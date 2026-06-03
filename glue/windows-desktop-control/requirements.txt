@@ -1,0 +1,6 @@
+# windows-desktop-control MCP server
+# Stays minimal -- UFO2's own venv has the heavy deps. We import only the
+# MCP SDK here. The subprocess we spawn uses vendor/UFO/.venv/Scripts/python.exe
+# (created in Phase 2) so UFO2's pinned dependency set is what actually drives
+# the GUI work.
+mcp>=1.0.0

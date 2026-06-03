@@ -1,0 +1,53 @@
+name: dex
+description: "Dex - a calm cockpit for commanding agents you can trust."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.0
+
+# Dependency budget (prompt.md section 8): a small handful, each justified.
+# Anything new requires an entry in LICENSES.md and a one-line rationale.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # REST calls to the OpenClaw gateway (initial handshake + occasional fetches).
+  http: ^1.2.0
+
+  # JSON-RPC over WebSocket to ws://127.0.0.1:18789 (the OpenClaw gateway).
+  web_socket_channel: ^3.0.0
+
+  # Stable v4 UUIDs for idempotencyKey and sessionKey in the gateway protocol.
+  uuid: ^4.4.0
+
+  # Localized timestamps in the conversation. Built into the Dart ecosystem.
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # FONTS:
+  # Geist + Geist Mono (OFL-1.1) are referenced by name in lib/theme/tokens.dart.
+  # Until the .ttf files are dropped into app/assets/fonts/, the system stack
+  # fallback (Segoe UI / Cascadia Code) is used at runtime -- the app still
+  # builds and runs.
+  #
+  # To enable Geist:
+  #   1. Download the variable .ttf files (see app/assets/fonts/README.md).
+  #   2. Uncomment the asset+font sections below and run `flutter pub get`.
+  #
+  # assets:
+  #   - assets/fonts/
+  # fonts:
+  #   - family: Geist
+  #     fonts:
+  #       - asset: assets/fonts/Geist-VariableFont_wght.ttf
+  #   - family: GeistMono
+  #     fonts:
+  #       - asset: assets/fonts/GeistMono-VariableFont_wght.ttf

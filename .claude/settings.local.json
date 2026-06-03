@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "PowerShell(& 'D:\\\\project1\\\\scripts\\\\setup-windows.ps1')",
+      "PowerShell(Get-Process *)",
+      "Bash(taskkill /F /PID 4356 /PID 11288)",
+      "PowerShell(Stop-Process *)",
+      "Bash(git clone *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\project1\\\\vendor\\\\openclaw\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(xargs grep -l \"chat\")",
+      "PowerShell(flutter create *)"
+    ]
+  }
+}

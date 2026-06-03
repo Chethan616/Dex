@@ -1,0 +1,57 @@
+# --- secrets & user-pasted keys (never commit) ---
+vendor/UFO/config/ufo/agents.yaml
+vendor/openclaw/.env
+vendor/openclaw/.env.*
+**/.env
+**/.env.*
+**/api_keys.json
+**/*.key
+*.pem
+.secrets/
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+
+# --- node ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+
+# --- flutter / dart ---
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+app/build/
+app/.pub/
+app/pubspec.lock
+app/windows/flutter/ephemeral/
+app/windows/CMakeFiles/
+app/windows/*.vcxproj.user
+
+# --- OS / IDE ---
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# --- logs / scratch ---
+*.log
+logs/
+scratch/
+.notes-scratch/
