@@ -10,7 +10,19 @@
       "Bash(Get-ChildItem -Path \"D:\\\\project1\\\\vendor\\\\openclaw\" -Directory)",
       "Bash(Select-Object Name)",
       "Bash(xargs grep -l \"chat\")",
-      "PowerShell(flutter create *)"
+      "PowerShell(flutter create *)",
+      "PowerShell(openclaw mcp *)",
+      "PowerShell(D:\\\\project1\\\\scripts\\\\install-skill.ps1 -Force 2>&1)",
+      "PowerShell(openclaw gateway *)",
+      "PowerShell(openclaw status *)",
+      "WebFetch(domain:console.groq.com)",
+      "WebSearch",
+      "PowerShell(Test-NetConnection *)",
+      "PowerShell(Join-Path *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(openclaw config *)",
+      "PowerShell($json = '[\"http://127.0.0.1:18789\",\"http://localhost:18789\"]'; & openclaw config set gateway.controlUi.allowedOrigins $json 2>&1 | Select-Object -Last 5)",
+      "PowerShell($json = '[\"http://127.0.0.1:18789\",\"http://localhost:18789\"]' -replace '\"','\\\\\"'; & openclaw config set gateway.controlUi.allowedOrigins $json 2>&1 | Select-Object -Last 5)"
     ]
   }
 }

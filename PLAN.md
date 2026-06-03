@@ -163,18 +163,19 @@ The agent has built everything that doesn't need keys or a running gateway. Thes
   "state": "final", "message": { ... } }
 ```
 
-**MCP server registration (the "mcporter" mechanism — actual current name is `openclaw mcp`):**
-- Docs: `vendor/openclaw/docs/cli/mcp.md`
-- Command:
-  ```powershell
-  openclaw mcp add windows-desktop-control `
-    --command python `
-    --arg D:\project1\glue\windows-desktop-control\server.py `
-    --cwd D:\project1\glue\windows-desktop-control
-  openclaw mcp doctor windows-desktop-control --probe
-  ```
-- Storage: `~/.openclaw/openclaw.json` under `mcp.servers.<name>`.
-- Reload: `openclaw mcp reload`.
+**MCP server registration (verified live against `openclaw mcp --help` on OpenClaw 2026.5.28 / e932160):**
+
+The current shape is `openclaw mcp set <name> <json>` — a Claude-Desktop-style JSON blob. There is NO `add`, `doctor`, or `reload` subcommand in this version; the live subcommands are: `list`, `serve`, `set`, `show`, `unset`.
+
+```powershell
+openclaw mcp set windows-desktop-control '{"command":"D:\\project1\\vendor\\UFO\\.venv\\Scripts\\python.exe","args":["D:\\project1\\glue\\windows-desktop-control\\server.py"],"cwd":"D:\\project1\\glue\\windows-desktop-control"}'
+openclaw mcp show windows-desktop-control
+# To pick up the change, restart the gateway:
+openclaw gateway stop
+openclaw gateway --port 18789 --verbose
+```
+
+`scripts\install-skill.ps1` does all of the above and uses `ConvertTo-Json -Compress` to avoid PS escaping headaches.
 
 **Skills directory precedence (on Windows; verified in source):**
 1. Workspace `.agents/skills/` (project-rooted)

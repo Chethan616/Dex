@@ -18,9 +18,10 @@ Future<void> main() async {
     const ApplicationSwitcherDescription(label: 'Dex'),
   );
 
-  final client = GatewayClient(GatewayConfig.localDefault());
-  // Best-effort connect; failures surface as an error message in the
-  // conversation rather than blocking app boot.
+  // Read gateway URL + auth token from ~\.openclaw\openclaw.json so we
+  // don't have to ask the user for them.
+  final client = GatewayClient(GatewayConfig.fromLocalConfig());
+  // Best-effort connect; the UI shows the live connection state.
   unawaited(client.connect());
 
   final store = ConversationStore(client);

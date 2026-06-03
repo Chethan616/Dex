@@ -16,6 +16,7 @@ import '../widgets/action_preview_card.dart';
 import '../widgets/action_step.dart';
 import '../widgets/agent_status_pill.dart';
 import '../widgets/command_bar.dart';
+import '../widgets/connection_banner.dart';
 import '../widgets/device_chip.dart';
 import '../widgets/message_agent_prose.dart';
 import '../widgets/message_human.dart';
@@ -175,7 +176,8 @@ class _ConversationColumnState extends State<_ConversationColumn> {
                   AgentStatusPill(state: widget.store.state),
                 ],
               ),
-              const SizedBox(height: DexSpace.lg),
+              const SizedBox(height: DexSpace.sm),
+              ConnectionBanner(client: widget.store.client),
               const Divider(),
               Expanded(
                 child: messages.isEmpty

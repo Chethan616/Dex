@@ -18,7 +18,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final client = GatewayClient(GatewayConfig.localDefault());
+    final client = GatewayClient(GatewayConfig.fromLocalConfig());
     final store = ConversationStore(client);
     await tester.pumpWidget(DexApp(store: store));
     await tester.pump();
