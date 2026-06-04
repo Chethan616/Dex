@@ -1,27 +1,28 @@
 ---
 name: windows-desktop-control
-description: Control Windows app GUIs (click, type, automate Office/Excel/Edge/Photoshop/system panels) via UFO2. Use ONLY for tasks that need a real app's interface.
+description: Drive native Windows app GUIs (Office, Settings, Calculator, file dialogs, Photoshop, anything Win32) via UFO2 and the Windows accessibility tree. NOT for browser tasks -- use run_browser_task instead.
 os: ["windows"]
 always: false
 ---
 
 # Windows Desktop Control
 
-This skill teaches you to drive **Windows application GUIs** through Microsoft UFO², via the `windows-desktop-control` MCP server's single tool `run_desktop_task`.
+This skill teaches you to drive **native Windows application GUIs** through Microsoft UFO2, via the `windows-desktop-control` MCP server's single tool `run_desktop_task`.
 
 ## When to reach for this
 
-Use `run_desktop_task` ONLY when the user's request needs a real GUI:
+Use `run_desktop_task` for tasks happening inside a native Win32 app's UI:
 
 - Office apps: Word, Excel, PowerPoint, Outlook
-- Browser-rendered tasks where the page is the UI (not scriptable via fetch/curl)
-- Image/video tools: Photoshop, Premiere, custom drawing apps
+- Image / video tools: Photoshop, Premiere, custom drawing apps
 - Windows Settings, Control Panel, system dialogs
-- Any program where shell/file tools can't reach the answer
+- Calculator, Notepad, File Explorer, native file pickers
+- Any program where shell/file tools can't reach the answer AND it's not a webpage
 
-**Do not use this for:**
+## When NOT to use this
+
+- **Anything inside a webpage** (forms, scraping, web-based tests, multi-page flows in Chrome / Edge / Vivaldi / Firefox) → use `run_browser_task` (browser-control skill). UFO2 can technically poke a browser's window chrome, but it's the wrong tool for DOM-level work.
 - Reading or editing files — use the shell/edit tools.
-- Web scraping where HTTP fetches work — use the web tool.
 - Pure data work (parsing, math, transforms) — do it inline.
 
 ## How to call

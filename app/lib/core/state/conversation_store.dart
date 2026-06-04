@@ -96,6 +96,16 @@ class ConversationStore extends ChangeNotifier {
     final p = _pending;
     if (p == null) return;
     _pending = null;
+    // Flip the most-recent pending chip to "denied" so the conversation
+    // surface reflects the user's choice. v1.1 plan 9.4.
+    final chipId = _lastPendingChipId;
+    if (chipId != null) {
+      final idx = _messages.indexWhere((m) => m.id == chipId);
+      if (idx >= 0) {
+        _messages[idx] = _messages[idx].copyWith(chipState: ToolChipState.denied);
+      }
+      _lastPendingChipId = null;
+    }
     _setState(AgentState.idle);
     notifyListeners();
     await _client.inject('Denied. Do not run: ${p.title}');
@@ -168,9 +178,14 @@ class ConversationStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Map runId -> id of an in-flight Action message so we can flip its step
-  // from "running" to "done/failed" when the result arrives.
-  final Map<String, String> _toolMessageByRunId = <String, String>{};
+  // callId -> (chipMessageId, actionMessageId) so chip + Action card flip
+  // together when the matching tool result arrives. callId is the runId
+  // from the gateway event when present, else a synthesized one.
+  final Map<String, _ToolCorrelation> _toolByCallId = <String, _ToolCorrelation>{};
+
+  // Track the most recently-emitted chip so deny() (Action Preview denial)
+  // can flip its state, per v1.1 plan section 9.4.
+  String? _lastPendingChipId;
 
   void _applyToolCall(GatewayEvent evt) {
     _setState(AgentState.acting);
@@ -178,17 +193,34 @@ class ConversationStore extends ChangeNotifier {
     final payload = (raw['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
     final toolName = (payload['name'] ?? payload['toolName'] ?? payload['tool'] ?? raw['event']) as String? ?? 'tool';
     final args = payload['args'] ?? payload['arguments'] ?? payload['params'];
-    final label = _summarizeArgs(toolName, args);
+    final goalLabel = _summarizeArgs(toolName, args);
 
-    final msgId = _uuid.v4();
-    _toolMessageByRunId[evt.runId.isEmpty ? msgId : evt.runId] = msgId;
+    final callId = evt.runId.isNotEmpty ? evt.runId : _uuid.v4();
+    final chipId = _uuid.v4();
+    final actionId = _uuid.v4();
+    _toolByCallId[callId] = _ToolCorrelation(chipId: chipId, actionId: actionId);
+    _lastPendingChipId = chipId;
+
+    // CHIP first (the Gemini-style "selecting tool X" announcement). The
+    // Action card follows immediately so the rich step list still has its
+    // own home in the conversation.
     _messages.add(Message(
-      id: msgId,
+      id: chipId,
+      speaker: MessageSpeaker.toolChip,
+      ts: DateTime.now(),
+      callId: callId,
+      toolId: toolName,
+      toolGoal: goalLabel,
+      chipState: ToolChipState.running,
+    ));
+    _messages.add(Message(
+      id: actionId,
       speaker: MessageSpeaker.action,
       ts: DateTime.now(),
+      callId: callId,
       steps: <ActionStep>[
         ActionStep(
-          text: label,
+          text: goalLabel,
           state: ActionStepState.running,
           ts: DateTime.now(),
         ),
@@ -202,23 +234,32 @@ class ConversationStore extends ChangeNotifier {
     final payload = (raw['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
     final ok = (payload['ok'] ?? payload['success'] ?? true) == true;
 
-    // Update the most recent matching in-flight tool message.
-    final msgId = _toolMessageByRunId.remove(evt.runId);
-    if (msgId != null) {
-      final idx = _messages.indexWhere((m) => m.id == msgId);
-      if (idx >= 0) {
-        final existing = _messages[idx];
+    final corr = _toolByCallId.remove(evt.runId);
+    if (corr != null) {
+      // Flip the chip.
+      final chipIdx = _messages.indexWhere((m) => m.id == corr.chipId);
+      if (chipIdx >= 0) {
+        _messages[chipIdx] = _messages[chipIdx].copyWith(
+          chipState: ok ? ToolChipState.done : ToolChipState.failed,
+        );
+      }
+      if (_lastPendingChipId == corr.chipId) _lastPendingChipId = null;
+
+      // Flip the matching Action card's step(s).
+      final actIdx = _messages.indexWhere((m) => m.id == corr.actionId);
+      if (actIdx >= 0) {
+        final existing = _messages[actIdx];
         final steps = (existing.steps ?? const [])
             .map((s) => s.state == ActionStepState.running
                 ? s.withState(ok ? ActionStepState.done : ActionStepState.failed)
                 : s)
             .toList(growable: false);
-        _messages[idx] = existing.copyWith(steps: steps);
+        _messages[actIdx] = existing.copyWith(steps: steps);
       }
     }
 
-    // If the tool result carried structured steps (UFO² returns these),
-    // append a fresh card with each step done.
+    // If the tool result carried structured step text (UFO² / browser-use
+    // return these in `result.steps`), append a fresh card listing each.
     final result = (payload['result'] as Map?)?.cast<String, dynamic>() ?? const {};
     final structured = (result['steps'] as List?)?.cast<String>() ?? const <String>[];
     if (structured.isNotEmpty) {
@@ -323,4 +364,12 @@ class ConversationStore extends ChangeNotifier {
     _sub.cancel();
     super.dispose();
   }
+}
+
+/// Internal mapping of a single MCP tool call's chip + Action card so the
+/// gateway's matching tool-result frame can flip both atomically.
+class _ToolCorrelation {
+  final String chipId;
+  final String actionId;
+  const _ToolCorrelation({required this.chipId, required this.actionId});
 }

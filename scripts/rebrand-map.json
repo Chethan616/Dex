@@ -1,0 +1,143 @@
+{
+  "_doc": [
+    "Exact-match replacement table for the OpenClaw -> DexCore rebrand.",
+    "Used by scripts/rebrand.ps1. Each entry: find + replace + files glob.",
+    "RULES:",
+    "  1. Exact string match. No regex, no fuzzy, no whole-word mode.",
+    "  2. Every `find` must be found at least once across its `files` glob,",
+    "     OR `optional: true` must be set. rebrand.ps1 fails loudly on misses",
+    "     -- that catches upstream drift when we bump the vendor pin.",
+    "  3. We do NOT rename:",
+    "       - @openclaw/* npm-scoped imports (public OSS plugin API)",
+    "       - ai.openclaw.* bundle IDs (iOS/Android/macOS apps we don't ship)",
+    "       - docs.openclaw.ai URLs (the upstream's docs site)",
+    "       - openclaw.mjs filename (just change what binary references it)",
+    "       - OPENCLAW_* env vars (consumed by OpenClaw runtime; renaming breaks reads)",
+    "       - Test fixtures, comments, internal class names",
+    "  4. Tagline: 'OpenClaw -> DexCore' (PascalCase display)",
+    "                'openclaw -> dex-core' (kebab-case identifier/CLI/path)"
+  ],
+  "internalName": {
+    "pascalCase": "DexCore",
+    "kebabCase": "dex-core",
+    "displayName": "DexCore",
+    "configDirName": ".dex-core"
+  },
+  "replacements": [
+    {
+      "_section": "package.json: npm package + bin field"
+    },
+    {
+      "find": "\"name\": \"openclaw\",",
+      "replace": "\"name\": \"dex-core\",",
+      "files": ["package.json"]
+    },
+    {
+      "find": "\"openclaw\": \"openclaw.mjs\"",
+      "replace": "\"dex-core\": \"openclaw.mjs\"",
+      "files": ["package.json"]
+    },
+
+    {
+      "_section": "openclaw.mjs: launcher script (the user-facing entrypoint)"
+    },
+    {
+      "find": "`openclaw: Node.js v${MIN_NODE_VERSION}+ is required",
+      "replace": "`dex-core: Node.js v${MIN_NODE_VERSION}+ is required",
+      "files": ["openclaw.mjs"]
+    },
+    {
+      "find": "    \"openclaw\",",
+      "replace": "    \"dex-core\",",
+      "files": ["openclaw.mjs"],
+      "_note": "process.title argument in the launcher's args array"
+    },
+    {
+      "find": "`[openclaw] Failed to respawn launcher:",
+      "replace": "`[dex-core] Failed to respawn launcher:",
+      "files": ["openclaw.mjs"]
+    },
+    {
+      "find": "\"openclaw: missing dist/entry.(m)js (build output).\"",
+      "replace": "\"dex-core: missing dist/entry.(m)js (build output).\"",
+      "files": ["openclaw.mjs"]
+    },
+    {
+      "find": "process.stdout.write(commit ? `OpenClaw ${version} (${commit})\\n` : `OpenClaw ${version}\\n`);",
+      "replace": "process.stdout.write(commit ? `DexCore ${version} (${commit})\\n` : `DexCore ${version}\\n`);",
+      "files": ["openclaw.mjs"]
+    },
+
+    {
+      "_section": "Config directory: ~/.openclaw/ -> ~/.dex-core/"
+    },
+    {
+      "find": "path.join(homeDir, \".openclaw\", \"openclaw.json\"),",
+      "replace": "path.join(homeDir, \".dex-core\", \"openclaw.json\"),",
+      "files": ["openclaw.mjs"]
+    },
+    {
+      "find": "path.join(homeDir, \".openclaw\", \"clawdbot.json\"),",
+      "replace": "path.join(homeDir, \".dex-core\", \"clawdbot.json\"),",
+      "files": ["openclaw.mjs"]
+    },
+
+    {
+      "_section": "CLI hint strings in error messages (src/cli/)"
+    },
+    {
+      "find": "formatCliCommand(\"openclaw doctor --fix\")",
+      "replace": "formatCliCommand(\"dex-core doctor --fix\")",
+      "files": ["src/cli/**/*.ts"]
+    },
+    {
+      "find": "formatCliCommand(\"openclaw doctor\", env)",
+      "replace": "formatCliCommand(\"dex-core doctor\", env)",
+      "files": ["src/cli/**/*.ts"]
+    },
+    {
+      "find": "formatCliCommand(\"openclaw onboard\")",
+      "replace": "formatCliCommand(\"dex-core onboard\")",
+      "files": ["src/cli/**/*.ts"]
+    },
+    {
+      "find": "formatCliCommand(\"openclaw gateway install --force\")",
+      "replace": "formatCliCommand(\"dex-core gateway install --force\")",
+      "files": ["src/cli/**/*.ts"]
+    },
+    {
+      "find": "params.inspectCommand ?? \"openclaw gateway status --deep\"",
+      "replace": "params.inspectCommand ?? \"dex-core gateway status --deep\"",
+      "files": ["src/cli/**/*.ts"]
+    },
+    {
+      "find": "`[openclaw] Try: ${formatCliCommand(\"openclaw doctor\", env)}`",
+      "replace": "`[dex-core] Try: ${formatCliCommand(\"dex-core doctor\", env)}`",
+      "files": ["src/cli/**/*.ts"]
+    },
+    {
+      "find": "/\\s*Run [`\"]?openclaw doctor[`\"]? for diagnostics\\.?/gi",
+      "replace": "/\\s*Run [`\"]?dex-core doctor[`\"]? for diagnostics\\.?/gi",
+      "files": ["src/cli/error-format.ts"],
+      "_note": "regex literal in the source code; we replace it as a STRING (not interpreting the regex)"
+    },
+
+    {
+      "_section": "Help text + README references in the launcher (npm install hints)"
+    },
+    {
+      "find": "For pinned GitHub installs, use `npm install -g github:openclaw/openclaw#<ref>` instead of a raw `/archive/<ref>.tar.gz` URL.",
+      "replace": "For pinned GitHub installs, use `npm install -g github:openclaw/openclaw#<ref>` instead of a raw `/archive/<ref>.tar.gz` URL.",
+      "files": ["openclaw.mjs"],
+      "optional": true,
+      "_note": "We keep the github URL pointing at upstream since that IS the heritage; this entry is here only to document the intentional non-rename"
+    },
+    {
+      "find": "\"For releases, use `npm install -g openclaw@latest`.\"",
+      "replace": "\"For releases, use `npm install -g openclaw@latest`.\"",
+      "files": ["openclaw.mjs"],
+      "optional": true,
+      "_note": "Same -- we don't republish under a new npm name in Phase A; users still install upstream then we rebrand on disk. v1.5 considers re-publishing."
+    }
+  ]
+}

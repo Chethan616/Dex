@@ -22,7 +22,15 @@
       "PowerShell(Get-Command *)",
       "PowerShell(openclaw config *)",
       "PowerShell($json = '[\"http://127.0.0.1:18789\",\"http://localhost:18789\"]'; & openclaw config set gateway.controlUi.allowedOrigins $json 2>&1 | Select-Object -Last 5)",
-      "PowerShell($json = '[\"http://127.0.0.1:18789\",\"http://localhost:18789\"]' -replace '\"','\\\\\"'; & openclaw config set gateway.controlUi.allowedOrigins $json 2>&1 | Select-Object -Last 5)"
+      "PowerShell($json = '[\"http://127.0.0.1:18789\",\"http://localhost:18789\"]' -replace '\"','\\\\\"'; & openclaw config set gateway.controlUi.allowedOrigins $json 2>&1 | Select-Object -Last 5)",
+      "WebFetch(domain:pub.dev)",
+      "Bash(grep -E '\\\\.git$|^total')",
+      "PowerShell(& 'D:\\\\project1\\\\scripts\\\\rebrand.ps1' -DryRun 2>&1 | Select-Object -Last 30)",
+      "PowerShell(& 'D:\\\\project1\\\\scripts\\\\rebrand.ps1' 2>&1 | Select-Object -Last 12)",
+      "PowerShell(pnpm build *)",
+      "Bash(awk 'NR<=10 || NR==128 || NR==173 || NR==325' D:/project1/core/dist/entry.js)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(npm view *)"
     ]
   }
 }

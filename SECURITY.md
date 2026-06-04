@@ -30,8 +30,14 @@ The brain (OpenClaw + Claude) can route requests to the hands (UFO² via the `wi
 
 ### 3. Tool scoping
 
-- The MCP server exposes **exactly one tool**: `run_desktop_task(goal, app_hint, engine, dry_run, timeout_s)`.
-- No shell, file-write, network, or process-spawn tools are exposed through this MCP. OpenClaw's own shell tool is a separate surface — when shell work is needed, the LLM uses *that*, and OpenClaw applies its own permission model.
+Dex exposes **two** MCP servers, each with exactly one tool. They share refusal logic via `glue/_shared/approval.py`:
+
+- `windows-desktop-control` → `run_desktop_task(goal, app_hint, timeout_s, dry_run)` — native Win32 GUI via UFO².
+- `browser-control` → `run_browser_task(goal, url_hint, timeout_s, dry_run, headless)` — web pages via browser-use + Playwright. Spawns its OWN isolated Chromium with a separate profile dir under `~/.config/browseruse/profiles/default`. Does NOT share cookies or sessions with the user's everyday browser.
+
+No shell, file-write, network, or process-spawn tools are exposed through these MCPs. OpenClaw's own shell tool is a separate surface — when shell work is needed, the LLM uses *that*, and OpenClaw applies its own permission model.
+
+**Rate-limit hardening (v1.1):** both tools share one Groq API key. Concurrent or rapid-fire tasks can rate-limit each other. The shared `_shared/approval.py::with_rate_limit_retry` retries once with a 2 s backoff; persistent failures return `ok=false` and surface in the tool chip as `failed`.
 
 ### 4. Timeouts
 
@@ -39,11 +45,12 @@ The brain (OpenClaw + Claude) can route requests to the hands (UFO² via the `wi
 
 ### 5. Refusal list
 
-`run_desktop_task` will refuse goals that look destructive without explicit user confirmation. The refusal list lives in the MCP server (`server.py`) and is meant to be conservative, not exhaustive — the primary defense is approval, not pattern matching. Current refusal patterns:
+Both `run_desktop_task` and `run_browser_task` will refuse goals that look destructive without explicit user confirmation. The refusal list lives in **`glue/_shared/approval.py`** (single source of truth) and is meant to be conservative, not exhaustive — the primary defense is approval, not pattern matching. Current refusal patterns:
 
 - Goals mentioning `format`, `delete all`, `wipe`, `factory reset`, `bitlocker`, `regedit` paired with destructive verbs
 - Goals asking to disable security software, antivirus, firewall, UAC
 - Goals asking to install or execute downloaded binaries
+- **Browser-specific (v1.1):** logging into banking sites; sending money via PayPal/Venmo/bank transfer; public posting (tweet/publish/post) without explicit goal-text consent; CAPTCHA solving (we refuse rather than attempt, since Qwen 3 has no vision)
 
 When refusing, the tool returns `{ok: false, summary: "refused: ..."}` and the agent surfaces this to the user.
 

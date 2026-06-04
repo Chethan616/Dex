@@ -8,7 +8,7 @@
 
 **Product.** Dex — a Windows-first personal AI assistant. Chat-first control surface for an agent that has *hands* on your machine. The memorable moment is the **Action Preview**: the agent shows you what it's about to do; you approve or deny.
 
-**Bundle ID.** `com.chethan616.dex`
+**Bun/ple ID.** `com.chethan616.dex`
 
 **Architecture (4 layers, 2 processes, 1 client).**
 
@@ -40,6 +40,21 @@ Tick a box only when the phase's **acceptance check** passes. Note the date.
 
 **Legend:** [x] code written + verified by us · [~] code written, needs user verification with live stack · [ ] not started · [👤] gated on human step (key paste, install)
 
+### 🟢 ACTIVE — Phase A: DexCore rebrand (NEW top priority)
+
+Per Ultraplan refinement: rebrand OpenClaw → DexCore BEFORE v1.4's UnifiedAgenticCore work so every downstream file references `core/` from the start (no double-touch later).
+
+- [ ] **A.1** — Internal name locked: `DexCore` / `dex-core`
+- [ ] **A.2** — `core/` exists (copy of `vendor/openclaw/` at pinned `7074cf8e…`); `.git/` stripped; `core/HERITAGE.md` written
+- [ ] **A.3** — `scripts/rebrand-map.json` enumerates every user-visible `openclaw` string from a `Grep` pass over source
+- [ ] **A.3** — `scripts/rebrand.ps1` applies the map and fails loudly on misses
+- [ ] **A.4** — `cd core && npm install && npm run build` succeeds; `dex-core gateway --help` shows `DexCore Gateway` banner; no surviving `openclaw` in `core/dist/` except `@openclaw/*` scoped imports
+- [ ] **A.5** — `README.md`, `LICENSES.md`, `install-skills.ps1` reference `core/` not `vendor/openclaw/`
+
+Once Phase A merges, v1.2 / v1.3 / v1.4 / v1.5 (below) all target `core/` from the start.
+
+### v1.0 history (shipped, references `vendor/openclaw/` — pre-rebrand)
+
 - [x] **Phase 0 — Bootstrap** (repo layout, PLAN.md, setup script runs green on this host)
 - [~] **Phase 1 — OpenClaw running** (vendor cloned + pinned, gateway client API documented; install + `openclaw onboard` + Anthropic key are human steps below)
 - [~] **Phase 2 — UFO² running standalone** (vendor cloned + pinned, headless entrypoint documented, PiP finding inverted; venv + Groq key are human steps below)
@@ -48,6 +63,12 @@ Tick a box only when the phase's **acceptance check** passes. Note the date.
 - [x] **Phase 5 — Flutter foundation** (`com.chethan616.dex` builds, theme tokens + gateway client + models + state store, `flutter build windows` succeeds, widget test passes)
 - [x] **Phase 6 — Flutter conversation surface** (3-zone home, Action Preview card with amber border + approve/deny, command bar with Ctrl+K, status pill with breathing dot, action steps in mono — all built)
 - [~] **Phase 7 — Polish** (`scripts/run-dev.ps1` skeleton, SECURITY.md revised after Phase 2 finding, LICENSES.md drafted; live golden-path verification waits on the user setup steps)
+
+## v1.1 — Browser tool family + tool chips
+
+- [x] **Phase 8 — browser-control MCP server** (browser-use vendored at `4931a7e0…`, `glue/_shared/approval.py` extracted with refusal list + rate-limit retry, `glue/browser-control/server.py` using `browser-use` library + Groq Qwen 3 / `use_vision=False`, SKILL.md routing + cross-reference, `scripts/install-skills.ps1` registers both MCPs)
+- [x] **Phase 9 — Tool chips** (`MessageSpeaker.toolChip` + `ToolChipState`, `lib/core/tool_registry.dart` friendly-name map, `lib/widgets/tool_chip.dart` widget honoring tokens + reduced-motion, conversation store emits chip **before** Action card on toolCall, flips to `denied` on user deny, render path wired in `home_desktop.dart`)
+- [ ] **v1.1 live smoke** — three back-to-back prompts produce three different tool chips (Shell · Windows app · Browser); typing test at livechat.com no longer fails with the SendKeys/JS-injection flailing seen in v1.0
 
 ## 🧑 Human steps to bring Dex live
 

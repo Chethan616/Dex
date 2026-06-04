@@ -21,6 +21,7 @@ import '../widgets/device_chip.dart';
 import '../widgets/message_agent_prose.dart';
 import '../widgets/message_human.dart';
 import '../widgets/skill_list_item.dart';
+import '../widgets/tool_chip.dart';
 
 class HomeDesktop extends StatelessWidget {
   const HomeDesktop({super.key, required this.store});
@@ -210,6 +211,8 @@ class _ConversationColumnState extends State<_ConversationColumn> {
         return MessageHuman(message: m);
       case MessageSpeaker.agent:
         return MessageAgentProse(message: m);
+      case MessageSpeaker.toolChip:
+        return ToolChip(message: m);
       case MessageSpeaker.action:
         final steps = m.steps ?? const [];
         return Padding(

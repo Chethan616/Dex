@@ -14,22 +14,24 @@ Dex is a Windows-first, chat-first control surface for a local AI agent that has
 Flutter app (Dex)
    │  HTTP + WebSocket on 127.0.0.1:18789
    ▼
-OpenClaw (Node 24)              ← the brain · Anthropic Claude
-   │  MCP stdio
+OpenClaw (Node 24)                          ← the brain · Anthropic Claude
+   │  MCP stdio (picks per-turn based on SKILL.md descriptions)
    ▼
-windows-desktop-control MCP     ← the glue · Python 3.10 · this repo
-   │
-   ▼
-Microsoft UFO² (Python 3.10)    ← the hands · Groq Qwen 3 (default)
-   │
-   ▼
-Picture-in-Picture desktop      ← isolated; does not steal your focus
+   ┌───────────────────────────┬─────────────────────────────┐
+   ▼                           ▼                             ▼
+OpenClaw built-in       windows-desktop-              browser-control
+shell / file / process  control MCP (UFO²)            MCP (browser-use)
+                        Python 3.10/3.11              Python 3.11
+                        Win32 UIA, Groq Qwen 3        Playwright + Groq Qwen 3
+                        run_desktop_task              run_browser_task
 ```
 
-- **OpenClaw** (`vendor/openclaw/`) — sessions, channels, skills, memory, cron.
-- **UFO²** (`vendor/UFO/`) — Windows GUI automation in an isolated virtual desktop.
-- **windows-desktop-control** (`glue/`) — a small MCP server that exposes UFO²'s "do this in the GUI" capability to OpenClaw as one tool: `run_desktop_task(goal, app_hint, engine, dry_run, timeout_s)`.
-- **app/** — the Flutter client. Talks to OpenClaw's local gateway. Implements `design.md`.
+- **OpenClaw** (`vendor/openclaw/`) — sessions, channels, skills, memory, cron, built-in shell tools.
+- **UFO²** (`vendor/UFO/`) — Windows native-app GUI automation via the accessibility tree.
+- **browser-use** (`vendor/browser-use/`) — browser automation via Playwright + an LLM-driven agent.
+- **windows-desktop-control** (`glue/windows-desktop-control/`) — MCP server exposing `run_desktop_task` to Claude.
+- **browser-control** (`glue/browser-control/`) — MCP server exposing `run_browser_task` to Claude.
+- **app/** — the Flutter client. Talks to OpenClaw's local gateway. Implements `design.md`; renders Gemini-style tool chips so the user sees which tool Claude picked.
 
 ---
 
@@ -85,8 +87,9 @@ Recorded so builds are reproducible. Update only when intentionally bumping.
 
 | Vendor | Commit | Date pinned |
 |---|---|---|
-| `openclaw/openclaw` | `7074cf8e23c1f64362c4f8c4bf32971ca94d5221` | 2026-06-03 |
-| `microsoft/UFO`     | `adef15b8789b015356977ed742916de2da644509` | 2026-05-26 |
+| `core/` (Dex brain — fork of `openclaw/openclaw`) | `7074cf8e23c1f64362c4f8c4bf32971ca94d5221` | 2026-06-03 — see `core/HERITAGE.md` |
+| `microsoft/UFO`            | `adef15b8789b015356977ed742916de2da644509` | 2026-05-26 |
+| `browser-use/browser-use`  | `4931a7e0217cf9c64450348b96511733263c9268` | 2026-06-01 |
 
 ---
 

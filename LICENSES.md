@@ -10,8 +10,10 @@ Status legend: `✓ verified` · `△ pending` (filled in during the phase that 
 
 | Component | License | SPDX | Source | Status |
 |---|---|---|---|---|
-| OpenClaw | MIT (expected) | `MIT` | https://github.com/openclaw/openclaw | △ pending — confirm in Phase 1 by reading `vendor/openclaw/LICENSE` |
+| **DexCore** (forked from OpenClaw, see `core/HERITAGE.md`) | MIT | `MIT` | https://github.com/openclaw/openclaw — heritage commit `7074cf8e23c1f64362c4f8c4bf32971ca94d5221` | ✓ MIT preserved in `core/LICENSE`; original copyright headers intact per MIT |
 | Microsoft UFO² | MIT (per README badge) | `MIT` | https://github.com/microsoft/UFO | △ pending — confirm in Phase 2 by reading `vendor/UFO/LICENSE` |
+| browser-use | MIT (per manifest.json) | `MIT` | https://github.com/browser-use/browser-use | △ pending — confirm by reading `vendor/browser-use/LICENSE` |
+| Playwright (transitive of browser-use) | Apache-2.0 | `Apache-2.0` | https://github.com/microsoft/playwright | △ pending |
 
 ---
 

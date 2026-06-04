@@ -1,0 +1,11 @@
+# browser-control MCP server -- runs inside its own venv at
+# D:\project1\vendor\browser-use\.venv (Python 3.11). Installed via
+# install-skills.ps1 step 2.
+#
+# We don't pin versions here; the install script `pip install browser-use`
+# resolves to whatever the vendored repo's pyproject.toml declares so the
+# server.py code matches the library version we vendored.
+mcp>=1.0.0
+browser-use
+playwright
+groq
