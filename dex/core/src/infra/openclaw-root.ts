@@ -2,7 +2,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { openClawRootFs, openClawRootFsSync } from "./openclaw-root.fs.runtime.js";
 
-const CORE_PACKAGE_NAMES = new Set(["openclaw"]);
+// Accept the new Dex package name AND the legacy upstream OpenClaw name so
+// source-checkouts AND published dexagent installs both resolve as "core".
+const CORE_PACKAGE_NAMES = new Set(["dexagent", "openclaw"]);
 const packageNameCache = new Map<string, string | null>();
 const packageRootCache = new Map<string, string | null>();
 const argv1CandidateCache = new Map<string, string[]>();

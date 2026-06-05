@@ -3,7 +3,10 @@ import { normalizeOptionalString } from "@dexagent/normalization-core/string-coe
 
 // oxlint-disable-next-line eslint/no-underscore-dangle -- Bundled builds replace this compile-time define identifier.
 declare const __DEX_VERSION__: string | undefined;
-const CORE_PACKAGE_NAME = "openclaw";
+// Accept the new Dex package name AND the legacy upstream OpenClaw name. The
+// latter keeps unbuilt source-checkout reads working through the one-cycle
+// migration; published Dex installs match "dexagent".
+const CORE_PACKAGE_NAMES = new Set<string>(["dexagent", "openclaw"]);
 
 const PACKAGE_JSON_CANDIDATES = [
   "../package.json",
@@ -32,7 +35,7 @@ function readVersionFromJsonCandidates(
         if (!version) {
           continue;
         }
-        if (opts.requirePackageName && parsed.name !== CORE_PACKAGE_NAME) {
+        if (opts.requirePackageName && !CORE_PACKAGE_NAMES.has(parsed.name ?? "")) {
           continue;
         }
         return version;

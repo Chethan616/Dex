@@ -70,14 +70,18 @@ export function parseTimeoutMsOrExit(timeout?: string): number | undefined | nul
   return seconds * 1000;
 }
 
-const DEX_REPO_URL = "https://github.com/openclaw/openclaw.git";
+const DEX_REPO_URL = "https://github.com/Chethan616/Dex.git";
 const MAX_LOG_CHARS = 8000;
 
-export const DEFAULT_PACKAGE_NAME = "openclaw";
-const CORE_PACKAGE_NAMES = new Set([DEFAULT_PACKAGE_NAME]);
+// Dex's canonical npm name is "dexagent". The auto-updater also recognises
+// the upstream "openclaw" name for installs that were originally created
+// from the OpenClaw npm package, so `dex update` correctly identifies
+// itself as the package-to-update in both cases.
+export const DEFAULT_PACKAGE_NAME = "dexagent";
+const CORE_PACKAGE_NAMES = new Set([DEFAULT_PACKAGE_NAME, "openclaw"]);
 
 export function normalizeTag(value?: string | null): string | null {
-  return normalizePackageTagInput(value, ["openclaw", DEFAULT_PACKAGE_NAME]);
+  return normalizePackageTagInput(value, ["dexagent", "openclaw"]);
 }
 
 function normalizeVersionTag(tag: string): string | null {

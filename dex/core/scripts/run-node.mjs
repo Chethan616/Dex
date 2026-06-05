@@ -993,7 +993,7 @@ const getInterruptedSpawnExitCode = (res) => {
 
 const runOpenClaw = async (deps) => {
   const diagnosticArgs = resolveRunNodeDiagnosticArgs(deps);
-  const nodeProcess = deps.spawn(deps.execPath, [...diagnosticArgs, "openclaw.mjs", ...deps.args], {
+  const nodeProcess = deps.spawn(deps.execPath, [...diagnosticArgs, "dex.mjs", ...deps.args], {
     cwd: deps.cwd,
     env: deps.env,
     stdio: deps.outputTee ? ["inherit", "pipe", "pipe"] : "inherit",
