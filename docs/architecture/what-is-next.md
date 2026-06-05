@@ -1,108 +1,51 @@
-# What's next for Dex — UFO² + browser-use deeper integration
+# What's next for Dex
 
-Phase B (the OpenClaw → Dex ownership migration) is done. The gateway,
-CLI, npm package, and Flutter UI all carry the Dex brand. Time to make
-the **hands** part of Dex (the part that actually drives apps and
-browsers) feel as polished as the brain.
+> **Canonical plan** lives in `C:\Users\cheth\.claude\plans\see-the-design-md-and-bubbly-whistle.md`
+> (a `/plan`-managed file). This document is the **repo-visible summary**
+> so anyone reading the GitHub repo without access to that file still
+> knows the roadmap. Where this doc and the slash-plan disagree, the
+> slash-plan wins.
 
-This document is the short version of the work that was queued in
-`plans/see-the-design-md-and-bubbly-whistle.md` as Phase C, but
-tightened so we can start picking commits without re-reading the whole
-plan.
+## Direction snapshot (post-2026.6.8)
 
-## The five things that matter most
+After Phase B (rebrand) shipped, five direction changes were locked
+that supersede earlier v1.3 / v1.4 designs:
 
-### 1. Make the orchestrator pick the right engine
+1. **One channel, one client.** Dex talks to the user **only** through
+   the official `dex-client` (desktop + mobile). No Telegram, WhatsApp,
+   Discord, Slack, etc. The ~25 channel plugins under `extensions/`
+   become opt-in installs; the bundled default ships with only
+   `dex-client`.
+2. **Mobile = native.** Android is Kotlin + Jetpack Compose + Material
+   3 Expressive (`MaterialExpressiveTheme`, morph button shapes,
+   polygon loading indicators, wallpaper-derived dynamic color). iOS
+   is Swift 6 + SwiftUI + iOS 18 Liquid Glass (`.glassEffect()`,
+   `Material.thin`, SF Symbols 6). **Not Flutter.**
+3. **Flutter scope = desktop only.** Windows + Linux + macOS. Android
+   and iOS Flutter targets are removed from `app/pubspec.yaml`.
+4. **CLI onboarding moves into the desktop GUI.** `dex onboard`,
+   `dex configure`, `dex doctor`, `dex models`, `dex plugins`,
+   `dex update` all get GUI screens in the Flutter desktop app. The
+   CLI commands stay for headless / scripting use, but the canonical
+   user experience is GUI.
+5. **Every API-key prompt links to the issuer's signup page.** Single
+   source of truth at `dex/core/src/auth/key-issuer-urls.ts` (to be
+   created). The GUI form imports the URL table; renders "Don't have
+   one yet? Get one here →" beneath every key input.
 
-**Why.** Today, Dex picks between **OpenClaw's built-in shell tool**,
-**UFO² (Windows native apps)**, and **browser-use (web pages)** based on
-the SKILL.md descriptions Claude reads each turn. That works ~80% of
-the time but burns 500-2000 ms on every decision and still mis-routes
-"open Notepad and type" to the browser sometimes.
+## Execution order
 
-**The fix.** A capability-scoring router that picks the engine in
-< 100 ms using cheap deterministic context (active process name, UIA
-tree availability, browser CDP probe) + a Beta-prior learner that
-remembers which engine succeeded on which app over time.
+The slash-plan locks this order:
 
-**Files to create:**
-- `dex/orchestration/context-scanner.ts` (< 50 ms parallel probes)
-- `dex/orchestration/capability-scorer.ts` (base table + history blend)
-- `dex/orchestration/router.ts` (sort, return top + fallback chain)
-- `dex/orchestration/telemetry.ts` (SQLite log of every run)
-- `dex/orchestration/self-learning.ts` (periodic Beta-prior update)
+1. **Phase C** (orchestration + OmniParser + Gemini Flash-Lite) — next.
+2. **v1.2** (Live action surface + Stop button + Windows chrome).
+3. **D.3** — move CLI onboarding into the desktop GUI (widens v1.4).
+4. **D.4** — `key-issuer-urls.ts` + GUI form helper component.
+5. **D.1** — channel consolidation (build `dex-client`, demote rest).
+6. **D.2** — native mobile clients (Kotlin Compose + SwiftUI Liquid Glass).
+7. **v1.5** — installer + production polish.
 
-**Effort.** ~1 week of focused work. Foundation for everything else
-below.
-
-### 2. OmniParser as a third engine
-
-**Why.** Some apps don't have a UIA tree (games, Photoshop, Figma
-desktop, anything Java Swing). Today UFO² fails on them. browser-use
-can't help because they're not in a browser. We need vision.
-
-**The fix.** Add Microsoft's
-[OmniParser v2](https://github.com/microsoft/OmniParser) (YOLO-style
-screen parser that outputs `[(bbox, label, type)]` from a screenshot).
-The router calls it only when UIA + DOM are both unavailable.
-
-**Files to create:**
-- `dex/drivers/omniparser/server.py` — FastMCP wrapper
-- `dex/drivers/omniparser/inference.py` — ONNX loader
-- `dex/orchestration/engines/omniparser.ts` — adapter
-
-**Effort.** ~3 days. ~2 GB ONNX weight download on first invocation;
-cached in `~/.dex/models/omniparser/`.
-
-### 3. Gemini Flash-Lite as a third LLM provider
-
-**Why.** Anthropic + Groq are great but expensive (Claude) or text-only
-(Qwen 3). Gemini Flash-Lite is multimodal AND cheap (~$0.075 per 1M
-tokens, 10× cheaper than Sonnet) AND fast. Perfect for the orchestrator
-+ UFO²'s per-step decisions.
-
-**The fix.** Add `google` as a provider option in `dex onboard`,
-`dex configure`, the `extensions/google/` plugin, the UFO²
-`agents.yaml.template`, and `dex/drivers/browser/server.py`.
-
-**Effort.** ~1 day. The `extensions/google/` plugin already exists for
-LLM; this just adds the Flash-Lite catalog entry + the UFO/browser
-wiring.
-
-### 4. UFO² timeout + shell-shortcut SKILL.md hints
-
-**Why.** Real session pain: "change my DNS to 1.1.1.1" took Claude 10
-minutes flailing through Windows Settings before timing out. It should
-have just run `netsh interface ip set dns name="Wi-Fi" static 1.1.1.1`
-in 5 seconds.
-
-**The fix.** Two changes to `dex/drivers/windows-desktop-control/`:
-
-1. Add a `timeout_s` knob the gateway can pass per-task. Default 120 s
-   today; raise to 300 s when the goal mentions Settings / Control
-   Panel.
-2. Add a "Prefer shell when possible" section to the driver's SKILL.md
-   that lists shell-solvable patterns (DNS, service start/stop,
-   registry, network adapters, env vars). Claude reads SKILL.md every
-   turn and will route shell-solvable tasks correctly.
-
-**Effort.** ~2 hours.
-
-### 5. browser-use vision auto-fallback
-
-**Why.** Qwen 3 (the default browser-use brain) is text-only and gets
-stuck on image-heavy pages (image CAPTCHAs, image-only buttons).
-Today the user has to manually re-run with `engine=vision`.
-
-**The fix.** When browser-use detects N consecutive page-state failures,
-flip to a vision-capable model (Claude or Gemini Flash-Lite) for the
-remaining steps. Logged in telemetry; never silent.
-
-**Effort.** ~3 hours.
-
-## Concrete next 8 commits
-
-In Phase C grouping (mirrors the `plans/...` file's commit shape):
+## Phase C (still next) — the 8-commit list
 
 ```
 C.0  feat(orchestration): types + AutomationEngine interface
@@ -115,45 +58,47 @@ C.6  feat(llm):           Gemini Flash-Lite across core + UFO² + browser-use
 C.7  test(orchestration): perf bench + 4-app routing smoke + Flutter chip
 ```
 
-Each commit has a single owner-verifiable gate. Total time budget:
-**~2 weeks** with one person.
+Each commit has a single owner-verifiable gate. Total budget: ~2 weeks.
 
-## Things deliberately NOT on this list
+## API key issuer URLs (D.4 reference)
 
-- **Replacing UFO² with a homegrown driver.** UFO² is MIT-licensed and
-  battle-tested on Win11 UIA edge cases that would take us months to
-  recreate. Keep using it; layer the orchestrator on top.
-- **Replacing browser-use with Playwright directly.** browser-use already
-  wraps Playwright with LLM-driven step planning. We don't want to
-  redo that work.
-- **Multi-OS (macOS / Linux) GUI automation.** Out of scope until v1.6.
-  Today Dex is Windows-first.
-- **Cloud relay / Tailscale.** Out of scope until v1.3 (per the original
-  plan).
+| Provider | Get-key URL |
+|---|---|
+| Anthropic | https://console.anthropic.com/account/keys |
+| Gemini (AI Studio) | https://aistudio.google.com/app/apikey |
+| Google Cloud (Vertex / Workspace OAuth) | https://console.cloud.google.com/apis/credentials |
+| Groq | https://console.groq.com/keys |
+| OpenAI | https://platform.openai.com/api-keys |
+| OpenRouter | https://openrouter.ai/keys |
+| Mistral | https://console.mistral.ai/api-keys |
+| Perplexity | https://www.perplexity.ai/settings/api |
+| ElevenLabs | https://elevenlabs.io/app/settings/api-keys |
+| Deepgram | https://console.deepgram.com/project/default/keys |
+| Azure Speech | https://portal.azure.com (Cognitive Services → Keys) |
+| Brave Search | https://brave.com/search/api/ |
+| Tavily | https://app.tavily.com/home |
+| Firecrawl | https://www.firecrawl.dev/app/api-keys |
+| Exa | https://dashboard.exa.ai/api-keys |
 
-## The first concrete deliverable when you say go
+These get baked into a TS const in `dex/core/src/auth/key-issuer-urls.ts`
+during D.4. The GUI form helper imports the const and renders a "Get
+one here →" link under every key input.
 
-If you give me a green light tomorrow, I start with **C.0 + C.1**:
+## What's intentionally NOT in this list
 
-- Write `dex/orchestration/types.ts` (the `AutomationEngine` interface +
-  `RuntimeContext` + `TaskIntent` shapes).
-- Write `dex/orchestration/context-scanner.ts` with stub probes that
-  return hardcoded values, plus the Win32 GetForegroundWindow call.
-- Pass the existing 3-engine smoke (UFO routing for Calculator,
-  browser-use for livechat.com, shell for `ls Desktop`).
-- Commit + push as `feat(orchestration): C.0 + C.1`.
-
-That gives us the skeleton + one real probe in a single afternoon.
-After that, each subsequent commit lands a single concrete capability.
+- **Multi-OS GUI automation** (macOS/Linux native UFO² equivalents) — out of scope until v1.6.
+- **Cloud relay / Tailscale** — out of scope until v1.6.
+- **Replacing UFO² or browser-use** — MIT-licensed, battle-tested; keep using them.
+- **Third-party messaging support beyond opt-in** — explicitly dropped per D.1.
 
 ## Status
 
-- Phase B: **done** (14 commits, on `origin/main` through `8ad93685`).
-- Phase C: **unblocked** when you publish `dexagent@2026.6.7` and confirm
-  the install works.
-- Mobile + macOS UI port (v1.3): blocked on Phase C landing.
-- Self-contained installer (v1.5): blocked on stability of the orchestrator.
+- Phase B: **done** (`origin/main` through `19968f5b`, npm `2026.6.8`).
+- Phase C: **unblocked** when 2026.6.8 publishes live and `dex onboard` works.
+- Phase D (above): **scoped, awaiting greenlight**.
+- Mobile native apps: **roadmap only**; ~6-8 weeks once Phase C + D.3 land.
 
-Phase C is the difference between Dex being "calm UI on top of OpenClaw"
-and Dex being "the assistant that actually picks the right tool the
-first time". It's the highest-leverage work left.
+Open the canonical plan file for the long-form versions of each phase,
+including all per-commit gates, verification matrices, and risk
+registers. This page exists so you don't HAVE to open it to know what's
+next.
