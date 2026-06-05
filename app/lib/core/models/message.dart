@@ -8,6 +8,7 @@
 // rich Action card can be correlated and updated together.
 
 import 'action_step.dart';
+import 'engine.dart';
 
 enum MessageSpeaker { human, agent, action, toolChip }
 
@@ -22,11 +23,14 @@ class Message {
   final DateTime ts;
   final bool streaming;          // true while delta frames are still arriving
 
-  // ----- toolChip fields (v1.1) ---------------------------------------------
+  // ----- toolChip fields (v1.1 + C.7-flutter) -------------------------------
   final String? callId;          // correlates chip <-> action card + result
   final String? toolId;          // raw MCP tool name; routed through tool_registry
   final String? toolGoal;        // short, truncated label for the chip
   final ToolChipState? chipState;
+  /// Orchestrator engine inferred from `toolId` (C.7-flutter). The chip and
+  /// the Live panel both render an engine pill when this is non-null.
+  final EngineId? engine;
 
   const Message({
     required this.id,
@@ -40,6 +44,7 @@ class Message {
     this.toolId,
     this.toolGoal,
     this.chipState,
+    this.engine,
   });
 
   Message copyWith({
@@ -59,5 +64,6 @@ class Message {
         toolId: toolId,
         toolGoal: toolGoal,
         chipState: chipState ?? this.chipState,
+        engine: engine,
       );
 }

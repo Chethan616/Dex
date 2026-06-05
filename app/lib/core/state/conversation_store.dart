@@ -13,6 +13,7 @@ import '../gateway_client.dart';
 import '../models/action_preview.dart';
 import '../models/action_step.dart';
 import '../models/agent_state.dart';
+import '../models/engine.dart';
 import '../models/gateway_event.dart';
 import '../models/message.dart';
 
@@ -38,6 +39,31 @@ class ConversationStore extends ChangeNotifier {
   List<Message> get messages => List<Message>.unmodifiable(_messages);
   AgentState get state => _state;
   ActionPreview? get pending => _pending;
+
+  /// Most-recent running tool-chip message, or `null` when nothing is
+  /// currently running. The Live panel uses this to render the "currently
+  /// routing through engine X" card while [state] is `acting`. Cheap O(n)
+  /// scan — the chip list per turn is small.
+  Message? get runningEngineChip {
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      final m = _messages[i];
+      if (m.speaker == MessageSpeaker.toolChip &&
+          m.chipState == ToolChipState.running) {
+        return m;
+      }
+    }
+    return null;
+  }
+
+  /// Test-only seam: append a message + notify, without a gateway round-trip.
+  /// Production code paths must go through `_onEvent` so streaming
+  /// correlation IDs stay consistent; this exists purely so widget tests
+  /// can put the store into a known visual state.
+  @visibleForTesting
+  void addMessageForTesting(Message m) {
+    _messages.add(m);
+    notifyListeners();
+  }
 
   // -----------------------------------------------------------------
   // User -> agent
@@ -204,6 +230,9 @@ class ConversationStore extends ChangeNotifier {
     // CHIP first (the Gemini-style "selecting tool X" announcement). The
     // Action card follows immediately so the rich step list still has its
     // own home in the conversation.
+    //
+    // engine is inferred from toolName via engineForToolId() until the
+    // gateway emits a structured engineAttempt frame (C.7+).
     _messages.add(Message(
       id: chipId,
       speaker: MessageSpeaker.toolChip,
@@ -212,6 +241,7 @@ class ConversationStore extends ChangeNotifier {
       toolId: toolName,
       toolGoal: goalLabel,
       chipState: ToolChipState.running,
+      engine: engineForToolId(toolName),
     ));
     _messages.add(Message(
       id: actionId,

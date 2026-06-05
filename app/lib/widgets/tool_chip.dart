@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../core/models/engine.dart';
 import '../core/models/message.dart';
 import '../core/tool_registry.dart';
 import '../theme/motion.dart';
@@ -60,6 +61,10 @@ class ToolChip extends StatelessWidget {
                 maxLines: 1,
               ),
             ),
+            if (message.engine != null) ...[
+              const SizedBox(width: DexSpace.sm),
+              EnginePill(engine: message.engine!),
+            ],
             const SizedBox(width: DexSpace.sm),
             _StateGlyph(state: state, color: color),
           ],
@@ -96,5 +101,43 @@ class _StateGlyph extends StatelessWidget {
       ToolChipState.denied  => '-',
     };
     return Text(glyph, style: DexType.mono(color: color));
+  }
+}
+
+/// Compact pill that displays the orchestrator engine routing this call.
+/// Reused by the inline tool chip and the Live panel's running-engine card.
+class EnginePill extends StatelessWidget {
+  const EnginePill({super.key, required this.engine, this.dense = true});
+  final EngineId engine;
+  /// When false, renders a larger version with both icon + label visible
+  /// — used in the Live panel where horizontal space is generous.
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final desc = descriptorForEngine(engine);
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: dense ? 6 : DexSpace.sm,
+        vertical: dense ? 2 : 4,
+      ),
+      decoration: BoxDecoration(
+        color: desc.color.withValues(alpha: 0.12),
+        borderRadius: DexRadius.rsm,
+        border: Border.all(color: desc.color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(desc.icon, size: dense ? 10 : 14, color: desc.color),
+          const SizedBox(width: 4),
+          Text(
+            desc.label,
+            style: DexType.mono(color: desc.color),
+            semanticsLabel: 'engine: ${desc.label}',
+          ),
+        ],
+      ),
+    );
   }
 }

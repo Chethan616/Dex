@@ -273,6 +273,7 @@ class _LivePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final preview = store.pending;
+    final runningChip = store.runningEngineChip;
     return Container(
       color: DexColors.bg,
       padding: const EdgeInsets.all(DexSpace.lg),
@@ -281,15 +282,60 @@ class _LivePanel extends StatelessWidget {
         children: [
           Text('Live', style: DexType.caption(color: DexColors.textFaint)),
           const SizedBox(height: DexSpace.sm),
-          if (preview == null)
-            _CollapsedLive(state: store.state)
-          else
+          if (preview != null)
             ActionPreviewCard(
               preview: preview,
               onApprove: store.approve,
               onDeny: store.deny,
-            ),
+            )
+          else if (runningChip != null && runningChip.engine != null)
+            _RunningEngineCard(message: runningChip)
+          else
+            _CollapsedLive(state: store.state),
           const Spacer(),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Currently routing through engine X" — the Live panel's running-state
+/// surface. Renders the EnginePill in its non-dense form plus the goal
+/// label that's being driven. C.7-flutter ships this; v1.2 will grow it
+/// into a full LiveEntry list.
+class _RunningEngineCard extends StatelessWidget {
+  const _RunningEngineCard({required this.message});
+  final Message message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(DexSpace.lg),
+      decoration: BoxDecoration(
+        color: DexColors.surface,
+        borderRadius: DexRadius.rmd,
+        border: Border.all(color: DexColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Running',
+                style: DexType.caption(color: DexColors.textDim),
+              ),
+              const Spacer(),
+              EnginePill(engine: message.engine!, dense: false),
+            ],
+          ),
+          const SizedBox(height: DexSpace.sm),
+          Text(
+            message.toolGoal ?? '',
+            style: DexType.mono(color: DexColors.text),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
