@@ -15,7 +15,8 @@ __pycache__/
 *$py.class
 .venv/
 venv/
-env/
+# (removed bare `env/` rule -- it was catching source dirs like
+#  core/src/env/. Python venv users should use .venv/ or venv/.)
 *.egg-info/
 
 # --- node ---
