@@ -1,6 +1,6 @@
 import {
   DEFAULT_ACCOUNT_ID,
-  type OpenClawConfig as ClawdbotConfig,
+  type DexConfig as ClawdbotConfig,
   createAccountListHelpers,
   hasConfiguredAccountValue,
   normalizeAccountId,

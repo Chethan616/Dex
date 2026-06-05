@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 /** Canonical Gateway config paths whose values may be plaintext or secret refs. */
 export type SupportedGatewaySecretInputPath =
@@ -24,7 +24,7 @@ export function isSupportedGatewaySecretInputPath(
 
 /** Read a Gateway secret input without assuming whether it is plaintext, a ref, or absent. */
 export function readGatewaySecretInputValue(
-  config: OpenClawConfig,
+  config: DexConfig,
   path: SupportedGatewaySecretInputPath,
 ): unknown {
   if (path === "gateway.auth.token") {
@@ -41,7 +41,7 @@ export function readGatewaySecretInputValue(
 
 /** Replace one Gateway secret input with its resolved plaintext value on a cloned config. */
 export function assignResolvedGatewaySecretInput(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   path: SupportedGatewaySecretInputPath;
   value: string | undefined;
 }): void {

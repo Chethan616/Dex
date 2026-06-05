@@ -18,11 +18,11 @@ function quotePowerShellSingleQuotedLiteral(value: string): string {
 }
 
 function resolveWindowsTaskName(env: NodeJS.ProcessEnv): string {
-  const override = env.OPENCLAW_WINDOWS_TASK_NAME?.trim();
+  const override = env.DEX_WINDOWS_TASK_NAME?.trim();
   if (override) {
     return override;
   }
-  return resolveGatewayWindowsTaskName(env.OPENCLAW_PROFILE);
+  return resolveGatewayWindowsTaskName(env.DEX_PROFILE);
 }
 
 function buildScheduledTaskRestartScript(params: {

@@ -6,14 +6,14 @@ import { getChatChannelMeta, normalizeChatChannelId } from "../channels/registry
 import type { PluginManifestRegistry } from "../plugins/manifest-registry.js";
 import { isRecord, resolveConfigDir, resolveUserPath } from "../utils.js";
 import type { PluginAutoEnableCandidate } from "./plugin-auto-enable.types.js";
-import type { OpenClawConfig } from "./types.openclaw.js";
+import type { DexConfig } from "./types.openclaw.js";
 
 type ExternalCatalogChannelEntry = {
   id: string;
   preferOver: string[];
 };
 
-const ENV_CATALOG_PATHS = ["OPENCLAW_PLUGIN_CATALOG_PATHS", "OPENCLAW_MPM_CATALOG_PATHS"];
+const ENV_CATALOG_PATHS = ["DEX_PLUGIN_CATALOG_PATHS", "DEX_MPM_CATALOG_PATHS"];
 
 function splitEnvPaths(value: string): string[] {
   const trimmed = normalizeOptionalString(value) ?? "";
@@ -127,13 +127,13 @@ function getPluginAutoEnableCandidateCacheKey(candidate: PluginAutoEnableCandida
 }
 
 export function shouldSkipPreferredPluginAutoEnable(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   entry: PluginAutoEnableCandidate;
   configured: readonly PluginAutoEnableCandidate[];
   env: NodeJS.ProcessEnv;
   registry: PluginManifestRegistry;
-  isPluginDenied: (config: OpenClawConfig, pluginId: string) => boolean;
-  isPluginExplicitlyDisabled: (config: OpenClawConfig, pluginId: string) => boolean;
+  isPluginDenied: (config: DexConfig, pluginId: string) => boolean;
+  isPluginExplicitlyDisabled: (config: DexConfig, pluginId: string) => boolean;
   preferOverCache: Map<string, string[]>;
 }): boolean {
   const getPreferredOverIds = (candidate: PluginAutoEnableCandidate): string[] => {

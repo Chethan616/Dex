@@ -5,7 +5,7 @@ import path from "node:path";
 import { isRecord as hasRecord } from "@dexagent/normalization-core/record-coerce";
 import { normalizeOptionalLowercaseString as normalizeString } from "@dexagent/normalization-core/string-coerce";
 import { collectConfiguredAgentHarnessRuntimes } from "../../../agents/harness-runtimes.js";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 
 export type CodexNativeAssetHit = {
   kind: "skill" | "plugin" | "config" | "hooks";
@@ -107,11 +107,11 @@ async function discoverPluginHits(root: string): Promise<CodexNativeAssetHit[]> 
   return [...hits.values()];
 }
 
-function isCodexRuntimeConfigured(cfg: OpenClawConfig, _env: NodeJS.ProcessEnv): boolean {
+function isCodexRuntimeConfigured(cfg: DexConfig, _env: NodeJS.ProcessEnv): boolean {
   return collectConfiguredAgentHarnessRuntimes(cfg).includes("codex");
 }
 
-function isCodexPluginConfigured(cfg: OpenClawConfig): boolean {
+function isCodexPluginConfigured(cfg: DexConfig): boolean {
   const plugins = cfg.plugins;
   if (plugins?.enabled === false) {
     return false;
@@ -127,12 +127,12 @@ function isCodexPluginConfigured(cfg: OpenClawConfig): boolean {
   return hasRecord(plugins?.entries?.codex) && plugins.entries.codex.enabled !== false;
 }
 
-function shouldScanCodexNativeAssets(cfg: OpenClawConfig, env: NodeJS.ProcessEnv): boolean {
+function shouldScanCodexNativeAssets(cfg: DexConfig, env: NodeJS.ProcessEnv): boolean {
   return isCodexRuntimeConfigured(cfg, env) || isCodexPluginConfigured(cfg);
 }
 
 export async function scanCodexNativeAssets(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
 }): Promise<CodexNativeAssetHit[]> {
   const env = params.env ?? process.env;
@@ -176,7 +176,7 @@ function plural(count: number, singular: string): string {
 }
 
 export async function collectCodexNativeAssetInfoNotes(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
 }): Promise<string[]> {
   const env = params.env ?? process.env;

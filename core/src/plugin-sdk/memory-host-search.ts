@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { RegisteredMemorySearchManager } from "../plugins/memory-state.js";
 
 type ActiveMemorySearchPurpose = "default" | "status";
@@ -15,7 +15,7 @@ async function loadMemoryHostSearchRuntime(): Promise<MemoryHostSearchRuntimeMod
 }
 
 export async function getActiveMemorySearchManager(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   purpose?: ActiveMemorySearchPurpose;
 }): Promise<ActiveMemorySearchManagerResult> {
@@ -23,13 +23,13 @@ export async function getActiveMemorySearchManager(params: {
   return await runtime.getActiveMemorySearchManager(params);
 }
 
-export async function closeActiveMemorySearchManagers(cfg?: OpenClawConfig): Promise<void> {
+export async function closeActiveMemorySearchManagers(cfg?: DexConfig): Promise<void> {
   const runtime = await loadMemoryHostSearchRuntime();
   await runtime.closeActiveMemorySearchManagers(cfg);
 }
 
 export async function closeActiveMemorySearchManager(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
 }): Promise<void> {
   const runtime = await loadMemoryHostSearchRuntime();

@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import type { FailoverReason } from "../embedded-agent-helpers/types.js";
 import { buildProviderAuthRecoveryHint } from "../provider-auth-recovery-hint.js";
@@ -20,7 +20,7 @@ export type AuthProfileFailureCopyParams = {
    * structured recovery copy applies.
    */
   cause?: unknown;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
 };

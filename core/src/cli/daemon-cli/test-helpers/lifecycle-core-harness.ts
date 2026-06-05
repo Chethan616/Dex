@@ -57,6 +57,6 @@ export function resetLifecycleServiceMocks() {
 
 export function stubEmptyGatewayEnv() {
   vi.unstubAllEnvs();
-  vi.stubEnv("OPENCLAW_GATEWAY_TOKEN", "");
-  vi.stubEnv("OPENCLAW_GATEWAY_URL", "");
+  vi.stubEnv("DEX_GATEWAY_TOKEN", "");
+  vi.stubEnv("DEX_GATEWAY_URL", "");
 }

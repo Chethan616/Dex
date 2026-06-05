@@ -1,11 +1,11 @@
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 import type { ProviderTransformSystemPromptContext } from "../../../plugins/types.js";
 import { buildEmbeddedSystemPrompt } from "../system-prompt.js";
 
 type EmbeddedSystemPromptParams = Parameters<typeof buildEmbeddedSystemPrompt>[0];
 type ProviderSystemPromptTransform = (params: {
   provider: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir: string;
   context: ProviderTransformSystemPromptContext;
 }) => string;
@@ -16,7 +16,7 @@ export type BuildAttemptSystemPromptParams = {
   transformProviderSystemPrompt: ProviderSystemPromptTransform;
   providerTransform: {
     provider: string;
-    config?: OpenClawConfig;
+    config?: DexConfig;
     workspaceDir: string;
     context: Omit<ProviderTransformSystemPromptContext, "systemPrompt">;
   };

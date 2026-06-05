@@ -75,7 +75,7 @@ export function formatGatewayCommandFailure(params: {
     .replace(/\s+/g, " ")
     .trim()
     .replace(/[.。]+$/u, "");
-  const inspectCommand = params.inspectCommand ?? "dex-core gateway status --deep";
+  const inspectCommand = params.inspectCommand ?? "dex gateway status --deep";
   const detail = message ? `: ${message}` : "";
   return `Could not ${params.action} because the Gateway did not respond${detail}. Run ${formatInlineCliCommand(
     inspectCommand,

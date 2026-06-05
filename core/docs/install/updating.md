@@ -48,7 +48,7 @@ See [Development channels](/install/development-channels) for channel semantics.
 ## Switch between npm and git installs
 
 Use channels when you want to change the install type. The updater keeps your
-state, config, credentials, and workspace in `~/.openclaw`; it only changes
+state, config, credentials, and workspace in `~/.dex`; it only changes
 which OpenClaw code install the CLI and gateway use.
 
 ```bash
@@ -185,7 +185,7 @@ bun add -g openclaw@latest
 
 ## Auto-updater
 
-The auto-updater is off by default. Enable it in `~/.openclaw/openclaw.json`:
+The auto-updater is off by default. Enable it in `~/.dex/openclaw.json`:
 
 ```json5
 {
@@ -208,7 +208,7 @@ The auto-updater is off by default. Enable it in `~/.openclaw/openclaw.json`:
 | `dev`    | No automatic apply. Use `openclaw update` manually.                                                           |
 
 The gateway also logs an update hint on startup (disable with `update.checkOnStart: false`).
-For downgrade or incident recovery, set `OPENCLAW_NO_AUTO_UPDATE=1` in the gateway environment to block automatic applies even when `update.auto.enabled` is configured. Startup update hints can still run unless `update.checkOnStart` is also disabled.
+For downgrade or incident recovery, set `DEX_NO_AUTO_UPDATE=1` in the gateway environment to block automatic applies even when `update.auto.enabled` is configured. Startup update hints can still run unless `update.checkOnStart` is also disabled.
 
 Package-manager updates requested through the live Gateway control-plane handler
 do not replace the package tree inside the running Gateway process. On managed

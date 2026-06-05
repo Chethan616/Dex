@@ -7,12 +7,12 @@ const REQUEST_LOG_PREVIEW_CHARS = 4096;
 export function readMockOpenAiHttpLimits(env = process.env) {
   return {
     requestMaxBytes: readPositiveIntEnv(
-      "OPENCLAW_MOCK_OPENAI_REQUEST_MAX_BYTES",
+      "DEX_MOCK_OPENAI_REQUEST_MAX_BYTES",
       DEFAULT_REQUEST_MAX_BYTES,
       env,
     ),
     requestLogBodyMaxBytes: readPositiveIntEnv(
-      "OPENCLAW_MOCK_OPENAI_REQUEST_LOG_BODY_MAX_BYTES",
+      "DEX_MOCK_OPENAI_REQUEST_LOG_BODY_MAX_BYTES",
       DEFAULT_REQUEST_LOG_BODY_MAX_BYTES,
       env,
     ),

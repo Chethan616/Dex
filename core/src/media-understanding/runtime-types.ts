@@ -1,5 +1,5 @@
 import type { AuthProfileStore } from "../agents/auth-profiles/types.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import type { ActiveMediaModel } from "./active-model.types.js";
 import type {
   MediaUnderstandingDecision,
@@ -12,7 +12,7 @@ export type RunMediaUnderstandingFileParams = {
   capability: "image" | "audio" | "video";
   filePath: string;
   mediaUrl?: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir?: string;
   workspaceDir?: string;
   mime?: string;
@@ -39,7 +39,7 @@ export type RunMediaUnderstandingFileResult = {
 export type DescribeImageFileParams = {
   filePath: string;
   mediaUrl?: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir?: string;
   workspaceDir?: string;
   mime?: string;
@@ -52,7 +52,7 @@ export type DescribeImageFileParams = {
 export type DescribeImageFileWithModelParams = {
   filePath: string;
   mediaUrl?: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir?: string;
   workspaceDir?: string;
   mime?: string;
@@ -74,7 +74,7 @@ export type ExtractStructuredWithModelParams = {
   schemaName?: string;
   jsonSchema?: unknown;
   jsonMode?: boolean;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir?: string;
   provider: string;
   model: string;
@@ -90,7 +90,7 @@ type ExtractStructuredWithModelResult = Awaited<
 
 export type DescribeVideoFileParams = {
   filePath: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir?: string;
   workspaceDir?: string;
   mime?: string;
@@ -99,7 +99,7 @@ export type DescribeVideoFileParams = {
 
 export type TranscribeAudioFileParams = {
   filePath: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir?: string;
   workspaceDir?: string;
   mime?: string;

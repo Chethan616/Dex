@@ -92,8 +92,8 @@ sessions should expire on a timer.
 All session state is owned by the **gateway**. UI clients query the gateway for
 session data.
 
-- **Store:** `~/.openclaw/agents/<agentId>/sessions/sessions.json`
-- **Transcripts:** `~/.openclaw/agents/<agentId>/sessions/<sessionId>.jsonl`
+- **Store:** `~/.dex/agents/<agentId>/sessions/sessions.json`
+- **Transcripts:** `~/.dex/agents/<agentId>/sessions/<sessionId>.jsonl`
 
 `sessions.json` keeps separate lifecycle timestamps:
 

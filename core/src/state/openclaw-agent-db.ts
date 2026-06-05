@@ -10,35 +10,35 @@ import { requireNodeSqlite } from "../infra/node-sqlite.js";
 import { runSqliteImmediateTransactionSync } from "../infra/sqlite-transaction.js";
 import { configureSqliteWalMaintenance, type SqliteWalMaintenance } from "../infra/sqlite-wal.js";
 import { normalizeAgentId } from "../routing/session-key.js";
-import type { DB as OpenClawAgentKyselyDatabase } from "./openclaw-agent-db.generated.js";
+import type { DB as DexAgentKyselyDatabase } from "./openclaw-agent-db.generated.js";
 import { resolveOpenClawAgentSqlitePath } from "./openclaw-agent-db.paths.js";
-import { OPENCLAW_AGENT_SCHEMA_SQL } from "./openclaw-agent-schema.generated.js";
-import type { DB as OpenClawStateKyselyDatabase } from "./openclaw-state-db.generated.js";
+import { DEX_AGENT_SCHEMA_SQL } from "./openclaw-agent-schema.generated.js";
+import type { DB as DexStateKyselyDatabase } from "./openclaw-state-db.generated.js";
 import {
-  OPENCLAW_SQLITE_BUSY_TIMEOUT_MS,
-  openOpenClawStateDatabase,
+  DEX_SQLITE_BUSY_TIMEOUT_MS,
+  openDexStateDatabase,
   runOpenClawStateWriteTransaction,
-  type OpenClawStateDatabaseOptions,
+  type DexStateDatabaseOptions,
 } from "./openclaw-state-db.js";
 export { resolveOpenClawAgentSqlitePath } from "./openclaw-agent-db.paths.js";
 
-const OPENCLAW_AGENT_SCHEMA_VERSION = 1;
-const OPENCLAW_AGENT_DB_DIR_MODE = 0o700;
-const OPENCLAW_AGENT_DB_FILE_MODE = 0o600;
-const OPENCLAW_AGENT_DB_SIDECAR_SUFFIXES = ["", "-shm", "-wal"] as const;
+const DEX_AGENT_SCHEMA_VERSION = 1;
+const DEX_AGENT_DB_DIR_MODE = 0o700;
+const DEX_AGENT_DB_FILE_MODE = 0o600;
+const DEX_AGENT_DB_SIDECAR_SUFFIXES = ["", "-shm", "-wal"] as const;
 
-export type OpenClawAgentDatabase = {
+export type DexAgentDatabase = {
   agentId: string;
   db: DatabaseSync;
   path: string;
   walMaintenance: SqliteWalMaintenance;
 };
 
-export type OpenClawAgentDatabaseOptions = OpenClawStateDatabaseOptions & {
+export type DexAgentDatabaseOptions = DexStateDatabaseOptions & {
   agentId: string;
 };
 
-export type OpenClawRegisteredAgentDatabase = {
+export type DexRegisteredAgentDatabase = {
   agentId: string;
   path: string;
   schemaVersion: number;
@@ -46,10 +46,10 @@ export type OpenClawRegisteredAgentDatabase = {
   sizeBytes: number | null;
 };
 
-type OpenClawAgentMetadataDatabase = Pick<OpenClawAgentKyselyDatabase, "schema_meta">;
-type OpenClawAgentRegistryDatabase = Pick<OpenClawStateKyselyDatabase, "agent_databases">;
+type DexAgentMetadataDatabase = Pick<DexAgentKyselyDatabase, "schema_meta">;
+type DexAgentRegistryDatabase = Pick<DexStateKyselyDatabase, "agent_databases">;
 
-const cachedDatabases = new Map<string, OpenClawAgentDatabase>();
+const cachedDatabases = new Map<string, DexAgentDatabase>();
 
 type ExistingSchemaMeta = {
   agentId: string | null;
@@ -63,16 +63,16 @@ function readSqliteUserVersion(db: DatabaseSync): number {
 
 function assertSupportedAgentSchemaVersion(db: DatabaseSync, pathname: string): void {
   const userVersion = readSqliteUserVersion(db);
-  if (userVersion > OPENCLAW_AGENT_SCHEMA_VERSION) {
+  if (userVersion > DEX_AGENT_SCHEMA_VERSION) {
     throw new Error(
-      `OpenClaw agent database ${pathname} uses newer schema version ${userVersion}; this OpenClaw build supports ${OPENCLAW_AGENT_SCHEMA_VERSION}.`,
+      `OpenClaw agent database ${pathname} uses newer schema version ${userVersion}; this OpenClaw build supports ${DEX_AGENT_SCHEMA_VERSION}.`,
     );
   }
 }
 
-function ensureOpenClawAgentDatabasePermissions(
+function ensureDexAgentDatabasePermissions(
   pathname: string,
-  options: OpenClawAgentDatabaseOptions,
+  options: DexAgentDatabaseOptions,
 ): void {
   const dir = path.dirname(pathname);
   const defaultPath = resolveOpenClawAgentSqlitePath({
@@ -81,14 +81,14 @@ function ensureOpenClawAgentDatabasePermissions(
   });
   const isDefaultAgentDatabase = path.resolve(pathname) === path.resolve(defaultPath);
   const dirExisted = existsSync(dir);
-  mkdirSync(dir, { recursive: true, mode: OPENCLAW_AGENT_DB_DIR_MODE });
+  mkdirSync(dir, { recursive: true, mode: DEX_AGENT_DB_DIR_MODE });
   if (isDefaultAgentDatabase || !dirExisted) {
-    chmodSync(dir, OPENCLAW_AGENT_DB_DIR_MODE);
+    chmodSync(dir, DEX_AGENT_DB_DIR_MODE);
   }
-  for (const suffix of OPENCLAW_AGENT_DB_SIDECAR_SUFFIXES) {
+  for (const suffix of DEX_AGENT_DB_SIDECAR_SUFFIXES) {
     const candidate = `${pathname}${suffix}`;
     if (existsSync(candidate)) {
-      chmodSync(candidate, OPENCLAW_AGENT_DB_FILE_MODE);
+      chmodSync(candidate, DEX_AGENT_DB_FILE_MODE);
     }
   }
 }
@@ -138,9 +138,9 @@ function assertExistingSchemaOwner(
 function ensureAgentSchema(db: DatabaseSync, agentId: string, pathname: string): void {
   assertSupportedAgentSchemaVersion(db, pathname);
   assertExistingSchemaOwner(readExistingSchemaMeta(db), agentId, pathname);
-  db.exec(OPENCLAW_AGENT_SCHEMA_SQL);
-  const kysely = getNodeSqliteKysely<OpenClawAgentMetadataDatabase>(db);
-  db.exec(`PRAGMA user_version = ${OPENCLAW_AGENT_SCHEMA_VERSION};`);
+  db.exec(DEX_AGENT_SCHEMA_SQL);
+  const kysely = getNodeSqliteKysely<DexAgentMetadataDatabase>(db);
+  db.exec(`PRAGMA user_version = ${DEX_AGENT_SCHEMA_VERSION};`);
   const now = Date.now();
   executeSqliteQuerySync(
     db,
@@ -149,7 +149,7 @@ function ensureAgentSchema(db: DatabaseSync, agentId: string, pathname: string):
       .values({
         meta_key: "primary",
         role: "agent",
-        schema_version: OPENCLAW_AGENT_SCHEMA_VERSION,
+        schema_version: DEX_AGENT_SCHEMA_VERSION,
         agent_id: agentId,
         app_version: null,
         created_at: now,
@@ -158,7 +158,7 @@ function ensureAgentSchema(db: DatabaseSync, agentId: string, pathname: string):
       .onConflict((conflict) =>
         conflict.column("meta_key").doUpdateSet({
           role: "agent",
-          schema_version: OPENCLAW_AGENT_SCHEMA_VERSION,
+          schema_version: DEX_AGENT_SCHEMA_VERSION,
           agent_id: agentId,
           app_version: null,
           updated_at: now,
@@ -181,7 +181,7 @@ function registerAgentDatabase(params: {
   const lastSeenAt = Date.now();
   runOpenClawStateWriteTransaction(
     (database) => {
-      const db = getNodeSqliteKysely<OpenClawAgentRegistryDatabase>(database.db);
+      const db = getNodeSqliteKysely<DexAgentRegistryDatabase>(database.db);
       executeSqliteQuerySync(
         database.db,
         db
@@ -189,13 +189,13 @@ function registerAgentDatabase(params: {
           .values({
             agent_id: params.agentId,
             path: params.path,
-            schema_version: OPENCLAW_AGENT_SCHEMA_VERSION,
+            schema_version: DEX_AGENT_SCHEMA_VERSION,
             last_seen_at: lastSeenAt,
             size_bytes: sizeBytes,
           })
           .onConflict((conflict) =>
             conflict.columns(["agent_id", "path"]).doUpdateSet({
-              schema_version: OPENCLAW_AGENT_SCHEMA_VERSION,
+              schema_version: DEX_AGENT_SCHEMA_VERSION,
               last_seen_at: lastSeenAt,
               size_bytes: sizeBytes,
             }),
@@ -206,11 +206,11 @@ function registerAgentDatabase(params: {
   );
 }
 
-export function listOpenClawRegisteredAgentDatabases(
-  options: OpenClawStateDatabaseOptions = {},
-): OpenClawRegisteredAgentDatabase[] {
-  const database = openOpenClawStateDatabase(options);
-  const db = getNodeSqliteKysely<OpenClawAgentRegistryDatabase>(database.db);
+export function listDexRegisteredAgentDatabases(
+  options: DexStateDatabaseOptions = {},
+): DexRegisteredAgentDatabase[] {
+  const database = openDexStateDatabase(options);
+  const db = getNodeSqliteKysely<DexAgentRegistryDatabase>(database.db);
   const rows = executeSqliteQuerySync(
     database.db,
     db.selectFrom("agent_databases").selectAll().orderBy("agent_id", "asc").orderBy("path", "asc"),
@@ -224,9 +224,9 @@ export function listOpenClawRegisteredAgentDatabases(
   }));
 }
 
-export function openOpenClawAgentDatabase(
-  options: OpenClawAgentDatabaseOptions,
-): OpenClawAgentDatabase {
+export function openDexAgentDatabase(
+  options: DexAgentDatabaseOptions,
+): DexAgentDatabase {
   const agentId = normalizeAgentId(options.agentId);
   const databaseOptions = { ...options, agentId };
   const pathname = resolveOpenClawAgentSqlitePath(databaseOptions);
@@ -246,7 +246,7 @@ export function openOpenClawAgentDatabase(
     cachedDatabases.delete(pathname);
   }
 
-  ensureOpenClawAgentDatabasePermissions(pathname, databaseOptions);
+  ensureDexAgentDatabasePermissions(pathname, databaseOptions);
   const sqlite = requireNodeSqlite();
   const db = new sqlite.DatabaseSync(pathname);
   const walMaintenance = configureSqliteWalMaintenance(db, {
@@ -254,7 +254,7 @@ export function openOpenClawAgentDatabase(
     databasePath: pathname,
   });
   db.exec("PRAGMA synchronous = NORMAL;");
-  db.exec(`PRAGMA busy_timeout = ${OPENCLAW_SQLITE_BUSY_TIMEOUT_MS};`);
+  db.exec(`PRAGMA busy_timeout = ${DEX_SQLITE_BUSY_TIMEOUT_MS};`);
   db.exec("PRAGMA foreign_keys = ON;");
   try {
     ensureAgentSchema(db, agentId, pathname);
@@ -263,7 +263,7 @@ export function openOpenClawAgentDatabase(
     db.close();
     throw err;
   }
-  ensureOpenClawAgentDatabasePermissions(pathname, databaseOptions);
+  ensureDexAgentDatabasePermissions(pathname, databaseOptions);
   const database = { agentId, db, path: pathname, walMaintenance };
   cachedDatabases.set(pathname, database);
   registerAgentDatabase({ agentId, path: pathname, env: options.env });
@@ -271,16 +271,16 @@ export function openOpenClawAgentDatabase(
 }
 
 export function runOpenClawAgentWriteTransaction<T>(
-  operation: (database: OpenClawAgentDatabase) => T,
-  options: OpenClawAgentDatabaseOptions,
+  operation: (database: DexAgentDatabase) => T,
+  options: DexAgentDatabaseOptions,
 ): T {
-  const database = openOpenClawAgentDatabase(options);
+  const database = openDexAgentDatabase(options);
   const result = runSqliteImmediateTransactionSync(database.db, () => operation(database));
-  ensureOpenClawAgentDatabasePermissions(database.path, options);
+  ensureDexAgentDatabasePermissions(database.path, options);
   return result;
 }
 
-export function closeOpenClawAgentDatabasesForTest(): void {
+export function closeDexAgentDatabasesForTest(): void {
   for (const database of cachedDatabases.values()) {
     database.walMaintenance.close();
     clearNodeSqliteKyselyCacheForDatabase(database.db);

@@ -19,7 +19,7 @@ import {
   uiProtocolFreshnessIssueToRepairEffects,
 } from "../commands/doctor-ui.js";
 import { collectDisabledCodexPluginRouteIssues } from "../commands/doctor/shared/codex-route-warnings.js";
-import type { ConfigValidationIssue, OpenClawConfig } from "../config/types.openclaw.js";
+import type { ConfigValidationIssue, DexConfig } from "../config/types.openclaw.js";
 import { resolveSecretInputRef, type SecretRef } from "../config/types.secrets.js";
 import { hasAmbiguousGatewayAuthModeConfig } from "../gateway/auth-mode-policy.js";
 import { resolveGatewayAuthToken } from "../gateway/auth-token-resolution.js";
@@ -38,8 +38,8 @@ const loadDoctorCoreChecksRuntimeModule = async () =>
 const loadDoctorWorkspaceModule = async () => await import("../commands/doctor-workspace.js");
 
 export type CoreHealthCheckDeps = {
-  readonly detectUnavailableSkills: (cfg: OpenClawConfig) => Promise<readonly SkillStatusEntry[]>;
-  readonly collectSecurityWarnings: (cfg: OpenClawConfig) => Promise<readonly string[]>;
+  readonly detectUnavailableSkills: (cfg: DexConfig) => Promise<readonly SkillStatusEntry[]>;
+  readonly collectSecurityWarnings: (cfg: DexConfig) => Promise<readonly string[]>;
   readonly collectWorkspaceSuggestionNotes: (workspaceDir: string) => Promise<readonly string[]>;
   readonly collectRuntimeToolSchemaFindings: (
     ctx: HealthCheckContext,
@@ -50,13 +50,13 @@ export type CoreHealthCheckDeps = {
 };
 
 async function detectUnavailableSkillsWithRuntime(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): Promise<readonly SkillStatusEntry[]> {
   const runtime = await loadDoctorCoreChecksRuntimeModule();
   return runtime.detectUnavailableSkills(cfg);
 }
 
-async function collectSecurityWarningsWithRuntime(cfg: OpenClawConfig): Promise<readonly string[]> {
+async function collectSecurityWarningsWithRuntime(cfg: DexConfig): Promise<readonly string[]> {
   const { collectSecurityWarnings } = await import("../commands/doctor-security.js");
   return collectSecurityWarnings(cfg);
 }
@@ -167,12 +167,12 @@ const commandOwnerCheck: HealthCheck = {
   },
 };
 
-function resolveDoctorMode(cfg: OpenClawConfig): "local" | "remote" {
+function resolveDoctorMode(cfg: DexConfig): "local" | "remote" {
   return cfg.gateway?.mode === "remote" ? "remote" : "local";
 }
 
 export function buildGatewayTokenSecretRefUnavailableMessage(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   ref: SecretRef;
   unresolvedRefReason?: string;
 }): string {

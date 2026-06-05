@@ -13,7 +13,7 @@ const SOURCE_CONFIG_PATH = path.join(SOURCE_DOCS_DIR, "docs.json");
 const INTERNAL_DOCS_DIRS = ["internal"];
 const DEFAULT_CLAWHUB_SOURCE_REPO = "openclaw/clawhub";
 const CLAWHUB_DOCS_TARGET_DIR = "clawhub";
-const CLAWHUB_REPO_ENV = "OPENCLAW_DOCS_SYNC_CLAWHUB_REPO";
+const CLAWHUB_REPO_ENV = "DEX_DOCS_SYNC_CLAWHUB_REPO";
 const DEFAULT_CLAWHUB_REPO_CANDIDATES = [
   path.resolve(ROOT, "..", "clawhub-docs-clawhub"),
   path.resolve(ROOT, "..", "clawhub"),
@@ -176,8 +176,8 @@ function parseArgs(argv) {
     sourceSha: "",
     clawhubRepo: process.env[CLAWHUB_REPO_ENV] || "",
     clawhubSourceRepo:
-      process.env.OPENCLAW_DOCS_SYNC_CLAWHUB_SOURCE_REPO || DEFAULT_CLAWHUB_SOURCE_REPO,
-    clawhubSourceSha: process.env.OPENCLAW_DOCS_SYNC_CLAWHUB_SOURCE_SHA || "",
+      process.env.DEX_DOCS_SYNC_CLAWHUB_SOURCE_REPO || DEFAULT_CLAWHUB_SOURCE_REPO,
+    clawhubSourceSha: process.env.DEX_DOCS_SYNC_CLAWHUB_SOURCE_SHA || "",
   };
 
   for (let index = 0; index < argv.length; index += 1) {

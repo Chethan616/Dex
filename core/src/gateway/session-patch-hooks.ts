@@ -1,6 +1,6 @@
 import type { SessionsPatchParams } from "../../packages/gateway-protocol/src/index.js";
 import type { SessionEntry } from "../config/sessions.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   hasInternalHookListeners,
   triggerInternalHook,
@@ -9,7 +9,7 @@ import {
 } from "../hooks/internal-hooks.js";
 
 export function triggerSessionPatchHook(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionEntry: SessionEntry;
   sessionKey: string;
   patch: SessionsPatchParams;

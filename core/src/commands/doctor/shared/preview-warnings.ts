@@ -11,7 +11,7 @@ import {
 } from "../../../agents/tool-policy-match.js";
 import { mergeAlsoAllowPolicy, resolveToolProfilePolicy } from "../../../agents/tool-policy.js";
 import { resolveAgentModelPrimaryValue } from "../../../config/model-input.js";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 import type { AgentToolsConfig, ToolsConfig } from "../../../config/types.tools.js";
 import { collectChannelRouteTargets } from "../../../routing/channel-route-targets.js";
 import { createLazyImportLoader } from "../../../shared/lazy-promise.js";
@@ -26,19 +26,19 @@ function loadChannelDoctorModule(): Promise<ChannelDoctorModule> {
   return channelDoctorModuleLoader.load();
 }
 
-function listAgentRecords(cfg: OpenClawConfig): Record<string, unknown>[] {
+function listAgentRecords(cfg: DexConfig): Record<string, unknown>[] {
   return Array.isArray(cfg.agents?.list) ? cfg.agents.list.filter(hasRecord) : [];
 }
 
-function hasChannels(cfg: OpenClawConfig): boolean {
+function hasChannels(cfg: DexConfig): boolean {
   return hasRecord(cfg.channels);
 }
 
-function hasPlugins(cfg: OpenClawConfig): boolean {
+function hasPlugins(cfg: DexConfig): boolean {
   return hasRecord(cfg.plugins);
 }
 
-function hasPluginLoadPaths(cfg: OpenClawConfig): boolean {
+function hasPluginLoadPaths(cfg: DexConfig): boolean {
   const plugins = cfg.plugins;
   if (!hasRecord(plugins)) {
     return false;
@@ -47,7 +47,7 @@ function hasPluginLoadPaths(cfg: OpenClawConfig): boolean {
   return hasRecord(load) && Array.isArray(load.paths) && load.paths.length > 0;
 }
 
-function hasSubagentAllowlistConfig(cfg: OpenClawConfig): boolean {
+function hasSubagentAllowlistConfig(cfg: DexConfig): boolean {
   if (Array.isArray(cfg.agents?.defaults?.subagents?.allowAgents)) {
     return true;
   }
@@ -57,7 +57,7 @@ function hasSubagentAllowlistConfig(cfg: OpenClawConfig): boolean {
   });
 }
 
-function hasExplicitChannelPluginBlockerConfig(cfg: OpenClawConfig): boolean {
+function hasExplicitChannelPluginBlockerConfig(cfg: DexConfig): boolean {
   if (cfg.plugins?.enabled === false) {
     return true;
   }
@@ -85,7 +85,7 @@ function hasToolsBySenderKey(value: unknown): boolean {
   );
 }
 
-function hasConfiguredSafeBins(cfg: OpenClawConfig): boolean {
+function hasConfiguredSafeBins(cfg: DexConfig): boolean {
   const globalExec = cfg.tools?.exec;
   if (
     hasRecord(globalExec) &&
@@ -153,7 +153,7 @@ function resolveProviderToolPolicy(params: {
 }
 
 function resolveMessageToolAvailability(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string;
   globalTools?: ToolsConfig;
   agentTools?: AgentToolsConfig;
@@ -202,7 +202,7 @@ function resolveMessageToolAvailability(params: {
 const SOURCE_REPLY_RUNTIME_MESSAGE_ALLOW = ["message"];
 
 function resolvePrimaryModelRef(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   agentModel?: NonNullable<ReturnType<typeof resolveAgentConfig>>["model"],
 ): { provider: string; model: string } {
   const raw =
@@ -218,7 +218,7 @@ function resolvePrimaryModelRef(
 }
 
 function resolveSourceReplyMessageToolAvailability(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string;
   globalTools?: ToolsConfig;
   agentTools?: AgentToolsConfig;
@@ -229,7 +229,7 @@ function resolveSourceReplyMessageToolAvailability(params: {
   });
 }
 
-function sourceReplyRuntimeMayAllowMessageTool(cfg: OpenClawConfig): boolean {
+function sourceReplyRuntimeMayAllowMessageTool(cfg: DexConfig): boolean {
   const groupPolicy = resolveGroupVisibleReplyProvenance(cfg);
   if (groupPolicy.value === "message_tool") {
     return true;
@@ -241,7 +241,7 @@ function sourceReplyRuntimeMayAllowMessageTool(cfg: OpenClawConfig): boolean {
 }
 
 function collectMessageToolUnavailableTargets(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   options: { sourceReplyRuntimeGrant?: boolean } = {},
 ): string[] {
   const agents = listAgentRecords(cfg);
@@ -270,7 +270,7 @@ function collectMessageToolUnavailableTargets(
   });
 }
 
-function resolveGroupVisibleReplyProvenance(cfg: OpenClawConfig): {
+function resolveGroupVisibleReplyProvenance(cfg: DexConfig): {
   path: "messages.groupChat.visibleReplies" | "messages.visibleReplies";
   provenance: VisibleReplyPolicyProvenance;
   value: "automatic" | "message_tool";
@@ -305,7 +305,7 @@ function formatTargets(targets: string[]): string {
   return `${targets.slice(0, 2).join(", ")}, and ${targets.length - 2} more`;
 }
 
-export function collectVisibleReplyToolPolicyWarnings(cfg: OpenClawConfig): string[] {
+export function collectVisibleReplyToolPolicyWarnings(cfg: DexConfig): string[] {
   const groupPolicy = resolveGroupVisibleReplyProvenance(cfg);
   const warnings: string[] = [];
   if (groupPolicy.value === "message_tool") {
@@ -345,7 +345,7 @@ function formatChannelList(channels: string[]): string {
     .join(", ")}, and ${channels.length - 2} more`;
 }
 
-export function collectChannelBoundMessageToolPolicyWarnings(cfg: OpenClawConfig): string[] {
+export function collectChannelBoundMessageToolPolicyWarnings(cfg: DexConfig): string[] {
   return collectChannelRouteTargets(cfg).flatMap((target) => {
     const agentTools = resolveAgentConfig(cfg, target.agentId)?.tools;
     const runtimeMayAllowMessage = sourceReplyRuntimeMayAllowMessageTool(cfg);
@@ -686,7 +686,7 @@ function collectInheritedByProviderConfiguredToolSectionWarnings(params: {
   });
 }
 
-export function collectProfileConfiguredToolSectionWarnings(cfg: OpenClawConfig): string[] {
+export function collectProfileConfiguredToolSectionWarnings(cfg: DexConfig): string[] {
   const warnings: string[] = [];
   const globalTools = hasRecord(cfg.tools) ? cfg.tools : undefined;
   const globalAlsoAllow = Array.isArray(globalTools?.alsoAllow)
@@ -759,7 +759,7 @@ export type DoctorPreviewNotes = {
 };
 
 export async function collectDoctorPreviewNotes(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   doctorFixCommand: string;
   env?: NodeJS.ProcessEnv;
 }): Promise<DoctorPreviewNotes> {
@@ -960,7 +960,7 @@ export async function collectDoctorPreviewNotes(params: {
 }
 
 export async function collectDoctorPreviewWarnings(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   doctorFixCommand: string;
   env?: NodeJS.ProcessEnv;
 }): Promise<string[]> {

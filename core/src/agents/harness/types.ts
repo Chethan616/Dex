@@ -13,7 +13,7 @@ export type AgentHarnessAttemptParams =
 export type AgentHarnessAttemptResult =
   import("../embedded-agent-runner/run/types.js").EmbeddedRunAttemptResult;
 export type AgentHarnessSideQuestionParams = {
-  cfg: import("../../config/types.openclaw.js").OpenClawConfig;
+  cfg: import("../../config/types.openclaw.js").DexConfig;
   agentDir: string;
   provider: string;
   model: string;

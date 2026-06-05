@@ -1,6 +1,6 @@
 import { getRuntimeConfig } from "../config/io.js";
 import type { SessionEntry } from "../config/sessions/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { normalizeAgentId } from "../routing/session-key.js";
 import { resolvePreferredSessionKeyForSessionIdMatches } from "../sessions/session-id-resolution.js";
 import { resolveTranscriptPathForComparison } from "./session-transcript-path.js";
@@ -14,7 +14,7 @@ const TRANSCRIPT_SESSION_KEY_CACHE = new Map<string, string>();
 const TRANSCRIPT_SESSION_KEY_CACHE_MAX = 256;
 
 function sessionKeyMatchesTranscriptPath(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   store: Record<string, SessionEntry>;
   key: string;
   targetPath: string;

@@ -36,7 +36,7 @@ openclaw backup verify ./2026-03-09T08-00-00.000+08-00-openclaw-backup.tar.gz
 
 `openclaw backup create` plans backup sources from your local OpenClaw install:
 
-- The state directory returned by OpenClaw's local state resolver, usually `~/.openclaw`
+- The state directory returned by OpenClaw's local state resolver, usually `~/.dex`
 - The active config file path
 - The resolved `credentials/` directory when it exists outside the state directory
 - Workspace directories discovered from the current config, unless you pass `--no-include-workspace`

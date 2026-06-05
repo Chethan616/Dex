@@ -10,7 +10,7 @@ import {
   getRuntimeConfigSourceSnapshot,
   selectApplicableRuntimeConfig,
 } from "../config/runtime-snapshot.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { logVerbose } from "../globals.js";
 import { resolveManifestContractOwnerPluginId } from "../plugins/plugin-registry-contributions.js";
 import type {
@@ -48,14 +48,14 @@ export type {
   RuntimeWebSearchToolDefinition,
 } from "./runtime-types.js";
 
-function resolveSearchConfig(cfg?: OpenClawConfig): WebSearchConfig {
+function resolveSearchConfig(cfg?: DexConfig): WebSearchConfig {
   return resolveWebProviderConfig(cfg, "search") as NonNullable<WebSearchConfig> | undefined;
 }
 
 function resolveWebSearchRuntimeConfig(params?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   preferInputConfig?: boolean;
-}): OpenClawConfig | undefined {
+}): DexConfig | undefined {
   if (params?.preferInputConfig && params.config) {
     return params.config;
   }
@@ -91,7 +91,7 @@ function hasEntryCredential(
     | "getCredentialValue"
     | "requiresCredential"
   >,
-  config: OpenClawConfig | undefined,
+  config: DexConfig | undefined,
   search: WebSearchConfig | undefined,
   agentDir?: string,
 ): boolean {
@@ -126,14 +126,14 @@ export function isWebSearchProviderConfigured(params: {
     | "getCredentialValue"
     | "requiresCredential"
   >;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): boolean {
   const config = resolveWebSearchRuntimeConfig({ config: params.config });
   return hasEntryCredential(params.provider, config, resolveSearchConfig(config));
 }
 
 export function listWebSearchProviders(params?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): PluginWebSearchProviderEntry[] {
   const config = resolveWebSearchRuntimeConfig({ config: params?.config });
   return resolveRuntimeWebSearchProviders({
@@ -142,7 +142,7 @@ export function listWebSearchProviders(params?: {
 }
 
 export function listConfiguredWebSearchProviders(params?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): PluginWebSearchProviderEntry[] {
   const config = resolveWebSearchRuntimeConfig({ config: params?.config });
   return resolvePluginWebSearchProviders({
@@ -152,7 +152,7 @@ export function listConfiguredWebSearchProviders(params?: {
 
 export function resolveWebSearchProviderId(params: {
   search?: WebSearchConfig;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   agentDir?: string;
   providers?: PluginWebSearchProviderEntry[];
 }): string {
@@ -231,7 +231,7 @@ function resolveExplicitWebSearchProviderId(params: {
 }
 
 function resolveExplicitWebSearchProviderPluginIds(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   search?: WebSearchConfig;
   runtimeWebSearch?: RuntimeWebSearchMetadata;
   providerId?: string;
@@ -250,7 +250,7 @@ function resolveExplicitWebSearchProviderPluginIds(params: {
 }
 
 function resolveWebSearchProviderLoadScope(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   search?: WebSearchConfig;
   runtimeWebSearch?: RuntimeWebSearchMetadata;
   providerId?: string;
@@ -261,7 +261,7 @@ function resolveWebSearchProviderLoadScope(params: {
 }
 
 type WebSearchRequestContext = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   search?: WebSearchConfig;
   runtimeWebSearch?: RuntimeWebSearchMetadata;
 };

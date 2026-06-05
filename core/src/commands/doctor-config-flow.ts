@@ -2,7 +2,7 @@ import path from "node:path";
 import { note } from "../../packages/terminal-core/src/note.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import { CONFIG_PATH } from "../config/paths.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { callGateway } from "../gateway/call.js";
 import type { RuntimeEnv } from "../runtime.js";
 import {
@@ -31,7 +31,7 @@ function hasLegacyInternalHookHandlers(raw: unknown): boolean {
 }
 
 function collectInvalidHookTransformsDirWarnings(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   configPath: string,
 ): string[] {
   const transformsDir = cfg.hooks?.transformsDir?.trim();
@@ -54,7 +54,7 @@ function collectInvalidHookTransformsDirWarnings(
   ];
 }
 
-function collectConfiguredChannelIds(cfg: OpenClawConfig): string[] {
+function collectConfiguredChannelIds(cfg: DexConfig): string[] {
   const channels =
     cfg.channels && typeof cfg.channels === "object" && !Array.isArray(cfg.channels)
       ? cfg.channels
@@ -116,7 +116,7 @@ export async function loadAndMaybeMigrateDoctorConfig(params: {
   });
   const snapshot = preflight.snapshot;
   const baseCfg = preflight.baseConfig;
-  let cfg: OpenClawConfig = baseCfg;
+  let cfg: DexConfig = baseCfg;
   let candidate = structuredClone(baseCfg);
   let pendingChanges = false;
   let fixHints: string[] = [];

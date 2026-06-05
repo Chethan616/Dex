@@ -266,15 +266,15 @@ jobs:
           install-bun: "false"
 
       - name: Configure Node test resources
-        run: echo "OPENCLAW_VITEST_MAX_WORKERS=2" >> "$GITHUB_ENV"
+        run: echo "DEX_VITEST_MAX_WORKERS=2" >> "$GITHUB_ENV"
 
       - name: Run release-only plugin Node shard
         env:
           NODE_OPTIONS: --max-old-space-size=8192
           OPENCLAW_NODE_TEST_CONFIGS_JSON: ${{ toJson(matrix.configs) }}
           OPENCLAW_NODE_TEST_INCLUDE_PATTERNS_JSON: ${{ toJson(matrix.includePatterns) }}
-          OPENCLAW_VITEST_SHARD_NAME: ${{ matrix.shard_name }}
-          OPENCLAW_TEST_PROJECTS_PARALLEL: "2"
+          DEX_VITEST_SHARD_NAME: ${{ matrix.shard_name }}
+          DEX_TEST_PROJECTS_PARALLEL: "2"
         shell: bash
         run: |
           set -euo pipefail
@@ -298,7 +298,7 @@ jobs:
               `node-test-include-${process.env.GITHUB_JOB ?? "local"}-${Date.now()}.json`,
             );
             writeFileSync(includeFile, JSON.stringify(includePatterns), "utf8");
-            childEnv.OPENCLAW_VITEST_INCLUDE_FILE = includeFile;
+            childEnv.DEX_VITEST_INCLUDE_FILE = includeFile;
           }
 
           const result = spawnSync(
@@ -341,8 +341,8 @@ jobs:
       - name: Run extension shard
         env:
           NODE_OPTIONS: --max-old-space-size=8192
-          OPENCLAW_EXTENSION_BATCH_PARALLEL: 2
-          OPENCLAW_VITEST_MAX_WORKERS: 1
+          DEX_EXTENSION_BATCH_PARALLEL: 2
+          DEX_VITEST_MAX_WORKERS: 1
           OPENCLAW_EXTENSION_BATCH: ${{ matrix.extensions_csv }}
         run: pnpm test:extensions:batch "$OPENCLAW_EXTENSION_BATCH" -- --exclude extensions/codex/src/app-server/run-attempt.test.ts
 
@@ -372,21 +372,21 @@ jobs:
 
       - name: Run plugin inspector advisory sweep
         env:
-          OPENCLAW_PLUGIN_INSPECTOR_VERSION: "0.3.10"
-          OPENCLAW_PLUGIN_INSPECTOR_ROOT: .artifacts/plugin-inspector
+          DEX_PLUGIN_INSPECTOR_VERSION: "0.3.10"
+          DEX_PLUGIN_INSPECTOR_ROOT: .artifacts/plugin-inspector
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$OPENCLAW_PLUGIN_INSPECTOR_ROOT"
+          mkdir -p "$DEX_PLUGIN_INSPECTOR_ROOT"
           set +e
           node --input-type=module <<'EOF'
           import { existsSync } from "node:fs";
           import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
           import path from "node:path";
 
-          const artifactRoot = process.env.OPENCLAW_PLUGIN_INSPECTOR_ROOT;
+          const artifactRoot = process.env.DEX_PLUGIN_INSPECTOR_ROOT;
           if (!artifactRoot) {
-            throw new Error("OPENCLAW_PLUGIN_INSPECTOR_ROOT is required");
+            throw new Error("DEX_PLUGIN_INSPECTOR_ROOT is required");
           }
 
           const readJson = async (filePath) => JSON.parse(await readFile(filePath, "utf8"));
@@ -449,32 +449,32 @@ jobs:
           EOF
           config_status=$?
           set -e
-          echo "$config_status" > "$OPENCLAW_PLUGIN_INSPECTOR_ROOT/config-exit-code.txt"
+          echo "$config_status" > "$DEX_PLUGIN_INSPECTOR_ROOT/config-exit-code.txt"
 
           if [ "$config_status" -eq 0 ]; then
             set +e
-            npm exec --yes "@openclaw/plugin-inspector@${OPENCLAW_PLUGIN_INSPECTOR_VERSION}" -- ci \
+            npm exec --yes "@openclaw/plugin-inspector@${DEX_PLUGIN_INSPECTOR_VERSION}" -- ci \
               --config plugin-inspector.config.json \
               --openclaw "$PWD" \
-              --out "$OPENCLAW_PLUGIN_INSPECTOR_ROOT/reports" \
+              --out "$DEX_PLUGIN_INSPECTOR_ROOT/reports" \
               --json \
-              > "$OPENCLAW_PLUGIN_INSPECTOR_ROOT/plugin-inspector-stdout.json" \
-              2> "$OPENCLAW_PLUGIN_INSPECTOR_ROOT/plugin-inspector-stderr.log"
+              > "$DEX_PLUGIN_INSPECTOR_ROOT/plugin-inspector-stdout.json" \
+              2> "$DEX_PLUGIN_INSPECTOR_ROOT/plugin-inspector-stderr.log"
             inspector_status=$?
             set -e
           else
             inspector_status=127
             echo "Skipped plugin-inspector because config generation failed." \
-              > "$OPENCLAW_PLUGIN_INSPECTOR_ROOT/plugin-inspector-stderr.log"
+              > "$DEX_PLUGIN_INSPECTOR_ROOT/plugin-inspector-stderr.log"
           fi
-          echo "$inspector_status" > "$OPENCLAW_PLUGIN_INSPECTOR_ROOT/exit-code.txt"
+          echo "$inspector_status" > "$DEX_PLUGIN_INSPECTOR_ROOT/exit-code.txt"
 
           node --input-type=module <<'EOF'
           import { existsSync } from "node:fs";
           import { appendFile, readFile, writeFile } from "node:fs/promises";
           import path from "node:path";
 
-          const artifactRoot = process.env.OPENCLAW_PLUGIN_INSPECTOR_ROOT;
+          const artifactRoot = process.env.DEX_PLUGIN_INSPECTOR_ROOT;
           const summaryPath = path.join(artifactRoot, "reports/plugin-inspector-ci-summary.json");
           const markdownPath = path.join(artifactRoot, "reports/plugin-inspector-ci-summary.md");
           const configExitCode = (await readFile(path.join(artifactRoot, "config-exit-code.txt"), "utf8")).trim();
@@ -482,7 +482,7 @@ jobs:
           const lines = [
             "## Plugin Inspector Advisory",
             "",
-            `Inspector: @openclaw/plugin-inspector@${process.env.OPENCLAW_PLUGIN_INSPECTOR_VERSION}`,
+            `Inspector: @openclaw/plugin-inspector@${process.env.DEX_PLUGIN_INSPECTOR_VERSION}`,
             `Config exit code: ${configExitCode}`,
             `Exit code: ${exitCode}`,
           ];

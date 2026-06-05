@@ -45,7 +45,7 @@ Keep using `/verbose` for normal verbose status/tool output, and keep using
 
 ## Plugin lifecycle trace
 
-Use `OPENCLAW_PLUGIN_LIFECYCLE_TRACE=1` when plugin lifecycle commands feel slow
+Use `DEX_PLUGIN_LIFECYCLE_TRACE=1` when plugin lifecycle commands feel slow
 and you need a built-in phase breakdown for plugin metadata, discovery, registry,
 runtime mirror, config mutation, and refresh work. The trace is opt-in and writes
 to stderr, so JSON command output remains parseable.
@@ -53,7 +53,7 @@ to stderr, so JSON command output remains parseable.
 Example:
 
 ```bash
-OPENCLAW_PLUGIN_LIFECYCLE_TRACE=1 openclaw plugins install tokenjuice --force
+DEX_PLUGIN_LIFECYCLE_TRACE=1 openclaw plugins install tokenjuice --force
 ```
 
 Example output:
@@ -80,10 +80,10 @@ pnpm tsx scripts/bench-cli-startup.ts --preset real --cpu-prof-dir .artifacts/cl
 ```
 
 For one-off profiling through the normal source runner, set
-`OPENCLAW_RUN_NODE_CPU_PROF_DIR`:
+`DEX_RUN_NODE_CPU_PROF_DIR`:
 
 ```bash
-OPENCLAW_RUN_NODE_CPU_PROF_DIR=.artifacts/cli-cpu pnpm openclaw status
+DEX_RUN_NODE_CPU_PROF_DIR=.artifacts/cli-cpu pnpm openclaw status
 ```
 
 The source runner adds Node CPU profile flags and writes a `.cpuprofile` for the
@@ -93,11 +93,11 @@ For startup stalls that look like synchronous filesystem or module-loader work,
 add Node's sync I/O trace flag through the source runner:
 
 ```bash
-OPENCLAW_TRACE_SYNC_IO=1 pnpm openclaw gateway --force
+DEX_TRACE_SYNC_IO=1 pnpm openclaw gateway --force
 ```
 
 `pnpm gateway:watch` leaves this flag disabled by default for the watched
-Gateway child. Set `OPENCLAW_TRACE_SYNC_IO=1` when you explicitly want Node
+Gateway child. Set `DEX_TRACE_SYNC_IO=1` when you explicitly want Node
 sync I/O trace output in watch mode.
 
 ## Gateway watch mode
@@ -129,13 +129,13 @@ Use foreground mode when tmux is not wanted:
 ```bash
 pnpm gateway:watch:raw
 # or
-OPENCLAW_GATEWAY_WATCH_TMUX=0 pnpm gateway:watch
+DEX_GATEWAY_WATCH_TMUX=0 pnpm gateway:watch
 ```
 
 Disable auto-attach while keeping tmux management:
 
 ```bash
-OPENCLAW_GATEWAY_WATCH_ATTACH=0 pnpm gateway:watch
+DEX_GATEWAY_WATCH_ATTACH=0 pnpm gateway:watch
 ```
 
 Profile watched Gateway CPU time when debugging startup/runtime hotspots:
@@ -158,19 +158,19 @@ Use `--benchmark-no-force` when you want the benchmarked child to skip the
 default `--force` port cleanup and fail fast if the Gateway port is already in
 use.
 Benchmark mode suppresses sync-I/O trace spam by default. Set
-`OPENCLAW_TRACE_SYNC_IO=1` with `--benchmark` when you explicitly want both CPU
+`DEX_TRACE_SYNC_IO=1` with `--benchmark` when you explicitly want both CPU
 profiles and Node sync-I/O stack traces. In benchmark mode those trace blocks
 are written to `gateway-watch-output.log` under the benchmark directory and
 filtered from the terminal pane; normal Gateway logs remain visible.
 
 The tmux wrapper carries common non-secret runtime selectors such as
-`OPENCLAW_PROFILE`, `OPENCLAW_CONFIG_PATH`, `OPENCLAW_STATE_DIR`,
-`OPENCLAW_GATEWAY_PORT`, and `OPENCLAW_SKIP_CHANNELS` into the pane. Put
+`DEX_PROFILE`, `DEX_CONFIG_PATH`, `DEX_STATE_DIR`,
+`DEX_GATEWAY_PORT`, and `DEX_SKIP_CHANNELS` into the pane. Put
 provider credentials in your normal profile/config, or use raw foreground mode
 for one-off ephemeral secrets.
 If the watched Gateway exits during startup, the watcher runs
 `openclaw doctor --fix --non-interactive` once and restarts the Gateway child.
-Use `OPENCLAW_GATEWAY_WATCH_AUTO_DOCTOR=0` when you want the original startup
+Use `DEX_GATEWAY_WATCH_AUTO_DOCTOR=0` when you want the original startup
 failure without the dev-only repair pass.
 The managed tmux pane also defaults to colored Gateway logs for readability;
 set `FORCE_COLOR=0` when starting `pnpm gateway:watch` to disable ANSI output.
@@ -191,7 +191,7 @@ are replaced instead of piling up.
 Use the dev profile to isolate state and spin up a safe, disposable setup for
 debugging. There are **two** `--dev` flags:
 
-- **Global `--dev` (profile):** isolates state under `~/.openclaw-dev` and
+- **Global `--dev` (profile):** isolates state under `~/.dex-dev` and
   defaults the gateway port to `19001` (derived ports shift with it).
 - **`gateway --dev`: tells the Gateway to auto-create a default config +
   workspace** when missing (and skip BOOTSTRAP.md).
@@ -200,7 +200,7 @@ Recommended flow (dev profile + dev bootstrap):
 
 ```bash
 pnpm gateway:dev
-OPENCLAW_PROFILE=dev openclaw tui
+DEX_PROFILE=dev openclaw tui
 ```
 
 If you don't have a global install yet, run the CLI via `pnpm openclaw ...`.
@@ -208,10 +208,10 @@ If you don't have a global install yet, run the CLI via `pnpm openclaw ...`.
 What this does:
 
 1. **Profile isolation** (global `--dev`)
-   - `OPENCLAW_PROFILE=dev`
-   - `OPENCLAW_STATE_DIR=~/.openclaw-dev`
-   - `OPENCLAW_CONFIG_PATH=~/.openclaw-dev/openclaw.json`
-   - `OPENCLAW_GATEWAY_PORT=19001` (browser/canvas shift accordingly)
+   - `DEX_PROFILE=dev`
+   - `DEX_STATE_DIR=~/.dex-dev`
+   - `DEX_CONFIG_PATH=~/.dex-dev/openclaw.json`
+   - `DEX_GATEWAY_PORT=19001` (browser/canvas shift accordingly)
 
 2. **Dev bootstrap** (`gateway --dev`)
    - Writes a minimal config if missing (`gateway.mode=local`, bind loopback).
@@ -220,7 +220,7 @@ What this does:
    - Seeds the workspace files if missing:
      `AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`.
    - Default identity: **C3-PO** (protocol droid).
-   - Skips channel providers in dev mode (`OPENCLAW_SKIP_CHANNELS=1`).
+   - Skips channel providers in dev mode (`DEX_SKIP_CHANNELS=1`).
 
 Reset flow (fresh start):
 
@@ -232,7 +232,7 @@ pnpm gateway:dev:reset
 `--dev` is a **global** profile flag and gets eaten by some runners. If you need to spell it out, use the env var form:
 
 ```bash
-OPENCLAW_PROFILE=dev openclaw gateway --dev --reset
+DEX_PROFILE=dev openclaw gateway --dev --reset
 ```
 
 </Note>
@@ -264,19 +264,19 @@ pnpm gateway:watch --raw-stream
 Optional path override:
 
 ```bash
-pnpm gateway:watch --raw-stream --raw-stream-path ~/.openclaw/logs/raw-stream.jsonl
+pnpm gateway:watch --raw-stream --raw-stream-path ~/.dex/logs/raw-stream.jsonl
 ```
 
 Equivalent env vars:
 
 ```bash
-OPENCLAW_RAW_STREAM=1
-OPENCLAW_RAW_STREAM_PATH=~/.openclaw/logs/raw-stream.jsonl
+DEX_RAW_STREAM=1
+DEX_RAW_STREAM_PATH=~/.dex/logs/raw-stream.jsonl
 ```
 
 Default file:
 
-`~/.openclaw/logs/raw-stream.jsonl`
+`~/.dex/logs/raw-stream.jsonl`
 
 ## Raw OpenAI-compatible chunk logging
 
@@ -284,18 +284,18 @@ To capture **raw OpenAI-compat chunks** before they are parsed into blocks,
 enable the transport logger:
 
 ```bash
-OPENCLAW_RAW_STREAM=1
+DEX_RAW_STREAM=1
 ```
 
 Optional path:
 
 ```bash
-OPENCLAW_RAW_STREAM_PATH=~/.openclaw/logs/raw-openai-completions.jsonl
+DEX_RAW_STREAM_PATH=~/.dex/logs/raw-openai-completions.jsonl
 ```
 
 Default file:
 
-`~/.openclaw/logs/raw-openai-completions.jsonl`
+`~/.dex/logs/raw-openai-completions.jsonl`
 
 ## Safety notes
 

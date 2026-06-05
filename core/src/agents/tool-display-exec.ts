@@ -316,10 +316,10 @@ function classifyWorkspacePath(
     if (!segment) {
       continue;
     }
-    if (segment === ".openclaw" && segments[index + 1] === "workspace") {
+    if (segment === ".dex" && segments[index + 1] === "workspace") {
       return "agent";
     }
-    if (segment === ".openclaw" && segments[index + 1] === "sandboxes") {
+    if (segment === ".dex" && segments[index + 1] === "sandboxes") {
       return "sandbox";
     }
     if (/[-_]workspace$/i.test(segment) && segment.toLowerCase() !== "workspace") {

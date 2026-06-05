@@ -2,7 +2,7 @@ import { normalizeUniqueStringEntries } from "@dexagent/normalization-core/strin
 import { resolveChannelDmAllowFrom } from "../../../channels/plugins/dm-access.js";
 import { normalizeAnyChannelId } from "../../../channels/registry.js";
 import { GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA } from "../../../config/bundled-channel-config-metadata.generated.js";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 import { getDoctorChannelCapabilities } from "../channel-capabilities.js";
 import { asObjectRecord } from "./object.js";
 
@@ -139,8 +139,8 @@ function migrateRecord(params: {
   return true;
 }
 
-export function maybeRepairGroupAllowFromFallback(cfg: OpenClawConfig): {
-  config: OpenClawConfig;
+export function maybeRepairGroupAllowFromFallback(cfg: DexConfig): {
+  config: DexConfig;
   changes: string[];
 } {
   const channels = asObjectRecord(cfg.channels);

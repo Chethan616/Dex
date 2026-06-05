@@ -111,7 +111,7 @@ function requireMatrixQaCliRuntimeEnv(context: MatrixQaScenarioContext) {
 }
 
 function requireMatrixQaGatewayConfigPath(context: MatrixQaScenarioContext) {
-  const configPath = requireMatrixQaCliRuntimeEnv(context).OPENCLAW_CONFIG_PATH?.trim();
+  const configPath = requireMatrixQaCliRuntimeEnv(context).DEX_CONFIG_PATH?.trim();
   if (!configPath) {
     throw new Error("Matrix E2EE destructive QA scenarios require the gateway config path");
   }

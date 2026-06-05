@@ -1,5 +1,5 @@
 import { PassThrough } from "node:stream";
-import type { DiscordAccountConfig, OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DiscordAccountConfig, DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   asDateTimestampMs,
   resolveExpiresAtMsFromDurationMs,
@@ -331,7 +331,7 @@ function mergeRealtimePartialTranscript(previous: string, next: string): string 
 
 function resolveDiscordRealtimeWakeNames(params: {
   config: DiscordRealtimeVoiceConfig;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
 }): string[] {
   const rawConfigured = params.config?.wakeNames;
@@ -421,7 +421,7 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
 
   constructor(
     private readonly params: {
-      cfg: OpenClawConfig;
+      cfg: DexConfig;
       discordConfig: DiscordAccountConfig;
       entry: VoiceSessionEntry;
       mode: Exclude<DiscordVoiceMode, "stt-tts">;

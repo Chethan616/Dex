@@ -1,4 +1,4 @@
-export type OpenClawAgentSessionSkillSourceAugmentation = never;
+export type DexAgentSessionSkillSourceAugmentation = never;
 
 declare module "openclaw/plugin-sdk/agent-sessions" {
   interface Skill {

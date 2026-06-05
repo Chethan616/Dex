@@ -13,7 +13,7 @@ import type {
 import { redactSensitiveUrlLikeString } from "@dexagent/net-policy/redact-sensitive-url";
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { Compile } from "typebox/compile";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { logWarn } from "../logger.js";
 import type { PluginManifestRegistry } from "../plugins/manifest-registry.js";
 import { resolveGlobalSingleton } from "../shared/global-singleton.js";
@@ -419,7 +419,7 @@ function createCatalogFingerprint(servers: Record<string, unknown>): string {
 
 function loadSessionMcpConfig(params: {
   workspaceDir: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   logDiagnostics?: boolean;
   manifestRegistry?: Pick<PluginManifestRegistry, "plugins">;
 }): {
@@ -448,7 +448,7 @@ function loadSessionMcpConfig(params: {
  */
 export function resolveSessionMcpConfigSummary(params: {
   workspaceDir: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   manifestRegistry?: Pick<PluginManifestRegistry, "plugins">;
 }): { fingerprint: string; serverNames: string[] } {
   const { loaded, fingerprint } = loadSessionMcpConfig({
@@ -466,7 +466,7 @@ export function resolveSessionMcpConfigSummary(params: {
 /** Returns the session MCP config fingerprint with the same no-runtime/no-connect contract as the summary helper. */
 export function resolveSessionMcpConfigFingerprint(params: {
   workspaceDir: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   manifestRegistry?: Pick<PluginManifestRegistry, "plugins">;
 }): string {
   return resolveSessionMcpConfigSummary(params).fingerprint;
@@ -476,7 +476,7 @@ function createDisposedError(sessionId: string): Error {
   return new Error(`bundle-mcp runtime disposed for session ${sessionId}`);
 }
 
-function resolveSessionMcpRuntimeIdleTtlMs(cfg?: OpenClawConfig): number {
+function resolveSessionMcpRuntimeIdleTtlMs(cfg?: DexConfig): number {
   const raw = cfg?.mcp?.sessionIdleTtlMs;
   if (typeof raw === "number" && Number.isFinite(raw) && raw >= 0) {
     return Math.floor(raw);
@@ -488,7 +488,7 @@ export function createSessionMcpRuntime(params: {
   sessionId: string;
   sessionKey?: string;
   workspaceDir: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   manifestRegistry?: Pick<PluginManifestRegistry, "plugins">;
 }): SessionMcpRuntime {
   const { loaded, fingerprint: configFingerprint } = loadSessionMcpConfig({
@@ -1078,7 +1078,7 @@ export async function getOrCreateSessionMcpRuntime(params: {
   sessionId: string;
   sessionKey?: string;
   workspaceDir: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): Promise<SessionMcpRuntime> {
   return await getSessionMcpRuntimeManager().getOrCreate(params);
 }

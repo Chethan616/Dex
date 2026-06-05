@@ -17,7 +17,7 @@ If you need tighter coupling to the UI, run the Gateway manually in a terminal.
 ## Default behavior (launchd)
 
 - The app installs a per-user LaunchAgent labeled `ai.openclaw.gateway`
-  (or `ai.openclaw.<profile>` when using `--profile`/`OPENCLAW_PROFILE`; legacy `com.openclaw.*` is supported).
+  (or `ai.openclaw.<profile>` when using `--profile`/`DEX_PROFILE`; legacy `com.openclaw.*` is supported).
 - When Local mode is enabled, the app ensures the LaunchAgent is loaded and
   starts the Gateway if needed.
 - Logs are written to the launchd gateway log path (visible in Debug Settings).
@@ -36,19 +36,19 @@ Replace the label with `ai.openclaw.<profile>` when running a named profile.
 `scripts/restart-mac.sh --no-sign` is for fast local builds when you don't have
 signing keys. To prevent launchd from pointing at an unsigned relay binary, it:
 
-- Writes `~/.openclaw/disable-launchagent`.
+- Writes `~/.dex/disable-launchagent`.
 
 Signed runs of `scripts/restart-mac.sh` clear this override if the marker is
 present. To reset manually:
 
 ```bash
-rm ~/.openclaw/disable-launchagent
+rm ~/.dex/disable-launchagent
 ```
 
 ## Attach-only mode
 
 To force the macOS app to **never install or manage launchd**, launch it with
-`--attach-only` (or `--no-launchd`). This sets `~/.openclaw/disable-launchagent`,
+`--attach-only` (or `--no-launchd`). This sets `~/.dex/disable-launchagent`,
 so the app only attaches to an already running Gateway. You can toggle the same
 behavior in Debug Settings.
 

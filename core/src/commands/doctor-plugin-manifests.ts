@@ -4,7 +4,7 @@ import { normalizeOptionalString } from "@dexagent/normalization-core/string-coe
 import { normalizeTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
 import { z } from "zod";
 import { note } from "../../packages/terminal-core/src/note.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { loadPluginManifestRegistry } from "../plugins/manifest-registry.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { shortenHomePath } from "../utils.js";
@@ -91,7 +91,7 @@ function buildLegacyManifestContractMigration(params: {
 }
 
 export function collectLegacyPluginManifestContractMigrations(params?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   env?: NodeJS.ProcessEnv;
   manifestRoots?: string[];
   workspaceDir?: string;
@@ -151,7 +151,7 @@ export function collectLegacyPluginManifestContractMigrations(params?: {
 }
 
 export async function maybeRepairLegacyPluginManifestContracts(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   env?: NodeJS.ProcessEnv;
   manifestRoots?: string[];
   workspaceDir?: string;

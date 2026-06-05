@@ -2,8 +2,8 @@ import path from "node:path";
 import { parseRegistryNpmSpec } from "../infra/npm-registry-spec.js";
 import { isRecord, resolveUserPath } from "../utils.js";
 
-export const PLUGIN_INSTALL_OVERRIDES_ENV = "OPENCLAW_PLUGIN_INSTALL_OVERRIDES";
-export const ALLOW_PLUGIN_INSTALL_OVERRIDES_ENV = "OPENCLAW_ALLOW_PLUGIN_INSTALL_OVERRIDES";
+export const PLUGIN_INSTALL_OVERRIDES_ENV = "DEX_PLUGIN_INSTALL_OVERRIDES";
+export const ALLOW_PLUGIN_INSTALL_OVERRIDES_ENV = "DEX_ALLOW_PLUGIN_INSTALL_OVERRIDES";
 
 export type PluginInstallOverride =
   | {

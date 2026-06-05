@@ -29,14 +29,14 @@ const ANTHROPIC_GA_1M_MODEL_PREFIXES = [
   "claude-sonnet-4-6",
   "claude-sonnet-4.6",
 ] as const;
-const OPENCLAW_DEFAULT_ANTHROPIC_BETAS = [
+const DEX_DEFAULT_ANTHROPIC_BETAS = [
   "fine-grained-tool-streaming-2025-05-14",
   "interleaved-thinking-2025-05-14",
 ] as const;
-const OPENCLAW_OAUTH_ANTHROPIC_BETAS = [
+const DEX_OAUTH_ANTHROPIC_BETAS = [
   "claude-code-20250219",
   "oauth-2025-04-20",
-  ...OPENCLAW_DEFAULT_ANTHROPIC_BETAS,
+  ...DEX_DEFAULT_ANTHROPIC_BETAS,
 ] as const;
 
 type AnthropicServiceTier = "auto" | "standard_only";
@@ -138,8 +138,8 @@ export function createAnthropicBetaHeadersWrapper(
     const effectiveBetas = betas.filter((beta) => beta !== ANTHROPIC_CONTEXT_1M_BETA_LEGACY);
 
     const openClawBetas = isOauth
-      ? (OPENCLAW_OAUTH_ANTHROPIC_BETAS as readonly string[])
-      : (OPENCLAW_DEFAULT_ANTHROPIC_BETAS as readonly string[]);
+      ? (DEX_OAUTH_ANTHROPIC_BETAS as readonly string[])
+      : (DEX_DEFAULT_ANTHROPIC_BETAS as readonly string[]);
     const allBetas = [...new Set([...openClawBetas, ...effectiveBetas])];
     return underlying(model, context, {
       ...options,

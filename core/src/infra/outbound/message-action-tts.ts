@@ -4,7 +4,7 @@ import {
   resolveSessionStoreEntry,
   resolveStorePath,
 } from "../../config/sessions.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { TtsAutoMode } from "../../config/types.tts.js";
 import { shouldAttemptTtsPayload } from "../../tts/tts-config.js";
 
@@ -18,7 +18,7 @@ function loadMessageActionTtsRuntime() {
 
 /** Reads the session-level TTS auto mode for a message-action send. */
 export function resolveMessageActionSessionTtsAuto(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey?: string;
   agentId?: string;
 }): TtsAutoMode | undefined {
@@ -39,7 +39,7 @@ export function resolveMessageActionSessionTtsAuto(params: {
 /** Applies automatic TTS to a message-action send payload when config/session policy allows it. */
 export async function maybeApplyTtsToMessageActionSendPayload(params: {
   payload: ReplyPayload;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: string;
   accountId?: string | null;
   agentId?: string;

@@ -759,9 +759,9 @@ function renderCaptureStartupStatusRow(status: CaptureStartupProbeStatus | null)
 
 function renderCaptureStartupInstructions(status: CaptureStartupStatus | null): string {
   const proxyStart = "pnpm proxy:start --port 7799";
-  const gatewayStart = `OPENCLAW_DEBUG_PROXY_ENABLED=1 \\
-OPENCLAW_DEBUG_PROXY_REQUIRE=1 \\
-OPENCLAW_DEBUG_PROXY_URL=http://127.0.0.1:7799 \\
+  const gatewayStart = `DEX_DEBUG_PROXY_ENABLED=1 \\
+DEX_DEBUG_PROXY_REQUIRE=1 \\
+DEX_DEBUG_PROXY_URL=http://127.0.0.1:7799 \\
 pnpm openclaw gateway --port 18789 --bind loopback`;
   const qaStart = "pnpm qa:lab:ui --port 43124 --control-ui-url http://127.0.0.1:18789/";
   const caInstall = "pnpm proxy:install-ca";

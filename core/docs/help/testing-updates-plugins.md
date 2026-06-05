@@ -90,7 +90,7 @@ Important lanes:
   moving-ref updates, npm registry installs with hoisted transitive
   dependencies, npm update no-ops, malformed npm package metadata rejection,
   local ClawHub fixture installs and update no-ops, marketplace update behavior,
-  and Claude-bundle enable/inspect. Set `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` to
+  and Claude-bundle enable/inspect. Set `DEX_PLUGINS_E2E_CLAWHUB=0` to
   keep the ClawHub block hermetic/offline.
 - `test:docker:plugin-lifecycle-matrix` installs the candidate package in a bare
   container, runs an npm plugin through install, inspect, disable, enable,
@@ -119,19 +119,19 @@ Important lanes:
 Useful published-upgrade survivor variants:
 
 ```bash
-OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC=openclaw@2026.4.23 \
-OPENCLAW_UPGRADE_SURVIVOR_SCENARIO=versioned-runtime-deps \
+DEX_UPGRADE_SURVIVOR_BASELINE_SPEC=openclaw@2026.4.23 \
+DEX_UPGRADE_SURVIVOR_SCENARIO=versioned-runtime-deps \
 pnpm test:docker:published-upgrade-survivor
 
-OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC=openclaw@latest \
-OPENCLAW_UPGRADE_SURVIVOR_SCENARIO=bootstrap-persona \
+DEX_UPGRADE_SURVIVOR_BASELINE_SPEC=openclaw@latest \
+DEX_UPGRADE_SURVIVOR_SCENARIO=bootstrap-persona \
 pnpm test:docker:published-upgrade-survivor
 ```
 
 Available scenarios are `base`, `feishu-channel`, `bootstrap-persona`,
 `plugin-deps-cleanup`, `configured-plugin-installs`,
 `stale-source-plugin-shadow`, `tilde-log-path`, and `versioned-runtime-deps`. In aggregate runs,
-`OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS=reported-issues` expands to all reported
+`DEX_UPGRADE_SURVIVOR_SCENARIOS=reported-issues` expands to all reported
 issue-shaped scenarios, including the configured-plugin install migration.
 
 Full update migration is intentionally separate from Full Release CI. Use the
@@ -170,7 +170,7 @@ Candidate sources:
   in `.github/package-trusted-sources.json`. Use this for enterprise/private
   mirrors instead of weakening `source=url` with an input-level allow-private
   switch. Bearer auth, when configured by policy, uses the fixed
-  `OPENCLAW_TRUSTED_PACKAGE_TOKEN` secret.
+  `DEX_TRUSTED_PACKAGE_TOKEN` secret.
 - `source=artifact`: reuse a tarball uploaded by another Actions run.
 
 Full Release Validation uses `source=artifact` by default, built from the

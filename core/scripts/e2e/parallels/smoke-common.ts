@@ -296,7 +296,7 @@ export async function expectedPackageBuildCommit(artifact: PackageArtifact): Pro
   return artifact.buildCommitShort || (await packageBuildCommitFromTgz(artifact.path)).slice(0, 7);
 }
 
-export async function extractLastOpenClawVersion(
+export async function extractLastDexVersion(
   runDir: string,
   phaseName: string,
   pattern: RegExp,

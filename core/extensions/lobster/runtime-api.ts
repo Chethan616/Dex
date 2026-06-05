@@ -1,9 +1,9 @@
 export { definePluginEntry } from "openclaw/plugin-sdk/core";
 export type {
   AnyAgentTool,
-  OpenClawPluginApi,
-  OpenClawPluginToolContext,
-  OpenClawPluginToolFactory,
+  DexPluginApi,
+  DexPluginToolContext,
+  DexPluginToolFactory,
 } from "openclaw/plugin-sdk/core";
 export {
   applyWindowsSpawnProgramPolicy,

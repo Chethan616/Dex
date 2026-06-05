@@ -1,6 +1,6 @@
 import type { PluginManifestRegistry } from "../plugins/manifest-registry.js";
 import { resolveBundledProviderPolicySurface } from "../plugins/provider-public-artifacts.js";
-import type { ModelProviderConfig, OpenClawConfig } from "./types.js";
+import type { ModelProviderConfig, DexConfig } from "./types.js";
 
 export function normalizeProviderConfigForConfigDefaults(params: {
   provider: string;
@@ -18,10 +18,10 @@ export function normalizeProviderConfigForConfigDefaults(params: {
 
 export function applyProviderConfigDefaultsForConfig(params: {
   provider: string;
-  config: OpenClawConfig;
+  config: DexConfig;
   env: NodeJS.ProcessEnv;
   manifestRegistry?: Pick<PluginManifestRegistry, "plugins">;
-}): OpenClawConfig {
+}): DexConfig {
   return (
     resolveBundledProviderPolicySurface(params.provider, {
       manifestRegistry: params.manifestRegistry,

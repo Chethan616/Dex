@@ -1,5 +1,5 @@
 export { mergeModelCatalogRowsByAuthority } from "./authority.js";
-export { loadOpenClawProviderIndex } from "./provider-index/index.js";
+export { loadDexProviderIndex } from "./provider-index/index.js";
 export {
   planManifestModelCatalogRows,
   planManifestModelCatalogSuppressions,
@@ -23,4 +23,4 @@ export type {
   UnifiedModelCatalogKind,
   UnifiedModelCatalogSource,
 } from "@dexagent/model-catalog-core/model-catalog-types";
-export type { OpenClawProviderIndexProvider } from "./provider-index/index.js";
+export type { DexProviderIndexProvider } from "./provider-index/index.js";

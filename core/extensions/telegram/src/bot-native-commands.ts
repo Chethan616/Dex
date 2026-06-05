@@ -20,7 +20,7 @@ import {
   resolveStoredModelOverride,
   type CommandArgs,
 } from "openclaw/plugin-sdk/command-auth-native";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { ChannelGroupPolicy } from "openclaw/plugin-sdk/config-contracts";
 import type {
   ReplyToMode,
@@ -177,7 +177,7 @@ function resolveTelegramProgressPlaceholder(command: {
 }
 
 async function resolveTelegramCommandSessionFile(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   sessionKey: string;
   threadId?: string | number;
@@ -219,7 +219,7 @@ async function resolveTelegramCommandSessionFile(params: {
 }
 
 function resolveTelegramCommandMenuModelContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   sessionKey: string;
 }): { provider?: string; model?: string; thinkingLevel?: string } {
@@ -271,7 +271,7 @@ function resolveTelegramCommandMenuModelContext(params: {
 }
 
 async function resolveTelegramDefaultThinkingLevel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   provider: string;
   model: string;
 }): Promise<string> {
@@ -284,7 +284,7 @@ async function resolveTelegramDefaultThinkingLevel(params: {
 }
 
 async function resolveTelegramThinkMenuCurrentLevel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   provider?: string;
   model?: string;
@@ -410,7 +410,7 @@ async function resolveTelegramNativeCommandThreadContext(params: {
 }
 
 export type RegisterTelegramHandlerParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
   bot: Bot;
   mediaMaxBytes: number;
@@ -456,7 +456,7 @@ export function resolveTelegramNativeCommandDisableBlockStreaming(
 
 export type RegisterTelegramNativeCommandsParams = {
   bot: Bot;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   runtime: RuntimeEnv;
   accountId: string;
   telegramCfg: TelegramAccountConfig;
@@ -482,7 +482,7 @@ export type RegisterTelegramNativeCommandsParams = {
 async function resolveTelegramCommandAuth(params: {
   msg: NonNullable<TelegramNativeCommandContext["message"]>;
   bot: Bot;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
   telegramCfg: TelegramAccountConfig;
   readChannelAllowFromStore: TelegramBotDeps["readChannelAllowFromStore"];
@@ -832,8 +832,8 @@ export const registerTelegramNativeCommands = ({
     );
   }
   const { nativeCommands, pluginCatalog } = fullCommandCatalog;
-  const loadFreshRuntimeConfig = (): OpenClawConfig => telegramDeps.getRuntimeConfig();
-  const resolveFreshTelegramConfig = (runtimeCfg: OpenClawConfig): TelegramAccountConfig => {
+  const loadFreshRuntimeConfig = (): DexConfig => telegramDeps.getRuntimeConfig();
+  const resolveFreshTelegramConfig = (runtimeCfg: DexConfig): TelegramAccountConfig => {
     try {
       return resolveTelegramAccount({
         cfg: runtimeCfg,
@@ -886,7 +886,7 @@ export const registerTelegramNativeCommands = ({
 
   const resolveCommandRuntimeContext = async (params: {
     msg: NonNullable<TelegramNativeCommandContext["message"]>;
-    runtimeCfg: OpenClawConfig;
+    runtimeCfg: DexConfig;
     isGroup: boolean;
     isForum: boolean;
     resolvedThreadId?: number;
@@ -958,7 +958,7 @@ export const registerTelegramNativeCommands = ({
     return { chatId, threadSpec, route, mediaLocalRoots, tableMode, chunkMode };
   };
   const buildCommandDeliveryBaseOptions = (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     chatId: string | number;
     accountId: string;
     sessionKeyForInternalHooks?: string;
@@ -991,7 +991,7 @@ export const registerTelegramNativeCommands = ({
     linkPreview: params.linkPreview,
   });
   const resolveCommandTargetSessionKey = (params: {
-    runtimeCfg: OpenClawConfig;
+    runtimeCfg: DexConfig;
     route: ReturnType<typeof resolveTelegramConversationRoute>["route"];
     chatId: number;
     isGroup: boolean;

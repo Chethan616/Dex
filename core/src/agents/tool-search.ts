@@ -7,7 +7,7 @@ import {
   uniqueValues,
 } from "@dexagent/normalization-core/string-normalization";
 import { Type } from "typebox";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { getPluginToolMeta, type PluginToolMcpMeta } from "../plugins/tools.js";
 import {
   isToolWrappedWithBeforeToolCallHook,
@@ -77,8 +77,8 @@ export type ToolSearchConfig = {
 };
 
 export type ToolSearchToolContext = {
-  config?: OpenClawConfig;
-  runtimeConfig?: OpenClawConfig;
+  config?: DexConfig;
+  runtimeConfig?: DexConfig;
   agentId?: string;
   sessionKey?: string;
   sessionId?: string;
@@ -386,7 +386,7 @@ const catalogFingerprints = new WeakMap<ToolSearchCatalogSession, string>();
 const catalogToolIdentities = new WeakMap<object, number>();
 let nextCatalogToolIdentity = 1;
 
-function readToolSearchConfig(config?: OpenClawConfig): Record<string, unknown> {
+function readToolSearchConfig(config?: DexConfig): Record<string, unknown> {
   const tools = isRecord(config?.tools) ? config.tools : undefined;
   const toolSearch = tools?.toolSearch;
   if (toolSearch === true) {
@@ -420,7 +420,7 @@ function resolveMinCodeTimeoutMs(): number {
   return toolSearchMinCodeTimeoutMsForTest ?? 1000;
 }
 
-export function resolveToolSearchConfig(config?: OpenClawConfig): ToolSearchConfig {
+export function resolveToolSearchConfig(config?: DexConfig): ToolSearchConfig {
   const raw = readToolSearchConfig(config);
   const rawMode = typeof raw.mode === "string" ? raw.mode : "code";
   const requestedMode: ToolSearchMode =
@@ -833,7 +833,7 @@ export function createToolSearchCatalogRef(): ToolSearchCatalogRef {
 
 export function applyToolSearchCatalog(params: {
   tools: AnyAgentTool[];
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionId?: string;
   sessionKey?: string;
   agentId?: string;
@@ -859,7 +859,7 @@ export function applyToolSearchCatalog(params: {
 
 export function addClientToolsToToolSearchCatalog(params: {
   tools: ToolDefinition[];
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionId?: string;
   sessionKey?: string;
   agentId?: string;

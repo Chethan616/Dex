@@ -2,7 +2,7 @@ import {
   normalizeStringEntries,
   sortUniqueStrings,
 } from "@dexagent/normalization-core/string-normalization";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveEnabledBundledManifestContractPlugins } from "./bundled-manifest-contract-plugins.js";
 import { loadBundledDocumentExtractorEntriesFromDir } from "./document-extractor-public-artifacts.js";
 import type { PluginDocumentExtractorEntry } from "./document-extractor-types.js";
@@ -20,7 +20,7 @@ function compareExtractors(
 }
 
 function resolveExplicitAllowedDocumentExtractorPluginIds(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   onlyPluginIds?: readonly string[];
 }): string[] | null {
   const allow = params.config?.plugins?.allow;
@@ -40,7 +40,7 @@ function resolveExplicitAllowedDocumentExtractorPluginIds(params: {
 }
 
 export function resolvePluginDocumentExtractors(params?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   onlyPluginIds?: readonly string[];

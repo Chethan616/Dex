@@ -1,5 +1,5 @@
 import type { MessageReceipt } from "openclaw/plugin-sdk/channel-outbound";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { RetryConfig } from "openclaw/plugin-sdk/retry-runtime";
 import type { RequestClient } from "./internal/discord.js";
 
@@ -34,12 +34,12 @@ export type DiscordSendResult = {
 };
 
 export type DiscordRuntimeAccountContext = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
 };
 
 export type DiscordReactOpts = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string;
   token?: string;
   rest?: RequestClient;

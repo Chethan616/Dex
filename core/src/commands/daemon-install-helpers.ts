@@ -4,12 +4,12 @@ import path from "node:path";
 import type { AuthProfileStore } from "../agents/auth-profiles/types.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import { collectDurableServiceEnvVarSources } from "../config/state-dir-dotenv.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { resolveSecretInputRef, type SecretRef } from "../config/types.secrets.js";
 import { resolveGatewayLaunchAgentLabel } from "../daemon/constants.js";
 import { resolveGatewayStateDir, resolveGatewayTaskScriptPath } from "../daemon/paths.js";
 import {
-  OPENCLAW_WRAPPER_ENV_KEY,
+  DEX_WRAPPER_ENV_KEY,
   resolveGatewayProgramArguments,
   resolveOpenClawWrapperPath,
 } from "../daemon/program-args.js";
@@ -168,7 +168,7 @@ type ExecSecretRefPassEnvSource = {
 
 function collectConfigSecretRefServiceEnvVars(params: {
   env: Record<string, string | undefined>;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   durableEnvironment: Record<string, string | undefined>;
   warn?: DaemonInstallWarnFn;
 }): Record<string, string> {
@@ -220,7 +220,7 @@ function collectConfigSecretRefServiceEnvVars(params: {
 
 function collectExecSecretRefPassEnvServiceEnvVars(params: {
   env: Record<string, string | undefined>;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   authStore?: AuthProfileStore;
   durableEnvironment: Record<string, string | undefined>;
   warn?: DaemonInstallWarnFn;
@@ -320,7 +320,7 @@ function collectExecSecretRefPassEnvServiceEnvVars(params: {
 
 function collectPluginConfigSecretRefs(params: {
   env: Record<string, string | undefined>;
-  config: OpenClawConfig;
+  config: DexConfig;
 }): SecretRef[] {
   const context = createResolverContext({
     sourceConfig: params.config,
@@ -436,9 +436,9 @@ function mergeServicePath(
 // they share the OPENCLAW_ prefix that is otherwise stripped from preserved
 // environments. These represent intentional, user-placed configuration on the
 // service definition that the install/repair flow should not silently revert.
-const PRESERVED_OPENCLAW_OPERATOR_OPT_IN_ENV_KEYS = new Set([
-  "OPENCLAW_CLI_CONTAINER_BYPASS",
-  "OPENCLAW_CONTAINER_HINT",
+const PRESERVED_DEX_OPERATOR_OPT_IN_ENV_KEYS = new Set([
+  "DEX_CLI_CONTAINER_BYPASS",
+  "DEX_CONTAINER_HINT",
 ]);
 
 export function collectPreservedExistingServiceEnvVars(
@@ -459,7 +459,7 @@ export function collectPreservedExistingServiceEnvVars(
       upper === "HOME" ||
       upper === "PATH" ||
       upper === "TMPDIR" ||
-      (upper.startsWith("OPENCLAW_") && !PRESERVED_OPENCLAW_OPERATOR_OPT_IN_ENV_KEYS.has(upper))
+      (upper.startsWith("OPENCLAW_") && !PRESERVED_DEX_OPERATOR_OPT_IN_ENV_KEYS.has(upper))
     ) {
       continue;
     }
@@ -510,7 +510,7 @@ function resolveGatewayInstallWorkingDirectory(params: {
 
 async function buildGatewayInstallEnvironment(params: {
   env: Record<string, string | undefined>;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   authStore?: AuthProfileStore;
   warn?: DaemonInstallWarnFn;
   serviceEnvironment: Record<string, string | undefined>;
@@ -607,7 +607,7 @@ export async function buildGatewayInstallPlan(params: {
   platform?: NodeJS.Platform;
   warn?: DaemonInstallWarnFn;
   /** Full config to extract env vars from (env vars + inline env keys). */
-  config?: OpenClawConfig;
+  config?: DexConfig;
   authStore?: AuthProfileStore;
   existingEnvironmentValueSources?: Record<
     string,
@@ -621,23 +621,23 @@ export async function buildGatewayInstallPlan(params: {
     devMode: params.devMode,
     nodePath: params.nodePath,
   });
-  const wrapperInput = params.wrapperPath ?? params.env[OPENCLAW_WRAPPER_ENV_KEY];
+  const wrapperInput = params.wrapperPath ?? params.env[DEX_WRAPPER_ENV_KEY];
   const wrapperPointsAtWindowsTaskScript =
     Boolean(wrapperInput?.trim()) &&
     platform === "win32" &&
     isSameServicePath(wrapperInput, resolveGatewayTaskScriptPath(params.env), platform);
   if (wrapperPointsAtWindowsTaskScript) {
     params.warn?.(
-      `Ignoring ${OPENCLAW_WRAPPER_ENV_KEY} because it points to the Windows task script; using the OpenClaw gateway entrypoint directly to avoid a recursive gateway.cmd wrapper.`,
+      `Ignoring ${DEX_WRAPPER_ENV_KEY} because it points to the Windows task script; using the OpenClaw gateway entrypoint directly to avoid a recursive gateway.cmd wrapper.`,
     );
   }
   const wrapperPath = wrapperPointsAtWindowsTaskScript
     ? undefined
     : await resolveOpenClawWrapperPath(wrapperInput);
   const serviceInputEnv: Record<string, string | undefined> = wrapperPath
-    ? { ...params.env, [OPENCLAW_WRAPPER_ENV_KEY]: wrapperPath }
+    ? { ...params.env, [DEX_WRAPPER_ENV_KEY]: wrapperPath }
     : wrapperPointsAtWindowsTaskScript
-      ? omitEnvKey(params.env, OPENCLAW_WRAPPER_ENV_KEY)
+      ? omitEnvKey(params.env, DEX_WRAPPER_ENV_KEY)
       : params.env;
   const { programArguments, workingDirectory } = await resolveGatewayProgramArguments({
     port: params.port,
@@ -658,7 +658,7 @@ export async function buildGatewayInstallPlan(params: {
     port: params.port,
     launchdLabel:
       platform === "darwin"
-        ? resolveGatewayLaunchAgentLabel(serviceInputEnv.OPENCLAW_PROFILE)
+        ? resolveGatewayLaunchAgentLabel(serviceInputEnv.DEX_PROFILE)
         : undefined,
     platform,
     extraPathDirs: resolveDaemonServicePathDirs({

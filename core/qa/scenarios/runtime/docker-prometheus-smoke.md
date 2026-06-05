@@ -76,7 +76,7 @@ steps:
           expr: "`${env.gateway.baseUrl}/api/diagnostics/prometheus`"
       - set: gatewayToken
         value:
-          expr: "String(env.gateway.token ?? env.gateway.runtimeEnv.OPENCLAW_GATEWAY_TOKEN ?? '')"
+          expr: "String(env.gateway.token ?? env.gateway.runtimeEnv.DEX_GATEWAY_TOKEN ?? '')"
       - assert:
           expr: "gatewayToken.length > 0"
           message: "expected QA gateway token to be available for protected scrape"

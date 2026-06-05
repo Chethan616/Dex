@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { resolveSandboxRuntimeStatus } from "openclaw/plugin-sdk/sandbox";
 import {
   formatCodexNativeNodeExecBlock,
@@ -68,7 +68,7 @@ const NODE_EXEC_BLOCKED_CONTROL_PLANE_METHODS = new Set<string>([
 export function resolveCodexAppServerDirectSandboxBypassBlock(params: {
   method: string;
   requestParams?: unknown;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionKey?: string;
   sessionId?: string;
 }): string | undefined {
@@ -118,7 +118,7 @@ export function resolveCodexAppServerDirectSandboxBypassBlock(params: {
 }
 
 export function resolveCodexNativeExecutionBlock(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionKey?: string;
   sessionId?: string;
   surface: string;
@@ -127,7 +127,7 @@ export function resolveCodexNativeExecutionBlock(params: {
 }
 
 export function resolveCodexNativeSandboxBlock(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionKey?: string;
   sessionId?: string;
   surface: string;
@@ -189,7 +189,7 @@ function formatCodexNativeSandboxBlock(params: { surface: string }): string {
 }
 
 function resolveCodexNativeNodeExecBlock(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionKey?: string;
   sessionId?: string;
   surface: string;

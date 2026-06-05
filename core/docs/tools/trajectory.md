@@ -141,11 +141,11 @@ OpenClaw also writes a best-effort pointer file beside the session:
 <session>.trajectory-path.json
 ```
 
-Set `OPENCLAW_TRAJECTORY_DIR` to store runtime trajectory sidecars in a
+Set `DEX_TRAJECTORY_DIR` to store runtime trajectory sidecars in a
 dedicated directory:
 
 ```bash
-export OPENCLAW_TRAJECTORY_DIR=/var/lib/openclaw/trajectories
+export DEX_TRAJECTORY_DIR=/var/lib/openclaw/trajectories
 ```
 
 When this variable is set, OpenClaw writes one JSONL file per session id in that
@@ -158,10 +158,10 @@ belongs to that session.
 
 ## Disable capture
 
-Set `OPENCLAW_TRAJECTORY=0` before starting OpenClaw:
+Set `DEX_TRAJECTORY=0` before starting OpenClaw:
 
 ```bash
-export OPENCLAW_TRAJECTORY=0
+export DEX_TRAJECTORY=0
 ```
 
 This disables runtime trajectory capture. `/export-trajectory` can still export
@@ -172,15 +172,15 @@ provider artifacts, and prompt metadata may be missing.
 
 OpenClaw flushes runtime trajectory sidecars during agent cleanup. The default
 cleanup timeout is 10,000 ms. On slow disks or large stores, set
-`OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS` before starting OpenClaw:
+`DEX_TRAJECTORY_FLUSH_TIMEOUT_MS` before starting OpenClaw:
 
 ```bash
-export OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS=30000
+export DEX_TRAJECTORY_FLUSH_TIMEOUT_MS=30000
 ```
 
 This controls when OpenClaw logs an `openclaw-trajectory-flush` timeout and continues.
 It does not change the trajectory size caps. To tune all agent cleanup steps
-that do not pass an explicit timeout, set `OPENCLAW_AGENT_CLEANUP_TIMEOUT_MS`.
+that do not pass an explicit timeout, set `DEX_AGENT_CLEANUP_TIMEOUT_MS`.
 
 ## Privacy and limits
 
@@ -208,8 +208,8 @@ and cannot know every application-specific secret.
 
 If the export has no runtime events:
 
-- confirm OpenClaw was started without `OPENCLAW_TRAJECTORY=0`
-- check whether `OPENCLAW_TRAJECTORY_DIR` points to a writable directory
+- confirm OpenClaw was started without `DEX_TRAJECTORY=0`
+- check whether `DEX_TRAJECTORY_DIR` points to a writable directory
 - run another message in the session, then export again
 - inspect `manifest.json` for `runtimeEventCount`
 

@@ -24,7 +24,7 @@ codeRefs:
   - extensions/qa-lab/src/suite.ts
 execution:
   kind: flow
-  summary: Run with `OPENCLAW_LIVE_SETUP_TOKEN_VALUE=<setup-token> pnpm openclaw qa suite --provider-mode live-frontier --model anthropic/claude-opus-4-8 --alt-model anthropic/claude-opus-4-8 --scenario anthropic-opus-setup-token-smoke`.
+  summary: Run with `DEX_LIVE_SETUP_TOKEN_VALUE=<setup-token> pnpm openclaw qa suite --provider-mode live-frontier --model anthropic/claude-opus-4-8 --alt-model anthropic/claude-opus-4-8 --scenario anthropic-opus-setup-token-smoke`.
   config:
     requiredProvider: anthropic
     requiredModel: claude-opus-4-8
@@ -53,7 +53,7 @@ steps:
           message:
             expr: "`expected token profile ${config.profileId} in QA config`"
       - assert:
-          expr: "env.providerMode !== 'live-frontier' || !env.gateway.runtimeEnv.OPENCLAW_LIVE_SETUP_TOKEN_VALUE"
+          expr: "env.providerMode !== 'live-frontier' || !env.gateway.runtimeEnv.DEX_LIVE_SETUP_TOKEN_VALUE"
           message: setup-token value should not be passed to the gateway child env
     detailsExpr: "env.providerMode === 'live-frontier' ? `provider=${selected?.provider} model=${selected?.model} auth=setup-token profile=${config.profileId}` : `mock-compatible provider=${selected?.provider}`"
   - name: talks through regular Anthropic Opus

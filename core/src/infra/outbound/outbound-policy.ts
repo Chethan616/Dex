@@ -5,7 +5,7 @@ import type {
   ChannelMessageActionName,
   ChannelThreadingToolContext,
 } from "../../channels/plugins/types.public.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { MessageToolsConfig } from "../../config/types.tools.js";
 import type { MessagePresentation } from "../../interactive/payload.js";
 import { normalizeTargetForProvider } from "./target-normalization.js";
@@ -97,7 +97,7 @@ function isCrossContextTarget(params: {
 }
 
 function resolveAgentMessageToolsConfig(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   agentId?: string | null,
 ): MessageToolsConfig | undefined {
   const trimmedAgentId = agentId?.trim();
@@ -149,7 +149,7 @@ function resolveAgentMessageToolsConfig(
  * Resolves the message-tool policy after applying any agent-specific overrides.
  */
 export function resolveEffectiveMessageToolsConfig(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string | null;
 }): MessageToolsConfig | undefined {
   return resolveAgentMessageToolsConfig(params.cfg, params.agentId);
@@ -159,7 +159,7 @@ export function resolveEffectiveMessageToolsConfig(params: {
  * Returns the normalized allowed message actions for an agent or the global policy.
  */
 export function resolveAllowedMessageActions(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string | null;
 }): string[] | undefined {
   const allow = resolveEffectiveMessageToolsConfig(params)?.actions?.allow;
@@ -174,7 +174,7 @@ export function resolveAllowedMessageActions(params: {
  * Rejects disabled message actions before channel-specific send handling runs.
  */
 export function enforceMessageActionAllowlist(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string | null;
   action: ChannelMessageActionName;
 }): void {
@@ -193,7 +193,7 @@ export function enforceCrossContextPolicy(params: {
   action: ChannelMessageActionName;
   args: Record<string, unknown>;
   toolContext?: ChannelThreadingToolContext;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string | null;
 }): void {
   const currentTarget = params.toolContext?.currentChannelId?.trim();
@@ -248,7 +248,7 @@ export function enforceCrossContextPolicy(params: {
  * Builds cross-context marker text or a channel-native presentation for forwarded sends.
  */
 export async function buildCrossContextDecoration(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
   target: string;
   toolContext?: ChannelThreadingToolContext;

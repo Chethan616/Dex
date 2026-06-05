@@ -15,7 +15,7 @@ import {
   type SessionEntry,
   updateSessionStore,
 } from "../../config/sessions.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { triggerSessionPatchHook } from "../../gateway/session-patch-hooks.js";
 import { resolveSessionModelIdentityRef } from "../../gateway/session-utils.js";
 import { loadManifestMetadataSnapshot } from "../../plugins/manifest-contract-eligibility.js";
@@ -405,7 +405,7 @@ function formatSessionTaskLine(params: {
 }
 
 async function resolveModelOverride(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   raw: string;
   sessionEntry?: SessionEntry;
   agentId: string;
@@ -488,7 +488,7 @@ export function createSessionStatusTool(opts?: {
    * "current"})` to resolve to the live run session instead of the stale sandbox key.
    */
   runSessionKey?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sandboxed?: boolean;
   activeModelProvider?: string;
   activeModelId?: string;

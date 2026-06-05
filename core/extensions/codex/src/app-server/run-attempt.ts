@@ -122,7 +122,7 @@ import {
   readCodexPluginConfig,
   resolveCodexComputerUseConfig,
   resolveCodexAppServerRuntimeOptions,
-  resolveOpenClawExecPolicyForCodexAppServer,
+  resolveDexExecPolicyForCodexAppServer,
   shouldAutoApproveCodexAppServerApprovals,
   type CodexAppServerRuntimeOptions,
 } from "./config.js";
@@ -139,9 +139,9 @@ import {
   includeForcedCodexDynamicToolAllow,
   isCodexNativeExecutionBlockedByNodeExecHost,
   resolveCodexAppServerHookChannelId,
-  resolveOpenClawCodingToolsSessionKeys,
-  resetOpenClawCodingToolsFactoryForTests,
-  setOpenClawCodingToolsFactoryForTests,
+  resolveDexCodingToolsSessionKeys,
+  resetDexCodingToolsFactoryForTests,
+  setDexCodingToolsFactoryForTests,
   shouldEnableCodexAppServerNativeToolSurface,
   shouldForceMessageTool,
   shouldWarnCodexDynamicToolBuildStageSummary,
@@ -378,7 +378,7 @@ export async function runCodexAppServerAttempt(
     workspaceDir: resolvedWorkspace,
   });
   preDynamicStartupStages.mark("sandbox");
-  const execPolicy = resolveOpenClawExecPolicyForCodexAppServer({
+  const execPolicy = resolveDexExecPolicyForCodexAppServer({
     execOverrides: params.execOverrides,
     approvals: loadExecApprovals(),
     config: params.config,
@@ -1159,7 +1159,7 @@ export async function runCodexAppServerAttempt(
   const turnAttemptIdleTimeoutMs = Math.max(100, Math.floor(params.timeoutMs));
   let nativeHookRelayLastRenewedAt = 0;
   let activeAppServerTurnRequests = 0;
-  const pendingOpenClawDynamicToolCompletionIds = new Set<string>();
+  const pendingDexDynamicToolCompletionIds = new Set<string>();
   const activeTurnItemIds = new Set<string>();
   let turnCrossedToolHandoff = false;
   let pendingTerminalDynamicToolRelease:
@@ -1263,7 +1263,7 @@ export async function runCodexAppServerAttempt(
         currentTurnHadNonTerminalDynamicToolResult,
         activeAppServerTurnRequests,
         activeTurnItemIdsCount: activeTurnItemIds.size,
-        pendingOpenClawDynamicToolCompletionIdsCount: pendingOpenClawDynamicToolCompletionIds.size,
+        pendingDexDynamicToolCompletionIdsCount: pendingDexDynamicToolCompletionIds.size,
       })
     ) {
       return;
@@ -1309,7 +1309,7 @@ export async function runCodexAppServerAttempt(
       const action = resolveTerminalDynamicToolBatchAction({
         activeAppServerTurnRequests,
         activeTurnItemIdsCount: activeTurnItemIds.size,
-        pendingOpenClawDynamicToolCompletionIdsCount: pendingOpenClawDynamicToolCompletionIds.size,
+        pendingDexDynamicToolCompletionIdsCount: pendingDexDynamicToolCompletionIds.size,
         currentTurnHadNonTerminalDynamicToolResult,
         hasPendingTerminalDynamicToolRelease: pendingTerminalDynamicToolRelease !== undefined,
       });
@@ -1407,7 +1407,7 @@ export async function runCodexAppServerAttempt(
       turnWatches,
       activeTurnItemIds,
       activeAppServerTurnRequests,
-      pendingOpenClawDynamicToolCompletionIds,
+      pendingDexDynamicToolCompletionIds,
       turnCrossedToolHandoff,
       postToolRawAssistantCompletionIdleTimeoutMs,
       onScheduleTerminalDynamicToolReleaseCheck: scheduleTerminalDynamicToolReleaseCheck,
@@ -1601,7 +1601,7 @@ export async function runCodexAppServerAttempt(
       armCompletionWatchOnResponse = true;
       markCurrentTurnRequestProgress();
       turnCrossedToolHandoff = true;
-      pendingOpenClawDynamicToolCompletionIds.add(call.callId);
+      pendingDexDynamicToolCompletionIds.add(call.callId);
       trajectoryRecorder?.recordEvent("tool.call", {
         threadId: call.threadId,
         turnId: call.turnId,
@@ -1730,7 +1730,7 @@ export async function runCodexAppServerAttempt(
             durationMs: toolDurationMs,
           });
         }
-        pendingOpenClawDynamicToolCompletionIds.delete(call.callId);
+        pendingDexDynamicToolCompletionIds.delete(call.callId);
         if (response.terminate === true) {
           scheduleTurnReleaseAfterTerminalDynamicTool({
             call,
@@ -1745,7 +1745,7 @@ export async function runCodexAppServerAttempt(
         }
         return protocolResponse as JsonValue;
       } catch (error) {
-        pendingOpenClawDynamicToolCompletionIds.delete(call.callId);
+        pendingDexDynamicToolCompletionIds.delete(call.callId);
         if (
           !terminalDiagnosticObserved &&
           !hasPendingDynamicToolTerminalDiagnostic({
@@ -2675,13 +2675,13 @@ export const testing = {
   resolveCodexDynamicToolsLoadingForModel,
   resolveCodexAppServerHookChannelId,
   buildCodexAppServerPromptTimeoutOutcome,
-  resolveOpenClawCodingToolsSessionKeys,
+  resolveDexCodingToolsSessionKeys,
   shouldEnableCodexAppServerNativeToolSurface,
   shouldForceMessageTool,
   hasPendingDynamicToolTerminalDiagnostic,
   withCodexStartupTimeout,
-  setOpenClawCodingToolsFactoryForTests,
-  resetOpenClawCodingToolsFactoryForTests,
+  setDexCodingToolsFactoryForTests,
+  resetDexCodingToolsFactoryForTests,
   async ensureCodexWorkspaceDirOnceForTests(workspaceDir: string): Promise<void> {
     await ensureCodexWorkspaceDirOnce(workspaceDir);
   },

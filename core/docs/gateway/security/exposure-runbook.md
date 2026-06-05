@@ -44,7 +44,7 @@ Record these before changing bind, proxy, Tailscale, or channel policy:
 - Agents reachable from non-local senders.
 - Tool profile, sandbox mode, and elevated tool policy for each reachable agent.
 - External credentials available to those agents.
-- Backup location for `~/.openclaw/openclaw.json` and credentials.
+- Backup location for `~/.dex/openclaw.json` and credentials.
 
 If more than one person can message the bot, treat this as shared delegated tool
 authority, not as per-user host isolation.
@@ -66,7 +66,7 @@ intentional and documented for the deployment.
 For remote CLI validation, pass credentials explicitly:
 
 ```bash
-openclaw gateway probe --url ws://127.0.0.1:18789 --token "$OPENCLAW_GATEWAY_TOKEN"
+openclaw gateway probe --url ws://127.0.0.1:18789 --token "$DEX_GATEWAY_TOKEN"
 ```
 
 Do not assume local config credentials apply to an explicit remote URL.

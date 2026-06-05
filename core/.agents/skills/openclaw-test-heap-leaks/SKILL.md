@@ -13,8 +13,8 @@ For **runtime fixes** (e.g., closure leaks in long-running services like the gat
 
 1. Reproduce the failing shape first.
    - Match the real entrypoint if possible. For Linux CI-style unit failures, start with:
-   - `pnpm canvas:a2ui:bundle && OPENCLAW_TEST_MEMORY_TRACE=1 OPENCLAW_TEST_HEAPSNAPSHOT_INTERVAL_MS=60000 OPENCLAW_TEST_HEAPSNAPSHOT_DIR=.tmp/heapsnap OPENCLAW_TEST_WORKERS=2 OPENCLAW_TEST_MAX_OLD_SPACE_SIZE_MB=6144 pnpm test`
-   - Keep `OPENCLAW_TEST_MEMORY_TRACE=1` enabled so the wrapper prints per-file RSS summaries alongside the snapshots.
+   - `pnpm canvas:a2ui:bundle && DEX_TEST_MEMORY_TRACE=1 DEX_TEST_HEAPSNAPSHOT_INTERVAL_MS=60000 DEX_TEST_HEAPSNAPSHOT_DIR=.tmp/heapsnap DEX_TEST_WORKERS=2 DEX_TEST_MAX_OLD_SPACE_SIZE_MB=6144 pnpm test`
+   - Keep `DEX_TEST_MEMORY_TRACE=1` enabled so the wrapper prints per-file RSS summaries alongside the snapshots.
    - If the report is about a specific shard or worker budget, preserve that shape.
    - Before you analyze snapshots, identify the real lane names from `[test-parallel] start ...` lines or `pnpm test --plan`. Do not assume a single `unit-fast` lane; local plans often split into `unit-fast-batch-*`.
 

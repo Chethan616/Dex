@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   createOpenAiCompatibleImageGenerationProvider,
   type ImageGenerationProvider,
@@ -26,16 +26,16 @@ const LITELLM_SUPPORTED_SIZES = [
 const LITELLM_MAX_INPUT_IMAGES = 5;
 
 type LitellmProviderConfig = NonNullable<
-  NonNullable<OpenClawConfig["models"]>["providers"]
+  NonNullable<DexConfig["models"]>["providers"]
 >[string];
 
 function resolveLitellmProviderConfig(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
 ): LitellmProviderConfig | undefined {
   return cfg?.models?.providers?.litellm;
 }
 
-function resolveConfiguredLitellmBaseUrl(cfg: OpenClawConfig | undefined): string {
+function resolveConfiguredLitellmBaseUrl(cfg: DexConfig | undefined): string {
   return normalizeOptionalString(resolveLitellmProviderConfig(cfg)?.baseUrl) ?? LITELLM_BASE_URL;
 }
 

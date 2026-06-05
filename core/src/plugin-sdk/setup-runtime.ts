@@ -1,4 +1,4 @@
-export type { OpenClawConfig } from "../config/config.js";
+export type { DexConfig } from "../config/config.js";
 export type { WizardPrompter } from "../wizard/prompts.js";
 export { createClackPrompter } from "../wizard/clack-prompter.js";
 export { createSetupTranslator } from "../wizard/i18n/index.js";

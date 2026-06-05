@@ -361,7 +361,7 @@ const server = await createServer({
   clearScreen: false,
   configFile: path.join(uiRoot, "vite.config.ts"),
   define: {
-    OPENCLAW_CONTROL_UI_BUILD_ID: JSON.stringify("mock"),
+    DEX_CONTROL_UI_BUILD_ID: JSON.stringify("mock"),
   },
   logLevel: "error",
   optimizeDeps: {

@@ -12,7 +12,7 @@ import {
 } from "../../dist/agents/agent-bundle-mcp-runtime.js";
 import { applyFinalEffectiveToolPolicy } from "../../dist/agents/embedded-agent-runner/effective-tool-policy.js";
 import { splitSdkTools } from "../../dist/agents/embedded-agent-runner/tool-split.js";
-import type { OpenClawConfig } from "../../dist/config/types.openclaw.js";
+import type { DexConfig } from "../../dist/config/types.openclaw.js";
 import { getPluginToolMeta } from "../../dist/plugins/tools.js";
 import { createE2eStateDir } from "./lib/temp-state-dir.ts";
 
@@ -46,7 +46,7 @@ await server.connect(new StdioServerTransport());
 
 function applyPolicy(params: {
   tools: Awaited<ReturnType<typeof materializeBundleMcpToolsForRun>>["tools"];
-  config: OpenClawConfig;
+  config: DexConfig;
 }) {
   const warnings: string[] = [];
   return {
@@ -73,7 +73,7 @@ async function main() {
   await fs.mkdir(probeDir, { recursive: true });
   await writeProbeServer(serverPath);
 
-  const cfg: OpenClawConfig = {
+  const cfg: DexConfig = {
     tools: {
       profile: "coding",
     },

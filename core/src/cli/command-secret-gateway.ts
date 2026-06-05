@@ -4,7 +4,7 @@ import {
   GATEWAY_CLIENT_NAMES,
 } from "../../packages/gateway-protocol/src/client-info.js";
 import { validateSecretsResolveResult } from "../../packages/gateway-protocol/src/index.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveSecretInputRef } from "../config/types.secrets.js";
 import { callGateway } from "../gateway/call.js";
 import { formatErrorMessage } from "../infra/errors.js";
@@ -25,7 +25,7 @@ import {
 } from "../secrets/target-registry.js";
 
 type ResolveCommandSecretsResult = {
-  resolvedConfig: OpenClawConfig;
+  resolvedConfig: DexConfig;
   diagnostics: string[];
   targetStatesByPath: Record<string, CommandSecretTargetState>;
   hadUnresolvedTargets: boolean;
@@ -145,7 +145,7 @@ function targetsRuntimeWebPath(path: string): boolean {
 }
 
 function classifyRuntimeWebTargetPathState(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   path: string;
 }): "active" | "inactive" | "unknown" {
   if (params.path === "tools.web.search.apiKey") {
@@ -221,7 +221,7 @@ function classifyRuntimeWebTargetPathState(params: {
 }
 
 function describeInactiveRuntimeWebTargetPath(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   path: string;
 }): string | undefined {
   if (params.path === "tools.web.search.apiKey") {
@@ -313,7 +313,7 @@ function targetsRuntimeWebResolution(params: {
 }
 
 function collectConfiguredTargetRefPaths(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   targetIds: Set<string>;
   allowedPaths?: ReadonlySet<string>;
 }): Set<string> {
@@ -339,7 +339,7 @@ function collectConfiguredTargetRefPaths(params: {
 }
 
 function classifyConfiguredTargetRefs(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   configuredTargetRefPaths: Set<string>;
   forcedActivePaths?: ReadonlySet<string>;
   optionalActivePaths?: ReadonlySet<string>;
@@ -481,7 +481,7 @@ function hasForcedActivePaths(paths: ReadonlySet<string> | undefined): boolean {
 }
 
 async function callGatewaySecretsResolve(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   commandName: string;
   targetIds: Set<string>;
   allowedPaths?: ReadonlySet<string>;
@@ -535,7 +535,7 @@ function isDirectRuntimeWebTargetPath(path: string): boolean {
 }
 
 async function resolveCommandSecretRefsLocally(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   commandName: string;
   targetIds: Set<string>;
   preflightDiagnostics: string[];
@@ -728,7 +728,7 @@ function buildUnresolvedDiagnostics(
 }
 
 function scrubUnresolvedAssignments(
-  config: OpenClawConfig,
+  config: DexConfig,
   unresolved: UnresolvedCommandSecretAssignment[],
 ): void {
   for (const entry of unresolved) {
@@ -753,8 +753,8 @@ function filterInactiveSurfaceDiagnostics(params: {
 
 async function resolveTargetSecretLocally(params: {
   target: DiscoveredConfigSecretTarget;
-  sourceConfig: OpenClawConfig;
-  resolvedConfig: OpenClawConfig;
+  sourceConfig: DexConfig;
+  resolvedConfig: DexConfig;
   env: NodeJS.ProcessEnv;
   cache: ReturnType<typeof createResolverContext>["cache"];
   activePaths: ReadonlySet<string>;
@@ -808,7 +808,7 @@ async function resolveTargetSecretLocally(params: {
 }
 
 export async function resolveCommandSecretRefsViaGateway(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   commandName: string;
   targetIds: Set<string>;
   mode?: CommandSecretResolutionModeInput;

@@ -412,14 +412,14 @@ export function createNpmShrinkwrapExecOptions(invocation, cwd, env = process.en
     cwd,
     env: invocation.env ?? env,
     maxBuffer: readPositiveIntEnv(
-      "OPENCLAW_NPM_SHRINKWRAP_COMMAND_MAX_BUFFER_BYTES",
+      "DEX_NPM_SHRINKWRAP_COMMAND_MAX_BUFFER_BYTES",
       NPM_SHRINKWRAP_COMMAND_MAX_BUFFER_BYTES,
       env,
     ),
     shell: invocation.shell,
     stdio: ["ignore", "pipe", "pipe"],
     timeout: readPositiveIntEnv(
-      "OPENCLAW_NPM_SHRINKWRAP_COMMAND_TIMEOUT_MS",
+      "DEX_NPM_SHRINKWRAP_COMMAND_TIMEOUT_MS",
       NPM_SHRINKWRAP_COMMAND_TIMEOUT_MS,
       env,
     ),

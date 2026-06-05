@@ -4,7 +4,7 @@ import { note } from "../../packages/terminal-core/src/note.js";
 import { sanitizeTerminalText } from "../../packages/terminal-core/src/safe-text.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import { resolveStateDir } from "../config/paths.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { callGateway } from "../gateway/call.js";
 import {
   listApprovedPairedDeviceRoles,
@@ -119,7 +119,7 @@ function normalizeLocalPairedDevice(device: PairedDevice): DoctorPairedDevice {
 }
 
 async function loadDoctorPairingSnapshot(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   healthOk: boolean;
 }): Promise<DoctorPairingSnapshot | null> {
   if (params.healthOk) {
@@ -489,7 +489,7 @@ function formatPairingStoreReadIssue(error: JsonFileReadError): string {
 }
 
 export async function noteDevicePairingHealth(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   healthOk: boolean;
 }): Promise<void> {
   let snapshot: DoctorPairingSnapshot | null;

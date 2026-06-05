@@ -333,7 +333,7 @@ For hot setup-only paths, prefer the narrow setup helper seams over the broader 
 Use the broader `plugin-sdk/setup` seam when you want the full shared setup toolbox, including config-patch helpers such as `moveSingleAccountChannelSectionToDefaultAccount(...)`.
 
 Use `createSetupTranslator(...)` for fixed setup wizard copy. It follows the
-CLI wizard locale (`OPENCLAW_LOCALE`, then system locale variables) and falls
+CLI wizard locale (`DEX_LOCALE`, then system locale variables) and falls
 back to English. Keep plugin-specific setup text in plugin-owned code and use
 shared catalog keys only for common setup labels, status text, and official
 bundled plugin setup copy.
@@ -534,7 +534,7 @@ openclaw plugins install <package-name>
 ```
 
 <Info>
-For npm-sourced installs, `openclaw plugins install` installs the package into a per-plugin project under `~/.openclaw/npm/projects` with lifecycle scripts disabled. Keep plugin dependency trees pure JS/TS and avoid packages that require `postinstall` builds.
+For npm-sourced installs, `openclaw plugins install` installs the package into a per-plugin project under `~/.dex/npm/projects` with lifecycle scripts disabled. Keep plugin dependency trees pure JS/TS and avoid packages that require `postinstall` builds.
 </Info>
 
 <Note>

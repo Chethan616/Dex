@@ -12,7 +12,7 @@ import {
   validateCronUpdateParams,
   validateWakeParams,
 } from "../../../packages/gateway-protocol/src/index.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { resolveCronDeliveryPreviews } from "../../cron/delivery-preview.js";
 import { assertCronDeliveryInputNonBlankFields } from "../../cron/delivery-target-validation.js";
 import { normalizeCronJobCreate, normalizeCronJobPatch } from "../../cron/normalize.js";
@@ -50,7 +50,7 @@ type CronRunsRequestParams = CronJobIdParams & {
   sortDir?: "asc" | "desc";
 };
 
-function listConfiguredAnnounceChannelIds(cfg: OpenClawConfig): string[] {
+function listConfiguredAnnounceChannelIds(cfg: DexConfig): string[] {
   return listConfiguredAnnounceChannelIdsForConfig({
     config: cfg,
     env: process.env,
@@ -58,7 +58,7 @@ function listConfiguredAnnounceChannelIds(cfg: OpenClawConfig): string[] {
 }
 
 function assertConfiguredAnnounceChannel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel?: string;
   field: "delivery.channel" | "delivery.failureDestination.channel";
 }) {
@@ -119,7 +119,7 @@ function assertCompatibleAnnounceTarget(params: {
   }
 }
 
-function assertValidCronAnnounceDelivery(params: { cfg: OpenClawConfig; delivery?: CronDelivery }) {
+function assertValidCronAnnounceDelivery(params: { cfg: DexConfig; delivery?: CronDelivery }) {
   if (params.delivery && (params.delivery.mode ?? "announce") === "announce") {
     assertCompatibleAnnounceTarget({
       channel: params.delivery.channel,
@@ -162,7 +162,7 @@ function assertValidCronAnnounceDelivery(params: { cfg: OpenClawConfig; delivery
   }
 }
 
-function assertValidCronCreateDelivery(cfg: OpenClawConfig, jobCreate: CronJobCreate) {
+function assertValidCronCreateDelivery(cfg: DexConfig, jobCreate: CronJobCreate) {
   assertValidCronAnnounceDelivery({
     cfg,
     delivery: jobCreate.delivery,
@@ -170,7 +170,7 @@ function assertValidCronCreateDelivery(cfg: OpenClawConfig, jobCreate: CronJobCr
 }
 
 function assertValidCronUpdatePatch(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   defaultAgentId?: string;
   currentJob: CronJob;
   patch: CronJobPatch;

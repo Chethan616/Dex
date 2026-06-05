@@ -1,5 +1,5 @@
 import type { APIAttachment, APIStickerItem } from "discord-api-types/v10";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { createReplyReferencePlanner } from "openclaw/plugin-sdk/reply-reference";
 import type { ChannelType, Client, MessageCreateListener } from "../internal/discord.js";
 import type { DiscordChannelConfigResolved } from "./allow-list.js";
@@ -97,6 +97,6 @@ export type MaybeCreateDiscordAutoThreadParams = {
   channelDescription?: string;
   baseText: string;
   combinedBody: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string;
 };

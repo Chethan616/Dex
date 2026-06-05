@@ -182,7 +182,7 @@ function buildFallbackStateMismatchError(details: ConnectPairingRequiredDetails)
       details.requestId
         ? `${FALLBACK_STATE_MISMATCH_MESSAGE} Missing requestId: ${details.requestId}.`
         : FALLBACK_STATE_MISMATCH_MESSAGE,
-      "The running gateway is probably using a different OPENCLAW_PROFILE or OPENCLAW_STATE_DIR than this CLI.",
+      "The running gateway is probably using a different DEX_PROFILE or DEX_STATE_DIR than this CLI.",
       "Rerun with the same profile/state-dir as the gateway, or pass --token/--password so the CLI can approve through the gateway.",
     ].join("\n"),
   );

@@ -30,8 +30,8 @@ const START_AFTER_EXIT_PRINT_RETRY_DELAY_SECONDS = 0.2;
 type LaunchdRestartLogEnv = {
   HOME?: string;
   USERPROFILE?: string;
-  OPENCLAW_STATE_DIR?: string;
-  OPENCLAW_PROFILE?: string;
+  DEX_STATE_DIR?: string;
+  DEX_PROFILE?: string;
 };
 
 function assertValidLaunchAgentLabel(label: string): string {
@@ -65,17 +65,17 @@ function collectRestartLogEnv(env?: Record<string, string | undefined>): Launchd
   return {
     HOME: source.HOME,
     USERPROFILE: source.USERPROFILE,
-    OPENCLAW_STATE_DIR: source.OPENCLAW_STATE_DIR,
-    OPENCLAW_PROFILE: source.OPENCLAW_PROFILE,
+    DEX_STATE_DIR: source.DEX_STATE_DIR,
+    DEX_PROFILE: source.DEX_PROFILE,
   };
 }
 
 function resolveLaunchAgentLabel(env?: Record<string, string | undefined>): string {
-  const envLabel = normalizeOptionalString(env?.OPENCLAW_LAUNCHD_LABEL);
+  const envLabel = normalizeOptionalString(env?.DEX_LAUNCHD_LABEL);
   if (envLabel) {
     return assertValidLaunchAgentLabel(envLabel);
   }
-  return assertValidLaunchAgentLabel(resolveGatewayLaunchAgentLabel(env?.OPENCLAW_PROFILE));
+  return assertValidLaunchAgentLabel(resolveGatewayLaunchAgentLabel(env?.DEX_PROFILE));
 }
 
 function resolveLaunchdRestartTarget(

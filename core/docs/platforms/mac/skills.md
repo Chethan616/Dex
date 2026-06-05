@@ -30,7 +30,7 @@ The macOS app surfaces OpenClaw skills via the gateway; it does not parse skills
 
 ## Env/API keys
 
-- The app stores keys in `~/.openclaw/openclaw.json` under `skills.entries.<skillKey>`.
+- The app stores keys in `~/.dex/openclaw.json` under `skills.entries.<skillKey>`.
 - `skills.update` patches `enabled`, `apiKey`, and `env`.
 
 ## Remote mode

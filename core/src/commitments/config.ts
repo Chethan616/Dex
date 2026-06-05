@@ -1,5 +1,5 @@
 import { resolveUserTimezone } from "../agents/date-time.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 
 const DEFAULT_COMMITMENT_EXTRACTION_DEBOUNCE_MS = 15_000;
 const DEFAULT_COMMITMENT_BATCH_MAX_ITEMS = 8;
@@ -30,7 +30,7 @@ function positiveInt(value: unknown, fallback: number): number {
     : fallback;
 }
 
-export function resolveCommitmentsConfig(cfg?: OpenClawConfig): ResolvedCommitmentsConfig {
+export function resolveCommitmentsConfig(cfg?: DexConfig): ResolvedCommitmentsConfig {
   const raw = cfg?.commitments;
   return {
     enabled: raw?.enabled === true,
@@ -46,6 +46,6 @@ export function resolveCommitmentsConfig(cfg?: OpenClawConfig): ResolvedCommitme
   };
 }
 
-export function resolveCommitmentTimezone(cfg?: OpenClawConfig): string {
+export function resolveCommitmentTimezone(cfg?: DexConfig): string {
   return resolveUserTimezone(cfg?.agents?.defaults?.userTimezone);
 }

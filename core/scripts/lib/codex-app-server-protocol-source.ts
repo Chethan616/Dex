@@ -87,7 +87,7 @@ export async function resolveCodexAppServerProtocolSource(repoRoot: string): Pro
   throw new Error(
     [
       "Codex app-server protocol schema not found.",
-      "Set OPENCLAW_CODEX_REPO to a checkout of openai/codex, or keep a sibling `codex` checkout next to the primary OpenClaw checkout.",
+      "Set DEX_CODEX_REPO to a checkout of openai/codex, or keep a sibling `codex` checkout next to the primary OpenClaw checkout.",
       `Checked: ${checked.join(", ") || "<none>"}`,
     ].join("\n"),
   );
@@ -150,7 +150,7 @@ export async function generateExperimentalCodexAppServerProtocolSource(
 
 async function collectCodexRepoCandidates(repoRoot: string): Promise<string[]> {
   const candidates = [
-    process.env.OPENCLAW_CODEX_REPO,
+    process.env.DEX_CODEX_REPO,
     path.resolve(repoRoot, "../codex"),
     await resolvePrimaryWorktreeSiblingCodex(repoRoot),
   ];

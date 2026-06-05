@@ -2,7 +2,7 @@
 // Keep this barrel thin and aligned with the local extension surface.
 
 export { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
-export type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+export type { DexPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 export type { GatewayRequestHandlerOptions } from "openclaw/plugin-sdk/gateway-runtime";
 export {
   isRequestBodyLimitError,

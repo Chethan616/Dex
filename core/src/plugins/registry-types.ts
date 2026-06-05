@@ -39,21 +39,21 @@ import type {
   MediaUnderstandingProviderPlugin,
   TranscriptSourceProvider,
   MusicGenerationProviderPlugin,
-  OpenClawPluginChannelRegistration,
-  OpenClawPluginCliCommandDescriptor,
-  OpenClawPluginCliRegistrar,
-  OpenClawPluginCommandDefinition,
-  OpenClawPluginGatewayRuntimeScopeSurface,
-  OpenClawGatewayDiscoveryService,
-  OpenClawPluginHttpRouteAuth,
-  OpenClawPluginHttpRouteHandler,
-  OpenClawPluginHttpRouteUpgradeHandler,
-  OpenClawPluginHttpRouteMatch,
-  OpenClawPluginHostedMediaResolver,
-  OpenClawPluginReloadRegistration,
-  OpenClawPluginSecurityAuditCollector,
-  OpenClawPluginService,
-  OpenClawPluginToolFactory,
+  DexPluginChannelRegistration,
+  DexPluginCliCommandDescriptor,
+  DexPluginCliRegistrar,
+  DexPluginCommandDefinition,
+  DexPluginGatewayRuntimeScopeSurface,
+  DexGatewayDiscoveryService,
+  DexPluginHttpRouteAuth,
+  DexPluginHttpRouteHandler,
+  DexPluginHttpRouteUpgradeHandler,
+  DexPluginHttpRouteMatch,
+  DexPluginHostedMediaResolver,
+  DexPluginReloadRegistration,
+  DexPluginSecurityAuditCollector,
+  DexPluginService,
+  DexPluginToolFactory,
   PluginConversationBindingResolvedEvent,
   PluginHookRegistration as TypedPluginHookRegistration,
   PluginLogger,
@@ -73,7 +73,7 @@ import type {
 export type PluginToolRegistration = {
   pluginId: string;
   pluginName?: string;
-  factory: OpenClawPluginToolFactory;
+  factory: DexPluginToolFactory;
   names: string[];
   declaredNames?: string[];
   optional: boolean;
@@ -84,10 +84,10 @@ export type PluginToolRegistration = {
 export type PluginCliRegistration = {
   pluginId: string;
   pluginName?: string;
-  register: OpenClawPluginCliRegistrar;
+  register: DexPluginCliRegistrar;
   parentPath: string[];
   commands: string[];
-  descriptors: OpenClawPluginCliCommandDescriptor[];
+  descriptors: DexPluginCliCommandDescriptor[];
   source: string;
   rootDir?: string;
 };
@@ -95,11 +95,11 @@ export type PluginCliRegistration = {
 export type PluginHttpRouteRegistration = {
   pluginId?: string;
   path: string;
-  handler: OpenClawPluginHttpRouteHandler;
-  handleUpgrade?: OpenClawPluginHttpRouteUpgradeHandler;
-  auth: OpenClawPluginHttpRouteAuth;
-  match: OpenClawPluginHttpRouteMatch;
-  gatewayRuntimeScopeSurface?: OpenClawPluginGatewayRuntimeScopeSurface;
+  handler: DexPluginHttpRouteHandler;
+  handleUpgrade?: DexPluginHttpRouteUpgradeHandler;
+  auth: DexPluginHttpRouteAuth;
+  match: DexPluginHttpRouteMatch;
+  gatewayRuntimeScopeSurface?: DexPluginGatewayRuntimeScopeSurface;
   gatewayMethodDispatchAllowed?: boolean;
   nodeCapability?: {
     surface: string;
@@ -111,7 +111,7 @@ export type PluginHttpRouteRegistration = {
 export type PluginHostedMediaResolverRegistration = {
   pluginId: string;
   pluginName?: string;
-  resolver: OpenClawPluginHostedMediaResolver;
+  resolver: DexPluginHostedMediaResolver;
   source: string;
   rootDir?: string;
 };
@@ -235,7 +235,7 @@ export type PluginHookRegistration = {
 export type PluginServiceRegistration = {
   pluginId: string;
   pluginName?: string;
-  service: OpenClawPluginService;
+  service: DexPluginService;
   source: string;
   origin: PluginOrigin;
   trustedOfficialInstall?: boolean;
@@ -245,7 +245,7 @@ export type PluginServiceRegistration = {
 export type PluginGatewayDiscoveryServiceRegistration = {
   pluginId: string;
   pluginName?: string;
-  service: OpenClawGatewayDiscoveryService;
+  service: DexGatewayDiscoveryService;
   source: string;
   rootDir?: string;
 };
@@ -253,7 +253,7 @@ export type PluginGatewayDiscoveryServiceRegistration = {
 export type PluginReloadRegistration = {
   pluginId: string;
   pluginName?: string;
-  registration: OpenClawPluginReloadRegistration;
+  registration: DexPluginReloadRegistration;
   source: string;
   rootDir?: string;
 };
@@ -261,7 +261,7 @@ export type PluginReloadRegistration = {
 export type PluginNodeHostCommandRegistration = {
   pluginId: string;
   pluginName?: string;
-  command: import("./types.js").OpenClawPluginNodeHostCommand;
+  command: import("./types.js").DexPluginNodeHostCommand;
   source: string;
   rootDir?: string;
 };
@@ -269,7 +269,7 @@ export type PluginNodeHostCommandRegistration = {
 export type PluginNodeInvokePolicyRegistration = {
   pluginId: string;
   pluginName?: string;
-  policy: import("./types.js").OpenClawPluginNodeInvokePolicy;
+  policy: import("./types.js").DexPluginNodeInvokePolicy;
   pluginConfig?: Record<string, unknown>;
   source: string;
   rootDir?: string;
@@ -278,7 +278,7 @@ export type PluginNodeInvokePolicyRegistration = {
 export type PluginSecurityAuditCollectorRegistration = {
   pluginId: string;
   pluginName?: string;
-  collector: OpenClawPluginSecurityAuditCollector;
+  collector: DexPluginSecurityAuditCollector;
   source: string;
   rootDir?: string;
 };
@@ -286,7 +286,7 @@ export type PluginSecurityAuditCollectorRegistration = {
 export type PluginCommandRegistration = {
   pluginId: string;
   pluginName?: string;
-  command: OpenClawPluginCommandDefinition;
+  command: DexPluginCommandDefinition;
   source: string;
   rootDir?: string;
 };
@@ -491,11 +491,11 @@ export type PluginRegistryParams = {
 };
 
 export type PluginRegistrationMode = import("./types.js").PluginRegistrationMode;
-export type OpenClawPluginNodeHostCommand = import("./types.js").OpenClawPluginNodeHostCommand;
-export type OpenClawPluginToolContext = import("./types.js").OpenClawPluginToolContext;
-export type OpenClawPluginHttpRouteParams = import("./types.js").OpenClawPluginHttpRouteParams;
-export type OpenClawPluginHookOptions = import("./types.js").OpenClawPluginHookOptions;
+export type DexPluginNodeHostCommand = import("./types.js").DexPluginNodeHostCommand;
+export type DexPluginToolContext = import("./types.js").DexPluginToolContext;
+export type DexPluginHttpRouteParams = import("./types.js").DexPluginHttpRouteParams;
+export type DexPluginHookOptions = import("./types.js").DexPluginHookOptions;
 export type PluginHookHandlerMap = import("./types.js").PluginHookHandlerMap;
-export type OpenClawPluginApi = import("./types.js").OpenClawPluginApi;
+export type DexPluginApi = import("./types.js").DexPluginApi;
 export type TypedPluginHook = TypedPluginHookRegistration;
-export type OpenClawPluginChannelReg = OpenClawPluginChannelRegistration;
+export type DexPluginChannelReg = DexPluginChannelRegistration;

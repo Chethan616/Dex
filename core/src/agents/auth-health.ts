@@ -4,7 +4,7 @@ import {
 } from "@dexagent/model-catalog-core/provider-id";
 import { asDateTimestampMs } from "@dexagent/normalization-core/number-coercion";
 import { normalizeUniqueStringEntries } from "@dexagent/normalization-core/string-normalization";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   DEFAULT_OAUTH_REFRESH_MARGIN_MS,
   type AuthCredentialReasonCode,
@@ -119,7 +119,7 @@ function buildProfileHealth(params: {
   credential: AuthProfileCredential;
   runtimeCredential?: AuthProfileCredential;
   store: AuthProfileStore;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   now: number;
   warnAfterMs: number;
   allowKeychainPrompt?: boolean;
@@ -255,7 +255,7 @@ function buildProfileHealth(params: {
 
 export function buildAuthHealthSummary(params: {
   store: AuthProfileStore;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   warnAfterMs?: number;
   providers?: string[];
   runtimeCredentialsByProvider?: ReadonlyMap<string, AuthProfileCredential>;

@@ -25,7 +25,7 @@ import {
   resolveAgentModelFallbackValues,
   resolveAgentModelPrimaryValue,
 } from "../config/model-input.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import type {
   MediaUnderstandingConfig,
   MediaUnderstandingModelConfig,
@@ -84,7 +84,7 @@ async function loadModelCatalogApi(): Promise<ModelCatalogApi> {
 }
 
 function resolveLiteralProviderApiKey(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   providerId: string,
 ): string | null {
   return normalizeNullableString(
@@ -94,7 +94,7 @@ function resolveLiteralProviderApiKey(
 
 async function hasProviderAuthAvailable(params: {
   provider: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   agentDir?: string;
   workspaceDir?: string;
 }): Promise<boolean> {
@@ -107,7 +107,7 @@ async function hasProviderAuthAvailable(params: {
 }
 
 function resolveConfiguredKeyProviderOrder(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   providerRegistry: ProviderRegistry;
   capability: MediaUnderstandingCapability;
   fallbackProviders: readonly string[];
@@ -125,7 +125,7 @@ function resolveConfiguredKeyProviderOrder(params: {
 }
 
 function resolveConfiguredImageModelId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   providerId: string;
 }): string | undefined {
   if (isMinimaxVlmProvider(params.providerId)) {
@@ -137,7 +137,7 @@ function resolveConfiguredImageModelId(params: {
 }
 
 function resolveConfiguredImageModel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   providerId: string;
 }): { id?: string; input?: string[] } | undefined {
   const providerCfg = findNormalizedProviderValue(
@@ -215,7 +215,7 @@ function resolveAutoMediaKeyProvidersFromRegistry(params: {
 }
 
 async function explicitImageModelVisionStatus(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   providerId: string;
   model: string;
 }): Promise<"supported" | "unsupported" | "unknown"> {
@@ -239,7 +239,7 @@ async function explicitImageModelVisionStatus(params: {
 }
 
 async function resolveAutoImageModelId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   providerId: string;
   providerRegistry: ProviderRegistry;
   explicitModel?: string;
@@ -292,13 +292,13 @@ async function resolveAutoImageModelId(params: {
 
 export function buildProviderRegistry(
   overrides?: Record<string, MediaUnderstandingProvider>,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
 ): ProviderRegistry {
   return buildMediaUnderstandingRegistry(overrides, cfg);
 }
 
 export function resolveMediaAttachmentLocalRoots(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   ctx: MsgContext;
   workspaceDir?: string;
 }): readonly string[] {
@@ -446,7 +446,7 @@ async function resolveAntigravityCliBinary(): Promise<string | null> {
     return cached;
   }
   const resolved = (async () => {
-    const configured = process.env.OPENCLAW_ANTIGRAVITY_CLI?.trim();
+    const configured = process.env.DEX_ANTIGRAVITY_CLI?.trim();
     const candidates = [configured, "agy", "antigravity"].filter((value): value is string =>
       Boolean(value),
     );
@@ -573,7 +573,7 @@ async function resolveAntigravityCliEntry(
 }
 
 async function resolveKeyEntry(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir?: string;
   workspaceDir?: string;
   providerRegistry: ProviderRegistry;
@@ -649,7 +649,7 @@ async function resolveKeyEntry(params: {
 }
 
 function resolveImageModelFromAgentDefaults(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string;
 }): MediaUnderstandingModelConfig[] {
   const refs: string[] = [];
@@ -700,7 +700,7 @@ function resolveImageModelFromAgentDefaults(params: {
 }
 
 function hasExplicitImageUnderstandingConfig(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   config?: MediaUnderstandingConfig;
   agentId?: string;
 }): boolean {
@@ -714,7 +714,7 @@ function hasExplicitImageUnderstandingConfig(params: {
 }
 
 async function resolveAutoEntries(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string;
   agentDir?: string;
   workspaceDir?: string;
@@ -757,7 +757,7 @@ async function resolveAutoEntries(params: {
 }
 
 export async function resolveAutoImageModel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string;
   agentDir?: string;
   workspaceDir?: string;
@@ -808,7 +808,7 @@ export async function resolveAutoImageModel(params: {
 }
 
 async function resolveActiveModelEntry(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir?: string;
   workspaceDir?: string;
   providerRegistry: ProviderRegistry;
@@ -875,7 +875,7 @@ async function resolveActiveModelEntry(params: {
 
 async function runAttachmentEntries(params: {
   capability: MediaUnderstandingCapability;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   ctx: MsgContext;
   attachmentIndex: number;
   agentDir?: string;
@@ -970,7 +970,7 @@ function hasFailedMediaAttempt(attachments: MediaUnderstandingDecision["attachme
 
 export async function runCapability(params: {
   capability: MediaUnderstandingCapability;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   ctx: MsgContext;
   attachments: MediaAttachmentCache;
   media: MediaAttachment[];

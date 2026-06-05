@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { resolveDefaultWhatsAppAccountId } from "./account-ids.js";
 import { getRegisteredWhatsAppConnectionController } from "./connection-controller-registry.js";
 import type { ActiveWebListener } from "./inbound/types.js";
@@ -6,7 +6,7 @@ import type { ActiveWebListener } from "./inbound/types.js";
 export type { ActiveWebListener, ActiveWebSendOptions } from "./inbound/types.js";
 
 export function resolveWebAccountId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 }): string {
   return (params.accountId ?? "").trim() || resolveDefaultWhatsAppAccountId(params.cfg);

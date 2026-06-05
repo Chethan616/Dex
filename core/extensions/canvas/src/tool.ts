@@ -12,13 +12,13 @@ import {
   readStringParam,
 } from "openclaw/plugin-sdk/channel-actions";
 import { readFiniteNumberParam, readPositiveIntegerParam } from "openclaw/plugin-sdk/param-readers";
-import type { AnyAgentTool, OpenClawConfig } from "openclaw/plugin-sdk/plugin-entry";
+import type { AnyAgentTool, DexConfig } from "openclaw/plugin-sdk/plugin-entry";
 import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/temp-path";
 import { normalizeCanvasSnapshotFileExtension, parseCanvasSnapshotPayload } from "./cli-helpers.js";
 import { CanvasToolSchema } from "./tool-schema.js";
 
 type CanvasToolOptions = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
 };
 
@@ -76,7 +76,7 @@ async function readJsonlFromPath(jsonlPath: string, workspaceDir?: string): Prom
 }
 
 function resolveCanvasImageSanitizationLimits(
-  config?: OpenClawConfig,
+  config?: DexConfig,
 ): CanvasImageSanitizationLimits {
   const configured = config?.agents?.defaults?.imageMaxDimensionPx;
   if (typeof configured !== "number" || !Number.isFinite(configured)) {

@@ -100,9 +100,9 @@ export async function loadChannelConfigSurfaceModule(
     const script = `
       import { pathToFileURL } from "node:url";
       const { buildChannelConfigSchema } = await import(${JSON.stringify(bunBuildChannelConfigSchemaUrl)});
-      const modulePath = process.env.OPENCLAW_CONFIG_SURFACE_MODULE;
+      const modulePath = process.env.DEX_CONFIG_SURFACE_MODULE;
       if (!modulePath) {
-        throw new Error("missing OPENCLAW_CONFIG_SURFACE_MODULE");
+        throw new Error("missing DEX_CONFIG_SURFACE_MODULE");
       }
       const imported = await import(pathToFileURL(modulePath).href);
       const isBuilt = (value) => Boolean(
@@ -132,7 +132,7 @@ export async function loadChannelConfigSurfaceModule(
       encoding: "utf8",
       env: {
         ...process.env,
-        OPENCLAW_CONFIG_SURFACE_MODULE: path.resolve(candidatePath),
+        DEX_CONFIG_SURFACE_MODULE: path.resolve(candidatePath),
       },
     });
     if (result.error) {

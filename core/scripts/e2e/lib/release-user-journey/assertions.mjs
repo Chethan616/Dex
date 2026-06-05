@@ -10,12 +10,12 @@ import { applyMockOpenAiModelConfig } from "../fixtures/mock-openai-config.mjs";
 import { readPluginInstallRecords } from "../plugin-index-sqlite.mjs";
 
 function clickClackHttpTimeoutMs() {
-  return readPositiveInt(process.env.OPENCLAW_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS, 5000);
+  return readPositiveInt(process.env.DEX_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS, 5000);
 }
 
 function clickClackHttpBodyMaxBytes() {
   return readPositiveInt(
-    process.env.OPENCLAW_RELEASE_USER_JOURNEY_HTTP_BODY_MAX_BYTES,
+    process.env.DEX_RELEASE_USER_JOURNEY_HTTP_BODY_MAX_BYTES,
     1024 * 1024,
   );
 }
@@ -83,8 +83,8 @@ function pathsEqual(left, right) {
 
 function configPath() {
   return (
-    process.env.OPENCLAW_CONFIG_PATH ??
-    path.join(process.env.HOME ?? "", ".openclaw", "openclaw.json")
+    process.env.DEX_CONFIG_PATH ??
+    path.join(process.env.HOME ?? "", ".dex", "openclaw.json")
   );
 }
 
@@ -104,7 +104,7 @@ function installRecords() {
 
 function assertOnboard() {
   const home = process.argv[3];
-  const stateDir = path.join(home, ".openclaw");
+  const stateDir = path.join(home, ".dex");
   const authPath = path.join(stateDir, "agents", "main", "agent", "auth-profiles.json");
   assert(fs.existsSync(configPath()), "onboard did not write openclaw.json");
   const stateRaw =

@@ -7,7 +7,7 @@ import {
   loadAuthProfileStoreWithoutExternalProfiles,
 } from "../agents/auth-profiles.js";
 import type { AuthProfileStore } from "../agents/auth-profiles/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { PluginManifestRegistry } from "../plugins/manifest-registry.js";
 import type { PluginMetadataSnapshot } from "../plugins/plugin-metadata-snapshot.js";
 import type { PluginOrigin } from "../plugins/plugin-origin.types.js";
@@ -54,7 +54,7 @@ function loadRuntimePrepareHelpers() {
 }
 
 async function resolveLoadablePluginOrigins(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   env: NodeJS.ProcessEnv;
   pluginMetadataSnapshot?: Pick<PluginMetadataSnapshot, "plugins">;
 }): Promise<ReadonlyMap<string, PluginOrigin>> {
@@ -74,7 +74,7 @@ async function resolveLoadablePluginOrigins(params: {
   return listPluginOriginsFromMetadataSnapshot(snapshot);
 }
 
-function hasConfiguredPluginEntries(config: OpenClawConfig): boolean {
+function hasConfiguredPluginEntries(config: DexConfig): boolean {
   const entries = config.plugins?.entries;
   return (
     Boolean(entries) &&
@@ -84,7 +84,7 @@ function hasConfiguredPluginEntries(config: OpenClawConfig): boolean {
   );
 }
 
-function hasConfiguredChannelEntries(config: OpenClawConfig): boolean {
+function hasConfiguredChannelEntries(config: DexConfig): boolean {
   const channels = config.channels;
   return (
     Boolean(channels) &&
@@ -94,7 +94,7 @@ function hasConfiguredChannelEntries(config: OpenClawConfig): boolean {
   );
 }
 
-function hasConfiguredPluginIntegrationSecretProviders(config: OpenClawConfig): boolean {
+function hasConfiguredPluginIntegrationSecretProviders(config: DexConfig): boolean {
   const providers = config.secrets?.providers;
   if (!providers || typeof providers !== "object" || Array.isArray(providers)) {
     return false;
@@ -107,7 +107,7 @@ function hasConfiguredPluginIntegrationSecretProviders(config: OpenClawConfig): 
   );
 }
 
-function shouldLoadPluginMetadataForSecrets(config: OpenClawConfig): boolean {
+function shouldLoadPluginMetadataForSecrets(config: DexConfig): boolean {
   return (
     hasConfiguredPluginEntries(config) ||
     hasConfiguredChannelEntries(config) ||
@@ -116,7 +116,7 @@ function shouldLoadPluginMetadataForSecrets(config: OpenClawConfig): boolean {
 }
 
 export async function prepareSecretsRuntimeSnapshot(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   env?: NodeJS.ProcessEnv;
   agentDirs?: string[];
   includeAuthStoreRefs?: boolean;
@@ -263,7 +263,7 @@ export function activateSecretsRuntimeSnapshot(snapshot: PreparedSecretsRuntimeS
     } satisfies SecretsRuntimeRefreshContext);
   const coercePreflightSnapshot = (
     value: unknown,
-    sourceConfig: OpenClawConfig,
+    sourceConfig: DexConfig,
   ): PreparedSecretsRuntimeSnapshot | null => {
     if (!value || typeof value !== "object") {
       return null;

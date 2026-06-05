@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   DEFAULT_CACHE_TTL_MINUTES,
   DEFAULT_SEARCH_COUNT,
@@ -113,7 +113,7 @@ function parseDuckDuckGoHtml(html: string): DuckDuckGoResult[] {
 }
 
 export async function runDuckDuckGoSearch(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   query: string;
   count?: number;
   region?: string;

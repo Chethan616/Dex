@@ -10,10 +10,10 @@ export type MatrixDeviceHealthSummary = {
   currentOpenClawDevices: MatrixManagedDeviceInfo[];
 };
 
-const OPENCLAW_DEVICE_NAME_PREFIX = "OpenClaw ";
+const DEX_DEVICE_NAME_PREFIX = "OpenClaw ";
 
 export function isOpenClawManagedMatrixDevice(displayName: string | null | undefined): boolean {
-  return displayName?.startsWith(OPENCLAW_DEVICE_NAME_PREFIX) === true;
+  return displayName?.startsWith(DEX_DEVICE_NAME_PREFIX) === true;
 }
 
 export function summarizeMatrixDeviceHealth(

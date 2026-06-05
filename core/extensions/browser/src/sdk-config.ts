@@ -9,7 +9,7 @@ export { mutateConfigFile, replaceConfigFile } from "openclaw/plugin-sdk/config-
 export {
   type BrowserConfig,
   type BrowserProfileConfig,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/config-contracts";
 export {
   normalizePluginsConfig,

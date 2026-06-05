@@ -80,12 +80,12 @@ async function writePtyInput(
   data: string,
   opts: { delay?: boolean } = {},
 ): Promise<void> {
-  const delayMs = readPositiveIntegerEnv("OPENCLAW_TUI_PTY_TYPE_DELAY_MS");
+  const delayMs = readPositiveIntegerEnv("DEX_TUI_PTY_TYPE_DELAY_MS");
   if (!delayMs || opts.delay === false) {
     pty.write(data);
     return;
   }
-  const chunkSize = readPositiveIntegerEnv("OPENCLAW_TUI_PTY_TYPE_CHUNK_SIZE") ?? 1;
+  const chunkSize = readPositiveIntegerEnv("DEX_TUI_PTY_TYPE_CHUNK_SIZE") ?? 1;
   for (let idx = 0; idx < data.length; idx += chunkSize) {
     pty.write(data.slice(idx, idx + chunkSize));
     if (idx + chunkSize < data.length) {
@@ -95,7 +95,7 @@ async function writePtyInput(
 }
 
 function mirrorPtyOutput(data: string) {
-  const mirrorPath = process.env.OPENCLAW_TUI_PTY_MIRROR_PATH;
+  const mirrorPath = process.env.DEX_TUI_PTY_MIRROR_PATH;
   if (!mirrorPath) {
     return;
   }
@@ -117,8 +117,8 @@ export function startPty(
   let exitEvent: PtyExitEvent | null = null;
   const pty = spawnPty(command, args, {
     name: "xterm-256color",
-    cols: readPtyDimensionEnv("OPENCLAW_TUI_PTY_COLS", 100),
-    rows: readPtyDimensionEnv("OPENCLAW_TUI_PTY_ROWS", 30),
+    cols: readPtyDimensionEnv("DEX_TUI_PTY_COLS", 100),
+    rows: readPtyDimensionEnv("DEX_TUI_PTY_ROWS", 30),
     cwd: opts.cwd,
     env: {
       ...process.env,

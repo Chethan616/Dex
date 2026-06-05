@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { resolveCompatibilityHostVersion } from "../version.js";
 import { normalizePluginsConfig, resolveEffectivePluginActivationState } from "./config-state.js";
 import { isPluginEnabledByDefaultForPlatform } from "./default-enablement.js";
@@ -113,7 +113,7 @@ export function listInstalledPluginRecords(
 
 export function listEnabledInstalledPluginRecords(
   index: InstalledPluginIndex,
-  config?: OpenClawConfig,
+  config?: DexConfig,
 ): readonly InstalledPluginIndexRecord[] {
   if (!config) {
     return index.plugins.filter((plugin) => plugin.enabled);
@@ -131,7 +131,7 @@ export function getInstalledPluginRecord(
 export function isInstalledPluginEnabled(
   index: InstalledPluginIndex,
   pluginId: string,
-  config?: OpenClawConfig,
+  config?: DexConfig,
 ): boolean {
   const record = getInstalledPluginRecord(index, pluginId);
   if (!record) {

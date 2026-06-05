@@ -13,7 +13,7 @@ import type { AuthProfileCredential, AuthProfileStore } from "../agents/auth-pro
 import { formatCliCommand } from "../cli/command-format.js";
 import { resolveStateDir } from "../config/paths.js";
 import type { AuthProfileConfig } from "../config/types.auth.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { coerceSecretRef } from "../config/types.secrets.js";
 import { loadJsonFile } from "../infra/json-file.js";
 import { shortenHomePath } from "../utils.js";
@@ -195,13 +195,13 @@ function listExistingAgentDirsFromState(env: NodeJS.ProcessEnv): string[] {
 }
 
 function listAuthProfileRepairCandidates(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   env: NodeJS.ProcessEnv,
 ): AuthProfileRepairCandidate[] {
   const candidates = new Map<string, AuthProfileRepairCandidate>();
   addCandidate(candidates, resolveDefaultAgentDir(cfg, env));
   const envAgentDir =
-    readNonEmptyString(env.OPENCLAW_AGENT_DIR) ?? readNonEmptyString(env.PI_CODING_AGENT_DIR);
+    readNonEmptyString(env.DEX_AGENT_DIR) ?? readNonEmptyString(env.PI_CODING_AGENT_DIR);
   if (envAgentDir) {
     addCandidate(candidates, envAgentDir);
   }
@@ -287,7 +287,7 @@ function resolveAwsSdkAuthProfileMarkerStore(
     : null;
 }
 
-function ensureConfigAuthProfiles(config: OpenClawConfig): Record<string, AuthProfileConfig> {
+function ensureConfigAuthProfiles(config: DexConfig): Record<string, AuthProfileConfig> {
   const root = config as Record<string, unknown>;
   const auth = isRecord(root.auth) ? root.auth : {};
   if (root.auth !== auth) {
@@ -309,7 +309,7 @@ function removeAwsSdkProfileMarkers(raw: Record<string, unknown>, profileIds: st
 }
 
 export async function maybeRepairLegacyFlatAuthProfileStores(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   prompter: DoctorPrompter;
   now?: () => number;
   env?: NodeJS.ProcessEnv;
@@ -453,7 +453,7 @@ function backupCanonicalApiKeyAlias(authPath: string, now: () => number): string
 }
 
 export async function maybeRepairCanonicalApiKeyFieldAlias(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   prompter: DoctorPrompter;
   now?: () => number;
   env?: NodeJS.ProcessEnv;
@@ -761,10 +761,10 @@ function canonicalizeOpenAILastGood(
 }
 
 export function maybeRepairOpenAICodexAuthConfig(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   options?: { profileIdMap?: ReadonlyMap<string, string> },
 ): {
-  config: OpenClawConfig;
+  config: DexConfig;
   changes: string[];
   warnings: string[];
 } {
@@ -838,7 +838,7 @@ function resolveOpenAICodexAuthStoreRepair(
 }
 
 export function collectOpenAICodexAuthProfileStoreIdMap(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
 }): Map<string, string> {
   const env = params.env ?? process.env;
@@ -874,7 +874,7 @@ function backupOpenAIProviderUnification(authPath: string, now: () => number): s
 }
 
 export async function maybeRepairOpenAICodexAuthProfileStores(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   now?: () => number;
   env?: NodeJS.ProcessEnv;
 }): Promise<LegacyFlatAuthProfileRepairResult> {

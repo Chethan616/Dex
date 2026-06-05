@@ -6,7 +6,7 @@ import {
   resolveAgentWorkspaceDir,
   resolveGlobalSingleton,
   resolveMemorySearchSyncConfig,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
 import {
   checkQmdBinaryAvailability,
@@ -149,7 +149,7 @@ function clearQmdManagerOpenFailure(scopeKey: string, identityKey: string): void
 }
 
 export async function getMemorySearchManager(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   purpose?: MemorySearchManagerPurpose;
 }): Promise<MemorySearchManagerResult> {
@@ -314,7 +314,7 @@ export async function getMemorySearchManager(params: {
 }
 
 async function getBuiltinMemorySearchManager(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   purpose?: MemorySearchManagerPurpose;
 }): Promise<MemorySearchManagerResult> {
@@ -405,7 +405,7 @@ export async function closeAllMemorySearchManagers(): Promise<void> {
 }
 
 export async function closeMemorySearchManager(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
 }): Promise<void> {
   const normalizedAgentId = normalizeAgentId(params.agentId);
@@ -649,7 +649,7 @@ function buildQmdManagerIdentityKey(
 }
 
 function resolveQmdManagerRuntimeConfig(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   agentId: string,
 ): QmdManagerRuntimeConfig {
   return {

@@ -41,16 +41,16 @@ Restart the gateway after changing flags.
 ## Env override (one-off)
 
 ```bash
-OPENCLAW_DIAGNOSTICS=telegram.http,telegram.payload
+DEX_DIAGNOSTICS=telegram.http,telegram.payload
 ```
 
 Disable all flags:
 
 ```bash
-OPENCLAW_DIAGNOSTICS=0
+DEX_DIAGNOSTICS=0
 ```
 
-`OPENCLAW_DIAGNOSTICS=0` is a process-level disable override: it disables
+`DEX_DIAGNOSTICS=0` is a process-level disable override: it disables
 flags from both env and config for that process.
 
 ## Profiling flags
@@ -61,19 +61,19 @@ levels. They are disabled by default.
 Enable all profiler-gated spans for one gateway run:
 
 ```bash
-OPENCLAW_DIAGNOSTICS=profiler openclaw gateway run
+DEX_DIAGNOSTICS=profiler openclaw gateway run
 ```
 
 Enable only reply-dispatch profiler spans:
 
 ```bash
-OPENCLAW_DIAGNOSTICS=reply.profiler openclaw gateway run
+DEX_DIAGNOSTICS=reply.profiler openclaw gateway run
 ```
 
 Enable only Codex app-server startup/tool/thread profiler spans:
 
 ```bash
-OPENCLAW_DIAGNOSTICS=codex.profiler openclaw gateway run
+DEX_DIAGNOSTICS=codex.profiler openclaw gateway run
 ```
 
 Enable profiler flags from config:
@@ -91,7 +91,7 @@ remove it from `diagnostics.flags` and restart. To temporarily disable every
 diagnostics flag even when config enables profiler flags, start the process with:
 
 ```bash
-OPENCLAW_DIAGNOSTICS=0 openclaw gateway run
+DEX_DIAGNOSTICS=0 openclaw gateway run
 ```
 
 ## Timeline artifacts
@@ -100,8 +100,8 @@ The `timeline` flag writes structured startup and runtime timing events for
 external QA harnesses:
 
 ```bash
-OPENCLAW_DIAGNOSTICS=timeline \
-OPENCLAW_DIAGNOSTICS_TIMELINE_PATH=/tmp/openclaw-timeline.jsonl \
+DEX_DIAGNOSTICS=timeline \
+DEX_DIAGNOSTICS_TIMELINE_PATH=/tmp/openclaw-timeline.jsonl \
 openclaw gateway run
 ```
 
@@ -116,12 +116,12 @@ You can also enable it in config:
 ```
 
 The timeline file path still comes from
-`OPENCLAW_DIAGNOSTICS_TIMELINE_PATH`. When `timeline` is enabled only from
+`DEX_DIAGNOSTICS_TIMELINE_PATH`. When `timeline` is enabled only from
 config, the earliest config-loading spans are not emitted because OpenClaw has
 not read config yet; subsequent startup spans use the config flag.
 
-`OPENCLAW_DIAGNOSTICS=1`, `OPENCLAW_DIAGNOSTICS=all`, and
-`OPENCLAW_DIAGNOSTICS=*` also enable the timeline because they enable every
+`DEX_DIAGNOSTICS=1`, `DEX_DIAGNOSTICS=all`, and
+`DEX_DIAGNOSTICS=*` also enable the timeline because they enable every
 diagnostics flag. Prefer `timeline` when you only want the JSONL timing
 artifact.
 

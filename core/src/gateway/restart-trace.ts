@@ -3,8 +3,8 @@ import { isTruthyEnvValue } from "../infra/env.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 
 const restartTraceLog = createSubsystemLogger("gateway");
-const RESTART_TRACE_HANDOFF_STARTED_AT_ENV = "OPENCLAW_GATEWAY_RESTART_TRACE_STARTED_AT_MS";
-const RESTART_TRACE_HANDOFF_LAST_AT_ENV = "OPENCLAW_GATEWAY_RESTART_TRACE_LAST_AT_MS";
+const RESTART_TRACE_HANDOFF_STARTED_AT_ENV = "DEX_GATEWAY_RESTART_TRACE_STARTED_AT_MS";
+const RESTART_TRACE_HANDOFF_LAST_AT_ENV = "DEX_GATEWAY_RESTART_TRACE_LAST_AT_MS";
 const RESTART_TRACE_HANDOFF_MAX_AGE_MS = 10 * 60_000;
 
 type RestartTraceMetricValue = boolean | number | string | null | undefined;
@@ -25,7 +25,7 @@ function nowMs(): number {
 }
 
 function isRestartTraceEnabled(): boolean {
-  return isTruthyEnvValue(process.env.OPENCLAW_GATEWAY_RESTART_TRACE);
+  return isTruthyEnvValue(process.env.DEX_GATEWAY_RESTART_TRACE);
 }
 
 function normalizeMetricEntries(

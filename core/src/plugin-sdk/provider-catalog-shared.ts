@@ -14,7 +14,7 @@ import { findNormalizedProviderKey } from "@dexagent/model-catalog-core/provider
 import { normalizeConfiguredProviderCatalogModelId } from "../agents/model-ref-shared.js";
 import { resolveProviderRequestCapabilities } from "../agents/provider-attribution.js";
 import type { ModelDefinitionConfig } from "../config/types.models.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   isFutureDateTimestampMs,
   resolveExpiresAtMsFromDurationMs,
@@ -199,7 +199,7 @@ function normalizeConfiguredCatalogModelInput(
 }
 
 function resolveConfiguredProviderModels(
-  config: OpenClawConfig | undefined,
+  config: DexConfig | undefined,
   providerId: string,
 ): ModelDefinitionConfig[] {
   const providers = config?.models?.providers;
@@ -218,7 +218,7 @@ function resolveConfiguredProviderModels(
 }
 
 export function readConfiguredProviderCatalogEntries(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   providerId: string;
   publishedProviderId?: string;
 }): ConfiguredProviderCatalogEntry[] {

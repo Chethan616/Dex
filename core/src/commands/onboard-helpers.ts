@@ -21,7 +21,7 @@ import { resolveAgentModelPrimaryValue } from "../config/model-input.js";
 import { resolveConfigPath } from "../config/paths.js";
 import { resolveSessionTranscriptsDirForAgent } from "../config/sessions/paths.js";
 import type { OptionalBootstrapFileName } from "../config/types.agent-defaults.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveControlUiLinks } from "../gateway/control-ui-links.js";
 import { normalizeControlUiBasePath } from "../gateway/control-ui-shared.js";
 import { probeGateway } from "../gateway/probe.js";
@@ -51,7 +51,7 @@ export function guardCancel<T>(value: T | symbol, runtime: RuntimeEnv): T {
   return value;
 }
 
-export function summarizeExistingConfig(config: OpenClawConfig): string {
+export function summarizeExistingConfig(config: DexConfig): string {
   const rows: string[] = [];
   const defaults = config.agents?.defaults;
   if (defaults?.workspace) {
@@ -73,7 +73,7 @@ export function summarizeExistingConfig(config: OpenClawConfig): string {
   return rows.length ? rows.join("\n") : "No key settings detected.";
 }
 
-function summarizeGatewayConfig(config: OpenClawConfig): string | null {
+function summarizeGatewayConfig(config: DexConfig): string | null {
   const gateway = config.gateway;
   if (
     !gateway?.mode &&
@@ -173,9 +173,9 @@ export function printWizardHeader(runtime: RuntimeEnv) {
 }
 
 export function applyWizardMetadata(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   params: { command: string; mode: OnboardMode },
-): OpenClawConfig {
+): DexConfig {
   const commit =
     normalizeOptionalString(process.env.GIT_COMMIT) ?? normalizeOptionalString(process.env.GIT_SHA);
   return {

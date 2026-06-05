@@ -1,11 +1,11 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveSecretInputRef } from "../config/types.secrets.js";
 export { shouldRequireGatewayTokenForInstall } from "../gateway/auth-install-policy.js";
 import { resolveGatewayAuthToken } from "../gateway/auth-token-resolution.js";
 import { trimToUndefined } from "../gateway/credentials.js";
 
 export async function resolveGatewayAuthTokenForService(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   env: NodeJS.ProcessEnv,
   options: { allowExecSecretRefs?: boolean } = {},
 ): Promise<{ token?: string; unavailableReason?: string }> {
@@ -14,7 +14,7 @@ export async function resolveGatewayAuthTokenForService(
     defaults: cfg.secrets?.defaults,
   }).ref;
   if (tokenRef?.source === "exec" && options.allowExecSecretRefs !== true) {
-    const envToken = trimToUndefined(env.OPENCLAW_GATEWAY_TOKEN);
+    const envToken = trimToUndefined(env.DEX_GATEWAY_TOKEN);
     return envToken ? { token: envToken } : {};
   }
   const resolved = await resolveGatewayAuthToken({

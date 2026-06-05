@@ -7,12 +7,12 @@ import {
   getNodeSqliteKysely,
 } from "../infra/kysely-sync.js";
 import { requireNodeSqlite } from "../infra/node-sqlite.js";
-import type { DB as OpenClawStateKyselyDatabase } from "../state/openclaw-state-db.generated.js";
+import type { DB as DexStateKyselyDatabase } from "../state/openclaw-state-db.generated.js";
 import {
-  closeOpenClawStateDatabase,
-  isOpenClawStateDatabaseOpen,
-  openOpenClawStateDatabase,
-  type OpenClawStateDatabaseOptions,
+  closeDexStateDatabase,
+  isDexStateDatabaseOpen,
+  openDexStateDatabase,
+  type DexStateDatabaseOptions,
   runOpenClawStateWriteTransaction,
 } from "../state/openclaw-state-db.js";
 import { resolveOpenClawStateSqlitePath } from "../state/openclaw-state-db.paths.js";
@@ -30,8 +30,8 @@ export const MAX_PLUGIN_STATE_VALUE_BYTES = 65_536;
 export const MAX_PLUGIN_STATE_ENTRIES_PER_PLUGIN = 50_000;
 let maxPluginStateEntriesPerPluginForTests: number | undefined;
 
-type PluginStateEntriesTable = OpenClawStateKyselyDatabase["plugin_state_entries"];
-type PluginStateStoreDatabase = Pick<OpenClawStateKyselyDatabase, "plugin_state_entries">;
+type PluginStateEntriesTable = DexStateKyselyDatabase["plugin_state_entries"];
+type PluginStateStoreDatabase = Pick<DexStateKyselyDatabase, "plugin_state_entries">;
 
 type PluginStateRow = Selectable<PluginStateEntriesTable>;
 
@@ -326,7 +326,7 @@ function sweepExpiredPluginStateEntriesFromDatabase(db: DatabaseSync, now: numbe
 
 function openPluginStateDatabase(
   operation: PluginStateStoreOperation = "open",
-  options: OpenClawStateDatabaseOptions = {},
+  options: DexStateDatabaseOptions = {},
 ): PluginStateDatabase {
   const env = options.env ?? process.env;
   const pathname = resolveOpenClawStateSqlitePath(env);
@@ -338,7 +338,7 @@ function openPluginStateDatabase(
   }
 
   try {
-    const database = openOpenClawStateDatabase(options);
+    const database = openDexStateDatabase(options);
     cachedDatabase = {
       db: database.db,
       path: database.path,
@@ -360,14 +360,14 @@ function countRow(row: CountRow | undefined): number {
   return typeof raw === "bigint" ? Number(raw) : raw;
 }
 
-function envOptions(env?: NodeJS.ProcessEnv): OpenClawStateDatabaseOptions {
+function envOptions(env?: NodeJS.ProcessEnv): DexStateDatabaseOptions {
   return env ? { env } : {};
 }
 
 function runWriteTransaction<T>(
   operation: PluginStateStoreOperation,
   write: (store: PluginStateDatabase) => T,
-  options: OpenClawStateDatabaseOptions = {},
+  options: DexStateDatabaseOptions = {},
 ): T {
   const store = openPluginStateDatabase(operation, options);
   return runOpenClawStateWriteTransaction(() => {
@@ -831,7 +831,7 @@ export function probePluginStateStore(): PluginStateStoreProbeResult {
   const databasePath = resolveOpenClawStateSqlitePath(process.env);
   const steps: PluginStateStoreProbeStep[] = [];
   const wasOpen = cachedDatabase !== null;
-  const stateWasOpen = isOpenClawStateDatabaseOpen();
+  const stateWasOpen = isDexStateDatabaseOpen();
 
   const pushOk = (name: string) => steps.push({ name, ok: true });
   const pushFailure = (name: string, error: unknown) => {
@@ -901,7 +901,7 @@ export function probePluginStateStore(): PluginStateStoreProbeResult {
       });
     });
     pushOk("write-read-delete");
-    openOpenClawStateDatabase().walMaintenance.checkpoint();
+    openDexStateDatabase().walMaintenance.checkpoint();
     pushOk("checkpoint");
   } catch (error) {
     pushFailure("probe", error);
@@ -916,7 +916,7 @@ export function probePluginStateStore(): PluginStateStoreProbeResult {
 
 export function closePluginStateDatabase(): void {
   cachedDatabase = null;
-  closeOpenClawStateDatabase();
+  closeDexStateDatabase();
 }
 
 export const closePluginStateSqliteStore = closePluginStateDatabase;

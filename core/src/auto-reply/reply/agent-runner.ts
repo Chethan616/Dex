@@ -17,7 +17,7 @@ import { resolveModelAuthMode } from "../../agents/model-auth.js";
 import { isCliProvider } from "../../agents/model-selection.js";
 import { deriveContextPromptTokens, hasNonzeroUsage, normalizeUsage } from "../../agents/usage.js";
 import { enqueueCommitmentExtraction } from "../../commitments/runtime.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import {
   applySessionStoreEntryPatch,
   loadSessionStore,
@@ -151,7 +151,7 @@ function buildSilentFallbackFailurePayload(params: {
 }
 
 function resolveSourceReplyPolicy(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionCtx: TemplateContext;
   sessionEntry?: SessionEntry;
   sessionKey: string;
@@ -178,7 +178,7 @@ function resolveSourceReplyPolicy(params: {
 }
 
 function resolveReplyRunDeliveryContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionCtx: TemplateContext;
   sessionEntry?: SessionEntry;
   sessionKey: string;
@@ -1016,7 +1016,7 @@ function buildPendingFinalDeliveryText(payloads: ReplyPayload[]): string {
 }
 
 function enqueueCommitmentExtractionForTurn(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   commandBody: string;
   isHeartbeat: boolean;
   followupRun: FollowupRun;

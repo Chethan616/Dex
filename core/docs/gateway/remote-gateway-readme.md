@@ -64,7 +64,7 @@ openclaw config set gateway.remote.token "<your-token>"
 ```
 
 Use `gateway.remote.password` instead if your remote gateway uses password auth.
-`OPENCLAW_GATEWAY_TOKEN` is still valid as a shell-level override, but the durable
+`DEX_GATEWAY_TOKEN` is still valid as a shell-level override, but the durable
 remote-client setup is `gateway.remote.token` / `gateway.remote.password`.
 
 ### Step 4: Start SSH Tunnel

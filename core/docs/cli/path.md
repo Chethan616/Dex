@@ -496,7 +496,7 @@ auto-detection.
 
 - `set` writes bytes through the substrate's emit path, which applies the
   redaction-sentinel guard automatically. A leaf carrying
-  `__OPENCLAW_REDACTED__` (verbatim or as a substring) is refused at write
+  `__DEX_REDACTED__` (verbatim or as a substring) is refused at write
   time.
 - JSONC parsing and leaf edits use the plugin-local `jsonc-parser`
   dependency, so comments and formatting are preserved on ordinary leaf

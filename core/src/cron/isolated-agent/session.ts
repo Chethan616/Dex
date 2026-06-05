@@ -9,7 +9,7 @@ import {
 } from "../../config/sessions/reset-policy.js";
 import { loadSessionStore } from "../../config/sessions/store-load.js";
 import type { SessionEntry } from "../../config/sessions/types.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 
 const FRESH_CRON_CARRIED_PREFERENCE_FIELDS = [
   "heartbeatTaskState",
@@ -105,7 +105,7 @@ function sanitizeFreshCronSessionEntry(
 
 /** Resolves or rolls over the cron session entry for one isolated-agent run. */
 export function resolveCronSession(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   nowMs: number;
   agentId: string;

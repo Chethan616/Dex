@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   createWebSearchProviderContractFields,
   mergeScopedSearchConfig,
@@ -68,14 +68,14 @@ function createGeminiToolDefinition(
 }
 
 function resolveGoogleModelProviderConfig(
-  config?: OpenClawConfig,
+  config?: DexConfig,
 ): Record<string, unknown> | undefined {
   const provider = config?.models?.providers?.google;
   return isRecord(provider) ? provider : undefined;
 }
 
 function getGoogleModelProviderCredentialFallback(
-  config?: OpenClawConfig,
+  config?: DexConfig,
 ): { path: string; value: unknown } | undefined {
   const provider = resolveGoogleModelProviderConfig(config);
   return provider && provider.apiKey !== undefined
@@ -85,7 +85,7 @@ function getGoogleModelProviderCredentialFallback(
 
 function withGoogleModelProviderFallbacks(
   searchConfig: Record<string, unknown> | undefined,
-  config?: OpenClawConfig,
+  config?: DexConfig,
 ): Record<string, unknown> | undefined {
   const provider = resolveGoogleModelProviderConfig(config);
   if (!provider || (provider.apiKey === undefined && provider.baseUrl === undefined)) {

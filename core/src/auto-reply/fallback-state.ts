@@ -1,7 +1,7 @@
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { formatRawAssistantErrorForUi } from "../agents/embedded-agent-helpers.js";
 import { areRuntimeModelRefsEquivalent } from "../agents/model-runtime-aliases.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { FallbackNoticeState } from "../status/fallback-notice-state.js";
 import { formatProviderModelRef } from "./model-runtime.js";
 import type { RuntimeFallbackAttempt } from "./reply/agent-runner-execution.js";
@@ -95,7 +95,7 @@ export function buildFallbackNotice(params: {
   activeProvider: string;
   activeModel: string;
   attempts: RuntimeFallbackAttempt[];
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): string | null {
   const selected = formatProviderModelRef(params.selectedProvider, params.selectedModel);
   const active = formatProviderModelRef(params.activeProvider, params.activeModel);
@@ -147,7 +147,7 @@ export function resolveFallbackTransition(params: {
   activeModel: string;
   attempts: RuntimeFallbackAttempt[];
   state?: FallbackNoticeState;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): ResolvedFallbackTransition {
   const selectedModelRef = formatProviderModelRef(params.selectedProvider, params.selectedModel);
   const activeModelRef = formatProviderModelRef(params.activeProvider, params.activeModel);

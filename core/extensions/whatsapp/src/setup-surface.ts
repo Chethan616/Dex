@@ -3,7 +3,7 @@ import {
   DEFAULT_ACCOUNT_ID,
   setSetupChannelEnabled,
   createSetupTranslator,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/setup";
 import { listWhatsAppAccountIds, resolveWhatsAppAuthDir } from "./accounts.js";
 import { formatWhatsAppWebAuthStatusState, readWebAuthState } from "./auth-store.js";
@@ -15,7 +15,7 @@ const channel = "whatsapp" as const;
 type WhatsAppSetupLinkState = "linked" | "not-linked" | "unstable";
 
 async function readWhatsAppSetupLinkState(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   accountId: string,
 ): Promise<WhatsAppSetupLinkState> {
   const { authDir } = resolveWhatsAppAuthDir({ cfg, accountId });

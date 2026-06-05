@@ -36,7 +36,7 @@ Docker is **optional**. Use it only if you want a containerized gateway or to va
     This builds the gateway image locally. To use a pre-built image instead:
 
     ```bash
-    export OPENCLAW_IMAGE="ghcr.io/openclaw/openclaw:latest"
+    export DEX_IMAGE="ghcr.io/openclaw/openclaw:latest"
     ./scripts/docker/setup.sh
     ```
 
@@ -107,8 +107,8 @@ docker compose up -d openclaw-gateway
 ```
 
 <Note>
-Run `docker compose` from the repo root. If you enabled `OPENCLAW_EXTRA_MOUNTS`
-or `OPENCLAW_HOME_VOLUME`, the setup script writes `docker-compose.extra.yml`;
+Run `docker compose` from the repo root. If you enabled `DEX_EXTRA_MOUNTS`
+or `DEX_HOME_VOLUME`, the setup script writes `docker-compose.extra.yml`;
 include it after any standard override file, for example
 `-f docker-compose.yml -f docker-compose.override.yml -f docker-compose.extra.yml`
 when both override files exist.
@@ -127,37 +127,37 @@ The setup script accepts these optional environment variables:
 
 | Variable                                   | Purpose                                                               |
 | ------------------------------------------ | --------------------------------------------------------------------- |
-| `OPENCLAW_IMAGE`                           | Use a remote image instead of building locally                        |
-| `OPENCLAW_IMAGE_APT_PACKAGES`              | Install extra apt packages during build (space-separated)             |
-| `OPENCLAW_IMAGE_PIP_PACKAGES`              | Install extra Python packages during build (space-separated)          |
-| `OPENCLAW_EXTENSIONS`                      | Pre-install plugin dependencies at build time (space-separated names) |
-| `OPENCLAW_EXTRA_MOUNTS`                    | Extra host bind mounts (comma-separated `source:target[:opts]`)       |
-| `OPENCLAW_HOME_VOLUME`                     | Persist `/home/node` in a named Docker volume                         |
-| `OPENCLAW_SANDBOX`                         | Opt in to sandbox bootstrap (`1`, `true`, `yes`, `on`)                |
-| `OPENCLAW_SKIP_ONBOARDING`                 | Skip the interactive onboarding step (`1`, `true`, `yes`, `on`)       |
-| `OPENCLAW_DOCKER_SOCKET`                   | Override Docker socket path                                           |
-| `OPENCLAW_DISABLE_BONJOUR`                 | Disable Bonjour/mDNS advertising (defaults to `1` for Docker)         |
-| `OPENCLAW_DISABLE_BUNDLED_SOURCE_OVERLAYS` | Disable bundled plugin source bind-mount overlays                     |
+| `DEX_IMAGE`                           | Use a remote image instead of building locally                        |
+| `DEX_IMAGE_APT_PACKAGES`              | Install extra apt packages during build (space-separated)             |
+| `DEX_IMAGE_PIP_PACKAGES`              | Install extra Python packages during build (space-separated)          |
+| `DEX_EXTENSIONS`                      | Pre-install plugin dependencies at build time (space-separated names) |
+| `DEX_EXTRA_MOUNTS`                    | Extra host bind mounts (comma-separated `source:target[:opts]`)       |
+| `DEX_HOME_VOLUME`                     | Persist `/home/node` in a named Docker volume                         |
+| `DEX_SANDBOX`                         | Opt in to sandbox bootstrap (`1`, `true`, `yes`, `on`)                |
+| `DEX_SKIP_ONBOARDING`                 | Skip the interactive onboarding step (`1`, `true`, `yes`, `on`)       |
+| `DEX_DOCKER_SOCKET`                   | Override Docker socket path                                           |
+| `DEX_DISABLE_BONJOUR`                 | Disable Bonjour/mDNS advertising (defaults to `1` for Docker)         |
+| `DEX_DISABLE_BUNDLED_SOURCE_OVERLAYS` | Disable bundled plugin source bind-mount overlays                     |
 | `OTEL_EXPORTER_OTLP_ENDPOINT`              | Shared OTLP/HTTP collector endpoint for OpenTelemetry export          |
 | `OTEL_EXPORTER_OTLP_*_ENDPOINT`            | Signal-specific OTLP endpoints for traces, metrics, or logs           |
 | `OTEL_EXPORTER_OTLP_PROTOCOL`              | OTLP protocol override. Only `http/protobuf` is supported today       |
 | `OTEL_SERVICE_NAME`                        | Service name used for OpenTelemetry resources                         |
 | `OTEL_SEMCONV_STABILITY_OPT_IN`            | Opt in to latest experimental GenAI semantic attributes               |
-| `OPENCLAW_OTEL_PRELOADED`                  | Skip starting a second OpenTelemetry SDK when one is preloaded        |
+| `DEX_OTEL_PRELOADED`                  | Skip starting a second OpenTelemetry SDK when one is preloaded        |
 
 The official Docker image does not ship Homebrew. During onboarding, OpenClaw
 hides brew-only skill dependency installers when it is running in a Linux
 container without `brew`; those dependencies must be provided by a custom image
 or installed manually. For dependencies available from Debian packages, use
-`OPENCLAW_IMAGE_APT_PACKAGES` during image build. The legacy
-`OPENCLAW_DOCKER_APT_PACKAGES` name is still accepted.
-For Python dependencies, use `OPENCLAW_IMAGE_PIP_PACKAGES`. This runs
+`DEX_IMAGE_APT_PACKAGES` during image build. The legacy
+`DEX_DOCKER_APT_PACKAGES` name is still accepted.
+For Python dependencies, use `DEX_IMAGE_PIP_PACKAGES`. This runs
 `python3 -m pip install --break-system-packages` during the image build, so pin
 package versions and use only package indexes you trust.
 
 Maintainers can test bundled plugin source against a packaged image by mounting
 one plugin source directory over its packaged source path, for example
-`OPENCLAW_EXTRA_MOUNTS=/path/to/fork/extensions/synology-chat:/app/extensions/synology-chat:ro`.
+`DEX_EXTRA_MOUNTS=/path/to/fork/extensions/synology-chat:/app/extensions/synology-chat:ro`.
 That mounted source directory overrides the matching compiled
 `/app/dist/extensions/synology-chat` bundle for the same plugin id.
 
@@ -169,7 +169,7 @@ locally and want the bundled OpenTelemetry exporter available inside the image,
 include its runtime dependencies:
 
 ```bash
-export OPENCLAW_EXTENSIONS="diagnostics-otel"
+export DEX_EXTENSIONS="diagnostics-otel"
 export OTEL_EXPORTER_OTLP_ENDPOINT="http://otel-collector:4318"
 export OTEL_SERVICE_NAME="openclaw-gateway"
 ./scripts/docker/setup.sh
@@ -178,7 +178,7 @@ export OTEL_SERVICE_NAME="openclaw-gateway"
 Install the official `@openclaw/diagnostics-otel` plugin from ClawHub in
 packaged Docker installs before enabling export. Custom source-built images can
 still include the local plugin source with
-`OPENCLAW_EXTENSIONS=diagnostics-otel`. To enable export, allow and enable the
+`DEX_EXTENSIONS=diagnostics-otel`. To enable export, allow and enable the
 `diagnostics-otel` plugin in config, then set
 `diagnostics.otel.enabled=true` or use the config example in [OpenTelemetry
 export](/gateway/opentelemetry). Collector auth headers are configured through
@@ -212,12 +212,12 @@ orchestration systems can restart or replace it.
 Authenticated deep health snapshot:
 
 ```bash
-docker compose exec openclaw-gateway node dist/index.js health --token "$OPENCLAW_GATEWAY_TOKEN"
+docker compose exec openclaw-gateway node dist/index.js health --token "$DEX_GATEWAY_TOKEN"
 ```
 
 ### LAN vs loopback
 
-`scripts/docker/setup.sh` defaults `OPENCLAW_GATEWAY_BIND=lan` so host access to
+`scripts/docker/setup.sh` defaults `DEX_GATEWAY_BIND=lan` so host access to
 `http://127.0.0.1:18789` works with Docker port publishing.
 
 - `lan` (default): host browser and host CLI can reach the published gateway port.
@@ -260,20 +260,20 @@ mapping yourself, for example
 
 Docker bridge networking usually does not forward Bonjour/mDNS multicast
 (`224.0.0.251:5353`) reliably. The bundled Compose setup therefore defaults
-`OPENCLAW_DISABLE_BONJOUR=1` so the Gateway does not crash-loop or repeatedly
+`DEX_DISABLE_BONJOUR=1` so the Gateway does not crash-loop or repeatedly
 restart advertising when the bridge drops multicast traffic.
 
 Use the published Gateway URL, Tailscale, or wide-area DNS-SD for Docker hosts.
-Set `OPENCLAW_DISABLE_BONJOUR=0` only when running with host networking, macvlan,
+Set `DEX_DISABLE_BONJOUR=0` only when running with host networking, macvlan,
 or another network where mDNS multicast is known to work.
 
 For gotchas and troubleshooting, see [Bonjour discovery](/gateway/bonjour).
 
 ### Storage and persistence
 
-Docker Compose bind-mounts `OPENCLAW_CONFIG_DIR` to `/home/node/.openclaw`,
-`OPENCLAW_WORKSPACE_DIR` to `/home/node/.openclaw/workspace`, and
-`OPENCLAW_AUTH_PROFILE_SECRET_DIR` to `/home/node/.config/openclaw`, so those
+Docker Compose bind-mounts `DEX_CONFIG_DIR` to `/home/node/.openclaw`,
+`DEX_WORKSPACE_DIR` to `/home/node/.openclaw/workspace`, and
+`DEX_AUTH_PROFILE_SECRET_DIR` to `/home/node/.config/openclaw`, so those
 paths survive container replacement. When any variable is unset, the bundled
 `docker-compose.yml` falls back under `${HOME}`, or `/tmp` when `HOME` itself is
 also missing. That keeps `docker compose up` from emitting an empty-source
@@ -283,11 +283,11 @@ That mounted config directory is where OpenClaw keeps:
 
 - `openclaw.json` for behavior config
 - `agents/<agentId>/agent/auth-profiles.json` for stored provider OAuth/API-key auth
-- `.env` for env-backed runtime secrets such as `OPENCLAW_GATEWAY_TOKEN`
+- `.env` for env-backed runtime secrets such as `DEX_GATEWAY_TOKEN`
 
 The auth-profile secret key directory stores the local encryption key used for
 OAuth-backed auth profile token material. Keep it with your Docker host state,
-but separate from `OPENCLAW_CONFIG_DIR`.
+but separate from `DEX_CONFIG_DIR`.
 
 Installed downloadable plugins store their package state under the mounted
 OpenClaw home, so plugin install records and package roots survive container
@@ -318,15 +318,15 @@ See [ClawDock](/install/clawdock) for the full helper guide.
 <AccordionGroup>
   <Accordion title="Enable agent sandbox for Docker gateway">
     ```bash
-    export OPENCLAW_SANDBOX=1
+    export DEX_SANDBOX=1
     ./scripts/docker/setup.sh
     ```
 
     Custom socket path (e.g. rootless Docker):
 
     ```bash
-    export OPENCLAW_SANDBOX=1
-    export OPENCLAW_DOCKER_SOCKET=/run/user/1000/docker.sock
+    export DEX_SANDBOX=1
+    export DEX_DOCKER_SOCKET=/run/user/1000/docker.sock
     ./scripts/docker/setup.sh
     ```
 
@@ -427,17 +427,17 @@ See [ClawDock](/install/clawdock) for the full helper guide.
     The default image is security-first and runs as non-root `node`. For a more
     full-featured container:
 
-    1. **Persist `/home/node`**: `export OPENCLAW_HOME_VOLUME="openclaw_home"`
-    2. **Bake system deps**: `export OPENCLAW_IMAGE_APT_PACKAGES="git curl jq"`
-    3. **Bake Python deps**: `export OPENCLAW_IMAGE_PIP_PACKAGES="requests==2.32.5 humanize==4.14.0"`
-    4. **Bake Playwright Chromium**: `export OPENCLAW_INSTALL_BROWSER=1`
+    1. **Persist `/home/node`**: `export DEX_HOME_VOLUME="openclaw_home"`
+    2. **Bake system deps**: `export DEX_IMAGE_APT_PACKAGES="git curl jq"`
+    3. **Bake Python deps**: `export DEX_IMAGE_PIP_PACKAGES="requests==2.32.5 humanize==4.14.0"`
+    4. **Bake Playwright Chromium**: `export DEX_INSTALL_BROWSER=1`
     5. **Or install Playwright browsers into a persisted volume**:
        ```bash
        docker compose run --rm openclaw-cli \
          node /app/node_modules/playwright-core/cli.js install chromium
        ```
-    6. **Persist browser downloads**: use `OPENCLAW_HOME_VOLUME` or
-       `OPENCLAW_EXTRA_MOUNTS`. OpenClaw auto-detects the Docker image's
+    6. **Persist browser downloads**: use `DEX_HOME_VOLUME` or
+       `DEX_EXTRA_MOUNTS`. OpenClaw auto-detects the Docker image's
        Playwright-managed Chromium on Linux.
 
   </Accordion>

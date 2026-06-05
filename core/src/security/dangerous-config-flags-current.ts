@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { collectPluginConfigContractMatches } from "../plugins/config-contract-matches.js";
 import { getCurrentPluginMetadataSnapshot } from "../plugins/current-plugin-metadata-snapshot.js";
 import type { PluginManifestConfigContracts } from "../plugins/manifest.js";
@@ -12,7 +12,7 @@ type PluginConfigContractMetadata = {
 };
 
 function resolveCurrentPluginConfigContractsById(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   pluginIds: readonly string[];
 }): ReadonlyMap<string, PluginConfigContractMetadata> | undefined {
   // Gateway startup already owns this metadata snapshot; reuse it here so
@@ -45,7 +45,7 @@ function resolveCurrentPluginConfigContractsById(params: {
 }
 
 export function collectEnabledInsecureOrDangerousFlagsFromCurrentSnapshot(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): string[] | undefined {
   const pluginEntries = cfg.plugins?.entries;
   if (!isRecord(pluginEntries)) {

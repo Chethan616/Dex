@@ -24,7 +24,7 @@ function resolveStateDirOverride(
   if (options.homedir) {
     return getMSTeamsRuntime().state.resolveStateDir(options.env ?? process.env, options.homedir);
   }
-  return options.env?.OPENCLAW_STATE_DIR?.trim() || undefined;
+  return options.env?.DEX_STATE_DIR?.trim() || undefined;
 }
 
 export function resolveMSTeamsSqliteStateEnv(
@@ -36,7 +36,7 @@ export function resolveMSTeamsSqliteStateEnv(
   }
   return {
     ...(options?.env ?? process.env),
-    OPENCLAW_STATE_DIR: stateDir,
+    DEX_STATE_DIR: stateDir,
   };
 }
 

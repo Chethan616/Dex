@@ -15,7 +15,7 @@ export type E2eStateDir = {
 };
 
 export async function createE2eStateDir(prefix: string, env = process.env): Promise<E2eStateDir> {
-  const configuredStateDir = env.OPENCLAW_STATE_DIR?.trim();
+  const configuredStateDir = env.DEX_STATE_DIR?.trim();
   const created = !configuredStateDir;
   const stateDir = configuredStateDir || (await fs.mkdtemp(path.join(os.tmpdir(), prefix)));
   const signalHandlers = new Map<CleanupSignal, () => void>();

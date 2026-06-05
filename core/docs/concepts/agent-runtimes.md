@@ -158,7 +158,7 @@ OpenClaw chooses an embedded runtime after provider and model resolution:
    strict.
 
 Whole-session and whole-agent runtime pins are ignored. That includes
-`OPENCLAW_AGENT_RUNTIME`, session `agentHarnessId`/`agentRuntimeOverride` state,
+`DEX_AGENT_RUNTIME`, session `agentHarnessId`/`agentRuntimeOverride` state,
 `agents.defaults.agentRuntime`, and `agents.list[].agentRuntime`. Run
 `openclaw doctor --fix` to remove stale whole-agent runtime config and convert
 legacy runtime model refs where OpenClaw can preserve the intent.

@@ -4,7 +4,7 @@ import { note } from "../../packages/terminal-core/src/note.js";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { resolveWorkspaceTemplateDir } from "../agents/workspace-templates.js";
 import { DEFAULT_HEARTBEAT_FILENAME } from "../agents/workspace.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { writeTextAtomic } from "../infra/json-files.js";
 import { shortenHomePath } from "../utils.js";
@@ -125,7 +125,7 @@ async function readCleanHeartbeatTemplate(): Promise<string> {
 }
 
 export async function maybeRepairHeartbeatTemplate(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   shouldRepair: boolean;
 }): Promise<void> {
   const workspaceDir = resolveAgentWorkspaceDir(params.cfg, resolveDefaultAgentId(params.cfg));

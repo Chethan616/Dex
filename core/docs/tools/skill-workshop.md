@@ -218,7 +218,7 @@ Read-only methods require `operator.read`. Mutating methods require
 ## Storage
 
 ```text
-<OPENCLAW_STATE_DIR>/skill-workshop/
+<DEX_STATE_DIR>/skill-workshop/
   proposals.json
   proposals/<proposal-id>/
     proposal.json
@@ -231,7 +231,7 @@ Read-only methods require `operator.read`. Mutating methods require
     templates/
 ```
 
-Default state directory: `~/.openclaw`.
+Default state directory: `~/.dex`.
 
 - `proposal.json`: canonical proposal record.
 - `proposals.json`: fast listing index, rebuildable from proposal folders.
@@ -256,7 +256,7 @@ Default state directory: `~/.openclaw`.
 | `Target skill changed after proposal creation` | Revise the proposal against the current target, or create a new proposal.                    |
 | `Proposal scan failed`                         | Inspect scanner findings, then revise or quarantine the proposal.                            |
 | `Support file paths must be under one of...`   | Move support files under `assets/`, `examples/`, `references/`, `scripts/`, or `templates/`. |
-| Proposal does not show in list                 | Check the selected `--agent` workspace and `OPENCLAW_STATE_DIR`.                             |
+| Proposal does not show in list                 | Check the selected `--agent` workspace and `DEX_STATE_DIR`.                             |
 
 ## Related
 

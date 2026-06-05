@@ -1,10 +1,10 @@
 // Manual facade. Keep loader boundary explicit.
-import type { ModelProviderConfig, OpenClawConfig } from "../config/types.js";
+import type { ModelProviderConfig, DexConfig } from "../config/types.js";
 import { loadBundledPluginPublicSurfaceModuleSync } from "./facade-loader.js";
 
 type FacadeModule = {
-  applyOpenrouterConfig: (cfg: OpenClawConfig) => OpenClawConfig;
-  applyOpenrouterProviderConfig: (cfg: OpenClawConfig) => OpenClawConfig;
+  applyOpenrouterConfig: (cfg: DexConfig) => DexConfig;
+  applyOpenrouterProviderConfig: (cfg: DexConfig) => DexConfig;
   buildOpenrouterProvider: () => ModelProviderConfig;
   OPENROUTER_DEFAULT_MODEL_REF: string;
 };

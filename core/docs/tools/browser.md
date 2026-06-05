@@ -133,7 +133,7 @@ Set `browser.defaultProfile: "openclaw"` if you want managed mode by default.
 
 ## Configuration
 
-Browser settings live in `~/.openclaw/openclaw.json`.
+Browser settings live in `~/.dex/openclaw.json`.
 
 ```json5
 {
@@ -243,7 +243,7 @@ main model can read the screenshot directly.
 
 <Accordion title="Ports and reachability">
 
-- Control service binds to loopback on a port derived from `gateway.port` (default `18791` = gateway + 2). Overriding `gateway.port` or `OPENCLAW_GATEWAY_PORT` shifts the derived ports in the same family.
+- Control service binds to loopback on a port derived from `gateway.port` (default `18791` = gateway + 2). Overriding `gateway.port` or `DEX_GATEWAY_PORT` shifts the derived ports in the same family.
 - Local `openclaw` profiles auto-assign `cdpPort`/`cdpUrl`; set those only for remote CDP. `cdpUrl` defaults to the managed local CDP port when unset.
 - `remoteCdpTimeoutMs` applies to remote and `attachOnly` CDP HTTP reachability
   checks and tab-opening HTTP requests; `remoteCdpHandshakeTimeoutMs` applies to
@@ -290,8 +290,8 @@ main model can read the screenshot directly.
   config explicitly chooses headed mode. `openclaw browser status --json`
   reports `headlessSource` as `env`, `profile`, `config`,
   `request`, `linux-display-fallback`, or `default`.
-- `OPENCLAW_BROWSER_HEADLESS=1` forces local managed launches headless for the
-  current process. `OPENCLAW_BROWSER_HEADLESS=0` forces headed mode for ordinary
+- `DEX_BROWSER_HEADLESS=1` forces local managed launches headless for the
+  current process. `DEX_BROWSER_HEADLESS=0` forces headed mode for ordinary
   starts and returns an actionable error on Linux hosts without a display server;
   an explicit `start --headless` request still wins for that one launch.
 - `executablePath` can be set globally or per local managed profile. Per-profile values override `browser.executablePath`, so different managed profiles can launch different Chromium-based browsers. Both forms accept `~` for your OS home directory.
@@ -581,8 +581,8 @@ Key ideas:
   **not** authenticate this standalone loopback browser API.
 - If browser control is enabled and no shared-secret auth is configured, OpenClaw
   generates a runtime-only gateway token for that startup. Configure
-  `gateway.auth.token`, `gateway.auth.password`, `OPENCLAW_GATEWAY_TOKEN`, or
-  `OPENCLAW_GATEWAY_PASSWORD` explicitly if clients need a stable secret across
+  `gateway.auth.token`, `gateway.auth.password`, `DEX_GATEWAY_TOKEN`, or
+  `DEX_GATEWAY_PASSWORD` explicitly if clients need a stable secret across
   restarts.
 - OpenClaw does **not** auto-generate that token when `gateway.auth.mode` is
   already `password`, `none`, or `trusted-proxy`.

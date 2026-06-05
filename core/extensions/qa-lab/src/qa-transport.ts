@@ -1,5 +1,5 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { resolveTimerTimeoutMs } from "openclaw/plugin-sdk/number-runtime";
 import type { QaProviderMode } from "./model-selection.js";
 import { extractQaFailureReplyText } from "./reply-failure.js";
@@ -34,7 +34,7 @@ export type QaTransportReportParams = {
   isolatedWorkers?: boolean;
 };
 
-export type QaTransportGatewayConfig = Pick<OpenClawConfig, "channels" | "messages">;
+export type QaTransportGatewayConfig = Pick<DexConfig, "channels" | "messages">;
 
 export type QaTransportState = {
   reset: () => void | Promise<void>;
@@ -65,7 +65,7 @@ type QaTransportCommonCapabilities = {
   executeGenericAction: (params: {
     action: QaTransportActionName;
     args: Record<string, unknown>;
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
   }) => Promise<unknown>;
   waitForReady: (params: {
@@ -177,7 +177,7 @@ export type QaTransportAdapter = {
   handleAction: (params: {
     action: QaTransportActionName;
     args: Record<string, unknown>;
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
   }) => Promise<unknown>;
   createReportNotes: (params: QaTransportReportParams) => string[];
@@ -235,7 +235,7 @@ export abstract class QaStateBackedTransportAdapter implements QaTransportAdapte
   abstract handleAction: (params: {
     action: QaTransportActionName;
     args: Record<string, unknown>;
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
   }) => Promise<unknown>;
   abstract createReportNotes: (params: QaTransportReportParams) => string[];

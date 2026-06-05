@@ -166,7 +166,7 @@ witness video when `MANTIS_DISCORD_VIEWER_CHROME_PROFILE_DIR` or
 environment. That viewer profile is only for visual capture; the pass/fail
 decision still comes from the Discord REST oracle.
 
-CI uses the same command surface in `.github/workflows/qa-live-transports-convex.yml`. Scheduled and default manual runs execute the fast Matrix profile with live frontier credentials, `--fast`, and `OPENCLAW_QA_MATRIX_NO_REPLY_WINDOW_MS=3000`. Manual `matrix_profile=all` fans out into the five profile shards so the exhaustive catalog can run in parallel while keeping one artifact directory per shard.
+CI uses the same command surface in `.github/workflows/qa-live-transports-convex.yml`. Scheduled and default manual runs execute the fast Matrix profile with live frontier credentials, `--fast`, and `DEX_QA_MATRIX_NO_REPLY_WINDOW_MS=3000`. Manual `matrix_profile=all` fans out into the five profile shards so the exhaustive catalog can run in parallel while keeping one artifact directory per shard.
 
 For transport-real Telegram, Discord, and Slack smoke lanes:
 
@@ -340,13 +340,13 @@ Targets one real private Telegram group with two distinct bots (driver + SUT). T
 
 Required env when `--credential-source env`:
 
-- `OPENCLAW_QA_TELEGRAM_GROUP_ID` - numeric chat id (string).
-- `OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN`
-- `OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN`
+- `DEX_QA_TELEGRAM_GROUP_ID` - numeric chat id (string).
+- `DEX_QA_TELEGRAM_DRIVER_BOT_TOKEN`
+- `DEX_QA_TELEGRAM_SUT_BOT_TOKEN`
 
 Optional:
 
-- `OPENCLAW_QA_TELEGRAM_CAPTURE_CONTENT=1` keeps message bodies in observed-message artifacts (default redacts).
+- `DEX_QA_TELEGRAM_CAPTURE_CONTENT=1` keeps message bodies in observed-message artifacts (default redacts).
 
 Scenarios (`extensions/qa-lab/src/live-transports/telegram/telegram-live.runtime.ts`):
 
@@ -373,7 +373,7 @@ Output artifacts:
 
 - `telegram-qa-report.md`
 - `telegram-qa-summary.json` - includes per-reply RTT (driver send → observed SUT reply) starting with the canary.
-- `telegram-qa-observed-messages.json` - bodies redacted unless `OPENCLAW_QA_TELEGRAM_CAPTURE_CONTENT=1`.
+- `telegram-qa-observed-messages.json` - bodies redacted unless `DEX_QA_TELEGRAM_CAPTURE_CONTENT=1`.
 
 Package RTT comparison uses the same Telegram credential contract while keeping
 its RTT sample controls on the RTT harness path:
@@ -390,8 +390,8 @@ When `--credential-source convex` is set, the RTT Docker wrapper leases a
 `kind: "telegram"` credential, exports the leased group/driver/SUT bot env into
 the installed-package run, heartbeats the lease, and releases it on shutdown.
 `--samples` and `--sample-timeout-ms` still feed
-`OPENCLAW_NPM_TELEGRAM_WARM_SAMPLES` and
-`OPENCLAW_NPM_TELEGRAM_SAMPLE_TIMEOUT_MS`, so `result.json` remains comparable
+`DEX_NPM_TELEGRAM_WARM_SAMPLES` and
+`DEX_NPM_TELEGRAM_SAMPLE_TIMEOUT_MS`, so `result.json` remains comparable
 across env-backed and Convex-backed RTT runs.
 
 ### Discord QA
@@ -404,16 +404,16 @@ Targets one real private Discord guild channel with two bots: a driver bot contr
 
 Required env when `--credential-source env`:
 
-- `OPENCLAW_QA_DISCORD_GUILD_ID`
-- `OPENCLAW_QA_DISCORD_CHANNEL_ID`
-- `OPENCLAW_QA_DISCORD_DRIVER_BOT_TOKEN`
-- `OPENCLAW_QA_DISCORD_SUT_BOT_TOKEN`
-- `OPENCLAW_QA_DISCORD_SUT_APPLICATION_ID` - must match the SUT bot user id returned by Discord (the lane fails fast otherwise).
+- `DEX_QA_DISCORD_GUILD_ID`
+- `DEX_QA_DISCORD_CHANNEL_ID`
+- `DEX_QA_DISCORD_DRIVER_BOT_TOKEN`
+- `DEX_QA_DISCORD_SUT_BOT_TOKEN`
+- `DEX_QA_DISCORD_SUT_APPLICATION_ID` - must match the SUT bot user id returned by Discord (the lane fails fast otherwise).
 
 Optional:
 
-- `OPENCLAW_QA_DISCORD_CAPTURE_CONTENT=1` keeps message bodies in observed-message artifacts.
-- `OPENCLAW_QA_DISCORD_VOICE_CHANNEL_ID` selects the voice/stage channel for `discord-voice-autojoin`; without it, the scenario picks the first visible voice/stage channel for the SUT bot.
+- `DEX_QA_DISCORD_CAPTURE_CONTENT=1` keeps message bodies in observed-message artifacts.
+- `DEX_QA_DISCORD_VOICE_CHANNEL_ID` selects the voice/stage channel for `discord-voice-autojoin`; without it, the scenario picks the first visible voice/stage channel for the SUT bot.
 
 Scenarios (`extensions/qa-lab/src/live-transports/discord/discord-live.runtime.ts:36`):
 
@@ -446,7 +446,7 @@ Output artifacts:
 
 - `discord-qa-report.md`
 - `discord-qa-summary.json`
-- `discord-qa-observed-messages.json` - bodies redacted unless `OPENCLAW_QA_DISCORD_CAPTURE_CONTENT=1`.
+- `discord-qa-observed-messages.json` - bodies redacted unless `DEX_QA_DISCORD_CAPTURE_CONTENT=1`.
 - `discord-qa-reaction-timelines.json` and `discord-status-reactions-tool-only-timeline.png` when the status-reaction scenario runs.
 
 ### Slack QA
@@ -459,18 +459,18 @@ Targets one real private Slack channel with two distinct bots: a driver bot cont
 
 Required env when `--credential-source env`:
 
-- `OPENCLAW_QA_SLACK_CHANNEL_ID`
-- `OPENCLAW_QA_SLACK_DRIVER_BOT_TOKEN`
-- `OPENCLAW_QA_SLACK_SUT_BOT_TOKEN`
-- `OPENCLAW_QA_SLACK_SUT_APP_TOKEN`
+- `DEX_QA_SLACK_CHANNEL_ID`
+- `DEX_QA_SLACK_DRIVER_BOT_TOKEN`
+- `DEX_QA_SLACK_SUT_BOT_TOKEN`
+- `DEX_QA_SLACK_SUT_APP_TOKEN`
 
 Optional:
 
-- `OPENCLAW_QA_SLACK_CAPTURE_CONTENT=1` keeps message bodies in observed-message artifacts.
-- `OPENCLAW_QA_SLACK_APPROVAL_CHECKPOINT_DIR` enables visual approval
+- `DEX_QA_SLACK_CAPTURE_CONTENT=1` keeps message bodies in observed-message artifacts.
+- `DEX_QA_SLACK_APPROVAL_CHECKPOINT_DIR` enables visual approval
   checkpoints for Mantis. The runner writes `<scenario>.pending.json` and
   `<scenario>.resolved.json`, then waits for matching `.ack.json` files.
-- `OPENCLAW_QA_SLACK_APPROVAL_CHECKPOINT_TIMEOUT_MS` overrides the checkpoint
+- `DEX_QA_SLACK_APPROVAL_CHECKPOINT_TIMEOUT_MS` overrides the checkpoint
   acknowledgement timeout. The default is `120000`.
 
 Scenarios (`extensions/qa-lab/src/live-transports/slack/slack-live.runtime.ts`):
@@ -494,9 +494,9 @@ Output artifacts:
 
 - `slack-qa-report.md`
 - `slack-qa-summary.json`
-- `slack-qa-observed-messages.json` - bodies redacted unless `OPENCLAW_QA_SLACK_CAPTURE_CONTENT=1`.
+- `slack-qa-observed-messages.json` - bodies redacted unless `DEX_QA_SLACK_CAPTURE_CONTENT=1`.
 - `approval-checkpoints/` - only when Mantis sets
-  `OPENCLAW_QA_SLACK_APPROVAL_CHECKPOINT_DIR`; contains checkpoint JSON,
+  `DEX_QA_SLACK_APPROVAL_CHECKPOINT_DIR`; contains checkpoint JSON,
   acknowledgement JSON, and pending/resolved screenshots.
 
 #### Setting up the Slack workspace
@@ -630,7 +630,7 @@ Copy the `Cxxxxxxxxxx` id from _channel info → About → Channel ID_ - that be
 
 **4. Register the credentials**
 
-Two options. Use env vars for single-machine debugging (set the four `OPENCLAW_QA_SLACK_*` variables and pass `--credential-source env`), or seed the shared Convex pool so CI and other maintainers can lease them.
+Two options. Use env vars for single-machine debugging (set the four `DEX_QA_SLACK_*` variables and pass `--credential-source env`), or seed the shared Convex pool so CI and other maintainers can lease them.
 
 For the Convex pool, write the four fields to a JSON file:
 
@@ -643,7 +643,7 @@ For the Convex pool, write the four fields to a JSON file:
 }
 ```
 
-With `OPENCLAW_QA_CONVEX_SITE_URL` and `OPENCLAW_QA_CONVEX_SECRET_MAINTAINER` exported in your shell, register and verify:
+With `DEX_QA_CONVEX_SITE_URL` and `DEX_QA_CONVEX_SECRET_MAINTAINER` exported in your shell, register and verify:
 
 ```bash
 pnpm openclaw qa credentials add \
@@ -681,15 +681,15 @@ bundled WhatsApp plugin.
 
 Required env when `--credential-source env`:
 
-- `OPENCLAW_QA_WHATSAPP_DRIVER_PHONE_E164`
-- `OPENCLAW_QA_WHATSAPP_SUT_PHONE_E164`
-- `OPENCLAW_QA_WHATSAPP_DRIVER_AUTH_ARCHIVE_BASE64`
-- `OPENCLAW_QA_WHATSAPP_SUT_AUTH_ARCHIVE_BASE64`
+- `DEX_QA_WHATSAPP_DRIVER_PHONE_E164`
+- `DEX_QA_WHATSAPP_SUT_PHONE_E164`
+- `DEX_QA_WHATSAPP_DRIVER_AUTH_ARCHIVE_BASE64`
+- `DEX_QA_WHATSAPP_SUT_AUTH_ARCHIVE_BASE64`
 
 Optional:
 
-- `OPENCLAW_QA_WHATSAPP_GROUP_JID` enables `whatsapp-mention-gating`.
-- `OPENCLAW_QA_WHATSAPP_CAPTURE_CONTENT=1` keeps message bodies in
+- `DEX_QA_WHATSAPP_GROUP_JID` enables `whatsapp-mention-gating`.
+- `DEX_QA_WHATSAPP_CAPTURE_CONTENT=1` keeps message bodies in
   observed-message artifacts.
 
 Scenarios (`extensions/qa-lab/src/live-transports/whatsapp/whatsapp-live.runtime.ts`):
@@ -709,11 +709,11 @@ Output artifacts:
 
 - `whatsapp-qa-report.md`
 - `whatsapp-qa-summary.json`
-- `whatsapp-qa-observed-messages.json` - bodies redacted unless `OPENCLAW_QA_WHATSAPP_CAPTURE_CONTENT=1`.
+- `whatsapp-qa-observed-messages.json` - bodies redacted unless `DEX_QA_WHATSAPP_CAPTURE_CONTENT=1`.
 
 ### Convex credential pool
 
-Telegram, Discord, Slack, and WhatsApp lanes can lease credentials from a shared Convex pool instead of reading the env vars above. Pass `--credential-source convex` (or set `OPENCLAW_QA_CREDENTIAL_SOURCE=convex`); QA Lab acquires an exclusive lease, heartbeats it for the duration of the run, and releases it on shutdown. Pool kinds are `"telegram"`, `"discord"`, `"slack"`, and `"whatsapp"`.
+Telegram, Discord, Slack, and WhatsApp lanes can lease credentials from a shared Convex pool instead of reading the env vars above. Pass `--credential-source convex` (or set `DEX_QA_CREDENTIAL_SOURCE=convex`); QA Lab acquires an exclusive lease, heartbeats it for the duration of the run, and releases it on shutdown. Pool kinds are `"telegram"`, `"discord"`, `"slack"`, and `"whatsapp"`.
 
 Payload shapes the broker validates on `admin/add`:
 

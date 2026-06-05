@@ -262,10 +262,10 @@ Pricing comes from the bundled manifest (Token Plan models include tiered cache-
   <Accordion title="Troubleshooting">
     - If models do not appear, confirm the relevant key env var or auth profile is present and valid.
     - For Token Plan, confirm the chosen onboarding region matches the subscription page base URL and that the key starts with `tp-`.
-    - When the Gateway runs as a daemon, ensure the key is available to that process (for example in `~/.openclaw/.env` or via `env.shellEnv`).
+    - When the Gateway runs as a daemon, ensure the key is available to that process (for example in `~/.dex/.env` or via `env.shellEnv`).
 
     <Warning>
-    Keys set only in your interactive shell are not visible to daemon-managed gateway processes. Use `~/.openclaw/.env` or `env.shellEnv` config for persistent availability.
+    Keys set only in your interactive shell are not visible to daemon-managed gateway processes. Use `~/.dex/.env` or `env.shellEnv` config for persistent availability.
     </Warning>
 
   </Accordion>

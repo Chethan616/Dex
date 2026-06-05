@@ -8,10 +8,10 @@ import { pathToFileURL } from "node:url";
 
 const repoRoot = process.cwd();
 const tmpDir = process.env.TMPDIR || process.env.TEMP || process.env.TMP || os.tmpdir();
-const MAX_RSS_MARKER = "__OPENCLAW_MAX_RSS_KB__=";
+const MAX_RSS_MARKER = "__DEX_MAX_RSS_KB__=";
 const DEFAULT_COMMAND_TIMEOUT_MS = 60_000;
 const COMMAND_TIMEOUT_MS = readPositiveIntEnv(
-  "OPENCLAW_STARTUP_MEMORY_TIMEOUT_MS",
+  "DEX_STARTUP_MEMORY_TIMEOUT_MS",
   DEFAULT_COMMAND_TIMEOUT_MS,
 );
 let tmpHome = null;
@@ -43,10 +43,10 @@ function readNonEmptyEnv(name) {
 function parseArgs(argv) {
   const options = {
     jsonPath:
-      readNonEmptyEnv("OPENCLAW_STARTUP_MEMORY_JSON_PATH") ??
+      readNonEmptyEnv("DEX_STARTUP_MEMORY_JSON_PATH") ??
       path.join(repoRoot, ".artifacts", "startup-memory", "startup-memory.json"),
     summaryPath:
-      readNonEmptyEnv("OPENCLAW_STARTUP_MEMORY_SUMMARY_PATH") ??
+      readNonEmptyEnv("DEX_STARTUP_MEMORY_SUMMARY_PATH") ??
       path.join(repoRoot, ".artifacts", "startup-memory", "summary.md"),
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -98,14 +98,14 @@ const cases = [
     id: "help",
     label: "--help",
     args: ["openclaw.mjs", "--help"],
-    limitMb: readPositiveNumberEnv("OPENCLAW_STARTUP_MEMORY_HELP_MB", DEFAULT_LIMITS_MB.help),
+    limitMb: readPositiveNumberEnv("DEX_STARTUP_MEMORY_HELP_MB", DEFAULT_LIMITS_MB.help),
   },
   {
     id: "statusJson",
     label: "status --json",
     args: ["openclaw.mjs", "status", "--json"],
     limitMb: readPositiveNumberEnv(
-      "OPENCLAW_STARTUP_MEMORY_STATUS_JSON_MB",
+      "DEX_STARTUP_MEMORY_STATUS_JSON_MB",
       DEFAULT_LIMITS_MB.statusJson,
     ),
   },
@@ -114,7 +114,7 @@ const cases = [
     label: "gateway status",
     args: ["openclaw.mjs", "gateway", "status"],
     limitMb: readPositiveNumberEnv(
-      "OPENCLAW_STARTUP_MEMORY_GATEWAY_STATUS_MB",
+      "DEX_STARTUP_MEMORY_GATEWAY_STATUS_MB",
       DEFAULT_LIMITS_MB.gatewayStatus,
     ),
   },
@@ -196,7 +196,7 @@ function buildBenchEnv() {
   }
   // Keep the benchmark on a single process so RSS reflects the actual command
   // path rather than the warning-suppression respawn wrapper.
-  env.OPENCLAW_NO_RESPAWN = "1";
+  env.DEX_NO_RESPAWN = "1";
 
   return env;
 }

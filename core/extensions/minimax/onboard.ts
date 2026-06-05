@@ -2,7 +2,7 @@ import {
   applyAgentDefaultModelPrimary,
   applyOnboardAuthAgentModelsAndProviders,
   type ModelProviderConfig,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/provider-onboard";
 import {
   buildMinimaxApiModelDefinition,
@@ -18,9 +18,9 @@ type MinimaxApiProviderConfigParams = {
 };
 
 function applyMinimaxApiProviderConfigWithBaseUrl(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   params: MinimaxApiProviderConfigParams,
-): OpenClawConfig {
+): DexConfig {
   const providers = { ...cfg.models?.providers } as Record<string, ModelProviderConfig>;
   const existingProvider = providers[params.providerId];
   const existingModels = existingProvider?.models ?? [];
@@ -53,17 +53,17 @@ function applyMinimaxApiProviderConfigWithBaseUrl(
 }
 
 function applyMinimaxApiConfigWithBaseUrl(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   params: MinimaxApiProviderConfigParams,
-): OpenClawConfig {
+): DexConfig {
   const next = applyMinimaxApiProviderConfigWithBaseUrl(cfg, params);
   return applyAgentDefaultModelPrimary(next, `${params.providerId}/${params.modelId}`);
 }
 
 export function applyMinimaxApiProviderConfig(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   modelId = MINIMAX_DEFAULT_MODEL_ID,
-): OpenClawConfig {
+): DexConfig {
   return applyMinimaxApiProviderConfigWithBaseUrl(cfg, {
     providerId: "minimax",
     modelId,
@@ -72,9 +72,9 @@ export function applyMinimaxApiProviderConfig(
 }
 
 export function applyMinimaxApiConfig(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   modelId = MINIMAX_DEFAULT_MODEL_ID,
-): OpenClawConfig {
+): DexConfig {
   return applyMinimaxApiConfigWithBaseUrl(cfg, {
     providerId: "minimax",
     modelId,
@@ -83,9 +83,9 @@ export function applyMinimaxApiConfig(
 }
 
 export function applyMinimaxApiProviderConfigCn(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   modelId = MINIMAX_DEFAULT_MODEL_ID,
-): OpenClawConfig {
+): DexConfig {
   return applyMinimaxApiProviderConfigWithBaseUrl(cfg, {
     providerId: "minimax",
     modelId,
@@ -94,9 +94,9 @@ export function applyMinimaxApiProviderConfigCn(
 }
 
 export function applyMinimaxApiConfigCn(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   modelId = MINIMAX_DEFAULT_MODEL_ID,
-): OpenClawConfig {
+): DexConfig {
   return applyMinimaxApiConfigWithBaseUrl(cfg, {
     providerId: "minimax",
     modelId,

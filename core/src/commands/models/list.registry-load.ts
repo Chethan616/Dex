@@ -1,6 +1,6 @@
 import { loadAgentModelRegistry } from "../../agents/model-registry-loader.js";
 import { shouldSuppressBuiltInModel } from "../../agents/model-suppression.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { ModelRegistry } from "../../llm/model-registry.js";
 import type { Model } from "../../llm/types.js";
 import { loadModelRegistry } from "./list.registry.js";
@@ -8,7 +8,7 @@ import type { ConfiguredEntry } from "./list.types.js";
 import { modelKey } from "./shared.js";
 
 export async function loadListModelRegistry(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   opts?: {
     providerFilter?: string;
     normalizeModels?: boolean;
@@ -26,7 +26,7 @@ export async function loadListModelRegistry(
 function findConfiguredRegistryModel(params: {
   registry: ModelRegistry;
   entry: ConfiguredEntry;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): Model | undefined {
   const model = params.registry.find(params.entry.ref.provider, params.entry.ref.model);
   if (!model) {
@@ -46,7 +46,7 @@ function findConfiguredRegistryModel(params: {
 }
 
 export function loadConfiguredListModelRegistry(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   entries: ConfiguredEntry[],
   opts?: { providerFilter?: string; workspaceDir?: string },
 ) {

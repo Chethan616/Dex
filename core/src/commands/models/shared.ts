@@ -9,7 +9,7 @@ import {
 } from "../../agents/model-selection.js";
 import { formatCliCommand } from "../../cli/command-format.js";
 import {
-  type OpenClawConfig,
+  type DexConfig,
   readConfigFileSnapshot,
   replaceConfigFile,
 } from "../../config/config.js";
@@ -51,7 +51,7 @@ export const formatMs = (value?: number | null) => {
   return `${Math.round(value / 100) / 10}s`;
 };
 
-export async function loadValidConfigOrThrow(): Promise<OpenClawConfig> {
+export async function loadValidConfigOrThrow(): Promise<DexConfig> {
   const snapshot = await readConfigFileSnapshot();
   if (!snapshot.valid) {
     const issues = formatConfigIssueLines(snapshot.issues, "-").join("\n");
@@ -61,12 +61,12 @@ export async function loadValidConfigOrThrow(): Promise<OpenClawConfig> {
 }
 
 export type UpdateConfigContext = {
-  runtimeConfig: OpenClawConfig;
+  runtimeConfig: DexConfig;
 };
 
 export async function updateConfig(
-  mutator: (cfg: OpenClawConfig, context: UpdateConfigContext) => OpenClawConfig,
-): Promise<OpenClawConfig> {
+  mutator: (cfg: DexConfig, context: UpdateConfigContext) => DexConfig,
+): Promise<DexConfig> {
   const snapshot = await readConfigFileSnapshot();
   if (!snapshot.valid) {
     const issues = formatConfigIssueLines(snapshot.issues, "-").join("\n");
@@ -82,7 +82,7 @@ export async function updateConfig(
   return next;
 }
 
-export function resolveModelTarget(params: { raw: string; cfg: OpenClawConfig }): {
+export function resolveModelTarget(params: { raw: string; cfg: DexConfig }): {
   provider: string;
   model: string;
 } {
@@ -103,7 +103,7 @@ export function resolveModelTarget(params: { raw: string; cfg: OpenClawConfig })
 
 function resolveAuthoredModelAliasTarget(params: {
   raw: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): { provider: string; model: string } | undefined {
   const aliasIndex = buildModelAliasIndex({
     cfg: params.cfg,
@@ -118,7 +118,7 @@ function resolveAuthoredModelAliasTarget(params: {
 }
 
 export function resolveModelKeysFromEntries(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   entries: readonly string[];
 }): string[] {
   const aliasIndex = buildModelAliasIndex({
@@ -137,7 +137,7 @@ export function resolveModelKeysFromEntries(params: {
     .map((entry) => modelKey(entry.ref.provider, entry.ref.model));
 }
 
-export function buildAllowlistSet(cfg: OpenClawConfig): Set<string> {
+export function buildAllowlistSet(cfg: DexConfig): Set<string> {
   const allowed = new Set<string>();
   const models = cfg.agents?.defaults?.models ?? {};
   for (const raw of Object.keys(models)) {
@@ -151,7 +151,7 @@ export function buildAllowlistSet(cfg: OpenClawConfig): Set<string> {
 }
 
 export function resolveKnownAgentId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   rawAgentId?: string | null;
 }): string | undefined {
   const raw = params.rawAgentId?.trim();
@@ -231,11 +231,11 @@ export function mergePrimaryFallbackConfig(
 }
 
 export function applyDefaultModelPrimaryUpdate(params: {
-  cfg: OpenClawConfig;
-  resolveCfg?: OpenClawConfig;
+  cfg: DexConfig;
+  resolveCfg?: DexConfig;
   modelRaw: string;
   field: "model" | "imageModel";
-}): OpenClawConfig {
+}): DexConfig {
   const resolved =
     params.resolveCfg && params.resolveCfg !== params.cfg
       ? (resolveAuthoredModelAliasTarget({

@@ -1,7 +1,7 @@
 import type { ExecApprovalRequest } from "../infra/exec-approvals.js";
 import type { PluginApprovalRequest } from "../infra/plugin-approvals.js";
 import type { ChannelApprovalCapability } from "./channel-contract.js";
-import type { OpenClawConfig } from "./config-runtime.js";
+import type { DexConfig } from "./config-runtime.js";
 import { normalizeMessageChannel } from "./routing.js";
 
 type ApprovalKind = "exec" | "plugin";
@@ -15,13 +15,13 @@ type ChannelApprovalCapabilitySurfaces = Pick<
 >;
 
 type ApprovalAdapterParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   senderId?: string | null;
 };
 
 type DeliverySuppressionParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   approvalKind: ApprovalKind;
   target: { channel: string; accountId?: string | null };
   request: { request: { turnSourceChannel?: string | null; turnSourceAccountId?: string | null } };
@@ -30,25 +30,25 @@ type DeliverySuppressionParams = {
 type ApproverRestrictedNativeApprovalParams = {
   channel: string;
   channelLabel: string;
-  listAccountIds: (cfg: OpenClawConfig) => string[];
+  listAccountIds: (cfg: DexConfig) => string[];
   hasApprovers: (params: ApprovalAdapterParams) => boolean;
   isExecAuthorizedSender: (params: ApprovalAdapterParams) => boolean;
   isPluginAuthorizedSender?: (params: ApprovalAdapterParams) => boolean;
-  isNativeDeliveryEnabled: (params: { cfg: OpenClawConfig; accountId?: string | null }) => boolean;
+  isNativeDeliveryEnabled: (params: { cfg: DexConfig; accountId?: string | null }) => boolean;
   resolveNativeDeliveryMode: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
   }) => NativeApprovalDeliveryMode;
   requireMatchingTurnSourceChannel?: boolean;
   resolveSuppressionAccountId?: (params: DeliverySuppressionParams) => string | undefined;
   resolveOriginTarget?: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind: ApprovalKind;
     request: NativeApprovalRequest;
   }) => NativeApprovalTarget | null | Promise<NativeApprovalTarget | null>;
   resolveApproverDmTargets?: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind: ApprovalKind;
     request: NativeApprovalRequest;
@@ -72,14 +72,14 @@ function buildApproverRestrictedNativeApprovalCapability(
     cfg,
     accountId,
   }: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
   }) => params.hasApprovers({ cfg, accountId });
   const isExecInitiatingSurfaceEnabled = ({
     cfg,
     accountId,
   }: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
   }) =>
     hasConfiguredApprovers({ cfg, accountId }) &&
@@ -88,7 +88,7 @@ function buildApproverRestrictedNativeApprovalCapability(
     cfg,
     accountId,
   }: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     action: "approve";
   }) => availabilityState(isExecInitiatingSurfaceEnabled({ cfg, accountId }));
@@ -100,7 +100,7 @@ function buildApproverRestrictedNativeApprovalCapability(
       senderId,
       approvalKind,
     }: {
-      cfg: OpenClawConfig;
+      cfg: DexConfig;
       accountId?: string | null;
       senderId?: string | null;
       action: "approve";
@@ -121,14 +121,14 @@ function buildApproverRestrictedNativeApprovalCapability(
       cfg,
       accountId,
     }: {
-      cfg: OpenClawConfig;
+      cfg: DexConfig;
       accountId?: string | null;
       action: "approve";
     }) => availabilityState(hasConfiguredApprovers({ cfg, accountId })),
     getExecInitiatingSurfaceState: resolveExecInitiatingSurfaceState,
     describeExecApprovalSetup: params.describeExecApprovalSetup,
     delivery: {
-      hasConfiguredDmRoute: ({ cfg }: { cfg: OpenClawConfig }) =>
+      hasConfiguredDmRoute: ({ cfg }: { cfg: DexConfig }) =>
         params.listAccountIds(cfg).some((accountId) => {
           if (!hasConfiguredApprovers({ cfg, accountId })) {
             return false;
@@ -167,7 +167,7 @@ function buildApproverRestrictedNativeApprovalCapability(
               cfg,
               accountId,
             }: {
-              cfg: OpenClawConfig;
+              cfg: DexConfig;
               accountId?: string | null;
               approvalKind: ApprovalKind;
               request: NativeApprovalRequest;

@@ -62,7 +62,7 @@ be accepted by the Token Plan search endpoint.
 
 **Environment alternative:** set `MINIMAX_CODE_PLAN_KEY`, `MINIMAX_CODING_API_KEY`,
 `MINIMAX_OAUTH_TOKEN`, or `MINIMAX_API_KEY` in the Gateway environment.
-For a gateway install, put it in `~/.openclaw/.env`.
+For a gateway install, put it in `~/.dex/.env`.
 
 ## Region selection
 

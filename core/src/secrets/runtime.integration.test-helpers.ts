@@ -20,12 +20,12 @@ export const SECRETS_RUNTIME_INTEGRATION_TIMEOUT_MS = 300_000;
 
 export function beginSecretsRuntimeIsolationForTest(): SecretsRuntimeEnvSnapshot {
   const envSnapshot = captureEnv([
-    "OPENCLAW_BUNDLED_PLUGINS_DIR",
-    "OPENCLAW_DISABLE_BUNDLED_PLUGINS",
-    "OPENCLAW_VERSION",
+    "DEX_BUNDLED_PLUGINS_DIR",
+    "DEX_DISABLE_BUNDLED_PLUGINS",
+    "DEX_VERSION",
   ]);
-  delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
-  delete process.env.OPENCLAW_VERSION;
+  delete process.env.DEX_BUNDLED_PLUGINS_DIR;
+  delete process.env.DEX_VERSION;
   return envSnapshot;
 }
 

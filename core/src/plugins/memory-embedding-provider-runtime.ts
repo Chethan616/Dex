@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   getRuntimeEmbeddingProviderAdapter,
   listRuntimeEmbeddingProviderAdapters,
@@ -17,7 +17,7 @@ export function listRegisteredMemoryEmbeddingProviderAdapters(): MemoryEmbedding
   return listRegisteredMemoryEmbeddingProviders().map((entry) => entry.adapter);
 }
 export function listMemoryEmbeddingProviders(
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
 ): MemoryEmbeddingProviderAdapter[] {
   return listRuntimeEmbeddingProviderAdapters({
     key: "memoryEmbeddingProviders",
@@ -28,12 +28,12 @@ export function listMemoryEmbeddingProviders(
 
 function resolveConfiguredMemoryEmbeddingProviderId(
   providerId: string,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
 ): string | undefined {
   return readConfiguredProviderApiId({ providerId, cfg });
 }
 
-function resolveMemoryEmbeddingProviderLookupIds(id: string, cfg?: OpenClawConfig): string[] {
+function resolveMemoryEmbeddingProviderLookupIds(id: string, cfg?: DexConfig): string[] {
   return resolveRuntimeEmbeddingProviderLookupIds({
     id,
     cfg,
@@ -43,7 +43,7 @@ function resolveMemoryEmbeddingProviderLookupIds(id: string, cfg?: OpenClawConfi
 
 export function getMemoryEmbeddingProvider(
   id: string,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
 ): MemoryEmbeddingProviderAdapter | undefined {
   return getRuntimeEmbeddingProviderAdapter({
     key: "memoryEmbeddingProviders",

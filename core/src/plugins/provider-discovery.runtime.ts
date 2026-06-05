@@ -2,7 +2,7 @@ import path from "node:path";
 import type { NormalizedModelCatalogRow } from "@dexagent/model-catalog-core/model-catalog-types";
 import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import type { ModelDefinitionConfig, ModelProviderConfig } from "../config/types.models.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { planManifestModelCatalogRows } from "../model-catalog/manifest-planner.js";
 import { sortUniqueStrings } from "../../packages/normalization-core/src/string-normalization.js";
 import { loadManifestMetadataSnapshot } from "./manifest-contract-eligibility.js";
@@ -266,7 +266,7 @@ function resolveRuntimeManifestCatalogPluginIds(
 }
 
 function resolveProviderDiscoveryEntryPlugins(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   onlyPluginIds?: string[];
@@ -418,7 +418,7 @@ function withoutFullLoadedPluginEntries(
 }
 
 export function resolvePluginDiscoveryProvidersRuntime(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   bundledProviderVitestCompat?: boolean;

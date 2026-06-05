@@ -9,7 +9,7 @@ import {
   createMessageReceiptFromOutboundResults,
   type MessageReceipt,
 } from "openclaw/plugin-sdk/channel-outbound";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
 import { getClientManager as getRegistryClientManager } from "./client-manager-registry.js";
 import { resolveTwitchAccountContext } from "./config.js";
@@ -79,7 +79,7 @@ function createTwitchSendReceipt(params: {
 export async function sendMessageTwitchInternal(
   channel: string,
   text: string,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   accountId?: string,
   stripMarkdown = true,
   logger: Console = console,

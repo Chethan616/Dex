@@ -1,5 +1,5 @@
 import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import type { SpeechProviderPlugin } from "../plugins/types.js";
 import { listSpeechProviders } from "./provider-registry.js";
 import type {
@@ -11,7 +11,7 @@ import type {
 } from "./provider-types.js";
 
 type ParseTtsDirectiveOptions = {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   providers?: readonly SpeechProviderPlugin[];
   providerConfigs?: Record<string, SpeechProviderConfig>;
   preferredProviderId?: string;

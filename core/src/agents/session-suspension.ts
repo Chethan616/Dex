@@ -2,7 +2,7 @@ import path from "node:path";
 import { resolveAgentMaxConcurrent, resolveSubagentMaxConcurrent } from "../config/agent-limits.js";
 import { resolveCronMaxConcurrentRuns } from "../config/cron-limits.js";
 import { applySessionStoreEntryPatch } from "../config/sessions.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { setCommandLaneConcurrency } from "../process/command-queue.js";
 import {
@@ -21,7 +21,7 @@ const laneResumeTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export type SessionSuspensionReason = "quota_exhausted" | "manual" | "circuit_open";
 
-function resolveLaneResumeConcurrency(cfg: OpenClawConfig | undefined, laneId: string): number {
+function resolveLaneResumeConcurrency(cfg: DexConfig | undefined, laneId: string): number {
   switch (laneId) {
     case "main":
       return resolveAgentMaxConcurrent(cfg);
@@ -74,7 +74,7 @@ export function cancelLaneAutoResume(laneId: string) {
 }
 
 export async function suspendSession(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   agentDir?: string;
   sessionId: string;
   laneId?: string;

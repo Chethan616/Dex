@@ -47,7 +47,7 @@ type SessionFileFingerprint =
       ctimeNs: bigint;
     };
 
-const TRANSCRIPT_ONLY_OPENCLAW_ASSISTANT_MODELS = new Set(["delivery-mirror", "gateway-injected"]);
+const TRANSCRIPT_ONLY_DEX_ASSISTANT_MODELS = new Set(["delivery-mirror", "gateway-injected"]);
 const MAX_BENIGN_SESSION_FENCE_ADVANCE_BYTES = 1024 * 1024;
 const MAX_BENIGN_SESSION_FENCE_REWRITE_BYTES = 8 * 1024 * 1024;
 const MAX_BENIGN_SESSION_FENCE_REWRITE_RESULT_BYTES =
@@ -107,7 +107,7 @@ function isTranscriptOnlyOpenClawAssistantLine(line: string): boolean {
       message.role === "assistant" &&
       message.provider === "openclaw" &&
       typeof message.model === "string" &&
-      TRANSCRIPT_ONLY_OPENCLAW_ASSISTANT_MODELS.has(message.model)
+      TRANSCRIPT_ONLY_DEX_ASSISTANT_MODELS.has(message.model)
     );
   } catch {
     return false;

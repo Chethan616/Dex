@@ -7,7 +7,7 @@ import {
 } from "@dexagent/normalization-core/number-coercion";
 import type { CommandContext } from "../auto-reply/reply/commands-types.js";
 import { resolveStateDir } from "../config/paths.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { tryReadJson, writeJson } from "../infra/json-files.js";
 import type { RuntimeEnv } from "../runtime.js";
 import {
@@ -29,7 +29,7 @@ type RescuePendingOperation = {
 };
 
 export type CrestodianRescueMessageInput = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   command: CommandContext;
   commandBody: string;
   agentId?: string;

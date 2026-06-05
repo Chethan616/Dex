@@ -101,9 +101,9 @@ export type SessionWriteLockAcquireTimeoutConfig = {
 type SessionWriteLockMsKey = "acquireTimeoutMs" | "staleMs" | "maxHoldMs";
 
 const SESSION_WRITE_LOCK_ENV: Record<SessionWriteLockMsKey, string> = {
-  acquireTimeoutMs: "OPENCLAW_SESSION_WRITE_LOCK_ACQUIRE_TIMEOUT_MS",
-  staleMs: "OPENCLAW_SESSION_WRITE_LOCK_STALE_MS",
-  maxHoldMs: "OPENCLAW_SESSION_WRITE_LOCK_MAX_HOLD_MS",
+  acquireTimeoutMs: "DEX_SESSION_WRITE_LOCK_ACQUIRE_TIMEOUT_MS",
+  staleMs: "DEX_SESSION_WRITE_LOCK_STALE_MS",
+  maxHoldMs: "DEX_SESSION_WRITE_LOCK_MAX_HOLD_MS",
 };
 
 function readPositiveMsEnv(
@@ -311,7 +311,7 @@ function stopWatchdogTimer(): void {
 }
 
 function shouldStartBackgroundWatchdog(): boolean {
-  return process.env.VITEST !== "true" || process.env.OPENCLAW_TEST_SESSION_LOCK_WATCHDOG === "1";
+  return process.env.VITEST !== "true" || process.env.DEX_TEST_SESSION_LOCK_WATCHDOG === "1";
 }
 
 function ensureWatchdogStarted(intervalMs: number): void {
@@ -473,9 +473,9 @@ function isOpenClawSessionOwnerArgv(args: string[]): boolean {
     "src/entry.ts",
     "src/index.ts",
   ];
-  const hasOpenClawCommandToken = normalized.some((arg) => arg === "gateway" || arg === "agent");
+  const hasDexCommandToken = normalized.some((arg) => arg === "gateway" || arg === "agent");
   return normalized.some(
-    (arg) => entryCandidates.some((entry) => arg.endsWith(entry)) && hasOpenClawCommandToken,
+    (arg) => entryCandidates.some((entry) => arg.endsWith(entry)) && hasDexCommandToken,
   );
 }
 

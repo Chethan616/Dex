@@ -1,7 +1,7 @@
 import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
 
 const REDACTED_QA_LIVE_LANE_ISSUE_DETAILS =
-  "details redacted (OPENCLAW_QA_REDACT_PUBLIC_METADATA=1)";
+  "details redacted (DEX_QA_REDACT_PUBLIC_METADATA=1)";
 
 export function appendQaLiveLaneIssue(issues: string[], label: string, error: unknown) {
   issues.push(`${label}: ${formatErrorMessage(error)}`);

@@ -1,5 +1,5 @@
 import { DEFAULT_ACCOUNT_ID } from "openclaw/plugin-sdk/account-id";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/account-resolution";
+import type { DexConfig } from "openclaw/plugin-sdk/account-resolution";
 import {
   createHybridChannelConfigAdapter,
   createScopedDmSecurityResolver,
@@ -140,10 +140,10 @@ function smsSetupPatch(input: Record<string, unknown>): Record<string, unknown> 
 }
 
 function applySmsAccountConfig(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
   input: Record<string, unknown>;
-}): OpenClawConfig {
+}): DexConfig {
   const patch = smsSetupPatch(params.input);
   const channels = { ...params.cfg.channels };
   const current = { ...(channels[CHANNEL_ID] as Record<string, unknown> | undefined) };
@@ -191,7 +191,7 @@ function createSmsReceipt(params: {
 }
 
 export function resolveSmsTextChunkLimit(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   fallbackLimit?: number;
 }): number {
@@ -201,7 +201,7 @@ export function resolveSmsTextChunkLimit(params: {
 }
 
 async function sendSmsText(ctx: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   to: string;
   text: string;

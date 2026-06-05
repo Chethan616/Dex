@@ -1,4 +1,4 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/channel-plugin-common";
+import type { DexPluginApi } from "openclaw/plugin-sdk/channel-plugin-common";
 import {
   formatThreadBindingDisabledError,
   formatThreadBindingSpawnDisabledError,
@@ -91,7 +91,7 @@ function normalizeThreadBindingTargetKind(raw?: string): ThreadBindingTargetKind
 }
 
 export async function handleDiscordSubagentSpawning(
-  api: OpenClawPluginApi,
+  api: DexPluginApi,
   event: DiscordSubagentSpawningEvent,
 ): Promise<DiscordSubagentSpawningResult> {
   if (!event.threadRequested) {

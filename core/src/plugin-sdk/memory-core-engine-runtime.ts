@@ -2,7 +2,7 @@
  * @deprecated Public SDK subpath has no bundled extension production imports.
  * Prefer vendor-neutral memory-host SDK subpaths for new plugin code.
  */
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import {
   createLazyFacadeObjectValue,
   loadActivatedBundledPluginPublicSurfaceModuleSync,
@@ -96,7 +96,7 @@ export type RepairShortTermPromotionArtifactsResult = {
 
 type MemoryIndexManagerFacade = {
   get(params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     agentId: string;
     purpose?: "default" | "status";
   }): Promise<MemorySearchManager | null>;
@@ -117,7 +117,7 @@ type FacadeModule = {
     providerId: string,
   ) => BuiltinMemoryEmbeddingProviderDoctorMetadata | null;
   getMemorySearchManager: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     agentId: string;
     purpose?: "default" | "status";
   }) => Promise<{

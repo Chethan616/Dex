@@ -1,5 +1,5 @@
 import { findNormalizedProviderValue } from "@dexagent/model-catalog-core/provider-id";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveProviderEndpoint } from "./provider-attribution.js";
 
 export const CONTEXT_WINDOW_HARD_MIN_TOKENS = 4_000;
@@ -45,7 +45,7 @@ function modelIdMatchesProviderScope(params: {
 }
 
 export function resolveContextWindowInfo(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
   modelId: string;
   modelContextTokens?: number;

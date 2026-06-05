@@ -4,7 +4,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { splitCommandParts } from "./command-line.js";
 import { resolveAcpxPluginRoot } from "./config.js";
-import { OPENCLAW_ACPX_LEASE_ID_ARG, OPENCLAW_GATEWAY_INSTANCE_ID_ARG } from "./process-lease.js";
+import { DEX_ACPX_LEASE_ID_ARG, DEX_GATEWAY_INSTANCE_ID_ARG } from "./process-lease.js";
 
 const execFileAsync = promisify(execFile);
 const requireFromHere = createRequire(import.meta.url);
@@ -12,7 +12,7 @@ const GENERATED_WRAPPER_BASENAMES = new Set([
   "codex-acp-wrapper.mjs",
   "claude-agent-acp-wrapper.mjs",
 ]);
-const OPENCLAW_PLUGIN_DEPS_MARKER = "/plugin-runtime-deps/";
+const DEX_PLUGIN_DEPS_MARKER = "/plugin-runtime-deps/";
 const OWNED_ACP_PACKAGE_NAMES = [
   "@zed-industries/codex-acp",
   "@zed-industries/codex-acp-darwin-arm64",
@@ -153,8 +153,8 @@ function liveCommandMatchesLeaseIdentity(params: {
   }
   const parts = splitCommandParts(params.command ?? "");
   return (
-    commandOptionEquals(parts, OPENCLAW_ACPX_LEASE_ID_ARG, params.expectedLeaseId) &&
-    commandOptionEquals(parts, OPENCLAW_GATEWAY_INSTANCE_ID_ARG, params.expectedGatewayInstanceId)
+    commandOptionEquals(parts, DEX_ACPX_LEASE_ID_ARG, params.expectedLeaseId) &&
+    commandOptionEquals(parts, DEX_GATEWAY_INSTANCE_ID_ARG, params.expectedGatewayInstanceId)
   );
 }
 
@@ -178,7 +178,7 @@ export function isOpenClawOwnedAcpxProcessCommand(params: {
   if (commandBelongsToResolvedAcpPackage(normalized)) {
     return true;
   }
-  if (!normalized.includes(OPENCLAW_PLUGIN_DEPS_MARKER)) {
+  if (!normalized.includes(DEX_PLUGIN_DEPS_MARKER)) {
     return false;
   }
   return ACP_PACKAGE_MARKERS.some((marker) => normalized.includes(marker));

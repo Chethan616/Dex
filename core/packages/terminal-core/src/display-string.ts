@@ -38,7 +38,7 @@ function resolveRawHomeDir(
   env: NodeJS.ProcessEnv = process.env,
   homedir: () => string = os.homedir,
 ): string | undefined {
-  const explicitHome = normalize(env.OPENCLAW_HOME);
+  const explicitHome = normalize(env.DEX_HOME);
   if (explicitHome) {
     const fallbackHome = resolveRawOsHomeDir(env, homedir);
     return fallbackHome ? explicitHome.replace(/^~(?=$|[\\/])/, fallbackHome) : explicitHome;
@@ -59,8 +59,8 @@ function resolveHomeDisplayPrefix(): { home: string; prefix: string } | undefine
   if (!home) {
     return undefined;
   }
-  const explicitHome = process.env.OPENCLAW_HOME?.trim();
-  return explicitHome ? { home, prefix: "$OPENCLAW_HOME" } : { home, prefix: "~" };
+  const explicitHome = process.env.DEX_HOME?.trim();
+  return explicitHome ? { home, prefix: "$DEX_HOME" } : { home, prefix: "~" };
 }
 
 export function displayString(input: string): string {

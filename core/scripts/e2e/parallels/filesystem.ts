@@ -23,7 +23,7 @@ export async function writeJson(filePath: string, value: unknown): Promise<void>
 
 export async function makeTempDir(prefix: string): Promise<string> {
   const root =
-    process.env.OPENCLAW_PARALLELS_ARTIFACT_ROOT || path.join(repoRoot, ".artifacts", "parallels");
+    process.env.DEX_PARALLELS_ARTIFACT_ROOT || path.join(repoRoot, ".artifacts", "parallels");
   mkdirSync(root, { recursive: true });
   return mkdtempSync(path.join(root, prefix));
 }

@@ -1,6 +1,6 @@
 import type { AcpRuntime, AcpRuntimeHandle } from "@dexagent/acp-core/runtime/types";
 import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { AcpRuntimeError, withAcpRuntimeErrorBoundary } from "../runtime/errors.js";
 import type { ManagerRuntimeHandleCache } from "./manager.runtime-handle-cache.js";
 import type {
@@ -31,7 +31,7 @@ export type RuntimeOptionCommandServices = {
 };
 
 type RuntimeOptionCommandContext = RuntimeOptionCommandServices & {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
 };
 

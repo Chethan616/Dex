@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { SecretRef } from "../../config/types.secrets.js";
 import type { LegacyOAuthRef } from "./legacy-oauth-ref.js";
 
@@ -128,7 +128,7 @@ export type AuthProfileStore = AuthProfileSecretsStore &
   };
 
 export type AuthProfileIdRepairResult = {
-  config: OpenClawConfig;
+  config: DexConfig;
   changes: string[];
   migrated: boolean;
   fromProfileId?: string;

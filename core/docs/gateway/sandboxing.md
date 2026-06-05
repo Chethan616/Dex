@@ -299,7 +299,7 @@ For `mirror` mode, recreate mainly resets the remote execution environment becau
 
 <Tabs>
   <Tab title="none (default)">
-    Tools see a sandbox workspace under `~/.openclaw/sandboxes`.
+    Tools see a sandbox workspace under `~/.dex/sandboxes`.
   </Tab>
   <Tab title="ro">
     Mounts the agent workspace read-only at `/agent` (disables `write`/`edit`/`apply_patch`).
@@ -447,7 +447,7 @@ By default, Docker sandbox containers run with **no network**. Override with `ag
     The bundled sandbox browser image also applies conservative Chromium startup defaults for containerized workloads. Current container defaults include:
 
     - `--remote-debugging-address=127.0.0.1`
-    - `--remote-debugging-port=<derived from OPENCLAW_BROWSER_CDP_PORT>`
+    - `--remote-debugging-port=<derived from DEX_BROWSER_CDP_PORT>`
     - `--user-data-dir=${HOME}/.chrome`
     - `--no-first-run`
     - `--no-default-browser-check`
@@ -481,7 +481,7 @@ By default, Docker sandbox containers run with **no network**. Override with `ag
 
 Docker installs and the containerized gateway live here: [Docker](/install/docker)
 
-For Docker gateway deployments, `scripts/docker/setup.sh` can bootstrap sandbox config. Set `OPENCLAW_SANDBOX=1` (or `true`/`yes`/`on`) to enable that path. You can override socket location with `OPENCLAW_DOCKER_SOCKET`. Full setup and env reference: [Docker](/install/docker#agent-sandbox).
+For Docker gateway deployments, `scripts/docker/setup.sh` can bootstrap sandbox config. Set `DEX_SANDBOX=1` (or `true`/`yes`/`on`) to enable that path. You can override socket location with `DEX_DOCKER_SOCKET`. Full setup and env reference: [Docker](/install/docker#agent-sandbox).
 
 ## setupCommand (one-time container setup)
 

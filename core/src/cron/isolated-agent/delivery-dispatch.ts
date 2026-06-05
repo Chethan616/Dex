@@ -17,7 +17,7 @@ import {
   resolveMainSessionKey,
 } from "../../config/sessions/main-session.js";
 import { resolveMirroredTranscriptText } from "../../config/sessions/transcript-mirror.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { TtsAutoMode } from "../../config/types.tts.js";
 import { sleepWithAbort } from "../../infra/backoff.js";
 import { formatErrorMessage } from "../../infra/errors.js";
@@ -95,8 +95,8 @@ export function resolveCronDeliveryBestEffort(job: CronJob): boolean {
 export type SuccessfulDeliveryTarget = Extract<DeliveryTargetResolution, { ok: true }>;
 
 type DispatchCronDeliveryParams = {
-  cfg: OpenClawConfig;
-  cfgWithAgentDefaults: OpenClawConfig;
+  cfg: DexConfig;
+  cfgWithAgentDefaults: DexConfig;
   deps: CliDeps;
   job: CronJob;
   agentId: string;
@@ -292,7 +292,7 @@ function cloneDeliveryResults(
 }
 
 function pruneCompletedDirectCronDeliveries(now: number) {
-  const ttlMs = process.env.OPENCLAW_TEST_FAST === "1" ? 60_000 : 24 * 60 * 60 * 1000;
+  const ttlMs = process.env.DEX_TEST_FAST === "1" ? 60_000 : 24 * 60 * 60 * 1000;
   for (const [key, entry] of COMPLETED_DIRECT_CRON_DELIVERIES) {
     if (now - entry.ts >= ttlMs) {
       COMPLETED_DIRECT_CRON_DELIVERIES.delete(key);
@@ -353,7 +353,7 @@ function getCompletedDirectCronDelivery(
 }
 
 async function maybeApplyTtsToCronPayloads(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   payloads: ReplyPayload[];
   delivery: SuccessfulDeliveryTarget;
   agentId: string;
@@ -416,7 +416,7 @@ function shouldQueueCronAwareness(params: {
 }
 
 function resolveCronAwarenessMainSessionKey(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
 }): string {
   return params.cfg.session?.scope === "global"
@@ -450,7 +450,7 @@ function resolveCronAwarenessText(params: {
 }
 
 async function queueCronAwarenessSystemEvent(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   jobId: string;
   agentId: string;
   deliveryIdempotencyKey: string;
@@ -563,7 +563,7 @@ function projectDeliveredDirectCronPayloadsForMirror(
 }
 
 function canonicalizeDirectCronRouteSessionKey(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   sessionKey: string;
 }): string {
@@ -592,7 +592,7 @@ function canonicalizeDirectCronRouteSessionKey(params: {
 }
 
 async function resolveDirectCronDeliverySessionKey(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   job: CronJob;
   agentId: string;
   agentSessionKey: string;
@@ -663,7 +663,7 @@ async function appendDirectCronDeliveryTranscriptMirror(params: {
     mediaUrls?: string[];
     storePath?: string;
     idempotencyKey: string;
-    config: OpenClawConfig;
+    config: DexConfig;
   };
 }): Promise<void> {
   if (!params.mirror.text && !params.mirror.mediaUrls?.length) {
@@ -720,7 +720,7 @@ function isTransientDirectCronDeliveryError(error: unknown): boolean {
 }
 
 function resolveDirectCronRetryDelaysMs(): readonly number[] {
-  return process.env.NODE_ENV === "test" && process.env.OPENCLAW_TEST_FAST === "1"
+  return process.env.NODE_ENV === "test" && process.env.DEX_TEST_FAST === "1"
     ? [0, 0, 0]
     : [5_000, 10_000, 20_000];
 }

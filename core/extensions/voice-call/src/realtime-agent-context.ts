@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { buildRealtimeVoiceAgentConsultPolicyInstructions } from "openclaw/plugin-sdk/realtime-voice";
 import { root } from "openclaw/plugin-sdk/security-runtime";
 import { normalizeOptionalString as normalizeString } from "openclaw/plugin-sdk/string-coerce-runtime";
@@ -76,7 +76,7 @@ export async function buildRealtimeVoiceInstructions(params: {
 
   if (contextConfig.includeIdentity) {
     const identity = params.agentRuntime.resolveAgentIdentity(
-      params.coreConfig as OpenClawConfig,
+      params.coreConfig as DexConfig,
       agentId,
     ) as VoiceIdentityLike | undefined;
     const identityLines = [
@@ -95,7 +95,7 @@ export async function buildRealtimeVoiceInstructions(params: {
 
   if (contextConfig.includeWorkspaceFiles) {
     const workspaceDir = params.agentRuntime.resolveAgentWorkspaceDir(
-      params.coreConfig as OpenClawConfig,
+      params.coreConfig as DexConfig,
       agentId,
     );
     const fileSections = await readWorkspaceVoiceContextFiles({

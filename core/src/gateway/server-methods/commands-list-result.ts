@@ -22,7 +22,7 @@ import type {
   CommandArgDefinition,
 } from "../../auto-reply/commands-registry.types.js";
 import { getChannelPlugin } from "../../channels/plugins/index.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   getPluginCommandEntrySpecs,
   getPluginCommandEntrySpecsFromRegistrations,
@@ -156,7 +156,7 @@ function mapCommand(
 function buildPluginCommandEntries(params: {
   provider?: string;
   nameSurface: CommandNameSurface;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): CommandEntry[] {
   const gatewayRegistry = getActivePluginGatewayCommandRegistry();
   const pluginSpecs = gatewayRegistry
@@ -191,7 +191,7 @@ function buildPluginCommandEntries(params: {
 
 /** Builds the public commands.list payload for an agent/provider/scope view. */
 export function buildCommandsListResult(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   provider?: string;
   scope?: "native" | "text" | "both";

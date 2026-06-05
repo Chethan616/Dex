@@ -1,5 +1,5 @@
 import type { AcpRuntime, AcpRuntimeHandle } from "@dexagent/acp-core/runtime/types";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   type AcpRuntimeError,
   toAcpRuntimeError,
@@ -15,7 +15,7 @@ import type {
 import { normalizeActorKey, requireReadySessionMeta } from "./manager.utils.js";
 
 export async function runManagerCancelSession(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   reason?: string;
   activeTurnBySession: Map<string, ActiveTurnState>;

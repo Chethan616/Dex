@@ -8,10 +8,10 @@ import {
 } from "../../infra/kysely-sync.js";
 import type {
   ChannelIngressEvents,
-  DB as OpenClawStateKyselyDatabase,
+  DB as DexStateKyselyDatabase,
 } from "../../state/openclaw-state-db.generated.js";
 import {
-  openOpenClawStateDatabase,
+  openDexStateDatabase,
   runOpenClawStateWriteTransaction,
 } from "../../state/openclaw-state-db.js";
 
@@ -173,7 +173,7 @@ export type CreateChannelIngressQueueOptions = {
   now?: () => number;
 };
 
-type ChannelIngressDatabase = Pick<OpenClawStateKyselyDatabase, "channel_ingress_events">;
+type ChannelIngressDatabase = Pick<DexStateKyselyDatabase, "channel_ingress_events">;
 type ChannelIngressRow = Selectable<ChannelIngressEvents>;
 
 function normalizePart(value: string | undefined, fallback: string): string {
@@ -182,8 +182,8 @@ function normalizePart(value: string | undefined, fallback: string): string {
 }
 
 function openStateDatabase(stateDir?: string) {
-  return openOpenClawStateDatabase({
-    env: stateDir ? { ...process.env, OPENCLAW_STATE_DIR: stateDir } : process.env,
+  return openDexStateDatabase({
+    env: stateDir ? { ...process.env, DEX_STATE_DIR: stateDir } : process.env,
   });
 }
 

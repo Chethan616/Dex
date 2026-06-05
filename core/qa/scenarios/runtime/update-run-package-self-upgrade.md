@@ -30,7 +30,7 @@ execution:
     requiredProviderMode: live-frontier
     sourceVersion: "2026.4.26"
     targetTag: latest
-    allowEnv: OPENCLAW_QA_ALLOW_UPDATE_RUN_SELF
+    allowEnv: DEX_QA_ALLOW_UPDATE_RUN_SELF
     channelId: qa-room
 ```
 

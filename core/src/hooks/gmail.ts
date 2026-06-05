@@ -3,7 +3,7 @@ import path from "node:path";
 import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { normalizeUniqueStringEntries } from "@dexagent/normalization-core/string-normalization";
 import {
-  type OpenClawConfig,
+  type DexConfig,
   DEFAULT_GATEWAY_PORT,
   type HooksGmailTailscaleMode,
   resolveGatewayPort,
@@ -106,7 +106,7 @@ export function buildDefaultHookUrl(
 }
 
 export function resolveGmailHookRuntimeConfig(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   overrides: GmailHookOverrides,
 ): { ok: true; value: GmailHookRuntimeConfig } | { ok: false; error: string } {
   const hooks = cfg.hooks;

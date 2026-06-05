@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { MigrationPlan } from "../../plugins/types.js";
 
 export type MigrationConfigPatchMode = "return";
@@ -20,7 +20,7 @@ export type MigrateCommonOptions = {
   suppressPlanLog?: boolean;
   // Internal embedded migration source of truth. Standalone CLI callers should
   // omit this so migration uses the current runtime config from disk.
-  configOverride?: OpenClawConfig;
+  configOverride?: DexConfig;
   // Internal embedded mode for config patch items. Default CLI behavior persists
   // patches when this is omitted; onboarding can request returned patch details.
   configPatchMode?: MigrationConfigPatchMode;

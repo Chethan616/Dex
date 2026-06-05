@@ -9,7 +9,7 @@ import {
 
 type MatrixQaCliRuntime = typeof import("./cli.runtime.js");
 
-const DISABLE_MATRIX_QA_FORCE_EXIT_ENV = "OPENCLAW_QA_MATRIX_DISABLE_FORCE_EXIT";
+const DISABLE_MATRIX_QA_FORCE_EXIT_ENV = "DEX_QA_MATRIX_DISABLE_FORCE_EXIT";
 
 const loadMatrixQaCliRuntime = createLazyCliRuntimeLoader<MatrixQaCliRuntime>(
   () => import("./cli.runtime.js"),

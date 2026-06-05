@@ -21,16 +21,16 @@ function readPositiveIntEnv(name, fallback) {
   return value;
 }
 
-const configPath = requireEnv("OPENCLAW_CONFIG_PATH");
-const stateDir = requireEnv("OPENCLAW_STATE_DIR");
-const workspaceDir = requireEnv("OPENCLAW_TEST_WORKSPACE_DIR");
-const modelRef = requireEnv("OPENCLAW_OPENAI_CHAT_TOOLS_MODEL");
-const token = requireEnv("OPENCLAW_GATEWAY_TOKEN");
-const timeoutSeconds = readPositiveIntEnv("OPENCLAW_OPENAI_CHAT_TOOLS_TIMEOUT_SECONDS", 180);
+const configPath = requireEnv("DEX_CONFIG_PATH");
+const stateDir = requireEnv("DEX_STATE_DIR");
+const workspaceDir = requireEnv("DEX_TEST_WORKSPACE_DIR");
+const modelRef = requireEnv("DEX_OPENAI_CHAT_TOOLS_MODEL");
+const token = requireEnv("DEX_GATEWAY_TOKEN");
+const timeoutSeconds = readPositiveIntEnv("DEX_OPENAI_CHAT_TOOLS_TIMEOUT_SECONDS", 180);
 const gatewayPort = readPositiveIntEnv("PORT", 18789);
 const [providerId, modelId] = modelRef.split("/");
 if (providerId !== "openai" || !modelId) {
-  throw new Error(`OPENCLAW_OPENAI_CHAT_TOOLS_MODEL must be openai/*, got ${modelRef}`);
+  throw new Error(`DEX_OPENAI_CHAT_TOOLS_MODEL must be openai/*, got ${modelRef}`);
 }
 
 const config = {

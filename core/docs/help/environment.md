@@ -14,11 +14,11 @@ Workspace `.env` files are a lower-trust source: OpenClaw ignores provider crede
 
 1. **Process environment** (what the Gateway process already has from the parent shell/daemon).
 2. **`.env` in the current working directory** (dotenv default; does not override; provider credentials and protected runtime controls are ignored).
-3. **Global `.env`** at `~/.openclaw/.env` (aka `$OPENCLAW_STATE_DIR/.env`; recommended for provider API keys; does not override).
-4. **Config `env` block** in `~/.openclaw/openclaw.json` (applied only if missing).
-5. **Optional login-shell import** (`env.shellEnv.enabled` or `OPENCLAW_LOAD_SHELL_ENV=1`), applied only for missing expected keys.
+3. **Global `.env`** at `~/.dex/.env` (aka `$DEX_STATE_DIR/.env`; recommended for provider API keys; does not override).
+4. **Config `env` block** in `~/.dex/openclaw.json` (applied only if missing).
+5. **Optional login-shell import** (`env.shellEnv.enabled` or `DEX_LOAD_SHELL_ENV=1`), applied only for missing expected keys.
 
-On Ubuntu fresh installs that use the default state dir, OpenClaw also treats `~/.config/openclaw/gateway.env` as a compatibility fallback after the global `.env`. If both files exist and disagree, OpenClaw keeps `~/.openclaw/.env` and prints a warning.
+On Ubuntu fresh installs that use the default state dir, OpenClaw also treats `~/.config/openclaw/gateway.env` as a compatibility fallback after the global `.env`. If both files exist and disagree, OpenClaw keeps `~/.dex/.env` and prints a warning.
 
 If the config file is missing entirely, step 4 is skipped; shell import still runs if enabled.
 
@@ -29,9 +29,9 @@ Do not keep provider API keys only in a workspace `.env`. OpenClaw ignores provi
 Use one of these trusted sources for provider credentials:
 
 - The Gateway process environment, such as a shell, launchd/systemd unit, container secret, or CI secret.
-- The global runtime dotenv file at `~/.openclaw/.env` or `$OPENCLAW_STATE_DIR/.env`.
-- The config `env` block in `~/.openclaw/openclaw.json`.
-- Optional login-shell import when `env.shellEnv.enabled` or `OPENCLAW_LOAD_SHELL_ENV=1` is enabled.
+- The global runtime dotenv file at `~/.dex/.env` or `$DEX_STATE_DIR/.env`.
+- The config `env` block in `~/.dex/openclaw.json`.
+- Optional login-shell import when `env.shellEnv.enabled` or `DEX_LOAD_SHELL_ENV=1` is enabled.
 
 If you previously stored provider keys only in a workspace `.env`, move them to one of the trusted sources above. Workspace `.env` can still provide ordinary project variables that are not credentials, endpoint redirects, host overrides, or `OPENCLAW_*` runtime controls.
 
@@ -65,7 +65,7 @@ supports it:
     providers: {
       xai_key_file: {
         source: "file",
-        path: "~/.openclaw/secrets/xai-api-key.txt",
+        path: "~/.dex/secrets/xai-api-key.txt",
         mode: "singleValue",
       },
     },
@@ -101,13 +101,13 @@ supported fields.
 
 Env var equivalents:
 
-- `OPENCLAW_LOAD_SHELL_ENV=1`
-- `OPENCLAW_SHELL_ENV_TIMEOUT_MS=15000`
+- `DEX_LOAD_SHELL_ENV=1`
+- `DEX_SHELL_ENV_TIMEOUT_MS=15000`
 
 ## Exec shell snapshots
 
 On non-Windows Gateway hosts, bash and zsh `exec` commands use a startup snapshot by default.
-Set `OPENCLAW_EXEC_SHELL_SNAPSHOT=0` in the Gateway process environment to disable this path.
+Set `DEX_EXEC_SHELL_SNAPSHOT=0` in the Gateway process environment to disable this path.
 Values `false`, `no`, and `off` also disable it. Per-call `exec.env` values cannot toggle
 snapshots or redirect the snapshot cache.
 
@@ -115,19 +115,19 @@ snapshots or redirect the snapshot cache.
 
 OpenClaw also injects context markers into spawned child processes:
 
-- `OPENCLAW_SHELL=exec`: set for commands run through the `exec` tool.
-- `OPENCLAW_SHELL=acp`: set for ACP runtime backend process spawns (for example `acpx`).
-- `OPENCLAW_SHELL=acp-client`: set for `openclaw acp client` when it spawns the ACP bridge process.
-- `OPENCLAW_SHELL=tui-local`: set for local TUI `!` shell commands.
-- `OPENCLAW_CLI=1`: set for child processes spawned by the CLI entry point.
+- `DEX_SHELL=exec`: set for commands run through the `exec` tool.
+- `DEX_SHELL=acp`: set for ACP runtime backend process spawns (for example `acpx`).
+- `DEX_SHELL=acp-client`: set for `openclaw acp client` when it spawns the ACP bridge process.
+- `DEX_SHELL=tui-local`: set for local TUI `!` shell commands.
+- `DEX_CLI=1`: set for child processes spawned by the CLI entry point.
 
 These are runtime markers (not required user config). They can be used in shell/profile logic
 to apply context-specific rules.
 
 ## UI env vars
 
-- `OPENCLAW_THEME=light`: force the light TUI palette when your terminal has a light background.
-- `OPENCLAW_THEME=dark`: force the dark TUI palette.
+- `DEX_THEME=light`: force the light TUI palette when your terminal has a light background.
+- `DEX_THEME=dark`: force the dark TUI palette.
 - `COLORFGBG`: if your terminal exports it, OpenClaw uses the background color hint to auto-pick the TUI palette.
 
 ## Env var substitution in config
@@ -163,40 +163,40 @@ shorthand values.
 
 | Variable                 | Purpose                                                                                                                                                                                                                                 |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENCLAW_HOME`          | Override the home directory used for internal OpenClaw path defaults (`~/.openclaw/`, agent dirs, sessions, credentials, installer onboarding, and the default dev checkout). Useful when running OpenClaw as a dedicated service user. |
-| `OPENCLAW_STATE_DIR`     | Override the state directory (default `~/.openclaw`).                                                                                                                                                                                   |
-| `OPENCLAW_CONFIG_PATH`   | Override the config file path (default `~/.openclaw/openclaw.json`).                                                                                                                                                                    |
-| `OPENCLAW_INCLUDE_ROOTS` | Path-list of directories where `$include` directives may resolve files outside the config directory (default: none — `$include` is confined to the config dir). Tilde-expanded.                                                         |
+| `DEX_HOME`          | Override the home directory used for internal OpenClaw path defaults (`~/.dex/`, agent dirs, sessions, credentials, installer onboarding, and the default dev checkout). Useful when running OpenClaw as a dedicated service user. |
+| `DEX_STATE_DIR`     | Override the state directory (default `~/.dex`).                                                                                                                                                                                   |
+| `DEX_CONFIG_PATH`   | Override the config file path (default `~/.dex/openclaw.json`).                                                                                                                                                                    |
+| `DEX_INCLUDE_ROOTS` | Path-list of directories where `$include` directives may resolve files outside the config directory (default: none — `$include` is confined to the config dir). Tilde-expanded.                                                         |
 
 ## Logging
 
 | Variable                         | Purpose                                                                                                                                                                                      |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENCLAW_LOG_LEVEL`             | Override log level for both file and console (e.g. `debug`, `trace`). Takes precedence over `logging.level` and `logging.consoleLevel` in config. Invalid values are ignored with a warning. |
-| `OPENCLAW_DEBUG_MODEL_TRANSPORT` | Emit targeted model request/response timing diagnostics at `info` level without enabling global debug logs.                                                                                  |
-| `OPENCLAW_DEBUG_MODEL_PAYLOAD`   | Model payload diagnostics: `summary`, `tools`, or `full-redacted`. `full-redacted` is capped and redacted but may include prompt/message text.                                               |
-| `OPENCLAW_DEBUG_SSE`             | Streaming diagnostics: `events` for first/done timing, `peek` to include the first five redacted SSE events.                                                                                 |
-| `OPENCLAW_DEBUG_CODE_MODE`       | Code-mode model-surface diagnostics, including provider-tool hiding and exec/wait-only enforcement.                                                                                          |
+| `DEX_LOG_LEVEL`             | Override log level for both file and console (e.g. `debug`, `trace`). Takes precedence over `logging.level` and `logging.consoleLevel` in config. Invalid values are ignored with a warning. |
+| `DEX_DEBUG_MODEL_TRANSPORT` | Emit targeted model request/response timing diagnostics at `info` level without enabling global debug logs.                                                                                  |
+| `DEX_DEBUG_MODEL_PAYLOAD`   | Model payload diagnostics: `summary`, `tools`, or `full-redacted`. `full-redacted` is capped and redacted but may include prompt/message text.                                               |
+| `DEX_DEBUG_SSE`             | Streaming diagnostics: `events` for first/done timing, `peek` to include the first five redacted SSE events.                                                                                 |
+| `DEX_DEBUG_CODE_MODE`       | Code-mode model-surface diagnostics, including provider-tool hiding and exec/wait-only enforcement.                                                                                          |
 
-### `OPENCLAW_HOME`
+### `DEX_HOME`
 
-When set, `OPENCLAW_HOME` replaces the system home directory (`$HOME` / `os.homedir()`) for internal OpenClaw path defaults. This includes the default state directory, config path, agent directories, credentials, installer onboarding workspace, and the default dev checkout used by `openclaw update --channel dev`.
+When set, `DEX_HOME` replaces the system home directory (`$HOME` / `os.homedir()`) for internal OpenClaw path defaults. This includes the default state directory, config path, agent directories, credentials, installer onboarding workspace, and the default dev checkout used by `openclaw update --channel dev`.
 
-**Precedence:** `OPENCLAW_HOME` > `$HOME` > `USERPROFILE` > Termux `PREFIX` home fallback on Android > `os.homedir()`
+**Precedence:** `DEX_HOME` > `$HOME` > `USERPROFILE` > Termux `PREFIX` home fallback on Android > `os.homedir()`
 
 **Example** (macOS LaunchDaemon):
 
 ```xml
 <key>EnvironmentVariables</key>
 <dict>
-  <key>OPENCLAW_HOME</key>
+  <key>DEX_HOME</key>
   <string>/Users/user</string>
 </dict>
 ```
 
-`OPENCLAW_HOME` can also be set to a tilde path (e.g. `~/svc`), which gets expanded using the same OS home fallback chain before use.
+`DEX_HOME` can also be set to a tilde path (e.g. `~/svc`), which gets expanded using the same OS home fallback chain before use.
 
-Explicit path variables such as `OPENCLAW_STATE_DIR`, `OPENCLAW_CONFIG_PATH`, and `OPENCLAW_GIT_DIR` still take precedence. OS-account tasks such as shell startup file detection, package-manager setup, and host `~` expansion may still use the real system home.
+Explicit path variables such as `DEX_STATE_DIR`, `DEX_CONFIG_PATH`, and `DEX_GIT_DIR` still take precedence. OS-account tasks such as shell startup file detection, package-manager setup, and host `~` expansion may still use the real system home.
 
 ## nvm users: web_fetch TLS failures
 
@@ -218,7 +218,7 @@ export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 openclaw gateway run
 ```
 
-Do not rely on writing only to `~/.openclaw/.env` for this variable; Node reads
+Do not rely on writing only to `~/.dex/.env` for this variable; Node reads
 `NODE_EXTRA_CA_CERTS` at process startup.
 
 ## Legacy environment variables
@@ -228,10 +228,10 @@ OpenClaw only reads `OPENCLAW_*` environment variables. The legacy
 ignored.
 
 If any are still set on the Gateway process at startup, OpenClaw emits a
-single Node deprecation warning (`OPENCLAW_LEGACY_ENV_VARS`) listing the
+single Node deprecation warning (`DEX_LEGACY_ENV_VARS`) listing the
 detected prefixes and the total count. Rename each value by replacing the
 legacy prefix with `OPENCLAW_` (for example `CLAWDBOT_GATEWAY_TOKEN` →
-`OPENCLAW_GATEWAY_TOKEN`); the old names take no effect.
+`DEX_GATEWAY_TOKEN`); the old names take no effect.
 
 ## Related
 

@@ -2,7 +2,7 @@ import { normalizeOptionalString } from "@dexagent/normalization-core/string-coe
 import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { resolveAgentConfig } from "../../agents/agent-scope.js";
 import { getChannelPlugin, normalizeChannelId } from "../../channels/plugins/index.js";
-import type { AgentElevatedAllowFromConfig, OpenClawConfig } from "../../config/config.js";
+import type { AgentElevatedAllowFromConfig, DexConfig } from "../../config/config.js";
 import type { MsgContext } from "../templating.js";
 import {
   type AllowFromFormatter,
@@ -29,7 +29,7 @@ function resolveElevatedAllowList(
 }
 
 function resolveAllowFromFormatter(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   provider: string;
   accountId?: string;
 }): AllowFromFormatter {
@@ -167,7 +167,7 @@ function isApprovedElevatedSender(params: {
 }
 
 export function resolveElevatedPermissions(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   ctx: MsgContext;
   provider: string;

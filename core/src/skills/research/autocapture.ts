@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { resolveSkillWorkshopConfig } from "../workshop/config.js";
 import { listSkillProposals, proposeCreateSkill, proposeUpdateSkill } from "../workshop/service.js";
@@ -26,7 +26,7 @@ function buildAutoCaptureUpdateContent(existingSkill: string, capturedContent: s
 export async function runSkillResearchAutoCapture(params: {
   event: SkillResearchAgentEndEvent;
   ctx: SkillResearchAgentContext;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): Promise<void> {
   const workshopConfig = resolveSkillWorkshopConfig(params.config);
   if (!workshopConfig.autonomous.enabled) {

@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type {
   DocumentExtractedImage,
   DocumentExtractionResult,
@@ -15,7 +15,7 @@ export async function extractPdfContent(params: {
   minTextChars: number;
   password?: string;
   pageNumbers?: number[];
-  config?: OpenClawConfig;
+  config?: DexConfig;
   onImageExtractionError?: (error: unknown) => void;
 }): Promise<PdfExtractedContent> {
   const extracted = await extractDocumentContent({

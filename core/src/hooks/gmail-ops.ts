@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { formatCliCommand } from "../cli/command-format.js";
 import {
   getRuntimeConfig,
-  type OpenClawConfig,
+  type DexConfig,
   CONFIG_PATH,
   readConfigFileSnapshot,
   replaceConfigFile,
@@ -200,7 +200,7 @@ export async function runGmailSetup(opts: GmailSetupOptions) {
     true,
   );
 
-  const nextConfig: OpenClawConfig = {
+  const nextConfig: DexConfig = {
     ...baseConfig,
     hooks: {
       ...baseConfig.hooks,

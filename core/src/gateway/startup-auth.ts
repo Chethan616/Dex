@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { GatewayAuthConfig, GatewayTailscaleConfig } from "../config/types.gateway.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   hasConfiguredGatewayAuthSecretInput,
   resolveGatewayPasswordSecretRefValue,
@@ -76,7 +76,7 @@ export function mergeGatewayTailscaleConfig(
 }
 
 function resolveGatewayAuthFromConfig(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env: NodeJS.ProcessEnv;
   authOverride?: GatewayAuthConfig;
   tailscaleOverride?: GatewayTailscaleConfig;
@@ -104,7 +104,7 @@ function findActiveGatewaySharedSecret(auth: ResolvedGatewayAuth): string {
 }
 
 function warnHooksTokenReuseGatewayAuth(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   auth: ResolvedGatewayAuth;
   warn?: (message: string) => void;
 }): void {
@@ -120,11 +120,11 @@ function warnHooksTokenReuseGatewayAuth(params: {
 
 /** Check every source that can satisfy token auth before startup generates one. */
 function hasGatewayTokenCandidate(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env: NodeJS.ProcessEnv;
   authOverride?: GatewayAuthConfig;
 }): boolean {
-  const envToken = trimToUndefined(params.env.OPENCLAW_GATEWAY_TOKEN);
+  const envToken = trimToUndefined(params.env.DEX_GATEWAY_TOKEN);
   if (envToken) {
     return true;
   }
@@ -158,7 +158,7 @@ function hasGatewayPasswordOverrideCandidate(params: {
 
 /** Ensure startup has effective Gateway auth, generating only an ephemeral token if needed. */
 export async function ensureGatewayStartupAuth(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
   authOverride?: GatewayAuthConfig;
   tailscaleOverride?: GatewayTailscaleConfig;
@@ -170,7 +170,7 @@ export async function ensureGatewayStartupAuth(params: {
   persist?: boolean;
   baseHash?: string;
 }): Promise<{
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   auth: ReturnType<typeof resolveGatewayAuth>;
   generatedToken?: string;
   persistedGeneratedToken: boolean;
@@ -228,7 +228,7 @@ export async function ensureGatewayStartupAuth(params: {
   }
 
   const generatedToken = crypto.randomBytes(24).toString("hex");
-  const nextCfg: OpenClawConfig = {
+  const nextCfg: DexConfig = {
     ...params.cfg,
     gateway: {
       ...params.cfg.gateway,

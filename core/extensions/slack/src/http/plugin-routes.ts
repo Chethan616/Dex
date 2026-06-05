@@ -1,5 +1,5 @@
 import { DEFAULT_ACCOUNT_ID } from "openclaw/plugin-sdk/account-id";
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/channel-plugin-common";
+import type { DexPluginApi } from "openclaw/plugin-sdk/channel-plugin-common";
 import { normalizeSlackWebhookPath } from "./paths.js";
 import { handleSlackHttpRequest } from "./registry.js";
 
@@ -8,7 +8,7 @@ type SlackWebhookConfig = {
   accounts?: Record<string, { webhookPath?: unknown } | undefined>;
 };
 
-function resolveSlackWebhookPaths(config: OpenClawPluginApi["config"]): string[] {
+function resolveSlackWebhookPaths(config: DexPluginApi["config"]): string[] {
   const slack = config.channels?.slack as SlackWebhookConfig | undefined;
   const accountConfigs = slack?.accounts ?? {};
   const paths = new Set<string>();
@@ -19,7 +19,7 @@ function resolveSlackWebhookPaths(config: OpenClawPluginApi["config"]): string[]
   return [...paths].toSorted((left, right) => left.localeCompare(right));
 }
 
-export function registerSlackPluginHttpRoutes(api: OpenClawPluginApi): void {
+export function registerSlackPluginHttpRoutes(api: DexPluginApi): void {
   for (const path of resolveSlackWebhookPaths(api.config)) {
     api.registerHttpRoute({
       path,

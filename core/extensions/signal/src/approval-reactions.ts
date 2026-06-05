@@ -8,7 +8,7 @@ import {
   type ApprovalReactionTargetRecord,
 } from "openclaw/plugin-sdk/approval-reaction-runtime";
 import type { ExecApprovalReplyDecision } from "openclaw/plugin-sdk/approval-reply-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { normalizeAccountId } from "openclaw/plugin-sdk/routing";
 import {
   normalizeLowercaseStringOrEmpty,
@@ -34,7 +34,7 @@ type SignalApprovalReactionResolution = {
 };
 
 type ApprovalKind = "exec" | "plugin";
-type ApprovalForwardingConfig = NonNullable<NonNullable<OpenClawConfig["approvals"]>["exec"]>;
+type ApprovalForwardingConfig = NonNullable<NonNullable<DexConfig["approvals"]>["exec"]>;
 type ApprovalForwardingMode = NonNullable<ApprovalForwardingConfig["mode"]>;
 
 type SignalApprovalReactionRoute =
@@ -79,7 +79,7 @@ function resolveApprovalKindFromId(approvalId: string): ApprovalKind {
 }
 
 function resolveApprovalForwardingConfig(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   approvalKind: ApprovalKind;
 }): ApprovalForwardingConfig | undefined {
   return params.approvalKind === "plugin"
@@ -151,7 +151,7 @@ function hasMatchingSignalApprovalReactionTarget(params: {
 }
 
 function isSignalApprovalReactionRouteStillEnabled(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   target: Pick<SignalApprovalReactionTarget, "approvalKind" | "route">;
 }): boolean {
   const config = resolveApprovalForwardingConfig({
@@ -365,7 +365,7 @@ export function extractSignalApprovalPromptBinding(text: string): {
 }
 
 function buildTargetRoute(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   to: string;
   approvalId: string;
@@ -401,7 +401,7 @@ function buildTargetRoute(params: {
 }
 
 export function shouldAppendSignalApprovalReactionHintForOutboundMessage(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   to: string;
   text: string;
@@ -433,7 +433,7 @@ export function shouldAppendSignalApprovalReactionHintForOutboundMessage(params:
 }
 
 export function appendSignalApprovalReactionHintForOutboundMessage(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   to: string;
   text: string;
@@ -459,7 +459,7 @@ export function appendSignalApprovalReactionHintForOutboundMessage(params: {
 }
 
 export function hasSignalApprovalReactionApprovers(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 }): boolean {
   return getSignalApprovalApprovers(params).length > 0;
@@ -530,7 +530,7 @@ export function registerSignalApprovalReactionTarget(params: {
 }
 
 export function registerSignalApprovalReactionTargetForOutboundMessage(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
   to: string;
   messageId: string;
@@ -641,7 +641,7 @@ export async function resolveSignalApprovalReactionTargetWithPersistence(params:
 }
 
 export async function maybeResolveSignalApprovalReaction(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
   conversationKey: string;
   messageId: string;

@@ -8,11 +8,11 @@
  * under `src/bridge/` (or `src/bootstrap/` in the standalone variant).
  */
 
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+import type { DexPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 import { registerQQBotFrameworkCommands } from "./commands/framework-registration.js";
 import { registerQQBotTools } from "./tools/index.js";
 
-export function registerQQBotFull(api: OpenClawPluginApi): void {
+export function registerQQBotFull(api: DexPluginApi): void {
   registerQQBotTools(api);
   registerQQBotFrameworkCommands(api);
 }

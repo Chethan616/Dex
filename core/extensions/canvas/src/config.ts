@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   normalizePluginsConfig,
   resolveEffectiveEnableState,
@@ -55,7 +55,7 @@ export function parseCanvasPluginConfig(value: unknown): CanvasPluginConfig {
   return host ? { host } : {};
 }
 
-export function isCanvasPluginEnabled(config?: OpenClawConfig): boolean {
+export function isCanvasPluginEnabled(config?: DexConfig): boolean {
   if (!config) {
     return true;
   }
@@ -69,7 +69,7 @@ export function isCanvasPluginEnabled(config?: OpenClawConfig): boolean {
 }
 
 export function resolveCanvasHostConfig(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   pluginConfig?: Record<string, unknown>;
 }): CanvasHostConfig {
   const pluginConfig =
@@ -78,8 +78,8 @@ export function resolveCanvasHostConfig(params: {
   return parsedPluginConfig.host ?? {};
 }
 
-export function isCanvasHostEnabled(config?: OpenClawConfig): boolean {
-  if (isTruthyEnvValue(process.env.OPENCLAW_SKIP_CANVAS_HOST)) {
+export function isCanvasHostEnabled(config?: DexConfig): boolean {
+  if (isTruthyEnvValue(process.env.DEX_SKIP_CANVAS_HOST)) {
     return false;
   }
   if (!isCanvasPluginEnabled(config)) {

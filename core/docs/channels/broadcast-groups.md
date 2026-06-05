@@ -338,7 +338,7 @@ Broadcast groups work alongside existing routing:
     **Debug:**
 
     ```bash
-    tail -f ~/.openclaw/logs/gateway.log | grep broadcast
+    tail -f ~/.dex/logs/gateway.log | grep broadcast
     ```
 
   </Accordion>

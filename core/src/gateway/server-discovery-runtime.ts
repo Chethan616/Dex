@@ -13,7 +13,7 @@ import {
 const DEFAULT_DISCOVERY_ADVERTISE_TIMEOUT_MS = 5_000;
 
 function resolveDiscoveryAdvertiseTimeoutMs(env: NodeJS.ProcessEnv): number {
-  const raw = env.OPENCLAW_GATEWAY_DISCOVERY_ADVERTISE_TIMEOUT_MS?.trim();
+  const raw = env.DEX_GATEWAY_DISCOVERY_ADVERTISE_TIMEOUT_MS?.trim();
   if (!raw) {
     return DEFAULT_DISCOVERY_ADVERTISE_TIMEOUT_MS;
   }
@@ -43,7 +43,7 @@ export async function startGatewayDiscovery(params: {
   // Local discovery can be disabled via config (mdnsMode: off) or env var.
   const localDiscoveryEnabled =
     mdnsMode !== "off" &&
-    !isTruthyEnvValue(process.env.OPENCLAW_DISABLE_BONJOUR) &&
+    !isTruthyEnvValue(process.env.DEX_DISABLE_BONJOUR) &&
     process.env.NODE_ENV !== "test" &&
     !process.env.VITEST;
   const mdnsMinimal = mdnsMode !== "full";
@@ -55,7 +55,7 @@ export async function startGatewayDiscovery(params: {
     : undefined;
   const sshPort = mdnsMinimal
     ? undefined
-    : (parseTcpPort(process.env.OPENCLAW_SSH_PORT) ?? undefined);
+    : (parseTcpPort(process.env.DEX_SSH_PORT) ?? undefined);
   const cliPath = mdnsMinimal ? undefined : resolveBonjourCliPath();
 
   if (localDiscoveryEnabled) {

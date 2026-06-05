@@ -44,7 +44,7 @@ import { applyMergePatch } from "../../config/merge-patch.js";
 import { resolveGroupSessionKey } from "../../config/sessions/group.js";
 import { appendAssistantMessageToSessionTranscript } from "../../config/sessions/transcript.js";
 import type { SessionEntry } from "../../config/sessions/types.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { logVerbose } from "../../globals.js";
 import { fireAndForgetHook } from "../../hooks/fire-and-forget.js";
 import {
@@ -346,7 +346,7 @@ const resolveRoutedPolicyConversationType = (
 
 const resolveSessionStoreLookup = (
   ctx: FinalizedMsgContext,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): {
   sessionKey?: string;
   storePath?: string;
@@ -378,7 +378,7 @@ const resolveSessionStoreLookup = (
 
 const resolveBoundAcpDispatchSessionKey = (params: {
   ctx: FinalizedMsgContext;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): string | undefined => {
   const bindingContext = resolveConversationBindingContextFromMessage({
     cfg: params.cfg,
@@ -498,7 +498,7 @@ function resolveTurnModelOverride(
 
 function resolveChannelModelCandidate(params: {
   aliasIndex: ModelAliasIndex;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   ctx: FinalizedMsgContext;
   defaultProvider: string;
   entry?: SessionEntry;
@@ -571,7 +571,7 @@ function resolveModelOverrideCandidate(params: {
 }
 
 const resolveHarnessSourceVisibleRepliesDefault = (params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   ctx: FinalizedMsgContext;
   entry?: SessionEntry;
   sessionAgentId: string;
@@ -652,7 +652,7 @@ const resolveHarnessSourceVisibleRepliesDefault = (params: {
 
 function shouldBypassPluginOwnedBindingForCommand(
   ctx: FinalizedMsgContext,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): boolean {
   const commandTurn = resolveCommandTurnContext(ctx);
   if (
@@ -724,7 +724,7 @@ async function clearPendingFinalDeliveryAfterSuccess(params: {
 
 async function mirrorInternalSourceReplyToTranscript(params: {
   metadata?: SourceReplyTranscriptMirror;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): Promise<void> {
   const mirror = params.metadata;
   if (!mirror) {
@@ -798,7 +798,7 @@ async function mirrorInternalSourceReplyAfterDispatcherDelivery(params: {
   dispatcher: ReplyDispatcher;
   before: { cancelled: number; failed: number };
   metadata: () => SourceReplyTranscriptMirror | undefined;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): Promise<void> {
   await params.dispatcher.waitForIdle();
   const after = getDispatcherFinalOutcomeCounts(params.dispatcher);
@@ -2441,7 +2441,7 @@ export async function dispatchReplyFromConfig(
       (await traceReplyPhase("reply.load_reply_resolver", () => loadGetReplyFromConfigRuntime()))
         .getReplyFromConfig;
     const replyConfig = withFullRuntimeReplyConfig(
-      params.configOverride ? (applyMergePatch(cfg, params.configOverride) as OpenClawConfig) : cfg,
+      params.configOverride ? (applyMergePatch(cfg, params.configOverride) as DexConfig) : cfg,
     );
     recordAgentDispatchStarted();
     const replyResult = await runWithDispatchAbortSignal(getDispatchAbortSignal(), () =>

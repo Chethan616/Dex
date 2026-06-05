@@ -1,5 +1,5 @@
 import type { SessionEntry } from "../config/sessions.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   loadExecApprovals,
   type ExecAsk,
@@ -79,13 +79,13 @@ function applySessionLegacyExecPolicyLayer(
 }
 
 function resolveExecConfigState(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   sessionEntry?: SessionEntry;
   execOverrides?: ExecOverridesConfig;
   agentId?: string;
   sessionKey?: string;
 }): {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   host: ExecTarget;
   agentId: string | undefined;
   agentExec?: ResolvedExecConfig;
@@ -118,7 +118,7 @@ function resolveExecConfigState(params: {
 }
 
 function resolveExecSandboxAvailability(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey?: string;
   sandboxAvailable?: boolean;
 }) {
@@ -134,7 +134,7 @@ function resolveExecSandboxAvailability(params: {
 }
 
 export function canExecRequestNode(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   sessionEntry?: SessionEntry;
   execOverrides?: ExecOverridesConfig;
   agentId?: string;
@@ -154,7 +154,7 @@ export function canExecRequestNode(params: {
 }
 
 export function resolveExecDefaults(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   sessionEntry?: SessionEntry;
   execOverrides?: ExecOverridesConfig;
   agentId?: string;

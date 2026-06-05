@@ -4,7 +4,7 @@ import {
   resolveAgentModelTimeoutMsValue,
 } from "../../config/model-input.js";
 import type { AgentToolModelConfig } from "../../config/types.agents-shared.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   externalCliDiscoveryForProviderAuth,
   ensureAuthProfileStore,
@@ -25,7 +25,7 @@ export function hasToolModelConfig(model: ToolModelConfig | undefined): boolean 
   );
 }
 
-export function resolveDefaultModelRef(cfg?: OpenClawConfig): { provider: string; model: string } {
+export function resolveDefaultModelRef(cfg?: DexConfig): { provider: string; model: string } {
   if (cfg) {
     const resolved = resolveConfiguredModelRef({
       cfg,
@@ -81,7 +81,7 @@ export function hasAuthProfileForProvider(params: {
 
 export function hasProviderAuthForTool(params: {
   provider: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
   agentDir?: string;
   authStore?: AuthProfileStore;
@@ -111,7 +111,7 @@ export function coerceToolModelConfig(model?: AgentToolModelConfig): ToolModelCo
 
 export function buildToolModelConfigFromCandidates(params: {
   explicit: ToolModelConfig;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
   agentDir?: string;
   authStore?: AuthProfileStore;

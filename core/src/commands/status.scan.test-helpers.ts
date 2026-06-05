@@ -1,6 +1,6 @@
 import type { Mock } from "vitest";
 import { vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 
 type UnknownMock = Mock<(...args: unknown[]) => unknown>;
 type ResolveConfigPathMock = Mock<() => string>;
@@ -186,12 +186,12 @@ export async function loadStatusScanModuleForTest(
   }));
   vi.doMock("../plugins/channel-plugin-ids.js", () => ({
     hasConfiguredChannelsForReadOnlyScope: (params: {
-      config: OpenClawConfig;
+      config: DexConfig;
       env?: NodeJS.ProcessEnv;
       includePersistedAuthState?: boolean;
     }) => mocks.hasConfiguredChannelsForReadOnlyScope(params),
     listConfiguredChannelIdsForReadOnlyScope: (params: {
-      config: OpenClawConfig;
+      config: DexConfig;
       env?: NodeJS.ProcessEnv;
       includePersistedAuthState?: boolean;
     }) =>
@@ -275,14 +275,14 @@ export async function loadStatusScanModuleForTest(
   return await import("./status.scan.js");
 }
 
-export function createStatusScanConfig<T extends object = OpenClawConfig>(
+export function createStatusScanConfig<T extends object = DexConfig>(
   overrides: T = {} as T,
-): OpenClawConfig & T {
+): DexConfig & T {
   return {
     session: {},
     gateway: {},
     ...overrides,
-  } as OpenClawConfig & T;
+  } as DexConfig & T;
 }
 
 export function createStatusSummary(
@@ -360,7 +360,7 @@ function createStatusGatewayProbeFailure() {
   };
 }
 
-export function createStatusMemorySearchConfig(): OpenClawConfig {
+export function createStatusMemorySearchConfig(): DexConfig {
   return createStatusScanConfig({
     agents: {
       defaults: {
@@ -388,8 +388,8 @@ export function applyStatusScanDefaults(
   mocks: StatusScanSharedMocks,
   options: {
     hasConfiguredChannels?: boolean;
-    sourceConfig?: OpenClawConfig;
-    resolvedConfig?: OpenClawConfig;
+    sourceConfig?: DexConfig;
+    resolvedConfig?: DexConfig;
     summary?: ReturnType<typeof createStatusSummary>;
     update?: ReturnType<typeof createStatusUpdateResult> | false;
     gatewayProbe?: ReturnType<typeof createStatusGatewayProbeFailure> | false;
@@ -402,7 +402,7 @@ export function applyStatusScanDefaults(
   mocks.hasPotentialConfiguredChannels.mockReturnValue(options.hasConfiguredChannels ?? false);
   mocks.hasConfiguredChannelsForReadOnlyScope.mockImplementation((rawParams: unknown) => {
     const params = rawParams as {
-      config: OpenClawConfig;
+      config: DexConfig;
       env?: NodeJS.ProcessEnv;
       includePersistedAuthState?: boolean;
     };

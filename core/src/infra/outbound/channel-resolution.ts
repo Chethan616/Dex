@@ -18,7 +18,7 @@ import type {
   ChannelStreamingAdapter,
   ChannelThreadingAdapter,
 } from "../../channels/plugins/types.public.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { getActivePluginRegistry } from "../../plugins/runtime.js";
 import {
   isDeliverableMessageChannel,
@@ -104,7 +104,7 @@ export function normalizeDeliverableOutboundChannel(
 
 function maybeBootstrapChannelPlugin(params: {
   channel: DeliverableMessageChannel;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): void {
   bootstrapOutboundChannelPlugin(params);
 }
@@ -178,7 +178,7 @@ function toOutboundChannelRuntime(plugin: ChannelPlugin): OutboundChannelRuntime
 /** Resolves a deliverable outbound channel plugin, optionally bootstrapping it. */
 export function resolveOutboundChannelPlugin(params: {
   channel: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   allowBootstrap?: boolean;
 }): ChannelPlugin | undefined {
   const normalized = normalizeDeliverableOutboundChannel(params.channel);
@@ -213,7 +213,7 @@ export function resolveOutboundChannelPlugin(params: {
 /** Resolves the message adapter for a deliverable outbound channel. */
 export function resolveOutboundChannelMessageAdapter(params: {
   channel: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   allowBootstrap?: boolean;
 }): ChannelMessageAdapterShape | undefined {
   return resolveOutboundChannelPlugin(params)?.message;
@@ -222,7 +222,7 @@ export function resolveOutboundChannelMessageAdapter(params: {
 /** Resolves a channel plugin for read-only metadata paths. */
 export function resolveOutboundChannelPluginForRead(params: {
   channel: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): ChannelPlugin | undefined {
   const normalized = normalizeMessageChannel(params.channel) ?? params.channel.trim();
   if (!normalized) {
@@ -252,7 +252,7 @@ export function resolveOutboundChannelPluginForRead(params: {
 /** Resolves the read-only outbound runtime facade for a channel. */
 export function resolveOutboundChannelRuntime(params: {
   channel: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): OutboundChannelRuntime | undefined {
   const plugin = resolveOutboundChannelPluginForRead(params);
   return plugin ? toOutboundChannelRuntime(plugin) : undefined;

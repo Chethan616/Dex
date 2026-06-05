@@ -400,7 +400,7 @@ export function buildHeadlessExecApprovalDeniedMessage(params: {
   return [
     `exec denied: ${runLabel} cannot wait for interactive exec approval.`,
     `Effective host exec policy: security=${params.security} ask=${params.ask} askFallback=${params.askFallback}`,
-    "Stricter values from tools.exec and ~/.openclaw/exec-approvals.json both apply.",
+    "Stricter values from tools.exec and ~/.dex/exec-approvals.json both apply.",
     "Fix one of these:",
     '- align both files to security="full" and ask="off" for trusted local automation',
     "- keep allowlist mode and add an explicit allowlist entry for this command",

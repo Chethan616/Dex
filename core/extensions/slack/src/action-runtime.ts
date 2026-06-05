@@ -14,7 +14,7 @@ import {
   readPositiveIntegerParam,
   readReactionParams,
   readStringParam,
-  type OpenClawConfig,
+  type DexConfig,
   withNormalizedTimestamp,
 } from "./runtime-api.js";
 import { parseSlackTarget, resolveSlackChannelId } from "./targets.js";
@@ -165,7 +165,7 @@ function isImageContentType(value: string | undefined): boolean {
 
 function assertSlackReadTargetAllowed(params: {
   account: ResolvedSlackAccount;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channelId: string;
 }) {
   const channels = params.account.config.channels;
@@ -201,7 +201,7 @@ function assertSlackReadTargetAllowed(params: {
 
 export async function handleSlackAction(
   params: Record<string, unknown>,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   context?: SlackActionContext,
 ): Promise<AgentToolResult<unknown>> {
   const resolveChannelId = () =>

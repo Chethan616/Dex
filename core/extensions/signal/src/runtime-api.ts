@@ -4,9 +4,9 @@
 export type { ChannelMessageActionAdapter } from "openclaw/plugin-sdk/channel-contract";
 export { buildChannelConfigSchema, SignalConfigSchema } from "../config-api.js";
 export { PAIRING_APPROVED_MESSAGE } from "openclaw/plugin-sdk/channel-status";
-import type { OpenClawConfig as RuntimeOpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
-export type { RuntimeOpenClawConfig as OpenClawConfig };
-export type { OpenClawPluginApi, PluginRuntime } from "openclaw/plugin-sdk/core";
+import type { DexConfig as RuntimeDexConfig } from "openclaw/plugin-sdk/config-contracts";
+export type { RuntimeDexConfig as DexConfig };
+export type { DexPluginApi, PluginRuntime } from "openclaw/plugin-sdk/core";
 export type { ChannelPlugin } from "openclaw/plugin-sdk/core";
 export {
   DEFAULT_ACCOUNT_ID,

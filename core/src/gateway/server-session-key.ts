@@ -5,7 +5,7 @@ import {
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { getRuntimeConfig } from "../config/io.js";
 import type { SessionEntry } from "../config/sessions.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { getAgentRunContext } from "../infra/agent-events.js";
 import {
   normalizeAgentId,
@@ -62,7 +62,7 @@ function setResolvedSessionKeyCache(
   });
 }
 
-function sessionKeyMatchesAgent(sessionKey: string, agentId: string, cfg: OpenClawConfig): boolean {
+function sessionKeyMatchesAgent(sessionKey: string, agentId: string, cfg: DexConfig): boolean {
   if (cfg.session?.scope === "global" && sessionKey.trim().toLowerCase() === "global") {
     return true;
   }

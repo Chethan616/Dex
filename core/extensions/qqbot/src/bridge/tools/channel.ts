@@ -1,4 +1,4 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/core";
+import type { DexPluginApi } from "openclaw/plugin-sdk/core";
 import { getAccessToken } from "../../engine/messaging/sender.js";
 import { ChannelApiSchema, executeChannelApi } from "../../engine/tools/channel-api.js";
 import type { ChannelApiParams } from "../../engine/tools/channel-api.js";
@@ -11,7 +11,7 @@ import { listQQBotAccountIds, resolveQQBotAccount } from "../config.js";
  * channel APIs. Agents learn endpoint details from the skill docs and
  * send requests through this proxy.
  */
-export function registerChannelTool(api: OpenClawPluginApi): void {
+export function registerChannelTool(api: DexPluginApi): void {
   const cfg = api.config;
   if (!cfg) {
     return;

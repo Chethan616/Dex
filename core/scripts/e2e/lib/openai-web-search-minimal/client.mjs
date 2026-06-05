@@ -24,9 +24,9 @@ function readExpectedRawSchemaError() {
 
 async function gatewayAgent(params) {
   const port = process.env.PORT;
-  const token = process.env.OPENCLAW_GATEWAY_TOKEN;
+  const token = process.env.DEX_GATEWAY_TOKEN;
   if (!port || !token) {
-    throw new Error("missing PORT/OPENCLAW_GATEWAY_TOKEN");
+    throw new Error("missing PORT/DEX_GATEWAY_TOKEN");
   }
 
   try {
@@ -78,7 +78,7 @@ async function main() {
   const mode = process.argv[2];
   const sessionKey = `agent:main:openai-web-search-minimal:${mode}`;
   const message =
-    mode === "reject" ? "FORCE_SCHEMA_REJECT" : "Return exactly OPENCLAW_SCHEMA_E2E_OK.";
+    mode === "reject" ? "FORCE_SCHEMA_REJECT" : "Return exactly DEX_SCHEMA_E2E_OK.";
   const id = mode === "reject" ? "schema-reject" : "schema-success";
 
   const result = await gatewayAgent({

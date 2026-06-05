@@ -1,6 +1,6 @@
 import {
   createModelCatalogPresetAppliers,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/provider-onboard";
 import {
   buildSyntheticModelDefinition,
@@ -13,7 +13,7 @@ export { SYNTHETIC_DEFAULT_MODEL_REF };
 
 const syntheticPresetAppliers = createModelCatalogPresetAppliers({
   primaryModelRef: SYNTHETIC_DEFAULT_MODEL_REF,
-  resolveParams: (_cfg: OpenClawConfig) => ({
+  resolveParams: (_cfg: DexConfig) => ({
     providerId: "synthetic",
     api: "anthropic-messages",
     baseUrl: SYNTHETIC_BASE_URL,
@@ -22,10 +22,10 @@ const syntheticPresetAppliers = createModelCatalogPresetAppliers({
   }),
 });
 
-export function applySyntheticProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
+export function applySyntheticProviderConfig(cfg: DexConfig): DexConfig {
   return syntheticPresetAppliers.applyProviderConfig(cfg);
 }
 
-export function applySyntheticConfig(cfg: OpenClawConfig): OpenClawConfig {
+export function applySyntheticConfig(cfg: DexConfig): DexConfig {
   return syntheticPresetAppliers.applyConfig(cfg);
 }

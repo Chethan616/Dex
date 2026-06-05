@@ -19,7 +19,7 @@ function readPositiveIntEnv(name, fallback) {
 }
 
 const agentTurnTimeoutSeconds = readPositiveIntEnv(
-  "OPENCLAW_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS",
+  "DEX_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS",
   300,
 );
 const SCAN_CHUNK_BYTES = 64 * 1024;
@@ -36,19 +36,19 @@ function requireEnv(name) {
 }
 
 function stateDir() {
-  return process.env.OPENCLAW_STATE_DIR || path.join(process.env.HOME, ".openclaw");
+  return process.env.DEX_STATE_DIR || path.join(process.env.HOME, ".dex");
 }
 
 function configPath() {
-  return process.env.OPENCLAW_CONFIG_PATH || path.join(stateDir(), "openclaw.json");
+  return process.env.DEX_CONFIG_PATH || path.join(stateDir(), "openclaw.json");
 }
 
 function agentOutputPath() {
-  return process.env.OPENCLAW_LIVE_PLUGIN_TOOL_AGENT_OUTPUT_PATH || "/tmp/openclaw-agent.json";
+  return process.env.DEX_LIVE_PLUGIN_TOOL_AGENT_OUTPUT_PATH || "/tmp/openclaw-agent.json";
 }
 
 function agentErrorPath() {
-  return process.env.OPENCLAW_LIVE_PLUGIN_TOOL_AGENT_ERROR_PATH || "/tmp/openclaw-agent.err";
+  return process.env.DEX_LIVE_PLUGIN_TOOL_AGENT_ERROR_PATH || "/tmp/openclaw-agent.err";
 }
 
 function scanFileForNeedles(file, pendingNeedles) {

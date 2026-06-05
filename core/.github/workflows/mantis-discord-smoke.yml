@@ -25,8 +25,8 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NODE_VERSION: "24.x"
-  OPENCLAW_BUILD_PRIVATE_QA: "1"
-  OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+  DEX_BUILD_PRIVATE_QA: "1"
+  DEX_ENABLE_PRIVATE_QA_CLI: "1"
 
 jobs:
   authorize_actor:
@@ -149,10 +149,10 @@ jobs:
       - name: Run Mantis Discord smoke
         shell: bash
         env:
-          OPENCLAW_QA_DISCORD_MANTIS_BOT_TOKEN: ${{ secrets.OPENCLAW_QA_DISCORD_MANTIS_BOT_TOKEN }}
-          OPENCLAW_QA_DISCORD_GUILD_ID: ${{ secrets.OPENCLAW_QA_DISCORD_GUILD_ID }}
-          OPENCLAW_QA_DISCORD_CHANNEL_ID: ${{ secrets.OPENCLAW_QA_DISCORD_CHANNEL_ID }}
-          OPENCLAW_QA_REDACT_PUBLIC_METADATA: "1"
+          DEX_QA_DISCORD_MANTIS_BOT_TOKEN: ${{ secrets.DEX_QA_DISCORD_MANTIS_BOT_TOKEN }}
+          DEX_QA_DISCORD_GUILD_ID: ${{ secrets.DEX_QA_DISCORD_GUILD_ID }}
+          DEX_QA_DISCORD_CHANNEL_ID: ${{ secrets.DEX_QA_DISCORD_CHANNEL_ID }}
+          DEX_QA_REDACT_PUBLIC_METADATA: "1"
         run: |
           set -euo pipefail
           args=()

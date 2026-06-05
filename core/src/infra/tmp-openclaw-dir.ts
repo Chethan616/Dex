@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { tmpdir as getOsTmpDir } from "node:os";
 import path from "node:path";
 
-export const POSIX_OPENCLAW_TMP_DIR = "/tmp/openclaw";
+export const POSIX_DEX_TMP_DIR = "/tmp/openclaw";
 
 type MaybeNodeError = { code?: string };
 
@@ -149,7 +149,7 @@ export function resolvePreferredOpenClawTmpDir(
     return ensureTrustedFallbackDir();
   }
 
-  const preferredDir = POSIX_OPENCLAW_TMP_DIR;
+  const preferredDir = POSIX_DEX_TMP_DIR;
   const preferredState = resolveDirState(preferredDir);
   if (preferredState === "available") {
     return preferredDir;

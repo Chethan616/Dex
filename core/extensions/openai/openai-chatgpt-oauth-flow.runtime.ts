@@ -74,7 +74,7 @@ function loadNodeOAuthRuntime(): Promise<NodeOAuthRuntime> {
 }
 
 function resolveCallbackHost(env: NodeJS.ProcessEnv = process.env): string {
-  const host = env.OPENCLAW_OAUTH_CALLBACK_HOST?.trim() || DEFAULT_CALLBACK_HOST;
+  const host = env.DEX_OAUTH_CALLBACK_HOST?.trim() || DEFAULT_CALLBACK_HOST;
   if (!LOOPBACK_CALLBACK_HOSTS.has(host)) {
     throw new Error("OpenAI Codex OAuth callback host must be localhost, 127.0.0.1, or ::1");
   }

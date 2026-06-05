@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { ConfiguredBindingResolution } from "./binding-types.js";
 import {
   ensureStatefulTargetBuiltinsRegistered,
@@ -10,7 +10,7 @@ import {
 } from "./stateful-target-drivers.js";
 
 export async function ensureConfiguredBindingTargetReady(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   bindingResolution: ConfiguredBindingResolution | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!params.bindingResolution) {
@@ -35,7 +35,7 @@ export async function ensureConfiguredBindingTargetReady(params: {
 }
 
 export async function resetConfiguredBindingTargetInPlace(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   reason: "new" | "reset";
   commandSource?: string;
@@ -64,7 +64,7 @@ export async function resetConfiguredBindingTargetInPlace(params: {
 }
 
 export async function ensureConfiguredBindingTargetSession(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   bindingResolution: ConfiguredBindingResolution;
 }): Promise<{ ok: true; sessionKey: string } | { ok: false; sessionKey: string; error: string }> {
   const driverId = params.bindingResolution.statefulTarget.driverId;

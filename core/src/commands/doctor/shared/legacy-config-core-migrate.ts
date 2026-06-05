@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 import { runPluginSetupConfigMigrations } from "../../../plugins/setup-registry.js";
 import { normalizeAgentId } from "../../../routing/session-key.js";
 import { migrateLegacySecretRefEnvMarkers } from "../../../secrets/legacy-secretref-env-marker.js";
@@ -9,7 +9,7 @@ import {
   normalizeLegacyOpenAICodexModelsAddMetadata,
 } from "./legacy-config-core-normalizers.js";
 
-function pruneBindingsForMissingAgents(cfg: OpenClawConfig, changes: string[]): OpenClawConfig {
+function pruneBindingsForMissingAgents(cfg: DexConfig, changes: string[]): DexConfig {
   const agents = cfg.agents?.list;
   const bindings = cfg.bindings;
   if (!Array.isArray(agents) || agents.length === 0 || !Array.isArray(bindings)) {
@@ -42,8 +42,8 @@ function pruneBindingsForMissingAgents(cfg: OpenClawConfig, changes: string[]): 
   };
 }
 
-export function normalizeCompatibilityConfigValues(cfg: OpenClawConfig): {
-  config: OpenClawConfig;
+export function normalizeCompatibilityConfigValues(cfg: DexConfig): {
+  config: DexConfig;
   changes: string[];
 } {
   const changes: string[] = [];

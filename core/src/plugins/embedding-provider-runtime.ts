@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   getRuntimeEmbeddingProviderAdapter,
   listRuntimeEmbeddingProviderAdapters,
@@ -20,7 +20,7 @@ export function listRegisteredEmbeddingProviderAdapters(): EmbeddingProviderAdap
   return listRegisteredEmbeddingProviders().map((entry) => entry.adapter);
 }
 
-export function listEmbeddingProviders(cfg?: OpenClawConfig): EmbeddingProviderAdapter[] {
+export function listEmbeddingProviders(cfg?: DexConfig): EmbeddingProviderAdapter[] {
   return listRuntimeEmbeddingProviderAdapters({
     key: "embeddingProviders",
     cfg,
@@ -30,7 +30,7 @@ export function listEmbeddingProviders(cfg?: OpenClawConfig): EmbeddingProviderA
 
 function resolveConfiguredEmbeddingProviderId(
   providerId: string,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
 ): string | undefined {
   return readConfiguredProviderApiId({
     providerId,
@@ -44,7 +44,7 @@ function resolveConfiguredEmbeddingProviderId(
   });
 }
 
-function resolveEmbeddingProviderLookupIds(id: string, cfg?: OpenClawConfig): string[] {
+function resolveEmbeddingProviderLookupIds(id: string, cfg?: DexConfig): string[] {
   return resolveRuntimeEmbeddingProviderLookupIds({
     id,
     cfg,
@@ -54,7 +54,7 @@ function resolveEmbeddingProviderLookupIds(id: string, cfg?: OpenClawConfig): st
 
 export function getEmbeddingProvider(
   id: string,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
 ): EmbeddingProviderAdapter | undefined {
   return getRuntimeEmbeddingProviderAdapter({
     key: "embeddingProviders",

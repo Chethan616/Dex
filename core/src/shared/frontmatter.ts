@@ -56,7 +56,7 @@ export function resolveOpenClawManifestBlock(params: {
   }
 }
 
-export type OpenClawManifestRequires = {
+export type DexManifestRequires = {
   bins: string[];
   anyBins: string[];
   env: string[];
@@ -64,9 +64,9 @@ export type OpenClawManifestRequires = {
 };
 
 /** Extracts normalized runtime requirement lists from an OpenClaw manifest block. */
-export function resolveOpenClawManifestRequires(
+export function resolveDexManifestRequires(
   metadataObj: Record<string, unknown>,
-): OpenClawManifestRequires | undefined {
+): DexManifestRequires | undefined {
   const requiresRaw =
     typeof metadataObj.requires === "object" && metadataObj.requires !== null
       ? (metadataObj.requires as Record<string, unknown>)

@@ -228,7 +228,7 @@ async function writeConfig(params: {
 
 export async function main() {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-mcp-code-mode-"));
-  const keep = process.env.OPENCLAW_MCP_CODE_MODE_GATEWAY_E2E_KEEP === "1";
+  const keep = process.env.DEX_MCP_CODE_MODE_GATEWAY_E2E_KEEP === "1";
   let provider: Awaited<ReturnType<typeof startQaMockOpenAiServer>> | undefined;
   let server: Awaited<ReturnType<typeof startGatewayServer>> | undefined;
   try {
@@ -249,9 +249,9 @@ export async function main() {
       serverPath,
     });
 
-    process.env.OPENCLAW_STATE_DIR = stateDir;
-    process.env.OPENCLAW_CONFIG_PATH = configPath;
-    process.env.OPENCLAW_TEST_FAST = "1";
+    process.env.DEX_STATE_DIR = stateDir;
+    process.env.DEX_CONFIG_PATH = configPath;
+    process.env.DEX_TEST_FAST = "1";
     resetConfigRuntimeState();
 
     server = await startGatewayServer(gatewayPort, {
@@ -333,9 +333,9 @@ export async function main() {
     await server?.close({ reason: "mcp code-mode gateway e2e complete" });
     await provider?.stop();
     resetConfigRuntimeState();
-    delete process.env.OPENCLAW_STATE_DIR;
-    delete process.env.OPENCLAW_CONFIG_PATH;
-    delete process.env.OPENCLAW_TEST_FAST;
+    delete process.env.DEX_STATE_DIR;
+    delete process.env.DEX_CONFIG_PATH;
+    delete process.env.DEX_TEST_FAST;
     if (!keep) {
       await fs.rm(rootDir, { recursive: true, force: true });
     }

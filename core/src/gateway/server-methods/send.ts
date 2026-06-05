@@ -21,7 +21,7 @@ import {
   getRuntimeConfigSourceSnapshot,
   selectApplicableRuntimeConfig,
 } from "../../config/runtime-snapshot.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { resolveOutboundChannelPlugin } from "../../infra/outbound/channel-resolution.js";
 import { resolveMessageChannelSelection } from "../../infra/outbound/channel-selection.js";
 import {
@@ -162,8 +162,8 @@ async function resolveRequestedChannel(params: {
   rejectWebchatAsInternalOnly?: boolean;
 }): Promise<
   | {
-      cfg: OpenClawConfig;
-      sourceCfg: OpenClawConfig;
+      cfg: DexConfig;
+      sourceCfg: DexConfig;
       channel: string;
     }
   | {
@@ -207,8 +207,8 @@ async function resolveInternalDeliveryChannel(
 ): Promise<
   | {
       kind: "ready";
-      cfg: OpenClawConfig;
-      sourceCfg: OpenClawConfig;
+      cfg: DexConfig;
+      sourceCfg: DexConfig;
       channel: string;
     }
   | {
@@ -234,7 +234,7 @@ async function resolveInternalDeliveryChannel(
 function resolveGatewayOutboundTarget(params: {
   channel: string;
   to: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string;
 }):
   | {
@@ -262,9 +262,9 @@ function resolveGatewayOutboundTarget(params: {
 }
 
 function resolveMessageActionRuntimeConfig(params: {
-  cfg: OpenClawConfig;
-  sourceCfg: OpenClawConfig;
-}): OpenClawConfig {
+  cfg: DexConfig;
+  sourceCfg: DexConfig;
+}): DexConfig {
   const runtimeConfig = getRuntimeConfigSnapshot();
   const runtimeSourceConfig = getRuntimeConfigSourceSnapshot();
   if (!runtimeConfig || !runtimeSourceConfig) {

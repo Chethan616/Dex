@@ -1,7 +1,7 @@
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { initSubagentRegistry } from "../agents/subagent-registry.js";
 import { applyPluginAutoEnable } from "../config/plugin-auto-enable.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { loadPluginLookUpTable } from "../plugins/plugin-lookup-table.js";
 import type { PluginMetadataSnapshot } from "../plugins/plugin-metadata-snapshot.js";
 import type { PluginRegistryParams } from "../plugins/registry-types.js";
@@ -24,9 +24,9 @@ type GatewayStartupTrace = {
 
 /** Returns the config snapshot used by channel/plugin startup maintenance. */
 export function resolveGatewayStartupMaintenanceConfig(params: {
-  cfgAtStart: OpenClawConfig;
-  startupRuntimeConfig: OpenClawConfig;
-}): OpenClawConfig {
+  cfgAtStart: DexConfig;
+  startupRuntimeConfig: DexConfig;
+}): DexConfig {
   // Early config recovery may supply channel blocks after the start snapshot; startup
   // maintenance needs those owner configs even when the original snapshot was sparse.
   return params.cfgAtStart.channels === undefined &&
@@ -40,9 +40,9 @@ export function resolveGatewayStartupMaintenanceConfig(params: {
 
 /** Builds plugin startup state and gateway method lists before the server binds. */
 export async function prepareGatewayPluginBootstrap(params: {
-  cfgAtStart: OpenClawConfig;
-  activationSourceConfig?: OpenClawConfig;
-  startupRuntimeConfig: OpenClawConfig;
+  cfgAtStart: DexConfig;
+  activationSourceConfig?: DexConfig;
+  startupRuntimeConfig: DexConfig;
   pluginMetadataSnapshot?: PluginMetadataSnapshot;
   minimalTestGateway: boolean;
   log: GatewayPluginBootstrapLog;
@@ -183,8 +183,8 @@ export async function prepareGatewayPluginBootstrap(params: {
 
 /** Loads startup plugin runtimes through the deferred bootstrap boundary. */
 export async function loadGatewayStartupPluginRuntime(params: {
-  cfg: OpenClawConfig;
-  activationSourceConfig?: OpenClawConfig;
+  cfg: DexConfig;
+  activationSourceConfig?: DexConfig;
   workspaceDir: string;
   log: GatewayPluginBootstrapLog;
   baseMethods: string[];

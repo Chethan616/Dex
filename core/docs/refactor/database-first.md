@@ -14,7 +14,7 @@ read_when:
 
 Use a two-level SQLite layout:
 
-- Global database: `~/.openclaw/state/openclaw.sqlite`
+- Global database: `~/.dex/state/openclaw.sqlite`
 - Agent database: one SQLite database per agent for agent-owned workspace,
   transcript, VFS, artifact, and large per-agent runtime state
 - Configuration stays file-backed: `openclaw.json` remains outside the
@@ -78,7 +78,7 @@ This migration has one canonical runtime shape:
   Runtime diagnostics must not expose JSONL file override knobs or generic
   transcript JSONL export helpers; user-facing exports can materialize explicit
   artifacts from database rows without feeding file names back into runtime.
-- Raw stream logging uses `OPENCLAW_RAW_STREAM=1` plus SQLite diagnostics rows.
+- Raw stream logging uses `DEX_RAW_STREAM=1` plus SQLite diagnostics rows.
   The old pi-mono `PI_RAW_STREAM`, `PI_RAW_STREAM_PATH`, and
   `raw-openai-completions.jsonl` file logger contract is not part of OpenClaw
   runtime or tests.
@@ -442,7 +442,7 @@ The branch already has a real shared SQLite base:
   legacy workspace marker, and helper APIs no longer pass around a fake
   `.openclaw/setup-state` path just to derive storage identity.
 - Exec approvals now live in the typed shared SQLite `exec_approvals_config`
-  singleton row. Doctor imports legacy `~/.openclaw/exec-approvals.json`;
+  singleton row. Doctor imports legacy `~/.dex/exec-approvals.json`;
   runtime writes no longer create, rewrite, or report that file as its active
   store location. The macOS companion reads and writes the same
   `state/openclaw.sqlite` table row; it keeps only the Unix prompt socket on disk
@@ -941,9 +941,9 @@ sessionId})`; create, branch, continue, list, and fork flows live in their
 - Cache trace, Anthropic payload, raw stream, and diagnostics timeline records
   now write to typed SQLite `diagnostic_events` rows. Gateway stability bundles
   now write to typed SQLite `diagnostic_stability_bundles` rows. The old
-  `diagnostics.cacheTrace.filePath`, `OPENCLAW_CACHE_TRACE_FILE`,
-  `OPENCLAW_ANTHROPIC_PAYLOAD_LOG_FILE`, and
-  `OPENCLAW_DIAGNOSTICS_TIMELINE_PATH` JSONL override paths are removed, and
+  `diagnostics.cacheTrace.filePath`, `DEX_CACHE_TRACE_FILE`,
+  `DEX_ANTHROPIC_PAYLOAD_LOG_FILE`, and
+  `DEX_DIAGNOSTICS_TIMELINE_PATH` JSONL override paths are removed, and
   normal stability capture no longer writes `logs/stability/*.json` files.
 - Cron persistence now reconciles SQLite `cron_jobs` rows instead of
   deleting/reinserting the whole job table on each save. Plugin target
@@ -1165,9 +1165,9 @@ sessionId})`; create, branch, continue, list, and fork flows live in their
   the canonical byte store. Local paths returned to channel and sandbox
   compatibility surfaces are temp materializations of the database row, not the
   durable media store. Runtime media allowlists no longer include legacy
-  `$OPENCLAW_STATE_DIR/media` or config-dir `media` roots; those directories are
+  `$DEX_STATE_DIR/media` or config-dir `media` roots; those directories are
   doctor import sources only.
-- Shell completion no longer writes `$OPENCLAW_STATE_DIR/completions/*` cache
+- Shell completion no longer writes `$DEX_STATE_DIR/completions/*` cache
   files. Install, doctor, update, and release smoke paths use generated
   completion output or profile sourcing instead of durable completion cache
   files.
@@ -1399,9 +1399,9 @@ create` validates the written archive by default; `--no-verify` is the
   external callers until a major SDK cleanup can remove it.
 - QMD's own `index.sqlite` is now a temp runtime materialization backed by the
   main SQLite `plugin_blob_entries` table. Runtime no longer creates a durable
-  `~/.openclaw/agents/<agentId>/qmd` sidecar.
+  `~/.dex/agents/<agentId>/qmd` sidecar.
 - The optional `memory-lancedb` plugin no longer creates
-  `~/.openclaw/memory/lancedb` as an implicit OpenClaw-managed store. It is an
+  `~/.dex/memory/lancedb` as an implicit OpenClaw-managed store. It is an
   external LanceDB backend and stays disabled until the operator configures an
   explicit `dbPath`.
 - `check:database-first-legacy-stores` fails new runtime source that pairs
@@ -1744,8 +1744,8 @@ setup, filesystem pruning, and compatibility writers from those subsystems.
 Create one database per agent and register it from the global DB:
 
 ```text
-~/.openclaw/state/openclaw.sqlite
-~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite
+~/.dex/state/openclaw.sqlite
+~/.dex/agents/<agentId>/agent/openclaw-agent.sqlite
 ```
 
 The global `agent_databases` row stores the path, schema version, last-seen

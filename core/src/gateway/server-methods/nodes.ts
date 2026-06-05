@@ -23,7 +23,7 @@ import {
   validateNodeRenameParams,
 } from "../../../packages/gateway-protocol/src/index.js";
 import { getRuntimeConfig } from "../../config/io.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { listDevicePairing } from "../../infra/device-pairing.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import {
@@ -201,7 +201,7 @@ async function resolveDirectNodePushConfig() {
 }
 
 function resolveRelayNodePushConfig(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   registration: Extract<
     NonNullable<Awaited<ReturnType<typeof loadApnsRegistration>>>,
     { transport: "relay" }
@@ -321,7 +321,7 @@ function listPendingNodeActions(nodeId: string): PendingNodeAction[] {
 function refreshConnectedNodeSurfaceCaches(params: {
   context: GatewayRequestContext;
   nodeSession: NodeSession;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }) {
   const cfg = params.cfg ?? params.context.getRuntimeConfig();
   const { nodeSession } = params;
@@ -349,7 +349,7 @@ function refreshConnectedNodeSurfaceCaches(params: {
 function resolveAllowedPendingNodeActions(params: {
   nodeId: string;
   client: { connect?: ConnectParams | null } | null;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): PendingNodeAction[] {
   const pending = listPendingNodeActions(params.nodeId);
   if (pending.length === 0) {
@@ -474,7 +474,7 @@ function emitTalkPttNodeEvent(params: {
 
 export async function maybeWakeNodeWithApns(
   nodeId: string,
-  opts?: { force?: boolean; wakeReason?: string; cfg?: OpenClawConfig },
+  opts?: { force?: boolean; wakeReason?: string; cfg?: DexConfig },
 ): Promise<NodeWakeAttempt> {
   const state = nodeWakeById.get(nodeId) ?? { lastWakeAtMs: 0 };
   nodeWakeById.set(nodeId, state);
@@ -590,7 +590,7 @@ export async function maybeWakeNodeWithApns(
 
 export async function maybeSendNodeWakeNudge(
   nodeId: string,
-  opts?: { cfg?: OpenClawConfig },
+  opts?: { cfg?: DexConfig },
 ): Promise<NodeWakeNudgeAttempt> {
   const startedAtMs = Date.now();
   const withDuration = (

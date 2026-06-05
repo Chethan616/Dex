@@ -93,7 +93,7 @@ export function buildBrowserDoctorReport(params: {
         status: "warn",
         summary: `No DISPLAY or WAYLAND_DISPLAY is set while headed mode is selected (${status.headlessSource ?? "unknown"})`,
         fixHint:
-          "Use a desktop session, Xvfb, set OPENCLAW_BROWSER_HEADLESS=1, or remove the headed override.",
+          "Use a desktop session, Xvfb, set DEX_BROWSER_HEADLESS=1, or remove the headed override.",
       });
     }
     if (platform === "linux" && uid === 0 && !status.noSandbox) {

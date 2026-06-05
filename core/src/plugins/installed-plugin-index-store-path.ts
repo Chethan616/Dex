@@ -12,7 +12,7 @@ export type InstalledPluginIndexStoreOptions = {
 
 function resolveStoreEnv(options: InstalledPluginIndexStoreOptions): NodeJS.ProcessEnv {
   return options.stateDir
-    ? { ...(options.env ?? process.env), OPENCLAW_STATE_DIR: options.stateDir }
+    ? { ...(options.env ?? process.env), DEX_STATE_DIR: options.stateDir }
     : (options.env ?? process.env);
 }
 

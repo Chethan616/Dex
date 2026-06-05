@@ -1,12 +1,12 @@
 import { getRuntimeConfig } from "../config/config.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { getCurrentPluginMetadataSnapshot } from "../plugins/current-plugin-metadata-snapshot.js";
 import { resolvePluginMetadataSnapshot } from "../plugins/plugin-metadata-snapshot.js";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "./agent-scope.js";
 import type { PluginModelCatalogMetadataSnapshot } from "./plugin-model-catalog.js";
 
 export function resolveModelWorkspaceDir(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   explicitWorkspaceDir: string | undefined,
 ): string | undefined {
   if (explicitWorkspaceDir !== undefined || !cfg) {
@@ -17,7 +17,7 @@ export function resolveModelWorkspaceDir(
 
 export function resolveModelPluginMetadataSnapshot(params: {
   allowWorkspaceScopedCurrent?: boolean;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   env?: NodeJS.ProcessEnv;
   pluginMetadataSnapshot?: PluginModelCatalogMetadataSnapshot;
   useRuntimeConfig?: boolean;

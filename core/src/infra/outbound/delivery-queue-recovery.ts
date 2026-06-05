@@ -6,7 +6,7 @@ import type {
   ChannelMessageSendCommitContext,
   ChannelMessageUnknownSendReconciliationResult,
 } from "../../channels/message/types.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { formatErrorMessage } from "../errors.js";
 import { resolveOutboundChannelMessageAdapter } from "./channel-resolution.js";
 import type { OutboundDeliveryResult } from "./deliver-types.js";
@@ -33,7 +33,7 @@ export type RecoverySummary = {
 
 export type DeliverFn = (
   params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
   } & QueuedDeliveryPayload & {
       deliveryQueueId?: string;
       deliveryQueueStateDir?: string;
@@ -137,7 +137,7 @@ export async function withActiveDeliveryClaim<T>(
   }
 }
 
-function buildRecoveryDeliverParams(entry: QueuedDelivery, cfg: OpenClawConfig, stateDir?: string) {
+function buildRecoveryDeliverParams(entry: QueuedDelivery, cfg: DexConfig, stateDir?: string) {
   return {
     cfg,
     channel: entry.channel,
@@ -167,7 +167,7 @@ function buildRecoveryDeliverParams(entry: QueuedDelivery, cfg: OpenClawConfig, 
 
 async function reconcileUnknownQueuedDelivery(opts: {
   entry: QueuedDelivery;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   log: RecoveryLogger;
 }): Promise<ChannelMessageUnknownSendReconciliationResult | null> {
   const adapter = resolveOutboundChannelMessageAdapter({
@@ -226,7 +226,7 @@ function buildReconciledSentResult(
 
 function buildReconciledCommitContext(params: {
   entry: QueuedDelivery;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   result: OutboundDeliveryResult;
 }): ChannelMessageSendCommitContext {
   const payload = params.entry.payloads[0] ?? {};
@@ -283,7 +283,7 @@ function buildReconciledCommitContext(params: {
 
 async function runReconciledSentCommitHooks(params: {
   entry: QueuedDelivery;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   reconciliation: Extract<ChannelMessageUnknownSendReconciliationResult, { status: "sent" }>;
   log: RecoveryLogger;
 }): Promise<void> {
@@ -375,7 +375,7 @@ export function isPermanentDeliveryError(error: string): boolean {
 
 async function drainQueuedEntry(opts: {
   entry: QueuedDelivery;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   deliver: DeliverFn;
   log: RecoveryLogger;
   stateDir?: string;
@@ -492,7 +492,7 @@ async function drainQueuedEntry(opts: {
 export async function drainPendingDeliveries(opts: {
   drainKey: string;
   logLabel: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   log: RecoveryLogger;
   stateDir?: string;
   deliver: DeliverFn;
@@ -604,7 +604,7 @@ export async function drainPendingDeliveries(opts: {
 export async function recoverPendingDeliveries(opts: {
   deliver: DeliverFn;
   log: RecoveryLogger;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   stateDir?: string;
   /** Maximum wall-clock time for recovery in ms. Remaining entries are deferred to next startup. Default: 60 000. */
   maxRecoveryMs?: number;

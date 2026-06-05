@@ -3,7 +3,7 @@ import path from "node:path";
 import { note } from "../../packages/terminal-core/src/note.js";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { DEFAULT_AGENTS_FILENAME } from "../agents/workspace.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import {
   CANONICAL_ROOT_MEMORY_FILENAME,
@@ -246,7 +246,7 @@ export async function migrateLegacyRootMemoryFile(
   };
 }
 
-export async function noteWorkspaceMemoryHealth(cfg: OpenClawConfig): Promise<void> {
+export async function noteWorkspaceMemoryHealth(cfg: DexConfig): Promise<void> {
   try {
     const agentId = resolveDefaultAgentId(cfg);
     const workspaceDir = resolveAgentWorkspaceDir(cfg, agentId);
@@ -262,7 +262,7 @@ export async function noteWorkspaceMemoryHealth(cfg: OpenClawConfig): Promise<vo
 }
 
 export async function maybeRepairWorkspaceMemoryHealth(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   prompter: DoctorPrompter;
 }): Promise<void> {
   try {

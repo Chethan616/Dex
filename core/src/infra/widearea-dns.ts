@@ -36,7 +36,7 @@ export function resolveWideAreaDiscoveryDomain(params?: {
   configDomain?: string | null;
 }): string | null {
   const env = params?.env ?? process.env;
-  const candidate = params?.configDomain ?? env.OPENCLAW_WIDE_AREA_DOMAIN ?? null;
+  const candidate = params?.configDomain ?? env.DEX_WIDE_AREA_DOMAIN ?? null;
   try {
     return normalizeWideAreaDomain(candidate);
   } catch {

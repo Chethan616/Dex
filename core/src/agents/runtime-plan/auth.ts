@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { normalizePluginsConfig } from "../../plugins/config-state.js";
 import type { PluginMetadataSnapshot } from "../../plugins/plugin-metadata-snapshot.types.js";
 import { normalizeOptionalAgentRuntimeId } from "../agent-runtime-id.js";
@@ -28,7 +28,7 @@ export function buildAgentRuntimeAuthPlan(params: {
   authProfileMode?: string;
   sessionAuthProfileId?: string;
   sessionAuthProfileCandidateIds?: string[];
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   metadataSnapshot?: Pick<PluginMetadataSnapshot, "plugins">;
   providerAuthAliasesEnabled?: boolean;

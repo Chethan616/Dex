@@ -28,13 +28,13 @@ const OPENAI_TOOL_CALL_PROVIDERS = new Set(["openai", "opencode"]);
 
 /**
  * Resolve cache retention preference.
- * Defaults to "short" and uses OPENCLAW_CACHE_RETENTION for backward compatibility.
+ * Defaults to "short" and uses DEX_CACHE_RETENTION for backward compatibility.
  */
 function resolveCacheRetention(cacheRetention?: CacheRetention): CacheRetention {
   if (cacheRetention) {
     return cacheRetention;
   }
-  if (typeof process !== "undefined" && process.env.OPENCLAW_CACHE_RETENTION === "long") {
+  if (typeof process !== "undefined" && process.env.DEX_CACHE_RETENTION === "long") {
     return "long";
   }
   return "short";

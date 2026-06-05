@@ -1,5 +1,5 @@
 import type { MsgContext } from "../auto-reply/templating.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { logVerbose, shouldLogVerbose } from "../globals.js";
 import type { ActiveMediaModel } from "./active-model.types.js";
 import { isAudioAttachment } from "./attachments.js";
@@ -15,7 +15,7 @@ import type { MediaUnderstandingProvider } from "./types.js";
  */
 export async function transcribeFirstAudio(params: {
   ctx: MsgContext;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir?: string;
   providers?: Record<string, MediaUnderstandingProvider>;
   activeModel?: ActiveMediaModel;

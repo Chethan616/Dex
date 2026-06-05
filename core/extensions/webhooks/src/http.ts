@@ -13,7 +13,7 @@ import {
   withResolvedWebhookRequestPipeline,
   WEBHOOK_IN_FLIGHT_DEFAULTS,
   WEBHOOK_RATE_LIMIT_DEFAULTS,
-  type OpenClawConfig,
+  type DexConfig,
   type WebhookInFlightLimiter,
 } from "../runtime-api.js";
 import type { WebhookSecretInput } from "./config.js";
@@ -583,7 +583,7 @@ function describeWebhookOutcome(params: { action: WebhookAction; result: unknown
 async function executeWebhookAction(params: {
   action: WebhookAction;
   target: TaskFlowWebhookTarget;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): Promise<unknown> {
   const { action, target } = params;
   switch (action.action) {
@@ -714,7 +714,7 @@ async function executeWebhookAction(params: {
 }
 
 export function createTaskFlowWebhookRequestHandler(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   targetsByPath: Map<string, TaskFlowWebhookTarget[]>;
   inFlightLimiter?: WebhookInFlightLimiter;
 }): (req: IncomingMessage, res: ServerResponse) => Promise<boolean> {

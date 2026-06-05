@@ -148,7 +148,7 @@ const PACKED_TEST_CARGO_DIRECTORY_SEGMENTS = new Set([
 const PACKED_TEST_CARGO_FILE_RE = /(?:^|\/)[^/]+\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/u;
 const NPM_PACK_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 const DEFAULT_RELEASE_CHECK_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
-const skipPackValidationEnv = "OPENCLAW_NPM_RELEASE_SKIP_PACK_CHECK";
+const skipPackValidationEnv = "DEX_NPM_RELEASE_SKIP_PACK_CHECK";
 
 type ReleaseCheckCommandInvocation = {
   command: string;
@@ -320,7 +320,7 @@ export function resolveNpmReleaseCheckCommandTimeoutMs(
   env: NodeJS.ProcessEnv = process.env,
 ): number {
   return positiveEnvInt(
-    "OPENCLAW_NPM_RELEASE_CHECK_COMMAND_TIMEOUT_MS",
+    "DEX_NPM_RELEASE_CHECK_COMMAND_TIMEOUT_MS",
     env,
     DEFAULT_RELEASE_CHECK_COMMAND_TIMEOUT_MS,
   );

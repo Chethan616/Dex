@@ -11,7 +11,7 @@
  * single-responsibility helpers in this directory.
  */
 
-import type { OpenClawPluginApi, PluginCommandContext } from "openclaw/plugin-sdk/plugin-entry";
+import type { DexPluginApi, PluginCommandContext } from "openclaw/plugin-sdk/plugin-entry";
 import { getFrameworkCommands } from "../../engine/commands/slash-commands-impl.js";
 import { resolveQQBotAccount } from "../config.js";
 import { buildFrameworkSlashContext } from "./framework-context-adapter.js";
@@ -32,7 +32,7 @@ function isExplicitQQBotC2cFrom(from: string | undefined | null): boolean {
   return /^qqbot:/iu.test(raw) && kind === "c2c" && targetId.length > 0;
 }
 
-export function registerQQBotFrameworkCommands(api: OpenClawPluginApi): void {
+export function registerQQBotFrameworkCommands(api: DexPluginApi): void {
   for (const cmd of getFrameworkCommands()) {
     api.registerCommand({
       name: cmd.name,

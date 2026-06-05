@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type {
   ManualExecSecretProviderConfig,
   PluginIntegrationSecretProviderConfig,
@@ -251,7 +251,7 @@ function materializeExecProviderConfig(
 function canExposeSecretProviderIntegrations(params: {
   record: PluginManifestRecord;
   normalizedConfig: NormalizedPluginsConfig;
-  config: OpenClawConfig;
+  config: DexConfig;
 }): boolean {
   if (params.record.origin !== "bundled" && params.record.origin !== "global") {
     return false;
@@ -316,7 +316,7 @@ export function resolveSecretProviderIntegrationConfig(params: {
   manifestRegistry: Pick<PluginManifestRegistry, "plugins">;
   providerAlias: string;
   providerConfig: PluginIntegrationSecretProviderConfig;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   env?: NodeJS.ProcessEnv;
 }): SecretProviderIntegrationResolution {
   const config = params.config ?? {};
@@ -364,7 +364,7 @@ export function resolveSecretProviderIntegrationConfig(params: {
 
 export function listSecretProviderIntegrationPresets(params: {
   manifestRegistry: Pick<PluginManifestRegistry, "plugins">;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   env?: NodeJS.ProcessEnv;
 }): SecretProviderIntegrationPreset[] {
   const presets: SecretProviderIntegrationPreset[] = [];

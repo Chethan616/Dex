@@ -35,7 +35,7 @@ export {
   resolveUserPath,
   truncateUtf16Safe,
 } from "./host/openclaw-runtime-io.js";
-export type { OpenClawConfig } from "./host/openclaw-runtime-config.js";
+export type { DexConfig } from "./host/openclaw-runtime-config.js";
 export type { SessionSendPolicyConfig } from "./host/openclaw-runtime-config.js";
 export type { SecretInput } from "./host/openclaw-runtime-config.js";
 export type {

@@ -20,7 +20,7 @@ Use canvas to show HTML on connected Mac/iOS/Android nodes.
 
 ## Config
 
-Active config: `$OPENCLAW_CONFIG_PATH` or `~/.openclaw/openclaw.json`.
+Active config: `$DEX_CONFIG_PATH` or `~/.dex/openclaw.json`.
 
 ```json
 {
@@ -30,7 +30,7 @@ Active config: `$OPENCLAW_CONFIG_PATH` or `~/.openclaw/openclaw.json`.
         "config": {
           "host": {
             "enabled": true,
-            "root": "~/.openclaw/canvas",
+            "root": "~/.dex/canvas",
             "liveReload": true
           }
         }

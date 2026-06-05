@@ -1,7 +1,7 @@
 // Path policy for file-transfer node.invoke calls.
 //
 // Default behavior is DENY. The operator must explicitly opt in by adding
-// a config block to ~/.openclaw/openclaw.json under
+// a config block to ~/.dex/openclaw.json under
 // `plugins.entries.file-transfer.config.nodes`. Without a matching block,
 // every file operation is rejected before reaching the node.
 //
@@ -349,7 +349,7 @@ export async function persistAllowAlways(input: {
   await mutateConfigFile({
     afterWrite: { mode: "none", reason: "file-transfer allow-always policy update" },
     mutate: (draft) => {
-      // Plugin config is intentionally plugin-owned; the root OpenClawConfig
+      // Plugin config is intentionally plugin-owned; the root DexConfig
       // type only guarantees `Record<string, unknown>` here.
       const root = draft as unknown as Record<string, unknown>;
       const plugins = (root.plugins ??= {}) as Record<string, unknown>;

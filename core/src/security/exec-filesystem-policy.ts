@@ -4,7 +4,7 @@ import { resolveSandboxToolPolicyForAgent } from "../agents/sandbox/tool-policy.
 import type { SandboxToolPolicy } from "../agents/sandbox/types.js";
 import { isToolAllowedByPolicies } from "../agents/tool-policy-match.js";
 import { resolveToolProfilePolicy } from "../agents/tool-policy.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { AgentToolsConfig, ExecToolConfig } from "../config/types.tools.js";
 
 const MUTATING_FS_TOOLS = ["write", "edit", "apply_patch"] as const;
@@ -20,7 +20,7 @@ export type ExecFilesystemPolicyDriftHit = {
 };
 
 function resolveToolPolicies(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentTools?: AgentToolsConfig;
   sandboxMode: "off" | "non-main" | "all";
   agentId?: string;
@@ -71,7 +71,7 @@ function isExecFilesystemConstrained(params: {
 }
 
 export function collectExecFilesystemPolicyDriftHits(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): ExecFilesystemPolicyDriftHit[] {
   const hits: ExecFilesystemPolicyDriftHit[] = [];
   const globalExec = cfg.tools?.exec;

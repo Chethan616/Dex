@@ -1,6 +1,6 @@
 import type { DispatchReplyWithBufferedBlockDispatcher } from "../auto-reply/reply/provider-dispatcher.types.js";
 import type { FinalizedMsgContext } from "../auto-reply/templating.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveInboundRouteEnvelopeBuilderWithRuntime } from "../plugin-sdk/inbound-envelope.js";
 import {
   normalizeOutboundReplyPayload,
@@ -36,7 +36,7 @@ type DirectDmRuntime = {
   channel: {
     routing: {
       resolveAgentRoute: (params: {
-        cfg: OpenClawConfig;
+        cfg: DexConfig;
         channel: string;
         accountId: string;
         peer: DirectDmRoutePeer;
@@ -52,7 +52,7 @@ type DirectDmRuntime = {
     };
     reply: {
       resolveEnvelopeFormatOptions: (
-        cfg: OpenClawConfig,
+        cfg: DexConfig,
       ) => ReturnType<typeof import("../auto-reply/envelope.js").resolveEnvelopeFormatOptions>;
       formatAgentEnvelope: typeof import("../auto-reply/envelope.js").formatAgentEnvelope;
       finalizeInboundContext: typeof import("../auto-reply/reply/inbound-context.js").finalizeInboundContext;
@@ -63,7 +63,7 @@ type DirectDmRuntime = {
 
 /** Route, envelope, record, and dispatch one direct-DM turn through the standard pipeline. */
 export async function dispatchInboundDirectDmWithRuntime(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   runtime: DirectDmRuntime;
   channel: string;
   channelLabel: string;

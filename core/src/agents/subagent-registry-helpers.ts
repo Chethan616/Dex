@@ -10,7 +10,7 @@ import {
   updateSessionStore,
   type SessionEntry,
 } from "../config/sessions.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { defaultRuntime } from "../runtime.js";
 import { withSubagentOutcomeTiming } from "./subagent-announce-output.js";
 import { getDeliveryAttemptCount, getDeliveryLastError } from "./subagent-delivery-state.js";
@@ -354,7 +354,7 @@ export function reconcileOrphanedRestoredRuns(params: {
   return changed;
 }
 
-export function resolveArchiveAfterMs(cfg?: OpenClawConfig) {
+export function resolveArchiveAfterMs(cfg?: DexConfig) {
   const config = cfg ?? getRuntimeConfig();
   const minutes =
     config.agents?.defaults?.subagents?.archiveAfterMinutes ??

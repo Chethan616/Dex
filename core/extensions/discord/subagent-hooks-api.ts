@@ -1,4 +1,4 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/channel-entry-contract";
+import type { DexPluginApi } from "openclaw/plugin-sdk/channel-entry-contract";
 
 type DiscordSubagentHooksModule = typeof import("./src/subagent-hooks.js");
 
@@ -11,7 +11,7 @@ function loadDiscordSubagentHooksModule() {
 
 // Subagent hooks live behind a dedicated barrel so the bundled entry can
 // register one stable hook wiring path while keeping the handler module lazy.
-export function registerDiscordSubagentHooks(api: OpenClawPluginApi): void {
+export function registerDiscordSubagentHooks(api: DexPluginApi): void {
   api.on("subagent_ended", async (event) => {
     const { handleDiscordSubagentEnded } = await loadDiscordSubagentHooksModule();
     handleDiscordSubagentEnded(event);

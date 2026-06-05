@@ -40,7 +40,7 @@ binary, and can index content beyond your workspace memory files.
 ```
 
 OpenClaw creates a self-contained QMD home under
-`~/.openclaw/agents/<agentId>/qmd/` and manages the sidecar lifecycle
+`~/.dex/agents/<agentId>/qmd/` and manages the sidecar lifecycle
 automatically -- collections, updates, and embedding runs are handled for you.
 It prefers current QMD collection and MCP query shapes, but still falls back to
 alternate collection pattern flags and older MCP tool names when needed.
@@ -163,7 +163,7 @@ Enable session indexing to recall earlier conversations:
 ```
 
 Transcripts are exported as sanitized User/Assistant turns into a dedicated QMD
-collection under `~/.openclaw/agents/<id>/qmd/sessions/`.
+collection under `~/.dex/agents/<id>/qmd/sessions/`.
 
 ## Search scope
 

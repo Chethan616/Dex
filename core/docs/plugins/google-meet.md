@@ -274,19 +274,19 @@ If `<gateway-host>` is a LAN IP and you are not using TLS, the node refuses the
 plaintext WebSocket unless you opt in for that trusted private network:
 
 ```bash
-OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1 \
+DEX_ALLOW_INSECURE_PRIVATE_WS=1 \
   openclaw node run --host <gateway-lan-ip> --port 18789 --display-name parallels-macos
 ```
 
 Use the same environment variable when installing the node as a LaunchAgent:
 
 ```bash
-OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1 \
+DEX_ALLOW_INSECURE_PRIVATE_WS=1 \
   openclaw node install --host <gateway-lan-ip> --port 18789 --display-name parallels-macos --force
 openclaw node restart
 ```
 
-`OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1` is process environment, not an
+`DEX_ALLOW_INSECURE_PRIVATE_WS=1` is process environment, not an
 `openclaw.json` setting. `openclaw node install` stores it in the LaunchAgent
 environment when it is present on the install command.
 
@@ -591,16 +591,16 @@ copy/paste flow with `--manual`.
 Examples:
 
 ```bash
-OPENCLAW_GOOGLE_MEET_CLIENT_ID="your-client-id" \
-OPENCLAW_GOOGLE_MEET_CLIENT_SECRET="your-client-secret" \
+DEX_GOOGLE_MEET_CLIENT_ID="your-client-id" \
+DEX_GOOGLE_MEET_CLIENT_SECRET="your-client-secret" \
 openclaw googlemeet auth login --json
 ```
 
 Use manual mode when the browser cannot reach the local callback:
 
 ```bash
-OPENCLAW_GOOGLE_MEET_CLIENT_ID="your-client-id" \
-OPENCLAW_GOOGLE_MEET_CLIENT_SECRET="your-client-secret" \
+DEX_GOOGLE_MEET_CLIENT_ID="your-client-id" \
+DEX_GOOGLE_MEET_CLIENT_SECRET="your-client-secret" \
 openclaw googlemeet auth login --json --manual
 ```
 
@@ -704,14 +704,14 @@ OpenClaw config.
 
 These environment variables are accepted as fallbacks:
 
-- `OPENCLAW_GOOGLE_MEET_CLIENT_ID` or `GOOGLE_MEET_CLIENT_ID`
-- `OPENCLAW_GOOGLE_MEET_CLIENT_SECRET` or `GOOGLE_MEET_CLIENT_SECRET`
-- `OPENCLAW_GOOGLE_MEET_REFRESH_TOKEN` or `GOOGLE_MEET_REFRESH_TOKEN`
-- `OPENCLAW_GOOGLE_MEET_ACCESS_TOKEN` or `GOOGLE_MEET_ACCESS_TOKEN`
-- `OPENCLAW_GOOGLE_MEET_ACCESS_TOKEN_EXPIRES_AT` or
+- `DEX_GOOGLE_MEET_CLIENT_ID` or `GOOGLE_MEET_CLIENT_ID`
+- `DEX_GOOGLE_MEET_CLIENT_SECRET` or `GOOGLE_MEET_CLIENT_SECRET`
+- `DEX_GOOGLE_MEET_REFRESH_TOKEN` or `GOOGLE_MEET_REFRESH_TOKEN`
+- `DEX_GOOGLE_MEET_ACCESS_TOKEN` or `GOOGLE_MEET_ACCESS_TOKEN`
+- `DEX_GOOGLE_MEET_ACCESS_TOKEN_EXPIRES_AT` or
   `GOOGLE_MEET_ACCESS_TOKEN_EXPIRES_AT`
-- `OPENCLAW_GOOGLE_MEET_DEFAULT_MEETING` or `GOOGLE_MEET_DEFAULT_MEETING`
-- `OPENCLAW_GOOGLE_MEET_PREVIEW_ACK` or `GOOGLE_MEET_PREVIEW_ACK`
+- `DEX_GOOGLE_MEET_DEFAULT_MEETING` or `GOOGLE_MEET_DEFAULT_MEETING`
+- `DEX_GOOGLE_MEET_PREVIEW_ACK` or `GOOGLE_MEET_PREVIEW_ACK`
 
 Resolve a Meet URL, code, or `spaces/{id}` through `spaces.get`:
 
@@ -868,8 +868,8 @@ meeting is useful:
 Run the guarded live smoke against a real retained meeting:
 
 ```bash
-OPENCLAW_LIVE_TEST=1 \
-OPENCLAW_GOOGLE_MEET_LIVE_MEETING=https://meet.google.com/abc-defg-hij \
+DEX_LIVE_TEST=1 \
+DEX_GOOGLE_MEET_LIVE_MEETING=https://meet.google.com/abc-defg-hij \
 pnpm test:live -- extensions/google-meet/google-meet.live.test.ts
 ```
 
@@ -883,16 +883,16 @@ openclaw googlemeet test-listen https://meet.google.com/abc-defg-hij --transport
 
 Live smoke environment:
 
-- `OPENCLAW_LIVE_TEST=1` enables guarded live tests.
-- `OPENCLAW_GOOGLE_MEET_LIVE_MEETING` points at a retained Meet URL, code, or
+- `DEX_LIVE_TEST=1` enables guarded live tests.
+- `DEX_GOOGLE_MEET_LIVE_MEETING` points at a retained Meet URL, code, or
   `spaces/{id}`.
-- `OPENCLAW_GOOGLE_MEET_CLIENT_ID` or `GOOGLE_MEET_CLIENT_ID` provides the OAuth
+- `DEX_GOOGLE_MEET_CLIENT_ID` or `GOOGLE_MEET_CLIENT_ID` provides the OAuth
   client id.
-- `OPENCLAW_GOOGLE_MEET_REFRESH_TOKEN` or `GOOGLE_MEET_REFRESH_TOKEN` provides
+- `DEX_GOOGLE_MEET_REFRESH_TOKEN` or `GOOGLE_MEET_REFRESH_TOKEN` provides
   the refresh token.
-- Optional: `OPENCLAW_GOOGLE_MEET_CLIENT_SECRET`,
-  `OPENCLAW_GOOGLE_MEET_ACCESS_TOKEN`, and
-  `OPENCLAW_GOOGLE_MEET_ACCESS_TOKEN_EXPIRES_AT` use the same fallback names
+- Optional: `DEX_GOOGLE_MEET_CLIENT_SECRET`,
+  `DEX_GOOGLE_MEET_ACCESS_TOKEN`, and
+  `DEX_GOOGLE_MEET_ACCESS_TOKEN_EXPIRES_AT` use the same fallback names
   without the `OPENCLAW_` prefix.
 
 The base artifact/attendance live smoke needs
@@ -1406,7 +1406,7 @@ On the node host, run:
 ```bash
 openclaw plugins enable google-meet
 openclaw plugins enable browser
-OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1 \
+DEX_ALLOW_INSECURE_PRIVATE_WS=1 \
   openclaw node run --host <gateway-lan-ip> --port 18789 --display-name parallels-macos
 ```
 
@@ -1436,7 +1436,7 @@ If `googlemeet setup` fails `chrome-node-connected` or the Gateway log reports
 token. For a LAN Gateway this usually means:
 
 ```bash
-OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1 \
+DEX_ALLOW_INSECURE_PRIVATE_WS=1 \
   openclaw node install \
   --host <gateway-lan-ip> \
   --port 18789 \

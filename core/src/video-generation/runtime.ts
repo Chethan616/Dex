@@ -1,6 +1,6 @@
 import type { FallbackAttempt } from "../agents/model-fallback.types.js";
 import { resolveAgentModelTimeoutMsValue } from "../config/model-input.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import {
   buildMediaGenerationNormalizationMetadata,
@@ -92,7 +92,7 @@ function validateProviderOptionsAgainstDeclaration(params: {
 }
 
 function buildNoVideoGenerationModelConfiguredMessage(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   deps: VideoGenerationRuntimeDeps,
 ): string {
   const listProviders = deps.listProviders ?? listVideoGenerationProviders;
@@ -105,7 +105,7 @@ function buildNoVideoGenerationModelConfiguredMessage(
 }
 
 export function listRuntimeVideoGenerationProviders(
-  params?: { config?: OpenClawConfig },
+  params?: { config?: DexConfig },
   deps: VideoGenerationRuntimeDeps = {},
 ) {
   return (deps.listProviders ?? listVideoGenerationProviders)(params?.config);

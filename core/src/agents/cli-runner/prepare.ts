@@ -86,9 +86,9 @@ const prepareDeps = {
   createMcpLoopbackServerConfig,
   resolveMcpLoopbackBearerToken,
   resolveMcpLoopbackScopedTools,
-  resolveOpenClawReferencePaths: async (
-    params: Parameters<typeof import("../docs-path.js").resolveOpenClawReferencePaths>[0],
-  ) => (await import("../docs-path.js")).resolveOpenClawReferencePaths(params),
+  resolveDexReferencePaths: async (
+    params: Parameters<typeof import("../docs-path.js").resolveDexReferencePaths>[0],
+  ) => (await import("../docs-path.js")).resolveDexReferencePaths(params),
   prepareClaudeCliSkillsPlugin,
   claudeCliSessionTranscriptHasContent,
   claudeCliSessionTranscriptHasOrphanedToolUse,
@@ -275,21 +275,21 @@ export async function prepareCliRunContext(
       : undefined,
     env: mcpLoopbackRuntime
       ? {
-          OPENCLAW_MCP_TOKEN: prepareDeps.resolveMcpLoopbackBearerToken(
+          DEX_MCP_TOKEN: prepareDeps.resolveMcpLoopbackBearerToken(
             mcpLoopbackRuntime,
             params.senderIsOwner === true,
           ),
-          OPENCLAW_MCP_AGENT_ID: sessionAgentId ?? "",
-          OPENCLAW_MCP_ACCOUNT_ID: params.agentAccountId ?? "",
-          OPENCLAW_MCP_SESSION_KEY: params.sessionKey ?? "",
-          OPENCLAW_MCP_MESSAGE_CHANNEL: params.messageChannel ?? params.messageProvider ?? "",
-          OPENCLAW_MCP_CURRENT_CHANNEL_ID: params.currentChannelId ?? "",
-          OPENCLAW_MCP_CURRENT_THREAD_TS: params.currentThreadTs ?? "",
-          OPENCLAW_MCP_CURRENT_MESSAGE_ID:
+          DEX_MCP_AGENT_ID: sessionAgentId ?? "",
+          DEX_MCP_ACCOUNT_ID: params.agentAccountId ?? "",
+          DEX_MCP_SESSION_KEY: params.sessionKey ?? "",
+          DEX_MCP_MESSAGE_CHANNEL: params.messageChannel ?? params.messageProvider ?? "",
+          DEX_MCP_CURRENT_CHANNEL_ID: params.currentChannelId ?? "",
+          DEX_MCP_CURRENT_THREAD_TS: params.currentThreadTs ?? "",
+          DEX_MCP_CURRENT_MESSAGE_ID:
             params.currentMessageId != null ? String(params.currentMessageId) : "",
-          OPENCLAW_MCP_CURRENT_INBOUND_AUDIO: params.currentInboundAudio === true ? "true" : "",
-          OPENCLAW_MCP_INBOUND_EVENT_KIND: params.currentInboundEventKind ?? "",
-          OPENCLAW_MCP_SOURCE_REPLY_DELIVERY_MODE: params.sourceReplyDeliveryMode ?? "",
+          DEX_MCP_CURRENT_INBOUND_AUDIO: params.currentInboundAudio === true ? "true" : "",
+          DEX_MCP_INBOUND_EVENT_KIND: params.currentInboundEventKind ?? "",
+          DEX_MCP_SOURCE_REPLY_DELIVERY_MODE: params.sourceReplyDeliveryMode ?? "",
         }
       : undefined,
     warn: (message) => cliBackendLog.warn(message),
@@ -437,7 +437,7 @@ export async function prepareCliRunContext(
     agentId: sessionAgentId,
     defaultAgentId,
   });
-  const openClawReferences = await prepareDeps.resolveOpenClawReferencePaths({
+  const openClawReferences = await prepareDeps.resolveDexReferencePaths({
     workspaceDir,
     argv1: process.argv[1],
     cwd,

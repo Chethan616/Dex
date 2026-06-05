@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../runtime-api.js";
+import type { DexConfig } from "../runtime-api.js";
 import { fetchGraphJson, resolveGraphToken } from "./graph.js";
 
 type GraphUserProfile = {
@@ -11,7 +11,7 @@ type GraphUserProfile = {
 };
 
 type GetMemberInfoMSTeamsParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   userId: string;
 };
 

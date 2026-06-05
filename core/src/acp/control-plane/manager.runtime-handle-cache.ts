@@ -8,7 +8,7 @@ import type {
   AcpRuntimeStatus,
 } from "@dexagent/acp-core/runtime/types";
 import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { logVerbose } from "../../globals.js";
 import type { ActiveTurnState, SessionAcpMeta } from "./manager.types.js";
 import { normalizeActorKey, resolveRuntimeIdleTtlMs } from "./manager.utils.js";
@@ -41,7 +41,7 @@ export class ManagerRuntimeHandleCache {
     this.runtimeCache.clear(normalizeActorKey(sessionKey));
   }
 
-  getObservabilitySnapshot(cfg: OpenClawConfig) {
+  getObservabilitySnapshot(cfg: DexConfig) {
     return {
       activeSessions: this.runtimeCache.size(),
       idleTtlMs: resolveRuntimeIdleTtlMs(cfg),
@@ -78,7 +78,7 @@ export class ManagerRuntimeHandleCache {
   }
 
   async evictIdle(params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     actorQueue: SessionActorQueue;
     activeTurnBySession: Map<string, ActiveTurnState>;
   }): Promise<void> {

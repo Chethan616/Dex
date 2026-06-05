@@ -83,8 +83,8 @@ jobs:
       - name: install-cli.sh in Docker
         run: |
           timeout --kill-after=30s 20m docker run --rm \
-            -e OPENCLAW_NO_ONBOARD=1 \
-            -e OPENCLAW_NO_PROMPT=1 \
+            -e DEX_NO_ONBOARD=1 \
+            -e DEX_NO_PROMPT=1 \
             -v "$PWD/scripts/install-cli.sh:/tmp/install-cli.sh:ro" \
             node:24-bookworm-slim \
             bash -lc 'apt-get update -y && apt-get install -y curl && bash /tmp/install-cli.sh --prefix /tmp/openclaw --no-onboard --version latest && /tmp/openclaw/bin/openclaw --version'
@@ -105,8 +105,8 @@ jobs:
 
       - name: install.sh on macOS
         env:
-          OPENCLAW_NO_ONBOARD: "1"
-          OPENCLAW_NO_PROMPT: "1"
+          DEX_NO_ONBOARD: "1"
+          DEX_NO_PROMPT: "1"
         run: |
           bash scripts/install.sh --no-onboard --no-prompt --version latest
           openclaw --version
@@ -133,28 +133,28 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.sync_website)
     runs-on: ubuntu-24.04
     env:
-      OPENCLAW_GH_TOKEN: ${{ secrets.OPENCLAW_GH_TOKEN }}
+      DEX_GH_TOKEN: ${{ secrets.DEX_GH_TOKEN }}
     steps:
       - name: Skip website sync without token
-        if: env.OPENCLAW_GH_TOKEN == ''
-        run: echo "OPENCLAW_GH_TOKEN is not configured; installer verification passed, skipping website sync."
+        if: env.DEX_GH_TOKEN == ''
+        run: echo "DEX_GH_TOKEN is not configured; installer verification passed, skipping website sync."
 
       - name: Checkout OpenClaw
-        if: env.OPENCLAW_GH_TOKEN != ''
+        if: env.DEX_GH_TOKEN != ''
         uses: actions/checkout@v6
         with:
           path: openclaw
 
       - name: Checkout openclaw.ai
-        if: env.OPENCLAW_GH_TOKEN != ''
+        if: env.DEX_GH_TOKEN != ''
         uses: actions/checkout@v6
         with:
           repository: openclaw/openclaw.ai
-          token: ${{ env.OPENCLAW_GH_TOKEN }}
+          token: ${{ env.DEX_GH_TOKEN }}
           path: openclaw.ai
 
       - name: Sync installer scripts
-        if: env.OPENCLAW_GH_TOKEN != ''
+        if: env.DEX_GH_TOKEN != ''
         run: |
           cp openclaw/scripts/install.sh openclaw.ai/public/install.sh
           cp openclaw/scripts/install-cli.sh openclaw.ai/public/install-cli.sh
@@ -163,7 +163,7 @@ jobs:
           chmod +x openclaw.ai/public/install.sh openclaw.ai/public/install-cli.sh
 
       - name: Check for changes
-        if: env.OPENCLAW_GH_TOKEN != ''
+        if: env.DEX_GH_TOKEN != ''
         id: changes
         working-directory: openclaw.ai
         run: |

@@ -3,7 +3,7 @@ import {
   listNativeCommandSpecsForConfig,
   listSkillCommandsForAgents,
 } from "openclaw/plugin-sdk/command-auth-native";
-import type { OpenClawConfig, ReplyToMode } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig, ReplyToMode } from "openclaw/plugin-sdk/config-contracts";
 import { createConnectedChannelStatusPatch } from "openclaw/plugin-sdk/gateway-runtime";
 import {
   resolveNativeCommandsEnabled,
@@ -66,7 +66,7 @@ import type { DiscordMonitorStatusSink } from "./status.js";
 export type MonitorDiscordOpts = {
   token?: string;
   accountId?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   runtime?: RuntimeEnv;
   channelRuntime?: ChannelRuntimeSurface;
   abortSignal?: AbortSignal;

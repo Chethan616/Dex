@@ -1,5 +1,5 @@
 import { asNullableRecord } from "@dexagent/normalization-core/record-coerce";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 
 export type SkillWorkshopConfig = {
   autonomous: {
@@ -33,7 +33,7 @@ function readApprovalPolicy(value: unknown, fallback: SkillWorkshopConfig["appro
   return value === "auto" ? "auto" : fallback;
 }
 
-export function resolveSkillWorkshopConfig(config?: OpenClawConfig): SkillWorkshopConfig {
+export function resolveSkillWorkshopConfig(config?: DexConfig): SkillWorkshopConfig {
   const raw = asNullableRecord(config?.skills?.workshop) ?? {};
   const autonomous = asNullableRecord(raw.autonomous) ?? {};
   return {

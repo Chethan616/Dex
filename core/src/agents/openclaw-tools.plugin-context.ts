@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { normalizeDeliveryContext } from "../utils/delivery-context.js";
 import type { GatewayMessageChannel } from "../utils/message-channel.js";
 import { resolveAgentWorkspaceDir, resolveSessionAgentIds } from "./agent-scope.js";
@@ -6,7 +6,7 @@ import { modelKey } from "./model-ref-shared.js";
 import type { ToolFsPolicy } from "./tool-fs-policy.js";
 import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
-export type OpenClawPluginToolOptions = {
+export type DexPluginToolOptions = {
   agentSessionKey?: string;
   agentChannel?: GatewayMessageChannel;
   agentAccountId?: string;
@@ -14,7 +14,7 @@ export type OpenClawPluginToolOptions = {
   agentThreadId?: string | number;
   agentDir?: string;
   workspaceDir?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   fsPolicy?: ToolFsPolicy;
   modelProvider?: string;
   modelId?: string;
@@ -28,10 +28,10 @@ export type OpenClawPluginToolOptions = {
 };
 
 export function resolveOpenClawPluginToolInputs(params: {
-  options?: OpenClawPluginToolOptions;
-  resolvedConfig?: OpenClawConfig;
-  runtimeConfig?: OpenClawConfig;
-  getRuntimeConfig?: () => OpenClawConfig | undefined;
+  options?: DexPluginToolOptions;
+  resolvedConfig?: DexConfig;
+  runtimeConfig?: DexConfig;
+  getRuntimeConfig?: () => DexConfig | undefined;
 }) {
   const { options, resolvedConfig, runtimeConfig, getRuntimeConfig } = params;
   const { sessionAgentId } = resolveSessionAgentIds({

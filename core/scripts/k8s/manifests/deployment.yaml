@@ -63,15 +63,15 @@ spec:
           env:
             - name: HOME
               value: /home/node
-            - name: OPENCLAW_CONFIG_DIR
+            - name: DEX_CONFIG_DIR
               value: /home/node/.openclaw
             - name: NODE_ENV
               value: production
-            - name: OPENCLAW_GATEWAY_TOKEN
+            - name: DEX_GATEWAY_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: openclaw-secrets
-                  key: OPENCLAW_GATEWAY_TOKEN
+                  key: DEX_GATEWAY_TOKEN
             - name: ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:

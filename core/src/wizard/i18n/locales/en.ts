@@ -214,7 +214,7 @@ export const en = {
       gatewayPasswordStoredMessage: "Where is this gateway password stored?",
       gatewayTokenStoredMessage: "Where is this gateway token stored?",
       insecureRemoteUrl:
-        "Use wss:// for remote hosts, or ws://127.0.0.1/localhost via SSH tunnel. Break-glass: OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1 for trusted private networks.",
+        "Use wss:// for remote hosts, or ws://127.0.0.1/localhost via SSH tunnel. Break-glass: DEX_ALLOW_INSECURE_PRIVATE_WS=1 for trusted private networks.",
       directDefaultsTls: "Direct remote access defaults to TLS.",
       loopbackSshHint:
         "If your gateway is loopback-only, choose SSH tunnel and keep ws://127.0.0.1:18789.",
@@ -839,10 +839,10 @@ export const en = {
       channelJoinPrompt: "Channel to join",
       clientIdPrompt: "Twitch Client ID",
       clientSecretPrompt: "Twitch Client Secret (for token refresh)",
-      envPrompt: "Twitch env var OPENCLAW_TWITCH_ACCESS_TOKEN detected. Use env token?",
+      envPrompt: "Twitch env var DEX_TWITCH_ACCESS_TOKEN detected. Use env token?",
       helpCopyToken: "3. Copy the token (starts with 'oauth:') and Client ID",
       helpCreateApp: "1. Create a Twitch application at https://dev.twitch.tv/console",
-      helpEnvVars: "Env vars supported: OPENCLAW_TWITCH_ACCESS_TOKEN",
+      helpEnvVars: "Env vars supported: DEX_TWITCH_ACCESS_TOKEN",
       helpGenerateToken: "2. Generate a token with scopes: chat:read and chat:write",
       helpRequiresBot: "Twitch requires a bot account with OAuth token.",
       helpTokenTools: "   Use https://twitchtokengenerator.com/ or https://twitchapps.com/tmi/",
@@ -951,7 +951,7 @@ export const en = {
       gatewayTokenGenerate: "Generate token: {command}",
       gatewayTokenShared: "Gateway token: shared auth for the Gateway + Control UI.",
       gatewayTokenStored:
-        "Stored in: $OPENCLAW_CONFIG_PATH (default: ~/.openclaw/openclaw.json) under gateway.auth.token, or in OPENCLAW_GATEWAY_TOKEN.",
+        "Stored in: $DEX_CONFIG_PATH (default: ~/.dex/openclaw.json) under gateway.auth.token, or in DEX_GATEWAY_TOKEN.",
       gatewayTokenView: "View token: {command}",
       gatewayWsUrl: "Gateway WS: {url}",
       hatchLater: "Hatch later",

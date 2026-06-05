@@ -2,7 +2,7 @@ import type {
   ChannelApprovalCapability,
   ChannelApprovalNativeAdapter,
 } from "../channels/plugins/types.adapters.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import {
   CHANNEL_APPROVAL_NATIVE_RUNTIME_CONTEXT_CAPABILITY,
@@ -306,7 +306,7 @@ export function createChannelApprovalNativeRuntimeAdapter<
 type ChannelApprovalHandlerRuntimeSpec<TRequest extends ApprovalRequest> = {
   label: string;
   clientDisplayName: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   gatewayUrl?: string;
   eventKinds?: readonly ExecApprovalChannelRuntimeEventKind[];
   channel?: string;
@@ -435,7 +435,7 @@ export async function createChannelApprovalHandlerFromCapability(params: {
   clientDisplayName: string;
   channel: string;
   channelLabel: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   gatewayUrl?: string;
   context?: unknown;

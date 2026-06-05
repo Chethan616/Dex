@@ -24,12 +24,12 @@ import {
   buildCopilotIdeHeaders,
 } from "../agents/copilot-dynamic-headers.js";
 import { resolveEnvApiKey } from "../agents/model-auth-env.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";
 import { loadJsonFile, saveJsonFile } from "../infra/json-file.js";
 import { resolveProviderEndpoint } from "./provider-model-shared.js";
 
-export type { OpenClawConfig } from "../config/config.js";
+export type { DexConfig } from "../config/config.js";
 export type { SecretInput } from "../config/types.secrets.js";
 export type { SecretInputMode } from "../plugins/provider-auth-types.js";
 export type { ProviderAuthResult } from "../plugins/types.js";
@@ -328,7 +328,7 @@ export function isProviderApiKeyConfigured(params: {
 
 export function listUsableProviderAuthProfileIds(params: {
   provider: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   agentDir?: string;
   allowKeychainPrompt?: boolean;
   includeExternalCliAuth?: boolean;
@@ -343,7 +343,7 @@ export function listUsableProviderAuthProfileIds(params: {
 
 export function isProviderAuthProfileConfigured(params: {
   provider: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   agentDir?: string;
   allowKeychainPrompt?: boolean;
   includeExternalCliAuth?: boolean;
@@ -353,7 +353,7 @@ export function isProviderAuthProfileConfigured(params: {
 
 export async function resolveProviderAuthProfileApiKey(params: {
   provider: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   agentDir?: string;
   allowKeychainPrompt?: boolean;
   includeExternalCliAuth?: boolean;
@@ -378,7 +378,7 @@ export async function resolveProviderAuthProfileApiKey(params: {
 
 function resolveUsableProviderAuthProfiles(params: {
   provider: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   agentDir?: string;
   allowKeychainPrompt?: boolean;
   includeExternalCliAuth?: boolean;

@@ -25,8 +25,8 @@ local Tailscale daemon is stopped or logged out.
 Set `gateway.auth.mode` to control the handshake:
 
 - `none` (private ingress only)
-- `token` (default when `OPENCLAW_GATEWAY_TOKEN` is set)
-- `password` (shared secret via `OPENCLAW_GATEWAY_PASSWORD` or config)
+- `token` (default when `DEX_GATEWAY_TOKEN` is set)
+- `password` (shared secret via `DEX_GATEWAY_PASSWORD` or config)
 - `trusted-proxy` (identity-aware reverse proxy; see [Trusted Proxy Auth](/gateway/trusted-proxy-auth))
 
 When `tailscale.mode = "serve"` and `gateway.auth.allowTailscale` is `true`,
@@ -120,7 +120,7 @@ Loopback (`http://127.0.0.1:18789`) will **not** work in this mode.
 }
 ```
 
-Prefer `OPENCLAW_GATEWAY_PASSWORD` over committing a password to disk.
+Prefer `DEX_GATEWAY_PASSWORD` over committing a password to disk.
 
 ## CLI examples
 

@@ -15,7 +15,7 @@ type RelinkManagedNpmRootResult = {
   skipped: number;
 };
 
-export type OpenClawPeerLinkAuditIssue = {
+export type DexPeerLinkAuditIssue = {
   packageName: string;
   packageDir: string;
   reason: string;
@@ -24,10 +24,10 @@ export type OpenClawPeerLinkAuditIssue = {
 type AuditManagedNpmRootResult = {
   checked: number;
   broken: number;
-  issues: OpenClawPeerLinkAuditIssue[];
+  issues: DexPeerLinkAuditIssue[];
 };
 
-type OpenClawPeerLinkResult = "linked" | "skipped" | "unchanged";
+type DexPeerLinkResult = "linked" | "skipped" | "unchanged";
 
 function readStringRecord(value: unknown): Record<string, string> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -116,7 +116,7 @@ async function auditOpenClawPeerDependency(params: {
   packageDir: string;
   npmRoot?: string;
   packageName?: string;
-}): Promise<OpenClawPeerLinkAuditIssue | null> {
+}): Promise<DexPeerLinkAuditIssue | null> {
   const packageName =
     params.packageName ??
     (params.npmRoot
@@ -169,7 +169,7 @@ async function auditOpenClawPeerDependency(params: {
 export async function auditOpenClawPeerDependencyLink(params: {
   packageDir: string;
   packageName?: string;
-}): Promise<OpenClawPeerLinkAuditIssue | null> {
+}): Promise<DexPeerLinkAuditIssue | null> {
   const packageName = params.packageName ?? path.basename(params.packageDir);
   const hostRoot = resolveOpenClawPackageRootSync({
     argv1: process.argv[1],
@@ -226,7 +226,7 @@ async function linkOpenClawPeerDependency(params: {
   installedDir: string;
   peerName: string;
   logger: PluginPeerLinkLogger;
-}): Promise<OpenClawPeerLinkResult> {
+}): Promise<DexPeerLinkResult> {
   const nodeModulesDir = await ensureRealNodeModulesDir({
     installedDir: params.installedDir,
     logger: params.logger,
@@ -375,7 +375,7 @@ export async function auditOpenClawPeerDependenciesInManagedNpmRoot(params: {
   }
 
   let checked = 0;
-  const issues: OpenClawPeerLinkAuditIssue[] = [];
+  const issues: DexPeerLinkAuditIssue[] = [];
   for (const packageDir of await listManagedNpmRootPackageDirs(params.npmRoot)) {
     const peerDependencies = await readPackagePeerDependencies(packageDir);
     if (!Object.hasOwn(peerDependencies, "openclaw")) {

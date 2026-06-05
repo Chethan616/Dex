@@ -5,7 +5,7 @@ import {
   supportsAutomaticThreadBindingSpawn,
 } from "../../channels/thread-bindings-policy.js";
 import { getRuntimeConfig } from "../../config/config.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { callGateway } from "../../gateway/call.js";
 import { resolveSnakeCaseParamKey } from "../../param-key.js";
 import { createLazyImportLoader } from "../../shared/lazy-promise.js";
@@ -130,7 +130,7 @@ function hasAnyThreadAvailability(availability: SessionsSpawnThreadAvailability)
 }
 
 function resolveSessionsSpawnThreadAvailability(opts?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   agentChannel?: GatewayMessageChannel;
   agentAccountId?: string;
 }): SessionsSpawnThreadAvailability {
@@ -235,7 +235,7 @@ function createSessionsSpawnToolSchema(params: {
   return Type.Object(schema);
 }
 
-function resolveAcpUnavailableMessage(opts?: { sandboxed?: boolean; config?: OpenClawConfig }) {
+function resolveAcpUnavailableMessage(opts?: { sandboxed?: boolean; config?: DexConfig }) {
   if (opts?.sandboxed === true) {
     return 'runtime="acp" is unavailable from sandboxed sessions because ACP sessions run on the host. Use runtime="subagent".';
   }
@@ -255,7 +255,7 @@ export function createSessionsSpawnTool(
     agentTo?: string;
     agentThreadId?: string | number;
     sandboxed?: boolean;
-    config?: OpenClawConfig;
+    config?: DexConfig;
     /** Explicit agent ID override for cron/hook sessions where session key parsing may not work. */
     requesterAgentIdOverride?: string;
   } & SpawnedToolContext,

@@ -10,11 +10,11 @@ export type SkillsHomeEnvSnapshot = {
 export function setMockSkillsHomeEnv(fakeHome: string): SkillsHomeEnvSnapshot {
   const snapshot: SkillsHomeEnvSnapshot = {
     previousHome: process.env.HOME,
-    previousOpenClawHome: process.env.OPENCLAW_HOME,
+    previousOpenClawHome: process.env.DEX_HOME,
     previousUserProfile: process.env.USERPROFILE,
   };
   process.env.HOME = fakeHome;
-  delete process.env.OPENCLAW_HOME;
+  delete process.env.DEX_HOME;
   delete process.env.USERPROFILE;
   vi.spyOn(os, "homedir").mockReturnValue(fakeHome);
   return snapshot;
@@ -31,9 +31,9 @@ export async function restoreMockSkillsHomeEnv(
     process.env.HOME = snapshot.previousHome;
   }
   if (snapshot.previousOpenClawHome === undefined) {
-    delete process.env.OPENCLAW_HOME;
+    delete process.env.DEX_HOME;
   } else {
-    process.env.OPENCLAW_HOME = snapshot.previousOpenClawHome;
+    process.env.DEX_HOME = snapshot.previousOpenClawHome;
   }
   if (snapshot.previousUserProfile === undefined) {
     delete process.env.USERPROFILE;

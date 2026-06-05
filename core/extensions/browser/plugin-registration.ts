@@ -1,11 +1,11 @@
 import type {
   AnyAgentTool,
-  OpenClawPluginApi,
-  OpenClawPluginNodeHostCommand,
-  OpenClawPluginSecurityAuditCollector,
-  OpenClawPluginService,
-  OpenClawPluginToolContext,
-  OpenClawPluginToolFactory,
+  DexPluginApi,
+  DexPluginNodeHostCommand,
+  DexPluginSecurityAuditCollector,
+  DexPluginService,
+  DexPluginToolContext,
+  DexPluginToolFactory,
 } from "openclaw/plugin-sdk/plugin-entry";
 import {
   BROWSER_REQUEST_GATEWAY_METHOD,
@@ -13,7 +13,7 @@ import {
 } from "./src/browser-gateway-contract.js";
 import { BrowserToolSchema } from "./src/browser-tool.schema.js";
 
-const EAGER_BROWSER_CONTROL_SERVICE_ENV = "OPENCLAW_EAGER_BROWSER_CONTROL_SERVER";
+const EAGER_BROWSER_CONTROL_SERVICE_ENV = "DEX_EAGER_BROWSER_CONTROL_SERVER";
 
 let browserRegistrationRuntimeModulePromise: Promise<
   typeof import("./register.runtime.js")
@@ -94,7 +94,7 @@ function createLazyBrowserTool(opts?: {
   };
 }
 
-function createBrowserToolOptions(ctx: OpenClawPluginToolContext): {
+function createBrowserToolOptions(ctx: DexPluginToolContext): {
   sandboxBridgeUrl?: string;
   allowHostControl?: boolean;
   agentSessionKey?: string;
@@ -142,7 +142,7 @@ function createBrowserToolOptions(ctx: OpenClawPluginToolContext): {
 
 export const browserPluginReload = { restartPrefixes: ["browser"] };
 
-export const browserPluginNodeHostCommands: OpenClawPluginNodeHostCommand[] = [
+export const browserPluginNodeHostCommands: DexPluginNodeHostCommand[] = [
   {
     command: "browser.proxy",
     cap: "browser",
@@ -153,15 +153,15 @@ export const browserPluginNodeHostCommands: OpenClawPluginNodeHostCommand[] = [
   },
 ];
 
-export const browserSecurityAuditCollectors: OpenClawPluginSecurityAuditCollector[] = [
+export const browserSecurityAuditCollectors: DexPluginSecurityAuditCollector[] = [
   async (ctx) => {
     const { collectBrowserSecurityAuditFindings } = await loadBrowserRegistrationRuntimeModule();
     return collectBrowserSecurityAuditFindings(ctx);
   },
 ];
 
-function createLazyBrowserPluginService(): OpenClawPluginService {
-  let service: OpenClawPluginService | null = null;
+function createLazyBrowserPluginService(): DexPluginService {
+  let service: DexPluginService | null = null;
   const loadService = async () => {
     if (!service) {
       const { createBrowserPluginService } = await loadBrowserRegistrationRuntimeModule();
@@ -189,9 +189,9 @@ function createLazyBrowserPluginService(): OpenClawPluginService {
   };
 }
 
-export function registerBrowserPlugin(api: OpenClawPluginApi) {
-  api.registerTool(((ctx: OpenClawPluginToolContext) =>
-    createLazyBrowserTool(createBrowserToolOptions(ctx))) as OpenClawPluginToolFactory);
+export function registerBrowserPlugin(api: DexPluginApi) {
+  api.registerTool(((ctx: DexPluginToolContext) =>
+    createLazyBrowserTool(createBrowserToolOptions(ctx))) as DexPluginToolFactory);
   api.registerCli(
     async ({ program }) => {
       const { registerBrowserCli } = await import("./src/cli/browser-cli.js");

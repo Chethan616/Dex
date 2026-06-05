@@ -2,7 +2,7 @@ import type { App } from "@slack/bolt";
 import { resolveDefaultAgentId } from "openclaw/plugin-sdk/agent-runtime";
 import { formatAllowlistMatchMeta } from "openclaw/plugin-sdk/allow-from";
 import type {
-  OpenClawConfig,
+  DexConfig,
   SlackReactionNotificationMode,
 } from "openclaw/plugin-sdk/config-contracts";
 import type { SessionScope } from "openclaw/plugin-sdk/config-contracts";
@@ -91,7 +91,7 @@ export function parseSlackAssistantThreadMetadata(value: unknown) {
 }
 
 export type SlackMonitorContext = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
   botToken: string;
   app: App;
@@ -178,7 +178,7 @@ const SLACK_ASSISTANT_CONTEXT_TTL_MS = 24 * 60 * 60 * 1000;
 const SLACK_ASSISTANT_CONTEXT_CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
 
 export function createSlackMonitorContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
   botToken: string;
   app: App;

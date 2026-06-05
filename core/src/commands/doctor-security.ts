@@ -4,7 +4,7 @@ import { resolveDmAllowAuditState } from "../channels/message-access/dm-allow-st
 import { listReadOnlyChannelPluginsForConfig } from "../channels/plugins/read-only.js";
 import type { ChannelId } from "../channels/plugins/types.public.js";
 import { formatCliCommand } from "../cli/command-format.js";
-import type { OpenClawConfig, GatewayBindMode } from "../config/config.js";
+import type { DexConfig, GatewayBindMode } from "../config/config.js";
 import type { AgentConfig } from "../config/types.agents.js";
 import { hasConfiguredSecretInput, resolveSecretInputRef } from "../config/types.secrets.js";
 import { resolveGatewayAuthTokenSourceConflict } from "../gateway/auth-token-source-conflict.js";
@@ -23,7 +23,7 @@ import { discoverConfigSecretTargets } from "../secrets/target-registry.js";
 import { collectExecFilesystemPolicyDriftHits } from "../security/exec-filesystem-policy.js";
 import { resolveDefaultChannelAccountContext } from "./channel-account-context.js";
 
-function collectImplicitHeartbeatDirectPolicyWarnings(cfg: OpenClawConfig): string[] {
+function collectImplicitHeartbeatDirectPolicyWarnings(cfg: DexConfig): string[] {
   const warnings: string[] = [];
 
   const maybeWarn = (params: {
@@ -86,7 +86,7 @@ function execAskRank(value: ExecAsk): number {
   throw new Error("Unsupported exec ask value");
 }
 
-function collectExecPolicyConflictWarnings(cfg: OpenClawConfig): string[] {
+function collectExecPolicyConflictWarnings(cfg: DexConfig): string[] {
   const warnings: string[] = [];
   const approvals = loadExecApprovals();
   const defaultRequestedSecuritySource = "OpenClaw default (full)";
@@ -173,12 +173,12 @@ function collectExecPolicyConflictWarnings(cfg: OpenClawConfig): string[] {
   return warnings;
 }
 
-function collectDurableExecApprovalWarnings(cfg: OpenClawConfig): string[] {
+function collectDurableExecApprovalWarnings(cfg: DexConfig): string[] {
   void cfg;
   return [];
 }
 
-function collectExecFilesystemPolicyWarnings(cfg: OpenClawConfig): string[] {
+function collectExecFilesystemPolicyWarnings(cfg: DexConfig): string[] {
   return collectExecFilesystemPolicyDriftHits(cfg).map((hit) =>
     [
       `- ${hit.scopeLabel}: filesystem write tools are disabled, but exec is still available.`,
@@ -190,7 +190,7 @@ function collectExecFilesystemPolicyWarnings(cfg: OpenClawConfig): string[] {
   );
 }
 
-function collectPlaintextConfigSecretWarnings(cfg: OpenClawConfig): string[] {
+function collectPlaintextConfigSecretWarnings(cfg: DexConfig): string[] {
   const plaintextPaths: string[] = [];
   const defaults = cfg.secrets?.defaults;
 
@@ -236,7 +236,7 @@ function collectPlaintextConfigSecretWarnings(cfg: OpenClawConfig): string[] {
 }
 
 export async function collectSecurityWarnings(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<string[]> {
   const warnings: string[] = [];
@@ -244,7 +244,7 @@ export async function collectSecurityWarnings(
   if (cfg.approvals?.exec?.enabled === false) {
     warnings.push(
       "- Note: approvals.exec.enabled=false disables approval forwarding only.",
-      "  Host exec gating still comes from ~/.openclaw/exec-approvals.json.",
+      "  Host exec gating still comes from ~/.dex/exec-approvals.json.",
       `  Check local policy with: ${formatCliCommand("openclaw approvals get --gateway")}`,
     );
   }
@@ -438,7 +438,7 @@ export async function collectSecurityWarnings(
   return warnings;
 }
 
-export async function noteSecurityWarnings(cfg: OpenClawConfig) {
+export async function noteSecurityWarnings(cfg: DexConfig) {
   const warnings = await collectSecurityWarnings(cfg);
   const auditHint = `- Run: ${formatCliCommand("openclaw security audit --deep")}`;
 

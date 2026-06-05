@@ -1,4 +1,4 @@
-import type { ChatType, OpenClawConfig } from "./runtime-api.js";
+import type { ChatType, DexConfig } from "./runtime-api.js";
 
 export function mapMattermostChannelTypeToChatType(channelType?: string | null): ChatType {
   const normalized = channelType?.trim().toUpperCase();
@@ -26,7 +26,7 @@ export function resolveMattermostTrustedChatKind(params: {
 }
 
 export type MattermostRequireMentionResolverInput = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: "mattermost";
   accountId: string;
   groupId: string;
@@ -35,7 +35,7 @@ export type MattermostRequireMentionResolverInput = {
 
 export type MattermostMentionGateInput = {
   kind: ChatType;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
   channelId: string;
   threadRootId?: string;

@@ -215,14 +215,14 @@ export async function startGateway({
           XDG_CONFIG_HOME: path.join(tempRoot, "xdg-config"),
           XDG_DATA_HOME: path.join(tempRoot, "xdg-data"),
           XDG_CACHE_HOME: path.join(tempRoot, "xdg-cache"),
-          OPENCLAW_CONFIG_PATH: configPath,
-          OPENCLAW_STATE_DIR: path.join(tempRoot, "state"),
-          OPENCLAW_GATEWAY_TOKEN: token,
-          OPENCLAW_SKIP_BROWSER_CONTROL_SERVER: "1",
-          OPENCLAW_SKIP_GMAIL_WATCHER: "1",
-          OPENCLAW_SKIP_CANVAS_HOST: "1",
-          OPENCLAW_NO_RESPAWN: "1",
-          OPENCLAW_TEST_FAST: "1",
+          DEX_CONFIG_PATH: configPath,
+          DEX_STATE_DIR: path.join(tempRoot, "state"),
+          DEX_GATEWAY_TOKEN: token,
+          DEX_SKIP_BROWSER_CONTROL_SERVER: "1",
+          DEX_SKIP_GMAIL_WATCHER: "1",
+          DEX_SKIP_CANVAS_HOST: "1",
+          DEX_NO_RESPAWN: "1",
+          DEX_TEST_FAST: "1",
         },
         stdio: ["ignore", stdout.fd, stderr.fd],
       },
@@ -408,7 +408,7 @@ async function writeSummary({
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const repoRoot = path.resolve(args.repoRoot ?? process.env.OPENCLAW_REPO_ROOT ?? process.cwd());
+  const repoRoot = path.resolve(args.repoRoot ?? process.env.DEX_REPO_ROOT ?? process.cwd());
   const outputDir = path.resolve(args.outputDir);
   await fs.mkdir(outputDir, { recursive: true });
   const tempRoot = await fs.mkdtemp(path.join(outputDir, "..", ".rpc-rtt-"));

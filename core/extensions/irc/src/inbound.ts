@@ -5,7 +5,7 @@ import {
   defineStableChannelIngressIdentity,
 } from "openclaw/plugin-sdk/channel-ingress-runtime";
 import { createChannelPairingController } from "openclaw/plugin-sdk/channel-pairing";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { isDangerousNameMatchingEnabled } from "openclaw/plugin-sdk/dangerous-name-runtime";
 import { resolveInboundRouteEnvelopeBuilderWithRuntime } from "openclaw/plugin-sdk/inbound-envelope";
 import {
@@ -216,11 +216,11 @@ export async function handleIrcInbound(params: {
   });
 
   const allowTextCommands = core.channel.commands.shouldHandleTextCommands({
-    cfg: config as OpenClawConfig,
+    cfg: config as DexConfig,
     surface: CHANNEL_ID,
   });
-  const hasControlCommand = core.channel.text.hasControlCommand(rawBody, config as OpenClawConfig);
-  const mentionRegexes = core.channel.mentions.buildMentionRegexes(config as OpenClawConfig);
+  const hasControlCommand = core.channel.text.hasControlCommand(rawBody, config as DexConfig);
+  const mentionRegexes = core.channel.mentions.buildMentionRegexes(config as DexConfig);
   const mentionNick = connectedNick?.trim() || account.nick;
   const explicitMentionRegex = mentionNick
     ? new RegExp(`\\b${escapeIrcRegexLiteral(mentionNick)}\\b[:,]?`, "i")
@@ -248,7 +248,7 @@ export async function handleIrcInbound(params: {
     channelId: CHANNEL_ID,
     accountId: account.accountId,
     identity: ircIngressIdentity,
-    cfg: config as OpenClawConfig,
+    cfg: config as DexConfig,
     readStoreAllowFrom: async () => await pairing.readAllowFromStore(),
   }).message({
     subject: createIrcIngressSubject(message),
@@ -351,7 +351,7 @@ export async function handleIrcInbound(params: {
       : `#${message.target}`;
   const peerId = message.isGroup ? channelTarget : message.senderNick;
   const { route, buildEnvelope } = resolveInboundRouteEnvelopeBuilderWithRuntime({
-    cfg: config as OpenClawConfig,
+    cfg: config as DexConfig,
     channel: CHANNEL_ID,
     accountId: account.accountId,
     peer: {
@@ -397,7 +397,7 @@ export async function handleIrcInbound(params: {
   });
 
   await core.channel.inbound.dispatchReply({
-    cfg: config as OpenClawConfig,
+    cfg: config as DexConfig,
     channel: CHANNEL_ID,
     accountId: account.accountId,
     agentId: route.agentId,

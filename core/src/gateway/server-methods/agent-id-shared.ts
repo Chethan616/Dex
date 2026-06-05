@@ -1,12 +1,12 @@
 import { ErrorCodes, errorShape } from "../../../packages/gateway-protocol/src/index.js";
 import { listAgentIds, resolveDefaultAgentId } from "../../agents/agent-scope.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { RespondFn } from "./types.js";
 
 export function resolveAgentIdOrRespondError(params: {
   rawAgentId: unknown;
   respond: RespondFn;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   normalize: (rawAgentId: unknown) => string | undefined;
 }) {
   const knownAgents = listAgentIds(params.cfg);

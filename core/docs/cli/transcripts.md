@@ -20,14 +20,14 @@ disk. It does not start or stop capture.
 Artifacts live under the OpenClaw state directory:
 
 ```text
-$OPENCLAW_STATE_DIR/transcripts/YYYY-MM-DD/<session>/
+$DEX_STATE_DIR/transcripts/YYYY-MM-DD/<session>/
   metadata.json
   transcript.jsonl
   summary.json
   summary.md
 ```
 
-The default state directory is `~/.openclaw`; set `OPENCLAW_STATE_DIR` to use a
+The default state directory is `~/.dex`; set `DEX_STATE_DIR` to use a
 different one. The date directory comes from the session start time, and the
 session directory is a safe filesystem segment derived from the session id.
 
@@ -94,7 +94,7 @@ Transcripts groups sessions by date, then by session id. Ten meetings on one
 day become ten sibling folders:
 
 ```text
-~/.openclaw/transcripts/2026-05-22/
+~/.dex/transcripts/2026-05-22/
   transcript-2026-05-22T09-00-00-000Z-a1b2c3d4/
   transcript-2026-05-22T10-30-00-000Z-b2c3d4e5/
   standup/

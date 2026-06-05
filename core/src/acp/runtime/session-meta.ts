@@ -11,23 +11,23 @@ import {
   type SessionAcpMeta,
   type SessionEntry,
 } from "../../config/sessions/types.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   executeSqliteQuerySync,
   executeSqliteQueryTakeFirstSync,
   getNodeSqliteKysely,
 } from "../../infra/kysely-sync.js";
 import { parseAgentSessionKey } from "../../routing/session-key.js";
-import type { DB as OpenClawStateKyselyDatabase } from "../../state/openclaw-state-db.generated.js";
+import type { DB as DexStateKyselyDatabase } from "../../state/openclaw-state-db.generated.js";
 import {
-  openOpenClawStateDatabase,
-  type OpenClawStateDatabaseOptions,
+  openDexStateDatabase,
+  type DexStateDatabaseOptions,
   runOpenClawStateWriteTransaction,
 } from "../../state/openclaw-state-db.js";
 import { isRecord } from "../../utils.js";
 
 export type AcpSessionStoreEntry = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   storePath: string;
   sessionKey: string;
   storeSessionKey: string;
@@ -36,8 +36,8 @@ export type AcpSessionStoreEntry = {
   storeReadFailed?: boolean;
 };
 
-type AcpSessionsTable = OpenClawStateKyselyDatabase["acp_sessions"];
-type AcpSessionMetaDatabase = Pick<OpenClawStateKyselyDatabase, "acp_sessions">;
+type AcpSessionsTable = DexStateKyselyDatabase["acp_sessions"];
+type AcpSessionMetaDatabase = Pick<DexStateKyselyDatabase, "acp_sessions">;
 type AcpSessionRow = Selectable<AcpSessionsTable>;
 
 let sessionStoreRuntimePromise:
@@ -71,9 +71,9 @@ function resolveStoreSessionKey(store: Record<string, SessionEntry>, sessionKey:
 
 export function resolveSessionStorePathForAcp(params: {
   sessionKey: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   env?: NodeJS.ProcessEnv;
-}): { cfg: OpenClawConfig; storePath: string } {
+}): { cfg: DexConfig; storePath: string } {
   const cfg = params.cfg ?? getRuntimeConfig();
   const parsed = parseAgentSessionKey(params.sessionKey);
   const storePath = resolveStorePath(cfg.session?.store, {
@@ -159,7 +159,7 @@ function acpSessionRowMatchesEntry(row: AcpSessionRow, entry: SessionEntry | und
 
 export function readAcpSessionMeta(params: {
   sessionKey: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   env?: NodeJS.ProcessEnv;
   databasePath?: string;
 }): SessionAcpMeta | undefined {
@@ -173,7 +173,7 @@ export function readAcpSessionMeta(params: {
     env: params.env,
     clone: false,
   });
-  const database = openOpenClawStateDatabase({
+  const database = openDexStateDatabase({
     env: params.env,
     path: params.databasePath,
   });
@@ -194,7 +194,7 @@ export function readAcpSessionMetaForEntry(params: {
   if (!sessionKey) {
     return undefined;
   }
-  const database = openOpenClawStateDatabase({
+  const database = openDexStateDatabase({
     env: params.env,
     path: params.databasePath,
   });
@@ -205,8 +205,8 @@ export function readAcpSessionMetaForEntry(params: {
   return rowToAcpSessionMeta(row);
 }
 
-function selectAcpSessionRows(options: OpenClawStateDatabaseOptions = {}): AcpSessionRow[] {
-  const database = openOpenClawStateDatabase(options);
+function selectAcpSessionRows(options: DexStateDatabaseOptions = {}): AcpSessionRow[] {
+  const database = openDexStateDatabase(options);
   return executeSqliteQuerySync(
     database.db,
     getAcpSessionKysely(database.db)
@@ -270,11 +270,11 @@ function upsertAcpSessionMetaRow(db: DatabaseSync, row: Insertable<AcpSessionsTa
 
 function readSessionEntryFromStore(params: {
   sessionKey: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   env?: NodeJS.ProcessEnv;
   clone?: boolean;
 }): {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   storePath: string;
   storeSessionKey: string;
   entry?: SessionEntry;
@@ -304,7 +304,7 @@ function readSessionEntryFromStore(params: {
 
 export function readAcpSessionEntry(params: {
   sessionKey: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   clone?: boolean;
   env?: NodeJS.ProcessEnv;
   databasePath?: string;
@@ -314,7 +314,7 @@ export function readAcpSessionEntry(params: {
     return null;
   }
   const storeEntry = readSessionEntryFromStore(params);
-  const database = openOpenClawStateDatabase({
+  const database = openDexStateDatabase({
     env: params.env,
     path: params.databasePath,
   });
@@ -333,7 +333,7 @@ export function readAcpSessionEntry(params: {
 }
 
 export async function listAcpSessionEntries(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   env?: NodeJS.ProcessEnv;
   clone?: boolean;
   databasePath?: string;
@@ -394,7 +394,7 @@ function sessionStoreUpdateOptions(params: {
 
 export async function upsertAcpSessionMeta(params: {
   sessionKey: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   env?: NodeJS.ProcessEnv;
   databasePath?: string;
   now?: () => number;

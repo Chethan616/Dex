@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   resolveDisplaySessionKey,
   resolveInternalSessionKey,
@@ -13,7 +13,7 @@ export type SubagentSpawnOwnership = {
 };
 
 export function resolveSubagentSpawnOwnership(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentSessionKey?: string;
   completionOwnerKey?: string;
 }): SubagentSpawnOwnership {

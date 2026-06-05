@@ -1,12 +1,12 @@
 import { resolveUserTimezone } from "../agents/date-time.js";
 import type { AgentDefaultsConfig } from "../config/types.agent-defaults.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 type HeartbeatConfig = AgentDefaultsConfig["heartbeat"];
 
 const ACTIVE_HOURS_TIME_PATTERN = /^(?:([01]\d|2[0-3]):([0-5]\d)|24:00)$/;
 
-export function resolveActiveHoursTimezone(cfg: OpenClawConfig, raw?: string): string {
+export function resolveActiveHoursTimezone(cfg: DexConfig, raw?: string): string {
   const trimmed = raw?.trim();
   if (!trimmed || trimmed === "user") {
     return resolveUserTimezone(cfg.agents?.defaults?.userTimezone);
@@ -68,7 +68,7 @@ function resolveMinutesInTimeZone(nowMs: number, timeZone: string): number | nul
 }
 
 export function isWithinActiveHours(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   heartbeat?: HeartbeatConfig,
   nowMs?: number,
 ): boolean {

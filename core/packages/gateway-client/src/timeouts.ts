@@ -69,7 +69,7 @@ export function clampConnectChallengeTimeoutMs(
 export function getConnectChallengeTimeoutMsFromEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): number | undefined {
-  const raw = env.OPENCLAW_CONNECT_CHALLENGE_TIMEOUT_MS;
+  const raw = env.DEX_CONNECT_CHALLENGE_TIMEOUT_MS;
   if (raw) {
     const parsed = parseStrictPositiveInteger(raw);
     if (parsed !== undefined) {
@@ -113,7 +113,7 @@ export function resolveConnectChallengeTimeoutMs(
 /** Reads the preauth handshake timeout override from environment variables. */
 export function getPreauthHandshakeTimeoutMsFromEnv(env: NodeJS.ProcessEnv = process.env): number {
   const configuredTimeout =
-    env.OPENCLAW_HANDSHAKE_TIMEOUT_MS || (env.VITEST && env.OPENCLAW_TEST_HANDSHAKE_TIMEOUT_MS);
+    env.DEX_HANDSHAKE_TIMEOUT_MS || (env.VITEST && env.DEX_TEST_HANDSHAKE_TIMEOUT_MS);
   if (configuredTimeout) {
     const parsed = parseStrictPositiveInteger(configuredTimeout);
     if (parsed !== undefined) {
@@ -130,7 +130,7 @@ export function resolvePreauthHandshakeTimeoutMs(params?: {
 }): number {
   const env = params?.env ?? process.env;
   const configuredTimeout =
-    env.OPENCLAW_HANDSHAKE_TIMEOUT_MS || (env.VITEST && env.OPENCLAW_TEST_HANDSHAKE_TIMEOUT_MS);
+    env.DEX_HANDSHAKE_TIMEOUT_MS || (env.VITEST && env.DEX_TEST_HANDSHAKE_TIMEOUT_MS);
   if (configuredTimeout) {
     const parsed = parseStrictPositiveInteger(configuredTimeout);
     if (parsed !== undefined) {

@@ -13,7 +13,7 @@ import type {
   SessionAcpMeta,
   SessionEntry,
 } from "../../config/sessions/types.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { AcpRuntimeError } from "../runtime/errors.js";
 import { getAcpRuntimeBackend, requireAcpRuntimeBackend } from "../runtime/registry.js";
 import {
@@ -39,7 +39,7 @@ export type AcpSessionResolution =
     };
 
 export type AcpInitializeSessionInput = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   agent: string;
   mode: AcpRuntimeSessionMode;
@@ -55,7 +55,7 @@ export type AcpTurnAttachment = {
 };
 
 export type AcpRunTurnInput = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   text: string;
   attachments?: AcpTurnAttachment[];
@@ -72,7 +72,7 @@ export type AcpTurnLifecycleEvent = {
 };
 
 export type AcpCloseSessionInput = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   reason: string;
   discardPersistentState?: boolean;
@@ -148,7 +148,7 @@ export type AcpSessionManagerDeps = {
 };
 
 export type WriteManagerSessionMeta = (params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   mutate: (
     current: SessionAcpMeta | undefined,
@@ -160,18 +160,18 @@ export type WriteManagerSessionMeta = (params: {
 }) => Promise<SessionEntry | null>;
 
 export type ResolveManagerSession = (params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
 }) => AcpSessionResolution;
 
 export type EnsureManagerRuntimeHandle = (params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   meta: SessionAcpMeta;
 }) => Promise<{ runtime: AcpRuntime; handle: AcpRuntimeHandle; meta: SessionAcpMeta }>;
 
 export type ReconcileManagerRuntimeSessionIdentifiers = (params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   runtime: AcpRuntime;
   handle: AcpRuntimeHandle;
@@ -185,7 +185,7 @@ export type ReconcileManagerRuntimeSessionIdentifiers = (params: {
 }>;
 
 export type SetManagerSessionState = (params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   state: SessionAcpMeta["state"];
   lastError?: string;

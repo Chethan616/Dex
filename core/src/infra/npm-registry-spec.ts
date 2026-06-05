@@ -2,16 +2,16 @@ import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/st
 
 const EXACT_SEMVER_VERSION_RE =
   /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/;
-const OPENCLAW_STABLE_CORRECTION_VERSION_RE =
+const DEX_STABLE_CORRECTION_VERSION_RE =
   /^(?<year>\d{4})\.(?<month>[1-9]\d?)\.(?<day>[1-9]\d?)-(?<correction>[1-9]\d*)$/;
-const OPENCLAW_STABLE_VERSION_RE = /^(?<year>\d{4})\.(?<month>[1-9]\d?)\.(?<day>[1-9]\d?)$/;
-const OPENCLAW_ALPHA_VERSION_RE =
+const DEX_STABLE_VERSION_RE = /^(?<year>\d{4})\.(?<month>[1-9]\d?)\.(?<day>[1-9]\d?)$/;
+const DEX_ALPHA_VERSION_RE =
   /^(?<year>\d{4})\.(?<month>[1-9]\d?)\.(?<day>[1-9]\d?)-alpha\.(?<alpha>[1-9]\d*)$/;
-const OPENCLAW_BETA_VERSION_RE =
+const DEX_BETA_VERSION_RE =
   /^(?<year>\d{4})\.(?<month>[1-9]\d?)\.(?<day>[1-9]\d?)-beta\.(?<beta>[1-9]\d*)$/;
 const DIST_TAG_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-type OpenClawReleaseVersion = {
+type DexReleaseVersion = {
   channel: "alpha" | "beta" | "stable";
   dateTime: number;
   alphaNumber?: number;
@@ -131,13 +131,13 @@ export function isExactSemverVersion(value: string): boolean {
   return EXACT_SEMVER_VERSION_RE.test(value.trim());
 }
 
-function parseOpenClawReleaseVersion(value: string): OpenClawReleaseVersion | null {
+function parseDexReleaseVersion(value: string): DexReleaseVersion | null {
   const trimmed = value.trim();
   const candidates = [
-    { match: OPENCLAW_STABLE_VERSION_RE.exec(trimmed), channel: "stable" as const },
-    { match: OPENCLAW_STABLE_CORRECTION_VERSION_RE.exec(trimmed), channel: "stable" as const },
-    { match: OPENCLAW_ALPHA_VERSION_RE.exec(trimmed), channel: "alpha" as const },
-    { match: OPENCLAW_BETA_VERSION_RE.exec(trimmed), channel: "beta" as const },
+    { match: DEX_STABLE_VERSION_RE.exec(trimmed), channel: "stable" as const },
+    { match: DEX_STABLE_CORRECTION_VERSION_RE.exec(trimmed), channel: "stable" as const },
+    { match: DEX_ALPHA_VERSION_RE.exec(trimmed), channel: "alpha" as const },
+    { match: DEX_BETA_VERSION_RE.exec(trimmed), channel: "beta" as const },
   ];
   const candidate = candidates.find((entry) => entry.match?.groups);
   if (!candidate?.match?.groups) {
@@ -182,13 +182,13 @@ function parseOpenClawReleaseVersion(value: string): OpenClawReleaseVersion | nu
 }
 
 export function isOpenClawStableCorrectionVersion(value: string): boolean {
-  const parsed = parseOpenClawReleaseVersion(value);
+  const parsed = parseDexReleaseVersion(value);
   return parsed?.channel === "stable" && parsed.correctionNumber !== undefined;
 }
 
-export function compareOpenClawReleaseVersions(left: string, right: string): number | null {
-  const parsedLeft = parseOpenClawReleaseVersion(left);
-  const parsedRight = parseOpenClawReleaseVersion(right);
+export function compareDexReleaseVersions(left: string, right: string): number | null {
+  const parsedLeft = parseDexReleaseVersion(left);
+  const parsedRight = parseDexReleaseVersion(right);
   if (!parsedLeft || !parsedRight) {
     return null;
   }

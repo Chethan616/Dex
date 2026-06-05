@@ -43,7 +43,7 @@ export function resolveVoiceCallLegacyCallLogPath(storePath: string): string {
 }
 
 function resolvePluginStateEnv(storePath: string): NodeJS.ProcessEnv {
-  return { ...process.env, OPENCLAW_STATE_DIR: storePath };
+  return { ...process.env, DEX_STATE_DIR: storePath };
 }
 
 function createCallRecordStateStores(storePath: string): CallRecordStateStores | null {

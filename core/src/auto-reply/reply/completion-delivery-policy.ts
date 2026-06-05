@@ -1,5 +1,5 @@
 import { normalizeChatType, type ChatType } from "../../channels/chat-type.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { deriveSessionChatTypeFromKey } from "../../sessions/session-chat-type-shared.js";
 import type { DeliveryContext } from "../../utils/delivery-context.types.js";
 import { resolveSourceReplyDeliveryMode } from "./source-reply-delivery-mode.js";
@@ -38,7 +38,7 @@ export function resolveCompletionChatType(params: {
 }
 
 export function completionRequiresMessageToolDelivery(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   requesterSessionKey?: string | null;
   targetRequesterSessionKey?: string | null;
   requesterEntry?: CompletionDeliverySessionEntry;

@@ -1,9 +1,9 @@
-import { normalizeOpenClawProviderIndex } from "./normalize.js";
-import { OPENCLAW_PROVIDER_INDEX } from "./openclaw-provider-index.js";
-import type { OpenClawProviderIndex } from "./types.js";
+import { normalizeDexProviderIndex } from "./normalize.js";
+import { DEX_PROVIDER_INDEX } from "./openclaw-provider-index.js";
+import type { DexProviderIndex } from "./types.js";
 
-export function loadOpenClawProviderIndex(
-  source: unknown = OPENCLAW_PROVIDER_INDEX,
-): OpenClawProviderIndex {
-  return normalizeOpenClawProviderIndex(source) ?? { version: 1, providers: {} };
+export function loadDexProviderIndex(
+  source: unknown = DEX_PROVIDER_INDEX,
+): DexProviderIndex {
+  return normalizeDexProviderIndex(source) ?? { version: 1, providers: {} };
 }

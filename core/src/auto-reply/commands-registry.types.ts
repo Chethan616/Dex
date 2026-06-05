@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import type { CommandArgValues } from "./commands-args.types.js";
 import type { ThinkingCatalogEntry } from "./thinking.shared.js";
 
@@ -26,7 +26,7 @@ export type CommandCategory =
 type CommandArgType = "string" | "number" | "boolean";
 
 export type CommandArgChoiceContext = {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider?: string;
   model?: string;
   catalog?: ThinkingCatalogEntry[];
@@ -93,7 +93,7 @@ export type CommandDetection = {
 };
 
 export type ShouldHandleTextCommandsParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   surface: string;
   commandSource?: "text" | "native";
 };

@@ -1,9 +1,9 @@
 import { pathToFileURL } from "node:url";
 
 export function enablePrivateQaScriptEnv(env: NodeJS.ProcessEnv = process.env) {
-  env.OPENCLAW_BUILD_PRIVATE_QA = "1";
-  env.OPENCLAW_ENABLE_PRIVATE_QA_CLI = "1";
-  env.OPENCLAW_DISABLE_BUNDLED_PLUGINS = "0";
+  env.DEX_BUILD_PRIVATE_QA = "1";
+  env.DEX_ENABLE_PRIVATE_QA_CLI = "1";
+  env.DEX_DISABLE_BUNDLED_PLUGINS = "0";
 }
 
 export function resolveQaE2eOutputPath(argv: readonly string[] = process.argv.slice(2)) {

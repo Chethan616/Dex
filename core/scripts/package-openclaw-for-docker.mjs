@@ -233,11 +233,11 @@ export async function buildPackageArtifacts(sourceDir, options = {}) {
     await runImpl(step.command, step.args, sourceDir, {
       env: {
         ...process.env,
-        OPENCLAW_BUILD_ALL_NO_PNPM: "1",
-        OPENCLAW_RUN_NODE_SKIP_DTS_BUILD: "1",
+        DEX_BUILD_ALL_NO_PNPM: "1",
+        DEX_RUN_NODE_SKIP_DTS_BUILD: "1",
       },
       timeoutMs: resolveTimeoutMs(
-        "OPENCLAW_DOCKER_PACKAGE_BUILD_TIMEOUT_MS",
+        "DEX_DOCKER_PACKAGE_BUILD_TIMEOUT_MS",
         DEFAULT_PACKAGE_BUILD_TIMEOUT_MS,
       ),
     });
@@ -288,7 +288,7 @@ export async function packOpenClawPackageForDocker(sourceDir, outputDir, options
       {
         deferForwardedSignalExit: true,
         timeoutMs: resolveTimeoutMs(
-          "OPENCLAW_DOCKER_PACKAGE_PACK_TIMEOUT_MS",
+          "DEX_DOCKER_PACKAGE_PACK_TIMEOUT_MS",
           DEFAULT_PACKAGE_PACK_TIMEOUT_MS,
         ),
       },
@@ -325,7 +325,7 @@ async function main() {
     sourceDir,
     {
       timeoutMs: resolveTimeoutMs(
-        "OPENCLAW_DOCKER_PACKAGE_INVENTORY_TIMEOUT_MS",
+        "DEX_DOCKER_PACKAGE_INVENTORY_TIMEOUT_MS",
         DEFAULT_PACKAGE_INVENTORY_TIMEOUT_MS,
       ),
     },
@@ -350,7 +350,7 @@ async function main() {
     sourceDir,
     {
       timeoutMs: resolveTimeoutMs(
-        "OPENCLAW_DOCKER_PACKAGE_TARBALL_CHECK_TIMEOUT_MS",
+        "DEX_DOCKER_PACKAGE_TARBALL_CHECK_TIMEOUT_MS",
         DEFAULT_PACKAGE_TARBALL_CHECK_TIMEOUT_MS,
       ),
     },

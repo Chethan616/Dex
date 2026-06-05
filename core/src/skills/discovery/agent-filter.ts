@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.js";
+import type { DexConfig } from "../../config/types.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
 import { normalizeSkillFilter } from "./filter.js";
 
@@ -7,9 +7,9 @@ type AgentSkillsLimits = {
 };
 
 function resolveAgentEntry(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   agentId: string | undefined,
-): NonNullable<NonNullable<OpenClawConfig["agents"]>["list"]>[number] | undefined {
+): NonNullable<NonNullable<DexConfig["agents"]>["list"]>[number] | undefined {
   if (!cfg) {
     return undefined;
   }
@@ -22,7 +22,7 @@ function resolveAgentEntry(
  * Unknown agent ids also fall back to defaults so legacy/unresolved callers do not widen access.
  */
 export function resolveEffectiveAgentSkillFilter(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   agentId: string | undefined,
 ): string[] | undefined {
   if (!cfg) {
@@ -36,7 +36,7 @@ export function resolveEffectiveAgentSkillFilter(
 }
 
 export function resolveEffectiveAgentSkillsLimits(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   agentId: string | undefined,
 ): AgentSkillsLimits | undefined {
   if (!agentId) {

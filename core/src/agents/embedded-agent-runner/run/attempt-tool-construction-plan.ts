@@ -1,5 +1,5 @@
 import { TOOL_NAME_SEPARATOR } from "../../agent-bundle-mcp-names.js";
-import type { OpenClawCodingToolConstructionPlan } from "../../agent-tools.js";
+import type { DexCodingToolConstructionPlan } from "../../agent-tools.js";
 import { isToolAllowedByPolicyName } from "../../tool-policy-match.js";
 import {
   buildPluginToolGroups,
@@ -16,7 +16,7 @@ const SHELL_CODING_TOOL_FACTORY_NAMES = new Set(["apply_patch", "exec", "process
 // Names here must be emitted directly by createOpenClawTools(). Catalog entries
 // backed by plugin registration, such as browser/x_search/code_execution, stay
 // out of this set so narrow allowlists still materialize plugin tools.
-const OPENCLAW_TOOL_FACTORY_NAMES = new Set([
+const DEX_TOOL_FACTORY_NAMES = new Set([
   "agents_list",
   "canvas",
   "cron",
@@ -47,7 +47,7 @@ const OPENCLAW_TOOL_FACTORY_NAMES = new Set([
   "web_search",
 ]);
 
-const ALL_CODING_TOOL_CONSTRUCTION_PLAN: OpenClawCodingToolConstructionPlan = {
+const ALL_CODING_TOOL_CONSTRUCTION_PLAN: DexCodingToolConstructionPlan = {
   includeBaseCodingTools: true,
   includeShellTools: true,
   includeChannelTools: true,
@@ -55,7 +55,7 @@ const ALL_CODING_TOOL_CONSTRUCTION_PLAN: OpenClawCodingToolConstructionPlan = {
   includePluginTools: true,
 };
 
-const NO_CODING_TOOL_CONSTRUCTION_PLAN: OpenClawCodingToolConstructionPlan = {
+const NO_CODING_TOOL_CONSTRUCTION_PLAN: DexCodingToolConstructionPlan = {
   includeBaseCodingTools: false,
   includeShellTools: false,
   includeChannelTools: false,
@@ -64,8 +64,8 @@ const NO_CODING_TOOL_CONSTRUCTION_PLAN: OpenClawCodingToolConstructionPlan = {
 };
 
 function cloneCodingToolConstructionPlan(
-  plan: OpenClawCodingToolConstructionPlan,
-): OpenClawCodingToolConstructionPlan {
+  plan: DexCodingToolConstructionPlan,
+): DexCodingToolConstructionPlan {
   return { ...plan };
 }
 
@@ -85,7 +85,7 @@ function isKnownLocalCodingToolName(normalized: string): boolean {
   return (
     BASE_CODING_TOOL_FACTORY_NAMES.has(normalized) ||
     SHELL_CODING_TOOL_FACTORY_NAMES.has(normalized) ||
-    OPENCLAW_TOOL_FACTORY_NAMES.has(normalized)
+    DEX_TOOL_FACTORY_NAMES.has(normalized)
   );
 }
 
@@ -134,7 +134,7 @@ export function mergeForcedEmbeddedAttemptToolsAllow(
 
 function resolveCodingToolConstructionPlanForAllowlist(
   toolsAllow?: string[],
-): OpenClawCodingToolConstructionPlan {
+): DexCodingToolConstructionPlan {
   if (!toolsAllow) {
     return cloneCodingToolConstructionPlan(ALL_CODING_TOOL_CONSTRUCTION_PLAN);
   }
@@ -150,7 +150,7 @@ function resolveCodingToolConstructionPlanForAllowlist(
     BASE_CODING_TOOL_FACTORY_NAMES.has(name),
   );
   const includeShellTools = normalized.some((name) => SHELL_CODING_TOOL_FACTORY_NAMES.has(name));
-  const includeOpenClawTools = normalized.some((name) => OPENCLAW_TOOL_FACTORY_NAMES.has(name));
+  const includeOpenClawTools = normalized.some((name) => DEX_TOOL_FACTORY_NAMES.has(name));
   const includePluginTools = normalized.some(
     (name) =>
       name === "group:plugins" ||
@@ -176,7 +176,7 @@ export function resolveEmbeddedAttemptToolConstructionPlan(params: {
   constructTools: boolean;
   includeCoreTools: boolean;
   runtimeToolAllowlist?: string[];
-  codingToolConstructionPlan: OpenClawCodingToolConstructionPlan;
+  codingToolConstructionPlan: DexCodingToolConstructionPlan;
 } {
   if (params.disableTools === true || params.isRawModelRun === true) {
     return {

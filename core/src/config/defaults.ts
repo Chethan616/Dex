@@ -19,7 +19,7 @@ import {
 } from "./provider-policy.js";
 import { normalizeTalkConfig } from "./talk.js";
 import type { ModelDefinitionConfig } from "./types.models.js";
-import type { OpenClawConfig } from "./types.openclaw.js";
+import type { DexConfig } from "./types.openclaw.js";
 
 type WarnState = { warned: boolean };
 type ProviderPolicyDefaultsOptions = {
@@ -105,7 +105,7 @@ type SessionDefaultsOptions = {
   warnState?: WarnState;
 };
 
-export function applyMessageDefaults(cfg: OpenClawConfig): OpenClawConfig {
+export function applyMessageDefaults(cfg: DexConfig): DexConfig {
   const messages = cfg.messages;
   const hasAckScope = messages?.ackReactionScope !== undefined;
   if (hasAckScope) {
@@ -121,9 +121,9 @@ export function applyMessageDefaults(cfg: OpenClawConfig): OpenClawConfig {
 }
 
 export function applySessionDefaults(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   options: SessionDefaultsOptions = {},
-): OpenClawConfig {
+): DexConfig {
   const session = cfg.session;
   if (!session || session.mainKey === undefined) {
     return cfg;
@@ -133,7 +133,7 @@ export function applySessionDefaults(
   const warn = options.warn ?? console.warn;
   const warnState = options.warnState ?? defaultWarnState;
 
-  const next: OpenClawConfig = {
+  const next: DexConfig = {
     ...cfg,
     session: { ...session, mainKey: "main" },
   };
@@ -146,14 +146,14 @@ export function applySessionDefaults(
   return next;
 }
 
-export function applyTalkConfigNormalization(config: OpenClawConfig): OpenClawConfig {
+export function applyTalkConfigNormalization(config: DexConfig): DexConfig {
   return normalizeTalkConfig(config);
 }
 
 export function applyModelDefaults(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   options: ProviderPolicyDefaultsOptions = {},
-): OpenClawConfig {
+): DexConfig {
   let mutated = false;
   let nextCfg = cfg;
 
@@ -400,7 +400,7 @@ function normalizeAgentModelConfigForDefaults(value: unknown): unknown {
   return mutated ? next : value;
 }
 
-export function applyAgentDefaults(cfg: OpenClawConfig): OpenClawConfig {
+export function applyAgentDefaults(cfg: DexConfig): DexConfig {
   const agents = cfg.agents;
   const defaults = agents?.defaults;
   const hasMax =
@@ -448,7 +448,7 @@ export function applyAgentDefaults(cfg: OpenClawConfig): OpenClawConfig {
   };
 }
 
-export function applyCronDefaults(cfg: OpenClawConfig): OpenClawConfig {
+export function applyCronDefaults(cfg: DexConfig): DexConfig {
   const raw = cfg.cron?.maxConcurrentRuns;
   if (typeof raw === "number" && Number.isFinite(raw)) {
     return cfg;
@@ -462,7 +462,7 @@ export function applyCronDefaults(cfg: OpenClawConfig): OpenClawConfig {
   };
 }
 
-export function applyLoggingDefaults(cfg: OpenClawConfig): OpenClawConfig {
+export function applyLoggingDefaults(cfg: DexConfig): DexConfig {
   const logging = cfg.logging;
   if (!logging) {
     return cfg;
@@ -479,7 +479,7 @@ export function applyLoggingDefaults(cfg: OpenClawConfig): OpenClawConfig {
   };
 }
 
-function hasAnthropicDefaultSignal(cfg: OpenClawConfig, env: NodeJS.ProcessEnv): boolean {
+function hasAnthropicDefaultSignal(cfg: DexConfig, env: NodeJS.ProcessEnv): boolean {
   if (env.ANTHROPIC_API_KEY?.trim() || env.ANTHROPIC_OAUTH_TOKEN?.trim()) {
     return true;
   }
@@ -506,9 +506,9 @@ function hasAnthropicDefaultSignal(cfg: OpenClawConfig, env: NodeJS.ProcessEnv):
 }
 
 export function applyContextPruningDefaults(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   options: ProviderPolicyDefaultsOptions = {},
-): OpenClawConfig {
+): DexConfig {
   if (!cfg.agents?.defaults) {
     return cfg;
   }
@@ -525,7 +525,7 @@ export function applyContextPruningDefaults(
   );
 }
 
-export function applyCompactionDefaults(cfg: OpenClawConfig): OpenClawConfig {
+export function applyCompactionDefaults(cfg: DexConfig): DexConfig {
   const defaults = cfg.agents?.defaults;
   if (!defaults) {
     return cfg;

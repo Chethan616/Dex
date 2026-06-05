@@ -86,11 +86,11 @@ endpoint and choose a model from your current catalog:
 ```bash
 export OLLAMA_API_KEY="<your-ollama-cloud-api-key>" # pragma: allowlist secret
 
-OPENCLAW_LIVE_TEST=1 \
-OPENCLAW_LIVE_OLLAMA=1 \
-OPENCLAW_LIVE_OLLAMA_BASE_URL=https://ollama.com \
-OPENCLAW_LIVE_OLLAMA_MODEL=kimi-k2.6 \
-OPENCLAW_LIVE_OLLAMA_WEB_SEARCH=1 \
+DEX_LIVE_TEST=1 \
+DEX_LIVE_OLLAMA=1 \
+DEX_LIVE_OLLAMA_BASE_URL=https://ollama.com \
+DEX_LIVE_OLLAMA_MODEL=kimi-k2.6 \
+DEX_LIVE_OLLAMA_WEB_SEARCH=1 \
 pnpm test:live -- extensions/ollama/ollama.live.test.ts
 ```
 

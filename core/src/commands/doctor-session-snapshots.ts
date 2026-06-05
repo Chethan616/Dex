@@ -10,7 +10,7 @@ import {
 } from "../config/sessions/skill-prompt-blobs.js";
 import { resolveAllAgentSessionStoreTargetsSync } from "../config/sessions/targets.js";
 import type { SessionEntry } from "../config/sessions/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { expandHomePrefix } from "../infra/home-dir.js";
 import { writeTextAtomic } from "../infra/json-files.js";
 import { resolveBundledSkillsDir } from "../skills/loading/bundled-dir.js";
@@ -262,7 +262,7 @@ async function listSessionStorePaths(stateDir: string): Promise<string[]> {
 }
 
 function resolveSessionStorePaths(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   env?: NodeJS.ProcessEnv;
 }): string[] | undefined {
   if (!params.cfg) {
@@ -320,7 +320,7 @@ function replaceStalePathsInText(text: string, finding: StaleSessionSnapshotPath
 export async function noteSessionSnapshotHealth(params?: {
   storePaths?: string[];
   bundledSkillsDir?: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   env?: NodeJS.ProcessEnv;
   shouldRepair?: boolean;
 }) {

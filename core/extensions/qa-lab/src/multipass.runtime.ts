@@ -342,15 +342,15 @@ export function renderQaMultipassGuestScript(
       .filter(
         ([key]) =>
           key !== "CODEX_HOME" &&
-          key !== "OPENCLAW_CONFIG_PATH" &&
-          key !== "OPENCLAW_QA_LIVE_PROVIDER_CONFIG_PATH",
+          key !== "DEX_CONFIG_PATH" &&
+          key !== "DEX_QA_LIVE_PROVIDER_CONFIG_PATH",
       )
       .map(([key, value]) => `${key}=${shellQuote(redactSecrets ? "<redacted>" : value)}`),
     ...(plan.guestCodexHomePath ? [`CODEX_HOME=${shellQuote(plan.guestCodexHomePath)}`] : []),
     ...(plan.guestLiveProviderConfigPath
       ? [
-          `OPENCLAW_CONFIG_PATH=${shellQuote(plan.guestLiveProviderConfigPath)}`,
-          `OPENCLAW_QA_LIVE_PROVIDER_CONFIG_PATH=${shellQuote(plan.guestLiveProviderConfigPath)}`,
+          `DEX_CONFIG_PATH=${shellQuote(plan.guestLiveProviderConfigPath)}`,
+          `DEX_QA_LIVE_PROVIDER_CONFIG_PATH=${shellQuote(plan.guestLiveProviderConfigPath)}`,
         ]
       : []),
     plan.qaCommand.map(shellQuote).join(" "),

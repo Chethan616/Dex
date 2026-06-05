@@ -87,7 +87,7 @@ Use this checklist when you already know your old BlueBubbles config and want th
 5. Snapshot your config:
 
    ```bash
-   cp ~/.openclaw/openclaw.json5 ~/.openclaw/openclaw.json5.bak
+   cp ~/.dex/openclaw.json5 ~/.dex/openclaw.json5.bak
    ```
 
 ## Config translation

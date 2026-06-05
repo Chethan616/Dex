@@ -237,7 +237,7 @@ function scenarioConfig(scenario, options = {}) {
 function scenarioEnv(scenario) {
   if (scenario === "external-service") {
     return {
-      OPENCLAW_SERVICE_REPAIR_POLICY: "external",
+      DEX_SERVICE_REPAIR_POLICY: "external",
     };
   }
   return {};
@@ -259,18 +259,18 @@ function generateAuthProfileSecretKey() {
 
 function renderAuthProfileSecretKeyExport() {
   return [
-    'OPENCLAW_AUTH_PROFILE_SECRET_KEY_FILE="$OPENCLAW_TEST_STATE_HOME/.openclaw-test-auth-profile-secret-key"',
-    'if [ -s "$OPENCLAW_AUTH_PROFILE_SECRET_KEY_FILE" ]; then',
-    '  OPENCLAW_AUTH_PROFILE_SECRET_KEY="$(cat "$OPENCLAW_AUTH_PROFILE_SECRET_KEY_FILE")"',
+    'DEX_AUTH_PROFILE_SECRET_KEY_FILE="$DEX_TEST_STATE_HOME/.openclaw-test-auth-profile-secret-key"',
+    'if [ -s "$DEX_AUTH_PROFILE_SECRET_KEY_FILE" ]; then',
+    '  DEX_AUTH_PROFILE_SECRET_KEY="$(cat "$DEX_AUTH_PROFILE_SECRET_KEY_FILE")"',
     "else",
-    '  OPENCLAW_AUTH_PROFILE_SECRET_KEY="$(od -An -N 32 -tx1 /dev/urandom | tr -d " \\n")"',
-    '  ( umask 077; printf "%s\\n" "$OPENCLAW_AUTH_PROFILE_SECRET_KEY" > "$OPENCLAW_AUTH_PROFILE_SECRET_KEY_FILE" )',
+    '  DEX_AUTH_PROFILE_SECRET_KEY="$(od -An -N 32 -tx1 /dev/urandom | tr -d " \\n")"',
+    '  ( umask 077; printf "%s\\n" "$DEX_AUTH_PROFILE_SECRET_KEY" > "$DEX_AUTH_PROFILE_SECRET_KEY_FILE" )',
     "fi",
-    'if [ -z "$OPENCLAW_AUTH_PROFILE_SECRET_KEY" ]; then',
-    '  echo "failed to generate OPENCLAW_AUTH_PROFILE_SECRET_KEY" >&2',
+    'if [ -z "$DEX_AUTH_PROFILE_SECRET_KEY" ]; then',
+    '  echo "failed to generate DEX_AUTH_PROFILE_SECRET_KEY" >&2',
     "  return 1 2>/dev/null || exit 1",
     "fi",
-    "export OPENCLAW_AUTH_PROFILE_SECRET_KEY",
+    "export DEX_AUTH_PROFILE_SECRET_KEY",
   ];
 }
 
@@ -280,9 +280,9 @@ function renderConfigWrite(configPathExpression, config) {
   }
   const json = JSON.stringify(config, null, 2);
   return [
-    `cat > ${configPathExpression} <<'OPENCLAW_TEST_STATE_JSON'`,
+    `cat > ${configPathExpression} <<'DEX_TEST_STATE_JSON'`,
     json,
-    "OPENCLAW_TEST_STATE_JSON",
+    "DEX_TEST_STATE_JSON",
   ].join("\n");
 }
 
@@ -294,17 +294,17 @@ function buildCreatePlan(options = {}) {
   }
   const root = options.root;
   const home = path.join(root, "home");
-  const stateDir = path.join(home, ".openclaw");
+  const stateDir = path.join(home, ".dex");
   const configPath = path.join(stateDir, "openclaw.json");
   const workspaceDir = path.join(home, "workspace");
   const config = scenarioConfig(scenario, options);
   const env = {
     HOME: home,
     USERPROFILE: home,
-    OPENCLAW_HOME: home,
-    OPENCLAW_STATE_DIR: stateDir,
-    OPENCLAW_CONFIG_PATH: configPath,
-    OPENCLAW_AUTH_PROFILE_SECRET_KEY: generateAuthProfileSecretKey(),
+    DEX_HOME: home,
+    DEX_STATE_DIR: stateDir,
+    DEX_CONFIG_PATH: configPath,
+    DEX_AUTH_PROFILE_SECRET_KEY: generateAuthProfileSecretKey(),
     ...scenarioEnv(scenario),
   };
   return {
@@ -344,25 +344,25 @@ export function renderShellSnippet(options = {}) {
   const env = scenarioEnv(scenario);
   const homeTemplate = `openclaw-${label}-${scenario}-home.XXXXXX`;
   const lines = [
-    'OPENCLAW_TEST_STATE_TMP_ROOT="${OPENCLAW_TEST_STATE_TMPDIR:-${TMPDIR:-/tmp}}"',
-    'OPENCLAW_TEST_STATE_TMP_ROOT="${OPENCLAW_TEST_STATE_TMP_ROOT%/}"',
-    '[ -n "$OPENCLAW_TEST_STATE_TMP_ROOT" ] || OPENCLAW_TEST_STATE_TMP_ROOT="/tmp"',
-    "export OPENCLAW_TEST_STATE_TMP_ROOT",
-    'mkdir -p "$OPENCLAW_TEST_STATE_TMP_ROOT"',
-    `OPENCLAW_TEST_STATE_HOME="$(mktemp -d "$OPENCLAW_TEST_STATE_TMP_ROOT/${homeTemplate}")"`,
-    'export HOME="$OPENCLAW_TEST_STATE_HOME"',
-    'export USERPROFILE="$OPENCLAW_TEST_STATE_HOME"',
-    'export OPENCLAW_HOME="$OPENCLAW_TEST_STATE_HOME"',
-    'export OPENCLAW_STATE_DIR="$OPENCLAW_TEST_STATE_HOME/.openclaw"',
-    'export OPENCLAW_CONFIG_PATH="$OPENCLAW_STATE_DIR/openclaw.json"',
+    'DEX_TEST_STATE_TMP_ROOT="${DEX_TEST_STATE_TMPDIR:-${TMPDIR:-/tmp}}"',
+    'DEX_TEST_STATE_TMP_ROOT="${DEX_TEST_STATE_TMP_ROOT%/}"',
+    '[ -n "$DEX_TEST_STATE_TMP_ROOT" ] || DEX_TEST_STATE_TMP_ROOT="/tmp"',
+    "export DEX_TEST_STATE_TMP_ROOT",
+    'mkdir -p "$DEX_TEST_STATE_TMP_ROOT"',
+    `DEX_TEST_STATE_HOME="$(mktemp -d "$DEX_TEST_STATE_TMP_ROOT/${homeTemplate}")"`,
+    'export HOME="$DEX_TEST_STATE_HOME"',
+    'export USERPROFILE="$DEX_TEST_STATE_HOME"',
+    'export DEX_HOME="$DEX_TEST_STATE_HOME"',
+    'export DEX_STATE_DIR="$DEX_TEST_STATE_HOME/.openclaw"',
+    'export DEX_CONFIG_PATH="$DEX_STATE_DIR/openclaw.json"',
     ...renderAuthProfileSecretKeyExport(),
-    'export OPENCLAW_TEST_WORKSPACE_DIR="$OPENCLAW_TEST_STATE_HOME/workspace"',
-    'mkdir -p "$OPENCLAW_STATE_DIR" "$OPENCLAW_TEST_WORKSPACE_DIR"',
+    'export DEX_TEST_WORKSPACE_DIR="$DEX_TEST_STATE_HOME/workspace"',
+    'mkdir -p "$DEX_STATE_DIR" "$DEX_TEST_WORKSPACE_DIR"',
   ];
   for (const [key, value] of Object.entries(env)) {
     lines.push(`export ${key}=${shellQuote(value)}`);
   }
-  const configWrite = renderConfigWrite('"$OPENCLAW_CONFIG_PATH"', config);
+  const configWrite = renderConfigWrite('"$DEX_CONFIG_PATH"', config);
   if (configWrite) {
     lines.push(configWrite);
   }
@@ -383,47 +383,47 @@ export function renderShellFunction() {
   esac
   case "$raw_label" in
     /*)
-      OPENCLAW_TEST_STATE_HOME="$raw_label"
-      mkdir -p "$OPENCLAW_TEST_STATE_HOME"
+      DEX_TEST_STATE_HOME="$raw_label"
+      mkdir -p "$DEX_TEST_STATE_HOME"
       ;;
     *)
       label="$(printf "%s" "$label" | tr -cs "A-Za-z0-9_.-" "-" | sed -e "s/^-*//" -e "s/-*$//")"
       [ -n "$label" ] || label="state"
-      local tmp_root="\${OPENCLAW_TEST_STATE_TMPDIR:-\${TMPDIR:-/tmp}}"
+      local tmp_root="\${DEX_TEST_STATE_TMPDIR:-\${TMPDIR:-/tmp}}"
       tmp_root="\${tmp_root%/}"
       [ -n "$tmp_root" ] || tmp_root="/tmp"
       mkdir -p "$tmp_root"
-      OPENCLAW_TEST_STATE_HOME="$(mktemp -d "$tmp_root/openclaw-$label-$scenario-home.XXXXXX")"
+      DEX_TEST_STATE_HOME="$(mktemp -d "$tmp_root/openclaw-$label-$scenario-home.XXXXXX")"
       ;;
   esac
-  export HOME="$OPENCLAW_TEST_STATE_HOME"
-  export USERPROFILE="$OPENCLAW_TEST_STATE_HOME"
-  export OPENCLAW_HOME="$OPENCLAW_TEST_STATE_HOME"
-  export OPENCLAW_STATE_DIR="$OPENCLAW_TEST_STATE_HOME/.openclaw"
-  export OPENCLAW_CONFIG_PATH="$OPENCLAW_STATE_DIR/openclaw.json"
+  export HOME="$DEX_TEST_STATE_HOME"
+  export USERPROFILE="$DEX_TEST_STATE_HOME"
+  export DEX_HOME="$DEX_TEST_STATE_HOME"
+  export DEX_STATE_DIR="$DEX_TEST_STATE_HOME/.openclaw"
+  export DEX_CONFIG_PATH="$DEX_STATE_DIR/openclaw.json"
   ${renderAuthProfileSecretKeyExport().join("\n  ")}
-  export OPENCLAW_TEST_WORKSPACE_DIR="$OPENCLAW_TEST_STATE_HOME/workspace"
-  unset OPENCLAW_AGENT_DIR
-  unset OPENCLAW_SERVICE_REPAIR_POLICY
-  mkdir -p "$OPENCLAW_STATE_DIR" "$OPENCLAW_TEST_WORKSPACE_DIR"
+  export DEX_TEST_WORKSPACE_DIR="$DEX_TEST_STATE_HOME/workspace"
+  unset DEX_AGENT_DIR
+  unset DEX_SERVICE_REPAIR_POLICY
+  mkdir -p "$DEX_STATE_DIR" "$DEX_TEST_WORKSPACE_DIR"
   case "$scenario" in
     minimal)
-      cat > "$OPENCLAW_CONFIG_PATH" <<'OPENCLAW_TEST_STATE_JSON'
+      cat > "$DEX_CONFIG_PATH" <<'DEX_TEST_STATE_JSON'
 {}
-OPENCLAW_TEST_STATE_JSON
+DEX_TEST_STATE_JSON
       ;;
     update-stable)
-      cat > "$OPENCLAW_CONFIG_PATH" <<'OPENCLAW_TEST_STATE_JSON'
+      cat > "$DEX_CONFIG_PATH" <<'DEX_TEST_STATE_JSON'
 {
   "update": {
     "channel": "stable"
   },
   "plugins": {}
 }
-OPENCLAW_TEST_STATE_JSON
+DEX_TEST_STATE_JSON
       ;;
     upgrade-survivor)
-      cat > "$OPENCLAW_CONFIG_PATH" <<'OPENCLAW_TEST_STATE_JSON'
+      cat > "$DEX_CONFIG_PATH" <<'DEX_TEST_STATE_JSON'
 {
   "update": {
     "channel": "stable"
@@ -595,10 +595,10 @@ OPENCLAW_TEST_STATE_JSON
     }
   }
 }
-OPENCLAW_TEST_STATE_JSON
+DEX_TEST_STATE_JSON
       ;;
     gateway-loopback)
-      cat > "$OPENCLAW_CONFIG_PATH" <<'OPENCLAW_TEST_STATE_JSON'
+      cat > "$DEX_CONFIG_PATH" <<'DEX_TEST_STATE_JSON'
 {
   "gateway": {
     "port": 18789,
@@ -611,13 +611,13 @@ OPENCLAW_TEST_STATE_JSON
     }
   }
 }
-OPENCLAW_TEST_STATE_JSON
+DEX_TEST_STATE_JSON
       ;;
     external-service)
-      export OPENCLAW_SERVICE_REPAIR_POLICY="external"
-      cat > "$OPENCLAW_CONFIG_PATH" <<'OPENCLAW_TEST_STATE_JSON'
+      export DEX_SERVICE_REPAIR_POLICY="external"
+      cat > "$DEX_CONFIG_PATH" <<'DEX_TEST_STATE_JSON'
 {}
-OPENCLAW_TEST_STATE_JSON
+DEX_TEST_STATE_JSON
       ;;
   esac
 }

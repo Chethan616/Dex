@@ -1,6 +1,6 @@
 import {
   createModelCatalogPresetAppliers,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/provider-onboard";
 import {
   QWEN_CN_BASE_URL,
@@ -15,7 +15,7 @@ import { buildQwenOAuthProvider, buildQwenProvider } from "./provider-catalog.js
 
 const qwenPresetAppliers = createModelCatalogPresetAppliers<[string]>({
   primaryModelRef: QWEN_DEFAULT_MODEL_REF,
-  resolveParams: (_cfg: OpenClawConfig, baseUrl: string) => {
+  resolveParams: (_cfg: DexConfig, baseUrl: string) => {
     const provider = buildQwenProvider({ baseUrl });
     return {
       providerId: "qwen",
@@ -50,39 +50,39 @@ const qwenOAuthPresetAppliers = createModelCatalogPresetAppliers<[]>({
   },
 });
 
-function applyQwenProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
+function applyQwenProviderConfig(cfg: DexConfig): DexConfig {
   return qwenPresetAppliers.applyProviderConfig(cfg, QWEN_GLOBAL_BASE_URL);
 }
 
-function applyQwenProviderConfigCn(cfg: OpenClawConfig): OpenClawConfig {
+function applyQwenProviderConfigCn(cfg: DexConfig): DexConfig {
   return qwenPresetAppliers.applyProviderConfig(cfg, QWEN_CN_BASE_URL);
 }
 
-export function applyQwenConfig(cfg: OpenClawConfig): OpenClawConfig {
+export function applyQwenConfig(cfg: DexConfig): DexConfig {
   return qwenPresetAppliers.applyConfig(cfg, QWEN_GLOBAL_BASE_URL);
 }
 
-export function applyQwenConfigCn(cfg: OpenClawConfig): OpenClawConfig {
+export function applyQwenConfigCn(cfg: DexConfig): DexConfig {
   return qwenPresetAppliers.applyConfig(cfg, QWEN_CN_BASE_URL);
 }
 
-function applyQwenStandardProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
+function applyQwenStandardProviderConfig(cfg: DexConfig): DexConfig {
   return qwenPresetAppliers.applyProviderConfig(cfg, QWEN_STANDARD_GLOBAL_BASE_URL);
 }
 
-function applyQwenStandardProviderConfigCn(cfg: OpenClawConfig): OpenClawConfig {
+function applyQwenStandardProviderConfigCn(cfg: DexConfig): DexConfig {
   return qwenPresetAppliers.applyProviderConfig(cfg, QWEN_STANDARD_CN_BASE_URL);
 }
 
-export function applyQwenStandardConfig(cfg: OpenClawConfig): OpenClawConfig {
+export function applyQwenStandardConfig(cfg: DexConfig): DexConfig {
   return qwenPresetAppliers.applyConfig(cfg, QWEN_STANDARD_GLOBAL_BASE_URL);
 }
 
-export function applyQwenStandardConfigCn(cfg: OpenClawConfig): OpenClawConfig {
+export function applyQwenStandardConfigCn(cfg: DexConfig): DexConfig {
   return qwenPresetAppliers.applyConfig(cfg, QWEN_STANDARD_CN_BASE_URL);
 }
 
-export function applyQwenOAuthConfig(cfg: OpenClawConfig): OpenClawConfig {
+export function applyQwenOAuthConfig(cfg: DexConfig): DexConfig {
   return qwenOAuthPresetAppliers.applyConfig(cfg);
 }
 

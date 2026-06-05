@@ -2,7 +2,7 @@ import { isRecord as hasRecord } from "@dexagent/normalization-core/record-coerc
 import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { normalizeChatChannelId } from "../channels/ids.js";
 import { listRouteBindings } from "../config/bindings.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveAgentRoute } from "./resolve-route.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId, normalizeAgentId } from "./session-key.js";
 
@@ -21,7 +21,7 @@ function normalizeRouteBindingChannelKey(raw?: string | null): string {
   return normalizeLowercaseStringOrEmpty(raw);
 }
 
-function listConfiguredChannelIds(cfg: OpenClawConfig): string[] {
+function listConfiguredChannelIds(cfg: DexConfig): string[] {
   if (!hasRecord(cfg.channels)) {
     return [];
   }
@@ -37,7 +37,7 @@ function listConfiguredChannelIds(cfg: OpenClawConfig): string[] {
     .toSorted();
 }
 
-function listConfiguredChannelAccountIds(cfg: OpenClawConfig, channelId: string): string[] {
+function listConfiguredChannelAccountIds(cfg: DexConfig, channelId: string): string[] {
   if (!hasRecord(cfg.channels)) {
     return [];
   }
@@ -65,7 +65,7 @@ function addTarget(byAgent: Map<string, Set<string>>, agentId: string, channel: 
   byAgent.set(normalizedAgentId, channels);
 }
 
-export function collectChannelRouteTargets(cfg: OpenClawConfig): ChannelRouteTarget[] {
+export function collectChannelRouteTargets(cfg: DexConfig): ChannelRouteTarget[] {
   const byAgent = new Map<string, Set<string>>();
 
   for (const binding of listRouteBindings(cfg)) {

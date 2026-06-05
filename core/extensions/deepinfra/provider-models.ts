@@ -367,7 +367,7 @@ function chatSurfaceModelToModelDefinition(model: DeepInfraSurfaceModel): ModelD
 // Gate dynamic discovery on key presence: pre-auth keeps the picker tight and
 // avoids a useless network call. The endpoint itself is unauthenticated.
 // Accepts env-var keys and auth-profile-store keys via the shared
-// `isProviderApiKeyConfigured` helper (covers SecretRef / `OPENCLAW_LIVE_*`
+// `isProviderApiKeyConfigured` helper (covers SecretRef / `DEX_LIVE_*`
 // indirection too).
 export function hasDeepInfraApiKey(options?: {
   env?: NodeJS.ProcessEnv;

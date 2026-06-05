@@ -129,15 +129,15 @@ To confirm the model payload shape while debugging, run the Gateway with
 targeted logging:
 
 ```bash
-OPENCLAW_DEBUG_CODE_MODE=1 \
-OPENCLAW_DEBUG_MODEL_TRANSPORT=1 \
-OPENCLAW_DEBUG_MODEL_PAYLOAD=tools \
+DEX_DEBUG_CODE_MODE=1 \
+DEX_DEBUG_MODEL_TRANSPORT=1 \
+DEX_DEBUG_MODEL_PAYLOAD=tools \
 openclaw gateway
 ```
 
 With code mode active, the logged model-facing tool names should be `exec` and
 `wait`. If you need the redacted provider payload, add
-`OPENCLAW_DEBUG_MODEL_PAYLOAD=full-redacted` for a short debugging session.
+`DEX_DEBUG_MODEL_PAYLOAD=full-redacted` for a short debugging session.
 
 ## Technical tour
 
@@ -955,18 +955,18 @@ Use targeted model transport logging when code mode behaves differently from a
 normal tool run:
 
 ```bash
-OPENCLAW_DEBUG_CODE_MODE=1 \
-OPENCLAW_DEBUG_MODEL_TRANSPORT=1 \
-OPENCLAW_DEBUG_MODEL_PAYLOAD=tools \
-OPENCLAW_DEBUG_SSE=events \
+DEX_DEBUG_CODE_MODE=1 \
+DEX_DEBUG_MODEL_TRANSPORT=1 \
+DEX_DEBUG_MODEL_PAYLOAD=tools \
+DEX_DEBUG_SSE=events \
 openclaw gateway
 ```
 
-For payload-shape debugging, use `OPENCLAW_DEBUG_MODEL_PAYLOAD=full-redacted`.
+For payload-shape debugging, use `DEX_DEBUG_MODEL_PAYLOAD=full-redacted`.
 This logs a capped, redacted JSON snapshot of the model request; it should only
 be used while debugging because prompts and message text can still appear.
 
-For stream debugging, use `OPENCLAW_DEBUG_SSE=peek` to log the first five
+For stream debugging, use `DEX_DEBUG_SSE=peek` to log the first five
 redacted SSE events. Code mode also fails closed if the final provider payload
 does not contain exactly `exec` and `wait` after the code-mode surface has
 activated.

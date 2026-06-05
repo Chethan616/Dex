@@ -1,5 +1,5 @@
 import { resolvePluginWebSearchConfig } from "../../config/plugin-web-search-config.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { isLegacyWebSearchProviderConfigKey } from "../../config/web-search-legacy-provider-keys.js";
 
 export function getTopLevelCredentialValue(searchConfig?: Record<string, unknown>): unknown {
@@ -78,7 +78,7 @@ export function mergeScopedSearchConfig(
 }
 
 export function resolveProviderWebSearchPluginConfig(
-  config: OpenClawConfig | undefined,
+  config: DexConfig | undefined,
   pluginId: string,
 ): Record<string, unknown> | undefined {
   return resolvePluginWebSearchConfig(config, pluginId);
@@ -95,7 +95,7 @@ function ensureObject(target: Record<string, unknown>, key: string): Record<stri
 }
 
 export function setProviderWebSearchPluginConfigValue(
-  configTarget: OpenClawConfig,
+  configTarget: DexConfig,
   pluginId: string,
   key: string,
   value: unknown,

@@ -3,13 +3,13 @@ import type { JsonObject } from "../protocol.js";
 import { requireObject, requireString } from "./json-rpc.js";
 import type {
   FsAccessMode,
-  OpenClawExecServer,
+  DexExecServer,
   ResolvedFsSandboxEntry,
   ResolvedFsSandboxPolicy,
 } from "./types.js";
 
 export function assertFsSandboxAccess(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   record: JsonObject,
   requests: Array<{ path: string; access: "read" | "write" }>,
 ): void {
@@ -17,7 +17,7 @@ export function assertFsSandboxAccess(
 }
 
 export function resolveFsSandboxPolicy(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   record: JsonObject,
 ): ResolvedFsSandboxPolicy | undefined {
   if (record.sandbox === undefined || record.sandbox === null) {
@@ -57,7 +57,7 @@ export function resolveFsSandboxPolicy(
   };
 }
 
-function readFsSandboxCwd(execServer: OpenClawExecServer, sandbox: JsonObject): string {
+function readFsSandboxCwd(execServer: DexExecServer, sandbox: JsonObject): string {
   if (sandbox.cwd === undefined || sandbox.cwd === null) {
     return normalizeSandboxAbsolutePath(execServer.sandbox.containerWorkdir, "sandbox cwd");
   }

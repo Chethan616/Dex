@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   resolveRetryConfig,
   retryAsync,
@@ -41,7 +41,7 @@ export function getDiscordDeliveryRetryAfterMs(err: unknown): number | undefined
 }
 
 export async function withDiscordDeliveryRetry<T>(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   fn: () => Promise<T>;
 }): Promise<T> {

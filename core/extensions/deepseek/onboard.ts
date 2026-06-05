@@ -1,13 +1,13 @@
 import {
   applyAgentDefaultModelPrimary,
   applyProviderConfigWithModelCatalog,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/provider-onboard";
 import { buildDeepSeekModelDefinition, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL_CATALOG } from "./api.js";
 
 export const DEEPSEEK_DEFAULT_MODEL_REF = "deepseek/deepseek-v4-flash";
 
-function applyDeepSeekProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
+function applyDeepSeekProviderConfig(cfg: DexConfig): DexConfig {
   const models = { ...cfg.agents?.defaults?.models };
   models[DEEPSEEK_DEFAULT_MODEL_REF] = {
     ...models[DEEPSEEK_DEFAULT_MODEL_REF],
@@ -23,7 +23,7 @@ function applyDeepSeekProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   });
 }
 
-export function applyDeepSeekConfig(cfg: OpenClawConfig): OpenClawConfig {
+export function applyDeepSeekConfig(cfg: DexConfig): DexConfig {
   return applyAgentDefaultModelPrimary(
     applyDeepSeekProviderConfig(cfg),
     DEEPSEEK_DEFAULT_MODEL_REF,

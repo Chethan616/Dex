@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   resolveManifestDeprecatedProviderAuthChoice,
   resolveManifestProviderAuthChoices,
@@ -10,7 +10,7 @@ const LEGACY_REPLACEMENT_AUTH_CHOICES = new Set(["claude-cli"]);
 function resolveLegacyCliBackendChoice(
   choice: string,
   params?: {
-    config?: OpenClawConfig;
+    config?: DexConfig;
     workspaceDir?: string;
     env?: NodeJS.ProcessEnv;
   },
@@ -26,7 +26,7 @@ function resolveReplacementLabel(choiceLabel: string): string {
 }
 
 export function resolveLegacyAuthChoiceAliasesForCli(params?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
 }): ReadonlyArray<AuthChoice> {
@@ -40,7 +40,7 @@ export function resolveLegacyAuthChoiceAliasesForCli(params?: {
 export function normalizeLegacyOnboardAuthChoice(
   authChoice: AuthChoice | undefined,
   params?: {
-    config?: OpenClawConfig;
+    config?: DexConfig;
     workspaceDir?: string;
     env?: NodeJS.ProcessEnv;
   },
@@ -60,7 +60,7 @@ export function normalizeLegacyOnboardAuthChoice(
 export function isDeprecatedAuthChoice(
   authChoice: AuthChoice | undefined,
   params?: {
-    config?: OpenClawConfig;
+    config?: DexConfig;
     workspaceDir?: string;
     env?: NodeJS.ProcessEnv;
   },
@@ -73,7 +73,7 @@ export function isDeprecatedAuthChoice(
 export function resolveDeprecatedAuthChoiceReplacement(
   authChoice: AuthChoice,
   params?: {
-    config?: OpenClawConfig;
+    config?: DexConfig;
     workspaceDir?: string;
     env?: NodeJS.ProcessEnv;
   },
@@ -100,7 +100,7 @@ export function resolveDeprecatedAuthChoiceReplacement(
 export function formatDeprecatedNonInteractiveAuthChoiceError(
   authChoice: AuthChoice,
   params?: {
-    config?: OpenClawConfig;
+    config?: DexConfig;
     workspaceDir?: string;
     env?: NodeJS.ProcessEnv;
   },

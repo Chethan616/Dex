@@ -58,7 +58,7 @@ Notes:
 
 ## API key
 
-Set `OPENAI_API_KEY`, or configure it in the active OpenClaw config file (`$OPENCLAW_CONFIG_PATH`, default `~/.openclaw/openclaw.json`). Optionally set `OPENAI_BASE_URL`:
+Set `OPENAI_API_KEY`, or configure it in the active OpenClaw config file (`$DEX_CONFIG_PATH`, default `~/.dex/openclaw.json`). Optionally set `OPENAI_BASE_URL`:
 
 ```json5
 {

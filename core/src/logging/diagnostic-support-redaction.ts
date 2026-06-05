@@ -194,7 +194,7 @@ function addPathPrefixVariants(
 
 function pathRedactionPrefixes(options: SupportRedactionContext): PathRedactionPrefix[] {
   const prefixes = new Map<string, PathRedactionPrefix>();
-  addPathPrefixVariants(prefixes, options.stateDir, "$OPENCLAW_STATE_DIR");
+  addPathPrefixVariants(prefixes, options.stateDir, "$DEX_STATE_DIR");
   addPathPrefixVariants(prefixes, options.env.HOME, "~");
   addPathPrefixVariants(prefixes, options.env.USERPROFILE, "~");
   return [...prefixes.values()].toSorted((a, b) => b.prefix.length - a.prefix.length);

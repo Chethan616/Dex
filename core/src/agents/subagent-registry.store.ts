@@ -67,7 +67,7 @@ function setCachedRegistryRead(
 }
 
 function resolveSubagentStateDir(env: NodeJS.ProcessEnv = process.env): string {
-  const explicit = env.OPENCLAW_STATE_DIR?.trim();
+  const explicit = env.DEX_STATE_DIR?.trim();
   if (explicit) {
     return resolveStateDir(env);
   }

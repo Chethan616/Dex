@@ -333,7 +333,7 @@ The `image` and `video` sections also support:
     Opt-in live coverage exists for the bundled plugin:
 
     ```bash
-    OPENCLAW_LIVE_TEST=1 COMFY_LIVE_TEST=1 pnpm test:live -- extensions/comfy/comfy.live.test.ts
+    DEX_LIVE_TEST=1 COMFY_LIVE_TEST=1 pnpm test:live -- extensions/comfy/comfy.live.test.ts
     ```
 
     The live test skips individual image, video, or music cases unless the matching Comfy workflow section is configured.

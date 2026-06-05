@@ -17,9 +17,9 @@ import type {
 import { copyArrayEntries, isRecord, readRecordValue } from "../shared/safe-record.js";
 import { definePluginEntry } from "./plugin-entry.js";
 import type {
-  OpenClawPluginApi,
-  OpenClawPluginConfigSchema,
-  OpenClawPluginDefinition,
+  DexPluginApi,
+  DexPluginConfigSchema,
+  DexPluginDefinition,
 } from "./plugin-entry.js";
 import { buildSingleProviderApiKeyCatalog } from "./provider-catalog-shared.js";
 
@@ -60,8 +60,8 @@ export type SingleProviderPluginOptions = {
    * manifest `kind`. Runtime-entry `kind` remains only as a compatibility
    * fallback for older plugins.
    */
-  kind?: OpenClawPluginDefinition["kind"];
-  configSchema?: OpenClawPluginConfigSchema | (() => OpenClawPluginConfigSchema);
+  kind?: DexPluginDefinition["kind"];
+  configSchema?: DexPluginConfigSchema | (() => DexPluginConfigSchema);
   provider?: {
     id?: string;
     label: string;
@@ -75,7 +75,7 @@ export type SingleProviderPluginOptions = {
     ProviderPlugin,
     "id" | "label" | "docsPath" | "aliases" | "envVars" | "auth" | "catalog" | "staticCatalog"
   >;
-  register?: (api: OpenClawPluginApi) => void;
+  register?: (api: DexPluginApi) => void;
 };
 
 function resolveWizardSetup(params: {

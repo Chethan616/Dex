@@ -1,4 +1,4 @@
-import type { OpenClawConfig, RuntimeEnv } from "../runtime-api.js";
+import type { DexConfig, RuntimeEnv } from "../runtime-api.js";
 import type { MSTeamsConversationStore } from "./conversation-store.js";
 import type { MSTeamsMonitorLogger } from "./monitor-types.js";
 import type { MSTeamsPollStore } from "./polls.js";
@@ -6,7 +6,7 @@ import type { MSTeamsApp } from "./sdk.js";
 import type { MSTeamsSsoDeps } from "./sso.js";
 
 export type MSTeamsMessageHandlerDeps = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   runtime: RuntimeEnv;
   appId: string;
   app: MSTeamsApp;

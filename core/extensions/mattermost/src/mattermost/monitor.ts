@@ -88,7 +88,7 @@ import {
 import type {
   ChannelAccountSnapshot,
   ChatType,
-  OpenClawConfig,
+  DexConfig,
   ReplyPayload,
   RuntimeEnv,
 } from "./runtime-api.js";
@@ -126,7 +126,7 @@ export type MonitorMattermostOpts = {
   botToken?: string;
   baseUrl?: string;
   accountId?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   runtime?: RuntimeEnv;
   abortSignal?: AbortSignal;
   statusSink?: (patch: Partial<ChannelAccountSnapshot>) => void;
@@ -516,7 +516,7 @@ function buildMattermostWsUrl(baseUrl: string): string {
 export async function monitorMattermostProvider(opts: MonitorMattermostOpts = {}): Promise<void> {
   const core = getMattermostRuntime();
   const runtime = resolveRuntime(opts);
-  const cfg = (opts.config ?? core.config.current()) as OpenClawConfig;
+  const cfg = (opts.config ?? core.config.current()) as DexConfig;
   const account = resolveMattermostAccount({
     cfg,
     accountId: opts.accountId,

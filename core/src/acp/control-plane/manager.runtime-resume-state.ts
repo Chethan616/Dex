@@ -1,6 +1,6 @@
 import { resolveSessionIdentityFromMeta } from "@dexagent/acp-core/runtime/session-identity";
 import type { AcpRuntime } from "@dexagent/acp-core/runtime/types";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { logVerbose } from "../../globals.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import type { AcpRuntimeError } from "../runtime/errors.js";
@@ -25,7 +25,7 @@ function isRecoverableMissingManagerPersistentSessionError(message: string): boo
 
 export async function prepareFreshManagerRuntimeHandleRetry(params: {
   attempt: number;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   error: AcpRuntimeError;
   sawTurnOutput: boolean;
@@ -80,7 +80,7 @@ export async function prepareFreshManagerRuntimeHandleRetry(params: {
 }
 
 async function clearPersistedRuntimeResumeState(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   writeSessionMeta: WriteManagerSessionMeta;
 }): Promise<boolean> {
@@ -130,7 +130,7 @@ async function clearPersistedRuntimeResumeState(params: {
 }
 
 export async function discardPersistedManagerRuntimeState(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   writeSessionMeta: WriteManagerSessionMeta;
 }): Promise<void> {
@@ -173,7 +173,7 @@ export async function discardPersistedManagerRuntimeState(params: {
 
 export async function tryPrepareFreshManagerRuntimeSession(params: {
   deps: Pick<AcpSessionManagerDeps, "getRuntimeBackend">;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   meta: SessionAcpMeta;
   sessionKey: string;
   logPrefix: string;

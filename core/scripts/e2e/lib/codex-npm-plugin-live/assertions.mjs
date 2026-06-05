@@ -14,7 +14,7 @@ import {
 
 const command = process.argv[2];
 const allowBetaCompatDiagnostics =
-  process.env.OPENCLAW_CODEX_NPM_PLUGIN_ALLOW_BETA_COMPAT_DIAGNOSTICS === "1";
+  process.env.DEX_CODEX_NPM_PLUGIN_ALLOW_BETA_COMPAT_DIAGNOSTICS === "1";
 
 function configure() {
   const modelRef = process.argv[3] || "codex/gpt-5.4";

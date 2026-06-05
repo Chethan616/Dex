@@ -3,26 +3,26 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { readBoundedResponseText } from "./lib/bounded-response-text.mjs";
 
-const groupId = process.env.OPENCLAW_QA_TELEGRAM_GROUP_ID;
-const driverToken = process.env.OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN;
-const sutToken = process.env.OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN;
-const outputDir = process.env.OPENCLAW_NPM_TELEGRAM_OUTPUT_DIR ?? ".artifacts/rtt/raw";
+const groupId = process.env.DEX_QA_TELEGRAM_GROUP_ID;
+const driverToken = process.env.DEX_QA_TELEGRAM_DRIVER_BOT_TOKEN;
+const sutToken = process.env.DEX_QA_TELEGRAM_SUT_BOT_TOKEN;
+const outputDir = process.env.DEX_NPM_TELEGRAM_OUTPUT_DIR ?? ".artifacts/rtt/raw";
 const telegramApiBaseUrl = (
-  process.env.OPENCLAW_QA_TELEGRAM_API_BASE_URL ?? "https://api.telegram.org"
+  process.env.DEX_QA_TELEGRAM_API_BASE_URL ?? "https://api.telegram.org"
 ).replace(/\/+$/u, "");
-const timeoutMs = readPositiveIntEnv("OPENCLAW_QA_TELEGRAM_SCENARIO_TIMEOUT_MS", 180000);
-const canaryTimeoutMs = readPositiveIntEnv("OPENCLAW_QA_TELEGRAM_CANARY_TIMEOUT_MS", timeoutMs);
-const warmSampleCount = readPositiveIntEnv("OPENCLAW_NPM_TELEGRAM_WARM_SAMPLES", 20);
-const sampleTimeoutMs = readPositiveIntEnv("OPENCLAW_NPM_TELEGRAM_SAMPLE_TIMEOUT_MS", 30000);
-const botApiTimeoutMs = readPositiveIntEnv("OPENCLAW_NPM_TELEGRAM_BOT_API_TIMEOUT_MS", 30000);
+const timeoutMs = readPositiveIntEnv("DEX_QA_TELEGRAM_SCENARIO_TIMEOUT_MS", 180000);
+const canaryTimeoutMs = readPositiveIntEnv("DEX_QA_TELEGRAM_CANARY_TIMEOUT_MS", timeoutMs);
+const warmSampleCount = readPositiveIntEnv("DEX_NPM_TELEGRAM_WARM_SAMPLES", 20);
+const sampleTimeoutMs = readPositiveIntEnv("DEX_NPM_TELEGRAM_SAMPLE_TIMEOUT_MS", 30000);
+const botApiTimeoutMs = readPositiveIntEnv("DEX_NPM_TELEGRAM_BOT_API_TIMEOUT_MS", 30000);
 const botApiBodyMaxBytes = readPositiveIntEnv(
-  "OPENCLAW_NPM_TELEGRAM_BOT_API_BODY_MAX_BYTES",
+  "DEX_NPM_TELEGRAM_BOT_API_BODY_MAX_BYTES",
   1024 * 1024,
 );
-const maxWarmFailures = readPositiveIntEnv("OPENCLAW_NPM_TELEGRAM_MAX_FAILURES", warmSampleCount);
-const successMarker = process.env.OPENCLAW_NPM_TELEGRAM_SUCCESS_MARKER ?? "OPENCLAW_E2E_OK";
+const maxWarmFailures = readPositiveIntEnv("DEX_NPM_TELEGRAM_MAX_FAILURES", warmSampleCount);
+const successMarker = process.env.DEX_NPM_TELEGRAM_SUCCESS_MARKER ?? "DEX_E2E_OK";
 const scenarioIds = new Set(
-  (process.env.OPENCLAW_NPM_TELEGRAM_SCENARIOS ?? "telegram-mentioned-message-reply")
+  (process.env.DEX_NPM_TELEGRAM_SCENARIOS ?? "telegram-mentioned-message-reply")
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean),
@@ -30,7 +30,7 @@ const scenarioIds = new Set(
 
 if (!groupId || !driverToken || !sutToken) {
   throw new Error(
-    "missing Telegram env: OPENCLAW_QA_TELEGRAM_GROUP_ID, OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN, OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN",
+    "missing Telegram env: DEX_QA_TELEGRAM_GROUP_ID, DEX_QA_TELEGRAM_DRIVER_BOT_TOKEN, DEX_QA_TELEGRAM_SUT_BOT_TOKEN",
   );
 }
 function readPositiveIntEnv(name, fallback) {

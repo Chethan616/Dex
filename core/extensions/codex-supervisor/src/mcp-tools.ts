@@ -7,8 +7,8 @@ import type {
   CodexSupervisorSessionListResult,
 } from "./types.js";
 
-export const RAW_TRANSCRIPTS_ENV = "OPENCLAW_CODEX_SUPERVISOR_ALLOW_RAW_TRANSCRIPTS";
-export const WRITE_CONTROLS_ENV = "OPENCLAW_CODEX_SUPERVISOR_ALLOW_WRITE_CONTROLS";
+export const RAW_TRANSCRIPTS_ENV = "DEX_CODEX_SUPERVISOR_ALLOW_RAW_TRANSCRIPTS";
+export const WRITE_CONTROLS_ENV = "DEX_CODEX_SUPERVISOR_ALLOW_WRITE_CONTROLS";
 
 export type CodexSupervisorMcpToolOptions = {
   rawTranscriptReadsAllowed?: () => boolean;

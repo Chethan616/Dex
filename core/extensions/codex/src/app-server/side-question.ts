@@ -531,8 +531,8 @@ async function createCodexSideToolBridge(input: {
     ({ id: input.params.model, provider: input.params.provider } as never);
   let tools: AnyAgentTool[] = [];
   if (supportsModelTools(runtimeModel)) {
-    const createOpenClawCodingTools = (await import("openclaw/plugin-sdk/agent-harness"))
-      .createOpenClawCodingTools;
+    const createDexCodingTools = (await import("openclaw/plugin-sdk/agent-harness"))
+      .createDexCodingTools;
     const sandboxSessionKey =
       input.params.sessionKey?.trim() || input.params.sessionId || input.sessionAgentId;
     const sandbox = await resolveSandboxContext({
@@ -540,7 +540,7 @@ async function createCodexSideToolBridge(input: {
       sessionKey: sandboxSessionKey,
       workspaceDir: input.cwd,
     });
-    const allTools = createOpenClawCodingTools({
+    const allTools = createDexCodingTools({
       agentId: input.sessionAgentId,
       sessionKey: sandboxSessionKey,
       runSessionKey:

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import http from "node:http";
 import type { Duplex } from "node:stream";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
 import {
   isFutureDateTimestampMs,
@@ -320,7 +320,7 @@ export class RealtimeCallHandler {
     private readonly realtimeProvider: RealtimeVoiceProviderPlugin,
     private readonly providerConfig: RealtimeVoiceProviderConfig,
     private readonly servePath: string,
-    private readonly coreConfig?: OpenClawConfig,
+    private readonly coreConfig?: DexConfig,
   ) {}
 
   setPublicUrl(url: string): void {

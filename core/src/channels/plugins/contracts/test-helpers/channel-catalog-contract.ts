@@ -23,8 +23,8 @@ function createCatalogFixtureEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.Proc
 
 function createCatalogFallbackOnlyEnv(): NodeJS.ProcessEnv {
   return createCatalogFixtureEnv({
-    OPENCLAW_DISABLE_BUNDLED_PLUGINS: "1",
-    OPENCLAW_BUNDLED_PLUGINS_DIR: "/nonexistent/bundled/plugins",
+    DEX_DISABLE_BUNDLED_PLUGINS: "1",
+    DEX_BUNDLED_PLUGINS_DIR: "/nonexistent/bundled/plugins",
   });
 }
 
@@ -61,7 +61,7 @@ export function describeBundledMetadataOnlyChannelCatalogContract(params: {
       const workspaceDir = fs.mkdtempSync(
         path.join(resolvePreferredOpenClawTmpDir(), "openclaw-bundled-catalog-"),
       );
-      const bundledDir = path.join(workspaceDir, ".openclaw", "extensions", params.pluginId);
+      const bundledDir = path.join(workspaceDir, ".dex", "extensions", params.pluginId);
       fs.mkdirSync(bundledDir, { recursive: true });
       fs.writeFileSync(
         path.join(workspaceDir, "package.json"),
@@ -92,7 +92,7 @@ export function describeBundledMetadataOnlyChannelCatalogContract(params: {
 
       const entry = listChannelPluginCatalogEntries({
         workspaceDir,
-        env: createCatalogFixtureEnv({ OPENCLAW_DISABLE_BUNDLED_PLUGINS: "1" }),
+        env: createCatalogFixtureEnv({ DEX_DISABLE_BUNDLED_PLUGINS: "1" }),
       }).find((item) => item.id === params.meta.id);
 
       expect(entry?.install.npmSpec).toBe(params.npmSpec);

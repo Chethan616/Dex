@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   hasAvailableCodexAuth,
   isCodexNativeSearchEligibleModel,
@@ -17,7 +17,7 @@ export {
 } from "./codex-native-web-search.shared.js";
 
 export function isCodexNativeWebSearchRelevant(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   agentId?: string;
   agentDir?: string;
 }): boolean {

@@ -1,7 +1,7 @@
 import { ensureAuthProfileStore } from "../agents/auth-profiles.js";
 import { resolveDefaultAgentWorkspaceDir } from "../agents/workspace.js";
 import { formatCliCommand } from "../cli/command-format.js";
-import type { OpenClawConfig, GatewayAuthConfig } from "../config/config.js";
+import type { DexConfig, GatewayAuthConfig } from "../config/config.js";
 import { isSecretRef, type SecretInput } from "../config/types.secrets.js";
 import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
@@ -41,7 +41,7 @@ function sanitizeTokenValue(value: unknown): string | undefined {
 
 async function resolveProviderChoiceModelPrompt(params: {
   authChoice: string;
-  config: OpenClawConfig;
+  config: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
 }): Promise<ProviderChoiceModelPrompt | undefined> {
@@ -68,7 +68,7 @@ async function resolveProviderChoiceModelPrompt(params: {
   };
 }
 
-function hasConfiguredProviderModels(cfg: OpenClawConfig, provider: string | undefined): boolean {
+function hasConfiguredProviderModels(cfg: DexConfig, provider: string | undefined): boolean {
   if (!provider) {
     return false;
   }
@@ -81,7 +81,7 @@ function hasConfiguredProviderModels(cfg: OpenClawConfig, provider: string | und
   );
 }
 
-function hasStaticManifestCatalogRows(cfg: OpenClawConfig, provider: string | undefined): boolean {
+function hasStaticManifestCatalogRows(cfg: DexConfig, provider: string | undefined): boolean {
   if (!provider) {
     return false;
   }
@@ -93,13 +93,13 @@ function hasStaticManifestCatalogRows(cfg: OpenClawConfig, provider: string | un
   );
 }
 
-function listConfiguredModelProviders(cfg: OpenClawConfig): string[] {
+function listConfiguredModelProviders(cfg: DexConfig): string[] {
   return Object.entries(cfg.models?.providers ?? {})
     .filter(([, provider]) => (provider.models?.length ?? 0) > 0)
     .map(([provider]) => provider);
 }
 
-function resolveSingleConfiguredProvider(cfg: OpenClawConfig): string | undefined {
+function resolveSingleConfiguredProvider(cfg: DexConfig): string | undefined {
   const configuredProviders = listConfiguredModelProviders(cfg);
   return configuredProviders.length === 1 ? configuredProviders[0] : undefined;
 }
@@ -111,7 +111,7 @@ function resolveProviderFromModelRef(model: string | undefined): string | undefi
 }
 
 function resolveCanonicalOpenAISelectionForLegacyCodexPrimary(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   selectedModels: readonly string[],
 ): string | undefined {
   const currentModel = cfg.agents?.defaults?.model;
@@ -130,8 +130,8 @@ function resolveCanonicalOpenAISelectionForLegacyCodexPrimary(
 }
 
 function resolveConfiguredProviderFromAuthChange(params: {
-  before: OpenClawConfig;
-  after: OpenClawConfig;
+  before: DexConfig;
+  after: DexConfig;
   preferredProvider?: string;
 }): string | undefined {
   if (hasConfiguredProviderModels(params.after, params.preferredProvider)) {
@@ -197,10 +197,10 @@ export function buildGatewayAuthConfig(params: {
 }
 
 export async function promptAuthConfig(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   runtime: RuntimeEnv,
   prompter: WizardPrompter,
-): Promise<OpenClawConfig> {
+): Promise<DexConfig> {
   let next = cfg;
   let authChoice = "skip";
   let preferredProvider: string | undefined;

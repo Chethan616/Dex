@@ -1,8 +1,8 @@
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { normalizeSecretInputString, resolveSecretInputRef } from "../config/types.secrets.js";
 
-const GATEWAY_ENV_TOKEN = "OPENCLAW_GATEWAY_TOKEN";
+const GATEWAY_ENV_TOKEN = "DEX_GATEWAY_TOKEN";
 const GATEWAY_SERVICE_KIND = "gateway";
 
 export type GatewayAuthTokenSourceConflict = {
@@ -15,15 +15,15 @@ export type GatewayAuthTokenSourceConflict = {
 };
 
 export function resolveGatewayAuthTokenSourceConflict(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env: NodeJS.ProcessEnv;
 }): GatewayAuthTokenSourceConflict | null {
-  const envToken = normalizeOptionalString(params.env.OPENCLAW_GATEWAY_TOKEN);
+  const envToken = normalizeOptionalString(params.env.DEX_GATEWAY_TOKEN);
   if (!envToken) {
     return null;
   }
 
-  if (params.env.OPENCLAW_SERVICE_KIND?.trim() === GATEWAY_SERVICE_KIND) {
+  if (params.env.DEX_SERVICE_KIND?.trim() === GATEWAY_SERVICE_KIND) {
     return null;
   }
 
@@ -60,7 +60,7 @@ export function resolveGatewayAuthTokenSourceConflict(params: {
     "prefers gateway.auth.token. If the values differ, CLI/RPC calls can fail to authenticate " +
     "with the running gateway.";
   const remediation =
-    `Remove ${GATEWAY_ENV_TOKEN} from the shell, ~/.openclaw/.env, or launchctl env if gateway.auth.token is intended, ` +
+    `Remove ${GATEWAY_ENV_TOKEN} from the shell, ~/.dex/.env, or launchctl env if gateway.auth.token is intended, ` +
     `or point gateway.auth.token at \${${GATEWAY_ENV_TOKEN}} if the env var should be canonical.`;
 
   return {

@@ -3,7 +3,7 @@ import { resolveApprovalOverGateway } from "openclaw/plugin-sdk/approval-gateway
 import type { ExecApprovalDecision } from "openclaw/plugin-sdk/approval-runtime";
 import type {
   DiscordExecApprovalConfig,
-  OpenClawConfig,
+  DexConfig,
 } from "openclaw/plugin-sdk/config-contracts";
 import { Button, type ButtonInteraction, type ComponentData } from "../internal/discord.js";
 export { buildExecApprovalCustomId } from "../approval-handler.runtime.js";
@@ -131,7 +131,7 @@ export function createExecApprovalButton(ctx: ExecApprovalButtonContext): Button
 }
 
 export function createDiscordExecApprovalButtonContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
   config: DiscordExecApprovalConfig;
   gatewayUrl?: string;

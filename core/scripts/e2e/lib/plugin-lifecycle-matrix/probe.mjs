@@ -6,7 +6,7 @@ import { readPluginInstallRecords } from "../plugin-index-sqlite.mjs";
 const home = os.homedir();
 
 function openclawPath(...parts) {
-  return path.join(home, ".openclaw", ...parts);
+  return path.join(home, ".dex", ...parts);
 }
 
 function readJson(file) {
@@ -35,7 +35,7 @@ function recordFor(pluginId) {
 }
 
 function config() {
-  return readJson(process.env.OPENCLAW_CONFIG_PATH ?? openclawPath("openclaw.json"));
+  return readJson(process.env.DEX_CONFIG_PATH ?? openclawPath("openclaw.json"));
 }
 
 function assert(condition, message) {

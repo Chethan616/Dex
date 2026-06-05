@@ -12,7 +12,7 @@ import {
   replaceConfigFile,
   resolveStateDir,
   type ConfigFileSnapshot,
-  type OpenClawConfig,
+  type DexConfig,
 } from "../config/config.js";
 import type { ConfigWriteOptions } from "../config/io.js";
 import { coerceSecretRef, type SecretProviderConfig } from "../config/types.secrets.js";
@@ -53,7 +53,7 @@ type ApplyWrite = {
 };
 
 type ProjectedState = {
-  nextConfig: OpenClawConfig;
+  nextConfig: DexConfig;
   configSnapshot: ConfigFileSnapshot;
   configPath: string;
   configWriteOptions: ConfigWriteOptions;
@@ -159,7 +159,7 @@ function scrubEnvRaw(
 }
 
 function applyProviderPlanMutations(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   upserts: Record<string, SecretProviderConfig> | undefined;
   deletes: string[] | undefined;
 }): boolean {
@@ -292,7 +292,7 @@ async function projectPlanState(params: {
 
 function applyConfigTargetMutations(params: {
   planTargets: SecretsPlanTarget[];
-  nextConfig: OpenClawConfig;
+  nextConfig: DexConfig;
   stateDir: string;
   authStoreByPath: Map<string, Record<string, unknown>>;
   changedFiles: Set<string>;
@@ -373,7 +373,7 @@ function applyConfigTargetMutations(params: {
 }
 
 function scrubAuthStoresForProviderTargets(params: {
-  nextConfig: OpenClawConfig;
+  nextConfig: DexConfig;
   stateDir: string;
   providerTargets: Set<string>;
   scrubbedValues: Set<string>;
@@ -448,7 +448,7 @@ function ensureMutableAuthStore(
 
 function resolveAuthStoreForTarget(params: {
   target: SecretsPlanTarget;
-  nextConfig: OpenClawConfig;
+  nextConfig: DexConfig;
   stateDir: string;
   authStoreByPath: Map<string, Record<string, unknown>>;
 }): { path: string; store: MutableAuthProfileStore } {
@@ -469,7 +469,7 @@ function resolveAuthStoreForTarget(params: {
 }
 
 function resolveAuthStorePathForAgent(params: {
-  nextConfig: OpenClawConfig;
+  nextConfig: DexConfig;
   stateDir: string;
   agentId: string;
 }): string {
@@ -544,7 +544,7 @@ function ensureAuthProfileContainer(params: {
 function applyAuthProfileTargetMutation(params: {
   target: SecretsPlanTarget;
   resolved: ResolvedPlanTargetEntry["resolved"];
-  nextConfig: OpenClawConfig;
+  nextConfig: DexConfig;
   stateDir: string;
   authStoreByPath: Map<string, Record<string, unknown>>;
   scrubbedValues: Set<string>;
@@ -651,7 +651,7 @@ function scrubEnvFiles(params: {
 
 async function validateProjectedSecretsState(params: {
   env: NodeJS.ProcessEnv;
-  nextConfig: OpenClawConfig;
+  nextConfig: DexConfig;
   resolvedTargets: ResolvedPlanTargetEntry[];
   authStoreByPath: Map<string, Record<string, unknown>>;
   write: boolean;
@@ -873,7 +873,7 @@ export const testing = {
   async projectConfigForTest(params: {
     plan: SecretsApplyPlan;
     env?: NodeJS.ProcessEnv;
-  }): Promise<OpenClawConfig> {
+  }): Promise<DexConfig> {
     const projected = await projectPlanState({
       plan: params.plan,
       env: params.env ?? process.env,

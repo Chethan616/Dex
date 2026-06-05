@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import type { OpenClawModalDialog } from "../ui/components/modal-dialog.ts";
+import type { DexModalDialog } from "../ui/components/modal-dialog.ts";
 
 type DialogMethodName = "showModal" | "close";
 type DialogDescriptorSnapshot = Record<DialogMethodName, PropertyDescriptor | undefined>;
@@ -42,7 +42,7 @@ export function installDialogPolyfill(): () => void {
 }
 
 export async function getRenderedModalDialog(container: HTMLElement) {
-  const modal = container.querySelector<OpenClawModalDialog>("openclaw-modal-dialog");
+  const modal = container.querySelector<DexModalDialog>("openclaw-modal-dialog");
   expect(modal).toBeInstanceOf(HTMLElement);
   if (!modal) {
     throw new Error("Expected openclaw-modal-dialog");

@@ -94,7 +94,7 @@ If you skip it, you can enable or change `x_search` later in config.
 **Credential alternatives:** sign in with `openclaw models auth login
 --provider xai --method oauth`, set `XAI_API_KEY` in the Gateway environment,
 or store `plugins.entries.xai.config.webSearch.apiKey`. For a gateway install,
-put env vars in `~/.openclaw/.env`.
+put env vars in `~/.dex/.env`.
 
 ## How it works
 

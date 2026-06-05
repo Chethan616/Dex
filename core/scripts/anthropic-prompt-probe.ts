@@ -1,10 +1,10 @@
 import { spawn } from "node:child_process";
 // Live prompt probe for Anthropic setup-token and Claude CLI prompt-path debugging.
 // Usage:
-// OPENCLAW_PROMPT_TRANSPORT=direct|gateway
-// OPENCLAW_PROMPT_MODE=extra
-// OPENCLAW_PROMPT_TEXT='...'
-// OPENCLAW_PROMPT_CAPTURE=1
+// DEX_PROMPT_TRANSPORT=direct|gateway
+// DEX_PROMPT_MODE=extra
+// DEX_PROMPT_TEXT='...'
+// DEX_PROMPT_CAPTURE=1
 // pnpm probe:anthropic:prompt
 import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
@@ -26,43 +26,43 @@ import {
   redactForDevToolLog,
 } from "./lib/dev-tooling-safety.ts";
 
-const TRANSPORT = process.env.OPENCLAW_PROMPT_TRANSPORT?.trim() === "direct" ? "direct" : "gateway";
+const TRANSPORT = process.env.DEX_PROMPT_TRANSPORT?.trim() === "direct" ? "direct" : "gateway";
 const GATEWAY_PROMPT_MODE = "extra";
-const PROMPT_TEXT = process.env.OPENCLAW_PROMPT_TEXT?.trim() ?? "";
-const PROMPT_LIST_JSON = process.env.OPENCLAW_PROMPT_LIST_JSON?.trim() ?? "";
-const USER_PROMPT = process.env.OPENCLAW_USER_PROMPT?.trim() || "is clawd here?";
+const PROMPT_TEXT = process.env.DEX_PROMPT_TEXT?.trim() ?? "";
+const PROMPT_LIST_JSON = process.env.DEX_PROMPT_LIST_JSON?.trim() ?? "";
+const USER_PROMPT = process.env.DEX_USER_PROMPT?.trim() || "is clawd here?";
 const ENABLE_CAPTURE = parseBooleanEnv({
   fallback: false,
-  name: "OPENCLAW_PROMPT_CAPTURE",
-  raw: process.env.OPENCLAW_PROMPT_CAPTURE,
+  name: "DEX_PROMPT_CAPTURE",
+  raw: process.env.DEX_PROMPT_CAPTURE,
 });
 const INCLUDE_RAW = parseBooleanEnv({
   fallback: false,
-  name: "OPENCLAW_PROMPT_INCLUDE_RAW",
-  raw: process.env.OPENCLAW_PROMPT_INCLUDE_RAW,
+  name: "DEX_PROMPT_INCLUDE_RAW",
+  raw: process.env.DEX_PROMPT_INCLUDE_RAW,
 });
 const KEEP_TMP = parseBooleanEnv({
   fallback: false,
-  name: "OPENCLAW_PROMPT_KEEP_TMP",
-  raw: process.env.OPENCLAW_PROMPT_KEEP_TMP,
+  name: "DEX_PROMPT_KEEP_TMP",
+  raw: process.env.DEX_PROMPT_KEEP_TMP,
 });
 const CLAUDE_BIN = process.env.CLAUDE_BIN?.trim() || "claude";
-const NODE_BIN = process.env.OPENCLAW_NODE_BIN?.trim() || process.execPath;
+const NODE_BIN = process.env.DEX_NODE_BIN?.trim() || process.execPath;
 const TIMEOUT_MS = parseStrictIntegerOption({
   fallback: 45_000,
-  label: "OPENCLAW_PROMPT_TIMEOUT_MS",
+  label: "DEX_PROMPT_TIMEOUT_MS",
   min: 1,
-  raw: process.env.OPENCLAW_PROMPT_TIMEOUT_MS,
+  raw: process.env.DEX_PROMPT_TIMEOUT_MS,
 });
 const GATEWAY_TIMEOUT_MS = parseStrictIntegerOption({
   fallback: 120_000,
-  label: "OPENCLAW_PROMPT_GATEWAY_TIMEOUT_MS",
+  label: "DEX_PROMPT_GATEWAY_TIMEOUT_MS",
   min: 1,
-  raw: process.env.OPENCLAW_PROMPT_GATEWAY_TIMEOUT_MS,
+  raw: process.env.DEX_PROMPT_GATEWAY_TIMEOUT_MS,
 });
-const SETUP_TOKEN_RAW = process.env.OPENCLAW_LIVE_SETUP_TOKEN?.trim() ?? "";
-const SETUP_TOKEN_VALUE = process.env.OPENCLAW_LIVE_SETUP_TOKEN_VALUE?.trim() ?? "";
-const SETUP_TOKEN_PROFILE = process.env.OPENCLAW_LIVE_SETUP_TOKEN_PROFILE?.trim() ?? "";
+const SETUP_TOKEN_RAW = process.env.DEX_LIVE_SETUP_TOKEN?.trim() ?? "";
+const SETUP_TOKEN_VALUE = process.env.DEX_LIVE_SETUP_TOKEN_VALUE?.trim() ?? "";
+const SETUP_TOKEN_PROFILE = process.env.DEX_LIVE_SETUP_TOKEN_PROFILE?.trim() ?? "";
 const DIRECT_CLAUDE_ARGS = ["-p", "--append-system-prompt"];
 
 type CaptureSummary = {
@@ -262,7 +262,7 @@ function resolveSetupTokenSource(): TokenSource {
   const match = pickSetupTokenProfile(candidates);
   if (!match) {
     throw new Error(
-      "no Anthropics setup-token profile found; set OPENCLAW_LIVE_SETUP_TOKEN_VALUE or OPENCLAW_LIVE_SETUP_TOKEN_PROFILE",
+      "no Anthropics setup-token profile found; set DEX_LIVE_SETUP_TOKEN_VALUE or DEX_LIVE_SETUP_TOKEN_PROFILE",
     );
   }
   return { profileId: match.id, token: validateSetupToken(match.token) };
@@ -501,18 +501,18 @@ async function startGatewayProcess(params: {
       cwd: process.cwd(),
       env: {
         ...process.env,
-        OPENCLAW_CONFIG_PATH: params.configPath,
-        OPENCLAW_STATE_DIR: params.stateDir,
-        OPENCLAW_AGENT_DIR: params.agentDir,
-        OPENCLAW_GATEWAY_TOKEN: params.gatewayToken,
-        OPENCLAW_SKIP_CHANNELS: "1",
-        OPENCLAW_SKIP_GMAIL_WATCHER: "1",
-        OPENCLAW_SKIP_CANVAS_HOST: "1",
-        OPENCLAW_SKIP_BROWSER_CONTROL_SERVER: "1",
-        OPENCLAW_DISABLE_BONJOUR: "1",
-        OPENCLAW_SKIP_CRON: "1",
-        OPENCLAW_TEST_MINIMAL_GATEWAY: "1",
-        OPENCLAW_BUNDLED_PLUGINS_DIR: params.bundledPluginsDir,
+        DEX_CONFIG_PATH: params.configPath,
+        DEX_STATE_DIR: params.stateDir,
+        DEX_AGENT_DIR: params.agentDir,
+        DEX_GATEWAY_TOKEN: params.gatewayToken,
+        DEX_SKIP_CHANNELS: "1",
+        DEX_SKIP_GMAIL_WATCHER: "1",
+        DEX_SKIP_CANVAS_HOST: "1",
+        DEX_SKIP_BROWSER_CONTROL_SERVER: "1",
+        DEX_DISABLE_BONJOUR: "1",
+        DEX_SKIP_CRON: "1",
+        DEX_TEST_MINIMAL_GATEWAY: "1",
+        DEX_BUNDLED_PLUGINS_DIR: params.bundledPluginsDir,
         ANTHROPIC_API_KEY: "",
         ANTHROPIC_API_KEY_OLD: "",
       },
@@ -740,7 +740,7 @@ async function runGatewayPrompt(prompt: string): Promise<PromptResult> {
 
 async function main() {
   if (!PROMPT_TEXT && !PROMPT_LIST_JSON) {
-    throw new Error("missing OPENCLAW_PROMPT_TEXT or OPENCLAW_PROMPT_LIST_JSON");
+    throw new Error("missing DEX_PROMPT_TEXT or DEX_PROMPT_LIST_JSON");
   }
   const prompts = PROMPT_LIST_JSON ? (JSON.parse(PROMPT_LIST_JSON) as string[]) : [PROMPT_TEXT];
   const results: PromptResult[] = [];

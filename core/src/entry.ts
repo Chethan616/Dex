@@ -41,7 +41,7 @@ function shouldForceReadOnlyAuthStore(argv: string[]): boolean {
 
 function createGatewayEntryStartupTrace(argv: string[]) {
   const enabled =
-    isTruthyEnvValue(process.env.OPENCLAW_GATEWAY_STARTUP_TRACE) &&
+    isTruthyEnvValue(process.env.DEX_GATEWAY_STARTUP_TRACE) &&
     argv.slice(2).includes("gateway");
   const started = performance.now();
   let last = started;
@@ -105,7 +105,7 @@ if (
     gatewayEntryStartupTrace.mark("bootstrap");
 
     if (shouldForceReadOnlyAuthStore(process.argv)) {
-      process.env.OPENCLAW_AUTH_STORE_READONLY = "1";
+      process.env.DEX_AUTH_STORE_READONLY = "1";
     }
 
     if (process.argv.includes("--no-color")) {
@@ -238,7 +238,7 @@ export async function tryHandlePrecomputedCommandHelpFastPath(
   } = {},
 ): Promise<boolean> {
   const env = deps.env ?? process.env;
-  if (env.OPENCLAW_DISABLE_CLI_STARTUP_HELP_FAST_PATH === "1") {
+  if (env.DEX_DISABLE_CLI_STARTUP_HELP_FAST_PATH === "1") {
     return false;
   }
   if (resolveCliContainerTarget(argv, env)) {

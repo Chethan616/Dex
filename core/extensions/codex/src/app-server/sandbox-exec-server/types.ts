@@ -69,7 +69,7 @@ export type ManagedProcess = {
   evictProcess: () => void;
 };
 
-export type OpenClawExecServer = {
+export type DexExecServer = {
   environmentId: string;
   authPath: string;
   refCount: number;

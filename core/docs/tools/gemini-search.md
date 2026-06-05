@@ -63,7 +63,7 @@ then `models.providers.google.apiKey`. For base URLs, the dedicated
 `plugins.entries.google.config.webSearch.baseUrl` wins before
 `models.providers.google.baseUrl`.
 
-For a gateway install, put env keys in `~/.openclaw/.env`.
+For a gateway install, put env keys in `~/.dex/.env`.
 
 ## How it works
 

@@ -42,7 +42,7 @@ Status: branch-local checkpoint, not release notes.
   command exited 0. The wrapper Actions run `26008757251` still reported
   `in_progress` after the box was stopped.
 - Testbox `tbx_01krwbsg15xvjdgpcz8fxq1htz` ran
-  `OPENCLAW_QA_GATEWAY_HEAP_CHECKPOINTS=1 pnpm openclaw qa suite --scenario channel-chat-baseline`.
+  `DEX_QA_GATEWAY_HEAP_CHECKPOINTS=1 pnpm openclaw qa suite --scenario channel-chat-baseline`.
   The sample passed and recorded heap checkpoints plus RSS trace: wall
   `20112ms`, gateway RSS `655036416 -> 953790464`, peak `1051258880`, heap
   snapshots `154M` and `165M`.

@@ -18,12 +18,12 @@ import {
   requireString,
 } from "./json-rpc.js";
 import { requireBackend, requireFsBridge } from "./runtime.js";
-import type { DirectoryEntry, OpenClawExecServer, ResolvedFsSandboxPolicy } from "./types.js";
+import type { DirectoryEntry, DexExecServer, ResolvedFsSandboxPolicy } from "./types.js";
 
 const CODEX_SANDBOX_EXEC_SERVER_MAX_READ_FILE_BYTES = 512 * 1024 * 1024;
 
 export async function readFile(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   params: JsonValue | undefined,
 ): Promise<JsonObject> {
   const record = requireObject(params, "fs/readFile params");
@@ -46,7 +46,7 @@ export async function readFile(
 }
 
 export async function writeFile(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   params: JsonValue | undefined,
 ): Promise<void> {
   const record = requireObject(params, "fs/writeFile params");
@@ -65,7 +65,7 @@ export async function writeFile(
 }
 
 export async function createDirectory(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   params: JsonValue | undefined,
 ): Promise<void> {
   const record = requireObject(params, "fs/createDirectory params");
@@ -85,7 +85,7 @@ export async function createDirectory(
 }
 
 export async function getMetadata(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   params: JsonValue | undefined,
 ): Promise<JsonObject> {
   const record = requireObject(params, "fs/getMetadata params");
@@ -102,7 +102,7 @@ export async function getMetadata(
 }
 
 export async function readDirectory(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   params: JsonValue | undefined,
 ): Promise<JsonObject> {
   const record = requireObject(params, "fs/readDirectory params");
@@ -114,7 +114,7 @@ export async function readDirectory(
 }
 
 async function listDirectoryEntries(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   filePath: string,
   fsSandboxPolicy: ResolvedFsSandboxPolicy | undefined,
 ): Promise<DirectoryEntry[]> {
@@ -149,7 +149,7 @@ async function listDirectoryEntries(
 }
 
 export async function removePath(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   params: JsonValue | undefined,
 ): Promise<void> {
   const record = requireObject(params, "fs/remove params");
@@ -168,7 +168,7 @@ export async function removePath(
 }
 
 export async function copyPath(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   params: JsonValue | undefined,
 ): Promise<void> {
   const record = requireObject(params, "fs/copy params");
@@ -191,7 +191,7 @@ export async function copyPath(
 }
 
 async function copySandboxPath(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   params: {
     sourcePath: string;
     destinationPath: string;

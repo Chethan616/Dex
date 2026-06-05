@@ -13,12 +13,12 @@ export type GatewayLogPaths = {
 };
 
 function resolveGatewayLogPrefix(env: GatewayServiceEnv): string {
-  return env.OPENCLAW_LOG_PREFIX?.trim() || "gateway";
+  return env.DEX_LOG_PREFIX?.trim() || "gateway";
 }
 
 function resolveMacLaunchAgentLogPrefix(env: GatewayServiceEnv): string {
   return (
-    env.OPENCLAW_LOG_PREFIX?.trim() || `gateway${resolveGatewayProfileSuffix(env.OPENCLAW_PROFILE)}`
+    env.DEX_LOG_PREFIX?.trim() || `gateway${resolveGatewayProfileSuffix(env.DEX_PROFILE)}`
   );
 }
 

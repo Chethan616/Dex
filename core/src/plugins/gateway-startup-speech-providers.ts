@@ -1,6 +1,6 @@
 import { isRecord } from "@dexagent/normalization-core/record-coerce";
 import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveEffectiveTtsConfig } from "../tts/tts-config.js";
 
 const TTS_PROVIDER_CONFIG_RESERVED_KEYS = new Set([
@@ -137,7 +137,7 @@ function addConfiguredTtsProviderIds(target: Set<string>, value: unknown): void 
   }
 }
 
-export function collectConfiguredSpeechProviderIds(config: OpenClawConfig): ReadonlySet<string> {
+export function collectConfiguredSpeechProviderIds(config: DexConfig): ReadonlySet<string> {
   const configured = new Set<string>();
   addConfiguredTtsProviderIds(configured, resolveEffectiveTtsConfig(config));
 

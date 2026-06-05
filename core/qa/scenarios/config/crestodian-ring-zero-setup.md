@@ -64,7 +64,7 @@ steps:
             expr: "String(template).replace(/\\{([A-Za-z0-9_]+)\\}/g, (match, key) => String(commandVars[key] ?? match))"
       - set: crestodianEnv
         value:
-          expr: "({ OPENCLAW_STATE_DIR: stateDir, OPENCLAW_CONFIG_PATH: configPath, OPENCLAW_BUNDLED_PLUGINS_DIR: path.join(env.repoRoot, 'dist', 'extensions'), [setupSpec.discordEnv]: setupSpec.discordToken })"
+          expr: "({ DEX_STATE_DIR: stateDir, DEX_CONFIG_PATH: configPath, DEX_BUNDLED_PLUGINS_DIR: path.join(env.repoRoot, 'dist', 'extensions'), [setupSpec.discordEnv]: setupSpec.discordToken })"
       - call: fs.rm
         args:
           - ref: stateDir

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { AgentContextInjection } from "../config/types.agent-defaults.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveUserPath } from "../utils.js";
 import { resolveAgentConfig, resolveSessionAgentIds } from "./agent-scope.js";
 import { getOrLoadBootstrapFiles } from "./bootstrap-cache.js";
@@ -55,7 +55,7 @@ export function resetBootstrapWarningCacheForTest(): void {
 }
 
 export function resolveContextInjectionMode(
-  config?: OpenClawConfig,
+  config?: DexConfig,
   agentId?: string | null,
 ): AgentContextInjection {
   const agentMode =
@@ -205,7 +205,7 @@ function applyContextModeFilter(params: {
 }
 
 function shouldExcludeHeartbeatBootstrapFile(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionKey?: string;
   sessionId?: string;
   agentId?: string;
@@ -276,7 +276,7 @@ async function isWorkspaceSetupCompletedForContext(workspaceDir: string): Promis
 
 export async function resolveBootstrapFilesForRun(params: {
   workspaceDir: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionKey?: string;
   sessionId?: string;
   agentId?: string;
@@ -325,7 +325,7 @@ export async function resolveBootstrapFilesForRun(params: {
 
 export async function resolveBootstrapContextForRun(params: {
   workspaceDir: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionKey?: string;
   sessionId?: string;
   agentId?: string;
@@ -344,7 +344,7 @@ export async function resolveBootstrapContextForRun(params: {
 export function buildBootstrapContextForFiles(
   bootstrapFiles: WorkspaceBootstrapFile[],
   params: {
-    config?: OpenClawConfig;
+    config?: DexConfig;
     agentId?: string | null;
     warn?: (message: string) => void;
   },

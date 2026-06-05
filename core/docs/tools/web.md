@@ -296,7 +296,7 @@ show the `x_search` prompt.
     export BRAVE_API_KEY="YOUR_KEY"
     ```
 
-    For a gateway install, put it in `~/.openclaw/.env`.
+    For a gateway install, put it in `~/.dex/.env`.
     See [Env vars](/help/faq#env-vars-and-env-loading).
 
   </Tab>

@@ -32,7 +32,7 @@ This is for cooperative/shared inbox hardening. A single Gateway shared by mutua
 It also emits `security.trust_model.multi_user_heuristic` when config suggests likely shared-user ingress (for example open DM/group policy, configured group targets, or wildcard sender rules), and reminds you that OpenClaw is a personal-assistant trust model by default.
 For intentional shared-user setups, the audit guidance is to sandbox all sessions, keep filesystem access workspace-scoped, and keep personal/private identities or credentials off that runtime.
 It also warns when small models (`<=300B`) are used without sandboxing and with web/browser tools enabled.
-For webhook ingress, startup logs a non-fatal security warning and audit flags `hooks.token` reuse of active Gateway shared-secret auth values, including `gateway.auth.token` / `OPENCLAW_GATEWAY_TOKEN` and `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`. It also warns when:
+For webhook ingress, startup logs a non-fatal security warning and audit flags `hooks.token` reuse of active Gateway shared-secret auth values, including `gateway.auth.token` / `DEX_GATEWAY_TOKEN` and `gateway.auth.password` / `DEX_GATEWAY_PASSWORD`. It also warns when:
 
 - `hooks.token` is short
 - `hooks.path="/"`

@@ -3,7 +3,7 @@ import path from "node:path";
 import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import { isRecord } from "@dexagent/normalization-core/record-coerce";
 import { resolveIsNixMode } from "../config/paths.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   getActiveDiagnosticsTimelineSpan,
   measureDiagnosticsTimelineSpanSync,
@@ -62,15 +62,15 @@ registerPluginMetadataProcessMemoLifecycleClear(clearLoadPluginMetadataSnapshotM
 const MEMO_RELEVANT_ENV_KEYS = [
   "APPDATA",
   "HOME",
-  "OPENCLAW_BUNDLED_PLUGINS_DIR",
-  "OPENCLAW_COMPATIBILITY_HOST_VERSION",
-  "OPENCLAW_CONFIG_PATH",
-  "OPENCLAW_DISABLE_BUNDLED_PLUGINS",
-  "OPENCLAW_DISABLE_BUNDLED_SOURCE_OVERLAYS",
-  "OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY",
-  "OPENCLAW_HOME",
-  "OPENCLAW_NIX_MODE",
-  "OPENCLAW_STATE_DIR",
+  "DEX_BUNDLED_PLUGINS_DIR",
+  "DEX_COMPATIBILITY_HOST_VERSION",
+  "DEX_CONFIG_PATH",
+  "DEX_DISABLE_BUNDLED_PLUGINS",
+  "DEX_DISABLE_BUNDLED_SOURCE_OVERLAYS",
+  "DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY",
+  "DEX_HOME",
+  "DEX_NIX_MODE",
+  "DEX_STATE_DIR",
   "USERPROFILE",
   "XDG_CONFIG_HOME",
 ] as const;
@@ -188,7 +188,7 @@ function resolvePersistedRegistryFastMemoFingerprint(params: {
   preferPersisted?: boolean;
   stateDir?: string;
 }): Record<string, unknown> {
-  const disabledByEnv = params.env.OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY?.trim().toLowerCase();
+  const disabledByEnv = params.env.DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY?.trim().toLowerCase();
   const disabled =
     params.preferPersisted === false ||
     (Boolean(disabledByEnv) &&
@@ -439,7 +439,7 @@ export function isPluginMetadataSnapshotCompatible(params: {
     PluginMetadataSnapshot,
     "configFingerprint" | "index" | "pluginIds" | "policyHash" | "workspaceDir"
   >;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   env?: NodeJS.ProcessEnv;
   allowScopedSnapshot?: boolean;
   pluginIds?: readonly string[];

@@ -3,7 +3,7 @@ import {
   collectConfiguredAgentHarnessRuntimes,
   type ConfiguredAgentHarnessRuntimeOptions,
 } from "../../../agents/harness-runtimes.js";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 import type { PluginPackageInstall } from "../../../plugins/manifest.js";
 
 export type ConfiguredRuntimePluginInstallCandidate = {
@@ -40,7 +40,7 @@ export function resolveConfiguredRuntimePluginInstallCandidate(
   );
 }
 
-function acpxRuntimeIsConfigured(cfg: OpenClawConfig): boolean {
+function acpxRuntimeIsConfigured(cfg: DexConfig): boolean {
   const acp = asOptionalRecord(cfg.acp);
   const backend = typeof acp?.backend === "string" ? acp.backend.trim().toLowerCase() : "";
   return (
@@ -52,7 +52,7 @@ function acpxRuntimeIsConfigured(cfg: OpenClawConfig): boolean {
 }
 
 export function collectConfiguredRuntimePluginIds(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   options?: ConfiguredAgentHarnessRuntimeOptions,
 ): string[] {
   const ids = new Set(collectConfiguredAgentHarnessRuntimes(cfg, options));

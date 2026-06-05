@@ -15,7 +15,7 @@
  *      `raw` directly instead of mutating the AST.
  *
  * In both modes, every emitted leaf flows through `guardSentinel` so a
- * `__OPENCLAW_REDACTED__` literal anywhere in the output throws
+ * `__DEX_REDACTED__` literal anywhere in the output throws
  * `OcEmitSentinelError`. This is the substrate guard: callers can't
  * accidentally write a redacted view to disk through this emitter.
  *
@@ -64,8 +64,8 @@ export function emitMd(ast: MdAst, opts: EmitOptions = {}): string {
     // jsonc/emit.ts. A markdown file legitimately containing the
     // sentinel literal (in a code block, in a pasted error log) would
     // otherwise become a workspace-wide emit DoS.
-    if (!acceptPreExisting && ast.raw.includes("__OPENCLAW_REDACTED__")) {
-      guardSentinel("__OPENCLAW_REDACTED__", `${guardPath}/[raw]`);
+    if (!acceptPreExisting && ast.raw.includes("__DEX_REDACTED__")) {
+      guardSentinel("__DEX_REDACTED__", `${guardPath}/[raw]`);
     }
     return ast.raw;
   }

@@ -27,7 +27,7 @@ Behavior:
 - Background and `yieldMs` runs inherit `tools.exec.timeoutSec` unless the call provides an explicit `timeout`.
 - Output is kept in memory until the session is polled or cleared.
 - If the `process` tool is disallowed, `exec` runs synchronously and ignores `yieldMs`/`background`.
-- Spawned exec commands receive `OPENCLAW_SHELL=exec` for context-aware shell/profile rules.
+- Spawned exec commands receive `DEX_SHELL=exec` for context-aware shell/profile rules.
 - For long-running work that starts now, start it once and rely on automatic
   completion wake when it is enabled and the command emits output or fails.
 - If automatic completion wake is unavailable, or you need quiet-success
@@ -42,11 +42,11 @@ When spawning long-running child processes outside the exec/process tools (for e
 
 Environment overrides:
 
-- `OPENCLAW_BASH_YIELD_MS`: default yield (ms)
-- `OPENCLAW_BASH_MAX_OUTPUT_CHARS`: in-memory output cap (chars)
-- `OPENCLAW_BASH_PENDING_MAX_OUTPUT_CHARS`: pending stdout/stderr cap per stream (chars)
-- `OPENCLAW_BASH_JOB_TTL_MS`: TTL for finished sessions (ms, bounded to 1m–3h)
-- `OPENCLAW_PROCESS_INPUT_WAIT_IDLE_MS`: idle-output threshold before writable background sessions are marked as likely waiting for input (default 15000 ms)
+- `DEX_BASH_YIELD_MS`: default yield (ms)
+- `DEX_BASH_MAX_OUTPUT_CHARS`: in-memory output cap (chars)
+- `DEX_BASH_PENDING_MAX_OUTPUT_CHARS`: pending stdout/stderr cap per stream (chars)
+- `DEX_BASH_JOB_TTL_MS`: TTL for finished sessions (ms, bounded to 1m–3h)
+- `DEX_PROCESS_INPUT_WAIT_IDLE_MS`: idle-output threshold before writable background sessions are marked as likely waiting for input (default 15000 ms)
 
 Config (preferred):
 

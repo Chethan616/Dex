@@ -9,7 +9,7 @@ import {
 } from "../agents/models-config.providers.secrets.js";
 import { resolveProviderCatalogPluginIdsForFilter } from "../commands/models/list.provider-catalog.js";
 import type { ModelDefinitionConfig, ModelProviderConfig } from "../config/types.models.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import {
@@ -51,7 +51,7 @@ function hasLiveProviderCatalog(provider: ProviderPlugin): boolean {
 }
 
 async function resolvePreferredProviderLiveCatalogProviders(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env: NodeJS.ProcessEnv;
   onlyPluginIds: string[];
   providerFilter: string;
@@ -137,7 +137,7 @@ function modelFromProviderCatalog(params: {
 }
 
 export async function loadPreferredProviderPickerCatalog(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   preferredProvider: string;
   agentDir?: string;
   workspaceDir?: string;

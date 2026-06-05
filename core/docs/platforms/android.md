@@ -187,7 +187,7 @@ If you want the node to show real HTML/CSS/JS that the agent can edit on disk, p
 Nodes load canvas from the Gateway HTTP server (same port as `gateway.port`, default `18789`).
 </Note>
 
-1. Create `~/.openclaw/workspace/canvas/index.html` on the gateway host.
+1. Create `~/.dex/workspace/canvas/index.html` on the gateway host.
 
 2. Navigate the node to it (LAN):
 

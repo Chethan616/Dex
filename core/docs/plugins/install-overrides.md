@@ -23,8 +23,8 @@ isolated state directory or disposable test machine.
 Overrides are disabled unless both variables are set:
 
 ```bash
-export OPENCLAW_ALLOW_PLUGIN_INSTALL_OVERRIDES=1
-export OPENCLAW_PLUGIN_INSTALL_OVERRIDES='{
+export DEX_ALLOW_PLUGIN_INSTALL_OVERRIDES=1
+export DEX_PLUGIN_INSTALL_OVERRIDES='{
   "codex": "npm-pack:/tmp/openclaw-codex-2026.5.8.tgz",
   "openclaw-web-search": "npm:@openclaw/web-search@2026.5.8"
 }'
@@ -62,17 +62,17 @@ touch your normal OpenClaw state:
 ```bash
 npm pack extensions/codex --pack-destination /tmp
 
-OPENCLAW_STATE_DIR="$(mktemp -d)" \
-OPENCLAW_ALLOW_PLUGIN_INSTALL_OVERRIDES=1 \
-OPENCLAW_PLUGIN_INSTALL_OVERRIDES='{"codex":"npm-pack:/tmp/openclaw-codex-2026.5.8.tgz"}' \
+DEX_STATE_DIR="$(mktemp -d)" \
+DEX_ALLOW_PLUGIN_INSTALL_OVERRIDES=1 \
+DEX_PLUGIN_INSTALL_OVERRIDES='{"codex":"npm-pack:/tmp/openclaw-codex-2026.5.8.tgz"}' \
 pnpm openclaw onboard --mode local
 ```
 
 Verify the installed package under the state directory:
 
 ```bash
-find "$OPENCLAW_STATE_DIR/npm/projects" -path '*/node_modules/@openclaw/codex/package.json' -print
-grep -R '"@openclaw/codex"' "$OPENCLAW_STATE_DIR/npm/projects"/*/package-lock.json
+find "$DEX_STATE_DIR/npm/projects" -path '*/node_modules/@openclaw/codex/package.json' -print
+grep -R '"@openclaw/codex"' "$DEX_STATE_DIR/npm/projects"/*/package-lock.json
 ```
 
 For live provider E2E, source the real API key from a trusted shell or CI secret

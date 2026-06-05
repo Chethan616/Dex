@@ -11,13 +11,13 @@ import { DEFAULT_CONTEXT_TOKENS, DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agen
 import { parseModelRef, resolvePersistedSelectedModelRef } from "../agents/model-selection.js";
 import { resolveAgentModelPrimaryValue } from "../config/model-input.js";
 import type { SessionEntry } from "../config/sessions/types.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { resolveStoredSessionKeyForAgentStore } from "../gateway/session-store-key.js";
 import { classifySessionKind } from "../sessions/classify-session-kind.js";
 import { resolveAgentRuntimeLabel } from "../status/agent-runtime-label.js";
 
 function resolveStatusModelRefFromRaw(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   rawModel: string;
   defaultProvider: string;
 }): { provider: string; model: string } | null {
@@ -49,7 +49,7 @@ function resolveStatusModelRefFromRaw(params: {
 }
 
 function resolveConfiguredStatusModelRef(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   defaultProvider: string;
   defaultModel: string;
   agentId?: string;
@@ -94,7 +94,7 @@ function resolveConfiguredStatusModelRef(params: {
 }
 
 function resolveConfiguredProviderContextTokens(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   provider: string,
   model: string,
 ): number | undefined {
@@ -128,7 +128,7 @@ function resolveConfiguredProviderContextTokens(
 }
 
 function resolveSessionModelRef(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   entry?:
     | SessionEntry
     | Pick<SessionEntry, "model" | "modelProvider" | "modelOverride" | "providerOverride">,
@@ -153,7 +153,7 @@ function resolveSessionModelRef(
 }
 
 function resolveSessionRuntimeLabel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   entry?: SessionEntry;
   provider: string;
   model: string;
@@ -188,7 +188,7 @@ function resolveSessionRuntimeLabel(params: {
 }
 
 function resolveContextTokensForModel(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider?: string;
   model?: string;
   contextTokensOverride?: number;

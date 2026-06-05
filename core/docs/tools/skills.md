@@ -39,7 +39,7 @@ skill name appears in multiple places, the highest source wins.
 | 1 — highest | Workspace skills       | `<workspace>/skills`                    |
 | 2           | Project agent skills   | `<workspace>/.agents/skills`            |
 | 3           | Personal agent skills  | `~/.agents/skills`                      |
-| 4           | Managed / local skills | `~/.openclaw/skills`                    |
+| 4           | Managed / local skills | `~/.dex/skills`                    |
 | 5           | Bundled skills         | shipped with the install                |
 | 6 — lowest  | Extra directories      | `skills.load.extraDirs` + plugin skills |
 
@@ -71,7 +71,7 @@ matches your desired visibility:
 | Per-agent      | `<workspace>/skills`         | Only that agent             |
 | Project-agent  | `<workspace>/.agents/skills` | Only that workspace's agent |
 | Personal-agent | `~/.agents/skills`           | All agents on this machine  |
-| Shared managed | `~/.openclaw/skills`         | All agents on this machine  |
+| Shared managed | `~/.dex/skills`         | All agents on this machine  |
 | Extra dirs     | `skills.load.extraDirs`      | All agents on this machine  |
 
 ## Agent allowlists
@@ -160,7 +160,7 @@ publish and sync.
   <Accordion title="Install details">
     `openclaw skills install` installs into the active workspace `skills/`
     directory by default. Add `--global` to install into the shared
-    `~/.openclaw/skills` directory, visible to all local agents unless agent
+    `~/.dex/skills` directory, visible to all local agents unless agent
     allowlists narrow it.
 
     Git and local installs expect `SKILL.md` at the source root. The slug comes
@@ -204,7 +204,7 @@ publish and sync.
     Workspace, project-agent, and extra-dir skill discovery only accepts skill
     roots whose resolved realpath stays inside the configured root, unless
     `skills.load.allowSymlinkTargets` explicitly trusts a target root.
-    Managed `~/.openclaw/skills` and personal `~/.agents/skills` may contain
+    Managed `~/.dex/skills` and personal `~/.agents/skills` may contain
     symlinked skill folders, but every `SKILL.md` realpath must still stay
     inside its resolved skill directory.
   </Accordion>
@@ -396,7 +396,7 @@ metadata:
       Go via Homebrew first and sets `GOBIN` to Homebrew's `bin`.
     - **Download:** `url` (required), `archive` (`tar.gz` | `tar.bz2` | `zip`),
       `extract` (default: auto when archive detected), `stripComponents`,
-      `targetDir` (default: `~/.openclaw/tools/<skillKey>`).
+      `targetDir` (default: `~/.dex/tools/<skillKey>`).
   </Accordion>
   <Accordion title="Sandboxing notes">
     `requires.bins` is checked on the **host** at skill load time. If an agent
@@ -410,7 +410,7 @@ metadata:
 ## Config overrides
 
 Toggle and configure bundled or managed skills under `skills.entries` in
-`~/.openclaw/openclaw.json`:
+`~/.dex/openclaw.json`:
 
 ```json5
 {

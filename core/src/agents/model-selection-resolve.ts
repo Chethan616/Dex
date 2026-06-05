@@ -1,5 +1,5 @@
 import { resolveAgentModelFallbackValues } from "../config/model-input.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { ModelCatalogEntry } from "./model-catalog.types.js";
 import type { ModelManifestNormalizationContext, ModelRef } from "./model-selection-normalize.js";
 import {
@@ -19,13 +19,13 @@ export {
 } from "./model-selection-shared.js";
 export type { ModelRefStatus } from "./model-selection-shared.js";
 
-function resolveDefaultFallbackModels(cfg: OpenClawConfig): string[] {
+function resolveDefaultFallbackModels(cfg: DexConfig): string[] {
   return resolveAgentModelFallbackValues(cfg.agents?.defaults?.model);
 }
 
 export function getModelRefStatus(
   params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     catalog: ModelCatalogEntry[];
     ref: ModelRef;
     defaultProvider: string;
@@ -46,7 +46,7 @@ export function getModelRefStatus(
 
 export function resolveAllowedModelRef(
   params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     catalog: ModelCatalogEntry[];
     raw: string;
     defaultProvider: string;

@@ -157,7 +157,7 @@ const recipe = [
 ];
 
 function selectedScenario() {
-  return process.env.OPENCLAW_UPGRADE_SURVIVOR_SCENARIO || "base";
+  return process.env.DEX_UPGRADE_SURVIVOR_SCENARIO || "base";
 }
 
 function adaptStepForBaseline(step, baselineVersion, summary) {
@@ -199,7 +199,7 @@ function adaptStepForBaseline(step, baselineVersion, summary) {
   return step;
 }
 
-export function resolveUpgradeSurvivorOpenClawCommand(argv, params = {}) {
+export function resolveUpgradeSurvivorDexCommand(argv, params = {}) {
   const platform = params.platform ?? process.platform;
   if (platform === "win32") {
     const comSpec = params.comSpec ?? process.env.ComSpec ?? "cmd.exe";
@@ -224,7 +224,7 @@ function errorCode(error) {
 }
 
 export function runUpgradeSurvivorOpenClawStep(step, params = {}) {
-  const invocation = resolveUpgradeSurvivorOpenClawCommand(step.argv);
+  const invocation = resolveUpgradeSurvivorDexCommand(step.argv);
   const run = params.spawnSyncCommand ?? spawnSync;
   const timeoutMs = params.timeoutMs ?? CONFIG_COMMAND_TIMEOUT_MS;
   const maxBuffer = params.maxBufferBytes ?? CONFIG_COMMAND_MAX_BUFFER_BYTES;

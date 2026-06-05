@@ -4,7 +4,7 @@ import {
   resolveSourceReplyDeliveryMode,
   type SourceReplyDeliveryModeContext,
 } from "../../auto-reply/reply/source-reply-delivery-mode.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { getLoadedChannelPluginForRead } from "../plugins/registry-loaded-read.js";
 import { normalizeAnyChannelId } from "../registry-normalize.js";
 import {
@@ -27,7 +27,7 @@ export type { SourceReplyDeliveryMode };
 
 /** Resolves whether a channel reply should use source delivery, message tools, or direct sending. */
 export function resolveChannelSourceReplyDeliveryMode(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   ctx: SourceReplyDeliveryModeContext;
   requested?: SourceReplyDeliveryMode;
   messageToolAvailable?: boolean;

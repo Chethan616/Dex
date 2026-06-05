@@ -54,14 +54,14 @@ opens Crestodian instead.
 
 Plaintext `ws://` is accepted for loopback, private IP literals, `.local`, and
 Tailnet `*.ts.net` gateway URLs. For other trusted private-DNS names, set
-`OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1` in the onboarding process environment.
+`DEX_ALLOW_INSECURE_PRIVATE_WS=1` in the onboarding process environment.
 
 ## Locale
 
 Interactive onboarding uses the CLI wizard locale for fixed setup copy. Resolve
 order is:
 
-1. `OPENCLAW_LOCALE`
+1. `DEX_LOCALE`
 2. `LC_ALL`
 3. `LC_MESSAGES`
 4. `LANG`
@@ -75,7 +75,7 @@ remain literal.
 Example:
 
 ```bash
-OPENCLAW_LOCALE=zh-CN openclaw onboard
+DEX_LOCALE=zh-CN openclaw onboard
 ```
 
 Non-interactive custom provider:
@@ -153,12 +153,12 @@ Gateway token options in non-interactive mode:
 Example:
 
 ```bash
-export OPENCLAW_GATEWAY_TOKEN="your-token"
+export DEX_GATEWAY_TOKEN="your-token"
 openclaw onboard --non-interactive \
   --mode local \
   --auth-choice skip \
   --gateway-auth token \
-  --gateway-token-ref-env OPENCLAW_GATEWAY_TOKEN \
+  --gateway-token-ref-env DEX_GATEWAY_TOKEN \
   --accept-risk
 ```
 

@@ -48,8 +48,8 @@ function resolveAuthRole(token: string | null): ActorRole {
       "Missing Authorization: Bearer <secret> header.",
     );
   }
-  const maintainerSecret = process.env.OPENCLAW_QA_CONVEX_SECRET_MAINTAINER?.trim();
-  const ciSecret = process.env.OPENCLAW_QA_CONVEX_SECRET_CI?.trim();
+  const maintainerSecret = process.env.DEX_QA_CONVEX_SECRET_MAINTAINER?.trim();
+  const ciSecret = process.env.DEX_QA_CONVEX_SECRET_CI?.trim();
 
   if (!maintainerSecret && !ciSecret) {
     throw new BrokerHttpError(
@@ -75,18 +75,18 @@ function assertMaintainerAdminAuth(token: string | null) {
       "Missing Authorization: Bearer <secret> header.",
     );
   }
-  const maintainerSecret = process.env.OPENCLAW_QA_CONVEX_SECRET_MAINTAINER?.trim();
+  const maintainerSecret = process.env.DEX_QA_CONVEX_SECRET_MAINTAINER?.trim();
   if (!maintainerSecret) {
     throw new BrokerHttpError(
       500,
       "SERVER_MISCONFIGURED",
-      "Admin endpoints require OPENCLAW_QA_CONVEX_SECRET_MAINTAINER on this deployment.",
+      "Admin endpoints require DEX_QA_CONVEX_SECRET_MAINTAINER on this deployment.",
     );
   }
   if (token === maintainerSecret) {
     return;
   }
-  const ciSecret = process.env.OPENCLAW_QA_CONVEX_SECRET_CI?.trim();
+  const ciSecret = process.env.DEX_QA_CONVEX_SECRET_CI?.trim();
   if (ciSecret && token === ciSecret) {
     throw new BrokerHttpError(
       403,

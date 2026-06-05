@@ -39,7 +39,7 @@ import { formatCliCommand } from "../../cli/command-format.js";
 import { parseDurationMs } from "../../cli/parse-duration.js";
 import { logConfigUpdated } from "../../config/logging.js";
 import { normalizeAgentModelRefForConfig } from "../../config/model-input.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   applyProviderAuthConfigPatch,
   applyDefaultModel,
@@ -199,7 +199,7 @@ function validateOpenAICodexApiKeyInput(value: string): string | undefined {
 }
 
 type ResolvedModelsAuthContext = {
-  config: OpenClawConfig;
+  config: DexConfig;
   agentDir: string;
   workspaceDir: string;
   providers: ProviderPlugin[];
@@ -241,7 +241,7 @@ function mergeSetupProviders(
 
 function preferSetupAuthProviders(params: {
   providers: readonly ProviderPlugin[];
-  config: OpenClawConfig;
+  config: DexConfig;
   workspaceDir: string;
   requestedProvider?: string;
 }): ProviderPlugin[] {
@@ -415,7 +415,7 @@ async function pickProviderTokenMethod(params: {
 async function persistProviderAuthResult(params: {
   result: ProviderAuthResult;
   profiles?: ProviderAuthResult["profiles"];
-  config: OpenClawConfig;
+  config: DexConfig;
   agentDir: string;
   runtime: RuntimeEnv;
   prompter: ReturnType<typeof createClackPrompter>;
@@ -504,7 +504,7 @@ async function persistProviderAuthResult(params: {
 }
 
 function resolveConfiguredAuthSelectionForProvider(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   provider: string,
 ): { createIfMissing: boolean; order?: string[] } {
   const providerAuthKey = resolveProviderIdForAuth(provider, { config: cfg });
@@ -528,7 +528,7 @@ function resolveConfiguredAuthSelectionForProvider(
 }
 
 async function runProviderAuthMethod(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   agentDir: string;
   workspaceDir: string;
   provider: ProviderPlugin;

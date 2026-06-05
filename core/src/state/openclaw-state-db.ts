@@ -10,48 +10,48 @@ import {
 import { requireNodeSqlite } from "../infra/node-sqlite.js";
 import { runSqliteImmediateTransactionSync } from "../infra/sqlite-transaction.js";
 import { configureSqliteWalMaintenance, type SqliteWalMaintenance } from "../infra/sqlite-wal.js";
-import type { DB as OpenClawStateKyselyDatabase } from "./openclaw-state-db.generated.js";
+import type { DB as DexStateKyselyDatabase } from "./openclaw-state-db.generated.js";
 import {
   resolveOpenClawStateSqliteDir,
   resolveOpenClawStateSqlitePath,
 } from "./openclaw-state-db.paths.js";
-import { OPENCLAW_STATE_SCHEMA_SQL } from "./openclaw-state-schema.generated.js";
+import { DEX_STATE_SCHEMA_SQL } from "./openclaw-state-schema.generated.js";
 
-const OPENCLAW_STATE_SCHEMA_VERSION = 1;
-export const OPENCLAW_SQLITE_BUSY_TIMEOUT_MS = 30_000;
-const OPENCLAW_STATE_DIR_MODE = 0o700;
-const OPENCLAW_STATE_FILE_MODE = 0o600;
-const OPENCLAW_STATE_SIDECAR_SUFFIXES = ["", "-shm", "-wal"] as const;
+const DEX_STATE_SCHEMA_VERSION = 1;
+export const DEX_SQLITE_BUSY_TIMEOUT_MS = 30_000;
+const DEX_STATE_DIR_MODE = 0o700;
+const DEX_STATE_FILE_MODE = 0o600;
+const DEX_STATE_SIDECAR_SUFFIXES = ["", "-shm", "-wal"] as const;
 
-export type OpenClawStateDatabase = {
+export type DexStateDatabase = {
   db: DatabaseSync;
   path: string;
   walMaintenance: SqliteWalMaintenance;
 };
 
-export type OpenClawStateDatabaseOptions = {
+export type DexStateDatabaseOptions = {
   env?: NodeJS.ProcessEnv;
   path?: string;
 };
 
-export type OpenClawMigrationRunStatus = "completed" | "warning" | "failed";
-export type OpenClawBackupRunStatus = "completed" | "failed";
+export type DexMigrationRunStatus = "completed" | "warning" | "failed";
+export type DexBackupRunStatus = "completed" | "failed";
 
-export type RecordOpenClawStateMigrationRunOptions = OpenClawStateDatabaseOptions & {
+export type RecordOpenClawStateMigrationRunOptions = DexStateDatabaseOptions & {
   id?: string;
   startedAt: number;
   finishedAt?: number;
-  status: OpenClawMigrationRunStatus;
+  status: DexMigrationRunStatus;
   report: Record<string, unknown>;
 };
 
-export type RecordOpenClawStateMigrationSourceOptions = OpenClawStateDatabaseOptions & {
+export type RecordOpenClawStateMigrationSourceOptions = DexStateDatabaseOptions & {
   runId: string;
   migrationKind: string;
   sourceKey: string;
   sourcePath: string;
   targetTable: string;
-  status: OpenClawMigrationRunStatus;
+  status: DexMigrationRunStatus;
   importedAt: number;
   removedSource: boolean;
   sourceSha256?: string;
@@ -60,18 +60,18 @@ export type RecordOpenClawStateMigrationSourceOptions = OpenClawStateDatabaseOpt
   report: Record<string, unknown>;
 };
 
-export type RecordOpenClawStateBackupRunOptions = OpenClawStateDatabaseOptions & {
+export type RecordOpenClawStateBackupRunOptions = DexStateDatabaseOptions & {
   id?: string;
   createdAt: number;
   archivePath: string;
-  status: OpenClawBackupRunStatus;
+  status: DexBackupRunStatus;
   manifest: Record<string, unknown>;
 };
 
-const cachedDatabases = new Map<string, OpenClawStateDatabase>();
+const cachedDatabases = new Map<string, DexStateDatabase>();
 
-type OpenClawStateMetadataDatabase = Pick<
-  OpenClawStateKyselyDatabase,
+type DexStateMetadataDatabase = Pick<
+  DexStateKyselyDatabase,
   "backup_runs" | "migration_runs" | "migration_sources" | "schema_meta"
 >;
 
@@ -82,9 +82,9 @@ function readSqliteUserVersion(db: DatabaseSync): number {
 
 function assertSupportedSchemaVersion(db: DatabaseSync, pathname: string): void {
   const userVersion = readSqliteUserVersion(db);
-  if (userVersion > OPENCLAW_STATE_SCHEMA_VERSION) {
+  if (userVersion > DEX_STATE_SCHEMA_VERSION) {
     throw new Error(
-      `OpenClaw state database ${pathname} uses newer schema version ${userVersion}; this OpenClaw build supports ${OPENCLAW_STATE_SCHEMA_VERSION}.`,
+      `OpenClaw state database ${pathname} uses newer schema version ${userVersion}; this OpenClaw build supports ${DEX_STATE_SCHEMA_VERSION}.`,
     );
   }
 }
@@ -98,14 +98,14 @@ function ensureOpenClawStatePermissions(pathname: string, env: NodeJS.ProcessEnv
     throw new Error(`OpenClaw state database path resolved outside its state dir: ${pathname}`);
   }
   const dirExisted = existsSync(dir);
-  mkdirSync(dir, { recursive: true, mode: OPENCLAW_STATE_DIR_MODE });
+  mkdirSync(dir, { recursive: true, mode: DEX_STATE_DIR_MODE });
   if (isDefaultStateDatabase || !dirExisted) {
-    chmodSync(dir, OPENCLAW_STATE_DIR_MODE);
+    chmodSync(dir, DEX_STATE_DIR_MODE);
   }
-  for (const suffix of OPENCLAW_STATE_SIDECAR_SUFFIXES) {
+  for (const suffix of DEX_STATE_SIDECAR_SUFFIXES) {
     const candidate = `${pathname}${suffix}`;
     if (existsSync(candidate)) {
-      chmodSync(candidate, OPENCLAW_STATE_FILE_MODE);
+      chmodSync(candidate, DEX_STATE_FILE_MODE);
     }
   }
 }
@@ -637,11 +637,11 @@ function ensureAdditiveStateColumns(db: DatabaseSync): void {
 function ensureSchema(db: DatabaseSync, pathname: string): void {
   assertSupportedSchemaVersion(db, pathname);
   ensureAdditiveStateColumns(db);
-  db.exec(OPENCLAW_STATE_SCHEMA_SQL);
+  db.exec(DEX_STATE_SCHEMA_SQL);
   ensureAdditiveStateColumns(db);
-  db.exec(`PRAGMA user_version = ${OPENCLAW_STATE_SCHEMA_VERSION};`);
+  db.exec(`PRAGMA user_version = ${DEX_STATE_SCHEMA_VERSION};`);
   const now = Date.now();
-  const kysely = getNodeSqliteKysely<OpenClawStateMetadataDatabase>(db);
+  const kysely = getNodeSqliteKysely<DexStateMetadataDatabase>(db);
   executeSqliteQuerySync(
     db,
     kysely
@@ -649,7 +649,7 @@ function ensureSchema(db: DatabaseSync, pathname: string): void {
       .values({
         meta_key: "primary",
         role: "global",
-        schema_version: OPENCLAW_STATE_SCHEMA_VERSION,
+        schema_version: DEX_STATE_SCHEMA_VERSION,
         agent_id: null,
         app_version: null,
         created_at: now,
@@ -658,7 +658,7 @@ function ensureSchema(db: DatabaseSync, pathname: string): void {
       .onConflict((conflict) =>
         conflict.column("meta_key").doUpdateSet({
           role: "global",
-          schema_version: OPENCLAW_STATE_SCHEMA_VERSION,
+          schema_version: DEX_STATE_SCHEMA_VERSION,
           agent_id: null,
           app_version: null,
           updated_at: now,
@@ -667,13 +667,13 @@ function ensureSchema(db: DatabaseSync, pathname: string): void {
   );
 }
 
-function resolveDatabasePath(options: OpenClawStateDatabaseOptions = {}): string {
+function resolveDatabasePath(options: DexStateDatabaseOptions = {}): string {
   return options.path ?? resolveOpenClawStateSqlitePath(options.env ?? process.env);
 }
 
-export function openOpenClawStateDatabase(
-  options: OpenClawStateDatabaseOptions = {},
-): OpenClawStateDatabase {
+export function openDexStateDatabase(
+  options: DexStateDatabaseOptions = {},
+): DexStateDatabase {
   const env = options.env ?? process.env;
   const pathname = resolveDatabasePath(options);
   const cached = cachedDatabases.get(pathname);
@@ -694,7 +694,7 @@ export function openOpenClawStateDatabase(
     databasePath: pathname,
   });
   db.exec("PRAGMA synchronous = NORMAL;");
-  db.exec(`PRAGMA busy_timeout = ${OPENCLAW_SQLITE_BUSY_TIMEOUT_MS};`);
+  db.exec(`PRAGMA busy_timeout = ${DEX_SQLITE_BUSY_TIMEOUT_MS};`);
   db.exec("PRAGMA foreign_keys = ON;");
   try {
     ensureSchema(db, pathname);
@@ -710,10 +710,10 @@ export function openOpenClawStateDatabase(
 }
 
 export function runOpenClawStateWriteTransaction<T>(
-  operation: (database: OpenClawStateDatabase) => T,
-  options: OpenClawStateDatabaseOptions = {},
+  operation: (database: DexStateDatabase) => T,
+  options: DexStateDatabaseOptions = {},
 ): T {
-  const database = openOpenClawStateDatabase(options);
+  const database = openDexStateDatabase(options);
   const result = runSqliteImmediateTransactionSync(database.db, () => operation(database));
   try {
     ensureOpenClawStatePermissions(database.path, options.env ?? process.env);
@@ -729,7 +729,7 @@ export function recordOpenClawStateMigrationRun(
 ): string {
   const id = options.id ?? randomUUID();
   runOpenClawStateWriteTransaction((database) => {
-    const db = getNodeSqliteKysely<OpenClawStateMetadataDatabase>(database.db);
+    const db = getNodeSqliteKysely<DexStateMetadataDatabase>(database.db);
     executeSqliteQuerySync(
       database.db,
       db.insertInto("migration_runs").values({
@@ -748,7 +748,7 @@ export function recordOpenClawStateMigrationSource(
   options: RecordOpenClawStateMigrationSourceOptions,
 ): void {
   runOpenClawStateWriteTransaction((database) => {
-    const db = getNodeSqliteKysely<OpenClawStateMetadataDatabase>(database.db);
+    const db = getNodeSqliteKysely<DexStateMetadataDatabase>(database.db);
     executeSqliteQuerySync(
       database.db,
       db
@@ -789,7 +789,7 @@ export function recordOpenClawStateMigrationSource(
 export function recordOpenClawStateBackupRun(options: RecordOpenClawStateBackupRunOptions): string {
   const id = options.id ?? randomUUID();
   runOpenClawStateWriteTransaction((database) => {
-    const db = getNodeSqliteKysely<OpenClawStateMetadataDatabase>(database.db);
+    const db = getNodeSqliteKysely<DexStateMetadataDatabase>(database.db);
     executeSqliteQuerySync(
       database.db,
       db.insertInto("backup_runs").values({
@@ -804,7 +804,7 @@ export function recordOpenClawStateBackupRun(options: RecordOpenClawStateBackupR
   return id;
 }
 
-export function closeOpenClawStateDatabase(): void {
+export function closeDexStateDatabase(): void {
   for (const database of cachedDatabases.values()) {
     database.walMaintenance.close();
     clearNodeSqliteKyselyCacheForDatabase(database.db);
@@ -815,8 +815,8 @@ export function closeOpenClawStateDatabase(): void {
   cachedDatabases.clear();
 }
 
-export function isOpenClawStateDatabaseOpen(): boolean {
+export function isDexStateDatabaseOpen(): boolean {
   return Array.from(cachedDatabases.values()).some((database) => database.db.isOpen);
 }
 
-export const closeOpenClawStateDatabaseForTest = closeOpenClawStateDatabase;
+export const closeDexStateDatabaseForTest = closeDexStateDatabase;

@@ -4,7 +4,7 @@ import { resolveDefaultAgentId } from "../../agents/agent-scope.js";
 import { resolveStoredSessionOwnerAgentId } from "../../gateway/session-store-key.js";
 import { getLogger } from "../../logging/logger.js";
 import { normalizeAgentId, parseAgentSessionKey } from "../../routing/session-key.js";
-import type { OpenClawConfig } from "../types.openclaw.js";
+import type { DexConfig } from "../types.openclaw.js";
 import {
   enforceSessionDiskBudget,
   pruneUnreferencedSessionArtifacts,
@@ -189,7 +189,7 @@ export function resolveSessionCleanupAction(params: {
 }
 
 function isMainScopeStaleDirectSessionKey(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   targetAgentId: string;
   key: string;
   activeKey?: string;
@@ -222,7 +222,7 @@ function rememberRemovedSessionFile(
 }
 
 function retireMainScopeDirectSessionEntries(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   store: Record<string, SessionEntry>;
   targetAgentId: string;
   activeKey?: string;
@@ -322,7 +322,7 @@ function addEntryArtifactPathsToSet(params: {
 }
 
 async function previewStoreCleanup(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   target: SessionStoreTarget;
   maintenance: ResolvedSessionMaintenanceConfig;
   mode: ResolvedSessionMaintenanceConfig["mode"];
@@ -459,7 +459,7 @@ async function previewStoreCleanup(params: {
 }
 
 export async function runSessionsCleanup(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   opts: SessionsCleanupOptions;
   targets?: SessionStoreTarget[];
 }): Promise<SessionsCleanupRunResult> {
@@ -624,7 +624,7 @@ export async function runSessionsCleanup(params: {
 
 /** Purge session store entries for a deleted agent (#65524). Best-effort. */
 export async function purgeAgentSessionStoreEntries(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   agentId: string,
 ): Promise<void> {
   try {

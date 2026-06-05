@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   hasConfiguredUnavailableCredentialStatus,
   hasResolvedCredentialValue,
@@ -17,7 +17,7 @@ type AccountInspectionFields = {
 
 export async function inspectChannelAccount(params: {
   plugin: ChannelPlugin;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
 }): Promise<unknown> {
   return (
@@ -32,8 +32,8 @@ export async function inspectChannelAccount(params: {
 
 export async function resolveInspectedChannelAccount(params: {
   plugin: ChannelPlugin;
-  cfg: OpenClawConfig;
-  sourceConfig: OpenClawConfig;
+  cfg: DexConfig;
+  sourceConfig: DexConfig;
   accountId: string;
 }): Promise<{
   account: unknown;

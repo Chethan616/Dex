@@ -12,12 +12,12 @@ import fs from "node:fs";
  * child and then `exec`s the real command, so there is no extra long-lived
  * shell process and no change to the final process identity.
  *
- * Opt out per-process by setting `OPENCLAW_CHILD_OOM_SCORE_ADJ=0` (also
+ * Opt out per-process by setting `DEX_CHILD_OOM_SCORE_ADJ=0` (also
  * accepts `false`/`no`/`off`). Callers may also provide the key via
  * `params.env` for per-child overrides.
  */
 
-const CHILD_OOM_SCORE_ADJ_ENV_KEY = "OPENCLAW_CHILD_OOM_SCORE_ADJ";
+const CHILD_OOM_SCORE_ADJ_ENV_KEY = "DEX_CHILD_OOM_SCORE_ADJ";
 const OOM_SCORE_WRAP_SHELL = "/bin/sh";
 const OOM_SCORE_WRAP_SCRIPT = 'echo 1000 > /proc/self/oom_score_adj 2>/dev/null; exec "$0" "$@"';
 

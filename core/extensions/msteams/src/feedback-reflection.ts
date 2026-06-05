@@ -1,7 +1,7 @@
 import { normalizeOptionalLowercaseString } from "openclaw/plugin-sdk/string-coerce-runtime";
 import {
   dispatchReplyFromConfigWithSettledDispatcher,
-  type OpenClawConfig,
+  type DexConfig,
 } from "../runtime-api.js";
 import { resolveMSTeamsSdkCloudOptions } from "./cloud.js";
 import type { StoredConversationReference } from "./conversation-store.js";
@@ -56,7 +56,7 @@ export function buildFeedbackEvent(params: {
 }
 
 export type RunFeedbackReflectionParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   app: MSTeamsApp;
   appId: string;
   conversationRef: StoredConversationReference;
@@ -70,7 +70,7 @@ export type RunFeedbackReflectionParams = {
 };
 
 function buildReflectionContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   conversationId: string;
   sessionKey: string;
   reflectionPrompt: string;
@@ -108,7 +108,7 @@ function buildReflectionContext(params: {
 }
 
 function createReflectionCaptureDispatcher(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   log: MSTeamsMonitorLogger;
 }) {
@@ -141,7 +141,7 @@ function createReflectionCaptureDispatcher(params: {
 }
 
 async function sendReflectionFollowUp(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   app: MSTeamsApp;
   conversationRef: StoredConversationReference;
   userMessage: string;

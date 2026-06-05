@@ -34,9 +34,9 @@ Other common Linux launch failures:
 - `Missing X server or $DISPLAY` means a visible browser was explicitly
   requested on a host without a desktop session. By default, local managed
   profiles now fall back to headless mode on Linux when `DISPLAY` and
-  `WAYLAND_DISPLAY` are both unset. If you set `OPENCLAW_BROWSER_HEADLESS=0`,
+  `WAYLAND_DISPLAY` are both unset. If you set `DEX_BROWSER_HEADLESS=0`,
   `browser.headless: false`, or `browser.profiles.<name>.headless: false`,
-  remove that headed override, set `OPENCLAW_BROWSER_HEADLESS=1`, start `Xvfb`,
+  remove that headed override, set `DEX_BROWSER_HEADLESS=1`, start `Xvfb`,
   run `openclaw browser start --headless` for a one-shot managed launch, or run
   OpenClaw in a real desktop session.
 
@@ -50,7 +50,7 @@ sudo dpkg -i google-chrome-stable_current_amd64.deb
 sudo apt --fix-broken install -y  # if there are dependency errors
 ```
 
-Then update your OpenClaw config (`~/.openclaw/openclaw.json`):
+Then update your OpenClaw config (`~/.dex/openclaw.json`):
 
 ```json
 {
@@ -130,7 +130,7 @@ curl -s http://127.0.0.1:18791/tabs
 | `browser.enabled`                | Enable browser control                                               | `true`                                                      |
 | `browser.executablePath`         | Path to a Chromium-based browser binary (Chrome/Brave/Edge/Chromium) | auto-detected (prefers default browser when Chromium-based) |
 | `browser.headless`               | Run without GUI                                                      | `false`                                                     |
-| `OPENCLAW_BROWSER_HEADLESS`      | Per-process override for local managed browser headless mode         | unset                                                       |
+| `DEX_BROWSER_HEADLESS`      | Per-process override for local managed browser headless mode         | unset                                                       |
 | `browser.noSandbox`              | Add `--no-sandbox` flag (needed for some Linux setups)               | `false`                                                     |
 | `browser.attachOnly`             | Don't launch browser, only attach to existing                        | `false`                                                     |
 | `browser.cdpPort`                | Chrome DevTools Protocol port                                        | `18800`                                                     |

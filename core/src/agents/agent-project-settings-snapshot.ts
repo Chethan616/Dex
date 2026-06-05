@@ -1,6 +1,6 @@
 import path from "node:path";
 import { applyMergePatch } from "../config/merge-patch.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { readRootJsonObjectSync } from "../infra/json-files.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import type { BundleMcpServerConfig } from "../plugins/bundle-mcp.js";
@@ -41,12 +41,12 @@ function sanitizeProjectSettings(settings: AgentSettingsSnapshot): AgentSettings
   return sanitizeAgentSettingsSnapshot(settings);
 }
 
-function canReuseUnscopedCurrentPluginMetadataSnapshot(config: OpenClawConfig): boolean {
+function canReuseUnscopedCurrentPluginMetadataSnapshot(config: DexConfig): boolean {
   return normalizePluginsConfigWithResolver(config.plugins).loadPaths.length === 0;
 }
 
 function resolveUnscopedCurrentPluginMetadataSnapshot(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   env: NodeJS.ProcessEnv;
   workspaceDir?: string;
 }): PluginMetadataSnapshot | undefined {
@@ -85,7 +85,7 @@ function loadBundleSettingsFile(params: {
 
 export function loadEnabledBundleAgentSettingsSnapshot(params: {
   cwd: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   env?: NodeJS.ProcessEnv;
   pluginMetadataSnapshot?: PluginMetadataSnapshot;
 }): AgentSettingsSnapshot {
@@ -175,7 +175,7 @@ export function loadEnabledBundleAgentSettingsSnapshot(params: {
 }
 
 export function resolveEmbeddedAgentProjectSettingsPolicy(
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
 ): EmbeddedAgentProjectSettingsPolicy {
   const raw = cfg?.agents?.defaults?.embeddedAgent?.projectSettingsPolicy;
   if (raw === "trusted" || raw === "sanitize" || raw === "ignore") {

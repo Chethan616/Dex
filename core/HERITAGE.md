@@ -10,8 +10,8 @@ Dex absorbs OpenClaw, Microsoft UFO², and browser-use into a single product. To
 
 - CLI command: `openclaw` → `dex`
 - Process / launcher name: `openclaw` → `dex` (file remains `openclaw.mjs` to keep upstream diffs minimal; the user-facing binary alias is `dex`)
-- Log prefix: `[openclaw]` → `[dex-core]` _(internal subsystem tag; not seen during normal use)_
-- Config dir: `~/.openclaw/` → `~/.dex-core/` _(internal, post-A.5 follow-up)_
+- Log prefix: `[openclaw]` → `[dex]` _(internal subsystem tag; not seen during normal use)_
+- Config dir: `~/.dex/` → `~/.dex/` _(internal, post-A.5 follow-up)_
 - Version banner: `🦞 OpenClaw <version>` → `🐚 Dex <version>`
 - Docs links: removed (Dex does not have a docs site yet)
 

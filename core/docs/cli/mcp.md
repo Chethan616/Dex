@@ -130,12 +130,12 @@ This gives MCP clients one place to:
   </Tab>
   <Tab title="Remote Gateway (token)">
     ```bash
-    openclaw mcp serve --url wss://gateway-host:18789 --token-file ~/.openclaw/gateway.token
+    openclaw mcp serve --url wss://gateway-host:18789 --token-file ~/.dex/gateway.token
     ```
   </Tab>
   <Tab title="Remote Gateway (password)">
     ```bash
-    openclaw mcp serve --url wss://gateway-host:18789 --password-file ~/.openclaw/gateway.password
+    openclaw mcp serve --url wss://gateway-host:18789 --password-file ~/.dex/gateway.password
     ```
   </Tab>
   <Tab title="Verbose / Claude off">

@@ -1,9 +1,9 @@
 import { readPositiveIntEnv } from "../env-limits.mjs";
 import { createConfigReloadLogScanner } from "./log-scanner.mjs";
 
-const logPath = process.env.OPENCLAW_CONFIG_RELOAD_LOG_PATH ?? "/tmp/config-reload-e2e.log";
-const deadlineMs = Date.now() + readPositiveIntEnv("OPENCLAW_CONFIG_RELOAD_LOG_TIMEOUT_MS", 30_000);
-const maxReadBytes = readPositiveIntEnv("OPENCLAW_CONFIG_RELOAD_LOG_MAX_READ_BYTES", 256 * 1024);
+const logPath = process.env.DEX_CONFIG_RELOAD_LOG_PATH ?? "/tmp/config-reload-e2e.log";
+const deadlineMs = Date.now() + readPositiveIntEnv("DEX_CONFIG_RELOAD_LOG_TIMEOUT_MS", 30_000);
+const maxReadBytes = readPositiveIntEnv("DEX_CONFIG_RELOAD_LOG_MAX_READ_BYTES", 256 * 1024);
 
 const sleep = (ms) =>
   new Promise((resolve) => {

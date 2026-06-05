@@ -52,7 +52,7 @@ export type SurfaceConfigEntry = {
   silentReply?: SilentReplyPolicyShape;
 };
 
-export type OpenClawConfig = {
+export type DexConfig = {
   $schema?: string;
   meta?: {
     /** Last OpenClaw version that wrote this config. */
@@ -155,13 +155,13 @@ export type OpenClawConfig = {
   proxy?: ProxyConfig;
 };
 
-export type OpenClawConfigInput = Omit<OpenClawConfig, "models"> & {
+export type DexConfigInput = Omit<DexConfig, "models"> & {
   models?: ModelsConfigInput;
 };
 
 declare const openClawConfigStateBrand: unique symbol;
 
-type BrandedConfigState<TState extends string> = OpenClawConfig & {
+type BrandedConfigState<TState extends string> = DexConfig & {
   readonly [openClawConfigStateBrand]?: TState;
 };
 

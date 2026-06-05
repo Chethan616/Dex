@@ -84,12 +84,12 @@ Optional compatibility controls:
 ## Where to set the key
 
 **Via config:** run `openclaw configure --section web`. It stores the key in
-`~/.openclaw/openclaw.json` under `plugins.entries.perplexity.config.webSearch.apiKey`.
+`~/.dex/openclaw.json` under `plugins.entries.perplexity.config.webSearch.apiKey`.
 That field also accepts SecretRef objects.
 
 **Via environment:** set `PERPLEXITY_API_KEY` or `OPENROUTER_API_KEY`
 in the Gateway process environment. For a gateway install, put it in
-`~/.openclaw/.env` (or your service environment). See [Env vars](/help/faq#env-vars-and-env-loading).
+`~/.dex/.env` (or your service environment). See [Env vars](/help/faq#env-vars-and-env-loading).
 
 If `provider: "perplexity"` is configured and the Perplexity key SecretRef is unresolved with no env fallback, startup/reload fails fast.
 

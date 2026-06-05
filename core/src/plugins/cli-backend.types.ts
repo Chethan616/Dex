@@ -1,5 +1,5 @@
 import type { CliBackendConfig } from "../config/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { ContextEngineHostCapability } from "../context-engine/types.js";
 
 export type PluginTextReplacement = {
@@ -20,7 +20,7 @@ export type CliBundleMcpMode =
   | "gemini-system-settings";
 
 export type CliBackendPrepareExecutionContext = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir: string;
   agentDir?: string;
   provider: string;
@@ -45,7 +45,7 @@ export type CliBackendThinkingLevel =
   | "max";
 
 export type CliBackendResolveExecutionArgsContext = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir: string;
   provider: string;
   modelId: string;
@@ -64,7 +64,7 @@ export type CliBackendAuthEpochMode = "combined" | "profile-only";
 export type CliBackendNativeToolMode = "none" | "always-on";
 
 export type CliBackendNormalizeConfigContext = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   backendId: string;
   agentId?: string;
 };
@@ -135,7 +135,7 @@ export type CliBackendPlugin = {
    * the generic CLI runner or prompt builder.
    */
   transformSystemPrompt?: (ctx: {
-    config?: OpenClawConfig;
+    config?: DexConfig;
     workspaceDir?: string;
     provider: string;
     modelId: string;

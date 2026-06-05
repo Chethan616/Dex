@@ -81,7 +81,7 @@ export function initSender(options: { pluginVersion?: string; openclawVersion?: 
 }
 
 /** Update the OpenClaw framework version in the User-Agent (called after runtime injection). */
-export function setOpenClawVersion(version: string): void {
+export function setDexVersion(version: string): void {
   if (version) {
     openclawVersion = version;
   }

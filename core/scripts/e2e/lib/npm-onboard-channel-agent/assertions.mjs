@@ -11,7 +11,7 @@ const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
 
 function assertOnboardState() {
   const home = process.argv[3];
-  const stateDir = path.join(home, ".openclaw");
+  const stateDir = path.join(home, ".dex");
   const configPath = path.join(stateDir, "openclaw.json");
   const agentDir = path.join(stateDir, "agents", "main", "agent");
   const authPath = path.join(agentDir, "auth-profiles.json");
@@ -36,7 +36,7 @@ function assertOnboardState() {
 
 function configureMockModel() {
   const mockPort = Number(process.argv[3]);
-  const configPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+  const configPath = path.join(process.env.HOME, ".dex", "openclaw.json");
   const cfg = readJson(configPath);
   applyMockOpenAiModelConfig(cfg, { mockPort });
   fs.writeFileSync(configPath, `${JSON.stringify(cfg, null, 2)}\n`);
@@ -46,7 +46,7 @@ function assertMockModelConfig() {
   const mockPort = Number(process.argv[3]);
   const expectedModelRef = "openai/gpt-5.5";
   const expectedBaseUrl = `http://127.0.0.1:${mockPort}/v1`;
-  const configPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+  const configPath = path.join(process.env.HOME, ".dex", "openclaw.json");
   const cfg = readJson(configPath);
   const provider = cfg.models?.providers?.openai;
   const defaultModel = cfg.agents?.defaults?.model?.primary;
@@ -91,7 +91,7 @@ function assertChannelConfig() {
   if (expectedTokens.length === 0) {
     throw new Error("assert-channel-config requires at least one expected token");
   }
-  const configPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+  const configPath = path.join(process.env.HOME, ".dex", "openclaw.json");
   const cfg = readJson(configPath);
   const entry = cfg.channels?.[channel];
   if (!entry || entry.enabled === false) {

@@ -172,7 +172,7 @@ export VOLCENGINE_TTS_CLUSTER="volcano_tts"
     env vars such as `VOLCANO_ENGINE_API_KEY`, `VOLCENGINE_TTS_API_KEY`,
     `BYTEPLUS_SEED_SPEECH_API_KEY`, `VOLCENGINE_TTS_APPID`, and
     `VOLCENGINE_TTS_TOKEN` are available to that process (for example, in
-    `~/.openclaw/.env` or via `env.shellEnv`).
+    `~/.dex/.env` or via `env.shellEnv`).
   </Accordion>
 </AccordionGroup>
 

@@ -7,7 +7,7 @@ import {
   normalizeStringEntries,
   uniqueStrings,
 } from "openclaw/plugin-sdk/string-coerce-runtime";
-import type { OpenClawConfig } from "../api.js";
+import type { DexConfig } from "../api.js";
 import { applyMemoryWikiMutation } from "./apply.js";
 import {
   importChatGptConversations,
@@ -408,7 +408,7 @@ async function runWikiCommandWithSummary<T>(params: {
 
 async function runSyncedWikiCommandWithSummary<T>(params: {
   config: ResolvedMemoryWikiConfig;
-  appConfig?: OpenClawConfig;
+  appConfig?: DexConfig;
   json?: boolean;
   stdout?: Pick<NodeJS.WriteStream, "write">;
   run: () => Promise<T>;
@@ -469,7 +469,7 @@ function addWikiApplyMutationOptions<T extends Command>(command: T): T {
 
 export async function runWikiStatus(params: {
   config: ResolvedMemoryWikiConfig;
-  appConfig?: OpenClawConfig;
+  appConfig?: DexConfig;
   json?: boolean;
   stdout?: Pick<NodeJS.WriteStream, "write">;
 }) {
@@ -493,7 +493,7 @@ export async function runWikiStatus(params: {
 
 export async function runWikiDoctor(params: {
   config: ResolvedMemoryWikiConfig;
-  appConfig?: OpenClawConfig;
+  appConfig?: DexConfig;
   json?: boolean;
   stdout?: Pick<NodeJS.WriteStream, "write">;
 }) {
@@ -536,7 +536,7 @@ export async function runWikiInit(params: {
 
 export async function runWikiCompile(params: {
   config: ResolvedMemoryWikiConfig;
-  appConfig?: OpenClawConfig;
+  appConfig?: DexConfig;
   json?: boolean;
   stdout?: Pick<NodeJS.WriteStream, "write">;
 }) {
@@ -553,7 +553,7 @@ export async function runWikiCompile(params: {
 
 export async function runWikiLint(params: {
   config: ResolvedMemoryWikiConfig;
-  appConfig?: OpenClawConfig;
+  appConfig?: DexConfig;
   json?: boolean;
   stdout?: Pick<NodeJS.WriteStream, "write">;
 }) {
@@ -591,7 +591,7 @@ export async function runWikiIngest(params: {
 
 export async function runWikiSearch(params: {
   config: ResolvedMemoryWikiConfig;
-  appConfig?: OpenClawConfig;
+  appConfig?: DexConfig;
   query: string;
   maxResults?: number;
   searchBackend?: ResolvedMemoryWikiConfig["search"]["backend"];
@@ -629,7 +629,7 @@ export async function runWikiSearch(params: {
 
 export async function runWikiGet(params: {
   config: ResolvedMemoryWikiConfig;
-  appConfig?: OpenClawConfig;
+  appConfig?: DexConfig;
   lookup: string;
   fromLine?: number;
   lineCount?: number;
@@ -657,7 +657,7 @@ export async function runWikiGet(params: {
 
 export async function runWikiApplySynthesis(params: {
   config: ResolvedMemoryWikiConfig;
-  appConfig?: OpenClawConfig;
+  appConfig?: DexConfig;
   title: string;
   body?: string;
   bodyFile?: string;
@@ -698,7 +698,7 @@ export async function runWikiApplySynthesis(params: {
 
 export async function runWikiApplyMetadata(params: {
   config: ResolvedMemoryWikiConfig;
-  appConfig?: OpenClawConfig;
+  appConfig?: DexConfig;
   lookup: string;
   sourceIds?: string[];
   contradictions?: string[];
@@ -738,7 +738,7 @@ export async function runWikiApplyMetadata(params: {
 
 export async function runWikiBridgeImport(params: {
   config: ResolvedMemoryWikiConfig;
-  appConfig?: OpenClawConfig;
+  appConfig?: DexConfig;
   json?: boolean;
   stdout?: Pick<NodeJS.WriteStream, "write">;
 }) {
@@ -763,7 +763,7 @@ export async function runWikiBridgeImport(params: {
 
 export async function runWikiUnsafeLocalImport(params: {
   config: ResolvedMemoryWikiConfig;
-  appConfig?: OpenClawConfig;
+  appConfig?: DexConfig;
   json?: boolean;
   stdout?: Pick<NodeJS.WriteStream, "write">;
 }) {
@@ -907,7 +907,7 @@ export async function runWikiChatGptRollback(params: {
 export function registerWikiCli(
   program: Command,
   pluginConfig?: MemoryWikiPluginConfig | ResolvedMemoryWikiConfig,
-  appConfig?: OpenClawConfig,
+  appConfig?: DexConfig,
 ) {
   const config = isResolvedMemoryWikiConfig(pluginConfig)
     ? pluginConfig

@@ -1,5 +1,5 @@
 import type { MessageMetadata } from "@slack/types";
-import type { MarkdownTableMode, OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { MarkdownTableMode, DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   chunkMarkdownTextWithMode,
   isSilentReplyText,
@@ -34,7 +34,7 @@ export function resolveDeliveredSlackReplyThreadTs(params: {
 }
 
 export async function deliverReplies(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   replies: ReplyPayload[];
   target: string;
   token: string;

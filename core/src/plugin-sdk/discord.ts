@@ -9,7 +9,7 @@ import type {
   ChannelStatusIssue,
 } from "./channel-contract.js";
 import type { ChannelPlugin } from "./channel-core.js";
-import type { OpenClawConfig } from "./config-types.js";
+import type { DexConfig } from "./config-types.js";
 import {
   createLazyFacadeObjectValue,
   loadBundledPluginPublicSurfaceModuleSync,
@@ -22,8 +22,8 @@ import { getRuntimeConfig, getRuntimeConfigSnapshot } from "./runtime-config-sna
  */
 export type { ChannelMessageActionAdapter, ChannelMessageActionName } from "./channel-contract.js";
 export type { ChannelPlugin } from "./channel-core.js";
-export type { OpenClawConfig } from "./config-types.js";
-export type { OpenClawPluginApi, PluginRuntime } from "./channel-plugin-common.js";
+export type { DexConfig } from "./config-types.js";
+export type { DexPluginApi, PluginRuntime } from "./channel-plugin-common.js";
 
 export {
   DEFAULT_ACCOUNT_ID,
@@ -43,7 +43,7 @@ export {
 } from "./channel-status.js";
 export { DiscordConfigSchema } from "./bundled-channel-config-schema.js";
 
-export type DiscordAccountConfig = NonNullable<NonNullable<OpenClawConfig["channels"]>["discord"]>;
+export type DiscordAccountConfig = NonNullable<NonNullable<DexConfig["channels"]>["discord"]>;
 
 export type DiscordComponentMessageSpec = {
   text?: string;
@@ -63,7 +63,7 @@ export type DiscordComponentBuildResult = {
 };
 
 export type DiscordComponentSendOpts = {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   accountId?: string;
   replyTo?: string;
   files?: unknown;
@@ -107,7 +107,7 @@ export type ThreadBindingRecord = {
 };
 
 type DirectoryConfigParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 };
 
@@ -135,8 +135,8 @@ type DiscordApiFacadeModule = {
   collectDiscordStatusIssues: (accounts: ChannelAccountSnapshot[]) => ChannelStatusIssue[];
   buildDiscordComponentMessage: BuildDiscordComponentMessage;
   discordOnboardingAdapter?: NonNullable<ChannelPlugin<ResolvedDiscordAccount>["setup"]>;
-  inspectDiscordAccount: (params: { cfg: OpenClawConfig; accountId?: string | null }) => unknown;
-  listDiscordAccountIds: (cfg: OpenClawConfig) => string[];
+  inspectDiscordAccount: (params: { cfg: DexConfig; accountId?: string | null }) => unknown;
+  listDiscordAccountIds: (cfg: DexConfig) => string[];
   listDiscordDirectoryGroupsFromConfig: (
     params: DirectoryConfigParams,
   ) => unknown[] | Promise<unknown[]>;
@@ -146,9 +146,9 @@ type DiscordApiFacadeModule = {
   looksLikeDiscordTargetId: (raw: string) => boolean;
   normalizeDiscordMessagingTarget: (raw: string) => string | undefined;
   normalizeDiscordOutboundTarget: (to?: string) => DiscordOutboundTargetResolution;
-  resolveDefaultDiscordAccountId: (cfg: OpenClawConfig) => string;
+  resolveDefaultDiscordAccountId: (cfg: DexConfig) => string;
   resolveDiscordAccount: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
   }) => ResolvedDiscordAccount;
   resolveDiscordGroupRequireMention: (params: ChannelGroupContext) => boolean | undefined;
@@ -159,7 +159,7 @@ type DiscordRuntimeFacadeModule = {
   editDiscordComponentMessage: EditDiscordComponentMessage;
   registerBuiltDiscordComponentMessage: RegisterBuiltDiscordComponentMessage;
   autoBindSpawnedDiscordSubagent: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string;
     channel?: string;
     to?: string;
@@ -170,7 +170,7 @@ type DiscordRuntimeFacadeModule = {
     boundBy?: string;
   }) => Promise<ThreadBindingRecord | null>;
   collectDiscordAuditChannelIds: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
   }) => unknown;
   listThreadBindingsBySessionKey: (params: {
@@ -202,7 +202,7 @@ function loadDiscordRuntimeFacadeModule(): DiscordRuntimeFacadeModule {
   });
 }
 
-function resolveCompatRuntimeConfig(params: { cfg?: OpenClawConfig }): OpenClawConfig {
+function resolveCompatRuntimeConfig(params: { cfg?: DexConfig }): DexConfig {
   return params.cfg ?? getRuntimeConfigSnapshot() ?? getRuntimeConfig();
 }
 
@@ -223,13 +223,13 @@ export const buildDiscordComponentMessage: DiscordApiFacadeModule["buildDiscordC
     )) as DiscordApiFacadeModule["buildDiscordComponentMessage"];
 
 export function inspectDiscordAccount(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 }): unknown {
   return loadDiscordApiFacadeModule().inspectDiscordAccount(params);
 }
 
-export function listDiscordAccountIds(cfg: OpenClawConfig): string[] {
+export function listDiscordAccountIds(cfg: DexConfig): string[] {
   return loadDiscordApiFacadeModule().listDiscordAccountIds(cfg);
 }
 
@@ -257,12 +257,12 @@ export function normalizeDiscordOutboundTarget(to?: string): DiscordOutboundTarg
   return loadDiscordApiFacadeModule().normalizeDiscordOutboundTarget(to);
 }
 
-export function resolveDefaultDiscordAccountId(cfg: OpenClawConfig): string {
+export function resolveDefaultDiscordAccountId(cfg: DexConfig): string {
   return loadDiscordApiFacadeModule().resolveDefaultDiscordAccountId(cfg);
 }
 
 export function resolveDiscordAccount(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 }): ResolvedDiscordAccount {
   return loadDiscordApiFacadeModule().resolveDiscordAccount(params);
@@ -279,7 +279,7 @@ export function resolveDiscordGroupToolPolicy(params: ChannelGroupContext): unkn
 }
 
 export function collectDiscordAuditChannelIds(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 }): unknown {
   return loadDiscordRuntimeFacadeModule().collectDiscordAuditChannelIds(params);
@@ -298,7 +298,7 @@ export const registerBuiltDiscordComponentMessage: DiscordRuntimeFacadeModule["r
     )) as DiscordRuntimeFacadeModule["registerBuiltDiscordComponentMessage"];
 
 export async function autoBindSpawnedDiscordSubagent(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   accountId?: string;
   channel?: string;
   to?: string;

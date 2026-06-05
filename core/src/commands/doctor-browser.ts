@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { note } from "../../packages/terminal-core/src/note.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { loadBundledPluginPublicSurfaceModuleSync } from "../plugin-sdk/facade-loader.js";
 import { resolveConfigDir } from "../utils.js";
 
@@ -34,13 +34,13 @@ export type LegacyClawdBrowserProfileResidue = {
 };
 
 type BrowserDoctorSurface = {
-  noteChromeMcpBrowserReadiness: (cfg: OpenClawConfig, deps?: BrowserDoctorDeps) => Promise<void>;
+  noteChromeMcpBrowserReadiness: (cfg: DexConfig, deps?: BrowserDoctorDeps) => Promise<void>;
   detectLegacyClawdBrowserProfileResidue?: (
-    cfg: OpenClawConfig,
+    cfg: DexConfig,
     deps?: BrowserDoctorRepairDeps,
   ) => LegacyClawdBrowserProfileResidue | null;
   maybeArchiveLegacyClawdBrowserProfileResidue?: (
-    cfg: OpenClawConfig,
+    cfg: DexConfig,
     deps?: BrowserDoctorRepairDeps,
   ) => Promise<{ changes: string[]; warnings: string[] }>;
 };
@@ -64,7 +64,7 @@ function mayHaveLegacyClawdBrowserProfileResidue(deps?: BrowserDoctorRepairDeps)
   }
 }
 
-export async function noteChromeMcpBrowserReadiness(cfg: OpenClawConfig, deps?: BrowserDoctorDeps) {
+export async function noteChromeMcpBrowserReadiness(cfg: DexConfig, deps?: BrowserDoctorDeps) {
   try {
     await loadBrowserDoctorSurface().noteChromeMcpBrowserReadiness(cfg, deps);
   } catch (error) {
@@ -75,7 +75,7 @@ export async function noteChromeMcpBrowserReadiness(cfg: OpenClawConfig, deps?: 
 }
 
 export async function detectLegacyClawdBrowserProfileResidue(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   deps?: BrowserDoctorRepairDeps,
 ): Promise<LegacyClawdBrowserProfileResidue | null> {
   if (!mayHaveLegacyClawdBrowserProfileResidue(deps)) {
@@ -89,7 +89,7 @@ export async function detectLegacyClawdBrowserProfileResidue(
 }
 
 export async function maybeArchiveLegacyClawdBrowserProfileResidue(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   deps?: BrowserDoctorRepairDeps,
 ): Promise<{ changes: string[]; warnings: string[] }> {
   if (!mayHaveLegacyClawdBrowserProfileResidue(deps)) {

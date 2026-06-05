@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { AgentGeneratedAttachment } from "../generated-attachments.js";
 import { IMAGE_GENERATION_TASK_KIND } from "../image-generation-task-status.js";
 import {
@@ -37,7 +37,7 @@ export const failImageGenerationTaskRun = (
 ) => imageGenerationTaskLifecycle.failTaskRun(...params);
 
 export async function wakeImageGenerationTaskCompletion(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   handle: ImageGenerationTaskHandle | null;
   status: "ok" | "error";
   statusLabel: string;

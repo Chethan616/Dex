@@ -55,7 +55,7 @@ read_when:
     [env]
       NODE_ENV = "production"
       OPENCLAW_PREFER_PNPM = "1"
-      OPENCLAW_STATE_DIR = "/data"
+      DEX_STATE_DIR = "/data"
       NODE_OPTIONS = "--max-old-space-size=1536"
 
     [processes]
@@ -86,16 +86,16 @@ read_when:
     | ------------------------------ | --------------------------------------------------------------------------- |
     | `--bind lan`                   | Binds to `0.0.0.0` so Fly's proxy can reach the gateway                     |
     | `--allow-unconfigured`         | Starts without a config file (you'll create one after)                      |
-    | `internal_port = 3000`         | Must match `--port 3000` (or `OPENCLAW_GATEWAY_PORT`) for Fly health checks |
+    | `internal_port = 3000`         | Must match `--port 3000` (or `DEX_GATEWAY_PORT`) for Fly health checks |
     | `memory = "2048mb"`            | 512MB is too small; 2GB recommended                                         |
-    | `OPENCLAW_STATE_DIR = "/data"` | Persists state on the volume                                                |
+    | `DEX_STATE_DIR = "/data"` | Persists state on the volume                                                |
 
   </Step>
 
   <Step title="Set secrets">
     ```bash
     # Required: Gateway token (for non-loopback binding)
-    fly secrets set OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
+    fly secrets set DEX_GATEWAY_TOKEN=$(openssl rand -hex 32)
 
     # Model provider API keys
     fly secrets set ANTHROPIC_API_KEY=example-anthropic-key-not-real
@@ -110,7 +110,7 @@ read_when:
 
     **Notes:**
 
-    - Non-loopback binds (`--bind lan`) require a valid gateway auth path. This Fly.io example uses `OPENCLAW_GATEWAY_TOKEN`, but `gateway.auth.password` or a correctly configured non-loopback `trusted-proxy` deployment also satisfy the requirement.
+    - Non-loopback binds (`--bind lan`) require a valid gateway auth path. This Fly.io example uses `DEX_GATEWAY_TOKEN`, but `gateway.auth.password` or a correctly configured non-loopback `trusted-proxy` deployment also satisfy the requirement.
     - Treat these tokens like passwords.
     - **Prefer env vars over config file** for all API keys and tokens. This keeps secrets out of `openclaw.json` where they could be accidentally exposed or logged.
 
@@ -207,7 +207,7 @@ read_when:
     EOF
     ```
 
-    **Note:** With `OPENCLAW_STATE_DIR=/data`, the config path is `/data/openclaw.json`.
+    **Note:** With `DEX_STATE_DIR=/data`, the config path is `/data/openclaw.json`.
 
     **Note:** Replace `https://my-openclaw.fly.dev` with your real Fly app
     origin. Gateway startup seeds local Control UI origins from the runtime
@@ -243,7 +243,7 @@ read_when:
     Or visit `https://my-openclaw.fly.dev/`
 
     Authenticate with the configured shared secret. This guide uses the gateway
-    token from `OPENCLAW_GATEWAY_TOKEN`; if you switched to password auth, use
+    token from `DEX_GATEWAY_TOKEN`; if you switched to password auth, use
     that password instead.
 
     ### Logs
@@ -274,7 +274,7 @@ The gateway is binding to `127.0.0.1` instead of `0.0.0.0`.
 
 Fly can't reach the gateway on the configured port.
 
-**Fix:** Ensure `internal_port` matches the gateway port (set `--port 3000` or `OPENCLAW_GATEWAY_PORT=3000`).
+**Fix:** Ensure `internal_port` matches the gateway port (set `--port 3000` or `DEX_GATEWAY_PORT=3000`).
 
 ### OOM / Memory Issues
 
@@ -344,7 +344,7 @@ fly ssh console --command "rm /data/openclaw.json"
 If you lose auth profiles, channel/provider state, or sessions after a restart,
 the state dir is writing to the container filesystem.
 
-**Fix:** Ensure `OPENCLAW_STATE_DIR=/data` is set in `fly.toml` and redeploy.
+**Fix:** Ensure `DEX_STATE_DIR=/data` is set in `fly.toml` and redeploy.
 
 ## Updates
 

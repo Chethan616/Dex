@@ -1,5 +1,5 @@
 import { sanitizeForLog } from "../../packages/terminal-core/src/ansi.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { defaultSlotIdForKey } from "../plugins/slots.js";
 import { resolveGlobalSingleton } from "../shared/global-singleton.js";
 import type {
@@ -20,7 +20,7 @@ import type {
  * without fragile workarounds.
  */
 export type ContextEngineFactoryContext = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   agentDir?: string;
   workspaceDir?: string;
 };
@@ -875,7 +875,7 @@ export type ResolveContextEngineOptions = {
  * Throws only when the default engine itself cannot be resolved.
  */
 export async function resolveContextEngine(
-  config?: OpenClawConfig,
+  config?: DexConfig,
   options?: ResolveContextEngineOptions,
 ): Promise<ContextEngine> {
   const slotValue = config?.plugins?.slots?.contextEngine;

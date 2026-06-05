@@ -3,7 +3,7 @@ import {
   normalizeProviderId,
 } from "@dexagent/model-catalog-core/provider-id";
 import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { Model } from "../llm/types.js";
 import type {
   prepareProviderDynamicModel,
@@ -49,7 +49,7 @@ function liveModelKey(provider: string, id: string): string | null {
 
 export async function appendPrioritizedDynamicLiveModels(params: {
   models: Model[];
-  config?: OpenClawConfig;
+  config?: DexConfig;
   agentDir: string;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;

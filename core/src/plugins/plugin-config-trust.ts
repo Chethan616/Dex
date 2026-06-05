@@ -1,8 +1,8 @@
 import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { PluginManifestRecord } from "./manifest-registry.js";
 
-type PluginEntriesConfig = NonNullable<NonNullable<OpenClawConfig["plugins"]>["entries"]>;
+type PluginEntriesConfig = NonNullable<NonNullable<DexConfig["plugins"]>["entries"]>;
 
 export function normalizePluginConfigId(id: unknown): string {
   return normalizeOptionalLowercaseString(id) ?? "";
@@ -31,7 +31,7 @@ function findPluginConfigEntry(
 }
 
 export function isWorkspacePluginAllowedByConfig(params: {
-  config: OpenClawConfig | undefined;
+  config: DexConfig | undefined;
   isImplicitlyAllowed?: (pluginId: string) => boolean;
   plugin: PluginManifestRecord;
 }): boolean {

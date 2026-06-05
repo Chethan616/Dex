@@ -5,7 +5,7 @@ import { normalizeOptionalString } from "@dexagent/normalization-core/string-coe
 import { expandHomePrefix } from "../infra/home-dir.js";
 import { replaceFileAtomic } from "../infra/replace-file.js";
 import {
-  openOpenClawStateDatabase,
+  openDexStateDatabase,
   runOpenClawStateWriteTransaction,
 } from "../state/openclaw-state-db.js";
 import { resolveConfigDir } from "../utils.js";
@@ -63,7 +63,7 @@ export function resolveCronJobsStorePath(storePath?: string) {
 export async function loadCronJobsStoreWithConfigJobs(storePath: string): Promise<LoadedCronStore> {
   const resolvedStorePath = path.resolve(storePath);
   const storeKey = cronStoreKey(resolvedStorePath);
-  const database = openOpenClawStateDatabase().db;
+  const database = openDexStateDatabase().db;
   const rows = loadCronRows(database, storeKey);
   if (rows.length > 0) {
     return loadedCronStoreFromRows(rows);
@@ -86,7 +86,7 @@ export async function loadCronJobsStore(storePath: string): Promise<CronStoreFil
 export function loadCronJobsStoreSync(storePath: string): CronStoreFile {
   const resolvedStorePath = path.resolve(storePath);
   const storeKey = cronStoreKey(resolvedStorePath);
-  const database = openOpenClawStateDatabase().db;
+  const database = openDexStateDatabase().db;
   const rows = loadCronRows(database, storeKey);
   if (rows.length > 0) {
     return loadedCronStoreFromRows(rows).store;

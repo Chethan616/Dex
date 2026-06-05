@@ -20,8 +20,8 @@ const DYNAMIC_TOOL_NAME_ALIASES: Record<string, string> = {
 };
 
 type CodexDynamicToolProfileEnv = {
-  OPENCLAW_BUILD_PRIVATE_QA?: string;
-  OPENCLAW_QA_FORCE_RUNTIME?: string;
+  DEX_BUILD_PRIVATE_QA?: string;
+  DEX_QA_FORCE_RUNTIME?: string;
 };
 
 export function normalizeCodexDynamicToolName(name: string): string {
@@ -33,8 +33,8 @@ export function isForcedPrivateQaCodexRuntime(
   env: CodexDynamicToolProfileEnv = process.env,
 ): boolean {
   return (
-    env.OPENCLAW_BUILD_PRIVATE_QA === "1" &&
-    env.OPENCLAW_QA_FORCE_RUNTIME?.trim().toLowerCase() === "codex"
+    env.DEX_BUILD_PRIVATE_QA === "1" &&
+    env.DEX_QA_FORCE_RUNTIME?.trim().toLowerCase() === "codex"
   );
 }
 

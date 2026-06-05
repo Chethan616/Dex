@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { emptyPluginConfigSchema } from "../plugins/config-schema.js";
 import type {
   AnyAgentTool,
@@ -15,22 +15,22 @@ import type {
   MigrationProviderContext,
   MigrationProviderPlugin,
   MigrationSummary,
-  OpenClawPluginApi,
-  OpenClawPluginCommandDefinition,
-  OpenClawPluginConfigSchema,
-  OpenClawPluginDefinition,
-  OpenClawPluginHttpRouteHandler,
-  OpenClawPluginNodeHostCommand,
-  OpenClawPluginNodeInvokePolicy,
-  OpenClawPluginNodeInvokePolicyContext,
-  OpenClawPluginNodeInvokePolicyResult,
-  OpenClawPluginReloadRegistration,
-  OpenClawPluginSecurityAuditCollector,
-  OpenClawPluginSecurityAuditContext,
-  OpenClawPluginService,
-  OpenClawPluginServiceContext,
-  OpenClawPluginToolContext,
-  OpenClawPluginToolFactory,
+  DexPluginApi,
+  DexPluginCommandDefinition,
+  DexPluginConfigSchema,
+  DexPluginDefinition,
+  DexPluginHttpRouteHandler,
+  DexPluginNodeHostCommand,
+  DexPluginNodeInvokePolicy,
+  DexPluginNodeInvokePolicyContext,
+  DexPluginNodeInvokePolicyResult,
+  DexPluginReloadRegistration,
+  DexPluginSecurityAuditCollector,
+  DexPluginSecurityAuditContext,
+  DexPluginService,
+  DexPluginServiceContext,
+  DexPluginToolContext,
+  DexPluginToolFactory,
   PluginLogger,
   ProviderAugmentModelCatalogContext,
   ProviderAuthContext,
@@ -85,8 +85,8 @@ import type {
   ProviderWrapStreamFnContext,
   UnifiedModelCatalogProviderContext,
   UnifiedModelCatalogProviderPlugin,
-  OpenClawGatewayDiscoveryAdvertiseContext,
-  OpenClawGatewayDiscoveryService,
+  DexGatewayDiscoveryAdvertiseContext,
+  DexGatewayDiscoveryService,
   SpeechProviderPlugin,
   PluginCommandContext,
   PluginCommandResult,
@@ -137,16 +137,16 @@ export type {
   MigrationProviderContext,
   MigrationProviderPlugin,
   MigrationSummary,
-  OpenClawPluginApi,
-  OpenClawPluginNodeHostCommand,
-  OpenClawPluginNodeInvokePolicy,
-  OpenClawPluginNodeInvokePolicyContext,
-  OpenClawPluginNodeInvokePolicyResult,
-  OpenClawPluginReloadRegistration,
-  OpenClawPluginSecurityAuditCollector,
-  OpenClawPluginSecurityAuditContext,
-  OpenClawPluginToolContext,
-  OpenClawPluginToolFactory,
+  DexPluginApi,
+  DexPluginNodeHostCommand,
+  DexPluginNodeInvokePolicy,
+  DexPluginNodeInvokePolicyContext,
+  DexPluginNodeInvokePolicyResult,
+  DexPluginReloadRegistration,
+  DexPluginSecurityAuditCollector,
+  DexPluginSecurityAuditContext,
+  DexPluginToolContext,
+  DexPluginToolFactory,
   PluginCommandContext,
   PluginCommandResult,
   PluginAgentEventEmitParams,
@@ -178,8 +178,8 @@ export type {
   PluginSessionExtensionProjection,
   PluginToolMetadataRegistration,
   PluginTrustedToolPolicyRegistration,
-  OpenClawPluginConfigSchema,
-  OpenClawPluginHttpRouteHandler,
+  DexPluginConfigSchema,
+  DexPluginHttpRouteHandler,
   ProviderDiscoveryContext,
   ProviderCatalogContext,
   ProviderCatalogResult,
@@ -229,17 +229,17 @@ export type {
   ProviderWrapStreamFnContext,
   UnifiedModelCatalogProviderContext,
   UnifiedModelCatalogProviderPlugin,
-  OpenClawGatewayDiscoveryAdvertiseContext,
-  OpenClawGatewayDiscoveryService,
-  OpenClawPluginService,
-  OpenClawPluginServiceContext,
+  DexGatewayDiscoveryAdvertiseContext,
+  DexGatewayDiscoveryService,
+  DexPluginService,
+  DexPluginServiceContext,
   ProviderAuthContext,
   ProviderAuthDoctorHintContext,
   ProviderAuthMethodNonInteractiveContext,
   ProviderAuthMethod,
   ProviderAuthResult,
-  OpenClawPluginCommandDefinition,
-  OpenClawPluginDefinition,
+  DexPluginCommandDefinition,
+  DexPluginDefinition,
   PluginLogger,
 };
 export type {
@@ -259,7 +259,7 @@ export type {
   UnifiedModelCatalogKind,
   UnifiedModelCatalogSource,
 } from "@dexagent/model-catalog-core/model-catalog-types";
-export type { OpenClawConfig };
+export type { DexConfig };
 
 export {
   buildJsonPluginConfigSchema,
@@ -277,12 +277,12 @@ type DefinePluginEntryOptions = {
    * manifest `kind`. Runtime-entry `kind` remains only as a compatibility
    * fallback for older plugins.
    */
-  kind?: OpenClawPluginDefinition["kind"];
-  configSchema?: OpenClawPluginConfigSchema | (() => OpenClawPluginConfigSchema);
-  reload?: OpenClawPluginDefinition["reload"];
-  nodeHostCommands?: OpenClawPluginDefinition["nodeHostCommands"];
-  securityAuditCollectors?: OpenClawPluginDefinition["securityAuditCollectors"];
-  register: (api: OpenClawPluginApi) => void;
+  kind?: DexPluginDefinition["kind"];
+  configSchema?: DexPluginConfigSchema | (() => DexPluginConfigSchema);
+  reload?: DexPluginDefinition["reload"];
+  nodeHostCommands?: DexPluginDefinition["nodeHostCommands"];
+  securityAuditCollectors?: DexPluginDefinition["securityAuditCollectors"];
+  register: (api: DexPluginApi) => void;
 };
 
 /** Normalized object shape that OpenClaw loads from a plugin entry module. */
@@ -290,10 +290,10 @@ type DefinedPluginEntry = {
   id: string;
   name: string;
   description: string;
-  configSchema: OpenClawPluginConfigSchema;
-  register: NonNullable<OpenClawPluginDefinition["register"]>;
+  configSchema: DexPluginConfigSchema;
+  register: NonNullable<DexPluginDefinition["register"]>;
 } & Pick<
-  OpenClawPluginDefinition,
+  DexPluginDefinition,
   "kind" | "reload" | "nodeHostCommands" | "securityAuditCollectors"
 >;
 

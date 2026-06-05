@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { PluginInstallRecord } from "../config/types.plugins.js";
 import { enablePluginInConfig } from "../plugins/enable.js";
 import { loadInstalledPluginIndexInstallRecords } from "../plugins/installed-plugin-index-records.js";
@@ -16,16 +16,16 @@ export type RuntimePluginInstallDescriptor = {
 };
 
 export type RuntimePluginInstallResult = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   required: boolean;
   installed: boolean;
   status?: "installed" | "skipped" | "failed" | "timed_out";
 };
 
-export type RuntimePluginSelection = (params: { cfg: OpenClawConfig; model?: string }) => boolean;
+export type RuntimePluginSelection = (params: { cfg: DexConfig; model?: string }) => boolean;
 
 export type RuntimePluginEnsureParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   model?: string;
   prompter: WizardPrompter;
   runtime: RuntimeEnv;
@@ -33,7 +33,7 @@ export type RuntimePluginEnsureParams = {
 };
 
 export type RuntimePluginRepairParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   model?: string;
   env?: NodeJS.ProcessEnv;
 };
@@ -57,7 +57,7 @@ function isInstalledRecordPresentOnDisk(
 }
 
 export async function ensureRuntimePluginForModelSelection(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   model?: string;
   prompter: WizardPrompter;
   runtime: RuntimeEnv;
@@ -123,7 +123,7 @@ export async function ensureRuntimePluginForModelSelection(params: {
 }
 
 export async function repairRuntimePluginInstallForModelSelection(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   model?: string;
   env?: NodeJS.ProcessEnv;
   descriptor: RuntimePluginInstallDescriptor;

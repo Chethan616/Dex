@@ -1,5 +1,5 @@
 import { formatCliCommand } from "../cli/command-format.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveBrewExecutable } from "../infra/brew.js";
 import { isContainerEnvironment } from "../infra/container-environment.js";
 import type { RuntimeEnv } from "../runtime.js";
@@ -45,11 +45,11 @@ function isBrewOnlyInstallableSkill(skill: {
 }
 
 export async function setupSkills(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   workspaceDir: string,
   runtime: RuntimeEnv,
   prompter: WizardPrompter,
-): Promise<OpenClawConfig> {
+): Promise<DexConfig> {
   const report = buildWorkspaceSkillStatus(workspaceDir, { config: cfg });
   const eligible = report.skills.filter((s) => s.eligible);
   const unsupportedOs = report.skills.filter(
@@ -98,7 +98,7 @@ export async function setupSkills(
       );
     }
   }
-  let next: OpenClawConfig = cfg;
+  let next: DexConfig = cfg;
   if (installable.length === 0 && missing.length === 0) {
     await prompter.note(
       [

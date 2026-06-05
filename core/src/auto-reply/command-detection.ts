@@ -2,7 +2,7 @@ import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
 } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { listChatCommands, listChatCommandsForConfig } from "./commands-registry-list.js";
 import { normalizeCommandBody } from "./commands-registry-normalize.js";
 import type { CommandNormalizeOptions } from "./commands-registry.types.js";
@@ -11,7 +11,7 @@ import { stripInboundMetadata } from "./reply/strip-inbound-meta.js";
 
 export function hasControlCommand(
   text?: string,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
   options?: CommandNormalizeOptions,
 ): boolean {
   if (!text) {
@@ -53,7 +53,7 @@ export function hasControlCommand(
 
 export function isControlCommandMessage(
   text?: string,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
   options?: CommandNormalizeOptions,
 ): boolean {
   if (!text) {
@@ -89,7 +89,7 @@ export function hasInlineCommandTokens(text?: string): boolean {
 
 export function shouldComputeCommandAuthorized(
   text?: string,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
   options?: CommandNormalizeOptions,
 ): boolean {
   return isControlCommandMessage(text, cfg, options) || hasInlineCommandTokens(text);

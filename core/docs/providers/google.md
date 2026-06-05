@@ -106,8 +106,8 @@ Choose your preferred auth method and follow the setup steps.
 
     **Environment variables:**
 
-    - `OPENCLAW_GEMINI_OAUTH_CLIENT_ID`
-    - `OPENCLAW_GEMINI_OAUTH_CLIENT_SECRET`
+    - `DEX_GEMINI_OAUTH_CLIENT_ID`
+    - `DEX_GEMINI_OAUTH_CLIENT_SECRET`
 
     (Or the `GEMINI_CLI_*` variants.)
 
@@ -449,7 +449,7 @@ WebSocket endpoint, sends the initial setup payload, and waits for
 
   <Accordion title="Environment and daemon setup">
     If the Gateway runs as a daemon (launchd/systemd), make sure `GEMINI_API_KEY`
-    is available to that process (for example, in `~/.openclaw/.env` or via
+    is available to that process (for example, in `~/.dex/.env` or via
     `env.shellEnv`).
   </Accordion>
 </AccordionGroup>

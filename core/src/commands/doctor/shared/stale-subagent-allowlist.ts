@@ -1,6 +1,6 @@
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { listAgentIds } from "../../../agents/agent-scope-config.js";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 import { normalizeAgentId } from "../../../routing/session-key.js";
 
 export type StaleSubagentAllowlistHit = {
@@ -17,7 +17,7 @@ function normalizeOptionalAgentId(value: string | undefined | null): string | un
   return normalizeAgentId(trimmed);
 }
 
-function collectConfiguredSubagentTargetIds(cfg: OpenClawConfig): Set<string> {
+function collectConfiguredSubagentTargetIds(cfg: DexConfig): Set<string> {
   const ids = new Set<string>(listAgentIds(cfg));
   for (const agent of cfg.agents?.list ?? []) {
     if (agent.runtime?.type !== "acp") {
@@ -81,7 +81,7 @@ function collectStaleAllowlistEntries(params: {
 }
 
 export function scanStaleSubagentAllowlistReferences(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): StaleSubagentAllowlistHit[] {
   const configuredTargetIds = collectConfiguredSubagentTargetIds(cfg);
   const hits: StaleSubagentAllowlistHit[] = [];
@@ -131,8 +131,8 @@ function filterAllowAgents(params: {
   });
 }
 
-export function maybeRepairStaleSubagentAllowlists(cfg: OpenClawConfig): {
-  config: OpenClawConfig;
+export function maybeRepairStaleSubagentAllowlists(cfg: DexConfig): {
+  config: DexConfig;
   changes: string[];
 } {
   const hits = scanStaleSubagentAllowlistReferences(cfg);

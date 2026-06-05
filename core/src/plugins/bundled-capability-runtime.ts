@@ -29,7 +29,7 @@ import {
   findUndeclaredPluginToolNames,
   normalizePluginToolContractNames,
 } from "./tool-contracts.js";
-import type { OpenClawPluginDefinition, OpenClawPluginModule } from "./types.js";
+import type { DexPluginDefinition, DexPluginModule } from "./types.js";
 
 const log = createSubsystemLogger("plugins");
 
@@ -110,17 +110,17 @@ export function buildBundledCapabilityRuntimeConfig(
 }
 
 function resolvePluginModuleExport(moduleExport: unknown): {
-  definition?: OpenClawPluginDefinition;
-  register?: OpenClawPluginDefinition["register"];
+  definition?: DexPluginDefinition;
+  register?: DexPluginDefinition["register"];
 } {
   const resolved = unwrapDefaultModuleExport(moduleExport);
   if (typeof resolved === "function") {
     return {
-      register: resolved as OpenClawPluginDefinition["register"],
+      register: resolved as DexPluginDefinition["register"],
     };
   }
   if (resolved && typeof resolved === "object") {
-    const definition = resolved as OpenClawPluginDefinition;
+    const definition = resolved as DexPluginDefinition;
     return {
       definition,
       register: definition.register ?? definition.activate,
@@ -300,9 +300,9 @@ export function loadBundledCapabilityRuntimeRegistry(params: {
     const safeSource = opened.path;
     fs.closeSync(opened.fd);
 
-    let mod: OpenClawPluginModule | null;
+    let mod: DexPluginModule | null;
     try {
-      mod = getModuleLoader(safeSource)(safeSource) as OpenClawPluginModule;
+      mod = getModuleLoader(safeSource)(safeSource) as DexPluginModule;
     } catch (error) {
       recordCapabilityLoadError(registry, record, String(error));
       continue;

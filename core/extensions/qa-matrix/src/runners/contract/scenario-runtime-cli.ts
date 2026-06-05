@@ -384,9 +384,9 @@ export async function createMatrixQaOpenClawCliRuntime(params: {
     ...params.runtimeEnv,
     FORCE_COLOR: "0",
     NO_COLOR: "1",
-    OPENCLAW_CONFIG_PATH: configPath,
-    OPENCLAW_DISABLE_AUTO_UPDATE: "1",
-    OPENCLAW_STATE_DIR: stateDir,
+    DEX_CONFIG_PATH: configPath,
+    DEX_DISABLE_AUTO_UPDATE: "1",
+    DEX_STATE_DIR: stateDir,
   };
   return {
     artifactDir,

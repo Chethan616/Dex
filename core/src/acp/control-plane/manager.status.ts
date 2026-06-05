@@ -5,7 +5,7 @@ import type {
   AcpRuntimeHandle,
   AcpRuntimeStatus,
 } from "@dexagent/acp-core/runtime/types";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { withAcpRuntimeErrorBoundary } from "../runtime/errors.js";
 import type {
   AcpSessionStatus,
@@ -17,7 +17,7 @@ import { requireReadySessionMeta } from "./manager.utils.js";
 import { resolveRuntimeOptionsFromMeta } from "./runtime-options.js";
 
 export async function runManagerGetSessionStatus(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   signal?: AbortSignal;
   throwIfAborted: (signal?: AbortSignal) => void;

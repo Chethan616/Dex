@@ -140,12 +140,12 @@ Run a persistent, always-on OpenClaw Gateway on a Raspberry Pi. Since the Pi is 
 grep -q 'NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache' ~/.bashrc || cat >> ~/.bashrc <<'EOF' # pragma: allowlist secret
 export NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache
 mkdir -p /var/tmp/openclaw-compile-cache
-export OPENCLAW_NO_RESPAWN=1
+export DEX_NO_RESPAWN=1
 EOF
 source ~/.bashrc
 ```
 
-`OPENCLAW_NO_RESPAWN=1` keeps routine Gateway restarts in-process, which avoids extra process handoffs and keeps PID tracking simple on small hosts.
+`DEX_NO_RESPAWN=1` keeps routine Gateway restarts in-process, which avoids extra process handoffs and keeps PID tracking simple on small hosts.
 
 **Reduce memory usage** -- For headless setups, free GPU memory and disable unused services:
 
@@ -162,7 +162,7 @@ systemctl --user edit openclaw-gateway.service
 
 ```ini
 [Service]
-Environment=OPENCLAW_NO_RESPAWN=1
+Environment=DEX_NO_RESPAWN=1
 Environment=NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache
 Restart=always
 RestartSec=2
@@ -198,8 +198,8 @@ Most OpenClaw features work on ARM64 without changes (Node.js, Telegram, WhatsAp
 
 OpenClaw state lives under:
 
-- `~/.openclaw/` — `openclaw.json`, per-agent `auth-profiles.json`, channel/provider state, sessions.
-- `~/.openclaw/workspace/` — agent workspace (SOUL.md, memory, artifacts).
+- `~/.dex/` — `openclaw.json`, per-agent `auth-profiles.json`, channel/provider state, sessions.
+- `~/.dex/workspace/` — agent workspace (SOUL.md, memory, artifacts).
 
 These survive reboots. Take a portable snapshot with:
 

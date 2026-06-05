@@ -1,9 +1,9 @@
 import { GATEWAY_LAUNCH_AGENT_LABEL, resolveGatewayLaunchAgentLabel } from "../daemon/constants.js";
 
 const SUPERVISOR_HINTS = {
-  launchd: ["OPENCLAW_LAUNCHD_LABEL"],
-  systemd: ["OPENCLAW_SYSTEMD_UNIT", "INVOCATION_ID", "SYSTEMD_EXEC_PID", "JOURNAL_STREAM"],
-  schtasks: ["OPENCLAW_WINDOWS_TASK_NAME"],
+  launchd: ["DEX_LAUNCHD_LABEL"],
+  systemd: ["DEX_SYSTEMD_UNIT", "INVOCATION_ID", "SYSTEMD_EXEC_PID", "JOURNAL_STREAM"],
+  schtasks: ["DEX_WINDOWS_TASK_NAME"],
 } as const;
 
 export const SUPERVISOR_HINT_ENV_VARS = [
@@ -13,8 +13,8 @@ export const SUPERVISOR_HINT_ENV_VARS = [
   ...SUPERVISOR_HINTS.launchd,
   ...SUPERVISOR_HINTS.systemd,
   ...SUPERVISOR_HINTS.schtasks,
-  "OPENCLAW_SERVICE_MARKER",
-  "OPENCLAW_SERVICE_KIND",
+  "DEX_SERVICE_MARKER",
+  "DEX_SERVICE_KIND",
 ] as const;
 
 export type RespawnSupervisor = "launchd" | "systemd" | "schtasks";
@@ -27,7 +27,7 @@ function hasAnyHint(env: NodeJS.ProcessEnv, keys: readonly string[]): boolean {
 }
 
 function isCurrentGatewayLaunchdJob(env: NodeJS.ProcessEnv): boolean {
-  const expectedLabel = resolveGatewayLaunchAgentLabel(env.OPENCLAW_PROFILE);
+  const expectedLabel = resolveGatewayLaunchAgentLabel(env.DEX_PROFILE);
   if (
     [env.LAUNCH_JOB_LABEL, env.LAUNCH_JOB_NAME].some((value) => value?.trim() === expectedLabel)
   ) {
@@ -52,8 +52,8 @@ export function detectRespawnSupervisor(
     if (hasAnyHint(env, SUPERVISOR_HINTS.schtasks)) {
       return "schtasks";
     }
-    const marker = env.OPENCLAW_SERVICE_MARKER?.trim();
-    const serviceKind = env.OPENCLAW_SERVICE_KIND?.trim();
+    const marker = env.DEX_SERVICE_MARKER?.trim();
+    const serviceKind = env.DEX_SERVICE_KIND?.trim();
     return marker && serviceKind === "gateway" ? "schtasks" : null;
   }
   return null;

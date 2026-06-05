@@ -587,7 +587,7 @@ async function runOne(mode: Mode, task: Task, model: string, apiKey: string): Pr
     finalText,
     ...(lastAssistant?.stopReason ? { stopReason: lastAssistant.stopReason } : {}),
     ...(lastAssistant?.errorMessage ? { errorMessage: lastAssistant.errorMessage } : {}),
-    ...(process.env.OPENCLAW_CODE_MODE_LIVE_DEBUG === "1" ? { toolResults } : {}),
+    ...(process.env.DEX_CODE_MODE_LIVE_DEBUG === "1" ? { toolResults } : {}),
   };
 }
 
@@ -602,10 +602,10 @@ async function main() {
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY is required");
   }
-  const model = readArg("model") ?? process.env.OPENCLAW_CODE_MODE_LIVE_MODEL ?? "gpt-5.4-mini";
+  const model = readArg("model") ?? process.env.DEX_CODE_MODE_LIVE_MODEL ?? "gpt-5.4-mini";
   const modeArg = readArg("modes");
   const modes = (modeArg ? modeArg.split(",") : ["regular", "code-namespace"]) as Mode[];
-  const taskLimit = Number(readArg("tasks") ?? process.env.OPENCLAW_CODE_MODE_LIVE_TASKS ?? "3");
+  const taskLimit = Number(readArg("tasks") ?? process.env.DEX_CODE_MODE_LIVE_TASKS ?? "3");
   const selectedTasks = tasks.slice(
     0,
     Number.isFinite(taskLimit) && taskLimit > 0 ? taskLimit : tasks.length,

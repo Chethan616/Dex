@@ -1,17 +1,17 @@
 import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import { getLoadedChannelPlugin } from "../channels/plugins/index.js";
 import { resolveReadOnlyChannelCommandDefaults } from "../channels/plugins/read-only-command-defaults.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { pluginCommandSupportsChannel } from "./command-registration.js";
 import { pluginCommands } from "./command-registry-state.js";
 import type { PluginCommandRegistration } from "./registry-types.js";
-import type { OpenClawPluginCommandDefinition } from "./types.js";
+import type { DexPluginCommandDefinition } from "./types.js";
 
 type PluginCommandSpecOptions = {
   env?: NodeJS.ProcessEnv;
   stateDir?: string;
   workspaceDir?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 };
 
 export type PluginCommandEntrySpec = {
@@ -22,7 +22,7 @@ export type PluginCommandEntrySpec = {
 };
 
 function resolvePluginNativeName(
-  command: OpenClawPluginCommandDefinition,
+  command: DexPluginCommandDefinition,
   provider?: string,
 ): string {
   const providerName = normalizeOptionalLowercaseString(provider);
@@ -38,7 +38,7 @@ function resolvePluginNativeName(
   return fallbackName || command.name;
 }
 
-function resolvePluginTextName(command: OpenClawPluginCommandDefinition): string {
+function resolvePluginTextName(command: DexPluginCommandDefinition): string {
   const name = command.name.trim();
   return name || command.name;
 }
@@ -148,7 +148,7 @@ export function listProviderPluginCommandSpecsFromRegistrations(
 }
 
 function serializePluginCommandSpec(
-  cmd: OpenClawPluginCommandDefinition,
+  cmd: DexPluginCommandDefinition,
   provider?: string,
 ): {
   name: string;
@@ -173,7 +173,7 @@ function serializePluginCommandSpec(
 }
 
 function serializePluginCommandEntrySpec(
-  cmd: OpenClawPluginCommandDefinition,
+  cmd: DexPluginCommandDefinition,
   provider: string | undefined,
   nativeCommandsEnabled: boolean,
 ): PluginCommandEntrySpec | null {

@@ -125,8 +125,8 @@ const HOME_ENV_KEYS = [
   "USERPROFILE",
   "HOMEDRIVE",
   "HOMEPATH",
-  "OPENCLAW_STATE_DIR",
-  "OPENCLAW_AGENT_DIR",
+  "DEX_STATE_DIR",
+  "DEX_AGENT_DIR",
 ] as const;
 
 export function createTempHomeHarness(options: { prefix: string; beforeEachCase?: () => void }) {
@@ -146,12 +146,12 @@ export function createTempHomeHarness(options: { prefix: string; beforeEachCase?
 
   async function withTempHome<T>(fn: (home: string) => Promise<T>): Promise<T> {
     const home = path.join(fixtureRoot, `case-${++caseId}`);
-    await fs.mkdir(path.join(home, ".openclaw", "agents", "main", "sessions"), { recursive: true });
+    await fs.mkdir(path.join(home, ".dex", "agents", "main", "sessions"), { recursive: true });
     const envSnapshot = captureEnv([...HOME_ENV_KEYS]);
     process.env.HOME = home;
     process.env.USERPROFILE = home;
-    process.env.OPENCLAW_STATE_DIR = path.join(home, ".openclaw");
-    process.env.OPENCLAW_AGENT_DIR = path.join(home, ".openclaw", "agent");
+    process.env.DEX_STATE_DIR = path.join(home, ".dex");
+    process.env.DEX_AGENT_DIR = path.join(home, ".dex", "agent");
 
     if (process.platform === "win32") {
       const match = home.match(/^([A-Za-z]:)(.*)$/);

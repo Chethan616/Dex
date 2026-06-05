@@ -9,8 +9,8 @@ import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/s
 
 const execFileAsync = promisify(execFile);
 const LIVE_CRON_PROBE_DELAY_SECONDS = 7 * 24 * 60 * 60;
-const OPENCLAW_CLI_GATEWAY_TIMEOUT_MS = 30_000;
-const OPENCLAW_CLI_CHILD_TIMEOUT_MS = OPENCLAW_CLI_GATEWAY_TIMEOUT_MS + 45_000;
+const DEX_CLI_GATEWAY_TIMEOUT_MS = 30_000;
+const DEX_CLI_CHILD_TIMEOUT_MS = DEX_CLI_GATEWAY_TIMEOUT_MS + 45_000;
 
 type CronListCliResult = {
   jobs?: Array<{
@@ -139,11 +139,11 @@ export async function runOpenClawCliJson<T>(args: string[], env: NodeJS.ProcessE
   delete childEnv.VITEST_WORKER_ID;
   const cliArgs = args.includes("--timeout")
     ? args
-    : [...args, "--timeout", String(OPENCLAW_CLI_GATEWAY_TIMEOUT_MS)];
+    : [...args, "--timeout", String(DEX_CLI_GATEWAY_TIMEOUT_MS)];
   const { stdout, stderr } = await execFileAsync(process.execPath, ["openclaw.mjs", ...cliArgs], {
     cwd: process.cwd(),
     env: childEnv,
-    timeout: OPENCLAW_CLI_CHILD_TIMEOUT_MS,
+    timeout: DEX_CLI_CHILD_TIMEOUT_MS,
     maxBuffer: 1024 * 1024,
   });
   const trimmed = stdout.trim();

@@ -1368,7 +1368,7 @@ function createResponsesFirstEventTimeoutError(model: Model, timeoutMs: number):
   return new Error(
     `Azure OpenAI Responses stream did not deliver a first event within ${timeoutMs}ms after HTTP streaming headers. ` +
       `provider=${model.provider} model=${model.id}. ` +
-      "The provider may be stalled while parsing the tool payload; retry with a smaller tool surface or enable OPENCLAW_DEBUG_MODEL_PAYLOAD=tools to inspect exposed tools.",
+      "The provider may be stalled while parsing the tool payload; retry with a smaller tool surface or enable DEX_DEBUG_MODEL_PAYLOAD=tools to inspect exposed tools.",
   );
 }
 
@@ -1984,7 +1984,7 @@ function resolveCacheRetention(cacheRetention: string | undefined): "short" | "l
   if (cacheRetention === "short" || cacheRetention === "long" || cacheRetention === "none") {
     return cacheRetention;
   }
-  if (typeof process !== "undefined" && process.env.OPENCLAW_CACHE_RETENTION === "long") {
+  if (typeof process !== "undefined" && process.env.DEX_CACHE_RETENTION === "long") {
     return "long";
   }
   return "short";

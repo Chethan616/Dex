@@ -27,7 +27,7 @@ export {
   listActiveMemoryPublicArtifacts,
 } from "./host/openclaw-runtime-memory.js";
 export { parseAgentSessionKey } from "./host/openclaw-runtime-agent.js";
-export type { OpenClawConfig } from "./host/openclaw-runtime-config.js";
+export type { DexConfig } from "./host/openclaw-runtime-config.js";
 export type { MemoryCitationsMode } from "./host/openclaw-runtime-config.js";
 export type {
   MemoryFlushPlan,
@@ -38,4 +38,4 @@ export type {
   MemoryPluginRuntime,
   MemoryPromptSectionBuilder,
 } from "./host/openclaw-runtime-memory.js";
-export type { OpenClawPluginApi } from "./host/openclaw-runtime-memory.js";
+export type { DexPluginApi } from "./host/openclaw-runtime-memory.js";

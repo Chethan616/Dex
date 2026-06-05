@@ -1,13 +1,13 @@
 import { mutateConfigFileWithRetry } from "../../config/config.js";
 import { REDACTED_SENTINEL } from "../../config/redact-snapshot.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { normalizeSecretInput } from "../../utils/normalize-secret-input.js";
 
 export function patchSkillConfigEntry(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   skillKey: string,
   patch: { enabled?: boolean; apiKey?: string; env?: Record<string, string> },
-): OpenClawConfig {
+): DexConfig {
   const entries = { ...cfg.skills?.entries };
   const current = entries[skillKey] ? { ...entries[skillKey] } : {};
   if (typeof patch.enabled === "boolean") {

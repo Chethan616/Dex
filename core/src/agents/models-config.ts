@@ -4,7 +4,7 @@ import {
   getRuntimeConfig,
   getRuntimeConfigSourceSnapshot,
   projectConfigOntoRuntimeSourceSnapshot,
-  type OpenClawConfig,
+  type DexConfig,
 } from "../config/config.js";
 import { createConfigRuntimeEnv } from "../config/env-vars.js";
 import { privateFileStore } from "../infra/private-file-store.js";
@@ -53,8 +53,8 @@ async function readPluginCatalogMtimes(agentDir: string): Promise<Array<[string,
 }
 
 async function buildModelsJsonFingerprint(params: {
-  config: OpenClawConfig;
-  sourceConfigForSecrets: OpenClawConfig;
+  config: DexConfig;
+  sourceConfigForSecrets: DexConfig;
   agentDir: string;
   workspaceDir?: string;
   pluginMetadataSnapshot?: Pick<PluginMetadataSnapshot, "index">;
@@ -234,9 +234,9 @@ async function writePluginCatalogsForModelsJson(params: {
   return wrote || removedStale;
 }
 
-function resolveModelsConfigInput(config?: OpenClawConfig): {
-  config: OpenClawConfig;
-  sourceConfigForSecrets: OpenClawConfig;
+function resolveModelsConfigInput(config?: DexConfig): {
+  config: DexConfig;
+  sourceConfigForSecrets: DexConfig;
 } {
   const runtimeSource = getRuntimeConfigSourceSnapshot();
   if (!config) {
@@ -281,7 +281,7 @@ async function withModelsJsonWriteLock<T>(targetPath: string, run: () => Promise
 }
 
 export async function ensureOpenClawModelsJson(
-  config?: OpenClawConfig,
+  config?: DexConfig,
   agentDirOverride?: string,
   options: {
     pluginMetadataSnapshot?: Pick<PluginMetadataSnapshot, "index" | "manifestRegistry" | "owners">;

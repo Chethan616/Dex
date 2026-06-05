@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "./config-types.js";
+import type { DexConfig } from "./config-types.js";
 import { loadBundledPluginPublicSurfaceModuleSync } from "./facade-loader.js";
 
 /**
@@ -6,7 +6,7 @@ import { loadBundledPluginPublicSurfaceModuleSync } from "./facade-loader.js";
  * New channel plugins should prefer injected runtime helpers and generic SDK subpaths.
  */
 export type TelegramAccountConfig = NonNullable<
-  NonNullable<OpenClawConfig["channels"]>["telegram"]
+  NonNullable<DexConfig["channels"]>["telegram"]
 >;
 
 /**
@@ -24,7 +24,7 @@ export type ResolvedTelegramAccount = {
 
 type TelegramAccountFacadeModule = {
   resolveTelegramAccount: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
   }) => ResolvedTelegramAccount;
 };
@@ -41,7 +41,7 @@ function loadTelegramAccountFacadeModule(): TelegramAccountFacadeModule {
  * New channel plugins should prefer injected runtime helpers and generic SDK subpaths.
  */
 export function resolveTelegramAccount(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 }): ResolvedTelegramAccount {
   return loadTelegramAccountFacadeModule().resolveTelegramAccount(params);

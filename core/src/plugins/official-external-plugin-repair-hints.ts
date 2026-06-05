@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveConfiguredChannelPresencePolicy } from "./channel-plugin-ids.js";
 import {
   getOfficialExternalPluginCatalogEntry,
@@ -51,8 +51,8 @@ export function resolveOfficialExternalPluginRepairHint(
 }
 
 export function resolveMissingOfficialExternalChannelPluginRepairHint(params: {
-  config: OpenClawConfig;
-  activationSourceConfig?: OpenClawConfig;
+  config: DexConfig;
+  activationSourceConfig?: DexConfig;
   channelId: string;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;

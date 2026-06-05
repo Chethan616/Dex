@@ -1,7 +1,7 @@
 import path from "node:path";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import {
-  POSIX_OPENCLAW_TMP_DIR,
+  POSIX_DEX_TMP_DIR,
   resolvePreferredOpenClawTmpDir,
 } from "../infra/tmp-openclaw-dir.js";
 
@@ -32,10 +32,10 @@ function formatLocalDate(date: Date): string {
 }
 
 function resolveDefaultRollingLogFile(date = new Date()): string {
-  const logDir = canUseNodeFs() ? resolvePreferredOpenClawTmpDir() : POSIX_OPENCLAW_TMP_DIR;
+  const logDir = canUseNodeFs() ? resolvePreferredOpenClawTmpDir() : POSIX_DEX_TMP_DIR;
   return path.join(logDir, `${LOG_PREFIX}-${formatLocalDate(date)}${LOG_SUFFIX}`);
 }
 
-export function resolveConfiguredLogFilePath(config?: OpenClawConfig | null): string {
+export function resolveConfiguredLogFilePath(config?: DexConfig | null): string {
   return config?.logging?.file ?? resolveDefaultRollingLogFile();
 }

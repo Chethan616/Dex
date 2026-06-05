@@ -8,7 +8,7 @@ import {
   GATEWAY_CLIENT_MODES,
   GATEWAY_CLIENT_NAMES,
 } from "../../packages/gateway-protocol/src/client-info.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { buildGatewayConnectionDetailsWithResolvers } from "../gateway/connection-details.js";
 import { normalizeControlUiBasePath } from "../gateway/control-ui-shared.js";
 import { resolveGatewayProbeTarget } from "../gateway/probe-target.js";
@@ -74,7 +74,7 @@ type StatusMemorySearchManager = {
 };
 
 type StatusMemorySearchManagerResolver = (params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   purpose: "status";
 }) => Promise<{
@@ -114,7 +114,7 @@ function shouldTryLocalStatusRpcFallback(params: {
 }
 
 async function applyLocalStatusRpcFallback(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   gatewayMode: "local" | "remote";
   gatewayUrl: string;
   gatewayProbe: GatewayProbeResult | null;
@@ -170,7 +170,7 @@ async function applyLocalStatusRpcFallback(params: {
   };
 }
 
-function hasExplicitMemorySearchConfig(cfg: OpenClawConfig, agentId: string): boolean {
+function hasExplicitMemorySearchConfig(cfg: DexConfig, agentId: string): boolean {
   if (cfg.agents?.defaults && Object.hasOwn(cfg.agents.defaults, "memorySearch")) {
     return true;
   }
@@ -178,7 +178,7 @@ function hasExplicitMemorySearchConfig(cfg: OpenClawConfig, agentId: string): bo
   return agents.some((agent) => agent?.id === agentId && Object.hasOwn(agent, "memorySearch"));
 }
 
-export function resolveMemoryPluginStatus(cfg: OpenClawConfig): MemoryPluginStatus {
+export function resolveMemoryPluginStatus(cfg: DexConfig): MemoryPluginStatus {
   const pluginsEnabled = cfg.plugins?.enabled !== false;
   if (!pluginsEnabled) {
     return { enabled: false, slot: null, reason: "plugins disabled" };
@@ -191,7 +191,7 @@ export function resolveMemoryPluginStatus(cfg: OpenClawConfig): MemoryPluginStat
 }
 
 export async function resolveGatewayProbeSnapshot(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   opts: {
     timeoutMs?: number;
     all?: boolean;
@@ -298,10 +298,10 @@ export function buildTailscaleHttpsUrl(params: {
 }
 
 export async function resolveSharedMemoryStatusSnapshot(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentStatus: { defaultId?: string | null };
   memoryPlugin: MemoryPluginStatus;
-  resolveMemoryConfig: (cfg: OpenClawConfig, agentId: string) => { store: { path: string } } | null;
+  resolveMemoryConfig: (cfg: DexConfig, agentId: string) => { store: { path: string } } | null;
   getMemorySearchManager: StatusMemorySearchManagerResolver;
   requireDefaultStore?: (agentId: string) => string | null;
 }): Promise<MemoryStatusSnapshot | null> {
@@ -337,7 +337,7 @@ export async function resolveSharedMemoryStatusSnapshot(params: {
 
 async function resolveMemoryManagerStatusSnapshot(
   params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     getMemorySearchManager: StatusMemorySearchManagerResolver;
   },
   agentId: string,

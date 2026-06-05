@@ -151,7 +151,7 @@ export const REMOTE_SETUP_COMMAND_TIMEOUT_MS = 90 * 60 * 1000;
 const REMOTE_ROOT = "/tmp/openclaw-telegram-user-crabbox";
 const CREDENTIAL_SCRIPT = fileURLToPath(new URL("./telegram-user-credential.ts", import.meta.url));
 export function readTelegramUserProofLogTailBytes(env: NodeJS.ProcessEnv = process.env): number {
-  return readPositiveIntEnv("OPENCLAW_TELEGRAM_USER_PROOF_LOG_TAIL_BYTES", 256 * 1024, env);
+  return readPositiveIntEnv("DEX_TELEGRAM_USER_PROOF_LOG_TAIL_BYTES", 256 * 1024, env);
 }
 
 const LOG_READY_TAIL_BYTES = readTelegramUserProofLogTailBytes();
@@ -253,21 +253,21 @@ function parseArgs(argvInput: string[]): Options {
   const opts: Options = {
     crabboxClass: "standard",
     command,
-    crabboxBin: trimToValue(process.env.OPENCLAW_TELEGRAM_USER_CRABBOX_BIN) ?? "crabbox",
+    crabboxBin: trimToValue(process.env.DEX_TELEGRAM_USER_CRABBOX_BIN) ?? "crabbox",
     desktopChatTitle:
-      trimToValue(process.env.OPENCLAW_TELEGRAM_USER_DESKTOP_CHAT_TITLE) ?? "OpenClaw Testing",
+      trimToValue(process.env.DEX_TELEGRAM_USER_DESKTOP_CHAT_TITLE) ?? "OpenClaw Testing",
     dryRun: false,
     expect: ["OpenClaw"],
     gatewayPort: 19_879,
     idleTimeout: "60m",
     keepBox: false,
-    mockResponseText: "OPENCLAW_E2E_OK",
+    mockResponseText: "DEX_E2E_OK",
     mockPort: 19_882,
     outputDir: path.join(DEFAULT_OUTPUT_ROOT, stamp),
     previewCropWidth: TELEGRAM_PROOF_CROP.cropWidth,
     previewFps: 24,
     previewWidth: 1920,
-    provider: process.env.OPENCLAW_TELEGRAM_USER_CRABBOX_PROVIDER?.trim() || "aws",
+    provider: process.env.DEX_TELEGRAM_USER_CRABBOX_PROVIDER?.trim() || "aws",
     publishFullArtifacts: false,
     publishRepo: "openclaw/openclaw",
     recordFps: 24,
@@ -278,7 +278,7 @@ function parseArgs(argvInput: string[]): Options {
     timeoutMs: 90_000,
     ttl: "120m",
     userDriverScript:
-      trimToValue(process.env.OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT) ?? DEFAULT_USER_DRIVER,
+      trimToValue(process.env.DEX_TELEGRAM_USER_DRIVER_SCRIPT) ?? DEFAULT_USER_DRIVER,
   };
   const commandSeparator = argv.indexOf("--");
   if (command === "run" && commandSeparator >= 0) {
@@ -448,8 +448,8 @@ function childProcessBaseEnv() {
     "LANG",
     "LC_ALL",
     "NODE_OPTIONS",
-    "OPENCLAW_BUILD_PRIVATE_QA",
-    "OPENCLAW_ENABLE_PRIVATE_QA_CLI",
+    "DEX_BUILD_PRIVATE_QA",
+    "DEX_ENABLE_PRIVATE_QA_CLI",
     "PATH",
     "PNPM_HOME",
     "SHELL",
@@ -483,13 +483,13 @@ function gatewayEnv(params: { configPath: string; stateDir: string; sutToken: st
   return {
     ...childProcessBaseEnv(),
     OPENAI_API_KEY: "sk-openclaw-e2e-mock",
-    OPENCLAW_CONFIG_PATH: params.configPath,
-    OPENCLAW_STATE_DIR: params.stateDir,
+    DEX_CONFIG_PATH: params.configPath,
+    DEX_STATE_DIR: params.stateDir,
     TELEGRAM_BOT_TOKEN: params.sutToken,
   };
 }
 
-export function createOpenClawGatewaySpawnSpec(params: {
+export function createDexGatewaySpawnSpec(params: {
   env: NodeJS.ProcessEnv;
   gatewayPort: number;
   repoRoot: string;
@@ -1025,7 +1025,7 @@ function writeSutConfig(params: {
 }
 
 type StartLocalSutDeps = {
-  createGatewaySpawnSpec?: typeof createOpenClawGatewaySpawnSpec;
+  createGatewaySpawnSpec?: typeof createDexGatewaySpawnSpec;
   drainUpdates?: typeof drainSutUpdates;
   spawnLoggedCommand?: typeof spawnLogged;
   waitForOutputReady?: typeof waitForOutput;
@@ -1049,7 +1049,7 @@ export async function startLocalSut(
   const writeConfig = deps.writeConfig ?? writeSutConfig;
   const spawnLoggedCommand = deps.spawnLoggedCommand ?? spawnLogged;
   const waitForOutputReady = deps.waitForOutputReady ?? waitForOutput;
-  const createGatewaySpawnSpec = deps.createGatewaySpawnSpec ?? createOpenClawGatewaySpawnSpec;
+  const createGatewaySpawnSpec = deps.createGatewaySpawnSpec ?? createDexGatewaySpawnSpec;
   let gateway: ReturnType<typeof spawnLogged> | undefined;
   let mock: ReturnType<typeof spawnLogged> | undefined;
   try {
@@ -1173,7 +1173,7 @@ async function startLocalSutDaemon(params: {
     await waitForLog(mockLog, /mock-openai listening/u, "mock-openai", 10_000);
 
     const gatewayEnvVars = gatewayEnv({ ...config, sutToken: params.sutToken });
-    const gatewaySpec = createOpenClawGatewaySpawnSpec({
+    const gatewaySpec = createDexGatewaySpawnSpec({
       env: gatewayEnvVars,
       gatewayPort: params.gatewayPort,
       repoRoot: params.repoRoot,
@@ -1456,14 +1456,14 @@ set -euo pipefail
 root=${REMOTE_ROOT}
 tdlib_sha256=${tdlibSha256}
 tdlib_url=${tdlibUrl}
-setup_step_timeout_kill_after="\${OPENCLAW_TELEGRAM_USER_SETUP_KILL_AFTER_SECONDS:-30}s"
-apt_timeout="\${OPENCLAW_TELEGRAM_USER_APT_TIMEOUT_SECONDS:-900}s"
-download_timeout="\${OPENCLAW_TELEGRAM_USER_DOWNLOAD_TIMEOUT_SECONDS:-600}"
-download_connect_timeout="\${OPENCLAW_TELEGRAM_USER_DOWNLOAD_CONNECT_TIMEOUT_SECONDS:-15}"
-download_retries="\${OPENCLAW_TELEGRAM_USER_DOWNLOAD_RETRIES:-3}"
-download_retry_delay="\${OPENCLAW_TELEGRAM_USER_DOWNLOAD_RETRY_DELAY_SECONDS:-5}"
-tdlib_clone_timeout="\${OPENCLAW_TELEGRAM_USER_TDLIB_CLONE_TIMEOUT_SECONDS:-600}s"
-tdlib_build_timeout="\${OPENCLAW_TELEGRAM_USER_TDLIB_BUILD_TIMEOUT_SECONDS:-1800}s"
+setup_step_timeout_kill_after="\${DEX_TELEGRAM_USER_SETUP_KILL_AFTER_SECONDS:-30}s"
+apt_timeout="\${DEX_TELEGRAM_USER_APT_TIMEOUT_SECONDS:-900}s"
+download_timeout="\${DEX_TELEGRAM_USER_DOWNLOAD_TIMEOUT_SECONDS:-600}"
+download_connect_timeout="\${DEX_TELEGRAM_USER_DOWNLOAD_CONNECT_TIMEOUT_SECONDS:-15}"
+download_retries="\${DEX_TELEGRAM_USER_DOWNLOAD_RETRIES:-3}"
+download_retry_delay="\${DEX_TELEGRAM_USER_DOWNLOAD_RETRY_DELAY_SECONDS:-5}"
+tdlib_clone_timeout="\${DEX_TELEGRAM_USER_TDLIB_CLONE_TIMEOUT_SECONDS:-600}s"
+tdlib_build_timeout="\${DEX_TELEGRAM_USER_TDLIB_BUILD_TIMEOUT_SECONDS:-1800}s"
 run_setup_step() {
   local label="$1"
   local timeout_value="$2"
@@ -1980,8 +1980,8 @@ async function startSession(root: string, opts: Options, outputDir: string) {
 
   const convexEnvFile = expandHome(opts.envFile ?? DEFAULT_CONVEX_ENV_FILE);
   const hasConvexEnv =
-    trimToValue(process.env.OPENCLAW_QA_CONVEX_SITE_URL) &&
-    trimToValue(process.env.OPENCLAW_QA_CONVEX_SECRET_CI);
+    trimToValue(process.env.DEX_QA_CONVEX_SITE_URL) &&
+    trimToValue(process.env.DEX_QA_CONVEX_SECRET_CI);
   if (!hasConvexEnv && !fs.existsSync(convexEnvFile)) {
     throw new Error(`Missing Convex env file: ${opts.envFile ?? DEFAULT_CONVEX_ENV_FILE}`);
   }
@@ -2479,8 +2479,8 @@ async function main() {
   try {
     const convexEnvFile = expandHome(opts.envFile ?? DEFAULT_CONVEX_ENV_FILE);
     const hasConvexEnv =
-      trimToValue(process.env.OPENCLAW_QA_CONVEX_SITE_URL) &&
-      trimToValue(process.env.OPENCLAW_QA_CONVEX_SECRET_CI);
+      trimToValue(process.env.DEX_QA_CONVEX_SITE_URL) &&
+      trimToValue(process.env.DEX_QA_CONVEX_SECRET_CI);
     if (!hasConvexEnv && !fs.existsSync(convexEnvFile)) {
       throw new Error(`Missing Convex env file: ${opts.envFile ?? DEFAULT_CONVEX_ENV_FILE}`);
     }

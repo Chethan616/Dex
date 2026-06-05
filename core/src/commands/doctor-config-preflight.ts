@@ -8,7 +8,7 @@ import {
 } from "../config/io.js";
 import { formatConfigIssueLines } from "../config/issue-format.js";
 import type { LegacyConfigIssue } from "../config/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { isTruthyEnvValue } from "../infra/env.js";
 import { resolveHomeDir } from "../utils.js";
 import { noteIncludeConfinementWarning } from "./doctor-config-analysis.js";
@@ -30,7 +30,7 @@ async function maybeMigrateLegacyConfig(): Promise<string[]> {
     return changes;
   }
 
-  const targetDir = path.join(home, ".openclaw");
+  const targetDir = path.join(home, ".dex");
   const targetPath = path.join(targetDir, "openclaw.json");
   try {
     await fs.access(targetPath);
@@ -68,7 +68,7 @@ async function maybeMigrateLegacyConfig(): Promise<string[]> {
 
 export type DoctorConfigPreflightResult = {
   snapshot: Awaited<ReturnType<typeof readConfigFileSnapshot>>;
-  baseConfig: OpenClawConfig;
+  baseConfig: DexConfig;
 };
 
 function collectDoctorLegacyIssues(
@@ -95,7 +95,7 @@ function addDoctorLegacyIssues(
 export function shouldSkipPluginValidationForDoctorConfigPreflight(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  return isTruthyEnvValue(env.OPENCLAW_UPDATE_IN_PROGRESS);
+  return isTruthyEnvValue(env.DEX_UPDATE_IN_PROGRESS);
 }
 
 function noteStateMigrationResult(result: { changes: string[]; warnings: string[] }): void {

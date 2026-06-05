@@ -210,7 +210,7 @@ export function runReleaseCheckCommand(
     maxBuffer:
       options.maxBuffer ??
       positiveEnvInt(
-        "OPENCLAW_RELEASE_CHECK_COMMAND_MAX_BUFFER_BYTES",
+        "DEX_RELEASE_CHECK_COMMAND_MAX_BUFFER_BYTES",
         DEFAULT_RELEASE_CHECK_COMMAND_MAX_BUFFER_BYTES,
       ),
     shell: invocation.shell ?? options.shell,
@@ -218,7 +218,7 @@ export function runReleaseCheckCommand(
     timeout:
       options.timeoutMs ??
       positiveEnvInt(
-        "OPENCLAW_RELEASE_CHECK_COMMAND_TIMEOUT_MS",
+        "DEX_RELEASE_CHECK_COMMAND_TIMEOUT_MS",
         DEFAULT_RELEASE_CHECK_COMMAND_TIMEOUT_MS,
       ),
     windowsVerbatimArguments: invocation.windowsVerbatimArguments,
@@ -425,7 +425,7 @@ export function createPackedBundledPluginPostinstallEnv(
 ): NodeJS.ProcessEnv {
   return {
     ...env,
-    OPENCLAW_DISABLE_BUNDLED_ENTRY_SOURCE_FALLBACK: "1",
+    DEX_DISABLE_BUNDLED_ENTRY_SOURCE_FALLBACK: "1",
   };
 }
 
@@ -468,10 +468,10 @@ export function createPackedCliSmokeEnv(
     AWS_EC2_METADATA_DISABLED: "true",
     AWS_SHARED_CREDENTIALS_FILE: homeDir ? join(homeDir, ".aws", "credentials") : undefined,
     AWS_CONFIG_FILE: homeDir ? join(homeDir, ".aws", "config") : undefined,
-    OPENCLAW_DISABLE_BUNDLED_ENTRY_SOURCE_FALLBACK: "1",
-    OPENCLAW_NO_ONBOARD: "1",
-    OPENCLAW_SERVICE_REPAIR_POLICY: "external",
-    OPENCLAW_SUPPRESS_NOTES: "1",
+    DEX_DISABLE_BUNDLED_ENTRY_SOURCE_FALLBACK: "1",
+    DEX_NO_ONBOARD: "1",
+    DEX_SERVICE_REPAIR_POLICY: "external",
+    DEX_SUPPRESS_NOTES: "1",
     ...overrides,
   };
 }
@@ -483,8 +483,8 @@ export function createPackedCompletionSmokeEnv(
   return {
     ...env,
     ...overrides,
-    OPENCLAW_SUPPRESS_NOTES: "1",
-    OPENCLAW_DISABLE_BUNDLED_ENTRY_SOURCE_FALLBACK: "1",
+    DEX_SUPPRESS_NOTES: "1",
+    DEX_DISABLE_BUNDLED_ENTRY_SOURCE_FALLBACK: "1",
     [COMPLETION_SKIP_PLUGIN_COMMANDS_ENV]: "1",
   };
 }
@@ -643,8 +643,8 @@ function runPackedPluginSdkTypescriptSmoke(tarballPath: string, tmpRoot: string)
 }
 
 export function writePackedBundledPluginActivationConfig(homeDir: string): void {
-  const configPath = join(homeDir, ".openclaw", "openclaw.json");
-  mkdirSync(join(homeDir, ".openclaw"), { recursive: true });
+  const configPath = join(homeDir, ".dex", "openclaw.json");
+  mkdirSync(join(homeDir, ".dex"), { recursive: true });
   writeFileSync(
     configPath,
     `${JSON.stringify(
@@ -751,7 +751,7 @@ function runPackedCliSmoke(params: {
   const binaryPath = resolveInstalledBinaryPath(params.prefixDir);
   const env = createPackedCliSmokeEnv(process.env, {
     HOME: params.homeDir,
-    OPENCLAW_STATE_DIR: params.stateDir,
+    DEX_STATE_DIR: params.stateDir,
     OPENAI_API_KEY: "sk-openclaw-release-check",
   });
   const windowsRoot = env.SystemRoot ?? env.WINDIR ?? "C:\\Windows";
@@ -837,7 +837,7 @@ function runPackedBundledChannelEntrySmoke(): void {
         stdio: "inherit",
         env: {
           ...process.env,
-          OPENCLAW_DISABLE_BUNDLED_ENTRY_SOURCE_FALLBACK: "1",
+          DEX_DISABLE_BUNDLED_ENTRY_SOURCE_FALLBACK: "1",
         },
       },
     );
@@ -852,7 +852,7 @@ function runPackedBundledChannelEntrySmoke(): void {
         stdio: "inherit",
         env: createPackedCompletionSmokeEnv(process.env, {
           HOME: homeDir,
-          OPENCLAW_STATE_DIR: stateDir,
+          DEX_STATE_DIR: stateDir,
         }),
       },
     );

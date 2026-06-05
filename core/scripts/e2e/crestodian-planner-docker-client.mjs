@@ -54,13 +54,13 @@ async function installFakeClaudeCli(fakeBinDir, promptLogPath) {
 
 async function main() {
   const stateDir =
-    process.env.OPENCLAW_STATE_DIR ??
+    process.env.DEX_STATE_DIR ??
     (await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-crestodian-planner-")));
-  const configPath = process.env.OPENCLAW_CONFIG_PATH ?? path.join(stateDir, "openclaw.json");
+  const configPath = process.env.DEX_CONFIG_PATH ?? path.join(stateDir, "openclaw.json");
   const fakeBinDir = path.join(stateDir, "fake-bin");
   const promptLogPath = path.join(stateDir, "fake-claude-prompt.jsonl");
-  process.env.OPENCLAW_STATE_DIR = stateDir;
-  process.env.OPENCLAW_CONFIG_PATH = configPath;
+  process.env.DEX_STATE_DIR = stateDir;
+  process.env.DEX_CONFIG_PATH = configPath;
   process.env.PATH = `${fakeBinDir}:${process.env.PATH ?? ""}`;
   await fs.rm(stateDir, { recursive: true, force: true });
   await fs.mkdir(stateDir, { recursive: true });

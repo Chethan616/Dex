@@ -5,11 +5,11 @@ import { DatabaseSync } from "node:sqlite";
 const INDEX_KEY = "installed-plugin-index";
 
 export function stateDir() {
-  return process.env.OPENCLAW_STATE_DIR || path.join(process.env.HOME, ".openclaw");
+  return process.env.DEX_STATE_DIR || path.join(process.env.HOME, ".dex");
 }
 
 export function configPath() {
-  return process.env.OPENCLAW_CONFIG_PATH || path.join(stateDir(), "openclaw.json");
+  return process.env.DEX_CONFIG_PATH || path.join(stateDir(), "openclaw.json");
 }
 
 function readJsonMaybe(file) {

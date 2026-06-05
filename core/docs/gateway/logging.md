@@ -32,7 +32,7 @@ default agent or model `fastMode` params.
   - Date uses the gateway host's local timezone.
 - Active log files rotate at `logging.maxFileBytes` (default: 100 MB), keeping
   up to five numbered archives and continuing to write a fresh active file.
-- The log file path and level can be configured via `~/.openclaw/openclaw.json`:
+- The log file path and level can be configured via `~/.dex/openclaw.json`:
   - `logging.file`
   - `logging.level`
 

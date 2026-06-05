@@ -13,7 +13,7 @@ function resolveTeamsSdkVersion(): string {
   }
 }
 
-function resolveOpenClawVersion(): string {
+function resolveDexVersion(): string {
   try {
     return getMSTeamsRuntime().version;
   } catch {
@@ -40,7 +40,7 @@ export function buildUserAgent(): string {
   if (cachedUserAgent) {
     return cachedUserAgent;
   }
-  cachedUserAgent = `teams.ts[apps]/${resolveTeamsSdkVersion()} OpenClaw/${resolveOpenClawVersion()}`;
+  cachedUserAgent = `teams.ts[apps]/${resolveTeamsSdkVersion()} OpenClaw/${resolveDexVersion()}`;
   return cachedUserAgent;
 }
 
@@ -53,7 +53,7 @@ export function buildUserAgent(): string {
  * Format: "OpenClaw/<openclaw-version>"
  */
 export function buildOpenClawUserAgentFragment(): string {
-  return `OpenClaw/${resolveOpenClawVersion()}`;
+  return `OpenClaw/${resolveDexVersion()}`;
 }
 
 export function ensureUserAgentHeader(headers?: HeadersInit): Headers {

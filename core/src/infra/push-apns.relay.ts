@@ -114,9 +114,9 @@ export function normalizeApnsRelayBaseUrl(
       throw new Error("host required");
     }
     // Plain HTTP is only for local relay development; production relay URLs must use TLS.
-    if (parsed.protocol === "http:" && !readAllowHttp(env.OPENCLAW_APNS_RELAY_ALLOW_HTTP)) {
+    if (parsed.protocol === "http:" && !readAllowHttp(env.DEX_APNS_RELAY_ALLOW_HTTP)) {
       throw new Error(
-        "http relay URLs require OPENCLAW_APNS_RELAY_ALLOW_HTTP=true (development only)",
+        "http relay URLs require DEX_APNS_RELAY_ALLOW_HTTP=true (development only)",
       );
     }
     if (parsed.protocol === "http:" && !isLoopbackRelayHostname(parsed.hostname)) {
@@ -155,7 +155,7 @@ export function resolveApnsRelayConfigFromEnv(
   options: ApnsRelayConfigResolutionOptions = {},
 ): ApnsRelayConfigResolution {
   const configuredRelay = gatewayConfig?.push?.apns?.relay;
-  const envBaseUrl = normalizeNonEmptyString(env.OPENCLAW_APNS_RELAY_BASE_URL);
+  const envBaseUrl = normalizeNonEmptyString(env.DEX_APNS_RELAY_BASE_URL);
   const configBaseUrl = normalizeNonEmptyString(configuredRelay?.baseUrl);
   const explicitBaseUrl = envBaseUrl ?? configBaseUrl;
   const normalizedRegistrationOrigin = options.registrationRelayOrigin
@@ -174,7 +174,7 @@ export function resolveApnsRelayConfigFromEnv(
       ? DEFAULT_APNS_RELAY_BASE_URL
       : undefined);
   const baseUrlSource = envBaseUrl
-    ? "OPENCLAW_APNS_RELAY_BASE_URL"
+    ? "DEX_APNS_RELAY_BASE_URL"
     : configBaseUrl
       ? "gateway.push.apns.relay.baseUrl"
       : "default APNs relay base URL";
@@ -182,7 +182,7 @@ export function resolveApnsRelayConfigFromEnv(
     return {
       ok: false,
       error:
-        "APNs relay config missing: set gateway.push.apns.relay.baseUrl or OPENCLAW_APNS_RELAY_BASE_URL for relay registrations without the hosted relay origin",
+        "APNs relay config missing: set gateway.push.apns.relay.baseUrl or DEX_APNS_RELAY_BASE_URL for relay registrations without the hosted relay origin",
     };
   }
 
@@ -207,7 +207,7 @@ export function resolveApnsRelayConfigFromEnv(
     value: {
       baseUrl: normalizedBaseUrl.value,
       timeoutMs: normalizeTimeoutMs(
-        env.OPENCLAW_APNS_RELAY_TIMEOUT_MS ?? configuredRelay?.timeoutMs,
+        env.DEX_APNS_RELAY_TIMEOUT_MS ?? configuredRelay?.timeoutMs,
       ),
     },
   };

@@ -6,7 +6,7 @@ import {
   resolveWorkspaceAttestationPaths,
   shouldRemoveWorkspaceAttestation,
 } from "../agents/workspace.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { isPathInside } from "../infra/path-guards.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { resolveHomeDir, shortenHomeInString } from "../utils.js";
@@ -34,7 +34,7 @@ type StateRemovalOptions = {
   preservePaths?: readonly string[];
 };
 
-function collectWorkspaceDirs(cfg: OpenClawConfig | undefined): string[] {
+function collectWorkspaceDirs(cfg: DexConfig | undefined): string[] {
   const dirs = new Set<string>();
   if (!cfg) {
     dirs.add(resolveDefaultAgentWorkspaceDir());
@@ -47,7 +47,7 @@ function collectWorkspaceDirs(cfg: OpenClawConfig | undefined): string[] {
 }
 
 export function buildCleanupPlan(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   stateDir: string;
   configPath: string;
   oauthDir: string;

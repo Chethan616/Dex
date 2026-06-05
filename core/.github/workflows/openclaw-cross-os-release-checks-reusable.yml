@@ -177,11 +177,11 @@ on:
         required: false
       MINIMAX_API_KEY:
         required: false
-      OPENCLAW_DISCORD_SMOKE_BOT_TOKEN:
+      DEX_DISCORD_SMOKE_BOT_TOKEN:
         required: false
-      OPENCLAW_DISCORD_SMOKE_GUILD_ID:
+      DEX_DISCORD_SMOKE_GUILD_ID:
         required: false
-      OPENCLAW_DISCORD_SMOKE_CHANNEL_ID:
+      DEX_DISCORD_SMOKE_CHANNEL_ID:
         required: false
 
 permissions: read-all
@@ -195,7 +195,7 @@ env:
   NODE_VERSION: "24.15.0"
   OPENCLAW_REPOSITORY: openclaw/openclaw
   TSX_VERSION: "4.21.0"
-  OPENCLAW_CROSS_OS_OPENAI_MODEL: ${{ inputs.openai_model || vars.OPENCLAW_CROSS_OS_OPENAI_MODEL || 'openai/gpt-5.5' }}
+  DEX_CROSS_OS_OPENAI_MODEL: ${{ inputs.openai_model || vars.DEX_CROSS_OS_OPENAI_MODEL || 'openai/gpt-5.5' }}
 
 jobs:
   prepare:
@@ -506,9 +506,9 @@ jobs:
           INPUT_UBUNTU_RUNNER: ${{ inputs.ubuntu_runner }}
           INPUT_WINDOWS_RUNNER: ${{ inputs.windows_runner }}
           INPUT_MACOS_RUNNER: ${{ inputs.macos_runner }}
-          VAR_UBUNTU_RUNNER: ${{ vars.OPENCLAW_RELEASE_CHECKS_UBUNTU_RUNNER }}
-          VAR_WINDOWS_RUNNER: ${{ vars.OPENCLAW_RELEASE_CHECKS_WINDOWS_RUNNER }}
-          VAR_MACOS_RUNNER: ${{ vars.OPENCLAW_RELEASE_CHECKS_MACOS_RUNNER }}
+          VAR_UBUNTU_RUNNER: ${{ vars.DEX_RELEASE_CHECKS_UBUNTU_RUNNER }}
+          VAR_WINDOWS_RUNNER: ${{ vars.DEX_RELEASE_CHECKS_WINDOWS_RUNNER }}
+          VAR_MACOS_RUNNER: ${{ vars.DEX_RELEASE_CHECKS_MACOS_RUNNER }}
         run: |
           MATRIX_JSON="$(bash workflow/scripts/github/run-openclaw-cross-os-release-checks.sh \
             --resolve-matrix \
@@ -607,11 +607,11 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
-          OPENCLAW_DISCORD_SMOKE_BOT_TOKEN: ${{ secrets.OPENCLAW_DISCORD_SMOKE_BOT_TOKEN }}
-          OPENCLAW_DISCORD_SMOKE_GUILD_ID: ${{ secrets.OPENCLAW_DISCORD_SMOKE_GUILD_ID }}
-          OPENCLAW_DISCORD_SMOKE_CHANNEL_ID: ${{ secrets.OPENCLAW_DISCORD_SMOKE_CHANNEL_ID }}
-          OPENCLAW_RELEASE_CHECK_OS: ${{ matrix.os_id }}
-          OPENCLAW_RELEASE_CHECK_RUNNER: ${{ matrix.runner }}
+          DEX_DISCORD_SMOKE_BOT_TOKEN: ${{ secrets.DEX_DISCORD_SMOKE_BOT_TOKEN }}
+          DEX_DISCORD_SMOKE_GUILD_ID: ${{ secrets.DEX_DISCORD_SMOKE_GUILD_ID }}
+          DEX_DISCORD_SMOKE_CHANNEL_ID: ${{ secrets.DEX_DISCORD_SMOKE_CHANNEL_ID }}
+          DEX_RELEASE_CHECK_OS: ${{ matrix.os_id }}
+          DEX_RELEASE_CHECK_RUNNER: ${{ matrix.runner }}
           CANDIDATE_TGZ: ${{ runner.temp }}/openclaw-cross-os-release-checks/candidate/${{ needs.prepare.outputs.candidate_file_name }}
           CANDIDATE_VERSION: ${{ needs.prepare.outputs.candidate_version }}
           SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
@@ -625,7 +625,7 @@ jobs:
           OUTPUT_DIR: ${{ runner.temp }}/openclaw-cross-os-release-checks/${{ matrix.artifact_name }}-${{ matrix.suite }}
         run: |
           DISCORD_ARGS=()
-          if [[ -n "${OPENCLAW_DISCORD_SMOKE_BOT_TOKEN}" ]] && [[ -n "${OPENCLAW_DISCORD_SMOKE_GUILD_ID}" ]] && [[ -n "${OPENCLAW_DISCORD_SMOKE_CHANNEL_ID}" ]]; then
+          if [[ -n "${DEX_DISCORD_SMOKE_BOT_TOKEN}" ]] && [[ -n "${DEX_DISCORD_SMOKE_GUILD_ID}" ]] && [[ -n "${DEX_DISCORD_SMOKE_CHANNEL_ID}" ]]; then
             DISCORD_ARGS+=(--run-discord-roundtrip true)
           fi
           bash workflow/scripts/github/run-openclaw-cross-os-release-checks.sh \

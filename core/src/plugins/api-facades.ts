@@ -1,12 +1,12 @@
-import type { OpenClawPluginApi } from "./types.js";
+import type { DexPluginApi } from "./types.js";
 
 type PluginApiFacadeFields = Pick<
-  OpenClawPluginApi,
+  DexPluginApi,
   "agent" | "lifecycle" | "runContext" | "session"
 >;
-export type OpenClawPluginApiWithoutFacades = Omit<OpenClawPluginApi, keyof PluginApiFacadeFields>;
+export type DexPluginApiWithoutFacades = Omit<DexPluginApi, keyof PluginApiFacadeFields>;
 type PluginApiFacadeSource = Pick<
-  OpenClawPluginApi,
+  DexPluginApi,
   | "clearRunContext"
   | "emitAgentEvent"
   | "enqueueNextTurnInjection"

@@ -7,7 +7,7 @@ import { normalizeUniqueStringEntries } from "@dexagent/normalization-core/strin
 import { formatCliCommand } from "../cli/command-format.js";
 import { getRuntimeConfigSnapshot } from "../config/config.js";
 import type { ModelProviderAuthMode, ModelProviderConfig } from "../config/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { coerceSecretRef } from "../config/types.secrets.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { getShellEnvAppliedKeys } from "../infra/shell-env.js";
@@ -116,7 +116,7 @@ function assertAuthModeAllowedForModel(params: {
 }
 
 function resolveConfigAwareEnvApiKey(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   provider: string,
   workspaceDir?: string,
 ): EnvApiKeyResult | null {
@@ -124,7 +124,7 @@ function resolveConfigAwareEnvApiKey(
 }
 
 function resolveProviderConfig(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   provider: string,
 ): ModelProviderConfig | undefined {
   const providers = cfg?.models?.providers ?? {};
@@ -146,7 +146,7 @@ function resolveProviderConfig(
 }
 
 export function createRuntimeProviderAuthLookup(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   includePluginSyntheticAuth?: boolean;
@@ -214,7 +214,7 @@ function resolveRuntimeEnvApiKeyLookupOptions(params: {
 }
 
 export function getCustomProviderApiKey(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   provider: string,
 ): string | undefined {
   const entry = resolveProviderConfig(cfg, provider);
@@ -239,7 +239,7 @@ type ResolvedCustomProviderApiKey = {
 };
 
 function canResolveEnvSecretRefInReadOnlyPath(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
   id: string;
 }): boolean {
@@ -255,7 +255,7 @@ function canResolveEnvSecretRefInReadOnlyPath(params: {
 }
 
 export function resolveUsableCustomProviderApiKey(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
   env?: NodeJS.ProcessEnv;
 }): ResolvedCustomProviderApiKey | null {
@@ -331,7 +331,7 @@ export function resolveUsableCustomProviderApiKey(params: {
 }
 
 export function hasUsableCustomProviderApiKey(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   provider: string,
   env?: NodeJS.ProcessEnv,
 ): boolean {
@@ -339,7 +339,7 @@ export function hasUsableCustomProviderApiKey(
 }
 
 export function shouldPreferExplicitConfigApiKeyAuth(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   provider: string,
 ): boolean {
   const providerConfig = resolveProviderConfig(cfg, provider);
@@ -351,7 +351,7 @@ export function shouldPreferExplicitConfigApiKeyAuth(
 }
 
 function resolveProviderAuthOverride(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   provider: string,
 ): ModelProviderAuthMode | undefined {
   const entry = resolveProviderConfig(cfg, provider);
@@ -363,7 +363,7 @@ function resolveProviderAuthOverride(
 }
 
 function shouldUseImplicitAwsSdkAuth(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
   modelApi: string | undefined;
 }): boolean {
@@ -432,7 +432,7 @@ function normalizeProviderEntryBaseUrlForBinding(baseUrl: string | undefined): s
 }
 
 function providerEntriesShareBaseUrl(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider: string;
   credentialProvider: string;
 }): boolean {
@@ -452,7 +452,7 @@ function isBearerProfileCredential(credential: AuthProfileCredential): boolean {
 }
 
 export function canUseProfileAsProviderEntryApiKey(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider: string;
   credential: AuthProfileCredential;
 }): boolean {
@@ -479,7 +479,7 @@ export function canUseProfileAsProviderEntryApiKey(params: {
 }
 
 export function resolveProviderEntryApiKeyProfileReference(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider: string;
   store: AuthProfileStore;
 }): ProviderEntryApiKeyProfileReference {
@@ -527,7 +527,7 @@ export function resolveProviderEntryApiKeyProfileReference(params: {
 }
 
 export async function resolveProviderEntryApiKeyBinding(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider: string;
   store: AuthProfileStore;
   agentDir?: string;
@@ -568,7 +568,7 @@ export async function resolveProviderEntryApiKeyBinding(params: {
 }
 
 function resolveConfiguredAwsSdkProfileAuth(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider: string;
   profileId: string;
 }): ResolvedProviderAuth | null {
@@ -641,7 +641,7 @@ function isManagedSecretRefApiKeyMarker(apiKey: string | undefined): boolean {
 }
 
 export function hasSyntheticLocalProviderAuthConfig(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
 }): boolean {
   const providerConfig = resolveProviderConfig(params.cfg, params.provider);
@@ -671,7 +671,7 @@ export function hasSyntheticLocalProviderAuthConfig(params: {
 }
 
 function listProviderSyntheticAuthRefs(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
   modelApi?: string;
 }): string[] {
@@ -687,7 +687,7 @@ function listProviderSyntheticAuthRefs(params: {
 }
 
 function shouldResolvePluginSyntheticAuth(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
   modelApi?: string;
   runtimeLookup?: RuntimeProviderAuthLookup;
@@ -707,7 +707,7 @@ function shouldResolvePluginSyntheticAuth(params: {
 
 export function hasRuntimeAvailableProviderAuth(params: {
   provider: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   allowPluginSyntheticAuth?: boolean;
@@ -763,12 +763,12 @@ type SyntheticProviderAuthResolution = {
 };
 
 function resolveProviderSyntheticRuntimeAuth(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
   modelApi?: string;
 }): SyntheticProviderAuthResolution {
   const resolveFromConfig = (
-    config: OpenClawConfig | undefined,
+    config: DexConfig | undefined,
   ): ResolvedProviderAuth | undefined => {
     const providerConfig = resolveProviderConfig(config, params.provider);
     return (
@@ -809,7 +809,7 @@ function resolveProviderSyntheticRuntimeAuth(params: {
 }
 
 function resolveSyntheticLocalProviderAuth(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
   modelApi?: string;
 }): ResolvedProviderAuth | null {
@@ -886,7 +886,7 @@ function resolveAwsSdkAuthInfo(): { mode: "aws-sdk"; source: string } {
 }
 
 function shouldDeferSyntheticProfileAuth(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
   resolvedApiKey: string | undefined;
   modelApi?: string;
@@ -909,7 +909,7 @@ function shouldDeferSyntheticProfileAuth(params: {
 
 function resolveScopedAuthProfileStore(params: {
   agentDir?: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider: string;
   profileId?: string;
   preferredProfile?: string;
@@ -921,7 +921,7 @@ function resolveScopedAuthProfileStore(params: {
 
 export async function resolveApiKeyForProvider(params: {
   provider: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   profileId?: string;
   preferredProfile?: string;
   store?: AuthProfileStore;
@@ -1286,7 +1286,7 @@ export type { EnvApiKeyResult } from "./model-auth-env.js";
 
 export function resolveModelAuthMode(
   provider?: string,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
   store?: AuthProfileStore,
   options?: { workspaceDir?: string },
 ): ModelAuthMode | undefined {
@@ -1351,7 +1351,7 @@ export function resolveModelAuthMode(
 
 export async function hasAvailableAuthForProvider(params: {
   provider: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   preferredProfile?: string;
   store?: AuthProfileStore;
   agentDir?: string;
@@ -1426,7 +1426,7 @@ export async function hasAvailableAuthForProvider(params: {
 
 export async function getApiKeyForModel(params: {
   model: Model;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   profileId?: string;
   preferredProfile?: string;
   store?: AuthProfileStore;
@@ -1484,7 +1484,7 @@ export function applyLocalNoAuthHeaderOverride<T extends Model>(
 export function applyAuthHeaderOverride<T extends Model>(
   model: T,
   auth: ResolvedProviderAuth | null | undefined,
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
 ): T {
   if (!auth?.apiKey) {
     return model;

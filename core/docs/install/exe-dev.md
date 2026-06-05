@@ -49,7 +49,7 @@ ssh <vm-name>.exe.xyz
 ```
 
 <Tip>
-Keep this VM **stateful**. OpenClaw stores `openclaw.json`, per-agent `auth-profiles.json`, sessions, and channel/provider state under `~/.openclaw/`, plus the workspace under `~/.openclaw/workspace/`.
+Keep this VM **stateful**. OpenClaw stores `openclaw.json`, per-agent `auth-profiles.json`, sessions, and channel/provider state under `~/.dex/`, plus the workspace under `~/.dex/workspace/`.
 </Tip>
 
 ## 2) Install prerequisites (on the VM)
@@ -110,17 +110,17 @@ and append-style `X-Forwarded-For` chains are treated as a hardening risk.
 Access `https://<vm-name>.exe.xyz/` (see the Control UI output from onboarding). If it prompts for auth, paste the
 configured shared secret from the VM. This guide uses token auth, so retrieve `gateway.auth.token`
 with `openclaw config get gateway.auth.token` (or generate one with `openclaw doctor --generate-gateway-token`).
-If you changed the gateway to password auth, use `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD` instead.
+If you changed the gateway to password auth, use `gateway.auth.password` / `DEX_GATEWAY_PASSWORD` instead.
 Approve devices with `openclaw devices list` and `openclaw devices approve <requestId>`. When in doubt, use Shelley from your browser!
 
 ## Remote channel setup
 
-For remote hosts, prefer one `config patch` call over many SSH calls to `config set`. Keep real tokens in the VM environment or `~/.openclaw/.env`, and put only SecretRefs in `openclaw.json`.
+For remote hosts, prefer one `config patch` call over many SSH calls to `config set`. Keep real tokens in the VM environment or `~/.dex/.env`, and put only SecretRefs in `openclaw.json`.
 
 On the VM, make the service environment contain the secrets it needs:
 
 ```bash
-cat >> ~/.openclaw/.env <<'EOF'
+cat >> ~/.dex/.env <<'EOF'
 SLACK_BOT_TOKEN=xoxb-...
 SLACK_APP_TOKEN=xapp-...
 DISCORD_BOT_TOKEN=...

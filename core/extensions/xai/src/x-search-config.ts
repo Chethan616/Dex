@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { isRecord } from "./tool-config-shared.js";
 
 type JsonRecord = Record<string, unknown>;
@@ -10,13 +10,13 @@ function cloneRecord<T extends JsonRecord | undefined>(value: T): T {
   return { ...value } as T;
 }
 
-function resolveLegacyXSearchConfig(config?: OpenClawConfig): JsonRecord | undefined {
+function resolveLegacyXSearchConfig(config?: DexConfig): JsonRecord | undefined {
   const web = config?.tools?.web as Record<string, unknown> | undefined;
   const xSearch = web?.x_search;
   return isRecord(xSearch) ? cloneRecord(xSearch) : undefined;
 }
 
-function resolvePluginXSearchConfig(config?: OpenClawConfig): JsonRecord | undefined {
+function resolvePluginXSearchConfig(config?: DexConfig): JsonRecord | undefined {
   const pluginConfig = config?.plugins?.entries?.xai?.config;
   if (!isRecord(pluginConfig?.xSearch)) {
     return undefined;
@@ -24,7 +24,7 @@ function resolvePluginXSearchConfig(config?: OpenClawConfig): JsonRecord | undef
   return cloneRecord(pluginConfig.xSearch);
 }
 
-function resolveLegacyGrokWebSearchConfig(config?: OpenClawConfig): JsonRecord | undefined {
+function resolveLegacyGrokWebSearchConfig(config?: DexConfig): JsonRecord | undefined {
   const web = config?.tools?.web as Record<string, unknown> | undefined;
   const search = web?.search;
   if (!isRecord(search) || !isRecord(search.grok)) {
@@ -33,7 +33,7 @@ function resolveLegacyGrokWebSearchConfig(config?: OpenClawConfig): JsonRecord |
   return cloneRecord(search.grok);
 }
 
-function resolvePluginWebSearchConfig(config?: OpenClawConfig): JsonRecord | undefined {
+function resolvePluginWebSearchConfig(config?: DexConfig): JsonRecord | undefined {
   const pluginConfig = config?.plugins?.entries?.xai?.config;
   if (!isRecord(pluginConfig?.webSearch)) {
     return undefined;
@@ -47,7 +47,7 @@ function baseUrlFallback(config?: JsonRecord): JsonRecord | undefined {
     : undefined;
 }
 
-export function resolveEffectiveXSearchConfig(config?: OpenClawConfig): JsonRecord | undefined {
+export function resolveEffectiveXSearchConfig(config?: DexConfig): JsonRecord | undefined {
   const legacyGrokBaseUrl = baseUrlFallback(resolveLegacyGrokWebSearchConfig(config));
   const pluginWebSearchBaseUrl = baseUrlFallback(resolvePluginWebSearchConfig(config));
   const legacy = resolveLegacyXSearchConfig(config);
@@ -65,7 +65,7 @@ export function resolveEffectiveXSearchConfig(config?: OpenClawConfig): JsonReco
 }
 
 export function setPluginXSearchConfigValue(
-  configTarget: OpenClawConfig,
+  configTarget: DexConfig,
   key: string,
   value: unknown,
 ): void {

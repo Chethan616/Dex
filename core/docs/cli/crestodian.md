@@ -67,7 +67,7 @@ validate config
 setup
 setup workspace ~/Projects/work model openai/gpt-5.5
 config set gateway.port 19001
-config set-ref gateway.auth.token env OPENCLAW_GATEWAY_TOKEN
+config set-ref gateway.auth.token env DEX_GATEWAY_TOKEN
 gateway status
 restart gateway
 agents
@@ -133,7 +133,7 @@ you pass `--yes` for a direct command:
 Applied writes are recorded in:
 
 ```text
-~/.openclaw/audit/crestodian.jsonl
+~/.dex/audit/crestodian.jsonl
 ```
 
 Discovery is not audited. Only applied operations and writes are logged.

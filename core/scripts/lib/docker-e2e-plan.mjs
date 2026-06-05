@@ -209,11 +209,11 @@ function expandUpgradeSurvivorBaselineLanes(poolLanes, rawBaselineSpecs, rawScen
           const suffix = suffixParts.join("-");
           const name = suffix ? `${poolLane.name}-${suffix}` : poolLane.name;
           const commandPrefix = [
-            `OPENCLAW_UPGRADE_SURVIVOR_ARTIFACT_DIR="$PWD/.artifacts/upgrade-survivor/${name}"`,
+            `DEX_UPGRADE_SURVIVOR_ARTIFACT_DIR="$PWD/.artifacts/upgrade-survivor/${name}"`,
             baselineSpec
-              ? `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC=${shellQuote(baselineSpec)}`
+              ? `DEX_UPGRADE_SURVIVOR_BASELINE_SPEC=${shellQuote(baselineSpec)}`
               : "",
-            scenario ? `OPENCLAW_UPGRADE_SURVIVOR_SCENARIO=${shellQuote(scenario)}` : "",
+            scenario ? `DEX_UPGRADE_SURVIVOR_SCENARIO=${shellQuote(scenario)}` : "",
           ]
             .filter(Boolean)
             .join(" ");
@@ -260,7 +260,7 @@ export function parseLiveMode(raw) {
     return mode;
   }
   throw new Error(
-    `OPENCLAW_DOCKER_ALL_LIVE_MODE must be one of: all, skip, only. Got: ${JSON.stringify(raw)}`,
+    `DEX_DOCKER_ALL_LIVE_MODE must be one of: all, skip, only. Got: ${JSON.stringify(raw)}`,
   );
 }
 
@@ -270,7 +270,7 @@ export function parseProfile(raw) {
     return profile;
   }
   throw new Error(
-    `OPENCLAW_DOCKER_ALL_PROFILE must be one of: ${DEFAULT_PROFILE}, ${RELEASE_PATH_PROFILE}. Got: ${JSON.stringify(raw)}`,
+    `DEX_DOCKER_ALL_PROFILE must be one of: ${DEFAULT_PROFILE}, ${RELEASE_PATH_PROFILE}. Got: ${JSON.stringify(raw)}`,
   );
 }
 
@@ -318,8 +318,8 @@ export function findLaneByName(name) {
   return dedupeLanes(
     expandUpgradeSurvivorBaselineLanes(
       [...allReleasePathLanes({ includeOpenWebUI: true }), ...mainLanes, ...tailLanes],
-      process.env.OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPECS,
-      process.env.OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS,
+      process.env.DEX_UPGRADE_SURVIVOR_BASELINE_SPECS,
+      process.env.DEX_UPGRADE_SURVIVOR_SCENARIOS,
     ),
   ).find((poolLane) => poolLane.name === name);
 }
@@ -452,7 +452,7 @@ export function resolveDockerE2ePlan(options) {
               upgradeSurvivorScenarios,
             );
           }
-          selectNamedLanes(selectableLanes, [selectedName], "OPENCLAW_DOCKER_ALL_LANES");
+          selectNamedLanes(selectableLanes, [selectedName], "DEX_DOCKER_ALL_LANES");
           return [];
         })
       : undefined;

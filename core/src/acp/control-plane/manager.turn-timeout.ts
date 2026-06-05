@@ -1,7 +1,7 @@
 import type { AcpRuntimeSessionMode } from "@dexagent/acp-core/runtime/types";
 import { clampTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
 import { resolveAgentTimeoutMs } from "../../agents/timeout.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { logVerbose } from "../../globals.js";
 import { AcpRuntimeError } from "../runtime/errors.js";
 import type { ActiveTurnState, SessionAcpMeta } from "./manager.types.js";
@@ -11,7 +11,7 @@ const ACP_TURN_TIMEOUT_CLEANUP_GRACE_MS = 2_000;
 const ACP_TURN_TIMEOUT_REASON = "turn-timeout";
 
 export function resolveTurnTimeoutMs(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   meta: SessionAcpMeta;
 }): number {
   const runtimeTimeoutSeconds = resolveRuntimeOptionsFromMeta(params.meta).timeoutSeconds;

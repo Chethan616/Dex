@@ -7,7 +7,7 @@
   },
   "channels": ["twitch"],
   "channelEnvVars": {
-    "twitch": ["OPENCLAW_TWITCH_ACCESS_TOKEN"]
+    "twitch": ["DEX_TWITCH_ACCESS_TOKEN"]
   },
   "configSchema": {
     "type": "object",

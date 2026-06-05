@@ -5,7 +5,7 @@ import {
   resolveAccountEntry,
   resolveListedDefaultAccountId,
   resolveMergedAccountConfig,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/account-resolution";
 import { parseStrictInteger } from "openclaw/plugin-sdk/number-runtime";
 import {
@@ -20,7 +20,7 @@ const CHANNEL_ID = "sms";
 const DEFAULT_WEBHOOK_PATH = "/webhooks/sms";
 const DEFAULT_TEXT_CHUNK_LIMIT = 1500;
 
-function getChannelConfig(cfg: OpenClawConfig): SmsChannelConfig | undefined {
+function getChannelConfig(cfg: DexConfig): SmsChannelConfig | undefined {
   return cfg?.channels?.[CHANNEL_ID] as SmsChannelConfig | undefined;
 }
 
@@ -64,7 +64,7 @@ function hasBaseAccount(channelCfg: SmsChannelConfig | undefined): boolean {
   );
 }
 
-export function listSmsAccountIds(cfg: OpenClawConfig): string[] {
+export function listSmsAccountIds(cfg: DexConfig): string[] {
   const channelCfg = getChannelConfig(cfg);
   return listCombinedAccountIds({
     configuredAccountIds: Object.keys(channelCfg?.accounts ?? {}),
@@ -72,7 +72,7 @@ export function listSmsAccountIds(cfg: OpenClawConfig): string[] {
   });
 }
 
-export function resolveDefaultSmsAccountId(cfg: OpenClawConfig): string {
+export function resolveDefaultSmsAccountId(cfg: DexConfig): string {
   const channelCfg = getChannelConfig(cfg);
   return resolveListedDefaultAccountId({
     accountIds: listSmsAccountIds(cfg),
@@ -81,7 +81,7 @@ export function resolveDefaultSmsAccountId(cfg: OpenClawConfig): string {
 }
 
 export function resolveSmsAccount(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   accountId?: string | null,
 ): ResolvedSmsAccount {
   const channelCfg = getChannelConfig(cfg) ?? {};
@@ -151,7 +151,7 @@ export function resolveSmsAccount(
   };
 }
 
-export function inspectSmsAccount(cfg: OpenClawConfig, accountId?: string | null) {
+export function inspectSmsAccount(cfg: DexConfig, accountId?: string | null) {
   const account = resolveSmsAccount(cfg, accountId);
   const configured = isSmsAccountConfigured(account);
   return {

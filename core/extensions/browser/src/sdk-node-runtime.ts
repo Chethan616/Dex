@@ -17,7 +17,7 @@ export type {
   NodeSession,
 } from "openclaw/plugin-sdk/gateway-runtime";
 export { runCommandWithRuntime } from "openclaw/plugin-sdk/cli-runtime";
-export type { OpenClawPluginService } from "openclaw/plugin-sdk/plugin-entry";
+export type { DexPluginService } from "openclaw/plugin-sdk/plugin-entry";
 export {
   startLazyPluginServiceModule,
   type LazyPluginServiceHandle,

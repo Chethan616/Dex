@@ -1,5 +1,5 @@
 import type {
-  OpenClawPluginCommandDefinition,
+  DexPluginCommandDefinition,
   PluginCommandContext,
   PluginCommandResult,
 } from "openclaw/plugin-sdk/plugin-entry";
@@ -21,7 +21,7 @@ type CodexCommandInternalOptions = CodexCommandOptions & {
   loadSubcommandHandler?: () => Promise<CodexSubcommandHandler>;
 };
 
-export function createCodexCommand(options: CodexCommandOptions): OpenClawPluginCommandDefinition {
+export function createCodexCommand(options: CodexCommandOptions): DexPluginCommandDefinition {
   return {
     name: "codex",
     description: "Inspect and control the Codex app-server harness",

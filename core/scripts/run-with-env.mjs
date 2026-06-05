@@ -77,7 +77,7 @@ function main(argv = process.argv.slice(2)) {
   });
   const forceKillDelayMs = Math.max(
     1,
-    Number.parseInt(process.env.OPENCLAW_RUN_WITH_ENV_FORCE_KILL_MS ?? "5000", 10) || 5_000,
+    Number.parseInt(process.env.DEX_RUN_WITH_ENV_FORCE_KILL_MS ?? "5000", 10) || 5_000,
   );
   let forwardedSignal = null;
   let forceKillTimer = null;

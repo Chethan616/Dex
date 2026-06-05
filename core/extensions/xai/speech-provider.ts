@@ -1,6 +1,6 @@
 import {
   isProviderAuthProfileConfigured,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/provider-auth";
 import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runtime";
 import { normalizeResolvedSecretInputString } from "openclaw/plugin-sdk/secret-input";
@@ -279,7 +279,7 @@ export function buildXaiSpeechProvider(): SpeechProviderPlugin {
 // 3. xAI OAuth auth profile (cfg-scoped)
 async function resolveXaiAudioApiKey(
   configApiKey: string | undefined,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): Promise<string> {
   const direct = trimToUndefined(configApiKey) ?? trimToUndefined(process.env.XAI_API_KEY);
   if (direct) {

@@ -3,9 +3,9 @@ import { isRecord as isObjectRecord } from "@dexagent/normalization-core/record-
 import JSON5 from "json5";
 import { getCommandPathWithRootOptions } from "../cli/argv.js";
 import { resolveConfigPath } from "../config/paths.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
-type LoggingConfig = OpenClawConfig["logging"];
+type LoggingConfig = DexConfig["logging"];
 
 let cachedLoggingConfig:
   | {

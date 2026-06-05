@@ -20,14 +20,14 @@ OpenClaw loads skills from several roots in a defined [precedence order](/tools/
     new skill:
 
     ```bash
-    mkdir -p ~/.openclaw/workspace/skills/hello-world
+    mkdir -p ~/.dex/workspace/skills/hello-world
     ```
 
     You can group skills in subfolders for organization — the skill is still
     named by the `SKILL.md` frontmatter, not the folder path:
 
     ```bash
-    mkdir -p ~/.openclaw/workspace/skills/personal/hello-world
+    mkdir -p ~/.dex/workspace/skills/personal/hello-world
     # skill name is still "hello-world", invoked as /hello-world
     ```
 

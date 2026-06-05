@@ -3,14 +3,14 @@ import { embeddedAgentLog } from "openclaw/plugin-sdk/agent-harness-runtime";
 import type { WebSocket } from "ws";
 import type { JsonObject, JsonValue } from "../protocol.js";
 import { requireObject, requireString, requireStringArray } from "./json-rpc.js";
-import type { ManagedProcess, OpenClawExecServer, ProcessChunk } from "./types.js";
+import type { ManagedProcess, DexExecServer, ProcessChunk } from "./types.js";
 
 const ENV_KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const RETAINED_PROCESS_OUTPUT_BYTES = 1024 * 1024;
 const CLOSED_PROCESS_EVICTION_MS = 60_000;
 
 export async function startProcess(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   processes: Map<string, ManagedProcess>,
   socket: WebSocket,
   params: JsonValue | undefined,
@@ -74,7 +74,7 @@ export async function startProcess(
 }
 
 async function runProcess(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   managed: ManagedProcess,
   params: { argv: string[]; cwd: string; env: Record<string, string> },
 ): Promise<void> {

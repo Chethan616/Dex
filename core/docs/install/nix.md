@@ -50,12 +50,12 @@ See the [nix-openclaw README](https://github.com/openclaw/nix-openclaw) for full
 
 ## Nix-mode runtime behavior
 
-When `OPENCLAW_NIX_MODE=1` is set (automatic with nix-openclaw), OpenClaw enters a deterministic mode for Nix-managed installs. Other Nix packages can set the same mode; nix-openclaw is the first-party reference.
+When `DEX_NIX_MODE=1` is set (automatic with nix-openclaw), OpenClaw enters a deterministic mode for Nix-managed installs. Other Nix packages can set the same mode; nix-openclaw is the first-party reference.
 
 You can also set it manually:
 
 ```bash
-export OPENCLAW_NIX_MODE=1
+export DEX_NIX_MODE=1
 ```
 
 On macOS, the GUI app does not automatically inherit shell environment variables. Enable Nix mode via defaults instead:
@@ -74,13 +74,13 @@ defaults write ai.openclaw.mac openclaw.nixMode -bool true
 
 ### Config and state paths
 
-OpenClaw reads JSON5 config from `OPENCLAW_CONFIG_PATH` and stores mutable data in `OPENCLAW_STATE_DIR`. When running under Nix, set these explicitly to Nix-managed locations so runtime state and config stay out of the immutable store.
+OpenClaw reads JSON5 config from `DEX_CONFIG_PATH` and stores mutable data in `DEX_STATE_DIR`. When running under Nix, set these explicitly to Nix-managed locations so runtime state and config stay out of the immutable store.
 
 | Variable               | Default                                 |
 | ---------------------- | --------------------------------------- |
-| `OPENCLAW_HOME`        | `HOME` / `USERPROFILE` / `os.homedir()` |
-| `OPENCLAW_STATE_DIR`   | `~/.openclaw`                           |
-| `OPENCLAW_CONFIG_PATH` | `$OPENCLAW_STATE_DIR/openclaw.json`     |
+| `DEX_HOME`        | `HOME` / `USERPROFILE` / `os.homedir()` |
+| `DEX_STATE_DIR`   | `~/.dex`                           |
+| `DEX_CONFIG_PATH` | `$DEX_STATE_DIR/openclaw.json`     |
 
 ### Service PATH discovery
 

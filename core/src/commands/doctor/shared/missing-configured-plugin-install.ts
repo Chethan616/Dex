@@ -7,11 +7,11 @@ import {
   listPotentialConfiguredChannelIds,
 } from "../../../channels/config-presence.js";
 import { listRawChannelPluginCatalogEntries } from "../../../channels/plugins/catalog.js";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 import type { PluginInstallRecord } from "../../../config/types.plugins.js";
 import { parseClawHubPluginSpec } from "../../../infra/clawhub-spec.js";
 import {
-  compareOpenClawReleaseVersions,
+  compareDexReleaseVersions,
   isOpenClawOrgNpmSpec,
   parseRegistryNpmSpec,
 } from "../../../infra/npm-registry-spec.js";
@@ -86,8 +86,8 @@ const REPAIRABLE_PACKAGE_ENTRY_DIAGNOSTIC_MARKERS = [
   "requires compiled runtime output",
 ] as const;
 const VERSION_BOUND_RUNTIME_PLUGIN_IDS = new Set(["codex"]);
-const OPENCLAW_BETA_COMPANION_VERSION_RE = /^(\d{4}\.[1-9]\d?\.[1-9]\d?)-beta\.[1-9]\d*$/;
-const OPENCLAW_STABLE_OR_BETA_COMPANION_VERSION_RE =
+const DEX_BETA_COMPANION_VERSION_RE = /^(\d{4}\.[1-9]\d?\.[1-9]\d?)-beta\.[1-9]\d*$/;
+const DEX_STABLE_OR_BETA_COMPANION_VERSION_RE =
   /^(\d{4}\.[1-9]\d?\.[1-9]\d?)(?:-beta\.[1-9]\d*)?$/;
 
 function shouldFallbackClawHubToNpm(params: {
@@ -123,13 +123,13 @@ function addConfiguredPluginId(ids: Set<string>, value: unknown): void {
   }
 }
 
-function addConfiguredAgentRuntimePluginIds(ids: Set<string>, cfg: OpenClawConfig): void {
+function addConfiguredAgentRuntimePluginIds(ids: Set<string>, cfg: DexConfig): void {
   for (const runtime of collectConfiguredRuntimePluginIds(cfg)) {
     addConfiguredPluginId(ids, runtime);
   }
 }
 
-function collectConfiguredPluginIds(cfg: OpenClawConfig): Set<string> {
+function collectConfiguredPluginIds(cfg: DexConfig): Set<string> {
   const ids = new Set<string>();
   const plugins = asObjectRecord(cfg.plugins);
   if (plugins?.enabled === false) {
@@ -153,7 +153,7 @@ function collectConfiguredPluginIds(cfg: OpenClawConfig): Set<string> {
   return ids;
 }
 
-function collectBlockedPluginIds(cfg: OpenClawConfig): Set<string> {
+function collectBlockedPluginIds(cfg: DexConfig): Set<string> {
   const ids = new Set<string>();
   const deny = cfg.plugins?.deny;
   if (Array.isArray(deny)) {
@@ -172,7 +172,7 @@ function collectBlockedPluginIds(cfg: OpenClawConfig): Set<string> {
   return ids;
 }
 
-function collectConfiguredChannelIds(cfg: OpenClawConfig, env?: NodeJS.ProcessEnv): Set<string> {
+function collectConfiguredChannelIds(cfg: DexConfig, env?: NodeJS.ProcessEnv): Set<string> {
   const ids = new Set<string>();
   if (asObjectRecord(cfg.plugins)?.enabled === false) {
     return ids;
@@ -195,7 +195,7 @@ function collectConfiguredChannelIds(cfg: OpenClawConfig, env?: NodeJS.ProcessEn
 }
 
 function collectEffectiveConfiguredChannelOwnerPluginIds(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env: NodeJS.ProcessEnv;
   snapshot: PluginMetadataSnapshot;
   configuredChannelIds: ReadonlySet<string>;
@@ -227,7 +227,7 @@ function collectEffectiveConfiguredChannelOwnerPluginIds(params: {
 }
 
 function collectDownloadableInstallCandidates(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
   missingPluginIds: ReadonlySet<string>;
   configuredPluginIds?: ReadonlySet<string>;
@@ -407,7 +407,7 @@ function addLegacyNpmDeclarationInstallCandidate(params: {
 }
 
 function collectLegacyNpmDeclarationInstallCandidates(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
   configuredPluginIds: ReadonlySet<string>;
   missingPluginIds: ReadonlySet<string>;
@@ -456,7 +456,7 @@ function collectLegacyNpmDeclarationInstallCandidates(params: {
 }
 
 function collectUpdateDeferredPluginIds(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env: NodeJS.ProcessEnv;
   configuredPluginIds: ReadonlySet<string>;
   configuredChannelIds: ReadonlySet<string>;
@@ -555,7 +555,7 @@ function installedRuntimePackageVersionIsStale(params: {
   ) {
     return false;
   }
-  const comparison = compareOpenClawReleaseVersions(params.installedVersion, params.currentVersion);
+  const comparison = compareDexReleaseVersions(params.installedVersion, params.currentVersion);
   return comparison === null ? params.installedVersion !== params.currentVersion : comparison < 0;
 }
 
@@ -563,8 +563,8 @@ function betaCompanionMatchesCurrentStableVersion(params: {
   installedVersion: string;
   currentVersion: string;
 }): boolean {
-  const installedBase = OPENCLAW_BETA_COMPANION_VERSION_RE.exec(params.installedVersion)?.[1];
-  const currentBase = OPENCLAW_STABLE_OR_BETA_COMPANION_VERSION_RE.exec(params.currentVersion)?.[1];
+  const installedBase = DEX_BETA_COMPANION_VERSION_RE.exec(params.installedVersion)?.[1];
+  const currentBase = DEX_STABLE_OR_BETA_COMPANION_VERSION_RE.exec(params.currentVersion)?.[1];
   return Boolean(installedBase && currentBase && installedBase === currentBase);
 }
 
@@ -629,7 +629,7 @@ function isConfiguredPluginRepairTarget(params: {
 }
 
 function collectOfficialReplacementInstallCandidates(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env: NodeJS.ProcessEnv;
   repairablePluginIds: ReadonlySet<string>;
   configuredPluginIds: ReadonlySet<string>;
@@ -1151,7 +1151,7 @@ export type RepairMissingPluginInstallsResult = {
 };
 
 export async function repairMissingConfiguredPluginInstalls(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
   /**
    * Optional pre-seeded records. When provided, this map is used instead of
@@ -1173,7 +1173,7 @@ export async function repairMissingConfiguredPluginInstalls(params: {
 }
 
 export async function repairMissingPluginInstallsForIds(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   pluginIds: Iterable<string>;
   channelIds?: Iterable<string>;
   blockedPluginIds?: Iterable<string>;
@@ -1201,7 +1201,7 @@ export async function repairMissingPluginInstallsForIds(params: {
 }
 
 async function repairMissingPluginInstalls(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   pluginIds: ReadonlySet<string>;
   channelIds: ReadonlySet<string>;
   blockedPluginIds?: ReadonlySet<string>;

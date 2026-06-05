@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import chokidar, { type FSWatcher } from "chokidar";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { CONFIG_DIR, resolveUserPath } from "../../utils.js";
 import { resolvePluginSkillDirs } from "../loading/plugin-skills.js";
@@ -84,7 +84,7 @@ export const DEFAULT_SKILLS_WATCH_IGNORED: RegExp[] = [
   /(^|[\\/])\.cache([\\/]|$)/,
 ];
 
-function resolveWatchTargets(workspaceDir: string, config?: OpenClawConfig): WatchTarget[] {
+function resolveWatchTargets(workspaceDir: string, config?: DexConfig): WatchTarget[] {
   const baseRoots: Array<{ path: string; source: string }> = [];
   if (workspaceDir.trim()) {
     baseRoots.push({ path: path.join(workspaceDir, "skills"), source: "openclaw-workspace" });
@@ -358,7 +358,7 @@ function watchDepthForPath(raw: string, depth: number): number {
   return depth + missingSegments;
 }
 
-function resolveAllowedSymlinkTargetRealPaths(config?: OpenClawConfig): string[] {
+function resolveAllowedSymlinkTargetRealPaths(config?: DexConfig): string[] {
   const rawTargets = config?.skills?.load?.allowSymlinkTargets ?? [];
   return rawTargets
     .map((dir) => normalizeOptionalString(dir) ?? "")
@@ -403,7 +403,7 @@ export function shouldIgnoreSkillsWatchPath(
   return path.posix.basename(normalized) !== "SKILL.md";
 }
 
-function resolveWatchDebounceMs(config?: OpenClawConfig): number {
+function resolveWatchDebounceMs(config?: DexConfig): number {
   const raw = config?.skills?.load?.watchDebounceMs;
   return typeof raw === "number" && Number.isFinite(raw) ? Math.max(0, raw) : 250;
 }
@@ -556,7 +556,7 @@ function evictIdleWorkspaceWatchStates(now: number): void {
   }
 }
 
-export function ensureSkillsWatcher(params: { workspaceDir: string; config?: OpenClawConfig }) {
+export function ensureSkillsWatcher(params: { workspaceDir: string; config?: DexConfig }) {
   const workspaceDir = params.workspaceDir.trim();
   if (!workspaceDir) {
     return;

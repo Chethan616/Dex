@@ -91,7 +91,7 @@ When using the native Perplexity API, searches support the following filters:
     <Warning>
     A key exported only in an interactive shell will not be visible to a
     launchd/systemd daemon unless that environment is explicitly imported. Set
-    the key in `~/.openclaw/.env` or via `env.shellEnv` to ensure the gateway
+    the key in `~/.dex/.env` or via `env.shellEnv` to ensure the gateway
     process can read it.
     </Warning>
 

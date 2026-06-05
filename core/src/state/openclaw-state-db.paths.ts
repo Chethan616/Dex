@@ -5,7 +5,7 @@ import { resolveStateDir } from "../config/paths.js";
 import { parseStrictNonNegativeInteger } from "../infra/parse-finite-number.js";
 
 function resolveOpenClawStateRootDir(env: NodeJS.ProcessEnv): string {
-  if (env.OPENCLAW_STATE_DIR?.trim()) {
+  if (env.DEX_STATE_DIR?.trim()) {
     return resolveStateDir(env);
   }
   if (env.VITEST || env.NODE_ENV === "test") {

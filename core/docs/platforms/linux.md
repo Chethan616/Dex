@@ -118,7 +118,7 @@ Covered child process surfaces include:
 - OpenClaw-launched browser/Chrome processes.
 
 The wrapper is Linux-only and is skipped when `/bin/sh` is unavailable. It is
-also skipped if the child env sets `OPENCLAW_CHILD_OOM_SCORE_ADJ=0`, `false`,
+also skipped if the child env sets `DEX_CHILD_OOM_SCORE_ADJ=0`, `false`,
 `no`, or `off`.
 
 To verify a child process:

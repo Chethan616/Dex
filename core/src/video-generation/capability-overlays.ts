@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveVideoGenerationModeCapabilities } from "./capabilities.js";
 import type { GenerateVideoParams } from "./runtime-types.js";
 import type {
@@ -134,7 +134,7 @@ export async function resolveProviderWithModelCapabilities(params: {
   provider: VideoGenerationProvider;
   providerId: string;
   model: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir?: string;
   authStore?: GenerateVideoParams["authStore"];
   timeoutMs?: number;

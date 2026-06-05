@@ -14,7 +14,7 @@ import { createWorkboardSqliteStores, resolveWorkboardSqlitePath } from "./src/s
 const MAX_CARDS = 2000;
 
 function migrationEnv(params: { env: NodeJS.ProcessEnv; stateDir: string }): NodeJS.ProcessEnv {
-  return { ...params.env, OPENCLAW_STATE_DIR: params.stateDir };
+  return { ...params.env, DEX_STATE_DIR: params.stateDir };
 }
 
 function openLegacyStore<T>(params: {

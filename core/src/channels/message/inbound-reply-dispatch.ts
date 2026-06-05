@@ -12,7 +12,7 @@ import {
 import type { DispatchReplyWithBufferedBlockDispatcher } from "../../auto-reply/reply/provider-dispatcher.types.js";
 import type { ReplyDispatcher } from "../../auto-reply/reply/reply-dispatcher.types.js";
 import type { FinalizedMsgContext } from "../../auto-reply/templating.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   normalizeOutboundReplyPayload,
   type OutboundReplyPayload,
@@ -138,12 +138,12 @@ export {
 
 /** Run `dispatchReplyFromConfig` with a dispatcher that always gets its settled callback. */
 export async function dispatchReplyFromConfigWithSettledDispatcher(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   ctxPayload: FinalizedMsgContext;
   dispatcher: ReplyDispatcher;
   onSettled: () => void | Promise<void>;
   replyOptions?: ReplyDispatchFromConfigOptions;
-  configOverride?: OpenClawConfig;
+  configOverride?: DexConfig;
 }): Promise<DispatchFromConfigResult> {
   return await withReplyDispatcher({
     dispatcher: params.dispatcher,
@@ -161,7 +161,7 @@ export async function dispatchReplyFromConfigWithSettledDispatcher(params: {
 
 /** Assemble the common inbound reply dispatch dependencies for a resolved route. */
 export function buildInboundReplyDispatchBase(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: string;
   accountId?: string;
   route: {
@@ -197,7 +197,7 @@ export function buildInboundReplyDispatchBase(params: {
 
 type BuildInboundReplyDispatchBaseParams = Parameters<typeof buildInboundReplyDispatchBase>[0];
 type RecordChannelMessageReplyDispatchParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: string;
   accountId?: string;
   agentId: string;

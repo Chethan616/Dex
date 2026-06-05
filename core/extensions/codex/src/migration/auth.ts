@@ -17,7 +17,7 @@ import {
   updateAuthProfileStoreWithLock,
   type AuthProfileStore,
   type OAuthCredential,
-  type OpenClawConfig,
+  type DexConfig,
   type ProviderAuthResult,
 } from "openclaw/plugin-sdk/provider-auth";
 import {
@@ -40,7 +40,7 @@ const CODEX_CONFIG_PATCH_MODE_RETURN = "return";
 
 type CodexMigrationTargets = ReturnType<typeof resolveCodexMigrationTargets>;
 type AgentDefaultModelConfigs = NonNullable<
-  NonNullable<NonNullable<OpenClawConfig["agents"]>["defaults"]>["models"]
+  NonNullable<NonNullable<DexConfig["agents"]>["defaults"]>["models"]
 >;
 type AgentDefaultModelConfigEntry = AgentDefaultModelConfigs[string];
 
@@ -120,7 +120,7 @@ async function buildCodexOAuthCredential(source: CodexSource): Promise<CodexAuth
         models: Object.fromEntries(modelRefs.map((modelRef) => [modelRef, {}])),
       },
     },
-  } satisfies Partial<OpenClawConfig>;
+  } satisfies Partial<DexConfig>;
   const result = buildOauthProviderAuthResult({
     providerId: OPENAI_PROVIDER_ID,
     defaultModel: OPENAI_CODEX_DEFAULT_MODEL,
@@ -219,15 +219,15 @@ function itemProfileTarget(
   return { profileId: matched ?? credential.profileId, matchedExisting: Boolean(matched) };
 }
 
-function replaceConfigDraft(draft: OpenClawConfig, next: OpenClawConfig): void {
-  for (const key of Object.keys(draft) as Array<keyof OpenClawConfig>) {
+function replaceConfigDraft(draft: DexConfig, next: DexConfig): void {
+  for (const key of Object.keys(draft) as Array<keyof DexConfig>) {
     delete draft[key];
   }
   Object.assign(draft, next);
 }
 
 function existingAuthProfileConfigIsCompatible(
-  existing: NonNullable<NonNullable<OpenClawConfig["auth"]>["profiles"]>[string],
+  existing: NonNullable<NonNullable<DexConfig["auth"]>["profiles"]>[string],
   profile: CodexAuthProfileConfig,
 ): boolean {
   if (existing.provider !== profile.provider || existing.mode !== profile.mode) {
@@ -240,7 +240,7 @@ function existingAuthProfileConfigIsCompatible(
 }
 
 function hasAuthProfileConfigConflict(
-  config: OpenClawConfig,
+  config: DexConfig,
   profile: CodexAuthProfileConfig,
   overwrite: boolean,
 ): boolean {
@@ -257,14 +257,14 @@ function hasCurrentAuthProfileConfigConflict(
 ): boolean {
   let config = ctx.config;
   try {
-    config = (ctx.runtime?.config?.current?.() as OpenClawConfig | undefined) ?? config;
+    config = (ctx.runtime?.config?.current?.() as DexConfig | undefined) ?? config;
   } catch {
     // Fall back to the planning snapshot; direct config writes recheck inside mutate.
   }
   return hasAuthProfileConfigConflict(config, profile, Boolean(ctx.overwrite));
 }
 
-function applyDefaultModelIfMissing(cfg: OpenClawConfig): OpenClawConfig {
+function applyDefaultModelIfMissing(cfg: DexConfig): DexConfig {
   const currentModel = cfg.agents?.defaults?.model;
   const primary =
     typeof currentModel === "string"
@@ -301,9 +301,9 @@ function mergeModelConfigEntry(
 }
 
 function applyOAuthModelConfigsToConfig(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   credential: Extract<CodexAuthCredential, { kind: "oauth" }>,
-): OpenClawConfig {
+): DexConfig {
   const existingModels = cfg.agents?.defaults?.models ?? {};
   const models: AgentDefaultModelConfigs = credential.result.replaceDefaultModels
     ? { ...credential.modelConfigs }
@@ -326,10 +326,10 @@ function applyOAuthModelConfigsToConfig(
 }
 
 function applyOAuthConfigToConfig(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   credential: Extract<CodexAuthCredential, { kind: "oauth" }>,
   profileId: string,
-): OpenClawConfig {
+): DexConfig {
   let next = applyOAuthModelConfigsToConfig(cfg, credential);
   const profile = credential.result.profiles[0];
   if (profile) {
@@ -350,10 +350,10 @@ function applyOAuthConfigToConfig(
 }
 
 function applyApiKeyConfigToConfig(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   credential: Extract<CodexAuthCredential, { kind: "api_key" }>,
   profileId: string,
-): OpenClawConfig {
+): DexConfig {
   return applyAuthProfileConfig(cfg, {
     profileId,
     provider: credential.provider,
@@ -412,7 +412,7 @@ function authProfileConfigForCredential(
 async function applyCodexAuthProfileConfig(
   ctx: MigrationProviderContext,
   profile: CodexAuthProfileConfig,
-  applyConfig: (config: OpenClawConfig) => OpenClawConfig,
+  applyConfig: (config: DexConfig) => DexConfig,
 ): Promise<CodexAuthConfigApplyResult> {
   const configApi = ctx.runtime?.config;
   if (!configApi?.current || !configApi.mutateConfigFile) {

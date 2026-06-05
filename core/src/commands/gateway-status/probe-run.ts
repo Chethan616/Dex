@@ -2,7 +2,7 @@ import {
   normalizeOptionalString,
   readStringValue,
 } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../../config/types.js";
+import type { DexConfig } from "../../config/types.js";
 import { probeGateway } from "../../gateway/probe.js";
 import {
   discoverGatewayBeacons,
@@ -28,7 +28,7 @@ export type GatewayStatusProbedTarget = {
 };
 
 export async function runGatewayStatusProbePass(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   opts: {
     token?: string;
     password?: string;

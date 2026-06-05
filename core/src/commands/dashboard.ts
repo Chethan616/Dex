@@ -88,7 +88,7 @@ export async function dashboardCommand(
   if (resolvedToken.unresolvedRefReason) {
     runtime.log(`Token auto-auth unavailable: ${resolvedToken.unresolvedRefReason}`);
     runtime.log(
-      "Set OPENCLAW_GATEWAY_TOKEN in this shell or resolve your secret provider, then rerun `openclaw dashboard`.",
+      "Set DEX_GATEWAY_TOKEN in this shell or resolve your secret provider, then rerun `openclaw dashboard`.",
     );
   }
 
@@ -126,7 +126,7 @@ export async function dashboardCommand(
 
   if (fallbackToManualAuth) {
     runtime.log(
-      "Token auto-auth not delivered. Append your gateway token (from OPENCLAW_GATEWAY_TOKEN or gateway.auth.token) as a URL fragment with key `token` to authenticate.",
+      "Token auto-auth not delivered. Append your gateway token (from DEX_GATEWAY_TOKEN or gateway.auth.token) as a URL fragment with key `token` to authenticate.",
     );
   }
 }

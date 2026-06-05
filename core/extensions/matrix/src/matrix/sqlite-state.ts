@@ -35,6 +35,6 @@ export function resolveMatrixSqliteStateEnv(
   }
   return {
     ...(options?.env ?? process.env),
-    OPENCLAW_STATE_DIR: stateDir,
+    DEX_STATE_DIR: stateDir,
   };
 }

@@ -2,10 +2,10 @@ import { normalizeOptionalString } from "@dexagent/normalization-core/string-coe
 import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { note } from "../../packages/terminal-core/src/note.js";
 import { formatCliCommand } from "../cli/command-format.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { PairingChannel } from "../pairing/pairing-store.types.js";
 
-function resolveConfiguredCommandOwners(cfg: OpenClawConfig): string[] {
+function resolveConfiguredCommandOwners(cfg: DexConfig): string[] {
   const owners = cfg.commands?.ownerAllowFrom;
   if (!Array.isArray(owners)) {
     return [];
@@ -13,7 +13,7 @@ function resolveConfiguredCommandOwners(cfg: OpenClawConfig): string[] {
   return normalizeStringEntries(owners.map((entry) => String(entry ?? "")));
 }
 
-export function hasConfiguredCommandOwners(cfg: OpenClawConfig): boolean {
+export function hasConfiguredCommandOwners(cfg: DexConfig): boolean {
   return resolveConfiguredCommandOwners(cfg).length > 0;
 }
 
@@ -35,7 +35,7 @@ export function formatCommandOwnerFromChannelSender(params: {
   return `${params.channel}:${id}`;
 }
 
-export function noteCommandOwnerHealth(cfg: OpenClawConfig): void {
+export function noteCommandOwnerHealth(cfg: DexConfig): void {
   if (hasConfiguredCommandOwners(cfg)) {
     return;
   }

@@ -35,7 +35,7 @@ import {
   resolveTranscriptBackedChannelFinalText,
 } from "openclaw/plugin-sdk/channel-outbound";
 import type {
-  OpenClawConfig,
+  DexConfig,
   ReplyToMode,
   TelegramAccountConfig,
 } from "openclaw/plugin-sdk/config-contracts";
@@ -218,7 +218,7 @@ function canUseNativeToolProgressDraftForChat(params: {
   return normalized.hasWildcard || normalized.entries.includes(String(params.chatId));
 }
 
-async function resolveStickerVisionSupport(cfg: OpenClawConfig, agentId: string) {
+async function resolveStickerVisionSupport(cfg: DexConfig, agentId: string) {
   try {
     const catalog = await loadModelCatalog({ config: cfg });
     const defaultModel = resolveDefaultModelForAgent({ cfg, agentId });
@@ -235,7 +235,7 @@ async function resolveStickerVisionSupport(cfg: OpenClawConfig, agentId: string)
 type DispatchTelegramMessageParams = {
   context: TelegramMessageContext;
   bot: Bot;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   runtime: RuntimeEnv;
   replyToMode: ReplyToMode;
   streamMode: TelegramStreamMode;
@@ -257,7 +257,7 @@ type FreshTelegramSessionStoreLoader = ((agentId: string) => {
 };
 
 function createFreshTelegramSessionStoreLoader(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   telegramDeps: TelegramBotDeps;
 }): FreshTelegramSessionStoreLoader {
   const storesByPath = new Map<string, TelegramSessionStore>();
@@ -278,7 +278,7 @@ function createFreshTelegramSessionStoreLoader(params: {
 }
 
 function resolveTelegramReasoningLevel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey?: string;
   agentId: string;
   loadFreshSessionStore: FreshTelegramSessionStoreLoader;
@@ -320,7 +320,7 @@ function resolveTelegramMirroredTranscriptText(
 }
 
 async function mirrorTelegramAssistantReplyToTranscript(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   route: TelegramMessageContext["route"];
   sessionKey: string;
   loadFreshSessionStore: FreshTelegramSessionStoreLoader;
@@ -487,7 +487,7 @@ function extractCurrentTelegramBody(body: string | undefined): string {
 }
 
 function buildRecoveredTelegramBody(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   context: TelegramMessageContext;
   currentMessage: string;
   historyKey?: string;
@@ -593,7 +593,7 @@ function migrateRecoveredTelegramRoomEventHistory(params: {
 }
 
 function resolveDispatchTelegramContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   context: TelegramMessageContext;
 }): TelegramMessageContext {
   const threadSpec = resolveDispatchTelegramThreadSpec({

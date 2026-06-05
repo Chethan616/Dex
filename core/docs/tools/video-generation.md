@@ -477,7 +477,7 @@ rest, use `maxInputImagesByModel`, `maxInputVideosByModel`, or
 Opt-in live coverage for the shared bundled providers:
 
 ```bash
-OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/video-generation-providers.live.test.ts
+DEX_LIVE_TEST=1 pnpm test:live -- extensions/video-generation-providers.live.test.ts
 ```
 
 Repo wrapper:
@@ -492,7 +492,7 @@ profiles by default, and runs a release-safe smoke by default:
 - `generate` for every non-FAL provider in the sweep.
 - One-second lobster prompt.
 - Per-provider operation cap from
-  `OPENCLAW_LIVE_VIDEO_GENERATION_TIMEOUT_MS` (`180000` by default).
+  `DEX_LIVE_VIDEO_GENERATION_TIMEOUT_MS` (`180000` by default).
 
 FAL is opt-in because provider-side queue latency can dominate release
 time:
@@ -501,7 +501,7 @@ time:
 pnpm test:live:media video --video-providers fal
 ```
 
-Set `OPENCLAW_LIVE_VIDEO_GENERATION_FULL_MODES=1` to also run declared
+Set `DEX_LIVE_VIDEO_GENERATION_FULL_MODES=1` to also run declared
 transform modes the shared sweep can exercise safely with local media:
 
 - `imageToVideo` when `capabilities.imageToVideo.enabled`.

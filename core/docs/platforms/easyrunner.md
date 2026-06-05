@@ -33,11 +33,11 @@ services:
     image: ghcr.io/openclaw/openclaw:latest
     restart: unless-stopped
     environment:
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
-      OPENCLAW_HOME: /home/node
-      OPENCLAW_STATE_DIR: /home/node/.openclaw
-      OPENCLAW_CONFIG_PATH: /home/node/.openclaw/openclaw.json
-      OPENCLAW_WORKSPACE_DIR: /workspace
+      DEX_GATEWAY_TOKEN: ${DEX_GATEWAY_TOKEN}
+      DEX_HOME: /home/node
+      DEX_STATE_DIR: /home/node/.openclaw
+      DEX_CONFIG_PATH: /home/node/.openclaw/openclaw.json
+      DEX_WORKSPACE_DIR: /workspace
     volumes:
       - openclaw-config:/home/node/.openclaw
       - openclaw-workspace:/workspace
@@ -52,7 +52,7 @@ volumes:
 ```
 
 Replace `openclaw.example.com` with your Gateway hostname. Store
-`OPENCLAW_GATEWAY_TOKEN` in EasyRunner's secret/environment manager instead of
+`DEX_GATEWAY_TOKEN` in EasyRunner's secret/environment manager instead of
 committing it to the app definition.
 
 ## Configure OpenClaw
@@ -66,7 +66,7 @@ the proxy and require auth:
     bind: "lan",
     port: 1455,
     auth: {
-      token: "${OPENCLAW_GATEWAY_TOKEN}",
+      token: "${DEX_GATEWAY_TOKEN}",
     },
   },
 }

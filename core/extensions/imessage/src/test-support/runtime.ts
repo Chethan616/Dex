@@ -17,7 +17,7 @@ function createIMessageTestEnv(): NodeJS.ProcessEnv {
   const stateDir = fs.mkdtempSync(
     path.join(resolvePreferredOpenClawTmpDir(), "openclaw-imessage-state-"),
   );
-  return { ...process.env, OPENCLAW_STATE_DIR: stateDir };
+  return { ...process.env, DEX_STATE_DIR: stateDir };
 }
 
 let imessageTestEnv = createIMessageTestEnv();

@@ -15,13 +15,13 @@ function hasDebugArg(argv: string[] | undefined): boolean {
 }
 
 function shouldShowStack(argv: string[] | undefined, env: NodeJS.ProcessEnv): boolean {
-  return hasDebugArg(argv) || isTruthyEnvValue(env.OPENCLAW_DEBUG);
+  return hasDebugArg(argv) || isTruthyEnvValue(env.DEX_DEBUG);
 }
 
 function pushPrefixed(out: string[], value: string): void {
   for (const line of value.split("\n")) {
     if (line.trim().length > 0) {
-      out.push(`[dex-core] ${line}`);
+      out.push(`[dex] ${line}`);
     }
   }
 }
@@ -29,20 +29,20 @@ function pushPrefixed(out: string[], value: string): void {
 export function formatCliFailureLines(options: FormatCliFailureOptions): string[] {
   const env = options.env ?? process.env;
   const lines = [
-    `[dex-core] ${options.title}`,
-    `[dex-core] Reason: ${formatErrorMessage(options.error)}`,
+    `[dex] ${options.title}`,
+    `[dex] Reason: ${formatErrorMessage(options.error)}`,
   ];
 
   if (shouldShowStack(options.argv, env)) {
-    lines.push("[dex-core] Stack:");
+    lines.push("[dex] Stack:");
     pushPrefixed(lines, formatUncaughtError(options.error));
   } else {
-    lines.push("[dex-core] Debug: set OPENCLAW_DEBUG=1 to include the stack trace.");
+    lines.push("[dex] Debug: set DEX_DEBUG=1 to include the stack trace.");
   }
 
   if (options.includeDoctorHint !== false) {
-    lines.push(`[dex-core] Try: ${formatCliCommand("dex-core doctor", env)}`);
+    lines.push(`[dex] Try: ${formatCliCommand("dex doctor", env)}`);
   }
-  lines.push(`[dex-core] Help: ${formatCliCommand("dex-core --help", env)}`);
+  lines.push(`[dex] Help: ${formatCliCommand("dex-core --help", env)}`);
   return lines;
 }

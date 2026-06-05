@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, vi } from "vitest";
 import type { AuthProfileStore } from "../agents/auth-profiles.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { createEmptyPluginRegistry } from "../plugins/registry.js";
 import { setActivePluginRegistry } from "../plugins/runtime.js";
 import type { PluginWebSearchProviderEntry } from "../plugins/types.js";
@@ -20,8 +20,8 @@ vi.mock("../plugins/installed-plugin-index-records.js", () => ({
   loadInstalledPluginIndexInstallRecordsSync: () => ({}),
 }));
 
-export function asConfig(value: unknown): OpenClawConfig {
-  return value as OpenClawConfig;
+export function asConfig(value: unknown): DexConfig {
+  return value as DexConfig;
 }
 
 export function loadAuthStoreWithProfiles(

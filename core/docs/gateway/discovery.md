@@ -86,17 +86,17 @@ Security notes:
 Enable/disable/override:
 
 - `openclaw plugins enable bonjour` enables LAN multicast advertising.
-- `OPENCLAW_DISABLE_BONJOUR=1` disables advertising.
-- When the Bonjour plugin is enabled and `OPENCLAW_DISABLE_BONJOUR` is unset,
+- `DEX_DISABLE_BONJOUR=1` disables advertising.
+- When the Bonjour plugin is enabled and `DEX_DISABLE_BONJOUR` is unset,
   Bonjour advertises on normal hosts and auto-disables inside detected containers.
   Empty-config macOS Gateway startup enables the plugin automatically; Linux,
   Windows, and containerized deployments need explicit enablement.
   Use `0` only on host, macvlan, or another mDNS-capable network; use `1` to
   force-disable.
-- `gateway.bind` in `~/.openclaw/openclaw.json` controls the Gateway bind mode.
-- `OPENCLAW_SSH_PORT` overrides the SSH port advertised when `sshPort` is emitted.
-- `OPENCLAW_TAILNET_DNS` publishes a `tailnetDns` hint (MagicDNS).
-- `OPENCLAW_CLI_PATH` overrides the advertised CLI path.
+- `gateway.bind` in `~/.dex/openclaw.json` controls the Gateway bind mode.
+- `DEX_SSH_PORT` overrides the SSH port advertised when `sshPort` is emitted.
+- `DEX_TAILNET_DNS` publishes a `tailnetDns` hint (MagicDNS).
+- `DEX_CLI_PATH` overrides the advertised CLI path.
 
 ### 2) Tailnet (cross-network)
 

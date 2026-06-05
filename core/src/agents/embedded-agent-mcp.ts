@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { BundleMcpDiagnostic, BundleMcpServerConfig } from "../plugins/bundle-mcp.js";
 import type { PluginManifestRegistry } from "../plugins/manifest-registry.js";
 import { loadMergedBundleMcpConfig } from "./bundle-mcp-config.js";
@@ -10,7 +10,7 @@ type EmbeddedAgentMcpConfig = {
 
 export function loadEmbeddedAgentMcpConfig(params: {
   workspaceDir: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   manifestRegistry?: Pick<PluginManifestRegistry, "plugins">;
 }): EmbeddedAgentMcpConfig {
   const bundleMcp = loadMergedBundleMcpConfig({

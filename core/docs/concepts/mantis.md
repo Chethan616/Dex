@@ -118,24 +118,24 @@ VNC session, captures the desktop, pulls artifacts back to the local output
 directory, and writes the reconnect command into the report. The command defaults
 to the Hetzner provider because it is the first provider with working desktop/VNC
 coverage in the Mantis lane. Override it with `--provider`, `--crabbox-bin`, or
-`OPENCLAW_MANTIS_CRABBOX_PROVIDER` when running against another Crabbox fleet.
+`DEX_MANTIS_CRABBOX_PROVIDER` when running against another Crabbox fleet.
 
 Useful desktop smoke flags:
 
-- `--lease-id <cbx_...>` or `OPENCLAW_MANTIS_CRABBOX_LEASE_ID` reuses a warmed desktop.
+- `--lease-id <cbx_...>` or `DEX_MANTIS_CRABBOX_LEASE_ID` reuses a warmed desktop.
 - `--browser-url <url>` changes the page opened in the visible browser.
 - `--html-file <path>` renders a repo-local HTML artifact in the visible browser. Mantis uses this to capture the generated Discord status-reaction timeline through a real Crabbox desktop.
 - `--browser-profile-dir <remote-path>` reuses a remote Chrome user-data-dir so a persistent Mantis desktop can stay logged in between runs. Use this for the long-lived Discord Web viewer profile.
-- `--browser-profile-archive-env <name>` restores a base64 `.tgz` Chrome user-data-dir archive from the named environment variable before launching the browser. Use this for logged-in witnesses such as Discord Web. The default env var is `OPENCLAW_MANTIS_BROWSER_PROFILE_TGZ_B64`.
+- `--browser-profile-archive-env <name>` restores a base64 `.tgz` Chrome user-data-dir archive from the named environment variable before launching the browser. Use this for logged-in witnesses such as Discord Web. The default env var is `DEX_MANTIS_BROWSER_PROFILE_TGZ_B64`.
 - `--video-duration <seconds>` controls the MP4 capture length. Use a longer duration for slow logged-in web apps that need time to settle.
-- `--keep-lease` or `OPENCLAW_MANTIS_KEEP_VM=1` keeps a newly created passing lease open for VNC inspection. Failed runs keep the lease by default when one was created so an operator can reconnect.
+- `--keep-lease` or `DEX_MANTIS_KEEP_VM=1` keeps a newly created passing lease open for VNC inspection. Failed runs keep the lease by default when one was created so an operator can reconnect.
 - `--class`, `--idle-timeout`, and `--ttl` tune machine size and lease lifetime.
 
 For Discord Web evidence, Mantis uses a dedicated viewer account instead of a
 bot token. The live Discord API scenario remains the oracle: it creates the real
 thread, sends the SUT `thread-reply`, and checks the attachment through Discord
-REST. When `OPENCLAW_QA_DISCORD_CAPTURE_UI_METADATA=1` is set, the scenario also
-writes a Discord Web URL artifact. When `OPENCLAW_QA_DISCORD_KEEP_THREADS=1` is
+REST. When `DEX_QA_DISCORD_CAPTURE_UI_METADATA=1` is set, the scenario also
+writes a Discord Web URL artifact. When `DEX_QA_DISCORD_KEEP_THREADS=1` is
 set, it leaves that thread available long enough for a logged-in browser to open
 and record it.
 
@@ -176,12 +176,12 @@ remains the default when `--gateway-setup` is omitted.
 
 Required inputs for `--credential-source env`:
 
-- `OPENCLAW_QA_SLACK_CHANNEL_ID`
-- `OPENCLAW_QA_SLACK_DRIVER_BOT_TOKEN`
-- `OPENCLAW_QA_SLACK_SUT_BOT_TOKEN`
-- `OPENCLAW_QA_SLACK_SUT_APP_TOKEN`
-- `OPENCLAW_LIVE_OPENAI_KEY` for the remote model lane. If only
-  `OPENAI_API_KEY` is set locally, Mantis maps it to `OPENCLAW_LIVE_OPENAI_KEY`
+- `DEX_QA_SLACK_CHANNEL_ID`
+- `DEX_QA_SLACK_DRIVER_BOT_TOKEN`
+- `DEX_QA_SLACK_SUT_BOT_TOKEN`
+- `DEX_QA_SLACK_SUT_APP_TOKEN`
+- `DEX_LIVE_OPENAI_KEY` for the remote model lane. If only
+  `OPENAI_API_KEY` is set locally, Mantis maps it to `DEX_LIVE_OPENAI_KEY`
   before invoking Crabbox so Crabbox's `OPENCLAW_*` env forwarding can carry it
   into the VM.
 
@@ -198,7 +198,7 @@ Useful Slack desktop flags:
 - `--keep-lease` keeps the gateway VM open for VNC inspection after success; `--no-keep-lease` stops it after collecting artifacts.
 - `--slack-url <url>` opens a specific Slack Web URL. Without it, Mantis derives `https://app.slack.com/client/<team>/<channel>` from Slack `auth.test` when the SUT bot token is available.
 - `--slack-channel-id <id>` controls the Slack channel allowlist used by gateway setup.
-- `OPENCLAW_MANTIS_SLACK_BROWSER_PROFILE_DIR` controls the persistent Chrome profile inside the VM. The default is `$HOME/.config/openclaw-mantis/slack-chrome-profile`, so a manual Slack Web login survives reruns on the same lease.
+- `DEX_MANTIS_SLACK_BROWSER_PROFILE_DIR` controls the persistent Chrome profile inside the VM. The default is `$HOME/.config/openclaw-mantis/slack-chrome-profile`, so a manual Slack Web login survives reruns on the same lease.
 - `--credential-source convex --credential-role ci` uses the shared credential pool instead of direct Slack env tokens.
 - `--provider-mode`, `--model`, `--alt-model`, and `--fast` pass through to the Slack live lane.
 
@@ -601,17 +601,17 @@ a local operator-controlled secret file for local runs.
 
 Recommended secret names:
 
-- `OPENCLAW_QA_DISCORD_MANTIS_BOT_TOKEN`
-- `OPENCLAW_QA_DISCORD_DRIVER_BOT_TOKEN`
-- `OPENCLAW_QA_DISCORD_SUT_BOT_TOKEN`
-- `OPENCLAW_QA_DISCORD_GUILD_ID`
-- `OPENCLAW_QA_DISCORD_CHANNEL_ID`
-- `OPENCLAW_QA_DISCORD_NOTIFY_CHANNEL_ID`
-- `OPENCLAW_QA_REDACT_PUBLIC_METADATA=1` for public GitHub artifact uploads
-- `OPENCLAW_QA_CONVEX_SITE_URL`
-- `OPENCLAW_QA_CONVEX_SECRET_CI`
-- `OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR`
-- `OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN`
+- `DEX_QA_DISCORD_MANTIS_BOT_TOKEN`
+- `DEX_QA_DISCORD_DRIVER_BOT_TOKEN`
+- `DEX_QA_DISCORD_SUT_BOT_TOKEN`
+- `DEX_QA_DISCORD_GUILD_ID`
+- `DEX_QA_DISCORD_CHANNEL_ID`
+- `DEX_QA_DISCORD_NOTIFY_CHANNEL_ID`
+- `DEX_QA_REDACT_PUBLIC_METADATA=1` for public GitHub artifact uploads
+- `DEX_QA_CONVEX_SITE_URL`
+- `DEX_QA_CONVEX_SECRET_CI`
+- `DEX_QA_MANTIS_CRABBOX_COORDINATOR`
+- `DEX_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN`
 
 Long term, the Convex credential pool should remain the normal source for live
 transport credentials. GitHub secrets bootstrap the broker and fallback lanes.
@@ -631,7 +631,7 @@ The Mantis runner must never print:
 
 Public artifact uploads should also redact Discord target metadata such as bot,
 guild, channel, and message ids. The GitHub smoke workflow enables
-`OPENCLAW_QA_REDACT_PUBLIC_METADATA=1` for this reason.
+`DEX_QA_REDACT_PUBLIC_METADATA=1` for this reason.
 
 If a token is accidentally pasted into an issue, PR, chat, or log, rotate it
 after the new secret has been stored.

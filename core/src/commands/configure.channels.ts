@@ -4,7 +4,7 @@ import { listChatChannels } from "../channels/chat-meta.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import { CONFIG_PATH } from "../config/config.js";
 import { isBlockedObjectKey } from "../config/prototype-keys.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { shortenHomePath } from "../utils.js";
 import { confirm, select } from "./configure.shared.js";
@@ -29,7 +29,7 @@ const RESERVED_CHANNEL_CONFIG_KEYS = new Set(["defaults", "modelByChannel"]);
 const DONE_VALUE: Extract<ChannelRemovalSelectValue, { kind: "done" }> = { kind: "done" };
 
 function listConfiguredChannelRemovalChoices(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): ConfiguredChannelRemovalChoice[] {
   const channels = cfg.channels;
   if (!channels) {
@@ -67,9 +67,9 @@ function compareChannelRemovalChoices(
 }
 
 export async function removeChannelConfigWizard(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   runtime: RuntimeEnv,
-): Promise<OpenClawConfig> {
+): Promise<DexConfig> {
   const next = { ...cfg };
 
   while (true) {
@@ -120,7 +120,7 @@ export async function removeChannelConfigWizard(
     const nextChannels: Record<string, unknown> = { ...next.channels };
     delete nextChannels[channel];
     if (Object.keys(nextChannels).length) {
-      next.channels = nextChannels as OpenClawConfig["channels"];
+      next.channels = nextChannels as DexConfig["channels"];
     } else {
       delete next.channels;
     }

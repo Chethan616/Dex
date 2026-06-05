@@ -4,7 +4,7 @@ export {
   fetchWithSsrFGuard,
   isBlockedHostnameOrIp,
   type LookupFn,
-  type OpenClawConfig,
+  type DexConfig,
   type ReplyPayload,
   type RuntimeEnv,
   SsrFBlockedError,

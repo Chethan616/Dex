@@ -40,7 +40,7 @@ function readConfiguredBasePath(): string | null {
   if (typeof window === "undefined") {
     return null;
   }
-  const value = (window as WindowWithControlUiBasePath)["__OPENCLAW_CONTROL_UI_BASE_PATH__"];
+  const value = (window as WindowWithControlUiBasePath)["__DEX_CONTROL_UI_BASE_PATH__"];
   return typeof value === "string" ? value : null;
 }
 

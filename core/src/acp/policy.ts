@@ -1,5 +1,5 @@
 import { AcpRuntimeError } from "@dexagent/acp-core/runtime/errors";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { normalizeAgentId } from "../routing/session-key.js";
 
 const ACP_DISABLED_MESSAGE = "ACP is disabled by policy (`acp.enabled=false`).";
@@ -8,11 +8,11 @@ const ACP_DISPATCH_DISABLED_MESSAGE =
 
 export type AcpDispatchPolicyState = "enabled" | "acp_disabled" | "dispatch_disabled";
 
-export function isAcpEnabledByPolicy(cfg: OpenClawConfig): boolean {
+export function isAcpEnabledByPolicy(cfg: DexConfig): boolean {
   return cfg.acp?.enabled !== false;
 }
 
-export function resolveAcpDispatchPolicyState(cfg: OpenClawConfig): AcpDispatchPolicyState {
+export function resolveAcpDispatchPolicyState(cfg: DexConfig): AcpDispatchPolicyState {
   if (!isAcpEnabledByPolicy(cfg)) {
     return "acp_disabled";
   }
@@ -23,11 +23,11 @@ export function resolveAcpDispatchPolicyState(cfg: OpenClawConfig): AcpDispatchP
   return "enabled";
 }
 
-export function isAcpDispatchEnabledByPolicy(cfg: OpenClawConfig): boolean {
+export function isAcpDispatchEnabledByPolicy(cfg: DexConfig): boolean {
   return resolveAcpDispatchPolicyState(cfg) === "enabled";
 }
 
-export function resolveAcpDispatchPolicyMessage(cfg: OpenClawConfig): string | null {
+export function resolveAcpDispatchPolicyMessage(cfg: DexConfig): string | null {
   const state = resolveAcpDispatchPolicyState(cfg);
   if (state === "acp_disabled") {
     return ACP_DISABLED_MESSAGE;
@@ -38,7 +38,7 @@ export function resolveAcpDispatchPolicyMessage(cfg: OpenClawConfig): string | n
   return null;
 }
 
-export function resolveAcpDispatchPolicyError(cfg: OpenClawConfig): AcpRuntimeError | null {
+export function resolveAcpDispatchPolicyError(cfg: DexConfig): AcpRuntimeError | null {
   const message = resolveAcpDispatchPolicyMessage(cfg);
   if (!message) {
     return null;
@@ -46,14 +46,14 @@ export function resolveAcpDispatchPolicyError(cfg: OpenClawConfig): AcpRuntimeEr
   return new AcpRuntimeError("ACP_DISPATCH_DISABLED", message);
 }
 
-export function resolveAcpExplicitTurnPolicyError(cfg: OpenClawConfig): AcpRuntimeError | null {
+export function resolveAcpExplicitTurnPolicyError(cfg: DexConfig): AcpRuntimeError | null {
   if (isAcpEnabledByPolicy(cfg)) {
     return null;
   }
   return new AcpRuntimeError("ACP_DISPATCH_DISABLED", ACP_DISABLED_MESSAGE);
 }
 
-export function isAcpAgentAllowedByPolicy(cfg: OpenClawConfig, agentId: string): boolean {
+export function isAcpAgentAllowedByPolicy(cfg: DexConfig, agentId: string): boolean {
   const allowed = (cfg.acp?.allowedAgents ?? [])
     .map((entry) => normalizeAgentId(entry))
     .filter(Boolean);
@@ -64,7 +64,7 @@ export function isAcpAgentAllowedByPolicy(cfg: OpenClawConfig, agentId: string):
 }
 
 export function resolveAcpAgentPolicyError(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   agentId: string,
 ): AcpRuntimeError | null {
   if (isAcpAgentAllowedByPolicy(cfg, agentId)) {

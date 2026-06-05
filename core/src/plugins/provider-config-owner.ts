@@ -1,5 +1,5 @@
 import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 const CORE_BUILT_IN_MODEL_APIS = new Set([
   "anthropic-messages",
@@ -14,7 +14,7 @@ const CORE_BUILT_IN_MODEL_APIS = new Set([
 
 export function resolveProviderConfigApiOwnerHint(params: {
   provider: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): string | undefined {
   const providers = params.config?.models?.providers;
   if (!providers) {

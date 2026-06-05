@@ -7,8 +7,8 @@ import {
   buildJsonPluginConfigSchema,
   definePluginEntry,
   type AnyAgentTool,
-  type OpenClawPluginApi,
-  type OpenClawPluginToolContext,
+  type DexPluginApi,
+  type DexPluginToolContext,
 } from "./plugin-entry.js";
 
 const EMPTY_TOOL_PLUGIN_CONFIG_SCHEMA = Type.Object({}, { additionalProperties: false });
@@ -16,7 +16,7 @@ const EMPTY_TOOL_PLUGIN_CONFIG_SCHEMA = Type.Object({}, { additionalProperties: 
 export const toolPluginMetadataSymbol = Symbol.for("openclaw.plugin-sdk.tool-plugin.metadata");
 
 export type ToolPluginExecutionContext = {
-  api: OpenClawPluginApi;
+  api: DexPluginApi;
   signal?: AbortSignal;
   toolCallId: string;
   onUpdate?: AgentToolUpdateCallback;
@@ -31,9 +31,9 @@ type ToolPluginToolFactory<TConfig> = <TParamsSchema extends TSchema>(
 ) => DefinedToolPluginTool;
 
 export type ToolPluginFactoryContext<TConfig> = {
-  api: OpenClawPluginApi;
+  api: DexPluginApi;
   config: TConfig;
-  toolContext: OpenClawPluginToolContext;
+  toolContext: DexPluginToolContext;
 };
 
 type ToolPluginToolDefinitionBase<TParamsSchema extends TSchema> = {

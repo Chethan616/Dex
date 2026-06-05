@@ -409,7 +409,7 @@ Current bundled behavior:
 When bundle MCP is enabled, OpenClaw:
 
 - spawns a loopback HTTP MCP server that exposes gateway tools to the CLI process
-- authenticates the bridge with a per-session token (`OPENCLAW_MCP_TOKEN`)
+- authenticates the bridge with a per-session token (`DEX_MCP_TOKEN`)
 - scopes tool access to the current session, account, and channel context
 - loads enabled bundle-MCP servers for the current workspace
 - merges them with any existing backend MCP config/settings shape

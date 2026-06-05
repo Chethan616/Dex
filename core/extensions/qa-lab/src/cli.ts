@@ -627,8 +627,8 @@ export function registerQaLabCli(program: Command) {
   credentials
     .command("doctor")
     .description("Check Convex credential broker env and admin reachability")
-    .option("--site-url <url>", "Override OPENCLAW_QA_CONVEX_SITE_URL")
-    .option("--endpoint-prefix <path>", "Override OPENCLAW_QA_CONVEX_ENDPOINT_PREFIX")
+    .option("--site-url <url>", "Override DEX_QA_CONVEX_SITE_URL")
+    .option("--endpoint-prefix <path>", "Override DEX_QA_CONVEX_ENDPOINT_PREFIX")
     .option("--actor-id <id>", "Optional admin actor id to include in broker audit events")
     .option("--json", "Emit machine-readable JSON output", false)
     .action(
@@ -649,8 +649,8 @@ export function registerQaLabCli(program: Command) {
     .requiredOption("--payload-file <path>", "JSON object file containing the credential payload")
     .option("--repo-root <path>", "Repository root for resolving relative payload-file paths")
     .option("--note <text>", "Optional note stored with this credential row")
-    .option("--site-url <url>", "Override OPENCLAW_QA_CONVEX_SITE_URL")
-    .option("--endpoint-prefix <path>", "Override OPENCLAW_QA_CONVEX_ENDPOINT_PREFIX")
+    .option("--site-url <url>", "Override DEX_QA_CONVEX_SITE_URL")
+    .option("--endpoint-prefix <path>", "Override DEX_QA_CONVEX_ENDPOINT_PREFIX")
     .option("--actor-id <id>", "Optional admin actor id to include in broker audit events")
     .option("--json", "Emit machine-readable JSON output", false)
     .action(
@@ -672,8 +672,8 @@ export function registerQaLabCli(program: Command) {
     .command("remove")
     .description("Remove one credential from active use by disabling it")
     .requiredOption("--credential-id <id>", "Credential row id from the Convex pool")
-    .option("--site-url <url>", "Override OPENCLAW_QA_CONVEX_SITE_URL")
-    .option("--endpoint-prefix <path>", "Override OPENCLAW_QA_CONVEX_ENDPOINT_PREFIX")
+    .option("--site-url <url>", "Override DEX_QA_CONVEX_SITE_URL")
+    .option("--endpoint-prefix <path>", "Override DEX_QA_CONVEX_ENDPOINT_PREFIX")
     .option("--actor-id <id>", "Optional admin actor id to include in broker audit events")
     .option("--json", "Emit machine-readable JSON output", false)
     .action(
@@ -697,8 +697,8 @@ export function registerQaLabCli(program: Command) {
       parseQaCliPositiveIntegerOption(value, "--limit"),
     )
     .option("--show-secrets", "Include credential payload JSON in output", false)
-    .option("--site-url <url>", "Override OPENCLAW_QA_CONVEX_SITE_URL")
-    .option("--endpoint-prefix <path>", "Override OPENCLAW_QA_CONVEX_ENDPOINT_PREFIX")
+    .option("--site-url <url>", "Override DEX_QA_CONVEX_SITE_URL")
+    .option("--endpoint-prefix <path>", "Override DEX_QA_CONVEX_ENDPOINT_PREFIX")
     .option("--actor-id <id>", "Optional admin actor id to include in broker audit events")
     .option("--json", "Emit machine-readable JSON output", false)
     .action(

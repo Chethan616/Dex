@@ -52,12 +52,12 @@ export function readToolSearchGatewayFetchLimits(
 ): ToolSearchGatewayFetchLimits {
   return {
     bodyMaxBytes: readPositiveIntEnv(
-      "OPENCLAW_TOOL_SEARCH_GATEWAY_E2E_FETCH_BODY_MAX_BYTES",
+      "DEX_TOOL_SEARCH_GATEWAY_E2E_FETCH_BODY_MAX_BYTES",
       1024 * 1024,
       env,
     ),
     timeoutMs: readPositiveIntEnv(
-      "OPENCLAW_TOOL_SEARCH_GATEWAY_E2E_FETCH_TIMEOUT_MS",
+      "DEX_TOOL_SEARCH_GATEWAY_E2E_FETCH_TIMEOUT_MS",
       180_000,
       env,
     ),
@@ -483,9 +483,9 @@ async function runLane(params: {
     fakePluginDir: params.fakePluginDir,
   });
 
-  process.env.OPENCLAW_STATE_DIR = stateDir;
-  process.env.OPENCLAW_CONFIG_PATH = configPath;
-  process.env.OPENCLAW_TEST_FAST = "1";
+  process.env.DEX_STATE_DIR = stateDir;
+  process.env.DEX_CONFIG_PATH = configPath;
+  process.env.DEX_TEST_FAST = "1";
   resetConfigRuntimeState();
 
   const server = await startGatewayServer(gatewayPort, {

@@ -20,7 +20,7 @@ import type {
   ChannelApprovalCapability,
   ChannelOutboundPayloadHint,
 } from "openclaw/plugin-sdk/channel-contract";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { ReplyPayload } from "openclaw/plugin-sdk/reply-runtime";
 import { parseAgentSessionKey } from "openclaw/plugin-sdk/routing";
 import {
@@ -37,7 +37,7 @@ import { normalizeSignalMessagingTarget } from "./normalize.js";
 
 type ApprovalRequest = ExecApprovalRequest | PluginApprovalRequest;
 type ApprovalKind = "exec" | "plugin";
-type ApprovalForwardingConfig = NonNullable<NonNullable<OpenClawConfig["approvals"]>["exec"]>;
+type ApprovalForwardingConfig = NonNullable<NonNullable<DexConfig["approvals"]>["exec"]>;
 type ApprovalForwardingMode = NonNullable<ApprovalForwardingConfig["mode"]>;
 type ChannelApprovalForwardTarget = Parameters<
   NonNullable<
@@ -53,7 +53,7 @@ type SignalApprovalTarget = {
 const DEFAULT_APPROVAL_FORWARDING_MODE: ApprovalForwardingMode = "session";
 
 function isSignalApprovalTransportEnabled(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 }): boolean {
   return resolveSignalAccount({ cfg: params.cfg, accountId: params.accountId }).enabled;
@@ -120,7 +120,7 @@ const {
 } = signalApprovalRouteGates;
 
 export function isSignalNativeApprovalHandlerConfigured(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 }): boolean {
   return isSignalNativeApprovalHandlerConfiguredBase(params);
@@ -136,7 +136,7 @@ function resolveSignalSessionTargetFromSessionKey(sessionKey?: string | null): s
 }
 
 export function shouldSuppressLocalSignalExecApprovalPrompt(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   payload: ReplyPayload;
   hint?: ChannelOutboundPayloadHint;
@@ -170,7 +170,7 @@ function isSignalGroupTarget(to: string): boolean {
 }
 
 function resolveSignalOriginTarget(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   approvalKind?: ApprovalKind;
   request: ApprovalRequest;

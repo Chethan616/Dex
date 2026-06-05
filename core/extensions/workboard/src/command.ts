@@ -1,4 +1,4 @@
-import type { OpenClawPluginApi } from "../api.js";
+import type { DexPluginApi } from "../api.js";
 import { resolveWorkboardCardByIdOrPrefix } from "./card-lookup.js";
 import { dispatchAndStartWorkboardCards, type WorkboardSubagentRuntime } from "./dispatcher.js";
 import type { WorkboardStore } from "./store.js";
@@ -141,7 +141,7 @@ export async function handleWorkboardCommand(params: {
 }
 
 export function registerWorkboardCommand(params: {
-  api: OpenClawPluginApi;
+  api: DexPluginApi;
   store: WorkboardStore;
 }): void {
   params.api.registerCommand({

@@ -60,17 +60,17 @@ const allowFailing = new Set(
 );
 const timeoutOption = optionValue(
   "--timeout-ms",
-  "OPENCLAW_UPGRADE_SURVIVOR_PROBE_TIMEOUT_MS",
+  "DEX_UPGRADE_SURVIVOR_PROBE_TIMEOUT_MS",
   "60000",
 );
 const attemptTimeoutOption = optionValue(
   "--attempt-timeout-ms",
-  "OPENCLAW_UPGRADE_SURVIVOR_PROBE_ATTEMPT_TIMEOUT_MS",
+  "DEX_UPGRADE_SURVIVOR_PROBE_ATTEMPT_TIMEOUT_MS",
   "5000",
 );
 const maxBodyOption = optionValue(
   "--max-body-bytes",
-  "OPENCLAW_UPGRADE_SURVIVOR_PROBE_MAX_BODY_BYTES",
+  "DEX_UPGRADE_SURVIVOR_PROBE_MAX_BODY_BYTES",
   "1048576",
 );
 const timeoutMs = readStrictInteger({ ...timeoutOption, allowZero: true });

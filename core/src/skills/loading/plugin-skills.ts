@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { isAcpRuntimeSpawnAvailable } from "../../acp/runtime/availability.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { walkDirectorySync } from "../../infra/fs-safe.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import {
@@ -20,7 +20,7 @@ type PluginSkillLinkType = "dir" | "junction";
 
 export function resolvePluginSkillDirs(params: {
   workspaceDir: string | undefined;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   /** Override the plugin skills directory for testing. */
   pluginSkillsDir?: string;
 }): string[] {
@@ -188,7 +188,7 @@ function hasPublishableSkillFile(params: { skillDir: string; rootDir: string }):
 
 /**
  * Creates symlinks from each resolved plugin skill directory into the
- * plugin skills directory (~/.openclaw/plugin-skills/) so the agent SDK can
+ * plugin skills directory (~/.dex/plugin-skills/) so the agent SDK can
  * discover them at the conventional file-system path.
  *
  * The plugin-skills directory is fully owned by OpenClaw — every entry is

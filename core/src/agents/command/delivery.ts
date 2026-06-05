@@ -11,7 +11,7 @@ import { getChannelPlugin, normalizeChannelId } from "../../channels/plugins/ind
 import { createReplyPrefixContext } from "../../channels/reply-prefix.js";
 import { createOutboundSendDeps, type CliDeps } from "../../cli/outbound-send-deps.js";
 import type { SessionEntry } from "../../config/sessions.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import {
   resolveAgentDeliveryPlanWithSessionRoute,
@@ -94,7 +94,7 @@ type FreshSessionDeliveryRefreshParams =
     };
 
 type DeliverAgentCommandResultParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   deps: CliDeps;
   runtime: RuntimeEnv;
   opts: AgentCommandOpts;
@@ -311,7 +311,7 @@ function noVisiblePayloadStatus(): AgentCommandDeliveryStatus {
 }
 
 async function normalizeReplyMediaPathsForDelivery(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   payloads: ReplyPayload[];
   sessionKey?: string;
   outboundSession: OutboundSessionContext | undefined;
@@ -344,7 +344,7 @@ async function normalizeReplyMediaPathsForDelivery(params: {
 }
 
 export function normalizeAgentCommandReplyPayloads(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   opts: AgentCommandOpts;
   outboundSession: OutboundSessionContext | undefined;
   payloads: RunResult["payloads"];

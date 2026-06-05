@@ -1,23 +1,23 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { VERSION } from "../version.js";
-import { OpenClawChannelBridge } from "./channel-bridge.js";
+import { DexChannelBridge } from "./channel-bridge.js";
 import { ClaudePermissionRequestSchema, type ClaudeChannelMode } from "./channel-shared.js";
 import { getChannelMcpCapabilities, registerChannelMcpTools } from "./channel-tools.js";
 
-export { OpenClawChannelBridge } from "./channel-bridge.js";
+export { DexChannelBridge } from "./channel-bridge.js";
 
-export type OpenClawMcpServeOptions = {
+export type DexMcpServeOptions = {
   gatewayUrl?: string;
   gatewayToken?: string;
   gatewayPassword?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   claudeChannelMode?: ClaudeChannelMode;
   verbose?: boolean;
 };
 
-async function resolveMcpConfig(config: OpenClawConfig | undefined): Promise<OpenClawConfig> {
+async function resolveMcpConfig(config: DexConfig | undefined): Promise<DexConfig> {
   if (config) {
     return config;
   }
@@ -25,9 +25,9 @@ async function resolveMcpConfig(config: OpenClawConfig | undefined): Promise<Ope
   return getRuntimeConfig();
 }
 
-export async function createOpenClawChannelMcpServer(opts: OpenClawMcpServeOptions = {}): Promise<{
+export async function createOpenClawChannelMcpServer(opts: DexMcpServeOptions = {}): Promise<{
   server: McpServer;
-  bridge: OpenClawChannelBridge;
+  bridge: DexChannelBridge;
   start: () => Promise<void>;
   close: () => Promise<void>;
 }> {
@@ -38,7 +38,7 @@ export async function createOpenClawChannelMcpServer(opts: OpenClawMcpServeOptio
     { name: "openclaw", version: VERSION },
     capabilities ? { capabilities } : undefined,
   );
-  const bridge = new OpenClawChannelBridge(cfg, {
+  const bridge = new DexChannelBridge(cfg, {
     gatewayUrl: opts.gatewayUrl,
     gatewayToken: opts.gatewayToken,
     gatewayPassword: opts.gatewayPassword,
@@ -70,7 +70,7 @@ export async function createOpenClawChannelMcpServer(opts: OpenClawMcpServeOptio
   };
 }
 
-export async function serveOpenClawChannelMcp(opts: OpenClawMcpServeOptions = {}): Promise<void> {
+export async function serveOpenClawChannelMcp(opts: DexMcpServeOptions = {}): Promise<void> {
   const { server, start, close } = await createOpenClawChannelMcpServer(opts);
   const transport = new StdioServerTransport();
 

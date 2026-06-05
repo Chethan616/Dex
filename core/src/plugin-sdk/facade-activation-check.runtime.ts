@@ -8,7 +8,7 @@ import {
   getRuntimeConfigSnapshot,
   getRuntimeConfigSourceSnapshot,
 } from "../config/runtime-snapshot.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { resolveBundledPluginsDir } from "../plugins/bundled-dir.js";
 import {
   createPluginActivationSource,
@@ -29,7 +29,7 @@ const ALWAYS_ALLOWED_RUNTIME_DIR_NAMES = new Set([
   "media-understanding-core",
   "speech-core",
 ]);
-const EMPTY_FACADE_BOUNDARY_CONFIG: OpenClawConfig = {};
+const EMPTY_FACADE_BOUNDARY_CONFIG: DexConfig = {};
 
 export type FacadePluginManifestLike = Pick<
   PluginManifestRecord,
@@ -42,7 +42,7 @@ type FacadeModuleLocation = {
 };
 
 function readFacadeBoundaryConfigSafely(): {
-  rawConfig: OpenClawConfig;
+  rawConfig: DexConfig;
 } {
   try {
     const sourceSnapshot = getRuntimeConfigSourceSnapshot();
@@ -61,7 +61,7 @@ function readFacadeBoundaryConfigSafely(): {
     const parsed = JSON5.parse(raw);
     const rawConfig =
       parsed && typeof parsed === "object"
-        ? (parsed as OpenClawConfig)
+        ? (parsed as DexConfig)
         : EMPTY_FACADE_BOUNDARY_CONFIG;
     return { rawConfig };
   } catch {
@@ -288,7 +288,7 @@ export function resolveBundledPluginPublicSurfaceAccess(params: {
 export function evaluateBundledPluginPublicSurfaceAccess(params: {
   params: { dirName: string; artifactBasename: string };
   manifestRecord: FacadePluginManifestLike;
-  config: OpenClawConfig;
+  config: DexConfig;
   normalizedPluginsConfig: ReturnType<typeof normalizePluginsConfig>;
   activationSource: ReturnType<typeof createPluginActivationSource>;
   autoEnabledReasons: Record<string, string[]>;

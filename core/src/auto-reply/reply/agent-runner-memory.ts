@@ -30,7 +30,7 @@ import {
   applySessionStoreEntryPatch,
   updateSessionStoreEntry,
 } from "../../config/sessions.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { readSessionMessagesAsync } from "../../gateway/session-utils.fs.js";
 import { logVerbose } from "../../globals.js";
 import { emitAgentEvent, registerAgentRunContext } from "../../infra/agent-events.js";
@@ -233,7 +233,7 @@ function resolveMemoryFlushRuntimeOverrideForProvider(params: {
 }
 
 function resolveFollowupContextConfigProvider(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   followupRun: FollowupRun;
   sessionEntry?: SessionEntry;
   sessionKey?: string;
@@ -248,7 +248,7 @@ function resolveFollowupContextConfigProvider(params: {
 }
 
 function resolveFollowupAgentRuntimeId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   followupRun: FollowupRun;
   sessionEntry?: SessionEntry;
   sessionKey?: string;
@@ -285,7 +285,7 @@ function resolveFollowupAgentRuntimeId(params: {
 }
 
 function followupUsesCodexRuntime(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   followupRun: FollowupRun;
   sessionEntry?: SessionEntry;
   sessionKey?: string;
@@ -429,7 +429,7 @@ type SessionLogSnapshot = {
 };
 
 async function appendPostCompactionRefreshPrompt(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   followupRun: FollowupRun;
 }): Promise<void> {
   const refreshPrompt = await readPostCompactionContext(params.followupRun.run.workspaceDir, {
@@ -674,7 +674,7 @@ async function estimatePromptTokensFromSessionTranscript(params: {
 }
 
 export async function runPreflightCompactionIfNeeded(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   followupRun: FollowupRun;
   promptForEstimate?: string;
   defaultModel: string;
@@ -952,7 +952,7 @@ export async function runPreflightCompactionIfNeeded(params: {
 }
 
 export async function runMemoryFlushIfNeeded(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   followupRun: FollowupRun;
   promptForEstimate?: string;
   sessionCtx: TemplateContext;

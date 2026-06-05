@@ -9,7 +9,7 @@ read_when:
 ---
 
 Most skills configuration lives under `skills` in
-`~/.openclaw/openclaw.json`. Agent-specific visibility lives under
+`~/.dex/openclaw.json`. Agent-specific visibility lives under
 `agents.defaults.skills` and `agents.list[].skills`.
 
 ```json5
@@ -204,7 +204,7 @@ With this config, `<workspace>/skills/manager -> ~/Projects/manager/skills` is
 accepted after realpath resolution. `extraDirs` scans the sibling repo directly;
 `allowSymlinkTargets` preserves the symlinked path for existing layouts.
 
-Managed `~/.openclaw/skills` and personal `~/.agents/skills` directories
+Managed `~/.dex/skills` and personal `~/.agents/skills` directories
 already accept skill-directory symlinks (per-skill `SKILL.md` containment still
 applies).
 
@@ -245,7 +245,7 @@ Pass secrets into a Docker sandbox with:
 workspace/skills      (highest)
 workspace/.agents/skills
 ~/.agents/skills
-~/.openclaw/skills
+~/.dex/skills
 bundled skills
 skills.load.extraDirs (lowest)
 ```

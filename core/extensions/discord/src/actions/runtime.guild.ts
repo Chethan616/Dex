@@ -9,7 +9,7 @@ import {
   readStringArrayParam,
   readStringParam,
   type DiscordActionConfig,
-  type OpenClawConfig,
+  type DexConfig,
 } from "../runtime-api.js";
 import {
   addRoleDiscord,
@@ -69,7 +69,7 @@ export const discordGuildActionRuntime = {
   uploadStickerDiscord,
 };
 
-type DiscordRoleMutationOpts = { cfg: OpenClawConfig; accountId?: string };
+type DiscordRoleMutationOpts = { cfg: DexConfig; accountId?: string };
 type DiscordRoleMutation = (
   params: {
     guildId: string;
@@ -178,7 +178,7 @@ function assertGuildAdminActionEnabled(
 async function resolveGuildIdForGuildAdminAction(params: {
   values: Record<string, unknown>;
   accountId?: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): Promise<string | undefined> {
   const guildId = readStringParam(params.values, "guildId");
   if (guildId) {
@@ -212,7 +212,7 @@ async function resolveGuildAdminActionPermissions(params: {
   action: string;
   values: Record<string, unknown>;
   accountId?: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   guard: GuildAdminActionGuard;
 }) {
   if (params.action !== "channelEdit") {
@@ -254,7 +254,7 @@ async function verifySenderGuildAdminPermission(params: {
   action: string;
   values: Record<string, unknown>;
   accountId?: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }) {
   const guard = guildAdminActionGuards[params.action];
   const senderUserId = readStringParam(params.values, "senderUserId");
@@ -329,7 +329,7 @@ async function verifySenderGuildAdminPermission(params: {
 }
 
 async function runRoleMutation(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string;
   values: Record<string, unknown>;
   mutate: DiscordRoleMutation;
@@ -354,7 +354,7 @@ export async function handleDiscordGuildAction(
   action: string,
   params: Record<string, unknown>,
   isActionEnabled: ActionGate<DiscordActionConfig>,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   options?: { mediaLocalRoots?: readonly string[] },
 ): Promise<AgentToolResult<unknown>> {
   const accountId = readStringParam(params, "accountId");

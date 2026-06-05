@@ -25,13 +25,13 @@ import type { CodexSandboxPolicy, CodexTurnEnvironmentParams } from "./protocol.
 import type { CodexSandboxExecEnvironment } from "./sandbox-exec-server.js";
 import { filterToolsForVisionInputs } from "./vision-tools.js";
 
-type OpenClawCodingToolsOptions = NonNullable<
-  Parameters<(typeof import("openclaw/plugin-sdk/agent-harness"))["createOpenClawCodingTools"]>[0]
+type DexCodingToolsOptions = NonNullable<
+  Parameters<(typeof import("openclaw/plugin-sdk/agent-harness"))["createDexCodingTools"]>[0]
 >;
-export type OpenClawCodingToolsFactory =
-  (typeof import("openclaw/plugin-sdk/agent-harness"))["createOpenClawCodingTools"];
-type OpenClawDynamicTool = ReturnType<OpenClawCodingToolsFactory>[number];
-type OpenClawSandboxContext = Awaited<ReturnType<typeof resolveSandboxContext>>;
+export type DexCodingToolsFactory =
+  (typeof import("openclaw/plugin-sdk/agent-harness"))["createDexCodingTools"];
+type DexDynamicTool = ReturnType<DexCodingToolsFactory>[number];
+type DexSandboxContext = Awaited<ReturnType<typeof resolveSandboxContext>>;
 type CodexDynamicToolBuildEvent = Parameters<
   NonNullable<EmbeddedRunAttemptParams["onAgentEvent"]>
 >[0];
@@ -52,7 +52,7 @@ export type DynamicToolBuildParams = {
   effectiveWorkspace: string;
   effectiveCwd?: string;
   sandboxSessionKey: string;
-  sandbox: OpenClawSandboxContext;
+  sandbox: DexSandboxContext;
   nativeToolSurfaceEnabled?: boolean;
   runAbortController: AbortController;
   sessionAgentId: string;
@@ -64,20 +64,20 @@ export type DynamicToolBuildParams = {
   onCodexAppServerEvent?: (event: CodexDynamicToolBuildEvent) => void;
 };
 
-let openClawCodingToolsFactoryForTests: OpenClawCodingToolsFactory | undefined;
+let openClawCodingToolsFactoryForTests: DexCodingToolsFactory | undefined;
 
-export function setOpenClawCodingToolsFactoryForTests(factory: OpenClawCodingToolsFactory): void {
+export function setDexCodingToolsFactoryForTests(factory: DexCodingToolsFactory): void {
   openClawCodingToolsFactoryForTests = factory;
 }
 
-export function resetOpenClawCodingToolsFactoryForTests(): void {
+export function resetDexCodingToolsFactoryForTests(): void {
   openClawCodingToolsFactoryForTests = undefined;
 }
 
-export function resolveOpenClawCodingToolsSessionKeys(
+export function resolveDexCodingToolsSessionKeys(
   params: EmbeddedRunAttemptParams,
   sandboxSessionKey: string,
-): Pick<OpenClawCodingToolsOptions, "sessionKey" | "runSessionKey"> {
+): Pick<DexCodingToolsOptions, "sessionKey" | "runSessionKey"> {
   return {
     sessionKey: sandboxSessionKey,
     runSessionKey:
@@ -179,12 +179,12 @@ export async function buildDynamicTools(input: DynamicToolBuildParams) {
   });
   const modelHasVision = params.model.input?.includes("image") ?? false;
   const agentDir = params.agentDir ?? resolveAgentDir(params.config ?? {}, input.sessionAgentId);
-  const createOpenClawCodingTools =
+  const createDexCodingTools =
     openClawCodingToolsFactoryForTests ??
-    (await import("openclaw/plugin-sdk/agent-harness")).createOpenClawCodingTools;
+    (await import("openclaw/plugin-sdk/agent-harness")).createDexCodingTools;
   toolBuildStages.mark("load-agent-harness-tools");
-  const sessionKeys = resolveOpenClawCodingToolsSessionKeys(params, input.sandboxSessionKey);
-  const allTools = createOpenClawCodingTools({
+  const sessionKeys = resolveDexCodingToolsSessionKeys(params, input.sandboxSessionKey);
+  const allTools = createDexCodingTools({
     agentId: input.sessionAgentId,
     ...buildEmbeddedAttemptToolRunContext(params),
     exec: {
@@ -228,7 +228,7 @@ export async function buildDynamicTools(input: DynamicToolBuildParams) {
     modelId: params.modelId,
     modelCompat:
       params.model.compat && typeof params.model.compat === "object"
-        ? (params.model.compat as OpenClawCodingToolsOptions["modelCompat"])
+        ? (params.model.compat as DexCodingToolsOptions["modelCompat"])
         : undefined,
     modelApi: params.model.api,
     modelContextWindowTokens: params.model.contextWindow,
@@ -368,7 +368,7 @@ export function includeForcedCodexDynamicToolAllow(
 
 export function shouldEnableCodexAppServerNativeToolSurface(
   params: EmbeddedRunAttemptParams,
-  sandbox?: OpenClawSandboxContext,
+  sandbox?: DexSandboxContext,
   options: {
     agentId?: string;
     runtimeSessionKey?: string;
@@ -405,7 +405,7 @@ export function isCodexNativeExecutionBlockedByNodeExecHost(
   options: {
     agentId?: string;
     runtimeSessionKey?: string;
-    sandbox?: OpenClawSandboxContext;
+    sandbox?: DexSandboxContext;
   } = {},
 ): boolean {
   return !resolveCodexNativeExecutionPolicy({
@@ -432,7 +432,7 @@ function resolveCodexRuntimePolicySessionKey(
 }
 
 function canCodexAppServerNativeToolSurfaceHonorSandbox(
-  sandbox: OpenClawSandboxContext | undefined,
+  sandbox: DexSandboxContext | undefined,
   options: { sandboxExecServerEnabled?: boolean } = {},
 ): boolean {
   if (!sandbox?.enabled) {
@@ -473,7 +473,7 @@ function filterCodexMemoryFlushDynamicTools<T extends { name: string }>(tools: T
 }
 
 export function shouldRequireCodexSandboxExecServerEnvironment(params: {
-  sandbox?: OpenClawSandboxContext;
+  sandbox?: DexSandboxContext;
   nativeToolSurfaceEnabled: boolean;
   sandboxExecServerEnabled: boolean;
 }): boolean {
@@ -500,7 +500,7 @@ export function resolveCodexAppServerExecutionCwd(params: {
 }
 
 export function resolveCodexExternalSandboxPolicyForOpenClawSandbox(
-  sandbox: OpenClawSandboxContext | undefined,
+  sandbox: DexSandboxContext | undefined,
 ): CodexSandboxPolicy {
   return {
     type: "externalSandbox",
@@ -509,7 +509,7 @@ export function resolveCodexExternalSandboxPolicyForOpenClawSandbox(
 }
 
 function codexNetworkAccessForOpenClawSandbox(
-  sandbox: OpenClawSandboxContext | undefined,
+  sandbox: DexSandboxContext | undefined,
 ): boolean {
   if (sandbox?.backendId !== "docker") {
     return true;
@@ -530,10 +530,10 @@ export function disableCodexPluginThreadConfig(pluginConfig?: unknown): CodexPlu
 }
 
 export function addSandboxShellDynamicToolsIfAvailable(
-  filteredTools: OpenClawDynamicTool[],
-  allTools: OpenClawDynamicTool[],
+  filteredTools: DexDynamicTool[],
+  allTools: DexDynamicTool[],
   input: DynamicToolBuildParams,
-): OpenClawDynamicTool[] {
+): DexDynamicTool[] {
   if (
     !shouldExposeSandboxExecDynamicTool(input) ||
     isSandboxShellDynamicToolExcluded(input.pluginConfig)
@@ -547,7 +547,7 @@ export function addSandboxShellDynamicToolsIfAvailable(
   if (!execTool || !processTool) {
     return filteredTools;
   }
-  const sandboxExecTool: OpenClawDynamicTool = {
+  const sandboxExecTool: DexDynamicTool = {
     ...execTool,
     name: "sandbox_exec",
     description:
@@ -569,7 +569,7 @@ export function addSandboxShellDynamicToolsIfAvailable(
       };
     },
   };
-  const sandboxProcessTool: OpenClawDynamicTool = {
+  const sandboxProcessTool: DexDynamicTool = {
     ...processTool,
     name: "sandbox_process",
     description:
@@ -608,10 +608,10 @@ function isSandboxShellDynamicToolExcluded(config: CodexPluginConfig): boolean {
 }
 
 function addNodeShellDynamicToolsIfNeeded(
-  filteredTools: OpenClawDynamicTool[],
-  allTools: OpenClawDynamicTool[],
+  filteredTools: DexDynamicTool[],
+  allTools: DexDynamicTool[],
   input: DynamicToolBuildParams,
-): OpenClawDynamicTool[] {
+): DexDynamicTool[] {
   if (
     isCodexMemoryFlushRun(input.params) ||
     !isCodexNativeExecutionBlockedByNodeExecHost(input.params, {

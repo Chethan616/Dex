@@ -3,7 +3,7 @@ import { resolveSubagentLabel, sortSubagentRuns } from "../auto-reply/reply/suba
 import { resolveStorePath } from "../config/sessions/paths.js";
 import { loadSessionStore } from "../config/sessions/store-load.js";
 import type { SessionEntry } from "../config/sessions/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { parseAgentSessionKey, type ParsedAgentSessionKey } from "../routing/session-key.js";
 import {
   formatDurationCompact,
@@ -60,14 +60,14 @@ type SessionEntryResolution = {
   entry: SessionEntry | undefined;
 };
 
-function resolveStorePathForKey(cfg: OpenClawConfig, parsed?: ParsedAgentSessionKey | null) {
+function resolveStorePathForKey(cfg: DexConfig, parsed?: ParsedAgentSessionKey | null) {
   return resolveStorePath(cfg.session?.store, {
     agentId: parsed?.agentId,
   });
 }
 
 export function resolveSessionEntryForKey(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   key: string;
   cache: Map<string, Record<string, SessionEntry>>;
 }): SessionEntryResolution {
@@ -215,7 +215,7 @@ function buildListText(params: {
 }
 
 export function buildSubagentList(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   runs: SubagentRunRecord[];
   recentMinutes: number;
   taskMaxChars?: number;

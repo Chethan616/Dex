@@ -11,7 +11,7 @@ import type {
   EffectiveToolInventoryResult,
 } from "../../agents/tools-effective-inventory.types.js";
 import { buildRuntimeCompatibleMcpToolInventory } from "../../agents/tools-effective-mcp-inventory.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { toErrorObject } from "../../infra/errors.js";
 import { logDebug, logWarn } from "../../logger.js";
 import { stringifyRouteThreadId } from "../../plugin-sdk/channel-route.js";
@@ -45,7 +45,7 @@ const MCP_CONFIG_SUMMARY_CACHE_LIMIT = 128;
 let nowForToolsEffectiveCache = () => Date.now();
 
 type TrustedToolsEffectiveContext = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   sessionKey: string;
   sessionId: string;
@@ -234,7 +234,7 @@ async function resolveCachedBaseToolsEffective(params: {
 
 function resolveRequestedAgentIdOrRespondError(params: {
   rawAgentId: unknown;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   respond: RespondFn;
 }) {
   const knownAgents = listAgentIds(params.cfg);

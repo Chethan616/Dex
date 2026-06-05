@@ -1,9 +1,9 @@
 import { VERSION } from "../version.js";
-import type { ConfigFileSnapshot, OpenClawConfig } from "./types.js";
+import type { ConfigFileSnapshot, DexConfig } from "./types.js";
 import { shouldWarnOnTouchedVersion } from "./version.js";
 
 export const ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS_ENV =
-  "OPENCLAW_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS";
+  "DEX_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS";
 
 export type FutureConfigActionBlock = {
   action: string;
@@ -16,7 +16,7 @@ export type FutureConfigActionBlock = {
 type FutureConfigGuardParams = {
   action: string;
   snapshot?: Pick<ConfigFileSnapshot, "config" | "sourceConfig"> | null;
-  config?: Pick<OpenClawConfig, "meta"> | null;
+  config?: Pick<DexConfig, "meta"> | null;
   currentVersion?: string;
   env?: Record<string, string | undefined>;
 };

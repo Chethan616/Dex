@@ -53,11 +53,11 @@ export function createWorkspaceBootstrapSmokeEnv(env, homeDir, overrides = {}) {
     PATH: safePath,
     HOME: homeDir,
     USERPROFILE: homeDir,
-    OPENCLAW_HOME: homeDir,
-    OPENCLAW_NO_ONBOARD: "1",
-    OPENCLAW_SUPPRESS_NOTES: "1",
-    OPENCLAW_DISABLE_BUNDLED_PLUGINS: "1",
-    OPENCLAW_DISABLE_BUNDLED_ENTRY_SOURCE_FALLBACK: "1",
+    DEX_HOME: homeDir,
+    DEX_NO_ONBOARD: "1",
+    DEX_SUPPRESS_NOTES: "1",
+    DEX_DISABLE_BUNDLED_PLUGINS: "1",
+    DEX_DISABLE_BUNDLED_ENTRY_SOURCE_FALLBACK: "1",
     AWS_EC2_METADATA_DISABLED: "true",
     AWS_SHARED_CREDENTIALS_FILE: join(homeDir, ".aws", "credentials"),
     AWS_CONFIG_FILE: join(homeDir, ".aws", "config"),
@@ -133,7 +133,7 @@ export function runInstalledWorkspaceBootstrapSmoke(params) {
       );
     }
 
-    const workspaceDir = join(homeDir, ".openclaw", "workspace");
+    const workspaceDir = join(homeDir, ".dex", "workspace");
     const missingFiles = collectMissingBootstrapWorkspaceFiles(workspaceDir);
     if (missingFiles.length > 0) {
       const outputDetails = combinedOutput.length > 0 ? `\nCommand output:\n${combinedOutput}` : "";

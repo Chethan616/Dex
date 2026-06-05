@@ -21,7 +21,7 @@ import {
   asDateTimestampMs,
   resolveExpiresAtMsFromDurationMs,
 } from "@dexagent/normalization-core/number-coercion";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { resolveOpenClawPackageRootSync } from "../../infra/openclaw-root.js";
 import { privateFileStoreSync } from "../../infra/private-file-store.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
@@ -97,7 +97,7 @@ export type NativeHookRelayRegistration = {
   agentId?: string;
   sessionId: string;
   sessionKey?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   runId: string;
   channelId?: string;
   allowedEvents: readonly NativeHookRelayEvent[];
@@ -121,7 +121,7 @@ export type RegisterNativeHookRelayParams = {
   agentId?: string;
   sessionId: string;
   sessionKey?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   runId: string;
   channelId?: string;
   allowedEvents?: readonly NativeHookRelayEvent[];
@@ -2109,7 +2109,7 @@ function truncateText(value: string, maxLength: number): string {
 }
 
 function resolveOpenClawCliExecutable(): string {
-  const envPath = process.env.OPENCLAW_CLI_PATH?.trim();
+  const envPath = process.env.DEX_CLI_PATH?.trim();
   if (envPath && existsSync(envPath)) {
     return envPath;
   }

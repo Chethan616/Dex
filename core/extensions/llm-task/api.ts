@@ -2,5 +2,5 @@ export { resolvePreferredOpenClawTmpDir, withTempWorkspace } from "./src/runtime
 export {
   definePluginEntry,
   type AnyAgentTool,
-  type OpenClawPluginApi,
+  type DexPluginApi,
 } from "openclaw/plugin-sdk/plugin-entry";

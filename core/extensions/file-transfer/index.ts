@@ -1,7 +1,7 @@
 import {
   definePluginEntry,
   type AnyAgentTool,
-  type OpenClawPluginNodeHostCommand,
+  type DexPluginNodeHostCommand,
 } from "openclaw/plugin-sdk/plugin-entry";
 import { createLazyFileTransferNodeInvokePolicy } from "./src/shared/lazy-node-invoke-policy.js";
 import {
@@ -38,7 +38,7 @@ function createLazyTool(
   };
 }
 
-const fileTransferNodeHostCommands: OpenClawPluginNodeHostCommand[] = [
+const fileTransferNodeHostCommands: DexPluginNodeHostCommand[] = [
   {
     command: "file.fetch",
     cap: "file",

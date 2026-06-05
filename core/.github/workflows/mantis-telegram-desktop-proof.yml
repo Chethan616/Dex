@@ -45,8 +45,8 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NODE_VERSION: "24.x"
-  OPENCLAW_BUILD_PRIVATE_QA: "1"
-  OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+  DEX_BUILD_PRIVATE_QA: "1"
+  DEX_ENABLE_PRIVATE_QA_CLI: "1"
   CRABBOX_REF: main
   CRABBOX_AWS_REGION: us-east-1
   CRABBOX_CAPACITY_REGIONS: us-east-1
@@ -428,8 +428,8 @@ jobs:
             printf '%s\n' 'Defaults env_keep += "BASELINE_REF BASELINE_SHA CANDIDATE_REF CANDIDATE_SHA"'
             printf '%s\n' 'Defaults env_keep += "CRABBOX_ACCESS_CLIENT_ID CRABBOX_ACCESS_CLIENT_SECRET CRABBOX_COORDINATOR CRABBOX_COORDINATOR_TOKEN CRABBOX_AWS_REGION CRABBOX_CAPACITY_REGIONS CRABBOX_LEASE_ID CRABBOX_PROVIDER"'
             printf '%s\n' 'Defaults env_keep += "GH_TOKEN MANTIS_CANDIDATE_TRUST MANTIS_INSTRUCTIONS MANTIS_OUTPUT_DIR MANTIS_PR_NUMBER"'
-            printf '%s\n' 'Defaults env_keep += "OPENCLAW_BUILD_PRIVATE_QA OPENCLAW_ENABLE_PRIVATE_QA_CLI OPENCLAW_QA_CONVEX_SECRET_CI OPENCLAW_QA_CONVEX_SITE_URL OPENCLAW_QA_CREDENTIAL_OWNER_ID OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN"'
-            printf '%s\n' 'Defaults env_keep += "OPENCLAW_TELEGRAM_USER_CRABBOX_BIN OPENCLAW_TELEGRAM_USER_CRABBOX_PROVIDER OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT OPENCLAW_TELEGRAM_USER_PROOF_CMD"'
+            printf '%s\n' 'Defaults env_keep += "DEX_BUILD_PRIVATE_QA DEX_ENABLE_PRIVATE_QA_CLI DEX_QA_CONVEX_SECRET_CI DEX_QA_CONVEX_SITE_URL DEX_QA_CREDENTIAL_OWNER_ID DEX_QA_MANTIS_CRABBOX_COORDINATOR DEX_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN"'
+            printf '%s\n' 'Defaults env_keep += "DEX_TELEGRAM_USER_CRABBOX_BIN DEX_TELEGRAM_USER_CRABBOX_PROVIDER DEX_TELEGRAM_USER_DRIVER_SCRIPT DEX_TELEGRAM_USER_PROOF_CMD"'
           } | sudo tee /etc/sudoers.d/mantis-codex-env >/dev/null
           sudo chmod 0440 /etc/sudoers.d/mantis-codex-env
           codex_home="/tmp/mantis-codex-home-${GITHUB_RUN_ID}"
@@ -453,8 +453,8 @@ jobs:
           CANDIDATE_SHA: ${{ needs.validate_refs.outputs.candidate_revision }}
           CRABBOX_ACCESS_CLIENT_ID: ${{ secrets.CRABBOX_ACCESS_CLIENT_ID }}
           CRABBOX_ACCESS_CLIENT_SECRET: ${{ secrets.CRABBOX_ACCESS_CLIENT_SECRET }}
-          CRABBOX_COORDINATOR: ${{ secrets.CRABBOX_COORDINATOR || secrets.OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR }}
-          CRABBOX_COORDINATOR_TOKEN: ${{ secrets.CRABBOX_COORDINATOR_TOKEN || secrets.OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN }}
+          CRABBOX_COORDINATOR: ${{ secrets.CRABBOX_COORDINATOR || secrets.DEX_QA_MANTIS_CRABBOX_COORDINATOR }}
+          CRABBOX_COORDINATOR_TOKEN: ${{ secrets.CRABBOX_COORDINATOR_TOKEN || secrets.DEX_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN }}
           CRABBOX_AWS_REGION: ${{ env.CRABBOX_AWS_REGION }}
           CRABBOX_CAPACITY_REGIONS: ${{ env.CRABBOX_CAPACITY_REGIONS }}
           CRABBOX_LEASE_ID: ${{ needs.resolve_request.outputs.lease_id }}
@@ -464,15 +464,15 @@ jobs:
           MANTIS_INSTRUCTIONS: ${{ needs.resolve_request.outputs.instructions }}
           MANTIS_OUTPUT_DIR: ${{ env.MANTIS_OUTPUT_DIR }}
           MANTIS_PR_NUMBER: ${{ needs.resolve_request.outputs.pr_number }}
-          OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
-          OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-          OPENCLAW_QA_CREDENTIAL_OWNER_ID: mantis-telegram-desktop-${{ github.run_id }}-${{ github.run_attempt }}
-          OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR: ${{ secrets.OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR }}
-          OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN: ${{ secrets.OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN }}
-          OPENCLAW_TELEGRAM_USER_CRABBOX_BIN: /usr/local/bin/crabbox
-          OPENCLAW_TELEGRAM_USER_CRABBOX_PROVIDER: ${{ needs.resolve_request.outputs.crabbox_provider }}
-          OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT: ${{ github.workspace }}/scripts/e2e/telegram-user-driver.py
-          OPENCLAW_TELEGRAM_USER_PROOF_CMD: /usr/local/bin/openclaw-telegram-user-crabbox-proof
+          DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
+          DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+          DEX_QA_CREDENTIAL_OWNER_ID: mantis-telegram-desktop-${{ github.run_id }}-${{ github.run_attempt }}
+          DEX_QA_MANTIS_CRABBOX_COORDINATOR: ${{ secrets.DEX_QA_MANTIS_CRABBOX_COORDINATOR }}
+          DEX_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN: ${{ secrets.DEX_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN }}
+          DEX_TELEGRAM_USER_CRABBOX_BIN: /usr/local/bin/crabbox
+          DEX_TELEGRAM_USER_CRABBOX_PROVIDER: ${{ needs.resolve_request.outputs.crabbox_provider }}
+          DEX_TELEGRAM_USER_DRIVER_SCRIPT: ${{ github.workspace }}/scripts/e2e/telegram-user-driver.py
+          DEX_TELEGRAM_USER_PROOF_CMD: /usr/local/bin/openclaw-telegram-user-crabbox-proof
         with:
           openai-api-key: ${{ secrets.OPENCLAW_MANTIS_AGENT_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
           prompt-file: .github/codex/prompts/mantis-telegram-desktop-proof.md
@@ -489,8 +489,8 @@ jobs:
         if: ${{ always() }}
         env:
           CRABBOX_PROVIDER: ${{ needs.resolve_request.outputs.crabbox_provider }}
-          OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
-          OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
+          DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
+          DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
         shell: bash
         run: |
           set -euo pipefail
@@ -508,10 +508,10 @@ jobs:
               continue
             fi
             if ! sudo -u codex env \
-              OPENCLAW_QA_CONVEX_SECRET_CI="$OPENCLAW_QA_CONVEX_SECRET_CI" \
-              OPENCLAW_QA_CONVEX_SITE_URL="$OPENCLAW_QA_CONVEX_SITE_URL" \
-              OPENCLAW_TELEGRAM_USER_CRABBOX_BIN=/usr/local/bin/crabbox \
-              OPENCLAW_TELEGRAM_USER_CRABBOX_PROVIDER="$CRABBOX_PROVIDER" \
+              DEX_QA_CONVEX_SECRET_CI="$DEX_QA_CONVEX_SECRET_CI" \
+              DEX_QA_CONVEX_SITE_URL="$DEX_QA_CONVEX_SITE_URL" \
+              DEX_TELEGRAM_USER_CRABBOX_BIN=/usr/local/bin/crabbox \
+              DEX_TELEGRAM_USER_CRABBOX_PROVIDER="$CRABBOX_PROVIDER" \
               node --import tsx "$GITHUB_WORKSPACE/scripts/e2e/telegram-user-crabbox-proof.ts" \
                 finish --session "$session_file" --preview-crop telegram-window; then
               status=1
@@ -523,8 +523,8 @@ jobs:
               continue
             fi
             if ! sudo -u codex env \
-              OPENCLAW_QA_CONVEX_SECRET_CI="$OPENCLAW_QA_CONVEX_SECRET_CI" \
-              OPENCLAW_QA_CONVEX_SITE_URL="$OPENCLAW_QA_CONVEX_SITE_URL" \
+              DEX_QA_CONVEX_SECRET_CI="$DEX_QA_CONVEX_SECRET_CI" \
+              DEX_QA_CONVEX_SITE_URL="$DEX_QA_CONVEX_SITE_URL" \
               node --import tsx "$GITHUB_WORKSPACE/scripts/e2e/telegram-user-credential.ts" \
                 release --lease-file "$lease_file"; then
               status=1

@@ -17,7 +17,7 @@ function clampTtl(value: number | undefined) {
   return Math.min(Math.max(value, MIN_JOB_TTL_MS), MAX_JOB_TTL_MS);
 }
 
-let jobTtlMs = clampTtl(readEnvInt("OPENCLAW_BASH_JOB_TTL_MS", "PI_BASH_JOB_TTL_MS"));
+let jobTtlMs = clampTtl(readEnvInt("DEX_BASH_JOB_TTL_MS", "PI_BASH_JOB_TTL_MS"));
 
 export type ProcessStatus = "running" | "completed" | "failed" | "killed";
 

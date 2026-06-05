@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { RootHelpRenderOptions } from "../src/cli/program/root-help.js";
-import type { OpenClawConfig } from "../src/config/config.js";
+import type { DexConfig } from "../src/config/config.js";
 
 function dedupe(values: string[]): string[] {
   const seen = new Set<string>();
@@ -246,11 +246,11 @@ function createIsolatedRootHelpRenderContext(
     LC_ALL: process.env.LC_ALL ?? "C.UTF-8",
     TERM: process.env.TERM ?? "dumb",
     NO_COLOR: "1",
-    OPENCLAW_BUNDLED_PLUGINS_DIR: bundledPluginsDir,
-    OPENCLAW_DISABLE_BUNDLED_PLUGINS: "",
-    OPENCLAW_STATE_DIR: stateDir,
+    DEX_BUNDLED_PLUGINS_DIR: bundledPluginsDir,
+    DEX_DISABLE_BUNDLED_PLUGINS: "",
+    DEX_STATE_DIR: stateDir,
   };
-  const config: OpenClawConfig = {
+  const config: DexConfig = {
     agents: {
       defaults: {
         workspace: workspaceDir,
@@ -574,7 +574,7 @@ async function renderSourceBrowserHelpText(
       cwd: rootDir,
       env: {
         ...renderContext.env,
-        OPENCLAW_DISABLE_CLI_STARTUP_HELP_FAST_PATH: "1",
+        DEX_DISABLE_CLI_STARTUP_HELP_FAST_PATH: "1",
       },
       failureMessage: "Failed to render source browser help",
       timeoutMs: BROWSER_HELP_RENDER_TIMEOUT_MS,
@@ -590,7 +590,7 @@ async function renderSourceCommandHelpText(
     cwd: rootDir,
     env: {
       ...renderContext.env,
-      OPENCLAW_DISABLE_CLI_STARTUP_HELP_FAST_PATH: "1",
+      DEX_DISABLE_CLI_STARTUP_HELP_FAST_PATH: "1",
     },
     failureMessage: `Failed to render source ${command} help`,
     timeoutMs: COMMAND_HELP_RENDER_TIMEOUT_MS,

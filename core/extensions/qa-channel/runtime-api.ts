@@ -12,7 +12,7 @@ export {
   defineChannelPluginEntry,
   getChatChannelMeta,
   jsonResult,
-  type OpenClawConfig,
+  type DexConfig,
   type PluginRuntime,
   readStringParam,
   type RuntimeEnv,

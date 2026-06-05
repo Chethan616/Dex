@@ -118,7 +118,7 @@ body:
       placeholder: |
         Default route is openclaw -> cloudflare-ai-gateway -> minimax.
         Previous setup was openclaw -> cloudflare-ai-gateway -> openrouter -> minimax.
-        Relevant config lives in ~/.openclaw/openclaw.json under models.providers.minimax and models.providers.cloudflare-ai-gateway.
+        Relevant config lives in ~/.dex/openclaw.json under models.providers.minimax and models.providers.cloudflare-ai-gateway.
   - type: textarea
     id: logs
     attributes:

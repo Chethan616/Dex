@@ -1,6 +1,6 @@
 import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   isCliRuntimeModelBackendForProvider,
   listCliRuntimeModelBackendBindings,
@@ -14,7 +14,7 @@ import { resolveProviderIdForAuth } from "./provider-auth-aliases.js";
 /** True for CLI runtime provider ids such as `claude-cli` and `google-gemini-cli`. */
 export function isCliRuntimeProvider(
   provider: string,
-  params: { config?: OpenClawConfig; env?: NodeJS.ProcessEnv; includeSetupRegistry?: boolean } = {},
+  params: { config?: DexConfig; env?: NodeJS.ProcessEnv; includeSetupRegistry?: boolean } = {},
 ): boolean {
   const normalized = normalizeProviderId(provider);
   return listCliRuntimeProviderIds({
@@ -35,7 +35,7 @@ export function isCliRuntimeAlias(runtime: string | undefined): boolean {
 export function isCliRuntimeAliasForProvider(params: {
   runtime: string | undefined;
   provider: string | undefined;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): boolean {
   return isCliRuntimeModelBackendForProvider({
     provider: params.provider,
@@ -45,7 +45,7 @@ export function isCliRuntimeAliasForProvider(params: {
 }
 
 type RuntimeAliasComparisonOptions = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   env?: NodeJS.ProcessEnv;
   includeSetupRegistry?: boolean;
 };
@@ -129,7 +129,7 @@ export function shouldPreferActiveRuntimeAliasAuthLabel(params: {
 }
 
 function resolveConfiguredRuntime(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider: string;
   agentId?: string;
   modelId?: string;
@@ -147,7 +147,7 @@ function resolveConfiguredRuntime(params: {
 }
 
 function resolveProfileRuntimeAlias(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider: string;
   profileId: string;
 }): string | undefined {
@@ -176,7 +176,7 @@ function resolveProfileRuntimeAlias(params: {
 }
 
 function resolveCliRuntimeFromAuthProfile(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider: string;
   authProfileId?: string;
 }): string | undefined {
@@ -228,7 +228,7 @@ function resolveCliRuntimeFromAuthProfile(params: {
 
 export function resolveCliRuntimeExecutionProvider(params: {
   provider: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   agentId?: string;
   modelId?: string;
   authProfileId?: string;

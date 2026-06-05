@@ -9,7 +9,7 @@ import {
 import { formatChannelStatusState } from "../channels/plugins/status-state.js";
 import type { ChannelPlugin } from "../channels/plugins/types.plugin.js";
 import type { ChannelAccountSnapshot } from "../channels/plugins/types.public.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { DEFAULT_ACCOUNT_ID } from "../routing/session-key.js";
 import { formatTimeAgo } from "./format-time/format-relative.ts";
 
@@ -17,7 +17,7 @@ export type ChannelSummaryOptions = {
   colorize?: boolean;
   includeAllowFrom?: boolean;
   plugins?: readonly ChannelPlugin[];
-  sourceConfig?: OpenClawConfig;
+  sourceConfig?: DexConfig;
 };
 
 const DEFAULT_OPTIONS: Omit<Required<ChannelSummaryOptions>, "plugins" | "sourceConfig"> = {
@@ -44,14 +44,14 @@ const formatAccountLabel = (params: { accountId: string; name?: string }) => {
 const accountLine = (label: string, details: string[]) =>
   `  - ${label}${details.length ? ` (${details.join(", ")})` : ""}`;
 
-async function loadChannelSummaryConfig(): Promise<OpenClawConfig> {
+async function loadChannelSummaryConfig(): Promise<DexConfig> {
   const { getRuntimeConfig } = await import("../config/config.js");
   return getRuntimeConfig();
 }
 
 async function listChannelSummaryPlugins(params: {
-  cfg: OpenClawConfig;
-  sourceConfig: OpenClawConfig;
+  cfg: DexConfig;
+  sourceConfig: DexConfig;
 }): Promise<ChannelPlugin[]> {
   const { listReadOnlyChannelPluginsForConfig } = await import("../channels/plugins/read-only.js");
   return listReadOnlyChannelPluginsForConfig(params.cfg, {
@@ -63,7 +63,7 @@ async function listChannelSummaryPlugins(params: {
 const buildAccountDetails = (params: {
   entry: ChannelAccountEntry;
   plugin: ChannelPlugin;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   includeAllowFrom: boolean;
 }): string[] => {
   const details: string[] = [];
@@ -120,7 +120,7 @@ const buildAccountDetails = (params: {
 };
 
 export async function buildChannelSummary(
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
   options?: ChannelSummaryOptions,
 ): Promise<string[]> {
   const effective = cfg ?? (await loadChannelSummaryConfig());

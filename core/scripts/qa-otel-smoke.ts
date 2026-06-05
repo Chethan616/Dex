@@ -82,7 +82,7 @@ type CapturedLogRecord = {
 
 const DEFAULT_SCENARIO_ID = "otel-trace-smoke";
 const DEFAULT_DOCKER_COLLECTOR_IMAGE =
-  process.env.OPENCLAW_QA_OTEL_COLLECTOR_IMAGE || "otel/opentelemetry-collector:0.104.0";
+  process.env.DEX_QA_OTEL_COLLECTOR_IMAGE || "otel/opentelemetry-collector:0.104.0";
 const OTLP_SIGNAL_PATHS = new Map<string, OtlpSignal>([
   ["/v1/traces", "traces"],
   ["/v1/metrics", "metrics"],
@@ -115,22 +115,22 @@ const DISALLOWED_BODY_NEEDLES = ["OTEL-QA-SECRET", "OTEL-QA-OK"];
 const COLLECTOR_OUTPUT_TAIL_BYTES = 16_000;
 const POSITIVE_INTEGER_PATTERN = /^[1-9]\d*$/u;
 const MAX_OTLP_COMPRESSED_BODY_BYTES = readPositiveIntegerEnv(
-  "OPENCLAW_QA_OTEL_MAX_COMPRESSED_BODY_BYTES",
+  "DEX_QA_OTEL_MAX_COMPRESSED_BODY_BYTES",
   2 * 1024 * 1024,
 );
 const MAX_OTLP_DECODED_BODY_BYTES = readPositiveIntegerEnv(
-  "OPENCLAW_QA_OTEL_MAX_DECODED_BODY_BYTES",
+  "DEX_QA_OTEL_MAX_DECODED_BODY_BYTES",
   8 * 1024 * 1024,
 );
 const MAX_CAPTURED_BODY_TEXT_BYTES = readPositiveIntegerEnv(
-  "OPENCLAW_QA_OTEL_MAX_CAPTURED_BODY_TEXT_BYTES",
+  "DEX_QA_OTEL_MAX_CAPTURED_BODY_TEXT_BYTES",
   512 * 1024,
 );
 const QA_SUITE_TIMEOUT_MS = readPositiveIntegerEnv(
-  "OPENCLAW_QA_OTEL_SUITE_TIMEOUT_MS",
+  "DEX_QA_OTEL_SUITE_TIMEOUT_MS",
   10 * 60 * 1000,
 );
-const QA_SUITE_KILL_GRACE_MS = readPositiveIntegerEnv("OPENCLAW_QA_OTEL_SUITE_KILL_GRACE_MS", 5000);
+const QA_SUITE_KILL_GRACE_MS = readPositiveIntegerEnv("DEX_QA_OTEL_SUITE_KILL_GRACE_MS", 5000);
 
 function readPositiveIntegerEnv(
   name: string,
@@ -1183,7 +1183,7 @@ function buildQaEnv(port: number): NodeJS.ProcessEnv {
   env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT = `http://127.0.0.1:${port}/v1/logs`;
   env.OTEL_SERVICE_NAME = "openclaw-qa-lab-otel-smoke";
   env.OTEL_SEMCONV_STABILITY_OPT_IN = "gen_ai_latest_experimental";
-  env.OPENCLAW_QA_SUITE_PROGRESS = env.OPENCLAW_QA_SUITE_PROGRESS ?? "1";
+  env.DEX_QA_SUITE_PROGRESS = env.DEX_QA_SUITE_PROGRESS ?? "1";
   return env;
 }
 

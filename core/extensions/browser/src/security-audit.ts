@@ -1,4 +1,4 @@
-import type { OpenClawPluginSecurityAuditContext } from "openclaw/plugin-sdk/plugin-entry";
+import type { DexPluginSecurityAuditContext } from "openclaw/plugin-sdk/plugin-entry";
 import { hasConfiguredSecretInput } from "openclaw/plugin-sdk/secret-input";
 import { formatCliCommand } from "openclaw/plugin-sdk/setup-tools";
 import { isPrivateNetworkOptInEnabled, isPrivateIpAddress } from "openclaw/plugin-sdk/ssrf-policy";
@@ -18,7 +18,7 @@ function isTrustedPrivateHostname(hostname: string): boolean {
   return normalized.length > 0 && BLOCKED_HOSTNAMES.has(normalized);
 }
 
-export function collectBrowserSecurityAuditFindings(ctx: OpenClawPluginSecurityAuditContext) {
+export function collectBrowserSecurityAuditFindings(ctx: DexPluginSecurityAuditContext) {
   const findings: Array<{
     checkId: string;
     severity: "warn" | "critical";
@@ -49,7 +49,7 @@ export function collectBrowserSecurityAuditFindings(ctx: OpenClawPluginSecurityA
   const explicitAuthMode = ctx.config.gateway?.auth?.mode;
   const tokenConfigured =
     Boolean(browserAuth.token) ||
-    hasNonEmptyString(ctx.env.OPENCLAW_GATEWAY_TOKEN) ||
+    hasNonEmptyString(ctx.env.DEX_GATEWAY_TOKEN) ||
     hasConfiguredSecretInput(ctx.config.gateway?.auth?.token, ctx.config.secrets?.defaults);
   const passwordCanWin =
     explicitAuthMode === "password" ||
@@ -60,7 +60,7 @@ export function collectBrowserSecurityAuditFindings(ctx: OpenClawPluginSecurityA
   const passwordConfigured =
     Boolean(browserAuth.password) ||
     (passwordCanWin &&
-      (hasNonEmptyString(ctx.env.OPENCLAW_GATEWAY_PASSWORD) ||
+      (hasNonEmptyString(ctx.env.DEX_GATEWAY_PASSWORD) ||
         hasConfiguredSecretInput(
           ctx.config.gateway?.auth?.password,
           ctx.config.secrets?.defaults,

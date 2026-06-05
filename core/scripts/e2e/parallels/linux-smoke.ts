@@ -37,7 +37,7 @@ import {
   buildCommonSmokeSummary,
   expectedPackageBuildCommit,
   expectedPackageTargetVersion,
-  extractLastOpenClawVersion,
+  extractLastDexVersion,
   packAndServeSmokeArtifact,
   printSmokeTargetSummary,
   SmokeRunController,
@@ -234,9 +234,9 @@ function stripLeadingPackageManagerSeparator(argv: string[]): string[] {
 
 class LinuxSmoke extends SmokeRunController<LinuxOptions> {
   private auth: ProviderAuth;
-  private disableBonjour = parseBoolEnv(process.env.OPENCLAW_PARALLELS_LINUX_DISABLE_BONJOUR);
+  private disableBonjour = parseBoolEnv(process.env.DEX_PARALLELS_LINUX_DISABLE_BONJOUR);
   private agentTimeoutSeconds = readPositiveIntEnv(
-    "OPENCLAW_PARALLELS_LINUX_AGENT_TIMEOUT_S",
+    "DEX_PARALLELS_LINUX_AGENT_TIMEOUT_S",
     1500,
   );
   private artifact: PackageArtifact | null = null;
@@ -457,7 +457,7 @@ printf 'preflight.npmRoot=%s\n' "$(npm root -g 2>/dev/null || true)"`);
     if (this.options.installVersion) {
       this.guestExec([
         "/usr/bin/env",
-        "OPENCLAW_NO_ONBOARD=1",
+        "DEX_NO_ONBOARD=1",
         "bash",
         "/tmp/openclaw-install.sh",
         "--version",
@@ -467,7 +467,7 @@ printf 'preflight.npmRoot=%s\n' "$(npm root -g 2>/dev/null || true)"`);
     } else {
       this.guestExec([
         "/usr/bin/env",
-        "OPENCLAW_NO_ONBOARD=1",
+        "DEX_NO_ONBOARD=1",
         "bash",
         "/tmp/openclaw-install.sh",
         "--no-onboard",
@@ -593,13 +593,13 @@ PY`);
   }
 
   private startGatewayBackground(): void {
-    const bonjourEnv = this.disableBonjour ? " OPENCLAW_DISABLE_BONJOUR=1" : "";
+    const bonjourEnv = this.disableBonjour ? " DEX_DISABLE_BONJOUR=1" : "";
     this.guestBash(
       String.raw`pkill -f "openclaw gateway run" >/dev/null 2>&1 || true
 rm -f /tmp/openclaw-parallels-linux-gateway.log
 setsid sh -lc ` +
         shellQuote(
-          `exec env OPENCLAW_HOME=/root OPENCLAW_STATE_DIR=/root/.openclaw OPENCLAW_CONFIG_PATH=/root/.openclaw/openclaw.json OPENCLAW_ALLOW_ROOT=1${bonjourEnv} ${this.auth.apiKeyEnv}=${shellQuote(
+          `exec env DEX_HOME=/root DEX_STATE_DIR=/root/.openclaw DEX_CONFIG_PATH=/root/.openclaw/openclaw.json DEX_ALLOW_ROOT=1${bonjourEnv} ${this.auth.apiKeyEnv}=${shellQuote(
             this.auth.apiKeyValue,
           )} openclaw gateway run --bind loopback --port 18789 --force >/tmp/openclaw-parallels-linux-gateway.log 2>&1`,
         ) +
@@ -622,7 +622,7 @@ setsid sh -lc ` +
       : ["openclaw", "gateway", "status", "--deep"];
     const result = run(
       "prlctl",
-      ["exec", this.options.vmName, "/usr/bin/env", "HOME=/root", "OPENCLAW_ALLOW_ROOT=1", ...args],
+      ["exec", this.options.vmName, "/usr/bin/env", "HOME=/root", "DEX_ALLOW_ROOT=1", ...args],
       {
         check: false,
         quiet: true,
@@ -646,7 +646,7 @@ setsid sh -lc ` +
           this.options.vmName,
           "/usr/bin/env",
           "HOME=/root",
-          "OPENCLAW_ALLOW_ROOT=1",
+          "DEX_ALLOW_ROOT=1",
           "openclaw",
           "gateway",
           "status",
@@ -745,7 +745,7 @@ for attempt in 1 2; do
   rm -f "$HOME/.openclaw/agents/main/sessions/$session_id.jsonl"
   output_file="$(mktemp)"
   set +e
-  /usr/bin/env OPENCLAW_ALLOW_ROOT=1 ${shellQuote(`${this.auth.apiKeyEnv}=${this.auth.apiKeyValue}`)} openclaw agent --local --agent main --session-id "$session_id" --message ${shellQuote(
+  /usr/bin/env DEX_ALLOW_ROOT=1 ${shellQuote(`${this.auth.apiKeyEnv}=${this.auth.apiKeyValue}`)} openclaw agent --local --agent main --session-id "$session_id" --message ${shellQuote(
     "Reply with exact ASCII text OK only.",
   )} --thinking off --timeout ${resolveParallelsModelTimeoutSeconds("linux")} --json >"$output_file" 2>&1
   rc=$?
@@ -778,7 +778,7 @@ fi`,
   }
 
   private async extractLastVersion(phaseId: string): Promise<string> {
-    return await extractLastOpenClawVersion(
+    return await extractLastDexVersion(
       this.runDir,
       phaseId,
       /(OpenClaw [^\r\n]+ \([0-9a-f]{7,}\))/g,

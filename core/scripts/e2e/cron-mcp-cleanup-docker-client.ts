@@ -24,7 +24,7 @@ async function loadMcpChannelsHarness(): Promise<McpChannelsHarness> {
 }
 
 export function readCronMcpCleanupProbePidWaitMs(env: NodeJS.ProcessEnv = process.env): number {
-  return readPositiveIntEnv("OPENCLAW_CRON_MCP_CLEANUP_PID_WAIT_MS", 120_000, env);
+  return readPositiveIntEnv("DEX_CRON_MCP_CLEANUP_PID_WAIT_MS", 120_000, env);
 }
 
 async function readProbePid(pidPath: string): Promise<number | undefined> {
@@ -282,7 +282,7 @@ async function main() {
   const { assert, connectGateway } = await loadMcpChannelsHarness();
   const gatewayUrl = process.env.GW_URL?.trim();
   const gatewayToken = process.env.GW_TOKEN?.trim();
-  const stateDir = process.env.OPENCLAW_STATE_DIR?.trim() || path.join(os.homedir(), ".openclaw");
+  const stateDir = process.env.DEX_STATE_DIR?.trim() || path.join(os.homedir(), ".dex");
   const pidPath = path.join(stateDir, "cron-mcp-cleanup", "probe.pid");
   const pidsPath = path.join(stateDir, "cron-mcp-cleanup", "probe.pids");
   const exitPath = path.join(stateDir, "cron-mcp-cleanup", "probe.exit");

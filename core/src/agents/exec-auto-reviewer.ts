@@ -2,7 +2,7 @@ import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coerc
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { z } from "zod";
 import type { AgentModelConfig } from "../config/types.agents-shared.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import {
   defaultExecAutoReviewer,
@@ -223,7 +223,7 @@ async function raceWithReviewerTimeout<T>(
 }
 
 export function createModelExecAutoReviewer(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   agentId?: string;
   reviewer?: ExecReviewerConfig;
   deps?: ExecReviewerDeps;

@@ -9,7 +9,7 @@ import {
   resolveSessionWriteLockOptions,
 } from "../../agents/session-write-lock.js";
 import { redactTranscriptMessage } from "../../agents/transcript-redact.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { redactSecrets } from "../../logging/redact.js";
 import { createSessionTranscriptHeader } from "./transcript-header.js";
 import {
@@ -237,7 +237,7 @@ type AppendSessionTranscriptMessageParams<TMessage = unknown> = {
   idempotencyLookup?: "scan" | "caller-checked";
   /** Runs under the transcript write lock after idempotency replay checks and before append. */
   prepareMessageAfterIdempotencyCheck?: (message: TMessage) => TMessage | undefined;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 };
 
 type AppendSessionTranscriptMessageResult<TMessage> = {

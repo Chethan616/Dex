@@ -5,14 +5,14 @@ if (!url) {
   throw new Error("usage: http-probe.mjs <url> [status|lt500]");
 }
 
-const timeoutMs = readPositiveIntEnv("OPENCLAW_HTTP_PROBE_TIMEOUT_MS", 30_000);
+const timeoutMs = readPositiveIntEnv("DEX_HTTP_PROBE_TIMEOUT_MS", 30_000);
 const controller = new AbortController();
 const timer = setTimeout(() => controller.abort(), timeoutMs);
 
 try {
   const headers = {};
-  if (process.env.OPENCLAW_HTTP_PROBE_BEARER) {
-    headers.authorization = `Bearer ${process.env.OPENCLAW_HTTP_PROBE_BEARER}`;
+  if (process.env.DEX_HTTP_PROBE_BEARER) {
+    headers.authorization = `Bearer ${process.env.DEX_HTTP_PROBE_BEARER}`;
   }
   const res = await fetch(url, { headers, signal: controller.signal }).catch(() => null);
   const ok =

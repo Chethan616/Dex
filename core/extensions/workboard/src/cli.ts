@@ -108,7 +108,7 @@ function hasExplicitGatewayTarget(options: GatewayOptions): boolean {
 }
 
 function hasConfiguredRemoteGatewayTarget(): boolean {
-  if (process.env.OPENCLAW_GATEWAY_URL?.trim()) {
+  if (process.env.DEX_GATEWAY_URL?.trim()) {
     return true;
   }
   try {

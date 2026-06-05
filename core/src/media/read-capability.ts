@@ -6,7 +6,7 @@ import { resolvePathFromInput } from "../agents/path-policy.js";
 import { resolveEffectiveToolFsRootExpansionAllowed } from "../agents/tool-fs-policy.js";
 import { isToolAllowedByPolicies } from "../agents/tool-policy-match.js";
 import { resolveWorkspaceRoot } from "../agents/workspace-dir.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { readLocalFileSafely } from "../infra/fs-safe.js";
 import type { OutboundMediaAccess, OutboundMediaReadFile } from "./load-options.js";
 import {
@@ -29,7 +29,7 @@ type OutboundHostMediaPolicyContext = {
 
 function isAgentScopedHostMediaReadAllowed(
   params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     agentId?: string;
   } & OutboundHostMediaPolicyContext,
 ): boolean {
@@ -63,7 +63,7 @@ function isAgentScopedHostMediaReadAllowed(
 
 export function createAgentScopedHostMediaReadFile(
   params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     agentId?: string;
     workspaceDir?: string;
   } & OutboundHostMediaPolicyContext,
@@ -100,7 +100,7 @@ function appendWorkspaceDirToLocalRoots(
 
 export function resolveAgentScopedOutboundMediaAccess(
   params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     agentId?: string;
     mediaSources?: readonly string[];
     workspaceDir?: string;

@@ -80,7 +80,7 @@ export type CodexDynamicToolBridge = {
   };
 };
 
-export const CODEX_OPENCLAW_DYNAMIC_TOOL_NAMESPACE = "openclaw";
+export const CODEX_DEX_DYNAMIC_TOOL_NAMESPACE = "openclaw";
 
 // Keep OpenClaw session spawning searchable in Codex mode so Codex's native
 // spawn_agent remains the primary Codex subagent surface.
@@ -301,7 +301,7 @@ function createCodexDynamicToolSpec(params: {
   }
   return {
     ...base,
-    namespace: CODEX_OPENCLAW_DYNAMIC_TOOL_NAMESPACE,
+    namespace: CODEX_DEX_DYNAMIC_TOOL_NAMESPACE,
     deferLoading: true,
   };
 }

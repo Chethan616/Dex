@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { SkillStatusEntry, SkillStatusReport } from "../skills/discovery/status.js";
 
 export function collectUnavailableAgentSkills(report: SkillStatusReport): SkillStatusEntry[] {
@@ -12,9 +12,9 @@ export function collectUnavailableAgentSkills(report: SkillStatusReport): SkillS
 }
 
 export function disableUnavailableSkillsInConfig(
-  config: OpenClawConfig,
+  config: DexConfig,
   skills: readonly SkillStatusEntry[],
-): OpenClawConfig {
+): DexConfig {
   if (skills.length === 0) {
     return config;
   }

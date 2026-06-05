@@ -205,7 +205,7 @@ function canMutateCodexPlugins(ctx: PluginCommandContext): boolean {
 
 export function buildPluginsHelp(): string {
   return [
-    "Codex sub-plugin management (writes only to ~/.openclaw/openclaw.json, never to ~/.codex/config.toml):",
+    "Codex sub-plugin management (writes only to ~/.dex/openclaw.json, never to ~/.codex/config.toml):",
     "- /codex plugins                  (alias for list)",
     "- /codex plugins list             show all configured Codex sub-plugins",
     "- /codex plugins enable <name>    enable a configured sub-plugin",
@@ -233,7 +233,7 @@ export function formatPluginList(
   const keyW = Math.max(...rows.map((r) => r.displayKey.length));
   const pluginW = Math.max(...rows.map((r) => r.pluginName.length));
   return [
-    "Codex sub-plugins in Openclaw config (~/.openclaw/openclaw.json):",
+    "Codex sub-plugins in Openclaw config (~/.dex/openclaw.json):",
     "",
     ...rows.map(
       (r) =>

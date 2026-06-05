@@ -1,6 +1,6 @@
 import { sortUniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { resolveVoiceModelRefs } from "../../packages/speech-core/voice-models.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { getLoadedRuntimePluginRegistry } from "./active-runtime-registry.js";
 import { loadBundledCapabilityRuntimeRegistry } from "./bundled-capability-runtime.js";
 import {
@@ -87,7 +87,7 @@ function shouldMergeManifestProvidersWhenActive(key: CapabilityProviderRegistryK
 
 function shouldSkipCapabilityResolution(params: {
   key: CapabilityProviderRegistryKey;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): boolean {
   return (
     params.cfg?.plugins?.enabled === false &&
@@ -100,7 +100,7 @@ function uniqueSorted(values: Iterable<string>): string[] {
 }
 
 export function loadCapabilityManifestSnapshot(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
 }): Pick<PluginMetadataSnapshot, "index" | "plugins"> {
   return loadManifestContractSnapshot({
@@ -111,7 +111,7 @@ export function loadCapabilityManifestSnapshot(params: {
 
 function resolveCapabilityPluginIds(params: {
   key: CapabilityProviderRegistryKey;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
   providerId?: string;
 }): CapabilityPluginResolution {
@@ -144,7 +144,7 @@ function resolveCapabilityPluginIds(params: {
 
 function resolveBundledCapabilityCompatPluginIds(params: {
   key: CapabilityProviderRegistryKey;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
   providerId?: string;
 }): string[] {
@@ -153,7 +153,7 @@ function resolveBundledCapabilityCompatPluginIds(params: {
 
 export function resolveManifestCapabilityProviderIds(params: {
   key: CapabilityProviderRegistryKey;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
 }): string[] {
   const contractKey = CAPABILITY_CONTRACT_KEY[params.key];
@@ -166,7 +166,7 @@ export function resolveManifestCapabilityProviderIds(params: {
 
 export function resolveBundledCapabilityProviderIds(params: {
   key: CapabilityProviderRegistryKey;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
 }): string[] {
   const contractKey = CAPABILITY_CONTRACT_KEY[params.key];
@@ -180,7 +180,7 @@ export function resolveBundledCapabilityProviderIds(params: {
 
 function resolveCapabilityProviderConfig(params: {
   key: CapabilityProviderRegistryKey;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
   pluginIds?: string[];
 }) {
@@ -197,7 +197,7 @@ function resolveCapabilityProviderConfig(params: {
 }
 
 function createCapabilityProviderFallbackLoadOptions(params: {
-  compatConfig?: OpenClawConfig;
+  compatConfig?: DexConfig;
   pluginIds: string[];
 }): PluginLoadOptions {
   return {
@@ -309,7 +309,7 @@ function addModelConfigProviderIds(target: Set<string>, value: unknown): void {
 }
 
 function collectRequestedSpeechProviderIds(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   options: { includeVoiceModel: boolean },
 ): Set<string> {
   const requested = new Set<string>();
@@ -326,7 +326,7 @@ function collectRequestedSpeechProviderIds(
   return requested;
 }
 
-function collectRequestedVoiceModelProviderIds(cfg: OpenClawConfig | undefined): Set<string> {
+function collectRequestedVoiceModelProviderIds(cfg: DexConfig | undefined): Set<string> {
   const requested = new Set<string>();
   addModelConfigProviderIds(requested, cfg?.agents?.defaults?.voiceModel);
   return requested;
@@ -344,7 +344,7 @@ function addMediaModelProviders(target: Set<string>, value: unknown): void {
 }
 
 function collectRequestedMediaUnderstandingProviderIds(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
 ): Set<string> {
   const requested = new Set<string>();
   const media = cfg?.tools?.media;
@@ -357,7 +357,7 @@ function collectRequestedMediaUnderstandingProviderIds(
 
 function collectRequestedCapabilityProviderIds(params: {
   key: CapabilityProviderRegistryKey;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   includeVoiceModel?: boolean;
 }): Set<string> | undefined {
   switch (params.key) {
@@ -439,7 +439,7 @@ function filterLoadedProvidersForRequestedConfig<K extends CapabilityProviderReg
 
 function resolveRequestedCapabilityPluginIds(params: {
   key: CapabilityProviderRegistryKey;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   requested?: Set<string>;
 }): CapabilityPluginResolution | undefined {
   if (!params.requested || params.requested.size === 0) {
@@ -513,7 +513,7 @@ function loadCapabilityProviderEntries<K extends CapabilityProviderRegistryKey>(
 export function resolvePluginCapabilityProvider<K extends CapabilityProviderRegistryKey>(params: {
   key: K;
   providerId: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): CapabilityProviderForKey<K> | undefined {
   if (shouldSkipCapabilityResolution(params)) {
     return undefined;
@@ -560,7 +560,7 @@ export function resolvePluginCapabilityProvider<K extends CapabilityProviderRegi
 
 function resolveCachedCapabilityProviderEntries<K extends CapabilityProviderRegistryKey>(params: {
   key: K;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   bundledCompatPluginIds: string[];
   loadOptions: PluginLoadOptions;
   requested?: Set<string>;
@@ -584,7 +584,7 @@ function resolveCachedCapabilityProviderEntries<K extends CapabilityProviderRegi
 
 export function resolvePluginCapabilityProviders<K extends CapabilityProviderRegistryKey>(params: {
   key: K;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): CapabilityProviderForKey<K>[] {
   if (shouldSkipCapabilityResolution(params)) {
     return [];

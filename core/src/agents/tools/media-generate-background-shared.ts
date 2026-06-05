@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { clearAgentRunContext, registerAgentRunContext } from "../../infra/agent-events.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
@@ -90,7 +90,7 @@ type FailMediaGenerationTaskRunParams = {
 };
 
 type WakeMediaGenerationTaskCompletionParams = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   handle: MediaGenerationTaskHandle | null;
   status: "ok" | "error";
   statusLabel: string;
@@ -371,7 +371,7 @@ export function scheduleMediaGenerationTaskCompletion<
   handle: MediaGenerationTaskHandle | null;
   scheduleBackgroundWork: MediaGenerateBackgroundScheduler;
   progressSummary: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   toolName: string;
   run: () => Promise<T>;
   onWakeFailure: (message: string, meta?: Record<string, unknown>) => void;
@@ -490,7 +490,7 @@ export function scheduleMediaGenerationTaskCompletion<
 }
 
 async function wakeMediaGenerationTaskCompletion(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   handle: MediaGenerationTaskHandle | null;
   status: "ok" | "error";
   statusLabel: string;
@@ -612,7 +612,7 @@ async function wakeMediaGenerationTaskCompletion(params: {
 }
 
 async function tryDeliverMediaGenerationDirect(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   handle: MediaGenerationTaskHandle;
   toolName: string;
   content: string;

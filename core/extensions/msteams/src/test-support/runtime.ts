@@ -9,12 +9,12 @@ export const msteamsRuntimeStub = {
     openKeyedStore: (options: OpenKeyedStoreOptions) =>
       createPluginStateKeyedStoreForTests("msteams", options),
     resolveStateDir: (env: NodeJS.ProcessEnv = process.env, homedir?: () => string) => {
-      const override = env.OPENCLAW_STATE_DIR?.trim() || env.OPENCLAW_STATE_DIR?.trim();
+      const override = env.DEX_STATE_DIR?.trim() || env.DEX_STATE_DIR?.trim();
       if (override) {
         return override;
       }
       const resolvedHome = homedir ? homedir() : os.homedir();
-      return path.join(resolvedHome, ".openclaw");
+      return path.join(resolvedHome, ".dex");
     },
   },
 } as unknown as PluginRuntime;

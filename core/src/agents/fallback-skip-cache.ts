@@ -20,10 +20,10 @@ import { modelKey } from "./model-selection-normalize.js";
 /**
  * Default time-to-live for a skip marker. Disabled by default so existing
  * fallback retry behavior stays unchanged unless an operator opts in with
- * OPENCLAW_FALLBACK_SKIP_TTL_MS.
+ * DEX_FALLBACK_SKIP_TTL_MS.
  */
 export const DEFAULT_FALLBACK_SKIP_TTL_MS = 0;
-const FALLBACK_SKIP_TTL_ENV = "OPENCLAW_FALLBACK_SKIP_TTL_MS";
+const FALLBACK_SKIP_TTL_ENV = "DEX_FALLBACK_SKIP_TTL_MS";
 const FALLBACK_SKIP_TTL_MIN_MS = 1_000;
 const FALLBACK_SKIP_TTL_MAX_MS = 10 * 60_000;
 

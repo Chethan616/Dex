@@ -26,5 +26,5 @@ export type {
   ImageGenerationResolution,
   ImageGenerationResult,
   ImageGenerationSourceImage,
-  OpenClawConfig,
+  DexConfig,
 } from "openclaw/plugin-sdk/image-generation-core";

@@ -4,7 +4,7 @@ import {
   resolveThinkingDefaultWithRuntimeCatalog,
   type ModelAliasIndex,
 } from "../../agents/model-selection.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { createLazyImportLoader } from "../../shared/lazy-promise.js";
 import type { SkillCommandSpec } from "../../skills/types.js";
 import { isNativeCommandTurn, resolveCommandTurnContext } from "../command-turn-context.js";
@@ -20,7 +20,7 @@ import { handleInlineActions } from "./get-reply-inline-actions.js";
 import { stripStructuralPrefixes } from "./mentions.js";
 import type { createTypingController } from "./typing.js";
 
-type AgentDefaults = NonNullable<NonNullable<OpenClawConfig["agents"]>["defaults"]> | undefined;
+type AgentDefaults = NonNullable<NonNullable<DexConfig["agents"]>["defaults"]> | undefined;
 type SkillCommandsRuntime = typeof import("../../skills/discovery/chat-commands.runtime.js");
 
 const commandsRuntimeLoader = createLazyImportLoader(() => import("./commands.runtime.js"));
@@ -58,7 +58,7 @@ function shouldRunNativeSlashCommandFastPath(ctx: MsgContext): boolean {
 }
 
 async function resolveNativeSlashDefaultThinkingLevel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   provider: string;
   model: string;
 }): Promise<ThinkLevel> {
@@ -72,7 +72,7 @@ async function resolveNativeSlashDefaultThinkingLevel(params: {
 
 export async function maybeResolveNativeSlashCommandFastReply(params: {
   ctx: MsgContext;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   agentDir: string;
   agentCfg: AgentDefaults;

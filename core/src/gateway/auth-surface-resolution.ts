@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { hasConfiguredSecretInput } from "../config/types.secrets.js";
 import { trimToUndefined, type ExplicitGatewayAuth } from "./credentials.js";
 import { resolveConfiguredSecretInputString } from "./resolve-configured-secret-input-string.js";
@@ -15,7 +15,7 @@ type ResolvedGatewayCredential = {
 };
 
 async function resolveGatewayCredential(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   env: NodeJS.ProcessEnv;
   diagnostics: string[];
   path: GatewayCredentialPath;
@@ -44,7 +44,7 @@ function withDiagnostics<T extends object>(params: {
 }
 
 export async function resolveGatewayProbeSurfaceAuth(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   env?: NodeJS.ProcessEnv;
   surface: "local" | "remote";
 }): Promise<{ token?: string; password?: string; diagnostics?: string[] }> {
@@ -79,8 +79,8 @@ export async function resolveGatewayProbeSurfaceAuth(params: {
     return {};
   }
 
-  const envToken = trimToUndefined(env.OPENCLAW_GATEWAY_TOKEN);
-  const envPassword = trimToUndefined(env.OPENCLAW_GATEWAY_PASSWORD);
+  const envToken = trimToUndefined(env.DEX_GATEWAY_TOKEN);
+  const envPassword = trimToUndefined(env.DEX_GATEWAY_PASSWORD);
 
   if (authMode === "token") {
     const token = await resolveGatewayCredential({
@@ -142,7 +142,7 @@ export async function resolveGatewayProbeSurfaceAuth(params: {
 }
 
 export async function resolveGatewayInteractiveSurfaceAuth(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   env?: NodeJS.ProcessEnv;
   explicitAuth?: ExplicitGatewayAuth;
   suppressEnvAuthFallback?: boolean;
@@ -158,10 +158,10 @@ export async function resolveGatewayInteractiveSurfaceAuth(params: {
   const explicitPassword = trimToUndefined(params.explicitAuth?.password);
   const envToken = params.suppressEnvAuthFallback
     ? undefined
-    : trimToUndefined(env.OPENCLAW_GATEWAY_TOKEN);
+    : trimToUndefined(env.DEX_GATEWAY_TOKEN);
   const envPassword = params.suppressEnvAuthFallback
     ? undefined
-    : trimToUndefined(env.OPENCLAW_GATEWAY_PASSWORD);
+    : trimToUndefined(env.DEX_GATEWAY_PASSWORD);
 
   if (params.surface === "remote") {
     const remoteToken = explicitToken

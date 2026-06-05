@@ -1,6 +1,6 @@
 import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   collectPluginConfigContractMatches,
   resolvePluginConfigContractsById,
@@ -31,7 +31,7 @@ function parsePluginConfigArrayIndex(segment: string): number | undefined {
  * non-loadable plugins from blocking startup or preflight validation.
  */
 export function collectPluginConfigAssignments(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   defaults: SecretDefaults | undefined;
   context: ResolverContext;
   loadablePluginOrigins?: ReadonlyMap<string, PluginOrigin>;

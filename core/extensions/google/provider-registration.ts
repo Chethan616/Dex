@@ -1,5 +1,5 @@
 import type {
-  OpenClawPluginApi,
+  DexPluginApi,
   ProviderReasoningOutputModeContext,
 } from "openclaw/plugin-sdk/plugin-entry";
 import { createProviderApiKeyAuthMethod } from "openclaw/plugin-sdk/provider-auth-api-key";
@@ -105,6 +105,6 @@ export function buildGoogleProvider(): ProviderPlugin {
   };
 }
 
-export function registerGoogleProvider(api: OpenClawPluginApi) {
+export function registerGoogleProvider(api: DexPluginApi) {
   api.registerProvider(buildGoogleProvider());
 }

@@ -1,5 +1,5 @@
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { collectPluginConfigContractMatches } from "../plugins/config-contract-matches.js";
 import { resolvePluginConfigContractsById } from "../plugins/config-contracts.js";
 import { isRecord } from "../utils.js";
@@ -7,7 +7,7 @@ import { collectEnabledInsecureOrDangerousFlagsFromContracts } from "./dangerous
 import { collectEnabledInsecureOrDangerousFlagsFromCurrentSnapshot } from "./dangerous-config-flags-current.js";
 
 export function collectEnabledInsecureOrDangerousFlags(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   options: { preferCurrentPluginMetadataSnapshot?: boolean } = {},
 ): string[] {
   const pluginEntries = cfg.plugins?.entries;

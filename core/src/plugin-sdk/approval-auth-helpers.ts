@@ -1,5 +1,5 @@
 import { normalizeOptionalString } from "../../packages/normalization-core/src/string-coerce.js";
-import type { OpenClawConfig } from "./config-runtime.js";
+import type { DexConfig } from "./config-runtime.js";
 
 type ApprovalKind = "exec" | "plugin";
 type ApprovalAuthorizationResult = {
@@ -39,7 +39,7 @@ export function isImplicitSameChatApprovalAuthorization(
 
 export function createResolvedApproverActionAuthAdapter(params: {
   channelLabel: string;
-  resolveApprovers: (params: { cfg: OpenClawConfig; accountId?: string | null }) => string[];
+  resolveApprovers: (params: { cfg: DexConfig; accountId?: string | null }) => string[];
   normalizeSenderId?: (value: string) => string | undefined;
 }) {
   const normalizeSenderId = params.normalizeSenderId ?? normalizeOptionalString;
@@ -51,7 +51,7 @@ export function createResolvedApproverActionAuthAdapter(params: {
       senderId,
       approvalKind,
     }: {
-      cfg: OpenClawConfig;
+      cfg: DexConfig;
       accountId?: string | null;
       senderId?: string | null;
       action: "approve";

@@ -1,5 +1,5 @@
 import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { scrubDoctorErrorMessage } from "./doctor-error-message.js";
 import { normalizeHealthCheck } from "./health-check-adapter.js";
 import { listHealthChecks } from "./health-check-registry.js";
@@ -20,7 +20,7 @@ export interface DoctorRepairRunOptions {
 }
 
 export interface DoctorRepairRunResult {
-  readonly config: OpenClawConfig;
+  readonly config: DexConfig;
   readonly findings: readonly HealthFinding[];
   readonly remainingFindings: readonly HealthFinding[];
   readonly changes: readonly string[];
@@ -258,7 +258,7 @@ function hasHealthRepairOutput(result: HealthRepairResult | HealthCheckRunResult
 }
 
 function repairRunResult(
-  config: OpenClawConfig,
+  config: DexConfig,
   findings: readonly HealthFinding[],
   remainingFindings: readonly HealthFinding[],
   changes: readonly string[],

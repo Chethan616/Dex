@@ -8,7 +8,7 @@ import {
   ensureOpenClawModelsJson,
   resetModelsJsonReadyCacheForTest,
 } from "../../src/agents/models-config.js";
-import type { OpenClawConfig } from "../../src/config/types.openclaw.js";
+import type { DexConfig } from "../../src/config/types.openclaw.js";
 
 type Options = {
   agentCount: number;
@@ -175,8 +175,8 @@ function modelRef(providerIndex: number, modelIndex: number): string {
   return `perf-${providerIndex}/perf-model-${modelIndex}`;
 }
 
-function buildConfig(options: Options, workspaceDir: string): OpenClawConfig {
-  const providers: NonNullable<NonNullable<OpenClawConfig["models"]>["providers"]> = {};
+function buildConfig(options: Options, workspaceDir: string): DexConfig {
+  const providers: NonNullable<NonNullable<DexConfig["models"]>["providers"]> = {};
   for (let providerIndex = 0; providerIndex < options.providers; providerIndex += 1) {
     providers[`perf-${providerIndex}`] = {
       api: providerIndex % 2 === 0 ? "openai-responses" : "openai-completions",
@@ -296,7 +296,7 @@ async function startCpuProfile(params: { dir?: string; output?: string }): Promi
 
 async function measurePhase(params: {
   agentDir: string;
-  config: OpenClawConfig;
+  config: DexConfig;
   lookups: number;
   modelIndexOffset: number;
   providerCount: number;
@@ -342,7 +342,7 @@ async function measurePhase(params: {
 }
 
 async function runOne(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   index: number;
   options: Options;
   tempRoot: string;

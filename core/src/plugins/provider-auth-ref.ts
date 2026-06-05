@@ -2,7 +2,7 @@ import {
   normalizeOptionalString,
   normalizeStringifiedOptionalString,
 } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { isValidEnvSecretRefId, type SecretRef } from "../config/types.secrets.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { encodeJsonPointerToken } from "../secrets/json-pointer.js";
@@ -44,7 +44,7 @@ export function extractEnvVarFromSourceLabel(source: string): string | undefined
 
 function resolveDefaultProviderEnvVar(
   provider: string,
-  config?: OpenClawConfig,
+  config?: DexConfig,
 ): string | undefined {
   const envVars = getProviderEnvVars(provider, {
     ...(config ? { config } : {}),
@@ -58,7 +58,7 @@ function resolveDefaultFilePointerId(provider: string): string {
 }
 
 export function resolveRefFallbackInput(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   provider: string;
   preferredEnvVar?: string;
   env?: NodeJS.ProcessEnv;
@@ -95,7 +95,7 @@ export function resolveRefFallbackInput(params: {
 
 async function promptEnvSecretRefForSetup(params: {
   provider: string;
-  config: OpenClawConfig;
+  config: DexConfig;
   prompter: WizardPrompter;
   defaultEnvVar: string;
   copy?: SecretRefSetupPromptCopy;
@@ -152,7 +152,7 @@ async function promptEnvSecretRefForSetup(params: {
 
 async function promptProviderSecretRefForSetup(params: {
   provider: string;
-  config: OpenClawConfig;
+  config: DexConfig;
   prompter: WizardPrompter;
   defaultFilePointer: string;
   copy?: SecretRefSetupPromptCopy;
@@ -266,7 +266,7 @@ async function promptProviderSecretRefForSetup(params: {
 
 export async function promptSecretRefForSetup(params: {
   provider: string;
-  config: OpenClawConfig;
+  config: DexConfig;
   prompter: WizardPrompter;
   preferredEnvVar?: string;
   copy?: SecretRefSetupPromptCopy;

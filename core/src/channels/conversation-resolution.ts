@@ -3,7 +3,7 @@ import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
 } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   resolveTargetPrefixedChannel,
   stripTargetKindPrefix,
@@ -46,7 +46,7 @@ type ConversationResolution = {
 };
 
 export type ResolveCommandConversationResolutionInput = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel?: string | null;
   accountId?: string | null;
   chatType?: string | null;
@@ -64,7 +64,7 @@ export type ResolveCommandConversationResolutionInput = {
 };
 
 type ResolveInboundConversationResolutionInput = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel?: string | null;
   accountId?: string | null;
   to?: string | null;
@@ -163,7 +163,7 @@ function normalizeResolutionTarget(params: {
 function resolveBindingAccountId(params: {
   rawAccountId?: string | null;
   plugin?: ChannelPlugin;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): string {
   return (
     normalizeOptionalString(params.rawAccountId) ||

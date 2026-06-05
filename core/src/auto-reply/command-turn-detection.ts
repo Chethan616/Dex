@@ -1,5 +1,5 @@
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { isControlCommandMessage } from "./command-detection.js";
 import {
   isExplicitCommandTurn,
@@ -38,7 +38,7 @@ function hasCommandSourceMetadata(input: CommandTurnContextInput): boolean {
 
 export function isExplicitCommandTurnContext(
   input: CommandTurnContextInput,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): boolean {
   if (isExplicitCommandTurn(resolveCommandTurnContext(input))) {
     return true;

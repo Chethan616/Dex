@@ -144,7 +144,7 @@ With the VCN locked down (only UDP 41641 open) and the Gateway bound to loopback
 
 Still recommended:
 
-- `chmod 700 ~/.openclaw` to restrict credential file permissions.
+- `chmod 700 ~/.dex` to restrict credential file permissions.
 - `openclaw security audit` for an OpenClaw-specific posture check.
 - Regular `sudo apt update && sudo apt upgrade` for OS patches.
 - Review devices in the [Tailscale admin console](https://login.tailscale.com/admin) periodically.
@@ -176,8 +176,8 @@ Verify the architecture with `uname -m` (should print `aarch64`). For binaries w
 
 OpenClaw state lives under:
 
-- `~/.openclaw/` — `openclaw.json`, per-agent `auth-profiles.json`, channel/provider state, and session data.
-- `~/.openclaw/workspace/` — the agent workspace (SOUL.md, memory, artifacts).
+- `~/.dex/` — `openclaw.json`, per-agent `auth-profiles.json`, channel/provider state, and session data.
+- `~/.dex/workspace/` — the agent workspace (SOUL.md, memory, artifacts).
 
 These survive reboots. To take a portable snapshot:
 

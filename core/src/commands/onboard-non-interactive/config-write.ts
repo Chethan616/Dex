@@ -5,14 +5,14 @@ import {
   unchangedPendingPluginInstallRecordIds,
 } from "../../cli/plugins-install-record-commit.js";
 import { replaceConfigFile } from "../../config/config.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 
 export async function commitNonInteractiveOnboardConfig(params: {
-  nextConfig: OpenClawConfig;
-  baseConfig: OpenClawConfig;
+  nextConfig: DexConfig;
+  baseConfig: DexConfig;
   baseHash?: string;
   reset?: boolean;
-}): Promise<OpenClawConfig> {
+}): Promise<DexConfig> {
   // Ordinary onboard reruns must preserve existing agents.list / bindings.
   // Only explicit --reset may allow a config size drop; see openclaw#84692.
   const allowConfigSizeDrop = params.reset === true;

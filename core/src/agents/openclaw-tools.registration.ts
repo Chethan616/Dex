@@ -1,5 +1,5 @@
 import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { isStrictAgenticExecutionContractActive } from "./execution-contract.js";
 import { isToolAllowedByPolicyName } from "./tool-policy-match.js";
 import type { AnyAgentTool } from "./tools/common.js";
@@ -11,7 +11,7 @@ export function collectPresentOpenClawTools(
 }
 
 export function isUpdatePlanToolEnabledForOpenClawTools(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   agentSessionKey?: string;
   agentId?: string | null;
   modelProvider?: string;
@@ -50,7 +50,7 @@ function isToolExplicitlyAllowedByOpenClawToolPolicy(params: {
 }
 
 export function shouldIncludeUpdatePlanToolForOpenClawTools(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   agentSessionKey?: string;
   agentId?: string | null;
   modelProvider?: string;

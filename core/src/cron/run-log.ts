@@ -7,7 +7,7 @@ import { uniqueValues } from "@dexagent/normalization-core/string-normalization"
 import { parseByteSize } from "../cli/parse-bytes.js";
 import type { CronConfig } from "../config/types.cron.js";
 import {
-  openOpenClawStateDatabase,
+  openDexStateDatabase,
   runOpenClawStateWriteTransaction,
 } from "../state/openclaw-state-db.js";
 import type { CronRunLogEntry } from "./run-log-types.js";
@@ -194,7 +194,7 @@ export function readCronRunLogEntriesSync(params: {
   const limit = Math.max(1, Math.min(5000, Math.floor(params.limit ?? 200)));
   const storeKey = cronStoreKey(params.storePath);
   const jobId = params.jobId ? assertSafeCronRunLogJobId(params.jobId) : undefined;
-  const rows = readCronRunLogRows(openOpenClawStateDatabase().db, storeKey, jobId);
+  const rows = readCronRunLogRows(openDexStateDatabase().db, storeKey, jobId);
   return rows
     .map(parseStoredRunLogEntry)
     .filter((entry): entry is CronRunLogEntry => entry !== null)
@@ -301,7 +301,7 @@ export async function readCronRunLogEntriesPage(
   const deliveryStatuses = normalizeDeliveryStatuses(opts);
   const query = normalizeLowercaseStringOrEmpty(opts.query);
   const sortDir: CronRunLogSortDir = opts.sortDir === "asc" ? "asc" : "desc";
-  const db = openOpenClawStateDatabase().db;
+  const db = openDexStateDatabase().db;
   const storeKey = cronStoreKey(opts.storePath);
   const offset = Math.max(0, Math.floor(opts.offset ?? 0));
 

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
 import {
   parseStrictPositiveInteger,
@@ -173,7 +173,7 @@ type MatrixQaTimings = {
 };
 
 function shouldWriteMatrixQaProgress() {
-  const override = process.env.OPENCLAW_QA_MATRIX_PROGRESS;
+  const override = process.env.DEX_QA_MATRIX_PROGRESS;
   if (override === "0") {
     return false;
   }
@@ -204,7 +204,7 @@ function parsePositiveMatrixQaEnvMs(name: string, fallback: number) {
 
 function createMatrixQaRunDeadline() {
   const timeoutMs = parsePositiveMatrixQaEnvMs(
-    "OPENCLAW_QA_MATRIX_TIMEOUT_MS",
+    "DEX_QA_MATRIX_TIMEOUT_MS",
     DEFAULT_MATRIX_QA_RUN_TIMEOUT_MS,
   );
   return {
@@ -215,7 +215,7 @@ function createMatrixQaRunDeadline() {
 
 function resolveMatrixQaCanaryTimeoutMs() {
   return parsePositiveMatrixQaEnvMs(
-    "OPENCLAW_QA_MATRIX_CANARY_TIMEOUT_MS",
+    "DEX_QA_MATRIX_CANARY_TIMEOUT_MS",
     DEFAULT_MATRIX_QA_CANARY_TIMEOUT_MS,
   );
 }
@@ -269,7 +269,7 @@ async function cleanupMatrixQaResource(params: {
   recovery?: string;
 }) {
   const timeoutMs = parsePositiveMatrixQaEnvMs(
-    "OPENCLAW_QA_MATRIX_CLEANUP_TIMEOUT_MS",
+    "DEX_QA_MATRIX_CLEANUP_TIMEOUT_MS",
     DEFAULT_MATRIX_QA_CLEANUP_TIMEOUT_MS,
   );
   try {
@@ -584,7 +584,7 @@ async function startMatrixQaLiveLaneGateway(params: {
     requiredPluginIds: readonly string[];
     createGatewayConfig: (params: {
       baseUrl: string;
-    }) => Pick<OpenClawConfig, "channels" | "messages">;
+    }) => Pick<DexConfig, "channels" | "messages">;
   };
   transportBaseUrl: string;
   providerMode: "mock-openai" | "live-frontier";
@@ -592,7 +592,7 @@ async function startMatrixQaLiveLaneGateway(params: {
   alternateModel: string;
   fastMode?: boolean;
   controlUiEnabled?: boolean;
-  mutateConfig?: (cfg: OpenClawConfig) => OpenClawConfig;
+  mutateConfig?: (cfg: DexConfig) => DexConfig;
 }): Promise<MatrixQaLiveLaneGatewayHarness> {
   return (await loadQaRuntimeModule().startQaLiveLaneGateway(
     params,
@@ -631,7 +631,7 @@ export async function runMatrixQaLive(params: {
     scenarios,
   });
   const observedEvents: MatrixQaObservedEvent[] = [];
-  const includeObservedEventContent = process.env.OPENCLAW_QA_MATRIX_CAPTURE_CONTENT === "1";
+  const includeObservedEventContent = process.env.DEX_QA_MATRIX_CAPTURE_CONTENT === "1";
   const startedAtDate = new Date();
   const startedAt = startedAtDate.toISOString();
   const runStartedAtMs = Date.now();
@@ -885,7 +885,7 @@ export async function runMatrixQaLive(params: {
                 observerPassword: provisioning.observer.password,
                 observerUserId: provisioning.observer.userId,
                 gatewayRuntimeEnv: scenarioGateway.harness.gateway.runtimeEnv,
-                gatewayStateDir: scenarioGateway.harness.gateway.runtimeEnv?.OPENCLAW_STATE_DIR,
+                gatewayStateDir: scenarioGateway.harness.gateway.runtimeEnv?.DEX_STATE_DIR,
                 gatewayWorkspaceDir: scenarioGateway.harness.gateway.workspaceDir,
                 gatewayCall: async (method, paramsLocal, opts) =>
                   await scenarioGateway.harness.gateway.call(method, paramsLocal ?? {}, opts),

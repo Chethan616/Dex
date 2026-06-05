@@ -1,5 +1,5 @@
 import { modelSelectionShouldEnsureCodexPlugin } from "../agents/openai-routing.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   createRuntimePluginModelSelectionHelpers,
   type RuntimePluginInstallResult,
@@ -18,7 +18,7 @@ const CODEX_RUNTIME_PLUGIN_DESCRIPTOR = {
 export type CodexRuntimePluginInstallResult = RuntimePluginInstallResult;
 
 export function selectedModelShouldEnsureCodexRuntimePlugin(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   model?: string;
 }): boolean {
   return modelSelectionShouldEnsureCodexPlugin({

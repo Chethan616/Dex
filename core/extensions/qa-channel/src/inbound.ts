@@ -1,5 +1,5 @@
 import { resolveStableChannelMessageIngress } from "openclaw/plugin-sdk/channel-ingress-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { resolveInboundRouteEnvelopeBuilderWithRuntime } from "openclaw/plugin-sdk/inbound-envelope";
 import {
   buildAgentMediaPayload,
@@ -105,7 +105,7 @@ export async function handleQaInbound(params: {
   });
   const toolCalls: QaBusToolCall[] = [];
   const { route, buildEnvelope } = resolveInboundRouteEnvelopeBuilderWithRuntime({
-    cfg: params.config as OpenClawConfig,
+    cfg: params.config as DexConfig,
     channel: params.channelId,
     accountId: params.account.accountId,
     peer: {
@@ -125,7 +125,7 @@ export async function handleQaInbound(params: {
     ? runtime.channel.mentions.matchesMentionPatterns(
         inbound.text,
         runtime.channel.mentions.buildMentionRegexes(
-          params.config as OpenClawConfig,
+          params.config as DexConfig,
           route.agentId,
         ),
       )
@@ -218,7 +218,7 @@ export async function handleQaInbound(params: {
   });
 
   await runtime.channel.inbound.dispatchReply({
-    cfg: params.config as OpenClawConfig,
+    cfg: params.config as DexConfig,
     channel: params.channelId,
     accountId: params.account.accountId,
     agentId: route.agentId,

@@ -49,12 +49,12 @@ let forwardedSignalExitCode: number | undefined;
 let forwardedSignalForceKillTimer: NodeJS.Timeout | undefined;
 
 export const CROSS_OS_AGENT_TURN_TIMEOUT_SECONDS = parsePositiveIntegerEnv(
-  "OPENCLAW_CROSS_OS_AGENT_TURN_TIMEOUT_SECONDS",
+  "DEX_CROSS_OS_AGENT_TURN_TIMEOUT_SECONDS",
   600,
 );
 export const CROSS_OS_COMMAND_CAPTURE_TAIL_BYTES = 16 * 1024 * 1024;
 const CROSS_OS_PROCESS_TREE_KILL_AFTER_MS = parsePositiveIntegerEnv(
-  "OPENCLAW_CROSS_OS_PROCESS_TREE_KILL_AFTER_MS",
+  "DEX_CROSS_OS_PROCESS_TREE_KILL_AFTER_MS",
   15_000,
 );
 const CROSS_OS_AGENT_TURN_OPTIONAL = resolveCrossOsAgentTurnOptional();
@@ -106,8 +106,8 @@ export function resolveProviderConfig(provider, env = process.env) {
   if (!config) {
     return null;
   }
-  const providerEnvKey = `OPENCLAW_CROSS_OS_${provider.toUpperCase().replace(/[^A-Z0-9]+/gu, "_")}_MODEL`;
-  const model = env[providerEnvKey]?.trim() || env.OPENCLAW_CROSS_OS_MODEL?.trim() || config.model;
+  const providerEnvKey = `DEX_CROSS_OS_${provider.toUpperCase().replace(/[^A-Z0-9]+/gu, "_")}_MODEL`;
+  const model = env[providerEnvKey]?.trim() || env.DEX_CROSS_OS_MODEL?.trim() || config.model;
   return { ...config, model };
 }
 
@@ -154,7 +154,7 @@ const OMITTED_QA_EXTENSION_PREFIXES = [
 export const CROSS_OS_DASHBOARD_SMOKE_TIMEOUT_MS = 120_000;
 export const CROSS_OS_DASHBOARD_FETCH_TIMEOUT_MS = 10_000;
 export const CROSS_OS_DISCORD_FETCH_TIMEOUT_MS = parsePositiveIntegerEnv(
-  "OPENCLAW_CROSS_OS_DISCORD_FETCH_TIMEOUT_MS",
+  "DEX_CROSS_OS_DISCORD_FETCH_TIMEOUT_MS",
   10_000,
 );
 export const CROSS_OS_FETCH_BODY_MAX_CHARS = 1024 * 1024;
@@ -168,7 +168,7 @@ export const CROSS_OS_WINDOWS_PACKAGED_UPGRADE_STEP_TIMEOUT_SECONDS = 10 * 60;
 export const CROSS_OS_WINDOWS_PACKAGED_UPGRADE_WRAPPER_TIMEOUT_MS =
   (CROSS_OS_WINDOWS_PACKAGED_UPGRADE_STEP_TIMEOUT_SECONDS + 2 * 60) * 1000;
 export const CROSS_OS_COMMAND_HEARTBEAT_SECONDS = parsePositiveIntegerEnv(
-  "OPENCLAW_CROSS_OS_COMMAND_HEARTBEAT_SECONDS",
+  "DEX_CROSS_OS_COMMAND_HEARTBEAT_SECONDS",
   60,
 );
 
@@ -238,7 +238,7 @@ function parseBooleanEnv(name, fallback, env = process.env) {
 }
 
 export function resolveCrossOsAgentTurnOptional(env = process.env) {
-  return parseBooleanEnv("OPENCLAW_CROSS_OS_AGENT_TURN_OPTIONAL", false, env);
+  return parseBooleanEnv("DEX_CROSS_OS_AGENT_TURN_OPTIONAL", false, env);
 }
 
 export function looksLikeReleaseVersionRef(ref) {
@@ -400,15 +400,15 @@ export function readRunnerOverrideEnv(env = process.env) {
   return {
     varUbuntuRunner: preferNonEmptyEnv(
       env.VAR_UBUNTU_RUNNER,
-      env.OPENCLAW_RELEASE_CHECKS_UBUNTU_RUNNER,
+      env.DEX_RELEASE_CHECKS_UBUNTU_RUNNER,
     ),
     varWindowsRunner: preferNonEmptyEnv(
       env.VAR_WINDOWS_RUNNER,
-      env.OPENCLAW_RELEASE_CHECKS_WINDOWS_RUNNER,
+      env.DEX_RELEASE_CHECKS_WINDOWS_RUNNER,
     ),
     varMacosRunner: preferNonEmptyEnv(
       env.VAR_MACOS_RUNNER,
-      env.OPENCLAW_RELEASE_CHECKS_MACOS_RUNNER,
+      env.DEX_RELEASE_CHECKS_MACOS_RUNNER,
     ),
   };
 }
@@ -502,8 +502,8 @@ async function main(argv) {
 
   const summary = {
     platform: process.platform,
-    runnerOs: process.env.OPENCLAW_RELEASE_CHECK_OS ?? "",
-    runnerLabel: process.env.OPENCLAW_RELEASE_CHECK_RUNNER ?? "",
+    runnerOs: process.env.DEX_RELEASE_CHECK_OS ?? "",
+    runnerLabel: process.env.DEX_RELEASE_CHECK_RUNNER ?? "",
     provider,
     mode,
     suite,
@@ -1339,7 +1339,7 @@ async function runDevUpdateSuite(params) {
       args: ["update", "--channel", "dev", "--yes", "--json"],
       env: {
         ...buildRealUpdateEnv(env),
-        OPENCLAW_UPDATE_DEV_TARGET_REF: verificationRef,
+        DEX_UPDATE_DEV_TARGET_REF: verificationRef,
       },
       cwd: lane.homeDir,
       logPath: join(params.logsDir, "dev-update.log"),
@@ -1463,7 +1463,7 @@ function createLaneState(name) {
   const rootDir = mkdtempSync(join(tmpdir(), `openclaw-${name}-`));
   const prefixDir = join(rootDir, "prefix");
   const homeDir = join(rootDir, "home");
-  const stateDir = join(homeDir, ".openclaw");
+  const stateDir = join(homeDir, ".dex");
   const appDataDir = process.platform === "win32" ? join(homeDir, "AppData", "Roaming") : stateDir;
   mkdirSync(prefixDir, { recursive: true });
   mkdirSync(homeDir, { recursive: true });
@@ -1493,11 +1493,11 @@ function buildLaneEnv(lane, providerMeta, providerSecretValue) {
     USERPROFILE: lane.homeDir,
     APPDATA: lane.appDataDir,
     LOCALAPPDATA: join(lane.homeDir, "AppData", "Local"),
-    OPENCLAW_HOME: lane.homeDir,
-    OPENCLAW_STATE_DIR: lane.stateDir,
-    OPENCLAW_CONFIG_PATH: join(lane.stateDir, "openclaw.json"),
-    OPENCLAW_DISABLE_BONJOUR: "1",
-    OPENCLAW_DISABLE_BUNDLED_PLUGIN_POSTINSTALL: "1",
+    DEX_HOME: lane.homeDir,
+    DEX_STATE_DIR: lane.stateDir,
+    DEX_CONFIG_PATH: join(lane.stateDir, "openclaw.json"),
+    DEX_DISABLE_BONJOUR: "1",
+    DEX_DISABLE_BUNDLED_PLUGIN_POSTINSTALL: "1",
     NPM_CONFIG_PREFIX: lane.prefixDir,
     PATH: `${binDirForPrefix(lane.prefixDir)}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`,
     [providerMeta.secretEnv]: providerSecretValue,
@@ -1513,12 +1513,12 @@ function buildInstallerEnv(lane, providerMeta, providerSecretValue) {
     USERPROFILE: lane.homeDir,
     APPDATA: lane.appDataDir,
     LOCALAPPDATA: localAppData,
-    OPENCLAW_HOME: lane.homeDir,
-    OPENCLAW_STATE_DIR: lane.stateDir,
-    OPENCLAW_CONFIG_PATH: join(lane.stateDir, "openclaw.json"),
-    OPENCLAW_DISABLE_BONJOUR: "1",
-    OPENCLAW_NO_ONBOARD: "1",
-    OPENCLAW_NO_PROMPT: "1",
+    DEX_HOME: lane.homeDir,
+    DEX_STATE_DIR: lane.stateDir,
+    DEX_CONFIG_PATH: join(lane.stateDir, "openclaw.json"),
+    DEX_DISABLE_BONJOUR: "1",
+    DEX_NO_ONBOARD: "1",
+    DEX_NO_PROMPT: "1",
     CI: "1",
     NODE_OPTIONS: "--max-old-space-size=8192",
     [providerMeta.secretEnv]: providerSecretValue,
@@ -1575,10 +1575,10 @@ export function shouldSkipInstallerDaemonHealthCheck(platform = process.platform
 export function buildRealUpdateEnv(env) {
   const updateEnv = {
     ...env,
-    OPENCLAW_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS: "1",
+    DEX_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS: "1",
     NODE_DISABLE_COMPILE_CACHE: "1",
   };
-  delete updateEnv.OPENCLAW_DISABLE_BUNDLED_PLUGIN_POSTINSTALL;
+  delete updateEnv.DEX_DISABLE_BUNDLED_PLUGIN_POSTINSTALL;
   delete updateEnv.NODE_COMPILE_CACHE;
   return updateEnv;
 }
@@ -1896,7 +1896,7 @@ if ($commandPath -match '(?i)\\.ps1$') {
   }
 }
 $version = (& $commandPath --version 2>&1 | Out-String).Trim()
-Write-Output "__OPENCLAW_PATH__=$commandPath"
+Write-Output "__DEX_PATH__=$commandPath"
 Write-Output $version
 if ('${expectedNeedle}'.Length -gt 0 -and $version -notmatch [regex]::Escape('${expectedNeedle}')) {
   throw "version mismatch: expected substring ${expectedNeedle}"
@@ -1958,7 +1958,7 @@ async function verifyFreshShellCommand(params) {
       timeoutMs: 2 * 60 * 1000,
     });
     const cliPath = normalizeWindowsInstalledCliPath(
-      parseMarkerLine(result.stdout, "__OPENCLAW_PATH__="),
+      parseMarkerLine(result.stdout, "__DEX_PATH__="),
     );
     if (!cliPath) {
       throw new Error("Failed to resolve installed openclaw path from fresh Windows shell.");
@@ -1973,7 +1973,7 @@ async function verifyFreshShellCommand(params) {
     "set -euo pipefail",
     'if [ -f "$HOME/.bashrc" ]; then . "$HOME/.bashrc"; fi',
     "command -v openclaw >/dev/null 2>&1",
-    'printf "__OPENCLAW_PATH__=%s\\n" "$(command -v openclaw)"',
+    'printf "__DEX_PATH__=%s\\n" "$(command -v openclaw)"',
     "openclaw --version",
   ].join("\n");
   const result = await runPosixShellScript(script, {
@@ -1982,7 +1982,7 @@ async function verifyFreshShellCommand(params) {
     logPath: params.logPath,
     timeoutMs: 2 * 60 * 1000,
   });
-  const cliPath = parseMarkerLine(result.stdout, "__OPENCLAW_PATH__=");
+  const cliPath = parseMarkerLine(result.stdout, "__DEX_PATH__=");
   const versionOutput = `${result.stdout}\n${result.stderr}`.trim();
   if (!cliPath) {
     throw new Error("Failed to resolve installed openclaw path from fresh POSIX shell.");
@@ -2669,11 +2669,11 @@ async function waitForInstalledDiscordReadback(params) {
 
 async function maybeRunDiscordRoundtrip(params) {
   const token =
-    process.env.OPENCLAW_DISCORD_SMOKE_BOT_TOKEN?.trim() ||
+    process.env.DEX_DISCORD_SMOKE_BOT_TOKEN?.trim() ||
     process.env.DISCORD_BOT_TOKEN?.trim() ||
     "";
-  const guildId = process.env.OPENCLAW_DISCORD_SMOKE_GUILD_ID?.trim() || "";
-  const channelId = process.env.OPENCLAW_DISCORD_SMOKE_CHANNEL_ID?.trim() || "";
+  const guildId = process.env.DEX_DISCORD_SMOKE_GUILD_ID?.trim() || "";
+  const channelId = process.env.DEX_DISCORD_SMOKE_CHANNEL_ID?.trim() || "";
   if (!token || !guildId || !channelId) {
     return "skipped-missing-config";
   }
@@ -2826,7 +2826,7 @@ async function runBundledPluginPostinstall(params) {
   const installEnv = {
     ...params.env,
   };
-  delete installEnv.OPENCLAW_DISABLE_BUNDLED_PLUGIN_POSTINSTALL;
+  delete installEnv.DEX_DISABLE_BUNDLED_PLUGIN_POSTINSTALL;
   delete installEnv.NPM_CONFIG_PREFIX;
   delete installEnv.npm_config_global;
   delete installEnv.npm_config_location;
@@ -2851,18 +2851,18 @@ export function buildInstalledBrowserOverrideImportProbeScript(
 import { existsSync } from "node:fs";
 import { startLazyPluginServiceModule } from ${JSON.stringify(runtimeModuleSpecifier)};
 
-const startedPath = process.env.OPENCLAW_BROWSER_OVERRIDE_STARTED_PATH;
-const stoppedPath = process.env.OPENCLAW_BROWSER_OVERRIDE_STOPPED_PATH;
+const startedPath = process.env.DEX_BROWSER_OVERRIDE_STARTED_PATH;
+const stoppedPath = process.env.DEX_BROWSER_OVERRIDE_STOPPED_PATH;
 
-if (!process.env.OPENCLAW_BROWSER_CONTROL_MODULE) {
-  throw new Error("Missing OPENCLAW_BROWSER_CONTROL_MODULE.");
+if (!process.env.DEX_BROWSER_CONTROL_MODULE) {
+  throw new Error("Missing DEX_BROWSER_CONTROL_MODULE.");
 }
 if (!startedPath || !stoppedPath) {
   throw new Error("Missing browser override sentinel path env.");
 }
 
 const handle = await startLazyPluginServiceModule({
-  overrideEnvVar: "OPENCLAW_BROWSER_CONTROL_MODULE",
+  overrideEnvVar: "DEX_BROWSER_CONTROL_MODULE",
   validateOverrideSpecifier: (specifier) => specifier,
   loadDefaultModule: async () => {
     throw new Error("Default browser control service should not load during override probe.");
@@ -2893,11 +2893,11 @@ function buildBrowserOverrideProbeServiceModule() {
 import { writeFileSync } from "node:fs";
 
 export async function startBrowserControlService() {
-  writeFileSync(process.env.OPENCLAW_BROWSER_OVERRIDE_STARTED_PATH, "started\\n", "utf8");
+  writeFileSync(process.env.DEX_BROWSER_OVERRIDE_STARTED_PATH, "started\\n", "utf8");
 }
 
 export async function stopBrowserControlService() {
-  writeFileSync(process.env.OPENCLAW_BROWSER_OVERRIDE_STOPPED_PATH, "stopped\\n", "utf8");
+  writeFileSync(process.env.DEX_BROWSER_OVERRIDE_STOPPED_PATH, "stopped\\n", "utf8");
 }
 `.trim();
 }
@@ -2930,9 +2930,9 @@ async function runInstalledBrowserOverrideImportSmoke(params) {
     cwd: packageRoot,
     env: {
       ...params.env,
-      OPENCLAW_BROWSER_CONTROL_MODULE: pathToFileURL(overridePath).href,
-      OPENCLAW_BROWSER_OVERRIDE_STARTED_PATH: startedPath,
-      OPENCLAW_BROWSER_OVERRIDE_STOPPED_PATH: stoppedPath,
+      DEX_BROWSER_CONTROL_MODULE: pathToFileURL(overridePath).href,
+      DEX_BROWSER_OVERRIDE_STARTED_PATH: startedPath,
+      DEX_BROWSER_OVERRIDE_STOPPED_PATH: stoppedPath,
     },
     logPath: params.logPath,
     timeoutMs: 60_000,

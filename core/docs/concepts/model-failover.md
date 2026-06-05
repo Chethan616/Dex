@@ -76,7 +76,7 @@ candidates that recently failed with `auth` or `auth_permanent`.
 Operators who prefer to suppress those repeat auth failures can opt in with:
 
 ```bash
-OPENCLAW_FALLBACK_SKIP_TTL_MS=60000
+DEX_FALLBACK_SKIP_TTL_MS=60000
 ```
 
 When enabled, OpenClaw records an in-memory, session-scoped skip marker for a
@@ -108,10 +108,10 @@ These notices are operational messages, not assistant content. They are delivere
 
 OpenClaw uses **auth profiles** for both API keys and OAuth tokens.
 
-- Secrets live in `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` (legacy: `~/.openclaw/agent/auth-profiles.json`).
-- Runtime auth-routing state lives in `~/.openclaw/agents/<agentId>/agent/auth-state.json`.
+- Secrets live in `~/.dex/agents/<agentId>/agent/auth-profiles.json` (legacy: `~/.dex/agent/auth-profiles.json`).
+- Runtime auth-routing state lives in `~/.dex/agents/<agentId>/agent/auth-state.json`.
 - Config `auth.profiles` / `auth.order` are **metadata + routing only** (no secrets).
-- Legacy import-only OAuth file: `~/.openclaw/credentials/oauth.json` (imported into `auth-profiles.json` on first use).
+- Legacy import-only OAuth file: `~/.dex/credentials/oauth.json` (imported into `auth-profiles.json` on first use).
 
 More detail: [OAuth](/concepts/oauth)
 
@@ -127,7 +127,7 @@ OAuth logins create distinct profiles so multiple accounts can coexist.
 - Default: `provider:default` when no email is available.
 - OAuth with email: `provider:<email>` (for example `google-antigravity:user@gmail.com`).
 
-Profiles live in `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` under `profiles`.
+Profiles live in `~/.dex/agents/<agentId>/agent/auth-profiles.json` under `profiles`.
 
 ## Rotation order
 
@@ -210,7 +210,7 @@ When a profile fails due to auth/rate-limit errors (or a timeout that looks like
 
   </Accordion>
   <Accordion title="SDK retry-after caps">
-    Some provider SDKs may otherwise sleep for a long `Retry-After` window before returning control to OpenClaw. For Stainless-based SDKs such as Anthropic and OpenAI, OpenClaw caps SDK-internal `retry-after-ms` / `retry-after` waits at 60 seconds by default and surfaces longer retryable responses immediately so this failover path can run. Tune or disable the cap with `OPENCLAW_SDK_RETRY_MAX_WAIT_SECONDS`; see [Retry behavior](/concepts/retry).
+    Some provider SDKs may otherwise sleep for a long `Retry-After` window before returning control to OpenClaw. For Stainless-based SDKs such as Anthropic and OpenAI, OpenClaw caps SDK-internal `retry-after-ms` / `retry-after` waits at 60 seconds by default and surfaces longer retryable responses immediately so this failover path can run. Tune or disable the cap with `DEX_SDK_RETRY_MAX_WAIT_SECONDS`; see [Retry behavior](/concepts/retry).
   </Accordion>
   <Accordion title="Model-scoped cooldowns">
     Rate-limit cooldowns can also be model-scoped:

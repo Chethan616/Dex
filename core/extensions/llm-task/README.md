@@ -95,4 +95,4 @@ It is intended to ship as a **bundled** OpenClaw extension (like `lobster`) and
 be enabled via `plugins.entries` + tool allowlists.
 
 It is **not** currently designed to be copied into
-`~/.openclaw/extensions` as a standalone plugin directory.
+`~/.dex/extensions` as a standalone plugin directory.

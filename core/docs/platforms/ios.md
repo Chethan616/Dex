@@ -129,7 +129,7 @@ compatible but does not count as a durable last-seen update.
 
 Compatibility note:
 
-- `OPENCLAW_APNS_RELAY_BASE_URL` still works as a temporary env override for the gateway.
+- `DEX_APNS_RELAY_BASE_URL` still works as a temporary env override for the gateway.
 - `OPENCLAW_PUSH_RELAY_BASE_URL` still works as a temporary env override for official/TestFlight iOS builds.
 
 ## Authentication and trust flow
@@ -187,9 +187,9 @@ Local/manual builds remain on direct APNs. If you are testing those builds witho
 gateway still needs direct APNs credentials:
 
 ```bash
-export OPENCLAW_APNS_TEAM_ID="TEAMID"
-export OPENCLAW_APNS_KEY_ID="KEYID"
-export OPENCLAW_APNS_PRIVATE_KEY_P8="$(cat /path/to/AuthKey_KEYID.p8)"
+export DEX_APNS_TEAM_ID="TEAMID"
+export DEX_APNS_KEY_ID="KEYID"
+export DEX_APNS_PRIVATE_KEY_P8="$(cat /path/to/AuthKey_KEYID.p8)"
 ```
 
 These are gateway-host runtime env vars, not Fastlane settings. `apps/ios/fastlane/.env` only stores
@@ -199,11 +199,11 @@ direct APNs delivery for local iOS builds.
 Recommended gateway-host storage:
 
 ```bash
-mkdir -p ~/.openclaw/credentials/apns
-chmod 700 ~/.openclaw/credentials/apns
-mv /path/to/AuthKey_KEYID.p8 ~/.openclaw/credentials/apns/AuthKey_KEYID.p8
-chmod 600 ~/.openclaw/credentials/apns/AuthKey_KEYID.p8
-export OPENCLAW_APNS_PRIVATE_KEY_PATH="$HOME/.openclaw/credentials/apns/AuthKey_KEYID.p8"
+mkdir -p ~/.dex/credentials/apns
+chmod 700 ~/.dex/credentials/apns
+mv /path/to/AuthKey_KEYID.p8 ~/.dex/credentials/apns/AuthKey_KEYID.p8
+chmod 600 ~/.dex/credentials/apns/AuthKey_KEYID.p8
+export DEX_APNS_PRIVATE_KEY_PATH="$HOME/.openclaw/credentials/apns/AuthKey_KEYID.p8"
 ```
 
 Do not commit the `.p8` file or place it under the repo checkout.

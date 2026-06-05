@@ -1,15 +1,15 @@
 export type EmbeddedAgentRuntime = "openclaw" | "auto" | (string & {});
 
-export const OPENCLAW_AGENT_RUNTIME_ID = "openclaw";
+export const DEX_AGENT_RUNTIME_ID = "openclaw";
 export const AUTO_AGENT_RUNTIME_ID = "auto";
 
 export function normalizeEmbeddedAgentRuntime(raw: string | undefined): EmbeddedAgentRuntime {
   const value = raw?.trim();
   if (!value) {
-    return OPENCLAW_AGENT_RUNTIME_ID;
+    return DEX_AGENT_RUNTIME_ID;
   }
   if (value === "openclaw" || value === "pi") {
-    return OPENCLAW_AGENT_RUNTIME_ID;
+    return DEX_AGENT_RUNTIME_ID;
   }
   if (value === "auto") {
     return AUTO_AGENT_RUNTIME_ID;
@@ -35,7 +35,7 @@ export function normalizeOptionalAgentRuntimeId(raw: unknown): EmbeddedAgentRunt
 export function resolveEmbeddedAgentRuntime(
   _env: NodeJS.ProcessEnv = process.env,
 ): EmbeddedAgentRuntime {
-  return OPENCLAW_AGENT_RUNTIME_ID;
+  return DEX_AGENT_RUNTIME_ID;
 }
 
 export function isDefaultAgentRuntimeId(runtime: string | undefined): boolean {

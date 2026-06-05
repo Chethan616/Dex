@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { DiagnosticTraceContext } from "../../infra/diagnostic-trace-context.js";
 import type {
   PluginHookAgentContext,
@@ -21,7 +21,7 @@ export type AgentHarnessHookContext = {
   contextTokenBudget?: number;
   contextWindowSource?: PluginHookContextWindowSource;
   contextWindowReferenceTokens?: number;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 };
 
 export function buildAgentHookContext(params: AgentHarnessHookContext): PluginHookAgentContext {

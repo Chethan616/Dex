@@ -1,5 +1,5 @@
 import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { getActiveMemorySearchManager } from "../plugins/memory-runtime.js";
 import type { RealtimeVoiceAgentConsultResult } from "./agent-consult-runtime.js";
@@ -118,7 +118,7 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
 }
 
 async function lookupFastContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   sessionKey: string;
   config: RealtimeVoiceFastContextConfig;
@@ -143,7 +143,7 @@ async function lookupFastContext(params: {
 }
 
 export async function resolveRealtimeVoiceFastContextConsult(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   sessionKey: string;
   config: RealtimeVoiceFastContextConfig;

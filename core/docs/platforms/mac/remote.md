@@ -49,7 +49,7 @@ openclaw-mac configure-remote \
   --ssh-target user@gateway.local \
   --local-port 18789 \
   --remote-port 18789 \
-  --token "$OPENCLAW_GATEWAY_TOKEN"
+  --token "$DEX_GATEWAY_TOKEN"
 ```
 
 For a gateway already reachable on a trusted LAN or Tailnet, skip SSH entirely:
@@ -57,7 +57,7 @@ For a gateway already reachable on a trusted LAN or Tailnet, skip SSH entirely:
 ```bash
 openclaw-mac configure-remote \
   --direct-url ws://192.168.0.202:18789 \
-  --token "$OPENCLAW_GATEWAY_TOKEN"
+  --token "$DEX_GATEWAY_TOKEN"
 ```
 
 This writes the remote config, marks onboarding complete, and lets the app own

@@ -1,12 +1,12 @@
 import type { AcpRuntime, AcpRuntimeCapabilities } from "@dexagent/acp-core/runtime/types";
 import { afterEach, beforeEach, expect, vi } from "vitest";
 import { resetAcpManagerTaskStateForTests } from "../../../test/helpers/acp-manager-task-state.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import type { AcpSessionRuntimeOptions, SessionAcpMeta } from "../../config/sessions/types.js";
 import { resetHeartbeatWakeStateForTests } from "../../infra/heartbeat-wake.js";
 import { resetAcpActiveTurnsForTests } from "./active-turns.js";
 
-export type { AcpRuntime, OpenClawConfig, SessionAcpMeta };
+export type { AcpRuntime, DexConfig, SessionAcpMeta };
 
 const hoistedMocks = vi.hoisted(() => {
   const listAcpSessionEntriesMock = vi.fn();
@@ -50,7 +50,7 @@ export const baseCfg = {
     dispatch: { enabled: true },
   },
 } as const;
-export const ORIGINAL_STATE_DIR = process.env.OPENCLAW_STATE_DIR;
+export const ORIGINAL_STATE_DIR = process.env.DEX_STATE_DIR;
 
 export async function flushMicrotasks(rounds = 3): Promise<void> {
   for (let index = 0; index < rounds; index += 1) {
@@ -302,9 +302,9 @@ export function installAcpSessionManagerTestLifecycle(): void {
 
   afterEach(() => {
     if (ORIGINAL_STATE_DIR === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_STATE_DIR;
     } else {
-      process.env.OPENCLAW_STATE_DIR = ORIGINAL_STATE_DIR;
+      process.env.DEX_STATE_DIR = ORIGINAL_STATE_DIR;
     }
     resetHeartbeatWakeStateForTests();
     resetAcpManagerTaskStateForTests();

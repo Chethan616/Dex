@@ -15,7 +15,7 @@ import { formatCliCommand } from "../cli/command-format.js";
 import type { CliDeps } from "../cli/deps.types.js";
 import { getRuntimeConfig } from "../config/io.js";
 import type { SessionEntry } from "../config/sessions/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { withLocalGatewayRequestScope } from "../gateway/local-request-context.js";
 import {
   clearAgentRunContext,
@@ -128,7 +128,7 @@ import { ensureAgentWorkspace } from "./workspace.js";
 const log = createSubsystemLogger("agents/agent-command");
 
 function hasExactConfiguredProviderModel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   provider: string;
   model: string;
 }): boolean {
@@ -146,7 +146,7 @@ function hasExactConfiguredProviderModel(params: {
   return false;
 }
 
-function hasConfiguredProvider(params: { cfg: OpenClawConfig; provider: string }): boolean {
+function hasConfiguredProvider(params: { cfg: DexConfig; provider: string }): boolean {
   const normalizedProvider = normalizeProviderId(params.provider);
   if (!normalizedProvider) {
     return false;
@@ -157,7 +157,7 @@ function hasConfiguredProvider(params: { cfg: OpenClawConfig; provider: string }
 }
 
 function allowPluginModelNormalizationForRef(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   provider: string;
   model: string;
 }): boolean {
@@ -168,7 +168,7 @@ function allowPluginModelNormalizationForRef(params: {
 }
 
 function normalizeAgentCommandModelRef(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   provider: string,
   model: string,
   modelManifestContext: ModelManifestNormalizationContext,
@@ -180,7 +180,7 @@ function normalizeAgentCommandModelRef(
 }
 
 function normalizeAgentCommandDefaultModelRef(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   provider: string,
   model: string,
   modelManifestContext: ModelManifestNormalizationContext,
@@ -198,7 +198,7 @@ function normalizeAgentCommandDefaultModelRef(
 }
 
 function parseAgentCommandModelRef(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   raw: string,
   defaultProvider: string,
   modelManifestContext: ModelManifestNormalizationContext,
@@ -401,7 +401,7 @@ function clearPendingFinalDeliveryFields(entry: SessionEntry, updatedAt: number)
 }
 
 async function resolveCurrentRunDeliveryContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   opts: AgentCommandOpts;
   sessionEntry?: SessionEntry;
 }): Promise<DeliveryContext | undefined> {
@@ -565,7 +565,7 @@ function resolveExplicitAgentCommandSessionKey(params: {
   rawExplicitSessionKey?: string;
   agentIdOverride?: string;
   shouldScopeDefaultAgentKey?: boolean;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): string | undefined {
   if (
     isUnscopedSessionKeySentinel(params.rawExplicitSessionKey) &&

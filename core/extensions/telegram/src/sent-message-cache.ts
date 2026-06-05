@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { PluginStateSyncKeyedStore } from "openclaw/plugin-sdk/plugin-state-runtime";
 import { logVerbose } from "openclaw/plugin-sdk/runtime-env";
 import { resolveStorePath } from "openclaw/plugin-sdk/session-store-runtime";
@@ -62,11 +62,11 @@ function createSentMessageStore(): SentMessageStore {
   return new Map<string, Map<string, number>>();
 }
 
-function resolveSentMessageStorePath(cfg?: Pick<OpenClawConfig, "session">): string {
+function resolveSentMessageStorePath(cfg?: Pick<DexConfig, "session">): string {
   return `${resolveStorePath(cfg?.session?.store)}.telegram-sent-messages.json`;
 }
 
-function resolveSentMessageScopeKey(cfg?: Pick<OpenClawConfig, "session">): string {
+function resolveSentMessageScopeKey(cfg?: Pick<DexConfig, "session">): string {
   const storePath = resolveStorePath(cfg?.session?.store);
   return createHash("sha256").update(storePath, "utf8").digest("hex").slice(0, 24);
 }
@@ -153,7 +153,7 @@ function readPersistedSentMessages(scopeKey: string): SentMessageStore {
   return store;
 }
 
-function getSentMessageBucket(cfg?: Pick<OpenClawConfig, "session">): SentMessageBucket {
+function getSentMessageBucket(cfg?: Pick<DexConfig, "session">): SentMessageBucket {
   const state = getSentMessageState();
   const scopeKey = resolveSentMessageScopeKey(cfg);
   const existing = state.bucketsByScope.get(scopeKey);
@@ -168,7 +168,7 @@ function getSentMessageBucket(cfg?: Pick<OpenClawConfig, "session">): SentMessag
   return bucket;
 }
 
-function getSentMessages(cfg?: Pick<OpenClawConfig, "session">): SentMessageStore {
+function getSentMessages(cfg?: Pick<DexConfig, "session">): SentMessageStore {
   return getSentMessageBucket(cfg).store;
 }
 
@@ -194,7 +194,7 @@ function persistSentMessages(bucket: SentMessageBucket): void {
 export function recordSentMessage(
   chatId: number | string,
   messageId: number,
-  cfg?: Pick<OpenClawConfig, "session">,
+  cfg?: Pick<DexConfig, "session">,
 ): void {
   const scopeKey = String(chatId);
   const idKey = String(messageId);
@@ -220,7 +220,7 @@ export function recordSentMessage(
 export function wasSentByBot(
   chatId: number | string,
   messageId: number,
-  cfg?: Pick<OpenClawConfig, "session">,
+  cfg?: Pick<DexConfig, "session">,
 ): boolean {
   const scopeKey = String(chatId);
   const idKey = String(messageId);
@@ -259,7 +259,7 @@ export function setTelegramSentMessageStoreForTest(
 }
 
 export function listTelegramLegacySentMessageCacheEntries(params: {
-  cfg?: Pick<OpenClawConfig, "session">;
+  cfg?: Pick<DexConfig, "session">;
   persistedPath?: string;
 }): Array<{ key: string; value: PersistedSentMessage; ttlMs?: number }> {
   const scopeKey = resolveSentMessageScopeKey(params.cfg);

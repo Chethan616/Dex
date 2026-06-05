@@ -191,7 +191,7 @@ on:
         default: ""
         type: string
     secrets:
-      OPENCLAW_TRUSTED_PACKAGE_TOKEN:
+      DEX_TRUSTED_PACKAGE_TOKEN:
         required: false
       OPENAI_API_KEY:
         required: false
@@ -229,15 +229,15 @@ on:
         required: false
       OPENCODE_ZEN_API_KEY:
         required: false
-      OPENCLAW_LIVE_BROWSER_CDP_URL:
+      DEX_LIVE_BROWSER_CDP_URL:
         required: false
-      OPENCLAW_LIVE_SETUP_TOKEN:
+      DEX_LIVE_SETUP_TOKEN:
         required: false
-      OPENCLAW_LIVE_SETUP_TOKEN_MODEL:
+      DEX_LIVE_SETUP_TOKEN_MODEL:
         required: false
-      OPENCLAW_LIVE_SETUP_TOKEN_PROFILE:
+      DEX_LIVE_SETUP_TOKEN_PROFILE:
         required: false
-      OPENCLAW_LIVE_SETUP_TOKEN_VALUE:
+      DEX_LIVE_SETUP_TOKEN_VALUE:
         required: false
       GEMINI_API_KEY:
         required: false
@@ -269,25 +269,25 @@ on:
         required: false
       CLAUDE_CODE_OAUTH_TOKEN:
         required: false
-      OPENCLAW_CODEX_AUTH_JSON:
+      DEX_CODEX_AUTH_JSON:
         required: false
       OPENCLAW_CODEX_CONFIG_TOML:
         required: false
-      OPENCLAW_CLAUDE_JSON:
+      DEX_CLAUDE_JSON:
         required: false
-      OPENCLAW_CLAUDE_CREDENTIALS_JSON:
+      DEX_CLAUDE_CREDENTIALS_JSON:
         required: false
       OPENCLAW_CLAUDE_SETTINGS_JSON:
         required: false
       OPENCLAW_CLAUDE_SETTINGS_LOCAL_JSON:
         required: false
-      OPENCLAW_GEMINI_SETTINGS_JSON:
+      DEX_GEMINI_SETTINGS_JSON:
         required: false
       FIREWORKS_API_KEY:
         required: false
-      OPENCLAW_QA_CONVEX_SITE_URL:
+      DEX_QA_CONVEX_SITE_URL:
         required: false
-      OPENCLAW_QA_CONVEX_SECRET_CI:
+      DEX_QA_CONVEX_SECRET_CI:
         required: false
 
 permissions:
@@ -369,7 +369,7 @@ jobs:
           PACKAGE_URL: ${{ inputs.package_url }}
           PACKAGE_SHA256: ${{ inputs.package_sha256 }}
           TRUSTED_SOURCE_ID: ${{ inputs.trusted_source_id }}
-          OPENCLAW_TRUSTED_PACKAGE_TOKEN: ${{ secrets.OPENCLAW_TRUSTED_PACKAGE_TOKEN }}
+          DEX_TRUSTED_PACKAGE_TOKEN: ${{ secrets.DEX_TRUSTED_PACKAGE_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
@@ -554,7 +554,7 @@ jobs:
 
       - name: Enforce public package integrity
         env:
-          OPENCLAW_PACKAGE_TARBALL_CHECK_TIMINGS: "0"
+          DEX_PACKAGE_TARBALL_CHECK_TIMINGS: "0"
         shell: bash
         run: |
           set -euo pipefail
@@ -601,11 +601,11 @@ jobs:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
       OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
       OPENCODE_ZEN_API_KEY: ${{ secrets.OPENCODE_ZEN_API_KEY }}
-      OPENCLAW_LIVE_BROWSER_CDP_URL: ${{ secrets.OPENCLAW_LIVE_BROWSER_CDP_URL }}
-      OPENCLAW_LIVE_SETUP_TOKEN: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN }}
-      OPENCLAW_LIVE_SETUP_TOKEN_MODEL: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_MODEL }}
-      OPENCLAW_LIVE_SETUP_TOKEN_PROFILE: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_PROFILE }}
-      OPENCLAW_LIVE_SETUP_TOKEN_VALUE: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_VALUE }}
+      DEX_LIVE_BROWSER_CDP_URL: ${{ secrets.DEX_LIVE_BROWSER_CDP_URL }}
+      DEX_LIVE_SETUP_TOKEN: ${{ secrets.DEX_LIVE_SETUP_TOKEN }}
+      DEX_LIVE_SETUP_TOKEN_MODEL: ${{ secrets.DEX_LIVE_SETUP_TOKEN_MODEL }}
+      DEX_LIVE_SETUP_TOKEN_PROFILE: ${{ secrets.DEX_LIVE_SETUP_TOKEN_PROFILE }}
+      DEX_LIVE_SETUP_TOKEN_VALUE: ${{ secrets.DEX_LIVE_SETUP_TOKEN_VALUE }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -621,13 +621,13 @@ jobs:
       BYTEPLUS_ACCESS_KEY_ID: ${{ secrets.BYTEPLUS_ACCESS_KEY_ID }}
       BYTEPLUS_SECRET_ACCESS_KEY: ${{ secrets.BYTEPLUS_SECRET_ACCESS_KEY }}
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      OPENCLAW_CODEX_AUTH_JSON: ${{ secrets.OPENCLAW_CODEX_AUTH_JSON }}
+      DEX_CODEX_AUTH_JSON: ${{ secrets.DEX_CODEX_AUTH_JSON }}
       OPENCLAW_CODEX_CONFIG_TOML: ${{ secrets.OPENCLAW_CODEX_CONFIG_TOML }}
-      OPENCLAW_CLAUDE_JSON: ${{ secrets.OPENCLAW_CLAUDE_JSON }}
-      OPENCLAW_CLAUDE_CREDENTIALS_JSON: ${{ secrets.OPENCLAW_CLAUDE_CREDENTIALS_JSON }}
+      DEX_CLAUDE_JSON: ${{ secrets.DEX_CLAUDE_JSON }}
+      DEX_CLAUDE_CREDENTIALS_JSON: ${{ secrets.DEX_CLAUDE_CREDENTIALS_JSON }}
       OPENCLAW_CLAUDE_SETTINGS_JSON: ${{ secrets.OPENCLAW_CLAUDE_SETTINGS_JSON }}
       OPENCLAW_CLAUDE_SETTINGS_LOCAL_JSON: ${{ secrets.OPENCLAW_CLAUDE_SETTINGS_LOCAL_JSON }}
-      OPENCLAW_GEMINI_SETTINGS_JSON: ${{ secrets.OPENCLAW_GEMINI_SETTINGS_JSON }}
+      DEX_GEMINI_SETTINGS_JSON: ${{ secrets.DEX_GEMINI_SETTINGS_JSON }}
       FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
 
   package_telegram:
@@ -645,8 +645,8 @@ jobs:
       scenario: ${{ inputs.telegram_scenarios }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-      OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
+      DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+      DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
 
   summary:
     name: Verify package acceptance

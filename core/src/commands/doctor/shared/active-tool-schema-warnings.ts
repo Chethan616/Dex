@@ -5,7 +5,7 @@ import {
   resolveAgentDir,
   resolveAgentWorkspaceDir,
 } from "../../../agents/agent-scope.js";
-import { createOpenClawCodingTools } from "../../../agents/agent-tools.js";
+import { createDexCodingTools } from "../../../agents/agent-tools.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../../../agents/defaults.js";
 import { resolveModel } from "../../../agents/embedded-agent-runner/model.js";
 import { parseModelRef } from "../../../agents/model-selection-normalize.js";
@@ -16,14 +16,14 @@ import {
 } from "../../../agents/tool-schema-projection.js";
 import type { AnyAgentTool } from "../../../agents/tools/common.js";
 import { resolveAgentModelPrimaryValue } from "../../../config/model-input.js";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 import { formatErrorMessage } from "../../../infra/errors.js";
 import { extractModelCompat } from "../../../plugins/provider-model-compat.js";
 import type { ProviderRuntimeModel } from "../../../plugins/provider-runtime-model.types.js";
 import { getPluginToolMeta } from "../../../plugins/tools.js";
 
 function resolvePrimaryModelRef(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   agentModel?: NonNullable<ReturnType<typeof resolveAgentConfig>>["model"],
 ): { provider: string; model: string } {
   const raw =
@@ -39,7 +39,7 @@ function resolvePrimaryModelRef(
 }
 
 function resolveRuntimeModelContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir: string;
   workspaceDir: string;
   provider: string;
@@ -115,7 +115,7 @@ function readPluginId(tool: AnyAgentTool | undefined): string | undefined {
 }
 
 export function collectActiveToolSchemaProjectionWarnings(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
 }): string[] {
   if (params.cfg.plugins?.enabled === false) {
@@ -145,9 +145,9 @@ export function collectActiveToolSchemaProjectionWarnings(params: {
         ),
       );
     }
-    let tools: ReturnType<typeof createOpenClawCodingTools>;
+    let tools: ReturnType<typeof createDexCodingTools>;
     try {
-      tools = createOpenClawCodingTools({
+      tools = createDexCodingTools({
         agentId,
         agentDir,
         workspaceDir,

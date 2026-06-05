@@ -64,19 +64,19 @@ function resolveFetchBodyLimit(limit: number | undefined) {
     }
     return limit;
   }
-  const raw = process.env.OPENCLAW_QA_CREDENTIAL_HTTP_MAX_BODY_BYTES?.trim();
+  const raw = process.env.DEX_QA_CREDENTIAL_HTTP_MAX_BODY_BYTES?.trim();
   if (!raw) {
     return DEFAULT_FETCH_BODY_LIMIT;
   }
   if (!/^\d+$/u.test(raw)) {
     throw new Error(
-      `OPENCLAW_QA_CREDENTIAL_HTTP_MAX_BODY_BYTES must be a positive integer; got: ${raw}`,
+      `DEX_QA_CREDENTIAL_HTTP_MAX_BODY_BYTES must be a positive integer; got: ${raw}`,
     );
   }
   const parsed = Number(raw);
   if (!Number.isSafeInteger(parsed) || parsed < 1) {
     throw new Error(
-      `OPENCLAW_QA_CREDENTIAL_HTTP_MAX_BODY_BYTES must be a positive integer; got: ${raw}`,
+      `DEX_QA_CREDENTIAL_HTTP_MAX_BODY_BYTES must be a positive integer; got: ${raw}`,
     );
   }
   return parsed;

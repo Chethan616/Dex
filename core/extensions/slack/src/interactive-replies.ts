@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { ReplyPayload } from "openclaw/plugin-sdk/reply-runtime";
 import {
   normalizeLowercaseStringOrEmpty,
@@ -164,7 +164,7 @@ function resolveInteractiveRepliesFromCapabilities(capabilities: unknown): boole
  * @deprecated Only needed for legacy Slack reply directives. New producers should emit presentation payloads.
  */
 export function isSlackInteractiveRepliesEnabled(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 }): boolean {
   const account = resolveSlackAccount({

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import { applyDockerOpenAiProviderConfig, type OpenClawConfig } from "./docker-openai-seed.ts";
+import { applyDockerOpenAiProviderConfig, type DexConfig } from "./docker-openai-seed.ts";
 
 const require = createRequire(import.meta.url);
 
@@ -42,14 +42,14 @@ await server.connect(new StdioServerTransport());
 }
 
 async function main() {
-  const stateDir = process.env.OPENCLAW_STATE_DIR?.trim() || path.join(os.homedir(), ".openclaw");
+  const stateDir = process.env.DEX_STATE_DIR?.trim() || path.join(os.homedir(), ".dex");
   const configPath =
-    process.env.OPENCLAW_CONFIG_PATH?.trim() || path.join(stateDir, "openclaw.json");
+    process.env.DEX_CONFIG_PATH?.trim() || path.join(stateDir, "openclaw.json");
   const workspaceDir = path.join(stateDir, "workspace");
   const serverPath = path.join(stateDir, "mcp-code-mode-fixture", "fixture-server.mjs");
   const apiKey =
     process.env.OPENAI_API_KEY?.trim() ||
-    process.env.OPENCLAW_MCP_CODE_MODE_OPENAI_API_KEY?.trim() ||
+    process.env.DEX_MCP_CODE_MODE_OPENAI_API_KEY?.trim() ||
     "sk-docker-smoke-test";
 
   const cfg = applyDockerOpenAiProviderConfig(
@@ -106,7 +106,7 @@ async function main() {
           },
         },
       },
-    } satisfies OpenClawConfig,
+    } satisfies DexConfig,
     apiKey,
   );
 

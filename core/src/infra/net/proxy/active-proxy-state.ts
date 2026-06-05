@@ -35,13 +35,13 @@ function parseActiveManagedProxyLoopbackMode(
 }
 
 function readInheritedActiveManagedProxyLoopbackMode(): ActiveManagedProxyLoopbackMode | undefined {
-  if (process.env["OPENCLAW_PROXY_ACTIVE"] !== "1") {
+  if (process.env["DEX_PROXY_ACTIVE"] !== "1") {
     return undefined;
   }
   // Child processes inherit loopback policy through env even when they do not
   // own the in-process proxy registration.
   return (
-    parseActiveManagedProxyLoopbackMode(process.env["OPENCLAW_PROXY_LOOPBACK_MODE"]) ??
+    parseActiveManagedProxyLoopbackMode(process.env["DEX_PROXY_LOOPBACK_MODE"]) ??
     "gateway-only"
   );
 }

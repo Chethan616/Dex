@@ -1,5 +1,5 @@
 import { resolveDefaultAgentId } from "../agents/agent-scope-config.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { hasExplicitCronDeliveryTarget, resolveCronDeliveryPlan } from "./delivery-plan.js";
 import { resolveDeliveryTarget } from "./isolated-agent/delivery-target.js";
 import { resolveCronDeliverySessionKey } from "./session-target.js";
@@ -36,7 +36,7 @@ function formatDeliveryDetail(params: {
 
 /** Builds the user-visible cron delivery preview for one job without sending anything. */
 export async function resolveCronDeliveryPreview(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   defaultAgentId?: string;
   job: CronJob;
 }): Promise<CronDeliveryPreview> {
@@ -93,7 +93,7 @@ export async function resolveCronDeliveryPreview(params: {
 
 /** Builds cron delivery previews keyed by job id. */
 export async function resolveCronDeliveryPreviews(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   defaultAgentId?: string;
   jobs: CronJob[];
 }): Promise<Record<string, CronDeliveryPreview>> {

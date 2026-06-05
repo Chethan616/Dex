@@ -153,8 +153,8 @@ function pruneNodeModulesForOmittedPlugins(repoRoot, bundledPluginDir, omittedPl
 export function pruneDockerPluginDist(params = {}) {
   const repoRoot = params.cwd ?? params.repoRoot ?? process.cwd();
   const env = params.env ?? process.env;
-  const bundledPluginDir = env.OPENCLAW_BUNDLED_PLUGIN_DIR ?? "extensions";
-  const keepPluginIds = parseDockerPluginKeepList(env.OPENCLAW_EXTENSIONS);
+  const bundledPluginDir = env.DEX_BUNDLED_PLUGIN_DIR ?? "extensions";
+  const keepPluginIds = parseDockerPluginKeepList(env.DEX_EXTENSIONS);
   const excludedPluginIds = collectRootPackageExcludedExtensionDirs({ cwd: repoRoot });
   const omittedPluginIds = new Set([...excludedPluginIds].filter((pluginId) => !keepPluginIds.has(pluginId)));
   const removed = [];

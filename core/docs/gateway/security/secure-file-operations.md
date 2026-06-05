@@ -23,13 +23,13 @@ OpenClaw only changes the default. If you explicitly set a mode, fs-safe honors 
 
 ```bash
 # Default OpenClaw behavior: Node-only fs-safe fallbacks.
-OPENCLAW_FS_SAFE_PYTHON_MODE=off
+DEX_FS_SAFE_PYTHON_MODE=off
 
 # Opt into the helper when available, falling back if unavailable.
-OPENCLAW_FS_SAFE_PYTHON_MODE=auto
+DEX_FS_SAFE_PYTHON_MODE=auto
 
 # Fail closed if the helper cannot start.
-OPENCLAW_FS_SAFE_PYTHON_MODE=require
+DEX_FS_SAFE_PYTHON_MODE=require
 
 # Optional explicit interpreter.
 OPENCLAW_FS_SAFE_PYTHON=/usr/bin/python3
@@ -60,7 +60,7 @@ That narrows same-UID race windows where another process can swap a parent direc
 If your deployment has that risk and Python is guaranteed to exist, use:
 
 ```bash
-OPENCLAW_FS_SAFE_PYTHON_MODE=require
+DEX_FS_SAFE_PYTHON_MODE=require
 ```
 
 Use `require` rather than `auto` when the helper is part of your security posture; `auto` intentionally falls back to Node-only behavior if the helper is unavailable.

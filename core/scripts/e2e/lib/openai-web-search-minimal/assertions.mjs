@@ -57,7 +57,7 @@ function scanSuccessRequest(logPath) {
       line: lineNumber,
       bodyTail: tailText(bodyText, RESPONSE_PREVIEW_BYTES),
     });
-    if (!success && bodyText.includes("OPENCLAW_SCHEMA_E2E_OK")) {
+    if (!success && bodyText.includes("DEX_SCHEMA_E2E_OK")) {
       success = entry;
     }
   });

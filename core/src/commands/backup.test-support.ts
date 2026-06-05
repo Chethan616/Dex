@@ -30,8 +30,8 @@ export function createBackupTestRuntime(): RuntimeEnv {
 
 export async function resetBackupTempHome(tempHome: { home: string }) {
   await fs.rm(tempHome.home, { recursive: true, force: true });
-  await fs.mkdir(path.join(tempHome.home, ".openclaw"), { recursive: true });
-  delete process.env.OPENCLAW_CONFIG_PATH;
+  await fs.mkdir(path.join(tempHome.home, ".dex"), { recursive: true });
+  delete process.env.DEX_CONFIG_PATH;
 }
 
 export async function mockStateOnlyBackupPlan(stateDir: string) {

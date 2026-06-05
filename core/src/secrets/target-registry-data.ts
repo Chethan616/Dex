@@ -13,7 +13,7 @@ const WEB_PROVIDER_SECRET_CONFIGS = [
 
 type WebProviderSecretConfig = (typeof WEB_PROVIDER_SECRET_CONFIGS)[number];
 
-function createPluginOpenClawConfigSecretTargetEntry(
+function createPluginDexConfigSecretTargetEntry(
   pluginId: string,
   configPath: string,
 ): SecretTargetRegistryEntry {
@@ -57,7 +57,7 @@ function listBundledWebProviderSecretTargetRegistryEntries(
         hasWebProviderContract(record, config.contract) &&
         hasSensitiveConfigHint(record, config.configPath)
       ) {
-        entries.push(createPluginOpenClawConfigSecretTargetEntry(record.id, config.configPath));
+        entries.push(createPluginDexConfigSecretTargetEntry(record.id, config.configPath));
       }
     }
   }
@@ -72,7 +72,7 @@ function listBundledPluginConfigSecretTargetRegistryEntries(
   for (const record of bundledPlugins) {
     const secretInputs = record.configContracts?.secretInputs?.paths ?? [];
     for (const secretInput of secretInputs) {
-      const entry = createPluginOpenClawConfigSecretTargetEntry(record.id, secretInput.path);
+      const entry = createPluginDexConfigSecretTargetEntry(record.id, secretInput.path);
       const key = `${entry.configFile}:${entry.pathPattern}`;
       if (seen.has(key)) {
         continue;
@@ -501,7 +501,7 @@ export function getSourceSecretTargetRegistry(): SecretTargetRegistryEntry[] {
   return loadSecretTargetRegistryFromPluginMetadata({
     env: {
       ...process.env,
-      OPENCLAW_BUNDLED_PLUGINS_DIR: process.env.OPENCLAW_BUNDLED_PLUGINS_DIR ?? "extensions",
+      DEX_BUNDLED_PLUGINS_DIR: process.env.DEX_BUNDLED_PLUGINS_DIR ?? "extensions",
     },
     preferPersisted: false,
   });

@@ -30,7 +30,7 @@ const ensureSupportedNodeVersion = () => {
   }
 
   process.stderr.write(
-    `dex-core: Node.js v${MIN_NODE_VERSION}+ is required (current: v${process.versions.node}).\n` +
+    `dex: Node.js v${MIN_NODE_VERSION}+ is required (current: v${process.versions.node}).\n` +
       "If you use nvm, run:\n" +
       `  nvm install ${MIN_NODE_MAJOR}\n` +
       `  nvm use ${MIN_NODE_MAJOR}\n` +
@@ -82,7 +82,7 @@ const resolvePackagedCompileCacheDirectory = () => {
     : path.join(os.tmpdir(), "node-compile-cache");
   return path.join(
     baseDirectory,
-    "dex-core",
+    "dex",
     version,
     sanitizeCompileCachePathSegment(installMarker),
   );
@@ -184,7 +184,7 @@ const runRespawnedChild = (command, args, env) => {
   child.once("error", (error) => {
     detach();
     process.stderr.write(
-      `[dex-core] Failed to respawn launcher: ${
+      `[dex] Failed to respawn launcher: ${
         error instanceof Error ? (error.stack ?? error.message) : String(error)
       }\n`,
     );
@@ -197,7 +197,7 @@ const respawnWithoutCompileCacheIfNeeded = () => {
   if (!isSourceCheckoutLauncher()) {
     return false;
   }
-  if (process.env.OPENCLAW_SOURCE_COMPILE_CACHE_RESPAWNED === "1") {
+  if (process.env.DEX_SOURCE_COMPILE_CACHE_RESPAWNED === "1") {
     return false;
   }
   if (!module.getCompileCacheDir?.() && !isNodeCompileCacheRequested()) {
@@ -206,7 +206,7 @@ const respawnWithoutCompileCacheIfNeeded = () => {
   const env = {
     ...process.env,
     NODE_DISABLE_COMPILE_CACHE: "1",
-    OPENCLAW_SOURCE_COMPILE_CACHE_RESPAWNED: "1",
+    DEX_SOURCE_COMPILE_CACHE_RESPAWNED: "1",
   };
   delete env.NODE_COMPILE_CACHE;
   return runRespawnedChild(
@@ -220,7 +220,7 @@ const respawnWithPackagedCompileCacheIfNeeded = () => {
   if (isSourceCheckoutLauncher() || isNodeCompileCacheDisabled()) {
     return false;
   }
-  if (process.env.OPENCLAW_PACKAGED_COMPILE_CACHE_RESPAWNED === "1") {
+  if (process.env.DEX_PACKAGED_COMPILE_CACHE_RESPAWNED === "1") {
     return false;
   }
   const currentDirectory = module.getCompileCacheDir?.();
@@ -234,7 +234,7 @@ const respawnWithPackagedCompileCacheIfNeeded = () => {
   const env = {
     ...process.env,
     NODE_COMPILE_CACHE: desiredDirectory,
-    OPENCLAW_PACKAGED_COMPILE_CACHE_RESPAWNED: "1",
+    DEX_PACKAGED_COMPILE_CACHE_RESPAWNED: "1",
   };
   return runRespawnedChild(
     process.execPath,
@@ -334,7 +334,7 @@ const exists = async (specifier) => {
 };
 
 const buildMissingEntryErrorMessage = async () => {
-  const lines = ["dex-core: missing dist/entry.(m)js (build output)."];
+  const lines = ["dex: missing dist/entry.(m)js (build output)."];
   if (!(await exists("./src/entry.ts"))) {
     return lines.join("\n");
   }
@@ -370,7 +370,7 @@ const resolvePrecomputedCommandHelp = (argv) => {
 };
 
 const isHelpFastPathDisabled = () =>
-  process.env.OPENCLAW_DISABLE_CLI_STARTUP_HELP_FAST_PATH === "1";
+  process.env.DEX_DISABLE_CLI_STARTUP_HELP_FAST_PATH === "1";
 
 const normalizeLauncherHomeValue = (value) => {
   const trimmed = value?.trim();
@@ -383,7 +383,7 @@ const resolveLauncherOsHomeDir = () =>
   os.homedir();
 
 const resolveLauncherHomeDir = () => {
-  const explicit = normalizeLauncherHomeValue(process.env.OPENCLAW_HOME);
+  const explicit = normalizeLauncherHomeValue(process.env.DEX_HOME);
   const rawHome =
     explicit && (explicit === "~" || explicit.startsWith("~/") || explicit.startsWith("~\\"))
       ? explicit.replace(/^~(?=$|[\\/])/, resolveLauncherOsHomeDir())
@@ -402,19 +402,19 @@ const resolveLauncherUserPath = (input) => {
 };
 
 const resolveLauncherConfigPaths = () => {
-  const explicit = process.env.OPENCLAW_CONFIG_PATH?.trim();
+  const explicit = process.env.DEX_CONFIG_PATH?.trim();
   if (explicit) {
     return [resolveLauncherUserPath(explicit)];
   }
-  const stateOverride = process.env.OPENCLAW_STATE_DIR?.trim();
+  const stateOverride = process.env.DEX_STATE_DIR?.trim();
   if (stateOverride) {
     const stateDir = resolveLauncherUserPath(stateOverride);
     return [path.join(stateDir, "openclaw.json"), path.join(stateDir, "clawdbot.json")];
   }
   const homeDir = resolveLauncherHomeDir();
   return [
-    path.join(homeDir, ".dex-core", "openclaw.json"),
-    path.join(homeDir, ".dex-core", "clawdbot.json"),
+    path.join(homeDir, ".dex", "openclaw.json"),
+    path.join(homeDir, ".dex", "clawdbot.json"),
     path.join(homeDir, ".clawdbot", "openclaw.json"),
     path.join(homeDir, ".clawdbot", "clawdbot.json"),
   ];
@@ -422,8 +422,8 @@ const resolveLauncherConfigPaths = () => {
 
 const shouldDeferRootHelpToRuntimeEntry = () => {
   if (
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR?.trim() ||
-    process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS?.trim()
+    process.env.DEX_BUNDLED_PLUGINS_DIR?.trim() ||
+    process.env.DEX_DISABLE_BUNDLED_PLUGINS?.trim()
   ) {
     return true;
   }
@@ -451,7 +451,7 @@ const loadPrecomputedHelpText = (key) => {
 
 function tryOutputLauncherVersion(argv) {
   try {
-    if (normalizeLauncherMetadataValue(process.env.OPENCLAW_CONTAINER)) {
+    if (normalizeLauncherMetadataValue(process.env.DEX_CONTAINER)) {
       return false;
     }
     if (!isLauncherVersionFastPathArgv(argv)) {
@@ -459,7 +459,7 @@ function tryOutputLauncherVersion(argv) {
     }
     const version = resolveLauncherVersion();
     const commit = resolveLauncherCommit();
-    process.stdout.write(commit ? `DexCore ${version} (${commit})\n` : `DexCore ${version}\n`);
+    process.stdout.write(commit ? `Dex ${version} (${commit})\n` : `Dex ${version}\n`);
     return true;
   } catch {
     return false;
@@ -494,7 +494,7 @@ function resolveLauncherVersion() {
   if (buildVersion) {
     return buildVersion;
   }
-  return normalizeLauncherMetadataValue(process.env.OPENCLAW_BUNDLED_VERSION) ?? "0.0.0";
+  return normalizeLauncherMetadataValue(process.env.DEX_BUNDLED_VERSION) ?? "0.0.0";
 }
 
 function resolveLauncherCommit() {

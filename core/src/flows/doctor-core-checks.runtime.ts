@@ -10,7 +10,7 @@ import {
   resolveAgentWorkspaceDir,
   resolveDefaultAgentId,
 } from "../agents/agent-scope.js";
-import { createOpenClawCodingTools } from "../agents/agent-tools.js";
+import { createDexCodingTools } from "../agents/agent-tools.js";
 import { resolveEffectiveToolPolicy } from "../agents/agent-tools.policy.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 import { applyFinalEffectiveToolPolicy } from "../agents/embedded-agent-runner/effective-tool-policy.js";
@@ -30,7 +30,7 @@ import {
 } from "../agents/tool-schema-projection.js";
 import type { AnyAgentTool } from "../agents/tools/common.js";
 import { collectUnavailableAgentSkills } from "../commands/doctor-skills-core.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import type { ProviderRuntimeModel } from "../plugins/provider-runtime-model.types.js";
 import { getPluginToolMeta, setPluginToolMeta } from "../plugins/tools.js";
@@ -43,7 +43,7 @@ type BundleMcpToolRuntime = Awaited<ReturnType<typeof createBundleMcpToolRuntime
 const PROVIDER_CATALOG_ORDERS = ["simple", "profile", "paired", "late"] as const;
 const PROVIDER_CATALOG_ORDER_SET = new Set<ProviderCatalogOrder>(PROVIDER_CATALOG_ORDERS);
 
-export function detectUnavailableSkills(cfg: OpenClawConfig): SkillStatusEntry[] {
+export function detectUnavailableSkills(cfg: DexConfig): SkillStatusEntry[] {
   const agentId = resolveDefaultAgentId(cfg);
   const workspaceDir = resolveAgentWorkspaceDir(cfg, agentId);
   const report = buildWorkspaceSkillStatus(workspaceDir, {
@@ -422,7 +422,7 @@ function groupProviderCatalogsForDoctor(providers: readonly ProviderPlugin[]): {
 }
 
 export async function collectProviderCatalogProjectionFindings(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): Promise<readonly HealthFinding[]> {
   const { runProviderStaticCatalog } = await import("../plugins/provider-discovery.js");
   const { resolvePluginProviders } = await import("../plugins/providers.runtime.js");
@@ -592,7 +592,7 @@ function collectToolSchemaFindings(params: {
 
 function collectBundleMcpRuntimeToolSchemaFindings(params: {
   bundleRuntime: BundleMcpToolRuntime;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   workspaceDir: string;
   modelRef: { provider: string; model: string };
@@ -676,7 +676,7 @@ function agentRuntimeToolNormalizationFailureFinding(params: {
 }
 
 function collectAgentRuntimeToolSchemaFindings(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   workspaceDir: string;
   modelRef: { provider: string; model: string };
@@ -684,7 +684,7 @@ function collectAgentRuntimeToolSchemaFindings(params: {
 }): readonly HealthFinding[] {
   let tools: AnyAgentTool[];
   try {
-    tools = createOpenClawCodingTools({
+    tools = createDexCodingTools({
       agentId: params.agentId,
       workspaceDir: params.workspaceDir,
       config: params.cfg,
@@ -812,7 +812,7 @@ function synthesizeBundleMcpAllowlistSentinelName(params: {
 }
 
 function collectBundleMcpDiagnosticSentinels(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   modelRef: { provider: string; model: string };
   diagnostic: McpToolCatalogDiagnostic;
@@ -855,7 +855,7 @@ function collectBundleMcpDiagnosticSentinels(params: {
 }
 
 function shouldReportBundleMcpRuntimeDiagnostic(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   modelRef: { provider: string; model: string };
   diagnostic: McpToolCatalogDiagnostic;
@@ -875,7 +875,7 @@ function shouldReportBundleMcpRuntimeDiagnostic(params: {
 
 function filterPolicyActiveBundleMcpDiagnostics(params: {
   diagnostics: readonly McpToolCatalogDiagnostic[];
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   modelRef: { provider: string; model: string };
 }): readonly McpToolCatalogDiagnostic[] {
@@ -889,7 +889,7 @@ function filterPolicyActiveBundleMcpDiagnostics(params: {
   );
 }
 
-function isAcpRuntimeAgent(cfg: OpenClawConfig, agentId: string): boolean {
+function isAcpRuntimeAgent(cfg: DexConfig, agentId: string): boolean {
   const entry = listAgentEntries(cfg).find(
     (candidate) => normalizeAgentId(candidate.id) === agentId,
   );
@@ -897,7 +897,7 @@ function isAcpRuntimeAgent(cfg: OpenClawConfig, agentId: string): boolean {
 }
 
 export async function collectRuntimeToolSchemaFindings(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): Promise<readonly HealthFinding[]> {
   const catalog = await loadModelCatalog({ config: cfg });
   const findings: HealthFinding[] = [];

@@ -13,9 +13,9 @@ function parseArgs(argv, env = process.env) {
     argv,
     {
       config: "test/vitest/vitest.unit.config.ts",
-      maxWallMs: readBudgetEnvNumber("OPENCLAW_TEST_PERF_MAX_WALL_MS", env),
-      baselineWallMs: readBudgetEnvNumber("OPENCLAW_TEST_PERF_BASELINE_WALL_MS", env),
-      maxRegressionPct: readBudgetEnvNumber("OPENCLAW_TEST_PERF_MAX_REGRESSION_PCT", env) ?? 10,
+      maxWallMs: readBudgetEnvNumber("DEX_TEST_PERF_MAX_WALL_MS", env),
+      baselineWallMs: readBudgetEnvNumber("DEX_TEST_PERF_BASELINE_WALL_MS", env),
+      maxRegressionPct: readBudgetEnvNumber("DEX_TEST_PERF_MAX_REGRESSION_PCT", env) ?? 10,
     },
     [
       stringFlag("--config", "config"),

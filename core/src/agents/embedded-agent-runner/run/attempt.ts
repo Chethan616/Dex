@@ -20,7 +20,7 @@ import {
 } from "../../../config/sessions/transcript-write-context.js";
 import {
   assertContextEngineHostSupport,
-  OPENCLAW_EMBEDDED_CONTEXT_ENGINE_HOST,
+  DEX_EMBEDDED_CONTEXT_ENGINE_HOST,
 } from "../../../context-engine/host-compat.js";
 import { resolveContextEngineOwnerPluginId } from "../../../context-engine/registry.js";
 import type { AssembleResult } from "../../../context-engine/types.js";
@@ -96,7 +96,7 @@ import {
   toClientToolDefinitions,
 } from "../../agent-tool-definition-adapter.js";
 import {
-  createOpenClawCodingTools,
+  createDexCodingTools,
   resolveProcessToolScopeKey,
   resolveToolLoopDetectionConfig,
 } from "../../agent-tools.js";
@@ -139,7 +139,7 @@ import {
   resolveCodeModeConfig,
 } from "../../code-mode.js";
 import { DEFAULT_CONTEXT_TOKENS } from "../../defaults.js";
-import { resolveOpenClawReferencePaths } from "../../docs-path.js";
+import { resolveDexReferencePaths } from "../../docs-path.js";
 import {
   isCloudCodeAssistFormatError,
   resolveBootstrapMaxChars,
@@ -1058,7 +1058,7 @@ export async function runEmbeddedAttempt(
       assertContextEngineHostSupport({
         contextEngine: activeContextEngine,
         operation: "agent-run",
-        host: OPENCLAW_EMBEDDED_CONTEXT_ENGINE_HOST,
+        host: DEX_EMBEDDED_CONTEXT_ENGINE_HOST,
       });
     }
     const resolveActiveContextEnginePluginId = () =>
@@ -1158,7 +1158,7 @@ export async function runEmbeddedAttempt(
     const toolsRaw = !shouldConstructTools
       ? []
       : (() => {
-          const allTools = createOpenClawCodingTools({
+          const allTools = createDexCodingTools({
             agentId: sessionAgentId,
             ...buildEmbeddedAttemptToolRunContext({ ...params, trace: runTrace }),
             exec: {
@@ -1777,7 +1777,7 @@ export async function runEmbeddedAttempt(
     // When toolsAllow is set, use minimal prompt and strip skills catalog
     const effectivePromptMode = params.toolsAllow?.length ? ("minimal" as const) : promptMode;
     const effectiveSkillsPrompt = params.toolsAllow?.length ? undefined : skillsPrompt;
-    const openClawReferences = await resolveOpenClawReferencePaths({
+    const openClawReferences = await resolveDexReferencePaths({
       workspaceDir: effectiveWorkspace,
       argv1: process.argv[1],
       cwd: effectiveCwd,

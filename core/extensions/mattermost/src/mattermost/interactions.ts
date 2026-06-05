@@ -11,7 +11,7 @@ import {
   isTrustedProxyAddress,
   readRequestBodyWithLimit,
   resolveClientIp,
-  type OpenClawConfig,
+  type DexConfig,
 } from "./runtime-api.js";
 
 const INTERACTION_MAX_BODY_BYTES = 64 * 1024;
@@ -69,7 +69,7 @@ export function getInteractionCallbackUrl(accountId: string): string | undefined
   return callbackUrls.get(accountId);
 }
 
-type InteractionCallbackConfig = Pick<OpenClawConfig, "gateway" | "channels"> & {
+type InteractionCallbackConfig = Pick<DexConfig, "gateway" | "channels"> & {
   interactions?: {
     callbackBaseUrl?: string;
   };

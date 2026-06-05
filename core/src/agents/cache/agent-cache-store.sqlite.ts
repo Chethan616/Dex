@@ -12,11 +12,11 @@ import {
   getNodeSqliteKysely,
 } from "../../infra/kysely-sync.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
-import type { DB as OpenClawAgentKyselyDatabase } from "../../state/openclaw-agent-db.generated.js";
+import type { DB as DexAgentKyselyDatabase } from "../../state/openclaw-agent-db.generated.js";
 import {
-  openOpenClawAgentDatabase,
+  openDexAgentDatabase,
   runOpenClawAgentWriteTransaction,
-  type OpenClawAgentDatabaseOptions,
+  type DexAgentDatabaseOptions,
 } from "../../state/openclaw-agent-db.js";
 import type {
   AgentRuntimeCacheStore,
@@ -24,7 +24,7 @@ import type {
   AgentRuntimeCacheWriteOptions,
 } from "./agent-cache-store.js";
 
-export type SqliteAgentCacheStoreOptions = OpenClawAgentDatabaseOptions & {
+export type SqliteAgentCacheStoreOptions = DexAgentDatabaseOptions & {
   scope: string;
   now?: () => number;
 };
@@ -32,8 +32,8 @@ export type SqliteAgentCacheStoreOptions = OpenClawAgentDatabaseOptions & {
 export type WriteSqliteAgentCacheEntryOptions = SqliteAgentCacheStoreOptions &
   AgentRuntimeCacheWriteOptions;
 
-type CacheEntriesTable = OpenClawAgentKyselyDatabase["cache_entries"];
-type AgentCacheDatabase = Pick<OpenClawAgentKyselyDatabase, "cache_entries">;
+type CacheEntriesTable = DexAgentKyselyDatabase["cache_entries"];
+type AgentCacheDatabase = Pick<DexAgentKyselyDatabase, "cache_entries">;
 type AgentCacheRow = Selectable<CacheEntriesTable>;
 
 function normalizeScopeValue(value: string): string {
@@ -68,7 +68,7 @@ function normalizeScope(options: SqliteAgentCacheStoreOptions): {
   };
 }
 
-function toDatabaseOptions(options: SqliteAgentCacheStoreOptions): OpenClawAgentDatabaseOptions {
+function toDatabaseOptions(options: SqliteAgentCacheStoreOptions): DexAgentDatabaseOptions {
   return {
     agentId: options.agentId,
     ...(options.env ? { env: options.env } : {}),
@@ -192,7 +192,7 @@ export function readSqliteAgentCacheEntry(
 ): AgentRuntimeCacheValue | null {
   const scope = normalizeScope(options);
   const key = normalizeKey(options.key);
-  const database = openOpenClawAgentDatabase(toDatabaseOptions(options));
+  const database = openDexAgentDatabase(toDatabaseOptions(options));
   const db = getNodeSqliteKysely<AgentCacheDatabase>(database.db);
   const row =
     executeSqliteQueryTakeFirstSync(
@@ -214,7 +214,7 @@ export function listSqliteAgentCacheEntries(
 ): AgentRuntimeCacheValue[] {
   const scope = normalizeScope(options);
   const now = resolveDateTimestampMs(options.now?.());
-  const database = openOpenClawAgentDatabase(toDatabaseOptions(options));
+  const database = openDexAgentDatabase(toDatabaseOptions(options));
   const db = getNodeSqliteKysely<AgentCacheDatabase>(database.db);
   return executeSqliteQuerySync(
     database.db,

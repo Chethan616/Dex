@@ -73,7 +73,7 @@ function parseNonNegativeInteger(value: string | undefined): number | null {
 
 function getSerializedSessionStoreCacheMaxBytes(): number {
   return (
-    parseNonNegativeInteger(process.env.OPENCLAW_SESSION_SERIALIZED_CACHE_MAX_BYTES) ??
+    parseNonNegativeInteger(process.env.DEX_SESSION_SERIALIZED_CACHE_MAX_BYTES) ??
     DEFAULT_SESSION_STORE_SERIALIZED_CACHE_MAX_BYTES
   );
 }
@@ -251,7 +251,7 @@ export function cloneSessionStoreSnapshotEntry(entry: SessionEntry): SessionStor
 
 export function getSessionStoreTtl(): number {
   return resolveCacheTtlMs({
-    envValue: process.env.OPENCLAW_SESSION_CACHE_TTL_MS,
+    envValue: process.env.DEX_SESSION_CACHE_TTL_MS,
     defaultTtlMs: DEFAULT_SESSION_STORE_TTL_MS,
   });
 }

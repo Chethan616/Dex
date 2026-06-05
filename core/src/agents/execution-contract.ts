@@ -1,5 +1,5 @@
 import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveAgentExecutionContract, resolveSessionAgentIds } from "./agent-scope.js";
 
 /**
@@ -82,7 +82,7 @@ export function isStrictAgenticSupportedProviderModel(params: {
  * installations, not only users who opted in manually.
  */
 export function resolveEffectiveExecutionContract(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionKey?: string;
   agentId?: string | null;
   provider?: string | null;
@@ -113,7 +113,7 @@ export function resolveEffectiveExecutionContract(params: {
 }
 
 export function isStrictAgenticExecutionContractActive(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionKey?: string;
   agentId?: string | null;
   provider?: string | null;

@@ -36,9 +36,9 @@ const signalChild = (child, signal) => {
 
 const runWithTimeout = async (timeout, command, commandArgs) => {
   const killGrace = parsePositiveNumber(
-    process.env.OPENCLAW_BUN_GLOBAL_SMOKE_TIMEOUT_KILL_GRACE_MS ??
+    process.env.DEX_BUN_GLOBAL_SMOKE_TIMEOUT_KILL_GRACE_MS ??
       String(DEFAULT_TIMEOUT_KILL_GRACE_MS),
-    "OPENCLAW_BUN_GLOBAL_SMOKE_TIMEOUT_KILL_GRACE_MS",
+    "DEX_BUN_GLOBAL_SMOKE_TIMEOUT_KILL_GRACE_MS",
   );
   const child = spawn(command, commandArgs, {
     detached: process.platform !== "win32",
@@ -101,7 +101,7 @@ if (mode === "run-with-timeout") {
 }
 
 if (mode === "assert-image-providers") {
-  const raw = process.env.OPENCLAW_IMAGE_PROVIDERS_JSON ?? "";
+  const raw = process.env.DEX_IMAGE_PROVIDERS_JSON ?? "";
   let parsed;
   try {
     parsed = JSON.parse(raw);

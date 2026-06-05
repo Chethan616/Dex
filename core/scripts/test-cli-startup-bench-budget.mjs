@@ -57,11 +57,11 @@ try {
       warmup: 0,
       timeoutMs: 30_000,
       maxDurationRegressionPct:
-        readBudgetEnvNumber("OPENCLAW_STARTUP_BENCH_MAX_DURATION_REGRESSION_PCT") ?? 20,
+        readBudgetEnvNumber("DEX_STARTUP_BENCH_MAX_DURATION_REGRESSION_PCT") ?? 20,
       maxFirstOutputRegressionPct:
-        readBudgetEnvNumber("OPENCLAW_STARTUP_BENCH_MAX_FIRST_OUTPUT_REGRESSION_PCT") ?? 20,
+        readBudgetEnvNumber("DEX_STARTUP_BENCH_MAX_FIRST_OUTPUT_REGRESSION_PCT") ?? 20,
       maxRssRegressionPct:
-        readBudgetEnvNumber("OPENCLAW_STARTUP_BENCH_MAX_RSS_REGRESSION_PCT") ?? 20,
+        readBudgetEnvNumber("DEX_STARTUP_BENCH_MAX_RSS_REGRESSION_PCT") ?? 20,
       skipBaseline: false,
     },
     [

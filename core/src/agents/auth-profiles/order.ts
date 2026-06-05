@@ -2,7 +2,7 @@ import {
   findNormalizedProviderValue,
   normalizeProviderId,
 } from "@dexagent/model-catalog-core/provider-id";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   type ProviderAuthAliasLookupParams,
   resolveProviderIdForAuth,
@@ -34,7 +34,7 @@ const OPENAI_PROVIDER_ID = "openai";
 const OPENAI_CODEX_PROVIDER_ID = "openai";
 
 function isOpenAIApiKeyCompatibleWithCodexAuth(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   authAliasLookupParams?: ProviderAuthAliasLookupParams;
   providerAuthKey: string;
   credential?: AuthProfileCredential;
@@ -53,7 +53,7 @@ function isOpenAIApiKeyCompatibleWithCodexAuth(params: {
 }
 
 function isCredentialProviderCompatibleWithAuthProvider(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   authAliasLookupParams?: ProviderAuthAliasLookupParams;
   providerAuthKey: string;
   credential: AuthProfileCredential;
@@ -75,7 +75,7 @@ function isCredentialProviderCompatibleWithAuthProvider(params: {
 }
 
 export function isStoredCredentialCompatibleWithAuthProvider(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   authAliasLookupParams?: ProviderAuthAliasLookupParams;
   provider: string;
   credential: AuthProfileCredential;
@@ -92,7 +92,7 @@ export function isStoredCredentialCompatibleWithAuthProvider(params: {
 }
 
 function isConfiguredProfileCompatibleWithAuthProvider(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   providerAuthKey: string;
   provider: string;
   mode?: string;
@@ -112,7 +112,7 @@ function isConfiguredProfileCompatibleWithAuthProvider(params: {
 }
 
 function listProfilesCompatibleWithAuthProvider(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   store: AuthProfileStore;
   provider: string;
   providerAuthKey: string;
@@ -132,7 +132,7 @@ function listProfilesCompatibleWithAuthProvider(params: {
 }
 
 function resolveProviderAuthMode(
-  cfg: OpenClawConfig | undefined,
+  cfg: DexConfig | undefined,
   provider: string,
 ): string | undefined {
   const providers = cfg?.models?.providers;
@@ -144,13 +144,13 @@ function resolveProviderAuthMode(
   return typeof auth === "string" ? auth : undefined;
 }
 
-function providerAllowsAwsSdkAuth(cfg: OpenClawConfig | undefined, provider: string): boolean {
+function providerAllowsAwsSdkAuth(cfg: DexConfig | undefined, provider: string): boolean {
   const authMode = resolveProviderAuthMode(cfg, provider);
   return authMode === "aws-sdk";
 }
 
 export function isConfiguredAwsSdkAuthProfileForProvider(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider: string;
   profileId: string;
 }): boolean {
@@ -168,7 +168,7 @@ export function isConfiguredAwsSdkAuthProfileForProvider(params: {
 }
 
 export function resolveAuthProfileEligibility(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   store: AuthProfileStore;
   provider: string;
   profileId: string;
@@ -228,7 +228,7 @@ export function resolveAuthProfileEligibility(params: {
 }
 
 export function resolveAuthProfileOrder(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   store: AuthProfileStore;
   provider: string;
   preferredProfile?: string;
@@ -383,7 +383,7 @@ function resolveAuthOrder(
 }
 
 function isNativeCredentialProviderCompatibleWithAuthProvider(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   providerAuthKey: string;
   credential: AuthProfileCredential | undefined;
 }): boolean {

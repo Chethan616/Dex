@@ -3,7 +3,7 @@ import {
   normalizeProviderId,
 } from "@dexagent/model-catalog-core/provider-id";
 import type { AuthProfileConfig } from "../../config/types.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { resolveAuthProfileMetadata } from "./identity.js";
 import { dedupeProfileIds, listProfilesForProvider } from "./profile-list.js";
 import type { AuthProfileIdRepairResult, AuthProfileStore } from "./types.js";
@@ -25,7 +25,7 @@ function isEmailLike(value: string): boolean {
 }
 
 export function suggestOAuthProfileIdForLegacyDefault(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   store: AuthProfileStore;
   provider: string;
   legacyProfileId: string;
@@ -86,7 +86,7 @@ export function suggestOAuthProfileIdForLegacyDefault(params: {
 }
 
 export function repairOAuthProfileIdMismatch(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   store: AuthProfileStore;
   provider: string;
   legacyProfileId?: string;
@@ -151,7 +151,7 @@ export function repairOAuthProfileIdMismatch(params: {
     return { ...order, [resolvedKey]: deduped };
   })();
 
-  const nextCfg: OpenClawConfig = {
+  const nextCfg: DexConfig = {
     ...params.cfg,
     auth: {
       ...params.cfg.auth,

@@ -63,7 +63,7 @@ import {
   updateSessionStore,
 } from "../../config/sessions.js";
 import { resolveMaintenanceConfigFromInput } from "../../config/sessions/store-maintenance.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { registerAgentRunContext } from "../../infra/agent-events.js";
 import { formatUncaughtError, readErrorName } from "../../infra/errors.js";
 import {
@@ -161,7 +161,7 @@ import type {
 const RESET_COMMAND_RE = /^\/(new|reset)(?:\s+([\s\S]*))?$/i;
 
 type AgentSendSessionLifecycleTransition = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   sessionId: string;
   storePath: string;
@@ -302,7 +302,7 @@ function buildBareSessionResetResponse(params: {
 }
 
 async function deliverBareSessionResetResult(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   context: GatewayRequestHandlerOptions["context"];
   reason: "new" | "reset";
   sessionId?: string;
@@ -366,7 +366,7 @@ async function deliverBareSessionResetResult(params: {
 }
 
 async function resolveBareSessionResetResult(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   context: GatewayRequestHandlerOptions["context"];
   reason: "new" | "reset";
   sessionId?: string;
@@ -441,11 +441,11 @@ async function resolveBareSessionResetResult(params: {
 }
 
 function loadBareSessionResetDeliverySession(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   agentId?: string;
 }): {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   entry?: SessionEntry;
   agentId: string;
 } {
@@ -637,7 +637,7 @@ function resolveGatewayAgentTaskTrackingMode(params: {
 }
 
 async function registerPluginSubagentRunFromGateway(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   runId: string;
   childSessionKey: string;
   task: string;
@@ -1507,7 +1507,7 @@ export const agentHandlers: GatewayRequestHandlers = {
       let resolvedSessionId = requestedSessionId;
       let sessionEntry: SessionEntry | undefined;
       let bestEffortDeliver = requestedBestEffortDeliver ?? false;
-      let cfgForAgent: OpenClawConfig | undefined;
+      let cfgForAgent: DexConfig | undefined;
       let resolvedSessionKey = requestedSessionKey;
       let resolvedSessionAgentId: string | undefined;
       let isNewSession = false;

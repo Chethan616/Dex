@@ -1,7 +1,7 @@
 import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { normalizePluginsConfig } from "./config-state.js";
 import { passesManifestOwnerBasePolicy } from "./manifest-owner-policy.js";
 import type { PluginManifestRecord } from "./manifest-registry.js";
@@ -54,7 +54,7 @@ export type PluginActivationPlan = {
 
 type ResolveManifestActivationPlanParams = {
   trigger: PluginActivationPlannerTrigger;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   origin?: PluginOrigin;

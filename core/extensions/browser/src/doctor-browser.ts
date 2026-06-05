@@ -7,9 +7,9 @@ import {
   resolveBrowserExecutableForPlatform,
   resolveGoogleChromeExecutableForPlatform,
 } from "./browser/chrome.executables.js";
-import { DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME, resolveBrowserConfig } from "./browser/config.js";
+import { DEFAULT_DEX_BROWSER_PROFILE_NAME, resolveBrowserConfig } from "./browser/config.js";
 import { movePathToTrash } from "./browser/trash.js";
-import type { OpenClawConfig } from "./config/config.js";
+import type { DexConfig } from "./config/config.js";
 import { asRecord } from "./record-shared.js";
 import { formatCliCommand, note } from "./sdk-setup-tools.js";
 import { CONFIG_DIR, resolveUserPath } from "./utils.js";
@@ -43,7 +43,7 @@ type BrowserDoctorFilesystemDeps = {
   movePathToTrash?: (targetPath: string) => Promise<string>;
 };
 
-function collectChromeMcpProfiles(cfg: OpenClawConfig): ExistingSessionProfile[] {
+function collectChromeMcpProfiles(cfg: DexConfig): ExistingSessionProfile[] {
   const browser = asRecord(cfg.browser);
   if (!browser) {
     return [];
@@ -74,7 +74,7 @@ function collectChromeMcpProfiles(cfg: OpenClawConfig): ExistingSessionProfile[]
   return [...profiles.values()].toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
-function collectManagedProfiles(cfg: OpenClawConfig): ManagedProfile[] {
+function collectManagedProfiles(cfg: DexConfig): ManagedProfile[] {
   const browser = asRecord(cfg.browser);
   if (!browser) {
     return [];
@@ -120,7 +120,7 @@ function isSameOrChildPath(candidatePath: string, parentPath: string): boolean {
   return candidate === parent || candidate.startsWith(`${parent}${path.sep}`);
 }
 
-function isLegacyClawdProfileConfigured(cfg: OpenClawConfig, legacyProfileDir: string): boolean {
+function isLegacyClawdProfileConfigured(cfg: DexConfig, legacyProfileDir: string): boolean {
   const browser = asRecord(cfg.browser);
   if (!browser) {
     return false;
@@ -148,7 +148,7 @@ function isLegacyClawdProfileConfigured(cfg: OpenClawConfig, legacyProfileDir: s
 }
 
 export function detectLegacyClawdBrowserProfileResidue(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   deps?: BrowserDoctorFilesystemDeps,
 ): LegacyClawdBrowserProfileResidue | null {
   const configDir = deps?.configDir ?? CONFIG_DIR;
@@ -172,7 +172,7 @@ export function detectLegacyClawdBrowserProfileResidue(
   const resolved = resolveBrowserConfig(cfg.browser, cfg);
   const defaultProfile = resolved.profiles[resolved.defaultProfile];
   if (
-    resolved.defaultProfile !== DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME ||
+    resolved.defaultProfile !== DEFAULT_DEX_BROWSER_PROFILE_NAME ||
     defaultProfile?.driver === "existing-session"
   ) {
     return null;
@@ -183,7 +183,7 @@ export function detectLegacyClawdBrowserProfileResidue(
     legacyUserDataDir,
     canonicalUserDataDir: resolveManagedBrowserUserDataDir(
       configDir,
-      DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME,
+      DEFAULT_DEX_BROWSER_PROFILE_NAME,
     ),
   };
 }
@@ -199,7 +199,7 @@ function formatLegacyClawdBrowserProfileResidueNote(
 }
 
 export async function noteChromeMcpBrowserReadiness(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   deps?: {
     platform?: NodeJS.Platform;
     noteFn?: typeof note;
@@ -349,7 +349,7 @@ export async function noteChromeMcpBrowserReadiness(
 }
 
 export async function maybeArchiveLegacyClawdBrowserProfileResidue(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   deps?: BrowserDoctorFilesystemDeps,
 ): Promise<{ changes: string[]; warnings: string[] }> {
   const residue = detectLegacyClawdBrowserProfileResidue(cfg, deps);

@@ -26,7 +26,7 @@ import { isBlockedObjectKey } from "../config/prototype-keys.js";
 import { isPluginPackagingRuntimeOutputInvalidConfigSnapshot } from "../config/recovery-policy.js";
 import { redactConfigObject } from "../config/redact-snapshot.js";
 import { readBestEffortRuntimeConfigSchema } from "../config/runtime-schema.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   coerceSecretRef,
   isValidEnvSecretRefId,
@@ -203,7 +203,7 @@ function normalizeProviderCatalogModelsForConfigMutation(
 }
 
 function normalizeModelProviderRefsForConfigMutation(
-  providers: NonNullable<OpenClawConfig["models"]>["providers"] | undefined,
+  providers: NonNullable<DexConfig["models"]>["providers"] | undefined,
 ): unknown {
   if (!isPlainRecord(providers)) {
     return providers;
@@ -226,7 +226,7 @@ function normalizeModelProviderRefsForConfigMutation(
   return mutated ? nextProviders : providers;
 }
 
-function normalizeConfigMutationModelRefs(cfg: OpenClawConfig): OpenClawConfig {
+function normalizeConfigMutationModelRefs(cfg: DexConfig): DexConfig {
   const defaults = cfg.agents?.defaults;
   const agentList = cfg.agents?.list;
   const providers = cfg.models?.providers;
@@ -459,7 +459,7 @@ function hasOwnPathKey(value: Record<string, unknown>, key: string): boolean {
 }
 
 function formatDoctorHint(message: string): string {
-  return `Run \`${formatCliCommand("dex-core doctor --fix")}\` ${message}`;
+  return `Run \`${formatCliCommand("dex doctor --fix")}\` ${message}`;
 }
 
 function formatInvalidConfigRepairHint(
@@ -1603,7 +1603,7 @@ function buildSingleSetOperations(params: {
 }
 
 function collectDryRunRefs(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   operations: ConfigSetOperation[];
 }): SecretRef[] {
   const refsByKey = new Map<string, SecretRef>();
@@ -1654,7 +1654,7 @@ function collectDryRunRefs(params: {
 
 async function collectDryRunResolvabilityErrors(params: {
   refs: SecretRef[];
-  config: OpenClawConfig;
+  config: DexConfig;
 }): Promise<ConfigSetDryRunError[]> {
   const failures: ConfigSetDryRunError[] = [];
   for (const ref of params.refs) {
@@ -1676,7 +1676,7 @@ async function collectDryRunResolvabilityErrors(params: {
 
 function collectDryRunStaticErrorsForSkippedExecRefs(params: {
   refs: SecretRef[];
-  config: OpenClawConfig;
+  config: DexConfig;
 }): ConfigSetDryRunError[] {
   const failures: ConfigSetDryRunError[] = [];
   for (const ref of params.refs) {
@@ -1857,7 +1857,7 @@ async function loadConfigMutationSchema(): Promise<JsonSchemaRecord | undefined>
   }
 }
 
-function collectDryRunSchemaErrors(params: { config: OpenClawConfig }): ConfigSetDryRunError[] {
+function collectDryRunSchemaErrors(params: { config: DexConfig }): ConfigSetDryRunError[] {
   const validated = validateConfigObjectRawWithPlugins(params.config);
   if (validated.ok) {
     return [];
@@ -1869,7 +1869,7 @@ function collectDryRunSchemaErrors(params: { config: OpenClawConfig }): ConfigSe
 }
 
 function collectPluginIntegrationProviderErrors(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   operations: ConfigSetOperation[];
 }): ConfigSetDryRunError[] {
   const providers = params.config.secrets?.providers ?? {};
@@ -2041,7 +2041,7 @@ async function runConfigOperations(params: {
     root: next,
     operations,
   });
-  const nextConfig = normalizeConfigMutationModelRefs(next as OpenClawConfig);
+  const nextConfig = normalizeConfigMutationModelRefs(next as DexConfig);
   const normalizedExplicitSetPaths = explicitSetPaths.map(normalizeConfigMutationExplicitSetPath);
   const policyIssues = collectUnsupportedSecretRefPolicyIssues(nextConfig);
   const policyIssueLines = formatConfigIssueLines(policyIssues, "", { normalizeRoot: true }).map(
@@ -2468,7 +2468,7 @@ export async function runConfigValidate(opts: { json?: boolean; runtime?: Runtim
       } else {
         runtime.error(danger(`Config file not found: ${shortPath}`));
         runtime.error(
-          `Create one with ${formatCliCommand("dex-core onboard")} or run ${formatCliCommand("dex-core doctor --fix")}.`,
+          `Create one with ${formatCliCommand("dex onboard")} or run ${formatCliCommand("dex doctor --fix")}.`,
         );
       }
       runtime.exit(1);

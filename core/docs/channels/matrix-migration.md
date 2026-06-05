@@ -13,8 +13,8 @@ For most users, the upgrade is in place:
 - the plugin stays `@openclaw/matrix`
 - the channel stays `matrix`
 - your config stays under `channels.matrix`
-- cached credentials stay under `~/.openclaw/credentials/matrix/`
-- runtime state stays under `~/.openclaw/matrix/`
+- cached credentials stay under `~/.dex/credentials/matrix/`
+- runtime state stays under `~/.dex/matrix/`
 
 You do not need to rename config keys or reinstall the plugin under a new name.
 
@@ -43,14 +43,14 @@ Automatic migration covers:
 
 Snapshot details:
 
-- OpenClaw writes a marker file at `~/.openclaw/matrix/migration-snapshot.json` after a successful snapshot so later startup and repair passes can reuse the same archive.
+- OpenClaw writes a marker file at `~/.dex/matrix/migration-snapshot.json` after a successful snapshot so later startup and repair passes can reuse the same archive.
 - These automatic Matrix migration snapshots back up config + state only (`includeWorkspace: false`).
 - If Matrix only has warning-only migration state, for example because `userId` or `accessToken` is still missing, OpenClaw does not create the snapshot yet because no Matrix mutation is actionable.
 - If the snapshot step fails, OpenClaw skips Matrix migration for that run instead of mutating state without a recovery point.
 
 About multi-account upgrades:
 
-- the oldest flat Matrix store (`~/.openclaw/matrix/bot-storage.json` and `~/.openclaw/matrix/crypto/`) came from a single-store layout, so OpenClaw can only migrate it into one resolved Matrix account target
+- the oldest flat Matrix store (`~/.dex/matrix/bot-storage.json` and `~/.dex/matrix/crypto/`) came from a single-store layout, so OpenClaw can only migrate it into one resolved Matrix account target
 - already account-scoped legacy Matrix stores are detected and prepared per configured Matrix account
 
 ## What the migration cannot do automatically

@@ -2,7 +2,7 @@ import type {
   SessionsListParams,
   SessionsResolveParams,
 } from "../../../packages/gateway-protocol/src/index.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { CallGatewayOptions } from "../../gateway/call.js";
 import type { ReadSessionMessagesAsyncOptions } from "../../gateway/session-utils.fs.js";
 import type { SessionsListResult } from "../../gateway/session-utils.types.js";
@@ -15,10 +15,10 @@ type EmbeddedCallGateway = <T = Record<string, unknown>>(opts: CallGatewayOption
 interface EmbeddedGatewayRuntime {
   resolveSessionAgentId: (opts: {
     sessionKey: string;
-    config: OpenClawConfig;
+    config: DexConfig;
     agentId?: string;
   }) => string;
-  getRuntimeConfig: () => OpenClawConfig;
+  getRuntimeConfig: () => DexConfig;
   augmentChatHistoryWithCliSessionImports: (opts: {
     entry: unknown;
     provider: string | undefined;
@@ -34,34 +34,34 @@ interface EmbeddedGatewayRuntime {
     messages: unknown[];
     maxSingleMessageBytes: number;
   }) => { messages: unknown[] };
-  resolveEffectiveChatHistoryMaxChars: (cfg: OpenClawConfig) => number;
+  resolveEffectiveChatHistoryMaxChars: (cfg: DexConfig) => number;
   projectRecentChatDisplayMessages: (
     msgs: unknown[],
     opts?: { maxChars?: number; maxMessages?: number },
   ) => unknown[];
   capArrayByJsonBytes: (items: unknown[], maxBytes: number) => { items: unknown[] };
   listSessionsFromStoreAsync: (opts: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     storePath: string;
     store: unknown;
     opts: SessionsListParams;
   }) => Promise<SessionsListResult>;
   loadCombinedSessionStoreForGateway: (
-    cfg: OpenClawConfig,
+    cfg: DexConfig,
     opts?: { agentId?: string },
   ) => {
     storePath: string;
     store: unknown;
   };
   resolveSessionKeyFromResolveParams: (opts: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     p: SessionsResolveParams;
   }) => Promise<SessionsResolveResult>;
   loadSessionEntry: (
     sessionKey: string,
     opts?: { agentId?: string },
   ) => {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     storePath: string | undefined;
     entry: Record<string, unknown> | undefined;
   };
@@ -72,7 +72,7 @@ interface EmbeddedGatewayRuntime {
     opts: ReadSessionMessagesAsyncOptions,
   ) => Promise<unknown[]>;
   resolveSessionModelRef: (
-    cfg: OpenClawConfig,
+    cfg: DexConfig,
     entry: unknown,
     sessionAgentId: string,
   ) => { provider: string | undefined };

@@ -333,7 +333,7 @@ export async function runCopilotAttempt(
         // enforcement layer receives the same context PI does
         // (identity, owner-only allowlist, auth-profile store,
         // channel/routing, model context, run hooks). See
-        // tool-bridge.ts buildOpenClawCodingToolsOptions().
+        // tool-bridge.ts buildDexCodingToolsOptions().
         attemptParams: input,
         sessionRef,
         onYieldDetected: () => {

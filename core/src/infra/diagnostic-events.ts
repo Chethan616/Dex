@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { TalkBrain, TalkEventType, TalkMode, TalkTransport } from "../talk/talk-events.js";
 import {
   formatDiagnosticTraceparent,
@@ -834,7 +834,7 @@ function getDiagnosticEventsState(): DiagnosticEventsGlobalState {
   return state;
 }
 
-export function isDiagnosticsEnabled(config?: OpenClawConfig): boolean {
+export function isDiagnosticsEnabled(config?: DexConfig): boolean {
   return config?.diagnostics?.enabled !== false;
 }
 

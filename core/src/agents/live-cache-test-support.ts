@@ -13,7 +13,7 @@ import { ensureOpenClawModelsJson } from "./models-config.js";
 import { buildAssistantMessageWithZeroUsage } from "./stream-message-shared.js";
 
 export const LIVE_CACHE_TEST_ENABLED =
-  isLiveTestEnabled() && isTruthyEnvValue(process.env.OPENCLAW_LIVE_CACHE_TEST);
+  isLiveTestEnabled() && isTruthyEnvValue(process.env.DEX_LIVE_CACHE_TEST);
 
 const DEFAULT_HEARTBEAT_MS = 20_000;
 const DEFAULT_TIMEOUT_MS = 90_000;
@@ -46,7 +46,7 @@ export async function withLiveCacheHeartbeat<T>(
 ): Promise<T> {
   const heartbeatMs = Math.max(
     1_000,
-    toInt(process.env.OPENCLAW_LIVE_HEARTBEAT_MS, DEFAULT_HEARTBEAT_MS),
+    toInt(process.env.DEX_LIVE_HEARTBEAT_MS, DEFAULT_HEARTBEAT_MS),
   );
   const startedAt = Date.now();
   let heartbeatCount = 0;
@@ -76,7 +76,7 @@ export async function completeSimpleWithLiveTimeout<TApi extends Api>(
   progressContext: string,
   timeoutMs = Math.max(
     1_000,
-    toInt(process.env.OPENCLAW_LIVE_MODEL_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
+    toInt(process.env.DEX_LIVE_MODEL_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
   ),
 ): Promise<AssistantMessage> {
   const controller = new AbortController();

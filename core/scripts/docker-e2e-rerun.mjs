@@ -124,7 +124,7 @@ function commonReuseInputs(entries) {
 }
 
 function ghWorkflowCommand(lanes, ref, workflow, reuseInputs = {}) {
-  const workflowRef = process.env.OPENCLAW_DOCKER_E2E_WORKFLOW_REF || process.env.GITHUB_REF_NAME;
+  const workflowRef = process.env.DEX_DOCKER_E2E_WORKFLOW_REF || process.env.GITHUB_REF_NAME;
   const releasePath = lanes.some(laneNeedsReleasePath);
   const fields = [
     "gh workflow run",

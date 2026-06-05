@@ -4,10 +4,10 @@ import {
   type ChannelPluginCatalogEntry,
 } from "../../channels/plugins/catalog.js";
 import { applyPluginAutoEnable } from "../../config/plugin-auto-enable.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { normalizePluginsConfig, resolveEnableState } from "../../plugins/config-state.js";
 
-function resolveEffectiveTrustConfig(cfg: OpenClawConfig, env?: NodeJS.ProcessEnv): OpenClawConfig {
+function resolveEffectiveTrustConfig(cfg: DexConfig, env?: NodeJS.ProcessEnv): DexConfig {
   return applyPluginAutoEnable({
     config: cfg,
     env: env ?? process.env,
@@ -16,7 +16,7 @@ function resolveEffectiveTrustConfig(cfg: OpenClawConfig, env?: NodeJS.ProcessEn
 
 function isTrustedWorkspaceChannelCatalogEntry(
   entry: ChannelPluginCatalogEntry | undefined,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   env?: NodeJS.ProcessEnv,
 ): boolean {
   if (entry?.origin !== "workspace") {
@@ -36,7 +36,7 @@ function isTrustedWorkspaceChannelCatalogEntry(
 export function getTrustedChannelPluginCatalogEntry(
   channelId: string,
   params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     workspaceDir?: string;
     env?: NodeJS.ProcessEnv;
   },
@@ -55,7 +55,7 @@ export function getTrustedChannelPluginCatalogEntry(
 
 function listChannelPluginCatalogEntriesWithTrustedFallback(
   params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     workspaceDir?: string;
     env?: NodeJS.ProcessEnv;
   },
@@ -80,7 +80,7 @@ function listChannelPluginCatalogEntriesWithTrustedFallback(
 }
 
 export function listTrustedChannelPluginCatalogEntries(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
 }): ChannelPluginCatalogEntry[] {
@@ -88,7 +88,7 @@ export function listTrustedChannelPluginCatalogEntries(params: {
 }
 
 export function listSetupDiscoveryChannelPluginCatalogEntries(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
 }): ChannelPluginCatalogEntry[] {

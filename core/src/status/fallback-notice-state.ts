@@ -1,7 +1,7 @@
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { areRuntimeModelRefsEquivalent } from "../agents/model-runtime-aliases.js";
 import type { SessionEntry } from "../config/sessions.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 export type FallbackNoticeState = Pick<
   SessionEntry,
@@ -11,7 +11,7 @@ export type FallbackNoticeState = Pick<
 export function resolveActiveFallbackState(params: {
   selectedModelRef: string;
   activeModelRef: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   state?: FallbackNoticeState;
 }): { active: boolean; reason?: string } {
   const selected = normalizeOptionalString(params.state?.fallbackNoticeSelectedModel);

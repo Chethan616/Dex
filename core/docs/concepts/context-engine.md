@@ -19,7 +19,7 @@ OpenClaw ships with a built-in `legacy` engine and uses it by default - most use
     ```bash
     openclaw doctor
     # or inspect config directly:
-    cat ~/.openclaw/openclaw.json | jq '.plugins.slots.contextEngine'
+    cat ~/.dex/openclaw.json | jq '.plugins.slots.contextEngine'
     ```
   </Step>
   <Step title="Install a plugin engine">

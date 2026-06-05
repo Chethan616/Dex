@@ -201,7 +201,7 @@ function createNoteOutput(columns: number): NodeJS.WriteStream {
 export function note(message: unknown, title?: string) {
   if (
     suppressNotesStorage.getStore() === true ||
-    isSuppressedByEnv(process.env.OPENCLAW_SUPPRESS_NOTES)
+    isSuppressedByEnv(process.env.DEX_SUPPRESS_NOTES)
   ) {
     return;
   }

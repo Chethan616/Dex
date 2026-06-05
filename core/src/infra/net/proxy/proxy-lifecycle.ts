@@ -35,9 +35,9 @@ export type ProxyHandle = {
 const PROXY_ENV_KEYS = ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"] as const;
 const NO_PROXY_ENV_KEYS = ["no_proxy", "NO_PROXY"] as const;
 const PROXY_ACTIVE_KEYS = [
-  "OPENCLAW_PROXY_ACTIVE",
-  "OPENCLAW_PROXY_LOOPBACK_MODE",
-  "OPENCLAW_PROXY_CA_FILE",
+  "DEX_PROXY_ACTIVE",
+  "DEX_PROXY_LOOPBACK_MODE",
+  "DEX_PROXY_CA_FILE",
 ] as const;
 const ALL_PROXY_ENV_KEYS = [...PROXY_ENV_KEYS, ...NO_PROXY_ENV_KEYS, ...PROXY_ACTIVE_KEYS] as const;
 type ProxyEnvKey = (typeof ALL_PROXY_ENV_KEYS)[number];
@@ -64,9 +64,9 @@ function captureProxyEnv(): ProxyEnvSnapshot {
     HTTPS_PROXY: process.env["HTTPS_PROXY"],
     no_proxy: process.env["no_proxy"],
     NO_PROXY: process.env["NO_PROXY"],
-    OPENCLAW_PROXY_ACTIVE: process.env["OPENCLAW_PROXY_ACTIVE"],
-    OPENCLAW_PROXY_LOOPBACK_MODE: process.env["OPENCLAW_PROXY_LOOPBACK_MODE"],
-    OPENCLAW_PROXY_CA_FILE: process.env["OPENCLAW_PROXY_CA_FILE"],
+    DEX_PROXY_ACTIVE: process.env["DEX_PROXY_ACTIVE"],
+    DEX_PROXY_LOOPBACK_MODE: process.env["DEX_PROXY_LOOPBACK_MODE"],
+    DEX_PROXY_CA_FILE: process.env["DEX_PROXY_CA_FILE"],
   };
 }
 
@@ -88,12 +88,12 @@ function applyProxyEnv(
   for (const key of PROXY_ENV_KEYS) {
     process.env[key] = proxyUrl;
   }
-  process.env["OPENCLAW_PROXY_ACTIVE"] = "1";
-  process.env["OPENCLAW_PROXY_LOOPBACK_MODE"] = loopbackMode;
+  process.env["DEX_PROXY_ACTIVE"] = "1";
+  process.env["DEX_PROXY_LOOPBACK_MODE"] = loopbackMode;
   if (proxyCaFile) {
-    process.env["OPENCLAW_PROXY_CA_FILE"] = proxyCaFile;
+    process.env["DEX_PROXY_CA_FILE"] = proxyCaFile;
   } else {
-    delete process.env["OPENCLAW_PROXY_CA_FILE"];
+    delete process.env["DEX_PROXY_CA_FILE"];
   }
   for (const key of NO_PROXY_ENV_KEYS) {
     process.env[key] = "";
@@ -154,17 +154,17 @@ function isSupportedProxyUrl(value: string): boolean {
 }
 
 function resolveProxyUrl(config: ProxyConfig | undefined): string {
-  const candidate = config?.proxyUrl?.trim() || process.env["OPENCLAW_PROXY_URL"]?.trim();
+  const candidate = config?.proxyUrl?.trim() || process.env["DEX_PROXY_URL"]?.trim();
   if (!candidate) {
     throw new Error(
       "proxy: enabled but no HTTP proxy URL is configured; set proxy.proxyUrl " +
-        "or OPENCLAW_PROXY_URL to an http:// or https:// forward proxy.",
+        "or DEX_PROXY_URL to an http:// or https:// forward proxy.",
     );
   }
   if (!isSupportedProxyUrl(candidate)) {
     throw new Error(
       "proxy: enabled but proxy URL is invalid; set proxy.proxyUrl " +
-        "or OPENCLAW_PROXY_URL to an http:// or https:// forward proxy.",
+        "or DEX_PROXY_URL to an http:// or https:// forward proxy.",
     );
   }
   return candidate;
@@ -181,7 +181,7 @@ function redactProxyUrlForLog(value: string): string {
 
 /** Reinstalls Proxyline routing in child processes that inherited active proxy env. */
 export function ensureInheritedManagedProxyRoutingActive(): void {
-  if (process.env["OPENCLAW_PROXY_ACTIVE"] !== "1") {
+  if (process.env["DEX_PROXY_ACTIVE"] !== "1") {
     return;
   }
   const proxyUrl = process.env["HTTP_PROXY"];
@@ -190,7 +190,7 @@ export function ensureInheritedManagedProxyRoutingActive(): void {
   }
   const proxyCaFile = resolveManagedProxyCaFileForUrl({
     proxyUrl,
-    caFileOverride: process.env["OPENCLAW_PROXY_CA_FILE"],
+    caFileOverride: process.env["DEX_PROXY_CA_FILE"],
   });
   const proxyTls = loadManagedProxyTlsOptionsSync(proxyCaFile);
   proxylineHandle = installGlobalProxy({

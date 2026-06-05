@@ -4,8 +4,8 @@ import type { ZodIssue } from "zod";
 import { note } from "../../packages/terminal-core/src/note.js";
 import { CONFIG_PATH } from "../config/config.js";
 import { resolveAgentModelFallbackValues } from "../config/model-input.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
-import { OpenClawSchema } from "../config/zod-schema.js";
+import type { DexConfig } from "../config/types.openclaw.js";
+import { DexSchema } from "../config/zod-schema.js";
 import { isRecord } from "../utils.js";
 
 type UnrecognizedKeysIssue = ZodIssue & {
@@ -62,7 +62,7 @@ export function resolveConfigPathTarget(root: unknown, pathLocal: Array<string |
 }
 
 function isUpdateInProgress(): boolean {
-  const value = process.env.OPENCLAW_UPDATE_IN_PROGRESS;
+  const value = process.env.DEX_UPDATE_IN_PROGRESS;
   return value === "1" || value === "true";
 }
 
@@ -71,15 +71,15 @@ const STRIP_PROTECTED_KEYS: Record<string, Set<string>> = {
   plugins: new Set(["installs"]),
 };
 
-export function stripUnknownConfigKeys(config: OpenClawConfig): {
-  config: OpenClawConfig;
+export function stripUnknownConfigKeys(config: DexConfig): {
+  config: DexConfig;
   removed: string[];
 } {
   if (isUpdateInProgress()) {
     return { config, removed: [] };
   }
 
-  const parsed = OpenClawSchema.safeParse(config);
+  const parsed = DexSchema.safeParse(config);
   if (parsed.success) {
     return { config, removed: [] };
   }
@@ -119,7 +119,7 @@ export function stripUnknownConfigKeys(config: OpenClawConfig): {
   return { config: next, removed };
 }
 
-export function noteOpencodeProviderOverrides(cfg: OpenClawConfig): void {
+export function noteOpencodeProviderOverrides(cfg: DexConfig): void {
   const providers = cfg.models?.providers;
   if (!providers) {
     return;
@@ -174,7 +174,7 @@ function isImplicitFallbackClobber(model: unknown): boolean {
   return false;
 }
 
-export function collectImplicitFallbackClobberWarnings(cfg: OpenClawConfig): string[] {
+export function collectImplicitFallbackClobberWarnings(cfg: DexConfig): string[] {
   const defaultFallbacks = resolveAgentModelFallbackValues(cfg.agents?.defaults?.model);
   if (defaultFallbacks.length === 0) {
     return [];
@@ -204,7 +204,7 @@ export function collectImplicitFallbackClobberWarnings(cfg: OpenClawConfig): str
   return warnings;
 }
 
-export function noteImplicitFallbackClobberWarnings(cfg: OpenClawConfig): void {
+export function noteImplicitFallbackClobberWarnings(cfg: DexConfig): void {
   const warnings = collectImplicitFallbackClobberWarnings(cfg);
   if (warnings.length === 0) {
     return;

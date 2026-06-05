@@ -9,17 +9,17 @@ import {
 } from "../plugin-index-sqlite.mjs";
 
 const command = process.argv[2];
-const scratchRoot = process.env.OPENCLAW_PLUGINS_TMP_DIR || os.tmpdir();
+const scratchRoot = process.env.DEX_PLUGINS_TMP_DIR || os.tmpdir();
 const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
 const scratchFile = (name) => path.join(scratchRoot, name);
 
 function readClawHubPreflightLimits() {
   return {
     bodyMaxBytes: readPositiveIntEnv(
-      "OPENCLAW_PLUGINS_E2E_CLAWHUB_PREFLIGHT_BODY_MAX_BYTES",
+      "DEX_PLUGINS_E2E_CLAWHUB_PREFLIGHT_BODY_MAX_BYTES",
       1024 * 1024,
     ),
-    timeoutMs: readPositiveIntEnv("OPENCLAW_PLUGINS_E2E_CLAWHUB_PREFLIGHT_TIMEOUT_MS", 30_000),
+    timeoutMs: readPositiveIntEnv("DEX_PLUGINS_E2E_CLAWHUB_PREFLIGHT_TIMEOUT_MS", 30_000),
   };
 }
 
@@ -114,9 +114,9 @@ function pathsEqual(left, right) {
 }
 
 function getInstallRecords() {
-  const configPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+  const configPath = path.join(process.env.HOME, ".dex", "openclaw.json");
   const config = fs.existsSync(configPath) ? readJson(configPath) : {};
-  const allowLegacyCompat = process.env.OPENCLAW_PACKAGE_ACCEPTANCE_LEGACY_COMPAT === "1";
+  const allowLegacyCompat = process.env.DEX_PACKAGE_ACCEPTANCE_LEGACY_COMPAT === "1";
   const index = readPluginInstallIndex({
     configPath,
     fallbackRecords: allowLegacyCompat ? (config.plugins?.installs ?? {}) : {},
@@ -127,8 +127,8 @@ function getInstallRecords() {
   return index.installRecords ?? {};
 }
 
-function readOpenClawConfig() {
-  const configPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+function readDexConfig() {
+  const configPath = path.join(process.env.HOME, ".dex", "openclaw.json");
   return fs.existsSync(configPath) ? readJson(configPath) : {};
 }
 
@@ -143,7 +143,7 @@ function assertPluginRemoved(params) {
     throw new Error(`${params.pluginId} install record still present after uninstall`);
   }
 
-  const config = readOpenClawConfig();
+  const config = readDexConfig();
   if (config.plugins?.entries?.[params.pluginId]) {
     throw new Error(`${params.pluginId} config entry still present after uninstall`);
   }
@@ -204,7 +204,7 @@ function recordFixturePluginTrust() {
   const pluginId = process.argv[3];
   const pluginRoot = process.argv[4];
   const enabled = process.argv[5] === "1";
-  const configPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+  const configPath = path.join(process.env.HOME, ".dex", "openclaw.json");
   const config = fs.existsSync(configPath) ? readJson(configPath) : {};
   const plugins = (config.plugins ??= {});
   const entries = (plugins.entries ??= {});
@@ -481,7 +481,7 @@ function assertGitPlugin() {
   if (!installPath || !fs.existsSync(installPath)) {
     throw new Error(`git install path missing on disk: ${installPath}`);
   }
-  const gitRoot = path.join(process.env.HOME, ".openclaw", "git");
+  const gitRoot = path.join(process.env.HOME, ".dex", "git");
   if (!installPath.endsWith(`${path.sep}repo`)) {
     throw new Error(`git install path should point at cloned repo root: ${installPath}`);
   }
@@ -748,7 +748,7 @@ function assertInvalidOpenClawExtensionsRejected() {
     throw new Error(`${pluginId} install record persisted after rejected install`);
   }
 
-  const managedInstallPath = path.join(process.env.HOME, ".openclaw", "extensions", pluginId);
+  const managedInstallPath = path.join(process.env.HOME, ".dex", "extensions", pluginId);
   if (fs.existsSync(managedInstallPath)) {
     throw new Error(`${pluginId} managed install directory exists after rejected install`);
   }
@@ -821,12 +821,12 @@ async function assertClawHubPreflight() {
   const limits = readClawHubPreflightLimits();
   const packageName = parseClawHubPackageName(spec);
   const baseUrl = (
-    process.env.OPENCLAW_CLAWHUB_URL ||
+    process.env.DEX_CLAWHUB_URL ||
     process.env.CLAWHUB_URL ||
     "https://clawhub.ai"
   ).replace(/\/+$/, "");
   const token =
-    process.env.OPENCLAW_CLAWHUB_TOKEN ||
+    process.env.DEX_CLAWHUB_TOKEN ||
     process.env.CLAWHUB_TOKEN ||
     process.env.CLAWHUB_AUTH_TOKEN ||
     "";
@@ -899,9 +899,9 @@ function assertClawHubInstalled() {
     throw new Error(`unexpected ClawHub inspect plugin id: ${inspect.plugin?.id}`);
   }
 
-  const configPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+  const configPath = path.join(process.env.HOME, ".dex", "openclaw.json");
   const config = fs.existsSync(configPath) ? readJson(configPath) : {};
-  const allowLegacyCompat = process.env.OPENCLAW_PACKAGE_ACCEPTANCE_LEGACY_COMPAT === "1";
+  const allowLegacyCompat = process.env.DEX_PACKAGE_ACCEPTANCE_LEGACY_COMPAT === "1";
   const index = readPluginInstallIndex({
     configPath,
     fallbackRecords: allowLegacyCompat ? (config.plugins?.installs ?? {}) : {},
@@ -931,7 +931,7 @@ function assertClawHubInstalled() {
   assertClawHubArtifactMetadata(record, pluginId);
 
   const installPath = resolveHomePath(record.installPath);
-  const extensionsRoot = path.join(process.env.HOME, ".openclaw", "extensions");
+  const extensionsRoot = path.join(process.env.HOME, ".dex", "extensions");
   if (!installPath.startsWith(`${extensionsRoot}${path.sep}`)) {
     throw new Error(`ClawHub install path is outside managed extensions root: ${installPath}`);
   }
@@ -954,7 +954,7 @@ function assertClawHubRemoved() {
     throw new Error(`ClawHub plugin still listed after uninstall: ${pluginId}`);
   }
 
-  const configPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+  const configPath = path.join(process.env.HOME, ".dex", "openclaw.json");
   const config = fs.existsSync(configPath) ? readJson(configPath) : {};
   const installRecords = readPluginInstallRecords({
     configPath,
@@ -964,7 +964,7 @@ function assertClawHubRemoved() {
     throw new Error(`ClawHub install record still present after uninstall: ${pluginId}`);
   }
 
-  const configAfterUninstallPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+  const configAfterUninstallPath = path.join(process.env.HOME, ".dex", "openclaw.json");
   const configAfterUninstall = fs.existsSync(configAfterUninstallPath)
     ? readJson(configAfterUninstallPath)
     : {};

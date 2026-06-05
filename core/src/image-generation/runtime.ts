@@ -1,7 +1,7 @@
 import { describeFailoverError, isFailoverError } from "../agents/failover-error.js";
 import type { FallbackAttempt } from "../agents/model-fallback.types.js";
 import { resolveAgentModelTimeoutMsValue } from "../config/model-input.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import {
@@ -30,7 +30,7 @@ export type ImageGenerationRuntimeDeps = {
 export type { GenerateImageParams, GenerateImageRuntimeResult } from "./runtime-types.js";
 
 function buildNoImageGenerationModelConfiguredMessage(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   deps: ImageGenerationRuntimeDeps,
 ): string {
   const listProviders = deps.listProviders ?? listImageGenerationProviders;
@@ -43,7 +43,7 @@ function buildNoImageGenerationModelConfiguredMessage(
 }
 
 export function listRuntimeImageGenerationProviders(
-  params?: { config?: OpenClawConfig },
+  params?: { config?: DexConfig },
   deps: ImageGenerationRuntimeDeps = {},
 ) {
   return (deps.listProviders ?? listImageGenerationProviders)(params?.config);

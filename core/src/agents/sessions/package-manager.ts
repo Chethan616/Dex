@@ -1479,7 +1479,7 @@ export class DefaultPackageManager implements PackageManager {
       projectBaseDir,
     );
 
-    // User extensions from ~/.openclaw/agent/
+    // User extensions from ~/.dex/agent/
     addResources(
       "extensions",
       collectAutoExtensionEntries(userDirs.extensions),
@@ -1488,7 +1488,7 @@ export class DefaultPackageManager implements PackageManager {
       globalBaseDir,
     );
 
-    // User skills from ~/.openclaw/agent/
+    // User skills from ~/.dex/agent/
     addResources(
       "skills",
       collectAutoSkillEntries(userDirs.skills, "openclaw"),

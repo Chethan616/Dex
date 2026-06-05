@@ -1,6 +1,6 @@
 import type { NormalizedModelCatalogRow } from "@dexagent/model-catalog-core/model-catalog-types";
 import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { planManifestModelCatalogRows } from "../../model-catalog/manifest-planner.js";
 import { listOpenClawPluginManifestMetadata } from "../../plugins/manifest-metadata-scan.js";
 import { loadPluginManifestRegistry } from "../../plugins/manifest-registry.js";
@@ -114,7 +114,7 @@ function resolveManifestModelCatalogProviderAlias(params: {
 
 export function canonicalizeManifestModelCatalogProviderAlias(params: {
   provider: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
 }): string {
@@ -161,7 +161,7 @@ export function bundledStaticCatalogProviderUsesRuntimeAugment(params: {
 export function resolveBundledStaticCatalogModel(params: {
   provider: string;
   modelId: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   includeRuntimeDiscovery?: boolean;

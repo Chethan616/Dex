@@ -1,6 +1,6 @@
 import type { AuthProfileStore } from "../agents/auth-profiles/types.js";
 import type { ModelProviderConfig } from "../config/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 type MediaUnderstandingKind = "audio.transcription" | "video.description" | "image.description";
 
@@ -144,7 +144,7 @@ export type ImageDescriptionRequest = {
   authStore?: AuthProfileStore;
   agentDir: string;
   workspaceDir?: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   model: string;
   provider: string;
 };
@@ -167,7 +167,7 @@ export type ImagesDescriptionRequest = {
   authStore?: AuthProfileStore;
   agentDir: string;
   workspaceDir?: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 };
 
 export type ImageDescriptionResult = {
@@ -208,7 +208,7 @@ export type StructuredExtractionRequest = {
   preferredProfile?: string;
   authStore?: AuthProfileStore;
   agentDir: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   model: string;
   provider: string;
 };
@@ -227,7 +227,7 @@ export type MediaUnderstandingDocumentModelDefaults = {
 };
 
 export type MediaUnderstandingProviderAuthContext = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   provider: string;
   providerConfig?: ModelProviderConfig;
 };

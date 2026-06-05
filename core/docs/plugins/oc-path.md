@@ -154,7 +154,7 @@ the plugin; consumers use the CLI (or build their own plugin against the SDK).
 
 `set` writes raw bytes through the substrate's emit path, which applies the
 redaction-sentinel guard automatically. A leaf carrying
-`__OPENCLAW_REDACTED__` (verbatim or as a substring) is refused at write time
+`__DEX_REDACTED__` (verbatim or as a substring) is refused at write time
 with `OC_EMIT_SENTINEL`. The CLI also scrubs the literal sentinel from any
 human or JSON output it prints, replacing it with `[REDACTED]` so terminal
 captures and pipelines never leak the marker.

@@ -1,5 +1,5 @@
-import type { DB as OpenClawStateKyselyDatabase } from "../state/openclaw-state-db.generated.js";
-import { openOpenClawStateDatabase } from "../state/openclaw-state-db.js";
+import type { DB as DexStateKyselyDatabase } from "../state/openclaw-state-db.generated.js";
+import { openDexStateDatabase } from "../state/openclaw-state-db.js";
 import {
   executeSqliteQuerySync,
   executeSqliteQueryTakeFirstSync,
@@ -7,7 +7,7 @@ import {
 } from "./kysely-sync.js";
 
 type QueueStatus = "pending" | "failed";
-type DeliveryQueueDatabase = Pick<OpenClawStateKyselyDatabase, "delivery_queue_entries">;
+type DeliveryQueueDatabase = Pick<DexStateKyselyDatabase, "delivery_queue_entries">;
 
 export type DeliveryQueueRowMetadata = {
   entryKind?: string;
@@ -39,8 +39,8 @@ type QueueRow = {
 };
 
 function openStateDatabase(stateDir?: string) {
-  return openOpenClawStateDatabase({
-    env: stateDir ? { ...process.env, OPENCLAW_STATE_DIR: stateDir } : process.env,
+  return openDexStateDatabase({
+    env: stateDir ? { ...process.env, DEX_STATE_DIR: stateDir } : process.env,
   });
 }
 

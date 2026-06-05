@@ -15,7 +15,7 @@ const DEFAULT_COMBINED_TIMEOUT_MS = 180_000;
 const DEFAULT_TOP = 10;
 const OUTPUT_CAPTURE_MAX_CHARS = 128 * 1024;
 const STDERR_PREVIEW_MAX_CHARS = 8 * 1024;
-const RSS_MARKER = "__OPENCLAW_MAX_RSS_KB__=";
+const RSS_MARKER = "__DEX_MAX_RSS_KB__=";
 
 function printHelp() {
   console.log(`Usage: node scripts/profile-extension-memory.mjs [options]
@@ -320,7 +320,7 @@ async function main() {
     XDG_DATA_HOME: path.join(tmpHome, ".local", "share"),
     XDG_CACHE_HOME: path.join(tmpHome, ".cache"),
     NODE_DISABLE_COMPILE_CACHE: "1",
-    OPENCLAW_NO_RESPAWN: "1",
+    DEX_NO_RESPAWN: "1",
     TERM: process.env.TERM ?? "dumb",
     LANG: process.env.LANG ?? "C.UTF-8",
   };

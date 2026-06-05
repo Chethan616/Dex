@@ -1,5 +1,5 @@
 import { modelSelectionShouldEnsureCopilotRuntimePlugin } from "../agents/copilot-routing.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   createRuntimePluginModelSelectionHelpers,
   type RuntimePluginInstallResult,
@@ -18,7 +18,7 @@ const COPILOT_RUNTIME_PLUGIN_DESCRIPTOR = {
 export type CopilotRuntimePluginInstallResult = RuntimePluginInstallResult;
 
 export function selectedModelShouldEnsureCopilotRuntimePlugin(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   model?: string;
 }): boolean {
   return modelSelectionShouldEnsureCopilotRuntimePlugin({

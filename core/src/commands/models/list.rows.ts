@@ -6,7 +6,7 @@ import {
   shouldSuppressBuiltInModelFromManifest,
 } from "../../agents/model-suppression.js";
 import type { ModelDefinitionConfig, ModelProviderConfig } from "../../config/types.models.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { ModelRegistry } from "../../llm/model-registry.js";
 import type { Model } from "../../llm/types.js";
 import type { PluginMetadataSnapshot } from "../../plugins/plugin-metadata-snapshot.types.js";
@@ -31,7 +31,7 @@ type RowFilter = {
 };
 
 export type RowBuilderContext = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir: string;
   authIndex: ModelListAuthIndex;
   availableKeys?: Set<string>;
@@ -262,7 +262,7 @@ function shouldListConfiguredProviderModel(params: {
 }
 
 function findConfiguredProviderModel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   provider: string;
   modelId: string;
 }): ListRowModel | undefined {
@@ -278,7 +278,7 @@ function findConfiguredProviderModel(params: {
   });
 }
 
-function toFallbackConfiguredListModel(entry: ConfiguredEntry, cfg: OpenClawConfig): ListRowModel {
+function toFallbackConfiguredListModel(entry: ConfiguredEntry, cfg: DexConfig): ListRowModel {
   return (
     findConfiguredProviderModel({
       cfg,

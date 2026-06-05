@@ -10,7 +10,7 @@ import {
 } from "../../cli/error-format.js";
 import { commitConfigWithPendingPluginInstalls } from "../../cli/plugins-install-record-commit.js";
 import { refreshPluginRegistryAfterConfigMutation } from "../../cli/plugins-registry-refresh.js";
-import { replaceConfigFile, type OpenClawConfig } from "../../config/config.js";
+import { replaceConfigFile, type DexConfig } from "../../config/config.js";
 import { callGateway } from "../../gateway/call.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../routing/session-key.js";
@@ -27,7 +27,7 @@ export type ChannelsRemoveOptions = {
 };
 
 function listAccountIds(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   channel: ChatChannel,
   pluginInput?: ChannelPlugin,
 ): string[] {
@@ -40,7 +40,7 @@ function listAccountIds(
 }
 
 async function stopGatewayRuntimeBeforeRemove(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChatChannel;
   accountId: string;
   plugin: ChannelPlugin;
@@ -78,7 +78,7 @@ export async function channelsRemoveCommand(
     return;
   }
   const baseHash = configSnapshot.hash;
-  let cfg = (configSnapshot.sourceConfig ?? configSnapshot.config) as OpenClawConfig;
+  let cfg = (configSnapshot.sourceConfig ?? configSnapshot.config) as DexConfig;
 
   const useWizard = shouldUseWizard(params);
   const prompter = useWizard ? createClackPrompter() : null;

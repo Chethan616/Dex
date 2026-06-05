@@ -1,5 +1,5 @@
 import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { getCurrentPluginMetadataSnapshotState } from "../plugins/current-plugin-metadata-state.js";
 import { buildManifestBuiltInModelSuppressionResolver } from "../plugins/manifest-model-suppression.js";
 import { resolvePluginControlPlaneFingerprint } from "../plugins/plugin-control-plane-context.js";
@@ -10,7 +10,7 @@ import { normalizeLowercaseStringOrEmpty } from "../../packages/normalization-co
 type ManifestSuppressionResolver = ReturnType<typeof buildManifestBuiltInModelSuppressionResolver>;
 
 type CachedManifestSuppressionResolver = {
-  config: OpenClawConfig | undefined;
+  config: DexConfig | undefined;
   controlPlaneFingerprint: string;
   cwd: string;
   envFingerprint: string;
@@ -30,7 +30,7 @@ registerPluginMetadataProcessMemoLifecycleClear(clearModelSuppressionResolverCac
 // Manifest suppressions come from plugin metadata snapshots. Keep one process-local
 // resolver per active config/workspace and clear it with the metadata lifecycle.
 function resolveCachedManifestSuppressionResolver(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   env: NodeJS.ProcessEnv;
   workspaceDir?: string;
 }): ManifestSuppressionResolver {
@@ -75,7 +75,7 @@ function resolveBuiltInModelSuppressionFromManifest(params: {
   provider?: string | null;
   id?: string | null;
   baseUrl?: string | null;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   unconditionalOnly?: boolean;
   workspaceDir?: string;
 }) {
@@ -102,7 +102,7 @@ function resolveBuiltInModelSuppression(params: {
   provider?: string | null;
   id?: string | null;
   baseUrl?: string | null;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
 }) {
   const manifestResult = resolveBuiltInModelSuppressionFromManifest(params);
@@ -120,7 +120,7 @@ function resolveBuiltInModelSuppression(params: {
 export function shouldSuppressBuiltInModelFromManifest(params: {
   provider?: string | null;
   id?: string | null;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
 }) {
   return resolveBuiltInModelSuppressionFromManifest(params)?.suppress ?? false;
@@ -130,7 +130,7 @@ export function shouldSuppressBuiltInModel(params: {
   provider?: string | null;
   id?: string | null;
   baseUrl?: string | null;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
 }) {
   return resolveBuiltInModelSuppression(params)?.suppress ?? false;
@@ -142,7 +142,7 @@ export function shouldSuppressBuiltInModel(params: {
 export function shouldUnconditionallySuppress(params: {
   provider?: string | null;
   id?: string | null;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
 }): boolean {
   return (
@@ -155,14 +155,14 @@ export function buildSuppressedBuiltInModelError(params: {
   provider?: string | null;
   id?: string | null;
   baseUrl?: string | null;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
 }): string | undefined {
   return resolveBuiltInModelSuppression(params)?.errorMessage;
 }
 
 export function buildShouldSuppressBuiltInModel(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
 }): (input: { provider?: string | null; id?: string | null; baseUrl?: string | null }) => boolean {
   const resolver = buildManifestBuiltInModelSuppressionResolver({

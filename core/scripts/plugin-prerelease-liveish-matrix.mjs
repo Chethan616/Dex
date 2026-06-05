@@ -17,19 +17,19 @@ const LIVEISH_INPUTS = Object.freeze([
   },
   {
     probe: "channel-telegram",
-    env: ["TELEGRAM_BOT_TOKEN", "OPENCLAW_TELEGRAM_BOT_TOKEN"],
+    env: ["TELEGRAM_BOT_TOKEN", "DEX_TELEGRAM_BOT_TOKEN"],
   },
   {
     probe: "channel-discord",
-    env: ["DISCORD_TOKEN", "OPENCLAW_DISCORD_TOKEN"],
+    env: ["DISCORD_TOKEN", "DEX_DISCORD_TOKEN"],
   },
   {
     probe: "channel-slack",
-    env: ["SLACK_BOT_TOKEN", "OPENCLAW_SLACK_BOT_TOKEN"],
+    env: ["SLACK_BOT_TOKEN", "DEX_SLACK_BOT_TOKEN"],
   },
   {
     probe: "channel-whatsapp",
-    env: ["WHATSAPP_ACCESS_TOKEN", "OPENCLAW_WHATSAPP_ACCESS_TOKEN"],
+    env: ["WHATSAPP_ACCESS_TOKEN", "DEX_WHATSAPP_ACCESS_TOKEN"],
   },
 ]);
 

@@ -248,7 +248,7 @@ export async function runGatewayLoop(params: {
         });
       } else {
         gatewayLog.info(
-          `restart mode: in-process restart (${respawn.detail ?? "OPENCLAW_NO_RESPAWN"})`,
+          `restart mode: in-process restart (${respawn.detail ?? "DEX_NO_RESPAWN"})`,
         );
       }
       if (!(await reacquireLockForInProcessRestart())) {
@@ -306,7 +306,7 @@ export async function runGatewayLoop(params: {
       );
     } else {
       gatewayLog.info(
-        `restart mode: in-process restart (${respawn.detail ?? "OPENCLAW_NO_RESPAWN"})`,
+        `restart mode: in-process restart (${respawn.detail ?? "DEX_NO_RESPAWN"})`,
       );
     }
     if (!(await reacquireLockForInProcessRestart())) {

@@ -28,7 +28,7 @@ test:extensions:batch <plugin[,plugin...]>` or plugin-inspector command
    - For a scoped hotspot use:
      `/usr/bin/time -l pnpm test <file-or-files> --maxWorkers=1 --reporter=verbose`
    - For import-heavy suspicion add:
-     `OPENCLAW_VITEST_IMPORT_DURATIONS=1 OPENCLAW_VITEST_PRINT_IMPORT_BREAKDOWN=1`.
+     `DEX_VITEST_IMPORT_DURATIONS=1 DEX_VITEST_PRINT_IMPORT_BREAKDOWN=1`.
 3. Separate wall/runner noise from real file cost:
    - Compare Vitest duration, test body timing, import breakdown, wall time, and
      max RSS.
@@ -94,7 +94,7 @@ barrels, package-boundary tests, or extension suites.
      available.
 4. For broad or package-heavy plugin proof, use Crabbox-backed Blacksmith
    Testbox by default on maintainer machines:
-   - `pnpm crabbox:run -- --provider blacksmith-testbox --timing-json -- OPENCLAW_TESTBOX=1 pnpm test:extensions:batch <ids>`
+   - `pnpm crabbox:run -- --provider blacksmith-testbox --timing-json -- DEX_TESTBOX=1 pnpm test:extensions:batch <ids>`
    - add `--keep`/`--id <id-or-slug>` only when several commands must share one
      warmed box; stop it with `pnpm crabbox:stop -- <id-or-slug>`.
 5. If plugin performance is package-artifact sensitive, switch to
@@ -110,7 +110,7 @@ same command. For Testbox comparisons, use the same `tbx_...` id when possible.
 | --------------- | ---------------------------------- | --------------------------------------------------------------------------- |
 | wall time       | user-visible suite cost            | `/usr/bin/time -l`, test wrapper duration, Testbox run time                 |
 | Vitest duration | test body/import cost              | Vitest output per file/shard                                                |
-| import duration | broad barrel/runtime loads         | `OPENCLAW_VITEST_IMPORT_DURATIONS=1`                                        |
+| import duration | broad barrel/runtime loads         | `DEX_VITEST_IMPORT_DURATIONS=1`                                        |
 | max RSS         | memory pressure and OOM risk       | `/usr/bin/time -l`, `pnpm test:extensions:memory`, wrapper memory summaries |
 | CPU/user/sys    | CPU-bound vs wait-bound split      | `/usr/bin/time -l` locally, Testbox job timing when local CPU is noisy      |
 | heap snapshots  | real leak vs retained module graph | `openclaw-test-heap-leaks` workflow                                         |
@@ -137,11 +137,11 @@ pnpm test:extensions:memory -- --extension discord --extension telegram --skip-c
 Heap/RSS escalation:
 
 ```bash
-OPENCLAW_TEST_MEMORY_TRACE=1 \
-OPENCLAW_TEST_HEAPSNAPSHOT_INTERVAL_MS=60000 \
-OPENCLAW_TEST_HEAPSNAPSHOT_DIR=.tmp/heapsnap \
-OPENCLAW_TEST_WORKERS=2 \
-OPENCLAW_TEST_MAX_OLD_SPACE_SIZE_MB=6144 \
+DEX_TEST_MEMORY_TRACE=1 \
+DEX_TEST_HEAPSNAPSHOT_INTERVAL_MS=60000 \
+DEX_TEST_HEAPSNAPSHOT_DIR=.tmp/heapsnap \
+DEX_TEST_WORKERS=2 \
+DEX_TEST_MAX_OLD_SPACE_SIZE_MB=6144 \
 pnpm test
 ```
 
@@ -173,7 +173,7 @@ leak until snapshots or retainers support it.
 - Timings missing from `test/fixtures/test-timings.unit.json`, causing hotspot
   files to stay in shared workers.
 - Parallel Vitest runs sharing `node_modules/.experimental-vitest-cache` without
-  distinct `OPENCLAW_VITEST_FS_MODULE_CACHE_PATH` values.
+  distinct `DEX_VITEST_FS_MODULE_CACHE_PATH` values.
 
 ## Benchmark Commands
 
@@ -187,8 +187,8 @@ Scoped file with import breakdown:
 
 ```bash
 timeout 240 /usr/bin/time -l env \
-  OPENCLAW_VITEST_IMPORT_DURATIONS=1 \
-  OPENCLAW_VITEST_PRINT_IMPORT_BREAKDOWN=1 \
+  DEX_VITEST_IMPORT_DURATIONS=1 \
+  DEX_VITEST_PRINT_IMPORT_BREAKDOWN=1 \
   pnpm test <file> --maxWorkers=1 --reporter=verbose
 ```
 

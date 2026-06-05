@@ -35,14 +35,14 @@ OpenClaw owns only the plugin lifecycle:
 OpenClaw uses stable per-source roots:
 
 - npm packages install into per-plugin projects under
-  `~/.openclaw/npm/projects/<encoded-package>`
-- git packages clone under `~/.openclaw/git`
+  `~/.dex/npm/projects/<encoded-package>`
+- git packages clone under `~/.dex/git`
 - local/path/archive installs are copied or referenced without dependency repair
 
 npm installs run in that per-plugin project root with:
 
 ```bash
-cd ~/.openclaw/npm/projects/<encoded-package>
+cd ~/.dex/npm/projects/<encoded-package>
 npm install --omit=dev --omit=peer --legacy-peer-deps --ignore-scripts --no-audit --no-fund
 ```
 
@@ -170,7 +170,7 @@ stage directories, and package-local pnpm stores. Packaged postinstall also
 removes those global symlinks before pruning the legacy target roots so upgrades
 do not leave dangling ESM package imports.
 
-Older npm installs also used a shared `~/.openclaw/npm/node_modules` root.
+Older npm installs also used a shared `~/.dex/npm/node_modules` root.
 Current install, update, uninstall, and doctor flows still recognize that legacy
 flat root only for recovery and cleanup. New npm installs should create
 per-plugin project roots instead.

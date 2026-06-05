@@ -1,6 +1,6 @@
 import { mimeTypeFromFilePath } from "@dexagent/media-core/mime";
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { logVerbose } from "../../globals.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import type { ImageContent } from "../../llm/types.js";
@@ -88,7 +88,7 @@ function createUndescribedImageContext(
 
 export async function resolveCurrentTurnImages(params: {
   ctx: MsgContext;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   images?: ImageContent[];
   imageOrder?: PromptImageOrderEntry[];
 }): Promise<{

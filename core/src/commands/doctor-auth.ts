@@ -31,7 +31,7 @@ import {
   resolveLegacyAuthStorePath,
 } from "../agents/auth-profiles/paths.js";
 import { buildProviderAuthRecoveryHint } from "../agents/provider-auth-recovery-hint.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { isRecord } from "../utils.js";
 import type { DoctorPrompter } from "./doctor-prompter.js";
@@ -45,7 +45,7 @@ const DOCTOR_REAUTH_PROVIDER_ALIASES: Readonly<Record<string, string>> = {
   [LEGACY_CODEX_PROVIDER_ID]: OPENAI_PROVIDER_ID,
 };
 
-function hasConfiguredCodexOAuthProfile(cfg: OpenClawConfig): boolean {
+function hasConfiguredCodexOAuthProfile(cfg: DexConfig): boolean {
   return Object.values(cfg.auth?.profiles ?? {}).some(
     (profile) =>
       (profile.provider === OPENAI_PROVIDER_ID || profile.provider === LEGACY_CODEX_PROVIDER_ID) &&
@@ -118,7 +118,7 @@ function buildCodexProviderOverrideWarning(providerOverride: unknown): string {
   return lines.join("\n");
 }
 
-export function noteLegacyCodexProviderOverride(cfg: OpenClawConfig): void {
+export function noteLegacyCodexProviderOverride(cfg: DexConfig): void {
   const providerOverride = cfg.models?.providers?.[LEGACY_CODEX_PROVIDER_ID];
   if (!providerOverride) {
     return;
@@ -158,7 +158,7 @@ function formatAgentNoteTitle(title: string, agentId: string, labelAgents: boole
   return labelAgents ? `${title} (agent: ${agentId})` : title;
 }
 
-function listAuthProfileHealthTargets(cfg: OpenClawConfig): AuthProfileHealthTarget[] {
+function listAuthProfileHealthTargets(cfg: DexConfig): AuthProfileHealthTarget[] {
   const defaultAgentId = resolveDefaultAgentId(cfg);
   const targets = new Map<string, AuthProfileHealthTarget>();
   const addTarget = (agentId: string, agentDir: string, isDefault: boolean) => {
@@ -237,7 +237,7 @@ export function formatOAuthRefreshFailureDoctorLine(params: {
 
 async function resolveAuthIssueHint(
   issue: AuthIssue,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   store: ReturnType<typeof ensureAuthProfileStore>,
 ): Promise<string | null> {
   if (issue.reasonCode === "invalid_expires") {
@@ -259,7 +259,7 @@ async function resolveAuthIssueHint(
 
 async function formatAuthIssueLine(
   issue: AuthIssue,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   store: ReturnType<typeof ensureAuthProfileStore>,
 ): Promise<string> {
   const remaining =
@@ -270,7 +270,7 @@ async function formatAuthIssueLine(
 }
 
 async function noteAuthProfileHealthForTarget(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   prompter: DoctorPrompter;
   allowKeychainPrompt: boolean;
   target: AuthProfileHealthTarget;
@@ -394,7 +394,7 @@ async function noteAuthProfileHealthForTarget(params: {
 }
 
 export async function noteAuthProfileHealth(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   prompter: DoctorPrompter;
   allowKeychainPrompt: boolean;
 }): Promise<void> {

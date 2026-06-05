@@ -11,7 +11,7 @@ import {
   rewriteSessionFileForNewSessionId,
 } from "../../config/sessions.js";
 import { resolveMaintenanceConfigFromInput } from "../../config/sessions/store-maintenance.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { resolveAgentIdFromSessionKey } from "../../routing/session-key.js";
 import { createLazyImportLoader } from "../../shared/lazy-promise.js";
 import { clearCliSession, setCliSessionBinding, setCliSessionId } from "../cli-session.js";
@@ -53,7 +53,7 @@ function removeLifecycleStateFromMetadataPatch(entry: SessionEntry): SessionEntr
 }
 
 export async function updateSessionStoreAfterAgentRun(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   contextTokensOverride?: number;
   sessionId: string;
   sessionKey: string;

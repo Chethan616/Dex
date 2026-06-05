@@ -1,7 +1,7 @@
 import { Type, type Static } from "typebox";
 import type { CodexSupervisorEndpoint } from "./types.js";
 
-const ENDPOINTS_ENV = "OPENCLAW_CODEX_SUPERVISOR_ENDPOINTS";
+const ENDPOINTS_ENV = "DEX_CODEX_SUPERVISOR_ENDPOINTS";
 
 const StdioEndpointSchema = Type.Object(
   {

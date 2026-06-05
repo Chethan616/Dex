@@ -14,14 +14,14 @@ import {
 } from "../lib/dev-tooling-safety.ts";
 
 const OPENAI_REALTIME_MODEL =
-  process.env.OPENCLAW_REALTIME_OPENAI_MODEL?.trim() || "gpt-realtime-2";
-const OPENAI_REALTIME_VOICE = process.env.OPENCLAW_REALTIME_OPENAI_VOICE?.trim() || "alloy";
+  process.env.DEX_REALTIME_OPENAI_MODEL?.trim() || "gpt-realtime-2";
+const OPENAI_REALTIME_VOICE = process.env.DEX_REALTIME_OPENAI_VOICE?.trim() || "alloy";
 const DEFAULT_OPENAI_HTTP_TIMEOUT_MS = 30_000;
 const OPENAI_HTTP_RESPONSE_MAX_BYTES = 256 * 1024;
 const GOOGLE_REALTIME_MODEL =
-  process.env.OPENCLAW_REALTIME_GOOGLE_MODEL?.trim() ||
+  process.env.DEX_REALTIME_GOOGLE_MODEL?.trim() ||
   "gemini-2.5-flash-native-audio-preview-12-2025";
-const GOOGLE_REALTIME_VOICE = process.env.OPENCLAW_REALTIME_GOOGLE_VOICE?.trim() || "Kore";
+const GOOGLE_REALTIME_VOICE = process.env.DEX_REALTIME_GOOGLE_VOICE?.trim() || "Kore";
 const GOOGLE_LIVE_WS_URL =
   "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained";
 
@@ -73,11 +73,11 @@ async function readBoundedJsonResponse(
 }
 
 function resolveOpenAIHttpTimeoutMs(
-  raw = process.env.OPENCLAW_REALTIME_OPENAI_HTTP_TIMEOUT_MS,
+  raw = process.env.DEX_REALTIME_OPENAI_HTTP_TIMEOUT_MS,
 ): number {
   return parseStrictIntegerOption({
     fallback: DEFAULT_OPENAI_HTTP_TIMEOUT_MS,
-    label: "OPENCLAW_REALTIME_OPENAI_HTTP_TIMEOUT_MS",
+    label: "DEX_REALTIME_OPENAI_HTTP_TIMEOUT_MS",
     min: 1,
     raw,
   });

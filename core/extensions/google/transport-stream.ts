@@ -80,7 +80,7 @@ type GoogleGenerateContentRequest = {
 };
 
 const GOOGLE_GEMINI3_FIRST_RESPONSE_RETRY_DEFAULT_MS = 45_000;
-const GOOGLE_GEMINI3_FIRST_RESPONSE_RETRY_ENV = "OPENCLAW_GOOGLE_GEMINI_FIRST_RESPONSE_RETRY_MS";
+const GOOGLE_GEMINI3_FIRST_RESPONSE_RETRY_ENV = "DEX_GOOGLE_GEMINI_FIRST_RESPONSE_RETRY_MS";
 
 type GoogleTransportContentBlock =
   | { type: "text"; text: string; textSignature?: string }

@@ -142,25 +142,25 @@ function normalizeEndpointPrefix(value: string | undefined): string {
     value,
     fallback: DEFAULT_ENDPOINT_PREFIX,
     invalidAbsoluteMessage:
-      "OPENCLAW_QA_CONVEX_ENDPOINT_PREFIX must be an absolute path like /qa-credentials/v1.",
+      "DEX_QA_CONVEX_ENDPOINT_PREFIX must be an absolute path like /qa-credentials/v1.",
     invalidSegmentsMessage:
-      "OPENCLAW_QA_CONVEX_ENDPOINT_PREFIX must not contain backslashes or .. path segments.",
+      "DEX_QA_CONVEX_ENDPOINT_PREFIX must not contain backslashes or .. path segments.",
   });
 }
 
 function resolveConvexAuthToken(env: NodeJS.ProcessEnv, role: QaCredentialRole): string {
   const roleToken =
     role === "ci"
-      ? env.OPENCLAW_QA_CONVEX_SECRET_CI?.trim()
-      : env.OPENCLAW_QA_CONVEX_SECRET_MAINTAINER?.trim();
+      ? env.DEX_QA_CONVEX_SECRET_CI?.trim()
+      : env.DEX_QA_CONVEX_SECRET_MAINTAINER?.trim();
   const token = roleToken;
   if (token) {
     return token;
   }
   if (role === "ci") {
-    throw new Error("Missing OPENCLAW_QA_CONVEX_SECRET_CI for CI credential access.");
+    throw new Error("Missing DEX_QA_CONVEX_SECRET_CI for CI credential access.");
   }
-  throw new Error("Missing OPENCLAW_QA_CONVEX_SECRET_MAINTAINER for maintainer credential access.");
+  throw new Error("Missing DEX_QA_CONVEX_SECRET_MAINTAINER for maintainer credential access.");
 }
 
 function resolveConvexCredentialBrokerConfig(params: {
@@ -168,15 +168,15 @@ function resolveConvexCredentialBrokerConfig(params: {
   ownerId?: string;
   role: QaCredentialRole;
 }): ConvexCredentialBrokerConfig {
-  const siteUrl = params.env.OPENCLAW_QA_CONVEX_SITE_URL?.trim();
+  const siteUrl = params.env.DEX_QA_CONVEX_SITE_URL?.trim();
   if (!siteUrl) {
-    throw new Error("Missing OPENCLAW_QA_CONVEX_SITE_URL for --credential-source convex.");
+    throw new Error("Missing DEX_QA_CONVEX_SITE_URL for --credential-source convex.");
   }
   const baseUrl = normalizeConvexSiteUrl(siteUrl, params.env);
-  const endpointPrefix = normalizeEndpointPrefix(params.env.OPENCLAW_QA_CONVEX_ENDPOINT_PREFIX);
+  const endpointPrefix = normalizeEndpointPrefix(params.env.DEX_QA_CONVEX_ENDPOINT_PREFIX);
   const ownerId =
     params.ownerId?.trim() ||
-    params.env.OPENCLAW_QA_CREDENTIAL_OWNER_ID?.trim() ||
+    params.env.DEX_QA_CREDENTIAL_OWNER_ID?.trim() ||
     `qa-lab-${params.role}-${process.pid}-${randomUUID().slice(0, 8)}`;
   return {
     role: params.role,
@@ -184,22 +184,22 @@ function resolveConvexCredentialBrokerConfig(params: {
     authToken: resolveConvexAuthToken(params.env, params.role),
     leaseTtlMs: parsePositiveIntegerEnv(
       params.env,
-      "OPENCLAW_QA_CREDENTIAL_LEASE_TTL_MS",
+      "DEX_QA_CREDENTIAL_LEASE_TTL_MS",
       DEFAULT_LEASE_TTL_MS,
     ),
     heartbeatIntervalMs: parsePositiveIntegerEnv(
       params.env,
-      "OPENCLAW_QA_CREDENTIAL_HEARTBEAT_INTERVAL_MS",
+      "DEX_QA_CREDENTIAL_HEARTBEAT_INTERVAL_MS",
       DEFAULT_HEARTBEAT_INTERVAL_MS,
     ),
     acquireTimeoutMs: parsePositiveIntegerEnv(
       params.env,
-      "OPENCLAW_QA_CREDENTIAL_ACQUIRE_TIMEOUT_MS",
+      "DEX_QA_CREDENTIAL_ACQUIRE_TIMEOUT_MS",
       DEFAULT_ACQUIRE_TIMEOUT_MS,
     ),
     httpTimeoutMs: parsePositiveIntegerEnv(
       params.env,
-      "OPENCLAW_QA_CREDENTIAL_HTTP_TIMEOUT_MS",
+      "DEX_QA_CREDENTIAL_HTTP_TIMEOUT_MS",
       DEFAULT_HTTP_TIMEOUT_MS,
     ),
     acquireUrl: joinQaCredentialEndpoint(baseUrl, endpointPrefix, "acquire"),
@@ -367,7 +367,7 @@ export async function acquireQaCredentialLease<TPayload>(
   opts: AcquireQaCredentialLeaseOptions<TPayload>,
 ): Promise<QaCredentialLease<TPayload>> {
   const env = opts.env ?? process.env;
-  const source = normalizeQaCredentialSource(opts.source ?? env.OPENCLAW_QA_CREDENTIAL_SOURCE);
+  const source = normalizeQaCredentialSource(opts.source ?? env.DEX_QA_CREDENTIAL_SOURCE);
   if (source === "env") {
     return {
       source: "env",
@@ -380,7 +380,7 @@ export async function acquireQaCredentialLease<TPayload>(
     };
   }
 
-  const role = normalizeQaCredentialRole(opts.role ?? env.OPENCLAW_QA_CREDENTIAL_ROLE, env);
+  const role = normalizeQaCredentialRole(opts.role ?? env.DEX_QA_CREDENTIAL_ROLE, env);
   const config = resolveConvexCredentialBrokerConfig({
     env,
     role,

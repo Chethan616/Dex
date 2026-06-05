@@ -12,7 +12,7 @@
  */
 
 import { isImplicitSameChatApprovalAuthorization } from "openclaw/plugin-sdk/approval-auth-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { uniqueStrings } from "openclaw/plugin-sdk/string-coerce-runtime";
 import { authorizeQQBotApprovalAction } from "../../exec-approvals.js";
 import { resolveQQBotEffectivePolicies } from "../access/resolve-policy.js";
@@ -32,7 +32,7 @@ import { InteractionType } from "./constants.js";
 import type { GatewayAccount, GatewayPluginRuntime, EngineLogger } from "./types.js";
 
 type QQBotCommandAuthorizationResolver = (params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
   isGroup: boolean;
   senderId: string;
@@ -171,7 +171,7 @@ export function createInteractionHandler(
   runtime: GatewayPluginRuntime,
   log?: EngineLogger,
   options?: {
-    getActiveCfg?: () => OpenClawConfig;
+    getActiveCfg?: () => DexConfig;
     resolveCommandAuthorized?: QQBotCommandAuthorizationResolver;
   },
 ): (event: InteractionEvent) => void {
@@ -223,7 +223,7 @@ async function handleApprovalButtonInteraction(params: {
   account: GatewayAccount;
   creds: { appId: string; clientSecret: string };
   event: InteractionEvent;
-  getActiveCfg?: () => OpenClawConfig | Record<string, unknown>;
+  getActiveCfg?: () => DexConfig | Record<string, unknown>;
   log?: EngineLogger;
   parsed: { approvalId: string; decision: "allow-once" | "allow-always" | "deny" };
   resolveCommandAuthorized?: QQBotCommandAuthorizationResolver;
@@ -236,9 +236,9 @@ async function handleApprovalButtonInteraction(params: {
     return;
   }
 
-  let cfg: OpenClawConfig;
+  let cfg: DexConfig;
   try {
-    cfg = params.getActiveCfg() as OpenClawConfig;
+    cfg = params.getActiveCfg() as DexConfig;
   } catch (err) {
     await acknowledgeApprovalInteraction(params.creds, params.event, params.log, {
       content: "Approval is unavailable.",
@@ -306,7 +306,7 @@ async function acknowledgeApprovalInteraction(
 }
 
 async function authorizeApprovalButtonActor(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   account: GatewayAccount;
   event: InteractionEvent;
   approvalKind: "exec" | "plugin";
@@ -358,7 +358,7 @@ async function authorizeApprovalButtonActor(params: {
 }
 
 async function isImplicitApprovalButtonActorAuthorized(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   account: GatewayAccount;
   event: InteractionEvent;
   senderId: string;
@@ -381,7 +381,7 @@ async function isImplicitApprovalButtonActorAuthorized(params: {
 }
 
 function resolveApprovalButtonAccountConfig(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   accountId: string,
 ): QQBotAccountConfigView {
   const qqbot = readRecord(readRecord(cfg.channels)?.qqbot);

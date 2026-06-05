@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { resolveOpenClawPackageRootSync } from "../../infra/openclaw-root.js";
 import { resolveBundledPluginsDir } from "../../plugins/bundled-dir.js";
 
-const OPENCLAW_PACKAGE_ROOT =
+const DEX_PACKAGE_ROOT =
   resolveOpenClawPackageRootSync({
     argv1: process.argv[1],
     cwd: process.cwd(),
@@ -34,8 +34,8 @@ export function resolveBundledChannelRootScope(
   const bundledPluginsDir = resolveBundledPluginsDir(env);
   if (!bundledPluginsDir) {
     return {
-      packageRoot: OPENCLAW_PACKAGE_ROOT,
-      cacheKey: OPENCLAW_PACKAGE_ROOT,
+      packageRoot: DEX_PACKAGE_ROOT,
+      cacheKey: DEX_PACKAGE_ROOT,
     };
   }
   const resolvedPluginsDir = path.resolve(bundledPluginsDir);

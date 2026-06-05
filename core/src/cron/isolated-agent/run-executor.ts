@@ -3,7 +3,7 @@ import type { BootstrapContextMode } from "../../agents/bootstrap-files.js";
 import { resolveCliRuntimeExecutionProvider } from "../../agents/model-runtime-aliases.js";
 import type { ThinkLevel, VerboseLevel } from "../../auto-reply/thinking.js";
 import type { AgentDefaultsConfig } from "../../config/types.agent-defaults.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { SourceDeliveryPlan } from "../../infra/outbound/source-delivery-plan.js";
 import { createLazyImportLoader } from "../../shared/lazy-promise.js";
 import type { SkillSnapshot } from "../../skills/types.js";
@@ -117,8 +117,8 @@ export type CronExecutionResult = {
 
 /** Creates the model-fallback executor for one isolated cron prompt run. */
 export function createCronPromptExecutor(params: {
-  cfg: OpenClawConfig;
-  cfgWithAgentDefaults: OpenClawConfig;
+  cfg: DexConfig;
+  cfgWithAgentDefaults: DexConfig;
   job: CronJob;
   agentId: string;
   agentDir: string;
@@ -356,8 +356,8 @@ export function createCronPromptExecutor(params: {
 
 /** Executes an isolated cron prompt, including live model-switch and interim-ack retries. */
 export async function executeCronRun(params: {
-  cfg: OpenClawConfig;
-  cfgWithAgentDefaults: OpenClawConfig;
+  cfg: DexConfig;
+  cfgWithAgentDefaults: DexConfig;
   job: CronJob;
   agentId: string;
   agentDir: string;

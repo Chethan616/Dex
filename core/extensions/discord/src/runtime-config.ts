@@ -3,9 +3,9 @@ import {
   getRuntimeConfigSourceSnapshot,
   selectApplicableRuntimeConfig,
 } from "openclaw/plugin-sdk/runtime-config-snapshot";
-import type { OpenClawConfig } from "./runtime-api.js";
+import type { DexConfig } from "./runtime-api.js";
 
-export function selectDiscordRuntimeConfig(inputConfig: OpenClawConfig): OpenClawConfig {
+export function selectDiscordRuntimeConfig(inputConfig: DexConfig): DexConfig {
   return (
     selectApplicableRuntimeConfig({
       inputConfig,

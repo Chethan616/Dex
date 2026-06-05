@@ -114,19 +114,19 @@ function requireValue(argv: string[], index: number, flag: string): string {
 
 const CAPTURE_MAX_BUFFER_BYTES = 32 * 1024 * 1024;
 const DEFAULT_COMMAND_TIMEOUT_MS = readPositiveInt(
-  process.env.OPENCLAW_RELEASE_BETA_SMOKE_COMMAND_MS,
+  process.env.DEX_RELEASE_BETA_SMOKE_COMMAND_MS,
   10 * 60_000,
-  "OPENCLAW_RELEASE_BETA_SMOKE_COMMAND_MS",
+  "DEX_RELEASE_BETA_SMOKE_COMMAND_MS",
 );
 const TELEGRAM_POLL_INTERVAL_MS = readPositiveInt(
-  process.env.OPENCLAW_RELEASE_BETA_SMOKE_POLL_INTERVAL_MS,
+  process.env.DEX_RELEASE_BETA_SMOKE_POLL_INTERVAL_MS,
   30_000,
-  "OPENCLAW_RELEASE_BETA_SMOKE_POLL_INTERVAL_MS",
+  "DEX_RELEASE_BETA_SMOKE_POLL_INTERVAL_MS",
 );
 const TELEGRAM_POLL_TIMEOUT_MS = readPositiveInt(
-  process.env.OPENCLAW_RELEASE_BETA_SMOKE_POLL_TIMEOUT_MS,
+  process.env.DEX_RELEASE_BETA_SMOKE_POLL_TIMEOUT_MS,
   4 * 60 * 60_000,
-  "OPENCLAW_RELEASE_BETA_SMOKE_POLL_TIMEOUT_MS",
+  "DEX_RELEASE_BETA_SMOKE_POLL_TIMEOUT_MS",
 );
 
 export function readPositiveInt(
@@ -239,12 +239,12 @@ function ghJson(repo: string, pathSuffix: string): unknown {
       [
         "set -euo pipefail",
         'token="$(gh auth token)"',
-        'curl -fsS -H "Authorization: Bearer ${token}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "${OPENCLAW_GITHUB_REST_URL}"',
+        'curl -fsS -H "Authorization: Bearer ${token}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "${DEX_GITHUB_REST_URL}"',
       ].join("\n"),
     ],
     {
       encoding: "utf8",
-      env: { ...process.env, OPENCLAW_GITHUB_REST_URL: url },
+      env: { ...process.env, DEX_GITHUB_REST_URL: url },
       killSignal: "SIGKILL",
       maxBuffer: CAPTURE_MAX_BUFFER_BYTES,
       stdio: ["ignore", "pipe", "pipe"],

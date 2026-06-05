@@ -14,8 +14,8 @@ import {
 } from "./process/respawn-child-runner.js";
 
 export const EXPERIMENTAL_WARNING_FLAG = "--disable-warning=ExperimentalWarning";
-export const OPENCLAW_NODE_OPTIONS_READY = "OPENCLAW_NODE_OPTIONS_READY";
-export const OPENCLAW_NODE_EXTRA_CA_CERTS_READY = "OPENCLAW_NODE_EXTRA_CA_CERTS_READY";
+export const DEX_NODE_OPTIONS_READY = "DEX_NODE_OPTIONS_READY";
+export const DEX_NODE_EXTRA_CA_CERTS_READY = "DEX_NODE_EXTRA_CA_CERTS_READY";
 const WINDOWS_STACK_SIZE_FLAG = "--stack-size=8192";
 
 type CliRespawnPlan = {
@@ -89,7 +89,7 @@ export function buildCliRespawnPlan(
 
   if (
     shouldSkipStartupEnvironmentRespawnForArgv(normalizedArgv) ||
-    isTruthyEnvValue(env.OPENCLAW_NO_RESPAWN)
+    isTruthyEnvValue(env.DEX_NO_RESPAWN)
   ) {
     return null;
   }
@@ -124,20 +124,20 @@ export function buildCliRespawnPlan(
     }).NODE_EXTRA_CA_CERTS;
   if (
     autoNodeExtraCaCerts &&
-    !isTruthyEnvValue(env[OPENCLAW_NODE_EXTRA_CA_CERTS_READY]) &&
+    !isTruthyEnvValue(env[DEX_NODE_EXTRA_CA_CERTS_READY]) &&
     !env.NODE_EXTRA_CA_CERTS
   ) {
     childEnv.NODE_EXTRA_CA_CERTS = autoNodeExtraCaCerts;
-    childEnv[OPENCLAW_NODE_EXTRA_CA_CERTS_READY] = "1";
+    childEnv[DEX_NODE_EXTRA_CA_CERTS_READY] = "1";
     needsRespawn = true;
   }
 
   if (
     !shouldSkipRespawnForArgv(argv) &&
-    !isTruthyEnvValue(env[OPENCLAW_NODE_OPTIONS_READY]) &&
+    !isTruthyEnvValue(env[DEX_NODE_OPTIONS_READY]) &&
     !hasExperimentalWarningSuppressed({ env, execArgv })
   ) {
-    childEnv[OPENCLAW_NODE_OPTIONS_READY] = "1";
+    childEnv[DEX_NODE_OPTIONS_READY] = "1";
     childExecArgv.unshift(EXPERIMENTAL_WARNING_FLAG);
     needsRespawn = true;
   }

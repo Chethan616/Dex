@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { AgentGeneratedAttachment } from "../generated-attachments.js";
 import { MUSIC_GENERATION_TASK_KIND } from "../music-generation-task-status.js";
 import {
@@ -37,7 +37,7 @@ export const failMusicGenerationTaskRun = (
 ) => musicGenerationTaskLifecycle.failTaskRun(...params);
 
 export async function wakeMusicGenerationTaskCompletion(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   handle: MusicGenerationTaskHandle | null;
   status: "ok" | "error";
   statusLabel: string;

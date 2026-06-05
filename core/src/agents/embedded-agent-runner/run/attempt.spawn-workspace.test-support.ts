@@ -67,7 +67,7 @@ type AttemptSpawnWorkspaceHoisted = {
   ensureGlobalUndiciDispatcherStreamTimeoutsMock: UnknownMock;
   ensureGlobalUndiciStreamTimeoutsMock: UnknownMock;
   buildEmbeddedMessageActionDiscoveryInputMock: UnknownMock;
-  createOpenClawCodingToolsMock: UnknownMock;
+  createDexCodingToolsMock: UnknownMock;
   subscribeEmbeddedAgentSessionMock: Mock<SubscribeEmbeddedAgentSessionFn>;
   acquireSessionWriteLockMock: Mock<AcquireSessionWriteLockFn>;
   installToolResultContextGuardMock: UnknownMock;
@@ -140,7 +140,7 @@ const hoisted = vi.hoisted((): AttemptSpawnWorkspaceHoisted => {
   const ensureGlobalUndiciDispatcherStreamTimeoutsMock = vi.fn();
   const ensureGlobalUndiciStreamTimeoutsMock = vi.fn();
   const buildEmbeddedMessageActionDiscoveryInputMock = vi.fn((params: unknown) => params);
-  const createOpenClawCodingToolsMock = vi.fn(() => []);
+  const createDexCodingToolsMock = vi.fn(() => []);
   const installToolResultContextGuardMock = vi.fn(() => () => {});
   const installContextEngineLoopHookMock = vi.fn(() => () => {});
   const flushPendingToolResultsAfterIdleMock = vi.fn(async () => {});
@@ -210,7 +210,7 @@ const hoisted = vi.hoisted((): AttemptSpawnWorkspaceHoisted => {
     ensureGlobalUndiciDispatcherStreamTimeoutsMock,
     ensureGlobalUndiciStreamTimeoutsMock,
     buildEmbeddedMessageActionDiscoveryInputMock,
-    createOpenClawCodingToolsMock,
+    createDexCodingToolsMock,
     subscribeEmbeddedAgentSessionMock,
     acquireSessionWriteLockMock,
     installToolResultContextGuardMock,
@@ -400,7 +400,7 @@ vi.mock("../context-engine-maintenance.js", () => ({
 }));
 
 vi.mock("../../docs-path.js", () => ({
-  resolveOpenClawReferencePaths: async () => ({ docsPath: undefined, sourcePath: undefined }),
+  resolveDexReferencePaths: async () => ({ docsPath: undefined, sourcePath: undefined }),
 }));
 
 vi.mock("../../agent-project-settings.js", () => ({
@@ -577,8 +577,8 @@ vi.mock("../../cache-trace.js", () => ({
 }));
 
 vi.mock("../../agent-tools.js", () => ({
-  createOpenClawCodingTools: (options?: { workspaceDir?: string; spawnWorkspaceDir?: string }) =>
-    hoisted.createOpenClawCodingToolsMock(options),
+  createDexCodingTools: (options?: { workspaceDir?: string; spawnWorkspaceDir?: string }) =>
+    hoisted.createDexCodingToolsMock(options),
   resolveProcessToolScopeKey: ({
     scopeKey,
     sessionKey,
@@ -941,7 +941,7 @@ export function resetEmbeddedAttemptHarness(
   hoisted.buildEmbeddedMessageActionDiscoveryInputMock
     .mockReset()
     .mockImplementation((paramsLocal) => paramsLocal);
-  hoisted.createOpenClawCodingToolsMock.mockReset().mockImplementation((...args: unknown[]) => {
+  hoisted.createDexCodingToolsMock.mockReset().mockImplementation((...args: unknown[]) => {
     const options = args[0] as
       | {
           workspaceDir?: string;
@@ -1237,9 +1237,9 @@ export async function createContextEngineAttemptRunner(params: {
       }),
   }));
 
-  const previousTrajectoryEnv = process.env.OPENCLAW_TRAJECTORY;
+  const previousTrajectoryEnv = process.env.DEX_TRAJECTORY;
   if (params.trajectory !== true) {
-    process.env.OPENCLAW_TRAJECTORY = "0";
+    process.env.DEX_TRAJECTORY = "0";
   }
   try {
     return await (
@@ -1290,9 +1290,9 @@ export async function createContextEngineAttemptRunner(params: {
     });
   } finally {
     if (previousTrajectoryEnv === undefined) {
-      delete process.env.OPENCLAW_TRAJECTORY;
+      delete process.env.DEX_TRAJECTORY;
     } else {
-      process.env.OPENCLAW_TRAJECTORY = previousTrajectoryEnv;
+      process.env.DEX_TRAJECTORY = previousTrajectoryEnv;
     }
   }
 }

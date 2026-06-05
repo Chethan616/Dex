@@ -5,7 +5,7 @@ import type {
   ChannelDirectoryEntryKind,
   ChannelId,
 } from "../../channels/plugins/types.public.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { defaultRuntime, type RuntimeEnv } from "../../runtime.js";
 import { buildDirectoryCacheKey, DirectoryCache } from "./directory-cache.js";
 import { ambiguousTargetError, unknownTargetError } from "./target-errors.js";
@@ -49,7 +49,7 @@ export { maybeResolveIdLikeTarget } from "./target-id-resolution.js";
 
 /** Resolves a channel target using the shared outbound target resolver. */
 export async function resolveChannelTarget(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
   input: string;
   accountId?: string | null;
@@ -223,7 +223,7 @@ function resolveMatch(params: {
 }
 
 async function listDirectoryEntries(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
   accountId?: string | null;
   kind: ChannelDirectoryEntryKind;
@@ -259,7 +259,7 @@ async function listDirectoryEntries(params: {
 }
 
 async function getDirectoryEntries(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
   accountId?: string | null;
   kind: ChannelDirectoryEntryKind;
@@ -348,7 +348,7 @@ function pickAmbiguousMatch(
 
 /** Resolves a user target through id-like, directory, plugin, and normalized fallback paths. */
 export async function resolveMessagingTarget(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
   input: string;
   accountId?: string | null;
@@ -471,7 +471,7 @@ export async function resolveMessagingTarget(params: {
 
 /** Looks up a display label for a resolved target id from cached/live directory entries. */
 export async function lookupDirectoryDisplay(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
   targetId: string;
   accountId?: string | null;

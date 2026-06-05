@@ -117,7 +117,7 @@ auth/runtime semantics or duplicate side effects.
 
 Whole-session and whole-agent runtime pins are ignored by selection. That
 includes stale session `agentHarnessId` values, `agents.defaults.agentRuntime`,
-`agents.list[].agentRuntime`, and `OPENCLAW_AGENT_RUNTIME`. `/status` shows the
+`agents.list[].agentRuntime`, and `DEX_AGENT_RUNTIME`. `/status` shows the
 effective runtime selected from the provider/model route.
 If the selected harness is surprising, enable `agents/harness` debug logging and
 inspect the gateway's structured `agent harness selected` record. It includes

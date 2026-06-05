@@ -8,7 +8,7 @@ import { normalizeOptionalString } from "./string-utils.js";
 export type RemoteEmbeddingProviderId = string;
 
 function resolveOpenClawAttributionHeaders(): Record<string, string> {
-  const version = typeof process !== "undefined" ? process.env.OPENCLAW_VERSION?.trim() : undefined;
+  const version = typeof process !== "undefined" ? process.env.DEX_VERSION?.trim() : undefined;
   return {
     originator: "openclaw",
     ...(version ? { version } : {}),

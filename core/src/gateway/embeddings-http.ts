@@ -7,7 +7,7 @@ import {
 import { resolveAgentDir } from "../agents/agent-scope.js";
 import { resolveMemorySearchConfig } from "../agents/memory-search.js";
 import { getRuntimeConfig } from "../config/io.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { logWarn } from "../logger.js";
 import {
@@ -25,7 +25,7 @@ import type { ResolvedGatewayAuth } from "./auth.js";
 import { sendJson } from "./http-common.js";
 import { handleGatewayPostJsonEndpoint } from "./http-endpoint-helpers.js";
 import {
-  OPENCLAW_MODEL_ID,
+  DEX_MODEL_ID,
   getHeader,
   resolveAgentIdForRequest,
   resolveAgentIdFromModel,
@@ -109,7 +109,7 @@ function resolveEmbeddingProviderRemoteConfig(remote: MemorySearchEmbeddingConfi
 }
 
 async function createConfiguredEmbeddingProvider(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir: string;
   provider: EmbeddingProviderRequest;
   model: string;
@@ -248,7 +248,7 @@ export async function handleOpenAiEmbeddingsHttpRequest(
   }
 
   const cfg = getRuntimeConfig();
-  if (requestModel !== OPENCLAW_MODEL_ID && !resolveAgentIdFromModel(requestModel, cfg)) {
+  if (requestModel !== DEX_MODEL_ID && !resolveAgentIdFromModel(requestModel, cfg)) {
     sendJson(res, 400, {
       error: {
         message: "Invalid `model`. Use `openclaw` or `openclaw/<agentId>`.",

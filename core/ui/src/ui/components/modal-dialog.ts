@@ -12,7 +12,7 @@ const FOCUSABLE_SELECTOR = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
 
-export class OpenClawModalDialog extends LitElement {
+export class DexModalDialog extends LitElement {
   @property() label = "";
   @property() description = "";
 
@@ -269,11 +269,11 @@ export class OpenClawModalDialog extends LitElement {
 }
 
 if (!customElements.get("openclaw-modal-dialog")) {
-  customElements.define("openclaw-modal-dialog", OpenClawModalDialog);
+  customElements.define("openclaw-modal-dialog", DexModalDialog);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    "openclaw-modal-dialog": OpenClawModalDialog;
+    "openclaw-modal-dialog": DexModalDialog;
   }
 }

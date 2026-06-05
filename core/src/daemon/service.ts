@@ -96,9 +96,9 @@ function mergeGatewayServiceEnv(
     ...command.environment,
   };
   for (const key of [
-    "OPENCLAW_LAUNCHD_LABEL",
-    "OPENCLAW_SYSTEMD_UNIT",
-    "OPENCLAW_WINDOWS_TASK_NAME",
+    "DEX_LAUNCHD_LABEL",
+    "DEX_SYSTEMD_UNIT",
+    "DEX_WINDOWS_TASK_NAME",
   ]) {
     const value = baseEnv[key]?.trim();
     if (value) {
@@ -139,7 +139,7 @@ function collectGatewayServiceStartRepairIssues(
     return [];
   }
   const issues: GatewayServiceStartRepairIssue[] = [];
-  const serviceVersion = command.environment?.OPENCLAW_SERVICE_VERSION?.trim();
+  const serviceVersion = command.environment?.DEX_SERVICE_VERSION?.trim();
   if (serviceVersion && serviceVersion !== VERSION) {
     issues.push({
       code: "version-mismatch",

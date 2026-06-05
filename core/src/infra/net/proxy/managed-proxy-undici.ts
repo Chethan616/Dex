@@ -64,7 +64,7 @@ function resolveManagedProxyUrl(env: ManagedProxyTlsEnv = process.env): string |
   if (activeProxyUrl) {
     return activeProxyUrl.href;
   }
-  if (env["OPENCLAW_PROXY_ACTIVE"] !== "1") {
+  if (env["DEX_PROXY_ACTIVE"] !== "1") {
     return undefined;
   }
   // Child processes inherit only env, so recover the managed proxy URL from
@@ -90,7 +90,7 @@ export function resolveActiveManagedProxyTlsOptions(
   }
   const proxyCaFile = resolveManagedProxyCaFileForUrl({
     proxyUrl: managedProxyUrl,
-    caFileOverride: env["OPENCLAW_PROXY_CA_FILE"],
+    caFileOverride: env["DEX_PROXY_CA_FILE"],
   });
   try {
     return loadManagedProxyTlsOptionsSync(proxyCaFile);

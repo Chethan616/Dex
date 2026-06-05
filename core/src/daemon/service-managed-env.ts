@@ -2,7 +2,7 @@ import { sortUniqueStrings } from "@dexagent/normalization-core/string-normaliza
 import { normalizeEnvVarKey } from "../infra/host-env-security.js";
 import type { GatewayServiceEnvironmentValueSource } from "./service-types.js";
 
-const MANAGED_SERVICE_ENV_KEYS_VAR = "OPENCLAW_SERVICE_MANAGED_ENV_KEYS";
+const MANAGED_SERVICE_ENV_KEYS_VAR = "DEX_SERVICE_MANAGED_ENV_KEYS";
 
 type ServiceEnvCommand = {
   environment?: Record<string, string | undefined>;

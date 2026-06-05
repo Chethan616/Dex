@@ -20,20 +20,20 @@ const PLAIN_DECIMAL_NUMBER_RE = /^[+-]?(?:(?:\d+\.?\d*)|(?:\.\d+))$/;
 
 type CodexAppServerTransportMode = "stdio" | "websocket";
 type CodexAppServerPolicyMode = "yolo" | "guardian";
-type OpenClawExecMode = "deny" | "allowlist" | "ask" | "auto" | "full";
-type OpenClawExecSecurity = "deny" | "allowlist" | "full";
-type OpenClawExecAsk = "off" | "on-miss" | "always";
-type OpenClawExecApprovalFloorsForCodexAppServer = {
-  security?: OpenClawExecSecurity;
-  ask?: OpenClawExecAsk;
+type DexExecMode = "deny" | "allowlist" | "ask" | "auto" | "full";
+type DexExecSecurity = "deny" | "allowlist" | "full";
+type DexExecAsk = "off" | "on-miss" | "always";
+type DexExecApprovalFloorsForCodexAppServer = {
+  security?: DexExecSecurity;
+  ask?: DexExecAsk;
 };
-export type OpenClawExecPolicyForCodexAppServer = {
-  mode?: OpenClawExecMode;
-  security: OpenClawExecSecurity;
-  ask: OpenClawExecAsk;
+export type DexExecPolicyForCodexAppServer = {
+  mode?: DexExecMode;
+  security: DexExecSecurity;
+  ask: DexExecAsk;
   touched: boolean;
 };
-type OpenClawExecPolicy = OpenClawExecPolicyForCodexAppServer;
+type DexExecPolicy = DexExecPolicyForCodexAppServer;
 type CodexAppServerDefaultPolicy = {
   mode: CodexAppServerPolicyMode;
   approvalPolicy?: CodexAppServerApprovalPolicy;
@@ -370,11 +370,11 @@ function assertCodexAppServerCommandHasNoInlineArgs(params: {
   }
   const sourceLabel =
     params.source === "env"
-      ? "OPENCLAW_CODEX_APP_SERVER_BIN"
+      ? "DEX_CODEX_APP_SERVER_BIN"
       : "plugins.entries.codex.config.appServer.command";
   const argsLabel =
     params.source === "env"
-      ? "OPENCLAW_CODEX_APP_SERVER_ARGS"
+      ? "DEX_CODEX_APP_SERVER_ARGS"
       : "plugins.entries.codex.config.appServer.args";
   throw new Error(
     `${sourceLabel} must be only the Codex app-server executable path; "${inlineArgs.executable}" was configured with inline arguments "${inlineArgs.arguments}". Move those arguments to ${argsLabel}, or remove the override to use the managed Codex startup path.`,
@@ -413,8 +413,8 @@ export function resolveCodexPluginsPolicy(pluginConfig?: unknown): ResolvedCodex
 export function resolveCodexAppServerRuntimeOptions(
   params: {
     pluginConfig?: unknown;
-    execMode?: OpenClawExecMode;
-    execPolicy?: OpenClawExecPolicyForCodexAppServer;
+    execMode?: DexExecMode;
+    execPolicy?: DexExecPolicyForCodexAppServer;
     env?: NodeJS.ProcessEnv;
     requirementsToml?: string | null;
     requirementsPath?: string;
@@ -428,7 +428,7 @@ export function resolveCodexAppServerRuntimeOptions(
   const config = readCodexPluginConfig(params.pluginConfig).appServer ?? {};
   const transport = resolveTransport(config.transport);
   const configCommand = readNonEmptyString(config.command);
-  const envCommand = readNonEmptyString(env.OPENCLAW_CODEX_APP_SERVER_BIN);
+  const envCommand = readNonEmptyString(env.DEX_CODEX_APP_SERVER_BIN);
   const command = configCommand ?? envCommand ?? "codex";
   const commandSource: CodexAppServerCommandSource = configCommand
     ? "config"
@@ -438,22 +438,22 @@ export function resolveCodexAppServerRuntimeOptions(
   if (commandSource === "config" || commandSource === "env") {
     assertCodexAppServerCommandHasNoInlineArgs({ command, source: commandSource });
   }
-  const args = resolveArgs(config.args, env.OPENCLAW_CODEX_APP_SERVER_ARGS);
+  const args = resolveArgs(config.args, env.DEX_CODEX_APP_SERVER_ARGS);
   const headers = normalizeHeaders(config.headers);
   const clearEnv = normalizeStringList(config.clearEnv);
   const authToken = readNonEmptyString(config.authToken);
   const url = readNonEmptyString(config.url);
-  const execMode = resolveEffectiveOpenClawExecModeForCodexAppServer({
+  const execMode = resolveEffectiveDexExecModeForCodexAppServer({
     execMode: params.execMode,
     execPolicy: params.execPolicy,
   });
-  assertCodexAppServerAllowedForOpenClawExecMode(execMode);
+  assertCodexAppServerAllowedForDexExecMode(execMode);
   const explicitPolicyMode =
-    resolvePolicyMode(config.mode) ?? resolvePolicyMode(env.OPENCLAW_CODEX_APP_SERVER_MODE);
+    resolvePolicyMode(config.mode) ?? resolvePolicyMode(env.DEX_CODEX_APP_SERVER_MODE);
   const configuredSandbox =
-    resolveSandbox(config.sandbox) ?? resolveSandbox(env.OPENCLAW_CODEX_APP_SERVER_SANDBOX);
+    resolveSandbox(config.sandbox) ?? resolveSandbox(env.DEX_CODEX_APP_SERVER_SANDBOX);
   const explicitApprovalsReviewer = resolveApprovalsReviewer(config.approvalsReviewer);
-  const normalizedPolicyMode = resolveCodexPolicyModeForOpenClawExecMode(execMode);
+  const normalizedPolicyMode = resolveCodexPolicyModeForDexExecMode(execMode);
   const ignoreLegacyYoloPolicyMode =
     normalizedPolicyMode === "guardian" && explicitPolicyMode === "yolo";
   const forceUserReviewer = execMode !== undefined && execMode !== "auto" && execMode !== "full";
@@ -511,7 +511,7 @@ export function resolveCodexAppServerRuntimeOptions(
   }
 
   const configApprovalPolicy = resolveApprovalPolicy(config.approvalPolicy);
-  const envApprovalPolicy = resolveApprovalPolicy(env.OPENCLAW_CODEX_APP_SERVER_APPROVAL_POLICY);
+  const envApprovalPolicy = resolveApprovalPolicy(env.DEX_CODEX_APP_SERVER_APPROVAL_POLICY);
   const approvalPolicy =
     configApprovalPolicy ??
     envApprovalPolicy ??
@@ -596,30 +596,30 @@ export function resolveCodexComputerUseConfig(
   const marketplaceSource =
     readNonEmptyString(params.overrides?.marketplaceSource) ??
     readNonEmptyString(config.marketplaceSource) ??
-    readNonEmptyString(env.OPENCLAW_CODEX_COMPUTER_USE_MARKETPLACE_SOURCE);
+    readNonEmptyString(env.DEX_CODEX_COMPUTER_USE_MARKETPLACE_SOURCE);
   const marketplacePath =
     readNonEmptyString(params.overrides?.marketplacePath) ??
     readNonEmptyString(config.marketplacePath) ??
-    readNonEmptyString(env.OPENCLAW_CODEX_COMPUTER_USE_MARKETPLACE_PATH);
+    readNonEmptyString(env.DEX_CODEX_COMPUTER_USE_MARKETPLACE_PATH);
   const marketplaceName =
     readNonEmptyString(params.overrides?.marketplaceName) ??
     readNonEmptyString(config.marketplaceName) ??
-    readNonEmptyString(env.OPENCLAW_CODEX_COMPUTER_USE_MARKETPLACE_NAME);
+    readNonEmptyString(env.DEX_CODEX_COMPUTER_USE_MARKETPLACE_NAME);
   const autoInstall =
     params.overrides?.autoInstall ??
     config.autoInstall ??
-    readBooleanEnv(env.OPENCLAW_CODEX_COMPUTER_USE_AUTO_INSTALL) ??
+    readBooleanEnv(env.DEX_CODEX_COMPUTER_USE_AUTO_INSTALL) ??
     false;
   const marketplaceDiscoveryTimeoutMs = normalizePositiveNumber(
     params.overrides?.marketplaceDiscoveryTimeoutMs ??
       config.marketplaceDiscoveryTimeoutMs ??
-      readNumberEnv(env.OPENCLAW_CODEX_COMPUTER_USE_MARKETPLACE_DISCOVERY_TIMEOUT_MS),
+      readNumberEnv(env.DEX_CODEX_COMPUTER_USE_MARKETPLACE_DISCOVERY_TIMEOUT_MS),
     DEFAULT_CODEX_COMPUTER_USE_MARKETPLACE_DISCOVERY_TIMEOUT_MS,
   );
   const enabled =
     params.overrides?.enabled ??
     config.enabled ??
-    readBooleanEnv(env.OPENCLAW_CODEX_COMPUTER_USE) ??
+    readBooleanEnv(env.DEX_CODEX_COMPUTER_USE) ??
     Boolean(autoInstall || marketplaceSource || marketplacePath || marketplaceName);
 
   return {
@@ -629,12 +629,12 @@ export function resolveCodexComputerUseConfig(
     pluginName:
       readNonEmptyString(params.overrides?.pluginName) ??
       readNonEmptyString(config.pluginName) ??
-      readNonEmptyString(env.OPENCLAW_CODEX_COMPUTER_USE_PLUGIN_NAME) ??
+      readNonEmptyString(env.DEX_CODEX_COMPUTER_USE_PLUGIN_NAME) ??
       DEFAULT_CODEX_COMPUTER_USE_PLUGIN_NAME,
     mcpServerName:
       readNonEmptyString(params.overrides?.mcpServerName) ??
       readNonEmptyString(config.mcpServerName) ??
-      readNonEmptyString(env.OPENCLAW_CODEX_COMPUTER_USE_MCP_SERVER_NAME) ??
+      readNonEmptyString(env.DEX_CODEX_COMPUTER_USE_MCP_SERVER_NAME) ??
       DEFAULT_CODEX_COMPUTER_USE_MCP_SERVER_NAME,
     ...(marketplaceSource ? { marketplaceSource } : {}),
     ...(marketplacePath ? { marketplacePath } : {}),
@@ -730,7 +730,7 @@ function resolveDefaultCodexAppServerPolicy(params: {
   transport: CodexAppServerTransportMode;
   forceGuardian?: boolean;
   forceUserReviewer?: boolean;
-  execModeRequiringPromptingApprovals?: Extract<OpenClawExecMode, "auto" | "ask">;
+  execModeRequiringPromptingApprovals?: Extract<DexExecMode, "auto" | "ask">;
   env?: NodeJS.ProcessEnv;
   requirementsToml?: string | null;
   requirementsPath?: string;
@@ -1036,7 +1036,7 @@ function normalizeRequirementsApprovalsReviewer(
 
 function selectGuardianApprovalPolicy(
   allowedApprovalPolicies: Set<CodexAppServerApprovalPolicy> | undefined,
-  execModeRequiringPromptingApprovals?: Extract<OpenClawExecMode, "auto" | "ask">,
+  execModeRequiringPromptingApprovals?: Extract<DexExecMode, "auto" | "ask">,
 ): CodexAppServerApprovalPolicy {
   if (allowedApprovalPolicies === undefined || allowedApprovalPolicies.has("on-request")) {
     return "on-request";
@@ -1060,7 +1060,7 @@ function selectGuardianApprovalPolicy(
 
 function selectGuardianApprovalsReviewer(
   allowedApprovalsReviewers: Set<CodexAppServerApprovalsReviewer> | undefined,
-  execModeRequiringAutoReviewer?: Extract<OpenClawExecMode, "auto">,
+  execModeRequiringAutoReviewer?: Extract<DexExecMode, "auto">,
 ): CodexAppServerApprovalsReviewer {
   if (allowedApprovalsReviewers === undefined || allowedApprovalsReviewers.has("auto_review")) {
     return "auto_review";
@@ -1153,21 +1153,21 @@ function resolveApprovalsReviewer(value: unknown): CodexAppServerApprovalsReview
     : undefined;
 }
 
-export function resolveOpenClawExecModeFromConfig(params: {
+export function resolveDexExecModeFromConfig(params: {
   config?: unknown;
   agentId?: string;
-}): OpenClawExecMode | undefined {
-  const policy = resolveOpenClawExecPolicyFromConfig(params);
+}): DexExecMode | undefined {
+  const policy = resolveDexExecPolicyFromConfig(params);
   return policy.touched ? policy.mode : undefined;
 }
 
-function resolveOpenClawExecPolicyFromConfig(params: {
+function resolveDexExecPolicyFromConfig(params: {
   config?: unknown;
   agentId?: string;
-}): OpenClawExecPolicy {
+}): DexExecPolicy {
   const root = readRecord(params.config);
   const globalExec = readRecord(readRecord(root?.tools)?.exec);
-  const globalPolicy = applyOpenClawExecPolicyLayer(createDefaultOpenClawExecPolicy(), globalExec);
+  const globalPolicy = applyDexExecPolicyLayer(createDefaultDexExecPolicy(), globalExec);
   const agentId = params.agentId?.trim();
   if (!agentId) {
     return globalPolicy;
@@ -1180,10 +1180,10 @@ function resolveOpenClawExecPolicyFromConfig(params: {
     return typeof id === "string" && normalizeAgentId(id) === normalizedAgentId;
   });
   const agentExec = readRecord(readRecord(readRecord(agentEntry)?.tools)?.exec);
-  return applyOpenClawExecPolicyLayer(globalPolicy, agentExec);
+  return applyDexExecPolicyLayer(globalPolicy, agentExec);
 }
 
-export function resolveOpenClawExecModeForCodexAppServer(params: {
+export function resolveDexExecModeForCodexAppServer(params: {
   execOverrides?: {
     security?: unknown;
     ask?: unknown;
@@ -1191,12 +1191,12 @@ export function resolveOpenClawExecModeForCodexAppServer(params: {
   approvals?: ExecApprovalsFile;
   config?: unknown;
   agentId?: string;
-}): OpenClawExecMode | undefined {
-  const policy = resolveOpenClawExecPolicyForCodexAppServer(params);
+}): DexExecMode | undefined {
+  const policy = resolveDexExecPolicyForCodexAppServer(params);
   return policy.touched ? policy.mode : undefined;
 }
 
-export function resolveOpenClawExecPolicyForCodexAppServer(params: {
+export function resolveDexExecPolicyForCodexAppServer(params: {
   execOverrides?: {
     security?: unknown;
     ask?: unknown;
@@ -1204,13 +1204,13 @@ export function resolveOpenClawExecPolicyForCodexAppServer(params: {
   approvals?: ExecApprovalsFile;
   config?: unknown;
   agentId?: string;
-}): OpenClawExecPolicyForCodexAppServer {
-  const basePolicy = resolveOpenClawExecPolicyFromConfig({
+}): DexExecPolicyForCodexAppServer {
+  const basePolicy = resolveDexExecPolicyFromConfig({
     config: params.config,
     agentId: params.agentId,
   });
-  const overridePolicy = applyOpenClawExecPolicyLayer(basePolicy, params.execOverrides);
-  const approvalFloors = resolveOpenClawExecApprovalFloorsForCodexAppServer({
+  const overridePolicy = applyDexExecPolicyLayer(basePolicy, params.execOverrides);
+  const approvalFloors = resolveDexExecApprovalFloorsForCodexAppServer({
     approvals: params.approvals,
     agentId: params.agentId,
     policy: overridePolicy,
@@ -1218,18 +1218,18 @@ export function resolveOpenClawExecPolicyForCodexAppServer(params: {
   return applyOpenClawExecApprovalFloors(overridePolicy, approvalFloors);
 }
 
-function resolveEffectiveOpenClawExecModeForCodexAppServer(params: {
-  execMode?: OpenClawExecMode;
-  execPolicy?: OpenClawExecPolicyForCodexAppServer;
-}): OpenClawExecMode | undefined {
+function resolveEffectiveDexExecModeForCodexAppServer(params: {
+  execMode?: DexExecMode;
+  execPolicy?: DexExecPolicyForCodexAppServer;
+}): DexExecMode | undefined {
   if (params.execPolicy?.touched === true) {
     return params.execPolicy.mode;
   }
   return params.execMode;
 }
 
-function resolveCodexPolicyModeForOpenClawExecMode(
-  mode: OpenClawExecMode | undefined,
+function resolveCodexPolicyModeForDexExecMode(
+  mode: DexExecMode | undefined,
 ): CodexAppServerPolicyMode | undefined {
   if (!mode || mode === "full") {
     return undefined;
@@ -1237,7 +1237,7 @@ function resolveCodexPolicyModeForOpenClawExecMode(
   return "guardian";
 }
 
-function assertCodexAppServerAllowedForOpenClawExecMode(mode: OpenClawExecMode | undefined): void {
+function assertCodexAppServerAllowedForDexExecMode(mode: DexExecMode | undefined): void {
   if (mode === "deny" || mode === "allowlist") {
     throw new Error(
       `Codex app-server local execution is not available when tools.exec.mode=${mode}`,
@@ -1245,7 +1245,7 @@ function assertCodexAppServerAllowedForOpenClawExecMode(mode: OpenClawExecMode |
   }
 }
 
-function createDefaultOpenClawExecPolicy(): OpenClawExecPolicy {
+function createDefaultDexExecPolicy(): DexExecPolicy {
   return {
     security: "full",
     ask: "off",
@@ -1253,17 +1253,17 @@ function createDefaultOpenClawExecPolicy(): OpenClawExecPolicy {
   };
 }
 
-function applyOpenClawExecPolicyLayer(
-  base: OpenClawExecPolicy,
+function applyDexExecPolicyLayer(
+  base: DexExecPolicy,
   exec?: { mode?: unknown; security?: unknown; ask?: unknown },
-): OpenClawExecPolicy {
+): DexExecPolicy {
   if (!exec) {
     return base;
   }
   const mode = readExecMode(exec.mode);
   if (mode !== undefined) {
     return {
-      ...resolveOpenClawExecPolicyForMode(mode),
+      ...resolveDexExecPolicyForMode(mode),
       touched: true,
     };
   }
@@ -1275,18 +1275,18 @@ function applyOpenClawExecPolicyLayer(
   const nextSecurity = security ?? base.security;
   const nextAsk = ask ?? base.ask;
   return {
-    mode: resolveOpenClawExecModeFromPolicy({ security: nextSecurity, ask: nextAsk }),
+    mode: resolveDexExecModeFromPolicy({ security: nextSecurity, ask: nextAsk }),
     security: nextSecurity,
     ask: nextAsk,
     touched: true,
   };
 }
 
-function resolveOpenClawExecApprovalFloorsForCodexAppServer(params: {
+function resolveDexExecApprovalFloorsForCodexAppServer(params: {
   approvals?: ExecApprovalsFile;
   agentId?: string;
-  policy: OpenClawExecPolicy;
-}): OpenClawExecApprovalFloorsForCodexAppServer | undefined {
+  policy: DexExecPolicy;
+}): DexExecApprovalFloorsForCodexAppServer | undefined {
   if (!params.approvals) {
     return undefined;
   }
@@ -1301,30 +1301,30 @@ function resolveOpenClawExecApprovalFloorsForCodexAppServer(params: {
 }
 
 function applyOpenClawExecApprovalFloors(
-  base: OpenClawExecPolicy,
-  approvalFloors?: OpenClawExecApprovalFloorsForCodexAppServer,
-): OpenClawExecPolicy {
+  base: DexExecPolicy,
+  approvalFloors?: DexExecApprovalFloorsForCodexAppServer,
+): DexExecPolicy {
   if (!approvalFloors) {
     return base;
   }
   const nextSecurity = approvalFloors.security
-    ? minOpenClawExecSecurity(base.security, approvalFloors.security)
+    ? minDexExecSecurity(base.security, approvalFloors.security)
     : base.security;
-  const nextAsk = approvalFloors.ask ? maxOpenClawExecAsk(base.ask, approvalFloors.ask) : base.ask;
+  const nextAsk = approvalFloors.ask ? maxDexExecAsk(base.ask, approvalFloors.ask) : base.ask;
   if (nextSecurity === base.security && nextAsk === base.ask) {
     return base;
   }
   return {
-    mode: resolveOpenClawExecModeFromPolicy({ security: nextSecurity, ask: nextAsk }),
+    mode: resolveDexExecModeFromPolicy({ security: nextSecurity, ask: nextAsk }),
     security: nextSecurity,
     ask: nextAsk,
     touched: true,
   };
 }
 
-function resolveOpenClawExecPolicyForMode(
-  mode: OpenClawExecMode,
-): Omit<OpenClawExecPolicy, "touched"> {
+function resolveDexExecPolicyForMode(
+  mode: DexExecMode,
+): Omit<DexExecPolicy, "touched"> {
   switch (mode) {
     case "deny":
       return { mode, security: "deny", ask: "off" };
@@ -1340,10 +1340,10 @@ function resolveOpenClawExecPolicyForMode(
   return exhaustiveMode;
 }
 
-function resolveOpenClawExecModeFromPolicy(params: {
-  security: OpenClawExecSecurity;
-  ask: OpenClawExecAsk;
-}): OpenClawExecMode {
+function resolveDexExecModeFromPolicy(params: {
+  security: DexExecSecurity;
+  ask: DexExecAsk;
+}): DexExecMode {
   if (params.security === "deny") {
     return "deny";
   }
@@ -1356,20 +1356,20 @@ function resolveOpenClawExecModeFromPolicy(params: {
   return "ask";
 }
 
-function minOpenClawExecSecurity(
-  left: OpenClawExecSecurity,
-  right: OpenClawExecSecurity,
-): OpenClawExecSecurity {
-  const order: Record<OpenClawExecSecurity, number> = { deny: 0, allowlist: 1, full: 2 };
+function minDexExecSecurity(
+  left: DexExecSecurity,
+  right: DexExecSecurity,
+): DexExecSecurity {
+  const order: Record<DexExecSecurity, number> = { deny: 0, allowlist: 1, full: 2 };
   return order[left] <= order[right] ? left : right;
 }
 
-function maxOpenClawExecAsk(left: OpenClawExecAsk, right: OpenClawExecAsk): OpenClawExecAsk {
-  const order: Record<OpenClawExecAsk, number> = { off: 0, "on-miss": 1, always: 2 };
+function maxDexExecAsk(left: DexExecAsk, right: DexExecAsk): DexExecAsk {
+  const order: Record<DexExecAsk, number> = { off: 0, "on-miss": 1, always: 2 };
   return order[left] >= order[right] ? left : right;
 }
 
-function readExecMode(value: unknown): OpenClawExecMode | undefined {
+function readExecMode(value: unknown): DexExecMode | undefined {
   return value === "deny" ||
     value === "allowlist" ||
     value === "ask" ||
@@ -1440,11 +1440,11 @@ function readBooleanEnv(value: string | undefined): boolean | undefined {
   return undefined;
 }
 
-function readExecSecurity(value: unknown): OpenClawExecSecurity | undefined {
+function readExecSecurity(value: unknown): DexExecSecurity | undefined {
   return value === "deny" || value === "allowlist" || value === "full" ? value : undefined;
 }
 
-function readExecAsk(value: unknown): OpenClawExecAsk | undefined {
+function readExecAsk(value: unknown): DexExecAsk | undefined {
   return value === "off" || value === "on-miss" || value === "always" ? value : undefined;
 }
 

@@ -11,7 +11,7 @@ import type {
   ChannelDoctorEmptyAllowlistAccountContext,
   ChannelDoctorSequenceResult,
 } from "../../../channels/plugins/types.adapters.js";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 
 type ChannelDoctorEntry = {
   doctor: ChannelDoctorAdapter;
@@ -23,12 +23,12 @@ type ChannelDoctorPluginCandidate = {
 };
 
 type ChannelDoctorLookupContext = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
 };
 
 type ChannelDoctorEmptyAllowlistLookupParams = ChannelDoctorEmptyAllowlistAccountContext & {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 };
 
 const channelDoctorFunctionKeys = new Set<keyof ChannelDoctorAdapter>([
@@ -59,7 +59,7 @@ export type ChannelDoctorEmptyAllowlistPolicyHooks = {
   ) => boolean;
 };
 
-function collectConfiguredChannelIds(cfg: OpenClawConfig): string[] {
+function collectConfiguredChannelIds(cfg: DexConfig): string[] {
   if (cfg.plugins?.enabled === false) {
     return [];
   }
@@ -90,7 +90,7 @@ function collectConfiguredChannelIds(cfg: OpenClawConfig): string[] {
     .toSorted();
 }
 
-function isChannelDoctorBlockedByConfig(channelId: string, cfg: OpenClawConfig): boolean {
+function isChannelDoctorBlockedByConfig(channelId: string, cfg: DexConfig): boolean {
   if (cfg.plugins?.enabled === false) {
     return true;
   }
@@ -286,7 +286,7 @@ export function createChannelDoctorEmptyAllowlistPolicyHooks(
 }
 
 export async function runChannelDoctorConfigSequences(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env: NodeJS.ProcessEnv;
   shouldRepair: boolean;
 }): Promise<ChannelDoctorSequenceResult> {
@@ -307,7 +307,7 @@ export async function runChannelDoctorConfigSequences(params: {
 }
 
 export function collectChannelDoctorCompatibilityMutations(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   options: { env?: NodeJS.ProcessEnv } = {},
 ): ChannelDoctorConfigMutation[] {
   const channelIds = collectConfiguredChannelIds(cfg);
@@ -328,7 +328,7 @@ export function collectChannelDoctorCompatibilityMutations(
 }
 
 export async function collectChannelDoctorStaleConfigMutations(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   options: { env?: NodeJS.ProcessEnv } = {},
 ): Promise<ChannelDoctorConfigMutation[]> {
   const mutations: ChannelDoctorConfigMutation[] = [];
@@ -348,7 +348,7 @@ export async function collectChannelDoctorStaleConfigMutations(
 }
 
 export async function collectChannelDoctorPreviewWarnings(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   doctorFixCommand: string;
   env?: NodeJS.ProcessEnv;
 }): Promise<string[]> {
@@ -366,7 +366,7 @@ export async function collectChannelDoctorPreviewWarnings(params: {
 }
 
 export async function collectChannelDoctorMutableAllowlistWarnings(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
 }): Promise<string[]> {
   const warnings: string[] = [];
@@ -383,7 +383,7 @@ export async function collectChannelDoctorMutableAllowlistWarnings(params: {
 }
 
 export async function collectChannelDoctorRepairMutations(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   doctorFixCommand: string;
   env?: NodeJS.ProcessEnv;
 }): Promise<ChannelDoctorConfigMutation[]> {

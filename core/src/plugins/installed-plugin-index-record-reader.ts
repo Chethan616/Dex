@@ -3,8 +3,8 @@ import path from "node:path";
 import { isRecord } from "@dexagent/normalization-core/record-coerce";
 import type { PluginInstallRecord } from "../config/types.plugins.js";
 import { tryReadJsonSync } from "../infra/json-files.js";
-import type { OpenClawStateDatabaseOptions } from "../state/openclaw-state-db.js";
-import { openOpenClawStateDatabase } from "../state/openclaw-state-db.js";
+import type { DexStateDatabaseOptions } from "../state/openclaw-state-db.js";
+import { openDexStateDatabase } from "../state/openclaw-state-db.js";
 import { resolveDefaultPluginNpmDir, validatePluginId } from "./install-paths.js";
 import {
   getInstalledPluginIndexInstallRecordsCache,
@@ -247,7 +247,7 @@ type InstalledPluginIndexRecordRow = {
 
 function resolveStateDatabaseOptions(
   options: InstalledPluginIndexStoreOptions = {},
-): OpenClawStateDatabaseOptions {
+): DexStateDatabaseOptions {
   if (options.filePath) {
     return {
       ...(options.env ? { env: options.env } : {}),
@@ -258,7 +258,7 @@ function resolveStateDatabaseOptions(
     return {
       env: {
         ...(options.env ?? process.env),
-        OPENCLAW_STATE_DIR: options.stateDir,
+        DEX_STATE_DIR: options.stateDir,
       },
     };
   }
@@ -284,7 +284,7 @@ function readPersistedInstalledPluginIndexForRecords(
     return tryReadJsonSync(options.filePath);
   }
   try {
-    const database = openOpenClawStateDatabase(resolveStateDatabaseOptions(options));
+    const database = openDexStateDatabase(resolveStateDatabaseOptions(options));
     const row = database.db
       .prepare(
         `

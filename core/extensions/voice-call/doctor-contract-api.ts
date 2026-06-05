@@ -80,7 +80,7 @@ function resolveVoiceCallStorePath(params: {
   if (configuredStore) {
     return resolveUserPath(configuredStore, params.env);
   }
-  return path.join(resolveHome(params.env), ".openclaw", "voice-calls");
+  return path.join(resolveHome(params.env), ".dex", "voice-calls");
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
@@ -272,7 +272,7 @@ export const stateMigrations: PluginDoctorStateMigration[] = [
       if (entries.length === 0) {
         return { changes, warnings };
       }
-      const env = { ...params.env, OPENCLAW_STATE_DIR: storePath };
+      const env = { ...params.env, DEX_STATE_DIR: storePath };
       const eventStore = params.context.openPluginStateKeyedStore<CallRecordEventMeta>({
         namespace: CALL_RECORD_EVENTS_NAMESPACE,
         maxEntries: CALL_RECORD_EVENT_META_MAX_ENTRIES,

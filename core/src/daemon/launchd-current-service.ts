@@ -22,13 +22,13 @@ export function isCurrentProcessLaunchdServiceLabel(
     }
   }
 
-  const configuredLabel = normalizeOptionalString(env.OPENCLAW_LAUNCHD_LABEL);
+  const configuredLabel = normalizeOptionalString(env.DEX_LAUNCHD_LABEL);
   if (!configuredLabel || configuredLabel !== label) {
     return false;
   }
   if (
-    normalizeOptionalString(env.OPENCLAW_SERVICE_MARKER) === "openclaw" &&
-    Boolean(normalizeOptionalString(env.OPENCLAW_SERVICE_KIND))
+    normalizeOptionalString(env.DEX_SERVICE_MARKER) === "openclaw" &&
+    Boolean(normalizeOptionalString(env.DEX_SERVICE_KIND))
   ) {
     return true;
   }

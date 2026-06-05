@@ -38,7 +38,7 @@ The public contract is the routing behavior, not the internal Node hooks used to
 
 Internally, OpenClaw installs Proxyline as the process-level routing runtime for this feature. Proxyline covers `fetch`, undici-backed clients, Node core `node:http` / `node:https` callers, common WebSocket clients, and helper-created CONNECT tunnels. Managed proxy mode replaces caller-provided Node HTTP agents so explicit agents do not accidentally bypass the operator proxy.
 
-Some plugins own custom transports that need explicit proxy wiring even when process-level routing exists. For example, Telegram's Bot API transport uses its own HTTP/1 undici dispatcher and therefore honors process proxy env plus the managed `OPENCLAW_PROXY_URL` fallback in that owner-specific transport path.
+Some plugins own custom transports that need explicit proxy wiring even when process-level routing exists. For example, Telegram's Bot API transport uses its own HTTP/1 undici dispatcher and therefore honors process proxy env plus the managed `DEX_PROXY_URL` fallback in that owner-specific transport path.
 
 The proxy URL itself can use either `http://` or `https://`. These schemes describe the connection from OpenClaw to the proxy endpoint:
 
@@ -80,10 +80,10 @@ proxy:
 You can also provide the URL through the environment, while keeping `proxy.enabled=true` in config:
 
 ```bash
-OPENCLAW_PROXY_URL=http://127.0.0.1:3128 openclaw gateway run
+DEX_PROXY_URL=http://127.0.0.1:3128 openclaw gateway run
 ```
 
-`proxy.proxyUrl` takes precedence over `OPENCLAW_PROXY_URL`.
+`proxy.proxyUrl` takes precedence over `DEX_PROXY_URL`.
 
 ### Gateway Loopback Mode
 
@@ -111,9 +111,9 @@ openclaw gateway install --force
 openclaw gateway start
 ```
 
-The environment fallback is best for foreground runs. If you use it with an installed service, put `OPENCLAW_PROXY_URL` in the service durable environment, such as `$OPENCLAW_STATE_DIR/.env` or `~/.openclaw/.env`, then reinstall the service so launchd, systemd, or Scheduled Tasks starts the gateway with that value.
+The environment fallback is best for foreground runs. If you use it with an installed service, put `DEX_PROXY_URL` in the service durable environment, such as `$DEX_STATE_DIR/.env` or `~/.dex/.env`, then reinstall the service so launchd, systemd, or Scheduled Tasks starts the gateway with that value.
 
-For `openclaw --container ...` commands, OpenClaw forwards `OPENCLAW_PROXY_URL` into the container-targeted child CLI when it is set. The URL must be reachable from inside the container; `127.0.0.1` refers to the container itself, not the host. OpenClaw rejects loopback proxy URLs for container-targeted commands unless you explicitly override that safety check.
+For `openclaw --container ...` commands, OpenClaw forwards `DEX_PROXY_URL` into the container-targeted child CLI when it is set. The URL must be reachable from inside the container; `127.0.0.1` refers to the container itself, not the host. OpenClaw rejects loopback proxy URLs for container-targeted commands unless you explicitly override that safety check.
 
 ## Proxy Requirements
 

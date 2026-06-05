@@ -20,7 +20,7 @@ import { resolveChannelResetConfig, resolveSessionResetType } from "../../config
 import { resolveSessionKey } from "../../config/sessions/session-key.js";
 import { loadSessionStore } from "../../config/sessions/store-load.js";
 import type { SessionEntry } from "../../config/sessions/types.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   buildAgentMainSessionKey,
   DEFAULT_AGENT_ID,
@@ -63,7 +63,7 @@ export function buildExplicitSessionIdSessionKey(params: {
 }
 
 function resolveLegacyMainStoreSessionForDefaultAgent(opts: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   defaultAgentId: string;
   mainKey: string;
   sessionKey?: string;
@@ -124,7 +124,7 @@ function resolveLegacyMainStoreSessionForDefaultAgent(opts: {
 }
 
 function collectSessionIdMatchesForRequest(opts: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionStore: Record<string, SessionEntry>;
   storePath: string;
   storeAgentId?: string;
@@ -182,7 +182,7 @@ function collectSessionIdMatchesForRequest(opts: {
  * into that agent's main session key.
  */
 export function resolveStoredSessionKeyForSessionId(opts: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionId: string;
   agentId?: string;
 }): SessionKeyResolution {
@@ -208,7 +208,7 @@ export function resolveStoredSessionKeyForSessionId(opts: {
 }
 
 export function resolveSessionKeyForRequest(opts: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   to?: string;
   sessionId?: string;
   sessionKey?: string;
@@ -302,7 +302,7 @@ export function resolveSessionKeyForRequest(opts: {
 }
 
 export function resolveSession(opts: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   to?: string;
   sessionId?: string;
   sessionKey?: string;

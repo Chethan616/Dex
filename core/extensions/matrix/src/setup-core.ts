@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   DEFAULT_ACCOUNT_ID,
   type DmPolicy,
@@ -93,7 +93,7 @@ export function createMatrixSetupWizardProxy(
           accountId: resolveMatrixSetupWizardAccountId(cfg as CoreConfig, accountId),
         }).dm?.policy ?? "pairing",
       setPolicy: (cfg, policy, accountId) =>
-        setMatrixDmPolicy(cfg as CoreConfig, policy, accountId) as OpenClawConfig,
+        setMatrixDmPolicy(cfg as CoreConfig, policy, accountId) as DexConfig,
       promptAllowFrom: async (params) => {
         const promptAllowFrom = (await loadWizard()).dmPolicy?.promptAllowFrom;
         return promptAllowFrom ? await promptAllowFrom(params) : params.cfg;

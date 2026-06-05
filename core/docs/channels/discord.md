@@ -114,7 +114,7 @@ openclaw gateway
 ```
 
     If OpenClaw is already running as a background service, restart it via the OpenClaw Mac app or by stopping and restarting the `openclaw gateway run` process.
-    For managed service installs, run `openclaw gateway install` from a shell where `DISCORD_BOT_TOKEN` is present, or store the variable in `~/.openclaw/.env`, so the service can resolve the env SecretRef after restart.
+    For managed service installs, run `openclaw gateway install` from a shell where `DISCORD_BOT_TOKEN` is present, or store the variable in `~/.dex/.env`, so the service can resolve the env SecretRef after restart.
     If your host is blocked or rate-limited by Discord's startup application lookup, set the Discord application/client ID from the Developer Portal so startup can skip that REST call. Use `channels.discord.applicationId` for the default account, or `channels.discord.accounts.<accountId>.applicationId` when you run multiple Discord bots.
 
   </Step>
@@ -1591,7 +1591,7 @@ openclaw logs --follow
 
     - single-account: `channels.discord.gatewayInfoTimeoutMs`
     - multi-account: `channels.discord.accounts.<accountId>.gatewayInfoTimeoutMs`
-    - env fallback when config is unset: `OPENCLAW_DISCORD_GATEWAY_INFO_TIMEOUT_MS`
+    - env fallback when config is unset: `DEX_DISCORD_GATEWAY_INFO_TIMEOUT_MS`
     - default: `30000` (30 seconds), max: `120000`
 
   </Accordion>
@@ -1603,11 +1603,11 @@ openclaw logs --follow
 
     - startup single-account: `channels.discord.gatewayReadyTimeoutMs`
     - startup multi-account: `channels.discord.accounts.<accountId>.gatewayReadyTimeoutMs`
-    - startup env fallback when config is unset: `OPENCLAW_DISCORD_READY_TIMEOUT_MS`
+    - startup env fallback when config is unset: `DEX_DISCORD_READY_TIMEOUT_MS`
     - startup default: `15000` (15 seconds), max: `120000`
     - runtime single-account: `channels.discord.gatewayRuntimeReadyTimeoutMs`
     - runtime multi-account: `channels.discord.accounts.<accountId>.gatewayRuntimeReadyTimeoutMs`
-    - runtime env fallback when config is unset: `OPENCLAW_DISCORD_RUNTIME_READY_TIMEOUT_MS`
+    - runtime env fallback when config is unset: `DEX_DISCORD_RUNTIME_READY_TIMEOUT_MS`
     - runtime default: `30000` (30 seconds), max: `120000`
 
   </Accordion>

@@ -282,9 +282,9 @@ jobs:
           RELEASE_RERUN_GROUP_INPUT: ${{ inputs.rerun_group }}
           RELEASE_LIVE_SUITE_FILTER_INPUT: ${{ inputs.live_suite_filter }}
           RELEASE_CROSS_OS_SUITE_FILTER_INPUT: ${{ inputs.cross_os_suite_filter }}
-          RELEASE_QA_DISCORD_LIVE_CI_ENABLED: ${{ vars.OPENCLAW_RELEASE_QA_DISCORD_LIVE_CI_ENABLED || 'false' }}
-          RELEASE_QA_WHATSAPP_LIVE_CI_ENABLED: ${{ vars.OPENCLAW_RELEASE_QA_WHATSAPP_LIVE_CI_ENABLED || 'false' }}
-          RELEASE_QA_SLACK_LIVE_CI_ENABLED: ${{ vars.OPENCLAW_RELEASE_QA_SLACK_LIVE_CI_ENABLED || 'false' }}
+          RELEASE_QA_DISCORD_LIVE_CI_ENABLED: ${{ vars.DEX_RELEASE_QA_DISCORD_LIVE_CI_ENABLED || 'false' }}
+          RELEASE_QA_WHATSAPP_LIVE_CI_ENABLED: ${{ vars.DEX_RELEASE_QA_WHATSAPP_LIVE_CI_ENABLED || 'false' }}
+          RELEASE_QA_SLACK_LIVE_CI_ENABLED: ${{ vars.DEX_RELEASE_QA_SLACK_LIVE_CI_ENABLED || 'false' }}
           RELEASE_PACKAGE_SPEC_INPUT: ${{ inputs.release_package_spec }}
           RELEASE_PACKAGE_ACCEPTANCE_PACKAGE_SPEC_INPUT: ${{ inputs.package_acceptance_package_spec }}
           RELEASE_CODEX_PLUGIN_SPEC_INPUT: ${{ inputs.codex_plugin_spec }}
@@ -587,9 +587,9 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
-      OPENCLAW_DISCORD_SMOKE_BOT_TOKEN: ${{ secrets.OPENCLAW_DISCORD_SMOKE_BOT_TOKEN }}
-      OPENCLAW_DISCORD_SMOKE_GUILD_ID: ${{ secrets.OPENCLAW_DISCORD_SMOKE_GUILD_ID }}
-      OPENCLAW_DISCORD_SMOKE_CHANNEL_ID: ${{ secrets.OPENCLAW_DISCORD_SMOKE_CHANNEL_ID }}
+      DEX_DISCORD_SMOKE_BOT_TOKEN: ${{ secrets.DEX_DISCORD_SMOKE_BOT_TOKEN }}
+      DEX_DISCORD_SMOKE_GUILD_ID: ${{ secrets.DEX_DISCORD_SMOKE_GUILD_ID }}
+      DEX_DISCORD_SMOKE_CHANNEL_ID: ${{ secrets.DEX_DISCORD_SMOKE_CHANNEL_ID }}
 
   live_repo_e2e_release_checks:
     name: Run repo/live E2E validation
@@ -629,11 +629,11 @@ jobs:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
       OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
       OPENCODE_ZEN_API_KEY: ${{ secrets.OPENCODE_ZEN_API_KEY }}
-      OPENCLAW_LIVE_BROWSER_CDP_URL: ${{ secrets.OPENCLAW_LIVE_BROWSER_CDP_URL }}
-      OPENCLAW_LIVE_SETUP_TOKEN: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN }}
-      OPENCLAW_LIVE_SETUP_TOKEN_MODEL: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_MODEL }}
-      OPENCLAW_LIVE_SETUP_TOKEN_PROFILE: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_PROFILE }}
-      OPENCLAW_LIVE_SETUP_TOKEN_VALUE: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_VALUE }}
+      DEX_LIVE_BROWSER_CDP_URL: ${{ secrets.DEX_LIVE_BROWSER_CDP_URL }}
+      DEX_LIVE_SETUP_TOKEN: ${{ secrets.DEX_LIVE_SETUP_TOKEN }}
+      DEX_LIVE_SETUP_TOKEN_MODEL: ${{ secrets.DEX_LIVE_SETUP_TOKEN_MODEL }}
+      DEX_LIVE_SETUP_TOKEN_PROFILE: ${{ secrets.DEX_LIVE_SETUP_TOKEN_PROFILE }}
+      DEX_LIVE_SETUP_TOKEN_VALUE: ${{ secrets.DEX_LIVE_SETUP_TOKEN_VALUE }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -649,13 +649,13 @@ jobs:
       BYTEPLUS_ACCESS_KEY_ID: ${{ secrets.BYTEPLUS_ACCESS_KEY_ID }}
       BYTEPLUS_SECRET_ACCESS_KEY: ${{ secrets.BYTEPLUS_SECRET_ACCESS_KEY }}
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      OPENCLAW_CODEX_AUTH_JSON: ${{ secrets.OPENCLAW_CODEX_AUTH_JSON }}
+      DEX_CODEX_AUTH_JSON: ${{ secrets.DEX_CODEX_AUTH_JSON }}
       OPENCLAW_CODEX_CONFIG_TOML: ${{ secrets.OPENCLAW_CODEX_CONFIG_TOML }}
-      OPENCLAW_CLAUDE_JSON: ${{ secrets.OPENCLAW_CLAUDE_JSON }}
-      OPENCLAW_CLAUDE_CREDENTIALS_JSON: ${{ secrets.OPENCLAW_CLAUDE_CREDENTIALS_JSON }}
+      DEX_CLAUDE_JSON: ${{ secrets.DEX_CLAUDE_JSON }}
+      DEX_CLAUDE_CREDENTIALS_JSON: ${{ secrets.DEX_CLAUDE_CREDENTIALS_JSON }}
       OPENCLAW_CLAUDE_SETTINGS_JSON: ${{ secrets.OPENCLAW_CLAUDE_SETTINGS_JSON }}
       OPENCLAW_CLAUDE_SETTINGS_LOCAL_JSON: ${{ secrets.OPENCLAW_CLAUDE_SETTINGS_LOCAL_JSON }}
-      OPENCLAW_GEMINI_SETTINGS_JSON: ${{ secrets.OPENCLAW_GEMINI_SETTINGS_JSON }}
+      DEX_GEMINI_SETTINGS_JSON: ${{ secrets.DEX_GEMINI_SETTINGS_JSON }}
       FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
 
   docker_e2e_release_checks:
@@ -722,11 +722,11 @@ jobs:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
       OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
       OPENCODE_ZEN_API_KEY: ${{ secrets.OPENCODE_ZEN_API_KEY }}
-      OPENCLAW_LIVE_BROWSER_CDP_URL: ${{ secrets.OPENCLAW_LIVE_BROWSER_CDP_URL }}
-      OPENCLAW_LIVE_SETUP_TOKEN: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN }}
-      OPENCLAW_LIVE_SETUP_TOKEN_MODEL: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_MODEL }}
-      OPENCLAW_LIVE_SETUP_TOKEN_PROFILE: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_PROFILE }}
-      OPENCLAW_LIVE_SETUP_TOKEN_VALUE: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_VALUE }}
+      DEX_LIVE_BROWSER_CDP_URL: ${{ secrets.DEX_LIVE_BROWSER_CDP_URL }}
+      DEX_LIVE_SETUP_TOKEN: ${{ secrets.DEX_LIVE_SETUP_TOKEN }}
+      DEX_LIVE_SETUP_TOKEN_MODEL: ${{ secrets.DEX_LIVE_SETUP_TOKEN_MODEL }}
+      DEX_LIVE_SETUP_TOKEN_PROFILE: ${{ secrets.DEX_LIVE_SETUP_TOKEN_PROFILE }}
+      DEX_LIVE_SETUP_TOKEN_VALUE: ${{ secrets.DEX_LIVE_SETUP_TOKEN_VALUE }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -742,16 +742,16 @@ jobs:
       BYTEPLUS_ACCESS_KEY_ID: ${{ secrets.BYTEPLUS_ACCESS_KEY_ID }}
       BYTEPLUS_SECRET_ACCESS_KEY: ${{ secrets.BYTEPLUS_SECRET_ACCESS_KEY }}
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      OPENCLAW_CODEX_AUTH_JSON: ${{ secrets.OPENCLAW_CODEX_AUTH_JSON }}
+      DEX_CODEX_AUTH_JSON: ${{ secrets.DEX_CODEX_AUTH_JSON }}
       OPENCLAW_CODEX_CONFIG_TOML: ${{ secrets.OPENCLAW_CODEX_CONFIG_TOML }}
-      OPENCLAW_CLAUDE_JSON: ${{ secrets.OPENCLAW_CLAUDE_JSON }}
-      OPENCLAW_CLAUDE_CREDENTIALS_JSON: ${{ secrets.OPENCLAW_CLAUDE_CREDENTIALS_JSON }}
+      DEX_CLAUDE_JSON: ${{ secrets.DEX_CLAUDE_JSON }}
+      DEX_CLAUDE_CREDENTIALS_JSON: ${{ secrets.DEX_CLAUDE_CREDENTIALS_JSON }}
       OPENCLAW_CLAUDE_SETTINGS_JSON: ${{ secrets.OPENCLAW_CLAUDE_SETTINGS_JSON }}
       OPENCLAW_CLAUDE_SETTINGS_LOCAL_JSON: ${{ secrets.OPENCLAW_CLAUDE_SETTINGS_LOCAL_JSON }}
-      OPENCLAW_GEMINI_SETTINGS_JSON: ${{ secrets.OPENCLAW_GEMINI_SETTINGS_JSON }}
+      DEX_GEMINI_SETTINGS_JSON: ${{ secrets.DEX_GEMINI_SETTINGS_JSON }}
       FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
-      OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-      OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
+      DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+      DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
 
   qa_lab_parity_lane_release_checks:
     name: Run QA Lab parity lane (${{ matrix.lane }})
@@ -772,15 +772,15 @@ jobs:
             output_dir: anthropic-baseline
     env:
       QA_PARITY_CONCURRENCY: "1"
-      OPENCLAW_QA_TRANSPORT_READY_TIMEOUT_MS: "180000"
+      DEX_QA_TRANSPORT_READY_TIMEOUT_MS: "180000"
       OPENAI_API_KEY: ""
       ANTHROPIC_API_KEY: ""
-      OPENCLAW_LIVE_OPENAI_KEY: ""
-      OPENCLAW_LIVE_ANTHROPIC_KEY: ""
-      OPENCLAW_LIVE_GEMINI_KEY: ""
-      OPENCLAW_LIVE_SETUP_TOKEN_VALUE: ""
-      OPENCLAW_BUILD_PRIVATE_QA: "1"
-      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+      DEX_LIVE_OPENAI_KEY: ""
+      DEX_LIVE_ANTHROPIC_KEY: ""
+      DEX_LIVE_GEMINI_KEY: ""
+      DEX_LIVE_SETUP_TOKEN_VALUE: ""
+      DEX_BUILD_PRIVATE_QA: "1"
+      DEX_ENABLE_PRIVATE_QA_CLI: "1"
     steps:
       - name: Checkout selected ref
         uses: actions/checkout@v6
@@ -850,8 +850,8 @@ jobs:
       contents: read
       actions: read
     env:
-      OPENCLAW_BUILD_PRIVATE_QA: "1"
-      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+      DEX_BUILD_PRIVATE_QA: "1"
+      DEX_ENABLE_PRIVATE_QA_CLI: "1"
     steps:
       - name: Checkout selected ref
         uses: actions/checkout@v6
@@ -908,15 +908,15 @@ jobs:
       contents: read
     env:
       QA_PARITY_CONCURRENCY: "1"
-      OPENCLAW_QA_TRANSPORT_READY_TIMEOUT_MS: "180000"
+      DEX_QA_TRANSPORT_READY_TIMEOUT_MS: "180000"
       OPENAI_API_KEY: ""
       ANTHROPIC_API_KEY: ""
-      OPENCLAW_LIVE_OPENAI_KEY: ""
-      OPENCLAW_LIVE_ANTHROPIC_KEY: ""
-      OPENCLAW_LIVE_GEMINI_KEY: ""
-      OPENCLAW_LIVE_SETUP_TOKEN_VALUE: ""
-      OPENCLAW_BUILD_PRIVATE_QA: "1"
-      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+      DEX_LIVE_OPENAI_KEY: ""
+      DEX_LIVE_ANTHROPIC_KEY: ""
+      DEX_LIVE_GEMINI_KEY: ""
+      DEX_LIVE_SETUP_TOKEN_VALUE: ""
+      DEX_BUILD_PRIVATE_QA: "1"
+      DEX_ENABLE_PRIVATE_QA_CLI: "1"
     steps:
       - name: Checkout selected ref
         uses: actions/checkout@v6
@@ -1030,8 +1030,8 @@ jobs:
       contents: read
       actions: read
     env:
-      OPENCLAW_BUILD_PRIVATE_QA: "1"
-      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+      DEX_BUILD_PRIVATE_QA: "1"
+      DEX_ENABLE_PRIVATE_QA_CLI: "1"
     steps:
       - name: Checkout selected ref
         uses: actions/checkout@v6
@@ -1082,8 +1082,8 @@ jobs:
       pull-requests: read
     environment: qa-live-shared
     env:
-      OPENCLAW_BUILD_PRIVATE_QA: "1"
-      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+      DEX_BUILD_PRIVATE_QA: "1"
+      DEX_ENABLE_PRIVATE_QA_CLI: "1"
     steps:
       - name: Checkout selected ref
         uses: actions/checkout@v6
@@ -1107,9 +1107,9 @@ jobs:
         id: run_lane
         shell: bash
         env:
-          OPENCLAW_QA_REDACT_PUBLIC_METADATA: "1"
-          OPENCLAW_QA_MATRIX_CANARY_TIMEOUT_MS: "90000"
-          OPENCLAW_QA_MATRIX_NO_REPLY_WINDOW_MS: "3000"
+          DEX_QA_REDACT_PUBLIC_METADATA: "1"
+          DEX_QA_MATRIX_CANARY_TIMEOUT_MS: "90000"
+          DEX_QA_MATRIX_NO_REPLY_WINDOW_MS: "3000"
         run: |
           set -euo pipefail
 
@@ -1161,8 +1161,8 @@ jobs:
       pull-requests: read
     environment: qa-live-shared
     env:
-      OPENCLAW_BUILD_PRIVATE_QA: "1"
-      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+      DEX_BUILD_PRIVATE_QA: "1"
+      DEX_ENABLE_PRIVATE_QA_CLI: "1"
     steps:
       - name: Checkout selected ref
         uses: actions/checkout@v6
@@ -1179,8 +1179,8 @@ jobs:
 
       - name: Validate required QA credential env
         env:
-          OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-          OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
+          DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+          DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1193,8 +1193,8 @@ jobs:
             fi
           }
 
-          require_var OPENCLAW_QA_CONVEX_SITE_URL
-          require_var OPENCLAW_QA_CONVEX_SECRET_CI
+          require_var DEX_QA_CONVEX_SITE_URL
+          require_var DEX_QA_CONVEX_SECRET_CI
 
       - name: Build private QA runtime
         env:
@@ -1205,11 +1205,11 @@ jobs:
         id: run_lane
         shell: bash
         env:
-          OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-          OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
-          OPENCLAW_QA_CREDENTIAL_ACQUIRE_TIMEOUT_MS: "1800000"
-          OPENCLAW_QA_REDACT_PUBLIC_METADATA: "1"
-          OPENCLAW_QA_TELEGRAM_CAPTURE_CONTENT: "1"
+          DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+          DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
+          DEX_QA_CREDENTIAL_ACQUIRE_TIMEOUT_MS: "1800000"
+          DEX_QA_REDACT_PUBLIC_METADATA: "1"
+          DEX_QA_TELEGRAM_CAPTURE_CONTENT: "1"
         run: |
           set -euo pipefail
 
@@ -1248,7 +1248,7 @@ jobs:
   qa_live_discord_release_checks:
     name: Run QA Lab live Discord lane
     needs: [resolve_target]
-    if: contains(fromJSON('["all","qa","qa-live"]'), needs.resolve_target.outputs.rerun_group) && needs.resolve_target.outputs.qa_live_discord_enabled == 'true' && vars.OPENCLAW_RELEASE_QA_DISCORD_LIVE_CI_ENABLED == 'true'
+    if: contains(fromJSON('["all","qa","qa-live"]'), needs.resolve_target.outputs.rerun_group) && needs.resolve_target.outputs.qa_live_discord_enabled == 'true' && vars.DEX_RELEASE_QA_DISCORD_LIVE_CI_ENABLED == 'true'
     continue-on-error: true
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -1257,8 +1257,8 @@ jobs:
       pull-requests: read
     environment: qa-live-shared
     env:
-      OPENCLAW_BUILD_PRIVATE_QA: "1"
-      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+      DEX_BUILD_PRIVATE_QA: "1"
+      DEX_ENABLE_PRIVATE_QA_CLI: "1"
     steps:
       - name: Checkout selected ref
         uses: actions/checkout@v6
@@ -1275,8 +1275,8 @@ jobs:
 
       - name: Validate required QA credential env
         env:
-          OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-          OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
+          DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+          DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1289,8 +1289,8 @@ jobs:
             fi
           }
 
-          require_var OPENCLAW_QA_CONVEX_SITE_URL
-          require_var OPENCLAW_QA_CONVEX_SECRET_CI
+          require_var DEX_QA_CONVEX_SITE_URL
+          require_var DEX_QA_CONVEX_SECRET_CI
 
       - name: Build private QA runtime
         env:
@@ -1301,10 +1301,10 @@ jobs:
         id: run_lane
         shell: bash
         env:
-          OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-          OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
-          OPENCLAW_QA_REDACT_PUBLIC_METADATA: "1"
-          OPENCLAW_QA_DISCORD_CAPTURE_CONTENT: "1"
+          DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+          DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
+          DEX_QA_REDACT_PUBLIC_METADATA: "1"
+          DEX_QA_DISCORD_CAPTURE_CONTENT: "1"
         run: |
           set -euo pipefail
 
@@ -1343,7 +1343,7 @@ jobs:
   qa_live_whatsapp_release_checks:
     name: Run QA Lab live WhatsApp lane
     needs: [resolve_target]
-    if: contains(fromJSON('["all","qa","qa-live"]'), needs.resolve_target.outputs.rerun_group) && needs.resolve_target.outputs.qa_live_whatsapp_enabled == 'true' && vars.OPENCLAW_RELEASE_QA_WHATSAPP_LIVE_CI_ENABLED == 'true'
+    if: contains(fromJSON('["all","qa","qa-live"]'), needs.resolve_target.outputs.rerun_group) && needs.resolve_target.outputs.qa_live_whatsapp_enabled == 'true' && vars.DEX_RELEASE_QA_WHATSAPP_LIVE_CI_ENABLED == 'true'
     continue-on-error: true
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -1355,8 +1355,8 @@ jobs:
       pull-requests: read
     environment: qa-live-shared
     env:
-      OPENCLAW_BUILD_PRIVATE_QA: "1"
-      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+      DEX_BUILD_PRIVATE_QA: "1"
+      DEX_ENABLE_PRIVATE_QA_CLI: "1"
     steps:
       - name: Checkout selected ref
         uses: actions/checkout@v6
@@ -1373,8 +1373,8 @@ jobs:
 
       - name: Validate required QA credential env
         env:
-          OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-          OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
+          DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+          DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1387,8 +1387,8 @@ jobs:
             fi
           }
 
-          require_var OPENCLAW_QA_CONVEX_SITE_URL
-          require_var OPENCLAW_QA_CONVEX_SECRET_CI
+          require_var DEX_QA_CONVEX_SITE_URL
+          require_var DEX_QA_CONVEX_SECRET_CI
 
       - name: Build private QA runtime
         env:
@@ -1399,10 +1399,10 @@ jobs:
         id: run_lane
         shell: bash
         env:
-          OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-          OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
-          OPENCLAW_QA_REDACT_PUBLIC_METADATA: "1"
-          OPENCLAW_QA_WHATSAPP_CAPTURE_CONTENT: "1"
+          DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+          DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
+          DEX_QA_REDACT_PUBLIC_METADATA: "1"
+          DEX_QA_WHATSAPP_CAPTURE_CONTENT: "1"
         run: |
           set -euo pipefail
 
@@ -1441,7 +1441,7 @@ jobs:
   qa_live_slack_release_checks:
     name: Run QA Lab live Slack lane
     needs: [resolve_target]
-    if: contains(fromJSON('["all","qa","qa-live"]'), needs.resolve_target.outputs.rerun_group) && needs.resolve_target.outputs.qa_live_slack_enabled == 'true' && vars.OPENCLAW_RELEASE_QA_SLACK_LIVE_CI_ENABLED == 'true'
+    if: contains(fromJSON('["all","qa","qa-live"]'), needs.resolve_target.outputs.rerun_group) && needs.resolve_target.outputs.qa_live_slack_enabled == 'true' && vars.DEX_RELEASE_QA_SLACK_LIVE_CI_ENABLED == 'true'
     continue-on-error: true
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -1450,8 +1450,8 @@ jobs:
       pull-requests: read
     environment: qa-live-shared
     env:
-      OPENCLAW_BUILD_PRIVATE_QA: "1"
-      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+      DEX_BUILD_PRIVATE_QA: "1"
+      DEX_ENABLE_PRIVATE_QA_CLI: "1"
     steps:
       - name: Checkout selected ref
         uses: actions/checkout@v6
@@ -1468,8 +1468,8 @@ jobs:
 
       - name: Validate required QA credential env
         env:
-          OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-          OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
+          DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+          DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1482,8 +1482,8 @@ jobs:
             fi
           }
 
-          require_var OPENCLAW_QA_CONVEX_SITE_URL
-          require_var OPENCLAW_QA_CONVEX_SECRET_CI
+          require_var DEX_QA_CONVEX_SITE_URL
+          require_var DEX_QA_CONVEX_SECRET_CI
 
       - name: Build private QA runtime
         env:
@@ -1494,10 +1494,10 @@ jobs:
         id: run_lane
         shell: bash
         env:
-          OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-          OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
-          OPENCLAW_QA_REDACT_PUBLIC_METADATA: "1"
-          OPENCLAW_QA_SLACK_CAPTURE_CONTENT: "1"
+          DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+          DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
+          DEX_QA_REDACT_PUBLIC_METADATA: "1"
+          DEX_QA_SLACK_CAPTURE_CONTENT: "1"
         run: |
           set -euo pipefail
 

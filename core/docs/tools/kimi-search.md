@@ -69,7 +69,7 @@ international endpoint by mistake (which often returns HTTP 401). Override
 with `tools.web.search.kimi.baseUrl` when you need a different search base URL.
 
 **Environment alternative:** set `KIMI_API_KEY` or `MOONSHOT_API_KEY` in the
-Gateway environment. For a gateway install, put it in `~/.openclaw/.env`.
+Gateway environment. For a gateway install, put it in `~/.dex/.env`.
 
 If you omit `baseUrl`, OpenClaw defaults to `https://api.moonshot.ai/v1`.
 If you omit `model`, OpenClaw defaults to `kimi-k2.6`.

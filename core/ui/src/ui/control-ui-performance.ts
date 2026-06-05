@@ -84,7 +84,7 @@ function logPerformanceEvent(event: string, payload: Record<string, unknown>, wa
   if (typeof logger !== "function") {
     return;
   }
-  logger(`[dex-core] ${event}`, payload);
+  logger(`[dex] ${event}`, payload);
 }
 
 export function recordControlUiPerformanceEvent(

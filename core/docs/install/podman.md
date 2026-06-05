@@ -11,7 +11,7 @@ The intended model is:
 
 - Podman runs the gateway container.
 - Your host `openclaw` CLI is the control plane.
-- Persistent state lives on the host under `~/.openclaw` by default.
+- Persistent state lives on the host under `~/.dex` by default.
 - Day-to-day management uses `openclaw --container <name> ...` instead of `sudo -u openclaw`, `podman exec`, or a separate service user.
 
 ## Prerequisites
@@ -37,16 +37,16 @@ The intended model is:
   </Step>
 
   <Step title="Manage the running container from the host CLI">
-    Set `OPENCLAW_CONTAINER=openclaw`, then use normal `openclaw` commands from the host.
+    Set `DEX_CONTAINER=openclaw`, then use normal `openclaw` commands from the host.
   </Step>
 </Steps>
 
 Setup details:
 
-- `./scripts/podman/setup.sh` builds `openclaw:local` in your rootless Podman store by default, or uses `OPENCLAW_IMAGE` / `OPENCLAW_PODMAN_IMAGE` if you set one.
-- It creates `~/.openclaw/openclaw.json` with `gateway.mode: "local"` if missing.
-- It creates `~/.openclaw/.env` with `OPENCLAW_GATEWAY_TOKEN` if missing.
-- For manual launches, the helper reads only a small allowlist of Podman-related keys from `~/.openclaw/.env` and passes explicit runtime env vars to the container; it does not hand the full env file to Podman.
+- `./scripts/podman/setup.sh` builds `openclaw:local` in your rootless Podman store by default, or uses `DEX_IMAGE` / `OPENCLAW_PODMAN_IMAGE` if you set one.
+- It creates `~/.dex/openclaw.json` with `gateway.mode: "local"` if missing.
+- It creates `~/.dex/.env` with `DEX_GATEWAY_TOKEN` if missing.
+- For manual launches, the helper reads only a small allowlist of Podman-related keys from `~/.dex/.env` and passes explicit runtime env vars to the container; it does not hand the full env file to Podman.
 
 Quadlet-managed setup:
 
@@ -60,11 +60,11 @@ You can also set `OPENCLAW_PODMAN_QUADLET=1`.
 
 Optional build/setup env vars:
 
-- `OPENCLAW_IMAGE` or `OPENCLAW_PODMAN_IMAGE` -- use an existing/pulled image instead of building `openclaw:local`
-- `OPENCLAW_IMAGE_APT_PACKAGES` -- install extra apt packages during image build (also accepts legacy `OPENCLAW_DOCKER_APT_PACKAGES`)
-- `OPENCLAW_IMAGE_PIP_PACKAGES` -- install extra Python packages during image build; pin versions and use only package indexes you trust
-- `OPENCLAW_EXTENSIONS` -- pre-install plugin dependencies at build time
-- `OPENCLAW_INSTALL_BROWSER` -- pre-install Chromium and Xvfb for browser automation (set to `1` to enable)
+- `DEX_IMAGE` or `OPENCLAW_PODMAN_IMAGE` -- use an existing/pulled image instead of building `openclaw:local`
+- `DEX_IMAGE_APT_PACKAGES` -- install extra apt packages during image build (also accepts legacy `DEX_DOCKER_APT_PACKAGES`)
+- `DEX_IMAGE_PIP_PACKAGES` -- install extra Python packages during image build; pin versions and use only package indexes you trust
+- `DEX_EXTENSIONS` -- pre-install plugin dependencies at build time
+- `DEX_INSTALL_BROWSER` -- pre-install Chromium and Xvfb for browser automation (set to `1` to enable)
 
 Container start:
 
@@ -80,18 +80,18 @@ Onboarding:
 ./scripts/run-openclaw-podman.sh launch setup
 ```
 
-Then open `http://127.0.0.1:18789/` and use the token from `~/.openclaw/.env`.
+Then open `http://127.0.0.1:18789/` and use the token from `~/.dex/.env`.
 
 Model auth in Podman:
 
 - Use OpenClaw-managed auth during setup: Anthropic API keys for Anthropic, or OpenAI Codex browser OAuth/device-code auth for Codex-backed OpenAI.
 - The Podman launcher does not mount host CLI credential homes such as `~/.claude` or `~/.codex` into the setup or gateway container.
-- Existing host CLI logins are same-host convenience paths. For container installs, keep provider auth in the mounted `~/.openclaw` state that setup manages.
+- Existing host CLI logins are same-host convenience paths. For container installs, keep provider auth in the mounted `~/.dex` state that setup manages.
 
 Host CLI default:
 
 ```bash
-export OPENCLAW_CONTAINER=openclaw
+export DEX_CONTAINER=openclaw
 ```
 
 Then commands such as these will run inside that container automatically:
@@ -154,15 +154,15 @@ sudo loginctl enable-linger "$(whoami)"
 
 ## Config, env, and storage
 
-- **Config dir:** `~/.openclaw`
-- **Workspace dir:** `~/.openclaw/workspace`
-- **Token file:** `~/.openclaw/.env`
+- **Config dir:** `~/.dex`
+- **Workspace dir:** `~/.dex/workspace`
+- **Token file:** `~/.dex/.env`
 - **Launch helper:** `./scripts/run-openclaw-podman.sh`
 
 The launch script and Quadlet bind-mount host state into the container:
 
-- `OPENCLAW_CONFIG_DIR` -> `/home/node/.openclaw`
-- `OPENCLAW_WORKSPACE_DIR` -> `/home/node/.openclaw/workspace`
+- `DEX_CONFIG_DIR` -> `/home/node/.openclaw`
+- `DEX_WORKSPACE_DIR` -> `/home/node/.openclaw/workspace`
 
 By default those are host directories, not anonymous container state, so
 `openclaw.json`, per-agent `auth-profiles.json`, channel/provider state,
@@ -172,23 +172,23 @@ The Podman setup also seeds `gateway.controlUi.allowedOrigins` for `127.0.0.1` a
 Useful env vars for the manual launcher:
 
 - `OPENCLAW_PODMAN_CONTAINER` -- container name (`openclaw` by default)
-- `OPENCLAW_PODMAN_IMAGE` / `OPENCLAW_IMAGE` -- image to run
-- `OPENCLAW_PODMAN_GATEWAY_HOST_PORT` -- host port mapped to container `18789`
+- `OPENCLAW_PODMAN_IMAGE` / `DEX_IMAGE` -- image to run
+- `DEX_PODMAN_GATEWAY_HOST_PORT` -- host port mapped to container `18789`
 - `OPENCLAW_PODMAN_BRIDGE_HOST_PORT` -- host port mapped to container `18790`
 - `OPENCLAW_PODMAN_PUBLISH_HOST` -- host interface for published ports; default is `127.0.0.1`
-- `OPENCLAW_GATEWAY_BIND` -- gateway bind mode inside the container; default is `lan`
+- `DEX_GATEWAY_BIND` -- gateway bind mode inside the container; default is `lan`
 - `OPENCLAW_PODMAN_USERNS` -- `keep-id` (default), `auto`, or `host`
 
-The manual launcher reads `~/.openclaw/.env` before finalizing container/image defaults, so you can persist these there.
+The manual launcher reads `~/.dex/.env` before finalizing container/image defaults, so you can persist these there.
 
-If you use a non-default `OPENCLAW_CONFIG_DIR` or `OPENCLAW_WORKSPACE_DIR`, set the same variables for both `./scripts/podman/setup.sh` and later `./scripts/run-openclaw-podman.sh launch` commands. The repo-local launcher does not persist custom path overrides across shells.
+If you use a non-default `DEX_CONFIG_DIR` or `DEX_WORKSPACE_DIR`, set the same variables for both `./scripts/podman/setup.sh` and later `./scripts/run-openclaw-podman.sh launch` commands. The repo-local launcher does not persist custom path overrides across shells.
 
 Quadlet note:
 
 - The generated Quadlet service intentionally keeps a fixed, hardened default shape: `127.0.0.1` published ports, `--bind lan` inside the container, and `keep-id` user namespace.
-- It pins `OPENCLAW_NO_RESPAWN=1`, `Restart=on-failure`, and `TimeoutStartSec=300`.
+- It pins `DEX_NO_RESPAWN=1`, `Restart=on-failure`, and `TimeoutStartSec=300`.
 - It publishes both `127.0.0.1:18789:18789` (gateway) and `127.0.0.1:18790:18790` (bridge).
-- It reads `~/.openclaw/.env` as a runtime `EnvironmentFile` for values such as `OPENCLAW_GATEWAY_TOKEN`, but it does not consume the manual launcher's Podman-specific override allowlist.
+- It reads `~/.dex/.env` as a runtime `EnvironmentFile` for values such as `DEX_GATEWAY_TOKEN`, but it does not consume the manual launcher's Podman-specific override allowlist.
 - If you need custom publish ports, publish host, or other container-run flags, use the manual launcher or edit `~/.config/containers/systemd/openclaw.container` directly, then reload and restart the service.
 
 ## Useful commands
@@ -203,8 +203,8 @@ Quadlet note:
 ## Troubleshooting
 
 - **Permission denied (EACCES) on config or workspace:** The container runs with `--userns=keep-id` and `--user <your uid>:<your gid>` by default. Ensure the host config/workspace paths are owned by your current user.
-- **Gateway start blocked (missing `gateway.mode=local`):** Ensure `~/.openclaw/openclaw.json` exists and sets `gateway.mode="local"`. `scripts/podman/setup.sh` creates this if missing.
-- **Container CLI commands hit the wrong target:** Use `openclaw --container <name> ...` explicitly, or export `OPENCLAW_CONTAINER=<name>` in your shell.
+- **Gateway start blocked (missing `gateway.mode=local`):** Ensure `~/.dex/openclaw.json` exists and sets `gateway.mode="local"`. `scripts/podman/setup.sh` creates this if missing.
+- **Container CLI commands hit the wrong target:** Use `openclaw --container <name> ...` explicitly, or export `DEX_CONTAINER=<name>` in your shell.
 - **`openclaw update` fails with `--container`:** Expected. Rebuild/pull the image, then restart the container or the Quadlet service.
 - **Quadlet service does not start:** Run `systemctl --user daemon-reload`, then `systemctl --user start openclaw.service`. On headless systems you may also need `sudo loginctl enable-linger "$(whoami)"`.
 - **SELinux blocks bind mounts:** Leave the default mount behavior alone; the launcher auto-adds `:Z` on Linux when SELinux is enforcing or permissive.

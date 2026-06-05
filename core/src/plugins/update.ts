@@ -1,13 +1,13 @@
 import path from "node:path";
 import { isRecord } from "@dexagent/normalization-core/record-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { PluginInstallRecord } from "../config/types.plugins.js";
 import { parseClawHubPluginSpec } from "../infra/clawhub-spec.js";
 import { satisfiesPluginApiRange } from "../infra/clawhub.js";
 import type { NpmSpecResolution } from "../infra/install-source-utils.js";
 import { resolveNpmSpecMetadata } from "../infra/install-source-utils.js";
 import {
-  compareOpenClawReleaseVersions,
+  compareDexReleaseVersions,
   isOpenClawOrgNpmSpec,
   isPrereleaseResolutionAllowed,
   parseRegistryNpmSpec,
@@ -77,7 +77,7 @@ export type PluginUpdateOutcome = {
 };
 
 export type PluginUpdateSummary = {
-  config: OpenClawConfig;
+  config: DexConfig;
   changed: boolean;
   outcomes: PluginUpdateOutcome[];
 };
@@ -101,7 +101,7 @@ export type PluginChannelSyncSummary = {
 };
 
 export type PluginChannelSyncResult = {
-  config: OpenClawConfig;
+  config: DexConfig;
   changed: boolean;
   summary: PluginChannelSyncSummary;
 };
@@ -241,7 +241,7 @@ function isNpmMetadataCompatibleWithCurrentHost(metadata: NpmSpecResolution): bo
 }
 
 function isBundledVersionNewer(bundledVersion: string, installedVersion: string): boolean {
-  const releaseCmp = compareOpenClawReleaseVersions(bundledVersion, installedVersion);
+  const releaseCmp = compareDexReleaseVersions(bundledVersion, installedVersion);
   if (releaseCmp !== null) {
     return releaseCmp > 0;
   }
@@ -403,7 +403,7 @@ function resolveBridgeInstallRecord(params: {
 }
 
 function isBridgeChannelEnabledByConfig(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   bridge: ExternalizedBundledPluginBridge;
 }): boolean {
   const channels = params.config.channels;
@@ -423,7 +423,7 @@ function isBridgeChannelEnabledByConfig(params: {
 }
 
 function isExternalizedBundledPluginEnabled(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   bridge: ExternalizedBundledPluginBridge;
 }): boolean {
   const normalized = normalizePluginsConfig(params.config.plugins);
@@ -749,7 +749,7 @@ function replacePluginIdInList(
   return next;
 }
 
-function migratePluginConfigId(cfg: OpenClawConfig, fromId: string, toId: string): OpenClawConfig {
+function migratePluginConfigId(cfg: DexConfig, fromId: string, toId: string): DexConfig {
   if (fromId === toId) {
     return cfg;
   }
@@ -804,7 +804,7 @@ function migratePluginConfigId(cfg: OpenClawConfig, fromId: string, toId: string
   };
 }
 
-function withoutPluginInstallRecord(cfg: OpenClawConfig, pluginId: string): OpenClawConfig {
+function withoutPluginInstallRecord(cfg: DexConfig, pluginId: string): DexConfig {
   const installs = cfg.plugins?.installs;
   if (!installs || !Object.hasOwn(installs, pluginId)) {
     return cfg;
@@ -857,9 +857,9 @@ function removeDisabledPluginIdFromList(
 }
 
 function resetDisabledPluginSlots(
-  slots: NonNullable<OpenClawConfig["plugins"]>["slots"] | undefined,
+  slots: NonNullable<DexConfig["plugins"]>["slots"] | undefined,
   pluginId: string,
-): NonNullable<OpenClawConfig["plugins"]>["slots"] | undefined {
+): NonNullable<DexConfig["plugins"]>["slots"] | undefined {
   if (!slots) {
     return slots;
   }
@@ -879,7 +879,7 @@ function resetDisabledPluginSlots(
   return next;
 }
 
-function disablePluginConfigEntry(config: OpenClawConfig, pluginId: string): OpenClawConfig {
+function disablePluginConfigEntry(config: DexConfig, pluginId: string): DexConfig {
   const pluginsConfig = config.plugins ?? {};
   const existingEntry = pluginsConfig.entries?.[pluginId];
   return {
@@ -901,7 +901,7 @@ function disablePluginConfigEntry(config: OpenClawConfig, pluginId: string): Ope
 }
 
 async function repairOpenClawPeerLinksForNpmInstalls(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   logger: PluginUpdateLogger;
 }): Promise<boolean> {
   let repaired = false;
@@ -958,7 +958,7 @@ async function repairOpenClawPeerLinksForNpmInstalls(params: {
 }
 
 export async function updateNpmInstalledPlugins(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   logger?: PluginUpdateLogger;
   pluginIds?: string[];
   skipIds?: Set<string>;
@@ -1787,7 +1787,7 @@ export async function updateNpmInstalledPlugins(params: {
 }
 
 export async function syncPluginsForUpdateChannel(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   channel: UpdateChannel;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;

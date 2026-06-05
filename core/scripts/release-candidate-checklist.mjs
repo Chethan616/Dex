@@ -184,13 +184,13 @@ function readJson(path, label) {
 }
 
 function githubApiTimeoutMs() {
-  const raw = process.env.OPENCLAW_RELEASE_CANDIDATE_GITHUB_API_TIMEOUT_MS;
+  const raw = process.env.DEX_RELEASE_CANDIDATE_GITHUB_API_TIMEOUT_MS;
   if (!raw) {
     return DEFAULT_GITHUB_API_TIMEOUT_MS;
   }
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) {
-    throw new Error("OPENCLAW_RELEASE_CANDIDATE_GITHUB_API_TIMEOUT_MS must be a positive number");
+    throw new Error("DEX_RELEASE_CANDIDATE_GITHUB_API_TIMEOUT_MS must be a positive number");
   }
   return Math.trunc(value);
 }

@@ -33,9 +33,9 @@ jobs:
         id: guard
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          OPENCLAW_DEPENDENCY_GUARD_MODE: detect
-          OPENCLAW_SECURITY_APPROVERS: vincentkoc,steipete,joshavant
-          OPENCLAW_SECURITY_TEAM_SLUG: openclaw-secops
+          DEX_DEPENDENCY_GUARD_MODE: detect
+          DEX_SECURITY_APPROVERS: vincentkoc,steipete,joshavant
+          DEX_SECURITY_TEAM_SLUG: openclaw-secops
         run: node scripts/github/dependency-guard.mjs
 
   dependency-guard-autoscrub:
@@ -80,10 +80,10 @@ jobs:
       - name: Remove package lockfile changes
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          OPENCLAW_DEPENDENCY_GUARD_AUTOSCRUB_TOKEN: ${{ steps.app-token.outputs.token || steps.app-token-fallback.outputs.token }}
-          OPENCLAW_DEPENDENCY_GUARD_MODE: autoscrub
-          OPENCLAW_SECURITY_APPROVERS: vincentkoc,steipete,joshavant
-          OPENCLAW_SECURITY_TEAM_SLUG: openclaw-secops
+          DEX_DEPENDENCY_GUARD_AUTOSCRUB_TOKEN: ${{ steps.app-token.outputs.token || steps.app-token-fallback.outputs.token }}
+          DEX_DEPENDENCY_GUARD_MODE: autoscrub
+          DEX_SECURITY_APPROVERS: vincentkoc,steipete,joshavant
+          DEX_SECURITY_TEAM_SLUG: openclaw-secops
         run: node scripts/github/dependency-guard.mjs
 
   dependency-guard:
@@ -103,7 +103,7 @@ jobs:
       - name: Enforce dependency guard
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          OPENCLAW_DEPENDENCY_GUARD_MODE: enforce
-          OPENCLAW_SECURITY_APPROVERS: vincentkoc,steipete,joshavant
-          OPENCLAW_SECURITY_TEAM_SLUG: openclaw-secops
+          DEX_DEPENDENCY_GUARD_MODE: enforce
+          DEX_SECURITY_APPROVERS: vincentkoc,steipete,joshavant
+          DEX_SECURITY_TEAM_SLUG: openclaw-secops
         run: node scripts/github/dependency-guard.mjs

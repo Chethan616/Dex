@@ -2,7 +2,7 @@ import { normalizeOptionalString } from "@dexagent/normalization-core/string-coe
 import type { SourceReplyDeliveryMode } from "../auto-reply/get-reply-options.types.js";
 import type { InboundEventKind } from "../channels/inbound-event/kind.js";
 import { selectApplicableRuntimeConfig } from "../config/config.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { callGateway } from "../gateway/call.js";
 import { isEmbeddedMode } from "../infra/embedded-mode.js";
 import { getActiveSecretsRuntimeConfigSnapshot } from "../secrets/runtime-state.js";
@@ -66,16 +66,16 @@ import { createVideoGenerateTool } from "./tools/video-generate-tool.js";
 import { createWebFetchTool, createWebSearchTool } from "./tools/web-tools.js";
 import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
-type OpenClawToolsDeps = {
+type DexToolsDeps = {
   callGateway: typeof callGateway;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 };
 
-const defaultOpenClawToolsDeps: OpenClawToolsDeps = {
+const defaultDexToolsDeps: DexToolsDeps = {
   callGateway,
 };
 
-let openClawToolsDeps: OpenClawToolsDeps = defaultOpenClawToolsDeps;
+let openClawToolsDeps: DexToolsDeps = defaultDexToolsDeps;
 
 export function createOpenClawTools(
   options?: {
@@ -101,7 +101,7 @@ export function createOpenClawTools(
     sandboxFsBridge?: SandboxFsBridge;
     fsPolicy?: ToolFsPolicy;
     sandboxed?: boolean;
-    config?: OpenClawConfig;
+    config?: DexConfig;
     pluginToolAllowlist?: string[];
     pluginToolDenylist?: string[];
     /** Current channel ID for auto-threading. */
@@ -586,13 +586,13 @@ export function createOpenClawTools(
 
 export const testing = {
   resolveOptionalMediaToolFactoryPlan,
-  setDepsForTest(overrides?: Partial<OpenClawToolsDeps>) {
+  setDepsForTest(overrides?: Partial<DexToolsDeps>) {
     openClawToolsDeps = overrides
       ? {
-          ...defaultOpenClawToolsDeps,
+          ...defaultDexToolsDeps,
           ...overrides,
         }
-      : defaultOpenClawToolsDeps;
+      : defaultDexToolsDeps;
   },
 };
 export { testing as __testing };

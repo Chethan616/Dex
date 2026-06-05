@@ -6,11 +6,11 @@ import {
   resolveInboundDebounceMs,
   type InboundDebounceCreateParams,
 } from "../auto-reply/inbound-debounce.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 
 export function shouldDebounceTextInbound(params: {
   text: string | null | undefined;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   hasMedia?: boolean;
   commandOptions?: CommandNormalizeOptions;
   allowDebounce?: boolean;
@@ -30,7 +30,7 @@ export function shouldDebounceTextInbound(params: {
 
 export function createChannelInboundDebouncer<T>(
   params: Omit<InboundDebounceCreateParams<T>, "debounceMs"> & {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     channel: string;
     debounceMsOverride?: number;
   },

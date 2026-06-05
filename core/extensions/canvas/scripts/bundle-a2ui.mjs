@@ -181,9 +181,9 @@ async function main() {
       console.log("A2UI package missing; keeping prebuilt bundle.");
       return;
     }
-    if (process.env.OPENCLAW_SPARSE_PROFILE || process.env.OPENCLAW_A2UI_SKIP_MISSING === "1") {
+    if (process.env.DEX_SPARSE_PROFILE || process.env.DEX_A2UI_SKIP_MISSING === "1") {
       console.error(
-        "A2UI package missing; skipping bundle because OPENCLAW_A2UI_SKIP_MISSING=1 or OPENCLAW_SPARSE_PROFILE is set.",
+        "A2UI package missing; skipping bundle because DEX_A2UI_SKIP_MISSING=1 or DEX_SPARSE_PROFILE is set.",
       );
       return;
     }

@@ -193,7 +193,7 @@ if (Test-Path $logPath) {
   $stream = [System.IO.File]::Open($logPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
   try {
     $length = $stream.Length
-    "__OPENCLAW_LOG_LENGTH__:$length"
+    "__DEX_LOG_LENGTH__:$length"
     if ($length -gt $offset) {
       [void]$stream.Seek($offset, [System.IO.SeekOrigin]::Begin)
       $count = [int][Math]::Min($length - $offset, ${logChunkBytes})
@@ -201,7 +201,7 @@ if (Test-Path $logPath) {
       $read = $stream.Read($buffer, 0, $count)
       if ($read -gt 0) {
         $nextOffset = $offset + $read
-        "__OPENCLAW_LOG_OFFSET__:$nextOffset"
+        "__DEX_LOG_OFFSET__:$nextOffset"
         [System.Text.Encoding]::UTF8.GetString($buffer, 0, $read)
       }
     }
@@ -211,8 +211,8 @@ if (Test-Path $logPath) {
 }
 if (Test-Path $donePath) {
   $backgroundExit = if (Test-Path $exitPath) { (Get-Content -Path $exitPath -Raw).Trim() } else { '0' }
-  "__OPENCLAW_BACKGROUND_EXIT__:$backgroundExit"
-  '__OPENCLAW_BACKGROUND_DONE__'
+  "__DEX_BACKGROUND_EXIT__:$backgroundExit"
+  '__DEX_BACKGROUND_DONE__'
   if ($backgroundExit -ne '0') { exit 23 }
   exit 0
 }`),
@@ -220,20 +220,20 @@ if (Test-Path $donePath) {
         { check: false, quiet: true, timeoutMs: timeoutBefore(deadline, 30_000) },
       );
       appendOutput(append, poll);
-      const offsetMatch = poll.stdout.match(/__OPENCLAW_LOG_OFFSET__:(\d+)/);
+      const offsetMatch = poll.stdout.match(/__DEX_LOG_OFFSET__:(\d+)/);
       if (offsetMatch) {
         lastLogOffset = Number(offsetMatch[1]);
       }
-      const lengthMatch = poll.stdout.match(/__OPENCLAW_LOG_LENGTH__:(\d+)/);
+      const lengthMatch = poll.stdout.match(/__DEX_LOG_LENGTH__:(\d+)/);
       const logLength = lengthMatch ? Number(lengthMatch[1]) : lastLogOffset;
-      if (poll.stdout.includes("__OPENCLAW_BACKGROUND_DONE__")) {
+      if (poll.stdout.includes("__DEX_BACKGROUND_DONE__")) {
         doneSeen = true;
         completedLogDrainDeadline ||= Date.now() + completedLogDrainGraceMs;
         if (lastLogOffset < logLength) {
           await sleep(Math.min(pollIntervalMs, 100));
           continue;
         }
-        const exitMatch = poll.stdout.match(/__OPENCLAW_BACKGROUND_EXIT__:(\S+)/);
+        const exitMatch = poll.stdout.match(/__DEX_BACKGROUND_EXIT__:(\S+)/);
         const backgroundExit = exitMatch?.[1] ?? "0";
         if (backgroundExit !== "0" || (poll.status !== 0 && poll.status !== 124)) {
           throw new Error(`${options.label} failed`);
@@ -295,16 +295,16 @@ function cleanupWindowsBackground(
   options: { stopProcessTree: boolean },
 ): void {
   const stopProcessTree = options.stopProcessTree
-    ? `function Stop-OpenClawBackgroundProcessTree([int]$ProcessId) {
+    ? `function Stop-DexBackgroundProcessTree([int]$ProcessId) {
   Get-CimInstance Win32_Process -Filter "ParentProcessId=$ProcessId" -ErrorAction SilentlyContinue | ForEach-Object {
-    Stop-OpenClawBackgroundProcessTree ([int]$_.ProcessId)
+    Stop-DexBackgroundProcessTree ([int]$_.ProcessId)
   }
   Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
 }
 if (Test-Path $pidPath) {
   $backgroundPid = (Get-Content -Path $pidPath -Raw).Trim()
   if ($backgroundPid) {
-    Stop-OpenClawBackgroundProcessTree ([int]$backgroundPid)
+    Stop-DexBackgroundProcessTree ([int]$backgroundPid)
   }
 }
 `
@@ -337,7 +337,7 @@ export class LinuxGuest {
   exec(args: string[], options: GuestExecOptions = {}): string {
     const result = run(
       "prlctl",
-      ["exec", this.vmName, "/usr/bin/env", "HOME=/root", "OPENCLAW_ALLOW_ROOT=1", ...args],
+      ["exec", this.vmName, "/usr/bin/env", "HOME=/root", "DEX_ALLOW_ROOT=1", ...args],
       {
         check: false,
         input: options.input,
@@ -360,7 +360,7 @@ export class LinuxGuest {
         this.vmName,
         "/usr/bin/env",
         "HOME=/root",
-        "OPENCLAW_ALLOW_ROOT=1",
+        "DEX_ALLOW_ROOT=1",
         "dd",
         `of=${scriptPath}`,
         "bs=1048576",

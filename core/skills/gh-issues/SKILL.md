@@ -49,7 +49,7 @@ Use for issue-to-PR automation. Prefer `gh` CLI; fall back to `gh api` only when
 ```bash
 git remote get-url origin
 if [ -z "${GH_TOKEN:-}" ]; then
-  CONFIG_PATH="${OPENCLAW_CONFIG_PATH:-${OPENCLAW_STATE_DIR:-$HOME/.openclaw}/openclaw.json}"
+  CONFIG_PATH="${DEX_CONFIG_PATH:-${DEX_STATE_DIR:-$HOME/.openclaw}/openclaw.json}"
   GH_TOKEN=$(jq -r '.skills.entries["gh-issues"].apiKey // empty' "$CONFIG_PATH" 2>/dev/null || true)
   if [ -n "$GH_TOKEN" ]; then export GH_TOKEN; fi
 fi
@@ -105,7 +105,7 @@ Skip candidates with an open PR, existing branch, or active local claim.
 Claim file:
 
 ```text
-${OPENCLAW_STATE_DIR:-$HOME/.openclaw}/gh-issues-<owner>-<repo>.json
+${DEX_STATE_DIR:-$HOME/.openclaw}/gh-issues-<owner>-<repo>.json
 ```
 
 Expire claims older than 2 hours.

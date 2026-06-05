@@ -7,7 +7,7 @@ export {
   revokeDeviceBootstrapToken,
   type DeviceBootstrapProfile,
 } from "openclaw/plugin-sdk/device-bootstrap";
-export { definePluginEntry, type OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+export { definePluginEntry, type DexPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 export {
   resolveGatewayBindUrl,
   resolveGatewayPort,

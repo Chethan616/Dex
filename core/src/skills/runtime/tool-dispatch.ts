@@ -25,7 +25,7 @@ import {
   resolveToolProfilePolicy,
 } from "../../agents/tool-policy.js";
 import type { SessionEntry } from "../../config/sessions.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { logVerbose } from "../../globals.js";
 import { getPluginToolMeta } from "../../plugins/tools.js";
 import { resolveGatewayMessageChannel } from "../../utils/message-channel.js";
@@ -52,7 +52,7 @@ type SkillDispatchMessageContext = {
  */
 export function resolveSkillDispatchTools(params: {
   message: SkillDispatchMessageContext;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   agentDir?: string;
   sessionEntry?: SessionEntry;

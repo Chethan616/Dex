@@ -1,6 +1,6 @@
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import type {
-  OpenClawConfig,
+  DexConfig,
   ProviderAuthContext,
   ProviderAuthMethod,
   ProviderAuthMethodNonInteractiveContext,
@@ -176,7 +176,7 @@ async function runXiaomiApiKeyAuth(
     promptMessage: string;
     expectedKind: "payg" | "token-plan";
     defaultModel: string;
-    applyConfig: (cfg: OpenClawConfig) => OpenClawConfig;
+    applyConfig: (cfg: DexConfig) => DexConfig;
   },
 ): Promise<ProviderAuthResult> {
   let capturedSecretInput: SecretInput | undefined;
@@ -242,7 +242,7 @@ async function runXiaomiApiKeyAuthNonInteractive(
     flagName: `--${string}`;
     envVar: string;
     expectedKind: "payg" | "token-plan";
-    applyConfig: (cfg: OpenClawConfig) => OpenClawConfig;
+    applyConfig: (cfg: DexConfig) => DexConfig;
   },
 ) {
   const resolved = await ctx.resolveApiKey({

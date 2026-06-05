@@ -334,5 +334,5 @@ vi.mock("/src/plugins/runtime/runtime-web-channel-plugin.js", () => ({
     (gatewayTestHoisted.sendWhatsAppMock as (...args: unknown[]) => unknown)(...args),
 }));
 
-process.env.OPENCLAW_SKIP_CHANNELS = "1";
-process.env.OPENCLAW_SKIP_CRON = "1";
+process.env.DEX_SKIP_CHANNELS = "1";
+process.env.DEX_SKIP_CRON = "1";

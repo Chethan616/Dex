@@ -2,7 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
 import {
   createSubsystemLogger,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
 import type { MemorySyncProgressUpdate } from "openclaw/plugin-sdk/memory-core-host-engine-storage";
 
@@ -169,7 +169,7 @@ export function enqueueMemoryTargetedSessionSync(
 export function createMemorySyncControlConfigForTests(
   workspaceDir: string,
   indexPath: string,
-): OpenClawConfig {
+): DexConfig {
   return {
     agents: {
       defaults: {
@@ -185,5 +185,5 @@ export function createMemorySyncControlConfigForTests(
       },
       list: [{ id: "main", default: true }],
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }

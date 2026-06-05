@@ -31,11 +31,11 @@ export function runNpmVerifyCommand(
 ): string {
   const timeoutMs =
     options.timeoutMs ??
-    positiveEnvInt("OPENCLAW_NPM_VERIFY_COMMAND_TIMEOUT_MS", DEFAULT_NPM_VERIFY_COMMAND_TIMEOUT_MS);
+    positiveEnvInt("DEX_NPM_VERIFY_COMMAND_TIMEOUT_MS", DEFAULT_NPM_VERIFY_COMMAND_TIMEOUT_MS);
   const maxBuffer =
     options.maxBufferBytes ??
     positiveEnvInt(
-      "OPENCLAW_NPM_VERIFY_COMMAND_MAX_BUFFER_BYTES",
+      "DEX_NPM_VERIFY_COMMAND_MAX_BUFFER_BYTES",
       DEFAULT_NPM_VERIFY_COMMAND_MAX_BUFFER_BYTES,
     );
 

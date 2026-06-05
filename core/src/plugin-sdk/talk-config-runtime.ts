@@ -1,2 +1,2 @@
 export { resolveActiveTalkProviderConfig } from "../config/talk.js";
-export type { OpenClawConfig } from "../config/types.js";
+export type { DexConfig } from "../config/types.js";

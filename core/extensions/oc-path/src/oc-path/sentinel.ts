@@ -6,7 +6,7 @@
  */
 
 /** Literal marking a redacted secret. Writing it to disk is always a bug. */
-export const REDACTED_SENTINEL = "__OPENCLAW_REDACTED__";
+export const REDACTED_SENTINEL = "__DEX_REDACTED__";
 
 /**
  * Thrown when emit detects the sentinel in output bytes. Fail-closed:
@@ -24,7 +24,7 @@ export class OcEmitSentinelError extends Error {
   }
 }
 
-// Substring match (not equality) — `prefix__OPENCLAW_REDACTED__suffix`
+// Substring match (not equality) — `prefix__DEX_REDACTED__suffix`
 // still leaks the marker. No-op on non-string input.
 export function guardSentinel(value: unknown, ocPath: string): void {
   if (typeof value === "string" && value.includes(REDACTED_SENTINEL)) {

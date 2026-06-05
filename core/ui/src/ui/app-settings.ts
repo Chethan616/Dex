@@ -215,7 +215,7 @@ export let warnQueryToken = false;
 
 declare global {
   interface Window {
-    __OPENCLAW_NATIVE_CONTROL_AUTH__?: {
+    __DEX_NATIVE_CONTROL_AUTH__?: {
       gatewayUrl?: string | null;
       token?: string | null;
       password?: string | null;
@@ -224,14 +224,14 @@ declare global {
 }
 
 function applyNativeControlAuth(host: SettingsHost) {
-  const nativeAuth = window["__OPENCLAW_NATIVE_CONTROL_AUTH__"];
+  const nativeAuth = window["__DEX_NATIVE_CONTROL_AUTH__"];
   if (!nativeAuth) {
     return;
   }
   try {
-    delete window["__OPENCLAW_NATIVE_CONTROL_AUTH__"];
+    delete window["__DEX_NATIVE_CONTROL_AUTH__"];
   } catch {
-    window["__OPENCLAW_NATIVE_CONTROL_AUTH__"] = undefined;
+    window["__DEX_NATIVE_CONTROL_AUTH__"] = undefined;
   }
 
   const gatewayUrl = normalizeOptionalString(nativeAuth.gatewayUrl);
@@ -526,7 +526,7 @@ export function inferBasePath() {
   if (typeof window === "undefined") {
     return "";
   }
-  const configured = window["__OPENCLAW_CONTROL_UI_BASE_PATH__"];
+  const configured = window["__DEX_CONTROL_UI_BASE_PATH__"];
   const normalizedConfigured = normalizeOptionalString(configured);
   if (normalizedConfigured) {
     return normalizeBasePath(normalizedConfigured);

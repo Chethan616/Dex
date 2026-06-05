@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { getLoadedRuntimePluginRegistry } from "./active-runtime-registry.js";
 import type {
@@ -14,7 +14,7 @@ import { loadPluginManifestRegistry, type PluginManifestRegistry } from "./manif
 
 const log = createSubsystemLogger("plugins/agent-tool-result-middleware");
 
-async function resolveRuntimeConfig(): Promise<OpenClawConfig> {
+async function resolveRuntimeConfig(): Promise<DexConfig> {
   const { getRuntimeConfig } = await import("../config/config.js");
   return getRuntimeConfig();
 }
@@ -40,7 +40,7 @@ function listMiddlewareOwnerPluginIds(params: {
 
 export async function loadAgentToolResultMiddlewaresForRuntime(params: {
   runtime: AgentToolResultMiddlewareRuntime;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   manifestRegistry?: PluginManifestRegistry;

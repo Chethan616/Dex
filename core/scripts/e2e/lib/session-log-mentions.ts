@@ -17,12 +17,12 @@ export function readSessionLogMentionLimits(
 ): SessionLogMentionLimits {
   return {
     fileMaxBytes: readPositiveIntEnv(
-      "OPENCLAW_SESSION_LOG_MENTION_FILE_MAX_BYTES",
+      "DEX_SESSION_LOG_MENTION_FILE_MAX_BYTES",
       DEFAULT_FILE_MAX_BYTES,
       env,
     ),
     totalMaxBytes: readPositiveIntEnv(
-      "OPENCLAW_SESSION_LOG_MENTION_TOTAL_MAX_BYTES",
+      "DEX_SESSION_LOG_MENTION_TOTAL_MAX_BYTES",
       DEFAULT_TOTAL_MAX_BYTES,
       env,
     ),

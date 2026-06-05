@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   DEFAULT_CACHE_TTL_MINUTES,
   markdownToText,
@@ -73,7 +73,7 @@ async function readFirecrawlJsonResponse(
 }
 
 export type FirecrawlSearchParams = {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   query: string;
   count?: number;
   timeoutSeconds?: number;
@@ -83,7 +83,7 @@ export type FirecrawlSearchParams = {
 };
 
 export type FirecrawlScrapeParams = {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   url: string;
   extractMode: "markdown" | "text";
   maxChars?: number;

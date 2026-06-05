@@ -8,7 +8,7 @@ import { resolveModelRuntimePolicy } from "../agents/model-runtime-policy.js";
 import { openAIProviderUsesCodexRuntimeByDefault } from "../agents/openai-routing.js";
 import type { AgentModelEntryConfig } from "./types.agent-defaults.js";
 import type { AgentRuntimePolicyConfig } from "./types.agents-shared.js";
-import type { OpenClawConfig } from "./types.openclaw.js";
+import type { DexConfig } from "./types.openclaw.js";
 
 const CODEX_PLUGIN_ID = "codex";
 const OPENAI_PROVIDER_ID = "openai";
@@ -22,7 +22,7 @@ function isCodexRuntimeSelection(raw?: string | null): boolean {
 }
 
 function isOpenAiCodexDefaultRuntimeSelection(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   raw?: string | null;
 }): boolean {
   const runtime = normalizeRuntimeId(params.raw);
@@ -50,7 +50,7 @@ function parseProviderModelRef(raw: string): { provider: string; model: string }
   return provider && model ? { provider, model } : null;
 }
 
-function codexPluginEntryEnabled(cfg: OpenClawConfig): boolean | undefined {
+function codexPluginEntryEnabled(cfg: DexConfig): boolean | undefined {
   for (const [pluginId, entry] of Object.entries(cfg.plugins?.entries ?? {})) {
     if (normalizeLowercaseStringOrEmpty(pluginId) === CODEX_PLUGIN_ID) {
       return entry?.enabled;
@@ -59,7 +59,7 @@ function codexPluginEntryEnabled(cfg: OpenClawConfig): boolean | undefined {
   return undefined;
 }
 
-function openAiProviderRuntimePolicy(cfg: OpenClawConfig): AgentRuntimePolicyConfig | undefined {
+function openAiProviderRuntimePolicy(cfg: DexConfig): AgentRuntimePolicyConfig | undefined {
   for (const [providerId, providerConfig] of Object.entries(cfg.models?.providers ?? {})) {
     if (normalizeProviderId(providerId) === OPENAI_PROVIDER_ID) {
       return providerConfig?.agentRuntime?.id?.trim() ? providerConfig.agentRuntime : undefined;
@@ -68,7 +68,7 @@ function openAiProviderRuntimePolicy(cfg: OpenClawConfig): AgentRuntimePolicyCon
   return undefined;
 }
 
-function listConfiguredAgentIds(cfg: OpenClawConfig): Array<string | undefined> {
+function listConfiguredAgentIds(cfg: DexConfig): Array<string | undefined> {
   const ids: Array<string | undefined> = [undefined];
   for (const agent of cfg.agents?.list ?? []) {
     if (typeof agent.id === "string" && agent.id.trim()) {
@@ -79,7 +79,7 @@ function listConfiguredAgentIds(cfg: OpenClawConfig): Array<string | undefined> 
 }
 
 function openAiProviderModelCanResolveToCodexDefault(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   modelId: string;
 }): boolean {
   // Provider model rows are below exact agent model policies in runtime
@@ -97,7 +97,7 @@ function openAiProviderModelCanResolveToCodexDefault(params: {
   );
 }
 
-function openAiHasCodexDefaultRuntimePolicy(cfg: OpenClawConfig): boolean {
+function openAiHasCodexDefaultRuntimePolicy(cfg: DexConfig): boolean {
   for (const [providerId, providerConfig] of Object.entries(cfg.models?.providers ?? {})) {
     if (normalizeProviderId(providerId) !== OPENAI_PROVIDER_ID) {
       continue;
@@ -128,7 +128,7 @@ function openAiHasCodexDefaultRuntimePolicy(cfg: OpenClawConfig): boolean {
 }
 
 function agentModelsHaveCodexDefaultRuntimePolicy(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   models: Record<string, AgentModelEntryConfig> | undefined,
 ): boolean {
   for (const [modelRef, modelConfig] of Object.entries(models ?? {})) {
@@ -163,7 +163,7 @@ function openAiWildcardRuntimePolicy(
 }
 
 function openAiDefaultRouteRuntimePolicy(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): AgentRuntimePolicyConfig | undefined {
   // This mirrors the default-route slice of resolveModelRuntimePolicy: a global
   // OpenAI wildcard policy is more specific than the provider-level policy.
@@ -172,7 +172,7 @@ function openAiDefaultRouteRuntimePolicy(
   );
 }
 
-function openAiDefaultRouteKeepsCodexUnavailable(cfg: OpenClawConfig): boolean {
+function openAiDefaultRouteKeepsCodexUnavailable(cfg: DexConfig): boolean {
   const policy = openAiDefaultRouteRuntimePolicy(cfg);
   if (!policy?.id?.trim()) {
     // With no explicit runtime policy, the OpenAI route only needs Codex on the
@@ -187,14 +187,14 @@ function openAiDefaultRouteKeepsCodexUnavailable(cfg: OpenClawConfig): boolean {
   return !isOpenAiCodexDefaultRuntimeSelection({ cfg, raw: policy.id });
 }
 
-export function configExplicitlyKeepsCodexUnavailableForOpenAi(cfg: OpenClawConfig): boolean {
+export function configExplicitlyKeepsCodexUnavailableForOpenAi(cfg: DexConfig): boolean {
   if (openAiHasCodexDefaultRuntimePolicy(cfg)) {
     return false;
   }
   return openAiDefaultRouteKeepsCodexUnavailable(cfg);
 }
 
-export function shouldSuppressMissingCodexPluginDiagnostics(cfg: OpenClawConfig): boolean {
+export function shouldSuppressMissingCodexPluginDiagnostics(cfg: DexConfig): boolean {
   const entryEnabled = codexPluginEntryEnabled(cfg);
   if (entryEnabled === true) {
     return false;

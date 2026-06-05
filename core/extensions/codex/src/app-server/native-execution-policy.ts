@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { resolveSandboxRuntimeStatus } from "openclaw/plugin-sdk/sandbox";
 import { getSessionEntry, type SessionEntry } from "openclaw/plugin-sdk/session-store-runtime";
 
@@ -10,7 +10,7 @@ type ExecHostOverride = {
   node?: string;
 };
 
-type AgentEntry = NonNullable<NonNullable<OpenClawConfig["agents"]>["list"]>[number];
+type AgentEntry = NonNullable<NonNullable<DexConfig["agents"]>["list"]>[number];
 
 const DEFAULT_AGENT_ID = "main";
 const VALID_AGENT_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
@@ -27,7 +27,7 @@ export type CodexNativeExecutionPolicy = {
 };
 
 export function resolveCodexNativeExecutionPolicy(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionEntry?: SessionEntry;
   sessionKey?: string;
   sessionId?: string;
@@ -97,7 +97,7 @@ export function formatCodexNativeNodeExecBlock(params: {
 }
 
 function resolvePolicyAgentId(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   sessionKey?: string;
   agentId?: string;
 }): string {
@@ -115,7 +115,7 @@ function resolvePolicyAgentId(params: {
 }
 
 function resolvePolicyAgentExec(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   agentId: string;
 }): ExecHostOverride | undefined {
   return listAgentEntries(params.config).find(
@@ -123,7 +123,7 @@ function resolvePolicyAgentExec(params: {
   )?.tools?.exec;
 }
 
-function listAgentEntries(config: OpenClawConfig): AgentEntry[] {
+function listAgentEntries(config: DexConfig): AgentEntry[] {
   return (config.agents?.list ?? []).filter(
     (entry): entry is AgentEntry => entry !== null && typeof entry === "object",
   );

@@ -5,13 +5,13 @@ import {
 } from "../channels/allow-from.js";
 import type { ChannelId } from "../channels/plugins/types.public.js";
 import type { AccessGroupConfig } from "../config/types.access-groups.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 export { ACCESS_GROUP_ALLOW_FROM_PREFIX, parseAccessGroupAllowFromEntry };
 
 /** Resolves membership for an access group using the full OpenClaw config. */
 export type AccessGroupMembershipResolver = (params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   name: string;
   group: AccessGroupConfig;
   channel: ChannelId;
@@ -130,7 +130,7 @@ export async function resolveAccessGroupAllowFromState(params: {
 
 /** Returns the matched `accessGroup:<name>` allowlist entries for a sender. */
 export async function resolveAccessGroupAllowFromMatches(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   allowFrom: Array<string | number> | null | undefined;
   channel: ChannelId;
   accountId: string;
@@ -161,7 +161,7 @@ export async function resolveAccessGroupAllowFromMatches(params: {
 
 /** Expands a matching access-group allowlist with the concrete sender entry. */
 export async function expandAllowFromWithAccessGroups(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   allowFrom: Array<string | number> | null | undefined;
   channel: ChannelId;
   accountId: string;

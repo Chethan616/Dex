@@ -4,7 +4,7 @@ import type { CurrentInboundPromptContext } from "../../../agents/embedded-agent
 import type { SilentReplyPromptMode } from "../../../agents/system-prompt.types.js";
 import type { InboundEventKind } from "../../../channels/inbound-event/kind.js";
 import type { SessionEntry } from "../../../config/sessions.js";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 import type { PromptImageOrderEntry } from "../../../media/prompt-image-order.js";
 import type { InputProvenance } from "../../../sessions/input-provenance.js";
 import type { UserTurnTranscriptRecorder } from "../../../sessions/user-turn-transcript.js";
@@ -102,7 +102,7 @@ export type FollowupRun = {
     workspaceDir: string;
     /** Task working directory for runtime execution. Defaults to workspaceDir. */
     cwd?: string;
-    config: OpenClawConfig;
+    config: DexConfig;
     skillsSnapshot?: SkillSnapshot;
     provider: string;
     model: string;
@@ -165,7 +165,7 @@ export function completeFollowupRunLifecycle(run: Pick<FollowupRun, "queuedLifec
 }
 
 export type ResolveQueueSettingsParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel?: string;
   sessionEntry?: SessionEntry;
   inlineMode?: QueueMode;

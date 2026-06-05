@@ -23,7 +23,7 @@ const NETWORK_TIMEOUT_MS = 10_000;
 const DOWNLOAD_TIMEOUT_MS = 120_000;
 
 function isOfflineModeEnabled(): boolean {
-  const value = process.env.OPENCLAW_OFFLINE;
+  const value = process.env.DEX_OFFLINE;
   if (!value) {
     return false;
   }

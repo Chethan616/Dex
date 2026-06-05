@@ -1,7 +1,7 @@
 import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import { Type } from "typebox";
 import { getRuntimeConfig } from "../../config/config.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { SsrFPolicy } from "../../infra/net/ssrf.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { resolveGeneratedMediaMaxBytes } from "../../media/configured-max-bytes.js";
@@ -144,7 +144,7 @@ const MusicGenerateToolSchema = Type.Object({
 });
 
 function resolveMusicGenerationModelConfigForTool(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   workspaceDir?: string;
   agentDir?: string;
   authStore?: AuthProfileStore;
@@ -159,12 +159,12 @@ function resolveMusicGenerationModelConfigForTool(params: {
   });
 }
 
-function hasExplicitMusicGenerationModelConfig(cfg?: OpenClawConfig): boolean {
+function hasExplicitMusicGenerationModelConfig(cfg?: DexConfig): boolean {
   return hasToolModelConfig(coerceToolModelConfig(cfg?.agents?.defaults?.musicGenerationModel));
 }
 
 function resolveSelectedMusicGenerationProvider(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   musicGenerationModelConfig: ToolModelConfig;
   modelOverride?: string;
 }): MusicGenerationProvider | undefined {
@@ -410,7 +410,7 @@ type ExecutedMusicGeneration = {
 };
 
 async function executeMusicGenerationJob(params: {
-  effectiveCfg: OpenClawConfig;
+  effectiveCfg: DexConfig;
   prompt: string;
   agentDir?: string;
   model?: string;
@@ -567,7 +567,7 @@ async function executeMusicGenerationJob(params: {
 }
 
 export function createMusicGenerateTool(options?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   agentDir?: string;
   authProfileStore?: AuthProfileStore;
   agentSessionKey?: string;
@@ -578,7 +578,7 @@ export function createMusicGenerateTool(options?: {
   scheduleBackgroundWork?: MediaGenerateBackgroundScheduler;
   onAsyncTaskStarted?: MediaGenerateAsyncStartCallback;
 }): AnyAgentTool | null {
-  const cfg: OpenClawConfig = options?.config ?? getRuntimeConfig();
+  const cfg: DexConfig = options?.config ?? getRuntimeConfig();
   if (
     !hasGenerationToolAvailability({
       cfg,

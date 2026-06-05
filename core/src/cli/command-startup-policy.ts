@@ -52,7 +52,7 @@ export function shouldHideCliBannerForCommandPath(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
   return (
-    isTruthyEnvValue(env.OPENCLAW_HIDE_BANNER) ||
+    isTruthyEnvValue(env.DEX_HIDE_BANNER) ||
     resolveCliCommandPathPolicy(commandPath).hideBanner
   );
 }
@@ -73,7 +73,7 @@ export function resolveCliStartupPolicy(params: {
   const env = params.env ?? process.env;
   return {
     suppressDoctorStdout,
-    hideBanner: isTruthyEnvValue(env.OPENCLAW_HIDE_BANNER) || commandPolicy.hideBanner,
+    hideBanner: isTruthyEnvValue(env.DEX_HIDE_BANNER) || commandPolicy.hideBanner,
     skipConfigGuard: params.routeMode
       ? commandPolicy.routeConfigGuard === "always" ||
         (commandPolicy.routeConfigGuard === "when-suppressed" && suppressDoctorStdout)

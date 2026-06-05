@@ -3,7 +3,7 @@ import path from "node:path";
 import { resolveExpiresAtMsFromDurationMs } from "@dexagent/normalization-core/number-coercion";
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { resolveCommitmentTimezone, resolveCommitmentsConfig } from "./config.js";
@@ -24,7 +24,7 @@ type ModelRef = { provider: string; model: string };
 type EmbeddedAgentPayloadResult = { payloads?: Array<{ text?: string }> };
 
 type CommitmentExtractionEnqueueInput = CommitmentScope & {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   nowMs?: number;
   userText: string;
   assistantText?: string;
@@ -34,10 +34,10 @@ type CommitmentExtractionEnqueueInput = CommitmentScope & {
 
 type CommitmentExtractionRuntime = {
   extractBatch?: (params: {
-    cfg?: OpenClawConfig;
+    cfg?: DexConfig;
     items: CommitmentExtractionItem[];
   }) => Promise<CommitmentExtractionBatchResult>;
-  resolveDefaultModel?: (params: { cfg: OpenClawConfig; agentId?: string }) => ModelRef;
+  resolveDefaultModel?: (params: { cfg: DexConfig; agentId?: string }) => ModelRef;
   setTimer?: (callback: () => void, delayMs: number) => TimerHandle;
   clearTimer?: (timer: TimerHandle) => void;
   forceInTests?: boolean;
@@ -47,7 +47,7 @@ const log = createSubsystemLogger("commitments");
 const TERMINAL_EXTRACTION_FAILURE_COOLDOWN_MS = 15 * 60_000;
 
 let runtime: CommitmentExtractionRuntime = {};
-let queue: Array<Omit<CommitmentExtractionItem, "existingPending"> & { cfg?: OpenClawConfig }> = [];
+let queue: Array<Omit<CommitmentExtractionItem, "existingPending"> & { cfg?: DexConfig }> = [];
 let timer: TimerHandle | null = null;
 let draining = false;
 let queueOverflowWarned = false;
@@ -212,7 +212,7 @@ function joinPayloadText(result: EmbeddedAgentPayloadResult): string {
 }
 
 async function resolveDefaultModel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string;
 }): Promise<ModelRef> {
   if (runtime.resolveDefaultModel) {
@@ -223,7 +223,7 @@ async function resolveDefaultModel(params: {
 }
 
 async function defaultExtractBatch(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   items: CommitmentExtractionItem[];
 }): Promise<CommitmentExtractionBatchResult> {
   const cfg = params.cfg ?? {};
@@ -261,7 +261,7 @@ async function defaultExtractBatch(params: {
 }
 
 async function hydrateBatch(
-  batch: Array<Omit<CommitmentExtractionItem, "existingPending"> & { cfg?: OpenClawConfig }>,
+  batch: Array<Omit<CommitmentExtractionItem, "existingPending"> & { cfg?: DexConfig }>,
 ): Promise<CommitmentExtractionItem[]> {
   return Promise.all(
     batch.map(async (item) =>

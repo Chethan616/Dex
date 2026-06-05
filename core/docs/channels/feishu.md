@@ -429,8 +429,8 @@ This is essential for public bots where you want each user to have their own pri
       allowFrom: ["*"],
       dynamicAgentCreation: {
         enabled: true,
-        workspaceTemplate: "~/.openclaw/workspace-{agentId}",
-        agentDirTemplate: "~/.openclaw/agents/{agentId}/agent",
+        workspaceTemplate: "~/.dex/workspace-{agentId}",
+        agentDirTemplate: "~/.dex/agents/{agentId}/agent",
       },
     },
   },
@@ -458,8 +458,8 @@ When a new user sends their first DM:
 | Setting                                                  | Description                                | Default                              |
 | -------------------------------------------------------- | ------------------------------------------ | ------------------------------------ |
 | `channels.feishu.dynamicAgentCreation.enabled`           | Enable automatic per-user agent creation   | `false`                              |
-| `channels.feishu.dynamicAgentCreation.workspaceTemplate` | Path template for dynamic agent workspaces | `~/.openclaw/workspace-{agentId}`    |
-| `channels.feishu.dynamicAgentCreation.agentDirTemplate`  | Agent directory name template              | `~/.openclaw/agents/{agentId}/agent` |
+| `channels.feishu.dynamicAgentCreation.workspaceTemplate` | Path template for dynamic agent workspaces | `~/.dex/workspace-{agentId}`    |
+| `channels.feishu.dynamicAgentCreation.agentDirTemplate`  | Agent directory name template              | `~/.dex/agents/{agentId}/agent` |
 | `channels.feishu.dynamicAgentCreation.maxAgents`         | Maximum number of dynamic agents to create | unlimited                            |
 
 Template variables:
@@ -508,8 +508,8 @@ Template variables:
       requireMention: true,
       dynamicAgentCreation: {
         enabled: true,
-        workspaceTemplate: "~/.openclaw/workspace-{agentId}",
-        agentDirTemplate: "~/.openclaw/agents/{agentId}/agent",
+        workspaceTemplate: "~/.dex/workspace-{agentId}",
+        agentDirTemplate: "~/.dex/agents/{agentId}/agent",
       },
     },
   },
@@ -535,7 +535,7 @@ feishu: dynamic agent created, new route: agent:feishu-ou_xxxxxx:main
 List all created workspaces:
 
 ```bash
-ls -la ~/.openclaw/workspace-*
+ls -la ~/.dex/workspace-*
 ```
 
 ### Notes
@@ -575,8 +575,8 @@ Full configuration: [Gateway configuration](/gateway/configuration)
 | `channels.feishu.groups.<chat_id>.requireMention`        | Per-group @mention override; explicit IDs also admit the group in allowlist mode | inherited                            |
 | `channels.feishu.groups.<chat_id>.enabled`               | Enable/disable a specific group                                                  | `true`                               |
 | `channels.feishu.dynamicAgentCreation.enabled`           | Enable automatic per-user agent creation                                         | `false`                              |
-| `channels.feishu.dynamicAgentCreation.workspaceTemplate` | Path template for dynamic agent workspaces                                       | `~/.openclaw/workspace-{agentId}`    |
-| `channels.feishu.dynamicAgentCreation.agentDirTemplate`  | Agent directory name template                                                    | `~/.openclaw/agents/{agentId}/agent` |
+| `channels.feishu.dynamicAgentCreation.workspaceTemplate` | Path template for dynamic agent workspaces                                       | `~/.dex/workspace-{agentId}`    |
+| `channels.feishu.dynamicAgentCreation.agentDirTemplate`  | Agent directory name template                                                    | `~/.dex/agents/{agentId}/agent` |
 | `channels.feishu.dynamicAgentCreation.maxAgents`         | Maximum number of dynamic agents to create                                       | unlimited                            |
 | `channels.feishu.textChunkLimit`                         | Message chunk size                                                               | `2000`                               |
 | `channels.feishu.mediaMaxMb`                             | Media size limit                                                                 | `30`                                 |

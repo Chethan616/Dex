@@ -5,7 +5,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { startWhatsAppQaDriverSession } from "@openclaw/whatsapp/api.js";
 import { normalizeE164 } from "openclaw/plugin-sdk/account-resolution";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
 import { normalizeStringEntries, uniqueStrings } from "openclaw/plugin-sdk/string-coerce-runtime";
 import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/temp-path";
@@ -179,18 +179,18 @@ type WhatsAppCredentialLease = Awaited<
 >;
 type WhatsAppCredentialHeartbeat = ReturnType<typeof startQaCredentialLeaseHeartbeat>;
 
-const WHATSAPP_QA_CAPTURE_CONTENT_ENV = "OPENCLAW_QA_WHATSAPP_CAPTURE_CONTENT";
-const QA_REDACT_PUBLIC_METADATA_ENV = "OPENCLAW_QA_REDACT_PUBLIC_METADATA";
+const WHATSAPP_QA_CAPTURE_CONTENT_ENV = "DEX_QA_WHATSAPP_CAPTURE_CONTENT";
+const QA_REDACT_PUBLIC_METADATA_ENV = "DEX_QA_REDACT_PUBLIC_METADATA";
 const WHATSAPP_QA_TRANSIENT_DRIVER_ATTEMPTS = 5;
 const WHATSAPP_QA_READY_TIMEOUT_MS = 150_000;
 const WHATSAPP_QA_READY_STABILITY_MS = 20_000;
 const WHATSAPP_QA_DRIVER_RECONNECT_DELAY_MS = 10_000;
 const WHATSAPP_QA_APPROVAL_DECISION_TIMEOUT_MS = 60_000;
 const WHATSAPP_QA_ENV_KEYS = [
-  "OPENCLAW_QA_WHATSAPP_DRIVER_PHONE_E164",
-  "OPENCLAW_QA_WHATSAPP_SUT_PHONE_E164",
-  "OPENCLAW_QA_WHATSAPP_DRIVER_AUTH_ARCHIVE_BASE64",
-  "OPENCLAW_QA_WHATSAPP_SUT_AUTH_ARCHIVE_BASE64",
+  "DEX_QA_WHATSAPP_DRIVER_PHONE_E164",
+  "DEX_QA_WHATSAPP_SUT_PHONE_E164",
+  "DEX_QA_WHATSAPP_DRIVER_AUTH_ARCHIVE_BASE64",
+  "DEX_QA_WHATSAPP_SUT_AUTH_ARCHIVE_BASE64",
 ] as const;
 
 const whatsappQaCredentialPayloadSchema = z.object({
@@ -309,7 +309,7 @@ function inferWhatsAppCredentialSource(
   env: NodeJS.ProcessEnv = process.env,
 ): "convex" | "env" {
   const normalized =
-    value?.trim().toLowerCase() || env.OPENCLAW_QA_CREDENTIAL_SOURCE?.trim().toLowerCase();
+    value?.trim().toLowerCase() || env.DEX_QA_CREDENTIAL_SOURCE?.trim().toLowerCase();
   return normalized === "convex" ? "convex" : "env";
 }
 
@@ -353,16 +353,16 @@ function validateWhatsAppQaRuntimeEnv(
 function resolveWhatsAppQaRuntimeEnv(env: NodeJS.ProcessEnv = process.env): WhatsAppQaRuntimeEnv {
   return validateWhatsAppQaRuntimeEnv(
     {
-      driverPhoneE164: resolveEnvValue(env, "OPENCLAW_QA_WHATSAPP_DRIVER_PHONE_E164"),
-      sutPhoneE164: resolveEnvValue(env, "OPENCLAW_QA_WHATSAPP_SUT_PHONE_E164"),
+      driverPhoneE164: resolveEnvValue(env, "DEX_QA_WHATSAPP_DRIVER_PHONE_E164"),
+      sutPhoneE164: resolveEnvValue(env, "DEX_QA_WHATSAPP_SUT_PHONE_E164"),
       driverAuthArchiveBase64: resolveEnvValue(
         env,
-        "OPENCLAW_QA_WHATSAPP_DRIVER_AUTH_ARCHIVE_BASE64",
+        "DEX_QA_WHATSAPP_DRIVER_AUTH_ARCHIVE_BASE64",
       ),
-      sutAuthArchiveBase64: resolveEnvValue(env, "OPENCLAW_QA_WHATSAPP_SUT_AUTH_ARCHIVE_BASE64"),
-      groupJid: env.OPENCLAW_QA_WHATSAPP_GROUP_JID?.trim() || undefined,
+      sutAuthArchiveBase64: resolveEnvValue(env, "DEX_QA_WHATSAPP_SUT_AUTH_ARCHIVE_BASE64"),
+      groupJid: env.DEX_QA_WHATSAPP_GROUP_JID?.trim() || undefined,
     },
-    "OPENCLAW_QA_WHATSAPP",
+    "DEX_QA_WHATSAPP",
   );
 }
 
@@ -385,7 +385,7 @@ function findScenarios(ids?: string[]) {
 }
 
 function buildWhatsAppQaConfig(
-  baseCfg: OpenClawConfig,
+  baseCfg: DexConfig,
   params: {
     allowFrom: string[];
     authDir: string;
@@ -394,7 +394,7 @@ function buildWhatsAppQaConfig(
     overrides?: WhatsAppQaConfigOverrides;
     sutAccountId: string;
   },
-): OpenClawConfig {
+): DexConfig {
   const pluginAllow = uniqueStrings([...(baseCfg.plugins?.allow ?? []), "whatsapp"]);
   const approvalOverrides = params.overrides?.approvals;
   const approvalForwardingConfig =

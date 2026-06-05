@@ -14,9 +14,9 @@ import {
   resolveModelAuthMode,
 } from "openclaw/plugin-sdk/agent-harness-runtime";
 
-type CreateOpenClawCodingTools =
-  (typeof import("openclaw/plugin-sdk/agent-harness"))["createOpenClawCodingTools"];
-type OpenClawCodingToolsOptions = NonNullable<Parameters<CreateOpenClawCodingTools>[0]>;
+type CreateDexCodingTools =
+  (typeof import("openclaw/plugin-sdk/agent-harness"))["createDexCodingTools"];
+type DexCodingToolsOptions = NonNullable<Parameters<CreateDexCodingTools>[0]>;
 
 type AgentToolResultLike = {
   content?: unknown;
@@ -38,7 +38,7 @@ export interface CopilotSessionHolder {
  * Structural subset of `EmbeddedRunAttemptParams` carried into the tool
  * bridge for PI-parity tool context (see
  * `src/agents/pi-embedded-runner/run/attempt.ts:1029-1117` — the
- * authoritative `createOpenClawCodingTools({...})` call shape).
+ * authoritative `createDexCodingTools({...})` call shape).
  *
  * Declared as `Partial<EmbeddedRunAttemptParams>` (imported from the
  * `openclaw/plugin-sdk/agent-harness-runtime` boundary, *not* from
@@ -80,7 +80,7 @@ export interface CopilotToolBridgeInput {
   /**
    * Full PI-parity attempt parameters. When set, the bridge forwards
    * identity, channel, owner/policy, auth-profile, message-routing,
-   * model, and run-trace fields to `createOpenClawCodingTools` so the
+   * model, and run-trace fields to `createDexCodingTools` so the
    * wrapped-tool enforcement layer
    * (`src/agents/pi-tools.before-tool-call.ts`) receives the same
    * context the in-tree PI runner provides. See
@@ -105,7 +105,7 @@ export interface CopilotToolBridgeInput {
    * `extensions/codex/src/app-server/run-attempt.ts:539-541`.
    */
   onYieldDetected?: (message?: string) => void;
-  createOpenClawCodingTools?: (opts: unknown) => AnyAgentTool[] | Promise<AnyAgentTool[]>;
+  createDexCodingTools?: (opts: unknown) => AnyAgentTool[] | Promise<AnyAgentTool[]>;
   beforeExecute?: (ctx: {
     toolName: string;
     toolCallId: string;
@@ -160,25 +160,25 @@ export async function createCopilotToolBridge(
     return { sdkTools: [], sourceTools: [] };
   }
 
-  const createOpenClawCodingTools =
-    input.createOpenClawCodingTools ??
-    (await import("openclaw/plugin-sdk/agent-harness")).createOpenClawCodingTools;
+  const createDexCodingTools =
+    input.createDexCodingTools ??
+    (await import("openclaw/plugin-sdk/agent-harness")).createDexCodingTools;
 
-  const toolOptions = buildOpenClawCodingToolsOptions(input, effectiveToolPlan);
+  const toolOptions = buildDexCodingToolsOptions(input, effectiveToolPlan);
 
   let sourceTools: unknown;
   try {
-    sourceTools = await createOpenClawCodingTools(toolOptions);
+    sourceTools = await createDexCodingTools(toolOptions);
   } catch (error: unknown) {
     throw createError(
-      `[copilot-tool-bridge] createOpenClawCodingTools failed: ${toError(error).message}`,
+      `[copilot-tool-bridge] createDexCodingTools failed: ${toError(error).message}`,
       error,
     );
   }
 
   if (!Array.isArray(sourceTools)) {
     throw new Error(
-      "[copilot-tool-bridge] createOpenClawCodingTools must return an array of tools",
+      "[copilot-tool-bridge] createDexCodingTools must return an array of tools",
     );
   }
 
@@ -211,7 +211,7 @@ export async function createCopilotToolBridge(
 }
 
 /**
- * Builds the full `createOpenClawCodingTools` options bag mirroring the
+ * Builds the full `createDexCodingTools` options bag mirroring the
  * PI in-tree call at `src/agents/pi-embedded-runner/run/attempt.ts:1029-1117`.
  *
  * Why PI parity matters: bridged OpenClaw tools register with the SDK
@@ -232,10 +232,10 @@ export async function createCopilotToolBridge(
  * {@link CopilotToolBridgeInput}; callers resolve it via
  * `resolveSandboxContext` before constructing the bridge.
  */
-function buildOpenClawCodingToolsOptions(
+function buildDexCodingToolsOptions(
   input: CopilotToolBridgeInput,
   toolPlan: ReturnType<typeof resolveEmbeddedAttemptToolConstructionPlan>,
-): OpenClawCodingToolsOptions {
+): DexCodingToolsOptions {
   const a = input.attemptParams ?? ({} as CopilotToolAttemptParams);
 
   // Mirror PI's `sandboxSessionKey` derivation (attempt.ts:873-874) so
@@ -280,7 +280,7 @@ function buildOpenClawCodingToolsOptions(
     "compat" in model &&
     model.compat &&
     typeof model.compat === "object"
-      ? (model.compat as OpenClawCodingToolsOptions["modelCompat"])
+      ? (model.compat as DexCodingToolsOptions["modelCompat"])
       : undefined;
 
   return {

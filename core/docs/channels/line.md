@@ -158,7 +158,7 @@ LINE IDs are case-sensitive. Valid IDs look like:
 - Streaming responses are buffered; LINE receives full chunks with a loading
   animation while the agent works.
 - Media downloads are capped by `channels.line.mediaMaxMb` (default 10).
-- Inbound media is saved under `~/.openclaw/media/inbound/` before it is passed
+- Inbound media is saved under `~/.dex/media/inbound/` before it is passed
   to the agent, matching the shared media store used by other bundled channel
   plugins.
 

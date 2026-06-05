@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import type { PluginInstallRecord } from "../config/types.plugins.js";
 import type { PluginCompatCode } from "./compat/registry.js";
 import type { PluginCandidate, PluginDiscoveryResult } from "./discovery.js";
@@ -140,7 +140,7 @@ export type InstalledPluginIndex = {
 };
 
 export type LoadInstalledPluginIndexParams = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   stateDir?: string;

@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { resolveOpenClawPackageRoot } from "../infra/openclaw-root.js";
 
-export const OPENCLAW_DOCS_URL = "https://docs.openclaw.ai";
-export const OPENCLAW_SOURCE_URL = "https://github.com/openclaw/openclaw";
+export const DEX_DOCS_URL = "https://docs.openclaw.ai";
+export const DEX_SOURCE_URL = "https://github.com/openclaw/openclaw";
 
 type ResolveOpenClawReferencePathParams = {
   workspaceDir?: string;
@@ -61,7 +61,7 @@ export async function resolveOpenClawSourcePath(
   return packageRoot;
 }
 
-export async function resolveOpenClawReferencePaths(
+export async function resolveDexReferencePaths(
   params: ResolveOpenClawReferencePathParams,
 ): Promise<{
   docsPath: string | null;

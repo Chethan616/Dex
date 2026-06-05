@@ -70,7 +70,7 @@ In practice, that means the rescue bot gets its own:
 
 - config file
 - state directory
-- workspace (by default `~/.openclaw/workspace-rescue`)
+- workspace (by default `~/.dex/workspace-rescue`)
 - managed service name
 
 The prompts are otherwise the same as normal onboarding.
@@ -118,8 +118,8 @@ different channels, tenants, workspaces, or operational roles.
 
 Keep these unique per Gateway instance:
 
-- `OPENCLAW_CONFIG_PATH` — per-instance config file
-- `OPENCLAW_STATE_DIR` — per-instance sessions, creds, caches
+- `DEX_CONFIG_PATH` — per-instance config file
+- `DEX_STATE_DIR` — per-instance sessions, creds, caches
 - `agents.defaults.workspace` — per-instance workspace root
 - `gateway.port` (or `--port`) — unique per instance
 - derived browser/canvas/CDP ports
@@ -128,7 +128,7 @@ If these are shared, you will hit config races and port conflicts.
 
 ## Port mapping (derived)
 
-Base port = `gateway.port` (or `OPENCLAW_GATEWAY_PORT` / `--port`).
+Base port = `gateway.port` (or `DEX_GATEWAY_PORT` / `--port`).
 
 - browser control service port = base + 2 (loopback only)
 - canvas host is served on the Gateway HTTP server (same port as `gateway.port`)
@@ -146,12 +146,12 @@ If you override any of these in config or env, you must keep them unique per ins
 ## Manual env example
 
 ```bash
-OPENCLAW_CONFIG_PATH=~/.openclaw/main.json \
-OPENCLAW_STATE_DIR=~/.openclaw \
+DEX_CONFIG_PATH=~/.dex/main.json \
+DEX_STATE_DIR=~/.dex \
 openclaw gateway --port 18789
 
-OPENCLAW_CONFIG_PATH=~/.openclaw/rescue.json \
-OPENCLAW_STATE_DIR=~/.openclaw-rescue \
+DEX_CONFIG_PATH=~/.dex/rescue.json \
+DEX_STATE_DIR=~/.dex-rescue \
 openclaw gateway --port 19789
 ```
 

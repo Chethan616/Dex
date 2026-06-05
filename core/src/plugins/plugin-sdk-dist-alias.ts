@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { tryReadJsonSync, writeJsonSync } from "../infra/json-files.js";
 
-type OpenClawPackageJson = {
+type DexPackageJson = {
   exports?: Record<string, unknown>;
 };
 
@@ -59,7 +59,7 @@ function readPrivateLocalOnlyPluginSdkDistFileNames(distRoot: string): Set<strin
 
 function readPublicPluginSdkDistFileNames(distRoot: string): Set<string> | undefined {
   const packageRoot = path.dirname(path.resolve(distRoot));
-  const packageJson = tryReadJsonSync<OpenClawPackageJson>(path.join(packageRoot, "package.json"));
+  const packageJson = tryReadJsonSync<DexPackageJson>(path.join(packageRoot, "package.json"));
   if (!packageJson || typeof packageJson !== "object" || Array.isArray(packageJson)) {
     return collectLegacyPublicPluginSdkDistFileNames(distRoot);
   }

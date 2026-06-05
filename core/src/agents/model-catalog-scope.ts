@@ -3,7 +3,7 @@ import {
   normalizeProviderId,
 } from "@dexagent/model-catalog-core/provider-id";
 import { normalizeUniqueSingleOrTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 function dedupeCatalogScopeRefs(values: Array<string | undefined>): string[] {
   return normalizeUniqueSingleOrTrimmedStringList(values);
@@ -34,7 +34,7 @@ function providerConfigDeclaresModel(
 }
 
 export function resolveModelCatalogScope(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider: string;
   model: string;
 }): { providerRefs: string[]; modelRefs: string[] } {

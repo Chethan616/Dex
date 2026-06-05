@@ -3,7 +3,7 @@ import { resolveStorePath } from "../config/sessions/paths.js";
 import { loadSessionStore } from "../config/sessions/store-load.js";
 import { resolveMaintenanceConfigFromInput } from "../config/sessions/store-maintenance.js";
 import type { SessionEntry } from "../config/sessions/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { normalizeOptionalAccountId } from "../routing/account-id.js";
 import { parseAgentSessionKey } from "../routing/session-key.js";
 import { normalizeMessageChannel } from "../utils/message-channel.js";
@@ -27,7 +27,7 @@ function normalizeOptionalChannel(value?: string | null): string | undefined {
 }
 
 export function resolvePersistedApprovalRequestSessionEntry(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   request: ApprovalRequestLike;
 }): PersistedApprovalRequestSessionEntry | null {
   const sessionKey = normalizeOptionalString(params.request.request.sessionKey);
@@ -48,7 +48,7 @@ export function resolvePersistedApprovalRequestSessionEntry(params: {
 }
 
 function resolvePersistedApprovalRequestSessionBinding(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   request: ApprovalRequestLike;
 }): ApprovalRequestSessionBinding | null {
   const persisted = resolvePersistedApprovalRequestSessionEntry(params);
@@ -62,7 +62,7 @@ function resolvePersistedApprovalRequestSessionBinding(params: {
 }
 
 export function resolveApprovalRequestAccountId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   request: ApprovalRequestLike;
   channel?: string | null;
 }): string | null {
@@ -89,7 +89,7 @@ export function resolveApprovalRequestAccountId(params: {
 }
 
 export function resolveApprovalRequestChannelAccountId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   request: ApprovalRequestLike;
   channel: string;
 }): string | null {
@@ -107,7 +107,7 @@ export function resolveApprovalRequestChannelAccountId(params: {
 }
 
 export function doesApprovalRequestMatchChannelAccount(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   request: ApprovalRequestLike;
   channel: string;
   accountId?: string | null;

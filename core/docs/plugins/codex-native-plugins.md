@@ -153,7 +153,7 @@ the configured plugin keys, on/off state, Codex plugin name, and marketplace
 from `plugins.entries.codex.config.codexPlugins.plugins`.
 
 `enable` and `disable` write only to OpenClaw config at
-`~/.openclaw/openclaw.json`; they do not edit `~/.codex/config.toml` or install
+`~/.dex/openclaw.json`; they do not edit `~/.codex/config.toml` or install
 new Codex plugins. Only the owner or a gateway client with the
 `operator.admin` scope can change plugin state.
 

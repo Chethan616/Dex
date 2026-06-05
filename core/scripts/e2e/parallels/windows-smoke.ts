@@ -39,7 +39,7 @@ import {
   buildCommonSmokeSummary,
   expectedPackageBuildCommit,
   expectedPackageTargetVersion,
-  extractLastOpenClawVersion,
+  extractLastDexVersion,
   packAndServeSmokeArtifact,
   printSmokeTargetSummary,
   SmokeRunController,
@@ -228,15 +228,15 @@ function stripLeadingPackageManagerSeparator(argv: string[]): string[] {
 class WindowsSmoke extends SmokeRunController<WindowsOptions> {
   private auth: ProviderAuth;
   private agentTimeoutSeconds = readPositiveIntEnv(
-    "OPENCLAW_PARALLELS_WINDOWS_AGENT_TIMEOUT_S",
+    "DEX_PARALLELS_WINDOWS_AGENT_TIMEOUT_S",
     2700,
   );
   private updateTimeoutSeconds = readPositiveIntEnv(
-    "OPENCLAW_PARALLELS_WINDOWS_UPDATE_TIMEOUT_S",
+    "DEX_PARALLELS_WINDOWS_UPDATE_TIMEOUT_S",
     1200,
   );
   private gatewayRecoveryAfterMs =
-    readPositiveIntEnv("OPENCLAW_PARALLELS_WINDOWS_GATEWAY_RECOVERY_AFTER_S", 180) * 1000;
+    readPositiveIntEnv("DEX_PARALLELS_WINDOWS_GATEWAY_RECOVERY_AFTER_S", 180) * 1000;
   private artifact: PackageArtifact | null = null;
   private minGitZipPath = "";
   private latestVersion = "";
@@ -648,12 +648,12 @@ if ($null -eq $config.update) {
 $config.update | Add-Member -Force -MemberType NoteProperty -Name channel -Value 'dev'
 $config | ConvertTo-Json -Depth 100 | Set-Content -Path $configPath -Encoding utf8
 ${windowsScopedEnvFunction}
-$script:OpenClawUpdateExit = 0
-Invoke-WithScopedEnv @{ OPENCLAW_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS = '1'; OPENCLAW_DISABLE_BUNDLED_PLUGINS = '1' } {
+$script:DexUpdateExit = 0
+Invoke-WithScopedEnv @{ DEX_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS = '1'; DEX_DISABLE_BUNDLED_PLUGINS = '1' } {
   Invoke-OpenClaw update --channel dev --yes --json
-  $script:OpenClawUpdateExit = $LASTEXITCODE
+  $script:DexUpdateExit = $LASTEXITCODE
 }
-if ($script:OpenClawUpdateExit -ne 0) { throw "openclaw update failed with exit code $script:OpenClawUpdateExit" }
+if ($script:DexUpdateExit -ne 0) { throw "openclaw update failed with exit code $script:DexUpdateExit" }
 Invoke-OpenClaw --version
 Invoke-OpenClaw update status --json`,
       { timeoutMs: this.updateTimeoutSeconds * 1000 },
@@ -773,7 +773,7 @@ if (-not $agentOk) { throw 'openclaw agent finished without OK response' }`,
   }
 
   private async extractLastVersion(phaseName: string): Promise<string> {
-    return await extractLastOpenClawVersion(this.runDir, phaseName, /OpenClaw\s+([0-9][^\s]*)/gi);
+    return await extractLastDexVersion(this.runDir, phaseName, /OpenClaw\s+([0-9][^\s]*)/gi);
   }
 
   protected async writeSummary(): Promise<string> {

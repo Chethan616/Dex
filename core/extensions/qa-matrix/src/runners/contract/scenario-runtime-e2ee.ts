@@ -138,7 +138,7 @@ function requireMatrixQaCliRuntimeEnv(context: MatrixQaScenarioContext) {
 }
 
 function requireMatrixQaGatewayConfigPath(context: MatrixQaScenarioContext) {
-  const configPath = requireMatrixQaCliRuntimeEnv(context).OPENCLAW_CONFIG_PATH?.trim();
+  const configPath = requireMatrixQaCliRuntimeEnv(context).DEX_CONFIG_PATH?.trim();
   if (!configPath) {
     throw new Error("Matrix CLI QA scenarios require the gateway config path");
   }
@@ -620,9 +620,9 @@ async function createMatrixQaCliSelfVerificationRuntime(params: {
     ...requireMatrixQaCliRuntimeEnv(params.context),
     FORCE_COLOR: "0",
     NO_COLOR: "1",
-    OPENCLAW_CONFIG_PATH: configPath,
-    OPENCLAW_DISABLE_AUTO_UPDATE: "1",
-    OPENCLAW_STATE_DIR: stateDir,
+    DEX_CONFIG_PATH: configPath,
+    DEX_DISABLE_AUTO_UPDATE: "1",
+    DEX_STATE_DIR: stateDir,
   };
   const run = async (args: string[], timeoutMs = params.context.timeoutMs, stdin?: string) =>
     await runMatrixQaOpenClawCli({
@@ -683,9 +683,9 @@ async function createMatrixQaCliE2eeSetupRuntime(params: {
     ...requireMatrixQaCliRuntimeEnv(params.context),
     FORCE_COLOR: "0",
     NO_COLOR: "1",
-    OPENCLAW_CONFIG_PATH: configPath,
-    OPENCLAW_DISABLE_AUTO_UPDATE: "1",
-    OPENCLAW_STATE_DIR: stateDir,
+    DEX_CONFIG_PATH: configPath,
+    DEX_DISABLE_AUTO_UPDATE: "1",
+    DEX_STATE_DIR: stateDir,
   };
   const run = async (args: string[], timeoutMs = params.context.timeoutMs) =>
     await runMatrixQaOpenClawCli({
@@ -728,7 +728,7 @@ async function createMatrixQaCliGatewayRuntime(params: {
     ...requireMatrixQaCliRuntimeEnv(params.context),
     FORCE_COLOR: "0",
     NO_COLOR: "1",
-    OPENCLAW_DISABLE_AUTO_UPDATE: "1",
+    DEX_DISABLE_AUTO_UPDATE: "1",
   };
   const run = async (args: string[], timeoutMs = params.context.timeoutMs) =>
     await runMatrixQaOpenClawCli({
@@ -3559,7 +3559,7 @@ export async function runMatrixQaE2eeArtifactRedactionScenario(
         },
         details: [
           "decrypted E2EE payload reached in-memory assertions only",
-          "observed-event artifacts redact body/formatted_body unless OPENCLAW_QA_MATRIX_CAPTURE_CONTENT=1",
+          "observed-event artifacts redact body/formatted_body unless DEX_QA_MATRIX_CAPTURE_CONTENT=1",
           `encrypted room id: ${result.roomId}`,
           `isolated driver user: ${driverUserId}`,
           ...buildMatrixReplyDetails("E2EE reply", result.reply),

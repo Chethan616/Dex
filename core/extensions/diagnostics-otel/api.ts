@@ -12,9 +12,9 @@ export {
   type DiagnosticEventPayload,
   type DiagnosticTraceContext,
 } from "openclaw/plugin-sdk/diagnostic-runtime";
-export { emptyPluginConfigSchema, type OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+export { emptyPluginConfigSchema, type DexPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 export type {
-  OpenClawPluginService,
-  OpenClawPluginServiceContext,
+  DexPluginService,
+  DexPluginServiceContext,
 } from "openclaw/plugin-sdk/plugin-entry";
 export { redactSensitiveText } from "openclaw/plugin-sdk/security-runtime";

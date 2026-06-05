@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { z } from "zod";
 import { isBlockedObjectKey } from "../infra/prototype-keys.js";
-import type { OpenClawStateDatabaseOptions } from "../state/openclaw-state-db.js";
+import type { DexStateDatabaseOptions } from "../state/openclaw-state-db.js";
 import {
-  openOpenClawStateDatabase,
+  openDexStateDatabase,
   runOpenClawStateWriteTransaction,
 } from "../state/openclaw-state-db.js";
 import { safeParseWithSchema } from "../utils/zod-parse.js";
@@ -196,7 +196,7 @@ type InstalledPluginIndexSqliteRow = {
 
 function resolveStateDatabaseOptions(
   options: InstalledPluginIndexStoreOptions = {},
-): OpenClawStateDatabaseOptions {
+): DexStateDatabaseOptions {
   if (options.filePath) {
     return {
       ...(options.env ? { env: options.env } : {}),
@@ -207,7 +207,7 @@ function resolveStateDatabaseOptions(
     return {
       env: {
         ...(options.env ?? process.env),
-        OPENCLAW_STATE_DIR: options.stateDir,
+        DEX_STATE_DIR: options.stateDir,
       },
     };
   }
@@ -307,7 +307,7 @@ function readPersistedInstalledPluginIndexFromSqlite(
     return null;
   }
   try {
-    const database = openOpenClawStateDatabase(resolveStateDatabaseOptions(options));
+    const database = openDexStateDatabase(resolveStateDatabaseOptions(options));
     const row = database.db
       .prepare(
         `

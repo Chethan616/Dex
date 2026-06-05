@@ -6,7 +6,7 @@ import {
   updateSessionGoalStatus,
 } from "../../config/sessions/goals.js";
 import { resolveStorePath } from "../../config/sessions/paths.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { normalizeAgentId, parseAgentSessionKey } from "../../routing/session-key.js";
 import { stringEnum } from "../schema/typebox.js";
 import {
@@ -21,7 +21,7 @@ type GoalToolOptions = {
   agentSessionKey?: string;
   runSessionKey?: string;
   sessionAgentId?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 };
 
 type GoalSessionScope = {

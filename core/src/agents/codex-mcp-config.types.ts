@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { BundleMcpDiagnostic } from "../plugins/bundle-mcp.js";
 
 export type CodexMcpServersConfig = Record<string, Record<string, unknown>>;
@@ -14,7 +14,7 @@ export type CodexBundleMcpThreadConfig = {
 
 export type LoadCodexBundleMcpThreadConfigParams = {
   workspaceDir: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   toolsEnabled?: boolean;
   disableTools?: boolean;
   toolsAllow?: string[];

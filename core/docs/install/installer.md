@@ -12,7 +12,7 @@ OpenClaw ships three installer scripts, served from `openclaw.ai`.
 | Script                             | Platform             | What it does                                                                                                   |
 | ---------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------- |
 | [`install.sh`](#installsh)         | macOS / Linux / WSL  | Installs Node if needed, installs OpenClaw via npm (default) or git, and can run onboarding.                   |
-| [`install-cli.sh`](#install-clish) | macOS / Linux / WSL  | Installs Node + OpenClaw into a local prefix (`~/.openclaw`) with npm or git checkout modes. No root required. |
+| [`install-cli.sh`](#install-clish) | macOS / Linux / WSL  | Installs Node + OpenClaw into a local prefix (`~/.dex`) with npm or git checkout modes. No root required. |
 | [`install.ps1`](#installps1)       | Windows (PowerShell) | Installs Node if needed, installs OpenClaw via npm (default) or git, and can run onboarding.                   |
 
 ## Quick commands
@@ -157,15 +157,15 @@ The script exits with code `2` for invalid method selection or invalid `--instal
 | Variable                                          | Description                                                        |
 | ------------------------------------------------- | ------------------------------------------------------------------ |
 | `OPENCLAW_INSTALL_METHOD=git\|npm`                | Install method                                                     |
-| `OPENCLAW_VERSION=latest\|next\|<semver>\|<spec>` | npm version, dist-tag, or package spec                             |
-| `OPENCLAW_BETA=0\|1`                              | Use beta if available                                              |
-| `OPENCLAW_HOME=<path>`                            | Base directory for OpenClaw state and default git/onboarding paths |
-| `OPENCLAW_GIT_DIR=<path>`                         | Checkout directory                                                 |
+| `DEX_VERSION=latest\|next\|<semver>\|<spec>` | npm version, dist-tag, or package spec                             |
+| `DEX_BETA=0\|1`                              | Use beta if available                                              |
+| `DEX_HOME=<path>`                            | Base directory for OpenClaw state and default git/onboarding paths |
+| `DEX_GIT_DIR=<path>`                         | Checkout directory                                                 |
 | `OPENCLAW_GIT_UPDATE=0\|1`                        | Toggle git updates                                                 |
-| `OPENCLAW_NO_PROMPT=1`                            | Disable prompts                                                    |
-| `OPENCLAW_NO_ONBOARD=1`                           | Skip onboarding                                                    |
+| `DEX_NO_PROMPT=1`                            | Disable prompts                                                    |
+| `DEX_NO_ONBOARD=1`                           | Skip onboarding                                                    |
 | `OPENCLAW_DRY_RUN=1`                              | Dry run mode                                                       |
-| `OPENCLAW_VERBOSE=1`                              | Debug mode                                                         |
+| `DEX_VERBOSE=1`                              | Debug mode                                                         |
 | `OPENCLAW_NPM_LOGLEVEL=error\|warn\|notice`       | npm log level                                                      |
 
   </Accordion>
@@ -179,7 +179,7 @@ The script exits with code `2` for invalid method selection or invalid `--instal
 
 <Info>
 Designed for environments where you want everything under a local prefix
-(default `~/.openclaw`) and no system Node dependency. Supports npm installs
+(default `~/.dex`) and no system Node dependency. Supports npm installs
 by default, plus git-checkout installs under the same prefix flow.
 </Info>
 
@@ -240,7 +240,7 @@ by default, plus git-checkout installs under the same prefix flow.
 
 | Flag                        | Description                                                                     |
 | --------------------------- | ------------------------------------------------------------------------------- |
-| `--prefix <path>`           | Install prefix (default: `~/.openclaw`)                                         |
+| `--prefix <path>`           | Install prefix (default: `~/.dex`)                                         |
 | `--install-method npm\|git` | Choose install method (default: `npm`). Alias: `--method`                       |
 | `--npm`                     | Shortcut for npm method                                                         |
 | `--git`, `--github`         | Shortcut for git method                                                         |
@@ -259,14 +259,14 @@ by default, plus git-checkout installs under the same prefix flow.
 
 | Variable                                    | Description                                                        |
 | ------------------------------------------- | ------------------------------------------------------------------ |
-| `OPENCLAW_PREFIX=<path>`                    | Install prefix                                                     |
+| `DEX_PREFIX=<path>`                    | Install prefix                                                     |
 | `OPENCLAW_INSTALL_METHOD=git\|npm`          | Install method                                                     |
-| `OPENCLAW_VERSION=<ver>`                    | OpenClaw version or dist-tag                                       |
+| `DEX_VERSION=<ver>`                    | OpenClaw version or dist-tag                                       |
 | `OPENCLAW_NODE_VERSION=<ver>`               | Node version                                                       |
-| `OPENCLAW_HOME=<path>`                      | Base directory for OpenClaw state and default git/onboarding paths |
-| `OPENCLAW_GIT_DIR=<path>`                   | Git checkout directory for git installs                            |
+| `DEX_HOME=<path>`                      | Base directory for OpenClaw state and default git/onboarding paths |
+| `DEX_GIT_DIR=<path>`                   | Git checkout directory for git installs                            |
 | `OPENCLAW_GIT_UPDATE=0\|1`                  | Toggle git updates for existing checkouts                          |
-| `OPENCLAW_NO_ONBOARD=1`                     | Skip onboarding                                                    |
+| `DEX_NO_ONBOARD=1`                     | Skip onboarding                                                    |
 | `OPENCLAW_NPM_LOGLEVEL=error\|warn\|notice` | npm log level                                                      |
 
   </Accordion>
@@ -360,8 +360,8 @@ by default, plus git-checkout installs under the same prefix flow.
 | Variable                           | Description        |
 | ---------------------------------- | ------------------ |
 | `OPENCLAW_INSTALL_METHOD=git\|npm` | Install method     |
-| `OPENCLAW_GIT_DIR=<path>`          | Checkout directory |
-| `OPENCLAW_NO_ONBOARD=1`            | Skip onboarding    |
+| `DEX_GIT_DIR=<path>`          | Checkout directory |
+| `DEX_NO_ONBOARD=1`            | Skip onboarding    |
 | `OPENCLAW_GIT_UPDATE=0`            | Disable git pull   |
 | `OPENCLAW_DRY_RUN=1`               | Dry run mode       |
 
@@ -386,7 +386,7 @@ Use non-interactive flags/env vars for predictable runs.
   </Tab>
   <Tab title="install.sh (non-interactive git)">
     ```bash
-    OPENCLAW_INSTALL_METHOD=git OPENCLAW_NO_PROMPT=1 \
+    OPENCLAW_INSTALL_METHOD=git DEX_NO_PROMPT=1 \
       curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash
     ```
   </Tab>

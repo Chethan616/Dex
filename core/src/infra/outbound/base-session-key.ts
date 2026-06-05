@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { buildAgentSessionKey, type RoutePeer } from "../../routing/resolve-route.js";
 
 /**
@@ -8,7 +8,7 @@ import { buildAgentSessionKey, type RoutePeer } from "../../routing/resolve-rout
  * inbound route resolution keep the same `dmScope` and identity-link behavior.
  */
 export function buildOutboundBaseSessionKey(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   channel: string;
   accountId?: string | null;

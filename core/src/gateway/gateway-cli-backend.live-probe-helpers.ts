@@ -30,8 +30,8 @@ const CLI_CRON_MCP_LOOPBACK_MAX_BODY_BYTES = 1_048_576;
 
 function shouldLogCliCronProbe(): boolean {
   return (
-    isTruthyEnvValue(process.env.OPENCLAW_LIVE_CLI_BACKEND_DEBUG) ||
-    isTruthyEnvValue(process.env.OPENCLAW_CLI_BACKEND_LOG_OUTPUT)
+    isTruthyEnvValue(process.env.DEX_LIVE_CLI_BACKEND_DEBUG) ||
+    isTruthyEnvValue(process.env.DEX_CLI_BACKEND_LOG_OUTPUT)
   );
 }
 
@@ -204,14 +204,14 @@ async function callLoopbackJsonRpc(params: {
     headers["x-openclaw-account-id"] = params.accountId;
   }
   const timeoutMs = parsePositiveInt(
-    params.env?.OPENCLAW_MCP_LOOPBACK_PROBE_TIMEOUT_MS,
+    params.env?.DEX_MCP_LOOPBACK_PROBE_TIMEOUT_MS,
     CLI_CRON_MCP_LOOPBACK_REQUEST_TIMEOUT_MS,
-    "OPENCLAW_MCP_LOOPBACK_PROBE_TIMEOUT_MS",
+    "DEX_MCP_LOOPBACK_PROBE_TIMEOUT_MS",
   );
   const maxBodyBytes = parsePositiveInt(
-    params.env?.OPENCLAW_MCP_LOOPBACK_PROBE_MAX_BODY_BYTES,
+    params.env?.DEX_MCP_LOOPBACK_PROBE_MAX_BODY_BYTES,
     CLI_CRON_MCP_LOOPBACK_MAX_BODY_BYTES,
-    "OPENCLAW_MCP_LOOPBACK_PROBE_MAX_BODY_BYTES",
+    "DEX_MCP_LOOPBACK_PROBE_MAX_BODY_BYTES",
   );
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);

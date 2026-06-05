@@ -1,5 +1,5 @@
 import type { ChannelDoctorLegacyConfigRule } from "openclaw/plugin-sdk/channel-contract";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { isRecord } from "openclaw/plugin-sdk/string-coerce-runtime";
 import { ELEVENLABS_TALK_PROVIDER_ID, migrateElevenLabsLegacyTalkConfig } from "./config-compat.js";
 
@@ -24,8 +24,8 @@ export const legacyConfigRules: ChannelDoctorLegacyConfigRule[] = [
 
 export const ELEVENLABS_TALK_LEGACY_CONFIG_RULES = legacyConfigRules;
 
-export function normalizeCompatibilityConfig({ cfg }: { cfg: OpenClawConfig }): {
-  config: OpenClawConfig;
+export function normalizeCompatibilityConfig({ cfg }: { cfg: DexConfig }): {
+  config: DexConfig;
   changes: string[];
 } {
   return migrateElevenLabsLegacyTalkConfig(cfg);

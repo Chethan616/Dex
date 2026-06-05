@@ -1,6 +1,6 @@
 import { statSync } from "node:fs";
 import path from "node:path";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { PluginMetadataSnapshot } from "../../plugins/plugin-metadata-snapshot.types.js";
 import {
   resolveRuntimeExternalAuthProviderRefs,
@@ -20,7 +20,7 @@ type DiscoveryStores = {
 
 type DiscoverCachedAgentStoresOptions = {
   agentDir: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   inheritedAuthDir?: string;
   workspaceDir?: string;
 };

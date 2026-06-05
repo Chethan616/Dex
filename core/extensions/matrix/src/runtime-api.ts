@@ -38,7 +38,7 @@ export { logTypingFailure } from "openclaw/plugin-sdk/channel-outbound";
 export { resolveAckReaction } from "openclaw/plugin-sdk/channel-feedback";
 export type { ChannelSetupInput } from "openclaw/plugin-sdk/setup";
 export type {
-  OpenClawConfig,
+  DexConfig,
   ContextVisibilityMode,
   DmPolicy,
   GroupPolicy,

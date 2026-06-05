@@ -2,7 +2,7 @@ import fs from "node:fs";
 import readline from "node:readline";
 
 const requestLog =
-  process.env.OPENCLAW_CODEX_MEDIA_PATH_APP_SERVER_LOG ??
+  process.env.DEX_CODEX_MEDIA_PATH_APP_SERVER_LOG ??
   "/tmp/openclaw-codex-media-path-app-server.jsonl";
 let turnCount = 0;
 

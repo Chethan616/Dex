@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "openclaw/plugin-sdk/routing";
 import { updateSessionStore } from "openclaw/plugin-sdk/session-store-runtime";
 import { resolveWhatsAppLegacyGroupSessionKey } from "../../group-session-key.js";
@@ -6,7 +6,7 @@ import { resolveWhatsAppInboundPolicy } from "../../inbound-policy.js";
 import { loadSessionStore, resolveStorePath } from "../config.runtime.js";
 import { normalizeGroupActivation } from "./group-activation.runtime.js";
 
-function hasNamedWhatsAppAccounts(cfg: OpenClawConfig) {
+function hasNamedWhatsAppAccounts(cfg: DexConfig) {
   const accountIds = Object.keys(cfg.channels?.whatsapp?.accounts ?? {});
   return accountIds.some((accountId) => normalizeAccountId(accountId) !== DEFAULT_ACCOUNT_ID);
 }
@@ -28,7 +28,7 @@ function isActivationOnlyEntry(
 }
 
 export async function resolveGroupActivationFor(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   agentId: string;
   sessionKey: string;

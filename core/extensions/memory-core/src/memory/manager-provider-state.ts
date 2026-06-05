@@ -1,5 +1,5 @@
 import type {
-  OpenClawConfig,
+  DexConfig,
   ResolvedMemorySearchConfig,
 } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
 import {
@@ -181,7 +181,7 @@ export function applyMemoryFallbackProviderState(params: {
 }
 
 export function resolveMemoryFallbackProviderRequest(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   settings: ResolvedMemorySearchConfig;
   currentProviderId: string | null;
 }): {

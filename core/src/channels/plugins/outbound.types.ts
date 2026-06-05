@@ -1,6 +1,6 @@
 import type { ReplyPayload } from "../../auto-reply/reply-payload.js";
 import type { ReplyToMode } from "../../config/types.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { OutboundDeliveryResult } from "../../infra/outbound/deliver-types.js";
 import type { OutboundDeliveryFormattingOptions } from "../../infra/outbound/formatting.js";
 import type { OutboundIdentity } from "../../infra/outbound/identity-types.js";
@@ -14,7 +14,7 @@ import type {
 } from "./types.core.js";
 
 export type ChannelOutboundContext = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   to: string;
   text: string;
   mediaUrl?: string;
@@ -137,7 +137,7 @@ export type ChannelOutboundChunkContext = {
 
 export type ChannelOutboundNormalizePayloadParams = {
   payload: ReplyPayload;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 };
 
@@ -157,24 +157,24 @@ export type ChannelOutboundAdapter = {
   sendTextOnlyErrorPayloads?: boolean;
   shouldSkipPlainTextSanitization?: (params: { payload: ReplyPayload }) => boolean;
   resolveEffectiveTextChunkLimit?: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     fallbackLimit?: number;
   }) => number | undefined;
   shouldSuppressLocalPayloadPrompt?: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     payload: ReplyPayload;
     hint?: ChannelOutboundPayloadHint;
   }) => boolean;
   beforeDeliverPayload?: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     target: ChannelOutboundTargetRef;
     payload: ReplyPayload;
     hint?: ChannelOutboundPayloadHint;
   }) => Promise<void> | void;
   afterDeliverPayload?: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     target: ChannelOutboundTargetRef;
     payload: ReplyPayload;
     results: readonly OutboundDeliveryResult[];
@@ -189,7 +189,7 @@ export type ChannelOutboundAdapter = {
     ctx: ChannelOutboundPayloadContext;
   }) => Promise<ReplyPayload | null> | ReplyPayload | null;
   pinDeliveredMessage?: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     target: ChannelOutboundTargetRef;
     messageId: string;
     pin: ReplyPayloadDeliveryPin;
@@ -213,7 +213,7 @@ export type ChannelOutboundAdapter = {
     targetThreadId?: string;
   }) => boolean;
   resolveTarget?: (params: {
-    cfg?: OpenClawConfig;
+    cfg?: DexConfig;
     to?: string;
     allowFrom?: string[];
     accountId?: string | null;

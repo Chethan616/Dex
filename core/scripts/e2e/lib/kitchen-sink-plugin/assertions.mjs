@@ -74,7 +74,7 @@ function scanLogs() {
   if (!process.env.KITCHEN_SINK_TMP_DIR) {
     throw new Error("KITCHEN_SINK_TMP_DIR is required for kitchen-sink log scans");
   }
-  const roots = [scratchRoot, path.join(process.env.HOME, ".openclaw")];
+  const roots = [scratchRoot, path.join(process.env.HOME, ".dex")];
   const files = [];
   const visit = (entry) => {
     if (!fs.existsSync(entry)) {
@@ -138,7 +138,7 @@ function scanLogs() {
 }
 
 function readConfig() {
-  const configPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+  const configPath = path.join(process.env.HOME, ".dex", "openclaw.json");
   return {
     configPath,
     exists: fs.existsSync(configPath),

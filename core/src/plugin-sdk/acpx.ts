@@ -19,10 +19,10 @@ export type {
   AcpSessionUpdateTag,
 } from "@dexagent/acp-core/runtime/types";
 export type {
-  OpenClawPluginApi,
-  OpenClawPluginConfigSchema,
-  OpenClawPluginService,
-  OpenClawPluginServiceContext,
+  DexPluginApi,
+  DexPluginConfigSchema,
+  DexPluginService,
+  DexPluginServiceContext,
   PluginLogger,
 } from "../plugins/types.js";
 export type {

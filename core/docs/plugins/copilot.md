@@ -33,7 +33,7 @@ For the broader model/provider/runtime split, start with
 - A GitHub Copilot subscription that can drive the Copilot CLI (or a
   `gitHubToken` env / auth-profile entry for headless / cron runs).
 - A writable `copilotHome` directory. The harness defaults to
-  `~/.openclaw/agents/<agentId>/copilot` for full per-agent isolation. The
+  `~/.dex/agents/<agentId>/copilot` for full per-agent isolation. The
   platform default (`%APPDATA%\copilot` on Windows, `$XDG_CONFIG_HOME/copilot`
   or `~/.config/copilot` elsewhere) is used as the doctor probe fallback when
   no explicit home is set.
@@ -65,7 +65,7 @@ The runtime resolves the SDK in this order:
 
 1. `import("@github/copilot-sdk")` from the installed `@openclaw/copilot`
    package.
-2. The well-known fallback dir `~/.openclaw/npm-runtime/copilot/` (the
+2. The well-known fallback dir `~/.dex/npm-runtime/copilot/` (the
    legacy on-demand install target).
 
 A missing SDK surfaces a single error with code `COPILOT_SDK_MISSING`
@@ -126,7 +126,7 @@ Per-agent precedence, applied during `runCopilotAttempt`:
    precedence order, mirroring the shipped `github-copilot` provider
    (`extensions/github-copilot/auth.ts`) and the documented Copilot SDK
    setup:
-   1. `OPENCLAW_GITHUB_TOKEN` -- harness-specific override; set this
+   1. `DEX_GITHUB_TOKEN` -- harness-specific override; set this
       to pin a token for the OpenClaw harness without disturbing
       system-wide `gh` / Copilot CLI config.
    2. `COPILOT_GITHUB_TOKEN` -- standard Copilot SDK / CLI env var.
@@ -145,7 +145,7 @@ Each agent gets a dedicated `copilotHome` so Copilot CLI tokens, sessions, and
 config do not leak between agents on the same machine. The default is
 `<agentDir>/copilot` when the host hands the harness an agent directory
 (isolating SDK state from OpenClaw's `models.json` / `auth-profiles.json` in
-the same directory), or `~/.openclaw/agents/<agentId>/copilot` otherwise.
+the same directory), or `~/.dex/agents/<agentId>/copilot` otherwise.
 Override with `copilotHome: <path>` on the attempt input when you need a
 custom location (for example, a shared mount for migration).
 

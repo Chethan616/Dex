@@ -1,6 +1,6 @@
 import {
   createDefaultModelsPresetAppliers,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/provider-onboard";
 import { buildNvidiaProvider, NVIDIA_DEFAULT_MODEL_ID } from "./provider-catalog.js";
 
@@ -8,7 +8,7 @@ export const NVIDIA_DEFAULT_MODEL_REF = NVIDIA_DEFAULT_MODEL_ID;
 
 const nvidiaPresetAppliers = createDefaultModelsPresetAppliers({
   primaryModelRef: NVIDIA_DEFAULT_MODEL_REF,
-  resolveParams: (_cfg: OpenClawConfig) => {
+  resolveParams: (_cfg: DexConfig) => {
     const defaultProvider = buildNvidiaProvider();
     return {
       providerId: "nvidia",
@@ -21,10 +21,10 @@ const nvidiaPresetAppliers = createDefaultModelsPresetAppliers({
   },
 });
 
-export function applyNvidiaProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
+export function applyNvidiaProviderConfig(cfg: DexConfig): DexConfig {
   return nvidiaPresetAppliers.applyProviderConfig(cfg);
 }
 
-export function applyNvidiaConfig(cfg: OpenClawConfig): OpenClawConfig {
+export function applyNvidiaConfig(cfg: DexConfig): DexConfig {
   return nvidiaPresetAppliers.applyConfig(cfg);
 }

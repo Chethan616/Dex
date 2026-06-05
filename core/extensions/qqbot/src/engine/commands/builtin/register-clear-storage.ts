@@ -78,7 +78,7 @@ const CLEAR_STORAGE_MAX_DISPLAY = 10;
  * Resolve the canonical QQBot downloads directory.
  *
  * All inbound attachments and outbound fallback downloads are stored directly
- * under `~/.openclaw/media/qqbot/downloads/` without appId subdivision.
+ * under `~/.dex/media/qqbot/downloads/` without appId subdivision.
  * The clear-storage command therefore cleans the entire downloads root.
  */
 function resolveQqbotDownloadsDir(): string {
@@ -104,7 +104,7 @@ export function registerClearStorageCommands(registry: SlashCommandRegistry): vo
     handler: (ctx) => {
       const isForce = ctx.args.trim() === "--force";
       const targetDir = resolveQqbotDownloadsDir();
-      const displayDir = `~/.openclaw/media/qqbot/downloads`;
+      const displayDir = `~/.dex/media/qqbot/downloads`;
 
       if (!isForce) {
         const files = scanDirectoryFiles(targetDir);

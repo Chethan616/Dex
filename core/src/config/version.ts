@@ -3,7 +3,7 @@ import {
   normalizeLegacyDotBetaVersion,
 } from "../infra/semver-compare.js";
 
-type OpenClawVersion = {
+type DexVersion = {
   major: number;
   minor: number;
   patch: number;
@@ -13,7 +13,7 @@ type OpenClawVersion = {
 
 const VERSION_RE = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
 
-export function parseOpenClawVersion(raw: string | null | undefined): OpenClawVersion | null {
+export function parseDexVersion(raw: string | null | undefined): DexVersion | null {
   if (!raw) {
     return null;
   }
@@ -33,8 +33,8 @@ export function parseOpenClawVersion(raw: string | null | undefined): OpenClawVe
   };
 }
 
-export function normalizeOpenClawVersionBase(raw: string | null | undefined): string | null {
-  const parsed = parseOpenClawVersion(raw);
+export function normalizeDexVersionBase(raw: string | null | undefined): string | null {
+  const parsed = parseDexVersion(raw);
   if (!parsed) {
     return null;
   }
@@ -45,8 +45,8 @@ export function isSameOpenClawStableFamily(
   a: string | null | undefined,
   b: string | null | undefined,
 ): boolean {
-  const parsedA = parseOpenClawVersion(a);
-  const parsedB = parseOpenClawVersion(b);
+  const parsedA = parseDexVersion(a);
+  const parsedB = parseDexVersion(b);
   if (!parsedA || !parsedB) {
     return false;
   }
@@ -60,12 +60,12 @@ export function isSameOpenClawStableFamily(
   );
 }
 
-export function compareOpenClawVersions(
+export function compareDexVersions(
   a: string | null | undefined,
   b: string | null | undefined,
 ): number | null {
-  const parsedA = parseOpenClawVersion(a);
-  const parsedB = parseOpenClawVersion(b);
+  const parsedA = parseDexVersion(a);
+  const parsedB = parseDexVersion(b);
   if (!parsedA || !parsedB) {
     return null;
   }
@@ -104,8 +104,8 @@ export function shouldWarnOnTouchedVersion(
   current: string | null | undefined,
   touched: string | null | undefined,
 ): boolean {
-  const parsedCurrent = parseOpenClawVersion(current);
-  const parsedTouched = parseOpenClawVersion(touched);
+  const parsedCurrent = parseDexVersion(current);
+  const parsedTouched = parseDexVersion(touched);
   if (
     parsedCurrent &&
     parsedTouched &&
@@ -120,11 +120,11 @@ export function shouldWarnOnTouchedVersion(
   if (isSameOpenClawStableFamily(current, touched)) {
     return false;
   }
-  const cmp = compareOpenClawVersions(current, touched);
+  const cmp = compareDexVersions(current, touched);
   return cmp !== null && cmp < 0;
 }
 
-function releaseRank(version: OpenClawVersion): number {
+function releaseRank(version: DexVersion): number {
   if (version.prerelease?.length) {
     return 0;
   }

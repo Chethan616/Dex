@@ -13,7 +13,7 @@ import {
 } from "../agents/auth-profiles/path-constants.js";
 import type { AuthProfileStore } from "../agents/auth-profiles/types.js";
 import { resolveOAuthPath } from "../config/paths.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { PluginManifestRegistry } from "../plugins/manifest-registry.js";
 import type { PluginOrigin } from "../plugins/plugin-origin.types.js";
 import { resolveUserPath } from "../utils.js";
@@ -30,11 +30,11 @@ const RUNTIME_PATH_ENV_KEYS = [
   "USERPROFILE",
   "HOMEDRIVE",
   "HOMEPATH",
-  "OPENCLAW_HOME",
-  "OPENCLAW_STATE_DIR",
-  "OPENCLAW_CONFIG_PATH",
-  "OPENCLAW_AGENT_DIR",
-  "OPENCLAW_TEST_FAST",
+  "DEX_HOME",
+  "DEX_STATE_DIR",
+  "DEX_CONFIG_PATH",
+  "DEX_AGENT_DIR",
+  "DEX_TEST_FAST",
 ] as const;
 
 export function mergeSecretsRuntimeEnv(
@@ -54,7 +54,7 @@ export function mergeSecretsRuntimeEnv(
 }
 
 export function collectCandidateAgentDirs(
-  config: OpenClawConfig,
+  config: DexConfig,
   env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
 ): string[] {
   const dirs = new Set<string>();
@@ -66,7 +66,7 @@ export function collectCandidateAgentDirs(
 }
 
 export function resolveRefreshAgentDirs(
-  config: OpenClawConfig,
+  config: DexConfig,
   context: SecretsRuntimeRefreshContext,
 ): string[] {
   const configDerived = collectCandidateAgentDirs(config, context.env);
@@ -77,7 +77,7 @@ export function resolveRefreshAgentDirs(
 }
 
 function resolveCandidateAgentDirs(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   env: NodeJS.ProcessEnv | Record<string, string | undefined>;
   agentDirs?: string[];
 }): string[] {
@@ -95,7 +95,7 @@ function hasCandidateAuthProfileStoreSource(agentDir: string): boolean {
 }
 
 export function hasCandidateAuthProfileStoreSources(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   env: NodeJS.ProcessEnv | Record<string, string | undefined>;
   agentDirs?: string[];
 }): boolean {
@@ -139,7 +139,7 @@ function hasActiveRuntimeWebFetchProviderSurface(
   return hasCredentialBearingObjectValue(fetchConfig, defaults);
 }
 
-function hasRuntimeWebToolConfigSurface(config: OpenClawConfig): boolean {
+function hasRuntimeWebToolConfigSurface(config: DexConfig): boolean {
   const web = config.tools?.web;
   const defaults = config.secrets?.defaults;
   const fetchExplicitlyDisabled =
@@ -179,7 +179,7 @@ function hasRuntimeWebToolConfigSurface(config: OpenClawConfig): boolean {
 }
 
 export function canUseSecretsRuntimeFastPath(params: {
-  sourceConfig: OpenClawConfig;
+  sourceConfig: DexConfig;
   authStores: Array<{ agentDir: string; store: AuthProfileStore }>;
 }): boolean {
   if (hasRuntimeWebToolConfigSurface(params.sourceConfig)) {
@@ -193,7 +193,7 @@ export function canUseSecretsRuntimeFastPath(params: {
 }
 
 export function prepareSecretsRuntimeFastPathSnapshot(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   env?: NodeJS.ProcessEnv;
   agentDirs?: string[];
   includeAuthStoreRefs?: boolean;

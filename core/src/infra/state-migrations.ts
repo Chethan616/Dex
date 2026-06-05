@@ -21,7 +21,7 @@ import { saveSessionStore } from "../config/sessions.js";
 import { canonicalizeMainSessionAlias } from "../config/sessions/main-session.js";
 import { resolveAllAgentSessionStoreTargetsSync } from "../config/sessions/targets.js";
 import type { SessionScope } from "../config/sessions/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import {
   countPluginStateLiveEntries,
@@ -54,7 +54,7 @@ import {
   parseAgentSessionKey,
 } from "../routing/session-key.js";
 import { normalizeSessionKeyPreservingOpaquePeerIds } from "../sessions/session-key-utils.js";
-import type { DB as OpenClawStateKyselyDatabase } from "../state/openclaw-state-db.generated.js";
+import type { DB as DexStateKyselyDatabase } from "../state/openclaw-state-db.generated.js";
 import { runOpenClawStateWriteTransaction } from "../state/openclaw-state-db.js";
 import { expandHomePrefix } from "./home-dir.js";
 import {
@@ -149,7 +149,7 @@ type LegacyPluginStateSidecarRow = {
   expires_at: number | bigint | null;
 };
 
-type LegacyPluginStateImportDatabase = Pick<OpenClawStateKyselyDatabase, "plugin_state_entries">;
+type LegacyPluginStateImportDatabase = Pick<DexStateKyselyDatabase, "plugin_state_entries">;
 type SqliteBindRow = Record<string, SQLInputValue>;
 
 type DetectedPluginDoctorStateMigrationPlan = {
@@ -933,7 +933,7 @@ async function migrateLegacyTaskRunsSidecar(params: {
           throw new LegacyTaskStateSidecarConflictError(conflicts);
         }
       },
-      { env: { ...process.env, OPENCLAW_STATE_DIR: params.stateDir } },
+      { env: { ...process.env, DEX_STATE_DIR: params.stateDir } },
     );
     if (importedTasks > 0) {
       changes.push(
@@ -1030,7 +1030,7 @@ async function migrateLegacyFlowRunsSidecar(params: {
           throw new LegacyTaskStateSidecarConflictError(conflicts);
         }
       },
-      { env: { ...process.env, OPENCLAW_STATE_DIR: params.stateDir } },
+      { env: { ...process.env, DEX_STATE_DIR: params.stateDir } },
     );
     if (imported > 0) {
       changes.push(
@@ -1307,7 +1307,7 @@ async function migrateLegacyDeliveryQueues(params: {
             imported++;
           }
         },
-        { env: { ...process.env, OPENCLAW_STATE_DIR: params.stateDir } },
+        { env: { ...process.env, DEX_STATE_DIR: params.stateDir } },
       );
     } catch (err) {
       warnings.push(`Failed migrating ${queue.label} ${queueDir}: ${String(err)}`);
@@ -1431,7 +1431,7 @@ async function migrateLegacyPluginStateSidecar(params: {
           imported += 1;
         }
       },
-      { env: { ...process.env, OPENCLAW_STATE_DIR: params.stateDir } },
+      { env: { ...process.env, DEX_STATE_DIR: params.stateDir } },
     );
     if (imported > 0) {
       changes.push(
@@ -1546,15 +1546,15 @@ async function withPluginStateImportEnv<T>(
   if (!plan.stateDir) {
     return await run();
   }
-  const previous = process.env.OPENCLAW_STATE_DIR;
-  process.env.OPENCLAW_STATE_DIR = plan.stateDir;
+  const previous = process.env.DEX_STATE_DIR;
+  process.env.DEX_STATE_DIR = plan.stateDir;
   try {
     return await run();
   } finally {
     if (previous === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_STATE_DIR;
     } else {
-      process.env.OPENCLAW_STATE_DIR = previous;
+      process.env.DEX_STATE_DIR = previous;
     }
   }
 }
@@ -2322,7 +2322,7 @@ export async function autoMigrateLegacyStateDir(params: {
   const env = params.env ?? process.env;
   const warnings: string[] = [];
   const changes: string[] = [];
-  const hasCustomStateDir = Boolean(env.OPENCLAW_STATE_DIR?.trim());
+  const hasCustomStateDir = Boolean(env.DEX_STATE_DIR?.trim());
   const targetDir = hasCustomStateDir ? resolveStateDir(env, homedir) : resolveNewStateDir(homedir);
   const migratePluginInstallIndex = async () => {
     const result = await migrateLegacyInstalledPluginIndex({ stateDir: targetDir });
@@ -2460,7 +2460,7 @@ export async function autoMigrateLegacyStateDir(params: {
           `State dir moved but failed to link legacy path (${legacyDir ?? "unknown"} → ${targetDir}): ${String(fallbackErr)}`,
         );
         warnings.push(
-          `Rollback failed; set OPENCLAW_STATE_DIR=${targetDir} to avoid split state: ${String(rollbackErr)}`,
+          `Rollback failed; set DEX_STATE_DIR=${targetDir} to avoid split state: ${String(rollbackErr)}`,
         );
         changes.push(`State dir: ${legacyDir ?? "unknown"} → ${targetDir}`);
       }
@@ -2508,7 +2508,7 @@ export async function autoMigrateLegacyTaskStateSidecars(params: {
 }
 
 async function collectChannelLegacyStateMigrationPlans(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env: NodeJS.ProcessEnv;
   stateDir: string;
   oauthDir: string;
@@ -2538,7 +2538,7 @@ async function collectChannelLegacyStateMigrationPlans(params: {
 }
 
 async function collectPluginDoctorStateMigrationPlans(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env: NodeJS.ProcessEnv;
   stateDir: string;
   oauthDir: string;
@@ -2581,7 +2581,7 @@ function createPluginDoctorStateMigrationContext(
 }
 
 export async function detectLegacyStateMigrations(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
   homedir?: () => string;
 }): Promise<LegacyStateDetection> {
@@ -2938,7 +2938,7 @@ export async function migrateLegacyAgentDir(
 
 async function runPluginDoctorStateMigrationPlans(params: {
   detected: LegacyStateDetection;
-  config: OpenClawConfig;
+  config: DexConfig;
 }): Promise<{ changes: string[]; warnings: string[] }> {
   const changes: string[] = [];
   const warnings: string[] = [];
@@ -2970,7 +2970,7 @@ async function runPluginDoctorStateMigrationPlans(params: {
 
 export async function runLegacyStateMigrations(params: {
   detected: LegacyStateDetection;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   now?: () => number;
   recoverCorruptTargetStore?: boolean;
 }): Promise<{ changes: string[]; warnings: string[] }> {
@@ -2993,14 +2993,14 @@ export async function runLegacyStateMigrations(params: {
   );
   const pluginPlans = await runPluginDoctorStateMigrationPlans({
     detected,
-    config: params.config ?? ({} as OpenClawConfig),
+    config: params.config ?? ({} as DexConfig),
   });
   const sessions = await migrateLegacySessions(detected, now, {
     recoverCorruptTargetStore: params.recoverCorruptTargetStore,
   });
   const acpSessionMetadata = await migrateLegacyAcpSessionMetadata({
-    cfg: params.config ?? ({} as OpenClawConfig),
-    env: { ...process.env, OPENCLAW_STATE_DIR: detected.stateDir },
+    cfg: params.config ?? ({} as DexConfig),
+    env: { ...process.env, DEX_STATE_DIR: detected.stateDir },
     now,
   });
   const agentDir = await migrateLegacyAgentDir(detected, now);
@@ -3036,7 +3036,7 @@ export async function runLegacyStateMigrations(params: {
 }
 
 export async function autoMigrateLegacyAgentDir(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
   homedir?: () => string;
   log?: MigrationLogger;
@@ -3062,7 +3062,7 @@ export async function autoMigrateLegacyAgentDir(params: {
  * Safe to run multiple times (idempotent). See #29683.
  */
 export async function migrateOrphanedSessionKeys(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
 }): Promise<{ changes: string[]; warnings: string[] }> {
   const changes: string[] = [];
@@ -3195,7 +3195,7 @@ export async function migrateOrphanedSessionKeys(params: {
 }
 
 async function migrateLegacyAcpSessionMetadata(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
   now?: () => number;
 }): Promise<{ changes: string[]; warnings: string[] }> {
@@ -3282,7 +3282,7 @@ function resolveStorePathFromTemplate(
 }
 
 export async function autoMigrateLegacyState(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env?: NodeJS.ProcessEnv;
   homedir?: () => string;
   log?: MigrationLogger;
@@ -3338,7 +3338,7 @@ export async function autoMigrateLegacyState(params: {
     env,
     homedir: params.homedir,
   });
-  const hasCustomAgentDir = env.OPENCLAW_AGENT_DIR?.trim() || env.PI_CODING_AGENT_DIR?.trim();
+  const hasCustomAgentDir = env.DEX_AGENT_DIR?.trim() || env.PI_CODING_AGENT_DIR?.trim();
   if (hasCustomAgentDir) {
     const pluginStateSidecar = await migrateLegacyPluginStateSidecar({
       stateDir: detected.stateDir,

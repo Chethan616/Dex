@@ -1,6 +1,6 @@
 import { MAX_DATE_TIMESTAMP_MS } from "@dexagent/normalization-core/number-coercion";
 import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { normalizeAccountId } from "../routing/session-key.js";
 import {
   resolveThreadBindingLifecycle as resolveSharedThreadBindingLifecycle,
@@ -143,7 +143,7 @@ export function resolveThreadBindingsEnabled(params: {
 }
 
 function resolveChannelThreadBindings(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: string;
   accountId: string;
 }): {
@@ -172,7 +172,7 @@ function normalizeSpawnContext(value: unknown): ThreadBindingSpawnContext | unde
 }
 
 export function resolveThreadBindingSpawnPolicy(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: string;
   accountId?: string;
   kind: ThreadBindingSpawnKind;
@@ -212,7 +212,7 @@ export function resolveThreadBindingSpawnPolicy(params: {
 }
 
 export function resolveThreadBindingIdleTimeoutMsForChannel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: string;
   accountId?: string;
 }): number {
@@ -224,7 +224,7 @@ export function resolveThreadBindingIdleTimeoutMsForChannel(params: {
 }
 
 export function resolveThreadBindingMaxAgeMsForChannel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: string;
   accountId?: string;
 }): number {
@@ -236,7 +236,7 @@ export function resolveThreadBindingMaxAgeMsForChannel(params: {
 }
 
 function resolveThreadBindingChannelScope(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: string;
   accountId?: string;
 }) {

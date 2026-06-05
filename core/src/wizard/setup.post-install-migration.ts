@@ -1,5 +1,5 @@
 import { formatCliCommand } from "../cli/command-format.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import {
   readMigrationConfigPatchDetails,
@@ -10,7 +10,7 @@ import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter } from "./prompts.js";
 
 export type PostInstallMigrationOptions = {
-  config: OpenClawConfig;
+  config: DexConfig;
   runtime: RuntimeEnv;
   // Required only on interactive paths; non-interactive callers can omit it
   // since the helper only emits hint lines in that mode.
@@ -25,7 +25,7 @@ export type PostInstallMigrationOptions = {
 };
 
 export type PostInstallMigrationResult = {
-  config: OpenClawConfig;
+  config: DexConfig;
 };
 
 type ResolvedProviderCandidate = {
@@ -48,7 +48,7 @@ const loadConfigPathsModule = async () => {
 };
 
 async function resolveCandidates(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   runtime: RuntimeEnv;
   installedPluginIds: readonly string[];
 }): Promise<ResolvedProviderCandidate[]> {
@@ -122,9 +122,9 @@ function logMigrationHint(runtime: RuntimeEnv, candidate: ResolvedProviderCandid
 }
 
 function applyMigrationConfigPatches(
-  config: OpenClawConfig,
+  config: DexConfig,
   result: { items?: readonly unknown[] } | undefined,
-): OpenClawConfig {
+): DexConfig {
   const items = result?.items ?? [];
   const patches = items
     .filter((item): item is Parameters<typeof readMigrationConfigPatchDetails>[0] =>

@@ -1,4 +1,4 @@
-import type { DiscordAccountConfig, OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DiscordAccountConfig, DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type {
   ButtonInteraction,
   ChannelSelectMenuInteraction,
@@ -35,7 +35,7 @@ export type DiscordChannelContext = {
 };
 
 export type AgentComponentContext = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
   discordConfig?: DiscordAccountConfig;
   runtime?: import("openclaw/plugin-sdk/runtime-env").RuntimeEnv;

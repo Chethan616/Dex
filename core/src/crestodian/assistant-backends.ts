@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { CrestodianOverview } from "./overview.js";
 
 const CRESTODIAN_CLAUDE_CLI_MODEL = "claude-opus-4-8";
@@ -10,7 +10,7 @@ type CrestodianLocalPlannerBackend = {
   runner: "cli" | "embedded";
   provider: string;
   model: string;
-  buildConfig: (workspaceDir: string) => OpenClawConfig;
+  buildConfig: (workspaceDir: string) => DexConfig;
 };
 
 const CLAUDE_CLI_BACKEND: CrestodianLocalPlannerBackend = {
@@ -45,7 +45,7 @@ export function selectCrestodianLocalPlannerBackends(
   return backends;
 }
 
-function buildCliPlannerConfig(workspaceDir: string, modelRef: string): OpenClawConfig {
+function buildCliPlannerConfig(workspaceDir: string, modelRef: string): DexConfig {
   return {
     agents: {
       defaults: {
@@ -56,7 +56,7 @@ function buildCliPlannerConfig(workspaceDir: string, modelRef: string): OpenClaw
   };
 }
 
-function buildCodexAppServerPlannerConfig(workspaceDir: string): OpenClawConfig {
+function buildCodexAppServerPlannerConfig(workspaceDir: string): DexConfig {
   return {
     agents: {
       defaults: {

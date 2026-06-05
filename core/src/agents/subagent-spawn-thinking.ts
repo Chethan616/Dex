@@ -1,6 +1,6 @@
 import { asOptionalObjectRecord } from "@dexagent/normalization-core/record-coerce";
 import { normalizeThinkLevel } from "../auto-reply/thinking.shared.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 function readString(value: Record<string, unknown>, key: string): string | undefined {
   const raw = value[key];
@@ -8,7 +8,7 @@ function readString(value: Record<string, unknown>, key: string): string | undef
 }
 
 export function resolveSubagentThinkingOverride(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   requesterAgentConfig?: unknown;
   targetAgentConfig?: unknown;
   thinkingOverrideRaw?: string;

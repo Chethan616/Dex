@@ -3,19 +3,19 @@ import {
   getRuntimeConfigSnapshot,
   getRuntimeConfigSourceSnapshot,
 } from "../config/runtime-snapshot.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolvePluginTools } from "../plugins/tools.js";
 import { normalizeDeliveryContext } from "../utils/delivery-context.js";
 import { resolveApiKeyForProfile, resolveAuthProfileOrder } from "./auth-profiles.js";
 import type { AuthProfileStore } from "./auth-profiles/types.js";
 import {
   resolveOpenClawPluginToolInputs,
-  type OpenClawPluginToolOptions,
+  type DexPluginToolOptions,
 } from "./openclaw-tools.plugin-context.js";
 import { applyPluginToolDeliveryDefaults } from "./plugin-tool-delivery-defaults.js";
 import type { AnyAgentTool } from "./tools/common.js";
 
-type ResolveOpenClawPluginToolsOptions = OpenClawPluginToolOptions & {
+type ResolveOpenClawPluginToolsOptions = DexPluginToolOptions & {
   pluginToolAllowlist?: string[];
   pluginToolDenylist?: string[];
   currentChannelId?: string;
@@ -34,8 +34,8 @@ type ResolveOpenClawPluginToolsOptions = OpenClawPluginToolOptions & {
 };
 
 function resolveApplicablePluginRuntimeConfig(
-  inputConfig?: OpenClawConfig,
-): OpenClawConfig | undefined {
+  inputConfig?: DexConfig,
+): DexConfig | undefined {
   const runtimeConfig = getRuntimeConfigSnapshot() ?? undefined;
   if (!runtimeConfig) {
     return inputConfig;
@@ -56,7 +56,7 @@ function resolveApplicablePluginRuntimeConfig(
 
 export function resolveOpenClawPluginToolsForOptions(params: {
   options?: ResolveOpenClawPluginToolsOptions;
-  resolvedConfig?: OpenClawConfig;
+  resolvedConfig?: DexConfig;
   existingToolNames?: Set<string>;
 }): AnyAgentTool[] {
   if (params.options?.disablePluginTools) {

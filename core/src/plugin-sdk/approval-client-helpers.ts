@@ -7,7 +7,7 @@ import { matchesApprovalRequestFilters } from "../infra/approval-request-filters
 import { getExecApprovalReplyMetadata } from "../infra/exec-approval-reply.js";
 import type { ExecApprovalRequest } from "../infra/exec-approvals.js";
 import type { PluginApprovalRequest } from "../infra/plugin-approvals.js";
-import type { OpenClawConfig } from "./config-runtime.js";
+import type { DexConfig } from "./config-runtime.js";
 import type { ReplyPayload } from "./reply-payload.js";
 import { normalizeAccountId } from "./routing.js";
 
@@ -23,11 +23,11 @@ type ChannelApprovalConfig = {
 };
 
 type ApprovalProfileParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 };
 
-function isApprovalTargetsMode(cfg: OpenClawConfig): boolean {
+function isApprovalTargetsMode(cfg: DexConfig): boolean {
   const execApprovals = cfg.approvals?.exec;
   if (!execApprovals?.enabled) {
     return false;
@@ -48,7 +48,7 @@ export function isChannelExecApprovalClientEnabledFromConfig(params: {
 }
 
 export function isChannelExecApprovalTargetRecipient(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   senderId?: string | null;
   accountId?: string | null;
   channel: string;

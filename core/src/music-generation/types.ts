@@ -1,6 +1,6 @@
 import type { MediaNormalizationEntry } from "../../packages/media-generation-core/src/normalization.js";
 import type { AuthProfileStore } from "../agents/auth-profiles/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 export type MusicGenerationOutputFormat = "mp3" | "wav";
 
@@ -20,7 +20,7 @@ export type MusicGenerationSourceImage = {
 };
 
 type MusicGenerationProviderConfiguredContext = {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   agentDir?: string;
 };
 
@@ -28,7 +28,7 @@ export type MusicGenerationRequest = {
   provider: string;
   model: string;
   prompt: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir?: string;
   authStore?: AuthProfileStore;
   timeoutMs?: number;

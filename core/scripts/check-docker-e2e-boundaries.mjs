@@ -90,7 +90,7 @@ function validateLane(label, lane) {
   if (!lane.live && !lane.e2eImageKind && !sourceCheckoutImageLane) {
     errors.push(`${label}: package Docker E2E lane '${lane.name}' must declare an e2e image kind`);
   }
-  if (sourceCheckoutImageLane && !/\bOPENCLAW_SKIP_DOCKER_BUILD=0\b/u.test(lane.command)) {
+  if (sourceCheckoutImageLane && !/\bDEX_SKIP_DOCKER_BUILD=0\b/u.test(lane.command)) {
     errors.push(
       `${label}: source-checkout Docker E2E lane '${lane.name}' must force a local image build`,
     );

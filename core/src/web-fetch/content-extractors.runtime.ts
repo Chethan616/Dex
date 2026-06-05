@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { createConfigScopedPromiseLoader } from "../plugins/plugin-cache-primitives.js";
 import type {
   WebContentExtractionResult,
@@ -6,7 +6,7 @@ import type {
 } from "../plugins/web-content-extractor-types.js";
 import { resolvePluginWebContentExtractors } from "../plugins/web-content-extractors.runtime.js";
 
-const webContentExtractorLoader = createConfigScopedPromiseLoader((config?: OpenClawConfig) =>
+const webContentExtractorLoader = createConfigScopedPromiseLoader((config?: DexConfig) =>
   resolvePluginWebContentExtractors(config ? { config } : undefined),
 );
 
@@ -14,7 +14,7 @@ export async function extractReadableContent(params: {
   html: string;
   url: string;
   extractMode: WebContentExtractMode;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): Promise<(WebContentExtractionResult & { extractor: string }) | null> {
   let extractors: Awaited<ReturnType<typeof webContentExtractorLoader.load>>;
   try {

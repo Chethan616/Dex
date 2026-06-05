@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { getApiProvider } from "../llm/api-registry.js";
 import type { Api, Model } from "../llm/types.js";
 import { createAnthropicVertexStreamFnForModel } from "./anthropic-vertex-stream.js";
@@ -7,7 +7,7 @@ import { prepareGoogleSimpleCompletionModel } from "./google-simple-completion-s
 import { registerProviderStreamForModel } from "./provider-stream.js";
 import {
   buildTransportAwareSimpleStreamFn,
-  createOpenClawTransportStreamFnForModel,
+  createDexTransportStreamFnForModel,
   prepareTransportAwareSimpleModel,
   resolveTransportAwareSimpleApi,
 } from "./provider-transport-stream.js";
@@ -51,7 +51,7 @@ function normalizeCodexResponsesBaseUrlForOpenAISdk(baseUrl?: string): string {
 
 function prepareCodexSimpleTransportModel<TApi extends Api>(
   model: Model<TApi>,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
 ): Model | undefined {
   if (model.provider !== "openai" || model.api !== "openai-chatgpt-responses") {
     return undefined;
@@ -64,7 +64,7 @@ function prepareCodexSimpleTransportModel<TApi extends Api>(
     baseUrl: normalizeCodexResponsesBaseUrlForOpenAISdk(model.baseUrl),
   } as Model;
   const api = resolveTransportAwareSimpleApi(model.api);
-  const streamFn = createOpenClawTransportStreamFnForModel(transportModel, { cfg });
+  const streamFn = createDexTransportStreamFnForModel(transportModel, { cfg });
   if (!api || !streamFn) {
     return undefined;
   }
@@ -78,7 +78,7 @@ function prepareCodexSimpleTransportModel<TApi extends Api>(
 
 export function prepareModelForSimpleCompletion<TApi extends Api>(params: {
   model: Model<TApi>;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): Model {
   const { model, cfg } = params;
   // Only provider-owned custom APIs need runtime stream registration here.

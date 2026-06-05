@@ -1,5 +1,5 @@
 import { parentPort, workerData } from "node:worker_threads";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { replaceRuntimeAuthProfileStoreSnapshots, type AuthProfileStore } from "./auth-profiles.js";
 import type { RuntimeProviderAuthLookup } from "./model-auth.js";
 import { buildCurrentProviderAuthStateSnapshot } from "./model-provider-auth.js";
@@ -10,7 +10,7 @@ type ProviderAuthWarmRuntimeAuthStore = {
 };
 
 type ProviderAuthWarmWorkerInput = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   runtimeAuthStores?: ProviderAuthWarmRuntimeAuthStore[];
   runtimeAuthLookups?: Array<{
     agentId: string;

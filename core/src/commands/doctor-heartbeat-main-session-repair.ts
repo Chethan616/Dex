@@ -11,7 +11,7 @@ import {
 } from "../config/sessions/paths.js";
 import { updateSessionStore } from "../config/sessions/store.js";
 import type { SessionEntry } from "../config/sessions/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { parseAgentSessionKey } from "../sessions/session-key-utils.js";
 
 type DoctorPrompterLike = {
@@ -234,7 +234,7 @@ export function clearTuiLastSessionPointers(params: {
 }
 
 export async function repairHeartbeatPoisonedMainSession(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   store: Record<string, SessionEntry>;
   absoluteStorePath: string;
   stateDir: string;

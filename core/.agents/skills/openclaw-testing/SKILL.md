@@ -27,7 +27,7 @@ Prove the touched surface first. Do not reflexively run the whole suite.
      use the Crabbox wrapper with the provider that matches the proof surface.
      For maintainer heavy `pnpm` gates, that is usually delegated Blacksmith
      Testbox through Crabbox, e.g. `node scripts/crabbox-wrapper.mjs run
---provider blacksmith-testbox ... -- env OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1 OPENCLAW_CHANGED_LANES_RAW_SYNC=1 corepack pnpm check:changed`. For direct AWS
+--provider blacksmith-testbox ... -- env DEX_CHECK_CHANGED_REMOTE_CHILD=1 DEX_CHANGED_LANES_RAW_SYNC=1 corepack pnpm check:changed`. For direct AWS
      Crabbox proof, omit `--provider` and let `.crabbox.yaml` choose AWS.
    - workflow-only: `git diff --check`, workflow syntax/lint (`actionlint` when available)
    - docs-only: `pnpm docs:list`, docs formatter/lint only if docs tooling changed or requested
@@ -69,9 +69,9 @@ pnpm changed:lanes --json
 pnpm check:changed       # Crabbox/Testbox changed typecheck/lint/guards; no Vitest
 pnpm test:changed        # cheap smart changed Vitest targets
 pnpm verify              # full check, then full Vitest
-OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed
+DEX_TEST_CHANGED_BROAD=1 pnpm test:changed
 pnpm test <path-or-filter> -- --reporter=verbose
-OPENCLAW_VITEST_MAX_WORKERS=1 pnpm test <path-or-filter>
+DEX_VITEST_MAX_WORKERS=1 pnpm test <path-or-filter>
 ```
 
 Use targeted file paths whenever possible. Avoid raw `vitest`; use the repo
@@ -96,7 +96,7 @@ status checks or install reconciliation in a linked worktree.
   so remote summaries show which half failed.
 - `pnpm test:changed` is intentionally cheap by default: direct test edits,
   sibling tests, explicit source mappings, and import-graph dependents.
-- `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed` is the explicit broad
+- `DEX_TEST_CHANGED_BROAD=1 pnpm test:changed` is the explicit broad
   fallback for harness/config/package edits that genuinely need it.
 - Do not run extension sweeps just because core changed. If a core edit is for a
   specific plugin bug, run that plugin's tests explicitly. If a public SDK or
@@ -120,7 +120,7 @@ status checks or install reconciliation in a linked worktree.
 - Public SDK or contract edits do not automatically run every plugin test.
   `check:changed` proves extension type contracts; the agent chooses the
   smallest plugin/contract Vitest proof that matches the actual risk.
-- Use `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed` only when a harness,
+- Use `DEX_TEST_CHANGED_BROAD=1 pnpm test:changed` only when a harness,
   config, package, or unknown-root edit really needs the broad Vitest fallback.
 
 ## CI Debugging
@@ -312,7 +312,7 @@ default is the fast release path. Use explicit profiles:
   `--fail-fast` only when the target CLI supports it
 - `--profile transport|media|e2ee-smoke|e2ee-deep|e2ee-cli`: sharded full
   Matrix proof
-- `OPENCLAW_QA_MATRIX_NO_REPLY_WINDOW_MS=3000`: CI-friendly no-reply quiet
+- `DEX_QA_MATRIX_NO_REPLY_WINDOW_MS=3000`: CI-friendly no-reply quiet
   window when paired with fast or sharded gates
 
 `QA-Lab - All Lanes` uses explicit fast Matrix on scheduled runs; manual
@@ -372,7 +372,7 @@ job:
 - `native-live-src-agents`
 - `native-live-src-gateway-core`
 - `native-live-src-gateway-profiles` (release CI runs this with provider
-  filters such as `OPENCLAW_LIVE_GATEWAY_PROVIDERS=anthropic`)
+  filters such as `DEX_LIVE_GATEWAY_PROVIDERS=anthropic`)
 - `native-live-src-gateway-backends`
 - `native-live-test`
 - `native-live-extensions-a-k`
@@ -395,28 +395,28 @@ so one live-provider flake does not force a broad native live rerun.
 
 For model-list or provider-selection fixes, use `live_models_only=true` plus the
 specific `live_model_providers` allowlist. Confirm logs show the expected
-`OPENCLAW_LIVE_PROVIDERS` and selected model ids before declaring proof.
+`DEX_LIVE_PROVIDERS` and selected model ids before declaring proof.
 
 ## Docker
 
 Docker is expensive. First inspect the scheduler without running Docker:
 
 ```bash
-OPENCLAW_DOCKER_ALL_DRY_RUN=1 pnpm test:docker:all
-OPENCLAW_DOCKER_ALL_DRY_RUN=1 OPENCLAW_DOCKER_ALL_LANES=install-e2e pnpm test:docker:all
-OPENCLAW_DOCKER_ALL_LANES=install-e2e node scripts/test-docker-all.mjs --plan-json
+DEX_DOCKER_ALL_DRY_RUN=1 pnpm test:docker:all
+DEX_DOCKER_ALL_DRY_RUN=1 DEX_DOCKER_ALL_LANES=install-e2e pnpm test:docker:all
+DEX_DOCKER_ALL_LANES=install-e2e node scripts/test-docker-all.mjs --plan-json
 ```
 
 Run one failed lane locally only when explicitly asked or when GitHub is not
 usable:
 
 ```bash
-OPENCLAW_DOCKER_ALL_LANES=<lane> \
-OPENCLAW_DOCKER_ALL_BUILD=0 \
-OPENCLAW_DOCKER_ALL_PREFLIGHT=0 \
-OPENCLAW_SKIP_DOCKER_BUILD=1 \
-OPENCLAW_DOCKER_E2E_BARE_IMAGE='<prepared-bare-image>' \
-OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE='<prepared-functional-image>' \
+DEX_DOCKER_ALL_LANES=<lane> \
+DEX_DOCKER_ALL_BUILD=0 \
+DEX_DOCKER_ALL_PREFLIGHT=0 \
+DEX_SKIP_DOCKER_BUILD=1 \
+DEX_DOCKER_E2E_BARE_IMAGE='<prepared-bare-image>' \
+DEX_DOCKER_E2E_FUNCTIONAL_IMAGE='<prepared-functional-image>' \
 pnpm test:docker:all
 ```
 

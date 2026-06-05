@@ -32,7 +32,7 @@ codeRefs:
   - extensions/qa-lab/src/suite.ts
 execution:
   kind: flow
-  summary: Run with `OPENCLAW_LIVE_OPENAI_KEY="${OPENAI_API_KEY}" pnpm openclaw qa suite --provider-mode live-frontier --model openai/gpt-5.5 --alt-model openai/gpt-5.5 --fast --thinking medium --scenario openai-native-web-search-live`.
+  summary: Run with `DEX_LIVE_OPENAI_KEY="${OPENAI_API_KEY}" pnpm openclaw qa suite --provider-mode live-frontier --model openai/gpt-5.5 --alt-model openai/gpt-5.5 --fast --thinking medium --scenario openai-native-web-search-live`.
   config:
     requiredProvider: openai
     requiredModel: gpt-5.5
@@ -86,8 +86,8 @@ steps:
           message:
             expr: "`expected web search provider auto/openai/unset for native OpenAI search, got ${JSON.stringify(searchConfig)}`"
       - assert:
-          expr: "env.providerMode !== 'live-frontier' || Boolean(env.gateway.runtimeEnv.OPENAI_API_KEY?.trim() || env.gateway.runtimeEnv.OPENCLAW_LIVE_OPENAI_KEY?.trim())"
-          message: expected OPENAI_API_KEY or OPENCLAW_LIVE_OPENAI_KEY for live OpenAI QA
+          expr: "env.providerMode !== 'live-frontier' || Boolean(env.gateway.runtimeEnv.OPENAI_API_KEY?.trim() || env.gateway.runtimeEnv.DEX_LIVE_OPENAI_KEY?.trim())"
+          message: expected OPENAI_API_KEY or DEX_LIVE_OPENAI_KEY for live OpenAI QA
     detailsExpr: "env.providerMode === 'live-frontier' ? `provider=${selected?.provider} model=${selected?.model} webSearch=${JSON.stringify(searchConfig)}` : `mock-compatible provider=${selected?.provider}`"
   - name: searches official OpenAI News through the live model
     actions:

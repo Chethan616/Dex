@@ -565,9 +565,9 @@ Behavior notes:
   </Accordion>
 
   <Accordion title="Credential paths and legacy compatibility">
-    - current auth path: `~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
+    - current auth path: `~/.dex/credentials/whatsapp/<accountId>/creds.json`
     - backup file: `creds.json.bak`
-    - legacy default auth in `~/.openclaw/credentials/` is still recognized/migrated for default-account flows
+    - legacy default auth in `~/.dex/credentials/` is still recognized/migrated for default-account flows
 
   </Accordion>
 
@@ -641,17 +641,17 @@ Behavior notes:
     the account auth directory and re-link that account:
 
     ```bash
-    cp -a ~/.openclaw/credentials/whatsapp/<accountId> \
-      ~/.openclaw/credentials/whatsapp/<accountId>.bak
+    cp -a ~/.dex/credentials/whatsapp/<accountId> \
+      ~/.dex/credentials/whatsapp/<accountId>.bak
     openclaw channels logout --channel whatsapp --account <accountId>
     openclaw channels login --channel whatsapp --account <accountId>
     ```
 
-    If `~/.openclaw/logs/whatsapp-health.log` says `Gateway inactive` but
+    If `~/.dex/logs/whatsapp-health.log` says `Gateway inactive` but
     `openclaw gateway status` and `openclaw channels status --probe` show the
     gateway and WhatsApp are healthy, run `openclaw doctor`. On Linux, doctor
     warns about legacy crontab entries that still invoke
-    `~/.openclaw/bin/ensure-whatsapp.sh`; remove those stale entries with
+    `~/.dex/bin/ensure-whatsapp.sh`; remove those stale entries with
     `crontab -e` because cron can lack the systemd user-bus environment and
     make that old script misreport gateway health.
 

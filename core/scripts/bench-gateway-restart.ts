@@ -187,19 +187,19 @@ const GATEWAY_CASES: readonly GatewayBenchCase[] = [
   {
     id: "skipChannels",
     name: "gateway restart, skip channels",
-    env: { OPENCLAW_SKIP_CHANNELS: "1" },
+    env: { DEX_SKIP_CHANNELS: "1" },
     config: BASE_CONFIG,
   },
   {
     id: "skipChannelsAcpxProbe",
     name: "gateway restart, skip channels, ACPX startup probe on",
-    env: { OPENCLAW_ACPX_RUNTIME_STARTUP_PROBE: "1", OPENCLAW_SKIP_CHANNELS: "1" },
+    env: { DEX_ACPX_RUNTIME_STARTUP_PROBE: "1", DEX_SKIP_CHANNELS: "1" },
     config: BASE_CONFIG,
   },
   {
     id: "skipChannelsNoAcpxProbe",
     name: "gateway restart, skip channels, ACPX startup probe off",
-    env: { OPENCLAW_ACPX_RUNTIME_STARTUP_PROBE: "0", OPENCLAW_SKIP_CHANNELS: "1" },
+    env: { DEX_ACPX_RUNTIME_STARTUP_PROBE: "0", DEX_SKIP_CHANNELS: "1" },
     config: BASE_CONFIG,
   },
   {
@@ -210,7 +210,7 @@ const GATEWAY_CASES: readonly GatewayBenchCase[] = [
   {
     id: "fiftyPlugins",
     name: "gateway restart, 50 manifest plugins",
-    env: { OPENCLAW_SKIP_CHANNELS: "1" },
+    env: { DEX_SKIP_CHANNELS: "1" },
     pluginActivationOnStartup: true,
     pluginCount: 50,
     config: BASE_CONFIG,
@@ -831,20 +831,20 @@ function sanitizedEnv(
     TMPDIR: process.env.TMPDIR,
     USER: process.env.USER ?? "openclaw-bench",
     npm_config_update_notifier: "false",
-    OPENCLAW_CONFIG: configPath,
-    OPENCLAW_CONFIG_PATH: configPath,
-    OPENCLAW_GATEWAY_RESTART_TRACE: "1",
-    OPENCLAW_GATEWAY_STARTUP_TRACE: "1",
-    OPENCLAW_HOME: root,
-    OPENCLAW_NO_RESPAWN: "1",
-    OPENCLAW_STATE_DIR: path.join(root, "state"),
-    OPENCLAW_TEST_DISABLE_UPDATE_CHECK: "1",
+    DEX_CONFIG: configPath,
+    DEX_CONFIG_PATH: configPath,
+    DEX_GATEWAY_RESTART_TRACE: "1",
+    DEX_GATEWAY_STARTUP_TRACE: "1",
+    DEX_HOME: root,
+    DEX_NO_RESPAWN: "1",
+    DEX_STATE_DIR: path.join(root, "state"),
+    DEX_TEST_DISABLE_UPDATE_CHECK: "1",
     ...benchCase.env,
   };
 }
 
 function writeRestartIntent(env: NodeJS.ProcessEnv, targetPid: number, reason: string): boolean {
-  const stateDir = env.OPENCLAW_STATE_DIR;
+  const stateDir = env.DEX_STATE_DIR;
   if (!stateDir) {
     return false;
   }

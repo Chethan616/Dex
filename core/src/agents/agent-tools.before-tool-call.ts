@@ -1,7 +1,7 @@
 import os from "node:os";
 import path from "node:path";
 import { addTimerTimeoutGraceMs } from "@dexagent/normalization-core/number-coercion";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { ToolLoopDetectionConfig } from "../config/types.tools.js";
 import {
   diagnosticErrorCategory,
@@ -83,7 +83,7 @@ export function isAbortSignalCancellation(err: unknown, signal?: AbortSignal): b
 
 export type HookContext = {
   agentId?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   /** Tool execution cwd for host-derived path facts. */
   cwd?: string;
   /** Host workspace used to resolve relative tool params for diagnostics only. */

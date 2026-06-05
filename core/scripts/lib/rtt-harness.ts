@@ -65,13 +65,13 @@ type TelegramQaSummary = {
   }>;
 };
 
-const OPENCLAW_PACKAGE_SPEC_RE =
+const DEX_PACKAGE_SPEC_RE =
   /^openclaw@(main|alpha|beta|latest|[0-9]{4}\.[1-9][0-9]*\.[1-9][0-9]*(-[1-9][0-9]*|-(alpha|beta)\.[1-9][0-9]*)?)$/u;
 
 const REQUIRED_TELEGRAM_ENV = [
-  "OPENCLAW_QA_TELEGRAM_GROUP_ID",
-  "OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN",
-  "OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN",
+  "DEX_QA_TELEGRAM_GROUP_ID",
+  "DEX_QA_TELEGRAM_DRIVER_BOT_TOKEN",
+  "DEX_QA_TELEGRAM_SUT_BOT_TOKEN",
 ] as const;
 
 export function parseRttCredentialSource(value: string): RttCredentialSource {
@@ -98,14 +98,14 @@ function resolveRttCredentialSource(
     return credentialSource;
   }
   const rawSource =
-    env.OPENCLAW_NPM_TELEGRAM_CREDENTIAL_SOURCE ?? env.OPENCLAW_QA_CREDENTIAL_SOURCE;
+    env.DEX_NPM_TELEGRAM_CREDENTIAL_SOURCE ?? env.DEX_QA_CREDENTIAL_SOURCE;
   if (rawSource?.trim()) {
     return parseRttCredentialSource(rawSource);
   }
   if (
     env.CI &&
-    env.OPENCLAW_QA_CONVEX_SITE_URL?.trim() &&
-    (env.OPENCLAW_QA_CONVEX_SECRET_CI?.trim() || env.OPENCLAW_QA_CONVEX_SECRET_MAINTAINER?.trim())
+    env.DEX_QA_CONVEX_SITE_URL?.trim() &&
+    (env.DEX_QA_CONVEX_SECRET_CI?.trim() || env.DEX_QA_CONVEX_SECRET_MAINTAINER?.trim())
   ) {
     return "convex";
   }
@@ -119,7 +119,7 @@ function resolveRttCredentialRole(
   if (credentialRole) {
     return credentialRole;
   }
-  const rawRole = env.OPENCLAW_NPM_TELEGRAM_CREDENTIAL_ROLE ?? env.OPENCLAW_QA_CREDENTIAL_ROLE;
+  const rawRole = env.DEX_NPM_TELEGRAM_CREDENTIAL_ROLE ?? env.DEX_QA_CREDENTIAL_ROLE;
   if (rawRole?.trim()) {
     return parseRttCredentialRole(rawRole);
   }
@@ -127,7 +127,7 @@ function resolveRttCredentialRole(
 }
 
 export function validateOpenClawPackageSpec(spec: string) {
-  if (!OPENCLAW_PACKAGE_SPEC_RE.test(spec)) {
+  if (!DEX_PACKAGE_SPEC_RE.test(spec)) {
     throw new Error(
       `Package spec must be openclaw@main, openclaw@alpha, openclaw@beta, openclaw@latest, or an exact OpenClaw release version; got: ${spec}`,
     );
@@ -185,23 +185,23 @@ export function createHarnessEnv(params: {
 }) {
   return {
     ...params.baseEnv,
-    OPENCLAW_NPM_TELEGRAM_PACKAGE_SPEC: params.spec,
-    ...(params.packageTgz ? { OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ: params.packageTgz } : {}),
-    OPENCLAW_NPM_TELEGRAM_PACKAGE_LABEL: `${params.spec} (${params.version})`,
-    OPENCLAW_NPM_TELEGRAM_PROVIDER_MODE: params.providerMode,
+    DEX_NPM_TELEGRAM_PACKAGE_SPEC: params.spec,
+    ...(params.packageTgz ? { DEX_NPM_TELEGRAM_PACKAGE_TGZ: params.packageTgz } : {}),
+    DEX_NPM_TELEGRAM_PACKAGE_LABEL: `${params.spec} (${params.version})`,
+    DEX_NPM_TELEGRAM_PROVIDER_MODE: params.providerMode,
     ...(params.credentialSource
-      ? { OPENCLAW_NPM_TELEGRAM_CREDENTIAL_SOURCE: params.credentialSource }
+      ? { DEX_NPM_TELEGRAM_CREDENTIAL_SOURCE: params.credentialSource }
       : {}),
     ...(params.credentialRole
-      ? { OPENCLAW_NPM_TELEGRAM_CREDENTIAL_ROLE: params.credentialRole }
+      ? { DEX_NPM_TELEGRAM_CREDENTIAL_ROLE: params.credentialRole }
       : {}),
-    OPENCLAW_NPM_TELEGRAM_SCENARIOS: params.scenarios.join(","),
-    OPENCLAW_NPM_TELEGRAM_OUTPUT_DIR: params.rawOutputDir,
-    OPENCLAW_NPM_TELEGRAM_FAST: params.baseEnv.OPENCLAW_NPM_TELEGRAM_FAST ?? "1",
-    OPENCLAW_NPM_TELEGRAM_WARM_SAMPLES: String(params.samples),
-    OPENCLAW_NPM_TELEGRAM_SAMPLE_TIMEOUT_MS: String(params.sampleTimeoutMs),
-    OPENCLAW_QA_TELEGRAM_CANARY_TIMEOUT_MS: String(params.timeoutMs),
-    OPENCLAW_QA_TELEGRAM_SCENARIO_TIMEOUT_MS: String(params.timeoutMs),
+    DEX_NPM_TELEGRAM_SCENARIOS: params.scenarios.join(","),
+    DEX_NPM_TELEGRAM_OUTPUT_DIR: params.rawOutputDir,
+    DEX_NPM_TELEGRAM_FAST: params.baseEnv.DEX_NPM_TELEGRAM_FAST ?? "1",
+    DEX_NPM_TELEGRAM_WARM_SAMPLES: String(params.samples),
+    DEX_NPM_TELEGRAM_SAMPLE_TIMEOUT_MS: String(params.sampleTimeoutMs),
+    DEX_QA_TELEGRAM_CANARY_TIMEOUT_MS: String(params.timeoutMs),
+    DEX_QA_TELEGRAM_SCENARIO_TIMEOUT_MS: String(params.timeoutMs),
   };
 }
 
@@ -216,14 +216,14 @@ export function assertRequiredEnv(
   if (credentialSource === "convex") {
     const missing: string[] = [];
     const credentialRole = resolveRttCredentialRole(env, options.credentialRole);
-    if (!env.OPENCLAW_QA_CONVEX_SITE_URL?.trim()) {
-      missing.push("OPENCLAW_QA_CONVEX_SITE_URL");
+    if (!env.DEX_QA_CONVEX_SITE_URL?.trim()) {
+      missing.push("DEX_QA_CONVEX_SITE_URL");
     }
-    if (credentialRole === "ci" && !env.OPENCLAW_QA_CONVEX_SECRET_CI?.trim()) {
-      missing.push("OPENCLAW_QA_CONVEX_SECRET_CI");
+    if (credentialRole === "ci" && !env.DEX_QA_CONVEX_SECRET_CI?.trim()) {
+      missing.push("DEX_QA_CONVEX_SECRET_CI");
     }
-    if (credentialRole === "maintainer" && !env.OPENCLAW_QA_CONVEX_SECRET_MAINTAINER?.trim()) {
-      missing.push("OPENCLAW_QA_CONVEX_SECRET_MAINTAINER");
+    if (credentialRole === "maintainer" && !env.DEX_QA_CONVEX_SECRET_MAINTAINER?.trim()) {
+      missing.push("DEX_QA_CONVEX_SECRET_MAINTAINER");
     }
     if (missing.length > 0) {
       throw new Error(`Missing Convex Telegram QA credential env: ${missing.join(", ")}`);

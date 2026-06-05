@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { resetInboundDedupe } from "openclaw/plugin-sdk/reply-runtime";
 import type { GetReplyOptions, MsgContext } from "openclaw/plugin-sdk/reply-runtime";
 import { afterEach, beforeEach, vi, type Mock } from "vitest";
@@ -130,7 +130,7 @@ const throttlerSpy = vi.fn(() => "throttler");
 const defaultRuntimeConfig = (() =>
   ({
     channels: { telegram: { dmPolicy: "open", allowFrom: ["*"] } },
-  }) as OpenClawConfig) as TelegramBotDeps["getRuntimeConfig"];
+  }) as DexConfig) as TelegramBotDeps["getRuntimeConfig"];
 
 type TopicNameStoreFactory = NonNullable<
   Parameters<typeof setTelegramTopicNameStoreFactoryForTest>[0]

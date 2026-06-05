@@ -33,7 +33,7 @@ import {
 import type {
   JsonRpcRequest,
   ManagedProcess,
-  OpenClawExecServer,
+  DexExecServer,
 } from "./sandbox-exec-server/types.js";
 import { MIN_CODEX_SANDBOX_EXEC_SERVER_APP_SERVER_VERSION } from "./version.js";
 
@@ -42,7 +42,7 @@ export type CodexSandboxExecEnvironment = {
   cwd: string;
 };
 
-const SANDBOX_EXEC_SERVERS = new Map<string, Promise<OpenClawExecServer>>();
+const SANDBOX_EXEC_SERVERS = new Map<string, Promise<DexExecServer>>();
 
 export async function closeCodexSandboxExecServersForTests(): Promise<void> {
   const servers = await Promise.allSettled(SANDBOX_EXEC_SERVERS.values());
@@ -51,7 +51,7 @@ export async function closeCodexSandboxExecServersForTests(): Promise<void> {
     servers.map(async (entry) => {
       if (entry.status === "fulfilled") {
         entry.value.refCount = 0;
-        await closeOpenClawExecServer(entry.value);
+        await closeDexExecServer(entry.value);
       }
     }),
   );
@@ -73,7 +73,7 @@ export async function ensureCodexSandboxExecServerEnvironment(params: {
     );
   }
   assertCodexSandboxExecServerSupported(params.client);
-  const execServer = await acquireOpenClawExecServer(params.sandbox);
+  const execServer = await acquireDexExecServer(params.sandbox);
   try {
     await params.client.request(
       "environment/add",
@@ -84,7 +84,7 @@ export async function ensureCodexSandboxExecServerEnvironment(params: {
       { timeoutMs: params.timeoutMs, signal: params.signal },
     );
   } catch (error) {
-    await releaseOpenClawExecServer(execServer);
+    await releaseDexExecServer(execServer);
     if (isEnvironmentAddUnsupported(error)) {
       embeddedAgentLog.warn("codex app-server does not support remote environments yet", {
         environmentId: execServer.environmentId,
@@ -107,7 +107,7 @@ export async function releaseCodexSandboxExecServerEnvironment(
   }
   const server = await SANDBOX_EXEC_SERVERS.get(sandbox.runtimeId)?.catch(() => undefined);
   if (server) {
-    await releaseOpenClawExecServer(server);
+    await releaseDexExecServer(server);
   }
 }
 
@@ -159,11 +159,11 @@ function canExposeLocalExecServerToAppServer(
   }
 }
 
-async function acquireOpenClawExecServer(sandbox: SandboxContext): Promise<OpenClawExecServer> {
+async function acquireDexExecServer(sandbox: SandboxContext): Promise<DexExecServer> {
   const key = sandbox.runtimeId;
   while (true) {
     const existing = SANDBOX_EXEC_SERVERS.get(key);
-    const promise = existing ?? startAndRememberOpenClawExecServer(sandbox);
+    const promise = existing ?? startAndRememberDexExecServer(sandbox);
     const server = await promise;
     if (!server.closed && SANDBOX_EXEC_SERVERS.get(key) === promise) {
       server.refCount += 1;
@@ -172,8 +172,8 @@ async function acquireOpenClawExecServer(sandbox: SandboxContext): Promise<OpenC
   }
 }
 
-function startAndRememberOpenClawExecServer(sandbox: SandboxContext): Promise<OpenClawExecServer> {
-  const created = startOpenClawExecServer(sandbox);
+function startAndRememberDexExecServer(sandbox: SandboxContext): Promise<DexExecServer> {
+  const created = startDexExecServer(sandbox);
   const key = sandbox.runtimeId;
   SANDBOX_EXEC_SERVERS.set(key, created);
   void created.catch(() => {
@@ -184,7 +184,7 @@ function startAndRememberOpenClawExecServer(sandbox: SandboxContext): Promise<Op
   return created;
 }
 
-async function startOpenClawExecServer(sandbox: SandboxContext): Promise<OpenClawExecServer> {
+async function startDexExecServer(sandbox: SandboxContext): Promise<DexExecServer> {
   const server = new WebSocketServer({ host: "127.0.0.1", port: 0 });
   await once(server, "listening");
   const address = server.address();
@@ -194,7 +194,7 @@ async function startOpenClawExecServer(sandbox: SandboxContext): Promise<OpenCla
   const environmentId = buildEnvironmentId(sandbox);
   const authPath = `/openclaw-${randomUUID()}`;
   const url = `ws://127.0.0.1:${(address as AddressInfo).port}${authPath}`;
-  const execServer: OpenClawExecServer = {
+  const execServer: DexExecServer = {
     authPath,
     closed: false,
     environmentId,
@@ -218,7 +218,7 @@ async function startOpenClawExecServer(sandbox: SandboxContext): Promise<OpenCla
   return execServer;
 }
 
-async function releaseOpenClawExecServer(execServer: OpenClawExecServer): Promise<void> {
+async function releaseDexExecServer(execServer: DexExecServer): Promise<void> {
   if (execServer.closed) {
     return;
   }
@@ -235,10 +235,10 @@ async function releaseOpenClawExecServer(execServer: OpenClawExecServer): Promis
   if (current === execServer) {
     SANDBOX_EXEC_SERVERS.delete(execServer.sandbox.runtimeId);
   }
-  await closeOpenClawExecServer(execServer);
+  await closeDexExecServer(execServer);
 }
 
-async function closeOpenClawExecServer(execServer: OpenClawExecServer): Promise<void> {
+async function closeDexExecServer(execServer: DexExecServer): Promise<void> {
   if (execServer.closed) {
     return;
   }
@@ -257,14 +257,14 @@ function buildEnvironmentId(sandbox: SandboxContext): string {
 }
 
 function isAuthorizedExecServerRequest(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   request: IncomingMessage,
 ): boolean {
   const url = new URL(request.url ?? "", "ws://127.0.0.1");
   return url.pathname === execServer.authPath;
 }
 
-function handleConnection(execServer: OpenClawExecServer, socket: WebSocket): void {
+function handleConnection(execServer: DexExecServer, socket: WebSocket): void {
   const processes = new Map<string, ManagedProcess>();
   socket.on("message", (data) => {
     void handleMessage(execServer, processes, socket, data).catch((error: unknown) => {
@@ -279,7 +279,7 @@ function handleConnection(execServer: OpenClawExecServer, socket: WebSocket): vo
 }
 
 async function handleMessage(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   processes: Map<string, ManagedProcess>,
   socket: WebSocket,
   data: RawData,
@@ -310,7 +310,7 @@ async function handleMessage(
 }
 
 async function dispatchRequest(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   processes: Map<string, ManagedProcess>,
   socket: WebSocket,
   request: Required<Pick<JsonRpcRequest, "method">> & Pick<JsonRpcRequest, "id" | "params">,

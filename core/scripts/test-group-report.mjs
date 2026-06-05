@@ -443,15 +443,15 @@ function withUniqueLabels(plans) {
 }
 
 function buildFullSuiteLeafRunPlans() {
-  const previousLeafShards = process.env.OPENCLAW_TEST_PROJECTS_LEAF_SHARDS;
-  process.env.OPENCLAW_TEST_PROJECTS_LEAF_SHARDS = "1";
+  const previousLeafShards = process.env.DEX_TEST_PROJECTS_LEAF_SHARDS;
+  process.env.DEX_TEST_PROJECTS_LEAF_SHARDS = "1";
   try {
     return buildFullSuiteVitestRunPlans([], process.cwd());
   } finally {
     if (previousLeafShards === undefined) {
-      delete process.env.OPENCLAW_TEST_PROJECTS_LEAF_SHARDS;
+      delete process.env.DEX_TEST_PROJECTS_LEAF_SHARDS;
     } else {
-      process.env.OPENCLAW_TEST_PROJECTS_LEAF_SHARDS = previousLeafShards;
+      process.env.DEX_TEST_PROJECTS_LEAF_SHARDS = previousLeafShards;
     }
   }
 }
@@ -480,14 +480,14 @@ export function resolveRunPlans(args) {
 export function resolveFullSuiteVitestEnv(args, env = process.env, label = "") {
   if (
     !args.fullSuite ||
-    env.OPENCLAW_VITEST_MAX_WORKERS?.trim() ||
-    env.OPENCLAW_TEST_WORKERS?.trim()
+    env.DEX_VITEST_MAX_WORKERS?.trim() ||
+    env.DEX_TEST_WORKERS?.trim()
   ) {
     return {};
   }
 
   return {
-    OPENCLAW_VITEST_MAX_WORKERS: label === "commands" ? "1" : "2",
+    DEX_VITEST_MAX_WORKERS: label === "commands" ? "1" : "2",
   };
 }
 

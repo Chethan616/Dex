@@ -1,7 +1,7 @@
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { resolveSessionAgentId } from "../../agents/agent-scope.js";
 import { normalizeChatType } from "../../channels/chat-type.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { SilentReplyConversationType } from "../../shared/silent-reply-policy.js";
 
 export type OutboundSessionContext = {
@@ -49,7 +49,7 @@ export type OutboundSessionContext = {
 
 /** Builds the outbound delivery session context, omitting empty policy fields. */
 export function buildOutboundSessionContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey?: string | null;
   policySessionKey?: string | null;
   conversationType?: string | null;

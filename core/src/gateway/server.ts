@@ -2,7 +2,7 @@ export { truncateCloseReason } from "./server/close-reason.js";
 export type { GatewayServer, GatewayServerOptions } from "./server.impl.js";
 
 function emitStartupTrace(name: string, durationMs: number, totalMs: number): void {
-  if (!process.env.OPENCLAW_GATEWAY_STARTUP_TRACE) {
+  if (!process.env.DEX_GATEWAY_STARTUP_TRACE) {
     return;
   }
   process.stderr.write(

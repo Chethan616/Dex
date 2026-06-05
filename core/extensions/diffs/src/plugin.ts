@@ -3,8 +3,8 @@ import path from "node:path";
 import { resolveLivePluginConfigObject } from "openclaw/plugin-sdk/plugin-config-runtime";
 import {
   resolvePreferredOpenClawTmpDir,
-  type OpenClawConfig,
-  type OpenClawPluginApi,
+  type DexConfig,
+  type DexPluginApi,
 } from "../api.js";
 import {
   resolveDiffsPluginDefaults,
@@ -18,7 +18,7 @@ import { createDiffsTool } from "./tool.js";
 
 const DIFFS_LANGUAGE_PACK_PLUGIN_ID = "diffs-language-pack";
 
-export function registerDiffsPlugin(api: OpenClawPluginApi): void {
+export function registerDiffsPlugin(api: DexPluginApi): void {
   const store = new DiffArtifactStore({
     rootDir: path.join(resolvePreferredOpenClawTmpDir(), "openclaw-diffs"),
     logger: api.logger,
@@ -26,13 +26,13 @@ export function registerDiffsPlugin(api: OpenClawPluginApi): void {
   const resolveCurrentPluginConfig = () =>
     resolveLivePluginConfigObject(
       api.runtime.config?.current
-        ? () => api.runtime.config.current() as OpenClawConfig
+        ? () => api.runtime.config.current() as DexConfig
         : undefined,
       "diffs",
       api.pluginConfig as Record<string, unknown>,
     ) ?? {};
   const resolveCurrentAccessConfig = () => {
-    const currentConfig = (api.runtime.config?.current?.() ?? api.config) as OpenClawConfig;
+    const currentConfig = (api.runtime.config?.current?.() ?? api.config) as DexConfig;
     const pluginConfig = resolveCurrentPluginConfig();
     return {
       allowRemoteViewer: resolveDiffsPluginSecurity(pluginConfig).allowRemoteViewer,
@@ -76,8 +76,8 @@ export function registerDiffsPlugin(api: OpenClawPluginApi): void {
   }));
 }
 
-export function resolveDiffsLanguagePackAvailability(api: OpenClawPluginApi): boolean {
-  const currentConfig = (api.runtime.config?.current?.() ?? api.config) as OpenClawConfig;
+export function resolveDiffsLanguagePackAvailability(api: DexPluginApi): boolean {
+  const currentConfig = (api.runtime.config?.current?.() ?? api.config) as DexConfig;
   const plugins = currentConfig.plugins;
   if (plugins?.enabled === false) {
     return false;

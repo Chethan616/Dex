@@ -18,7 +18,7 @@ import {
   getRuntimeConfigSnapshot,
   getRuntimeConfigSourceSnapshot,
   selectApplicableRuntimeConfig,
-  type OpenClawConfig,
+  type DexConfig,
 } from "../../config/config.js";
 import { isReasoningTagProvider } from "../../utils/provider-utils.js";
 import type { TemplateContext } from "../templating.js";
@@ -38,7 +38,7 @@ import type { FollowupRun } from "./queue.js";
 
 const BUN_FETCH_SOCKET_ERROR_RE = /socket connection was closed unexpectedly/i;
 
-export function resolveQueuedReplyRuntimeConfig(config: OpenClawConfig): OpenClawConfig {
+export function resolveQueuedReplyRuntimeConfig(config: DexConfig): DexConfig {
   const runtimeConfig =
     typeof getRuntimeConfigSnapshot === "function" ? getRuntimeConfigSnapshot() : null;
   const runtimeSourceConfig =
@@ -53,14 +53,14 @@ export function resolveQueuedReplyRuntimeConfig(config: OpenClawConfig): OpenCla
 }
 
 export async function resolveQueuedReplyExecutionConfig(
-  config: OpenClawConfig,
+  config: DexConfig,
   params?: {
     originatingChannel?: string;
     messageProvider?: string;
     originatingAccountId?: string;
     agentAccountId?: string;
   },
-): Promise<OpenClawConfig> {
+): Promise<DexConfig> {
   const runtimeConfig = resolveQueuedReplyRuntimeConfig(config);
   const { resolvedConfig } = await resolveCommandSecretRefsViaGateway({
     config: runtimeConfig,
@@ -102,7 +102,7 @@ export async function resolveQueuedReplyExecutionConfig(
  */
 export function buildThreadingToolContext(params: {
   sessionCtx: TemplateContext;
-  config: OpenClawConfig | undefined;
+  config: DexConfig | undefined;
   hasRepliedRef: { value: boolean } | undefined;
 }): ChannelThreadingToolContext {
   const { sessionCtx, config, hasRepliedRef } = params;

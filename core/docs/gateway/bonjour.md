@@ -48,7 +48,7 @@ openclaw dns setup --apply
 This installs CoreDNS and configures it to:
 
 - listen on port 53 only on the gateway's Tailscale interfaces
-- serve your chosen domain (example: `openclaw.internal.`) from `~/.openclaw/dns/<domain>.db`
+- serve your chosen domain (example: `openclaw.internal.`) from `~/.dex/dns/<domain>.db`
 
 Validate from a tailnet-connected machine:
 
@@ -74,7 +74,7 @@ access, bind explicitly and keep auth enabled.
 
 For tailnet-only setups:
 
-- Set `gateway.bind: "tailnet"` in `~/.openclaw/openclaw.json`.
+- Set `gateway.bind: "tailnet"` in `~/.dex/openclaw.json`.
 - Restart the Gateway (or restart the macOS menubar app).
 
 ## What advertises
@@ -149,7 +149,7 @@ Gateway process instead of re-advertising forever.
 Bonjour uses the system hostname for the advertised `.local` host when it is a
 valid DNS label. If the system hostname contains spaces, underscores, or another
 invalid DNS-label character, OpenClaw falls back to `openclaw.local`. Set
-`OPENCLAW_MDNS_HOSTNAME=<name>` before starting the Gateway when you need an
+`DEX_MDNS_HOSTNAME=<name>` before starting the Gateway when you need an
 explicit host label.
 
 ## Debugging on iOS node
@@ -193,7 +193,7 @@ DNS-SD, but LAN auto-discovery is not reliable.
 Prefer the existing environment override when the problem is deployment-scoped:
 
 ```bash
-OPENCLAW_DISABLE_BONJOUR=1
+DEX_DISABLE_BONJOUR=1
 ```
 
 That disables LAN multicast advertising without changing plugin configuration.
@@ -210,7 +210,7 @@ openclaw plugins disable bonjour
 ## Docker gotchas
 
 The bundled Bonjour plugin auto-disables LAN multicast advertising in detected
-containers when `OPENCLAW_DISABLE_BONJOUR` is unset. Docker bridge networks
+containers when `DEX_DISABLE_BONJOUR` is unset. Docker bridge networks
 usually do not forward mDNS multicast (`224.0.0.251:5353`) between the container
 and the LAN, so advertising from the container rarely makes discovery work.
 
@@ -219,12 +219,12 @@ Important gotchas:
 - Bonjour auto-starts on macOS hosts and is opt-in elsewhere. Leaving it
   disabled does not stop the Gateway; it only skips LAN multicast advertising.
 - Disabling Bonjour does not change `gateway.bind`; Docker still defaults to
-  `OPENCLAW_GATEWAY_BIND=lan` so the published host port can work.
+  `DEX_GATEWAY_BIND=lan` so the published host port can work.
 - Disabling Bonjour does not disable wide-area DNS-SD. Use wide-area discovery
   or Tailnet when the Gateway and node are not on the same LAN.
-- Reusing the same `OPENCLAW_CONFIG_DIR` outside Docker does not persist the
+- Reusing the same `DEX_CONFIG_DIR` outside Docker does not persist the
   container auto-disable policy.
-- Set `OPENCLAW_DISABLE_BONJOUR=0` only for host networking, macvlan, or another
+- Set `DEX_DISABLE_BONJOUR=0` only for host networking, macvlan, or another
   network where mDNS multicast is known to pass; set it to `1` to force-disable.
 
 ## Troubleshooting disabled Bonjour
@@ -234,7 +234,7 @@ If a node no longer auto-discovers the Gateway after Docker setup:
 1. Confirm whether the Gateway is running in auto, forced-on, or forced-off mode:
 
    ```bash
-   docker compose config | grep OPENCLAW_DISABLE_BONJOUR
+   docker compose config | grep DEX_DISABLE_BONJOUR
    ```
 
 2. Confirm the Gateway itself is reachable through the published port:
@@ -250,14 +250,14 @@ If a node no longer auto-discovers the Gateway after Docker setup:
      wide-area DNS-SD
 
 4. If you deliberately enabled the Bonjour plugin in Docker and forced advertising
-   with `OPENCLAW_DISABLE_BONJOUR=0`, test multicast from the host:
+   with `DEX_DISABLE_BONJOUR=0`, test multicast from the host:
 
    ```bash
    dns-sd -B _openclaw-gw._tcp local.
    ```
 
    If browsing is empty or the Gateway logs show repeated ciao watchdog
-   cancellations, restore `OPENCLAW_DISABLE_BONJOUR=1` and use a direct or
+   cancellations, restore `DEX_DISABLE_BONJOUR=1` and use a direct or
    Tailnet route.
 
 ## Common failure modes
@@ -269,7 +269,7 @@ If a node no longer auto-discovers the Gateway after Docker setup:
   non-announced state. OpenClaw retries a few times and then disables Bonjour
   for the current Gateway process instead of restarting the advertiser forever.
 - **Docker bridge networking**: Bonjour auto-disables in detected containers.
-  Set `OPENCLAW_DISABLE_BONJOUR=0` only for host, macvlan, or another
+  Set `DEX_DISABLE_BONJOUR=0` only for host, macvlan, or another
   mDNS-capable network.
 - **Sleep / interface churn**: macOS may temporarily drop mDNS results; retry.
 - **Browse works but resolve fails**: keep machine names simple (avoid emojis or
@@ -289,13 +289,13 @@ sequences (e.g. spaces become `\032`).
 - macOS hosts auto-start the bundled LAN discovery plugin by default.
 - `openclaw plugins enable bonjour` enables the bundled LAN discovery plugin on hosts where it is not default-enabled.
 - `openclaw plugins disable bonjour` disables LAN multicast advertising by disabling the bundled plugin.
-- `OPENCLAW_DISABLE_BONJOUR=1` disables LAN multicast advertising without changing plugin config; accepted truthy values are `1`, `true`, `yes`, and `on` (legacy: `OPENCLAW_DISABLE_BONJOUR`).
-- `OPENCLAW_DISABLE_BONJOUR=0` forces LAN multicast advertising on, including inside detected containers; accepted falsy values are `0`, `false`, `no`, and `off`.
-- When the Bonjour plugin is enabled and `OPENCLAW_DISABLE_BONJOUR` is unset, Bonjour advertises on normal hosts and auto-disables inside detected containers.
-- `gateway.bind` in `~/.openclaw/openclaw.json` controls the Gateway bind mode.
-- `OPENCLAW_SSH_PORT` overrides the SSH port when `sshPort` is advertised (legacy: `OPENCLAW_SSH_PORT`).
-- `OPENCLAW_TAILNET_DNS` publishes a MagicDNS hint in TXT when mDNS full mode is enabled (legacy: `OPENCLAW_TAILNET_DNS`).
-- `OPENCLAW_CLI_PATH` overrides the advertised CLI path (legacy: `OPENCLAW_CLI_PATH`).
+- `DEX_DISABLE_BONJOUR=1` disables LAN multicast advertising without changing plugin config; accepted truthy values are `1`, `true`, `yes`, and `on` (legacy: `DEX_DISABLE_BONJOUR`).
+- `DEX_DISABLE_BONJOUR=0` forces LAN multicast advertising on, including inside detected containers; accepted falsy values are `0`, `false`, `no`, and `off`.
+- When the Bonjour plugin is enabled and `DEX_DISABLE_BONJOUR` is unset, Bonjour advertises on normal hosts and auto-disables inside detected containers.
+- `gateway.bind` in `~/.dex/openclaw.json` controls the Gateway bind mode.
+- `DEX_SSH_PORT` overrides the SSH port when `sshPort` is advertised (legacy: `DEX_SSH_PORT`).
+- `DEX_TAILNET_DNS` publishes a MagicDNS hint in TXT when mDNS full mode is enabled (legacy: `DEX_TAILNET_DNS`).
+- `DEX_CLI_PATH` overrides the advertised CLI path (legacy: `DEX_CLI_PATH`).
 
 ## Related docs
 

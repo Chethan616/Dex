@@ -14,7 +14,7 @@ injected, and how sessions bootstrap against it.
 
 OpenClaw uses a single agent workspace directory (`agents.defaults.workspace`) as the agent's **only** working directory (`cwd`) for tools and context.
 
-Recommended: use `openclaw setup` to create `~/.openclaw/openclaw.json` if missing and initialize the workspace files.
+Recommended: use `openclaw setup` to create `~/.dex/openclaw.json` if missing and initialize the workspace files.
 
 Full workspace layout + backup guide: [Agent workspace](/concepts/agent-workspace)
 
@@ -63,7 +63,7 @@ OpenClaw loads skills from these locations (highest precedence first):
 - Workspace: `<workspace>/skills`
 - Project agent skills: `<workspace>/.agents/skills`
 - Personal agent skills: `~/.agents/skills`
-- Managed/local: `~/.openclaw/skills`
+- Managed/local: `~/.dex/skills`
 - Bundled (shipped with the install)
 - Extra skill folders: `skills.load.extraDirs`
 
@@ -83,7 +83,7 @@ runtime surface.
 
 Session transcripts are stored as JSONL at:
 
-- `~/.openclaw/agents/<agentId>/sessions/<SessionId>.jsonl`
+- `~/.dex/agents/<agentId>/sessions/<SessionId>.jsonl`
 
 The session ID is stable and chosen by OpenClaw.
 Legacy session folders from other tools are not read.

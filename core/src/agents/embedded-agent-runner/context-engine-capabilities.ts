@@ -1,10 +1,10 @@
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { ContextEngineRuntimeContext } from "../../context-engine/types.js";
 import { resolveBoundAgentIdForSession } from "../session-agent-binding.js";
 
 export type ResolveContextEngineCapabilitiesParams = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   sessionKey?: string;
   agentId?: string;
   authProfileId?: string;

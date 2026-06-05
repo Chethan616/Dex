@@ -8,10 +8,10 @@ import {
   type MattermostClient,
   type MattermostUser,
 } from "./client.js";
-import type { ChannelDirectoryEntry, OpenClawConfig, RuntimeEnv } from "./runtime-api.js";
+import type { ChannelDirectoryEntry, DexConfig, RuntimeEnv } from "./runtime-api.js";
 
 export type MattermostDirectoryParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   query?: string | null;
   limit?: number | null;
@@ -19,7 +19,7 @@ export type MattermostDirectoryParams = {
 };
 
 function buildClient(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 }): MattermostClient | null {
   const account = resolveMattermostAccount({ cfg: params.cfg, accountId: params.accountId });

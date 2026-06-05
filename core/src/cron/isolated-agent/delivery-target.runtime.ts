@@ -1,5 +1,5 @@
 import type { ChannelId } from "../../channels/plugins/types.public.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { resolveOutboundChannelPlugin } from "../../infra/outbound/channel-resolution.js";
 import {
   resolveOutboundSessionRoute,
@@ -15,7 +15,7 @@ export { resolveFirstBoundAccountId } from "../../routing/bound-account-read.js"
 
 /** Resolves a cron delivery target through channel plugins with bootstrap allowed. */
 export async function resolveChannelTargetForDelivery(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
   input: string;
   accountId?: string | null;
@@ -43,7 +43,7 @@ export async function resolveChannelTargetForDelivery(params: {
 
 /** Resolves the outbound session route used for cron delivery threading and mirrors. */
 export async function resolveOutboundSessionRouteForDelivery(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
   agentId: string;
   accountId?: string | null;
@@ -62,7 +62,7 @@ export async function resolveOutboundSessionRouteForDelivery(params: {
 
 /** Returns whether a channel can canonicalize outbound cron delivery sessions. */
 export function channelCanResolveOutboundSessionRoute(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
 }): boolean {
   return Boolean(

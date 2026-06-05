@@ -500,7 +500,7 @@ jobs:
             rm -rf "$gateway_home"
           }
           trap cleanup_gateway EXIT
-          OPENCLAW_HOME="$gateway_home" OPENCLAW_STATE_DIR="$gateway_state" OPENCLAW_CONFIG_PATH="$gateway_config" OPENCLAW_GATEWAY_PORT="$gateway_port" OPENCLAW_SKIP_CHANNELS=1 \
+          DEX_HOME="$gateway_home" DEX_STATE_DIR="$gateway_state" DEX_CONFIG_PATH="$gateway_config" DEX_GATEWAY_PORT="$gateway_port" DEX_SKIP_CHANNELS=1 \
             node dist/entry.js gateway run --bind loopback --port "$gateway_port" --auth none --allow-unconfigured --force \
             >"$gateway_log" 2>&1 &
           gateway_pid="$!"
@@ -517,7 +517,7 @@ jobs:
           done
           curl -fsS "http://127.0.0.1:${gateway_port}/healthz" >/dev/null
 
-          OPENCLAW_HOME="$gateway_home" OPENCLAW_STATE_DIR="$gateway_state" OPENCLAW_CONFIG_PATH="$gateway_config" OPENCLAW_GATEWAY_PORT="$gateway_port" \
+          DEX_HOME="$gateway_home" DEX_STATE_DIR="$gateway_state" DEX_CONFIG_PATH="$gateway_config" DEX_GATEWAY_PORT="$gateway_port" \
             node --import tsx scripts/bench-cli-startup.ts \
             --case gatewayHealthJson \
             --case configGetGatewayPort \

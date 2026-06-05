@@ -11,7 +11,7 @@ const CORE_TEST_CONFIGS = new Set([
 ]);
 
 const CORE_PROD_CONFIGS = new Set(["tsconfig.core.json"]);
-const TSGO_SPARSE_SKIP_ENV_KEY = "OPENCLAW_TSGO_SPARSE_SKIP";
+const TSGO_SPARSE_SKIP_ENV_KEY = "DEX_TSGO_SPARSE_SKIP";
 const CORE_SPARSE_ROOTS = ["packages", "ui/config", "ui/src"];
 
 const CORE_PROD_REQUIRED_PATHS = [

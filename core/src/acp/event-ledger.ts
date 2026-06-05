@@ -7,8 +7,8 @@ import { resolveStateDir } from "../config/paths.js";
 import { withFileLock } from "../infra/file-lock.js";
 import { readJsonFile, writeTextAtomic } from "../infra/json-files.js";
 import {
-  openOpenClawStateDatabase,
-  type OpenClawStateDatabaseOptions,
+  openDexStateDatabase,
+  type DexStateDatabaseOptions,
   runOpenClawStateWriteTransaction,
 } from "../state/openclaw-state-db.js";
 import { isRecord } from "../utils.js";
@@ -503,7 +503,7 @@ export function createFileAcpEventLedger(
 }
 
 export async function migrateFileAcpEventLedgerToSqlite(
-  params: { filePath: string; archiveSource?: boolean } & OpenClawStateDatabaseOptions,
+  params: { filePath: string; archiveSource?: boolean } & DexStateDatabaseOptions,
 ): Promise<{ importedSessions: number; importedEvents: number; archived?: boolean }> {
   if (!(await fileExists(params.filePath))) {
     return { importedSessions: 0, importedEvents: 0 };
@@ -882,7 +882,7 @@ function buildSqliteReplay(session: LedgerSession | undefined): AcpEventLedgerRe
 }
 
 export function createSqliteAcpEventLedger(
-  params: OpenClawStateDatabaseOptions & LedgerOptions = {},
+  params: DexStateDatabaseOptions & LedgerOptions = {},
 ): AcpEventLedger {
   const normalized = normalizeLedgerOptions(params);
   const dbOptions = { env: params.env, path: params.path };
@@ -891,7 +891,7 @@ export function createSqliteAcpEventLedger(
   };
   const mutate = (fn: (db: DatabaseSync) => void) =>
     runOpenClawStateWriteTransaction((database) => fn(database.db), dbOptions);
-  const read = <T>(fn: (db: DatabaseSync) => T): T => fn(openOpenClawStateDatabase(dbOptions).db);
+  const read = <T>(fn: (db: DatabaseSync) => T): T => fn(openDexStateDatabase(dbOptions).db);
 
   return {
     async startSession(sessionParams) {

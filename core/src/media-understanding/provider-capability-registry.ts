@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { resolvePluginCapabilityProviders } from "../plugins/capability-provider-runtime.js";
 import { resolveImageCapableConfigProviderIds } from "./config-provider-models.js";
 import { normalizeMediaProviderId } from "./provider-id.js";
@@ -16,7 +16,7 @@ function mergeProviderCapabilities(
 }
 
 export function buildMediaUnderstandingCapabilityRegistry(
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
 ): MediaUnderstandingCapabilityRegistry {
   const registry: MediaUnderstandingCapabilityRegistry = new Map();
 

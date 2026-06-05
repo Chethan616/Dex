@@ -1,6 +1,6 @@
 import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import type { MsgContext } from "../auto-reply/templating.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { logVerbose, shouldLogVerbose } from "../globals.js";
 import { isDeliverableMessageChannel } from "../utils/message-channel.js";
 
@@ -23,7 +23,7 @@ function formatEchoTranscript(transcript: string, format: string): string {
  */
 export async function sendTranscriptEcho(params: {
   ctx: MsgContext;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   transcript: string;
   format?: string;
 }): Promise<void> {

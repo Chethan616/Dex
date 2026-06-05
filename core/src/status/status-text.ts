@@ -26,7 +26,7 @@ import { resolveSelectedAndActiveModel } from "../auto-reply/model-runtime.js";
 import type { ThinkLevel } from "../auto-reply/thinking.js";
 import { toAgentModelListLike } from "../config/model-input.js";
 import type { SessionEntry } from "../config/sessions.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatDurationCompact } from "../infra/format-time/format-duration.ts";
 import {
   formatUsageWindowSummary,
@@ -89,7 +89,7 @@ function loadStatusQueueRuntime(): Promise<typeof import("./status-queue.runtime
 }
 
 function resolveStatusRuntimeContextTokens(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   provider: string;
   model: string;
 }): number | undefined {
@@ -151,7 +151,7 @@ function formatSessionTaskLine(sessionKey: string): string | undefined {
 }
 
 async function resolveStatusHarnessId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   provider: string;
   model: string;
   agentId: string;

@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 export type PluginLruCacheResult<T> = { hit: true; value: T } | { hit: false };
 
@@ -66,16 +66,16 @@ export class PluginLruCache<T> {
   }
 }
 
-export type ConfigScopedRuntimeCache<T> = WeakMap<OpenClawConfig, Map<string, T>>;
+export type ConfigScopedRuntimeCache<T> = WeakMap<DexConfig, Map<string, T>>;
 
 export type ConfigScopedPromiseLoader<T> = {
-  load(config?: OpenClawConfig): Promise<T>;
+  load(config?: DexConfig): Promise<T>;
   clear(): void;
 };
 
 export function resolveConfigScopedRuntimeCacheValue<T>(params: {
   cache: ConfigScopedRuntimeCache<T>;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   key: string;
   load: () => T;
 }): T {
@@ -100,12 +100,12 @@ export function createPluginCacheKey(parts: readonly unknown[]): string {
 }
 
 export function createConfigScopedPromiseLoader<T>(
-  load: (config?: OpenClawConfig) => T | Promise<T>,
+  load: (config?: DexConfig) => T | Promise<T>,
 ): ConfigScopedPromiseLoader<T> {
   let defaultPromise: Promise<T> | undefined;
-  let promisesByConfig = new WeakMap<OpenClawConfig, Promise<T>>();
+  let promisesByConfig = new WeakMap<DexConfig, Promise<T>>();
 
-  const createPromise = (config?: OpenClawConfig): Promise<T> => {
+  const createPromise = (config?: DexConfig): Promise<T> => {
     const promise = Promise.resolve().then(() => load(config));
     void promise.catch(() => {
       if (config) {
@@ -118,7 +118,7 @@ export function createConfigScopedPromiseLoader<T>(
   };
 
   return {
-    async load(config?: OpenClawConfig): Promise<T> {
+    async load(config?: DexConfig): Promise<T> {
       if (!config) {
         defaultPromise ??= createPromise();
         return await defaultPromise;
@@ -133,7 +133,7 @@ export function createConfigScopedPromiseLoader<T>(
     },
     clear(): void {
       defaultPromise = undefined;
-      promisesByConfig = new WeakMap<OpenClawConfig, Promise<T>>();
+      promisesByConfig = new WeakMap<DexConfig, Promise<T>>();
     },
   };
 }

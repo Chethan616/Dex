@@ -64,20 +64,20 @@ steps:
           expr: splitModelRef(env.primaryModel)
       - set: preserveEnv
         value:
-          expr: "String(env.gateway.runtimeEnv.OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV ?? '')"
+          expr: "String(env.gateway.runtimeEnv.DEX_LIVE_CLI_BACKEND_PRESERVE_ENV ?? '')"
       - assert:
           expr: "env.providerMode !== 'live-frontier' || selected?.provider === config.requiredProvider"
           message:
             expr: "`expected live primary provider ${config.requiredProvider}, got ${env.primaryModel}`"
       - assert:
-          expr: "env.providerMode !== 'live-frontier' || env.gateway.runtimeEnv.OPENCLAW_LIVE_CLI_BACKEND_AUTH_MODE === config.authMode"
+          expr: "env.providerMode !== 'live-frontier' || env.gateway.runtimeEnv.DEX_LIVE_CLI_BACKEND_AUTH_MODE === config.authMode"
           message:
-            expr: "`expected Claude CLI auth mode ${config.authMode}, got ${env.gateway.runtimeEnv.OPENCLAW_LIVE_CLI_BACKEND_AUTH_MODE ?? 'unset'}`"
+            expr: "`expected Claude CLI auth mode ${config.authMode}, got ${env.gateway.runtimeEnv.DEX_LIVE_CLI_BACKEND_AUTH_MODE ?? 'unset'}`"
       - assert:
           expr: "env.providerMode !== 'live-frontier' || !preserveEnv.includes('ANTHROPIC_API_KEY')"
           message:
             expr: "`expected ANTHROPIC_API_KEY not to be preserved for Claude CLI subscription QA mode, got ${preserveEnv}`"
-    detailsExpr: "env.providerMode === 'live-frontier' ? `provider=${selected?.provider} model=${selected?.model} auth=${env.gateway.runtimeEnv.OPENCLAW_LIVE_CLI_BACKEND_AUTH_MODE} preserve=${preserveEnv}` : `mock-compatible provider=${selected?.provider}`"
+    detailsExpr: "env.providerMode === 'live-frontier' ? `provider=${selected?.provider} model=${selected?.model} auth=${env.gateway.runtimeEnv.DEX_LIVE_CLI_BACKEND_AUTH_MODE} preserve=${preserveEnv}` : `mock-compatible provider=${selected?.provider}`"
   - name: talks through the selected provider
     actions:
       - call: reset

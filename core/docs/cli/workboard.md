@@ -94,7 +94,7 @@ artifacts, worker logs, protocol state, diagnostics, and automation metadata.
 ```bash
 openclaw workboard dispatch
 openclaw workboard dispatch --json
-openclaw workboard dispatch --url http://127.0.0.1:18789 --token "$OPENCLAW_GATEWAY_TOKEN"
+openclaw workboard dispatch --url http://127.0.0.1:18789 --token "$DEX_GATEWAY_TOKEN"
 ```
 
 `dispatch` first calls the running Gateway RPC method

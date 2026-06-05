@@ -11,7 +11,7 @@ import {
   validateArtifactsListParams,
 } from "../../../packages/gateway-protocol/src/index.js";
 import { resolveDefaultAgentId } from "../../agents/agent-scope.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   normalizeAgentId,
   parseAgentSessionKey,
@@ -64,7 +64,7 @@ function artifactError(type: string, message: string, details?: Record<string, u
 
 function resolveRequesterSessionAgentId(
   sessionKey: string | undefined,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
 ): string | undefined {
   const key = asNonEmptyString(sessionKey);
   if (!key) {
@@ -88,7 +88,7 @@ function resolveRequesterSessionAgentId(
 function resolveScopedArtifactSessionKey(
   sessionKey: string | undefined,
   agentId: string | undefined,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
 ): string | undefined {
   const key = asNonEmptyString(sessionKey);
   if (!key) {
@@ -402,7 +402,7 @@ function collectArtifactsFromMessage(params: {
 
 function resolveQuerySession(
   query: ArtifactQuery,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
 ): ResolvedArtifactSession | undefined {
   if (query.sessionKey) {
     const sessionKey = resolveScopedArtifactSessionKey(query.sessionKey, query.agentId, cfg);
@@ -445,7 +445,7 @@ function resolveQuerySession(
 /** Loads artifacts from the transcript selected by sessionKey, runId, or taskId. */
 async function loadArtifacts(
   query: ArtifactQuery,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
   opts: ArtifactCollectionOptions = {},
 ): Promise<{ artifacts: ArtifactRecord[]; sessionKey?: string }> {
   const resolved = resolveQuerySession(query, cfg);
@@ -508,7 +508,7 @@ function requireQueryable(params: ArtifactQuery, respond: RespondFn): boolean {
 
 async function findArtifact(
   params: ArtifactsGetParams,
-  cfg?: OpenClawConfig,
+  cfg?: DexConfig,
   opts: ArtifactCollectionOptions = {},
 ): Promise<{
   artifact?: ArtifactRecord;

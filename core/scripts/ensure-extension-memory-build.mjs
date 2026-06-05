@@ -29,7 +29,7 @@ function positiveEnvInt(name, env, fallback) {
 
 export function resolveExtensionMemoryBuildTimeoutMs(env = process.env) {
   return positiveEnvInt(
-    "OPENCLAW_EXTENSION_MEMORY_BUILD_TIMEOUT_MS",
+    "DEX_EXTENSION_MEMORY_BUILD_TIMEOUT_MS",
     env,
     DEFAULT_BUILD_TIMEOUT_MS,
   );

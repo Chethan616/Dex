@@ -1,6 +1,6 @@
 import { repairMissingConfiguredPluginInstalls } from "../../commands/doctor/shared/missing-configured-plugin-install.js";
 import { UPDATE_POST_CORE_CONVERGENCE_ENV } from "../../commands/doctor/shared/update-phase.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { PluginInstallRecord } from "../../config/types.plugins.js";
 import { normalizePluginsConfig, resolveEffectiveEnableState } from "../../plugins/config-state.js";
 import { resolveDefaultPluginNpmDir } from "../../plugins/install-paths.js";
@@ -91,7 +91,7 @@ async function repairManagedNpmOpenClawPeerLinks(params: {
  * never restart with an installed active plugin whose payload is unloadable.
  */
 export async function runPostCorePluginConvergence(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env: NodeJS.ProcessEnv;
   /**
    * Optional in-memory install records from earlier post-core steps (e.g.
@@ -105,7 +105,7 @@ export async function runPostCorePluginConvergence(params: {
 }): Promise<PostCoreConvergenceResult> {
   const env: NodeJS.ProcessEnv = {
     ...params.env,
-    OPENCLAW_COMPATIBILITY_HOST_VERSION: VERSION,
+    DEX_COMPATIBILITY_HOST_VERSION: VERSION,
     [UPDATE_POST_CORE_CONVERGENCE_ENV]: "1",
   };
   const prunedBaseline = params.baselineInstallRecords
@@ -176,7 +176,7 @@ export async function runPostCorePluginConvergence(params: {
  * enable state is the right precision boundary.
  */
 export function filterRecordsToActive(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   records: Record<string, PluginInstallRecord>;
 }): Record<string, PluginInstallRecord> {
   const normalizedPluginConfig = normalizePluginsConfig(params.cfg.plugins);

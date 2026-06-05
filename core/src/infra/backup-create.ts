@@ -482,7 +482,7 @@ async function createSanitizedStateSqliteBackupAsset(params: {
 }): Promise<SanitizedSqliteBackupAsset | undefined> {
   const archiveSourcePath = resolveOpenClawStateSqlitePath({
     ...process.env,
-    OPENCLAW_STATE_DIR: params.stateDir,
+    DEX_STATE_DIR: params.stateDir,
   });
   if (!(await pathExists(archiveSourcePath))) {
     return undefined;

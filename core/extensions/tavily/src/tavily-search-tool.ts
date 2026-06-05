@@ -1,4 +1,4 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-runtime";
+import type { DexPluginApi } from "openclaw/plugin-sdk/plugin-runtime";
 import {
   jsonResult,
   readPositiveIntegerParam,
@@ -47,7 +47,7 @@ const TavilySearchToolSchema = Type.Object(
   { additionalProperties: false },
 );
 
-export function createTavilySearchTool(api: OpenClawPluginApi, ctx?: TavilyToolConfigContext) {
+export function createTavilySearchTool(api: DexPluginApi, ctx?: TavilyToolConfigContext) {
   return {
     name: "tavily_search",
     label: "Tavily Search",

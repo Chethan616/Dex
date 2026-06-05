@@ -28,7 +28,7 @@ import {
   updateConfiguredMcpServer,
   updateConfiguredMcpServerTools,
 } from "../config/mcp-config.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { serveOpenClawChannelMcp } from "../mcp/channel-server.js";
 import { defaultRuntime } from "../runtime.js";
@@ -300,7 +300,7 @@ async function collectMcpDoctorIssues(params: {
   name: string;
   server: Record<string, unknown>;
   probe: boolean;
-  config: OpenClawConfig;
+  config: DexConfig;
   path: string;
 }): Promise<McpDoctorIssue[]> {
   const issues: McpDoctorIssue[] = [];
@@ -401,7 +401,7 @@ async function collectMcpDoctorIssues(params: {
 }
 
 async function probeMcpServerIssue(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   name: string;
   server: Record<string, unknown>;
 }): Promise<McpDoctorIssue | null> {
@@ -521,9 +521,9 @@ function formatMcpProbeResult(
 }
 
 function buildMcpProbeConfig(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   servers: Record<string, Record<string, unknown>>;
-}): OpenClawConfig {
+}): DexConfig {
   return {
     ...params.config,
     mcp: {
@@ -534,7 +534,7 @@ function buildMcpProbeConfig(params: {
 }
 
 async function probeMcpServersOrFail(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   servers: Record<string, Record<string, unknown>>;
   path: string;
 }): Promise<ReturnType<typeof formatMcpProbeResult>> {

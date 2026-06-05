@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../api.js";
+import type { DexConfig } from "../api.js";
 
 type LegacyConfigRule = {
   path: Array<string | number>;
@@ -25,8 +25,8 @@ export const legacyConfigRules: LegacyConfigRule[] = [
   },
 ];
 
-export function migrateMemoryWikiLegacyConfig(config: OpenClawConfig): {
-  config: OpenClawConfig;
+export function migrateMemoryWikiLegacyConfig(config: DexConfig): {
+  config: DexConfig;
   changes: string[];
 } | null {
   const rawEntry = asRecord(config.plugins?.entries?.["memory-wiki"]);
@@ -67,8 +67,8 @@ export function migrateMemoryWikiLegacyConfig(config: OpenClawConfig): {
   };
 }
 
-export function normalizeCompatibilityConfig({ cfg }: { cfg: OpenClawConfig }): {
-  config: OpenClawConfig;
+export function normalizeCompatibilityConfig({ cfg }: { cfg: DexConfig }): {
+  config: DexConfig;
   changes: string[];
 } {
   return migrateMemoryWikiLegacyConfig(cfg) ?? { config: cfg, changes: [] };

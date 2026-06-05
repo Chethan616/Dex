@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { resolveManifestContractOwnerPluginId } from "../../plugins/plugin-registry.js";
 import { getActiveSecretsRuntimeConfigSnapshot } from "../../secrets/runtime-state.js";
 import { getActiveRuntimeWebToolsMetadata } from "../../secrets/runtime-web-tools-state.js";
@@ -14,13 +14,13 @@ type WebProviderRuntimeMetadata = RuntimeWebFetchMetadata | RuntimeWebSearchMeta
 type WebProviderContract = "webFetchProviders" | "webSearchProviders";
 
 type ResolvedWebToolRuntimeContext<TMetadata extends WebProviderRuntimeMetadata> = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   preferRuntimeProviders: boolean;
   runtimeMetadata?: TMetadata;
 };
 
 function resolveConfiguredWebProviderId(
-  config: OpenClawConfig | undefined,
+  config: DexConfig | undefined,
   kind: WebProviderKind,
 ): string {
   const provider = config?.tools?.web?.[kind]?.provider;
@@ -36,7 +36,7 @@ function resolveWebProviderContract(kind: WebProviderKind): WebProviderContract 
 }
 
 function shouldPreferRuntimeProviders(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   kind: WebProviderKind;
   providerSelectionId: string;
 }): boolean {
@@ -52,7 +52,7 @@ function shouldPreferRuntimeProviders(params: {
 }
 
 function resolveWebToolRuntimeContext<TMetadata extends WebProviderRuntimeMetadata>(params: {
-  capturedConfig?: OpenClawConfig;
+  capturedConfig?: DexConfig;
   capturedRuntimeMetadata?: TMetadata;
   kind: WebProviderKind;
   lateBindRuntimeConfig?: boolean;
@@ -81,7 +81,7 @@ function resolveWebToolRuntimeContext<TMetadata extends WebProviderRuntimeMetada
 }
 
 export function resolveWebSearchToolRuntimeContext(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   lateBindRuntimeConfig?: boolean;
   runtimeWebSearch?: RuntimeWebSearchMetadata;
 }): ResolvedWebToolRuntimeContext<RuntimeWebSearchMetadata> & {
@@ -102,7 +102,7 @@ export function resolveWebSearchToolRuntimeContext(params: {
 }
 
 export function resolveWebFetchToolRuntimeContext(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   lateBindRuntimeConfig?: boolean;
   runtimeWebFetch?: RuntimeWebFetchMetadata;
 }): ResolvedWebToolRuntimeContext<RuntimeWebFetchMetadata> & {

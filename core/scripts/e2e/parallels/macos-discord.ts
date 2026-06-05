@@ -44,7 +44,7 @@ ${this.input.guestNode} ${this.input.guestOpenClawEntry} doctor --fix --yes --no
 ${this.input.guestNode} - <<'JS'
 const fs = require("node:fs");
 const path = require("node:path");
-const configPath = path.join(process.env.HOME || "", ".openclaw", "openclaw.json");
+const configPath = path.join(process.env.HOME || "", ".dex", "openclaw.json");
 const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 config.plugins = config.plugins && typeof config.plugins === "object" ? config.plugins : {};
 const allow = Array.isArray(config.plugins.allow) ? config.plugins.allow : [];

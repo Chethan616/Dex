@@ -17,9 +17,9 @@ import type { UpdateRestartSentinelMeta } from "../../infra/update-restart-senti
 const PARENT_EXIT_GRACE_MS = 60_000;
 const SYSTEMD_RUN_CANDIDATE_PATHS = ["/usr/bin/systemd-run", "/bin/systemd-run"] as const;
 const SERVICE_IDENTITY_ENV_VARS = new Set<string>([
-  "OPENCLAW_LAUNCHD_LABEL",
-  "OPENCLAW_SYSTEMD_UNIT",
-  "OPENCLAW_WINDOWS_TASK_NAME",
+  "DEX_LAUNCHD_LABEL",
+  "DEX_SYSTEMD_UNIT",
+  "DEX_WINDOWS_TASK_NAME",
 ] as const);
 
 const HANDOFF_SCRIPT = String.raw`
@@ -453,7 +453,7 @@ export async function startManagedServiceUpdateHandoff(params: {
   const env = {
     ...stripSupervisorHintEnv(params.env ?? process.env),
     [CONTROL_PLANE_UPDATE_SENTINEL_META_ENV]: metaPath,
-    OPENCLAW_UPDATE_RUN_HANDOFF: "1",
+    DEX_UPDATE_RUN_HANDOFF: "1",
   };
   const spawnTarget = await resolveHandoffSpawn({
     supervisor: params.supervisor,

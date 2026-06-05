@@ -5,12 +5,12 @@ import type { WebSocket } from "ws";
 import type { JsonObject, JsonValue } from "../protocol.js";
 import { readHttpHeaders, requireNumber, requireObject, requireString } from "./json-rpc.js";
 import { requireBackend } from "./runtime.js";
-import type { HttpHeader, OpenClawExecServer } from "./types.js";
+import type { HttpHeader, DexExecServer } from "./types.js";
 
 export const SANDBOX_HTTP_STREAM_LINE_MAX_CHARS = 256 * 1024;
 
 export async function httpRequest(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   socket: WebSocket,
   params: JsonValue | undefined,
 ): Promise<JsonObject> {
@@ -47,7 +47,7 @@ type SandboxHttpRequest = {
 };
 
 async function runSandboxHttpRequest(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   params: SandboxHttpRequest,
 ): Promise<JsonObject & { status: number; headers: HttpHeader[]; bodyBase64: string }> {
   const backend = requireBackend(execServer);
@@ -76,7 +76,7 @@ async function runSandboxHttpRequest(
 }
 
 async function runStreamingSandboxHttpRequest(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
   socket: WebSocket,
   requestId: string,
   params: SandboxHttpRequest,

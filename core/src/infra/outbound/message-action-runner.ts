@@ -22,7 +22,7 @@ import type {
   ChannelMessageActionName,
   ChannelThreadingToolContext,
 } from "../../channels/plugins/types.public.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   hasInteractiveReplyBlocks,
   hasMessagePresentationBlocks,
@@ -109,7 +109,7 @@ function loadMessageActionGatewayRuntime() {
 }
 
 export type RunMessageActionParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   action: ChannelMessageActionName;
   params: Record<string, unknown>;
   defaultAccountId?: string;
@@ -247,7 +247,7 @@ function applyCrossContextMessageDecoration({
 }
 
 async function maybeApplyCrossContextMarker(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
   action: ChannelMessageActionName;
   target: string;
@@ -281,7 +281,7 @@ async function maybeApplyCrossContextMarker(params: {
 }
 
 async function resolveChannel(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   params: Record<string, unknown>,
   toolContext?: { currentChannelProvider?: string },
 ) {
@@ -335,7 +335,7 @@ function inferPeerKindForAccountBinding(channel: ChannelId, target: string): Cha
 }
 
 function resolveTargetBoundAccountId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
   args: Record<string, unknown>;
   agentId?: string;
@@ -371,7 +371,7 @@ function resolveTargetBoundAccountId(params: {
 }
 
 async function resolveActionTarget(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
   action: ChannelMessageActionName;
   args: Record<string, unknown>;
@@ -412,7 +412,7 @@ function sanitizeGroupTargetId(target: string): string {
 }
 
 async function resolveResolvedTargetOrThrow(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: ChannelId;
   input: string;
   accountId?: string;
@@ -437,7 +437,7 @@ async function resolveResolvedTargetOrThrow(params: {
 }
 
 type ResolvedActionContext = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   params: Record<string, unknown>;
   channel: ChannelId;
   mediaAccess: OutboundMediaAccess;
@@ -673,7 +673,7 @@ async function shouldUseInternalSourceReplySink(
 }
 
 async function runGatewayPluginMessageActionOrNull(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   params: Record<string, unknown>;
   channel: ChannelId;
   action: ChannelMessageActionName;
@@ -907,7 +907,7 @@ function buildInternalSourceReplyToolResult(payload: {
 }
 
 async function buildSendPayloadParts(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   actionParams: Record<string, unknown>;
   input: RunMessageActionParams;
   channel?: ChannelId;

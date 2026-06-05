@@ -9,7 +9,7 @@ import {
   shouldStartOnboardingForFreshInstall,
 } from "../../dist/cli/run-main.js";
 import { clearConfigCache } from "../../dist/config/config.js";
-import type { OpenClawConfig } from "../../dist/config/types.openclaw.js";
+import type { DexConfig } from "../../dist/config/types.openclaw.js";
 import { runCrestodian } from "../../dist/crestodian/crestodian.js";
 import type { RuntimeEnv } from "../../dist/runtime.js";
 import { createE2eStateDir } from "./lib/temp-state-dir.ts";
@@ -70,9 +70,9 @@ async function main() {
   const tempState = await createE2eStateDir("openclaw-crestodian-first-run-");
   tempState.registerExitCleanup();
   const stateDir = tempState.stateDir;
-  const configPath = process.env.OPENCLAW_CONFIG_PATH ?? path.join(stateDir, "openclaw.json");
-  process.env.OPENCLAW_STATE_DIR = stateDir;
-  process.env.OPENCLAW_CONFIG_PATH = configPath;
+  const configPath = process.env.DEX_CONFIG_PATH ?? path.join(stateDir, "openclaw.json");
+  process.env.DEX_STATE_DIR = stateDir;
+  process.env.DEX_CONFIG_PATH = configPath;
   await fs.rm(stateDir, { recursive: true, force: true });
   await fs.mkdir(stateDir, { recursive: true });
   clearConfigCache();
@@ -131,7 +131,7 @@ async function main() {
     );
   }
 
-  const config = JSON.parse(await fs.readFile(configPath, "utf8")) as OpenClawConfig;
+  const config = JSON.parse(await fs.readFile(configPath, "utf8")) as DexConfig;
   assert(
     config.agents?.defaults?.workspace === spec.dockerDefaultWorkspace,
     "first-run setup did not write default workspace",

@@ -25,7 +25,7 @@ function isTruthyEnv(value: unknown): boolean {
 export function resolveModelPayloadDebugMode(
   env: ModelTransportDebugEnv = process.env,
 ): ModelPayloadDebugMode {
-  const normalized = normalizeEnv(env.OPENCLAW_DEBUG_MODEL_PAYLOAD);
+  const normalized = normalizeEnv(env.DEX_DEBUG_MODEL_PAYLOAD);
   if (normalized === "tools" || normalized === "full-redacted") {
     return normalized;
   }
@@ -38,7 +38,7 @@ export function resolveModelPayloadDebugMode(
 export function resolveModelSseDebugMode(
   env: ModelTransportDebugEnv = process.env,
 ): ModelSseDebugMode {
-  const normalized = normalizeEnv(env.OPENCLAW_DEBUG_SSE);
+  const normalized = normalizeEnv(env.DEX_DEBUG_SSE);
   if (normalized === "peek") {
     return "peek";
   }
@@ -50,10 +50,10 @@ export function resolveModelSseDebugMode(
 
 export function isModelTransportDebugEnabled(env: ModelTransportDebugEnv = process.env): boolean {
   return (
-    isTruthyEnv(env.OPENCLAW_DEBUG_MODEL_TRANSPORT) ||
+    isTruthyEnv(env.DEX_DEBUG_MODEL_TRANSPORT) ||
     resolveModelPayloadDebugMode(env) !== "off" ||
     resolveModelSseDebugMode(env) !== "off" ||
-    isTruthyEnv(env.OPENCLAW_DEBUG_CODE_MODE)
+    isTruthyEnv(env.DEX_DEBUG_CODE_MODE)
   );
 }
 

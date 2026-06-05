@@ -112,8 +112,8 @@ and troubleshooting see the main [FAQ](/help/faq).
 
     - Open `http://127.0.0.1:18789/`.
     - If it asks for shared-secret auth, paste the configured token or password into Control UI settings.
-    - Token source: `gateway.auth.token` (or `OPENCLAW_GATEWAY_TOKEN`).
-    - Password source: `gateway.auth.password` (or `OPENCLAW_GATEWAY_PASSWORD`).
+    - Token source: `gateway.auth.token` (or `DEX_GATEWAY_TOKEN`).
+    - Password source: `gateway.auth.password` (or `DEX_GATEWAY_PASSWORD`).
     - If no shared secret is configured yet, generate a token with `openclaw doctor --generate-gateway-token`.
 
     **Not on localhost:**
@@ -215,8 +215,8 @@ and troubleshooting see the main [FAQ](/help/faq).
     state) as long as you copy **both** locations:
 
     1. Install OpenClaw on the new machine.
-    2. Copy `$OPENCLAW_STATE_DIR` (default: `~/.openclaw`) from the old machine.
-    3. Copy your workspace (default: `~/.openclaw/workspace`).
+    2. Copy `$DEX_STATE_DIR` (default: `~/.dex`) from the old machine.
+    3. Copy your workspace (default: `~/.dex/workspace`).
     4. Run `openclaw doctor` and restart the Gateway service.
 
     That preserves config, auth profiles, WhatsApp creds, sessions, and memory. If you're in
@@ -224,7 +224,7 @@ and troubleshooting see the main [FAQ](/help/faq).
 
     **Important:** if you only commit/push your workspace to GitHub, you're backing
     up **memory + bootstrap files**, but **not** session history or auth. Those live
-    under `~/.openclaw/` (for example `~/.openclaw/agents/<agentId>/sessions/`).
+    under `~/.dex/` (for example `~/.dex/agents/<agentId>/sessions/`).
 
     Related: [Migrating](/install/migrating), [Where things live on disk](/help/faq#where-things-live-on-disk),
     [Agent workspace](/concepts/agent-workspace), [Doctor](/gateway/doctor),
@@ -773,7 +773,7 @@ and troubleshooting see the main [FAQ](/help/faq).
   <Accordion title="Can I switch between npm and git installs later?">
     Yes. Use `openclaw update --channel ...` when OpenClaw is already installed.
     This **does not delete your data** - it only changes the OpenClaw code install.
-    Your state (`~/.openclaw`) and workspace (`~/.openclaw/workspace`) stay untouched.
+    Your state (`~/.dex`) and workspace (`~/.dex/workspace`) stay untouched.
 
     From npm to git:
 

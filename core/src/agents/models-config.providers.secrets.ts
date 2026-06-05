@@ -1,5 +1,5 @@
 import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveSecretInputRef } from "../config/types.secrets.js";
 import { resolveProviderSyntheticAuthWithPlugin } from "../plugins/provider-runtime.js";
 import type { ProviderAuthEvidence } from "../secrets/provider-env-vars.js";
@@ -57,7 +57,7 @@ function resolveAuthProfileStoreInput(input: AuthProfileStoreInput) {
 
 function createProviderAuthLookupCaches(
   env: NodeJS.ProcessEnv,
-  config?: OpenClawConfig,
+  config?: DexConfig,
 ): () => ProviderAuthLookupCaches {
   let caches: ProviderAuthLookupCaches | undefined;
   return () => {
@@ -87,7 +87,7 @@ function resolveProviderIdForAuthFromCaches(
 export function createProviderApiKeyResolver(
   env: NodeJS.ProcessEnv,
   authStoreInput: AuthProfileStoreInput,
-  config?: OpenClawConfig,
+  config?: DexConfig,
 ): ProviderApiKeyResolver {
   const getLookupCaches = createProviderAuthLookupCaches(env, config);
   return (provider: string): { apiKey: string | undefined; discoveryApiKey?: string } => {
@@ -133,7 +133,7 @@ export function createProviderApiKeyResolver(
 export function createProviderAuthResolver(
   env: NodeJS.ProcessEnv,
   authStoreInput: AuthProfileStoreInput,
-  config?: OpenClawConfig,
+  config?: DexConfig,
 ): ProviderAuthResolver {
   const getLookupCaches = createProviderAuthLookupCaches(env, config);
   return (provider: string, options?: { oauthMarker?: string }) => {
@@ -221,7 +221,7 @@ export function createProviderAuthResolver(
 
 function resolveConfigBackedProviderAuth(params: {
   provider: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   env?: NodeJS.ProcessEnv;
   authProvider?: string;
 }):

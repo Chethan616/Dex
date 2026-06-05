@@ -5,9 +5,9 @@ import { uniqueStrings } from "@dexagent/normalization-core/string-normalization
 import { captureEnv } from "./env.js";
 import { cleanupSessionStateForTest } from "./session-state-cleanup.js";
 
-type OpenClawTestStateLayout = "home" | "state-only" | "split";
+type DexTestStateLayout = "home" | "state-only" | "split";
 
-type OpenClawTestStateScenario =
+type DexTestStateScenario =
   | "empty"
   | "minimal"
   | "update-stable"
@@ -15,11 +15,11 @@ type OpenClawTestStateScenario =
   | "gateway-loopback"
   | "external-service";
 
-export type OpenClawTestStateOptions = {
+export type DexTestStateOptions = {
   prefix?: string;
   label?: string;
-  layout?: OpenClawTestStateLayout;
-  scenario?: OpenClawTestStateScenario;
+  layout?: DexTestStateLayout;
+  scenario?: DexTestStateScenario;
   agentEnv?: "clear" | "main";
   applyEnv?: boolean;
   env?: Record<string, string | undefined>;
@@ -29,7 +29,7 @@ export type OpenClawTestStateOptions = {
   };
 };
 
-export type OpenClawTestState = {
+export type DexTestState = {
   root: string;
   home: string;
   stateDir: string;
@@ -56,11 +56,11 @@ const ENV_KEYS = [
   "USERPROFILE",
   "HOMEDRIVE",
   "HOMEPATH",
-  "OPENCLAW_HOME",
-  "OPENCLAW_STATE_DIR",
-  "OPENCLAW_CONFIG_PATH",
-  "OPENCLAW_AGENT_DIR",
-  "OPENCLAW_SERVICE_REPAIR_POLICY",
+  "DEX_HOME",
+  "DEX_STATE_DIR",
+  "DEX_CONFIG_PATH",
+  "DEX_AGENT_DIR",
+  "DEX_SERVICE_REPAIR_POLICY",
 ] as const;
 
 function normalizeLabel(value: string | undefined): string {
@@ -85,7 +85,7 @@ function resolveWindowsHomeEnv(
 
 function resolveLayout(
   root: string,
-  layout: OpenClawTestStateLayout,
+  layout: DexTestStateLayout,
 ): {
   home: string;
   stateDir: string;
@@ -94,7 +94,7 @@ function resolveLayout(
 } {
   if (layout === "home") {
     const home = path.join(root, "home");
-    const stateDir = path.join(home, ".openclaw");
+    const stateDir = path.join(home, ".dex");
     return {
       home,
       stateDir,
@@ -121,7 +121,7 @@ function resolveLayout(
   };
 }
 
-function scenarioConfig(options: OpenClawTestStateOptions): Record<string, unknown> | undefined {
+function scenarioConfig(options: DexTestStateOptions): Record<string, unknown> | undefined {
   const scenario = options.scenario ?? "empty";
   if (scenario === "minimal" || scenario === "external-service") {
     return {};
@@ -178,17 +178,17 @@ function scenarioConfig(options: OpenClawTestStateOptions): Record<string, unkno
   return undefined;
 }
 
-function scenarioEnv(options: OpenClawTestStateOptions): Record<string, string | undefined> {
+function scenarioEnv(options: DexTestStateOptions): Record<string, string | undefined> {
   if ((options.scenario ?? "empty") === "external-service") {
     return {
-      OPENCLAW_SERVICE_REPAIR_POLICY: "external",
+      DEX_SERVICE_REPAIR_POLICY: "external",
     };
   }
   return {};
 }
 
 function buildEnvVars(params: {
-  layout: OpenClawTestStateLayout;
+  layout: DexTestStateLayout;
   home: string;
   stateDir: string;
   configPath: string;
@@ -200,14 +200,14 @@ function buildEnvVars(params: {
   const agentDirEnv =
     params.agentEnv === "main"
       ? {
-          OPENCLAW_AGENT_DIR: params.agentDir,
+          DEX_AGENT_DIR: params.agentDir,
         }
       : {
-          OPENCLAW_AGENT_DIR: undefined,
+          DEX_AGENT_DIR: undefined,
         };
   const envVars: Record<string, string | undefined> = {
-    OPENCLAW_STATE_DIR: params.stateDir,
-    OPENCLAW_CONFIG_PATH: params.configPath,
+    DEX_STATE_DIR: params.stateDir,
+    DEX_CONFIG_PATH: params.configPath,
     ...agentDirEnv,
     ...params.scenarioEnv,
     ...params.extraEnv,
@@ -216,7 +216,7 @@ function buildEnvVars(params: {
     Object.assign(envVars, {
       HOME: params.home,
       USERPROFILE: params.home,
-      OPENCLAW_HOME: params.home,
+      DEX_HOME: params.home,
       ...resolveWindowsHomeEnv(params.home),
     });
   }
@@ -241,9 +241,9 @@ async function writeJsonFile(filePath: string, value: unknown): Promise<string> 
   return filePath;
 }
 
-export async function createOpenClawTestState(
-  options: OpenClawTestStateOptions = {},
-): Promise<OpenClawTestState> {
+export async function createDexTestState(
+  options: DexTestStateOptions = {},
+): Promise<DexTestState> {
   const label = normalizeLabel(options.label ?? options.scenario);
   const prefix = options.prefix ?? `${DEFAULT_PREFIX}${label}-`;
   const root = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
@@ -280,7 +280,7 @@ export async function createOpenClawTestState(
   const sessionsDir = (agentId = "main") =>
     path.join(paths.stateDir, "agents", agentId, "sessions");
 
-  const state: OpenClawTestState = {
+  const state: DexTestState = {
     root,
     ...paths,
     env,
@@ -337,11 +337,11 @@ export async function createOpenClawTestState(
   return state;
 }
 
-export async function withOpenClawTestState<T>(
-  options: OpenClawTestStateOptions,
-  fn: (state: OpenClawTestState) => Promise<T>,
+export async function withDexTestState<T>(
+  options: DexTestStateOptions,
+  fn: (state: DexTestState) => Promise<T>,
 ): Promise<T> {
-  const state = await createOpenClawTestState(options);
+  const state = await createDexTestState(options);
   try {
     return await fn(state);
   } finally {

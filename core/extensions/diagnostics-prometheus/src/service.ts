@@ -2,8 +2,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type {
   DiagnosticEventMetadata,
   DiagnosticEventPayload,
-  OpenClawPluginHttpRouteHandler,
-  OpenClawPluginService,
+  DexPluginHttpRouteHandler,
+  DexPluginService,
 } from "../api.js";
 import { isInternalDiagnosticEventMetadata, redactSensitiveText } from "../api.js";
 
@@ -991,7 +991,7 @@ function recordDiagnosticEvent(
   }
 }
 
-function createMetricsHandler(store: PrometheusMetricStore): OpenClawPluginHttpRouteHandler {
+function createMetricsHandler(store: PrometheusMetricStore): DexPluginHttpRouteHandler {
   return (req: IncomingMessage, res: ServerResponse) => {
     if (req.method !== "GET" && req.method !== "HEAD") {
       res.statusCode = 405;
@@ -1047,7 +1047,7 @@ export function createDiagnosticsPrometheusExporter() {
       unsubscribe = undefined;
       store.reset();
     },
-  } satisfies OpenClawPluginService;
+  } satisfies DexPluginService;
 
   return {
     handler: createMetricsHandler(store),

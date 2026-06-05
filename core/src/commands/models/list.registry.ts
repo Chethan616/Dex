@@ -3,7 +3,7 @@ import {
   shouldSuppressBuiltInModel,
   shouldSuppressBuiltInModelFromManifest,
 } from "../../agents/model-suppression.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { ModelRegistry } from "../../llm/model-registry.js";
 import type { Model } from "../../llm/types.js";
 import {
@@ -55,7 +55,7 @@ function validateAvailableModels(availableModels: unknown): Model[] {
 
 function loadAvailableModels(
   registry: ModelRegistry,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   opts?: { runtimeSuppression?: boolean },
 ): Model[] {
   let availableModels: unknown;
@@ -85,7 +85,7 @@ function loadAvailableModels(
 }
 
 export async function loadModelRegistry(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   opts?: {
     providerFilter?: string;
     normalizeModels?: boolean;

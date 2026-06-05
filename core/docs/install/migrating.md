@@ -26,7 +26,7 @@ The CLI entry point is [`openclaw migrate`](/cli/migrate). Onboarding can also o
 
 ## Move OpenClaw to a new machine
 
-Copy the **state directory** (`~/.openclaw/` by default) and your **workspace** to preserve:
+Copy the **state directory** (`~/.dex/` by default) and your **workspace** to preserve:
 
 - **Config** — `openclaw.json` and all gateway settings.
 - **Auth** — per-agent `auth-profiles.json` (API keys plus OAuth), plus any channel or provider state under `credentials/`.
@@ -35,7 +35,7 @@ Copy the **state directory** (`~/.openclaw/` by default) and your **workspace** 
 - **Workspace files** — `MEMORY.md`, `USER.md`, skills, and prompts.
 
 <Tip>
-Run `openclaw status` on the old machine to confirm your state directory path. Custom profiles use `~/.openclaw-<profile>/` or a path set via `OPENCLAW_STATE_DIR`.
+Run `openclaw status` on the old machine to confirm your state directory path. Custom profiles use `~/.dex-<profile>/` or a path set via `DEX_STATE_DIR`.
 </Tip>
 
 ### Migration steps
@@ -50,12 +50,12 @@ Run `openclaw status` on the old machine to confirm your state directory path. C
     tar -czf openclaw-state.tgz .openclaw
     ```
 
-    If you use multiple profiles (for example `~/.openclaw-work`), archive each separately.
+    If you use multiple profiles (for example `~/.dex-work`), archive each separately.
 
   </Step>
 
   <Step title="Install OpenClaw on the new machine">
-    [Install](/install) the CLI (and Node if needed) on the new machine. It is fine if onboarding creates a fresh `~/.openclaw/`. You will overwrite it next.
+    [Install](/install) the CLI (and Node if needed) on the new machine. It is fine if onboarding creates a fresh `~/.dex/`. You will overwrite it next.
   </Step>
 
   <Step title="Copy state directory and workspace">
@@ -85,7 +85,7 @@ Run `openclaw status` on the old machine to confirm your state directory path. C
 If Telegram or Discord uses the default env fallback (`TELEGRAM_BOT_TOKEN` or `DISCORD_BOT_TOKEN`), verify the migrated state-dir `.env` contains those keys without printing the secret values:
 
 ```bash
-awk -F= '/^(TELEGRAM_BOT_TOKEN|DISCORD_BOT_TOKEN)=/ { print $1 "=present" }' ~/.openclaw/.env
+awk -F= '/^(TELEGRAM_BOT_TOKEN|DISCORD_BOT_TOKEN)=/ { print $1 "=present" }' ~/.dex/.env
 ```
 
 `openclaw doctor` also warns when an enabled default Telegram or Discord account has no configured token and the matching env variable is unavailable to the doctor process.
@@ -94,7 +94,7 @@ awk -F= '/^(TELEGRAM_BOT_TOKEN|DISCORD_BOT_TOKEN)=/ { print $1 "=present" }' ~/.
 
 <AccordionGroup>
   <Accordion title="Profile or state-dir mismatch">
-    If the old gateway used `--profile` or `OPENCLAW_STATE_DIR` and the new one does not, channels will appear logged out and sessions will be empty. Launch the gateway with the **same** profile or state-dir you migrated, then rerun `openclaw doctor`.
+    If the old gateway used `--profile` or `DEX_STATE_DIR` and the new one does not, channels will appear logged out and sessions will be empty. Launch the gateway with the **same** profile or state-dir you migrated, then rerun `openclaw doctor`.
   </Accordion>
 
   <Accordion title="Copying only openclaw.json">

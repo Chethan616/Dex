@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { resolveContextEngineOwnerPluginId } from "../../context-engine/registry.js";
 import type {
   ContextEngine,
@@ -54,7 +54,7 @@ type DeferredTurnMaintenanceScheduleParams = {
   sessionManager?: Parameters<typeof rewriteTranscriptEntriesInSessionManager>[0]["sessionManager"];
   runtimeContext?: ContextEngineRuntimeContext;
   agentId?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   disposeContextEngineAfterMaintenance?: boolean;
   onScheduleFailure?: (error: unknown) => void;
 };
@@ -303,7 +303,7 @@ export function buildContextEngineMaintenanceRuntimeContext(params: {
   agentId?: string;
   allowDeferredCompactionExecution?: boolean;
   deferTranscriptRewriteToSessionLane?: boolean;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   purpose?: string;
   contextEnginePluginId?: string;
 }): ContextEngineRuntimeContext {
@@ -362,7 +362,7 @@ async function executeContextEngineMaintenance(params: {
   runtimeContext?: ContextEngineRuntimeContext;
   agentId?: string;
   executionMode: "foreground" | "background";
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): Promise<ContextEngineMaintenanceResult | undefined> {
   if (typeof params.contextEngine.maintain !== "function") {
     return undefined;
@@ -406,7 +406,7 @@ async function runDeferredTurnMaintenanceWorker(params: {
   runtimeContext?: ContextEngineRuntimeContext;
   agentId?: string;
   runId: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   disposeContextEngineAfterMaintenance?: boolean;
 }): Promise<void> {
   let surfacedUserNotice = false;
@@ -703,7 +703,7 @@ export async function runContextEngineMaintenance(params: {
   executionMode?: "foreground" | "background";
   onDeferredMaintenance?: (promise: Promise<void>) => void;
   onDeferredMaintenanceFailure?: (error: unknown) => void;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   disposeDeferredContextEngineAfterMaintenance?: boolean;
 }): Promise<ContextEngineMaintenanceResult | undefined> {
   if (typeof params.contextEngine?.maintain !== "function") {

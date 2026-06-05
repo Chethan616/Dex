@@ -138,7 +138,7 @@ allow/deny list entries, and linked load paths when applicable. Managed install
 directories are removed unless you pass `--keep-files`. A running managed
 Gateway restarts automatically when the uninstall changes plugin source.
 
-In Nix mode (`OPENCLAW_NIX_MODE=1`), plugin install, update, uninstall, enable,
+In Nix mode (`DEX_NIX_MODE=1`), plugin install, update, uninstall, enable,
 and disable commands are disabled. Manage those choices in the Nix source for
 the install instead.
 

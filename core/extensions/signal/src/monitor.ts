@@ -1,7 +1,7 @@
 import { CHANNEL_APPROVAL_NATIVE_RUNTIME_CONTEXT_CAPABILITY } from "openclaw/plugin-sdk/approval-handler-adapter-runtime";
 import type { ChannelRuntimeSurface } from "openclaw/plugin-sdk/channel-contract";
 import { registerChannelRuntimeContext } from "openclaw/plugin-sdk/channel-runtime-context";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { SignalReactionNotificationMode } from "openclaw/plugin-sdk/config-contracts";
 import {
   detectMime,
@@ -55,7 +55,7 @@ export type MonitorSignalOpts = {
   abortSignal?: AbortSignal;
   account?: string;
   accountId?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   baseUrl?: string;
   channelRuntime?: ChannelRuntimeSurface;
   autoStart?: boolean;
@@ -354,7 +354,7 @@ async function fetchAttachment(params: {
 }
 
 async function deliverReplies(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   replies: ReplyPayload[];
   target: string;
   baseUrl: string;

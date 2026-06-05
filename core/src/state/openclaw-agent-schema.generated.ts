@@ -3,7 +3,7 @@
  * Please do not edit it manually.
  */
 
-export const OPENCLAW_AGENT_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS schema_meta (
+export const DEX_AGENT_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS schema_meta (
   meta_key TEXT NOT NULL PRIMARY KEY,
   role TEXT NOT NULL,
   schema_version INTEGER NOT NULL,

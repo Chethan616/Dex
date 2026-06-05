@@ -12,7 +12,7 @@ export const GITHUB_API_REQUEST_TIMEOUT_MS = 30_000;
 
 const maxListedFiles = 25;
 const autoscrubCommitMessage = "chore: remove dependency lockfile change";
-const securityTeamSlug = process.env.OPENCLAW_SECURITY_TEAM_SLUG ?? "openclaw-secops";
+const securityTeamSlug = process.env.DEX_SECURITY_TEAM_SLUG ?? "openclaw-secops";
 const dependencyManifestFields = [
   "dependencies",
   "devDependencies",
@@ -751,16 +751,16 @@ async function main() {
   }
 
   const api = githubApi(token);
-  const autoscrubToken = process.env.OPENCLAW_DEPENDENCY_GUARD_AUTOSCRUB_TOKEN;
+  const autoscrubToken = process.env.DEX_DEPENDENCY_GUARD_AUTOSCRUB_TOKEN;
   const autoscrubApi = autoscrubToken ? githubApi(autoscrubToken) : null;
-  const explicitSecurityApprovers = securityApproverSet(process.env.OPENCLAW_SECURITY_APPROVERS);
+  const explicitSecurityApprovers = securityApproverSet(process.env.DEX_SECURITY_APPROVERS);
   const trustedCommentAuthors = dependencyGuardCommentAuthors(
-    process.env.OPENCLAW_DEPENDENCY_GUARD_COMMENT_BOTS,
+    process.env.DEX_DEPENDENCY_GUARD_COMMENT_BOTS,
   );
   const issuePath = `/repos/${owner}/${repo}/issues/${eventPullRequest.number}`;
   const pullPath = `/repos/${owner}/${repo}/pulls/${eventPullRequest.number}`;
   const pullRequest = await api.request(pullPath);
-  const mode = process.env.OPENCLAW_DEPENDENCY_GUARD_MODE ?? "enforce";
+  const mode = process.env.DEX_DEPENDENCY_GUARD_MODE ?? "enforce";
   const files = await api.paginate(`${pullPath}/files`);
   const dependencyFiles = files
     .map((file) => file.filename)

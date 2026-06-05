@@ -1,5 +1,5 @@
 export type { ReplyPayload } from "openclaw/plugin-sdk/reply-runtime";
-export type { OpenClawConfig, GroupPolicy } from "openclaw/plugin-sdk/config-contracts";
+export type { DexConfig, GroupPolicy } from "openclaw/plugin-sdk/config-contracts";
 export type { MarkdownTableMode } from "openclaw/plugin-sdk/config-contracts";
 export type { BaseTokenResolution } from "openclaw/plugin-sdk/channel-contract";
 export type {

@@ -12,8 +12,8 @@ import type {
   EnvironmentsListResult,
   GatewayEvent,
   GatewayRequestOptions,
-  OpenClawEvent,
-  OpenClawTransport,
+  DexEvent,
+  DexTransport,
   RunCreateParams,
   RunResult,
   RunTimestamp,
@@ -32,16 +32,16 @@ const MAX_REPLAY_RUNS = 100;
 const MAX_REPLAY_EVENTS_PER_RUN = 500;
 const MAX_NORMALIZED_REPLAY_EVENTS = 2000;
 
-export type OpenClawOptions = {
+export type DexOptions = {
   gateway?: "auto" | (string & {});
   url?: string;
   token?: string;
   password?: string;
   requestTimeoutMs?: number;
-  transport?: OpenClawTransport;
+  transport?: DexTransport;
 };
 
-function resolveGatewayUrl(options: OpenClawOptions): string | undefined {
+function resolveGatewayUrl(options: DexOptions): string | undefined {
   if (options.url) {
     return options.url;
   }
@@ -225,7 +225,7 @@ function requireArtifactQueryScope(api: string, params: unknown): ArtifactQuery 
   return params;
 }
 
-function readChatProjection(event: OpenClawEvent): ChatProjection | undefined {
+function readChatProjection(event: DexEvent): ChatProjection | undefined {
   const raw = event.raw;
   if (event.type !== "raw" || raw?.event !== "chat") {
     return undefined;
@@ -262,11 +262,11 @@ function readChatProjectionReplace(payload: Record<string, unknown>): boolean {
   return payload.replace === true;
 }
 
-function isAssistantRunEvent(event: OpenClawEvent): boolean {
+function isAssistantRunEvent(event: DexEvent): boolean {
   return event.type === "assistant.delta" || event.type === "assistant.message";
 }
 
-function isTerminalRunEvent(event: OpenClawEvent): boolean {
+function isTerminalRunEvent(event: DexEvent): boolean {
   return (
     event.type === "run.completed" ||
     event.type === "run.failed" ||
@@ -276,10 +276,10 @@ function isTerminalRunEvent(event: OpenClawEvent): boolean {
 }
 
 function normalizeChatProjectionEvent(
-  event: OpenClawEvent,
+  event: DexEvent,
   projection: ChatProjection,
   previousText: string | undefined,
-): OpenClawEvent {
+): DexEvent {
   const text = readChatProjectionText(projection.payload);
   const deltaText = readChatProjectionDeltaText(projection.payload);
   const hasPreviousText = previousText !== undefined;
@@ -311,16 +311,16 @@ export class OpenClaw {
   readonly approvals: ApprovalsNamespace;
   readonly environments: EnvironmentsNamespace;
 
-  private readonly transport: OpenClawTransport;
-  private readonly normalizedEvents = new EventHub<OpenClawEvent>({
+  private readonly transport: DexTransport;
+  private readonly normalizedEvents = new EventHub<DexEvent>({
     replayLimit: MAX_NORMALIZED_REPLAY_EVENTS,
   });
-  private readonly replayByRunId = new Map<string, OpenClawEvent[]>();
+  private readonly replayByRunId = new Map<string, DexEvent[]>();
   private connected = false;
   private eventPumpPromise: Promise<void> | null = null;
   private eventPumpReady: Promise<void> | null = null;
 
-  constructor(options: OpenClawOptions = {}) {
+  constructor(options: DexOptions = {}) {
     this.transport =
       options.transport ??
       new GatewayClientTransport({
@@ -370,14 +370,14 @@ export class OpenClaw {
     return await this.transport.request<T>(method, params, options);
   }
 
-  events(filter?: (event: OpenClawEvent) => boolean): AsyncIterable<OpenClawEvent> {
+  events(filter?: (event: DexEvent) => boolean): AsyncIterable<DexEvent> {
     return this.iterateEvents(filter);
   }
 
   runEvents(
     runId: string,
-    filter?: (event: OpenClawEvent) => boolean,
-  ): AsyncIterable<OpenClawEvent> {
+    filter?: (event: DexEvent) => boolean,
+  ): AsyncIterable<DexEvent> {
     return this.iterateRunEvents(runId, filter);
   }
 
@@ -386,8 +386,8 @@ export class OpenClaw {
   }
 
   private async *iterateEvents(
-    filter?: (event: OpenClawEvent) => boolean,
-  ): AsyncIterable<OpenClawEvent> {
+    filter?: (event: DexEvent) => boolean,
+  ): AsyncIterable<DexEvent> {
     await this.connect();
     for await (const event of this.normalizedEvents.stream(filter)) {
       yield event;
@@ -396,14 +396,14 @@ export class OpenClaw {
 
   private async *iterateRunEvents(
     runId: string,
-    filter?: (event: OpenClawEvent) => boolean,
-  ): AsyncIterable<OpenClawEvent> {
+    filter?: (event: DexEvent) => boolean,
+  ): AsyncIterable<DexEvent> {
     await this.connect();
     const replayEvents = this.replaySnapshot(runId);
     let hasCanonicalAssistantRunEvent = replayEvents.some(isAssistantRunEvent);
     let hasTerminalRunEvent = replayEvents.some(isTerminalRunEvent);
     let previousChatProjectionText: string | undefined;
-    const toRunStreamEvent = (event: OpenClawEvent): OpenClawEvent | undefined => {
+    const toRunStreamEvent = (event: DexEvent): DexEvent | undefined => {
       const chatProjection = readChatProjection(event);
       if (chatProjection?.state === "delta") {
         if (hasCanonicalAssistantRunEvent) {
@@ -435,7 +435,7 @@ export class OpenClaw {
       }
       return event;
     };
-    const matches = (event: OpenClawEvent) => event.runId === runId;
+    const matches = (event: DexEvent) => event.runId === runId;
     const liveSource = this.normalizedEvents.stream(matches, { replay: true });
     const live = liveSource[Symbol.asyncIterator]();
     let nextLive = live.next();
@@ -515,7 +515,7 @@ export class OpenClaw {
     return this.eventPumpReady;
   }
 
-  private recordReplayEvent(event: OpenClawEvent): void {
+  private recordReplayEvent(event: DexEvent): void {
     if (!event.runId) {
       return;
     }
@@ -536,7 +536,7 @@ export class OpenClaw {
     }
   }
 
-  private replaySnapshot(runId: string): OpenClawEvent[] {
+  private replaySnapshot(runId: string): DexEvent[] {
     return [...(this.replayByRunId.get(runId) ?? [])];
   }
 }
@@ -568,7 +568,7 @@ export class Run {
     readonly sessionKey?: string,
   ) {}
 
-  events(filter?: (event: OpenClawEvent) => boolean): AsyncIterable<OpenClawEvent> {
+  events(filter?: (event: DexEvent) => boolean): AsyncIterable<DexEvent> {
     return this.client.runEvents(this.id, filter);
   }
 
@@ -718,7 +718,7 @@ export class RunsNamespace {
     return new Run(this.client, runId);
   }
 
-  events(runId: string): AsyncIterable<OpenClawEvent> {
+  events(runId: string): AsyncIterable<DexEvent> {
     return new Run(this.client, runId).events();
   }
 

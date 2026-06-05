@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   resolveReactionLevel,
   type ResolvedReactionLevel,
@@ -9,7 +9,7 @@ type ResolvedWhatsAppReactionLevel = ResolvedReactionLevel;
 
 /** Resolve the effective reaction level and its implications for WhatsApp. */
 export function resolveWhatsAppReactionLevel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string;
 }): ResolvedWhatsAppReactionLevel {
   const account = resolveMergedWhatsAppAccountConfig({

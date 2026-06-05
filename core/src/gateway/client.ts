@@ -156,7 +156,7 @@ export type GatewayClientConnectionMetadata = {
   preauthHandshakeTimeoutMs?: number;
 };
 
-function createOpenClawGatewayClientHostDeps(
+function createDexGatewayClientHostDeps(
   overrides?: GatewayClientHostDeps,
 ): GatewayClientHostDeps {
   return {
@@ -194,7 +194,7 @@ export class GatewayClient {
     this.#client = new BaseGatewayClient({
       ...opts,
       clientVersion: opts.clientVersion ?? VERSION,
-      hostDeps: createOpenClawGatewayClientHostDeps(opts.hostDeps),
+      hostDeps: createDexGatewayClientHostDeps(opts.hostDeps),
     });
   }
 

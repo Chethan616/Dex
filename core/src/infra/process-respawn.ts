@@ -42,14 +42,14 @@ function spawnDetachedGatewayProcess(opts: GatewayRespawnOptions = {}): {
 /**
  * Attempt to restart this process with a fresh PID.
  * - supervised environments (launchd/systemd/schtasks): caller should exit and let supervisor restart
- * - OPENCLAW_NO_RESPAWN=1: caller should keep in-process restart behavior (tests/dev)
+ * - DEX_NO_RESPAWN=1: caller should keep in-process restart behavior (tests/dev)
  * - unmanaged environments: caller should keep in-process restart behavior so
  *   custom supervisors keep tracking the same gateway PID
  */
 export function restartGatewayProcessWithFreshPid(
   _opts: GatewayRespawnOptions = {},
 ): GatewayRespawnResult {
-  if (isTruthy(process.env.OPENCLAW_NO_RESPAWN)) {
+  if (isTruthy(process.env.DEX_NO_RESPAWN)) {
     return { mode: "disabled" };
   }
   const supervisor = detectRespawnSupervisor(process.env);
@@ -100,8 +100,8 @@ export function restartGatewayProcessWithFreshPid(
 export function respawnGatewayProcessForUpdate(
   opts: GatewayRespawnOptions = {},
 ): GatewayUpdateRespawnResult {
-  if (isTruthy(process.env.OPENCLAW_NO_RESPAWN)) {
-    return { mode: "disabled", detail: "OPENCLAW_NO_RESPAWN" };
+  if (isTruthy(process.env.DEX_NO_RESPAWN)) {
+    return { mode: "disabled", detail: "DEX_NO_RESPAWN" };
   }
   const supervisor = detectRespawnSupervisor(process.env);
   if (supervisor) {

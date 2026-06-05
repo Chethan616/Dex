@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { SkillScanFinding } from "../security/scanner.js";
 
 export const SKILL_WORKSHOP_SCHEMA = "openclaw.skill-workshop.proposal.v1" as const;
@@ -112,7 +112,7 @@ export type SkillProposalSupportFileInput = {
 
 export type SkillProposalCreateInput = {
   workspaceDir: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   name: string;
   description: string;
   content: string;
@@ -125,7 +125,7 @@ export type SkillProposalCreateInput = {
 
 export type SkillProposalUpdateInput = {
   workspaceDir: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   skillName: string;
   description?: string;
   content: string;
@@ -138,7 +138,7 @@ export type SkillProposalUpdateInput = {
 
 export type SkillProposalReviseInput = {
   workspaceDir: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   proposalId: string;
   content: string;
   supportFiles?: SkillProposalSupportFileInput[];

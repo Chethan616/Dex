@@ -449,7 +449,7 @@ const CommitmentsSchema = z
   .strict()
   .optional();
 
-export const OpenClawSchema = z
+export const DexSchema = z
   .object({
     $schema: z.string().optional(),
     meta: z

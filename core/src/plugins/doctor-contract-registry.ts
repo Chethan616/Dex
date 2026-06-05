@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { asNullableRecord } from "@dexagent/normalization-core/record-coerce";
 import { normalizeTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
 import type { LegacyConfigRule } from "../config/legacy.shared.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import type {
   OpenKeyedStoreOptions,
   PluginStateKeyedStore,
@@ -33,12 +33,12 @@ type PluginDoctorContractModule = {
 };
 
 type PluginDoctorCompatibilityMutation = {
-  config: OpenClawConfig;
+  config: DexConfig;
   changes: string[];
 };
 
 type PluginDoctorCompatibilityNormalizer = (params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }) => PluginDoctorCompatibilityMutation;
 
 type PluginDoctorContractEntry = {
@@ -61,7 +61,7 @@ export type PluginDoctorStateMigration = {
   id: string;
   label: string;
   detectLegacyState: (params: {
-    config: OpenClawConfig;
+    config: DexConfig;
     env: NodeJS.ProcessEnv;
     stateDir: string;
     oauthDir: string;
@@ -71,7 +71,7 @@ export type PluginDoctorStateMigration = {
     | PluginDoctorStateMigrationDetection
     | null;
   migrateLegacyState: (params: {
-    config: OpenClawConfig;
+    config: DexConfig;
     env: NodeJS.ProcessEnv;
     stateDir: string;
     oauthDir: string;
@@ -333,7 +333,7 @@ function loadPluginDoctorContractEntry(
 }
 
 function resolvePluginDoctorContracts(params?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   pluginIds?: readonly string[];
@@ -382,7 +382,7 @@ export function setPluginDoctorContractRegistryModuleLoaderFactoryForTest(
 }
 
 export function listPluginDoctorLegacyConfigRules(params?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   pluginIds?: readonly string[];
@@ -391,7 +391,7 @@ export function listPluginDoctorLegacyConfigRules(params?: {
 }
 
 export function listPluginDoctorSessionRouteStateOwners(params?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   pluginIds?: readonly string[];
@@ -408,7 +408,7 @@ export function listPluginDoctorSessionRouteStateOwners(params?: {
 }
 
 export function listPluginDoctorStateMigrations(params?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   pluginIds?: readonly string[];
@@ -417,7 +417,7 @@ export function listPluginDoctorStateMigrations(params?: {
 }
 
 export function listPluginDoctorStateMigrationEntries(params?: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   pluginIds?: readonly string[];
@@ -431,15 +431,15 @@ export function listPluginDoctorStateMigrationEntries(params?: {
 }
 
 export function applyPluginDoctorCompatibilityMigrations(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   params?: {
-    config?: OpenClawConfig;
+    config?: DexConfig;
     workspaceDir?: string;
     env?: NodeJS.ProcessEnv;
     pluginIds?: readonly string[];
   },
 ): {
-  config: OpenClawConfig;
+  config: DexConfig;
   changes: string[];
 } {
   let nextCfg = cfg;

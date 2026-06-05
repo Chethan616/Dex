@@ -26,8 +26,8 @@ const store = {
 };
 fs.writeFileSync(configPath, "{}\n");
 fs.writeFileSync(storePath, `${JSON.stringify(store, null, 2)}\n`);
-process.env.OPENCLAW_CONFIG_PATH = configPath;
-process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS = "1";
+process.env.DEX_CONFIG_PATH = configPath;
+process.env.DEX_DISABLE_BUNDLED_PLUGINS = "1";
 
 const originalStderrWrite = process.stderr.write.bind(process.stderr);
 process.stderr.write = (chunk, encoding, callback) => {

@@ -7,7 +7,7 @@ import {
   canonicalizeMainSessionAlias,
   resolveMainSessionKey,
 } from "../config/sessions/main-session.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   DEFAULT_AGENT_ID,
   normalizeAgentId,
@@ -29,12 +29,12 @@ export function canonicalizeSessionKeyForAgent(agentId: string, key: string): st
   return `agent:${normalizeAgentId(agentId)}:${normalized}`;
 }
 
-function resolveDefaultStoreAgentId(cfg: OpenClawConfig): string {
+function resolveDefaultStoreAgentId(cfg: DexConfig): string {
   return normalizeAgentId(resolveDefaultAgentId(cfg));
 }
 
 function shouldRemapLegacyDefaultMainAlias(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   parsed: ParsedAgentSessionKey,
   options?: { storeAgentId?: string },
 ): boolean {
@@ -52,7 +52,7 @@ function shouldRemapLegacyDefaultMainAlias(
 }
 
 function resolveParsedSessionStoreKey(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   raw: string,
   parsed: ParsedAgentSessionKey,
   options?: { storeAgentId?: string },
@@ -69,7 +69,7 @@ function resolveParsedSessionStoreKey(
 }
 
 export function resolveSessionStoreKey(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   storeAgentId?: string;
 }): string {
@@ -107,7 +107,7 @@ export function resolveSessionStoreKey(params: {
   return canonicalizeSessionKeyForAgent(agentId, raw);
 }
 
-export function resolveSessionStoreAgentId(cfg: OpenClawConfig, canonicalKey: string): string {
+export function resolveSessionStoreAgentId(cfg: DexConfig, canonicalKey: string): string {
   if (canonicalKey === "global" || canonicalKey === "unknown") {
     return resolveDefaultStoreAgentId(cfg);
   }
@@ -119,7 +119,7 @@ export function resolveSessionStoreAgentId(cfg: OpenClawConfig, canonicalKey: st
 }
 
 export function resolveStoredSessionKeyForAgentStore(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   sessionKey: string;
 }): string {
@@ -140,7 +140,7 @@ export function resolveStoredSessionKeyForAgentStore(params: {
 }
 
 export function resolveStoredSessionOwnerAgentId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   sessionKey: string;
 }): string | null {
@@ -152,7 +152,7 @@ export function resolveStoredSessionOwnerAgentId(params: {
 }
 
 export function canonicalizeSpawnedByForAgent(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   agentId: string,
   spawnedBy?: string,
 ): string | undefined {

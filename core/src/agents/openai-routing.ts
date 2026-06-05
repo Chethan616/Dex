@@ -1,5 +1,5 @@
 import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 export const OPENAI_PROVIDER_ID = "openai";
 export const OPENAI_CODEX_PROVIDER_ID = OPENAI_PROVIDER_ID;
@@ -23,7 +23,7 @@ function isOfficialOpenAIBaseUrl(baseUrl: unknown): boolean {
   }
 }
 
-function resolveOpenAIProviderConfig(config: OpenClawConfig | undefined) {
+function resolveOpenAIProviderConfig(config: DexConfig | undefined) {
   const providers = config?.models?.providers;
   if (!providers) {
     return undefined;
@@ -40,7 +40,7 @@ function resolveOpenAIProviderConfig(config: OpenClawConfig | undefined) {
   return undefined;
 }
 
-function openAIProviderUsesCustomBaseUrl(config: OpenClawConfig | undefined): boolean {
+function openAIProviderUsesCustomBaseUrl(config: DexConfig | undefined): boolean {
   return !isOfficialOpenAIBaseUrl(resolveOpenAIProviderConfig(config)?.baseUrl);
 }
 
@@ -51,7 +51,7 @@ export function isOpenAIProvider(provider: string | undefined): boolean {
 
 export function openAIProviderUsesCodexRuntimeByDefault(params: {
   provider?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): boolean {
   return isOpenAIProvider(params.provider) && !openAIProviderUsesCustomBaseUrl(params.config);
 }
@@ -73,7 +73,7 @@ export function modelRefUsesOpenAIProvider(value: unknown): boolean {
 
 export function modelSelectionShouldEnsureCodexPlugin(params: {
   model?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): boolean {
   const provider = parseModelRefProvider(params.model);
   return provider === OPENAI_PROVIDER_ID && !openAIProviderUsesCustomBaseUrl(params.config);
@@ -83,7 +83,7 @@ export function listOpenAIAuthProfileProvidersForAgentRuntime(params: {
   provider: string;
   harnessRuntime?: string;
   agentHarnessId?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): string[] {
   if (!isOpenAIProvider(params.provider)) {
     return [params.provider];
@@ -97,7 +97,7 @@ export function resolveOpenAIRuntimeProvider(params: {
   agentHarnessId?: string;
   authProfileProvider?: string;
   authProfileId?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
 }): string {
   return isOpenAIProvider(params.provider) ? OPENAI_PROVIDER_ID : params.provider;
@@ -109,7 +109,7 @@ export function resolveSelectedOpenAIRuntimeProvider(params: {
   agentHarnessId?: string;
   authProfileProvider?: string;
   authProfileId?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   workspaceDir?: string;
 }): string {
   return isOpenAIProvider(params.provider) ? OPENAI_PROVIDER_ID : params.provider;
@@ -118,7 +118,7 @@ export function resolveSelectedOpenAIRuntimeProvider(params: {
 export function resolveContextConfigProviderForRuntime(params: {
   provider: string;
   runtimeId?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): string {
   return isOpenAIProvider(params.provider) ? OPENAI_PROVIDER_ID : params.provider;
 }

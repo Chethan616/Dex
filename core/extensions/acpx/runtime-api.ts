@@ -22,10 +22,10 @@ export type {
   AcpSessionUpdateTag,
 } from "openclaw/plugin-sdk/acp-runtime-backend";
 export type {
-  OpenClawPluginApi,
-  OpenClawPluginConfigSchema,
-  OpenClawPluginService,
-  OpenClawPluginServiceContext,
+  DexPluginApi,
+  DexPluginConfigSchema,
+  DexPluginService,
+  DexPluginServiceContext,
   PluginLogger,
 } from "openclaw/plugin-sdk/core";
 export type {

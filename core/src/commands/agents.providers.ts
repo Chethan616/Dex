@@ -5,7 +5,7 @@ import { listReadOnlyChannelPluginsForConfig } from "../channels/plugins/read-on
 import type { ChannelPlugin } from "../channels/plugins/types.plugin.js";
 import type { ChannelId } from "../channels/plugins/types.public.js";
 import type { AgentBinding } from "../config/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { DEFAULT_ACCOUNT_ID } from "../routing/session-key.js";
 
 type ProviderAccountStatus = {
@@ -30,7 +30,7 @@ function providerAccountKey(provider: ChannelId, accountId?: string) {
 }
 
 export function buildProviderSummaryMetadataIndex(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): Map<ChannelId, ProviderSummaryMetadata> {
   return new Map(
     listReadOnlyChannelPluginsForConfig(cfg, {
@@ -81,7 +81,7 @@ function formatProviderState(entry: ProviderAccountStatus): string {
 
 async function resolveReadOnlyAccount(params: {
   plugin: ChannelPlugin;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
 }): Promise<unknown> {
   if (params.plugin.config.inspectAccount) {
@@ -91,7 +91,7 @@ async function resolveReadOnlyAccount(params: {
 }
 
 export async function buildProviderStatusIndex(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): Promise<Map<string, ProviderAccountStatus>> {
   const map = new Map<string, ProviderAccountStatus>();
 
@@ -169,7 +169,7 @@ function resolveDefaultAccountId(
 
 function shouldShowProviderEntry(params: {
   entry: ProviderAccountStatus;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   metadataByProvider: ReadonlyMap<ChannelId, ProviderSummaryMetadata>;
 }): boolean {
   const visibleInConfiguredLists =
@@ -193,7 +193,7 @@ function formatProviderEntry(entry: ProviderAccountStatus): string {
 }
 
 export function summarizeBindings(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   bindings: AgentBinding[],
   metadataByProvider = buildProviderSummaryMetadataIndex(cfg),
 ): string[] {
@@ -223,7 +223,7 @@ export function summarizeBindings(
 
 export function listProvidersForAgent(params: {
   summaryIsDefault: boolean;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   bindings: AgentBinding[];
   providerStatus: Map<string, ProviderAccountStatus>;
   providerMetadata?: ReadonlyMap<ChannelId, ProviderSummaryMetadata>;

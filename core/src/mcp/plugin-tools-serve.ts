@@ -17,13 +17,13 @@ import {
 } from "../agents/tool-policy.js";
 import type { AnyAgentTool } from "../agents/tools/common.js";
 import { getRuntimeConfig } from "../config/config.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { routeLogsToStderr } from "../logging/console.js";
 import { ensureStandalonePluginToolRegistryLoaded, resolvePluginTools } from "../plugins/tools.js";
 import { connectToolsMcpServerToStdio, createToolsMcpServer } from "./tools-stdio-server.js";
 
-function resolvePluginToolPolicy(config: OpenClawConfig): {
+function resolvePluginToolPolicy(config: DexConfig): {
   toolAllowlist?: string[];
   toolDenylist?: string[];
 } {
@@ -40,7 +40,7 @@ function resolvePluginToolPolicy(config: OpenClawConfig): {
   };
 }
 
-function resolveTools(config: OpenClawConfig): AnyAgentTool[] {
+function resolveTools(config: DexConfig): AnyAgentTool[] {
   const pluginToolPolicy = resolvePluginToolPolicy(config);
   ensureStandalonePluginToolRegistryLoaded({
     context: { config },
@@ -55,7 +55,7 @@ function resolveTools(config: OpenClawConfig): AnyAgentTool[] {
 
 export function createPluginToolsMcpServer(
   params: {
-    config?: OpenClawConfig;
+    config?: DexConfig;
     tools?: AnyAgentTool[];
   } = {},
 ): Server {

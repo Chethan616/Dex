@@ -2,4 +2,4 @@
 // Keep this list additive and scoped to the bundled open-prose surface.
 
 export { definePluginEntry } from "./plugin-entry.js";
-export type { OpenClawPluginApi } from "../plugins/types.js";
+export type { DexPluginApi } from "../plugins/types.js";

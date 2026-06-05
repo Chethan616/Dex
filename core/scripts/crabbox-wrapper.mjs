@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { resolvePathEnvKey } from "./windows-cmd-helpers.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const ignoreRepoBinary = process.env.OPENCLAW_CRABBOX_WRAPPER_IGNORE_REPO_BINARY === "1";
+const ignoreRepoBinary = process.env.DEX_CRABBOX_WRAPPER_IGNORE_REPO_BINARY === "1";
 const repoLocal = ignoreRepoBinary ? null : resolveCrabboxBinary(process.env, process.platform);
 const pathLocal = resolvePathBinary("crabbox", process.env, process.platform);
 const binary =
@@ -143,8 +143,8 @@ const shellControlCommandPrefixes = new Set([
 const shellCommandExecutionPrefixes = new Set(["exec"]);
 const shellInlineCommandInterpreters = new Set(["bash", "dash", "ksh", "sh", "zsh"]);
 const remoteChangedGateEnv = [
-  "OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1",
-  "OPENCLAW_CHANGED_LANES_RAW_SYNC=1",
+  "DEX_CHECK_CHANGED_REMOTE_CHILD=1",
+  "DEX_CHANGED_LANES_RAW_SYNC=1",
   "CI=1",
 ];
 const shellInlineCommandOptionsWithNextValue = new Set([
@@ -465,7 +465,7 @@ function selectedProvider(commandArgs, advertisedProviders = []) {
 }
 
 function shouldRequireBrokeredAws(commandArgs, providerName) {
-  if (process.env.OPENCLAW_CRABBOX_ALLOW_DIRECT_AWS === "1") {
+  if (process.env.DEX_CRABBOX_ALLOW_DIRECT_AWS === "1") {
     return false;
   }
   const canonicalProvider = providerAliases.get(providerName) ?? providerName;
@@ -500,7 +500,7 @@ function enforceBrokeredAws(commandArgs, providerName) {
     [
       "[crabbox] provider=aws requires a configured Crabbox broker for OpenClaw proof.",
       "[crabbox] run `crabbox login --url https://crabbox.openclaw.ai --provider aws`, then retry.",
-      "[crabbox] for intentional direct AWS provider debugging, set OPENCLAW_CRABBOX_ALLOW_DIRECT_AWS=1.",
+      "[crabbox] for intentional direct AWS provider debugging, set DEX_CRABBOX_ALLOW_DIRECT_AWS=1.",
     ].join("\n"),
   );
   process.exit(2);
@@ -1638,14 +1638,14 @@ function injectRemoteChangedGateGitBootstrap(commandArgs, changedGateBase) {
 }
 
 function remoteAwsMacosJsBootstrap({ packageManager = false } = {}) {
-  const nodeVersion = process.env.OPENCLAW_CRABBOX_MACOS_NODE_VERSION?.trim() || "24.15.0";
+  const nodeVersion = process.env.DEX_CRABBOX_MACOS_NODE_VERSION?.trim() || "24.15.0";
   const bootstrap = [
     "openclaw_crabbox_bootstrap_macos_js() {",
-    'tool_root="${OPENCLAW_CRABBOX_MACOS_TOOLCHAIN_DIR:-$HOME/.openclaw-crabbox-toolchain}";',
+    'tool_root="${DEX_CRABBOX_MACOS_TOOLCHAIN_DIR:-$HOME/.openclaw-crabbox-toolchain}";',
     `node_version=${shellQuote(nodeVersion)};`,
     'arch="$(uname -m)";',
     'case "$arch" in arm64) node_arch=arm64 ;; x86_64) node_arch=x64 ;; *) echo "unsupported macOS arch: $arch" >&2; return 2 ;; esac;',
-    'macos_locale="${OPENCLAW_CRABBOX_MACOS_LOCALE:-en_US.UTF-8}";',
+    'macos_locale="${DEX_CRABBOX_MACOS_LOCALE:-en_US.UTF-8}";',
     'case "${LANG:-}" in C.UTF-8|C.utf8|c.UTF-8|c.utf8) export LANG="$macos_locale" ;; esac;',
     'case "${LC_ALL:-}" in C.UTF-8|C.utf8|c.UTF-8|c.utf8) export LC_ALL="$macos_locale" ;; esac;',
     'case "${LC_CTYPE:-}" in C.UTF-8|C.utf8|c.UTF-8|c.utf8) export LC_CTYPE="$macos_locale" ;; esac;',
@@ -1888,7 +1888,7 @@ function scriptNeedsAwsMacosPackageManager(script) {
 function uniqueHereDocDelimiter(script) {
   let index = 0;
   for (;;) {
-    const delimiterLocal = `OPENCLAW_CRABBOX_SCRIPT_${index}`;
+    const delimiterLocal = `DEX_CRABBOX_SCRIPT_${index}`;
     if (!new RegExp(`^${delimiterLocal}$`, "mu").test(script)) {
       return delimiterLocal;
     }
@@ -1932,7 +1932,7 @@ function defaultFullCheckoutSyncRoot() {
 }
 
 function fullCheckoutSyncRoot() {
-  const configured = process.env.OPENCLAW_CRABBOX_SYNC_TMPDIR?.trim();
+  const configured = process.env.DEX_CRABBOX_SYNC_TMPDIR?.trim();
   const root = configured ? resolve(configured) : defaultFullCheckoutSyncRoot();
   mkdirSync(root, { recursive: true });
   return root;
@@ -1969,7 +1969,7 @@ function formatByteCount(bytes) {
 
 function assertFullCheckoutSyncDisk(root) {
   const requiredBytes = parseNonNegativeIntegerEnv(
-    "OPENCLAW_CRABBOX_SYNC_MIN_FREE_BYTES",
+    "DEX_CRABBOX_SYNC_MIN_FREE_BYTES",
     1024 * 1024 * 1024,
     "byte count",
   );
@@ -1987,7 +1987,7 @@ function assertFullCheckoutSyncDisk(root) {
       `root=${root}`,
       `free=${formatByteCount(freeBytes)}`,
       `required=${formatByteCount(requiredBytes)}`,
-      "set OPENCLAW_CRABBOX_SYNC_TMPDIR to a roomier filesystem or lower OPENCLAW_CRABBOX_SYNC_MIN_FREE_BYTES if you know this checkout fits",
+      "set DEX_CRABBOX_SYNC_TMPDIR to a roomier filesystem or lower DEX_CRABBOX_SYNC_MIN_FREE_BYTES if you know this checkout fits",
     ].join("; "),
   );
 }
@@ -2071,7 +2071,7 @@ function startFullCheckoutKeepalive(checkout) {
 
   refresh();
   const intervalMs = parseNonNegativeIntegerEnv(
-    "OPENCLAW_CRABBOX_SYNC_KEEPALIVE_MS",
+    "DEX_CRABBOX_SYNC_KEEPALIVE_MS",
     5000,
     "millisecond interval",
   );

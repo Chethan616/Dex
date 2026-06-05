@@ -121,7 +121,7 @@ The onboarding preset sets `arcee/trinity-large-thinking` as the default model.
   <Accordion title="Environment note">
     If the Gateway runs as a daemon (launchd/systemd), make sure `ARCEEAI_API_KEY`
     (or `OPENROUTER_API_KEY`) is available to that process (for example, in
-    `~/.openclaw/.env` or via `env.shellEnv`).
+    `~/.dex/.env` or via `env.shellEnv`).
   </Accordion>
 
   <Accordion title="OpenRouter routing">

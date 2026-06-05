@@ -27,7 +27,7 @@ Use it when you want to:
 
 - inspect the local requested policy, host approvals file, and effective merge
 - apply a local preset such as YOLO or deny-all
-- synchronize local `tools.exec.*` and local `~/.openclaw/exec-approvals.json`
+- synchronize local `tools.exec.*` and local `~/.dex/exec-approvals.json`
 
 Examples:
 
@@ -182,7 +182,7 @@ Targeting notes:
 - `--node` uses the same resolver as `openclaw nodes` (id, name, ip, or id prefix).
 - `--agent` defaults to `"*"`, which applies to all agents.
 - The node host must advertise `system.execApprovals.get/set` (macOS app or headless node host).
-- Approvals files are stored per host at `~/.openclaw/exec-approvals.json`.
+- Approvals files are stored per host at `~/.dex/exec-approvals.json`.
 
 ## Related
 

@@ -5,7 +5,7 @@ import {
   type ChannelMessageSendResult,
   type MessageReceiptPartKind,
 } from "openclaw/plugin-sdk/channel-outbound";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { ChannelPlugin } from "openclaw/plugin-sdk/core";
 // Register the PlatformAdapter before any core/ module is used.
 import "./bridge/bootstrap.js";
@@ -17,7 +17,7 @@ import {
   resolveQQBotAccount,
 } from "./bridge/config.js";
 import type { GatewayContext } from "./bridge/gateway.js";
-import { toGatewayAccount, writeOpenClawConfigThroughRuntime } from "./bridge/narrowing.js";
+import { toGatewayAccount, writeDexConfigThroughRuntime } from "./bridge/narrowing.js";
 import { getQQBotRuntime } from "./bridge/runtime.js";
 import { qqbotSetupWizard } from "./bridge/setup/surface.js";
 import { qqbotChannelConfigSchema } from "./config-schema.js";
@@ -67,7 +67,7 @@ function createQQBotSendReceipt(params: {
 }
 
 async function sendQQBotText(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   to: string;
   text: string;
   accountId?: string | null;
@@ -98,7 +98,7 @@ async function sendQQBotText(params: {
 }
 
 async function sendQQBotMedia(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   to: string;
   text?: string | null;
   mediaUrl?: string | null;
@@ -180,7 +180,7 @@ function persistAccountCredentialSnapshot(account: ResolvedQQBotAccount): void {
 }
 
 function shouldSuppressLocalQQBotApprovalPrompt(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   payload: { text?: string; channelData?: unknown };
   hint?: { kind: "approval-pending" | "approval-resolved"; approvalKind: "exec" | "plugin" };
@@ -295,7 +295,7 @@ export const qqbotPlugin: ChannelPlugin<ResolvedQQBotAccount> = {
               appId: backup.appId,
               clientSecret: backup.clientSecret,
             });
-            await writeOpenClawConfigThroughRuntime(getQQBotRuntime(), nextCfg);
+            await writeDexConfigThroughRuntime(getQQBotRuntime(), nextCfg);
             cfg = nextCfg;
             account = resolveQQBotAccount(nextCfg, account.accountId);
             log?.info(
@@ -362,10 +362,10 @@ export const qqbotPlugin: ChannelPlugin<ResolvedQQBotAccount> = {
       );
 
       if (changed) {
-        await writeOpenClawConfigThroughRuntime(getQQBotRuntime(), nextCfg as OpenClawConfig);
+        await writeDexConfigThroughRuntime(getQQBotRuntime(), nextCfg as DexConfig);
       }
 
-      const resolved = resolveQQBotAccount((changed ? nextCfg : cfg) as OpenClawConfig, accountId);
+      const resolved = resolveQQBotAccount((changed ? nextCfg : cfg) as DexConfig, accountId);
       const loggedOut = resolved.secretSource === "none";
       const envToken = Boolean(process.env.QQBOT_CLIENT_SECRET);
 

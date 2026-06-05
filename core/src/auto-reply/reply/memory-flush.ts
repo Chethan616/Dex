@@ -3,12 +3,12 @@ import { DEFAULT_CONTEXT_TOKENS } from "../../agents/defaults.js";
 import { legacyModelKey, modelKey } from "../../agents/model-selection-normalize.js";
 import { parseNonNegativeByteSize } from "../../config/byte-size.js";
 import { resolveFreshSessionTotalTokens, type SessionEntry } from "../../config/sessions.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 
 export function resolveMemoryFlushContextWindowTokens(params: {
   modelId?: string;
   agentCfgContextTokens?: number;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider?: string;
 }): number {
   return (
@@ -22,7 +22,7 @@ export function resolveMemoryFlushContextWindowTokens(params: {
   );
 }
 
-export function resolveMaxActiveTranscriptBytes(cfg?: OpenClawConfig): number | undefined {
+export function resolveMaxActiveTranscriptBytes(cfg?: DexConfig): number | undefined {
   const compaction = cfg?.agents?.defaults?.compaction;
   if (compaction?.truncateAfterCompaction !== true) {
     return undefined;
@@ -67,7 +67,7 @@ function resolvePositiveIntegerParam(
 }
 
 export function resolveResponsesServerCompactionThreshold(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   provider?: string;
   modelId?: string;
 }): number | undefined {

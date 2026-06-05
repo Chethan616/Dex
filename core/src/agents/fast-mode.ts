@@ -1,6 +1,6 @@
 import { normalizeFastMode } from "../auto-reply/thinking.shared.js";
 import type { SessionEntry } from "../config/sessions.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveAgentConfig } from "./agent-scope.js";
 import { modelKey } from "./model-ref-shared.js";
 
@@ -10,7 +10,7 @@ type FastModeState = {
 };
 
 function resolveConfiguredFastModeRaw(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
   model: string;
 }): unknown {
@@ -20,7 +20,7 @@ function resolveConfiguredFastModeRaw(params: {
 }
 
 export function resolveFastModeState(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
   model: string;
   agentId?: string;

@@ -6,12 +6,12 @@ import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
 } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { extractModelCompat } from "../plugins/provider-model-compat.js";
 import type { ProviderRuntimeModel } from "../plugins/provider-runtime-model.types.js";
 import { normalizeProviderTransportWithPlugin } from "../plugins/provider-runtime.js";
 import { resolveAgentDir, resolveAgentWorkspaceDir, resolveSessionAgentId } from "./agent-scope.js";
-import { createOpenClawCodingTools } from "./agent-tools.js";
+import { createDexCodingTools } from "./agent-tools.js";
 import { resolveEffectiveToolPolicy } from "./agent-tools.policy.js";
 import { resolveModel } from "./embedded-agent-runner/model.js";
 import { resolveBundledStaticCatalogModel } from "./embedded-agent-runner/model.static-catalog.js";
@@ -50,12 +50,12 @@ function policyDeniesTool(policy: { deny?: string[] } | undefined, toolName: str
   );
 }
 
-function hasExplicitBrowserIntent(cfg: OpenClawConfig): boolean {
+function hasExplicitBrowserIntent(cfg: DexConfig): boolean {
   return cfg.browser?.enabled !== false && Boolean(cfg.browser || cfg.plugins?.entries?.browser);
 }
 
 function buildToolInventoryNotices(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   profile: string;
   entries: EffectiveToolInventoryEntry[];
   effectivePolicy: ReturnType<typeof resolveEffectiveToolPolicy>;
@@ -111,7 +111,7 @@ function buildToolInventoryNotices(params: {
 }
 
 function applyProviderTransportNormalization(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   provider: string;
   workspaceDir?: string;
   runtimeModel: ProviderRuntimeModel;
@@ -151,7 +151,7 @@ function resolveConfiguredFallbackApi(
 }
 
 function resolveDynamicRuntimeModelContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentDir?: string;
   workspaceDir?: string;
   provider: string;
@@ -170,7 +170,7 @@ function resolveDynamicRuntimeModelContext(params: {
 }
 
 export function resolveEffectiveToolInventoryRuntimeModelContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string;
   agentDir?: string;
   workspaceDir?: string;
@@ -256,7 +256,7 @@ export function resolveEffectiveToolInventoryRuntimeModelContext(params: {
 }
 
 function resolveEffectiveModelCompat(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   modelProvider?: string;
   modelId?: string;
 }) {
@@ -311,7 +311,7 @@ export function resolveEffectiveToolInventory(
     modelId: params.modelId,
   });
 
-  const effectiveTools = createOpenClawCodingTools({
+  const effectiveTools = createDexCodingTools({
     agentId,
     sessionKey: params.sessionKey,
     workspaceDir,

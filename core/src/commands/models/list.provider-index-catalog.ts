@@ -1,20 +1,20 @@
 import { normalizeModelCatalogProviderId } from "@dexagent/model-catalog-core/model-catalog-refs";
 import type { NormalizedModelCatalogRow } from "@dexagent/model-catalog-core/model-catalog-types";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
-  loadOpenClawProviderIndex,
+  loadDexProviderIndex,
   planProviderIndexModelCatalogRows,
 } from "../../model-catalog/index.js";
 import { normalizePluginsConfig, resolveEffectiveEnableState } from "../../plugins/config-state.js";
 
 export function loadProviderIndexCatalogRowsForList(params: {
   providerFilter?: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): readonly NormalizedModelCatalogRow[] {
   const providerFilter = params.providerFilter
     ? normalizeModelCatalogProviderId(params.providerFilter)
     : undefined;
-  const index = loadOpenClawProviderIndex();
+  const index = loadDexProviderIndex();
   return planProviderIndexModelCatalogRows({
     index,
     ...(providerFilter ? { providerFilter } : {}),

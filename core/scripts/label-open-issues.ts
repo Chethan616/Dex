@@ -253,10 +253,10 @@ function isMainModule() {
   return entry ? import.meta.url === pathToFileURL(entry).href : false;
 }
 
-function resolveOpenAITimeoutMs(raw = process.env.OPENCLAW_LABEL_OPEN_ISSUES_OPENAI_TIMEOUT_MS) {
+function resolveOpenAITimeoutMs(raw = process.env.DEX_LABEL_OPEN_ISSUES_OPENAI_TIMEOUT_MS) {
   return parseStrictIntegerOption({
     fallback: DEFAULT_OPENAI_TIMEOUT_MS,
-    label: "OPENCLAW_LABEL_OPEN_ISSUES_OPENAI_TIMEOUT_MS",
+    label: "DEX_LABEL_OPEN_ISSUES_OPENAI_TIMEOUT_MS",
     min: 1,
     raw,
   });

@@ -32,7 +32,7 @@ export type { CliMockOutputRuntime, CliRuntimeCapture } from "../cli/test-runtim
 export { setDefaultChannelPluginRegistryForTests } from "../commands/channel-test-registry.js";
 export type { ChannelAccountSnapshot } from "../channels/plugins/types.public.js";
 export type { ChannelGatewayContext } from "../channels/plugins/types.adapters.js";
-export type { OpenClawConfig } from "../config/config.js";
+export type { DexConfig } from "../config/config.js";
 export { isAtLeast, parseSemver } from "../infra/runtime-guard.js";
 export { callGateway } from "../gateway/call.js";
 /** @deprecated Direct outbound delivery is runtime substrate; use channel message runtime helpers. */

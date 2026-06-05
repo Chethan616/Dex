@@ -3,11 +3,11 @@ import type {
   ChannelOutboundAdapter,
   ChannelPlugin,
 } from "../../channels/plugins/types.public.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { buildChannelOutboundSessionRoute } from "../../plugin-sdk/core.js";
 import { createTestRegistry } from "../../test-utils/channel-plugins.js";
 
-function readTestDefaultTo(cfg: OpenClawConfig, channelId: string): string | undefined {
+function readTestDefaultTo(cfg: DexConfig, channelId: string): string | undefined {
   const channels = cfg.channels as Record<string, { defaultTo?: unknown }> | undefined;
   const value = channels?.[channelId]?.defaultTo;
   return typeof value === "string" ? value : undefined;
@@ -149,7 +149,7 @@ export function createTestChannelPlugin(params: {
   label?: string;
   outbound?: ChannelOutboundAdapter;
   messaging?: ChannelMessagingAdapter;
-  resolveDefaultTo?: (params: { cfg: OpenClawConfig }) => string | undefined;
+  resolveDefaultTo?: (params: { cfg: DexConfig }) => string | undefined;
 }): ChannelPlugin {
   return {
     id: params.id,

@@ -1,5 +1,5 @@
 import { asNullableRecord } from "@dexagent/normalization-core/record-coerce";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { PluginHookBeforeToolCallResult } from "../../plugins/types.js";
 import { resolveSkillWorkshopConfig } from "./config.js";
 
@@ -44,7 +44,7 @@ function lifecycleApprovalText(action: SkillWorkshopLifecycleAction): {
 export function resolveSkillWorkshopToolApproval(params: {
   toolName: string;
   toolParams: unknown;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): PluginHookBeforeToolCallResult | undefined {
   if (params.toolName !== "skill_workshop") {
     return undefined;

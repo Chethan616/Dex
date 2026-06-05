@@ -13,14 +13,14 @@ export type {
 } from "openclaw/plugin-sdk/channel-contract";
 export type {
   ChannelPlugin,
-  OpenClawPluginApi,
+  DexPluginApi,
   PluginRuntime,
 } from "openclaw/plugin-sdk/channel-plugin-common";
 export type {
   DiscordAccountConfig,
   DiscordActionConfig,
   DiscordConfig,
-  OpenClawConfig,
+  DexConfig,
 } from "openclaw/plugin-sdk/config-contracts";
 export {
   jsonResult,

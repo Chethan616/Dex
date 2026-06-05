@@ -9,10 +9,10 @@ import {
   resolveOpenClawManifestBlock,
   resolveOpenClawManifestInstall,
   resolveOpenClawManifestOs,
-  resolveOpenClawManifestRequires,
+  resolveDexManifestRequires,
 } from "../shared/frontmatter.js";
 import type {
-  OpenClawHookMetadata,
+  DexHookMetadata,
   HookEntry,
   HookInstallSpec,
   HookInvocationPolicy,
@@ -47,12 +47,12 @@ function parseInstallSpec(input: unknown): HookInstallSpec | undefined {
 
 export function resolveOpenClawMetadata(
   frontmatter: ParsedHookFrontmatter,
-): OpenClawHookMetadata | undefined {
+): DexHookMetadata | undefined {
   const metadataObj = resolveOpenClawManifestBlock({ frontmatter });
   if (!metadataObj) {
     return undefined;
   }
-  const requires = resolveOpenClawManifestRequires(metadataObj);
+  const requires = resolveDexManifestRequires(metadataObj);
   const install = resolveOpenClawManifestInstall(metadataObj, parseInstallSpec);
   const osRaw = resolveOpenClawManifestOs(metadataObj);
   const eventsRaw = normalizeStringList(metadataObj.events);

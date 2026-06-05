@@ -1,5 +1,5 @@
 import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type {
   DocumentExtractionRequest,
   DocumentExtractionResult,
@@ -7,13 +7,13 @@ import type {
 import { resolvePluginDocumentExtractors } from "../plugins/document-extractors.runtime.js";
 import { createConfigScopedPromiseLoader } from "../plugins/plugin-cache-primitives.js";
 
-const documentExtractorLoader = createConfigScopedPromiseLoader((config?: OpenClawConfig) =>
+const documentExtractorLoader = createConfigScopedPromiseLoader((config?: DexConfig) =>
   resolvePluginDocumentExtractors(config ? { config } : undefined),
 );
 
 export async function extractDocumentContent(
   params: DocumentExtractionRequest & {
-    config?: OpenClawConfig;
+    config?: DexConfig;
   },
 ): Promise<(DocumentExtractionResult & { extractor: string }) | null> {
   const mimeType = normalizeLowercaseStringOrEmpty(params.mimeType);

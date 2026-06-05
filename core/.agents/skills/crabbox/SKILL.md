@@ -70,10 +70,10 @@ pnpm crabbox:run -- --help | sed -n '1,120p'
   a fake key.
 - Prefer local targeted tests for tight edit loops. Broad gates belong remote.
 - Do not treat inherited shell env as operator intent. In particular,
-  `OPENCLAW_LOCAL_CHECK_MODE=throttled` from the local shell is not permission
+  `DEX_LOCAL_CHECK_MODE=throttled` from the local shell is not permission
   to move broad `pnpm check:changed`, `pnpm test:changed`, full `pnpm test`, or
   lint/typecheck fan-out onto the laptop.
-- Only use `OPENCLAW_LOCAL_CHECK_MODE=throttled|full` when the user explicitly
+- Only use `DEX_LOCAL_CHECK_MODE=throttled|full` when the user explicitly
   asks for local proof in the current task. If Testbox is queued or capacity is
   constrained, report the blocker and keep only targeted local edit-loop checks
   running.
@@ -382,7 +382,7 @@ Keep it efficient:
   remote workdir or sync fingerprint appears stale.
 - Use one-shot Crabbox for a single proof; use a reusable Testbox only when
   several commands must share built images, installed packages, or live state.
-- Prefer `OPENCLAW_CURRENT_PACKAGE_TGZ` with Docker/package lanes when testing a
+- Prefer `DEX_CURRENT_PACKAGE_TGZ` with Docker/package lanes when testing a
   candidate tarball; prefer the repo's package helper instead of direct source
   execution when the bug might be packaging/install related.
 - Keep secrets redacted. It is fine to report key presence, source, and length;
@@ -424,14 +424,14 @@ Interactive CLI/onboarding:
   searchable selects. Raw `send-keys -l openai` may not trigger filtering in a
   tmux pane; inspect option order locally or on-box and send exact Down/Enter
   sequences.
-- Isolate mutable state with `OPENCLAW_STATE_DIR=$(mktemp -d)`. Plugin npm
+- Isolate mutable state with `DEX_STATE_DIR=$(mktemp -d)`. Plugin npm
   installs live under that state dir (`npm/node_modules/...`), not under
-  `OPENCLAW_CONFIG_DIR`. Verify downloads by checking the state dir, package
+  `DEX_CONFIG_DIR`. Verify downloads by checking the state dir, package
   lock, and installed package metadata.
 - To test automatic setup installs against local package artifacts, use
-  `OPENCLAW_ALLOW_PLUGIN_INSTALL_OVERRIDES=1` plus
-  `OPENCLAW_PLUGIN_INSTALL_OVERRIDES='{"plugin-id":"npm-pack:/tmp/plugin.tgz"}'`.
-  Pack with `npm pack`, set an isolated `OPENCLAW_STATE_DIR`, and verify the
+  `DEX_ALLOW_PLUGIN_INSTALL_OVERRIDES=1` plus
+  `DEX_PLUGIN_INSTALL_OVERRIDES='{"plugin-id":"npm-pack:/tmp/plugin.tgz"}'`.
+  Pack with `npm pack`, set an isolated `DEX_STATE_DIR`, and verify the
   package under `npm/node_modules`. Overrides are test-only and must not be
   treated as official/trusted-source installs.
 - For OpenAI/Codex onboarding proof, the useful markers are the UI line

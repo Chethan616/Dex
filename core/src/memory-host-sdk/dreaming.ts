@@ -7,7 +7,7 @@ import {
   normalizeStringifiedOptionalString,
 } from "@dexagent/normalization-core/string-coerce";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 export const DEFAULT_MEMORY_DREAMING_ENABLED = false;
 export const DEFAULT_MEMORY_DREAMING_TIMEZONE = undefined;
@@ -335,7 +335,7 @@ function formatLocalIsoDay(epochMs: number): string {
 }
 
 export function resolveMemoryDreamingPluginId(
-  cfg: OpenClawConfig | Record<string, unknown> | undefined,
+  cfg: DexConfig | Record<string, unknown> | undefined,
 ): string {
   const root = asNullableRecord(cfg);
   const plugins = asNullableRecord(root?.plugins);
@@ -348,7 +348,7 @@ export function resolveMemoryDreamingPluginId(
 }
 
 export function resolveMemoryDreamingPluginConfig(
-  cfg: OpenClawConfig | Record<string, unknown> | undefined,
+  cfg: DexConfig | Record<string, unknown> | undefined,
 ): Record<string, unknown> | undefined {
   const root = asNullableRecord(cfg);
   const plugins = asNullableRecord(root?.plugins);
@@ -363,7 +363,7 @@ export const resolveMemoryCorePluginConfig = resolveMemoryDreamingPluginConfig;
 
 export function resolveMemoryDreamingConfig(params: {
   pluginConfig?: Record<string, unknown>;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): MemoryDreamingConfig {
   const dreaming = asNullableRecord(params.pluginConfig?.dreaming);
   const frequency =
@@ -526,7 +526,7 @@ export function resolveMemoryDreamingConfig(params: {
 
 export function resolveMemoryDeepDreamingConfig(params: {
   pluginConfig?: Record<string, unknown>;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): MemoryDeepDreamingConfig & {
   timezone?: string;
   verboseLogging: boolean;
@@ -544,7 +544,7 @@ export function resolveMemoryDeepDreamingConfig(params: {
 
 export function resolveMemoryLightDreamingConfig(params: {
   pluginConfig?: Record<string, unknown>;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): MemoryLightDreamingConfig & {
   timezone?: string;
   verboseLogging: boolean;
@@ -562,7 +562,7 @@ export function resolveMemoryLightDreamingConfig(params: {
 
 export function resolveMemoryRemDreamingConfig(params: {
   pluginConfig?: Record<string, unknown>;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }): MemoryRemDreamingConfig & {
   timezone?: string;
   verboseLogging: boolean;
@@ -614,7 +614,7 @@ export function isSameMemoryDreamingDay(
 }
 
 export function resolveMemoryDreamingWorkspaces(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   options: MemoryDreamingWorkspaceOptions = {},
 ): MemoryDreamingWorkspace[] {
   const configured = Array.isArray(cfg.agents?.list) ? cfg.agents.list : [];

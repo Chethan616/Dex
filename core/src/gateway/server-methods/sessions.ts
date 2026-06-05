@@ -59,7 +59,7 @@ import {
 } from "../../config/sessions.js";
 import { resolveAgentMainSessionKey } from "../../config/sessions/main-session.js";
 import { CURRENT_SESSION_VERSION } from "../../config/sessions/version.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   createInternalHookEvent,
   hasInternalHookListeners,
@@ -132,7 +132,7 @@ import type {
 import { assertValidParams } from "./validation.js";
 
 function filterSessionStoreToConfiguredAgents(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   store: Record<string, SessionEntry>,
 ): Record<string, SessionEntry> {
   const configuredAgentIds = new Set(listConfiguredSessionStoreAgentIds(cfg));
@@ -248,7 +248,7 @@ function rejectPluginRuntimeDeleteMismatch(params: {
 
 function resolveGatewaySessionTargetFromKey(
   key: string,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   opts?: { agentId?: string },
 ) {
   const target = resolveGatewaySessionStoreTarget({
@@ -494,7 +494,7 @@ function resolveCheckpointForkSource(
   };
 }
 
-function isAgentMainSessionKey(cfg: OpenClawConfig, sessionKey: string): boolean {
+function isAgentMainSessionKey(cfg: DexConfig, sessionKey: string): boolean {
   const parsed = parseAgentSessionKey(sessionKey);
   if (!parsed) {
     return false;
@@ -639,7 +639,7 @@ function resolveAbortSessionKey(params: {
 
 function resolveSessionKeyAgentId(
   sessionKey: string | undefined,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): string | undefined {
   const key = normalizeOptionalString(sessionKey);
   if (!key) {
@@ -655,7 +655,7 @@ function resolveSessionKeyAgentId(
 function sessionKeyBelongsToAgent(
   sessionKey: string | undefined,
   agentId: string,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): boolean {
   const key = normalizeOptionalString(sessionKey);
   if (cfg.session?.scope === "global" && key?.toLowerCase() === "global") {
@@ -666,7 +666,7 @@ function sessionKeyBelongsToAgent(
 }
 
 function resolveScopedAbortKey(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   key: string | undefined;
   agentId: string | undefined;
 }): string | undefined {
@@ -715,7 +715,7 @@ type RequestedGlobalAgentIdResolution =
   | { ok: false; error: ReturnType<typeof errorShape> };
 
 function resolveRequestedGlobalAgentId(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   key: string,
   explicitAgentId?: string,
 ): RequestedGlobalAgentIdResolution {

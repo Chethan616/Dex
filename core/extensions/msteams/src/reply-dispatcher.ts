@@ -11,7 +11,7 @@ import {
   createChannelMessageReplyPipeline,
   logTypingFailure,
   resolveChannelMediaMaxBytes,
-  type OpenClawConfig,
+  type DexConfig,
   type MSTeamsReplyStyle,
   type ReplyPayload,
   type RuntimeEnv,
@@ -41,7 +41,7 @@ import type { MSTeamsApp } from "./sdk.js";
 export { pickInformativeStatusText } from "./reply-stream-controller.js";
 
 export function createMSTeamsReplyDispatcher(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   sessionKey: string;
   accountId?: string;

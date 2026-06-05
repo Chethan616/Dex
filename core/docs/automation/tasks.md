@@ -306,7 +306,7 @@ Both `/status` and the `session_status` tool use a cleanup-aware task snapshot: 
 Task records persist in SQLite at:
 
 ```
-$OPENCLAW_STATE_DIR/tasks/runs.sqlite
+$DEX_STATE_DIR/tasks/runs.sqlite
 ```
 
 The registry loads into memory at gateway start and syncs writes to SQLite for durability across restarts.

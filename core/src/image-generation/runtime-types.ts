@@ -1,6 +1,6 @@
 import type { AuthProfileStore } from "../agents/auth-profiles/types.js";
 import type { FallbackAttempt } from "../agents/model-fallback.types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { SsrFPolicy } from "../infra/net/ssrf.js";
 import type {
   GeneratedImageAsset,
@@ -16,7 +16,7 @@ import type {
 } from "./types.js";
 
 export type GenerateImageParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   prompt: string;
   agentDir?: string;
   authStore?: AuthProfileStore;
@@ -48,7 +48,7 @@ export type GenerateImageRuntimeResult = {
 };
 
 export type ListRuntimeImageGenerationProvidersParams = {
-  config?: OpenClawConfig;
+  config?: DexConfig;
 };
 
 export type RuntimeImageGenerationProvider = ImageGenerationProvider;

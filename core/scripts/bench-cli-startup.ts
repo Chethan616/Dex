@@ -76,7 +76,7 @@ const DEFAULT_RUNS = 5;
 const DEFAULT_WARMUP = 1;
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_ENTRY = "openclaw.mjs";
-const MAX_RSS_MARKER = "__OPENCLAW_MAX_RSS_KB__=";
+const MAX_RSS_MARKER = "__DEX_MAX_RSS_KB__=";
 
 const COMMAND_CASES: readonly CommandCase[] = [
   {
@@ -436,7 +436,7 @@ function parseGatewayPortEnv(raw: string | undefined): number {
   }
   const bracketHostMatch = /^\[[^\]]+\]:(\d+)$/u.exec(value);
   if (bracketHostMatch) {
-    return parsePositiveInt(bracketHostMatch[1], 32123, "OPENCLAW_GATEWAY_PORT");
+    return parsePositiveInt(bracketHostMatch[1], 32123, "DEX_GATEWAY_PORT");
   }
   if (value.startsWith("[") && value.endsWith("]")) {
     return 32123;
@@ -446,7 +446,7 @@ function parseGatewayPortEnv(raw: string | undefined): number {
     return 32123;
   }
   const portRaw = colonCount === 1 ? value.split(":")[1] : value;
-  return parsePositiveInt(portRaw, 32123, "OPENCLAW_GATEWAY_PORT");
+  return parsePositiveInt(portRaw, 32123, "DEX_GATEWAY_PORT");
 }
 
 function parsePresets(raw: string | undefined): string[] {
@@ -555,7 +555,7 @@ function buildConfigFixture(commandCase: CommandCase): Record<string, unknown> |
   if (commandCase.id !== "configGetGatewayPort" && commandCase.id !== "gatewayHealthJson") {
     return null;
   }
-  const port = parseGatewayPortEnv(process.env.OPENCLAW_GATEWAY_PORT);
+  const port = parseGatewayPortEnv(process.env.DEX_GATEWAY_PORT);
   return {
     gateway: {
       auth: { mode: "none" },
@@ -616,7 +616,7 @@ async function runSample(params: {
   rssHookPath: string;
 }): Promise<Sample> {
   const runRoot = mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-bench-home-"));
-  const stateDir = path.join(runRoot, ".openclaw");
+  const stateDir = path.join(runRoot, ".dex");
   const configPath = path.join(stateDir, "openclaw.json");
   const configFixture = buildConfigFixture(params.commandCase);
   if (configFixture) {
@@ -648,10 +648,10 @@ async function runSample(params: {
           ...process.env,
           HOME: runRoot,
           USERPROFILE: runRoot,
-          OPENCLAW_HOME: runRoot,
-          OPENCLAW_STATE_DIR: stateDir,
-          OPENCLAW_CONFIG_PATH: configPath,
-          OPENCLAW_HIDE_BANNER: "1",
+          DEX_HOME: runRoot,
+          DEX_STATE_DIR: stateDir,
+          DEX_CONFIG_PATH: configPath,
+          DEX_HIDE_BANNER: "1",
           NO_COLOR: "1",
           FORCE_COLOR: "0",
         },

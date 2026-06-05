@@ -1,4 +1,4 @@
-import type { GatewayEvent, JsonObject, OpenClawEvent, OpenClawEventType } from "./types.js";
+import type { GatewayEvent, JsonObject, DexEvent, DexEventType } from "./types.js";
 
 function asRecord(value: unknown): JsonObject {
   return typeof value === "object" && value !== null ? (value as JsonObject) : {};
@@ -26,7 +26,7 @@ function hasHardTimeoutMetadata(data: JsonObject, statusAlreadyTimeoutAttributed
   );
 }
 
-function normalizeLifecycleEndEventType(data: JsonObject): OpenClawEventType {
+function normalizeLifecycleEndEventType(data: JsonObject): DexEventType {
   const status = readLowerString(data.status);
   const stopReason = readLowerString(data.stopReason);
   const statusAlreadyTimeoutAttributed =
@@ -64,7 +64,7 @@ function normalizeLifecycleEndEventType(data: JsonObject): OpenClawEventType {
   return "run.completed";
 }
 
-function normalizeAgentEventType(payload: JsonObject): OpenClawEventType {
+function normalizeAgentEventType(payload: JsonObject): DexEventType {
   const stream = readString(payload.stream);
   const data = asRecord(payload.data);
   const phase = readString(data.phase);
@@ -119,7 +119,7 @@ function normalizeAgentEventType(payload: JsonObject): OpenClawEventType {
   return "raw";
 }
 
-function normalizeNamedEventType(event: GatewayEvent): OpenClawEventType {
+function normalizeNamedEventType(event: GatewayEvent): DexEventType {
   const payload = asRecord(event.payload);
   switch (event.event) {
     case "agent":
@@ -152,7 +152,7 @@ function normalizeNamedEventType(event: GatewayEvent): OpenClawEventType {
   }
 }
 
-export function normalizeGatewayEvent(event: GatewayEvent): OpenClawEvent {
+export function normalizeGatewayEvent(event: GatewayEvent): DexEvent {
   const payload = asRecord(event.payload);
   const runId = readString(payload.runId);
   const sessionId = readString(payload.sessionId);

@@ -53,7 +53,7 @@ export function resolveDaemonNodeBinDir(nodePath?: string): string[] | undefined
   return [path.dirname(trimmed)];
 }
 
-function isOpenClawCommandBasename(basename: string, platform: NodeJS.Platform): boolean {
+function isDexCommandBasename(basename: string, platform: NodeJS.Platform): boolean {
   if (basename === "openclaw") {
     return true;
   }
@@ -106,7 +106,7 @@ export function resolveDaemonOpenClawBinDir(
   if (
     argv1 &&
     path.isAbsolute(argv1) &&
-    isOpenClawCommandBasename(path.basename(argv1), platform)
+    isDexCommandBasename(path.basename(argv1), platform)
   ) {
     addUniquePathDir(dirs, path.dirname(argv1));
   }

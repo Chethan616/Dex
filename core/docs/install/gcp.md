@@ -18,10 +18,10 @@ Pricing varies by machine type and region; pick the smallest VM that fits your w
 - Create a Compute Engine VM
 - Install Docker (isolated app runtime)
 - Start the OpenClaw Gateway in Docker
-- Persist `~/.openclaw` + `~/.openclaw/workspace` on the host (survives restarts/rebuilds)
+- Persist `~/.dex` + `~/.dex/workspace` on the host (survives restarts/rebuilds)
 - Access the Control UI from your laptop via an SSH tunnel
 
-That mounted `~/.openclaw` state includes `openclaw.json`, per-agent
+That mounted `~/.dex` state includes `openclaw.json`, per-agent
 `agents/<agentId>/agent/auth-profiles.json`, and `.env`.
 
 The Gateway can be accessed via:
@@ -198,8 +198,8 @@ For the generic Docker flow, see [Docker](/install/docker).
     All long-lived state must live on the host.
 
     ```bash
-    mkdir -p ~/.openclaw
-    mkdir -p ~/.openclaw/workspace
+    mkdir -p ~/.dex
+    mkdir -p ~/.dex/workspace
     ```
 
   </Step>
@@ -208,19 +208,19 @@ For the generic Docker flow, see [Docker](/install/docker).
     Create `.env` in the repository root.
 
     ```bash
-    OPENCLAW_IMAGE=openclaw:latest
-    OPENCLAW_GATEWAY_TOKEN=
-    OPENCLAW_GATEWAY_BIND=lan
-    OPENCLAW_GATEWAY_PORT=18789
+    DEX_IMAGE=openclaw:latest
+    DEX_GATEWAY_TOKEN=
+    DEX_GATEWAY_BIND=lan
+    DEX_GATEWAY_PORT=18789
 
-    OPENCLAW_CONFIG_DIR=/home/$USER/.openclaw
-    OPENCLAW_WORKSPACE_DIR=/home/$USER/.openclaw/workspace
+    DEX_CONFIG_DIR=/home/$USER/.openclaw
+    DEX_WORKSPACE_DIR=/home/$USER/.openclaw/workspace
 
     GOG_KEYRING_PASSWORD=
     XDG_CONFIG_HOME=/home/node/.openclaw
     ```
 
-    Set `OPENCLAW_GATEWAY_TOKEN` when you want to manage the stable gateway
+    Set `DEX_GATEWAY_TOKEN` when you want to manage the stable gateway
     token through `.env`; otherwise configure `gateway.auth.token` before
     relying on clients across restarts. If neither source exists, OpenClaw uses
     a runtime-only token for that startup. Generate a keyring password and paste
@@ -232,9 +232,9 @@ For the generic Docker flow, see [Docker](/install/docker).
 
     **Do not commit this file.**
 
-    This `.env` file is for container/runtime env such as `OPENCLAW_GATEWAY_TOKEN`.
+    This `.env` file is for container/runtime env such as `DEX_GATEWAY_TOKEN`.
     Stored provider OAuth/API-key auth lives in the mounted
-    `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`.
+    `~/.dex/agents/<agentId>/agent/auth-profiles.json`.
 
   </Step>
 
@@ -244,7 +244,7 @@ For the generic Docker flow, see [Docker](/install/docker).
     ```yaml
     services:
       openclaw-gateway:
-        image: ${OPENCLAW_IMAGE}
+        image: ${DEX_IMAGE}
         build: .
         restart: unless-stopped
         env_file:
@@ -253,28 +253,28 @@ For the generic Docker flow, see [Docker](/install/docker).
           - HOME=/home/node
           - NODE_ENV=production
           - TERM=xterm-256color
-          - OPENCLAW_GATEWAY_BIND=${OPENCLAW_GATEWAY_BIND}
-          - OPENCLAW_GATEWAY_PORT=${OPENCLAW_GATEWAY_PORT}
-          - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN}
+          - DEX_GATEWAY_BIND=${DEX_GATEWAY_BIND}
+          - DEX_GATEWAY_PORT=${DEX_GATEWAY_PORT}
+          - DEX_GATEWAY_TOKEN=${DEX_GATEWAY_TOKEN}
           - GOG_KEYRING_PASSWORD=${GOG_KEYRING_PASSWORD}
           - XDG_CONFIG_HOME=${XDG_CONFIG_HOME}
           - PATH=/home/linuxbrew/.linuxbrew/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         volumes:
-          - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
-          - ${OPENCLAW_WORKSPACE_DIR}:/home/node/.openclaw/workspace
+          - ${DEX_CONFIG_DIR}:/home/node/.openclaw
+          - ${DEX_WORKSPACE_DIR}:/home/node/.openclaw/workspace
         ports:
           # Recommended: keep the Gateway loopback-only on the VM; access via SSH tunnel.
           # To expose it publicly, remove the `127.0.0.1:` prefix and firewall accordingly.
-          - "127.0.0.1:${OPENCLAW_GATEWAY_PORT}:18789"
+          - "127.0.0.1:${DEX_GATEWAY_PORT}:18789"
         command:
           [
             "node",
             "dist/index.js",
             "gateway",
             "--bind",
-            "${OPENCLAW_GATEWAY_BIND}",
+            "${DEX_GATEWAY_BIND}",
             "--port",
-            "${OPENCLAW_GATEWAY_PORT}",
+            "${DEX_GATEWAY_PORT}",
             "--allow-unconfigured",
           ]
     ```
@@ -296,7 +296,7 @@ For the generic Docker flow, see [Docker](/install/docker).
   <Step title="GCP-specific launch notes">
     On GCP, if build fails with `Killed` or `exit code 137` during `pnpm install --frozen-lockfile`, the VM is out of memory. Use `e2-small` minimum, or `e2-medium` for more reliable first builds.
 
-    When binding to LAN (`OPENCLAW_GATEWAY_BIND=lan`), configure a trusted browser origin before continuing:
+    When binding to LAN (`DEX_GATEWAY_BIND=lan`), configure a trusted browser origin before continuing:
 
     ```bash
     docker compose run --rm openclaw-cli config set gateway.controlUi.allowedOrigins '["http://127.0.0.1:18789"]' --strict-json

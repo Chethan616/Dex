@@ -4,13 +4,13 @@ import { resolveZaloProxyFetch } from "./proxy.js";
 import {
   PAIRING_APPROVED_MESSAGE,
   type ChannelPlugin,
-  type OpenClawConfig,
+  type DexConfig,
 } from "./runtime-api.js";
 import { normalizeSecretInputString } from "./secret-input.js";
 import { sendMessageZalo } from "./send.js";
 import type { ResolvedZaloAccount } from "./types.js";
 
-export async function notifyZaloPairingApproval(params: { cfg: OpenClawConfig; id: string }) {
+export async function notifyZaloPairingApproval(params: { cfg: DexConfig; id: string }) {
   const { resolveZaloAccount } = await import("./accounts.js");
   const account = resolveZaloAccount({ cfg: params.cfg });
   if (!account.token) {

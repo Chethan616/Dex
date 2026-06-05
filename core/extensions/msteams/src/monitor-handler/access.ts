@@ -9,7 +9,7 @@ import {
   createChannelPairingController,
   isDangerousNameMatchingEnabled,
   resolveDefaultGroupPolicy,
-  type OpenClawConfig,
+  type DexConfig,
 } from "../../runtime-api.js";
 import { normalizeMSTeamsConversationId } from "../inbound.js";
 import { resolveMSTeamsRouteConfig } from "../policy.js";
@@ -39,7 +39,7 @@ function normalizeIngressValue(value?: string | null): string | null {
 }
 
 export async function resolveMSTeamsSenderAccess(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   activity: MSTeamsTurnContext["activity"];
   hasControlCommand?: boolean;
 }) {

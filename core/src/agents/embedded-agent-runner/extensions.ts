@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { ProviderRuntimeModel } from "../../plugins/provider-runtime-model.types.js";
 import { setCompactionSafeguardRuntime } from "../agent-hooks/compaction-safeguard-runtime.js";
 import compactionSafeguardExtension from "../agent-hooks/compaction-safeguard.js";
@@ -87,7 +87,7 @@ function buildAgentToolResultMiddlewareFactory(): ExtensionFactory {
 }
 
 function resolveContextWindowTokens(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   provider: string;
   modelId: string;
   model: ProviderRuntimeModel | undefined;
@@ -103,7 +103,7 @@ function resolveContextWindowTokens(params: {
 }
 
 function buildContextPruningFactory(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   sessionManager: SessionManager;
   provider: string;
   modelId: string;
@@ -142,7 +142,7 @@ function buildContextPruningFactory(params: {
 }
 
 export function buildEmbeddedExtensionFactories(params: {
-  cfg: OpenClawConfig | undefined;
+  cfg: DexConfig | undefined;
   sessionManager: SessionManager;
   workspaceDir?: string;
   provider: string;

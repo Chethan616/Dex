@@ -24,7 +24,7 @@ import {
   resolveThreadBindingSpawnPolicy,
 } from "../channels/thread-bindings-policy.js";
 import type { SessionEntry } from "../config/sessions/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { SubagentSpawnPreparation } from "../context-engine/types.js";
 import { stringifyRouteThreadId } from "../plugin-sdk/channel-route.js";
 import { listRegisteredPluginAgentPromptGuidance } from "../plugins/command-registry-state.js";
@@ -122,7 +122,7 @@ export type {
 
 export { decodeStrictBase64 };
 
-function resolveConfiguredAgentIds(cfg: OpenClawConfig): string[] {
+function resolveConfiguredAgentIds(cfg: DexConfig): string[] {
   return listAgentIds(cfg);
 }
 
@@ -331,7 +331,7 @@ function loadSubagentConfig() {
 }
 
 async function persistInitialChildSessionRuntimeModel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   childSessionKey: string;
   resolvedModel?: string;
 }): Promise<string | undefined> {
@@ -375,7 +375,7 @@ function resolveStoreEntryByKeys(
 }
 
 function readRequesterThinkingLevel(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   requesterInternalKey: string;
   requesterAgentId?: string;
 }): string | undefined {
@@ -449,7 +449,7 @@ type PreparedSpawnContext =
   | { status: "error"; error: string };
 
 async function prepareSubagentSessionContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   contextMode: SpawnSubagentContextMode;
   requesterAgentId: string;
   targetAgentId: string;
@@ -558,7 +558,7 @@ async function prepareSubagentSessionContext(params: {
 }
 
 async function prepareContextEngineSubagentSpawn(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   context: PreparedSpawnContext & { status: "ok" };
   requesterInternalKey: string;
   childSessionKey: string;
@@ -685,7 +685,7 @@ function resolveSpawnMode(params: {
 function resolveSubagentContextMode(params: {
   requestedContext?: SpawnSubagentContextMode;
   threadRequested: boolean;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   requester: {
     channel?: string;
     accountId?: string;
@@ -745,7 +745,7 @@ function resolvePlacementWithoutChannelPlugin(params: {
 }
 
 function resolveSubagentSpawnChannelAccountId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel?: string;
   accountId?: string;
 }): string | undefined {
@@ -762,7 +762,7 @@ function resolveSubagentSpawnChannelAccountId(params: {
 }
 
 function resolveConversationRefForThreadBinding(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel?: string;
   accountId?: string;
   to?: string;
@@ -830,7 +830,7 @@ function resolveRequesterBoundConversationRef(params: {
 }
 
 function prepareSubagentThreadBinding(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   mode: SpawnSubagentMode;
   requesterSessionKey?: string;
   requester: {
@@ -946,7 +946,7 @@ function prepareSubagentThreadBinding(params: {
 }
 
 async function bindThreadForSubagentSpawn(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   childSessionKey: string;
   agentId: string;
   label?: string;

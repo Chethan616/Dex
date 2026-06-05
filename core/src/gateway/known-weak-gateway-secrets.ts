@@ -30,7 +30,7 @@ export function assertGatewayAuthNotKnownWeak(auth: ResolvedGatewayAuth): void {
       throw new Error(
         "Invalid config: gateway auth token is set to a published example placeholder " +
           "from docs or .env.example. Generate a real secret (e.g. `openssl rand -hex 32`) " +
-          "and set OPENCLAW_GATEWAY_TOKEN or gateway.auth.token before starting " +
+          "and set DEX_GATEWAY_TOKEN or gateway.auth.token before starting " +
           "the gateway.",
       );
     }
@@ -41,7 +41,7 @@ export function assertGatewayAuthNotKnownWeak(auth: ResolvedGatewayAuth): void {
     if (password && KNOWN_WEAK_GATEWAY_PASSWORDS.has(password)) {
       throw new Error(
         "Invalid config: gateway auth password is set to the example placeholder " +
-          "from .env.example. Choose a real password and set OPENCLAW_GATEWAY_PASSWORD " +
+          "from .env.example. Choose a real password and set DEX_GATEWAY_PASSWORD " +
           "or gateway.auth.password before starting the gateway.",
       );
     }

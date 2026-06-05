@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { note } from "../../packages/terminal-core/src/note.js";
 import { formatCliCommand } from "../cli/command-format.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { StatusSummary } from "./status.types.js";
 
 export type LocalTuiProcess = {
@@ -75,7 +75,7 @@ export function listLocalTuiProcesses(): LocalTuiProcess[] {
   return processes;
 }
 
-function hasWhatsappEnabled(cfg: OpenClawConfig): boolean {
+function hasWhatsappEnabled(cfg: DexConfig): boolean {
   const whatsapp = cfg.channels?.whatsapp;
   if (!whatsapp || whatsapp.enabled === false) {
     return false;
@@ -146,7 +146,7 @@ export async function terminateLocalTuiProcesses(params: {
 }
 
 export async function noteWhatsappResponsivenessHealth(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   status?: Pick<StatusSummary, "eventLoop"> | null;
   shouldRepair: boolean;
   listLocalTuiProcesses?: () => LocalTuiProcess[];

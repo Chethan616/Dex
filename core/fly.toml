@@ -11,7 +11,7 @@ dockerfile = "Dockerfile"
 NODE_ENV = "production"
 # Fly uses x86, but keep this for consistency
 OPENCLAW_PREFER_PNPM = "1"
-OPENCLAW_STATE_DIR = "/data"
+DEX_STATE_DIR = "/data"
 NODE_OPTIONS = "--max-old-space-size=1536"
 
 [processes]

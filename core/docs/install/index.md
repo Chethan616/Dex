@@ -52,7 +52,7 @@ For all flags and CI/automation options, see [Installer internals](/install/inst
 ### Local prefix installer (`install-cli.sh`)
 
 Use this when you want OpenClaw and Node kept under a local prefix such as
-`~/.openclaw`, without depending on a system-wide Node install:
+`~/.dex`, without depending on a system-wide Node install:
 
 ```bash
 curl -fsSL https://openclaw.ai/install-cli.sh | bash

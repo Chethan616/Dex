@@ -1,6 +1,6 @@
 import type { ChannelHeartbeatDeps, ChannelPlugin } from "../channels/plugins/types.public.js";
 import { createTypingCallbacks, type TypingCallbacks } from "../channels/typing.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 const DEFAULT_HEARTBEAT_TYPING_INTERVAL_SECONDS = 6;
 
@@ -16,7 +16,7 @@ type HeartbeatTypingTarget = {
 };
 
 export function createHeartbeatTypingCallbacks(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   target: HeartbeatTypingTarget;
   plugin?: Pick<ChannelPlugin, "heartbeat">;
   deps?: ChannelHeartbeatDeps;

@@ -89,9 +89,9 @@ on:
     secrets:
       OPENAI_API_KEY:
         required: false
-      OPENCLAW_QA_CONVEX_SITE_URL:
+      DEX_QA_CONVEX_SITE_URL:
         required: false
-      OPENCLAW_QA_CONVEX_SECRET_CI:
+      DEX_QA_CONVEX_SECRET_CI:
         required: false
 
 permissions:
@@ -154,8 +154,8 @@ jobs:
           PACKAGE_ARTIFACT_NAME: ${{ inputs.package_artifact_name || '' }}
           PROVIDER_MODE: ${{ inputs.provider_mode }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-          OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
+          DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+          DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
         shell: bash
         run: |
           set -euo pipefail
@@ -182,8 +182,8 @@ jobs:
             fi
           }
 
-          require_var OPENCLAW_QA_CONVEX_SITE_URL
-          require_var OPENCLAW_QA_CONVEX_SECRET_CI
+          require_var DEX_QA_CONVEX_SITE_URL
+          require_var DEX_QA_CONVEX_SECRET_CI
           if [[ "${PROVIDER_MODE}" == "live-frontier" ]]; then
             require_var OPENAI_API_KEY
           fi
@@ -209,18 +209,18 @@ jobs:
         shell: bash
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENCLAW_SKIP_DOCKER_BUILD: "1"
-          OPENCLAW_DOCKER_E2E_IMAGE: openclaw-docker-e2e:local
-          OPENCLAW_NPM_TELEGRAM_PACKAGE_SPEC: ${{ inputs.package_spec }}
-          OPENCLAW_NPM_TELEGRAM_PACKAGE_LABEL: ${{ inputs.package_label }}
-          OPENCLAW_NPM_TELEGRAM_PROVIDER_MODE: ${{ inputs.provider_mode }}
-          OPENCLAW_NPM_TELEGRAM_CREDENTIAL_SOURCE: convex
-          OPENCLAW_NPM_TELEGRAM_CREDENTIAL_ROLE: ci
-          OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
-          OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
-          OPENCLAW_QA_CREDENTIAL_ACQUIRE_TIMEOUT_MS: "1800000"
-          OPENCLAW_QA_REDACT_PUBLIC_METADATA: "1"
-          OPENCLAW_QA_TELEGRAM_CAPTURE_CONTENT: "1"
+          DEX_SKIP_DOCKER_BUILD: "1"
+          DEX_DOCKER_E2E_IMAGE: openclaw-docker-e2e:local
+          DEX_NPM_TELEGRAM_PACKAGE_SPEC: ${{ inputs.package_spec }}
+          DEX_NPM_TELEGRAM_PACKAGE_LABEL: ${{ inputs.package_label }}
+          DEX_NPM_TELEGRAM_PROVIDER_MODE: ${{ inputs.provider_mode }}
+          DEX_NPM_TELEGRAM_CREDENTIAL_SOURCE: convex
+          DEX_NPM_TELEGRAM_CREDENTIAL_ROLE: ci
+          DEX_QA_CONVEX_SITE_URL: ${{ secrets.DEX_QA_CONVEX_SITE_URL }}
+          DEX_QA_CONVEX_SECRET_CI: ${{ secrets.DEX_QA_CONVEX_SECRET_CI }}
+          DEX_QA_CREDENTIAL_ACQUIRE_TIMEOUT_MS: "1800000"
+          DEX_QA_REDACT_PUBLIC_METADATA: "1"
+          DEX_QA_TELEGRAM_CAPTURE_CONTENT: "1"
           INPUT_SCENARIO: ${{ inputs.scenario }}
           PACKAGE_ARTIFACT_NAME: ${{ inputs.package_artifact_name || '' }}
         run: |
@@ -228,7 +228,7 @@ jobs:
 
           output_dir=".artifacts/qa-e2e/npm-telegram-beta-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           echo "output_dir=${output_dir}" >> "$GITHUB_OUTPUT"
-          export OPENCLAW_NPM_TELEGRAM_OUTPUT_DIR="${output_dir}"
+          export DEX_NPM_TELEGRAM_OUTPUT_DIR="${output_dir}"
 
           append_telegram_summary() {
             local status=$?
@@ -237,8 +237,8 @@ jobs:
               {
                 echo "## Package Telegram E2E"
                 echo
-                echo "- Package: ${OPENCLAW_NPM_TELEGRAM_PACKAGE_LABEL:-${OPENCLAW_NPM_TELEGRAM_PACKAGE_SPEC}}"
-                echo "- Provider mode: ${OPENCLAW_NPM_TELEGRAM_PROVIDER_MODE}"
+                echo "- Package: ${DEX_NPM_TELEGRAM_PACKAGE_LABEL:-${DEX_NPM_TELEGRAM_PACKAGE_SPEC}}"
+                echo "- Provider mode: ${DEX_NPM_TELEGRAM_PROVIDER_MODE}"
                 echo
                 cat "${report}"
               } >> "${GITHUB_STEP_SUMMARY}"
@@ -253,16 +253,16 @@ jobs:
               echo "package artifact ${PACKAGE_ARTIFACT_NAME} must contain exactly one .tgz; found ${#package_tgzs[@]}" >&2
               exit 1
             fi
-            export OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ="${package_tgzs[0]}"
-            if [[ -z "${OPENCLAW_NPM_TELEGRAM_PACKAGE_LABEL// }" ]]; then
-              export OPENCLAW_NPM_TELEGRAM_PACKAGE_LABEL="$(basename "${package_tgzs[0]}")"
+            export DEX_NPM_TELEGRAM_PACKAGE_TGZ="${package_tgzs[0]}"
+            if [[ -z "${DEX_NPM_TELEGRAM_PACKAGE_LABEL// }" ]]; then
+              export DEX_NPM_TELEGRAM_PACKAGE_LABEL="$(basename "${package_tgzs[0]}")"
             fi
-          elif [[ -z "${OPENCLAW_NPM_TELEGRAM_PACKAGE_LABEL// }" ]]; then
-            export OPENCLAW_NPM_TELEGRAM_PACKAGE_LABEL="${OPENCLAW_NPM_TELEGRAM_PACKAGE_SPEC}"
+          elif [[ -z "${DEX_NPM_TELEGRAM_PACKAGE_LABEL// }" ]]; then
+            export DEX_NPM_TELEGRAM_PACKAGE_LABEL="${DEX_NPM_TELEGRAM_PACKAGE_SPEC}"
           fi
 
           if [[ -n "${INPUT_SCENARIO// }" ]]; then
-            export OPENCLAW_NPM_TELEGRAM_SCENARIOS="${INPUT_SCENARIO}"
+            export DEX_NPM_TELEGRAM_SCENARIOS="${INPUT_SCENARIO}"
           fi
 
           pnpm test:docker:npm-telegram-live

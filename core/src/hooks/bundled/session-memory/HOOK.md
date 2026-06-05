@@ -86,7 +86,7 @@ Example configuration:
 
 The hook automatically:
 
-- Uses your workspace directory (`~/.openclaw/workspace` by default)
+- Uses your workspace directory (`~/.dex/workspace` by default)
 - Uses timestamp slugs by default so `/new` and `/reset` stay fast on message channels
 - Runs memory capture in the background so reset acknowledgements can return immediately
 - Uses your configured LLM for slug generation only when `llmSlug` is `true`

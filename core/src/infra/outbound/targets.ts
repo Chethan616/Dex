@@ -4,7 +4,7 @@ import type { ChannelOutboundTargetMode } from "../../channels/plugins/types.cor
 import type { ChannelId } from "../../channels/plugins/types.public.js";
 import type { SessionEntry } from "../../config/sessions.js";
 import type { AgentDefaultsConfig } from "../../config/types.agent-defaults.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { normalizeAccountId } from "../../routing/session-key.js";
 import {
   deliveryContextFromSession,
@@ -65,7 +65,7 @@ export function resolveOutboundTarget(params: {
   to?: string;
   allowFrom?: string[];
   allowBootstrap?: boolean;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   accountId?: string | null;
   mode?: ChannelOutboundTargetMode;
 }): OutboundTargetResolution {
@@ -93,7 +93,7 @@ export function resolveOutboundTarget(params: {
 
 /** Resolves the heartbeat delivery destination from config, session state, and turn source. */
 export function resolveHeartbeatDeliveryTarget(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   entry?: SessionEntry;
   heartbeat?: AgentDefaultsConfig["heartbeat"];
   turnSource?: DeliveryContext;
@@ -273,7 +273,7 @@ function buildNoHeartbeatDeliveryTarget(params: {
 
 /** Resolves heartbeat delivery and lets plugins refine the outbound session route. */
 export async function resolveHeartbeatDeliveryTargetWithSessionRoute(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId: string;
   entry?: SessionEntry;
   heartbeat?: AgentDefaultsConfig["heartbeat"];
@@ -386,7 +386,7 @@ function resolveHeartbeatDeliveryChatType(params: {
 }
 
 function shouldReuseHeartbeatRouteThreadId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   target: HeartbeatTarget;
   heartbeat?: AgentDefaultsConfig["heartbeat"];
   turnSource?: DeliveryContext;
@@ -445,7 +445,7 @@ function resolveHeartbeatSenderId(params: {
 
 /** Resolves the sender id/allow-list context used for heartbeat sends. */
 export function resolveHeartbeatSenderContext(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   entry?: SessionEntry;
   delivery: OutboundTarget;
 }): HeartbeatSenderContext {

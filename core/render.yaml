@@ -5,13 +5,13 @@ services:
     plan: starter
     healthCheckPath: /health
     envVars:
-      - key: OPENCLAW_GATEWAY_PORT
+      - key: DEX_GATEWAY_PORT
         value: "8080"
-      - key: OPENCLAW_STATE_DIR
+      - key: DEX_STATE_DIR
         value: /data/.openclaw
-      - key: OPENCLAW_WORKSPACE_DIR
+      - key: DEX_WORKSPACE_DIR
         value: /data/workspace
-      - key: OPENCLAW_GATEWAY_TOKEN
+      - key: DEX_GATEWAY_TOKEN
         generateValue: true
     disk:
       name: openclaw-data

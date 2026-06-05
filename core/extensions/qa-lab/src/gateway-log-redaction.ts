@@ -6,7 +6,7 @@ import {
 
 const QA_GATEWAY_DEBUG_SECRET_ENV_VARS = Object.freeze([
   ...QA_PROVIDER_SECRET_ENV_VARS,
-  "OPENCLAW_GATEWAY_TOKEN",
+  "DEX_GATEWAY_TOKEN",
 ]);
 const QA_GATEWAY_DEBUG_SECRET_VALUE_KEYS = Object.freeze([
   "botToken",

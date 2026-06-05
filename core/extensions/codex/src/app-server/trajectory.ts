@@ -245,7 +245,7 @@ export function recordCodexTrajectoryCompletion(
 }
 
 function parseTrajectoryEnabled(env: NodeJS.ProcessEnv): boolean {
-  const value = env.OPENCLAW_TRAJECTORY?.trim().toLowerCase();
+  const value = env.DEX_TRAJECTORY?.trim().toLowerCase();
   if (value === "1" || value === "true" || value === "yes" || value === "on") {
     return true;
   }
@@ -260,7 +260,7 @@ function resolveTrajectoryFilePath(params: {
   sessionFile: string;
   sessionId: string;
 }): string {
-  const dirOverride = params.env.OPENCLAW_TRAJECTORY_DIR?.trim();
+  const dirOverride = params.env.DEX_TRAJECTORY_DIR?.trim();
   if (dirOverride) {
     return resolveContainedPath(
       resolveUserPath(dirOverride),

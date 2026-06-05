@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   LEGACY_SECRETREF_ENV_MARKER_PREFIX,
   parseLegacySecretRefEnvMarker,
@@ -23,7 +23,7 @@ function isLegacySecretRefEnvMarker(value: unknown): value is string {
 
 function toCandidate(
   target: DiscoveredConfigSecretTarget,
-  defaults: NonNullable<OpenClawConfig["secrets"]>["defaults"] | undefined,
+  defaults: NonNullable<DexConfig["secrets"]>["defaults"] | undefined,
 ): LegacySecretRefEnvMarkerCandidate | null {
   if (!isLegacySecretRefEnvMarker(target.value)) {
     return null;
@@ -37,7 +37,7 @@ function toCandidate(
 }
 
 export function collectLegacySecretRefEnvMarkerCandidates(
-  config: OpenClawConfig,
+  config: DexConfig,
 ): LegacySecretRefEnvMarkerCandidate[] {
   const defaults = config.secrets?.defaults;
   return discoverConfigSecretTargets(config)
@@ -45,8 +45,8 @@ export function collectLegacySecretRefEnvMarkerCandidates(
     .filter((candidate): candidate is LegacySecretRefEnvMarkerCandidate => candidate !== null);
 }
 
-export function migrateLegacySecretRefEnvMarkers(config: OpenClawConfig): {
-  config: OpenClawConfig;
+export function migrateLegacySecretRefEnvMarkers(config: DexConfig): {
+  config: DexConfig;
   changes: string[];
 } {
   const candidates = collectLegacySecretRefEnvMarkerCandidates(config).filter(
@@ -56,7 +56,7 @@ export function migrateLegacySecretRefEnvMarkers(config: OpenClawConfig): {
     return { config, changes: [] };
   }
 
-  const next = structuredClone(config) as OpenClawConfig & Record<string, unknown>;
+  const next = structuredClone(config) as DexConfig & Record<string, unknown>;
   const changes: string[] = [];
   for (const candidate of candidates) {
     const ref = candidate.ref;

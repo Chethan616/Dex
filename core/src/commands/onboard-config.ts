@@ -1,15 +1,15 @@
 import { setConfigValueAtPath } from "../config/config-paths.js";
 import type { DmScope } from "../config/types.base.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { ToolProfileId } from "../config/types.tools.js";
 
 export const ONBOARDING_DEFAULT_DM_SCOPE: DmScope = "per-channel-peer";
 export const ONBOARDING_DEFAULT_TOOLS_PROFILE: ToolProfileId = "coding";
 
 export function applyLocalSetupWorkspaceConfig(
-  baseConfig: OpenClawConfig,
+  baseConfig: DexConfig,
   workspaceDir: string,
-): OpenClawConfig {
+): DexConfig {
   return {
     ...baseConfig,
     agents: {
@@ -34,7 +34,7 @@ export function applyLocalSetupWorkspaceConfig(
   };
 }
 
-export function applySkipBootstrapConfig(cfg: OpenClawConfig): OpenClawConfig {
+export function applySkipBootstrapConfig(cfg: DexConfig): DexConfig {
   const next = structuredClone(cfg);
   setConfigValueAtPath(
     next as Record<string, unknown>,

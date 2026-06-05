@@ -1,5 +1,5 @@
 import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveSecretInputRef } from "../config/types.secrets.js";
 import { createLazyRuntimeNamedExport } from "../shared/lazy-runtime.js";
 import { setPathExistingStrict } from "./path-utils.js";
@@ -52,8 +52,8 @@ export type RuntimeWebProviderSelectionParams<
   configuredProvider?: string;
   metadata: TMetadata;
   diagnostics: RuntimeWebDiagnostic[];
-  sourceConfig: OpenClawConfig;
-  resolvedConfig: OpenClawConfig;
+  sourceConfig: DexConfig;
+  resolvedConfig: DexConfig;
   context: ResolverContext;
   defaults: SecretDefaults | undefined;
   deferKeylessFallback: boolean;
@@ -62,12 +62,12 @@ export type RuntimeWebProviderSelectionParams<
   autoDetectSelectedCode: RuntimeWebWarningCode;
   readConfiguredCredential: (params: {
     provider: TProvider;
-    config: OpenClawConfig;
+    config: DexConfig;
     toolConfig: TToolConfig;
   }) => unknown;
   readConfiguredCredentialFallback?: (params: {
     provider: TProvider;
-    config: OpenClawConfig;
+    config: DexConfig;
     toolConfig: TToolConfig;
   }) => { path: string; value: unknown } | undefined;
   resolveSecretInput: (params: {
@@ -76,7 +76,7 @@ export type RuntimeWebProviderSelectionParams<
     envVars: string[];
   }) => Promise<SecretResolutionResult<TSource>>;
   setResolvedCredential: (params: {
-    resolvedConfig: OpenClawConfig;
+    resolvedConfig: DexConfig;
     provider: TProvider;
     value: string;
   }) => void;
@@ -166,7 +166,7 @@ function getProviderEnvVars(provider: object): string[] {
 }
 
 function setResolvedCredentialPath(params: {
-  resolvedConfig: OpenClawConfig;
+  resolvedConfig: DexConfig;
   path: string;
   value: string;
 }): void {
@@ -209,19 +209,19 @@ export type ResolveRuntimeWebProviderSurfaceParams<
   diagnostics: RuntimeWebDiagnostic[];
   metadataDiagnostics: RuntimeWebDiagnostic[];
   invalidAutoDetectCode: RuntimeWebWarningCode;
-  sourceConfig: OpenClawConfig;
+  sourceConfig: DexConfig;
   context: ResolverContext;
   configuredBundledPluginIdHint?: string;
   resolveProviders: (params: { configuredBundledPluginId?: string }) => Promise<TProvider[]>;
   sortProviders: (providers: TProvider[]) => TProvider[];
   readConfiguredCredential: (params: {
     provider: TProvider;
-    config: OpenClawConfig;
+    config: DexConfig;
     toolConfig: TToolConfig;
   }) => unknown;
   readConfiguredCredentialFallback?: (params: {
     provider: TProvider;
-    config: OpenClawConfig;
+    config: DexConfig;
     toolConfig: TToolConfig;
   }) => { path: string; value: unknown } | undefined;
   ignoreKeylessProvidersForConfiguredSurface?: boolean;

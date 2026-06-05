@@ -22,7 +22,7 @@ import type { PluginApprovalRequest } from "../infra/plugin-approvals.js";
 import { normalizeAccountId } from "../routing/session-key.js";
 import type { ChannelApprovalCapability, ChannelOutboundPayloadHint } from "./channel-contract.js";
 import { channelRouteTargetsMatchExact } from "./channel-route.js";
-import type { OpenClawConfig } from "./config-runtime.js";
+import type { DexConfig } from "./config-runtime.js";
 import type { ReplyPayload } from "./reply-payload.js";
 
 type ApprovalRequest = ExecApprovalRequest | PluginApprovalRequest;
@@ -42,7 +42,7 @@ type LocalNativeExecApprovalConfig = {
 type ChannelApprovalForwardTarget = DeliverySuppressionInput["target"];
 
 type ApprovalResolverParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   approvalKind?: ApprovalKind;
   request: ApprovalRequest;
@@ -50,15 +50,15 @@ type ApprovalResolverParams = {
 
 type ChannelApprovalForwardingEvaluatorParams = {
   channel: string;
-  isTransportEnabled: (params: { cfg: OpenClawConfig; accountId?: string | null }) => boolean;
+  isTransportEnabled: (params: { cfg: DexConfig; accountId?: string | null }) => boolean;
   hasMatchingTarget: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     config: ExecApprovalForwardingConfig;
     accountId?: string | null;
     target?: ChannelApprovalForwardTarget;
   }) => boolean;
   hasOriginOrSessionTarget: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     request: ApprovalRequest;
   }) => boolean;
@@ -74,14 +74,14 @@ type ApprovalOriginOrSessionTargetChecker =
   ChannelApprovalForwardingEvaluatorParams["hasOriginOrSessionTarget"];
 
 export type ChannelApprovalForwardingEligibilityParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   approvalKind: ApprovalKind;
   request: ApprovalRequest;
 };
 
 export type ChannelApprovalPotentialRouteParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   approvalKind: ApprovalKind;
   nativeSessionOnly?: boolean;
@@ -110,13 +110,13 @@ type NativeApprovalForwardingFallbackSuppressorParams<TTarget extends NativeAppr
     request: ApprovalRequest;
   }) => ApprovalKind;
   isSessionRouteEligible: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind: ApprovalKind;
     request: ApprovalRequest;
   }) => boolean;
   isExplicitTargetEligible?: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind: ApprovalKind;
     request: ApprovalRequest;
@@ -130,13 +130,13 @@ type NativeApprovalForwardingFallbackSuppressorParams<TTarget extends NativeAppr
     request: ApprovalRequest;
   }) => TTarget | null;
   resolveOriginTarget: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind: ApprovalKind;
     request: ApprovalRequest;
   }) => TTarget | null;
   resolveApproverDmTargets: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind: ApprovalKind;
     request: ApprovalRequest;
@@ -147,9 +147,9 @@ type NativeApprovalForwardingFallbackSuppressorParams<TTarget extends NativeAppr
 type NativeApprovalChannelRouteGateParams<TTarget extends NativeApprovalTarget> = {
   channel: string;
   defaultForwardingMode: ExecApprovalForwardingMode;
-  isTransportEnabled: (params: { cfg: OpenClawConfig; accountId?: string | null }) => boolean;
-  listAccountIds: (cfg: OpenClawConfig) => readonly string[];
-  resolveDefaultAccountId: (cfg: OpenClawConfig) => string;
+  isTransportEnabled: (params: { cfg: DexConfig; accountId?: string | null }) => boolean;
+  listAccountIds: (cfg: DexConfig) => readonly string[];
+  resolveDefaultAccountId: (cfg: DexConfig) => string;
   normalizeForwardTarget: (target: NativeApprovalForwardTarget) => TTarget | null;
   resolveTurnSourceTarget: (request: ApprovalRequest) => TTarget | null;
   targetsMatch?: (left: TTarget, right: TTarget) => boolean;
@@ -157,35 +157,35 @@ type NativeApprovalChannelRouteGateParams<TTarget extends NativeApprovalTarget> 
 
 type NativeApprovalChannelRouteGates = {
   canApprovalPotentiallyRouteToChannel: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind: ApprovalKind;
     nativeSessionOnly?: boolean;
   }) => boolean;
   canAnyApprovalPotentiallyRouteToChannel: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     nativeSessionOnly?: boolean;
   }) => boolean;
   isNativeApprovalHandlerConfigured: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
   }) => boolean;
   isSessionApprovalEligible: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind: ApprovalKind;
     request: ApprovalRequest;
   }) => boolean;
   isExplicitTargetEligible: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind: ApprovalKind;
     request: ApprovalRequest;
     target: NativeApprovalForwardTarget;
   }) => boolean;
   shouldHandleApprovalRequest: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind?: ApprovalKind;
     request: ApprovalRequest;
@@ -242,21 +242,21 @@ export function nativeApprovalTargetsMatch(params: {
 }
 
 export function shouldSuppressLocalNativeExecApprovalPrompt(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
   payload: ReplyPayload;
   hint?: ChannelOutboundPayloadHint;
-  isTransportEnabled?: (params: { cfg: OpenClawConfig; accountId?: string | null }) => boolean;
-  isNativeDeliveryEnabled?: (params: { cfg: OpenClawConfig; accountId?: string | null }) => boolean;
+  isTransportEnabled?: (params: { cfg: DexConfig; accountId?: string | null }) => boolean;
+  isNativeDeliveryEnabled?: (params: { cfg: DexConfig; accountId?: string | null }) => boolean;
   resolveApprovalConfig?: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     metadata: ExecApprovalReplyMetadata;
   }) => LocalNativeExecApprovalConfig | undefined;
   requireApprovalConfigEnabled?: boolean;
   enforceForwardingMode?: boolean;
   isSessionRouteEligible?: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     metadata: ExecApprovalReplyMetadata;
   }) => boolean;
@@ -341,7 +341,7 @@ export function resolveApprovalKind(
 }
 
 function resolveApprovalForwardingConfig(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   approvalKind: ApprovalKind;
 }): ExecApprovalForwardingConfig | undefined {
   return params.approvalKind === "plugin"
@@ -518,7 +518,7 @@ export function createChannelApprovalForwardingEvaluator(
   };
 
   const canAnyPotentiallyRoute = (input: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     nativeSessionOnly?: boolean;
   }): boolean =>
@@ -532,7 +532,7 @@ export function createChannelApprovalForwardingEvaluator(
     });
 
   const shouldHandleRequest = (input: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind?: ApprovalKind;
     request: ApprovalRequest;
@@ -573,7 +573,7 @@ export function createNativeApprovalChannelRouteGates<TTarget extends NativeAppr
       nativeApprovalTargetsMatch({ channel: params.channel, left, right }));
 
   const targetAccountMatchesChannelAccount = (input: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     targetAccountId?: string | null;
     accountId?: string | null;
   }): boolean => {
@@ -603,7 +603,7 @@ export function createNativeApprovalChannelRouteGates<TTarget extends NativeAppr
   };
 
   const hasMatchingChannelTarget = (input: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     config: ExecApprovalForwardingConfig;
     accountId?: string | null;
     target?: NativeApprovalForwardTarget;
@@ -631,7 +631,7 @@ export function createNativeApprovalChannelRouteGates<TTarget extends NativeAppr
   };
 
   const hasChannelOriginOrSessionTarget = (input: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     request: ApprovalRequest;
   }): boolean => {
@@ -654,7 +654,7 @@ export function createNativeApprovalChannelRouteGates<TTarget extends NativeAppr
   };
 
   const canApprovalPotentiallyRouteToChannel = (input: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind: ApprovalKind;
     nativeSessionOnly?: boolean;
@@ -668,7 +668,7 @@ export function createNativeApprovalChannelRouteGates<TTarget extends NativeAppr
   };
 
   const canAnyApprovalPotentiallyRouteToChannel = (input: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     nativeSessionOnly?: boolean;
   }): boolean =>
@@ -682,7 +682,7 @@ export function createNativeApprovalChannelRouteGates<TTarget extends NativeAppr
     });
 
   const isSessionApprovalEligible = (input: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind: ApprovalKind;
     request: ApprovalRequest;
@@ -697,7 +697,7 @@ export function createNativeApprovalChannelRouteGates<TTarget extends NativeAppr
   };
 
   const isExplicitTargetEligible = (input: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind: ApprovalKind;
     request: ApprovalRequest;
@@ -712,7 +712,7 @@ export function createNativeApprovalChannelRouteGates<TTarget extends NativeAppr
   };
 
   const shouldHandleApprovalRequest = (input: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
     approvalKind?: ApprovalKind;
     request: ApprovalRequest;
@@ -892,7 +892,7 @@ export function createChannelApproverDmTargetResolver<
 >(params: {
   shouldHandleRequest?: (params: ApprovalResolverParams) => boolean;
   resolveApprovers: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     accountId?: string | null;
   }) => readonly TApprover[];
   mapApprover: (approver: TApprover, params: ApprovalResolverParams) => TTarget | null | undefined;

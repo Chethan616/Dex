@@ -543,8 +543,8 @@ The xAI media paths are covered by unit tests and opt-in live suites. Export
 
 ```bash
 pnpm test extensions/xai
-OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_TEST_QUIET=1 pnpm test:live -- extensions/xai/xai.live.test.ts
-OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_TEST_QUIET=1 OPENCLAW_LIVE_IMAGE_GENERATION_PROVIDERS=xai pnpm test:live -- test/image-generation.runtime.live.test.ts
+DEX_LIVE_TEST=1 DEX_LIVE_TEST_QUIET=1 pnpm test:live -- extensions/xai/xai.live.test.ts
+DEX_LIVE_TEST=1 DEX_LIVE_TEST_QUIET=1 DEX_LIVE_IMAGE_GENERATION_PROVIDERS=xai pnpm test:live -- test/image-generation.runtime.live.test.ts
 ```
 
 The provider-specific live file synthesizes normal TTS, telephony-friendly PCM

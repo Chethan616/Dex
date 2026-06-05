@@ -9,7 +9,7 @@ import type {
 } from "../commands/channel-setup/types.js";
 import type { ChannelChoice } from "../commands/onboard-types.js";
 import type { DmPolicy } from "../config/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../routing/session-key.js";
 import { t } from "../wizard/i18n/index.js";
 import type { WizardPrompter, WizardSelectOption } from "../wizard/prompts.js";
@@ -61,7 +61,7 @@ export async function promptConfiguredAction(params: {
 }
 
 export async function promptRemovalAccountId(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   prompter: WizardPrompter;
   label: string;
   channel: ChannelChoice;
@@ -89,12 +89,12 @@ export async function promptRemovalAccountId(params: {
 }
 
 export async function maybeConfigureDmPolicies(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   selection: ChannelChoice[];
   prompter: WizardPrompter;
   accountIdsByChannel?: Map<ChannelChoice, string>;
   resolveAdapter?: (channel: ChannelChoice) => ChannelSetupWizardAdapter | undefined;
-}): Promise<OpenClawConfig> {
+}): Promise<DexConfig> {
   const { selection, prompter, accountIdsByChannel } = params;
   const resolve = params.resolveAdapter ?? (() => undefined);
   const dmPolicies = selection

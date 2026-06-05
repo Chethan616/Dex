@@ -1,9 +1,9 @@
 import { spawn } from "node:child_process";
 import { readPositiveIntegerParam } from "openclaw/plugin-sdk/param-readers";
 import type {
-  OpenClawPluginNodeInvokePolicy,
-  OpenClawPluginNodeInvokePolicyContext,
-  OpenClawPluginNodeInvokePolicyResult,
+  DexPluginNodeInvokePolicy,
+  DexPluginNodeInvokePolicyContext,
+  DexPluginNodeInvokePolicyResult,
 } from "openclaw/plugin-sdk/plugin-entry";
 import { appendFileTransferAudit, type FileTransferAuditOp } from "./audit.js";
 import {
@@ -81,7 +81,7 @@ function promptVerb(command: FileTransferCommand): string {
 }
 
 async function requestApproval(input: {
-  ctx: OpenClawPluginNodeInvokePolicyContext;
+  ctx: DexPluginNodeInvokePolicyContext;
   op: FileTransferAuditOp;
   kind: FilePolicyKind;
   path: string;
@@ -440,14 +440,14 @@ async function listDirFetchArchiveEntries(
 }
 
 async function validateDirFetchEntries(input: {
-  ctx: OpenClawPluginNodeInvokePolicyContext;
+  ctx: DexPluginNodeInvokePolicyContext;
   op: FileTransferAuditOp;
   requestedPath: string;
   canonicalPath: string;
   entries: unknown;
   startedAt: number;
   phase: "preflight" | "archive";
-}): Promise<OpenClawPluginNodeInvokePolicyResult | null> {
+}): Promise<DexPluginNodeInvokePolicyResult | null> {
   const nodeDisplayName = input.ctx.node?.displayName;
   const missingCode =
     input.phase === "preflight" ? "PREFLIGHT_ENTRIES_MISSING" : "ARCHIVE_ENTRIES_MISSING";
@@ -582,7 +582,7 @@ function policyDeniedResult(input: {
   code: string;
   message: string;
   details?: Record<string, unknown>;
-}): OpenClawPluginNodeInvokePolicyResult {
+}): DexPluginNodeInvokePolicyResult {
   return {
     ok: false,
     code: input.code,
@@ -599,11 +599,11 @@ type PreflightResult =
     }
   | {
       ok: false;
-      result: OpenClawPluginNodeInvokePolicyResult;
+      result: DexPluginNodeInvokePolicyResult;
     };
 
 async function invokePreflight(input: {
-  ctx: OpenClawPluginNodeInvokePolicyContext;
+  ctx: DexPluginNodeInvokePolicyContext;
   op: FileTransferAuditOp;
   params: Record<string, unknown>;
   requestedPath: string;
@@ -663,13 +663,13 @@ async function invokePreflight(input: {
 }
 
 async function runPathPreflight(input: {
-  ctx: OpenClawPluginNodeInvokePolicyContext;
+  ctx: DexPluginNodeInvokePolicyContext;
   op: FileTransferAuditOp;
   kind: FilePolicyKind;
   params: Record<string, unknown>;
   requestedPath: string;
   startedAt: number;
-}): Promise<OpenClawPluginNodeInvokePolicyResult | null> {
+}): Promise<DexPluginNodeInvokePolicyResult | null> {
   const preflight = await invokePreflight(input);
   if (!preflight.ok) {
     return preflight.result;
@@ -711,12 +711,12 @@ async function runPathPreflight(input: {
 }
 
 async function runDirFetchPreflight(input: {
-  ctx: OpenClawPluginNodeInvokePolicyContext;
+  ctx: DexPluginNodeInvokePolicyContext;
   op: FileTransferAuditOp;
   params: Record<string, unknown>;
   requestedPath: string;
   startedAt: number;
-}): Promise<OpenClawPluginNodeInvokePolicyResult | null> {
+}): Promise<DexPluginNodeInvokePolicyResult | null> {
   const preflight = await invokePreflight(input);
   if (!preflight.ok) {
     return preflight.result;
@@ -734,8 +734,8 @@ async function runDirFetchPreflight(input: {
 }
 
 async function handleFileTransferInvoke(
-  ctx: OpenClawPluginNodeInvokePolicyContext,
-): Promise<OpenClawPluginNodeInvokePolicyResult> {
+  ctx: DexPluginNodeInvokePolicyContext,
+): Promise<DexPluginNodeInvokePolicyResult> {
   if (!FILE_TRANSFER_NODE_INVOKE_COMMANDS.includes(ctx.command as FileTransferCommand)) {
     return { ok: false, code: "UNSUPPORTED_COMMAND", message: "unsupported file-transfer command" };
   }
@@ -938,7 +938,7 @@ async function handleFileTransferInvoke(
   return result;
 }
 
-export function createFileTransferNodeInvokePolicy(): OpenClawPluginNodeInvokePolicy {
+export function createFileTransferNodeInvokePolicy(): DexPluginNodeInvokePolicy {
   return {
     commands: [...FILE_TRANSFER_NODE_INVOKE_COMMANDS],
     handle: handleFileTransferInvoke,

@@ -1,6 +1,6 @@
 import type { SourceReplyDeliveryMode } from "../auto-reply/get-reply-options.types.js";
 import type { InboundEventKind } from "../channels/inbound-event/kind.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   buildMcpToolSchema,
   type McpLoopbackTool,
@@ -15,12 +15,12 @@ type CachedScopedTools = {
   agentId: string | undefined;
   tools: McpLoopbackTool[];
   toolSchema: McpToolSchemaEntry[];
-  configRef: OpenClawConfig;
+  configRef: DexConfig;
   time: number;
 };
 
 type McpLoopbackScopeParams = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   messageProvider: string | undefined;
   currentChannelId: string | undefined;

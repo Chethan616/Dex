@@ -4,7 +4,7 @@ import type {
   ModelCatalogProvider,
   NormalizedModelCatalogRow,
 } from "@dexagent/model-catalog-core/model-catalog-types";
-import type { OpenClawProviderIndex } from "./provider-index/index.js";
+import type { DexProviderIndex } from "./provider-index/index.js";
 
 type ProviderIndexModelCatalogPlanEntry = {
   provider: string;
@@ -28,7 +28,7 @@ function withPreviewStatusDefaults(providerCatalog: ModelCatalogProvider): Model
 }
 
 export function planProviderIndexModelCatalogRows(params: {
-  index: OpenClawProviderIndex;
+  index: DexProviderIndex;
   providerFilter?: string;
 }): ProviderIndexModelCatalogPlan {
   const providerFilter = params.providerFilter

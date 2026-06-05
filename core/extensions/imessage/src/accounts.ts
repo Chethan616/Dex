@@ -3,7 +3,7 @@ import {
   createAccountListHelpers,
   normalizeAccountId,
   resolveMergedAccountConfig,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/account-resolution";
 import { normalizeOptionalString } from "openclaw/plugin-sdk/string-coerce-runtime";
 import type { IMessageAccountConfig } from "./account-types.js";
@@ -24,7 +24,7 @@ const { listAccountIds, resolveDefaultAccountId } = createAccountListHelpers("im
 export const listIMessageAccountIds = listAccountIds;
 export const resolveDefaultIMessageAccountId = resolveDefaultAccountId;
 
-function mergeIMessageAccountConfig(cfg: OpenClawConfig, accountId: string): IMessageAccountConfig {
+function mergeIMessageAccountConfig(cfg: DexConfig, accountId: string): IMessageAccountConfig {
   return resolveMergedAccountConfig<IMessageAccountConfig>({
     channelConfig: cfg.channels?.imessage as IMessageAccountConfig | undefined,
     accounts: cfg.channels?.imessage?.accounts as
@@ -35,7 +35,7 @@ function mergeIMessageAccountConfig(cfg: OpenClawConfig, accountId: string): IMe
 }
 
 export function resolveIMessageAccount(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId?: string | null;
 }): ResolvedIMessageAccount {
   const accountId = normalizeAccountId(
@@ -88,7 +88,7 @@ export function resolveIMessageAccountSourceSignature(account: ResolvedIMessageA
 }
 
 function resolveIMessageAccountSourceOwner(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   signature: string;
 }): string | undefined {
   // Prefer an explicit named account over the implicit "default" so that
@@ -123,7 +123,7 @@ function resolveIMessageAccountSourceOwner(params: {
  * keep treating both accounts normally.
  */
 export function resolveIMessageDuplicateSourceOwner(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   account: ResolvedIMessageAccount;
 }): string | undefined {
   if (!params.account.enabled) {
@@ -136,14 +136,14 @@ export function resolveIMessageDuplicateSourceOwner(params: {
   return owner && owner !== params.account.accountId ? owner : undefined;
 }
 
-export function listEnabledIMessageAccounts(cfg: OpenClawConfig): ResolvedIMessageAccount[] {
+export function listEnabledIMessageAccounts(cfg: DexConfig): ResolvedIMessageAccount[] {
   return listIMessageAccountIds(cfg)
     .map((accountId) => resolveIMessageAccount({ cfg, accountId }))
     .filter((account) => account.enabled);
 }
 
 export function collectIMessageDuplicateAccountSourceWarnings(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 }): string[] {
   const groups = new Map<string, ResolvedIMessageAccount[]>();
   for (const accountId of listIMessageAccountIds(params.cfg)) {

@@ -1,5 +1,5 @@
 import os from "node:os";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";
 import { resolveRequiredHomeDir } from "../infra/home-dir.js";
 import { tryReadDiskSpace } from "../infra/disk-space.js";
@@ -78,7 +78,7 @@ export function buildDiskSpaceWarnings(params: {
  * are specific to this health contribution.
  */
 export function noteDiskSpace(
-  _cfg: OpenClawConfig, // reserved for API consistency with other Doctor contributions
+  _cfg: DexConfig, // reserved for API consistency with other Doctor contributions
   deps?: {
     env?: NodeJS.ProcessEnv;
     readDiskSpace?: (targetPath: string) => { availableBytes: number } | null;

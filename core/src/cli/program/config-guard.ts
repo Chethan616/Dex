@@ -100,7 +100,7 @@ function hasLegacyStateMigrationInputs(): boolean {
   const stateDir = resolveStateDir(process.env, os.homedir);
   const oauthDir = resolveOAuthDir(process.env, stateDir);
   if (
-    !process.env.OPENCLAW_STATE_DIR?.trim() &&
+    !process.env.DEX_STATE_DIR?.trim() &&
     resolveLegacyStateDirs(() => resolveRequiredHomeDir(process.env, os.homedir)).some(
       fileOrDirExists,
     )
@@ -262,7 +262,7 @@ export async function ensureConfigReady(params: {
   params.runtime.error("");
   const fixHint = isPluginPackagingRuntimeOutputInvalidConfigSnapshot(snapshot)
     ? formatPluginPackagingRuntimeOutputRecoveryHint()
-    : commandText(formatCliCommand("dex-core doctor --fix"));
+    : commandText(formatCliCommand("dex doctor --fix"));
   params.runtime.error(`${muted("Fix:")} ${fixHint}`);
   params.runtime.error(
     `${muted("Inspect:")} ${commandText(formatCliCommand("openclaw config validate"))}`,

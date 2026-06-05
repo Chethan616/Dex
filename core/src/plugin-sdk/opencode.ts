@@ -1,4 +1,4 @@
-import { createProviderApiKeyAuthMethod, type OpenClawConfig } from "./provider-auth-api-key.js";
+import { createProviderApiKeyAuthMethod, type DexConfig } from "./provider-auth-api-key.js";
 
 export { applyOpencodeZenModelDefault, OPENCODE_ZEN_DEFAULT_MODEL } from "./provider-onboard.js";
 
@@ -16,7 +16,7 @@ export function createOpencodeCatalogApiKeyAuthMethod(params: {
   optionKey: string;
   flagName: `--${string}`;
   defaultModel: string;
-  applyConfig: (cfg: OpenClawConfig) => OpenClawConfig;
+  applyConfig: (cfg: DexConfig) => DexConfig;
   noteMessage: string;
   choiceId: string;
   choiceLabel: string;

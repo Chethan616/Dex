@@ -1,5 +1,5 @@
-export type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
-export { definePluginEntry, type OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+export type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
+export { definePluginEntry, type DexPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 export {
   fetchWithSsrFGuard,
   ssrfPolicyFromDangerouslyAllowPrivateNetwork,

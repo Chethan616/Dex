@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { sanitizeForPromptLiteral } from "./sanitize-for-prompt.js";
 import { listControlledSubagentRuns } from "./subagent-control.js";
 import { buildSubagentList } from "./subagent-list.js";
@@ -9,7 +9,7 @@ function quotePromptData(value: string): string {
 }
 
 export function buildActiveSubagentSystemPromptAddition(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   controllerSessionKey?: string;
   hasSessionsYield?: boolean;
   recentMinutes?: number;

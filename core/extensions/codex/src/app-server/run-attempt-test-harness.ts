@@ -496,7 +496,7 @@ export function setupRunAttemptTestHooks(): void {
     clearInternalHooks();
     resetAgentEventsForTest();
     resetDiagnosticEventsForTest();
-    vi.stubEnv("OPENCLAW_TRAJECTORY", "0");
+    vi.stubEnv("DEX_TRAJECTORY", "0");
     vi.stubEnv("CODEX_API_KEY", "");
     vi.stubEnv("OPENAI_API_KEY", "");
     tempDir = await fs.mkdtemp(path.join(resolvePreferredOpenClawTmpDir(), "openclaw-codex-run-"));
@@ -506,7 +506,7 @@ export function setupRunAttemptTestHooks(): void {
     await drainActiveAppServerAttemptsForTest();
     await closeCodexSandboxExecServersForTests();
     resetCodexAppServerClientFactoryForTest();
-    testing.resetOpenClawCodingToolsFactoryForTests();
+    testing.resetDexCodingToolsFactoryForTests();
     testing.resetEnsuredCodexWorkspaceDirsForTests();
     testing.clearPendingCodexNativeHookRelayUnregistersForTests();
     resetCodexRateLimitCacheForTests();

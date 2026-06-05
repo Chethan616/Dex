@@ -31,7 +31,7 @@ import { resolveConfigIncludes } from "../../config/includes.js";
 import { formatConfigIssueLines } from "../../config/issue-format.js";
 import { asResolvedSourceConfig, asRuntimeConfig } from "../../config/materialize.js";
 import { CONFIG_PATH, resolveIncludeRoots } from "../../config/paths.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { PluginInstallRecord } from "../../config/types.plugins.js";
 import {
   GATEWAY_SERVICE_KIND,
@@ -151,23 +151,23 @@ const SERVICE_REFRESH_TIMEOUT_MS = 60_000;
 const POST_REFRESH_ALREADY_HEALTHY_ATTEMPTS = 10;
 const POST_REFRESH_ALREADY_HEALTHY_DELAY_MS = 500;
 const DEFAULT_UPDATE_STEP_TIMEOUT_MS = 30 * 60_000;
-const POST_CORE_UPDATE_ENV = "OPENCLAW_UPDATE_POST_CORE";
-const POST_CORE_UPDATE_CHANNEL_ENV = "OPENCLAW_UPDATE_POST_CORE_CHANNEL";
-const POST_CORE_UPDATE_REQUESTED_CHANNEL_ENV = "OPENCLAW_UPDATE_POST_CORE_REQUESTED_CHANNEL";
-const POST_CORE_UPDATE_RESULT_PATH_ENV = "OPENCLAW_UPDATE_POST_CORE_RESULT_PATH";
-const POST_CORE_UPDATE_INSTALL_RECORDS_PATH_ENV = "OPENCLAW_UPDATE_POST_CORE_INSTALL_RECORDS_PATH";
-const POST_CORE_UPDATE_SOURCE_CONFIG_PATH_ENV = "OPENCLAW_UPDATE_POST_CORE_SOURCE_CONFIG_PATH";
-const POST_CORE_UPDATE_STARTED_AT_ENV = "OPENCLAW_UPDATE_POST_CORE_STARTED_AT_MS";
+const POST_CORE_UPDATE_ENV = "DEX_UPDATE_POST_CORE";
+const POST_CORE_UPDATE_CHANNEL_ENV = "DEX_UPDATE_POST_CORE_CHANNEL";
+const POST_CORE_UPDATE_REQUESTED_CHANNEL_ENV = "DEX_UPDATE_POST_CORE_REQUESTED_CHANNEL";
+const POST_CORE_UPDATE_RESULT_PATH_ENV = "DEX_UPDATE_POST_CORE_RESULT_PATH";
+const POST_CORE_UPDATE_INSTALL_RECORDS_PATH_ENV = "DEX_UPDATE_POST_CORE_INSTALL_RECORDS_PATH";
+const POST_CORE_UPDATE_SOURCE_CONFIG_PATH_ENV = "DEX_UPDATE_POST_CORE_SOURCE_CONFIG_PATH";
+const POST_CORE_UPDATE_STARTED_AT_ENV = "DEX_UPDATE_POST_CORE_STARTED_AT_MS";
 const POST_CORE_UPDATE_RESULT_POLL_MS = 100;
 const PRE_UPDATE_CONFIG_SNAPSHOT_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 const SERVICE_REFRESH_PATH_ENV_KEYS = [
-  "OPENCLAW_HOME",
-  "OPENCLAW_STATE_DIR",
-  "OPENCLAW_CONFIG_PATH",
+  "DEX_HOME",
+  "DEX_STATE_DIR",
+  "DEX_CONFIG_PATH",
 ] as const;
 const POST_INSTALL_DOCTOR_SERVICE_ENV_KEYS = [
   ...SERVICE_REFRESH_PATH_ENV_KEYS,
-  "OPENCLAW_PROFILE",
+  "DEX_PROFILE",
 ] as const;
 const POST_UPDATE_PLUGIN_REPAIR_GUIDANCE = "Run openclaw doctor --fix to attempt automatic repair.";
 const JSON_MODE_SERVICE_STDOUT = new Writable({
@@ -211,8 +211,8 @@ type PostCorePluginUpdateResult = NonNullable<
 >;
 
 type PreUpdateConfigRestoreInput = {
-  sourceConfig: OpenClawConfig;
-  authoredConfig: OpenClawConfig;
+  sourceConfig: DexConfig;
+  authoredConfig: DexConfig;
 };
 
 type MissingPluginInstallPayload = {
@@ -358,7 +358,7 @@ function restoreDroppedPreUpdateChannels(
   const authoredChannels = resolveRestoredAuthoredChannels({
     currentChannels: snapshot.sourceConfig.channels,
     currentAuthoredChannels: isRecord(snapshot.parsed)
-      ? (snapshot.parsed as OpenClawConfig).channels
+      ? (snapshot.parsed as DexConfig).channels
       : snapshot.sourceConfig.channels,
     preUpdateAuthoredChannels: preUpdateConfig.authoredConfig.channels,
     restoredChannelIds,
@@ -366,7 +366,7 @@ function restoreDroppedPreUpdateChannels(
   const nextConfig = {
     ...snapshot.sourceConfig,
     channels: restoredChannels,
-  } as OpenClawConfig;
+  } as DexConfig;
   return {
     snapshot: {
       ...createUpdatedConfigSnapshot(snapshot, nextConfig),
@@ -455,7 +455,7 @@ function resolveRestoredAuthoredChannels(params: {
 
 export async function collectMissingPluginInstallPayloads(params: {
   records: Record<string, PluginInstallRecord>;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   skipDisabledPlugins?: boolean;
   syncOfficialPluginInstalls?: boolean;
   env?: NodeJS.ProcessEnv;
@@ -720,7 +720,7 @@ export async function recoverLaunchAgentAndRecheckGatewayHealth(params: {
 function formatPostUpdateGatewayRecoveryLine(platform: NodeJS.Platform): string {
   const restartCommand = replaceCliName(formatCliCommand("openclaw gateway restart"), CLI_NAME);
   const installCommand = replaceCliName(
-    formatCliCommand("dex-core gateway install --force"),
+    formatCliCommand("dex gateway install --force"),
     CLI_NAME,
   );
   const statusCommand = replaceCliName(
@@ -747,7 +747,7 @@ export function formatPostUpdateGatewayRecoveryInstructions(
   const beforeVersion = normalizeOptionalString(result.before?.version);
   if (isPackageManagerUpdateMode(result.mode) && beforeVersion) {
     lines.push(
-      `Rollback: reinstall OpenClaw ${beforeVersion} with the same package manager, then rerun \`${replaceCliName(formatCliCommand("dex-core gateway install --force"), CLI_NAME)}\`.`,
+      `Rollback: reinstall OpenClaw ${beforeVersion} with the same package manager, then rerun \`${replaceCliName(formatCliCommand("dex gateway install --force"), CLI_NAME)}\`.`,
     );
   }
   return lines;
@@ -941,10 +941,10 @@ async function maybeRestartServiceAfterFailedPackageUpdate(params: {
 function isRunningInsideGatewayService(
   env: Record<string, string | undefined> = process.env,
 ): boolean {
-  if (env.OPENCLAW_SERVICE_MARKER?.trim() !== GATEWAY_SERVICE_MARKER) {
+  if (env.DEX_SERVICE_MARKER?.trim() !== GATEWAY_SERVICE_MARKER) {
     return false;
   }
-  const serviceKind = env.OPENCLAW_SERVICE_KIND?.trim();
+  const serviceKind = env.DEX_SERVICE_KIND?.trim();
   return !serviceKind || serviceKind === GATEWAY_SERVICE_KIND;
 }
 
@@ -1073,8 +1073,8 @@ function disableUpdatedPackageCompileCacheEnv(env: NodeJS.ProcessEnv): NodeJS.Pr
 
 function stripGatewayServiceMarkerEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const resolvedEnv = { ...env };
-  delete resolvedEnv.OPENCLAW_SERVICE_MARKER;
-  delete resolvedEnv.OPENCLAW_SERVICE_KIND;
+  delete resolvedEnv.DEX_SERVICE_MARKER;
+  delete resolvedEnv.DEX_SERVICE_KIND;
   delete resolvedEnv[GATEWAY_SERVICE_RUNTIME_PID_ENV];
   return resolvedEnv;
 }
@@ -1107,7 +1107,7 @@ export function resolvePostInstallDoctorEnv(params?: {
 }
 
 export function resolveUpdatedGatewayRestartPort(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   processEnv?: NodeJS.ProcessEnv;
   serviceEnv?: NodeJS.ProcessEnv;
 }): number {
@@ -1490,12 +1490,12 @@ async function runPackageInstallUpdate(params: {
               serviceEnv: params.managedServiceEnv,
               invocationCwd: params.invocationCwd,
             }),
-            OPENCLAW_UPDATE_IN_PROGRESS: "1",
+            DEX_UPDATE_IN_PROGRESS: "1",
             [UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR_ENV]: "1",
             [UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE_ENV]: "1",
             ...(candidateHostVersion === null
               ? {}
-              : { OPENCLAW_COMPATIBILITY_HOST_VERSION: candidateHostVersion }),
+              : { DEX_COMPATIBILITY_HOST_VERSION: candidateHostVersion }),
           },
           timeoutMs: params.timeoutMs,
           progress: params.progress,
@@ -1841,7 +1841,7 @@ export async function updatePluginsAfterCoreUpdate(params: {
     if (params.restoredAuthoredChannels !== undefined) {
       nextConfig = {
         ...nextConfig,
-        channels: structuredClone(params.restoredAuthoredChannels) as OpenClawConfig["channels"],
+        channels: structuredClone(params.restoredAuthoredChannels) as DexConfig["channels"],
       };
     }
     await commitPluginInstallRecordsWithConfig({
@@ -2165,7 +2165,7 @@ async function maybeRestartService(params: {
         defaultRuntime.log(theme.success("Daemon restarted successfully."));
         defaultRuntime.log("");
         await createUpdateConfigSnapshot();
-        process.env.OPENCLAW_UPDATE_IN_PROGRESS = "1";
+        process.env.DEX_UPDATE_IN_PROGRESS = "1";
         process.env[UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE_ENV] = "1";
         try {
           const interactiveDoctor =
@@ -2176,7 +2176,7 @@ async function maybeRestartService(params: {
         } catch (err) {
           defaultRuntime.log(theme.warn(`Doctor failed: ${String(err)}`));
         } finally {
-          delete process.env.OPENCLAW_UPDATE_IN_PROGRESS;
+          delete process.env.DEX_UPDATE_IN_PROGRESS;
           delete process.env[UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE_ENV];
         }
       }
@@ -2253,19 +2253,19 @@ type UpdateFinalizeResult = {
 };
 
 function withUpdateFinalizationEnv<T>(run: () => Promise<T>): Promise<T> {
-  const previousUpdateInProgress = process.env.OPENCLAW_UPDATE_IN_PROGRESS;
+  const previousUpdateInProgress = process.env.DEX_UPDATE_IN_PROGRESS;
   const previousDeferConfiguredPluginInstallRepair =
     process.env[UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR_ENV];
   const previousParentSupportsDoctorConfigWrite =
     process.env[UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE_ENV];
-  process.env.OPENCLAW_UPDATE_IN_PROGRESS = "1";
+  process.env.DEX_UPDATE_IN_PROGRESS = "1";
   process.env[UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR_ENV] = "1";
   process.env[UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE_ENV] = "1";
   return run().finally(() => {
     if (previousUpdateInProgress === undefined) {
-      delete process.env.OPENCLAW_UPDATE_IN_PROGRESS;
+      delete process.env.DEX_UPDATE_IN_PROGRESS;
     } else {
-      process.env.OPENCLAW_UPDATE_IN_PROGRESS = previousUpdateInProgress;
+      process.env.DEX_UPDATE_IN_PROGRESS = previousUpdateInProgress;
     }
     if (previousDeferConfiguredPluginInstallRepair === undefined) {
       delete process.env[UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR_ENV];
@@ -2296,7 +2296,7 @@ export async function updateFinalizeCommand(opts: UpdateFinalizeOptions): Promis
     ? {
         sourceConfig: configSnapshot.sourceConfig,
         authoredConfig: isRecord(configSnapshot.parsed)
-          ? (configSnapshot.parsed as OpenClawConfig)
+          ? (configSnapshot.parsed as DexConfig)
           : configSnapshot.sourceConfig,
       }
     : undefined;
@@ -2418,7 +2418,7 @@ async function persistRequestedUpdateChannel(params: {
 
 function createUpdatedConfigSnapshot(
   snapshot: Awaited<ReturnType<typeof readConfigFileSnapshot>>,
-  next: OpenClawConfig,
+  next: DexConfig,
 ): Awaited<ReturnType<typeof readConfigFileSnapshot>> {
   if (!snapshot.valid) {
     return snapshot;
@@ -2518,11 +2518,11 @@ function normalizePreUpdateConfigRestoreInput(
   const authoredConfig = parsed.authoredConfig;
   if (isRecord(sourceConfig) && isRecord(authoredConfig)) {
     return {
-      sourceConfig: sourceConfig as OpenClawConfig,
-      authoredConfig: authoredConfig as OpenClawConfig,
+      sourceConfig: sourceConfig as DexConfig,
+      authoredConfig: authoredConfig as DexConfig,
     };
   }
-  const authored = parsed as OpenClawConfig;
+  const authored = parsed as DexConfig;
   return {
     sourceConfig: options?.configPath
       ? resolvePreUpdateSourceConfigFromAuthored(authored, options.configPath)
@@ -2532,9 +2532,9 @@ function normalizePreUpdateConfigRestoreInput(
 }
 
 function resolvePreUpdateSourceConfigFromAuthored(
-  authoredConfig: OpenClawConfig,
+  authoredConfig: DexConfig,
   configPath: string,
-): OpenClawConfig {
+): DexConfig {
   try {
     const withIncludes = resolveConfigIncludes(authoredConfig, configPath, undefined, {
       allowedRoots: resolveIncludeRoots(process.env),
@@ -2542,7 +2542,7 @@ function resolvePreUpdateSourceConfigFromAuthored(
     const resolved = resolveConfigEnvVars(withIncludes, process.env, {
       onMissing: () => undefined,
     });
-    return isRecord(resolved) ? (resolved as OpenClawConfig) : authoredConfig;
+    return isRecord(resolved) ? (resolved as DexConfig) : authoredConfig;
   } catch {
     return authoredConfig;
   }
@@ -2796,7 +2796,7 @@ async function continuePostCoreUpdateInFreshProcess(params: {
       stdio: childStdio,
       env: {
         ...stripGatewayServiceMarkerEnv(disableUpdatedPackageCompileCacheEnv(process.env)),
-        OPENCLAW_UPDATE_IN_PROGRESS: "1",
+        DEX_UPDATE_IN_PROGRESS: "1",
         [POST_CORE_UPDATE_ENV]: "1",
         [POST_CORE_UPDATE_CHANNEL_ENV]: params.channel,
         ...(params.requestedChannel
@@ -2807,7 +2807,7 @@ async function continuePostCoreUpdateInFreshProcess(params: {
         [POST_CORE_UPDATE_STARTED_AT_ENV]: String(params.updateStartedAtMs),
         ...(postCoreHostVersion === null
           ? {}
-          : { OPENCLAW_COMPATIBILITY_HOST_VERSION: postCoreHostVersion }),
+          : { DEX_COMPATIBILITY_HOST_VERSION: postCoreHostVersion }),
         ...(params.preUpdateConfig
           ? { [POST_CORE_UPDATE_SOURCE_CONFIG_PATH_ENV]: sourceConfigPath }
           : {}),
@@ -2954,13 +2954,13 @@ async function markControlPlaneUpdateRestartSentinelFailureBestEffort(params: {
 }
 
 async function withUpdateInProgressEnv<T>(run: () => Promise<T>): Promise<T> {
-  const previousUpdateInProgress = process.env.OPENCLAW_UPDATE_IN_PROGRESS;
-  process.env.OPENCLAW_UPDATE_IN_PROGRESS = "1";
+  const previousUpdateInProgress = process.env.DEX_UPDATE_IN_PROGRESS;
+  process.env.DEX_UPDATE_IN_PROGRESS = "1";
   return run().finally(() => {
     if (previousUpdateInProgress === undefined) {
-      delete process.env.OPENCLAW_UPDATE_IN_PROGRESS;
+      delete process.env.DEX_UPDATE_IN_PROGRESS;
     } else {
-      process.env.OPENCLAW_UPDATE_IN_PROGRESS = previousUpdateInProgress;
+      process.env.DEX_UPDATE_IN_PROGRESS = previousUpdateInProgress;
     }
   });
 }
@@ -3013,7 +3013,7 @@ async function updateCommandInternal(opts: UpdateCommandOptions): Promise<void> 
       return;
     }
 
-    process.env.OPENCLAW_COMPATIBILITY_HOST_VERSION = (await readPackageVersion(root)) ?? VERSION;
+    process.env.DEX_COMPATIBILITY_HOST_VERSION = (await readPackageVersion(root)) ?? VERSION;
 
     let postCoreConfigSnapshot = await readConfigFileSnapshot({
       skipPluginValidation: true,
@@ -3117,7 +3117,7 @@ async function updateCommandInternal(opts: UpdateCommandOptions): Promise<void> 
     updateInstallKind === "git" ? DEFAULT_GIT_CHANNEL : DEFAULT_PACKAGE_CHANNEL;
   const channel = requestedChannel ?? storedChannel ?? defaultChannel;
   const devTargetRef =
-    channel === "dev" ? process.env.OPENCLAW_UPDATE_DEV_TARGET_REF?.trim() || undefined : undefined;
+    channel === "dev" ? process.env.DEX_UPDATE_DEV_TARGET_REF?.trim() || undefined : undefined;
 
   const explicitTag = normalizeTag(opts.tag);
   let tag = explicitTag ?? channelToNpmTag(channel);
@@ -3530,7 +3530,7 @@ async function updateCommandInternal(opts: UpdateCommandOptions): Promise<void> 
         ? {
             sourceConfig: configSnapshot.sourceConfig,
             authoredConfig: isRecord(configSnapshot.parsed)
-              ? (configSnapshot.parsed as OpenClawConfig)
+              ? (configSnapshot.parsed as DexConfig)
               : configSnapshot.sourceConfig,
           }
         : undefined,
@@ -3552,7 +3552,7 @@ async function updateCommandInternal(opts: UpdateCommandOptions): Promise<void> 
         ? {
             sourceConfig: configSnapshot.sourceConfig,
             authoredConfig: isRecord(configSnapshot.parsed)
-              ? (configSnapshot.parsed as OpenClawConfig)
+              ? (configSnapshot.parsed as DexConfig)
               : configSnapshot.sourceConfig,
           }
         : undefined,
@@ -3568,9 +3568,9 @@ async function updateCommandInternal(opts: UpdateCommandOptions): Promise<void> 
         : null;
     const compatibilityDowngradeTarget =
       versionComparison != null && versionComparison > 0 ? postUpdateInstalledVersion : null;
-    const previousCompatibilityHostVersion = process.env.OPENCLAW_COMPATIBILITY_HOST_VERSION;
+    const previousCompatibilityHostVersion = process.env.DEX_COMPATIBILITY_HOST_VERSION;
     if (compatibilityDowngradeTarget) {
-      process.env.OPENCLAW_COMPATIBILITY_HOST_VERSION = compatibilityDowngradeTarget;
+      process.env.DEX_COMPATIBILITY_HOST_VERSION = compatibilityDowngradeTarget;
     }
     try {
       postCorePluginUpdate = await runPostCorePluginUpdate({
@@ -3586,9 +3586,9 @@ async function updateCommandInternal(opts: UpdateCommandOptions): Promise<void> 
     } finally {
       if (compatibilityDowngradeTarget) {
         if (previousCompatibilityHostVersion === undefined) {
-          delete process.env.OPENCLAW_COMPATIBILITY_HOST_VERSION;
+          delete process.env.DEX_COMPATIBILITY_HOST_VERSION;
         } else {
-          process.env.OPENCLAW_COMPATIBILITY_HOST_VERSION = previousCompatibilityHostVersion;
+          process.env.DEX_COMPATIBILITY_HOST_VERSION = previousCompatibilityHostVersion;
         }
       }
     }

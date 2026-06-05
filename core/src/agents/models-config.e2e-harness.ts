@@ -1,6 +1,6 @@
 import { afterEach, beforeEach } from "vitest";
 import { clearConfigCache, clearRuntimeConfigSnapshot } from "../config/config.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { withTempHome as withTempHomeBase } from "../plugin-sdk/test-helpers/temp-home.js";
 import { resetPluginLoaderTestStateForTest } from "../plugins/loader.test-fixtures.js";
 import { resetModelsJsonReadyCacheForTest } from "./models-config-state.js";
@@ -25,8 +25,8 @@ export function installModelsConfigTestHooks(opts?: {
 
   beforeEach(() => {
     previousHome = process.env.HOME;
-    previousOpenClawAgentDir = process.env.OPENCLAW_AGENT_DIR;
-    delete process.env.OPENCLAW_AGENT_DIR;
+    previousOpenClawAgentDir = process.env.DEX_AGENT_DIR;
+    delete process.env.DEX_AGENT_DIR;
     clearRuntimeConfigSnapshot();
     clearConfigCache();
     if (shouldResetPluginLoaderState) {
@@ -38,9 +38,9 @@ export function installModelsConfigTestHooks(opts?: {
   afterEach(() => {
     process.env.HOME = previousHome;
     if (previousOpenClawAgentDir === undefined) {
-      delete process.env.OPENCLAW_AGENT_DIR;
+      delete process.env.DEX_AGENT_DIR;
     } else {
-      process.env.OPENCLAW_AGENT_DIR = previousOpenClawAgentDir;
+      process.env.DEX_AGENT_DIR = previousOpenClawAgentDir;
     }
     clearRuntimeConfigSnapshot();
     clearConfigCache();
@@ -81,7 +81,7 @@ export function unsetEnv(vars: string[]) {
 }
 
 export const MODELS_CONFIG_IMPLICIT_ENV_VARS = [
-  "OPENCLAW_TEST_ONLY_PROVIDER_PLUGIN_IDS",
+  "DEX_TEST_ONLY_PROVIDER_PLUGIN_IDS",
   "VITEST",
   "NODE_ENV",
   "AI_GATEWAY_API_KEY",
@@ -97,10 +97,10 @@ export const MODELS_CONFIG_IMPLICIT_ENV_VARS = [
   "MOONSHOT_API_KEY",
   "NVIDIA_API_KEY",
   "OLLAMA_API_KEY",
-  "OPENCLAW_AGENT_DIR",
+  "DEX_AGENT_DIR",
   "OPENAI_API_KEY",
   "OPENROUTER_API_KEY",
-  "OPENCLAW_AGENT_DIR",
+  "DEX_AGENT_DIR",
   "QIANFAN_API_KEY",
   "QWEN_API_KEY",
   "MODELSTUDIO_API_KEY",
@@ -115,7 +115,7 @@ export const MODELS_CONFIG_IMPLICIT_ENV_VARS = [
   "KIMI_API_KEY",
   "KIMICODE_API_KEY",
   "GEMINI_API_KEY",
-  "OPENCLAW_BUNDLED_PLUGINS_DIR",
+  "DEX_BUNDLED_PLUGINS_DIR",
   "GOOGLE_APPLICATION_CREDENTIALS",
   "GOOGLE_CLOUD_LOCATION",
   "GOOGLE_CLOUD_PROJECT",
@@ -138,7 +138,7 @@ export const MODELS_CONFIG_IMPLICIT_ENV_VARS = [
   "AWS_SHARED_CREDENTIALS_FILE",
 ];
 
-export const CUSTOM_PROXY_MODELS_CONFIG: OpenClawConfig = {
+export const CUSTOM_PROXY_MODELS_CONFIG: DexConfig = {
   models: {
     providers: {
       "custom-proxy": {

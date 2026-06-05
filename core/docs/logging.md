@@ -28,7 +28,7 @@ OpenClaw keeps up to five numbered archives beside the active file, such as
 `openclaw-YYYY-MM-DD.1.log`, and keeps writing to a fresh active log instead of
 suppressing diagnostics.
 
-You can override this in `~/.openclaw/openclaw.json`:
+You can override this in `~/.dex/openclaw.json`:
 
 ```json
 {
@@ -152,7 +152,7 @@ openclaw gateway --verbose --ws-log full
 
 ## Configuring logging
 
-All logging configuration lives under `logging` in `~/.openclaw/openclaw.json`.
+All logging configuration lives under `logging` in `~/.dex/openclaw.json`.
 
 ```json
 {
@@ -172,7 +172,7 @@ All logging configuration lives under `logging` in `~/.openclaw/openclaw.json`.
 - `logging.level`: **file logs** (JSONL) level.
 - `logging.consoleLevel`: **console** verbosity level.
 
-You can override both via the **`OPENCLAW_LOG_LEVEL`** environment variable (e.g. `OPENCLAW_LOG_LEVEL=debug`). The env var takes precedence over the config file, so you can raise verbosity for a single run without editing `openclaw.json`. You can also pass the global CLI option **`--log-level <level>`** (for example, `openclaw --log-level debug gateway run`), which overrides the environment variable for that command.
+You can override both via the **`DEX_LOG_LEVEL`** environment variable (e.g. `DEX_LOG_LEVEL=debug`). The env var takes precedence over the config file, so you can raise verbosity for a single run without editing `openclaw.json`. You can also pass the global CLI option **`--log-level <level>`** (for example, `openclaw --log-level debug gateway run`), which overrides the environment variable for that command.
 
 `--verbose` only affects console output and WS log verbosity; it does not change
 file log levels.
@@ -183,26 +183,26 @@ When debugging provider calls, use targeted environment flags instead of raising
 all logs to `debug`:
 
 ```bash
-OPENCLAW_DEBUG_MODEL_TRANSPORT=1 openclaw gateway
-OPENCLAW_DEBUG_MODEL_PAYLOAD=tools OPENCLAW_DEBUG_SSE=events openclaw gateway
+DEX_DEBUG_MODEL_TRANSPORT=1 openclaw gateway
+DEX_DEBUG_MODEL_PAYLOAD=tools DEX_DEBUG_SSE=events openclaw gateway
 ```
 
 Available flags:
 
-- `OPENCLAW_DEBUG_MODEL_TRANSPORT=1`: emit request start, fetch response, SDK
+- `DEX_DEBUG_MODEL_TRANSPORT=1`: emit request start, fetch response, SDK
   headers, first streaming event, stream completion, and transport errors at
   `info` level.
-- `OPENCLAW_DEBUG_MODEL_PAYLOAD=summary`: include a bounded request payload
+- `DEX_DEBUG_MODEL_PAYLOAD=summary`: include a bounded request payload
   summary in model request logs.
-- `OPENCLAW_DEBUG_MODEL_PAYLOAD=tools`: include all model-facing tool names in
+- `DEX_DEBUG_MODEL_PAYLOAD=tools`: include all model-facing tool names in
   the payload summary.
-- `OPENCLAW_DEBUG_MODEL_PAYLOAD=full-redacted`: include a redacted, capped JSON
+- `DEX_DEBUG_MODEL_PAYLOAD=full-redacted`: include a redacted, capped JSON
   payload snapshot. Use only while debugging; secrets are redacted but prompts
   and message text may still be present.
-- `OPENCLAW_DEBUG_SSE=events`: emit first-event and stream-completion timing.
-- `OPENCLAW_DEBUG_SSE=peek`: also emit the first five redacted SSE event
+- `DEX_DEBUG_SSE=events`: emit first-event and stream-completion timing.
+- `DEX_DEBUG_SSE=peek`: also emit the first five redacted SSE event
   payloads, capped per event.
-- `OPENCLAW_DEBUG_CODE_MODE=1`: emit code-mode model-surface diagnostics,
+- `DEX_DEBUG_CODE_MODE=1`: emit code-mode model-surface diagnostics,
   including when native provider tools are hidden because code mode owns the
   tool surface.
 
@@ -292,7 +292,7 @@ Two adjacent surfaces:
 - **Diagnostics flags** — targeted debug-log flags that route extra logs to
   `logging.file` without raising `logging.level`. Flags are case-insensitive
   and support wildcards (`telegram.*`, `*`). Configure under `diagnostics.flags`
-  or via the `OPENCLAW_DIAGNOSTICS=...` env override. Full guide:
+  or via the `DEX_DIAGNOSTICS=...` env override. Full guide:
   [Diagnostics flags](/diagnostics/flags).
 
 To enable diagnostics events for plugins or custom sinks without OTLP export:

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 
 type ColdPluginFixture = {
   authChoiceId: string;
@@ -97,7 +97,7 @@ export function createColdPluginFixture(options: ColdPluginFixtureOptions): Cold
   };
 }
 
-export function createColdPluginConfig(pluginDir: string, pluginId: string): OpenClawConfig {
+export function createColdPluginConfig(pluginDir: string, pluginId: string): DexConfig {
   return {
     plugins: {
       load: { paths: [pluginDir] },
@@ -114,11 +114,11 @@ export function createColdPluginHermeticEnv(
 ): NodeJS.ProcessEnv {
   return {
     ...process.env,
-    OPENCLAW_HOME: path.join(homeDir, "home"),
-    OPENCLAW_BUNDLED_PLUGINS_DIR: options.bundledPluginsDir,
-    OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY:
+    DEX_HOME: path.join(homeDir, "home"),
+    DEX_BUNDLED_PLUGINS_DIR: options.bundledPluginsDir,
+    DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY:
       options.disablePersistedRegistry === false ? undefined : "1",
-    OPENCLAW_VERSION: "2026.4.25",
+    DEX_VERSION: "2026.4.25",
     VITEST: "true",
   };
 }

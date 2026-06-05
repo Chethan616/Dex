@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { normalizeAgentId } from "../routing/session-key.js";
 
 type CrestodianRescueDecision =
@@ -22,7 +22,7 @@ type CrestodianRescueDecision =
     };
 
 type CrestodianRescuePolicyInput = {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   agentId?: string;
   senderIsOwner: boolean;
   isDirectMessage: boolean;
@@ -32,7 +32,7 @@ function resolvePendingTtlMinutes(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 15;
 }
 
-function resolveAgentEntry(cfg: OpenClawConfig, agentId?: string) {
+function resolveAgentEntry(cfg: DexConfig, agentId?: string) {
   if (!agentId) {
     return undefined;
   }
@@ -42,12 +42,12 @@ function resolveAgentEntry(cfg: OpenClawConfig, agentId?: string) {
   );
 }
 
-function resolveScopedExecConfig(cfg: OpenClawConfig, agentId?: string) {
+function resolveScopedExecConfig(cfg: DexConfig, agentId?: string) {
   return resolveAgentEntry(cfg, agentId)?.tools?.exec;
 }
 
 function resolveScopedSandboxMode(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   agentId?: string,
 ): "off" | "non-main" | "all" {
   return (
@@ -55,7 +55,7 @@ function resolveScopedSandboxMode(
   );
 }
 
-function isYoloHostPosture(cfg: OpenClawConfig, agentId?: string): boolean {
+function isYoloHostPosture(cfg: DexConfig, agentId?: string): boolean {
   const scopedExec = resolveScopedExecConfig(cfg, agentId);
   const globalExec = cfg.tools?.exec;
   const security = scopedExec?.security ?? globalExec?.security ?? "full";

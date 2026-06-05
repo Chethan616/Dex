@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   asNullableRecord as asRecord,
   normalizeOptionalLowercaseString as normalizeProviderId,
@@ -31,8 +31,8 @@ export const legacyConfigRules: LegacyConfigRule[] = [
   },
 ];
 
-export function migrateGoogleMeetLegacyRealtimeProvider(config: OpenClawConfig): {
-  config: OpenClawConfig;
+export function migrateGoogleMeetLegacyRealtimeProvider(config: DexConfig): {
+  config: DexConfig;
   changes: string[];
 } | null {
   const rawEntry = asRecord(config.plugins?.entries?.["google-meet"]);
@@ -70,8 +70,8 @@ export function migrateGoogleMeetLegacyRealtimeProvider(config: OpenClawConfig):
   };
 }
 
-export function normalizeCompatibilityConfig({ cfg }: { cfg: OpenClawConfig }): {
-  config: OpenClawConfig;
+export function normalizeCompatibilityConfig({ cfg }: { cfg: DexConfig }): {
+  config: DexConfig;
   changes: string[];
 } {
   return migrateGoogleMeetLegacyRealtimeProvider(cfg) ?? { config: cfg, changes: [] };

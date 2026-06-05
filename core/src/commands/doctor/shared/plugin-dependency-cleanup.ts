@@ -174,7 +174,7 @@ async function collectExistingCleanupRoots(
 }
 
 function collectExplicitStageTargets(env: NodeJS.ProcessEnv): CleanupTarget[] {
-  return splitPathList(env.OPENCLAW_PLUGIN_STAGE_DIR).map((entry) => ({
+  return splitPathList(env.DEX_PLUGIN_STAGE_DIR).map((entry) => ({
     kind: "explicit-stage",
     path: resolveUserPath(entry, env),
     rawPath: entry,

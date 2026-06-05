@@ -1,5 +1,5 @@
 import { createInterface, type Interface as ReadlineInterface } from "node:readline";
-import { embeddedAgentLog, OPENCLAW_VERSION } from "openclaw/plugin-sdk/agent-harness-runtime";
+import { embeddedAgentLog, DEX_VERSION } from "openclaw/plugin-sdk/agent-harness-runtime";
 import { resolveCodexAppServerRuntimeOptions, type CodexAppServerStartOptions } from "./config.js";
 import {
   type CodexAppServerRequestMethod,
@@ -174,7 +174,7 @@ export class CodexAppServerClient {
       clientInfo: {
         name: "openclaw",
         title: "OpenClaw",
-        version: OPENCLAW_VERSION,
+        version: DEX_VERSION,
       },
       capabilities: {
         experimentalApi: true,

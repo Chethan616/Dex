@@ -3,7 +3,7 @@ import path from "node:path";
 import { resolveUserPath } from "../utils.js";
 import { isPathInside, safeRealpathSync } from "./path-safety.js";
 
-export const OPENCLAW_DEV_SOURCE_ROOT_ENV = "OPENCLAW_DEV_SOURCE_ROOT";
+export const DEX_DEV_SOURCE_ROOT_ENV = "DEX_DEV_SOURCE_ROOT";
 
 function readPackageName(packageJsonPath: string): string | null {
   try {
@@ -15,7 +15,7 @@ function readPackageName(packageJsonPath: string): string | null {
 }
 
 export function resolveOpenClawDevSourceRoot(env: NodeJS.ProcessEnv = process.env): string | null {
-  const rawRoot = env[OPENCLAW_DEV_SOURCE_ROOT_ENV]?.trim();
+  const rawRoot = env[DEX_DEV_SOURCE_ROOT_ENV]?.trim();
   if (!rawRoot) {
     return null;
   }

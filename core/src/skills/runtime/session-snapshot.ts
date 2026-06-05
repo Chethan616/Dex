@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { stableStringify } from "../../agents/stable-stringify.js";
 import { redactConfigObject } from "../../config/redact-snapshot.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { matchesSkillFilter } from "../discovery/filter.js";
 import { buildWorkspaceSkillSnapshot } from "../loading/workspace.js";
 import type { SkillEligibilityContext, SkillSnapshot } from "../types.js";
@@ -14,7 +14,7 @@ const RESOLVED_SKILLS_CACHE_MAX = 10;
 
 export type ReusableSkillSnapshotParams = {
   workspaceDir: string;
-  config: OpenClawConfig;
+  config: DexConfig;
   agentId?: string;
   skillFilter?: string[];
   eligibility?: SkillEligibilityContext;
@@ -34,7 +34,7 @@ export function resetResolvedSkillsCacheForTests(): void {
   resolvedSkillsCache.clear();
 }
 
-function fingerprintSkillSnapshotConfig(config: OpenClawConfig): string {
+function fingerprintSkillSnapshotConfig(config: DexConfig): string {
   return crypto
     .createHash("sha256")
     .update(stableStringify(redactConfigObject(config)))

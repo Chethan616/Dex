@@ -13,8 +13,8 @@ import {
 const port =
   process.env.MOCK_PORT != null
     ? readPositiveIntEnv("MOCK_PORT")
-    : readPositiveIntEnv("OPENCLAW_MOCK_OPENAI_PORT");
-const successMarker = process.env.SUCCESS_MARKER ?? "OPENCLAW_E2E_OK";
+    : readPositiveIntEnv("DEX_MOCK_OPENAI_PORT");
+const successMarker = process.env.SUCCESS_MARKER ?? "DEX_E2E_OK";
 const requestLog = process.env.MOCK_REQUEST_LOG;
 
 function responseEvents(text) {
@@ -194,7 +194,7 @@ function writeImageGeneration(res) {
 }
 
 function resolveResponseText(bodyText) {
-  const matches = Array.from(bodyText.matchAll(/\bOPENCLAW_E2E_OK(?:_\d+)?\b/gu));
+  const matches = Array.from(bodyText.matchAll(/\bDEX_E2E_OK(?:_\d+)?\b/gu));
   return matches.at(-1)?.[0] ?? successMarker;
 }
 

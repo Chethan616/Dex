@@ -4,7 +4,7 @@ import {
   noteChannelLookupSummary,
   resolveEntriesWithOptionalToken,
   createSetupTranslator,
-  type OpenClawConfig,
+  type DexConfig,
   parseMentionOrPrefixedId,
   promptLegacyChannelAllowFromForAccount,
   type WizardPrompter,
@@ -55,10 +55,10 @@ async function resolveSlackAllowFromEntries(params: {
 }
 
 async function promptSlackAllowFrom(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   prompter: WizardPrompter;
   accountId?: string;
-}): Promise<OpenClawConfig> {
+}): Promise<DexConfig> {
   const parseId = (value: string) =>
     parseMentionOrPrefixedId({
       value,
@@ -106,7 +106,7 @@ async function promptSlackAllowFrom(params: {
 }
 
 async function resolveSlackGroupAllowlist(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   accountId: string;
   credentialValues: { botToken?: string };
   entries: string[];

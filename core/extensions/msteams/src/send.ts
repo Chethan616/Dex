@@ -5,7 +5,7 @@ import {
 } from "openclaw/plugin-sdk/channel-outbound";
 import { resolveMarkdownTableMode } from "openclaw/plugin-sdk/markdown-table-runtime";
 import { convertMarkdownTables } from "openclaw/plugin-sdk/text-chunking";
-import { loadOutboundMediaFromUrl, type OpenClawConfig } from "../runtime-api.js";
+import { loadOutboundMediaFromUrl, type DexConfig } from "../runtime-api.js";
 import {
   classifyMSTeamsSendError,
   formatMSTeamsSendErrorHint,
@@ -32,7 +32,7 @@ import { resolveMSTeamsSendContext, type MSTeamsProactiveContext } from "./send-
 
 type SendMSTeamsMessageParams = {
   /** Full config (for credentials) */
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   /** Conversation ID or user ID to send to */
   to: string;
   /** Message text */
@@ -103,7 +103,7 @@ function createMSTeamsSendResult(params: {
 
 type SendMSTeamsPollParams = {
   /** Full config (for credentials) */
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   /** Conversation ID or user ID to send to */
   to: string;
   /** Poll question */
@@ -122,7 +122,7 @@ type SendMSTeamsPollResult = {
 
 type SendMSTeamsCardParams = {
   /** Full config (for credentials) */
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   /** Conversation ID or user ID to send to */
   to: string;
   /** Adaptive Card JSON object */
@@ -582,7 +582,7 @@ export async function sendAdaptiveCardMSTeams(
 
 type EditMSTeamsMessageParams = {
   /** Full config (for credentials) */
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   /** Conversation ID or user ID */
   to: string;
   /** Activity ID of the message to edit */
@@ -597,7 +597,7 @@ type EditMSTeamsMessageResult = {
 
 type DeleteMSTeamsMessageParams = {
   /** Full config (for credentials) */
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   /** Conversation ID or user ID */
   to: string;
   /** Activity ID of the message to delete */

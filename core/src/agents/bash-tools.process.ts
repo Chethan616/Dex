@@ -180,7 +180,7 @@ export function createProcessTool(
   const scopeKey = defaults?.scopeKey;
   const supervisor = getProcessSupervisor();
   const inputWaitIdleMs = clampWithDefault(
-    defaults?.inputWaitIdleMs ?? readEnvInt("OPENCLAW_PROCESS_INPUT_WAIT_IDLE_MS"),
+    defaults?.inputWaitIdleMs ?? readEnvInt("DEX_PROCESS_INPUT_WAIT_IDLE_MS"),
     DEFAULT_INPUT_WAIT_IDLE_MS,
     MIN_INPUT_WAIT_IDLE_MS,
     MAX_INPUT_WAIT_IDLE_MS,

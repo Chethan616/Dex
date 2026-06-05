@@ -1,7 +1,7 @@
 import {
   applyAgentDefaultModelPrimary,
   applyProviderConfigWithModelCatalog,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/provider-onboard";
 import {
   buildTokenHubModelDefinition,
@@ -14,7 +14,7 @@ import {
 
 export const TOKENHUB_DEFAULT_MODEL_REF = `${TOKENHUB_PROVIDER_ID}/hy3-preview`;
 
-function applyTokenHubProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
+function applyTokenHubProviderConfig(cfg: DexConfig): DexConfig {
   const models = { ...cfg.agents?.defaults?.models };
   models[TOKENHUB_DEFAULT_MODEL_REF] = {
     ...models[TOKENHUB_DEFAULT_MODEL_REF],
@@ -30,7 +30,7 @@ function applyTokenHubProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   });
 }
 
-export function applyTokenHubConfig(cfg: OpenClawConfig): OpenClawConfig {
+export function applyTokenHubConfig(cfg: DexConfig): DexConfig {
   return applyAgentDefaultModelPrimary(
     applyTokenHubProviderConfig(cfg),
     TOKENHUB_DEFAULT_MODEL_REF,

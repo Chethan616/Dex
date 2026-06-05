@@ -1,6 +1,6 @@
 import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import type { AgentCompactionMode } from "../config/types.agent-defaults.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { ContextEngineInfo } from "../context-engine/types.js";
 import { MIN_PROMPT_BUDGET_RATIO, MIN_PROMPT_BUDGET_TOKENS } from "./agent-compaction-constants.js";
 import { resolveProviderEndpoint } from "./provider-attribution.js";
@@ -43,7 +43,7 @@ export function ensureAgentCompactionReserveTokens(params: {
   return { didOverride: true, reserveTokens: minReserveTokens };
 }
 
-export function resolveCompactionReserveTokensFloor(cfg?: OpenClawConfig): number {
+export function resolveCompactionReserveTokensFloor(cfg?: DexConfig): number {
   const raw = cfg?.agents?.defaults?.compaction?.reserveTokensFloor;
   if (typeof raw === "number" && Number.isFinite(raw) && raw >= 0) {
     return Math.floor(raw);
@@ -67,7 +67,7 @@ function toPositiveInt(value: unknown): number | undefined {
 
 export function applyAgentCompactionSettingsFromConfig(params: {
   settingsManager: AgentSettingsManagerLike;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   /** When known, the resolved context window budget for the current model. */
   contextTokenBudget?: number;
 }): {
@@ -126,7 +126,7 @@ export function applyAgentCompactionSettingsFromConfig(params: {
 }
 
 /** Resolve the compaction mode after provider-backed safeguard promotion. */
-export function resolveEffectiveCompactionMode(cfg?: OpenClawConfig): AgentCompactionMode {
+export function resolveEffectiveCompactionMode(cfg?: DexConfig): AgentCompactionMode {
   const compaction = cfg?.agents?.defaults?.compaction;
   if (compaction?.provider) {
     return "safeguard";

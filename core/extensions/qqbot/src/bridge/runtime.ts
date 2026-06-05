@@ -1,7 +1,7 @@
 import type { PluginRuntime } from "openclaw/plugin-sdk/core";
 import { createPluginRuntimeStore } from "openclaw/plugin-sdk/runtime-store";
 import type { GatewayPluginRuntime } from "../engine/gateway/types.js";
-import { setOpenClawVersion } from "../engine/messaging/sender.js";
+import { setDexVersion } from "../engine/messaging/sender.js";
 
 // Single plugin runtime per process — concurrent multi-tenant qqbot runtimes are not supported.
 const {
@@ -17,7 +17,7 @@ const {
 function setQQBotRuntime(runtime: PluginRuntime): void {
   _setRuntime(runtime);
   // Inject the framework version into the User-Agent string (same as standalone).
-  setOpenClawVersion(runtime.version);
+  setDexVersion(runtime.version);
 }
 
 export { getQQBotRuntime, resetQQBotRuntimeForTest, setQQBotRuntime };

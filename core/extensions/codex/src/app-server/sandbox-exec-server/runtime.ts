@@ -1,8 +1,8 @@
 import type { SandboxContext } from "openclaw/plugin-sdk/sandbox";
-import type { OpenClawExecServer } from "./types.js";
+import type { DexExecServer } from "./types.js";
 
 export function requireBackend(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
 ): NonNullable<SandboxContext["backend"]> {
   const backend = execServer.sandbox.backend;
   if (!backend) {
@@ -12,7 +12,7 @@ export function requireBackend(
 }
 
 export function requireFsBridge(
-  execServer: OpenClawExecServer,
+  execServer: DexExecServer,
 ): NonNullable<SandboxContext["fsBridge"]> {
   const fsBridge = execServer.sandbox.fsBridge;
   if (!fsBridge) {

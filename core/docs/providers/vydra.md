@@ -115,8 +115,8 @@ OpenClaw uses the same `VYDRA_API_KEY` for all three capabilities.
     Provider-specific live coverage:
 
     ```bash
-    OPENCLAW_LIVE_TEST=1 \
-    OPENCLAW_LIVE_VYDRA_VIDEO=1 \
+    DEX_LIVE_TEST=1 \
+    DEX_LIVE_VYDRA_VIDEO=1 \
     pnpm test:live -- extensions/vydra/vydra.live.test.ts
     ```
 
@@ -128,7 +128,7 @@ OpenClaw uses the same `VYDRA_API_KEY` for all three capabilities.
     Override the remote image fixture when needed:
 
     ```bash
-    export OPENCLAW_LIVE_VYDRA_KLING_IMAGE_URL="https://example.com/reference.png"
+    export DEX_LIVE_VYDRA_KLING_IMAGE_URL="https://example.com/reference.png"
     ```
 
   </Accordion>
