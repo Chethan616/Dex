@@ -107,11 +107,17 @@ export function formatCliBannerLine(version: string, options: BannerOptions = {}
   return `${line1}\n${line2}`;
 }
 
-const LOBSTER_ASCII_BODY = [
+// Phase B brand swap: the upstream lobster ASCII (spelled OPENCLAW in
+// block letters) is replaced with a clean sand-colored frame. The title
+// "🐚 DEX 🐚" is centered below the frame by `formatCliBannerArtLines`.
+// Same 52-column width and 5-row body height as the upstream art so the
+// existing color-by-char renderer below still works unchanged.
+const DEX_ASCII_BODY = [
   "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
-  "██░▄▄▄░██░▄▄░██░▄▄▄██░▀██░██░▄▄▀██░████░▄▄▀██░███░██",
-  "██░███░██░▀▀░██░▄▄▄██░█░█░██░█████░████░▀▀░██░█░█░██",
-  "██░▀▀▀░██░█████░▀▀▀██░██▄░██░▀▀▄██░▀▀░█░██░██▄▀▄▀▄██",
+  "██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██",
+  "██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██",
+  "██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██",
+  "██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██",
   "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
 ];
 
@@ -123,10 +129,10 @@ function centerText(text: string, width: number): string {
 }
 
 function formatCliBannerArtLines(options: BannerOptions): string[] {
-  const width = visibleWidth(LOBSTER_ASCII_BODY[0] ?? "");
+  const width = visibleWidth(DEX_ASCII_BODY[0] ?? "");
   const emojiOptions = resolveEmojiOptions(options);
-  const title = supportsDecorativeEmoji(emojiOptions) ? "🦞 OPENCLAW 🦞" : "OPENCLAW";
-  return [...LOBSTER_ASCII_BODY, centerText(title, width), " "];
+  const title = supportsDecorativeEmoji(emojiOptions) ? "🐚 DEX 🐚" : "DEX";
+  return [...DEX_ASCII_BODY, centerText(title, width), " "];
 }
 
 export function formatCliBannerArt(options: BannerOptions = {}): string {
@@ -150,16 +156,16 @@ export function formatCliBannerArt(options: BannerOptions = {}): string {
   };
 
   const emojiOptions = resolveEmojiOptions(options);
-  const icon = decorativeEmoji("🦞", emojiOptions);
+  const icon = decorativeEmoji("🐚", emojiOptions);
   const colored = lines.map((line) => {
-    if (line.includes("OPENCLAW")) {
+    if (line.includes("DEX")) {
       if (!icon) {
-        return theme.info(centerText("OPENCLAW", visibleWidth(line)));
+        return theme.info(centerText("DEX", visibleWidth(line)));
       }
       return (
-        theme.muted("              ") +
+        theme.muted("            ") +
         theme.accent(icon) +
-        theme.info(" OPENCLAW ") +
+        theme.info(" DEX ") +
         theme.accent(icon)
       );
     }

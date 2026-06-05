@@ -2,6 +2,23 @@
 
 Repo: https://github.com/Chethan616/Dex
 
+## 2026.6.8 (Dex rebrand release + visual polish)
+
+This release lands the final visual rebrand: the lobster ASCII art is gone,
+the orange `LOBSTER_PALETTE` is replaced by a warm sand `DEX_PALETTE`,
+and the banner title centered below the frame reads `🐚 DEX 🐚`. The
+2026.6.7 release was a partial fix (build-time stale cache); 6.8 is the
+first release where every visible CLI surface is fully Dex-branded.
+
+### Visual
+
+- Banner ASCII: 5-row decorative frame; no more block-letter `OPENCLAW`.
+- Title row: `🐚 DEX 🐚` (was `🦞 OPENCLAW 🦞`).
+- Palette: `accent #D4A574` warm sand (was `#FF5A2D` lobster orange);
+  `warn #D9A441` dusty gold (was `#FFB020`); `success`, `error`, `muted`
+  unchanged.
+- Re-exported `LOBSTER_PALETTE` alias dropped in v1.4.
+
 ## 2026.6.7 (Dex rebrand release)
 
 This release is the first under the `dexagent` npm package name and the Dex
