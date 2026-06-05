@@ -10,14 +10,29 @@ Status legend: `✓ verified` · `△ pending` (filled in during the phase that 
 
 | Component | License | SPDX | Source | Status |
 |---|---|---|---|---|
-| **DexCore** (forked from OpenClaw, see `core/HERITAGE.md`) | MIT | `MIT` | https://github.com/openclaw/openclaw — heritage commit `7074cf8e23c1f64362c4f8c4bf32971ca94d5221` | ✓ MIT preserved in `core/LICENSE`; original copyright headers intact per MIT |
+| **Dex core** (forked from OpenClaw, see `dex/core/HERITAGE.md`) | MIT | `MIT` | https://github.com/openclaw/openclaw — heritage commit `7074cf8e23c1f64362c4f8c4bf32971ca94d5221`, forked 2026-06-04 | ✓ MIT preserved in `dex/core/LICENSE`; original per-file copyright headers intact per MIT |
 | Microsoft UFO² | MIT (per README badge) | `MIT` | https://github.com/microsoft/UFO | △ pending — confirm in Phase 2 by reading `vendor/UFO/LICENSE` |
 | browser-use | MIT (per manifest.json) | `MIT` | https://github.com/browser-use/browser-use | △ pending — confirm by reading `vendor/browser-use/LICENSE` |
 | Playwright (transitive of browser-use) | Apache-2.0 | `Apache-2.0` | https://github.com/microsoft/playwright | △ pending |
 
+### External `@openclaw/*` npm dependencies (preserved upstream, NOT rebranded)
+
+Per the heritage commitment in `dex/core/HERITAGE.md`, the following scoped packages stay as third-party upstream deps and are credited here:
+
+| Package | Source | Used by |
+|---|---|---|
+| `@openclaw/fs-safe` | npm registry (`@openclaw/fs-safe@0.3.0`) | Cross-cutting filesystem safety helpers used throughout `dex/core/` |
+| `@openclaw/proxyline` | npm registry (`@openclaw/proxyline@0.3.3`) | HAProxy PROXY protocol decoder for gateway TLS termination |
+| `@openclaw/discord` | npm registry | Discord channel plugin runtime |
+| `@openclaw/matrix` | npm registry | Matrix channel plugin runtime |
+| `@openclaw/slack` | npm registry | Slack channel plugin runtime |
+| `@openclaw/whatsapp` | npm registry | WhatsApp channel plugin runtime |
+
+These remain `@openclaw/*` because they are third-party libraries Dex does not own. Renaming them would break installation. The user-visible Dex surface (CLI, banners, env vars, log prefixes) is fully rebranded; these scoped imports are purely an internal dep contract.
+
 ---
 
-## Python dependencies (glue / MCP server)
+## Python dependencies (dex/drivers/ MCP servers)
 
 | Package | License | Source | Status |
 |---|---|---|---|
@@ -33,8 +48,8 @@ Approved budget per `prompt.md` §8: a small handful, justified individually.
 | Package | License | Why | Status |
 |---|---|---|---|
 | `flutter` (SDK) | BSD-3-Clause | the framework | ✓ |
-| `http` | BSD-3-Clause | REST calls to OpenClaw gateway | △ pending — confirm in Phase 5 |
-| `web_socket_channel` | BSD-3-Clause | WebSocket stream from gateway | △ pending — confirm in Phase 5 |
+| `http` | BSD-3-Clause | REST calls to the Dex gateway | △ pending — confirm in Phase 5 |
+| `web_socket_channel` | BSD-3-Clause | WebSocket stream from the Dex gateway | △ pending — confirm in Phase 5 |
 | `intl` | BSD-3-Clause | localized timestamps | △ pending — confirm in Phase 5 |
 
 **Not included** (intentionally): GetX, Provider/Riverpod (we use built-in `ChangeNotifier`), animation libraries, icon webfonts, Material You theming packs.
