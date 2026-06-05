@@ -1,7 +1,10 @@
 {
   "name": "dexagent",
   "version": "2026.6.2",
-  "description": "Multi-channel AI gateway with extensible messaging integrations",
+  "description": "Dex — a calm cockpit for commanding agents you can trust.",
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [],
   "homepage": "https://github.com/openclaw/openclaw#readme",
   "bugs": {
