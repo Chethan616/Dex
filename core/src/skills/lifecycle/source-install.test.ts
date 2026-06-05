@@ -122,7 +122,7 @@ describe("installSkillFromSource", () => {
 
       expect(result).toMatchObject({ ok: true });
       await fs.writeFile(
-        path.join(workspaceDir, "skills", "custom-name", ".openclaw", "source-origin.json"),
+        path.join(workspaceDir, "skills", "custom-name", ".dex", "source-origin.json"),
         "x".repeat(20 * 1024),
       );
 

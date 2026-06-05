@@ -64,12 +64,12 @@ describe("qa docker harness", () => {
     expect(compose).toContain(
       "cp -R /opt/openclaw-scaffold/seed-workspace/. /tmp/openclaw/workspace/",
     );
-    expect(compose).toContain("OPENCLAW_CONFIG_PATH: /tmp/openclaw/openclaw.json");
-    expect(compose).toContain("OPENCLAW_STATE_DIR: /tmp/openclaw/state");
-    expect(compose).toContain('OPENCLAW_NO_RESPAWN: "1"');
+    expect(compose).toContain("DEX_CONFIG_PATH: /tmp/openclaw/openclaw.json");
+    expect(compose).toContain("DEX_STATE_DIR: /tmp/openclaw/state");
+    expect(compose).toContain('DEX_NO_RESPAWN: "1"');
 
     const envExample = await readFile(path.join(outputDir, ".env.example"), "utf8");
-    expect(envExample).toContain("OPENCLAW_GATEWAY_TOKEN=qa-token");
+    expect(envExample).toContain("DEX_GATEWAY_TOKEN=qa-token");
     expect(envExample).toContain("QA_BUS_BASE_URL=http://qa-lab:43123");
     expect(envExample).toContain("QA_PROVIDER_BASE_URL=http://host.docker.internal:45123/v1");
     expect(envExample).toContain("QA_LAB_URL=http://127.0.0.1:43124");
@@ -117,7 +117,7 @@ describe("qa docker harness", () => {
 
     expect(result.imageName).toBe("openclaw:qa-local-prebaked");
     expect(calls).toEqual([
-      "docker build -t openclaw:qa-local-prebaked --build-arg OPENCLAW_EXTENSIONS=qa-channel qa-lab -f Dockerfile . @/repo/openclaw",
+      "docker build -t openclaw:qa-local-prebaked --build-arg DEX_EXTENSIONS=qa-channel qa-lab -f Dockerfile . @/repo/openclaw",
     ]);
   });
 });

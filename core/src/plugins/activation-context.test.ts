@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeRegistry } from "../config/plugin-auto-enable.test-helpers.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   clearCurrentPluginMetadataSnapshot,
   setCurrentPluginMetadataSnapshot,
@@ -10,7 +10,7 @@ import type { PluginManifestRegistry } from "./manifest-registry.js";
 import type { PluginMetadataSnapshot } from "./plugin-metadata-snapshot.js";
 
 const applyPluginAutoEnableMock = vi.hoisted(() =>
-  vi.fn((params: { config?: OpenClawConfig }) => ({
+  vi.fn((params: { config?: DexConfig }) => ({
     config: params.config,
     changes: [],
     autoEnabledReasons: {},
@@ -24,7 +24,7 @@ vi.mock("../config/plugin-auto-enable.js", () => ({
 import { resolveBundledPluginCompatibleActivationInputs } from "./activation-context.js";
 
 function createPluginMetadataSnapshot(params: {
-  config?: OpenClawConfig;
+  config?: DexConfig;
   manifestRegistry: PluginManifestRegistry;
   workspaceDir?: string;
 }): PluginMetadataSnapshot {

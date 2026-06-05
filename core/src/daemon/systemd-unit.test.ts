@@ -45,13 +45,13 @@ describe("buildSystemdUnit", () => {
       programArguments: ["/usr/bin/openclaw", "gateway", "run"],
       environmentFiles: ["/home/test/.openclaw/.env"],
       environment: {
-        OPENCLAW_GATEWAY_PORT: "18789",
+        DEX_GATEWAY_PORT: "18789",
       },
     });
     expect(unit).toContain("EnvironmentFile=-/home/test/.openclaw/.env");
-    expect(unit).toContain("Environment=OPENCLAW_GATEWAY_PORT=18789");
+    expect(unit).toContain("Environment=DEX_GATEWAY_PORT=18789");
     expect(unit.indexOf("EnvironmentFile=-/home/test/.openclaw/.env")).toBeLessThan(
-      unit.indexOf("Environment=OPENCLAW_GATEWAY_PORT=18789"),
+      unit.indexOf("Environment=DEX_GATEWAY_PORT=18789"),
     );
   });
 });

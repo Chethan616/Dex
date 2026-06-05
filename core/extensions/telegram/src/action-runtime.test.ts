@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { resolveStorePath } from "openclaw/plugin-sdk/session-store-runtime";
 import { captureEnv } from "openclaw/plugin-sdk/test-env";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,7 +24,7 @@ const sendMessageTelegram = vi.fn(
 );
 const sendDurableMessageBatch = vi.fn(
   async (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     to: string;
     accountId?: string;
     payloads: Array<{
@@ -242,13 +242,13 @@ describe("handleTelegramAction", () => {
     emoji: "✅",
   } as const;
 
-  function reactionConfig(reactionLevel: "minimal" | "extensive" | "off" | "ack"): OpenClawConfig {
+  function reactionConfig(reactionLevel: "minimal" | "extensive" | "off" | "ack"): DexConfig {
     return {
       channels: { telegram: { botToken: "tok", reactionLevel } },
-    } as OpenClawConfig;
+    } as DexConfig;
   }
 
-  function telegramConfig(overrides?: Record<string, unknown>): OpenClawConfig {
+  function telegramConfig(overrides?: Record<string, unknown>): DexConfig {
     return {
       channels: {
         telegram: {
@@ -256,10 +256,10 @@ describe("handleTelegramAction", () => {
           ...overrides,
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
   }
 
-  function topicCacheScopeFor(cfg: OpenClawConfig, accountId: string): string {
+  function topicCacheScopeFor(cfg: DexConfig, accountId: string): string {
     return resolveTopicNameCacheScope(resolveStorePath(cfg.session?.store, { agentId: accountId }));
   }
 
@@ -300,7 +300,7 @@ describe("handleTelegramAction", () => {
   }
 
   beforeEach(() => {
-    envSnapshot = captureEnv(["OPENCLAW_STATE_DIR", "TELEGRAM_BOT_TOKEN"]);
+    envSnapshot = captureEnv(["DEX_STATE_DIR", "TELEGRAM_BOT_TOKEN"]);
     resetTopicNameCacheForTest();
     installTopicNameStoreForTest();
     Object.assign(telegramActionRuntime, originalTelegramActionRuntime, {
@@ -385,7 +385,7 @@ describe("handleTelegramAction", () => {
   it("soft-fails when messageId is missing", async () => {
     const cfg = {
       channels: { telegram: { botToken: "tok", reactionLevel: "minimal" } },
-    } as OpenClawConfig;
+    } as DexConfig;
     const result = await handleTelegramAction(
       {
         action: "react",
@@ -438,7 +438,7 @@ describe("handleTelegramAction", () => {
   });
 
   it("rejects sticker actions when disabled by default", async () => {
-    const cfg = { channels: { telegram: { botToken: "tok" } } } as OpenClawConfig;
+    const cfg = { channels: { telegram: { botToken: "tok" } } } as DexConfig;
     await expect(
       handleTelegramAction(
         {
@@ -455,7 +455,7 @@ describe("handleTelegramAction", () => {
   it("sends stickers when enabled", async () => {
     const cfg = {
       channels: { telegram: { botToken: "tok", actions: { sticker: true } } },
-    } as OpenClawConfig;
+    } as DexConfig;
     await handleTelegramAction(
       {
         action: "sendSticker",
@@ -473,7 +473,7 @@ describe("handleTelegramAction", () => {
   it("accepts shared sticker action aliases", async () => {
     const cfg = {
       channels: { telegram: { botToken: "tok", actions: { sticker: true } } },
-    } as OpenClawConfig;
+    } as DexConfig;
     await handleTelegramAction(
       {
         action: "sticker",
@@ -587,7 +587,7 @@ describe("handleTelegramAction", () => {
           actions: { reactions: false },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const result = await handleTelegramAction(
       {
         action: "react",
@@ -686,7 +686,7 @@ describe("handleTelegramAction", () => {
         return { channel: "telegram", messageId: "tg-ok" };
       });
 
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    process.env.DEX_STATE_DIR = stateDir;
     telegramActionRuntime.sendDurableMessageBatch =
       originalTelegramActionRuntime.sendDurableMessageBatch;
     setActivePluginRegistry(
@@ -1279,7 +1279,7 @@ describe("handleTelegramAction", () => {
     const cfg = {
       ...telegramConfig({ actions: { createForumTopic: true } }),
       session: { store: path.join(os.tmpdir(), "openclaw-telegram-action-sessions.json") },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await handleTelegramAction(
       { action: "createForumTopic", accountId: "work", chatId: "alias-chat", name: "Topic" },
@@ -1301,7 +1301,7 @@ describe("handleTelegramAction", () => {
     const cfg = {
       ...telegramConfig({ actions: { editForumTopic: true } }),
       session: { store: path.join(os.tmpdir(), "openclaw-telegram-action-sessions.json") },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await handleTelegramAction(
       {
@@ -1539,7 +1539,7 @@ describe("handleTelegramAction", () => {
       channels: {
         telegram: { botToken: "tok", actions: { sendMessage: false } },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     await expect(
       handleTelegramAction(
         {
@@ -1557,7 +1557,7 @@ describe("handleTelegramAction", () => {
       channels: {
         telegram: { botToken: "tok", actions: { poll: false } },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     await expect(
       handleTelegramAction(
         {
@@ -1574,7 +1574,7 @@ describe("handleTelegramAction", () => {
   it("deletes a message", async () => {
     const cfg = {
       channels: { telegram: { botToken: "tok" } },
-    } as OpenClawConfig;
+    } as DexConfig;
     await handleTelegramAction(
       {
         action: "deleteMessage",
@@ -1592,7 +1592,7 @@ describe("handleTelegramAction", () => {
   it("rejects fractional message ids before mutating messages", async () => {
     const cfg = {
       channels: { telegram: { botToken: "tok" } },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await expect(
       handleTelegramAction(
@@ -1626,7 +1626,7 @@ describe("handleTelegramAction", () => {
     } as unknown as Awaited<ReturnType<typeof deleteMessageTelegram>>);
     const cfg = {
       channels: { telegram: { botToken: "tok" } },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = await handleTelegramAction(
       {
@@ -1656,7 +1656,7 @@ describe("handleTelegramAction", () => {
       channels: {
         telegram: { botToken: "tok", actions: { deleteMessage: false } },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     await expect(
       handleTelegramAction(
         {
@@ -1671,7 +1671,7 @@ describe("handleTelegramAction", () => {
 
   it("throws on missing bot token for sendMessage", async () => {
     delete process.env.TELEGRAM_BOT_TOKEN;
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as DexConfig;
     await expect(
       handleTelegramAction(
         {
@@ -1687,7 +1687,7 @@ describe("handleTelegramAction", () => {
   it("allows inline buttons by default (allowlist)", async () => {
     const cfg = {
       channels: { telegram: { botToken: "tok" } },
-    } as OpenClawConfig;
+    } as DexConfig;
     await handleTelegramAction(
       {
         action: "sendMessage",
@@ -1856,7 +1856,7 @@ describe("handleTelegramAction per-account gating", () => {
     >;
     topLevelBotToken?: string;
     topLevelActions?: { reactions?: boolean };
-  }): OpenClawConfig {
+  }): DexConfig {
     return {
       channels: {
         telegram: {
@@ -1865,10 +1865,10 @@ describe("handleTelegramAction per-account gating", () => {
           accounts: params.accounts,
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
   }
 
-  async function expectAccountStickerSend(cfg: OpenClawConfig, accountId = "media") {
+  async function expectAccountStickerSend(cfg: DexConfig, accountId = "media") {
     await handleTelegramAction(
       { action: "sendSticker", to: "123", fileId: "sticker-id", accountId },
       cfg,
@@ -1897,7 +1897,7 @@ describe("handleTelegramAction per-account gating", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await expect(
       handleTelegramAction(

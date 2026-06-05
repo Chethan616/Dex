@@ -15,8 +15,8 @@ describe("gateway restart trace handoff", () => {
         lastAt,
       }),
     ).toStrictEqual({
-      OPENCLAW_GATEWAY_RESTART_TRACE_STARTED_AT_MS: String(startedAt),
-      OPENCLAW_GATEWAY_RESTART_TRACE_LAST_AT_MS: String(lastAt),
+      DEX_GATEWAY_RESTART_TRACE_STARTED_AT_MS: String(startedAt),
+      DEX_GATEWAY_RESTART_TRACE_LAST_AT_MS: String(lastAt),
     });
   });
 

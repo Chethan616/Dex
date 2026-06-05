@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import {
   createReplyRuntimeMocks,
   createTempHomeHarness,
@@ -22,7 +22,7 @@ describe("getReplyFromConfig fast-path runtime", () => {
   });
 
   beforeEach(async () => {
-    vi.stubEnv("OPENCLAW_TEST_FAST", "1");
+    vi.stubEnv("DEX_TEST_FAST", "1");
     resetReplyRuntimeMocks(agentMocks);
   });
 
@@ -55,7 +55,7 @@ describe("getReplyFromConfig fast-path runtime", () => {
           ChatType: "direct",
         },
         {},
-        makeReplyConfig(home) as OpenClawConfig,
+        makeReplyConfig(home) as DexConfig,
       );
 
       const text = Array.isArray(res) ? res[0]?.text : res?.text;
@@ -87,7 +87,7 @@ describe("getReplyFromConfig fast-path runtime", () => {
           ChatType: "direct",
         },
         {},
-        makeReplyConfig(home) as OpenClawConfig,
+        makeReplyConfig(home) as DexConfig,
       );
 
       expect(agentMocks.runEmbeddedAgent).toHaveBeenCalledWith(
@@ -121,7 +121,7 @@ describe("getReplyFromConfig fast-path runtime", () => {
           ChatType: "direct",
         },
         {},
-        makeReplyConfig(home) as OpenClawConfig,
+        makeReplyConfig(home) as DexConfig,
       );
 
       expect(agentMocks.runEmbeddedAgent).toHaveBeenCalledWith(

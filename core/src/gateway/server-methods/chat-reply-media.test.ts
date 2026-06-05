@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { getAgentScopedMediaLocalRoots } from "../../media/local-roots.js";
 import { createManagedOutgoingImageBlocks } from "../managed-image-attachments.js";
 import { normalizeWebchatReplyMediaPathsForDisplay } from "./chat-reply-media.js";
@@ -22,7 +22,7 @@ type MediaTestContext = {
   stateDir: string;
   agentDir: string;
   workspaceDir: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
 };
 
 describe("normalizeWebchatReplyMediaPathsForDisplay", () => {
@@ -30,7 +30,7 @@ describe("normalizeWebchatReplyMediaPathsForDisplay", () => {
 
   beforeEach(async () => {
     rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-webchat-reply-media-"));
-    vi.stubEnv("OPENCLAW_STATE_DIR", path.join(rootDir, "state"));
+    vi.stubEnv("DEX_STATE_DIR", path.join(rootDir, "state"));
   });
 
   afterEach(async () => {
@@ -43,7 +43,7 @@ describe("normalizeWebchatReplyMediaPathsForDisplay", () => {
     agentDir: string;
     workspaceDir: string;
     allowRead: boolean;
-  }): OpenClawConfig {
+  }): DexConfig {
     return {
       tools: params.allowRead ? { allow: ["read"] } : { fs: { workspaceOnly: true } },
       agents: {
@@ -59,7 +59,7 @@ describe("normalizeWebchatReplyMediaPathsForDisplay", () => {
   }
 
   function createMediaTestContext(params: { allowRead: boolean }): MediaTestContext {
-    const stateDir = process.env.OPENCLAW_STATE_DIR ?? "";
+    const stateDir = process.env.DEX_STATE_DIR ?? "";
     const agentDir = path.join(stateDir, "agents", "main", "agent");
     const workspaceDir = path.join(stateDir, "workspace");
     return {
@@ -94,7 +94,7 @@ describe("normalizeWebchatReplyMediaPathsForDisplay", () => {
   }
 
   async function normalizeReplyMedia(params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     payloads: ReplyMediaPayloads;
   }) {
     const [payload] = await normalizeWebchatReplyMediaPathsForDisplay({
@@ -120,7 +120,7 @@ describe("normalizeWebchatReplyMediaPathsForDisplay", () => {
   }
 
   async function createManagedImageBlocks(params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     mediaUrls: string[] | undefined;
   }) {
     return createManagedOutgoingImageBlocks({

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { loadOpenClawProviderIndex, normalizeOpenClawProviderIndex } from "./index.js";
+import { loadDexProviderIndex, normalizeDexProviderIndex } from "./index.js";
 
 describe("OpenClaw provider index", () => {
   it("normalizes provider preview catalog rows through model catalog validation", () => {
-    const index = normalizeOpenClawProviderIndex({
+    const index = normalizeDexProviderIndex({
       version: 1,
       providers: {
         Moonshot: {
@@ -103,7 +103,7 @@ describe("OpenClaw provider index", () => {
   });
 
   it("drops unsafe providers and malformed preview catalog rows", () => {
-    const index = normalizeOpenClawProviderIndex({
+    const index = normalizeDexProviderIndex({
       version: 1,
       providers: {
         ["__proto__"]: {
@@ -140,7 +140,7 @@ describe("OpenClaw provider index", () => {
   });
 
   it("loads the bundled provider index without runtime plugin loading", () => {
-    const index = loadOpenClawProviderIndex();
+    const index = loadDexProviderIndex();
 
     expect(index.providers.moonshot?.previewCatalog).not.toHaveProperty("api");
     expect(index.providers.moonshot?.previewCatalog).not.toHaveProperty("baseUrl");

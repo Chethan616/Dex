@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { normalizeLegacyStreamingAliases } from "../config/channel-compat-normalization.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { normalizeLegacyBrowserConfig } from "./doctor/shared/legacy-config-core-normalizers.js";
 
-function asLegacyConfig(value: unknown): OpenClawConfig {
-  return value as OpenClawConfig;
+function asLegacyConfig(value: unknown): DexConfig {
+  return value as DexConfig;
 }
 
 function getLegacyProperty(value: unknown, key: string): unknown {

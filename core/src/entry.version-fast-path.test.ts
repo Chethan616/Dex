@@ -9,7 +9,7 @@ vi.mock("./cli/argv.js", () => ({
 vi.mock("./cli/container-target.js", () => ({
   parseCliContainerArgs: (argv: string[]) => ({ ok: true, container: null, argv }),
   resolveCliContainerTarget: (argv: string[], env: NodeJS.ProcessEnv = process.env) =>
-    argv.includes("--container") ? "demo" : (env.OPENCLAW_CONTAINER ?? null),
+    argv.includes("--container") ? "demo" : (env.DEX_CONTAINER ?? null),
 }));
 
 async function flushVersionFastPath() {
@@ -75,7 +75,7 @@ describe("entry root version fast path", () => {
 
     expect(
       tryHandleRootVersionFastPath(["node", "openclaw", "--version"], {
-        env: { OPENCLAW_CONTAINER: "demo" },
+        env: { DEX_CONTAINER: "demo" },
         output,
         exit,
         resolveVersion,

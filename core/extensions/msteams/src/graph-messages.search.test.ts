@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../runtime-api.js";
+import type { DexConfig } from "../runtime-api.js";
 import {
   CHANNEL_TO,
   CHAT_ID,
@@ -43,7 +43,7 @@ describe("searchMessagesMSTeams", () => {
     });
 
     const result = await searchMessagesMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: CHAT_ID,
       query: "meeting notes",
     });
@@ -77,7 +77,7 @@ describe("searchMessagesMSTeams", () => {
     });
 
     const result = await searchMessagesMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: CHANNEL_TO,
       query: "sprint",
     });
@@ -91,7 +91,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: CHAT_ID,
       query: "test",
       limit: 10,
@@ -105,7 +105,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: CHAT_ID,
       query: "test",
       limit: 100,
@@ -119,7 +119,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: CHAT_ID,
       query: "test",
       limit: 0,
@@ -133,7 +133,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: CHAT_ID,
       query: "budget",
       from: "Alice",
@@ -149,7 +149,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: CHAT_ID,
       query: "test",
       from: "O'Brien",
@@ -164,7 +164,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: CHAT_ID,
       query: 'say "hello" world',
     });
@@ -179,7 +179,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: CHAT_ID,
       query: "test",
     });
@@ -197,7 +197,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     const result = await searchMessagesMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: CHAT_ID,
       query: "nonexistent",
     });
@@ -213,7 +213,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: "user:aad-user-1",
       query: "hello",
     });

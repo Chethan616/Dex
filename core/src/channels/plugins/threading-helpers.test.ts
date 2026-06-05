@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import {
   createScopedAccountReplyToModeResolver,
   createStaticReplyToModeResolver,
@@ -8,7 +8,7 @@ import {
 
 describe("createStaticReplyToModeResolver", () => {
   it.each(["off", "all"] as const)("always returns the configured mode %s", (mode) => {
-    expect(createStaticReplyToModeResolver(mode)({ cfg: {} as OpenClawConfig })).toBe(mode);
+    expect(createStaticReplyToModeResolver(mode)({ cfg: {} as DexConfig })).toBe(mode);
   });
 });
 
@@ -18,12 +18,12 @@ describe("createTopLevelChannelReplyToModeResolver", () => {
   it.each([
     {
       name: "reads the top-level channel config",
-      cfg: { channels: { "demo-top-level": { replyToMode: "first" } } } as OpenClawConfig,
+      cfg: { channels: { "demo-top-level": { replyToMode: "first" } } } as DexConfig,
       expected: "first",
     },
     {
       name: "falls back to off",
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       expected: "off",
     },
   ])("$name", ({ cfg, expected }) => {
@@ -61,7 +61,7 @@ describe("createScopedAccountReplyToModeResolver", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(resolver({ cfg, accountId })).toBe(expected);
   });
@@ -76,7 +76,7 @@ describe("createScopedAccountReplyToModeResolver", () => {
       },
     });
 
-    expect(resolver({ cfg: {} as OpenClawConfig, chatType: "group" })).toBe("first");
+    expect(resolver({ cfg: {} as DexConfig, chatType: "group" })).toBe("first");
     expect(seen).toEqual(["group"]);
   });
 });

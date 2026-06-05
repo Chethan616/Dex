@@ -6,7 +6,7 @@ import {
   resetSubagentRegistryForTests,
 } from "../../agents/subagent-registry.test-helpers.js";
 import type { SubagentRunRecord } from "../../agents/subagent-registry.types.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { failTaskRunByRunId } from "../../tasks/task-executor.js";
 import { createTaskRecord, resetTaskRegistryForTests } from "../../tasks/task-registry.js";
 import type { ReplyPayload } from "../types.js";
@@ -21,7 +21,7 @@ const TEST_SESSION_STORE_PATH = path.join(
   `openclaw-commands-subagents-info-${process.pid}.json`,
 );
 
-function buildCommandTestConfig(): OpenClawConfig {
+function buildCommandTestConfig(): DexConfig {
   return {
     ...baseCommandTestConfig,
     session: {
@@ -31,7 +31,7 @@ function buildCommandTestConfig(): OpenClawConfig {
   };
 }
 
-function buildInfoContext(params: { cfg: OpenClawConfig; runs: object[]; restTokens: string[] }) {
+function buildInfoContext(params: { cfg: DexConfig; runs: object[]; restTokens: string[] }) {
   return {
     params: {
       cfg: params.cfg,
@@ -62,7 +62,7 @@ describe("subagents info", () => {
     const cfg = {
       commands: { text: true },
       channels: { quietchat: { allowFrom: ["*"] } },
-    } as OpenClawConfig;
+    } as DexConfig;
     const result = handleSubagentsInfoAction(buildInfoContext({ cfg, runs: [], restTokens: [] }));
     expect(result.shouldContinue).toBe(false);
     expect(result.reply?.text).toContain("/subagents info <id|#>");
@@ -233,7 +233,7 @@ describe("subagents info", () => {
       commands: { text: true },
       channels: { quietchat: { allowFrom: ["*"] } },
       session: { mainKey: "main", scope: "per-sender", store: TEST_SESSION_STORE_PATH },
-    } as OpenClawConfig;
+    } as DexConfig;
     const result = handleSubagentsInfoAction({
       params: {
         cfg,

@@ -17,7 +17,7 @@ describe("release-check", () => {
     try {
       writePackedBundledPluginActivationConfig(homeDir);
       const config = JSON.parse(
-        readFileSync(join(homeDir, ".openclaw", "openclaw.json"), "utf8"),
+        readFileSync(join(homeDir, ".dex", "openclaw.json"), "utf8"),
       ) as {
         channels?: Record<string, unknown>;
         plugins?: { entries?: Record<string, unknown> };

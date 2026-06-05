@@ -12,10 +12,10 @@ function runDriver(env: Record<string, string>) {
     encoding: "utf8",
     env: {
       ...process.env,
-      OPENCLAW_QA_TELEGRAM_API_BASE_URL: "http://127.0.0.1:9",
-      OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN: "driver-token",
-      OPENCLAW_QA_TELEGRAM_GROUP_ID: "-100123",
-      OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN: "sut-token",
+      DEX_QA_TELEGRAM_API_BASE_URL: "http://127.0.0.1:9",
+      DEX_QA_TELEGRAM_DRIVER_BOT_TOKEN: "driver-token",
+      DEX_QA_TELEGRAM_GROUP_ID: "-100123",
+      DEX_QA_TELEGRAM_SUT_BOT_TOKEN: "sut-token",
       ...env,
     },
   });
@@ -115,15 +115,15 @@ async function runStalledTelegramBodyCase(): Promise<DriverCaseResult> {
       encoding: "utf8",
       env: {
         ...process.env,
-        OPENCLAW_NPM_TELEGRAM_BOT_API_TIMEOUT_MS: "100",
-        OPENCLAW_NPM_TELEGRAM_OUTPUT_DIR: outputDir,
-        OPENCLAW_NPM_TELEGRAM_WARM_SAMPLES: "1",
-        OPENCLAW_QA_TELEGRAM_API_BASE_URL: `http://127.0.0.1:${port}`,
-        OPENCLAW_QA_TELEGRAM_CANARY_TIMEOUT_MS: "1000",
-        OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN: "driver-token",
-        OPENCLAW_QA_TELEGRAM_GROUP_ID: "-100123",
-        OPENCLAW_QA_TELEGRAM_SCENARIO_TIMEOUT_MS: "1000",
-        OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN: "sut-token",
+        DEX_NPM_TELEGRAM_BOT_API_TIMEOUT_MS: "100",
+        DEX_NPM_TELEGRAM_OUTPUT_DIR: outputDir,
+        DEX_NPM_TELEGRAM_WARM_SAMPLES: "1",
+        DEX_QA_TELEGRAM_API_BASE_URL: `http://127.0.0.1:${port}`,
+        DEX_QA_TELEGRAM_CANARY_TIMEOUT_MS: "1000",
+        DEX_QA_TELEGRAM_DRIVER_BOT_TOKEN: "driver-token",
+        DEX_QA_TELEGRAM_GROUP_ID: "-100123",
+        DEX_QA_TELEGRAM_SCENARIO_TIMEOUT_MS: "1000",
+        DEX_QA_TELEGRAM_SUT_BOT_TOKEN: "sut-token",
       },
       killSignal: "SIGKILL",
       timeout: 2500,
@@ -147,16 +147,16 @@ async function runOversizedTelegramBodyCase(): Promise<DriverCaseResult> {
       encoding: "utf8",
       env: {
         ...process.env,
-        OPENCLAW_NPM_TELEGRAM_BOT_API_BODY_MAX_BYTES: "16",
-        OPENCLAW_NPM_TELEGRAM_BOT_API_TIMEOUT_MS: "1000",
-        OPENCLAW_NPM_TELEGRAM_OUTPUT_DIR: outputDir,
-        OPENCLAW_NPM_TELEGRAM_WARM_SAMPLES: "1",
-        OPENCLAW_QA_TELEGRAM_API_BASE_URL: `http://127.0.0.1:${port}`,
-        OPENCLAW_QA_TELEGRAM_CANARY_TIMEOUT_MS: "1000",
-        OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN: "driver-token",
-        OPENCLAW_QA_TELEGRAM_GROUP_ID: "-100123",
-        OPENCLAW_QA_TELEGRAM_SCENARIO_TIMEOUT_MS: "1000",
-        OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN: "sut-token",
+        DEX_NPM_TELEGRAM_BOT_API_BODY_MAX_BYTES: "16",
+        DEX_NPM_TELEGRAM_BOT_API_TIMEOUT_MS: "1000",
+        DEX_NPM_TELEGRAM_OUTPUT_DIR: outputDir,
+        DEX_NPM_TELEGRAM_WARM_SAMPLES: "1",
+        DEX_QA_TELEGRAM_API_BASE_URL: `http://127.0.0.1:${port}`,
+        DEX_QA_TELEGRAM_CANARY_TIMEOUT_MS: "1000",
+        DEX_QA_TELEGRAM_DRIVER_BOT_TOKEN: "driver-token",
+        DEX_QA_TELEGRAM_GROUP_ID: "-100123",
+        DEX_QA_TELEGRAM_SCENARIO_TIMEOUT_MS: "1000",
+        DEX_QA_TELEGRAM_SUT_BOT_TOKEN: "sut-token",
       },
       killSignal: "SIGKILL",
       timeout: 2500,
@@ -181,13 +181,13 @@ describe("npm Telegram RTT driver", () => {
 
   it("rejects loose numeric env values instead of parsing prefixes", () => {
     for (const [name, value] of [
-      ["OPENCLAW_QA_TELEGRAM_SCENARIO_TIMEOUT_MS", "180000ms"],
-      ["OPENCLAW_QA_TELEGRAM_CANARY_TIMEOUT_MS", "1e3"],
-      ["OPENCLAW_NPM_TELEGRAM_WARM_SAMPLES", "20samples"],
-      ["OPENCLAW_NPM_TELEGRAM_SAMPLE_TIMEOUT_MS", "30000ms"],
-      ["OPENCLAW_NPM_TELEGRAM_BOT_API_TIMEOUT_MS", "100ms"],
-      ["OPENCLAW_NPM_TELEGRAM_BOT_API_BODY_MAX_BYTES", "1mb"],
-      ["OPENCLAW_NPM_TELEGRAM_MAX_FAILURES", "2failures"],
+      ["DEX_QA_TELEGRAM_SCENARIO_TIMEOUT_MS", "180000ms"],
+      ["DEX_QA_TELEGRAM_CANARY_TIMEOUT_MS", "1e3"],
+      ["DEX_NPM_TELEGRAM_WARM_SAMPLES", "20samples"],
+      ["DEX_NPM_TELEGRAM_SAMPLE_TIMEOUT_MS", "30000ms"],
+      ["DEX_NPM_TELEGRAM_BOT_API_TIMEOUT_MS", "100ms"],
+      ["DEX_NPM_TELEGRAM_BOT_API_BODY_MAX_BYTES", "1mb"],
+      ["DEX_NPM_TELEGRAM_MAX_FAILURES", "2failures"],
     ]) {
       const result = runDriver({ [name]: value });
 
@@ -197,10 +197,10 @@ describe("npm Telegram RTT driver", () => {
   });
 
   it("rejects zero where positive numeric env values are required", () => {
-    const result = runDriver({ OPENCLAW_NPM_TELEGRAM_WARM_SAMPLES: "0" });
+    const result = runDriver({ DEX_NPM_TELEGRAM_WARM_SAMPLES: "0" });
 
     expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain("invalid OPENCLAW_NPM_TELEGRAM_WARM_SAMPLES: 0");
+    expect(result.stderr).toContain("invalid DEX_NPM_TELEGRAM_WARM_SAMPLES: 0");
   });
 
   it("bounds stalled Telegram Bot API response bodies", async () => {

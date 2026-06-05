@@ -59,8 +59,8 @@ describe("generate-npm-shrinkwrap", () => {
   it("accepts strict npm shrinkwrap command timeout and buffer overrides", () => {
     expect(
       createNpmShrinkwrapExecOptions({ command: "npm", args: ["install"] }, "/tmp/package", {
-        OPENCLAW_NPM_SHRINKWRAP_COMMAND_MAX_BUFFER_BYTES: "1048576",
-        OPENCLAW_NPM_SHRINKWRAP_COMMAND_TIMEOUT_MS: "30000",
+        DEX_NPM_SHRINKWRAP_COMMAND_MAX_BUFFER_BYTES: "1048576",
+        DEX_NPM_SHRINKWRAP_COMMAND_TIMEOUT_MS: "30000",
       }),
     ).toMatchObject({
       maxBuffer: 1024 * 1024,
@@ -71,14 +71,14 @@ describe("generate-npm-shrinkwrap", () => {
   it("rejects loose npm shrinkwrap command timeout and buffer overrides", () => {
     expect(() =>
       createNpmShrinkwrapExecOptions({ command: "npm", args: ["install"] }, "/tmp/package", {
-        OPENCLAW_NPM_SHRINKWRAP_COMMAND_TIMEOUT_MS: "30s",
+        DEX_NPM_SHRINKWRAP_COMMAND_TIMEOUT_MS: "30s",
       }),
-    ).toThrow("invalid OPENCLAW_NPM_SHRINKWRAP_COMMAND_TIMEOUT_MS: 30s");
+    ).toThrow("invalid DEX_NPM_SHRINKWRAP_COMMAND_TIMEOUT_MS: 30s");
     expect(() =>
       createNpmShrinkwrapExecOptions({ command: "npm", args: ["install"] }, "/tmp/package", {
-        OPENCLAW_NPM_SHRINKWRAP_COMMAND_MAX_BUFFER_BYTES: "64mb",
+        DEX_NPM_SHRINKWRAP_COMMAND_MAX_BUFFER_BYTES: "64mb",
       }),
-    ).toThrow("invalid OPENCLAW_NPM_SHRINKWRAP_COMMAND_MAX_BUFFER_BYTES: 64mb");
+    ).toThrow("invalid DEX_NPM_SHRINKWRAP_COMMAND_MAX_BUFFER_BYTES: 64mb");
   });
 
   it("extracts exact versions from npm override specs", () => {

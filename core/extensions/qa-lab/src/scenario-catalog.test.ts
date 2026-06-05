@@ -253,7 +253,7 @@ describe("qa scenario catalog", () => {
     expect(scenario.coverage?.primary).toContain("runtime.update-run");
     expect(scenario.coverage?.secondary).toContain("runtime.package-update");
     expect(config?.requiredProviderMode).toBe("live-frontier");
-    expect(config?.allowEnv).toBe("OPENCLAW_QA_ALLOW_UPDATE_RUN_SELF");
+    expect(config?.allowEnv).toBe("DEX_QA_ALLOW_UPDATE_RUN_SELF");
     expect(config?.sourceVersion).toBe("2026.4.26");
     expect(config?.targetTag).toBe("latest");
     expect(scenario.execution.flow?.steps.map((step) => step.name)).toEqual([

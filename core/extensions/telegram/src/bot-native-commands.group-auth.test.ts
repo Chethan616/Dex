@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { ChannelGroupPolicy } from "openclaw/plugin-sdk/config-contracts";
 import type { TelegramAccountConfig } from "openclaw/plugin-sdk/config-contracts";
 import { describe, expect, it, vi } from "vitest";
@@ -11,7 +11,7 @@ import {
 
 describe("native command auth in groups", () => {
   function setup(params: {
-    cfg?: OpenClawConfig;
+    cfg?: DexConfig;
     telegramCfg?: TelegramAccountConfig;
     allowFrom?: string[];
     groupAllowFrom?: string[];
@@ -21,7 +21,7 @@ describe("native command auth in groups", () => {
     resolveGroupPolicy?: () => ChannelGroupPolicy;
   }) {
     return createNativeCommandsHarness({
-      cfg: params.cfg ?? ({} as OpenClawConfig),
+      cfg: params.cfg ?? ({} as DexConfig),
       telegramCfg: params.telegramCfg ?? ({} as TelegramAccountConfig),
       allowFrom: params.allowFrom ?? [],
       groupAllowFrom: params.groupAllowFrom ?? [],
@@ -75,7 +75,7 @@ describe("native command auth in groups", () => {
             telegram: ["12345"],
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       allowFrom: ["99999"],
       groupAllowFrom: ["99999"],
       useAccessGroups: true,
@@ -97,7 +97,7 @@ describe("native command auth in groups", () => {
             telegram: ["99999"],
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       groupAllowFrom: ["12345"],
       useAccessGroups: true,
     });
@@ -126,7 +126,7 @@ describe("native command auth in groups", () => {
             telegram: ["12345"],
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       useAccessGroups: true,
       resolveGroupPolicy: () =>
         ({
@@ -152,7 +152,7 @@ describe("native command auth in groups", () => {
             telegram: ["12345"],
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       useAccessGroups: true,
       resolveGroupPolicy: () =>
         ({
@@ -195,7 +195,7 @@ describe("native command auth in groups", () => {
       cfg: {
         commands: { native: true, allowFrom: { telegram: ["12345"] } },
         channels: { telegram: { dmPolicy: "pairing" } },
-      } as OpenClawConfig,
+      } as DexConfig,
       telegramCfg: { dmPolicy: "pairing" } as TelegramAccountConfig,
       readChannelAllowFromStore,
     });

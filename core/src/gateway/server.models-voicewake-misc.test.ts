@@ -205,7 +205,7 @@ const expectedConfiguredProviderModel = (params: ConfiguredProviderModelFixture)
 
 describe("gateway server models + voicewake", () => {
   const listModels = async (params?: { view?: "default" | "configured" | "all" }) =>
-    withEnvAsync({ OPENCLAW_DISABLE_BUNDLED_PLUGINS: "1" }, async () =>
+    withEnvAsync({ DEX_DISABLE_BUNDLED_PLUGINS: "1" }, async () =>
       params
         ? await rpcReq<{ models: ModelCatalogRpcEntry[] }>(ws, "models.list", params)
         : await rpcReq<{ models: ModelCatalogRpcEntry[] }>(ws, "models.list"),
@@ -222,9 +222,9 @@ describe("gateway server models + voicewake", () => {
   };
 
   const withModelsConfig = async <T>(config: unknown, run: () => Promise<T>): Promise<T> => {
-    const configPath = process.env.OPENCLAW_CONFIG_PATH;
+    const configPath = process.env.DEX_CONFIG_PATH;
     if (!configPath) {
-      throw new Error("Missing OPENCLAW_CONFIG_PATH");
+      throw new Error("Missing DEX_CONFIG_PATH");
     }
     let previousConfig: string | undefined;
     try {
@@ -365,7 +365,7 @@ describe("gateway server models + voicewake", () => {
         expect(after.payload?.triggers).toEqual(["hi", "there"]);
 
         const onDisk = JSON.parse(
-          await fs.readFile(path.join(homeDir, ".openclaw", "settings", "voicewake.json"), "utf8"),
+          await fs.readFile(path.join(homeDir, ".dex", "settings", "voicewake.json"), "utf8"),
         ) as { triggers?: unknown; updatedAtMs?: unknown };
         expect(onDisk.triggers).toEqual(["hi", "there"]);
         expect(typeof onDisk.updatedAtMs).toBe("number");
@@ -446,7 +446,7 @@ describe("gateway server models + voicewake", () => {
 
       const onDisk = JSON.parse(
         await fs.readFile(
-          path.join(homeDir, ".openclaw", "settings", "voicewake-routing.json"),
+          path.join(homeDir, ".dex", "settings", "voicewake-routing.json"),
           "utf8",
         ),
       ) as { routes?: unknown };

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawPluginApi } from "../api.js";
+import type { DexPluginApi } from "../api.js";
 import { registerWorkboardGatewayMethods } from "./gateway.js";
 import { WorkboardStore, type PersistedWorkboardCard, type WorkboardKeyedStore } from "./store.js";
 
@@ -24,8 +24,8 @@ function createMemoryStore<T = PersistedWorkboardCard>(): WorkboardKeyedStore<T>
 describe("workboard gateway methods", () => {
   it("registers CRUD methods with read/write scopes", async () => {
     type RegisteredMethod = {
-      handler: Parameters<OpenClawPluginApi["registerGatewayMethod"]>[1];
-      opts: Parameters<OpenClawPluginApi["registerGatewayMethod"]>[2];
+      handler: Parameters<DexPluginApi["registerGatewayMethod"]>[1];
+      opts: Parameters<DexPluginApi["registerGatewayMethod"]>[2];
     };
     const methods = new Map<string, RegisteredMethod>();
     const api = {
@@ -39,7 +39,7 @@ describe("workboard gateway methods", () => {
           methods.set(method, { handler, opts });
         },
       ),
-    } as unknown as OpenClawPluginApi;
+    } as unknown as DexPluginApi;
 
     registerWorkboardGatewayMethods({ api, store: new WorkboardStore(createMemoryStore()) });
 
@@ -140,8 +140,8 @@ describe("workboard gateway methods", () => {
 
   it("stores metadata updates through dedicated card methods", async () => {
     type RegisteredMethod = {
-      handler: Parameters<OpenClawPluginApi["registerGatewayMethod"]>[1];
-      opts: Parameters<OpenClawPluginApi["registerGatewayMethod"]>[2];
+      handler: Parameters<DexPluginApi["registerGatewayMethod"]>[1];
+      opts: Parameters<DexPluginApi["registerGatewayMethod"]>[2];
     };
     const methods = new Map<string, RegisteredMethod>();
     const api = {
@@ -155,7 +155,7 @@ describe("workboard gateway methods", () => {
           methods.set(method, { handler, opts });
         },
       ),
-    } as unknown as OpenClawPluginApi;
+    } as unknown as DexPluginApi;
 
     registerWorkboardGatewayMethods({ api, store: new WorkboardStore(createMemoryStore()) });
 
@@ -185,8 +185,8 @@ describe("workboard gateway methods", () => {
 
   it("validates labels from comma-separated gateway input", async () => {
     type RegisteredMethod = {
-      handler: Parameters<OpenClawPluginApi["registerGatewayMethod"]>[1];
-      opts: Parameters<OpenClawPluginApi["registerGatewayMethod"]>[2];
+      handler: Parameters<DexPluginApi["registerGatewayMethod"]>[1];
+      opts: Parameters<DexPluginApi["registerGatewayMethod"]>[2];
     };
     const methods = new Map<string, RegisteredMethod>();
     const api = {
@@ -200,7 +200,7 @@ describe("workboard gateway methods", () => {
           methods.set(method, { handler, opts });
         },
       ),
-    } as unknown as OpenClawPluginApi;
+    } as unknown as DexPluginApi;
 
     registerWorkboardGatewayMethods({ api, store: new WorkboardStore(createMemoryStore()) });
 
@@ -219,8 +219,8 @@ describe("workboard gateway methods", () => {
 
   it("claims, heartbeats, and bulk-updates cards through gateway methods", async () => {
     type RegisteredMethod = {
-      handler: Parameters<OpenClawPluginApi["registerGatewayMethod"]>[1];
-      opts: Parameters<OpenClawPluginApi["registerGatewayMethod"]>[2];
+      handler: Parameters<DexPluginApi["registerGatewayMethod"]>[1];
+      opts: Parameters<DexPluginApi["registerGatewayMethod"]>[2];
     };
     const methods = new Map<string, RegisteredMethod>();
     const api = {
@@ -234,7 +234,7 @@ describe("workboard gateway methods", () => {
           methods.set(method, { handler, opts });
         },
       ),
-    } as unknown as OpenClawPluginApi;
+    } as unknown as DexPluginApi;
 
     registerWorkboardGatewayMethods({ api, store: new WorkboardStore(createMemoryStore()) });
 

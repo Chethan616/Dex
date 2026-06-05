@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resetCoreHealthChecksForTest } from "../flows/doctor-core-checks.js";
 import { clearHealthChecksForTest } from "../flows/health-check-registry.js";
 import { runDoctorLintCli } from "./doctor-lint.js";
@@ -159,7 +159,7 @@ describe("runDoctorLintCli", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       path: "/tmp/openclaw.json",
     });
 

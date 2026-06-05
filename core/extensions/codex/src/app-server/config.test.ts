@@ -11,9 +11,9 @@ import {
   readCodexPluginConfig,
   resolveCodexAppServerRuntimeOptions,
   resolveCodexComputerUseConfig,
-  resolveOpenClawExecModeForCodexAppServer,
-  resolveOpenClawExecModeFromConfig,
-  resolveOpenClawExecPolicyForCodexAppServer,
+  resolveDexExecModeForCodexAppServer,
+  resolveDexExecModeFromConfig,
+  resolveDexExecPolicyForCodexAppServer,
   resolveCodexPluginsPolicy,
   shouldAutoApproveCodexAppServerApprovals,
 } from "./config.js";
@@ -100,8 +100,8 @@ describe("Codex app-server config", () => {
         },
       },
       env: {
-        OPENCLAW_CODEX_APP_SERVER_APPROVAL_POLICY: "never",
-        OPENCLAW_CODEX_APP_SERVER_SANDBOX: "read-only",
+        DEX_CODEX_APP_SERVER_APPROVAL_POLICY: "never",
+        DEX_CODEX_APP_SERVER_SANDBOX: "read-only",
       },
     });
 
@@ -515,7 +515,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
     expectRuntimePolicy(
       resolveRuntimeForTest({
         pluginConfig: {},
-        env: { OPENCLAW_CODEX_APP_SERVER_MODE: "yolo" },
+        env: { DEX_CODEX_APP_SERVER_MODE: "yolo" },
         requirementsToml,
       }),
       {
@@ -710,7 +710,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
     expectFields(
       resolveRuntimeForTest({
         pluginConfig: { appServer: { command: "/opt/codex/bin/codex" } },
-        env: { OPENCLAW_CODEX_APP_SERVER_BIN: "/usr/local/bin/codex" },
+        env: { DEX_CODEX_APP_SERVER_BIN: "/usr/local/bin/codex" },
       }).start,
       "configured start",
       {
@@ -722,7 +722,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
     expectFields(
       resolveRuntimeForTest({
         pluginConfig: {},
-        env: { OPENCLAW_CODEX_APP_SERVER_BIN: "/usr/local/bin/codex" },
+        env: { DEX_CODEX_APP_SERVER_BIN: "/usr/local/bin/codex" },
       }).start,
       "environment start",
       {
@@ -749,11 +749,11 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
       resolveRuntimeForTest({
         pluginConfig: {},
         env: {
-          OPENCLAW_CODEX_APP_SERVER_BIN:
+          DEX_CODEX_APP_SERVER_BIN:
             "node C:\\Users\\me\\.openclaw\\npm\\node_modules\\@openai\\codex\\bin\\codex.js",
         },
       }),
-    ).toThrow("OPENCLAW_CODEX_APP_SERVER_BIN must be only the Codex app-server executable path");
+    ).toThrow("DEX_CODEX_APP_SERVER_BIN must be only the Codex app-server executable path");
   });
 
   it("preserves executable paths that contain spaces", () => {
@@ -775,7 +775,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
           },
         },
         env: {
-          OPENCLAW_CODEX_COMPUTER_USE_PLUGIN_NAME: "env-fallback-plugin",
+          DEX_CODEX_COMPUTER_USE_PLUGIN_NAME: "env-fallback-plugin",
         },
       }),
     ).toEqual({
@@ -791,10 +791,10 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
       resolveCodexComputerUseConfig({
         pluginConfig: {},
         env: {
-          OPENCLAW_CODEX_COMPUTER_USE: "1",
-          OPENCLAW_CODEX_COMPUTER_USE_MARKETPLACE_SOURCE: "github:example/plugins",
-          OPENCLAW_CODEX_COMPUTER_USE_AUTO_INSTALL: "true",
-          OPENCLAW_CODEX_COMPUTER_USE_MARKETPLACE_DISCOVERY_TIMEOUT_MS: "30000",
+          DEX_CODEX_COMPUTER_USE: "1",
+          DEX_CODEX_COMPUTER_USE_MARKETPLACE_SOURCE: "github:example/plugins",
+          DEX_CODEX_COMPUTER_USE_AUTO_INSTALL: "true",
+          DEX_CODEX_COMPUTER_USE_MARKETPLACE_DISCOVERY_TIMEOUT_MS: "30000",
         },
       }),
       "computer use config",
@@ -811,8 +811,8 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
         resolveCodexComputerUseConfig({
           pluginConfig: {},
           env: {
-            OPENCLAW_CODEX_COMPUTER_USE: "1",
-            OPENCLAW_CODEX_COMPUTER_USE_MARKETPLACE_DISCOVERY_TIMEOUT_MS: value,
+            DEX_CODEX_COMPUTER_USE: "1",
+            DEX_CODEX_COMPUTER_USE_MARKETPLACE_DISCOVERY_TIMEOUT_MS: value,
           },
         }),
         "computer use config",
@@ -844,7 +844,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
   it("allows environment mode fallback to opt in to guardian-reviewed local execution", () => {
     const runtime = resolveRuntimeForTest({
       pluginConfig: {},
-      env: { OPENCLAW_CODEX_APP_SERVER_MODE: "guardian" },
+      env: { DEX_CODEX_APP_SERVER_MODE: "guardian" },
     });
 
     expectRuntimePolicy(runtime, {
@@ -877,8 +877,8 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
         },
       },
       env: {
-        OPENCLAW_CODEX_APP_SERVER_APPROVAL_POLICY: "never",
-        OPENCLAW_CODEX_APP_SERVER_SANDBOX: "danger-full-access",
+        DEX_CODEX_APP_SERVER_APPROVAL_POLICY: "never",
+        DEX_CODEX_APP_SERVER_SANDBOX: "danger-full-access",
       },
       execMode: "auto",
     });
@@ -907,9 +907,9 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
       pluginConfig: {},
       execMode: "auto",
       env: {
-        OPENCLAW_CODEX_APP_SERVER_MODE: "yolo",
-        OPENCLAW_CODEX_APP_SERVER_APPROVAL_POLICY: "never",
-        OPENCLAW_CODEX_APP_SERVER_SANDBOX: "read-only",
+        DEX_CODEX_APP_SERVER_MODE: "yolo",
+        DEX_CODEX_APP_SERVER_APPROVAL_POLICY: "never",
+        DEX_CODEX_APP_SERVER_SANDBOX: "read-only",
       },
     });
 
@@ -965,7 +965,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
     const envRuntime = resolveRuntimeForTest({
       pluginConfig: {},
       execMode: "ask",
-      env: { OPENCLAW_CODEX_APP_SERVER_MODE: "guardian" },
+      env: { DEX_CODEX_APP_SERVER_MODE: "guardian" },
     });
 
     expectRuntimePolicy(configRuntime, {
@@ -997,9 +997,9 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
       pluginConfig: {},
       execMode: "ask",
       env: {
-        OPENCLAW_CODEX_APP_SERVER_MODE: "yolo",
-        OPENCLAW_CODEX_APP_SERVER_APPROVAL_POLICY: "never",
-        OPENCLAW_CODEX_APP_SERVER_SANDBOX: "danger-full-access",
+        DEX_CODEX_APP_SERVER_MODE: "yolo",
+        DEX_CODEX_APP_SERVER_APPROVAL_POLICY: "never",
+        DEX_CODEX_APP_SERVER_SANDBOX: "danger-full-access",
       },
     });
 
@@ -1032,9 +1032,9 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
       pluginConfig: {},
       execMode: "ask",
       env: {
-        OPENCLAW_CODEX_APP_SERVER_MODE: "yolo",
-        OPENCLAW_CODEX_APP_SERVER_APPROVAL_POLICY: "never",
-        OPENCLAW_CODEX_APP_SERVER_SANDBOX: "read-only",
+        DEX_CODEX_APP_SERVER_MODE: "yolo",
+        DEX_CODEX_APP_SERVER_APPROVAL_POLICY: "never",
+        DEX_CODEX_APP_SERVER_SANDBOX: "read-only",
       },
     });
 
@@ -1207,13 +1207,13 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
       },
     };
 
-    expect(resolveOpenClawExecModeFromConfig({ config, agentId: "codex-agent" })).toBe("auto");
-    expect(resolveOpenClawExecModeFromConfig({ config, agentId: "other-agent" })).toBe("ask");
+    expect(resolveDexExecModeFromConfig({ config, agentId: "codex-agent" })).toBe("auto");
+    expect(resolveDexExecModeFromConfig({ config, agentId: "other-agent" })).toBe("ask");
   });
 
   it("keeps legacy exec security overrides ahead of normalized OpenClaw exec mode", () => {
     expect(
-      resolveOpenClawExecModeFromConfig({
+      resolveDexExecModeFromConfig({
         config: {
           tools: {
             exec: {
@@ -1249,9 +1249,9 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
           },
         },
       };
-      const execPolicy = resolveOpenClawExecPolicyForCodexAppServer({ config });
+      const execPolicy = resolveDexExecPolicyForCodexAppServer({ config });
 
-      expect(resolveOpenClawExecModeForCodexAppServer({ config })).toBe("ask");
+      expect(resolveDexExecModeForCodexAppServer({ config })).toBe("ask");
       expectRuntimePolicy(
         resolveRuntimeForTest({
           pluginConfig: {
@@ -1282,9 +1282,9 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
         },
       },
     };
-    const execPolicy = resolveOpenClawExecPolicyForCodexAppServer({ config });
+    const execPolicy = resolveDexExecPolicyForCodexAppServer({ config });
 
-    expect(resolveOpenClawExecModeForCodexAppServer({ config })).toBe("full");
+    expect(resolveDexExecModeForCodexAppServer({ config })).toBe("full");
     expectRuntimePolicy(resolveRuntimeForTest({ execPolicy }), {
       approvalPolicy: "never",
       sandbox: "danger-full-access",
@@ -1304,7 +1304,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
 
     expect(() =>
       resolveRuntimeForTest({
-        execPolicy: resolveOpenClawExecPolicyForCodexAppServer({ config }),
+        execPolicy: resolveDexExecPolicyForCodexAppServer({ config }),
         requirementsToml: 'allowed_sandbox_modes = ["read-only", "workspace-write"]\n',
       }),
     ).toThrow("legacy full exec security with ask requires Codex app-server danger-full-access");
@@ -1322,7 +1322,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
 
     expectRuntimePolicy(
       resolveRuntimeForTest({
-        execPolicy: resolveOpenClawExecPolicyForCodexAppServer({ config }),
+        execPolicy: resolveDexExecPolicyForCodexAppServer({ config }),
         openClawSandboxActive: true,
         requirementsToml: 'allowed_sandbox_modes = ["read-only", "workspace-write"]\n',
       }),
@@ -1335,7 +1335,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
   });
 
   it("applies host exec approval security floors before starting Codex app-server", () => {
-    const execPolicy = resolveOpenClawExecPolicyForCodexAppServer({
+    const execPolicy = resolveDexExecPolicyForCodexAppServer({
       config: {
         tools: {
           exec: {
@@ -1368,7 +1368,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
   });
 
   it("applies host exec approval ask floors before starting Codex app-server", () => {
-    const execPolicy = resolveOpenClawExecPolicyForCodexAppServer({
+    const execPolicy = resolveDexExecPolicyForCodexAppServer({
       config: {
         tools: {
           exec: {
@@ -1407,7 +1407,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
   });
 
   it("preserves explicit read-only sandbox for host exec approval ask floors", () => {
-    const execPolicy = resolveOpenClawExecPolicyForCodexAppServer({
+    const execPolicy = resolveDexExecPolicyForCodexAppServer({
       config: {
         tools: {
           exec: {
@@ -1446,7 +1446,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
   });
 
   it("applies agent-scoped exec approval security floors before starting Codex app-server", () => {
-    const execPolicy = resolveOpenClawExecPolicyForCodexAppServer({
+    const execPolicy = resolveDexExecPolicyForCodexAppServer({
       config: {
         tools: {
           exec: {
@@ -1484,7 +1484,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
   });
 
   it("applies agent-scoped exec approval ask floors before starting Codex app-server", () => {
-    const execPolicy = resolveOpenClawExecPolicyForCodexAppServer({
+    const execPolicy = resolveDexExecPolicyForCodexAppServer({
       config: {
         tools: {
           exec: {
@@ -1548,8 +1548,8 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
       },
     };
 
-    expect(resolveOpenClawExecModeFromConfig({ config, agentId: "codex-agent" })).toBe("allowlist");
-    const execMode = resolveOpenClawExecModeForCodexAppServer({
+    expect(resolveDexExecModeFromConfig({ config, agentId: "codex-agent" })).toBe("allowlist");
+    const execMode = resolveDexExecModeForCodexAppServer({
       config,
       agentId: "main",
       execOverrides: {
@@ -1574,7 +1574,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
     };
 
     expect(
-      resolveOpenClawExecModeForCodexAppServer({
+      resolveDexExecModeForCodexAppServer({
         config,
         agentId: "main",
         execOverrides: {
@@ -1583,7 +1583,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
       }),
     ).toBe("full");
     expect(
-      resolveOpenClawExecModeForCodexAppServer({
+      resolveDexExecModeForCodexAppServer({
         config,
         agentId: "main",
         execOverrides: {
@@ -1592,7 +1592,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
       }),
     ).toBe("ask");
     expect(
-      resolveOpenClawExecModeForCodexAppServer({
+      resolveDexExecModeForCodexAppServer({
         config,
         agentId: "main",
         execOverrides: {
@@ -1605,7 +1605,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
 
   it("preserves legacy full exec security before applying current ask overrides", () => {
     expect(
-      resolveOpenClawExecModeForCodexAppServer({
+      resolveDexExecModeForCodexAppServer({
         config: {
           tools: {
             exec: {
@@ -1617,7 +1617,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
       }),
     ).toBe("full");
     expect(
-      resolveOpenClawExecModeForCodexAppServer({
+      resolveDexExecModeForCodexAppServer({
         config: {
           tools: {
             exec: {
@@ -1632,7 +1632,7 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
       }),
     ).toBe("full");
     expect(
-      resolveOpenClawExecModeForCodexAppServer({
+      resolveDexExecModeForCodexAppServer({
         config: {
           tools: {
             exec: {
@@ -1663,10 +1663,10 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
     ).toBe("guardian_subagent");
   });
 
-  it("ignores removed OPENCLAW_CODEX_APP_SERVER_GUARDIAN fallback", () => {
+  it("ignores removed DEX_CODEX_APP_SERVER_GUARDIAN fallback", () => {
     const runtime = resolveRuntimeForTest({
       pluginConfig: {},
-      env: { OPENCLAW_CODEX_APP_SERVER_GUARDIAN: "1" },
+      env: { DEX_CODEX_APP_SERVER_GUARDIAN: "1" },
     });
 
     expectRuntimePolicy(runtime, {

@@ -108,7 +108,7 @@ function loadProfileEnv(homeDir = os.homedir()): void {
       { encoding: "utf8" },
     );
     const applied = countAppliedEntries(output.split("\0").filter(Boolean));
-    if (applied > 0 && !isTruthyEnvValue(process.env.OPENCLAW_LIVE_TEST_QUIET)) {
+    if (applied > 0 && !isTruthyEnvValue(process.env.DEX_LIVE_TEST_QUIET)) {
       console.log(`[live] loaded ${applied} env vars from ~/.profile`);
     }
   } catch {
@@ -135,7 +135,7 @@ function loadProfileEnv(homeDir = os.homedir()): void {
         })
         .filter(Boolean);
       const applied = countAppliedEntries(fallbackEntries);
-      if (applied > 0 && !isTruthyEnvValue(process.env.OPENCLAW_LIVE_TEST_QUIET)) {
+      if (applied > 0 && !isTruthyEnvValue(process.env.DEX_LIVE_TEST_QUIET)) {
         console.log(`[live] loaded ${applied} env vars from ~/.profile`);
       }
     } catch {
@@ -146,18 +146,18 @@ function loadProfileEnv(homeDir = os.homedir()): void {
 
 function resolveRestoreEntries(): RestoreEntry[] {
   return [
-    { key: "OPENCLAW_TEST_FAST", value: process.env.OPENCLAW_TEST_FAST },
+    { key: "DEX_TEST_FAST", value: process.env.DEX_TEST_FAST },
     {
-      key: "OPENCLAW_STRICT_FAST_REPLY_CONFIG",
-      value: process.env.OPENCLAW_STRICT_FAST_REPLY_CONFIG,
+      key: "DEX_STRICT_FAST_REPLY_CONFIG",
+      value: process.env.DEX_STRICT_FAST_REPLY_CONFIG,
     },
     {
-      key: "OPENCLAW_ALLOW_SLOW_REPLY_TESTS",
-      value: process.env.OPENCLAW_ALLOW_SLOW_REPLY_TESTS,
+      key: "DEX_ALLOW_SLOW_REPLY_TESTS",
+      value: process.env.DEX_ALLOW_SLOW_REPLY_TESTS,
     },
     {
-      key: "OPENCLAW_LIVE_TEST_NORMALIZE_CONFIG",
-      value: process.env.OPENCLAW_LIVE_TEST_NORMALIZE_CONFIG,
+      key: "DEX_LIVE_TEST_NORMALIZE_CONFIG",
+      value: process.env.DEX_LIVE_TEST_NORMALIZE_CONFIG,
     },
     { key: "HOME", value: process.env.HOME },
     { key: "USERPROFILE", value: process.env.USERPROFILE },
@@ -165,15 +165,15 @@ function resolveRestoreEntries(): RestoreEntry[] {
     { key: "XDG_DATA_HOME", value: process.env.XDG_DATA_HOME },
     { key: "XDG_STATE_HOME", value: process.env.XDG_STATE_HOME },
     { key: "XDG_CACHE_HOME", value: process.env.XDG_CACHE_HOME },
-    { key: "OPENCLAW_STATE_DIR", value: process.env.OPENCLAW_STATE_DIR },
-    { key: "OPENCLAW_CONFIG_PATH", value: process.env.OPENCLAW_CONFIG_PATH },
-    { key: "OPENCLAW_GATEWAY_PORT", value: process.env.OPENCLAW_GATEWAY_PORT },
-    { key: "OPENCLAW_BRIDGE_ENABLED", value: process.env.OPENCLAW_BRIDGE_ENABLED },
-    { key: "OPENCLAW_BRIDGE_HOST", value: process.env.OPENCLAW_BRIDGE_HOST },
-    { key: "OPENCLAW_BRIDGE_PORT", value: process.env.OPENCLAW_BRIDGE_PORT },
-    { key: "OPENCLAW_CANVAS_HOST_PORT", value: process.env.OPENCLAW_CANVAS_HOST_PORT },
-    { key: "OPENCLAW_TEST_HOME", value: process.env.OPENCLAW_TEST_HOME },
-    { key: "OPENCLAW_AGENT_DIR", value: process.env.OPENCLAW_AGENT_DIR },
+    { key: "DEX_STATE_DIR", value: process.env.DEX_STATE_DIR },
+    { key: "DEX_CONFIG_PATH", value: process.env.DEX_CONFIG_PATH },
+    { key: "DEX_GATEWAY_PORT", value: process.env.DEX_GATEWAY_PORT },
+    { key: "DEX_BRIDGE_ENABLED", value: process.env.DEX_BRIDGE_ENABLED },
+    { key: "DEX_BRIDGE_HOST", value: process.env.DEX_BRIDGE_HOST },
+    { key: "DEX_BRIDGE_PORT", value: process.env.DEX_BRIDGE_PORT },
+    { key: "DEX_CANVAS_HOST_PORT", value: process.env.DEX_CANVAS_HOST_PORT },
+    { key: "DEX_TEST_HOME", value: process.env.DEX_TEST_HOME },
+    { key: "DEX_AGENT_DIR", value: process.env.DEX_AGENT_DIR },
     { key: "TELEGRAM_BOT_TOKEN", value: process.env.TELEGRAM_BOT_TOKEN },
     { key: "DISCORD_BOT_TOKEN", value: process.env.DISCORD_BOT_TOKEN },
     { key: "SLACK_BOT_TOKEN", value: process.env.SLACK_BOT_TOKEN },
@@ -194,22 +194,22 @@ function createIsolatedTestHome(restore: RestoreEntry[]): {
 
   process.env.HOME = tempHome;
   process.env.USERPROFILE = tempHome;
-  process.env.OPENCLAW_TEST_HOME = tempHome;
-  process.env.OPENCLAW_TEST_FAST = "1";
-  process.env.OPENCLAW_STRICT_FAST_REPLY_CONFIG = "1";
-  delete process.env.OPENCLAW_ALLOW_SLOW_REPLY_TESTS;
+  process.env.DEX_TEST_HOME = tempHome;
+  process.env.DEX_TEST_FAST = "1";
+  process.env.DEX_STRICT_FAST_REPLY_CONFIG = "1";
+  delete process.env.DEX_ALLOW_SLOW_REPLY_TESTS;
 
   // Ensure test runs never touch the developer's real config/state, even if they have overrides set.
-  delete process.env.OPENCLAW_CONFIG_PATH;
+  delete process.env.DEX_CONFIG_PATH;
   // Prefer deriving state dir from HOME so nested tests that change HOME also isolate correctly.
-  delete process.env.OPENCLAW_STATE_DIR;
-  delete process.env.OPENCLAW_AGENT_DIR;
+  delete process.env.DEX_STATE_DIR;
+  delete process.env.DEX_AGENT_DIR;
   // Prefer test-controlled ports over developer overrides (avoid port collisions across tests/workers).
-  delete process.env.OPENCLAW_GATEWAY_PORT;
-  delete process.env.OPENCLAW_BRIDGE_ENABLED;
-  delete process.env.OPENCLAW_BRIDGE_HOST;
-  delete process.env.OPENCLAW_BRIDGE_PORT;
-  delete process.env.OPENCLAW_CANVAS_HOST_PORT;
+  delete process.env.DEX_GATEWAY_PORT;
+  delete process.env.DEX_BRIDGE_ENABLED;
+  delete process.env.DEX_BRIDGE_HOST;
+  delete process.env.DEX_BRIDGE_PORT;
+  delete process.env.DEX_CANVAS_HOST_PORT;
   // Avoid leaking real GitHub/Copilot tokens into non-live test runs.
   delete process.env.TELEGRAM_BOT_TOKEN;
   delete process.env.DISCORD_BOT_TOKEN;
@@ -224,7 +224,7 @@ function createIsolatedTestHome(restore: RestoreEntry[]): {
 
   // Windows: prefer the default state dir so auth/profile tests match real paths.
   if (process.platform === "win32") {
-    process.env.OPENCLAW_STATE_DIR = path.join(tempHome, ".openclaw");
+    process.env.DEX_STATE_DIR = path.join(tempHome, ".dex");
   }
 
   process.env.XDG_CONFIG_HOME = path.join(tempHome, ".config");
@@ -331,7 +331,7 @@ function sanitizeLiveConfig(raw: string): string {
       delete parsed.diagnostics.memoryPressureSnapshot;
     }
 
-    if (!isTruthyEnvValue(process.env.OPENCLAW_LIVE_TEST_NORMALIZE_CONFIG)) {
+    if (!isTruthyEnvValue(process.env.DEX_LIVE_TEST_NORMALIZE_CONFIG)) {
       return `${JSON.stringify(parsed, null, 2)}\n`;
     }
 
@@ -369,26 +369,26 @@ function stageLiveTestState(params: {
   realHome: string;
   tempHome: string;
 }): void {
-  const rawStateDir = params.env.OPENCLAW_STATE_DIR?.trim();
+  const rawStateDir = params.env.DEX_STATE_DIR?.trim();
   let realStateDir = rawStateDir
     ? resolveHomeRelativePath(rawStateDir, params.realHome)
-    : path.join(params.realHome, ".openclaw");
-  const priorIsolatedHome = params.env.OPENCLAW_TEST_HOME?.trim();
+    : path.join(params.realHome, ".dex");
+  const priorIsolatedHome = params.env.DEX_TEST_HOME?.trim();
   const snapshotHome = params.env.HOME?.trim();
   if (
     priorIsolatedHome &&
     snapshotHome &&
     snapshotHome !== priorIsolatedHome &&
-    realStateDir === path.join(priorIsolatedHome, ".openclaw")
+    realStateDir === path.join(priorIsolatedHome, ".dex")
   ) {
-    realStateDir = path.join(params.realHome, ".openclaw");
+    realStateDir = path.join(params.realHome, ".dex");
   }
-  const tempStateDir = path.join(params.tempHome, ".openclaw");
+  const tempStateDir = path.join(params.tempHome, ".dex");
   fs.mkdirSync(tempStateDir, { recursive: true });
   fs.mkdirSync(path.join(params.tempHome, ".gemini"), { recursive: true });
 
-  const realConfigPath = params.env.OPENCLAW_CONFIG_PATH?.trim()
-    ? resolveHomeRelativePath(params.env.OPENCLAW_CONFIG_PATH, params.realHome)
+  const realConfigPath = params.env.DEX_CONFIG_PATH?.trim()
+    ? resolveHomeRelativePath(params.env.DEX_CONFIG_PATH, params.realHome)
     : path.join(realStateDir, "openclaw.json");
   if (fs.existsSync(realConfigPath)) {
     const rawConfig = fs.readFileSync(realConfigPath, "utf8");
@@ -421,9 +421,9 @@ export function installTestEnv(options?: { loadProfileEnv?: boolean }): {
 } {
   const live =
     process.env.LIVE === "1" ||
-    process.env.OPENCLAW_LIVE_TEST === "1" ||
-    process.env.OPENCLAW_LIVE_GATEWAY === "1";
-  const allowRealHome = isTruthyEnvValue(process.env.OPENCLAW_LIVE_USE_REAL_HOME);
+    process.env.DEX_LIVE_TEST === "1" ||
+    process.env.DEX_LIVE_GATEWAY === "1";
+  const allowRealHome = isTruthyEnvValue(process.env.DEX_LIVE_USE_REAL_HOME);
   const realHome = process.env.HOME ?? os.homedir();
   const liveEnvSnapshot = { ...process.env };
 

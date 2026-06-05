@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SubagentRunRecord } from "../../agents/subagent-registry.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import {
   testing as abortTesting,
   getAbortMemory,
@@ -109,7 +109,7 @@ describe("abort detection", () => {
       ...(typeof params?.commandsTextEnabled === "boolean"
         ? { commands: { text: params.commandsTextEnabled } }
         : {}),
-    } as OpenClawConfig;
+    } as DexConfig;
     if (params?.sessionIdsByKey) {
       await writeSessionStore(storePath, params.sessionIdsByKey, params.nowMs);
     }
@@ -117,7 +117,7 @@ describe("abort detection", () => {
   }
 
   async function runStopCommand(params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     sessionKey?: string;
     parentSessionKey?: string;
     from: string;
@@ -151,7 +151,7 @@ describe("abort detection", () => {
 
   function enqueueQueuedFollowupRun(params: {
     root: string;
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     sessionId: string;
     sessionKey: string;
   }) {
@@ -1222,7 +1222,7 @@ describe("abort detection", () => {
     });
 
     const result = stopSubagentsForRequester({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       requesterSessionKey: oldParentKey,
     });
 

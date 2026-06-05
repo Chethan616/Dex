@@ -188,7 +188,7 @@ describe("bench-cli-startup", () => {
 
   it("writes a config fixture for config get benchmarks", () => {
     expect(
-      withEnv({ OPENCLAW_GATEWAY_PORT: undefined }, () =>
+      withEnv({ DEX_GATEWAY_PORT: undefined }, () =>
         testing.buildConfigFixture({
           id: "configGetGatewayPort",
           name: "config get gateway.port",
@@ -205,7 +205,7 @@ describe("bench-cli-startup", () => {
       },
     });
     expect(
-      withEnv({ OPENCLAW_GATEWAY_PORT: undefined }, () =>
+      withEnv({ DEX_GATEWAY_PORT: undefined }, () =>
         testing.buildConfigFixture({
           id: "gatewayHealthJson",
           name: "gateway health --json",
@@ -231,7 +231,7 @@ describe("bench-cli-startup", () => {
     expect(testing.parseGatewayPortEnv("[::1]")).toBe(32123);
 
     expect(
-      withEnv({ OPENCLAW_GATEWAY_PORT: "45678" }, () =>
+      withEnv({ DEX_GATEWAY_PORT: "45678" }, () =>
         testing.buildConfigFixture({
           id: "gatewayHealthJson",
           name: "gateway health --json",
@@ -243,7 +243,7 @@ describe("bench-cli-startup", () => {
 
     for (const invalid of ["45678abc", "127.0.0.1:45678abc"]) {
       expect(() =>
-        withEnv({ OPENCLAW_GATEWAY_PORT: invalid }, () =>
+        withEnv({ DEX_GATEWAY_PORT: invalid }, () =>
           testing.buildConfigFixture({
             id: "gatewayHealthJson",
             name: "gateway health --json",
@@ -251,7 +251,7 @@ describe("bench-cli-startup", () => {
             presets: ["real"],
           }),
         ),
-      ).toThrow("OPENCLAW_GATEWAY_PORT must be an integer >= 1");
+      ).toThrow("DEX_GATEWAY_PORT must be an integer >= 1");
     }
   });
 });

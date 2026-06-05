@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { getSessionEntry, upsertSessionEntry } from "../../config/sessions.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   formatGoalContinuationPrompt,
   handleGoalCommand,
@@ -28,7 +28,7 @@ async function createStorePath(): Promise<string> {
 
 function buildGoalParams(commandBodyNormalized: string, storePath: string): HandleCommandsParams {
   return {
-    cfg: {} as OpenClawConfig,
+    cfg: {} as DexConfig,
     ctx: {
       Provider: "web",
       Surface: "web",

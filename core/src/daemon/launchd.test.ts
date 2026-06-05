@@ -82,7 +82,7 @@ function countMatching<T>(items: readonly T[], predicate: (item: T) => boolean):
 function createDefaultLaunchdEnv(): Record<string, string | undefined> {
   return {
     HOME: "/Users/test",
-    OPENCLAW_PROFILE: "default",
+    DEX_PROFILE: "default",
   };
 }
 
@@ -441,7 +441,7 @@ describe("launchctl list detection", () => {
   it("detects the resolved label in launchctl list", async () => {
     state.listOutput = "123 0 ai.openclaw.gateway\n";
     const listed = await isLaunchAgentListed({
-      env: { HOME: "/Users/test", OPENCLAW_PROFILE: "default" },
+      env: { HOME: "/Users/test", DEX_PROFILE: "default" },
     });
     expect(listed).toBe(true);
   });
@@ -449,7 +449,7 @@ describe("launchctl list detection", () => {
   it("returns false when the label is missing", async () => {
     state.listOutput = "123 0 com.other.service\n";
     const listed = await isLaunchAgentListed({
-      env: { HOME: "/Users/test", OPENCLAW_PROFILE: "default" },
+      env: { HOME: "/Users/test", DEX_PROFILE: "default" },
     });
     expect(listed).toBe(false);
   });
@@ -509,10 +509,10 @@ describe("launchctl list detection", () => {
       ].join("\n");
 
       const jobs = await findStaleOpenClawUpdateLaunchdJobs({
-        OPENCLAW_PROFILE: "manual-update.profile",
-        OPENCLAW_LAUNCHD_LABEL: "ai.openclaw.manual-update.custom-label",
-        OPENCLAW_SERVICE_MARKER: GATEWAY_SERVICE_MARKER,
-        OPENCLAW_SERVICE_KIND: GATEWAY_SERVICE_KIND,
+        DEX_PROFILE: "manual-update.profile",
+        DEX_LAUNCHD_LABEL: "ai.openclaw.manual-update.custom-label",
+        DEX_SERVICE_MARKER: GATEWAY_SERVICE_MARKER,
+        DEX_SERVICE_KIND: GATEWAY_SERVICE_KIND,
       } as NodeJS.ProcessEnv);
 
       expect(jobs).toEqual([
@@ -583,7 +583,7 @@ describe("launchctl list detection", () => {
     async () => {
       await expect(
         disableCurrentOpenClawUpdateLaunchdJob({
-          OPENCLAW_LAUNCHD_LABEL: "ai.openclaw.update.2026.5.12",
+          DEX_LAUNCHD_LABEL: "ai.openclaw.update.2026.5.12",
         }),
       ).resolves.toBe(true);
 
@@ -601,7 +601,7 @@ describe("launchctl list detection", () => {
       await expect(
         disableCurrentOpenClawUpdateLaunchdJob({
           XPC_SERVICE_NAME: "0",
-          OPENCLAW_LAUNCHD_LABEL: "ai.openclaw.update.2026.5.12",
+          DEX_LAUNCHD_LABEL: "ai.openclaw.update.2026.5.12",
         }),
       ).resolves.toBe(true);
 
@@ -632,7 +632,7 @@ describe("launchctl list detection", () => {
       await expect(
         disableCurrentOpenClawUpdateLaunchdJob({
           LAUNCH_JOB_LABEL: "ai.openclaw.update.2026.5.12",
-          OPENCLAW_PROFILE: "update.2026.5.12",
+          DEX_PROFILE: "update.2026.5.12",
         }),
       ).resolves.toBe(false);
 
@@ -646,7 +646,7 @@ describe("launchctl list detection", () => {
       await expect(
         disableCurrentOpenClawUpdateLaunchdJob({
           LAUNCH_JOB_LABEL: "ai.openclaw.manual-update.1717168800",
-          OPENCLAW_PROFILE: "manual-update.1717168800",
+          DEX_PROFILE: "manual-update.1717168800",
         }),
       ).resolves.toBe(false);
 
@@ -673,9 +673,9 @@ describe("launchctl list detection", () => {
       await expect(
         disableCurrentOpenClawUpdateLaunchdJob({
           LAUNCH_JOB_LABEL: "ai.openclaw.update.2026.5.12",
-          OPENCLAW_LAUNCHD_LABEL: "ai.openclaw.update.2026.5.12",
-          OPENCLAW_SERVICE_MARKER: "openclaw",
-          OPENCLAW_SERVICE_KIND: "gateway",
+          DEX_LAUNCHD_LABEL: "ai.openclaw.update.2026.5.12",
+          DEX_SERVICE_MARKER: "openclaw",
+          DEX_SERVICE_KIND: "gateway",
         }),
       ).resolves.toBe(false);
 
@@ -850,15 +850,15 @@ describe("launchd install", () => {
     const callerEnv = createDefaultLaunchdEnv();
     const serviceEnv = {
       ...callerEnv,
-      OPENCLAW_STATE_DIR: "/Users/test/service-env/custom-state",
+      DEX_STATE_DIR: "/Users/test/service-env/custom-state",
     };
     await installLaunchAgent({
       env: serviceEnv,
       stdout: new PassThrough(),
       programArguments: defaultProgramArguments,
       environment: {
-        OPENCLAW_GATEWAY_PORT: "18789",
-        OPENCLAW_STATE_DIR: serviceEnv.OPENCLAW_STATE_DIR,
+        DEX_GATEWAY_PORT: "18789",
+        DEX_STATE_DIR: serviceEnv.DEX_STATE_DIR,
       },
     });
 
@@ -882,9 +882,9 @@ describe("launchd install", () => {
 
     const command = await readLaunchAgentProgramArguments(callerEnv);
     expect(command?.programArguments).toEqual(defaultProgramArguments);
-    expect(command?.environment?.OPENCLAW_GATEWAY_PORT).toBe("18789");
-    expect(command?.environment?.OPENCLAW_STATE_DIR).toBe(serviceEnv.OPENCLAW_STATE_DIR);
-    expect(command?.environmentValueSources?.OPENCLAW_GATEWAY_PORT).toBe("file");
+    expect(command?.environment?.DEX_GATEWAY_PORT).toBe("18789");
+    expect(command?.environment?.DEX_STATE_DIR).toBe(serviceEnv.DEX_STATE_DIR);
+    expect(command?.environmentValueSources?.DEX_GATEWAY_PORT).toBe("file");
 
     await restartLaunchAgent({
       env: callerEnv,
@@ -897,9 +897,9 @@ describe("launchd install", () => {
     expect(rewritten).not.toContain(mangledEnvFilePath);
     expect(rewritten).not.toContain(mangledWrapperPath);
     const rewrittenEnv = state.files.get(callerEnvFilePath) ?? "";
-    expect(rewrittenEnv).toContain("export OPENCLAW_GATEWAY_PORT='18789'");
+    expect(rewrittenEnv).toContain("export DEX_GATEWAY_PORT='18789'");
     expect(rewrittenEnv).toContain(
-      "export OPENCLAW_STATE_DIR='/Users/test/service-env/custom-state'",
+      "export DEX_STATE_DIR='/Users/test/service-env/custom-state'",
     );
   });
 
@@ -1049,9 +1049,9 @@ describe("launchd install", () => {
         LAUNCH_JOB_LABEL: undefined,
         LAUNCH_JOB_NAME: undefined,
         XPC_SERVICE_NAME: "0",
-        OPENCLAW_SERVICE_MARKER: "openclaw",
-        OPENCLAW_SERVICE_KIND: "gateway",
-        OPENCLAW_LAUNCHD_LABEL: "ai.openclaw.gateway",
+        DEX_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_KIND: "gateway",
+        DEX_LAUNCHD_LABEL: "ai.openclaw.gateway",
       },
       async () => {
         await expect(stopLaunchAgent({ env, stdout: new PassThrough() })).rejects.toThrow(
@@ -1066,7 +1066,7 @@ describe("launchd install", () => {
   it("allows external LaunchAgent label overrides to stop the selected target", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      OPENCLAW_LAUNCHD_LABEL: "com.example.openclaw.gateway",
+      DEX_LAUNCHD_LABEL: "com.example.openclaw.gateway",
     };
     const stdout = new PassThrough();
     let output = "";
@@ -1079,9 +1079,9 @@ describe("launchd install", () => {
         LAUNCH_JOB_LABEL: undefined,
         LAUNCH_JOB_NAME: undefined,
         XPC_SERVICE_NAME: undefined,
-        OPENCLAW_LAUNCHD_LABEL: undefined,
-        OPENCLAW_SERVICE_MARKER: undefined,
-        OPENCLAW_SERVICE_KIND: undefined,
+        DEX_LAUNCHD_LABEL: undefined,
+        DEX_SERVICE_MARKER: undefined,
+        DEX_SERVICE_KIND: undefined,
       },
       async () => {
         await stopLaunchAgent({ env, stdout });
@@ -1097,7 +1097,7 @@ describe("launchd install", () => {
   it("verifies the configured gateway port is released before reporting stop success", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      OPENCLAW_GATEWAY_PORT: "19003",
+      DEX_GATEWAY_PORT: "19003",
     };
     const stdout = new PassThrough();
     let output = "";
@@ -1118,7 +1118,7 @@ describe("launchd install", () => {
       env,
       stdout: new PassThrough(),
       programArguments: defaultProgramArguments,
-      environment: { OPENCLAW_GATEWAY_PORT: "19006" },
+      environment: { DEX_GATEWAY_PORT: "19006" },
     });
     state.launchctlCalls.length = 0;
 
@@ -1131,7 +1131,7 @@ describe("launchd install", () => {
   it("fails stop when the verified gateway port remains busy after cleanup", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      OPENCLAW_GATEWAY_PORT: "19004",
+      DEX_GATEWAY_PORT: "19004",
     };
     const stdout = new PassThrough();
     let output = "";
@@ -1178,7 +1178,7 @@ describe("launchd install", () => {
   it("verifies the configured gateway port is released before reporting disable stop success", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      OPENCLAW_GATEWAY_PORT: "19005",
+      DEX_GATEWAY_PORT: "19005",
     };
     const stdout = new PassThrough();
     let output = "";
@@ -1275,7 +1275,7 @@ describe("launchd install", () => {
   it("does not report degraded stop success when fallback cleanup leaves the port busy", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      OPENCLAW_GATEWAY_PORT: "19008",
+      DEX_GATEWAY_PORT: "19008",
     };
     const stdout = new PassThrough();
     let output = "";
@@ -1411,7 +1411,7 @@ describe("launchd install", () => {
   it("restarts LaunchAgent with kickstart and no bootout", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      OPENCLAW_GATEWAY_PORT: "18789",
+      DEX_GATEWAY_PORT: "18789",
     };
     const result = await restartLaunchAgent({
       env,
@@ -1434,7 +1434,7 @@ describe("launchd install", () => {
   it("reloads launchd after rewriting an existing plist", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      OPENCLAW_GATEWAY_PORT: "18789",
+      DEX_GATEWAY_PORT: "18789",
     };
     const plistPath = resolveLaunchAgentPlistPath(env);
     state.files.set(
@@ -1473,7 +1473,7 @@ describe("launchd install", () => {
   it("treats a concurrent launchd bootstrap as success when the service is loaded", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      OPENCLAW_GATEWAY_PORT: "18789",
+      DEX_GATEWAY_PORT: "18789",
     };
     const plistPath = resolveLaunchAgentPlistPath(env);
     state.files.set(
@@ -1511,7 +1511,7 @@ describe("launchd install", () => {
   it("uses the configured gateway port for stale cleanup", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      OPENCLAW_GATEWAY_PORT: "19001",
+      DEX_GATEWAY_PORT: "19001",
     };
 
     await restartLaunchAgent({
@@ -1525,7 +1525,7 @@ describe("launchd install", () => {
   it("ignores invalid configured gateway ports for stale cleanup", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      OPENCLAW_GATEWAY_PORT: "65536",
+      DEX_GATEWAY_PORT: "65536",
     };
     state.files.clear();
 
@@ -1544,7 +1544,7 @@ describe("launchd install", () => {
       env,
       stdout: new PassThrough(),
       programArguments: defaultProgramArguments,
-      environment: { OPENCLAW_GATEWAY_PORT: "19007" },
+      environment: { DEX_GATEWAY_PORT: "19007" },
     });
     state.launchctlCalls.length = 0;
 
@@ -1563,7 +1563,7 @@ describe("launchd install", () => {
       env,
       stdout: new PassThrough(),
       programArguments: defaultProgramArguments,
-      environment: { OPENCLAW_GATEWAY_PORT: "65536" },
+      environment: { DEX_GATEWAY_PORT: "65536" },
     });
     state.launchctlCalls.length = 0;
 
@@ -1579,7 +1579,7 @@ describe("launchd install", () => {
   it("fails restart before kickstart when the configured gateway port remains busy", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      OPENCLAW_GATEWAY_PORT: "19002",
+      DEX_GATEWAY_PORT: "19002",
     };
     const plistPath = resolveLaunchAgentPlistPath(env);
     const originalPlist = [
@@ -1776,9 +1776,9 @@ describe("launchd install", () => {
         LAUNCH_JOB_LABEL: undefined,
         LAUNCH_JOB_NAME: undefined,
         XPC_SERVICE_NAME: "0",
-        OPENCLAW_SERVICE_MARKER: "openclaw",
-        OPENCLAW_SERVICE_KIND: "gateway",
-        OPENCLAW_LAUNCHD_LABEL: "ai.openclaw.gateway",
+        DEX_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_KIND: "gateway",
+        DEX_LAUNCHD_LABEL: "ai.openclaw.gateway",
       },
       async () =>
         restartLaunchAgent({
@@ -1804,9 +1804,9 @@ describe("launchd install", () => {
         LAUNCH_JOB_LABEL: undefined,
         LAUNCH_JOB_NAME: undefined,
         XPC_SERVICE_NAME: "0",
-        OPENCLAW_SERVICE_MARKER: undefined,
-        OPENCLAW_SERVICE_KIND: undefined,
-        OPENCLAW_LAUNCHD_LABEL: undefined,
+        DEX_SERVICE_MARKER: undefined,
+        DEX_SERVICE_KIND: undefined,
+        DEX_LAUNCHD_LABEL: undefined,
       },
       async () =>
         restartLaunchAgent({
@@ -1854,38 +1854,38 @@ describe("launchd install", () => {
 describe("resolveLaunchAgentPlistPath", () => {
   it.each([
     {
-      name: "uses default label when OPENCLAW_PROFILE is unset",
+      name: "uses default label when DEX_PROFILE is unset",
       env: { HOME: "/Users/test" },
       expected: "/Users/test/Library/LaunchAgents/ai.openclaw.gateway.plist",
     },
     {
-      name: "uses profile-specific label when OPENCLAW_PROFILE is set to a custom value",
-      env: { HOME: "/Users/test", OPENCLAW_PROFILE: "jbphoenix" },
+      name: "uses profile-specific label when DEX_PROFILE is set to a custom value",
+      env: { HOME: "/Users/test", DEX_PROFILE: "jbphoenix" },
       expected: "/Users/test/Library/LaunchAgents/ai.openclaw.jbphoenix.plist",
     },
     {
-      name: "prefers OPENCLAW_LAUNCHD_LABEL over OPENCLAW_PROFILE",
+      name: "prefers DEX_LAUNCHD_LABEL over DEX_PROFILE",
       env: {
         HOME: "/Users/test",
-        OPENCLAW_PROFILE: "jbphoenix",
-        OPENCLAW_LAUNCHD_LABEL: "com.custom.label",
+        DEX_PROFILE: "jbphoenix",
+        DEX_LAUNCHD_LABEL: "com.custom.label",
       },
       expected: "/Users/test/Library/LaunchAgents/com.custom.label.plist",
     },
     {
-      name: "trims whitespace from OPENCLAW_LAUNCHD_LABEL",
+      name: "trims whitespace from DEX_LAUNCHD_LABEL",
       env: {
         HOME: "/Users/test",
-        OPENCLAW_LAUNCHD_LABEL: "  com.custom.label  ",
+        DEX_LAUNCHD_LABEL: "  com.custom.label  ",
       },
       expected: "/Users/test/Library/LaunchAgents/com.custom.label.plist",
     },
     {
-      name: "ignores empty OPENCLAW_LAUNCHD_LABEL and falls back to profile",
+      name: "ignores empty DEX_LAUNCHD_LABEL and falls back to profile",
       env: {
         HOME: "/Users/test",
-        OPENCLAW_PROFILE: "myprofile",
-        OPENCLAW_LAUNCHD_LABEL: "   ",
+        DEX_PROFILE: "myprofile",
+        DEX_LAUNCHD_LABEL: "   ",
       },
       expected: "/Users/test/Library/LaunchAgents/ai.openclaw.myprofile.plist",
     },
@@ -1897,7 +1897,7 @@ describe("resolveLaunchAgentPlistPath", () => {
     expect(() =>
       resolveLaunchAgentPlistPath({
         HOME: "/Users/test",
-        OPENCLAW_LAUNCHD_LABEL: "../evil/label",
+        DEX_LAUNCHD_LABEL: "../evil/label",
       }),
     ).toThrow("Invalid launchd label");
   });

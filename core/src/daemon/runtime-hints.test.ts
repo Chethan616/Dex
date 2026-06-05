@@ -8,8 +8,8 @@ describe("buildPlatformRuntimeLogHints", () => {
         platform: "darwin",
         env: {
           HOME: "/Users/test",
-          OPENCLAW_STATE_DIR: "/tmp/openclaw-state",
-          OPENCLAW_LOG_PREFIX: "gateway",
+          DEX_STATE_DIR: "/tmp/openclaw-state",
+          DEX_LOG_PREFIX: "gateway",
         },
         systemdServiceName: "openclaw-gateway",
         windowsTaskName: "OpenClaw Gateway",
@@ -26,7 +26,7 @@ describe("buildPlatformRuntimeLogHints", () => {
       buildPlatformRuntimeLogHints({
         platform: "linux",
         env: {
-          OPENCLAW_STATE_DIR: "/tmp/openclaw-state",
+          DEX_STATE_DIR: "/tmp/openclaw-state",
         },
         systemdServiceName: "openclaw-gateway",
         windowsTaskName: "OpenClaw Gateway",
@@ -39,7 +39,7 @@ describe("buildPlatformRuntimeLogHints", () => {
       buildPlatformRuntimeLogHints({
         platform: "win32",
         env: {
-          OPENCLAW_STATE_DIR: "/tmp/openclaw-state",
+          DEX_STATE_DIR: "/tmp/openclaw-state",
         },
         systemdServiceName: "openclaw-gateway",
         windowsTaskName: "OpenClaw Gateway",

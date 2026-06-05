@@ -296,9 +296,9 @@ describe("fallback-skip-cache", () => {
     expect(DEFAULT_FALLBACK_SKIP_TTL_MS).toBe(0);
   });
 
-  it("uses OPENCLAW_FALLBACK_SKIP_TTL_MS as an opt-in default TTL", () => {
-    const previous = process.env.OPENCLAW_FALLBACK_SKIP_TTL_MS;
-    process.env.OPENCLAW_FALLBACK_SKIP_TTL_MS = "60000";
+  it("uses DEX_FALLBACK_SKIP_TTL_MS as an opt-in default TTL", () => {
+    const previous = process.env.DEX_FALLBACK_SKIP_TTL_MS;
+    process.env.DEX_FALLBACK_SKIP_TTL_MS = "60000";
     try {
       markFallbackCandidateSkipped({
         sessionId: "s1",
@@ -325,9 +325,9 @@ describe("fallback-skip-cache", () => {
       ).toBe(false);
     } finally {
       if (previous === undefined) {
-        delete process.env.OPENCLAW_FALLBACK_SKIP_TTL_MS;
+        delete process.env.DEX_FALLBACK_SKIP_TTL_MS;
       } else {
-        process.env.OPENCLAW_FALLBACK_SKIP_TTL_MS = previous;
+        process.env.DEX_FALLBACK_SKIP_TTL_MS = previous;
       }
     }
   });

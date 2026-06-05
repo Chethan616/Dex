@@ -3,13 +3,13 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearRuntimeAuthProfileStoreSnapshots } from "../agents/auth-profiles/store.js";
 import {
-  createOpenClawTestState,
-  type OpenClawTestState,
+  createDexTestState,
+  type DexTestState,
 } from "../test-utils/openclaw-test-state.js";
 import { maybeRepairCanonicalApiKeyFieldAlias } from "./doctor-auth-flat-profiles.js";
 import type { DoctorPrompter } from "./doctor-prompter.js";
 
-const states: OpenClawTestState[] = [];
+const states: DexTestState[] = [];
 
 function makePrompter(shouldRepair: boolean): DoctorPrompter {
   return {
@@ -30,12 +30,12 @@ function makePrompter(shouldRepair: boolean): DoctorPrompter {
   };
 }
 
-async function makeTestState(): Promise<OpenClawTestState> {
-  const state = await createOpenClawTestState({
+async function makeTestState(): Promise<DexTestState> {
+  const state = await createDexTestState({
     layout: "state-only",
     prefix: "openclaw-doctor-canonical-api-key-",
     env: {
-      OPENCLAW_AGENT_DIR: undefined,
+      DEX_AGENT_DIR: undefined,
     },
   });
   states.push(state);
@@ -138,7 +138,7 @@ describe("maybeRepairCanonicalApiKeyFieldAlias", () => {
     );
   });
 
-  it("repairs auth profiles from OPENCLAW_AGENT_DIR", async () => {
+  it("repairs auth profiles from DEX_AGENT_DIR", async () => {
     const state = await makeTestState();
     const agentDir = state.path("external-agent");
     const authPath = path.join(agentDir, "auth-profiles.json");
@@ -161,7 +161,7 @@ describe("maybeRepairCanonicalApiKeyFieldAlias", () => {
       now: () => 123,
       env: {
         ...state.env,
-        OPENCLAW_AGENT_DIR: agentDir,
+        DEX_AGENT_DIR: agentDir,
       },
     });
 
@@ -205,7 +205,7 @@ describe("maybeRepairCanonicalApiKeyFieldAlias", () => {
       now: () => 123,
       env: {
         ...state.env,
-        OPENCLAW_AGENT_DIR: undefined,
+        DEX_AGENT_DIR: undefined,
         PI_CODING_AGENT_DIR: agentDir,
       },
     });

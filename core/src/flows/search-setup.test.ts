@@ -172,8 +172,8 @@ describe("runSearchSetupFlow", () => {
   });
 
   it("localizes setup copy for web search provider selection", async () => {
-    const previousLocale = process.env.OPENCLAW_LOCALE;
-    process.env.OPENCLAW_LOCALE = "zh-CN";
+    const previousLocale = process.env.DEX_LOCALE;
+    process.env.DEX_LOCALE = "zh-CN";
     const note = vi.fn(async () => {});
     const select = vi.fn().mockResolvedValueOnce("__skip__");
     const prompter = createWizardPrompter({
@@ -189,9 +189,9 @@ describe("runSearchSetupFlow", () => {
       );
     } finally {
       if (previousLocale === undefined) {
-        delete process.env.OPENCLAW_LOCALE;
+        delete process.env.DEX_LOCALE;
       } else {
-        process.env.OPENCLAW_LOCALE = previousLocale;
+        process.env.DEX_LOCALE = previousLocale;
       }
     }
 

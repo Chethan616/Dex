@@ -124,7 +124,7 @@ describe("ensure-cli-startup-build", () => {
 
     ensureCliStartupBuild({
       rootDir: root,
-      env: { OPENCLAW_CLI_STARTUP_BUILD_TIMEOUT_MS: "1234" },
+      env: { DEX_CLI_STARTUP_BUILD_TIMEOUT_MS: "1234" },
       spawnSync: (command, args, options) => {
         calls.push({ command, args, options });
         return { status: 0 };
@@ -169,17 +169,17 @@ describe("ensure-cli-startup-build", () => {
 describe("resolveCliStartupBuildTimeoutMs", () => {
   it("parses only positive integer environment timeouts", () => {
     expect(resolveCliStartupBuildTimeoutMs({})).toBe(10 * 60 * 1000);
-    expect(resolveCliStartupBuildTimeoutMs({ OPENCLAW_CLI_STARTUP_BUILD_TIMEOUT_MS: "" })).toBe(
+    expect(resolveCliStartupBuildTimeoutMs({ DEX_CLI_STARTUP_BUILD_TIMEOUT_MS: "" })).toBe(
       10 * 60 * 1000,
     );
-    expect(resolveCliStartupBuildTimeoutMs({ OPENCLAW_CLI_STARTUP_BUILD_TIMEOUT_MS: "4321" })).toBe(
+    expect(resolveCliStartupBuildTimeoutMs({ DEX_CLI_STARTUP_BUILD_TIMEOUT_MS: "4321" })).toBe(
       4321,
     );
 
     for (const raw of ["nope", "10m", "1e3", "0", "-1", "9007199254740992"]) {
       expect(() =>
-        resolveCliStartupBuildTimeoutMs({ OPENCLAW_CLI_STARTUP_BUILD_TIMEOUT_MS: raw }),
-      ).toThrow(`invalid OPENCLAW_CLI_STARTUP_BUILD_TIMEOUT_MS: ${raw}`);
+        resolveCliStartupBuildTimeoutMs({ DEX_CLI_STARTUP_BUILD_TIMEOUT_MS: raw }),
+      ).toThrow(`invalid DEX_CLI_STARTUP_BUILD_TIMEOUT_MS: ${raw}`);
     }
   });
 });

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {
-  closeOpenClawStateDatabaseForTest,
+  closeDexStateDatabaseForTest,
   createChannelIngressQueueForTests as createChannelIngressQueue,
 } from "openclaw/plugin-sdk/plugin-state-test-runtime";
 import { afterEach, describe, expect, it } from "vitest";
@@ -41,7 +41,7 @@ async function withTempSpool<T>(fn: (spoolDir: string) => Promise<T>): Promise<T
     return await fn(spoolDir);
   } finally {
     clearTelegramRuntime();
-    closeOpenClawStateDatabaseForTest();
+    closeDexStateDatabaseForTest();
     await fs.rm(stateDir, { recursive: true, force: true });
   }
 }
@@ -49,7 +49,7 @@ async function withTempSpool<T>(fn: (spoolDir: string) => Promise<T>): Promise<T
 describe("Telegram ingress spool", () => {
   afterEach(() => {
     clearTelegramRuntime();
-    closeOpenClawStateDatabaseForTest();
+    closeDexStateDatabaseForTest();
   });
 
   it("persists updates durably in update_id order and deletes handled entries", async () => {

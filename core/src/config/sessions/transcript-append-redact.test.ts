@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { onSessionTranscriptUpdate } from "../../sessions/transcript-events.js";
 import { resolveSessionTranscriptPathInDir } from "./paths.js";
 import { useTempSessionsFixture } from "./test-helpers.js";
@@ -44,7 +44,7 @@ describe("appendSessionTranscriptMessage - redaction", () => {
 
   it("masks secrets in message content before writing to disk", async () => {
     const sessionFile = resolveSessionTranscriptPathInDir("redact-on", fixture.sessionsDir());
-    const config: OpenClawConfig = { logging: { redactSensitive: "tools" } };
+    const config: DexConfig = { logging: { redactSensitive: "tools" } };
 
     await appendSessionTranscriptMessage({
       transcriptPath: sessionFile,
@@ -67,7 +67,7 @@ describe("appendSessionTranscriptMessage - redaction", () => {
 
   it("writes content unchanged when redactSensitive is off", async () => {
     const sessionFile = resolveSessionTranscriptPathInDir("redact-off", fixture.sessionsDir());
-    const config: OpenClawConfig = { logging: { redactSensitive: "off" } };
+    const config: DexConfig = { logging: { redactSensitive: "off" } };
 
     await appendSessionTranscriptMessage({
       transcriptPath: sessionFile,
@@ -103,7 +103,7 @@ describe("appendSessionTranscriptMessage - redaction", () => {
       "redact-string-payload",
       fixture.sessionsDir(),
     );
-    const config: OpenClawConfig = { logging: { redactSensitive: "tools" } };
+    const config: DexConfig = { logging: { redactSensitive: "tools" } };
 
     await appendSessionTranscriptMessage({
       transcriptPath: sessionFile,
@@ -125,7 +125,7 @@ describe("appendSessionTranscriptMessage - redaction", () => {
       "redact-structured-no-role",
       fixture.sessionsDir(),
     );
-    const config: OpenClawConfig = { logging: { redactSensitive: "tools" } };
+    const config: DexConfig = { logging: { redactSensitive: "tools" } };
 
     await appendSessionTranscriptMessage({
       transcriptPath: sessionFile,
@@ -196,7 +196,7 @@ describe("appendSessionTranscriptMessage - redaction", () => {
       "redact-tool-call-args",
       fixture.sessionsDir(),
     );
-    const config: OpenClawConfig = { logging: { redactSensitive: "tools" } };
+    const config: DexConfig = { logging: { redactSensitive: "tools" } };
 
     await appendSessionTranscriptMessage({
       transcriptPath: sessionFile,
@@ -248,7 +248,7 @@ describe("appendSessionTranscriptMessage - redaction", () => {
       "redact-tool-result-details",
       fixture.sessionsDir(),
     );
-    const config: OpenClawConfig = { logging: { redactSensitive: "tools" } };
+    const config: DexConfig = { logging: { redactSensitive: "tools" } };
 
     await appendSessionTranscriptMessage({
       transcriptPath: sessionFile,
@@ -297,7 +297,7 @@ describe("appendSessionTranscriptMessage - redaction", () => {
       "issue-80379-tool-result-env-placeholders",
       fixture.sessionsDir(),
     );
-    const config: OpenClawConfig = { logging: { redactSensitive: "tools" } };
+    const config: DexConfig = { logging: { redactSensitive: "tools" } };
     const toolOutput =
       'DISCORD_BOT_TOKEN="${DISCORD_BOT_TOKEN:-}"\nTELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"';
 
@@ -340,7 +340,7 @@ describe("appendExactAssistantMessageToSessionTranscript - redaction", () => {
     fs.writeFileSync(storePath, JSON.stringify(store, null, 2), { encoding: "utf-8", mode: 0o600 });
 
     const fakeApiKey = "sk-proj-FAKEKEYFORTESTINGONLY1234567890";
-    const config: OpenClawConfig = { logging: { redactSensitive: "off" } };
+    const config: DexConfig = { logging: { redactSensitive: "off" } };
 
     const result = await appendExactAssistantMessageToSessionTranscript({
       sessionKey,
@@ -386,7 +386,7 @@ describe("appendExactAssistantMessageToSessionTranscript - redaction", () => {
     );
 
     const fakeApiKey = "sk-proj-FAKEKEYFORTESTINGONLY1234567890";
-    const config: OpenClawConfig = { logging: { redactSensitive: "tools" } };
+    const config: DexConfig = { logging: { redactSensitive: "tools" } };
     const updates: Array<{ message?: unknown }> = [];
     const unsubscribe = onSessionTranscriptUpdate((update) => updates.push(update));
 
@@ -441,7 +441,7 @@ describe("appendExactAssistantMessageToSessionTranscript - redaction", () => {
     );
 
     const fakeApiKey = "sk-proj-FAKEKEYFORTESTINGONLY1234567890";
-    const config: OpenClawConfig = { logging: { redactSensitive: "tools" } };
+    const config: DexConfig = { logging: { redactSensitive: "tools" } };
 
     const first = await appendAssistantMessageToSessionTranscript({
       sessionKey,

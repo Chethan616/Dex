@@ -1,4 +1,4 @@
-import type { AnyAgentTool, OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+import type { AnyAgentTool, DexPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 import { createTestPluginApi } from "openclaw/plugin-sdk/plugin-test-api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import canvasPlugin from "./index.js";
@@ -45,13 +45,13 @@ vi.mock("./src/tool.js", () => ({
 }));
 
 function registerCanvas() {
-  const routes: Array<Parameters<OpenClawPluginApi["registerHttpRoute"]>[0]> = [];
-  const services: Array<Parameters<OpenClawPluginApi["registerService"]>[0]> = [];
-  const resolvers: Array<Parameters<OpenClawPluginApi["registerHostedMediaResolver"]>[0]> = [];
-  const tools: Array<Parameters<OpenClawPluginApi["registerTool"]>[0]> = [];
+  const routes: Array<Parameters<DexPluginApi["registerHttpRoute"]>[0]> = [];
+  const services: Array<Parameters<DexPluginApi["registerService"]>[0]> = [];
+  const resolvers: Array<Parameters<DexPluginApi["registerHostedMediaResolver"]>[0]> = [];
+  const tools: Array<Parameters<DexPluginApi["registerTool"]>[0]> = [];
   const cliFeatures: Array<{
-    registrar: Parameters<OpenClawPluginApi["registerNodeCliFeature"]>[0];
-    opts: Parameters<OpenClawPluginApi["registerNodeCliFeature"]>[1];
+    registrar: Parameters<DexPluginApi["registerNodeCliFeature"]>[0];
+    opts: Parameters<DexPluginApi["registerNodeCliFeature"]>[1];
   }> = [];
   canvasPlugin.register?.(
     createTestPluginApi({

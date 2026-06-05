@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
+import type { DexConfig } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
 import type { checkQmdBinaryAvailability as checkQmdBinaryAvailabilityFn } from "openclaw/plugin-sdk/memory-core-host-engine-qmd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -149,14 +149,14 @@ function createQmdCfg(
   agentId: string,
   workspace = "/tmp/workspace",
   qmd: Record<string, unknown> = {},
-): OpenClawConfig {
+): DexConfig {
   return {
     memory: { backend: "qmd", qmd },
     agents: { list: [{ id: agentId, default: true, workspace }] },
   };
 }
 
-function createBuiltinCfg(agentId: string): OpenClawConfig {
+function createBuiltinCfg(agentId: string): DexConfig {
   return {
     agents: {
       defaults: {
@@ -176,7 +176,7 @@ function createBuiltinCfg(agentId: string): OpenClawConfig {
       },
       list: [{ id: agentId, default: true, workspace: "/tmp/workspace" }],
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 function requireManager(result: SearchManagerResult): SearchManager {
@@ -220,8 +220,8 @@ function qmdCreateParams(index = 0): Record<string, unknown> {
 
 async function expectPendingQmdReplacement(params: {
   agentId: string;
-  firstCfg: OpenClawConfig;
-  secondCfg: OpenClawConfig;
+  firstCfg: DexConfig;
+  secondCfg: DexConfig;
   firstAvailability: { command: string; cwd: string };
   secondAvailability: { command: string; cwd: string };
 }) {
@@ -472,7 +472,7 @@ describe("getMemorySearchManager caching", () => {
     const cfg = {
       memory: { backend: "qmd", qmd: {} },
       agents: { list: [{ id: agentId, default: true, workspace }] },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     try {
       await getMemorySearchManager({ cfg, agentId });
@@ -579,7 +579,7 @@ describe("getMemorySearchManager caching", () => {
           },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const firstPrimary = createManagerMock({
       backend: "qmd",
       provider: "qmd",
@@ -690,7 +690,7 @@ describe("getMemorySearchManager caching", () => {
     const secondCfg = {
       ...createQmdCfg(agentId),
       session: { store: "/tmp/alternate-session-store.json" },
-    } as OpenClawConfig;
+    } as DexConfig;
     const createGate = createDeferred<QmdManagerInstance>();
     createQmdManagerMock.mockImplementationOnce(async () => await createGate.promise);
 

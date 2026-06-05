@@ -372,13 +372,13 @@ describe("applySettingsFromUrl", () => {
     setTestWindowUrl("https://control.example/ui/chat");
     (
       window as unknown as {
-        __OPENCLAW_NATIVE_CONTROL_AUTH__?: {
+        __DEX_NATIVE_CONTROL_AUTH__?: {
           gatewayUrl?: string;
           token?: string;
           password?: string;
         };
       }
-    )["__OPENCLAW_NATIVE_CONTROL_AUTH__"] = {
+    )["__DEX_NATIVE_CONTROL_AUTH__"] = {
       gatewayUrl: "wss://control.example/ui/",
       token: "device-token",
       password: "shared-password",
@@ -393,9 +393,9 @@ describe("applySettingsFromUrl", () => {
     expect(
       (
         window as unknown as {
-          __OPENCLAW_NATIVE_CONTROL_AUTH__?: unknown;
+          __DEX_NATIVE_CONTROL_AUTH__?: unknown;
         }
-      )["__OPENCLAW_NATIVE_CONTROL_AUTH__"],
+      )["__DEX_NATIVE_CONTROL_AUTH__"],
     ).toBeUndefined();
   });
 

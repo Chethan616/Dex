@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveMainSessionKey } from "../config/sessions.js";
 import { runHeartbeatOnce } from "./heartbeat-runner.js";
 import {
@@ -63,7 +63,7 @@ describe("heartbeat transcript append-only (#39609)", () => {
           agent: { workspace: tmpDir },
           sessionStore: storePath,
           channels: { telegram: {} },
-        } as unknown as OpenClawConfig;
+        } as unknown as DexConfig;
 
         await runHeartbeatOnce({
           agentId: undefined,

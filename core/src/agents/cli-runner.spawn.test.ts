@@ -226,9 +226,9 @@ async function withTempExecApprovalsFile(
 ): Promise<void> {
   const originalHome = process.env.HOME;
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-cli-exec-approvals-"));
-  await fs.mkdir(path.join(home, ".openclaw"), { recursive: true });
+  await fs.mkdir(path.join(home, ".dex"), { recursive: true });
   await fs.writeFile(
-    path.join(home, ".openclaw", "exec-approvals.json"),
+    path.join(home, ".dex", "exec-approvals.json"),
     `${JSON.stringify(file)}\n`,
     "utf-8",
   );
@@ -246,16 +246,16 @@ async function withTempExecApprovalsFile(
 }
 
 async function withTempOpenClawHome(run: (home: string) => Promise<void>): Promise<void> {
-  const originalOpenClawHome = process.env.OPENCLAW_HOME;
+  const originalOpenClawHome = process.env.DEX_HOME;
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-cli-home-"));
-  process.env.OPENCLAW_HOME = home;
+  process.env.DEX_HOME = home;
   try {
     await run(home);
   } finally {
     if (originalOpenClawHome === undefined) {
-      delete process.env.OPENCLAW_HOME;
+      delete process.env.DEX_HOME;
     } else {
-      process.env.OPENCLAW_HOME = originalOpenClawHome;
+      process.env.DEX_HOME = originalOpenClawHome;
     }
     await fs.rm(home, { recursive: true, force: true });
   }
@@ -1889,7 +1889,7 @@ ${JSON.stringify({
 
   it("does not create exec approvals file while resolving Claude live policy", async () => {
     await withTempOpenClawHome(async (home) => {
-      const approvalsPath = path.join(home, ".openclaw", "exec-approvals.json");
+      const approvalsPath = path.join(home, ".dex", "exec-approvals.json");
       let stdoutListener: ((chunk: string) => void) | undefined;
       const stdin = {
         write: vi.fn((_data: string, cb?: (err?: Error | null) => void) => {
@@ -3165,7 +3165,7 @@ ${JSON.stringify({
 
   it("can preserve selected clearEnv keys for live CLI backend probes", async () => {
     try {
-      process.env.OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV = '["SAFE_CLEAR"]';
+      process.env.DEX_LIVE_CLI_BACKEND_PRESERVE_ENV = '["SAFE_CLEAR"]';
       process.env.SAFE_CLEAR = "from-base";
       mockSuccessfulCliRun();
       await executePreparedCliRun(
@@ -3186,7 +3186,7 @@ ${JSON.stringify({
       expect(input.env?.SAFE_CLEAR).toBe("from-base");
       expect(input.env?.SAFE_DROP).toBeUndefined();
     } finally {
-      delete process.env.OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV;
+      delete process.env.DEX_LIVE_CLI_BACKEND_PRESERVE_ENV;
       delete process.env.SAFE_CLEAR;
     }
   });

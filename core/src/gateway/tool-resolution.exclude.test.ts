@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 type CreateOpenClawToolsArg = {
   inheritedToolDenylist?: string[];
@@ -50,7 +50,7 @@ describe("resolveGatewayScopedTools excludeToolNames", () => {
 
   it("filters loopback dedup exclusions without inheriting policy denies", () => {
     const result = resolveGatewayScopedTools({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionKey: "agent:main:direct:test",
       surface: "loopback",
       excludeToolNames: ["read", "apply_patch"],
@@ -66,7 +66,7 @@ describe("resolveGatewayScopedTools excludeToolNames", () => {
     resolveGatewayScopedTools({
       cfg: {
         gateway: { tools: { deny: ["exec"] } },
-      } as OpenClawConfig,
+      } as DexConfig,
       sessionKey: "agent:main:direct:test",
       surface: "loopback",
       excludeToolNames: ["read", "apply_patch"],

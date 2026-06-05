@@ -217,7 +217,7 @@ describe("resolveTsdownBuildInvocation", () => {
     const result = resolveTsdownBuildInvocation({
       platform: "linux",
       nodeExecPath: "/usr/bin/node",
-      env: { OPENCLAW_BUILD_ALL_NO_PNPM: "1" },
+      env: { DEX_BUILD_ALL_NO_PNPM: "1" },
       ...NO_MEMORY_LIMIT,
     });
 
@@ -237,7 +237,7 @@ describe("resolveTsdownBuildInvocation", () => {
         windowsVerbatimArguments: undefined,
         env: {
           NODE_OPTIONS: "--max-old-space-size=12288",
-          OPENCLAW_BUILD_ALL_NO_PNPM: "1",
+          DEX_BUILD_ALL_NO_PNPM: "1",
         },
       },
     });
@@ -369,7 +369,7 @@ describe("resolveTsdownBuildInvocation", () => {
 
     cleanTsdownOutputRoots({
       cwd: rootDir,
-      env: { OPENCLAW_PRESERVE_CLI_STARTUP_METADATA: "1" },
+      env: { DEX_PRESERVE_CLI_STARTUP_METADATA: "1" },
     });
 
     await expect(fsPromises.readFile(metadataFile, "utf8")).resolves.toBe(
@@ -424,7 +424,7 @@ describe("resolveTsdownBuildInvocation", () => {
 
     cleanTsdownOutputRoots({
       cwd: rootDir,
-      env: { OPENCLAW_RUN_NODE_SKIP_DTS_BUILD: "1" },
+      env: { DEX_RUN_NODE_SKIP_DTS_BUILD: "1" },
     });
 
     await expect(fsPromises.readFile(declarationFile, "utf8")).resolves.toBe("export {};\n");
@@ -526,7 +526,7 @@ describe("runTsdownBuildInvocation", () => {
       {
         stdout: output.sink,
         stderr: output.sink,
-        env: { ...process.env, OPENCLAW_TSDOWN_HEARTBEAT_MS: "0" },
+        env: { ...process.env, DEX_TSDOWN_HEARTBEAT_MS: "0" },
       },
     );
 
@@ -535,7 +535,7 @@ describe("runTsdownBuildInvocation", () => {
     expect(output.chunks.join("")).toContain("stdout-ok");
   });
 
-  it("rejects malformed OPENCLAW_TSDOWN_TIMEOUT_MS values", async () => {
+  it("rejects malformed DEX_TSDOWN_TIMEOUT_MS values", async () => {
     const invocation = {
       command: process.execPath,
       args: ["-e", "process.exit(0)"],
@@ -551,14 +551,14 @@ describe("runTsdownBuildInvocation", () => {
         runTsdownBuildInvocation(invocation, {
           env: {
             ...process.env,
-            OPENCLAW_TSDOWN_TIMEOUT_MS: value,
+            DEX_TSDOWN_TIMEOUT_MS: value,
           },
         }),
-      ).rejects.toThrow("OPENCLAW_TSDOWN_TIMEOUT_MS must be");
+      ).rejects.toThrow("DEX_TSDOWN_TIMEOUT_MS must be");
     }
   });
 
-  it("rejects malformed OPENCLAW_TSDOWN_HEARTBEAT_MS values", async () => {
+  it("rejects malformed DEX_TSDOWN_HEARTBEAT_MS values", async () => {
     const invocation = {
       command: process.execPath,
       args: ["-e", "process.exit(0)"],
@@ -574,14 +574,14 @@ describe("runTsdownBuildInvocation", () => {
         runTsdownBuildInvocation(invocation, {
           env: {
             ...process.env,
-            OPENCLAW_TSDOWN_HEARTBEAT_MS: value,
+            DEX_TSDOWN_HEARTBEAT_MS: value,
           },
         }),
-      ).rejects.toThrow("OPENCLAW_TSDOWN_HEARTBEAT_MS must be");
+      ).rejects.toThrow("DEX_TSDOWN_HEARTBEAT_MS must be");
     }
   });
 
-  it("terminates the child when OPENCLAW_TSDOWN_TIMEOUT_MS elapses", async () => {
+  it("terminates the child when DEX_TSDOWN_TIMEOUT_MS elapses", async () => {
     const output = createWriteSink();
     const result = await runTsdownBuildInvocation(
       {
@@ -598,8 +598,8 @@ describe("runTsdownBuildInvocation", () => {
         stderr: output.sink,
         env: {
           ...process.env,
-          OPENCLAW_TSDOWN_HEARTBEAT_MS: "0",
-          OPENCLAW_TSDOWN_TIMEOUT_MS: "50",
+          DEX_TSDOWN_HEARTBEAT_MS: "0",
+          DEX_TSDOWN_TIMEOUT_MS: "50",
         },
       },
     );

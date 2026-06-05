@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../../config/config.js";
+import type { DexConfig } from "../../../config/config.js";
 import {
   listLegacyXSearchConfigPaths,
   migrateLegacyXSearchConfig,
@@ -17,7 +17,7 @@ describe("legacy x_search config migration", () => {
           },
         } as Record<string, unknown>,
       },
-    } as OpenClawConfig);
+    } as DexConfig);
 
     expect((res.config.tools?.web as Record<string, unknown> | undefined)?.x_search).toEqual({
       enabled: true,
@@ -63,7 +63,7 @@ describe("legacy x_search config migration", () => {
           },
         },
       },
-    } as OpenClawConfig);
+    } as DexConfig);
 
     expect((res.config.tools?.web as Record<string, unknown> | undefined)?.x_search).toEqual({
       enabled: true,
@@ -94,7 +94,7 @@ describe("legacy x_search config migration", () => {
           },
         } as Record<string, unknown>,
       },
-    } as OpenClawConfig);
+    } as DexConfig);
 
     expect((res.config.tools?.web as Record<string, unknown> | undefined)?.x_search).toEqual({
       enabled: true,
@@ -126,7 +126,7 @@ describe("legacy x_search config migration", () => {
           },
         } as Record<string, unknown>,
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const res = migrateLegacyXSearchConfig(config);
 
@@ -146,7 +146,7 @@ describe("legacy x_search config migration", () => {
             },
           } as Record<string, unknown>,
         },
-      } as OpenClawConfig),
+      } as DexConfig),
     ).toEqual(["tools.web.x_search.apiKey"]);
   });
 });

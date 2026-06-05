@@ -71,7 +71,7 @@ describe("bundled plugin build entries", () => {
     const entries = listBundledPluginBuildEntries({
       env: {
         ...process.env,
-        OPENCLAW_BUNDLED_PLUGIN_BUILD_IDS: "active-memory,acpx",
+        DEX_BUNDLED_PLUGIN_BUILD_IDS: "active-memory,acpx",
       },
     });
     const entryKeys = Object.keys(entries);
@@ -87,11 +87,11 @@ describe("bundled plugin build entries", () => {
       listBundledPluginBuildEntries({
         env: {
           ...process.env,
-          OPENCLAW_BUNDLED_PLUGIN_BUILD_IDS: "missing-plugin",
+          DEX_BUNDLED_PLUGIN_BUILD_IDS: "missing-plugin",
         },
       }),
     ).toThrow(
-      "OPENCLAW_BUNDLED_PLUGIN_BUILD_IDS references unknown bundled plugin id(s): missing-plugin",
+      "DEX_BUNDLED_PLUGIN_BUILD_IDS references unknown bundled plugin id(s): missing-plugin",
     );
   });
 

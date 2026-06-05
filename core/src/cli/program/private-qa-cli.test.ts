@@ -6,21 +6,21 @@ import { loadPrivateQaCliModule } from "./private-qa-cli.js";
 
 describe("private-qa-cli", () => {
   const tempDirs: string[] = [];
-  const originalPrivateQaCli = process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI;
+  const originalPrivateQaCli = process.env.DEX_ENABLE_PRIVATE_QA_CLI;
 
   afterEach(() => {
     for (const dir of tempDirs.splice(0)) {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     if (originalPrivateQaCli === undefined) {
-      delete process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI;
+      delete process.env.DEX_ENABLE_PRIVATE_QA_CLI;
     } else {
-      process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI = originalPrivateQaCli;
+      process.env.DEX_ENABLE_PRIVATE_QA_CLI = originalPrivateQaCli;
     }
   });
 
   it("loads the private QA CLI from a source checkout path", async () => {
-    process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI = "1";
+    process.env.DEX_ENABLE_PRIVATE_QA_CLI = "1";
     const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-private-qa-source-"));
     tempDirs.push(repoRoot);
     const expectedPaths = new Set([
@@ -52,7 +52,7 @@ describe("private-qa-cli", () => {
   });
 
   it("loads the private QA CLI from a raw synced source checkout path", async () => {
-    process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI = "1";
+    process.env.DEX_ENABLE_PRIVATE_QA_CLI = "1";
     const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-private-qa-raw-source-"));
     tempDirs.push(repoRoot);
     const expectedPaths = new Set([
@@ -79,7 +79,7 @@ describe("private-qa-cli", () => {
   });
 
   it("rejects non-source package roots even when private QA is enabled", () => {
-    process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI = "1";
+    process.env.DEX_ENABLE_PRIVATE_QA_CLI = "1";
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-private-qa-"));
     tempDirs.push(root);
     fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "openclaw" }), "utf8");
@@ -95,7 +95,7 @@ describe("private-qa-cli", () => {
   });
 
   it("rejects when the private QA env flag is disabled", () => {
-    delete process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI;
+    delete process.env.DEX_ENABLE_PRIVATE_QA_CLI;
     const importModule = vi.fn(async () => ({}));
 
     expect(() => loadPrivateQaCliModule({ importModule })).toThrow(

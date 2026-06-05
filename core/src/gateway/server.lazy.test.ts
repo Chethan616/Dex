@@ -1,20 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const originalTrace = process.env.OPENCLAW_GATEWAY_STARTUP_TRACE;
+const originalTrace = process.env.DEX_GATEWAY_STARTUP_TRACE;
 
 describe("gateway server boundary", () => {
   beforeEach(() => {
     vi.resetModules();
-    process.env.OPENCLAW_GATEWAY_STARTUP_TRACE = "1";
+    process.env.DEX_GATEWAY_STARTUP_TRACE = "1";
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     vi.resetModules();
     if (originalTrace === undefined) {
-      delete process.env.OPENCLAW_GATEWAY_STARTUP_TRACE;
+      delete process.env.DEX_GATEWAY_STARTUP_TRACE;
     } else {
-      process.env.OPENCLAW_GATEWAY_STARTUP_TRACE = originalTrace;
+      process.env.DEX_GATEWAY_STARTUP_TRACE = originalTrace;
     }
   });
 

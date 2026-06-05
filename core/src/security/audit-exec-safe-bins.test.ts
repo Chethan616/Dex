@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { collectExecRuntimeFindings } from "./audit.js";
 
 function hasFinding(
@@ -45,7 +45,7 @@ describe("security audit exec safe-bin findings", () => {
             },
           ],
         },
-      } satisfies OpenClawConfig,
+      } satisfies DexConfig,
       expected: true,
     },
     {
@@ -78,7 +78,7 @@ describe("security audit exec safe-bin findings", () => {
             },
           ],
         },
-      } satisfies OpenClawConfig,
+      } satisfies DexConfig,
       expected: false,
     },
   ])(
@@ -99,7 +99,7 @@ describe("security audit exec safe-bin findings", () => {
             safeBins: ["jq"],
           },
         },
-      } satisfies OpenClawConfig,
+      } satisfies DexConfig,
       expected: true,
     },
     {
@@ -110,7 +110,7 @@ describe("security audit exec safe-bin findings", () => {
             safeBins: ["cut"],
           },
         },
-      } satisfies OpenClawConfig,
+      } satisfies DexConfig,
       expected: false,
     },
   ])(
@@ -145,7 +145,7 @@ describe("security audit exec safe-bin findings", () => {
           },
         ],
       },
-    } satisfies OpenClawConfig);
+    } satisfies DexConfig);
 
     const riskyFinding = requireFinding("tools.exec.safe_bin_trusted_dirs_risky", findings);
     expect(riskyFinding.severity).toBe("warn");
@@ -164,7 +164,7 @@ describe("security audit exec safe-bin findings", () => {
               safeBinTrustedDirs: ["/usr/libexec"],
             },
           },
-        } satisfies OpenClawConfig),
+        } satisfies DexConfig),
       ),
     ).toBe(false);
   });

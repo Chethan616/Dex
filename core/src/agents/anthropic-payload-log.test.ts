@@ -7,7 +7,7 @@ describe("createAnthropicPayloadLogger", () => {
   it("sanitizes credential fields and image base64 payload data before writing logs", async () => {
     const lines: string[] = [];
     const logger = createAnthropicPayloadLogger({
-      env: { OPENCLAW_ANTHROPIC_PAYLOAD_LOG: "1" },
+      env: { DEX_ANTHROPIC_PAYLOAD_LOG: "1" },
       writer: {
         filePath: "memory",
         write: (line) => lines.push(line),
@@ -68,7 +68,7 @@ describe("createAnthropicPayloadLogger", () => {
   it("sanitizes usage and error fields before writing logs", () => {
     const lines: string[] = [];
     const logger = createAnthropicPayloadLogger({
-      env: { OPENCLAW_ANTHROPIC_PAYLOAD_LOG: "1" },
+      env: { DEX_ANTHROPIC_PAYLOAD_LOG: "1" },
       writer: {
         filePath: "memory",
         write: (line) => lines.push(line),

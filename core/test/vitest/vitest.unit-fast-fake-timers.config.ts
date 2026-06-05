@@ -8,7 +8,7 @@ export function createUnitFastFakeTimersVitestConfig(
   options: { argv?: string[] } = {},
 ) {
   const sharedTest = sharedVitestConfig.test ?? {};
-  const includeFromEnv = loadPatternListFromEnv("OPENCLAW_VITEST_INCLUDE_FILE", env);
+  const includeFromEnv = loadPatternListFromEnv("DEX_VITEST_INCLUDE_FILE", env);
   const unitFastTimerTestFiles = getUnitFastTimerTestFiles();
   const cliInclude = narrowIncludePatternsForCli(unitFastTimerTestFiles, options.argv);
 

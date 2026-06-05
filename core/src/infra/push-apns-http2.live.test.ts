@@ -10,18 +10,18 @@ const APNS_CONNECT_PORT = 443;
 const DEFAULT_TIMEOUT_MS = 15_000;
 
 const LIVE =
-  (isTruthyEnvValue(process.env.LIVE) || isTruthyEnvValue(process.env.OPENCLAW_LIVE_TEST)) &&
-  isTruthyEnvValue(process.env.OPENCLAW_LIVE_APNS_REACHABILITY);
+  (isTruthyEnvValue(process.env.LIVE) || isTruthyEnvValue(process.env.DEX_LIVE_TEST)) &&
+  isTruthyEnvValue(process.env.DEX_LIVE_APNS_REACHABILITY);
 const describeLive = LIVE ? describe : describe.skip;
 
 function getLiveTimeoutMs(): number {
-  const raw = process.env.OPENCLAW_LIVE_APNS_TIMEOUT_MS;
+  const raw = process.env.DEX_LIVE_APNS_TIMEOUT_MS;
   if (!raw) {
     return DEFAULT_TIMEOUT_MS;
   }
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error(`OPENCLAW_LIVE_APNS_TIMEOUT_MS must be a positive number, got ${raw}`);
+    throw new Error(`DEX_LIVE_APNS_TIMEOUT_MS must be a positive number, got ${raw}`);
   }
   return Math.trunc(parsed);
 }

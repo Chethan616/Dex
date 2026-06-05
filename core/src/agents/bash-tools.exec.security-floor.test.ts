@@ -23,15 +23,15 @@ describe("exec security floor", () => {
       "USERPROFILE",
       "HOMEDRIVE",
       "HOMEPATH",
-      "OPENCLAW_HOME",
-      "OPENCLAW_STATE_DIR",
+      "DEX_HOME",
+      "DEX_STATE_DIR",
       "SHELL",
     ]);
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-exec-security-floor-"));
     process.env.HOME = tempRoot;
     process.env.USERPROFILE = tempRoot;
-    process.env.OPENCLAW_HOME = tempRoot;
-    process.env.OPENCLAW_STATE_DIR = path.join(tempRoot, "state");
+    process.env.DEX_HOME = tempRoot;
+    process.env.DEX_STATE_DIR = path.join(tempRoot, "state");
     if (process.platform === "win32") {
       const parsed = path.parse(tempRoot);
       process.env.HOMEDRIVE = parsed.root.slice(0, 2);
@@ -120,7 +120,7 @@ describe("exec security floor", () => {
   });
 
   it("does not let host approval defaults deny implicit sandbox execution", async () => {
-    const openclawDir = path.join(tempRoot ?? os.tmpdir(), ".openclaw");
+    const openclawDir = path.join(tempRoot ?? os.tmpdir(), ".dex");
     fs.mkdirSync(openclawDir, { recursive: true });
     fs.writeFileSync(
       path.join(openclawDir, "exec-approvals.json"),
@@ -204,7 +204,7 @@ describe("exec security floor", () => {
   });
 
   it("intersects normalized gateway auto mode with host approval deny defaults", async () => {
-    const openclawDir = path.join(tempRoot ?? os.tmpdir(), ".openclaw");
+    const openclawDir = path.join(tempRoot ?? os.tmpdir(), ".dex");
     fs.mkdirSync(openclawDir, { recursive: true });
     fs.writeFileSync(
       path.join(openclawDir, "exec-approvals.json"),
@@ -231,7 +231,7 @@ describe("exec security floor", () => {
   });
 
   it("uses agent-scoped host policy when clamping normalized modes", async () => {
-    const openclawDir = path.join(tempRoot ?? os.tmpdir(), ".openclaw");
+    const openclawDir = path.join(tempRoot ?? os.tmpdir(), ".dex");
     fs.mkdirSync(openclawDir, { recursive: true });
     fs.writeFileSync(
       path.join(openclawDir, "exec-approvals.json"),
@@ -257,7 +257,7 @@ describe("exec security floor", () => {
   });
 
   it("preserves host ask floors for elevated full gateway exec", async () => {
-    const openclawDir = path.join(tempRoot ?? os.tmpdir(), ".openclaw");
+    const openclawDir = path.join(tempRoot ?? os.tmpdir(), ".dex");
     fs.mkdirSync(openclawDir, { recursive: true });
     fs.writeFileSync(
       path.join(openclawDir, "exec-approvals.json"),

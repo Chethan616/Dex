@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { setEmbeddedMode } from "../infra/embedded-mode.js";
 import { isToolWrappedWithBeforeToolCallHook } from "./agent-tools.before-tool-call.js";
 import { createOpenClawTools } from "./openclaw-tools.js";
@@ -10,7 +10,7 @@ import {
 import { createUpdatePlanTool } from "./tools/update-plan-tool.js";
 
 type UpdatePlanGatingParams = Parameters<typeof isUpdatePlanToolEnabledForOpenClawTools>[0];
-type CreateOpenClawToolsOptions = NonNullable<Parameters<typeof createOpenClawTools>[0]>;
+type CreateDexToolsOptions = NonNullable<Parameters<typeof createOpenClawTools>[0]>;
 
 function expectUpdatePlanEnabled(params: UpdatePlanGatingParams, expected: boolean): void {
   expect(isUpdatePlanToolEnabledForOpenClawTools(params)).toBe(expected);
@@ -20,7 +20,7 @@ function toolNames(tools: ReturnType<typeof createOpenClawTools>): string[] {
   return tools.map((tool) => tool.name);
 }
 
-function createFastToolNames(options: CreateOpenClawToolsOptions): string[] {
+function createFastToolNames(options: CreateDexToolsOptions): string[] {
   return toolNames(
     createOpenClawTools({
       disableMessageTool: true,
@@ -43,7 +43,7 @@ function expectToolNamed(
 }
 
 function openAiGpt5Params(
-  config: OpenClawConfig,
+  config: DexConfig,
   overrides: Partial<UpdatePlanGatingParams> = {},
 ): UpdatePlanGatingParams {
   const params: UpdatePlanGatingParams = {
@@ -65,17 +65,17 @@ describe("openclaw-tools update_plan gating", () => {
   });
 
   it("keeps update_plan disabled by default", () => {
-    expectUpdatePlanEnabled({ config: {} as OpenClawConfig }, false);
+    expectUpdatePlanEnabled({ config: {} as DexConfig }, false);
   });
 
   it("does not expose update_plan from default tool construction", () => {
     const defaultTools = createFastToolNames({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       modelProvider: "anthropic",
       modelId: "claude-sonnet-4-6",
     });
     const emptyAllowlistParams = {
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       pluginToolAllowlist: [],
       modelProvider: "anthropic",
       modelId: "claude-sonnet-4-6",
@@ -87,11 +87,11 @@ describe("openclaw-tools update_plan gating", () => {
 
   it("wraps constructed tools with before-tool-call hooks by default", () => {
     const tools = createOpenClawTools({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       disablePluginTools: true,
     });
     const unwrappedTools = createOpenClawTools({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       disablePluginTools: true,
       wrapBeforeToolCallHook: false,
     });
@@ -105,7 +105,7 @@ describe("openclaw-tools update_plan gating", () => {
   it("keeps message tool in embedded message-tool-only completions", () => {
     setEmbeddedMode(true);
     const tools = createOpenClawTools({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       disablePluginTools: true,
       wrapBeforeToolCallHook: false,
       sourceReplyDeliveryMode: "message_tool_only",
@@ -116,10 +116,10 @@ describe("openclaw-tools update_plan gating", () => {
 
   it("requires explicit transcripts enablement before registering the transcripts tool", () => {
     const defaultTools = createFastToolNames({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
     });
     const enabledTools = createFastToolNames({
-      config: { transcripts: { enabled: true } } as OpenClawConfig,
+      config: { transcripts: { enabled: true } } as DexConfig,
     });
 
     expect(defaultTools).not.toContain("transcripts");
@@ -129,18 +129,18 @@ describe("openclaw-tools update_plan gating", () => {
   it("keeps explicitly allowed message tool in embedded completions", () => {
     setEmbeddedMode(true);
     const fromRuntimeAllowlist = createOpenClawTools({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       disablePluginTools: true,
       pluginToolAllowlist: ["message"],
       wrapBeforeToolCallHook: false,
     });
     const fromGlobalAlsoAllow = createOpenClawTools({
-      config: { tools: { profile: "minimal", alsoAllow: ["message"] } } as OpenClawConfig,
+      config: { tools: { profile: "minimal", alsoAllow: ["message"] } } as DexConfig,
       disablePluginTools: true,
       wrapBeforeToolCallHook: false,
     });
     const denied = createOpenClawTools({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       disablePluginTools: true,
       pluginToolAllowlist: ["message"],
       pluginToolDenylist: ["message"],
@@ -155,10 +155,10 @@ describe("openclaw-tools update_plan gating", () => {
   it("keeps subagent spawn available for trusted embedded gateway-bound runs", () => {
     setEmbeddedMode(true);
     const defaultTools = createFastToolNames({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
     });
     const gatewayBoundTools = createFastToolNames({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       allowGatewaySubagentBinding: true,
     });
 
@@ -175,7 +175,7 @@ describe("openclaw-tools update_plan gating", () => {
           planTool: true,
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectUpdatePlanEnabled({ config }, true);
     expect(createUpdatePlanTool().displaySummary).toBe("Track short work plan.");
@@ -183,7 +183,7 @@ describe("openclaw-tools update_plan gating", () => {
 
   it("registers update_plan when the runtime allowlist explicitly requests it", () => {
     const tools = createFastToolNames({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       pluginToolAllowlist: ["update_plan"],
       modelProvider: "anthropic",
       modelId: "claude-sonnet-4-6",
@@ -194,7 +194,7 @@ describe("openclaw-tools update_plan gating", () => {
 
   it("includes update_plan when a config allowlist group includes it", () => {
     const includeUpdatePlan = shouldIncludeUpdatePlanToolForOpenClawTools({
-      config: { tools: { allow: ["group:agents"] } } as OpenClawConfig,
+      config: { tools: { allow: ["group:agents"] } } as DexConfig,
       modelProvider: "anthropic",
       modelId: "claude-sonnet-4-6",
     });
@@ -204,7 +204,7 @@ describe("openclaw-tools update_plan gating", () => {
 
   it("includes update_plan when a runtime allowlist group includes it", () => {
     const includeUpdatePlan = shouldIncludeUpdatePlanToolForOpenClawTools({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       pluginToolAllowlist: ["group:agents"],
       modelProvider: "anthropic",
       modelId: "claude-sonnet-4-6",
@@ -215,7 +215,7 @@ describe("openclaw-tools update_plan gating", () => {
 
   it("respects deny policy for grouped allowlists", () => {
     const includeUpdatePlan = shouldIncludeUpdatePlanToolForOpenClawTools({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       pluginToolAllowlist: ["group:agents"],
       pluginToolDenylist: ["update_plan"],
       modelProvider: "anthropic",
@@ -235,7 +235,7 @@ describe("openclaw-tools update_plan gating", () => {
       agents: {
         list: [{ id: "main" }],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectUpdatePlanEnabled(openAiGpt5Params(cfg), true);
   });
@@ -252,7 +252,7 @@ describe("openclaw-tools update_plan gating", () => {
         },
         list: [{ id: "main" }],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectUpdatePlanEnabled(openAiGpt5Params(cfg), false);
   });
@@ -262,7 +262,7 @@ describe("openclaw-tools update_plan gating", () => {
       agents: {
         list: [{ id: "main" }],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectUpdatePlanEnabled(
       openAiGpt5Params(cfg, { modelProvider: "anthropic", modelId: "claude-sonnet-4-6" }),
@@ -281,7 +281,7 @@ describe("openclaw-tools update_plan gating", () => {
         },
         list: [{ id: "main" }],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectUpdatePlanEnabled(openAiGpt5Params(cfg), true);
   });
@@ -296,7 +296,7 @@ describe("openclaw-tools update_plan gating", () => {
         },
         list: [{ id: "main" }],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectUpdatePlanEnabled(
       openAiGpt5Params(cfg, { modelProvider: "anthropic", modelId: "claude-sonnet-4-6" }),
@@ -320,7 +320,7 @@ describe("openclaw-tools update_plan gating", () => {
         },
         list: [{ id: "main" }],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectUpdatePlanEnabled(openAiGpt5Params(cfg), false);
   });
@@ -343,7 +343,7 @@ describe("openclaw-tools update_plan gating", () => {
           },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectUpdatePlanEnabled(openAiGpt5Params(cfg, { agentId: "research" }), true);
   });
@@ -368,7 +368,7 @@ describe("openclaw-tools update_plan gating", () => {
           },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectUpdatePlanEnabled(openAiGpt5Params(cfg, { agentId: "main" }), false);
     expectUpdatePlanEnabled(openAiGpt5Params(cfg, { agentId: "research" }), true);

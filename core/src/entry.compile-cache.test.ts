@@ -5,11 +5,11 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanupTempDirs, makeTempDir } from "../test/helpers/temp-dir.js";
 import {
-  buildOpenClawCompileCacheRespawnPlan,
+  buildDexCompileCacheRespawnPlan,
   isSourceCheckoutInstallRoot,
   resolveOpenClawCompileCacheDirectory,
   resolveEntryInstallRoot,
-  runOpenClawCompileCacheRespawnPlan,
+  runDexCompileCacheRespawnPlan,
   shouldEnableOpenClawCompileCache,
 } from "./entry.compile-cache.js";
 
@@ -86,7 +86,7 @@ describe("entry compile cache", () => {
     await fs.mkdir(path.join(root, "src"), { recursive: true });
     await fs.writeFile(path.join(root, "src", "entry.ts"), "export {};\n", "utf8");
 
-    const plan = buildOpenClawCompileCacheRespawnPlan({
+    const plan = buildDexCompileCacheRespawnPlan({
       currentFile: path.join(root, "dist", "entry.js"),
       env: { NODE_COMPILE_CACHE: "/tmp/openclaw-cache" },
       execArgv: ["--no-warnings"],
@@ -100,7 +100,7 @@ describe("entry compile cache", () => {
       args: ["--no-warnings", path.join(root, "dist", "entry.js"), "status", "--json"],
       env: {
         NODE_DISABLE_COMPILE_CACHE: "1",
-        OPENCLAW_SOURCE_COMPILE_CACHE_RESPAWNED: "1",
+        DEX_SOURCE_COMPILE_CACHE_RESPAWNED: "1",
       },
     });
   });
@@ -109,7 +109,7 @@ describe("entry compile cache", () => {
     const root = makeTempDir(tempDirs, "openclaw-compile-cache-package-respawn-");
 
     expect(
-      buildOpenClawCompileCacheRespawnPlan({
+      buildDexCompileCacheRespawnPlan({
         currentFile: path.join(root, "dist", "entry.js"),
         env: { NODE_COMPILE_CACHE: "/tmp/openclaw-cache" },
         installRoot: root,
@@ -123,11 +123,11 @@ describe("entry compile cache", () => {
     await fs.writeFile(path.join(root, "src", "entry.ts"), "export {};\n", "utf8");
 
     expect(
-      buildOpenClawCompileCacheRespawnPlan({
+      buildDexCompileCacheRespawnPlan({
         currentFile: path.join(root, "dist", "entry.js"),
         env: {
           NODE_COMPILE_CACHE: "/tmp/openclaw-cache",
-          OPENCLAW_SOURCE_COMPILE_CACHE_RESPAWNED: "1",
+          DEX_SOURCE_COMPILE_CACHE_RESPAWNED: "1",
         },
         installRoot: root,
       }),
@@ -141,7 +141,7 @@ describe("entry compile cache", () => {
     const exit = vi.fn();
     const writeError = vi.fn();
 
-    runOpenClawCompileCacheRespawnPlan(
+    runDexCompileCacheRespawnPlan(
       {
         command: "/usr/bin/node",
         args: ["/repo/openclaw/dist/entry.js", "status"],
@@ -181,7 +181,7 @@ describe("entry compile cache", () => {
     const spawn = vi.fn(() => child);
     const exit = vi.fn();
 
-    runOpenClawCompileCacheRespawnPlan(
+    runDexCompileCacheRespawnPlan(
       {
         command: "/usr/bin/node",
         args: ["/repo/openclaw/dist/entry.js"],
@@ -210,7 +210,7 @@ describe("entry compile cache", () => {
     let onSignal: ((signal: NodeJS.Signals) => void) | undefined;
 
     try {
-      runOpenClawCompileCacheRespawnPlan(
+      runDexCompileCacheRespawnPlan(
         {
           command: "/usr/bin/node",
           args: ["/repo/openclaw/dist/entry.js"],

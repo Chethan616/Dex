@@ -121,7 +121,7 @@ describe("managed Codex app-server binary", () => {
       "C:\\",
       "Users",
       "test",
-      ".openclaw",
+      ".dex",
       "npm",
       "projects",
       "openclaw-codex-hash",

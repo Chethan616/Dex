@@ -48,7 +48,7 @@ describe("persistBrowserProxyFiles", () => {
     ).rejects.toThrow("Media exceeds 5MB limit");
 
     await expect(
-      fs.stat(path.join(tempHome.home, ".openclaw", "media", "browser")),
+      fs.stat(path.join(tempHome.home, ".dex", "media", "browser")),
     ).rejects.toHaveProperty("code", "ENOENT");
   });
 });

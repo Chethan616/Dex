@@ -111,9 +111,9 @@ describe("ensureAuthProfileStore", () => {
     previousAgentDir: string | undefined;
   }): void {
     if ("previousStateDir" in params) {
-      restoreEnvValue("OPENCLAW_STATE_DIR", params.previousStateDir);
+      restoreEnvValue("DEX_STATE_DIR", params.previousStateDir);
     }
-    restoreEnvValue("OPENCLAW_AGENT_DIR", params.previousAgentDir);
+    restoreEnvValue("DEX_AGENT_DIR", params.previousAgentDir);
   }
 
   function configureMainAuthTestDirs(root: string): {
@@ -122,15 +122,15 @@ describe("ensureAuthProfileStore", () => {
     previousStateDir: string | undefined;
     previousAgentDir: string | undefined;
   } {
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    const previousAgentDir = process.env.OPENCLAW_AGENT_DIR;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    const previousAgentDir = process.env.DEX_AGENT_DIR;
     const mainDir = path.join(root, "agents", "main", "agent");
     const agentDir = path.join(root, "agents", "agent-x", "agent");
     fs.mkdirSync(mainDir, { recursive: true });
     fs.mkdirSync(agentDir, { recursive: true });
 
-    process.env.OPENCLAW_STATE_DIR = root;
-    process.env.OPENCLAW_AGENT_DIR = mainDir;
+    process.env.DEX_STATE_DIR = root;
+    process.env.DEX_AGENT_DIR = mainDir;
     clearRuntimeAuthProfileStoreSnapshots();
     return { mainDir, agentDir, previousStateDir, previousAgentDir };
   }
@@ -819,8 +819,8 @@ describe("ensureAuthProfileStore", () => {
 
   it("merges legacy oauth.json into auth-profiles.json", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-oauth-migrate-"));
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    const previousAgentDir = process.env.OPENCLAW_AGENT_DIR;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    const previousAgentDir = process.env.DEX_AGENT_DIR;
     try {
       const agentDir = path.join(root, "agent");
       const oauthDir = path.join(root, "credentials");
@@ -843,8 +843,8 @@ describe("ensureAuthProfileStore", () => {
         "utf8",
       );
 
-      process.env.OPENCLAW_STATE_DIR = root;
-      process.env.OPENCLAW_AGENT_DIR = agentDir;
+      process.env.DEX_STATE_DIR = root;
+      process.env.DEX_AGENT_DIR = agentDir;
       clearRuntimeAuthProfileStoreSnapshots();
 
       const store = ensureAuthProfileStore(agentDir);
@@ -869,7 +869,7 @@ describe("ensureAuthProfileStore", () => {
       expect(persistedProfile).not.toHaveProperty("idToken");
     } finally {
       clearRuntimeAuthProfileStoreSnapshots();
-      restoreEnvValue("OPENCLAW_STATE_DIR", previousStateDir);
+      restoreEnvValue("DEX_STATE_DIR", previousStateDir);
       restoreAgentDirEnv({ previousAgentDir });
       fs.rmSync(root, { recursive: true, force: true });
     }
@@ -877,7 +877,7 @@ describe("ensureAuthProfileStore", () => {
 
   it("exposes provider-managed runtime auth without persisting copied tokens", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-external-auth-"));
-    const previousAgentDir = process.env.OPENCLAW_AGENT_DIR;
+    const previousAgentDir = process.env.DEX_AGENT_DIR;
     try {
       const agentDir = path.join(root, "agent");
       fs.mkdirSync(agentDir, { recursive: true });
@@ -896,7 +896,7 @@ describe("ensureAuthProfileStore", () => {
         },
       ]);
 
-      process.env.OPENCLAW_AGENT_DIR = agentDir;
+      process.env.DEX_AGENT_DIR = agentDir;
       clearRuntimeAuthProfileStoreSnapshots();
 
       const store = ensureAuthProfileStore(agentDir);
@@ -917,9 +917,9 @@ describe("ensureAuthProfileStore", () => {
 
   it("does not write inherited auth stores during secrets runtime reads", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-secrets-runtime-"));
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
+    const previousStateDir = process.env.DEX_STATE_DIR;
     try {
-      const stateDir = path.join(root, ".openclaw");
+      const stateDir = path.join(root, ".dex");
       const mainAgentDir = path.join(stateDir, "agents", "main", "agent");
       const workerAgentDir = path.join(stateDir, "agents", "worker", "agent");
       const workerStorePath = path.join(workerAgentDir, "auth-profiles.json");
@@ -942,7 +942,7 @@ describe("ensureAuthProfileStore", () => {
         )}\n`,
         "utf8",
       );
-      process.env.OPENCLAW_STATE_DIR = stateDir;
+      process.env.DEX_STATE_DIR = stateDir;
       clearRuntimeAuthProfileStoreSnapshots();
 
       const store = loadAuthProfileStoreForRuntime(workerAgentDir, { readOnly: true });
@@ -954,16 +954,16 @@ describe("ensureAuthProfileStore", () => {
       expect(fs.existsSync(workerStorePath)).toBe(false);
     } finally {
       clearRuntimeAuthProfileStoreSnapshots();
-      restoreEnvValue("OPENCLAW_STATE_DIR", previousStateDir);
+      restoreEnvValue("DEX_STATE_DIR", previousStateDir);
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
 
   it("does not clone inherited auth stores during normal agent reads", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-auth-read-through-"));
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
+    const previousStateDir = process.env.DEX_STATE_DIR;
     try {
-      const stateDir = path.join(root, ".openclaw");
+      const stateDir = path.join(root, ".dex");
       const mainAgentDir = path.join(stateDir, "agents", "main", "agent");
       const workerAgentDir = path.join(stateDir, "agents", "worker", "agent");
       const workerStorePath = path.join(workerAgentDir, "auth-profiles.json");
@@ -988,7 +988,7 @@ describe("ensureAuthProfileStore", () => {
         )}\n`,
         "utf8",
       );
-      process.env.OPENCLAW_STATE_DIR = stateDir;
+      process.env.DEX_STATE_DIR = stateDir;
       clearRuntimeAuthProfileStoreSnapshots();
 
       const store = ensureAuthProfileStore(workerAgentDir);
@@ -1001,7 +1001,7 @@ describe("ensureAuthProfileStore", () => {
       expect(fs.existsSync(workerStorePath)).toBe(false);
     } finally {
       clearRuntimeAuthProfileStoreSnapshots();
-      restoreEnvValue("OPENCLAW_STATE_DIR", previousStateDir);
+      restoreEnvValue("DEX_STATE_DIR", previousStateDir);
       fs.rmSync(root, { recursive: true, force: true });
     }
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveModelCatalogScope } from "./model-catalog-scope.js";
 
 describe("resolveModelCatalogScope", () => {
@@ -24,7 +24,7 @@ describe("resolveModelCatalogScope", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveModelCatalogScope({

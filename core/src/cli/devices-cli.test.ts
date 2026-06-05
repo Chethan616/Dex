@@ -1275,7 +1275,7 @@ describe("devices cli local fallback", () => {
     summarizeDeviceTokens.mockReturnValue(undefined);
 
     await expect(runDevicesCommand(["list"])).rejects.toThrow(
-      "different OPENCLAW_PROFILE or OPENCLAW_STATE_DIR",
+      "different DEX_PROFILE or DEX_STATE_DIR",
     );
     expect(readRuntimeOutput()).not.toContain(fallbackNotice);
   });

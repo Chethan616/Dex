@@ -58,7 +58,7 @@ describe("runCodexAppServerAttempt dynamic tools", () => {
     params.sessionKey = "agent:main:main";
 
     expect(
-      testing.resolveOpenClawCodingToolsSessionKeys(
+      testing.resolveDexCodingToolsSessionKeys(
         params,
         "agent:main:telegram:default:direct:1234",
       ),
@@ -67,7 +67,7 @@ describe("runCodexAppServerAttempt dynamic tools", () => {
       runSessionKey: "agent:main:main",
     });
 
-    expect(testing.resolveOpenClawCodingToolsSessionKeys(params, "agent:main:main")).toEqual({
+    expect(testing.resolveDexCodingToolsSessionKeys(params, "agent:main:main")).toEqual({
       sessionKey: "agent:main:main",
       runSessionKey: undefined,
     });

@@ -139,25 +139,25 @@ describe("buildQaRuntimeEnv", () => {
       providerMode: "mock-openai",
     });
 
-    expect(env.OPENCLAW_TEST_FAST).toBe("1");
-    expect(env.OPENCLAW_EMBEDDED_ABORT_SETTLE_TIMEOUT_MS).toBe("2000");
-    expect(env.OPENCLAW_QA_PARENT_PID).toBe(String(process.pid));
-    expect(env.OPENCLAW_QA_TEMP_ROOT).toBe("/tmp/openclaw-qa");
-    expect(env.OPENCLAW_QA_STAGED_RUNTIME_ROOT).toBe(
+    expect(env.DEX_TEST_FAST).toBe("1");
+    expect(env.DEX_EMBEDDED_ABORT_SETTLE_TIMEOUT_MS).toBe("2000");
+    expect(env.DEX_QA_PARENT_PID).toBe(String(process.pid));
+    expect(env.DEX_QA_TEMP_ROOT).toBe("/tmp/openclaw-qa");
+    expect(env.DEX_QA_STAGED_RUNTIME_ROOT).toBe(
       "/repo/.artifacts/qa-runtime/openclaw-qa-suite-test",
     );
-    expect(env.OPENCLAW_QA_ALLOW_LOCAL_IMAGE_PROVIDER).toBe("1");
-    expect(env.OPENCLAW_ALLOW_SLOW_REPLY_TESTS).toBe("1");
-    expect(env.OPENCLAW_BUNDLED_PLUGINS_DIR).toBe("/tmp/openclaw-qa/bundled-plugins");
-    expect(env.OPENCLAW_COMPATIBILITY_HOST_VERSION).toBe("2026.4.8");
+    expect(env.DEX_QA_ALLOW_LOCAL_IMAGE_PROVIDER).toBe("1");
+    expect(env.DEX_ALLOW_SLOW_REPLY_TESTS).toBe("1");
+    expect(env.DEX_BUNDLED_PLUGINS_DIR).toBe("/tmp/openclaw-qa/bundled-plugins");
+    expect(env.DEX_COMPATIBILITY_HOST_VERSION).toBe("2026.4.8");
   });
 
   it("maps live frontier key aliases into provider env vars", () => {
     const env = buildQaRuntimeEnv({
       ...createParams({
-        OPENCLAW_LIVE_OPENAI_KEY: "openai-live",
-        OPENCLAW_LIVE_ANTHROPIC_KEY: "anthropic-live",
-        OPENCLAW_LIVE_GEMINI_KEY: "gemini-live",
+        DEX_LIVE_OPENAI_KEY: "openai-live",
+        DEX_LIVE_ANTHROPIC_KEY: "anthropic-live",
+        DEX_LIVE_GEMINI_KEY: "gemini-live",
       }),
       providerMode: "live-frontier",
     });
@@ -176,7 +176,7 @@ describe("buildQaRuntimeEnv", () => {
     const env = buildQaRuntimeEnv({
       ...createParams({
         OPENAI_API_KEY: "openai-explicit",
-        OPENCLAW_LIVE_OPENAI_KEY: "openai-live",
+        DEX_LIVE_OPENAI_KEY: "openai-live",
       }),
       providerMode: "live-frontier",
     });
@@ -200,7 +200,7 @@ describe("buildQaRuntimeEnv", () => {
     });
 
     expect(env.HOME).toBe("/tmp/openclaw-qa/home");
-    expect(env.OPENCLAW_HOME).toBe("/tmp/openclaw-qa/home");
+    expect(env.DEX_HOME).toBe("/tmp/openclaw-qa/home");
     expect(env.CODEX_HOME).toBe(codexHome);
   });
 
@@ -219,8 +219,8 @@ describe("buildQaRuntimeEnv", () => {
     });
 
     expect(env.HOME).toBe(hostHome);
-    expect(env.OPENCLAW_HOME).toBe("/tmp/openclaw-qa/home");
-    expect(env.OPENCLAW_STATE_DIR).toBe("/tmp/openclaw-qa/state");
+    expect(env.DEX_HOME).toBe("/tmp/openclaw-qa/home");
+    expect(env.DEX_STATE_DIR).toBe("/tmp/openclaw-qa/state");
   });
 
   it("can forward host HOME for browser-backed QA runs while keeping OpenClaw home sandboxed", async () => {
@@ -238,8 +238,8 @@ describe("buildQaRuntimeEnv", () => {
     });
 
     expect(env.HOME).toBe(hostHome);
-    expect(env.OPENCLAW_HOME).toBe("/tmp/openclaw-qa/home");
-    expect(env.OPENCLAW_STATE_DIR).toBe("/tmp/openclaw-qa/state");
+    expect(env.DEX_HOME).toBe("/tmp/openclaw-qa/home");
+    expect(env.DEX_STATE_DIR).toBe("/tmp/openclaw-qa/state");
   });
 
   it("preserves the live Anthropic key for live Claude CLI runs without writing it into config", async () => {
@@ -251,8 +251,8 @@ describe("buildQaRuntimeEnv", () => {
     const env = buildQaRuntimeEnv({
       ...createParams({
         HOME: hostHome,
-        OPENCLAW_LIVE_ANTHROPIC_KEY: "anthropic-live",
-        OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV: '["SAFE_KEEP"]',
+        DEX_LIVE_ANTHROPIC_KEY: "anthropic-live",
+        DEX_LIVE_CLI_BACKEND_PRESERVE_ENV: '["SAFE_KEEP"]',
       }),
       providerMode: "live-frontier",
       forwardHostHomeForClaudeCli: true,
@@ -260,8 +260,8 @@ describe("buildQaRuntimeEnv", () => {
     });
 
     expect(env.ANTHROPIC_API_KEY).toBe("anthropic-live");
-    expect(env.OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV).toBe('["SAFE_KEEP","ANTHROPIC_API_KEY"]');
-    expect(env.OPENCLAW_LIVE_CLI_BACKEND_AUTH_MODE).toBe("api-key");
+    expect(env.DEX_LIVE_CLI_BACKEND_PRESERVE_ENV).toBe('["SAFE_KEEP","ANTHROPIC_API_KEY"]');
+    expect(env.DEX_LIVE_CLI_BACKEND_AUTH_MODE).toBe("api-key");
   });
 
   it("removes preserved Anthropic keys for live Claude CLI subscription runs", async () => {
@@ -274,7 +274,7 @@ describe("buildQaRuntimeEnv", () => {
       ...createParams({
         HOME: hostHome,
         ANTHROPIC_API_KEY: "anthropic-live",
-        OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV: '["SAFE_KEEP","ANTHROPIC_API_KEY"]',
+        DEX_LIVE_CLI_BACKEND_PRESERVE_ENV: '["SAFE_KEEP","ANTHROPIC_API_KEY"]',
       }),
       providerMode: "live-frontier",
       forwardHostHomeForClaudeCli: true,
@@ -282,34 +282,34 @@ describe("buildQaRuntimeEnv", () => {
     });
 
     expect(env.ANTHROPIC_API_KEY).toBe("anthropic-live");
-    expect(env.OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV).toBe('["SAFE_KEEP"]');
-    expect(env.OPENCLAW_LIVE_CLI_BACKEND_AUTH_MODE).toBe("subscription");
+    expect(env.DEX_LIVE_CLI_BACKEND_PRESERVE_ENV).toBe('["SAFE_KEEP"]');
+    expect(env.DEX_LIVE_CLI_BACKEND_AUTH_MODE).toBe("subscription");
   });
 
   it("does not pass QA setup-token values to the gateway child env", () => {
     const env = buildQaRuntimeEnv({
       ...createParams({
-        OPENCLAW_LIVE_SETUP_TOKEN_VALUE: `sk-ant-oat01-${"a".repeat(80)}`,
-        OPENCLAW_QA_LIVE_ANTHROPIC_SETUP_TOKEN: `sk-ant-oat01-${"b".repeat(80)}`,
+        DEX_LIVE_SETUP_TOKEN_VALUE: `sk-ant-oat01-${"a".repeat(80)}`,
+        DEX_QA_LIVE_ANTHROPIC_SETUP_TOKEN: `sk-ant-oat01-${"b".repeat(80)}`,
       }),
       providerMode: "live-frontier",
     });
 
-    expect(env.OPENCLAW_LIVE_SETUP_TOKEN_VALUE).toBeUndefined();
-    expect(env.OPENCLAW_QA_LIVE_ANTHROPIC_SETUP_TOKEN).toBeUndefined();
+    expect(env.DEX_LIVE_SETUP_TOKEN_VALUE).toBeUndefined();
+    expect(env.DEX_QA_LIVE_ANTHROPIC_SETUP_TOKEN).toBeUndefined();
   });
 
   it("does not pass Convex credential broker secrets to the gateway child env", () => {
     const env = buildQaRuntimeEnv({
       ...createParams({
-        OPENCLAW_QA_CONVEX_SECRET_CI: "convex-ci-secret",
-        OPENCLAW_QA_CONVEX_SECRET_MAINTAINER: "convex-maintainer-secret",
+        DEX_QA_CONVEX_SECRET_CI: "convex-ci-secret",
+        DEX_QA_CONVEX_SECRET_MAINTAINER: "convex-maintainer-secret",
       }),
       providerMode: "live-frontier",
     });
 
-    expect(env.OPENCLAW_QA_CONVEX_SECRET_CI).toBeUndefined();
-    expect(env.OPENCLAW_QA_CONVEX_SECRET_MAINTAINER).toBeUndefined();
+    expect(env.DEX_QA_CONVEX_SECRET_CI).toBeUndefined();
+    expect(env.DEX_QA_CONVEX_SECRET_MAINTAINER).toBeUndefined();
   });
 
   it("requires an Anthropic key for live Claude CLI API-key mode", async () => {
@@ -356,11 +356,11 @@ describe("buildQaRuntimeEnv", () => {
           OPENAI_API_KEY: "openai-live",
           OPENAI_API_KEYS: "openai-a,openai-b",
           CODEX_HOME: "/host/.codex",
-          OPENCLAW_LIVE_ANTHROPIC_KEY: "anthropic-live",
-          OPENCLAW_LIVE_ANTHROPIC_KEYS: "anthropic-a,anthropic-b",
-          OPENCLAW_LIVE_CODEX_API_KEY: "codex-live",
-          OPENCLAW_LIVE_GEMINI_KEY: "gemini-live",
-          OPENCLAW_LIVE_OPENAI_KEY: "openai-live",
+          DEX_LIVE_ANTHROPIC_KEY: "anthropic-live",
+          DEX_LIVE_ANTHROPIC_KEYS: "anthropic-a,anthropic-b",
+          DEX_LIVE_CODEX_API_KEY: "codex-live",
+          DEX_LIVE_GEMINI_KEY: "gemini-live",
+          DEX_LIVE_OPENAI_KEY: "openai-live",
         }),
         providerMode,
       });
@@ -374,11 +374,11 @@ describe("buildQaRuntimeEnv", () => {
       expect(env.GEMINI_API_KEY).toBeUndefined();
       expect(env.GEMINI_API_KEYS).toBeUndefined();
       expect(env.GOOGLE_API_KEY).toBeUndefined();
-      expect(env.OPENCLAW_LIVE_OPENAI_KEY).toBeUndefined();
-      expect(env.OPENCLAW_LIVE_ANTHROPIC_KEY).toBeUndefined();
-      expect(env.OPENCLAW_LIVE_ANTHROPIC_KEYS).toBeUndefined();
-      expect(env.OPENCLAW_LIVE_CODEX_API_KEY).toBeUndefined();
-      expect(env.OPENCLAW_LIVE_GEMINI_KEY).toBeUndefined();
+      expect(env.DEX_LIVE_OPENAI_KEY).toBeUndefined();
+      expect(env.DEX_LIVE_ANTHROPIC_KEY).toBeUndefined();
+      expect(env.DEX_LIVE_ANTHROPIC_KEYS).toBeUndefined();
+      expect(env.DEX_LIVE_CODEX_API_KEY).toBeUndefined();
+      expect(env.DEX_LIVE_GEMINI_KEY).toBeUndefined();
     },
   );
 
@@ -456,7 +456,7 @@ describe("buildQaRuntimeEnv", () => {
       cfg: {},
       stateDir,
       env: {
-        OPENCLAW_LIVE_SETUP_TOKEN_VALUE: token,
+        DEX_LIVE_SETUP_TOKEN_VALUE: token,
       },
     });
 
@@ -522,7 +522,7 @@ describe("buildQaRuntimeEnv", () => {
       stateDir,
       providerIds: ["openai"],
       env: {
-        OPENCLAW_LIVE_OPENAI_KEY: "qa-live-codex-fallback-key",
+        DEX_LIVE_OPENAI_KEY: "qa-live-codex-fallback-key",
       },
     });
 
@@ -564,7 +564,7 @@ describe("buildQaRuntimeEnv", () => {
       stateDir,
       providerIds: ["openai"],
       env: {
-        OPENCLAW_LIVE_CODEX_API_KEY: "qa-live-direct-codex-key",
+        DEX_LIVE_CODEX_API_KEY: "qa-live-direct-codex-key",
       },
     });
 
@@ -585,7 +585,7 @@ describe("buildQaRuntimeEnv", () => {
         cfg,
         providerIds: ["openai"],
         env: {
-          OPENCLAW_LIVE_CODEX_API_KEY: "qa-live-direct-codex-key",
+          DEX_LIVE_CODEX_API_KEY: "qa-live-direct-codex-key",
         },
         readCodexCredentials: () => null,
       }),
@@ -647,7 +647,7 @@ describe("buildQaRuntimeEnv", () => {
         providerIds: ["openai"],
         env: {
           CODEX_HOME: path.join(os.tmpdir(), "missing-openclaw-codex-home"),
-          OPENCLAW_QA_FORCE_RUNTIME: "codex",
+          DEX_QA_FORCE_RUNTIME: "codex",
         },
         readCodexCredentials: () => null,
       }),
@@ -660,8 +660,8 @@ describe("buildQaRuntimeEnv", () => {
         cfg: {},
         providerIds: ["openai"],
         env: {
-          OPENCLAW_LIVE_OPENAI_KEY: "qa-live-codex-fallback-key",
-          OPENCLAW_QA_FORCE_RUNTIME: "codex",
+          DEX_LIVE_OPENAI_KEY: "qa-live-codex-fallback-key",
+          DEX_QA_FORCE_RUNTIME: "codex",
         },
         readCodexCredentials: () => null,
       }),
@@ -723,7 +723,7 @@ describe("buildQaRuntimeEnv", () => {
       await rm(stateDir, { recursive: true, force: true });
     });
     const env = {
-      OPENCLAW_LIVE_CODEX_API_KEY: "qa-configured-env-ref-not-a-real-key",
+      DEX_LIVE_CODEX_API_KEY: "qa-configured-env-ref-not-a-real-key",
     };
     const cfg = await testing.stageQaLiveApiKeyProfiles({
       cfg: {
@@ -735,7 +735,7 @@ describe("buildQaRuntimeEnv", () => {
               apiKey: {
                 source: "env",
                 provider: "default",
-                id: "OPENCLAW_LIVE_CODEX_API_KEY",
+                id: "DEX_LIVE_CODEX_API_KEY",
               },
             },
           },
@@ -780,7 +780,7 @@ describe("buildQaRuntimeEnv", () => {
             openai: {
               baseUrl: "",
               models: [],
-              apiKey: "OPENCLAW_LIVE_CODEX_API_KEY",
+              apiKey: "DEX_LIVE_CODEX_API_KEY",
             },
           },
         },
@@ -788,7 +788,7 @@ describe("buildQaRuntimeEnv", () => {
       stateDir,
       providerIds: ["openai"],
       env: {
-        OPENCLAW_LIVE_CODEX_API_KEY: "qa-configured-marker-not-a-real-key",
+        DEX_LIVE_CODEX_API_KEY: "qa-configured-marker-not-a-real-key",
       },
     });
 
@@ -1039,11 +1039,11 @@ describe("buildQaRuntimeEnv", () => {
     await writeFile(
       stdoutLogPath,
       [
-        "OPENCLAW_GATEWAY_TOKEN=qa-suite-token",
+        "DEX_GATEWAY_TOKEN=qa-suite-token",
         'OPENAI_API_KEY="openai-live"',
-        "OPENCLAW_QA_CONVEX_SECRET_CI=convex-ci-secret",
-        "OPENCLAW_QA_CONVEX_SECRET_MAINTAINER=convex-maintainer-secret",
-        "OPENCLAW_LIVE_CODEX_API_KEY=codex-live-secret",
+        "DEX_QA_CONVEX_SECRET_CI=convex-ci-secret",
+        "DEX_QA_CONVEX_SECRET_MAINTAINER=convex-maintainer-secret",
+        "DEX_LIVE_CODEX_API_KEY=codex-live-secret",
         "botToken=12345:AbCdEfGhIjKl",
         '"driverToken":"12345:driver-secr3t"',
         "sutToken='12345:sut-secr3t'",
@@ -1071,11 +1071,11 @@ describe("buildQaRuntimeEnv", () => {
     ]);
     await expect(readFile(path.join(artifactDir, "gateway.stdout.log"), "utf8")).resolves.toBe(
       [
-        "OPENCLAW_GATEWAY_TOKEN=<redacted>",
+        "DEX_GATEWAY_TOKEN=<redacted>",
         "OPENAI_API_KEY=<redacted>",
-        "OPENCLAW_QA_CONVEX_SECRET_CI=<redacted>",
-        "OPENCLAW_QA_CONVEX_SECRET_MAINTAINER=<redacted>",
-        "OPENCLAW_LIVE_CODEX_API_KEY=<redacted>",
+        "DEX_QA_CONVEX_SECRET_CI=<redacted>",
+        "DEX_QA_CONVEX_SECRET_MAINTAINER=<redacted>",
+        "DEX_LIVE_CODEX_API_KEY=<redacted>",
         "botToken=<redacted>",
         '"driverToken":"<redacted>"',
         "sutToken=<redacted>",
@@ -1684,7 +1684,7 @@ describe("qa bundled plugin dir", () => {
 
     const overrides = await testing.readQaLiveProviderConfigOverrides({
       providerIds: ["custom-openai"],
-      env: { OPENCLAW_QA_LIVE_PROVIDER_CONFIG_PATH: configPath },
+      env: { DEX_QA_LIVE_PROVIDER_CONFIG_PATH: configPath },
     });
     expect(Object.keys(overrides)).toEqual(["custom-openai"]);
     expect(overrides["custom-openai"]?.baseUrl).toBe("https://api.example.test/v1");
@@ -1707,7 +1707,7 @@ describe("qa bundled plugin dir", () => {
             openai: {
               apiKey: {
                 source: "env",
-                id: "OPENCLAW_LIVE_CODEX_API_KEY",
+                id: "DEX_LIVE_CODEX_API_KEY",
               },
             },
           },
@@ -1718,14 +1718,14 @@ describe("qa bundled plugin dir", () => {
 
     const overrides = await testing.readQaLiveProviderConfigOverrides({
       providerIds: ["openai"],
-      env: { OPENCLAW_QA_LIVE_PROVIDER_CONFIG_PATH: configPath },
+      env: { DEX_QA_LIVE_PROVIDER_CONFIG_PATH: configPath },
     });
     expect(Object.keys(overrides)).toEqual(["openai"]);
     expect(overrides["openai"]?.baseUrl).toBe("");
     expect(overrides["openai"]?.models).toEqual([]);
     expect(overrides["openai"]?.apiKey).toEqual({
       source: "env",
-      id: "OPENCLAW_LIVE_CODEX_API_KEY",
+      id: "DEX_LIVE_CODEX_API_KEY",
     });
   });
 
@@ -1747,7 +1747,7 @@ describe("qa bundled plugin dir", () => {
               models: [],
               apiKey: {
                 source: "env",
-                id: "OPENCLAW_LIVE_CODEX_API_KEY",
+                id: "DEX_LIVE_CODEX_API_KEY",
               },
             },
           },
@@ -1758,7 +1758,7 @@ describe("qa bundled plugin dir", () => {
 
     const overrides = await testing.readQaLiveProviderConfigOverrides({
       providerIds: ["openai"],
-      env: { OPENCLAW_QA_LIVE_PROVIDER_CONFIG_PATH: configPath },
+      env: { DEX_QA_LIVE_PROVIDER_CONFIG_PATH: configPath },
     });
     expect(Object.keys(overrides)).toEqual(["openai"]);
     expect(overrides.openai?.baseUrl).toBe("https://proxy.example.test/v1");

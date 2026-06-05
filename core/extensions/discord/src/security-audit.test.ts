@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ResolvedDiscordAccount } from "./accounts.js";
-import type { OpenClawConfig } from "./runtime-api.js";
+import type { DexConfig } from "./runtime-api.js";
 import { collectDiscordSecurityAuditFindings } from "./security-audit.js";
 
 type DiscordAccountConfig = ResolvedDiscordAccount["config"];
@@ -28,7 +28,7 @@ function createAccount(
 }
 
 async function collectFindings(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   config: DiscordAccountConfig;
   accountId?: string;
   orderedAccountIds?: string[];
@@ -47,7 +47,7 @@ async function collectFindings(params: {
 
 describe("Discord security audit findings", () => {
   it("flags slash commands when access-group enforcement is disabled and no users allowlist exists", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       commands: { native: true, useAccessGroups: false },
       channels: {
         discord: {
@@ -99,7 +99,7 @@ describe("Discord security audit findings", () => {
             },
           },
         },
-      } satisfies OpenClawConfig,
+      } satisfies DexConfig,
       expectFinding: true,
     },
     {
@@ -121,7 +121,7 @@ describe("Discord security audit findings", () => {
             },
           },
         },
-      } satisfies OpenClawConfig,
+      } satisfies DexConfig,
       expectFinding: false,
     },
   ])("$name", async (testCase) => {
@@ -161,7 +161,7 @@ describe("Discord security audit findings", () => {
         "channels.discord.allowFrom:Alice#1234",
         "channels.discord.guilds.123.users:trusted.operator",
         "channels.discord.guilds.123.channels.general.users:security-team",
-        "~/.openclaw/credentials/discord-allowFrom.json:team.owner",
+        "~/.dex/credentials/discord-allowFrom.json:team.owner",
       ],
       detailExcludes: ["<@123456789012345678>"],
     },

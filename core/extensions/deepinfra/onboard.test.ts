@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as providerAuth from "openclaw/plugin-sdk/provider-auth-runtime";
 import {
-  type OpenClawConfig,
+  type DexConfig,
   resolveAgentModelPrimaryValue,
 } from "openclaw/plugin-sdk/provider-onboard";
 import { captureEnv } from "openclaw/plugin-sdk/test-env";
@@ -18,7 +18,7 @@ import { DEEPINFRA_DEFAULT_MODEL_ID } from "./provider-models.js";
 
 const { resolveEnvApiKey } = providerAuth;
 
-const emptyCfg: OpenClawConfig = {};
+const emptyCfg: DexConfig = {};
 
 describe("DeepInfra provider config", () => {
   describe("constants", () => {
@@ -55,7 +55,7 @@ describe("DeepInfra provider config", () => {
     });
 
     it("preserves existing alias if already set", () => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             models: {
@@ -70,7 +70,7 @@ describe("DeepInfra provider config", () => {
     });
 
     it("does not change the default model selection", () => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             model: { primary: "openai/gpt-5" },

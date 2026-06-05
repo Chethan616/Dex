@@ -123,7 +123,7 @@ describe("run-tsgo sparse guard", () => {
       }),
     ).toMatchInlineSnapshot(`
       "tsconfig.core.json cannot be typechecked from this sparse checkout because tracked project inputs are missing or only partially included:
-      - apps/shared/OpenClawKit/Sources/OpenClawKit/Resources/tool-display.json
+      - apps/shared/DexKit/Sources/DexKit/Resources/tool-display.json
       Expand this worktree's sparse checkout to include those paths, or rerun in a full worktree."
     `);
   });
@@ -149,12 +149,12 @@ describe("run-tsgo sparse guard", () => {
   });
 
   it("recognizes the check:changed sparse-skip env", () => {
-    expect(shouldSkipSparseTsgoGuardError({ OPENCLAW_TSGO_SPARSE_SKIP: "1" })).toBe(true);
-    expect(shouldSkipSparseTsgoGuardError({ OPENCLAW_TSGO_SPARSE_SKIP: "true" })).toBe(true);
-    expect(shouldSkipSparseTsgoGuardError({ OPENCLAW_TSGO_SPARSE_SKIP: "0" })).toBe(false);
+    expect(shouldSkipSparseTsgoGuardError({ DEX_TSGO_SPARSE_SKIP: "1" })).toBe(true);
+    expect(shouldSkipSparseTsgoGuardError({ DEX_TSGO_SPARSE_SKIP: "true" })).toBe(true);
+    expect(shouldSkipSparseTsgoGuardError({ DEX_TSGO_SPARSE_SKIP: "0" })).toBe(false);
     expect(createSparseTsgoSkipEnv({ PATH: "/usr/bin" })).toStrictEqual({
       PATH: "/usr/bin",
-      OPENCLAW_TSGO_SPARSE_SKIP: "1",
+      DEX_TSGO_SPARSE_SKIP: "1",
     });
   });
 });

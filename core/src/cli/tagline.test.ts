@@ -10,10 +10,10 @@ describe("pickTagline", () => {
     expect(pickTagline({ mode: "default" })).toBe(DEFAULT_TAGLINE);
   });
 
-  it("keeps OPENCLAW_TAGLINE_INDEX behavior in random mode", () => {
+  it("keeps DEX_TAGLINE_INDEX behavior in random mode", () => {
     const value = pickTagline({
       mode: "random",
-      env: { OPENCLAW_TAGLINE_INDEX: "0" } as NodeJS.ProcessEnv,
+      env: { DEX_TAGLINE_INDEX: "0" } as NodeJS.ProcessEnv,
     });
     expect(value).toBe(
       "Your terminal just grew claws\u2014type something and let the bot pinch the busywork.",
@@ -21,11 +21,11 @@ describe("pickTagline", () => {
     expect(value).not.toBe(DEFAULT_TAGLINE);
   });
 
-  it("ignores partial OPENCLAW_TAGLINE_INDEX values", () => {
+  it("ignores partial DEX_TAGLINE_INDEX values", () => {
     expect(
       pickTagline({
         mode: "random",
-        env: { OPENCLAW_TAGLINE_INDEX: "1abc" } as NodeJS.ProcessEnv,
+        env: { DEX_TAGLINE_INDEX: "1abc" } as NodeJS.ProcessEnv,
         random: () => 0,
       }),
     ).toBe("Your terminal just grew claws\u2014type something and let the bot pinch the busywork.");

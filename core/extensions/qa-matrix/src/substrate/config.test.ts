@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { describe, expect, it } from "vitest";
 import {
   buildMatrixQaConfig,
@@ -51,7 +51,7 @@ describe("matrix qa config", () => {
   };
 
   it("builds default Matrix QA config from provisioned topology", () => {
-    const next = buildMatrixQaConfig({} as OpenClawConfig, {
+    const next = buildMatrixQaConfig({} as DexConfig, {
       driverUserId: "@driver:matrix-qa.test",
       homeserver: "http://127.0.0.1:28008/",
       observerUserId: "@observer:matrix-qa.test",
@@ -81,7 +81,7 @@ describe("matrix qa config", () => {
   });
 
   it("applies room-keyed Matrix QA config overrides", () => {
-    const next = buildMatrixQaConfig({} as OpenClawConfig, {
+    const next = buildMatrixQaConfig({} as DexConfig, {
       driverUserId: "@driver:matrix-qa.test",
       homeserver: "http://127.0.0.1:28008/",
       observerUserId: "@observer:matrix-qa.test",
@@ -183,7 +183,7 @@ describe("matrix qa config", () => {
   });
 
   it("rewrites the owned Matrix QA account instead of retaining stale override fields", () => {
-    const overridden = buildMatrixQaConfig({} as OpenClawConfig, {
+    const overridden = buildMatrixQaConfig({} as DexConfig, {
       driverUserId: "@driver:matrix-qa.test",
       homeserver: "http://127.0.0.1:28008/",
       observerUserId: "@observer:matrix-qa.test",
@@ -308,7 +308,7 @@ describe("matrix qa config", () => {
   });
 
   it("applies Matrix approval delivery overrides with gateway forwarding enabled", () => {
-    const next = buildMatrixQaConfig({} as OpenClawConfig, {
+    const next = buildMatrixQaConfig({} as DexConfig, {
       driverUserId: "@driver:matrix-qa.test",
       homeserver: "http://127.0.0.1:28008/",
       observerUserId: "@observer:matrix-qa.test",
@@ -362,7 +362,7 @@ describe("matrix qa config", () => {
 
   it("rejects configured bot roles without matching side-account auth", () => {
     expect(() =>
-      buildMatrixQaConfig({} as OpenClawConfig, {
+      buildMatrixQaConfig({} as DexConfig, {
         driverUserId: "@driver:matrix-qa.test",
         homeserver: "http://127.0.0.1:28008/",
         observerUserId: "@observer:matrix-qa.test",
@@ -379,7 +379,7 @@ describe("matrix qa config", () => {
 
   it("rejects the SUT role as a configured bot source", () => {
     expect(() =>
-      buildMatrixQaConfig({} as OpenClawConfig, {
+      buildMatrixQaConfig({} as DexConfig, {
         driverUserId: "@driver:matrix-qa.test",
         homeserver: "http://127.0.0.1:28008/",
         observerUserId: "@observer:matrix-qa.test",
@@ -396,7 +396,7 @@ describe("matrix qa config", () => {
 
   it("rejects unknown room-key overrides", () => {
     expect(() =>
-      buildMatrixQaConfig({} as OpenClawConfig, {
+      buildMatrixQaConfig({} as DexConfig, {
         driverUserId: "@driver:matrix-qa.test",
         homeserver: "http://127.0.0.1:28008/",
         observerUserId: "@observer:matrix-qa.test",

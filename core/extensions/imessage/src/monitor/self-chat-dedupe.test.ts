@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installIMessageStateRuntimeForTest } from "../test-support/runtime.js";
 import { createSentMessageCache } from "./echo-cache.js";
@@ -24,7 +24,7 @@ import { createSelfChatCache } from "./self-chat-cache.js";
 
 type InboundDecisionParams = Parameters<typeof resolveIMessageInboundDecision>[0];
 
-const cfg = {} as OpenClawConfig;
+const cfg = {} as DexConfig;
 
 beforeEach(() => {
   installIMessageStateRuntimeForTest();

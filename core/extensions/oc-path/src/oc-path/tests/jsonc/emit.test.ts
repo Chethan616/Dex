@@ -57,7 +57,7 @@ describe("emitJsonc — render mode", () => {
 
   it("throws when a leaf string EMBEDS the sentinel (prefix/suffix wrap)", () => {
     // Regression: prior to this fix, render mode used `value.value === SENTINEL`
-    // (exact match), so `prefix__OPENCLAW_REDACTED__suffix` slipped through.
+    // (exact match), so `prefix__DEX_REDACTED__suffix` slipped through.
     // The roundtrip path always used `.includes()` for the same reason —
     // render must too. Catches the sentinel-guard bypass class.
     const ast = parseJsonc('{ "x": "ok" }').ast;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { collectSmallModelRiskFindings } from "./audit-extra.summary.js";
 
 function requireFirstSmallModelFinding(
@@ -17,7 +17,7 @@ describe("security audit small-model risk findings", () => {
   it("scores small-model risk by tool/sandbox exposure", () => {
     const cases: Array<{
       name: string;
-      cfg: OpenClawConfig;
+      cfg: DexConfig;
       expectedSeverity: "info" | "critical";
       detailIncludes: string[];
     }> = [
@@ -74,7 +74,7 @@ describe("security audit small-model risk findings", () => {
           },
           tools: { web: { search: { enabled: true }, fetch: { enabled: true } } },
           browser: { enabled: true },
-        } satisfies OpenClawConfig,
+        } satisfies DexConfig,
         env: {},
       }),
       "configured alias",
@@ -106,7 +106,7 @@ describe("security audit small-model risk findings", () => {
             },
           },
           browser: { enabled: true },
-        } satisfies OpenClawConfig,
+        } satisfies DexConfig,
         env: {},
       }),
       "provider/model deny",

@@ -57,11 +57,11 @@ function validateChangelogEntry(repo: string, contrib: string): string {
     "bash",
     [
       "-c",
-      'source "$OPENCLAW_PR_CHANGELOG_SH"; validate_changelog_entry_for_pr 123 "$OPENCLAW_TEST_CONTRIB"',
+      'source "$DEX_PR_CHANGELOG_SH"; validate_changelog_entry_for_pr 123 "$DEX_TEST_CONTRIB"',
     ],
     {
-      OPENCLAW_PR_CHANGELOG_SH: changelogScriptPath,
-      OPENCLAW_TEST_CONTRIB: contrib,
+      DEX_PR_CHANGELOG_SH: changelogScriptPath,
+      DEX_TEST_CONTRIB: contrib,
     },
   );
 }
@@ -70,9 +70,9 @@ function validateChangelogAttributionPolicy(repo: string): string {
   return run(
     repo,
     "bash",
-    ["-c", 'source "$OPENCLAW_PR_CHANGELOG_SH"; validate_changelog_attribution_policy'],
+    ["-c", 'source "$DEX_PR_CHANGELOG_SH"; validate_changelog_attribution_policy'],
     {
-      OPENCLAW_PR_CHANGELOG_SH: changelogScriptPath,
+      DEX_PR_CHANGELOG_SH: changelogScriptPath,
     },
   );
 }
@@ -224,28 +224,28 @@ describe("check-changelog-attributions", () => {
           "-c",
           `
 set -euo pipefail
-source "$OPENCLAW_PR_COMMON_SH"
-source "$OPENCLAW_PR_CHANGELOG_SH"
-source "$OPENCLAW_PR_GATES_SH"
+source "$DEX_PR_COMMON_SH"
+source "$DEX_PR_CHANGELOG_SH"
+source "$DEX_PR_GATES_SH"
 
 enter_worktree() { :; }
 checkout_prep_branch() { :; }
 bootstrap_deps_if_needed() { :; }
 require_artifact() { [ -s "$1" ]; }
-normalize_pr_changelog_entries() { printf 'normalize\\n' >>"$OPENCLAW_TEST_CALLS"; }
-validate_changelog_attribution_policy() { printf 'policy\\n' >>"$OPENCLAW_TEST_CALLS"; }
-validate_changelog_merge_hygiene() { printf 'merge-hygiene\\n' >>"$OPENCLAW_TEST_CALLS"; }
-validate_changelog_entry_for_pr() { printf 'entry:%s:%s\\n' "$1" "$2" >>"$OPENCLAW_TEST_CALLS"; }
-run_quiet_logged() { printf 'gate:%s\\n' "$1" >>"$OPENCLAW_TEST_CALLS"; }
+normalize_pr_changelog_entries() { printf 'normalize\\n' >>"$DEX_TEST_CALLS"; }
+validate_changelog_attribution_policy() { printf 'policy\\n' >>"$DEX_TEST_CALLS"; }
+validate_changelog_merge_hygiene() { printf 'merge-hygiene\\n' >>"$DEX_TEST_CALLS"; }
+validate_changelog_entry_for_pr() { printf 'entry:%s:%s\\n' "$1" "$2" >>"$DEX_TEST_CALLS"; }
+run_quiet_logged() { printf 'gate:%s\\n' "$1" >>"$DEX_TEST_CALLS"; }
 
 prepare_gates 123
 `,
         ],
         {
-          OPENCLAW_PR_COMMON_SH: commonScriptPath,
-          OPENCLAW_PR_CHANGELOG_SH: changelogScriptPath,
-          OPENCLAW_PR_GATES_SH: gatesScriptPath,
-          OPENCLAW_TEST_CALLS: callsPath,
+          DEX_PR_COMMON_SH: commonScriptPath,
+          DEX_PR_CHANGELOG_SH: changelogScriptPath,
+          DEX_PR_GATES_SH: gatesScriptPath,
+          DEX_TEST_CALLS: callsPath,
         },
       );
       const calls = readFileSync(callsPath, "utf8");

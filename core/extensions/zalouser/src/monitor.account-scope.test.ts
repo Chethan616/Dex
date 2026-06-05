@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig, PluginRuntime } from "../runtime-api.js";
+import type { DexConfig, PluginRuntime } from "../runtime-api.js";
 import "./monitor.send-mocks.js";
 import { testing } from "./monitor.js";
 import "./zalo-js.test-mocks.js";
@@ -71,7 +71,7 @@ describe("zalouser monitor pairing account scoping", () => {
       },
     };
 
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       channels: {
         zalouser: {
           accounts: {

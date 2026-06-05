@@ -12,7 +12,7 @@ const readConfigFileSnapshotMock = vi.fn();
 const loadConfig = vi.fn(() => ({}));
 const newerConfigHints = [
   "Run the newer openclaw binary on PATH, or reinstall the intended gateway service from the newer install.",
-  "Set OPENCLAW_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS=1 only for an intentional downgrade or recovery action.",
+  "Set DEX_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS=1 only for an intentional downgrade or recovery action.",
 ];
 const newerConfigHintItems = newerConfigHints.map((text) => ({ kind: "generic", text }));
 const invalidConfigRecoveryHint = [

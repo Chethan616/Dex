@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { setActivePluginRegistry } from "../../plugins/runtime.js";
 import { createOutboundTestPlugin, createTestRegistry } from "../../test-utils/channel-plugins.js";
 import { runMessageAction } from "./message-action-runner.js";
@@ -33,7 +33,7 @@ const slackConfig = {
       enabled: true,
     },
   },
-} as OpenClawConfig;
+} as DexConfig;
 
 function registerSlackTextPlugin() {
   const sendText = vi.fn().mockResolvedValue({
@@ -106,7 +106,7 @@ describe("runMessageAction core send routing", () => {
           enabled: true,
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = await runMessageAction({
       cfg,
@@ -159,7 +159,7 @@ describe("runMessageAction core send routing", () => {
           enabled: true,
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = await runMessageAction({
       cfg,
@@ -216,7 +216,7 @@ describe("runMessageAction core send routing", () => {
             botToken: "123:test",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       action: "send",
       params: {
         channel: "telegram",
@@ -346,7 +346,7 @@ describe("runMessageAction core send routing", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         action: "send",
         params: {
           channel: "telegram",
@@ -405,7 +405,7 @@ describe("runMessageAction core send routing", () => {
             auto: "tagged",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       action: "send",
       params: {
         channel: "testchat",
@@ -465,7 +465,7 @@ describe("runMessageAction core send routing", () => {
             auto: "inbound",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       action: "send",
       params: {
         channel: "testchat",

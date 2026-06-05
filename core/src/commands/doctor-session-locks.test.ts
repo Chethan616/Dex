@@ -2,8 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  createOpenClawTestState,
-  type OpenClawTestState,
+  createDexTestState,
+  type DexTestState,
 } from "../test-utils/openclaw-test-state.js";
 
 const note = vi.hoisted(() => vi.fn());
@@ -32,11 +32,11 @@ function firstNoteCall(): [string, string] {
 }
 
 describe("noteSessionLockHealth", () => {
-  let state: OpenClawTestState;
+  let state: DexTestState;
 
   beforeEach(async () => {
     note.mockClear();
-    state = await createOpenClawTestState({
+    state = await createDexTestState({
       layout: "state-only",
       prefix: "openclaw-doctor-locks-",
     });

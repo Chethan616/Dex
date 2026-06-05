@@ -161,7 +161,7 @@ describeCacheLive("MCP-style prompt caching (live)", () => {
       const fixture = await resolveLiveDirectModel({
         provider: "openai",
         api: "openai-responses",
-        envVar: "OPENCLAW_LIVE_OPENAI_CACHE_MODEL",
+        envVar: "DEX_LIVE_OPENAI_CACHE_MODEL",
         preferredModelIds: ["gpt-5.5", "gpt-5.4-mini", "gpt-5.4"],
       });
       logLiveCache(`openai mcp-style model=${fixture.model.provider}/${fixture.model.id}`);

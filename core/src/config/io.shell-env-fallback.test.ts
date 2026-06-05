@@ -22,7 +22,7 @@ vi.mock("../infra/shell-env.js", async (importOriginal) => ({
 async function withConfig(run: (params: { home: string; configPath: string }) => Promise<void>) {
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-shell-env-"));
   try {
-    const configPath = path.join(home, ".openclaw", "openclaw.json");
+    const configPath = path.join(home, ".dex", "openclaw.json");
     await fs.mkdir(path.dirname(configPath), { recursive: true });
     await fs.writeFile(
       configPath,

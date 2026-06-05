@@ -102,8 +102,8 @@ describe("push-apns.relay", () => {
     it("lets env overrides win and clamps tiny timeout values", () => {
       const resolved = resolveApnsRelayConfigFromEnv(
         {
-          OPENCLAW_APNS_RELAY_BASE_URL: " https://relay-override.example.com/base/ ",
-          OPENCLAW_APNS_RELAY_TIMEOUT_MS: "999",
+          DEX_APNS_RELAY_BASE_URL: " https://relay-override.example.com/base/ ",
+          DEX_APNS_RELAY_TIMEOUT_MS: "999",
         } as NodeJS.ProcessEnv,
         {
           push: {
@@ -125,8 +125,8 @@ describe("push-apns.relay", () => {
 
     it("caps oversized timeout values before they reach AbortSignal.timeout", () => {
       const resolved = resolveApnsRelayConfigFromEnv({
-        OPENCLAW_APNS_RELAY_BASE_URL: "https://relay.example.com",
-        OPENCLAW_APNS_RELAY_TIMEOUT_MS: String(Number.MAX_SAFE_INTEGER),
+        DEX_APNS_RELAY_BASE_URL: "https://relay.example.com",
+        DEX_APNS_RELAY_TIMEOUT_MS: String(Number.MAX_SAFE_INTEGER),
       } as NodeJS.ProcessEnv);
 
       expectRelayConfig(resolved, {
@@ -137,9 +137,9 @@ describe("push-apns.relay", () => {
 
     it("allows loopback http URLs for alternate truthy env values", () => {
       const resolved = resolveApnsRelayConfigFromEnv({
-        OPENCLAW_APNS_RELAY_BASE_URL: "http://[::1]:8787",
-        OPENCLAW_APNS_RELAY_ALLOW_HTTP: "yes",
-        OPENCLAW_APNS_RELAY_TIMEOUT_MS: "nope",
+        DEX_APNS_RELAY_BASE_URL: "http://[::1]:8787",
+        DEX_APNS_RELAY_ALLOW_HTTP: "yes",
+        DEX_APNS_RELAY_TIMEOUT_MS: "nope",
       } as NodeJS.ProcessEnv);
 
       expectRelayConfig(resolved, {
@@ -151,25 +151,25 @@ describe("push-apns.relay", () => {
     it.each([
       {
         name: "unsupported protocol",
-        env: { OPENCLAW_APNS_RELAY_BASE_URL: "ftp://relay.example.com" },
+        env: { DEX_APNS_RELAY_BASE_URL: "ftp://relay.example.com" },
         expected: "unsupported protocol",
       },
       {
         name: "http non-loopback host",
         env: {
-          OPENCLAW_APNS_RELAY_BASE_URL: "http://relay.example.com",
-          OPENCLAW_APNS_RELAY_ALLOW_HTTP: "true",
+          DEX_APNS_RELAY_BASE_URL: "http://relay.example.com",
+          DEX_APNS_RELAY_ALLOW_HTTP: "true",
         },
         expected: "loopback hosts",
       },
       {
         name: "query string",
-        env: { OPENCLAW_APNS_RELAY_BASE_URL: "https://relay.example.com/path?debug=1" },
+        env: { DEX_APNS_RELAY_BASE_URL: "https://relay.example.com/path?debug=1" },
         expected: "query and fragment are not allowed",
       },
       {
         name: "userinfo",
-        env: { OPENCLAW_APNS_RELAY_BASE_URL: "https://user:pass@relay.example.com/path" },
+        env: { DEX_APNS_RELAY_BASE_URL: "https://user:pass@relay.example.com/path" },
         expected: "userinfo is not allowed",
       },
     ])("rejects invalid relay URL: $name", ({ env, expected }) => {

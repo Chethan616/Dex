@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { cleanupTrackedTempDirs } from "../plugins/test-helpers/fs-fixtures.js";
 import type { RuntimeEnv } from "../runtime.js";
 import {
@@ -20,7 +20,7 @@ function makeTrustedBundledPluginsDir() {
   return dir;
 }
 
-function configWithPluginLoadPath(pluginRoot: string): OpenClawConfig {
+function configWithPluginLoadPath(pluginRoot: string): DexConfig {
   return {
     plugins: {
       load: {

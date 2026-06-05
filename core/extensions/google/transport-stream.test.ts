@@ -568,7 +568,7 @@ describe("google transport stream", () => {
   });
 
   it("rejects non-integer Gemini 3 first-response retry env values", () => {
-    const envName = "OPENCLAW_GOOGLE_GEMINI_FIRST_RESPONSE_RETRY_MS";
+    const envName = "DEX_GOOGLE_GEMINI_FIRST_RESPONSE_RETRY_MS";
 
     expect(resolveGoogleGemini3FirstResponseRetryMs({ [envName]: "1200" })).toBe(1200);
     expect(resolveGoogleGemini3FirstResponseRetryMs({ [envName]: "0" })).toBe(0);
@@ -631,7 +631,7 @@ describe("google transport stream", () => {
   });
 
   it("retries Gemini 3 requests with lean thinking when the first attempt has no first response", async () => {
-    vi.stubEnv("OPENCLAW_GOOGLE_GEMINI_FIRST_RESPONSE_RETRY_MS", "10");
+    vi.stubEnv("DEX_GOOGLE_GEMINI_FIRST_RESPONSE_RETRY_MS", "10");
     guardedFetchMock
       .mockImplementationOnce(
         (_url: string, init?: RequestInit) =>
@@ -701,7 +701,7 @@ describe("google transport stream", () => {
   });
 
   it("keeps streaming after the first Gemini 3 chunk arrives before the retry deadline", async () => {
-    vi.stubEnv("OPENCLAW_GOOGLE_GEMINI_FIRST_RESPONSE_RETRY_MS", "10");
+    vi.stubEnv("DEX_GOOGLE_GEMINI_FIRST_RESPONSE_RETRY_MS", "10");
     guardedFetchMock.mockResolvedValueOnce(
       buildDelayedSecondSseResponse({
         first: {

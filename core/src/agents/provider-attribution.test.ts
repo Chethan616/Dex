@@ -106,7 +106,7 @@ import {
 describe("provider attribution", () => {
   it("resolves the canonical OpenClaw product and runtime version", () => {
     const identity = resolveProviderAttributionIdentity({
-      OPENCLAW_VERSION: "2026.3.99",
+      DEX_VERSION: "2026.3.99",
     });
 
     expect(identity).toEqual({
@@ -117,7 +117,7 @@ describe("provider attribution", () => {
 
   it("returns a documented OpenRouter attribution policy", () => {
     const policy = resolveProviderAttributionPolicy("openrouter", {
-      OPENCLAW_VERSION: "2026.3.22",
+      DEX_VERSION: "2026.3.22",
     });
 
     expect(policy).toEqual({
@@ -140,7 +140,7 @@ describe("provider attribution", () => {
 
   it("returns a documented NVIDIA attribution policy", () => {
     const policy = resolveProviderAttributionPolicy("nvidia", {
-      OPENCLAW_VERSION: "2026.3.22",
+      DEX_VERSION: "2026.3.22",
     });
 
     expect(policy).toEqual({
@@ -156,7 +156,7 @@ describe("provider attribution", () => {
         "X-BILLING-INVOKE-ORIGIN": "OpenClaw",
       },
     });
-    expect(resolveProviderAttributionHeaders("NVIDIA", { OPENCLAW_VERSION: "2026.3.22" })).toEqual({
+    expect(resolveProviderAttributionHeaders("NVIDIA", { DEX_VERSION: "2026.3.22" })).toEqual({
       "X-BILLING-INVOKE-ORIGIN": "OpenClaw",
     });
   });
@@ -164,7 +164,7 @@ describe("provider attribution", () => {
   it("normalizes aliases when resolving provider headers", () => {
     expect(
       resolveProviderAttributionHeaders("OpenRouter", {
-        OPENCLAW_VERSION: "2026.3.22",
+        DEX_VERSION: "2026.3.22",
       }),
     ).toEqual({
       "HTTP-Referer": "https://openclaw.ai",
@@ -175,7 +175,7 @@ describe("provider attribution", () => {
   });
 
   it("returns a hidden-spec OpenAI attribution policy", () => {
-    expect(resolveProviderAttributionPolicy("openai", { OPENCLAW_VERSION: "2026.3.22" })).toEqual({
+    expect(resolveProviderAttributionPolicy("openai", { DEX_VERSION: "2026.3.22" })).toEqual({
       provider: "openai",
       enabledByDefault: true,
       verification: "vendor-hidden-api-spec",
@@ -190,7 +190,7 @@ describe("provider attribution", () => {
         "User-Agent": "openclaw/2026.3.22",
       },
     });
-    expect(resolveProviderAttributionHeaders("openai", { OPENCLAW_VERSION: "2026.3.22" })).toEqual({
+    expect(resolveProviderAttributionHeaders("openai", { DEX_VERSION: "2026.3.22" })).toEqual({
       originator: "openclaw",
       version: "2026.3.22",
       "User-Agent": "openclaw/2026.3.22",
@@ -198,7 +198,7 @@ describe("provider attribution", () => {
   });
 
   it("maps legacy OpenAI Codex attribution to canonical OpenAI policy", () => {
-    expect(resolveProviderAttributionPolicy("openai", { OPENCLAW_VERSION: "2026.3.22" })).toEqual({
+    expect(resolveProviderAttributionPolicy("openai", { DEX_VERSION: "2026.3.22" })).toEqual({
       provider: "openai",
       enabledByDefault: true,
       verification: "vendor-hidden-api-spec",
@@ -216,7 +216,7 @@ describe("provider attribution", () => {
   });
 
   it("returns a hidden-spec xAI attribution policy", () => {
-    expect(resolveProviderAttributionPolicy("xai", { OPENCLAW_VERSION: "2026.3.22" })).toEqual({
+    expect(resolveProviderAttributionPolicy("xai", { DEX_VERSION: "2026.3.22" })).toEqual({
       provider: "xai",
       enabledByDefault: true,
       verification: "vendor-hidden-api-spec",
@@ -231,7 +231,7 @@ describe("provider attribution", () => {
         "User-Agent": "openclaw/2026.3.22",
       },
     });
-    expect(resolveProviderAttributionHeaders("xai", { OPENCLAW_VERSION: "2026.3.22" })).toEqual({
+    expect(resolveProviderAttributionHeaders("xai", { DEX_VERSION: "2026.3.22" })).toEqual({
       originator: "openclaw",
       version: "2026.3.22",
       "User-Agent": "openclaw/2026.3.22",
@@ -240,7 +240,7 @@ describe("provider attribution", () => {
 
   it("lists the current attribution support matrix", () => {
     expect(
-      listProviderAttributionPolicies({ OPENCLAW_VERSION: "2026.3.22" }).map((policy) => [
+      listProviderAttributionPolicies({ DEX_VERSION: "2026.3.22" }).map((policy) => [
         policy.provider,
         policy.enabledByDefault,
         policy.verification,
@@ -269,7 +269,7 @@ describe("provider attribution", () => {
           transport: "stream",
           capability: "llm",
         },
-        { OPENCLAW_VERSION: "2026.3.22" },
+        { DEX_VERSION: "2026.3.22" },
       ),
       {
         endpointClass: "xai-native",
@@ -286,7 +286,7 @@ describe("provider attribution", () => {
           transport: "stream",
           capability: "llm",
         },
-        { OPENCLAW_VERSION: "2026.3.22" },
+        { DEX_VERSION: "2026.3.22" },
       ),
     ).toEqual({
       originator: "openclaw",
@@ -302,7 +302,7 @@ describe("provider attribution", () => {
           transport: "stream",
           capability: "llm",
         },
-        { OPENCLAW_VERSION: "2026.3.22" },
+        { DEX_VERSION: "2026.3.22" },
       ),
       {
         endpointClass: "default",
@@ -320,7 +320,7 @@ describe("provider attribution", () => {
           transport: "stream",
           capability: "llm",
         },
-        { OPENCLAW_VERSION: "2026.3.22" },
+        { DEX_VERSION: "2026.3.22" },
       ),
       {
         endpointClass: "custom",
@@ -340,7 +340,7 @@ describe("provider attribution", () => {
           transport: "stream",
           capability: "llm",
         },
-        { OPENCLAW_VERSION: "2026.3.22" },
+        { DEX_VERSION: "2026.3.22" },
       ),
       {
         endpointClass: "openai-public",
@@ -361,7 +361,7 @@ describe("provider attribution", () => {
           transport: "stream",
           capability: "llm",
         },
-        { OPENCLAW_VERSION: "2026.3.22" },
+        { DEX_VERSION: "2026.3.22" },
       ),
       {
         endpointClass: "custom",

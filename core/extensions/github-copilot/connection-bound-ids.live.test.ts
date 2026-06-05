@@ -6,16 +6,16 @@ import { wrapCopilotOpenAIResponsesStream } from "./stream.js";
 import { resolveCopilotApiToken } from "./token.js";
 
 const LIVE =
-  process.env.OPENCLAW_LIVE_TEST === "1" ||
+  process.env.DEX_LIVE_TEST === "1" ||
   process.env.LIVE === "1" ||
   process.env.GITHUB_COPILOT_LIVE_TEST === "1";
 const ENV_GITHUB_TOKEN =
-  process.env.OPENCLAW_LIVE_GITHUB_COPILOT_TOKEN ??
+  process.env.DEX_LIVE_GITHUB_COPILOT_TOKEN ??
   process.env.COPILOT_GITHUB_TOKEN ??
   process.env.GH_TOKEN ??
   process.env.GITHUB_TOKEN ??
   "";
-const LIVE_MODEL_ID = process.env.OPENCLAW_LIVE_GITHUB_COPILOT_MODEL?.trim() || "gpt-5.4";
+const LIVE_MODEL_ID = process.env.DEX_LIVE_GITHUB_COPILOT_MODEL?.trim() || "gpt-5.4";
 const describeLive = LIVE ? describe : describe.skip;
 
 type CopilotApiToken = {

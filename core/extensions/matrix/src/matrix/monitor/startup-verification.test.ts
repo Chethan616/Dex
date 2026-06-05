@@ -26,7 +26,7 @@ async function readPersistedStartupState(rootDir: string) {
   }>("matrix", {
     namespace: "startup-verification",
     maxEntries: 1_000,
-    env: { ...process.env, OPENCLAW_STATE_DIR: rootDir },
+    env: { ...process.env, DEX_STATE_DIR: rootDir },
   });
   return await store.lookup("default");
 }

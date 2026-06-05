@@ -188,7 +188,7 @@ describe("Parallels smoke model selection", () => {
       },
     );
     invalidModelTimeoutResult = spawnNodeEvalSync(
-      `process.env.OPENCLAW_PARALLELS_MACOS_MODEL_TIMEOUT_S = "1800s"; const { resolveParallelsModelTimeoutSeconds } = await import("./${TS_PATHS.common}"); resolveParallelsModelTimeoutSeconds("macos");`,
+      `process.env.DEX_PARALLELS_MACOS_MODEL_TIMEOUT_S = "1800s"; const { resolveParallelsModelTimeoutSeconds } = await import("./${TS_PATHS.common}"); resolveParallelsModelTimeoutSeconds("macos");`,
       { env: process.env, imports: ["tsx"] },
     );
     invalidHostPortResult = spawnNodeEvalSync(
@@ -196,15 +196,15 @@ describe("Parallels smoke model selection", () => {
       { env: process.env, imports: ["tsx"] },
     );
     invalidLinuxAgentTimeoutResult = spawnNodeEvalSync(
-      `process.env.OPENCLAW_PARALLELS_LINUX_AGENT_TIMEOUT_S = "1e3"; process.argv = ["node", "${TS_PATHS.linux}"]; await import("./${TS_PATHS.linux}");`,
+      `process.env.DEX_PARALLELS_LINUX_AGENT_TIMEOUT_S = "1e3"; process.argv = ["node", "${TS_PATHS.linux}"]; await import("./${TS_PATHS.linux}");`,
       { env: process.env, imports: ["tsx"] },
     );
     invalidWindowsAgentTimeoutResult = spawnNodeEvalSync(
-      `process.env.OPENCLAW_PARALLELS_WINDOWS_AGENT_TIMEOUT_S = "2700s"; process.argv = ["node", "${TS_PATHS.windows}"]; await import("./${TS_PATHS.windows}");`,
+      `process.env.DEX_PARALLELS_WINDOWS_AGENT_TIMEOUT_S = "2700s"; process.argv = ["node", "${TS_PATHS.windows}"]; await import("./${TS_PATHS.windows}");`,
       { env: process.env, imports: ["tsx"] },
     );
     invalidWindowsUpdateTimeoutResult = spawnNodeEvalSync(
-      `process.env.OPENCLAW_PARALLELS_WINDOWS_UPDATE_TIMEOUT_S = "12.5"; process.argv = ["node", "${TS_PATHS.windows}"]; await import("./${TS_PATHS.windows}");`,
+      `process.env.DEX_PARALLELS_WINDOWS_UPDATE_TIMEOUT_S = "12.5"; process.argv = ["node", "${TS_PATHS.windows}"]; await import("./${TS_PATHS.windows}");`,
       { env: process.env, imports: ["tsx"] },
     );
   });
@@ -252,8 +252,8 @@ describe("Parallels smoke model selection", () => {
   it("keeps provider auth and model defaults in the shared TypeScript helper", () => {
     const providerAuth = readFileSync(TS_PATHS.providerAuth, "utf8");
 
-    expect(providerAuth).toContain("OPENCLAW_PARALLELS_OPENAI_MODEL");
-    expect(providerAuth).toContain("OPENCLAW_PARALLELS_WINDOWS_OPENAI_MODEL");
+    expect(providerAuth).toContain("DEX_PARALLELS_OPENAI_MODEL");
+    expect(providerAuth).toContain("DEX_PARALLELS_WINDOWS_OPENAI_MODEL");
     expect(providerAuth).toContain("openai/gpt-5.5");
     expect(providerAuth).toContain('authChoice: "openai-api-key"');
     expect(providerAuth).toContain('authChoice: "apiKey"');
@@ -628,7 +628,7 @@ if (isPrlctl) {
       withEnv(
         {
           OPENAI_API_KEY: "sk-openai",
-          OPENCLAW_PARALLELS_WINDOWS_OPENAI_MODEL: "openai/custom-windows",
+          DEX_PARALLELS_WINDOWS_OPENAI_MODEL: "openai/custom-windows",
         },
         () => resolveWindowsProviderAuth({ provider: "openai" }),
       ),
@@ -784,8 +784,8 @@ if (isPrlctl) {
 
     expect(macos).toContain('channel: "dev"');
     expect(windows).toContain("Name channel -Value 'dev'");
-    expect(macos).toContain("OPENCLAW_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS=1");
-    expect(windows).toContain("OPENCLAW_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS");
+    expect(macos).toContain("DEX_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS=1");
+    expect(windows).toContain("DEX_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS");
   });
 
   it("passes aggregate model overrides into each OS fresh lane", () => {
@@ -796,16 +796,16 @@ if (isPrlctl) {
     expect(script).toContain('"--model"');
     expect(script).toContain("auth.modelId");
     expect(script).toContain("authForPlatform");
-    expect(script).toContain("OPENCLAW_PARALLELS_LINUX_DISABLE_BONJOUR");
+    expect(script).toContain("DEX_PARALLELS_LINUX_DISABLE_BONJOUR");
   });
 
   it("keeps the Windows update config scrub compatible with PowerShell 5.1", () => {
     const script = readFileSync(TS_PATHS.npmUpdateScripts, "utf8");
 
     expect(script).not.toContain("ConvertFrom-Json -AsHashtable");
-    expect(script).toContain("function Get-OpenClawJsonProperty");
-    expect(script).toContain("function Remove-OpenClawJsonProperty");
-    expect(script).toContain("Remove-OpenClawJsonProperty $entries $pluginId");
+    expect(script).toContain("function Get-DexJsonProperty");
+    expect(script).toContain("function Remove-DexJsonProperty");
+    expect(script).toContain("Remove-DexJsonProperty $entries $pluginId");
   });
 
   it("keeps aggregate update guest scripts isolated from the npm-update orchestrator", () => {
@@ -853,7 +853,7 @@ if (isPrlctl) {
   it("keeps Windows gateway reachability on a real deadline with start recovery", () => {
     const script = readFileSync(TS_PATHS.windows, "utf8");
 
-    expect(script).toContain("OPENCLAW_PARALLELS_WINDOWS_GATEWAY_RECOVERY_AFTER_S");
+    expect(script).toContain("DEX_PARALLELS_WINDOWS_GATEWAY_RECOVERY_AFTER_S");
     expect(script).toContain("Date.now() < deadline");
     expect(script).toContain("gateway start");
     expect(script).toContain("gateway-reachable recovery");
@@ -866,9 +866,9 @@ if (isPrlctl) {
     expect(script).toContain("guestPowerShellBackground");
     expect(script).toContain("runWindowsBackgroundPowerShell");
     expect(transports).toContain("Join-Path $env:TEMP");
-    expect(transports).toContain("__OPENCLAW_BACKGROUND_DONE__");
-    expect(transports).toContain("__OPENCLAW_BACKGROUND_EXIT__");
-    expect(transports).toContain("__OPENCLAW_LOG_OFFSET__");
+    expect(transports).toContain("__DEX_BACKGROUND_DONE__");
+    expect(transports).toContain("__DEX_BACKGROUND_EXIT__");
+    expect(transports).toContain("__DEX_LOG_OFFSET__");
     expect(transports).toContain("poll.status !== 0 && poll.status !== 124");
     expect(transports).toContain("Start-Process -FilePath powershell.exe");
     expect(transports).toContain('launch.stdout.includes("started")');
@@ -990,7 +990,7 @@ setInterval(() => {}, 1000);
     () => {
       const result = run(
         process.execPath,
-        ["-e", "process.stderr.write('__OPENCLAW_HOST_COMMAND_SPAWN_ERROR__{}\\n')"],
+        ["-e", "process.stderr.write('__DEX_HOST_COMMAND_SPAWN_ERROR__{}\\n')"],
         {
           check: false,
           quiet: true,
@@ -1081,9 +1081,9 @@ setInterval(() => {}, 1000);
     const script = readFileSync(TS_PATHS.windows, "utf8");
 
     expect(script).toContain('guestPowerShellBackground(\n      "agent-turn"');
-    expect(script).toContain("OPENCLAW_PARALLELS_WINDOWS_AGENT_TIMEOUT_S");
+    expect(script).toContain("DEX_PARALLELS_WINDOWS_AGENT_TIMEOUT_S");
     expect(script).toContain(
-      'readPositiveIntEnv(\n    "OPENCLAW_PARALLELS_WINDOWS_AGENT_TIMEOUT_S"',
+      'readPositiveIntEnv(\n    "DEX_PARALLELS_WINDOWS_AGENT_TIMEOUT_S"',
     );
     expect(script).toContain("windowsAgentTurnConfigPatchScript(this.auth.modelId)");
     expect(script).toContain("--model");
@@ -1107,7 +1107,7 @@ setInterval(() => {}, 1000);
       windows: 1800,
     });
     expect(readFileSync(TS_PATHS.macos, "utf8")).toContain(
-      'this.agentTimeoutSeconds = readPositiveIntEnv("OPENCLAW_PARALLELS_MACOS_AGENT_TIMEOUT_S", 2700)',
+      'this.agentTimeoutSeconds = readPositiveIntEnv("DEX_PARALLELS_MACOS_AGENT_TIMEOUT_S", 2700)',
     );
     expect(readFileSync(TS_PATHS.macos, "utf8")).toContain("--timeout ${this.modelTimeoutSeconds}");
     expect(readFileSync(TS_PATHS.linux, "utf8")).toContain(
@@ -1117,19 +1117,19 @@ setInterval(() => {}, 1000);
 
   it("rejects loose Parallels numeric limits before starting smoke lanes", () => {
     expect(
-      withEnv({ OPENCLAW_PARALLELS_MODEL_TIMEOUT_S: "1200" }, () =>
+      withEnv({ DEX_PARALLELS_MODEL_TIMEOUT_S: "1200" }, () =>
         resolveParallelsModelTimeoutSeconds("linux"),
       ),
     ).toBe(1200);
     expect(
-      withEnv({ OPENCLAW_PARALLELS_NUMERIC_TEST: " 42 " }, () =>
-        readPositiveIntEnv("OPENCLAW_PARALLELS_NUMERIC_TEST", 7),
+      withEnv({ DEX_PARALLELS_NUMERIC_TEST: " 42 " }, () =>
+        readPositiveIntEnv("DEX_PARALLELS_NUMERIC_TEST", 7),
       ),
     ).toBe(42);
 
     expect(invalidModelTimeoutResult.status).toBe(1);
     expect(invalidModelTimeoutResult.stderr).toContain(
-      "invalid OPENCLAW_PARALLELS_MACOS_MODEL_TIMEOUT_S: 1800s",
+      "invalid DEX_PARALLELS_MACOS_MODEL_TIMEOUT_S: 1800s",
     );
 
     expect(invalidHostPortResult.status).toBe(1);
@@ -1137,33 +1137,33 @@ setInterval(() => {}, 1000);
 
     expect(invalidLinuxAgentTimeoutResult.status).toBe(1);
     expect(invalidLinuxAgentTimeoutResult.stderr).toContain(
-      "invalid OPENCLAW_PARALLELS_LINUX_AGENT_TIMEOUT_S: 1e3",
+      "invalid DEX_PARALLELS_LINUX_AGENT_TIMEOUT_S: 1e3",
     );
 
     expect(invalidWindowsAgentTimeoutResult.status).toBe(1);
     expect(invalidWindowsAgentTimeoutResult.stderr).toContain(
-      "invalid OPENCLAW_PARALLELS_WINDOWS_AGENT_TIMEOUT_S: 2700s",
+      "invalid DEX_PARALLELS_WINDOWS_AGENT_TIMEOUT_S: 2700s",
     );
 
     expect(invalidWindowsUpdateTimeoutResult.status).toBe(1);
     expect(invalidWindowsUpdateTimeoutResult.stderr).toContain(
-      "invalid OPENCLAW_PARALLELS_WINDOWS_UPDATE_TIMEOUT_S: 12.5",
+      "invalid DEX_PARALLELS_WINDOWS_UPDATE_TIMEOUT_S: 12.5",
     );
 
     expect(readFileSync(TS_PATHS.macos, "utf8")).toContain(
-      'this.updateDevTimeoutSeconds = readPositiveIntEnv(\n      "OPENCLAW_PARALLELS_MACOS_UPDATE_DEV_TIMEOUT_S"',
+      'this.updateDevTimeoutSeconds = readPositiveIntEnv(\n      "DEX_PARALLELS_MACOS_UPDATE_DEV_TIMEOUT_S"',
     );
     expect(readFileSync(TS_PATHS.linux, "utf8")).toContain(
-      'readPositiveIntEnv(\n    "OPENCLAW_PARALLELS_LINUX_AGENT_TIMEOUT_S"',
+      'readPositiveIntEnv(\n    "DEX_PARALLELS_LINUX_AGENT_TIMEOUT_S"',
     );
     expect(readFileSync(TS_PATHS.windows, "utf8")).toContain(
-      'readPositiveIntEnv(\n    "OPENCLAW_PARALLELS_WINDOWS_UPDATE_TIMEOUT_S"',
+      'readPositiveIntEnv(\n    "DEX_PARALLELS_WINDOWS_UPDATE_TIMEOUT_S"',
     );
     expect(readFileSync(TS_PATHS.packageArtifact, "utf8")).toContain(
-      'readPositiveIntEnv("OPENCLAW_PARALLELS_PACKAGE_LOCK_TIMEOUT_MS", 30 * 60_000)',
+      'readPositiveIntEnv("DEX_PARALLELS_PACKAGE_LOCK_TIMEOUT_MS", 30 * 60_000)',
     );
     expect(readFileSync(TS_PATHS.npmUpdate, "utf8")).toContain(
-      'readPositiveIntEnv("OPENCLAW_PARALLELS_NPM_UPDATE_TIMEOUT_S", 1200)',
+      'readPositiveIntEnv("DEX_PARALLELS_NPM_UPDATE_TIMEOUT_S", 1200)',
     );
   });
 
@@ -1182,10 +1182,10 @@ setInterval(() => {}, 1000);
 
     expect(powershell).toContain("windowsScopedEnvFunction");
     expect(windows).toContain(
-      "Invoke-WithScopedEnv @{ OPENCLAW_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS",
+      "Invoke-WithScopedEnv @{ DEX_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS",
     );
-    expect(windows).toContain("$script:OpenClawUpdateExit = $LASTEXITCODE");
-    expect(windows).not.toContain("$env:OPENCLAW_DISABLE_BUNDLED_PLUGINS = '1'");
+    expect(windows).toContain("$script:DexUpdateExit = $LASTEXITCODE");
+    expect(windows).not.toContain("$env:DEX_DISABLE_BUNDLED_PLUGINS = '1'");
   });
 
   it("writes Parallels phase timing artifacts", () => {
@@ -1206,13 +1206,13 @@ setInterval(() => {}, 1000);
     expect(powershell).toContain("providerTimeoutConfigJson");
     expect(powershell).toContain("models.providers.${providerId}");
     expect(powershell).toContain("agents.defaults.models${configPathMapKey(modelId)}");
-    expect(powershell).toContain("OPENCLAW_PARALLELS_AGENT_RUNTIME_POLICY_SUPPORTED");
+    expect(powershell).toContain("DEX_PARALLELS_AGENT_RUNTIME_POLICY_SUPPORTED");
     expect(powershell).toContain('selectedModelEntry.agentRuntime = { id: "openclaw" }');
     expect(powershell).toContain("delete selectedModelEntry.agentRuntime");
     expect(powershell).toContain("delete providerEntry.agentRuntime");
     expect(powershell).toContain("configPathMapKey");
     expect(powershell).toContain('transport: "sse"');
-    expect(powershell).toContain("Resolve-OpenClawCommand");
+    expect(powershell).toContain("Resolve-DexCommand");
     expect(powershell).toContain("npm\\node_modules\\openclaw\\openclaw.mjs");
     expect(powershell).toContain("$ErrorActionPreference = 'Continue'");
     expect(powershell).toContain("$PSNativeCommandUseErrorActionPreference = $false");

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   clearRuntimeConfigSnapshot,
   getRuntimeConfig,
-  type OpenClawConfig,
+  type DexConfig,
 } from "../config/config.js";
 import { callGateway as realCallGateway } from "../gateway/call.js";
 import { GatewayClient } from "../gateway/client.js";
@@ -16,8 +16,8 @@ import { onAgentEvent, type AgentEventPayload } from "../infra/agent-events.js";
 import { isTruthyEnvValue } from "../infra/env.js";
 import { clearCurrentPluginMetadataSnapshot } from "../plugins/current-plugin-metadata-snapshot.js";
 import {
-  createOpenClawTestState,
-  type OpenClawTestState,
+  createDexTestState,
+  type DexTestState,
 } from "../test-utils/openclaw-test-state.js";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
 import { isLiveTestEnabled } from "./live-test-helpers.js";
@@ -26,7 +26,7 @@ import { testing as subagentAnnounceTesting } from "./subagent-announce.js";
 import { resolveSubagentController, steerControlledSubagentRun } from "./subagent-control.js";
 import { listSubagentRunsForRequester } from "./subagent-registry.js";
 
-const LIVE = isLiveTestEnabled() && isTruthyEnvValue(process.env.OPENCLAW_LIVE_SUBAGENT_E2E);
+const LIVE = isLiveTestEnabled() && isTruthyEnvValue(process.env.DEX_LIVE_SUBAGENT_E2E);
 const describeLive = LIVE ? describe : describe.skip;
 
 type AgentPayload = {
@@ -52,10 +52,10 @@ type LiveSubagentModelConfig = {
   provider: "openai" | "google";
   requiredEnv: "OPENAI_API_KEY" | "GEMINI_API_KEY" | "GOOGLE_API_KEY";
 };
-type LiveSubagentModelProviders = NonNullable<NonNullable<OpenClawConfig["models"]>["providers"]>;
+type LiveSubagentModelProviders = NonNullable<NonNullable<DexConfig["models"]>["providers"]>;
 
 function resolveLiveSubagentModelConfig(): LiveSubagentModelConfig {
-  const modelKey = process.env.OPENCLAW_LIVE_SUBAGENT_E2E_MODEL?.trim() || "openai/gpt-5.5";
+  const modelKey = process.env.DEX_LIVE_SUBAGENT_E2E_MODEL?.trim() || "openai/gpt-5.5";
   if (modelKey.startsWith("google/")) {
     return {
       modelKey,
@@ -76,10 +76,10 @@ function liveSubagentConfig(
   port: number,
   token: string,
   options?: {
-    queue?: NonNullable<OpenClawConfig["messages"]>["queue"];
+    queue?: NonNullable<DexConfig["messages"]>["queue"];
     toolAllow?: string[];
   },
-): OpenClawConfig {
+): DexConfig {
   const providerConfig = resolveLiveSubagentModelConfig();
   const modelId = modelKey.replace(/^(openai|google)\//u, "");
   const providers: LiveSubagentModelProviders = {};
@@ -241,7 +241,7 @@ function createGatewayClient(params: {
 }
 
 describeLive("subagent announce live", () => {
-  let state: OpenClawTestState | undefined;
+  let state: DexTestState | undefined;
   let server: GatewayServer | undefined;
   let client: GatewayClient | undefined;
   let stopAgentEventCapture: (() => void) | undefined;
@@ -264,9 +264,9 @@ describeLive("subagent announce live", () => {
   it(
     "keeps issue 82913 busy-parent completion announce pending until transcript delivery",
     async () => {
-      if (!isTruthyEnvValue(process.env.OPENCLAW_SUBAGENT_ISSUE_82913_REPRO)) {
+      if (!isTruthyEnvValue(process.env.DEX_SUBAGENT_ISSUE_82913_REPRO)) {
         console.warn(
-          "[issue-82913] skip: set OPENCLAW_SUBAGENT_ISSUE_82913_REPRO=1 to run this focused repro",
+          "[issue-82913] skip: set DEX_SUBAGENT_ISSUE_82913_REPRO=1 to run this focused repro",
         );
         return;
       }
@@ -281,21 +281,21 @@ describeLive("subagent announce live", () => {
       const parentToken = `ISSUE_82913_PARENT_SAW_${nonce}`;
       const sessionKey = `agent:main:issue-82913-${nonce.toLowerCase()}`;
 
-      state = await createOpenClawTestState({
+      state = await createDexTestState({
         label: "subagent-issue-82913-live",
         layout: "split",
         env: {
-          OPENCLAW_SKIP_CHANNELS: "1",
-          OPENCLAW_SKIP_CRON: "1",
-          OPENCLAW_SKIP_BROWSER_CONTROL_SERVER: "1",
-          OPENCLAW_SKIP_CANVAS_HOST: "1",
-          OPENCLAW_TEST_MINIMAL_GATEWAY: "1",
-          OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined,
-          OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY: "1",
-          OPENCLAW_BUNDLED_PLUGINS_DIR: path.resolve("extensions"),
-          OPENCLAW_TEST_TRUST_BUNDLED_PLUGINS_DIR: "1",
-          OPENCLAW_PLUGIN_CATALOG_PATHS: undefined,
-          OPENCLAW_PLUGINS_PATHS: undefined,
+          DEX_SKIP_CHANNELS: "1",
+          DEX_SKIP_CRON: "1",
+          DEX_SKIP_BROWSER_CONTROL_SERVER: "1",
+          DEX_SKIP_CANVAS_HOST: "1",
+          DEX_TEST_MINIMAL_GATEWAY: "1",
+          DEX_DISABLE_BUNDLED_PLUGINS: undefined,
+          DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY: "1",
+          DEX_BUNDLED_PLUGINS_DIR: path.resolve("extensions"),
+          DEX_TEST_TRUST_BUNDLED_PLUGINS_DIR: "1",
+          DEX_PLUGIN_CATALOG_PATHS: undefined,
+          DEX_PLUGINS_PATHS: undefined,
         },
       });
       await state.writeConfig(
@@ -475,21 +475,21 @@ describeLive("subagent announce live", () => {
         }),
       });
 
-      state = await createOpenClawTestState({
+      state = await createDexTestState({
         label: "subagent-announce-live",
         layout: "split",
         env: {
-          OPENCLAW_SKIP_CHANNELS: "1",
-          OPENCLAW_SKIP_CRON: "1",
-          OPENCLAW_SKIP_BROWSER_CONTROL_SERVER: "1",
-          OPENCLAW_SKIP_CANVAS_HOST: "1",
-          OPENCLAW_TEST_MINIMAL_GATEWAY: "1",
-          OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined,
-          OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY: "1",
-          OPENCLAW_BUNDLED_PLUGINS_DIR: path.resolve("extensions"),
-          OPENCLAW_TEST_TRUST_BUNDLED_PLUGINS_DIR: "1",
-          OPENCLAW_PLUGIN_CATALOG_PATHS: undefined,
-          OPENCLAW_PLUGINS_PATHS: undefined,
+          DEX_SKIP_CHANNELS: "1",
+          DEX_SKIP_CRON: "1",
+          DEX_SKIP_BROWSER_CONTROL_SERVER: "1",
+          DEX_SKIP_CANVAS_HOST: "1",
+          DEX_TEST_MINIMAL_GATEWAY: "1",
+          DEX_DISABLE_BUNDLED_PLUGINS: undefined,
+          DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY: "1",
+          DEX_BUNDLED_PLUGINS_DIR: path.resolve("extensions"),
+          DEX_TEST_TRUST_BUNDLED_PLUGINS_DIR: "1",
+          DEX_PLUGIN_CATALOG_PATHS: undefined,
+          DEX_PLUGINS_PATHS: undefined,
         },
       });
       await state.writeConfig(
@@ -649,7 +649,7 @@ describeLive("subagent announce live", () => {
       const modelConfig = resolveLiveSubagentModelConfig();
       if (!modelConfig.modelKey.startsWith("google/")) {
         console.warn(
-          "[subagent-stress] skip: set OPENCLAW_LIVE_SUBAGENT_E2E_MODEL=google/gemini-3.1-pro-preview",
+          "[subagent-stress] skip: set DEX_LIVE_SUBAGENT_E2E_MODEL=google/gemini-3.1-pro-preview",
         );
         return;
       }
@@ -662,24 +662,24 @@ describeLive("subagent announce live", () => {
       const childTokens = [1, 2, 3].map((index) => `GEMINI_STRESS_${nonce}_${index}`);
       const parentToken = `GEMINI_STRESS_PARENT_${nonce}`;
 
-      state = await createOpenClawTestState({
+      state = await createDexTestState({
         label: "subagent-gemini-stress-live",
         layout: "split",
         env: {
-          OPENCLAW_SKIP_CHANNELS: "1",
-          OPENCLAW_SKIP_CRON: "1",
-          OPENCLAW_SKIP_BROWSER_CONTROL_SERVER: "1",
-          OPENCLAW_SKIP_CANVAS_HOST: "1",
-          OPENCLAW_TEST_MINIMAL_GATEWAY: "1",
-          OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined,
-          OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY: "1",
-          OPENCLAW_BUNDLED_PLUGINS_DIR: path.resolve("extensions"),
-          OPENCLAW_TEST_TRUST_BUNDLED_PLUGINS_DIR: "1",
-          OPENCLAW_PLUGIN_CATALOG_PATHS: undefined,
-          OPENCLAW_PLUGINS_PATHS: undefined,
-          OPENCLAW_DEBUG_MODEL_TRANSPORT: "1",
-          OPENCLAW_DEBUG_MODEL_PAYLOAD: "tools",
-          OPENCLAW_DEBUG_SSE: "events",
+          DEX_SKIP_CHANNELS: "1",
+          DEX_SKIP_CRON: "1",
+          DEX_SKIP_BROWSER_CONTROL_SERVER: "1",
+          DEX_SKIP_CANVAS_HOST: "1",
+          DEX_TEST_MINIMAL_GATEWAY: "1",
+          DEX_DISABLE_BUNDLED_PLUGINS: undefined,
+          DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY: "1",
+          DEX_BUNDLED_PLUGINS_DIR: path.resolve("extensions"),
+          DEX_TEST_TRUST_BUNDLED_PLUGINS_DIR: "1",
+          DEX_PLUGIN_CATALOG_PATHS: undefined,
+          DEX_PLUGINS_PATHS: undefined,
+          DEX_DEBUG_MODEL_TRANSPORT: "1",
+          DEX_DEBUG_MODEL_PAYLOAD: "tools",
+          DEX_DEBUG_SSE: "events",
         },
       });
       await fs.writeFile(

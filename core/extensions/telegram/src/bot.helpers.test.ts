@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { describe, expect, it } from "vitest";
 import { resolveTelegramGroupAllowFromContext, resolveTelegramStreamMode } from "./bot/helpers.js";
 import { resolveTelegramDraftStreamingChunking } from "./draft-chunking.js";
@@ -27,7 +27,7 @@ describe("resolveTelegramStreamMode", () => {
 
 describe("resolveTelegramGroupAllowFromContext", () => {
   it("expands Telegram access groups before normalizing allowFrom entries", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       accessGroups: {
         maintainers: {
           type: "message.senders",
@@ -65,7 +65,7 @@ describe("resolveTelegramDraftStreamingChunking", () => {
   });
 
   it("clamps to telegram.textChunkLimit", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: { telegram: { allowFrom: ["*"], textChunkLimit: 150 } },
     };
     const chunking = resolveTelegramDraftStreamingChunking(cfg, "default");
@@ -77,7 +77,7 @@ describe("resolveTelegramDraftStreamingChunking", () => {
   });
 
   it("supports per-account overrides", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           allowFrom: ["*"],

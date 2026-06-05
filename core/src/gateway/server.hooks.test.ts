@@ -180,8 +180,8 @@ async function waitForSystemEventTexts(sessionKey: string, timeoutMs = 2_000) {
 
 async function writeHookTransformModule(moduleName: string, source: string): Promise<void> {
   const configPath = requireNonEmptyString(
-    process.env.OPENCLAW_CONFIG_PATH,
-    "OPENCLAW_CONFIG_PATH",
+    process.env.DEX_CONFIG_PATH,
+    "DEX_CONFIG_PATH",
   );
   const transformsDir = path.join(path.dirname(configPath), "hooks", "transforms");
   await fs.mkdir(transformsDir, { recursive: true });
@@ -716,8 +716,8 @@ describe("gateway server hooks", () => {
   test("dedupes hook retries even when trusted-proxy client IP changes", async () => {
     testState.hooksConfig = { enabled: true, token: HOOK_TOKEN };
     const configPath = requireNonEmptyString(
-      process.env.OPENCLAW_CONFIG_PATH,
-      "OPENCLAW_CONFIG_PATH",
+      process.env.DEX_CONFIG_PATH,
+      "DEX_CONFIG_PATH",
     );
     await fs.writeFile(
       configPath,

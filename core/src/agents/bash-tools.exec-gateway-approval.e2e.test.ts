@@ -18,17 +18,17 @@ import { createExecTool } from "./bash-tools.exec.js";
 
 const TEST_ENV_KEYS = [
   "HOME",
-  "OPENCLAW_STATE_DIR",
-  "OPENCLAW_CONFIG_PATH",
-  "OPENCLAW_GATEWAY_TOKEN",
-  "OPENCLAW_GATEWAY_PORT",
-  "OPENCLAW_SKIP_CHANNELS",
-  "OPENCLAW_SKIP_GMAIL_WATCHER",
-  "OPENCLAW_SKIP_CRON",
-  "OPENCLAW_SKIP_CANVAS_HOST",
-  "OPENCLAW_SKIP_BROWSER_CONTROL_SERVER",
-  "OPENCLAW_SKIP_PROVIDERS",
-  "OPENCLAW_TEST_MINIMAL_GATEWAY",
+  "DEX_STATE_DIR",
+  "DEX_CONFIG_PATH",
+  "DEX_GATEWAY_TOKEN",
+  "DEX_GATEWAY_PORT",
+  "DEX_SKIP_CHANNELS",
+  "DEX_SKIP_GMAIL_WATCHER",
+  "DEX_SKIP_CRON",
+  "DEX_SKIP_CANVAS_HOST",
+  "DEX_SKIP_BROWSER_CONTROL_SERVER",
+  "DEX_SKIP_PROVIDERS",
+  "DEX_TEST_MINIMAL_GATEWAY",
 ];
 
 type Cleanup = () => Promise<void> | void;
@@ -67,7 +67,7 @@ describe("gateway-hosted exec approvals", () => {
     const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-exec-approval-e2e-"));
     cleanup.push(() => fs.rm(tempHome, { recursive: true, force: true, maxRetries: 5 }));
 
-    const stateDir = path.join(tempHome, ".openclaw");
+    const stateDir = path.join(tempHome, ".dex");
     const workspaceDir = path.join(tempHome, "workspace");
     await fs.mkdir(workspaceDir, { recursive: true });
 
@@ -98,17 +98,17 @@ describe("gateway-hosted exec approvals", () => {
     );
 
     process.env.HOME = tempHome;
-    process.env.OPENCLAW_STATE_DIR = stateDir;
-    process.env.OPENCLAW_CONFIG_PATH = configPath;
-    process.env.OPENCLAW_GATEWAY_TOKEN = token;
-    process.env.OPENCLAW_GATEWAY_PORT = String(port);
-    process.env.OPENCLAW_SKIP_CHANNELS = "1";
-    process.env.OPENCLAW_SKIP_GMAIL_WATCHER = "1";
-    process.env.OPENCLAW_SKIP_CRON = "1";
-    process.env.OPENCLAW_SKIP_CANVAS_HOST = "1";
-    process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER = "1";
-    process.env.OPENCLAW_SKIP_PROVIDERS = "1";
-    process.env.OPENCLAW_TEST_MINIMAL_GATEWAY = "1";
+    process.env.DEX_STATE_DIR = stateDir;
+    process.env.DEX_CONFIG_PATH = configPath;
+    process.env.DEX_GATEWAY_TOKEN = token;
+    process.env.DEX_GATEWAY_PORT = String(port);
+    process.env.DEX_SKIP_CHANNELS = "1";
+    process.env.DEX_SKIP_GMAIL_WATCHER = "1";
+    process.env.DEX_SKIP_CRON = "1";
+    process.env.DEX_SKIP_CANVAS_HOST = "1";
+    process.env.DEX_SKIP_BROWSER_CONTROL_SERVER = "1";
+    process.env.DEX_SKIP_PROVIDERS = "1";
+    process.env.DEX_TEST_MINIMAL_GATEWAY = "1";
     clearRuntimeConfigSnapshot();
     clearConfigCache();
     clearSessionStoreCacheForTest();

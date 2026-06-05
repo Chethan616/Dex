@@ -3,7 +3,7 @@ import {
   verifyChannelMessageAdapterCapabilityProofs,
   verifyDurableFinalCapabilityProofs,
 } from "openclaw/plugin-sdk/channel-outbound";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   listImportedBundledPluginFacadeIds,
   resetFacadeRuntimeStateForTest,
@@ -131,7 +131,7 @@ describe("createIMessageTestPlugin", () => {
               enabled: true,
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         accountId: "default",
         payload: {
           text: "Approval required.",

@@ -86,7 +86,7 @@ describe("runtime tool fixture", () => {
         baseUrl: "http://127.0.0.1:1",
         tempRoot: "",
         workspaceDir: "",
-        runtimeEnv: { OPENCLAW_QA_FORCE_RUNTIME: "codex" },
+        runtimeEnv: { DEX_QA_FORCE_RUNTIME: "codex" },
         call: vi.fn(),
       },
     });

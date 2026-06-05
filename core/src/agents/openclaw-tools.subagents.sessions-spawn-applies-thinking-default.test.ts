@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveSubagentThinkingOverride } from "./subagent-spawn-thinking.js";
 
 type ThinkingLevel = "high" | "medium" | "low" | "off";
@@ -11,14 +11,14 @@ function expectResolvedThinkingPlan(input: {
   callerThinkingRaw?: string;
   requesterAgentConfig?: unknown;
   targetAgentConfig?: unknown;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
 }) {
   const cfg =
     input.cfg ??
     ({
       session: { mainKey: "main", scope: "per-sender" },
       agents: { defaults: { subagents: { thinking: "high" } } },
-    } as OpenClawConfig);
+    } as DexConfig);
 
   const plan = resolveSubagentThinkingOverride({
     cfg,
@@ -71,7 +71,7 @@ describe("sessions_spawn thinking defaults", () => {
       cfg: {
         session: { mainKey: "main", scope: "per-sender" },
         agents: { defaults: {} },
-      } as OpenClawConfig,
+      } as DexConfig,
       callerThinkingRaw: "medium",
       expected: "medium",
       expectedOverride: null,
@@ -90,7 +90,7 @@ describe("sessions_spawn thinking defaults", () => {
       cfg: {
         session: { mainKey: "main", scope: "per-sender" },
         agents: { defaults: {} },
-      } as OpenClawConfig,
+      } as DexConfig,
       callerThinkingRaw: "off",
       expected: "off",
       expectedOverride: null,

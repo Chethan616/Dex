@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 
 const getRuntimeConfigMock = vi.fn();
 const mutateConfigFileMock = vi.fn();
@@ -88,7 +88,7 @@ describe("createRuntimeConfig", () => {
 
   it("routes deprecated writeConfigFile through replaceConfigFile with afterWrite", async () => {
     const configApi = createRuntimeConfig();
-    const nextConfig = { plugins: { entries: {} } } as OpenClawConfig;
+    const nextConfig = { plugins: { entries: {} } } as DexConfig;
 
     await configApi.writeConfigFile(nextConfig);
 
@@ -104,7 +104,7 @@ describe("createRuntimeConfig", () => {
 
   it("attributes deprecated writeConfigFile warnings to the active plugin scope", async () => {
     const configApi = createRuntimeConfig();
-    const nextConfig = { plugins: { entries: {} } } as OpenClawConfig;
+    const nextConfig = { plugins: { entries: {} } } as DexConfig;
 
     await withPluginRuntimePluginScope(
       { pluginId: "legacy-plugin", pluginSource: "/plugins/legacy-plugin/index.js" },
@@ -123,7 +123,7 @@ describe("createRuntimeConfig", () => {
 
   it("preserves explicit afterWrite intent for deprecated writeConfigFile", async () => {
     const configApi = createRuntimeConfig();
-    const nextConfig = { plugins: { entries: {} } } as OpenClawConfig;
+    const nextConfig = { plugins: { entries: {} } } as DexConfig;
 
     await configApi.writeConfigFile(nextConfig, {
       afterWrite: { mode: "none", reason: "test-controlled" },

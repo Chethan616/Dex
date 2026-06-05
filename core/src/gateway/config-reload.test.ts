@@ -5,7 +5,7 @@ import type { ChannelPlugin } from "../channels/plugins/types.js";
 import type {
   ConfigFileSnapshot,
   ConfigWriteNotification,
-  OpenClawConfig,
+  DexConfig,
 } from "../config/config.js";
 import type { PluginInstallRecord } from "../config/types.plugins.js";
 import {
@@ -612,7 +612,7 @@ function makeZeroDebounceHookWrite(persistedHash: string): ConfigWriteNotificati
 function createReloaderHarness(
   readSnapshot: () => Promise<ConfigFileSnapshot>,
   options: {
-    initialCompareConfig?: OpenClawConfig;
+    initialCompareConfig?: DexConfig;
     initialInternalWriteHash?: string | null;
     promoteSnapshot?: (snapshot: ConfigFileSnapshot, reason: string) => Promise<boolean>;
     initialPluginInstallRecords?: Record<string, PluginInstallRecord>;
@@ -621,8 +621,8 @@ function createReloaderHarness(
 ) {
   const watcher = createWatcherMock();
   vi.spyOn(chokidar, "watch").mockReturnValue(watcher as unknown as never);
-  const onHotReload = vi.fn(async (_plan: GatewayReloadPlan, _nextConfig: OpenClawConfig) => {});
-  const onRestart = vi.fn((_plan: GatewayReloadPlan, _nextConfig: OpenClawConfig) => {});
+  const onHotReload = vi.fn(async (_plan: GatewayReloadPlan, _nextConfig: DexConfig) => {});
+  const onRestart = vi.fn((_plan: GatewayReloadPlan, _nextConfig: DexConfig) => {});
   let writeListener: ((event: ConfigWriteNotification) => void) | null = null;
   const subscribeToWrites = vi.fn((listener: (event: ConfigWriteNotification) => void) => {
     writeListener = listener;
@@ -665,7 +665,7 @@ function createReloaderHarness(
 
 type ReloaderHarness = ReturnType<typeof createReloaderHarness>;
 
-function getOnlyRestartCall(harness: ReloaderHarness): [GatewayReloadPlan, OpenClawConfig] {
+function getOnlyRestartCall(harness: ReloaderHarness): [GatewayReloadPlan, DexConfig] {
   expect(harness.onRestart).toHaveBeenCalledTimes(1);
   const call = harness.onRestart.mock.calls[0];
   if (!call) {
@@ -674,7 +674,7 @@ function getOnlyRestartCall(harness: ReloaderHarness): [GatewayReloadPlan, OpenC
   return call;
 }
 
-function getOnlyHotReloadCall(harness: ReloaderHarness): [GatewayReloadPlan, OpenClawConfig] {
+function getOnlyHotReloadCall(harness: ReloaderHarness): [GatewayReloadPlan, DexConfig] {
   expect(harness.onHotReload).toHaveBeenCalledTimes(1);
   const call = harness.onHotReload.mock.calls[0];
   if (!call) {
@@ -828,7 +828,7 @@ describe("startGatewayConfigReloader", () => {
   });
 
   it("skips plugin-local invalid reloads without degraded mode", async () => {
-    const activeConfig: OpenClawConfig = {
+    const activeConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 } },
       agents: { defaults: { model: "gpt-5.4" } },
       plugins: {
@@ -859,7 +859,7 @@ describe("startGatewayConfigReloader", () => {
       .fn<() => Promise<ConfigFileSnapshot>>()
       .mockResolvedValueOnce(invalidSnapshot);
     const promoteSnapshot = vi.fn(async (_snapshot: ConfigFileSnapshot, _reason: string) => true);
-    const previousConfig: OpenClawConfig = {
+    const previousConfig: DexConfig = {
       ...activeConfig,
       plugins: {
         entries: {
@@ -919,7 +919,7 @@ describe("startGatewayConfigReloader", () => {
   });
 
   it("hot-reloads direct diagnostics memory pressure snapshot edits", async () => {
-    const nextConfig: OpenClawConfig = {
+    const nextConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 } },
       diagnostics: { memoryPressureSnapshot: false },
     };
@@ -931,7 +931,7 @@ describe("startGatewayConfigReloader", () => {
         hash: "diagnostics-memory-pressure-snapshot-1",
       }),
     );
-    const previousConfig: OpenClawConfig = {
+    const previousConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 } },
       diagnostics: { memoryPressureSnapshot: true },
     };
@@ -1112,7 +1112,7 @@ describe("startGatewayConfigReloader", () => {
       installedAt: "2026-04-22T00:00:00.000Z",
       resolvedAt: "2026-04-22T00:00:00.000Z",
     };
-    const sourceConfig: OpenClawConfig = {
+    const sourceConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 }, auth: { mode: "token" } },
       plugins: {
         installs: {
@@ -1192,7 +1192,7 @@ describe("startGatewayConfigReloader", () => {
   });
 
   it("does not suppress functional install changes that collide with timestamp paths", async () => {
-    const sourceConfig: OpenClawConfig = {
+    const sourceConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 } },
       plugins: {
         installs: {
@@ -1203,7 +1203,7 @@ describe("startGatewayConfigReloader", () => {
         },
       },
     };
-    const nextSourceConfig: OpenClawConfig = {
+    const nextSourceConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 } },
       plugins: {
         installs: {
@@ -1256,7 +1256,7 @@ describe("startGatewayConfigReloader", () => {
   });
 
   it("queues restart when an external plugin source write only changes the managed index", async () => {
-    const activeConfig: OpenClawConfig = {
+    const activeConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 } },
       plugins: {
         allow: ["lossless-claw"],
@@ -1301,7 +1301,7 @@ describe("startGatewayConfigReloader", () => {
   });
 
   it("keeps external plugin policy-only writes on the hot reload path", async () => {
-    const previousConfig: OpenClawConfig = {
+    const previousConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 } },
       plugins: {
         entries: {
@@ -1309,7 +1309,7 @@ describe("startGatewayConfigReloader", () => {
         },
       },
     };
-    const nextConfig: OpenClawConfig = {
+    const nextConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 } },
       plugins: {
         entries: {
@@ -1354,7 +1354,7 @@ describe("startGatewayConfigReloader", () => {
   });
 
   it("keeps external auth cooldown writes on the hot reload path", async () => {
-    const previousConfig: OpenClawConfig = {
+    const previousConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 } },
       auth: {
         cooldowns: {
@@ -1363,7 +1363,7 @@ describe("startGatewayConfigReloader", () => {
         },
       },
     };
-    const nextConfig: OpenClawConfig = {
+    const nextConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 } },
       auth: {
         cooldowns: {
@@ -1405,13 +1405,13 @@ describe("startGatewayConfigReloader", () => {
   });
 
   it("queues restart when an external plugin source write also changes plugin config", async () => {
-    const previousConfig: OpenClawConfig = {
+    const previousConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 } },
       plugins: {
         allow: ["lossless-claw"],
       },
     };
-    const nextConfig: OpenClawConfig = {
+    const nextConfig: DexConfig = {
       gateway: { reload: { debounceMs: 0 } },
       plugins: {
         allow: ["lossless-claw"],

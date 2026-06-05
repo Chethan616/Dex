@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ChannelPlugin } from "../channels/plugins/types.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import {
   applySecurityFixConfigMutations,
   collectSecurityPermissionTargets,
@@ -32,8 +32,8 @@ describe("security fix", () => {
 
   const createFixEnv = (stateDir: string, configPath: string) => ({
     ...process.env,
-    OPENCLAW_STATE_DIR: stateDir,
-    OPENCLAW_CONFIG_PATH: configPath,
+    DEX_STATE_DIR: stateDir,
+    DEX_CONFIG_PATH: configPath,
   });
 
   const createWhatsAppConfigFixTestPlugin = (storeAllowFrom: string[]): ChannelPlugin => ({
@@ -139,7 +139,7 @@ describe("security fix", () => {
         channels: {
           whatsapp: params.whatsapp,
         },
-      } satisfies OpenClawConfig,
+      } satisfies DexConfig,
       env: process.env,
       channelPlugins: [createWhatsAppConfigFixTestPlugin(params.allowFromStore)],
     });
@@ -169,7 +169,7 @@ describe("security fix", () => {
         imessage: { groupPolicy: "open" },
       },
       logging: { redactSensitive: "off" },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
     const fixed = await applySecurityFixConfigMutations({
       cfg,
       env: process.env,
@@ -286,7 +286,7 @@ describe("security fix", () => {
       configPath,
       cfg: {
         channels: { whatsapp: { groupPolicy: "open" } },
-      } as OpenClawConfig,
+      } as DexConfig,
       includePaths: [includePath],
     });
 

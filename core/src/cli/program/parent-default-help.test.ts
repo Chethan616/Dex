@@ -7,15 +7,15 @@ describe("applyParentDefaultHelpAction (#73077)", () => {
   let originalSuppressHelpBanner: string | undefined;
   beforeEach(() => {
     originalExitCode = process.exitCode;
-    originalSuppressHelpBanner = process.env.OPENCLAW_SUPPRESS_HELP_BANNER;
+    originalSuppressHelpBanner = process.env.DEX_SUPPRESS_HELP_BANNER;
     process.exitCode = undefined;
   });
   afterEach(() => {
     process.exitCode = originalExitCode;
     if (originalSuppressHelpBanner === undefined) {
-      delete process.env.OPENCLAW_SUPPRESS_HELP_BANNER;
+      delete process.env.DEX_SUPPRESS_HELP_BANNER;
     } else {
-      process.env.OPENCLAW_SUPPRESS_HELP_BANNER = originalSuppressHelpBanner;
+      process.env.DEX_SUPPRESS_HELP_BANNER = originalSuppressHelpBanner;
     }
   });
 
@@ -33,7 +33,7 @@ describe("applyParentDefaultHelpAction (#73077)", () => {
     const parent = buildParent();
     const suppressHelpBannerValues: Array<string | undefined> = [];
     const helpSpy = vi.spyOn(parent, "outputHelp").mockImplementation(() => {
-      suppressHelpBannerValues.push(process.env.OPENCLAW_SUPPRESS_HELP_BANNER);
+      suppressHelpBannerValues.push(process.env.DEX_SUPPRESS_HELP_BANNER);
     });
     expect(isParentDefaultHelpAction(parent)).toBe(false);
     applyParentDefaultHelpAction(parent);
@@ -41,7 +41,7 @@ describe("applyParentDefaultHelpAction (#73077)", () => {
     await parent.parent!.parseAsync(["node", "test", "parent"]);
     expect(helpSpy).toHaveBeenCalledTimes(1);
     expect(suppressHelpBannerValues).toEqual(["1"]);
-    expect(process.env.OPENCLAW_SUPPRESS_HELP_BANNER).toBeUndefined();
+    expect(process.env.DEX_SUPPRESS_HELP_BANNER).toBeUndefined();
     expect(process.exitCode).toBe(0);
   });
 

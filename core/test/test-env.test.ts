@@ -113,13 +113,13 @@ describe("installTestEnv", () => {
         },
       }`,
     );
-    writeFile(path.join(realHome, ".openclaw", "credentials", "token.txt"), "secret\n");
+    writeFile(path.join(realHome, ".dex", "credentials", "token.txt"), "secret\n");
     writeFile(
-      path.join(realHome, ".openclaw", "external-plugins", "glueclaw", "openclaw.plugin.json"),
+      path.join(realHome, ".dex", "external-plugins", "glueclaw", "openclaw.plugin.json"),
       '{"id":"glueclaw"}\n',
     );
     writeFile(
-      path.join(realHome, ".openclaw", "agents", "main", "agent", "auth-profiles.json"),
+      path.join(realHome, ".dex", "agents", "main", "agent", "auth-profiles.json"),
       JSON.stringify({ version: 1, profiles: { default: { provider: "openai" } } }, null, 2),
     );
     writeFile(path.join(realHome, ".claude", ".credentials.json"), '{"accessToken":"token"}\n');
@@ -134,21 +134,21 @@ describe("installTestEnv", () => {
 
     process.env.HOME = realHome;
     process.env.USERPROFILE = realHome;
-    process.env.OPENCLAW_LIVE_TEST = "1";
-    process.env.OPENCLAW_LIVE_TEST_QUIET = "1";
-    process.env.OPENCLAW_CONFIG_PATH = "~/custom-openclaw.json5";
-    process.env.OPENCLAW_TEST_HOME = priorIsolatedHome;
-    process.env.OPENCLAW_STATE_DIR = path.join(priorIsolatedHome, ".openclaw");
+    process.env.DEX_LIVE_TEST = "1";
+    process.env.DEX_LIVE_TEST_QUIET = "1";
+    process.env.DEX_CONFIG_PATH = "~/custom-openclaw.json5";
+    process.env.DEX_TEST_HOME = priorIsolatedHome;
+    process.env.DEX_STATE_DIR = path.join(priorIsolatedHome, ".dex");
 
     const testEnv = installTestEnv();
     cleanupFns.push(testEnv.cleanup);
 
     expect(testEnv.tempHome).not.toBe(realHome);
     expect(process.env.HOME).toBe(testEnv.tempHome);
-    expect(process.env.OPENCLAW_TEST_HOME).toBe(testEnv.tempHome);
+    expect(process.env.DEX_TEST_HOME).toBe(testEnv.tempHome);
     expect(process.env.TEST_PROFILE_ONLY).toBe("from-profile");
 
-    const copiedConfigPath = path.join(testEnv.tempHome, ".openclaw", "openclaw.json");
+    const copiedConfigPath = path.join(testEnv.tempHome, ".dex", "openclaw.json");
     const copiedConfig = JSON.parse(fs.readFileSync(copiedConfigPath, "utf8")) as {
       agents?: {
         defaults?: Record<string, unknown>;
@@ -186,13 +186,13 @@ describe("installTestEnv", () => {
     });
 
     expect(
-      fs.existsSync(path.join(testEnv.tempHome, ".openclaw", "credentials", "token.txt")),
+      fs.existsSync(path.join(testEnv.tempHome, ".dex", "credentials", "token.txt")),
     ).toBe(true);
     expect(
       fs.existsSync(
         path.join(
           testEnv.tempHome,
-          ".openclaw",
+          ".dex",
           "external-plugins",
           "glueclaw",
           "openclaw.plugin.json",
@@ -201,7 +201,7 @@ describe("installTestEnv", () => {
     ).toBe(true);
     expect(
       fs.existsSync(
-        path.join(testEnv.tempHome, ".openclaw", "agents", "main", "agent", "auth-profiles.json"),
+        path.join(testEnv.tempHome, ".dex", "agents", "main", "agent", "auth-profiles.json"),
       ),
     ).toBe(true);
     expect(fs.existsSync(path.join(testEnv.tempHome, ".claude", ".credentials.json"))).toBe(true);
@@ -220,9 +220,9 @@ describe("installTestEnv", () => {
 
     process.env.HOME = realHome;
     process.env.USERPROFILE = realHome;
-    process.env.OPENCLAW_LIVE_TEST = "1";
-    process.env.OPENCLAW_LIVE_USE_REAL_HOME = "1";
-    process.env.OPENCLAW_LIVE_TEST_QUIET = "1";
+    process.env.DEX_LIVE_TEST = "1";
+    process.env.DEX_LIVE_USE_REAL_HOME = "1";
+    process.env.DEX_LIVE_TEST_QUIET = "1";
 
     const testEnv = installTestEnv();
 
@@ -238,10 +238,10 @@ describe("installTestEnv", () => {
     process.env.HOME = realHome;
     process.env.USERPROFILE = realHome;
     delete process.env.LIVE;
-    delete process.env.OPENCLAW_LIVE_TEST;
-    delete process.env.OPENCLAW_LIVE_GATEWAY;
-    delete process.env.OPENCLAW_LIVE_USE_REAL_HOME;
-    delete process.env.OPENCLAW_LIVE_TEST_QUIET;
+    delete process.env.DEX_LIVE_TEST;
+    delete process.env.DEX_LIVE_GATEWAY;
+    delete process.env.DEX_LIVE_USE_REAL_HOME;
+    delete process.env.DEX_LIVE_TEST_QUIET;
 
     const testEnv = installTestEnv();
     cleanupFns.push(testEnv.cleanup);
@@ -256,9 +256,9 @@ describe("installTestEnv", () => {
 
     process.env.HOME = realHome;
     process.env.USERPROFILE = realHome;
-    process.env.OPENCLAW_LIVE_TEST = "1";
-    process.env.OPENCLAW_LIVE_USE_REAL_HOME = "1";
-    process.env.OPENCLAW_LIVE_TEST_QUIET = "1";
+    process.env.DEX_LIVE_TEST = "1";
+    process.env.DEX_LIVE_USE_REAL_HOME = "1";
+    process.env.DEX_LIVE_TEST_QUIET = "1";
 
     vi.doMock("node:child_process", () => ({
       execFileSync: () => {

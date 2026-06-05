@@ -7,7 +7,7 @@ const hasVolcengineTtsCredentials = Boolean(
   seedSpeechApiKey || (process.env.VOLCENGINE_TTS_APPID && process.env.VOLCENGINE_TTS_TOKEN),
 );
 const describeLive =
-  process.env.OPENCLAW_LIVE_TEST === "1" && hasVolcengineTtsCredentials ? describe : describe.skip;
+  process.env.DEX_LIVE_TEST === "1" && hasVolcengineTtsCredentials ? describe : describe.skip;
 
 describeLive("Volcengine TTS live", () => {
   it("synthesizes mp3 audio with .profile credentials", async () => {

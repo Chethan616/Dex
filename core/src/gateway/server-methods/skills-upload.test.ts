@@ -72,7 +72,7 @@ async function makeHarness(): Promise<{
   const stateDir = path.join(root, "state");
   const workspaceDir = path.join(root, "workspace");
   await fs.mkdir(workspaceDir, { recursive: true });
-  vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+  vi.stubEnv("DEX_STATE_DIR", stateDir);
   agentScopeState.workspaceDir = workspaceDir;
   vi.resetModules();
   const { skillsHandlers } = await import("./skills.js");

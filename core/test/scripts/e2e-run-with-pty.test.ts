@@ -88,7 +88,7 @@ describe("run-with-pty", () => {
     try {
       const result = await runPtyProbe(
         logPath,
-        { OPENCLAW_E2E_PTY_OUTPUT_MAX_BYTES: "64" },
+        { DEX_E2E_PTY_OUTPUT_MAX_BYTES: "64" },
         [process.execPath, "-e", "process.stdout.write('x'.repeat(2048))"],
         "",
       );
@@ -120,7 +120,7 @@ describe("run-with-pty", () => {
       {
         env: {
           ...process.env,
-          OPENCLAW_E2E_PTY_FORCE_KILL_MS: "25",
+          DEX_E2E_PTY_FORCE_KILL_MS: "25",
         },
         stdio: ["ignore", "pipe", "pipe"],
       },

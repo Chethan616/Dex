@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ConfigFileSnapshot, OpenClawConfig } from "../config/config.js";
+import type { ConfigFileSnapshot, DexConfig } from "../config/config.js";
 import {
   formatCrestodianOverview,
   formatCrestodianStartupMessage,
@@ -8,7 +8,7 @@ import {
 
 describe("loadCrestodianOverview", () => {
   it("summarizes config, agents, model, tools, and gateway", async () => {
-    const runtimeConfig: OpenClawConfig = {
+    const runtimeConfig: DexConfig = {
       agents: {
         defaults: { model: { primary: "openai/gpt-5.2" } },
         list: [
@@ -34,7 +34,7 @@ describe("loadCrestodianOverview", () => {
       legacyIssues: [],
     };
     const overview = await loadCrestodianOverview({
-      env: { OPENCLAW_TEST_FAST: "1" },
+      env: { DEX_TEST_FAST: "1" },
       deps: {
         readConfigFileSnapshot: async () => snapshot,
         resolveConfigPath: () => "/tmp/openclaw.json",

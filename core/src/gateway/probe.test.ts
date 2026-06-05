@@ -381,7 +381,7 @@ describe("probeGateway", () => {
   it("loads probe identity and cached device auth from the provided env", async () => {
     const env = {
       ...process.env,
-      OPENCLAW_STATE_DIR: "/tmp/openclaw-probe-service-state",
+      DEX_STATE_DIR: "/tmp/openclaw-probe-service-state",
     } as NodeJS.ProcessEnv;
 
     await runTokenProbe({ env });

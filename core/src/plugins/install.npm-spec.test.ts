@@ -1312,7 +1312,7 @@ describe("installPluginFromNpmSpec", () => {
   it("rejects exact npm plugins whose package compatibility requires a newer host", async () => {
     const stateDir = suiteTempRootTracker.makeTempDir();
     const npmRoot = path.join(stateDir, "npm");
-    vi.stubEnv("OPENCLAW_COMPATIBILITY_HOST_VERSION", "2026.5.10-beta.1");
+    vi.stubEnv("DEX_COMPATIBILITY_HOST_VERSION", "2026.5.10-beta.1");
 
     mockNpmViewAndInstall({
       spec: "@openclaw/whatsapp@2026.5.27",
@@ -1353,7 +1353,7 @@ describe("installPluginFromNpmSpec", () => {
     const stateDir = suiteTempRootTracker.makeTempDir();
     const npmRoot = path.join(stateDir, "npm");
     const warnings: string[] = [];
-    vi.stubEnv("OPENCLAW_COMPATIBILITY_HOST_VERSION", "2026.5.10-beta.1");
+    vi.stubEnv("DEX_COMPATIBILITY_HOST_VERSION", "2026.5.10-beta.1");
 
     mockNpmViewAndInstallMany([
       {
@@ -1437,7 +1437,7 @@ describe("installPluginFromNpmSpec", () => {
         compat: { pluginApi: ">=2026.5.10-beta.1" },
       },
     });
-    vi.stubEnv("OPENCLAW_COMPATIBILITY_HOST_VERSION", "2026.5.10-beta.1");
+    vi.stubEnv("DEX_COMPATIBILITY_HOST_VERSION", "2026.5.10-beta.1");
     mockNpmViewAndInstallMany([
       {
         spec: "@openclaw/whatsapp",
@@ -1501,7 +1501,7 @@ describe("installPluginFromNpmSpec", () => {
     const stateDir = suiteTempRootTracker.makeTempDir();
     const npmRoot = path.join(stateDir, "npm");
     const warnings: string[] = [];
-    vi.stubEnv("OPENCLAW_COMPATIBILITY_HOST_VERSION", "2026.5.28-beta.3");
+    vi.stubEnv("DEX_COMPATIBILITY_HOST_VERSION", "2026.5.28-beta.3");
 
     mockNpmViewAndInstallMany([
       {
@@ -1559,7 +1559,7 @@ describe("installPluginFromNpmSpec", () => {
   it("does not resolve explicit prerelease tags to stable compatible versions", async () => {
     const stateDir = suiteTempRootTracker.makeTempDir();
     const npmRoot = path.join(stateDir, "npm");
-    vi.stubEnv("OPENCLAW_COMPATIBILITY_HOST_VERSION", "2026.5.28-beta.3");
+    vi.stubEnv("DEX_COMPATIBILITY_HOST_VERSION", "2026.5.28-beta.3");
 
     mockNpmViewAndInstallMany([
       {
@@ -1597,7 +1597,7 @@ describe("installPluginFromNpmSpec", () => {
   it("does not resolve explicit prerelease tags to a different prerelease channel", async () => {
     const stateDir = suiteTempRootTracker.makeTempDir();
     const npmRoot = path.join(stateDir, "npm");
-    vi.stubEnv("OPENCLAW_COMPATIBILITY_HOST_VERSION", "2026.5.28-beta.3");
+    vi.stubEnv("DEX_COMPATIBILITY_HOST_VERSION", "2026.5.28-beta.3");
 
     mockNpmViewAndInstallMany([
       {

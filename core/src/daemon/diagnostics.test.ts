@@ -23,7 +23,7 @@ describe("readLastGatewayErrorLine", () => {
   it("ignores stale launchd stderr when stderr is suppressed", async () => {
     const stateDir = makeTempStateDir();
     const homeDir = makeTempStateDir();
-    const env = { HOME: homeDir, OPENCLAW_STATE_DIR: stateDir };
+    const env = { HOME: homeDir, DEX_STATE_DIR: stateDir };
     const stateLogs = resolveGatewayLogPaths(env);
     const launchdLogs = resolveGatewaySupervisorLogPaths(env, { platform: "darwin" });
     fs.mkdirSync(stateLogs.logDir, { recursive: true });

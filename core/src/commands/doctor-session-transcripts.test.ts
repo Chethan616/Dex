@@ -70,9 +70,9 @@ describe("doctor session transcript repair", () => {
           content: [
             "visible ask",
             "",
-            "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>",
+            "<<<BEGIN_DEX_INTERNAL_CONTEXT>>>",
             "secret",
-            "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>",
+            "<<<END_DEX_INTERNAL_CONTEXT>>>",
           ].join("\n"),
         },
       },
@@ -126,7 +126,7 @@ describe("doctor session transcript repair", () => {
         message: {
           role: "user",
           content:
-            "visible ask\n\n<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>\nsecret\n<<<END_OPENCLAW_INTERNAL_CONTEXT>>>",
+            "visible ask\n\n<<<BEGIN_DEX_INTERNAL_CONTEXT>>>\nsecret\n<<<END_DEX_INTERNAL_CONTEXT>>>",
         },
       },
       {

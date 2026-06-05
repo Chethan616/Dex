@@ -77,7 +77,7 @@ function runAssertInstalled({
   const inspectJsonPath = path.join(scratchRoot, `kitchen-sink-${label}-inspect.json`);
   const inspectAllJsonPath = path.join(scratchRoot, `kitchen-sink-${label}-inspect-all.json`);
   const installPathMarker = path.join(scratchRoot, `kitchen-sink-${label}-install-path.txt`);
-  const installsPath = path.join(home, ".openclaw", "plugins", "installs.json");
+  const installsPath = path.join(home, ".dex", "plugins", "installs.json");
   const spawnEnv = { ...process.env };
   delete spawnEnv.KITCHEN_SINK_REQUIRE_ALL_DIAGNOSTICS;
 
@@ -138,7 +138,7 @@ function runAssertClawhubInstalled({
   const inspectJsonPath = path.join(scratchRoot, `kitchen-sink-${label}-inspect.json`);
   const inspectAllJsonPath = path.join(scratchRoot, `kitchen-sink-${label}-inspect-all.json`);
   const installPathMarker = path.join(scratchRoot, `kitchen-sink-${label}-install-path.txt`);
-  const installsPath = path.join(home, ".openclaw", "plugins", "installs.json");
+  const installsPath = path.join(home, ".dex", "plugins", "installs.json");
   try {
     const inspectPayload = fullSurfaceInspectPayload(pluginId);
     inspectPayload.plugin.contextEngineIds = contextEngineIds;
@@ -370,7 +370,7 @@ set -euo pipefail
 export PATH="$FAKE_BIN:$PATH"
 export KITCHEN_SINK_SWEEP_SOURCE_ONLY=1
 export KITCHEN_SINK_TMP_DIR="$SCRATCH_ROOT"
-export OPENCLAW_CLAWHUB_FIXTURE_WAIT_ATTEMPTS=1
+export DEX_CLAWHUB_FIXTURE_WAIT_ATTEMPTS=1
 source scripts/e2e/lib/kitchen-sink-plugin/sweep.sh
 set +e
 start_kitchen_sink_clawhub_fixture_server "$FIXTURE_DIR"

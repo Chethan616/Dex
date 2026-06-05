@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { modelKey } from "../agents/model-selection.js";
 import type { normalizeProviderModelIdWithRuntime } from "../agents/provider-model-normalization.runtime.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resetLogger, setLoggerOverride } from "../logging/logger.js";
 import { loggingState } from "../logging/state.js";
 import type { PluginManifestRecord, PluginManifestRegistry } from "../plugins/manifest-registry.js";
@@ -157,7 +157,7 @@ describe("model-pricing-cache", () => {
           summaryModel: "openai/gpt-5.4",
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const refs = collectConfiguredModelPricingRefs(config).map((ref) =>
       modelKey(ref.provider, ref.model),
@@ -193,7 +193,7 @@ describe("model-pricing-cache", () => {
           },
         },
       },
-    } as OpenClawConfig).map((ref) => modelKey(ref.provider, ref.model));
+    } as DexConfig).map((ref) => modelKey(ref.provider, ref.model));
 
     expect(refs).toContain("tavily/search-preview");
   });
@@ -229,7 +229,7 @@ describe("model-pricing-cache", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const fetchImpl = vi.fn<typeof fetch>();
 
     await refreshGatewayModelPricingCache({ config, fetchImpl });
@@ -276,7 +276,7 @@ describe("model-pricing-cache", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const fetchImpl = vi.fn<typeof fetch>();
 
     await refreshGatewayModelPricingCache({
@@ -344,7 +344,7 @@ describe("model-pricing-cache", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const fetchImpl = vi.fn<typeof fetch>();
 
     await refreshGatewayModelPricingCache({ config, fetchImpl });
@@ -387,7 +387,7 @@ describe("model-pricing-cache", () => {
       tools: {
         subagents: { model: { primary: "my-local-gpu/qwen2.5-coder:7b" } },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const fetchImpl = vi.fn<typeof fetch>();
 
     await refreshGatewayModelPricingCache({ config, fetchImpl });
@@ -414,7 +414,7 @@ describe("model-pricing-cache", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const failingFetch = withFetchPreconnect(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.includes("openrouter.ai")) {
@@ -468,7 +468,7 @@ describe("model-pricing-cache", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const fetchImpl = withFetchPreconnect(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.includes("openrouter.ai")) {
@@ -509,7 +509,7 @@ describe("model-pricing-cache", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const fetchImpl = withFetchPreconnect(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.includes("openrouter.ai")) {
@@ -562,7 +562,7 @@ describe("model-pricing-cache", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig;
+      } as unknown as DexConfig;
       const fetchImpl = withFetchPreconnect(async (input: RequestInfo | URL) => {
         const url =
           typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -635,7 +635,7 @@ describe("model-pricing-cache", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const fetchImpl = vi.fn<typeof fetch>();
 
     await refreshGatewayModelPricingCache({ config, fetchImpl });
@@ -663,7 +663,7 @@ describe("model-pricing-cache", () => {
           },
         ],
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const fetchImpl = withFetchPreconnect(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -748,7 +748,7 @@ describe("model-pricing-cache", () => {
           model: { primary: "openrouter/auto" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const fetchImpl = withFetchPreconnect(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -795,7 +795,7 @@ describe("model-pricing-cache", () => {
           model: { primary: "volcengine/doubao-seed-2-0-pro" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const fetchImpl = withFetchPreconnect(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -874,7 +874,7 @@ describe("model-pricing-cache", () => {
           model: { primary: "volcengine/doubao-open" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const fetchImpl = withFetchPreconnect(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -936,7 +936,7 @@ describe("model-pricing-cache", () => {
           model: { primary: "dashscope/qwen-plus" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const fetchImpl = withFetchPreconnect(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -1013,7 +1013,7 @@ describe("model-pricing-cache", () => {
           model: { primary: "anthropic/claude-opus-4-6" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const fetchImpl = withFetchPreconnect(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -1060,7 +1060,7 @@ describe("model-pricing-cache", () => {
           model: { primary: "anthropic/claude-opus-4-6" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const fetchImpl = withFetchPreconnect(
       vi.fn(async (input: RequestInfo | URL) => {
         const url =
@@ -1093,7 +1093,7 @@ describe("model-pricing-cache", () => {
           model: { primary: "anthropic/claude-opus-4-6" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const abortedUrls: string[] = [];
     const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
     const fetchImpl = withFetchPreconnect(
@@ -1142,7 +1142,7 @@ describe("model-pricing-cache", () => {
         },
       },
       models: { pricing: { enabled: false } },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const fetchImpl = withFetchPreconnect(vi.fn());
 
     const stop = startGatewayModelPricingRefresh({ config, fetchImpl });
@@ -1160,7 +1160,7 @@ describe("model-pricing-cache", () => {
         },
       },
       models: { pricing: { enabled: false } },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const fetchImpl = withFetchPreconnect(vi.fn());
 
     await refreshGatewayModelPricingCache({ config, fetchImpl });
@@ -1184,7 +1184,7 @@ describe("model-pricing-cache", () => {
           model: { primary: "anthropic/claude-opus-4-6" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const timeoutError = new DOMException(
       "The operation was aborted due to timeout",
       "TimeoutError",
@@ -1218,7 +1218,7 @@ describe("model-pricing-cache", () => {
           model: { primary: "kimi/kimi-k2.6" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const fetchImpl = withFetchPreconnect(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;

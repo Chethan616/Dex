@@ -52,8 +52,8 @@ const withoutSupervisorEnv = Object.fromEntries(
   SUPERVISOR_HINT_ENV_VARS.map((key) => [key, undefined]),
 ) as Record<string, string | undefined>;
 const withoutGatewayAuthEnv = {
-  OPENCLAW_GATEWAY_TOKEN: undefined,
-  OPENCLAW_GATEWAY_PASSWORD: undefined,
+  DEX_GATEWAY_TOKEN: undefined,
+  DEX_GATEWAY_PASSWORD: undefined,
 };
 
 const { runtimeErrors, defaultRuntime, resetRuntimeCapture } = createCliRuntimeCapture();
@@ -82,13 +82,13 @@ vi.mock("../../gateway/auth.js", () => ({
     const token =
       (typeof params.authOverride?.token === "string" ? params.authOverride.token : undefined) ??
       (typeof params.authConfig?.token === "string" ? params.authConfig.token : undefined) ??
-      params.env?.OPENCLAW_GATEWAY_TOKEN;
+      params.env?.DEX_GATEWAY_TOKEN;
     const password =
       (typeof params.authOverride?.password === "string"
         ? params.authOverride.password
         : undefined) ??
       (typeof params.authConfig?.password === "string" ? params.authConfig.password : undefined) ??
-      params.env?.OPENCLAW_GATEWAY_PASSWORD;
+      params.env?.DEX_GATEWAY_PASSWORD;
     return {
       mode,
       token,
@@ -303,7 +303,7 @@ describe("gateway run option collisions", () => {
   it("marks service-mode gateway descendants with the live gateway pid", async () => {
     await withEnvAsync(
       {
-        OPENCLAW_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_MARKER: "openclaw",
         [GATEWAY_SERVICE_RUNTIME_PID_ENV]: undefined,
       },
       async () => {
@@ -339,17 +339,17 @@ describe("gateway run option collisions", () => {
       config: { meta: { lastTouchedVersion: "9999.1.1" } },
       sourceConfig: { meta: { lastTouchedVersion: "9999.1.1" } },
     };
-    const previousMarker = process.env.OPENCLAW_SERVICE_MARKER;
-    process.env.OPENCLAW_SERVICE_MARKER = "gateway";
+    const previousMarker = process.env.DEX_SERVICE_MARKER;
+    process.env.DEX_SERVICE_MARKER = "gateway";
     try {
       await expect(runGatewayCli(["gateway", "run", "--allow-unconfigured"])).rejects.toThrow(
         "__exit__:78",
       );
     } finally {
       if (previousMarker === undefined) {
-        delete process.env.OPENCLAW_SERVICE_MARKER;
+        delete process.env.DEX_SERVICE_MARKER;
       } else {
-        process.env.OPENCLAW_SERVICE_MARKER = previousMarker;
+        process.env.DEX_SERVICE_MARKER = previousMarker;
       }
     }
 
@@ -362,12 +362,12 @@ describe("gateway run option collisions", () => {
     ["--cli-backend-logs", "generic flag"],
     ["--claude-cli-logs", "deprecated alias"],
   ])("enables CLI backend log filtering via %s (%s)", async (flag) => {
-    delete process.env.OPENCLAW_CLI_BACKEND_LOG_OUTPUT;
+    delete process.env.DEX_CLI_BACKEND_LOG_OUTPUT;
 
     await runGatewayCli(["gateway", "run", flag, "--allow-unconfigured"]);
 
     expect(setConsoleSubsystemFilter).toHaveBeenCalledWith(["agent/cli-backend"]);
-    expect(process.env.OPENCLAW_CLI_BACKEND_LOG_OUTPUT).toBe("1");
+    expect(process.env.DEX_CLI_BACKEND_LOG_OUTPUT).toBe("1");
   });
 
   it("starts gateway when token mode has no configured token (startup bootstrap path)", async () => {
@@ -567,7 +567,7 @@ describe("gateway run option collisions", () => {
       gateway: {
         auth: {
           mode: "password",
-          password: { source: "env", provider: "default", id: "OPENCLAW_GATEWAY_PASSWORD" },
+          password: { source: "env", provider: "default", id: "DEX_GATEWAY_PASSWORD" },
         },
       },
       secrets: {
@@ -609,7 +609,7 @@ describe("gateway run option collisions", () => {
     expect(options.auth?.mode).toBe("password");
     expect(options.auth?.password).toBe("pw_from_file"); // pragma: allowlist secret
     expect(runtimeErrors).not.toContain(
-      "Warning: --password can be exposed via process listings. Prefer --password-file or OPENCLAW_GATEWAY_PASSWORD.",
+      "Warning: --password can be exposed via process listings. Prefer --password-file or DEX_GATEWAY_PASSWORD.",
     );
   });
 
@@ -625,7 +625,7 @@ describe("gateway run option collisions", () => {
     ]);
 
     expect(runtimeErrors).toContain(
-      "Warning: --password can be exposed via process listings. Prefer --password-file or OPENCLAW_GATEWAY_PASSWORD.",
+      "Warning: --password can be exposed via process listings. Prefer --password-file or DEX_GATEWAY_PASSWORD.",
     );
   });
 

@@ -92,7 +92,7 @@ function verboseMessages(): string[] {
 
 async function resetMessageHookTestState() {
   await loadGetReplyRuntimeForTest();
-  delete process.env.OPENCLAW_TEST_FAST;
+  delete process.env.DEX_TEST_FAST;
   mocks.applyMediaUnderstanding.mockReset();
   mocks.applyLinkUnderstanding.mockReset();
   mocks.createInternalHookEvent.mockReset();
@@ -387,7 +387,7 @@ describe("getReplyFromConfig message hooks", () => {
   });
 
   it("skips message hooks in fast test mode", async () => {
-    process.env.OPENCLAW_TEST_FAST = "1";
+    process.env.DEX_TEST_FAST = "1";
 
     await getReplyFromConfig(buildCtx(), undefined, withFastReplyConfig({}));
 

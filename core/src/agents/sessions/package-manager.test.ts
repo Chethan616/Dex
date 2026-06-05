@@ -122,7 +122,7 @@ describe("DefaultPackageManager", () => {
 
   it("keeps auto-discovered project resources inside their resource roots", async () => {
     const root = await makeTempDir("openclaw-package-manager-");
-    const configRoot = join(root, ".openclaw");
+    const configRoot = join(root, ".dex");
     const outsideRoot = join(root, "outside");
     const insidePrompt = join(configRoot, "prompts", "inside.md");
     const insideTheme = join(configRoot, "themes", "inside.json");

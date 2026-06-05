@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { getRuntimeConfig, writeConfigFile } from "../config/config.js";
 import { withTempHome } from "../config/home-env.test-harness.js";
 import { withEnvAsync } from "../test-utils/env.js";
@@ -36,8 +36,8 @@ describe("secrets runtime snapshot gateway-auth integration", () => {
   it("fails fast at startup when gateway auth SecretRef is active and unresolved", async () => {
     await withEnvAsync(
       {
-        OPENCLAW_BUNDLED_PLUGINS_DIR: undefined,
-        OPENCLAW_VERSION: undefined,
+        DEX_BUNDLED_PLUGINS_DIR: undefined,
+        DEX_VERSION: undefined,
       },
       async () => {
         await expect(
@@ -78,9 +78,9 @@ describe("secrets runtime snapshot gateway-auth integration", () => {
           provider: "default",
           id: "MISSING_GATEWAY_AUTH_TOKEN",
         } as const;
-        await fs.mkdir(path.join(home, ".openclaw"), { recursive: true });
+        await fs.mkdir(path.join(home, ".dex"), { recursive: true });
         await fs.writeFile(
-          path.join(home, ".openclaw", "openclaw.json"),
+          path.join(home, ".dex", "openclaw.json"),
           `${JSON.stringify(
             {
               gateway: {
@@ -136,8 +136,8 @@ describe("secrets runtime snapshot gateway-auth integration", () => {
         expect(activeAfterFailure.sourceConfig.gateway?.auth?.token).toEqual(initialTokenRef);
 
         const persistedConfig = JSON.parse(
-          await fs.readFile(path.join(home, ".openclaw", "openclaw.json"), "utf8"),
-        ) as OpenClawConfig;
+          await fs.readFile(path.join(home, ".dex", "openclaw.json"), "utf8"),
+        ) as DexConfig;
         expect(persistedConfig.gateway?.auth?.token).toEqual(initialTokenRef);
       });
     },

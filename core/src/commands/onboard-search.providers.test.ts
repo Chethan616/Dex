@@ -1,10 +1,10 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { PluginWebSearchProviderEntry } from "../plugins/types.js";
 
 const mocks = vi.hoisted(() => ({
   resolvePluginWebSearchProviders: vi.fn<
-    (params?: { config?: OpenClawConfig }) => PluginWebSearchProviderEntry[]
+    (params?: { config?: DexConfig }) => PluginWebSearchProviderEntry[]
   >(() => []),
   resolveWebSearchInstallCatalogEntries: vi.fn(() => []),
 }));
@@ -109,7 +109,7 @@ describe("onboard-search provider resolution", () => {
       params?.config ? [customEntry] : [],
     );
 
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       tools: {
         web: {
           search: {
@@ -149,7 +149,7 @@ describe("onboard-search provider resolution", () => {
       params?.config ? [customEntry] : [],
     );
 
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       plugins: {
         installs: {
           "custom-plugin": {
@@ -196,7 +196,7 @@ describe("onboard-search provider resolution", () => {
   it("does not treat hard-disabled bundled providers as selectable credentials", () => {
     mocks.resolvePluginWebSearchProviders.mockReturnValue([]);
 
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       tools: {
         web: {
           search: {
@@ -245,7 +245,7 @@ describe("onboard-search provider resolution", () => {
       progress: vi.fn(() => ({ update: vi.fn(), stop: vi.fn() })),
     };
 
-    const result = await mod.setupSearch({} as OpenClawConfig, {} as never, prompter as never);
+    const result = await mod.setupSearch({} as DexConfig, {} as never, prompter as never);
 
     expect(result.tools?.web?.search?.provider).toBe("duckduckgo");
     expect(result.plugins?.entries?.duckduckgo?.enabled).toBe(true);

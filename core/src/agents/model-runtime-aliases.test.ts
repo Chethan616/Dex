@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { testing as cliBackendsTesting } from "./cli-backends.js";
 import { createModelPickerVisibleProviderPredicate } from "./model-picker-visibility.js";
 import {
@@ -10,8 +10,8 @@ import {
 
 function createAnthropicAuthConfig(params: {
   order?: string[];
-  models?: NonNullable<NonNullable<OpenClawConfig["agents"]>["defaults"]>["models"];
-}): OpenClawConfig {
+  models?: NonNullable<NonNullable<DexConfig["agents"]>["defaults"]>["models"];
+}): DexConfig {
   return {
     auth: {
       order: params.order ? { anthropic: params.order } : undefined,
@@ -25,7 +25,7 @@ function createAnthropicAuthConfig(params: {
         models: params.models,
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 describe("resolveCliRuntimeExecutionProvider", () => {

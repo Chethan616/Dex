@@ -6,7 +6,7 @@ import type {
   PluginStateEntry,
   PluginStateKeyedStore,
 } from "../../plugin-state/plugin-state-store.types.js";
-import { closeOpenClawStateDatabaseForTest } from "../../state/openclaw-state-db.js";
+import { closeDexStateDatabaseForTest } from "../../state/openclaw-state-db.js";
 import { createDurableInboundReceiveJournalFromQueue } from "./durable-receive.js";
 import { createDurableInboundReceiveJournal } from "./durable-receive.js";
 import { createChannelIngressQueue } from "./ingress-queue.js";
@@ -76,7 +76,7 @@ async function withTempState<T>(fn: (stateDir: string) => Promise<T>): Promise<T
   try {
     return await fn(stateDir);
   } finally {
-    closeOpenClawStateDatabaseForTest();
+    closeDexStateDatabaseForTest();
     await fs.rm(stateDir, { recursive: true, force: true });
   }
 }

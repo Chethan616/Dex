@@ -7,9 +7,9 @@ describe("buildPairingReply", () => {
   let envSnapshot: ReturnType<typeof captureEnv>;
 
   beforeEach(() => {
-    envSnapshot = captureEnv(["OPENCLAW_CONTAINER_HINT", "OPENCLAW_PROFILE"]);
-    delete process.env.OPENCLAW_CONTAINER_HINT;
-    process.env.OPENCLAW_PROFILE = "isolated";
+    envSnapshot = captureEnv(["DEX_CONTAINER_HINT", "DEX_PROFILE"]);
+    delete process.env.DEX_CONTAINER_HINT;
+    process.env.DEX_PROFILE = "isolated";
   });
 
   afterEach(() => {

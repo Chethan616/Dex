@@ -56,10 +56,10 @@ function callHandler(method: string, params: Record<string, unknown>) {
 
 describe("skills proposal gateway handlers", () => {
   beforeEach(async () => {
-    envSnapshot = captureEnv(["OPENCLAW_STATE_DIR"]);
+    envSnapshot = captureEnv(["DEX_STATE_DIR"]);
     mocks.workspaceDir = await tempDirs.make("openclaw-skills-proposals-gateway-");
     stateDir = await tempDirs.make("openclaw-skills-proposals-gateway-state-");
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    process.env.DEX_STATE_DIR = stateDir;
   });
 
   afterEach(async () => {

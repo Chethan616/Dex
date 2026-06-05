@@ -1,5 +1,5 @@
 import http from "node:http";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { fetch as undiciFetch } from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDiscordRestClient } from "./client.js";
@@ -36,7 +36,7 @@ describe("createDiscordRestClient proxy support", () => {
           proxy: "http://127.0.0.1:8080",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const { rest } = createDiscordRestClient({ cfg });
     const requestClient = rest as unknown as {
@@ -56,7 +56,7 @@ describe("createDiscordRestClient proxy support", () => {
           token: "Bot test-token",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const { rest } = createDiscordRestClient({ cfg });
     const requestClient = rest as unknown as {
@@ -74,7 +74,7 @@ describe("createDiscordRestClient proxy support", () => {
           proxy: "bad-proxy",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const { rest } = createDiscordRestClient({ cfg });
     const requestClient = rest as unknown as {
@@ -93,7 +93,7 @@ describe("createDiscordRestClient proxy support", () => {
           proxy: "http://proxy.test:8080",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const { rest } = createDiscordRestClient({ cfg });
     const requestClient = rest as unknown as {
@@ -112,7 +112,7 @@ describe("createDiscordRestClient proxy support", () => {
           proxy: "http://[::1]:8080",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const { rest } = createDiscordRestClient({ cfg });
     const requestClient = rest as unknown as {

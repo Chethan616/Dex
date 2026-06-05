@@ -29,7 +29,7 @@ let testStateDir: string | undefined;
 
 beforeEach(async () => {
   testStateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-workspace-state-"));
-  vi.stubEnv("OPENCLAW_STATE_DIR", testStateDir);
+  vi.stubEnv("DEX_STATE_DIR", testStateDir);
 });
 
 afterEach(async () => {
@@ -41,19 +41,19 @@ afterEach(async () => {
 });
 
 describe("resolveDefaultAgentWorkspaceDir", () => {
-  it("uses OPENCLAW_HOME for default workspace resolution", () => {
+  it("uses DEX_HOME for default workspace resolution", () => {
     const dir = resolveDefaultAgentWorkspaceDir({
-      OPENCLAW_HOME: "/srv/openclaw-home",
+      DEX_HOME: "/srv/openclaw-home",
       HOME: "/home/other",
     } as NodeJS.ProcessEnv);
 
-    expect(dir).toBe(path.join(path.resolve("/srv/openclaw-home"), ".openclaw", "workspace"));
+    expect(dir).toBe(path.join(path.resolve("/srv/openclaw-home"), ".dex", "workspace"));
   });
 
-  it("prefers OPENCLAW_WORKSPACE_DIR for default workspace resolution", () => {
+  it("prefers DEX_WORKSPACE_DIR for default workspace resolution", () => {
     const dir = resolveDefaultAgentWorkspaceDir({
-      OPENCLAW_WORKSPACE_DIR: "/srv/openclaw-workspace",
-      OPENCLAW_HOME: "/srv/openclaw-home",
+      DEX_WORKSPACE_DIR: "/srv/openclaw-workspace",
+      DEX_HOME: "/srv/openclaw-home",
       HOME: "/home/other",
     } as NodeJS.ProcessEnv);
 
@@ -61,7 +61,7 @@ describe("resolveDefaultAgentWorkspaceDir", () => {
   });
 });
 
-const WORKSPACE_STATE_PATH_SEGMENTS = [".openclaw", "workspace-state.json"] as const;
+const WORKSPACE_STATE_PATH_SEGMENTS = [".dex", "workspace-state.json"] as const;
 
 async function readWorkspaceState(dir: string): Promise<{
   version: number;
@@ -173,7 +173,7 @@ describe("ensureAgentWorkspace", () => {
 
     await fs.rm(tempDir, { recursive: true, force: true });
     await fs.mkdir(path.join(tempDir, ".git"), { recursive: true });
-    await fs.mkdir(path.join(tempDir, ".openclaw"), { recursive: true });
+    await fs.mkdir(path.join(tempDir, ".dex"), { recursive: true });
 
     await expectWorkspaceVanished(
       ensureAgentWorkspace({ dir: tempDir, ensureBootstrapFiles: true }),
@@ -295,7 +295,7 @@ describe("ensureAgentWorkspace", () => {
     await ensureAgentWorkspace({ dir: tempDir, ensureBootstrapFiles: false });
 
     await fs.rm(tempDir, { recursive: true, force: true });
-    await fs.mkdir(path.join(tempDir, ".openclaw"), { recursive: true });
+    await fs.mkdir(path.join(tempDir, ".dex"), { recursive: true });
     await fs.mkdir(path.join(tempDir, "skills"), { recursive: true });
     await fs.writeFile(path.join(tempDir, ".DS_Store"), "");
 
@@ -518,7 +518,7 @@ describe("ensureAgentWorkspace", () => {
 
   it("migrates legacy onboardingCompletedAt markers to setupCompletedAt", async () => {
     const tempDir = await makeTempWorkspace("openclaw-workspace-");
-    await fs.mkdir(path.join(tempDir, ".openclaw"), { recursive: true });
+    await fs.mkdir(path.join(tempDir, ".dex"), { recursive: true });
     await fs.writeFile(
       path.join(tempDir, ...WORKSPACE_STATE_PATH_SEGMENTS),
       JSON.stringify({

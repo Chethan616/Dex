@@ -6,10 +6,10 @@ import { describe, expect, it, vi } from "vitest";
 import { backupVerifyCommand } from "../commands/backup-verify.js";
 import type { RuntimeEnv } from "../runtime.js";
 import {
-  closeOpenClawStateDatabase,
-  openOpenClawStateDatabase,
+  closeDexStateDatabase,
+  openDexStateDatabase,
 } from "../state/openclaw-state-db.js";
-import { withOpenClawTestState } from "../test-utils/openclaw-test-state.js";
+import { withDexTestState } from "../test-utils/openclaw-test-state.js";
 import {
   testApi as backupCreateInternals,
   buildExtensionsNodeModulesFilter,
@@ -80,7 +80,7 @@ describe("formatBackupCreateSummary", () => {
             kind: "state",
             sourcePath: "/state",
             archivePath: "archive/state",
-            displayPath: "~/.openclaw",
+            displayPath: "~/.dex",
           },
         ],
         skipped: [
@@ -89,16 +89,16 @@ describe("formatBackupCreateSummary", () => {
             sourcePath: "/workspace",
             displayPath: "~/Projects/openclaw",
             reason: "covered",
-            coveredBy: "~/.openclaw",
+            coveredBy: "~/.dex",
           },
         ],
       }),
       expected: [
         backupArchiveLine,
         "Included 1 path:",
-        "- state: ~/.openclaw",
+        "- state: ~/.dex",
         "Skipped 1 path:",
-        "- workspace: ~/Projects/openclaw (covered by ~/.openclaw)",
+        "- workspace: ~/Projects/openclaw (covered by ~/.dex)",
         "Created /tmp/openclaw-backup.tar.gz",
         "Archive verification: passed",
       ],
@@ -112,21 +112,21 @@ describe("formatBackupCreateSummary", () => {
             kind: "config",
             sourcePath: "/config",
             archivePath: "archive/config",
-            displayPath: "~/.openclaw/config.json",
+            displayPath: "~/.dex/config.json",
           },
           {
             kind: "credentials",
             sourcePath: "/oauth",
             archivePath: "archive/oauth",
-            displayPath: "~/.openclaw/oauth",
+            displayPath: "~/.dex/oauth",
           },
         ],
       }),
       expected: [
         backupArchiveLine,
         "Included 2 paths:",
-        "- config: ~/.openclaw/config.json",
-        "- credentials: ~/.openclaw/oauth",
+        "- config: ~/.dex/config.json",
+        "- credentials: ~/.dex/oauth",
         "Dry run only; archive was not written.",
       ],
     },
@@ -143,7 +143,7 @@ describe("formatBackupCreateSummary", () => {
               kind: "state",
               sourcePath: "/state",
               archivePath: "archive/state",
-              displayPath: "~/.openclaw",
+              displayPath: "~/.dex",
             },
           ],
           skippedVolatileCount: 3,
@@ -152,7 +152,7 @@ describe("formatBackupCreateSummary", () => {
     ).toEqual([
       "Backup archive: /tmp/openclaw-backup.tar.gz",
       "Included 1 path:",
-      "- state: ~/.openclaw",
+      "- state: ~/.dex",
       "Created /tmp/openclaw-backup.tar.gz",
       "Skipped 3 volatile files (live sessions, cron logs, queues, sockets, pid/tmp).",
     ]);
@@ -312,7 +312,7 @@ describe("buildExtensionsNodeModulesFilter", () => {
 
 describe("createBackupArchive", () => {
   it("falls back when injected nowMs is outside Date range", async () => {
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-backup-invalid-now-",
@@ -342,7 +342,7 @@ describe("createBackupArchive", () => {
   });
 
   it("falls back to epoch when injected nowMs and Date.now are outside Date range", async () => {
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-backup-invalid-fallback-now-",
@@ -372,7 +372,7 @@ describe("createBackupArchive", () => {
   });
 
   it("skips current live volatile state files while preserving workspace locks", async () => {
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "split",
         prefix: "openclaw-backup-volatile-",
@@ -438,7 +438,7 @@ describe("createBackupArchive", () => {
   });
 
   it("scrubs transient SQLite delivery queue rows from archive snapshots", async () => {
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-backup-sqlite-queue-",
@@ -449,7 +449,7 @@ describe("createBackupArchive", () => {
         const extractDir = state.path("extract");
         await fs.mkdir(outputDir, { recursive: true });
         await fs.mkdir(extractDir, { recursive: true });
-        const { db } = openOpenClawStateDatabase({ env: state.env });
+        const { db } = openDexStateDatabase({ env: state.env });
         db.prepare(
           `
             INSERT INTO delivery_queue_entries (
@@ -490,14 +490,14 @@ describe("createBackupArchive", () => {
             count: 1,
           });
         } finally {
-          closeOpenClawStateDatabase();
+          closeDexStateDatabase();
         }
       },
     );
   });
 
   it("omits installed plugin node_modules from the real archive while keeping plugin files", async () => {
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-backup-plugin-deps-",
@@ -557,7 +557,7 @@ describe("createBackupArchive", () => {
   });
 
   it("dereferences hardlinks instead of emitting restore-hostile Link entries", async () => {
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-backup-hardlink-",
@@ -596,7 +596,7 @@ describe("createBackupArchive", () => {
   });
 
   it("does not duplicate the root manifest when the system tempdir lives inside the state dir", async () => {
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-backup-tmp-overlap-",
@@ -633,7 +633,7 @@ describe("createBackupArchive", () => {
   });
 
   it("does not duplicate the root manifest when the system tempdir is the state dir itself", async () => {
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-backup-tmp-equals-state-",

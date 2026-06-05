@@ -15,12 +15,12 @@ function createIntentEnv(): NodeJS.ProcessEnv {
   tempDirs.push(dir);
   return {
     ...process.env,
-    OPENCLAW_STATE_DIR: dir,
+    DEX_STATE_DIR: dir,
   };
 }
 
 function intentPath(env: NodeJS.ProcessEnv): string {
-  return path.join(env.OPENCLAW_STATE_DIR ?? "", "gateway-restart-intent.json");
+  return path.join(env.DEX_STATE_DIR ?? "", "gateway-restart-intent.json");
 }
 
 describe("gateway restart intent", () => {
@@ -86,7 +86,7 @@ describe("gateway restart intent", () => {
 
   it("does not follow an existing intent-path symlink when writing", () => {
     const env = createIntentEnv();
-    const targetPath = path.join(env.OPENCLAW_STATE_DIR ?? "", "attacker-target.txt");
+    const targetPath = path.join(env.DEX_STATE_DIR ?? "", "attacker-target.txt");
     fs.writeFileSync(targetPath, "keep", "utf8");
     try {
       fs.symlinkSync(targetPath, intentPath(env));

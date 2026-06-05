@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   clearRuntimeConfigSnapshot,
   setRuntimeConfigSnapshot,
@@ -16,7 +16,7 @@ describe("resolveDiscordToken", () => {
     vi.stubEnv("DISCORD_BOT_TOKEN", "env-token");
     const cfg = {
       channels: { discord: { token: "cfg-token" } },
-    } as OpenClawConfig;
+    } as DexConfig;
     const res = resolveDiscordToken(cfg);
     expect(res.token).toBe("cfg-token");
     expect(res.source).toBe("config");
@@ -27,7 +27,7 @@ describe("resolveDiscordToken", () => {
     vi.stubEnv("DISCORD_BOT_TOKEN", "env-token");
     const cfg = {
       channels: { discord: {} },
-    } as OpenClawConfig;
+    } as DexConfig;
     const res = resolveDiscordToken(cfg);
     expect(res.token).toBe("env-token");
     expect(res.source).toBe("env");
@@ -45,7 +45,7 @@ describe("resolveDiscordToken", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const res = resolveDiscordToken(cfg, { accountId: "work" });
     expect(res.token).toBe("acct-token");
     expect(res.source).toBe("config");
@@ -62,7 +62,7 @@ describe("resolveDiscordToken", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const res = resolveDiscordToken(cfg, { accountId: "work" });
     expect(res.token).toBe("base-token");
     expect(res.source).toBe("config");
@@ -79,7 +79,7 @@ describe("resolveDiscordToken", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const res = resolveDiscordToken(cfg, { accountId: "work" });
     expect(res.token).toBe("");
     expect(res.source).toBe("none");
@@ -95,7 +95,7 @@ describe("resolveDiscordToken", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const res = resolveDiscordToken(cfg, { accountId: "work" });
     expect(res.token).toBe("acct-token");
     expect(res.source).toBe("config");
@@ -113,7 +113,7 @@ describe("resolveDiscordToken", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const runtimeCfg = {
       channels: {
         discord: {
@@ -124,7 +124,7 @@ describe("resolveDiscordToken", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     setRuntimeConfigSnapshot(runtimeCfg, sourceCfg);
 
     const res = resolveDiscordToken(sourceCfg, { accountId: "work" });
@@ -142,7 +142,7 @@ describe("resolveDiscordToken", () => {
           token: { source: "env", provider: "default", id: "DISCORD_BOT_TOKEN" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const res = resolveDiscordToken(cfg);
 
@@ -163,7 +163,7 @@ describe("resolveDiscordToken", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const res = resolveDiscordToken(cfg, { accountId: "work" });
 

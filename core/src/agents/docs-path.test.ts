@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   resolveOpenClawDocsPath,
-  resolveOpenClawReferencePaths,
+  resolveDexReferencePaths,
   resolveOpenClawSourcePath,
 } from "./docs-path.js";
 
@@ -61,13 +61,13 @@ describe("resolveOpenClawSourcePath", () => {
   });
 });
 
-describe("resolveOpenClawReferencePaths", () => {
+describe("resolveDexReferencePaths", () => {
   it("returns docs and local source together for git checkouts", async () => {
     const root = await makePackageRoot("openclaw-reference-git-");
     await writeDocsJson(root);
     await fs.mkdir(path.join(root, ".git"));
 
-    await expect(resolveOpenClawReferencePaths({ cwd: root })).resolves.toEqual({
+    await expect(resolveDexReferencePaths({ cwd: root })).resolves.toEqual({
       docsPath: path.join(root, "docs"),
       sourcePath: root,
     });

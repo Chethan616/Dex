@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolvePluginConfigContractsById } from "../plugins/config-contracts.js";
 import { getCurrentPluginMetadataSnapshot } from "../plugins/current-plugin-metadata-snapshot.js";
 import { collectEnabledInsecureOrDangerousFlags } from "./dangerous-config-flags.js";
@@ -20,8 +20,8 @@ vi.mock("../plugins/config-contracts.js", async () => {
   };
 });
 
-function asConfig(value: unknown): OpenClawConfig {
-  return value as OpenClawConfig;
+function asConfig(value: unknown): DexConfig {
+  return value as DexConfig;
 }
 
 describe("collectEnabledInsecureOrDangerousFlags current metadata snapshot", () => {

@@ -10,7 +10,7 @@ const GOOGLE_IMAGE_KEY =
   process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim() || "";
 const LIVE =
   isLiveTestEnabled() &&
-  isTruthyEnvValue(process.env.OPENCLAW_LIVE_INFER_CLI_TEST) &&
+  isTruthyEnvValue(process.env.DEX_LIVE_INFER_CLI_TEST) &&
   GOOGLE_IMAGE_KEY.length > 0;
 const describeLive = LIVE ? describe : describe.skip;
 

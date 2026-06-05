@@ -79,9 +79,9 @@ describe("sessionsTailCommand", () => {
 
   beforeEach(() => {
     setSessionsTailFollowIntervalMsForTests(10);
-    previousStateDir = process.env.OPENCLAW_STATE_DIR;
+    previousStateDir = process.env.DEX_STATE_DIR;
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-sessions-tail-"));
-    process.env.OPENCLAW_STATE_DIR = path.join(tmpDir, "state");
+    process.env.DEX_STATE_DIR = path.join(tmpDir, "state");
     mocks.getRuntimeConfig.mockReturnValue({
       agents: {
         list: [{ id: "main" }, { id: "ops" }],
@@ -105,9 +105,9 @@ describe("sessionsTailCommand", () => {
   afterEach(() => {
     setSessionsTailFollowIntervalMsForTests();
     if (previousStateDir === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_STATE_DIR;
     } else {
-      process.env.OPENCLAW_STATE_DIR = previousStateDir;
+      process.env.DEX_STATE_DIR = previousStateDir;
     }
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -285,7 +285,7 @@ describe("sessionsTailCommand", () => {
   it("resolves the target store from a fully qualified non-default agent session key", async () => {
     const runtime = makeRuntime();
     const opsSessionKey = "agent:ops:telegram:direct:owner";
-    const opsSessionsDir = path.join(process.env.OPENCLAW_STATE_DIR!, "agents", "ops", "sessions");
+    const opsSessionsDir = path.join(process.env.DEX_STATE_DIR!, "agents", "ops", "sessions");
     fs.mkdirSync(opsSessionsDir, { recursive: true });
     fs.writeFileSync(
       path.join(opsSessionsDir, "sessions.json"),

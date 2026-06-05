@@ -162,7 +162,7 @@ describe("label-open-issues helpers", () => {
   it("rejects invalid OpenAI classification timeout values", () => {
     expect(testing.resolveOpenAITimeoutMs("250")).toBe(250);
     expect(() => testing.resolveOpenAITimeoutMs("slow")).toThrow(
-      /OPENCLAW_LABEL_OPEN_ISSUES_OPENAI_TIMEOUT_MS must be an integer/u,
+      /DEX_LABEL_OPEN_ISSUES_OPENAI_TIMEOUT_MS must be an integer/u,
     );
   });
 });

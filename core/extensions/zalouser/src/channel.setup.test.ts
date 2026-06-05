@@ -14,7 +14,7 @@ describe("zalouser setup plugin", () => {
     const stateDir = await mkdtemp(path.join(os.tmpdir(), "openclaw-zalouser-setup-"));
 
     try {
-      await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
+      await withEnvAsync({ DEX_STATE_DIR: stateDir }, async () => {
         const status = await zalouserSetupGetStatus({
           cfg: {},
           accountOverrides: {},

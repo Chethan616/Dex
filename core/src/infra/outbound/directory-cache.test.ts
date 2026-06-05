@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { DirectoryCache, buildDirectoryCacheKey } from "./directory-cache.js";
 import type { DirectoryCacheKey } from "./directory-cache.js";
 
@@ -35,8 +35,8 @@ describe("DirectoryCache", () => {
   it("expires entries after ttl and resets when config ref changes", () => {
     vi.useFakeTimers();
     const cache = new DirectoryCache<string>(1_000);
-    const cfgA = {} as OpenClawConfig;
-    const cfgB = {} as OpenClawConfig;
+    const cfgA = {} as DexConfig;
+    const cfgB = {} as DexConfig;
 
     cache.set("a", "first", cfgA);
     expect(cache.get("a", cfgA)).toBe("first");
@@ -52,7 +52,7 @@ describe("DirectoryCache", () => {
 
   it("evicts least-recent entries, refreshes insertion order, and clears matches", () => {
     const cache = new DirectoryCache<string>(60_000, 2);
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as DexConfig;
 
     cache.set("a", "A", cfg);
     cache.set("b", "B", cfg);
@@ -72,7 +72,7 @@ describe("DirectoryCache", () => {
 
   it("uses the default max size when maxSize is non-finite", () => {
     const cache = new DirectoryCache<number>(60_000, Number.NaN);
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as DexConfig;
 
     for (let i = 0; i <= 2000; i++) {
       cache.set(`key-${i}`, i, cfg);

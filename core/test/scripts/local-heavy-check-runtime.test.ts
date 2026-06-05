@@ -26,23 +26,23 @@ const ROOMY_HOST = {
 function makeEnv(overrides: Record<string, string | undefined> = {}) {
   const env = {
     ...process.env,
-    OPENCLAW_LOCAL_CHECK: "1",
+    DEX_LOCAL_CHECK: "1",
     ...overrides,
   };
-  if (!Object.hasOwn(overrides, "OPENCLAW_LOCAL_CHECK_MODE")) {
-    delete env.OPENCLAW_LOCAL_CHECK_MODE;
+  if (!Object.hasOwn(overrides, "DEX_LOCAL_CHECK_MODE")) {
+    delete env.DEX_LOCAL_CHECK_MODE;
   }
   return env;
 }
 
 describe("local-heavy-check-runtime", () => {
   it("reenables local heavy-check policy for local wrapper entrypoints", () => {
-    expect(resolveLocalHeavyCheckEnv({ OPENCLAW_LOCAL_CHECK: "0", PATH: "/usr/bin" })).toEqual({
-      OPENCLAW_LOCAL_CHECK: "1",
+    expect(resolveLocalHeavyCheckEnv({ DEX_LOCAL_CHECK: "0", PATH: "/usr/bin" })).toEqual({
+      DEX_LOCAL_CHECK: "1",
       PATH: "/usr/bin",
     });
-    expect(resolveLocalHeavyCheckEnv({ OPENCLAW_LOCAL_CHECK: "false", PATH: "/usr/bin" })).toEqual({
-      OPENCLAW_LOCAL_CHECK: "1",
+    expect(resolveLocalHeavyCheckEnv({ DEX_LOCAL_CHECK: "false", PATH: "/usr/bin" })).toEqual({
+      DEX_LOCAL_CHECK: "1",
       PATH: "/usr/bin",
     });
   });
@@ -51,12 +51,12 @@ describe("local-heavy-check-runtime", () => {
     expect(
       resolveLocalHeavyCheckEnv({
         CI: "true",
-        OPENCLAW_LOCAL_CHECK: "0",
+        DEX_LOCAL_CHECK: "0",
         PATH: "/usr/bin",
       }),
     ).toEqual({
       CI: "true",
-      OPENCLAW_LOCAL_CHECK: "0",
+      DEX_LOCAL_CHECK: "0",
       PATH: "/usr/bin",
     });
   });
@@ -79,7 +79,7 @@ describe("local-heavy-check-runtime", () => {
   });
 
   it("skips declaration transforms for no-emit tsgo checks", () => {
-    const { args } = applyLocalTsgoPolicy([], makeEnv({ OPENCLAW_LOCAL_CHECK: "0" }), ROOMY_HOST);
+    const { args } = applyLocalTsgoPolicy([], makeEnv({ DEX_LOCAL_CHECK: "0" }), ROOMY_HOST);
 
     expect(args).toEqual(["--declaration", "false"]);
   });
@@ -90,7 +90,7 @@ describe("local-heavy-check-runtime", () => {
       makeEnv({
         GOGC: "80",
         GOMEMLIMIT: "5GiB",
-        OPENCLAW_TSGO_PPROF_DIR: "/tmp/profile",
+        DEX_TSGO_PPROF_DIR: "/tmp/profile",
       }),
       CONSTRAINED_HOST,
     );
@@ -109,7 +109,7 @@ describe("local-heavy-check-runtime", () => {
   });
 
   it("keeps explicit tsgo declaration flags intact", () => {
-    const env = makeEnv({ OPENCLAW_LOCAL_CHECK_MODE: "full" });
+    const env = makeEnv({ DEX_LOCAL_CHECK_MODE: "full" });
     const longFlag = applyLocalTsgoPolicy(["--declaration"], env, ROOMY_HOST);
     const shortFlag = applyLocalTsgoPolicy(["-d"], env, ROOMY_HOST);
 
@@ -135,8 +135,8 @@ describe("local-heavy-check-runtime", () => {
     const { args } = applyLocalTsgoPolicy(
       [],
       makeEnv({
-        OPENCLAW_LOCAL_CHECK_MODE: "full",
-        OPENCLAW_TSGO_BUILD_INFO_FILE: ".artifacts/custom/tsgo.tsbuildinfo",
+        DEX_LOCAL_CHECK_MODE: "full",
+        DEX_TSGO_BUILD_INFO_FILE: ".artifacts/custom/tsgo.tsbuildinfo",
       }),
       ROOMY_HOST,
     );
@@ -153,7 +153,7 @@ describe("local-heavy-check-runtime", () => {
   it("avoids incremental cache reuse for ad hoc tsgo runs", () => {
     const { args } = applyLocalTsgoPolicy(
       ["--extendedDiagnostics"],
-      makeEnv({ OPENCLAW_LOCAL_CHECK_MODE: "full" }),
+      makeEnv({ DEX_LOCAL_CHECK_MODE: "full" }),
       ROOMY_HOST,
     );
 
@@ -164,7 +164,7 @@ describe("local-heavy-check-runtime", () => {
     const { args, env } = applyLocalTsgoPolicy(
       [],
       makeEnv({
-        OPENCLAW_LOCAL_CHECK_MODE: "throttled",
+        DEX_LOCAL_CHECK_MODE: "throttled",
       }),
       ROOMY_HOST,
     );
@@ -187,7 +187,7 @@ describe("local-heavy-check-runtime", () => {
     const { args, env } = applyLocalTsgoPolicy(
       [],
       makeEnv({
-        OPENCLAW_LOCAL_CHECK_MODE: "full",
+        DEX_LOCAL_CHECK_MODE: "full",
       }),
       ROOMY_HOST,
     );
@@ -221,7 +221,7 @@ describe("local-heavy-check-runtime", () => {
     expect(
       shouldAcquireLocalHeavyCheckLockForTsgo(
         ["--help"],
-        makeEnv({ OPENCLAW_TSGO_FORCE_LOCK: "1" }),
+        makeEnv({ DEX_TSGO_FORCE_LOCK: "1" }),
       ),
     ).toBe(true);
   });
@@ -279,7 +279,7 @@ describe("local-heavy-check-runtime", () => {
     const { args, env } = applyLocalOxlintPolicy(
       [],
       makeEnv({
-        OPENCLAW_LOCAL_CHECK_MODE: "full",
+        DEX_LOCAL_CHECK_MODE: "full",
       }),
       ROOMY_HOST,
     );
@@ -333,7 +333,7 @@ describe("local-heavy-check-runtime", () => {
     expect(
       shouldAcquireLocalHeavyCheckLockForOxlint(["--type-aware", "--", "sample.ts"], {
         cwd,
-        env: makeEnv({ OPENCLAW_OXLINT_FORCE_LOCK: "1" }),
+        env: makeEnv({ DEX_OXLINT_FORCE_LOCK: "1" }),
       }),
     ).toBe(true);
   });
@@ -383,7 +383,7 @@ describe("local-heavy-check-runtime", () => {
 
     const release = acquireLocalHeavyCheckLockSync({
       cwd,
-      env: makeEnv({ OPENCLAW_HEAVY_CHECK_LOCK_SCOPE: "worktree" }),
+      env: makeEnv({ DEX_HEAVY_CHECK_LOCK_SCOPE: "worktree" }),
       toolName: "check:changed",
     });
 
@@ -403,17 +403,17 @@ describe("local-heavy-check-runtime", () => {
     expect(() =>
       acquireLocalHeavyCheckLockSync({
         cwd,
-        env: makeEnv({ OPENCLAW_HEAVY_CHECK_LOCK_TIMEOUT_MS: "10ms" }),
+        env: makeEnv({ DEX_HEAVY_CHECK_LOCK_TIMEOUT_MS: "10ms" }),
         toolName: "oxlint",
       }),
-    ).toThrow("OPENCLAW_HEAVY_CHECK_LOCK_TIMEOUT_MS must be a positive integer; got: 10ms");
+    ).toThrow("DEX_HEAVY_CHECK_LOCK_TIMEOUT_MS must be a positive integer; got: 10ms");
     expect(() =>
       acquireLocalHeavyCheckLockSync({
         cwd,
-        env: makeEnv({ OPENCLAW_HEAVY_CHECK_LOCK_POLL_MS: "0" }),
+        env: makeEnv({ DEX_HEAVY_CHECK_LOCK_POLL_MS: "0" }),
         toolName: "oxlint",
       }),
-    ).toThrow("OPENCLAW_HEAVY_CHECK_LOCK_POLL_MS must be a positive integer; got: 0");
+    ).toThrow("DEX_HEAVY_CHECK_LOCK_POLL_MS must be a positive integer; got: 0");
   });
 
   it("cleans up stale legacy test locks when acquiring the shared heavy-check lock", () => {

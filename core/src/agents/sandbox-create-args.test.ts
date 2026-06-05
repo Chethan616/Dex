@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OPENCLAW_CLI_ENV_VALUE } from "../infra/openclaw-exec-env.js";
+import { DEX_CLI_ENV_VALUE } from "../infra/openclaw-exec-env.js";
 import { buildSandboxCreateArgs } from "./sandbox/docker.js";
 import type { SandboxDockerConfig } from "./sandbox/types.js";
 
@@ -116,7 +116,7 @@ describe("buildSandboxCreateArgs", () => {
     expectFlagValues(args, "--memory", ["512m"]);
     expectFlagValues(args, "--memory-swap", ["1024"]);
     expectFlagValues(args, "--cpus", ["1.5"]);
-    expectFlagValues(args, "--env", ["LANG=C.UTF-8", `OPENCLAW_CLI=${OPENCLAW_CLI_ENV_VALUE}`]);
+    expectFlagValues(args, "--env", ["LANG=C.UTF-8", `DEX_CLI=${DEX_CLI_ENV_VALUE}`]);
     expectFlagValues(args, "--ulimit", ["nofile=1024:2048", "nproc=128", "core=0"]);
   });
 
@@ -185,7 +185,7 @@ describe("buildSandboxCreateArgs", () => {
       "OURA_CLIENT_ID=dummy-oura-client-id",
       "OURA_CLIENT_SECRET=dummy-oura-client-secret",
       "RESEND_API_KEY=dummy-resend-api-key",
-      `OPENCLAW_CLI=${OPENCLAW_CLI_ENV_VALUE}`,
+      `DEX_CLI=${DEX_CLI_ENV_VALUE}`,
     ]);
   });
 

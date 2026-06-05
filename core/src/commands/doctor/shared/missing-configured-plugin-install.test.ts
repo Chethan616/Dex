@@ -1024,8 +1024,8 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         },
       },
       env: {
-        OPENCLAW_UPDATE_IN_PROGRESS: "1",
-        OPENCLAW_UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR: "1",
+        DEX_UPDATE_IN_PROGRESS: "1",
+        DEX_UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR: "1",
       },
     });
 
@@ -1085,7 +1085,7 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         },
       },
       env: {
-        OPENCLAW_UPDATE_POST_CORE_CONVERGENCE: "1",
+        DEX_UPDATE_POST_CORE_CONVERGENCE: "1",
       },
     });
 
@@ -1147,7 +1147,7 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         },
       },
       env: {
-        OPENCLAW_UPDATE_POST_CORE_CONVERGENCE: "1",
+        DEX_UPDATE_POST_CORE_CONVERGENCE: "1",
       },
     });
 
@@ -1218,7 +1218,7 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         },
       },
       env: {
-        OPENCLAW_UPDATE_POST_CORE_CONVERGENCE: "1",
+        DEX_UPDATE_POST_CORE_CONVERGENCE: "1",
       },
     });
 
@@ -1285,16 +1285,16 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         },
       },
       env: {
-        OPENCLAW_COMPATIBILITY_HOST_VERSION: "2026.5.19",
-        OPENCLAW_UPDATE_POST_CORE_CONVERGENCE: "1",
+        DEX_COMPATIBILITY_HOST_VERSION: "2026.5.19",
+        DEX_UPDATE_POST_CORE_CONVERGENCE: "1",
       },
     });
 
     expectRecordFields(mockCallArg(mocks.installPluginFromClawHub), {
       spec: expectedClawHubInstallSpec("clawhub:@openclaw/whatsapp"),
       env: {
-        OPENCLAW_COMPATIBILITY_HOST_VERSION: "2026.5.19",
-        OPENCLAW_UPDATE_POST_CORE_CONVERGENCE: "1",
+        DEX_COMPATIBILITY_HOST_VERSION: "2026.5.19",
+        DEX_UPDATE_POST_CORE_CONVERGENCE: "1",
       },
       mode: "install",
     });
@@ -1308,7 +1308,7 @@ describe("repairMissingConfiguredPluginInstalls", () => {
     });
   });
 
-  it("repairs missing external payload during post-core convergence even with OPENCLAW_UPDATE_IN_PROGRESS=1", async () => {
+  it("repairs missing external payload during post-core convergence even with DEX_UPDATE_IN_PROGRESS=1", async () => {
     const records = {
       discord: {
         source: "npm",
@@ -1347,8 +1347,8 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         },
       },
       env: {
-        OPENCLAW_UPDATE_IN_PROGRESS: "1",
-        OPENCLAW_UPDATE_POST_CORE_CONVERGENCE: "1",
+        DEX_UPDATE_IN_PROGRESS: "1",
+        DEX_UPDATE_POST_CORE_CONVERGENCE: "1",
       },
     });
 
@@ -1390,8 +1390,8 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         },
       },
       env: {
-        OPENCLAW_UPDATE_IN_PROGRESS: "1",
-        OPENCLAW_UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR: "1",
+        DEX_UPDATE_IN_PROGRESS: "1",
+        DEX_UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR: "1",
       },
     });
 
@@ -1429,8 +1429,8 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         },
       },
       env: {
-        OPENCLAW_UPDATE_IN_PROGRESS: "1",
-        OPENCLAW_UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR: "1",
+        DEX_UPDATE_IN_PROGRESS: "1",
+        DEX_UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR: "1",
       },
     });
 
@@ -1475,7 +1475,7 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         },
       },
       env: {
-        OPENCLAW_UPDATE_IN_PROGRESS: "1",
+        DEX_UPDATE_IN_PROGRESS: "1",
       },
     });
 
@@ -1525,7 +1525,7 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         },
       },
       env: {
-        OPENCLAW_UPDATE_IN_PROGRESS: "1",
+        DEX_UPDATE_IN_PROGRESS: "1",
       },
     });
 
@@ -1565,7 +1565,7 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         },
       },
       env: {
-        OPENCLAW_UPDATE_IN_PROGRESS: "1",
+        DEX_UPDATE_IN_PROGRESS: "1",
       },
     });
 
@@ -2206,7 +2206,7 @@ describe("repairMissingConfiguredPluginInstalls", () => {
       },
       {},
     ],
-    ["environment runtime override", {}, { OPENCLAW_AGENT_RUNTIME: "codex" }],
+    ["environment runtime override", {}, { DEX_AGENT_RUNTIME: "codex" }],
   ])("ignores legacy whole-agent Codex runtime selected by %s", async (_label, cfg, env) => {
     mocks.listOfficialExternalPluginCatalogEntries.mockReturnValue([
       {

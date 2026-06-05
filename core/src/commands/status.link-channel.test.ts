@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 
 const pluginRegistry = vi.hoisted(() => ({ list: [] as unknown[] }));
 
@@ -33,7 +33,7 @@ describe("resolveLinkChannelContext", () => {
       },
     ];
 
-    const result = await resolveLinkChannelContext({} as OpenClawConfig);
+    const result = await resolveLinkChannelContext({} as DexConfig);
     expect(result?.linked).toBe(true);
     expect(result?.authAgeMs).toBe(1234);
     expect(result?.account).toBe(account);
@@ -53,7 +53,7 @@ describe("resolveLinkChannelContext", () => {
       },
     ];
 
-    const result = await resolveLinkChannelContext({} as OpenClawConfig);
+    const result = await resolveLinkChannelContext({} as DexConfig);
     expect(result).toBeNull();
   });
 });

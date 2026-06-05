@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { mockPinnedHostnameResolution } from "openclaw/plugin-sdk/test-env";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -286,7 +286,7 @@ describe("firecrawl tools", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         url: "http://169.254.169.254/latest/meta-data/",
         extractMode: "markdown",
       }),
@@ -640,7 +640,7 @@ describe("firecrawl tools", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(resolveFirecrawlSearchConfig(cfg)).toEqual({
       apiKey: "plugin-key",
@@ -660,7 +660,7 @@ describe("firecrawl tools", () => {
     expect(resolveFirecrawlMaxAgeMs()).toBe(DEFAULT_FIRECRAWL_MAX_AGE_MS);
     expect(resolveFirecrawlScrapeTimeoutSeconds()).toBe(DEFAULT_FIRECRAWL_SCRAPE_TIMEOUT_SECONDS);
     expect(resolveFirecrawlSearchTimeoutSeconds()).toBe(DEFAULT_FIRECRAWL_SEARCH_TIMEOUT_SECONDS);
-    expect(resolveFirecrawlBaseUrl({} as OpenClawConfig)).not.toBe(DEFAULT_FIRECRAWL_BASE_URL);
+    expect(resolveFirecrawlBaseUrl({} as DexConfig)).not.toBe(DEFAULT_FIRECRAWL_BASE_URL);
   });
 
   it("resolves env SecretRefs for Firecrawl API key without requiring a runtime snapshot", () => {
@@ -681,7 +681,7 @@ describe("firecrawl tools", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(resolveFirecrawlApiKey(cfg)).toBe("firecrawl-env-ref-key");
   });
@@ -704,7 +704,7 @@ describe("firecrawl tools", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(resolveFirecrawlApiKey(cfg)).toBeUndefined();
   });
@@ -727,7 +727,7 @@ describe("firecrawl tools", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(resolveFirecrawlApiKey(cfg)).toBeUndefined();
   });
@@ -758,7 +758,7 @@ describe("firecrawl tools", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(resolveFirecrawlApiKey(cfg)).toBeUndefined();
   });
@@ -789,7 +789,7 @@ describe("firecrawl tools", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(resolveFirecrawlApiKey(cfg)).toBeUndefined();
   });
@@ -878,7 +878,7 @@ describe("firecrawl tools", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         query: "openclaw malformed search",
       }),
     ).rejects.toThrow("Firecrawl Search API error: malformed JSON response");
@@ -908,7 +908,7 @@ describe("firecrawl tools", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         url: "https://example.com/firecrawl-malformed-scrape",
         extractMode: "markdown",
       }),
@@ -928,7 +928,7 @@ describe("firecrawl tools", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(resolveFirecrawlOnlyMainContent(cfg)).toBe(false);
     expect(resolveFirecrawlMaxAgeMs(cfg)).toBe(1234);

@@ -2,7 +2,7 @@ import {
   getRequiredHookHandler,
   registerHookHandlersForTest,
 } from "openclaw/plugin-sdk/channel-test-helpers";
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/core";
+import type { DexPluginApi } from "openclaw/plugin-sdk/core";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { handleDiscordSubagentSpawning } from "./subagent-hooks.js";
 
@@ -84,7 +84,7 @@ function registerHandlersForTest(
     },
   },
 ) {
-  return registerHookHandlersForTest<OpenClawPluginApi>({
+  return registerHookHandlersForTest<DexPluginApi>({
     config,
     register: (api) => {
       registerDiscordSubagentHooks(api);

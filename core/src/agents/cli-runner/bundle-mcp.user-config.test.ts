@@ -163,7 +163,7 @@ describe("prepareCliBundleMcpConfig user mcp.servers", () => {
           openclaw: {
             type: "http",
             url: "http://127.0.0.1:23119/mcp",
-            headers: { Authorization: "Bearer ${OPENCLAW_MCP_TOKEN}" },
+            headers: { Authorization: "Bearer ${DEX_MCP_TOKEN}" },
           },
         },
       },
@@ -189,7 +189,7 @@ describe("prepareCliBundleMcpConfig user mcp.servers", () => {
     });
     const pluginDir = path.join(
       cliBundleMcpHarness.bundleProbeHomeDir,
-      ".openclaw",
+      ".dex",
       "extensions",
       "omi",
     );

@@ -3,7 +3,7 @@ import { resolveStateDir } from "../config/paths.js";
 import type { PluginRecord } from "../plugins/registry-types.js";
 import { createPluginRegistry } from "../plugins/registry.js";
 import type { PluginRuntime } from "../plugins/runtime/types.js";
-import { withOpenClawTestState } from "../test-utils/openclaw-test-state.js";
+import { withDexTestState } from "../test-utils/openclaw-test-state.js";
 import { resetPluginStateStoreForTests } from "./plugin-state-store.js";
 
 function createPluginRecord(
@@ -71,7 +71,7 @@ afterEach(() => {
 
 describe("plugin runtime state proxy", () => {
   it("binds openKeyedStore to the bundled plugin id and keeps resolveStateDir", async () => {
-    await withOpenClawTestState({ label: "plugin-state-runtime" }, async (state) => {
+    await withDexTestState({ label: "plugin-state-runtime" }, async (state) => {
       const registry = createTestPluginRegistry();
       const record = createPluginRecord("discord", "bundled");
       registry.registry.plugins.push(record);
@@ -105,7 +105,7 @@ describe("plugin runtime state proxy", () => {
   });
 
   it("allows trusted official global plugins to use keyed state", async () => {
-    await withOpenClawTestState({ label: "plugin-state-trusted-global" }, async () => {
+    await withDexTestState({ label: "plugin-state-trusted-global" }, async () => {
       const registry = createTestPluginRegistry();
       const record = createPluginRecord("slack", "global", { trustedOfficialInstall: true });
       registry.registry.plugins.push(record);

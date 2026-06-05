@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WhatsAppSendResult } from "../../inbound/send-result.js";
 import type { WebInboundMessage } from "../../inbound/types.js";
@@ -40,8 +40,8 @@ function createMessage(overrides: Partial<WebInboundMessage> = {}): WebInboundMe
 
 function createConfig(
   reactionLevel: "off" | "ack" | "minimal" | "extensive",
-  extras?: Partial<NonNullable<OpenClawConfig["channels"]>["whatsapp"]>,
-): OpenClawConfig {
+  extras?: Partial<NonNullable<DexConfig["channels"]>["whatsapp"]>,
+): DexConfig {
   return {
     channels: {
       whatsapp: {
@@ -54,7 +54,7 @@ function createConfig(
         ...extras,
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 type AckReactionParams = Parameters<typeof maybeSendAckReaction>[0];
@@ -73,7 +73,7 @@ const runAckReaction = (overrides: Partial<AckReactionParams> = {}) =>
     ...overrides,
   });
 
-const expectAckReactionSent = (accountId: string, cfg: OpenClawConfig = createConfig("ack")) => {
+const expectAckReactionSent = (accountId: string, cfg: DexConfig = createConfig("ack")) => {
   expect(hoisted.sendReactionWhatsApp).toHaveBeenCalledWith(
     "15551234567@s.whatsapp.net",
     "msg-1",
@@ -150,7 +150,7 @@ describe("maybeSendAckReaction", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const ackReaction = await runAckReaction({ cfg });
 

@@ -25,7 +25,7 @@ describe("proxy validation", () => {
     return caFile;
   }
 
-  it("resolves proxy URL overrides before config and OPENCLAW_PROXY_URL", () => {
+  it("resolves proxy URL overrides before config and DEX_PROXY_URL", () => {
     const result = resolveProxyValidationConfig({
       proxyUrlOverride: "http://override-proxy.example:3128",
       config: {
@@ -33,7 +33,7 @@ describe("proxy validation", () => {
         proxyUrl: "http://config-proxy.example:3128",
       },
       env: {
-        OPENCLAW_PROXY_URL: "http://env-proxy.example:3128",
+        DEX_PROXY_URL: "http://env-proxy.example:3128",
       },
     });
 
@@ -45,14 +45,14 @@ describe("proxy validation", () => {
     });
   });
 
-  it("resolves config proxy URLs before OPENCLAW_PROXY_URL", () => {
+  it("resolves config proxy URLs before DEX_PROXY_URL", () => {
     const result = resolveProxyValidationConfig({
       config: {
         enabled: true,
         proxyUrl: "http://config-proxy.example:3128",
       },
       env: {
-        OPENCLAW_PROXY_URL: "http://env-proxy.example:3128",
+        DEX_PROXY_URL: "http://env-proxy.example:3128",
       },
     });
 
@@ -64,11 +64,11 @@ describe("proxy validation", () => {
     });
   });
 
-  it("uses OPENCLAW_PROXY_URL when enabled config has no URL", () => {
+  it("uses DEX_PROXY_URL when enabled config has no URL", () => {
     const result = resolveProxyValidationConfig({
       config: { enabled: true },
       env: {
-        OPENCLAW_PROXY_URL: "http://env-proxy.example:3128",
+        DEX_PROXY_URL: "http://env-proxy.example:3128",
       },
     });
 
@@ -105,13 +105,13 @@ describe("proxy validation", () => {
     });
   });
 
-  it("reports disabled proxy config when only OPENCLAW_PROXY_URL is present", async () => {
+  it("reports disabled proxy config when only DEX_PROXY_URL is present", async () => {
     const fetchCheck = vi.fn();
 
     const result = await runProxyValidation({
       config: {},
       env: {
-        OPENCLAW_PROXY_URL: "http://env-proxy.example:3128",
+        DEX_PROXY_URL: "http://env-proxy.example:3128",
       },
       fetchCheck,
     });
@@ -123,7 +123,7 @@ describe("proxy validation", () => {
         enabled: false,
         proxyUrl: "http://env-proxy.example:3128",
         source: "env",
-        errors: ["proxy validation requires proxy.enabled to be true for OPENCLAW_PROXY_URL"],
+        errors: ["proxy validation requires proxy.enabled to be true for DEX_PROXY_URL"],
       },
       checks: [],
     });
@@ -158,7 +158,7 @@ describe("proxy validation", () => {
     expect(result.proxyUrl).toBeUndefined();
     expect(result.source).toBe("missing");
     expect(result.errors).toEqual([
-      "proxy validation requires proxy.proxyUrl, --proxy-url, or OPENCLAW_PROXY_URL",
+      "proxy validation requires proxy.proxyUrl, --proxy-url, or DEX_PROXY_URL",
     ]);
   });
 
@@ -178,7 +178,7 @@ describe("proxy validation", () => {
         enabled: false,
         source: "disabled",
         errors: [
-          "proxy validation requires proxy.enabled=true with proxy.proxyUrl or OPENCLAW_PROXY_URL, or --proxy-url",
+          "proxy validation requires proxy.enabled=true with proxy.proxyUrl or DEX_PROXY_URL, or --proxy-url",
         ],
       },
       checks: [],

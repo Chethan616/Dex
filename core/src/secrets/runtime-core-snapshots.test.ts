@@ -44,12 +44,12 @@ type SecretsRuntimeEnvSnapshot = ReturnType<typeof captureEnv>;
 
 function beginSecretsRuntimeIsolationForTest(): SecretsRuntimeEnvSnapshot {
   const envSnapshot = captureEnv([
-    "OPENCLAW_BUNDLED_PLUGINS_DIR",
-    "OPENCLAW_DISABLE_BUNDLED_PLUGINS",
-    "OPENCLAW_VERSION",
+    "DEX_BUNDLED_PLUGINS_DIR",
+    "DEX_DISABLE_BUNDLED_PLUGINS",
+    "DEX_VERSION",
   ]);
-  delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
-  delete process.env.OPENCLAW_VERSION;
+  delete process.env.DEX_BUNDLED_PLUGINS_DIR;
+  delete process.env.DEX_VERSION;
   return envSnapshot;
 }
 
@@ -79,8 +79,8 @@ describe("secrets runtime snapshot core lanes", () => {
   async function prepareOpenAiRuntimeSnapshot(params?: { includeAuthStoreRefs?: boolean }) {
     return withEnvAsync(
       {
-        OPENCLAW_BUNDLED_PLUGINS_DIR: undefined,
-        OPENCLAW_VERSION: undefined,
+        DEX_BUNDLED_PLUGINS_DIR: undefined,
+        DEX_VERSION: undefined,
       },
       async () =>
         prepareSecretsRuntimeSnapshot({

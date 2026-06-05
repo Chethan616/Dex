@@ -17,7 +17,7 @@ function createTempDir(prefix: string): string {
 }
 
 function refIndexFile(homeDir: string): string {
-  return path.join(homeDir, ".openclaw", "qqbot", "data", "ref-index.jsonl");
+  return path.join(homeDir, ".dex", "qqbot", "data", "ref-index.jsonl");
 }
 
 async function useMockHome(homeDir: string): Promise<void> {
@@ -46,7 +46,7 @@ describe("engine/ref/store", () => {
     vi.resetModules();
     const stateDir = createTempDir("qqbot-state-");
     const homeDir = createTempDir("qqbot-home-");
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
     vi.stubEnv("HOME", homeDir);
     await useMockHome(homeDir);
     installQQBotRuntimeForStateTests(stateDir);

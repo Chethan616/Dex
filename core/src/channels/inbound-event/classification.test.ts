@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import {
   classifyChannelInboundEvent,
   resolveUnmentionedGroupInboundPolicy,
@@ -49,7 +49,7 @@ describe("resolveUnmentionedGroupInboundPolicy", () => {
           },
         ],
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     expect(resolveUnmentionedGroupInboundPolicy({ cfg, agentId: "room-agent" })).toBe("room_event");
     expect(resolveUnmentionedGroupInboundPolicy({ cfg, agentId: "other" })).toBe("user_request");

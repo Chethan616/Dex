@@ -91,18 +91,18 @@ describe("release user journey assertions", () => {
     const root = mkdtempSync(path.join(tmpdir(), "openclaw-release-user-assertions-"));
     const home = path.join(root, "home");
     const pluginId = "journey-plugin-a";
-    const installPath = path.join(home, ".openclaw", "extensions", pluginId);
+    const installPath = path.join(home, ".dex", "extensions", pluginId);
     const installPathFile = path.join(root, "install-path.txt");
 
     try {
-      writeJson(path.join(home, ".openclaw", "openclaw.json"), {
+      writeJson(path.join(home, ".dex", "openclaw.json"), {
         plugins: {
           entries: {},
           allow: [],
           deny: [],
         },
       });
-      writeJson(path.join(home, ".openclaw", "plugins", "installs.json"), {
+      writeJson(path.join(home, ".dex", "plugins", "installs.json"), {
         installRecords: {},
       });
       mkdirSync(installPath, { recursive: true });
@@ -123,19 +123,19 @@ describe("release user journey assertions", () => {
     const installPathFile = path.join(root, "install-path.txt");
 
     try {
-      writeJson(path.join(home, ".openclaw", "openclaw.json"), {
+      writeJson(path.join(home, ".dex", "openclaw.json"), {
         plugins: {
           entries: {},
           allow: [],
           deny: [],
         },
       });
-      writeJson(path.join(home, ".openclaw", "plugins", "installs.json"), {
+      writeJson(path.join(home, ".dex", "plugins", "installs.json"), {
         installRecords: {},
       });
       writeFileSync(
         installPathFile,
-        path.join(home, ".openclaw", "extensions", "journey-plugin-a"),
+        path.join(home, ".dex", "extensions", "journey-plugin-a"),
         "utf8",
       );
 
@@ -156,14 +156,14 @@ describe("release user journey assertions", () => {
     const home = path.join(root, "home");
     const pluginId = "journey-plugin-a";
     const sourcePath = path.join(root, "source", pluginId);
-    const installPath = path.join(home, ".openclaw", "extensions", pluginId);
+    const installPath = path.join(home, ".dex", "extensions", pluginId);
     const installPathFile = path.join(root, "install-path.txt");
     const sourcePathFile = path.join(root, "source-path.txt");
 
     try {
       mkdirSync(sourcePath, { recursive: true });
       mkdirSync(installPath, { recursive: true });
-      writeJson(path.join(home, ".openclaw", "plugins", "installs.json"), {
+      writeJson(path.join(home, ".dex", "plugins", "installs.json"), {
         installRecords: {
           [pluginId]: {
             source: "path",
@@ -200,7 +200,7 @@ describe("release user journey assertions", () => {
 
     try {
       await expect(
-        withEnv({ HOME: home, OPENCLAW_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS: "1000" }, () =>
+        withEnv({ HOME: home, DEX_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS: "1000" }, () =>
           runReleaseUserJourneyAssertion("wait-clickclack-socket", [
             `http://127.0.0.1:${server.port}`,
             "1",
@@ -223,7 +223,7 @@ describe("release user journey assertions", () => {
     try {
       const startedAt = Date.now();
       await expect(
-        withEnv({ HOME: home, OPENCLAW_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS: "100" }, () =>
+        withEnv({ HOME: home, DEX_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS: "100" }, () =>
           runReleaseUserJourneyAssertion("wait-clickclack-socket", [
             `http://127.0.0.1:${server.port}`,
             "0.2",
@@ -246,7 +246,7 @@ describe("release user journey assertions", () => {
 
     try {
       await expect(
-        withEnv({ HOME: home, OPENCLAW_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS: "100ms" }, () =>
+        withEnv({ HOME: home, DEX_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS: "100ms" }, () =>
           runReleaseUserJourneyAssertion("wait-clickclack-socket", [
             `http://127.0.0.1:${server.port}`,
             "0.2",
@@ -274,8 +274,8 @@ describe("release user journey assertions", () => {
         withEnv(
           {
             HOME: home,
-            OPENCLAW_RELEASE_USER_JOURNEY_HTTP_BODY_MAX_BYTES: "16",
-            OPENCLAW_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS: "1000",
+            DEX_RELEASE_USER_JOURNEY_HTTP_BODY_MAX_BYTES: "16",
+            DEX_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS: "1000",
           },
           () =>
             runReleaseUserJourneyAssertion("post-clickclack-inbound", [
@@ -305,8 +305,8 @@ describe("release user journey assertions", () => {
         withEnv(
           {
             HOME: home,
-            OPENCLAW_RELEASE_USER_JOURNEY_HTTP_BODY_MAX_BYTES: "16bytes",
-            OPENCLAW_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS: "1000",
+            DEX_RELEASE_USER_JOURNEY_HTTP_BODY_MAX_BYTES: "16bytes",
+            DEX_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS: "1000",
           },
           () =>
             runReleaseUserJourneyAssertion("post-clickclack-inbound", [

@@ -21,7 +21,7 @@ const {
     const headers = new Headers(params.defaultHeaders as HeadersInit | undefined);
     // Stub mirroring the xAI attribution policy headers (real wire is locked in provider-attribution.test.ts).
     if (params.provider === "xai") {
-      const version = process.env.OPENCLAW_VERSION?.trim() || "unknown";
+      const version = process.env.DEX_VERSION?.trim() || "unknown";
       headers.set("User-Agent", `openclaw/${version}`);
       headers.set("originator", "openclaw");
       headers.set("version", version);
@@ -229,7 +229,7 @@ describe("xai image generation provider", () => {
   });
 
   it("forwards xAI attribution User-Agent through the SDK image request", async () => {
-    vi.stubEnv("OPENCLAW_VERSION", "2026.3.22");
+    vi.stubEnv("DEX_VERSION", "2026.3.22");
     postJsonRequestMock.mockResolvedValue({
       response: {
         json: async () => ({

@@ -184,7 +184,7 @@ function buildPreparedSystemRunPayload(rawInvokeParams: unknown) {
 }
 
 async function writeExecApprovalsConfig(config: Record<string, unknown>) {
-  const approvalsPath = path.join(process.env.HOME ?? "", ".openclaw", "exec-approvals.json");
+  const approvalsPath = path.join(process.env.HOME ?? "", ".dex", "exec-approvals.json");
   await fs.mkdir(path.dirname(approvalsPath), { recursive: true });
   await fs.writeFile(approvalsPath, JSON.stringify(config, null, 2));
 }
@@ -398,15 +398,15 @@ describe("exec approvals", () => {
   beforeEach(async () => {
     previousHome = process.env.HOME;
     previousUserProfile = process.env.USERPROFILE;
-    previousBundledPluginsDir = process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
-    previousDisableBundledPlugins = process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS;
+    previousBundledPluginsDir = process.env.DEX_BUNDLED_PLUGINS_DIR;
+    previousDisableBundledPlugins = process.env.DEX_DISABLE_BUNDLED_PLUGINS;
     const tempDir = path.join(tempRoot, `case-${++tempCaseIndex}`);
     await fs.mkdir(tempDir, { recursive: true });
     process.env.HOME = tempDir;
     // Windows uses USERPROFILE for os.homedir()
     process.env.USERPROFILE = tempDir;
-    delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
-    process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS = "1";
+    delete process.env.DEX_BUNDLED_PLUGINS_DIR;
+    process.env.DEX_DISABLE_BUNDLED_PLUGINS = "1";
     vi.mocked(callGatewayTool).mockReset();
     vi.mocked(sendMessage).mockClear();
   });
@@ -424,14 +424,14 @@ describe("exec approvals", () => {
       process.env.USERPROFILE = previousUserProfile;
     }
     if (previousBundledPluginsDir === undefined) {
-      delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+      delete process.env.DEX_BUNDLED_PLUGINS_DIR;
     } else {
-      process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = previousBundledPluginsDir;
+      process.env.DEX_BUNDLED_PLUGINS_DIR = previousBundledPluginsDir;
     }
     if (previousDisableBundledPlugins === undefined) {
-      delete process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS;
+      delete process.env.DEX_DISABLE_BUNDLED_PLUGINS;
     } else {
-      process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS = previousDisableBundledPlugins;
+      process.env.DEX_DISABLE_BUNDLED_PLUGINS = previousDisableBundledPlugins;
     }
   });
 
@@ -774,7 +774,7 @@ describe("exec approvals", () => {
     expect(calls).toContain("exec.approval.request");
     expect(calls).toContain("exec.approval.waitDecision");
 
-    const approvalsPath = path.join(process.env.HOME ?? "", ".openclaw", "exec-approvals.json");
+    const approvalsPath = path.join(process.env.HOME ?? "", ".dex", "exec-approvals.json");
     await expect
       .poll(
         async () => {
@@ -1312,7 +1312,7 @@ describe("exec approvals", () => {
     }
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-skill-prelude-"));
     try {
-      const skillDir = path.join(tempDir, ".openclaw", "skills", "gog");
+      const skillDir = path.join(tempDir, ".dex", "skills", "gog");
       const skillPath = path.join(skillDir, "SKILL.md");
       const binDir = path.join(tempDir, "bin");
       const wrapperPath = path.join(binDir, "gog-wrapper");

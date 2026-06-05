@@ -62,7 +62,7 @@ describe("native Gateway protocol levels", () => {
     }
 
     const swiftGeneratedPath =
-      "apps/shared/OpenClawKit/Sources/OpenClawProtocol/GatewayModels.swift";
+      "apps/shared/DexKit/Sources/DexProtocol/GatewayModels.swift";
     const swiftGenerated = await readRepoFile(swiftGeneratedPath);
     assertLevelsMatch(swiftGeneratedPath, {
       min: extractInteger(
@@ -99,8 +99,8 @@ describe("native Gateway protocol levels", () => {
 
   it("uses the min constant for native connect compatibility ranges", async () => {
     const swiftConnectFiles = [
-      "apps/shared/OpenClawKit/Sources/OpenClawKit/GatewayChannel.swift",
-      "apps/macos/Sources/OpenClawMacCLI/WizardCommand.swift",
+      "apps/shared/DexKit/Sources/DexKit/GatewayChannel.swift",
+      "apps/macos/Sources/DexMacCLI/WizardCommand.swift",
     ];
     for (const relativePath of swiftConnectFiles) {
       const content = await readRepoFile(relativePath);

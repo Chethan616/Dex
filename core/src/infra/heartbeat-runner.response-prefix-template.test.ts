@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { runHeartbeatOnce, type HeartbeatDeps } from "./heartbeat-runner.js";
 import { installHeartbeatRunnerTestRuntime } from "./heartbeat-runner.test-harness.js";
 import {
@@ -16,7 +16,7 @@ describe("runHeartbeatOnce responsePrefix templates", () => {
     tmpDir: string;
     storePath: string;
     responsePrefix: string;
-  }): OpenClawConfig {
+  }): DexConfig {
     return {
       agents: {
         defaults: {

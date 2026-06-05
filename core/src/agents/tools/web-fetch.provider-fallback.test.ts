@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { withFetchPreconnect } from "../../test-utils/fetch-mock.js";
 import { createWebFetchTool } from "./web-fetch.js";
 
@@ -70,7 +70,7 @@ describe("web_fetch provider fallback normalization", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       sandboxed: false,
     });
 
@@ -121,7 +121,7 @@ describe("web_fetch provider fallback normalization", () => {
     });
 
     const tool = createWebFetchTool({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       sandboxed: false,
     });
 
@@ -152,7 +152,7 @@ describe("web_fetch provider fallback normalization", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     runtimeState.activeSecretsRuntimeSnapshot = { config: runtimeConfig };
     runtimeState.activeRuntimeWebToolsMetadata = {
       fetch: {
@@ -185,7 +185,7 @@ describe("web_fetch provider fallback normalization", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       sandboxed: false,
       runtimeWebFetch: {
         providerConfigured: "stale",
@@ -210,7 +210,7 @@ describe("web_fetch provider fallback normalization", () => {
     expect(details.externalContent?.provider).toBe("firecrawl");
     const definitionInput = resolveWebFetchDefinitionMock.mock.calls.at(0)?.[0] as
       | {
-          config?: OpenClawConfig;
+          config?: DexConfig;
           runtimeWebFetch?: { selectedProvider?: string };
         }
       | undefined;
@@ -263,7 +263,7 @@ describe("web_fetch provider fallback normalization", () => {
         diagnostics: [],
       };
       const tool = createWebFetchTool({
-        config: {} as OpenClawConfig,
+        config: {} as DexConfig,
         sandboxed: false,
         lateBindRuntimeConfig: true,
       });

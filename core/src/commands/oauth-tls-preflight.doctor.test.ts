@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 
 const note = vi.hoisted(() => vi.fn());
 
@@ -9,7 +9,7 @@ vi.mock("../../packages/terminal-core/src/note.js", () => ({
 
 import { noteOpenAIOAuthTlsPrerequisites } from "./oauth-tls-preflight.js";
 
-function buildOpenAICodexOAuthConfig(): OpenClawConfig {
+function buildOpenAICodexOAuthConfig(): DexConfig {
   return {
     auth: {
       profiles: {
@@ -23,7 +23,7 @@ function buildOpenAICodexOAuthConfig(): OpenClawConfig {
   };
 }
 
-function buildOpenAIOAuthConfig(): OpenClawConfig {
+function buildOpenAIOAuthConfig(): DexConfig {
   return {
     auth: {
       profiles: {

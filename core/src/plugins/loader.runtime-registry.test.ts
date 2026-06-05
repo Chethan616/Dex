@@ -330,13 +330,13 @@ describe("getCompatibleActivePluginRegistry", () => {
             load: { paths: ["/tmp/demo.js"] },
           },
         },
-        env: { ...process.env, OPENCLAW_DEV_SOURCE_ROOT: undefined },
+        env: { ...process.env, DEX_DEV_SOURCE_ROOT: undefined },
       };
 
       const base = testing.resolvePluginLoadCacheContext(baseOptions).cacheKey;
       const dev = testing.resolvePluginLoadCacheContext({
         ...baseOptions,
-        env: { ...process.env, OPENCLAW_DEV_SOURCE_ROOT: devSourceRoot },
+        env: { ...process.env, DEX_DEV_SOURCE_ROOT: devSourceRoot },
       }).cacheKey;
 
       expect(dev).not.toBe(base);

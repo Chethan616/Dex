@@ -27,7 +27,7 @@ describe("config secret refs schema", () => {
           default: { source: "env" },
           filemain: {
             source: "file",
-            path: "~/.openclaw/secrets.json",
+            path: "~/.dex/secrets.json",
             mode: "json",
             timeoutMs: 10_000,
             allowInsecurePath: true,
@@ -218,7 +218,7 @@ describe("config secret refs schema", () => {
         providers: {
           rawfile: {
             source: "file",
-            path: "~/.openclaw/token.txt",
+            path: "~/.dex/token.txt",
             mode: "singleValue",
           },
         },

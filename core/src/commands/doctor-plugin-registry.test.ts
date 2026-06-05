@@ -40,8 +40,8 @@ async function readRequiredPersistedInstalledPluginIndex(
 
 function hermeticEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   return {
-    OPENCLAW_BUNDLED_PLUGINS_DIR: undefined,
-    OPENCLAW_VERSION: "2026.4.25",
+    DEX_BUNDLED_PLUGINS_DIR: undefined,
+    DEX_VERSION: "2026.4.25",
     VITEST: "true",
     ...overrides,
   };

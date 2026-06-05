@@ -2,7 +2,7 @@ import {
   resolveApiKeyForProvider,
   resolveDefaultAgentDir,
 } from "openclaw/plugin-sdk/agent-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   registerProviderPlugin,
   requireRegisteredProvider,
@@ -60,19 +60,19 @@ import xaiPlugin from "./xai/index.js";
 
 const LIVE = isLiveTestEnabled();
 const REQUIRE_PROFILE_KEYS =
-  isLiveProfileKeyModeEnabled() || isTruthyEnvValue(process.env.OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS);
+  isLiveProfileKeyModeEnabled() || isTruthyEnvValue(process.env.DEX_LIVE_REQUIRE_PROFILE_KEYS);
 const describeLive = LIVE ? describe : describe.skip;
-const providerFilter = parseCsvFilter(process.env.OPENCLAW_LIVE_VIDEO_GENERATION_PROVIDERS);
+const providerFilter = parseCsvFilter(process.env.DEX_LIVE_VIDEO_GENERATION_PROVIDERS);
 const defaultSkippedProviders = providerFilter
   ? null
-  : parseCsvFilter(process.env.OPENCLAW_LIVE_VIDEO_GENERATION_SKIP_PROVIDERS ?? "fal");
-const envModelMap = parseProviderModelMap(process.env.OPENCLAW_LIVE_VIDEO_GENERATION_MODELS);
+  : parseCsvFilter(process.env.DEX_LIVE_VIDEO_GENERATION_SKIP_PROVIDERS ?? "fal");
+const envModelMap = parseProviderModelMap(process.env.DEX_LIVE_VIDEO_GENERATION_MODELS);
 const RUN_FULL_VIDEO_MODES = isTruthyEnvValue(
-  process.env.OPENCLAW_LIVE_VIDEO_GENERATION_FULL_MODES,
+  process.env.DEX_LIVE_VIDEO_GENERATION_FULL_MODES,
 );
 const LIVE_VIDEO_REQUESTED_DURATION_SECONDS = 1;
 const LIVE_VIDEO_OPERATION_TIMEOUT_MS = readPositiveIntegerEnv(
-  process.env.OPENCLAW_LIVE_VIDEO_GENERATION_TIMEOUT_MS,
+  process.env.DEX_LIVE_VIDEO_GENERATION_TIMEOUT_MS,
   180_000,
 );
 const LIVE_VIDEO_TEST_TIMEOUT_MS =
@@ -156,7 +156,7 @@ function readPositiveIntegerEnv(raw: string | undefined, fallback: number): numb
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-function withPluginsEnabled(cfg: OpenClawConfig): OpenClawConfig {
+function withPluginsEnabled(cfg: DexConfig): DexConfig {
   return {
     ...cfg,
     plugins: {

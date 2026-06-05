@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MsgContext } from "../auto-reply/templating.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { LinkModelConfig } from "../config/types.tools.js";
 import { fetchWithSsrFGuard } from "../infra/net/fetch-guard.js";
 import { runCommandWithTimeout } from "../process/exec.js";
@@ -37,7 +37,7 @@ function cfg(entry: LinkModelConfig) {
         models: [entry],
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 function ctx(body: string): MsgContext {
@@ -90,8 +90,8 @@ describe("runLinkUnderstanding", () => {
     );
     expect(runCommandWithTimeout).toHaveBeenCalledWith(["summarize", "--source"], {
       env: {
-        OPENCLAW_LINK_FINAL_URL: "https://example.com/final",
-        OPENCLAW_LINK_URL: "https://example.com/page",
+        DEX_LINK_FINAL_URL: "https://example.com/final",
+        DEX_LINK_URL: "https://example.com/page",
       },
       input: "page body",
       timeoutMs: 30000,

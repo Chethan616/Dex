@@ -19,16 +19,16 @@ describe("web logout", () => {
 
   beforeAll(async () => {
     fixtureRoot = await fsPromises.mkdtemp(path.join(os.tmpdir(), "openclaw-test-web-logout-"));
-    previousOAuthDir = process.env.OPENCLAW_OAUTH_DIR;
-    process.env.OPENCLAW_OAUTH_DIR = path.join(fixtureRoot, "oauth");
+    previousOAuthDir = process.env.DEX_OAUTH_DIR;
+    process.env.DEX_OAUTH_DIR = path.join(fixtureRoot, "oauth");
     ({ logoutWeb } = await import("./auth-store.js"));
   });
 
   afterAll(async () => {
     if (previousOAuthDir === undefined) {
-      delete process.env.OPENCLAW_OAUTH_DIR;
+      delete process.env.DEX_OAUTH_DIR;
     } else {
-      process.env.OPENCLAW_OAUTH_DIR = previousOAuthDir;
+      process.env.DEX_OAUTH_DIR = previousOAuthDir;
     }
     await fsPromises.rm(fixtureRoot, { recursive: true, force: true });
   });

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { deliverAgentCommandResult } from "../agents/command/delivery.js";
 import type { ReplyPayload } from "../auto-reply/types.js";
 import type { CliDeps } from "../cli/deps.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { SessionEntry } from "../config/sessions.js";
 import type { RuntimeEnv } from "../runtime.js";
 
@@ -91,7 +91,7 @@ describe("deliverAgentCommandResult", () => {
     resultText?: string;
     payloads?: ReplyPayload[];
   }) {
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as DexConfig;
     const deps = {} as CliDeps;
     const runtime = params.runtime ?? createRuntime();
     const result = params.payloads

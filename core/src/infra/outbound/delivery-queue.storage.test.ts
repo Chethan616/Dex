@@ -1,6 +1,6 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { openOpenClawStateDatabase } from "../../state/openclaw-state-db.js";
+import { openDexStateDatabase } from "../../state/openclaw-state-db.js";
 import {
   ackDelivery,
   enqueueDelivery,
@@ -18,8 +18,8 @@ describe("delivery-queue storage", () => {
     enqueueDelivery(params, rootDir);
 
   function readStatus(id: string): string | undefined {
-    const { db } = openOpenClawStateDatabase({
-      env: { ...process.env, OPENCLAW_STATE_DIR: tmpDir() },
+    const { db } = openDexStateDatabase({
+      env: { ...process.env, DEX_STATE_DIR: tmpDir() },
     });
     const row = db
       .prepare("SELECT status FROM delivery_queue_entries WHERE queue_name = 'outbound' AND id = ?")

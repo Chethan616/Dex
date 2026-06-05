@@ -63,7 +63,7 @@ const { undiciFetchMock, agentSpy, envHttpProxyAgentSpy, proxyAgentSpy, createMo
     };
   });
 
-const TEST_UNDICI_RUNTIME_DEPS_KEY = "__OPENCLAW_TEST_UNDICI_RUNTIME_DEPS__";
+const TEST_UNDICI_RUNTIME_DEPS_KEY = "__DEX_TEST_UNDICI_RUNTIME_DEPS__";
 
 vi.mock("undici", async (importOriginal) => ({
   ...(await importOriginal<typeof import("undici")>()),
@@ -127,8 +127,8 @@ describe("resolveDiscordRestFetch", () => {
     "all_proxy",
     "no_proxy",
     "NO_PROXY",
-    "OPENCLAW_PROXY_ACTIVE",
-    "OPENCLAW_PROXY_CA_FILE",
+    "DEX_PROXY_ACTIVE",
+    "DEX_PROXY_CA_FILE",
   ] as const;
   const tempDirs: string[] = [];
 
@@ -193,8 +193,8 @@ describe("resolveDiscordRestFetch", () => {
     const caFile = writeTempCa("discord-rest-configured-proxy-ca");
     vi.stubEnv("HTTPS_PROXY", "https://127.0.0.1:8443");
     vi.stubEnv("https_proxy", "https://127.0.0.1:8443");
-    vi.stubEnv("OPENCLAW_PROXY_ACTIVE", "1");
-    vi.stubEnv("OPENCLAW_PROXY_CA_FILE", caFile);
+    vi.stubEnv("DEX_PROXY_ACTIVE", "1");
+    vi.stubEnv("DEX_PROXY_CA_FILE", caFile);
     const runtime = {
       log: vi.fn(),
       error: vi.fn(),
@@ -293,8 +293,8 @@ describe("resolveDiscordRestFetch", () => {
     const caFile = writeTempCa("discord-rest-managed-proxy-ca");
     vi.stubEnv("HTTPS_PROXY", "https://proxy.example:8443");
     vi.stubEnv("https_proxy", "https://proxy.example:8443");
-    vi.stubEnv("OPENCLAW_PROXY_ACTIVE", "1");
-    vi.stubEnv("OPENCLAW_PROXY_CA_FILE", caFile);
+    vi.stubEnv("DEX_PROXY_ACTIVE", "1");
+    vi.stubEnv("DEX_PROXY_CA_FILE", caFile);
     const runtime = {
       log: vi.fn(),
       error: vi.fn(),
@@ -342,8 +342,8 @@ describe("resolveDiscordRestFetch", () => {
   });
 
   it("uses debug proxy env when no discord proxy URL is configured", async () => {
-    vi.stubEnv("OPENCLAW_DEBUG_PROXY_ENABLED", "1");
-    vi.stubEnv("OPENCLAW_DEBUG_PROXY_URL", "http://127.0.0.1:7777");
+    vi.stubEnv("DEX_DEBUG_PROXY_ENABLED", "1");
+    vi.stubEnv("DEX_DEBUG_PROXY_URL", "http://127.0.0.1:7777");
     const runtime = {
       log: vi.fn(),
       error: vi.fn(),

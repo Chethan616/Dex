@@ -255,7 +255,7 @@ describe("buildExportTrajectoryReply", () => {
     await buildExportTrajectoryReply(params);
 
     expect(exportBundleParams().outputDir).toBe(
-      path.join(params.workspaceDir, ".openclaw", "trajectory-exports", "my-bundle"),
+      path.join(params.workspaceDir, ".dex", "trajectory-exports", "my-bundle"),
     );
   });
 
@@ -308,8 +308,8 @@ describe("buildExportTrajectoryReply", () => {
   it("rejects output paths redirected by a symlinked exports directory", async () => {
     const workspaceDir = makeTempDir();
     const outsideDir = makeTempDir();
-    fs.mkdirSync(path.join(workspaceDir, ".openclaw"), { recursive: true });
-    fs.symlinkSync(outsideDir, path.join(workspaceDir, ".openclaw", "trajectory-exports"));
+    fs.mkdirSync(path.join(workspaceDir, ".dex"), { recursive: true });
+    fs.symlinkSync(outsideDir, path.join(workspaceDir, ".dex", "trajectory-exports"));
     const params = makeParams(workspaceDir);
     params.command.commandBodyNormalized = "/export-trajectory my-bundle";
 
@@ -322,8 +322,8 @@ describe("buildExportTrajectoryReply", () => {
   it("rejects default output paths redirected by a symlinked exports directory", async () => {
     const workspaceDir = makeTempDir();
     const outsideDir = makeTempDir();
-    fs.mkdirSync(path.join(workspaceDir, ".openclaw"), { recursive: true });
-    fs.symlinkSync(outsideDir, path.join(workspaceDir, ".openclaw", "trajectory-exports"));
+    fs.mkdirSync(path.join(workspaceDir, ".dex"), { recursive: true });
+    fs.symlinkSync(outsideDir, path.join(workspaceDir, ".dex", "trajectory-exports"));
 
     const reply = await buildExportTrajectoryReply(makeParams(workspaceDir));
 
@@ -334,7 +334,7 @@ describe("buildExportTrajectoryReply", () => {
   it("rejects symlinked state directories before creating export folders", async () => {
     const workspaceDir = makeTempDir();
     const outsideDir = makeTempDir();
-    fs.symlinkSync(outsideDir, path.join(workspaceDir, ".openclaw"));
+    fs.symlinkSync(outsideDir, path.join(workspaceDir, ".dex"));
     const params = makeParams(workspaceDir);
     params.command.commandBodyNormalized = "/export-trajectory my-bundle";
 

@@ -797,13 +797,13 @@ describe("google-meet plugin", () => {
     const config = resolveGoogleMeetConfigWithEnv(
       {},
       {
-        OPENCLAW_GOOGLE_MEET_CLIENT_ID: "client-id",
+        DEX_GOOGLE_MEET_CLIENT_ID: "client-id",
         GOOGLE_MEET_CLIENT_SECRET: "client-secret",
-        OPENCLAW_GOOGLE_MEET_REFRESH_TOKEN: "refresh-token",
+        DEX_GOOGLE_MEET_REFRESH_TOKEN: "refresh-token",
         GOOGLE_MEET_ACCESS_TOKEN: "access-token",
-        OPENCLAW_GOOGLE_MEET_ACCESS_TOKEN_EXPIRES_AT: "123456",
+        DEX_GOOGLE_MEET_ACCESS_TOKEN_EXPIRES_AT: "123456",
         GOOGLE_MEET_DEFAULT_MEETING: "https://meet.google.com/abc-defg-hij",
-        OPENCLAW_GOOGLE_MEET_PREVIEW_ACK: "true",
+        DEX_GOOGLE_MEET_PREVIEW_ACK: "true",
       },
     );
     expect(config.defaults).toEqual({ meeting: "https://meet.google.com/abc-defg-hij" });
@@ -821,8 +821,8 @@ describe("google-meet plugin", () => {
     const config = resolveGoogleMeetConfigWithEnv(
       {},
       {
-        OPENCLAW_GOOGLE_MEET_ACCESS_TOKEN: "access-token",
-        OPENCLAW_GOOGLE_MEET_ACCESS_TOKEN_EXPIRES_AT: expiresAt,
+        DEX_GOOGLE_MEET_ACCESS_TOKEN: "access-token",
+        DEX_GOOGLE_MEET_ACCESS_TOKEN_EXPIRES_AT: expiresAt,
       },
     );
 

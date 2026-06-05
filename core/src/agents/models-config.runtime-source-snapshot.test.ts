@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { createFixtureSuite } from "../test-utils/fixture-suite.js";
 import { NON_ENV_SECRETREF_MARKER } from "./model-auth-markers.js";
 import {
@@ -26,7 +26,7 @@ vi.mock("./model-auth-env-vars.js", () => ({
 }));
 
 vi.mock("../plugins/provider-runtime.js", () => ({
-  applyProviderConfigDefaultsWithPlugin: (config: OpenClawConfig) => config,
+  applyProviderConfigDefaultsWithPlugin: (config: DexConfig) => config,
   applyProviderNativeStreamingUsageCompatWithPlugin: () => undefined,
   normalizeProviderConfigWithPlugin: () => undefined,
   resolveProviderConfigApiKeyWithPlugin: () => undefined,
@@ -74,7 +74,7 @@ afterAll(async () => {
   await fixtureSuite.cleanup();
 });
 
-function createOpenAiApiKeySourceConfig(): OpenClawConfig {
+function createOpenAiApiKeySourceConfig(): DexConfig {
   return {
     models: {
       providers: {
@@ -89,7 +89,7 @@ function createOpenAiApiKeySourceConfig(): OpenClawConfig {
   };
 }
 
-function createOpenAiApiKeyRuntimeConfig(): OpenClawConfig {
+function createOpenAiApiKeyRuntimeConfig(): DexConfig {
   return {
     models: {
       providers: {
@@ -104,7 +104,7 @@ function createOpenAiApiKeyRuntimeConfig(): OpenClawConfig {
   };
 }
 
-function createCustomProviderApiKeySourceConfig(): OpenClawConfig {
+function createCustomProviderApiKeySourceConfig(): DexConfig {
   return {
     models: {
       providers: {
@@ -113,7 +113,7 @@ function createCustomProviderApiKeySourceConfig(): OpenClawConfig {
           apiKey: {
             source: "env",
             provider: "default",
-            id: "OPENCLAW_MODEL_LITELLM_API_KEY", // pragma: allowlist secret
+            id: "DEX_MODEL_LITELLM_API_KEY", // pragma: allowlist secret
           },
           api: "openai-completions" as const,
           models: [],
@@ -123,7 +123,7 @@ function createCustomProviderApiKeySourceConfig(): OpenClawConfig {
   };
 }
 
-function createCustomProviderApiKeyRuntimeConfig(): OpenClawConfig {
+function createCustomProviderApiKeyRuntimeConfig(): DexConfig {
   return {
     models: {
       providers: {
@@ -138,7 +138,7 @@ function createCustomProviderApiKeyRuntimeConfig(): OpenClawConfig {
   };
 }
 
-function createOpenAiHeaderSourceConfig(): OpenClawConfig {
+function createOpenAiHeaderSourceConfig(): DexConfig {
   return {
     models: {
       providers: {
@@ -164,7 +164,7 @@ function createOpenAiHeaderSourceConfig(): OpenClawConfig {
   };
 }
 
-function createOpenAiHeaderRuntimeConfig(): OpenClawConfig {
+function createOpenAiHeaderRuntimeConfig(): DexConfig {
   return {
     models: {
       providers: {
@@ -182,7 +182,7 @@ function createOpenAiHeaderRuntimeConfig(): OpenClawConfig {
   };
 }
 
-function createOpenAiSourceConfigWithHeadersAndApiKey(): OpenClawConfig {
+function createOpenAiSourceConfigWithHeadersAndApiKey(): DexConfig {
   const config = createOpenAiHeaderSourceConfig();
   config.models!.providers!.openai.apiKey = {
     source: "env",
@@ -192,13 +192,13 @@ function createOpenAiSourceConfigWithHeadersAndApiKey(): OpenClawConfig {
   return config;
 }
 
-function createOpenAiRuntimeConfigWithHeadersAndApiKey(): OpenClawConfig {
+function createOpenAiRuntimeConfigWithHeadersAndApiKey(): DexConfig {
   const config = createOpenAiHeaderRuntimeConfig();
   config.models!.providers!.openai.apiKey = "sk-runtime-resolved"; // pragma: allowlist secret
   return config;
 }
 
-function withGatewayTokenMode(config: OpenClawConfig): OpenClawConfig {
+function withGatewayTokenMode(config: DexConfig): DexConfig {
   return {
     ...config,
     gateway: {
@@ -221,8 +221,8 @@ async function expectGeneratedProviderApiKey(
 }
 
 async function planGeneratedProviders(params: {
-  config: OpenClawConfig;
-  sourceConfigForSecrets: OpenClawConfig;
+  config: DexConfig;
+  sourceConfigForSecrets: DexConfig;
 }) {
   const plan = await planOpenClawModelsJsonWithDeps(
     {
@@ -258,7 +258,7 @@ function expectOpenAiHeaderMarkers(
 
 describe("models-config runtime source snapshot", () => {
   it("uses runtime source snapshot markers when passed the active runtime config", () => {
-    const sourceConfig: OpenClawConfig = {
+    const sourceConfig: DexConfig = {
       models: {
         providers: {
           openai: createOpenAiApiKeySourceConfig().models!.providers!.openai,
@@ -271,7 +271,7 @@ describe("models-config runtime source snapshot", () => {
         },
       },
     };
-    const runtimeConfig: OpenClawConfig = {
+    const runtimeConfig: DexConfig = {
       models: {
         providers: {
           openai: createOpenAiApiKeyRuntimeConfig().models!.providers!.openai,
@@ -298,7 +298,7 @@ describe("models-config runtime source snapshot", () => {
       unsetEnv(MODELS_CONFIG_IMPLICIT_ENV_VARS);
       const sourceConfig = createOpenAiApiKeySourceConfig();
       const runtimeConfig = createOpenAiApiKeyRuntimeConfig();
-      const clonedRuntimeConfig: OpenClawConfig = {
+      const clonedRuntimeConfig: DexConfig = {
         ...runtimeConfig,
         agents: {
           defaults: {
@@ -328,7 +328,7 @@ describe("models-config runtime source snapshot", () => {
       try {
         setRuntimeConfigSnapshot(runtimeConfig, sourceConfig);
         await ensureOpenClawModelsJson(runtimeConfig, agentDir);
-        await expectGeneratedProviderApiKey(agentDir, "litellm", "OPENCLAW_MODEL_LITELLM_API_KEY"); // pragma: allowlist secret
+        await expectGeneratedProviderApiKey(agentDir, "litellm", "DEX_MODEL_LITELLM_API_KEY"); // pragma: allowlist secret
       } finally {
         clearRuntimeConfigSnapshot();
         clearConfigCache();
@@ -342,7 +342,7 @@ describe("models-config runtime source snapshot", () => {
       unsetEnv(MODELS_CONFIG_IMPLICIT_ENV_VARS);
       const sourceConfig = createOpenAiApiKeySourceConfig();
       const runtimeConfig = createOpenAiApiKeyRuntimeConfig();
-      const firstCandidate: OpenClawConfig = {
+      const firstCandidate: DexConfig = {
         ...runtimeConfig,
         models: {
           providers: {
@@ -356,7 +356,7 @@ describe("models-config runtime source snapshot", () => {
           },
         },
       };
-      const secondCandidate: OpenClawConfig = {
+      const secondCandidate: DexConfig = {
         ...runtimeConfig,
         models: {
           providers: {

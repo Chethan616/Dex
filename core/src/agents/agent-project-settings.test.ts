@@ -149,7 +149,7 @@ describe("createPreparedEmbeddedAgentSettingsManager", () => {
     try {
       const cwd = path.join(baseDir, "workspace");
       const agentDir = path.join(baseDir, "agent");
-      const projectSettingsDir = path.join(cwd, ".openclaw");
+      const projectSettingsDir = path.join(cwd, ".dex");
       const agentSettingsPath = path.join(agentDir, "settings.json");
       await fs.mkdir(projectSettingsDir, { recursive: true });
       await fs.mkdir(agentDir, { recursive: true });

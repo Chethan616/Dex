@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveModelAgentRuntimeMetadata } from "../agents/agent-runtime-metadata.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { parseAgentSessionKey } from "../routing/session-key.js";
 
 /**
@@ -45,7 +45,7 @@ const ACP_SESSION_KEY = "agent:copilot:acp:86b7b5af-3773-4a56-b244-069d6c5d3db9"
 const NON_ACP_SESSION_KEY = "agent:main:main";
 
 /**
- * Build a minimal `OpenClawConfig` that mirrors the deployed scenario:
+ * Build a minimal `DexConfig` that mirrors the deployed scenario:
  * - a copilot agent exists in the agents.list
  * - it has NO explicit `agentRuntime.id` policy
  * - no top-level `agents.defaults.agentRuntime` either
@@ -53,7 +53,7 @@ const NON_ACP_SESSION_KEY = "agent:main:main";
  * Result: the old metadata resolver fell through to the implicit "openclaw"
  * branch — which is the bug under test.
  */
-function buildConfigWithoutAgentRuntimePolicy(): OpenClawConfig {
+function buildConfigWithoutAgentRuntimePolicy(): DexConfig {
   return {
     agents: {
       list: [
@@ -68,7 +68,7 @@ function buildConfigWithoutAgentRuntimePolicy(): OpenClawConfig {
       // No `defaults.agentRuntime` either.
       defaults: {},
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 /**
@@ -80,7 +80,7 @@ function buildConfigWithoutAgentRuntimePolicy(): OpenClawConfig {
  * After commit 02fe0d8978, the production path goes through resolveModelAgentRuntimeMetadata.
  */
 function computeSessionAgentRuntime(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   fallbackAgentId: string;
   /** Mirrors `entry?.acp != null` passed from loaded session rows. */

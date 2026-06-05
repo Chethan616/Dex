@@ -305,7 +305,7 @@ describe("openclaw path CLI", () => {
       // exit code 1, stable code OC_EMIT_SENTINEL, message scrubbed.
       await pathSetCommand(
         "oc://gateway.jsonc/token",
-        "__OPENCLAW_REDACTED__",
+        "__DEX_REDACTED__",
         { cwd: workspaceDir, json: true },
         rt,
       );

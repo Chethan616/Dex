@@ -72,8 +72,8 @@ async function withCapturedStdout(run: () => Promise<void>): Promise<string> {
 describe("ensureConfigReady", () => {
   const resetConfigGuardStateForTests = testApi.resetConfigGuardStateForTests;
   const originalHome = process.env.HOME;
-  const originalOpenClawHome = process.env.OPENCLAW_HOME;
-  const originalOpenClawStateDir = process.env.OPENCLAW_STATE_DIR;
+  const originalOpenClawHome = process.env.DEX_HOME;
+  const originalOpenClawStateDir = process.env.DEX_STATE_DIR;
   const tempRoots: string[] = [];
 
   async function runEnsureConfigReady(commandPath: string[], suppressDoctorStdout = false) {
@@ -100,19 +100,19 @@ describe("ensureConfigReady", () => {
   function useTempOpenClawHome(): string {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-config-guard-"));
     tempRoots.push(root);
-    process.env.OPENCLAW_HOME = root;
-    delete process.env.OPENCLAW_STATE_DIR;
+    process.env.DEX_HOME = root;
+    delete process.env.DEX_STATE_DIR;
     return root;
   }
 
   function writeLegacyTaskSidecarMarker(root: string): void {
-    const markerPath = path.join(root, ".openclaw", "tasks", "runs.sqlite");
+    const markerPath = path.join(root, ".dex", "tasks", "runs.sqlite");
     fs.mkdirSync(path.dirname(markerPath), { recursive: true });
     fs.writeFileSync(markerPath, "");
   }
 
   function writeStateMarker(root: string, relativePath: string): void {
-    const markerPath = path.join(root, ".openclaw", relativePath);
+    const markerPath = path.join(root, ".dex", relativePath);
     fs.mkdirSync(path.dirname(markerPath), { recursive: true });
     fs.writeFileSync(markerPath, "{}");
   }
@@ -143,14 +143,14 @@ describe("ensureConfigReady", () => {
       process.env.HOME = originalHome;
     }
     if (originalOpenClawHome === undefined) {
-      delete process.env.OPENCLAW_HOME;
+      delete process.env.DEX_HOME;
     } else {
-      process.env.OPENCLAW_HOME = originalOpenClawHome;
+      process.env.DEX_HOME = originalOpenClawHome;
     }
     if (originalOpenClawStateDir === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_STATE_DIR;
     } else {
-      process.env.OPENCLAW_STATE_DIR = originalOpenClawStateDir;
+      process.env.DEX_STATE_DIR = originalOpenClawStateDir;
     }
     for (const root of tempRoots.splice(0)) {
       fs.rmSync(root, { recursive: true, force: true });
@@ -205,7 +205,7 @@ describe("ensureConfigReady", () => {
 
   it("runs doctor flow for legacy sessions without task sidecars", async () => {
     const root = useTempOpenClawHome();
-    fs.mkdirSync(path.join(root, ".openclaw", "sessions"), { recursive: true });
+    fs.mkdirSync(path.join(root, ".dex", "sessions"), { recursive: true });
 
     await runEnsureConfigReady(["status"]);
 
@@ -248,12 +248,12 @@ describe("ensureConfigReady", () => {
     expect(loadAndMaybeMigrateDoctorConfigMock).toHaveBeenCalledOnce();
   });
 
-  it("uses shared tilde expansion for OPENCLAW_HOME in the startup detector", async () => {
+  it("uses shared tilde expansion for DEX_HOME in the startup detector", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-config-guard-home-"));
     tempRoots.push(root);
     process.env.HOME = root;
-    process.env.OPENCLAW_HOME = "~/svc";
-    delete process.env.OPENCLAW_STATE_DIR;
+    process.env.DEX_HOME = "~/svc";
+    delete process.env.DEX_STATE_DIR;
     writeLegacyTaskSidecarMarker(path.join(root, "svc"));
 
     await runEnsureConfigReady(["status"]);
@@ -332,7 +332,7 @@ describe("ensureConfigReady", () => {
       "Problem:",
       "  - channels.quietchat: invalid",
       "",
-      `Fix: ${formatCliCommand("dex-core doctor --fix")}`,
+      `Fix: ${formatCliCommand("dex doctor --fix")}`,
       `Inspect: ${formatCliCommand("openclaw config validate")}`,
       "Status, health, logs, tasks list/audit, and doctor commands still run with invalid config.",
     ]);
@@ -359,7 +359,7 @@ describe("ensureConfigReady", () => {
     const calls = plainErrorCalls(runtime);
 
     expect(calls).toContain(`Fix: ${pluginPackagingRecoveryHint}`);
-    expect(calls).not.toContain(`Fix: ${formatCliCommand("dex-core doctor --fix")}`);
+    expect(calls).not.toContain(`Fix: ${formatCliCommand("dex doctor --fix")}`);
     expect(runtime.exit).toHaveBeenCalledWith(1);
   });
 

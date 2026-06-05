@@ -1030,11 +1030,11 @@ describe("saveAuthProfileStore", () => {
 
   it("does not persist unchanged inherited main OAuth when saving secondary local updates", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-auth-save-inherited-"));
-    const stateDir = path.join(root, ".openclaw");
+    const stateDir = path.join(root, ".dex");
     const childAgentDir = path.join(stateDir, "agents", "worker", "agent");
     const childAuthPath = resolveAuthStorePath(childAgentDir);
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
-    vi.stubEnv("OPENCLAW_AGENT_DIR", "");
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_AGENT_DIR", "");
     try {
       saveAuthProfileStore({
         version: 1,
@@ -1100,11 +1100,11 @@ describe("saveAuthProfileStore", () => {
 
   it("does not persist stale inherited main OAuth after main refreshes", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-auth-save-stale-inherited-"));
-    const stateDir = path.join(root, ".openclaw");
+    const stateDir = path.join(root, ".dex");
     const childAgentDir = path.join(stateDir, "agents", "worker", "agent");
     const childAuthPath = resolveAuthStorePath(childAgentDir);
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
-    vi.stubEnv("OPENCLAW_AGENT_DIR", "");
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_AGENT_DIR", "");
     try {
       saveAuthProfileStore({
         version: 1,
@@ -1173,11 +1173,11 @@ describe("saveAuthProfileStore", () => {
 
   it("does not persist inherited OAuth with an out-of-range local expiry", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-auth-save-invalid-local-"));
-    const stateDir = path.join(root, ".openclaw");
+    const stateDir = path.join(root, ".dex");
     const childAgentDir = path.join(stateDir, "agents", "worker", "agent");
     const childAuthPath = resolveAuthStorePath(childAgentDir);
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
-    vi.stubEnv("OPENCLAW_AGENT_DIR", "");
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_AGENT_DIR", "");
     try {
       saveAuthProfileStore({
         version: 1,
@@ -1230,11 +1230,11 @@ describe("saveAuthProfileStore", () => {
 
   it("preserves inherited main OAuth in active secondary runtime snapshots", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-auth-save-snapshot-"));
-    const stateDir = path.join(root, ".openclaw");
+    const stateDir = path.join(root, ".dex");
     const childAgentDir = path.join(stateDir, "agents", "worker", "agent");
     const childAuthPath = resolveAuthStorePath(childAgentDir);
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
-    vi.stubEnv("OPENCLAW_AGENT_DIR", "");
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_AGENT_DIR", "");
     try {
       saveAuthProfileStore({
         version: 1,

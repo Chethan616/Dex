@@ -79,7 +79,7 @@ describe("package-mac-app plist stamping", () => {
       [
         "#!/usr/bin/env bash",
         "set -euo pipefail",
-        "printf '%s|%s\\n' \"$PWD\" \"$*\" >> \"$OPENCLAW_TEST_LOG\"",
+        "printf '%s|%s\\n' \"$PWD\" \"$*\" >> \"$DEX_TEST_LOG\"",
         "if [[ \"${1:-}\" == \"pnpm\" && \"${2:-}\" == \"--version\" ]]; then",
         "  echo '11.2.2'",
         "fi",
@@ -92,8 +92,8 @@ describe("package-mac-app plist stamping", () => {
     const result = runHelper(`
       set -euo pipefail
       ROOT_DIR=${JSON.stringify(tempRoot)}
-      OPENCLAW_TEST_LOG=${JSON.stringify(logPath)}
-      export OPENCLAW_TEST_LOG
+      DEX_TEST_LOG=${JSON.stringify(logPath)}
+      export DEX_TEST_LOG
       PATH=${JSON.stringify(`${toolsDir}:/usr/bin:/bin`)}
       ${helperBlock}
       run_pnpm install --frozen-lockfile --config.node-linker=hoisted
@@ -157,12 +157,12 @@ describe("package-mac-app plist stamping", () => {
     const script = readFileSync(scriptPath, "utf8");
     const openClawKitBlock = script.slice(
       script.indexOf(
-        'OPENCLAWKIT_BUNDLE="$(build_path_for_arch "$PRIMARY_ARCH")/$BUILD_CONFIG/OpenClawKit_OpenClawKit.bundle"',
+        'OPENCLAWKIT_BUNDLE="$(build_path_for_arch "$PRIMARY_ARCH")/$BUILD_CONFIG/DexKit_DexKit.bundle"',
       ),
       script.indexOf('echo "📦 Copying Textual resources"'),
     );
 
-    expect(openClawKitBlock).toContain("ERROR: OpenClawKit resource bundle not found");
+    expect(openClawKitBlock).toContain("ERROR: DexKit resource bundle not found");
     expect(openClawKitBlock).toContain("exit 1");
     expect(openClawKitBlock).not.toContain("WARN:");
     expect(openClawKitBlock).not.toContain("continuing");

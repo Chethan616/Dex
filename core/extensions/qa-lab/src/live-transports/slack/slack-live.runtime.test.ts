@@ -12,10 +12,10 @@ describe("Slack live QA runtime helpers", () => {
   it("resolves env credential payloads", () => {
     expect(
       testing.resolveSlackQaRuntimeEnv({
-        OPENCLAW_QA_SLACK_CHANNEL_ID: "C123456789",
-        OPENCLAW_QA_SLACK_DRIVER_BOT_TOKEN: "xoxb-driver",
-        OPENCLAW_QA_SLACK_SUT_BOT_TOKEN: "xoxb-sut",
-        OPENCLAW_QA_SLACK_SUT_APP_TOKEN: "xapp-sut",
+        DEX_QA_SLACK_CHANNEL_ID: "C123456789",
+        DEX_QA_SLACK_DRIVER_BOT_TOKEN: "xoxb-driver",
+        DEX_QA_SLACK_SUT_BOT_TOKEN: "xoxb-sut",
+        DEX_QA_SLACK_SUT_APP_TOKEN: "xapp-sut",
       }),
     ).toEqual({
       channelId: "C123456789",
@@ -28,12 +28,12 @@ describe("Slack live QA runtime helpers", () => {
   it("rejects malformed Slack channel ids", () => {
     expect(() =>
       testing.resolveSlackQaRuntimeEnv({
-        OPENCLAW_QA_SLACK_CHANNEL_ID: "qa-channel",
-        OPENCLAW_QA_SLACK_DRIVER_BOT_TOKEN: "xoxb-driver",
-        OPENCLAW_QA_SLACK_SUT_BOT_TOKEN: "xoxb-sut",
-        OPENCLAW_QA_SLACK_SUT_APP_TOKEN: "xapp-sut",
+        DEX_QA_SLACK_CHANNEL_ID: "qa-channel",
+        DEX_QA_SLACK_DRIVER_BOT_TOKEN: "xoxb-driver",
+        DEX_QA_SLACK_SUT_BOT_TOKEN: "xoxb-sut",
+        DEX_QA_SLACK_SUT_APP_TOKEN: "xapp-sut",
       }),
-    ).toThrow("OPENCLAW_QA_SLACK channelId must be a Slack id like C123 or U123.");
+    ).toThrow("DEX_QA_SLACK channelId must be a Slack id like C123 or U123.");
   });
 
   it("parses Convex credential payloads", () => {
@@ -180,8 +180,8 @@ describe("Slack live QA runtime helpers", () => {
   it("resolves Slack approval checkpoint configuration from env", () => {
     expect(
       testing.resolveSlackApprovalCheckpointConfig({
-        OPENCLAW_QA_SLACK_APPROVAL_CHECKPOINT_DIR: "/tmp/checkpoints",
-        OPENCLAW_QA_SLACK_APPROVAL_CHECKPOINT_TIMEOUT_MS: "5000",
+        DEX_QA_SLACK_APPROVAL_CHECKPOINT_DIR: "/tmp/checkpoints",
+        DEX_QA_SLACK_APPROVAL_CHECKPOINT_TIMEOUT_MS: "5000",
       }),
     ).toEqual({
       checkpointDir: "/tmp/checkpoints",
@@ -260,12 +260,12 @@ describe("Slack live QA runtime helpers", () => {
     expect(testing.resolveSlackQaReadyTimeoutMs({})).toBe(45_000);
     expect(
       testing.resolveSlackQaReadyTimeoutMs({
-        OPENCLAW_QA_TRANSPORT_READY_TIMEOUT_MS: "180000",
+        DEX_QA_TRANSPORT_READY_TIMEOUT_MS: "180000",
       }),
     ).toBe(180_000);
     expect(
       testing.resolveSlackQaReadyTimeoutMs({
-        OPENCLAW_QA_TRANSPORT_READY_TIMEOUT_MS: "bad",
+        DEX_QA_TRANSPORT_READY_TIMEOUT_MS: "bad",
       }),
     ).toBe(45_000);
   });
@@ -433,7 +433,7 @@ describe("Slack live QA runtime helpers", () => {
     expect(result.scenarios).toHaveLength(1);
     expect(result.scenarios[0]?.id).toBe("slack-canary");
     expect(result.scenarios[0]?.status).toBe("fail");
-    expect(result.scenarios[0]?.details).toContain("Missing OPENCLAW_QA_CONVEX_SITE_URL");
+    expect(result.scenarios[0]?.details).toContain("Missing DEX_QA_CONVEX_SITE_URL");
     await expect(fs.stat(result.reportPath).then((stats) => stats.isFile())).resolves.toBe(true);
     const summary = JSON.parse(await fs.readFile(result.summaryPath, "utf8")) as {
       channelId: string;

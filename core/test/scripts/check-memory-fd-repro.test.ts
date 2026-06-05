@@ -58,9 +58,9 @@ describe("check-memory-fd-repro", () => {
     expect(
       withEnv(
         {
-          OPENCLAW_MEMORY_FD_REPRO_FILES: "17",
-          OPENCLAW_MEMORY_FD_REPRO_MAX_WORKSPACE_REG_FDS: "0",
-          OPENCLAW_MEMORY_FD_REPRO_SAMPLE_DELAY_MS: "0",
+          DEX_MEMORY_FD_REPRO_FILES: "17",
+          DEX_MEMORY_FD_REPRO_MAX_WORKSPACE_REG_FDS: "0",
+          DEX_MEMORY_FD_REPRO_SAMPLE_DELAY_MS: "0",
         },
         () => parseArgs([]),
       ),
@@ -71,22 +71,22 @@ describe("check-memory-fd-repro", () => {
     });
 
     expect(() =>
-      withEnv({ OPENCLAW_MEMORY_FD_REPRO_FILES: "17files" }, () => parseArgs([])),
-    ).toThrow("OPENCLAW_MEMORY_FD_REPRO_FILES must be a non-negative integer");
+      withEnv({ DEX_MEMORY_FD_REPRO_FILES: "17files" }, () => parseArgs([])),
+    ).toThrow("DEX_MEMORY_FD_REPRO_FILES must be a non-negative integer");
     expect(() =>
-      withEnv({ OPENCLAW_MEMORY_FD_REPRO_TIMEOUT_MS: "1e3" }, () => parseArgs([])),
-    ).toThrow("OPENCLAW_MEMORY_FD_REPRO_TIMEOUT_MS must be a non-negative integer");
+      withEnv({ DEX_MEMORY_FD_REPRO_TIMEOUT_MS: "1e3" }, () => parseArgs([])),
+    ).toThrow("DEX_MEMORY_FD_REPRO_TIMEOUT_MS must be a non-negative integer");
   });
 
   it("lets explicit CLI numeric flags override malformed inherited env defaults", () => {
     expect(
       withEnv(
         {
-          OPENCLAW_MEMORY_FD_REPRO_FILES: "17files",
-          OPENCLAW_MEMORY_FD_REPRO_MAX_WORKSPACE_REG_FDS: "4fds",
-          OPENCLAW_MEMORY_FD_REPRO_TIMEOUT_MS: "1e3",
-          OPENCLAW_MEMORY_FD_REPRO_SAMPLE_DELAY_MS: "soon",
-          OPENCLAW_MEMORY_FD_REPRO_SETTLE_DELAY_MS: "later",
+          DEX_MEMORY_FD_REPRO_FILES: "17files",
+          DEX_MEMORY_FD_REPRO_MAX_WORKSPACE_REG_FDS: "4fds",
+          DEX_MEMORY_FD_REPRO_TIMEOUT_MS: "1e3",
+          DEX_MEMORY_FD_REPRO_SAMPLE_DELAY_MS: "soon",
+          DEX_MEMORY_FD_REPRO_SETTLE_DELAY_MS: "later",
         },
         () =>
           parseArgs([
@@ -117,7 +117,7 @@ describe("check-memory-fd-repro", () => {
     });
 
     expect(
-      withEnv({ OPENCLAW_MEMORY_FD_REPRO_FILES: "17" }, () => parseArgs(["--", "--unknown"])),
+      withEnv({ DEX_MEMORY_FD_REPRO_FILES: "17" }, () => parseArgs(["--", "--unknown"])),
     ).toMatchObject({
       fileCount: 17,
     });
@@ -153,7 +153,7 @@ describe("check-memory-fd-repro", () => {
         provider: "none",
         model: "",
         store: {
-          path: path.join(homeDir, ".openclaw", "memory", "main.sqlite"),
+          path: path.join(homeDir, ".dex", "memory", "main.sqlite"),
           vector: { enabled: false },
         },
         sync: {

@@ -11,15 +11,15 @@ const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
 const OPENROUTER_MISTRAL_PROVIDER_PREFIX = "mistralai/";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
 const LIVE_MODEL_ID =
-  process.env.OPENCLAW_LIVE_OPENROUTER_PLUGIN_MODEL?.trim() || "openai/gpt-5.4-nano";
+  process.env.DEX_LIVE_OPENROUTER_PLUGIN_MODEL?.trim() || "openai/gpt-5.4-nano";
 const LIVE_CACHE_MODEL_ID =
-  process.env.OPENCLAW_LIVE_OPENROUTER_CACHE_MODEL?.trim() || "deepseek/deepseek-v3.2";
-const liveEnabled = OPENROUTER_API_KEY.trim().length > 0 && process.env.OPENCLAW_LIVE_TEST === "1";
-const liveCatalogEnabled = process.env.OPENCLAW_LIVE_TEST === "1";
+  process.env.DEX_LIVE_OPENROUTER_CACHE_MODEL?.trim() || "deepseek/deepseek-v3.2";
+const liveEnabled = OPENROUTER_API_KEY.trim().length > 0 && process.env.DEX_LIVE_TEST === "1";
+const liveCatalogEnabled = process.env.DEX_LIVE_TEST === "1";
 const describeLive = liveEnabled ? describe : describe.skip;
 const describeCatalogLive = liveCatalogEnabled ? describe : describe.skip;
 const describeCacheLive =
-  liveEnabled && process.env.OPENCLAW_LIVE_CACHE_TEST === "1" ? describe : describe.skip;
+  liveEnabled && process.env.DEX_LIVE_CACHE_TEST === "1" ? describe : describe.skip;
 const ModelRegistryCtor = ModelRegistry as unknown as {
   new (authStorage: AuthStorage, modelsJsonPath?: string): ModelRegistry;
 };

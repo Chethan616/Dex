@@ -5,19 +5,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { appendCrestodianAuditEntry, resolveCrestodianAuditPath } from "./audit.js";
 
 describe("Crestodian audit log", () => {
-  const previousStateDir = process.env.OPENCLAW_STATE_DIR;
+  const previousStateDir = process.env.DEX_STATE_DIR;
 
   afterEach(() => {
     if (previousStateDir === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_STATE_DIR;
     } else {
-      process.env.OPENCLAW_STATE_DIR = previousStateDir;
+      process.env.DEX_STATE_DIR = previousStateDir;
     }
   });
 
   it("writes jsonl records under the OpenClaw audit dir", async () => {
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "crestodian-audit-"));
-    vi.stubEnv("OPENCLAW_STATE_DIR", tempDir);
+    vi.stubEnv("DEX_STATE_DIR", tempDir);
 
     const auditPath = await appendCrestodianAuditEntry({
       operation: "config.setDefaultModel",

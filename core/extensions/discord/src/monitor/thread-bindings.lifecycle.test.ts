@@ -11,7 +11,7 @@ import {
 import {
   clearRuntimeConfigSnapshot,
   setRuntimeConfigSnapshot,
-  type OpenClawConfig,
+  type DexConfig,
 } from "openclaw/plugin-sdk/runtime-config-snapshot";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setDiscordRuntime, type DiscordRuntime } from "../runtime.js";
@@ -79,7 +79,7 @@ const acpRuntime = await import("openclaw/plugin-sdk/acp-runtime");
 
 function createTestThreadBindingManager(
   params: Omit<Parameters<typeof createThreadBindingManager>[0], "cfg"> & {
-    cfg?: OpenClawConfig;
+    cfg?: DexConfig;
   },
 ) {
   return createThreadBindingManager({
@@ -730,9 +730,9 @@ describe("thread binding lifecycle", () => {
 
   it("persists touched activity timestamps across restart when persistence is enabled", async () => {
     vi.useFakeTimers();
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
+    const previousStateDir = process.env.DEX_STATE_DIR;
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-thread-bindings-"));
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    process.env.DEX_STATE_DIR = stateDir;
     try {
       testing.resetThreadBindingsForTests();
       vi.setSystemTime(new Date("2026-02-20T00:00:00.000Z"));
@@ -778,9 +778,9 @@ describe("thread binding lifecycle", () => {
     } finally {
       testing.resetThreadBindingsForTests();
       if (previousStateDir === undefined) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
       fs.rmSync(stateDir, { recursive: true, force: true });
       vi.useRealTimers();
@@ -960,7 +960,7 @@ describe("thread binding lifecycle", () => {
   it("passes manager token when resolving parent channels for auto-bind", async () => {
     const cfg = {
       channels: { discord: { token: "tok" } },
-    } as OpenClawConfig;
+    } as DexConfig;
     createTestThreadBindingManager({
       accountId: "runtime",
       token: "runtime-token",
@@ -1019,10 +1019,10 @@ describe("thread binding lifecycle", () => {
   it("uses the active runtime snapshot cfg for manager operations", async () => {
     const startupCfg = {
       channels: { discord: { token: "startup-token" } },
-    } as OpenClawConfig;
+    } as DexConfig;
     const refreshedCfg = {
       channels: { discord: { token: "refreshed-token" } },
-    } as OpenClawConfig;
+    } as DexConfig;
     const manager = createTestThreadBindingManager({
       accountId: "runtime",
       token: "runtime-token",
@@ -1876,9 +1876,9 @@ describe("thread binding lifecycle", () => {
   });
 
   it("migrates legacy expiresAt bindings to idle/max-age semantics", () => {
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
+    const previousStateDir = process.env.DEX_STATE_DIR;
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-thread-bindings-"));
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    process.env.DEX_STATE_DIR = stateDir;
     try {
       testing.resetThreadBindingsForTests();
       const boundAt = Date.now() - 10_000;
@@ -1958,18 +1958,18 @@ describe("thread binding lifecycle", () => {
     } finally {
       testing.resetThreadBindingsForTests();
       if (previousStateDir === undefined) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
       fs.rmSync(stateDir, { recursive: true, force: true });
     }
   });
 
   it("persists unbinds even when no manager is active", () => {
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
+    const previousStateDir = process.env.DEX_STATE_DIR;
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-thread-bindings-"));
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    process.env.DEX_STATE_DIR = stateDir;
     try {
       testing.resetThreadBindingsForTests();
       const now = Date.now();
@@ -1999,9 +1999,9 @@ describe("thread binding lifecycle", () => {
     } finally {
       testing.resetThreadBindingsForTests();
       if (previousStateDir === undefined) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
       fs.rmSync(stateDir, { recursive: true, force: true });
     }

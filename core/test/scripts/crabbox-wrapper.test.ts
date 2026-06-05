@@ -46,7 +46,7 @@ function writeFakeCrabbox(binDir: string, helpText: string): string {
     const script = [
       "#!/bin/sh",
       'if [ "$1" = "--version" ]; then',
-      '  printf "%s\\n" "${OPENCLAW_FAKE_CRABBOX_VERSION:-crabbox 0.22.1}"',
+      '  printf "%s\\n" "${DEX_FAKE_CRABBOX_VERSION:-crabbox 0.22.1}"',
       "  exit 0",
       "fi",
       'if [ "$1" = "run" ] && [ "$2" = "--help" ]; then',
@@ -56,13 +56,13 @@ function writeFakeCrabbox(binDir: string, helpText: string): string {
       'if [ "$1" = "config" ] && [ "$2" = "show" ]; then',
       '  for arg in "$@"; do',
       '    if [ "$arg" = "--json" ]; then',
-      '      status="${OPENCLAW_FAKE_CRABBOX_CONFIG_STATUS:-0}"',
+      '      status="${DEX_FAKE_CRABBOX_CONFIG_STATUS:-0}"',
       '      if [ "$status" != "0" ]; then',
       '        printf "%s\\n" "config unavailable" >&2',
       '        exit "$status"',
       "      fi",
-      '      if [ -n "${OPENCLAW_FAKE_CRABBOX_CONFIG_JSON+x}" ]; then',
-      '        printf "%s" "$OPENCLAW_FAKE_CRABBOX_CONFIG_JSON"',
+      '      if [ -n "${DEX_FAKE_CRABBOX_CONFIG_JSON+x}" ]; then',
+      '        printf "%s" "$DEX_FAKE_CRABBOX_CONFIG_JSON"',
       "      else",
       '        printf "%s" "{\\"coordinator\\":\\"configured-broker\\",\\"brokerAuth\\":\\"configured\\"}"',
       "      fi",
@@ -85,7 +85,7 @@ function writeFakeCrabbox(binDir: string, helpText: string): string {
       "  fi",
       '  previous_arg="$arg"',
       "done",
-      'if [ "${OPENCLAW_FAKE_CRABBOX_DELETE_CWD_ONCE:-}" = "1" ]; then',
+      'if [ "${DEX_FAKE_CRABBOX_DELETE_CWD_ONCE:-}" = "1" ]; then',
       '  deleted_cwd="$PWD"',
       "  cd / || exit 1",
       '  rm -rf "$deleted_cwd"',
@@ -100,7 +100,7 @@ function writeFakeCrabbox(binDir: string, helpText: string): string {
       "  fi",
       '  cd "$deleted_cwd" || exit 1',
       "fi",
-      'printf "%s\\0" "__OPENCLAW_FAKE_CRABBOX_V1__"',
+      'printf "%s\\0" "__DEX_FAKE_CRABBOX_V1__"',
       'printf "%s\\0" "$PWD"',
       'printf "%s\\0" "$#"',
       'for arg in "$@"; do',
@@ -118,12 +118,12 @@ function writeFakeCrabbox(binDir: string, helpText: string): string {
   const helperScript = [
     "const args = process.argv.slice(2);",
     'if (args[0] === "config" && args[1] === "show" && args.includes("--json")) {',
-    "  const status = Number.parseInt(process.env.OPENCLAW_FAKE_CRABBOX_CONFIG_STATUS || '0', 10);",
+    "  const status = Number.parseInt(process.env.DEX_FAKE_CRABBOX_CONFIG_STATUS || '0', 10);",
     "  if (status !== 0) {",
     "    process.stderr.write('config unavailable\\n');",
     "    process.exit(status);",
     "  }",
-    '  process.stdout.write(process.env.OPENCLAW_FAKE_CRABBOX_CONFIG_JSON || \'{"coordinator":"configured-broker","brokerAuth":"configured"}\');',
+    '  process.stdout.write(process.env.DEX_FAKE_CRABBOX_CONFIG_JSON || \'{"coordinator":"configured-broker","brokerAuth":"configured"}\');',
     "  process.exit(0);",
     "}",
     "const scriptIndex = args.findIndex((arg) => arg === '--script' || arg === '-script');",
@@ -141,7 +141,7 @@ function writeFakeCrabbox(binDir: string, helpText: string): string {
     "#!/usr/bin/env node",
     "const args = process.argv.slice(2);",
     'if (args[0] === "--version") {',
-    "  console.log(process.env.OPENCLAW_FAKE_CRABBOX_VERSION || 'crabbox 0.22.1');",
+    "  console.log(process.env.DEX_FAKE_CRABBOX_VERSION || 'crabbox 0.22.1');",
     "  process.exit(0);",
     "}",
     'if (args[0] === "run" && args[1] === "--help") {',
@@ -228,7 +228,7 @@ function makeFakeGit(
   const script = [
     "#!/usr/bin/env node",
     "const fs = require('node:fs');",
-    "const responses = new Map(Object.entries(JSON.parse(process.env.OPENCLAW_FAKE_GIT_RESPONSES || '{}')));",
+    "const responses = new Map(Object.entries(JSON.parse(process.env.DEX_FAKE_GIT_RESPONSES || '{}')));",
     "const args = process.argv.slice(2);",
     "if (args[0] === 'worktree' && args[1] === 'add') { fs.mkdirSync(args[3], { recursive: true }); process.exit(0); }",
     "if (args[0] === '-C' && args[2] === 'sparse-checkout' && args[3] === 'disable') { process.exit(0); }",
@@ -280,15 +280,15 @@ function runWrapper(
         .filter(Boolean)
         .join(path.delimiter),
       CRABBOX_PROVIDER: "",
-      OPENCLAW_CRABBOX_WRAPPER_IGNORE_REPO_BINARY: "1",
+      DEX_CRABBOX_WRAPPER_IGNORE_REPO_BINARY: "1",
       ...(options.configJson
-        ? { OPENCLAW_FAKE_CRABBOX_CONFIG_JSON: JSON.stringify(options.configJson) }
+        ? { DEX_FAKE_CRABBOX_CONFIG_JSON: JSON.stringify(options.configJson) }
         : {}),
       ...(options.configStatus
-        ? { OPENCLAW_FAKE_CRABBOX_CONFIG_STATUS: String(options.configStatus) }
+        ? { DEX_FAKE_CRABBOX_CONFIG_STATUS: String(options.configStatus) }
         : {}),
       ...options.env,
-      OPENCLAW_FAKE_GIT_RESPONSES: JSON.stringify(gitResponses),
+      DEX_FAKE_GIT_RESPONSES: JSON.stringify(gitResponses),
     },
     timeout: 10_000,
   });
@@ -299,7 +299,7 @@ function parseFakeCrabboxOutput(result: ReturnType<typeof runWrapper>): {
   cwd: string;
   scriptContent?: string;
 } {
-  const marker = "__OPENCLAW_FAKE_CRABBOX_V1__\0";
+  const marker = "__DEX_FAKE_CRABBOX_V1__\0";
   if (result.stdout.startsWith(marker)) {
     let offset = marker.length;
     const readField = () => {
@@ -336,7 +336,7 @@ function expectGroupedShellCommand(remoteCommand: string, command: string): void
 }
 
 const remoteChangedGateEnvPrefix =
-  "OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1 OPENCLAW_CHANGED_LANES_RAW_SYNC=1 CI=1";
+  "DEX_CHECK_CHANGED_REMOTE_CHILD=1 DEX_CHANGED_LANES_RAW_SYNC=1 CI=1";
 const remoteChangedGateExport = `export ${remoteChangedGateEnvPrefix};`;
 
 afterAll(() => {
@@ -391,7 +391,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     const result = runWrapper(
       "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
       ["run", "--provider", "blacksmith-testbox", "--", "echo ok"],
-      { env: { OPENCLAW_FAKE_CRABBOX_VERSION: "crabbox 0.21.9" } },
+      { env: { DEX_FAKE_CRABBOX_VERSION: "crabbox 0.21.9" } },
     );
 
     expect(result.status).toBe(2);
@@ -404,7 +404,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     const result = runWrapper(
       "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
       ["run", "--provider", "blacksmith", "--", "echo ok"],
-      { env: { OPENCLAW_FAKE_CRABBOX_VERSION: "crabbox 0.21.9" } },
+      { env: { DEX_FAKE_CRABBOX_VERSION: "crabbox 0.21.9" } },
     );
 
     expect(result.status).toBe(2);
@@ -415,7 +415,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     const result = runWrapper(
       "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
       ["run", "--provider", "blacksmith-testbox", "--", "echo ok"],
-      { env: { OPENCLAW_FAKE_CRABBOX_VERSION: "crabbox 0.22.0-rc.1" } },
+      { env: { DEX_FAKE_CRABBOX_VERSION: "crabbox 0.22.0-rc.1" } },
     );
 
     expect(result.status).toBe(2);
@@ -426,7 +426,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     const result = runWrapper(
       "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
       ["run", "--provider", "blacksmith-testbox", "--", "echo ok"],
-      { env: { OPENCLAW_FAKE_CRABBOX_VERSION: "crabbox 0.22.0-3-gabc1234" } },
+      { env: { DEX_FAKE_CRABBOX_VERSION: "crabbox 0.22.0-3-gabc1234" } },
     );
 
     expect(result.status).toBe(0);
@@ -522,7 +522,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
       {
         env: {
           CRABBOX_PROVIDER: "aws",
-          OPENCLAW_CRABBOX_ALLOW_DIRECT_AWS: "1",
+          DEX_CRABBOX_ALLOW_DIRECT_AWS: "1",
         },
       },
     );
@@ -545,7 +545,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
       {
         env: {
           CRABBOX_PROVIDER: "aws",
-          OPENCLAW_CRABBOX_ALLOW_DIRECT_AWS: "1",
+          DEX_CRABBOX_ALLOW_DIRECT_AWS: "1",
         },
       },
     );
@@ -597,7 +597,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
       ["run", "--provider", "aws", "--", "echo ok"],
       {
         configJson: { coordinator: "", brokerAuth: "missing" },
-        env: { OPENCLAW_CRABBOX_ALLOW_DIRECT_AWS: "1" },
+        env: { DEX_CRABBOX_ALLOW_DIRECT_AWS: "1" },
       },
     );
 
@@ -713,7 +713,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     const remoteCommand = normalizeShellLineEndings(output.args.at(-1) ?? "");
     expect(result.status).toBe(0);
     expect(remoteCommand).toContain(
-      'macos_locale="${OPENCLAW_CRABBOX_MACOS_LOCALE:-en_US.UTF-8}"',
+      'macos_locale="${DEX_CRABBOX_MACOS_LOCALE:-en_US.UTF-8}"',
     );
     expect(remoteCommand).toContain(
       'case "${LANG:-}" in C.UTF-8|C.utf8|c.UTF-8|c.utf8) export LANG="$macos_locale" ;; esac;',
@@ -1100,8 +1100,8 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     expect(output.scriptContent).toContain("openclaw_crabbox_bootstrap_macos_js || exit $?");
     expect(output.scriptContent).not.toContain("corepack enable");
     expect(output.scriptContent).not.toContain("pnpm --version >&2");
-    expect(output.scriptContent).toContain("cat >\"$tmp_script\" <<'OPENCLAW_CRABBOX_SCRIPT_0'");
-    expect(output.scriptContent).toContain(`\n${script}\nOPENCLAW_CRABBOX_SCRIPT_0\n`);
+    expect(output.scriptContent).toContain("cat >\"$tmp_script\" <<'DEX_CRABBOX_SCRIPT_0'");
+    expect(output.scriptContent).toContain(`\n${script}\nDEX_CRABBOX_SCRIPT_0\n`);
     expect(output.scriptContent).toContain('chmod 700 "$tmp_script" || exit $?');
     expect(output.scriptContent).toContain('"$tmp_script" "$@"');
     expect(output.args.at(-1)).toBe("arg1");
@@ -1650,8 +1650,8 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
           encoding: "utf8",
           env: {
             ...process.env,
-            OPENCLAW_CRABBOX_WRAPPER_IGNORE_REPO_BINARY: "1",
-            OPENCLAW_FAKE_GIT_RESPONSES: JSON.stringify(gitResponses),
+            DEX_CRABBOX_WRAPPER_IGNORE_REPO_BINARY: "1",
+            DEX_FAKE_GIT_RESPONSES: JSON.stringify(gitResponses),
             PATH: [gitBinDir, path.dirname(process.execPath)].join(path.delimiter),
           },
         },
@@ -1889,7 +1889,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     expect(remoteCommand).toContain("git diff --cached --quiet");
     expect(remoteCommand).toContain("commit -q --no-gpg-sign -m remote-changed-gate-tree");
     expect(remoteCommand).toMatch(
-      /&& env OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1 OPENCLAW_CHANGED_LANES_RAW_SYNC=1 CI=1 corepack pnpm check:changed$/u,
+      /&& env DEX_CHECK_CHANGED_REMOTE_CHILD=1 DEX_CHANGED_LANES_RAW_SYNC=1 CI=1 corepack pnpm check:changed$/u,
     );
   });
 
@@ -1917,7 +1917,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
       "git fetch -q --depth=1 origin abc123:refs/remotes/origin/main",
     );
     expect(remoteCommand).toMatch(
-      /&& env OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1 OPENCLAW_CHANGED_LANES_RAW_SYNC=1 CI=1 corepack pnpm check:changed$/u,
+      /&& env DEX_CHECK_CHANGED_REMOTE_CHILD=1 DEX_CHANGED_LANES_RAW_SYNC=1 CI=1 corepack pnpm check:changed$/u,
     );
   });
 
@@ -1930,8 +1930,8 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
         "aws",
         "--",
         "env",
-        "OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1",
-        "OPENCLAW_CHANGED_LANES_RAW_SYNC=1",
+        "DEX_CHECK_CHANGED_REMOTE_CHILD=1",
+        "DEX_CHANGED_LANES_RAW_SYNC=1",
         "CI=1",
         "corepack",
         "pnpm",
@@ -1954,7 +1954,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
       "git fetch -q --depth=1 origin abc123:refs/remotes/origin/main",
     );
     expect(remoteCommand).toMatch(
-      /&& env OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1 OPENCLAW_CHANGED_LANES_RAW_SYNC=1 CI=1 corepack pnpm check:changed$/u,
+      /&& env DEX_CHECK_CHANGED_REMOTE_CHILD=1 DEX_CHANGED_LANES_RAW_SYNC=1 CI=1 corepack pnpm check:changed$/u,
     );
   });
 
@@ -2095,7 +2095,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
       "git fetch -q --depth=1 origin abc123:refs/remotes/origin/main",
     );
     expect(remoteCommand).toContain(
-      `&& export OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1 OPENCLAW_CHANGED_LANES_RAW_SYNC=1; ${shellScript}`,
+      `&& export DEX_CHECK_CHANGED_REMOTE_CHILD=1 DEX_CHANGED_LANES_RAW_SYNC=1; ${shellScript}`,
     );
   });
 
@@ -2240,7 +2240,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     expect(output.args).toContain("--shell");
     expect(remoteCommand).toContain("git init -q");
     expect(remoteCommand).toMatch(
-      /&& env OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1 OPENCLAW_CHANGED_LANES_RAW_SYNC=1 CI=1 timeout 1200s node scripts\/check-changed\.mjs --base origin\/main --head HEAD$/u,
+      /&& env DEX_CHECK_CHANGED_REMOTE_CHILD=1 DEX_CHANGED_LANES_RAW_SYNC=1 CI=1 timeout 1200s node scripts\/check-changed\.mjs --base origin\/main --head HEAD$/u,
     );
   });
 
@@ -2263,7 +2263,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     expect(output.args).toContain("--shell");
     expect(remoteCommand).toContain("git init -q");
     expect(remoteCommand).toMatch(
-      /&& env OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1 OPENCLAW_CHANGED_LANES_RAW_SYNC=1 CI=1 timeout 1200s bash -lc 'pnpm check:changed'$/u,
+      /&& env DEX_CHECK_CHANGED_REMOTE_CHILD=1 DEX_CHANGED_LANES_RAW_SYNC=1 CI=1 timeout 1200s bash -lc 'pnpm check:changed'$/u,
     );
   });
 
@@ -2407,7 +2407,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
       "git fetch -q --depth=1 origin abc123:refs/remotes/origin/main",
     );
     expect(remoteCommand).toMatch(
-      /&& export OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1 OPENCLAW_CHANGED_LANES_RAW_SYNC=1; env CI=1 pnpm check:changed$/u,
+      /&& export DEX_CHECK_CHANGED_REMOTE_CHILD=1 DEX_CHANGED_LANES_RAW_SYNC=1; env CI=1 pnpm check:changed$/u,
     );
   });
 
@@ -2475,7 +2475,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
         "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
         ["run", "--provider", "aws", "--", "echo ok"],
         {
-          env: { OPENCLAW_CRABBOX_SYNC_TMPDIR: syncRoot },
+          env: { DEX_CRABBOX_SYNC_TMPDIR: syncRoot },
           gitResponses: {
             [GIT_CONFIG_SPARSE_KEY]: { stdout: "true\n" },
             [GIT_STATUS_PORCELAIN_KEY]: { stdout: "" },
@@ -2501,8 +2501,8 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
         ["run", "--provider", "aws", "--", "echo ok"],
         {
           env: {
-            OPENCLAW_CRABBOX_SYNC_MIN_FREE_BYTES: "999999999999999",
-            OPENCLAW_CRABBOX_SYNC_TMPDIR: syncRoot,
+            DEX_CRABBOX_SYNC_MIN_FREE_BYTES: "999999999999999",
+            DEX_CRABBOX_SYNC_TMPDIR: syncRoot,
           },
           gitResponses: {
             [GIT_CONFIG_SPARSE_KEY]: { stdout: "true\n" },
@@ -2515,8 +2515,8 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
       expect(result.stderr).toContain(
         "insufficient free disk for Crabbox sparse-sync full checkout",
       );
-      expect(result.stderr).toContain("OPENCLAW_CRABBOX_SYNC_TMPDIR");
-      expect(result.stderr).toContain("OPENCLAW_CRABBOX_SYNC_MIN_FREE_BYTES");
+      expect(result.stderr).toContain("DEX_CRABBOX_SYNC_TMPDIR");
+      expect(result.stderr).toContain("DEX_CRABBOX_SYNC_MIN_FREE_BYTES");
       expect(readdirSync(syncRoot)).toEqual([]);
     } finally {
       rmSync(syncRoot, { recursive: true, force: true });
@@ -2532,8 +2532,8 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
         ["run", "--provider", "aws", "--", "echo ok"],
         {
           env: {
-            OPENCLAW_CRABBOX_SYNC_MIN_FREE_BYTES: "1024mb",
-            OPENCLAW_CRABBOX_SYNC_TMPDIR: syncRoot,
+            DEX_CRABBOX_SYNC_MIN_FREE_BYTES: "1024mb",
+            DEX_CRABBOX_SYNC_TMPDIR: syncRoot,
           },
           gitResponses: {
             [GIT_CONFIG_SPARSE_KEY]: { stdout: "true\n" },
@@ -2544,7 +2544,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
 
       expect(result.status).toBe(1);
       expect(result.stderr).toContain(
-        'OPENCLAW_CRABBOX_SYNC_MIN_FREE_BYTES must be a non-negative integer byte count, got "1024mb"',
+        'DEX_CRABBOX_SYNC_MIN_FREE_BYTES must be a non-negative integer byte count, got "1024mb"',
       );
       expect(readdirSync(syncRoot)).toEqual([]);
     } finally {
@@ -2561,8 +2561,8 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
         ["run", "--provider", "aws", "--", "echo ok"],
         {
           env: {
-            OPENCLAW_CRABBOX_SYNC_MIN_FREE_BYTES: String(Number.MAX_SAFE_INTEGER + 1),
-            OPENCLAW_CRABBOX_SYNC_TMPDIR: syncRoot,
+            DEX_CRABBOX_SYNC_MIN_FREE_BYTES: String(Number.MAX_SAFE_INTEGER + 1),
+            DEX_CRABBOX_SYNC_TMPDIR: syncRoot,
           },
           gitResponses: {
             [GIT_CONFIG_SPARSE_KEY]: { stdout: "true\n" },
@@ -2573,7 +2573,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
 
       expect(result.status).toBe(1);
       expect(result.stderr).toContain(
-        "OPENCLAW_CRABBOX_SYNC_MIN_FREE_BYTES must be a safe non-negative integer byte count",
+        "DEX_CRABBOX_SYNC_MIN_FREE_BYTES must be a safe non-negative integer byte count",
       );
       expect(readdirSync(syncRoot)).toEqual([]);
     } finally {
@@ -2590,8 +2590,8 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
         ["run", "--provider", "aws", "--", "echo ok"],
         {
           env: {
-            OPENCLAW_CRABBOX_SYNC_KEEPALIVE_MS: "10ms",
-            OPENCLAW_CRABBOX_SYNC_TMPDIR: syncRoot,
+            DEX_CRABBOX_SYNC_KEEPALIVE_MS: "10ms",
+            DEX_CRABBOX_SYNC_TMPDIR: syncRoot,
           },
           gitResponses: {
             [GIT_CONFIG_SPARSE_KEY]: { stdout: "true\n" },
@@ -2602,7 +2602,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
 
       expect(result.status).toBe(1);
       expect(result.stderr).toContain(
-        'OPENCLAW_CRABBOX_SYNC_KEEPALIVE_MS must be a non-negative integer millisecond interval, got "10ms"',
+        'DEX_CRABBOX_SYNC_KEEPALIVE_MS must be a non-negative integer millisecond interval, got "10ms"',
       );
       expect(readdirSync(syncRoot)).toEqual([]);
     } finally {
@@ -2618,8 +2618,8 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
         ["run", "--provider", "aws", "--", "echo ok"],
         {
           env: {
-            OPENCLAW_CRABBOX_SYNC_KEEPALIVE_MS: "10",
-            OPENCLAW_FAKE_CRABBOX_DELETE_CWD_ONCE: "1",
+            DEX_CRABBOX_SYNC_KEEPALIVE_MS: "10",
+            DEX_FAKE_CRABBOX_DELETE_CWD_ONCE: "1",
           },
           gitResponses: {
             [GIT_CONFIG_SPARSE_KEY]: { stdout: "true\n" },

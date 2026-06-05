@@ -9,9 +9,9 @@ import {
   filterCodexDynamicToolsForAllowlist,
   hasWildcardCodexToolsAllow,
   includeForcedCodexDynamicToolAllow,
-  resetOpenClawCodingToolsFactoryForTests,
-  resolveOpenClawCodingToolsSessionKeys,
-  setOpenClawCodingToolsFactoryForTests,
+  resetDexCodingToolsFactoryForTests,
+  resolveDexCodingToolsSessionKeys,
+  setDexCodingToolsFactoryForTests,
   shouldEnableCodexAppServerNativeToolSurface,
   shouldForceMessageTool,
 } from "./dynamic-tool-build.js";
@@ -122,7 +122,7 @@ describe("Codex app-server dynamic tool build", () => {
   });
 
   afterEach(async () => {
-    resetOpenClawCodingToolsFactoryForTests();
+    resetDexCodingToolsFactoryForTests();
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
     await fs.rm(tempDir, { recursive: true, force: true });
@@ -168,8 +168,8 @@ describe("Codex app-server dynamic tool build", () => {
   it("exposes app-server-owned tools directly for forced private QA Codex runtime", () => {
     const tools = ["read", "write", "image_generate", "message"].map((name) => ({ name }));
     const privateQaCodexEnv = {
-      OPENCLAW_BUILD_PRIVATE_QA: "1",
-      OPENCLAW_QA_FORCE_RUNTIME: "codex",
+      DEX_BUILD_PRIVATE_QA: "1",
+      DEX_QA_FORCE_RUNTIME: "codex",
     };
 
     expect(filterCodexDynamicTools(tools, {}, privateQaCodexEnv).map((tool) => tool.name)).toEqual([
@@ -213,7 +213,7 @@ describe("Codex app-server dynamic tool build", () => {
         return Reflect.get(target, property, receiver);
       },
     });
-    setOpenClawCodingToolsFactoryForTests(() => sourceTools);
+    setDexCodingToolsFactoryForTests(() => sourceTools);
     const sessionFile = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const params = createParams(sessionFile, workspaceDir);
@@ -225,7 +225,7 @@ describe("Codex app-server dynamic tool build", () => {
 
   it("limits Codex memory flush runs to managed read and write tools", async () => {
     const factoryOptions: unknown[] = [];
-    setOpenClawCodingToolsFactoryForTests((options) => {
+    setDexCodingToolsFactoryForTests((options) => {
       factoryOptions.push(options);
       return [
         createRuntimeDynamicTool("read"),
@@ -261,7 +261,7 @@ describe("Codex app-server dynamic tool build", () => {
   });
 
   it("exposes OpenClaw sandbox shell tools under distinct names for non-Docker sandbox backends", async () => {
-    setOpenClawCodingToolsFactoryForTests(() => [
+    setDexCodingToolsFactoryForTests(() => [
       createRuntimeDynamicTool("read"),
       createRuntimeDynamicTool("write"),
       createRuntimeDynamicTool("edit"),
@@ -291,7 +291,7 @@ describe("Codex app-server dynamic tool build", () => {
   });
 
   it("exposes Docker sandbox shell tools when OpenClaw sandboxing disables native Code Mode", async () => {
-    setOpenClawCodingToolsFactoryForTests(() => [
+    setDexCodingToolsFactoryForTests(() => [
       createRuntimeDynamicTool("exec"),
       createRuntimeDynamicTool("process"),
       createRuntimeDynamicTool("message"),
@@ -318,7 +318,7 @@ describe("Codex app-server dynamic tool build", () => {
   });
 
   it("keeps OpenClaw shell tools for node-targeted Codex app-server runs", async () => {
-    setOpenClawCodingToolsFactoryForTests(() => [
+    setDexCodingToolsFactoryForTests(() => [
       createRuntimeDynamicTool("exec"),
       createRuntimeDynamicTool("process"),
       createRuntimeDynamicTool("message"),
@@ -365,7 +365,7 @@ describe("Codex app-server dynamic tool build", () => {
   });
 
   it("exposes Docker sandbox shell tools when native Code Mode cannot honor sandbox paths", async () => {
-    setOpenClawCodingToolsFactoryForTests(() => [
+    setDexCodingToolsFactoryForTests(() => [
       createRuntimeDynamicTool("exec"),
       createRuntimeDynamicTool("process"),
       createRuntimeDynamicTool("message"),
@@ -392,7 +392,7 @@ describe("Codex app-server dynamic tool build", () => {
   });
 
   it("does not expose sandbox shell tools when sandbox routing is disabled", async () => {
-    setOpenClawCodingToolsFactoryForTests(() => [
+    setDexCodingToolsFactoryForTests(() => [
       createRuntimeDynamicTool("exec"),
       createRuntimeDynamicTool("process"),
       createRuntimeDynamicTool("message"),
@@ -411,7 +411,7 @@ describe("Codex app-server dynamic tool build", () => {
   });
 
   it("does not expose sandbox_exec without a matching process follow-up tool", async () => {
-    setOpenClawCodingToolsFactoryForTests(() => [
+    setDexCodingToolsFactoryForTests(() => [
       createRuntimeDynamicTool("exec"),
       createRuntimeDynamicTool("message"),
     ]);
@@ -429,7 +429,7 @@ describe("Codex app-server dynamic tool build", () => {
   });
 
   it("honors Codex dynamic tool excludes for sandbox shell exposure", async () => {
-    setOpenClawCodingToolsFactoryForTests(() => [
+    setDexCodingToolsFactoryForTests(() => [
       createRuntimeDynamicTool("exec"),
       createRuntimeDynamicTool("process"),
       createRuntimeDynamicTool("message"),
@@ -500,7 +500,7 @@ describe("Codex app-server dynamic tool build", () => {
     params.authProfileStore = authProfileStore;
     params.runtimePlan = createCodexRuntimePlanFixture();
     const factoryOptions: unknown[] = [];
-    setOpenClawCodingToolsFactoryForTests((options) => {
+    setDexCodingToolsFactoryForTests((options) => {
       factoryOptions.push(options);
       return [];
     });
@@ -531,7 +531,7 @@ describe("Codex app-server dynamic tool build", () => {
     params.config = runtimeConfig;
     params.runtimePlan = createCodexRuntimePlanFixture();
     const factoryOptions: unknown[] = [];
-    setOpenClawCodingToolsFactoryForTests((options) => {
+    setDexCodingToolsFactoryForTests((options) => {
       factoryOptions.push(options);
       return [];
     });
@@ -588,7 +588,7 @@ describe("Codex app-server dynamic tool build", () => {
     params.toolAuthProfileStore = toolAuthProfileStore;
     params.runtimePlan = createCodexRuntimePlanFixture();
     const factoryOptions: unknown[] = [];
-    setOpenClawCodingToolsFactoryForTests((options) => {
+    setDexCodingToolsFactoryForTests((options) => {
       factoryOptions.push(options);
       return [];
     });
@@ -624,7 +624,7 @@ describe("Codex app-server dynamic tool build", () => {
       },
     };
     const factoryOptions: unknown[] = [];
-    setOpenClawCodingToolsFactoryForTests((options) => {
+    setDexCodingToolsFactoryForTests((options) => {
       factoryOptions.push(options);
       return [];
     });
@@ -637,15 +637,15 @@ describe("Codex app-server dynamic tool build", () => {
   });
 
   it("enables gateway subagent binding for forced private QA Codex runs", async () => {
-    vi.stubEnv("OPENCLAW_BUILD_PRIVATE_QA", "1");
-    vi.stubEnv("OPENCLAW_QA_FORCE_RUNTIME", "codex");
+    vi.stubEnv("DEX_BUILD_PRIVATE_QA", "1");
+    vi.stubEnv("DEX_QA_FORCE_RUNTIME", "codex");
     const sessionFile = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const params = createParams(sessionFile, workspaceDir);
     params.disableTools = false;
     params.runtimePlan = createCodexRuntimePlanFixture();
     const factoryOptions: unknown[] = [];
-    setOpenClawCodingToolsFactoryForTests((options) => {
+    setDexCodingToolsFactoryForTests((options) => {
       factoryOptions.push(options);
       return [createRuntimeDynamicTool("sessions_spawn")];
     });
@@ -887,13 +887,13 @@ describe("Codex app-server dynamic tool build", () => {
     params.sessionKey = "agent:main:main";
 
     expect(
-      resolveOpenClawCodingToolsSessionKeys(params, "agent:main:telegram:default:direct:1234"),
+      resolveDexCodingToolsSessionKeys(params, "agent:main:telegram:default:direct:1234"),
     ).toEqual({
       sessionKey: "agent:main:telegram:default:direct:1234",
       runSessionKey: "agent:main:main",
     });
 
-    expect(resolveOpenClawCodingToolsSessionKeys(params, "agent:main:main")).toEqual({
+    expect(resolveDexCodingToolsSessionKeys(params, "agent:main:main")).toEqual({
       sessionKey: "agent:main:main",
       runSessionKey: undefined,
     });

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { runDoctorHealthRepairs } from "./doctor-repair-flow.js";
 import { defineSplitHealthCheck, normalizeHealthCheck } from "./health-check-adapter.js";
 import type { RunnableHealthCheck } from "./health-check-runner-types.js";
 import type { HealthCheck, HealthRepairContext } from "./health-checks.js";
 
-function ctx(cfg: OpenClawConfig): HealthRepairContext {
+function ctx(cfg: DexConfig): HealthRepairContext {
   return {
     mode: "fix",
     runtime: {

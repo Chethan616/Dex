@@ -70,7 +70,7 @@ vi.mock("node:child_process", async () => {
 });
 
 import { spawn as mockedSpawn } from "node:child_process";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
+import type { DexConfig } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
 import { resolveMemoryBackendConfig } from "openclaw/plugin-sdk/memory-core-host-engine-storage";
 import { QmdMemoryManager } from "./qmd-manager.js";
 
@@ -80,7 +80,7 @@ describe("QmdMemoryManager slugified path resolution", () => {
   let tmpRoot: string;
   let workspaceDir: string;
   let stateDir: string;
-  let cfg: OpenClawConfig;
+  let cfg: DexConfig;
   const agentId = "main";
   const openManagers = new Set<QmdMemoryManager>();
 
@@ -91,7 +91,7 @@ describe("QmdMemoryManager slugified path resolution", () => {
     return manager;
   }
 
-  async function createManager(params?: { cfg?: OpenClawConfig }) {
+  async function createManager(params?: { cfg?: DexConfig }) {
     const cfgToUse = params?.cfg ?? cfg;
     const resolved = resolveMemoryBackendConfig({ cfg: cfgToUse, agentId });
     const manager = trackManager(
@@ -171,7 +171,7 @@ describe("QmdMemoryManager slugified path resolution", () => {
     workspaceDir = path.join(tmpRoot, "workspace");
     stateDir = path.join(tmpRoot, "state");
     await fs.mkdir(workspaceDir, { recursive: true });
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    process.env.DEX_STATE_DIR = stateDir;
 
     cfg = {
       agents: {
@@ -185,7 +185,7 @@ describe("QmdMemoryManager slugified path resolution", () => {
           paths: [{ path: workspaceDir, pattern: "**/*.md", name: "workspace" }],
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
   });
 
   afterEach(async () => {
@@ -196,7 +196,7 @@ describe("QmdMemoryManager slugified path resolution", () => {
     );
     openManagers.clear();
     await fs.rm(tmpRoot, { recursive: true, force: true });
-    delete process.env.OPENCLAW_STATE_DIR;
+    delete process.env.DEX_STATE_DIR;
   });
 
   it("maps slugified workspace qmd URIs back to the indexed filesystem path", async () => {
@@ -267,7 +267,7 @@ describe("QmdMemoryManager slugified path resolution", () => {
           paths: [{ path: extraRoot, pattern: "**/*.md", name: "vault" }],
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const actualRelative = "Topics/Sub Category/Topic Name.md";
     const actualFile = path.join(extraRoot, actualRelative);

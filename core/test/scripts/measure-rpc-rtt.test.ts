@@ -51,9 +51,9 @@ describe("scripts/measure-rpc-rtt.mjs", () => {
         cwd: "/repo",
         env: expect.objectContaining({
           HOME: "/tmp/rpc-rtt/home",
-          OPENCLAW_CONFIG_PATH: "/tmp/openclaw.json",
-          OPENCLAW_GATEWAY_TOKEN: "secret-token",
-          OPENCLAW_STATE_DIR: "/tmp/rpc-rtt/state",
+          DEX_CONFIG_PATH: "/tmp/openclaw.json",
+          DEX_GATEWAY_TOKEN: "secret-token",
+          DEX_STATE_DIR: "/tmp/rpc-rtt/state",
           PATH: "/bin",
         }),
         stdio: ["ignore", 41, 42],

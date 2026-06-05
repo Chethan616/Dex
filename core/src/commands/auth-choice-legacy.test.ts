@@ -33,9 +33,9 @@ import {
 
 function authChoiceManifestEnv(): NodeJS.ProcessEnv {
   return {
-    OPENCLAW_BUNDLED_PLUGINS_DIR: "extensions",
-    OPENCLAW_DISABLE_BUNDLED_PLUGINS: "0",
-    OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY: "1",
+    DEX_BUNDLED_PLUGINS_DIR: "extensions",
+    DEX_DISABLE_BUNDLED_PLUGINS: "0",
+    DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY: "1",
     VITEST: "1",
   } as NodeJS.ProcessEnv;
 }

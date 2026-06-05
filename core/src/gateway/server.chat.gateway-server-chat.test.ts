@@ -1188,8 +1188,8 @@ describe("gateway server chat", () => {
 
   test("chat.history persists assistant image data URLs as managed image blocks", async () => {
     await withMainSessionStore(async (dir) => {
-      const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-      process.env.OPENCLAW_STATE_DIR = dir;
+      const previousStateDir = process.env.DEX_STATE_DIR;
+      process.env.DEX_STATE_DIR = dir;
       const pngB64 =
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
       dispatchInboundMessageMock.mockImplementationOnce(async (...args: unknown[]) => {
@@ -1268,9 +1268,9 @@ describe("gateway server chat", () => {
         expect(serializedAssistant).not.toContain(pngB64);
       } finally {
         if (previousStateDir == null) {
-          delete process.env.OPENCLAW_STATE_DIR;
+          delete process.env.DEX_STATE_DIR;
         } else {
-          process.env.OPENCLAW_STATE_DIR = previousStateDir;
+          process.env.DEX_STATE_DIR = previousStateDir;
         }
       }
     });

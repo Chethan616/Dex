@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { resetPluginRuntimeStateForTest, setActivePluginRegistry } from "../../plugins/runtime.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../routing/session-key.js";
 import {
@@ -14,8 +14,8 @@ import {
   prepareScopedSetupConfig,
 } from "./setup-helpers.js";
 
-function asConfig(value: unknown): OpenClawConfig {
-  return value as OpenClawConfig;
+function asConfig(value: unknown): DexConfig {
+  return value as DexConfig;
 }
 
 function requireRecord(value: unknown): Record<string, unknown> {
@@ -25,7 +25,7 @@ function requireRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function channelRecord(cfg: OpenClawConfig, channelKey: string): Record<string, unknown> {
+function channelRecord(cfg: DexConfig, channelKey: string): Record<string, unknown> {
   return requireRecord(cfg.channels?.[channelKey]);
 }
 

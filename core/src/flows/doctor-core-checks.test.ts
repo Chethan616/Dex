@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { SkillStatusEntry } from "../skills/discovery/status.js";
 import {
   CORE_HEALTH_CHECKS,
@@ -106,7 +106,7 @@ describe("registerCoreHealthChecks", () => {
     resetCoreHealthChecksForTest();
     mocks.loadModelCatalog.mockClear();
     mocks.loadModelCatalog.mockResolvedValue([]);
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       hooks: {
         gmail: {
           model: "openai/gpt-5.5",
@@ -202,7 +202,7 @@ describe("registerCoreHealthChecks", () => {
 
   it("converts unavailable skills into repair-capable health findings", async () => {
     const unavailableSkill = createSkill();
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       agents: {
         defaults: {
           workspace: "/tmp/openclaw-test-workspace",
@@ -349,7 +349,7 @@ describe("registerCoreHealthChecks", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
     });
 
     expect(findings).toStrictEqual([
@@ -367,7 +367,7 @@ describe("registerCoreHealthChecks", () => {
   });
 
   it("uses the read-only model catalog for hooks.gmail.model checks", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       hooks: {
         gmail: {
           model: "openai/gpt-5.5",
@@ -379,8 +379,8 @@ describe("registerCoreHealthChecks", () => {
 
   it("skips gateway auth warning when SecretRef-managed token resolves in lint checks", async () => {
     const check = CORE_HEALTH_CHECKS.find((entry) => entry.id === "core/doctor/gateway-auth");
-    const previousToken = process.env.OPENCLAW_TEST_GATEWAY_TOKEN;
-    process.env.OPENCLAW_TEST_GATEWAY_TOKEN = "resolved-test-token";
+    const previousToken = process.env.DEX_TEST_GATEWAY_TOKEN;
+    process.env.DEX_TEST_GATEWAY_TOKEN = "resolved-test-token";
     try {
       const findings = await check?.detect({
         mode: "lint",
@@ -393,7 +393,7 @@ describe("registerCoreHealthChecks", () => {
               token: {
                 source: "env",
                 provider: "default",
-                id: "OPENCLAW_TEST_GATEWAY_TOKEN",
+                id: "DEX_TEST_GATEWAY_TOKEN",
               },
             },
           },
@@ -409,19 +409,19 @@ describe("registerCoreHealthChecks", () => {
       expect(findings).toEqual([]);
     } finally {
       if (previousToken === undefined) {
-        delete process.env.OPENCLAW_TEST_GATEWAY_TOKEN;
+        delete process.env.DEX_TEST_GATEWAY_TOKEN;
       } else {
-        process.env.OPENCLAW_TEST_GATEWAY_TOKEN = previousToken;
+        process.env.DEX_TEST_GATEWAY_TOKEN = previousToken;
       }
     }
   });
 
-  it("reports unresolved SecretRefs even when OPENCLAW_GATEWAY_TOKEN is set", async () => {
+  it("reports unresolved SecretRefs even when DEX_GATEWAY_TOKEN is set", async () => {
     const check = CORE_HEALTH_CHECKS.find((entry) => entry.id === "core/doctor/gateway-auth");
-    const previousFallbackToken = process.env.OPENCLAW_GATEWAY_TOKEN;
-    const previousRefToken = process.env.OPENCLAW_MISSING_GATEWAY_REF_TOKEN;
-    process.env.OPENCLAW_GATEWAY_TOKEN = "fallback-token";
-    delete process.env.OPENCLAW_MISSING_GATEWAY_REF_TOKEN;
+    const previousFallbackToken = process.env.DEX_GATEWAY_TOKEN;
+    const previousRefToken = process.env.DEX_MISSING_GATEWAY_REF_TOKEN;
+    process.env.DEX_GATEWAY_TOKEN = "fallback-token";
+    delete process.env.DEX_MISSING_GATEWAY_REF_TOKEN;
     try {
       const findings = await check?.detect({
         mode: "lint",
@@ -434,7 +434,7 @@ describe("registerCoreHealthChecks", () => {
               token: {
                 source: "env",
                 provider: "default",
-                id: "OPENCLAW_MISSING_GATEWAY_REF_TOKEN",
+                id: "DEX_MISSING_GATEWAY_REF_TOKEN",
               },
             },
           },
@@ -455,14 +455,14 @@ describe("registerCoreHealthChecks", () => {
       );
     } finally {
       if (previousFallbackToken === undefined) {
-        delete process.env.OPENCLAW_GATEWAY_TOKEN;
+        delete process.env.DEX_GATEWAY_TOKEN;
       } else {
-        process.env.OPENCLAW_GATEWAY_TOKEN = previousFallbackToken;
+        process.env.DEX_GATEWAY_TOKEN = previousFallbackToken;
       }
       if (previousRefToken === undefined) {
-        delete process.env.OPENCLAW_MISSING_GATEWAY_REF_TOKEN;
+        delete process.env.DEX_MISSING_GATEWAY_REF_TOKEN;
       } else {
-        process.env.OPENCLAW_MISSING_GATEWAY_REF_TOKEN = previousRefToken;
+        process.env.DEX_MISSING_GATEWAY_REF_TOKEN = previousRefToken;
       }
     }
   });
@@ -569,8 +569,8 @@ describe("registerCoreHealthChecks", () => {
       "utf8",
     );
     const check = CORE_HEALTH_CHECKS.find((entry) => entry.id === "core/doctor/gateway-auth");
-    const previousFallbackToken = process.env.OPENCLAW_GATEWAY_TOKEN;
-    process.env.OPENCLAW_GATEWAY_TOKEN = "fallback-token";
+    const previousFallbackToken = process.env.DEX_GATEWAY_TOKEN;
+    process.env.DEX_GATEWAY_TOKEN = "fallback-token";
 
     let findings: readonly HealthFinding[] | undefined;
     try {
@@ -606,9 +606,9 @@ describe("registerCoreHealthChecks", () => {
       });
     } finally {
       if (previousFallbackToken === undefined) {
-        delete process.env.OPENCLAW_GATEWAY_TOKEN;
+        delete process.env.DEX_GATEWAY_TOKEN;
       } else {
-        process.env.OPENCLAW_GATEWAY_TOKEN = previousFallbackToken;
+        process.env.DEX_GATEWAY_TOKEN = previousFallbackToken;
       }
     }
 
@@ -631,7 +631,7 @@ describe("registerCoreHealthChecks", () => {
             return [
               [
                 "- Tip: back up the workspace in a private git repo (GitHub or GitLab).",
-                "- Keep ~/.openclaw out of git; it contains credentials and session history.",
+                "- Keep ~/.dex out of git; it contains credentials and session history.",
               ].join("\n"),
               "Memory system not found in workspace.",
             ];

@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { resolveMemoryBackendConfig } from "./backend-config.js";
-import type { OpenClawConfig } from "./config-utils.js";
+import type { DexConfig } from "./config-utils.js";
 
 type ResolvedMemoryBackendConfig = ReturnType<typeof resolveMemoryBackendConfig>;
 
@@ -30,7 +30,7 @@ const withMemoryRootEntries = <T>(entries: Dirent[], test: () => T): T => {
   }
 };
 
-const rootMemoryConfig = (workspaceDir: string): OpenClawConfig =>
+const rootMemoryConfig = (workspaceDir: string): DexConfig =>
   ({
     agents: {
       defaults: { workspace: workspaceDir },
@@ -40,7 +40,7 @@ const rootMemoryConfig = (workspaceDir: string): OpenClawConfig =>
       backend: "qmd",
       qmd: {},
     },
-  }) as OpenClawConfig;
+  }) as DexConfig;
 
 const collectionNames = (resolved: ResolvedMemoryBackendConfig): string[] =>
   (resolved.qmd?.collections ?? []).map((collection) => collection.name).toSorted();
@@ -96,7 +96,7 @@ async function createFixtureDir(name: string): Promise<string> {
 
 describe("resolveMemoryBackendConfig", () => {
   it("defaults to builtin backend when config missing", () => {
-    const cfg = { agents: { defaults: { workspace: "/tmp/memory-test" } } } as OpenClawConfig;
+    const cfg = { agents: { defaults: { workspace: "/tmp/memory-test" } } } as DexConfig;
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     expect(resolved.backend).toBe("builtin");
     expect(resolved.citations).toBe("auto");
@@ -110,7 +110,7 @@ describe("resolveMemoryBackendConfig", () => {
         backend: "qmd",
         qmd: {},
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     expect(resolved.backend).toBe("qmd");
     const qmd = requireQmdConfig(resolved);
@@ -160,7 +160,7 @@ describe("resolveMemoryBackendConfig", () => {
           command: '"/Applications/QMD Tools/qmd" --flag',
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     expect(requireQmdConfig(resolved).command).toBe("/Applications/QMD Tools/qmd");
   });
@@ -183,7 +183,7 @@ describe("resolveMemoryBackendConfig", () => {
           ],
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const custom = requireQmdConfig(resolved).collections.find((c) =>
       c.name.startsWith("custom-notes"),
@@ -210,7 +210,7 @@ describe("resolveMemoryBackendConfig", () => {
           paths: [{ path: "notes{a,b}[1].md", name: "direct-note", pattern: "**/*.md" }],
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const custom = resolved.qmd?.collections.find((c) => c.name.startsWith("direct-note"));
@@ -236,7 +236,7 @@ describe("resolveMemoryBackendConfig", () => {
           paths: [{ path: "notes", name: "workspace", pattern: "**/*.md" }],
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const mainResolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const devResolved = resolveMemoryBackendConfig({ cfg, agentId: "dev" });
     const mainNames = collectionNames(mainResolved);
@@ -287,7 +287,7 @@ describe("resolveMemoryBackendConfig", () => {
           includeDefaultMemory: false,
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const names = collectionNames(resolved);
     expect(names).toStrictEqual(["notes-main", "team-notes"]);
@@ -309,7 +309,7 @@ describe("resolveMemoryBackendConfig", () => {
           paths: [{ path: "/shared/notion-mirror", name: "notion-mirror", pattern: "**/*.md" }],
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const mainResolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const devResolved = resolveMemoryBackendConfig({ cfg, agentId: "dev" });
     const mainNames = collectionNames(mainResolved);
@@ -336,7 +336,7 @@ describe("resolveMemoryBackendConfig", () => {
           paths: [{ path: workspaceAliasDir, name: "workspace", pattern: "**/*.md" }],
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const names = collectionNames(resolved);
     expect(names).toStrictEqual(["workspace-main"]);
@@ -364,7 +364,7 @@ describe("resolveMemoryBackendConfig", () => {
           ],
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const names = collectionNames(resolved);
     expect(names).toStrictEqual(["notes-main"]);
@@ -384,7 +384,7 @@ describe("resolveMemoryBackendConfig", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const update = requireQmdConfig(resolved).update;
     expect(update.waitForBootSync).toBe(true);
@@ -416,7 +416,7 @@ describe("resolveMemoryBackendConfig", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const qmd = requireQmdConfig(resolved);
@@ -456,7 +456,7 @@ describe("resolveMemoryBackendConfig", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const qmd = requireQmdConfig(resolved);
@@ -485,7 +485,7 @@ describe("resolveMemoryBackendConfig", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const update = requireQmdConfig(resolved).update;
     expect(update.startup).toBe("idle");
@@ -502,7 +502,7 @@ describe("resolveMemoryBackendConfig", () => {
           searchMode: "vsearch",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     expect(requireQmdConfig(resolved).searchMode).toBe("vsearch");
   });
@@ -517,7 +517,7 @@ describe("resolveMemoryBackendConfig", () => {
           searchTool: " hybrid_search ",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const qmd = requireQmdConfig(resolved);
     expect(qmd.searchMode).toBe("query");
@@ -537,7 +537,7 @@ describe("memorySearch.extraPaths integration", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const result = resolveMemoryBackendConfig({ cfg, agentId: "test-agent" });
     expect(result.backend).toBe("qmd");
     const paths = customCollectionPaths(result);
@@ -566,7 +566,7 @@ describe("memorySearch.extraPaths integration", () => {
           },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const result = resolveMemoryBackendConfig({ cfg, agentId: "my-agent" });
     expect(result.backend).toBe("qmd");
     const paths = customCollectionPaths(result);
@@ -595,7 +595,7 @@ describe("memorySearch.extraPaths integration", () => {
           },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const result = resolveMemoryBackendConfig({ cfg, agentId: "my-agent" });
     expect(result.backend).toBe("qmd");
     const paths = customCollectionPaths(result);
@@ -621,7 +621,7 @@ describe("memorySearch.extraPaths integration", () => {
           },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = resolveMemoryBackendConfig({ cfg, agentId: "my-agent" });
     const paths = customCollectionPaths(result);
@@ -643,7 +643,7 @@ describe("memorySearch.extraPaths integration", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const result = resolveMemoryBackendConfig({ cfg, agentId: "my-agent" });
     expect(customQmdCollections(result).map((collection) => collection.name)).toStrictEqual([
       "custom-1-my-agent",
@@ -666,7 +666,7 @@ describe("memorySearch.extraPaths integration", () => {
           },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = resolveMemoryBackendConfig({ cfg, agentId: "my-agent" });
 
@@ -691,7 +691,7 @@ describe("memorySearch.extraPaths integration", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     const docsCollections = customQmdCollections(result).filter(

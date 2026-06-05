@@ -14,7 +14,7 @@ import { attachModelProviderRequestTransport } from "./provider-request-config.j
 import {
   buildTransportAwareSimpleStreamFn,
   createBoundaryAwareStreamFnForModel,
-  createOpenClawTransportStreamFnForModel,
+  createDexTransportStreamFnForModel,
   isTransportAwareApiSupported,
   prepareTransportAwareSimpleModel,
   resolveTransportAwareSimpleApi,
@@ -462,8 +462,8 @@ describe("openai transport stream", () => {
   });
 
   it("summarizes model payload tools with full names when requested", () => {
-    const previous = process.env.OPENCLAW_DEBUG_MODEL_PAYLOAD;
-    process.env.OPENCLAW_DEBUG_MODEL_PAYLOAD = "tools";
+    const previous = process.env.DEX_DEBUG_MODEL_PAYLOAD;
+    process.env.DEX_DEBUG_MODEL_PAYLOAD = "tools";
     try {
       expect(
         testing.summarizeResponsesTools([
@@ -473,16 +473,16 @@ describe("openai transport stream", () => {
       ).toBe("count=2 names=exec,wait");
     } finally {
       if (previous === undefined) {
-        delete process.env.OPENCLAW_DEBUG_MODEL_PAYLOAD;
+        delete process.env.DEX_DEBUG_MODEL_PAYLOAD;
       } else {
-        process.env.OPENCLAW_DEBUG_MODEL_PAYLOAD = previous;
+        process.env.DEX_DEBUG_MODEL_PAYLOAD = previous;
       }
     }
   });
 
   it("redacts full model payload debug summaries", () => {
-    const previous = process.env.OPENCLAW_DEBUG_MODEL_PAYLOAD;
-    process.env.OPENCLAW_DEBUG_MODEL_PAYLOAD = "full-redacted";
+    const previous = process.env.DEX_DEBUG_MODEL_PAYLOAD;
+    process.env.DEX_DEBUG_MODEL_PAYLOAD = "full-redacted";
     try {
       const summary = testing.summarizeResponsesPayload({
         model: "gpt-5.5",
@@ -496,9 +496,9 @@ describe("openai transport stream", () => {
       expect(summary).not.toContain("sk-abcdefghijklmnopqrstuvwxyz");
     } finally {
       if (previous === undefined) {
-        delete process.env.OPENCLAW_DEBUG_MODEL_PAYLOAD;
+        delete process.env.DEX_DEBUG_MODEL_PAYLOAD;
       } else {
-        process.env.OPENCLAW_DEBUG_MODEL_PAYLOAD = previous;
+        process.env.DEX_DEBUG_MODEL_PAYLOAD = previous;
       }
     }
   });
@@ -526,7 +526,7 @@ describe("openai transport stream", () => {
   });
 
   it("adds OpenClaw attribution to native OpenAI transport headers and protects it from provider overrides", () => {
-    vi.stubEnv("OPENCLAW_VERSION", "2026.3.22");
+    vi.stubEnv("DEX_VERSION", "2026.3.22");
     const headers = testing.buildOpenAIClientHeaders(
       {
         id: "gpt-5.4",
@@ -563,7 +563,7 @@ describe("openai transport stream", () => {
   });
 
   it("adds OpenClaw attribution to native OpenAI Codex transport headers", () => {
-    vi.stubEnv("OPENCLAW_VERSION", "2026.3.22");
+    vi.stubEnv("DEX_VERSION", "2026.3.22");
     const headers = testing.buildOpenAIClientHeaders(
       {
         id: "gpt-5.4-codex",
@@ -684,7 +684,7 @@ describe("openai transport stream", () => {
       } satisfies Model<"openai-responses">),
     ).toBeTypeOf("function");
     expect(
-      createOpenClawTransportStreamFnForModel({
+      createDexTransportStreamFnForModel({
         id: "gpt-5.4",
         name: "GPT-5.4",
         api: "openai-responses",

@@ -45,7 +45,7 @@ vi.mock("../plugins/cli.js", () => ({
 
 describe("completion-cli write-state", () => {
   const originalHome = process.env.HOME;
-  const originalStateDir = process.env.OPENCLAW_STATE_DIR;
+  const originalStateDir = process.env.DEX_STATE_DIR;
   let restoreStderrWriteSpy: (() => void) | null = null;
 
   beforeEach(() => {
@@ -73,9 +73,9 @@ describe("completion-cli write-state", () => {
       process.env.HOME = originalHome;
     }
     if (originalStateDir === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_STATE_DIR;
     } else {
-      process.env.OPENCLAW_STATE_DIR = originalStateDir;
+      process.env.DEX_STATE_DIR = originalStateDir;
     }
   });
 
@@ -84,7 +84,7 @@ describe("completion-cli write-state", () => {
     const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-completion-state-"));
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-completion-home-"));
 
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    process.env.DEX_STATE_DIR = stateDir;
     process.env.HOME = homeDir;
 
     const program = new Command();
@@ -122,7 +122,7 @@ describe("completion-cli write-state", () => {
     const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-completion-state-"));
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-completion-home-"));
 
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    process.env.DEX_STATE_DIR = stateDir;
     process.env.HOME = homeDir;
     process.env[COMPLETION_SKIP_PLUGIN_COMMANDS_ENV] = "1";
 

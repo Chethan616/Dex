@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import {
   buildAccountScopedDmSecurityPolicy,
   formatPairingApproveHint,
   parseOptionalDelimitedEntries,
 } from "./helpers.js";
 
-function cfgWithChannel(channelKey: string, accounts?: Record<string, unknown>): OpenClawConfig {
+function cfgWithChannel(channelKey: string, accounts?: Record<string, unknown>): DexConfig {
   return {
     channels: {
       [channelKey]: accounts ? { accounts } : {},
     },
-  } as unknown as OpenClawConfig;
+  } as unknown as DexConfig;
 }
 
 describe("buildAccountScopedDmSecurityPolicy", () => {
@@ -118,7 +118,7 @@ describe("buildAccountScopedDmSecurityPolicy", () => {
               },
             },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         channelKey: "demo-root",
         accountId: "work",
         fallbackAccountId: "default",

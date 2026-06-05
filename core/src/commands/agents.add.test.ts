@@ -256,8 +256,8 @@ describe("agents add command", () => {
 
   it("copies portable Codex OAuth profiles inline", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-agents-add-oauth-copy-"));
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    process.env.OPENCLAW_STATE_DIR = root;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    process.env.DEX_STATE_DIR = root;
     try {
       const sourceAgentDir = path.join(root, "main", "agent");
       const destAgentDir = path.join(root, "work", "agent");
@@ -304,9 +304,9 @@ describe("agents add command", () => {
       });
     } finally {
       if (previousStateDir === undefined) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
       await fs.rm(root, { recursive: true, force: true });
     }

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import {
   getActivePluginRegistry,
   resetPluginRuntimeStateForTest,
@@ -175,7 +175,7 @@ describe("subagents command dispatch", () => {
     const cfg = {
       commands: { allowFrom: { "*": ["*"] } },
       channels: { telegram: { allowFrom: ["*"] } },
-    } as OpenClawConfig;
+    } as DexConfig;
     const ctx = {
       Provider: "telegram",
       Surface: "telegram",

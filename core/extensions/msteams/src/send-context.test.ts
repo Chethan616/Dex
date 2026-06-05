@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { MSTeamsConfig, OpenClawConfig } from "../runtime-api.js";
+import type { MSTeamsConfig, DexConfig } from "../runtime-api.js";
 import type { StoredConversationReference } from "./conversation-store.js";
 import { resolveMSTeamsProactiveReplyStyle, resolveMSTeamsSendContext } from "./send-context.js";
 
@@ -79,7 +79,7 @@ describe("resolveMSTeamsSendContext", () => {
           tenantId: "tenant-id",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await expect(
       resolveMSTeamsSendContext({
@@ -109,7 +109,7 @@ describe("resolveMSTeamsSendContext", () => {
           tenantId: "tenant-id",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await expect(
       resolveMSTeamsSendContext({

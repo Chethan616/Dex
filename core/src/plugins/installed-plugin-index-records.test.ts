@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PluginInstallRecord } from "../config/types.plugins.js";
 import {
-  closeOpenClawStateDatabaseForTest,
+  closeDexStateDatabaseForTest,
   runOpenClawStateWriteTransaction,
 } from "../state/openclaw-state-db.js";
 import type { PluginCandidate } from "./discovery.js";
@@ -78,12 +78,12 @@ function updatePersistedInstallRecordsWithoutClearingCache(
         `,
       ).run(JSON.stringify(records), Date.now());
     },
-    { env: { ...process.env, OPENCLAW_STATE_DIR: stateDir } },
+    { env: { ...process.env, DEX_STATE_DIR: stateDir } },
   );
 }
 
 afterEach(() => {
-  closeOpenClawStateDatabaseForTest();
+  closeDexStateDatabaseForTest();
   vi.doUnmock("./installed-plugin-index-store.js");
   clearLoadInstalledPluginIndexInstallRecordsCache();
   for (const dir of tempDirs.splice(0)) {

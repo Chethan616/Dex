@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../../config/config.js";
+import type { DexConfig } from "../../../config/config.js";
 import {
   collectDoctorPreviewNotes,
   collectChannelBoundMessageToolPolicyWarnings,
@@ -261,7 +261,7 @@ describe("doctor preview warnings", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       doctorFixCommand: "openclaw doctor --fix",
       env: { CODEX_HOME: codexHome, HOME: root },
     });
@@ -375,7 +375,7 @@ describe("doctor preview warnings", () => {
 
   it("includes stale OAuth profile shadow warnings", async () => {
     staleOAuthShadowState.warnings = [
-      '- ~/.openclaw/agents/telegram/agent/auth-profiles.json has stale OAuth auth profile openai-codex:default. Run "openclaw doctor --fix".',
+      '- ~/.dex/agents/telegram/agent/auth-profiles.json has stale OAuth auth profile openai-codex:default. Run "openclaw doctor --fix".',
     ];
 
     const warnings = await collectDoctorPreviewWarnings({
@@ -757,7 +757,7 @@ describe("doctor preview warnings", () => {
       tools: {
         profile: "coding" as const,
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     expect(collectVisibleReplyToolPolicyWarnings(cfg)).toStrictEqual([]);
     expect(collectChannelBoundMessageToolPolicyWarnings(cfg)).toStrictEqual([]);
@@ -793,7 +793,7 @@ describe("doctor preview warnings", () => {
           },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     expectWarningsContaining(collectVisibleReplyToolPolicyWarnings(cfg), [
       'messages.groupChat.visibleReplies is set to "message_tool"',
@@ -833,7 +833,7 @@ describe("doctor preview warnings", () => {
           },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     expect(collectVisibleReplyToolPolicyWarnings(cfg)).toStrictEqual([]);
     expect(collectChannelBoundMessageToolPolicyWarnings(cfg)).toStrictEqual([]);

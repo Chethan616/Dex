@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveGatewayProbeAuthSafe, resolveGatewayProbeTarget } from "../gateway/probe-auth.js";
 import { collectDeepProbeFindings } from "./audit-deep-probe-findings.js";
 
@@ -18,17 +18,17 @@ describe("security audit gateway auth selection", () => {
     const makeProbeEnv = (env?: { token?: string; password?: string }) => {
       const probeEnv: NodeJS.ProcessEnv = {};
       if (env?.token !== undefined) {
-        probeEnv.OPENCLAW_GATEWAY_TOKEN = env.token;
+        probeEnv.DEX_GATEWAY_TOKEN = env.token;
       }
       if (env?.password !== undefined) {
-        probeEnv.OPENCLAW_GATEWAY_PASSWORD = env.password;
+        probeEnv.DEX_GATEWAY_PASSWORD = env.password;
       }
       return probeEnv;
     };
 
     const cases: Array<{
       name: string;
-      cfg: OpenClawConfig;
+      cfg: DexConfig;
       env?: { token?: string; password?: string };
       expectedAuth: { token?: string; password?: string };
     }> = [
@@ -119,7 +119,7 @@ describe("security audit gateway auth selection", () => {
   });
 
   it("adds warning finding when probe auth SecretRef is unavailable", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       gateway: {
         mode: "local",
         auth: {

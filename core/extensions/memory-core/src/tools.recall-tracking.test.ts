@@ -1,6 +1,6 @@
 import type { MemorySearchResult } from "openclaw/plugin-sdk/memory-core-host-runtime-files";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../api.js";
+import type { DexConfig } from "../api.js";
 import {
   resetMemoryToolMockState,
   setMemoryBackend,
@@ -24,11 +24,11 @@ vi.mock("./short-term-promotion.js", () => ({
   recordShortTermRecalls: recallTrackingMock.recordShortTermRecalls,
 }));
 
-function asOpenClawConfig(config: Partial<OpenClawConfig>): OpenClawConfig {
+function asDexConfig(config: Partial<DexConfig>): DexConfig {
   return config;
 }
 
-function createSearchTool(config: OpenClawConfig) {
+function createSearchTool(config: DexConfig) {
   const tool = createMemorySearchTool({ config });
   if (!tool) {
     throw new Error("memory_search tool missing");
@@ -65,7 +65,7 @@ describe("memory_search recall tracking", () => {
     ]);
 
     const tool = createSearchTool(
-      asOpenClawConfig({
+      asDexConfig({
         agents: { list: [{ id: "main", default: true }] },
         plugins: {
           entries: {
@@ -112,7 +112,7 @@ describe("memory_search recall tracking", () => {
     );
 
     const tool = createSearchTool(
-      asOpenClawConfig({
+      asDexConfig({
         agents: { list: [{ id: "main", default: true }] },
         plugins: {
           entries: {
@@ -174,7 +174,7 @@ describe("memory_search recall tracking", () => {
     ]);
 
     const tool = createSearchTool(
-      asOpenClawConfig({
+      asDexConfig({
         agents: {
           defaults: {
             userTimezone: "America/Los_Angeles",
@@ -216,7 +216,7 @@ describe("memory_search recall tracking", () => {
     ]);
 
     const tool = createSearchTool(
-      asOpenClawConfig({
+      asDexConfig({
         agents: { list: [{ id: "main", default: true }] },
         plugins: {
           entries: {

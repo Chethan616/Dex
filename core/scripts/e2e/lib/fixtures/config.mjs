@@ -14,7 +14,7 @@ function readPositiveIntEnv(name, fallback) {
 }
 
 function writeConfig(kind) {
-  const configPath = requireArg(process.env.OPENCLAW_CONFIG_PATH, "OPENCLAW_CONFIG_PATH");
+  const configPath = requireArg(process.env.DEX_CONFIG_PATH, "DEX_CONFIG_PATH");
   const port = readPositiveIntEnv("PORT", 18789);
   const config =
     kind === "config-reload"
@@ -36,7 +36,7 @@ function writeConfig(kind) {
               port,
               auth: {
                 mode: "token",
-                token: requireArg(process.env.OPENCLAW_GATEWAY_TOKEN, "OPENCLAW_GATEWAY_TOKEN"),
+                token: requireArg(process.env.DEX_GATEWAY_TOKEN, "DEX_GATEWAY_TOKEN"),
               },
               controlUi: { enabled: false },
             },
@@ -57,7 +57,7 @@ function writeConfig(kind) {
 }
 
 function writeOpenAiWebSearchMinimalConfig() {
-  writeJson(path.join(process.env.OPENCLAW_STATE_DIR, "openclaw.json"), {
+  writeJson(path.join(process.env.DEX_STATE_DIR, "openclaw.json"), {
     agents: {
       defaults: {
         model: { primary: "openai/gpt-5" },
@@ -93,14 +93,14 @@ function writeOpenAiWebSearchMinimalConfig() {
     },
     tools: { web: { search: { enabled: true, maxResults: 3 } } },
     plugins: { enabled: true, allow: ["openai"], entries: { openai: { enabled: true } } },
-    gateway: { auth: { mode: "token", token: process.env.OPENCLAW_GATEWAY_TOKEN } },
+    gateway: { auth: { mode: "token", token: process.env.DEX_GATEWAY_TOKEN } },
   });
 }
 
 function writeOpenWebUiConfig([openaiApiKey]) {
   const batchPath = requireArg(
-    process.env.OPENCLAW_CONFIG_BATCH_PATH,
-    "OPENCLAW_CONFIG_BATCH_PATH",
+    process.env.DEX_CONFIG_BATCH_PATH,
+    "DEX_CONFIG_BATCH_PATH",
   );
   writeJson(batchPath, [
     { path: "models.providers.openai.apiKey", value: requireArg(openaiApiKey, "OpenAI API key") },
@@ -111,16 +111,16 @@ function writeOpenWebUiConfig([openaiApiKey]) {
     { path: "models.providers.openai.models", value: [] },
     {
       path: "models.providers.openai.timeoutSeconds",
-      value: readPositiveIntEnv("OPENCLAW_OPENWEBUI_PROVIDER_TIMEOUT_SECONDS", 900),
+      value: readPositiveIntEnv("DEX_OPENWEBUI_PROVIDER_TIMEOUT_SECONDS", 900),
     },
     { path: "models.providers.openai.agentRuntime", value: { id: "openclaw" } },
     { path: "gateway.controlUi.enabled", value: false },
     { path: "gateway.mode", value: "local" },
     { path: "gateway.bind", value: "lan" },
     { path: "gateway.auth.mode", value: "token" },
-    { path: "gateway.auth.token", value: process.env.OPENCLAW_GATEWAY_TOKEN },
+    { path: "gateway.auth.token", value: process.env.DEX_GATEWAY_TOKEN },
     { path: "gateway.http.endpoints.chatCompletions.enabled", value: true },
-    { path: "agents.defaults.model.primary", value: process.env.OPENCLAW_OPENWEBUI_MODEL },
+    { path: "agents.defaults.model.primary", value: process.env.DEX_OPENWEBUI_MODEL },
   ]);
 }
 

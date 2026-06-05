@@ -18,8 +18,8 @@ describe("managed proxy undici TLS options", () => {
     "https_proxy",
     "HTTP_PROXY",
     "HTTPS_PROXY",
-    "OPENCLAW_PROXY_ACTIVE",
-    "OPENCLAW_PROXY_CA_FILE",
+    "DEX_PROXY_ACTIVE",
+    "DEX_PROXY_CA_FILE",
   ] as const;
   const tempDirs: string[] = [];
 
@@ -47,7 +47,7 @@ describe("managed proxy undici TLS options", () => {
   }
 
   it("adds active proxy CA trust only to matching explicit proxy URLs", () => {
-    vi.stubEnv("OPENCLAW_PROXY_ACTIVE", "1");
+    vi.stubEnv("DEX_PROXY_ACTIVE", "1");
     registerActiveManagedProxyUrl(new URL("https://managed.example:8443"), {
       loopbackMode: "gateway-only",
       proxyTls: { ca: "active-managed-ca" },
@@ -76,9 +76,9 @@ describe("managed proxy undici TLS options", () => {
 
   it("loads inherited proxy CA trust only for the inherited proxy URL", () => {
     const caFile = writeTempCa("inherited-managed-ca");
-    vi.stubEnv("OPENCLAW_PROXY_ACTIVE", "1");
+    vi.stubEnv("DEX_PROXY_ACTIVE", "1");
     vi.stubEnv("https_proxy", "https://managed.example:8443");
-    vi.stubEnv("OPENCLAW_PROXY_CA_FILE", caFile);
+    vi.stubEnv("DEX_PROXY_CA_FILE", caFile);
 
     expect(resolveActiveManagedProxyTlsOptions()).toStrictEqual({
       ca: "inherited-managed-ca",
@@ -100,9 +100,9 @@ describe("managed proxy undici TLS options", () => {
 
     expect(
       resolveManagedEnvHttpProxyAgentOptions({
-        OPENCLAW_PROXY_ACTIVE: "1",
+        DEX_PROXY_ACTIVE: "1",
         HTTPS_PROXY: "https://managed.example:8443",
-        OPENCLAW_PROXY_CA_FILE: caFile,
+        DEX_PROXY_CA_FILE: caFile,
       }),
     ).toStrictEqual({
       httpsProxy: "https://managed.example:8443",

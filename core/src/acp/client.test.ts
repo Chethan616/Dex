@@ -80,22 +80,22 @@ afterEach(async () => {
 });
 
 describe("resolveAcpClientSpawnEnv", () => {
-  it("sets OPENCLAW_SHELL marker and preserves existing env values", () => {
+  it("sets DEX_SHELL marker and preserves existing env values", () => {
     const env = resolveAcpClientSpawnEnv({
       PATH: "/usr/bin",
       USER: "openclaw",
     });
 
-    expect(env.OPENCLAW_SHELL).toBe("acp-client");
+    expect(env.DEX_SHELL).toBe("acp-client");
     expect(env.PATH).toBe("/usr/bin");
     expect(env.USER).toBe("openclaw");
   });
 
-  it("overrides pre-existing OPENCLAW_SHELL to acp-client", () => {
+  it("overrides pre-existing DEX_SHELL to acp-client", () => {
     const env = resolveAcpClientSpawnEnv({
-      OPENCLAW_SHELL: "wrong",
+      DEX_SHELL: "wrong",
     });
-    expect(env.OPENCLAW_SHELL).toBe("acp-client");
+    expect(env.DEX_SHELL).toBe("acp-client");
   });
 
   it("strips skill-injected env keys when stripKeys is provided", () => {
@@ -114,7 +114,7 @@ describe("resolveAcpClientSpawnEnv", () => {
     );
 
     expect(env.PATH).toBe("/usr/bin");
-    expect(env.OPENCLAW_SHELL).toBe("acp-client");
+    expect(env.DEX_SHELL).toBe("acp-client");
     expect(env.ANTHROPIC_API_KEY).toBe("anthropic-test-value");
     expect(env.OPENAI_API_KEY).toBeUndefined();
     expect(env.ELEVENLABS_API_KEY).toBeUndefined();
@@ -132,17 +132,17 @@ describe("resolveAcpClientSpawnEnv", () => {
     expect(baseEnv.OPENAI_API_KEY).toBe("openai-original");
   });
 
-  it("preserves OPENCLAW_SHELL even when stripKeys contains it", () => {
+  it("preserves DEX_SHELL even when stripKeys contains it", () => {
     const openAiApiKeyEnv = envVar("OPENAI", "API", "KEY");
     const env = resolveAcpClientSpawnEnv(
       {
-        OPENCLAW_SHELL: "skill-overridden",
+        DEX_SHELL: "skill-overridden",
         [openAiApiKeyEnv]: "openai-leaked", // pragma: allowlist secret
       },
-      { stripKeys: new Set(["OPENCLAW_SHELL", openAiApiKeyEnv]) },
+      { stripKeys: new Set(["DEX_SHELL", openAiApiKeyEnv]) },
     );
 
-    expect(env.OPENCLAW_SHELL).toBe("acp-client");
+    expect(env.DEX_SHELL).toBe("acp-client");
     expect(env.OPENAI_API_KEY).toBeUndefined();
   });
 
@@ -153,7 +153,7 @@ describe("resolveAcpClientSpawnEnv", () => {
         OPENAI_API_KEY: "openai-secret", // pragma: allowlist secret
         GITHUB_TOKEN: "gh-secret", // pragma: allowlist secret
         HF_TOKEN: "hf-secret", // pragma: allowlist secret
-        OPENCLAW_API_KEY: "keep-me",
+        DEX_API_KEY: "keep-me",
         PATH: "/usr/bin",
       },
       { stripKeys },
@@ -162,9 +162,9 @@ describe("resolveAcpClientSpawnEnv", () => {
     expect(env.OPENAI_API_KEY).toBeUndefined();
     expect(env.GITHUB_TOKEN).toBeUndefined();
     expect(env.HF_TOKEN).toBeUndefined();
-    expect(env.OPENCLAW_API_KEY).toBe("keep-me");
+    expect(env.DEX_API_KEY).toBe("keep-me");
     expect(env.PATH).toBe("/usr/bin");
-    expect(env.OPENCLAW_SHELL).toBe("acp-client");
+    expect(env.DEX_SHELL).toBe("acp-client");
   });
 
   it("strips provider auth env vars case-insensitively", () => {
@@ -172,15 +172,15 @@ describe("resolveAcpClientSpawnEnv", () => {
       {
         OpenAI_Api_Key: "openai-secret", // pragma: allowlist secret
         Github_Token: "gh-secret", // pragma: allowlist secret
-        OPENCLAW_API_KEY: "keep-me",
+        DEX_API_KEY: "keep-me",
       },
       { stripKeys: new Set(["OPENAI_API_KEY", "GITHUB_TOKEN"]) },
     );
 
     expect(env.OpenAI_Api_Key).toBeUndefined();
     expect(env.Github_Token).toBeUndefined();
-    expect(env.OPENCLAW_API_KEY).toBe("keep-me");
-    expect(env.OPENCLAW_SHELL).toBe("acp-client");
+    expect(env.DEX_API_KEY).toBe("keep-me");
+    expect(env.DEX_SHELL).toBe("acp-client");
   });
 
   it("preserves provider auth env vars when no strip keys are provided", () => {
@@ -188,14 +188,14 @@ describe("resolveAcpClientSpawnEnv", () => {
       OPENAI_API_KEY: "openai-secret", // pragma: allowlist secret
       GITHUB_TOKEN: "gh-secret", // pragma: allowlist secret
       HF_TOKEN: "hf-secret", // pragma: allowlist secret
-      OPENCLAW_API_KEY: "keep-me",
+      DEX_API_KEY: "keep-me",
     });
 
     expect(env.OPENAI_API_KEY).toBe("openai-secret");
     expect(env.GITHUB_TOKEN).toBe("gh-secret");
     expect(env.HF_TOKEN).toBe("hf-secret");
-    expect(env.OPENCLAW_API_KEY).toBe("keep-me");
-    expect(env.OPENCLAW_SHELL).toBe("acp-client");
+    expect(env.DEX_API_KEY).toBe("keep-me");
+    expect(env.DEX_SHELL).toBe("acp-client");
   });
 });
 
@@ -257,7 +257,7 @@ describe("buildAcpClientStripKeys", () => {
     expect(stripKeys.has("OPENAI_API_KEY")).toBe(true);
     expect(stripKeys.has("GITHUB_TOKEN")).toBe(true);
     expect(stripKeys.has("HF_TOKEN")).toBe(true);
-    expect(stripKeys.has("OPENCLAW_API_KEY")).toBe(false);
+    expect(stripKeys.has("DEX_API_KEY")).toBe(false);
   });
 });
 

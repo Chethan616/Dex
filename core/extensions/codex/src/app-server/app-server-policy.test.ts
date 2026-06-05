@@ -49,7 +49,7 @@ describe("Codex app-server policy", () => {
     const explicitEnv = resolveCodexAppServerForOpenClawToolPolicy({
       appServer,
       pluginConfig: readCodexPluginConfig({}),
-      env: { OPENCLAW_CODEX_APP_SERVER_APPROVAL_POLICY: "never" },
+      env: { DEX_CODEX_APP_SERVER_APPROVAL_POLICY: "never" },
       shouldPromote: true,
       canUseUntrustedApprovalPolicy: true,
     });

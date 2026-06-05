@@ -41,7 +41,7 @@ describe("browser client fetch attachOnly diagnostics", () => {
       server.listen(0, "127.0.0.1", resolve);
     });
     const port = (server.address() as { port: number }).port;
-    const configPath = path.join(tempHome.home, ".openclaw", "openclaw.json");
+    const configPath = path.join(tempHome.home, ".dex", "openclaw.json");
     await fs.writeFile(
       configPath,
       JSON.stringify(
@@ -63,7 +63,7 @@ describe("browser client fetch attachOnly diagnostics", () => {
         2,
       ),
     );
-    process.env.OPENCLAW_CONFIG_PATH = configPath;
+    process.env.DEX_CONFIG_PATH = configPath;
     clearRuntimeConfigSnapshot();
 
     try {

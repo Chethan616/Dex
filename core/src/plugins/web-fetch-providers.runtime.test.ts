@@ -26,7 +26,7 @@ function firstPluginLoadOptions(mock: { mock: { calls: unknown[][] } }): PluginL
 
 function createWebFetchEnv(overrides?: Partial<NodeJS.ProcessEnv>) {
   return {
-    OPENCLAW_HOME: "/tmp/openclaw-home",
+    DEX_HOME: "/tmp/openclaw-home",
     ...overrides,
   } as NodeJS.ProcessEnv;
 }

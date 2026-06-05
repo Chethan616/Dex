@@ -73,7 +73,7 @@ const {
 } = await import("./schtasks.js");
 
 function resolveStartupEntryPath(env: Record<string, string>, extension = "cmd") {
-  const taskName = env.OPENCLAW_WINDOWS_TASK_NAME ?? "OpenClaw Gateway";
+  const taskName = env.DEX_WINDOWS_TASK_NAME ?? "OpenClaw Gateway";
   return path.join(
     env.APPDATA,
     "Microsoft",
@@ -99,8 +99,8 @@ async function writeNodeScript(env: Record<string, string>, port = "18789") {
     scriptPath,
     [
       "@echo off",
-      `set "OPENCLAW_SERVICE_KIND=node"`,
-      `set "OPENCLAW_GATEWAY_PORT=${port}"`,
+      `set "DEX_SERVICE_KIND=node"`,
+      `set "DEX_GATEWAY_PORT=${port}"`,
       `"C:\\bin\\openclaw.cmd" node run --host 127.0.0.1 --port ${port}`,
       "",
     ].join("\r\n"),
@@ -114,8 +114,8 @@ const NODE_PROCESS_QUERY =
 function makeNodeServiceEnv(env: Record<string, string>): Record<string, string> {
   return {
     ...env,
-    OPENCLAW_SERVICE_KIND: "node",
-    OPENCLAW_WINDOWS_TASK_NAME: "OpenClaw Node",
+    DEX_SERVICE_KIND: "node",
+    DEX_WINDOWS_TASK_NAME: "OpenClaw Node",
   };
 }
 
@@ -174,7 +174,7 @@ function expectStartupFallbackSpawn() {
   expect(args).toContain("--port");
   expect(args).toContain("18789");
   expect(options.detached).toBe(true);
-  expect((options.env as Record<string, string> | undefined)?.OPENCLAW_GATEWAY_PORT).toBe("18789");
+  expect((options.env as Record<string, string> | undefined)?.DEX_GATEWAY_PORT).toBe("18789");
   expect(options.stdio).toBe("ignore");
   expect(options.windowsHide).toBe(true);
 }
@@ -202,7 +202,7 @@ function installGatewayScheduledTask(env: Record<string, string>, stdout = new P
     env,
     stdout,
     programArguments: ["node", "gateway.js", "--port", "18789"],
-    environment: { OPENCLAW_GATEWAY_PORT: "18789" },
+    environment: { DEX_GATEWAY_PORT: "18789" },
   });
 }
 
@@ -210,14 +210,14 @@ function installNodeScheduledTask(env: Record<string, string>, stdout = new Pass
   return installScheduledTask({
     env: {
       ...env,
-      OPENCLAW_SERVICE_KIND: "node",
-      OPENCLAW_WINDOWS_TASK_NAME: "OpenClaw Node",
+      DEX_SERVICE_KIND: "node",
+      DEX_WINDOWS_TASK_NAME: "OpenClaw Node",
     },
     stdout,
     programArguments: ["node", "openclaw", "node", "run", "--host", "127.0.0.1", "--port", "18789"],
     environment: {
-      OPENCLAW_SERVICE_KIND: "node",
-      OPENCLAW_GATEWAY_PORT: "18789",
+      DEX_SERVICE_KIND: "node",
+      DEX_GATEWAY_PORT: "18789",
     },
   });
 }
@@ -307,7 +307,7 @@ describe("Windows startup fallback", () => {
 
       const result = await installGatewayScheduledTask({
         ...env,
-        OPENCLAW_WINDOWS_TASK_HIDDEN_LAUNCHER: "1",
+        DEX_WINDOWS_TASK_HIDDEN_LAUNCHER: "1",
       });
 
       const startupEntryPath = resolveStartupEntryPath(env, "vbs");
@@ -529,8 +529,8 @@ describe("Windows startup fallback", () => {
 
   it("does not report a node task as running from a gateway listener", async () => {
     await withWindowsEnv("openclaw-win-startup-", async ({ env }) => {
-      env.OPENCLAW_SERVICE_KIND = "node";
-      env.OPENCLAW_WINDOWS_TASK_NAME = "OpenClaw Node";
+      env.DEX_SERVICE_KIND = "node";
+      env.DEX_WINDOWS_TASK_NAME = "OpenClaw Node";
       findVerifiedGatewayListenerPidsOnPortSync.mockReturnValue([4242]);
       schtasksResponses.push(
         { code: 0, stdout: "", stderr: "" },
@@ -550,8 +550,8 @@ describe("Windows startup fallback", () => {
       vi.spyOn(process, "platform", "get").mockReturnValue("win32");
       const nodeEnv = {
         ...env,
-        OPENCLAW_SERVICE_KIND: "node",
-        OPENCLAW_WINDOWS_TASK_NAME: "OpenClaw Node",
+        DEX_SERVICE_KIND: "node",
+        DEX_WINDOWS_TASK_NAME: "OpenClaw Node",
       };
       await writeNodeScript(nodeEnv);
       findVerifiedGatewayListenerPidsOnPortSync.mockReturnValue([4242]);
@@ -642,7 +642,7 @@ describe("Windows startup fallback", () => {
         isScheduledTaskInstalled({
           env: {
             ...env,
-            OPENCLAW_WINDOWS_TASK_HIDDEN_LAUNCHER: "1",
+            DEX_WINDOWS_TASK_HIDDEN_LAUNCHER: "1",
           },
         }),
       ).resolves.toBe(true);
@@ -658,7 +658,7 @@ describe("Windows startup fallback", () => {
       await uninstallScheduledTask({
         env: {
           ...env,
-          OPENCLAW_WINDOWS_TASK_HIDDEN_LAUNCHER: "1",
+          DEX_WINDOWS_TASK_HIDDEN_LAUNCHER: "1",
         },
         stdout,
       });
@@ -856,7 +856,7 @@ describe("Windows startup fallback", () => {
 
       const stdout = new PassThrough();
       const envWithoutPort = { ...env };
-      delete envWithoutPort.OPENCLAW_GATEWAY_PORT;
+      delete envWithoutPort.DEX_GATEWAY_PORT;
       await stopScheduledTask({ env: envWithoutPort, stdout });
 
       expectGatewayTermination(5151);

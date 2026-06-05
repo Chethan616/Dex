@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { withEnvAsync } from "../test-utils/env.js";
 import { clearMediaUnderstandingBinaryCacheForTests, runCapability } from "./runner.js";
 import { withAudioFixture } from "./runner.test-utils.js";
@@ -38,7 +38,7 @@ function createOpenAiAudioProvider(
   });
 }
 
-function createOpenAiAudioCfg(extra?: Partial<OpenClawConfig>): OpenClawConfig {
+function createOpenAiAudioCfg(extra?: Partial<DexConfig>): DexConfig {
   return {
     models: {
       providers: {
@@ -49,7 +49,7 @@ function createOpenAiAudioCfg(extra?: Partial<OpenClawConfig>): OpenClawConfig {
       },
     },
     ...extra,
-  } as unknown as OpenClawConfig;
+  } as unknown as DexConfig;
 }
 
 async function createMockExecutable(dir: string, name: string) {
@@ -60,7 +60,7 @@ async function createMockExecutable(dir: string, name: string) {
 
 async function runAutoAudioCase(params: {
   transcribeAudio: (req: AudioTranscriptionRequest) => Promise<{ text: string; model: string }>;
-  cfgExtra?: Partial<OpenClawConfig>;
+  cfgExtra?: Partial<DexConfig>;
 }) {
   let runResult: Awaited<ReturnType<typeof runCapability>> | undefined;
   await withAudioFixture("openclaw-auto-audio", async ({ ctx, media, cache }) => {
@@ -121,7 +121,7 @@ describe("runCapability auto audio entries", () => {
               },
             },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         ctx,
         attachments: cache,
         media,
@@ -171,7 +171,7 @@ describe("runCapability auto audio entries", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig;
+      } as unknown as DexConfig;
 
       runResult = await runCapability({
         capability: "audio",
@@ -300,7 +300,7 @@ describe("runCapability auto audio entries", () => {
             },
           },
         },
-      } as Partial<OpenClawConfig>,
+      } as Partial<DexConfig>,
     });
 
     expect(requireCapabilityOutput(result, 0).text).toBe("ok");
@@ -320,7 +320,7 @@ describe("runCapability auto audio entries", () => {
           GEMINI_API_KEY: undefined,
           GOOGLE_API_KEY: undefined,
           MISTRAL_API_KEY: "mistral-test-key", // pragma: allowlist secret
-          OPENCLAW_AGENT_DIR: isolatedAgentDir,
+          DEX_AGENT_DIR: isolatedAgentDir,
         },
         async () => {
           await withAudioFixture("openclaw-auto-audio-mistral", async ({ ctx, media, cache }) => {
@@ -358,7 +358,7 @@ describe("runCapability auto audio entries", () => {
                   },
                 },
               },
-            } as unknown as OpenClawConfig;
+            } as unknown as DexConfig;
 
             runResult = await runCapability({
               capability: "audio",

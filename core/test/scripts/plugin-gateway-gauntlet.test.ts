@@ -172,7 +172,7 @@ describe("plugin gateway gauntlet helpers", () => {
       }),
     ]);
     expect(buildGauntletPrebuildEnv({}, { buildIds: [matrix[0].buildId] })).toEqual({
-      OPENCLAW_BUNDLED_PLUGIN_BUILD_IDS: "kimi-coding",
+      DEX_BUNDLED_PLUGIN_BUILD_IDS: "kimi-coding",
     });
   });
 
@@ -378,9 +378,9 @@ describe("plugin gateway gauntlet helpers", () => {
   it("prebuilds private QA dist when QA chunks are enabled", () => {
     expect(buildGauntletPrebuildEnv({ EXISTING: "1" }, { includePrivateQa: true })).toEqual({
       EXISTING: "1",
-      OPENCLAW_BUILD_PRIVATE_QA: "1",
-      OPENCLAW_BUNDLED_PLUGIN_BUILD_IDS: "qa-channel,qa-lab,qa-matrix",
-      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1",
+      DEX_BUILD_PRIVATE_QA: "1",
+      DEX_BUNDLED_PLUGIN_BUILD_IDS: "qa-channel,qa-lab,qa-matrix",
+      DEX_ENABLE_PRIVATE_QA_CLI: "1",
     });
     const env = { EXISTING: "1" };
     expect(buildGauntletPrebuildEnv(env, { includePrivateQa: false })).toBe(env);
@@ -397,8 +397,8 @@ describe("plugin gateway gauntlet helpers", () => {
       ),
     ).toEqual({
       EXISTING: "1",
-      OPENCLAW_BUNDLED_PLUGIN_BUILD_IDS: "acpx",
-      OPENCLAW_RUN_NODE_SKIP_DTS_BUILD: "1",
+      DEX_BUNDLED_PLUGIN_BUILD_IDS: "acpx",
+      DEX_RUN_NODE_SKIP_DTS_BUILD: "1",
     });
   });
 
@@ -413,9 +413,9 @@ describe("plugin gateway gauntlet helpers", () => {
       ),
     ).toEqual({
       EXISTING: "1",
-      OPENCLAW_BUILD_PRIVATE_QA: "1",
-      OPENCLAW_BUNDLED_PLUGIN_BUILD_IDS: "acpx,active-memory,qa-channel,qa-lab,qa-matrix",
-      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1",
+      DEX_BUILD_PRIVATE_QA: "1",
+      DEX_BUNDLED_PLUGIN_BUILD_IDS: "acpx,active-memory,qa-channel,qa-lab,qa-matrix",
+      DEX_ENABLE_PRIVATE_QA_CLI: "1",
     });
   });
 
@@ -768,7 +768,7 @@ setInterval(() => {}, 1000);
       [
         'const fs = require("node:fs");',
         'const path = require("node:path");',
-        'const stateDir = process.env.OPENCLAW_STATE_DIR ?? process.cwd();',
+        'const stateDir = process.env.DEX_STATE_DIR ?? process.cwd();',
         'const marker = path.join(stateDir, "workboard-enabled");',
         "const args = process.argv.slice(2);",
         'if (args[0] === "plugins") {',
@@ -924,7 +924,7 @@ setInterval(() => {}, 1000);
         'const outputArgIndex = process.argv.indexOf("--output-dir");',
         "const outputDir = path.resolve(process.cwd(), process.argv[outputArgIndex + 1]);",
         "fs.mkdirSync(outputDir, { recursive: true });",
-        'fs.writeFileSync(path.join(outputDir, "env.txt"), process.env.OPENCLAW_BUNDLED_PLUGIN_BUILD_IDS ?? "", "utf8");',
+        'fs.writeFileSync(path.join(outputDir, "env.txt"), process.env.DEX_BUNDLED_PLUGIN_BUILD_IDS ?? "", "utf8");',
         `fs.writeFileSync(path.join(outputDir, "qa-suite-summary.json"), ${JSON.stringify(qaSummaryJson)}, "utf8");`,
       ].join("\n"),
       "utf8",

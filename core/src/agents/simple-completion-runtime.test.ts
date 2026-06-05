@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { Model } from "../llm/types.js";
 
 const hoisted = vi.hoisted(() => ({
@@ -517,7 +517,7 @@ describe("prepareSimpleCompletionModelForAgent", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     hoisted.resolveModelAsyncMock.mockResolvedValueOnce({
       model: {
         provider: "openai",

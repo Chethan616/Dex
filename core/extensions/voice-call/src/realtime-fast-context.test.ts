@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { VoiceCallRealtimeFastContextConfig } from "./config.js";
 
@@ -12,7 +12,7 @@ vi.mock("openclaw/plugin-sdk/realtime-voice", () => ({
 
 import { resolveRealtimeFastContextConsult } from "./realtime-fast-context.js";
 
-const cfg = {} as OpenClawConfig;
+const cfg = {} as DexConfig;
 
 function createFastContextConfig(
   overrides: Partial<VoiceCallRealtimeFastContextConfig> = {},

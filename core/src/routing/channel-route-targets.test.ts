@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { collectChannelRouteTargets } from "./channel-route-targets.js";
 
-function targetMap(cfg: OpenClawConfig): Map<string, string[]> {
+function targetMap(cfg: DexConfig): Map<string, string[]> {
   return new Map(
     collectChannelRouteTargets(cfg).map((target) => [target.agentId, target.channels]),
   );

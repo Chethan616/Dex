@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  compareOpenClawReleaseVersions,
+  compareDexReleaseVersions,
   formatPrereleaseResolutionError,
   isExactSemverVersion,
   isOpenClawOrgNpmSpec,
@@ -151,7 +151,7 @@ describe("npm registry spec parsing helpers", () => {
     { left: "2026.5.3-beta.3", right: "2026.5.3-alpha.9", expected: 1 },
     { left: "1.2.3-1", right: "1.2.3", expected: null },
   ])("compares OpenClaw release versions for %s and %s", ({ left, right, expected }) => {
-    expect(compareOpenClawReleaseVersions(left, right)).toBe(expected);
+    expect(compareDexReleaseVersions(left, right)).toBe(expected);
   });
 });
 

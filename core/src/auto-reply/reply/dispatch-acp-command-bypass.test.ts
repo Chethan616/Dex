@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { setActivePluginRegistry } from "../../plugins/runtime.js";
 import {
   createChannelTestPluginBase,
@@ -21,7 +21,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       BodyForAgent: "write a test",
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(false);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(false);
   });
 
   it("returns true for ACP slash commands", () => {
@@ -33,7 +33,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       BodyForAgent: "/acp cancel",
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(true);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(true);
   });
 
   it("returns true for native ACP slash commands", () => {
@@ -46,7 +46,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       BodyForAgent: "/acp close",
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(true);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(true);
   });
 
   it("returns false for ACP slash commands addressed to another bot", () => {
@@ -58,7 +58,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       BodyForAgent: "/acp@otherbot cancel",
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(false);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(false);
   });
 
   it("returns true for local status commands", () => {
@@ -70,7 +70,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       BodyForAgent: "/status",
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(true);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(true);
   });
 
   it("returns true for registry-backed local help commands", () => {
@@ -82,7 +82,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       BodyForAgent: "/help",
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(true);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(true);
   });
 
   it("prefers clean command text over channel envelopes", () => {
@@ -94,7 +94,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       BodyForAgent: "/status",
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(true);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(true);
   });
 
   it("returns true for local unfocus commands", () => {
@@ -106,7 +106,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       BodyForAgent: "/unfocus",
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(true);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(true);
   });
 
   it("returns true for local verbose commands", () => {
@@ -118,7 +118,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       BodyForAgent: "/verbose on",
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(true);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(true);
   });
 
   it("returns true for local verbose alias commands", () => {
@@ -130,7 +130,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       BodyForAgent: "/v off",
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(true);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(true);
   });
 
   it.each(["/verbose:on", "/v:off", "/verbose:"])(
@@ -144,7 +144,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
         BodyForAgent: command,
       });
 
-      expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(true);
+      expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(true);
     },
   );
 
@@ -158,7 +158,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       BodyForAgent: "/new continue with deployment",
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(true);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(true);
   });
 
   it("returns true for bare ACP reset slash commands", () => {
@@ -170,7 +170,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       BodyForAgent: "/reset",
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(true);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(true);
   });
 
   it("returns false for unrelated slash commands when text commands are disabled", () => {
@@ -186,7 +186,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       commands: {
         text: false,
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(shouldBypassAcpDispatchForCommand(ctx, cfg)).toBe(false);
   });
@@ -204,7 +204,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       commands: {
         text: false,
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(shouldBypassAcpDispatchForCommand(ctx, cfg)).toBe(true);
   });
@@ -235,7 +235,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       commands: {
         text: false,
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(shouldBypassAcpDispatchForCommand(ctx, cfg)).toBe(false);
   });
@@ -253,7 +253,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       commands: {
         text: false,
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(shouldBypassAcpDispatchForCommand(ctx, cfg)).toBe(true);
   });
@@ -268,7 +268,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       CommandAuthorized: false,
     });
 
-    expect(shouldBypassAcpDispatchForCommand(ctx, {} as OpenClawConfig)).toBe(false);
+    expect(shouldBypassAcpDispatchForCommand(ctx, {} as DexConfig)).toBe(false);
   });
 
   it("returns false for bang-prefixed commands when text commands are disabled", () => {
@@ -285,7 +285,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       commands: {
         text: false,
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(shouldBypassAcpDispatchForCommand(ctx, cfg)).toBe(false);
   });
@@ -304,7 +304,7 @@ describe("shouldBypassAcpDispatchForCommand", () => {
       commands: {
         bash: true,
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(shouldBypassAcpDispatchForCommand(ctx, cfg)).toBe(true);
   });

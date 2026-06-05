@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 import {
   collectStaleSubagentAllowlistWarnings,
   maybeRepairStaleSubagentAllowlists,
@@ -25,7 +25,7 @@ describe("stale subagent allowlist doctor repair", () => {
           { id: "planner" },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(scanStaleSubagentAllowlistReferences(cfg)).toStrictEqual([
       {
@@ -62,7 +62,7 @@ describe("stale subagent allowlist doctor repair", () => {
           },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(scanStaleSubagentAllowlistReferences(cfg)).toStrictEqual([
       {
@@ -91,7 +91,7 @@ describe("stale subagent allowlist doctor repair", () => {
           { id: "planner" },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = maybeRepairStaleSubagentAllowlists(cfg);
 

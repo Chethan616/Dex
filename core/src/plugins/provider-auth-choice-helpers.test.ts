@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { applyDefaultModel, applyProviderAuthConfigPatch } from "./provider-auth-choice-helpers.js";
 
 describe("applyProviderAuthConfigPatch", () => {
@@ -92,7 +92,7 @@ describe("applyProviderAuthConfigPatch", () => {
           },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
     const patch = {
       agents: {
         defaults: {
@@ -225,7 +225,7 @@ describe("applyProviderAuthConfigPatch", () => {
           },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     const next = applyProviderAuthConfigPatch({}, patch);
 
@@ -255,7 +255,7 @@ describe("applyProviderAuthConfigPatch", () => {
           },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     const next = applyProviderAuthConfigPatch({}, patch);
 
@@ -267,7 +267,7 @@ describe("applyDefaultModel", () => {
   it("sets the primary when none exists", () => {
     const config = {
       agents: { defaults: {} },
-    } as OpenClawConfig;
+    } as DexConfig;
     const next = applyDefaultModel(config, "openrouter/auto");
     expect(next.agents?.defaults?.model).toEqual({ primary: "openrouter/auto" });
   });
@@ -279,7 +279,7 @@ describe("applyDefaultModel", () => {
           model: { primary: "anthropic/claude-opus-4-6" },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const next = applyDefaultModel(config, "openrouter/auto");
     expect(next.agents?.defaults?.model).toEqual({
       primary: "openrouter/auto",
@@ -293,7 +293,7 @@ describe("applyDefaultModel", () => {
           model: { primary: "anthropic/claude-opus-4-6" },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const next = applyDefaultModel(config, "openrouter/auto", {
       preserveExistingPrimary: true,
     });
@@ -309,7 +309,7 @@ describe("applyDefaultModel", () => {
           model: { primary: "google/gemini-3-pro-preview" },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const next = applyDefaultModel(config, "openrouter/auto", {
       preserveExistingPrimary: true,
     });
@@ -328,7 +328,7 @@ describe("applyDefaultModel", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const next = applyDefaultModel(config, "openrouter/auto", {
       preserveExistingPrimary: true,
     });
@@ -341,7 +341,7 @@ describe("applyDefaultModel", () => {
   it("adds the model to the allowlist", () => {
     const config = {
       agents: { defaults: { models: { "anthropic/claude-sonnet-4-6": {} } } },
-    } as OpenClawConfig;
+    } as DexConfig;
     const next = applyDefaultModel(config, "openrouter/auto");
     expect(next.agents?.defaults?.models).toEqual({
       "anthropic/claude-sonnet-4-6": {},
@@ -352,7 +352,7 @@ describe("applyDefaultModel", () => {
   it("normalizes retired Google Gemini default models before writing config", () => {
     const config = {
       agents: { defaults: { models: { "anthropic/claude-sonnet-4-6": {} } } },
-    } as OpenClawConfig;
+    } as DexConfig;
     const next = applyDefaultModel(config, "google/gemini-3-pro-preview");
     expect(next.agents?.defaults?.model).toEqual({
       primary: "google/gemini-3.1-pro-preview",
@@ -375,7 +375,7 @@ describe("applyDefaultModel", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const next = applyDefaultModel(config, "google/gemini-3.1-pro-preview");
 
@@ -397,7 +397,7 @@ describe("applyDefaultModel", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const next = applyDefaultModel(config, "openrouter/auto");
     expect(next.agents?.defaults?.model).toEqual({
       primary: "openrouter/auto",

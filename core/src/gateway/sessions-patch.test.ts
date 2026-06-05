@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest";
 import { resetProviderAuthAliasMapCacheForTest } from "../agents/provider-auth-aliases.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { SessionEntry } from "../config/sessions.js";
 import { createEmptyPluginRegistry } from "../plugins/registry-empty.js";
 import { resetPluginRuntimeStateForTest, setActivePluginRegistry } from "../plugins/runtime.js";
@@ -14,14 +14,14 @@ const ANTHROPIC_SONNET_ID = "claude-sonnet-4-6";
 const ANTHROPIC_OPUS_ID = "claude-opus-4-6";
 const OPENAI_GPT_MODEL = "openai/gpt-5.4";
 const OPENAI_GPT_ID = "gpt-5.4";
-const EMPTY_CFG = {} as OpenClawConfig;
+const EMPTY_CFG = {} as DexConfig;
 
 type ApplySessionsPatchArgs = Parameters<typeof applySessionsPatchToStore>[0];
 
 async function runPatch(params: {
   patch: ApplySessionsPatchArgs["patch"];
   store?: Record<string, SessionEntry>;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   storeKey?: string;
   agentId?: string;
   loadGatewayModelCatalog?: ApplySessionsPatchArgs["loadGatewayModelCatalog"];
@@ -104,7 +104,7 @@ function expectModelSelection(
 
 async function applyMainModelPatch(params: {
   store?: Record<string, SessionEntry>;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   model: string | null;
   catalogRefs?: string[];
 }) {
@@ -151,7 +151,7 @@ function expectAuthOverride(
   }
 }
 
-async function applySubagentModelPatch(cfg: OpenClawConfig) {
+async function applySubagentModelPatch(cfg: DexConfig) {
   return expectPatchOk(
     await runPatch({
       cfg,
@@ -172,7 +172,7 @@ function makeKimiSubagentCfg(params: {
   agentPrimaryModel?: string;
   agentSubagentModel?: string;
   defaultsSubagentModel?: string;
-}): OpenClawConfig {
+}): DexConfig {
   return {
     agents: {
       defaults: {
@@ -192,10 +192,10 @@ function makeKimiSubagentCfg(params: {
         },
       ],
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
-function createAllowlistedAnthropicModelCfg(): OpenClawConfig {
+function createAllowlistedAnthropicModelCfg(): DexConfig {
   return {
     agents: {
       defaults: {
@@ -205,7 +205,7 @@ function createAllowlistedAnthropicModelCfg(): OpenClawConfig {
         },
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 describe("gateway sessions patch", () => {
@@ -433,7 +433,7 @@ describe("gateway sessions patch", () => {
             model: { primary: `anthropic/${ANTHROPIC_OPUS_ID}` },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       store,
       model: ANTHROPIC_SONNET_MODEL,
       catalogRefs: [ANTHROPIC_SONNET_MODEL],
@@ -562,7 +562,7 @@ describe("gateway sessions patch", () => {
               model: { primary: "ollama/qwen3:0.6b" },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         patch: {
           key: MAIN_SESSION_KEY,
           thinkingLevel: "medium",
@@ -590,7 +590,7 @@ describe("gateway sessions patch", () => {
               model: { primary: "gmn/gpt-5.4" },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         patch: {
           key: MAIN_SESSION_KEY,
           thinkingLevel: "xhigh",
@@ -627,7 +627,7 @@ describe("gateway sessions patch", () => {
               },
             ],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         storeKey: "global",
         agentId: "work",
         patch: {
@@ -650,7 +650,7 @@ describe("gateway sessions patch", () => {
               model: { primary: "openai/gpt-5.5" },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         patch: {
           key: MAIN_SESSION_KEY,
           thinkingLevel: "xhigh",
@@ -899,7 +899,7 @@ describe("gateway sessions patch", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         patch: { key: MAIN_SESSION_KEY, model: "kimi-k2.6@work" },
         loadGatewayModelCatalog: async () => [
           { provider: "openai", id: "gpt-5.4", name: "gpt-5.4" },

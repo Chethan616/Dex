@@ -8,7 +8,7 @@ import {
 } from "openclaw/plugin-sdk/agent-runtime-test-contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionEntry } from "../config/sessions.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type * as ManifestRegistryModule from "../plugins/manifest-registry.js";
 import { runAgentAttempt } from "./command/attempt-execution.js";
 import type { RunEmbeddedAgentParams } from "./embedded-agent-runner/run/params.js";
@@ -146,7 +146,7 @@ function makeEmbeddedResult(text: string): EmbeddedAgentRunResult {
   };
 }
 
-function providerRuntimeConfig(provider: string, runtime: string): OpenClawConfig {
+function providerRuntimeConfig(provider: string, runtime: string): DexConfig {
   return {
     models: {
       providers: {
@@ -157,7 +157,7 @@ function providerRuntimeConfig(provider: string, runtime: string): OpenClawConfi
         },
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 async function runAuthContractAttempt(params: {
@@ -166,10 +166,10 @@ async function runAuthContractAttempt(params: {
   providerOverride: string;
   authProfileProvider: string;
   authProfileOverride: string;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   sessionHasHistory?: boolean;
 }) {
-  const cfg = params.cfg ?? ({} as OpenClawConfig);
+  const cfg = params.cfg ?? ({} as DexConfig);
   const sessionEntry: SessionEntry = {
     sessionId: AUTH_PROFILE_RUNTIME_CONTRACT.sessionId,
     updatedAt: Date.now(),
@@ -253,7 +253,7 @@ describe("Auth profile runtime contract - embedded OpenClaw and CLI adapter", ()
     (provider, expectedAuthProvider) => {
       expect(
         resolveProviderIdForAuth(provider, {
-          config: {} as OpenClawConfig,
+          config: {} as DexConfig,
           workspaceDir: tmpDir,
         }),
       ).toBe(expectedAuthProvider);
@@ -346,7 +346,7 @@ describe("Auth profile runtime contract - embedded OpenClaw and CLI adapter", ()
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     expect(capturedCliRunParams().authProfileId).toBeUndefined();

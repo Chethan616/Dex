@@ -4,7 +4,7 @@ import path from "node:path";
 import type { AgentMessage } from "openclaw/plugin-sdk/agent-core";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { HEARTBEAT_TRANSCRIPT_PROMPT } from "../../../auto-reply/heartbeat.js";
-import type { OpenClawConfig } from "../../../config/types.js";
+import type { DexConfig } from "../../../config/types.js";
 import { buildMemorySystemPromptAddition } from "../../../context-engine/delegate.js";
 import {
   clearMemoryPluginState,
@@ -250,14 +250,14 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
             tools: {
               toolSearch: true,
             },
-          } as OpenClawConfig,
+          } as DexConfig,
         },
       });
 
       toolSearchControlsCase = mockParams(
-        hoisted.createOpenClawCodingToolsMock,
+        hoisted.createDexCodingToolsMock,
         0,
-        "createOpenClawCodingTools options",
+        "createDexCodingTools options",
       );
     } finally {
       await cleanupTempPaths(setupTempPaths);
@@ -285,7 +285,7 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
   });
 
   it("quarantines unsupported tool schemas before creating the model session", async () => {
-    hoisted.createOpenClawCodingToolsMock.mockReturnValue([
+    hoisted.createDexCodingToolsMock.mockReturnValue([
       {
         name: "healthy_lookup",
         label: "Healthy Lookup",
@@ -319,7 +319,7 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
             codeMode: { enabled: false },
             toolSearch: false,
           },
-        } as OpenClawConfig,
+        } as DexConfig,
       },
       createSession: () => {
         const session = createDefaultEmbeddedSession();
@@ -374,7 +374,7 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
           agents: {
             list: [{ id: "ops", tools: { codeMode: true } }],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         model: {
           api: "openai-chatgpt-responses",
           provider: "gateway",
@@ -447,9 +447,9 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
         prompt: [
           "visible ask",
           "",
-          "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>",
+          "<<<BEGIN_DEX_INTERNAL_CONTEXT>>>",
           "secret runtime context",
-          "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>",
+          "<<<END_DEX_INTERNAL_CONTEXT>>>",
         ].join("\n"),
         transcriptPrompt: "visible ask",
       },
@@ -501,7 +501,7 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
       modelCompleted?.data?.finalPromptText,
       traceArtifacts?.data?.finalPromptText,
     ]) {
-      expect(String(value)).not.toContain("OPENCLAW_INTERNAL_CONTEXT");
+      expect(String(value)).not.toContain("DEX_INTERNAL_CONTEXT");
       expect(String(value)).not.toContain("secret runtime context");
     }
   });
@@ -810,7 +810,7 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
       attemptOverrides: {
         skillsSnapshot: {
           prompt:
-            "<available_skills><skill><location>~/.openclaw/skills/smaug/SKILL.md</location></skill></available_skills>",
+            "<available_skills><skill><location>~/.dex/skills/smaug/SKILL.md</location></skill></available_skills>",
           skills: [{ name: "smaug" }],
           resolvedSkills: [
             {
@@ -986,9 +986,9 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
         prompt: [
           "visible ask",
           "",
-          "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>",
+          "<<<BEGIN_DEX_INTERNAL_CONTEXT>>>",
           "secret runtime context",
-          "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>",
+          "<<<END_DEX_INTERNAL_CONTEXT>>>",
         ].join("\n"),
         transcriptPrompt: "visible ask",
       },
@@ -1044,7 +1044,7 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
               bootstrapTotalMaxChars: 50,
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         prompt: "visible ask",
         transcriptPrompt: "visible ask",
       },
@@ -1066,7 +1066,7 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
   it("preserves bootstrap system context in the assembled system prompt", async () => {
     const seen: { prompt?: string; messages?: unknown[] } = {};
     hoisted.isWorkspaceBootstrapPendingMock.mockResolvedValueOnce(true);
-    hoisted.createOpenClawCodingToolsMock.mockImplementationOnce(() => [
+    hoisted.createDexCodingToolsMock.mockImplementationOnce(() => [
       { name: "read", execute: async () => "" },
     ]);
     hoisted.resolveBootstrapContextForRunMock.mockResolvedValueOnce({
@@ -1207,9 +1207,9 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
         prompt: [
           "what does this mean?",
           "",
-          "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>",
+          "<<<BEGIN_DEX_INTERNAL_CONTEXT>>>",
           "secret runtime context",
-          "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>",
+          "<<<END_DEX_INTERNAL_CONTEXT>>>",
         ].join("\n"),
         transcriptPrompt: "what does this mean?",
         currentInboundContext: {
@@ -1243,7 +1243,7 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
     expect(seenPrompt).toContain("WT daily plan - Sat May 2");
     expect(seenPrompt).toContain("./quoted-secret.png");
     expect(seenPrompt).toContain("media://inbound/quoted.png");
-    expect(seenPrompt).not.toContain("OPENCLAW_INTERNAL_CONTEXT");
+    expect(seenPrompt).not.toContain("DEX_INTERNAL_CONTEXT");
     expect(seenPrompt).not.toContain("secret runtime context");
     expect(seenPrompt?.trim().startsWith("Reply target of current user message")).toBe(true);
     expect(result.finalPromptText).toBe(seenPrompt);
@@ -1288,9 +1288,9 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
         prompt: [
           "visible ask",
           "",
-          "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>",
+          "<<<BEGIN_DEX_INTERNAL_CONTEXT>>>",
           "secret runtime context",
-          "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>",
+          "<<<END_DEX_INTERNAL_CONTEXT>>>",
         ].join("\n"),
         transcriptPrompt: "visible ask",
         inputProvenance: {
@@ -2349,7 +2349,7 @@ describe("runEmbeddedAttempt context engine mid-turn precheck integration", () =
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
       },
     });
 
@@ -2397,7 +2397,7 @@ describe("runEmbeddedAttempt context engine mid-turn precheck integration", () =
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
       },
       sessionMessages: [seedMessage],
       sessionPrompt: async (session) => {
@@ -2494,7 +2494,7 @@ describe("runEmbeddedAttempt tool-result guard budget wiring", () => {
             },
             list: [{ id: "main" }],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
       },
       createSession: () => {
         const session = createDefaultEmbeddedSession({ initialMessages: sessionMessages });

@@ -73,11 +73,11 @@ async function expectSessionCompletion(params: {
     .toBe(true);
 }
 
-test("exec supports pty output, OPENCLAW_SHELL, send-keys, and submit", async () => {
+test("exec supports pty output, DEX_SHELL, send-keys, and submit", async () => {
   const { processTool, sessionId } = await startPtySession(
     currentNodeEvalCommand(
       [
-        "process.stdout.write(`ok:${process.env.OPENCLAW_SHELL || ''}`);",
+        "process.stdout.write(`ok:${process.env.DEX_SHELL || ''}`);",
         "const dataEvent=String.fromCharCode(100,97,116,97);",
         "const submitted=String.fromCharCode(115,117,98,109,105,116,116,101,100);",
         "let first=false;",

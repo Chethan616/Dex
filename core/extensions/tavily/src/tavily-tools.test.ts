@@ -1,5 +1,5 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-runtime";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexPluginApi } from "openclaw/plugin-sdk/plugin-runtime";
 import { createTestPluginApi } from "openclaw/plugin-sdk/plugin-test-api";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -38,10 +38,10 @@ function requireFirstMockArg(mock: ReturnType<typeof vi.fn>, label: string): unk
   return call[0];
 }
 
-function fakeApi(): OpenClawPluginApi {
+function fakeApi(): DexPluginApi {
   return {
     config: {},
-  } as OpenClawPluginApi;
+  } as DexPluginApi;
 }
 
 describe("tavily tools", () => {
@@ -200,7 +200,7 @@ describe("tavily tools", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const runtimeConfig = {
       plugins: {
         entries: {
@@ -213,9 +213,9 @@ describe("tavily tools", () => {
           },
         },
       },
-    } as OpenClawConfig;
-    const registeredTools: Array<Parameters<OpenClawPluginApi["registerTool"]>[0]> = [];
-    const registeredOptions: Array<Parameters<OpenClawPluginApi["registerTool"]>[1]> = [];
+    } as DexConfig;
+    const registeredTools: Array<Parameters<DexPluginApi["registerTool"]>[0]> = [];
+    const registeredOptions: Array<Parameters<DexPluginApi["registerTool"]>[1]> = [];
     const api = createTestPluginApi({
       config: rawConfig,
       registerTool(tool, opts) {
@@ -376,7 +376,7 @@ describe("tavily tools", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(resolveTavilySearchConfig(cfg)).toEqual({
       apiKey: "plugin-key",
@@ -392,7 +392,7 @@ describe("tavily tools", () => {
 
     expect(resolveTavilyApiKey()).toBe("env-key");
     expect(resolveTavilyBaseUrl()).toBe("https://env.tavily.test");
-    expect(resolveTavilyBaseUrl({} as OpenClawConfig)).not.toBe(DEFAULT_TAVILY_BASE_URL);
+    expect(resolveTavilyBaseUrl({} as DexConfig)).not.toBe(DEFAULT_TAVILY_BASE_URL);
     expect(resolveTavilySearchTimeoutSeconds()).toBe(DEFAULT_TAVILY_SEARCH_TIMEOUT_SECONDS);
     expect(resolveTavilyExtractTimeoutSeconds()).toBe(DEFAULT_TAVILY_EXTRACT_TIMEOUT_SECONDS);
   });

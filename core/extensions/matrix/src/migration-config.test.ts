@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { withTempHome } from "openclaw/plugin-sdk/test-env";
 import { describe, expect, it } from "vitest";
 import { resolveMatrixMigrationAccountTarget } from "./migration-config.js";
@@ -11,7 +11,7 @@ import {
   writeMatrixCredentials,
 } from "./test-helpers.js";
 
-function resolveOpsTarget(cfg: OpenClawConfig, env = process.env) {
+function resolveOpsTarget(cfg: DexConfig, env = process.env) {
   return resolveMatrixMigrationAccountTarget({
     cfg,
     env,
@@ -32,14 +32,14 @@ function expectMigrationTarget(target: ReturnType<typeof resolveOpsTarget>): Mat
 describe("resolveMatrixMigrationAccountTarget", () => {
   it("reuses stored user identity for token-only configs when the access token matches", async () => {
     await withTempHome(async (home) => {
-      const stateDir = path.join(home, ".openclaw");
+      const stateDir = path.join(home, ".dex");
       writeMatrixCredentials(stateDir, {
         accountId: MATRIX_OPS_ACCOUNT_ID,
         deviceId: "DEVICE-OPS",
         accessToken: MATRIX_OPS_ACCESS_TOKEN,
       });
 
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           matrix: {
             accounts: {
@@ -62,7 +62,7 @@ describe("resolveMatrixMigrationAccountTarget", () => {
 
   it("ignores stored device IDs from stale cached Matrix credentials", async () => {
     await withTempHome(async (home) => {
-      const stateDir = path.join(home, ".openclaw");
+      const stateDir = path.join(home, ".dex");
       writeMatrixCredentials(stateDir, {
         accountId: MATRIX_OPS_ACCOUNT_ID,
         userId: "@old-bot:example.org",
@@ -70,7 +70,7 @@ describe("resolveMatrixMigrationAccountTarget", () => {
         deviceId: "DEVICE-OLD",
       });
 
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           matrix: {
             accounts: {
@@ -95,7 +95,7 @@ describe("resolveMatrixMigrationAccountTarget", () => {
 
   it("does not trust stale stored creds on the same homeserver when the token changes", async () => {
     await withTempHome(async (home) => {
-      const stateDir = path.join(home, ".openclaw");
+      const stateDir = path.join(home, ".dex");
       writeMatrixCredentials(stateDir, {
         accountId: MATRIX_OPS_ACCOUNT_ID,
         userId: "@old-bot:example.org",
@@ -103,7 +103,7 @@ describe("resolveMatrixMigrationAccountTarget", () => {
         deviceId: "DEVICE-OLD",
       });
 
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           matrix: {
             accounts: {
@@ -124,14 +124,14 @@ describe("resolveMatrixMigrationAccountTarget", () => {
 
   it("does not inherit the base userId for non-default token-only accounts", async () => {
     await withTempHome(async (home) => {
-      const stateDir = path.join(home, ".openclaw");
+      const stateDir = path.join(home, ".dex");
       writeMatrixCredentials(stateDir, {
         accountId: MATRIX_OPS_ACCOUNT_ID,
         deviceId: "DEVICE-OPS",
         accessToken: MATRIX_OPS_ACCESS_TOKEN,
       });
 
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           matrix: {
             homeserver: MATRIX_TEST_HOMESERVER,
@@ -156,7 +156,7 @@ describe("resolveMatrixMigrationAccountTarget", () => {
 
   it("does not inherit the base access token for non-default accounts", async () => {
     await withTempHome(async () => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           matrix: {
             homeserver: MATRIX_TEST_HOMESERVER,
@@ -181,7 +181,7 @@ describe("resolveMatrixMigrationAccountTarget", () => {
   it("does not inherit the global Matrix access token for non-default accounts", async () => {
     await withTempHome(
       async () => {
-        const cfg: OpenClawConfig = {
+        const cfg: DexConfig = {
           channels: {
             matrix: {
               accounts: {
@@ -208,7 +208,7 @@ describe("resolveMatrixMigrationAccountTarget", () => {
 
   it("uses the same scoped env token encoding as runtime account auth", async () => {
     await withTempHome(async () => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           matrix: {
             accounts: {

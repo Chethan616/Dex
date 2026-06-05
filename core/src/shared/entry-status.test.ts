@@ -24,7 +24,7 @@ describe("shared/entry-status", () => {
         requires: {
           bins: ["bun"],
           anyBins: ["ffmpeg", "sox"],
-          env: ["OPENCLAW_TOKEN"],
+          env: ["DEX_TOKEN"],
           config: ["gateway.bind"],
         },
         os: ["darwin"],
@@ -48,14 +48,14 @@ describe("shared/entry-status", () => {
       required: {
         bins: ["bun"],
         anyBins: ["ffmpeg", "sox"],
-        env: ["OPENCLAW_TOKEN"],
+        env: ["DEX_TOKEN"],
         config: ["gateway.bind"],
         os: ["darwin"],
       },
       missing: {
         bins: [],
         anyBins: [],
-        env: ["OPENCLAW_TOKEN"],
+        env: ["DEX_TOKEN"],
         config: [],
         os: ["darwin"],
       },

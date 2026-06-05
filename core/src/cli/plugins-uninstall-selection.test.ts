@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolvePluginUninstallId } from "./plugins-uninstall-selection.js";
 
 describe("resolvePluginUninstallId", () => {
@@ -19,7 +19,7 @@ describe("resolvePluginUninstallId", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       plugins: [{ id: "linkmind-context", name: "linkmind-context" }],
     });
 
@@ -41,7 +41,7 @@ describe("resolvePluginUninstallId", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       plugins: [{ id: "linkmind-context", name: "linkmind-context" }],
     });
 

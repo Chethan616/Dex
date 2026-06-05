@@ -87,7 +87,7 @@ describe("scripts/test-docker-all scheduler", () => {
     expect(result.status).toBe(0);
     expect(result.stderr).toBe("");
     expect(result.stdout).toContain("Usage: node scripts/test-docker-all.mjs [--plan-json]");
-    expect(result.stdout).toContain("OPENCLAW_DOCKER_ALL_* env vars");
+    expect(result.stdout).toContain("DEX_DOCKER_ALL_* env vars");
   });
 
   it("rejects unknown CLI options without a stack trace", () => {
@@ -109,13 +109,13 @@ describe("scripts/test-docker-all scheduler", () => {
       encoding: "utf8",
       env: {
         ...process.env,
-        OPENCLAW_DOCKER_ALL_PARALLELISM: "1e3",
+        DEX_DOCKER_ALL_PARALLELISM: "1e3",
       },
     });
 
     expect(result.status).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toContain("OPENCLAW_DOCKER_ALL_PARALLELISM must be a positive integer");
+    expect(result.stderr).toContain("DEX_DOCKER_ALL_PARALLELISM must be a positive integer");
     expect(result.stderr).not.toContain("at ");
   });
 
@@ -127,18 +127,18 @@ describe("scripts/test-docker-all scheduler", () => {
         encoding: "utf8",
         env: {
           ...process.env,
-          OPENCLAW_DOCKER_ALL_BUILD: "0",
-          OPENCLAW_DOCKER_ALL_DOCKER_LIMIT: "1e3",
-          OPENCLAW_DOCKER_ALL_DRY_RUN: "1",
-          OPENCLAW_DOCKER_ALL_LOG_DIR: logDir,
-          OPENCLAW_DOCKER_ALL_PREFLIGHT: "0",
-          OPENCLAW_DOCKER_ALL_TIMINGS: "0",
+          DEX_DOCKER_ALL_BUILD: "0",
+          DEX_DOCKER_ALL_DOCKER_LIMIT: "1e3",
+          DEX_DOCKER_ALL_DRY_RUN: "1",
+          DEX_DOCKER_ALL_LOG_DIR: logDir,
+          DEX_DOCKER_ALL_PREFLIGHT: "0",
+          DEX_DOCKER_ALL_TIMINGS: "0",
         },
       });
 
       expect(result.status).toBe(1);
       expect(result.stderr).toContain(
-        "OPENCLAW_DOCKER_ALL_DOCKER_LIMIT must be a positive integer",
+        "DEX_DOCKER_ALL_DOCKER_LIMIT must be a positive integer",
       );
       expect(result.stderr).not.toContain("at ");
     } finally {

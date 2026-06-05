@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadSessionStore, saveSessionStore, type SessionEntry } from "../config/sessions.js";
 import { CURRENT_SESSION_VERSION } from "../config/sessions/version.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { runAgentAttempt } from "./command/attempt-execution.runtime.js";
 import type { EmbeddedAgentRunResult } from "./embedded-agent.js";
 import type { loadManifestModelCatalog } from "./model-catalog.js";
@@ -14,7 +14,7 @@ type LoadManifestModelCatalogParams = Parameters<typeof loadManifestModelCatalog
 type RunAgentAttempt = typeof runAgentAttempt;
 
 const state = vi.hoisted(() => ({
-  cfg: undefined as OpenClawConfig | undefined,
+  cfg: undefined as DexConfig | undefined,
   workspaceDir: undefined as string | undefined,
   agentDir: undefined as string | undefined,
   runAgentAttemptMock: vi.fn<RunAgentAttempt>(),
@@ -183,7 +183,7 @@ beforeEach(async () => {
         },
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 });
 
 afterEach(async () => {
@@ -288,7 +288,7 @@ describe("agentCommand compaction transcript rotation", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     state.runAgentAttemptMock.mockResolvedValueOnce(
       makeResult({
         sessionId: "custom-provider-session",

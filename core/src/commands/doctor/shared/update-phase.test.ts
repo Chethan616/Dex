@@ -12,7 +12,7 @@ import {
 } from "./update-phase.js";
 
 describe("update-phase env helpers", () => {
-  it("treats only OPENCLAW_UPDATE_IN_PROGRESS=1 as package-swap-in-progress", () => {
+  it("treats only DEX_UPDATE_IN_PROGRESS=1 as package-swap-in-progress", () => {
     expect(isUpdatePackageSwapInProgress({ [UPDATE_IN_PROGRESS_ENV]: "1" })).toBe(true);
     expect(isUpdatePackageSwapInProgress({ [UPDATE_IN_PROGRESS_ENV]: "0" })).toBe(false);
     expect(isUpdatePackageSwapInProgress({})).toBe(false);

@@ -44,7 +44,7 @@ describe("zai fallback repro command resolution", () => {
     const exitCode = await runZaiFallbackRepro({
       env: {
         ANTHROPIC_API_KEY: "anthropic-test-key",
-        OPENCLAW_ZAI_FALLBACK_SESSION_ID: "session-test",
+        DEX_ZAI_FALLBACK_SESSION_ID: "session-test",
         PATH: process.env.PATH,
         ZAI_API_KEY: "zai-test-key",
       },
@@ -60,7 +60,7 @@ describe("zai fallback repro command resolution", () => {
         calls.push(label);
         if (label === "run1") {
           const sessionFile = path.join(
-            String(env.OPENCLAW_STATE_DIR),
+            String(env.DEX_STATE_DIR),
             "agents",
             "main",
             "sessions",

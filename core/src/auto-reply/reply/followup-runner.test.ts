@@ -4,7 +4,7 @@ import path from "node:path";
 import { DELIVERY_NO_REPLY_RUNTIME_CONTRACT } from "openclaw/plugin-sdk/agent-runtime-test-contracts";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { setCliSessionBinding } from "../../agents/cli-session.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import type { SessionEntry } from "../../config/sessions/types.js";
 import {
   createUserTurnTranscriptRecorder,
@@ -40,7 +40,7 @@ let createMockTypingController: typeof import("./test-helpers.js").createMockTyp
 let createReplyOperationForTest: typeof import("./reply-run-registry.js").createReplyOperation;
 let replyRunTestingForTest: typeof import("./reply-run-registry.js").testing;
 let cliBackendsTestingForTest: typeof import("../../agents/cli-backends.js").testing;
-const FOLLOWUP_DEBUG = process.env.OPENCLAW_DEBUG_FOLLOWUP_RUNNER_TEST === "1";
+const FOLLOWUP_DEBUG = process.env.DEX_DEBUG_FOLLOWUP_RUNNER_TEST === "1";
 const FOLLOWUP_TEST_QUEUES = new Map<
   string,
   {
@@ -975,7 +975,7 @@ describe("createFollowupRunner auto fallback primary probes", () => {
 
 describe("createFollowupRunner runtime config", () => {
   it("routes queued followups through CLI runtime dispatch when the model selects a CLI backend", async () => {
-    const runtimeConfig: OpenClawConfig = {
+    const runtimeConfig: DexConfig = {
       agents: {
         defaults: {
           cliBackends: {
@@ -1063,7 +1063,7 @@ describe("createFollowupRunner runtime config", () => {
   });
 
   it("reuses CLI session bindings for queued room-event followups", async () => {
-    const runtimeConfig: OpenClawConfig = {
+    const runtimeConfig: DexConfig = {
       agents: {
         defaults: {
           cliBackends: {
@@ -1133,7 +1133,7 @@ describe("createFollowupRunner runtime config", () => {
   });
 
   it("stores queued room-event CLI sessions created from the first ambient run", async () => {
-    const runtimeConfig: OpenClawConfig = {
+    const runtimeConfig: DexConfig = {
       agents: {
         defaults: {
           cliBackends: {
@@ -1204,7 +1204,7 @@ describe("createFollowupRunner runtime config", () => {
   });
 
   it("does not replace queued room-event CLI session bindings when reuse fails", async () => {
-    const runtimeConfig: OpenClawConfig = {
+    const runtimeConfig: DexConfig = {
       agents: {
         defaults: {
           cliBackends: {
@@ -1274,7 +1274,7 @@ describe("createFollowupRunner runtime config", () => {
   });
 
   it("passes prepared media user turns to CLI runtime dispatch", async () => {
-    const runtimeConfig: OpenClawConfig = {
+    const runtimeConfig: DexConfig = {
       agents: {
         defaults: {
           cliBackends: {
@@ -1325,7 +1325,7 @@ describe("createFollowupRunner runtime config", () => {
     const realAgentEvents = await vi.importActual<typeof import("../../infra/agent-events.js")>(
       "../../infra/agent-events.js",
     );
-    const runtimeConfig: OpenClawConfig = {
+    const runtimeConfig: DexConfig = {
       agents: {
         defaults: {
           cliBackends: {
@@ -1393,7 +1393,7 @@ describe("createFollowupRunner runtime config", () => {
         lifecyclePhases.push(phase);
       }
     });
-    const runtimeConfig: OpenClawConfig = {
+    const runtimeConfig: DexConfig = {
       agents: {
         defaults: {
           cliBackends: {
@@ -1465,7 +1465,7 @@ describe("createFollowupRunner runtime config", () => {
   });
 
   it("uses the active runtime snapshot for queued embedded followup runs", async () => {
-    const sourceConfig: OpenClawConfig = {
+    const sourceConfig: DexConfig = {
       models: {
         providers: {
           openai: {
@@ -1480,7 +1480,7 @@ describe("createFollowupRunner runtime config", () => {
         },
       },
     };
-    const runtimeConfig: OpenClawConfig = {
+    const runtimeConfig: DexConfig = {
       models: {
         providers: {
           openai: {
@@ -1659,7 +1659,7 @@ describe("createFollowupRunner runtime config", () => {
   });
 
   it("resolves queued embedded followups before preflight helpers read config", async () => {
-    const sourceConfig: OpenClawConfig = {
+    const sourceConfig: DexConfig = {
       skills: {
         entries: {
           whisper: {
@@ -1672,7 +1672,7 @@ describe("createFollowupRunner runtime config", () => {
         },
       },
     };
-    const runtimeConfig: OpenClawConfig = {
+    const runtimeConfig: DexConfig = {
       skills: {
         entries: {
           whisper: {
@@ -1718,7 +1718,7 @@ describe("createFollowupRunner runtime config", () => {
       payloads: [],
       meta: {},
     });
-    const sourceConfig: OpenClawConfig = {};
+    const sourceConfig: DexConfig = {};
     const runner = createFollowupRunner({
       typing: createMockTypingController(),
       typingMode: "instant",
@@ -3038,7 +3038,7 @@ describe("createFollowupRunner messaging delivery and dedupe", () => {
                   },
                 },
               },
-            } as OpenClawConfig,
+            } as DexConfig,
           },
         }),
       ),

@@ -3,20 +3,20 @@ import os from "node:os";
 import path from "node:path";
 import { loadSessionStore } from "openclaw/plugin-sdk/session-store-runtime";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../runtime-api.js";
+import type { DexConfig } from "../runtime-api.js";
 import { isFeishuSessionStoreKey, runFeishuDoctorSequence } from "./doctor.js";
 
 type EnvSnapshot = {
   HOME?: string;
-  OPENCLAW_HOME?: string;
-  OPENCLAW_STATE_DIR?: string;
+  DEX_HOME?: string;
+  DEX_STATE_DIR?: string;
 };
 
 function captureEnv(): EnvSnapshot {
   return {
     HOME: process.env.HOME,
-    OPENCLAW_HOME: process.env.OPENCLAW_HOME,
-    OPENCLAW_STATE_DIR: process.env.OPENCLAW_STATE_DIR,
+    DEX_HOME: process.env.DEX_HOME,
+    DEX_STATE_DIR: process.env.DEX_STATE_DIR,
   };
 }
 
@@ -31,7 +31,7 @@ function restoreEnv(snapshot: EnvSnapshot) {
   }
 }
 
-function feishuConfig(): OpenClawConfig {
+function feishuConfig(): DexConfig {
   return {
     channels: {
       feishu: {
@@ -39,13 +39,13 @@ function feishuConfig(): OpenClawConfig {
         appSecret: "secret_xxx",
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 function stateDir(): string {
-  const dir = process.env.OPENCLAW_STATE_DIR;
+  const dir = process.env.DEX_STATE_DIR;
   if (!dir) {
-    throw new Error("OPENCLAW_STATE_DIR is not set");
+    throw new Error("DEX_STATE_DIR is not set");
   }
   return dir;
 }
@@ -107,9 +107,9 @@ describe("Feishu doctor state repair", () => {
     envSnapshot = captureEnv();
     tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-feishu-doctor-"));
     process.env.HOME = tempHome;
-    process.env.OPENCLAW_HOME = tempHome;
-    process.env.OPENCLAW_STATE_DIR = path.join(tempHome, ".openclaw");
-    fs.mkdirSync(process.env.OPENCLAW_STATE_DIR, { recursive: true, mode: 0o700 });
+    process.env.DEX_HOME = tempHome;
+    process.env.DEX_STATE_DIR = path.join(tempHome, ".dex");
+    fs.mkdirSync(process.env.DEX_STATE_DIR, { recursive: true, mode: 0o700 });
   });
 
   afterEach(() => {
@@ -169,7 +169,7 @@ describe("Feishu doctor state repair", () => {
       cfg: {
         ...feishuConfig(),
         session: { store: customStorePath },
-      } as OpenClawConfig,
+      } as DexConfig,
       env: process.env,
       shouldRepair: false,
     });

@@ -6,7 +6,7 @@ import { loadOrCreateDeviceIdentity } from "../../src/infra/device-identity.js";
 import { extractFirstTextBlock } from "../../src/shared/chat-message-content.js";
 import { sleep } from "../../src/utils.js";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../../src/utils/message-channel.js";
-import { createOpenClawTestInstance, type OpenClawTestInstance } from "./openclaw-test-instance.js";
+import { createDexTestInstance, type DexTestInstance } from "./openclaw-test-instance.js";
 
 export { extractFirstTextBlock };
 
@@ -17,7 +17,7 @@ export type ChatEventPayload = {
   message?: unknown;
 };
 
-export type GatewayInstance = OpenClawTestInstance;
+export type GatewayInstance = DexTestInstance;
 
 const GATEWAY_CONNECT_STATUS_TIMEOUT_MS = 10_000;
 const GATEWAY_NODE_STATUS_TIMEOUT_MS = 15_000;
@@ -31,7 +31,7 @@ export type PostJsonOptions = {
 };
 
 export async function spawnGatewayInstance(name: string): Promise<GatewayInstance> {
-  const inst = await createOpenClawTestInstance({ name });
+  const inst = await createDexTestInstance({ name });
   try {
     await inst.startGateway();
     return inst;

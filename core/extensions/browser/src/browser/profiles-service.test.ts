@@ -2,17 +2,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getRuntimeConfig } from "../config/config.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveOpenClawUserDataDir } from "./chrome.js";
 import type { BrowserRouteContext, BrowserServerState } from "./server-context.js";
 import { movePathToTrash } from "./trash.js";
 
 const configMocks = vi.hoisted(() => ({
-  getRuntimeConfig: vi.fn<() => OpenClawConfig>(),
-  writeConfigFile: vi.fn<(cfg: OpenClawConfig) => Promise<void>>(async (_cfg) => {}),
+  getRuntimeConfig: vi.fn<() => DexConfig>(),
+  writeConfigFile: vi.fn<(cfg: DexConfig) => Promise<void>>(async (_cfg) => {}),
   mutateConfigFile: vi.fn(
     async (params: {
-      mutate: (draft: OpenClawConfig, context: { snapshot: { path: string } }) => unknown;
+      mutate: (draft: DexConfig, context: { snapshot: { path: string } }) => unknown;
     }) => {
       const draft = structuredClone(configMocks.getRuntimeConfig());
       const result = await params.mutate(draft, { snapshot: { path: "/tmp/openclaw.json" } });
@@ -37,7 +37,7 @@ vi.mock("../config/config.js", async () => {
   const actual = await vi.importActual<typeof import("../config/config.js")>("../config/config.js");
   return {
     ...actual,
-    replaceConfigFile: vi.fn(async ({ nextConfig }: { nextConfig: OpenClawConfig }) => {
+    replaceConfigFile: vi.fn(async ({ nextConfig }: { nextConfig: DexConfig }) => {
       await configMocks.writeConfigFile(nextConfig);
     }),
     mutateConfigFile: configMocks.mutateConfigFile,
@@ -184,13 +184,13 @@ describe("BrowserProfilesService", () => {
           cdpPortRangeStart: 19000,
           profiles: {},
         },
-      } as OpenClawConfig)
+      } as DexConfig)
       .mockReturnValue({
         browser: {
           cdpPortRangeEnd: 18801,
           profiles: {},
         },
-      } as unknown as OpenClawConfig);
+      } as unknown as DexConfig);
 
     const service = createBrowserProfilesService(ctx);
     const result = await service.createProfile({ name: "work" });

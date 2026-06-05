@@ -20,9 +20,9 @@ describe("qqbot legacy credential backup paths", () => {
     }
   });
 
-  it("scopes legacy credential backup imports to the active OPENCLAW_STATE_DIR", () => {
+  it("scopes legacy credential backup imports to the active DEX_STATE_DIR", () => {
     const stateDir = createTempDir("qqbot-state-");
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
 
     expect(getCredentialBackupFile("default")).toBe(
       path.join(stateDir, "qqbot", "data", "credential-backup-default.json"),
@@ -36,10 +36,10 @@ describe("qqbot legacy credential backup paths", () => {
     const stateDirA = createTempDir("qqbot-state-a-");
     const stateDirB = createTempDir("qqbot-state-b-");
 
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDirA);
+    vi.stubEnv("DEX_STATE_DIR", stateDirA);
     const gatewayAPath = getCredentialBackupFile("default");
 
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDirB);
+    vi.stubEnv("DEX_STATE_DIR", stateDirB);
     const gatewayBPath = getCredentialBackupFile("default");
 
     expect(gatewayAPath).toBe(
@@ -51,21 +51,21 @@ describe("qqbot legacy credential backup paths", () => {
     expect(gatewayBPath).not.toBe(gatewayAPath);
   });
 
-  it("uses OPENCLAW_HOME for default legacy credential backup imports", () => {
+  it("uses DEX_HOME for default legacy credential backup imports", () => {
     const homeDir = createTempDir("qqbot-openclaw-home-");
-    vi.stubEnv("OPENCLAW_STATE_DIR", "");
-    vi.stubEnv("OPENCLAW_HOME", homeDir);
+    vi.stubEnv("DEX_STATE_DIR", "");
+    vi.stubEnv("DEX_HOME", homeDir);
 
     expect(getCredentialBackupFile("default")).toBe(
-      path.join(homeDir, ".openclaw", "qqbot", "data", "credential-backup-default.json"),
+      path.join(homeDir, ".dex", "qqbot", "data", "credential-backup-default.json"),
     );
   });
 
   it("expands tilde state-dir overrides through the canonical state resolver", () => {
     const homeDir = createTempDir("qqbot-home-");
     vi.stubEnv("HOME", homeDir);
-    vi.stubEnv("OPENCLAW_HOME", "");
-    vi.stubEnv("OPENCLAW_STATE_DIR", "~/gateway-a");
+    vi.stubEnv("DEX_HOME", "");
+    vi.stubEnv("DEX_STATE_DIR", "~/gateway-a");
 
     expect(getCredentialBackupFile("default")).toBe(
       path.join(homeDir, "gateway-a", "qqbot", "data", "credential-backup-default.json"),

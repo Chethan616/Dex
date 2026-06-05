@@ -39,8 +39,8 @@ If you want to share credentials, copy auth-profiles.json instead of sharing the
       {
         agents: {
           list: [
-            { id: "a", agentDir: "~/.openclaw/agents/shared/agent" },
-            { id: "b", agentDir: "~/.openclaw/agents/shared/agent" },
+            { id: "a", agentDir: "~/.dex/agents/shared/agent" },
+            { id: "b", agentDir: "~/.dex/agents/shared/agent" },
           ],
         },
         bindings: [{ agentId: "a", match: { channel: "forum" } }],

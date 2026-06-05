@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 
 const getLoadedChannelPluginMock = vi.hoisted(() => vi.fn());
 
@@ -18,7 +18,7 @@ describe("resolveQueueSettings runtime defaults", () => {
     });
     const { resolveQueueSettings } = await import("./settings-runtime.js");
 
-    expect(resolveQueueSettings({ cfg: {} as OpenClawConfig, channel: "demo" })).toEqual({
+    expect(resolveQueueSettings({ cfg: {} as DexConfig, channel: "demo" })).toEqual({
       mode: "steer",
       debounceMs: 125,
       cap: 20,
@@ -31,7 +31,7 @@ describe("resolveQueueSettings runtime defaults", () => {
     getLoadedChannelPluginMock.mockReturnValueOnce(undefined);
     const { resolveQueueSettings } = await import("./settings-runtime.js");
 
-    expect(resolveQueueSettings({ cfg: {} as OpenClawConfig, channel: "telegram" })).toEqual({
+    expect(resolveQueueSettings({ cfg: {} as DexConfig, channel: "telegram" })).toEqual({
       mode: "steer",
       debounceMs: 500,
       cap: 20,

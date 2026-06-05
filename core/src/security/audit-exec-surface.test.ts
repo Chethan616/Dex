@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { saveExecApprovals } from "../infra/exec-approvals.js";
 import { collectExecRuntimeFindings } from "./audit.js";
 
@@ -32,9 +32,9 @@ function requireFinding(
 }
 
 describe("security audit exec surface findings", () => {
-  // Redirect the OpenClaw home (OPENCLAW_HOME wins over HOME/USERPROFILE in
+  // Redirect the OpenClaw home (DEX_HOME wins over HOME/USERPROFILE in
   // `resolveRawHomeDir`) to a per-test tempdir so `saveExecApprovals` never
-  // touches the real `~/.openclaw/exec-approvals.json` on the host running
+  // touches the real `~/.dex/exec-approvals.json` on the host running
   // the suite.
   let previousOpenClawHome: string | undefined;
   let previousHome: string | undefined;
@@ -47,15 +47,15 @@ describe("security audit exec surface findings", () => {
   });
 
   beforeEach(async () => {
-    previousOpenClawHome = process.env.OPENCLAW_HOME;
+    previousOpenClawHome = process.env.DEX_HOME;
     previousHome = process.env.HOME;
     previousUserProfile = process.env.USERPROFILE;
     const tempDir = path.join(tempRoot, `case-${++tempCaseIndex}`);
-    await fs.mkdir(path.join(tempDir, ".openclaw"), { recursive: true });
-    // OPENCLAW_HOME takes precedence over HOME/USERPROFILE in resolveRawHomeDir,
+    await fs.mkdir(path.join(tempDir, ".dex"), { recursive: true });
+    // DEX_HOME takes precedence over HOME/USERPROFILE in resolveRawHomeDir,
     // so all three must point at the tempdir to neutralize whichever the host
     // happens to have set.
-    process.env.OPENCLAW_HOME = tempDir;
+    process.env.DEX_HOME = tempDir;
     process.env.HOME = tempDir;
     // Windows uses USERPROFILE for os.homedir()
     process.env.USERPROFILE = tempDir;
@@ -64,9 +64,9 @@ describe("security audit exec surface findings", () => {
   afterEach(() => {
     saveExecApprovals({ version: 1, agents: {} });
     if (previousOpenClawHome === undefined) {
-      delete process.env.OPENCLAW_HOME;
+      delete process.env.DEX_HOME;
     } else {
-      process.env.OPENCLAW_HOME = previousOpenClawHome;
+      process.env.DEX_HOME = previousOpenClawHome;
     }
     if (previousHome === undefined) {
       delete process.env.HOME;
@@ -113,7 +113,7 @@ describe("security audit exec surface findings", () => {
           },
         },
       },
-    } satisfies OpenClawConfig);
+    } satisfies DexConfig);
 
     const finding = findings.find(
       (entry) => entry.checkId === "agents.claude_cli.permission_mode_overridden_by_yolo",
@@ -141,7 +141,7 @@ describe("security audit exec surface findings", () => {
           },
         },
       },
-    } satisfies OpenClawConfig);
+    } satisfies DexConfig);
 
     expect(
       hasFinding("agents.claude_cli.permission_mode_overridden_by_yolo", "warn", findings),
@@ -164,7 +164,7 @@ describe("security audit exec surface findings", () => {
           },
         },
       },
-    } satisfies OpenClawConfig);
+    } satisfies DexConfig);
 
     expect(
       hasFinding("agents.claude_cli.permission_mode_overridden_by_yolo", "warn", findings),
@@ -184,7 +184,7 @@ describe("security audit exec surface findings", () => {
           },
         },
       },
-    } satisfies OpenClawConfig);
+    } satisfies DexConfig);
 
     expect(
       hasFinding("agents.claude_cli.permission_mode_overridden_by_yolo", "warn", findings),
@@ -204,7 +204,7 @@ describe("security audit exec surface findings", () => {
           },
         },
       },
-    } satisfies OpenClawConfig);
+    } satisfies DexConfig);
 
     expect(
       hasFinding("agents.claude_cli.permission_mode_overridden_by_yolo", "warn", findings),
@@ -225,7 +225,7 @@ describe("security audit exec surface findings", () => {
           },
         },
       },
-    } satisfies OpenClawConfig);
+    } satisfies DexConfig);
 
     expect(
       hasFinding("agents.claude_cli.permission_mode_overridden_by_yolo", "warn", findings),
@@ -253,7 +253,7 @@ describe("security audit exec surface findings", () => {
           agents: {
             list: [{ id: "ops" }],
           },
-        } satisfies OpenClawConfig),
+        } satisfies DexConfig),
       ),
     ).toBe(true);
   });
@@ -278,7 +278,7 @@ describe("security audit exec surface findings", () => {
               strictInlineEval: true,
             },
           },
-        } satisfies OpenClawConfig),
+        } satisfies DexConfig),
       ),
     ).toBe(false);
   });
@@ -296,7 +296,7 @@ describe("security audit exec surface findings", () => {
           host: "gateway",
         },
       },
-    } satisfies OpenClawConfig);
+    } satisfies DexConfig);
 
     expect(hasFinding("security.exposure.open_channels_with_exec", "warn", findings)).toBe(true);
   });
@@ -313,7 +313,7 @@ describe("security audit exec surface findings", () => {
           security: "full",
         },
       },
-    } satisfies OpenClawConfig);
+    } satisfies DexConfig);
 
     expect(hasFinding("tools.exec.security_full_configured", "critical", findings)).toBe(true);
     expect(hasFinding("security.exposure.open_channels_with_exec", "critical", findings)).toBe(
@@ -327,7 +327,7 @@ describe("security audit exec surface findings", () => {
         allow: ["read", "exec", "process"],
         deny: ["write", "edit", "apply_patch"],
       },
-    } satisfies OpenClawConfig);
+    } satisfies DexConfig);
 
     const finding = requireFinding("tools.exec.fs_tools_disabled_but_exec_enabled", findings);
     expect(finding.severity).toBe("warn");
@@ -350,7 +350,7 @@ describe("security audit exec surface findings", () => {
         allow: ["read", "exec", "process"],
         deny: ["write", "edit", "apply_patch"],
       },
-    } satisfies OpenClawConfig);
+    } satisfies DexConfig);
 
     expect(hasFinding("tools.exec.fs_tools_disabled_but_exec_enabled", "warn", findings)).toBe(
       false,

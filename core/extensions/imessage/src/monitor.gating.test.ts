@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetIMessageShortIdState } from "./monitor-reply-cache.js";
 import {
@@ -14,7 +14,7 @@ beforeEach(() => {
   resetIMessageShortIdState();
 });
 
-function baseCfg(): OpenClawConfig {
+function baseCfg(): DexConfig {
   return {
     channels: {
       imessage: {
@@ -28,11 +28,11 @@ function baseCfg(): OpenClawConfig {
     messages: {
       groupChat: { mentionPatterns: ["@openclaw"] },
     },
-  } as unknown as OpenClawConfig;
+  } as unknown as DexConfig;
 }
 
 async function resolve(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   message: IMessagePayload;
   storeAllowFrom?: string[];
 }) {
@@ -56,7 +56,7 @@ async function resolve(params: {
 }
 
 async function resolveDispatchDecision(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   message: IMessagePayload;
   groupHistories?: Parameters<typeof resolveIMessageInboundDecision>[0]["groupHistories"];
   allowFrom?: string[];
@@ -90,7 +90,7 @@ async function resolveDispatchDecision(params: {
 }
 
 async function buildDispatchContextPayload(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   message: IMessagePayload;
 }) {
   const { cfg, message } = params;

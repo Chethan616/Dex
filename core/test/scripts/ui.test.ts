@@ -182,7 +182,7 @@ describe("scripts/ui windows spawn behavior", () => {
       encoding: "utf8",
       env: {
         ...process.env,
-        OPENCLAW_BUILD_ALL_NO_PNPM: "1",
+        DEX_BUILD_ALL_NO_PNPM: "1",
         PATH: "",
       },
     });

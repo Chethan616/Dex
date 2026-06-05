@@ -50,7 +50,7 @@ describe("agent cleanup timeout", () => {
       cleanup,
       log,
       env: {
-        OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS: "25000",
+        DEX_TRAJECTORY_FLUSH_TIMEOUT_MS: "25000",
       },
     });
 
@@ -177,7 +177,7 @@ describe("agent cleanup timeout", () => {
       cleanup,
       log,
       env: {
-        OPENCLAW_AGENT_CLEANUP_TIMEOUT_MS: "1500",
+        DEX_AGENT_CLEANUP_TIMEOUT_MS: "1500",
       },
     });
 
@@ -195,8 +195,8 @@ describe("agent cleanup timeout", () => {
         step: "openclaw-trajectory-flush",
         timeoutMs: 2_000,
         env: {
-          OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS: "25000",
-          OPENCLAW_AGENT_CLEANUP_TIMEOUT_MS: "15000",
+          DEX_TRAJECTORY_FLUSH_TIMEOUT_MS: "25000",
+          DEX_AGENT_CLEANUP_TIMEOUT_MS: "15000",
         },
       }),
     ).toBe(2_000);
@@ -208,7 +208,7 @@ describe("agent cleanup timeout", () => {
         step: "openclaw-trajectory-flush",
         timeoutMs: 0,
         env: {
-          OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS: "25000",
+          DEX_TRAJECTORY_FLUSH_TIMEOUT_MS: "25000",
         },
       }),
     ).toBe(1);
@@ -219,8 +219,8 @@ describe("agent cleanup timeout", () => {
       resolveAgentCleanupStepTimeoutMs({
         step: "openclaw-trajectory-flush",
         env: {
-          OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS: "0",
-          OPENCLAW_AGENT_CLEANUP_TIMEOUT_MS: "not-a-number",
+          DEX_TRAJECTORY_FLUSH_TIMEOUT_MS: "0",
+          DEX_AGENT_CLEANUP_TIMEOUT_MS: "not-a-number",
         },
       }),
     ).toBe(AGENT_CLEANUP_STEP_TIMEOUT_MS);
@@ -228,8 +228,8 @@ describe("agent cleanup timeout", () => {
       resolveAgentCleanupStepTimeoutMs({
         step: "openclaw-trajectory-flush",
         env: {
-          OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS: "1e3",
-          OPENCLAW_AGENT_CLEANUP_TIMEOUT_MS: "0x10",
+          DEX_TRAJECTORY_FLUSH_TIMEOUT_MS: "1e3",
+          DEX_AGENT_CLEANUP_TIMEOUT_MS: "0x10",
         },
       }),
     ).toBe(AGENT_CLEANUP_STEP_TIMEOUT_MS);

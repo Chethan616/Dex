@@ -83,7 +83,7 @@ describe("registerWorkboardCli", () => {
     gatewayRuntime.callGatewayFromCli.mockReset();
     gatewayRuntime.getRuntimeConfig.mockReset();
     gatewayRuntime.getRuntimeConfig.mockReturnValue({});
-    delete process.env.OPENCLAW_GATEWAY_URL;
+    delete process.env.DEX_GATEWAY_URL;
   });
 
   it("redacts claim tokens from card JSON output", async () => {

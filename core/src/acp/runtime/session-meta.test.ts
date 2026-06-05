@@ -1,9 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { loadSessionStore } from "../../config/sessions/store-load.js";
-import { closeOpenClawStateDatabaseForTest } from "../../state/openclaw-state-db.js";
+import { closeDexStateDatabaseForTest } from "../../state/openclaw-state-db.js";
 import { withTempDir } from "../../test-helpers/temp-dir.js";
 import {
   listAcpSessionEntries,
@@ -14,14 +14,14 @@ import {
 
 describe("ACP session metadata SQLite store", () => {
   afterEach(() => {
-    closeOpenClawStateDatabaseForTest();
+    closeDexStateDatabaseForTest();
   });
 
   it("persists ACP metadata in SQLite without writing sessions.json acp blocks", async () => {
     await withTempDir({ prefix: "openclaw-acp-meta-" }, async (dir) => {
       const storePath = path.join(dir, "sessions.json");
       const databasePath = path.join(dir, "state", "openclaw.sqlite");
-      const cfg = { session: { store: storePath } } as OpenClawConfig;
+      const cfg = { session: { store: storePath } } as DexConfig;
       const sessionKey = "agent:codex:acp:binding:discord:default:feedface";
       await fs.writeFile(
         storePath,
@@ -73,7 +73,7 @@ describe("ACP session metadata SQLite store", () => {
     await withTempDir({ prefix: "openclaw-acp-meta-" }, async (dir) => {
       const storePath = path.join(dir, "sessions.json");
       const databasePath = path.join(dir, "state", "openclaw.sqlite");
-      const cfg = { session: { store: storePath } } as OpenClawConfig;
+      const cfg = { session: { store: storePath } } as DexConfig;
       const sessionKey = "agent:codex:acp:new-session";
 
       const result = await upsertAcpSessionMeta({
@@ -104,7 +104,7 @@ describe("ACP session metadata SQLite store", () => {
     await withTempDir({ prefix: "openclaw-acp-meta-" }, async (dir) => {
       const storePath = path.join(dir, "sessions.json");
       const databasePath = path.join(dir, "state", "openclaw.sqlite");
-      const cfg = { session: { store: storePath } } as OpenClawConfig;
+      const cfg = { session: { store: storePath } } as DexConfig;
       const storeSessionKey = "agent:codex:acp:binding:discord:default:feedface";
       const rawSessionKey = storeSessionKey.toUpperCase();
       await fs.writeFile(
@@ -173,7 +173,7 @@ describe("ACP session metadata SQLite store", () => {
     await withTempDir({ prefix: "openclaw-acp-meta-" }, async (dir) => {
       const storePath = path.join(dir, "sessions.json");
       const databasePath = path.join(dir, "state", "openclaw.sqlite");
-      const cfg = { session: { store: storePath } } as OpenClawConfig;
+      const cfg = { session: { store: storePath } } as DexConfig;
       const sessionKey = "agent:codex:acp:binding:discord:default:feedface";
       await fs.writeFile(
         storePath,
@@ -228,7 +228,7 @@ describe("ACP session metadata SQLite store", () => {
     await withTempDir({ prefix: "openclaw-acp-meta-" }, async (dir) => {
       const storePath = path.join(dir, "sessions", "codex.json");
       const databasePath = path.join(dir, "state", "openclaw.sqlite");
-      const cfg = { session: { store: storePath } } as OpenClawConfig;
+      const cfg = { session: { store: storePath } } as DexConfig;
       const sessionKey = "agent:codex:acp:s1";
       await fs.mkdir(path.dirname(storePath), { recursive: true });
       await fs.writeFile(
@@ -278,10 +278,10 @@ describe("ACP session metadata SQLite store", () => {
     });
   });
 
-  it("honors OPENCLAW_STATE_DIR when joining listed SQLite rows to session stores", async () => {
+  it("honors DEX_STATE_DIR when joining listed SQLite rows to session stores", async () => {
     await withTempDir({ prefix: "openclaw-acp-meta-" }, async (dir) => {
-      const env = { ...process.env, OPENCLAW_STATE_DIR: dir } as NodeJS.ProcessEnv;
-      const cfg = {} as OpenClawConfig;
+      const env = { ...process.env, DEX_STATE_DIR: dir } as NodeJS.ProcessEnv;
+      const cfg = {} as DexConfig;
       const sessionKey = "agent:codex:acp:s1";
       const storePath = path.join(dir, "agents", "codex", "sessions", "sessions.json");
       await fs.mkdir(path.dirname(storePath), { recursive: true });

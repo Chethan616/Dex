@@ -8,18 +8,18 @@ describe("MCP code-mode gateway Docker client fetch helper", () => {
   it("rejects loose numeric env limits instead of parsing prefixes", () => {
     expect(() =>
       readMcpCodeModeClientFetchLimits({
-        OPENCLAW_MCP_CODE_MODE_CLIENT_TIMEOUT_MS: "1e3",
+        DEX_MCP_CODE_MODE_CLIENT_TIMEOUT_MS: "1e3",
       }),
-    ).toThrow("invalid OPENCLAW_MCP_CODE_MODE_CLIENT_TIMEOUT_MS: 1e3");
+    ).toThrow("invalid DEX_MCP_CODE_MODE_CLIENT_TIMEOUT_MS: 1e3");
     expect(() =>
       readMcpCodeModeClientFetchLimits({
-        OPENCLAW_MCP_CODE_MODE_CLIENT_BODY_MAX_BYTES: "1000ms",
+        DEX_MCP_CODE_MODE_CLIENT_BODY_MAX_BYTES: "1000ms",
       }),
-    ).toThrow("invalid OPENCLAW_MCP_CODE_MODE_CLIENT_BODY_MAX_BYTES: 1000ms");
+    ).toThrow("invalid DEX_MCP_CODE_MODE_CLIENT_BODY_MAX_BYTES: 1000ms");
     expect(
       readMcpCodeModeClientFetchLimits({
-        OPENCLAW_MCP_CODE_MODE_CLIENT_BODY_MAX_BYTES: "4096",
-        OPENCLAW_MCP_CODE_MODE_CLIENT_TIMEOUT_MS: "120000",
+        DEX_MCP_CODE_MODE_CLIENT_BODY_MAX_BYTES: "4096",
+        DEX_MCP_CODE_MODE_CLIENT_TIMEOUT_MS: "120000",
       }),
     ).toEqual({
       bodyMaxBytes: 4096,

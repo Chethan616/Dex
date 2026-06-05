@@ -591,7 +591,7 @@ describe("before_tool_call loop detection behavior", () => {
   });
 
   it("matches home-compacted skill instruction paths from prompts", async () => {
-    const skillBaseDir = path.join(os.homedir(), ".openclaw", "skills", "home-skill");
+    const skillBaseDir = path.join(os.homedir(), ".dex", "skills", "home-skill");
     const skillFilePath = path.join(skillBaseDir, "SKILL.md");
     const execute = vi.fn().mockResolvedValue({ content: [{ type: "text", text: "skill" }] });
     const tool = wrapToolWithBeforeToolCallHook({ name: "read", execute } as any, {
@@ -617,7 +617,7 @@ describe("before_tool_call loop detection behavior", () => {
     await withDiagnosticEvents(async (emitted, flush) => {
       await tool.execute(
         "tool-call-home-skill",
-        { path: "~/.openclaw/skills/home-skill/SKILL.md" },
+        { path: "~/.dex/skills/home-skill/SKILL.md" },
         undefined,
         undefined,
       );

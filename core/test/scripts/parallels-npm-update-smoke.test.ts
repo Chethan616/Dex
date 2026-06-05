@@ -131,7 +131,7 @@ describe("parallels npm update smoke", () => {
     expect(script).toContain("assertPublishedTargetMatchesHarnessCheckout");
     expect(script).toContain("readHarnessCheckoutVersion");
     expect(script).toContain("openClawVersionFamily");
-    expect(script).toContain("OPENCLAW_PARALLELS_ALLOW_HARNESS_TARGET_MISMATCH");
+    expect(script).toContain("DEX_PARALLELS_ALLOW_HARNESS_TARGET_MISMATCH");
     expect(script).toContain("checkout the matching release branch");
   });
 
@@ -189,20 +189,20 @@ describe("parallels npm update smoke", () => {
   });
 
   it("sets platform-aware fresh lane timeouts", () => {
-    const previous = process.env.OPENCLAW_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S;
+    const previous = process.env.DEX_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S;
     try {
-      delete process.env.OPENCLAW_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S;
+      delete process.env.DEX_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S;
       expect(freshLaneTimeoutMs("macos")).toBe(75 * 60 * 1000);
       expect(freshLaneTimeoutMs("linux")).toBe(75 * 60 * 1000);
       expect(freshLaneTimeoutMs("windows")).toBe(90 * 60 * 1000);
 
-      process.env.OPENCLAW_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S = "3";
+      process.env.DEX_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S = "3";
       expect(freshLaneTimeoutMs("macos")).toBe(3000);
     } finally {
       if (previous === undefined) {
-        delete process.env.OPENCLAW_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S;
+        delete process.env.DEX_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S;
       } else {
-        process.env.OPENCLAW_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S = previous;
+        process.env.DEX_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S = previous;
       }
     }
   });
@@ -251,8 +251,8 @@ describe("parallels npm update smoke", () => {
 
     expect(script).toContain("runWindowsBackgroundPowerShell");
     expect(transports).toContain("runWindowsBackgroundPowerShell");
-    expect(transports).toContain("__OPENCLAW_BACKGROUND_EXIT__");
-    expect(transports).toContain("__OPENCLAW_BACKGROUND_DONE__");
+    expect(transports).toContain("__DEX_BACKGROUND_EXIT__");
+    expect(transports).toContain("__DEX_BACKGROUND_DONE__");
     expect(transports).toContain("${options.label} timed out");
   });
 
@@ -285,7 +285,7 @@ describe("parallels npm update smoke", () => {
     expect(commands).toContain("-PassThru");
     expect(commands).toContain("[System.IO.File]::Open($logPath");
     expect(commands).toContain("[Math]::Min($length - $offset, 64)");
-    expect(commands).toContain("Stop-OpenClawBackgroundProcessTree ([int]$backgroundPid)");
+    expect(commands).toContain("Stop-DexBackgroundProcessTree ([int]$backgroundPid)");
     expect(commands).toContain(
       'Get-CimInstance Win32_Process -Filter "ParentProcessId=$ProcessId"',
     );
@@ -305,7 +305,7 @@ describe("parallels npm update smoke", () => {
       if (decoded.includes("Start-Process")) {
         return { status: 0, stderr: "", stdout: "started\n" };
       }
-      if (decoded.includes("__OPENCLAW_LOG_LENGTH__")) {
+      if (decoded.includes("__DEX_LOG_LENGTH__")) {
         pollCount += 1;
         return {
           status: 0,
@@ -313,19 +313,19 @@ describe("parallels npm update smoke", () => {
           stdout:
             pollCount === 1
               ? [
-                  "__OPENCLAW_LOG_LENGTH__:128",
-                  "__OPENCLAW_LOG_OFFSET__:64",
+                  "__DEX_LOG_LENGTH__:128",
+                  "__DEX_LOG_OFFSET__:64",
                   "first chunk",
-                  "__OPENCLAW_BACKGROUND_EXIT__:0",
-                  "__OPENCLAW_BACKGROUND_DONE__",
+                  "__DEX_BACKGROUND_EXIT__:0",
+                  "__DEX_BACKGROUND_DONE__",
                   "",
                 ].join("\n")
               : [
-                  "__OPENCLAW_LOG_LENGTH__:128",
-                  "__OPENCLAW_LOG_OFFSET__:128",
+                  "__DEX_LOG_LENGTH__:128",
+                  "__DEX_LOG_OFFSET__:128",
                   "second chunk",
-                  "__OPENCLAW_BACKGROUND_EXIT__:0",
-                  "__OPENCLAW_BACKGROUND_DONE__",
+                  "__DEX_BACKGROUND_EXIT__:0",
+                  "__DEX_BACKGROUND_DONE__",
                   "",
                 ].join("\n"),
         };
@@ -350,7 +350,7 @@ describe("parallels npm update smoke", () => {
     expect(pollCount).toBe(2);
     expect(output.join("")).toContain("first chunk");
     expect(output.join("")).toContain("second chunk");
-    expect(decodedCommands.join("\n")).not.toContain("Stop-OpenClawBackgroundProcessTree");
+    expect(decodedCommands.join("\n")).not.toContain("Stop-DexBackgroundProcessTree");
     expect(decodedCommands.join("\n")).toContain(
       "Remove-Item -Path $scriptPath, $logPath, $donePath, $exitPath, $pidPath",
     );
@@ -375,21 +375,21 @@ describe("parallels npm update smoke", () => {
     expect(script).toContain("scrub_future_plugin_entries");
     expect(script).toContain("delete plugins.entries.feishu");
     expect(script).toContain("delete plugins.entries.whatsapp");
-    expect(script).toContain("Remove-FuturePluginEntries\nStop-OpenClawGatewayProcesses");
+    expect(script).toContain("Remove-FuturePluginEntries\nStop-DexGatewayProcesses");
     expect(script).toContain("scrub_future_plugin_entries\nstop_openclaw_gateway_processes");
-    expect(script).toContain("Invoke-WithScopedEnv @{ OPENCLAW_DISABLE_BUNDLED_PLUGINS = '1'");
-    expect(macosScript).toContain('OPENCLAW_BIN="$(resolve_required_command openclaw)"');
+    expect(script).toContain("Invoke-WithScopedEnv @{ DEX_DISABLE_BUNDLED_PLUGINS = '1'");
+    expect(macosScript).toContain('DEX_BIN="$(resolve_required_command openclaw)"');
     expect(macosScript).toContain("/usr/local/bin:/usr/local/sbin");
     expect(macosScript).toContain(
-      'OPENCLAW_DISABLE_BUNDLED_PLUGINS=1 "$OPENCLAW_BIN" update --tag',
+      'DEX_DISABLE_BUNDLED_PLUGINS=1 "$DEX_BIN" update --tag',
     );
     expect(macosScript).not.toContain("/opt/homebrew/bin/openclaw");
-    expect(script).toContain("OPENCLAW_DISABLE_BUNDLED_PLUGINS=1 openclaw update --tag");
+    expect(script).toContain("DEX_DISABLE_BUNDLED_PLUGINS=1 openclaw update --tag");
     expect(macosScript).toContain(
-      'OPENCLAW_DISABLE_BUNDLED_PLUGINS=1 "$OPENCLAW_BIN" gateway stop',
+      'DEX_DISABLE_BUNDLED_PLUGINS=1 "$DEX_BIN" gateway stop',
     );
     expect(script).toContain(
-      "OPENCLAW_DISABLE_BUNDLED_PLUGINS=1 OPENCLAW_ALLOW_ROOT=1 openclaw gateway stop",
+      "DEX_DISABLE_BUNDLED_PLUGINS=1 DEX_ALLOW_ROOT=1 openclaw gateway stop",
     );
   });
 
@@ -401,7 +401,7 @@ describe("parallels npm update smoke", () => {
     });
 
     const updateIndex = script.indexOf("Invoke-OpenClaw update --tag");
-    const scopedIndex = script.indexOf("Invoke-WithScopedEnv @{ OPENCLAW_DISABLE_BUNDLED_PLUGINS");
+    const scopedIndex = script.indexOf("Invoke-WithScopedEnv @{ DEX_DISABLE_BUNDLED_PLUGINS");
     const versionIndex = script.indexOf("Invoke-OpenClaw --version", scopedIndex);
     const restartIndex = script.indexOf("Invoke-OpenClaw gateway restart");
     const agentIndex = script.indexOf("Invoke-OpenClaw agent --local");
@@ -412,7 +412,7 @@ describe("parallels npm update smoke", () => {
     expect(versionIndex).toBeGreaterThan(updateIndex);
     expect(restartIndex).toBeGreaterThan(updateIndex);
     expect(agentIndex).toBeGreaterThan(updateIndex);
-    expect(script).not.toContain("$env:OPENCLAW_DISABLE_BUNDLED_PLUGINS = '1'");
+    expect(script).not.toContain("$env:DEX_DISABLE_BUNDLED_PLUGINS = '1'");
   });
 
   it("generates a .NET-safe Windows stale import regex in the update-failure guard", () => {

@@ -32,10 +32,10 @@ function runWriteConfig(root: string, env: Record<string, string> = {}) {
     encoding: "utf8",
     env: {
       ...process.env,
-      OPENCLAW_CONFIG_PATH: path.join(root, "openclaw.json"),
-      OPENCLAW_GATEWAY_TOKEN: "test-token",
-      OPENCLAW_STATE_DIR: path.join(root, "state"),
-      OPENCLAW_TEST_WORKSPACE_DIR: path.join(root, "workspace"),
+      DEX_CONFIG_PATH: path.join(root, "openclaw.json"),
+      DEX_GATEWAY_TOKEN: "test-token",
+      DEX_STATE_DIR: path.join(root, "state"),
+      DEX_TEST_WORKSPACE_DIR: path.join(root, "workspace"),
       PORT: "18790",
       ...env,
     },
@@ -51,21 +51,21 @@ afterEach(() => {
 describe("codex media path limits", () => {
   it("rejects loose numeric env values instead of parsing prefixes", () => {
     expect(() =>
-      readPositiveIntEnv("OPENCLAW_CODEX_MEDIA_PATH_TIMEOUT_SECONDS", 180, {
-        OPENCLAW_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: "1e3",
+      readPositiveIntEnv("DEX_CODEX_MEDIA_PATH_TIMEOUT_SECONDS", 180, {
+        DEX_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: "1e3",
       }),
-    ).toThrow("invalid OPENCLAW_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: 1e3");
+    ).toThrow("invalid DEX_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: 1e3");
     expect(() =>
-      readPositiveIntEnv("OPENCLAW_CODEX_MEDIA_PATH_LOG_TAIL_MAX_BYTES", 2 * 1024 * 1024, {
-        OPENCLAW_CODEX_MEDIA_PATH_LOG_TAIL_MAX_BYTES: "64bytes",
+      readPositiveIntEnv("DEX_CODEX_MEDIA_PATH_LOG_TAIL_MAX_BYTES", 2 * 1024 * 1024, {
+        DEX_CODEX_MEDIA_PATH_LOG_TAIL_MAX_BYTES: "64bytes",
       }),
-    ).toThrow("invalid OPENCLAW_CODEX_MEDIA_PATH_LOG_TAIL_MAX_BYTES: 64bytes");
+    ).toThrow("invalid DEX_CODEX_MEDIA_PATH_LOG_TAIL_MAX_BYTES: 64bytes");
   });
 
   it("writes strict positive timeout and port values into generated config", () => {
     const root = makeTempRoot();
     const result = runWriteConfig(root, {
-      OPENCLAW_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: "240",
+      DEX_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: "240",
       PORT: "19002",
     });
 
@@ -79,11 +79,11 @@ describe("codex media path limits", () => {
   it("rejects loose write-config timeout env values", () => {
     const root = makeTempRoot();
     const result = runWriteConfig(root, {
-      OPENCLAW_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: "1e3",
+      DEX_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: "1e3",
     });
 
     expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain("invalid OPENCLAW_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: 1e3");
+    expect(result.stderr).toContain("invalid DEX_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: 1e3");
   });
 });
 

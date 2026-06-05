@@ -89,7 +89,7 @@ describe("detectLinuxSdBackedStateDir", () => {
   it("returns null outside linux", () => {
     const mountInfo = "24 19 179:2 / / rw,relatime - ext4 /dev/mmcblk0p2 rw";
 
-    const result = detectLinuxSdBackedStateDir(path.join("/Users", "tester", ".openclaw"), {
+    const result = detectLinuxSdBackedStateDir(path.join("/Users", "tester", ".dex"), {
       platform: "darwin",
       mountInfo,
     });

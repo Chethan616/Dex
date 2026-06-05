@@ -47,7 +47,7 @@ describe("pinIosVersion", () => {
     );
     expect(
       fs.readFileSync(path.join(rootDir, "apps", "ios", "Config", "Version.xcconfig"), "utf8"),
-    ).toContain("OPENCLAW_MARKETING_VERSION = 2026.4.7");
+    ).toContain("DEX_MARKETING_VERSION = 2026.4.7");
     expect(
       fs.readFileSync(
         path.join(rootDir, "apps", "ios", "fastlane", "metadata", "en-US", "release_notes.txt"),

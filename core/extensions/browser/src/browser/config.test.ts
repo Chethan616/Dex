@@ -6,7 +6,7 @@ import type { BrowserConfig } from "../config/config.js";
 import { resolveUserPath } from "../utils.js";
 import {
   getManagedBrowserMissingDisplayError,
-  OPENCLAW_BROWSER_HEADLESS_ENV,
+  DEX_BROWSER_HEADLESS_ENV,
   resolveBrowserConfig,
   resolveManagedBrowserHeadlessMode,
   resolveProfile,
@@ -77,8 +77,8 @@ describe("browser config", () => {
     });
   });
 
-  it("derives default ports from OPENCLAW_GATEWAY_PORT when unset", () => {
-    withEnv({ OPENCLAW_GATEWAY_PORT: "19001" }, () => {
+  it("derives default ports from DEX_GATEWAY_PORT when unset", () => {
+    withEnv({ DEX_GATEWAY_PORT: "19001" }, () => {
       const resolved = resolveBrowserConfig(undefined);
       expect(resolved.controlPort).toBe(19003);
       expect(resolveProfile(resolved, "chrome-relay")).toBe(null);
@@ -90,7 +90,7 @@ describe("browser config", () => {
   });
 
   it("derives default ports from gateway.port when env is unset", () => {
-    withEnv({ OPENCLAW_GATEWAY_PORT: undefined }, () => {
+    withEnv({ DEX_GATEWAY_PORT: undefined }, () => {
       const resolved = resolveBrowserConfig(undefined, { gateway: { port: 19011 } });
       expect(resolved.controlPort).toBe(19013);
       expect(resolveProfile(resolved, "chrome-relay")).toBe(null);
@@ -340,7 +340,7 @@ describe("browser config", () => {
     const noDisplayEnv = {
       DISPLAY: undefined,
       WAYLAND_DISPLAY: undefined,
-      [OPENCLAW_BROWSER_HEADLESS_ENV]: undefined,
+      [DEX_BROWSER_HEADLESS_ENV]: undefined,
     };
 
     it("falls back to headless for local managed Linux profiles without display", () => {
@@ -400,7 +400,7 @@ describe("browser config", () => {
       ).toEqual({ headless: false, source: "config" });
     });
 
-    it("lets OPENCLAW_BROWSER_HEADLESS override profile/global config", () => {
+    it("lets DEX_BROWSER_HEADLESS override profile/global config", () => {
       const resolved = resolveBrowserConfig({
         profiles: {
           openclaw: { cdpPort: 18800, color: "#FF4500", headless: false },
@@ -411,7 +411,7 @@ describe("browser config", () => {
       expect(
         resolveManagedBrowserHeadlessMode(resolved, profile, {
           platform: "linux",
-          env: { ...noDisplayEnv, [OPENCLAW_BROWSER_HEADLESS_ENV]: "1" },
+          env: { ...noDisplayEnv, [DEX_BROWSER_HEADLESS_ENV]: "1" },
         }),
       ).toEqual({ headless: true, source: "env" });
     });
@@ -429,7 +429,7 @@ describe("browser config", () => {
         resolveManagedBrowserHeadlessMode(resolved, profile, {
           headlessOverride: true,
           platform: "linux",
-          env: { ...noDisplayEnv, [OPENCLAW_BROWSER_HEADLESS_ENV]: "0" },
+          env: { ...noDisplayEnv, [DEX_BROWSER_HEADLESS_ENV]: "0" },
         }),
       ).toEqual({ headless: true, source: "request" });
     });

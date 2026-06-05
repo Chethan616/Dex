@@ -24,10 +24,10 @@ import {
 import { buildUpdateRestartSentinelPayload } from "./update-restart-sentinel-payload.js";
 
 async function withRestartSentinelStateDir(run: () => Promise<void>): Promise<void> {
-  const envSnapshot = captureEnv(["OPENCLAW_STATE_DIR"]);
+  const envSnapshot = captureEnv(["DEX_STATE_DIR"]);
   try {
     await withTempDir({ prefix: "openclaw-sentinel-" }, async (tempDir) => {
-      process.env.OPENCLAW_STATE_DIR = tempDir;
+      process.env.DEX_STATE_DIR = tempDir;
       await run();
     });
   } finally {
@@ -372,7 +372,7 @@ describe("restart sentinel message dedup", () => {
   it("keeps profile-aware doctor guidance actionable outside constrained delivery surfaces", () => {
     expect(
       formatDoctorNonInteractiveHint({
-        OPENCLAW_PROFILE: "isolated",
+        DEX_PROFILE: "isolated",
         PATH: "/usr/bin:/bin",
       }),
     ).toBe(

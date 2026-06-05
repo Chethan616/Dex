@@ -8,7 +8,7 @@ import {
   resolveOpenClawManifestBlock,
   resolveOpenClawManifestInstall,
   resolveOpenClawManifestOs,
-  resolveOpenClawManifestRequires,
+  resolveDexManifestRequires,
 } from "./frontmatter.js";
 
 function expectInstallBase(
@@ -93,21 +93,21 @@ describe("shared/frontmatter", () => {
 
   it("normalizes manifest requirement and os lists", () => {
     expect(
-      resolveOpenClawManifestRequires({
+      resolveDexManifestRequires({
         requires: {
           bins: "bun, node",
           anyBins: [" ffmpeg ", ""],
-          env: ["OPENCLAW_TOKEN", " OPENCLAW_URL "],
+          env: ["DEX_TOKEN", " DEX_URL "],
           config: null,
         },
       }),
     ).toEqual({
       bins: ["bun", "node"],
       anyBins: ["ffmpeg"],
-      env: ["OPENCLAW_TOKEN", "OPENCLAW_URL"],
+      env: ["DEX_TOKEN", "DEX_URL"],
       config: [],
     });
-    expect(resolveOpenClawManifestRequires({})).toBeUndefined();
+    expect(resolveDexManifestRequires({})).toBeUndefined();
     expect(resolveOpenClawManifestOs({ os: [" darwin ", "linux", ""] })).toEqual([
       "darwin",
       "linux",

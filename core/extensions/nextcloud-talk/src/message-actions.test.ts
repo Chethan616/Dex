@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CoreConfig } from "./types.js";
 
@@ -56,7 +56,7 @@ describe("nextcloudTalkMessageActions", () => {
       hoisted.listNextcloudTalkAccountIds.mockReturnValue([]);
 
       const result = nextcloudTalkMessageActions.describeMessageTool?.({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
       });
 
       expect(result).toBeNull();
@@ -67,7 +67,7 @@ describe("nextcloudTalkMessageActions", () => {
       hoisted.resolveNextcloudTalkAccount.mockReturnValue(unconfiguredAccount);
 
       const result = nextcloudTalkMessageActions.describeMessageTool?.({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
       });
 
       expect(result).toBeNull();
@@ -78,7 +78,7 @@ describe("nextcloudTalkMessageActions", () => {
       hoisted.resolveNextcloudTalkAccount.mockReturnValue(disabledAccount);
 
       const result = nextcloudTalkMessageActions.describeMessageTool?.({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
       });
 
       expect(result).toBeNull();
@@ -89,7 +89,7 @@ describe("nextcloudTalkMessageActions", () => {
       hoisted.resolveNextcloudTalkAccount.mockReturnValue(configuredAccount);
 
       const result = nextcloudTalkMessageActions.describeMessageTool?.({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
       });
 
       expect(result?.actions).toEqual(["send", "react"]);
@@ -99,7 +99,7 @@ describe("nextcloudTalkMessageActions", () => {
       hoisted.resolveNextcloudTalkAccount.mockReturnValue(configuredAccount);
 
       const result = nextcloudTalkMessageActions.describeMessageTool?.({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         accountId: "work",
       });
 
@@ -115,7 +115,7 @@ describe("nextcloudTalkMessageActions", () => {
       hoisted.resolveNextcloudTalkAccount.mockReturnValue(disabledAccount);
 
       const result = nextcloudTalkMessageActions.describeMessageTool?.({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         accountId: "work",
       });
 

@@ -18,7 +18,7 @@ import {
   shouldSuppressBuiltInModel,
 } from "./model-suppression.js";
 
-const originalBundledPluginsDir = process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+const originalBundledPluginsDir = process.env.DEX_BUNDLED_PLUGINS_DIR;
 
 describe("model suppression", () => {
   beforeEach(() => {
@@ -29,9 +29,9 @@ describe("model suppression", () => {
 
   afterEach(() => {
     if (originalBundledPluginsDir === undefined) {
-      delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+      delete process.env.DEX_BUNDLED_PLUGINS_DIR;
     } else {
-      process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = originalBundledPluginsDir;
+      process.env.DEX_BUNDLED_PLUGINS_DIR = originalBundledPluginsDir;
     }
   });
 
@@ -118,10 +118,10 @@ describe("model suppression", () => {
       .mockReturnValueOnce(firstResolver)
       .mockReturnValueOnce(secondResolver);
 
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/tmp/openclaw-bundled-a";
+    process.env.DEX_BUNDLED_PLUGINS_DIR = "/tmp/openclaw-bundled-a";
     expect(shouldSuppressBuiltInModel({ provider: "openai", id: "gpt-5.3", config })).toBe(false);
 
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/tmp/openclaw-bundled-b";
+    process.env.DEX_BUNDLED_PLUGINS_DIR = "/tmp/openclaw-bundled-b";
     expect(shouldSuppressBuiltInModel({ provider: "openai", id: "gpt-5.3", config })).toBe(false);
 
     expect(mocks.buildManifestBuiltInModelSuppressionResolver).toHaveBeenCalledTimes(2);

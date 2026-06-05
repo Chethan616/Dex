@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 const storeMocks = vi.hoisted(() => ({
   ensureAuthProfileStore: vi.fn(() => ({ version: 1, profiles: {} })),
@@ -47,7 +47,7 @@ describe("resolveAgentCredentialsForDiscovery external CLI scoping", () => {
   });
 
   it("threads scoped external CLI discovery into writable auth store loading", () => {
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as DexConfig;
     const externalCli = externalCliDiscoveryForProviders({
       cfg,
       providers: ["fireworks"],
@@ -68,7 +68,7 @@ describe("resolveAgentCredentialsForDiscovery external CLI scoping", () => {
   });
 
   it("preserves scoped external CLI discovery for read-only auth store loading", () => {
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as DexConfig;
     const externalCli = externalCliDiscoveryForProviders({
       cfg,
       providers: ["fireworks"],

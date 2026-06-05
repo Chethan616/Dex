@@ -13,10 +13,10 @@ import { describe, expect, it } from "vitest";
 import { createOpenShellSandboxBackendFactory } from "./backend.js";
 import { resolveOpenShellPluginConfig } from "./config.js";
 
-const OPENCLAW_OPENSHELL_E2E = process.env.OPENCLAW_E2E_OPENSHELL === "1";
-const OPENCLAW_OPENSHELL_E2E_TIMEOUT_MS = 12 * 60_000;
-const OPENCLAW_OPENSHELL_COMMAND =
-  process.env.OPENCLAW_E2E_OPENSHELL_COMMAND?.trim() || "openshell";
+const DEX_OPENSHELL_E2E = process.env.DEX_E2E_OPENSHELL === "1";
+const DEX_OPENSHELL_E2E_TIMEOUT_MS = 12 * 60_000;
+const DEX_OPENSHELL_COMMAND =
+  process.env.DEX_E2E_OPENSHELL_COMMAND?.trim() || "openshell";
 
 const CUSTOM_IMAGE_DOCKERFILE = `FROM python:3.13-slim
 
@@ -345,17 +345,17 @@ async function runBackendExec(params: {
 }
 
 describe("openshell sandbox backend e2e", () => {
-  it.runIf(process.platform !== "win32" && OPENCLAW_OPENSHELL_E2E)(
+  it.runIf(process.platform !== "win32" && DEX_OPENSHELL_E2E)(
     "creates a remote-canonical sandbox through OpenShell and executes over SSH",
-    { timeout: OPENCLAW_OPENSHELL_E2E_TIMEOUT_MS },
+    { timeout: DEX_OPENSHELL_E2E_TIMEOUT_MS },
     async () => {
       if (!(await dockerReady())) {
         return;
       }
-      if (!(await commandAvailable(OPENCLAW_OPENSHELL_COMMAND))) {
+      if (!(await commandAvailable(DEX_OPENSHELL_COMMAND))) {
         return;
       }
-      if (!(await openshellGatewayAvailable(OPENCLAW_OPENSHELL_COMMAND))) {
+      if (!(await openshellGatewayAvailable(DEX_OPENSHELL_COMMAND))) {
         return;
       }
 
@@ -398,7 +398,7 @@ describe("openshell sandbox backend e2e", () => {
       };
 
       const pluginConfig = resolveOpenShellPluginConfig({
-        command: OPENCLAW_OPENSHELL_COMMAND,
+        command: DEX_OPENSHELL_COMMAND,
         gateway: gatewayName,
         from: dockerfilePath,
         mode: "remote",
@@ -444,7 +444,7 @@ describe("openshell sandbox backend e2e", () => {
         );
 
         await runCommand({
-          command: OPENCLAW_OPENSHELL_COMMAND,
+          command: DEX_OPENSHELL_COMMAND,
           args: [
             "gateway",
             "start",
@@ -508,7 +508,7 @@ describe("openshell sandbox backend e2e", () => {
         );
 
         const verifyResult = await runCommand({
-          command: OPENCLAW_OPENSHELL_COMMAND,
+          command: DEX_OPENSHELL_COMMAND,
           args: ["sandbox", "ssh-config", backend.runtimeId],
           env,
           timeoutMs: 60_000,
@@ -526,7 +526,7 @@ describe("openshell sandbox backend e2e", () => {
         expect(`${blockedGetResult.stdout}\n${blockedGetResult.stderr}`).toMatch(/403|deny/i);
 
         const allowedGetResult = await runCommand({
-          command: OPENCLAW_OPENSHELL_COMMAND,
+          command: DEX_OPENSHELL_COMMAND,
           args: [
             "sandbox",
             "create",
@@ -554,21 +554,21 @@ describe("openshell sandbox backend e2e", () => {
         expect(allowedGetResult.stdout).toContain('"message":"hello-from-host"');
       } finally {
         await runCommand({
-          command: OPENCLAW_OPENSHELL_COMMAND,
+          command: DEX_OPENSHELL_COMMAND,
           args: ["sandbox", "delete", backend.runtimeId],
           env,
           allowFailure: true,
           timeoutMs: 2 * 60_000,
         });
         await runCommand({
-          command: OPENCLAW_OPENSHELL_COMMAND,
+          command: DEX_OPENSHELL_COMMAND,
           args: ["sandbox", "delete", allowSandboxName],
           env,
           allowFailure: true,
           timeoutMs: 2 * 60_000,
         });
         await runCommand({
-          command: OPENCLAW_OPENSHELL_COMMAND,
+          command: DEX_OPENSHELL_COMMAND,
           args: ["gateway", "destroy", "--name", gatewayName],
           env,
           allowFailure: true,

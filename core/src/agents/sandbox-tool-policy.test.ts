@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveEffectiveToolPolicy } from "./agent-tools.policy.js";
 import { pickSandboxToolPolicy } from "./sandbox-tool-policy.js";
 import { resolveEffectiveToolFsRootExpansionAllowed } from "./tool-fs-policy.js";
@@ -56,7 +56,7 @@ describe("pickSandboxToolPolicy", () => {
   });
 
   it("keeps global alsoAllow additive in effective tool policy resolution", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       tools: {
         profile: "coding",
         alsoAllow: ["lobster"],
@@ -69,7 +69,7 @@ describe("pickSandboxToolPolicy", () => {
   });
 
   it("does not block fs root expansion when only global alsoAllow is configured", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       tools: {
         alsoAllow: ["lobster"],
       },

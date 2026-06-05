@@ -1,5 +1,5 @@
 import { ChannelType } from "discord-api-types/v10";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockCommandInteraction as createInteraction } from "./native-command.test-helpers.js";
 import { createNoopThreadBindingManager } from "./thread-bindings.js";
@@ -33,7 +33,7 @@ vi.mock("openclaw/plugin-sdk/web-media", () => ({
 let createDiscordNativeCommand: typeof import("./native-command.js").createDiscordNativeCommand;
 let discordNativeCommandTesting: typeof import("./native-command.js").testing;
 
-function createConfig(params?: { requireMention?: boolean }): OpenClawConfig {
+function createConfig(params?: { requireMention?: boolean }): DexConfig {
   return {
     commands: {
       useAccessGroups: false,
@@ -54,10 +54,10 @@ function createConfig(params?: { requireMention?: boolean }): OpenClawConfig {
         },
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
-async function createStatusCommand(cfg: OpenClawConfig) {
+async function createStatusCommand(cfg: DexConfig) {
   return createDiscordNativeCommand({
     command: {
       name: "status",
@@ -115,7 +115,7 @@ function firstMockArg(mock: MockWithCalls, label: string) {
 }
 
 function firstStatusCall(): {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   channel: string;
   isGroup: boolean;
@@ -126,7 +126,7 @@ function firstStatusCall(): {
     "resolveDirectStatusReplyForSession",
   );
   return call as {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     sessionKey: string;
     channel: string;
     isGroup: boolean;

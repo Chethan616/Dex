@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import * as runtimeEnvModule from "openclaw/plugin-sdk/runtime-env";
 import { withEnv } from "openclaw/plugin-sdk/test-env";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,7 +28,7 @@ function expectNoMissingDefaultWarning() {
 
 function resolveAccountWithEnv(
   env: Record<string, string>,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   accountId?: string,
 ) {
   return withEnv(env, () => resolveTelegramAccount({ cfg, ...(accountId ? { accountId } : {}) }));
@@ -109,8 +109,8 @@ describe("resolveTelegramAccount", () => {
   });
 
   it("formats debug logs with inspect-style output when debug env is enabled", () => {
-    withEnv({ TELEGRAM_BOT_TOKEN: "", OPENCLAW_DEBUG_TELEGRAM_ACCOUNTS: "1" }, () => {
-      const cfg: OpenClawConfig = {
+    withEnv({ TELEGRAM_BOT_TOKEN: "", DEX_DEBUG_TELEGRAM_ACCOUNTS: "1" }, () => {
+      const cfg: DexConfig = {
         channels: {
           telegram: { accounts: { work: { botToken: "tok-work" } } },
         },
@@ -138,7 +138,7 @@ describe("resolveTelegramAccount", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const accounts = listEnabledTelegramAccounts(cfg);
 
@@ -161,7 +161,7 @@ describe("resolveTelegramAccount", () => {
         },
       },
       bindings: [{ agentId: "fusion", match: { channel: "telegram", accountId: "fusion" } }],
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(listTelegramAccountIds(cfg)).toEqual(["default", "fusion"]);
     expect(resolveDefaultTelegramAccountId(cfg)).toBe("default");
@@ -185,7 +185,7 @@ describe("resolveDefaultTelegramAccountId", () => {
   });
 
   it("warns when accounts.default is missing in multi-account setup (#32137)", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           accounts: { work: { botToken: "tok-work" }, alerts: { botToken: "tok-alerts" } },
@@ -201,7 +201,7 @@ describe("resolveDefaultTelegramAccountId", () => {
   });
 
   it("does not warn when accounts.default exists", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           accounts: { default: { botToken: "tok-default" }, work: { botToken: "tok-work" } },
@@ -214,7 +214,7 @@ describe("resolveDefaultTelegramAccountId", () => {
   });
 
   it("does not warn when defaultAccount is explicitly set", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           defaultAccount: "work",
@@ -228,7 +228,7 @@ describe("resolveDefaultTelegramAccountId", () => {
   });
 
   it("does not warn when explicit defaultAccount is first in multi-account fallback order (#83948)", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           defaultAccount: "alerts",
@@ -245,7 +245,7 @@ describe("resolveDefaultTelegramAccountId", () => {
   });
 
   it("does not warn when only one non-default account is configured", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           accounts: { work: { botToken: "tok-work" } },
@@ -258,7 +258,7 @@ describe("resolveDefaultTelegramAccountId", () => {
   });
 
   it("warns only once per process lifetime", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           accounts: { work: { botToken: "tok-work" }, alerts: { botToken: "tok-alerts" } },
@@ -277,7 +277,7 @@ describe("resolveDefaultTelegramAccountId", () => {
   });
 
   it("prefers channels.telegram.defaultAccount when it matches a configured account", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           defaultAccount: "work",
@@ -290,7 +290,7 @@ describe("resolveDefaultTelegramAccountId", () => {
   });
 
   it("normalizes channels.telegram.defaultAccount before lookup", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           defaultAccount: "Router D",
@@ -303,7 +303,7 @@ describe("resolveDefaultTelegramAccountId", () => {
   });
 
   it("falls back when channels.telegram.defaultAccount is not configured", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           defaultAccount: "missing",
@@ -387,7 +387,7 @@ describe("resolveTelegramAccount allowFrom precedence", () => {
 
 describe("mergeTelegramAccountConfig", () => {
   it("inherits top-level policy fallback for named accounts", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           enabled: true,
@@ -422,7 +422,7 @@ describe("mergeTelegramAccountConfig", () => {
   });
 
   it("keeps top-level policy fallback when auth lives in accounts.default", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           enabled: true,
@@ -446,7 +446,7 @@ describe("mergeTelegramAccountConfig", () => {
   });
 
   it("drops account wildcard DM access when top-level allowFrom is restrictive", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           enabled: true,
@@ -471,7 +471,7 @@ describe("mergeTelegramAccountConfig", () => {
   });
 
   it("keeps explicit account allowlist entries while dropping a conflicting wildcard", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           enabled: true,
@@ -535,7 +535,7 @@ describe("resolveTelegramPollActionGateState", () => {
 });
 
 describe("resolveTelegramAccount groups inheritance (#30673)", () => {
-  const createMultiAccountGroupsConfig = (): OpenClawConfig => ({
+  const createMultiAccountGroupsConfig = (): DexConfig => ({
     channels: {
       telegram: {
         groups: { "-100123": { requireMention: false } },
@@ -547,7 +547,7 @@ describe("resolveTelegramAccount groups inheritance (#30673)", () => {
     },
   });
 
-  const createDefaultAccountGroupsConfig = (includeDevAccount: boolean): OpenClawConfig => ({
+  const createDefaultAccountGroupsConfig = (includeDevAccount: boolean): DexConfig => ({
     channels: {
       telegram: {
         groups: { "-100999": { requireMention: true } },

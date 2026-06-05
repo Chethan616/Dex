@@ -4,7 +4,7 @@ import path from "node:path";
 import type { AssistantMessage, Message, Tool } from "openclaw/plugin-sdk/llm";
 import { Type } from "typebox";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { runEmbeddedAgent } from "./embedded-agent-runner.js";
 import { compactEmbeddedAgentSessionDirect } from "./embedded-agent-runner/compact.runtime.js";
 import {
@@ -235,7 +235,7 @@ function buildEmbeddedRunnerConfig(
     cacheRetention: "none" | "short" | "long";
     transport?: "sse" | "websocket";
   },
-): OpenClawConfig {
+): DexConfig {
   const provider = params.model.provider;
   const modelKey = `${provider}/${params.model.id}`;
   const providerBaseUrl =
@@ -758,28 +758,28 @@ describeCacheLive("embedded agent runner prompt caching (live)", () => {
     liveCacheTraceFile = path.join(liveRunnerRootDir, "cache-trace.jsonl");
     liveTestPngBase64 = (await fs.readFile(LIVE_TEST_PNG_URL)).toString("base64");
     previousCacheTraceEnv = {
-      enabled: process.env.OPENCLAW_CACHE_TRACE,
-      file: process.env.OPENCLAW_CACHE_TRACE_FILE,
-      messages: process.env.OPENCLAW_CACHE_TRACE_MESSAGES,
-      prompt: process.env.OPENCLAW_CACHE_TRACE_PROMPT,
-      system: process.env.OPENCLAW_CACHE_TRACE_SYSTEM,
+      enabled: process.env.DEX_CACHE_TRACE,
+      file: process.env.DEX_CACHE_TRACE_FILE,
+      messages: process.env.DEX_CACHE_TRACE_MESSAGES,
+      prompt: process.env.DEX_CACHE_TRACE_PROMPT,
+      system: process.env.DEX_CACHE_TRACE_SYSTEM,
     };
-    process.env.OPENCLAW_CACHE_TRACE = "1";
-    process.env.OPENCLAW_CACHE_TRACE_FILE = liveCacheTraceFile;
-    process.env.OPENCLAW_CACHE_TRACE_MESSAGES = "0";
-    process.env.OPENCLAW_CACHE_TRACE_PROMPT = "0";
-    process.env.OPENCLAW_CACHE_TRACE_SYSTEM = "0";
+    process.env.DEX_CACHE_TRACE = "1";
+    process.env.DEX_CACHE_TRACE_FILE = liveCacheTraceFile;
+    process.env.DEX_CACHE_TRACE_MESSAGES = "0";
+    process.env.DEX_CACHE_TRACE_PROMPT = "0";
+    process.env.DEX_CACHE_TRACE_SYSTEM = "0";
   }, 120_000);
 
   afterAll(async () => {
     if (previousCacheTraceEnv) {
       const restore = (
         key:
-          | "OPENCLAW_CACHE_TRACE"
-          | "OPENCLAW_CACHE_TRACE_FILE"
-          | "OPENCLAW_CACHE_TRACE_MESSAGES"
-          | "OPENCLAW_CACHE_TRACE_PROMPT"
-          | "OPENCLAW_CACHE_TRACE_SYSTEM",
+          | "DEX_CACHE_TRACE"
+          | "DEX_CACHE_TRACE_FILE"
+          | "DEX_CACHE_TRACE_MESSAGES"
+          | "DEX_CACHE_TRACE_PROMPT"
+          | "DEX_CACHE_TRACE_SYSTEM",
         value: string | undefined,
       ) => {
         if (value === undefined) {
@@ -788,11 +788,11 @@ describeCacheLive("embedded agent runner prompt caching (live)", () => {
           process.env[key] = value;
         }
       };
-      restore("OPENCLAW_CACHE_TRACE", previousCacheTraceEnv.enabled);
-      restore("OPENCLAW_CACHE_TRACE_FILE", previousCacheTraceEnv.file);
-      restore("OPENCLAW_CACHE_TRACE_MESSAGES", previousCacheTraceEnv.messages);
-      restore("OPENCLAW_CACHE_TRACE_PROMPT", previousCacheTraceEnv.prompt);
-      restore("OPENCLAW_CACHE_TRACE_SYSTEM", previousCacheTraceEnv.system);
+      restore("DEX_CACHE_TRACE", previousCacheTraceEnv.enabled);
+      restore("DEX_CACHE_TRACE_FILE", previousCacheTraceEnv.file);
+      restore("DEX_CACHE_TRACE_MESSAGES", previousCacheTraceEnv.messages);
+      restore("DEX_CACHE_TRACE_PROMPT", previousCacheTraceEnv.prompt);
+      restore("DEX_CACHE_TRACE_SYSTEM", previousCacheTraceEnv.system);
     }
     previousCacheTraceEnv = null;
     liveCacheTraceFile = undefined;
@@ -809,7 +809,7 @@ describeCacheLive("embedded agent runner prompt caching (live)", () => {
       fixture = await resolveLiveDirectModel({
         provider: "openai",
         api: "openai-responses",
-        envVar: "OPENCLAW_LIVE_OPENAI_CACHE_MODEL",
+        envVar: "DEX_LIVE_OPENAI_CACHE_MODEL",
         preferredModelIds: ["gpt-5.5", "gpt-5.4-mini", "gpt-5.4"],
       });
       logLiveCache(`openai model=${fixture.model.provider}/${fixture.model.id}`);
@@ -1065,7 +1065,7 @@ describeCacheLive("embedded agent runner prompt caching (live)", () => {
       fixture = await resolveLiveDirectModel({
         provider: "anthropic",
         api: "anthropic-messages",
-        envVar: "OPENCLAW_LIVE_ANTHROPIC_CACHE_MODEL",
+        envVar: "DEX_LIVE_ANTHROPIC_CACHE_MODEL",
         preferredModelIds: ["claude-sonnet-4-6", "claude-sonnet-4-6", "claude-haiku-3-5"],
       });
       logLiveCache(`anthropic model=${fixture.model.provider}/${fixture.model.id}`);

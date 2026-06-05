@@ -15,26 +15,26 @@ function runSurfaceReport(env: Record<string, string>) {
 describe("plugin SDK surface report", () => {
   it("rejects loose numeric budget env vars before collecting SDK stats", () => {
     const result = runSurfaceReport({
-      OPENCLAW_PLUGIN_SDK_MAX_PUBLIC_EXPORTS: "1e9",
+      DEX_PLUGIN_SDK_MAX_PUBLIC_EXPORTS: "1e9",
     });
 
     expect(result.status).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toContain(
-      "OPENCLAW_PLUGIN_SDK_MAX_PUBLIC_EXPORTS must be a non-negative integer",
+      "DEX_PLUGIN_SDK_MAX_PUBLIC_EXPORTS must be a non-negative integer",
     );
     expect(result.stderr).not.toContain("at ");
   });
 
   it("rejects unsafe budget env vars before collecting SDK stats", () => {
     const result = runSurfaceReport({
-      OPENCLAW_PLUGIN_SDK_MAX_PUBLIC_EXPORTS: "9007199254740992",
+      DEX_PLUGIN_SDK_MAX_PUBLIC_EXPORTS: "9007199254740992",
     });
 
     expect(result.status).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toContain(
-      "OPENCLAW_PLUGIN_SDK_MAX_PUBLIC_EXPORTS must be a safe non-negative integer",
+      "DEX_PLUGIN_SDK_MAX_PUBLIC_EXPORTS must be a safe non-negative integer",
     );
     expect(result.stderr).not.toContain("at ");
   });

@@ -9,8 +9,8 @@ describe("live transport artifacts", () => {
         "live gateway cleanup: failed to stop pid 123",
       ]),
     ).toEqual([
-      "credential lease release: details redacted (OPENCLAW_QA_REDACT_PUBLIC_METADATA=1)",
-      "live gateway cleanup: details redacted (OPENCLAW_QA_REDACT_PUBLIC_METADATA=1)",
+      "credential lease release: details redacted (DEX_QA_REDACT_PUBLIC_METADATA=1)",
+      "live gateway cleanup: details redacted (DEX_QA_REDACT_PUBLIC_METADATA=1)",
     ]);
   });
 });

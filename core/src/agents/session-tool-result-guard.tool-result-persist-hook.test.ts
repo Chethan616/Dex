@@ -12,8 +12,8 @@ import { loadOpenClawPlugins } from "../plugins/loader.js";
 import { guardSessionManager } from "./session-tool-result-guard-wrapper.js";
 
 const EMPTY_PLUGIN_SCHEMA = { type: "object", additionalProperties: false, properties: {} };
-const originalBundledPluginsDir = process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
-const originalConfigPath = process.env.OPENCLAW_CONFIG_PATH;
+const originalBundledPluginsDir = process.env.DEX_BUNDLED_PLUGINS_DIR;
+const originalConfigPath = process.env.DEX_CONFIG_PATH;
 let tempDirs: string[] = [];
 
 function writeTempPlugin(params: { dir: string; id: string; body: string }): string {
@@ -71,7 +71,7 @@ function requirePersistedToolResult(sm: ReturnType<typeof SessionManager.inMemor
 
 function initializeTempPlugin(params: { tmpPrefix: string; id: string; body: string }) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), params.tmpPrefix));
-  process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+  process.env.DEX_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
   const plugin = writeTempPlugin({
     dir: tmp,
     id: params.id,
@@ -109,14 +109,14 @@ function expectPersistedToolResultDetailsCapped(sm: ReturnType<typeof SessionMan
 afterEach(() => {
   resetGlobalHookRunner();
   if (originalBundledPluginsDir === undefined) {
-    delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+    delete process.env.DEX_BUNDLED_PLUGINS_DIR;
   } else {
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = originalBundledPluginsDir;
+    process.env.DEX_BUNDLED_PLUGINS_DIR = originalBundledPluginsDir;
   }
   if (originalConfigPath === undefined) {
-    delete process.env.OPENCLAW_CONFIG_PATH;
+    delete process.env.DEX_CONFIG_PATH;
   } else {
-    process.env.OPENCLAW_CONFIG_PATH = originalConfigPath;
+    process.env.DEX_CONFIG_PATH = originalConfigPath;
   }
   for (const dir of tempDirs) {
     fs.rmSync(dir, { force: true, recursive: true });
@@ -224,9 +224,9 @@ describe("tool_result_persist hook", () => {
   it("keeps sensitive parent keys when custom value patterns match the key probe", () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-redact-config-"));
     tempDirs.push(tempDir);
-    process.env.OPENCLAW_CONFIG_PATH = path.join(tempDir, "openclaw.json");
+    process.env.DEX_CONFIG_PATH = path.join(tempDir, "openclaw.json");
     fs.writeFileSync(
-      process.env.OPENCLAW_CONFIG_PATH,
+      process.env.DEX_CONFIG_PATH,
       JSON.stringify({ logging: { redactPatterns: ["/[a-z0-9]{30,}/g"] } }),
       "utf-8",
     );
@@ -633,7 +633,7 @@ describe("tool_result_persist hook", () => {
 
   it("loads tool_result_persist hooks without breaking persistence", () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-toolpersist-"));
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.DEX_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
 
     const pluginA = writeTempPlugin({
       dir: tmp,

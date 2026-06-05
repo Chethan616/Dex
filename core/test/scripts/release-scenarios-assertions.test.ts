@@ -86,7 +86,7 @@ describe("release scenario assertions", () => {
       writeJson(outputPath, {
         capability: "image.describe",
         ok: true,
-        outputs: [{ provider: "openai", text: "OPENCLAW_E2E_OK describe" }],
+        outputs: [{ provider: "openai", text: "DEX_E2E_OK describe" }],
       });
       const endpointPrefix = "/v1/res";
       writeFileSync(

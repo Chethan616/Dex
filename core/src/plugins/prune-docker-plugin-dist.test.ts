@@ -70,7 +70,7 @@ describe("pruneDockerPluginDist", () => {
 
     const removed = pruneDockerPluginDist({
       repoRoot,
-      env: { OPENCLAW_EXTENSIONS: "diagnostics-otel" } as NodeJS.ProcessEnv,
+      env: { DEX_EXTENSIONS: "diagnostics-otel" } as NodeJS.ProcessEnv,
     });
 
     expect(removed).toEqual([
@@ -102,7 +102,7 @@ describe("pruneDockerPluginDist", () => {
     const removed = pruneDockerPluginDist({
       repoRoot,
       env: {
-        OPENCLAW_BUNDLED_PLUGIN_DIR: "plugins",
+        DEX_BUNDLED_PLUGIN_DIR: "plugins",
       } as NodeJS.ProcessEnv,
     });
 
@@ -152,7 +152,7 @@ describe("pruneDockerPluginDist", () => {
 
     const removed = pruneDockerPluginDist({
       repoRoot,
-      env: { OPENCLAW_EXTENSIONS: "codex" } as NodeJS.ProcessEnv,
+      env: { DEX_EXTENSIONS: "codex" } as NodeJS.ProcessEnv,
     });
 
     expect(removed).toEqual([

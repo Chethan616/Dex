@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import type { SessionEntry } from "../../config/sessions/types.js";
 import type { SessionBindingRecord } from "../../infra/outbound/session-binding-service.js";
 import { createEmptyInlineDirectives } from "./commands-subagents.test-helpers.js";
@@ -85,7 +85,7 @@ vi.mock("../../channels/thread-bindings-policy.js", () => ({
     threadId?: string;
   }) => (params.channel === ROOM_CHANNEL && !params.threadId ? "child" : "current"),
   resolveThreadBindingSpawnPolicy: (params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     channel: string;
     accountId: string;
   }) => {
@@ -126,7 +126,7 @@ vi.mock("./commands-subagents/shared.js", async () => {
 
 const baseCfg = {
   session: { mainKey: "main", scope: "per-sender" },
-} satisfies OpenClawConfig;
+} satisfies DexConfig;
 
 function createSessionBindingRecord(
   overrides?: Partial<SessionBindingRecord>,
@@ -194,7 +194,7 @@ function firstSessionBindingBindInput(): SessionBindingBindInput {
 }
 
 function buildCommandParams(params?: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   chatType?: string;
   senderId?: string;
   sessionEntry?: SessionEntry;
@@ -231,7 +231,7 @@ function buildCommandParams(params?: {
 }
 
 function buildFocusContext(params?: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   chatType?: string;
   senderId?: string;
   token?: string;
@@ -390,8 +390,8 @@ describe("focus actions", () => {
                 spawnSessions: true,
               },
             },
-          } as OpenClawConfig["channels"],
-        } as OpenClawConfig,
+          } as DexConfig["channels"],
+        } as DexConfig,
       }),
     );
 
@@ -439,8 +439,8 @@ describe("focus actions", () => {
                 spawnSessions: false,
               },
             },
-          } as OpenClawConfig["channels"],
-        } as OpenClawConfig,
+          } as DexConfig["channels"],
+        } as DexConfig,
       }),
     );
 

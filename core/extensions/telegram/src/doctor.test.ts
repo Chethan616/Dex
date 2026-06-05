@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   collectTelegramInvalidAllowFromWarnings,
@@ -241,7 +241,7 @@ describe("telegram doctor", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig);
+    } as unknown as DexConfig);
 
     expect(hits).toEqual([
       { path: "channels.telegram.allowFrom", entry: "@top" },
@@ -290,7 +290,7 @@ describe("telegram doctor", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const hits = scanTelegramMalformedGroupsConfig(cfg);
     expect(hits).toEqual([
@@ -324,7 +324,7 @@ describe("telegram doctor", () => {
           allowFrom: ["@testuser"],
         },
       },
-    } as unknown as OpenClawConfig);
+    } as unknown as DexConfig);
 
     expect(result.config.channels?.telegram?.allowFrom).toEqual(["111"]);
     expect(result.changes[0]).toContain("@testuser");
@@ -337,7 +337,7 @@ describe("telegram doctor", () => {
           allowFrom: [-1001234567890],
         },
       },
-    } as unknown as OpenClawConfig);
+    } as unknown as DexConfig);
 
     expect(result.config.channels?.telegram?.allowFrom).toEqual([-1001234567890]);
     expect(result.changes).toEqual([
@@ -382,7 +382,7 @@ describe("telegram doctor", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig);
+    } as unknown as DexConfig);
 
     expect(result.config.channels?.telegram?.accounts?.inactive?.allowFrom).toEqual(["@testuser"]);
     expect(result.changes).toEqual([
@@ -413,7 +413,7 @@ describe("telegram doctor", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const hits = scanTelegramBotEndpointApiRoots(cfg);
     expect(hits.map((hit) => hit.path)).toEqual([
@@ -444,7 +444,7 @@ describe("telegram doctor", () => {
           replyToMode: "first",
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const hits = scanTelegramSelectedQuoteToolProgressWarnings(cfg);
     expect(hits).toEqual([{ path: "channels.telegram", replyToMode: "first" }]);
@@ -471,7 +471,7 @@ describe("telegram doctor", () => {
           accounts: {},
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(scanTelegramSelectedQuoteToolProgressWarnings(cfg)).toEqual([
       { path: "channels.telegram", replyToMode: "all" },
@@ -492,7 +492,7 @@ describe("telegram doctor", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(scanTelegramSelectedQuoteToolProgressWarnings(cfg)).toEqual([
       { path: "channels.telegram.accounts.work", replyToMode: "batched" },
@@ -511,7 +511,7 @@ describe("telegram doctor", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(scanTelegramSelectedQuoteToolProgressWarnings(cfg)).toStrictEqual([]);
   });
@@ -525,7 +525,7 @@ describe("telegram doctor", () => {
             streaming: false,
           },
         },
-      } as unknown as OpenClawConfig),
+      } as unknown as DexConfig),
     ).toStrictEqual([]);
 
     expect(
@@ -540,7 +540,7 @@ describe("telegram doctor", () => {
             blockStreamingDefault: "on",
           },
         },
-      } as unknown as OpenClawConfig),
+      } as unknown as DexConfig),
     ).toStrictEqual([]);
   });
 
@@ -551,7 +551,7 @@ describe("telegram doctor", () => {
           apiRoot: "https://api.telegram.org/bot123456:ABC",
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       await telegramDoctor.collectPreviewWarnings?.({
@@ -579,7 +579,7 @@ describe("telegram doctor", () => {
           allowFrom: ["123"],
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     inspectTelegramAccountMock.mockReturnValueOnce({
       enabled: true,
@@ -633,7 +633,7 @@ describe("telegram doctor", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(collectTelegramMissingEnvTokenWarnings({ cfg, env: {} })).toStrictEqual([]);
   });

@@ -161,8 +161,8 @@ describe("resolveApiKeyForProfile openai refresh fallback", () => {
     const caseRoot = path.join(tempRoot, `case-${++caseIndex}`);
     agentDir = path.join(caseRoot, "agents", "main", "agent");
     await fs.mkdir(agentDir, { recursive: true });
-    process.env.OPENCLAW_STATE_DIR = caseRoot;
-    process.env.OPENCLAW_AGENT_DIR = agentDir;
+    process.env.DEX_STATE_DIR = caseRoot;
+    process.env.DEX_AGENT_DIR = agentDir;
   });
 
   afterEach(async () => {

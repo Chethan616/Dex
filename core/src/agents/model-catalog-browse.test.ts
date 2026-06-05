@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { MAX_TIMER_TIMEOUT_MS } from "../shared/number-coercion.js";
 import {
   DEFAULT_MODEL_CATALOG_BROWSE_TIMEOUT_MS,
@@ -14,7 +14,7 @@ const readOnlyCatalog: ModelCatalogEntry[] = [
 ];
 const fullCatalog: ModelCatalogEntry[] = [{ id: "gpt-full", name: "GPT Full", provider: "openai" }];
 
-function config(params: { providerWildcard?: boolean } = {}): OpenClawConfig {
+function config(params: { providerWildcard?: boolean } = {}): DexConfig {
   return {
     agents: params.providerWildcard
       ? {
@@ -25,7 +25,7 @@ function config(params: { providerWildcard?: boolean } = {}): OpenClawConfig {
           },
         }
       : undefined,
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 describe("loadModelCatalogForBrowse", () => {

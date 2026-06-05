@@ -15,8 +15,8 @@ import {
 } from "../tasks/task-registry.js";
 import * as taskRegistryMaintenance from "../tasks/task-registry.maintenance.js";
 import type { TaskRecord } from "../tasks/task-registry.types.js";
-import { withOpenClawTestState } from "../test-utils/openclaw-test-state.js";
-import type { OpenClawTestState } from "../test-utils/openclaw-test-state.js";
+import { withDexTestState } from "../test-utils/openclaw-test-state.js";
+import type { DexTestState } from "../test-utils/openclaw-test-state.js";
 import { tasksAuditCommand, tasksMaintenanceCommand, tasksShowCommand } from "./tasks.js";
 
 function createRuntime(): RuntimeEnv {
@@ -66,9 +66,9 @@ const zeroTaskAuditCounts = {
 };
 
 async function withTaskCommandStateDir(
-  run: (state: OpenClawTestState) => Promise<void>,
+  run: (state: DexTestState) => Promise<void>,
 ): Promise<void> {
-  await withOpenClawTestState(
+  await withDexTestState(
     { layout: "state-only", prefix: "openclaw-tasks-command-" },
     async (state) => {
       resetTaskRegistryDeliveryRuntimeForTests();

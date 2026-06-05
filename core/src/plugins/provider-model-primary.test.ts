@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { applyPrimaryModel } from "./provider-model-primary.js";
 
 describe("applyPrimaryModel", () => {
@@ -19,7 +19,7 @@ describe("applyPrimaryModel", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const next = applyPrimaryModel(cfg, "google/gemini-3-pro-preview");
 

@@ -6,7 +6,7 @@ import {
   addSubagentRunForTests,
   resetSubagentRegistryForTests,
 } from "../agents/subagent-registry.test-helpers.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { SessionEntry } from "../config/sessions.js";
 import { registerAgentRunContext, resetAgentRunContextForTest } from "../infra/agent-events.js";
 import { buildGatewaySessionInfo, listSessionsFromStore } from "./session-utils.js";
@@ -49,7 +49,7 @@ const FREE_OPENAI_USAGE: TranscriptUsageFixture = {
 function createModelDefaultsConfig(params: {
   primary: string;
   models?: Record<string, Record<string, never>>;
-}): OpenClawConfig {
+}): DexConfig {
   return {
     agents: {
       defaults: {
@@ -57,12 +57,12 @@ function createModelDefaultsConfig(params: {
         models: params.models,
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 function createLegacyRuntimeListConfig(
   models?: Record<string, Record<string, never>>,
-): OpenClawConfig {
+): DexConfig {
   return createModelDefaultsConfig({
     primary: "google-gemini-cli/gemini-3.1-pro-preview",
     ...(models ? { models } : {}),
@@ -83,7 +83,7 @@ function createOpenAiPricingConfig(params: {
   id: string;
   label: string;
   cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
-}): OpenClawConfig {
+}): DexConfig {
   return {
     session: { mainKey: "main" },
     agents: { list: [{ id: "main", default: true }] },
@@ -101,7 +101,7 @@ function createOpenAiPricingConfig(params: {
         },
       },
     },
-  } as unknown as OpenClawConfig;
+  } as unknown as DexConfig;
 }
 
 type DefaultTranscriptFixtureParams<T> = {
@@ -152,7 +152,7 @@ const withAnthropicTranscriptFixture = <T>(params: DefaultTranscriptFixtureParam
 const withFreeOpenAiTranscriptFixture = <T>(params: DefaultTranscriptFixtureParams<T>) =>
   withTranscriptFixture(FREE_OPENAI_USAGE, params);
 
-function createAnthropicContext1mConfig(): OpenClawConfig {
+function createAnthropicContext1mConfig(): DexConfig {
   return {
     session: { mainKey: "main" },
     agents: {
@@ -163,11 +163,11 @@ function createAnthropicContext1mConfig(): OpenClawConfig {
         },
       },
     },
-  } as unknown as OpenClawConfig;
+  } as unknown as DexConfig;
 }
 
 function listSingleSession(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   storePath: string;
   key: string;
   entry: SessionEntry;
@@ -182,7 +182,7 @@ function listSingleSession(params: {
   });
 }
 
-function listMainSession(params: { cfg: OpenClawConfig; storePath: string; entry: SessionEntry }) {
+function listMainSession(params: { cfg: DexConfig; storePath: string; entry: SessionEntry }) {
   return listSingleSession({
     cfg: params.cfg,
     storePath: params.storePath,
@@ -331,7 +331,7 @@ describe("listSessionsFromStore search", () => {
   const baseCfg = {
     session: { mainKey: "main" },
     agents: { list: [{ id: "main", default: true }] },
-  } as OpenClawConfig;
+  } as DexConfig;
 
   const makeStore = (): Record<string, SessionEntry> => ({
     "agent:main:work-project": {
@@ -356,7 +356,7 @@ describe("listSessionsFromStore search", () => {
 
   function listSearchSessions(params: {
     opts: Parameters<typeof listSessionsFromStore>[0]["opts"];
-    cfg?: OpenClawConfig;
+    cfg?: DexConfig;
     store?: Record<string, SessionEntry>;
   }) {
     return listSessionsFromStore({
@@ -367,7 +367,7 @@ describe("listSessionsFromStore search", () => {
     });
   }
 
-  function listConfiguredMainSession(cfg: OpenClawConfig, entry: SessionEntry) {
+  function listConfiguredMainSession(cfg: DexConfig, entry: SessionEntry) {
     return listSearchSessions({
       cfg,
       store: mainSessionStore(entry),
@@ -673,7 +673,7 @@ describe("listSessionsFromStore search", () => {
                 },
               },
             },
-          } as unknown as OpenClawConfig,
+          } as unknown as DexConfig,
           storePath,
           key: MAIN_SESSION_KEY,
           store: {
@@ -785,7 +785,7 @@ describe("listSessionsFromStore search", () => {
             agents: {
               list: [{ id: "main", default: true }],
             },
-          } as unknown as OpenClawConfig,
+          } as unknown as DexConfig,
           storePath,
           entry: anthropicUsageEntry(now, {
             sessionId: "sess-pricing",

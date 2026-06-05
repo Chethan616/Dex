@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawPluginApi } from "../api.js";
+import type { DexPluginApi } from "../api.js";
 import { WorkboardStore, type PersistedWorkboardCard, type WorkboardKeyedStore } from "./store.js";
 import { createWorkboardTools } from "./tools.js";
 
@@ -34,7 +34,7 @@ describe("workboard tools", () => {
           openKeyedStore: vi.fn(() => keyed),
         },
       },
-    } as unknown as OpenClawPluginApi;
+    } as unknown as DexPluginApi;
     const workboardStore = new WorkboardStore(keyed);
     const tools = createWorkboardTools({
       api,
@@ -123,7 +123,7 @@ describe("workboard tools", () => {
           openKeyedStore: vi.fn(() => keyed),
         },
       },
-    } as unknown as OpenClawPluginApi;
+    } as unknown as DexPluginApi;
     const store = new WorkboardStore(keyed);
     const mainTools = new Map(
       createWorkboardTools({
@@ -156,7 +156,7 @@ describe("workboard tools", () => {
           openKeyedStore: vi.fn(() => keyed),
         },
       },
-    } as unknown as OpenClawPluginApi;
+    } as unknown as DexPluginApi;
     const store = new WorkboardStore(keyed);
     const mainTools = new Map(
       createWorkboardTools({
@@ -229,7 +229,7 @@ describe("workboard tools", () => {
           openKeyedStore: vi.fn(() => keyed),
         },
       },
-    } as unknown as OpenClawPluginApi;
+    } as unknown as DexPluginApi;
     const store = new WorkboardStore(keyed);
     const tools = new Map(
       createWorkboardTools({
@@ -303,7 +303,7 @@ describe("workboard tools", () => {
           openKeyedStore: vi.fn(() => keyed),
         },
       },
-    } as unknown as OpenClawPluginApi;
+    } as unknown as DexPluginApi;
     const store = new WorkboardStore(keyed);
     const tools = new Map(
       createWorkboardTools({
@@ -347,7 +347,7 @@ describe("workboard tools", () => {
           openKeyedStore: vi.fn(() => keyed),
         },
       },
-    } as unknown as OpenClawPluginApi;
+    } as unknown as DexPluginApi;
     const store = new WorkboardStore(keyed);
     const tools = new Map(
       createWorkboardTools({

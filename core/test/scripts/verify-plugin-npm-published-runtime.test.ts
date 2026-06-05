@@ -12,27 +12,27 @@ import {
 describe("plugin npm publish verifier retry limits", () => {
   it("rejects loose numeric retry env values instead of parsing prefixes", () => {
     expect(() =>
-      readPositiveIntEnv("OPENCLAW_PLUGIN_NPM_VERIFY_ATTEMPTS", 90, {
-        OPENCLAW_PLUGIN_NPM_VERIFY_ATTEMPTS: "2tries",
+      readPositiveIntEnv("DEX_PLUGIN_NPM_VERIFY_ATTEMPTS", 90, {
+        DEX_PLUGIN_NPM_VERIFY_ATTEMPTS: "2tries",
       }),
-    ).toThrow("invalid OPENCLAW_PLUGIN_NPM_VERIFY_ATTEMPTS: 2tries");
+    ).toThrow("invalid DEX_PLUGIN_NPM_VERIFY_ATTEMPTS: 2tries");
     expect(() =>
-      readPositiveIntEnv("OPENCLAW_PLUGIN_NPM_VERIFY_DELAY_MS", 10000, {
-        OPENCLAW_PLUGIN_NPM_VERIFY_DELAY_MS: "1e3",
+      readPositiveIntEnv("DEX_PLUGIN_NPM_VERIFY_DELAY_MS", 10000, {
+        DEX_PLUGIN_NPM_VERIFY_DELAY_MS: "1e3",
       }),
-    ).toThrow("invalid OPENCLAW_PLUGIN_NPM_VERIFY_DELAY_MS: 1e3");
+    ).toThrow("invalid DEX_PLUGIN_NPM_VERIFY_DELAY_MS: 1e3");
     expect(() =>
-      readPositiveIntEnv("OPENCLAW_PLUGIN_NPM_README_VERIFY_ATTEMPTS", 6, {
-        OPENCLAW_PLUGIN_NPM_README_VERIFY_ATTEMPTS: "0",
+      readPositiveIntEnv("DEX_PLUGIN_NPM_README_VERIFY_ATTEMPTS", 6, {
+        DEX_PLUGIN_NPM_README_VERIFY_ATTEMPTS: "0",
       }),
-    ).toThrow("invalid OPENCLAW_PLUGIN_NPM_README_VERIFY_ATTEMPTS: 0");
+    ).toThrow("invalid DEX_PLUGIN_NPM_README_VERIFY_ATTEMPTS: 0");
   });
 
   it("accepts strict positive retry env values and defaults", () => {
-    expect(readPositiveIntEnv("OPENCLAW_PLUGIN_NPM_VERIFY_ATTEMPTS", 90, {})).toBe(90);
+    expect(readPositiveIntEnv("DEX_PLUGIN_NPM_VERIFY_ATTEMPTS", 90, {})).toBe(90);
     expect(
-      readPositiveIntEnv("OPENCLAW_PLUGIN_NPM_README_VERIFY_DELAY_MS", 10000, {
-        OPENCLAW_PLUGIN_NPM_README_VERIFY_DELAY_MS: "2500",
+      readPositiveIntEnv("DEX_PLUGIN_NPM_README_VERIFY_DELAY_MS", 10000, {
+        DEX_PLUGIN_NPM_README_VERIFY_DELAY_MS: "2500",
       }),
     ).toBe(2500);
   });
@@ -52,8 +52,8 @@ describe("plugin npm publish verifier command limits", () => {
   it("accepts strict npm command timeout and buffer overrides", () => {
     expect(
       readPluginNpmCommandOptions({
-        OPENCLAW_PLUGIN_NPM_COMMAND_MAX_BUFFER_BYTES: "33554432",
-        OPENCLAW_PLUGIN_NPM_COMMAND_TIMEOUT_MS: "120000",
+        DEX_PLUGIN_NPM_COMMAND_MAX_BUFFER_BYTES: "33554432",
+        DEX_PLUGIN_NPM_COMMAND_TIMEOUT_MS: "120000",
       }),
     ).toMatchObject({
       maxBuffer: 32 * 1024 * 1024,
@@ -64,22 +64,22 @@ describe("plugin npm publish verifier command limits", () => {
   it("rejects loose npm command timeout and buffer overrides", () => {
     expect(() =>
       readPluginNpmCommandOptions({
-        OPENCLAW_PLUGIN_NPM_COMMAND_TIMEOUT_MS: "60s",
+        DEX_PLUGIN_NPM_COMMAND_TIMEOUT_MS: "60s",
       }),
-    ).toThrow("invalid OPENCLAW_PLUGIN_NPM_COMMAND_TIMEOUT_MS: 60s");
+    ).toThrow("invalid DEX_PLUGIN_NPM_COMMAND_TIMEOUT_MS: 60s");
     expect(() =>
       readPluginNpmCommandOptions({
-        OPENCLAW_PLUGIN_NPM_COMMAND_MAX_BUFFER_BYTES: "16mb",
+        DEX_PLUGIN_NPM_COMMAND_MAX_BUFFER_BYTES: "16mb",
       }),
-    ).toThrow("invalid OPENCLAW_PLUGIN_NPM_COMMAND_MAX_BUFFER_BYTES: 16mb");
+    ).toThrow("invalid DEX_PLUGIN_NPM_COMMAND_MAX_BUFFER_BYTES: 16mb");
   });
 
   it("runs npm metadata commands with bounded exec options", () => {
     const calls: unknown[] = [];
     const output = runPluginNpmCommand(["view", "@openclaw/discord", "readme"], {
       env: {
-        OPENCLAW_PLUGIN_NPM_COMMAND_MAX_BUFFER_BYTES: "1024",
-        OPENCLAW_PLUGIN_NPM_COMMAND_TIMEOUT_MS: "2500",
+        DEX_PLUGIN_NPM_COMMAND_MAX_BUFFER_BYTES: "1024",
+        DEX_PLUGIN_NPM_COMMAND_TIMEOUT_MS: "2500",
       },
       execFileSyncImpl(command: string, args: string[], options: unknown) {
         calls.push({ args, command, options });

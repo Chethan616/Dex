@@ -4,7 +4,7 @@ import { setPluginToolMeta } from "../plugins/tools.js";
 
 const mocks = vi.hoisted(() => ({
   createBundleMcpToolRuntime: vi.fn(),
-  createOpenClawCodingTools: vi.fn(),
+  createDexCodingTools: vi.fn(),
   disposeBundleRuntime: vi.fn(),
   loadModelCatalog: vi.fn(async (): Promise<Array<Record<string, unknown>>> => []),
   normalizeProviderToolSchemasWithPlugin: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock("../agents/agent-bundle-mcp-tools.js", () => ({
 }));
 
 vi.mock("../agents/agent-tools.js", () => ({
-  createOpenClawCodingTools: mocks.createOpenClawCodingTools,
+  createDexCodingTools: mocks.createDexCodingTools,
 }));
 
 vi.mock("../plugins/provider-runtime.js", () => ({
@@ -58,7 +58,7 @@ function bundleMcpTool(name: string, parameters: unknown): AnyAgentTool {
 
 describe("doctor runtime tool schema error handling", () => {
   beforeEach(() => {
-    mocks.createOpenClawCodingTools.mockReset().mockReturnValue([]);
+    mocks.createDexCodingTools.mockReset().mockReturnValue([]);
     mocks.createBundleMcpToolRuntime.mockReset().mockResolvedValue({
       tools: [],
       dispose: mocks.disposeBundleRuntime,
@@ -72,7 +72,7 @@ describe("doctor runtime tool schema error handling", () => {
   });
 
   it("reports agent runtime tool construction failures without aborting schema checks", async () => {
-    mocks.createOpenClawCodingTools.mockImplementationOnce(() => {
+    mocks.createDexCodingTools.mockImplementationOnce(() => {
       throw new Error("fuzzplugin startup failed");
     });
 
@@ -90,7 +90,7 @@ describe("doctor runtime tool schema error handling", () => {
   });
 
   it("reports agent runtime tool normalization failures without aborting doctor", async () => {
-    mocks.createOpenClawCodingTools.mockReturnValueOnce([
+    mocks.createDexCodingTools.mockReturnValueOnce([
       tool("fuzzplugin_move_angles", { type: "object", properties: {} }),
     ]);
     mocks.normalizeProviderToolSchemasWithPlugin.mockImplementation(({ context }) => {
@@ -122,7 +122,7 @@ describe("doctor runtime tool schema error handling", () => {
         throw new Error("fuzzplugin parameters getter exploded");
       },
     });
-    mocks.createOpenClawCodingTools.mockReturnValueOnce([
+    mocks.createDexCodingTools.mockReturnValueOnce([
       unreadable,
       tool("healthy", { type: "object", properties: {} }),
     ]);

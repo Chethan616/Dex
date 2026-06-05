@@ -35,7 +35,7 @@ const mockPrompter: WizardPrompter = {
   confirm: mockPromptConfirm,
   note: mockPromptNote,
 } as unknown as WizardPrompter;
-const originalEnvToken = process.env.OPENCLAW_TWITCH_ACCESS_TOKEN;
+const originalEnvToken = process.env.DEX_TWITCH_ACCESS_TOKEN;
 
 const mockAccount: TwitchAccountConfig = {
   username: "testbot",
@@ -67,9 +67,9 @@ describe("setup surface helpers", () => {
 
   afterEach(() => {
     if (originalEnvToken === undefined) {
-      delete process.env.OPENCLAW_TWITCH_ACCESS_TOKEN;
+      delete process.env.DEX_TWITCH_ACCESS_TOKEN;
     } else {
-      process.env.OPENCLAW_TWITCH_ACCESS_TOKEN = originalEnvToken;
+      process.env.DEX_TWITCH_ACCESS_TOKEN = originalEnvToken;
     }
     // Don't restoreAllMocks as it breaks module-level mocks
   });
@@ -307,7 +307,7 @@ describe("setup surface helpers", () => {
     });
 
     it("reports env-token default account setup as configured", async () => {
-      process.env.OPENCLAW_TWITCH_ACCESS_TOKEN = "oauth:fromenv";
+      process.env.DEX_TWITCH_ACCESS_TOKEN = "oauth:fromenv";
 
       const cfg = {
         channels: {
@@ -445,7 +445,7 @@ describe("setup surface helpers", () => {
     });
 
     it("persists a token instead of using env-token shortcut for non-default finalize", async () => {
-      process.env.OPENCLAW_TWITCH_ACCESS_TOKEN = "oauth:fromenv";
+      process.env.DEX_TWITCH_ACCESS_TOKEN = "oauth:fromenv";
       mockPromptText
         .mockReset()
         .mockResolvedValueOnce("secondary-bot" as never)

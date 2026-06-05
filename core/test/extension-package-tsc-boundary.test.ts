@@ -8,7 +8,7 @@ const CHECK_EXTENSION_PACKAGE_BOUNDARY_BIN = resolve(
   "scripts/check-extension-package-tsc-boundary.mjs",
 );
 const SHOULD_RUN_BOUNDARY_SCRIPT_WRAPPER =
-  process.env.OPENCLAW_RUN_EXTENSION_PACKAGE_BOUNDARY_TEST === "1";
+  process.env.DEX_RUN_EXTENSION_PACKAGE_BOUNDARY_TEST === "1";
 
 function runNode(args: string[], timeout: number) {
   return spawnSync(process.execPath, args, {

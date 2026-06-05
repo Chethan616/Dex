@@ -57,7 +57,7 @@ describe("compactSkillPaths", () => {
 
     const compactedPath = workspaceSkillsTesting.compactHomePath(skillPath, [home]);
 
-    expect(compactedPath).toBe("~/.openclaw-test-skills/win-skill/SKILL.md");
+    expect(compactedPath).toBe("~/.dex-test-skills/win-skill/SKILL.md");
   });
 
   it("preserves POSIX literal backslashes after home compaction", () => {

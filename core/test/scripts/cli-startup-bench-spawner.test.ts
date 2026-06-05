@@ -102,14 +102,14 @@ describe("CLI startup benchmark script spawners", () => {
       encoding: "utf8",
       env: {
         ...process.env,
-        OPENCLAW_STARTUP_BENCH_MAX_RSS_REGRESSION_PCT: "20pct",
+        DEX_STARTUP_BENCH_MAX_RSS_REGRESSION_PCT: "20pct",
       },
     });
 
     expect(result.status).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toContain(
-      "OPENCLAW_STARTUP_BENCH_MAX_RSS_REGRESSION_PCT must be a non-negative number",
+      "DEX_STARTUP_BENCH_MAX_RSS_REGRESSION_PCT must be a non-negative number",
     );
     expect(result.stderr).not.toContain("at ");
   });

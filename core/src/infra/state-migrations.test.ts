@@ -2,9 +2,9 @@ import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveChannelAllowFromPath } from "../pairing/pairing-store.js";
-import { openOpenClawStateDatabase } from "../state/openclaw-state-db.js";
+import { openDexStateDatabase } from "../state/openclaw-state-db.js";
 import { createTrackedTempDirs } from "../test-utils/tracked-temp-dirs.js";
 import { detectLegacyStateMigrations, runLegacyStateMigrations } from "./state-migrations.js";
 
@@ -17,7 +17,7 @@ vi.mock("../channels/plugins/bundled.js", () => {
     }
   }
 
-  function resolveChatAppAccountId(cfg: OpenClawConfig): string {
+  function resolveChatAppAccountId(cfg: DexConfig): string {
     const channel = (cfg.channels as Record<string, { defaultAccount?: string }> | undefined)
       ?.chatapp;
     return channel?.defaultAccount ?? "default";
@@ -59,8 +59,8 @@ vi.mock("../channels/plugins/bundled.js", () => {
               ];
         });
       },
-      ({ cfg, env }: { cfg: OpenClawConfig; env: NodeJS.ProcessEnv }) => {
-        const root = env.OPENCLAW_STATE_DIR;
+      ({ cfg, env }: { cfg: DexConfig; env: NodeJS.ProcessEnv }) => {
+        const root = env.DEX_STATE_DIR;
         if (!root) {
           return [];
         }
@@ -94,7 +94,7 @@ async function expectMissingPath(targetPath: string): Promise<void> {
 }
 const createTempDir = () => tempDirs.make("openclaw-state-migrations-test-");
 
-function createConfig(): OpenClawConfig {
+function createConfig(): DexConfig {
   return {
     agents: {
       list: [{ id: "worker-1", default: true }],
@@ -111,19 +111,19 @@ function createConfig(): OpenClawConfig {
         },
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 function createEnv(stateDir: string): NodeJS.ProcessEnv {
   return {
     ...process.env,
-    OPENCLAW_STATE_DIR: stateDir,
+    DEX_STATE_DIR: stateDir,
   };
 }
 
 async function createLegacyStateFixture(params?: { includePreKey?: boolean }) {
   const root = await createTempDir();
-  const stateDir = path.join(root, ".openclaw");
+  const stateDir = path.join(root, ".dex");
   const env = createEnv(stateDir);
   const cfg = createConfig();
 
@@ -284,7 +284,7 @@ describe("state migrations", () => {
 
   it("migrates legacy delivery queue files into shared SQLite state", async () => {
     const root = await createTempDir();
-    const stateDir = path.join(root, ".openclaw");
+    const stateDir = path.join(root, ".dex");
     const env = createEnv(stateDir);
     const cfg = createConfig();
     await fs.mkdir(path.join(stateDir, "delivery-queue"), { recursive: true });
@@ -356,7 +356,7 @@ describe("state migrations", () => {
     expect(result.changes).toContain(
       "Migrated 2 session delivery queue entries → shared SQLite state",
     );
-    const { db } = openOpenClawStateDatabase({ env });
+    const { db } = openDexStateDatabase({ env });
     const rows = db
       .prepare(
         "SELECT queue_name, id, status, channel, target, retry_count FROM delivery_queue_entries ORDER BY queue_name, id",
@@ -402,7 +402,7 @@ describe("state migrations", () => {
 
   it("keeps legacy delivery queue files when shared SQLite already has a conflicting row", async () => {
     const root = await createTempDir();
-    const stateDir = path.join(root, ".openclaw");
+    const stateDir = path.join(root, ".dex");
     const env = createEnv(stateDir);
     const cfg = createConfig();
     const queueDir = path.join(stateDir, "delivery-queue");
@@ -446,7 +446,7 @@ describe("state migrations", () => {
       "utf8",
     );
 
-    const { db } = openOpenClawStateDatabase({ env });
+    const { db } = openDexStateDatabase({ env });
     db.prepare(
       `
         INSERT INTO delivery_queue_entries (

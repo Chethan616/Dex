@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveHookEnableState, resolveHookEntries } from "./policy.js";
 import type { HookEntry, HookSource } from "./types.js";
 
@@ -37,7 +37,7 @@ describe("hook policy", () => {
 
     it("allows workspace hooks when explicitly enabled", () => {
       const entry = makeHookEntry("workspace-hook", "openclaw-workspace");
-      const config: OpenClawConfig = {
+      const config: DexConfig = {
         hooks: {
           internal: {
             entries: {

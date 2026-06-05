@@ -5,7 +5,7 @@ import { OcEmitSentinelError, REDACTED_SENTINEL, guardSentinel } from "../../sen
 
 describe("sentinel-guard", () => {
   it("sentinel constant matches the literal", () => {
-    expect(REDACTED_SENTINEL).toBe("__OPENCLAW_REDACTED__");
+    expect(REDACTED_SENTINEL).toBe("__DEX_REDACTED__");
   });
 
   it("guardSentinel passes normal strings", () => {
@@ -26,7 +26,7 @@ describe("sentinel-guard", () => {
   it("guardSentinel throws on substring matches (sentinel embedded in larger string)", () => {
     // Substring scan — the sentinel anywhere in the value is a leak,
     // not just exact equality. A hostile caller smuggling
-    // `prefix__OPENCLAW_REDACTED__suffix` would have bypassed the old
+    // `prefix__DEX_REDACTED__suffix` would have bypassed the old
     // equality check; substring scan closes the gap.
     expect(() => guardSentinel(`prefix${REDACTED_SENTINEL}suffix`, "oc://X.md")).toThrow(
       OcEmitSentinelError,
@@ -46,7 +46,7 @@ describe("sentinel-guard", () => {
   });
 
   it("round-trip echoes pre-existing sentinel; strict mode rejects", () => {
-    const raw = "## Section\n\n- token: __OPENCLAW_REDACTED__\n";
+    const raw = "## Section\n\n- token: __DEX_REDACTED__\n";
     const { ast } = parseMd(raw);
     expect(emitMd(ast)).toBe(raw);
     expect(() => emitMd(ast, { acceptPreExistingSentinel: false })).toThrow(OcEmitSentinelError);

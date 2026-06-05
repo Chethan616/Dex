@@ -194,7 +194,7 @@ describe("getShellEnv", () => {
     const env = getShellEnv();
 
     expect(env.PATH).toContain("/usr/bin");
-    expect(env.PATH).toContain(".openclaw");
+    expect(env.PATH).toContain(".dex");
   });
 });
 
@@ -268,7 +268,7 @@ describe("detectRuntimeShell", () => {
 
   beforeEach(() => {
     envSnapshot = captureEnv([
-      "OPENCLAW_SHELL",
+      "DEX_SHELL",
       "SHELL",
       "POWERSHELL_DISTRIBUTION_CHANNEL",
       "BASH_VERSION",
@@ -278,7 +278,7 @@ describe("detectRuntimeShell", () => {
       "NU_VERSION",
       "NUSHELL_VERSION",
     ]);
-    delete process.env.OPENCLAW_SHELL;
+    delete process.env.DEX_SHELL;
     delete process.env.POWERSHELL_DISTRIBUTION_CHANNEL;
     delete process.env.BASH_VERSION;
     delete process.env.ZSH_VERSION;

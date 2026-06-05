@@ -26,7 +26,7 @@ describe("msteams conversation store (plugin state)", () => {
     const stateDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "openclaw-msteams-store-"));
     const env: NodeJS.ProcessEnv = {
       ...process.env,
-      OPENCLAW_STATE_DIR: stateDir,
+      DEX_STATE_DIR: stateDir,
     };
 
     const ref: StoredConversationReference = {
@@ -91,7 +91,7 @@ describe("msteams conversation store (plugin state)", () => {
     const stateDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "openclaw-msteams-store-"));
     const env: NodeJS.ProcessEnv = {
       ...process.env,
-      OPENCLAW_STATE_DIR: stateDir,
+      DEX_STATE_DIR: stateDir,
     };
     const ref: StoredConversationReference = {
       conversation: { id: "conv-current" },

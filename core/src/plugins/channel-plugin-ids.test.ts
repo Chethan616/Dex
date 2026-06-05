@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { InstalledPluginIndex, InstalledPluginIndexRecord } from "./installed-plugin-index.js";
 import type { PluginManifestRecord, PluginManifestRegistry } from "./manifest-registry.js";
 
 const listPotentialConfiguredChannelIds = vi.hoisted(() => vi.fn());
 const listExplicitlyDisabledChannelIdsForConfig = vi.hoisted(() =>
-  vi.fn((config: OpenClawConfig) => {
+  vi.fn((config: DexConfig) => {
     return Object.entries(config.channels ?? {})
       .filter(([, value]) => {
         return (
@@ -490,7 +490,7 @@ function filterManifestRegistryForInstalledIndex(params: {
 
 function createPluginPlanningTestEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   return {
-    OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY: "1",
+    DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY: "1",
     ...overrides,
   };
 }
@@ -508,8 +508,8 @@ function useManifestRegistryFixture(
 }
 
 function expectStartupPluginIds(params: {
-  config: OpenClawConfig;
-  activationSourceConfig?: OpenClawConfig;
+  config: DexConfig;
+  activationSourceConfig?: DexConfig;
   env?: NodeJS.ProcessEnv;
   expected: readonly string[];
 }) {
@@ -528,8 +528,8 @@ function expectStartupPluginIds(params: {
 }
 
 function expectStartupPluginIdsCase(params: {
-  config: OpenClawConfig;
-  activationSourceConfig?: OpenClawConfig;
+  config: DexConfig;
+  activationSourceConfig?: DexConfig;
   env?: NodeJS.ProcessEnv;
   expected: readonly string[];
 }) {
@@ -537,7 +537,7 @@ function expectStartupPluginIdsCase(params: {
 }
 
 function resolveConfiguredDeferredChannelPluginIdsForFixture(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   env?: NodeJS.ProcessEnv;
 }): string[] {
   const manifestRegistry = loadPluginManifestRegistry() as PluginManifestRegistry;
@@ -665,12 +665,12 @@ function createStartupConfig(params: {
             },
           }
         : {}),
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 describe("resolveGatewayStartupPluginIds", () => {
   beforeEach(() => {
-    listPotentialConfiguredChannelIds.mockReset().mockImplementation((config: OpenClawConfig) => {
+    listPotentialConfiguredChannelIds.mockReset().mockImplementation((config: DexConfig) => {
       if (Object.hasOwn(config, "channels")) {
         return Object.keys(config.channels ?? {});
       }
@@ -678,13 +678,13 @@ describe("resolveGatewayStartupPluginIds", () => {
     });
     listPotentialConfiguredChannelPresenceSignals
       .mockReset()
-      .mockImplementation((config: OpenClawConfig) => {
+      .mockImplementation((config: DexConfig) => {
         return listPotentialConfiguredChannelIds(config).map((channelId: string) => ({
           channelId,
           source: "config",
         }));
       });
-    hasPotentialConfiguredChannels.mockReset().mockImplementation((config: OpenClawConfig) => {
+    hasPotentialConfiguredChannels.mockReset().mockImplementation((config: DexConfig) => {
       if (Object.hasOwn(config, "channels")) {
         return Object.keys(config.channels ?? {}).length > 0;
       }
@@ -710,7 +710,7 @@ describe("resolveGatewayStartupPluginIds", () => {
     ],
     [
       "keeps bundled startup sidecars with enabledByDefault at idle startup",
-      {} as OpenClawConfig,
+      {} as DexConfig,
       ["demo-channel", "browser", "memory-core"],
     ],
     [
@@ -736,7 +736,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
         plugins: { entries: { "amazon-bedrock": { enabled: false } } },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["demo-channel", "browser", "memory-core"],
     ],
     [
@@ -744,7 +744,7 @@ describe("resolveGatewayStartupPluginIds", () => {
       {
         channels: {},
         messages: { tts: { provider: "microsoft" } },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["browser", "microsoft", "memory-core"],
     ],
     [
@@ -752,7 +752,7 @@ describe("resolveGatewayStartupPluginIds", () => {
       {
         channels: {},
         messages: { tts: { providers: { "tts-local-cli": { command: "say" } } } },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["browser", "tts-local-cli", "memory-core"],
     ],
     [
@@ -760,7 +760,7 @@ describe("resolveGatewayStartupPluginIds", () => {
       {
         channels: {},
         messages: { tts: { provider: "edge" } },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["browser", "microsoft", "memory-core"],
     ],
     [
@@ -778,7 +778,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["browser", "microsoft", "memory-core"],
     ],
     [
@@ -798,7 +798,7 @@ describe("resolveGatewayStartupPluginIds", () => {
         agents: {
           list: [{ id: "reader", tts: { persona: "narrator" } }],
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["browser", "microsoft", "memory-core"],
     ],
     [
@@ -817,7 +817,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["demo-channel", "browser", "microsoft", "memory-core"],
     ],
     [
@@ -840,7 +840,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["demo-channel", "browser", "microsoft", "memory-core"],
     ],
     [
@@ -853,7 +853,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             providers: { microsoft: { enabled: false } },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["browser", "memory-core"],
     ],
     [
@@ -862,7 +862,7 @@ describe("resolveGatewayStartupPluginIds", () => {
         channels: {},
         messages: { tts: { provider: "microsoft" } },
         plugins: { entries: { microsoft: { enabled: false } } },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["browser", "memory-core"],
     ],
     [
@@ -883,7 +883,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["browser", "openai", "google", "memory-core"],
     ],
     [
@@ -896,7 +896,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
         plugins: { entries: { google: { enabled: false } } },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["browser", "memory-core"],
     ],
     [
@@ -911,7 +911,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["browser", "openai", "google", "memory-core"],
     ],
     [
@@ -924,7 +924,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
         plugins: { entries: { openai: { enabled: false } } },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["browser", "memory-core"],
     ],
     [
@@ -947,7 +947,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["brave"],
     ],
     [
@@ -970,7 +970,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       [],
     ],
     [
@@ -993,7 +993,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       [],
     ],
     [
@@ -1006,7 +1006,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
         plugins: { allow: ["browser"] },
-      } as OpenClawConfig,
+      } as DexConfig,
       ["browser"],
     ],
     [
@@ -1052,7 +1052,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectStartupPluginIdsCase({
       config: effectiveConfig,
@@ -1075,7 +1075,7 @@ describe("resolveGatewayStartupPluginIds", () => {
       plugins: {
         allow: ["browser"],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const effectiveConfig = {
       ...rawConfig,
       plugins: {
@@ -1086,7 +1086,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectStartupPluginIdsCase({
       config: effectiveConfig,
@@ -1106,7 +1106,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const runtimeConfig = {
       ...activationSourceConfig,
       plugins: {
@@ -1122,7 +1122,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectStartupPluginIdsCase({
       config: runtimeConfig,
@@ -1178,7 +1178,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       expected: ["browser", "demo-config-startup"],
     });
   });
@@ -1324,7 +1324,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const runtimeConfig = {
       channels: {},
       plugins: {
@@ -1341,7 +1341,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectStartupPluginIdsCase({
       config: runtimeConfig,
@@ -1357,7 +1357,7 @@ describe("resolveGatewayStartupPluginIds", () => {
         defaultProfile: "docker-cdp",
       },
       channels: {},
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
     const effectiveConfig = {
       ...rawConfig,
       plugins: {
@@ -1367,7 +1367,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     expectStartupPluginIdsCase({
       config: effectiveConfig,
@@ -1413,7 +1413,7 @@ describe("resolveGatewayStartupPluginIds", () => {
       { channelId: "demo-channel", source: "env" },
     ]);
 
-    const config = {} as OpenClawConfig;
+    const config = {} as DexConfig;
 
     expectStartupPluginIdsCase({
       config,
@@ -1445,7 +1445,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           plugins: {
             allow: ["workspace-demo-channel-plugin"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
       }),
     ).toEqual(["workspace-demo-channel-plugin"]);
@@ -1462,7 +1462,7 @@ describe("resolveGatewayStartupPluginIds", () => {
         plugins: {
           allow: ["browser"],
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       env: createPluginPlanningTestEnv(),
       expected: ["demo-channel", "browser"],
     });
@@ -1486,7 +1486,7 @@ describe("resolveGatewayStartupPluginIds", () => {
               memory: "none",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1510,7 +1510,7 @@ describe("resolveGatewayStartupPluginIds", () => {
               memory: "none",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1536,7 +1536,7 @@ describe("resolveGatewayStartupPluginIds", () => {
               memory: "none",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1562,7 +1562,7 @@ describe("resolveGatewayStartupPluginIds", () => {
               memory: "none",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1604,7 +1604,7 @@ describe("resolveGatewayStartupPluginIds", () => {
               memory: "none",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1646,7 +1646,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           plugins: {
             allow: ["openai"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1664,7 +1664,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             allow: ["browser"],
             bundledDiscovery: "compat",
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1686,7 +1686,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           plugins: {
             allow: ["browser"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1719,7 +1719,7 @@ describe("resolveGatewayStartupPluginIds", () => {
               memory: "none",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1747,7 +1747,7 @@ describe("resolveGatewayStartupPluginIds", () => {
               memory: "none",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1773,7 +1773,7 @@ describe("resolveGatewayStartupPluginIds", () => {
               memory: "none",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1801,7 +1801,7 @@ describe("resolveGatewayStartupPluginIds", () => {
               memory: "none",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1826,7 +1826,7 @@ describe("resolveGatewayStartupPluginIds", () => {
               memory: "none",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1852,7 +1852,7 @@ describe("resolveGatewayStartupPluginIds", () => {
               memory: "none",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1867,7 +1867,7 @@ describe("resolveGatewayStartupPluginIds", () => {
       resolveConfigValidationMetadataPluginIds({
         config: {
           channels: {},
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1889,7 +1889,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           plugins: {
             enabled: false,
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1910,7 +1910,7 @@ describe("resolveGatewayStartupPluginIds", () => {
               paths: ["/tmp/plugins/custom"],
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
         index,
       }),
@@ -1926,7 +1926,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             token: "stale",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       env: createPluginPlanningTestEnv(),
       expected: ["browser", "memory-core"],
     });
@@ -1935,16 +1935,16 @@ describe("resolveGatewayStartupPluginIds", () => {
   it("does not treat persisted auth alone as gateway startup intent", () => {
     listPotentialConfiguredChannelIds.mockImplementation(
       (
-        configForTest: OpenClawConfig,
+        configForTest: DexConfig,
         _env: NodeJS.ProcessEnv,
         options?: { includePersistedAuthState?: boolean },
       ) => (options?.includePersistedAuthState === false ? [] : ["demo-channel"]),
     );
 
     expectStartupPluginIdsCase({
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
       env: createPluginPlanningTestEnv({
-        OPENCLAW_STATE_DIR: "/tmp/openclaw-with-persisted-demo-channel",
+        DEX_STATE_DIR: "/tmp/openclaw-with-persisted-demo-channel",
       }),
       expected: ["browser", "memory-core"],
     });
@@ -1954,7 +1954,7 @@ describe("resolveGatewayStartupPluginIds", () => {
     useManifestRegistryFixture(createManifestRegistryFixtureWithWorkspaceDemoChannel());
     listPotentialConfiguredChannelIds.mockImplementation(
       (
-        configForTest: OpenClawConfig,
+        configForTest: DexConfig,
         _env: NodeJS.ProcessEnv,
         options?: { includePersistedAuthState?: boolean },
       ) => (options?.includePersistedAuthState === false ? [] : ["demo-channel"]),
@@ -1966,9 +1966,9 @@ describe("resolveGatewayStartupPluginIds", () => {
           plugins: {
             allow: ["workspace-demo-channel-plugin"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv({
-          OPENCLAW_STATE_DIR: "/tmp/openclaw-with-persisted-demo-channel",
+          DEX_STATE_DIR: "/tmp/openclaw-with-persisted-demo-channel",
         }),
       }),
     ).toStrictEqual([]);
@@ -1985,7 +1985,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             token: "configured",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       env: createPluginPlanningTestEnv(),
       index,
       manifestRegistry: registry,
@@ -2010,7 +2010,7 @@ describe("resolveGatewayStartupPluginIds", () => {
         plugins: {
           allow: ["workspace-demo-channel-plugin"],
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       env: createPluginPlanningTestEnv(),
       index,
       manifestRegistry: registry,
@@ -2037,7 +2037,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           plugins: {
             allow: ["workspace-demo-channel-plugin"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: createPluginPlanningTestEnv(),
       }),
     ).toStrictEqual([]);
@@ -2145,7 +2145,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             codex: { enabled: true },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       expected: ["demo-channel", "browser", "openai", "codex", "memory-core"],
     });
   });
@@ -2170,7 +2170,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       expected: ["demo-channel", "browser", "anthropic", "openai", "codex", "memory-core"],
     });
   });
@@ -2186,7 +2186,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       expected: ["demo-channel", "browser", "openai", "memory-core"],
     });
   });
@@ -2206,7 +2206,7 @@ describe("resolveGatewayStartupPluginIds", () => {
       config: createStartupConfig({
         enabledPluginIds: ["codex"],
       }),
-      env: { OPENCLAW_AGENT_RUNTIME: "codex" },
+      env: { DEX_AGENT_RUNTIME: "codex" },
       expected: ["demo-channel", "browser", "memory-core"],
     });
   });
@@ -2238,7 +2238,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             "demo-provider-plugin": { enabled: true },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       expected: ["demo-channel", "browser", "demo-provider-plugin", "memory-core"],
     });
   });
@@ -2253,7 +2253,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       expected: ["demo-channel", "browser", "anthropic", "memory-core"],
     });
   });
@@ -2289,7 +2289,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       expected: ["demo-channel", "browser", "memory-core"],
     });
   });
@@ -2311,7 +2311,7 @@ describe("resolveGatewayStartupPluginIds", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       expected: ["demo-channel", "browser", "openai", "memory-core"],
     });
   });
@@ -2319,7 +2319,7 @@ describe("resolveGatewayStartupPluginIds", () => {
 
 describe("resolveConfiguredChannelPluginIds", () => {
   beforeEach(() => {
-    listPotentialConfiguredChannelIds.mockReset().mockImplementation((config: OpenClawConfig) => {
+    listPotentialConfiguredChannelIds.mockReset().mockImplementation((config: DexConfig) => {
       if (Object.hasOwn(config, "channels")) {
         return Object.keys(config.channels ?? {});
       }
@@ -2327,13 +2327,13 @@ describe("resolveConfiguredChannelPluginIds", () => {
     });
     listPotentialConfiguredChannelPresenceSignals
       .mockReset()
-      .mockImplementation((config: OpenClawConfig) => {
+      .mockImplementation((config: DexConfig) => {
         return listPotentialConfiguredChannelIds(config).map((channelId: string) => ({
           channelId,
           source: "config",
         }));
       });
-    hasPotentialConfiguredChannels.mockReset().mockImplementation((config: OpenClawConfig) => {
+    hasPotentialConfiguredChannels.mockReset().mockImplementation((config: DexConfig) => {
       if (Object.hasOwn(config, "channels")) {
         return Object.keys(config.channels ?? {}).length > 0;
       }
@@ -2379,7 +2379,7 @@ describe("resolveConfiguredChannelPluginIds", () => {
           plugins: {
             allow: ["browser"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {},
       }),
@@ -2396,7 +2396,7 @@ describe("resolveConfiguredChannelPluginIds", () => {
           plugins: {
             deny: ["activation-only-channel-plugin"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: process.env,
       }),
@@ -2413,7 +2413,7 @@ describe("resolveConfiguredChannelPluginIds", () => {
           plugins: {
             enabled: false,
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: process.env,
       }),
@@ -2480,7 +2480,7 @@ describe("resolveConfiguredChannelPluginIds", () => {
           plugins: {
             allow: ["external-env-channel-plugin"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           EXTERNAL_ENV_CHANNEL_TOKEN: "token",
@@ -2503,7 +2503,7 @@ describe("resolveConfiguredChannelPluginIds", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: process.env,
       }),
@@ -2532,7 +2532,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           plugins: {
             allow: ["memory-core"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           DEMO_CHANNEL_TOKEN: "token",
@@ -2547,7 +2547,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           plugins: {
             allow: ["memory-core"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           DEMO_CHANNEL_TOKEN: "token",
@@ -2569,7 +2569,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           plugins: {
             allow: ["memory-core"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           DEMO_CHANNEL_TOKEN: "token",
@@ -2603,7 +2603,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           DEMO_CHANNEL_TOKEN: "token",
@@ -2622,7 +2622,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
               enabled: true,
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {},
         includePersistedAuthState: false,
@@ -2645,7 +2645,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
               enabled: true,
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {},
         includePersistedAuthState: false,
@@ -2661,7 +2661,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           token: "stale-token",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(listExplicitConfiguredChannelIdsForConfig(config)).toStrictEqual([]);
     expect(
@@ -2702,7 +2702,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveConfiguredChannelPresencePolicy({
@@ -2747,7 +2747,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {},
       }),
@@ -2766,7 +2766,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           plugins: {
             allow: ["external-env-channel-plugin"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           EXTERNAL_ENV_CHANNEL_TOKEN: "token",
@@ -2786,7 +2786,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
       plugins: {
         allow: ["browser"],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveConfiguredChannelPresencePolicy({
@@ -2828,7 +2828,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
               token: "configured",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {},
         includePersistedAuthState: false,
@@ -2853,7 +2853,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           plugins: {
             enabled: false,
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {},
         includePersistedAuthState: false,
@@ -2871,7 +2871,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           plugins: {
             deny: ["demo-channel"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {},
         includePersistedAuthState: false,
@@ -2893,7 +2893,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
             enabled: false,
           },
         },
-      } as OpenClawConfig),
+      } as DexConfig),
     ).toEqual(["demo-channel"]);
   });
 
@@ -2919,7 +2919,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           DEMO_CHANNEL_TOKEN: "ambient",
@@ -2946,7 +2946,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           plugins: {
             allow: ["demo-other-channel"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           DEMO_CHANNEL_TOKEN: "ambient",
@@ -2971,7 +2971,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           ACTIVATION_ONLY_CHANNEL_TOKEN: "ambient",
@@ -2996,7 +2996,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           plugins: {
             allow: ["external-env-channel-plugin"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           EXTERNAL_ENV_CHANNEL_TOKEN: "token",
@@ -3009,7 +3009,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
   it("ignores manifest env vars from untrusted external plugins", () => {
     expect(
       listConfiguredChannelIdsForReadOnlyScope({
-        config: {} as OpenClawConfig,
+        config: {} as DexConfig,
         workspaceDir: "/tmp",
         env: {
           EXTERNAL_ENV_CHANNEL_TOKEN: "token",
@@ -3020,7 +3020,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
 
     expect(
       hasConfiguredChannelsForReadOnlyScope({
-        config: {} as OpenClawConfig,
+        config: {} as DexConfig,
         workspaceDir: "/tmp",
         env: {
           EXTERNAL_ENV_CHANNEL_TOKEN: "token",
@@ -3037,7 +3037,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           plugins: {
             allow: ["ambient-env-channel-plugin"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           HOME: "/tmp/user",
@@ -3056,7 +3056,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           plugins: {
             allow: ["external-env-channel-plugin"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           external_env_channel_token: "token",
@@ -3086,7 +3086,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           plugins: {
             allow: ["external-env-channel-plugin"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           EXTERNAL_ENV_CHANNEL_TOKEN: "token",
@@ -3120,7 +3120,7 @@ describe("listConfiguredChannelIdsForReadOnlyScope", () => {
           plugins: {
             allow: ["external-env-channel-plugin"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         workspaceDir: "/tmp",
         env: {
           EXTERNAL_ENV_CHANNEL_TOKEN: "token",

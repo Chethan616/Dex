@@ -7,7 +7,7 @@ import {
   installDialogPolyfill,
   nextFrame,
 } from "../../test-helpers/modal-dialog.ts";
-import type { OpenClawModalDialog } from "./modal-dialog.ts";
+import type { DexModalDialog } from "./modal-dialog.ts";
 import "./modal-dialog.ts";
 
 let container: HTMLDivElement;
@@ -33,7 +33,7 @@ async function renderModal() {
   return await getRenderedModalDialog(container);
 }
 
-function expectShadowElement(modal: OpenClawModalDialog, id: string): HTMLElement {
+function expectShadowElement(modal: DexModalDialog, id: string): HTMLElement {
   const element = modal.shadowRoot?.getElementById(id);
   if (!(element instanceof HTMLElement)) {
     throw new Error(`Expected shadow element #${id}`);

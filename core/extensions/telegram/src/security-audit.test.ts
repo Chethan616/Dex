@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../runtime-api.js";
+import type { DexConfig } from "../runtime-api.js";
 import type { ResolvedTelegramAccount } from "./accounts.js";
 import { collectTelegramSecurityAuditFindings } from "./security-audit.js";
 
@@ -12,7 +12,7 @@ vi.mock("openclaw/plugin-sdk/conversation-runtime", () => ({
 }));
 
 function createTelegramAccount(
-  config: NonNullable<NonNullable<OpenClawConfig["channels"]>["telegram"]>,
+  config: NonNullable<NonNullable<DexConfig["channels"]>["telegram"]>,
 ): ResolvedTelegramAccount {
   return {
     accountId: "default",
@@ -23,7 +23,7 @@ function createTelegramAccount(
   };
 }
 
-function getTelegramConfig(cfg: OpenClawConfig) {
+function getTelegramConfig(cfg: DexConfig) {
   const config = cfg.channels?.telegram;
   if (!config) {
     throw new Error("expected telegram config");
@@ -47,7 +47,7 @@ describe("Telegram security audit findings", () => {
   });
 
   it("flags group commands without a sender allowlist", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           enabled: true,
@@ -68,7 +68,7 @@ describe("Telegram security audit findings", () => {
   });
 
   it("warns when allowFrom entries are non-numeric legacy @username configs", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           enabled: true,
@@ -90,7 +90,7 @@ describe("Telegram security audit findings", () => {
   });
 
   it("warns about invalid DM allowFrom entries even when groups are not enabled", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         telegram: {
           enabled: true,
@@ -114,7 +114,7 @@ describe("Telegram security audit findings", () => {
   });
 
   it("warns about invalid DM allowFrom entries when text commands are disabled", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       commands: { text: false },
       channels: {
         telegram: {

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { slackPlugin } from "./channel.js";
 import { slackOutbound } from "./outbound-adapter.js";
 import * as probeModule from "./probe.js";
-import type { OpenClawConfig } from "./runtime-api.js";
+import type { DexConfig } from "./runtime-api.js";
 import { clearSlackRuntime, setSlackRuntime } from "./runtime.js";
 
 const { handleSlackActionMock } = vi.hoisted(() => ({
@@ -57,7 +57,7 @@ beforeEach(async () => {
   } as never);
 });
 
-async function getSlackConfiguredState(cfg: OpenClawConfig) {
+async function getSlackConfiguredState(cfg: DexConfig) {
   const account = slackPlugin.config.resolveAccount(cfg, "default");
   return {
     configured: slackPlugin.config.isConfigured?.(account, cfg),
@@ -197,7 +197,7 @@ describe("slackPlugin actions", () => {
   });
 
   it("honors the selected Slack account during message tool discovery", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         slack: {
           botToken: "xoxb-root",
@@ -285,7 +285,7 @@ describe("slackPlugin actions", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     setSlackRuntime({
       config: {
         loadConfig: () => cfg,
@@ -320,7 +320,7 @@ describe("slackPlugin actions", () => {
             appToken: "xapp-test",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
     const downloadFile = findSchemaEntry(discovery?.schema, ["download-file"], "Slack schema");
     const downloadProperties = requireRecord(downloadFile.properties, "download-file properties");
@@ -436,7 +436,7 @@ describe("slackPlugin status", () => {
           appToken: "xapp-test",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const account = slackPlugin.config.resolveAccount(cfg, "default");
 
     const result = await slackPlugin.status!.probeAccount!({
@@ -461,7 +461,7 @@ describe("slackPlugin status", () => {
     }
 
     const route = await resolveRoute({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       agentId: "main",
       target: "channel:C1",
       currentSessionKey: "agent:main:slack:channel:C1:thread:1712345678.123456",
@@ -496,7 +496,7 @@ describe("slackPlugin status", () => {
             appToken: "xapp-test",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       agentId: "main",
       target: "D0AEWSDHAQH",
       threadId: "1778110574.653649",
@@ -543,7 +543,7 @@ describe("slackPlugin status", () => {
             appToken: "xapp-test",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       agentId: "main",
       target: "channel:D123",
     });
@@ -570,7 +570,7 @@ describe("slackPlugin status", () => {
 
     await expect(
       resolveRoute({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         agentId: "main",
         target: "D0NOUSER001",
         threadId: "1778110574.653649",
@@ -586,7 +586,7 @@ describe("slackPlugin status", () => {
     conversationsInfoMock.mockResolvedValueOnce({ channel: { id: "G123", is_mpim: true } });
 
     const route = await resolveRoute({
-      cfg: { channels: { slack: { botToken: "xoxb-test" } } } as OpenClawConfig,
+      cfg: { channels: { slack: { botToken: "xoxb-test" } } } as DexConfig,
       agentId: "main",
       target: "G123",
     });
@@ -618,7 +618,7 @@ describe("slackPlugin security", () => {
             dm: { policy: "allowlist", allowFrom: ["  slack:U123  "] },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       account: slackPlugin.config.resolveAccount(
         {
           channels: {
@@ -628,7 +628,7 @@ describe("slackPlugin security", () => {
               dm: { policy: "allowlist", allowFrom: ["  slack:U123  "] },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         "default",
       ),
     });
@@ -1216,7 +1216,7 @@ describe("slackPlugin configured bindings", () => {
 
 describe("slackPlugin config", () => {
   it("treats HTTP mode accounts with bot token + signing secret as configured", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         slack: {
           mode: "http",
@@ -1233,7 +1233,7 @@ describe("slackPlugin config", () => {
   });
 
   it("keeps socket mode requiring app token", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         slack: {
           mode: "socket",
@@ -1261,7 +1261,7 @@ describe("slackPlugin config", () => {
         appTokenSource: "none",
         config: {},
       } as never,
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       runtime: undefined,
     });
 
@@ -1288,7 +1288,7 @@ describe("slackPlugin config", () => {
           signingSecret: { source: "env", provider: "default", id: "SLACK_SIGNING_SECRET" },
         },
       } as never,
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       runtime: undefined,
     });
 

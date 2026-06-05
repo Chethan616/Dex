@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveMainSessionKey } from "../config/sessions.js";
 import { runHeartbeatOnce } from "./heartbeat-runner.js";
 import { installHeartbeatRunnerTestRuntime } from "./heartbeat-runner.test-harness.js";
@@ -28,7 +28,7 @@ function requireFirstMockCall<T>(mock: { mock: { calls: T[][] } }, label: string
 describe("runHeartbeatOnce", () => {
   it("falls back to the main session when a subagent session key is forced", async () => {
     await withTempHeartbeatSandbox(async ({ tmpDir, storePath, replySpy }) => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             workspace: tmpDir,
@@ -98,7 +98,7 @@ describe("runHeartbeatOnce", () => {
 
   it("routes single-owner dmScope=main direct event wakes to the main session", async () => {
     await withTempHeartbeatSandbox(async ({ tmpDir, storePath, replySpy }) => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             workspace: tmpDir,

@@ -485,7 +485,7 @@ describe("media store", () => {
             ),
           ).rejects.toThrow("Media exceeds 0MB limit");
 
-          const targetDir = path.join(homeInner, ".openclaw", "media", "oversized-stream");
+          const targetDir = path.join(homeInner, ".dex", "media", "oversized-stream");
           const entries = await fs.readdir(targetDir).catch(() => []);
           expect(entries).toStrictEqual([]);
         });

@@ -29,11 +29,11 @@ describe("push APNs auth and helper coverage", () => {
 
   it("prefers inline APNs private key values and unescapes newlines", async () => {
     const resolved = await resolveApnsAuthConfigFromEnv({
-      OPENCLAW_APNS_TEAM_ID: "TEAM123",
-      OPENCLAW_APNS_KEY_ID: "KEY123",
-      OPENCLAW_APNS_PRIVATE_KEY_P8:
+      DEX_APNS_TEAM_ID: "TEAM123",
+      DEX_APNS_KEY_ID: "KEY123",
+      DEX_APNS_PRIVATE_KEY_P8:
         "-----BEGIN PRIVATE KEY-----\\nline-a\\nline-b\\n-----END PRIVATE KEY-----", // pragma: allowlist secret
-      OPENCLAW_APNS_PRIVATE_KEY: "ignored",
+      DEX_APNS_PRIVATE_KEY: "ignored",
     } as NodeJS.ProcessEnv);
 
     expect(resolved.ok).toBe(true);
@@ -45,12 +45,12 @@ describe("push APNs auth and helper coverage", () => {
     }
   });
 
-  it("falls back to OPENCLAW_APNS_PRIVATE_KEY when OPENCLAW_APNS_PRIVATE_KEY_P8 is blank", async () => {
+  it("falls back to DEX_APNS_PRIVATE_KEY when DEX_APNS_PRIVATE_KEY_P8 is blank", async () => {
     const resolved = await resolveApnsAuthConfigFromEnv({
-      OPENCLAW_APNS_TEAM_ID: "TEAM123",
-      OPENCLAW_APNS_KEY_ID: "KEY123",
-      OPENCLAW_APNS_PRIVATE_KEY_P8: "   ",
-      OPENCLAW_APNS_PRIVATE_KEY:
+      DEX_APNS_TEAM_ID: "TEAM123",
+      DEX_APNS_KEY_ID: "KEY123",
+      DEX_APNS_PRIVATE_KEY_P8: "   ",
+      DEX_APNS_PRIVATE_KEY:
         "-----BEGIN PRIVATE KEY-----\\nline-c\\nline-d\\n-----END PRIVATE KEY-----", // pragma: allowlist secret
     } as NodeJS.ProcessEnv);
 
@@ -64,7 +64,7 @@ describe("push APNs auth and helper coverage", () => {
     }
   });
 
-  it("reads APNs private keys from OPENCLAW_APNS_PRIVATE_KEY_PATH", async () => {
+  it("reads APNs private keys from DEX_APNS_PRIVATE_KEY_PATH", async () => {
     const dir = await makeTempDir();
     const keyPath = path.join(dir, "apns-key.p8");
     await fs.writeFile(
@@ -74,9 +74,9 @@ describe("push APNs auth and helper coverage", () => {
     );
 
     const resolved = await resolveApnsAuthConfigFromEnv({
-      OPENCLAW_APNS_TEAM_ID: "TEAM123",
-      OPENCLAW_APNS_KEY_ID: "KEY123",
-      OPENCLAW_APNS_PRIVATE_KEY_PATH: keyPath,
+      DEX_APNS_TEAM_ID: "TEAM123",
+      DEX_APNS_KEY_ID: "KEY123",
+      DEX_APNS_PRIVATE_KEY_PATH: keyPath,
     } as NodeJS.ProcessEnv);
 
     expect(resolved.ok).toBe(true);
@@ -95,19 +95,19 @@ describe("push APNs auth and helper coverage", () => {
 
     await expect(resolveApnsAuthConfigFromEnv({} as NodeJS.ProcessEnv)).resolves.toEqual({
       ok: false,
-      error: "APNs auth missing: set OPENCLAW_APNS_TEAM_ID and OPENCLAW_APNS_KEY_ID",
+      error: "APNs auth missing: set DEX_APNS_TEAM_ID and DEX_APNS_KEY_ID",
     });
 
     const missingKey = await resolveApnsAuthConfigFromEnv({
-      OPENCLAW_APNS_TEAM_ID: "TEAM123",
-      OPENCLAW_APNS_KEY_ID: "KEY123",
-      OPENCLAW_APNS_PRIVATE_KEY_PATH: missingPath,
+      DEX_APNS_TEAM_ID: "TEAM123",
+      DEX_APNS_KEY_ID: "KEY123",
+      DEX_APNS_PRIVATE_KEY_PATH: missingPath,
     } as NodeJS.ProcessEnv);
 
     expect(missingKey.ok).toBe(false);
     if (!missingKey.ok) {
       expect(missingKey.error).toContain(
-        `failed reading OPENCLAW_APNS_PRIVATE_KEY_PATH (${missingPath})`,
+        `failed reading DEX_APNS_PRIVATE_KEY_PATH (${missingPath})`,
       );
     }
   });

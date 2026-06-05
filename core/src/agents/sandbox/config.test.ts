@@ -1,11 +1,11 @@
 import { MAX_TIMER_TIMEOUT_MS } from "@dexagent/normalization-core/number-coercion";
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { resolveSandboxConfigForAgent } from "./config.js";
 
 describe("sandbox config", () => {
   it("caps browser autostart timeout to a timer-safe delay", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       agents: {
         defaults: {
           sandbox: {

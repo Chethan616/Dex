@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { OpenClawChannelBridge } from "./channel-bridge.js";
+import { DexChannelBridge } from "./channel-bridge.js";
 
 const ONE_MINUTE_MS = 60 * 1_000;
 const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
@@ -28,13 +28,13 @@ type BridgeInternals = {
 };
 
 function makeBridge(): BridgeInternals {
-  return new OpenClawChannelBridge({} as never, {
+  return new DexChannelBridge({} as never, {
     claudeChannelMode: "off",
     verbose: false,
   }) as unknown as BridgeInternals;
 }
 
-describe("OpenClawChannelBridge — pendingClaudePermissions / pendingApprovals memory bounds", () => {
+describe("DexChannelBridge — pendingClaudePermissions / pendingApprovals memory bounds", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(0);

@@ -38,7 +38,7 @@ function expectLastAuthResolutionParams(expected: {
 describe("resolveGatewayUrlOverrideSource", () => {
   it("maps override url sources only", () => {
     expect(resolveGatewayUrlOverrideSource("cli --url")).toBe("cli");
-    expect(resolveGatewayUrlOverrideSource("env OPENCLAW_GATEWAY_URL")).toBe("env");
+    expect(resolveGatewayUrlOverrideSource("env DEX_GATEWAY_URL")).toBe("env");
     expect(resolveGatewayUrlOverrideSource("config gateway.remote.url")).toBeUndefined();
   });
 });

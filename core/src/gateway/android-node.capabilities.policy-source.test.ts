@@ -25,7 +25,7 @@ describe("shouldFetchRemotePolicyConfig", () => {
   });
 
   it("returns true for env and cli overrides", () => {
-    expect(shouldFetchRemotePolicyConfig(details({ urlSource: "env OPENCLAW_GATEWAY_URL" }))).toBe(
+    expect(shouldFetchRemotePolicyConfig(details({ urlSource: "env DEX_GATEWAY_URL" }))).toBe(
       true,
     );
     expect(shouldFetchRemotePolicyConfig(details({ urlSource: "cli --url" }))).toBe(true);

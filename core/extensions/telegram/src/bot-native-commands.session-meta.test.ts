@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { ResolvedAgentRoute } from "openclaw/plugin-sdk/routing";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TelegramNativeCommandDeps } from "./bot-native-command-deps.runtime.js";
@@ -127,7 +127,7 @@ vi.mock("openclaw/plugin-sdk/conversation-runtime", async () => {
     ensureConfiguredBindingRouteReady: persistentBindingMocks.ensureConfiguredBindingRouteReady,
     recordInboundSessionMetaSafe: vi.fn(
       async (params: {
-        cfg: OpenClawConfig;
+        cfg: DexConfig;
         agentId: string;
         sessionKey: string;
         ctx: unknown;
@@ -225,7 +225,7 @@ type TelegramPluginCommandSpecs = ReturnType<
 >;
 
 function registerAndResolveStatusHandler(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   allowFrom?: string[];
   groupAllowFrom?: string[];
   storeAllowFrom?: string[];
@@ -257,7 +257,7 @@ function registerAndResolveStatusHandler(params: {
 
 function registerAndResolveCommandHandlerBase(params: {
   commandName: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   allowFrom: string[];
   groupAllowFrom: string[];
   storeAllowFrom?: string[];
@@ -320,7 +320,7 @@ function registerAndResolveCommandHandlerBase(params: {
 
 function registerAndResolveCommandHandler(params: {
   commandName: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   allowFrom?: string[];
   groupAllowFrom?: string[];
   storeAllowFrom?: string[];
@@ -587,7 +587,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
   });
 
   it("calls recordSessionMetaFromInbound after a native slash command", async () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: DexConfig = {};
     const { handler } = registerAndResolveStatusHandler({ cfg });
     await handler(createTelegramPrivateCommandContext());
 
@@ -619,7 +619,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     sessionMocks.loadSessionStore.mockReturnValue({
       "agent:main:main": {
         providerOverride: "anthropic",
@@ -657,7 +657,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
   });
 
   it("inherits the parent session model when building DM thread native argument menus", async () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: DexConfig = {};
     sessionMocks.loadSessionStore.mockReturnValue({
       "agent:main:main": {
         providerOverride: "anthropic",
@@ -700,7 +700,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
           thinkingDefault: "medium",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     sessionMocks.loadSessionStore.mockReturnValue({
       "agent:main:main": {
         providerOverride: "anthropic",
@@ -744,7 +744,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
           model: { primary: "openai/gpt-5.5" },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     sessionMocks.loadSessionStore.mockReturnValue({});
 
     const { handler, sendMessage } = registerAndResolveCommandHandler({
@@ -779,7 +779,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     sessionMocks.loadSessionStore.mockReturnValue({
       "agent:main:main": {
         providerOverride: "anthropic",
@@ -825,7 +825,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
           },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     sessionMocks.loadSessionStore.mockReturnValue({});
 
     const { handler, sendMessage } = registerAndResolveCommandHandler({
@@ -861,7 +861,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
     const deferred = createDeferred<void>();
     sessionMocks.recordSessionMetaFromInbound.mockReturnValue(deferred.promise);
 
-    const cfg: OpenClawConfig = {};
+    const cfg: DexConfig = {};
     const { handler } = registerAndResolveStatusHandler({ cfg });
     const runPromise = handler(createTelegramPrivateCommandContext());
 
@@ -1295,7 +1295,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
 
     const { handler } = registerAndResolveCommandHandler({
       commandName: "codex",
-      cfg: { commands: { allowFrom: { telegram: ["200"] } } } as OpenClawConfig,
+      cfg: { commands: { allowFrom: { telegram: ["200"] } } } as DexConfig,
       groupAllowFrom: ["-1001234567890"],
       useAccessGroups: false,
       pluginCommandSpecs: [
@@ -1351,7 +1351,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
 
     const { handler } = registerAndResolveCommandHandler({
       commandName: "codex",
-      cfg: { commands: { allowFrom: { telegram: ["200"] } } } as OpenClawConfig,
+      cfg: { commands: { allowFrom: { telegram: ["200"] } } } as DexConfig,
       useAccessGroups: false,
       pluginCommandSpecs: [
         {

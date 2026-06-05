@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { collectSandboxBrowserHashLabelFindings } from "./audit-extra.async.js";
 import { collectSandboxDangerousConfigFindings } from "./audit-extra.sync.js";
 
@@ -213,7 +213,7 @@ describe("security audit sandbox browser findings", () => {
           },
         },
       },
-    } satisfies OpenClawConfig);
+    } satisfies DexConfig);
     expect(findings.map((finding) => finding.checkId)).not.toContain(
       "sandbox.browser_cdp_bridge_unrestricted",
     );

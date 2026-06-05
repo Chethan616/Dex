@@ -1,9 +1,9 @@
 import { sortUniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { PluginAutoEnableResult } from "../config/plugin-auto-enable.js";
 import type { PluginManifestRecord } from "./manifest-registry.js";
-import type { OpenClawPackageManifest } from "./manifest.js";
+import type { DexPackageManifest } from "./manifest.js";
 import type { PluginMetadataSnapshot } from "./plugin-metadata-snapshot.types.js";
 import type { PluginRegistrySnapshot } from "./plugin-registry.js";
 import { createEmptyPluginRegistry } from "./registry-empty.js";
@@ -58,7 +58,7 @@ function createManifestProviderPlugin(params: {
   contracts?: PluginManifestRecord["contracts"];
   modelCatalog?: PluginManifestRecord["modelCatalog"];
   providerAuthAliases?: PluginManifestRecord["providerAuthAliases"];
-  packageManifest?: OpenClawPackageManifest;
+  packageManifest?: DexPackageManifest;
 }): PluginManifestRecord {
   return {
     id: params.id,
@@ -415,10 +415,10 @@ function getLastSetupLoadedPluginConfig() {
 }
 
 function createAutoEnabledProviderConfig() {
-  const rawConfig: OpenClawConfig = {
+  const rawConfig: DexConfig = {
     plugins: {},
   };
-  const autoEnabledConfig: OpenClawConfig = {
+  const autoEnabledConfig: DexConfig = {
     ...rawConfig,
     plugins: {
       entries: {
@@ -734,7 +734,7 @@ describe("resolvePluginProviders", () => {
     applyPluginAutoEnableMock.mockReset();
     applyPluginAutoEnableMock.mockImplementation(
       (params): PluginAutoEnableResult => ({
-        config: params.config ?? ({} as OpenClawConfig),
+        config: params.config ?? ({} as DexConfig),
         changes: [],
         autoEnabledReasons: {},
       }),
@@ -769,7 +769,7 @@ describe("resolvePluginProviders", () => {
   });
 
   it("forwards an explicit env to plugin loading", () => {
-    const env = { OPENCLAW_HOME: "/srv/openclaw-home" } as NodeJS.ProcessEnv;
+    const env = { DEX_HOME: "/srv/openclaw-home" } as NodeJS.ProcessEnv;
 
     const providers = resolvePluginProviders({
       workspaceDir: "/workspace/explicit",
@@ -1227,7 +1227,7 @@ describe("resolvePluginProviders", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       providerRefs: ["ollama-spark"],
       activate: true,
     });

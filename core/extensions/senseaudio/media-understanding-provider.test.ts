@@ -102,7 +102,7 @@ describe("transcribeSenseAudioAudio", () => {
   });
 
   it("can transcribe generated speech in live mode", async () => {
-    if (process.env.OPENCLAW_LIVE_TEST !== "1" || !process.env.SENSEAUDIO_API_KEY) {
+    if (process.env.DEX_LIVE_TEST !== "1" || !process.env.SENSEAUDIO_API_KEY) {
       return;
     }
     const say = spawnSync("sh", ["-lc", "command -v say"], { encoding: "utf8" });

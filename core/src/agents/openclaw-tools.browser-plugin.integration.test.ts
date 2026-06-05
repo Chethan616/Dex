@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resetConfigRuntimeState, setRuntimeConfigSnapshot } from "../config/config.js";
 import { activateSecretsRuntimeSnapshot, clearSecretsRuntimeSnapshot } from "../secrets/runtime.js";
 import { resolveOpenClawPluginToolsForOptions } from "./openclaw-plugin-tools.js";
@@ -48,7 +48,7 @@ describe("createOpenClawTools browser plugin integration", () => {
       plugins: {
         allow: ["browser"],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const tools = resolveOpenClawPluginToolsForOptions({
       options: { config },
@@ -70,7 +70,7 @@ describe("createOpenClawTools browser plugin integration", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const tools = resolveOpenClawPluginToolsForOptions({
       options: { config },
@@ -109,14 +109,14 @@ describe("createOpenClawTools browser plugin integration", () => {
           plugins: {
             allow: ["browser"],
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         fsPolicy: { workspaceOnly: true },
       },
       resolvedConfig: {
         plugins: {
           allow: ["browser"],
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     const browserTool = tools.find((tool) => tool.name === "browser");
@@ -135,7 +135,7 @@ describe("createOpenClawTools browser plugin integration", () => {
       plugins: {
         allow: ["browser"],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     resolveOpenClawPluginToolsForOptions({
       options: { config, allowGatewaySubagentBinding: true },
@@ -169,7 +169,7 @@ describe("createOpenClawTools browser plugin integration", () => {
       plugins: {
         allow: ["xai"],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     resolveOpenClawPluginToolsForOptions({
       options: {
@@ -206,7 +206,7 @@ describe("createOpenClawTools browser plugin integration", () => {
       plugins: {
         allow: ["browser"],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     resolveOpenClawPluginToolsForOptions({
       options: {
@@ -228,12 +228,12 @@ describe("createOpenClawTools browser plugin integration", () => {
       plugins: {
         allow: ["old-plugin"],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const staleRuntimeConfig = {
       plugins: {
         allow: ["old-plugin"],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const resolvedRunConfig = {
       plugins: {
         allow: ["browser"],
@@ -243,10 +243,10 @@ describe("createOpenClawTools browser plugin integration", () => {
           planTool: true,
         },
       },
-    } as OpenClawConfig;
-    let capturedRuntimeConfig: OpenClawConfig | undefined;
+    } as DexConfig;
+    let capturedRuntimeConfig: DexConfig | undefined;
     hoisted.resolvePluginTools.mockImplementation((params: unknown) => {
-      capturedRuntimeConfig = (params as { context?: { runtimeConfig?: OpenClawConfig } }).context
+      capturedRuntimeConfig = (params as { context?: { runtimeConfig?: DexConfig } }).context
         ?.runtimeConfig;
       return [];
     });
@@ -281,7 +281,7 @@ describe("createOpenClawTools browser plugin integration", () => {
       plugins: {
         allow: ["old-plugin"],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const explicitConfig = {
       plugins: {
         allow: ["browser"],
@@ -291,15 +291,15 @@ describe("createOpenClawTools browser plugin integration", () => {
           planTool: true,
         },
       },
-    } as OpenClawConfig;
-    let capturedRuntimeConfig: OpenClawConfig | undefined;
-    let getRuntimeConfig: (() => OpenClawConfig | undefined) | undefined;
+    } as DexConfig;
+    let capturedRuntimeConfig: DexConfig | undefined;
+    let getRuntimeConfig: (() => DexConfig | undefined) | undefined;
     hoisted.resolvePluginTools.mockImplementation((params: unknown) => {
       const context = (
         params as {
           context?: {
-            runtimeConfig?: OpenClawConfig;
-            getRuntimeConfig?: () => OpenClawConfig | undefined;
+            runtimeConfig?: DexConfig;
+            getRuntimeConfig?: () => DexConfig | undefined;
           };
         }
       ).context;
@@ -323,23 +323,23 @@ describe("createOpenClawTools browser plugin integration", () => {
       plugins: {
         allow: ["memory-core"],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const firstRuntimeConfig = {
       plugins: {
         allow: ["memory-core"],
         entries: { "memory-core": { enabled: true } },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const nextRuntimeConfig = {
       plugins: {
         allow: ["memory-core"],
         entries: { "memory-core": { enabled: false } },
       },
-    } as OpenClawConfig;
-    let getRuntimeConfig: (() => OpenClawConfig | undefined) | undefined;
+    } as DexConfig;
+    let getRuntimeConfig: (() => DexConfig | undefined) | undefined;
     hoisted.resolvePluginTools.mockImplementation((params: unknown) => {
       getRuntimeConfig = (
-        params as { context?: { getRuntimeConfig?: () => OpenClawConfig | undefined } }
+        params as { context?: { getRuntimeConfig?: () => DexConfig | undefined } }
       ).context?.getRuntimeConfig;
       return [];
     });

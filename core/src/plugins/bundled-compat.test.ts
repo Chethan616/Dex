@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { withBundledPluginEnablementCompat } from "./bundled-compat.js";
 
 describe("withBundledPluginEnablementCompat", () => {
@@ -9,7 +9,7 @@ describe("withBundledPluginEnablementCompat", () => {
         allow: ["discord"],
         bundledDiscovery: "compat",
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     const result = withBundledPluginEnablementCompat({
       config,
@@ -29,7 +29,7 @@ describe("withBundledPluginEnablementCompat", () => {
         allow: ["openai"],
         bundledDiscovery: "allowlist",
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     expect(
       withBundledPluginEnablementCompat({
@@ -50,7 +50,7 @@ describe("withBundledPluginEnablementCompat", () => {
           deepseek: { enabled: true },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     expect(
       withBundledPluginEnablementCompat({

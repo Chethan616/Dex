@@ -1384,8 +1384,8 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
 
   it("does not duplicate media-bearing internal-ui source replies in the transcript", async () => {
     const fixtureDir = createTranscriptFixture("openclaw-chat-send-agent-source-reply-media-");
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    process.env.OPENCLAW_STATE_DIR = fixtureDir;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    process.env.DEX_STATE_DIR = fixtureDir;
     const mediaUrl = `data:image/png;base64,${TINY_PNG_BASE64}`;
     const savedImagePath = path.join(fixtureDir, "source-reply.png");
     fs.writeFileSync(savedImagePath, Buffer.from(TINY_PNG_BASE64, "base64"));
@@ -1450,17 +1450,17 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expect(JSON.stringify(assistantEntries[0])).not.toContain(mediaUrl);
     } finally {
       if (previousStateDir == null) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
     }
   });
 
   it("backs source reply media with an equivalent deduped delivery mirror", async () => {
     const fixtureDir = createTranscriptFixture("openclaw-chat-send-agent-source-reply-deduped-");
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    process.env.OPENCLAW_STATE_DIR = fixtureDir;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    process.env.DEX_STATE_DIR = fixtureDir;
     const mediaUrl = `data:image/png;base64,${TINY_PNG_BASE64}`;
     const savedImagePath = path.join(fixtureDir, "source-reply-deduped.png");
     fs.writeFileSync(savedImagePath, Buffer.from(TINY_PNG_BASE64, "base64"));
@@ -1508,17 +1508,17 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expect(JSON.stringify(assistantEntries[0])).not.toContain(mediaUrl);
     } finally {
       if (previousStateDir == null) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
     }
   });
 
   it("updates each media-bearing source reply mirror independently", async () => {
     const fixtureDir = createTranscriptFixture("openclaw-chat-send-agent-source-reply-multi-");
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    process.env.OPENCLAW_STATE_DIR = fixtureDir;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    process.env.DEX_STATE_DIR = fixtureDir;
     const firstMediaUrl = `data:image/png;base64,${TINY_PNG_BASE64}`;
     const secondMediaUrl = `data:image/png;base64,${TINY_PNG_BASE64}`;
     const firstSavedImagePath = path.join(fixtureDir, "source-reply-1.png");
@@ -1601,17 +1601,17 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expect(JSON.stringify(assistantEntries[1])).not.toContain(secondMediaUrl);
     } finally {
       if (previousStateDir == null) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
     }
   });
 
   it("keeps backed media source replies when a sibling mirror is missing", async () => {
     const fixtureDir = createTranscriptFixture("openclaw-chat-send-agent-source-reply-partial-");
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    process.env.OPENCLAW_STATE_DIR = fixtureDir;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    process.env.DEX_STATE_DIR = fixtureDir;
     const firstMediaUrl = `data:image/png;base64,${TINY_PNG_BASE64}`;
     const secondMediaUrl = `data:image/png;base64,${TINY_PNG_BASE64}`;
     const firstSavedImagePath = path.join(fixtureDir, "source-reply-backed.png");
@@ -1688,17 +1688,17 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expect(JSON.stringify(broadcastContent)).not.toContain(secondMediaUrl);
     } finally {
       if (previousStateDir == null) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
     }
   });
 
   it("keeps media source replies when followed by text-only source reply mirrors", async () => {
     const fixtureDir = createTranscriptFixture("openclaw-chat-send-agent-source-reply-text-tail-");
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    process.env.OPENCLAW_STATE_DIR = fixtureDir;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    process.env.DEX_STATE_DIR = fixtureDir;
     const mediaUrl = `data:image/png;base64,${TINY_PNG_BASE64}`;
     const savedImagePath = path.join(fixtureDir, "source-reply-text-tail.png");
     fs.writeFileSync(savedImagePath, Buffer.from(TINY_PNG_BASE64, "base64"));
@@ -1771,17 +1771,17 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expect(JSON.stringify(assistantEntries[1])).toContain("Text-only source reply");
     } finally {
       if (previousStateDir == null) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
     }
   });
 
   it("does not rewrite unrelated assistant messages with colliding source reply keys", async () => {
     const fixtureDir = createTranscriptFixture("openclaw-chat-send-agent-source-reply-collision-");
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    process.env.OPENCLAW_STATE_DIR = fixtureDir;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    process.env.DEX_STATE_DIR = fixtureDir;
     const mediaUrl = `data:image/png;base64,${TINY_PNG_BASE64}`;
     const savedImagePath = path.join(fixtureDir, "source-reply-collision.png");
     fs.writeFileSync(savedImagePath, Buffer.from(TINY_PNG_BASE64, "base64"));
@@ -1834,17 +1834,17 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expect(assistantEntries[0]?.model).toBe("gateway-injected");
     } finally {
       if (previousStateDir == null) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
     }
   });
 
   it("does not expose raw media refs when an unbacked source reply has no text", async () => {
     const fixtureDir = createTranscriptFixture("openclaw-chat-send-agent-source-reply-media-only-");
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    process.env.OPENCLAW_STATE_DIR = fixtureDir;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    process.env.DEX_STATE_DIR = fixtureDir;
     const mediaUrl = `data:image/png;base64,${TINY_PNG_BASE64}`;
     const savedImagePath = path.join(fixtureDir, "source-reply-media-only.png");
     fs.writeFileSync(savedImagePath, Buffer.from(TINY_PNG_BASE64, "base64"));
@@ -1887,9 +1887,9 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expect(await readActiveAssistantTranscriptMessages()).toStrictEqual([]);
     } finally {
       if (previousStateDir == null) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
     }
   });
@@ -1898,8 +1898,8 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
     const fixtureDir = createTranscriptFixture(
       "openclaw-chat-send-agent-source-reply-media-only-sibling-",
     );
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    process.env.OPENCLAW_STATE_DIR = fixtureDir;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    process.env.DEX_STATE_DIR = fixtureDir;
     const mediaUrl = `data:image/png;base64,${TINY_PNG_BASE64}`;
     const savedImagePath = path.join(fixtureDir, "source-reply-media-only-sibling.png");
     fs.writeFileSync(savedImagePath, Buffer.from(TINY_PNG_BASE64, "base64"));
@@ -1966,17 +1966,17 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expect(broadcastJson).not.toContain("/api/chat/media/outgoing/");
     } finally {
       if (previousStateDir == null) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
     }
   });
 
   it("does not rewrite source reply mirrors when later transcript entries would be replayed", async () => {
     const fixtureDir = createTranscriptFixture("openclaw-chat-send-agent-source-reply-later-");
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    process.env.OPENCLAW_STATE_DIR = fixtureDir;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    process.env.DEX_STATE_DIR = fixtureDir;
     const mediaUrl = `data:image/png;base64,${TINY_PNG_BASE64}`;
     const savedImagePath = path.join(fixtureDir, "source-reply-later.png");
     fs.writeFileSync(savedImagePath, Buffer.from(TINY_PNG_BASE64, "base64"));
@@ -2038,9 +2038,9 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       ]);
     } finally {
       if (previousStateDir == null) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
     }
   });

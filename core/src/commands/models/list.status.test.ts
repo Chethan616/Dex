@@ -431,18 +431,18 @@ describe("modelsStatusCommand auth overview", () => {
     );
   });
 
-  it("honors OPENCLAW_AGENT_DIR when no --agent override is provided", async () => {
+  it("honors DEX_AGENT_DIR when no --agent override is provided", async () => {
     const localRuntime = createRuntime();
-    const previous = process.env.OPENCLAW_AGENT_DIR;
-    process.env.OPENCLAW_AGENT_DIR = "/tmp/openclaw-isolated-agent";
+    const previous = process.env.DEX_AGENT_DIR;
+    process.env.DEX_AGENT_DIR = "/tmp/openclaw-isolated-agent";
     mocks.resolveAgentDir.mockClear();
     try {
       await modelsStatusCommand({ json: true }, localRuntime as never);
     } finally {
       if (previous === undefined) {
-        delete process.env.OPENCLAW_AGENT_DIR;
+        delete process.env.DEX_AGENT_DIR;
       } else {
-        process.env.OPENCLAW_AGENT_DIR = previous;
+        process.env.DEX_AGENT_DIR = previous;
       }
     }
 
@@ -453,20 +453,20 @@ describe("modelsStatusCommand auth overview", () => {
     expect(payload.auth.storePath).toBe("/tmp/openclaw-isolated-agent/auth-profiles.json");
   });
 
-  it("honors deprecated PI_CODING_AGENT_DIR when OPENCLAW_AGENT_DIR is unset", async () => {
+  it("honors deprecated PI_CODING_AGENT_DIR when DEX_AGENT_DIR is unset", async () => {
     const localRuntime = createRuntime();
-    const previousOpenClaw = process.env.OPENCLAW_AGENT_DIR;
+    const previousOpenClaw = process.env.DEX_AGENT_DIR;
     const previousPi = process.env.PI_CODING_AGENT_DIR;
-    delete process.env.OPENCLAW_AGENT_DIR;
+    delete process.env.DEX_AGENT_DIR;
     process.env.PI_CODING_AGENT_DIR = "/tmp/openclaw-legacy-agent";
     mocks.resolveAgentDir.mockClear();
     try {
       await modelsStatusCommand({ json: true }, localRuntime as never);
     } finally {
       if (previousOpenClaw === undefined) {
-        delete process.env.OPENCLAW_AGENT_DIR;
+        delete process.env.DEX_AGENT_DIR;
       } else {
-        process.env.OPENCLAW_AGENT_DIR = previousOpenClaw;
+        process.env.DEX_AGENT_DIR = previousOpenClaw;
       }
       if (previousPi === undefined) {
         delete process.env.PI_CODING_AGENT_DIR;

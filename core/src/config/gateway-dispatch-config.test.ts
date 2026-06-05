@@ -40,13 +40,13 @@ describe("readGatewayDispatchConfig", () => {
       "gateway-base.json5": `{
         gateway: {
           port: 18888,
-          auth: { mode: "token", token: "\${OPENCLAW_GATEWAY_TOKEN}" },
+          auth: { mode: "token", token: "\${DEX_GATEWAY_TOKEN}" },
         },
         models: { providers: { expensive: { apiKey: "\${MISSING_MODEL_KEY}" } } },
       }`,
       "openclaw.json5": `{
         $include: "./gateway-base.json5",
-        env: { vars: { OPENCLAW_GATEWAY_TOKEN: "inline-token" } },
+        env: { vars: { DEX_GATEWAY_TOKEN: "inline-token" } },
         agents: {
           defaults: { timeoutSeconds: 42 },
           list: [{ id: "ops", default: true }],
@@ -59,7 +59,7 @@ describe("readGatewayDispatchConfig", () => {
         session: { mainKey: "main-ops", store: "./sessions.json" },
       }`,
     });
-    const env = { OPENCLAW_CONFIG_PATH: configPath };
+    const env = { DEX_CONFIG_PATH: configPath };
 
     const config = readGatewayDispatchConfig({ env });
 
@@ -81,12 +81,12 @@ describe("readGatewayDispatchConfig", () => {
     const configPath = createTempConfig({
       "openclaw.json5": `{
         env: { shellEnv: { enabled: true, timeoutMs: 123 } },
-        gateway: { auth: { mode: "token", token: "\${OPENCLAW_GATEWAY_TOKEN}" } },
+        gateway: { auth: { mode: "token", token: "\${DEX_GATEWAY_TOKEN}" } },
       }`,
     });
-    const env: NodeJS.ProcessEnv = { OPENCLAW_CONFIG_PATH: configPath };
+    const env: NodeJS.ProcessEnv = { DEX_CONFIG_PATH: configPath };
     shellEnvMocks.loadShellEnvFallback.mockImplementation(({ env: targetEnv }) => {
-      targetEnv.OPENCLAW_GATEWAY_TOKEN = "shell-token";
+      targetEnv.DEX_GATEWAY_TOKEN = "shell-token";
     });
 
     const config = await readGatewayDispatchConfigWithShellEnvFallback({ env });
@@ -94,7 +94,7 @@ describe("readGatewayDispatchConfig", () => {
     expect(shellEnvMocks.loadShellEnvFallback).toHaveBeenCalledWith({
       enabled: true,
       env,
-      expectedKeys: ["OPENCLAW_GATEWAY_TOKEN", "OPENCLAW_GATEWAY_PASSWORD"],
+      expectedKeys: ["DEX_GATEWAY_TOKEN", "DEX_GATEWAY_PASSWORD"],
       logger: console,
       timeoutMs: 123,
     });

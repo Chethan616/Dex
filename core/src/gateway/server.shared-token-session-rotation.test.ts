@@ -27,9 +27,9 @@ let configSetRotationCase: {
 };
 
 beforeAll(async () => {
-  const configPath = process.env.OPENCLAW_CONFIG_PATH;
+  const configPath = process.env.DEX_CONFIG_PATH;
   if (!configPath) {
-    throw new Error("OPENCLAW_CONFIG_PATH missing in gateway test environment");
+    throw new Error("DEX_CONFIG_PATH missing in gateway test environment");
   }
   port = await getFreePort();
   testState.gatewayAuth = undefined;

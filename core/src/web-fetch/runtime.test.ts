@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import type { PluginWebFetchProviderEntry } from "../plugins/types.js";
 import type { RuntimeWebFetchMetadata } from "../secrets/runtime-web-tools.types.js";
 import {
@@ -25,7 +25,7 @@ vi.mock("../plugins/web-fetch-providers.runtime.js", () => ({
   resolveRuntimeWebFetchProviders: resolveRuntimeWebFetchProvidersMock,
 }));
 
-function getFirecrawlApiKey(config?: OpenClawConfig): unknown {
+function getFirecrawlApiKey(config?: DexConfig): unknown {
   const pluginConfig = config?.plugins?.entries?.firecrawl?.config as
     | TestPluginWebFetchConfig
     | undefined;
@@ -54,7 +54,7 @@ function createThirdPartyFetchProvider(): PluginWebFetchProviderEntry {
   });
 }
 
-function createFirecrawlPluginConfig(apiKey: unknown): OpenClawConfig {
+function createFirecrawlPluginConfig(apiKey: unknown): DexConfig {
   return {
     plugins: {
       entries: {
@@ -206,7 +206,7 @@ describe("web fetch runtime", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     expect(requireResolvedWebFetch(resolved).provider.id).toBe("firecrawl");
@@ -245,7 +245,7 @@ describe("web fetch runtime", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     expect(requireResolvedWebFetch(resolved).provider.id).toBe("firecrawl");
@@ -266,7 +266,7 @@ describe("web fetch runtime", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     expect(requireResolvedWebFetch(resolved).provider.id).toBe("firecrawl");
@@ -316,7 +316,7 @@ describe("web fetch runtime", () => {
     const resolved = resolveWebFetchDefinition({
       config: {
         tools: { web: { fetch: { provider: "thirdparty" } } },
-      } as OpenClawConfig,
+      } as DexConfig,
       sandboxed: false,
       preferRuntimeProviders: false,
     });
@@ -334,7 +334,7 @@ describe("web fetch runtime", () => {
     const resolved = resolveWebFetchDefinition({
       config: {
         tools: { web: { fetch: { provider: "thirdparty" } } },
-      } as OpenClawConfig,
+      } as DexConfig,
       runtimeWebFetch: {
         providerSource: "auto-detect",
         selectedProvider: "firecrawl",

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 const { extractDeliveryInfoMock } = vi.hoisted(() => ({
   extractDeliveryInfoMock: vi.fn(),
@@ -12,7 +12,7 @@ vi.mock("../config/sessions/delivery-info.js", () => ({
 import { cronDeliveryFromContext, resolveCronCreationDelivery } from "./delivery-context.js";
 
 describe("cron delivery context", () => {
-  const cfg = {} as OpenClawConfig;
+  const cfg = {} as DexConfig;
 
   beforeEach(() => {
     extractDeliveryInfoMock.mockReset();

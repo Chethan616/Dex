@@ -42,13 +42,13 @@ describe("warnLegacyOpenClawEnvVars", () => {
     expect(message).not.toContain("GATEWAY_PASSWORD");
     expect(message).not.toContain("forged");
     expect(options).toEqual({
-      code: "OPENCLAW_LEGACY_ENV_VARS",
+      code: "DEX_LEGACY_ENV_VARS",
       type: "DeprecationWarning",
     });
   });
 
   it("does not warn for current OPENCLAW names", () => {
-    warnLegacyOpenClawEnvVars({ OPENCLAW_GATEWAY_TOKEN: "token" });
+    warnLegacyOpenClawEnvVars({ DEX_GATEWAY_TOKEN: "token" });
 
     expect(emitWarning).not.toHaveBeenCalled();
   });

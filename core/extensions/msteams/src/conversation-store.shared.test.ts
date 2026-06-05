@@ -20,7 +20,7 @@ const storeFactories: StoreFactory[] = [
     createStore: async () => {
       const stateDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "openclaw-msteams-store-"));
       return createMSTeamsConversationStoreState({
-        env: { ...process.env, OPENCLAW_STATE_DIR: stateDir },
+        env: { ...process.env, DEX_STATE_DIR: stateDir },
         ttlMs: 60_000,
       });
     },

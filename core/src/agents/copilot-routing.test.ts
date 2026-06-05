@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { modelSelectionShouldEnsureCopilotRuntimePlugin } from "./copilot-routing.js";
 
-const emptyCfg = {} as OpenClawConfig;
+const emptyCfg = {} as DexConfig;
 
-function cfgWithProviderRuntime(id: string): OpenClawConfig {
+function cfgWithProviderRuntime(id: string): DexConfig {
   return {
     models: {
       providers: {
         "github-copilot": { agentRuntime: { id } },
       },
     },
-  } as unknown as OpenClawConfig;
+  } as unknown as DexConfig;
 }
 
-function cfgWithModelRuntime(modelId: string, id: string): OpenClawConfig {
+function cfgWithModelRuntime(modelId: string, id: string): DexConfig {
   return {
     models: {
       providers: {
@@ -23,7 +23,7 @@ function cfgWithModelRuntime(modelId: string, id: string): OpenClawConfig {
         },
       },
     },
-  } as unknown as OpenClawConfig;
+  } as unknown as DexConfig;
 }
 
 describe("modelSelectionShouldEnsureCopilotRuntimePlugin", () => {
@@ -90,7 +90,7 @@ describe("modelSelectionShouldEnsureCopilotRuntimePlugin", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     expect(
       modelSelectionShouldEnsureCopilotRuntimePlugin({
         model: "github-copilot/gpt-4o",
@@ -113,7 +113,7 @@ describe("modelSelectionShouldEnsureCopilotRuntimePlugin", () => {
           openai: { agentRuntime: { id: "copilot" } },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     expect(
       modelSelectionShouldEnsureCopilotRuntimePlugin({ model: "openai/gpt-4o", config: cfg }),
     ).toBe(false);

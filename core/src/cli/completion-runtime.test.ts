@@ -13,7 +13,7 @@ import {
 
 describe("completion-runtime", () => {
   const originalHome = process.env.HOME;
-  const originalStateDir = process.env.OPENCLAW_STATE_DIR;
+  const originalStateDir = process.env.DEX_STATE_DIR;
 
   afterEach(() => {
     if (originalHome === undefined) {
@@ -22,9 +22,9 @@ describe("completion-runtime", () => {
       process.env.HOME = originalHome;
     }
     if (originalStateDir === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_STATE_DIR;
     } else {
-      process.env.OPENCLAW_STATE_DIR = originalStateDir;
+      process.env.DEX_STATE_DIR = originalStateDir;
     }
   });
 
@@ -90,7 +90,7 @@ describe("completion-runtime", () => {
     const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-completion-state-"));
 
     process.env.HOME = homeDir;
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    process.env.DEX_STATE_DIR = stateDir;
 
     try {
       const cachePath = resolveCompletionCachePath("powershell", "openclaw");
@@ -113,7 +113,7 @@ describe("completion-runtime", () => {
     const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-completion-state-"));
 
     process.env.HOME = homeDir;
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    process.env.DEX_STATE_DIR = stateDir;
 
     try {
       await expect(installCompletion("zsh", true, "openclaw")).rejects.toThrow(

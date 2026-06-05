@@ -8,13 +8,13 @@ import { buildWorkspaceSkillsPrompt } from "./workspace.js";
 
 describe("buildWorkspaceSkillsPrompt", () => {
   it("applies bundled allowlist without affecting workspace skills", async () => {
-    const env = captureEnv(["HOME", "USERPROFILE", "OPENCLAW_HOME", "OPENCLAW_STATE_DIR"]);
+    const env = captureEnv(["HOME", "USERPROFILE", "DEX_HOME", "DEX_STATE_DIR"]);
     const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-"));
     try {
       process.env.HOME = workspaceDir;
       process.env.USERPROFILE = workspaceDir;
-      delete process.env.OPENCLAW_HOME;
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_HOME;
+      delete process.env.DEX_STATE_DIR;
       const bundledDir = path.join(workspaceDir, ".bundled");
       const bundledSkillDir = path.join(bundledDir, "peekaboo");
       const workspaceSkillDir = path.join(workspaceDir, "skills", "demo-skill");

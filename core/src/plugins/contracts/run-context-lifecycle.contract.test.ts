@@ -23,7 +23,7 @@ import {
 import { createEmptyPluginRegistry } from "../registry-empty.js";
 import { setActivePluginRegistry } from "../runtime.js";
 import { createPluginRecord } from "../status.test-helpers.js";
-import type { OpenClawPluginApi } from "../types.js";
+import type { DexPluginApi } from "../types.js";
 
 async function waitForPluginEventHandlers(): Promise<void> {
   await new Promise<void>((resolve) => {
@@ -56,7 +56,7 @@ describe("plugin run context lifecycle", () => {
 
   it("blocks stale plugin API run-context mutations after registry replacement", () => {
     const { config, registry } = createPluginRegistryFixture();
-    let capturedApi: OpenClawPluginApi | undefined;
+    let capturedApi: DexPluginApi | undefined;
     registerTestPlugin({
       registry,
       config,
@@ -102,7 +102,7 @@ describe("plugin run context lifecycle", () => {
 
   it("allows run-context mutations after a previous registry is restored active", () => {
     const { config, registry } = createPluginRegistryFixture();
-    let capturedApi: OpenClawPluginApi | undefined;
+    let capturedApi: DexPluginApi | undefined;
     registerTestPlugin({
       registry,
       config,
@@ -169,7 +169,7 @@ describe("plugin run context lifecycle", () => {
   it("keeps restored active registry state after stale async cleanup finishes", async () => {
     let releaseCleanup: (() => void) | undefined;
     let markCleanupStarted: (() => void) | undefined;
-    let capturedApi: OpenClawPluginApi | undefined;
+    let capturedApi: DexPluginApi | undefined;
     const cleanupStarted = new Promise<void>((resolve) => {
       markCleanupStarted = resolve;
     });
@@ -689,9 +689,9 @@ describe("plugin run context lifecycle", () => {
     const tempConfig = {
       session: { store: storePath },
     };
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
+    const previousStateDir = process.env.DEX_STATE_DIR;
     try {
-      process.env.OPENCLAW_STATE_DIR = stateDir;
+      process.env.DEX_STATE_DIR = stateDir;
       await withTempConfig({
         cfg: tempConfig,
         run: async () => {
@@ -745,9 +745,9 @@ describe("plugin run context lifecycle", () => {
       });
     } finally {
       if (previousStateDir === undefined) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
       await fs.rm(stateDir, { recursive: true, force: true });
     }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isNixStorePluginRoot, shouldRejectHardlinkedPluginFiles } from "./hardlink-policy.js";
 
-const nixEnv: NodeJS.ProcessEnv = { OPENCLAW_NIX_MODE: "1" };
+const nixEnv: NodeJS.ProcessEnv = { DEX_NIX_MODE: "1" };
 
 describe("plugin hardlink policy", () => {
   it("does not reject bundled plugin files", () => {
@@ -24,7 +24,7 @@ describe("plugin hardlink policy", () => {
     ).toBe(true);
   });
 
-  it("does not treat OPENCLAW_NIX_MODE as enough by itself", () => {
+  it("does not treat DEX_NIX_MODE as enough by itself", () => {
     expect(
       shouldRejectHardlinkedPluginFiles({
         origin: "config",

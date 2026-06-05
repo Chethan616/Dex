@@ -1,10 +1,10 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { withEnv, withEnvAsync, withFetchPreconnect } from "openclaw/plugin-sdk/test-env";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testing, createGeminiWebSearchProvider } from "./src/gemini-web-search-provider.js";
 
 type TestModelProviderConfig = NonNullable<
-  NonNullable<OpenClawConfig["models"]>["providers"]
+  NonNullable<DexConfig["models"]>["providers"]
 >[string];
 
 function installGeminiFetch() {
@@ -125,7 +125,7 @@ describe("google web search provider", () => {
 
   it("stores configured credentials at the canonical plugin config path", () => {
     const provider = createGeminiWebSearchProvider();
-    const config = {} as OpenClawConfig;
+    const config = {} as DexConfig;
 
     provider.setConfiguredCredentialValue?.(config, "AIza-plugin-test");
 

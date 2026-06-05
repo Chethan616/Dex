@@ -16,9 +16,9 @@ const secret = "sk-testsecret1234567890abcd";
 const TRACE_ID = "4bf92f3577b34da6a3ce929d0e0e4736";
 const SPAN_ID = "00f067aa0ba902b7";
 const logPathTracker = createSuiteLogPathTracker("openclaw-log-redaction-");
-const originalConfigPath = process.env.OPENCLAW_CONFIG_PATH;
+const originalConfigPath = process.env.DEX_CONFIG_PATH;
 const originalHome = process.env.HOME;
-const originalTestFileLog = process.env.OPENCLAW_TEST_FILE_LOG;
+const originalTestFileLog = process.env.DEX_TEST_FILE_LOG;
 
 beforeAll(async () => {
   await logPathTracker.setup();
@@ -30,9 +30,9 @@ beforeEach(() => {
 
 afterEach(() => {
   if (originalConfigPath === undefined) {
-    delete process.env.OPENCLAW_CONFIG_PATH;
+    delete process.env.DEX_CONFIG_PATH;
   } else {
-    process.env.OPENCLAW_CONFIG_PATH = originalConfigPath;
+    process.env.DEX_CONFIG_PATH = originalConfigPath;
   }
   if (originalHome === undefined) {
     delete process.env.HOME;
@@ -40,9 +40,9 @@ afterEach(() => {
     process.env.HOME = originalHome;
   }
   if (originalTestFileLog === undefined) {
-    delete process.env.OPENCLAW_TEST_FILE_LOG;
+    delete process.env.DEX_TEST_FILE_LOG;
   } else {
-    process.env.OPENCLAW_TEST_FILE_LOG = originalTestFileLog;
+    process.env.DEX_TEST_FILE_LOG = originalTestFileLog;
   }
   resetDiagnosticEventsForTest();
   resetDiagnosticTraceContextForTest();
@@ -113,7 +113,7 @@ describe("file log redaction", () => {
         },
       }),
     );
-    process.env.OPENCLAW_CONFIG_PATH = configPath;
+    process.env.DEX_CONFIG_PATH = configPath;
     setLoggerOverride({ level: "info", file: logPath });
 
     getLogger().info({
@@ -142,8 +142,8 @@ describe("file log redaction", () => {
         },
       }),
     );
-    process.env.OPENCLAW_CONFIG_PATH = configPath;
-    process.env.OPENCLAW_TEST_FILE_LOG = "1";
+    process.env.DEX_CONFIG_PATH = configPath;
+    process.env.DEX_TEST_FILE_LOG = "1";
 
     getLogger().info({ message: "configured log path works" });
 

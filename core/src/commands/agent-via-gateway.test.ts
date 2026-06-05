@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { MAX_TIMER_TIMEOUT_MS } from "@dexagent/normalization-core/number-coercion";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { loggingState } from "../logging/state.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { agentCliCommand, agentViaGatewayTesting } from "./agent-via-gateway.js";
@@ -50,7 +50,7 @@ const jsonRuntime = {
   exit: vi.fn(),
 };
 
-function mockConfig(storePath: string, overrides?: Partial<OpenClawConfig>) {
+function mockConfig(storePath: string, overrides?: Partial<DexConfig>) {
   const config = {
     agents: {
       defaults: {
@@ -73,7 +73,7 @@ function mockConfig(storePath: string, overrides?: Partial<OpenClawConfig>) {
 
 async function withTempStore(
   fn: (ctx: { dir: string; store: string }) => Promise<void>,
-  overrides?: Partial<OpenClawConfig>,
+  overrides?: Partial<DexConfig>,
 ) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-agent-cli-"));
   const store = path.join(dir, "sessions.json");

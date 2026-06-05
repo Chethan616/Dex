@@ -235,7 +235,7 @@ describe("check-gateway-watch-regression", () => {
       expect(result.spawnError).toBe("spawn failed");
       expect(fs.existsSync(isolatedHomeDir)).toBe(false);
       expect(fs.existsSync(path.join(outputDir, "watch.home.txt"))).toBe(true);
-      expect(spawn.mock.calls[0]?.[2]?.env?.OPENCLAW_RUNTIME_POSTBUILD_STATIC_ASSETS).toBe("0");
+      expect(spawn.mock.calls[0]?.[2]?.env?.DEX_RUNTIME_POSTBUILD_STATIC_ASSETS).toBe("0");
       expect(waitForGatewayReady).not.toHaveBeenCalled();
       expect(stopChild).not.toHaveBeenCalled();
     } finally {

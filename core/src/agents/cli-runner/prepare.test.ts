@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { CURRENT_SESSION_VERSION } from "openclaw/plugin-sdk/agent-sessions";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { registerLegacyContextEngine } from "../../context-engine/legacy.registration.js";
 import {
   registerContextEngine,
@@ -94,17 +94,17 @@ function createTestMcpLoopbackServerConfig(port: number) {
         type: "http",
         url: `http://127.0.0.1:${port}/mcp`,
         headers: {
-          Authorization: "Bearer ${OPENCLAW_MCP_TOKEN}",
-          "x-session-key": "${OPENCLAW_MCP_SESSION_KEY}",
-          "x-openclaw-agent-id": "${OPENCLAW_MCP_AGENT_ID}",
-          "x-openclaw-account-id": "${OPENCLAW_MCP_ACCOUNT_ID}",
-          "x-openclaw-message-channel": "${OPENCLAW_MCP_MESSAGE_CHANNEL}",
-          "x-openclaw-current-channel-id": "${OPENCLAW_MCP_CURRENT_CHANNEL_ID}",
-          "x-openclaw-current-thread-ts": "${OPENCLAW_MCP_CURRENT_THREAD_TS}",
-          "x-openclaw-current-message-id": "${OPENCLAW_MCP_CURRENT_MESSAGE_ID}",
-          "x-openclaw-current-inbound-audio": "${OPENCLAW_MCP_CURRENT_INBOUND_AUDIO}",
-          "x-openclaw-inbound-event-kind": "${OPENCLAW_MCP_INBOUND_EVENT_KIND}",
-          "x-openclaw-source-reply-delivery-mode": "${OPENCLAW_MCP_SOURCE_REPLY_DELIVERY_MODE}",
+          Authorization: "Bearer ${DEX_MCP_TOKEN}",
+          "x-session-key": "${DEX_MCP_SESSION_KEY}",
+          "x-openclaw-agent-id": "${DEX_MCP_AGENT_ID}",
+          "x-openclaw-account-id": "${DEX_MCP_ACCOUNT_ID}",
+          "x-openclaw-message-channel": "${DEX_MCP_MESSAGE_CHANNEL}",
+          "x-openclaw-current-channel-id": "${DEX_MCP_CURRENT_CHANNEL_ID}",
+          "x-openclaw-current-thread-ts": "${DEX_MCP_CURRENT_THREAD_TS}",
+          "x-openclaw-current-message-id": "${DEX_MCP_CURRENT_MESSAGE_ID}",
+          "x-openclaw-current-inbound-audio": "${DEX_MCP_CURRENT_INBOUND_AUDIO}",
+          "x-openclaw-inbound-event-kind": "${DEX_MCP_INBOUND_EVENT_KIND}",
+          "x-openclaw-source-reply-delivery-mode": "${DEX_MCP_SOURCE_REPLY_DELIVERY_MODE}",
         },
       },
     },
@@ -123,7 +123,7 @@ function createCliBackendConfig(
     bundleMcp?: boolean;
     reseedFromRawTranscriptWhenUncompacted?: boolean;
   } = {},
-): OpenClawConfig {
+): DexConfig {
   return {
     agents: {
       defaults: {
@@ -146,7 +146,7 @@ function createCliBackendConfig(
         },
       },
     },
-  } satisfies OpenClawConfig;
+  } satisfies DexConfig;
 }
 
 function setClaudeCliBackendForPrepareTest() {
@@ -172,7 +172,7 @@ function setClaudeCliBackendForPrepareTest() {
 
 function createSessionFile() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-prepare-"));
-  vi.stubEnv("OPENCLAW_STATE_DIR", dir);
+  vi.stubEnv("DEX_STATE_DIR", dir);
   const sessionFile = path.join(dir, "agents", "main", "sessions", "session-test.jsonl");
   fs.mkdirSync(path.dirname(sessionFile), { recursive: true });
   fs.writeFileSync(
@@ -230,7 +230,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
         senderIsOwner ? runtime.ownerToken : runtime.nonOwnerToken,
       ),
       resolveMcpLoopbackScopedTools: vi.fn(() => ({ agentId: "main", tools: [] })),
-      resolveOpenClawReferencePaths: vi.fn(async () => ({ docsPath: null, sourcePath: null })),
+      resolveDexReferencePaths: vi.fn(async () => ({ docsPath: null, sourcePath: null })),
       prepareClaudeCliSkillsPlugin: vi.fn(async () => ({
         args: [],
         cleanup: vi.fn(async () => undefined),
@@ -694,7 +694,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
     });
     registerContextEngine(engineId, factory);
     setCliRunnerPrepareTestDeps({
-      resolveOpenClawReferencePaths: vi.fn(async () => {
+      resolveDexReferencePaths: vi.fn(async () => {
         throw new Error("reference path lookup failed");
       }),
     });
@@ -834,7 +834,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
         list: [{ id: "main", default: true, agentDir: runtimeAgentDir }],
       },
       plugins: { slots: { contextEngine: engineId } },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
     const factory = vi.fn((_ctx: unknown): ContextEngine => {
       return {
         info: { id: engineId, name: "CLI runtime config engine" },
@@ -1374,13 +1374,13 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
       });
 
       expect(context.preparedBackend.env).toMatchObject({
-        OPENCLAW_MCP_MESSAGE_CHANNEL: "telegram",
-        OPENCLAW_MCP_CURRENT_CHANNEL_ID: "telegram:-100123:topic:42",
-        OPENCLAW_MCP_CURRENT_THREAD_TS: "42",
-        OPENCLAW_MCP_CURRENT_MESSAGE_ID: "reply-message-1",
-        OPENCLAW_MCP_CURRENT_INBOUND_AUDIO: "true",
-        OPENCLAW_MCP_INBOUND_EVENT_KIND: "room_event",
-        OPENCLAW_MCP_SOURCE_REPLY_DELIVERY_MODE: "message_tool_only",
+        DEX_MCP_MESSAGE_CHANNEL: "telegram",
+        DEX_MCP_CURRENT_CHANNEL_ID: "telegram:-100123:topic:42",
+        DEX_MCP_CURRENT_THREAD_TS: "42",
+        DEX_MCP_CURRENT_MESSAGE_ID: "reply-message-1",
+        DEX_MCP_CURRENT_INBOUND_AUDIO: "true",
+        DEX_MCP_INBOUND_EVENT_KIND: "room_event",
+        DEX_MCP_SOURCE_REPLY_DELIVERY_MODE: "message_tool_only",
       });
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });

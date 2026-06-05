@@ -4,22 +4,22 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CommandContext } from "../auto-reply/reply/commands-types.js";
 import { clearConfigCache } from "../config/config.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { runCrestodianRescueMessage } from "./rescue-message.js";
 
-const originalStateDir = process.env.OPENCLAW_STATE_DIR;
-const originalConfigPath = process.env.OPENCLAW_CONFIG_PATH;
+const originalStateDir = process.env.DEX_STATE_DIR;
+const originalConfigPath = process.env.DEX_CONFIG_PATH;
 
 function truthy(value: string | undefined): boolean {
   return /^(1|true|yes|on)$/i.test(value?.trim() ?? "");
 }
 
 const runLive =
-  truthy(process.env.OPENCLAW_LIVE_TEST) &&
-  truthy(process.env.OPENCLAW_LIVE_CRESTODIAN_RESCUE_CHANNEL);
+  truthy(process.env.DEX_LIVE_TEST) &&
+  truthy(process.env.DEX_LIVE_CRESTODIAN_RESCUE_CHANNEL);
 const describeLive = runLive ? describe : describe.skip;
 
-function commandContext(channel = process.env.OPENCLAW_LIVE_CRESTODIAN_CHANNEL ?? "whatsapp") {
+function commandContext(channel = process.env.DEX_LIVE_CRESTODIAN_CHANNEL ?? "whatsapp") {
   return {
     surface: channel,
     channel,
@@ -37,7 +37,7 @@ function commandContext(channel = process.env.OPENCLAW_LIVE_CRESTODIAN_CHANNEL ?
 
 async function runRescue(params: {
   commandBody: string;
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   ctx?: CommandContext;
 }) {
   const ctx = params.ctx ?? commandContext();
@@ -53,22 +53,22 @@ describeLive("Crestodian live rescue channel smoke", () => {
   afterEach(() => {
     clearConfigCache();
     if (originalStateDir === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_STATE_DIR;
     } else {
-      process.env.OPENCLAW_STATE_DIR = originalStateDir;
+      process.env.DEX_STATE_DIR = originalStateDir;
     }
     if (originalConfigPath === undefined) {
-      delete process.env.OPENCLAW_CONFIG_PATH;
+      delete process.env.DEX_CONFIG_PATH;
     } else {
-      process.env.OPENCLAW_CONFIG_PATH = originalConfigPath;
+      process.env.DEX_CONFIG_PATH = originalConfigPath;
     }
   });
 
   it("handles /crestodian status and a persistent approval roundtrip", async () => {
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "crestodian-live-rescue-"));
     const configPath = path.join(tempDir, "openclaw.json");
-    vi.stubEnv("OPENCLAW_STATE_DIR", tempDir);
-    vi.stubEnv("OPENCLAW_CONFIG_PATH", configPath);
+    vi.stubEnv("DEX_STATE_DIR", tempDir);
+    vi.stubEnv("DEX_CONFIG_PATH", configPath);
     await fs.writeFile(
       configPath,
       JSON.stringify(
@@ -82,7 +82,7 @@ describeLive("Crestodian live rescue channel smoke", () => {
       ),
     );
 
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       crestodian: { rescue: { enabled: true } },
       tools: { exec: { security: "full", ask: "off" } },
     };
@@ -97,7 +97,7 @@ describeLive("Crestodian live rescue channel smoke", () => {
       "Default model: openai/gpt-5.5",
     );
 
-    const config = JSON.parse(await fs.readFile(configPath, "utf8")) as OpenClawConfig;
+    const config = JSON.parse(await fs.readFile(configPath, "utf8")) as DexConfig;
     const defaultModel = config.agents?.defaults?.model;
     if (!defaultModel || typeof defaultModel !== "object") {
       throw new Error("expected default model object");

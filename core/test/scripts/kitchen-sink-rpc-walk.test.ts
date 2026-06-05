@@ -55,7 +55,7 @@ describe("kitchen-sink RPC isolated state", () => {
 
     expect(result.stderr).toBe("");
     expect(result.stdout).toContain("Usage: node scripts/e2e/kitchen-sink-rpc-walk.mjs");
-    expect(result.stdout).toContain("OPENCLAW_KITCHEN_SINK_NPM_SPEC");
+    expect(result.stdout).toContain("DEX_KITCHEN_SINK_NPM_SPEC");
     expect(result.stdout).not.toContain("Kitchen Sink RPC walk using");
     expect(result.stdout).not.toContain("temp root preserved");
   });
@@ -81,10 +81,10 @@ describe("kitchen-sink RPC isolated state", () => {
     expect(root).toContain("openclaw-kitchen-sink-rpc-");
     expect(env.HOME).toBe(path.join(root, "home"));
     expect(env.USERPROFILE).toBe(env.HOME);
-    expect(env.OPENCLAW_HOME).toBe(env.HOME);
-    expect(env.OPENCLAW_STATE_DIR).toBe(path.join(env.HOME, ".openclaw"));
-    expect(env.OPENCLAW_CONFIG_PATH).toBe(path.join(env.OPENCLAW_STATE_DIR, "openclaw.json"));
-    expect(existsSync(env.OPENCLAW_STATE_DIR)).toBe(true);
+    expect(env.DEX_HOME).toBe(env.HOME);
+    expect(env.DEX_STATE_DIR).toBe(path.join(env.HOME, ".dex"));
+    expect(env.DEX_CONFIG_PATH).toBe(path.join(env.DEX_STATE_DIR, "openclaw.json"));
+    expect(existsSync(env.DEX_STATE_DIR)).toBe(true);
 
     await expect(cleanupKitchenSinkEnv(root)).resolves.toBe(true);
 
@@ -462,7 +462,7 @@ describe("kitchen-sink RPC caller loading", () => {
     expect(usesBuiltOpenClawEntry({ command: "node", baseArgs: ["dist/index.js"] })).toBe(true);
     expect(
       usesBuiltOpenClawEntry({ command: "node", baseArgs: ["/app/openclaw.mjs"] }, "/repo", {
-        OPENCLAW_ENTRY: "/app/openclaw.mjs",
+        DEX_ENTRY: "/app/openclaw.mjs",
       }),
     ).toBe(true);
   });

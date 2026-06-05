@@ -30,8 +30,8 @@ describe("MCP OAuth provider", () => {
         prefix: "openclaw-mcp-oauth-",
         skipSessionCleanup: true,
         env: {
-          OPENCLAW_CONFIG_PATH: undefined,
-          OPENCLAW_STATE_DIR: undefined,
+          DEX_CONFIG_PATH: undefined,
+          DEX_STATE_DIR: undefined,
         },
       },
     );
@@ -56,8 +56,8 @@ describe("MCP OAuth provider", () => {
         prefix: "openclaw-mcp-oauth-url-",
         skipSessionCleanup: true,
         env: {
-          OPENCLAW_CONFIG_PATH: undefined,
-          OPENCLAW_STATE_DIR: undefined,
+          DEX_CONFIG_PATH: undefined,
+          DEX_STATE_DIR: undefined,
         },
       },
     );
@@ -83,8 +83,8 @@ describe("MCP OAuth provider", () => {
         prefix: "openclaw-mcp-oauth-noninteractive-",
         skipSessionCleanup: true,
         env: {
-          OPENCLAW_CONFIG_PATH: undefined,
-          OPENCLAW_STATE_DIR: undefined,
+          DEX_CONFIG_PATH: undefined,
+          DEX_STATE_DIR: undefined,
         },
       },
     );
@@ -110,8 +110,8 @@ describe("MCP OAuth provider", () => {
         prefix: "openclaw-mcp-oauth-clear-",
         skipSessionCleanup: true,
         env: {
-          OPENCLAW_CONFIG_PATH: undefined,
-          OPENCLAW_STATE_DIR: undefined,
+          DEX_CONFIG_PATH: undefined,
+          DEX_STATE_DIR: undefined,
         },
       },
     );

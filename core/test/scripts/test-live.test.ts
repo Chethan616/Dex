@@ -60,9 +60,9 @@ describe("scripts/test-live", () => {
 
     expect(env).toMatchObject({
       CI: "1",
-      OPENCLAW_LIVE_CODEX_HARNESS: "1",
-      OPENCLAW_LIVE_TEST: "1",
-      OPENCLAW_LIVE_TEST_QUIET: "1",
+      DEX_LIVE_CODEX_HARNESS: "1",
+      DEX_LIVE_TEST: "1",
+      DEX_LIVE_TEST_QUIET: "1",
       PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "false",
       pnpm_config_verify_deps_before_run: "false",
     });
@@ -91,8 +91,8 @@ describe("scripts/test-live", () => {
     const runner = spawn(process.execPath, ["scripts/test-live.mjs", "--", "fake.live.test.ts"], {
       env: {
         ...process.env,
-        OPENCLAW_FAKE_PNPM_PID_PATH: childPidPath,
-        OPENCLAW_FAKE_PNPM_SIGNALED_PATH: signaledPath,
+        DEX_FAKE_PNPM_PID_PATH: childPidPath,
+        DEX_FAKE_PNPM_SIGNALED_PATH: signaledPath,
         npm_execpath: fakePnpmPath,
       },
       stdio: "ignore",
@@ -125,15 +125,15 @@ describe("scripts/test-live", () => {
 
   it("rejects loose heartbeat intervals instead of parsing prefixes", () => {
     expect(resolveTestLiveHeartbeatMs({})).toBe(20_000);
-    expect(resolveTestLiveHeartbeatMs({ OPENCLAW_LIVE_WRAPPER_HEARTBEAT_MS: "2500" })).toBe(2500);
-    expect(() => resolveTestLiveHeartbeatMs({ OPENCLAW_LIVE_WRAPPER_HEARTBEAT_MS: "1e3" })).toThrow(
-      "invalid OPENCLAW_LIVE_WRAPPER_HEARTBEAT_MS: 1e3",
+    expect(resolveTestLiveHeartbeatMs({ DEX_LIVE_WRAPPER_HEARTBEAT_MS: "2500" })).toBe(2500);
+    expect(() => resolveTestLiveHeartbeatMs({ DEX_LIVE_WRAPPER_HEARTBEAT_MS: "1e3" })).toThrow(
+      "invalid DEX_LIVE_WRAPPER_HEARTBEAT_MS: 1e3",
     );
     expect(() =>
-      resolveTestLiveHeartbeatMs({ OPENCLAW_LIVE_WRAPPER_HEARTBEAT_MS: "1000ms" }),
-    ).toThrow("invalid OPENCLAW_LIVE_WRAPPER_HEARTBEAT_MS: 1000ms");
-    expect(() => resolveTestLiveHeartbeatMs({ OPENCLAW_LIVE_WRAPPER_HEARTBEAT_MS: "0" })).toThrow(
-      "invalid OPENCLAW_LIVE_WRAPPER_HEARTBEAT_MS: 0",
+      resolveTestLiveHeartbeatMs({ DEX_LIVE_WRAPPER_HEARTBEAT_MS: "1000ms" }),
+    ).toThrow("invalid DEX_LIVE_WRAPPER_HEARTBEAT_MS: 1000ms");
+    expect(() => resolveTestLiveHeartbeatMs({ DEX_LIVE_WRAPPER_HEARTBEAT_MS: "0" })).toThrow(
+      "invalid DEX_LIVE_WRAPPER_HEARTBEAT_MS: 0",
     );
   });
 
@@ -158,9 +158,9 @@ function writeFakePnpm(filePath: string): void {
     [
       "#!/usr/bin/env node",
       'const fs = require("node:fs");',
-      "fs.writeFileSync(process.env.OPENCLAW_FAKE_PNPM_PID_PATH, String(process.pid));",
+      "fs.writeFileSync(process.env.DEX_FAKE_PNPM_PID_PATH, String(process.pid));",
       'process.on("SIGTERM", () => {',
-      '  fs.writeFileSync(process.env.OPENCLAW_FAKE_PNPM_SIGNALED_PATH, "SIGTERM");',
+      '  fs.writeFileSync(process.env.DEX_FAKE_PNPM_SIGNALED_PATH, "SIGTERM");',
       "  process.exit(0);",
       "});",
       "setInterval(() => {}, 1000);",

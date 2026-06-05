@@ -1,6 +1,6 @@
 import type { AssistantMessage } from "openclaw/plugin-sdk/llm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { MALFORMED_STREAMING_FRAGMENT_ERROR_MESSAGE } from "../../shared/assistant-error-format.js";
 import { makeAssistantMessageFixture } from "../test-helpers/assistant-message-fixtures.js";
 import { formatAssistantErrorText, isLikelyContextOverflowError } from "./errors.js";
@@ -55,7 +55,7 @@ describe("formatAssistantErrorText streaming JSON parse classification", () => {
   });
 
   it("audits a sandbox tool-policy block once per assistant error", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       agents: {
         defaults: {
           sandbox: { mode: "non-main", scope: "agent" },

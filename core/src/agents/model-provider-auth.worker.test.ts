@@ -2,13 +2,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { clearRuntimeAuthProfileStoreSnapshots } from "./auth-profiles.js";
 import { clearCurrentProviderAuthState } from "./model-provider-auth.js";
 import { runProviderAuthWarmWorkerInput } from "./model-provider-auth.worker.js";
 
 const tempDirs: string[] = [];
-const envKeys = ["OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY", "OPENCLAW_STATE_DIR"] as const;
+const envKeys = ["DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY", "DEX_STATE_DIR"] as const;
 
 function restoreEnv(previous: Record<(typeof envKeys)[number], string | undefined>): void {
   for (const key of envKeys) {
@@ -36,8 +36,8 @@ describe("provider auth warm worker", () => {
       (typeof envKeys)[number],
       string | undefined
     >;
-    process.env.OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY = "1";
-    process.env.OPENCLAW_STATE_DIR = path.join(root, "state");
+    process.env.DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY = "1";
+    process.env.DEX_STATE_DIR = path.join(root, "state");
 
     try {
       const agentDir = path.join(root, "agent");
@@ -52,7 +52,7 @@ describe("provider auth warm worker", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig;
+      } as unknown as DexConfig;
       const result = await runProviderAuthWarmWorkerInput({
         cfg,
         runtimeAuthStores: [

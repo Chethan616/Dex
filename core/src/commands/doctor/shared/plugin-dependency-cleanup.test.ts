@@ -74,8 +74,8 @@ describe("cleanupLegacyPluginDependencyState", () => {
     await fs.mkdir(path.join(stateDirectory, "plugin-runtime-deps"), { recursive: true });
 
     const env = {
-      OPENCLAW_STATE_DIR: stateDir,
-      OPENCLAW_PLUGIN_STAGE_DIR: explicitStageDir,
+      DEX_STATE_DIR: stateDir,
+      DEX_PLUGIN_STAGE_DIR: explicitStageDir,
       STATE_DIRECTORY: stateDirectory,
     };
     const targets = await testing.collectLegacyPluginDependencyTargets(env, { packageRoot });
@@ -117,8 +117,8 @@ describe("cleanupLegacyPluginDependencyState", () => {
 
     const result = await cleanupLegacyPluginDependencyState({
       env: {
-        OPENCLAW_STATE_DIR: stateDir,
-        OPENCLAW_PLUGIN_STAGE_DIR: stageRoot,
+        DEX_STATE_DIR: stateDir,
+        DEX_PLUGIN_STAGE_DIR: stageRoot,
       },
       packageRoot,
     });
@@ -139,8 +139,8 @@ describe("cleanupLegacyPluginDependencyState", () => {
 
     const result = await cleanupLegacyPluginDependencyState({
       env: {
-        OPENCLAW_STATE_DIR: stateDir,
-        OPENCLAW_PLUGIN_STAGE_DIR: stageRoot,
+        DEX_STATE_DIR: stateDir,
+        DEX_PLUGIN_STAGE_DIR: stageRoot,
       },
       packageRoot,
     });
@@ -164,8 +164,8 @@ describe("cleanupLegacyPluginDependencyState", () => {
 
     const result = await cleanupLegacyPluginDependencyState({
       env: {
-        OPENCLAW_STATE_DIR: stateDir,
-        OPENCLAW_PLUGIN_STAGE_DIR: dotDotStage,
+        DEX_STATE_DIR: stateDir,
+        DEX_PLUGIN_STAGE_DIR: dotDotStage,
       },
       packageRoot,
     });
@@ -192,13 +192,13 @@ describe("cleanupLegacyPluginDependencyState", () => {
     await fs.symlink(externalPlugin, linkedPlugin, "dir");
 
     const targets = await testing.collectLegacyPluginDependencyTargets(
-      { OPENCLAW_STATE_DIR: stateDir },
+      { DEX_STATE_DIR: stateDir },
       { packageRoot },
     );
     expect(targets).not.toContain(path.join(linkedPlugin, "node_modules"));
 
     const result = await cleanupLegacyPluginDependencyState({
-      env: { OPENCLAW_STATE_DIR: stateDir },
+      env: { DEX_STATE_DIR: stateDir },
       packageRoot,
     });
 
@@ -218,7 +218,7 @@ describe("cleanupLegacyPluginDependencyState", () => {
     await fs.symlink(externalRuntimeRoot, legacyRuntimeRoot, "dir");
 
     const result = await cleanupLegacyPluginDependencyState({
-      env: { OPENCLAW_STATE_DIR: stateDir },
+      env: { DEX_STATE_DIR: stateDir },
       packageRoot,
     });
 
@@ -257,7 +257,7 @@ describe("cleanupLegacyPluginDependencyState", () => {
     await fs.symlink(unsafeRuntimeTarget, leftPadLink, "dir");
 
     const result = await cleanupLegacyPluginDependencyState({
-      env: { OPENCLAW_STATE_DIR: stateDir },
+      env: { DEX_STATE_DIR: stateDir },
       packageRoot,
     });
 
@@ -297,7 +297,7 @@ describe("cleanupLegacyPluginDependencyState", () => {
     await fs.symlink(liveTarget, liveLink, "dir");
 
     const result = await cleanupLegacyPluginDependencyState({
-      env: { OPENCLAW_STATE_DIR: stateDir },
+      env: { DEX_STATE_DIR: stateDir },
       packageRoot,
     });
 

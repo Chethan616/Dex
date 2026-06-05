@@ -2,7 +2,7 @@ import nodeFs from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import {
   setGatewayModelPricingForTest,
   clearGatewayModelPricingCacheState,
@@ -25,7 +25,7 @@ import {
 describe("session cost usage", () => {
   const suiteRootTracker = createSuiteTempRootTracker({ prefix: "openclaw-session-cost-" });
   const withStateDir = async <T>(stateDir: string, fn: () => Promise<T>): Promise<T> =>
-    await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, fn);
+    await withEnvAsync({ DEX_STATE_DIR: stateDir }, fn);
   const makeSessionCostRoot = async (prefix: string): Promise<string> =>
     await suiteRootTracker.make(prefix);
   const transcriptText = (sessionId: string, entry: unknown): string =>
@@ -139,7 +139,7 @@ describe("session cost usage", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     await withStateDir(root, async () => {
       const summary = await loadCostUsageSummary({ days: 30, config });
@@ -180,7 +180,7 @@ describe("session cost usage", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const costSpy = vi.spyOn(usageFormat, "resolveModelCostConfig");
     try {
@@ -287,7 +287,7 @@ describe("session cost usage", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     clearGatewayModelPricingCacheState();
     await withStateDir(root, async () => {
@@ -657,7 +657,7 @@ describe("session cost usage", () => {
             },
           },
         },
-      }) as unknown as OpenClawConfig;
+      }) as unknown as DexConfig;
 
     await withStateDir(root, async () => {
       await refreshCostUsageCache({ config: configFor(1, 1) });

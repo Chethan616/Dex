@@ -58,7 +58,7 @@ describe("gateway client handshake timeouts", () => {
   it("caps preauth handshake timeout env and config values to the safe timer range", () => {
     expect(
       getPreauthHandshakeTimeoutMsFromEnv({
-        OPENCLAW_HANDSHAKE_TIMEOUT_MS: "3000000000",
+        DEX_HANDSHAKE_TIMEOUT_MS: "3000000000",
       }),
     ).toBe(MAX_SAFE_TIMEOUT_DELAY_MS);
     expect(
@@ -72,12 +72,12 @@ describe("gateway client handshake timeouts", () => {
   it("accepts existing strict timeout env integer forms", () => {
     expect(
       getPreauthHandshakeTimeoutMsFromEnv({
-        OPENCLAW_HANDSHAKE_TIMEOUT_MS: " +75000 ",
+        DEX_HANDSHAKE_TIMEOUT_MS: " +75000 ",
       }),
     ).toBe(75_000);
     expect(
       getConnectChallengeTimeoutMsFromEnv({
-        OPENCLAW_CONNECT_CHALLENGE_TIMEOUT_MS: " 015000 ",
+        DEX_CONNECT_CHALLENGE_TIMEOUT_MS: " 015000 ",
       }),
     ).toBe(15_000);
   });
@@ -85,7 +85,7 @@ describe("gateway client handshake timeouts", () => {
   it("caps connect challenge timeout env and explicit values to the safe timer range", () => {
     expect(
       getConnectChallengeTimeoutMsFromEnv({
-        OPENCLAW_CONNECT_CHALLENGE_TIMEOUT_MS: "3000000000",
+        DEX_CONNECT_CHALLENGE_TIMEOUT_MS: "3000000000",
       }),
     ).toBe(MAX_SAFE_TIMEOUT_DELAY_MS);
     expect(
@@ -96,7 +96,7 @@ describe("gateway client handshake timeouts", () => {
     ).toBe(MAX_SAFE_TIMEOUT_DELAY_MS);
     expect(
       resolveConnectChallengeTimeoutMs(undefined, {
-        env: { OPENCLAW_CONNECT_CHALLENGE_TIMEOUT_MS: "3000000000" },
+        env: { DEX_CONNECT_CHALLENGE_TIMEOUT_MS: "3000000000" },
       }),
     ).toBe(MAX_SAFE_TIMEOUT_DELAY_MS);
   });

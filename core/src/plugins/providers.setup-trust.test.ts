@@ -42,7 +42,7 @@ function writeWorkspaceProviderPlugin(params: {
   providerId: string;
   markerDir: string;
 }) {
-  const pluginDir = path.join(params.workspaceDir, ".openclaw", "extensions", params.pluginId);
+  const pluginDir = path.join(params.workspaceDir, ".dex", "extensions", params.pluginId);
   mkdirSafeDir(pluginDir);
   writeJson(path.join(pluginDir, "openclaw.plugin.json"), {
     id: params.pluginId,
@@ -103,9 +103,9 @@ describe("setup provider workspace trust", () => {
     });
 
     const env: NodeJS.ProcessEnv = {
-      OPENCLAW_STATE_DIR: stateDir,
-      OPENCLAW_DISABLE_BUNDLED_PLUGINS: "1",
-      OPENCLAW_BUNDLED_PLUGINS_DIR: undefined,
+      DEX_STATE_DIR: stateDir,
+      DEX_DISABLE_BUNDLED_PLUGINS: "1",
+      DEX_BUNDLED_PLUGINS_DIR: undefined,
     };
 
     withEnv(env, () => {
@@ -144,9 +144,9 @@ describe("setup provider workspace trust", () => {
     });
 
     const env: NodeJS.ProcessEnv = {
-      OPENCLAW_STATE_DIR: stateDir,
-      OPENCLAW_DISABLE_BUNDLED_PLUGINS: "1",
-      OPENCLAW_BUNDLED_PLUGINS_DIR: undefined,
+      DEX_STATE_DIR: stateDir,
+      DEX_DISABLE_BUNDLED_PLUGINS: "1",
+      DEX_BUNDLED_PLUGINS_DIR: undefined,
     };
 
     withEnv(env, () => {

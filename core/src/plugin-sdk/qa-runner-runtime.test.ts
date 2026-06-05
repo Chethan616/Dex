@@ -46,7 +46,7 @@ function firstPublicSurfaceCall(): PublicSurfaceCall | undefined {
 
 describe("plugin-sdk qa-runner-runtime", () => {
   const tempDirs: string[] = [];
-  const originalPrivateQaCli = process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI;
+  const originalPrivateQaCli = process.env.DEX_ENABLE_PRIVATE_QA_CLI;
 
   beforeEach(() => {
     loadPluginManifestRegistry.mockReset().mockReturnValue({
@@ -56,7 +56,7 @@ describe("plugin-sdk qa-runner-runtime", () => {
     loadBundledPluginPublicSurfaceModuleSync.mockReset();
     tryLoadActivatedBundledPluginPublicSurfaceModuleSync.mockReset();
     resolveOpenClawPackageRootSync.mockReset().mockReturnValue(null);
-    delete process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI;
+    delete process.env.DEX_ENABLE_PRIVATE_QA_CLI;
   });
 
   afterEach(() => {
@@ -101,8 +101,8 @@ describe("plugin-sdk qa-runner-runtime", () => {
     const testApiCall = firstPublicSurfaceCall();
     expect(testApiCall?.dirName).toBe("matrix");
     expect(testApiCall?.artifactBasename).toBe("test-api.js");
-    expect(testApiCall?.env?.OPENCLAW_ENABLE_PRIVATE_QA_CLI).toBe("1");
-    expect(testApiCall?.env?.OPENCLAW_BUNDLED_PLUGINS_DIR).toBe(
+    expect(testApiCall?.env?.DEX_ENABLE_PRIVATE_QA_CLI).toBe("1");
+    expect(testApiCall?.env?.DEX_BUNDLED_PLUGINS_DIR).toBe(
       path.join(sourceRoot, "extensions"),
     );
   });
@@ -218,16 +218,16 @@ describe("plugin-sdk qa-runner-runtime", () => {
       },
     ]);
     const manifestCall = firstManifestRegistryCall();
-    expect(manifestCall?.env?.OPENCLAW_ENABLE_PRIVATE_QA_CLI).toBe("1");
-    expect(manifestCall?.env?.OPENCLAW_BUNDLED_PLUGINS_DIR).toBe(
+    expect(manifestCall?.env?.DEX_ENABLE_PRIVATE_QA_CLI).toBe("1");
+    expect(manifestCall?.env?.DEX_BUNDLED_PLUGINS_DIR).toBe(
       path.join(sourceRoot, "extensions"),
     );
 
     const publicSurfaceCall = firstPublicSurfaceCall();
     expect(publicSurfaceCall?.dirName).toBe("qa-matrix");
     expect(publicSurfaceCall?.artifactBasename).toBe("runtime-api.js");
-    expect(publicSurfaceCall?.env?.OPENCLAW_ENABLE_PRIVATE_QA_CLI).toBe("1");
-    expect(publicSurfaceCall?.env?.OPENCLAW_BUNDLED_PLUGINS_DIR).toBe(
+    expect(publicSurfaceCall?.env?.DEX_ENABLE_PRIVATE_QA_CLI).toBe("1");
+    expect(publicSurfaceCall?.env?.DEX_BUNDLED_PLUGINS_DIR).toBe(
       path.join(sourceRoot, "extensions"),
     );
   });

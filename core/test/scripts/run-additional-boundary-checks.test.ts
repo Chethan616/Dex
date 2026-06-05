@@ -44,16 +44,16 @@ describe("run-additional-boundary-checks", () => {
   });
 
   it("rejects malformed timeout and output limit integers", () => {
-    expect(resolvePositiveInteger("25", 50, "OPENCLAW_ADDITIONAL_BOUNDARY_TIMEOUT_MS")).toBe(25);
-    expect(resolvePositiveInteger(undefined, 50, "OPENCLAW_ADDITIONAL_BOUNDARY_TIMEOUT_MS")).toBe(
+    expect(resolvePositiveInteger("25", 50, "DEX_ADDITIONAL_BOUNDARY_TIMEOUT_MS")).toBe(25);
+    expect(resolvePositiveInteger(undefined, 50, "DEX_ADDITIONAL_BOUNDARY_TIMEOUT_MS")).toBe(
       50,
     );
     expect(() =>
-      resolvePositiveInteger("1000ms", 50, "OPENCLAW_ADDITIONAL_BOUNDARY_TIMEOUT_MS"),
-    ).toThrow("OPENCLAW_ADDITIONAL_BOUNDARY_TIMEOUT_MS must be a positive integer; got: 1000ms");
+      resolvePositiveInteger("1000ms", 50, "DEX_ADDITIONAL_BOUNDARY_TIMEOUT_MS"),
+    ).toThrow("DEX_ADDITIONAL_BOUNDARY_TIMEOUT_MS must be a positive integer; got: 1000ms");
     expect(() =>
-      resolvePositiveInteger("1e3", 50, "OPENCLAW_ADDITIONAL_BOUNDARY_OUTPUT_MAX_BYTES"),
-    ).toThrow("OPENCLAW_ADDITIONAL_BOUNDARY_OUTPUT_MAX_BYTES must be a positive integer; got: 1e3");
+      resolvePositiveInteger("1e3", 50, "DEX_ADDITIONAL_BOUNDARY_OUTPUT_MAX_BYTES"),
+    ).toThrow("DEX_ADDITIONAL_BOUNDARY_OUTPUT_MAX_BYTES must be a positive integer; got: 1e3");
   });
 
   it("formats command display text", () => {

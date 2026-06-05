@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import { MAX_DATE_TIMESTAMP_MS } from "../../shared/number-coercion.js";
 import { captureEnv } from "../../test-utils/env.js";
@@ -35,10 +35,10 @@ function createCredential(overrides: Partial<OAuthCredential> = {}): OAuthCreden
 
 const tempDirs: string[] = [];
 const envSnapshot = captureEnv([
-  "OPENCLAW_STATE_DIR",
-  "OPENCLAW_AGENT_DIR",
-  "OPENCLAW_OAUTH_DIR",
-  "OPENCLAW_AUTH_PROFILE_SECRET_KEY",
+  "DEX_STATE_DIR",
+  "DEX_AGENT_DIR",
+  "DEX_OAUTH_DIR",
+  "DEX_AUTH_PROFILE_SECRET_KEY",
 ]);
 
 beforeEach(() => {
@@ -272,7 +272,7 @@ describe("createOAuthManager", () => {
           openai: { auth: "oauth", baseUrl: "", models: [] },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
     const buildApiKey = vi.fn(async (_provider, value: OAuthCredential) => value.access);
     const manager = createOAuthManager({
       buildApiKey,
@@ -306,10 +306,10 @@ describe("createOAuthManager", () => {
   it("does not overlay external auth while checking main-store adoption", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "oauth-manager-main-adopt-"));
     tempDirs.push(tempRoot);
-    process.env.OPENCLAW_STATE_DIR = tempRoot;
+    process.env.DEX_STATE_DIR = tempRoot;
     const mainAgentDir = path.join(tempRoot, "agents", "main", "agent");
     const agentDir = path.join(tempRoot, "agents", "sub", "agent");
-    process.env.OPENCLAW_AGENT_DIR = mainAgentDir;
+    process.env.DEX_AGENT_DIR = mainAgentDir;
     await fs.mkdir(agentDir, { recursive: true });
     await fs.mkdir(mainAgentDir, { recursive: true });
 
@@ -392,10 +392,10 @@ describe("createOAuthManager", () => {
   it("adopts main-store OAuth when the local expiry is out of range", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "oauth-manager-invalid-local-"));
     tempDirs.push(tempRoot);
-    process.env.OPENCLAW_STATE_DIR = tempRoot;
+    process.env.DEX_STATE_DIR = tempRoot;
     const mainAgentDir = path.join(tempRoot, "agents", "main", "agent");
     const agentDir = path.join(tempRoot, "agents", "sub", "agent");
-    process.env.OPENCLAW_AGENT_DIR = mainAgentDir;
+    process.env.DEX_AGENT_DIR = mainAgentDir;
     await fs.mkdir(agentDir, { recursive: true });
     await fs.mkdir(mainAgentDir, { recursive: true });
 
@@ -457,10 +457,10 @@ describe("createOAuthManager", () => {
   it("refreshes with the adopted external oauth credential", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "oauth-manager-refresh-"));
     tempDirs.push(tempRoot);
-    process.env.OPENCLAW_STATE_DIR = tempRoot;
+    process.env.DEX_STATE_DIR = tempRoot;
     const mainAgentDir = path.join(tempRoot, "agents", "main", "agent");
     const agentDir = path.join(tempRoot, "agents", "sub", "agent");
-    process.env.OPENCLAW_AGENT_DIR = mainAgentDir;
+    process.env.DEX_AGENT_DIR = mainAgentDir;
     await fs.mkdir(agentDir, { recursive: true });
     await fs.mkdir(mainAgentDir, { recursive: true });
     const profileId = "minimax-portal:default";
@@ -520,7 +520,7 @@ describe("createOAuthManager", () => {
   it("skips the refresh adapter when the credential has no refresh token", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "oauth-manager-no-refresh-"));
     tempDirs.push(tempRoot);
-    process.env.OPENCLAW_STATE_DIR = tempRoot;
+    process.env.DEX_STATE_DIR = tempRoot;
     const agentDir = path.join(tempRoot, "agents", "main", "agent");
     await fs.mkdir(agentDir, { recursive: true });
     const profileId = "openai:oauth";
@@ -563,7 +563,7 @@ describe("createOAuthManager", () => {
   it("redacts the external oauth credential attempted during refresh failures", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "oauth-manager-refresh-redact-"));
     tempDirs.push(tempRoot);
-    process.env.OPENCLAW_STATE_DIR = tempRoot;
+    process.env.DEX_STATE_DIR = tempRoot;
     const agentDir = path.join(tempRoot, "agents", "sub", "agent");
     await fs.mkdir(agentDir, { recursive: true });
     const profileId = "minimax-portal:default";

@@ -8,7 +8,7 @@ describe("signal daemon args", () => {
     expect(
       testApi.buildDaemonArgs({
         cliPath: "signal-cli",
-        configPath: "~/.openclaw/signal-cli",
+        configPath: "~/.dex/signal-cli",
         httpHost: "127.0.0.1",
         httpPort: 8080,
       }),

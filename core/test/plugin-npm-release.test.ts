@@ -7,7 +7,7 @@ import {
   collectPublishablePluginPackages,
   collectChangedExtensionIdsFromPaths,
   collectPublishablePluginPackageErrors,
-  OPENCLAW_PLUGIN_NPM_REPOSITORY_URL,
+  DEX_PLUGIN_NPM_REPOSITORY_URL,
   parsePluginReleaseArgs,
   parsePluginReleaseSelection,
   parsePluginReleaseSelectionMode,
@@ -107,7 +107,7 @@ describe("collectPublishablePluginPackageErrors", () => {
           version: "2026.3.15",
           repository: {
             type: "git",
-            url: OPENCLAW_PLUGIN_NPM_REPOSITORY_URL,
+            url: DEX_PLUGIN_NPM_REPOSITORY_URL,
           },
           openclaw: {
             extensions: ["./index.ts"],
@@ -148,7 +148,7 @@ describe("collectPublishablePluginPackageErrors", () => {
     ).toEqual([
       'package name must start with "@openclaw/"; found "broken".',
       "package.json private must not be true.",
-      `package.json repository.url must be "${OPENCLAW_PLUGIN_NPM_REPOSITORY_URL}" so npm provenance can validate GitHub trusted publishing; found "<missing>".`,
+      `package.json repository.url must be "${DEX_PLUGIN_NPM_REPOSITORY_URL}" so npm provenance can validate GitHub trusted publishing; found "<missing>".`,
       'package.json version must match YYYY.M.D, YYYY.M.D-N, YYYY.M.D-alpha.N, or YYYY.M.D-beta.N; found "latest".',
       "openclaw.extensions must contain only non-empty strings.",
       "openclaw.install.npmSpec must be a non-empty string for publishable plugins.",
@@ -176,7 +176,7 @@ describe("collectPublishablePluginPackageErrors", () => {
         },
       }),
     ).toEqual([
-      `package.json repository.url must be "${OPENCLAW_PLUGIN_NPM_REPOSITORY_URL}" so npm provenance can validate GitHub trusted publishing; found "<missing>".`,
+      `package.json repository.url must be "${DEX_PLUGIN_NPM_REPOSITORY_URL}" so npm provenance can validate GitHub trusted publishing; found "<missing>".`,
     ]);
   });
 
@@ -190,7 +190,7 @@ describe("collectPublishablePluginPackageErrors", () => {
           version: "2026.5.1-beta.1",
           repository: {
             type: "git",
-            url: OPENCLAW_PLUGIN_NPM_REPOSITORY_URL,
+            url: DEX_PLUGIN_NPM_REPOSITORY_URL,
           },
           openclaw: {
             extensions: ["./index.ts"],
@@ -214,7 +214,7 @@ describe("collectPublishablePluginPackageErrors", () => {
           version: "2026.5.1-beta.1",
           repository: {
             type: "git",
-            url: OPENCLAW_PLUGIN_NPM_REPOSITORY_URL,
+            url: DEX_PLUGIN_NPM_REPOSITORY_URL,
           },
           openclaw: {
             extensions: ["./index.ts"],
@@ -264,7 +264,7 @@ describe("collectPublishablePluginPackages", () => {
       version: "2026.4.10",
       repository: {
         type: "git",
-        url: OPENCLAW_PLUGIN_NPM_REPOSITORY_URL,
+        url: DEX_PLUGIN_NPM_REPOSITORY_URL,
       },
       openclaw: {
         extensions: ["./index.ts"],
@@ -299,7 +299,7 @@ describe("collectPublishablePluginPackages", () => {
       version: "2026.4.10-beta.1",
       repository: {
         type: "git",
-        url: OPENCLAW_PLUGIN_NPM_REPOSITORY_URL,
+        url: DEX_PLUGIN_NPM_REPOSITORY_URL,
       },
       openclaw: {
         extensions: ["./index.ts"],
@@ -377,7 +377,7 @@ describe("collectPublishablePluginPackages", () => {
       version: "2026.4.10-alpha.1",
       repository: {
         type: "git",
-        url: OPENCLAW_PLUGIN_NPM_REPOSITORY_URL,
+        url: DEX_PLUGIN_NPM_REPOSITORY_URL,
       },
       openclaw: {
         extensions: ["./index.ts"],

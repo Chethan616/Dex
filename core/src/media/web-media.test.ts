@@ -584,7 +584,7 @@ describe("loadWebMedia", () => {
   });
 
   it("resolves home-relative local media paths through allowed local roots", async () => {
-    vi.stubEnv("OPENCLAW_HOME", fixtureRoot);
+    vi.stubEnv("DEX_HOME", fixtureRoot);
     try {
       const result = await loadWebMedia("~/workspace/chart.png", {
         maxBytes: 1024 * 1024,

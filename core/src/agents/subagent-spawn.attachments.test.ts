@@ -194,8 +194,8 @@ describe("spawnSubagentDirect filename validation", () => {
       );
 
       expect(result.status).toBe("accepted");
-      const explicitAttachmentsRoot = path.join(explicitWorkspaceDir, ".openclaw", "attachments");
-      const targetAttachmentsRoot = path.join(workspaceDirOverride, ".openclaw", "attachments");
+      const explicitAttachmentsRoot = path.join(explicitWorkspaceDir, ".dex", "attachments");
+      const targetAttachmentsRoot = path.join(workspaceDirOverride, ".dex", "attachments");
       expect(fs.existsSync(explicitAttachmentsRoot)).toBe(true);
       expect(fs.existsSync(targetAttachmentsRoot)).toBe(false);
     } finally {
@@ -231,7 +231,7 @@ describe("spawnSubagentDirect filename validation", () => {
       );
 
       expect(result.status).toBe("accepted");
-      const attachmentsRoot = path.join(expectedCwd, ".openclaw", "attachments");
+      const attachmentsRoot = path.join(expectedCwd, ".dex", "attachments");
       expect(fs.existsSync(attachmentsRoot)).toBe(true);
       const childSessionKey = result.childSessionKey as string;
       expect(persistedStore?.[childSessionKey]?.spawnedCwd).toBe(expectedCwd);
@@ -273,7 +273,7 @@ describe("spawnSubagentDirect filename validation", () => {
 
     expect(result.status).toBe("error");
     expect(result.error).toContain("lineage patch failed");
-    const attachmentsRoot = path.join(workspaceDirOverride, ".openclaw", "attachments");
+    const attachmentsRoot = path.join(workspaceDirOverride, ".dex", "attachments");
     const retainedDirs = fs.existsSync(attachmentsRoot)
       ? fs.readdirSync(attachmentsRoot).filter((entry) => !entry.startsWith("."))
       : [];

@@ -326,7 +326,7 @@ describe("resolvePrecomputedSubcommandHelpFastPath", () => {
     ).toBeNull();
     expect(
       resolvePrecomputedSubcommandHelpFastPath(["node", "openclaw", "doctor", "--help"], {
-        OPENCLAW_DISABLE_CLI_STARTUP_HELP_FAST_PATH: "1",
+        DEX_DISABLE_CLI_STARTUP_HELP_FAST_PATH: "1",
       }),
     ).toBeNull();
   });

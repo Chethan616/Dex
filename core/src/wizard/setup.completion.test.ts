@@ -4,15 +4,15 @@ import { resolveCompletionProfilePath } from "../cli/completion-runtime.js";
 import { setupWizardShellCompletion } from "./setup.completion.js";
 
 async function withLocale(locale: string, run: () => Promise<void>): Promise<void> {
-  const previousLocale = process.env.OPENCLAW_LOCALE;
-  process.env.OPENCLAW_LOCALE = locale;
+  const previousLocale = process.env.DEX_LOCALE;
+  process.env.DEX_LOCALE = locale;
   try {
     await run();
   } finally {
     if (previousLocale === undefined) {
-      delete process.env.OPENCLAW_LOCALE;
+      delete process.env.DEX_LOCALE;
     } else {
-      process.env.OPENCLAW_LOCALE = previousLocale;
+      process.env.DEX_LOCALE = previousLocale;
     }
   }
 }

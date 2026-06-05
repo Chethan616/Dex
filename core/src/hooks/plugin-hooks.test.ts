@@ -3,7 +3,7 @@ import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import {
   clearInternalHooks,
   createInternalHookEvent,
@@ -28,17 +28,17 @@ describe("bundle plugin hooks", () => {
     setInternalHooksEnabled(true);
     workspaceDir = path.join(fixtureRoot, `case-${caseId++}`);
     await fsp.mkdir(workspaceDir, { recursive: true });
-    previousBundledHooksDir = process.env.OPENCLAW_BUNDLED_HOOKS_DIR;
-    process.env.OPENCLAW_BUNDLED_HOOKS_DIR = "/nonexistent/bundled/hooks";
+    previousBundledHooksDir = process.env.DEX_BUNDLED_HOOKS_DIR;
+    process.env.DEX_BUNDLED_HOOKS_DIR = "/nonexistent/bundled/hooks";
   });
 
   afterEach(() => {
     clearInternalHooks();
     setInternalHooksEnabled(true);
     if (previousBundledHooksDir === undefined) {
-      delete process.env.OPENCLAW_BUNDLED_HOOKS_DIR;
+      delete process.env.DEX_BUNDLED_HOOKS_DIR;
     } else {
-      process.env.OPENCLAW_BUNDLED_HOOKS_DIR = previousBundledHooksDir;
+      process.env.DEX_BUNDLED_HOOKS_DIR = previousBundledHooksDir;
     }
   });
 
@@ -47,7 +47,7 @@ describe("bundle plugin hooks", () => {
   });
 
   async function writeBundleHookFixture(): Promise<string> {
-    const bundleRoot = path.join(workspaceDir, ".openclaw", "extensions", "sample-bundle");
+    const bundleRoot = path.join(workspaceDir, ".dex", "extensions", "sample-bundle");
     const hookDir = path.join(bundleRoot, "hooks", "bundle-hook");
     await fsp.mkdir(path.join(bundleRoot, ".codex-plugin"), { recursive: true });
     await fsp.mkdir(hookDir, { recursive: true });
@@ -81,7 +81,7 @@ describe("bundle plugin hooks", () => {
     return bundleRoot;
   }
 
-  function createConfig(enabled: boolean): OpenClawConfig {
+  function createConfig(enabled: boolean): DexConfig {
     return {
       hooks: {
         internal: {
@@ -145,7 +145,7 @@ describe("bundle plugin hooks", () => {
   });
 
   it("does not treat Claude hooks.json bundles as OpenClaw hook packs", async () => {
-    const bundleRoot = path.join(workspaceDir, ".openclaw", "extensions", "claude-bundle");
+    const bundleRoot = path.join(workspaceDir, ".dex", "extensions", "claude-bundle");
     await fsp.mkdir(path.join(bundleRoot, ".claude-plugin"), { recursive: true });
     await fsp.mkdir(path.join(bundleRoot, "hooks"), { recursive: true });
     await fsp.writeFile(

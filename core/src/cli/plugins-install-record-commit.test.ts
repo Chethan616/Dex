@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { PluginInstallRecord } from "../config/types.plugins.js";
 
 const mocks = vi.hoisted(() => ({
@@ -34,7 +34,7 @@ describe("commitConfigWithPendingPluginInstalls", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.loadInstalledPluginIndexInstallRecords.mockResolvedValue({});
-    mocks.replaceConfigFile.mockImplementation(async (params: { nextConfig: OpenClawConfig }) => ({
+    mocks.replaceConfigFile.mockImplementation(async (params: { nextConfig: DexConfig }) => ({
       path: "/tmp/openclaw.json",
       previousHash: null,
       snapshot: {} as never,
@@ -60,7 +60,7 @@ describe("commitConfigWithPendingPluginInstalls", () => {
       },
     };
     mocks.loadInstalledPluginIndexInstallRecords.mockResolvedValue(existingRecords);
-    const nextConfig: OpenClawConfig = {
+    const nextConfig: DexConfig = {
       plugins: {
         entries: {
           demo: { enabled: true },
@@ -110,7 +110,7 @@ describe("commitConfigWithPendingPluginInstalls", () => {
   });
 
   it("strips only selected pending plugin install records", () => {
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       plugins: {
         installs: {
           legacy: { source: "npm", spec: "legacy@1.0.0" },
@@ -129,7 +129,7 @@ describe("commitConfigWithPendingPluginInstalls", () => {
   });
 
   it("selects only unchanged pending plugin install records for migration stripping", () => {
-    const baseConfig: OpenClawConfig = {
+    const baseConfig: DexConfig = {
       plugins: {
         installs: {
           legacy: { source: "npm", spec: "legacy@1.0.0" },
@@ -137,7 +137,7 @@ describe("commitConfigWithPendingPluginInstalls", () => {
         },
       },
     };
-    const nextConfig: OpenClawConfig = {
+    const nextConfig: DexConfig = {
       plugins: {
         installs: {
           legacy: { source: "npm", spec: "legacy@1.0.0" },
@@ -219,7 +219,7 @@ describe("commitConfigWithPendingPluginInstalls", () => {
   });
 
   it("uses a plain config write when no pending plugin install records exist", async () => {
-    const nextConfig: OpenClawConfig = {
+    const nextConfig: DexConfig = {
       gateway: {
         mode: "local",
       },
@@ -242,7 +242,7 @@ describe("commitConfigWithPendingPluginInstalls", () => {
 
   it("supports non-replace config writers without adding an undefined write options argument", async () => {
     const writeConfigFile = vi.fn(async () => undefined);
-    const nextConfig: OpenClawConfig = {
+    const nextConfig: DexConfig = {
       gateway: {
         mode: "local",
       },

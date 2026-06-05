@@ -10,10 +10,10 @@ import {
 } from "../infra/kysely-sync.js";
 import { requireNodeSqlite } from "../infra/node-sqlite.js";
 import { readSqliteNumberPragma } from "../infra/sqlite-pragma.test-support.js";
-import type { DB as OpenClawStateKyselyDatabase } from "./openclaw-state-db.generated.js";
+import type { DB as DexStateKyselyDatabase } from "./openclaw-state-db.generated.js";
 import {
-  closeOpenClawStateDatabaseForTest,
-  openOpenClawStateDatabase,
+  closeDexStateDatabaseForTest,
+  openDexStateDatabase,
   runOpenClawStateWriteTransaction,
 } from "./openclaw-state-db.js";
 import { resolveOpenClawStateSqlitePath } from "./openclaw-state-db.paths.js";
@@ -22,21 +22,21 @@ import {
   createSqliteSchemaShapeFromSql,
 } from "./sqlite-schema-shape.test-support.js";
 
-type StateDbTestDatabase = Pick<OpenClawStateKyselyDatabase, "diagnostic_events" | "schema_meta">;
+type StateDbTestDatabase = Pick<DexStateKyselyDatabase, "diagnostic_events" | "schema_meta">;
 
 function createTempStateDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-state-db-"));
 }
 
 afterEach(() => {
-  closeOpenClawStateDatabaseForTest();
+  closeDexStateDatabaseForTest();
 });
 
 describe("openclaw state database", () => {
   it("resolves under the shared state database directory", () => {
     const stateDir = createTempStateDir();
 
-    expect(resolveOpenClawStateSqlitePath({ OPENCLAW_STATE_DIR: stateDir })).toBe(
+    expect(resolveOpenClawStateSqlitePath({ DEX_STATE_DIR: stateDir })).toBe(
       path.join(stateDir, "state", "openclaw.sqlite"),
     );
   });
@@ -54,8 +54,8 @@ describe("openclaw state database", () => {
 
   it("creates the shared state schema from the committed SQL shape", () => {
     const stateDir = createTempStateDir();
-    const database = openOpenClawStateDatabase({
-      env: { OPENCLAW_STATE_DIR: stateDir },
+    const database = openDexStateDatabase({
+      env: { DEX_STATE_DIR: stateDir },
     });
 
     expect(collectSqliteSchemaShape(database.db)).toEqual(
@@ -106,8 +106,8 @@ describe("openclaw state database", () => {
     ).run(path.join(stateDir, "cron", "jobs.json"), "legacy-job", jobJson, 456);
     db.close();
 
-    const database = openOpenClawStateDatabase({
-      env: { OPENCLAW_STATE_DIR: stateDir },
+    const database = openDexStateDatabase({
+      env: { DEX_STATE_DIR: stateDir },
     });
 
     expect(() =>
@@ -178,16 +178,16 @@ describe("openclaw state database", () => {
     );
     db.close();
 
-    const database = openOpenClawStateDatabase({
-      env: { OPENCLAW_STATE_DIR: stateDir },
+    const database = openDexStateDatabase({
+      env: { DEX_STATE_DIR: stateDir },
     });
 
     expect(() =>
       database.db.prepare("SELECT status, entry_json FROM cron_run_logs LIMIT 1").all(),
     ).not.toThrow();
 
-    const previousStateDir = process.env["OPENCLAW_STATE_DIR"];
-    process.env["OPENCLAW_STATE_DIR"] = stateDir;
+    const previousStateDir = process.env["DEX_STATE_DIR"];
+    process.env["DEX_STATE_DIR"] = stateDir;
     try {
       expect(
         readCronRunLogEntriesSync({
@@ -197,9 +197,9 @@ describe("openclaw state database", () => {
       ).toMatchObject([{ action: "finished", jobId: "legacy-job", ts: 12345 }]);
     } finally {
       if (previousStateDir === undefined) {
-        delete process.env["OPENCLAW_STATE_DIR"];
+        delete process.env["DEX_STATE_DIR"];
       } else {
-        process.env["OPENCLAW_STATE_DIR"] = previousStateDir;
+        process.env["DEX_STATE_DIR"] = previousStateDir;
       }
     }
   });
@@ -264,8 +264,8 @@ describe("openclaw state database", () => {
     );
     db.close();
 
-    const database = openOpenClawStateDatabase({
-      env: { OPENCLAW_STATE_DIR: stateDir },
+    const database = openDexStateDatabase({
+      env: { DEX_STATE_DIR: stateDir },
     });
 
     expect(() =>
@@ -300,8 +300,8 @@ describe("openclaw state database", () => {
 
   it("configures durable SQLite connection pragmas", () => {
     const stateDir = createTempStateDir();
-    const database = openOpenClawStateDatabase({
-      env: { OPENCLAW_STATE_DIR: stateDir },
+    const database = openDexStateDatabase({
+      env: { DEX_STATE_DIR: stateDir },
     });
 
     expect(readSqliteNumberPragma(database.db, "busy_timeout")).toBe(30_000);
@@ -317,8 +317,8 @@ describe("openclaw state database", () => {
 
   it("records durable schema metadata", () => {
     const stateDir = createTempStateDir();
-    const database = openOpenClawStateDatabase({
-      env: { OPENCLAW_STATE_DIR: stateDir },
+    const database = openDexStateDatabase({
+      env: { DEX_STATE_DIR: stateDir },
     });
     const stateDb = getNodeSqliteKysely<StateDbTestDatabase>(database.db);
 
@@ -340,8 +340,8 @@ describe("openclaw state database", () => {
     db.close();
 
     expect(() =>
-      openOpenClawStateDatabase({
-        env: { OPENCLAW_STATE_DIR: stateDir },
+      openDexStateDatabase({
+        env: { DEX_STATE_DIR: stateDir },
       }),
     ).toThrow(/newer schema version 2/);
   });
@@ -352,7 +352,7 @@ describe("openclaw state database", () => {
       `openclaw-explicit-state-${process.pid}-${Date.now()}.sqlite`,
     );
 
-    expect(() => openOpenClawStateDatabase({ path: databasePath })).not.toThrow();
+    expect(() => openDexStateDatabase({ path: databasePath })).not.toThrow();
     expect(fs.existsSync(databasePath)).toBe(true);
   });
 
@@ -368,18 +368,18 @@ describe("openclaw state database", () => {
       `second-${process.pid}-${Date.now()}.sqlite`,
     );
 
-    const first = openOpenClawStateDatabase({ path: firstPath });
-    const second = openOpenClawStateDatabase({ path: secondPath });
+    const first = openDexStateDatabase({ path: firstPath });
+    const second = openDexStateDatabase({ path: secondPath });
 
     expect(first.db.isOpen).toBe(true);
     expect(second.db.isOpen).toBe(true);
-    expect(openOpenClawStateDatabase({ path: firstPath })).toBe(first);
+    expect(openDexStateDatabase({ path: firstPath })).toBe(first);
     expect(readSqliteNumberPragma(first.db, "user_version")).toBe(1);
   });
 
   it("uses savepoints for nested write transaction rollback", () => {
     const stateDir = createTempStateDir();
-    const options = { env: { OPENCLAW_STATE_DIR: stateDir } };
+    const options = { env: { DEX_STATE_DIR: stateDir } };
 
     runOpenClawStateWriteTransaction((database) => {
       const stateDb = getNodeSqliteKysely<StateDbTestDatabase>(database.db);
@@ -409,7 +409,7 @@ describe("openclaw state database", () => {
       ).toThrow("rollback nested");
     }, options);
 
-    const database = openOpenClawStateDatabase(options);
+    const database = openDexStateDatabase(options);
     const stateDb = getNodeSqliteKysely<StateDbTestDatabase>(database.db);
     expect(
       executeSqliteQuerySync(
@@ -425,7 +425,7 @@ describe("openclaw state database", () => {
 
   it("rejects Promise-returning write transactions", () => {
     const stateDir = createTempStateDir();
-    const options = { env: { OPENCLAW_STATE_DIR: stateDir } };
+    const options = { env: { DEX_STATE_DIR: stateDir } };
 
     expect(() =>
       runOpenClawStateWriteTransaction(async () => {

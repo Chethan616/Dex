@@ -10,10 +10,10 @@ describe("WhatsApp auth dir profile resolution", () => {
   let tempStateDir: string | undefined;
 
   beforeEach(() => {
-    envSnapshot = captureEnv(["OPENCLAW_STATE_DIR", "OPENCLAW_OAUTH_DIR"]);
+    envSnapshot = captureEnv(["DEX_STATE_DIR", "DEX_OAUTH_DIR"]);
     tempStateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-wa-profile-"));
-    delete process.env.OPENCLAW_STATE_DIR;
-    delete process.env.OPENCLAW_OAUTH_DIR;
+    delete process.env.DEX_STATE_DIR;
+    delete process.env.DEX_OAUTH_DIR;
     vi.resetModules();
   });
 
@@ -26,16 +26,16 @@ describe("WhatsApp auth dir profile resolution", () => {
     }
   });
 
-  it("resolves the default web auth dir from OPENCLAW_STATE_DIR at call time", async () => {
+  it("resolves the default web auth dir from DEX_STATE_DIR at call time", async () => {
     const authStore = await import("./auth-store.js");
-    process.env.OPENCLAW_STATE_DIR = tempStateDir;
+    process.env.DEX_STATE_DIR = tempStateDir;
 
     const expected = path.join(tempStateDir ?? "", "credentials", "whatsapp", DEFAULT_ACCOUNT_ID);
     expect(authStore.resolveDefaultWebAuthDir()).toBe(expected);
   });
 
   it("exports the legacy default auth dir as a primitive string", async () => {
-    process.env.OPENCLAW_STATE_DIR = tempStateDir;
+    process.env.DEX_STATE_DIR = tempStateDir;
     const authStore = await import("./auth-store.js");
 
     const expected = path.join(tempStateDir ?? "", "credentials", "whatsapp", DEFAULT_ACCOUNT_ID);
@@ -45,7 +45,7 @@ describe("WhatsApp auth dir profile resolution", () => {
 
   it("lists WhatsApp auth dirs under the active profile state dir", async () => {
     const accounts = await import("./accounts.js");
-    process.env.OPENCLAW_STATE_DIR = tempStateDir;
+    process.env.DEX_STATE_DIR = tempStateDir;
 
     const dirs = accounts.listWhatsAppAuthDirs({});
     expect(dirs).toContain(path.join(tempStateDir ?? "", "credentials"));

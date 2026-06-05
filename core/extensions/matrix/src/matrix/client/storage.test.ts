@@ -80,7 +80,7 @@ describe("matrix client storage paths", () => {
     },
   ): string {
     const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-matrix-storage-"));
-    const stateDir = path.join(homeDir, ".openclaw");
+    const stateDir = path.join(homeDir, ".dex");
     fs.mkdirSync(stateDir, { recursive: true });
     tempDirs.push(homeDir);
     installMatrixTestRuntime({
@@ -100,9 +100,9 @@ describe("matrix client storage paths", () => {
   function createMigrationEnv(stateDir: string): NodeJS.ProcessEnv {
     return {
       HOME: path.dirname(stateDir),
-      OPENCLAW_HOME: path.dirname(stateDir),
-      OPENCLAW_STATE_DIR: stateDir,
-      OPENCLAW_TEST_FAST: "1",
+      DEX_HOME: path.dirname(stateDir),
+      DEX_STATE_DIR: stateDir,
+      DEX_TEST_FAST: "1",
     } as NodeJS.ProcessEnv;
   }
 
@@ -264,7 +264,7 @@ describe("matrix client storage paths", () => {
     const stateDir = setupStateDir();
     const storagePaths = resolveMatrixStoragePaths({
       ...defaultStorageAuth,
-      env: { ...process.env, OPENCLAW_STATE_DIR: stateDir },
+      env: { ...process.env, DEX_STATE_DIR: stateDir },
     });
     expect(
       writeStorageMeta({

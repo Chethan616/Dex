@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handleWhatsAppReactAction } from "./channel-react-action.js";
-import type { OpenClawConfig } from "./runtime-api.js";
+import type { DexConfig } from "./runtime-api.js";
 
 const hoisted = vi.hoisted(() => ({
   handleWhatsAppAction: vi.fn(async () => ({ content: [{ type: "text", text: '{"ok":true}' }] })),
@@ -91,7 +91,7 @@ vi.mock("./channel-react-action.runtime.js", async () => {
 describe("whatsapp react action messageId resolution", () => {
   const baseCfg = {
     channels: { whatsapp: { actions: { reactions: true }, allowFrom: ["*"] } },
-  } as OpenClawConfig;
+  } as DexConfig;
 
   beforeEach(() => {
     hoisted.handleWhatsAppAction.mockClear();

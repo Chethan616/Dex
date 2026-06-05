@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MsgContext } from "../auto-reply/templating.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { resolvePreferredOpenClawTmpDir } from "../infra/tmp-openclaw-dir.js";
 import { createSafeAudioFixtureBuffer } from "./runner.test-utils.js";
 import type { MediaUnderstandingProvider } from "./types.js";
@@ -79,10 +79,10 @@ function createAudioConfigWithEcho(opts?: {
   echoFormat?: string;
   transcribedText?: string;
 }): {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   providers: Record<string, { id: string; transcribeAudio: () => Promise<{ text: string }> }>;
 } {
-  const cfg: OpenClawConfig = {
+  const cfg: DexConfig = {
     tools: {
       media: {
         audio: {
@@ -104,7 +104,7 @@ function createAudioConfigWithEcho(opts?: {
   return { cfg, providers };
 }
 
-function disableImageUnderstanding(cfg: OpenClawConfig): void {
+function disableImageUnderstanding(cfg: DexConfig): void {
   if (!cfg.tools?.media) {
     throw new Error("Expected media tool config");
   }

@@ -297,7 +297,7 @@ describe("dynamic tool execution helpers", () => {
         currentTurnHadNonTerminalDynamicToolResult: false,
         activeAppServerTurnRequests: 0,
         activeTurnItemIdsCount: 0,
-        pendingOpenClawDynamicToolCompletionIdsCount: 0,
+        pendingDexDynamicToolCompletionIdsCount: 0,
       }),
     ).toBe(true);
     expect(
@@ -308,7 +308,7 @@ describe("dynamic tool execution helpers", () => {
         currentTurnHadNonTerminalDynamicToolResult: true,
         activeAppServerTurnRequests: 0,
         activeTurnItemIdsCount: 0,
-        pendingOpenClawDynamicToolCompletionIdsCount: 0,
+        pendingDexDynamicToolCompletionIdsCount: 0,
       }),
     ).toBe(false);
     expect(
@@ -319,7 +319,7 @@ describe("dynamic tool execution helpers", () => {
         currentTurnHadNonTerminalDynamicToolResult: false,
         activeAppServerTurnRequests: 1,
         activeTurnItemIdsCount: 0,
-        pendingOpenClawDynamicToolCompletionIdsCount: 0,
+        pendingDexDynamicToolCompletionIdsCount: 0,
       }),
     ).toBe(false);
     expect(
@@ -330,7 +330,7 @@ describe("dynamic tool execution helpers", () => {
         currentTurnHadNonTerminalDynamicToolResult: false,
         activeAppServerTurnRequests: 0,
         activeTurnItemIdsCount: 0,
-        pendingOpenClawDynamicToolCompletionIdsCount: 1,
+        pendingDexDynamicToolCompletionIdsCount: 1,
       }),
     ).toBe(false);
   });
@@ -340,7 +340,7 @@ describe("dynamic tool execution helpers", () => {
       resolveTerminalDynamicToolBatchAction({
         activeAppServerTurnRequests: 1,
         activeTurnItemIdsCount: 0,
-        pendingOpenClawDynamicToolCompletionIdsCount: 0,
+        pendingDexDynamicToolCompletionIdsCount: 0,
         currentTurnHadNonTerminalDynamicToolResult: false,
         hasPendingTerminalDynamicToolRelease: true,
       }),
@@ -349,7 +349,7 @@ describe("dynamic tool execution helpers", () => {
       resolveTerminalDynamicToolBatchAction({
         activeAppServerTurnRequests: 0,
         activeTurnItemIdsCount: 0,
-        pendingOpenClawDynamicToolCompletionIdsCount: 0,
+        pendingDexDynamicToolCompletionIdsCount: 0,
         currentTurnHadNonTerminalDynamicToolResult: true,
         hasPendingTerminalDynamicToolRelease: true,
       }),
@@ -358,7 +358,7 @@ describe("dynamic tool execution helpers", () => {
       resolveTerminalDynamicToolBatchAction({
         activeAppServerTurnRequests: 0,
         activeTurnItemIdsCount: 0,
-        pendingOpenClawDynamicToolCompletionIdsCount: 0,
+        pendingDexDynamicToolCompletionIdsCount: 0,
         currentTurnHadNonTerminalDynamicToolResult: false,
         hasPendingTerminalDynamicToolRelease: true,
       }),

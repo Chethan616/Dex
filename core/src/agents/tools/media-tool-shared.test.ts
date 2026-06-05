@@ -1,7 +1,7 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import {
   hasGenerationToolAvailability,
   isCapabilityProviderConfigured,
@@ -15,7 +15,7 @@ import {
 // tests cover the real bundled contract loader.
 vi.mock("../../media/channel-inbound-roots.js", () => ({
   resolveChannelInboundAttachmentRootsForChannel: (params: {
-    cfg?: OpenClawConfig;
+    cfg?: DexConfig;
     channelId?: string | null;
     accountId?: string | null;
   }) => {
@@ -68,7 +68,7 @@ describe("resolveMediaToolLocalRoots", () => {
     const moviesDir =
       process.platform === "win32" ? "C:\\Users\\peter\\Movies" : "/Users/peter/Movies";
 
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
 
     const roots = resolveMediaToolLocalRoots(path.join(stateDir, "workspace-agent"), undefined, [
       path.join(picturesDir, "photo.png"),

@@ -1,7 +1,7 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   finalizeDebugProxyCapture,
   getDebugProxyCaptureStore,
@@ -23,7 +23,7 @@ import {
 } from "./speech-provider.js";
 import * as ttsModule from "./tts.js";
 
-const TEST_CFG = {} as OpenClawConfig;
+const TEST_CFG = {} as DexConfig;
 
 function requireFirstEdgeTtsCall(edgeSpy: ReturnType<typeof vi.spyOn>): {
   config?: unknown;
@@ -97,10 +97,10 @@ describe("listMicrosoftVoices", () => {
   it("records voice discovery exchanges in debug proxy capture mode", async () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "microsoft-voices-capture-"));
     proxyReset.captureProxyEnv();
-    process.env.OPENCLAW_DEBUG_PROXY_ENABLED = "1";
-    process.env.OPENCLAW_DEBUG_PROXY_DB_PATH = path.join(tempDir, "capture.sqlite");
-    process.env.OPENCLAW_DEBUG_PROXY_BLOB_DIR = path.join(tempDir, "blobs");
-    process.env.OPENCLAW_DEBUG_PROXY_SESSION_ID = "ms-voices-session";
+    process.env.DEX_DEBUG_PROXY_ENABLED = "1";
+    process.env.DEX_DEBUG_PROXY_DB_PATH = path.join(tempDir, "capture.sqlite");
+    process.env.DEX_DEBUG_PROXY_BLOB_DIR = path.join(tempDir, "blobs");
+    process.env.DEX_DEBUG_PROXY_SESSION_ID = "ms-voices-session";
 
     globalThis.fetch = vi
       .fn()
@@ -109,8 +109,8 @@ describe("listMicrosoftVoices", () => {
       ) as unknown as typeof globalThis.fetch;
 
     const store = getDebugProxyCaptureStore(
-      process.env.OPENCLAW_DEBUG_PROXY_DB_PATH,
-      process.env.OPENCLAW_DEBUG_PROXY_BLOB_DIR,
+      process.env.DEX_DEBUG_PROXY_DB_PATH,
+      process.env.DEX_DEBUG_PROXY_BLOB_DIR,
     );
     store.upsertSession({
       id: "ms-voices-session",
@@ -118,8 +118,8 @@ describe("listMicrosoftVoices", () => {
       mode: "test",
       sourceScope: "openclaw",
       sourceProcess: "openclaw",
-      dbPath: process.env.OPENCLAW_DEBUG_PROXY_DB_PATH,
-      blobDir: process.env.OPENCLAW_DEBUG_PROXY_BLOB_DIR,
+      dbPath: process.env.DEX_DEBUG_PROXY_DB_PATH,
+      blobDir: process.env.DEX_DEBUG_PROXY_BLOB_DIR,
     });
 
     await listMicrosoftVoices();
@@ -142,18 +142,18 @@ describe("listMicrosoftVoices", () => {
   it("does not double-capture voice discovery when the global fetch patch is installed", async () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "microsoft-voices-global-"));
     proxyReset.captureProxyEnv();
-    process.env.OPENCLAW_DEBUG_PROXY_ENABLED = "1";
-    process.env.OPENCLAW_DEBUG_PROXY_DB_PATH = path.join(tempDir, "capture.sqlite");
-    process.env.OPENCLAW_DEBUG_PROXY_BLOB_DIR = path.join(tempDir, "blobs");
-    process.env.OPENCLAW_DEBUG_PROXY_SESSION_ID = "ms-voices-global-session";
+    process.env.DEX_DEBUG_PROXY_ENABLED = "1";
+    process.env.DEX_DEBUG_PROXY_DB_PATH = path.join(tempDir, "capture.sqlite");
+    process.env.DEX_DEBUG_PROXY_BLOB_DIR = path.join(tempDir, "blobs");
+    process.env.DEX_DEBUG_PROXY_SESSION_ID = "ms-voices-global-session";
 
     globalThis.fetch = vi.fn(
       async () => new Response(JSON.stringify([{ ShortName: "en-US-AvaNeural" }]), { status: 200 }),
     ) as unknown as typeof globalThis.fetch;
 
     const store = getDebugProxyCaptureStore(
-      process.env.OPENCLAW_DEBUG_PROXY_DB_PATH,
-      process.env.OPENCLAW_DEBUG_PROXY_BLOB_DIR,
+      process.env.DEX_DEBUG_PROXY_DB_PATH,
+      process.env.DEX_DEBUG_PROXY_BLOB_DIR,
     );
     store.upsertSession({
       id: "ms-voices-global-session",
@@ -161,8 +161,8 @@ describe("listMicrosoftVoices", () => {
       mode: "test",
       sourceScope: "openclaw",
       sourceProcess: "openclaw",
-      dbPath: process.env.OPENCLAW_DEBUG_PROXY_DB_PATH,
-      blobDir: process.env.OPENCLAW_DEBUG_PROXY_BLOB_DIR,
+      dbPath: process.env.DEX_DEBUG_PROXY_DB_PATH,
+      blobDir: process.env.DEX_DEBUG_PROXY_BLOB_DIR,
     });
     initializeDebugProxyCapture("test");
 

@@ -22,7 +22,7 @@ import {
   installAcpSessionManagerTestLifecycle,
   mockCallArg,
   readySessionMeta,
-  type OpenClawConfig,
+  type DexConfig,
   resetAcpSessionManagerForTests,
   type SessionAcpMeta,
 } from "./manager.test-helpers.js";
@@ -78,7 +78,7 @@ describe("AcpSessionManager", () => {
       ...baseCfg,
       session: { mainKey: "main" },
       agents: { list: [{ id: "main", default: true }] },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await manager.runTurn({
       cfg,
@@ -655,7 +655,7 @@ describe("AcpSessionManager", () => {
             timeoutSeconds: 1,
           },
         },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const first = manager.runTurn({
         cfg,
@@ -785,7 +785,7 @@ describe("AcpSessionManager", () => {
             timeoutSeconds: 1,
           },
         },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const first = manager.runTurn({
         cfg,
@@ -912,7 +912,7 @@ describe("AcpSessionManager", () => {
         ...baseCfg.acp,
         maxConcurrentSessions: 1,
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const manager = new AcpSessionManager();
     await manager.runTurn({
@@ -969,7 +969,7 @@ describe("AcpSessionManager", () => {
         enabled: true,
         dispatch: { enabled: true },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const manager = new AcpSessionManager();
     await expect(
@@ -1024,7 +1024,7 @@ describe("AcpSessionManager", () => {
           ...baseCfg.acp,
           maxConcurrentSessions: 1,
         },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const manager = new AcpSessionManager();
       await manager.runTurn({
@@ -1357,7 +1357,7 @@ describe("AcpSessionManager", () => {
             ttlMinutes: 0.01,
           },
         },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const manager = new AcpSessionManager();
       await manager.runTurn({

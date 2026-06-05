@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { resetLogger, setLoggerOverride } from "../../logging/logger.js";
 import { loggingState } from "../../logging/state.js";
 import {
@@ -31,7 +31,7 @@ vi.mock("../../plugins/manifest-registry.js", async () => {
   const pathLocal = await import("node:path");
   return {
     loadPluginManifestRegistry: (params: { workspaceDir?: string }) => {
-      const extensionsRoot = pathLocal.join(params.workspaceDir ?? "", ".openclaw", "extensions");
+      const extensionsRoot = pathLocal.join(params.workspaceDir ?? "", ".dex", "extensions");
       const plugins = [];
       for (const id of ["open-prose", "browser"]) {
         const rootDir = pathLocal.join(extensionsRoot, id);
@@ -65,7 +65,7 @@ let tempRoot = "";
 let workspaceCaseIndex = 0;
 
 function createWorkspacePluginRegistry(workspaceDir: string): PluginManifestRegistry {
-  const extensionsRoot = path.join(workspaceDir, ".openclaw", "extensions");
+  const extensionsRoot = path.join(workspaceDir, ".dex", "extensions");
   const plugins: PluginManifestRecord[] = [];
   for (const id of ["open-prose", "browser"]) {
     const rootDir = path.join(extensionsRoot, id);
@@ -101,7 +101,7 @@ function createWorkspacePluginRegistry(workspaceDir: string): PluginManifestRegi
 
 function createWorkspacePluginMetadataSnapshot(params: {
   workspaceDir: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
   manifestRegistry: PluginManifestRegistry;
 }): PluginMetadataSnapshot {
   const policyHash = resolveInstalledPluginIndexPolicyHash(params.config);
@@ -147,7 +147,7 @@ function createWorkspacePluginMetadataSnapshot(params: {
   };
 }
 
-function setWorkspacePluginMetadataSnapshot(workspaceDir: string, config?: OpenClawConfig): void {
+function setWorkspacePluginMetadataSnapshot(workspaceDir: string, config?: DexConfig): void {
   const manifestRegistry = createWorkspacePluginRegistry(workspaceDir);
   setCurrentPluginMetadataSnapshot(
     createWorkspacePluginMetadataSnapshot({
@@ -244,7 +244,7 @@ async function setupWorkspaceWithProsePlugin() {
   const workspaceDir = await createTempWorkspaceDir();
   const managedDir = path.join(workspaceDir, ".managed");
   const bundledDir = path.join(workspaceDir, ".bundled");
-  const pluginRoot = path.join(workspaceDir, ".openclaw", "extensions", "open-prose");
+  const pluginRoot = path.join(workspaceDir, ".dex", "extensions", "open-prose");
 
   await writePluginWithSkill({
     pluginRoot,
@@ -305,7 +305,7 @@ describe("loadWorkspaceSkillEntries", () => {
   it("loads the browser plugin automation skill when the bundled plugin is enabled", async () => {
     const workspaceDir = await createTempWorkspaceDir();
     const managedDir = path.join(workspaceDir, ".managed");
-    const pluginRoot = path.join(workspaceDir, ".openclaw", "extensions", "browser");
+    const pluginRoot = path.join(workspaceDir, ".dex", "extensions", "browser");
 
     await writePluginWithSkill({
       pluginRoot,

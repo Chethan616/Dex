@@ -8,13 +8,13 @@ import {
   RUNTIME_POSTBUILD_STAMP_FILE,
 } from "../../scripts/lib/local-build-metadata-paths.mjs";
 import {
-  createOpenClawTestState,
-  type OpenClawTestState,
-  type OpenClawTestStateOptions,
+  createDexTestState,
+  type DexTestState,
+  type DexTestStateOptions,
 } from "../../src/test-utils/openclaw-test-state.js";
 import { sleep } from "../../src/utils.js";
 
-export type OpenClawTestInstanceOptions = {
+export type DexTestInstanceOptions = {
   name: string;
   cwd?: string;
   port?: number;
@@ -22,20 +22,20 @@ export type OpenClawTestInstanceOptions = {
   hookToken?: string;
   config?: Record<string, unknown>;
   env?: Record<string, string | undefined>;
-  state?: Omit<OpenClawTestStateOptions, "applyEnv" | "gateway" | "env">;
+  state?: Omit<DexTestStateOptions, "applyEnv" | "gateway" | "env">;
   gatewayArgs?: string[];
   startTimeoutMs?: number;
   stopTimeoutMs?: number;
 };
 
-export type OpenClawTestInstanceCommandResult = {
+export type DexTestInstanceCommandResult = {
   code: number | null;
   signal: NodeJS.Signals | null;
   stdout: string;
   stderr: string;
 };
 
-export type OpenClawTestInstance = {
+export type DexTestInstance = {
   name: string;
   port: number;
   url: string;
@@ -44,7 +44,7 @@ export type OpenClawTestInstance = {
   homeDir: string;
   stateDir: string;
   configPath: string;
-  state: OpenClawTestState;
+  state: DexTestState;
   stdout: string[];
   stderr: string[];
   child?: ChildProcessWithoutNullStreams;
@@ -53,7 +53,7 @@ export type OpenClawTestInstance = {
   cli: (
     args: string[],
     options?: { timeoutMs?: number },
-  ) => Promise<OpenClawTestInstanceCommandResult>;
+  ) => Promise<DexTestInstanceCommandResult>;
   startGateway: () => Promise<void>;
   stopGateway: () => Promise<void>;
   logs: () => string;
@@ -295,15 +295,15 @@ function createInstanceEnv(params: {
 }): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...params.stateEnv,
-    OPENCLAW_GATEWAY_TOKEN: "",
-    OPENCLAW_GATEWAY_PASSWORD: "",
-    OPENCLAW_SKIP_CHANNELS: "1",
-    OPENCLAW_SKIP_PROVIDERS: "1",
-    OPENCLAW_SKIP_GMAIL_WATCHER: "1",
-    OPENCLAW_SKIP_CRON: "1",
-    OPENCLAW_SKIP_BROWSER_CONTROL_SERVER: "1",
-    OPENCLAW_SKIP_CANVAS_HOST: "1",
-    OPENCLAW_TEST_MINIMAL_GATEWAY: "1",
+    DEX_GATEWAY_TOKEN: "",
+    DEX_GATEWAY_PASSWORD: "",
+    DEX_SKIP_CHANNELS: "1",
+    DEX_SKIP_PROVIDERS: "1",
+    DEX_SKIP_GMAIL_WATCHER: "1",
+    DEX_SKIP_CRON: "1",
+    DEX_SKIP_BROWSER_CONTROL_SERVER: "1",
+    DEX_SKIP_CANVAS_HOST: "1",
+    DEX_TEST_MINIMAL_GATEWAY: "1",
     VITEST: "1",
   };
   for (const [key, value] of Object.entries(params.extraEnv)) {
@@ -316,14 +316,14 @@ function createInstanceEnv(params: {
   return env;
 }
 
-export async function createOpenClawTestInstance(
-  options: OpenClawTestInstanceOptions,
-): Promise<OpenClawTestInstance> {
+export async function createDexTestInstance(
+  options: DexTestInstanceOptions,
+): Promise<DexTestInstance> {
   const cwd = options.cwd ?? process.cwd();
   const port = options.port ?? (await getFreePort());
   const gatewayToken = options.gatewayToken ?? `gateway-${options.name}-${randomUUID()}`;
   const hookToken = options.hookToken ?? `token-${options.name}-${randomUUID()}`;
-  const state = await createOpenClawTestState({
+  const state = await createDexTestState({
     label: options.name,
     layout: "home",
     ...options.state,
@@ -353,7 +353,7 @@ export async function createOpenClawTestInstance(
   let child: ChildProcessWithoutNullStreams | undefined;
   let cleaned = false;
 
-  const instance: OpenClawTestInstance = {
+  const instance: DexTestInstance = {
     name: options.name,
     port,
     url: `ws://127.0.0.1:${port}`,
@@ -467,7 +467,7 @@ async function runCommand(params: {
   cwd: string;
   env: NodeJS.ProcessEnv;
   timeoutMs: number;
-}): Promise<OpenClawTestInstanceCommandResult> {
+}): Promise<DexTestInstanceCommandResult> {
   const [command, ...args] = params.args;
   if (!command) {
     throw new Error("missing command");

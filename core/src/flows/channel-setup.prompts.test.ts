@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChannelSetupDmPolicy } from "../commands/channel-setup/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
 import { maybeConfigureDmPolicies } from "./channel-setup.prompts.js";
 
 beforeEach(() => {
-  delete process.env.OPENCLAW_LOCALE;
+  delete process.env.DEX_LOCALE;
 });
 
 describe("maybeConfigureDmPolicies", () => {
   it("localizes DM policy guidance and options", async () => {
-    process.env.OPENCLAW_LOCALE = "zh-CN";
+    process.env.DEX_LOCALE = "zh-CN";
     const note = vi.fn<WizardPrompter["note"]>(async () => {});
     const select = vi.fn(async () => "pairing") as unknown as WizardPrompter["select"];
     const prompter = {
@@ -24,7 +24,7 @@ describe("maybeConfigureDmPolicies", () => {
       policyKey: "channels.telegram.dmPolicy",
       allowFromKey: "channels.telegram.allowFrom",
       getCurrent: () => "pairing",
-      setPolicy: (cfg: OpenClawConfig) => cfg,
+      setPolicy: (cfg: DexConfig) => cfg,
     };
 
     await maybeConfigureDmPolicies({

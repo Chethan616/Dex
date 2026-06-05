@@ -16,11 +16,11 @@ describe("cli json stdout contract", () => {
           ...process.env,
           HOME: tempHome,
           USERPROFILE: tempHome,
-          OPENCLAW_TEST_FAST: "1",
+          DEX_TEST_FAST: "1",
         };
-        delete env.OPENCLAW_HOME;
-        delete env.OPENCLAW_STATE_DIR;
-        delete env.OPENCLAW_CONFIG_PATH;
+        delete env.DEX_HOME;
+        delete env.DEX_STATE_DIR;
+        delete env.DEX_CONFIG_PATH;
         delete env.VITEST;
 
         const entry = path.resolve(process.cwd(), "src/entry.ts");

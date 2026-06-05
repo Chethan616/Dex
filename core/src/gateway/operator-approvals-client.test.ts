@@ -151,7 +151,7 @@ describe("withOperatorApprovalsGatewayClient", () => {
     {
       name: "env loopback gateway URL overrides",
       url: "ws://127.0.0.1:18789",
-      urlSource: "env OPENCLAW_GATEWAY_URL",
+      urlSource: "env DEX_GATEWAY_URL",
     },
   ])("omits approval runtime token for $name", async ({ url, urlSource, gatewayUrl }) => {
     bootstrapState.url = url;

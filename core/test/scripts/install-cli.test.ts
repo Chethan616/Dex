@@ -21,7 +21,7 @@ function runInstallCliShell(script: string, env: NodeJS.ProcessEnv = {}) {
     encoding: "utf8",
     env: {
       ...process.env,
-      OPENCLAW_INSTALL_CLI_SH_NO_RUN: "1",
+      DEX_INSTALL_CLI_SH_NO_RUN: "1",
       ...env,
     },
   });
@@ -116,7 +116,7 @@ describe("install-cli.sh", () => {
     expect(result.stdout + result.stderr).not.toContain("unbound variable");
   });
 
-  it("keeps HOME for default prefix while OPENCLAW_HOME controls git checkout paths", () => {
+  it("keeps HOME for default prefix while DEX_HOME controls git checkout paths", () => {
     const tmp = mkdtempSync(join(tmpdir(), "openclaw-install-cli-home-"));
     const osHome = join(tmp, "os-home");
     const openclawHome = join(tmp, "openclaw-home");
@@ -133,9 +133,9 @@ describe("install-cli.sh", () => {
         ].join("\n"),
         {
           HOME: osHome,
-          OPENCLAW_HOME: openclawHome,
-          OPENCLAW_GIT_DIR: undefined,
-          OPENCLAW_PREFIX: undefined,
+          DEX_HOME: openclawHome,
+          DEX_GIT_DIR: undefined,
+          DEX_PREFIX: undefined,
         },
       );
     } finally {
@@ -144,7 +144,7 @@ describe("install-cli.sh", () => {
 
     expect(result?.status).toBe(0);
     const output = result?.stdout ?? "";
-    expect(output).toContain(`prefix=${join(osHome, ".openclaw")}`);
+    expect(output).toContain(`prefix=${join(osHome, ".dex")}`);
     expect(output).toContain(`git=${join(openclawHome, "openclaw")}`);
   });
 
@@ -160,13 +160,13 @@ describe("install-cli.sh", () => {
         fi
         return 1
       }
-      OPENCLAW_VERSION=v2026.5.12-beta.3
+      DEX_VERSION=v2026.5.12-beta.3
       printf 'tag=%s\\n' "$(resolve_git_openclaw_ref)"
-      OPENCLAW_VERSION=2026.5.12-beta.3
+      DEX_VERSION=2026.5.12-beta.3
       printf 'semver=%s\\n' "$(resolve_git_openclaw_ref)"
-      OPENCLAW_VERSION=beta
+      DEX_VERSION=beta
       printf 'beta=%s\\n' "$(resolve_git_openclaw_ref)"
-      OPENCLAW_VERSION=main
+      DEX_VERSION=main
       printf 'main=%s\\n' "$(resolve_git_openclaw_ref)"
     `);
 
@@ -775,7 +775,7 @@ describe("install-cli.sh", () => {
           "log() { :; }",
           `PREFIX=${JSON.stringify(prefix)}`,
           "SET_NPM_PREFIX=0",
-          "OPENCLAW_VERSION=1.2.3",
+          "DEX_VERSION=1.2.3",
           "install_openclaw",
         ].join("\n"),
         {
@@ -847,7 +847,7 @@ describe("install-cli.sh", () => {
           "log() { :; }",
           `PREFIX=${JSON.stringify(installPrefix)}`,
           "SET_NPM_PREFIX=0",
-          "OPENCLAW_VERSION=1.2.3",
+          "DEX_VERSION=1.2.3",
           "install_openclaw",
         ].join("\n"),
         {
@@ -924,7 +924,7 @@ describe("install-cli.sh", () => {
           "log() { :; }",
           `PREFIX=${JSON.stringify(installPrefix)}`,
           "SET_NPM_PREFIX=0",
-          "OPENCLAW_VERSION=1.2.3",
+          "DEX_VERSION=1.2.3",
           "install_openclaw",
         ].join("\n"),
         {
@@ -953,7 +953,7 @@ describe("install-cli.sh", () => {
     const result = runInstallCliShell(`
       set -euo pipefail
       source "${SCRIPT_PATH}"
-      OPENCLAW_VERSION=main
+      DEX_VERSION=main
       install_openclaw
     `);
 
@@ -980,8 +980,8 @@ describe("install-cli.sh", () => {
         [
           "set -euo pipefail",
           `HOME=${JSON.stringify(home)}`,
-          `OPENCLAW_PREFIX=${JSON.stringify(prefix)}`,
-          "OPENCLAW_VERSION=2026.5.19",
+          `DEX_PREFIX=${JSON.stringify(prefix)}`,
+          "DEX_VERSION=2026.5.19",
           `source ${JSON.stringify(SCRIPT_PATH)}`,
           "ensure_git() { return 0; }",
           "install_openclaw",
@@ -1019,8 +1019,8 @@ describe("install-cli.sh", () => {
           "set -euo pipefail",
           `cd ${JSON.stringify(project)}`,
           `HOME=${JSON.stringify(home)}`,
-          `OPENCLAW_PREFIX=${JSON.stringify(prefix)}`,
-          "OPENCLAW_VERSION=2026.5.19",
+          `DEX_PREFIX=${JSON.stringify(prefix)}`,
+          "DEX_VERSION=2026.5.19",
           `source ${JSON.stringify(process.cwd() + "/" + SCRIPT_PATH)}`,
           "ensure_git() { return 0; }",
           "install_openclaw",

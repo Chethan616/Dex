@@ -4,12 +4,12 @@ import { assert, readJson, requireArg, write, writeJson } from "./common.mjs";
 
 function writeOpenWebUiWorkspace() {
   const workspace =
-    process.env.OPENCLAW_WORKSPACE_DIR || path.join(process.env.HOME, ".openclaw", "workspace");
+    process.env.DEX_WORKSPACE_DIR || path.join(process.env.HOME, ".dex", "workspace");
   write(
     path.join(workspace, "IDENTITY.md"),
     "# Identity\n\n- Name: OpenClaw\n- Purpose: Open WebUI Docker compatibility smoke test assistant.\n",
   );
-  writeJson(path.join(workspace, ".openclaw", "workspace-state.json"), {
+  writeJson(path.join(workspace, ".dex", "workspace-state.json"), {
     version: 1,
     setupCompletedAt: "2026-01-01T00:00:00.000Z",
   });
@@ -17,9 +17,9 @@ function writeOpenWebUiWorkspace() {
 }
 
 function writeAgentsDeleteConfig() {
-  const stateDir = requireArg(process.env.OPENCLAW_STATE_DIR, "OPENCLAW_STATE_DIR");
+  const stateDir = requireArg(process.env.DEX_STATE_DIR, "DEX_STATE_DIR");
   const sharedWorkspace = requireArg(process.env.SHARED_WORKSPACE, "SHARED_WORKSPACE");
-  const gatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN?.trim();
+  const gatewayToken = process.env.DEX_GATEWAY_TOKEN?.trim();
   fs.mkdirSync(sharedWorkspace, { recursive: true });
   writeJson(path.join(stateDir, "openclaw.json"), {
     agents: {
@@ -55,7 +55,7 @@ function assertAgentsDeleteResult([outputPath]) {
   );
   assert(fs.existsSync(process.env.SHARED_WORKSPACE), "shared workspace was removed");
   const remaining =
-    readJson(path.join(process.env.OPENCLAW_STATE_DIR, "openclaw.json"))?.agents?.list ?? [];
+    readJson(path.join(process.env.DEX_STATE_DIR, "openclaw.json"))?.agents?.list ?? [];
   assert(Array.isArray(remaining), "agents list missing after delete");
   assert(!remaining.some((entry) => entry?.id === "ops"), "deleted agent remained in config");
   assert(

@@ -141,7 +141,7 @@ describe("zalouser credential persistence", () => {
     });
 
     try {
-      await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
+      await withEnvAsync({ DEX_STATE_DIR: stateDir }, async () => {
         await startZaloQrLogin({ profile, timeoutMs: 1000 });
 
         const loginResult = await waitForZaloQrLogin({ profile, timeoutMs: 1000 });
@@ -213,7 +213,7 @@ describe("zalouser credential persistence", () => {
     createZaloMock.mockResolvedValueOnce({ login });
 
     try {
-      await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
+      await withEnvAsync({ DEX_STATE_DIR: stateDir }, async () => {
         await expect(checkZaloAuthenticated(profile)).resolves.toBe(true);
 
         expect(login).toHaveBeenCalledWith({
@@ -278,7 +278,7 @@ describe("zalouser credential persistence", () => {
     createZaloMock.mockResolvedValueOnce({ login: vi.fn(async () => api) });
 
     try {
-      await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
+      await withEnvAsync({ DEX_STATE_DIR: stateDir }, async () => {
         await expect(listZaloFriends(profile)).resolves.toEqual([
           {
             userId: "friend-1",
@@ -332,7 +332,7 @@ describe("zalouser credential persistence", () => {
     createZaloMock.mockResolvedValueOnce({ login: vi.fn(async () => api) });
 
     try {
-      await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
+      await withEnvAsync({ DEX_STATE_DIR: stateDir }, async () => {
         await expect(listZaloFriends(profile)).resolves.toStrictEqual([]);
         const firstRaw = await readFile(filePath, "utf8");
         const stableMtime = new Date("2026-04-01T00:00:10.000Z");
@@ -359,7 +359,7 @@ describe("zalouser credential persistence", () => {
     const stateDir = await mkdtemp(path.join(os.tmpdir(), "openclaw-zalouser-credentials-"));
 
     try {
-      await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
+      await withEnvAsync({ DEX_STATE_DIR: stateDir }, async () => {
         const result = await sendZaloReaction({
           profile: "missing-session",
           threadId: "thread-1",
@@ -378,7 +378,7 @@ describe("zalouser credential persistence", () => {
     const stateDir = await mkdtemp(path.join(os.tmpdir(), "openclaw-zalouser-credentials-"));
 
     try {
-      await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
+      await withEnvAsync({ DEX_STATE_DIR: stateDir }, async () => {
         const result = await sendZaloLink("thread-1", "https://example.com", {
           profile: "missing-session",
         });
@@ -419,7 +419,7 @@ describe("zalouser credential persistence", () => {
       });
 
       try {
-        await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
+        await withEnvAsync({ DEX_STATE_DIR: stateDir }, async () => {
           await startZaloQrLogin({ profile, timeoutMs: 1000 });
           const loginResult = await waitForZaloQrLogin({ profile, timeoutMs: 1000 });
           expect(loginResult.connected).toBe(true);
@@ -472,7 +472,7 @@ describe("zalouser credential persistence", () => {
       });
 
       try {
-        await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
+        await withEnvAsync({ DEX_STATE_DIR: stateDir }, async () => {
           const started = await startZaloQrLogin({ profile, timeoutMs: 1000 });
           const waited = await waitForZaloQrLogin({ profile, timeoutMs: 1000 });
           expect(`${started.message} ${waited.message}`).toMatch(

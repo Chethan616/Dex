@@ -26,7 +26,7 @@ function extractToolText(result: unknown): string {
   return textBlock?.text ?? "";
 }
 
-describe("createOpenClawCodingTools read behavior", () => {
+describe("createDexCodingTools read behavior", () => {
   it("applies sandbox path guards to canonical path", async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-sbx-"));
     const outsidePath = path.join(os.tmpdir(), "openclaw-outside.txt");

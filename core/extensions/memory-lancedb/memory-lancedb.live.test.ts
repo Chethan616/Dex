@@ -3,7 +3,7 @@ import { installTmpDirHarness } from "./test-helpers.js";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
 const HAS_OPENAI_KEY = Boolean(process.env.OPENAI_API_KEY);
-const liveEnabled = HAS_OPENAI_KEY && process.env.OPENCLAW_LIVE_TEST === "1";
+const liveEnabled = HAS_OPENAI_KEY && process.env.DEX_LIVE_TEST === "1";
 const describeLive = liveEnabled ? describe : describe.skip;
 
 // Live tests that require OpenAI API key and actually use LanceDB

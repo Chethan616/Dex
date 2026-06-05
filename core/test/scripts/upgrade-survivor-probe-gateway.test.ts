@@ -118,13 +118,13 @@ describe("scripts/e2e/lib/upgrade-survivor/probe-gateway.mjs", () => {
       ],
       5_000,
       {
-        OPENCLAW_UPGRADE_SURVIVOR_PROBE_MAX_BODY_BYTES: "64bytes",
+        DEX_UPGRADE_SURVIVOR_PROBE_MAX_BODY_BYTES: "64bytes",
       },
     );
 
     expect(bodyLimitResult.status).not.toBe(0);
     expect(bodyLimitResult.stderr).toContain(
-      "invalid OPENCLAW_UPGRADE_SURVIVOR_PROBE_MAX_BODY_BYTES: 64bytes",
+      "invalid DEX_UPGRADE_SURVIVOR_PROBE_MAX_BODY_BYTES: 64bytes",
     );
   });
 

@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   CONFIG_COMMAND_MAX_BUFFER_BYTES,
   CONFIG_COMMAND_TIMEOUT_MS,
-  resolveUpgradeSurvivorOpenClawCommand,
+  resolveUpgradeSurvivorDexCommand,
   runUpgradeSurvivorOpenClawStep,
 } from "../../scripts/e2e/lib/upgrade-survivor/config-recipe.mjs";
 
 describe("upgrade survivor config recipe command resolution", () => {
   it("wraps Windows openclaw npm shims through cmd.exe", () => {
     expect(
-      resolveUpgradeSurvivorOpenClawCommand(
+      resolveUpgradeSurvivorDexCommand(
         ["config", "set", "models.providers.openai", '{"apiKey":"sk test"}', "--strict-json"],
         {
           comSpec: String.raw`C:\Windows\System32\cmd.exe`,
@@ -33,7 +33,7 @@ describe("upgrade survivor config recipe command resolution", () => {
 
   it("keeps POSIX openclaw invocations direct", () => {
     expect(
-      resolveUpgradeSurvivorOpenClawCommand(["config", "validate"], {
+      resolveUpgradeSurvivorDexCommand(["config", "validate"], {
         platform: "linux",
       }),
     ).toEqual({

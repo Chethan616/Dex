@@ -14,11 +14,11 @@ import {
   resetConfigRuntimeState,
   setRuntimeConfigSnapshotRefreshHandler,
 } from "./runtime-snapshot.js";
-import type { ConfigFileSnapshot, OpenClawConfig } from "./types.js";
+import type { ConfigFileSnapshot, DexConfig } from "./types.js";
 
 type MockValidationIssue = { path: string; message: string };
 type MockValidationResult =
-  | { ok: true; config: OpenClawConfig; warnings: MockValidationIssue[] }
+  | { ok: true; config: DexConfig; warnings: MockValidationIssue[] }
   | { ok: false; issues: MockValidationIssue[]; warnings: MockValidationIssue[] };
 
 const ioMocks = vi.hoisted(() => ({
@@ -28,7 +28,7 @@ const ioMocks = vi.hoisted(() => ({
 }));
 const validationMocks = vi.hoisted(() => ({
   validateConfigObjectWithPlugins: vi.fn(
-    (config: OpenClawConfig): MockValidationResult => ({
+    (config: DexConfig): MockValidationResult => ({
       ok: true,
       config,
       warnings: [],
@@ -46,8 +46,8 @@ function createSnapshot(params: {
   hash: string;
   path?: string;
   parsed?: unknown;
-  sourceConfig: OpenClawConfig;
-  runtimeConfig?: OpenClawConfig;
+  sourceConfig: DexConfig;
+  runtimeConfig?: DexConfig;
 }): ConfigFileSnapshot {
   const runtimeConfig = (params.runtimeConfig ??
     params.sourceConfig) as ConfigFileSnapshot["config"];
@@ -71,7 +71,7 @@ function createSnapshot(params: {
 
 describe("config mutate helpers", () => {
   const suiteRootTracker = createSuiteTempRootTracker({ prefix: "openclaw-config-mutate-" });
-  const originalNixMode = process.env.OPENCLAW_NIX_MODE;
+  const originalNixMode = process.env.DEX_NIX_MODE;
 
   beforeAll(async () => {
     await suiteRootTracker.setup();
@@ -79,9 +79,9 @@ describe("config mutate helpers", () => {
 
   afterAll(async () => {
     if (originalNixMode === undefined) {
-      delete process.env.OPENCLAW_NIX_MODE;
+      delete process.env.DEX_NIX_MODE;
     } else {
-      process.env.OPENCLAW_NIX_MODE = originalNixMode;
+      process.env.DEX_NIX_MODE = originalNixMode;
     }
     await suiteRootTracker.cleanup();
   });
@@ -90,7 +90,7 @@ describe("config mutate helpers", () => {
     vi.clearAllMocks();
     resetConfigRuntimeState();
     validationMocks.validateConfigObjectWithPlugins.mockImplementation(
-      (config: OpenClawConfig) => ({
+      (config: DexConfig) => ({
         ok: true,
         config,
         warnings: [],
@@ -99,7 +99,7 @@ describe("config mutate helpers", () => {
     ioMocks.resolveConfigSnapshotHash.mockImplementation(
       (snapshot: { hash?: string }) => snapshot.hash ?? null,
     );
-    delete process.env.OPENCLAW_NIX_MODE;
+    delete process.env.DEX_NIX_MODE;
   });
 
   it("mutates source config with optimistic hash protection", async () => {
@@ -284,7 +284,7 @@ describe("config mutate helpers", () => {
   });
 
   it("refuses replace writes in Nix mode before touching disk", async () => {
-    process.env.OPENCLAW_NIX_MODE = "1";
+    process.env.DEX_NIX_MODE = "1";
     const snapshot = createSnapshot({
       hash: "hash-1",
       sourceConfig: { gateway: { port: 18789 } },
@@ -306,7 +306,7 @@ describe("config mutate helpers", () => {
   });
 
   it("refuses mutate writes in Nix mode before touching disk", async () => {
-    process.env.OPENCLAW_NIX_MODE = "1";
+    process.env.DEX_NIX_MODE = "1";
     const snapshot = createSnapshot({
       hash: "hash-1",
       sourceConfig: { gateway: { port: 18789 } },
@@ -439,8 +439,8 @@ describe("config mutate helpers", () => {
 
   it("writes through a single-file top-level plugins include", async () => {
     const home = await suiteRootTracker.make("include");
-    const configPath = path.join(home, ".openclaw", "openclaw.json");
-    const pluginsPath = path.join(home, ".openclaw", "config", "plugins.json5");
+    const configPath = path.join(home, ".dex", "openclaw.json");
+    const pluginsPath = path.join(home, ".dex", "config", "plugins.json5");
     await fs.mkdir(path.dirname(pluginsPath), { recursive: true });
     await fs.writeFile(
       configPath,
@@ -555,8 +555,8 @@ describe("config mutate helpers", () => {
 
   it("keeps single-file top-level plugins include writes when plugin validation is skipped", async () => {
     const home = await suiteRootTracker.make("include-skip-plugin-validation");
-    const configPath = path.join(home, ".openclaw", "openclaw.json");
-    const pluginsPath = path.join(home, ".openclaw", "config", "plugins.json5");
+    const configPath = path.join(home, ".dex", "openclaw.json");
+    const pluginsPath = path.join(home, ".dex", "config", "plugins.json5");
     await fs.mkdir(path.dirname(pluginsPath), { recursive: true });
     await fs.writeFile(
       configPath,
@@ -586,7 +586,7 @@ describe("config mutate helpers", () => {
       snapshot: refreshedSnapshot,
       writeOptions: { expectedConfigPath: configPath },
     });
-    const nextConfig: OpenClawConfig = {
+    const nextConfig: DexConfig = {
       plugins: {
         entries: {
           "strict-plugin": { enabled: true },
@@ -622,8 +622,8 @@ describe("config mutate helpers", () => {
 
   it("preflights single-file top-level include writes before persisting", async () => {
     const home = await suiteRootTracker.make("include-runtime-preflight");
-    const configPath = path.join(home, ".openclaw", "openclaw.json");
-    const pluginsPath = path.join(home, ".openclaw", "config", "plugins.json5");
+    const configPath = path.join(home, ".dex", "openclaw.json");
+    const pluginsPath = path.join(home, ".dex", "config", "plugins.json5");
     await fs.mkdir(path.dirname(pluginsPath), { recursive: true });
     await fs.writeFile(
       configPath,
@@ -670,10 +670,10 @@ describe("config mutate helpers", () => {
 
   it("rolls back single-file top-level include writes when runtime refresh fails", async () => {
     const home = await suiteRootTracker.make("include-runtime-refresh-rollback");
-    const configPath = path.join(home, ".openclaw", "openclaw.json");
-    const pluginsPath = path.join(home, ".openclaw", "config", "plugins.json5");
+    const configPath = path.join(home, ".dex", "openclaw.json");
+    const pluginsPath = path.join(home, ".dex", "config", "plugins.json5");
     const env = {} as NodeJS.ProcessEnv;
-    const envKey = "OPENCLAW_TEST_INCLUDE_ROLLBACK_ENV";
+    const envKey = "DEX_TEST_INCLUDE_ROLLBACK_ENV";
     await fs.mkdir(path.dirname(pluginsPath), { recursive: true });
     await fs.writeFile(
       configPath,
@@ -737,8 +737,8 @@ describe("config mutate helpers", () => {
 
   it("does not overwrite concurrent include edits during failed refresh rollback", async () => {
     const home = await suiteRootTracker.make("include-runtime-refresh-concurrent");
-    const configPath = path.join(home, ".openclaw", "openclaw.json");
-    const pluginsPath = path.join(home, ".openclaw", "config", "plugins.json5");
+    const configPath = path.join(home, ".dex", "openclaw.json");
+    const pluginsPath = path.join(home, ".dex", "config", "plugins.json5");
     await fs.mkdir(path.dirname(pluginsPath), { recursive: true });
     await fs.writeFile(
       configPath,
@@ -800,8 +800,8 @@ describe("config mutate helpers", () => {
 
   it("rejects invalid base config before skipped-plugin include writes", async () => {
     const home = await suiteRootTracker.make("include-skip-invalid-base");
-    const configPath = path.join(home, ".openclaw", "openclaw.json");
-    const pluginsPath = path.join(home, ".openclaw", "config", "plugins.json5");
+    const configPath = path.join(home, ".dex", "openclaw.json");
+    const pluginsPath = path.join(home, ".dex", "config", "plugins.json5");
     await fs.mkdir(path.dirname(pluginsPath), { recursive: true });
     await fs.writeFile(
       configPath,
@@ -825,7 +825,7 @@ describe("config mutate helpers", () => {
           "strict-plugin": { enabled: "yes" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     validationMocks.validateConfigObjectWithPlugins.mockReturnValue({
       ok: false,
       issues: [
@@ -892,9 +892,9 @@ describe("config mutate helpers", () => {
 
   it("preflights injected root writers before persisting", async () => {
     const home = await suiteRootTracker.make("injected-root-runtime-preflight");
-    const configPath = path.join(home, ".openclaw", "openclaw.json");
+    const configPath = path.join(home, ".dex", "openclaw.json");
     await fs.mkdir(path.dirname(configPath), { recursive: true });
-    const initialConfig = { gateway: { mode: "local" } } satisfies OpenClawConfig;
+    const initialConfig = { gateway: { mode: "local" } } satisfies DexConfig;
     const initialRaw = `${JSON.stringify(initialConfig, null, 2)}\n`;
     await fs.writeFile(configPath, initialRaw, "utf-8");
     const snapshot = createSnapshot({
@@ -910,8 +910,8 @@ describe("config mutate helpers", () => {
           token: { source: "exec", provider: "execmain", id: "gateway/token" },
         },
       },
-    } as OpenClawConfig;
-    const injectedWrite = vi.fn(async (config: OpenClawConfig, options?: ConfigWriteOptions) => {
+    } as DexConfig;
+    const injectedWrite = vi.fn(async (config: DexConfig, options?: ConfigWriteOptions) => {
       await options?.preCommitRuntimePreflight?.(config);
       await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf-8");
       return { persistedHash: "hash-written", persistedConfig: config };

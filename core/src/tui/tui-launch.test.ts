@@ -161,7 +161,7 @@ describe("launchTuiCli", () => {
     );
 
     const options = expectSpawned(["/repo/openclaw.mjs", "tui"]);
-    expect(options.env?.OPENCLAW_GATEWAY_URL).toBe("ws://127.0.0.1:18789");
-    expect(options.env?.OPENCLAW_TUI_SETUP_AUTH_SOURCE).toBe("config");
+    expect(options.env?.DEX_GATEWAY_URL).toBe("ws://127.0.0.1:18789");
+    expect(options.env?.DEX_TUI_SETUP_AUTH_SOURCE).toBe("config");
   });
 });

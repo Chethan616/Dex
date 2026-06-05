@@ -83,8 +83,8 @@ describe("credential lease runtime", () => {
       source: "convex",
       role: "maintainer",
       env: {
-        OPENCLAW_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
-        OPENCLAW_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
+        DEX_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
+        DEX_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
       },
       fetchImpl,
       resolveEnvPayload: () => ({ groupId: "-1", driverToken: "unused", sutToken: "unused" }),
@@ -134,8 +134,8 @@ describe("credential lease runtime", () => {
       source: "convex",
       role: "ci",
       env: {
-        OPENCLAW_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
-        OPENCLAW_QA_CONVEX_SECRET_CI: "ci-secret",
+        DEX_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
+        DEX_QA_CONVEX_SECRET_CI: "ci-secret",
       },
       fetchImpl,
       resolveEnvPayload: () => ({ groupId: "-1", driverToken: "unused", sutToken: "unused" }),
@@ -178,8 +178,8 @@ describe("credential lease runtime", () => {
       kind: "telegram",
       source: "convex",
       env: {
-        OPENCLAW_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
-        OPENCLAW_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
+        DEX_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
+        DEX_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
       },
       fetchImpl,
       resolveEnvPayload: () => ({ groupId: "-1", driverToken: "unused", sutToken: "unused" }),
@@ -207,8 +207,8 @@ describe("credential lease runtime", () => {
       source: "convex",
       env: {
         CI: "true",
-        OPENCLAW_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
-        OPENCLAW_QA_CONVEX_SECRET_CI: "ci-secret",
+        DEX_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
+        DEX_QA_CONVEX_SECRET_CI: "ci-secret",
       },
       fetchImpl,
       resolveEnvPayload: () => ({ groupId: "-1", driverToken: "unused", sutToken: "unused" }),
@@ -254,9 +254,9 @@ describe("credential lease runtime", () => {
       kind: "telegram",
       source: "convex",
       env: {
-        OPENCLAW_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
-        OPENCLAW_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
-        OPENCLAW_QA_CREDENTIAL_ACQUIRE_TIMEOUT_MS: "90000",
+        DEX_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
+        DEX_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
+        DEX_QA_CREDENTIAL_ACQUIRE_TIMEOUT_MS: "90000",
       },
       fetchImpl,
       randomImpl: () => 0,
@@ -283,8 +283,8 @@ describe("credential lease runtime", () => {
         kind: "telegram",
         source: "convex",
         env: {
-          OPENCLAW_QA_CONVEX_SITE_URL: "http://qa-cred.example.convex.site",
-          OPENCLAW_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
+          DEX_QA_CONVEX_SITE_URL: "http://qa-cred.example.convex.site",
+          DEX_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
         },
         resolveEnvPayload: () => ({ groupId: "-1", driverToken: "unused", sutToken: "unused" }),
         parsePayload: (payload) =>
@@ -293,7 +293,7 @@ describe("credential lease runtime", () => {
     ).rejects.toThrow("must use https://");
   });
 
-  it("allows loopback http URLs when OPENCLAW_QA_ALLOW_INSECURE_HTTP is enabled", async () => {
+  it("allows loopback http URLs when DEX_QA_ALLOW_INSECURE_HTTP is enabled", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValueOnce(
       jsonResponse({
         status: "ok",
@@ -308,9 +308,9 @@ describe("credential lease runtime", () => {
       source: "convex",
       role: "maintainer",
       env: {
-        OPENCLAW_QA_CONVEX_SITE_URL: "http://127.0.0.1:3210",
-        OPENCLAW_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
-        OPENCLAW_QA_ALLOW_INSECURE_HTTP: "1",
+        DEX_QA_CONVEX_SITE_URL: "http://127.0.0.1:3210",
+        DEX_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
+        DEX_QA_ALLOW_INSECURE_HTTP: "1",
       },
       fetchImpl,
       resolveEnvPayload: () => ({ groupId: "-1", driverToken: "unused", sutToken: "unused" }),
@@ -338,9 +338,9 @@ describe("credential lease runtime", () => {
       source: "convex",
       role: "maintainer",
       env: {
-        OPENCLAW_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
-        OPENCLAW_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
-        OPENCLAW_QA_CREDENTIAL_HTTP_TIMEOUT_MS: String(Number.MAX_SAFE_INTEGER),
+        DEX_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
+        DEX_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
+        DEX_QA_CREDENTIAL_HTTP_TIMEOUT_MS: String(Number.MAX_SAFE_INTEGER),
       },
       fetchImpl,
       resolveEnvPayload: () => ({ groupId: "-1", driverToken: "unused", sutToken: "unused" }),
@@ -358,15 +358,15 @@ describe("credential lease runtime", () => {
         kind: "telegram",
         source: "convex",
         env: {
-          OPENCLAW_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
-          OPENCLAW_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
-          OPENCLAW_QA_CONVEX_ENDPOINT_PREFIX: "//evil.example",
+          DEX_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
+          DEX_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
+          DEX_QA_CONVEX_ENDPOINT_PREFIX: "//evil.example",
         },
         resolveEnvPayload: () => ({ groupId: "-1", driverToken: "unused", sutToken: "unused" }),
         parsePayload: (payload) =>
           payload as { groupId: string; driverToken: string; sutToken: string },
       }),
-    ).rejects.toThrow("OPENCLAW_QA_CONVEX_ENDPOINT_PREFIX must be an absolute path");
+    ).rejects.toThrow("DEX_QA_CONVEX_ENDPOINT_PREFIX must be an absolute path");
   });
 
   it("releases acquired lease when payload parsing fails", async () => {
@@ -388,8 +388,8 @@ describe("credential lease runtime", () => {
         source: "convex",
         role: "maintainer",
         env: {
-          OPENCLAW_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
-          OPENCLAW_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
+          DEX_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
+          DEX_QA_CONVEX_SECRET_MAINTAINER: "maintainer-secret",
         },
         fetchImpl,
         resolveEnvPayload: () => ({ groupId: "-1", driverToken: "unused", sutToken: "unused" }),
@@ -412,13 +412,13 @@ describe("credential lease runtime", () => {
         source: "convex",
         role: "maintainer",
         env: {
-          OPENCLAW_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
+          DEX_QA_CONVEX_SITE_URL: "https://qa-cred.example.convex.site",
         },
         resolveEnvPayload: () => ({ groupId: "-1", driverToken: "unused", sutToken: "unused" }),
         parsePayload: (payload) =>
           payload as { groupId: string; driverToken: string; sutToken: string },
       }),
-    ).rejects.toThrow("OPENCLAW_QA_CONVEX_SECRET_MAINTAINER");
+    ).rejects.toThrow("DEX_QA_CONVEX_SECRET_MAINTAINER");
   });
 
   it("captures heartbeat failures for fail-fast checks", async () => {

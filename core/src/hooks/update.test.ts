@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { HookNpmIntegrityDriftParams } from "./install.js";
 
 const installHooksFromNpmSpecMock = vi.fn();
@@ -15,7 +15,7 @@ function createHookInstallConfig(params: {
   hookId: string;
   spec: string;
   integrity?: string;
-}): OpenClawConfig {
+}): DexConfig {
   return {
     hooks: {
       internal: {
@@ -29,7 +29,7 @@ function createHookInstallConfig(params: {
         },
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 describe("updateNpmInstalledHookPacks", () => {

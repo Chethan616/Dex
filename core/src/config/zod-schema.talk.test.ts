@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { OpenClawSchema } from "./zod-schema.js";
+import { DexSchema } from "./zod-schema.js";
 
-describe("OpenClawSchema talk validation", () => {
+describe("DexSchema talk validation", () => {
   it("accepts a positive integer talk.silenceTimeoutMs", () => {
-    const result = OpenClawSchema.safeParse({
+    const result = DexSchema.safeParse({
       talk: {
         consultThinkingLevel: "low",
         consultFastMode: true,
@@ -16,7 +16,7 @@ describe("OpenClawSchema talk validation", () => {
 
   it("rejects invalid talk.consultThinkingLevel", () => {
     expect(() =>
-      OpenClawSchema.parse({
+      DexSchema.parse({
         talk: {
           consultThinkingLevel: "turbo",
         },
@@ -26,7 +26,7 @@ describe("OpenClawSchema talk validation", () => {
 
   it("accepts additional realtime Talk instructions", () => {
     expect(() =>
-      OpenClawSchema.parse({
+      DexSchema.parse({
         talk: {
           realtime: {
             provider: "openai",
@@ -47,7 +47,7 @@ describe("OpenClawSchema talk validation", () => {
 
   it("rejects invalid realtime Talk consult routing", () => {
     expect(() =>
-      OpenClawSchema.parse({
+      DexSchema.parse({
         talk: {
           realtime: {
             consultRouting: "always",
@@ -63,7 +63,7 @@ describe("OpenClawSchema talk validation", () => {
     ["float", 1500.5],
   ])("rejects %s talk.silenceTimeoutMs", (_label, value) => {
     expect(() =>
-      OpenClawSchema.parse({
+      DexSchema.parse({
         talk: {
           silenceTimeoutMs: value,
         },
@@ -73,7 +73,7 @@ describe("OpenClawSchema talk validation", () => {
 
   it("rejects talk.provider when it does not match talk.providers", () => {
     expect(() =>
-      OpenClawSchema.parse({
+      DexSchema.parse({
         talk: {
           provider: "acme",
           providers: {
@@ -88,7 +88,7 @@ describe("OpenClawSchema talk validation", () => {
 
   it("rejects multi-provider talk config without talk.provider", () => {
     expect(() =>
-      OpenClawSchema.parse({
+      DexSchema.parse({
         talk: {
           providers: {
             acme: {

@@ -30,7 +30,7 @@ function makeTmpProbePath(prefix: string): string {
 
 async function withManagedMediaRoot<T>(run: (ctx: { stateDir: string }) => Promise<T>) {
   const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-managed-media-"));
-  vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+  vi.stubEnv("DEX_STATE_DIR", stateDir);
   try {
     await fs.mkdir(path.join(stateDir, "media", "outbound"), { recursive: true });
     await fs.mkdir(path.join(stateDir, "media", "tool-image-generation"), { recursive: true });

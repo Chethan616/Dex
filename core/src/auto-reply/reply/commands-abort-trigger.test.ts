@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { handleAbortTrigger } from "./commands-session-abort.js";
 import "./commands-session-abort.test-support.js";
 import type { HandleCommandsParams } from "./commands-types.js";
@@ -52,7 +52,7 @@ function buildAbortParams(): HandleCommandsParams {
     cfg: {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig,
+    } as DexConfig,
     ctx: {
       Provider: "whatsapp",
       Surface: "whatsapp",

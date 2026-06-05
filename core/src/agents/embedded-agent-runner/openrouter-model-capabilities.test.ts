@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 async function withOpenRouterStateDir(run: (stateDir: string) => Promise<void>) {
   const stateDir = mkdtempSync(join(tmpdir(), "openclaw-openrouter-capabilities-"));
   resetPluginStateStoreForTests();
-  process.env.OPENCLAW_STATE_DIR = stateDir;
+  process.env.DEX_STATE_DIR = stateDir;
   for (const key of [
     "ALL_PROXY",
     "all_proxy",
@@ -38,7 +38,7 @@ describe("openrouter-model-capabilities", () => {
   afterEach(() => {
     resetPluginStateStoreForTests();
     vi.unstubAllGlobals();
-    delete process.env.OPENCLAW_STATE_DIR;
+    delete process.env.DEX_STATE_DIR;
   });
 
   it("uses top-level OpenRouter max token fields when top_provider is absent", async () => {

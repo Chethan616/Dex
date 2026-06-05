@@ -171,7 +171,7 @@ vi.mock("openclaw/plugin-sdk/proxy-capture", () => ({
   captureHttpExchange: captureHttpExchangeSpy,
   captureWsEvent: captureWsEventSpy,
   resolveEffectiveDebugProxyUrl: (configuredProxyUrl?: string) =>
-    configuredProxyUrl?.trim() || process.env.OPENCLAW_DEBUG_PROXY_URL,
+    configuredProxyUrl?.trim() || process.env.DEX_DEBUG_PROXY_URL,
   resolveDebugProxySettings: resolveDebugProxySettingsMock,
 }));
 
@@ -321,8 +321,8 @@ describe("createDiscordGatewayPlugin", () => {
 
   beforeEach(() => {
     vi.unstubAllEnvs();
-    vi.stubEnv("OPENCLAW_DEBUG_PROXY_ENABLED", "");
-    vi.stubEnv("OPENCLAW_DEBUG_PROXY_URL", "");
+    vi.stubEnv("DEX_DEBUG_PROXY_ENABLED", "");
+    vi.stubEnv("DEX_DEBUG_PROXY_URL", "");
     vi.stubGlobal("fetch", globalFetchMock);
     vi.useRealTimers();
     baseRegisterClientSpy.mockClear();
@@ -643,7 +643,7 @@ describe("createDiscordGatewayPlugin", () => {
 
   it("uses env gateway metadata timeout when config is unset", async () => {
     vi.useFakeTimers();
-    vi.stubEnv("OPENCLAW_DISCORD_GATEWAY_INFO_TIMEOUT_MS", "6000");
+    vi.stubEnv("DEX_DISCORD_GATEWAY_INFO_TIMEOUT_MS", "6000");
     const runtime = createRuntime();
     globalFetchMock.mockImplementation(() => new Promise(() => {}));
     const plugin = createDiscordGatewayPlugin({

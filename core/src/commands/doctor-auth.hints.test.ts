@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   formatOAuthRefreshFailureDoctorLine,
   noteLegacyCodexProviderOverride,
@@ -25,8 +25,8 @@ vi.mock("../agents/auth-profiles.js", async () => {
   };
 });
 
-function doctorFixtureConfig(config: unknown): OpenClawConfig {
-  return config as OpenClawConfig;
+function doctorFixtureConfig(config: unknown): DexConfig {
+  return config as DexConfig;
 }
 
 describe("resolveUnusableProfileHint", () => {

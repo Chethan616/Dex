@@ -17,7 +17,7 @@ vi.mock("./bundled-dir.js", async (importOriginal) => {
   return {
     ...actual,
     resolveBundledPluginsDir: (env: NodeJS.ProcessEnv = process.env) =>
-      env.OPENCLAW_BUNDLED_PLUGINS_DIR ?? actual.resolveBundledPluginsDir(env),
+      env.DEX_BUNDLED_PLUGINS_DIR ?? actual.resolveBundledPluginsDir(env),
   };
 });
 
@@ -91,10 +91,10 @@ function buildDiscoveryEnv(stateDir: string): NodeJS.ProcessEnv {
   const bundledPluginsDir = path.join(stateDir, "empty-bundled-plugins");
   mkdirSafe(bundledPluginsDir);
   return {
-    OPENCLAW_STATE_DIR: stateDir,
-    OPENCLAW_HOME: undefined,
-    OPENCLAW_DISABLE_BUNDLED_PLUGINS: "1",
-    OPENCLAW_BUNDLED_PLUGINS_DIR: bundledPluginsDir,
+    DEX_STATE_DIR: stateDir,
+    DEX_HOME: undefined,
+    DEX_DISABLE_BUNDLED_PLUGINS: "1",
+    DEX_BUNDLED_PLUGINS_DIR: bundledPluginsDir,
   };
 }
 
@@ -103,11 +103,11 @@ function buildDiscoveryEnvWithOverrides(
   overrides: Partial<NodeJS.ProcessEnv> = {},
 ): NodeJS.ProcessEnv {
   const enablesBundledOverride =
-    Object.hasOwn(overrides, "OPENCLAW_BUNDLED_PLUGINS_DIR") &&
-    overrides.OPENCLAW_BUNDLED_PLUGINS_DIR !== undefined;
+    Object.hasOwn(overrides, "DEX_BUNDLED_PLUGINS_DIR") &&
+    overrides.DEX_BUNDLED_PLUGINS_DIR !== undefined;
   return {
     ...buildDiscoveryEnv(stateDir),
-    ...(enablesBundledOverride ? { OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined } : {}),
+    ...(enablesBundledOverride ? { DEX_DISABLE_BUNDLED_PLUGINS: undefined } : {}),
     ...overrides,
   };
 }
@@ -115,8 +115,8 @@ function buildDiscoveryEnvWithOverrides(
 function buildBundledDiscoveryEnv(stateDir: string): NodeJS.ProcessEnv {
   return {
     ...buildDiscoveryEnv(stateDir),
-    OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined,
-    OPENCLAW_BUNDLED_PLUGINS_DIR: undefined,
+    DEX_DISABLE_BUNDLED_PLUGINS: undefined,
+    DEX_BUNDLED_PLUGINS_DIR: undefined,
   };
 }
 
@@ -476,7 +476,7 @@ describe("discoverOpenClawPlugins", () => {
       pluginId: "alpha",
     });
     createPackagePluginWithEntry({
-      packageDir: path.join(workspaceDir, ".openclaw", "extensions", "beta"),
+      packageDir: path.join(workspaceDir, ".dex", "extensions", "beta"),
       packageName: "@openclaw/beta",
       pluginId: "beta",
     });
@@ -489,7 +489,7 @@ describe("discoverOpenClawPlugins", () => {
     const stateDir = makeTempDir();
     const workspaceDir = path.join(stateDir, "workspace");
     const globalExt = path.join(stateDir, "extensions");
-    const workspaceExt = path.join(workspaceDir, ".openclaw", "extensions");
+    const workspaceExt = path.join(workspaceDir, ".dex", "extensions");
     mkdirSafe(globalExt);
     mkdirSafe(workspaceExt);
     fs.writeFileSync(path.join(globalExt, "my-helper.mjs"), "export default {}", "utf-8");
@@ -586,7 +586,7 @@ describe("discoverOpenClawPlugins", () => {
     async () => {
       const stateDir = makeTempDir();
       const workspaceDir = path.join(stateDir, "workspace");
-      const workspaceExt = path.join(workspaceDir, ".openclaw", "extensions");
+      const workspaceExt = path.join(workspaceDir, ".dex", "extensions");
       mkdirSafe(workspaceExt);
 
       const linkedPluginDir = path.join(stateDir, "workspace-linked-plugin-src");
@@ -625,7 +625,7 @@ describe("discoverOpenClawPlugins", () => {
   it("does not recurse arbitrary workspace directories for plugin auto-discovery", () => {
     const stateDir = makeTempDir();
     const workspaceDir = path.join(stateDir, "workspace");
-    const workspaceExt = path.join(workspaceDir, ".openclaw", "extensions");
+    const workspaceExt = path.join(workspaceDir, ".dex", "extensions");
 
     const expectedWorkspacePluginDir = path.join(workspaceExt, "workspace-plugin");
     createPackagePluginWithEntry({
@@ -657,7 +657,7 @@ describe("discoverOpenClawPlugins", () => {
     const homeDir = makeTempDir();
     const workspaceRoot = path.join(homeDir, "workspace");
     createPackagePluginWithEntry({
-      packageDir: path.join(workspaceRoot, ".openclaw", "extensions", "tilde-workspace"),
+      packageDir: path.join(workspaceRoot, ".dex", "extensions", "tilde-workspace"),
       packageName: "@openclaw/tilde-workspace",
       pluginId: "tilde-workspace",
     });
@@ -753,8 +753,8 @@ describe("discoverOpenClawPlugins", () => {
       discoverOpenClawPlugins({
         env: {
           ...buildDiscoveryEnv(stateDir),
-          OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined,
-          OPENCLAW_BUNDLED_PLUGINS_DIR: bundledDir,
+          DEX_DISABLE_BUNDLED_PLUGINS: undefined,
+          DEX_BUNDLED_PLUGINS_DIR: bundledDir,
         },
       }),
     );
@@ -777,8 +777,8 @@ describe("discoverOpenClawPlugins", () => {
         extraPaths: [bundledPluginDir],
         env: {
           ...buildDiscoveryEnv(stateDir),
-          OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined,
-          OPENCLAW_BUNDLED_PLUGINS_DIR: bundledRoot,
+          DEX_DISABLE_BUNDLED_PLUGINS: undefined,
+          DEX_BUNDLED_PLUGINS_DIR: bundledRoot,
         },
       }),
     );
@@ -813,8 +813,8 @@ describe("discoverOpenClawPlugins", () => {
         extraPaths: [legacyPluginDir],
         env: {
           ...buildDiscoveryEnv(stateDir),
-          OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined,
-          OPENCLAW_BUNDLED_PLUGINS_DIR: bundledRoot,
+          DEX_DISABLE_BUNDLED_PLUGINS: undefined,
+          DEX_BUNDLED_PLUGINS_DIR: bundledRoot,
         },
       }),
     );
@@ -855,8 +855,8 @@ describe("discoverOpenClawPlugins", () => {
       discoverOpenClawPlugins({
         env: {
           ...buildDiscoveryEnv(stateDir),
-          OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined,
-          OPENCLAW_BUNDLED_PLUGINS_DIR: bundledRoot,
+          DEX_DISABLE_BUNDLED_PLUGINS: undefined,
+          DEX_BUNDLED_PLUGINS_DIR: bundledRoot,
         },
       }),
     );
@@ -908,8 +908,8 @@ describe("discoverOpenClawPlugins", () => {
       discoverOpenClawPlugins({
         env: {
           ...buildDiscoveryEnv(stateDir),
-          OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined,
-          OPENCLAW_BUNDLED_PLUGINS_DIR: bundledRoot,
+          DEX_DISABLE_BUNDLED_PLUGINS: undefined,
+          DEX_BUNDLED_PLUGINS_DIR: bundledRoot,
         },
       }),
     );
@@ -1223,7 +1223,7 @@ describe("discoverOpenClawPlugins", () => {
 
     const result = discoverOpenClawPlugins({
       env: buildDiscoveryEnvWithOverrides(stateDir, {
-        OPENCLAW_BUNDLED_PLUGINS_DIR: bundledDir,
+        DEX_BUNDLED_PLUGINS_DIR: bundledDir,
       }),
       installRecords: {
         discord: {
@@ -1535,7 +1535,7 @@ describe("discoverOpenClawPlugins", () => {
   it("keeps workspace package TypeScript entries unless runtime entries are explicit", () => {
     const stateDir = makeTempDir();
     const workspaceDir = path.join(stateDir, "workspace");
-    const pluginDir = path.join(workspaceDir, ".openclaw", "extensions", "workspace-pack");
+    const pluginDir = path.join(workspaceDir, ".dex", "extensions", "workspace-pack");
     mkdirSafe(path.join(pluginDir, "src"));
     mkdirSafe(path.join(pluginDir, "dist"));
 
@@ -1569,7 +1569,7 @@ describe("discoverOpenClawPlugins", () => {
 
     const { candidates, diagnostics } = discoverOpenClawPlugins({
       env: buildDiscoveryEnvWithOverrides(stateDir, {
-        OPENCLAW_COMPATIBILITY_HOST_VERSION: "2026.5.27-beta.1",
+        DEX_COMPATIBILITY_HOST_VERSION: "2026.5.27-beta.1",
       }),
     });
 
@@ -1605,7 +1605,7 @@ describe("discoverOpenClawPlugins", () => {
 
     const { candidates, diagnostics } = discoverOpenClawPlugins({
       env: buildDiscoveryEnvWithOverrides(stateDir, {
-        OPENCLAW_COMPATIBILITY_HOST_VERSION: "2026.5.27",
+        DEX_COMPATIBILITY_HOST_VERSION: "2026.5.27",
       }),
     });
 
@@ -1639,7 +1639,7 @@ describe("discoverOpenClawPlugins", () => {
 
     const { candidates, diagnostics } = discoverOpenClawPlugins({
       env: buildDiscoveryEnvWithOverrides(stateDir, {
-        OPENCLAW_COMPATIBILITY_HOST_VERSION: "2026.5.27-beta.1",
+        DEX_COMPATIBILITY_HOST_VERSION: "2026.5.27-beta.1",
       }),
     });
 
@@ -1667,7 +1667,7 @@ describe("discoverOpenClawPlugins", () => {
 
     const { candidates, diagnostics } = discoverOpenClawPlugins({
       env: buildDiscoveryEnvWithOverrides(stateDir, {
-        OPENCLAW_COMPATIBILITY_HOST_VERSION: "2026.5.27-beta.1",
+        DEX_COMPATIBILITY_HOST_VERSION: "2026.5.27-beta.1",
       }),
     });
 
@@ -1696,7 +1696,7 @@ describe("discoverOpenClawPlugins", () => {
 
     const { candidates } = discoverOpenClawPlugins({
       env: buildDiscoveryEnvWithOverrides(stateDir, {
-        OPENCLAW_BUNDLED_PLUGINS_DIR: bundledDir,
+        DEX_BUNDLED_PLUGINS_DIR: bundledDir,
       }),
     });
 
@@ -1723,7 +1723,7 @@ describe("discoverOpenClawPlugins", () => {
 
     const { candidates, diagnostics } = discoverOpenClawPlugins({
       env: buildDiscoveryEnvWithOverrides(stateDir, {
-        OPENCLAW_BUNDLED_PLUGINS_DIR: bundledDir,
+        DEX_BUNDLED_PLUGINS_DIR: bundledDir,
       }),
     });
 
@@ -1779,7 +1779,7 @@ describe("discoverOpenClawPlugins", () => {
 
     const { candidates } = discoverOpenClawPlugins({
       env: buildDiscoveryEnvWithOverrides(stateDir, {
-        OPENCLAW_BUNDLED_PLUGINS_DIR: bundledDir,
+        DEX_BUNDLED_PLUGINS_DIR: bundledDir,
       }),
     });
 
@@ -1843,7 +1843,7 @@ describe("discoverOpenClawPlugins", () => {
   it("skips dependency and build directories while scanning workspace roots", () => {
     const stateDir = makeTempDir();
     const workspaceDir = path.join(stateDir, "workspace");
-    const workspaceRoot = path.join(workspaceDir, ".openclaw", "extensions");
+    const workspaceRoot = path.join(workspaceDir, ".dex", "extensions");
     const workspacePluginDir = path.join(workspaceRoot, "workspace-plugin");
     const nestedNodeModulesDir = path.join(workspaceRoot, "node_modules", "openclaw");
     const nestedDistDir = path.join(workspaceRoot, "dist", "extensions", "diffs");
@@ -2369,7 +2369,7 @@ describe("discoverOpenClawPlugins", () => {
       const result = discoverOpenClawPlugins({
         env: {
           ...buildDiscoveryEnv(stateDir),
-          OPENCLAW_PLUGINS_PATHS: blockedDir,
+          DEX_PLUGINS_PATHS: blockedDir,
         },
       });
       const blockedDiagnostics = result.diagnostics.filter(
@@ -2454,20 +2454,20 @@ describe("discoverOpenClawPlugins", () => {
       pluginId: "global-plugin",
     });
     createPackagePluginWithEntry({
-      packageDir: path.join(workspaceA, ".openclaw", "extensions", "workspace-a-plugin"),
+      packageDir: path.join(workspaceA, ".dex", "extensions", "workspace-a-plugin"),
       packageName: "@openclaw/workspace-a-plugin",
       pluginId: "workspace-a-plugin",
     });
     createPackagePluginWithEntry({
-      packageDir: path.join(workspaceB, ".openclaw", "extensions", "workspace-b-plugin"),
+      packageDir: path.join(workspaceB, ".dex", "extensions", "workspace-b-plugin"),
       packageName: "@openclaw/workspace-b-plugin",
       pluginId: "workspace-b-plugin",
     });
 
     const env = {
       ...buildDiscoveryEnv(stateDir),
-      OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined,
-      OPENCLAW_BUNDLED_PLUGINS_DIR: bundledDir,
+      DEX_DISABLE_BUNDLED_PLUGINS: undefined,
+      DEX_BUNDLED_PLUGINS_DIR: bundledDir,
     };
     const first = withOpenClawPackageArgv(packageRoot, () =>
       discoverWithEnv({ workspaceDir: workspaceA, env }),

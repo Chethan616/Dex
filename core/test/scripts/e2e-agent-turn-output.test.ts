@@ -13,22 +13,22 @@ describe("scripts/e2e/lib/agent-turn-output", () => {
     expect(
       extractAgentReplyTexts(
         JSON.stringify({
-          payloads: [{ text: "OPENCLAW_E2E_OK_LOCAL" }],
+          payloads: [{ text: "DEX_E2E_OK_LOCAL" }],
           meta: { finalAssistantVisibleText: "visible" },
         }),
       ),
-    ).toEqual(["visible", "OPENCLAW_E2E_OK_LOCAL"]);
+    ).toEqual(["visible", "DEX_E2E_OK_LOCAL"]);
 
     expect(
       extractAgentReplyTexts(
         JSON.stringify({
           result: {
-            payloads: [{ text: "OPENCLAW_E2E_OK_GATEWAY" }],
+            payloads: [{ text: "DEX_E2E_OK_GATEWAY" }],
             meta: { finalAssistantRawText: "raw" },
           },
         }),
       ),
-    ).toEqual(["raw", "OPENCLAW_E2E_OK_GATEWAY"]);
+    ).toEqual(["raw", "DEX_E2E_OK_GATEWAY"]);
   });
 
   it("reads compact JSON replies from combined stdout and stderr logs", () => {
@@ -36,10 +36,10 @@ describe("scripts/e2e/lib/agent-turn-output", () => {
       extractAgentReplyTexts(
         [
           "warning: diagnostic on stderr",
-          JSON.stringify({ payloads: [{ text: "OPENCLAW_E2E_OK_COMBINED" }] }),
+          JSON.stringify({ payloads: [{ text: "DEX_E2E_OK_COMBINED" }] }),
         ].join("\n"),
       ),
-    ).toEqual(["OPENCLAW_E2E_OK_COMBINED"]);
+    ).toEqual(["DEX_E2E_OK_COMBINED"]);
   });
 
   it("reads pretty JSON replies from combined stdout and stderr logs", () => {
@@ -49,14 +49,14 @@ describe("scripts/e2e/lib/agent-turn-output", () => {
           "warning: diagnostic on stderr",
           JSON.stringify(
             {
-              payloads: [{ text: "OPENCLAW_E2E_OK_PRETTY" }],
+              payloads: [{ text: "DEX_E2E_OK_PRETTY" }],
             },
             null,
             2,
           ),
         ].join("\n"),
       ),
-    ).toEqual(["OPENCLAW_E2E_OK_PRETTY"]);
+    ).toEqual(["DEX_E2E_OK_PRETTY"]);
   });
 
   it("does not accept markers that only appear outside reply payloads", () => {
@@ -66,13 +66,13 @@ describe("scripts/e2e/lib/agent-turn-output", () => {
       writeFileSync(
         outputPath,
         [
-          "Return marker OPENCLAW_E2E_OK_PROMPT_ECHO",
+          "Return marker DEX_E2E_OK_PROMPT_ECHO",
           JSON.stringify({ payloads: [{ text: "wrong reply" }] }),
         ].join("\n"),
       );
 
       expect(() =>
-        assertAgentReplyContainsMarker("OPENCLAW_E2E_OK_PROMPT_ECHO", outputPath),
+        assertAgentReplyContainsMarker("DEX_E2E_OK_PROMPT_ECHO", outputPath),
       ).toThrow(/agent reply payload did not contain marker/u);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -92,11 +92,11 @@ describe("scripts/e2e/lib/agent-turn-output", () => {
         ].join("\n"),
       );
 
-      expect(() => assertAgentReplyContainsMarker("OPENCLAW_E2E_OK_MISSING", outputPath)).toThrow(
+      expect(() => assertAgentReplyContainsMarker("DEX_E2E_OK_MISSING", outputPath)).toThrow(
         /agent reply payload did not contain marker/u,
       );
       try {
-        assertAgentReplyContainsMarker("OPENCLAW_E2E_OK_MISSING", outputPath);
+        assertAgentReplyContainsMarker("DEX_E2E_OK_MISSING", outputPath);
       } catch (error) {
         expect(error).toBeInstanceOf(Error);
         expect((error as Error).message).toContain("Output tail:");
@@ -124,7 +124,7 @@ describe("scripts/e2e/lib/agent-turn-output", () => {
       );
 
       try {
-        assertAgentReplyContainsMarker("OPENCLAW_E2E_OK_MISSING", outputPath);
+        assertAgentReplyContainsMarker("DEX_E2E_OK_MISSING", outputPath);
       } catch (error) {
         expect(error).toBeInstanceOf(Error);
         expect((error as Error).message).toContain("Reply payload summary:");

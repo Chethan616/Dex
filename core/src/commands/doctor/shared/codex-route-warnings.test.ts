@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveAgentHarnessPolicy } from "../../../agents/harness/policy.js";
 import type { SessionEntry } from "../../../config/sessions/types.js";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 
 const mocks = vi.hoisted(() => ({
   ensureAuthProfileStore: vi.fn(),
@@ -62,7 +62,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "openai-codex/gpt-5.5",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
     });
 
     expect(warnings).toStrictEqual([
@@ -85,7 +85,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
     });
 
     expect(warnings).toStrictEqual([
@@ -97,7 +97,7 @@ describe("collectCodexRouteWarnings", () => {
     ]);
   });
 
-  it("ignores OPENCLAW_AGENT_RUNTIME when reporting legacy model refs", () => {
+  it("ignores DEX_AGENT_RUNTIME when reporting legacy model refs", () => {
     const warnings = collectCodexRouteWarnings({
       cfg: {
         agents: {
@@ -105,9 +105,9 @@ describe("collectCodexRouteWarnings", () => {
             model: "openai-codex/gpt-5.5",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       env: {
-        OPENCLAW_AGENT_RUNTIME: "codex",
+        DEX_AGENT_RUNTIME: "codex",
       },
     });
 
@@ -128,7 +128,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "openai/gpt-5.5",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
     });
 
     expect(warnings).toStrictEqual([]);
@@ -150,7 +150,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
     });
 
     expect(warnings).toStrictEqual([
@@ -177,7 +177,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
     });
 
     expect(warnings).toStrictEqual([
@@ -201,7 +201,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
     });
 
     expect(warnings).toStrictEqual([
@@ -225,7 +225,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
     });
 
     expect(warnings).toStrictEqual([
@@ -251,7 +251,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
     });
 
     expect(warnings).toStrictEqual([
@@ -277,7 +277,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -303,7 +303,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -331,7 +331,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -363,7 +363,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -390,7 +390,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -437,7 +437,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -478,7 +478,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -506,7 +506,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -541,7 +541,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -565,7 +565,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -599,7 +599,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -638,7 +638,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -688,7 +688,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -746,7 +746,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -829,7 +829,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -885,7 +885,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -945,7 +945,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1021,7 +1021,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1081,7 +1081,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "openai-codex/gpt-5.4",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1122,7 +1122,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "openai-codex/gpt-5.4",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1161,7 +1161,7 @@ describe("collectCodexRouteWarnings", () => {
           model: "openai-codex/gpt-5.4",
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(collectCodexRouteWarnings({ cfg })).toStrictEqual([
       [
@@ -1195,7 +1195,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1239,7 +1239,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1279,7 +1279,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1320,7 +1320,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1365,7 +1365,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1403,7 +1403,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1446,7 +1446,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1485,7 +1485,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1525,7 +1525,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1557,7 +1557,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1593,7 +1593,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1641,7 +1641,7 @@ describe("collectCodexRouteWarnings", () => {
           model: "openai-codex/gpt-5.4",
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(collectCodexRouteWarnings({ cfg })).toStrictEqual([
       [
@@ -1689,7 +1689,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "openai-codex/gpt-5.4",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1731,7 +1731,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
     });
 
     expect(warnings).toStrictEqual([
@@ -1766,7 +1766,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1817,7 +1817,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -1903,7 +1903,7 @@ describe("collectCodexRouteWarnings", () => {
             summaryModel: "openai-codex/gpt-5.4-mini",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
       codexRuntimeReady: true,
     });
@@ -1986,7 +1986,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
       codexRuntimeReady: true,
     });
@@ -2016,7 +2016,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "openai-codex/gpt-5.5",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2045,7 +2045,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2081,7 +2081,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2110,7 +2110,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2142,7 +2142,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2171,7 +2171,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2203,7 +2203,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2236,7 +2236,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2263,7 +2263,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2293,7 +2293,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2323,7 +2323,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2351,7 +2351,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2372,7 +2372,7 @@ describe("collectCodexRouteWarnings", () => {
             codex: { enabled: false },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2397,7 +2397,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2426,7 +2426,7 @@ describe("collectCodexRouteWarnings", () => {
         agents: {
           defaults: {},
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2453,7 +2453,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2480,7 +2480,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2514,7 +2514,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2538,7 +2538,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "openrouter:auto",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2568,7 +2568,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2595,7 +2595,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2624,7 +2624,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2656,7 +2656,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2679,7 +2679,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "gpt-5.5",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2704,7 +2704,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "gpt-5.5",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2731,7 +2731,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "gpt-5.5",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2758,7 +2758,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "gpt-5.5",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2792,7 +2792,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "gpt-5.5",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2826,7 +2826,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2855,7 +2855,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "qwen-max",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2884,7 +2884,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "qwen-max",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2913,7 +2913,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "qwen-max",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2941,7 +2941,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "openai-codex/gpt-5.5",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -2985,7 +2985,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           ],
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -3031,7 +3031,7 @@ describe("collectCodexRouteWarnings", () => {
           },
         ],
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveAgentHarnessPolicy({
@@ -3081,7 +3081,7 @@ describe("collectCodexRouteWarnings", () => {
           },
         ],
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveAgentHarnessPolicy({
@@ -3132,7 +3132,7 @@ describe("collectCodexRouteWarnings", () => {
           },
         ],
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveAgentHarnessPolicy({
@@ -3184,7 +3184,7 @@ describe("collectCodexRouteWarnings", () => {
       plugins: {
         entries: { codex: { enabled: false } },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveAgentHarnessPolicy({
@@ -3234,7 +3234,7 @@ describe("collectCodexRouteWarnings", () => {
           model: "openai-codex/gpt-5.4",
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveAgentHarnessPolicy({
@@ -3287,7 +3287,7 @@ describe("collectCodexRouteWarnings", () => {
           },
         ],
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveAgentHarnessPolicy({
@@ -3344,7 +3344,7 @@ describe("collectCodexRouteWarnings", () => {
           },
         ],
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveAgentHarnessPolicy({
@@ -3415,7 +3415,7 @@ describe("collectCodexRouteWarnings", () => {
           },
         ],
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveAgentHarnessPolicy({
@@ -3465,7 +3465,7 @@ describe("collectCodexRouteWarnings", () => {
           },
         ],
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveAgentHarnessPolicy({
@@ -3514,7 +3514,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -3555,7 +3555,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -3594,7 +3594,7 @@ describe("collectCodexRouteWarnings", () => {
             },
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -3641,7 +3641,7 @@ describe("collectCodexRouteWarnings", () => {
             summaryModel: "openai-codex/gpt-5.4",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -3675,7 +3675,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "openai-codex/gpt-5.4",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -3973,7 +3973,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "openai-codex/gpt-5.5",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -4019,7 +4019,7 @@ describe("collectCodexRouteWarnings", () => {
             model: "openai-codex/gpt-5.5",
           },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -4048,7 +4048,7 @@ describe("collectCodexRouteWarnings", () => {
         plugins: {
           entries: { codex: { enabled: false } },
         },
-      } as unknown as OpenClawConfig,
+      } as unknown as DexConfig,
       shouldRepair: true,
     });
 
@@ -4081,7 +4081,7 @@ describe("collectCodexRouteWarnings", () => {
           plugins: {
             entries: { codex: { enabled: false } },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         shouldRepair: true,
       });
 

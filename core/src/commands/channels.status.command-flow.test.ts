@@ -315,7 +315,7 @@ describe("channelsStatusCommand SecretRef fallback flow", () => {
           "gateway timeout after 3000ms",
           "Gateway target: wss://user:pass@gateway.example.com/socket?token=secret-token&keep=visible",
           "Gateway fallback: (wss://fallback-user:fallback-pass@[bad-host/socket?token=fallback-secret&keep=visible)",
-          "Source: env OPENCLAW_GATEWAY_URL",
+          "Source: env DEX_GATEWAY_URL",
         ].join("\n"),
       ),
     );

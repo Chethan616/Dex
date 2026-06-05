@@ -1,7 +1,7 @@
 import { createInboundDebouncer } from "openclaw/plugin-sdk/channel-inbound-debounce";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { monitorMattermostProvider } from "./monitor.js";
-import type { OpenClawConfig, RuntimeEnv } from "./runtime-api.js";
+import type { DexConfig, RuntimeEnv } from "./runtime-api.js";
 
 class FakeWebSocket {
   public readonly sent: string[] = [];
@@ -141,7 +141,7 @@ vi.mock("./runtime-api.js", async () => {
 });
 
 function createRuntimeCore(
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   routeOverride?: {
     accountId?: string;
     agentId?: string;
@@ -336,7 +336,7 @@ function createRuntimeCore(
   };
 }
 
-const testConfig: OpenClawConfig = {
+const testConfig: DexConfig = {
   channels: {
     mattermost: {
       enabled: true,
@@ -447,7 +447,7 @@ describe("mattermost inbound user posts", () => {
     const socket = new FakeWebSocket();
     const abortController = new AbortController();
     mockState.abortController = abortController;
-    const inlineCommandConfig: OpenClawConfig = {
+    const inlineCommandConfig: DexConfig = {
       commands: { useAccessGroups: true },
       channels: {
         mattermost: {
@@ -523,7 +523,7 @@ describe("mattermost inbound user posts", () => {
     const socket = new FakeWebSocket();
     const abortController = new AbortController();
     mockState.abortController = abortController;
-    const directConfig: OpenClawConfig = {
+    const directConfig: DexConfig = {
       channels: {
         mattermost: {
           enabled: true,
@@ -650,7 +650,7 @@ describe("mattermost inbound user posts", () => {
     const socket = new FakeWebSocket();
     const abortController = new AbortController();
     mockState.abortController = abortController;
-    const channelTypeConfig: OpenClawConfig = {
+    const channelTypeConfig: DexConfig = {
       channels: {
         mattermost: {
           enabled: true,
@@ -709,7 +709,7 @@ describe("mattermost inbound user posts", () => {
     const socket = new FakeWebSocket();
     const abortController = new AbortController();
     mockState.abortController = abortController;
-    const mentionConfig: OpenClawConfig = {
+    const mentionConfig: DexConfig = {
       commands: { useAccessGroups: false },
       messages: { inbound: { debounceMs: 60_000 } },
       channels: {
@@ -801,7 +801,7 @@ describe("mattermost inbound user posts", () => {
     const socket = new FakeWebSocket();
     const abortController = new AbortController();
     mockState.abortController = abortController;
-    const directConfig: OpenClawConfig = {
+    const directConfig: DexConfig = {
       channels: {
         mattermost: {
           enabled: true,
@@ -877,7 +877,7 @@ describe("mattermost inbound user posts", () => {
     const socket = new FakeWebSocket();
     const abortController = new AbortController();
     mockState.abortController = abortController;
-    const directConfig: OpenClawConfig = {
+    const directConfig: DexConfig = {
       session: { dmScope: "per-channel-peer" },
       channels: {
         mattermost: {

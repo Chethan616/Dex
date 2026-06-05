@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import {
   loadAuthStoreWithProfiles,
   setupSecretsRuntimeSnapshotTestHooks,
@@ -7,7 +7,7 @@ import {
 
 const { prepareSecretsRuntimeSnapshot } = setupSecretsRuntimeSnapshotTestHooks();
 
-function withAuthProfileMode(mode: "api_key" | "aws-sdk" | "oauth" | "token"): OpenClawConfig {
+function withAuthProfileMode(mode: "api_key" | "aws-sdk" | "oauth" | "token"): DexConfig {
   return {
     auth: {
       profiles: {
@@ -22,7 +22,7 @@ function withAuthProfileMode(mode: "api_key" | "aws-sdk" | "oauth" | "token"): O
         default: { source: "env" },
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 describe("secrets runtime oauth auth-profile SecretRef policy", () => {

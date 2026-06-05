@@ -133,9 +133,9 @@ vi.mock("openclaw/plugin-sdk/proxy-capture", () => ({
   }),
   getDebugProxyCaptureStore: () => captureMock.store,
   resolveDebugProxySettings: () => ({
-    dbPath: process.env.OPENCLAW_DEBUG_PROXY_DB_PATH ?? "",
-    blobDir: process.env.OPENCLAW_DEBUG_PROXY_BLOB_DIR ?? "",
-    proxyUrl: process.env.OPENCLAW_DEBUG_PROXY_URL ?? "",
+    dbPath: process.env.DEX_DEBUG_PROXY_DB_PATH ?? "",
+    blobDir: process.env.DEX_DEBUG_PROXY_BLOB_DIR ?? "",
+    proxyUrl: process.env.DEX_DEBUG_PROXY_URL ?? "",
     sessionId: "qa-lab-test",
   }),
 }));
@@ -648,7 +648,7 @@ describe("qa-lab server", () => {
         `  fs.writeFileSync(${JSON.stringify(stoppedPath)}, "terminated", "utf8");`,
         "  process.exit(0);",
         "});",
-        `fs.writeFileSync(${JSON.stringify(markerPath)}, process.env.OPENCLAW_CODEX_DISCOVERY_LIVE || "", "utf8");`,
+        `fs.writeFileSync(${JSON.stringify(markerPath)}, process.env.DEX_CODEX_DISCOVERY_LIVE || "", "utf8");`,
         "setInterval(() => {}, 1000);",
       ].join("\n"),
       "utf8",
@@ -784,8 +784,8 @@ describe("qa-lab server", () => {
     cleanups.push(async () => {
       await rm(tempDir, { recursive: true, force: true });
     });
-    process.env.OPENCLAW_DEBUG_PROXY_DB_PATH = path.join(tempDir, "capture.sqlite");
-    process.env.OPENCLAW_DEBUG_PROXY_BLOB_DIR = path.join(tempDir, "blobs");
+    process.env.DEX_DEBUG_PROXY_DB_PATH = path.join(tempDir, "capture.sqlite");
+    process.env.DEX_DEBUG_PROXY_BLOB_DIR = path.join(tempDir, "blobs");
     const store = captureMock.store;
     store.upsertSession({
       id: "qa-capture-session",
@@ -793,8 +793,8 @@ describe("qa-lab server", () => {
       mode: "proxy-run",
       sourceScope: "openclaw",
       sourceProcess: "openclaw",
-      dbPath: process.env.OPENCLAW_DEBUG_PROXY_DB_PATH,
-      blobDir: process.env.OPENCLAW_DEBUG_PROXY_BLOB_DIR,
+      dbPath: process.env.DEX_DEBUG_PROXY_DB_PATH,
+      blobDir: process.env.DEX_DEBUG_PROXY_BLOB_DIR,
     });
     store.recordEvent({
       sessionId: "qa-capture-session",
@@ -862,8 +862,8 @@ describe("qa-lab server", () => {
       port: 0,
     });
     cleanups.push(async () => {
-      delete process.env.OPENCLAW_DEBUG_PROXY_DB_PATH;
-      delete process.env.OPENCLAW_DEBUG_PROXY_BLOB_DIR;
+      delete process.env.DEX_DEBUG_PROXY_DB_PATH;
+      delete process.env.DEX_DEBUG_PROXY_BLOB_DIR;
       await lab.stop();
     });
 

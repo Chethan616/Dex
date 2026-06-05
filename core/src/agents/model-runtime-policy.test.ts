@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { ModelDefinitionConfig } from "../config/types.models.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveModelRuntimePolicy } from "./model-runtime-policy.js";
 
-const ORIGINAL_BUILD_PRIVATE_QA = process.env.OPENCLAW_BUILD_PRIVATE_QA;
-const ORIGINAL_QA_FORCE_RUNTIME = process.env.OPENCLAW_QA_FORCE_RUNTIME;
+const ORIGINAL_BUILD_PRIVATE_QA = process.env.DEX_BUILD_PRIVATE_QA;
+const ORIGINAL_QA_FORCE_RUNTIME = process.env.DEX_QA_FORCE_RUNTIME;
 
 const createModelConfig = (agentRuntimeId: string): ModelDefinitionConfig => ({
   id: "qwen-local",
@@ -23,7 +23,7 @@ const createModelConfig = (agentRuntimeId: string): ModelDefinitionConfig => ({
 });
 
 function restoreEnv(
-  name: "OPENCLAW_BUILD_PRIVATE_QA" | "OPENCLAW_QA_FORCE_RUNTIME",
+  name: "DEX_BUILD_PRIVATE_QA" | "DEX_QA_FORCE_RUNTIME",
   value: string | undefined,
 ): void {
   if (value == null) {
@@ -33,7 +33,7 @@ function restoreEnv(
   process.env[name] = value;
 }
 
-function makeProviderRuntimeConfig(runtime: string): OpenClawConfig {
+function makeProviderRuntimeConfig(runtime: string): DexConfig {
   return {
     models: {
       providers: {
@@ -44,18 +44,18 @@ function makeProviderRuntimeConfig(runtime: string): OpenClawConfig {
         },
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 afterEach(() => {
-  restoreEnv("OPENCLAW_BUILD_PRIVATE_QA", ORIGINAL_BUILD_PRIVATE_QA);
-  restoreEnv("OPENCLAW_QA_FORCE_RUNTIME", ORIGINAL_QA_FORCE_RUNTIME);
+  restoreEnv("DEX_BUILD_PRIVATE_QA", ORIGINAL_BUILD_PRIVATE_QA);
+  restoreEnv("DEX_QA_FORCE_RUNTIME", ORIGINAL_QA_FORCE_RUNTIME);
 });
 
 describe("resolveModelRuntimePolicy", () => {
   it("ignores the QA force-runtime override when the private QA gate is unset", () => {
-    delete process.env.OPENCLAW_BUILD_PRIVATE_QA;
-    process.env.OPENCLAW_QA_FORCE_RUNTIME = "openclaw";
+    delete process.env.DEX_BUILD_PRIVATE_QA;
+    process.env.DEX_QA_FORCE_RUNTIME = "openclaw";
 
     expect(
       resolveModelRuntimePolicy({
@@ -70,8 +70,8 @@ describe("resolveModelRuntimePolicy", () => {
   });
 
   it("respects the QA force-runtime override when the private QA gate is set", () => {
-    process.env.OPENCLAW_BUILD_PRIVATE_QA = "1";
-    process.env.OPENCLAW_QA_FORCE_RUNTIME = "openclaw";
+    process.env.DEX_BUILD_PRIVATE_QA = "1";
+    process.env.DEX_QA_FORCE_RUNTIME = "openclaw";
 
     expect(
       resolveModelRuntimePolicy({
@@ -86,8 +86,8 @@ describe("resolveModelRuntimePolicy", () => {
   });
 
   it("ignores invalid QA force-runtime values even when the private QA gate is set", () => {
-    process.env.OPENCLAW_BUILD_PRIVATE_QA = "1";
-    process.env.OPENCLAW_QA_FORCE_RUNTIME = "bogus";
+    process.env.DEX_BUILD_PRIVATE_QA = "1";
+    process.env.DEX_QA_FORCE_RUNTIME = "bogus";
 
     expect(
       resolveModelRuntimePolicy({
@@ -110,7 +110,7 @@ describe("resolveModelRuntimePolicy", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveModelRuntimePolicy({
@@ -134,7 +134,7 @@ describe("resolveModelRuntimePolicy", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveModelRuntimePolicy({
@@ -158,7 +158,7 @@ describe("resolveModelRuntimePolicy", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveModelRuntimePolicy({
@@ -190,7 +190,7 @@ describe("resolveModelRuntimePolicy", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveModelRuntimePolicy({
@@ -222,7 +222,7 @@ describe("resolveModelRuntimePolicy", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveModelRuntimePolicy({
@@ -246,7 +246,7 @@ describe("resolveModelRuntimePolicy", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveModelRuntimePolicy({
@@ -270,7 +270,7 @@ describe("resolveModelRuntimePolicy", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveModelRuntimePolicy({
@@ -290,7 +290,7 @@ describe("resolveModelRuntimePolicy", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveModelRuntimePolicy({
@@ -322,7 +322,7 @@ describe("resolveModelRuntimePolicy", () => {
           },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveModelRuntimePolicy({
@@ -349,7 +349,7 @@ describe("resolveModelRuntimePolicy", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveModelRuntimePolicy({

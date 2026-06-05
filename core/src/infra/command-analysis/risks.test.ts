@@ -211,7 +211,7 @@ describe("command-analysis risks", () => {
     expect(
       buildCommandPayloadCandidates(["sudo", "--command-timeout=1", "/approve", "abc"]),
     ).toEqual(["/approve abc"]);
-    expect(buildCommandPayloadCandidates(["sudo", "OPENCLAW_ENV=1", "/approve", "abc"])).toEqual([
+    expect(buildCommandPayloadCandidates(["sudo", "DEX_ENV=1", "/approve", "abc"])).toEqual([
       "/approve abc",
     ]);
     expect(buildCommandPayloadCandidates(["sudo", "--shell", "/approve", "abc"])).toEqual([

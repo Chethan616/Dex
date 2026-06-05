@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ChannelPlugin } from "../channels/plugins/types.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveDefaultChannelAccountContext } from "./channel-account-context.js";
 
 vi.mock("../channels/read-only-account-inspect.js", () => ({
@@ -18,7 +18,7 @@ describe("resolveDefaultChannelAccountContext", () => {
       },
     } as unknown as ChannelPlugin;
 
-    const result = await resolveDefaultChannelAccountContext(plugin, {} as OpenClawConfig);
+    const result = await resolveDefaultChannelAccountContext(plugin, {} as DexConfig);
 
     expect(result.accountIds).toEqual(["acc-1"]);
     expect(result.defaultAccountId).toBe("acc-1");
@@ -43,7 +43,7 @@ describe("resolveDefaultChannelAccountContext", () => {
       },
     } as unknown as ChannelPlugin;
 
-    const result = await resolveDefaultChannelAccountContext(plugin, {} as OpenClawConfig);
+    const result = await resolveDefaultChannelAccountContext(plugin, {} as DexConfig);
 
     expect(isEnabled).toHaveBeenCalledWith(account, {});
     expect(isConfigured).toHaveBeenCalledWith(account, {});
@@ -64,11 +64,11 @@ describe("resolveDefaultChannelAccountContext", () => {
       },
     } as unknown as ChannelPlugin;
 
-    await expect(resolveDefaultChannelAccountContext(plugin, {} as OpenClawConfig)).rejects.toThrow(
+    await expect(resolveDefaultChannelAccountContext(plugin, {} as DexConfig)).rejects.toThrow(
       /missing secret/i,
     );
 
-    const result = await resolveDefaultChannelAccountContext(plugin, {} as OpenClawConfig, {
+    const result = await resolveDefaultChannelAccountContext(plugin, {} as DexConfig, {
       mode: "read_only",
       commandName: "status",
     });
@@ -93,7 +93,7 @@ describe("resolveDefaultChannelAccountContext", () => {
       },
     } as unknown as ChannelPlugin;
 
-    const result = await resolveDefaultChannelAccountContext(plugin, {} as OpenClawConfig, {
+    const result = await resolveDefaultChannelAccountContext(plugin, {} as DexConfig, {
       mode: "read_only",
     });
 

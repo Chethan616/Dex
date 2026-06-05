@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 import { hasEmbeddedRunConfiguredModelFallbacks } from "./fallbacks.js";
 
 describe("hasEmbeddedRunConfiguredModelFallbacks", () => {
@@ -13,7 +13,7 @@ describe("hasEmbeddedRunConfiguredModelFallbacks", () => {
   });
 
   it("treats explicit empty modelFallbacksOverride as disabling fallbacks", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       agents: {
         defaults: {
           model: {
@@ -31,7 +31,7 @@ describe("hasEmbeddedRunConfiguredModelFallbacks", () => {
   });
 
   it("falls back to normal agent/default model fallback config when no override is provided", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       agents: {
         defaults: {
           model: {

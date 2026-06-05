@@ -7,20 +7,20 @@ afterEach(() => {
 });
 
 describe("DEFAULT_AGENT_WORKSPACE_DIR", () => {
-  it("uses OPENCLAW_HOME when resolving the default workspace dir", () => {
+  it("uses DEX_HOME when resolving the default workspace dir", () => {
     const home = path.join(path.sep, "srv", "openclaw-home");
-    vi.stubEnv("OPENCLAW_HOME", home);
+    vi.stubEnv("DEX_HOME", home);
     vi.stubEnv("HOME", path.join(path.sep, "home", "other"));
 
     expect(resolveDefaultAgentWorkspaceDir()).toBe(
-      path.join(path.resolve(home), ".openclaw", "workspace"),
+      path.join(path.resolve(home), ".dex", "workspace"),
     );
   });
 
-  it("uses OPENCLAW_WORKSPACE_DIR before OPENCLAW_HOME", () => {
+  it("uses DEX_WORKSPACE_DIR before DEX_HOME", () => {
     const workspaceDir = path.join(path.sep, "srv", "openclaw-workspace");
-    vi.stubEnv("OPENCLAW_WORKSPACE_DIR", workspaceDir);
-    vi.stubEnv("OPENCLAW_HOME", path.join(path.sep, "srv", "openclaw-home"));
+    vi.stubEnv("DEX_WORKSPACE_DIR", workspaceDir);
+    vi.stubEnv("DEX_HOME", path.join(path.sep, "srv", "openclaw-home"));
 
     expect(resolveDefaultAgentWorkspaceDir()).toBe(path.resolve(workspaceDir));
   });

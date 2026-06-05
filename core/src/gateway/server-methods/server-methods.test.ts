@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { asOptionalRecord } from "@dexagent/normalization-core/record-coerce";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { validateExecApprovalRequestParams } from "../../../packages/gateway-protocol/src/index.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { registerLegacyContextEngine } from "../../context-engine/legacy.registration.js";
 import {
   clearContextEngineRuntimeQuarantine,
@@ -2128,7 +2128,7 @@ describe("exec approval handlers", () => {
     });
   }
 
-  function createExecApprovalFixture(opts?: { config?: OpenClawConfig }) {
+  function createExecApprovalFixture(opts?: { config?: DexConfig }) {
     const manager = new ExecApprovalManager();
     const handlers = createExecApprovalHandlers(manager);
     const broadcasts: Array<{ event: string; payload: unknown }> = [];
@@ -3818,7 +3818,7 @@ describe("gateway healthHandlers.health cache freshness", () => {
     try {
       const contextEngine = await resolveContextEngine({
         plugins: { slots: { contextEngine: engineId } },
-      } as OpenClawConfig);
+      } as DexConfig);
       await contextEngine.assemble({ sessionId: "s1", messages: [] });
 
       const cached = {

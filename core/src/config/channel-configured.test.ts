@@ -78,7 +78,7 @@ describe("isChannelConfigured", () => {
 
   it("does not treat persisted Matrix credentials as configured channel state", () => {
     expect(
-      isChannelConfigured({}, "matrix", { OPENCLAW_STATE_DIR: "state-with-matrix-creds" }),
+      isChannelConfigured({}, "matrix", { DEX_STATE_DIR: "state-with-matrix-creds" }),
     ).toBe(false);
   });
 });

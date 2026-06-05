@@ -421,7 +421,7 @@ describe("scripts/test-group-report child process guard", () => {
 describe("scripts/test-group-report run plans", () => {
   it("caps Vitest workers for full-suite profiling by default", () => {
     expect(resolveFullSuiteVitestEnv(parseTestGroupReportArgs(["--full-suite"]), {})).toEqual({
-      OPENCLAW_VITEST_MAX_WORKERS: "2",
+      DEX_VITEST_MAX_WORKERS: "2",
     });
   });
 
@@ -429,19 +429,19 @@ describe("scripts/test-group-report run plans", () => {
     expect(
       resolveFullSuiteVitestEnv(parseTestGroupReportArgs(["--full-suite"]), {}, "commands"),
     ).toEqual({
-      OPENCLAW_VITEST_MAX_WORKERS: "1",
+      DEX_VITEST_MAX_WORKERS: "1",
     });
   });
 
   it("preserves explicit Vitest worker budgets for full-suite profiling", () => {
     expect(
       resolveFullSuiteVitestEnv(parseTestGroupReportArgs(["--full-suite"]), {
-        OPENCLAW_VITEST_MAX_WORKERS: "2",
+        DEX_VITEST_MAX_WORKERS: "2",
       }),
     ).toEqual({});
     expect(
       resolveFullSuiteVitestEnv(parseTestGroupReportArgs(["--full-suite"]), {
-        OPENCLAW_TEST_WORKERS: "2",
+        DEX_TEST_WORKERS: "2",
       }),
     ).toEqual({});
   });
@@ -471,17 +471,17 @@ describe("scripts/test-group-report run plans", () => {
       { cwd: "/repo", env: {} },
     );
 
-    expect(specs.map((spec) => spec.env.OPENCLAW_VITEST_FS_MODULE_CACHE_PATH)).toEqual([
+    expect(specs.map((spec) => spec.env.DEX_VITEST_FS_MODULE_CACHE_PATH)).toEqual([
       path.join("/repo", "node_modules", ".experimental-vitest-cache", "0-a.ts"),
       path.join("/repo", "node_modules", ".experimental-vitest-cache", "1-b.ts"),
     ]);
   });
 
   it("uses leaf configs for full-suite profiling without requiring parallel env", () => {
-    const previousParallel = process.env.OPENCLAW_TEST_PROJECTS_PARALLEL;
-    const previousLeaf = process.env.OPENCLAW_TEST_PROJECTS_LEAF_SHARDS;
-    delete process.env.OPENCLAW_TEST_PROJECTS_PARALLEL;
-    delete process.env.OPENCLAW_TEST_PROJECTS_LEAF_SHARDS;
+    const previousParallel = process.env.DEX_TEST_PROJECTS_PARALLEL;
+    const previousLeaf = process.env.DEX_TEST_PROJECTS_LEAF_SHARDS;
+    delete process.env.DEX_TEST_PROJECTS_PARALLEL;
+    delete process.env.DEX_TEST_PROJECTS_LEAF_SHARDS;
     try {
       const plans = resolveRunPlans(parseTestGroupReportArgs(["--full-suite"]));
 
@@ -493,21 +493,21 @@ describe("scripts/test-group-report run plans", () => {
       );
     } finally {
       if (previousParallel === undefined) {
-        delete process.env.OPENCLAW_TEST_PROJECTS_PARALLEL;
+        delete process.env.DEX_TEST_PROJECTS_PARALLEL;
       } else {
-        process.env.OPENCLAW_TEST_PROJECTS_PARALLEL = previousParallel;
+        process.env.DEX_TEST_PROJECTS_PARALLEL = previousParallel;
       }
       if (previousLeaf === undefined) {
-        delete process.env.OPENCLAW_TEST_PROJECTS_LEAF_SHARDS;
+        delete process.env.DEX_TEST_PROJECTS_LEAF_SHARDS;
       } else {
-        process.env.OPENCLAW_TEST_PROJECTS_LEAF_SHARDS = previousLeaf;
+        process.env.DEX_TEST_PROJECTS_LEAF_SHARDS = previousLeaf;
       }
     }
   });
 
   it("preserves full-suite shard file args and unique report labels", () => {
-    const previousParallel = process.env.OPENCLAW_TEST_PROJECTS_PARALLEL;
-    process.env.OPENCLAW_TEST_PROJECTS_PARALLEL = "6";
+    const previousParallel = process.env.DEX_TEST_PROJECTS_PARALLEL;
+    process.env.DEX_TEST_PROJECTS_PARALLEL = "6";
     try {
       const plans = resolveRunPlans(parseTestGroupReportArgs(["--full-suite"]));
       const gatewayServerPlans = plans.filter(
@@ -524,9 +524,9 @@ describe("scripts/test-group-report run plans", () => {
       );
     } finally {
       if (previousParallel === undefined) {
-        delete process.env.OPENCLAW_TEST_PROJECTS_PARALLEL;
+        delete process.env.DEX_TEST_PROJECTS_PARALLEL;
       } else {
-        process.env.OPENCLAW_TEST_PROJECTS_PARALLEL = previousParallel;
+        process.env.DEX_TEST_PROJECTS_PARALLEL = previousParallel;
       }
     }
   });

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { registerAgentRunContext, resetAgentRunContextForTest } from "../infra/agent-events.js";
 
 const hoisted = vi.hoisted(() => ({
-  loadConfigMock: vi.fn<() => OpenClawConfig>(),
+  loadConfigMock: vi.fn<() => DexConfig>(),
   loadCombinedSessionStoreForGatewayMock: vi.fn(),
 }));
 
@@ -16,7 +16,7 @@ vi.mock("./session-utils.js", async () => {
   return {
     ...actual,
     loadCombinedSessionStoreForGateway: (
-      cfg: OpenClawConfig,
+      cfg: DexConfig,
       opts?: { agentId?: string; configuredAgentsOnly?: boolean },
     ) => hoisted.loadCombinedSessionStoreForGatewayMock(cfg, opts),
   };
@@ -40,7 +40,7 @@ describe("resolveSessionKeyForRun", () => {
   });
 
   it("resolves run ids from the combined gateway store and caches the result", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       session: {
         store: "/custom/root/agents/{agentId}/sessions/sessions.json",
       },
@@ -62,7 +62,7 @@ describe("resolveSessionKeyForRun", () => {
   });
 
   it("uses the requested agent scope for run lookups", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       session: {
         store: "/custom/root/agents/{agentId}/sessions/sessions.json",
       },
@@ -82,7 +82,7 @@ describe("resolveSessionKeyForRun", () => {
   });
 
   it("defaults run id lookups without explicit agent scope to the default agent", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       session: {
         store: "/custom/root/agents/{agentId}/sessions/sessions.json",
       },
@@ -102,7 +102,7 @@ describe("resolveSessionKeyForRun", () => {
   });
 
   it("filters same-run matches by requested agent for shared stores", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       session: {
         store: "/custom/root/sessions/sessions.json",
       },
@@ -122,7 +122,7 @@ describe("resolveSessionKeyForRun", () => {
   });
 
   it("allows literal global session keys for scoped lookups when session scope is global", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       session: {
         scope: "global",
       },
@@ -145,7 +145,7 @@ describe("resolveSessionKeyForRun", () => {
     hoisted.loadConfigMock.mockReturnValue({});
     registerAgentRunContext("run-1", { sessionKey: "agent:retired:acp:run-1" });
     hoisted.loadCombinedSessionStoreForGatewayMock.mockImplementation(
-      (_cfg: OpenClawConfig, opts?: { agentId?: string }) => ({
+      (_cfg: DexConfig, opts?: { agentId?: string }) => ({
         storePath: "(multiple)",
         store:
           opts?.agentId === "main"
@@ -163,7 +163,7 @@ describe("resolveSessionKeyForRun", () => {
   it("keeps run lookup cache entries scoped by agent", () => {
     hoisted.loadConfigMock.mockReturnValue({});
     hoisted.loadCombinedSessionStoreForGatewayMock.mockImplementation(
-      (_cfg: OpenClawConfig, opts?: { agentId?: string }) => ({
+      (_cfg: DexConfig, opts?: { agentId?: string }) => ({
         storePath: "(multiple)",
         store:
           opts?.agentId === "retired"
@@ -214,7 +214,7 @@ describe("resolveSessionKeyForRun", () => {
   });
 
   it("uses legacy store entries for the configured default agent", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       agents: { list: [{ id: "work", default: true }] },
     };
     hoisted.loadConfigMock.mockReturnValue(cfg);

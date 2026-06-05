@@ -108,10 +108,10 @@ describe("resolveGatewayConnection", () => {
 
   beforeEach(() => {
     envSnapshot = captureEnv([
-      "OPENCLAW_GATEWAY_URL",
-      "OPENCLAW_GATEWAY_TOKEN",
-      "OPENCLAW_GATEWAY_PASSWORD",
-      "OPENCLAW_TUI_SETUP_AUTH_SOURCE",
+      "DEX_GATEWAY_URL",
+      "DEX_GATEWAY_TOKEN",
+      "DEX_GATEWAY_PASSWORD",
+      "DEX_TUI_SETUP_AUTH_SOURCE",
     ]);
     loadConfig.mockReset();
     resolveGatewayPort.mockReset();
@@ -119,16 +119,16 @@ describe("resolveGatewayConnection", () => {
     resolveConfigPath.mockReset();
     resolveGatewayPort.mockReturnValue(18789);
     resolveStateDir.mockImplementation(
-      (env: NodeJS.ProcessEnv) => env.OPENCLAW_STATE_DIR ?? "/tmp/openclaw",
+      (env: NodeJS.ProcessEnv) => env.DEX_STATE_DIR ?? "/tmp/openclaw",
     );
     resolveConfigPath.mockImplementation(
       (env: NodeJS.ProcessEnv, stateDir: string) =>
-        env.OPENCLAW_CONFIG_PATH ?? `${stateDir}/openclaw.json`,
+        env.DEX_CONFIG_PATH ?? `${stateDir}/openclaw.json`,
     );
-    delete process.env.OPENCLAW_GATEWAY_URL;
-    delete process.env.OPENCLAW_GATEWAY_TOKEN;
-    delete process.env.OPENCLAW_GATEWAY_PASSWORD;
-    delete process.env.OPENCLAW_TUI_SETUP_AUTH_SOURCE;
+    delete process.env.DEX_GATEWAY_URL;
+    delete process.env.DEX_GATEWAY_TOKEN;
+    delete process.env.DEX_GATEWAY_PASSWORD;
+    delete process.env.DEX_TUI_SETUP_AUTH_SOURCE;
   });
 
   afterEach(() => {
@@ -187,16 +187,16 @@ describe("resolveGatewayConnection", () => {
   it("uses config auth token for local mode when both config and env tokens are set", async () => {
     loadConfig.mockReturnValue({ gateway: { mode: "local", auth: { token: "config-token" } } });
 
-    await withEnvAsync({ OPENCLAW_GATEWAY_TOKEN: "env-token" }, async () => {
+    await withEnvAsync({ DEX_GATEWAY_TOKEN: "env-token" }, async () => {
       const result = await resolveGatewayConnection({});
       expect(result.token).toBe("config-token");
     });
   });
 
-  it("falls back to OPENCLAW_GATEWAY_TOKEN when config token is missing", async () => {
+  it("falls back to DEX_GATEWAY_TOKEN when config token is missing", async () => {
     loadConfig.mockReturnValue({ gateway: { mode: "local" } });
 
-    await withEnvAsync({ OPENCLAW_GATEWAY_TOKEN: "env-token" }, async () => {
+    await withEnvAsync({ DEX_GATEWAY_TOKEN: "env-token" }, async () => {
       const result = await resolveGatewayConnection({});
       expect(result.token).toBe("env-token");
     });
@@ -228,7 +228,7 @@ describe("resolveGatewayConnection", () => {
       },
     });
 
-    await withEnvAsync({ OPENCLAW_GATEWAY_PASSWORD: "env-password" }, async () => {
+    await withEnvAsync({ DEX_GATEWAY_PASSWORD: "env-password" }, async () => {
       const result = await resolveGatewayConnection({});
       expect(result.password).toBe("env-password");
     });
@@ -247,8 +247,8 @@ describe("resolveGatewayConnection", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_GATEWAY_PASSWORD: "stale-env-password", // pragma: allowlist secret
-        OPENCLAW_TUI_SETUP_AUTH_SOURCE: "config",
+        DEX_GATEWAY_PASSWORD: "stale-env-password", // pragma: allowlist secret
+        DEX_TUI_SETUP_AUTH_SOURCE: "config",
       },
       async () => {
         const result = await resolveGatewayConnection({});
@@ -268,15 +268,15 @@ describe("resolveGatewayConnection", () => {
         mode: "local",
         auth: {
           mode: "password",
-          password: { source: "env", provider: "default", id: "OPENCLAW_GATEWAY_PASSWORD" },
+          password: { source: "env", provider: "default", id: "DEX_GATEWAY_PASSWORD" },
         },
       },
     });
 
     await withEnvAsync(
       {
-        OPENCLAW_GATEWAY_PASSWORD: "resolved-ref-password", // pragma: allowlist secret
-        OPENCLAW_TUI_SETUP_AUTH_SOURCE: "config",
+        DEX_GATEWAY_PASSWORD: "resolved-ref-password", // pragma: allowlist secret
+        DEX_TUI_SETUP_AUTH_SOURCE: "config",
       },
       async () => {
         const result = await resolveGatewayConnection({});
@@ -333,7 +333,7 @@ describe("resolveGatewayConnection", () => {
     );
   });
 
-  it("prefers OPENCLAW_GATEWAY_PASSWORD over remote password fallback", async () => {
+  it("prefers DEX_GATEWAY_PASSWORD over remote password fallback", async () => {
     loadConfig.mockReturnValue({
       gateway: {
         mode: "remote",
@@ -341,7 +341,7 @@ describe("resolveGatewayConnection", () => {
       },
     });
 
-    const gatewayPasswordEnv = "OPENCLAW_GATEWAY_PASSWORD"; // pragma: allowlist secret
+    const gatewayPasswordEnv = "DEX_GATEWAY_PASSWORD"; // pragma: allowlist secret
     const gatewayPassword = "env-pass"; // pragma: allowlist secret
     await withEnvAsync({ [gatewayPasswordEnv]: gatewayPassword }, async () => {
       const result = await resolveGatewayConnection({});

@@ -2,7 +2,7 @@ import type { ChildProcess } from "node:child_process";
 import { EventEmitter } from "node:events";
 import process from "node:process";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { OPENCLAW_CLI_ENV_VALUE } from "../infra/openclaw-exec-env.js";
+import { DEX_CLI_ENV_VALUE } from "../infra/openclaw-exec-env.js";
 
 const spawnMock = vi.hoisted(() => vi.fn());
 
@@ -104,18 +104,18 @@ describe("runCommandWithTimeout", () => {
     const resolved = resolveCommandEnv({
       argv: ["node", "script.js"],
       baseEnv: {
-        OPENCLAW_BASE_ENV: "base",
-        OPENCLAW_TO_REMOVE: undefined,
+        DEX_BASE_ENV: "base",
+        DEX_TO_REMOVE: undefined,
       },
       env: {
-        OPENCLAW_TEST_ENV: "ok",
+        DEX_TEST_ENV: "ok",
       },
     });
 
-    expect(resolved.OPENCLAW_BASE_ENV).toBe("base");
-    expect(resolved.OPENCLAW_TEST_ENV).toBe("ok");
-    expect(resolved.OPENCLAW_TO_REMOVE).toBeUndefined();
-    expect(resolved.OPENCLAW_CLI).toBe(OPENCLAW_CLI_ENV_VALUE);
+    expect(resolved.DEX_BASE_ENV).toBe("base");
+    expect(resolved.DEX_TEST_ENV).toBe("ok");
+    expect(resolved.DEX_TO_REMOVE).toBeUndefined();
+    expect(resolved.DEX_CLI).toBe(DEX_CLI_ENV_VALUE);
   });
 
   it("collapses case-insensitive duplicate env keys on Windows", () => {
@@ -124,18 +124,18 @@ describe("runCommandWithTimeout", () => {
       platform: "win32",
       baseEnv: {
         Path: "C:\\base\\bin",
-        OPENCLAW_BASE_ENV: "base",
+        DEX_BASE_ENV: "base",
       },
       env: {
         PATH: "C:\\override\\bin",
-        OPENCLAW_TEST_ENV: "ok",
+        DEX_TEST_ENV: "ok",
       },
     });
 
     expect(resolved.Path).toBeUndefined();
     expect(resolved.PATH).toBe("C:\\override\\bin");
-    expect(resolved.OPENCLAW_BASE_ENV).toBe("base");
-    expect(resolved.OPENCLAW_TEST_ENV).toBe("ok");
+    expect(resolved.DEX_BASE_ENV).toBe("base");
+    expect(resolved.DEX_TEST_ENV).toBe("ok");
   });
 
   it("preserves case-distinct env keys outside Windows", () => {

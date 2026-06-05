@@ -202,6 +202,6 @@ describe("resolveGatewayProgramArguments", () => {
         port: 18789,
         wrapperPath,
       }),
-    ).rejects.toThrow("OPENCLAW_WRAPPER must point to an executable file");
+    ).rejects.toThrow("DEX_WRAPPER must point to an executable file");
   });
 });

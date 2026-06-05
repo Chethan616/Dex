@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { OPENCLAW_CLI_ENV_VALUE } from "../infra/openclaw-exec-env.js";
+import { DEX_CLI_ENV_VALUE } from "../infra/openclaw-exec-env.js";
 import type { ExtensionContext } from "./sessions/index.js";
 
 const mocks = vi.hoisted(() => ({
@@ -96,7 +96,7 @@ vi.mock("../process/supervisor/index.js", () => ({
 
 let createExecTool: typeof import("./bash-tools.exec.js").createExecTool;
 let toToolDefinitions: typeof import("./agent-tool-definition-adapter.js").toToolDefinitions;
-let createOpenClawCodingTools: typeof import("./agent-tools.js").createOpenClawCodingTools;
+let createDexCodingTools: typeof import("./agent-tools.js").createDexCodingTools;
 const testExtensionContext = {} as ExtensionContext;
 
 function installResolveExecEnvHook(result: Record<string, string>) {
@@ -110,7 +110,7 @@ describe("exec resolve_exec_env hook wiring", () => {
   beforeAll(async () => {
     ({ createExecTool } = await import("./bash-tools.exec.js"));
     ({ toToolDefinitions } = await import("./agent-tool-definition-adapter.js"));
-    ({ createOpenClawCodingTools } = await import("./agent-tools.js"));
+    ({ createDexCodingTools } = await import("./agent-tools.js"));
   });
 
   beforeEach(() => {
@@ -127,7 +127,7 @@ describe("exec resolve_exec_env hook wiring", () => {
       PLUGIN_SAFE: "yes",
       PATH: "/tmp/plugin-bin",
       NODE_OPTIONS: "--require /tmp/hook.js",
-      OPENCLAW_CLI: "0",
+      DEX_CLI: "0",
       "bad-key": "bad",
     });
 
@@ -167,7 +167,7 @@ describe("exec resolve_exec_env hook wiring", () => {
       PLUGIN_SAFE: "yes",
     });
     expect(mocks.gatewayParams[0]?.env).not.toHaveProperty("NODE_OPTIONS");
-    expect(mocks.gatewayParams[0]?.env.OPENCLAW_CLI).toBe(OPENCLAW_CLI_ENV_VALUE);
+    expect(mocks.gatewayParams[0]?.env.DEX_CLI).toBe(DEX_CLI_ENV_VALUE);
     expect(mocks.gatewayParams[0]?.env.PATH).not.toBe("/tmp/plugin-bin");
     expect(mocks.spawnInputs[0]?.env).toMatchObject({
       EXISTING: "plugin",
@@ -265,7 +265,7 @@ describe("exec resolve_exec_env hook wiring", () => {
       }),
     };
 
-    const exec = createOpenClawCodingTools({
+    const exec = createDexCodingTools({
       agentId: "main",
       sessionKey: "agent:main:telegram:chat-1",
       cwd: process.cwd(),

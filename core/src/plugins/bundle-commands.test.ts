@@ -45,7 +45,7 @@ async function createTempDir(prefix: string): Promise<string> {
 }
 
 function resolveBundlePluginRoot(homeDir: string, pluginId: string) {
-  return path.join(homeDir, ".openclaw", "extensions", pluginId);
+  return path.join(homeDir, ".dex", "extensions", pluginId);
 }
 
 async function writeClaudeBundleCommandFixture(params: {
@@ -94,14 +94,14 @@ function expectEnabledClaudeBundleCommands(
 
 describe("loadEnabledClaudeBundleCommands", () => {
   it("loads enabled Claude bundle markdown commands and skips disabled-model-invocation entries", async () => {
-    const env = captureEnv(["HOME", "USERPROFILE", "OPENCLAW_HOME", "OPENCLAW_STATE_DIR"]);
+    const env = captureEnv(["HOME", "USERPROFILE", "DEX_HOME", "DEX_STATE_DIR"]);
     try {
       const homeDir = await createTempDir("openclaw-bundle-commands-home-");
       const workspaceDir = await createTempDir("openclaw-bundle-commands-workspace-");
       process.env.HOME = homeDir;
       process.env.USERPROFILE = homeDir;
-      delete process.env.OPENCLAW_HOME;
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_HOME;
+      delete process.env.DEX_STATE_DIR;
 
       await writeClaudeBundleCommandFixture({
         homeDir,

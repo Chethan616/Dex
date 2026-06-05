@@ -92,29 +92,29 @@ describe("supportsModelTools", () => {
 
 describe("createCopilotToolBridge", () => {
   it("returns empty arrays for unsupported providers without calling the seam", async () => {
-    const createOpenClawCodingTools = vi.fn(async () => [makeTool()]);
+    const createDexCodingTools = vi.fn(async () => [makeTool()]);
 
     const result = await createCopilotToolBridge({
       agentId: "agent-1",
-      createOpenClawCodingTools,
+      createDexCodingTools,
       modelId: "gpt-4o",
       modelProvider: "openai",
       sessionId: "session-1",
     });
 
     expect(result).toEqual({ sdkTools: [], sourceTools: [] });
-    expect(createOpenClawCodingTools).toHaveBeenCalledTimes(0);
+    expect(createDexCodingTools).toHaveBeenCalledTimes(0);
   });
 
-  it("forwards supported fields to injected createOpenClawCodingTools", async () => {
+  it("forwards supported fields to injected createDexCodingTools", async () => {
     const controller = new AbortController();
-    const createOpenClawCodingTools = vi.fn(async () => [makeTool()]);
+    const createDexCodingTools = vi.fn(async () => [makeTool()]);
 
     await createCopilotToolBridge({
       abortSignal: controller.signal,
       agentDir: "/agent",
       agentId: "agent-1",
-      createOpenClawCodingTools,
+      createDexCodingTools,
       cwd: "/workspace/task",
       modelId: "gpt-4o",
       modelProvider: "github-copilot",
@@ -123,11 +123,11 @@ describe("createCopilotToolBridge", () => {
       workspaceDir: "/workspace",
     });
 
-    expect(createOpenClawCodingTools).toHaveBeenCalledTimes(1);
+    expect(createDexCodingTools).toHaveBeenCalledTimes(1);
     // F6: the bridge now forwards PI-parity context fields too. This
     // test continues to assert the core flat fields plumb through; full
     // PI-parity is asserted in dedicated tests below.
-    expect(createOpenClawCodingTools).toHaveBeenCalledWith(
+    expect(createDexCodingTools).toHaveBeenCalledWith(
       expect.objectContaining({
         abortSignal: controller.signal,
         agentDir: "/agent",
@@ -149,7 +149,7 @@ describe("createCopilotToolBridge", () => {
 
     const result = await createCopilotToolBridge({
       agentId: "agent-1",
-      createOpenClawCodingTools: async () => sourceTools,
+      createDexCodingTools: async () => sourceTools,
       modelId: "gpt-4o",
       modelProvider: "github-copilot",
       sessionId: "session-1",
@@ -160,23 +160,23 @@ describe("createCopilotToolBridge", () => {
     expect(result.sdkTools.map((tool) => tool.name)).toEqual(["tool-a", "tool-b"]);
   });
 
-  it("throws when createOpenClawCodingTools returns a non-array", async () => {
+  it("throws when createDexCodingTools returns a non-array", async () => {
     await expect(
       createCopilotToolBridge({
         agentId: "agent-1",
-        createOpenClawCodingTools: async () => ({ tools: [] }) as never,
+        createDexCodingTools: async () => ({ tools: [] }) as never,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
       }),
-    ).rejects.toThrow("createOpenClawCodingTools must return an array");
+    ).rejects.toThrow("createDexCodingTools must return an array");
   });
 
-  it("throws when createOpenClawCodingTools rejects and includes the cause", async () => {
+  it("throws when createDexCodingTools rejects and includes the cause", async () => {
     await expect(
       createCopilotToolBridge({
         agentId: "agent-1",
-        createOpenClawCodingTools: async () => {
+        createDexCodingTools: async () => {
           throw new Error("factory failed");
         },
         modelId: "gpt-4o",
@@ -190,7 +190,7 @@ describe("createCopilotToolBridge", () => {
     await expect(
       createCopilotToolBridge({
         agentId: "agent-1",
-        createOpenClawCodingTools: async () => [
+        createDexCodingTools: async () => [
           makeTool({ name: "alpha" }),
           makeTool({ name: "beta" }),
           makeTool({ name: "alpha" }),
@@ -213,11 +213,11 @@ describe("createCopilotToolBridge", () => {
   // finding F6 and docs/plugins/copilot.md.
   describe("PI-parity attempt context (F6)", () => {
     function captureCall() {
-      const createOpenClawCodingTools = vi.fn(async () => [makeTool()]);
+      const createDexCodingTools = vi.fn(async () => [makeTool()]);
       return {
-        createOpenClawCodingTools,
+        createDexCodingTools,
         getOpts: () =>
-          (createOpenClawCodingTools.mock.calls[0] as unknown[] | undefined)?.[0] as Record<
+          (createDexCodingTools.mock.calls[0] as unknown[] | undefined)?.[0] as Record<
             string,
             unknown
           >,
@@ -225,7 +225,7 @@ describe("createCopilotToolBridge", () => {
     }
 
     it("forwards identity, owner/policy, and channel/routing fields from attemptParams", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
 
       await createCopilotToolBridge({
         agentId: "agent-1",
@@ -255,7 +255,7 @@ describe("createCopilotToolBridge", () => {
           enableHeartbeatTool: true,
           forceHeartbeatTool: false,
         } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -289,12 +289,12 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("falls back messageProvider to attemptParams.messageChannel when messageProvider is absent (codex parity)", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
 
       await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { messageChannel: "telegram" } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -304,7 +304,7 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("forwards authProfileStore, runId, config, and run hooks (onToolOutcome) from attemptParams", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
       const authProfileStore = { kind: "fake-store" } as never;
       const config = { agents: {} } as never;
       const onToolOutcome = vi.fn();
@@ -317,7 +317,7 @@ describe("createCopilotToolBridge", () => {
           config,
           onToolOutcome,
         } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -331,7 +331,7 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("prefers the unscoped toolAuthProfileStore when building OpenClaw tools", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
       const authProfileStore = { kind: "transport-scoped-store" } as never;
       const toolAuthProfileStore = { kind: "tool-store" } as never;
 
@@ -341,7 +341,7 @@ describe("createCopilotToolBridge", () => {
           authProfileStore,
           toolAuthProfileStore,
         } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -351,7 +351,7 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("derives sandboxSessionKey and runSessionKey from attemptParams (PI parity)", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
 
       await createCopilotToolBridge({
         agentId: "agent-1",
@@ -363,7 +363,7 @@ describe("createCopilotToolBridge", () => {
           sandboxSessionKey: "sandbox:agent:main",
           sessionKey: "agent:main:main",
         } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -375,12 +375,12 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("derives runSessionKey as undefined when sandboxSessionKey equals sessionKey", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
 
       await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { sessionKey: "agent:main:main" } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -392,12 +392,12 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("falls back sessionKey to input.sessionKey when attemptParams omits it (legacy callers)", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
 
       await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: {},
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -408,7 +408,7 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("computes modelApi, modelContextWindowTokens, modelCompat, and modelHasVision from attemptParams.model", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
 
       await createCopilotToolBridge({
         agentId: "agent-1",
@@ -420,7 +420,7 @@ describe("createCopilotToolBridge", () => {
             compat: { some: "shape" },
           },
         } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -434,12 +434,12 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("modelHasVision is false when model.input does not include 'image'", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
 
       await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { model: { input: ["text"] } } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -449,14 +449,14 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("spreads execOverrides and bashElevated into the exec field (PI parity)", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
       const execOverrides = { security: "fast" } as never;
       const bashElevated = { allowed: true } as never;
 
       await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { execOverrides, bashElevated } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -467,7 +467,7 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("forwards run-trace context (trigger, jobId, memoryFlushWritePath, toolsAllow) via buildEmbeddedAttemptToolRunContext", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
 
       await createCopilotToolBridge({
         agentId: "agent-1",
@@ -477,7 +477,7 @@ describe("createCopilotToolBridge", () => {
           memoryFlushWritePath: ".memory/append.md",
           toolsAllow: ["read", "edit"],
         } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -494,7 +494,7 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("onYield routes to sessionRef.current.abort() and invokes onYieldDetected when the live session is bound", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
       const abort = vi.fn();
       const sessionRef: { current: { abort?: () => unknown } | undefined } = {
         current: undefined,
@@ -503,7 +503,7 @@ describe("createCopilotToolBridge", () => {
 
       await createCopilotToolBridge({
         agentId: "agent-1",
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         onYieldDetected,
@@ -532,7 +532,7 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("onYield still aborts the live session when onYieldDetected throws (defense in depth)", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
       const abort = vi.fn();
       const sessionRef: { current: { abort?: () => unknown } | undefined } = {
         current: { abort },
@@ -541,7 +541,7 @@ describe("createCopilotToolBridge", () => {
 
       await createCopilotToolBridge({
         agentId: "agent-1",
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         onYieldDetected: () => {
@@ -558,7 +558,7 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("requireExplicitMessageTarget defaults to isSubagentSessionKey(sessionKey) when undefined", async () => {
-      const { createOpenClawCodingTools, getOpts } = captureCall();
+      const { createDexCodingTools, getOpts } = captureCall();
 
       await createCopilotToolBridge({
         agentId: "agent-1",
@@ -566,7 +566,7 @@ describe("createCopilotToolBridge", () => {
         // subagent key so the default must be true. Mirrors PI
         // attempt.ts:1097-1098.
         attemptParams: { sessionKey: "subagent:envelope:abc" } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -596,17 +596,17 @@ describe("createCopilotToolBridge", () => {
     }
 
     it("defaults sandbox to undefined and derives spawnWorkspaceDir from workspaceDir when no sandbox is passed (back-compat)", async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [makeTool()]);
+      const createDexCodingTools = vi.fn(async () => [makeTool()]);
       await createCopilotToolBridge({
         agentId: "agent-1",
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
         sessionKey: "session-1",
         workspaceDir: "/workspace",
       });
-      const opts = (createOpenClawCodingTools.mock.calls[0] as unknown[] | undefined)?.[0] as {
+      const opts = (createDexCodingTools.mock.calls[0] as unknown[] | undefined)?.[0] as {
         sandbox?: unknown;
         spawnWorkspaceDir?: unknown;
         workspaceDir?: unknown;
@@ -618,12 +618,12 @@ describe("createCopilotToolBridge", () => {
       expect(opts.spawnWorkspaceDir).toBeUndefined();
     });
 
-    it("forwards an explicit sandbox and spawnWorkspaceDir verbatim to createOpenClawCodingTools", async () => {
+    it("forwards an explicit sandbox and spawnWorkspaceDir verbatim to createDexCodingTools", async () => {
       const sandbox = makeSandboxStub();
-      const createOpenClawCodingTools = vi.fn(async () => [makeTool()]);
+      const createDexCodingTools = vi.fn(async () => [makeTool()]);
       await createCopilotToolBridge({
         agentId: "agent-1",
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sandbox,
@@ -632,7 +632,7 @@ describe("createCopilotToolBridge", () => {
         spawnWorkspaceDir: "/original-workspace",
         workspaceDir: "/sandbox/copy",
       });
-      const opts = (createOpenClawCodingTools.mock.calls[0] as unknown[] | undefined)?.[0] as {
+      const opts = (createDexCodingTools.mock.calls[0] as unknown[] | undefined)?.[0] as {
         sandbox?: unknown;
         spawnWorkspaceDir?: unknown;
         workspaceDir?: unknown;
@@ -644,10 +644,10 @@ describe("createCopilotToolBridge", () => {
 
     it("derives spawnWorkspaceDir from sandbox when caller omits it (fallback path)", async () => {
       const sandbox = makeSandboxStub({ workspaceAccess: "ro" });
-      const createOpenClawCodingTools = vi.fn(async () => [makeTool()]);
+      const createDexCodingTools = vi.fn(async () => [makeTool()]);
       await createCopilotToolBridge({
         agentId: "agent-1",
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sandbox,
@@ -655,7 +655,7 @@ describe("createCopilotToolBridge", () => {
         sessionKey: "session-1",
         workspaceDir: "/sandbox/copy",
       });
-      const opts = (createOpenClawCodingTools.mock.calls[0] as unknown[] | undefined)?.[0] as {
+      const opts = (createDexCodingTools.mock.calls[0] as unknown[] | undefined)?.[0] as {
         spawnWorkspaceDir?: unknown;
       };
       // Fallback derives spawnWorkspaceDir from (effective) workspaceDir
@@ -673,50 +673,50 @@ describe("createCopilotToolBridge", () => {
   // so a Copilot run cannot expose the SDK any tool that the same
   // OpenClaw attempt would suppress. These tests pin the contract.
   describe("tool-surface gating (PR #86155 [P1] round-6)", () => {
-    it("short-circuits when attemptParams.disableTools is true and never calls createOpenClawCodingTools", async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [makeTool()]);
+    it("short-circuits when attemptParams.disableTools is true and never calls createDexCodingTools", async () => {
+      const createDexCodingTools = vi.fn(async () => [makeTool()]);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { disableTools: true } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
       });
       expect(result).toEqual({ sdkTools: [], sourceTools: [] });
-      expect(createOpenClawCodingTools).toHaveBeenCalledTimes(0);
+      expect(createDexCodingTools).toHaveBeenCalledTimes(0);
     });
 
     it('short-circuits raw model runs signalled via promptMode: "none"', async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [makeTool()]);
+      const createDexCodingTools = vi.fn(async () => [makeTool()]);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { promptMode: "none" } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
       });
       expect(result).toEqual({ sdkTools: [], sourceTools: [] });
-      expect(createOpenClawCodingTools).toHaveBeenCalledTimes(0);
+      expect(createDexCodingTools).toHaveBeenCalledTimes(0);
     });
 
     it("short-circuits raw model runs signalled via modelRun: true", async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [makeTool()]);
+      const createDexCodingTools = vi.fn(async () => [makeTool()]);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { modelRun: true } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
       });
       expect(result).toEqual({ sdkTools: [], sourceTools: [] });
-      expect(createOpenClawCodingTools).toHaveBeenCalledTimes(0);
+      expect(createDexCodingTools).toHaveBeenCalledTimes(0);
     });
 
     it("filters constructed tools to exactly the allowlist when toolsAllow is narrow", async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "read" }),
         makeTool({ name: "edit" }),
         makeTool({ name: "message" }),
@@ -724,7 +724,7 @@ describe("createCopilotToolBridge", () => {
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: ["read"] } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -734,14 +734,14 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("returns no tools when toolsAllow is an empty list and nothing is forced", async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "read" }),
         makeTool({ name: "edit" }),
       ]);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: [] } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -751,14 +751,14 @@ describe("createCopilotToolBridge", () => {
     });
 
     it('merges "message" into an empty allowlist when forceMessageTool is true', async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "read" }),
         makeTool({ name: "message" }),
       ]);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: [], forceMessageTool: true } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -767,7 +767,7 @@ describe("createCopilotToolBridge", () => {
     });
 
     it('merges "message" into an empty allowlist when sourceReplyDeliveryMode is message_tool_only', async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "read" }),
         makeTool({ name: "message" }),
       ]);
@@ -777,7 +777,7 @@ describe("createCopilotToolBridge", () => {
           toolsAllow: [],
           sourceReplyDeliveryMode: "message_tool_only",
         } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -786,7 +786,7 @@ describe("createCopilotToolBridge", () => {
     });
 
     it('appends "message" to a narrow allowlist when forceMessageTool is true', async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "read" }),
         makeTool({ name: "edit" }),
         makeTool({ name: "message" }),
@@ -797,7 +797,7 @@ describe("createCopilotToolBridge", () => {
           toolsAllow: ["read"],
           forceMessageTool: true,
         } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -806,7 +806,7 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("does NOT force a message tool when disableMessageTool is true (disable wins over force)", async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "read" }),
         makeTool({ name: "message" }),
       ]);
@@ -817,7 +817,7 @@ describe("createCopilotToolBridge", () => {
           forceMessageTool: true,
           disableMessageTool: true,
         } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -827,11 +827,11 @@ describe("createCopilotToolBridge", () => {
 
     it("leaves the tool list unchanged when toolsAllow is undefined", async () => {
       const tools = [makeTool({ name: "read" }), makeTool({ name: "edit" })];
-      const createOpenClawCodingTools = vi.fn(async () => tools);
+      const createDexCodingTools = vi.fn(async () => tools);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: {} as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -841,11 +841,11 @@ describe("createCopilotToolBridge", () => {
 
     it("leaves the tool list unchanged when toolsAllow contains a wildcard", async () => {
       const tools = [makeTool({ name: "read" }), makeTool({ name: "edit" })];
-      const createOpenClawCodingTools = vi.fn(async () => tools);
+      const createDexCodingTools = vi.fn(async () => tools);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: ["*"] } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -857,7 +857,7 @@ describe("createCopilotToolBridge", () => {
       // The raw construction returns duplicate "edit" entries, but the
       // allowlist excludes "edit" entirely. PI parity: the duplicate
       // never reaches the SDK, so the bridge must not throw.
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "read" }),
         makeTool({ name: "edit" }),
         makeTool({ name: "edit" }),
@@ -865,7 +865,7 @@ describe("createCopilotToolBridge", () => {
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: ["read"] } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -880,7 +880,7 @@ describe("createCopilotToolBridge", () => {
         createCopilotToolBridge({
           agentId: "agent-1",
           attemptParams: { toolsAllow: ["read"] } as never,
-          createOpenClawCodingTools: async () => [
+          createDexCodingTools: async () => [
             makeTool({ name: "read" }),
             makeTool({ name: "read" }),
           ],
@@ -900,14 +900,14 @@ describe("createCopilotToolBridge", () => {
   // or `toolsAllow: ["apply-patch"]` resolves to the underlying tool.
   describe("tool-name aliases (PR #86155 [P1] round-7)", () => {
     it('matches the "exec" tool when toolsAllow contains "bash"', async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "exec" }),
         makeTool({ name: "read" }),
       ]);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: ["bash"] } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -916,14 +916,14 @@ describe("createCopilotToolBridge", () => {
     });
 
     it('matches the "apply_patch" tool when toolsAllow contains "apply-patch"', async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "apply_patch" }),
         makeTool({ name: "read" }),
       ]);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: ["apply-patch"] } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -932,7 +932,7 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("normalises case so uppercase/whitespace aliases still resolve", async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "exec" }),
         makeTool({ name: "apply_patch" }),
         makeTool({ name: "read" }),
@@ -940,7 +940,7 @@ describe("createCopilotToolBridge", () => {
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: [" BASH ", "Apply-Patch", "READ"] } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -953,14 +953,14 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("continues to match canonical names directly (no double-aliasing)", async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "exec" }),
         makeTool({ name: "apply_patch" }),
       ]);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: ["exec", "apply_patch"] } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -972,14 +972,14 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("honors core group allowlists through the shared embedded-runner filter", async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "read" }),
         makeTool({ name: "edit" }),
       ]);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: ["group:fs"] } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -988,14 +988,14 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("keeps plugin tools for plugin group allowlists", async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "memory_search", pluginId: "active-memory" } as never),
         makeTool({ name: "read" }),
       ]);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: ["group:plugins"] } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
@@ -1004,40 +1004,40 @@ describe("createCopilotToolBridge", () => {
     });
 
     it("keeps core tools available for glob allowlists", async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "web_fetch" }),
         makeTool({ name: "read" }),
       ]);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: ["web_*"] } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
       });
       expect(result.sourceTools.map((tool) => tool.name)).toEqual(["web_fetch"]);
-      const options = (createOpenClawCodingTools.mock.calls[0] as unknown[] | undefined)?.[0] as {
+      const options = (createDexCodingTools.mock.calls[0] as unknown[] | undefined)?.[0] as {
         toolConstructionPlan?: { includeOpenClawTools?: boolean };
       };
       expect(options?.toolConstructionPlan?.includeOpenClawTools).toBe(true);
     });
 
     it("does not keep apply_patch for a write-only allowlist", async () => {
-      const createOpenClawCodingTools = vi.fn(async () => [
+      const createDexCodingTools = vi.fn(async () => [
         makeTool({ name: "write" }),
         makeTool({ name: "apply_patch" }),
       ]);
       const result = await createCopilotToolBridge({
         agentId: "agent-1",
         attemptParams: { toolsAllow: ["write"] } as never,
-        createOpenClawCodingTools,
+        createDexCodingTools,
         modelId: "gpt-4o",
         modelProvider: "github-copilot",
         sessionId: "session-1",
       });
       expect(result.sourceTools.map((tool) => tool.name)).toEqual(["write"]);
-      const options = (createOpenClawCodingTools.mock.calls[0] as unknown[] | undefined)?.[0] as {
+      const options = (createDexCodingTools.mock.calls[0] as unknown[] | undefined)?.[0] as {
         toolConstructionPlan?: { includeShellTools?: boolean };
       };
       expect(options?.toolConstructionPlan?.includeShellTools).toBe(false);
@@ -1081,7 +1081,7 @@ describe("convertOpenClawToolToSdkTool", () => {
 
   it("sets skipPermission: true so OpenClaw's wrapped-tool internal enforcement handles permission decisions (PI-parity model)", () => {
     // Per the harness docs: every bridged OpenClaw tool comes from
-    // `createOpenClawCodingTools`, which already wraps each tool with
+    // `createDexCodingTools`, which already wraps each tool with
     // `wrapToolWithBeforeToolCallHook` (loop detection, trusted plugin
     // policies, before-tool-call hooks, two-phase plugin approvals via
     // the gateway). Asking the SDK to run its own `onPermissionRequest`
@@ -1098,7 +1098,7 @@ describe("convertOpenClawToolToSdkTool", () => {
   });
 
   it("marks every bridged tool as overridesBuiltInTool so OpenClaw owns names that collide with Copilot CLI built-ins (edit/read/write/bash/...)", () => {
-    // Real-world dogfood found that openclaw's createOpenClawCodingTools
+    // Real-world dogfood found that openclaw's createDexCodingTools
     // returns a tool named `edit`, which the bundled Copilot CLI also ships
     // as a built-in. The SDK rejects the registration unless the external
     // tool is explicitly marked as an override.

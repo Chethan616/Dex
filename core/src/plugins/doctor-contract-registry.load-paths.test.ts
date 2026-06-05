@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { findLegacyConfigIssues } from "../config/legacy.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import {
   applyPluginDoctorCompatibilityMigrations,
   clearPluginDoctorContractRegistryCache,
@@ -25,10 +25,10 @@ function makeHermeticDoctorEnv(stateDir: string): NodeJS.ProcessEnv {
   return {
     ...process.env,
     HOME: stateDir,
-    OPENCLAW_HOME: stateDir,
-    OPENCLAW_STATE_DIR: stateDir,
-    OPENCLAW_CONFIG_PATH: path.join(stateDir, "openclaw.json"),
-    OPENCLAW_DISABLE_BUNDLED_PLUGINS: "1",
+    DEX_HOME: stateDir,
+    DEX_STATE_DIR: stateDir,
+    DEX_CONFIG_PATH: path.join(stateDir, "openclaw.json"),
+    DEX_DISABLE_BUNDLED_PLUGINS: "1",
   };
 }
 
@@ -180,7 +180,7 @@ module.exports = {
   );
 }
 
-function createDoctorPluginConfig(pluginRoot: string, pluginId: string): OpenClawConfig {
+function createDoctorPluginConfig(pluginRoot: string, pluginId: string): DexConfig {
   return {
     plugins: {
       load: { paths: [pluginRoot] },
@@ -196,7 +196,7 @@ function createDoctorPluginConfig(pluginRoot: string, pluginId: string): OpenCla
   };
 }
 
-function readPluginLlmPolicy(config: OpenClawConfig, pluginId: string): Record<string, unknown> {
+function readPluginLlmPolicy(config: DexConfig, pluginId: string): Record<string, unknown> {
   const entry = config.plugins?.entries?.[pluginId] as { llm?: unknown } | undefined;
   return entry?.llm && typeof entry.llm === "object" && !Array.isArray(entry.llm)
     ? (entry.llm as Record<string, unknown>)

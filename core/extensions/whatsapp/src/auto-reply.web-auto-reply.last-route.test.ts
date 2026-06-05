@@ -1,5 +1,5 @@
 import "./test-helpers.js";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createAcceptedWhatsAppSendResult,
@@ -23,7 +23,7 @@ vi.mock("./auto-reply/monitor/last-route.js", async () => {
   };
 });
 
-function makeCfg(storePath: string): OpenClawConfig {
+function makeCfg(storePath: string): DexConfig {
   return {
     channels: { whatsapp: { allowFrom: ["*"] } },
     session: { store: storePath },
@@ -39,7 +39,7 @@ function makeReplyLogger() {
   } as unknown as Parameters<typeof createWebOnMessageHandler>[0]["replyLogger"];
 }
 
-function createHandlerForTest(opts: { cfg: OpenClawConfig; replyResolver: unknown }) {
+function createHandlerForTest(opts: { cfg: DexConfig; replyResolver: unknown }) {
   const backgroundTasks = new Set<Promise<unknown>>();
   const replyLogger = makeReplyLogger();
   const handler = createWebOnMessageHandler({

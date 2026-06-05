@@ -10,7 +10,7 @@ import type { WizardPrompter } from "openclaw/plugin-sdk/plugin-test-runtime";
 import { bundledPluginRoot } from "openclaw/plugin-sdk/test-fixtures";
 import ts from "typescript";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig, PluginRuntime, ResolvedLineAccount } from "../api.js";
+import type { DexConfig, PluginRuntime, ResolvedLineAccount } from "../api.js";
 import { linePlugin } from "./channel.js";
 import { lineGatewayAdapter } from "./gateway.js";
 import { probeLineBot } from "./probe.js";
@@ -175,7 +175,7 @@ describe("line setup wizard", () => {
 
     const result = await runSetupWizardConfigure({
       configure: lineConfigure,
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       prompter,
       options: {},
     });
@@ -202,14 +202,14 @@ describe("line setup wizard", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         "work",
       ),
     ).toBe("allowlist");
   });
 
   it("reports account-scoped config keys for named accounts", () => {
-    expect(lineSetupWizard.dmPolicy?.resolveConfigKeys?.({} as OpenClawConfig, "work")).toEqual({
+    expect(lineSetupWizard.dmPolicy?.resolveConfigKeys?.({} as DexConfig, "work")).toEqual({
       policyKey: "channels.line.accounts.work.dmPolicy",
       allowFromKey: "channels.line.accounts.work.allowFrom",
     });
@@ -231,7 +231,7 @@ describe("line setup wizard", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(lineSetupWizard.dmPolicy?.getCurrent(cfg)).toBe("allowlist");
     expect(lineSetupWizard.dmPolicy?.resolveConfigKeys?.(cfg)).toEqual({
@@ -263,7 +263,7 @@ describe("line setup wizard", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       "open",
       "work",
     );
@@ -300,7 +300,7 @@ describe("line setup wizard", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     expect(configured).toBe(false);
@@ -363,7 +363,7 @@ describe("linePlugin status.probeAccount", () => {
     });
 
     const params = {
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       account: {
         accountId: "default",
         enabled: true,

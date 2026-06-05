@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { RuntimeEnv } from "openclaw/plugin-sdk/runtime-env";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RequestClient } from "../internal/discord.js";
@@ -34,7 +34,7 @@ vi.mock("../send.js", async () => {
 let deliverDiscordReply: typeof import("./reply-delivery.js").deliverDiscordReply;
 
 type DeliverParams = Record<string, unknown> & {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   formatting?: unknown;
   deps?: Record<string, (...args: unknown[]) => Promise<unknown>>;
 };
@@ -82,7 +82,7 @@ describe("deliverDiscordReply", () => {
   const runtime = {} as RuntimeEnv;
   const cfg = {
     channels: { discord: { token: "test-token" } },
-  } as OpenClawConfig;
+  } as DexConfig;
 
   beforeAll(async () => {
     ({ deliverDiscordReply } = await import("./reply-delivery.js"));
@@ -431,7 +431,7 @@ describe("deliverDiscordReply", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await deliverDiscordReply({
       replies: [{ text: "formatted" }],

@@ -16,7 +16,7 @@ import {
 import { resolveStorePath } from "../config/sessions/paths.js";
 import { loadSessionStore } from "../config/sessions/store.js";
 import type { SessionEntry } from "../config/sessions/types.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { isTruthyEnvValue } from "../infra/env.js";
 import { clearPluginLoaderCache } from "../plugins/loader.js";
 import { resetPluginRuntimeStateForTest } from "../plugins/runtime.js";
@@ -24,14 +24,14 @@ import { sleep } from "../utils.js";
 import { startGatewayServer } from "./server.js";
 
 const LIVE = isLiveTestEnabled();
-const ACP_SPAWN_DEFAULTS_LIVE = isTruthyEnvValue(process.env.OPENCLAW_LIVE_ACP_SPAWN_DEFAULTS);
+const ACP_SPAWN_DEFAULTS_LIVE = isTruthyEnvValue(process.env.DEX_LIVE_ACP_SPAWN_DEFAULTS);
 const describeLive = LIVE && ACP_SPAWN_DEFAULTS_LIVE ? describe : describe.skip;
 const CONNECT_TIMEOUT_MS = resolvePositiveInteger(
-  process.env.OPENCLAW_LIVE_ACP_SPAWN_DEFAULTS_CONNECT_TIMEOUT_MS,
+  process.env.DEX_LIVE_ACP_SPAWN_DEFAULTS_CONNECT_TIMEOUT_MS,
   90_000,
 );
 const LIVE_TIMEOUT_MS = resolvePositiveInteger(
-  process.env.OPENCLAW_LIVE_ACP_SPAWN_DEFAULTS_TIMEOUT_MS,
+  process.env.DEX_LIVE_ACP_SPAWN_DEFAULTS_TIMEOUT_MS,
   240_000,
 );
 
@@ -41,19 +41,19 @@ function resolvePositiveInteger(raw: string | undefined, fallback: number): numb
 }
 
 function resolveSubagentModel(): string {
-  return process.env.OPENCLAW_LIVE_ACP_SPAWN_DEFAULTS_MODEL?.trim() || "openai/gpt-5.5";
+  return process.env.DEX_LIVE_ACP_SPAWN_DEFAULTS_MODEL?.trim() || "openai/gpt-5.5";
 }
 
 function resolveThinking(): string {
-  return process.env.OPENCLAW_LIVE_ACP_SPAWN_DEFAULTS_THINKING?.trim() || "high";
+  return process.env.DEX_LIVE_ACP_SPAWN_DEFAULTS_THINKING?.trim() || "high";
 }
 
 function resolveHarnessModel(): string {
-  return process.env.OPENCLAW_LIVE_ACP_BIND_CODEX_MODEL?.trim() || "gpt-5.5";
+  return process.env.DEX_LIVE_ACP_BIND_CODEX_MODEL?.trim() || "gpt-5.5";
 }
 
 function resolveAcpAgentId(): string {
-  return process.env.OPENCLAW_LIVE_ACP_SPAWN_DEFAULTS_AGENT?.trim() || "codex";
+  return process.env.DEX_LIVE_ACP_SPAWN_DEFAULTS_AGENT?.trim() || "codex";
 }
 
 function resolveAcpAgentCommand(): { command: string; args?: string[] } {
@@ -155,7 +155,7 @@ async function waitForAcpBackendReady(timeoutMs = CONNECT_TIMEOUT_MS): Promise<v
 }
 
 async function waitForSessionEntry(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   sessionKey: string;
   timeoutMs?: number;
 }): Promise<SessionEntry> {
@@ -179,7 +179,7 @@ function createConfig(params: {
   subagentModel?: string;
   thinking?: string;
   includePrimaryOnlyAcpAgent?: boolean;
-}): OpenClawConfig {
+}): DexConfig {
   const subagents = params.subagentModel
     ? {
         allowAgents: ["*"],
@@ -263,14 +263,14 @@ describeLive("gateway live (ACP spawn defaults)", () => {
     "applies existing subagent defaults to live ACP spawns without leaking primary agent model",
     async () => {
       const previous = {
-        configPath: process.env.OPENCLAW_CONFIG_PATH,
-        stateDir: process.env.OPENCLAW_STATE_DIR,
-        token: process.env.OPENCLAW_GATEWAY_TOKEN,
-        port: process.env.OPENCLAW_GATEWAY_PORT,
-        skipChannels: process.env.OPENCLAW_SKIP_CHANNELS,
-        skipGmail: process.env.OPENCLAW_SKIP_GMAIL_WATCHER,
-        skipCron: process.env.OPENCLAW_SKIP_CRON,
-        skipCanvas: process.env.OPENCLAW_SKIP_CANVAS_HOST,
+        configPath: process.env.DEX_CONFIG_PATH,
+        stateDir: process.env.DEX_STATE_DIR,
+        token: process.env.DEX_GATEWAY_TOKEN,
+        port: process.env.DEX_GATEWAY_PORT,
+        skipChannels: process.env.DEX_SKIP_CHANNELS,
+        skipGmail: process.env.DEX_SKIP_GMAIL_WATCHER,
+        skipCron: process.env.DEX_SKIP_CRON,
+        skipCanvas: process.env.DEX_SKIP_CANVAS_HOST,
         codexHome: process.env.CODEX_HOME,
       };
       const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-live-acp-spawn-"));
@@ -283,14 +283,14 @@ describeLive("gateway live (ACP spawn defaults)", () => {
       const thinking = resolveThinking();
       const sessionKeys: string[] = [];
 
-      process.env.OPENCLAW_CONFIG_PATH = tempConfigPath;
-      process.env.OPENCLAW_STATE_DIR = tempStateDir;
-      process.env.OPENCLAW_SKIP_CHANNELS = "1";
-      process.env.OPENCLAW_SKIP_GMAIL_WATCHER = "1";
-      process.env.OPENCLAW_SKIP_CRON = "1";
-      process.env.OPENCLAW_SKIP_CANVAS_HOST = "1";
-      process.env.OPENCLAW_GATEWAY_TOKEN = token;
-      process.env.OPENCLAW_GATEWAY_PORT = String(port);
+      process.env.DEX_CONFIG_PATH = tempConfigPath;
+      process.env.DEX_STATE_DIR = tempStateDir;
+      process.env.DEX_SKIP_CHANNELS = "1";
+      process.env.DEX_SKIP_GMAIL_WATCHER = "1";
+      process.env.DEX_SKIP_CRON = "1";
+      process.env.DEX_SKIP_CANVAS_HOST = "1";
+      process.env.DEX_GATEWAY_TOKEN = token;
+      process.env.DEX_GATEWAY_PORT = String(port);
       await prepareCodexHomeForLiveSpawnDefaultsTest(tempRoot);
 
       const cfg = createConfig({
@@ -383,44 +383,44 @@ describeLive("gateway live (ACP spawn defaults)", () => {
         await server.close();
         await fs.rm(tempRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         if (previous.configPath === undefined) {
-          delete process.env.OPENCLAW_CONFIG_PATH;
+          delete process.env.DEX_CONFIG_PATH;
         } else {
-          process.env.OPENCLAW_CONFIG_PATH = previous.configPath;
+          process.env.DEX_CONFIG_PATH = previous.configPath;
         }
         if (previous.stateDir === undefined) {
-          delete process.env.OPENCLAW_STATE_DIR;
+          delete process.env.DEX_STATE_DIR;
         } else {
-          process.env.OPENCLAW_STATE_DIR = previous.stateDir;
+          process.env.DEX_STATE_DIR = previous.stateDir;
         }
         if (previous.token === undefined) {
-          delete process.env.OPENCLAW_GATEWAY_TOKEN;
+          delete process.env.DEX_GATEWAY_TOKEN;
         } else {
-          process.env.OPENCLAW_GATEWAY_TOKEN = previous.token;
+          process.env.DEX_GATEWAY_TOKEN = previous.token;
         }
         if (previous.port === undefined) {
-          delete process.env.OPENCLAW_GATEWAY_PORT;
+          delete process.env.DEX_GATEWAY_PORT;
         } else {
-          process.env.OPENCLAW_GATEWAY_PORT = previous.port;
+          process.env.DEX_GATEWAY_PORT = previous.port;
         }
         if (previous.skipChannels === undefined) {
-          delete process.env.OPENCLAW_SKIP_CHANNELS;
+          delete process.env.DEX_SKIP_CHANNELS;
         } else {
-          process.env.OPENCLAW_SKIP_CHANNELS = previous.skipChannels;
+          process.env.DEX_SKIP_CHANNELS = previous.skipChannels;
         }
         if (previous.skipGmail === undefined) {
-          delete process.env.OPENCLAW_SKIP_GMAIL_WATCHER;
+          delete process.env.DEX_SKIP_GMAIL_WATCHER;
         } else {
-          process.env.OPENCLAW_SKIP_GMAIL_WATCHER = previous.skipGmail;
+          process.env.DEX_SKIP_GMAIL_WATCHER = previous.skipGmail;
         }
         if (previous.skipCron === undefined) {
-          delete process.env.OPENCLAW_SKIP_CRON;
+          delete process.env.DEX_SKIP_CRON;
         } else {
-          process.env.OPENCLAW_SKIP_CRON = previous.skipCron;
+          process.env.DEX_SKIP_CRON = previous.skipCron;
         }
         if (previous.skipCanvas === undefined) {
-          delete process.env.OPENCLAW_SKIP_CANVAS_HOST;
+          delete process.env.DEX_SKIP_CANVAS_HOST;
         } else {
-          process.env.OPENCLAW_SKIP_CANVAS_HOST = previous.skipCanvas;
+          process.env.DEX_SKIP_CANVAS_HOST = previous.skipCanvas;
         }
         if (previous.codexHome === undefined) {
           delete process.env.CODEX_HOME;

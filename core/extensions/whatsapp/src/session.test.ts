@@ -24,7 +24,7 @@ const { envHttpProxyAgentCtor, proxyAgentCtor } = vi.hoisted(() => ({
   }),
 }));
 
-const TEST_UNDICI_RUNTIME_DEPS_KEY = "__OPENCLAW_TEST_UNDICI_RUNTIME_DEPS__";
+const TEST_UNDICI_RUNTIME_DEPS_KEY = "__DEX_TEST_UNDICI_RUNTIME_DEPS__";
 
 vi.mock("undici", async () => {
   const actual = await vi.importActual<typeof import("undici")>("undici");
@@ -428,8 +428,8 @@ describe("web session", () => {
   it("adds managed proxy CA trust to WhatsApp env proxy agents", async () => {
     const caFile = createTempCaFile("whatsapp-managed-proxy-ca");
     vi.stubEnv("HTTPS_PROXY", "https://proxy.test:8443");
-    vi.stubEnv("OPENCLAW_PROXY_ACTIVE", "1");
-    vi.stubEnv("OPENCLAW_PROXY_CA_FILE", caFile);
+    vi.stubEnv("DEX_PROXY_ACTIVE", "1");
+    vi.stubEnv("DEX_PROXY_CA_FILE", caFile);
 
     await createWaSocket(false, false);
 
@@ -450,8 +450,8 @@ describe("web session", () => {
     const caFile = createTempCaFile("whatsapp-managed-env-proxy-ca");
     vi.stubEnv("HTTPS_PROXY", "https://proxy.test:8443");
     vi.stubEnv("NO_PROXY", "mmg.whatsapp.net");
-    vi.stubEnv("OPENCLAW_PROXY_ACTIVE", "1");
-    vi.stubEnv("OPENCLAW_PROXY_CA_FILE", caFile);
+    vi.stubEnv("DEX_PROXY_ACTIVE", "1");
+    vi.stubEnv("DEX_PROXY_CA_FILE", caFile);
 
     await createWaSocket(false, false);
 

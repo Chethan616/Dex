@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { openOpenClawStateDatabase } from "../state/openclaw-state-db.js";
+import { openDexStateDatabase } from "../state/openclaw-state-db.js";
 import { withTempDir } from "../test-helpers/temp-dir.js";
 import {
   ackSessionDelivery,
@@ -10,8 +10,8 @@ import {
 
 describe("session-delivery queue storage", () => {
   function readSessionQueueStatus(tempDir: string, id: string): string | undefined {
-    const { db } = openOpenClawStateDatabase({
-      env: { ...process.env, OPENCLAW_STATE_DIR: tempDir },
+    const { db } = openDexStateDatabase({
+      env: { ...process.env, DEX_STATE_DIR: tempDir },
     });
     const row = db
       .prepare("SELECT status FROM delivery_queue_entries WHERE queue_name = 'session' AND id = ?")

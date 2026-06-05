@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { setActivePluginRegistry } from "../plugins/runtime.js";
 import { createOutboundTestPlugin, createTestRegistry } from "../test-utils/channel-plugins.js";
 import { resolveCommandAuthorization } from "./command-auth.js";
@@ -79,7 +79,7 @@ describe("resolveCommandAuthorization", () => {
     registerAllowFromPlugins(createAllowFromPlugin("mobilechat", () => params.allowFrom));
     const cfg = {
       channels: { mobilechat: { allowFrom: params.allowFrom } },
-    } as OpenClawConfig;
+    } as DexConfig;
     const ctx = {
       Provider: "mobilechat",
       Surface: "mobilechat",
@@ -151,7 +151,7 @@ describe("resolveCommandAuthorization", () => {
     const cfg = {
       commands: { ownerAllowFrom: ["whatsapp:+15551234567"] },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const ownerCtx = {
       Provider: "whatsapp",
@@ -206,7 +206,7 @@ describe("resolveCommandAuthorization", () => {
     );
     const cfg = {
       channels: { discord: { allowFrom: ["*"] } },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const auth = resolveCommandAuthorization({
       ctx: {
@@ -248,7 +248,7 @@ describe("resolveCommandAuthorization", () => {
     );
     const cfg = {
       channels: { discord: { allowFrom: ["*"] } },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const auth = resolveCommandAuthorization({
       ctx: {
@@ -271,7 +271,7 @@ describe("resolveCommandAuthorization", () => {
     const cfg = {
       commands: { ownerAllowFrom: ["whatsapp:+15551234567"] },
       channels: { whatsapp: {} },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const ownerAuth = resolveCommandAuthorization({
       ctx: {
@@ -315,7 +315,7 @@ describe("resolveCommandAuthorization", () => {
     );
     const cfg = {
       channels: { discord: {} },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const ctx = {
       Provider: "discord",
@@ -338,7 +338,7 @@ describe("resolveCommandAuthorization", () => {
   it("suppresses inherited owner status when the context forbids it", () => {
     const cfg = {
       channels: { telegram: { allowFrom: ["owner-123"] } },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const auth = resolveCommandAuthorization({
       ctx: {
@@ -358,7 +358,7 @@ describe("resolveCommandAuthorization", () => {
   it("does not infer a provider from channel allowlists for webchat command contexts", () => {
     const cfg = {
       channels: { whatsapp: { allowFrom: ["+15551234567"] } },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const ctx = {
       Provider: "webchat",
@@ -380,7 +380,7 @@ describe("resolveCommandAuthorization", () => {
   it("does not apply channel-prefixed owner wildcards to webchat command contexts", () => {
     const cfg = {
       commands: { ownerAllowFrom: ["discord:*"] },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const auth = resolveCommandAuthorization({
       ctx: {
@@ -401,7 +401,7 @@ describe("resolveCommandAuthorization", () => {
   it("does not apply channel-prefixed owner identities to webchat command contexts", () => {
     const cfg = {
       commands: { ownerAllowFrom: ["discord:123456789012345678"] },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const auth = resolveCommandAuthorization({
       ctx: {
@@ -422,7 +422,7 @@ describe("resolveCommandAuthorization", () => {
   it("applies channel-prefixed owner identities to matching providers", () => {
     const cfg = {
       commands: { ownerAllowFrom: ["discord:123456789012345678"] },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const auth = resolveCommandAuthorization({
       ctx: {
@@ -442,7 +442,7 @@ describe("resolveCommandAuthorization", () => {
   it("does not apply channel-prefixed owner wildcards to mismatched providers", () => {
     const cfg = {
       commands: { ownerAllowFrom: ["telegram:*"] },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const auth = resolveCommandAuthorization({
       ctx: {
@@ -463,7 +463,7 @@ describe("resolveCommandAuthorization", () => {
     const cfg = {
       commands: { allowFrom: { whatsapp: ["+15551234567"] } },
       channels: { whatsapp: { allowFrom: ["+15551234567"] } },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const auth = resolveCommandAuthorization({
       ctx: {
@@ -487,7 +487,7 @@ describe("resolveCommandAuthorization", () => {
     );
     const cfg = {
       channels: { telegram: { allowFrom: ["123"] } },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const auth = resolveCommandAuthorization({
       ctx: {
@@ -513,7 +513,7 @@ describe("resolveCommandAuthorization", () => {
         },
       },
       channels: { whatsapp: { allowFrom: ["+different"] } },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     function makeWhatsAppContext(senderId: string): MsgContext {
       return {
@@ -570,7 +570,7 @@ describe("resolveCommandAuthorization", () => {
           },
         },
         channels: { whatsapp: { allowFrom: ["*"] } },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       // User in global list but not in whatsapp-specific list
       const globalUserCtx = {
@@ -609,7 +609,7 @@ describe("resolveCommandAuthorization", () => {
     it("falls back to channel allowFrom when commands.allowFrom not set", () => {
       const cfg = {
         channels: { whatsapp: { allowFrom: ["+15551234567"] } },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const authorizedCtx = {
         Provider: "whatsapp",
@@ -635,7 +635,7 @@ describe("resolveCommandAuthorization", () => {
           },
         },
         channels: { whatsapp: { allowFrom: ["+specific"] } },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const anyUserCtx = {
         Provider: "whatsapp",
@@ -662,7 +662,7 @@ describe("resolveCommandAuthorization", () => {
           },
         },
         channels: { telegram: { allowFrom: ["*"] } },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const auth = resolveCommandAuthorization({
         ctx: {
@@ -690,7 +690,7 @@ describe("resolveCommandAuthorization", () => {
           },
         },
         channels: { discord: { allowFrom: ["*"] } },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const auth = resolveCommandAuthorization({
         ctx: {
@@ -716,7 +716,7 @@ describe("resolveCommandAuthorization", () => {
             discord: ["channel:123456789012345678"],
           },
         },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const auth = resolveCommandAuthorization({
         ctx: {
@@ -740,7 +740,7 @@ describe("resolveCommandAuthorization", () => {
             discord: ["123456789012345678"],
           },
         },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const auth = resolveCommandAuthorization({
         ctx: {
@@ -765,7 +765,7 @@ describe("resolveCommandAuthorization", () => {
             "*": ["demo:group:room-1"],
           },
         },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const auth = resolveCommandAuthorization({
         ctx: {
@@ -789,7 +789,7 @@ describe("resolveCommandAuthorization", () => {
             discord: ["user:123", "<@!456>", "pk:member-1"],
           },
         },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const userAuth = resolveCommandAuthorization({
         ctx: makeDiscordContext("123"),
@@ -842,7 +842,7 @@ describe("resolveCommandAuthorization", () => {
             allowFrom: ["123"],
           },
         },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const auth = resolveCommandAuthorization({
         ctx: {
@@ -877,7 +877,7 @@ describe("resolveCommandAuthorization", () => {
           channels: {
             telegram: {},
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         commandAuthorized: true,
       });
 
@@ -903,7 +903,7 @@ describe("resolveCommandAuthorization", () => {
           channels: {
             slack: {},
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         commandAuthorized: false,
       });
 
@@ -931,7 +931,7 @@ describe("resolveCommandAuthorization", () => {
               allowFrom: ["123"],
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         commandAuthorized: false,
       });
 
@@ -963,7 +963,7 @@ describe("resolveCommandAuthorization", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         commandAuthorized: true,
       });
 
@@ -984,7 +984,7 @@ describe("resolveCommandAuthorization", () => {
           channels: {
             discord: {},
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         commandAuthorized: true,
       });
 
@@ -1008,7 +1008,7 @@ describe("resolveCommandAuthorization", () => {
                 allowFrom: ["123"],
               },
             },
-          } as OpenClawConfig,
+          } as DexConfig,
           commandAuthorized: true,
         });
         expect(warn).toHaveBeenCalledTimes(1);
@@ -1022,7 +1022,7 @@ describe("resolveCommandAuthorization", () => {
   });
 
   it("grants senderIsOwner for internal channel with operator.admin scope", () => {
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as DexConfig;
     const ctx = {
       Provider: "webchat",
       Surface: "webchat",
@@ -1037,7 +1037,7 @@ describe("resolveCommandAuthorization", () => {
   });
 
   it("does not grant senderIsOwner for internal channel without admin scope", () => {
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as DexConfig;
     const ctx = {
       Provider: "webchat",
       Surface: "webchat",
@@ -1052,7 +1052,7 @@ describe("resolveCommandAuthorization", () => {
   });
 
   it("does not grant senderIsOwner for external channel even with admin scope", () => {
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as DexConfig;
     const ctx = {
       Provider: "telegram",
       Surface: "telegram",

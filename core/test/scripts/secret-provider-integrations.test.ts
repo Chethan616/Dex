@@ -101,9 +101,9 @@ function runProofHarness(
     encoding: "utf8",
     env: {
       ...process.env,
-      OPENCLAW_ENTRY: fakeOpenClaw,
-      OPENCLAW_SECRET_PROOF_READY_MS: "60",
-      OPENCLAW_SECRET_PROOF_RPC_MS: "1000",
+      DEX_ENTRY: fakeOpenClaw,
+      DEX_SECRET_PROOF_READY_MS: "60",
+      DEX_SECRET_PROOF_RPC_MS: "1000",
       ...envOverrides,
     },
     timeout: 5_000,
@@ -123,9 +123,9 @@ describe("secret provider integration proof harness", () => {
     fs.writeFileSync(fakePnpm, "#!/usr/bin/env node\n", { mode: 0o755 });
     const proof = await import(`${pathToFileURL(proofScriptPath).href}?case=${Date.now()}`);
 
-    const command = await proof.resolveOpenClawCommand(
+    const command = await proof.resolveDexCommand(
       ["gateway", "status"],
-      { ...process.env, OPENCLAW_SECRET_PROOF_SENTINEL: "1" },
+      { ...process.env, DEX_SECRET_PROOF_SENTINEL: "1" },
       {
         nodeExecPath: "/opt/node/bin/node",
         npmExecPath: fakePnpm,
@@ -135,7 +135,7 @@ describe("secret provider integration proof harness", () => {
 
     expect(command.command).toBe("/opt/node/bin/node");
     expect(command.args).toEqual([fakePnpm, "openclaw", "gateway", "status"]);
-    expect(command.options.env.OPENCLAW_SECRET_PROOF_SENTINEL).toBe("1");
+    expect(command.options.env.DEX_SECRET_PROOF_SENTINEL).toBe("1");
     expect(command.options.shell).toBe(false);
   });
 
@@ -158,7 +158,7 @@ describe("secret provider integration proof harness", () => {
       gatewayDescendantMarkerPath: markerPath,
     });
     const result = runProofHarness(root, fakeOpenClaw, "start", {
-      OPENCLAW_SECRET_PROOF_TEARDOWN_GRACE_MS: "100",
+      DEX_SECRET_PROOF_TEARDOWN_GRACE_MS: "100",
     });
 
     expect(result.error).toBeUndefined();
@@ -176,8 +176,8 @@ describe("secret provider integration proof harness", () => {
   });
 
   it("bounds captured command output", async () => {
-    const previousLimit = process.env.OPENCLAW_SECRET_PROOF_OUTPUT_BYTES;
-    process.env.OPENCLAW_SECRET_PROOF_OUTPUT_BYTES = "1024";
+    const previousLimit = process.env.DEX_SECRET_PROOF_OUTPUT_BYTES;
+    process.env.DEX_SECRET_PROOF_OUTPUT_BYTES = "1024";
     try {
       const proof = await import(
         `${pathToFileURL(proofScriptPath).href}?case=output-${Date.now()}`
@@ -192,9 +192,9 @@ describe("secret provider integration proof harness", () => {
       expect(result.stdout).toContain("stdout truncated after 1024 bytes");
     } finally {
       if (previousLimit === undefined) {
-        delete process.env.OPENCLAW_SECRET_PROOF_OUTPUT_BYTES;
+        delete process.env.DEX_SECRET_PROOF_OUTPUT_BYTES;
       } else {
-        process.env.OPENCLAW_SECRET_PROOF_OUTPUT_BYTES = previousLimit;
+        process.env.DEX_SECRET_PROOF_OUTPUT_BYTES = previousLimit;
       }
     }
   });
@@ -264,7 +264,7 @@ describe("secret provider integration proof harness", () => {
     const root = makeTempDir();
     const fakeOpenClaw = writeLeakingStartupOpenClaw(root);
     const result = runProofHarness(root, fakeOpenClaw, "startup-fails", {
-      OPENCLAW_SECRET_PROOF_OUTPUT_BYTES: "128",
+      DEX_SECRET_PROOF_OUTPUT_BYTES: "128",
     });
 
     expect(result.error).toBeUndefined();

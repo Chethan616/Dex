@@ -236,7 +236,7 @@ describe("scanStatusJsonFast", () => {
   it("skips gateway and update probes on cold-start status --json", async () => {
     await withTemporaryEnv(
       {
-        OPENCLAW_TWITCH_ACCESS_TOKEN: undefined,
+        DEX_TWITCH_ACCESS_TOKEN: undefined,
         TELEGRAM_BOT_TOKEN: undefined,
         VITEST: undefined,
         VITEST_POOL_ID: undefined,
@@ -254,7 +254,7 @@ describe("scanStatusJsonFast", () => {
   it("keeps cold-start gateway probes with local-only updates when a channel is configured from manifest env vars", async () => {
     await withTemporaryEnv(
       {
-        OPENCLAW_TWITCH_ACCESS_TOKEN: "token",
+        DEX_TWITCH_ACCESS_TOKEN: "token",
         VITEST: undefined,
         VITEST_POOL_ID: undefined,
         NODE_ENV: undefined,

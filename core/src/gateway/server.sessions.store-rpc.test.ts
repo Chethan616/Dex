@@ -456,14 +456,14 @@ test("lists and patches session store via sessions.* RPC", async () => {
 });
 
 test("sessions.list configuredAgentsOnly keeps configured-agent children and hides unrelated stores", async () => {
-  const stateDir = process.env.OPENCLAW_STATE_DIR;
+  const stateDir = process.env.DEX_STATE_DIR;
   if (!stateDir) {
-    throw new Error("OPENCLAW_STATE_DIR is required for gateway session tests");
+    throw new Error("DEX_STATE_DIR is required for gateway session tests");
   }
   testState.agentsConfig = { list: [{ id: "main", default: true }] };
-  const configPath = process.env.OPENCLAW_CONFIG_PATH;
+  const configPath = process.env.DEX_CONFIG_PATH;
   if (!configPath) {
-    throw new Error("OPENCLAW_CONFIG_PATH is required for gateway session tests");
+    throw new Error("DEX_CONFIG_PATH is required for gateway session tests");
   }
   await fs.writeFile(
     configPath,

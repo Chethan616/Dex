@@ -271,7 +271,7 @@ describe("lookupContextTokens", () => {
     expect(discoverCall[0]).toEqual({});
     expect(typeof discoverAgentDir).toBe("string");
     expect(
-      path.normalize(discoverAgentDir).endsWith(path.join(".openclaw", "agents", "main", "agent")),
+      path.normalize(discoverAgentDir).endsWith(path.join(".dex", "agents", "main", "agent")),
     ).toBe(true);
     expect(discoverCall[2]).toEqual({
       normalizeModels: false,

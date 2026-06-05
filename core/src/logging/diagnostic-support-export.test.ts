@@ -182,7 +182,7 @@ describe("diagnostic support export", () => {
       env: {
         ...process.env,
         HOME: tempDir,
-        OPENCLAW_STATE_DIR: tempDir,
+        DEX_STATE_DIR: tempDir,
       },
       stateDir: tempDir,
       outputPath,
@@ -198,7 +198,7 @@ describe("diagnostic support export", () => {
             programArguments: ["openclaw", "gateway", "run", "--token", fakeToken],
             environment: {
               HOME: tempDir,
-              OPENCLAW_GATEWAY_TOKEN: fakeToken,
+              DEX_GATEWAY_TOKEN: fakeToken,
             },
           },
         },
@@ -269,7 +269,7 @@ describe("diagnostic support export", () => {
     expect(combined).not.toContain(fakeJwt);
     expect(combined).toContain("payload.large");
     expect(combined).toContain("gateway.http.json");
-    expect(combined).toContain("$OPENCLAW_STATE_DIR");
+    expect(combined).toContain("$DEX_STATE_DIR");
     expect(combined).toContain("<redacted-hostname>");
     expect(combined).toContain("gateway-status.json");
     expect(combined).toContain("gateway-health.json");
@@ -319,7 +319,7 @@ describe("diagnostic support export", () => {
       "--token",
       "<redacted>",
     ]);
-    expect(status.data?.service?.command?.environment?.OPENCLAW_GATEWAY_TOKEN).toBe("<redacted>");
+    expect(status.data?.service?.command?.environment?.DEX_GATEWAY_TOKEN).toBe("<redacted>");
     expect(JSON.stringify(status)).toContain(
       "wss://<redacted>:<redacted>@gateway.example/ws?token=<redacted>",
     );
@@ -427,7 +427,7 @@ describe("diagnostic support export", () => {
       env: {
         ...process.env,
         HOME: tempDir,
-        OPENCLAW_STATE_DIR: tempDir,
+        DEX_STATE_DIR: tempDir,
       },
       stateDir: tempDir,
       outputPath,
@@ -497,9 +497,9 @@ describe("diagnostic support export", () => {
       env: {
         ...process.env,
         HOME: tempDir,
-        OPENCLAW_CONFIG_PATH: configPath,
-        OPENCLAW_DISABLE_BONJOUR: "1",
-        OPENCLAW_STATE_DIR: tempDir,
+        DEX_CONFIG_PATH: configPath,
+        DEX_DISABLE_BONJOUR: "1",
+        DEX_STATE_DIR: tempDir,
       },
       stateDir: tempDir,
       outputPath,
@@ -570,7 +570,7 @@ describe("diagnostic support export", () => {
     const redaction = {
       env: {
         HOME: tempDir,
-        OPENCLAW_STATE_DIR: tempDir,
+        DEX_STATE_DIR: tempDir,
       },
       stateDir: tempDir,
     };
@@ -586,7 +586,7 @@ describe("diagnostic support export", () => {
     const redaction = {
       env: {
         HOME: tempDir,
-        OPENCLAW_STATE_DIR: tempDir,
+        DEX_STATE_DIR: tempDir,
       },
       stateDir: tempDir,
     };
@@ -673,13 +673,13 @@ describe("diagnostic support export", () => {
     const redaction = {
       env: {
         USERPROFILE: userProfile,
-        OPENCLAW_STATE_DIR: stateDir,
+        DEX_STATE_DIR: stateDir,
       },
       stateDir,
     };
 
     expect(redactSupportString(`${stateDir}\\logs\\gateway.log`, redaction)).toBe(
-      "$OPENCLAW_STATE_DIR\\logs\\gateway.log",
+      "$DEX_STATE_DIR\\logs\\gateway.log",
     );
     expect(
       redactSupportString(`failed at ${userProfile}\\Documents\\snapshot-error.txt`, redaction),
@@ -710,7 +710,7 @@ describe("diagnostic support export", () => {
     const serialized = JSON.stringify(status);
     expect(serialized).not.toContain("support-user");
     expect(serialized).toContain("~\\\\openclaw\\\\dist\\\\index.js");
-    expect(serialized).toContain("$OPENCLAW_STATE_DIR\\\\openclaw.json");
+    expect(serialized).toContain("$DEX_STATE_DIR\\\\openclaw.json");
     expect(serialized).toContain("~\\\\AppData\\\\Local\\\\openclaw\\\\gateway-service.json");
   });
 
@@ -722,7 +722,7 @@ describe("diagnostic support export", () => {
       env: {
         ...process.env,
         HOME: tempDir,
-        OPENCLAW_STATE_DIR: tempDir,
+        DEX_STATE_DIR: tempDir,
       },
       stateDir: tempDir,
       outputPath,
@@ -763,7 +763,7 @@ describe("diagnostic support export", () => {
       env: {
         ...process.env,
         HOME: tempDir,
-        OPENCLAW_STATE_DIR: tempDir,
+        DEX_STATE_DIR: tempDir,
       },
       stateDir: tempDir,
       outputPath,
@@ -802,8 +802,8 @@ describe("diagnostic support export", () => {
         env: {
           ...process.env,
           HOME: tempDir,
-          OPENCLAW_CONFIG_PATH: configPath,
-          OPENCLAW_STATE_DIR: tempDir,
+          DEX_CONFIG_PATH: configPath,
+          DEX_STATE_DIR: tempDir,
         },
         stateDir: tempDir,
         outputPath,

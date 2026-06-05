@@ -138,11 +138,11 @@ describe("host tool tilde expansion (non-workspace mode)", () => {
     expect((await fs.stat(newDir)).isDirectory()).toBe(true);
   });
 
-  it("ignores OPENCLAW_HOME for write operations", async () => {
+  it("ignores DEX_HOME for write operations", async () => {
     const openclawHome = await createTempDir("openclaw-home-override-", os.tmpdir());
     const dir = await createTempDir("openclaw-tilde-test-write-");
     const testFile = path.join(dir, "os-home-write.txt");
-    vi.stubEnv("OPENCLAW_HOME", openclawHome);
+    vi.stubEnv("DEX_HOME", openclawHome);
 
     createHostWorkspaceWriteTool(openclawHome, { workspaceOnly: false });
     await readWriteOps().writeFile(toTildePath(testFile), "written via os home");
@@ -151,11 +151,11 @@ describe("host tool tilde expansion (non-workspace mode)", () => {
     await expectMissingPath(fs.access(path.join(openclawHome, path.basename(testFile))));
   });
 
-  it("ignores OPENCLAW_HOME for mkdir operations", async () => {
+  it("ignores DEX_HOME for mkdir operations", async () => {
     const openclawHome = await createTempDir("openclaw-home-override-", os.tmpdir());
     const dir = await createTempDir("openclaw-tilde-test-mkdir-");
     const newDir = path.join(dir, "os-home-subdir");
-    vi.stubEnv("OPENCLAW_HOME", openclawHome);
+    vi.stubEnv("DEX_HOME", openclawHome);
 
     createHostWorkspaceWriteTool(openclawHome, { workspaceOnly: false });
     await readWriteOps().mkdir(toTildePath(newDir));
@@ -164,12 +164,12 @@ describe("host tool tilde expansion (non-workspace mode)", () => {
     await expectMissingPath(fs.access(path.join(openclawHome, path.basename(newDir))));
   });
 
-  it("ignores OPENCLAW_HOME for readFile operations", async () => {
+  it("ignores DEX_HOME for readFile operations", async () => {
     const openclawHome = await createTempDir("openclaw-home-override-", os.tmpdir());
     const dir = await createTempDir("openclaw-tilde-test-edit-");
     const testFile = path.join(dir, "os-home-read.txt");
     await fs.writeFile(testFile, "OS home content", "utf8");
-    vi.stubEnv("OPENCLAW_HOME", openclawHome);
+    vi.stubEnv("DEX_HOME", openclawHome);
 
     createHostWorkspaceEditTool(openclawHome, { workspaceOnly: false });
     const content = await readEditOps().readFile(toTildePath(testFile));
@@ -178,12 +178,12 @@ describe("host tool tilde expansion (non-workspace mode)", () => {
     await expectMissingPath(fs.access(path.join(openclawHome, path.basename(testFile))));
   });
 
-  it("ignores OPENCLAW_HOME for access operations", async () => {
+  it("ignores DEX_HOME for access operations", async () => {
     const openclawHome = await createTempDir("openclaw-home-override-", os.tmpdir());
     const dir = await createTempDir("openclaw-tilde-test-edit-");
     const testFile = path.join(dir, "os-home-access.txt");
     await fs.writeFile(testFile, "exists", "utf8");
-    vi.stubEnv("OPENCLAW_HOME", openclawHome);
+    vi.stubEnv("DEX_HOME", openclawHome);
 
     createHostWorkspaceEditTool(openclawHome, { workspaceOnly: false });
 

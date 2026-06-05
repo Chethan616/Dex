@@ -4,7 +4,7 @@ import path from "node:path";
 import { CURRENT_SESSION_VERSION } from "openclaw/plugin-sdk/agent-sessions";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionEntry } from "../../config/sessions/types.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import type { ContextEngine } from "../../context-engine/types.js";
 import {
   resetCliCompactionTestDeps,
@@ -140,7 +140,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     const updatedEntry = await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -244,7 +244,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     const updatedEntry = await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -328,7 +328,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     const updatedEntry = await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -439,7 +439,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     const updatedEntry = await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -505,7 +505,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -573,7 +573,7 @@ describe("runCliTurnCompactionLifecycle", () => {
 
     await expect(
       runCliTurnCompactionLifecycle({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         sessionId,
         sessionKey,
         sessionEntry,
@@ -653,7 +653,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     const result = await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -725,7 +725,7 @@ describe("runCliTurnCompactionLifecycle", () => {
 
     await expect(
       runCliTurnCompactionLifecycle({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         sessionId,
         sessionKey,
         sessionEntry,
@@ -819,7 +819,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -900,7 +900,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     const updatedEntry = await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -986,7 +986,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     const updatedEntry = await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -1085,7 +1085,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     const updatedEntry = await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -1163,7 +1163,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     const updatedEntry = await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -1245,7 +1245,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     const updatedEntry = await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -1307,7 +1307,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -1378,7 +1378,7 @@ describe("runCliTurnCompactionLifecycle", () => {
 
     vi.useFakeTimers();
     const pending = runCliTurnCompactionLifecycle({
-      cfg: { agents: { defaults: { compaction: { timeoutSeconds: 1 } } } } as OpenClawConfig,
+      cfg: { agents: { defaults: { compaction: { timeoutSeconds: 1 } } } } as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -1457,7 +1457,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     const updatedEntry = await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -1522,7 +1522,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,
@@ -1598,7 +1598,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     });
 
     await runCliTurnCompactionLifecycle({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionId,
       sessionKey,
       sessionEntry,

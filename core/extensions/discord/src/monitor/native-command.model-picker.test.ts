@@ -8,7 +8,7 @@ import type {
   CommandArgsParsing,
 } from "openclaw/plugin-sdk/command-auth-native";
 import type { ModelsProviderData } from "openclaw/plugin-sdk/command-auth-native";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import * as globalsModule from "openclaw/plugin-sdk/runtime-env";
 import {
   loadSessionStore,
@@ -72,7 +72,7 @@ function createModelPickerContext(): ModelPickerContext {
         },
       },
     },
-  } as unknown as OpenClawConfig;
+  } as unknown as DexConfig;
 
   return {
     cfg,
@@ -955,7 +955,7 @@ describe("Discord model picker interactions", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await replyWithDiscordModelPickerProviders({
       interaction: interaction as never,

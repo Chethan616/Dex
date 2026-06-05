@@ -117,7 +117,7 @@ describe("install.ps1 failure handling", () => {
     const commandSafeBody = extractFunctionBody(source, "Invoke-CommandFromWindowsSafeDirectory");
     const npmCommandBody = extractFunctionBody(source, "Invoke-NpmCommand");
     const corepackCommandBody = extractFunctionBody(source, "Invoke-CorepackCommand");
-    const openClawPathBody = extractFunctionBody(source, "Ensure-OpenClawOnPath");
+    const openClawPathBody = extractFunctionBody(source, "Ensure-DexOnPath");
     const ensurePnpmBody = extractFunctionBody(source, "Ensure-Pnpm");
     const mainBody = extractFunctionBody(source, "Main");
 
@@ -140,10 +140,10 @@ describe("install.ps1 failure handling", () => {
 
   it("rejects OpenClaw GitHub source targets for npm installs", () => {
     const npmInstallBody = extractFunctionBody(source, "Install-OpenClaw");
-    const sourceTargetBody = extractFunctionBody(source, "Test-OpenClawSourcePackageInstallSpec");
+    const sourceTargetBody = extractFunctionBody(source, "Test-DexSourcePackageInstallSpec");
     expect(sourceTargetBody).toContain('$normalizedTag -eq "main"');
     expect(sourceTargetBody).toContain("^github:openclaw/openclaw");
-    expect(npmInstallBody).toContain("Test-OpenClawSourcePackageInstallSpec -RequestedTag $Tag");
+    expect(npmInstallBody).toContain("Test-DexSourcePackageInstallSpec -RequestedTag $Tag");
     expect(npmInstallBody).toContain("npm installs do not support OpenClaw GitHub source targets");
     expect(npmInstallBody).toContain("-InstallMethod git -Tag main");
   });
@@ -195,7 +195,7 @@ describe("install.ps1 failure handling", () => {
     const portableNodeRootBody = extractFunctionBody(source, "Get-PortableNodeRoot");
     const portableNodePathBody = extractFunctionBody(source, "Ensure-PortableNodeOnUserPath");
     const userPathBody = extractFunctionBody(source, "Add-ToUserPath");
-    const depsRootBody = extractFunctionBody(source, "Get-OpenClawDepsRoot");
+    const depsRootBody = extractFunctionBody(source, "Get-DexDepsRoot");
     const resolveNodeBody = extractFunctionBody(source, "Resolve-PortableNodeDownload");
     const expandNodeBody = extractFunctionBody(source, "Expand-PortableNodeArchive");
 
@@ -237,7 +237,7 @@ describe("install.ps1 failure handling", () => {
     const usePortableGitBody = extractFunctionBody(source, "Use-PortableGitIfPresent");
     const ensureGitBody = extractFunctionBody(source, "Ensure-Git");
 
-    expect(portableGitRootBody).toContain("Get-OpenClawDepsRoot");
+    expect(portableGitRootBody).toContain("Get-DexDepsRoot");
     expect(portableGitPathEntriesBody).toContain("mingw64\\bin");
     expect(portableGitPathEntriesBody).toContain("usr\\bin");
     expect(portableGitPathEntriesBody).toContain("Split-Path -Parent $gitExe");
@@ -252,7 +252,7 @@ describe("install.ps1 failure handling", () => {
     const pnpmVersionBody = extractFunctionBody(source, "Get-RepoPnpmVersion");
     const pnpmVersionMatchBody = extractFunctionBody(source, "Test-PnpmCommandMatchesVersion");
     const ensurePnpmBody = extractFunctionBody(source, "Ensure-Pnpm");
-    const gitInstallBody = extractFunctionBody(source, "Install-OpenClawFromGit");
+    const gitInstallBody = extractFunctionBody(source, "Install-DexFromGit");
     const nodeOptionsBody = extractFunctionBody(source, "Resolve-NodeOptionsWithMinOldSpace");
     const mainBody = extractFunctionBody(source, "Main");
 
@@ -284,7 +284,7 @@ describe("install.ps1 failure handling", () => {
     expect(gitInstallBody.indexOf("git -C $RepoDir pull --rebase")).toBeLessThan(
       gitInstallBody.indexOf("Ensure-Pnpm -RepoDir $RepoDir"),
     );
-    expect(mainBody).toContain("$gitInstallResults = @(Install-OpenClawFromGit");
+    expect(mainBody).toContain("$gitInstallResults = @(Install-DexFromGit");
     expect(mainBody).toContain("Test-BooleanSuccessResult -Results $gitInstallResults");
     expect(mainBody).toContain("$npmInstallResults = @(Install-OpenClaw)");
     expect(mainBody).toContain("Test-BooleanSuccessResult -Results $npmInstallResults");
@@ -340,21 +340,21 @@ describe("install.ps1 failure handling", () => {
   });
 
   it("cleans legacy git submodules only from the selected git checkout", () => {
-    const gitInstallBody = extractFunctionBody(source, "Install-OpenClawFromGit");
+    const gitInstallBody = extractFunctionBody(source, "Install-DexFromGit");
     const mainBody = extractFunctionBody(source, "Main");
     expect(gitInstallBody).toContain("Remove-LegacySubmodule -RepoDir $RepoDir");
     expect(mainBody).not.toContain("Remove-LegacySubmodule");
   });
 
   it("launches interactive onboarding outside Main's captured output", () => {
-    const interactiveCommandBody = extractFunctionBody(source, "Invoke-InteractiveOpenClawCommand");
+    const interactiveCommandBody = extractFunctionBody(source, "Invoke-InteractiveDexCommand");
     const mainBody = extractFunctionBody(source, "Main");
     expect(interactiveCommandBody).toContain("Start-Process");
     expect(interactiveCommandBody).toContain("-NoNewWindow");
     expect(interactiveCommandBody).toContain("-Wait");
     expect(interactiveCommandBody).toContain("-PassThru");
     expect(mainBody).toContain('Write-Host "Starting setup..." -ForegroundColor Cyan');
-    expect(mainBody).toContain("Invoke-InteractiveOpenClawCommand onboard");
+    expect(mainBody).toContain("Invoke-InteractiveDexCommand onboard");
   });
 
   runIfPowerShell("exits non-zero when run as a script file", () => {
@@ -410,11 +410,11 @@ describe("install.ps1 failure handling", () => {
         "function Check-Node { return $true }",
         "function Check-ExistingOpenClaw { return $false }",
         "function Get-NpmCommandPath { return $null }",
-        "function Install-OpenClawFromGit {",
+        "function Install-DexFromGit {",
         "  Write-Output 'pnpm stdout before failure'",
         "  return $false",
         "}",
-        "function Ensure-OpenClawOnPath { throw 'should not continue after failed git install' }",
+        "function Ensure-DexOnPath { throw 'should not continue after failed git install' }",
         "$InstallMethod = 'git'",
         "$GitDir = 'C:\\\\openclaw-test'",
         "$NoOnboard = $true",
@@ -487,9 +487,9 @@ describe("install.ps1 failure handling", () => {
         "function Check-ExistingOpenClaw { return $false }",
         "function Add-ToPath { param([string]$Path) }",
         "function Install-OpenClaw { Write-Output 'npm stdout'; return $true }",
-        "function Ensure-OpenClawOnPath { return $true }",
+        "function Ensure-DexOnPath { return $true }",
         "function Refresh-GatewayServiceIfLoaded { }",
-        "function Invoke-OpenClawCommand { return 'OpenClaw test-version' }",
+        "function Invoke-DexCommand { return 'OpenClaw test-version' }",
         "$NoOnboard = $true",
         "$result = Main",
         "if ($result -is [array]) { throw 'Main returned an array' }",
@@ -530,9 +530,9 @@ describe("install.ps1 failure handling", () => {
         "  Write-Output 'native chatter'",
         "  return $true",
         "}",
-        "function Ensure-OpenClawOnPath { return $true }",
+        "function Ensure-DexOnPath { return $true }",
         "function Refresh-GatewayServiceIfLoaded { }",
-        "function Invoke-OpenClawCommand { return 'OpenClaw test-version' }",
+        "function Invoke-DexCommand { return 'OpenClaw test-version' }",
         "$NoOnboard = $true",
         ...ENTRYPOINT_LINES,
         "",

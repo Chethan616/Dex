@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { setActivePluginRegistry } from "../../plugins/runtime.js";
 import { createTestRegistry } from "../../test-utils/channel-plugins.js";
 import { runMessageAction } from "./message-action-runner.js";
@@ -10,7 +10,7 @@ import {
   workspaceTestPlugin,
 } from "./message-action-runner.test-helpers.js";
 
-const emptyConfig = {} as OpenClawConfig;
+const emptyConfig = {} as DexConfig;
 
 describe("runMessageAction send validation", () => {
   beforeEach(() => {
@@ -55,7 +55,7 @@ describe("runMessageAction send validation", () => {
             botToken: "forum-test",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       actionParams: {
         channel: "forum",
         target: "123456",

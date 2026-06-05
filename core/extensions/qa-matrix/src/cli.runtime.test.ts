@@ -35,14 +35,14 @@ async function expectPathMissing(targetPath: string): Promise<void> {
 }
 
 describe("matrix qa cli runtime", () => {
-  const originalRunNodeOutputLog = process.env.OPENCLAW_RUN_NODE_OUTPUT_LOG;
+  const originalRunNodeOutputLog = process.env.DEX_RUN_NODE_OUTPUT_LOG;
 
   afterEach(async () => {
     vi.clearAllMocks();
     if (originalRunNodeOutputLog === undefined) {
-      delete process.env.OPENCLAW_RUN_NODE_OUTPUT_LOG;
+      delete process.env.DEX_RUN_NODE_OUTPUT_LOG;
     } else {
-      process.env.OPENCLAW_RUN_NODE_OUTPUT_LOG = originalRunNodeOutputLog;
+      process.env.DEX_RUN_NODE_OUTPUT_LOG = originalRunNodeOutputLog;
     }
     await Promise.all(tmpDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
   });
@@ -98,7 +98,7 @@ describe("matrix qa cli runtime", () => {
     const repoRoot = await mkdtemp(path.join(os.tmpdir(), "matrix-qa-cli-"));
     tmpDirs.push(repoRoot);
     const outputPath = path.join(repoRoot, "run-node-output.log");
-    process.env.OPENCLAW_RUN_NODE_OUTPUT_LOG = outputPath;
+    process.env.DEX_RUN_NODE_OUTPUT_LOG = outputPath;
     runMatrixQaLive.mockResolvedValue({
       reportPath: "/tmp/matrix-report.md",
       summaryPath: "/tmp/matrix-summary.json",

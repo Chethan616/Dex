@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { PluginRuntimeGatewayRequestScope } from "../plugins/runtime/gateway-request-scope.js";
 import type { GatewayRequestContext, GatewayRequestOptions } from "./server-methods/types.js";
 
@@ -17,13 +17,13 @@ vi.mock("./server-methods.js", () => ({
 type ServerPluginsModule = typeof import("./server-plugins.js");
 type GatewayRequestScopeModule = typeof import("../plugins/runtime/gateway-request-scope.js");
 
-function createTestCfg(): OpenClawConfig {
+function createTestCfg(): DexConfig {
   return {
     session: { mainKey: "agent:main:main", scope: "per-sender" },
-  } as unknown as OpenClawConfig;
+  } as unknown as DexConfig;
 }
 
-function createTestContext(label: string, cfg: OpenClawConfig): GatewayRequestContext {
+function createTestContext(label: string, cfg: DexConfig): GatewayRequestContext {
   return {
     label,
     getRuntimeConfig: () => cfg,

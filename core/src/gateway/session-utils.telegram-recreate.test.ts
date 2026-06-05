@@ -9,7 +9,7 @@ import {
   updateLastRoute,
   updateSessionStore,
 } from "../config/sessions.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { createSuiteTempRootTracker } from "../test-helpers/temp-dir.js";
 import { listSessionsFromStore } from "./session-utils.js";
 
@@ -25,7 +25,7 @@ const cfg = {
   session: {
     dmScope: "per-channel-peer",
   },
-} satisfies Partial<OpenClawConfig> as OpenClawConfig;
+} satisfies Partial<DexConfig> as DexConfig;
 
 function createTelegramDirectContext(): MsgContext {
   return {

@@ -2,7 +2,7 @@ import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig, PluginRuntime, RuntimeEnv } from "../runtime-api.js";
+import type { DexConfig, PluginRuntime, RuntimeEnv } from "../runtime-api.js";
 import { runMSTeamsFeedbackInvokeHandler } from "./feedback-invoke.js";
 import type { MSTeamsMessageHandlerDeps } from "./monitor-handler.js";
 import { createMSTeamsMessageHandlerDeps } from "./monitor-handler.test-helpers.js";
@@ -63,7 +63,7 @@ function createRuntimeStub(readAllowFromStore: ReturnType<typeof vi.fn>): Plugin
 }
 
 function createDeps(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   readAllowFromStore?: ReturnType<typeof vi.fn>;
 }): MSTeamsMessageHandlerDeps {
   const readAllowFromStore = params.readAllowFromStore ?? vi.fn(async () => []);
@@ -137,7 +137,7 @@ async function expectFileMissing(filePath: string) {
 }
 
 async function withFeedbackHandler(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   context: Parameters<typeof createFeedbackInvokeContext>[0];
   assertResult: (args: { tmpDir: string }) => Promise<void>;
 }) {
@@ -171,7 +171,7 @@ describe("msteams feedback invoke authz", () => {
             allowFrom: ["owner-aad"],
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       context: {
         reaction: "like",
         conversationId: "a:personal-chat;messageid=bot-msg-1",
@@ -229,7 +229,7 @@ describe("msteams feedback invoke authz", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       context: {
         reaction: "like",
         conversationId: "a:personal-chat;messageid=bot-msg-1",
@@ -280,7 +280,7 @@ describe("msteams feedback invoke authz", () => {
             allowFrom: ["owner-aad"],
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       context: {
         reaction: "like",
         conversationId: "a:personal-chat;messageid=bot-msg-1",
@@ -309,7 +309,7 @@ describe("msteams feedback invoke authz", () => {
               feedbackReflection: true,
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
       });
 
       await runMSTeamsFeedbackInvokeHandler(

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { drainFormattedSystemEvents } from "../auto-reply/reply/session-system-events.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveMainSessionKey } from "../config/sessions/main-session.js";
 import { isCronSystemEvent } from "./heartbeat-events-filter.js";
 import {
@@ -24,7 +24,7 @@ async function importSystemEventsModule(cacheBust: string): Promise<SystemEvents
   return (await import(`${systemEventsModuleUrl}?t=${cacheBust}`)) as SystemEventsModule;
 }
 
-const cfg = {} as unknown as OpenClawConfig;
+const cfg = {} as unknown as DexConfig;
 const mainKey = resolveMainSessionKey(cfg);
 
 async function drainFormattedEvents(

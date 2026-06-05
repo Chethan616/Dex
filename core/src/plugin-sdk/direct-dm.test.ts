@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import {
   createDirectDmPreCryptoGuardPolicy,
   createPreCryptoDirectDmAuthorizer,
@@ -9,7 +9,7 @@ import {
 
 const baseCfg = {
   commands: { useAccessGroups: true },
-} as unknown as OpenClawConfig;
+} as unknown as DexConfig;
 
 function createDirectDmRuntime() {
   const recordInboundSession = vi.fn(async () => {});
@@ -106,7 +106,7 @@ describe("plugin-sdk/direct-dm", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       channel: "nostr",
       accountId: "default",
       dmPolicy: "allowlist",

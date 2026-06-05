@@ -6,7 +6,7 @@ import {
   addSubagentRunForTests,
   resetSubagentRegistryForTests,
 } from "../agents/subagent-registry.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { loadSessionStore, type SessionEntry } from "../config/sessions.js";
 import { registerAgentRunContext, resetAgentRunContextForTest } from "../infra/agent-events.js";
 import { withStateDirEnv } from "../test-helpers/state-dir-env.js";
@@ -30,7 +30,7 @@ describe("listSessionsFromStore subagent metadata", () => {
   const cfg = {
     session: { mainKey: "main" },
     agents: { list: [{ id: "main", default: true }] },
-  } as OpenClawConfig;
+  } as DexConfig;
 
   test("searches channel-derived display names before row enrichment", () => {
     const result = listSessionsFromStore({
@@ -749,8 +749,8 @@ describe("listSessionsFromStore subagent metadata", () => {
 
       const row = withEnv(
         {
-          OPENCLAW_STATE_DIR: stateDir,
-          OPENCLAW_TEST_READ_SUBAGENT_RUNS_FROM_DISK: "1",
+          DEX_STATE_DIR: stateDir,
+          DEX_TEST_READ_SUBAGENT_RUNS_FROM_DISK: "1",
         },
         () => {
           const result = listSessionsFromStore({
@@ -847,8 +847,8 @@ describe("listSessionsFromStore subagent metadata", () => {
     try {
       const result = withEnv(
         {
-          OPENCLAW_STATE_DIR: stateDir,
-          OPENCLAW_TEST_READ_SUBAGENT_RUNS_FROM_DISK: "1",
+          DEX_STATE_DIR: stateDir,
+          DEX_TEST_READ_SUBAGENT_RUNS_FROM_DISK: "1",
         },
         () =>
           listSessionsFromStore({
@@ -883,8 +883,8 @@ describe("listSessionsFromStore subagent metadata", () => {
     try {
       const result = withEnv(
         {
-          OPENCLAW_STATE_DIR: stateDir,
-          OPENCLAW_TEST_READ_SUBAGENT_RUNS_FROM_DISK: "1",
+          DEX_STATE_DIR: stateDir,
+          DEX_TEST_READ_SUBAGENT_RUNS_FROM_DISK: "1",
         },
         () =>
           listSessionsFromStore({
@@ -1272,7 +1272,7 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
         agents: {
           list: [{ id: "main", default: true }],
         },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const { store } = loadCombinedSessionStoreForGateway(cfg);
       expect(store["agent:main:main"]?.sessionId).toBe("s-main");
@@ -1314,7 +1314,7 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
         agents: {
           list: [{ id: "main", default: true }],
         },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const readSpy = vi.spyOn(fs, "readFileSync");
 
@@ -1360,7 +1360,7 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
         agents: {
           list: [{ id: "codex", default: true }],
         },
-      } as OpenClawConfig;
+      } as DexConfig;
 
       const cachedStore = loadSessionStore(fs.realpathSync.native(codexStorePath), {
         clone: false,

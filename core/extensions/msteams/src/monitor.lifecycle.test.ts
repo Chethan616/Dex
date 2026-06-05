@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import type { Request, Response } from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig, RuntimeEnv } from "../runtime-api.js";
+import type { DexConfig, RuntimeEnv } from "../runtime-api.js";
 import type { MSTeamsConversationStore } from "./conversation-store.js";
 import type { MSTeamsActivityHandler, MSTeamsMessageHandlerDeps } from "./monitor-handler.js";
 import type { MSTeamsPollStore } from "./polls.js";
@@ -216,7 +216,7 @@ vi.mock("./sso-token-store.js", () => ({
 
 import { monitorMSTeamsProvider } from "./monitor.js";
 
-function createConfig(port: number): OpenClawConfig {
+function createConfig(port: number): DexConfig {
   return {
     channels: {
       msteams: {
@@ -230,12 +230,12 @@ function createConfig(port: number): OpenClawConfig {
         },
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 function updateMSTeamsConfig(
-  cfg: OpenClawConfig,
-  patch: NonNullable<NonNullable<OpenClawConfig["channels"]>["msteams"]>,
+  cfg: DexConfig,
+  patch: NonNullable<NonNullable<DexConfig["channels"]>["msteams"]>,
 ): void {
   const msteams = cfg.channels?.msteams;
   if (!cfg.channels || !msteams) {
@@ -264,9 +264,9 @@ function createStores() {
   };
 }
 
-function requireRegisteredMSTeamsConfig(): OpenClawConfig {
+function requireRegisteredMSTeamsConfig(): DexConfig {
   const registered = registerMSTeamsHandlers.mock.calls[0]?.[1] as
-    | { cfg?: OpenClawConfig }
+    | { cfg?: DexConfig }
     | undefined;
   if (!registered?.cfg) {
     throw new Error("expected registered MSTeams handler config");

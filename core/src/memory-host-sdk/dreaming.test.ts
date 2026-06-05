@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import {
   formatMemoryDreamingDay,
   isSameMemoryDreamingDay,
@@ -90,7 +90,7 @@ describe("memory dreaming host helpers", () => {
           userTimezone: "America/Los_Angeles",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const resolved = resolveMemoryDreamingConfig({
       pluginConfig: {},
@@ -157,7 +157,7 @@ describe("memory dreaming host helpers", () => {
           { id: "gamma", workspace: "/workspace/shared" },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(resolveMemoryDreamingWorkspaces(cfg)).toEqual([
       {
@@ -179,7 +179,7 @@ describe("memory dreaming host helpers", () => {
           { id: "agi-cdo", workspace: "/workspace/agi-cdo" },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(
       resolveMemoryDreamingWorkspaces(cfg, {
@@ -209,7 +209,7 @@ describe("memory dreaming host helpers", () => {
           workspace: "/workspace",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(resolveMemoryDreamingWorkspaces(cfg)).toEqual([
       {
@@ -238,7 +238,7 @@ describe("memory dreaming host helpers", () => {
             memory: "memos-local-openclaw-plugin",
           },
         },
-      } as OpenClawConfig),
+      } as DexConfig),
     ).toBe("memos-local-openclaw-plugin");
   });
 
@@ -259,7 +259,7 @@ describe("memory dreaming host helpers", () => {
             },
           },
         },
-      } as OpenClawConfig),
+      } as DexConfig),
     ).toEqual({
       dreaming: {
         enabled: true,
@@ -285,7 +285,7 @@ describe("memory dreaming host helpers", () => {
             },
           },
         },
-      } as OpenClawConfig),
+      } as DexConfig),
     ).toEqual({
       dreaming: {
         enabled: true,
@@ -308,7 +308,7 @@ describe("memory dreaming host helpers", () => {
             },
           },
         },
-      } as OpenClawConfig),
+      } as DexConfig),
     ).toEqual({
       dreaming: {
         enabled: true,
@@ -324,7 +324,7 @@ describe("memory dreaming host helpers", () => {
             memory: "none",
           },
         },
-      } as OpenClawConfig),
+      } as DexConfig),
     ).toBe("memory-core");
 
     expect(
@@ -343,7 +343,7 @@ describe("memory dreaming host helpers", () => {
             },
           },
         },
-      } as OpenClawConfig),
+      } as DexConfig),
     ).toEqual({
       dreaming: {
         enabled: true,

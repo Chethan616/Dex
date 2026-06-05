@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SubagentRunRecord } from "../../agents/subagent-registry.types.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import type { ReplyPayload } from "../types.js";
 import { handleSubagentsLogAction } from "./commands-subagents/action-log.js";
 
@@ -27,7 +27,7 @@ function makeRun(overrides: Partial<SubagentRunRecord> = {}): SubagentRunRecord 
 function buildLogContext(restTokens: string[], runs: SubagentRunRecord[]) {
   return {
     params: {
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       sessionKey: "agent:main:main",
     },
     handledPrefix: "/subagents",

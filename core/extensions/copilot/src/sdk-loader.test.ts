@@ -200,15 +200,15 @@ describe("sdk-loader", () => {
     expect(primaryImport).toHaveBeenCalledTimes(2);
   });
 
-  it("default fallback dir points at ~/.openclaw/npm-runtime/copilot", () => {
+  it("default fallback dir points at ~/.dex/npm-runtime/copilot", () => {
     expect(COPILOT_SDK_FALLBACK_DIR).toMatch(/\.openclaw[\\/]+npm-runtime[\\/]+copilot$/);
   });
 
-  it("resolves the fallback dir from OPENCLAW_STATE_DIR for relocated profiles", () => {
+  it("resolves the fallback dir from DEX_STATE_DIR for relocated profiles", () => {
     expect(
       resolveCopilotSdkFallbackDir({
         ...process.env,
-        OPENCLAW_STATE_DIR: "/tmp/openclaw-state",
+        DEX_STATE_DIR: "/tmp/openclaw-state",
       }),
     ).toBe(path.join("/tmp/openclaw-state", "npm-runtime", "copilot"));
   });

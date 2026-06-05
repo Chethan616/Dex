@@ -1,6 +1,6 @@
 import { Type } from "typebox";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { setActivePluginRegistry } from "../../plugins/runtime.js";
 import { defaultRuntime } from "../../runtime.js";
 import {
@@ -82,12 +82,12 @@ describe("message action capability checks", () => {
   it("aggregates capabilities across plugins", () => {
     activateMessageActionTestRegistry();
 
-    expect(listChannelMessageCapabilities({} as OpenClawConfig).toSorted()).toEqual([
+    expect(listChannelMessageCapabilities({} as DexConfig).toSorted()).toEqual([
       "delivery-pin",
       "presentation",
     ]);
-    expect(channelSupportsMessageCapability({} as OpenClawConfig, "presentation")).toBe(true);
-    expect(channelSupportsMessageCapability({} as OpenClawConfig, "delivery-pin")).toBe(true);
+    expect(channelSupportsMessageCapability({} as DexConfig, "presentation")).toBe(true);
+    expect(channelSupportsMessageCapability({} as DexConfig, "delivery-pin")).toBe(true);
   });
 
   it("checks per-channel capabilities", () => {
@@ -95,42 +95,42 @@ describe("message action capability checks", () => {
 
     expect(
       listChannelMessageCapabilitiesForChannel({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         channel: "demo-buttons",
       }),
     ).toEqual(["presentation"]);
     expect(
       listChannelMessageCapabilitiesForChannel({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         channel: "demo-cards",
       }),
     ).toEqual(["delivery-pin"]);
     expect(
       channelSupportsMessageCapabilityForChannel(
-        { cfg: {} as OpenClawConfig, channel: "demo-buttons" },
+        { cfg: {} as DexConfig, channel: "demo-buttons" },
         "presentation",
       ),
     ).toBe(true);
     expect(
       channelSupportsMessageCapabilityForChannel(
-        { cfg: {} as OpenClawConfig, channel: "demo-cards" },
+        { cfg: {} as DexConfig, channel: "demo-cards" },
         "presentation",
       ),
     ).toBe(false);
     expect(
       channelSupportsMessageCapabilityForChannel(
-        { cfg: {} as OpenClawConfig, channel: "demo-buttons" },
+        { cfg: {} as DexConfig, channel: "demo-buttons" },
         "delivery-pin",
       ),
     ).toBe(false);
     expect(
       channelSupportsMessageCapabilityForChannel(
-        { cfg: {} as OpenClawConfig, channel: "demo-cards" },
+        { cfg: {} as DexConfig, channel: "demo-cards" },
         "delivery-pin",
       ),
     ).toBe(true);
     expect(
-      channelSupportsMessageCapabilityForChannel({ cfg: {} as OpenClawConfig }, "delivery-pin"),
+      channelSupportsMessageCapabilityForChannel({ cfg: {} as DexConfig }, "delivery-pin"),
     ).toBe(false);
   });
 
@@ -151,7 +151,7 @@ describe("message action capability checks", () => {
 
     expect(
       listChannelMessageCapabilitiesForChannel({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         channel: "demo-cards-alias",
       }),
     ).toEqual(["delivery-pin"]);
@@ -183,11 +183,11 @@ describe("message action capability checks", () => {
       createTestRegistry([{ pluginId: "demo-unified", source: "test", plugin: unifiedPlugin }]),
     );
 
-    expect(listChannelMessageActions({} as OpenClawConfig)).toEqual(["send", "broadcast", "react"]);
-    expect(listChannelMessageCapabilities({} as OpenClawConfig)).toEqual(["presentation"]);
+    expect(listChannelMessageActions({} as DexConfig)).toEqual(["send", "broadcast", "react"]);
+    expect(listChannelMessageCapabilities({} as DexConfig)).toEqual(["presentation"]);
     expect(
       resolveChannelMessageToolSchemaProperties({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         channel: "demo-unified",
       }),
     ).toHaveProperty("components");
@@ -223,7 +223,7 @@ describe("message action capability checks", () => {
 
     expect(
       listCrossChannelSchemaSupportedMessageActions({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         channel: "demo-scoped-schema",
       }),
     ).toEqual(["read", "list-pins"]);
@@ -258,7 +258,7 @@ describe("message action capability checks", () => {
 
     expect(
       listCrossChannelSchemaSupportedMessageActions({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         channel: "demo-unscoped-schema",
       }),
     ).toStrictEqual([]);
@@ -298,7 +298,7 @@ describe("message action capability checks", () => {
 
     expect(
       listCrossChannelSchemaSupportedMessageActions({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         channel: "demo-empty-scoped-schema",
       }),
     ).toEqual(["read", "list-pins"]);
@@ -336,14 +336,14 @@ describe("message action capability checks", () => {
 
     expect(
       resolveChannelMessageToolMediaSourceParamKeys({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         action: "set-profile",
         channel: "demo-media",
       }),
     ).toEqual(["avatarUrl", "avatarPath"]);
     expect(
       resolveChannelMessageToolMediaSourceParamKeys({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         action: "send",
         channel: "demo-media",
       }),
@@ -373,7 +373,7 @@ describe("message action capability checks", () => {
 
     expect(
       resolveChannelMessageToolMediaSourceParamKeys({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         action: "set-profile",
         channel: "demo-media-flat",
       }),
@@ -400,12 +400,12 @@ describe("message action capability checks", () => {
       createTestRegistry([{ pluginId: "demo-crashing", source: "test", plugin: crashingPlugin }]),
     );
 
-    expect(listChannelMessageActions({} as OpenClawConfig)).toEqual(["send", "broadcast"]);
-    expect(listChannelMessageCapabilities({} as OpenClawConfig)).toStrictEqual([]);
+    expect(listChannelMessageActions({} as DexConfig)).toEqual(["send", "broadcast"]);
+    expect(listChannelMessageCapabilities({} as DexConfig)).toStrictEqual([]);
     expect(errorSpy).toHaveBeenCalledTimes(1);
 
-    expect(listChannelMessageActions({} as OpenClawConfig)).toEqual(["send", "broadcast"]);
-    expect(listChannelMessageCapabilities({} as OpenClawConfig)).toStrictEqual([]);
+    expect(listChannelMessageActions({} as DexConfig)).toEqual(["send", "broadcast"]);
+    expect(listChannelMessageCapabilities({} as DexConfig)).toStrictEqual([]);
     expect(errorSpy).toHaveBeenCalledTimes(1);
   });
 });

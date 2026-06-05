@@ -70,7 +70,7 @@ function touchPersistedIndex(stateDir: string, value = 1): void {
         generated_at_ms: value,
       });
     },
-    { env: { ...process.env, OPENCLAW_STATE_DIR: stateDir } },
+    { env: { ...process.env, DEX_STATE_DIR: stateDir } },
   );
 }
 

@@ -32,15 +32,15 @@ vi.mock("../plugins/provider-runtime.js", () => ({
 
 async function withAgentDirEnv(prefix: string, run: (agentDir: string) => void | Promise<void>) {
   const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  const previousAgentDir = process.env.OPENCLAW_AGENT_DIR;
+  const previousAgentDir = process.env.DEX_AGENT_DIR;
   try {
-    process.env.OPENCLAW_AGENT_DIR = agentDir;
+    process.env.DEX_AGENT_DIR = agentDir;
     await run(agentDir);
   } finally {
     if (previousAgentDir === undefined) {
-      delete process.env.OPENCLAW_AGENT_DIR;
+      delete process.env.DEX_AGENT_DIR;
     } else {
-      process.env.OPENCLAW_AGENT_DIR = previousAgentDir;
+      process.env.DEX_AGENT_DIR = previousAgentDir;
     }
     fs.rmSync(agentDir, { recursive: true, force: true });
   }

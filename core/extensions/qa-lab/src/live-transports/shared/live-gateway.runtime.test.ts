@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { startQaGatewayChild, startQaProviderServer } = vi.hoisted(() => ({
@@ -20,7 +20,7 @@ type GatewayOptions = {
   providerBaseUrl?: string;
   providerMode?: string;
   transportBaseUrl?: string;
-  mutateConfig?: (cfg: OpenClawConfig) => OpenClawConfig;
+  mutateConfig?: (cfg: DexConfig) => DexConfig;
 };
 
 function createStubTransport(baseUrl = "http://127.0.0.1:43123") {

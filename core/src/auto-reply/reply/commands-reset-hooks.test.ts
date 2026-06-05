@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as bootstrapCache from "../../agents/bootstrap-cache.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import type { MsgContext } from "../templating.js";
 import { maybeHandleResetCommand } from "./commands-reset.js";
 import type { HandleCommandsParams } from "./commands-types.js";
@@ -59,7 +59,7 @@ vi.mock("./route-reply.runtime.js", () => ({
 
 function buildResetParams(
   commandBody: string,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
   ctxOverrides?: Partial<MsgContext>,
 ): HandleCommandsParams {
   const ctx = {
@@ -158,7 +158,7 @@ describe("handleCommands reset hooks", () => {
         params: buildResetParams("/new take notes", {
           commands: { text: true },
           channels: { whatsapp: { allowFrom: ["*"] } },
-        } as OpenClawConfig),
+        } as DexConfig),
         expectedEvent: { type: "command", action: "new" },
       },
       {
@@ -169,7 +169,7 @@ describe("handleCommands reset hooks", () => {
             {
               commands: { text: true },
               channels: { telegram: { allowFrom: ["*"] } },
-            } as OpenClawConfig,
+            } as DexConfig,
             {
               Provider: "telegram",
               Surface: "telegram",
@@ -216,7 +216,7 @@ describe("handleCommands reset hooks", () => {
       {
         commands: { text: true },
         channels: { discord: { allowFrom: ["*"] } },
-      } as OpenClawConfig,
+      } as DexConfig,
       {
         Provider: "discord",
         Surface: "discord",
@@ -255,7 +255,7 @@ describe("handleCommands reset hooks", () => {
       {
         commands: { text: true },
         channels: { discord: { allowFrom: ["*"] } },
-      } as OpenClawConfig,
+      } as DexConfig,
       {
         Provider: "discord",
         Surface: "discord",
@@ -280,7 +280,7 @@ describe("handleCommands reset hooks", () => {
       {
         commands: { text: true },
         channels: { whatsapp: { allowFrom: ["*"] } },
-      } as OpenClawConfig,
+      } as DexConfig,
       {
         SenderId: "id:whatsapp:123",
         SenderName: "Alice",
@@ -308,7 +308,7 @@ describe("handleCommands reset hooks", () => {
     const params = buildResetParams("/reset", {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     params.sessionEntry = {
       sessionId: "wrapper-session",
       updatedAt: Date.now(),
@@ -331,7 +331,7 @@ describe("handleCommands reset hooks", () => {
     const params = buildResetParams("/reset soft", {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     params.sessionEntry = {
       sessionId: "session-1",
       updatedAt: Date.now(),
@@ -367,7 +367,7 @@ describe("handleCommands reset hooks", () => {
       {
         commands: { text: true },
         channels: { webchat: { allowFrom: ["*"] } },
-      } as OpenClawConfig,
+      } as DexConfig,
       {
         Provider: "webchat",
         Surface: "webchat",
@@ -392,7 +392,7 @@ describe("handleCommands reset hooks", () => {
     const params = buildResetParams("/reset soft", {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     params.sessionEntry = {
       sessionId: "session-direct",
       updatedAt: 1,
@@ -440,7 +440,7 @@ describe("handleCommands reset hooks", () => {
       {
         commands: { text: true },
         channels: { discord: { allowFrom: ["*"] } },
-      } as OpenClawConfig,
+      } as DexConfig,
       {
         Provider: "discord",
         Surface: "discord",
@@ -462,7 +462,7 @@ describe("handleCommands reset hooks", () => {
     const params = buildResetParams("/RESET", {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
 
     const result = await maybeHandleResetCommand(params);
 
@@ -477,7 +477,7 @@ describe("handleCommands reset hooks", () => {
     const params = buildResetParams("/NEW", {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
 
     const result = await maybeHandleResetCommand(params);
 
@@ -492,7 +492,7 @@ describe("handleCommands reset hooks", () => {
     const params = buildResetParams("/Reset take notes", {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
 
     const result = await maybeHandleResetCommand(params);
 

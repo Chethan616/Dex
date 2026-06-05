@@ -66,8 +66,8 @@ describe("gateway startup benchmark script", () => {
       name: "gateway default",
     });
 
-    expect(env.OPENCLAW_LOCAL_CHECK).toBeUndefined();
-    expect(env.OPENCLAW_GATEWAY_STARTUP_TRACE).toBe("1");
+    expect(env.DEX_LOCAL_CHECK).toBeUndefined();
+    expect(env.DEX_GATEWAY_STARTUP_TRACE).toBe("1");
   });
 
   it("classifies HTTP listen and gateway ready logs separately", () => {

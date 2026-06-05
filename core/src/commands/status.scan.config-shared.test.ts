@@ -100,12 +100,12 @@ describe("status.scan.config-shared", () => {
       commandName: "status --json",
       readBestEffortConfig,
       resolveConfig,
-      env: { VITEST: "true", OPENCLAW_GATEWAY_TOKEN: "env-token" },
+      env: { VITEST: "true", DEX_GATEWAY_TOKEN: "env-token" },
       allowMissingConfigFastPath: true,
     });
 
     expect(result.secretDiagnostics).toEqual([
-      "OPENCLAW_GATEWAY_TOKEN conflicts with gateway.auth.token: Remove OPENCLAW_GATEWAY_TOKEN from the shell, ~/.openclaw/.env, or launchctl env if gateway.auth.token is intended, or point gateway.auth.token at ${OPENCLAW_GATEWAY_TOKEN} if the env var should be canonical.",
+      "DEX_GATEWAY_TOKEN conflicts with gateway.auth.token: Remove DEX_GATEWAY_TOKEN from the shell, ~/.dex/.env, or launchctl env if gateway.auth.token is intended, or point gateway.auth.token at ${DEX_GATEWAY_TOKEN} if the env var should be canonical.",
     ]);
   });
 
@@ -123,8 +123,8 @@ describe("status.scan.config-shared", () => {
       resolveConfig,
       env: {
         VITEST: "true",
-        OPENCLAW_GATEWAY_TOKEN: "env-token",
-        OPENCLAW_SERVICE_KIND: "gateway",
+        DEX_GATEWAY_TOKEN: "env-token",
+        DEX_SERVICE_KIND: "gateway",
       },
       allowMissingConfigFastPath: true,
     });
@@ -132,9 +132,9 @@ describe("status.scan.config-shared", () => {
     expect(result.secretDiagnostics).toStrictEqual([]);
   });
 
-  it("does not add a status diagnostic when config uses OPENCLAW_GATEWAY_TOKEN", async () => {
+  it("does not add a status diagnostic when config uses DEX_GATEWAY_TOKEN", async () => {
     const sourceConfig = {
-      gateway: { auth: { token: "${OPENCLAW_GATEWAY_TOKEN}" } },
+      gateway: { auth: { token: "${DEX_GATEWAY_TOKEN}" } },
       secrets: { providers: { default: { source: "env" as const } } },
     };
     const readBestEffortConfig = vi.fn(async () => sourceConfig);
@@ -147,7 +147,7 @@ describe("status.scan.config-shared", () => {
       commandName: "status --json",
       readBestEffortConfig,
       resolveConfig,
-      env: { VITEST: "true", OPENCLAW_GATEWAY_TOKEN: "env-token" },
+      env: { VITEST: "true", DEX_GATEWAY_TOKEN: "env-token" },
       allowMissingConfigFastPath: true,
     });
 
@@ -172,7 +172,7 @@ describe("status.scan.config-shared", () => {
       commandName: "status --json",
       readBestEffortConfig,
       resolveConfig,
-      env: { VITEST: "true", OPENCLAW_GATEWAY_TOKEN: "env-token" },
+      env: { VITEST: "true", DEX_GATEWAY_TOKEN: "env-token" },
       allowMissingConfigFastPath: true,
     });
 

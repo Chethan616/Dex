@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type {
-  OpenClawConfig,
+  DexConfig,
   ResolvedMemorySearchConfig,
 } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
 import type { MemorySource } from "openclaw/plugin-sdk/memory-core-host-engine-storage";
@@ -18,7 +18,7 @@ type MemoryIndexEntry = {
 };
 
 class IntervalSyncHarness extends MemoryManagerSyncOps {
-  protected readonly cfg = {} as OpenClawConfig;
+  protected readonly cfg = {} as DexConfig;
   protected readonly agentId = "main";
   protected readonly workspaceDir = "/tmp/openclaw-memory-interval-test";
   protected readonly settings: ResolvedMemorySearchConfig;

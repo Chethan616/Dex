@@ -14,13 +14,13 @@ import {
 import { buildReplyPromptBodies } from "../../../src/auto-reply/reply/prompt-prelude.js";
 import type { TemplateContext } from "../../../src/auto-reply/templating.js";
 import { SILENT_REPLY_TOKEN } from "../../../src/auto-reply/tokens.js";
-import type { OpenClawConfig } from "../../../src/config/types.openclaw.js";
+import type { DexConfig } from "../../../src/config/types.openclaw.js";
 import type {
   AnyAgentTool,
   EmbeddedRunAttemptParams,
 } from "../../../src/plugin-sdk/agent-harness-runtime.js";
 import { normalizeAgentRuntimeTools } from "../../../src/plugin-sdk/agent-harness-runtime.js";
-import { createOpenClawCodingTools } from "../../../src/plugin-sdk/agent-harness.js";
+import { createDexCodingTools } from "../../../src/plugin-sdk/agent-harness.js";
 import { resolveRelativeBundledPluginPublicModuleId } from "../../../src/test-utils/bundled-plugin-public-surface.js";
 import {
   CODEX_MODEL_PROMPT_FIXTURE_DIR,
@@ -220,7 +220,7 @@ const CODEX_PROMPT_SNAPSHOT_THREAD_CONFIG = {
   "features.code_mode_only": false,
 };
 
-const baseConfig: OpenClawConfig = {
+const baseConfig: DexConfig = {
   messages: {
     groupChat: {
       visibleReplies: "message_tool",
@@ -253,7 +253,7 @@ const baseConfig: OpenClawConfig = {
   },
 };
 
-const dynamicToolsConfig: OpenClawConfig = {
+const dynamicToolsConfig: DexConfig = {
   ...baseConfig,
   plugins: {
     enabled: true,
@@ -387,7 +387,7 @@ function createDynamicTools(params: {
   ctx: TemplateContext;
   trigger: "user" | "heartbeat";
 }): CodexDynamicToolSpec[] {
-  const tools = createOpenClawCodingTools({
+  const tools = createDexCodingTools({
     agentId: "main",
     workspaceDir: WORKSPACE_DIR,
     agentDir: AGENT_DIR,

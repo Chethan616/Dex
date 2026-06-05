@@ -230,7 +230,7 @@ describe("runCodexAppServerAttempt turn watches", () => {
       path.join(tempDir, "workspace"),
     );
     params.timeoutMs = 200;
-    vi.stubEnv("OPENCLAW_STATE_DIR", path.join(tempDir, "state"));
+    vi.stubEnv("DEX_STATE_DIR", path.join(tempDir, "state"));
 
     const run = runCodexAppServerAttempt(params, {
       pluginConfig: { appServer: { turnCompletionIdleTimeoutMs: 5 } },

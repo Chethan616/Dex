@@ -253,7 +253,7 @@ describe("shouldSkipPackedTarballValidation", () => {
   it("accepts truthy values for metadata-only validation", () => {
     expect(
       shouldSkipPackedTarballValidation({
-        OPENCLAW_NPM_RELEASE_SKIP_PACK_CHECK: "1",
+        DEX_NPM_RELEASE_SKIP_PACK_CHECK: "1",
       }),
     ).toBe(true);
   });
@@ -261,7 +261,7 @@ describe("shouldSkipPackedTarballValidation", () => {
   it("treats false-like values as disabled", () => {
     expect(
       shouldSkipPackedTarballValidation({
-        OPENCLAW_NPM_RELEASE_SKIP_PACK_CHECK: "false",
+        DEX_NPM_RELEASE_SKIP_PACK_CHECK: "false",
       }),
     ).toBe(false);
   });
@@ -384,7 +384,7 @@ describe("resolveNpmCommandInvocation", () => {
           join(dir, "fake-npm.js"),
           [
             "const fs = require('node:fs');",
-            "fs.writeFileSync(process.env.OPENCLAW_FAKE_NPM_OUT, JSON.stringify(process.argv.slice(2)));",
+            "fs.writeFileSync(process.env.DEX_FAKE_NPM_OUT, JSON.stringify(process.argv.slice(2)));",
           ].join("\n"),
         );
         writeFileSync(
@@ -402,7 +402,7 @@ describe("resolveNpmCommandInvocation", () => {
           cwd: dir,
           env: {
             ...process.env,
-            OPENCLAW_FAKE_NPM_OUT: outputPath,
+            DEX_FAKE_NPM_OUT: outputPath,
             PATH: `${dir}${delimiter}${process.env.PATH ?? ""}`,
           },
           windowsVerbatimArguments: invocation.windowsVerbatimArguments,
@@ -458,21 +458,21 @@ describe("runNpmReleaseCheckCommand", () => {
 describe("resolveNpmReleaseCheckCommandTimeoutMs", () => {
   it("parses only positive integer environment timeouts", () => {
     expect(resolveNpmReleaseCheckCommandTimeoutMs({})).toBe(10 * 60 * 1000);
-    expect(resolveNpmReleaseCheckCommandTimeoutMs({ OPENCLAW_NPM_RELEASE_CHECK_COMMAND_TIMEOUT_MS: "" })).toBe(
+    expect(resolveNpmReleaseCheckCommandTimeoutMs({ DEX_NPM_RELEASE_CHECK_COMMAND_TIMEOUT_MS: "" })).toBe(
       10 * 60 * 1000,
     );
     expect(
       resolveNpmReleaseCheckCommandTimeoutMs({
-        OPENCLAW_NPM_RELEASE_CHECK_COMMAND_TIMEOUT_MS: "1234",
+        DEX_NPM_RELEASE_CHECK_COMMAND_TIMEOUT_MS: "1234",
       }),
     ).toBe(1234);
 
     for (const raw of ["nope", "10m", "1e3", "0", "-1", "9007199254740992"]) {
       expect(
         () => resolveNpmReleaseCheckCommandTimeoutMs({
-          OPENCLAW_NPM_RELEASE_CHECK_COMMAND_TIMEOUT_MS: raw,
+          DEX_NPM_RELEASE_CHECK_COMMAND_TIMEOUT_MS: raw,
         }),
-      ).toThrow(`invalid OPENCLAW_NPM_RELEASE_CHECK_COMMAND_TIMEOUT_MS: ${raw}`);
+      ).toThrow(`invalid DEX_NPM_RELEASE_CHECK_COMMAND_TIMEOUT_MS: ${raw}`);
     }
   });
 });

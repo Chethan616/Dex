@@ -96,8 +96,8 @@ describe("gateway auth", () => {
     const auth = resolveGatewayAuth({
       authConfig: {},
       env: {
-        OPENCLAW_GATEWAY_TOKEN: "env-token",
-        OPENCLAW_GATEWAY_PASSWORD: "env-password",
+        DEX_GATEWAY_TOKEN: "env-token",
+        DEX_GATEWAY_PASSWORD: "env-password",
       } as NodeJS.ProcessEnv,
     });
 
@@ -191,8 +191,8 @@ describe("gateway auth", () => {
         password: "config-password", // pragma: allowlist secret
       },
       env: {
-        OPENCLAW_GATEWAY_TOKEN: "env-token",
-        OPENCLAW_GATEWAY_PASSWORD: "env-password",
+        DEX_GATEWAY_TOKEN: "env-token",
+        DEX_GATEWAY_PASSWORD: "env-password",
       } as NodeJS.ProcessEnv,
     });
 
@@ -203,12 +203,12 @@ describe("gateway auth", () => {
   it("treats env-template auth secrets as SecretRefs instead of plaintext", () => {
     const auth = resolveGatewayAuth({
       authConfig: {
-        token: "${OPENCLAW_GATEWAY_TOKEN}",
-        password: "${OPENCLAW_GATEWAY_PASSWORD}",
+        token: "${DEX_GATEWAY_TOKEN}",
+        password: "${DEX_GATEWAY_PASSWORD}",
       },
       env: {
-        OPENCLAW_GATEWAY_TOKEN: "env-token",
-        OPENCLAW_GATEWAY_PASSWORD: "env-password",
+        DEX_GATEWAY_TOKEN: "env-token",
+        DEX_GATEWAY_PASSWORD: "env-password",
       } as NodeJS.ProcessEnv,
     });
 
@@ -531,7 +531,7 @@ describe("gateway auth", () => {
     ).toThrow(/provider reference object/);
   });
 
-  it("accepts password mode when env provides OPENCLAW_GATEWAY_PASSWORD", () => {
+  it("accepts password mode when env provides DEX_GATEWAY_PASSWORD", () => {
     const rawPasswordRef = { source: "exec", provider: "op", id: "pw" } as never;
     const auth = resolveGatewayAuth({
       authConfig: {
@@ -539,7 +539,7 @@ describe("gateway auth", () => {
         password: rawPasswordRef,
       },
       env: {
-        OPENCLAW_GATEWAY_PASSWORD: "env-password",
+        DEX_GATEWAY_PASSWORD: "env-password",
       } as NodeJS.ProcessEnv,
     });
 
@@ -887,7 +887,7 @@ describe("trusted-proxy auth", () => {
         },
       },
       env: {
-        OPENCLAW_GATEWAY_TOKEN: "shared-secret",
+        DEX_GATEWAY_TOKEN: "shared-secret",
       } as NodeJS.ProcessEnv,
     },
   ])("rejects trusted-proxy mode when shared token comes from $name", ({ authConfig, env }) => {

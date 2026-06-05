@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   clearCurrentPluginMetadataSnapshot,
   resolvePluginMetadataControlPlaneFingerprint,
@@ -19,47 +19,47 @@ import { createEmptyPluginRegistry } from "./registry-empty.js";
 import { resetPluginRuntimeStateForTest, setActivePluginRegistry } from "./runtime.js";
 
 const ORIGINAL_ENV = {
-  OPENCLAW_STATE_DIR: process.env.OPENCLAW_STATE_DIR,
-  OPENCLAW_HOME: process.env.OPENCLAW_HOME,
-  OPENCLAW_DISABLE_BUNDLED_PLUGINS: process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS,
-  OPENCLAW_BUNDLED_PLUGINS_DIR: process.env.OPENCLAW_BUNDLED_PLUGINS_DIR,
+  DEX_STATE_DIR: process.env.DEX_STATE_DIR,
+  DEX_HOME: process.env.DEX_HOME,
+  DEX_DISABLE_BUNDLED_PLUGINS: process.env.DEX_DISABLE_BUNDLED_PLUGINS,
+  DEX_BUNDLED_PLUGINS_DIR: process.env.DEX_BUNDLED_PLUGINS_DIR,
 } as const;
 
 const tempDirs: string[] = [];
 
 function restoreOpenClawStateDirEnv(): void {
-  const value = ORIGINAL_ENV.OPENCLAW_STATE_DIR;
+  const value = ORIGINAL_ENV.DEX_STATE_DIR;
   if (value === undefined) {
-    delete process.env.OPENCLAW_STATE_DIR;
+    delete process.env.DEX_STATE_DIR;
   } else {
-    process.env.OPENCLAW_STATE_DIR = value;
+    process.env.DEX_STATE_DIR = value;
   }
 }
 
 function restoreOpenClawHomeEnv(): void {
-  const value = ORIGINAL_ENV.OPENCLAW_HOME;
+  const value = ORIGINAL_ENV.DEX_HOME;
   if (value === undefined) {
-    delete process.env.OPENCLAW_HOME;
+    delete process.env.DEX_HOME;
   } else {
-    process.env.OPENCLAW_HOME = value;
+    process.env.DEX_HOME = value;
   }
 }
 
 function restoreOpenClawDisableBundledPluginsEnv(): void {
-  const value = ORIGINAL_ENV.OPENCLAW_DISABLE_BUNDLED_PLUGINS;
+  const value = ORIGINAL_ENV.DEX_DISABLE_BUNDLED_PLUGINS;
   if (value === undefined) {
-    delete process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS;
+    delete process.env.DEX_DISABLE_BUNDLED_PLUGINS;
   } else {
-    process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS = value;
+    process.env.DEX_DISABLE_BUNDLED_PLUGINS = value;
   }
 }
 
 function restoreOpenClawBundledPluginsDirEnv(): void {
-  const value = ORIGINAL_ENV.OPENCLAW_BUNDLED_PLUGINS_DIR;
+  const value = ORIGINAL_ENV.DEX_BUNDLED_PLUGINS_DIR;
   if (value === undefined) {
-    delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+    delete process.env.DEX_BUNDLED_PLUGINS_DIR;
   } else {
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = value;
+    process.env.DEX_BUNDLED_PLUGINS_DIR = value;
   }
 }
 
@@ -138,7 +138,7 @@ function createCurrentSnapshot(params: {
   manifestHash: string;
   prefix: string;
   workspaceDir?: string;
-  config?: OpenClawConfig;
+  config?: DexConfig;
 }): PluginMetadataSnapshot {
   const config = params.config ?? {};
   const policyHash = resolveInstalledPluginIndexPolicyHash(config);
@@ -298,7 +298,7 @@ describe("manifest model id normalization", () => {
   });
 
   it("reuses current metadata when callers omit config", () => {
-    const config: OpenClawConfig = { plugins: { allow: ["normalizer"] } };
+    const config: DexConfig = { plugins: { allow: ["normalizer"] } };
     setCurrentPluginMetadataSnapshot(
       createCurrentSnapshot({
         manifestHash: "alpha",
@@ -327,10 +327,10 @@ describe("manifest model id normalization", () => {
 
     const env = {
       ...process.env,
-      OPENCLAW_STATE_DIR: stateDir,
-      OPENCLAW_HOME: undefined,
-      OPENCLAW_DISABLE_BUNDLED_PLUGINS: "1",
-      OPENCLAW_BUNDLED_PLUGINS_DIR: undefined,
+      DEX_STATE_DIR: stateDir,
+      DEX_HOME: undefined,
+      DEX_DISABLE_BUNDLED_PLUGINS: "1",
+      DEX_BUNDLED_PLUGINS_DIR: undefined,
     };
 
     expect(normalizeDemoModelWithEnv(env)).toBe("bravo/demo-model");
@@ -342,10 +342,10 @@ describe("manifest model id normalization", () => {
     writeInstallIndex({ stateDir: stateDirA, pluginDir: pluginDirA });
     writeNormalizerManifest({ pluginDir: pluginDirA, prefix: "alpha" });
 
-    process.env.OPENCLAW_STATE_DIR = stateDirA;
-    process.env.OPENCLAW_HOME = undefined;
-    process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS = "1";
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = undefined;
+    process.env.DEX_STATE_DIR = stateDirA;
+    process.env.DEX_HOME = undefined;
+    process.env.DEX_DISABLE_BUNDLED_PLUGINS = "1";
+    process.env.DEX_BUNDLED_PLUGINS_DIR = undefined;
 
     expect(normalizeDemoModel()).toBe("alpha/demo-model");
 
@@ -357,7 +357,7 @@ describe("manifest model id normalization", () => {
     writeInstallIndex({ stateDir: stateDirB, pluginDir: pluginDirB });
     writeNormalizerManifest({ pluginDir: pluginDirB, prefix: "charlie" });
 
-    process.env.OPENCLAW_STATE_DIR = stateDirB;
+    process.env.DEX_STATE_DIR = stateDirB;
     clearPluginMetadataLifecycleCaches();
     expect(normalizeDemoModel()).toBe("charlie/demo-model");
   });
@@ -369,10 +369,10 @@ describe("manifest model id normalization", () => {
     writeInstallIndex({ stateDir, pluginDir });
     writeNormalizerManifest({ pluginDir, prefix: "alpha" });
 
-    process.env.OPENCLAW_STATE_DIR = stateDir;
-    process.env.OPENCLAW_HOME = undefined;
-    process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS = "1";
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = undefined;
+    process.env.DEX_STATE_DIR = stateDir;
+    process.env.DEX_HOME = undefined;
+    process.env.DEX_DISABLE_BUNDLED_PLUGINS = "1";
+    process.env.DEX_BUNDLED_PLUGINS_DIR = undefined;
 
     const readFileSyncSpy = vi.spyOn(fs, "readFileSync");
 

@@ -17,7 +17,7 @@ function runInstallShell(script: string, env: NodeJS.ProcessEnv = {}) {
         ...env,
         BASH_ENV: "",
         ENV: "",
-        OPENCLAW_INSTALL_SH_NO_RUN: "1",
+        DEX_INSTALL_SH_NO_RUN: "1",
       },
     });
   } finally {
@@ -99,10 +99,10 @@ describe("install.sh", () => {
   it("runs installer snippets without inherited shell startup files", () => {
     const tmp = mkdtempSync(join(tmpdir(), "openclaw-install-shell-env-"));
     const bashEnvPath = join(tmp, "bash_env");
-    writeFileSync(bashEnvPath, "export OPENCLAW_BASH_ENV_LEAKED=1\n");
+    writeFileSync(bashEnvPath, "export DEX_BASH_ENV_LEAKED=1\n");
 
     try {
-      const result = runInstallShell('printf "leaked=%s\\n" "${OPENCLAW_BASH_ENV_LEAKED:-0}"', {
+      const result = runInstallShell('printf "leaked=%s\\n" "${DEX_BASH_ENV_LEAKED:-0}"', {
         BASH_ENV: bashEnvPath,
       });
 
@@ -593,7 +593,7 @@ describe("install.sh", () => {
     }
   });
 
-  it("uses OPENCLAW_HOME for git and onboarding defaults", () => {
+  it("uses DEX_HOME for git and onboarding defaults", () => {
     const tmp = mkdtempSync(join(tmpdir(), "openclaw-install-home-"));
     const osHome = join(tmp, "os-home");
     const openclawHome = join(tmp, "openclaw-home");
@@ -607,13 +607,13 @@ describe("install.sh", () => {
           `cd ${JSON.stringify(process.cwd())}`,
           `source ${JSON.stringify(SCRIPT_PATH)}`,
           'printf "git=%s\\nworkspace=%s\\n" "$GIT_DIR" "$(resolve_workspace_dir)"',
-          "OPENCLAW_PROFILE=work",
+          "DEX_PROFILE=work",
           'printf "workspaceProfile=%s\\n" "$(resolve_workspace_dir)"',
         ].join("\n"),
         {
           HOME: osHome,
-          OPENCLAW_HOME: openclawHome,
-          OPENCLAW_GIT_DIR: undefined,
+          DEX_HOME: openclawHome,
+          DEX_GIT_DIR: undefined,
           TERM: "dumb",
         },
       );
@@ -624,9 +624,9 @@ describe("install.sh", () => {
     expect(result?.status).toBe(0);
     const output = result?.stdout ?? "";
     expect(output).toContain(`git=${join(openclawHome, "openclaw")}`);
-    expect(output).toContain(`workspace=${join(openclawHome, ".openclaw", "workspace")}`);
+    expect(output).toContain(`workspace=${join(openclawHome, ".dex", "workspace")}`);
     expect(output).toContain(
-      `workspaceProfile=${join(openclawHome, ".openclaw", "workspace-work")}`,
+      `workspaceProfile=${join(openclawHome, ".dex", "workspace-work")}`,
     );
     const mkdirParentIndex = script.indexOf('mkdir -p "$(dirname "$repo_dir")"');
     const cloneIndex = script.indexOf(
@@ -637,12 +637,12 @@ describe("install.sh", () => {
     expect(mkdirParentIndex).toBeLessThan(cloneIndex);
   });
 
-  it("skips bootstrap onboarding when legacy HOME config exists with OPENCLAW_HOME", () => {
+  it("skips bootstrap onboarding when legacy HOME config exists with DEX_HOME", () => {
     const tmp = mkdtempSync(join(tmpdir(), "openclaw-install-legacy-config-"));
     const osHome = join(tmp, "os-home");
     const openclawHome = join(tmp, "openclaw-home");
-    const legacyConfigDir = join(osHome, ".openclaw");
-    const bootstrapDir = join(openclawHome, ".openclaw", "workspace");
+    const legacyConfigDir = join(osHome, ".dex");
+    const bootstrapDir = join(openclawHome, ".dex", "workspace");
     mkdirSync(legacyConfigDir, { recursive: true });
     mkdirSync(bootstrapDir, { recursive: true });
     writeFileSync(join(legacyConfigDir, "openclaw.json"), "{}\n");
@@ -659,8 +659,8 @@ describe("install.sh", () => {
         ].join("\n"),
         {
           HOME: osHome,
-          OPENCLAW_HOME: openclawHome,
-          OPENCLAW_CONFIG_PATH: undefined,
+          DEX_HOME: openclawHome,
+          DEX_CONFIG_PATH: undefined,
           TERM: "dumb",
         },
       );
@@ -678,7 +678,7 @@ describe("install.sh", () => {
       set -euo pipefail
       source "${SCRIPT_PATH}"
       set +e
-      OPENCLAW_VERSION=main
+      DEX_VERSION=main
       USE_BETA=0
       install_openclaw
       status=$?
@@ -802,7 +802,7 @@ describe("install.sh", () => {
         "}",
         "npm_global_bin_dir",
       ].join("\n"),
-      { OPENCLAW_INSTALL_PROBE_TIMEOUT_SECONDS: "0.1" },
+      { DEX_INSTALL_PROBE_TIMEOUT_SECONDS: "0.1" },
     );
 
     expect(result.status).toBe(0);
@@ -836,7 +836,7 @@ describe("install.sh", () => {
           '  printf "not-loaded\\n"',
           "fi",
         ].join("\n"),
-        { OPENCLAW_INSTALL_PROBE_TIMEOUT_SECONDS: "0.1" },
+        { DEX_INSTALL_PROBE_TIMEOUT_SECONDS: "0.1" },
       );
 
       expect(result.status).toBe(0);
@@ -1251,13 +1251,13 @@ describe("install.sh", () => {
         fi
         return 1
       }
-      OPENCLAW_VERSION=v2026.5.12-beta.3
+      DEX_VERSION=v2026.5.12-beta.3
       printf 'tag=%s\\n' "$(resolve_git_openclaw_ref)"
-      OPENCLAW_VERSION=2026.5.12-beta.3
+      DEX_VERSION=2026.5.12-beta.3
       printf 'semver=%s\\n' "$(resolve_git_openclaw_ref)"
-      OPENCLAW_VERSION=beta
+      DEX_VERSION=beta
       printf 'beta=%s\\n' "$(resolve_git_openclaw_ref)"
-      OPENCLAW_VERSION=main
+      DEX_VERSION=main
       printf 'main=%s\\n' "$(resolve_git_openclaw_ref)"
     `);
 
@@ -1469,7 +1469,7 @@ describe("install.sh duplicate OpenClaw install detection", () => {
       printf '{"version":"2026.3.7"}\\n' > "$root/brew/openclaw/package.json"
       printf '{"version":"2026.3.1"}\\n' > "$root/fnm/openclaw/package.json"
       collect_openclaw_npm_root_candidates() { printf '%s\\n' "$root/brew" "$root/fnm"; }
-      OPENCLAW_BIN="$root/fnm/.bin/openclaw"
+      DEX_BIN="$root/fnm/.bin/openclaw"
       ui_warn() { echo "WARN: $*"; }
       warn_duplicate_openclaw_global_installs
     `);

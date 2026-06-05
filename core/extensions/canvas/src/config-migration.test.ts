@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { describe, expect, test } from "vitest";
 import { migrateLegacyCanvasHostConfig } from "./config-migration.js";
 
@@ -10,7 +10,7 @@ describe("migrateLegacyCanvasHostConfig", () => {
         root: "~/canvas",
         liveReload: false,
       },
-    } as OpenClawConfig);
+    } as DexConfig);
 
     if (!result) {
       throw new Error("expected Canvas config migration result");
@@ -52,7 +52,7 @@ describe("migrateLegacyCanvasHostConfig", () => {
           },
         },
       },
-    } as OpenClawConfig);
+    } as DexConfig);
 
     if (!result) {
       throw new Error("expected Canvas config migration result");
@@ -76,6 +76,6 @@ describe("migrateLegacyCanvasHostConfig", () => {
   });
 
   test("ignores configs without legacy canvasHost", () => {
-    expect(migrateLegacyCanvasHostConfig({} as OpenClawConfig)).toBeNull();
+    expect(migrateLegacyCanvasHostConfig({} as DexConfig)).toBeNull();
   });
 });

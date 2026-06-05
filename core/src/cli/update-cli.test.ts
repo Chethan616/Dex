@@ -6,7 +6,7 @@ import path from "node:path";
 import { Command } from "commander";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TEST_BUNDLED_RUNTIME_SIDECAR_PATHS } from "../../test/helpers/bundled-runtime-sidecars.js";
-import type { OpenClawConfig, ConfigFileSnapshot } from "../config/types.openclaw.js";
+import type { DexConfig, ConfigFileSnapshot } from "../config/types.openclaw.js";
 import type { PluginInstallRecord } from "../config/types.plugins.js";
 import { GATEWAY_SERVICE_RUNTIME_PID_ENV } from "../daemon/constants.js";
 import { writePackageDistInventory } from "../infra/package-dist-inventory.js";
@@ -42,7 +42,7 @@ const pathExists = vi.fn();
 const syncPluginsForUpdateChannel = vi.fn();
 const updateNpmInstalledPlugins = vi.fn();
 const loadInstalledPluginIndexInstallRecords = vi.fn(
-  async (params: { config?: OpenClawConfig } = {}) => params.config?.plugins?.installs ?? {},
+  async (params: { config?: DexConfig } = {}) => params.config?.plugins?.installs ?? {},
 );
 const checkShellCompletionStatus = vi.fn();
 const ensureCompletionCacheExists = vi.fn();
@@ -83,10 +83,10 @@ vi.mock("../infra/openclaw-root.js", () => ({
 
 vi.mock("../config/config.js", () => ({
   assertConfigWriteAllowedInCurrentMode: () => {
-    if (process.env.OPENCLAW_NIX_MODE === "1") {
+    if (process.env.DEX_NIX_MODE === "1") {
       throw new Error(
         [
-          "Config is managed by Nix (`OPENCLAW_NIX_MODE=1`), so OpenClaw treats openclaw.json as immutable.",
+          "Config is managed by Nix (`DEX_NIX_MODE=1`), so OpenClaw treats openclaw.json as immutable.",
           "Do not run setup, onboarding, openclaw update, plugin install/update/uninstall/enable, doctor repair/token-generation, or config set against this file.",
           "Agent-first Nix setup: https://github.com/openclaw/nix-openclaw#quick-start",
           "OpenClaw Nix overview: https://docs.openclaw.ai/install/nix",
@@ -390,7 +390,7 @@ describe("update-cli", () => {
     return dir;
   };
 
-  const baseConfig = {} as OpenClawConfig;
+  const baseConfig = {} as DexConfig;
   const baseSnapshot: ConfigFileSnapshot = {
     path: "/tmp/openclaw-config.json",
     exists: true,
@@ -516,14 +516,14 @@ describe("update-cli", () => {
 
   const syncPluginCall = (index = 0) => {
     const calls = syncPluginsForUpdateChannel.mock.calls as unknown as Array<
-      [{ channel?: string; config?: OpenClawConfig }]
+      [{ channel?: string; config?: DexConfig }]
     >;
     return calls[index]?.[0];
   };
 
   const npmPluginUpdateCall = (index = 0) => {
     const calls = updateNpmInstalledPlugins.mock.calls as unknown as Array<
-      [{ config?: OpenClawConfig; timeoutMs?: number }]
+      [{ config?: DexConfig; timeoutMs?: number }]
     >;
     return calls[index]?.[0];
   };
@@ -536,7 +536,7 @@ describe("update-cli", () => {
   const setupConfigMutationWithRetryMock = () => {
     vi.mocked(mutateConfigFileWithRetry).mockImplementation(async (params) => {
       const snapshot = await readConfigFileSnapshot();
-      const nextConfig = structuredClone(snapshot.sourceConfig) as OpenClawConfig;
+      const nextConfig = structuredClone(snapshot.sourceConfig) as DexConfig;
       await params.mutate(nextConfig, {
         snapshot,
         previousHash: snapshot.hash ?? null,
@@ -888,13 +888,13 @@ describe("update-cli", () => {
     const call = spawnSyncCall();
     expect(typeof call?.[0]).toBe("string");
     expect(call?.[1]).toEqual([path.join(root, "openclaw.mjs"), "completion", "--write-state"]);
-    expect(call?.[2]?.env?.OPENCLAW_COMPLETION_SKIP_PLUGIN_COMMANDS).toBe("1");
+    expect(call?.[2]?.env?.DEX_COMPLETION_SKIP_PLUGIN_COMMANDS).toBe("1");
     expect(call?.[2]?.timeout).toBe(30_000);
   });
 
   it("disarms legacy launchd updater jobs before refusing mutating updates in Nix mode", async () => {
-    await withEnvAsync({ OPENCLAW_NIX_MODE: "1" }, async () => {
-      await expect(updateCommand({ yes: true })).rejects.toThrow("OPENCLAW_NIX_MODE=1");
+    await withEnvAsync({ DEX_NIX_MODE: "1" }, async () => {
+      await expect(updateCommand({ yes: true })).rejects.toThrow("DEX_NIX_MODE=1");
     });
 
     expect(launchdUpdateCleanupMocks.disableCurrentOpenClawUpdateLaunchdJob).toHaveBeenCalledOnce();
@@ -963,10 +963,10 @@ describe("update-cli", () => {
     expect(call?.[1]).toEqual([entrypoints[0], "update", "--yes", "--timeout", "1800"]);
     expect(call?.[2]?.stdio).toBe("inherit");
     expect(call?.[2]?.env?.NODE_DISABLE_COMPILE_CACHE).toBe("1");
-    expect(call?.[2]?.env?.OPENCLAW_UPDATE_IN_PROGRESS).toBe("1");
-    expect(call?.[2]?.env?.OPENCLAW_UPDATE_POST_CORE).toBe("1");
-    expect(call?.[2]?.env?.OPENCLAW_UPDATE_POST_CORE_CHANNEL).toBe("dev");
-    expect(call?.[2]?.env?.OPENCLAW_COMPATIBILITY_HOST_VERSION).toBe("1.0.0");
+    expect(call?.[2]?.env?.DEX_UPDATE_IN_PROGRESS).toBe("1");
+    expect(call?.[2]?.env?.DEX_UPDATE_POST_CORE).toBe("1");
+    expect(call?.[2]?.env?.DEX_UPDATE_POST_CORE_CHANNEL).toBe("dev");
+    expect(call?.[2]?.env?.DEX_COMPATIBILITY_HOST_VERSION).toBe("1.0.0");
     expect(vi.mocked(readConfigFileSnapshot).mock.calls[1]?.[0]).toEqual({
       skipPluginValidation: true,
       suppressFutureVersionWarning: true,
@@ -981,7 +981,7 @@ describe("update-cli", () => {
     const kill = vi.fn();
     spawn.mockImplementationOnce((_command: unknown, _argv: unknown, options: unknown) => {
       const resultPath = (options as { env?: NodeJS.ProcessEnv }).env
-        ?.OPENCLAW_UPDATE_POST_CORE_RESULT_PATH;
+        ?.DEX_UPDATE_POST_CORE_RESULT_PATH;
       if (!resultPath) {
         throw new Error("missing post-core result path");
       }
@@ -1011,7 +1011,7 @@ describe("update-cli", () => {
     pathExists.mockImplementation(async (candidate: string) => candidate === entryPath);
     spawn.mockImplementationOnce((_command: unknown, _argv: unknown, options: unknown) => {
       const resultPath = (options as { env?: NodeJS.ProcessEnv }).env
-        ?.OPENCLAW_UPDATE_POST_CORE_RESULT_PATH;
+        ?.DEX_UPDATE_POST_CORE_RESULT_PATH;
       if (!resultPath) {
         throw new Error("missing post-core result path");
       }
@@ -1073,8 +1073,8 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_SERVICE_MARKER: "openclaw",
-        OPENCLAW_SERVICE_KIND: "gateway",
+        DEX_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_KIND: "gateway",
         [GATEWAY_SERVICE_RUNTIME_PID_ENV]: "7777",
       },
       async () => {
@@ -1083,8 +1083,8 @@ describe("update-cli", () => {
     );
 
     const spawnEnv = spawnCall()?.[2]?.env;
-    expect(spawnEnv?.OPENCLAW_SERVICE_MARKER).toBeUndefined();
-    expect(spawnEnv?.OPENCLAW_SERVICE_KIND).toBeUndefined();
+    expect(spawnEnv?.DEX_SERVICE_MARKER).toBeUndefined();
+    expect(spawnEnv?.DEX_SERVICE_KIND).toBeUndefined();
     expect(spawnEnv?.[GATEWAY_SERVICE_RUNTIME_PID_ENV]).toBeUndefined();
   });
 
@@ -1104,7 +1104,7 @@ describe("update-cli", () => {
           dmPolicy: "pairing",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     let capturedRecords: unknown;
     let capturedSourceConfig: unknown;
     vi.mocked(readConfigFileSnapshot).mockResolvedValue({
@@ -1117,8 +1117,8 @@ describe("update-cli", () => {
     loadInstalledPluginIndexInstallRecords.mockResolvedValueOnce(pluginInstallRecords);
     spawn.mockImplementationOnce((_node, _argv, options) => {
       const env = (options as { env?: NodeJS.ProcessEnv }).env;
-      const recordsPath = env?.OPENCLAW_UPDATE_POST_CORE_INSTALL_RECORDS_PATH;
-      const sourceConfigPath = env?.OPENCLAW_UPDATE_POST_CORE_SOURCE_CONFIG_PATH;
+      const recordsPath = env?.DEX_UPDATE_POST_CORE_INSTALL_RECORDS_PATH;
+      const sourceConfigPath = env?.DEX_UPDATE_POST_CORE_SOURCE_CONFIG_PATH;
       if (!recordsPath) {
         throw new Error("missing post-core install records path");
       }
@@ -1168,7 +1168,7 @@ describe("update-cli", () => {
     loadInstalledPluginIndexInstallRecords.mockResolvedValueOnce(pluginInstallRecords);
     spawn.mockImplementationOnce((_node, _argv, options) => {
       const env = (options as { env?: NodeJS.ProcessEnv }).env;
-      const recordsPath = env?.OPENCLAW_UPDATE_POST_CORE_INSTALL_RECORDS_PATH;
+      const recordsPath = env?.DEX_UPDATE_POST_CORE_INSTALL_RECORDS_PATH;
       if (!recordsPath) {
         throw new Error("missing post-core install records path");
       }
@@ -1213,9 +1213,9 @@ describe("update-cli", () => {
     expect(call?.[0]).toMatch(/node/);
     expect(call?.[1]).toEqual([entrypoints[0], "update", "--no-restart", "--yes"]);
     expect(call?.[2]?.stdio).toBe("inherit");
-    expect(call?.[2]?.env?.OPENCLAW_UPDATE_POST_CORE).toBe("1");
-    expect(call?.[2]?.env?.OPENCLAW_UPDATE_POST_CORE_CHANNEL).toBe("dev");
-    expect(call?.[2]?.env?.OPENCLAW_UPDATE_POST_CORE_REQUESTED_CHANNEL).toBe("dev");
+    expect(call?.[2]?.env?.DEX_UPDATE_POST_CORE).toBe("1");
+    expect(call?.[2]?.env?.DEX_UPDATE_POST_CORE_CHANNEL).toBe("dev");
+    expect(call?.[2]?.env?.DEX_UPDATE_POST_CORE_REQUESTED_CHANNEL).toBe("dev");
     expect(replaceConfigFile).not.toHaveBeenCalled();
     expect(syncPluginsForUpdateChannel).not.toHaveBeenCalled();
     expect(updateNpmInstalledPlugins).not.toHaveBeenCalled();
@@ -1282,10 +1282,10 @@ describe("update-cli", () => {
     );
     vi.mocked(resolveNpmChannelTag).mockResolvedValue({ tag: "latest", version: "2026.4.10" });
 
-    delete process.env.OPENCLAW_COMPATIBILITY_HOST_VERSION;
+    delete process.env.DEX_COMPATIBILITY_HOST_VERSION;
     let hostVersionDuringPluginUpdate: string | undefined = "unset";
     updateNpmInstalledPlugins.mockImplementation(async () => {
-      hostVersionDuringPluginUpdate = process.env.OPENCLAW_COMPATIBILITY_HOST_VERSION;
+      hostVersionDuringPluginUpdate = process.env.DEX_COMPATIBILITY_HOST_VERSION;
       return { changed: false, config: baseConfig, outcomes: [] };
     });
 
@@ -1299,9 +1299,9 @@ describe("update-cli", () => {
       // before restart.
       expect(hostVersionDuringPluginUpdate).toBe("2026.4.10");
       // The override is scoped to the plugin convergence and restored afterward.
-      expect(process.env.OPENCLAW_COMPATIBILITY_HOST_VERSION).toBeUndefined();
+      expect(process.env.DEX_COMPATIBILITY_HOST_VERSION).toBeUndefined();
     } finally {
-      delete process.env.OPENCLAW_COMPATIBILITY_HOST_VERSION;
+      delete process.env.DEX_COMPATIBILITY_HOST_VERSION;
     }
   });
 
@@ -1328,8 +1328,8 @@ describe("update-cli", () => {
   it("post-core resume mode skips the core update and only runs post-update tasks", async () => {
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
       },
       async () => {
         await updateCommand({ restart: false });
@@ -1362,9 +1362,9 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
-        OPENCLAW_UPDATE_POST_CORE_RESULT_PATH: resultPath,
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE_RESULT_PATH: resultPath,
       },
       async () => {
         await updateCommand({ restart: false });
@@ -1400,9 +1400,9 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
-        OPENCLAW_UPDATE_POST_CORE_INSTALL_RECORDS_PATH: recordsPath,
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE_INSTALL_RECORDS_PATH: recordsPath,
       },
       async () => {
         await updateCommand({ json: true, restart: false });
@@ -1444,9 +1444,9 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
-        OPENCLAW_UPDATE_POST_CORE_INSTALL_RECORDS_PATH: recordsPath,
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE_INSTALL_RECORDS_PATH: recordsPath,
       },
       async () => {
         await updateCommand({ json: true, restart: false });
@@ -1460,18 +1460,18 @@ describe("update-cli", () => {
     vi.mocked(readConfigFileSnapshot).mockResolvedValue({
       ...baseSnapshot,
       parsed: { update: { channel: "stable" } },
-      resolved: { update: { channel: "stable" } } as OpenClawConfig,
-      sourceConfig: { update: { channel: "stable" } } as OpenClawConfig,
-      runtimeConfig: { update: { channel: "stable" } } as OpenClawConfig,
-      config: { update: { channel: "stable" } } as OpenClawConfig,
+      resolved: { update: { channel: "stable" } } as DexConfig,
+      sourceConfig: { update: { channel: "stable" } } as DexConfig,
+      runtimeConfig: { update: { channel: "stable" } } as DexConfig,
+      config: { update: { channel: "stable" } } as DexConfig,
       hash: "stable-hash",
     });
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "dev",
-        OPENCLAW_UPDATE_POST_CORE_REQUESTED_CHANNEL: "dev",
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "dev",
+        DEX_UPDATE_POST_CORE_REQUESTED_CHANNEL: "dev",
       },
       async () => {
         await updateCommand({ restart: false });
@@ -1500,10 +1500,10 @@ describe("update-cli", () => {
     vi.mocked(readConfigFileSnapshot).mockResolvedValueOnce({
       ...baseSnapshot,
       parsed: { update: { channel: "stable" } },
-      resolved: { update: { channel: "stable" } } as OpenClawConfig,
-      sourceConfig: { update: { channel: "stable" } } as OpenClawConfig,
-      runtimeConfig: { update: { channel: "stable" } } as OpenClawConfig,
-      config: { update: { channel: "stable" } } as OpenClawConfig,
+      resolved: { update: { channel: "stable" } } as DexConfig,
+      sourceConfig: { update: { channel: "stable" } } as DexConfig,
+      runtimeConfig: { update: { channel: "stable" } } as DexConfig,
+      config: { update: { channel: "stable" } } as DexConfig,
       hash: "stable-hash",
     });
     const newerSnapshot = {
@@ -1515,19 +1515,19 @@ describe("update-cli", () => {
       resolved: {
         meta: { lastTouchedVersion: "2026.4.30" },
         update: { channel: "stable" },
-      } as OpenClawConfig,
+      } as DexConfig,
       sourceConfig: {
         meta: { lastTouchedVersion: "2026.4.30" },
         update: { channel: "stable" },
-      } as OpenClawConfig,
+      } as DexConfig,
       runtimeConfig: {
         meta: { lastTouchedVersion: "2026.4.30" },
         update: { channel: "stable" },
-      } as OpenClawConfig,
+      } as DexConfig,
       config: {
         meta: { lastTouchedVersion: "2026.4.30" },
         update: { channel: "stable" },
-      } as OpenClawConfig,
+      } as DexConfig,
       hash: "newer-hash",
     };
     vi.mocked(mutateConfigFileWithRetry).mockImplementationOnce(async (params) => {
@@ -1552,9 +1552,9 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "dev",
-        OPENCLAW_UPDATE_POST_CORE_REQUESTED_CHANNEL: "dev",
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "dev",
+        DEX_UPDATE_POST_CORE_REQUESTED_CHANNEL: "dev",
       },
       async () => {
         await updateCommand({ restart: false });
@@ -1569,8 +1569,8 @@ describe("update-cli", () => {
   it("passes the update timeout budget into post-core plugin updates", async () => {
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
       },
       async () => {
         await updateCommand({ restart: false, timeout: "1800" });
@@ -1583,8 +1583,8 @@ describe("update-cli", () => {
   it("uses a fail-closed integrity policy for post-core plugin updates", async () => {
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
       },
       async () => {
         await updateCommand({ restart: false });
@@ -1625,7 +1625,7 @@ describe("update-cli", () => {
   it("keeps json update output successful when post-core plugin updates warn", async () => {
     updateNpmInstalledPlugins.mockImplementationOnce(
       async (params: {
-        config: OpenClawConfig;
+        config: DexConfig;
         onIntegrityDrift?: (drift: {
           pluginId: string;
           spec: string;
@@ -1705,7 +1705,7 @@ describe("update-cli", () => {
           demo: { enabled: true },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     vi.mocked(readConfigFileSnapshot).mockResolvedValue({
       ...baseSnapshot,
       parsed: config,
@@ -1834,7 +1834,7 @@ describe("update-cli", () => {
       const env = (options as { env?: NodeJS.ProcessEnv }).env;
       queueMicrotask(() => {
         void (async () => {
-          const resultPath = env?.OPENCLAW_UPDATE_POST_CORE_RESULT_PATH;
+          const resultPath = env?.DEX_UPDATE_POST_CORE_RESULT_PATH;
           if (resultPath) {
             await fs.writeFile(
               resultPath,
@@ -1965,11 +1965,11 @@ describe("update-cli", () => {
     vi.mocked(readConfigFileSnapshot).mockResolvedValue({
       ...baseSnapshot,
       valid: false,
-      config: {} as OpenClawConfig,
+      config: {} as DexConfig,
     });
     vi.mocked(readSourceConfigBestEffort).mockResolvedValue({
       update: { channel: "dev" },
-    } as OpenClawConfig);
+    } as DexConfig);
 
     await updateStatusCommand({ json: true });
 
@@ -2024,7 +2024,7 @@ describe("update-cli", () => {
       prepare: async () => {
         vi.mocked(readConfigFileSnapshot).mockResolvedValue({
           ...baseSnapshot,
-          config: { update: { channel: "beta" } } as OpenClawConfig,
+          config: { update: { channel: "beta" } } as DexConfig,
         });
       },
       expectedChannel: "beta" as const,
@@ -2074,7 +2074,7 @@ describe("update-cli", () => {
     mockPackageInstallStatus(tempDir);
     vi.mocked(readConfigFileSnapshot).mockResolvedValue({
       ...baseSnapshot,
-      config: { update: { channel: "beta" } } as OpenClawConfig,
+      config: { update: { channel: "beta" } } as DexConfig,
     });
     vi.mocked(resolveNpmChannelTag).mockResolvedValue({
       tag: "latest",
@@ -2139,8 +2139,8 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_SERVICE_MARKER: "openclaw",
-        OPENCLAW_SERVICE_KIND: "gateway",
+        DEX_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_KIND: "gateway",
       },
       async () => {
         await updateCommand({ yes: true });
@@ -2162,16 +2162,16 @@ describe("update-cli", () => {
     serviceReadCommand.mockResolvedValue({
       programArguments: ["openclaw", "gateway", "run"],
       environment: {
-        OPENCLAW_SERVICE_MARKER: "openclaw",
-        OPENCLAW_SERVICE_KIND: "gateway",
+        DEX_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_KIND: "gateway",
       },
     });
     serviceLoaded.mockResolvedValue(true);
 
     await withEnvAsync(
       {
-        OPENCLAW_SERVICE_MARKER: "openclaw",
-        OPENCLAW_SERVICE_KIND: "gateway",
+        DEX_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_KIND: "gateway",
       },
       async () => {
         await updateCommand({ yes: true, restart: false });
@@ -2208,16 +2208,16 @@ describe("update-cli", () => {
       serviceReadCommand.mockResolvedValue({
         programArguments: ["openclaw", "gateway", "run"],
         environment: {
-          OPENCLAW_SERVICE_MARKER: "openclaw",
-          OPENCLAW_SERVICE_KIND: "gateway",
+          DEX_SERVICE_MARKER: "openclaw",
+          DEX_SERVICE_KIND: "gateway",
         },
       });
       setupRuntime();
 
       await withEnvAsync(
         {
-          OPENCLAW_SERVICE_MARKER: "openclaw",
-          OPENCLAW_SERVICE_KIND: "gateway",
+          DEX_SERVICE_MARKER: "openclaw",
+          DEX_SERVICE_KIND: "gateway",
         },
         async () => {
           await updateCommand({ yes: true });
@@ -2249,8 +2249,8 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_SERVICE_MARKER: "openclaw",
-        OPENCLAW_SERVICE_KIND: "gateway",
+        DEX_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_KIND: "gateway",
       },
       async () => {
         await updateCommand({ yes: true });
@@ -2299,8 +2299,8 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_SERVICE_MARKER: "openclaw",
-        OPENCLAW_SERVICE_KIND: "gateway",
+        DEX_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_KIND: "gateway",
         [GATEWAY_SERVICE_RUNTIME_PID_ENV]: "4242",
       },
       async () => {
@@ -2416,11 +2416,11 @@ describe("update-cli", () => {
       expectedSpec: "git@github.com:openclaw/openclaw.git#main",
     },
     {
-      name: "OPENCLAW_UPDATE_PACKAGE_SPEC override",
+      name: "DEX_UPDATE_PACKAGE_SPEC override",
       run: async () => {
         mockPackageInstallStatus(createCaseDir("openclaw-update"));
         await withEnvAsync(
-          { OPENCLAW_UPDATE_PACKAGE_SPEC: "http://10.211.55.2:8138/openclaw-next.tgz" },
+          { DEX_UPDATE_PACKAGE_SPEC: "http://10.211.55.2:8138/openclaw-next.tgz" },
           async () => {
             await updateCommand({ yes: true, tag: "latest" });
           },
@@ -2617,7 +2617,7 @@ describe("update-cli", () => {
     expect(doctorCall?.[0][0]).toContain("node");
     expect(doctorCall?.[0].slice(1)).toEqual([entryPath, "doctor", "--non-interactive", "--fix"]);
     expect(
-      (doctorCall?.[1].env as NodeJS.ProcessEnv | undefined)?.OPENCLAW_UPDATE_IN_PROGRESS,
+      (doctorCall?.[1].env as NodeJS.ProcessEnv | undefined)?.DEX_UPDATE_IN_PROGRESS,
     ).toBe("1");
   });
 
@@ -2704,7 +2704,7 @@ describe("update-cli", () => {
     expect(doctorCall?.[0].slice(1)).toEqual([entryPath, "doctor", "--non-interactive", "--fix"]);
     expect(doctorCall?.[1].cwd).toBe(pkgRoot);
     expect(
-      (doctorCall?.[1].env as NodeJS.ProcessEnv | undefined)?.OPENCLAW_COMPATIBILITY_HOST_VERSION,
+      (doctorCall?.[1].env as NodeJS.ProcessEnv | undefined)?.DEX_COMPATIBILITY_HOST_VERSION,
     ).toBe("2026.5.14");
     expect(defaultRuntime.exit).not.toHaveBeenCalledWith(1);
   });
@@ -2726,8 +2726,8 @@ describe("update-cli", () => {
     serviceReadCommand.mockResolvedValue({
       programArguments: ["openclaw", "gateway", "run"],
       environment: {
-        OPENCLAW_SERVICE_MARKER: "openclaw",
-        OPENCLAW_SERVICE_KIND: "gateway",
+        DEX_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_KIND: "gateway",
       },
     });
     serviceLoaded.mockResolvedValue(true);
@@ -2767,8 +2767,8 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_SERVICE_MARKER: "openclaw",
-        OPENCLAW_SERVICE_KIND: "gateway",
+        DEX_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_KIND: "gateway",
       },
       async () => {
         await updateCommand({ yes: true });
@@ -2785,8 +2785,8 @@ describe("update-cli", () => {
     const serviceStopCall = serviceStop.mock.calls[0]?.[0] as
       | { env?: NodeJS.ProcessEnv }
       | undefined;
-    expect(serviceStopCall?.env?.OPENCLAW_SERVICE_MARKER).toBe("openclaw");
-    expect(serviceStopCall?.env?.OPENCLAW_SERVICE_KIND).toBe("gateway");
+    expect(serviceStopCall?.env?.DEX_SERVICE_MARKER).toBe("openclaw");
+    expect(serviceStopCall?.env?.DEX_SERVICE_KIND).toBe("gateway");
     const serviceStopCallOrder = serviceStop.mock.invocationCallOrder[0];
     const requiredServiceStopCallOrder = requireValue(
       serviceStopCallOrder,
@@ -2814,8 +2814,8 @@ describe("update-cli", () => {
     serviceReadCommand.mockResolvedValue({
       programArguments: ["openclaw", "gateway", "run"],
       environment: {
-        OPENCLAW_SERVICE_MARKER: "openclaw",
-        OPENCLAW_SERVICE_KIND: "gateway",
+        DEX_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_KIND: "gateway",
       },
     });
     serviceLoaded.mockResolvedValue(true);
@@ -2885,8 +2885,8 @@ describe("update-cli", () => {
     serviceReadCommand.mockResolvedValue({
       programArguments: ["openclaw", "gateway", "run"],
       environment: {
-        OPENCLAW_SERVICE_MARKER: "openclaw",
-        OPENCLAW_SERVICE_KIND: "gateway",
+        DEX_SERVICE_MARKER: "openclaw",
+        DEX_SERVICE_KIND: "gateway",
       },
     });
     serviceLoaded.mockResolvedValue(true);
@@ -2998,8 +2998,8 @@ describe("update-cli", () => {
     expect(postCoreSpawn?.[0]).toContain("node");
     expect(postCoreSpawn?.[1]).toEqual([entryPath, "update", "--no-restart", "--yes"]);
     expect(postCoreSpawn?.[2].stdio).toBe("inherit");
-    expect(postCoreSpawn?.[2].env?.OPENCLAW_UPDATE_POST_CORE).toBe("1");
-    expect(postCoreSpawn?.[2].env?.OPENCLAW_UPDATE_POST_CORE_CHANNEL).toBe("stable");
+    expect(postCoreSpawn?.[2].env?.DEX_UPDATE_POST_CORE).toBe("1");
+    expect(postCoreSpawn?.[2].env?.DEX_UPDATE_POST_CORE_CHANNEL).toBe("stable");
     expect(updateNpmInstalledPlugins).not.toHaveBeenCalled();
     expect(
       vi
@@ -3721,7 +3721,7 @@ describe("update-cli", () => {
           streaming: "block",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const migratedConfig = {
       channels: {
         slack: {
@@ -3736,7 +3736,7 @@ describe("update-cli", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     vi.mocked(readConfigFileSnapshot)
       .mockResolvedValueOnce({
         ...baseSnapshot,
@@ -3851,7 +3851,7 @@ describe("update-cli", () => {
           nativeStreaming: false,
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     vi.mocked(readConfigFileSnapshot).mockResolvedValueOnce({
       ...baseSnapshot,
       parsed: legacyConfigWithInclude,
@@ -3892,7 +3892,7 @@ describe("update-cli", () => {
           nativeStreaming: false,
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     vi.mocked(readConfigFileSnapshot).mockResolvedValueOnce({
       ...baseSnapshot,
       parsed: legacyConfig,
@@ -3984,11 +3984,11 @@ describe("update-cli", () => {
   it("refreshes post-doctor config before post-update plugin sync", async () => {
     const tempDir = createCaseDir("openclaw-update");
     mockPackageInstallStatus(tempDir);
-    const preUpdateConfig = { update: { channel: "stable" } } as OpenClawConfig;
+    const preUpdateConfig = { update: { channel: "stable" } } as DexConfig;
     const postDoctorConfig = {
       update: { channel: "stable" },
       meta: { lastTouchedVersion: "2026.5.14" },
-    } as OpenClawConfig;
+    } as DexConfig;
     vi.mocked(readConfigFileSnapshot)
       .mockResolvedValueOnce({
         ...baseSnapshot,
@@ -4027,12 +4027,12 @@ describe("update-cli", () => {
     await updateCommand({ yes: true });
 
     const syncConfig = syncPluginCall()?.config as
-      | (OpenClawConfig & { meta?: { lastTouchedVersion?: string } })
+      | (DexConfig & { meta?: { lastTouchedVersion?: string } })
       | undefined;
     const lastWrite = lastReplaceConfigCall() as
       | {
           baseHash?: string;
-          nextConfig?: OpenClawConfig & { meta?: { lastTouchedVersion?: string } };
+          nextConfig?: DexConfig & { meta?: { lastTouchedVersion?: string } };
         }
       | undefined;
     expect(syncConfig?.meta?.lastTouchedVersion).toBe("2026.5.14");
@@ -4051,11 +4051,11 @@ describe("update-cli", () => {
           dmPolicy: "pairing",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const postDoctorConfig = {
       update: { channel: "stable" },
       meta: { lastTouchedVersion: "2026.5.14" },
-    } as OpenClawConfig;
+    } as DexConfig;
     await fs.mkdir(tempDir, { recursive: true });
     await fs.writeFile(`${configPath}.pre-update`, `${JSON.stringify(preUpdateConfig)}\n`, "utf-8");
     await fs.writeFile(`${configPath}.bak`, `${JSON.stringify(postDoctorConfig)}\n`, "utf-8");
@@ -4087,8 +4087,8 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
       },
       async () => {
         await updateCommand({ yes: true, restart: false });
@@ -4096,12 +4096,12 @@ describe("update-cli", () => {
     );
 
     const syncConfig = syncPluginCall()?.config as
-      | (OpenClawConfig & { meta?: { lastTouchedVersion?: string } })
+      | (DexConfig & { meta?: { lastTouchedVersion?: string } })
       | undefined;
     const lastWrite = lastReplaceConfigCall() as
       | {
           baseHash?: string;
-          nextConfig?: OpenClawConfig & {
+          nextConfig?: DexConfig & {
             meta?: { lastTouchedVersion?: string };
             channels?: { whatsapp?: { enabled?: boolean; dmPolicy?: string } };
           };
@@ -4134,7 +4134,7 @@ describe("update-cli", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const postDoctorConfig = {
       update: { channel: "stable" },
       channels: {
@@ -4147,7 +4147,7 @@ describe("update-cli", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     await fs.mkdir(tempDir, { recursive: true });
     await fs.writeFile(`${configPath}.pre-update`, `${JSON.stringify(preUpdateConfig)}\n`, "utf-8");
     await fs.writeFile(configPath, `${JSON.stringify(postDoctorConfig)}\n`, "utf-8");
@@ -4178,8 +4178,8 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
       },
       async () => {
         await updateCommand({ yes: true, restart: false });
@@ -4187,7 +4187,7 @@ describe("update-cli", () => {
     );
 
     const syncConfig = syncPluginCall()?.config as
-      | (OpenClawConfig & {
+      | (DexConfig & {
           channels?: {
             modelByChannel?: Record<string, Record<string, string>>;
           };
@@ -4195,7 +4195,7 @@ describe("update-cli", () => {
       | undefined;
     const lastWrite = lastReplaceConfigCall() as
       | {
-          nextConfig?: OpenClawConfig & {
+          nextConfig?: DexConfig & {
             channels?: {
               modelByChannel?: Record<string, Record<string, string>>;
             };
@@ -4223,13 +4223,13 @@ describe("update-cli", () => {
           dmPolicy: "pairing",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const currentPreUpdateConfig = {
       update: { channel: "stable" },
-    } as OpenClawConfig;
+    } as DexConfig;
     const postDoctorConfig = {
       update: { channel: "stable" },
-    } as OpenClawConfig;
+    } as DexConfig;
     await fs.mkdir(tempDir, { recursive: true });
     await fs.writeFile(
       `${configPath}.pre-update`,
@@ -4265,8 +4265,8 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
       },
       async () => {
         await updateCommand({ yes: true, restart: false });
@@ -4288,10 +4288,10 @@ describe("update-cli", () => {
           dmPolicy: "pairing",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const postDoctorConfig = {
       update: { channel: "stable" },
-    } as OpenClawConfig;
+    } as DexConfig;
     const updateStartedAtMs = Date.now();
     const staleTime = new Date(updateStartedAtMs - 60_000);
     await fs.mkdir(tempDir, { recursive: true });
@@ -4331,9 +4331,9 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
-        OPENCLAW_UPDATE_POST_CORE_STARTED_AT_MS: String(updateStartedAtMs),
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE_STARTED_AT_MS: String(updateStartedAtMs),
       },
       async () => {
         await updateCommand({ yes: true, restart: false });
@@ -4355,10 +4355,10 @@ describe("update-cli", () => {
           dmPolicy: "pairing",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const postDoctorConfig = {
       update: { channel: "stable" },
-    } as OpenClawConfig;
+    } as DexConfig;
     await fs.mkdir(tempDir, { recursive: true });
     await fs.writeFile(`${configPath}.pre-update`, `${JSON.stringify(preUpdateConfig)}\n`, "utf-8");
     await fs.writeFile(configPath, `${JSON.stringify(postDoctorConfig)}\n`, "utf-8");
@@ -4405,8 +4405,8 @@ describe("update-cli", () => {
     try {
       await withEnvAsync(
         {
-          OPENCLAW_UPDATE_POST_CORE: "1",
-          OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
+          DEX_UPDATE_POST_CORE: "1",
+          DEX_UPDATE_POST_CORE_CHANNEL: "stable",
         },
         async () => {
           await updateCommand({ yes: true, restart: false });
@@ -4435,10 +4435,10 @@ describe("update-cli", () => {
           dmPolicy: "pairing",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const postDoctorConfig = {
       update: { channel: "stable" },
-    } as OpenClawConfig;
+    } as DexConfig;
     await fs.mkdir(tempDir, { recursive: true });
     await fs.writeFile(`${configPath}.pre-update`, `${JSON.stringify(preUpdateConfig)}\n`, "utf-8");
     await fs.writeFile(`${configPath}.bak`, `${JSON.stringify(preUpdateConfig)}\n`, "utf-8");
@@ -4477,8 +4477,8 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
       },
       async () => {
         await updateCommand({ yes: true, restart: false });
@@ -4500,7 +4500,7 @@ describe("update-cli", () => {
           token: "resolved-secret",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const authoredPreUpdateConfig = {
       update: { channel: "stable" },
       channels: {
@@ -4509,11 +4509,11 @@ describe("update-cli", () => {
           token: "${WHATSAPP_TOKEN}",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const postDoctorConfig = {
       update: { channel: "stable" },
       meta: { lastTouchedVersion: "2026.5.14" },
-    } as OpenClawConfig;
+    } as DexConfig;
     await fs.mkdir(tempDir, { recursive: true });
     await fs.writeFile(
       sourceConfigPath,
@@ -4548,9 +4548,9 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
-        OPENCLAW_UPDATE_POST_CORE_SOURCE_CONFIG_PATH: sourceConfigPath,
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE_SOURCE_CONFIG_PATH: sourceConfigPath,
       },
       async () => {
         await updateCommand({ yes: true, restart: false });
@@ -4558,11 +4558,11 @@ describe("update-cli", () => {
     );
 
     const syncConfig = syncPluginCall()?.config as
-      | (OpenClawConfig & { channels?: { whatsapp?: { token?: string } } })
+      | (DexConfig & { channels?: { whatsapp?: { token?: string } } })
       | undefined;
     const lastWrite = lastReplaceConfigCall() as
       | {
-          nextConfig?: OpenClawConfig & {
+          nextConfig?: DexConfig & {
             channels?: { whatsapp?: { token?: string } };
           };
         }
@@ -4584,11 +4584,11 @@ describe("update-cli", () => {
     const preUpdateConfig = {
       update: { channel: "stable" },
       channels: { $include: "./channels.json5" },
-    } as OpenClawConfig;
+    } as DexConfig;
     const postDoctorConfig = {
       update: { channel: "stable" },
       channels: {},
-    } as OpenClawConfig;
+    } as DexConfig;
     await fs.mkdir(tempDir, { recursive: true });
     await fs.writeFile(channelsPath, `${JSON.stringify(includedChannels)}\n`, "utf-8");
     await fs.writeFile(`${configPath}.bak`, `${JSON.stringify(preUpdateConfig)}\n`, "utf-8");
@@ -4620,8 +4620,8 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
         WHATSAPP_TOKEN: "resolved-token",
       },
       async () => {
@@ -4630,11 +4630,11 @@ describe("update-cli", () => {
     );
 
     const syncConfig = syncPluginCall()?.config as
-      | (OpenClawConfig & { channels?: { whatsapp?: { token?: string } } })
+      | (DexConfig & { channels?: { whatsapp?: { token?: string } } })
       | undefined;
     const lastWrite = lastReplaceConfigCall() as
       | {
-          nextConfig?: OpenClawConfig & {
+          nextConfig?: DexConfig & {
             channels?: { $include?: string };
           };
         }
@@ -4652,10 +4652,10 @@ describe("update-cli", () => {
           enabled: true,
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const postDoctorConfig = {
       update: { channel: "stable" },
-    } as OpenClawConfig;
+    } as DexConfig;
     await fs.mkdir(tempDir, { recursive: true });
     await fs.writeFile(configPath, `${JSON.stringify(postDoctorConfig)}\n`, "utf-8");
     await fs.writeFile(`${configPath}.pre-update`, `${JSON.stringify(staleConfig)}\n`, "utf-8");
@@ -4687,8 +4687,8 @@ describe("update-cli", () => {
 
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_POST_CORE: "1",
-        OPENCLAW_UPDATE_POST_CORE_CHANNEL: "stable",
+        DEX_UPDATE_POST_CORE: "1",
+        DEX_UPDATE_POST_CORE_CHANNEL: "stable",
       },
       async () => {
         await updateCommand({ yes: true, restart: false });
@@ -4711,7 +4711,7 @@ describe("update-cli", () => {
     } as const;
     const sourceConfig = {
       plugins: {},
-    } as OpenClawConfig;
+    } as DexConfig;
     loadInstalledPluginIndexInstallRecords.mockResolvedValueOnce(pluginInstallRecords);
     vi.mocked(readConfigFileSnapshot).mockResolvedValue({
       ...baseSnapshot,
@@ -4729,7 +4729,7 @@ describe("update-cli", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
     syncPluginsForUpdateChannel.mockResolvedValue({
       changed: false,
@@ -4771,10 +4771,10 @@ describe("update-cli", () => {
     vi.mocked(readConfigFileSnapshot).mockResolvedValue({
       ...baseSnapshot,
       parsed: { update: { channel: "stable" } },
-      resolved: { update: { channel: "stable" } } as OpenClawConfig,
-      sourceConfig: { update: { channel: "stable" } } as OpenClawConfig,
-      runtimeConfig: { update: { channel: "stable" } } as OpenClawConfig,
-      config: { update: { channel: "stable" } } as OpenClawConfig,
+      resolved: { update: { channel: "stable" } } as DexConfig,
+      sourceConfig: { update: { channel: "stable" } } as DexConfig,
+      runtimeConfig: { update: { channel: "stable" } } as DexConfig,
+      config: { update: { channel: "stable" } } as DexConfig,
     });
     vi.mocked(runGatewayUpdate).mockResolvedValue(
       makeOkUpdateResult({
@@ -4804,7 +4804,7 @@ describe("update-cli", () => {
     const persistedConfig = replaceConfigCall()?.nextConfig;
     expect(persistedConfig?.update?.channel).toBe("dev");
     const syncCall = syncPluginCall() as
-      | { channel?: string; config?: OpenClawConfig; workspaceDir?: string }
+      | { channel?: string; config?: DexConfig; workspaceDir?: string }
       | undefined;
     expect(syncCall?.channel).toBe("dev");
     expect(syncCall?.config?.update?.channel).toBe("dev");
@@ -5114,7 +5114,7 @@ describe("update-cli", () => {
     await withEnvAsync(
       {
         [CONTROL_PLANE_UPDATE_SENTINEL_META_ENV]: metaPath,
-        OPENCLAW_STATE_DIR: stateDir,
+        DEX_STATE_DIR: stateDir,
       },
       async () => {
         await updateCommand({ yes: true, json: true });
@@ -5189,7 +5189,7 @@ describe("update-cli", () => {
     await withEnvAsync(
       {
         [CONTROL_PLANE_UPDATE_SENTINEL_META_ENV]: metaPath,
-        OPENCLAW_STATE_DIR: stateDir,
+        DEX_STATE_DIR: stateDir,
       },
       async () => {
         await updateCommand({ yes: true, json: true });
@@ -5284,8 +5284,8 @@ describe("update-cli", () => {
       invoke: async () => {
         await withEnvAsync(
           {
-            OPENCLAW_STATE_DIR: "./state",
-            OPENCLAW_CONFIG_PATH: "./config/openclaw.json",
+            DEX_STATE_DIR: "./state",
+            DEX_CONFIG_PATH: "./config/openclaw.json",
           },
           async () => {
             await updateCommand({});
@@ -5293,8 +5293,8 @@ describe("update-cli", () => {
         );
       },
       expectedEnv: () => ({
-        OPENCLAW_STATE_DIR: path.resolve("./state"),
-        OPENCLAW_CONFIG_PATH: path.resolve("./config/openclaw.json"),
+        DEX_STATE_DIR: path.resolve("./state"),
+        DEX_CONFIG_PATH: path.resolve("./config/openclaw.json"),
       }),
       assertExtra: () => {
         expect(runDaemonInstall).not.toHaveBeenCalled();
@@ -5323,7 +5323,7 @@ describe("update-cli", () => {
         try {
           await withEnvAsync(
             {
-              OPENCLAW_STATE_DIR: "./state",
+              DEX_STATE_DIR: "./state",
             },
             async () => {
               await updateCommand({});
@@ -5336,7 +5336,7 @@ describe("update-cli", () => {
       },
       customSetup: true,
       expectedEnv: (context?: { originalCwd: string }) => ({
-        OPENCLAW_STATE_DIR: path.resolve(context?.originalCwd ?? process.cwd(), "./state"),
+        DEX_STATE_DIR: path.resolve(context?.originalCwd ?? process.cwd(), "./state"),
       }),
       assertExtra: () => {
         expect(runDaemonInstall).not.toHaveBeenCalled();
@@ -5367,7 +5367,7 @@ describe("update-cli", () => {
   it("updateCommand continues after doctor sub-step and clears update flag", async () => {
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
     try {
-      await withEnvAsync({ OPENCLAW_UPDATE_IN_PROGRESS: undefined }, async () => {
+      await withEnvAsync({ DEX_UPDATE_IN_PROGRESS: undefined }, async () => {
         vi.mocked(runGatewayUpdate).mockResolvedValue(makeOkUpdateResult());
         vi.mocked(runDaemonRestart).mockResolvedValue(true);
         vi.mocked(doctorCommand).mockResolvedValue(undefined);
@@ -5378,7 +5378,7 @@ describe("update-cli", () => {
         const doctorCall = vi.mocked(doctorCommand).mock.calls[0];
         expect(doctorCall?.[0]).toBe(defaultRuntime);
         expect(doctorCall?.[1]?.nonInteractive).toBe(true);
-        expect(process.env.OPENCLAW_UPDATE_IN_PROGRESS).toBeUndefined();
+        expect(process.env.DEX_UPDATE_IN_PROGRESS).toBeUndefined();
 
         const logLines = vi.mocked(defaultRuntime.log).mock.calls.map((call) => String(call[0]));
         expect(
@@ -5393,26 +5393,26 @@ describe("update-cli", () => {
   });
 
   it("marks the whole update command as update-in-progress", async () => {
-    await withEnvAsync({ OPENCLAW_UPDATE_IN_PROGRESS: undefined }, async () => {
+    await withEnvAsync({ DEX_UPDATE_IN_PROGRESS: undefined }, async () => {
       let observedUpdateEnv: string | undefined;
       vi.mocked(runGatewayUpdate).mockImplementationOnce(async () => {
-        observedUpdateEnv = process.env.OPENCLAW_UPDATE_IN_PROGRESS;
+        observedUpdateEnv = process.env.DEX_UPDATE_IN_PROGRESS;
         return makeOkUpdateResult();
       });
 
       await updateCommand({ restart: false });
 
       expect(observedUpdateEnv).toBe("1");
-      expect(process.env.OPENCLAW_UPDATE_IN_PROGRESS).toBeUndefined();
+      expect(process.env.DEX_UPDATE_IN_PROGRESS).toBeUndefined();
     });
   });
 
   it("updateFinalizeCommand runs doctor and plugin convergence with full update env", async () => {
     await withEnvAsync(
       {
-        OPENCLAW_UPDATE_IN_PROGRESS: undefined,
-        OPENCLAW_UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR: undefined,
-        OPENCLAW_UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE: undefined,
+        DEX_UPDATE_IN_PROGRESS: undefined,
+        DEX_UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR: undefined,
+        DEX_UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE: undefined,
       },
       async () => {
         let doctorEnv: NodeJS.ProcessEnv | undefined;
@@ -5423,12 +5423,12 @@ describe("update-cli", () => {
 
         await updateFinalizeCommand({ json: true, yes: true, timeout: "9", restart: false });
 
-        expect(doctorEnv?.OPENCLAW_UPDATE_IN_PROGRESS).toBe("1");
-        expect(doctorEnv?.OPENCLAW_UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR).toBe("1");
-        expect(doctorEnv?.OPENCLAW_UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE).toBe("1");
-        expect(process.env.OPENCLAW_UPDATE_IN_PROGRESS).toBeUndefined();
-        expect(process.env.OPENCLAW_UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR).toBeUndefined();
-        expect(process.env.OPENCLAW_UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE).toBeUndefined();
+        expect(doctorEnv?.DEX_UPDATE_IN_PROGRESS).toBe("1");
+        expect(doctorEnv?.DEX_UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR).toBe("1");
+        expect(doctorEnv?.DEX_UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE).toBe("1");
+        expect(process.env.DEX_UPDATE_IN_PROGRESS).toBeUndefined();
+        expect(process.env.DEX_UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR).toBeUndefined();
+        expect(process.env.DEX_UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE).toBeUndefined();
         expect(doctorCommand).toHaveBeenCalledWith(defaultRuntime, {
           nonInteractive: true,
           repair: true,
@@ -5462,11 +5462,11 @@ describe("update-cli", () => {
     const preDoctorConfig = {
       update: { channel: "stable" },
       plugins: { entries: { pre: { enabled: true } } },
-    } as OpenClawConfig;
+    } as DexConfig;
     const postDoctorConfig = {
       update: { channel: "beta" },
       plugins: { entries: { post: { enabled: true } } },
-    } as OpenClawConfig;
+    } as DexConfig;
     const preDoctorSnapshot: ConfigFileSnapshot = {
       ...baseSnapshot,
       sourceConfig: preDoctorConfig,
@@ -5494,7 +5494,7 @@ describe("update-cli", () => {
       .mockResolvedValueOnce(postDoctorSnapshot);
     loadInstalledPluginIndexInstallRecords.mockResolvedValueOnce(postDoctorRecords);
     syncPluginsForUpdateChannel.mockImplementationOnce(
-      async (params: { config?: OpenClawConfig }) => ({
+      async (params: { config?: DexConfig }) => ({
         changed: true,
         config: params.config ?? baseConfig,
         summary: {
@@ -5529,8 +5529,8 @@ describe("update-cli", () => {
   });
 
   it("updateFinalizeCommand reapplies requested channel against post-doctor config", async () => {
-    const preDoctorConfig = { update: { channel: "stable" } } as OpenClawConfig;
-    const postDoctorConfig = { update: { channel: "beta" } } as OpenClawConfig;
+    const preDoctorConfig = { update: { channel: "stable" } } as DexConfig;
+    const postDoctorConfig = { update: { channel: "beta" } } as DexConfig;
     const preDoctorSnapshot: ConfigFileSnapshot = {
       ...baseSnapshot,
       sourceConfig: preDoctorConfig,
@@ -5639,7 +5639,7 @@ describe("update-cli", () => {
 
   it("updateWizardCommand offers dev checkout and forwards selections", async () => {
     const tempDir = createCaseDir("openclaw-update-wizard");
-    await withEnvAsync({ OPENCLAW_GIT_DIR: tempDir }, async () => {
+    await withEnvAsync({ DEX_GIT_DIR: tempDir }, async () => {
       setTty(true);
 
       vi.mocked(checkUpdateStatus).mockResolvedValue({
@@ -5675,8 +5675,8 @@ describe("update-cli", () => {
       await withEnvAsync(
         {
           HOME: undefined,
-          OPENCLAW_GIT_DIR: undefined,
-          OPENCLAW_HOME: undefined,
+          DEX_GIT_DIR: undefined,
+          DEX_HOME: undefined,
           USERPROFILE: undefined,
         },
         async () => {
@@ -5688,11 +5688,11 @@ describe("update-cli", () => {
     }
   });
 
-  it("uses OPENCLAW_HOME for the default dev checkout directory", async () => {
+  it("uses DEX_HOME for the default dev checkout directory", async () => {
     const homedirSpy = vi.spyOn(os, "homedir").mockReturnValue("/tmp/oc-home");
     try {
       await withEnvAsync(
-        { OPENCLAW_GIT_DIR: undefined, OPENCLAW_HOME: "/srv/openclaw-home" },
+        { DEX_GIT_DIR: undefined, DEX_HOME: "/srv/openclaw-home" },
         async () => {
           expect(resolveGitInstallDir()).toBe(path.posix.join("/srv/openclaw-home", "openclaw"));
         },
@@ -5707,7 +5707,7 @@ describe("update-cli", () => {
     const home = path.join(root, "custom-openclaw-home");
     const checkoutDir = path.join(home, "openclaw");
 
-    await withEnvAsync({ OPENCLAW_GIT_DIR: undefined, OPENCLAW_HOME: home }, async () => {
+    await withEnvAsync({ DEX_GIT_DIR: undefined, DEX_HOME: home }, async () => {
       const dir = resolveGitInstallDir();
       expect(dir).toBe(checkoutDir);
       await ensureGitCheckout({ dir, timeoutMs: 1_000, env: process.env });

@@ -28,13 +28,13 @@ describe("scripts/test-live-codex-harness-docker.sh", () => {
     const script = fs.readFileSync(SCRIPT_PATH, "utf8");
 
     expect(script).toContain(
-      "OPENCLAW_LIVE_CODEX_HARNESS_AUTH=codex-auth requires ~/.codex/auth.json before building the live Docker image",
+      "DEX_LIVE_CODEX_HARNESS_AUTH=codex-auth requires ~/.codex/auth.json before building the live Docker image",
     );
     expect(script).toContain(
-      "If this is a Testbox/API-key run, set OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key and run through openclaw-testbox-env.",
+      "If this is a Testbox/API-key run, set DEX_LIVE_CODEX_HARNESS_AUTH=api-key and run through openclaw-testbox-env.",
     );
     expect(script.indexOf("requires ~/.codex/auth.json before building")).toBeLessThan(
-      script.indexOf('OPENCLAW_LIVE_DOCKER_REPO_ROOT="$ROOT_DIR"'),
+      script.indexOf('DEX_LIVE_DOCKER_REPO_ROOT="$ROOT_DIR"'),
     );
   });
 
@@ -86,7 +86,7 @@ describe("scripts/test-live-codex-harness-docker.sh", () => {
     const script = fs.readFileSync(SCRIPT_PATH, "utf8");
 
     expect(script).toContain(
-      '-e OPENCLAW_LIVE_CODEX_BIND_PROVIDER="${OPENCLAW_LIVE_CODEX_BIND_PROVIDER:-}"',
+      '-e DEX_LIVE_CODEX_BIND_PROVIDER="${DEX_LIVE_CODEX_BIND_PROVIDER:-}"',
     );
   });
 
@@ -95,9 +95,9 @@ describe("scripts/test-live-codex-harness-docker.sh", () => {
 
     expect(script).toContain('"$ROOT_DIR/extensions/codex/package.json"');
     expect(script).toContain("process.stdout.write(`@openai/codex@${version}`);");
-    expect(script).toContain('-e OPENCLAW_LIVE_CODEX_CLI_PACKAGE_SPEC="$CODEX_CLI_PACKAGE_SPEC"');
+    expect(script).toContain('-e DEX_LIVE_CODEX_CLI_PACKAGE_SPEC="$CODEX_CLI_PACKAGE_SPEC"');
     expect(script).toContain(
-      'run_setup_command npm install -g "$OPENCLAW_LIVE_CODEX_CLI_PACKAGE_SPEC"',
+      'run_setup_command npm install -g "$DEX_LIVE_CODEX_CLI_PACKAGE_SPEC"',
     );
     expect(script).not.toContain("run_setup_command npm install -g @openai/codex");
   });
@@ -107,7 +107,7 @@ describe("scripts/test-live-codex-harness-docker.sh", () => {
 
     expect(script).toContain("Failed to extract accountId from token");
     expect(script).toContain(
-      "ERROR: Codex auth cannot extract accountId from the available token; refresh OPENCLAW_CODEX_AUTH_JSON or use OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key.",
+      "ERROR: Codex auth cannot extract accountId from the available token; refresh DEX_CODEX_AUTH_JSON or use DEX_LIVE_CODEX_HARNESS_AUTH=api-key.",
     );
     expect(script).not.toContain(
       "SKIP: Codex auth cannot extract accountId from the available token; skipping live Codex harness lane.",

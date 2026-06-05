@@ -248,7 +248,7 @@ describe("codex provider", () => {
     const listModels = vi.fn();
 
     const result = await buildCodexProviderCatalog({
-      env: { OPENCLAW_CODEX_DISCOVERY_LIVE: "0" },
+      env: { DEX_CODEX_DISCOVERY_LIVE: "0" },
       listModels,
     });
 
@@ -261,7 +261,7 @@ describe("codex provider", () => {
     vi.spyOn(CodexAppServerClient, "start").mockReturnValue(client);
 
     await buildCodexProviderCatalog({
-      env: { OPENCLAW_CODEX_DISCOVERY_LIVE: "1" },
+      env: { DEX_CODEX_DISCOVERY_LIVE: "1" },
       pluginConfig: TEST_CODEX_APP_SERVER_CONFIG,
       listModels: listTestCodexAppServerModels,
     });
@@ -288,7 +288,7 @@ describe("codex provider", () => {
       authProfileId: null,
     });
     await buildCodexProviderCatalog({
-      env: { OPENCLAW_CODEX_DISCOVERY_LIVE: "1" },
+      env: { DEX_CODEX_DISCOVERY_LIVE: "1" },
       pluginConfig: TEST_CODEX_APP_SERVER_CONFIG,
       listModels: listTestCodexAppServerModels,
     });

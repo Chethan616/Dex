@@ -160,32 +160,32 @@ describe("applyCliProfileEnv", () => {
       homedir: () => "/home/peter",
     });
     const expectedStateDir = path.join(path.resolve("/home/peter"), ".openclaw-dev");
-    expect(env.OPENCLAW_PROFILE).toBe("dev");
-    expect(env.OPENCLAW_STATE_DIR).toBe(expectedStateDir);
-    expect(env.OPENCLAW_CONFIG_PATH).toBe(path.join(expectedStateDir, "openclaw.json"));
-    expect(env.OPENCLAW_GATEWAY_PORT).toBe("19001");
+    expect(env.DEX_PROFILE).toBe("dev");
+    expect(env.DEX_STATE_DIR).toBe(expectedStateDir);
+    expect(env.DEX_CONFIG_PATH).toBe(path.join(expectedStateDir, "openclaw.json"));
+    expect(env.DEX_GATEWAY_PORT).toBe("19001");
   });
 
   it("does not override explicit env values", () => {
     const env: Record<string, string | undefined> = {
-      OPENCLAW_PROFILE: "prod",
-      OPENCLAW_STATE_DIR: "/custom",
-      OPENCLAW_GATEWAY_PORT: "19099",
+      DEX_PROFILE: "prod",
+      DEX_STATE_DIR: "/custom",
+      DEX_GATEWAY_PORT: "19099",
     };
     applyCliProfileEnv({
       profile: "dev",
       env,
       homedir: () => "/home/peter",
     });
-    expect(env.OPENCLAW_PROFILE).toBe("dev");
-    expect(env.OPENCLAW_STATE_DIR).toBe("/custom");
-    expect(env.OPENCLAW_GATEWAY_PORT).toBe("19099");
-    expect(env.OPENCLAW_CONFIG_PATH).toBe(path.join("/custom", "openclaw.json"));
+    expect(env.DEX_PROFILE).toBe("dev");
+    expect(env.DEX_STATE_DIR).toBe("/custom");
+    expect(env.DEX_GATEWAY_PORT).toBe("19099");
+    expect(env.DEX_CONFIG_PATH).toBe(path.join("/custom", "openclaw.json"));
   });
 
-  it("uses OPENCLAW_HOME when deriving profile state dir", () => {
+  it("uses DEX_HOME when deriving profile state dir", () => {
     const env: Record<string, string | undefined> = {
-      OPENCLAW_HOME: "/srv/openclaw-home",
+      DEX_HOME: "/srv/openclaw-home",
       HOME: "/home/other",
     };
     applyCliProfileEnv({
@@ -195,8 +195,8 @@ describe("applyCliProfileEnv", () => {
     });
 
     const resolvedHome = path.resolve("/srv/openclaw-home");
-    expect(env.OPENCLAW_STATE_DIR).toBe(path.join(resolvedHome, ".openclaw-work"));
-    expect(env.OPENCLAW_CONFIG_PATH).toBe(
+    expect(env.DEX_STATE_DIR).toBe(path.join(resolvedHome, ".openclaw-work"));
+    expect(env.DEX_CONFIG_PATH).toBe(
       path.join(resolvedHome, ".openclaw-work", "openclaw.json"),
     );
   });
@@ -213,31 +213,31 @@ describe("formatCliCommand", () => {
     {
       name: "profile is default",
       cmd: "openclaw doctor --fix",
-      env: { OPENCLAW_PROFILE: "default" },
+      env: { DEX_PROFILE: "default" },
       expected: "openclaw doctor --fix",
     },
     {
       name: "profile is Default (case-insensitive)",
       cmd: "openclaw doctor --fix",
-      env: { OPENCLAW_PROFILE: "Default" },
+      env: { DEX_PROFILE: "Default" },
       expected: "openclaw doctor --fix",
     },
     {
       name: "profile is invalid",
       cmd: "openclaw doctor --fix",
-      env: { OPENCLAW_PROFILE: "bad profile" },
+      env: { DEX_PROFILE: "bad profile" },
       expected: "openclaw doctor --fix",
     },
     {
       name: "--profile is already present",
       cmd: "openclaw --profile work doctor --fix",
-      env: { OPENCLAW_PROFILE: "work" },
+      env: { DEX_PROFILE: "work" },
       expected: "openclaw --profile work doctor --fix",
     },
     {
       name: "--dev is already present",
       cmd: "openclaw --dev doctor",
-      env: { OPENCLAW_PROFILE: "dev" },
+      env: { DEX_PROFILE: "dev" },
       expected: "openclaw --dev doctor",
     },
   ])("returns command unchanged when $name", ({ cmd, env, expected }) => {
@@ -245,39 +245,39 @@ describe("formatCliCommand", () => {
   });
 
   it("inserts --profile flag when profile is set", () => {
-    expect(formatCliCommand("openclaw doctor --fix", { OPENCLAW_PROFILE: "work" })).toBe(
+    expect(formatCliCommand("openclaw doctor --fix", { DEX_PROFILE: "work" })).toBe(
       "openclaw --profile work doctor --fix",
     );
   });
 
   it("trims whitespace from profile", () => {
-    expect(formatCliCommand("openclaw doctor --fix", { OPENCLAW_PROFILE: "  jbopenclaw  " })).toBe(
+    expect(formatCliCommand("openclaw doctor --fix", { DEX_PROFILE: "  jbopenclaw  " })).toBe(
       "openclaw --profile jbopenclaw doctor --fix",
     );
   });
 
   it("handles command with no args after openclaw", () => {
-    expect(formatCliCommand("openclaw", { OPENCLAW_PROFILE: "test" })).toBe(
+    expect(formatCliCommand("openclaw", { DEX_PROFILE: "test" })).toBe(
       "openclaw --profile test",
     );
   });
 
   it("handles pnpm wrapper", () => {
-    expect(formatCliCommand("pnpm openclaw doctor", { OPENCLAW_PROFILE: "work" })).toBe(
+    expect(formatCliCommand("pnpm openclaw doctor", { DEX_PROFILE: "work" })).toBe(
       "pnpm openclaw --profile work doctor",
     );
   });
 
   it("inserts --container when a container hint is set", () => {
     expect(
-      formatCliCommand("openclaw gateway status --deep", { OPENCLAW_CONTAINER_HINT: "demo" }),
+      formatCliCommand("openclaw gateway status --deep", { DEX_CONTAINER_HINT: "demo" }),
     ).toBe("openclaw --container demo gateway status --deep");
   });
 
   it("ignores unsafe container hints", () => {
     expect(
       formatCliCommand("openclaw gateway status --deep", {
-        OPENCLAW_CONTAINER_HINT: "demo; rm -rf /",
+        DEX_CONTAINER_HINT: "demo; rm -rf /",
       }),
     ).toBe("openclaw gateway status --deep");
   });
@@ -285,18 +285,18 @@ describe("formatCliCommand", () => {
   it("preserves both --container and --profile hints", () => {
     expect(
       formatCliCommand("openclaw doctor", {
-        OPENCLAW_CONTAINER_HINT: "demo",
-        OPENCLAW_PROFILE: "work",
+        DEX_CONTAINER_HINT: "demo",
+        DEX_PROFILE: "work",
       }),
     ).toBe("openclaw --container demo doctor");
   });
 
   it("does not prepend --container for update commands", () => {
-    expect(formatCliCommand("openclaw update", { OPENCLAW_CONTAINER_HINT: "demo" })).toBe(
+    expect(formatCliCommand("openclaw update", { DEX_CONTAINER_HINT: "demo" })).toBe(
       "openclaw update",
     );
     expect(
-      formatCliCommand("pnpm openclaw update --channel beta", { OPENCLAW_CONTAINER_HINT: "demo" }),
+      formatCliCommand("pnpm openclaw update --channel beta", { DEX_CONTAINER_HINT: "demo" }),
     ).toBe("pnpm openclaw update --channel beta");
   });
 });

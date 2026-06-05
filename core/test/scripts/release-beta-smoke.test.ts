@@ -34,13 +34,13 @@ describe("release-beta-smoke", () => {
   });
 
   it("rejects malformed positive integer environment limits", () => {
-    expect(readPositiveInt(undefined, 60, "OPENCLAW_RELEASE_BETA_SMOKE_COMMAND_MS")).toBe(60);
-    expect(readPositiveInt("", 60, "OPENCLAW_RELEASE_BETA_SMOKE_COMMAND_MS")).toBe(60);
-    expect(readPositiveInt("25", 60, "OPENCLAW_RELEASE_BETA_SMOKE_COMMAND_MS")).toBe(25);
+    expect(readPositiveInt(undefined, 60, "DEX_RELEASE_BETA_SMOKE_COMMAND_MS")).toBe(60);
+    expect(readPositiveInt("", 60, "DEX_RELEASE_BETA_SMOKE_COMMAND_MS")).toBe(60);
+    expect(readPositiveInt("25", 60, "DEX_RELEASE_BETA_SMOKE_COMMAND_MS")).toBe(25);
 
     for (const raw of ["1e3", "25ms", "1.5", "0", "-1", String(Number.MAX_SAFE_INTEGER + 1)]) {
-      expect(() => readPositiveInt(raw, 60, "OPENCLAW_RELEASE_BETA_SMOKE_COMMAND_MS")).toThrow(
-        "OPENCLAW_RELEASE_BETA_SMOKE_COMMAND_MS must be a positive integer",
+      expect(() => readPositiveInt(raw, 60, "DEX_RELEASE_BETA_SMOKE_COMMAND_MS")).toThrow(
+        "DEX_RELEASE_BETA_SMOKE_COMMAND_MS must be a positive integer",
       );
     }
   });

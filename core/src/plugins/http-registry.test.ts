@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { registerPluginHttpRoute, withPluginHttpRouteRegistry } from "./http-registry.js";
 import { createEmptyPluginRegistry } from "./registry-empty.js";
 import { createPluginRegistry } from "./registry.js";
@@ -124,7 +124,7 @@ describe("registerPluginHttpRoute", () => {
       runtime: {} as PluginRuntime,
       activateGlobalSideEffects: false,
     });
-    const config = {} as OpenClawConfig;
+    const config = {} as DexConfig;
     const plainRecord = createPluginRecord({
       id: "plain-http",
       source: "/plugins/plain-http/index.ts",

@@ -25,15 +25,15 @@ afterAll(() => {
 beforeEach(() => {
   tmpDir = path.join(fixtureRoot, `case-${fixtureId++}`);
   fsSync.mkdirSync(tmpDir, { recursive: true });
-  originalStateDir = process.env.OPENCLAW_STATE_DIR;
-  process.env.OPENCLAW_STATE_DIR = tmpDir;
+  originalStateDir = process.env.DEX_STATE_DIR;
+  process.env.DEX_STATE_DIR = tmpDir;
 });
 
 afterEach(() => {
   if (originalStateDir === undefined) {
-    delete process.env.OPENCLAW_STATE_DIR;
+    delete process.env.DEX_STATE_DIR;
   } else {
-    process.env.OPENCLAW_STATE_DIR = originalStateDir;
+    process.env.DEX_STATE_DIR = originalStateDir;
   }
 });
 

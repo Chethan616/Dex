@@ -1280,10 +1280,10 @@ describe("buildFailoverRemediationHint", () => {
   });
 
   it("wraps rendered provider commands in the standard CLI formatter", () => {
-    expect(buildProviderReauthCommand("anthropic", { OPENCLAW_PROFILE: "work" })).toBe(
+    expect(buildProviderReauthCommand("anthropic", { DEX_PROFILE: "work" })).toBe(
       "openclaw --profile work models auth login --provider 'anthropic' --force",
     );
-    expect(buildProviderReauthCommand("anthropic", { OPENCLAW_CONTAINER_HINT: "dev" })).toBe(
+    expect(buildProviderReauthCommand("anthropic", { DEX_CONTAINER_HINT: "dev" })).toBe(
       "openclaw --container dev models auth login --provider 'anthropic' --force",
     );
   });

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { resetLogger, setLoggerOverride } from "../logging.js";
 import { readConfiguredLogTail } from "./log-tail.js";
 
-const originalConfigPath = process.env.OPENCLAW_CONFIG_PATH;
+const originalConfigPath = process.env.DEX_CONFIG_PATH;
 let tempDirs: string[] = [];
 
 async function makeTempDir(): Promise<string> {
@@ -16,9 +16,9 @@ async function makeTempDir(): Promise<string> {
 
 afterEach(async () => {
   if (originalConfigPath === undefined) {
-    delete process.env.OPENCLAW_CONFIG_PATH;
+    delete process.env.DEX_CONFIG_PATH;
   } else {
-    process.env.OPENCLAW_CONFIG_PATH = originalConfigPath;
+    process.env.DEX_CONFIG_PATH = originalConfigPath;
   }
   setLoggerOverride(null);
   resetLogger();
@@ -50,7 +50,7 @@ describe("readConfiguredLogTail redaction", () => {
       ].join("\n"),
       "utf8",
     );
-    process.env.OPENCLAW_CONFIG_PATH = configFile;
+    process.env.DEX_CONFIG_PATH = configFile;
     setLoggerOverride({ file: logFile });
 
     const payload = await readConfiguredLogTail({ limit: 10 });

@@ -14,8 +14,8 @@ const tempDirs = createTrackedTempDirs();
 let envSnapshot: ReturnType<typeof captureEnv>;
 
 beforeEach(async () => {
-  envSnapshot = captureEnv(["OPENCLAW_STATE_DIR"]);
-  process.env.OPENCLAW_STATE_DIR = await tempDirs.make("openclaw-skill-workshop-state-");
+  envSnapshot = captureEnv(["DEX_STATE_DIR"]);
+  process.env.DEX_STATE_DIR = await tempDirs.make("openclaw-skill-workshop-state-");
 });
 
 afterEach(async () => {

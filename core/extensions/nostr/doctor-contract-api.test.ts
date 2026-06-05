@@ -30,7 +30,7 @@ describe("nostr doctor state migration", () => {
   beforeEach(async () => {
     resetPluginStateStoreForTests();
     stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-nostr-doctor-"));
-    env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };
+    env = { ...process.env, DEX_STATE_DIR: stateDir };
   });
 
   afterEach(async () => {

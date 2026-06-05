@@ -25,7 +25,7 @@ function mockProcessWrite(
 }
 
 describe("matrix qa cli registration", () => {
-  const originalDisableForceExit = process.env.OPENCLAW_QA_MATRIX_DISABLE_FORCE_EXIT;
+  const originalDisableForceExit = process.env.DEX_QA_MATRIX_DISABLE_FORCE_EXIT;
   let exitSpy: ReturnType<typeof vi.spyOn>;
   let stderrSpy: ReturnType<typeof vi.spyOn>;
   let stdoutSpy: ReturnType<typeof vi.spyOn>;
@@ -41,9 +41,9 @@ describe("matrix qa cli registration", () => {
 
   afterEach(() => {
     if (originalDisableForceExit === undefined) {
-      delete process.env.OPENCLAW_QA_MATRIX_DISABLE_FORCE_EXIT;
+      delete process.env.DEX_QA_MATRIX_DISABLE_FORCE_EXIT;
     } else {
-      process.env.OPENCLAW_QA_MATRIX_DISABLE_FORCE_EXIT = originalDisableForceExit;
+      process.env.DEX_QA_MATRIX_DISABLE_FORCE_EXIT = originalDisableForceExit;
     }
     exitSpy.mockRestore();
     stderrSpy.mockRestore();
@@ -89,7 +89,7 @@ describe("matrix qa cli registration", () => {
   });
 
   it("can disable the forced exit for direct test harnesses", async () => {
-    process.env.OPENCLAW_QA_MATRIX_DISABLE_FORCE_EXIT = "1";
+    process.env.DEX_QA_MATRIX_DISABLE_FORCE_EXIT = "1";
     const qa = new Command();
     matrixQaCliRegistration.register(qa);
     runQaMatrixCommand.mockRejectedValue(new Error("scenario failed"));

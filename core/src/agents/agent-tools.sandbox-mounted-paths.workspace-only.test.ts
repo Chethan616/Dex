@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import {
   createSandboxedEditTool,
   createSandboxedReadTool,
@@ -40,7 +40,7 @@ const APPLY_PATCH_PAYLOAD = `*** Begin Patch
 
 function resolveApplyPatchTool(params: {
   sandbox: UnsafeMountedSandbox;
-  config: OpenClawConfig;
+  config: DexConfig;
 }): ToolWithExecute {
   return createApplyPatchTool({
     cwd: params.sandbox.workspaceDir,
@@ -162,7 +162,7 @@ describe("tools.fs.workspaceOnly", () => {
             allow: ["read", "write", "exec"],
             exec: { applyPatch: {} },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
       });
 
       await expect(applyPatchTool.execute("t1", { input: APPLY_PATCH_PAYLOAD })).rejects.toThrow(
@@ -184,7 +184,7 @@ describe("tools.fs.workspaceOnly", () => {
             allow: ["read", "write", "exec"],
             exec: { applyPatch: { workspaceOnly: false } },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
       });
 
       await applyPatchTool.execute("t2", { input: APPLY_PATCH_PAYLOAD });

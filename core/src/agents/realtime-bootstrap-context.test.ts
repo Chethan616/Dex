@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveRealtimeBootstrapContextInstructions } from "./realtime-bootstrap-context.js";
 
 const tempDirs: string[] = [];
@@ -13,13 +13,13 @@ async function makeWorkspace(): Promise<string> {
   return dir;
 }
 
-function makeConfig(workspaceDir: string): OpenClawConfig {
+function makeConfig(workspaceDir: string): DexConfig {
   return {
     agents: {
       defaults: { workspace: workspaceDir },
       list: [{ id: "main", default: true }],
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 afterEach(async () => {

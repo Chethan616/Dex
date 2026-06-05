@@ -4,7 +4,7 @@ import {
   verifyChannelMessageLiveFinalizerProofs,
 } from "openclaw/plugin-sdk/channel-outbound";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../runtime-api.js";
+import type { DexConfig } from "../runtime-api.js";
 
 const mocks = vi.hoisted(() => ({
   sendMessageMatrix: vi.fn(),
@@ -34,7 +34,7 @@ const cfg = {
       accessToken: "resolved-token",
     },
   },
-} as OpenClawConfig;
+} as DexConfig;
 
 function lastMatrixSendOptions() {
   const options = mocks.sendMessageMatrix.mock.lastCall?.[2];

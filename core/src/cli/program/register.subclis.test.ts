@@ -84,8 +84,8 @@ vi.mock("./private-qa-cli.js", async () => {
 
 describe("registerSubCliCommands", () => {
   const originalArgv = process.argv;
-  const originalDisableLazySubcommands = process.env.OPENCLAW_DISABLE_LAZY_SUBCOMMANDS;
-  const originalEnablePrivateQaCli = process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI;
+  const originalDisableLazySubcommands = process.env.DEX_DISABLE_LAZY_SUBCOMMANDS;
+  const originalEnablePrivateQaCli = process.env.DEX_ENABLE_PRIVATE_QA_CLI;
 
   const createRegisteredProgram = (argv: string[], name?: string) => {
     process.argv = argv;
@@ -99,11 +99,11 @@ describe("registerSubCliCommands", () => {
 
   beforeEach(() => {
     if (originalDisableLazySubcommands === undefined) {
-      delete process.env.OPENCLAW_DISABLE_LAZY_SUBCOMMANDS;
+      delete process.env.DEX_DISABLE_LAZY_SUBCOMMANDS;
     } else {
-      process.env.OPENCLAW_DISABLE_LAZY_SUBCOMMANDS = originalDisableLazySubcommands;
+      process.env.DEX_DISABLE_LAZY_SUBCOMMANDS = originalDisableLazySubcommands;
     }
-    process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI = "1";
+    process.env.DEX_ENABLE_PRIVATE_QA_CLI = "1";
     registerAcpCli.mockClear();
     acpAction.mockClear();
     registerNodesCli.mockClear();
@@ -123,14 +123,14 @@ describe("registerSubCliCommands", () => {
   afterEach(() => {
     process.argv = originalArgv;
     if (originalDisableLazySubcommands === undefined) {
-      delete process.env.OPENCLAW_DISABLE_LAZY_SUBCOMMANDS;
+      delete process.env.DEX_DISABLE_LAZY_SUBCOMMANDS;
     } else {
-      process.env.OPENCLAW_DISABLE_LAZY_SUBCOMMANDS = originalDisableLazySubcommands;
+      process.env.DEX_DISABLE_LAZY_SUBCOMMANDS = originalDisableLazySubcommands;
     }
     if (originalEnablePrivateQaCli === undefined) {
-      delete process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI;
+      delete process.env.DEX_ENABLE_PRIVATE_QA_CLI;
     } else {
-      process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI = originalEnablePrivateQaCli;
+      process.env.DEX_ENABLE_PRIVATE_QA_CLI = originalEnablePrivateQaCli;
     }
   });
 
@@ -157,7 +157,7 @@ describe("registerSubCliCommands", () => {
   });
 
   it("omits the qa placeholder when the private qa cli is disabled", () => {
-    delete process.env.OPENCLAW_ENABLE_PRIVATE_QA_CLI;
+    delete process.env.DEX_ENABLE_PRIVATE_QA_CLI;
 
     const program = createRegisteredProgram(["node", "openclaw"]);
 

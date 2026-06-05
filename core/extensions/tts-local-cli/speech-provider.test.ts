@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { SpeechProviderConfig, SpeechSynthesisRequest } from "openclaw/plugin-sdk/speech-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,7 +15,7 @@ vi.mock("openclaw/plugin-sdk/media-runtime", () => ({
 
 import { buildCliSpeechProvider } from "./speech-provider.js";
 
-const TEST_CFG = {} as OpenClawConfig;
+const TEST_CFG = {} as DexConfig;
 
 function createCliFixture(): { dir: string; script: string } {
   const dir = mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-tts-test-"));
@@ -256,7 +256,7 @@ describe("buildCliSpeechProvider", () => {
   });
 
   it("can synthesize through a real local CLI fixture and ffmpeg", async () => {
-    if (process.env.OPENCLAW_LIVE_TEST !== "1") {
+    if (process.env.DEX_LIVE_TEST !== "1") {
       return;
     }
     const fixture = createCliFixture();

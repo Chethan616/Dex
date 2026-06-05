@@ -94,7 +94,7 @@ describe("setup-pnpm-store-cache ensure-node", () => {
             RUNNER_TOOL_CACHE: join(root, "missing-toolcache"),
             AGENT_TOOLSDIRECTORY: join(root, "missing-agent-tools"),
             ACTIONS_RUNNER_TOOL_CACHE: join(root, "missing-actions-cache"),
-            OPENCLAW_CONTAINER_TOOL_CACHE: join(root, "missing-container-cache"),
+            DEX_CONTAINER_TOOL_CACHE: join(root, "missing-container-cache"),
           },
         },
       );
@@ -206,7 +206,7 @@ exit 1
       const toolcacheNode = writeFakeNode(toolcacheBin, "24.99.99");
       const result = runEnsureNode(root, "24.99.99", {
         PATH: `${activeBin}:${process.env.PATH ?? ""}`,
-        OPENCLAW_CONTAINER_TOOL_CACHE: join(root, "__t"),
+        DEX_CONTAINER_TOOL_CACHE: join(root, "__t"),
         RUNNER_TOOL_CACHE: join(root, "hostedtoolcache"),
       });
 

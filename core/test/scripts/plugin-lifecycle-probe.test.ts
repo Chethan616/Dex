@@ -20,7 +20,7 @@ function runProbe(args: string[], home = makeTempDir()) {
     env: {
       ...process.env,
       HOME: home,
-      OPENCLAW_CONFIG_PATH: path.join(home, ".openclaw", "openclaw.json"),
+      DEX_CONFIG_PATH: path.join(home, ".dex", "openclaw.json"),
       USERPROFILE: home,
     },
   });

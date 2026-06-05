@@ -4,7 +4,7 @@ import {
   runSetupWizardConfigure,
 } from "openclaw/plugin-sdk/plugin-test-runtime";
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../runtime-api.js";
+import type { DexConfig } from "../runtime-api.js";
 import "./zalo-js.test-mocks.js";
 import { zalouserSetupWizard } from "./setup-surface.js";
 import { zalouserSetupPlugin } from "./setup-test-helpers.js";
@@ -12,7 +12,7 @@ import { zalouserSetupPlugin } from "./setup-test-helpers.js";
 const zalouserConfigure = createPluginSetupWizardConfigure(zalouserSetupPlugin);
 
 async function runSetup(params: {
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   prompter: ReturnType<typeof createTestWizardPrompter>;
   options?: Record<string, unknown>;
   forceAllowFrom?: boolean;
@@ -240,7 +240,7 @@ describe("zalouser setup wizard", () => {
         plugins: {
           allow: ["telegram"],
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       prompter,
     });
 
@@ -263,14 +263,14 @@ describe("zalouser setup wizard", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         "work",
       ),
     ).toBe("allowlist");
   });
 
   it("reports account-scoped config keys for named accounts", () => {
-    expect(zalouserSetupWizard.dmPolicy?.resolveConfigKeys?.({} as OpenClawConfig, "work")).toEqual(
+    expect(zalouserSetupWizard.dmPolicy?.resolveConfigKeys?.({} as DexConfig, "work")).toEqual(
       {
         policyKey: "channels.zalouser.accounts.work.dmPolicy",
         allowFromKey: "channels.zalouser.accounts.work.allowFrom",
@@ -293,7 +293,7 @@ describe("zalouser setup wizard", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expect(zalouserSetupWizard.dmPolicy?.getCurrent(cfg)).toBe("allowlist");
     expect(zalouserSetupWizard.dmPolicy?.resolveConfigKeys?.(cfg)).toEqual({
@@ -322,7 +322,7 @@ describe("zalouser setup wizard", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       "open",
       "work",
     );
@@ -354,7 +354,7 @@ describe("zalouser setup wizard", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       prompter,
       options: { quickstartDefaults: true },
       accountOverrides: { zalouser: "work" },

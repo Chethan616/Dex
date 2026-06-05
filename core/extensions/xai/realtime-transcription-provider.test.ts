@@ -149,7 +149,7 @@ describe("xai realtime transcription provider", () => {
   });
 
   it("streams raw binary audio and maps partial and final transcript events", async () => {
-    vi.stubEnv("OPENCLAW_VERSION", "2026.3.22");
+    vi.stubEnv("DEX_VERSION", "2026.3.22");
     const binaryFrames: Buffer[] = [];
     const requestUrls: URL[] = [];
     const upgradeHeaders: Array<Record<string, string | string[] | undefined>> = [];

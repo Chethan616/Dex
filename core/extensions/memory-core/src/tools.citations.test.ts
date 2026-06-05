@@ -19,7 +19,7 @@ import {
 import { createMemoryCoreTestHarness } from "./test-helpers.js";
 import { testing as memoryToolsTesting } from "./tools.js";
 import {
-  asOpenClawConfig,
+  asDexConfig,
   createAutoCitationsMemorySearchTool,
   createDefaultMemoryToolConfig,
   createMemoryGetToolOrThrow,
@@ -86,7 +86,7 @@ describe("memory search citations", () => {
 
   it("appends source information when citations are enabled", async () => {
     setMemoryBackend("builtin");
-    const cfg = asOpenClawConfig({
+    const cfg = asDexConfig({
       memory: { citations: "on" },
       agents: { list: [{ id: "main", default: true }] },
     });
@@ -100,7 +100,7 @@ describe("memory search citations", () => {
 
   it("leaves snippet untouched when citations are off", async () => {
     setMemoryBackend("builtin");
-    const cfg = asOpenClawConfig({
+    const cfg = asDexConfig({
       memory: { citations: "off" },
       agents: { list: [{ id: "main", default: true }] },
     });
@@ -114,7 +114,7 @@ describe("memory search citations", () => {
 
   it("clamps decorated snippets to qmd injected budget", async () => {
     setMemoryBackend("qmd");
-    const cfg = asOpenClawConfig({
+    const cfg = asDexConfig({
       memory: { citations: "on", backend: "qmd", qmd: { limits: { maxInjectedChars: 20 } } },
       agents: { list: [{ id: "main", default: true }] },
     });
@@ -265,7 +265,7 @@ describe("memory tools", () => {
       ]);
 
       const tool = createMemorySearchToolOrThrow({
-        config: asOpenClawConfig({
+        config: asDexConfig({
           agents: { list: [{ id: "main", default: true }] },
           plugins: {
             entries: {

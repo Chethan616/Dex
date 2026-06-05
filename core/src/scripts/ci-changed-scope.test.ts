@@ -104,7 +104,7 @@ describe("detectChangedScope", () => {
       runControlUiI18n: false,
     });
     expect(
-      detectChangedScope(["apps/macos-mlx-tts/Sources/OpenClawMLXTTSHelper/main.swift"]),
+      detectChangedScope(["apps/macos-mlx-tts/Sources/DexMLXTTSHelper/main.swift"]),
     ).toEqual({
       runNode: false,
       runMacos: true,
@@ -114,7 +114,7 @@ describe("detectChangedScope", () => {
       runChangedSmoke: false,
       runControlUiI18n: false,
     });
-    expect(detectChangedScope(["apps/shared/OpenClawKit/Sources/Foo.swift"])).toEqual({
+    expect(detectChangedScope(["apps/shared/DexKit/Sources/Foo.swift"])).toEqual({
       runNode: false,
       runMacos: true,
       runAndroid: true,
@@ -145,7 +145,7 @@ describe("detectChangedScope", () => {
 
   it("does not force macOS for generated protocol model-only changes", () => {
     expect(
-      detectChangedScope(["apps/shared/OpenClawKit/Sources/OpenClawProtocol/GatewayModels.swift"]),
+      detectChangedScope(["apps/shared/DexKit/Sources/DexProtocol/GatewayModels.swift"]),
     ).toEqual({
       runNode: false,
       runMacos: false,

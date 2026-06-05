@@ -4,12 +4,12 @@ import path from "node:path";
 import type { ChannelAccountSnapshot } from "openclaw/plugin-sdk/channel-contract";
 import { MAX_TIMER_TIMEOUT_MS } from "openclaw/plugin-sdk/number-runtime";
 import {
-  closeOpenClawStateDatabaseForTest,
+  closeDexStateDatabaseForTest,
   createChannelIngressQueueForTests as createChannelIngressQueue,
   executeSqliteQuerySync,
   getNodeSqliteKysely,
-  openOpenClawStateDatabase,
-  type OpenClawStateKyselyDatabaseForTests,
+  openDexStateDatabase,
+  type DexStateKyselyDatabaseForTests,
 } from "openclaw/plugin-sdk/plugin-state-test-runtime";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearTelegramRuntime, setTelegramRuntime } from "./runtime.js";
@@ -107,7 +107,7 @@ type WorkerMessageListener = (message: TelegramIngressWorkerMessage) => void;
 type AsyncVoidFn = () => Promise<void>;
 type MockCallSource = { mock: { calls: Array<Array<unknown>> } };
 type TelegramPollingTestDatabase = Pick<
-  OpenClawStateKyselyDatabaseForTests,
+  DexStateKyselyDatabaseForTests,
   "channel_ingress_events"
 >;
 
@@ -446,8 +446,8 @@ function telegramTestQueueName(spoolDir: string): string {
 }
 
 function openTelegramSpoolTestKysely(spoolDir: string) {
-  const database = openOpenClawStateDatabase({
-    env: { ...process.env, OPENCLAW_STATE_DIR: spoolDir },
+  const database = openDexStateDatabase({
+    env: { ...process.env, DEX_STATE_DIR: spoolDir },
   });
   return {
     database,
@@ -496,7 +496,7 @@ async function withTempSpool<T>(fn: (spoolDir: string) => Promise<T>): Promise<T
   try {
     return await fn(spoolDir);
   } finally {
-    closeOpenClawStateDatabaseForTest();
+    closeDexStateDatabaseForTest();
     await fs.rm(spoolDir, { recursive: true, force: true });
   }
 }
@@ -602,7 +602,7 @@ describe("TelegramPollingSession", () => {
   afterEach(() => {
     pollingSessionTesting.resetActiveSpooledUpdateHandlersForTests();
     clearTelegramRuntime();
-    closeOpenClawStateDatabaseForTest();
+    closeDexStateDatabaseForTest();
   });
 
   it("uses backoff helpers for recoverable polling retries", async () => {

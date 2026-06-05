@@ -50,7 +50,7 @@ async function addCompileCacheProbe(fixtureRoot: string): Promise<void> {
     [
       'import module from "node:module";',
       "process.stdout.write(",
-      '  `${module.getCompileCacheDir?.() ? "cache:enabled" : "cache:disabled"};respawn:${process.env.OPENCLAW_SOURCE_COMPILE_CACHE_RESPAWNED ?? "0"}`',
+      '  `${module.getCompileCacheDir?.() ? "cache:enabled" : "cache:disabled"};respawn:${process.env.DEX_SOURCE_COMPILE_CACHE_RESPAWNED ?? "0"}`',
       ");",
     ].join("\n"),
     "utf8",
@@ -296,7 +296,7 @@ describe("openclaw launcher", () => {
       [path.join(fixtureRoot, "openclaw.mjs"), "--version"],
       {
         cwd: fixtureRoot,
-        env: launcherEnv({ OPENCLAW_CONTAINER: "demo" }),
+        env: launcherEnv({ DEX_CONTAINER: "demo" }),
         encoding: "utf8",
       },
     );
@@ -356,7 +356,7 @@ describe("openclaw launcher", () => {
     });
   });
 
-  it.runIf(process.env.OPENCLAW_TEST_BUN_LAUNCHER === "1" && hasBunRuntime())(
+  it.runIf(process.env.DEX_TEST_BUN_LAUNCHER === "1" && hasBunRuntime())(
     "falls through Bun optional warning filter misses",
     async () => {
       const fixtureRoot = await makeLauncherFixture(fixtureRoots);
@@ -381,7 +381,7 @@ describe("openclaw launcher", () => {
     },
   );
 
-  it.runIf(process.env.OPENCLAW_TEST_BUN_LAUNCHER === "1" && hasBunRuntime())(
+  it.runIf(process.env.DEX_TEST_BUN_LAUNCHER === "1" && hasBunRuntime())(
     "surfaces Bun transitive entry misses with the same raw specifier",
     async () => {
       const fixtureRoot = await makeLauncherFixture(fixtureRoots);
@@ -477,7 +477,7 @@ describe("openclaw launcher", () => {
 
     const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs"), "--help"], {
       cwd: fixtureRoot,
-      env: launcherEnv({ OPENCLAW_CONFIG_PATH: configPath }),
+      env: launcherEnv({ DEX_CONFIG_PATH: configPath }),
       encoding: "utf8",
     });
 
@@ -510,7 +510,7 @@ describe("openclaw launcher", () => {
       [path.join(fixtureRoot, "openclaw.mjs"), "nodes", "--help"],
       {
         cwd: fixtureRoot,
-        env: launcherEnv({ OPENCLAW_CONFIG_PATH: configPath }),
+        env: launcherEnv({ DEX_CONFIG_PATH: configPath }),
         encoding: "utf8",
       },
     );
@@ -520,10 +520,10 @@ describe("openclaw launcher", () => {
     expect(result.stdout).not.toContain("PRECOMPUTED");
   });
 
-  it("checks the OPENCLAW_HOME default config path before using precomputed root help", async () => {
+  it("checks the DEX_HOME default config path before using precomputed root help", async () => {
     const fixtureRoot = await makeLauncherFixture(fixtureRoots);
     const openclawHome = path.join(fixtureRoot, "home");
-    const configDir = path.join(openclawHome, ".openclaw");
+    const configDir = path.join(openclawHome, ".dex");
     await fs.mkdir(configDir, { recursive: true });
     await fs.writeFile(
       path.join(fixtureRoot, "dist", "cli-startup-metadata.json"),
@@ -543,7 +543,7 @@ describe("openclaw launcher", () => {
 
     const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs"), "--help"], {
       cwd: fixtureRoot,
-      env: launcherEnv({ OPENCLAW_HOME: openclawHome }),
+      env: launcherEnv({ DEX_HOME: openclawHome }),
       encoding: "utf8",
     });
 
@@ -575,7 +575,7 @@ describe("openclaw launcher", () => {
 
     const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs"), "--help"], {
       cwd: fixtureRoot,
-      env: launcherEnv({ HOME: home, OPENCLAW_HOME: undefined }),
+      env: launcherEnv({ HOME: home, DEX_HOME: undefined }),
       encoding: "utf8",
     });
 
@@ -601,7 +601,7 @@ describe("openclaw launcher", () => {
 
     const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs"), "--help"], {
       cwd: fixtureRoot,
-      env: launcherEnv({ OPENCLAW_CONFIG_PATH: configPath }),
+      env: launcherEnv({ DEX_CONFIG_PATH: configPath }),
       encoding: "utf8",
     });
 

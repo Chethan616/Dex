@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import type { DexConfig } from "../../../config/types.openclaw.js";
 import { registerContextEngine } from "../../../context-engine/registry.js";
 import type { ContextEngine, ContextEngineHostCapability } from "../../../context-engine/types.js";
 import {
@@ -45,7 +45,7 @@ function registerEngine(requiredCapabilities: ContextEngineHostCapability[]): st
   return id;
 }
 
-function configWithEngine(engineId: string, cfg: OpenClawConfig = {}): OpenClawConfig {
+function configWithEngine(engineId: string, cfg: DexConfig = {}): DexConfig {
   return {
     ...cfg,
     plugins: {

@@ -9,12 +9,12 @@ vi.mock("../../plugins/bundled-dir.js", async (importOriginal) => {
   return {
     ...actual,
     resolveBundledPluginsDir: (env: NodeJS.ProcessEnv = process.env) =>
-      env.OPENCLAW_BUNDLED_PLUGINS_DIR ?? actual.resolveBundledPluginsDir(env),
+      env.DEX_BUNDLED_PLUGINS_DIR ?? actual.resolveBundledPluginsDir(env),
   };
 });
 
 const tempDirs: string[] = [];
-const originalBundledPluginsDir = process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+const originalBundledPluginsDir = process.env.DEX_BUNDLED_PLUGINS_DIR;
 
 function makeBundledRoot(prefix: string): { root: string; pluginsDir: string } {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -43,9 +43,9 @@ afterEach(() => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
   if (originalBundledPluginsDir === undefined) {
-    delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+    delete process.env.DEX_BUNDLED_PLUGINS_DIR;
   } else {
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = originalBundledPluginsDir;
+    process.env.DEX_BUNDLED_PLUGINS_DIR = originalBundledPluginsDir;
   }
   vi.resetModules();
   vi.doUnmock("../../plugins/channel-catalog-registry.js");
@@ -60,7 +60,7 @@ describe("bundled root-aware plugin lookups", () => {
 
     vi.doMock("../../plugins/channel-catalog-registry.js", () => ({
       listChannelCatalogEntries: (params?: { env?: NodeJS.ProcessEnv }) => {
-        const activeRoot = params?.env?.OPENCLAW_BUNDLED_PLUGINS_DIR;
+        const activeRoot = params?.env?.DEX_BUNDLED_PLUGINS_DIR;
         if (activeRoot === rootA.pluginsDir) {
           return [{ pluginId: "alpha", channel: { id: "alpha-chat" } }];
         }
@@ -76,11 +76,11 @@ describe("bundled root-aware plugin lookups", () => {
       "./bundled-ids.js?scope=root-aware-id-cache",
     );
 
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = rootA.pluginsDir;
+    process.env.DEX_BUNDLED_PLUGINS_DIR = rootA.pluginsDir;
     expect(bundledIds.listBundledChannelPluginIds()).toEqual(["alpha"]);
     expect(bundledIds.listBundledChannelIds()).toEqual(["alpha-chat"]);
 
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = rootB.pluginsDir;
+    process.env.DEX_BUNDLED_PLUGINS_DIR = rootB.pluginsDir;
     expect(bundledIds.listBundledChannelPluginIds()).toEqual(["beta"]);
     expect(bundledIds.listBundledChannelIds()).toEqual(["beta-chat"]);
   });
@@ -91,10 +91,10 @@ describe("bundled root-aware plugin lookups", () => {
 
     vi.doMock("./bundled-ids.js", () => ({
       listBundledChannelPluginIdsForRoot: () => {
-        if (process.env.OPENCLAW_BUNDLED_PLUGINS_DIR === rootA.pluginsDir) {
+        if (process.env.DEX_BUNDLED_PLUGINS_DIR === rootA.pluginsDir) {
           return ["alpha"];
         }
-        if (process.env.OPENCLAW_BUNDLED_PLUGINS_DIR === rootB.pluginsDir) {
+        if (process.env.DEX_BUNDLED_PLUGINS_DIR === rootB.pluginsDir) {
           return ["beta"];
         }
         return [];
@@ -110,7 +110,7 @@ describe("bundled root-aware plugin lookups", () => {
       }),
       getBundledChannelSetupPlugin: (id: string) => {
         const suffix = resolveMockRootSuffix({
-          activeRoot: process.env.OPENCLAW_BUNDLED_PLUGINS_DIR,
+          activeRoot: process.env.DEX_BUNDLED_PLUGINS_DIR,
           rootAPluginsDir: rootA.pluginsDir,
           rootBPluginsDir: rootB.pluginsDir,
         });
@@ -126,7 +126,7 @@ describe("bundled root-aware plugin lookups", () => {
       }),
       getBundledChannelSetupSecrets: (id: string) => {
         const suffix = resolveMockRootSuffix({
-          activeRoot: process.env.OPENCLAW_BUNDLED_PLUGINS_DIR,
+          activeRoot: process.env.DEX_BUNDLED_PLUGINS_DIR,
           rootAPluginsDir: rootA.pluginsDir,
           rootBPluginsDir: rootB.pluginsDir,
         });
@@ -141,14 +141,14 @@ describe("bundled root-aware plugin lookups", () => {
       "./bootstrap-registry.js?scope=root-aware-bootstrap-cache",
     );
 
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = rootA.pluginsDir;
+    process.env.DEX_BUNDLED_PLUGINS_DIR = rootA.pluginsDir;
     expect(bootstrapRegistry.listBootstrapChannelPluginIds()).toEqual(["alpha"]);
     expect(bootstrapRegistry.getBootstrapChannelPlugin("alpha")?.meta.label).toBe("setup-A");
     expect(
       bootstrapRegistry.getBootstrapChannelSecrets("alpha")?.secretTargetRegistryEntries?.[0]?.id,
     ).toBe("setup-alpha-A");
 
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = rootB.pluginsDir;
+    process.env.DEX_BUNDLED_PLUGINS_DIR = rootB.pluginsDir;
     expect(bootstrapRegistry.listBootstrapChannelPluginIds()).toEqual(["beta"]);
     expect(bootstrapRegistry.getBootstrapChannelPlugin("beta")?.meta.label).toBe("setup-B");
     expect(
@@ -161,7 +161,7 @@ describe("bundled root-aware plugin lookups", () => {
 
     vi.doMock("./bundled-ids.js", () => ({
       listBundledChannelPluginIdsForRoot: () =>
-        process.env.OPENCLAW_BUNDLED_PLUGINS_DIR === root.pluginsDir ? ["alpha"] : [],
+        process.env.DEX_BUNDLED_PLUGINS_DIR === root.pluginsDir ? ["alpha"] : [],
     }));
 
     const getBundledChannelPluginMock = vi.fn(() => {
@@ -183,7 +183,7 @@ describe("bundled root-aware plugin lookups", () => {
       "./bootstrap-registry.js?scope=bootstrap-plugin-load-guard",
     );
 
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = root.pluginsDir;
+    process.env.DEX_BUNDLED_PLUGINS_DIR = root.pluginsDir;
     expect(bootstrapRegistry.listBootstrapChannelPluginIds()).toEqual(["alpha"]);
     expect(bootstrapRegistry.getBootstrapChannelPlugin("alpha")).toBeUndefined();
     expect(bootstrapRegistry.getBootstrapChannelPlugin("alpha")).toBeUndefined();
@@ -197,7 +197,7 @@ describe("bundled root-aware plugin lookups", () => {
 
     vi.doMock("./bundled-ids.js", () => ({
       listBundledChannelPluginIdsForRoot: () =>
-        process.env.OPENCLAW_BUNDLED_PLUGINS_DIR === root.pluginsDir ? ["alpha"] : [],
+        process.env.DEX_BUNDLED_PLUGINS_DIR === root.pluginsDir ? ["alpha"] : [],
     }));
 
     const getBundledChannelSecretsMock = vi.fn(() => {
@@ -222,7 +222,7 @@ describe("bundled root-aware plugin lookups", () => {
       "./bootstrap-registry.js?scope=bootstrap-secrets-load-guard",
     );
 
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = root.pluginsDir;
+    process.env.DEX_BUNDLED_PLUGINS_DIR = root.pluginsDir;
     expect(bootstrapRegistry.getBootstrapChannelSecrets("alpha")).toBeUndefined();
     expect(bootstrapRegistry.getBootstrapChannelSecrets("alpha")).toBeUndefined();
     expect(bootstrapRegistry.getBootstrapChannelPlugin("alpha")).toEqual({

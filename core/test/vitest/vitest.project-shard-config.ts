@@ -3,8 +3,8 @@ import { nonIsolatedRunnerPath, sharedVitestConfig } from "./vitest.shared.confi
 
 export function createProjectShardVitestConfig(projects: readonly string[]) {
   const maxWorkers = sharedVitestConfig.test.maxWorkers;
-  if (!process.env.OPENCLAW_VITEST_MAX_WORKERS && typeof maxWorkers === "number") {
-    process.env.OPENCLAW_VITEST_MAX_WORKERS = String(maxWorkers);
+  if (!process.env.DEX_VITEST_MAX_WORKERS && typeof maxWorkers === "number") {
+    process.env.DEX_VITEST_MAX_WORKERS = String(maxWorkers);
   }
   return defineConfig({
     ...sharedVitestConfig,

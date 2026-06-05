@@ -1014,7 +1014,7 @@ describe("config view", () => {
     const secretRefValue = {
       channels: {
         discord: {
-          token: { source: "env", provider: "default", id: "__OPENCLAW_REDACTED__" },
+          token: { source: "env", provider: "default", id: "__DEX_REDACTED__" },
         },
       },
     };

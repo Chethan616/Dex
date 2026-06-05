@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { CLI_OUTPUT_MAX_BUFFER } from "./defaults.constants.js";
 import { withAudioFixture } from "./runner.test-utils.js";
 
@@ -59,7 +59,7 @@ describe("media-understanding CLI audio entry", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         ctx,
         attachmentIndex: 0,
         cache,
@@ -97,7 +97,7 @@ describe("media-understanding CLI audio entry", () => {
           command: "sherpa-onnx-offline",
           args: ["{{MediaPath}}"],
         },
-        cfg: { tools: { media: { audio: {} } } } as OpenClawConfig,
+        cfg: { tools: { media: { audio: {} } } } as DexConfig,
         ctx,
         attachmentIndex: 0,
         cache,
@@ -122,7 +122,7 @@ describe("media-understanding CLI audio entry", () => {
           command: "sherpa-onnx-offline",
           args: ["{{MediaPath}}"],
         },
-        cfg: { tools: { media: { audio: {} } } } as OpenClawConfig,
+        cfg: { tools: { media: { audio: {} } } } as DexConfig,
         ctx,
         attachmentIndex: 0,
         cache,

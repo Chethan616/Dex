@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 
 const mocks = vi.hoisted(() => ({
   ensurePluginRegistryLoaded: vi.fn(),
@@ -52,7 +52,7 @@ describe("ensureSelectedAgentHarnessPlugin", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       agentHarnessRuntimeOverride: "codex",
       workspaceDir: "/tmp/workspace",
     });
@@ -79,7 +79,7 @@ describe("ensureSelectedAgentHarnessPlugin", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       workspaceDir: "/tmp/workspace",
     });
 
@@ -106,7 +106,7 @@ describe("ensureSelectedAgentHarnessPlugin", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       workspaceDir: "/tmp/workspace",
     });
 
@@ -148,7 +148,7 @@ describe("ensureSelectedAgentHarnessPlugin", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       workspaceDir: "/tmp/workspace",
     });
 
@@ -180,7 +180,7 @@ describe("ensureSelectedAgentHarnessPlugin", () => {
             codex: { enabled: true },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       workspaceDir: "/tmp/workspace",
     });
 
@@ -217,7 +217,7 @@ describe("ensureSelectedAgentHarnessPlugin", () => {
             codex: { enabled: true },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       workspaceDir: "/tmp/workspace",
     });
 
@@ -251,7 +251,7 @@ describe("ensureSelectedAgentHarnessPlugin", () => {
             telegram: { enabled: true },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       workspaceDir: "/tmp/workspace",
     });
 
@@ -310,7 +310,7 @@ describe("ensureSelectedAgentHarnessPlugin", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       workspaceDir: "/tmp/workspace",
     });
 
@@ -332,7 +332,7 @@ describe("ensureSelectedAgentHarnessPlugin", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       workspaceDir: "/tmp/workspace",
     });
 

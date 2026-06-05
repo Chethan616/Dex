@@ -3,7 +3,7 @@ import {
   type OwnerDisplaySecretRuntimeState,
   retainGeneratedOwnerDisplaySecret,
 } from "./io.owner-display-secret.js";
-import type { OpenClawConfig } from "./types.openclaw.js";
+import type { DexConfig } from "./types.openclaw.js";
 
 function createState(): OwnerDisplaySecretRuntimeState {
   return {
@@ -20,7 +20,7 @@ describe("retainGeneratedOwnerDisplaySecret", () => {
         ownerDisplay: "hash",
         ownerDisplaySecret: "generated-owner-secret",
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = retainGeneratedOwnerDisplaySecret({
       config,
@@ -42,7 +42,7 @@ describe("retainGeneratedOwnerDisplaySecret", () => {
         ownerDisplay: "hash",
         ownerDisplaySecret: "existing-secret",
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = retainGeneratedOwnerDisplaySecret({
       config,

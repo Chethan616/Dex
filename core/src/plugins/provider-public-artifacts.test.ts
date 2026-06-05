@@ -7,19 +7,19 @@ import type { ModelProviderConfig } from "../config/types.models.js";
 import { resolveBundledProviderPolicySurface } from "./provider-public-artifacts.js";
 
 describe("provider public artifacts", () => {
-  const originalBundledPluginsDir = process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
-  const originalTrustBundledPluginsDir = process.env.OPENCLAW_TEST_TRUST_BUNDLED_PLUGINS_DIR;
+  const originalBundledPluginsDir = process.env.DEX_BUNDLED_PLUGINS_DIR;
+  const originalTrustBundledPluginsDir = process.env.DEX_TEST_TRUST_BUNDLED_PLUGINS_DIR;
 
   afterEach(() => {
     if (originalBundledPluginsDir === undefined) {
-      delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+      delete process.env.DEX_BUNDLED_PLUGINS_DIR;
     } else {
-      process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = originalBundledPluginsDir;
+      process.env.DEX_BUNDLED_PLUGINS_DIR = originalBundledPluginsDir;
     }
     if (originalTrustBundledPluginsDir === undefined) {
-      delete process.env.OPENCLAW_TEST_TRUST_BUNDLED_PLUGINS_DIR;
+      delete process.env.DEX_TEST_TRUST_BUNDLED_PLUGINS_DIR;
     } else {
-      process.env.OPENCLAW_TEST_TRUST_BUNDLED_PLUGINS_DIR = originalTrustBundledPluginsDir;
+      process.env.DEX_TEST_TRUST_BUNDLED_PLUGINS_DIR = originalTrustBundledPluginsDir;
     }
     vi.doUnmock("./bundled-dir.js");
     vi.doUnmock("./manifest-registry.js");
@@ -79,8 +79,8 @@ describe("provider public artifacts", () => {
         resolveBundledPluginsDir: () => bundledPluginsDir,
       };
     });
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = bundledPluginsDir;
-    process.env.OPENCLAW_TEST_TRUST_BUNDLED_PLUGINS_DIR = "1";
+    process.env.DEX_BUNDLED_PLUGINS_DIR = bundledPluginsDir;
+    process.env.DEX_TEST_TRUST_BUNDLED_PLUGINS_DIR = "1";
     vi.doMock("./public-surface-loader.js", () => ({
       loadBundledPluginPublicArtifactModuleSync,
     }));
@@ -213,8 +213,8 @@ describe("provider public artifacts", () => {
     vi.doMock("./public-surface-loader.js", () => ({
       loadBundledPluginPublicArtifactModuleSync,
     }));
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = bundledPluginsDir;
-    process.env.OPENCLAW_TEST_TRUST_BUNDLED_PLUGINS_DIR = "1";
+    process.env.DEX_BUNDLED_PLUGINS_DIR = bundledPluginsDir;
+    process.env.DEX_TEST_TRUST_BUNDLED_PLUGINS_DIR = "1";
 
     try {
       writePlugin("first", ["fixture-provider"], 1);

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { bundledPluginRootAt } from "openclaw/plugin-sdk/test-fixtures";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { PluginNpmIntegrityDriftParams } from "./install.js";
 
 const APP_ROOT = "/app";
@@ -167,7 +167,7 @@ function createMarketplaceInstallConfig(params: {
   marketplaceSource: string;
   marketplacePlugin: string;
   marketplaceName?: string;
-}): OpenClawConfig {
+}): DexConfig {
   return {
     plugins: {
       installs: {
@@ -191,7 +191,7 @@ function createClawHubInstallConfig(params: {
   clawhubFamily: "bundle-plugin" | "code-plugin";
   clawhubChannel: "community" | "official" | "private";
   spec?: string;
-}): OpenClawConfig {
+}): DexConfig {
   return {
     plugins: {
       installs: {
@@ -214,7 +214,7 @@ function createGitInstallConfig(params: {
   spec: string;
   installPath: string;
   commit?: string;
-}): OpenClawConfig {
+}): DexConfig {
   return {
     plugins: {
       installs: {
@@ -234,7 +234,7 @@ function createBundledPathInstallConfig(params: {
   installPath: string;
   sourcePath?: string;
   spec?: string;
-}): OpenClawConfig {
+}): DexConfig {
   return {
     plugins: {
       load: { paths: params.loadPaths },
@@ -757,7 +757,7 @@ describe("updateNpmInstalledPlugins", () => {
       shasum: "same",
     });
     installPluginFromNpmSpecMock.mockRejectedValue(new Error("installer should not run"));
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       plugins: {
         installs: {
           "lossless-claw": {
@@ -808,7 +808,7 @@ describe("updateNpmInstalledPlugins", () => {
   });
 
   it("does not skip unchanged npm plugins when package metadata requires a newer plugin API", async () => {
-    vi.stubEnv("OPENCLAW_COMPATIBILITY_HOST_VERSION", "2026.5.28-beta.3");
+    vi.stubEnv("DEX_COMPATIBILITY_HOST_VERSION", "2026.5.28-beta.3");
     const installPath = createInstalledPackageDir({
       name: "@openclaw/msteams",
       version: "2026.5.28-beta.4",
@@ -873,7 +873,7 @@ describe("updateNpmInstalledPlugins", () => {
   });
 
   it("does not skip unchanged npm plugins when package metadata requires a newer host", async () => {
-    vi.stubEnv("OPENCLAW_COMPATIBILITY_HOST_VERSION", "2026.5.28-beta.3");
+    vi.stubEnv("DEX_COMPATIBILITY_HOST_VERSION", "2026.5.28-beta.3");
     const installPath = createInstalledPackageDir({
       name: "@openclaw/msteams",
       version: "2026.5.28-beta.4",
@@ -951,7 +951,7 @@ describe("updateNpmInstalledPlugins", () => {
         },
       }),
     );
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       plugins: {
         installs: {
           codex: {
@@ -1309,7 +1309,7 @@ describe("updateNpmInstalledPlugins", () => {
   it("expands home-relative install paths before checking installed npm versions", async () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-plugin-update-home-"));
     tempDirs.push(home);
-    const installPath = path.join(home, ".openclaw", "extensions", "lossless-claw");
+    const installPath = path.join(home, ".dex", "extensions", "lossless-claw");
     fs.mkdirSync(installPath, { recursive: true });
     fs.writeFileSync(
       path.join(installPath, "package.json"),
@@ -1328,7 +1328,7 @@ describe("updateNpmInstalledPlugins", () => {
       config: createNpmInstallConfig({
         pluginId: "lossless-claw",
         spec: "@martian-engineering/lossless-claw",
-        installPath: "~/.openclaw/extensions/lossless-claw",
+        installPath: "~/.dex/extensions/lossless-claw",
         resolvedName: "@martian-engineering/lossless-claw",
         resolvedVersion: "0.9.0",
         resolvedSpec: "@martian-engineering/lossless-claw@0.9.0",
@@ -1455,7 +1455,7 @@ describe("updateNpmInstalledPlugins", () => {
             },
           },
         },
-      } satisfies OpenClawConfig,
+      } satisfies DexConfig,
     },
     {
       source: "ClawHub",
@@ -1479,7 +1479,7 @@ describe("updateNpmInstalledPlugins", () => {
             },
           },
         },
-      } satisfies OpenClawConfig,
+      } satisfies DexConfig,
     },
     {
       source: "marketplace",
@@ -1500,7 +1500,7 @@ describe("updateNpmInstalledPlugins", () => {
             },
           },
         },
-      } satisfies OpenClawConfig,
+      } satisfies DexConfig,
     },
   ])("skips disabled $source installs before update network calls", async ({ config }) => {
     installPluginFromNpmSpecMock.mockRejectedValue(new Error("npm installer should not run"));
@@ -1801,7 +1801,7 @@ describe("updateNpmInstalledPlugins", () => {
           },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     const result = await updateNpmInstalledPlugins({
       config,
@@ -1845,7 +1845,7 @@ describe("updateNpmInstalledPlugins", () => {
           },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     const result = await updateNpmInstalledPlugins({
       config,
@@ -1901,7 +1901,7 @@ describe("updateNpmInstalledPlugins", () => {
           },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     const result = await updateNpmInstalledPlugins({
       config,
@@ -2895,7 +2895,7 @@ describe("updateNpmInstalledPlugins", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       pluginIds: ["context-engine"],
     });
 
@@ -3193,7 +3193,7 @@ describe("syncPluginsForUpdateChannel", () => {
 
   it("forwards an explicit env to bundled plugin source resolution", async () => {
     resolveBundledPluginSourcesMock.mockReturnValue(new Map());
-    const env = { OPENCLAW_HOME: "/srv/openclaw-home" } as NodeJS.ProcessEnv;
+    const env = { DEX_HOME: "/srv/openclaw-home" } as NodeJS.ProcessEnv;
 
     await syncPluginsForUpdateChannel({
       channel: "beta",
@@ -3223,7 +3223,7 @@ describe("syncPluginsForUpdateChannel", () => {
         channel: "beta",
         env: {
           ...process.env,
-          OPENCLAW_HOME: bundledHome,
+          DEX_HOME: bundledHome,
           HOME: "/tmp/ignored-home",
         },
         config: {
@@ -3507,7 +3507,7 @@ describe("syncPluginsForUpdateChannel", () => {
       code: "package_not_found",
       error: "Package not found on ClawHub.",
     });
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       channels: {
         "legacy-chat": {
           enabled: true,
@@ -3659,7 +3659,7 @@ describe("syncPluginsForUpdateChannel", () => {
       code: "archive_integrity_mismatch",
       error: "ClawHub ClawPack integrity mismatch.",
     });
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       channels: {
         "legacy-chat": {
           enabled: true,
@@ -3779,7 +3779,7 @@ describe("syncPluginsForUpdateChannel", () => {
       ok: false,
       error: "package unavailable",
     });
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       channels: {
         "legacy-chat": {
           enabled: true,

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { resetConfigRuntimeState, setRuntimeConfigSnapshot } from "../config/config.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import {
   resolveStorePath,
   saveSessionStore,
@@ -92,7 +92,7 @@ async function withSingleRowCacheStore(
   run: (context: SingleRowCacheContext) => Promise<void>,
 ): Promise<void> {
   await withStateDirEnv(statePrefix, async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       agents: {
         list: [
           {
@@ -103,7 +103,7 @@ async function withSingleRowCacheStore(
         ],
         defaults: { model: { primary: TEST_MODEL } },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     setRuntimeConfigSnapshot(cfg, cfg);
     await run({
       now: Math.floor(Date.now() / 1_000) * 1_000 + 100,

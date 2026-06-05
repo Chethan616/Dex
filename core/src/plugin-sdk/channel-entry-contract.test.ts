@@ -7,7 +7,7 @@ import { importFreshModule } from "openclaw/plugin-sdk/test-fixtures";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { PluginModuleLoaderFactory } from "../plugins/plugin-module-loader-cache.js";
 import type { PluginRuntime } from "../plugins/runtime/types.js";
-import type { OpenClawPluginApi, PluginRegistrationMode } from "../plugins/types.js";
+import type { DexPluginApi, PluginRegistrationMode } from "../plugins/types.js";
 import { withMockedWindowsPlatform } from "../test-utils/vitest-spies.js";
 import {
   defineBundledChannelEntry,
@@ -47,13 +47,13 @@ function writeJson(targetPath: string, value: unknown): void {
   fs.writeFileSync(targetPath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
-function createApi(registrationMode: PluginRegistrationMode): OpenClawPluginApi {
+function createApi(registrationMode: PluginRegistrationMode): DexPluginApi {
   return {
     registrationMode,
     runtime: { registrationMode } as unknown as PluginRuntime,
     registerChannel: vi.fn(),
     registerTool: vi.fn(),
-  } as unknown as OpenClawPluginApi;
+  } as unknown as DexPluginApi;
 }
 
 function writeBundledChannelFixture(params: {
@@ -103,8 +103,8 @@ function writeBundledChannelFixture(params: {
 function createBundledChannelEntry(params: {
   importerPath: string;
   pluginId: string;
-  registerCliMetadata?: (api: OpenClawPluginApi) => void;
-  registerFull?: (api: OpenClawPluginApi) => void;
+  registerCliMetadata?: (api: DexPluginApi) => void;
+  registerFull?: (api: DexPluginApi) => void;
 }) {
   return defineBundledChannelEntry({
     id: params.pluginId,
@@ -129,8 +129,8 @@ describe("defineBundledChannelEntry", () => {
       pluginId,
       runtimeMarker,
     });
-    const registerCliMetadata = vi.fn<(api: OpenClawPluginApi) => void>();
-    const registerFull = vi.fn<(api: OpenClawPluginApi) => void>((api) => {
+    const registerCliMetadata = vi.fn<(api: DexPluginApi) => void>();
+    const registerFull = vi.fn<(api: DexPluginApi) => void>((api) => {
       api.registerTool(
         {
           name: "channel_tool",
@@ -169,8 +169,8 @@ describe("defineBundledChannelEntry", () => {
       pluginId,
       runtimeMarker,
     });
-    const registerCliMetadata = vi.fn<(api: OpenClawPluginApi) => void>();
-    const registerFull = vi.fn<(api: OpenClawPluginApi) => void>();
+    const registerCliMetadata = vi.fn<(api: DexPluginApi) => void>();
+    const registerFull = vi.fn<(api: DexPluginApi) => void>();
     const entry = createBundledChannelEntry({
       importerPath,
       pluginId,
@@ -197,8 +197,8 @@ describe("defineBundledChannelEntry", () => {
       pluginId,
       runtimeMarker,
     });
-    const registerCliMetadata = vi.fn<(api: OpenClawPluginApi) => void>();
-    const registerFull = vi.fn<(api: OpenClawPluginApi) => void>();
+    const registerCliMetadata = vi.fn<(api: DexPluginApi) => void>();
+    const registerFull = vi.fn<(api: DexPluginApi) => void>();
     const entry = createBundledChannelEntry({
       importerPath,
       pluginId,
@@ -225,7 +225,7 @@ describe("defineBundledChannelSetupEntry", () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-bundled-setup-entry-"));
     tempDirs.push(tempRoot);
     const runtimeMarker = path.join(tempRoot, "runtime-loaded");
-    const setupRuntimeRegister = vi.fn<(api: OpenClawPluginApi) => void>();
+    const setupRuntimeRegister = vi.fn<(api: DexPluginApi) => void>();
     const pluginId = "bundled-setup-runtime";
     const { importerPath } = writeBundledChannelFixture({
       pluginRoot: path.join(tempRoot, "dist", "extensions", pluginId),
@@ -253,7 +253,7 @@ async function expectBuiltArtifactNodeRequireFastPath(
   scope: string,
   artifactRoot = "dist",
 ): Promise<void> {
-  vi.stubEnv("OPENCLAW_PLUGIN_LOAD_PROFILE", "1");
+  vi.stubEnv("DEX_PLUGIN_LOAD_PROFILE", "1");
   const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
   try {
@@ -353,7 +353,7 @@ function runCompiledEsmSidecarFastPathProbe(): SpawnSyncReturns<string> {
   return spawnSync(process.execPath, ["--import", "tsx", probePath], {
     cwd: process.cwd(),
     encoding: "utf8",
-    env: { ...process.env, OPENCLAW_PLUGIN_LOAD_PROFILE: "1" },
+    env: { ...process.env, DEX_PLUGIN_LOAD_PROFILE: "1" },
   });
 }
 
@@ -606,7 +606,7 @@ describe("loadBundledEntryExportSync", () => {
       }),
     ).toBe(42);
 
-    vi.stubEnv("OPENCLAW_DISABLE_BUNDLED_ENTRY_SOURCE_FALLBACK", "1");
+    vi.stubEnv("DEX_DISABLE_BUNDLED_ENTRY_SOURCE_FALLBACK", "1");
 
     expect(() =>
       loadBundledEntryExportSync<number>(pathToFileURL(importerPath).href, {

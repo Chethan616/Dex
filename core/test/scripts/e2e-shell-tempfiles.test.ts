@@ -42,9 +42,9 @@ describe("e2e shell tempfile hygiene", () => {
       `#!/usr/bin/env bash
 set -euo pipefail
 
-export OPENCLAW_ONBOARD_SCENARIO_SOURCE_ONLY=1
-export OPENCLAW_ONBOARD_E2E_TMPDIR=${JSON.stringify(tempRoot)}
-OPENCLAW_ENTRY=node
+export DEX_ONBOARD_SCENARIO_SOURCE_ONLY=1
+export DEX_ONBOARD_E2E_TMPDIR=${JSON.stringify(tempRoot)}
+DEX_ENTRY=node
 openclaw_test_state_create() { :; }
 source scripts/e2e/lib/onboard/scenario.sh
 
@@ -82,10 +82,10 @@ run_wizard_cmd failing-wizard fake-state "node fake-wizard" send_noop false
     expect(contents).toContain(
       'ONBOARD_TMP_DIR="$(mktemp -d "$ONBOARD_TMP_ROOT/openclaw-onboard.XXXXXX")"',
     );
-    expect(contents).toContain('OPENCLAW_E2E_LOG_DIR="$ONBOARD_TMP_DIR/logs"');
+    expect(contents).toContain('DEX_E2E_LOG_DIR="$ONBOARD_TMP_DIR/logs"');
     expect(contents).toContain('GATEWAY_LOG_PATH="$ONBOARD_TMP_DIR/gateway-e2e.log"');
     expect(contents).not.toContain("/tmp/gateway-e2e.log");
-    expect(contents).toContain('validate_local_basic_log "$OPENCLAW_E2E_LAST_LOG_PATH"');
+    expect(contents).toContain('validate_local_basic_log "$DEX_E2E_LAST_LOG_PATH"');
     expect(contents).not.toContain(
       "validate_local_basic_log /tmp/openclaw-onboard-local-basic.log",
     );
@@ -102,9 +102,9 @@ run_wizard_cmd failing-wizard fake-state "node fake-wizard" send_noop false
       `#!/usr/bin/env bash
 set -euo pipefail
 
-export OPENCLAW_ONBOARD_SCENARIO_SOURCE_ONLY=1
-export OPENCLAW_ONBOARD_E2E_TMPDIR=${JSON.stringify(tempRoot)}
-OPENCLAW_ENTRY=node
+export DEX_ONBOARD_SCENARIO_SOURCE_ONLY=1
+export DEX_ONBOARD_E2E_TMPDIR=${JSON.stringify(tempRoot)}
+DEX_ENTRY=node
 source scripts/e2e/lib/onboard/scenario.sh
 
 openclaw_e2e_probe_tcp() { return 1; }

@@ -87,10 +87,10 @@ describe("skills workshop cli", () => {
   };
 
   beforeEach(async () => {
-    envSnapshot = captureEnv(["OPENCLAW_STATE_DIR"]);
+    envSnapshot = captureEnv(["DEX_STATE_DIR"]);
     mocks.workspaceDir = await tempDirs.make("openclaw-skills-cli-workshop-");
     stateDir = await tempDirs.make("openclaw-skills-cli-workshop-state-");
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    process.env.DEX_STATE_DIR = stateDir;
     mocks.runtimeStdout.length = 0;
     mocks.runtimeErrors.length = 0;
     mocks.defaultRuntime.log.mockClear();

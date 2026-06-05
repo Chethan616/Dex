@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { createChannelMessageAdapterFromOutbound } from "./outbound-bridge.js";
 import type {
   ChannelMessageSendPayloadContext,
@@ -8,7 +8,7 @@ import type {
   MessageReceipt,
 } from "./types.js";
 
-const cfg = {} as OpenClawConfig;
+const cfg = {} as DexConfig;
 
 function requireFirstCallArg(mock: {
   mock: { calls: readonly unknown[][] };

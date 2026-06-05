@@ -5,7 +5,7 @@ import path from "node:path";
 import { CURRENT_SESSION_VERSION, SessionManager } from "openclaw/plugin-sdk/agent-sessions";
 import type { AssistantMessage } from "openclaw/plugin-sdk/llm";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   captureCompactionCheckpointSnapshotAsync,
   cleanupCompactionCheckpointSnapshot,
@@ -77,11 +77,11 @@ async function makeTempSessionStore(prefix: string, sessionId = TEST_SESSION_ID)
   };
 }
 
-function checkpointConfig(storePath: string): OpenClawConfig {
+function checkpointConfig(storePath: string): DexConfig {
   return {
     session: { store: storePath },
     agents: { list: [{ id: MAIN_AGENT_ID, default: true }] },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 async function writeSessionStore(

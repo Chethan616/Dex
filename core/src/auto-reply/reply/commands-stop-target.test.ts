@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import {
   getActivePluginRegistry,
   resetPluginRuntimeStateForTest,
@@ -98,7 +98,7 @@ function buildStopParams(): HandleCommandsParams {
     cfg: {
       commands: { text: true },
       channels: { telegram: { allowFrom: ["*"] } },
-    } as OpenClawConfig,
+    } as DexConfig,
     ctx: {
       Provider: "telegram",
       Surface: "telegram",
@@ -195,7 +195,7 @@ describe("handleStopCommand target fallback", () => {
     const cfg = {
       commands: { text: true, allowFrom: { "*": ["*"] } },
       channels: { telegram: { allowFrom: ["*"] } },
-    } as OpenClawConfig;
+    } as DexConfig;
     const ctx = {
       Provider: "telegram",
       Surface: "telegram",

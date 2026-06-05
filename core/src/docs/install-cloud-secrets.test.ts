@@ -26,14 +26,14 @@ describe("cloud install docs", () => {
   it("does not publish a copy-paste gateway token placeholder", async () => {
     for (const { docName, markdown } of await readInstallDocs()) {
       for (const token of KNOWN_WEAK_GATEWAY_TOKEN_PLACEHOLDERS) {
-        expect(markdown, docName).not.toContain(`OPENCLAW_GATEWAY_TOKEN=${token}`);
+        expect(markdown, docName).not.toContain(`DEX_GATEWAY_TOKEN=${token}`);
       }
       for (const password of KNOWN_WEAK_GATEWAY_PASSWORD_PLACEHOLDERS) {
-        expect(markdown, docName).not.toContain(`OPENCLAW_GATEWAY_PASSWORD=${password}`);
+        expect(markdown, docName).not.toContain(`DEX_GATEWAY_PASSWORD=${password}`);
       }
       expect(markdown, docName).not.toMatch(/^ {4}GOG_KEYRING_PASSWORD=change-me-now$/m);
       if (CLOUD_DOCKER_VM_INSTALL_DOCS.has(docName)) {
-        expect(markdown, docName).toMatch(/^ {4}OPENCLAW_GATEWAY_TOKEN=[ \t]*\r?$/m);
+        expect(markdown, docName).toMatch(/^ {4}DEX_GATEWAY_TOKEN=[ \t]*\r?$/m);
         expect(markdown, docName).toMatch(/^ {4}GOG_KEYRING_PASSWORD=[ \t]*\r?$/m);
         expect(markdown, docName).toContain("openssl rand -hex 32");
       }

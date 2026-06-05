@@ -133,8 +133,8 @@ describe("registerOnboardCommand", () => {
   });
 
   it("forwards --gateway-token-ref-env", async () => {
-    await runCli(["onboard", "--gateway-token-ref-env", "OPENCLAW_GATEWAY_TOKEN"]);
-    expect(setupWizardOptions().gatewayTokenRefEnv).toBe("OPENCLAW_GATEWAY_TOKEN");
+    await runCli(["onboard", "--gateway-token-ref-env", "DEX_GATEWAY_TOKEN"]);
+    expect(setupWizardOptions().gatewayTokenRefEnv).toBe("DEX_GATEWAY_TOKEN");
   });
 
   it("forwards onboarding migration flags", async () => {

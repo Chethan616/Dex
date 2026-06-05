@@ -15,7 +15,7 @@ const bundleTestDeps = await vi.hoisted(async () => {
   const loadBundleRegistry = (params: { workspaceDir?: string }) => {
     const rootDir = pathModule.join(
       params.workspaceDir ?? "",
-      ".openclaw",
+      ".dex",
       "extensions",
       "claude-bundle",
     );
@@ -43,7 +43,7 @@ const bundleTestDeps = await vi.hoisted(async () => {
   }) => {
     const pluginRoot = pathModule.join(
       params.workspaceDir,
-      ".openclaw",
+      ".dex",
       "extensions",
       "claude-bundle",
     );
@@ -137,7 +137,7 @@ async function createWorkspaceBundle(params: {
   pluginId?: string;
 }): Promise<string> {
   const pluginId = params.pluginId ?? "claude-bundle";
-  const pluginRoot = path.join(params.workspaceDir, ".openclaw", "extensions", pluginId);
+  const pluginRoot = path.join(params.workspaceDir, ".dex", "extensions", pluginId);
   await fs.mkdir(path.join(pluginRoot, ".claude-plugin"), { recursive: true });
   await fs.writeFile(
     path.join(pluginRoot, ".claude-plugin", "plugin.json"),

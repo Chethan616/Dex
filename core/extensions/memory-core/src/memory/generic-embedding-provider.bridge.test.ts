@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type {
   EmbeddingInput,
   EmbeddingProviderCallOptions,
@@ -30,7 +30,7 @@ type CapturedCall = {
 let embeddingProvidersSnapshot: RegisteredEmbeddingProvider[];
 let memoryEmbeddingProvidersSnapshot: RegisteredMemoryEmbeddingProvider[];
 
-function createOptions(config: OpenClawConfig) {
+function createOptions(config: DexConfig) {
   return {
     config,
     agentDir: "/tmp/openclaw-agent",
@@ -60,7 +60,7 @@ describe("memory-core generic embedding provider bridge", () => {
       plugins: {
         enabled: false,
       },
-    } as OpenClawConfig);
+    } as DexConfig);
 
     registerVirtualTestPlugin({
       registry,

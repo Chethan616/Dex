@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import type { AuthProfileStore } from "../agents/auth-profiles.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type {
   PluginOrigin,
   PluginWebFetchProviderEntry,
@@ -22,7 +22,7 @@ function createCoverageWebSearchProvider(params: {
   order: number;
 }): PluginWebSearchProviderEntry {
   const credentialPath = `plugins.entries.${params.pluginId}.config.webSearch.apiKey`;
-  const readConfiguredCredential = (config?: OpenClawConfig): unknown =>
+  const readConfiguredCredential = (config?: DexConfig): unknown =>
     (config?.plugins?.entries?.[params.pluginId]?.config as { webSearch?: { apiKey?: unknown } })
       ?.webSearch?.apiKey;
   return {
@@ -56,7 +56,7 @@ function createCoverageWebFetchProvider(params: {
   envVar: string;
 }): PluginWebFetchProviderEntry {
   const credentialPath = `plugins.entries.${params.pluginId}.config.webFetch.apiKey`;
-  const readConfiguredCredential = (config?: OpenClawConfig): unknown =>
+  const readConfiguredCredential = (config?: DexConfig): unknown =>
     (config?.plugins?.entries?.[params.pluginId]?.config as { webFetch?: { apiKey?: unknown } })
       ?.webFetch?.apiKey;
   return {
@@ -230,11 +230,11 @@ function loadCoverageRegistryEntries(): SecretRegistryEntry[] {
 }
 
 const COVERAGE_REGISTRY_ENTRIES = loadCoverageRegistryEntries();
-const DEBUG_COVERAGE_BATCHES = process.env.OPENCLAW_DEBUG_RUNTIME_COVERAGE === "1";
+const DEBUG_COVERAGE_BATCHES = process.env.DEX_DEBUG_RUNTIME_COVERAGE === "1";
 const RUNTIME_COVERAGE_TEST_TIMEOUT_MS = 240_000;
 const COVERAGE_LOADABLE_PLUGIN_ORIGINS =
   buildCoverageLoadablePluginOrigins(COVERAGE_REGISTRY_ENTRIES);
-const PLUGIN_OWNED_OPENCLAW_COVERAGE_EXCLUSIONS = new Set([
+const PLUGIN_OWNED_DEX_COVERAGE_EXCLUSIONS = new Set([
   "channels.googlechat.accounts.*.serviceAccount",
   // Doctor migrates legacy web search config into plugin-owned webSearch config.
   "tools.web.search.apiKey",
@@ -248,22 +248,22 @@ let collectConfigAssignments: typeof import("./runtime-config-collectors.js").co
 let createResolverContext: typeof import("./runtime-shared.js").createResolverContext;
 let resolveSecretRefValues: typeof import("./resolve.js").resolveSecretRefValues;
 let resolveRuntimeWebTools: typeof import("./runtime-web-tools.js").resolveRuntimeWebTools;
-const previousBundledPluginsDir = process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
-const previousTrustBundledPluginsDir = process.env.OPENCLAW_TEST_TRUST_BUNDLED_PLUGINS_DIR;
+const previousBundledPluginsDir = process.env.DEX_BUNDLED_PLUGINS_DIR;
+const previousTrustBundledPluginsDir = process.env.DEX_TEST_TRUST_BUNDLED_PLUGINS_DIR;
 
-process.env.OPENCLAW_BUNDLED_PLUGINS_DIR ??= "extensions";
-process.env.OPENCLAW_TEST_TRUST_BUNDLED_PLUGINS_DIR ??= "1";
+process.env.DEX_BUNDLED_PLUGINS_DIR ??= "extensions";
+process.env.DEX_TEST_TRUST_BUNDLED_PLUGINS_DIR ??= "1";
 
 afterAll(() => {
   if (previousBundledPluginsDir === undefined) {
-    delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+    delete process.env.DEX_BUNDLED_PLUGINS_DIR;
   } else {
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = previousBundledPluginsDir;
+    process.env.DEX_BUNDLED_PLUGINS_DIR = previousBundledPluginsDir;
   }
   if (previousTrustBundledPluginsDir === undefined) {
-    delete process.env.OPENCLAW_TEST_TRUST_BUNDLED_PLUGINS_DIR;
+    delete process.env.DEX_TEST_TRUST_BUNDLED_PLUGINS_DIR;
   } else {
-    process.env.OPENCLAW_TEST_TRUST_BUNDLED_PLUGINS_DIR = previousTrustBundledPluginsDir;
+    process.env.DEX_TEST_TRUST_BUNDLED_PLUGINS_DIR = previousTrustBundledPluginsDir;
   }
 });
 
@@ -462,12 +462,12 @@ function collectOpenClawCoverageEntries(options: {
     (entry) =>
       entry.configFile === "openclaw.json" &&
       entry.id.startsWith("plugins.entries.") === options.includePluginEntries &&
-      !PLUGIN_OWNED_OPENCLAW_COVERAGE_EXCLUSIONS.has(entry.id),
+      !PLUGIN_OWNED_DEX_COVERAGE_EXCLUSIONS.has(entry.id),
   );
 }
 
 function applyConfigForOpenClawTarget(
-  config: OpenClawConfig,
+  config: DexConfig,
   entry: SecretRegistryEntry,
   envId: string,
   wildcardToken: string,
@@ -651,7 +651,7 @@ function applyAuthStoreTarget(
 }
 
 async function prepareConfigCoverageSnapshot(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   env: NodeJS.ProcessEnv;
   loadablePluginOrigins?: ReadonlyMap<string, PluginOrigin>;
   includeRuntimeWebTools?: boolean;
@@ -704,7 +704,7 @@ async function prepareConfigCoverageSnapshot(params: {
 }
 
 async function prepareAuthCoverageSnapshot(params: {
-  config: OpenClawConfig;
+  config: DexConfig;
   env: NodeJS.ProcessEnv;
   agentDirs: string[];
   loadAuthStore: (agentDir?: string) => AuthProfileStore;
@@ -752,10 +752,10 @@ async function expectOpenClawCoverageBatchResolved(
   batch: readonly SecretRegistryEntry[],
 ): Promise<void> {
   logCoverageBatch(label, batch);
-  const config = {} as OpenClawConfig;
+  const config = {} as DexConfig;
   const env: Record<string, string> = {};
   for (const [index, entry] of batch.entries()) {
-    const envId = `OPENCLAW_SECRET_TARGET_${entry.id}`;
+    const envId = `DEX_SECRET_TARGET_${entry.id}`;
     const runtimeEnvId = resolveCoverageEnvId(entry, envId);
     const expectedValue = `resolved-${entry.id}`;
     const wildcardToken = resolveCoverageWildcardToken(index);
@@ -778,10 +778,10 @@ async function expectOpenClawCoverageBatchResolved(
   }
 }
 
-const OPENCLAW_CORE_COVERAGE_BATCHES = buildCoverageBatches(
+const DEX_CORE_COVERAGE_BATCHES = buildCoverageBatches(
   collectOpenClawCoverageEntries({ includePluginEntries: false }),
 );
-const OPENCLAW_PLUGIN_COVERAGE_BATCHES = buildCoverageBatches(
+const DEX_PLUGIN_COVERAGE_BATCHES = buildCoverageBatches(
   collectOpenClawCoverageEntries({ includePluginEntries: true }),
 );
 const AUTH_PROFILE_COVERAGE_BATCHES = buildCoverageBatches(
@@ -817,7 +817,7 @@ describe("secrets runtime target coverage", () => {
     ({ collectAuthStoreAssignments } = authCollectors);
     ({ resolveRuntimeWebTools } = runtimeWebTools);
 
-    const googleChatBatch = OPENCLAW_CORE_COVERAGE_BATCHES.find((batch) =>
+    const googleChatBatch = DEX_CORE_COVERAGE_BATCHES.find((batch) =>
       batch.some((entry) => entry.id === "channels.googlechat.serviceAccount"),
     );
     if (googleChatBatch) {
@@ -826,7 +826,7 @@ describe("secrets runtime target coverage", () => {
   });
 
   describe("openclaw.json core and channel registry targets", () => {
-    test.each(OPENCLAW_CORE_COVERAGE_BATCHES.map(toCoverageBatchCase))(
+    test.each(DEX_CORE_COVERAGE_BATCHES.map(toCoverageBatchCase))(
       "handles $name",
       async ({ batch }) => {
         await expectOpenClawCoverageBatchResolved("openclaw.json core", batch);
@@ -836,7 +836,7 @@ describe("secrets runtime target coverage", () => {
   });
 
   describe("openclaw.json plugin registry targets", () => {
-    test.each(OPENCLAW_PLUGIN_COVERAGE_BATCHES.map(toCoverageBatchCase))(
+    test.each(DEX_PLUGIN_COVERAGE_BATCHES.map(toCoverageBatchCase))(
       "handles $name",
       async ({ batch }) => {
         await expectOpenClawCoverageBatchResolved("openclaw.json plugins", batch);
@@ -856,12 +856,12 @@ describe("secrets runtime target coverage", () => {
           profiles: {},
         };
         for (const [index, entry] of batch.entries()) {
-          const envId = `OPENCLAW_AUTH_SECRET_TARGET_${entry.id}`;
+          const envId = `DEX_AUTH_SECRET_TARGET_${entry.id}`;
           env[envId] = `resolved-${entry.id}`;
           applyAuthStoreTarget(authStore, entry, envId, resolveCoverageWildcardToken(index));
         }
         const snapshot = await prepareAuthCoverageSnapshot({
-          config: {} as OpenClawConfig,
+          config: {} as DexConfig,
           env,
           agentDirs: ["/tmp/openclaw-agent-main"],
           loadAuthStore: () => authStore,

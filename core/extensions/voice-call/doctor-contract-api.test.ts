@@ -56,7 +56,7 @@ describe("voice-call doctor state migration", () => {
     resetPluginStateStoreForTests();
     stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-voice-call-doctor-"));
     storePath = createTestStorePath();
-    env = { ...process.env, HOME: stateDir, OPENCLAW_STATE_DIR: stateDir };
+    env = { ...process.env, HOME: stateDir, DEX_STATE_DIR: stateDir };
     installStateRuntime();
   });
 

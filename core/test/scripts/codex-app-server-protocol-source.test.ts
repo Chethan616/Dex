@@ -8,13 +8,13 @@ import {
 import { createScriptTestHarness } from "./test-helpers.js";
 
 const { createTempDir } = createScriptTestHarness();
-const originalOpenClawCodexRepo = process.env.OPENCLAW_CODEX_REPO;
+const originalOpenClawCodexRepo = process.env.DEX_CODEX_REPO;
 
 afterEach(() => {
   if (originalOpenClawCodexRepo === undefined) {
-    delete process.env.OPENCLAW_CODEX_REPO;
+    delete process.env.DEX_CODEX_REPO;
   } else {
-    process.env.OPENCLAW_CODEX_REPO = originalOpenClawCodexRepo;
+    process.env.DEX_CODEX_REPO = originalOpenClawCodexRepo;
   }
 });
 
@@ -42,11 +42,11 @@ describe("codex app-server protocol source resolver", () => {
     });
   });
 
-  it("uses OPENCLAW_CODEX_REPO when provided", async () => {
+  it("uses DEX_CODEX_REPO when provided", async () => {
     const root = createTempDir("openclaw-protocol-source-root-");
     const codexRepo = createTempDir("openclaw-protocol-source-codex-");
     createProtocolSchema(codexRepo);
-    process.env.OPENCLAW_CODEX_REPO = codexRepo;
+    process.env.DEX_CODEX_REPO = codexRepo;
 
     await expect(resolveCodexAppServerProtocolSource(root)).resolves.toEqual({
       codexRepo,
@@ -68,7 +68,7 @@ describe("codex app-server protocol source resolver", () => {
       `gitdir: ${path.join(primaryOpenClaw, ".git", "worktrees", "codex-harness")}\n`,
     );
     createProtocolSchema(codexRepo);
-    delete process.env.OPENCLAW_CODEX_REPO;
+    delete process.env.DEX_CODEX_REPO;
 
     await expect(resolveCodexAppServerProtocolSource(worktreeRoot)).resolves.toEqual({
       codexRepo,

@@ -5,7 +5,7 @@ import { buildOpenAIProvider } from "./openai-provider.js";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
 const DEFAULT_LIVE_MODEL_IDS = ["chat-latest", "gpt-5.5", "gpt-5.4-mini", "gpt-5.4-nano"] as const;
-const liveEnabled = OPENAI_API_KEY.trim().length > 0 && process.env.OPENCLAW_LIVE_TEST === "1";
+const liveEnabled = OPENAI_API_KEY.trim().length > 0 && process.env.DEX_LIVE_TEST === "1";
 const describeLive = liveEnabled ? describe : describe.skip;
 
 type LiveModelCase = {
@@ -116,7 +116,7 @@ function resolveLiveModelCases(raw?: string): LiveModelCase[] {
 }
 
 describeLive("buildOpenAIProvider live", () => {
-  it.each(resolveLiveModelCases(process.env.OPENCLAW_LIVE_OPENAI_MODELS))(
+  it.each(resolveLiveModelCases(process.env.DEX_LIVE_OPENAI_MODELS))(
     "resolves %s and completes through the OpenAI responses API",
     async (liveCase) => {
       const provider = buildOpenAIProvider();

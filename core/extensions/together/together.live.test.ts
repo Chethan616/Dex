@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { TOGETHER_BASE_URL, TOGETHER_MODEL_CATALOG } from "./models.js";
 
 const TOGETHER_KEY = process.env.TOGETHER_API_KEY ?? "";
-const LIVE = ["LIVE", "OPENCLAW_LIVE_TEST", "TOGETHER_LIVE_TEST"].some((name) => {
+const LIVE = ["LIVE", "DEX_LIVE_TEST", "TOGETHER_LIVE_TEST"].some((name) => {
   const value = process.env[name]?.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
 });

@@ -3,8 +3,8 @@ import { collectWhatsAppStatusIssues } from "./status-issues.js";
 
 describe("collectWhatsAppStatusIssues", () => {
   beforeEach(() => {
-    vi.stubEnv("OPENCLAW_CONTAINER_HINT", "");
-    vi.stubEnv("OPENCLAW_PROFILE", "");
+    vi.stubEnv("DEX_CONTAINER_HINT", "");
+    vi.stubEnv("DEX_PROFILE", "");
   });
 
   afterEach(() => {

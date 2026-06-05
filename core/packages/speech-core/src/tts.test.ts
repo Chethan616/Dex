@@ -1,6 +1,6 @@
 import { rmSync } from "node:fs";
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { MAX_TIMER_TIMEOUT_MS } from "openclaw/plugin-sdk/number-runtime";
 import type { ReplyPayload } from "openclaw/plugin-sdk/reply-payload";
 import {
@@ -142,7 +142,7 @@ function installSpeechProviders(providers: SpeechProviderPlugin[]): void {
   );
 }
 
-function createTtsConfig(prefsName: string): OpenClawConfig {
+function createTtsConfig(prefsName: string): DexConfig {
   return {
     messages: {
       tts: {
@@ -357,7 +357,7 @@ describe("speech-core native voice-note routing", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     const runtimeConfig = {
       messages: {
         tts: {
@@ -370,7 +370,7 @@ describe("speech-core native voice-note routing", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
     installSpeechProviders([
       createMockSpeechProvider("mock", {
         isConfigured: ({ providerConfig }) => providerConfig.apiKey === "resolved-minimax-key",
@@ -410,7 +410,7 @@ describe("speech-core native voice-note routing", () => {
             provider: "mock",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       disableFallback: true,
     });
 
@@ -433,7 +433,7 @@ describe("speech-core native voice-note routing", () => {
             provider: "mock",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       disableFallback: true,
     });
 
@@ -454,7 +454,7 @@ describe("speech-core native voice-note routing", () => {
             provider: "mock",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       disableFallback: true,
     });
 
@@ -476,7 +476,7 @@ describe("speech-core native voice-note routing", () => {
             timeoutMs: 45_000,
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       disableFallback: true,
     });
 
@@ -503,7 +503,7 @@ describe("speech-core native voice-note routing", () => {
             provider: "mock",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       disableFallback: true,
     });
 
@@ -543,7 +543,7 @@ describe("speech-core native voice-note routing", () => {
             prefsPath: "/tmp/openclaw-speech-core-voice-model-default-test.json",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       disableFallback: true,
     });
 
@@ -589,7 +589,7 @@ describe("speech-core native voice-note routing", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       disableFallback: true,
     });
 
@@ -633,7 +633,7 @@ describe("speech-core native voice-note routing", () => {
             prefsPath: "/tmp/openclaw-speech-core-voice-model-fallback-test.json",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     expect(result.success).toBe(true);
@@ -679,7 +679,7 @@ describe("speech-core native voice-note routing", () => {
             prefsPath: "/tmp/openclaw-speech-core-same-provider-voice-model-fallback-test.json",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     expect(result.success).toBe(true);
@@ -724,7 +724,7 @@ describe("speech-core native voice-note routing", () => {
             prefsPath: "/tmp/openclaw-speech-core-realtime-voice-model-ignored-test.json",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       disableFallback: true,
     });
 
@@ -767,7 +767,7 @@ describe("speech-core native voice-note routing", () => {
             prefsPath: "/tmp/openclaw-speech-core-supported-voice-model-provider-test.json",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     expect(result.success).toBe(true);
@@ -795,7 +795,7 @@ describe("speech-core native voice-note routing", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       disableFallback: true,
     });
 
@@ -834,7 +834,7 @@ describe("speech-core native voice-note routing", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       disableFallback: true,
     });
 
@@ -863,7 +863,7 @@ describe("speech-core native voice-note routing", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       disableFallback: true,
     });
 
@@ -1019,7 +1019,7 @@ describe("speech-core native voice-note routing", () => {
   });
 
   it("selects persona preferred provider before config fallback", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       messages: {
         tts: {
           enabled: true,
@@ -1047,7 +1047,7 @@ describe("speech-core native voice-note routing", () => {
   });
 
   it("merges active persona provider binding into synthesis config", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       messages: {
         tts: {
           enabled: true,
@@ -1360,7 +1360,7 @@ describe("speech-core per-agent TTS config", () => {
           },
         ],
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     const resolved = resolveTtsConfig(cfg, "reader");
 
@@ -1422,7 +1422,7 @@ describe("speech-core per-agent TTS config", () => {
           },
         ],
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     let mediaDir: string | undefined;
     try {
@@ -1471,7 +1471,7 @@ describe("speech-core per-agent TTS config", () => {
           },
         ],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const resolved = resolveTtsConfig(cfg, "reader");
 

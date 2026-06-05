@@ -5,7 +5,7 @@ import {
 } from "./plugin-lifecycle-trace.js";
 
 describe("plugin lifecycle trace", () => {
-  const originalTraceEnv = process.env.OPENCLAW_PLUGIN_LIFECYCLE_TRACE;
+  const originalTraceEnv = process.env.DEX_PLUGIN_LIFECYCLE_TRACE;
   let errorSpy: ReturnType<typeof vi.spyOn>;
 
   function requireErrorMessage(index = 0): unknown {
@@ -22,22 +22,22 @@ describe("plugin lifecycle trace", () => {
 
   afterEach(() => {
     if (originalTraceEnv === undefined) {
-      delete process.env.OPENCLAW_PLUGIN_LIFECYCLE_TRACE;
+      delete process.env.DEX_PLUGIN_LIFECYCLE_TRACE;
     } else {
-      process.env.OPENCLAW_PLUGIN_LIFECYCLE_TRACE = originalTraceEnv;
+      process.env.DEX_PLUGIN_LIFECYCLE_TRACE = originalTraceEnv;
     }
     errorSpy.mockRestore();
   });
 
   it("does not emit when the trace env var is disabled", () => {
-    delete process.env.OPENCLAW_PLUGIN_LIFECYCLE_TRACE;
+    delete process.env.DEX_PLUGIN_LIFECYCLE_TRACE;
 
     expect(tracePluginLifecyclePhase("config read", () => "done")).toBe("done");
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("emits a successful sync phase with details when enabled", () => {
-    process.env.OPENCLAW_PLUGIN_LIFECYCLE_TRACE = "1";
+    process.env.DEX_PLUGIN_LIFECYCLE_TRACE = "1";
 
     expect(
       tracePluginLifecyclePhase("config read", () => 42, {
@@ -54,7 +54,7 @@ describe("plugin lifecycle trace", () => {
   });
 
   it("emits failed sync phases before rethrowing", () => {
-    process.env.OPENCLAW_PLUGIN_LIFECYCLE_TRACE = "true";
+    process.env.DEX_PLUGIN_LIFECYCLE_TRACE = "true";
     const error = new Error("boom");
 
     expect(() =>
@@ -70,7 +70,7 @@ describe("plugin lifecycle trace", () => {
   });
 
   it("emits failed async phases before rejecting", async () => {
-    process.env.OPENCLAW_PLUGIN_LIFECYCLE_TRACE = "yes";
+    process.env.DEX_PLUGIN_LIFECYCLE_TRACE = "yes";
     const error = new Error("async boom");
 
     await expect(

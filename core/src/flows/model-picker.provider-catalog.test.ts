@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ModelDefinitionConfig } from "../config/types.models.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { ProviderPlugin } from "../plugins/types.js";
 
 function textModel(id: string, name: string): ModelDefinitionConfig {
@@ -120,7 +120,7 @@ describe("loadPreferredProviderPickerCatalog", () => {
     providersRuntimeMocks.resolvePluginProviders.mockReturnValue([liveProvider]);
 
     const rows = await loadPreferredProviderPickerCatalog({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       preferredProvider: "nvidia",
       env: { NVIDIA_API_KEY: "nvapi-test" },
     });

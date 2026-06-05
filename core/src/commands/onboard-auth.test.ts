@@ -27,14 +27,14 @@ const providerEnvVarsById = vi.hoisted(
 );
 
 vi.mock("../config/paths.js", () => ({
-  resolveStateDir: () => process.env.OPENCLAW_STATE_DIR ?? "/tmp/openclaw-state",
+  resolveStateDir: () => process.env.DEX_STATE_DIR ?? "/tmp/openclaw-state",
 }));
 
 vi.mock("../agents/auth-profiles/profiles.js", async () => {
   const fsLocal = await import("node:fs");
   const pathLocal = await import("node:path");
   const upsert = (params: { profileId: string; credential: unknown; agentDir?: string }) => {
-    const stateDir = process.env.OPENCLAW_STATE_DIR ?? "/tmp/openclaw-state";
+    const stateDir = process.env.DEX_STATE_DIR ?? "/tmp/openclaw-state";
     const agentDir = params.agentDir ?? pathLocal.join(stateDir, "agents", "main", "agent");
     const file = pathLocal.join(agentDir, "auth-profiles.json");
     fsLocal.mkdirSync(agentDir, { recursive: true });
@@ -122,9 +122,9 @@ async function expectMissingFile(readPromise: Promise<unknown>) {
 
 describe("writeOAuthCredentials", () => {
   const lifecycle = createAuthTestLifecycle([
-    "OPENCLAW_STATE_DIR",
-    "OPENCLAW_AGENT_DIR",
-    "OPENCLAW_OAUTH_DIR",
+    "DEX_STATE_DIR",
+    "DEX_AGENT_DIR",
+    "DEX_OAUTH_DIR",
   ]);
 
   let tempStateDir: string;
@@ -161,7 +161,7 @@ describe("writeOAuthCredentials", () => {
 
   it("writes OAuth credentials to all sibling agent dirs when syncSiblingAgents=true", async () => {
     tempStateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-oauth-sync-"));
-    process.env.OPENCLAW_STATE_DIR = tempStateDir;
+    process.env.DEX_STATE_DIR = tempStateDir;
 
     const mainAgentDir = path.join(tempStateDir, "agents", "main", "agent");
     const kidAgentDir = path.join(tempStateDir, "agents", "kid", "agent");
@@ -170,7 +170,7 @@ describe("writeOAuthCredentials", () => {
     await fs.mkdir(kidAgentDir, { recursive: true });
     await fs.mkdir(workerAgentDir, { recursive: true });
 
-    process.env.OPENCLAW_AGENT_DIR = kidAgentDir;
+    process.env.DEX_AGENT_DIR = kidAgentDir;
 
     const creds = {
       refresh: "refresh-sync",
@@ -197,14 +197,14 @@ describe("writeOAuthCredentials", () => {
 
   it("writes OAuth credentials only to target dir by default", async () => {
     tempStateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-oauth-nosync-"));
-    process.env.OPENCLAW_STATE_DIR = tempStateDir;
+    process.env.DEX_STATE_DIR = tempStateDir;
 
     const mainAgentDir = path.join(tempStateDir, "agents", "main", "agent");
     const kidAgentDir = path.join(tempStateDir, "agents", "kid", "agent");
     await fs.mkdir(mainAgentDir, { recursive: true });
     await fs.mkdir(kidAgentDir, { recursive: true });
 
-    process.env.OPENCLAW_AGENT_DIR = kidAgentDir;
+    process.env.DEX_AGENT_DIR = kidAgentDir;
 
     const creds = {
       refresh: "refresh-kid",
@@ -226,11 +226,11 @@ describe("writeOAuthCredentials", () => {
     await expectMissingFile(fs.readFile(authProfilePathFor(mainAgentDir), "utf8"));
   });
 
-  it("syncs siblings from explicit agentDir outside OPENCLAW_STATE_DIR", async () => {
+  it("syncs siblings from explicit agentDir outside DEX_STATE_DIR", async () => {
     tempStateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-oauth-external-"));
-    process.env.OPENCLAW_STATE_DIR = tempStateDir;
+    process.env.DEX_STATE_DIR = tempStateDir;
 
-    // Create standard-layout agents tree *outside* OPENCLAW_STATE_DIR
+    // Create standard-layout agents tree *outside* DEX_STATE_DIR
     const externalRoot = path.join(tempStateDir, "external", "agents");
     const extMain = path.join(externalRoot, "main", "agent");
     const extKid = path.join(externalRoot, "kid", "agent");
@@ -270,8 +270,8 @@ describe("writeOAuthCredentials", () => {
 
 describe("upsertApiKeyProfile secret refs", () => {
   const lifecycle = createAuthTestLifecycle([
-    "OPENCLAW_STATE_DIR",
-    "OPENCLAW_AGENT_DIR",
+    "DEX_STATE_DIR",
+    "DEX_AGENT_DIR",
     "MOONSHOT_API_KEY",
     "OPENAI_API_KEY",
     "CLOUDFLARE_AI_GATEWAY_API_KEY",
@@ -414,7 +414,7 @@ describe("upsertApiKeyProfile secret refs", () => {
 });
 
 describe("upsertApiKeyProfile", () => {
-  const lifecycle = createAuthTestLifecycle(["OPENCLAW_STATE_DIR", "OPENCLAW_AGENT_DIR"]);
+  const lifecycle = createAuthTestLifecycle(["DEX_STATE_DIR", "DEX_AGENT_DIR"]);
 
   afterEach(async () => {
     await lifecycle.cleanup();

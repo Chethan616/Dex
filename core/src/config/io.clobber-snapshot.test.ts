@@ -23,7 +23,7 @@ describe("config clobber snapshots", () => {
 
   async function withCase<T>(fn: (configPath: string) => Promise<T>): Promise<T> {
     const home = path.join(fixtureRoot, `case-${caseId++}`);
-    const configPath = path.join(home, ".openclaw", "openclaw.json");
+    const configPath = path.join(home, ".dex", "openclaw.json");
     await fsp.mkdir(path.dirname(configPath), { recursive: true });
     await fsp.writeFile(configPath, "{}\n", "utf-8");
     return await fn(configPath);

@@ -207,7 +207,7 @@ describe("runGlobalPackageUpdateSteps", () => {
 
   it("swaps staged npm updates into an explicitly selected direct node_modules root", async () => {
     await withTempDir({ prefix: "openclaw-package-update-direct-root-" }, async (base) => {
-      const managedRoot = path.join(base, ".openclaw", "npm", "node_modules");
+      const managedRoot = path.join(base, ".dex", "npm", "node_modules");
       const packageRoot = path.join(managedRoot, "openclaw");
       await writePackageRoot(packageRoot, "1.0.0");
 

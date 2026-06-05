@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import {
   detectLegacyClawdBrowserProfileResidue,
   maybeArchiveLegacyClawdBrowserProfileResidue,
@@ -31,7 +31,7 @@ describe("doctor browser facade", () => {
       noteChromeMcpBrowserReadiness: delegate,
     });
 
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       browser: {
         defaultProfile: "user",
       },
@@ -59,7 +59,7 @@ describe("doctor browser facade", () => {
       noteChromeMcpBrowserReadiness: vi.fn(),
       detectLegacyClawdBrowserProfileResidue: detect,
     });
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       browser: {
         profiles: {
           openclaw: { color: "#FF4500" },
@@ -86,7 +86,7 @@ describe("doctor browser facade", () => {
       maybeArchiveLegacyClawdBrowserProfileResidue: cleanup,
     });
 
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       browser: {
         profiles: {
           openclaw: { color: "#FF4500" },

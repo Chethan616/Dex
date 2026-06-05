@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { parseInlineDirectives } from "./directive-handling.parse.js";
 import { maybeHandleQueueDirective } from "./directive-handling.queue-validation.js";
 
@@ -7,7 +7,7 @@ describe("maybeHandleQueueDirective", () => {
   it("reports invalid queue options and current queue settings", () => {
     const invalid = maybeHandleQueueDirective({
       directives: parseInlineDirectives("/queue collect debounce:bogus cap:zero drop:maybe"),
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       channel: "quietchat",
     });
     expect(invalid?.text).toContain("Invalid debounce");
@@ -16,7 +16,7 @@ describe("maybeHandleQueueDirective", () => {
 
     const invalidMode = maybeHandleQueueDirective({
       directives: parseInlineDirectives("/queue backlog"),
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       channel: "quietchat",
     });
     expect(invalidMode?.text).toContain(
@@ -34,7 +34,7 @@ describe("maybeHandleQueueDirective", () => {
             drop: "summarize",
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       channel: "quietchat",
     });
     expect(current?.text).toContain(
@@ -48,7 +48,7 @@ describe("maybeHandleQueueDirective", () => {
   it.each(["cap:1e3", "cap:0x10", "cap:4.9"])("rejects non-decimal-integer caps: %s", (cap) => {
     const invalid = maybeHandleQueueDirective({
       directives: parseInlineDirectives(`/queue collect ${cap}`),
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       channel: "quietchat",
     });
 

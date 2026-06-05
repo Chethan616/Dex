@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import {
   applyLocalSetupWorkspaceConfig,
   ONBOARDING_DEFAULT_DM_SCOPE,
@@ -12,7 +12,7 @@ describe("applyLocalSetupWorkspaceConfig", () => {
   });
 
   it("sets secure dmScope default when unset", () => {
-    const baseConfig: OpenClawConfig = {};
+    const baseConfig: DexConfig = {};
     const result = applyLocalSetupWorkspaceConfig(baseConfig, "/tmp/workspace");
 
     expect(result.session?.dmScope).toBe(ONBOARDING_DEFAULT_DM_SCOPE);
@@ -22,7 +22,7 @@ describe("applyLocalSetupWorkspaceConfig", () => {
   });
 
   it("preserves existing dmScope when already configured", () => {
-    const baseConfig: OpenClawConfig = {
+    const baseConfig: DexConfig = {
       session: {
         dmScope: "main",
       },
@@ -33,7 +33,7 @@ describe("applyLocalSetupWorkspaceConfig", () => {
   });
 
   it("preserves explicit non-main dmScope values", () => {
-    const baseConfig: OpenClawConfig = {
+    const baseConfig: DexConfig = {
       session: {
         dmScope: "per-account-channel-peer",
       },
@@ -44,7 +44,7 @@ describe("applyLocalSetupWorkspaceConfig", () => {
   });
 
   it("preserves an explicit tools.profile when already configured", () => {
-    const baseConfig: OpenClawConfig = {
+    const baseConfig: DexConfig = {
       tools: {
         profile: "full",
       },
@@ -55,7 +55,7 @@ describe("applyLocalSetupWorkspaceConfig", () => {
   });
 
   it("preserves agents.list and bindings on onboard rerun (openclaw#84692)", () => {
-    const baseConfig: OpenClawConfig = {
+    const baseConfig: DexConfig = {
       agents: {
         list: [
           { id: "alpha", model: "anthropic/claude-3-5-sonnet" },
@@ -69,7 +69,7 @@ describe("applyLocalSetupWorkspaceConfig", () => {
           match: { channel: "discord", peer: { kind: "direct", id: "user-1" } },
         },
       ],
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = applyLocalSetupWorkspaceConfig(baseConfig, "/tmp/workspace");
 

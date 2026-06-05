@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import {
   resolveAgentDirMock,
   resolveSessionAgentIdMock,
@@ -30,7 +30,7 @@ const { handleCompactCommand } = await import("./commands-compact.js");
 
 function buildCompactParams(
   commandBodyNormalized: string,
-  cfg: OpenClawConfig,
+  cfg: DexConfig,
 ): HandleCommandsParams {
   return {
     cfg,
@@ -65,7 +65,7 @@ function requireCompactEmbeddedAgentSessionCall(index = 0) {
 function requireResolveSessionAgentIdCall(index = 0) {
   const call = (
     resolveSessionAgentIdMock.mock.calls[index] as unknown as [unknown] | undefined
-  )?.[0] as { sessionKey?: string; config?: OpenClawConfig } | undefined;
+  )?.[0] as { sessionKey?: string; config?: DexConfig } | undefined;
   if (!call) {
     throw new Error(`resolveSessionAgentId call ${index} missing`);
   }
@@ -73,7 +73,7 @@ function requireResolveSessionAgentIdCall(index = 0) {
 }
 
 function requireResolveAgentDirCall(index = 0) {
-  const call = resolveAgentDirMock.mock.calls[index] as [OpenClawConfig, string] | undefined;
+  const call = resolveAgentDirMock.mock.calls[index] as [DexConfig, string] | undefined;
   if (!call) {
     throw new Error(`resolveAgentDir call ${index} missing`);
   }
@@ -102,7 +102,7 @@ describe("handleCompactCommand", () => {
       buildCompactParams("/status", {
         commands: { text: true },
         channels: { whatsapp: { allowFrom: ["*"] } },
-      } as OpenClawConfig),
+      } as DexConfig),
       true,
     );
 
@@ -114,7 +114,7 @@ describe("handleCompactCommand", () => {
     const params = buildCompactParams("/compact", {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
 
     const result = await handleCompactCommand(
       {
@@ -144,7 +144,7 @@ describe("handleCompactCommand", () => {
           commands: { text: true },
           channels: { whatsapp: { allowFrom: ["*"] } },
           session: { store: "/tmp/openclaw-session-store.json" },
-        } as OpenClawConfig),
+        } as DexConfig),
         ctx: {
           Provider: "whatsapp",
           Surface: "whatsapp",
@@ -204,7 +204,7 @@ describe("handleCompactCommand", () => {
         ...buildCompactParams("/compact", {
           commands: { text: true },
           channels: { whatsapp: { allowFrom: ["*"] } },
-        } as OpenClawConfig),
+        } as DexConfig),
         sessionEntry: {
           sessionId: "session-1",
           updatedAt: Date.now(),
@@ -229,7 +229,7 @@ describe("handleCompactCommand", () => {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
       session: { store: "/tmp/openclaw-session-store.json" },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await handleCompactCommand(
       {
@@ -264,7 +264,7 @@ describe("handleCompactCommand", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await handleCompactCommand(
       {
@@ -298,7 +298,7 @@ describe("handleCompactCommand", () => {
         ...buildCompactParams("/compact", {
           commands: { text: true },
           channels: { whatsapp: { allowFrom: ["*"] } },
-        } as OpenClawConfig),
+        } as DexConfig),
         sessionKey: "agent:target:whatsapp:direct:12345",
         sessionEntry: {
           sessionId: "wrapper-session",
@@ -352,7 +352,7 @@ describe("handleCompactCommand", () => {
         ...buildCompactParams("/compact", {
           commands: { text: true },
           channels: { whatsapp: { allowFrom: ["*"] } },
-        } as OpenClawConfig),
+        } as DexConfig),
         sessionKey: "agent:target:whatsapp:direct:12345",
         sessionEntry: {
           sessionId: "wrapper-session",
@@ -398,7 +398,7 @@ describe("handleCompactCommand", () => {
         ...buildCompactParams("/compact", {
           commands: { text: true },
           channels: { whatsapp: { allowFrom: ["*"] } },
-        } as OpenClawConfig),
+        } as DexConfig),
         sessionEntry: {
           sessionId: "live-session",
           updatedAt: Date.now(),
@@ -444,7 +444,7 @@ describe("handleCompactCommand", () => {
               },
             },
           },
-        } as unknown as OpenClawConfig),
+        } as unknown as DexConfig),
         provider: "openai",
         model: "openai/gpt-5.5",
         contextTokens: 0,

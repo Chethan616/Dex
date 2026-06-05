@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ChannelPlugin } from "../channels/plugins/types.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { collectChannelSecurityFindings } from "./audit-channel.js";
 
 function stubChannelPlugin(params: {
   id: "zalouser";
   label: string;
-  resolveAccount: (cfg: OpenClawConfig, accountId: string | null | undefined) => unknown;
+  resolveAccount: (cfg: DexConfig, accountId: string | null | undefined) => unknown;
 }): ChannelPlugin {
   return {
     id: params.id,
@@ -53,7 +53,7 @@ describe("security audit channel read-only resolution", () => {
       },
     });
 
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         zalouser: {
           enabled: true,

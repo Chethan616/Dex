@@ -16,7 +16,7 @@ import {
 import { setMSTeamsRuntime } from "./runtime.js";
 import { msteamsRuntimeStub } from "./test-support/runtime.js";
 
-const previousStateDir = process.env.OPENCLAW_STATE_DIR;
+const previousStateDir = process.env.DEX_STATE_DIR;
 
 describe("buildFeedbackEvent", () => {
   it("builds a well-formed custom event", () => {
@@ -173,9 +173,9 @@ describe("loadSessionLearnings", () => {
 
   afterEach(async () => {
     if (previousStateDir === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_STATE_DIR;
     } else {
-      process.env.OPENCLAW_STATE_DIR = previousStateDir;
+      process.env.DEX_STATE_DIR = previousStateDir;
     }
     if (tmpDir) {
       await rm(tmpDir, { recursive: true, force: true });
@@ -184,14 +184,14 @@ describe("loadSessionLearnings", () => {
 
   it("returns empty array when file doesn't exist", async () => {
     tmpDir = await mkdtemp(path.join(os.tmpdir(), "learnings-test-"));
-    process.env.OPENCLAW_STATE_DIR = tmpDir;
+    process.env.DEX_STATE_DIR = tmpDir;
     const learnings = await loadSessionLearnings(tmpDir, "nonexistent");
     expect(learnings).toStrictEqual([]);
   });
 
   it("reads persisted learnings from plugin state", async () => {
     tmpDir = await mkdtemp(path.join(os.tmpdir(), "learnings-test-"));
-    process.env.OPENCLAW_STATE_DIR = tmpDir;
+    process.env.DEX_STATE_DIR = tmpDir;
     await storeSessionLearning({
       storePath: tmpDir,
       sessionKey: "msteams:user1",
@@ -209,7 +209,7 @@ describe("loadSessionLearnings", () => {
 
   it("keeps distinct session keys isolated across the filename persistence boundary", async () => {
     tmpDir = await mkdtemp(path.join(os.tmpdir(), "learnings-test-"));
-    process.env.OPENCLAW_STATE_DIR = tmpDir;
+    process.env.DEX_STATE_DIR = tmpDir;
 
     await storeSessionLearning({
       storePath: tmpDir,
@@ -228,7 +228,7 @@ describe("loadSessionLearnings", () => {
 
   it("keeps the same session key isolated by store path", async () => {
     tmpDir = await mkdtemp(path.join(os.tmpdir(), "learnings-test-"));
-    process.env.OPENCLAW_STATE_DIR = tmpDir;
+    process.env.DEX_STATE_DIR = tmpDir;
     const workStorePath = path.join(tmpDir, "work");
     const opsStorePath = path.join(tmpDir, "ops");
 

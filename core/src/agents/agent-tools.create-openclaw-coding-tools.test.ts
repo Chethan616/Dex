@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   findUnsupportedSchemaKeywords,
   GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS,
@@ -15,7 +15,7 @@ import { createMockPluginRegistry } from "../plugins/hooks.test-helpers.js";
 import "./test-helpers/fast-bash-tools.js";
 import "./test-helpers/fast-coding-tools.js";
 import "./test-helpers/fast-openclaw-tools.js";
-import { createOpenClawCodingTools } from "./agent-tools.js";
+import { createDexCodingTools } from "./agent-tools.js";
 import type { AuthProfileStore } from "./auth-profiles/types.js";
 import * as openClawPluginTools from "./openclaw-plugin-tools.js";
 import { createOpenClawTools } from "./openclaw-tools.js";
@@ -74,7 +74,7 @@ async function writeSessionStore(
 }
 
 function createToolsForStoredSession(storeTemplate: string, sessionKey: string) {
-  return createOpenClawCodingTools({
+  return createDexCodingTools({
     sessionKey,
     config: {
       session: {
@@ -91,7 +91,7 @@ function createToolsForStoredSession(storeTemplate: string, sessionKey: string) 
   });
 }
 
-function expectNoSubagentControlTools(tools: ReturnType<typeof createOpenClawCodingTools>) {
+function expectNoSubagentControlTools(tools: ReturnType<typeof createDexCodingTools>) {
   const names = new Set(tools.map((tool) => tool.name));
   expect(names.has("sessions_spawn")).toBe(false);
   expect(names.has("sessions_list")).toBe(false);
@@ -104,14 +104,14 @@ function applyRuntimeToolsAllow<T extends { name: string }>(tools: T[], toolsAll
   return tools.filter((tool) => allowSet.has(normalizeToolName(tool.name)));
 }
 
-type OpenClawCodingTool = ReturnType<typeof createOpenClawCodingTools>[number];
-type OpenClawToolsOptions = NonNullable<Parameters<typeof createOpenClawTools>[0]>;
+type DexCodingTool = ReturnType<typeof createDexCodingTools>[number];
+type DexToolsOptions = NonNullable<Parameters<typeof createOpenClawTools>[0]>;
 
 function toolNameList(tools: readonly { name: string }[]): string[] {
   return tools.map((tool) => tool.name);
 }
 
-function requireTool(tools: OpenClawCodingTool[], name: string): OpenClawCodingTool {
+function requireTool(tools: DexCodingTool[], name: string): DexCodingTool {
   const tool = tools.find((candidate) => candidate.name === name);
   if (!tool) {
     throw new Error(`expected ${name} tool`);
@@ -119,14 +119,14 @@ function requireTool(tools: OpenClawCodingTool[], name: string): OpenClawCodingT
   return tool;
 }
 
-function requireToolExecute(tool: OpenClawCodingTool): NonNullable<OpenClawCodingTool["execute"]> {
+function requireToolExecute(tool: DexCodingTool): NonNullable<DexCodingTool["execute"]> {
   if (!tool.execute) {
     throw new Error(`expected ${tool.name} tool execute`);
   }
   return tool.execute;
 }
 
-function latestCreateOpenClawToolsOptions(): OpenClawToolsOptions {
+function latestCreateDexToolsOptions(): DexToolsOptions {
   const calls = vi.mocked(createOpenClawTools).mock.calls;
   const lastCall = calls.at(-1);
   const options = lastCall?.[0];
@@ -148,15 +148,15 @@ function expectListIncludes(
   }
 }
 
-describe("createOpenClawCodingTools", () => {
-  const testConfig: OpenClawConfig = {};
+describe("createDexCodingTools", () => {
+  const testConfig: DexConfig = {};
 
   afterEach(() => {
     resetGlobalHookRunner();
   });
 
   it("exposes gateway config and restart actions to owner sessions", () => {
-    const tools = createOpenClawCodingTools({ config: testConfig });
+    const tools = createDexCodingTools({ config: testConfig });
     const gateway = requireTool(tools, "gateway");
 
     const parameters = gateway.parameters as {
@@ -172,7 +172,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("does not add Tool Search control tools from the shared factory by default", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: {
         tools: {
           toolSearch: true,
@@ -194,7 +194,7 @@ describe("createOpenClawCodingTools", () => {
     );
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-hook-channel-"));
     await fs.writeFile(path.join(tmpDir, "note.txt"), "hello");
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       workspaceDir: tmpDir,
       currentChannelId: "telegram:-100123",
       hookChannelId: "-100123",
@@ -209,7 +209,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("adds Tool Search control tools when explicitly requested", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       includeToolSearchControls: true,
       config: {
         tools: {
@@ -226,7 +226,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("keeps Tool Search controls available under restrictive tool profiles", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       includeToolSearchControls: true,
       config: {
         tools: {
@@ -245,7 +245,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("keeps Tool Search controls available under restrictive tool allowlists", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       includeToolSearchControls: true,
       config: {
         tools: {
@@ -265,7 +265,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("lets explicit deny policies remove Tool Search controls", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       includeToolSearchControls: true,
       config: {
         tools: {
@@ -285,7 +285,7 @@ describe("createOpenClawCodingTools", () => {
     const createOpenClawToolsMock = vi.mocked(createOpenClawTools);
     createOpenClawToolsMock.mockClear();
 
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       includeCoreTools: false,
       includeToolSearchControls: true,
       toolConstructionPlan: {
@@ -313,7 +313,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("exposes control-plane tools to configured sessions", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: testConfig,
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -325,7 +325,7 @@ describe("createOpenClawCodingTools", () => {
 
   it("resolves isolated cron runtime toolsAllow", () => {
     const allowed = applyRuntimeToolsAllow(
-      createOpenClawCodingTools({
+      createDexCodingTools({
         config: testConfig,
       }),
       ["cron"],
@@ -345,18 +345,18 @@ describe("createOpenClawCodingTools", () => {
     const createOpenClawToolsMock = vi.mocked(createOpenClawTools);
     createOpenClawToolsMock.mockClear();
 
-    createOpenClawCodingTools({
+    createDexCodingTools({
       config: testConfig,
       runtimeToolAllowlist: ["memory_search", "memory_get"],
     });
 
     expect(createOpenClawToolsMock).toHaveBeenCalledTimes(1);
-    const options = latestCreateOpenClawToolsOptions();
+    const options = latestCreateDexToolsOptions();
     expectListIncludes(options.pluginToolAllowlist, ["memory_search", "memory_get"]);
   });
 
   it("preserves runtime-allowed message through restrictive profiles", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: { tools: { profile: "minimal" } },
       runtimeToolAllowlist: ["message"],
       toolConstructionPlan: {
@@ -372,7 +372,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("preserves runtime-allowed message through local model lean filtering", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: {
         agents: {
           defaults: {
@@ -397,7 +397,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("preserves forced message through local model lean filtering without runtime allowlist", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: {
         agents: {
           defaults: {
@@ -422,7 +422,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("preserves message-tool-only replies through local model lean filtering without runtime allowlist", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: {
         agents: {
           defaults: {
@@ -448,7 +448,7 @@ describe("createOpenClawCodingTools", () => {
 
   it("preserves runtime allowlist groups containing message through restrictive profiles", () => {
     for (const runtimeToolAllowlist of [["group:messaging"], ["group:openclaw"], ["*"]]) {
-      const tools = createOpenClawCodingTools({
+      const tools = createDexCodingTools({
         config: { tools: { profile: "minimal" } },
         runtimeToolAllowlist,
         toolConstructionPlan: {
@@ -468,21 +468,21 @@ describe("createOpenClawCodingTools", () => {
     const createOpenClawToolsMock = vi.mocked(createOpenClawTools);
     createOpenClawToolsMock.mockClear();
 
-    createOpenClawCodingTools({
+    createDexCodingTools({
       config: testConfig,
       forceMessageTool: true,
       sourceReplyDeliveryMode: "message_tool_only",
     });
 
     expect(createOpenClawToolsMock).toHaveBeenCalledTimes(1);
-    expect(latestCreateOpenClawToolsOptions().sourceReplyDeliveryMode).toBe("message_tool_only");
+    expect(latestCreateDexToolsOptions().sourceReplyDeliveryMode).toBe("message_tool_only");
   });
 
   it("skips unrelated tool families when construction is planned from a narrow allowlist", () => {
     const createOpenClawToolsMock = vi.mocked(createOpenClawTools);
     createOpenClawToolsMock.mockClear();
 
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: testConfig,
       toolConstructionPlan: {
         includeBaseCodingTools: true,
@@ -508,7 +508,7 @@ describe("createOpenClawCodingTools", () => {
     const createOpenClawToolsMock = vi.mocked(createOpenClawTools);
     createOpenClawToolsMock.mockClear();
 
-    createOpenClawCodingTools({
+    createDexCodingTools({
       config: testConfig,
       toolConstructionPlan: {
         includeBaseCodingTools: false,
@@ -520,14 +520,14 @@ describe("createOpenClawCodingTools", () => {
     });
 
     expect(createOpenClawToolsMock).toHaveBeenCalledTimes(1);
-    expect(latestCreateOpenClawToolsOptions().disablePluginTools).toBe(true);
+    expect(latestCreateDexToolsOptions().disablePluginTools).toBe(true);
   });
 
   it("keeps plugin-only construction off the OpenClaw core factory", () => {
     const createOpenClawToolsMock = vi.mocked(createOpenClawTools);
     createOpenClawToolsMock.mockClear();
 
-    createOpenClawCodingTools({
+    createDexCodingTools({
       config: testConfig,
       includeCoreTools: false,
       runtimeToolAllowlist: ["memory_search"],
@@ -551,7 +551,7 @@ describe("createOpenClawCodingTools", () => {
       .mockReturnValue([]);
 
     try {
-      createOpenClawCodingTools({
+      createDexCodingTools({
         config: testConfig,
         includeCoreTools: false,
         runtimeToolAllowlist: ["memory_search"],
@@ -597,7 +597,7 @@ describe("createOpenClawCodingTools", () => {
     } satisfies AuthProfileStore;
 
     try {
-      createOpenClawCodingTools({
+      createDexCodingTools({
         config: {
           auth: {
             order: {
@@ -630,12 +630,12 @@ describe("createOpenClawCodingTools", () => {
     const createOpenClawToolsMock = vi.mocked(createOpenClawTools);
     createOpenClawToolsMock.mockClear();
 
-    createOpenClawCodingTools({
+    createDexCodingTools({
       config: { tools: { alsoAllow: ["lobster"] } },
     });
 
     expect(createOpenClawToolsMock).toHaveBeenCalledTimes(1);
-    expect(latestCreateOpenClawToolsOptions().pluginToolAllowlist).toStrictEqual([
+    expect(latestCreateDexToolsOptions().pluginToolAllowlist).toStrictEqual([
       "lobster",
       DEFAULT_PLUGIN_TOOLS_ALLOWLIST_ENTRY,
     ]);
@@ -645,12 +645,12 @@ describe("createOpenClawCodingTools", () => {
     const createOpenClawToolsMock = vi.mocked(createOpenClawTools);
     createOpenClawToolsMock.mockClear();
 
-    createOpenClawCodingTools({
+    createDexCodingTools({
       config: { tools: { deny: ["pdf"] } },
     });
 
     expect(createOpenClawToolsMock).toHaveBeenCalledTimes(1);
-    expectListIncludes(latestCreateOpenClawToolsOptions().pluginToolDenylist, ["pdf"]);
+    expectListIncludes(latestCreateDexToolsOptions().pluginToolDenylist, ["pdf"]);
   });
 
   it("passes inherited allowlist entries to OpenClaw plugin discovery", async () => {
@@ -672,7 +672,7 @@ describe("createOpenClawCodingTools", () => {
       },
     });
 
-    createOpenClawCodingTools({
+    createDexCodingTools({
       sessionKey: `agent:${agentId}:subagent:limited`,
       config: {
         session: {
@@ -682,7 +682,7 @@ describe("createOpenClawCodingTools", () => {
     });
 
     expect(createOpenClawToolsMock).toHaveBeenCalledTimes(1);
-    expectListIncludes(latestCreateOpenClawToolsOptions().pluginToolAllowlist, [
+    expectListIncludes(latestCreateDexToolsOptions().pluginToolAllowlist, [
       "custom_plugin_tool",
       "sessions_spawn",
     ]);
@@ -692,12 +692,12 @@ describe("createOpenClawCodingTools", () => {
     const createOpenClawToolsMock = vi.mocked(createOpenClawTools);
     createOpenClawToolsMock.mockClear();
 
-    createOpenClawCodingTools({
+    createDexCodingTools({
       config: { tools: { allow: ["read", "sessions_spawn"] } },
     });
 
     expect(createOpenClawToolsMock).toHaveBeenCalledTimes(1);
-    const inheritedAllow = latestCreateOpenClawToolsOptions().inheritedToolAllowlist;
+    const inheritedAllow = latestCreateDexToolsOptions().inheritedToolAllowlist;
     expectListIncludes(inheritedAllow, ["read", "sessions_spawn"]);
     expect(inheritedAllow?.includes("exec")).toBe(false);
     expect(inheritedAllow?.includes("process")).toBe(false);
@@ -706,7 +706,7 @@ describe("createOpenClawCodingTools", () => {
   it("records core tool-prep stages for hot-path diagnostics", () => {
     const stages: string[] = [];
 
-    createOpenClawCodingTools({
+    createDexCodingTools({
       config: testConfig,
       recordToolPrepStage: (name) => stages.push(name),
     });
@@ -735,7 +735,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("preserves action enums in normalized schemas", () => {
-    const defaultTools = createOpenClawCodingTools({ config: testConfig });
+    const defaultTools = createDexCodingTools({ config: testConfig });
     const toolNames = ["canvas", "nodes", "cron", "gateway", "message"];
     const missingNames = toolNames.filter(
       (name) => !defaultTools.some((candidate) => candidate.name === name),
@@ -759,68 +759,68 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("enforces apply_patch availability and canonical names across model/provider constraints", () => {
-    const defaultTools = createOpenClawCodingTools({ config: testConfig });
+    const defaultTools = createDexCodingTools({ config: testConfig });
     expect(toolNameList(defaultTools)).toContain("exec");
     expect(toolNameList(defaultTools)).toContain("process");
     expect(toolNameList(defaultTools)).toContain("apply_patch");
 
-    const openAiTools = createOpenClawCodingTools({
+    const openAiTools = createDexCodingTools({
       config: testConfig,
       modelProvider: "openai",
       modelId: "gpt-5.4",
     });
     expect(toolNameList(openAiTools)).toContain("apply_patch");
 
-    const codexTools = createOpenClawCodingTools({
+    const codexTools = createDexCodingTools({
       config: testConfig,
       modelProvider: "openai",
       modelId: "gpt-5.4",
     });
     expect(toolNameList(codexTools)).toContain("apply_patch");
 
-    const disabledConfig: OpenClawConfig = {
+    const disabledConfig: DexConfig = {
       tools: {
         exec: {
           applyPatch: { enabled: false },
         },
       },
     };
-    const disabledOpenAiTools = createOpenClawCodingTools({
+    const disabledOpenAiTools = createDexCodingTools({
       config: disabledConfig,
       modelProvider: "openai",
       modelId: "gpt-5.4",
     });
     expect(toolNameList(disabledOpenAiTools)).not.toContain("apply_patch");
 
-    const anthropicTools = createOpenClawCodingTools({
+    const anthropicTools = createDexCodingTools({
       config: disabledConfig,
       modelProvider: "anthropic",
       modelId: "claude-opus-4-6",
     });
     expect(toolNameList(anthropicTools)).not.toContain("apply_patch");
 
-    const allowModelsConfig: OpenClawConfig = {
+    const allowModelsConfig: DexConfig = {
       tools: {
         exec: {
           applyPatch: { allowModels: ["gpt-5.4"] },
         },
       },
     };
-    const allowed = createOpenClawCodingTools({
+    const allowed = createDexCodingTools({
       config: allowModelsConfig,
       modelProvider: "openai",
       modelId: "gpt-5.4",
     });
     expect(toolNameList(allowed)).toContain("apply_patch");
 
-    const denied = createOpenClawCodingTools({
+    const denied = createDexCodingTools({
       config: allowModelsConfig,
       modelProvider: "openai",
       modelId: "gpt-5.4-mini",
     });
     expect(toolNameList(denied)).not.toContain("apply_patch");
 
-    const oauthTools = createOpenClawCodingTools({
+    const oauthTools = createDexCodingTools({
       config: testConfig,
       modelProvider: "anthropic",
       modelAuthMode: "oauth",
@@ -834,7 +834,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("provides top-level object schemas for all tools", () => {
-    const tools = createOpenClawCodingTools({ config: testConfig });
+    const tools = createDexCodingTools({ config: testConfig });
     const offenders = tools
       .map((tool) => {
         const schema =
@@ -853,7 +853,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("does not expose provider-specific message tools", () => {
-    const tools = createOpenClawCodingTools({ messageProvider: "discord" });
+    const tools = createDexCodingTools({ messageProvider: "discord" });
     const names = new Set(tools.map((tool) => tool.name));
     expect(names.has("discord")).toBe(false);
     expect(names.has("slack")).toBe(false);
@@ -862,7 +862,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("filters session tools for sub-agent sessions by default", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       sessionKey: "agent:main:subagent:test",
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -974,7 +974,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("supports allow-only sub-agent tool policy", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       sessionKey: "agent:main:subagent:test",
       config: {
         tools: {
@@ -990,7 +990,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("applies tool profiles before allow/deny policies", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: { tools: { profile: "messaging" } },
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -1002,12 +1002,12 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("includes browser tool with full profile when browser is configured (#76507)", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: {
         tools: { profile: "full" },
         browser: { enabled: true },
         plugins: { entries: { browser: { enabled: true } } },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
     const names = new Set(tools.map((tool) => tool.name));
     // full profile must not filter any tools — browser, canvas, etc. must be present.
@@ -1018,12 +1018,12 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("includes browser tool with full profile (#76507)", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: {
         tools: { profile: "full" },
         browser: { enabled: true },
         plugins: { entries: { browser: { enabled: true } } },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
     const names = new Set(tools.map((tool) => tool.name));
     expect(names.has("browser")).toBe(true);
@@ -1034,11 +1034,11 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("includes browser tool without explicit profile (defaults to no filtering) (#76507)", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: {
         browser: { enabled: true },
         plugins: { entries: { browser: { enabled: true } } },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
     const names = new Set(tools.map((tool) => tool.name));
     // No profile means no profile filtering — all tools pass.
@@ -1050,15 +1050,15 @@ describe("createOpenClawCodingTools", () => {
       browser: { enabled: true },
       plugins: { entries: { browser: { enabled: true } } },
       tools: { profile: "coding" },
-    } as OpenClawConfig;
-    const codingSubagent = createOpenClawCodingTools({
+    } as DexConfig;
+    const codingSubagent = createDexCodingTools({
       sessionKey: "agent:main:subagent:test",
       config: baseConfig,
     });
     const codingNames = new Set(codingSubagent.map((tool) => tool.name));
     expect(codingNames.has("browser")).toBe(false);
 
-    const subagentAllowOnly = createOpenClawCodingTools({
+    const subagentAllowOnly = createDexCodingTools({
       sessionKey: "agent:main:subagent:test",
       config: {
         ...baseConfig,
@@ -1066,27 +1066,27 @@ describe("createOpenClawCodingTools", () => {
           profile: "coding",
           subagents: { tools: { allow: ["browser"] } },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
     expect(toolNameList(subagentAllowOnly)).not.toContain("browser");
 
-    const profileStageAlsoAllow = createOpenClawCodingTools({
+    const profileStageAlsoAllow = createDexCodingTools({
       sessionKey: "agent:main:subagent:test",
       config: {
         ...baseConfig,
         tools: { profile: "coding", alsoAllow: ["browser"] },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
     expect(toolNameList(profileStageAlsoAllow)).toContain("browser");
   });
 
   it("can keep message available when a cron route needs it under the coding profile", () => {
-    const codingTools = createOpenClawCodingTools({
+    const codingTools = createDexCodingTools({
       config: { tools: { profile: "coding" } },
     });
     expect(toolNameList(codingTools)).not.toContain("message");
 
-    const cronTools = createOpenClawCodingTools({
+    const cronTools = createDexCodingTools({
       config: { tools: { profile: "coding" } },
       forceMessageTool: true,
     });
@@ -1094,7 +1094,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("keeps message available for message-tool-only source replies under the coding profile", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: { tools: { profile: "coding" } },
       sourceReplyDeliveryMode: "message_tool_only",
     });
@@ -1103,7 +1103,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("keeps heartbeat response available for heartbeat runs under the coding profile", () => {
-    const codingTools = createOpenClawCodingTools({
+    const codingTools = createDexCodingTools({
       config: { tools: { profile: "coding" } },
       trigger: "heartbeat",
       enableHeartbeatTool: true,
@@ -1114,11 +1114,11 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("enables heartbeat response when visible replies are message-tool-only", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: {
         messages: { visibleReplies: "message_tool" },
         tools: { profile: "coding" },
-      } as OpenClawConfig,
+      } as DexConfig,
       trigger: "heartbeat",
     });
 
@@ -1126,7 +1126,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("keeps skill_workshop available under the coding profile", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: { tools: { profile: "coding" } },
     });
 
@@ -1134,14 +1134,14 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("can keep message available when a cron route needs it under a provider coding profile", () => {
-    const providerProfileTools = createOpenClawCodingTools({
+    const providerProfileTools = createDexCodingTools({
       config: { tools: { byProvider: { openai: { profile: "coding" } } } },
       modelProvider: "openai",
       modelId: "gpt-5.4",
     });
     expect(toolNameList(providerProfileTools)).not.toContain("message");
 
-    const cronTools = createOpenClawCodingTools({
+    const cronTools = createDexCodingTools({
       config: { tools: { byProvider: { openai: { profile: "coding" } } } },
       modelProvider: "openai",
       modelId: "gpt-5.4",
@@ -1151,7 +1151,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("expands group shorthands in global tool policy", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: { tools: { allow: ["group:fs"] } },
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -1163,7 +1163,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("expands group shorthands in global tool deny policy", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       config: { tools: { deny: ["group:fs"] } },
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -1174,7 +1174,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("lets agent profiles override global profiles", () => {
-    const tools = createOpenClawCodingTools({
+    const tools = createDexCodingTools({
       sessionKey: "agent:work:main",
       config: {
         tools: { profile: "coding" },
@@ -1190,7 +1190,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("removes unsupported JSON Schema keywords for Cloud Code Assist API compatibility", () => {
-    const googleTools = createOpenClawCodingTools({
+    const googleTools = createDexCodingTools({
       modelProvider: "google",
     });
     for (const tool of googleTools) {
@@ -1204,7 +1204,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("applies xai model compat for direct Grok tool cleanup", () => {
-    const xaiTools = createOpenClawCodingTools({
+    const xaiTools = createDexCodingTools({
       modelProvider: "xai",
       modelCompat: {
         toolSchemaProfile: "xai",
@@ -1231,7 +1231,7 @@ describe("createOpenClawCodingTools", () => {
   });
 
   it("returns image-aware read metadata for images and text-only blocks for text files", async () => {
-    const defaultTools = createOpenClawCodingTools();
+    const defaultTools = createDexCodingTools();
     const readTool = requireTool(defaultTools, "read");
     const readExecute = requireToolExecute(readTool);
 
@@ -1284,7 +1284,7 @@ describe("createOpenClawCodingTools", () => {
         deny: ["browser"],
       },
     });
-    const tools = createOpenClawCodingTools({ sandbox });
+    const tools = createDexCodingTools({ sandbox });
     expect(toolNameList(tools)).toContain("exec");
     expect(toolNameList(tools)).not.toContain("read");
     expect(toolNameList(tools)).not.toContain("browser");
@@ -1302,7 +1302,7 @@ describe("createOpenClawCodingTools", () => {
         deny: [],
       },
     });
-    const tools = createOpenClawCodingTools({ sandbox });
+    const tools = createDexCodingTools({ sandbox });
     expect(toolNameList(tools)).toContain("read");
     expect(toolNameList(tools)).not.toContain("write");
     expect(toolNameList(tools)).not.toContain("edit");
@@ -1311,7 +1311,7 @@ describe("createOpenClawCodingTools", () => {
   it("accepts canonical parameters for read/write/edit", async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-canonical-"));
     try {
-      const tools = createOpenClawCodingTools({ workspaceDir: tmpDir });
+      const tools = createDexCodingTools({ workspaceDir: tmpDir });
       const { readTool, writeTool, editTool } = expectReadWriteEditTools(tools);
 
       const filePath = "canonical-test.txt";
@@ -1350,7 +1350,7 @@ describe("createOpenClawCodingTools", () => {
       await fs.mkdir(path.dirname(workspaceMemoryFile), { recursive: true });
       await fs.writeFile(workspaceMemoryFile, "seed", "utf8");
 
-      const tools = createOpenClawCodingTools({
+      const tools = createDexCodingTools({
         workspaceDir,
         cwd: taskCwd,
         trigger: "memory",
@@ -1376,7 +1376,7 @@ describe("createOpenClawCodingTools", () => {
   it("rejects legacy alias parameters", async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-legacy-alias-"));
     try {
-      const tools = createOpenClawCodingTools({ workspaceDir: tmpDir });
+      const tools = createDexCodingTools({ workspaceDir: tmpDir });
       const { readTool, writeTool, editTool } = expectReadWriteEditTools(tools);
 
       await expect(
@@ -1407,7 +1407,7 @@ describe("createOpenClawCodingTools", () => {
   it("rejects structured content blocks for write", async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-structured-write-"));
     try {
-      const tools = createOpenClawCodingTools({ workspaceDir: tmpDir });
+      const tools = createDexCodingTools({ workspaceDir: tmpDir });
       const writeTool = requireTool(tools, "write");
       const writeExecute = requireToolExecute(writeTool);
 
@@ -1431,7 +1431,7 @@ describe("createOpenClawCodingTools", () => {
       const filePath = path.join(tmpDir, "structured-edit.js");
       await fs.writeFile(filePath, "const value = 'old';\n", "utf8");
 
-      const tools = createOpenClawCodingTools({ workspaceDir: tmpDir });
+      const tools = createDexCodingTools({ workspaceDir: tmpDir });
       const editTool = requireTool(tools, "edit");
       const editExecute = requireToolExecute(editTool);
 

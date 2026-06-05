@@ -80,11 +80,11 @@ async function writeTuiPtyFixtureScript(dir: string) {
       import type { TuiBackend } from ${JSON.stringify(tuiModuleUrl.replace("/tui.ts", "/tui-backend.ts"))};
       import { runTui } from ${JSON.stringify(tuiModuleUrl)};
 
-      const actionLogPath = process.env.OPENCLAW_TUI_PTY_LOG_PATH;
-      const gatewayStatus = process.env.OPENCLAW_TUI_PTY_GATEWAY_STATUS ?? "fixture gateway ok";
+      const actionLogPath = process.env.DEX_TUI_PTY_LOG_PATH;
+      const gatewayStatus = process.env.DEX_TUI_PTY_GATEWAY_STATUS ?? "fixture gateway ok";
       const xaiLimitError = '403 {"code":"The caller does not have permission to execute the specified operation","error":"Your team team-redacted has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit."}';
       let currentModel = "fixture-provider/fixture-model";
-      let fastMode = process.env.OPENCLAW_TUI_PTY_FAST_MODE === "true";
+      let fastMode = process.env.DEX_TUI_PTY_FAST_MODE === "true";
 
       function record(method: string, payload?: unknown) {
         if (!actionLogPath) {
@@ -324,8 +324,8 @@ async function startTuiFixture(opts: { env?: NodeJS.ProcessEnv } = {}) {
     activeRuns,
     cwd: process.cwd(),
     env: {
-      OPENCLAW_THEME: "dark",
-      OPENCLAW_TUI_PTY_LOG_PATH: logPath,
+      DEX_THEME: "dark",
+      DEX_TUI_PTY_LOG_PATH: logPath,
       NO_COLOR: undefined,
       ...opts.env,
     },

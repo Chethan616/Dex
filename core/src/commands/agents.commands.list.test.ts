@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import type { OutputRuntimeEnv } from "../runtime.js";
 
 const {
@@ -54,7 +54,7 @@ function createRuntime(): OutputRuntimeEnv & { json: unknown[] } {
   };
 }
 
-function createConfig(): OpenClawConfig {
+function createConfig(): DexConfig {
   return {
     agents: {
       list: [{ id: "main", default: true }],
@@ -126,8 +126,8 @@ describe("agentsListCommand", () => {
         [
           "Agents:",
           "- main (default)",
-          "  Workspace: ~/.openclaw/workspace",
-          "  Agent dir: ~/.openclaw/agents/main/agent",
+          "  Workspace: ~/.dex/workspace",
+          "  Agent dir: ~/.dex/agents/main/agent",
           "  Routing rules: 1",
           "  Routing: Telegram default",
           "  Providers:",

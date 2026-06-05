@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import type { SessionAcpMeta } from "../../config/sessions/types.js";
 import {
   AcpRuntimeError,
@@ -85,7 +85,7 @@ describe("AcpSessionManager backend failover", () => {
         backend: "primary-backend",
         fallbacks: ["fallback-backend"],
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     return {
       cfg,
       fallbackRuntime,

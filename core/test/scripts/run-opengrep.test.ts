@@ -49,7 +49,7 @@ describe("run-opengrep.sh", () => {
       env: {
         ...process.env,
         PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}`,
-        OPENCLAW_OPENGREP_BASE_REF: "HEAD",
+        DEX_OPENGREP_BASE_REF: "HEAD",
       },
       encoding: "utf8",
     });

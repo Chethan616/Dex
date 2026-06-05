@@ -1,6 +1,6 @@
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { setBundledPluginsDirOverrideForTest } from "../plugins/bundled-dir.js";
 import {
   clearCurrentPluginMetadataSnapshot,
@@ -19,13 +19,13 @@ import { DEFAULT_PLUGIN_TOOLS_ALLOWLIST_ENTRY } from "./tool-policy.js";
 import { loadCapabilityMetadataSnapshot } from "./tools/manifest-capability-availability.js";
 import * as pdfModelConfigModule from "./tools/pdf-tool.model-config.js";
 
-type CreateOpenClawToolsOptions = Parameters<
+type CreateDexToolsOptions = Parameters<
   typeof import("./openclaw-tools.js").createOpenClawTools
 >[0];
 let createOpenClawToolsForTestModule: typeof import("./openclaw-tools.js").createOpenClawTools;
 let legacyComfyToolNames: string[];
 
-async function createOpenClawToolsForTest(options?: CreateOpenClawToolsOptions) {
+async function createOpenClawToolsForTest(options?: CreateDexToolsOptions) {
   return createOpenClawToolsForTestModule(options);
 }
 
@@ -98,7 +98,7 @@ function createInstalledPluginRecord(
   };
 }
 
-function legacyModelProviderConfig(provider: Record<string, unknown>): OpenClawConfig {
+function legacyModelProviderConfig(provider: Record<string, unknown>): DexConfig {
   return {
     models: {
       providers: {
@@ -109,7 +109,7 @@ function legacyModelProviderConfig(provider: Record<string, unknown>): OpenClawC
 }
 
 function installSnapshot(
-  config: OpenClawConfig,
+  config: DexConfig,
   plugins: PluginManifestRecord[],
   enabledPluginIds = plugins
     .filter((plugin) => plugin.origin !== "bundled")
@@ -195,7 +195,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("skips unavailable generation and PDF factories from snapshot and run auth facts", () => {
-    const config: OpenClawConfig = {};
+    const config: DexConfig = {};
     installSnapshot(config, [
       createPlugin({
         id: "image-owner",
@@ -233,7 +233,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("does not plan media factories from workspace-scoped metadata without workspace context", () => {
-    const config: OpenClawConfig = {};
+    const config: DexConfig = {};
     setBundledPluginsDirOverrideForTest("/nonexistent/bundled/plugins");
     installSnapshot(
       config,
@@ -271,7 +271,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("keeps explicit model configs on the factory path", () => {
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       agents: {
         defaults: {
           imageGenerationModel: { primary: "image-owner/model" },
@@ -297,7 +297,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("preserves implicit allow-all from alsoAllow-only policies for built-in media factories", async () => {
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       agents: {
         defaults: {
           imageGenerationModel: { primary: "image-owner/model" },
@@ -338,7 +338,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("keeps denylists authoritative when alsoAllow-only policies preserve factory construction", () => {
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       agents: {
         defaults: {
           imageGenerationModel: { primary: "image-owner/model" },
@@ -366,7 +366,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("skips tools that the resolved allowlist cannot expose", () => {
-    const config: OpenClawConfig = {};
+    const config: DexConfig = {};
     installSnapshot(config, [
       createPlugin({
         id: "image-owner",
@@ -395,7 +395,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("skips tools that the resolved denylist blocks", () => {
-    const config: OpenClawConfig = {};
+    const config: DexConfig = {};
     installSnapshot(config, [
       createPlugin({
         id: "image-owner",
@@ -424,7 +424,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("applies global tool policy before optional media factories run", () => {
-    const config: OpenClawConfig = { tools: { deny: ["pdf"] } };
+    const config: DexConfig = { tools: { deny: ["pdf"] } };
     installSnapshot(config, [
       createPlugin({
         id: "media-owner",
@@ -442,7 +442,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("applies wildcard deny patterns to optional factory planning", () => {
-    const config: OpenClawConfig = {};
+    const config: DexConfig = {};
     installSnapshot(config, [
       createPlugin({
         id: "image-owner",
@@ -481,7 +481,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("keeps auth-backed providers on the factory path", () => {
-    const config: OpenClawConfig = {};
+    const config: DexConfig = {};
     installSnapshot(config, [
       createPlugin({
         id: "image-owner",
@@ -520,7 +520,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("keeps manifest provider auth env aliases on the music factory path", () => {
-    const config: OpenClawConfig = {};
+    const config: DexConfig = {};
     installSnapshot(config, [
       createPlugin({
         id: "minimax",
@@ -542,7 +542,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("defers PDF model resolution from the tool-prep hot path", async () => {
-    const config: OpenClawConfig = {};
+    const config: DexConfig = {};
     installSnapshot(config, []);
     const resolveSpy = vi.spyOn(pdfModelConfigModule, "resolvePdfModelConfigForTool");
 
@@ -557,7 +557,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("keeps enabled external manifest capability providers on the factory path", () => {
-    const config: OpenClawConfig = {};
+    const config: DexConfig = {};
     installSnapshot(config, [
       createPlugin({
         id: "external-image",
@@ -604,7 +604,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("keeps manifest-declared image provider auth aliases on the factory path", async () => {
-    const config: OpenClawConfig = {};
+    const config: DexConfig = {};
     const plugins = [
       createPlugin({
         id: "openai",
@@ -650,7 +650,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("keeps manifest-declared config-only generation providers on the factory path", () => {
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       plugins: {
         entries: {
           comfy: {
@@ -705,7 +705,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("does not expose manifest-backed generation providers when plugins are globally disabled", async () => {
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       plugins: {
         enabled: false,
         entries: {
@@ -777,7 +777,7 @@ describe("optional media tool factory planning", () => {
   it("does not count unresolved SecretRef config signals as configured", async () => {
     vi.stubEnv("COMFY_TEST_API_KEY", "");
     const workspaceDir = process.cwd();
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       plugins: {
         entries: {
           comfy: {
@@ -853,7 +853,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("counts configured non-env SecretRef config signals without resolving secrets", () => {
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       plugins: {
         entries: {
           comfy: {
@@ -917,7 +917,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("does not register the image tool without cheap vision availability evidence", async () => {
-    const config: OpenClawConfig = {};
+    const config: DexConfig = {};
     const workspaceDir = "/tmp/openclaw-workspace";
     vi.stubEnv("MEDIA_OWNER_API_KEY", "");
     installSnapshot(
@@ -970,7 +970,7 @@ describe("optional media tool factory planning", () => {
             },
           },
         },
-      } satisfies OpenClawConfig,
+      } satisfies DexConfig,
       expectedToolNames: undefined,
     },
     {
@@ -1003,7 +1003,7 @@ describe("optional media tool factory planning", () => {
   );
 
   it("honors manifest-declared image provider auth alias base-url guards", () => {
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       models: {
         providers: {
           openai: {
@@ -1043,7 +1043,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("ignores external manifest capability providers excluded by plugin policy", () => {
-    const config: OpenClawConfig = {
+    const config: DexConfig = {
       plugins: {
         allow: ["other-plugin"],
       },
@@ -1071,7 +1071,7 @@ describe("optional media tool factory planning", () => {
   });
 
   it("does not use a generic factory plan when metadata has no availability proof", () => {
-    const config: OpenClawConfig = {};
+    const config: DexConfig = {};
     installSnapshot(config, []);
 
     expect(

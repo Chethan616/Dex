@@ -57,7 +57,7 @@ describe("graph upload helpers", () => {
 
     expectGraphUploadFetch(
       fetchFn,
-      "https://graph.microsoft.com/v1.0/me/drive/root:/OpenClawShared/a.txt:/content",
+      "https://graph.microsoft.com/v1.0/me/drive/root:/DexShared/a.txt:/content",
     );
     expect(result).toEqual({
       id: "item-1",
@@ -88,7 +88,7 @@ describe("graph upload helpers", () => {
 
     expectGraphUploadFetch(
       fetchFn,
-      "https://graph.microsoft.com/v1.0/sites/site-123/drive/root:/OpenClawShared/b.txt:/content",
+      "https://graph.microsoft.com/v1.0/sites/site-123/drive/root:/DexShared/b.txt:/content",
     );
     expect(result).toEqual({
       id: "item-2",

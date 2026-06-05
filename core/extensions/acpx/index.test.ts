@@ -1,4 +1,4 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+import type { DexPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 import { createTestPluginApi } from "openclaw/plugin-sdk/plugin-test-api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import setupPlugin from "./setup-api.js";
@@ -18,7 +18,7 @@ vi.mock("openclaw/plugin-sdk/acp-runtime-backend", () => ({
 
 import plugin from "./index.js";
 
-type AcpxAutoEnableProbe = Parameters<OpenClawPluginApi["registerAutoEnableProbe"]>[0];
+type AcpxAutoEnableProbe = Parameters<DexPluginApi["registerAutoEnableProbe"]>[0];
 
 function registerAcpxAutoEnableProbe(): AcpxAutoEnableProbe {
   const probes: AcpxAutoEnableProbe[] = [];

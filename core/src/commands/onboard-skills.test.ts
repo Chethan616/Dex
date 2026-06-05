@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
 
@@ -163,7 +163,7 @@ describe("setupSkills", () => {
       mocks.isContainerEnvironment.mockReturnValue(true);
 
       const { prompter, notes } = createPrompter({});
-      await setupSkills({} as OpenClawConfig, "/tmp/ws", runtime, prompter);
+      await setupSkills({} as DexConfig, "/tmp/ws", runtime, prompter);
 
       expect(prompter.multiselect).not.toHaveBeenCalled();
       expect(mocks.installSkill).not.toHaveBeenCalled();
@@ -193,7 +193,7 @@ describe("setupSkills", () => {
       mocks.resolveBrewExecutable.mockReturnValue("/home/linuxbrew/.linuxbrew/bin/brew");
 
       const { prompter, notes } = createPrompter({ multiselect: ["video-frames"] });
-      await setupSkills({} as OpenClawConfig, "/tmp/ws", runtime, prompter);
+      await setupSkills({} as DexConfig, "/tmp/ws", runtime, prompter);
 
       expect(prompter.multiselect).toHaveBeenCalled();
       expect(mocks.installSkill).toHaveBeenCalledWith(
@@ -228,7 +228,7 @@ describe("setupSkills", () => {
     ]);
 
     const { prompter, notes } = createPrompter({ multiselect: ["__skip__"] });
-    await setupSkills({} as OpenClawConfig, "/tmp/ws", runtime, prompter);
+    await setupSkills({} as DexConfig, "/tmp/ws", runtime, prompter);
 
     // OS-mismatched skill should be counted as unsupported, not installable/missing.
     expect(notes.find((n) => n.title === "Skills status")).toStrictEqual({
@@ -260,7 +260,7 @@ describe("setupSkills", () => {
     ]);
 
     const { prompter, notes } = createPrompter({ multiselect: ["video-frames"] });
-    await setupSkills({} as OpenClawConfig, "/tmp/ws", runtime, prompter);
+    await setupSkills({} as DexConfig, "/tmp/ws", runtime, prompter);
 
     const brewNote = notes.find((n) => n.title === "Homebrew recommended");
     expect(brewNote?.title).toBe("Homebrew recommended");
@@ -270,7 +270,7 @@ describe("setupSkills", () => {
     mockMissingBrewStatus([]);
 
     const { prompter, notes } = createPrompter({});
-    await setupSkills({} as OpenClawConfig, "/tmp/ws", runtime, prompter);
+    await setupSkills({} as DexConfig, "/tmp/ws", runtime, prompter);
 
     expect(prompter.multiselect).not.toHaveBeenCalled();
     const emptyStateNote = notes.find((n) => n.title === "All skills ready");

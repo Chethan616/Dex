@@ -2,22 +2,22 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { captureEnv, withEnvAsync } from "../test-utils/env.js";
 
 const PLUGIN_MANIFEST_ENV_KEYS = [
-  "OPENCLAW_BUNDLED_PLUGINS_DIR",
-  "OPENCLAW_DISABLE_BUNDLED_PLUGINS",
-  "OPENCLAW_SKIP_PROVIDERS",
-  "OPENCLAW_SKIP_CHANNELS",
-  "OPENCLAW_SKIP_CRON",
-  "OPENCLAW_TEST_MINIMAL_GATEWAY",
+  "DEX_BUNDLED_PLUGINS_DIR",
+  "DEX_DISABLE_BUNDLED_PLUGINS",
+  "DEX_SKIP_PROVIDERS",
+  "DEX_SKIP_CHANNELS",
+  "DEX_SKIP_CRON",
+  "DEX_TEST_MINIMAL_GATEWAY",
 ] as const;
 
 function cleanPluginManifestEnv(): Record<(typeof PLUGIN_MANIFEST_ENV_KEYS)[number], undefined> {
   return {
-    OPENCLAW_BUNDLED_PLUGINS_DIR: undefined,
-    OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined,
-    OPENCLAW_SKIP_PROVIDERS: undefined,
-    OPENCLAW_SKIP_CHANNELS: undefined,
-    OPENCLAW_SKIP_CRON: undefined,
-    OPENCLAW_TEST_MINIMAL_GATEWAY: undefined,
+    DEX_BUNDLED_PLUGINS_DIR: undefined,
+    DEX_DISABLE_BUNDLED_PLUGINS: undefined,
+    DEX_SKIP_PROVIDERS: undefined,
+    DEX_SKIP_CHANNELS: undefined,
+    DEX_SKIP_CRON: undefined,
+    DEX_TEST_MINIMAL_GATEWAY: undefined,
   };
 }
 
@@ -76,7 +76,7 @@ describe("model auth markers", () => {
   });
 
   it("recognizes the Codex app-server marker without bundled plugin discovery", async () => {
-    await withEnvAsync({ OPENCLAW_DISABLE_BUNDLED_PLUGINS: "1" }, async () => {
+    await withEnvAsync({ DEX_DISABLE_BUNDLED_PLUGINS: "1" }, async () => {
       await loadMarkerModules();
       expect(isNonSecretApiKeyMarker(CODEX_APP_SERVER_AUTH_MARKER)).toBe(true);
     });

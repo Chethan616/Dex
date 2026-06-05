@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { closeOpenClawStateDatabaseForTest } from "../state/openclaw-state-db.js";
+import { closeDexStateDatabaseForTest } from "../state/openclaw-state-db.js";
 import { withTempDir } from "../test-helpers/temp-dir.js";
 import {
   createFileAcpEventLedger,
@@ -12,7 +12,7 @@ import {
 
 describe("ACP event ledger", () => {
   afterEach(() => {
-    closeOpenClawStateDatabaseForTest();
+    closeDexStateDatabaseForTest();
   });
 
   it("records complete in-memory session updates in sequence", async () => {
@@ -172,7 +172,7 @@ describe("ACP event ledger", () => {
         },
       });
 
-      closeOpenClawStateDatabaseForTest();
+      closeDexStateDatabaseForTest();
       const second = createSqliteAcpEventLedger({ path: databasePath });
       const replay = await second.readReplay({
         sessionId: "session-1",

@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import {
   resetGatewayModelPricingCacheForTest,
   setGatewayModelPricingForTest,
@@ -42,16 +42,16 @@ function requireTieredPricing(
 }
 
 describe("usage-format", () => {
-  const originalAgentDir = process.env.OPENCLAW_AGENT_DIR;
-  const originalStateDir = process.env.OPENCLAW_STATE_DIR;
+  const originalAgentDir = process.env.DEX_AGENT_DIR;
+  const originalStateDir = process.env.DEX_STATE_DIR;
   let agentDir: string;
   let stateDir: string;
 
   beforeEach(async () => {
     stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-usage-format-"));
     agentDir = path.join(stateDir, "agents", "main", "agent");
-    process.env.OPENCLAW_STATE_DIR = stateDir;
-    delete process.env.OPENCLAW_AGENT_DIR;
+    process.env.DEX_STATE_DIR = stateDir;
+    delete process.env.DEX_AGENT_DIR;
     await fs.mkdir(agentDir, { recursive: true });
     resetUsageFormatCachesForTest();
     resetGatewayModelPricingCacheForTest();
@@ -59,14 +59,14 @@ describe("usage-format", () => {
 
   afterEach(async () => {
     if (originalAgentDir === undefined) {
-      delete process.env.OPENCLAW_AGENT_DIR;
+      delete process.env.DEX_AGENT_DIR;
     } else {
-      process.env.OPENCLAW_AGENT_DIR = originalAgentDir;
+      process.env.DEX_AGENT_DIR = originalAgentDir;
     }
     if (originalStateDir === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_STATE_DIR;
     } else {
-      process.env.OPENCLAW_STATE_DIR = originalStateDir;
+      process.env.DEX_STATE_DIR = originalStateDir;
     }
     resetUsageFormatCachesForTest();
     resetGatewayModelPricingCacheForTest();
@@ -102,7 +102,7 @@ describe("usage-format", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const cost = resolveModelCostConfig({
       provider: "test",
@@ -155,7 +155,7 @@ describe("usage-format", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     await fs.writeFile(
       path.join(agentDir, "models.json"),
@@ -214,7 +214,7 @@ describe("usage-format", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     setGatewayModelPricingForTest([
       {
@@ -274,7 +274,7 @@ describe("usage-format", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveModelCostConfig({
@@ -309,7 +309,7 @@ describe("usage-format", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveModelCostConfig({
@@ -340,7 +340,7 @@ describe("usage-format", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveModelCostConfig({
@@ -374,7 +374,7 @@ describe("usage-format", () => {
           "demo-structural": { models },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveModelCostConfig({
@@ -417,7 +417,7 @@ describe("usage-format", () => {
           "demo-replaced-cost": { models: [model] },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveModelCostConfig({
@@ -460,7 +460,7 @@ describe("usage-format", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveModelCostConfig({
@@ -495,7 +495,7 @@ describe("usage-format", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(
       resolveModelCostConfig({
@@ -560,7 +560,7 @@ describe("usage-format", () => {
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     const before = resolveModelCostConfigFingerprint(config);
     metadataOnlyModel.cost = { input: 9, output: 8, cacheRead: 7, cacheWrite: 6 };

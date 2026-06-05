@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { PluginCommandContext } from "openclaw/plugin-sdk/plugin-entry";
 import { describe, expect, it } from "vitest";
 import { buildFrameworkSlashContext } from "./framework-context-adapter.js";
@@ -10,7 +10,7 @@ function createCommandContext(isAuthorizedSender: boolean): PluginCommandContext
     isAuthorizedSender,
     args: "on",
     commandBody: "/bot-streaming on",
-    config: {} as OpenClawConfig,
+    config: {} as DexConfig,
     from: "qqbot:c2c:SENDER_OPENID",
     requestConversationBinding: async () => undefined,
     detachConversationBinding: async () => ({ removed: false }),

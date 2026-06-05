@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import {
   hasCommittedMessagingToolDeliveryEvidence,
   hasOutboundDeliveryEvidence,
@@ -307,7 +307,7 @@ describe("runEmbeddedAgent incomplete-turn safety", () => {
             },
           ],
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     expect(mockedRunEmbeddedAttempt).toHaveBeenCalledTimes(3);
@@ -346,7 +346,7 @@ describe("runEmbeddedAgent incomplete-turn safety", () => {
           },
           list: [{ id: "main" }],
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     expect(result.payloads).toEqual([
@@ -421,7 +421,7 @@ describe("runEmbeddedAgent incomplete-turn safety", () => {
         agents: {
           list: [{ id: "main" }],
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     // Two retries (strict-agentic retry cap) plus the original attempt = 3 calls.
@@ -470,7 +470,7 @@ describe("runEmbeddedAgent incomplete-turn safety", () => {
           },
           list: [{ id: "main" }],
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     // Default contract: 1 retry then falls through. Should NOT surface the
@@ -2705,7 +2705,7 @@ describe("runEmbeddedAgent incomplete-turn safety", () => {
         agents: {
           list: [{ id: "main" }],
         },
-      } as OpenClawConfig,
+      } as DexConfig,
     });
 
     expect(mockedRunEmbeddedAttempt).toHaveBeenCalledTimes(1);

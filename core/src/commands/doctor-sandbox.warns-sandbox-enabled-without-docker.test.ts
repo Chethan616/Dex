@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
 import type { DoctorPrompter } from "./doctor-prompter.js";
 import type { DoctorRepairMode } from "./doctor-repair-mode.js";
@@ -57,7 +57,7 @@ describe("maybeRepairSandboxImages", () => {
     migrateLegacySandboxRegistryFiles.mockResolvedValue([]);
   });
 
-  function createSandboxConfig(mode: "off" | "all" | "non-main"): OpenClawConfig {
+  function createSandboxConfig(mode: "off" | "all" | "non-main"): DexConfig {
     return {
       agents: {
         defaults: {
@@ -69,7 +69,7 @@ describe("maybeRepairSandboxImages", () => {
     };
   }
 
-  function createSandboxConfigWithDockerNetwork(network: string): OpenClawConfig {
+  function createSandboxConfigWithDockerNetwork(network: string): DexConfig {
     return {
       agents: {
         defaults: {

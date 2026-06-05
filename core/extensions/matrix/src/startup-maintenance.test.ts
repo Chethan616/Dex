@@ -15,7 +15,7 @@ import { runMatrixStartupMaintenance } from "./startup-maintenance.js";
 import { resolveMatrixAccountStorageRoot } from "./storage-paths.js";
 
 async function seedLegacyMatrixState(home: string) {
-  const stateDir = path.join(home, ".openclaw");
+  const stateDir = path.join(home, ".dex");
   await fs.mkdir(path.join(stateDir, "matrix"), { recursive: true });
   await fs.writeFile(path.join(stateDir, "matrix", "bot-storage.json"), '{"legacy":true}');
 }
@@ -37,7 +37,7 @@ function makeMatrixStartupConfig(includeCredentials = true) {
 }
 
 async function seedLegacyMatrixCrypto(home: string) {
-  const stateDir = path.join(home, ".openclaw");
+  const stateDir = path.join(home, ".dex");
   const { rootDir } = resolveMatrixAccountStorageRoot({
     stateDir,
     homeserver: "https://matrix.example.org",
@@ -142,7 +142,7 @@ describe("runMatrixStartupMaintenance", () => {
 
       expectWarningOnlyMaintenanceSkipped(harness);
       expect(harness.log.warn).toHaveBeenCalledWith(
-        `matrix: Legacy Matrix state detected at ${path.join(home, ".openclaw", "matrix")}, but the new account-scoped target could not be resolved yet (need homeserver, userId, and access token for channels.matrix). Start the gateway once with a working Matrix login, or rerun "openclaw doctor --fix" after cached credentials are available.`,
+        `matrix: Legacy Matrix state detected at ${path.join(home, ".dex", "matrix")}, but the new account-scoped target could not be resolved yet (need homeserver, userId, and access token for channels.matrix). Start the gateway once with a working Matrix login, or rerun "openclaw doctor --fix" after cached credentials are available.`,
       );
     });
   });

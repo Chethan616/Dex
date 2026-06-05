@@ -8,7 +8,7 @@ import {
 } from "./agent-limits.js";
 import { DEFAULT_CRON_MAX_CONCURRENT_RUNS, resolveCronMaxConcurrentRuns } from "./cron-limits.js";
 import { applyAgentDefaults } from "./defaults.js";
-import { OpenClawSchema } from "./zod-schema.js";
+import { DexSchema } from "./zod-schema.js";
 
 describe("agent concurrency defaults", () => {
   it("resolves defaults when unset", () => {
@@ -32,7 +32,7 @@ describe("agent concurrency defaults", () => {
   });
 
   it("accepts subagent spawn depth and per-agent child limits", () => {
-    const parsed = OpenClawSchema.parse({
+    const parsed = DexSchema.parse({
       agents: {
         defaults: {
           subagents: {

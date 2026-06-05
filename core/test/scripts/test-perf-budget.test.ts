@@ -5,9 +5,9 @@ describe("test perf budget script", () => {
   it("parses numeric budget env vars strictly before running Vitest", () => {
     expect(
       testing.parseArgs([], {
-        OPENCLAW_TEST_PERF_BASELINE_WALL_MS: "1000",
-        OPENCLAW_TEST_PERF_MAX_REGRESSION_PCT: "12.5",
-        OPENCLAW_TEST_PERF_MAX_WALL_MS: "1500",
+        DEX_TEST_PERF_BASELINE_WALL_MS: "1000",
+        DEX_TEST_PERF_MAX_REGRESSION_PCT: "12.5",
+        DEX_TEST_PERF_MAX_WALL_MS: "1500",
       }),
     ).toMatchObject({
       baselineWallMs: 1000,
@@ -17,9 +17,9 @@ describe("test perf budget script", () => {
 
     expect(() =>
       testing.parseArgs([], {
-        OPENCLAW_TEST_PERF_MAX_WALL_MS: "1000ms",
+        DEX_TEST_PERF_MAX_WALL_MS: "1000ms",
       }),
-    ).toThrow("OPENCLAW_TEST_PERF_MAX_WALL_MS must be a non-negative number");
+    ).toThrow("DEX_TEST_PERF_MAX_WALL_MS must be a non-negative number");
   });
 
   it("rejects malformed CLI budget values before running Vitest", () => {

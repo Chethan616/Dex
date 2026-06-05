@@ -119,15 +119,15 @@ describe("authorizeSlackSystemEventSender", () => {
 
   beforeEach(() => {
     clearSlackAllowFromCacheForTest();
-    delete process.env.OPENCLAW_SLACK_CHANNEL_MEMBERS_CACHE_TTL_MS;
+    delete process.env.DEX_SLACK_CHANNEL_MEMBERS_CACHE_TTL_MS;
   });
 
   afterEach(() => {
-    delete process.env.OPENCLAW_SLACK_CHANNEL_MEMBERS_CACHE_TTL_MS;
+    delete process.env.DEX_SLACK_CHANNEL_MEMBERS_CACHE_TTL_MS;
   });
 
   it("ignores non-decimal channel member cache ttl env values", async () => {
-    process.env.OPENCLAW_SLACK_CHANNEL_MEMBERS_CACHE_TTL_MS = "0x0";
+    process.env.DEX_SLACK_CHANNEL_MEMBERS_CACHE_TTL_MS = "0x0";
     const conversationsMembers = vi.fn(async () => ({
       members: ["UOWNER"],
       response_metadata: {},

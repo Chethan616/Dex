@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { AgentModelEntryConfig } from "../config/types.agent-defaults.js";
 import type { ModelDefinitionConfig } from "../config/types.models.js";
 import {
@@ -30,7 +30,7 @@ describe("onboard auth provider config merges", () => {
   };
 
   it("appends missing default models to existing provider models", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       models: {
         providers: {
           custom: {
@@ -61,7 +61,7 @@ describe("onboard auth provider config merges", () => {
   });
 
   it("preserves existing agent model entries when adding provider models", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       agents: {
         defaults: {
           models: {
@@ -96,7 +96,7 @@ describe("onboard auth provider config merges", () => {
   });
 
   it("normalizes retired Google agent model keys when adding provider models", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       agents: {
         defaults: {
           models: {
@@ -132,7 +132,7 @@ describe("onboard auth provider config merges", () => {
   });
 
   it("merges model catalogs without duplicating existing model ids", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       models: {
         providers: {
           custom: {

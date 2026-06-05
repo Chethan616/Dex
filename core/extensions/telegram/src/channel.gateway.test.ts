@@ -5,7 +5,7 @@ import {
   createPluginRuntimeMock,
   createStartAccountContext,
 } from "openclaw/plugin-sdk/channel-test-helpers";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readCachedTelegramBotInfo, writeCachedTelegramBotInfo } from "./bot-info-cache.js";
 import type { TelegramBotInfo } from "./bot-info.js";
@@ -46,7 +46,7 @@ const startupBotInfo: TelegramBotInfo = {
 async function useTempStateDir(): Promise<string> {
   const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-tg-channel-"));
   tempRoots.push(stateDir);
-  vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+  vi.stubEnv("DEX_STATE_DIR", stateDir);
   return stateDir;
 }
 
@@ -159,7 +159,7 @@ function createRuntimeEnvMock() {
 function createTelegramConfig(
   accountId = "default",
   telegramOverrides: Record<string, unknown> = {},
-): OpenClawConfig {
+): DexConfig {
   if (accountId === "default") {
     return {
       channels: {
@@ -168,7 +168,7 @@ function createTelegramConfig(
           ...telegramOverrides,
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
   }
 
   return {
@@ -182,7 +182,7 @@ function createTelegramConfig(
         },
       },
     },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 function startTelegramAccount(

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { CUSTOM_LOCAL_AUTH_MARKER } from "../agents/model-auth-markers.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import { withEnvAsync } from "../test-utils/env.js";
 import { buildProviderRegistry, runCapability } from "./runner.js";
 import { withAudioFixture, withVideoFixture } from "./runner.test-utils.js";
@@ -26,7 +26,7 @@ vi.mock("../plugins/providers.js", async (importOriginal) => ({
 const AUTH_ENV = {
   LOCAL_AUDIO_API_KEY: undefined,
   REMOTE_AUDIO_API_KEY: undefined,
-  OPENCLAW_AGENT_DIR: undefined,
+  DEX_AGENT_DIR: undefined,
 } satisfies Record<string, string | undefined>;
 
 function createAudioProvider(
@@ -69,7 +69,7 @@ function createAudioCfg(params: {
   model: string;
   providerConfig?: Record<string, unknown>;
   entry?: Record<string, unknown>;
-}): OpenClawConfig {
+}): DexConfig {
   return {
     ...(params.providerConfig
       ? {
@@ -90,10 +90,10 @@ function createAudioCfg(params: {
         },
       },
     },
-  } as unknown as OpenClawConfig;
+  } as unknown as DexConfig;
 }
 
-function createVideoCfg(params: { provider: string; model: string }): OpenClawConfig {
+function createVideoCfg(params: { provider: string; model: string }): DexConfig {
   return {
     tools: {
       media: {
@@ -103,7 +103,7 @@ function createVideoCfg(params: { provider: string; model: string }): OpenClawCo
         },
       },
     },
-  } as unknown as OpenClawConfig;
+  } as unknown as DexConfig;
 }
 
 describe("runCapability local no-auth audio providers", () => {

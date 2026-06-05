@@ -6,8 +6,8 @@ import { formatPluginSourceForTable, resolvePluginSourceRoots } from "./source-d
 
 const PLUGIN_SOURCE_ROOTS = {
   stock: path.resolve(path.sep, "opt", "homebrew", "lib", "node_modules", "openclaw", "extensions"),
-  global: path.resolve(path.sep, "Users", "x", ".openclaw", "extensions"),
-  workspace: path.resolve(path.sep, "Users", "x", "ws", ".openclaw", "extensions"),
+  global: path.resolve(path.sep, "Users", "x", ".dex", "extensions"),
+  workspace: path.resolve(path.sep, "Users", "x", "ws", ".dex", "extensions"),
 };
 
 function expectFormattedSource(params: {
@@ -75,8 +75,8 @@ describe("formatPluginSourceForTable", () => {
   it("ignores untrusted explicit env override for the stock source root", () => {
     const homeDir = path.resolve(path.sep, "tmp", "openclaw-home");
     const rawEnv = {
-      OPENCLAW_BUNDLED_PLUGINS_DIR: "~/bundled",
-      OPENCLAW_STATE_DIR: "~/state",
+      DEX_BUNDLED_PLUGINS_DIR: "~/bundled",
+      DEX_STATE_DIR: "~/state",
     } as NodeJS.ProcessEnv;
     const stock = withPathResolutionEnv(homeDir, rawEnv, (env) => resolveBundledPluginsDir(env));
     if (!stock) {
@@ -89,7 +89,7 @@ describe("formatPluginSourceForTable", () => {
       expected: {
         stock,
         global: path.join(homeDir, "state", "extensions"),
-        workspace: path.join(homeDir, "ws", ".openclaw", "extensions"),
+        workspace: path.join(homeDir, "ws", ".dex", "extensions"),
       },
     });
   });

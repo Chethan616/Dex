@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
 import type { ChannelMessageActionName } from "../../channels/plugins/types.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import type { CrossContextDecoration } from "./outbound-policy.js";
 
 let applyCrossContextDecoration: typeof import("./outbound-policy.js").applyCrossContextDecoration;
@@ -80,16 +80,16 @@ const workspaceConfig = {
       appToken: "workspace-app-test",
     },
   },
-} as OpenClawConfig;
+} as DexConfig;
 
 const richChatConfig = {
   channels: {
     richchat: {},
   },
-} as OpenClawConfig;
+} as DexConfig;
 
 function expectCrossContextPolicyResult(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   channel: string;
   action: "send" | "upload-file";
   to: string;
@@ -138,7 +138,7 @@ describe("outbound policy helpers", () => {
         tools: {
           message: { crossContext: { allowAcrossProviders: true } },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       channel: "forum",
       action: "send" as const,
       to: "forum:@ops",
@@ -161,7 +161,7 @@ describe("outbound policy helpers", () => {
         tools: {
           message: { crossContext: { allowWithinProvider: false } },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       channel: "workspace",
       action: "send" as const,
       to: "C999",
@@ -175,7 +175,7 @@ describe("outbound policy helpers", () => {
         tools: {
           message: { crossContext: { allowWithinProvider: false } },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       channel: "workspace",
       action: "upload-file" as const,
       to: "C999",
@@ -200,7 +200,7 @@ describe("outbound policy helpers", () => {
             },
           ],
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       channel: "workspace",
       action: "send" as const,
       to: "C999",

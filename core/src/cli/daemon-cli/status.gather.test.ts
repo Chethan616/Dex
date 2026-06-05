@@ -76,8 +76,8 @@ const serviceReadCommand = vi.fn<
 >(async (_env?: NodeJS.ProcessEnv) => ({
   programArguments: ["/bin/node", "cli", "gateway", "--port", "19001"],
   environment: {
-    OPENCLAW_STATE_DIR: "/tmp/openclaw-daemon",
-    OPENCLAW_CONFIG_PATH: "/tmp/openclaw-daemon/openclaw.json",
+    DEX_STATE_DIR: "/tmp/openclaw-daemon",
+    DEX_CONFIG_PATH: "/tmp/openclaw-daemon/openclaw.json",
   },
 }));
 const resolveGatewayBindHost = vi.fn(
@@ -86,10 +86,10 @@ const resolveGatewayBindHost = vi.fn(
 const pickPrimaryTailnetIPv4 = vi.fn(() => "100.64.0.9");
 const resolveGatewayPort = vi.fn((_cfg?: unknown, _env?: unknown) => 18789);
 const resolveStateDir = vi.fn(
-  (env: NodeJS.ProcessEnv) => env.OPENCLAW_STATE_DIR ?? "/tmp/openclaw-cli",
+  (env: NodeJS.ProcessEnv) => env.DEX_STATE_DIR ?? "/tmp/openclaw-cli",
 );
 const resolveConfigPath = vi.fn((env: NodeJS.ProcessEnv, stateDir: string) => {
-  return env.OPENCLAW_CONFIG_PATH ?? `${stateDir}/openclaw.json`;
+  return env.DEX_CONFIG_PATH ?? `${stateDir}/openclaw.json`;
 });
 const createConfigIOCalls = vi.fn((configPath: string, pluginValidation?: "full" | "skip") => ({
   configPath,
@@ -228,17 +228,17 @@ describe("gatherDaemonStatus", () => {
 
   beforeEach(() => {
     envSnapshot = captureEnv([
-      "OPENCLAW_STATE_DIR",
-      "OPENCLAW_CONFIG_PATH",
-      "OPENCLAW_GATEWAY_TOKEN",
-      "OPENCLAW_GATEWAY_PASSWORD",
+      "DEX_STATE_DIR",
+      "DEX_CONFIG_PATH",
+      "DEX_GATEWAY_TOKEN",
+      "DEX_GATEWAY_PASSWORD",
       "DAEMON_GATEWAY_TOKEN",
       "DAEMON_GATEWAY_PASSWORD",
     ]);
-    process.env.OPENCLAW_STATE_DIR = "/tmp/openclaw-cli";
-    process.env.OPENCLAW_CONFIG_PATH = "/tmp/openclaw-cli/openclaw.json";
-    delete process.env.OPENCLAW_GATEWAY_TOKEN;
-    delete process.env.OPENCLAW_GATEWAY_PASSWORD;
+    process.env.DEX_STATE_DIR = "/tmp/openclaw-cli";
+    process.env.DEX_CONFIG_PATH = "/tmp/openclaw-cli/openclaw.json";
+    delete process.env.DEX_GATEWAY_TOKEN;
+    delete process.env.DEX_GATEWAY_PASSWORD;
     delete process.env.DAEMON_GATEWAY_TOKEN;
     delete process.env.DAEMON_GATEWAY_PASSWORD;
     callGatewayStatusProbe.mockClear();
@@ -449,14 +449,14 @@ describe("gatherDaemonStatus", () => {
     serviceReadCommand.mockResolvedValueOnce({
       programArguments: ["/bin/node", "cli", "gateway", "--port", "19001"],
       environment: {
-        OPENCLAW_GATEWAY_PORT: "19001",
-        OPENCLAW_CONFIG_PATH: "/tmp/openclaw-daemon/openclaw.json",
-        OPENCLAW_STATE_DIR: "/tmp/openclaw-daemon",
+        DEX_GATEWAY_PORT: "19001",
+        DEX_CONFIG_PATH: "/tmp/openclaw-daemon/openclaw.json",
+        DEX_STATE_DIR: "/tmp/openclaw-daemon",
       } as Record<string, string>,
     });
     serviceReadRuntime.mockImplementationOnce(async (env?: NodeJS.ProcessEnv) => ({
-      status: env?.OPENCLAW_GATEWAY_PORT === "19001" ? "running" : "unknown",
-      detail: env?.OPENCLAW_GATEWAY_PORT ?? "missing-port",
+      status: env?.DEX_GATEWAY_PORT === "19001" ? "running" : "unknown",
+      detail: env?.DEX_GATEWAY_PORT ?? "missing-port",
     }));
 
     const status = await gatherDaemonStatus({
@@ -466,7 +466,7 @@ describe("gatherDaemonStatus", () => {
     });
 
     expect(
-      serviceReadRuntime.mock.calls.some(([env]) => env?.OPENCLAW_GATEWAY_PORT === "19001"),
+      serviceReadRuntime.mock.calls.some(([env]) => env?.DEX_GATEWAY_PORT === "19001"),
     ).toBe(true);
     expect(status.service.runtime?.status).toBe("running");
     expect((status.service.runtime as { detail?: string }).detail).toBe("19001");
@@ -493,8 +493,8 @@ describe("gatherDaemonStatus", () => {
     });
 
     const handoffInput = callArg(readGatewayRestartHandoffSync) as NodeJS.ProcessEnv;
-    expect(handoffInput.OPENCLAW_STATE_DIR).toBe("/tmp/openclaw-daemon");
-    expect(handoffInput.OPENCLAW_CONFIG_PATH).toBe("/tmp/openclaw-daemon/openclaw.json");
+    expect(handoffInput.DEX_STATE_DIR).toBe("/tmp/openclaw-daemon");
+    expect(handoffInput.DEX_CONFIG_PATH).toBe("/tmp/openclaw-daemon/openclaw.json");
     expect(status.service.restartHandoff?.reason).toBe("plugin source changed");
     expect(status.service.restartHandoff?.restartKind).toBe("full-process");
     expect(status.service.restartHandoff?.supervisorMode).toBe("launchd");
@@ -506,9 +506,9 @@ describe("gatherDaemonStatus", () => {
       serviceReadCommand.mockResolvedValueOnce({
         programArguments: ["/bin/node", "cli", "gateway", "--port", "19001"],
         environment: {
-          OPENCLAW_STATE_DIR: "/tmp/openclaw-daemon",
-          OPENCLAW_CONFIG_PATH: "/tmp/openclaw-daemon/openclaw.json",
-          OPENCLAW_LAUNCHD_LABEL: "ai.openclaw.manual-update.gateway",
+          DEX_STATE_DIR: "/tmp/openclaw-daemon",
+          DEX_CONFIG_PATH: "/tmp/openclaw-daemon/openclaw.json",
+          DEX_LAUNCHD_LABEL: "ai.openclaw.manual-update.gateway",
         },
       });
       findStaleOpenClawUpdateLaunchdJobs.mockResolvedValueOnce([
@@ -529,9 +529,9 @@ describe("gatherDaemonStatus", () => {
       });
 
       const staleScanEnv = findStaleOpenClawUpdateLaunchdJobs.mock.calls[0]?.[0];
-      expect(staleScanEnv?.OPENCLAW_STATE_DIR).toBe("/tmp/openclaw-daemon");
-      expect(staleScanEnv?.OPENCLAW_CONFIG_PATH).toBe("/tmp/openclaw-daemon/openclaw.json");
-      expect(staleScanEnv?.OPENCLAW_LAUNCHD_LABEL).toBe("ai.openclaw.manual-update.gateway");
+      expect(staleScanEnv?.DEX_STATE_DIR).toBe("/tmp/openclaw-daemon");
+      expect(staleScanEnv?.DEX_CONFIG_PATH).toBe("/tmp/openclaw-daemon/openclaw.json");
+      expect(staleScanEnv?.DEX_LAUNCHD_LABEL).toBe("ai.openclaw.manual-update.gateway");
       expect(status.service.staleUpdateLaunchdJobs).toEqual([
         {
           label: "ai.openclaw.update.2026.5.12",
@@ -624,13 +624,13 @@ describe("gatherDaemonStatus", () => {
         },
       }),
     );
-    process.env.OPENCLAW_STATE_DIR = tmp;
-    process.env.OPENCLAW_CONFIG_PATH = configPath;
+    process.env.DEX_STATE_DIR = tmp;
+    process.env.DEX_CONFIG_PATH = configPath;
     serviceReadCommand.mockResolvedValueOnce({
       programArguments: ["/bin/node", "cli", "gateway", "--port", "19001"],
       environment: {
-        OPENCLAW_STATE_DIR: tmp,
-        OPENCLAW_CONFIG_PATH: configPath,
+        DEX_STATE_DIR: tmp,
+        DEX_CONFIG_PATH: configPath,
       },
     });
 
@@ -666,8 +666,8 @@ describe("gatherDaemonStatus", () => {
         },
       }),
     );
-    process.env.OPENCLAW_STATE_DIR = tmp;
-    process.env.OPENCLAW_CONFIG_PATH = configPath;
+    process.env.DEX_STATE_DIR = tmp;
+    process.env.DEX_CONFIG_PATH = configPath;
     cliLoadedConfig = {
       gateway: {
         bind: "loopback",
@@ -865,8 +865,8 @@ describe("gatherDaemonStatus", () => {
         },
       },
     };
-    process.env.OPENCLAW_GATEWAY_TOKEN = "env-token";
-    process.env.OPENCLAW_GATEWAY_PASSWORD = "env-password"; // pragma: allowlist secret
+    process.env.DEX_GATEWAY_TOKEN = "env-token";
+    process.env.DEX_GATEWAY_PASSWORD = "env-password"; // pragma: allowlist secret
 
     await gatherDaemonStatus({
       rpc: {},
@@ -982,13 +982,13 @@ describe("gatherDaemonStatus", () => {
       deep: true,
     });
 
-    // The mock daemon service command sets OPENCLAW_STATE_DIR=/tmp/openclaw-daemon,
-    // distinct from the CLI process OPENCLAW_STATE_DIR=/tmp/openclaw-cli. Drift
+    // The mock daemon service command sets DEX_STATE_DIR=/tmp/openclaw-daemon,
+    // distinct from the CLI process DEX_STATE_DIR=/tmp/openclaw-cli. Drift
     // detection must inspect the daemon profile's install records.
     expect(loadInstalledPluginIndexInstallRecords).toHaveBeenCalledWith(
       expect.objectContaining({
         env: expect.objectContaining({
-          OPENCLAW_STATE_DIR: "/tmp/openclaw-daemon",
+          DEX_STATE_DIR: "/tmp/openclaw-daemon",
         }),
       }),
     );
@@ -1012,7 +1012,7 @@ describe("gatherDaemonStatus", () => {
     expect(loadInstalledPluginIndexInstallRecords).toHaveBeenCalledWith(
       expect.objectContaining({
         env: expect.objectContaining({
-          OPENCLAW_STATE_DIR: "/tmp/openclaw-daemon",
+          DEX_STATE_DIR: "/tmp/openclaw-daemon",
         }),
       }),
     );

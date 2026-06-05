@@ -24,16 +24,16 @@ function resolveInstallerVersionCases(params: { stdinCwd: string }): string[] {
       `${versionHelperSource}
 fake_openclaw_decorated() { printf '%s\\n' 'OpenClaw 2026.3.10 (abcdef0)'; }
 fake_openclaw_raw() { printf '%s\\n' "OpenClaw dev's build"; }
-OPENCLAW_BIN=fake_openclaw_decorated resolve_openclaw_version
-OPENCLAW_BIN=fake_openclaw_raw resolve_openclaw_version
+DEX_BIN=fake_openclaw_decorated resolve_openclaw_version
+DEX_BIN=fake_openclaw_raw resolve_openclaw_version
 (
   cd "$1"
-  source /dev/stdin <<'OPENCLAW_STDIN_INSTALLER'
+  source /dev/stdin <<'DEX_STDIN_INSTALLER'
 ${versionHelperSource}
 fake_openclaw_stdin() { printf '%s\\n' 'OpenClaw 2026.3.10 (abcdef0)'; }
-OPENCLAW_BIN=fake_openclaw_stdin
+DEX_BIN=fake_openclaw_stdin
 resolve_openclaw_version
-OPENCLAW_STDIN_INSTALLER
+DEX_STDIN_INSTALLER
 )`,
       "openclaw-version-test",
       params.stdinCwd,
@@ -43,7 +43,7 @@ OPENCLAW_STDIN_INSTALLER
       encoding: "utf-8",
       env: {
         ...process.env,
-        OPENCLAW_INSTALL_SH_NO_RUN: "1",
+        DEX_INSTALL_SH_NO_RUN: "1",
       },
     },
   );

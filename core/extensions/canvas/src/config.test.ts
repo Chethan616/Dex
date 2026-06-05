@@ -7,13 +7,13 @@ import {
 } from "./config.js";
 
 describe("Canvas plugin config", () => {
-  const originalSkipCanvasHost = process.env.OPENCLAW_SKIP_CANVAS_HOST;
+  const originalSkipCanvasHost = process.env.DEX_SKIP_CANVAS_HOST;
 
   afterEach(() => {
     if (originalSkipCanvasHost === undefined) {
-      delete process.env.OPENCLAW_SKIP_CANVAS_HOST;
+      delete process.env.DEX_SKIP_CANVAS_HOST;
     } else {
-      process.env.OPENCLAW_SKIP_CANVAS_HOST = originalSkipCanvasHost;
+      process.env.DEX_SKIP_CANVAS_HOST = originalSkipCanvasHost;
     }
   });
 
@@ -80,7 +80,7 @@ describe("Canvas plugin config", () => {
 
   it("honors truthy skip-canvas env values before host registration", () => {
     for (const value of ["1", "true", " yes ", "ON"]) {
-      process.env.OPENCLAW_SKIP_CANVAS_HOST = value;
+      process.env.DEX_SKIP_CANVAS_HOST = value;
       expect(isCanvasHostEnabled()).toBe(false);
     }
   });

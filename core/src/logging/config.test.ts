@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { readLoggingConfig } from "./config.js";
 
 const originalArgv = process.argv;
-const originalConfigPath = process.env.OPENCLAW_CONFIG_PATH;
+const originalConfigPath = process.env.DEX_CONFIG_PATH;
 let tempDirs: string[] = [];
 
 function writeConfig(source: string): string {
@@ -13,7 +13,7 @@ function writeConfig(source: string): string {
   tempDirs.push(dir);
   const configPath = path.join(dir, "openclaw.json");
   fs.writeFileSync(configPath, source);
-  process.env.OPENCLAW_CONFIG_PATH = configPath;
+  process.env.DEX_CONFIG_PATH = configPath;
   return configPath;
 }
 
@@ -21,9 +21,9 @@ describe("readLoggingConfig", () => {
   afterEach(() => {
     process.argv = originalArgv;
     if (originalConfigPath === undefined) {
-      delete process.env.OPENCLAW_CONFIG_PATH;
+      delete process.env.DEX_CONFIG_PATH;
     } else {
-      process.env.OPENCLAW_CONFIG_PATH = originalConfigPath;
+      process.env.DEX_CONFIG_PATH = originalConfigPath;
     }
     for (const dir of tempDirs) {
       fs.rmSync(dir, { force: true, recursive: true });
@@ -69,7 +69,7 @@ describe("readLoggingConfig", () => {
   });
 
   it("returns undefined for missing or malformed config files", () => {
-    process.env.OPENCLAW_CONFIG_PATH = path.join(os.tmpdir(), "openclaw-missing-config.json");
+    process.env.DEX_CONFIG_PATH = path.join(os.tmpdir(), "openclaw-missing-config.json");
     expect(readLoggingConfig()).toBeUndefined();
 
     writeConfig(`{ logging: `);

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { startPty, waitFor, type PtyRun } from "./tui-pty-test-support.js";
 
 type MockModelServer = {
@@ -211,7 +211,7 @@ function buildLocalModeConfig(params: { workspaceDir: string; providerBaseUrl: s
       auth: { mode: "token", token: "tui-pty-local" },
     },
     discovery: { mdns: { mode: "off" } },
-  } satisfies OpenClawConfig;
+  } satisfies DexConfig;
 }
 
 async function startLocalModeTui() {
@@ -253,14 +253,14 @@ async function startLocalModeTui() {
     cwd: process.cwd(),
     env: {
       HOME: homeDir,
-      OPENCLAW_HOME: homeDir,
-      OPENCLAW_CONFIG_PATH: configPath,
-      OPENCLAW_STATE_DIR: stateDir,
+      DEX_HOME: homeDir,
+      DEX_CONFIG_PATH: configPath,
+      DEX_STATE_DIR: stateDir,
       XDG_CONFIG_HOME: xdgConfigHome,
       XDG_DATA_HOME: xdgDataHome,
       XDG_CACHE_HOME: xdgCacheHome,
-      OPENCLAW_THEME: "dark",
-      OPENCLAW_CODEX_DISCOVERY_LIVE: "0",
+      DEX_THEME: "dark",
+      DEX_CODEX_DISCOVERY_LIVE: "0",
       NO_COLOR: undefined,
     },
     exitTimeoutMs: LOCAL_EXIT_TIMEOUT_MS,

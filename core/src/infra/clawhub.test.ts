@@ -62,11 +62,11 @@ describe("clawhub helpers", () => {
   const originalHome = process.env.HOME;
 
   afterEach(() => {
-    delete process.env.OPENCLAW_CLAWHUB_URL;
-    delete process.env.OPENCLAW_CLAWHUB_TOKEN;
+    delete process.env.DEX_CLAWHUB_URL;
+    delete process.env.DEX_CLAWHUB_TOKEN;
     delete process.env.CLAWHUB_TOKEN;
     delete process.env.CLAWHUB_AUTH_TOKEN;
-    delete process.env.OPENCLAW_CLAWHUB_CONFIG_PATH;
+    delete process.env.DEX_CLAWHUB_CONFIG_PATH;
     delete process.env.CLAWHUB_CONFIG_PATH;
     delete process.env.CLAWDHUB_CONFIG_PATH;
     delete process.env.XDG_CONFIG_HOME;
@@ -212,7 +212,7 @@ describe("clawhub helpers", () => {
   it("resolves ClawHub auth token from config.json", async () => {
     await withTempDir({ prefix: "openclaw-clawhub-config-" }, async (configRoot) => {
       const configPath = path.join(configRoot, "clawhub", "config.json");
-      process.env.OPENCLAW_CLAWHUB_CONFIG_PATH = configPath;
+      process.env.DEX_CLAWHUB_CONFIG_PATH = configPath;
       await fs.mkdir(path.dirname(configPath), { recursive: true });
       await fs.writeFile(configPath, JSON.stringify({ auth: { token: "cfg-token-123" } }), "utf8");
 
@@ -276,7 +276,7 @@ describe("clawhub helpers", () => {
   );
 
   it("injects resolved auth token into ClawHub requests", async () => {
-    process.env.OPENCLAW_CLAWHUB_TOKEN = "env-token-123";
+    process.env.DEX_CLAWHUB_TOKEN = "env-token-123";
     const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);
       expect(url).toContain("/api/v1/search");
@@ -291,7 +291,7 @@ describe("clawhub helpers", () => {
   });
 
   it("preserves the configured ClawHub base URL path prefix", async () => {
-    process.env.OPENCLAW_CLAWHUB_URL = "https://internal.example.com/clawhub";
+    process.env.DEX_CLAWHUB_URL = "https://internal.example.com/clawhub";
     let requestedUrl = "";
 
     await expect(
@@ -400,7 +400,7 @@ describe("clawhub helpers", () => {
   });
 
   it("can post bulk skill security verdict requests without resolved auth", async () => {
-    process.env.OPENCLAW_CLAWHUB_TOKEN = "env-token-123";
+    process.env.DEX_CLAWHUB_TOKEN = "env-token-123";
     let requestedInit: RequestInit | undefined;
     const envelope = {
       schema: "clawhub.skill.security-verdicts.v1",
@@ -705,7 +705,7 @@ describe("clawhub helpers", () => {
   });
 
   it("annotates 429 errors with the reset hint and a sign-in hint when unauthenticated", async () => {
-    process.env.OPENCLAW_CLAWHUB_CONFIG_PATH = path.join(os.tmpdir(), "openclaw-no-clawhub-config");
+    process.env.DEX_CLAWHUB_CONFIG_PATH = path.join(os.tmpdir(), "openclaw-no-clawhub-config");
     await expect(
       searchClawHubSkills({
         query: "calendar",
@@ -723,7 +723,7 @@ describe("clawhub helpers", () => {
   });
 
   it("degrades gracefully on 429 when the response carries no rate-limit headers", async () => {
-    process.env.OPENCLAW_CLAWHUB_CONFIG_PATH = path.join(os.tmpdir(), "openclaw-no-clawhub-config");
+    process.env.DEX_CLAWHUB_CONFIG_PATH = path.join(os.tmpdir(), "openclaw-no-clawhub-config");
     await expect(
       searchClawHubSkills({
         query: "calendar",
@@ -746,7 +746,7 @@ describe("clawhub helpers", () => {
   });
 
   it("annotates 429 errors with the reset hint but no sign-in hint when authenticated", async () => {
-    process.env.OPENCLAW_CLAWHUB_TOKEN = "env-token-123";
+    process.env.DEX_CLAWHUB_TOKEN = "env-token-123";
     await expect(
       searchClawHubSkills({
         query: "calendar",
@@ -764,7 +764,7 @@ describe("clawhub helpers", () => {
   });
 
   it("skips the reset suffix on 429 when Retry-After is an HTTP-date", async () => {
-    process.env.OPENCLAW_CLAWHUB_TOKEN = "env-token-123";
+    process.env.DEX_CLAWHUB_TOKEN = "env-token-123";
     await expect(
       searchClawHubSkills({
         query: "calendar",

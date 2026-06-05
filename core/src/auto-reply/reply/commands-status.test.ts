@@ -135,7 +135,7 @@ function writeTranscriptUsageLog(params: {
 }) {
   const logPath = path.join(
     params.dir,
-    ".openclaw",
+    ".dex",
     "agents",
     params.agentId,
     "sessions",
@@ -629,7 +629,7 @@ describe("buildStatusReply subagent summary", () => {
       async (dir) => {
         const authPath = path.join(
           dir,
-          ".openclaw",
+          ".dex",
           "agents",
           "main",
           "agent",
@@ -746,7 +746,7 @@ describe("buildStatusReply subagent summary", () => {
       async (dir) => {
         const authPath = path.join(
           dir,
-          ".openclaw",
+          ".dex",
           "agents",
           "main",
           "agent",
@@ -883,7 +883,7 @@ describe("buildStatusReply subagent summary", () => {
       async (dir) => {
         const authPath = path.join(
           dir,
-          ".openclaw",
+          ".dex",
           "agents",
           "main",
           "agent",
@@ -1158,7 +1158,7 @@ describe("buildStatusReply subagent summary", () => {
   it("uses workspace-scoped auth evidence in /status auth labels", async () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-status-auth-label-"));
     const workspaceDir = path.join(tempRoot, "workspace");
-    const pluginDir = path.join(workspaceDir, ".openclaw", "extensions", "workspace-auth-label");
+    const pluginDir = path.join(workspaceDir, ".dex", "extensions", "workspace-auth-label");
     const bundledDir = path.join(tempRoot, "bundled");
     const stateDir = path.join(tempRoot, "state");
     const credentialPath = path.join(tempRoot, "credentials.json");
@@ -1194,8 +1194,8 @@ describe("buildStatusReply subagent summary", () => {
     try {
       await withEnvAsync(
         {
-          OPENCLAW_BUNDLED_PLUGINS_DIR: bundledDir,
-          OPENCLAW_STATE_DIR: stateDir,
+          DEX_BUNDLED_PLUGINS_DIR: bundledDir,
+          DEX_STATE_DIR: stateDir,
           ANTHROPIC_API_KEY: undefined,
           ANTHROPIC_OAUTH_TOKEN: undefined,
           WORKSPACE_STATUS_CREDENTIALS: credentialPath,

@@ -4,7 +4,7 @@ import {
   resolveOpenClawMetadata,
   resolveHookInvocationPolicy,
 } from "./frontmatter.js";
-import type { OpenClawHookMetadata } from "./types.js";
+import type { DexHookMetadata } from "./types.js";
 
 function requireString(value: string | undefined, label: string): string {
   if (typeof value !== "string") {
@@ -13,7 +13,7 @@ function requireString(value: string | undefined, label: string): string {
   return value;
 }
 
-function requireOpenClawMetadata(metadata: OpenClawHookMetadata | undefined): OpenClawHookMetadata {
+function requireOpenClawMetadata(metadata: DexHookMetadata | undefined): DexHookMetadata {
   if (!metadata) {
     throw new Error("expected openclaw metadata");
   }

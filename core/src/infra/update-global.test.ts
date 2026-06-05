@@ -26,7 +26,7 @@ import {
   globalInstallFallbackArgs,
   isExplicitPackageInstallSpec,
   isMainPackageTarget,
-  OPENCLAW_MAIN_PACKAGE_SPEC,
+  DEX_MAIN_PACKAGE_SPEC,
   resolveGlobalInstallCommand,
   resolveGlobalPackageRoot,
   resolveGlobalInstallTarget,
@@ -100,8 +100,8 @@ describe("update global helpers", () => {
   });
 
   it("prefers explicit package spec overrides", () => {
-    envSnapshot = captureEnv(["OPENCLAW_UPDATE_PACKAGE_SPEC"]);
-    process.env.OPENCLAW_UPDATE_PACKAGE_SPEC = "file:/tmp/openclaw.tgz";
+    envSnapshot = captureEnv(["DEX_UPDATE_PACKAGE_SPEC"]);
+    process.env.DEX_UPDATE_PACKAGE_SPEC = "file:/tmp/openclaw.tgz";
 
     expect(resolveGlobalInstallSpec({ packageName: "openclaw", tag: "latest" })).toBe(
       "file:/tmp/openclaw.tgz",
@@ -110,7 +110,7 @@ describe("update global helpers", () => {
       resolveGlobalInstallSpec({
         packageName: "openclaw",
         tag: "beta",
-        env: { OPENCLAW_UPDATE_PACKAGE_SPEC: "openclaw@next" },
+        env: { DEX_UPDATE_PACKAGE_SPEC: "openclaw@next" },
       }),
     ).toBe("openclaw@next");
   });
@@ -138,7 +138,7 @@ describe("update global helpers", () => {
 
   it("maps main and explicit install specs for global installs", () => {
     expect(resolveGlobalInstallSpec({ packageName: "openclaw", tag: "main" })).toBe(
-      OPENCLAW_MAIN_PACKAGE_SPEC,
+      DEX_MAIN_PACKAGE_SPEC,
     );
     expect(
       resolveGlobalInstallSpec({
@@ -399,7 +399,7 @@ describe("update global helpers", () => {
 
   it("honors an explicitly selected direct npm node_modules package root", async () => {
     await withTempDir({ prefix: "openclaw-update-managed-service-root-" }, async (base) => {
-      const managedNpmRoot = path.join(base, ".openclaw", "npm", "node_modules");
+      const managedNpmRoot = path.join(base, ".dex", "npm", "node_modules");
       const pkgRoot = path.join(managedNpmRoot, "openclaw");
       const pathNpmRoot = path.join(base, "shell", "lib", "node_modules");
       const otherPnpmRoot = path.join(base, "pnpm", "global", "5", "node_modules");

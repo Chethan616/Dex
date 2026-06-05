@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 
 const ensureOpenClawModelsJsonMock = vi.fn<
   (
@@ -28,7 +28,7 @@ vi.mock("../agents/embedded-agent-runner/model.js", () => ({
 let prewarmConfiguredPrimaryModel: typeof import("./server-startup-post-attach.js").testing.prewarmConfiguredPrimaryModel;
 let shouldSkipStartupModelPrewarm: typeof import("./server-startup-post-attach.js").testing.shouldSkipStartupModelPrewarm;
 
-function expectModelsJsonPrewarmCall(cfg: OpenClawConfig) {
+function expectModelsJsonPrewarmCall(cfg: DexConfig) {
   expect(ensureOpenClawModelsJsonMock).toHaveBeenCalledTimes(1);
   const [calledConfig, agentDir, options] = ensureOpenClawModelsJsonMock.mock.calls.at(0) ?? [];
   expect(calledConfig).toBe(cfg);
@@ -62,7 +62,7 @@ describe("gateway startup primary model warmup", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await prewarmConfiguredPrimaryModel({
       cfg,
@@ -75,7 +75,7 @@ describe("gateway startup primary model warmup", () => {
 
   it("skips warmup when no explicit primary model is configured", async () => {
     await prewarmConfiguredPrimaryModel({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       log: { warn: vi.fn() },
     });
 
@@ -87,12 +87,12 @@ describe("gateway startup primary model warmup", () => {
     expect(shouldSkipStartupModelPrewarm({})).toBe(false);
     expect(
       shouldSkipStartupModelPrewarm({
-        OPENCLAW_SKIP_STARTUP_MODEL_PREWARM: "1",
+        DEX_SKIP_STARTUP_MODEL_PREWARM: "1",
       }),
     ).toBe(true);
     expect(
       shouldSkipStartupModelPrewarm({
-        OPENCLAW_SKIP_STARTUP_MODEL_PREWARM: "true",
+        DEX_SKIP_STARTUP_MODEL_PREWARM: "true",
       }),
     ).toBe(true);
   });
@@ -113,7 +113,7 @@ describe("gateway startup primary model warmup", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       log: { warn: vi.fn() },
     });
 
@@ -134,7 +134,7 @@ describe("gateway startup primary model warmup", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as DexConfig,
       log: { warn },
     });
 

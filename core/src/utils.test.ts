@@ -53,28 +53,28 @@ describe("sleep", () => {
 });
 
 describe("resolveConfigDir", () => {
-  it("prefers ~/.openclaw when legacy dir is missing", async () => {
+  it("prefers ~/.dex when legacy dir is missing", async () => {
     await withTempDir({ prefix: "openclaw-config-dir-" }, async (root) => {
-      const newDir = path.join(root, ".openclaw");
+      const newDir = path.join(root, ".dex");
       await fs.promises.mkdir(newDir, { recursive: true });
       const resolved = resolveConfigDir({} as NodeJS.ProcessEnv, () => root);
       expect(resolved).toBe(newDir);
     });
   });
 
-  it("expands OPENCLAW_STATE_DIR using the provided env", () => {
+  it("expands DEX_STATE_DIR using the provided env", () => {
     const env = {
       HOME: "/tmp/openclaw-home",
-      OPENCLAW_STATE_DIR: "~/state",
+      DEX_STATE_DIR: "~/state",
     } as NodeJS.ProcessEnv;
 
     expect(resolveConfigDir(env)).toBe(path.resolve("/tmp/openclaw-home", "state"));
   });
 
-  it("falls back to the config file directory when only OPENCLAW_CONFIG_PATH is set", () => {
+  it("falls back to the config file directory when only DEX_CONFIG_PATH is set", () => {
     const env = {
       HOME: "/tmp/openclaw-home",
-      OPENCLAW_CONFIG_PATH: "~/profiles/dev/openclaw.json",
+      DEX_CONFIG_PATH: "~/profiles/dev/openclaw.json",
     } as NodeJS.ProcessEnv;
 
     expect(resolveConfigDir(env)).toBe(path.resolve("/tmp/openclaw-home", "profiles", "dev"));
@@ -82,8 +82,8 @@ describe("resolveConfigDir", () => {
 });
 
 describe("resolveHomeDir", () => {
-  it("prefers OPENCLAW_HOME over HOME", () => {
-    vi.stubEnv("OPENCLAW_HOME", "/srv/openclaw-home");
+  it("prefers DEX_HOME over HOME", () => {
+    vi.stubEnv("DEX_HOME", "/srv/openclaw-home");
     vi.stubEnv("HOME", "/home/other");
     try {
       expect(resolveHomeDir()).toBe(path.resolve("/srv/openclaw-home"));
@@ -94,12 +94,12 @@ describe("resolveHomeDir", () => {
 });
 
 describe("shortenHomePath", () => {
-  it("uses $OPENCLAW_HOME prefix when OPENCLAW_HOME is set", () => {
-    vi.stubEnv("OPENCLAW_HOME", "/srv/openclaw-home");
+  it("uses $DEX_HOME prefix when DEX_HOME is set", () => {
+    vi.stubEnv("DEX_HOME", "/srv/openclaw-home");
     vi.stubEnv("HOME", "/home/other");
     try {
       expect(shortenHomePath(`${path.resolve("/srv/openclaw-home")}/.openclaw/openclaw.json`)).toBe(
-        "$OPENCLAW_HOME/.openclaw/openclaw.json",
+        "$DEX_HOME/.openclaw/openclaw.json",
       );
     } finally {
       vi.unstubAllEnvs();
@@ -108,15 +108,15 @@ describe("shortenHomePath", () => {
 });
 
 describe("shortenHomeInString", () => {
-  it("uses $OPENCLAW_HOME replacement when OPENCLAW_HOME is set", () => {
-    vi.stubEnv("OPENCLAW_HOME", "/srv/openclaw-home");
+  it("uses $DEX_HOME replacement when DEX_HOME is set", () => {
+    vi.stubEnv("DEX_HOME", "/srv/openclaw-home");
     vi.stubEnv("HOME", "/home/other");
     try {
       expect(
         shortenHomeInString(
           `config: ${path.resolve("/srv/openclaw-home")}/.openclaw/openclaw.json`,
         ),
-      ).toBe("config: $OPENCLAW_HOME/.openclaw/openclaw.json");
+      ).toBe("config: $DEX_HOME/.openclaw/openclaw.json");
     } finally {
       vi.unstubAllEnvs();
     }
@@ -138,8 +138,8 @@ describe("resolveUserPath", () => {
     expect(resolveUserPath("tmp/dir")).toBe(path.resolve("tmp/dir"));
   });
 
-  it("prefers OPENCLAW_HOME for tilde expansion", () => {
-    vi.stubEnv("OPENCLAW_HOME", "/srv/openclaw-home");
+  it("prefers DEX_HOME for tilde expansion", () => {
+    vi.stubEnv("DEX_HOME", "/srv/openclaw-home");
     vi.stubEnv("HOME", "/home/other");
     try {
       expect(resolveUserPath("~/openclaw")).toBe(path.resolve("/srv/openclaw-home", "openclaw"));
@@ -151,7 +151,7 @@ describe("resolveUserPath", () => {
   it("uses the provided env for tilde expansion", () => {
     const env = {
       HOME: "/tmp/openclaw-home",
-      OPENCLAW_HOME: "/srv/openclaw-home",
+      DEX_HOME: "/srv/openclaw-home",
     } as NodeJS.ProcessEnv;
 
     expect(resolveUserPath("~/openclaw", env)).toBe(path.resolve("/srv/openclaw-home", "openclaw"));

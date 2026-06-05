@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { MemoryQmdUpdateConfig } from "../config/types.memory.js";
 
 const { getMemorySearchManagerMock } = vi.hoisted(() => ({
@@ -13,13 +13,13 @@ vi.mock("../plugins/memory-runtime.js", () => ({
 import { startGatewayMemoryBackend } from "./server-startup-memory.js";
 
 function createQmdConfig(
-  agents: OpenClawConfig["agents"],
+  agents: DexConfig["agents"],
   update: MemoryQmdUpdateConfig = { startup: "immediate" },
-): OpenClawConfig {
+): DexConfig {
   return {
     agents,
     memory: { backend: "qmd", qmd: { update } },
-  } as OpenClawConfig;
+  } as DexConfig;
 }
 
 function createGatewayLogMock() {
@@ -34,13 +34,13 @@ function createQmdManagerMock() {
   };
 }
 
-async function startMemoryBackendForTest(cfg: OpenClawConfig) {
+async function startMemoryBackendForTest(cfg: DexConfig) {
   const log = createGatewayLogMock();
   await startGatewayMemoryBackend({ cfg, log });
   return log;
 }
 
-async function startQmdBackendWithManager(cfg: OpenClawConfig) {
+async function startQmdBackendWithManager(cfg: DexConfig) {
   getMemorySearchManagerMock.mockResolvedValue({ manager: createQmdManagerMock() });
   return await startMemoryBackendForTest(cfg);
 }
@@ -51,7 +51,7 @@ function expectNoMemoryBackendStartup(log: ReturnType<typeof createGatewayLogMoc
   expect(log.warn).not.toHaveBeenCalled();
 }
 
-function expectQmdManagerRequests(cfg: OpenClawConfig, agentIds: string[]) {
+function expectQmdManagerRequests(cfg: DexConfig, agentIds: string[]) {
   expect(getMemorySearchManagerMock).toHaveBeenCalledTimes(agentIds.length);
   for (const [index, agentId] of agentIds.entries()) {
     expect(getMemorySearchManagerMock).toHaveBeenNthCalledWith(index + 1, {
@@ -82,7 +82,7 @@ describe("startGatewayMemoryBackend", () => {
     const cfg = {
       agents: { list: [{ id: "main", default: true }] },
       memory: { backend: "builtin" },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const log = await startMemoryBackendForTest(cfg);
 
@@ -93,7 +93,7 @@ describe("startGatewayMemoryBackend", () => {
     const cfg = {
       agents: { list: [{ id: "main", default: true }] },
       memory: { backend: "qmd", qmd: {} },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const log = await startMemoryBackendForTest(cfg);
 
@@ -179,7 +179,7 @@ describe("startGatewayMemoryBackend", () => {
           update: { startup: "immediate", onBoot: false, interval: "0s", embedInterval: "0s" },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const log = await startMemoryBackendForTest(cfg);
 

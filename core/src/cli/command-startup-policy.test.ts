@@ -171,16 +171,16 @@ describe("command-startup-policy", () => {
     expect(
       shouldHideCliBannerForCommandPath(["status"], {
         ...process.env,
-        OPENCLAW_HIDE_BANNER: "1",
+        DEX_HIDE_BANNER: "1",
       }),
     ).toBe(true);
     expect(shouldHideCliBannerForCommandPath(["status"], {})).toBe(false);
   });
 
   it("uses process env banner suppression when startup env is omitted", () => {
-    const originalHideBanner = process.env.OPENCLAW_HIDE_BANNER;
+    const originalHideBanner = process.env.DEX_HIDE_BANNER;
     try {
-      process.env.OPENCLAW_HIDE_BANNER = "1";
+      process.env.DEX_HIDE_BANNER = "1";
 
       expect(
         resolveCliStartupPolicy({
@@ -197,9 +197,9 @@ describe("command-startup-policy", () => {
       ).toBe(false);
     } finally {
       if (originalHideBanner === undefined) {
-        delete process.env.OPENCLAW_HIDE_BANNER;
+        delete process.env.DEX_HIDE_BANNER;
       } else {
-        process.env.OPENCLAW_HIDE_BANNER = originalHideBanner;
+        process.env.DEX_HIDE_BANNER = originalHideBanner;
       }
     }
   });

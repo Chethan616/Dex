@@ -15,9 +15,9 @@ describe("plugin host cleanup session stores", () => {
   afterEach(async () => {
     clearSessionStoreCacheForTest();
     if (previousStateDir === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_STATE_DIR;
     } else {
-      process.env.OPENCLAW_STATE_DIR = previousStateDir;
+      process.env.DEX_STATE_DIR = previousStateDir;
     }
     if (stateDir) {
       await fs.rm(stateDir, { recursive: true, force: true });
@@ -30,8 +30,8 @@ describe("plugin host cleanup session stores", () => {
     stateDir = await fs.mkdtemp(
       path.join(resolvePreferredOpenClawTmpDir(), "openclaw-host-cleanup-noop-"),
     );
-    previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    previousStateDir = process.env.DEX_STATE_DIR;
+    process.env.DEX_STATE_DIR = stateDir;
     const storePath = path.join(stateDir, "sessions.json");
     await saveSessionStore(
       storePath,

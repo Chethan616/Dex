@@ -34,7 +34,7 @@ function createRepairPrompter(params?: { force?: boolean }) {
 
 describe("createDoctorPrompter", () => {
   const originalStdinIsTTY = process.stdin.isTTY;
-  const originalUpdateInProgress = process.env.OPENCLAW_UPDATE_IN_PROGRESS;
+  const originalUpdateInProgress = process.env.DEX_UPDATE_IN_PROGRESS;
 
   afterEach(() => {
     vi.resetAllMocks();
@@ -43,9 +43,9 @@ describe("createDoctorPrompter", () => {
       configurable: true,
     });
     if (originalUpdateInProgress === undefined) {
-      delete process.env.OPENCLAW_UPDATE_IN_PROGRESS;
+      delete process.env.DEX_UPDATE_IN_PROGRESS;
     } else {
-      process.env.OPENCLAW_UPDATE_IN_PROGRESS = originalUpdateInProgress;
+      process.env.DEX_UPDATE_IN_PROGRESS = originalUpdateInProgress;
     }
   });
 
@@ -122,7 +122,7 @@ describe("createDoctorPrompter", () => {
   });
 
   it("keeps skip-in-non-interactive prompts disabled during update-mode repairs", async () => {
-    process.env.OPENCLAW_UPDATE_IN_PROGRESS = "1";
+    process.env.DEX_UPDATE_IN_PROGRESS = "1";
     const prompter = createRepairPrompter();
 
     await expect(

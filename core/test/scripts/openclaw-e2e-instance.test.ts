@@ -26,7 +26,7 @@ function runHelper(payload: string) {
         "set -euo pipefail",
         `source ${shellQuote(helperPath)}`,
         `openclaw_e2e_eval_test_state_from_b64 ${shellQuote(payload)}`,
-        'printf "value=%s" "${OPENCLAW_E2E_INSTANCE_TEST:-unset}"',
+        'printf "value=%s" "${DEX_E2E_INSTANCE_TEST:-unset}"',
       ].join("; "),
     ],
     { encoding: "utf8" },
@@ -87,7 +87,7 @@ function writeFakeTimeout(filePath: string, supportsKillAfter: boolean): void {
     'if [ "${1:-}" = "--kill-after=1s" ]; then',
     `  exit ${supportsKillAfter ? 0 : 1}`,
     "fi",
-    'printf "%s\\n" "$*" >"$OPENCLAW_TEST_TIMEOUT_ARGS"',
+    'printf "%s\\n" "$*" >"$DEX_TEST_TIMEOUT_ARGS"',
     'while [ "$#" -gt 0 ]; do',
     '  case "$1" in',
     "    --)",
@@ -111,7 +111,7 @@ function writeFakeTimeout(filePath: string, supportsKillAfter: boolean): void {
 }
 
 function writeFakeNpm(filePath: string): void {
-  writeBashExecutable(filePath, ['printf "%s\\n" "$*" >"$OPENCLAW_TEST_NPM_ARGS"']);
+  writeBashExecutable(filePath, ['printf "%s\\n" "$*" >"$DEX_TEST_NPM_ARGS"']);
 }
 
 function expectNpmInstallObserved(argsPath: string, expectedArgs: string, prefix: string): void {
@@ -126,7 +126,7 @@ function expectNpmInstallObserved(argsPath: string, expectedArgs: string, prefix
 
 describe("scripts/lib/openclaw-e2e-instance.sh", () => {
   it("sources decoded test-state scripts", () => {
-    const result = runHelper(base64('export OPENCLAW_E2E_INSTANCE_TEST="ok"\n'));
+    const result = runHelper(base64('export DEX_E2E_INSTANCE_TEST="ok"\n'));
 
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("value=ok");
@@ -174,11 +174,11 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
           encoding: "utf8",
           env: shellTestEnv({
             PATH: `${tempDir}${path.delimiter}${hostPath}`,
-            OPENCLAW_CURRENT_PACKAGE_TGZ: packagePath,
-            OPENCLAW_E2E_NPM_INSTALL_TIMEOUT: "42s",
-            OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
-            OPENCLAW_TEST_NPM_ARGS: npmArgsPath,
-            OPENCLAW_TEST_NPM_BIN: path.join(tempDir, "npm"),
+            DEX_CURRENT_PACKAGE_TGZ: packagePath,
+            DEX_E2E_NPM_INSTALL_TIMEOUT: "42s",
+            DEX_TEST_TIMEOUT_ARGS: timeoutArgsPath,
+            DEX_TEST_NPM_ARGS: npmArgsPath,
+            DEX_TEST_NPM_BIN: path.join(tempDir, "npm"),
           }),
         },
       );
@@ -224,11 +224,11 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
           encoding: "utf8",
           env: shellTestEnv({
             PATH: `${tempDir}${path.delimiter}${hostPath}`,
-            OPENCLAW_CURRENT_PACKAGE_TGZ: packagePath,
-            OPENCLAW_E2E_NPM_INSTALL_TIMEOUT: "42s",
-            OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
-            OPENCLAW_TEST_NPM_ARGS: npmArgsPath,
-            OPENCLAW_TEST_NPM_BIN: path.join(tempDir, "npm"),
+            DEX_CURRENT_PACKAGE_TGZ: packagePath,
+            DEX_E2E_NPM_INSTALL_TIMEOUT: "42s",
+            DEX_TEST_TIMEOUT_ARGS: timeoutArgsPath,
+            DEX_TEST_NPM_ARGS: npmArgsPath,
+            DEX_TEST_NPM_BIN: path.join(tempDir, "npm"),
           }),
         },
       );
@@ -273,11 +273,11 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
           encoding: "utf8",
           env: shellTestEnv({
             PATH: tempDir,
-            OPENCLAW_CURRENT_PACKAGE_TGZ: packagePath,
-            OPENCLAW_E2E_NPM_INSTALL_TIMEOUT: "42s",
-            OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
-            OPENCLAW_TEST_NPM_ARGS: npmArgsPath,
-            OPENCLAW_TEST_NPM_BIN: path.join(tempDir, "npm"),
+            DEX_CURRENT_PACKAGE_TGZ: packagePath,
+            DEX_E2E_NPM_INSTALL_TIMEOUT: "42s",
+            DEX_TEST_TIMEOUT_ARGS: timeoutArgsPath,
+            DEX_TEST_NPM_ARGS: npmArgsPath,
+            DEX_TEST_NPM_BIN: path.join(tempDir, "npm"),
           }),
         },
       );
@@ -321,9 +321,9 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
           encoding: "utf8",
           env: shellTestEnv({
             PATH: tempDir,
-            OPENCLAW_CURRENT_PACKAGE_TGZ: packagePath,
-            OPENCLAW_E2E_NPM_INSTALL_TIMEOUT: "42s",
-            OPENCLAW_TEST_NPM_ARGS: npmArgsPath,
+            DEX_CURRENT_PACKAGE_TGZ: packagePath,
+            DEX_E2E_NPM_INSTALL_TIMEOUT: "42s",
+            DEX_TEST_NPM_ARGS: npmArgsPath,
           }),
         },
       );
@@ -403,7 +403,7 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
         const script = `
 set -euo pipefail
 source ${shellQuote(helperPath)}
-export OPENCLAW_E2E_TIMEOUT_KILL_GRACE_MS=100
+export DEX_E2E_TIMEOUT_KILL_GRACE_MS=100
 openclaw_e2e_maybe_timeout 30s node ${shellQuote(childPath)} ${shellQuote(pidPath)} ${shellQuote(watchdogPidPath)} &
 wrapper_pid="$!"
 for ((i = 0; i < 100; i += 1)); do
@@ -448,11 +448,11 @@ exit 1
       const forbiddenToolLog = path.join(tempDir, "process-tools.log");
       fs.writeFileSync(forbiddenToolLog, "");
       writeBashExecutable(path.join(tempDir, "pkill"), [
-        'printf "pkill %s\\n" "$*" >>"$OPENCLAW_TEST_FORBIDDEN_PROCESS_TOOL_LOG"',
+        'printf "pkill %s\\n" "$*" >>"$DEX_TEST_FORBIDDEN_PROCESS_TOOL_LOG"',
         "exit 42",
       ]);
       writeBashExecutable(path.join(tempDir, "pgrep"), [
-        'printf "pgrep %s\\n" "$*" >>"$OPENCLAW_TEST_FORBIDDEN_PROCESS_TOOL_LOG"',
+        'printf "pgrep %s\\n" "$*" >>"$DEX_TEST_FORBIDDEN_PROCESS_TOOL_LOG"',
         "exit 42",
       ]);
 
@@ -467,14 +467,14 @@ if kill -0 "$tracked_pid" 2>/dev/null; then
   echo "tracked gateway process still alive" >&2
   exit 1
 fi
-[ ! -s "$OPENCLAW_TEST_FORBIDDEN_PROCESS_TOOL_LOG" ]
+[ ! -s "$DEX_TEST_FORBIDDEN_PROCESS_TOOL_LOG" ]
 `;
 
       const result = spawnSync("/bin/bash", ["-c", script], {
         encoding: "utf8",
         env: shellTestEnv({
           PATH: `${tempDir}:${hostPath}`,
-          OPENCLAW_TEST_FORBIDDEN_PROCESS_TOOL_LOG: forbiddenToolLog,
+          DEX_TEST_FORBIDDEN_PROCESS_TOOL_LOG: forbiddenToolLog,
         }),
         timeout: 5_000,
       });
@@ -545,11 +545,11 @@ fi
           "#!/usr/bin/env bash",
           "set -euo pipefail",
           'if [ "${1:-}" = "--kill-after=1s" ]; then exit 0; fi',
-          'printf "%s\\n" "$*" >"$OPENCLAW_TEST_TIMEOUT_ARGS"',
+          'printf "%s\\n" "$*" >"$DEX_TEST_TIMEOUT_ARGS"',
           'while [ "$#" -gt 0 ] && [ "$1" != "fixture-command" ]; do shift; done',
           '[ "$#" -gt 0 ] || exit 127',
           "shift",
-          'exec "$OPENCLAW_TEST_COMMAND_BIN" "$@"',
+          'exec "$DEX_TEST_COMMAND_BIN" "$@"',
           "",
         ].join("\n"),
       );
@@ -558,7 +558,7 @@ fi
         [
           "#!/usr/bin/env bash",
           "set -euo pipefail",
-          'printf "%s\\n" "$*" >"$OPENCLAW_TEST_COMMAND_ARGS"',
+          'printf "%s\\n" "$*" >"$DEX_TEST_COMMAND_ARGS"',
           'printf "fixture output\\n"',
           "",
         ].join("\n"),
@@ -574,18 +574,18 @@ fi
             "set -euo pipefail",
             `source ${shellQuote(helperPath)}`,
             `openclaw_e2e_run_logged ${shellQuote(logLabel)} fixture-command one two`,
-            `printf "%s" "$OPENCLAW_E2E_LAST_LOG_PATH" > ${shellQuote(logPathFile)}`,
+            `printf "%s" "$DEX_E2E_LAST_LOG_PATH" > ${shellQuote(logPathFile)}`,
           ].join("; "),
         ],
         {
           encoding: "utf8",
           env: shellTestEnv({
             PATH: `${tempDir}:${hostPath}`,
-            OPENCLAW_E2E_LOG_DIR: logDir,
-            OPENCLAW_E2E_COMMAND_TIMEOUT: "17s",
-            OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
-            OPENCLAW_TEST_COMMAND_ARGS: commandArgsPath,
-            OPENCLAW_TEST_COMMAND_BIN: path.join(tempDir, "fixture-command"),
+            DEX_E2E_LOG_DIR: logDir,
+            DEX_E2E_COMMAND_TIMEOUT: "17s",
+            DEX_TEST_TIMEOUT_ARGS: timeoutArgsPath,
+            DEX_TEST_COMMAND_ARGS: commandArgsPath,
+            DEX_TEST_COMMAND_BIN: path.join(tempDir, "fixture-command"),
           }),
         },
       );
@@ -624,7 +624,7 @@ fi
             "openclaw_e2e_install_trash_shim",
             "openclaw_e2e_install_trash_shim",
             `printf "%s" "$PATH" > ${shellQuote(pathFile)}`,
-            `printf "%s" "$OPENCLAW_E2E_BIN_DIR" > ${shellQuote(binDirFile)}`,
+            `printf "%s" "$DEX_E2E_BIN_DIR" > ${shellQuote(binDirFile)}`,
             'command -v trash >/dev/null',
           ].join("; "),
         ],
@@ -632,7 +632,7 @@ fi
           encoding: "utf8",
           env: shellTestEnv({
             HOME: homeDir,
-            OPENCLAW_STATE_DIR: stateDir,
+            DEX_STATE_DIR: stateDir,
             PATH: hostPath,
           }),
         },
@@ -661,11 +661,11 @@ fi
           "#!/usr/bin/env bash",
           "set -euo pipefail",
           'if [ "${1:-}" = "--kill-after=1s" ]; then exit 0; fi',
-          'printf "%s\\n" "$*" >"$OPENCLAW_TEST_TIMEOUT_ARGS"',
+          'printf "%s\\n" "$*" >"$DEX_TEST_TIMEOUT_ARGS"',
           `while [ "$#" -gt 0 ] && [ "$1" != ${shellQuote(path.join(tempDir, "openclaw"))} ]; do shift; done`,
           '[ "$#" -gt 0 ] || exit 127',
           "shift",
-          'exec "$OPENCLAW_TEST_OPENCLAW_BIN" "$@"',
+          'exec "$DEX_TEST_DEX_BIN" "$@"',
           "",
         ].join("\n"),
       );
@@ -674,7 +674,7 @@ fi
         [
           "#!/usr/bin/env bash",
           "set -euo pipefail",
-          'printf "%s\\n" "$*" >"$OPENCLAW_TEST_COMMAND_ARGS"',
+          'printf "%s\\n" "$*" >"$DEX_TEST_COMMAND_ARGS"',
           "",
         ].join("\n"),
       );
@@ -697,10 +697,10 @@ fi
           encoding: "utf8",
           env: shellTestEnv({
             PATH: `${tempDir}:${hostPath}`,
-            OPENCLAW_E2E_COMMAND_TIMEOUT: "23s",
-            OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
-            OPENCLAW_TEST_COMMAND_ARGS: commandArgsPath,
-            OPENCLAW_TEST_OPENCLAW_BIN: path.join(tempDir, "openclaw"),
+            DEX_E2E_COMMAND_TIMEOUT: "23s",
+            DEX_TEST_TIMEOUT_ARGS: timeoutArgsPath,
+            DEX_TEST_COMMAND_ARGS: commandArgsPath,
+            DEX_TEST_DEX_BIN: path.join(tempDir, "openclaw"),
           }),
         },
       );
@@ -727,11 +727,11 @@ fi
           "#!/usr/bin/env bash",
           "set -euo pipefail",
           'if [ "${1:-}" = "--kill-after=1s" ]; then exit 0; fi',
-          'printf "%s\\n" "$*" >"$OPENCLAW_TEST_TIMEOUT_ARGS"',
+          'printf "%s\\n" "$*" >"$DEX_TEST_TIMEOUT_ARGS"',
           'while [ "$#" -gt 0 ] && [ "$1" != "script" ]; do shift; done',
           '[ "$#" -gt 0 ] || exit 127',
           "shift",
-          'exec "$OPENCLAW_TEST_SCRIPT_BIN" "$@"',
+          'exec "$DEX_TEST_SCRIPT_BIN" "$@"',
           "",
         ].join("\n"),
       );
@@ -741,7 +741,7 @@ fi
           "#!/usr/bin/env bash",
           "set -euo pipefail",
           'if [ "${1:-}" = "--version" ]; then exit 0; fi',
-          'printf "%s\\n" "$*" >"$OPENCLAW_TEST_SCRIPT_ARGS"',
+          'printf "%s\\n" "$*" >"$DEX_TEST_SCRIPT_ARGS"',
           "",
         ].join("\n"),
       );
@@ -762,10 +762,10 @@ fi
           encoding: "utf8",
           env: shellTestEnv({
             PATH: `${tempDir}:${hostPath}`,
-            OPENCLAW_E2E_COMMAND_TIMEOUT: "31s",
-            OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
-            OPENCLAW_TEST_SCRIPT_ARGS: scriptArgsPath,
-            OPENCLAW_TEST_SCRIPT_BIN: path.join(tempDir, "script"),
+            DEX_E2E_COMMAND_TIMEOUT: "31s",
+            DEX_TEST_TIMEOUT_ARGS: timeoutArgsPath,
+            DEX_TEST_SCRIPT_ARGS: scriptArgsPath,
+            DEX_TEST_SCRIPT_BIN: path.join(tempDir, "script"),
           }),
         },
       );

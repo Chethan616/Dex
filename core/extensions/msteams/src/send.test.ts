@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../runtime-api.js";
+import type { DexConfig } from "../runtime-api.js";
 import { deleteMessageMSTeams, editMessageMSTeams, sendMessageMSTeams } from "./send.js";
 
 const mockState = vi.hoisted(() => ({
@@ -269,7 +269,7 @@ describe("sendMessageMSTeams", () => {
     });
 
     const result = await sendMessageMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: "conversation:19:conversation@thread.tacv2",
       text: "hello",
       mediaUrl: "file:///tmp/agent-workspace/inline.png",
@@ -307,7 +307,7 @@ describe("sendMessageMSTeams", () => {
     mockState.convertMarkdownTables.mockReturnValue("hello");
 
     const result = await sendMessageMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: "conversation:19:conversation@thread.tacv2",
       text: "hello",
     });
@@ -346,7 +346,7 @@ describe("sendMessageMSTeams", () => {
     });
 
     await sendMessageMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: "conversation:19:channel@thread.tacv2",
       text: "threaded reply",
     });
@@ -373,7 +373,7 @@ describe("sendMessageMSTeams", () => {
     });
 
     await sendMessageMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: "conversation:19:channel@thread.tacv2",
       text: "top-level reply",
     });
@@ -402,7 +402,7 @@ describe("sendMessageMSTeams", () => {
     });
 
     await sendMessageMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: "conversation:19:bot-framework-id@thread.tacv2",
       text: "here is a file",
       mediaUrl: "https://example.com/doc.pdf",
@@ -432,7 +432,7 @@ describe("sendMessageMSTeams", () => {
     });
 
     await sendMessageMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: "conversation:19:fallback-id@thread.tacv2",
       text: "report",
       mediaUrl: "https://example.com/report.pdf",
@@ -478,7 +478,7 @@ describe("editMessageMSTeams", () => {
     });
 
     const result = await editMessageMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: "conversation:19:conversation@thread.tacv2",
       activityId: "activity-123",
       text: "Updated message text",
@@ -507,7 +507,7 @@ describe("editMessageMSTeams", () => {
 
     await expect(
       editMessageMSTeams({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         to: "conversation:19:conversation@thread.tacv2",
         activityId: "activity-123",
         text: "Updated text",
@@ -543,7 +543,7 @@ describe("deleteMessageMSTeams", () => {
     });
 
     const result = await deleteMessageMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: "conversation:19:conversation@thread.tacv2",
       activityId: "activity-456",
     });
@@ -566,7 +566,7 @@ describe("deleteMessageMSTeams", () => {
 
     await expect(
       deleteMessageMSTeams({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         to: "conversation:19:conversation@thread.tacv2",
         activityId: "activity-456",
       }),
@@ -594,7 +594,7 @@ describe("deleteMessageMSTeams", () => {
     });
 
     await deleteMessageMSTeams({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       to: "conversation:19:conv@thread.tacv2",
       activityId: "activity-789",
     });

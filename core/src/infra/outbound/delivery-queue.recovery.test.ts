@@ -1,6 +1,6 @@
 import { MAX_DATE_TIMESTAMP_MS } from "@dexagent/normalization-core/number-coercion";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { openOpenClawStateDatabase } from "../../state/openclaw-state-db.js";
+import { openDexStateDatabase } from "../../state/openclaw-state-db.js";
 import { attachOutboundDeliveryCommitHook } from "./delivery-commit-hooks.js";
 import {
   enqueueDelivery,
@@ -36,8 +36,8 @@ function expectMockMessageContaining(mock: { mock: { calls: unknown[][] } }, exp
 }
 
 function readOutboundQueueStatus(tmpDir: string, id: string): string | undefined {
-  const { db } = openOpenClawStateDatabase({
-    env: { ...process.env, OPENCLAW_STATE_DIR: tmpDir },
+  const { db } = openDexStateDatabase({
+    env: { ...process.env, DEX_STATE_DIR: tmpDir },
   });
   const row = db
     .prepare("SELECT status FROM delivery_queue_entries WHERE queue_name = 'outbound' AND id = ?")

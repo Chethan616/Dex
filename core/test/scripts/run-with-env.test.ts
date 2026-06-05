@@ -54,7 +54,7 @@ describe("run-with-env", () => {
   it("parses leading env assignments before the command separator", () => {
     expect(
       parseRunWithEnvArgs([
-        "OPENCLAW_GATEWAY_PROJECT_SHARDS=1",
+        "DEX_GATEWAY_PROJECT_SHARDS=1",
         "EMPTY=",
         "--",
         "node",
@@ -63,7 +63,7 @@ describe("run-with-env", () => {
       ]),
     ).toEqual({
       env: {
-        OPENCLAW_GATEWAY_PROJECT_SHARDS: "1",
+        DEX_GATEWAY_PROJECT_SHARDS: "1",
         EMPTY: "",
       },
       command: "node",
@@ -72,7 +72,7 @@ describe("run-with-env", () => {
   });
 
   it("rejects missing command separators", () => {
-    expect(() => parseRunWithEnvArgs(["OPENCLAW_GATEWAY_PROJECT_SHARDS=1", "node"])).toThrow(
+    expect(() => parseRunWithEnvArgs(["DEX_GATEWAY_PROJECT_SHARDS=1", "node"])).toThrow(
       /Usage:/u,
     );
   });
@@ -90,7 +90,7 @@ describe("run-with-env", () => {
 
   it("keeps command help passthrough after the separator", () => {
     expect(
-      isRunWithEnvHelpRequest(["OPENCLAW_GATEWAY_PROJECT_SHARDS=1", "--", "node", "--help"]),
+      isRunWithEnvHelpRequest(["DEX_GATEWAY_PROJECT_SHARDS=1", "--", "node", "--help"]),
     ).toBe(false);
   });
 
@@ -207,7 +207,7 @@ describe("run-with-env", () => {
         ],
         {
           cwd: process.cwd(),
-          env: { ...process.env, OPENCLAW_RUN_WITH_ENV_FORCE_KILL_MS: "200" },
+          env: { ...process.env, DEX_RUN_WITH_ENV_FORCE_KILL_MS: "200" },
           stdio: "ignore",
         },
       );
@@ -281,7 +281,7 @@ describe("run-with-env", () => {
         ],
         {
           cwd: process.cwd(),
-          env: { ...process.env, OPENCLAW_RUN_WITH_ENV_FORCE_KILL_MS: "1000" },
+          env: { ...process.env, DEX_RUN_WITH_ENV_FORCE_KILL_MS: "1000" },
           stdio: "ignore",
         },
       );
@@ -309,7 +309,7 @@ describe("run-with-env", () => {
       process.execPath,
       [
         "scripts/run-with-env.mjs",
-        "OPENCLAW_RUN_WITH_ENV_SIGNAL_TEST=1",
+        "DEX_RUN_WITH_ENV_SIGNAL_TEST=1",
         "--",
         "node",
         "-e",
@@ -327,7 +327,7 @@ describe("run-with-env", () => {
       process.execPath,
       [
         "scripts/run-with-env.mjs",
-        "OPENCLAW_RUN_WITH_ENV_SIGNAL_TEST=1",
+        "DEX_RUN_WITH_ENV_SIGNAL_TEST=1",
         "--",
         "node",
         "-e",

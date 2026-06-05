@@ -396,7 +396,7 @@ describe("bundled plugin postinstall", () => {
   it("does not prune user-state legacy runtime deps during source-checkout postinstall", async () => {
     const packageRoot = await createTempDirAsync("openclaw-source-checkout-state-skip-");
     const home = await createTempDirAsync("openclaw-source-checkout-home-");
-    const legacyRuntimeRoot = path.join(home, ".openclaw", "plugin-runtime-deps");
+    const legacyRuntimeRoot = path.join(home, ".dex", "plugin-runtime-deps");
     await fs.mkdir(path.join(packageRoot, ".git"), { recursive: true });
     await fs.mkdir(path.join(packageRoot, "src"), { recursive: true });
     await fs.mkdir(path.join(packageRoot, "extensions"), { recursive: true });
@@ -421,7 +421,7 @@ describe("bundled plugin postinstall", () => {
     await fs.writeFile(path.join(extensionsDir, "acpx", "package.json"), "{}\n");
 
     runBundledPluginPostinstall({
-      env: { OPENCLAW_DISABLE_BUNDLED_PLUGIN_POSTINSTALL: "1" },
+      env: { DEX_DISABLE_BUNDLED_PLUGIN_POSTINSTALL: "1" },
       packageRoot,
       log: { log: vi.fn(), warn: vi.fn() },
     });
@@ -457,7 +457,7 @@ describe("bundled plugin postinstall", () => {
         ),
       ),
       importModule,
-      env: { OPENCLAW_HOME: "/tmp/home" },
+      env: { DEX_HOME: "/tmp/home" },
       log,
     });
 
@@ -472,7 +472,7 @@ describe("bundled plugin postinstall", () => {
       status: "migrated",
     });
     expect(migratePluginRegistryForInstall).toHaveBeenCalledWith({
-      env: { OPENCLAW_HOME: "/tmp/home" },
+      env: { DEX_HOME: "/tmp/home" },
       packageRoot,
     });
     expect(log.log).toHaveBeenCalledWith(
@@ -486,7 +486,7 @@ describe("bundled plugin postinstall", () => {
       status: "skip-existing",
       migrated: false,
       preflight: {
-        deprecationWarnings: ["OPENCLAW_FORCE_PLUGIN_REGISTRY_MIGRATION is deprecated"],
+        deprecationWarnings: ["DEX_FORCE_PLUGIN_REGISTRY_MIGRATION is deprecated"],
       },
     }));
     const importModule = vi.fn(async () => ({ migratePluginRegistryForInstall }));
@@ -499,7 +499,7 @@ describe("bundled plugin postinstall", () => {
     });
 
     expect(warn).toHaveBeenCalledWith(
-      "[postinstall] OPENCLAW_FORCE_PLUGIN_REGISTRY_MIGRATION is deprecated",
+      "[postinstall] DEX_FORCE_PLUGIN_REGISTRY_MIGRATION is deprecated",
     );
   });
 
@@ -526,7 +526,7 @@ describe("bundled plugin postinstall", () => {
     await expect(
       runPluginRegistryPostinstallMigration({
         packageRoot: "/pkg",
-        env: { OPENCLAW_DISABLE_PLUGIN_REGISTRY_MIGRATION: "1" },
+        env: { DEX_DISABLE_PLUGIN_REGISTRY_MIGRATION: "1" },
         existsSync: vi.fn(() => true),
         importModule,
         log: { log: vi.fn(), warn: vi.fn() },
@@ -550,7 +550,7 @@ describe("bundled plugin postinstall", () => {
     await expect(
       runPluginRegistryPostinstallMigration({
         packageRoot: "/pkg",
-        env: { OPENCLAW_DISABLE_PLUGIN_REGISTRY_MIGRATION: "0" },
+        env: { DEX_DISABLE_PLUGIN_REGISTRY_MIGRATION: "0" },
         existsSync: vi.fn(() => true),
         importModule,
         log: { log: vi.fn(), warn: vi.fn() },
@@ -562,7 +562,7 @@ describe("bundled plugin postinstall", () => {
     });
     expect(importModule).toHaveBeenCalledOnce();
     expect(migratePluginRegistryForInstall).toHaveBeenCalledWith({
-      env: { OPENCLAW_DISABLE_PLUGIN_REGISTRY_MIGRATION: "0" },
+      env: { DEX_DISABLE_PLUGIN_REGISTRY_MIGRATION: "0" },
       packageRoot: "/pkg",
     });
   });
@@ -622,13 +622,13 @@ describe("bundled plugin postinstall", () => {
     const home = await createTempDirAsync("openclaw-packaged-home-");
     const stateOverride = path.join(home, "custom-state");
     const systemState = path.join(home, "system-state");
-    const defaultLegacyRoot = path.join(home, ".openclaw", "plugin-runtime-deps");
+    const defaultLegacyRoot = path.join(home, ".dex", "plugin-runtime-deps");
     const oldBrandLegacyRoot = path.join(home, ".clawdbot", "plugin-runtime-deps");
     const overrideLegacyRoot = path.join(stateOverride, "plugin-runtime-deps");
     const systemLegacyRoot = path.join(systemState, "plugin-runtime-deps");
     const thirdPartyNodeModules = path.join(
       home,
-      ".openclaw",
+      ".dex",
       "extensions",
       "lossless-claw",
       "node_modules",
@@ -665,7 +665,7 @@ describe("bundled plugin postinstall", () => {
     runBundledPluginPostinstall({
       env: {
         HOME: home,
-        OPENCLAW_STATE_DIR: stateOverride,
+        DEX_STATE_DIR: stateOverride,
         STATE_DIRECTORY: systemState,
       },
       packageRoot,
@@ -695,7 +695,7 @@ describe("bundled plugin postinstall", () => {
     const home = await createTempDirAsync("openclaw-packaged-home-");
     const packageRoot = path.join(prefix, "lib", "node_modules", "openclaw");
     const nodeModulesRoot = path.dirname(packageRoot);
-    const legacyRuntimeRoot = path.join(home, ".openclaw", "plugin-runtime-deps");
+    const legacyRuntimeRoot = path.join(home, ".dex", "plugin-runtime-deps");
     const legacyTarget = path.join(
       legacyRuntimeRoot,
       "openclaw-2026.4.29-slack",
@@ -758,9 +758,9 @@ describe("bundled plugin postinstall", () => {
       collectLegacyPluginRuntimeDepsStateRoots({
         env: {
           HOME: "/users/alice",
-          OPENCLAW_HOME: "/srv/openclaw-home",
-          OPENCLAW_CONFIG_PATH: "~/profile/openclaw.json",
-          OPENCLAW_STATE_DIR: "~/state",
+          DEX_HOME: "/srv/openclaw-home",
+          DEX_CONFIG_PATH: "~/profile/openclaw.json",
+          DEX_STATE_DIR: "~/state",
           STATE_DIRECTORY: "/var/lib/openclaw",
         },
         homedir: () => "/users/alice",

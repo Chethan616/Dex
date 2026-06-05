@@ -7,8 +7,8 @@ import { captureEnv } from "../test-utils/env.js";
 let envSnapshot: ReturnType<typeof captureEnv>;
 
 beforeAll(() => {
-  envSnapshot = captureEnv(["OPENCLAW_PROFILE"]);
-  process.env.OPENCLAW_PROFILE = "isolated";
+  envSnapshot = captureEnv(["DEX_PROFILE"]);
+  process.env.DEX_PROFILE = "isolated";
 });
 
 afterAll(() => {
@@ -353,8 +353,8 @@ async function createMockStatusScanResult(params: { includePluginCompatibility?:
     gatewayConnection: { url: "ws://127.0.0.1:18789" },
     remoteUrlMissing: false,
     gatewayMode: "local" as const,
-    gatewayProbeAuth: process.env.OPENCLAW_GATEWAY_TOKEN
-      ? { token: process.env.OPENCLAW_GATEWAY_TOKEN }
+    gatewayProbeAuth: process.env.DEX_GATEWAY_TOKEN
+      ? { token: process.env.DEX_GATEWAY_TOKEN }
       : {},
     gatewayProbeAuthWarning: gatewayAuthWarning,
     gatewayProbe,
@@ -668,7 +668,7 @@ vi.mock("../gateway/call.js", () => ({
           path: "gateway.auth.token",
         });
       }
-      const envToken = process.env.OPENCLAW_GATEWAY_TOKEN?.trim();
+      const envToken = process.env.DEX_GATEWAY_TOKEN?.trim();
       return envToken ? { token: envToken } : {};
     },
   ),
@@ -1274,7 +1274,7 @@ describe("statusCommand", () => {
       session: {},
       channels: { whatsapp: { allowFrom: ["*"] } },
     });
-    await withEnvVar("OPENCLAW_GATEWAY_TOKEN", "abcd1234", async () => {
+    await withEnvVar("DEX_GATEWAY_TOKEN", "abcd1234", async () => {
       mockProbeGatewayResult({
         ok: true,
         connectLatencyMs: 123,

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLlmStreamSimpleMock } from "../../../test/helpers/agents/llm-stream-simple-mock.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import type { Model, SimpleStreamOptions } from "../../llm/types.js";
 
 vi.mock("../../llm/stream.js", () => createLlmStreamSimpleMock());
@@ -12,7 +12,7 @@ type ToolStreamCase = {
   applyProvider: string;
   applyModelId: string;
   model: Model<"openai-completions">;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   options?: SimpleStreamOptions;
 };
 

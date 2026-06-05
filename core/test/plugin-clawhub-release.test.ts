@@ -14,7 +14,7 @@ import {
 } from "../scripts/lib/plugin-clawhub-release.ts";
 import {
   collectPublishablePluginPackages,
-  OPENCLAW_PLUGIN_NPM_REPOSITORY_URL,
+  DEX_PLUGIN_NPM_REPOSITORY_URL,
 } from "../scripts/lib/plugin-npm-release.ts";
 import { cleanupTempDirs, makeTempRepoRoot } from "./helpers/temp-repo.js";
 
@@ -206,7 +206,7 @@ describe("collectClawHubVersionGateErrors", () => {
           version: "2026.4.1",
           repository: {
             type: "git",
-            url: OPENCLAW_PLUGIN_NPM_REPOSITORY_URL,
+            url: DEX_PLUGIN_NPM_REPOSITORY_URL,
           },
           openclaw: {
             extensions: ["./index.ts"],
@@ -491,7 +491,7 @@ exit 0
         encoding: "utf8",
         env: {
           ...process.env,
-          OPENCLAW_PLUGIN_NPM_RUNTIME_BUILD: "0",
+          DEX_PLUGIN_NPM_RUNTIME_BUILD: "0",
           PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
         },
       },
@@ -555,7 +555,7 @@ function createTempPluginRepo(
           version: "2026.4.1",
           repository: {
             type: "git",
-            url: OPENCLAW_PLUGIN_NPM_REPOSITORY_URL,
+            url: DEX_PLUGIN_NPM_REPOSITORY_URL,
           },
           openclaw: {
             extensions: ["./index.ts"],

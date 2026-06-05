@@ -11,9 +11,9 @@ let envSnapshot: ReturnType<typeof captureEnv>;
 let stateDir = "";
 
 beforeEach(async () => {
-  envSnapshot = captureEnv(["OPENCLAW_STATE_DIR"]);
+  envSnapshot = captureEnv(["DEX_STATE_DIR"]);
   stateDir = await tempDirs.make("openclaw-skill-workshop-state-");
-  process.env.OPENCLAW_STATE_DIR = stateDir;
+  process.env.DEX_STATE_DIR = stateDir;
 });
 
 afterEach(async () => {

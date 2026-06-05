@@ -12,8 +12,8 @@ const dotenvState = vi.hoisted(() => {
   return {
     state,
     loadDotEnv: vi.fn(() => {
-      state.profileAtDotenvLoad = process.env.OPENCLAW_PROFILE;
-      state.containerAtDotenvLoad = process.env.OPENCLAW_CONTAINER;
+      state.profileAtDotenvLoad = process.env.DEX_PROFILE;
+      state.containerAtDotenvLoad = process.env.DEX_CONTAINER;
     }),
   };
 });
@@ -74,24 +74,24 @@ vi.mock("./container-target.js", async () => {
 import { runCli } from "./run-main.js";
 
 describe("runCli profile env bootstrap", () => {
-  const originalProfile = process.env.OPENCLAW_PROFILE;
-  const originalStateDir = process.env.OPENCLAW_STATE_DIR;
-  const originalConfigPath = process.env.OPENCLAW_CONFIG_PATH;
-  const originalContainer = process.env.OPENCLAW_CONTAINER;
-  const originalGatewayPort = process.env.OPENCLAW_GATEWAY_PORT;
-  const originalGatewayUrl = process.env.OPENCLAW_GATEWAY_URL;
-  const originalGatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN;
-  const originalGatewayPassword = process.env.OPENCLAW_GATEWAY_PASSWORD;
+  const originalProfile = process.env.DEX_PROFILE;
+  const originalStateDir = process.env.DEX_STATE_DIR;
+  const originalConfigPath = process.env.DEX_CONFIG_PATH;
+  const originalContainer = process.env.DEX_CONTAINER;
+  const originalGatewayPort = process.env.DEX_GATEWAY_PORT;
+  const originalGatewayUrl = process.env.DEX_GATEWAY_URL;
+  const originalGatewayToken = process.env.DEX_GATEWAY_TOKEN;
+  const originalGatewayPassword = process.env.DEX_GATEWAY_PASSWORD;
 
   beforeEach(() => {
-    delete process.env.OPENCLAW_PROFILE;
-    delete process.env.OPENCLAW_STATE_DIR;
-    delete process.env.OPENCLAW_CONFIG_PATH;
-    delete process.env.OPENCLAW_CONTAINER;
-    delete process.env.OPENCLAW_GATEWAY_PORT;
-    delete process.env.OPENCLAW_GATEWAY_URL;
-    delete process.env.OPENCLAW_GATEWAY_TOKEN;
-    delete process.env.OPENCLAW_GATEWAY_PASSWORD;
+    delete process.env.DEX_PROFILE;
+    delete process.env.DEX_STATE_DIR;
+    delete process.env.DEX_CONFIG_PATH;
+    delete process.env.DEX_CONTAINER;
+    delete process.env.DEX_GATEWAY_PORT;
+    delete process.env.DEX_GATEWAY_URL;
+    delete process.env.DEX_GATEWAY_TOKEN;
+    delete process.env.DEX_GATEWAY_PASSWORD;
     dotenvState.state.profileAtDotenvLoad = undefined;
     dotenvState.state.containerAtDotenvLoad = undefined;
     dotenvState.loadDotEnv.mockClear();
@@ -101,44 +101,44 @@ describe("runCli profile env bootstrap", () => {
 
   afterEach(() => {
     if (originalProfile === undefined) {
-      delete process.env.OPENCLAW_PROFILE;
+      delete process.env.DEX_PROFILE;
     } else {
-      process.env.OPENCLAW_PROFILE = originalProfile;
+      process.env.DEX_PROFILE = originalProfile;
     }
     if (originalContainer === undefined) {
-      delete process.env.OPENCLAW_CONTAINER;
+      delete process.env.DEX_CONTAINER;
     } else {
-      process.env.OPENCLAW_CONTAINER = originalContainer;
+      process.env.DEX_CONTAINER = originalContainer;
     }
     if (originalStateDir === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.DEX_STATE_DIR;
     } else {
-      process.env.OPENCLAW_STATE_DIR = originalStateDir;
+      process.env.DEX_STATE_DIR = originalStateDir;
     }
     if (originalConfigPath === undefined) {
-      delete process.env.OPENCLAW_CONFIG_PATH;
+      delete process.env.DEX_CONFIG_PATH;
     } else {
-      process.env.OPENCLAW_CONFIG_PATH = originalConfigPath;
+      process.env.DEX_CONFIG_PATH = originalConfigPath;
     }
     if (originalGatewayPort === undefined) {
-      delete process.env.OPENCLAW_GATEWAY_PORT;
+      delete process.env.DEX_GATEWAY_PORT;
     } else {
-      process.env.OPENCLAW_GATEWAY_PORT = originalGatewayPort;
+      process.env.DEX_GATEWAY_PORT = originalGatewayPort;
     }
     if (originalGatewayUrl === undefined) {
-      delete process.env.OPENCLAW_GATEWAY_URL;
+      delete process.env.DEX_GATEWAY_URL;
     } else {
-      process.env.OPENCLAW_GATEWAY_URL = originalGatewayUrl;
+      process.env.DEX_GATEWAY_URL = originalGatewayUrl;
     }
     if (originalGatewayToken === undefined) {
-      delete process.env.OPENCLAW_GATEWAY_TOKEN;
+      delete process.env.DEX_GATEWAY_TOKEN;
     } else {
-      process.env.OPENCLAW_GATEWAY_TOKEN = originalGatewayToken;
+      process.env.DEX_GATEWAY_TOKEN = originalGatewayToken;
     }
     if (originalGatewayPassword === undefined) {
-      delete process.env.OPENCLAW_GATEWAY_PASSWORD;
+      delete process.env.DEX_GATEWAY_PASSWORD;
     } else {
-      process.env.OPENCLAW_GATEWAY_PASSWORD = originalGatewayPassword;
+      process.env.DEX_GATEWAY_PASSWORD = originalGatewayPassword;
     }
   });
 
@@ -148,7 +148,7 @@ describe("runCli profile env bootstrap", () => {
 
     expect(dotenvState.loadDotEnv).toHaveBeenCalledOnce();
     expect(dotenvState.state.profileAtDotenvLoad).toBe("rawdog");
-    expect(process.env.OPENCLAW_PROFILE).toBe("rawdog");
+    expect(process.env.DEX_PROFILE).toBe("rawdog");
   });
 
   it("rejects --container combined with --profile", async () => {
@@ -157,7 +157,7 @@ describe("runCli profile env bootstrap", () => {
     ).rejects.toThrow("--container cannot be combined with --profile/--dev");
 
     expect(dotenvState.loadDotEnv).not.toHaveBeenCalled();
-    expect(process.env.OPENCLAW_PROFILE).toBe("rawdog");
+    expect(process.env.DEX_PROFILE).toBe("rawdog");
   });
 
   it("rejects --container combined with interleaved --profile", async () => {
@@ -175,15 +175,15 @@ describe("runCli profile env bootstrap", () => {
   it("does not let dotenv change container target resolution", async () => {
     fileState.hasCliDotEnv = true;
     dotenvState.loadDotEnv.mockImplementationOnce(() => {
-      process.env.OPENCLAW_CONTAINER = "demo";
-      dotenvState.state.profileAtDotenvLoad = process.env.OPENCLAW_PROFILE;
-      dotenvState.state.containerAtDotenvLoad = process.env.OPENCLAW_CONTAINER;
+      process.env.DEX_CONTAINER = "demo";
+      dotenvState.state.profileAtDotenvLoad = process.env.DEX_PROFILE;
+      dotenvState.state.containerAtDotenvLoad = process.env.DEX_CONTAINER;
     });
 
     await runCli(["node", "openclaw", "status"]);
 
     expect(dotenvState.loadDotEnv).toHaveBeenCalledOnce();
-    expect(process.env.OPENCLAW_CONTAINER).toBe("demo");
+    expect(process.env.DEX_CONTAINER).toBe("demo");
     expect(dotenvState.state.containerAtDotenvLoad).toBe("demo");
     expect(maybeRunCliInContainerMock).toHaveBeenCalledWith(["node", "openclaw", "status"]);
     expect(maybeRunCliInContainerMock).toHaveReturnedWith({
@@ -192,8 +192,8 @@ describe("runCli profile env bootstrap", () => {
     });
   });
 
-  it("allows container mode when OPENCLAW_PROFILE is already set in env", async () => {
-    process.env.OPENCLAW_PROFILE = "work";
+  it("allows container mode when DEX_PROFILE is already set in env", async () => {
+    process.env.DEX_PROFILE = "work";
 
     await expect(
       runCli(["node", "openclaw", "--container", "demo", "status"]),
@@ -201,10 +201,10 @@ describe("runCli profile env bootstrap", () => {
   });
 
   it.each([
-    ["OPENCLAW_GATEWAY_PORT", "19001"],
-    ["OPENCLAW_GATEWAY_URL", "ws://127.0.0.1:18789"],
-    ["OPENCLAW_GATEWAY_TOKEN", "demo-token"],
-    ["OPENCLAW_GATEWAY_PASSWORD", "demo-password"],
+    ["DEX_GATEWAY_PORT", "19001"],
+    ["DEX_GATEWAY_URL", "ws://127.0.0.1:18789"],
+    ["DEX_GATEWAY_TOKEN", "demo-token"],
+    ["DEX_GATEWAY_PASSWORD", "demo-password"],
   ])("allows container mode when %s is set in env", async (key, value) => {
     process.env[key] = value;
 
@@ -213,16 +213,16 @@ describe("runCli profile env bootstrap", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("allows container mode when only OPENCLAW_STATE_DIR is set in env", async () => {
-    process.env.OPENCLAW_STATE_DIR = "/tmp/openclaw-host-state";
+  it("allows container mode when only DEX_STATE_DIR is set in env", async () => {
+    process.env.DEX_STATE_DIR = "/tmp/openclaw-host-state";
 
     await expect(
       runCli(["node", "openclaw", "--container", "demo", "status"]),
     ).resolves.toBeUndefined();
   });
 
-  it("allows container mode when only OPENCLAW_CONFIG_PATH is set in env", async () => {
-    process.env.OPENCLAW_CONFIG_PATH = "/tmp/openclaw-host-state/openclaw.json";
+  it("allows container mode when only DEX_CONFIG_PATH is set in env", async () => {
+    process.env.DEX_CONFIG_PATH = "/tmp/openclaw-host-state/openclaw.json";
 
     await expect(
       runCli(["node", "openclaw", "--container", "demo", "status"]),

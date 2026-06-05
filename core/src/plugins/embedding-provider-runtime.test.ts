@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import {
   clearEmbeddingProviders,
   registerEmbeddingProvider,
@@ -91,7 +91,7 @@ describe("embedding provider runtime resolution", () => {
           },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     expect(runtimeModule.getEmbeddingProvider("tenant-embeddings", cfg)?.id).toBe(
       "openai-compatible",

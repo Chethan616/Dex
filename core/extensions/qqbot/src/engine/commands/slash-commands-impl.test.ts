@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { describe, expect, it } from "vitest";
 import { resolveQQBotCommandsAllowFrom, resolveSlashCommandAuth } from "./slash-command-auth.js";
 import { getWrittenQQBotConfig, installCommandRuntime } from "./slash-command-test-support.js";
@@ -73,7 +73,7 @@ describe("QQBot framework slash commands", () => {
   });
 
   it("does not write streaming config when the sender is not command-authorized", async () => {
-    const writes: OpenClawConfig[] = [];
+    const writes: DexConfig[] = [];
     installCommandRuntime(
       {
         channels: {
@@ -93,7 +93,7 @@ describe("QQBot framework slash commands", () => {
   });
 
   it("does not write streaming config when allowFrom mixes wildcard with another sender", async () => {
-    const writes: OpenClawConfig[] = [];
+    const writes: DexConfig[] = [];
     const allowFrom = ["*", "TRUSTED_OPENID"];
     installCommandRuntime(
       {
@@ -125,7 +125,7 @@ describe("QQBot framework slash commands", () => {
   });
 
   it("writes streaming config when commands.allowFrom grants the sender in open DM configs", async () => {
-    const writes: OpenClawConfig[] = [];
+    const writes: DexConfig[] = [];
     installCommandRuntime(
       {
         commands: {
@@ -171,7 +171,7 @@ describe("QQBot framework slash commands", () => {
   });
 
   it("writes streaming config when the sender is command-authorized", async () => {
-    const writes: OpenClawConfig[] = [];
+    const writes: DexConfig[] = [];
     const allowFrom = ["*", "TRUSTED_OPENID"];
     installCommandRuntime(
       {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../../config/config.js";
+import type { DexConfig } from "../../../config/config.js";
 import type { DoctorConfigPreflightResult } from "../../doctor-config-preflight.js";
 
 const { migrateLegacyConfigMock, stripUnknownConfigKeysMock } = vi.hoisted(() => ({
@@ -37,7 +37,7 @@ function createLegacyStepResult(
 describe("doctor config flow steps", () => {
   beforeEach(() => {
     migrateLegacyConfigMock.mockReset();
-    migrateLegacyConfigMock.mockImplementation((config: OpenClawConfig) => ({
+    migrateLegacyConfigMock.mockImplementation((config: DexConfig) => ({
       config,
       changes: [],
     }));
@@ -150,7 +150,7 @@ describe("doctor config flow steps", () => {
     const result = applyUnknownConfigKeyStep({
       state: {
         cfg: {},
-        candidate: { bogus: true } as unknown as OpenClawConfig,
+        candidate: { bogus: true } as unknown as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -212,7 +212,7 @@ describe("doctor config flow steps", () => {
               },
             },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -278,7 +278,7 @@ describe("doctor config flow steps", () => {
               },
             },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -328,7 +328,7 @@ describe("doctor config flow steps", () => {
               },
             },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -380,7 +380,7 @@ describe("doctor config flow steps", () => {
               },
             },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -429,7 +429,7 @@ describe("doctor config flow steps", () => {
               },
             },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -479,7 +479,7 @@ describe("doctor config flow steps", () => {
               },
             },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },

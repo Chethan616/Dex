@@ -3,9 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import type { Model } from "openclaw/plugin-sdk/llm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { withEnvAsync } from "../test-utils/env.js";
-import { withOpenClawTestState } from "../test-utils/openclaw-test-state.js";
+import { withDexTestState } from "../test-utils/openclaw-test-state.js";
 import {
   clearRuntimeAuthProfileStoreSnapshots,
   ensureAuthProfileStore,
@@ -147,7 +147,7 @@ vi.mock("./model-auth-env-vars.js", () => {
     bedrock: "amazon-bedrock",
     "aws-bedrock": "amazon-bedrock",
   };
-  const resolveProviderEnvAuthEvidence = (params?: { config?: OpenClawConfig }) => {
+  const resolveProviderEnvAuthEvidence = (params?: { config?: DexConfig }) => {
     const evidence = {
       "google-vertex": [
         {
@@ -183,7 +183,7 @@ vi.mock("./model-auth-env-vars.js", () => {
     listKnownProviderEnvApiKeyNames: () => [...new Set(Object.values(candidates).flat())],
     resolveProviderEnvApiKeyCandidates: () => candidates,
     resolveProviderEnvAuthEvidence,
-    resolveProviderEnvAuthLookupMaps: (params?: { config?: OpenClawConfig }) => ({
+    resolveProviderEnvAuthLookupMaps: (params?: { config?: DexConfig }) => ({
       aliasMap,
       envCandidateMap: candidates,
       authEvidenceMap: resolveProviderEnvAuthEvidence(params),
@@ -367,7 +367,7 @@ function buildDemoLocalStore(keys: string[]) {
   };
 }
 
-function buildDemoLocalProviderCfg(apiKey: string): OpenClawConfig {
+function buildDemoLocalProviderCfg(apiKey: string): DexConfig {
   return {
     models: {
       providers: {
@@ -398,7 +398,7 @@ async function resolveDemoLocalApiKey(params: {
 
 describe("getApiKeyForModel", () => {
   it("reads oauth auth-profiles entries from auth-profiles.json via explicit profile", async () => {
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-oauth-",
@@ -422,14 +422,14 @@ describe("getApiKeyForModel", () => {
           api: "openai-chatgpt-responses",
         } as Model;
 
-        const store = ensureAuthProfileStore(process.env.OPENCLAW_AGENT_DIR, {
+        const store = ensureAuthProfileStore(process.env.DEX_AGENT_DIR, {
           allowKeychainPrompt: false,
         });
         const apiKey = await getApiKeyForModel({
           model,
           profileId: "openai:default",
           store,
-          agentDir: process.env.OPENCLAW_AGENT_DIR,
+          agentDir: process.env.DEX_AGENT_DIR,
         });
         expect(apiKey.apiKey).toBe(oauthFixture.access);
       },
@@ -509,7 +509,7 @@ describe("getApiKeyForModel", () => {
   });
 
   it("uses the config default agent dir when resolving provider profiles", async () => {
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-auth-agent-dir-",
@@ -546,7 +546,7 @@ describe("getApiKeyForModel", () => {
           "configured",
         );
 
-        const cfg: OpenClawConfig = {
+        const cfg: DexConfig = {
           agents: {
             list: [
               {
@@ -566,7 +566,7 @@ describe("getApiKeyForModel", () => {
   });
 
   it("reports the config default agent dir when provider auth is missing", async () => {
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-auth-missing-agent-dir-",
@@ -577,7 +577,7 @@ describe("getApiKeyForModel", () => {
       },
       async (state) => {
         const configuredAgentDir = state.agentDir("configured");
-        const cfg: OpenClawConfig = {
+        const cfg: DexConfig = {
           agents: {
             list: [
               {
@@ -597,7 +597,7 @@ describe("getApiKeyForModel", () => {
   });
 
   it("uses OpenAI OAuth when it is configured for the provider", async () => {
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-auth-",
@@ -638,7 +638,7 @@ describe("getApiKeyForModel", () => {
       expires: createUsableOAuthExpiry(),
     });
 
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-auth-scope-",
@@ -668,7 +668,7 @@ describe("getApiKeyForModel", () => {
       expires: createUsableOAuthExpiry(),
     });
 
-    await withOpenClawTestState(
+    await withDexTestState(
       {
         layout: "state-only",
         prefix: "openclaw-auth-claude-cli-",
@@ -776,7 +776,7 @@ describe("getApiKeyForModel", () => {
     const credentialsPath = path.join(tempDir, "credentials.json");
     await fs.writeFile(credentialsPath, "{}", "utf8");
 
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       plugins: {
         allow: ["workspace-cloud"],
       },
@@ -877,12 +877,12 @@ describe("getApiKeyForModel", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await expect(
       hasAuthForModelProvider({
         provider: "amazon-bedrock",
-        cfg: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
         env: {},
         store,
       }),

@@ -3,8 +3,8 @@ import { EventHub, OpenClaw, normalizeGatewayEvent } from "./index.js";
 import type {
   GatewayEvent,
   GatewayRequestOptions,
-  OpenClawEvent,
-  OpenClawTransport,
+  DexEvent,
+  DexTransport,
 } from "./types.js";
 
 type RequestCall = {
@@ -21,7 +21,7 @@ type FakeResponseHandler = (
 ) => Promise<FakeResponseValue> | FakeResponseValue;
 type FakeResponse = FakeResponseValue | FakeResponseHandler;
 
-class FakeTransport implements OpenClawTransport {
+class FakeTransport implements DexTransport {
   readonly calls: RequestCall[] = [];
   private readonly eventHub = new EventHub<GatewayEvent>({ replayLimit: 100 });
 
@@ -763,7 +763,7 @@ describe("OpenClaw SDK", () => {
       idempotencyKey: "chat-projection-events",
       sessionKey: "chat-projection",
     });
-    const seen: OpenClawEvent[] = [];
+    const seen: DexEvent[] = [];
 
     for await (const event of run.events()) {
       seen.push(event);
@@ -986,7 +986,7 @@ describe("OpenClaw SDK", () => {
     const oc = new OpenClaw({ transport });
     const runId = "run_chat_delta_text_replay";
     let text = "";
-    let iterator: AsyncIterator<OpenClawEvent> | undefined;
+    let iterator: AsyncIterator<DexEvent> | undefined;
 
     try {
       await oc.connect();

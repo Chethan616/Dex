@@ -94,8 +94,8 @@ describe("buildMinimaxSpeechProvider", () => {
       tempStateDir = await mkdtemp(path.join(tmpdir(), "openclaw-minimax-tts-auth-"));
       tempAgentDir = path.join(tempStateDir, "agents", "main", "agent");
       await mkdir(tempAgentDir, { recursive: true });
-      process.env.OPENCLAW_STATE_DIR = tempStateDir;
-      process.env.OPENCLAW_AGENT_DIR = tempAgentDir;
+      process.env.DEX_STATE_DIR = tempStateDir;
+      process.env.DEX_AGENT_DIR = tempAgentDir;
       clearMinimaxAuthEnv();
     });
 
@@ -355,8 +355,8 @@ describe("buildMinimaxSpeechProvider", () => {
       await mkdir(tempAgentDir, { recursive: true });
       process.env = {
         ...savedEnv,
-        OPENCLAW_AGENT_DIR: tempAgentDir,
-        OPENCLAW_STATE_DIR: tempStateDir,
+        DEX_AGENT_DIR: tempAgentDir,
+        DEX_STATE_DIR: tempStateDir,
       };
       clearMinimaxAuthEnv();
       vi.stubGlobal("fetch", vi.fn());

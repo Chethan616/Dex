@@ -10,24 +10,24 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  originalTestFileLog = process.env.OPENCLAW_TEST_FILE_LOG;
-  originalOpenClawLogLevel = process.env.OPENCLAW_LOG_LEVEL;
-  delete process.env.OPENCLAW_TEST_FILE_LOG;
-  delete process.env.OPENCLAW_LOG_LEVEL;
+  originalTestFileLog = process.env.DEX_TEST_FILE_LOG;
+  originalOpenClawLogLevel = process.env.DEX_LOG_LEVEL;
+  delete process.env.DEX_TEST_FILE_LOG;
+  delete process.env.DEX_LOG_LEVEL;
   logging.resetLogger();
   logging.setLoggerOverride(null);
 });
 
 afterEach(() => {
   if (originalTestFileLog === undefined) {
-    delete process.env.OPENCLAW_TEST_FILE_LOG;
+    delete process.env.DEX_TEST_FILE_LOG;
   } else {
-    process.env.OPENCLAW_TEST_FILE_LOG = originalTestFileLog;
+    process.env.DEX_TEST_FILE_LOG = originalTestFileLog;
   }
   if (originalOpenClawLogLevel === undefined) {
-    delete process.env.OPENCLAW_LOG_LEVEL;
+    delete process.env.DEX_LOG_LEVEL;
   } else {
-    process.env.OPENCLAW_LOG_LEVEL = originalOpenClawLogLevel;
+    process.env.DEX_LOG_LEVEL = originalOpenClawLogLevel;
   }
   logging.resetLogger();
   logging.setLoggerOverride(null);
@@ -47,7 +47,7 @@ describe("getResolvedLoggerSettings", () => {
   });
 
   it("reads logging config when test file logging is explicitly enabled", () => {
-    process.env.OPENCLAW_TEST_FILE_LOG = "1";
+    process.env.DEX_TEST_FILE_LOG = "1";
     logging.setLoggerConfigLoaderForTests(() => ({
       level: "debug",
       file: "/tmp/openclaw-configured.log",
@@ -62,7 +62,7 @@ describe("getResolvedLoggerSettings", () => {
   });
 
   it("uses defaults when no logging config is available", () => {
-    process.env.OPENCLAW_TEST_FILE_LOG = "1";
+    process.env.DEX_TEST_FILE_LOG = "1";
     logging.setLoggerConfigLoaderForTests(() => undefined);
 
     const settings = logging.getResolvedLoggerSettings();

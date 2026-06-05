@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { isInboundPathAllowed } from "@dexagent/media-core/inbound-path-policy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import type { ModelDefinitionConfig } from "../../config/types.models.js";
 import { encodePngRgba, fillPixel } from "../../media/png-encode.js";
 import type {
@@ -13,7 +13,7 @@ import type {
   MediaUnderstandingProvider,
 } from "../../plugin-sdk/media-understanding.js";
 import { withFetchPreconnect } from "../../test-utils/fetch-mock.js";
-import { createOpenClawCodingTools } from "../agent-tools.js";
+import { createDexCodingTools } from "../agent-tools.js";
 import { minimaxUnderstandImage } from "../minimax-vlm.js";
 import type { SandboxFsBridge } from "../sandbox/fs-bridge.js";
 import { createHostSandboxFsBridge } from "../test-helpers/host-sandbox-fs-bridge.js";
@@ -37,7 +37,7 @@ const publicSurfaceLoaderMocks = vi.hoisted(() => ({
             cfg,
           }: {
             accountId?: string | null;
-            cfg: OpenClawConfig;
+            cfg: DexConfig;
           }) => [
             ...((accountId
               ? cfg.channels?.imessage?.accounts?.[accountId]?.attachmentRoots
@@ -56,9 +56,9 @@ const publicSurfaceLoaderMocks = vi.hoisted(() => ({
 
 vi.mock("../../plugins/public-surface-loader.js", () => publicSurfaceLoaderMocks);
 
-type CreateOpenClawCodingToolsArgs = Parameters<typeof createOpenClawCodingTools>[0];
-type MockOpenClawToolsOptions = {
-  config?: OpenClawConfig;
+type CreateDexCodingToolsArgs = Parameters<typeof createDexCodingTools>[0];
+type MockDexToolsOptions = {
+  config?: DexConfig;
   agentDir?: string;
   workspaceDir?: string;
   sandboxRoot?: string;
@@ -136,7 +136,7 @@ vi.mock("../agent-tools.abort.js", () => ({
 // and channel-inbound tests cover the real bundled contract loader.
 vi.mock("../../media/channel-inbound-roots.js", () => ({
   resolveChannelInboundAttachmentRootsForChannel: (params: {
-    cfg?: OpenClawConfig;
+    cfg?: DexConfig;
     channelId?: string | null;
     accountId?: string | null;
   }) => {
@@ -185,7 +185,7 @@ vi.mock("../auth-profiles.js", () => ({
 }));
 
 vi.mock("../model-auth.js", () => ({
-  hasUsableCustomProviderApiKey: (cfg?: OpenClawConfig, provider?: string) => {
+  hasUsableCustomProviderApiKey: (cfg?: DexConfig, provider?: string) => {
     const providerConfig = cfg?.models?.providers?.[provider ?? ""];
     const apiKey = providerConfig?.apiKey;
     return typeof apiKey === "string" && apiKey.trim().length > 0;
@@ -217,7 +217,7 @@ vi.mock("../model-auth.js", () => ({
 vi.mock("../openclaw-tools.js", async () => {
   const { createImageTool: createImageToolLocal } = await import("./image-tool.js");
   return {
-    createOpenClawTools: vi.fn((options?: MockOpenClawToolsOptions) => {
+    createOpenClawTools: vi.fn((options?: MockDexToolsOptions) => {
       const imageTool = createImageToolLocal({
         config: options?.config,
         agentDir: options?.agentDir,
@@ -249,7 +249,7 @@ async function writeAuthProfiles(agentDir: string, profiles: unknown) {
   );
 }
 
-async function createOpenClawCodingToolsWithFreshModules(options?: CreateOpenClawCodingToolsArgs) {
+async function createDexCodingToolsWithFreshModules(options?: CreateDexCodingToolsArgs) {
   const defaultImageModels = new Map<string, string>([
     ["anthropic", "claude-opus-4-6"],
     ["minimax", "MiniMax-VL-01"],
@@ -275,7 +275,7 @@ async function createOpenClawCodingToolsWithFreshModules(options?: CreateOpenCla
     resolveDefaultMediaModel: ({ providerId, capability }) =>
       capability === "image" ? defaultImageModels.get(providerId.toLowerCase()) : undefined,
   });
-  return createOpenClawCodingTools(options);
+  return createDexCodingTools(options);
 }
 
 async function withTempAgentDir<T>(run: (agentDir: string) => Promise<T>): Promise<T> {
@@ -445,7 +445,7 @@ function stubOpenAiCompletionsOkFetch(text = "ok") {
   return fetch;
 }
 
-function createMinimaxImageConfig(): OpenClawConfig {
+function createMinimaxImageConfig(): DexConfig {
   return {
     agents: {
       defaults: {
@@ -850,7 +850,7 @@ describe("image tool implicit imageModel config", () => {
 
   it("stays disabled without auth when no pairing is possible", async () => {
     await withTempAgentDir(async (agentDir) => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "openai/gpt-5.4" } } },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toBeNull();
@@ -874,7 +874,7 @@ describe("image tool implicit imageModel config", () => {
         resolveDefaultMediaModel: resolveDefaultMediaModelSpy,
         resolveAutoMediaKeyProviders: resolveAutoMediaKeyProvidersSpy,
       });
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "openai/gpt-5.4" } } },
       };
 
@@ -901,7 +901,7 @@ describe("image tool implicit imageModel config", () => {
         capabilities: ["image"],
         describeImage,
       });
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "opencode-go/kimi-k2.6" } } },
       };
       const tool = createRequiredImageTool({
@@ -929,7 +929,7 @@ describe("image tool implicit imageModel config", () => {
       vi.stubEnv("MINIMAX_OAUTH_TOKEN", "minimax-oauth-test");
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
       vi.stubEnv("ANTHROPIC_API_KEY", "anthropic-test");
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "minimax/MiniMax-M2.7" } } },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual({
@@ -945,7 +945,7 @@ describe("image tool implicit imageModel config", () => {
       vi.stubEnv("MINIMAX_API_KEY", "minimax-test");
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
       vi.stubEnv("ANTHROPIC_API_KEY", "anthropic-test");
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "minimax/MiniMax-M2.7" } } },
         models: {
           mode: "merge",
@@ -969,7 +969,7 @@ describe("image tool implicit imageModel config", () => {
 
   it("keeps MiniMax CN chat metadata off automatic image routing", async () => {
     await withTempAgentDir(async (agentDir) => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "minimax-cn/MiniMax-M2.5" } } },
         models: {
           mode: "merge",
@@ -1019,7 +1019,7 @@ describe("image tool implicit imageModel config", () => {
         resolveDefaultMediaModel: ({ providerId, capability }) =>
           capability === "image" ? defaultImageModels.get(providerId.toLowerCase()) : undefined,
       });
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         models: {
           mode: "merge",
           providers: {
@@ -1062,7 +1062,7 @@ describe("image tool implicit imageModel config", () => {
         resolveDefaultMediaModel: ({ providerId, capability }) =>
           capability === "image" && providerId === "minimax" ? "MiniMax-VL-01" : undefined,
       });
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         models: {
           mode: "merge",
           providers: {
@@ -1100,7 +1100,7 @@ describe("image tool implicit imageModel config", () => {
           capabilities: ["image"],
           describeImage,
         });
-        const cfg: OpenClawConfig = {
+        const cfg: DexConfig = {
           agents: {
             defaults: {
               imageModel: { primary: "ollama/gemma4:26b-a4b-it-q4_K_M" },
@@ -1133,7 +1133,7 @@ describe("image tool implicit imageModel config", () => {
           capabilities: ["image"],
           describeImage,
         });
-        const cfg: OpenClawConfig = {
+        const cfg: DexConfig = {
           agents: {
             defaults: {
               imageModel: { primary: "ollama/gemma4:26b-a4b-it-q4_K_M" },
@@ -1179,7 +1179,7 @@ describe("image tool implicit imageModel config", () => {
       });
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
       vi.stubEnv("ANTHROPIC_API_KEY", "anthropic-test");
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "minimax-portal/MiniMax-M2.7" } } },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual(
@@ -1192,7 +1192,7 @@ describe("image tool implicit imageModel config", () => {
   it("pairs opencode primary with the plugin-owned image model when auth exists", async () => {
     await withTempAgentDir(async (agentDir) => {
       vi.stubEnv("OPENCODE_API_KEY", "opencode-test");
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "opencode/minimax-m2.7" } } },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual({
@@ -1205,7 +1205,7 @@ describe("image tool implicit imageModel config", () => {
   it("pairs opencode-go primary with the Go plugin-owned image model when auth exists", async () => {
     await withTempAgentDir(async (agentDir) => {
       vi.stubEnv("OPENCODE_API_KEY", "opencode-test");
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "opencode-go/minimax-m2.7" } } },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual({
@@ -1220,7 +1220,7 @@ describe("image tool implicit imageModel config", () => {
       vi.stubEnv("ZAI_API_KEY", "zai-test");
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
       vi.stubEnv("ANTHROPIC_API_KEY", "anthropic-test");
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "zai/glm-4.7" } } },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual(
@@ -1238,7 +1238,7 @@ describe("image tool implicit imageModel config", () => {
           "acme:default": { type: "api_key", provider: "acme", key: "sk-test" },
         },
       });
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "acme/text-1" } } },
         models: {
           providers: {
@@ -1261,7 +1261,7 @@ describe("image tool implicit imageModel config", () => {
 
   it("pairs a custom provider when config declares its api key", async () => {
     await withTempAgentDir(async (agentDir) => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "hatchery-qwen3.6-plus/text-1" } } },
         models: {
           providers: {
@@ -1291,7 +1291,7 @@ describe("image tool implicit imageModel config", () => {
           "kimchi:default": { type: "api_key", provider: "kimchi", key: "sk-test" },
         },
       });
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "kimchi/text-1" } } },
         models: {
           providers: {
@@ -1324,7 +1324,7 @@ describe("image tool implicit imageModel config", () => {
           },
         },
       });
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "aws-bedrock/text-1" } } },
         models: {
           providers: {
@@ -1344,7 +1344,7 @@ describe("image tool implicit imageModel config", () => {
 
   it("prefers explicit agents.defaults.imageModel", async () => {
     await withTempAgentDir(async (agentDir) => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             model: { primary: "minimax/MiniMax-M2.7" },
@@ -1360,7 +1360,7 @@ describe("image tool implicit imageModel config", () => {
 
   it("resolves providerless explicit image models from unique configured image providers", async () => {
     await withTempAgentDir(async (agentDir) => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             imageModel: {
@@ -1401,7 +1401,7 @@ describe("image tool implicit imageModel config", () => {
         capabilities: ["image"],
         describeImage,
       });
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             imageModel: { primary: "moondream" },
@@ -1432,7 +1432,7 @@ describe("image tool implicit imageModel config", () => {
 
   it("rejects ambiguous providerless explicit image models", async () => {
     await withTempAgentDir(async (agentDir) => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             imageModel: { primary: "moondream" },
@@ -1460,7 +1460,7 @@ describe("image tool implicit imageModel config", () => {
 
   it("keeps unmatched providerless explicit image models on the legacy default-provider path", async () => {
     await withTempAgentDir(async (agentDir) => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             imageModel: { primary: "gpt-5.4-mini" },
@@ -1480,7 +1480,7 @@ describe("image tool implicit imageModel config", () => {
     // adjusted via modelHasVision to discourage redundant usage.
     vi.stubEnv("OPENAI_API_KEY", "test-key");
     await withTempAgentDir(async (agentDir) => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             model: { primary: "acme/vision-1" },
@@ -1512,7 +1512,7 @@ describe("image tool implicit imageModel config", () => {
     await withTempAgentDir(async (agentDir) => {
       vi.stubEnv("MOONSHOT_API_KEY", "moonshot-test");
       const fetch = stubOpenAiCompletionsOkFetch("ok moonshot");
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             model: { primary: "moonshot/kimi-k2.5" },
@@ -1571,7 +1571,7 @@ describe("image tool implicit imageModel config", () => {
   it("falls back to the generic image runtime when openrouter has no media provider registration", async () => {
     await withTempAgentDir(async (agentDir) => {
       const fetch = stubOpenAiCompletionsOkFetch("ok openrouter");
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             model: { primary: "openrouter/google/gemini-2.5-flash-lite" },
@@ -1604,7 +1604,7 @@ describe("image tool implicit imageModel config", () => {
   it("falls back to the generic multi-image runtime when openrouter has no media provider registration", async () => {
     await withTempAgentDir(async (agentDir) => {
       const fetch = stubOpenAiCompletionsOkFetch("ok multi");
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             model: { primary: "openrouter/google/gemini-2.5-flash-lite" },
@@ -1653,7 +1653,7 @@ describe("image tool implicit imageModel config", () => {
         },
       });
       const fetch = stubMinimaxOkFetch();
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             model: { primary: "minimax-portal/MiniMax-M2.7" },
@@ -1799,7 +1799,7 @@ describe("image tool implicit imageModel config", () => {
       const imagePath = path.join(attachmentRoot, "photo.png");
       await fs.writeFile(imagePath, Buffer.from(ONE_PIXEL_PNG_B64, "base64"));
       try {
-        const cfg: OpenClawConfig = {
+        const cfg: DexConfig = {
           agents: {
             defaults: {
               imageModel: { primary: "ollama/moondream" },
@@ -1872,7 +1872,7 @@ describe("image tool implicit imageModel config", () => {
       await fs.mkdir(attachmentRoot, { recursive: true });
       await fs.writeFile(imagePath, Buffer.from(ONE_PIXEL_PNG_B64, "base64"));
       try {
-        const cfg: OpenClawConfig = {
+        const cfg: DexConfig = {
           agents: {
             defaults: {
               imageModel: { primary: "ollama/moondream" },
@@ -1912,13 +1912,13 @@ describe("image tool implicit imageModel config", () => {
     });
   });
 
-  it("allows workspace images via createOpenClawCodingTools when workspace root is explicit", async () => {
+  it("allows workspace images via createDexCodingTools when workspace root is explicit", async () => {
     await withTempWorkspacePng(async ({ workspaceDir, imagePath }) => {
       const fetch = stubMinimaxOkFetch();
       await withTempAgentDir(async (agentDir) => {
         const cfg = createMinimaxImageConfig();
 
-        const tools = await createOpenClawCodingToolsWithFreshModules({
+        const tools = await createDexCodingToolsWithFreshModules({
           config: cfg,
           agentDir,
           workspaceDir,
@@ -1968,7 +1968,7 @@ describe("image tool implicit imageModel config", () => {
     vi.stubEnv("MINIMAX_API_KEY", "minimax-test");
 
     await withTempAgentDir(async (agentDir) => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         ...createMinimaxImageConfig(),
         tools: { web: { fetch: { ssrfPolicy: { allowRfc2544BenchmarkRange: true } } } },
       };
@@ -2027,7 +2027,7 @@ describe("image tool implicit imageModel config", () => {
       const sandbox = { root: sandboxRoot, bridge: createHostSandboxFsBridge(sandboxRoot) };
 
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: { defaults: { model: { primary: "minimax/MiniMax-M2.7" } } },
       };
       const tool = createRequiredImageTool({ config: cfg, agentDir, sandbox });
@@ -2050,12 +2050,12 @@ describe("image tool implicit imageModel config", () => {
       );
       const sandbox = createUnsafeMountedSandbox({ sandboxRoot, agentRoot: agentDir });
       const fetch = stubMinimaxOkFetch();
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         ...createMinimaxImageConfig(),
         tools: { fs: { workspaceOnly: true } },
       };
 
-      const tools = await createOpenClawCodingToolsWithFreshModules({
+      const tools = await createDexCodingToolsWithFreshModules({
         config: cfg,
         agentDir,
         sandbox,
@@ -2092,7 +2092,7 @@ describe("image tool implicit imageModel config", () => {
 
       const fetch = stubMinimaxOkFetch();
 
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             model: { primary: "minimax/MiniMax-M2.7" },
@@ -2155,7 +2155,7 @@ describe("image tool data URL support", () => {
           models: [model.mediaInput.image],
         }),
       });
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             imageModel: { primary: "openai/tiny-vision" },
@@ -2210,7 +2210,7 @@ describe("image tool data URL support", () => {
           }),
         },
       );
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             imageModel: { primary: "openai/tiny-vision" },
@@ -2256,7 +2256,7 @@ describe("image tool data URL support", () => {
           return { text: "ok", model: params.model };
         },
       });
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         agents: {
           defaults: {
             imageModel: { primary: "openai/plain-vision" },
@@ -2468,7 +2468,7 @@ describe("image tool managed inbound media", () => {
     const mediaPath = path.join(inboundDir, mediaId);
     await fs.mkdir(inboundDir, { recursive: true });
     await fs.writeFile(mediaPath, Buffer.from(ONE_PIXEL_PNG_B64, "base64"));
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
     try {
       await run({ stateDir, mediaId, mediaPath });
     } finally {
@@ -2770,12 +2770,12 @@ describe("image compression policy", () => {
         },
       },
     },
-  } satisfies OpenClawConfig;
+  } satisfies DexConfig;
 
   it("derives model metadata, quality preference, and image count from config", async () => {
     const cfg = {
       ...cfgWithImageModelMetadata,
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     await expect(
       testing.resolveImageCompressionPolicy({
@@ -2904,7 +2904,7 @@ describe("image compression policy", () => {
                 },
               },
             },
-          } satisfies OpenClawConfig,
+          } satisfies DexConfig,
           imageModelConfig: {
             primary: "anthropic/claude-opus-4.7-20260219",
           },

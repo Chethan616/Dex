@@ -4,10 +4,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   createAcpxProcessLeaseStore,
-  OPENCLAW_ACPX_LEASE_ID_ARG,
-  OPENCLAW_ACPX_LEASE_ID_ENV,
-  OPENCLAW_GATEWAY_INSTANCE_ID_ARG,
-  OPENCLAW_GATEWAY_INSTANCE_ID_ENV,
+  DEX_ACPX_LEASE_ID_ARG,
+  DEX_ACPX_LEASE_ID_ENV,
+  DEX_GATEWAY_INSTANCE_ID_ARG,
+  DEX_GATEWAY_INSTANCE_ID_ENV,
   withAcpxLeaseEnvironment,
   type AcpxProcessLease,
 } from "./process-lease.js";
@@ -55,12 +55,12 @@ describe("withAcpxLeaseEnvironment", () => {
     expect(command).toBe(
       [
         "env",
-        `${OPENCLAW_ACPX_LEASE_ID_ENV}=lease-test`,
-        `${OPENCLAW_GATEWAY_INSTANCE_ID_ENV}=gateway-test`,
+        `${DEX_ACPX_LEASE_ID_ENV}=lease-test`,
+        `${DEX_GATEWAY_INSTANCE_ID_ENV}=gateway-test`,
         "node /tmp/openclaw/acpx/codex-acp-wrapper.mjs",
-        OPENCLAW_ACPX_LEASE_ID_ARG,
+        DEX_ACPX_LEASE_ID_ARG,
         "lease-test",
-        OPENCLAW_GATEWAY_INSTANCE_ID_ARG,
+        DEX_GATEWAY_INSTANCE_ID_ARG,
         "gateway-test",
       ].join(" "),
     );
@@ -77,13 +77,13 @@ describe("withAcpxLeaseEnvironment", () => {
     expect(command).toBe(
       [
         "node C:/openclaw/acpx/codex-acp-wrapper.mjs",
-        OPENCLAW_ACPX_LEASE_ID_ARG,
+        DEX_ACPX_LEASE_ID_ARG,
         "lease-test",
-        OPENCLAW_GATEWAY_INSTANCE_ID_ARG,
+        DEX_GATEWAY_INSTANCE_ID_ARG,
         "gateway-test",
       ].join(" "),
     );
-    expect(command).not.toContain(`${OPENCLAW_ACPX_LEASE_ID_ENV}=`);
-    expect(command).not.toContain(`${OPENCLAW_GATEWAY_INSTANCE_ID_ENV}=`);
+    expect(command).not.toContain(`${DEX_ACPX_LEASE_ID_ENV}=`);
+    expect(command).not.toContain(`${DEX_GATEWAY_INSTANCE_ID_ENV}=`);
   });
 });

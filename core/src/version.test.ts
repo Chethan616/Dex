@@ -54,8 +54,8 @@ describe("version resolution", () => {
     const source = await fs.readFile(fileURLToPath(new URL("./version.ts", import.meta.url)), {
       encoding: "utf-8",
     });
-    expect(source).toContain("typeof __OPENCLAW_VERSION__");
-    expect(source).toContain("? __OPENCLAW_VERSION__");
+    expect(source).toContain("typeof __DEX_VERSION__");
+    expect(source).toContain("? __DEX_VERSION__");
   });
 
   it("resolves package version from nested dist/plugin-sdk module URL", async () => {
@@ -147,11 +147,11 @@ describe("version resolution", () => {
     });
   });
 
-  it("prefers OPENCLAW_VERSION over service and package versions", () => {
+  it("prefers DEX_VERSION over service and package versions", () => {
     expect(
       resolveRuntimeServiceVersion({
-        OPENCLAW_VERSION: "9.9.9",
-        OPENCLAW_SERVICE_VERSION: "2.2.2",
+        DEX_VERSION: "9.9.9",
+        DEX_SERVICE_VERSION: "2.2.2",
         npm_package_version: "1.1.1",
       }),
     ).toBe("9.9.9");
@@ -165,18 +165,18 @@ describe("version resolution", () => {
     process.env[key] = value;
   }
 
-  it("prefers runtime VERSION over stale OPENCLAW_VERSION for compatibility checks", () => {
-    const previous = process.env.OPENCLAW_VERSION;
-    const previousService = process.env.OPENCLAW_SERVICE_VERSION;
+  it("prefers runtime VERSION over stale DEX_VERSION for compatibility checks", () => {
+    const previous = process.env.DEX_VERSION;
+    const previousService = process.env.DEX_SERVICE_VERSION;
     const previousPackage = process.env.npm_package_version;
     try {
-      process.env.OPENCLAW_VERSION = "2026.3.25";
-      process.env.OPENCLAW_SERVICE_VERSION = "2026.3.25-service";
+      process.env.DEX_VERSION = "2026.3.25";
+      process.env.DEX_SERVICE_VERSION = "2026.3.25-service";
       process.env.npm_package_version = "2026.3.25-package";
       expect(resolveCompatibilityHostVersion()).toBe(VERSION);
     } finally {
-      restoreEnvValue("OPENCLAW_VERSION", previous);
-      restoreEnvValue("OPENCLAW_SERVICE_VERSION", previousService);
+      restoreEnvValue("DEX_VERSION", previous);
+      restoreEnvValue("DEX_SERVICE_VERSION", previousService);
       restoreEnvValue("npm_package_version", previousPackage);
     }
   });
@@ -184,8 +184,8 @@ describe("version resolution", () => {
   it("keeps explicit env-object overrides for compatibility checks in tests", () => {
     expect(
       resolveCompatibilityHostVersion({
-        OPENCLAW_VERSION: "2026.3.99",
-        OPENCLAW_SERVICE_VERSION: "2026.3.98",
+        DEX_VERSION: "2026.3.99",
+        DEX_SERVICE_VERSION: "2026.3.98",
         npm_package_version: "2026.3.97",
       }),
     ).toBe("2026.3.99");
@@ -194,9 +194,9 @@ describe("version resolution", () => {
   it("prefers explicit compatibility host overrides over runtime and stale env versions", () => {
     expect(
       resolveCompatibilityHostVersion({
-        OPENCLAW_COMPATIBILITY_HOST_VERSION: "2026.4.8",
-        OPENCLAW_VERSION: "2026.3.99",
-        OPENCLAW_SERVICE_VERSION: "2026.3.98",
+        DEX_COMPATIBILITY_HOST_VERSION: "2026.4.8",
+        DEX_VERSION: "2026.3.99",
+        DEX_SERVICE_VERSION: "2026.3.98",
         npm_package_version: "2026.3.97",
       }),
     ).toBe("2026.4.8");
@@ -215,16 +215,16 @@ describe("version resolution", () => {
   it("prefers runtime VERSION over service/package markers and ignores unusable env values", () => {
     expect(
       resolveRuntimeServiceVersion({
-        OPENCLAW_VERSION: "   ",
-        OPENCLAW_SERVICE_VERSION: "  2.0.0  ",
+        DEX_VERSION: "   ",
+        DEX_SERVICE_VERSION: "  2.0.0  ",
         npm_package_version: "1.0.0",
       }),
     ).toBe(VERSION);
 
     expect(
       resolveRuntimeServiceVersion({
-        OPENCLAW_VERSION: " ",
-        OPENCLAW_SERVICE_VERSION: "\t",
+        DEX_VERSION: " ",
+        DEX_SERVICE_VERSION: "\t",
         npm_package_version: " 1.0.0-package ",
       }),
     ).toBe(VERSION);
@@ -232,8 +232,8 @@ describe("version resolution", () => {
     expect(
       resolveRuntimeServiceVersion(
         {
-          OPENCLAW_VERSION: "",
-          OPENCLAW_SERVICE_VERSION: " ",
+          DEX_VERSION: "",
+          DEX_SERVICE_VERSION: " ",
           npm_package_version: "",
         },
         "fallback",
@@ -242,8 +242,8 @@ describe("version resolution", () => {
 
     expect(
       resolveRuntimeServiceVersion({
-        OPENCLAW_VERSION: "undefined",
-        OPENCLAW_SERVICE_VERSION: "null",
+        DEX_VERSION: "undefined",
+        DEX_SERVICE_VERSION: "null",
         npm_package_version: "1.0.0-package",
       }),
     ).toBe(VERSION);

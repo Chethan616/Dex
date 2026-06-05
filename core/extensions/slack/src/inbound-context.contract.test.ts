@@ -1,5 +1,5 @@
 import { expectChannelInboundContextContract } from "openclaw/plugin-sdk/channel-contract-testing";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { createTempHomeEnv } from "openclaw/plugin-sdk/test-env";
 import { describe, it } from "vitest";
 import {
@@ -42,7 +42,7 @@ describe("Slack inbound context contract", () => {
       const ctx = createInboundSlackTestContext({
         cfg: {
           channels: { slack: { enabled: true } },
-        } as OpenClawConfig,
+        } as DexConfig,
       });
       ctx.resolveUserName = async () => ({ name: "Alice" }) as never;
 

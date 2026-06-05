@@ -305,9 +305,9 @@ describe("OpenClaw Codex sandbox exec-server", () => {
     vi.stubEnv("HOME", "/gateway-home");
     vi.stubEnv("USER", "gateway-user");
     vi.stubEnv("TMPDIR", "/gateway-tmp");
-    vi.stubEnv("OPENCLAW_TEST_SECRET_TOKEN", "host-secret");
-    vi.stubEnv("OPENCLAW_TEST_DATABASE_PASSWORD", "host-password");
-    vi.stubEnv("OPENCLAW_TEST_PRIVATE_KEY", "host-private-key");
+    vi.stubEnv("DEX_TEST_SECRET_TOKEN", "host-secret");
+    vi.stubEnv("DEX_TEST_DATABASE_PASSWORD", "host-password");
+    vi.stubEnv("DEX_TEST_PRIVATE_KEY", "host-private-key");
     const buildExecSpec = vi.fn(async () => ({
       argv: [process.execPath, "-e", ""],
       env: {},

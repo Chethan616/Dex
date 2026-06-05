@@ -1,6 +1,6 @@
 import { createChannelMessageReplyPipeline } from "openclaw/plugin-sdk/channel-outbound";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig, PluginRuntime } from "../runtime-api.js";
+import type { DexConfig, PluginRuntime } from "../runtime-api.js";
 import "./monitor.send-mocks.js";
 import "./zalo-js.test-mocks.js";
 import { resolveZalouserAccountSync } from "./accounts.js";
@@ -37,7 +37,7 @@ function createAccount(): ResolvedZalouserAccount {
   };
 }
 
-function createConfig(): OpenClawConfig {
+function createConfig(): DexConfig {
   return {
     channels: {
       zalouser: {
@@ -242,7 +242,7 @@ function installRuntime(params: {
       },
       groups: {
         resolveRequireMention: vi.fn((input) => {
-          const cfg = input.cfg as OpenClawConfig;
+          const cfg = input.cfg as DexConfig;
           const groupCfg = cfg.channels?.zalouser?.groups ?? {};
           const typedGroupCfg = groupCfg as Record<string, { requireMention?: boolean }>;
           const groupEntry = input.groupId ? typedGroupCfg[input.groupId] : undefined;
@@ -521,7 +521,7 @@ describe("zalouser monitor group mention gating", () => {
     const { dispatchReplyWithBufferedBlockDispatcher } = installRuntime({
       commandAuthorized: false,
     });
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       channels: {
         zalouser: {
           enabled: true,

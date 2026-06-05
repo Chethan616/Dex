@@ -31,7 +31,7 @@ vi.mock("./managed-binary.js", () => ({
 
 vi.mock("openclaw/plugin-sdk/agent-harness-runtime", () => ({
   embeddedAgentLog: mocks.embeddedAgentLog,
-  OPENCLAW_VERSION: "test",
+  DEX_VERSION: "test",
 }));
 
 vi.mock("openclaw/plugin-sdk/agent-runtime", () => ({

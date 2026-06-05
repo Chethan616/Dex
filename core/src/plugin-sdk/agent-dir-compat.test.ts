@@ -13,7 +13,7 @@ describe("resolveOpenClawAgentDir", () => {
   it("prefers the OpenClaw env override over the deprecated Pi alias", () => {
     expect(
       resolveOpenClawAgentDir({
-        OPENCLAW_AGENT_DIR: "/tmp/openclaw-agent",
+        DEX_AGENT_DIR: "/tmp/openclaw-agent",
         PI_CODING_AGENT_DIR: "/tmp/openclaw-legacy-agent",
       }),
     ).toBe("/tmp/openclaw-agent");

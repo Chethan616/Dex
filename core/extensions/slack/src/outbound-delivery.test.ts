@@ -12,7 +12,7 @@ import {
 } from "openclaw/plugin-sdk/channel-test-helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { slackOutbound } from "./outbound-adapter.js";
-import type { OpenClawConfig } from "./runtime-api.js";
+import type { DexConfig } from "./runtime-api.js";
 
 const sendMessageSlackMock = vi.hoisted(() => vi.fn());
 
@@ -20,7 +20,7 @@ vi.mock("./send.runtime.js", () => ({
   sendMessageSlack: sendMessageSlackMock,
 }));
 
-const cfg: OpenClawConfig = {
+const cfg: DexConfig = {
   channels: {
     slack: {
       botToken: "xoxb-test",

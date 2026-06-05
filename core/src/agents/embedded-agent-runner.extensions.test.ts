@@ -5,7 +5,7 @@ import { setActivePluginRegistry } from "../plugins/runtime.js";
 import { buildEmbeddedExtensionFactories } from "./embedded-agent-runner/extensions.js";
 import { cleanupTempPluginTestEnvironment } from "./test-helpers/temp-plugin-extension-fixtures.js";
 
-const originalBundledPluginsDir = process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+const originalBundledPluginsDir = process.env.DEX_BUNDLED_PLUGINS_DIR;
 const tempDirs: string[] = [];
 
 afterEach(() => {

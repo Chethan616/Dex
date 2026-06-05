@@ -76,12 +76,12 @@ describe("update-startup", () => {
     vi.setSystemTime(new Date("2026-01-17T10:00:00Z"));
     tempDir = await suiteRootTracker.make("case");
     envSnapshot = captureEnv([
-      "OPENCLAW_NO_AUTO_UPDATE",
-      "OPENCLAW_STATE_DIR",
+      "DEX_NO_AUTO_UPDATE",
+      "DEX_STATE_DIR",
       "NODE_ENV",
       "VITEST",
     ]);
-    process.env.OPENCLAW_STATE_DIR = tempDir;
+    process.env.DEX_STATE_DIR = tempDir;
 
     process.env.NODE_ENV = "test";
 
@@ -445,9 +445,9 @@ describe("update-startup", () => {
     expect(runAutoUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it("honors OPENCLAW_NO_AUTO_UPDATE for configured auto-updates", async () => {
+  it("honors DEX_NO_AUTO_UPDATE for configured auto-updates", async () => {
     mockPackageUpdateStatus("beta", "2.0.0-beta.1");
-    process.env.OPENCLAW_NO_AUTO_UPDATE = "1";
+    process.env.DEX_NO_AUTO_UPDATE = "1";
     const log = { info: vi.fn() };
     const runAutoUpdate = createAutoUpdateSuccessMock();
 
@@ -461,10 +461,10 @@ describe("update-startup", () => {
 
     expect(runAutoUpdate).not.toHaveBeenCalled();
     const disabledLogCall = log.info.mock.calls.find(
-      ([message]) => message === "auto-update disabled by OPENCLAW_NO_AUTO_UPDATE",
+      ([message]) => message === "auto-update disabled by DEX_NO_AUTO_UPDATE",
     );
     expect(disabledLogCall).toEqual([
-      "auto-update disabled by OPENCLAW_NO_AUTO_UPDATE",
+      "auto-update disabled by DEX_NO_AUTO_UPDATE",
       {
         version: "2.0.0-beta.1",
         tag: "beta",
@@ -508,7 +508,7 @@ describe("update-startup", () => {
     expect(options).toEqual({
       timeoutMs: 45 * 60 * 1000,
       env: {
-        OPENCLAW_AUTO_UPDATE: "1",
+        DEX_AUTO_UPDATE: "1",
       },
     });
   });

@@ -206,19 +206,19 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
   });
 
   it("rejects malformed cross-OS positive integer environment values", () => {
-    expect(parsePositiveIntegerEnv("OPENCLAW_CROSS_OS_COMMAND_HEARTBEAT_SECONDS", 60, {})).toBe(60);
+    expect(parsePositiveIntegerEnv("DEX_CROSS_OS_COMMAND_HEARTBEAT_SECONDS", 60, {})).toBe(60);
     expect(
-      parsePositiveIntegerEnv("OPENCLAW_CROSS_OS_COMMAND_HEARTBEAT_SECONDS", 60, {
-        OPENCLAW_CROSS_OS_COMMAND_HEARTBEAT_SECONDS: "25",
+      parsePositiveIntegerEnv("DEX_CROSS_OS_COMMAND_HEARTBEAT_SECONDS", 60, {
+        DEX_CROSS_OS_COMMAND_HEARTBEAT_SECONDS: "25",
       }),
     ).toBe(25);
 
     for (const raw of ["1e3", "25ms", "1.5", "0", "-1", String(Number.MAX_SAFE_INTEGER + 1)]) {
       expect(() =>
-        parsePositiveIntegerEnv("OPENCLAW_CROSS_OS_COMMAND_HEARTBEAT_SECONDS", 60, {
-          OPENCLAW_CROSS_OS_COMMAND_HEARTBEAT_SECONDS: raw,
+        parsePositiveIntegerEnv("DEX_CROSS_OS_COMMAND_HEARTBEAT_SECONDS", 60, {
+          DEX_CROSS_OS_COMMAND_HEARTBEAT_SECONDS: raw,
         }),
-      ).toThrow("OPENCLAW_CROSS_OS_COMMAND_HEARTBEAT_SECONDS must be a positive integer");
+      ).toThrow("DEX_CROSS_OS_COMMAND_HEARTBEAT_SECONDS must be a positive integer");
     }
   });
 
@@ -287,11 +287,11 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
 
   it("requires explicit opt-in before cross-OS agent turns become optional", () => {
     expect(resolveCrossOsAgentTurnOptional({})).toBe(false);
-    expect(resolveCrossOsAgentTurnOptional({ OPENCLAW_CROSS_OS_AGENT_TURN_OPTIONAL: "1" })).toBe(
+    expect(resolveCrossOsAgentTurnOptional({ DEX_CROSS_OS_AGENT_TURN_OPTIONAL: "1" })).toBe(
       true,
     );
     expect(
-      resolveCrossOsAgentTurnOptional({ OPENCLAW_CROSS_OS_AGENT_TURN_OPTIONAL: "false" }),
+      resolveCrossOsAgentTurnOptional({ DEX_CROSS_OS_AGENT_TURN_OPTIONAL: "false" }),
     ).toBe(false);
   });
 
@@ -408,12 +408,12 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
   it("allows cross-OS provider smoke models to use faster CI overrides", () => {
     expect(
       resolveProviderConfig("openai", {
-        OPENCLAW_CROSS_OS_OPENAI_MODEL: "openai/gpt-5.4-mini",
+        DEX_CROSS_OS_OPENAI_MODEL: "openai/gpt-5.4-mini",
       })?.model,
     ).toBe("openai/gpt-5.4-mini");
     expect(
       resolveProviderConfig("openai", {
-        OPENCLAW_CROSS_OS_MODEL: "openai/gpt-5.4-nano",
+        DEX_CROSS_OS_MODEL: "openai/gpt-5.4-nano",
       })?.model,
     ).toBe("openai/gpt-5.4-nano");
     expect(resolveProviderConfig("openai", {})?.model).toBe("openai/gpt-5.5");
@@ -427,7 +427,7 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
     const releaseChecks = readFileSync(".github/workflows/openclaw-release-checks.yml", "utf8");
 
     expect(workflow).toContain(
-      "OPENCLAW_CROSS_OS_OPENAI_MODEL: ${{ inputs.openai_model || vars.OPENCLAW_CROSS_OS_OPENAI_MODEL || 'openai/gpt-5.5' }}",
+      "DEX_CROSS_OS_OPENAI_MODEL: ${{ inputs.openai_model || vars.DEX_CROSS_OS_OPENAI_MODEL || 'openai/gpt-5.5' }}",
     );
     expect(releaseChecks).toContain("openai_model: openai/gpt-5.5");
   });
@@ -724,9 +724,9 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
         VAR_UBUNTU_RUNNER: "workflow-linux",
         VAR_WINDOWS_RUNNER: "workflow-windows",
         VAR_MACOS_RUNNER: "workflow-macos",
-        OPENCLAW_RELEASE_CHECKS_UBUNTU_RUNNER: "legacy-linux",
-        OPENCLAW_RELEASE_CHECKS_WINDOWS_RUNNER: "legacy-windows",
-        OPENCLAW_RELEASE_CHECKS_MACOS_RUNNER: "legacy-macos",
+        DEX_RELEASE_CHECKS_UBUNTU_RUNNER: "legacy-linux",
+        DEX_RELEASE_CHECKS_WINDOWS_RUNNER: "legacy-windows",
+        DEX_RELEASE_CHECKS_MACOS_RUNNER: "legacy-macos",
       }),
     ).toEqual({
       varUbuntuRunner: "workflow-linux",
@@ -741,9 +741,9 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
         VAR_UBUNTU_RUNNER: "",
         VAR_WINDOWS_RUNNER: " ",
         VAR_MACOS_RUNNER: "",
-        OPENCLAW_RELEASE_CHECKS_UBUNTU_RUNNER: "legacy-linux",
-        OPENCLAW_RELEASE_CHECKS_WINDOWS_RUNNER: "legacy-windows",
-        OPENCLAW_RELEASE_CHECKS_MACOS_RUNNER: "legacy-macos",
+        DEX_RELEASE_CHECKS_UBUNTU_RUNNER: "legacy-linux",
+        DEX_RELEASE_CHECKS_WINDOWS_RUNNER: "legacy-windows",
+        DEX_RELEASE_CHECKS_MACOS_RUNNER: "legacy-macos",
       }),
     ).toEqual({
       varUbuntuRunner: "legacy-linux",
@@ -896,7 +896,7 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
 
     const script = buildInstalledBrowserOverrideImportProbeScript();
     expect(script).toContain('from "openclaw/plugin-sdk/plugin-runtime"');
-    expect(script).toContain('overrideEnvVar: "OPENCLAW_BROWSER_CONTROL_MODULE"');
+    expect(script).toContain('overrideEnvVar: "DEX_BROWSER_CONTROL_MODULE"');
     expect(script).toContain("startBrowserControlService");
     expect(script).toContain("stopBrowserControlService");
     expect(script).toContain("Browser control override start sentinel was not written.");
@@ -908,7 +908,7 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
       'from "file:///C:/Users/runner/AppData/Roaming/npm/node_modules/openclaw/dist/plugin-sdk/plugin-runtime.js"',
     );
     expect(readFileSync("scripts/openclaw-cross-os-release-checks.ts", "utf8")).toContain(
-      "OPENCLAW_BROWSER_CONTROL_MODULE: pathToFileURL(overridePath).href",
+      "DEX_BROWSER_CONTROL_MODULE: pathToFileURL(overridePath).href",
     );
   });
 
@@ -1049,13 +1049,13 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
         "const { spawn } = require('node:child_process');",
         "const fs = require('node:fs');",
         `const child = spawn(process.execPath, ['-e', ${JSON.stringify(childScript)}], { stdio: 'ignore' });`,
-        "fs.writeFileSync(process.env.OPENCLAW_TEST_CHILD_PID, String(child.pid));",
+        "fs.writeFileSync(process.env.DEX_TEST_CHILD_PID, String(child.pid));",
         "setInterval(() => {}, 1000);",
       ].join("");
 
       const command = runCommand(process.execPath, ["-e", parentScript], {
         cwd: dir,
-        env: { ...process.env, OPENCLAW_TEST_CHILD_PID: childPidPath },
+        env: { ...process.env, DEX_TEST_CHILD_PID: childPidPath },
         logPath,
         timeoutMs: 500,
       });
@@ -1095,7 +1095,7 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
         "const { spawn } = require('node:child_process');",
         "const fs = require('node:fs');",
         `const child = spawn(process.execPath, ['-e', ${JSON.stringify(childScript)}], { stdio: 'ignore' });`,
-        "fs.writeFileSync(process.env.OPENCLAW_TEST_CHILD_PID, String(child.pid));",
+        "fs.writeFileSync(process.env.DEX_TEST_CHILD_PID, String(child.pid));",
         "setInterval(() => {}, 1000);",
       ].join("");
       const runnerScript = [
@@ -1114,8 +1114,8 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
           cwd: process.cwd(),
           env: {
             ...process.env,
-            OPENCLAW_CROSS_OS_PROCESS_TREE_KILL_AFTER_MS: "25",
-            OPENCLAW_TEST_CHILD_PID: childPidPath,
+            DEX_CROSS_OS_PROCESS_TREE_KILL_AFTER_MS: "25",
+            DEX_TEST_CHILD_PID: childPidPath,
           },
           stdio: ["ignore", "ignore", "pipe"],
         },
@@ -1267,11 +1267,11 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
       buildRealUpdateEnv({
         FOO: "bar",
         NODE_COMPILE_CACHE: "/tmp/stale-openclaw-cache",
-        OPENCLAW_DISABLE_BUNDLED_PLUGIN_POSTINSTALL: "1",
+        DEX_DISABLE_BUNDLED_PLUGIN_POSTINSTALL: "1",
       }),
     ).toEqual({
       FOO: "bar",
-      OPENCLAW_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS: "1",
+      DEX_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS: "1",
       NODE_DISABLE_COMPILE_CACHE: "1",
     });
   });

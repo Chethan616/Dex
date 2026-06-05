@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
-import { openOpenClawStateDatabase } from "../../state/openclaw-state-db.js";
+import type { DexConfig } from "../../config/config.js";
+import { openDexStateDatabase } from "../../state/openclaw-state-db.js";
 import {
   type DeliverFn,
   drainPendingDeliveries,
@@ -20,7 +20,7 @@ import {
   setQueuedEntryState,
 } from "./delivery-queue.test-helpers.js";
 
-const stubCfg = {} as OpenClawConfig;
+const stubCfg = {} as DexConfig;
 const NO_LISTENER_ERROR = "No active DirectChat listener";
 
 function normalizeReconnectAccountIdForTest(accountId?: string | null): string {
@@ -61,8 +61,8 @@ function expectLogMessageWith(logFn: ReturnType<typeof vi.fn>, text: string): vo
 }
 
 function readOutboundQueueStatus(tmpDir: string, id: string): string | undefined {
-  const { db } = openOpenClawStateDatabase({
-    env: { ...process.env, OPENCLAW_STATE_DIR: tmpDir },
+  const { db } = openDexStateDatabase({
+    env: { ...process.env, DEX_STATE_DIR: tmpDir },
   });
   const row = db
     .prepare("SELECT status FROM delivery_queue_entries WHERE queue_name = 'outbound' AND id = ?")

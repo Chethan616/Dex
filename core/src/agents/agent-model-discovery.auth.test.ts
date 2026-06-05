@@ -263,8 +263,8 @@ describe("discoverAuthStorage", () => {
 
   it("preserves legacy auth.json when auth store is forced read-only", async () => {
     await withAgentDir(async (agentDir) => {
-      const previous = process.env.OPENCLAW_AUTH_STORE_READONLY;
-      process.env.OPENCLAW_AUTH_STORE_READONLY = "1";
+      const previous = process.env.DEX_AUTH_STORE_READONLY;
+      process.env.DEX_AUTH_STORE_READONLY = "1";
       try {
         await writeLegacyAuthJson(agentDir, {
           openrouter: { type: "api_key", key: "legacy-static-key" },
@@ -278,9 +278,9 @@ describe("discoverAuthStorage", () => {
         expect(openrouterEntry?.key).toBe("legacy-static-key");
       } finally {
         if (previous === undefined) {
-          delete process.env.OPENCLAW_AUTH_STORE_READONLY;
+          delete process.env.DEX_AUTH_STORE_READONLY;
         } else {
-          process.env.OPENCLAW_AUTH_STORE_READONLY = previous;
+          process.env.DEX_AUTH_STORE_READONLY = previous;
         }
       }
     });
@@ -288,11 +288,11 @@ describe("discoverAuthStorage", () => {
 
   it("includes env-backed provider auth when no auth profile exists", () => {
     const previousMistral = process.env.MISTRAL_API_KEY;
-    const previousBundledPluginsDir = process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
-    const previousDisableBundledPlugins = process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS;
+    const previousBundledPluginsDir = process.env.DEX_BUNDLED_PLUGINS_DIR;
+    const previousDisableBundledPlugins = process.env.DEX_DISABLE_BUNDLED_PLUGINS;
     process.env.MISTRAL_API_KEY = "mistral-env-test-key";
-    delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
-    delete process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS;
+    delete process.env.DEX_BUNDLED_PLUGINS_DIR;
+    delete process.env.DEX_DISABLE_BUNDLED_PLUGINS;
     try {
       const credentials = addEnvBackedAgentCredentials({}, { env: process.env });
 
@@ -307,14 +307,14 @@ describe("discoverAuthStorage", () => {
         process.env.MISTRAL_API_KEY = previousMistral;
       }
       if (previousBundledPluginsDir === undefined) {
-        delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+        delete process.env.DEX_BUNDLED_PLUGINS_DIR;
       } else {
-        process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = previousBundledPluginsDir;
+        process.env.DEX_BUNDLED_PLUGINS_DIR = previousBundledPluginsDir;
       }
       if (previousDisableBundledPlugins === undefined) {
-        delete process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS;
+        delete process.env.DEX_DISABLE_BUNDLED_PLUGINS;
       } else {
-        process.env.OPENCLAW_DISABLE_BUNDLED_PLUGINS = previousDisableBundledPlugins;
+        process.env.DEX_DISABLE_BUNDLED_PLUGINS = previousDisableBundledPlugins;
       }
     }
   });

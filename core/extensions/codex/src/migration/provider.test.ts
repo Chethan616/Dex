@@ -178,19 +178,19 @@ describe("buildCodexMigrationProvider", () => {
   it("parses target marketplace discovery timeout env strictly", () => {
     expect(
       targetCodexMarketplaceDiscoveryTimeoutMs({
-        OPENCLAW_CODEX_MIGRATION_PLUGIN_LIST_TIMEOUT_MS: "0",
+        DEX_CODEX_MIGRATION_PLUGIN_LIST_TIMEOUT_MS: "0",
       }),
     ).toBe(0);
     expect(
       targetCodexMarketplaceDiscoveryTimeoutMs({
-        OPENCLAW_CODEX_MIGRATION_PLUGIN_LIST_TIMEOUT_MS: "250",
+        DEX_CODEX_MIGRATION_PLUGIN_LIST_TIMEOUT_MS: "250",
       }),
     ).toBe(250);
 
     for (const value of ["0x10", "1e3", "2.5"]) {
       expect(
         targetCodexMarketplaceDiscoveryTimeoutMs({
-          OPENCLAW_CODEX_MIGRATION_PLUGIN_LIST_TIMEOUT_MS: value,
+          DEX_CODEX_MIGRATION_PLUGIN_LIST_TIMEOUT_MS: value,
         }),
       ).toBe(30_000);
     }
@@ -1544,7 +1544,7 @@ describe("buildCodexMigrationProvider", () => {
   });
 
   it("leaves selected Codex plugins as warnings when target curated plugins never load", async () => {
-    vi.stubEnv("OPENCLAW_CODEX_MIGRATION_PLUGIN_LIST_TIMEOUT_MS", "1");
+    vi.stubEnv("DEX_CODEX_MIGRATION_PLUGIN_LIST_TIMEOUT_MS", "1");
     const fixture = await createCodexFixture();
     const configState: MigrationProviderContext["config"] = {
       agents: { defaults: { workspace: fixture.workspaceDir } },

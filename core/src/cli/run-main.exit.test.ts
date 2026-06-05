@@ -327,8 +327,8 @@ describe("runCli exit behavior", () => {
     resolveManifestCommandAliasOwnerMock.mockReturnValue(undefined);
     resolveManifestToolOwnerMock.mockReturnValue(undefined);
     resolveManifestCliCommandSurfaceOwnerMock.mockReturnValue(undefined);
-    delete process.env.OPENCLAW_DISABLE_CLI_STARTUP_HELP_FAST_PATH;
-    delete process.env.OPENCLAW_HIDE_BANNER;
+    delete process.env.DEX_DISABLE_CLI_STARTUP_HELP_FAST_PATH;
+    delete process.env.DEX_HIDE_BANNER;
     loggingState.forceConsoleToStderr = false;
   });
 
@@ -464,7 +464,7 @@ describe("runCli exit behavior", () => {
   });
 
   it("honors banner suppression on the gateway foreground fast path", async () => {
-    process.env.OPENCLAW_HIDE_BANNER = "1";
+    process.env.DEX_HIDE_BANNER = "1";
 
     await runCli(["node", "openclaw", "gateway"]);
 

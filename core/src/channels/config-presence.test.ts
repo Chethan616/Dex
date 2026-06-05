@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import {
   hasMeaningfulChannelConfig,
   hasPotentialConfiguredChannels,
@@ -18,7 +18,7 @@ const matrixPresenceOptions = {
   persistedAuthStateProbe: {
     listChannelIds: () => ["matrix"],
     hasState: ({ channelId, env }: { channelId: string; env?: NodeJS.ProcessEnv }) =>
-      channelId === "matrix" && Boolean(env?.OPENCLAW_STATE_DIR?.includes("persisted-matrix")),
+      channelId === "matrix" && Boolean(env?.DEX_STATE_DIR?.includes("persisted-matrix")),
   },
 };
 
@@ -29,7 +29,7 @@ function makeTempStateDir() {
 }
 
 function expectPotentialConfiguredChannelCase(params: {
-  cfg: OpenClawConfig;
+  cfg: DexConfig;
   env: NodeJS.ProcessEnv;
   expectedIds: string[];
   expectedConfigured: boolean;
@@ -82,7 +82,7 @@ describe("config presence", () => {
         slack: { botToken: "token" },
         discord: false,
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(listExplicitlyDisabledChannelIdsForConfig(cfg)).toEqual(["matrix"]);
   });
@@ -113,7 +113,7 @@ describe("config presence", () => {
     );
     fs.mkdirSync(stateDir, { recursive: true });
     tempDirs.push(stateDir);
-    const env = { OPENCLAW_STATE_DIR: stateDir } as NodeJS.ProcessEnv;
+    const env = { DEX_STATE_DIR: stateDir } as NodeJS.ProcessEnv;
 
     expectPotentialConfiguredChannelCase({
       cfg: {},

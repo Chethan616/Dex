@@ -1,10 +1,10 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../../config/config.js";
+import type { DexConfig } from "../../../config/config.js";
 import { resolveAcpInstallCommandHint } from "./install-hints.js";
 
-function withAcpConfig(acp: OpenClawConfig["acp"]): OpenClawConfig {
-  return { acp } as OpenClawConfig;
+function withAcpConfig(acp: DexConfig["acp"]): DexConfig {
+  return { acp } as DexConfig;
 }
 
 afterEach(() => {

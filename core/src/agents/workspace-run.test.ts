@@ -1,6 +1,6 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { resolveRunWorkspaceDir } from "./workspace-run.js";
 
 describe("resolveRunWorkspaceDir", () => {
@@ -24,7 +24,7 @@ describe("resolveRunWorkspaceDir", () => {
         defaults: { workspace: defaultWorkspace },
         list: [{ id: "research", workspace: researchWorkspace }],
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     const result = resolveRunWorkspaceDir({
       workspaceDir: undefined,
@@ -44,7 +44,7 @@ describe("resolveRunWorkspaceDir", () => {
       agents: {
         defaults: { workspace: defaultWorkspace },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     const result = resolveRunWorkspaceDir({
       workspaceDir: "   ",
@@ -64,7 +64,7 @@ describe("resolveRunWorkspaceDir", () => {
       workspaceDir: null,
       sessionKey: "agent:main:subagent:test",
       config: undefined,
-      env: { ...process.env, OPENCLAW_WORKSPACE_DIR: workspaceDir },
+      env: { ...process.env, DEX_WORKSPACE_DIR: workspaceDir },
     });
 
     expect(result.usedFallback).toBe(true);
@@ -87,8 +87,8 @@ describe("resolveRunWorkspaceDir", () => {
     const env = {
       ...process.env,
       HOME: "/home/runner",
-      OPENCLAW_HOME: undefined,
-      OPENCLAW_STATE_DIR: "/tmp/openclaw-state",
+      DEX_HOME: undefined,
+      DEX_STATE_DIR: "/tmp/openclaw-state",
     } satisfies NodeJS.ProcessEnv;
     const result = resolveRunWorkspaceDir({
       workspaceDir: undefined,
@@ -114,7 +114,7 @@ describe("resolveRunWorkspaceDir", () => {
           { id: "research", workspace: researchWorkspace, default: true },
         ],
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     expect(() =>
       resolveRunWorkspaceDir({
@@ -131,7 +131,7 @@ describe("resolveRunWorkspaceDir", () => {
       agents: {
         defaults: { workspace: fallbackWorkspace },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     const result = resolveRunWorkspaceDir({
       workspaceDir: undefined,

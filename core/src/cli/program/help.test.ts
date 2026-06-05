@@ -61,18 +61,18 @@ describe("configureProgramHelp", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     originalArgv = [...process.argv];
-    originalSuppressHelpBanner = process.env.OPENCLAW_SUPPRESS_HELP_BANNER;
+    originalSuppressHelpBanner = process.env.DEX_SUPPRESS_HELP_BANNER;
     hasEmittedCliBannerMock.mockReturnValue(false);
     resolveCommitHashMock.mockReturnValue("abc1234");
-    delete process.env.OPENCLAW_SUPPRESS_HELP_BANNER;
+    delete process.env.DEX_SUPPRESS_HELP_BANNER;
   });
 
   afterEach(() => {
     process.argv = originalArgv;
     if (originalSuppressHelpBanner === undefined) {
-      delete process.env.OPENCLAW_SUPPRESS_HELP_BANNER;
+      delete process.env.DEX_SUPPRESS_HELP_BANNER;
     } else {
-      process.env.OPENCLAW_SUPPRESS_HELP_BANNER = originalSuppressHelpBanner;
+      process.env.DEX_SUPPRESS_HELP_BANNER = originalSuppressHelpBanner;
     }
   });
 
@@ -146,7 +146,7 @@ describe("configureProgramHelp", () => {
 
   it("suppresses banner formatting when parent default help requests it", () => {
     process.argv = ["node", "openclaw", "channels"];
-    process.env.OPENCLAW_SUPPRESS_HELP_BANNER = "1";
+    process.env.DEX_SUPPRESS_HELP_BANNER = "1";
     const program = makeProgramWithCommands();
     configureProgramHelp(program, testProgramContext);
 

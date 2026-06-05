@@ -11,7 +11,7 @@ import { loggingState } from "./state.js";
 const defaultMaxFileBytes = 100 * 1024 * 1024;
 const logPathTracker = createSuiteLogPathTracker("openclaw-test-env-log-level-");
 
-describe("OPENCLAW_LOG_LEVEL", () => {
+describe("DEX_LOG_LEVEL", () => {
   let originalEnv: string | undefined;
   let testLogPath = "";
 
@@ -20,9 +20,9 @@ describe("OPENCLAW_LOG_LEVEL", () => {
   });
 
   beforeEach(() => {
-    originalEnv = process.env.OPENCLAW_LOG_LEVEL;
+    originalEnv = process.env.DEX_LOG_LEVEL;
     testLogPath = logPathTracker.nextPath();
-    delete process.env.OPENCLAW_LOG_LEVEL;
+    delete process.env.DEX_LOG_LEVEL;
     loggingState.invalidEnvLogLevelValue = null;
     resetLogger();
     setLoggerOverride(null);
@@ -30,9 +30,9 @@ describe("OPENCLAW_LOG_LEVEL", () => {
 
   afterEach(() => {
     if (originalEnv === undefined) {
-      delete process.env.OPENCLAW_LOG_LEVEL;
+      delete process.env.DEX_LOG_LEVEL;
     } else {
-      process.env.OPENCLAW_LOG_LEVEL = originalEnv;
+      process.env.DEX_LOG_LEVEL = originalEnv;
     }
     loggingState.invalidEnvLogLevelValue = null;
     resetLogger();
@@ -52,7 +52,7 @@ describe("OPENCLAW_LOG_LEVEL", () => {
       consoleStyle: "json",
       file: testLogPath,
     });
-    process.env.OPENCLAW_LOG_LEVEL = "debug";
+    process.env.DEX_LOG_LEVEL = "debug";
 
     expect(getResolvedLoggerSettings()).toEqual({
       level: "debug",
@@ -72,7 +72,7 @@ describe("OPENCLAW_LOG_LEVEL", () => {
       consoleStyle: "compact",
       file: testLogPath,
     });
-    process.env.OPENCLAW_LOG_LEVEL = "nope";
+    process.env.DEX_LOG_LEVEL = "nope";
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(
       () => true as unknown as ReturnType<typeof process.stderr.write>, // preserve stream contract in test spy
     );
@@ -84,8 +84,8 @@ describe("OPENCLAW_LOG_LEVEL", () => {
 
     const warnings = stderrSpy.mock.calls
       .map(([firstArg]) => String(firstArg))
-      .filter((line) => line.includes("OPENCLAW_LOG_LEVEL"));
+      .filter((line) => line.includes("DEX_LOG_LEVEL"));
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain('Ignoring invalid OPENCLAW_LOG_LEVEL="nope"');
+    expect(warnings[0]).toContain('Ignoring invalid DEX_LOG_LEVEL="nope"');
   });
 });

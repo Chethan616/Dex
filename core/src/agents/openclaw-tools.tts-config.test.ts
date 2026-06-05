@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { testing, createOpenClawTools } from "./openclaw-tools.js";
 import type { AnyAgentTool } from "./tools/common.js";
 
@@ -139,7 +139,7 @@ function getTextToSpeechParams() {
   return calls[0]?.[0] as
     | {
         text?: string;
-        cfg?: OpenClawConfig;
+        cfg?: DexConfig;
         agentId?: string;
         channel?: string;
         accountId?: string;
@@ -169,7 +169,7 @@ describe("createOpenClawTools TTS config wiring", () => {
           },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     testing.setDepsForTest({ config: injectedConfig });
 
@@ -218,7 +218,7 @@ describe("createOpenClawTools TTS config wiring", () => {
       agents: {
         list: [{ id: "reader" }, { id: "main" }],
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     testing.setDepsForTest({ config: injectedConfig });
 
@@ -256,7 +256,7 @@ describe("createOpenClawTools TTS config wiring", () => {
           },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     testing.setDepsForTest({ config: injectedConfig });
 
@@ -301,7 +301,7 @@ describe("createOpenClawTools media generation session wiring", () => {
           musicGenerationModel: { primary: "music-owner/model" },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     createOpenClawTools({
       config,
@@ -337,7 +337,7 @@ describe("createOpenClawTools media generation session wiring", () => {
           imageGenerationModel: { primary: "image-owner/model" },
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies DexConfig;
 
     createOpenClawTools({
       config,

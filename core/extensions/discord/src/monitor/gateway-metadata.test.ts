@@ -10,19 +10,19 @@ describe("Discord gateway metadata", () => {
     expect(resolveDiscordGatewayInfoTimeoutMs({ configuredTimeoutMs: 45_000 })).toBe(45_000);
     expect(
       resolveDiscordGatewayInfoTimeoutMs({
-        env: { OPENCLAW_DISCORD_GATEWAY_INFO_TIMEOUT_MS: "90000" },
+        env: { DEX_DISCORD_GATEWAY_INFO_TIMEOUT_MS: "90000" },
       }),
     ).toBe(90_000);
     expect(resolveDiscordGatewayInfoTimeoutMs({ configuredTimeoutMs: 150_000 })).toBe(120_000);
     expect(
       resolveDiscordGatewayInfoTimeoutMs({
         configuredTimeoutMs: 1.5,
-        env: { OPENCLAW_DISCORD_GATEWAY_INFO_TIMEOUT_MS: "0x1000" },
+        env: { DEX_DISCORD_GATEWAY_INFO_TIMEOUT_MS: "0x1000" },
       }),
     ).toBe(30_000);
     expect(
       resolveDiscordGatewayInfoTimeoutMs({
-        env: { OPENCLAW_DISCORD_GATEWAY_INFO_TIMEOUT_MS: "1e3" },
+        env: { DEX_DISCORD_GATEWAY_INFO_TIMEOUT_MS: "1e3" },
       }),
     ).toBe(30_000);
   });

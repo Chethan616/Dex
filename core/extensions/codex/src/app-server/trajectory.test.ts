@@ -128,7 +128,7 @@ describe("Codex trajectory recorder", () => {
         sessionId: "../evil/session",
         model: { api: "responses" },
       } as never,
-      env: { OPENCLAW_TRAJECTORY_DIR: tmpDir },
+      env: { DEX_TRAJECTORY_DIR: tmpDir },
     });
 
     const trajectoryRecorder = expectTrajectoryRecorder(recorder);
@@ -147,7 +147,7 @@ describe("Codex trajectory recorder", () => {
         sessionId: "session-1",
         model: { api: "responses" },
       } as never,
-      env: { OPENCLAW_TRAJECTORY: "0" },
+      env: { DEX_TRAJECTORY: "0" },
     });
 
     expect(recorder).toBeNull();

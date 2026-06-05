@@ -1,4 +1,4 @@
-import type { OpenClawConfig, TelegramAccountConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig, TelegramAccountConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { RuntimeEnv } from "openclaw/plugin-sdk/runtime-env";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -26,7 +26,7 @@ type TelegramInlineKeyboardReplyMarkup = {
 };
 type PlugCommandHarnessParams = {
   botHarness?: CommandBotHarness;
-  cfg?: OpenClawConfig;
+  cfg?: DexConfig;
   command?: Record<string, unknown>;
   args?: string;
   result?: Record<string, unknown>;
@@ -161,7 +161,7 @@ describe("registerTelegramNativeCommands", () => {
   });
 
   it("scopes skill commands when account binding exists", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       agents: {
         list: [{ id: "main", default: true }, { id: "butler" }],
       },
@@ -182,7 +182,7 @@ describe("registerTelegramNativeCommands", () => {
   });
 
   it("scopes skill commands to default agent without a matching binding (#15599)", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       agents: {
         list: [{ id: "main", default: true }, { id: "butler" }],
       },
@@ -326,7 +326,7 @@ describe("registerTelegramNativeCommands", () => {
   });
 
   it("resolves plugin commands with the Telegram runtime config", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       commands: { native: true },
       channels: {
         telegram: {
@@ -413,7 +413,7 @@ describe("registerTelegramNativeCommands", () => {
 
   it("passes agent-scoped media roots for plugin command replies with media", async () => {
     const mediaMaxBytes = 50 * 1024 * 1024;
-    const cfg: OpenClawConfig = {
+    const cfg: DexConfig = {
       agents: {
         list: [{ id: "main", default: true }, { id: "work" }],
       },

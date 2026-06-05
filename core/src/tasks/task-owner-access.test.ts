@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { withOpenClawTestState } from "../test-utils/openclaw-test-state.js";
+import { withDexTestState } from "../test-utils/openclaw-test-state.js";
 import {
   findLatestTaskForRelatedSessionKeyForOwner,
   findTaskByRunIdForOwner,
@@ -12,7 +12,7 @@ import {
 } from "./task-registry.js";
 import type { TaskRecord } from "./task-registry.types.js";
 
-const ORIGINAL_STATE_DIR = process.env.OPENCLAW_STATE_DIR;
+const ORIGINAL_STATE_DIR = process.env.DEX_STATE_DIR;
 
 function createTaskRecord(params: Parameters<typeof createTaskRecordOrNull>[0]): TaskRecord {
   const task = createTaskRecordOrNull(params);
@@ -25,14 +25,14 @@ function createTaskRecord(params: Parameters<typeof createTaskRecordOrNull>[0]):
 afterEach(() => {
   resetTaskRegistryForTests({ persist: false });
   if (ORIGINAL_STATE_DIR == null) {
-    delete process.env.OPENCLAW_STATE_DIR;
+    delete process.env.DEX_STATE_DIR;
   } else {
-    process.env.OPENCLAW_STATE_DIR = ORIGINAL_STATE_DIR;
+    process.env.DEX_STATE_DIR = ORIGINAL_STATE_DIR;
   }
 });
 
 async function withTaskRegistryTempDir<T>(run: () => Promise<T> | T): Promise<T> {
-  return await withOpenClawTestState(
+  return await withDexTestState(
     {
       layout: "state-only",
       prefix: "openclaw-task-owner-access-",

@@ -2,12 +2,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "./runtime-api.js";
+import type { DexConfig } from "./runtime-api.js";
 import { resolveMatrixOutboundSessionRoute } from "./session-route.js";
 
 const tempDirs = new Set<string>();
 const currentDmSessionKey = "agent:main:matrix:channel:!dm:example.org";
-type MatrixChannelConfig = NonNullable<NonNullable<OpenClawConfig["channels"]>["matrix"]>;
+type MatrixChannelConfig = NonNullable<NonNullable<DexConfig["channels"]>["matrix"]>;
 
 const perRoomDmMatrixConfig = {
   dm: {
@@ -37,7 +37,7 @@ function createTempStore(entries: Record<string, unknown>): string {
 function createMatrixRouteConfig(
   entries: Record<string, unknown>,
   matrix: MatrixChannelConfig = perRoomDmMatrixConfig,
-): OpenClawConfig {
+): DexConfig {
   return {
     session: {
       store: createTempStore(entries),
@@ -45,7 +45,7 @@ function createMatrixRouteConfig(
     channels: {
       matrix,
     },
-  } satisfies OpenClawConfig;
+  } satisfies DexConfig;
 }
 
 function createStoredDirectDmSession(
@@ -110,7 +110,7 @@ function createStoredChannelSession(): Record<string, unknown> {
   };
 }
 
-function resolveUserRoute(params: { cfg: OpenClawConfig; accountId?: string; target?: string }) {
+function resolveUserRoute(params: { cfg: DexConfig; accountId?: string; target?: string }) {
   const target = params.target ?? "@alice:example.org";
   return resolveMatrixOutboundSessionRoute({
     cfg: params.cfg,

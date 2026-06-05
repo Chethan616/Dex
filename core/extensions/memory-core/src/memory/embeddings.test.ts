@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { EmbeddingProviderAdapter } from "openclaw/plugin-sdk/embedding-providers";
 import type { MemoryEmbeddingProviderAdapter } from "openclaw/plugin-sdk/memory-core-host-engine-embeddings";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,11 +7,11 @@ import { createEmbeddingProvider, resolveEmbeddingProviderFallbackModel } from "
 const mockEmbeddingRegistry = vi.hoisted(() => ({
   genericAdapters: [] as EmbeddingProviderAdapter[],
   adapters: [] as MemoryEmbeddingProviderAdapter[],
-  genericLookupConfigs: [] as Array<OpenClawConfig | undefined>,
+  genericLookupConfigs: [] as Array<DexConfig | undefined>,
 }));
 
 vi.mock("openclaw/plugin-sdk/embedding-providers", () => ({
-  getEmbeddingProvider: (id: string, config?: OpenClawConfig) => {
+  getEmbeddingProvider: (id: string, config?: DexConfig) => {
     mockEmbeddingRegistry.genericLookupConfigs.push(config);
     return mockEmbeddingRegistry.genericAdapters.find((adapter) => adapter.id === id);
   },
@@ -51,7 +51,7 @@ function createOptions(provider: string) {
           "voyage",
         ],
       },
-    } as OpenClawConfig,
+    } as DexConfig,
     agentDir: "/tmp/openclaw-agent",
     provider,
     fallback: "none",

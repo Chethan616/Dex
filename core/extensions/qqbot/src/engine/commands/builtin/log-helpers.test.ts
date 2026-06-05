@@ -16,7 +16,7 @@ const platformMock = await vi.hoisted(async () => {
 vi.mock("../../utils/platform.js", () => ({
   getHomeDir: () => platformMock.homeDir,
   getQQBotDataDir: (...subPaths: string[]) => {
-    const dir = platformMock.path.join(platformMock.homeDir, ".openclaw", "qqbot", ...subPaths);
+    const dir = platformMock.path.join(platformMock.homeDir, ".dex", "qqbot", ...subPaths);
     platformMock.fs.mkdirSync(dir, { recursive: true });
     return dir;
   },
@@ -41,7 +41,7 @@ describe("buildBotLogsResult", () => {
   it("suffixes same-second log exports instead of overwriting", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-05T10:11:12.345Z"));
-    const logDir = path.join(tempHome, ".openclaw", "logs");
+    const logDir = path.join(tempHome, ".dex", "logs");
     fs.mkdirSync(logDir, { recursive: true });
     fs.writeFileSync(path.join(logDir, "gateway.log"), "line 1\nline 2\n", "utf8");
 

@@ -304,7 +304,7 @@ describe("runCopilotAttempt", () => {
     const mediaId = "telegram-photo.png";
     await fsp.mkdir(inboundDir, { recursive: true });
     await fsp.writeFile(path.join(inboundDir, mediaId), Buffer.from(TINY_PNG_BASE64, "base64"));
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
     const sdk = makeFakeSdk();
     const pool = makeFakePool(sdk);
 
@@ -1642,9 +1642,9 @@ describe("runCopilotAttempt", () => {
 
       // No env tokens, no contract token, no explicit token: falls
       // through to default useLoggedInUser mode.
-      const prevOpenclaw = process.env.OPENCLAW_GITHUB_TOKEN;
+      const prevOpenclaw = process.env.DEX_GITHUB_TOKEN;
       const prevGithub = process.env.GITHUB_TOKEN;
-      delete process.env.OPENCLAW_GITHUB_TOKEN;
+      delete process.env.DEX_GITHUB_TOKEN;
       delete process.env.GITHUB_TOKEN;
       try {
         await runCopilotAttempt(makeParams({ auth: {} as never }), { pool });
@@ -1652,7 +1652,7 @@ describe("runCopilotAttempt", () => {
         expect("gitHubToken" in cfg).toBe(false);
       } finally {
         if (prevOpenclaw !== undefined) {
-          process.env.OPENCLAW_GITHUB_TOKEN = prevOpenclaw;
+          process.env.DEX_GITHUB_TOKEN = prevOpenclaw;
         }
         if (prevGithub !== undefined) {
           process.env.GITHUB_TOKEN = prevGithub;

@@ -33,8 +33,8 @@ const PROXY_KEYS = [
   "http_proxy",
   "NO_PROXY",
   "no_proxy",
-  "OPENCLAW_PROXY_ACTIVE",
-  "OPENCLAW_PROXY_CA_FILE",
+  "DEX_PROXY_ACTIVE",
+  "DEX_PROXY_CA_FILE",
 ] as const;
 const originalEnv = { ...process.env };
 const tempDirs: string[] = [];
@@ -224,8 +224,8 @@ describe("slack proxy agent", () => {
   it("creates Slack env proxy agents while managed proxy CA trust is active", () => {
     const caFile = writeTempCa("slack-managed-proxy-ca");
     process.env.HTTPS_PROXY = "https://proxy.example.com:8443";
-    process.env.OPENCLAW_PROXY_ACTIVE = "1";
-    process.env.OPENCLAW_PROXY_CA_FILE = caFile;
+    process.env.DEX_PROXY_ACTIVE = "1";
+    process.env.DEX_PROXY_CA_FILE = caFile;
 
     const options = resolveSlackWebClientOptions();
     const agent = requireAgent(options);

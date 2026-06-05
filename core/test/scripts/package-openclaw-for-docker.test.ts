@@ -77,8 +77,8 @@ describe("package-openclaw-for-docker", () => {
       skipDts: string | undefined;
       timeoutMs: number | undefined;
     }> = [];
-    const previousTimeout = process.env.OPENCLAW_DOCKER_PACKAGE_BUILD_TIMEOUT_MS;
-    process.env.OPENCLAW_DOCKER_PACKAGE_BUILD_TIMEOUT_MS = "1234";
+    const previousTimeout = process.env.DEX_DOCKER_PACKAGE_BUILD_TIMEOUT_MS;
+    process.env.DEX_DOCKER_PACKAGE_BUILD_TIMEOUT_MS = "1234";
 
     try {
       await buildPackageArtifacts("/repo", {
@@ -92,17 +92,17 @@ describe("package-openclaw-for-docker", () => {
             command,
             args,
             cwd,
-            noPnpm: options.env?.OPENCLAW_BUILD_ALL_NO_PNPM,
-            skipDts: options.env?.OPENCLAW_RUN_NODE_SKIP_DTS_BUILD,
+            noPnpm: options.env?.DEX_BUILD_ALL_NO_PNPM,
+            skipDts: options.env?.DEX_RUN_NODE_SKIP_DTS_BUILD,
             timeoutMs: options.timeoutMs,
           });
         },
       });
     } finally {
       if (previousTimeout === undefined) {
-        delete process.env.OPENCLAW_DOCKER_PACKAGE_BUILD_TIMEOUT_MS;
+        delete process.env.DEX_DOCKER_PACKAGE_BUILD_TIMEOUT_MS;
       } else {
-        process.env.OPENCLAW_DOCKER_PACKAGE_BUILD_TIMEOUT_MS = previousTimeout;
+        process.env.DEX_DOCKER_PACKAGE_BUILD_TIMEOUT_MS = previousTimeout;
       }
     }
 
@@ -184,13 +184,13 @@ describe("package-openclaw-for-docker", () => {
         "const { spawn } = require('node:child_process');",
         "const fs = require('node:fs');",
         `const child = spawn(process.execPath, ['-e', ${JSON.stringify(childScript)}], { stdio: 'ignore' });`,
-        "fs.writeFileSync(process.env.OPENCLAW_TEST_CHILD_PID, String(child.pid));",
+        "fs.writeFileSync(process.env.DEX_TEST_CHILD_PID, String(child.pid));",
         "process.on('SIGTERM', () => {});",
         "setInterval(() => {}, 1000);",
       ].join("");
 
       const runPromise = runCommandForTest(process.execPath, ["-e", parentScript], process.cwd(), {
-        env: { ...process.env, OPENCLAW_TEST_CHILD_PID: childPidPath },
+        env: { ...process.env, DEX_TEST_CHILD_PID: childPidPath },
         killAfterMs: 25,
         timeoutMs: 500,
       });
@@ -223,13 +223,13 @@ describe("package-openclaw-for-docker", () => {
         "const { spawn } = require('node:child_process');",
         "const fs = require('node:fs');",
         `const child = spawn(process.execPath, ['-e', ${JSON.stringify(childScript)}], { stdio: 'ignore' });`,
-        "fs.writeFileSync(process.env.OPENCLAW_TEST_CHILD_PID, String(child.pid));",
+        "fs.writeFileSync(process.env.DEX_TEST_CHILD_PID, String(child.pid));",
         "setInterval(() => {}, 1000);",
       ].join("");
 
       await expect(
         runCommandForTest(process.execPath, ["-e", parentScript], process.cwd(), {
-          env: { ...process.env, OPENCLAW_TEST_CHILD_PID: childPidPath },
+          env: { ...process.env, DEX_TEST_CHILD_PID: childPidPath },
           killAfterMs: 25,
           timeoutMs: 500,
         }),
@@ -310,7 +310,7 @@ describe("package-openclaw-for-docker", () => {
         "const { spawn } = require('node:child_process');",
         "const fs = require('node:fs');",
         `const child = spawn(process.execPath, ['-e', ${JSON.stringify(childScript)}], { stdio: 'ignore' });`,
-        "fs.writeFileSync(process.env.OPENCLAW_TEST_CHILD_PID, String(child.pid));",
+        "fs.writeFileSync(process.env.DEX_TEST_CHILD_PID, String(child.pid));",
         "setInterval(() => {}, 1000);",
       ].join("");
       const runnerScript = [
@@ -319,7 +319,7 @@ describe("package-openclaw-for-docker", () => {
       ].join("\n");
       const runner = spawn(process.execPath, ["--input-type=module", "-e", runnerScript], {
         cwd: process.cwd(),
-        env: { ...process.env, OPENCLAW_TEST_CHILD_PID: childPidPath },
+        env: { ...process.env, DEX_TEST_CHILD_PID: childPidPath },
         stdio: ["ignore", "ignore", "pipe"],
       });
       runnerPid = runner.pid ?? 0;

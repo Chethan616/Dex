@@ -15,7 +15,7 @@ describe("prepareCliBundleMcpConfig resume hash", () => {
             type: "http",
             url: "http://127.0.0.1:23119/mcp",
             headers: {
-              Authorization: "Bearer ${OPENCLAW_MCP_TOKEN}",
+              Authorization: "Bearer ${DEX_MCP_TOKEN}",
             },
           },
         },
@@ -28,7 +28,7 @@ describe("prepareCliBundleMcpConfig resume hash", () => {
             type: "http",
             url: "http://127.0.0.1:24567/mcp",
             headers: {
-              Authorization: "Bearer ${OPENCLAW_MCP_TOKEN}",
+              Authorization: "Bearer ${DEX_MCP_TOKEN}",
             },
           },
         },
@@ -50,7 +50,7 @@ describe("prepareCliBundleMcpConfig resume hash", () => {
             type: "http",
             url: "http://127.0.0.1:23119/mcp",
             headers: {
-              Authorization: "Bearer ${OPENCLAW_MCP_TOKEN}",
+              Authorization: "Bearer ${DEX_MCP_TOKEN}",
             },
           },
         },
@@ -63,7 +63,7 @@ describe("prepareCliBundleMcpConfig resume hash", () => {
             type: "http",
             url: "http://127.0.0.1:23119/other",
             headers: {
-              Authorization: "Bearer ${OPENCLAW_MCP_TOKEN}",
+              Authorization: "Bearer ${DEX_MCP_TOKEN}",
             },
           },
         },

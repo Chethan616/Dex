@@ -3,8 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  closeOpenClawStateDatabaseForTest,
-  openOpenClawStateDatabase,
+  closeDexStateDatabaseForTest,
+  openDexStateDatabase,
 } from "../state/openclaw-state-db.js";
 import { captureEnv } from "../test-utils/env.js";
 import {
@@ -54,16 +54,16 @@ function createRun(overrides: Partial<SubagentRunRecord> = {}): SubagentRunRecor
 }
 
 describe("subagent registry sqlite store", () => {
-  const envSnapshot = captureEnv(["OPENCLAW_STATE_DIR"]);
+  const envSnapshot = captureEnv(["DEX_STATE_DIR"]);
   let tempStateDir: string | null = null;
 
   beforeEach(async () => {
     tempStateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-subagent-sqlite-"));
-    process.env.OPENCLAW_STATE_DIR = tempStateDir;
+    process.env.DEX_STATE_DIR = tempStateDir;
   });
 
   afterEach(async () => {
-    closeOpenClawStateDatabaseForTest();
+    closeDexStateDatabaseForTest();
     if (tempStateDir) {
       await fs.rm(tempStateDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
       tempStateDir = null;
@@ -128,7 +128,7 @@ describe("subagent registry sqlite store", () => {
       "import legacy registry",
     );
     expect(
-      openOpenClawStateDatabase().db.prepare("SELECT COUNT(*) AS count FROM subagent_runs").get(),
+      openDexStateDatabase().db.prepare("SELECT COUNT(*) AS count FROM subagent_runs").get(),
     ).toEqual({ count: 1 });
   });
 });

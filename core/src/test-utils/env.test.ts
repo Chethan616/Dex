@@ -19,8 +19,8 @@ function restoreEnvKey(key: string, previous: string | undefined): void {
 
 describe("env test utils", () => {
   it("captureEnv restores mutated keys", () => {
-    const keyA = "OPENCLAW_ENV_TEST_A";
-    const keyB = "OPENCLAW_ENV_TEST_B";
+    const keyA = "DEX_ENV_TEST_A";
+    const keyB = "DEX_ENV_TEST_B";
     const snapshot = captureEnv([keyA, keyB]);
     const prevA = process.env[keyA];
     const prevB = process.env[keyB];
@@ -34,7 +34,7 @@ describe("env test utils", () => {
   });
 
   it("captureFullEnv restores added keys and baseline values", () => {
-    const key = "OPENCLAW_ENV_TEST_ADDED";
+    const key = "DEX_ENV_TEST_ADDED";
     const prevHome = process.env.HOME;
     const snapshot = captureFullEnv();
     process.env[key] = "1";
@@ -47,7 +47,7 @@ describe("env test utils", () => {
   });
 
   it("withEnv applies values only inside callback", () => {
-    const key = "OPENCLAW_ENV_TEST_SYNC";
+    const key = "DEX_ENV_TEST_SYNC";
     const prev = process.env[key];
 
     const seen = withEnv({ [key]: "inside" }, () => process.env[key]);
@@ -57,7 +57,7 @@ describe("env test utils", () => {
   });
 
   it("withEnv restores values when callback throws", () => {
-    const key = "OPENCLAW_ENV_TEST_SYNC_THROW";
+    const key = "DEX_ENV_TEST_SYNC_THROW";
     const prev = process.env[key];
 
     expect(() =>
@@ -71,7 +71,7 @@ describe("env test utils", () => {
   });
 
   it("withEnv can delete a key only inside callback", () => {
-    const key = "OPENCLAW_ENV_TEST_SYNC_DELETE";
+    const key = "DEX_ENV_TEST_SYNC_DELETE";
     const prev = process.env[key];
     process.env[key] = "outer";
 
@@ -83,7 +83,7 @@ describe("env test utils", () => {
   });
 
   it("withEnvAsync restores values when callback throws", async () => {
-    const key = "OPENCLAW_ENV_TEST_ASYNC";
+    const key = "DEX_ENV_TEST_ASYNC";
     const prev = process.env[key];
 
     await expect(
@@ -97,7 +97,7 @@ describe("env test utils", () => {
   });
 
   it("withEnvAsync applies values only inside async callback", async () => {
-    const key = "OPENCLAW_ENV_TEST_ASYNC_OK";
+    const key = "DEX_ENV_TEST_ASYNC_OK";
     const prev = process.env[key];
 
     const seen = await withEnvAsync({ [key]: "inside" }, async () => process.env[key]);
@@ -107,7 +107,7 @@ describe("env test utils", () => {
   });
 
   it("withEnvAsync can delete a key only inside callback", async () => {
-    const key = "OPENCLAW_ENV_TEST_ASYNC_DELETE";
+    const key = "DEX_ENV_TEST_ASYNC_DELETE";
     const prev = process.env[key];
     process.env[key] = "outer";
 
@@ -121,44 +121,44 @@ describe("env test utils", () => {
   it("createPathResolutionEnv clears leaked path overrides before applying explicit ones", () => {
     const homeDir = path.join(path.sep, "tmp", "openclaw-home");
     const resolvedHomeDir = path.resolve(homeDir);
-    const previousOpenClawHome = process.env.OPENCLAW_HOME;
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    const previousBundledDir = process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
-    process.env.OPENCLAW_HOME = "/srv/openclaw-home";
-    process.env.OPENCLAW_STATE_DIR = "/srv/openclaw-state";
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/srv/openclaw-bundled";
+    const previousOpenClawHome = process.env.DEX_HOME;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    const previousBundledDir = process.env.DEX_BUNDLED_PLUGINS_DIR;
+    process.env.DEX_HOME = "/srv/openclaw-home";
+    process.env.DEX_STATE_DIR = "/srv/openclaw-state";
+    process.env.DEX_BUNDLED_PLUGINS_DIR = "/srv/openclaw-bundled";
 
     try {
       const env = createPathResolutionEnv(homeDir, {
-        OPENCLAW_STATE_DIR: "~/state",
+        DEX_STATE_DIR: "~/state",
       });
 
       expect(env.HOME).toBe(resolvedHomeDir);
-      expect(env.OPENCLAW_HOME).toBeUndefined();
-      expect(env.OPENCLAW_BUNDLED_PLUGINS_DIR).toBeUndefined();
-      expect(env.OPENCLAW_STATE_DIR).toBe("~/state");
+      expect(env.DEX_HOME).toBeUndefined();
+      expect(env.DEX_BUNDLED_PLUGINS_DIR).toBeUndefined();
+      expect(env.DEX_STATE_DIR).toBe("~/state");
     } finally {
-      restoreEnvKey("OPENCLAW_HOME", previousOpenClawHome);
-      restoreEnvKey("OPENCLAW_STATE_DIR", previousStateDir);
-      restoreEnvKey("OPENCLAW_BUNDLED_PLUGINS_DIR", previousBundledDir);
+      restoreEnvKey("DEX_HOME", previousOpenClawHome);
+      restoreEnvKey("DEX_STATE_DIR", previousStateDir);
+      restoreEnvKey("DEX_BUNDLED_PLUGINS_DIR", previousBundledDir);
     }
   });
 
   it("withPathResolutionEnv only applies the explicit path env inside the callback", () => {
     const homeDir = path.join(path.sep, "tmp", "openclaw-home");
     const resolvedHomeDir = path.resolve(homeDir);
-    const previousOpenClawHome = process.env.OPENCLAW_HOME;
-    process.env.OPENCLAW_HOME = "/srv/openclaw-home";
+    const previousOpenClawHome = process.env.DEX_HOME;
+    process.env.DEX_HOME = "/srv/openclaw-home";
 
     try {
       const seen = withPathResolutionEnv(
         homeDir,
-        { OPENCLAW_BUNDLED_PLUGINS_DIR: "~/bundled" },
+        { DEX_BUNDLED_PLUGINS_DIR: "~/bundled" },
         (env) => ({
           processHome: process.env.HOME,
-          processOpenClawHome: process.env.OPENCLAW_HOME,
-          processBundledDir: process.env.OPENCLAW_BUNDLED_PLUGINS_DIR,
-          envBundledDir: env.OPENCLAW_BUNDLED_PLUGINS_DIR,
+          processOpenClawHome: process.env.DEX_HOME,
+          processBundledDir: process.env.DEX_BUNDLED_PLUGINS_DIR,
+          envBundledDir: env.DEX_BUNDLED_PLUGINS_DIR,
         }),
       );
 
@@ -168,9 +168,9 @@ describe("env test utils", () => {
         processBundledDir: "~/bundled",
         envBundledDir: "~/bundled",
       });
-      expect(process.env.OPENCLAW_HOME).toBe("/srv/openclaw-home");
+      expect(process.env.DEX_HOME).toBe("/srv/openclaw-home");
     } finally {
-      restoreEnvKey("OPENCLAW_HOME", previousOpenClawHome);
+      restoreEnvKey("DEX_HOME", previousOpenClawHome);
     }
   });
 });

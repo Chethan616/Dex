@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -26,7 +26,7 @@ describe("hasConfiguredWebSearchCredential", () => {
   it("keeps empty config and env on the manifest-only path", () => {
     expect(
       hasConfiguredWebSearchCredential({
-        config: {} as OpenClawConfig,
+        config: {} as DexConfig,
         env: {},
         origin: "bundled",
       }),
@@ -38,7 +38,7 @@ describe("hasConfiguredWebSearchCredential", () => {
       hasConfiguredWebSearchCredential({
         config: {
           tools: { web: { search: { apiKey: "brave-key" } } },
-        } as OpenClawConfig,
+        } as DexConfig,
         env: {},
         origin: "bundled",
       }),

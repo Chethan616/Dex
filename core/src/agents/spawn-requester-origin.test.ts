@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentBindingMatch } from "../config/types.agents.js";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveRequesterOriginForChild } from "./spawn-requester-origin.js";
 
 describe("resolveRequesterOriginForChild", () => {
@@ -9,7 +9,7 @@ describe("resolveRequesterOriginForChild", () => {
   }
 
   function resolveAccount(params: {
-    cfg: OpenClawConfig;
+    cfg: DexConfig;
     targetAgentId?: string;
     requesterAgentId?: string;
     requesterChannel: string;
@@ -53,7 +53,7 @@ describe("resolveRequesterOriginForChild", () => {
             accountId: "bot-alpha-qa",
           }),
         ],
-      } as OpenClawConfig;
+      } as DexConfig;
 
       expectOrigin(
         resolveRequesterOriginForChild({
@@ -195,7 +195,7 @@ describe("resolveRequesterOriginForChild", () => {
   ] as const)("selects target account: $name", (scenario) => {
     expect(
       resolveAccount({
-        cfg: { bindings: [...scenario.bindings] } as OpenClawConfig,
+        cfg: { bindings: [...scenario.bindings] } as DexConfig,
         requesterChannel: scenario.requesterChannel,
         requesterAccountId: scenario.requesterAccountId,
         requesterAgentId: scenario.requesterAgentId,
@@ -221,7 +221,7 @@ describe("resolveRequesterOriginForChild", () => {
           accountId: "bot-alpha-teams",
         }),
       ],
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectOrigin(
       resolveRequesterOriginForChild({
@@ -253,7 +253,7 @@ describe("resolveRequesterOriginForChild", () => {
           accountId: "bot-alpha-qa",
         }),
       ],
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectOrigin(
       resolveRequesterOriginForChild({
@@ -295,7 +295,7 @@ describe("resolveRequesterOriginForChild", () => {
           accountId: "bot-alpha-current-guild",
         }),
       ],
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectOrigin(
       resolveRequesterOriginForChild({
@@ -328,7 +328,7 @@ describe("resolveRequesterOriginForChild", () => {
           accountId: "bot-alpha-line",
         }),
       ],
-    } as OpenClawConfig;
+    } as DexConfig;
 
     expectOrigin(
       resolveRequesterOriginForChild({

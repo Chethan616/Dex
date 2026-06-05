@@ -5,31 +5,31 @@ import { afterEach, describe, expect, it } from "vitest";
 import { executeSqliteQueryTakeFirstSync, getNodeSqliteKysely } from "../infra/kysely-sync.js";
 import { requireNodeSqlite } from "../infra/node-sqlite.js";
 import { readSqliteNumberPragma } from "../infra/sqlite-pragma.test-support.js";
-import type { DB as OpenClawAgentKyselyDatabase } from "./openclaw-agent-db.generated.js";
+import type { DB as DexAgentKyselyDatabase } from "./openclaw-agent-db.generated.js";
 import {
-  closeOpenClawAgentDatabasesForTest,
-  listOpenClawRegisteredAgentDatabases,
-  openOpenClawAgentDatabase,
+  closeDexAgentDatabasesForTest,
+  listDexRegisteredAgentDatabases,
+  openDexAgentDatabase,
   resolveOpenClawAgentSqlitePath,
 } from "./openclaw-agent-db.js";
 import {
-  closeOpenClawStateDatabaseForTest,
-  openOpenClawStateDatabase,
+  closeDexStateDatabaseForTest,
+  openDexStateDatabase,
 } from "./openclaw-state-db.js";
 import {
   collectSqliteSchemaShape,
   createSqliteSchemaShapeFromSql,
 } from "./sqlite-schema-shape.test-support.js";
 
-type AgentDbTestDatabase = Pick<OpenClawAgentKyselyDatabase, "schema_meta">;
+type AgentDbTestDatabase = Pick<DexAgentKyselyDatabase, "schema_meta">;
 
 function createTempStateDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-agent-db-"));
 }
 
 afterEach(() => {
-  closeOpenClawAgentDatabasesForTest();
-  closeOpenClawStateDatabaseForTest();
+  closeDexAgentDatabasesForTest();
+  closeDexStateDatabaseForTest();
 });
 
 describe("openclaw agent database", () => {
@@ -39,7 +39,7 @@ describe("openclaw agent database", () => {
     expect(
       resolveOpenClawAgentSqlitePath({
         agentId: "Worker-1",
-        env: { OPENCLAW_STATE_DIR: stateDir },
+        env: { DEX_STATE_DIR: stateDir },
       }),
     ).toBe(path.join(stateDir, "agents", "worker-1", "agent", "openclaw-agent.sqlite"));
   });
@@ -68,9 +68,9 @@ describe("openclaw agent database", () => {
 
   it("creates the per-agent schema and registers it globally", () => {
     const stateDir = createTempStateDir();
-    const database = openOpenClawAgentDatabase({
+    const database = openDexAgentDatabase({
       agentId: "worker-1",
-      env: { OPENCLAW_STATE_DIR: stateDir },
+      env: { DEX_STATE_DIR: stateDir },
     });
 
     expect(collectSqliteSchemaShape(database.db)).toEqual(
@@ -81,8 +81,8 @@ describe("openclaw agent database", () => {
       path.join(stateDir, "agents", "worker-1", "agent", "openclaw-agent.sqlite"),
     );
 
-    const registered = listOpenClawRegisteredAgentDatabases({
-      env: { OPENCLAW_STATE_DIR: stateDir },
+    const registered = listDexRegisteredAgentDatabases({
+      env: { DEX_STATE_DIR: stateDir },
     }).find((entry) => entry.agentId === "worker-1");
 
     expect(registered).toMatchObject({
@@ -95,20 +95,20 @@ describe("openclaw agent database", () => {
 
   it("keeps multiple registered paths for the same agent", () => {
     const stateDir = createTempStateDir();
-    const env = { OPENCLAW_STATE_DIR: stateDir };
+    const env = { DEX_STATE_DIR: stateDir };
     const relocatedPath = path.join(stateDir, "relocated", "worker-1.sqlite");
-    const relocated = openOpenClawAgentDatabase({
+    const relocated = openDexAgentDatabase({
       agentId: "worker-1",
       env,
       path: relocatedPath,
     });
-    const defaultDatabase = openOpenClawAgentDatabase({
+    const defaultDatabase = openDexAgentDatabase({
       agentId: "worker-1",
       env,
     });
 
     expect(
-      listOpenClawRegisteredAgentDatabases({ env })
+      listDexRegisteredAgentDatabases({ env })
         .filter((entry) => entry.agentId === "worker-1")
         .map((entry) => entry.path),
     ).toEqual([defaultDatabase.path, relocated.path].toSorted());
@@ -116,26 +116,26 @@ describe("openclaw agent database", () => {
 
   it("rejects sharing one explicit database path across agent ids", () => {
     const stateDir = createTempStateDir();
-    const env = { OPENCLAW_STATE_DIR: stateDir };
+    const env = { DEX_STATE_DIR: stateDir };
     const databasePath = path.join(stateDir, "relocated", "shared.sqlite");
 
-    openOpenClawAgentDatabase({
+    openDexAgentDatabase({
       agentId: "worker-1",
       env,
       path: databasePath,
     });
 
     expect(() =>
-      openOpenClawAgentDatabase({
+      openDexAgentDatabase({
         agentId: "worker-2",
         env,
         path: databasePath,
       }),
     ).toThrow(/already open for agent worker-1/);
 
-    closeOpenClawAgentDatabasesForTest();
+    closeDexAgentDatabasesForTest();
     expect(() =>
-      openOpenClawAgentDatabase({
+      openDexAgentDatabase({
         agentId: "worker-2",
         env,
         path: databasePath,
@@ -145,23 +145,23 @@ describe("openclaw agent database", () => {
 
   it("rejects explicit paths that point at the global state database", () => {
     const stateDir = createTempStateDir();
-    const env = { OPENCLAW_STATE_DIR: stateDir };
+    const env = { DEX_STATE_DIR: stateDir };
     const databasePath = path.join(stateDir, "state", "openclaw.sqlite");
-    const stateDatabase = openOpenClawStateDatabase({
+    const stateDatabase = openDexStateDatabase({
       env,
       path: databasePath,
     });
-    closeOpenClawStateDatabaseForTest();
+    closeDexStateDatabaseForTest();
 
     expect(() =>
-      openOpenClawAgentDatabase({
+      openDexAgentDatabase({
         agentId: "worker-1",
         env,
         path: stateDatabase.path,
       }),
     ).toThrow(/schema role global/);
 
-    const reopenedStateDatabase = openOpenClawStateDatabase({
+    const reopenedStateDatabase = openDexStateDatabase({
       env,
       path: databasePath,
     });
@@ -176,7 +176,7 @@ describe("openclaw agent database", () => {
     fs.chmodSync(parentDir, 0o755);
     const databasePath = path.join(parentDir, "worker-1.sqlite");
 
-    openOpenClawAgentDatabase({
+    openDexAgentDatabase({
       agentId: "worker-1",
       path: databasePath,
     });
@@ -186,9 +186,9 @@ describe("openclaw agent database", () => {
 
   it("configures durable SQLite connection pragmas", () => {
     const stateDir = createTempStateDir();
-    const database = openOpenClawAgentDatabase({
+    const database = openDexAgentDatabase({
       agentId: "worker-1",
-      env: { OPENCLAW_STATE_DIR: stateDir },
+      env: { DEX_STATE_DIR: stateDir },
     });
 
     expect(readSqliteNumberPragma(database.db, "busy_timeout")).toBe(30_000);
@@ -204,9 +204,9 @@ describe("openclaw agent database", () => {
 
   it("records durable per-agent schema metadata", () => {
     const stateDir = createTempStateDir();
-    const database = openOpenClawAgentDatabase({
+    const database = openDexAgentDatabase({
       agentId: "worker-1",
-      env: { OPENCLAW_STATE_DIR: stateDir },
+      env: { DEX_STATE_DIR: stateDir },
     });
     const agentDb = getNodeSqliteKysely<AgentDbTestDatabase>(database.db);
 
@@ -238,9 +238,9 @@ describe("openclaw agent database", () => {
     db.close();
 
     expect(() =>
-      openOpenClawAgentDatabase({
+      openDexAgentDatabase({
         agentId: "worker-1",
-        env: { OPENCLAW_STATE_DIR: stateDir },
+        env: { DEX_STATE_DIR: stateDir },
       }),
     ).toThrow(/newer schema version 2/);
   });

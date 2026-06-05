@@ -265,8 +265,8 @@ function firstGatewayStartCall(
 
 describe("startGatewayPostAttachRuntime", () => {
   beforeEach(() => {
-    vi.stubEnv("OPENCLAW_SKIP_CHANNELS", "0");
-    vi.stubEnv("OPENCLAW_SKIP_PROVIDERS", "0");
+    vi.stubEnv("DEX_SKIP_CHANNELS", "0");
+    vi.stubEnv("DEX_SKIP_PROVIDERS", "0");
     hoisted.startPluginServices.mockClear();
     hoisted.startGmailWatcherWithLogs.mockClear();
     hoisted.loadInternalHooks.mockClear();
@@ -509,7 +509,7 @@ describe("startGatewayPostAttachRuntime", () => {
 
   it("skips heavy restart sentinel refresh when no sentinel file exists", async () => {
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-no-sentinel-"));
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
 
     const result = await testing.refreshLatestUpdateRestartSentinelIfPresent();
 
@@ -521,7 +521,7 @@ describe("startGatewayPostAttachRuntime", () => {
   it("refreshes the restart sentinel when the sentinel file exists", async () => {
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-sentinel-"));
     fs.writeFileSync(path.join(stateDir, "restart-sentinel.json"), "{}\n");
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
     const sentinel = { kind: "update", status: "ok", ts: 1 } as const;
     hoisted.refreshLatestUpdateRestartSentinel.mockResolvedValue(sentinel);
 
@@ -536,14 +536,14 @@ describe("startGatewayPostAttachRuntime", () => {
     const osHome = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-home-"));
     try {
       const openclawHome = path.join(osHome, "openclaw-home");
-      const stateDirFromHome = path.join(openclawHome, ".openclaw");
+      const stateDirFromHome = path.join(openclawHome, ".dex");
       fs.mkdirSync(stateDirFromHome, { recursive: true });
       fs.writeFileSync(path.join(stateDirFromHome, "restart-sentinel.json"), "{}\n");
 
       expect(
         await testing.hasRestartSentinelFileFast({
           HOME: osHome,
-          OPENCLAW_HOME: "~/openclaw-home",
+          DEX_HOME: "~/openclaw-home",
         } as NodeJS.ProcessEnv),
       ).toBe(true);
 
@@ -554,7 +554,7 @@ describe("startGatewayPostAttachRuntime", () => {
       expect(
         await testing.hasRestartSentinelFileFast({
           HOME: osHome,
-          OPENCLAW_STATE_DIR: "~\\openclaw-state",
+          DEX_STATE_DIR: "~\\openclaw-state",
         } as NodeJS.ProcessEnv),
       ).toBe(true);
     } finally {
@@ -576,7 +576,7 @@ describe("startGatewayPostAttachRuntime", () => {
       try {
         await expect(
           testing.hasRestartSentinelFileFast({
-            OPENCLAW_STATE_DIR: stateDir,
+            DEX_STATE_DIR: stateDir,
           } as NodeJS.ProcessEnv),
         ).resolves.toBe(true);
         expect(
@@ -1181,8 +1181,8 @@ describe("startGatewayPostAttachRuntime", () => {
   it("starts channels when channel startup is enabled", async () => {
     await withEnvAsync(
       {
-        OPENCLAW_SKIP_CHANNELS: undefined,
-        OPENCLAW_SKIP_PROVIDERS: undefined,
+        DEX_SKIP_CHANNELS: undefined,
+        DEX_SKIP_PROVIDERS: undefined,
       },
       async () => {
         const startChannels = vi.fn(async () => {});
@@ -1215,7 +1215,7 @@ describe("startGatewayPostAttachRuntime", () => {
 
   it("starts and reports plugin services after channel startup completes", async () => {
     await withEnvAsync(
-      { OPENCLAW_SKIP_CHANNELS: undefined, OPENCLAW_SKIP_PROVIDERS: undefined },
+      { DEX_SKIP_CHANNELS: undefined, DEX_SKIP_PROVIDERS: undefined },
       async () => {
         let releaseChannels: (() => void) | undefined;
         const events: string[] = [];
@@ -1278,7 +1278,7 @@ describe("startGatewayPostAttachRuntime", () => {
 
   it("does not start plugin services after deferred close starts during channel startup", async () => {
     await withEnvAsync(
-      { OPENCLAW_SKIP_CHANNELS: undefined, OPENCLAW_SKIP_PROVIDERS: undefined },
+      { DEX_SKIP_CHANNELS: undefined, DEX_SKIP_PROVIDERS: undefined },
       async () => {
         let closing = false;
         let releaseChannels: (() => void) | undefined;
@@ -1322,7 +1322,7 @@ describe("startGatewayPostAttachRuntime", () => {
 
   it("stops plugin services that finish starting after deferred close begins", async () => {
     await withEnvAsync(
-      { OPENCLAW_SKIP_CHANNELS: undefined, OPENCLAW_SKIP_PROVIDERS: undefined },
+      { DEX_SKIP_CHANNELS: undefined, DEX_SKIP_PROVIDERS: undefined },
       async () => {
         let shouldStartPluginServices = true;
         let releasePluginServices: (() => void) | undefined;
@@ -1374,7 +1374,7 @@ describe("startGatewayPostAttachRuntime", () => {
 
   it("returns plugin services already reported by deferred sidecars", async () => {
     await withEnvAsync(
-      { OPENCLAW_SKIP_CHANNELS: undefined, OPENCLAW_SKIP_PROVIDERS: undefined },
+      { DEX_SKIP_CHANNELS: undefined, DEX_SKIP_PROVIDERS: undefined },
       async () => {
         let releaseStartupLog: (() => void) | undefined;
         let releaseChannels: (() => void) | undefined;
@@ -1439,7 +1439,7 @@ describe("startGatewayPostAttachRuntime", () => {
     const logChannels = { info: vi.fn(), error: vi.fn() };
 
     await withEnvAsync(
-      { OPENCLAW_SKIP_CHANNELS: "1", OPENCLAW_SKIP_PROVIDERS: undefined },
+      { DEX_SKIP_CHANNELS: "1", DEX_SKIP_PROVIDERS: undefined },
       async () => {
         await startGatewaySidecars({
           cfg: { hooks: { internal: { enabled: false } } } as never,
@@ -1462,7 +1462,7 @@ describe("startGatewayPostAttachRuntime", () => {
     expect(trace.measures).toContain("sidecars.channels");
     expect(trace.measures).toContain("sidecars.channel-skip");
     expect(logChannels.info).toHaveBeenCalledWith(
-      "skipping channel start (OPENCLAW_SKIP_CHANNELS=1 or OPENCLAW_SKIP_PROVIDERS=1)",
+      "skipping channel start (DEX_SKIP_CHANNELS=1 or DEX_SKIP_PROVIDERS=1)",
     );
   });
 

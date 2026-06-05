@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { clearPluginCommands, registerPluginCommand } from "../../plugins/commands.js";
 import { createPluginRegistry, type PluginRecord } from "../../plugins/registry.js";
 import type { PluginRuntime } from "../../plugins/runtime/types.js";
@@ -66,7 +66,7 @@ function buildDiagnosticsParams(
   overrides: Partial<HandleCommandsParams> = {},
 ): HandleCommandsParams {
   return {
-    cfg: { commands: { text: true } } as OpenClawConfig,
+    cfg: { commands: { text: true } } as DexConfig,
     ctx: {
       Provider: "whatsapp",
       Surface: "whatsapp",

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/types.js";
+import type { DexConfig } from "../config/types.js";
 import {
   clearCurrentPluginMetadataSnapshot,
   resolvePluginMetadataControlPlaneFingerprint,
@@ -75,11 +75,11 @@ describe("isCliProvider", () => {
   });
 
   it("returns true for setup-registered cli backends", () => {
-    expect(isCliProvider("claude-cli", {} as OpenClawConfig)).toBe(true);
+    expect(isCliProvider("claude-cli", {} as DexConfig)).toBe(true);
   });
 
   it("returns false for provider ids", () => {
-    expect(isCliProvider("example-cli", {} as OpenClawConfig)).toBe(false);
+    expect(isCliProvider("example-cli", {} as DexConfig)).toBe(false);
   });
 
   it("does not execute setup runtime when descriptor metadata has no matching backend", () => {
@@ -89,6 +89,6 @@ describe("isCliProvider", () => {
       },
     });
 
-    expect(isCliProvider("openai", {} as OpenClawConfig)).toBe(false);
+    expect(isCliProvider("openai", {} as DexConfig)).toBe(false);
   });
 });

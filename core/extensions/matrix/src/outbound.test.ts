@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../runtime-api.js";
+import type { DexConfig } from "../runtime-api.js";
 
 const mocks = vi.hoisted(() => ({
   sendMessageMatrix: vi.fn(),
@@ -69,7 +69,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await matrixOutbound.sendText!({
       cfg,
@@ -97,7 +97,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await matrixOutbound.sendMedia!({
       cfg,
@@ -126,7 +126,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
     const matrix = vi.fn(async () => ({
       messageId: "evt-injected",
       roomId: "!room:example",
@@ -159,7 +159,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await matrixOutbound.sendPoll!({
       cfg,
@@ -247,7 +247,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const presentationContent = {
       version: 1,
@@ -301,7 +301,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const presentationContent = {
       version: 1,
@@ -341,7 +341,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const presentationContent = {
       version: 1,
@@ -385,7 +385,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await matrixOutbound.sendPayload!({
       cfg,
@@ -423,7 +423,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await matrixOutbound.sendPayload!({
       cfg,
@@ -472,7 +472,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "regression-token",
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     await matrixOutbound.sendPayload!({
       cfg,

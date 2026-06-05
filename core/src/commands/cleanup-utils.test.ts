@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, test, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import { applyAgentDefaultPrimaryModel } from "../plugins/provider-model-primary.js";
 import type { RuntimeEnv } from "../runtime.js";
 import {
@@ -24,7 +24,7 @@ describe("buildCleanupPlan", () => {
       },
     };
     const plan = buildCleanupPlan({
-      cfg: cfg as unknown as OpenClawConfig,
+      cfg: cfg as unknown as DexConfig,
       stateDir: path.join(tmpRoot, "openclaw-state"),
       configPath: path.join(tmpRoot, "openclaw-state", "openclaw.json"),
       oauthDir: path.join(tmpRoot, "openclaw-oauth"),
@@ -37,11 +37,11 @@ describe("buildCleanupPlan", () => {
 
   test("includes implicit per-agent workspaces under the state dir", () => {
     const previousHome = process.env.HOME;
-    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
-    const previousWorkspaceDir = process.env.OPENCLAW_WORKSPACE_DIR;
+    const previousStateDir = process.env.DEX_STATE_DIR;
+    const previousWorkspaceDir = process.env.DEX_WORKSPACE_DIR;
     const tmpRoot = path.join(path.parse(process.cwd()).root, "tmp", "openclaw-cleanup-plan");
     const home = path.join(tmpRoot, "home");
-    const stateDir = path.join(home, ".openclaw");
+    const stateDir = path.join(home, ".dex");
     const cfg = {
       agents: {
         list: [{ id: "main" }, { id: "work" }],
@@ -50,11 +50,11 @@ describe("buildCleanupPlan", () => {
 
     try {
       process.env.HOME = home;
-      process.env.OPENCLAW_STATE_DIR = stateDir;
-      delete process.env.OPENCLAW_WORKSPACE_DIR;
+      process.env.DEX_STATE_DIR = stateDir;
+      delete process.env.DEX_WORKSPACE_DIR;
 
       const plan = buildCleanupPlan({
-        cfg: cfg as unknown as OpenClawConfig,
+        cfg: cfg as unknown as DexConfig,
         stateDir,
         configPath: path.join(stateDir, "openclaw.json"),
         oauthDir: path.join(stateDir, "credentials"),
@@ -70,14 +70,14 @@ describe("buildCleanupPlan", () => {
         process.env.HOME = previousHome;
       }
       if (previousStateDir === undefined) {
-        delete process.env.OPENCLAW_STATE_DIR;
+        delete process.env.DEX_STATE_DIR;
       } else {
-        process.env.OPENCLAW_STATE_DIR = previousStateDir;
+        process.env.DEX_STATE_DIR = previousStateDir;
       }
       if (previousWorkspaceDir === undefined) {
-        delete process.env.OPENCLAW_WORKSPACE_DIR;
+        delete process.env.DEX_WORKSPACE_DIR;
       } else {
-        process.env.OPENCLAW_WORKSPACE_DIR = previousWorkspaceDir;
+        process.env.DEX_WORKSPACE_DIR = previousWorkspaceDir;
       }
     }
   });
@@ -85,14 +85,14 @@ describe("buildCleanupPlan", () => {
 
 describe("applyAgentDefaultPrimaryModel", () => {
   it("does not mutate when already set", () => {
-    const cfg = { agents: { defaults: { model: { primary: "a/b" } } } } as OpenClawConfig;
+    const cfg = { agents: { defaults: { model: { primary: "a/b" } } } } as DexConfig;
     const result = applyAgentDefaultPrimaryModel({ cfg, model: "a/b" });
     expect(result.changed).toBe(false);
     expect(result.next).toBe(cfg);
   });
 
   it("normalizes legacy models", () => {
-    const cfg = { agents: { defaults: { model: { primary: "legacy" } } } } as OpenClawConfig;
+    const cfg = { agents: { defaults: { model: { primary: "legacy" } } } } as DexConfig;
     const result = applyAgentDefaultPrimaryModel({
       cfg,
       model: "a/b",
@@ -103,7 +103,7 @@ describe("applyAgentDefaultPrimaryModel", () => {
   });
 
   it("normalizes retired Google Gemini primary models before writing config", () => {
-    const cfg = { agents: { defaults: {} } } as OpenClawConfig;
+    const cfg = { agents: { defaults: {} } } as DexConfig;
     const result = applyAgentDefaultPrimaryModel({
       cfg,
       model: "google/gemini-3-pro-preview",
@@ -150,7 +150,7 @@ describe("cleanup path removals", () => {
   it("preserves nested workspace paths during state-only removal", async () => {
     const runtime = createRuntimeMock();
     const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-cleanup-"));
-    const stateDir = path.join(tmpRoot, ".openclaw");
+    const stateDir = path.join(tmpRoot, ".dex");
     const workspaceDir = path.join(stateDir, "workspace");
     const workspaceFile = path.join(workspaceDir, "project.txt");
     const configPath = path.join(stateDir, "openclaw.json");

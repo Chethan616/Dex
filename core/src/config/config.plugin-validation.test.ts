@@ -131,10 +131,10 @@ describe("config plugin validation", () => {
   const suiteEnv = () =>
     ({
       HOME: suiteHome,
-      OPENCLAW_HOME: undefined,
-      OPENCLAW_STATE_DIR: path.join(suiteHome, ".openclaw"),
-      OPENCLAW_BUNDLED_PLUGINS_DIR: undefined,
-      OPENCLAW_VERSION: undefined,
+      DEX_HOME: undefined,
+      DEX_STATE_DIR: path.join(suiteHome, ".dex"),
+      DEX_BUNDLED_PLUGINS_DIR: undefined,
+      DEX_VERSION: undefined,
       VITEST: "true",
     }) satisfies NodeJS.ProcessEnv;
 
@@ -1243,7 +1243,7 @@ describe("config plugin validation", () => {
   });
 
   it("uses persisted installed-plugin records as stale channel evidence", async () => {
-    const stateDir = path.join(suiteHome, ".openclaw");
+    const stateDir = path.join(suiteHome, ".dex");
     clearLoadInstalledPluginIndexInstallRecordsCache();
     await writePersistedInstalledPluginIndex(
       {
@@ -1342,7 +1342,7 @@ describe("config plugin validation", () => {
       {
         env: {
           ...suiteEnv(),
-          OPENCLAW_BUNDLED_PLUGINS_DIR: path.join(suiteHome, "missing-bundled-plugins"),
+          DEX_BUNDLED_PLUGINS_DIR: path.join(suiteHome, "missing-bundled-plugins"),
         },
       },
     );
@@ -1389,7 +1389,7 @@ describe("config plugin validation", () => {
   });
 
   it("ignores standalone helper scripts in auto-discovered global extensions", async () => {
-    const helperPath = path.join(suiteHome, ".openclaw", "extensions", "my-helper.mjs");
+    const helperPath = path.join(suiteHome, ".dex", "extensions", "my-helper.mjs");
     await mkdirSafe(path.dirname(helperPath));
     await fs.writeFile(helperPath, "export default {};\n", "utf-8");
     try {
@@ -1451,7 +1451,7 @@ describe("config plugin validation", () => {
       {
         env: {
           ...suiteEnv(),
-          OPENCLAW_BUNDLED_PLUGINS_DIR: path.join(process.cwd(), "extensions"),
+          DEX_BUNDLED_PLUGINS_DIR: path.join(process.cwd(), "extensions"),
         },
       },
     );

@@ -1,9 +1,9 @@
-import type { OpenClawPluginApi } from "../../../src/plugins/types.js";
+import type { DexPluginApi } from "../../../src/plugins/types.js";
 import { loadBundledPluginPublicSurfaceSync } from "../../../src/test-utils/bundled-plugin-public-surface.js";
 
 type BundledPluginEntryModule = {
   default: {
-    register(api: OpenClawPluginApi): void;
+    register(api: DexPluginApi): void;
   };
 };
 

@@ -231,7 +231,7 @@ describe("registerBrowserCli lazy browser subcommands", () => {
   });
 
   it("can eagerly register all browser groups for compatibility", async () => {
-    vi.stubEnv("OPENCLAW_DISABLE_LAZY_SUBCOMMANDS", "1");
+    vi.stubEnv("DEX_DISABLE_LAZY_SUBCOMMANDS", "1");
     const program = new Command();
     program.name("openclaw");
 

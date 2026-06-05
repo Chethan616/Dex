@@ -19,8 +19,8 @@ describe("resolveAmbientNodeProxyAgent", () => {
     "HTTP_PROXY",
     "https_proxy",
     "http_proxy",
-    "OPENCLAW_PROXY_ACTIVE",
-    "OPENCLAW_PROXY_CA_FILE",
+    "DEX_PROXY_ACTIVE",
+    "DEX_PROXY_CA_FILE",
   ] as const;
   const tempDirs: string[] = [];
 
@@ -51,8 +51,8 @@ describe("resolveAmbientNodeProxyAgent", () => {
   it("adds managed proxy CA trust to ambient Node proxy agents", async () => {
     const caFile = writeTempCa("extension-shared-managed-proxy-ca");
     vi.stubEnv("https_proxy", "https://proxy.example:8443");
-    vi.stubEnv("OPENCLAW_PROXY_ACTIVE", "1");
-    vi.stubEnv("OPENCLAW_PROXY_CA_FILE", caFile);
+    vi.stubEnv("DEX_PROXY_ACTIVE", "1");
+    vi.stubEnv("DEX_PROXY_CA_FILE", caFile);
 
     const agent = await resolveAmbientNodeProxyAgent<{ proxy: true }>();
 

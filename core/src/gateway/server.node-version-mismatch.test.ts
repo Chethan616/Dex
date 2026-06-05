@@ -18,7 +18,7 @@ describe("node host version mismatch guard", () => {
 
   beforeAll(async () => {
     // Write a node.json so the gateway's resolveLocalNodeId() finds it in the test state dir.
-    const stateDir = process.env.OPENCLAW_STATE_DIR;
+    const stateDir = process.env.DEX_STATE_DIR;
     if (stateDir) {
       fs.mkdirSync(stateDir, { recursive: true });
       fs.writeFileSync(

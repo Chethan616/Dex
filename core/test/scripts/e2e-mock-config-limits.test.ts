@@ -7,10 +7,10 @@ const configReloadAssertPath = "scripts/e2e/lib/config-reload/assert-log.mjs";
 const scrubbedEnvKeys = [
   "MOCK_PORT",
   "MOCK_REQUEST_LOG",
-  "OPENCLAW_CONFIG_RELOAD_LOG_MAX_READ_BYTES",
-  "OPENCLAW_CONFIG_RELOAD_LOG_PATH",
-  "OPENCLAW_CONFIG_RELOAD_LOG_TIMEOUT_MS",
-  "OPENCLAW_MOCK_OPENAI_PORT",
+  "DEX_CONFIG_RELOAD_LOG_MAX_READ_BYTES",
+  "DEX_CONFIG_RELOAD_LOG_PATH",
+  "DEX_CONFIG_RELOAD_LOG_TIMEOUT_MS",
+  "DEX_MOCK_OPENAI_PORT",
   "RAW_SCHEMA_ERROR",
   "SUCCESS_MARKER",
 ];
@@ -35,10 +35,10 @@ describe("e2e mock and config helper numeric limits", () => {
     expect(mockPort.stderr).toContain("invalid MOCK_PORT: 44080tcp");
 
     const fallbackPort = runScript(mockOpenAiPath, {
-      OPENCLAW_MOCK_OPENAI_PORT: "44080http",
+      DEX_MOCK_OPENAI_PORT: "44080http",
     });
     expect(fallbackPort.status).not.toBe(0);
-    expect(fallbackPort.stderr).toContain("invalid OPENCLAW_MOCK_OPENAI_PORT: 44080http");
+    expect(fallbackPort.stderr).toContain("invalid DEX_MOCK_OPENAI_PORT: 44080http");
   });
 
   it("rejects loose OpenAI web-search mock port env values", () => {
@@ -50,19 +50,19 @@ describe("e2e mock and config helper numeric limits", () => {
 
   it("rejects loose config-reload log timeout env values", () => {
     const result = runScript(configReloadAssertPath, {
-      OPENCLAW_CONFIG_RELOAD_LOG_TIMEOUT_MS: "30000ms",
+      DEX_CONFIG_RELOAD_LOG_TIMEOUT_MS: "30000ms",
     });
 
     expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain("invalid OPENCLAW_CONFIG_RELOAD_LOG_TIMEOUT_MS: 30000ms");
+    expect(result.stderr).toContain("invalid DEX_CONFIG_RELOAD_LOG_TIMEOUT_MS: 30000ms");
   });
 
   it("rejects loose config-reload log read caps", () => {
     const result = runScript(configReloadAssertPath, {
-      OPENCLAW_CONFIG_RELOAD_LOG_MAX_READ_BYTES: "256kb",
+      DEX_CONFIG_RELOAD_LOG_MAX_READ_BYTES: "256kb",
     });
 
     expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain("invalid OPENCLAW_CONFIG_RELOAD_LOG_MAX_READ_BYTES: 256kb");
+    expect(result.stderr).toContain("invalid DEX_CONFIG_RELOAD_LOG_MAX_READ_BYTES: 256kb");
   });
 });

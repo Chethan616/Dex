@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { makeTempWorkspace } from "../../test-helpers/workspace.js";
 import {
   buildBareSessionResetPrompt,
@@ -46,7 +46,7 @@ describe("buildBareSessionResetPrompt", () => {
   it("appends current time line so agents know the date", () => {
     const cfg = {
       agents: { defaults: { userTimezone: "America/New_York", timeFormat: "12" } },
-    } as OpenClawConfig;
+    } as DexConfig;
     // 2026-03-03 14:00 UTC = 2026-03-03 09:00 EST
     const nowMs = Date.UTC(2026, 2, 3, 14, 0, 0);
     const prompt = buildBareSessionResetPrompt(cfg, nowMs);

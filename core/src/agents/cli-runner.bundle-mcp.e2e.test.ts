@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { DexConfig } from "../config/config.js";
 import type { CliBackendConfig } from "../config/types.js";
 import { captureEnv } from "../test-utils/env.js";
 import {
@@ -24,7 +24,7 @@ import type {
 const E2E_TIMEOUT_MS = 30_000;
 
 type BundleMcpFixture = {
-  config: OpenClawConfig;
+  config: DexConfig;
   envSnapshot: ReturnType<typeof captureEnv>;
   fakeClaudePath: string;
   fakeClaudePidPath?: string;
@@ -61,16 +61,16 @@ async function createBundleMcpFixture(params: {
   const envSnapshot = captureEnv([
     "HOME",
     "USERPROFILE",
-    "OPENCLAW_HOME",
-    "OPENCLAW_STATE_DIR",
-    "OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY",
+    "DEX_HOME",
+    "DEX_STATE_DIR",
+    "DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY",
   ]);
   const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), params.tempPrefix));
   process.env.HOME = tempHome;
   process.env.USERPROFILE = tempHome;
-  delete process.env.OPENCLAW_HOME;
-  delete process.env.OPENCLAW_STATE_DIR;
-  process.env.OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY = "1";
+  delete process.env.DEX_HOME;
+  delete process.env.DEX_STATE_DIR;
+  process.env.DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY = "1";
 
   const workspaceDir = path.join(tempHome, "workspace");
   const sessionFile = path.join(tempHome, "session.jsonl");
@@ -83,7 +83,7 @@ async function createBundleMcpFixture(params: {
   const fakeClaudePidPath = params.liveSession
     ? path.join(tempHome, "fake-live-claude.pid")
     : undefined;
-  const pluginRoot = path.join(tempHome, ".openclaw", "extensions", "bundle-probe");
+  const pluginRoot = path.join(tempHome, ".dex", "extensions", "bundle-probe");
   await fs.mkdir(workspaceDir, { recursive: true });
   await writeBundleProbeMcpServer(serverScriptPath);
   if (params.liveSession) {
@@ -93,7 +93,7 @@ async function createBundleMcpFixture(params: {
   }
   await writeClaudeBundle({ pluginRoot, serverScriptPath });
 
-  const config: OpenClawConfig = {
+  const config: DexConfig = {
     agents: {
       defaults: {
         workspace: workspaceDir,
@@ -135,7 +135,7 @@ function buildTestBackend(params: {
 
 async function prepareBundleMcpExecutionContext(params: {
   backend: CliBackendConfig;
-  config: OpenClawConfig;
+  config: DexConfig;
   model: string;
   prompt: string;
   runId: string;

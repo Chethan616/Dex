@@ -12,7 +12,7 @@ import type { TaskRecord } from "../../tasks/task-registry.types.js";
 import { tasksHandlers } from "./tasks.js";
 import type { RespondFn } from "./types.js";
 
-const ORIGINAL_STATE_DIR = process.env.OPENCLAW_STATE_DIR;
+const ORIGINAL_STATE_DIR = process.env.DEX_STATE_DIR;
 type TaskResponsePayload = {
   tasks?: Array<Record<string, unknown>>;
   task?: Record<string, unknown>;
@@ -32,16 +32,16 @@ function createTaskRecord(params: Parameters<typeof createTaskRecordOrNull>[0]):
 
 beforeEach(async () => {
   stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gateway-tasks-"));
-  process.env.OPENCLAW_STATE_DIR = stateDir;
+  process.env.DEX_STATE_DIR = stateDir;
   resetTaskRegistryForTests();
 });
 
 afterEach(async () => {
   resetTaskRegistryForTests();
   if (ORIGINAL_STATE_DIR === undefined) {
-    delete process.env.OPENCLAW_STATE_DIR;
+    delete process.env.DEX_STATE_DIR;
   } else {
-    process.env.OPENCLAW_STATE_DIR = ORIGINAL_STATE_DIR;
+    process.env.DEX_STATE_DIR = ORIGINAL_STATE_DIR;
   }
   await fs.rm(stateDir, { recursive: true, force: true });
 });

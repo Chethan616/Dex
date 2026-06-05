@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveRegistryUpdateChannel } from "../infra/update-channels.js";
 import type { PluginEnableResult } from "../plugins/enable.js";
 import { resolveNpmInstallSpecsForUpdateChannel } from "../plugins/install-channel-specs.js";
@@ -55,7 +55,7 @@ vi.mock("../plugins/clawhub.js", () => ({
 }));
 
 const enablePluginInConfig = vi.hoisted(() =>
-  vi.fn<(cfg: OpenClawConfig, pluginId: string) => PluginEnableResult>((cfg, pluginId) => ({
+  vi.fn<(cfg: DexConfig, pluginId: string) => PluginEnableResult>((cfg, pluginId) => ({
     config: cfg,
     enabled: true,
     pluginId,
@@ -66,7 +66,7 @@ vi.mock("../plugins/enable.js", () => ({
 }));
 
 const recordPluginInstall = vi.hoisted(() =>
-  vi.fn((cfg: OpenClawConfig, update: { pluginId: string }) => ({
+  vi.fn((cfg: DexConfig, update: { pluginId: string }) => ({
     ...cfg,
     plugins: {
       ...cfg.plugins,
@@ -159,15 +159,15 @@ type PluginInstallRecord = {
 describe("ensureOnboardingPluginInstalled", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.OPENCLAW_ALLOW_PLUGIN_INSTALL_OVERRIDES;
-    delete process.env.OPENCLAW_PLUGIN_INSTALL_OVERRIDES;
+    delete process.env.DEX_ALLOW_PLUGIN_INSTALL_OVERRIDES;
+    delete process.env.DEX_PLUGIN_INSTALL_OVERRIDES;
     withTimeout.mockImplementation(async <T>(promise: Promise<T>) => await promise);
     refreshPluginRegistryAfterConfigMutation.mockResolvedValue(undefined);
   });
 
   it("localizes plugin install choices", async () => {
-    const previousLocale = process.env.OPENCLAW_LOCALE;
-    process.env.OPENCLAW_LOCALE = "zh-CN";
+    const previousLocale = process.env.DEX_LOCALE;
+    process.env.DEX_LOCALE = "zh-CN";
     let captured:
       | {
           message: string;
@@ -205,16 +205,16 @@ describe("ensureOnboardingPluginInstalled", () => {
       ]);
     } finally {
       if (previousLocale === undefined) {
-        delete process.env.OPENCLAW_LOCALE;
+        delete process.env.DEX_LOCALE;
       } else {
-        process.env.OPENCLAW_LOCALE = previousLocale;
+        process.env.DEX_LOCALE = previousLocale;
       }
     }
   });
 
   it("localizes plugin install progress and enablement failures", async () => {
-    const previousLocale = process.env.OPENCLAW_LOCALE;
-    process.env.OPENCLAW_LOCALE = "zh-CN";
+    const previousLocale = process.env.DEX_LOCALE;
+    process.env.DEX_LOCALE = "zh-CN";
     enablePluginInConfig.mockReturnValueOnce({
       config: {},
       enabled: false,
@@ -252,16 +252,16 @@ describe("ensureOnboardingPluginInstalled", () => {
       expect(note).toHaveBeenCalledWith("无法启用 Demo Plugin：blocked by allowlist。", "插件安装");
     } finally {
       if (previousLocale === undefined) {
-        delete process.env.OPENCLAW_LOCALE;
+        delete process.env.DEX_LOCALE;
       } else {
-        process.env.OPENCLAW_LOCALE = previousLocale;
+        process.env.DEX_LOCALE = previousLocale;
       }
     }
   });
 
   it("refuses non-skipped installs in Nix mode before package work", async () => {
-    const previous = process.env.OPENCLAW_NIX_MODE;
-    process.env.OPENCLAW_NIX_MODE = "1";
+    const previous = process.env.DEX_NIX_MODE;
+    process.env.DEX_NIX_MODE = "1";
     try {
       await expect(
         ensureOnboardingPluginInstalled({
@@ -280,12 +280,12 @@ describe("ensureOnboardingPluginInstalled", () => {
           } as never,
           runtime: {} as never,
         }),
-      ).rejects.toThrow("OPENCLAW_NIX_MODE=1");
+      ).rejects.toThrow("DEX_NIX_MODE=1");
     } finally {
       if (previous === undefined) {
-        delete process.env.OPENCLAW_NIX_MODE;
+        delete process.env.DEX_NIX_MODE;
       } else {
-        process.env.OPENCLAW_NIX_MODE = previous;
+        process.env.DEX_NIX_MODE = previous;
       }
     }
 
@@ -296,8 +296,8 @@ describe("ensureOnboardingPluginInstalled", () => {
 
   it("uses a guarded npm-pack install override for the matching plugin id", async () => {
     const archivePath = path.resolve("tmp/demo-plugin.tgz");
-    process.env.OPENCLAW_ALLOW_PLUGIN_INSTALL_OVERRIDES = "1";
-    process.env.OPENCLAW_PLUGIN_INSTALL_OVERRIDES = JSON.stringify({
+    process.env.DEX_ALLOW_PLUGIN_INSTALL_OVERRIDES = "1";
+    process.env.DEX_PLUGIN_INSTALL_OVERRIDES = JSON.stringify({
       "other-plugin": "npm:@demo/other@1.0.0",
       "demo-plugin": `npm-pack:${archivePath}`,
     });
@@ -347,7 +347,7 @@ describe("ensureOnboardingPluginInstalled", () => {
     expect(packCall.expectedPluginId).toBe("demo-plugin");
     expect(packCall).not.toHaveProperty("trustedSourceLinkedOfficialInstall");
     const [, recordUpdate] = readFirstMockCall(recordPluginInstall, "recordPluginInstall") as [
-      OpenClawConfig,
+      DexConfig,
       PluginInstallRecord,
     ];
     expect(recordUpdate).toEqual({
@@ -367,8 +367,8 @@ describe("ensureOnboardingPluginInstalled", () => {
   });
 
   it("uses a guarded npm install override without official-trust flags", async () => {
-    process.env.OPENCLAW_ALLOW_PLUGIN_INSTALL_OVERRIDES = "1";
-    process.env.OPENCLAW_PLUGIN_INSTALL_OVERRIDES = JSON.stringify({
+    process.env.DEX_ALLOW_PLUGIN_INSTALL_OVERRIDES = "1";
+    process.env.DEX_PLUGIN_INSTALL_OVERRIDES = JSON.stringify({
       codex: "npm:@openclaw/codex@2026.5.8",
       "other-plugin": "npm-pack:/tmp/other.tgz",
     });
@@ -468,7 +468,7 @@ describe("ensureOnboardingPluginInstalled", () => {
     expect(update).toHaveBeenCalledWith("Downloading");
     expect(stop).toHaveBeenCalledWith("Installed Demo Provider plugin");
     const [, recordUpdate] = readFirstMockCall(recordPluginInstall, "recordPluginInstall") as [
-      OpenClawConfig,
+      DexConfig,
       PluginInstallRecord,
     ];
     expect(recordUpdate.pluginId).toBe("demo-plugin");
@@ -551,7 +551,7 @@ describe("ensureOnboardingPluginInstalled", () => {
     expect(stop).toHaveBeenCalledWith("Installed WeCom plugin");
     expect(buildNpmResolutionInstallFields).toHaveBeenCalledWith(npmResolution);
     const [, recordUpdate] = readFirstMockCall(recordPluginInstall, "recordPluginInstall") as [
-      OpenClawConfig,
+      DexConfig,
       PluginInstallRecord,
     ];
     expect(recordUpdate.pluginId).toBe("demo-plugin");
@@ -1141,7 +1141,7 @@ describe("ensureOnboardingPluginInstalled", () => {
       const [recordCfg, recordUpdate] = readFirstMockCall(
         recordPluginInstall,
         "recordPluginInstall",
-      ) as [OpenClawConfig, PluginInstallRecord];
+      ) as [DexConfig, PluginInstallRecord];
       expect(recordCfg.plugins?.load?.paths).toEqual([realPluginDir]);
       expect(recordUpdate).toEqual({
         pluginId: "demo-plugin",
@@ -1313,7 +1313,7 @@ describe("ensureOnboardingPluginInstalled", () => {
         const [recordCfg, recordUpdate] = readFirstMockCall(
           recordPluginInstall,
           "recordPluginInstall",
-        ) as [OpenClawConfig, PluginInstallRecord];
+        ) as [DexConfig, PluginInstallRecord];
         expect(recordCfg.plugins?.load?.paths).toEqual([realPluginDir]);
         expect(recordUpdate).toEqual({
           pluginId: "demo-plugin",
@@ -1362,7 +1362,7 @@ describe("ensureOnboardingPluginInstalled", () => {
       const [recordCfg, recordUpdate] = readFirstMockCall(
         recordPluginInstall,
         "recordPluginInstall",
-      ) as [OpenClawConfig, PluginInstallRecord];
+      ) as [DexConfig, PluginInstallRecord];
       expect(recordCfg).toEqual({
         plugins: {
           load: {

@@ -13,7 +13,7 @@ describe("formatCliFailureLines", () => {
     expect(lines).toEqual([
       "[openclaw] Could not start the CLI.",
       "[openclaw] Reason: config file is invalid",
-      "[openclaw] Debug: set OPENCLAW_DEBUG=1 to include the stack trace.",
+      "[openclaw] Debug: set DEX_DEBUG=1 to include the stack trace.",
       "[openclaw] Try: openclaw doctor",
       "[openclaw] Help: openclaw --help",
     ]);
@@ -23,7 +23,7 @@ describe("formatCliFailureLines", () => {
     const lines = formatCliFailureLines({
       title: "The CLI command failed.",
       error: new Error("boom"),
-      env: { OPENCLAW_DEBUG: "1" },
+      env: { DEX_DEBUG: "1" },
     });
 
     expect(lines.slice(0, 4)).toEqual([

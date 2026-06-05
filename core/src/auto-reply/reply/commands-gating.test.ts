@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { isCommandFlagEnabled } from "../../config/commands.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { REDACTED_SENTINEL } from "../../config/redact-snapshot.js";
 import type { MsgContext } from "../templating.js";
 import { handleBashChatCommand } from "./bash-command.js";
@@ -88,12 +88,12 @@ vi.mock("../../config/config.js", () => ({
   transformConfigFileWithRetry: async (params: {
     afterWrite?: unknown;
     transform: (
-      currentConfig: OpenClawConfig,
+      currentConfig: DexConfig,
       context: { snapshot: ConfigSnapshotMock; previousHash: string | null; attempt: number },
     ) =>
-      | Promise<{ nextConfig: OpenClawConfig; result?: unknown }>
+      | Promise<{ nextConfig: DexConfig; result?: unknown }>
       | {
-          nextConfig: OpenClawConfig;
+          nextConfig: DexConfig;
           result?: unknown;
         };
   }) => {
@@ -185,7 +185,7 @@ vi.mock("./debug-commands.js", () => ({
   }),
 }));
 
-function buildParams(commandBody: string, cfg: OpenClawConfig): HandleCommandsParams {
+function buildParams(commandBody: string, cfg: DexConfig): HandleCommandsParams {
   const ctx = {
     Body: commandBody,
     CommandBody: commandBody,
@@ -277,7 +277,7 @@ describe("command gating", () => {
         CommandBody: "/bash echo hi",
         SessionKey: "agent:main:main",
       } as MsgContext,
-      cfg: { commands: { bash: false } } as OpenClawConfig,
+      cfg: { commands: { bash: false } } as DexConfig,
       sessionKey: "agent:main:main",
       isGroup: false,
       elevated: { enabled: true, allowed: true, failures: [] },
@@ -292,7 +292,7 @@ describe("command gating", () => {
         CommandBody: "/bash echo hi",
         SessionKey: "agent:main:main",
       } as MsgContext,
-      cfg: { commands: { bash: true } } as OpenClawConfig,
+      cfg: { commands: { bash: true } } as DexConfig,
       sessionKey: "agent:main:main",
       isGroup: false,
       elevated: {
@@ -308,7 +308,7 @@ describe("command gating", () => {
     const params = buildParams("/config show", {
       commands: { config: false, debug: false, text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     params.command.senderIsOwner = true;
     const result = await handleConfigCommand(params, true);
     expect(result?.reply?.text).toContain("/config is disabled");
@@ -318,7 +318,7 @@ describe("command gating", () => {
     const params = buildParams("/debug show", {
       commands: { config: false, debug: false, text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     params.command.senderIsOwner = true;
     const result = await handleDebugCommand(params, true);
     expect(result?.reply?.text).toContain("/debug is disabled");
@@ -328,14 +328,14 @@ describe("command gating", () => {
     const configParams = buildParams("/config show", {
       commands: { config: true, text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     const configResult = await handleConfigCommand(configParams, true);
     expect(configResult).toEqual({ shouldContinue: false });
 
     const debugParams = buildParams("/debug show", {
       commands: { debug: true, text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     const debugResult = await handleDebugCommand(debugParams, true);
     expect(debugResult).toEqual({ shouldContinue: false });
   });
@@ -348,7 +348,7 @@ describe("command gating", () => {
     const configParams = buildParams("/config show messages.ackReaction", {
       commands: { config: true, text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     configParams.command.senderIsOwner = true;
     const configResult = await handleConfigCommand(configParams, true);
     expect(configResult?.reply?.text).toContain("⚙️ Config");
@@ -357,7 +357,7 @@ describe("command gating", () => {
     const debugParams = buildParams("/debug show", {
       commands: { debug: true, text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     debugParams.command.senderIsOwner = true;
     const debugResult = await handleDebugCommand(debugParams, true);
     expect(debugResult?.reply?.text).toContain("Debug overrides");
@@ -370,8 +370,8 @@ describe("command gating", () => {
         gateway: {
           auth: {
             mode: "token",
-            token: "OPENCLAW_CONFIG_SHOW_CANARY_TOKEN_65623",
-            password: "OPENCLAW_CONFIG_SHOW_CANARY_PASSWORD_65623",
+            token: "DEX_CONFIG_SHOW_CANARY_TOKEN_65623",
+            password: "DEX_CONFIG_SHOW_CANARY_PASSWORD_65623",
           },
           bind: "127.0.0.1",
           port: 3210,
@@ -379,7 +379,7 @@ describe("command gating", () => {
         models: {
           providers: {
             openai: {
-              apiKey: "OPENCLAW_CONFIG_SHOW_CANARY_API_KEY_65623",
+              apiKey: "DEX_CONFIG_SHOW_CANARY_API_KEY_65623",
               baseUrl: "https://api.example.test",
               models: [{ id: "gpt-test", name: "gpt-test" }],
             },
@@ -387,21 +387,21 @@ describe("command gating", () => {
         },
         browser: {
           cdpUrl:
-            "wss://chrome.example.test/devtools?token=OPENCLAW_CONFIG_SHOW_CANARY_CDP_TOKEN_65623&apiKey=OPENCLAW_CONFIG_SHOW_CANARY_CDP_API_KEY_65623",
+            "wss://chrome.example.test/devtools?token=DEX_CONFIG_SHOW_CANARY_CDP_TOKEN_65623&apiKey=DEX_CONFIG_SHOW_CANARY_CDP_API_KEY_65623",
           profiles: {
             local: {
               cdpUrl: "ws://localhost:9222",
             },
             remote: {
               cdpUrl:
-                "wss://chrome.remote.example.test/devtools?apiKey=OPENCLAW_CONFIG_SHOW_CANARY_CDP_PROFILE_API_KEY_65623",
+                "wss://chrome.remote.example.test/devtools?apiKey=DEX_CONFIG_SHOW_CANARY_CDP_PROFILE_API_KEY_65623",
             },
           },
         },
         talk: {
           providers: {
             openai: {
-              apiKey: "OPENCLAW_CONFIG_SHOW_CANARY_API_KEY_65623",
+              apiKey: "DEX_CONFIG_SHOW_CANARY_API_KEY_65623",
               baseUrl: "https://api.example.test",
               model: "gpt-test",
             },
@@ -425,7 +425,7 @@ describe("command gating", () => {
     const params = buildParams("/config show", {
       commands: { config: true, text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     params.command.senderIsOwner = true;
 
     const result = await handleConfigCommand(params, true);
@@ -438,12 +438,12 @@ describe("command gating", () => {
     expect(output).toContain("browser");
     expect(output).toContain("cdpUrl");
     expect(output).toContain(REDACTED_SENTINEL);
-    expect(output).not.toContain("OPENCLAW_CONFIG_SHOW_CANARY_TOKEN_65623");
-    expect(output).not.toContain("OPENCLAW_CONFIG_SHOW_CANARY_PASSWORD_65623");
-    expect(output).not.toContain("OPENCLAW_CONFIG_SHOW_CANARY_API_KEY_65623");
-    expect(output).not.toContain("OPENCLAW_CONFIG_SHOW_CANARY_CDP_TOKEN_65623");
-    expect(output).not.toContain("OPENCLAW_CONFIG_SHOW_CANARY_CDP_API_KEY_65623");
-    expect(output).not.toContain("OPENCLAW_CONFIG_SHOW_CANARY_CDP_PROFILE_API_KEY_65623");
+    expect(output).not.toContain("DEX_CONFIG_SHOW_CANARY_TOKEN_65623");
+    expect(output).not.toContain("DEX_CONFIG_SHOW_CANARY_PASSWORD_65623");
+    expect(output).not.toContain("DEX_CONFIG_SHOW_CANARY_API_KEY_65623");
+    expect(output).not.toContain("DEX_CONFIG_SHOW_CANARY_CDP_TOKEN_65623");
+    expect(output).not.toContain("DEX_CONFIG_SHOW_CANARY_CDP_API_KEY_65623");
+    expect(output).not.toContain("DEX_CONFIG_SHOW_CANARY_CDP_PROFILE_API_KEY_65623");
     expect(output).toContain('"mode": "token"');
     expect(output).toContain('"bind": "127.0.0.1"');
     expect(output).toContain('"port": 3210');
@@ -460,7 +460,7 @@ describe("command gating", () => {
         gateway: {
           auth: {
             mode: "token",
-            token: "OPENCLAW_CONFIG_SHOW_CANARY_TOKEN_65623",
+            token: "DEX_CONFIG_SHOW_CANARY_TOKEN_65623",
           },
         },
       },
@@ -468,7 +468,7 @@ describe("command gating", () => {
     const params = buildParams("/config show gateway.auth.token", {
       commands: { config: true, text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     params.command.senderIsOwner = true;
 
     const result = await handleConfigCommand(params, true);
@@ -476,7 +476,7 @@ describe("command gating", () => {
 
     expect(output).toContain("Config gateway.auth.token");
     expect(output).toContain(REDACTED_SENTINEL);
-    expect(output).not.toContain("OPENCLAW_CONFIG_SHOW_CANARY_TOKEN_65623");
+    expect(output).not.toContain("DEX_CONFIG_SHOW_CANARY_TOKEN_65623");
   });
 
   it("redacts browser cdpUrl query secrets from path-specific /config show replies", async () => {
@@ -485,14 +485,14 @@ describe("command gating", () => {
       parsed: {
         browser: {
           cdpUrl:
-            "wss://chrome.example.test/devtools?token=OPENCLAW_CONFIG_SHOW_CANARY_CDP_TOKEN_65623&apiKey=OPENCLAW_CONFIG_SHOW_CANARY_CDP_API_KEY_65623",
+            "wss://chrome.example.test/devtools?token=DEX_CONFIG_SHOW_CANARY_CDP_TOKEN_65623&apiKey=DEX_CONFIG_SHOW_CANARY_CDP_API_KEY_65623",
         },
       },
     });
     const params = buildParams("/config show browser.cdpUrl", {
       commands: { config: true, text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     params.command.senderIsOwner = true;
 
     const result = await handleConfigCommand(params, true);
@@ -500,8 +500,8 @@ describe("command gating", () => {
 
     expect(output).toContain("Config browser.cdpUrl");
     expect(output).toContain(REDACTED_SENTINEL);
-    expect(output).not.toContain("OPENCLAW_CONFIG_SHOW_CANARY_CDP_TOKEN_65623");
-    expect(output).not.toContain("OPENCLAW_CONFIG_SHOW_CANARY_CDP_API_KEY_65623");
+    expect(output).not.toContain("DEX_CONFIG_SHOW_CANARY_CDP_TOKEN_65623");
+    expect(output).not.toContain("DEX_CONFIG_SHOW_CANARY_CDP_API_KEY_65623");
   });
 
   it("redacts secret-shaped values from /config set acknowledgements", async () => {
@@ -510,11 +510,11 @@ describe("command gating", () => {
       parsed: { gateway: { auth: { mode: "token" } } },
     });
     const params = buildParams(
-      '/config set gateway.auth.token="OPENCLAW_CONFIG_SET_CANARY_TOKEN_65623"',
+      '/config set gateway.auth.token="DEX_CONFIG_SET_CANARY_TOKEN_65623"',
       {
         commands: { config: true, text: true },
         channels: { whatsapp: { allowFrom: ["*"] } },
-      } as OpenClawConfig,
+      } as DexConfig,
     );
     params.command.senderIsOwner = true;
 
@@ -523,14 +523,14 @@ describe("command gating", () => {
 
     expect(output).toContain("Config updated: gateway.auth.token=");
     expect(output).toContain(REDACTED_SENTINEL);
-    expect(output).not.toContain("OPENCLAW_CONFIG_SET_CANARY_TOKEN_65623");
+    expect(output).not.toContain("DEX_CONFIG_SET_CANARY_TOKEN_65623");
   });
 
   it("returns explicit unauthorized replies for native privileged commands", async () => {
     const configParams = buildParams("/config show", {
       commands: { config: true, text: true },
       channels: { telegram: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     configParams.ctx.CommandSource = "native";
     configParams.command.channel = "telegram";
     configParams.command.channelId = "telegram";
@@ -544,7 +544,7 @@ describe("command gating", () => {
     const debugParams = buildParams("/debug show", {
       commands: { debug: true, text: true },
       channels: { telegram: { allowFrom: ["*"] } },
-    } as OpenClawConfig);
+    } as DexConfig);
     debugParams.ctx.CommandSource = "native";
     debugParams.command.channel = "telegram";
     debugParams.command.channelId = "telegram";
@@ -562,7 +562,7 @@ describe("command gating", () => {
       config: true,
       debug: true,
     }) as Record<string, unknown>;
-    const cfg = { commands: inheritedCommands as never } as OpenClawConfig;
+    const cfg = { commands: inheritedCommands as never } as DexConfig;
     expect(isCommandFlagEnabled(cfg, "bash")).toBe(false);
     expect(isCommandFlagEnabled(cfg, "config")).toBe(false);
     expect(isCommandFlagEnabled(cfg, "debug")).toBe(false);
@@ -581,7 +581,7 @@ describe("command gating", () => {
           const params = buildParams('/config set messages.ackReaction=":)"', {
             commands: { config: true, text: true },
             channels: { whatsapp: { allowFrom: ["*"], configWrites: false } },
-          } as OpenClawConfig);
+          } as DexConfig);
           params.command.senderIsOwner = true;
           return params;
         })(),
@@ -600,7 +600,7 @@ describe("command gating", () => {
                 },
               },
             },
-          } as OpenClawConfig);
+          } as DexConfig);
           params.ctx.Provider = "telegram";
           params.ctx.Surface = "telegram";
           params.command.channel = "telegram";
@@ -617,7 +617,7 @@ describe("command gating", () => {
           const params = buildParams('/config set channels.telegram={"enabled":false}', {
             commands: { config: true, text: true },
             channels: { telegram: { configWrites: true } },
-          } as OpenClawConfig);
+          } as DexConfig);
           params.ctx.Provider = "telegram";
           params.ctx.Surface = "telegram";
           params.command.channel = "telegram";
@@ -654,7 +654,7 @@ describe("command gating", () => {
           },
         },
       },
-    } as OpenClawConfig);
+    } as DexConfig);
     params.ctx.Provider = "telegram";
     params.ctx.Surface = "telegram";
     params.command.channel = "telegram";
@@ -741,7 +741,7 @@ describe("command gating", () => {
   });
 
   it("enforces gateway client permissions for /config commands", async () => {
-    const baseCfg = { commands: { config: true, text: true } } as OpenClawConfig;
+    const baseCfg = { commands: { config: true, text: true } } as DexConfig;
 
     const blockedParams = buildParams('/config set messages.ackReaction=":)"', baseCfg);
     blockedParams.ctx.Provider = "webchat";
@@ -801,7 +801,7 @@ describe("command gating", () => {
     });
     const params = buildParams("/config unset messages.missing", {
       commands: { config: true, text: true },
-    } as OpenClawConfig);
+    } as DexConfig);
     params.ctx.GatewayClientScopes = ["operator.admin"];
     params.command.senderIsOwner = true;
 

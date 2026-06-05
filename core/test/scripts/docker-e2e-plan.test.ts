@@ -57,9 +57,9 @@ function publishedUpgradeSurvivorLane(
   scenario?: string,
 ): ReturnType<typeof summarizeLane> {
   return {
-    command: `OPENCLAW_UPGRADE_SURVIVOR_ARTIFACT_DIR="$PWD/.artifacts/upgrade-survivor/${name}" OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC='${baselineSpec}' ${
-      scenario ? `OPENCLAW_UPGRADE_SURVIVOR_SCENARIO='${scenario}' ` : ""
-    }OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:published-upgrade-survivor`,
+    command: `DEX_UPGRADE_SURVIVOR_ARTIFACT_DIR="$PWD/.artifacts/upgrade-survivor/${name}" DEX_UPGRADE_SURVIVOR_BASELINE_SPEC='${baselineSpec}' ${
+      scenario ? `DEX_UPGRADE_SURVIVOR_SCENARIO='${scenario}' ` : ""
+    }DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:published-upgrade-survivor`,
     imageKind: "bare",
     live: false,
     name,
@@ -72,7 +72,7 @@ function publishedUpgradeSurvivorLane(
 
 function updateMigrationLane(name: string, baselineSpec: string): ReturnType<typeof summarizeLane> {
   return {
-    command: `OPENCLAW_UPGRADE_SURVIVOR_ARTIFACT_DIR="$PWD/.artifacts/upgrade-survivor/${name}" OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC='${baselineSpec}' OPENCLAW_UPGRADE_SURVIVOR_SCENARIO='plugin-deps-cleanup' OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:update-migration`,
+    command: `DEX_UPGRADE_SURVIVOR_ARTIFACT_DIR="$PWD/.artifacts/upgrade-survivor/${name}" DEX_UPGRADE_SURVIVOR_BASELINE_SPEC='${baselineSpec}' DEX_UPGRADE_SURVIVOR_SCENARIO='plugin-deps-cleanup' DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:update-migration`,
     imageKind: "bare",
     live: false,
     name,
@@ -85,7 +85,7 @@ function updateMigrationLane(name: string, baselineSpec: string): ReturnType<typ
 
 function bundledPluginSweepLane(index: number): ReturnType<typeof summarizeLane> {
   return {
-    command: `OPENCLAW_BUNDLED_PLUGIN_SWEEP_TOTAL=24 OPENCLAW_BUNDLED_PLUGIN_SWEEP_INDEX=${index} OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:bundled-plugin-install-uninstall`,
+    command: `DEX_BUNDLED_PLUGIN_SWEEP_TOTAL=24 DEX_BUNDLED_PLUGIN_SWEEP_INDEX=${index} DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:bundled-plugin-install-uninstall`,
     imageKind: "functional",
     live: false,
     name: `bundled-plugin-install-uninstall-${index}`,
@@ -263,7 +263,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
     ]);
     expect(packageUpdateCore.lanes.map(summarizeLane)).toEqual([
       {
-        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:npm-onboard-channel-agent",
+        command: "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:npm-onboard-channel-agent",
         imageKind: "bare",
         live: false,
         name: "npm-onboard-channel-agent",
@@ -273,7 +273,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
       },
       {
         command:
-          "OPENCLAW_NPM_ONBOARD_CHANNEL=discord OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:npm-onboard-channel-agent",
+          "DEX_NPM_ONBOARD_CHANNEL=discord DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:npm-onboard-channel-agent",
         imageKind: "bare",
         live: false,
         name: "npm-onboard-discord-channel-agent",
@@ -283,7 +283,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
       },
       {
         command:
-          "OPENCLAW_NPM_ONBOARD_CHANNEL=slack OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:npm-onboard-channel-agent",
+          "DEX_NPM_ONBOARD_CHANNEL=slack DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:npm-onboard-channel-agent",
         imageKind: "bare",
         live: false,
         name: "npm-onboard-slack-channel-agent",
@@ -292,7 +292,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
         weight: 3,
       },
       {
-        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:doctor-switch",
+        command: "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:doctor-switch",
         imageKind: "bare",
         live: false,
         name: "doctor-switch",
@@ -301,7 +301,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
         weight: 3,
       },
       {
-        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:update-channel-switch",
+        command: "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:update-channel-switch",
         imageKind: "bare",
         live: false,
         name: "update-channel-switch",
@@ -311,7 +311,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
         weight: 3,
       },
       {
-        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:skill-install",
+        command: "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:skill-install",
         imageKind: "bare",
         live: false,
         name: "skill-install",
@@ -321,7 +321,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
         weight: 2,
       },
       {
-        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:upgrade-survivor",
+        command: "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:upgrade-survivor",
         imageKind: "bare",
         live: false,
         name: "upgrade-survivor",
@@ -331,7 +331,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
         weight: 3,
       },
       {
-        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:published-upgrade-survivor",
+        command: "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:published-upgrade-survivor",
         imageKind: "bare",
         live: false,
         name: "published-upgrade-survivor",
@@ -341,7 +341,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
         weight: 3,
       },
       {
-        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:root-managed-vps-upgrade",
+        command: "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:root-managed-vps-upgrade",
         imageKind: "bare",
         live: false,
         name: "root-managed-vps-upgrade",
@@ -351,7 +351,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
         weight: 3,
       },
       {
-        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:update-restart-auth",
+        command: "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:update-restart-auth",
         imageKind: "bare",
         live: false,
         name: "update-restart-auth",
@@ -364,7 +364,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
     expect(pluginsRuntimePlugins.lanes.map((lane) => lane.name)).toEqual(["plugins"]);
     expect(pluginsRuntimeServices.lanes.map(summarizeLane)).toEqual([
       {
-        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:cron-mcp-cleanup",
+        command: "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:cron-mcp-cleanup",
         imageKind: "functional",
         live: false,
         name: "cron-mcp-cleanup",
@@ -373,7 +373,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
         weight: 3,
       },
       {
-        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:kitchen-sink-rpc",
+        command: "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:kitchen-sink-rpc",
         imageKind: "functional",
         live: false,
         name: "kitchen-sink-rpc",
@@ -383,7 +383,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
         weight: 3,
       },
       {
-        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openai-web-search-minimal",
+        command: "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:openai-web-search-minimal",
         imageKind: "functional",
         live: false,
         name: "openai-web-search-minimal",
@@ -394,7 +394,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
       },
       {
         command:
-          "OPENCLAW_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS=300 OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-plugin-tool",
+          "DEX_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS=300 DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-plugin-tool",
         imageKind: "bare",
         live: true,
         name: "live-plugin-tool",
@@ -405,7 +405,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
       },
       {
         command:
-          "OPENCLAW_OPENWEBUI_MODEL=openai/gpt-5.4-mini OPENWEBUI_SMOKE_MODE=models OPENCLAW_OPENWEBUI_PROVIDER_TIMEOUT_SECONDS=300 OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openwebui",
+          "DEX_OPENWEBUI_MODEL=openai/gpt-5.4-mini OPENWEBUI_SMOKE_MODE=models DEX_OPENWEBUI_PROVIDER_TIMEOUT_SECONDS=300 DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:openwebui",
         imageKind: "functional",
         live: true,
         name: "openwebui",
@@ -701,7 +701,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
     expect(plan.lanes.map(summarizeLane)).toEqual([
       {
         command:
-          'OPENCLAW_SKIP_DOCKER_BUILD=1 bash -c \'harness="${OPENCLAW_DOCKER_E2E_TRUSTED_HARNESS_DIR:-}"; if [ -z "$harness" ]; then if [ -d .release-harness/scripts ]; then harness=.release-harness; else harness=.; fi; fi; OPENCLAW_LIVE_DOCKER_REPO_ROOT="${OPENCLAW_DOCKER_E2E_REPO_ROOT:-$PWD}" bash "$harness/scripts/e2e/codex-npm-plugin-live-docker.sh"\'',
+          'DEX_SKIP_DOCKER_BUILD=1 bash -c \'harness="${DEX_DOCKER_E2E_TRUSTED_HARNESS_DIR:-}"; if [ -z "$harness" ]; then if [ -d .release-harness/scripts ]; then harness=.release-harness; else harness=.; fi; fi; DEX_LIVE_DOCKER_REPO_ROOT="${DEX_DOCKER_E2E_REPO_ROOT:-$PWD}" bash "$harness/scripts/e2e/codex-npm-plugin-live-docker.sh"\'',
         imageKind: "bare",
         live: true,
         name: "live-codex-npm-plugin",
@@ -725,7 +725,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
 
     expect(plan.lanes).toHaveLength(1);
     const lane = requireFirstLane(plan);
-    expect(lane.command).toBe("OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:codex-on-demand");
+    expect(lane.command).toBe("DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:codex-on-demand");
     expect(lane.imageKind).toBe("bare");
     expect(lane.live).toBe(false);
     expect(lane.name).toBe("codex-on-demand");
@@ -742,7 +742,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
     expect(plan.lanes).toHaveLength(1);
     const lane = requireFirstLane(plan);
     expect(lane.command).toBe(
-      "OPENCLAW_SKIP_DOCKER_BUILD=0 pnpm test:docker:plugin-binding-command-escape",
+      "DEX_SKIP_DOCKER_BUILD=0 pnpm test:docker:plugin-binding-command-escape",
     );
     expect(lane.imageKind).toBeUndefined();
     expect(lane.live).toBe(false);
@@ -760,7 +760,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
     expect(plan.lanes).toHaveLength(1);
     const lane = requireFirstLane(plan);
     expect(lane.command).toBe(
-      "OPENCLAW_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS=300 OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-plugin-tool",
+      "DEX_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS=300 DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-plugin-tool",
     );
     expect(lane.imageKind).toBe("bare");
     expect(lane.live).toBe(true);
@@ -796,7 +796,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
     expect(plan.lanes).toHaveLength(1);
     const lane = requireFirstLane(plan);
     expect(lane.command).toBe(
-      'OPENCLAW_LIVE_ACP_BIND_AGENT=droid OPENCLAW_LIVE_ACP_BIND_REQUIRE_TRANSCRIPT=1 OPENCLAW_SKIP_DOCKER_BUILD=1 bash -c \'harness="${OPENCLAW_DOCKER_E2E_TRUSTED_HARNESS_DIR:-}"; if [ -z "$harness" ]; then if [ -d .release-harness/scripts ]; then harness=.release-harness; else harness=.; fi; fi; OPENCLAW_LIVE_DOCKER_REPO_ROOT="${OPENCLAW_DOCKER_E2E_REPO_ROOT:-$PWD}" bash "$harness/scripts/test-live-acp-bind-docker.sh"\'',
+      'DEX_LIVE_ACP_BIND_AGENT=droid DEX_LIVE_ACP_BIND_REQUIRE_TRANSCRIPT=1 DEX_SKIP_DOCKER_BUILD=1 bash -c \'harness="${DEX_DOCKER_E2E_TRUSTED_HARNESS_DIR:-}"; if [ -z "$harness" ]; then if [ -d .release-harness/scripts ]; then harness=.release-harness; else harness=.; fi; fi; DEX_LIVE_DOCKER_REPO_ROOT="${DEX_DOCKER_E2E_REPO_ROOT:-$PWD}" bash "$harness/scripts/test-live-acp-bind-docker.sh"\'',
     );
     expect(lane.imageKind).toBeUndefined();
     expect(lane.live).toBe(true);
@@ -816,7 +816,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
     expect(plan.lanes.map(summarizeLane)).toEqual([
       {
         command:
-          "OPENCLAW_OPENWEBUI_MODEL=openai/gpt-5.4-mini OPENWEBUI_SMOKE_MODE=models OPENCLAW_OPENWEBUI_PROVIDER_TIMEOUT_SECONDS=300 OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openwebui",
+          "DEX_OPENWEBUI_MODEL=openai/gpt-5.4-mini OPENWEBUI_SMOKE_MODE=models DEX_OPENWEBUI_PROVIDER_TIMEOUT_SECONDS=300 DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:openwebui",
         imageKind: "functional",
         live: true,
         name: "openwebui",
@@ -906,7 +906,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
     expect(plan.lanes.map(summarizeLane)).toEqual([
       {
         command:
-          "OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=openai OPENCLAW_INSTALL_E2E_IMAGE=openclaw-install-e2e-openai:local OPENCLAW_INSTALL_E2E_AGENT_TOOL_SMOKE=0 OPENCLAW_INSTALL_E2E_OPENAI_MODEL=openai/gpt-5.4-mini OPENCLAW_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS=120 OPENCLAW_INSTALL_E2E_OPENAI_PROVIDER_TIMEOUT_SECONDS=120 pnpm test:install:e2e",
+          "DEX_INSTALL_TAG=beta DEX_E2E_MODELS=openai DEX_INSTALL_E2E_IMAGE=openclaw-install-e2e-openai:local DEX_INSTALL_E2E_AGENT_TOOL_SMOKE=0 DEX_INSTALL_E2E_OPENAI_MODEL=openai/gpt-5.4-mini DEX_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS=120 DEX_INSTALL_E2E_OPENAI_PROVIDER_TIMEOUT_SECONDS=120 pnpm test:install:e2e",
         imageKind: "bare",
         live: false,
         name: "install-e2e-openai",
@@ -916,7 +916,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
       },
       {
         command:
-          "OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=anthropic OPENCLAW_INSTALL_E2E_IMAGE=openclaw-install-e2e-anthropic:local pnpm test:install:e2e",
+          "DEX_INSTALL_TAG=beta DEX_E2E_MODELS=anthropic DEX_INSTALL_E2E_IMAGE=openclaw-install-e2e-anthropic:local pnpm test:install:e2e",
         imageKind: "bare",
         live: false,
         name: "install-e2e-anthropic",
@@ -956,7 +956,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
 
   it("rejects unknown selected lanes with the available lane names", () => {
     expect(() => planFor({ selectedLaneNames: ["missing-lane"] })).toThrow(
-      /OPENCLAW_DOCKER_ALL_LANES unknown lane\(s\): missing-lane/u,
+      /DEX_DOCKER_ALL_LANES unknown lane\(s\): missing-lane/u,
     );
   });
 });

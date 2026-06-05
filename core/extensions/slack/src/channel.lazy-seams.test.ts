@@ -13,7 +13,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { slackPlugin } from "./channel.js";
-import type { OpenClawConfig } from "./runtime-api.js";
+import type { DexConfig } from "./runtime-api.js";
 import { setSlackRuntime } from "./runtime.js";
 
 // --- Hoisted mocks for lazy seams ------------------------------------------------
@@ -60,7 +60,7 @@ beforeEach(() => {
 
 function makeMinimalSlackConfig(
   opts: { botToken?: string; userToken?: string } = {},
-): OpenClawConfig {
+): DexConfig {
   const slack: Record<string, unknown> = {};
   if (opts.botToken !== undefined) {
     slack.botToken = opts.botToken;
@@ -68,7 +68,7 @@ function makeMinimalSlackConfig(
   if (opts.userToken !== undefined) {
     slack.userToken = opts.userToken;
   }
-  return { channels: { slack } } as OpenClawConfig;
+  return { channels: { slack } } as DexConfig;
 }
 
 type MockWithCalls = {

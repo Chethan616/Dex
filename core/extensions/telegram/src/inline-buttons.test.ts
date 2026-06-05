@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-types";
+import type { DexConfig } from "openclaw/plugin-sdk/config-types";
 import { describe, expect, it } from "vitest";
 import { buildTelegramInteractiveButtons } from "./button-types.js";
 import { describeTelegramInteractiveButtonBehavior } from "./button-types.test-helpers.js";
@@ -102,7 +102,7 @@ describe("resolveTelegramInlineButtonsScope (#75433 SecretRef tolerance)", () =>
           botToken: { source: "exec", provider: "default", id: "telegram-token" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(resolveTelegramInlineButtonsScope({ cfg })).toBe("allowlist");
     expect(isTelegramInlineButtonsEnabled({ cfg })).toBe(true);
@@ -116,7 +116,7 @@ describe("resolveTelegramInlineButtonsScope (#75433 SecretRef tolerance)", () =>
           capabilities: { inlineButtons: "off" },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(resolveTelegramInlineButtonsScope({ cfg })).toBe("off");
     expect(isTelegramInlineButtonsEnabled({ cfg })).toBe(false);
@@ -134,7 +134,7 @@ describe("resolveTelegramInlineButtonsScope (#75433 SecretRef tolerance)", () =>
           },
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as DexConfig;
 
     expect(resolveTelegramInlineButtonsScope({ cfg, accountId: "ops" })).toBe("all");
     expect(isTelegramInlineButtonsEnabled({ cfg, accountId: "ops" })).toBe(true);

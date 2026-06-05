@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
-import { embeddedAgentLog, OPENCLAW_VERSION } from "openclaw/plugin-sdk/agent-harness-runtime";
+import { embeddedAgentLog, DEX_VERSION } from "openclaw/plugin-sdk/agent-harness-runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   testing,
@@ -234,7 +234,7 @@ describe("CodexAppServerClient", () => {
         clientInfo: {
           name: "openclaw",
           title: "OpenClaw",
-          version: OPENCLAW_VERSION,
+          version: DEX_VERSION,
         },
         capabilities: {
           experimentalApi: true,

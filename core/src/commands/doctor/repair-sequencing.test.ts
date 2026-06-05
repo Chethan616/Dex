@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import { runDoctorRepairSequence } from "./repair-sequencing.js";
 
 const mocks = vi.hoisted(() => ({
@@ -65,7 +65,7 @@ vi.mock("../../plugins/installed-plugin-index.js", async (importOriginal) => ({
 }));
 
 vi.mock("./shared/channel-doctor.js", () => ({
-  collectChannelDoctorRepairMutations: ({ cfg }: { cfg: OpenClawConfig }) => {
+  collectChannelDoctorRepairMutations: ({ cfg }: { cfg: DexConfig }) => {
     const allowFrom = cfg.channels?.discord?.allowFrom as unknown[] | undefined;
     if (allowFrom?.[0] === 123) {
       return [
@@ -104,14 +104,14 @@ vi.mock("./shared/channel-doctor.js", () => ({
 }));
 
 vi.mock("./shared/empty-allowlist-scan.js", () => ({
-  scanEmptyAllowlistPolicyWarnings: (cfg: OpenClawConfig) =>
+  scanEmptyAllowlistPolicyWarnings: (cfg: DexConfig) =>
     cfg.channels?.signal
       ? ["channels.signal.accounts.ops\u001B[31m-team\u001B[0m\r\nnext.dmPolicy warning"]
       : [],
 }));
 
 vi.mock("./shared/allowlist-policy-repair.js", () => ({
-  maybeRepairAllowlistPolicyAllowFrom: async (cfg: OpenClawConfig) => ({
+  maybeRepairAllowlistPolicyAllowFrom: async (cfg: DexConfig) => ({
     config: cfg,
     changes: [],
   }),
@@ -126,7 +126,7 @@ vi.mock("./shared/active-tool-schema-warnings.js", () => ({
 }));
 
 vi.mock("./shared/bundled-plugin-load-paths.js", () => ({
-  maybeRepairBundledPluginLoadPaths: (cfg: OpenClawConfig) => ({
+  maybeRepairBundledPluginLoadPaths: (cfg: DexConfig) => ({
     config: cfg,
     changes: [],
   }),
@@ -145,14 +145,14 @@ vi.mock("./shared/stale-oauth-profile-shadows.js", () => ({
 }));
 
 vi.mock("./shared/invalid-plugin-config.js", () => ({
-  maybeRepairInvalidPluginConfig: (cfg: OpenClawConfig) => ({
+  maybeRepairInvalidPluginConfig: (cfg: DexConfig) => ({
     config: cfg,
     changes: [],
   }),
 }));
 
 vi.mock("./shared/legacy-tools-by-sender.js", () => ({
-  maybeRepairLegacyToolsBySenderKeys: (cfg: OpenClawConfig) => {
+  maybeRepairLegacyToolsBySenderKeys: (cfg: DexConfig) => {
     const channels = cfg.channels as Record<string, unknown> | undefined;
     const tools = channels?.tools as
       | { exec?: { toolsBySender?: Record<string, unknown> } }
@@ -189,7 +189,7 @@ vi.mock("./shared/legacy-tools-by-sender.js", () => ({
 }));
 
 vi.mock("./shared/exec-safe-bins.js", () => ({
-  maybeRepairExecSafeBinProfiles: (cfg: OpenClawConfig) => ({
+  maybeRepairExecSafeBinProfiles: (cfg: DexConfig) => ({
     config: cfg,
     changes: [],
   }),
@@ -205,7 +205,7 @@ vi.mock("./shared/plugin-dependency-cleanup.js", () => ({
 describe("doctor repair sequencing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.applyPluginAutoEnable.mockImplementation((params: { config: OpenClawConfig }) => ({
+    mocks.applyPluginAutoEnable.mockImplementation((params: { config: DexConfig }) => ({
       config: params.config,
       changes: [],
     }));
@@ -220,7 +220,7 @@ describe("doctor repair sequencing", () => {
     mocks.getInstalledPluginRecord.mockReturnValue(undefined);
     mocks.isInstalledPluginEnabled.mockReturnValue(false);
     mocks.loadInstalledPluginIndex.mockReturnValue({ plugins: [] });
-    mocks.maybeRepairGroupAllowFromFallback.mockImplementation((cfg: OpenClawConfig) => ({
+    mocks.maybeRepairGroupAllowFromFallback.mockImplementation((cfg: DexConfig) => ({
       config: cfg,
       changes: [],
     }));
@@ -230,7 +230,7 @@ describe("doctor repair sequencing", () => {
       changes: [],
       warnings: [],
     });
-    mocks.maybeRepairOpenAICodexAuthConfig.mockImplementation((cfg: OpenClawConfig) => ({
+    mocks.maybeRepairOpenAICodexAuthConfig.mockImplementation((cfg: DexConfig) => ({
       changes: [],
       config: cfg,
       warnings: [],
@@ -239,7 +239,7 @@ describe("doctor repair sequencing", () => {
       changes: [],
       warnings: [],
     });
-    mocks.maybeRepairOpenPolicyAllowFrom.mockImplementation((cfg: OpenClawConfig) => ({
+    mocks.maybeRepairOpenPolicyAllowFrom.mockImplementation((cfg: DexConfig) => ({
       config: cfg,
       changes: [],
     }));
@@ -255,7 +255,7 @@ describe("doctor repair sequencing", () => {
     mocks.collectActiveToolSchemaProjectionWarnings.mockReturnValue([]);
     mocks.resolveAuthProfileOrder.mockReturnValue([]);
     mocks.resolveProfileUnusableUntilForDisplay.mockReturnValue(null);
-    mocks.maybeRepairStalePluginConfig.mockImplementation((cfg: OpenClawConfig) => ({
+    mocks.maybeRepairStalePluginConfig.mockImplementation((cfg: DexConfig) => ({
       config: cfg,
       changes: [],
     }));
@@ -284,7 +284,7 @@ describe("doctor repair sequencing", () => {
               },
             },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         candidate: {
           channels: {
             discord: {
@@ -305,7 +305,7 @@ describe("doctor repair sequencing", () => {
               },
             },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -350,14 +350,14 @@ describe("doctor repair sequencing", () => {
               "google-meet": { enabled: true },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         candidate: {
           plugins: {
             entries: {
               "google-meet": { enabled: true },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -396,8 +396,8 @@ describe("doctor repair sequencing", () => {
 
     const result = await runDoctorRepairSequence({
       state: {
-        cfg: {} as OpenClawConfig,
-        candidate: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
+        candidate: {} as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -427,8 +427,8 @@ describe("doctor repair sequencing", () => {
 
     const result = await runDoctorRepairSequence({
       state: {
-        cfg: {} as OpenClawConfig,
-        candidate: {} as OpenClawConfig,
+        cfg: {} as DexConfig,
+        candidate: {} as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -450,14 +450,14 @@ describe("doctor repair sequencing", () => {
               allowFrom: [106232522769186816],
             },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         candidate: {
           channels: {
             discord: {
               allowFrom: [106232522769186816],
             },
           },
-        } as unknown as OpenClawConfig,
+        } as unknown as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -481,10 +481,10 @@ describe("doctor repair sequencing", () => {
       state: {
         cfg: {
           tools: { allow: ["fuzzplugin_move_angles"] },
-        } as OpenClawConfig,
+        } as DexConfig,
         candidate: {
           tools: { allow: ["fuzzplugin_move_angles"] },
-        } as OpenClawConfig,
+        } as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -508,7 +508,7 @@ describe("doctor repair sequencing", () => {
       changes: ['Installed missing configured plugin "brave" from @openclaw/brave-plugin.'],
       warnings: [],
     });
-    mocks.applyPluginAutoEnable.mockImplementationOnce((params: { config: OpenClawConfig }) => ({
+    mocks.applyPluginAutoEnable.mockImplementationOnce((params: { config: DexConfig }) => ({
       config: {
         ...params.config,
         plugins: {
@@ -528,11 +528,11 @@ describe("doctor repair sequencing", () => {
         cfg: {
           tools: { web: { search: { provider: "brave" } } },
           plugins: { allow: ["telegram"] },
-        } as OpenClawConfig,
+        } as DexConfig,
         candidate: {
           tools: { web: { search: { provider: "brave" } } },
           plugins: { allow: ["telegram"] },
-        } as OpenClawConfig,
+        } as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -550,7 +550,7 @@ describe("doctor repair sequencing", () => {
 
   it("moves legacy Codex routes to canonical OpenAI before missing plugin install repair", async () => {
     mocks.repairMissingConfiguredPluginInstalls.mockImplementationOnce(
-      async (params: { cfg: OpenClawConfig }) => {
+      async (params: { cfg: DexConfig }) => {
         expect(params.cfg.agents?.defaults?.model).toBe("openai/gpt-5.5");
         expect(params.cfg.agents?.defaults?.agentRuntime).toBeUndefined();
         return {
@@ -568,14 +568,14 @@ describe("doctor repair sequencing", () => {
               model: "openai-codex/gpt-5.5",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         candidate: {
           agents: {
             defaults: {
               model: "openai-codex/gpt-5.5",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -593,7 +593,7 @@ describe("doctor repair sequencing", () => {
 
   it("runs group allowFrom fallback migration after open-policy allowFrom repair", async () => {
     const events: string[] = [];
-    mocks.maybeRepairOpenPolicyAllowFrom.mockImplementationOnce((cfg: OpenClawConfig) => {
+    mocks.maybeRepairOpenPolicyAllowFrom.mockImplementationOnce((cfg: DexConfig) => {
       events.push("open-policy");
       return {
         config: {
@@ -609,7 +609,7 @@ describe("doctor repair sequencing", () => {
         changes: ['channels.signal.allowFrom: set to ["*"]'],
       };
     });
-    mocks.maybeRepairGroupAllowFromFallback.mockImplementationOnce((cfg: OpenClawConfig) => {
+    mocks.maybeRepairGroupAllowFromFallback.mockImplementationOnce((cfg: DexConfig) => {
       events.push("group-fallback");
       expect(cfg.channels?.signal?.allowFrom).toEqual(["*"]);
       return {
@@ -635,14 +635,14 @@ describe("doctor repair sequencing", () => {
               dmPolicy: "open",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         candidate: {
           channels: {
             signal: {
               dmPolicy: "open",
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -684,7 +684,7 @@ describe("doctor repair sequencing", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         candidate: {
           plugins: {
             allow: ["brave"],
@@ -703,13 +703,13 @@ describe("doctor repair sequencing", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
       doctorFixCommand: "openclaw doctor --fix",
       env: {
-        OPENCLAW_UPDATE_IN_PROGRESS: "1",
+        DEX_UPDATE_IN_PROGRESS: "1",
       },
     });
 
@@ -731,7 +731,7 @@ describe("doctor repair sequencing", () => {
     });
     mocks.maybeRepairStalePluginConfig.mockImplementationOnce(
       (
-        cfg: OpenClawConfig,
+        cfg: DexConfig,
         _env: NodeJS.ProcessEnv | undefined,
         params: { preservePluginIds?: string[] },
       ) => {
@@ -775,7 +775,7 @@ describe("doctor repair sequencing", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         candidate: {
           plugins: {
             allow: ["brave"],
@@ -797,7 +797,7 @@ describe("doctor repair sequencing", () => {
               },
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },
@@ -826,7 +826,7 @@ describe("doctor repair sequencing", () => {
     });
     mocks.maybeRepairStalePluginConfig.mockImplementationOnce(
       (
-        cfg: OpenClawConfig,
+        cfg: DexConfig,
         _env: NodeJS.ProcessEnv | undefined,
         params: { preservePluginIds?: string[] },
       ) => {
@@ -846,14 +846,14 @@ describe("doctor repair sequencing", () => {
               allowFrom: ["+15555550123"],
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         candidate: {
           channels: {
             whatsapp: {
               allowFrom: ["+15555550123"],
             },
           },
-        } as OpenClawConfig,
+        } as DexConfig,
         pendingChanges: false,
         fixHints: [],
       },

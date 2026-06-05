@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { DexConfig } from "../config/types.openclaw.js";
 import { resolveVisibleModelCatalog } from "./model-catalog-visibility.js";
 import type { ModelCatalogEntry } from "./model-catalog.types.js";
 
@@ -21,7 +21,7 @@ describe("resolveVisibleModelCatalog", () => {
       { provider: "anthropic", id: "claude-test", name: "Claude Test" },
       { provider: "openai", id: "gpt-test", name: "GPT Test" },
     ];
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as DexConfig;
 
     const result = await resolveVisibleModelCatalog({
       cfg,
@@ -57,7 +57,7 @@ describe("resolveVisibleModelCatalog", () => {
     ];
 
     const result = await resolveVisibleModelCatalog({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       catalog,
       defaultProvider: "openai",
       runtimeAuthDiscovery: false,
@@ -82,7 +82,7 @@ describe("resolveVisibleModelCatalog", () => {
     normalizeProviderModelIdWithRuntimeMock.mockImplementation(() => "custom-modern-model");
 
     const result = await resolveVisibleModelCatalog({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as DexConfig,
       catalog: [{ provider: "custom-provider", id: "custom-legacy-model", name: "Custom Legacy" }],
       defaultProvider: "custom-provider",
       defaultModel: "custom-legacy-model",
@@ -115,7 +115,7 @@ describe("resolveVisibleModelCatalog", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = await resolveVisibleModelCatalog({
       cfg,
@@ -156,7 +156,7 @@ describe("resolveVisibleModelCatalog", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = await resolveVisibleModelCatalog({
       cfg,
@@ -183,7 +183,7 @@ describe("resolveVisibleModelCatalog", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = await resolveVisibleModelCatalog({
       cfg,

@@ -237,13 +237,13 @@ describe("resolve-openclaw-package-candidate", () => {
         "const { spawn } = require('node:child_process');",
         "const fs = require('node:fs');",
         `const child = spawn(process.execPath, ['-e', ${JSON.stringify(childScript)}], { stdio: 'ignore' });`,
-        "fs.writeFileSync(process.env.OPENCLAW_TEST_CHILD_PID, String(child.pid));",
+        "fs.writeFileSync(process.env.DEX_TEST_CHILD_PID, String(child.pid));",
         "setInterval(() => {}, 1000);",
       ].join("");
 
       const timeoutAssertion = expect(
         runCommandForTest(process.execPath, ["-e", parentScript], {
-          env: { ...process.env, OPENCLAW_TEST_CHILD_PID: childPidPath },
+          env: { ...process.env, DEX_TEST_CHILD_PID: childPidPath },
           killAfterMs: 25,
           timeoutMs: 500,
         }),
@@ -280,7 +280,7 @@ describe("resolve-openclaw-package-candidate", () => {
         "const { spawn } = require('node:child_process');",
         "const fs = require('node:fs');",
         `const child = spawn(process.execPath, ['-e', ${JSON.stringify(childScript)}], { stdio: 'ignore' });`,
-        "fs.writeFileSync(process.env.OPENCLAW_TEST_CHILD_PID, String(child.pid));",
+        "fs.writeFileSync(process.env.DEX_TEST_CHILD_PID, String(child.pid));",
         "setInterval(() => {}, 1000);",
       ].join("");
       const runnerScript = [
@@ -289,7 +289,7 @@ describe("resolve-openclaw-package-candidate", () => {
       ].join("\n");
       const runner = spawn(process.execPath, ["--input-type=module", "-e", runnerScript], {
         cwd: process.cwd(),
-        env: { ...process.env, OPENCLAW_TEST_CHILD_PID: childPidPath },
+        env: { ...process.env, DEX_TEST_CHILD_PID: childPidPath },
         stdio: ["ignore", "ignore", "pipe"],
       });
       runnerPid = runner.pid;

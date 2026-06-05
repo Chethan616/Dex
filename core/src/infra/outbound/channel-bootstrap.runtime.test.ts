@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import type { DexConfig } from "../../config/types.openclaw.js";
 import { createEmptyPluginRegistry } from "../../plugins/registry-empty.js";
 import {
   pinActivePluginChannelRegistry,
@@ -22,7 +22,7 @@ const discordConfig = {
   channels: {
     discord: {},
   },
-} satisfies OpenClawConfig;
+} satisfies DexConfig;
 
 describe("bootstrapOutboundChannelPlugin", () => {
   afterEach(() => {

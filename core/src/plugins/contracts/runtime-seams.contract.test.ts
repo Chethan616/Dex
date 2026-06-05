@@ -18,8 +18,8 @@ vi.mock("../../config/plugin-auto-enable.js", () => ({
   }),
 }));
 
-const originalBundledPluginsDir = process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
-const originalStateDir = process.env.OPENCLAW_STATE_DIR;
+const originalBundledPluginsDir = process.env.DEX_BUNDLED_PLUGINS_DIR;
+const originalStateDir = process.env.DEX_STATE_DIR;
 const originalGlobalFetch = globalThis.fetch;
 const tempDirs: string[] = [];
 
@@ -79,14 +79,14 @@ afterEach(() => {
   vi.restoreAllMocks();
   Reflect.deleteProperty(globalThis as object, TEST_UNDICI_RUNTIME_DEPS_KEY);
   if (originalBundledPluginsDir === undefined) {
-    delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+    delete process.env.DEX_BUNDLED_PLUGINS_DIR;
   } else {
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = originalBundledPluginsDir;
+    process.env.DEX_BUNDLED_PLUGINS_DIR = originalBundledPluginsDir;
   }
   if (originalStateDir === undefined) {
-    delete process.env.OPENCLAW_STATE_DIR;
+    delete process.env.DEX_STATE_DIR;
   } else {
-    process.env.OPENCLAW_STATE_DIR = originalStateDir;
+    process.env.DEX_STATE_DIR = originalStateDir;
   }
   if (originalGlobalFetch) {
     (globalThis as Record<string, unknown>).fetch = originalGlobalFetch;
@@ -105,8 +105,8 @@ describe("shared runtime seam contracts", () => {
       pluginId,
       "line-ok",
     );
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
-    process.env.OPENCLAW_STATE_DIR = stateDir;
+    process.env.DEX_BUNDLED_PLUGINS_DIR = bundledDir;
+    process.env.DEX_STATE_DIR = stateDir;
     setRuntimeConfigSnapshot({
       plugins: {
         entries: {

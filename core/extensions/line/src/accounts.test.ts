@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
+import type { DexConfig } from "openclaw/plugin-sdk/config-contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   resolveLineAccount,
@@ -35,7 +35,7 @@ describe("LINE accounts", () => {
 
   describe("resolveLineAccount", () => {
     it("resolves account from config", () => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           line: {
             enabled: true,
@@ -60,7 +60,7 @@ describe("LINE accounts", () => {
       vi.stubEnv("LINE_CHANNEL_ACCESS_TOKEN", "env-token");
       vi.stubEnv("LINE_CHANNEL_SECRET", "env-secret");
 
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           line: {
             enabled: true,
@@ -76,7 +76,7 @@ describe("LINE accounts", () => {
     });
 
     it("resolves named account", () => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           line: {
             enabled: true,
@@ -102,7 +102,7 @@ describe("LINE accounts", () => {
     });
 
     it("uses configured defaultAccount when accountId is omitted", () => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           line: {
             defaultAccount: "business",
@@ -128,7 +128,7 @@ describe("LINE accounts", () => {
     });
 
     it("returns empty token when not configured", () => {
-      const cfg: OpenClawConfig = {};
+      const cfg: DexConfig = {};
 
       const account = resolveLineAccount({ cfg });
 
@@ -138,7 +138,7 @@ describe("LINE accounts", () => {
     });
 
     it("resolves default account credentials from files", () => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           line: {
             tokenFile: createSecretFile("token.txt", "file-token\n"),
@@ -155,7 +155,7 @@ describe("LINE accounts", () => {
     });
 
     it("resolves named account credentials from account-level files", () => {
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           line: {
             accounts: {
@@ -187,7 +187,7 @@ describe("LINE accounts", () => {
       fs.symlinkSync(tokenFile, tokenLink);
       fs.symlinkSync(secretFile, secretLink);
 
-      const cfg: OpenClawConfig = {
+      const cfg: DexConfig = {
         channels: {
           line: {
             tokenFile: tokenLink,
@@ -216,7 +216,7 @@ describe("LINE accounts", () => {
               },
             },
           },
-        } satisfies OpenClawConfig,
+        } satisfies DexConfig,
         expected: "business",
       },
       {
@@ -230,7 +230,7 @@ describe("LINE accounts", () => {
               },
             },
           },
-        } satisfies OpenClawConfig,
+        } satisfies DexConfig,
         expected: "business-ops",
       },
       {
@@ -243,7 +243,7 @@ describe("LINE accounts", () => {
               },
             },
           },
-        } satisfies OpenClawConfig,
+        } satisfies DexConfig,
         expected: "business",
       },
       {
@@ -257,7 +257,7 @@ describe("LINE accounts", () => {
               },
             },
           },
-        } satisfies OpenClawConfig,
+        } satisfies DexConfig,
         expected: "business",
       },
       {
@@ -271,7 +271,7 @@ describe("LINE accounts", () => {
               },
             },
           },
-        } satisfies OpenClawConfig,
+        } satisfies DexConfig,
         expected: DEFAULT_ACCOUNT_ID,
       },
     ])("$name", ({ cfg, expected }) => {

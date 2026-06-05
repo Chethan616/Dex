@@ -692,7 +692,7 @@ describe("iMessage monitor last-route updates", () => {
   it("advances the catchup cursor after startup catchup succeeds and a live row is handled", async () => {
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-imsg-live-cursor-"));
     tempDirs.push(stateDir);
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
 
     let onNotification: ((message: { method: string; params: unknown }) => void) | undefined;
     const client = {
@@ -759,7 +759,7 @@ describe("iMessage monitor last-route updates", () => {
     vi.setSystemTime(new Date("2026-05-22T15:31:00.000Z"));
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-imsg-live-during-catchup-"));
     tempDirs.push(stateDir);
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
 
     let onNotification: ((message: { method: string; params: unknown }) => void) | undefined;
     const client = {
@@ -844,7 +844,7 @@ describe("iMessage monitor last-route updates", () => {
   it("repairs anchorless group watch payloads before routing or cursor updates", async () => {
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-imsg-anchor-repair-"));
     tempDirs.push(stateDir);
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
 
     let onNotification: ((message: { method: string; params: unknown }) => void) | undefined;
     const client = {
@@ -941,7 +941,7 @@ describe("iMessage monitor last-route updates", () => {
     vi.setSystemTime(new Date("2026-05-22T15:31:00.000Z"));
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-imsg-partial-cursor-"));
     tempDirs.push(stateDir);
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
 
     let onNotification: ((message: { method: string; params: unknown }) => void) | undefined;
     const client = {
@@ -1031,7 +1031,7 @@ describe("iMessage monitor last-route updates", () => {
   it("advances a coalesced live bucket to the highest source row", async () => {
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-imsg-coalesced-cursor-"));
     tempDirs.push(stateDir);
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("DEX_STATE_DIR", stateDir);
     debouncerControl.holdEntries = true;
 
     let onNotification: ((message: { method: string; params: unknown }) => void) | undefined;

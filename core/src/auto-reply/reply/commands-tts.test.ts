@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { DexConfig } from "../../config/config.js";
 import type { SessionEntry } from "../../config/sessions.js";
 
 const ttsMocks = vi.hoisted(() => ({
@@ -45,7 +45,7 @@ type TtsCommandResult = Awaited<ReturnType<typeof handleTtsCommands>>;
 
 function buildTtsParams(
   commandBodyNormalized: string,
-  cfg: OpenClawConfig = {},
+  cfg: DexConfig = {},
   agentId?: string,
   overrides: Partial<Parameters<typeof handleTtsCommands>[0]> = {},
 ): Parameters<typeof handleTtsCommands>[0] {
@@ -241,7 +241,7 @@ describe("handleTtsCommands status fallback reporting", () => {
     const result = await handleTtsCommands(
       buildTtsParams("/tts", {
         messages: { tts: { prefsPath: "/tmp/tts.json" } },
-      } as OpenClawConfig),
+      } as DexConfig),
       true,
     );
     const reply = expectReply(result);
@@ -251,7 +251,7 @@ describe("handleTtsCommands status fallback reporting", () => {
   it("resolves status config for the active agent", async () => {
     const cfg = {
       agents: { list: [{ id: "reader", tts: { provider: "elevenlabs" } }] },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = await handleTtsCommands(buildTtsParams("/tts status", cfg, "reader"), true);
 
@@ -272,7 +272,7 @@ describe("handleTtsCommands status fallback reporting", () => {
     });
     const cfg = {
       agents: { list: [{ id: "reader", tts: { provider: PRIMARY_TTS_PROVIDER } }] },
-    } as OpenClawConfig;
+    } as DexConfig;
 
     const result = await handleTtsCommands(
       buildTtsParams("/tts audio hello", cfg, "reader", {
@@ -285,7 +285,7 @@ describe("handleTtsCommands status fallback reporting", () => {
     const speechCall = lastMockCall(ttsMocks.textToSpeech, "textToSpeech")[0] as {
       accountId?: string;
       agentId?: string;
-      cfg?: OpenClawConfig;
+      cfg?: DexConfig;
       text?: string;
     };
     expect(speechCall.text).toBe("hello");

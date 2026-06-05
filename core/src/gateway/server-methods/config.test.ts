@@ -86,11 +86,11 @@ describe("resolveConfigOpenCommand", () => {
 
 describe("config.openFile", () => {
   afterEach(() => {
-    delete process.env.OPENCLAW_CONFIG_PATH;
+    delete process.env.DEX_CONFIG_PATH;
   });
 
   it("opens the configured file without shell interpolation", async () => {
-    process.env.OPENCLAW_CONFIG_PATH = "/tmp/config $(touch pwned).json";
+    process.env.DEX_CONFIG_PATH = "/tmp/config $(touch pwned).json";
     execFileMock.mockImplementation((...args: unknown[]) => {
       expect(["open", "xdg-open", "powershell.exe"]).toContain(args[0]);
       expect(args[1]).toEqual(["/tmp/config $(touch pwned).json"]);
@@ -111,7 +111,7 @@ describe("config.openFile", () => {
   });
 
   it("returns a detailed error and logs details when the opener fails", async () => {
-    process.env.OPENCLAW_CONFIG_PATH = "/tmp/config.json";
+    process.env.DEX_CONFIG_PATH = "/tmp/config.json";
     mockExecFileError(Object.assign(new Error("spawn xdg-open ENOENT"), { code: "ENOENT" }));
 
     const { respond, logGateway } = await invokeConfigOpenFile();
@@ -131,7 +131,7 @@ describe("config.openFile", () => {
   });
 
   it("returns actionable headless environment error when xdg-open reports no method available", async () => {
-    process.env.OPENCLAW_CONFIG_PATH = "/tmp/config.json";
+    process.env.DEX_CONFIG_PATH = "/tmp/config.json";
     mockExecFileError(new Error("xdg-open: no method available for opening '/tmp/config.json'"));
 
     const { respond, logGateway } = await invokeConfigOpenFile();

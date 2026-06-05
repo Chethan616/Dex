@@ -30,7 +30,7 @@ function getSharedTestHome(): string | undefined {
   const globalState = globalThis as typeof globalThis & {
     [SHARED_TEST_SETUP]?: { tempHome?: string };
   };
-  return globalState[SHARED_TEST_SETUP]?.tempHome ?? process.env.OPENCLAW_TEST_HOME;
+  return globalState[SHARED_TEST_SETUP]?.tempHome ?? process.env.DEX_TEST_HOME;
 }
 
 function resetEvaluatedModules(modules: EvaluatedModules, resetMocks: boolean) {
@@ -60,10 +60,10 @@ function restoreSharedTestHomeAfterEnvUnstub(testHomeRaw: string | undefined): v
 
   process.env.HOME = testHome;
   process.env.USERPROFILE = testHome;
-  process.env.OPENCLAW_TEST_HOME = testHome;
-  delete process.env.OPENCLAW_CONFIG_PATH;
-  delete process.env.OPENCLAW_STATE_DIR;
-  delete process.env.OPENCLAW_AGENT_DIR;
+  process.env.DEX_TEST_HOME = testHome;
+  delete process.env.DEX_CONFIG_PATH;
+  delete process.env.DEX_STATE_DIR;
+  delete process.env.DEX_AGENT_DIR;
   process.env.XDG_CONFIG_HOME = path.join(testHome, ".config");
   process.env.XDG_DATA_HOME = path.join(testHome, ".local", "share");
   process.env.XDG_STATE_HOME = path.join(testHome, ".local", "state");
@@ -200,13 +200,13 @@ function resetOpenClawGlobalRunState(): void {
   replyRunState?.waitersByKey?.clear();
 }
 
-export default class OpenClawNonIsolatedRunner extends TestRunner {
+export default class DexNonIsolatedRunner extends TestRunner {
   override onCollectStart(file: { filepath: string }) {
     super.onCollectStart(file);
     restoreRealTimers();
     restoreNativeTimerGlobals();
     restoreSharedTestHomeAfterEnvUnstub(getSharedTestHome());
-    const orderLogPath = process.env.OPENCLAW_VITEST_FILE_ORDER_LOG?.trim();
+    const orderLogPath = process.env.DEX_VITEST_FILE_ORDER_LOG?.trim();
     if (orderLogPath) {
       fs.appendFileSync(orderLogPath, `START ${file.filepath}\n`);
     }
@@ -230,7 +230,7 @@ export default class OpenClawNonIsolatedRunner extends TestRunner {
       return;
     }
 
-    const orderLogPath = process.env.OPENCLAW_VITEST_FILE_ORDER_LOG?.trim();
+    const orderLogPath = process.env.DEX_VITEST_FILE_ORDER_LOG?.trim();
     if (orderLogPath) {
       fs.appendFileSync(orderLogPath, `END ${suite.filepath}\n`);
     }
