@@ -55,6 +55,74 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 GROQ_MODEL = os.environ.get("DEX_BROWSER_MODEL", "qwen/qwen3-32b")
 GROQ_API_KEY_ENV = "GROQ_API_KEY"
 
+# Phase C.6 -- LLM provider selection for browser-use.
+#
+# DEX_BROWSER_PROVIDER selects which adapter wraps the LLM that drives
+# browser-use's per-step planning. Each provider has its own model env
+# var + API-key env var for one-line config flips.
+#
+#   groq    (default)   ChatGroq + qwen/qwen3-32b. Free tier; text-only.
+#   google              ChatGoogle + gemini-2.5-flash-lite. Multimodal,
+#                       ~10x cheaper than Claude Sonnet, ~200-400ms TTFT.
+#   anthropic           ChatAnthropic + claude-sonnet-4-6. Most capable;
+#                       paid; supports vision.
+#   openai              ChatOpenAI + gpt-5. Paid; supports vision.
+#
+# Default model per provider is picked when DEX_BROWSER_MODEL is unset.
+BROWSER_PROVIDER = os.environ.get("DEX_BROWSER_PROVIDER", "groq").lower()
+BROWSER_PROVIDER_DEFAULT_MODEL = {
+    "groq": "qwen/qwen3-32b",
+    "google": "gemini-2.5-flash-lite",
+    "anthropic": "claude-sonnet-4-6",
+    "openai": "gpt-5",
+}
+BROWSER_PROVIDER_API_KEY_ENV = {
+    "groq": "GROQ_API_KEY",
+    "google": "GEMINI_API_KEY",   # AI Studio key; supports openai-compat too
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+}
+
+
+def _resolve_browser_llm():
+    """Build the browser-use LLM adapter for the selected provider.
+
+    Imports are local so the MCP server can still start (and surface a
+    friendly error message) when browser-use's deps aren't installed
+    yet. Each branch only imports the adapter it actually needs.
+    """
+    provider = BROWSER_PROVIDER
+    api_key_env = BROWSER_PROVIDER_API_KEY_ENV.get(provider)
+    if api_key_env is None:
+        raise RuntimeError(
+            f"Unknown DEX_BROWSER_PROVIDER={provider!r}. "
+            f"Supported: {', '.join(BROWSER_PROVIDER_DEFAULT_MODEL)}",
+        )
+    api_key = os.environ.get(api_key_env)
+    if not api_key:
+        raise RuntimeError(
+            f"browser-use provider {provider!r} needs env var {api_key_env}.",
+        )
+    model = os.environ.get(
+        "DEX_BROWSER_MODEL",
+        BROWSER_PROVIDER_DEFAULT_MODEL[provider],
+    )
+    if provider == "groq":
+        from browser_use import ChatGroq  # type: ignore[import-not-found]
+        return ChatGroq(model=model, api_key=api_key)
+    if provider == "google":
+        from browser_use import ChatGoogle  # type: ignore[import-not-found]
+        return ChatGoogle(model=model, api_key=api_key)
+    if provider == "anthropic":
+        from browser_use import ChatAnthropic  # type: ignore[import-not-found]
+        return ChatAnthropic(model=model, api_key=api_key)
+    if provider == "openai":
+        from browser_use import ChatOpenAI  # type: ignore[import-not-found]
+        return ChatOpenAI(model=model, api_key=api_key)
+    raise RuntimeError(  # unreachable, kept for type-checker
+        f"DEX_BROWSER_PROVIDER={provider!r} fell through provider switch.",
+    )
+
 # ---------------------------------------------------------------------------
 # FastMCP server
 # ---------------------------------------------------------------------------
@@ -103,11 +171,22 @@ def run_browser_task(
     if dry_run:
         return dry_run_ack(goal, task_id, url_hint)
 
-    if not os.environ.get(GROQ_API_KEY_ENV):
+    # Provider-aware key check; e.g. when DEX_BROWSER_PROVIDER=google we need
+    # GEMINI_API_KEY, not GROQ_API_KEY.
+    required_key_env = BROWSER_PROVIDER_API_KEY_ENV.get(BROWSER_PROVIDER, GROQ_API_KEY_ENV)
+    if not os.environ.get(required_key_env):
         return result(
             False,
-            f"GROQ_API_KEY env var not set. The MCP server config should "
-            f"include `env: {{\"{GROQ_API_KEY_ENV}\": \"gsk_...\"}}` (see install-skills.ps1).",
+            f"{required_key_env} env var not set for provider {BROWSER_PROVIDER!r}. "
+            f"The MCP server config should include "
+            f"`env: {{\"{required_key_env}\": \"...\"}}` (see install-skills.ps1). "
+            f"Get a key at: "
+            + {
+                "groq": "https://console.groq.com/keys",
+                "google": "https://aistudio.google.com/app/apikey",
+                "anthropic": "https://console.anthropic.com/account/keys",
+                "openai": "https://platform.openai.com/api-keys",
+            }.get(BROWSER_PROVIDER, "(unknown provider)"),
             [],
             task_id,
             None,
@@ -135,10 +214,11 @@ async def _run_agent(
     Imports are local so the MCP server can still start (and surface a
     friendly error) when browser-use's deps aren't installed yet.
     """
-    from browser_use import Agent, BrowserSession, ChatGroq  # type: ignore[import-not-found]
+    from browser_use import Agent, BrowserSession  # type: ignore[import-not-found]
 
-    api_key = os.environ[GROQ_API_KEY_ENV]
-    llm = ChatGroq(model=GROQ_MODEL, api_key=api_key)
+    # Provider-aware LLM construction (Phase C.6). Falls back to Groq Qwen 3
+    # when DEX_BROWSER_PROVIDER is unset.
+    llm = _resolve_browser_llm()
 
     # The browser-use agent reads the task at construction; we prepend the
     # url_hint so the agent navigates there as step 1 if provided.
