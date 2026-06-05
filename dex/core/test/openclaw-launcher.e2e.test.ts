@@ -8,8 +8,8 @@ import { cleanupTempDirs, makeTempDir } from "./helpers/temp-dir.js";
 async function makeLauncherFixture(fixtureRoots: string[]): Promise<string> {
   const fixtureRoot = makeTempDir(fixtureRoots, "openclaw-launcher-");
   await fs.copyFile(
-    path.resolve(process.cwd(), "openclaw.mjs"),
-    path.join(fixtureRoot, "openclaw.mjs"),
+    path.resolve(process.cwd(), "dex.mjs"),
+    path.join(fixtureRoot, "dex.mjs"),
   );
   await fs.mkdir(path.join(fixtureRoot, "dist"), { recursive: true });
   return fixtureRoot;
@@ -20,7 +20,7 @@ async function makeLauncherProbeFixture(
   probeSource: string,
 ): Promise<string> {
   const fixtureRoot = await makeLauncherFixture(fixtureRoots);
-  const launcherPath = path.join(fixtureRoot, "openclaw.mjs");
+  const launcherPath = path.join(fixtureRoot, "dex.mjs");
   const launcher = await fs.readFile(launcherPath, "utf8");
   const bootstrapStart = "\nif (!waitingForCompileCacheRespawn) {";
   const bootstrapIndex = launcher.indexOf(bootstrapStart);
@@ -137,7 +137,7 @@ describe("openclaw launcher", () => {
 
   it("keeps the bootstrap Node floor aligned with package and runtime guards", async () => {
     const [launcher, runtimeGuard, packageJsonRaw] = await Promise.all([
-      fs.readFile(path.resolve(process.cwd(), "openclaw.mjs"), "utf8"),
+      fs.readFile(path.resolve(process.cwd(), "dex.mjs"), "utf8"),
       fs.readFile(path.resolve(process.cwd(), "src/infra/runtime-guard.ts"), "utf8"),
       fs.readFile(path.resolve(process.cwd(), "package.json"), "utf8"),
     ]);
@@ -151,7 +151,7 @@ describe("openclaw launcher", () => {
     const engineMatch = packageJson.engines?.node?.match(/^>=(\d+)\.(\d+)\.(\d+)$/u);
 
     if (!launcherMatch) {
-      throw new Error("openclaw.mjs MIN_NODE_* constants were not found");
+      throw new Error("dex.mjs MIN_NODE_* constants were not found");
     }
     if (!runtimeMatch) {
       throw new Error("src/infra/runtime-guard.ts MIN_NODE constant was not found");
@@ -164,7 +164,7 @@ describe("openclaw launcher", () => {
 
     expect(
       [Number(launcherMatch[1]), Number(launcherMatch[2]), 0],
-      "openclaw.mjs MIN_NODE_* must match package.json engines.node",
+      "dex.mjs MIN_NODE_* must match package.json engines.node",
     ).toEqual([engineMajor, engineMinor, enginePatch]);
     expect(
       runtimeMatch.slice(1, 4).map(Number),
@@ -187,7 +187,7 @@ describe("openclaw launcher", () => {
 
     const result = spawnSync(
       process.execPath,
-      ["--import", mockNodeVersionPath, path.join(fixtureRoot, "openclaw.mjs"), "--help"],
+      ["--import", mockNodeVersionPath, path.join(fixtureRoot, "dex.mjs"), "--help"],
       {
         cwd: fixtureRoot,
         env: launcherEnv(),
@@ -209,7 +209,7 @@ describe("openclaw launcher", () => {
       "utf8",
     );
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs"), "--help"], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs"), "--help"], {
       cwd: fixtureRoot,
       env: launcherEnv(),
       encoding: "utf8",
@@ -223,7 +223,7 @@ describe("openclaw launcher", () => {
   it("keeps the friendly launcher error for a truly missing entry build output", async () => {
     const fixtureRoot = await makeLauncherFixture(fixtureRoots);
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs"), "--help"], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs"), "--help"], {
       cwd: fixtureRoot,
       env: launcherEnv(),
       encoding: "utf8",
@@ -252,7 +252,7 @@ describe("openclaw launcher", () => {
 
     const result = spawnSync(
       process.execPath,
-      [path.join(fixtureRoot, "openclaw.mjs"), "--version"],
+      [path.join(fixtureRoot, "dex.mjs"), "--version"],
       {
         cwd: fixtureRoot,
         env: launcherEnv(),
@@ -280,7 +280,7 @@ describe("openclaw launcher", () => {
 
     const result = spawnSync(
       process.execPath,
-      [path.join(fixtureRoot, "openclaw.mjs"), "--container", "demo", "--version"],
+      [path.join(fixtureRoot, "dex.mjs"), "--container", "demo", "--version"],
       {
         cwd: fixtureRoot,
         env: launcherEnv(),
@@ -293,7 +293,7 @@ describe("openclaw launcher", () => {
 
     const envResult = spawnSync(
       process.execPath,
-      [path.join(fixtureRoot, "openclaw.mjs"), "--version"],
+      [path.join(fixtureRoot, "dex.mjs"), "--version"],
       {
         cwd: fixtureRoot,
         env: launcherEnv({ DEX_CONTAINER: "demo" }),
@@ -339,7 +339,7 @@ describe("openclaw launcher", () => {
       ].join("\n"),
     );
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs")], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs")], {
       cwd: fixtureRoot,
       env: launcherEnv(),
       encoding: "utf8",
@@ -368,7 +368,7 @@ describe("openclaw launcher", () => {
 
       const result = spawnSync(
         process.env.BUN_BIN ?? "bun",
-        [path.join(fixtureRoot, "openclaw.mjs")],
+        [path.join(fixtureRoot, "dex.mjs")],
         {
           cwd: fixtureRoot,
           env: launcherEnv(),
@@ -398,7 +398,7 @@ describe("openclaw launcher", () => {
 
       const result = spawnSync(
         process.env.BUN_BIN ?? "bun",
-        [path.join(fixtureRoot, "openclaw.mjs"), "--help"],
+        [path.join(fixtureRoot, "dex.mjs"), "--help"],
         {
           cwd: fixtureRoot,
           env: launcherEnv(),
@@ -420,7 +420,7 @@ describe("openclaw launcher", () => {
       "utf8",
     );
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs"), "--help"], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs"), "--help"], {
       cwd: fixtureRoot,
       env: launcherEnv(),
       encoding: "utf8",
@@ -444,7 +444,7 @@ describe("openclaw launcher", () => {
 
     const result = spawnSync(
       process.execPath,
-      [path.join(fixtureRoot, "openclaw.mjs"), params.command, "--help"],
+      [path.join(fixtureRoot, "dex.mjs"), params.command, "--help"],
       {
         cwd: fixtureRoot,
         env: launcherEnv(),
@@ -475,7 +475,7 @@ describe("openclaw launcher", () => {
       "utf8",
     );
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs"), "--help"], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs"), "--help"], {
       cwd: fixtureRoot,
       env: launcherEnv({ DEX_CONFIG_PATH: configPath }),
       encoding: "utf8",
@@ -507,7 +507,7 @@ describe("openclaw launcher", () => {
 
     const result = spawnSync(
       process.execPath,
-      [path.join(fixtureRoot, "openclaw.mjs"), "nodes", "--help"],
+      [path.join(fixtureRoot, "dex.mjs"), "nodes", "--help"],
       {
         cwd: fixtureRoot,
         env: launcherEnv({ DEX_CONFIG_PATH: configPath }),
@@ -541,7 +541,7 @@ describe("openclaw launcher", () => {
       "utf8",
     );
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs"), "--help"], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs"), "--help"], {
       cwd: fixtureRoot,
       env: launcherEnv({ DEX_HOME: openclawHome }),
       encoding: "utf8",
@@ -573,7 +573,7 @@ describe("openclaw launcher", () => {
       "utf8",
     );
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs"), "--help"], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs"), "--help"], {
       cwd: fixtureRoot,
       env: launcherEnv({ HOME: home, DEX_HOME: undefined }),
       encoding: "utf8",
@@ -599,7 +599,7 @@ describe("openclaw launcher", () => {
     );
     await fs.writeFile(configPath, JSON.stringify({ $include: "memory.json" }), "utf8");
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs"), "--help"], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs"), "--help"], {
       cwd: fixtureRoot,
       env: launcherEnv({ DEX_CONFIG_PATH: configPath }),
       encoding: "utf8",
@@ -614,7 +614,7 @@ describe("openclaw launcher", () => {
     const fixtureRoot = await makeLauncherFixture(fixtureRoots);
     await addSourceTreeMarker(fixtureRoot);
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs"), "--help"], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs"), "--help"], {
       cwd: fixtureRoot,
       env: launcherEnv(),
       encoding: "utf8",
@@ -632,7 +632,7 @@ describe("openclaw launcher", () => {
     await addSourceTreeMarker(fixtureRoot);
     await addCompileCacheProbe(fixtureRoot);
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs")], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs")], {
       cwd: fixtureRoot,
       env: launcherEnv(),
       encoding: "utf8",
@@ -647,7 +647,7 @@ describe("openclaw launcher", () => {
     await addGitMarker(fixtureRoot);
     await addCompileCacheProbe(fixtureRoot);
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs")], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs")], {
       cwd: fixtureRoot,
       env: launcherEnv({
         NODE_COMPILE_CACHE: path.join(fixtureRoot, ".node-compile-cache"),
@@ -679,7 +679,7 @@ describe("openclaw launcher", () => {
         "utf8",
       );
 
-      const launcher = spawn(process.execPath, [path.join(fixtureRoot, "openclaw.mjs")], {
+      const launcher = spawn(process.execPath, [path.join(fixtureRoot, "dex.mjs")], {
         cwd: fixtureRoot,
         env: launcherEnv({
           NODE_COMPILE_CACHE: path.join(fixtureRoot, ".node-compile-cache"),
@@ -730,7 +730,7 @@ describe("openclaw launcher", () => {
         "utf8",
       );
 
-      const launcher = spawn(process.execPath, [path.join(fixtureRoot, "openclaw.mjs")], {
+      const launcher = spawn(process.execPath, [path.join(fixtureRoot, "dex.mjs")], {
         cwd: fixtureRoot,
         env: launcherEnv({
           NODE_COMPILE_CACHE: path.join(fixtureRoot, ".node-compile-cache"),
@@ -772,7 +772,7 @@ describe("openclaw launcher", () => {
       const linkedRoot = path.join(linkParent, "openclaw-linked");
       await fs.symlink(fixtureRoot, linkedRoot, "dir");
 
-      const result = spawnSync(process.execPath, [path.join(linkedRoot, "openclaw.mjs")], {
+      const result = spawnSync(process.execPath, [path.join(linkedRoot, "dex.mjs")], {
         cwd: linkParent,
         env: launcherEnv({
           NODE_COMPILE_CACHE: path.join(linkParent, ".node-compile-cache"),
@@ -789,7 +789,7 @@ describe("openclaw launcher", () => {
     const fixtureRoot = await makeLauncherFixture(fixtureRoots);
     await addCompileCacheProbe(fixtureRoot);
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs")], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs")], {
       cwd: fixtureRoot,
       env: launcherEnv({
         NODE_COMPILE_CACHE: path.join(fixtureRoot, ".node-compile-cache"),
@@ -813,7 +813,7 @@ describe("openclaw launcher", () => {
       "utf8",
     );
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs")], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs")], {
       cwd: fixtureRoot,
       env: launcherEnv({
         NODE_COMPILE_CACHE: path.join(fixtureRoot, ".node-compile-cache"),
@@ -839,7 +839,7 @@ describe("openclaw launcher", () => {
       "utf8",
     );
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs")], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs")], {
       cwd: runCwd,
       env: launcherEnv({
         NODE_COMPILE_CACHE: "",
@@ -860,7 +860,7 @@ describe("openclaw launcher", () => {
     const tmpRoot = makeTempDir(fixtureRoots, "openclaw-launcher-tmp-");
     await addCompileCacheProbe(fixtureRoot);
 
-    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "openclaw.mjs")], {
+    const result = spawnSync(process.execPath, [path.join(fixtureRoot, "dex.mjs")], {
       cwd: fixtureRoot,
       env: launcherEnv({
         TMP: tmpRoot,

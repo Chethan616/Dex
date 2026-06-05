@@ -57,7 +57,7 @@ async function runHelperWithExistingSentinel(params: {
     restartDelayMs: 500,
     parentPid: process.pid,
     execPath: "/usr/local/bin/node",
-    argv1: "/opt/openclaw/openclaw.mjs",
+    argv1: "/opt/openclaw/dex.mjs",
     ...(params.handoffId ? { handoffId: params.handoffId } : {}),
     env: {},
     meta: {
@@ -140,7 +140,7 @@ describe("managed service update handoff", () => {
       restartDelayMs: 500,
       parentPid: 12345,
       execPath: "/usr/local/bin/node",
-      argv1: "/opt/openclaw/openclaw.mjs",
+      argv1: "/opt/openclaw/dex.mjs",
       env: {
         ...supervisorEnv,
         ...serviceIdentityEnv,
@@ -200,7 +200,7 @@ describe("managed service update handoff", () => {
       restartDelayMs: 500,
       parentPid: 12345,
       execPath: "/usr/local/bin/node",
-      argv1: "/opt/openclaw/openclaw.mjs",
+      argv1: "/opt/openclaw/dex.mjs",
       handoffId: "handoff-123",
       supervisor: "systemd",
       env: {
@@ -242,7 +242,7 @@ describe("managed service update handoff", () => {
     };
     expect(helperParams.commandArgv).toEqual([
       "/usr/local/bin/node",
-      "/opt/openclaw/openclaw.mjs",
+      "/opt/openclaw/dex.mjs",
       "update",
       "--yes",
       "--json",

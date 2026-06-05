@@ -33,7 +33,7 @@ function hasTrustedOpenClawRootIndicator(packageRoot, packageJson) {
     (typeof packageJson?.bin === "object" &&
       packageJson.bin !== null &&
       typeof packageJson.bin.openclaw === "string");
-  const hasOpenClawEntrypoint = fs.existsSync(path.join(packageRoot, "openclaw.mjs"));
+  const hasOpenClawEntrypoint = fs.existsSync(path.join(packageRoot, "dex.mjs"));
   return hasCliEntryExport || hasOpenClawBin || hasOpenClawEntrypoint;
 }
 

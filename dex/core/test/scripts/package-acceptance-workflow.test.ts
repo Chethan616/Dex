@@ -1376,7 +1376,7 @@ describe("package artifact reuse", () => {
     expect(fullReleaseWorkflow).toContain("docker build");
     expect(fullReleaseWorkflow).toContain("--target runtime-assets");
     expect(fullReleaseWorkflow).toContain("timeout --kill-after=30s 15m docker build");
-    expect(fullReleaseWorkflow).not.toContain("node /app/openclaw.mjs agent");
+    expect(fullReleaseWorkflow).not.toContain("node /app/dex.mjs agent");
     expect(fullReleaseWorkflow).toContain('DEX_EXTENSIONS="diagnostics-otel,codex"');
     expect(fullReleaseWorkflow).not.toContain("/app/src/agents/templates/HEARTBEAT.md");
     expect(fullReleaseWorkflow).toContain("inputs.rerun_group == 'all'");

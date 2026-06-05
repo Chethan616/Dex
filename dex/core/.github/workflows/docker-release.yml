@@ -221,7 +221,7 @@ jobs:
             AWS_EC2_METADATA_DISABLED=true \
             AWS_SHARED_CREDENTIALS_FILE="${temp_root}/home/.aws/credentials" \
             AWS_CONFIG_FILE="${temp_root}/home/.aws/config" \
-              node /app/openclaw.mjs agent --message "workspace bootstrap smoke" --session-id "workspace-bootstrap-smoke" --local --timeout 1 --json \
+              node /app/dex.mjs agent --message "workspace bootstrap smoke" --session-id "workspace-bootstrap-smoke" --local --timeout 1 --json \
               >"${temp_root}/out.log" 2>&1
             status="$?"
             set -e
@@ -412,7 +412,7 @@ jobs:
             AWS_EC2_METADATA_DISABLED=true \
             AWS_SHARED_CREDENTIALS_FILE="${temp_root}/home/.aws/credentials" \
             AWS_CONFIG_FILE="${temp_root}/home/.aws/config" \
-              node /app/openclaw.mjs agent --message "workspace bootstrap smoke" --session-id "workspace-bootstrap-smoke" --local --timeout 1 --json \
+              node /app/dex.mjs agent --message "workspace bootstrap smoke" --session-id "workspace-bootstrap-smoke" --local --timeout 1 --json \
               >"${temp_root}/out.log" 2>&1
             status="$?"
             set -e

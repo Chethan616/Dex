@@ -307,13 +307,13 @@ function runCompiledEsmSidecarFastPathProbe(): SpawnSyncReturns<string> {
   writeJson(path.join(tempRoot, "package.json"), {
     name: "openclaw",
     type: "module",
-    bin: { openclaw: "./openclaw.mjs" },
+    bin: { openclaw: "./dex.mjs" },
     exports: {
       "./plugin-sdk": "./dist/plugin-sdk/root-alias.cjs",
       "./plugin-sdk/channel-outbound": "./dist/plugin-sdk/channel-outbound.js",
     },
   });
-  fs.writeFileSync(path.join(tempRoot, "openclaw.mjs"), "#!/usr/bin/env node\n", "utf8");
+  fs.writeFileSync(path.join(tempRoot, "dex.mjs"), "#!/usr/bin/env node\n", "utf8");
   fs.mkdirSync(path.join(tempRoot, "dist", "plugin-sdk"), { recursive: true });
   fs.writeFileSync(
     path.join(tempRoot, "dist", "plugin-sdk", "root-alias.cjs"),

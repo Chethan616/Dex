@@ -988,7 +988,7 @@ function openClawEntryArgs(): string[] {
   if (existsSync(path.join(process.cwd(), "scripts", "run-node.mjs"))) {
     return ["scripts/run-node.mjs"];
   }
-  return ["openclaw.mjs"];
+  return ["dex.mjs"];
 }
 
 function spawnOpenClaw(args: string[], env: NodeJS.ProcessEnv): ChildProcess {

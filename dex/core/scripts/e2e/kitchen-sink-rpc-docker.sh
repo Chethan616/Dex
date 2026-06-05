@@ -22,7 +22,7 @@ docker_e2e_build_or_reuse "$IMAGE_NAME" kitchen-sink-rpc
 
 DOCKER_ENV_ARGS=(
   -e COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-  -e OPENCLAW_ENTRY=/app/openclaw.mjs
+  -e OPENCLAW_ENTRY=/app/dex.mjs
 )
 
 for env_name in \

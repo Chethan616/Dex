@@ -3663,7 +3663,7 @@ function installedPackageRoot(prefixDir, platform = process.platform) {
 }
 
 function installedEntryPath(prefixDir) {
-  return join(installedPackageRoot(prefixDir), "openclaw.mjs");
+  return join(installedPackageRoot(prefixDir), "dex.mjs");
 }
 
 function npmShimPath(prefixDir) {

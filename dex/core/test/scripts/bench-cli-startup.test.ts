@@ -28,7 +28,7 @@ describe("bench-cli-startup", () => {
   it("fails reports with no measured samples", () => {
     expect(
       testing.collectFailedSamples({
-        entry: "openclaw.mjs",
+        entry: "dex.mjs",
         cases: [
           {
             id: "version",
@@ -46,7 +46,7 @@ describe("bench-cli-startup", () => {
           },
         ],
       }),
-    ).toEqual(["openclaw.mjs version: no measured samples"]);
+    ).toEqual(["dex.mjs version: no measured samples"]);
   });
 
   it("fails reports with nonzero or signaled CLI samples", () => {
@@ -100,7 +100,7 @@ describe("bench-cli-startup", () => {
 
     expect(
       testing.collectFailedSamples({
-        entry: "openclaw.mjs",
+        entry: "dex.mjs",
         cases: [
           {
             id: "health",
@@ -135,7 +135,7 @@ describe("bench-cli-startup", () => {
 
     expect(
       testing.collectFailedSamples({
-        entry: "openclaw.mjs",
+        entry: "dex.mjs",
         cases: [
           {
             id: "health",
@@ -156,7 +156,7 @@ describe("bench-cli-startup", () => {
         ],
       }),
     ).toEqual([
-      "openclaw.mjs health sample 1: exited with expected code 1 but output did not match expected clean-state markers (Gateway target:)",
+      "dex.mjs health sample 1: exited with expected code 1 but output did not match expected clean-state markers (Gateway target:)",
     ]);
   });
 

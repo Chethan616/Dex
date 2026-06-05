@@ -32,7 +32,7 @@ function writeStallingOpenClaw(
         )}, "x"), 20);`,
       ].join("\n")
     : "";
-  const scriptPath = path.join(root, "fake-openclaw.mjs");
+  const scriptPath = path.join(root, "fake-dex.mjs");
   fs.writeFileSync(
     scriptPath,
     [
@@ -71,7 +71,7 @@ function writeStallingOpenClaw(
 }
 
 function writeLeakingStartupOpenClaw(root: string): string {
-  const scriptPath = path.join(root, "fake-leaking-openclaw.mjs");
+  const scriptPath = path.join(root, "fake-leaking-dex.mjs");
   fs.writeFileSync(
     scriptPath,
     [

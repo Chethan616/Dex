@@ -35,8 +35,8 @@ run_openclaw() {
     openclaw "$@"
     return
   fi
-  if [ -f /app/openclaw.mjs ]; then
-    node /app/openclaw.mjs "$@"
+  if [ -f /app/dex.mjs ]; then
+    node /app/dex.mjs "$@"
     return
   fi
   echo "openclaw CLI not found in Docker image" >&2

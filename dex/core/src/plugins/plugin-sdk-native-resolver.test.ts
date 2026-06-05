@@ -31,7 +31,7 @@ function writeFakeOpenClawPackage(root: string): { distRoot: string; loaderModul
     name: "openclaw",
     type: "module",
     bin: {
-      openclaw: "./openclaw.mjs",
+      openclaw: "./dex.mjs",
     },
     exports: {
       "./cli-entry": "./dist/cli-entry.js",
@@ -42,7 +42,7 @@ function writeFakeOpenClawPackage(root: string): { distRoot: string; loaderModul
       "./plugin-sdk/source-only": "./dist/plugin-sdk/source-only.js",
     },
   });
-  fs.writeFileSync(path.join(root, "openclaw.mjs"), "#!/usr/bin/env node\n", "utf8");
+  fs.writeFileSync(path.join(root, "dex.mjs"), "#!/usr/bin/env node\n", "utf8");
   const distRoot = path.join(root, "dist");
   const pluginSdkDir = path.join(distRoot, "plugin-sdk");
   fs.mkdirSync(pluginSdkDir, { recursive: true });
@@ -298,13 +298,13 @@ describe("installOpenClawPluginSdkNativeResolver", () => {
         'writeJson(path.join(root, "package.json"), {',
         '  name: "openclaw",',
         '  type: "module",',
-        '  bin: { openclaw: "./openclaw.mjs" },',
+        '  bin: { openclaw: "./dex.mjs" },',
         "  exports: {",
         '    "./plugin-sdk": "./dist/plugin-sdk/root-alias.cjs",',
         '    "./plugin-sdk/channel-outbound": "./dist/plugin-sdk/channel-outbound.js",',
         "  },",
         "});",
-        'fs.writeFileSync(path.join(root, "openclaw.mjs"), "#!/usr/bin/env node\\n", "utf8");',
+        'fs.writeFileSync(path.join(root, "dex.mjs"), "#!/usr/bin/env node\\n", "utf8");',
         'fs.mkdirSync(path.join(root, "dist", "plugin-sdk"), { recursive: true });',
         'fs.writeFileSync(path.join(root, "dist", "plugin-sdk", "root-alias.cjs"), "module.exports = {};\\n", "utf8");',
         'fs.writeFileSync(path.join(root, "dist", "plugin-sdk", "channel-outbound.js"), "export const defineChannelMessageAdapter = () => \\"adapter\\";\\n", "utf8");',

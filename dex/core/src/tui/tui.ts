@@ -68,7 +68,7 @@ export {
   shouldEnableWindowsGitBashPasteFallback,
 } from "./tui-submit.js";
 
-const DEX_CLI_WRAPPER_PATH = fileURLToPath(new URL("../../openclaw.mjs", import.meta.url));
+const DEX_CLI_WRAPPER_PATH = fileURLToPath(new URL("../../dex.mjs", import.meta.url));
 const DEX_RUN_NODE_SCRIPT_PATH = fileURLToPath(
   new URL("../../scripts/run-node.mjs", import.meta.url),
 );
@@ -136,7 +136,7 @@ export function resolveLocalAuthSpawnCwd(params: { args: string[]; defaultCwd?: 
     return defaultCwd;
   }
   const entryBase = path.basename(entryArg).toLowerCase();
-  if (entryBase === "openclaw.mjs") {
+  if (entryBase === "dex.mjs") {
     return path.dirname(entryArg);
   }
   if (entryBase === "run-node.mjs") {

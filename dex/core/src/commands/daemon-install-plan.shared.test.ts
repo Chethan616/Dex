@@ -56,10 +56,10 @@ describe("resolveDaemonOpenClawBinDir", () => {
 
   it("finds the PATH shim that resolves to the active package entrypoint", () => {
     const realpaths = new Map([
-      ["/Users/testuser/.npm-global/bin/openclaw", "/pkg/openclaw/openclaw.mjs"],
+      ["/Users/testuser/.npm-global/bin/openclaw", "/pkg/openclaw/dex.mjs"],
       [
-        "/Users/testuser/.npm-global/lib/node_modules/openclaw/openclaw.mjs",
-        "/pkg/openclaw/openclaw.mjs",
+        "/Users/testuser/.npm-global/lib/node_modules/openclaw/dex.mjs",
+        "/pkg/openclaw/dex.mjs",
       ],
     ]);
 
@@ -67,7 +67,7 @@ describe("resolveDaemonOpenClawBinDir", () => {
       resolveDaemonOpenClawBinDir({
         argv: [
           "node",
-          "/Users/testuser/.npm-global/lib/node_modules/openclaw/openclaw.mjs",
+          "/Users/testuser/.npm-global/lib/node_modules/openclaw/dex.mjs",
           "gateway",
           "install",
         ],
@@ -82,13 +82,13 @@ describe("resolveDaemonOpenClawBinDir", () => {
   it("ignores unrelated openclaw commands elsewhere on PATH", () => {
     expect(
       resolveDaemonOpenClawBinDir({
-        argv: ["node", "/opt/openclaw/openclaw.mjs", "gateway", "install"],
+        argv: ["node", "/opt/openclaw/dex.mjs", "gateway", "install"],
         env: { PATH: "/Users/testuser/.npm-global/bin" },
         platform: "darwin",
         existsSync: () => true,
         realpathSync: (candidate) =>
           candidate === "/Users/testuser/.npm-global/bin/openclaw"
-            ? "/other/openclaw.mjs"
+            ? "/other/dex.mjs"
             : candidate,
       }),
     ).toBeUndefined();

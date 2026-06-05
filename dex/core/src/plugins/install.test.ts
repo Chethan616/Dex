@@ -2035,7 +2035,7 @@ describe("installPluginFromArchive", () => {
       const hostRoot = path.join(tmpDir, "host-openclaw");
       fs.mkdirSync(hostRoot, { recursive: true });
       fs.writeFileSync(path.join(hostRoot, "package.json"), '{"name":"openclaw"}\n');
-      const hostBin = path.join(hostRoot, "openclaw.mjs");
+      const hostBin = path.join(hostRoot, "dex.mjs");
       fs.writeFileSync(hostBin, "#!/usr/bin/env node\n");
       vi.mocked(resolveOpenClawPackageRootSync).mockReturnValue(hostRoot);
       writeMinimalPackagePlugin(pluginDir, "openclaw-bin-peer-plugin");

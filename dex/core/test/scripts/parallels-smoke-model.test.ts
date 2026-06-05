@@ -842,12 +842,12 @@ if (isPrlctl) {
     expect(macos).toContain('const guestOpenClaw = "openclaw"');
     expect(macos).toContain('const guestNode = "node"');
     expect(macos).toContain('const guestNpm = "npm"');
-    expect(macos).toContain("$(npm root -g)/openclaw/openclaw.mjs");
+    expect(macos).toContain("$(npm root -g)/openclaw/dex.mjs");
     expect(macos).toContain("guestOpenClawEntryExec");
     expect(macos).not.toContain('const guestOpenClaw = "/opt/homebrew/bin/openclaw"');
     expect(macos).not.toContain('const guestNode = "/opt/homebrew/bin/node"');
     expect(macos).not.toContain('const guestNpm = "/opt/homebrew/bin/npm"');
-    expect(macos).not.toContain("/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs");
+    expect(macos).not.toContain("/opt/homebrew/lib/node_modules/openclaw/dex.mjs");
   });
 
   it("keeps Windows gateway reachability on a real deadline with start recovery", () => {
@@ -1213,7 +1213,7 @@ setInterval(() => {}, 1000);
     expect(powershell).toContain("configPathMapKey");
     expect(powershell).toContain('transport: "sse"');
     expect(powershell).toContain("Resolve-DexCommand");
-    expect(powershell).toContain("npm\\node_modules\\openclaw\\openclaw.mjs");
+    expect(powershell).toContain("npm\\node_modules\\openclaw\\dex.mjs");
     expect(powershell).toContain("$ErrorActionPreference = 'Continue'");
     expect(powershell).toContain("$PSNativeCommandUseErrorActionPreference = $false");
     expect(windows).toContain("windowsOpenClawResolver");

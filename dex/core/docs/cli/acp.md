@@ -114,7 +114,7 @@ openclaw acp client
 openclaw acp client --server-args --url wss://gateway-host:18789 --token-file ~/.dex/gateway.token
 
 # Override the server command (default: openclaw)
-openclaw acp client --server "node" --server-args openclaw.mjs acp --url ws://127.0.0.1:19001
+openclaw acp client --server "node" --server-args dex.mjs acp --url ws://127.0.0.1:19001
 ```
 
 Permission model (client debug mode):
@@ -259,7 +259,7 @@ For a repo-local OpenClaw checkout, use the direct CLI entrypoint instead of the
 dev runner so the ACP stream stays clean. For example:
 
 ```bash
-env DEX_HIDE_BANNER=1 DEX_SUPPRESS_NOTES=1 node openclaw.mjs acp ...
+env DEX_HIDE_BANNER=1 DEX_SUPPRESS_NOTES=1 node dex.mjs acp ...
 ```
 
 This is the easiest way to let Codex, Claude Code, or another ACP-aware client

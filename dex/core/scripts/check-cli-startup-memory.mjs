@@ -97,13 +97,13 @@ const cases = [
   {
     id: "help",
     label: "--help",
-    args: ["openclaw.mjs", "--help"],
+    args: ["dex.mjs", "--help"],
     limitMb: readPositiveNumberEnv("DEX_STARTUP_MEMORY_HELP_MB", DEFAULT_LIMITS_MB.help),
   },
   {
     id: "statusJson",
     label: "status --json",
-    args: ["openclaw.mjs", "status", "--json"],
+    args: ["dex.mjs", "status", "--json"],
     limitMb: readPositiveNumberEnv(
       "DEX_STARTUP_MEMORY_STATUS_JSON_MB",
       DEFAULT_LIMITS_MB.statusJson,
@@ -112,7 +112,7 @@ const cases = [
   {
     id: "gatewayStatus",
     label: "gateway status",
-    args: ["openclaw.mjs", "gateway", "status"],
+    args: ["dex.mjs", "gateway", "status"],
     limitMb: readPositiveNumberEnv(
       "DEX_STARTUP_MEMORY_GATEWAY_STATUS_MB",
       DEFAULT_LIMITS_MB.gatewayStatus,

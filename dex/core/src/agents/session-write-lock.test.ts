@@ -795,7 +795,7 @@ describe("acquireSessionWriteLock", () => {
         config: { session: { writeLock: { staleMs: 30_000 } } },
         nowMs,
         removeStale: false,
-        readOwnerProcessArgs: () => ["node", "/opt/openclaw/openclaw.mjs", "doctor"],
+        readOwnerProcessArgs: () => ["node", "/opt/openclaw/dex.mjs", "doctor"],
       });
       expect(configOnly.locks[0]?.stale).toBe(true);
 
@@ -805,7 +805,7 @@ describe("acquireSessionWriteLock", () => {
         env: { DEX_SESSION_WRITE_LOCK_STALE_MS: "60000" },
         nowMs,
         removeStale: false,
-        readOwnerProcessArgs: () => ["node", "/opt/openclaw/openclaw.mjs", "doctor"],
+        readOwnerProcessArgs: () => ["node", "/opt/openclaw/dex.mjs", "doctor"],
       });
       expect(envOverride.locks[0]?.stale).toBe(false);
     } finally {
@@ -836,7 +836,7 @@ describe("acquireSessionWriteLock", () => {
         staleMs: 60_000,
         nowMs,
         removeStale: true,
-        readOwnerProcessArgs: () => ["node", "/opt/openclaw/openclaw.mjs", "agent"],
+        readOwnerProcessArgs: () => ["node", "/opt/openclaw/dex.mjs", "agent"],
       });
 
       expect(lockCleanupRecords(result.locks)).toEqual([
@@ -903,7 +903,7 @@ describe("acquireSessionWriteLock", () => {
         staleMs: 30_000,
         nowMs,
         removeStale: true,
-        readOwnerProcessArgs: () => ["node", "/opt/openclaw/openclaw.mjs", "agent"],
+        readOwnerProcessArgs: () => ["node", "/opt/openclaw/dex.mjs", "agent"],
       });
 
       expect(result.locks).toHaveLength(3);
@@ -1199,7 +1199,7 @@ describe("acquireSessionWriteLock", () => {
         staleMs: 30_000,
         nowMs,
         removeStale: true,
-        readOwnerProcessArgs: () => ["node", "/opt/openclaw/openclaw.mjs", "agent"],
+        readOwnerProcessArgs: () => ["node", "/opt/openclaw/dex.mjs", "agent"],
       });
 
       expect(openclawResult.cleaned).toEqual([]);
