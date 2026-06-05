@@ -1,6 +1,6 @@
 // A chat message in the Dex conversation. Four speakers:
 //   - human    (the user)
-//   - agent    (OpenClaw -> Claude prose responses)
+//   - agent    (Dex brain -> Claude prose responses)
 //   - action   (UFO2 / browser-use -- a group of executed steps, rendered as a card)
 //   - toolChip (Gemini-style "Claude picked tool X" inline announcement, v1.1)
 //

@@ -1,7 +1,7 @@
 """
 windows-desktop-control -- the Dex MCP glue for native Windows GUIs (UFO2).
 
-A FastMCP stdio server that exposes one tool to the OpenClaw agent:
+A FastMCP stdio server that exposes one tool to the Dex agent:
 
     run_desktop_task(goal, app_hint="", timeout_s=120, dry_run=False)
 

@@ -70,7 +70,7 @@ EngineDescriptor descriptorForEngine(EngineId id) {
 }
 
 /// MCP tool id -> orchestrator engine. Returns `EngineId.shell` for any
-/// tool we don't recognise (built-in OpenClaw shell-class tools, plus
+/// tool we don't recognise (Dex's built-in shell-class tools plus
 /// anything user-installed). The caller is free to treat the fallback as
 /// "engine unknown" by checking against a known-set if needed.
 EngineId engineForToolId(String toolId) {
@@ -107,7 +107,7 @@ EngineId engineForToolId(String toolId) {
   })) {
     return EngineId.omniparser;
   }
-  // Default: anything OpenClaw-built-in (bash, read, write, edit, process)
+  // Default: anything Dex-built-in (bash, read, write, edit, process)
   // routes through the shell engine in the capability-scorer's table.
   return EngineId.shell;
 }

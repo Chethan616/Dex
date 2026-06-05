@@ -19,7 +19,7 @@ const Map<String, ToolDescriptor> _toolRegistry = <String, ToolDescriptor>{
   'windows-desktop-control': ToolDescriptor('Windows app', Icons.desktop_windows),
   'browser-control':         ToolDescriptor('Browser',     Icons.public),
 
-  // OpenClaw's built-in tools that we want to surface explicitly.
+  // Dex brain's built-in tools that we want to surface explicitly.
   'bash':    ToolDescriptor('Shell',      Icons.terminal),
   'process': ToolDescriptor('Process',    Icons.memory),
   'read':    ToolDescriptor('File read',  Icons.description),

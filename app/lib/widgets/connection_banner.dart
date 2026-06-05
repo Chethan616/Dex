@@ -68,9 +68,9 @@ class ConnectionBanner extends StatelessWidget {
   (Color, String, String) _describe(GatewayConnState s, String? err) {
     switch (s) {
       case GatewayConnState.disconnected:
-        return (DexColors.textDim, 'disconnected', 'Gateway is not connected. Click Retry, or make sure `openclaw gateway` is running on 127.0.0.1:18789.');
+        return (DexColors.textDim, 'disconnected', 'Gateway is not connected. Click Retry, or make sure `dex gateway` is running on 127.0.0.1:18789.');
       case GatewayConnState.connecting:
-        return (DexColors.stateActing, 'connecting', 'Opening WebSocket to the OpenClaw gateway...');
+        return (DexColors.stateActing, 'connecting', 'Opening WebSocket to the Dex gateway...');
       case GatewayConnState.handshaking:
         return (DexColors.stateActing, 'handshaking', 'Authenticating with the gateway...');
       case GatewayConnState.failed:

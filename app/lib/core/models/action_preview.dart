@@ -12,7 +12,7 @@ import 'action_step.dart';
 class ActionPreview {
   /// Stable id; ties the preview to the agent's pending tool call so an
   /// Approve response can be delivered through the right channel back to
-  /// OpenClaw.
+  /// the Dex brain.
   final String id;
 
   /// One-line title rendered above the steps. E.g. "Calculator -- compute 12 x 9".

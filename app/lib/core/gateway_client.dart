@@ -38,27 +38,42 @@ class GatewayConfig {
     this.token,
   });
 
-  /// Load gateway config from `%USERPROFILE%\.openclaw\openclaw.json`.
-  /// Falls back to defaults if the file or fields are missing -- the client
-  /// will then surface a clear "authentication required" error in the UI.
+  /// Load gateway config from `%USERPROFILE%\.dex\openclaw.json`, falling
+  /// back to the legacy `%USERPROFILE%\.openclaw\openclaw.json` location
+  /// for one cycle while users finish migrating off it (Phase B.5 moved
+  /// the directory; the filename rename ships in v1.4). Returns defaults
+  /// if neither location is present -- the client then surfaces a clear
+  /// "authentication required" error in the UI.
   static GatewayConfig fromLocalConfig({String sessionKey = 'dex-desktop'}) {
     final home = Platform.environment['USERPROFILE'] ??
         Platform.environment['HOME'] ??
         '';
-    final path = '$home${Platform.pathSeparator}.openclaw${Platform.pathSeparator}openclaw.json';
+    final sep = Platform.pathSeparator;
+    final candidates = <String>[
+      '$home$sep.dex${sep}openclaw.json',
+      '$home$sep.openclaw${sep}openclaw.json',
+    ];
     String? token;
     int port = 18789;
-    try {
-      final f = File(path);
-      if (f.existsSync()) {
+    String? loaded;
+    for (final path in candidates) {
+      try {
+        final f = File(path);
+        if (!f.existsSync()) continue;
         final parsed = jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
         final gw = (parsed['gateway'] as Map?)?.cast<String, dynamic>() ?? const {};
         final auth = (gw['auth'] as Map?)?.cast<String, dynamic>() ?? const {};
         token = auth['token'] as String?;
         port = (gw['port'] as int?) ?? port;
+        loaded = path;
+        break;
+      } catch (e) {
+        debugPrint('Dex: failed to read $path: $e');
       }
-    } catch (e) {
-      debugPrint('Dex: failed to read $path: $e');
+    }
+    if (loaded == null) {
+      debugPrint('Dex: no config at ${candidates.join(' or ')} -- '
+          'run `dex onboard` to write one.');
     }
     return GatewayConfig(
       url: Uri.parse('ws://127.0.0.1:$port'),
@@ -106,7 +121,7 @@ class GatewayClient extends ChangeNotifier {
     }
     if (_config.token == null || _config.token!.isEmpty) {
       _setState(GatewayConnState.failed,
-          error: 'No auth token. Run `openclaw onboard` first; ~\\.openclaw\\openclaw.json should contain gateway.auth.token.');
+          error: 'No auth token. Run `dex onboard` first; ~\\.dex\\openclaw.json should contain gateway.auth.token.');
       return;
     }
 

@@ -70,7 +70,7 @@ Weights download lazily on the first `parse_screen()` call into `~/.dex/models/o
 | CPU (Ryzen 7 / i7) | 2-4 s session load | 1-3 s inference |
 | GPU (RTX 3060+) | 1-2 s session load + ~700 MB VRAM | 200-400 ms inference |
 
-Dex's router will avoid OmniParser when the `RuntimeContext.budget.latencyMs` is tight (< 1 s) — it falls back to OpenClaw's shell or UFO² in those cases.
+Dex's router will avoid OmniParser when the `RuntimeContext.budget.latencyMs` is tight (< 1 s) — it falls back to Dex's shell engine or UFO² in those cases.
 
 ## Failure modes worth knowing
 

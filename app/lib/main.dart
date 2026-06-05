@@ -18,8 +18,9 @@ Future<void> main() async {
     const ApplicationSwitcherDescription(label: 'Dex'),
   );
 
-  // Read gateway URL + auth token from ~\.openclaw\openclaw.json so we
-  // don't have to ask the user for them.
+  // Read gateway URL + auth token from ~\.dex\openclaw.json (the filename
+  // rename to dex.json ships in v1.4); see GatewayConfig.fromLocalConfig
+  // for the one-cycle ~/.openclaw/ fallback.
   final client = GatewayClient(GatewayConfig.fromLocalConfig());
   // Best-effort connect; the UI shows the live connection state.
   unawaited(client.connect());

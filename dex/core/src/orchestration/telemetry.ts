@@ -8,7 +8,7 @@
  * This file defines the store contract + an in-memory implementation.
  * A SQLite-backed implementation can be layered on top of `TelemetryStore`
  * without changing the rest of the orchestrator (see `kysely-node-sqlite.ts`
- * in core/src/infra for the pattern OpenClaw uses elsewhere). Keeping the
+ * in core/src/infra for the pattern dex-core uses elsewhere). Keeping the
  * production store choice behind an interface means tests + CI never need
  * to touch disk.
  *

@@ -9,7 +9,7 @@
  * internal step planning.
  *
  * The shape below is the contract Phase C builds against. Concrete engines
- * (UfoUIA, BrowserUse, OmniParser, plus the OpenClaw-built-in Shell) live in
+ * (UfoUIA, BrowserUse, OmniParser, plus the Dex built-in Shell) live in
  * `./engines/`. The router lives in `./router.ts`. The scorer lives in
  * `./capability-scorer.ts`.
  */

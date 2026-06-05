@@ -1,7 +1,7 @@
 """
 browser-control -- the Dex MCP glue for web tasks (browser-use + Playwright).
 
-A FastMCP stdio server that exposes one tool to the OpenClaw agent:
+A FastMCP stdio server that exposes one tool to the Dex agent:
 
     run_browser_task(goal, url_hint="", timeout_s=180, dry_run=False, headless=False)
 
