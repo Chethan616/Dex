@@ -2,6 +2,36 @@
 
 Repo: https://github.com/Chethan616/Dex
 
+## 2026.6.7 (Dex rebrand release)
+
+This release is the first under the `dexagent` npm package name and the Dex
+brand. It is built from the OpenClaw runtime at commit
+`7074cf8e23c1f64362c4f8c4bf32971ca94d5221`. See `HERITAGE.md` and the
+parent repo's `docs/migration/dex-migration-report.md` for the full
+rename / heritage manifest.
+
+### Branding
+
+- CLI banner now reads `🐚 Dex <version>`; binary alias on PATH is `dex`.
+- npm package: `dexagent` (was `openclaw`).
+- Launcher renamed: `openclaw.mjs` → `dex.mjs`.
+- Config directory: `~/.dex/` (auto-migrator copies `~/.openclaw/` on first
+  launch for upgraders); legacy `OPENCLAW_*` env vars keep working for one
+  release cycle.
+- Outbound `openclaw.ai` endpoints are opt-in only on fresh installs.
+
+### Fixes vs. 2026.6.2-2026.6.6
+
+Earlier 6.2-6.6 publishes were broken intermediates (leaked OpenClaw README,
+stale dist cache, missing launcher rename). Deprecate them with
+`npm deprecate dexagent@2026.6.<2..6> "Bad first publish. Use 2026.6.7+."`.
+
+### Upstream
+
+Everything that was in OpenClaw `7074cf8e` is in this release, with the
+rebrand applied. The 13-commit Phase B history is on
+github.com/Chethan616/Dex.
+
 ## 2026.6.3 (Dex rebrand release)
 
 This release is the first under the `dexagent` npm package name and the Dex
