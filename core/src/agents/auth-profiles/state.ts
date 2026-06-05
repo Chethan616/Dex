@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import { isDeepStrictEqual } from "node:util";
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { asFiniteNumber } from "@openclaw/normalization-core/number-coercion";
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
-import { normalizeTrimmedStringList } from "@openclaw/normalization-core/string-normalization";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { asFiniteNumber } from "@dexagent/normalization-core/number-coercion";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
+import { normalizeTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
 import { loadJsonFile, repairJsonFilePermissions, saveJsonFile } from "../../infra/json-file.js";
 import { AUTH_STORE_VERSION } from "./constants.js";
 import { resolveAuthStatePath } from "./paths.js";

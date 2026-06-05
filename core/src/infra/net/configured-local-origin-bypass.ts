@@ -1,4 +1,4 @@
-import { isLoopbackIpAddress } from "@openclaw/net-policy/ip";
+import { isLoopbackIpAddress } from "@dexagent/net-policy/ip";
 import { getActiveManagedProxyLoopbackMode } from "./proxy/active-proxy-state.js";
 import { SsrFBlockedError } from "./ssrf.js";
 

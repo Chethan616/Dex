@@ -1,7 +1,7 @@
 import {
   normalizeStringEntries,
   uniqueStrings,
-} from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-normalization";
 import { readChannelAllowFromStore } from "../../pairing/pairing-store.js";
 import type { PairingChannel } from "../../pairing/pairing-store.types.js";
 import { mergeDmAllowFromSources, resolveGroupAllowFromSources } from "../allow-from.js";

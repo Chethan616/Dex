@@ -1,7 +1,7 @@
 import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { collectTextContentBlocks } from "../../agents/content-blocks.js";
 import type { BlockReplyChunking } from "../../agents/embedded-agent-block-chunker.js";
 import { getChannelPlugin } from "../../channels/plugins/index.js";

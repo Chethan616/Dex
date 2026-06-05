@@ -1,4 +1,4 @@
-import { resolveTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
+import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
 
 async function readChunkWithIdleTimeout(
   reader: ReadableStreamDefaultReader<Uint8Array>,

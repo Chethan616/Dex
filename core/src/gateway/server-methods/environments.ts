@@ -1,4 +1,4 @@
-import { normalizeSortedUniqueTrimmedStringList } from "@openclaw/normalization-core/string-normalization";
+import { normalizeSortedUniqueTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
 import {
   type EnvironmentSummary,
   ErrorCodes,

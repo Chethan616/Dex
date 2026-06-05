@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { addTimerTimeoutGraceMs } from "@openclaw/normalization-core/number-coercion";
+import { addTimerTimeoutGraceMs } from "@dexagent/normalization-core/number-coercion";
 import {
   GATEWAY_CLIENT_MODES,
   GATEWAY_CLIENT_NAMES,

@@ -1,9 +1,9 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import {
   collectManifestModelIdNormalizationPolicies,
   normalizeConfiguredProviderCatalogModelId,
-} from "@openclaw/model-catalog-core/provider-model-id-normalization";
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
+} from "@dexagent/model-catalog-core/provider-model-id-normalization";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
 import { DEFAULT_CONTEXT_TOKENS } from "../agents/defaults.js";
 import type { PluginManifestRegistry } from "../plugins/manifest-registry.js";
 import {

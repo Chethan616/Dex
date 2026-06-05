@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import { compileSafeRegex } from "../security/safe-regex.js";
 import { normalizePluginId } from "./config-state.js";
 import { CONFIG_PATH_ACTIVATION_COMPAT_CODE } from "./installed-plugin-index-config-path-scope.js";

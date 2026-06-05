@@ -4,7 +4,7 @@ import {
   isFutureDateTimestampMs,
   resolveDateTimestampMs,
   resolveExpiresAtMsFromDurationMs,
-} from "@openclaw/normalization-core/number-coercion";
+} from "@dexagent/normalization-core/number-coercion";
 import type { Selectable } from "kysely";
 import {
   executeSqliteQuerySync,

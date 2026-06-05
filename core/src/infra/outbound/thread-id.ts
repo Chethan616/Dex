@@ -1,4 +1,4 @@
-import { normalizeOptionalStringifiedId } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalStringifiedId } from "@dexagent/normalization-core/string-coerce";
 
 /** Normalizes channel thread/topic ids before outbound payload construction. */
 export function normalizeOutboundThreadId(value?: string | number | null): string | undefined {

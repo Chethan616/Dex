@@ -1,5 +1,5 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
-import { normalizeUniqueStringEntriesLower } from "@openclaw/normalization-core/string-normalization";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
+import { normalizeUniqueStringEntriesLower } from "@dexagent/normalization-core/string-normalization";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 
 const DIAGNOSTICS_ENV = "OPENCLAW_DIAGNOSTICS";

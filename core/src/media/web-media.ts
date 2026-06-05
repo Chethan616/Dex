@@ -1,7 +1,7 @@
 import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
-import { maxBytesForKind, type MediaKind } from "@openclaw/media-core/constants";
-import { basenameFromAnyPath, extnameFromAnyPath } from "@openclaw/media-core/file-name";
+import { maxBytesForKind, type MediaKind } from "@dexagent/media-core/constants";
+import { basenameFromAnyPath, extnameFromAnyPath } from "@dexagent/media-core/file-name";
 import {
   detectMime,
   extensionForMime,
@@ -9,8 +9,8 @@ import {
   kindFromMime,
   mimeTypeFromFilePath,
   normalizeMimeType,
-} from "@openclaw/media-core/mime";
-import { uniqueValues } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/media-core/mime";
+import { uniqueValues } from "@dexagent/normalization-core/string-normalization";
 import { logVerbose, shouldLogVerbose } from "../globals.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { FsSafeError, readLocalFileSafely } from "../infra/fs-safe.js";

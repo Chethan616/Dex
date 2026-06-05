@@ -1,6 +1,6 @@
 import * as net from "node:net";
 import * as tls from "node:tls";
-import { resolveTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
+import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
 import type { ManagedProxyTlsOptions } from "./proxy/proxy-tls.js";
 
 /** Parameters for opening an APNs HTTP/2 tunnel through an HTTP(S) forward proxy. */

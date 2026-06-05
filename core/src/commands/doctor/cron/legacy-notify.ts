@@ -1,7 +1,7 @@
 import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { normalizeHttpWebhookUrl } from "../../../cron/webhook-url.js";
 
 export type LegacyNotifyMigrationOutcome = {

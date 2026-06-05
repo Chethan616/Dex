@@ -1,4 +1,4 @@
-import { normalizeSortedUniqueStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeSortedUniqueStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { resolveCompatibleRuntimePluginRegistry, type PluginLoadOptions } from "./loader.js";
 import type { PluginRegistry } from "./registry-types.js";
 import {

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { PluginApprovalRequestPayload } from "../infra/plugin-approvals.js";
 import { resolvePluginApprovalTimeoutMs } from "../infra/plugin-approvals.js";
 import { getActiveRuntimePluginRegistry } from "../plugins/active-runtime-registry.js";

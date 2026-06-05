@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
 import { normalizeTalkSection } from "../../../config/talk.js";
 import type { OpenClawConfig } from "../../../config/types.js";
 

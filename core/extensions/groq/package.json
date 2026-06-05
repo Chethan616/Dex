@@ -5,7 +5,7 @@
   "description": "OpenClaw Groq media-understanding provider",
   "type": "module",
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@dexagent/plugin-sdk": "workspace:*"
   },
   "openclaw": {
     "extensions": [

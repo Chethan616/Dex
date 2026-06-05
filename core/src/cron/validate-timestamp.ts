@@ -1,8 +1,8 @@
 import {
   asDateTimestampMs,
   resolveTimestampMsToIsoString,
-} from "@openclaw/normalization-core/number-coercion";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/number-coercion";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { parseAbsoluteTimeMs } from "./parse.js";
 import type { CronSchedule } from "./types.js";
 

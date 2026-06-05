@@ -1,11 +1,11 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import {
   asDateTimestampMs,
   isFutureDateTimestampMs,
   positiveSecondsToSafeMilliseconds,
   resolveExpiresAtMsFromDurationMs,
   resolveExpiresAtMsFromEpochSeconds,
-} from "@openclaw/normalization-core/number-coercion";
+} from "@dexagent/normalization-core/number-coercion";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { resolveProviderRequestHeaders } from "../provider-request-config.js";

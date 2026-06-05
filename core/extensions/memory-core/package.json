@@ -10,7 +10,7 @@
     "typebox": "1.1.39"
   },
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*",
+    "@dexagent/plugin-sdk": "workspace:*",
     "openclaw": "2026.5.28"
   },
   "peerDependencies": {

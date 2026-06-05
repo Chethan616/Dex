@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import {
   DEFAULT_AGENT_ID,
   normalizeAgentId,

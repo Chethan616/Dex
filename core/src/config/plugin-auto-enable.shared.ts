@@ -1,6 +1,6 @@
-import { collectConfiguredModelRefs } from "@openclaw/model-catalog-core/configured-model-refs";
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { collectConfiguredModelRefs } from "@dexagent/model-catalog-core/configured-model-refs";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import { collectConfiguredAgentHarnessRuntimes } from "../agents/harness-runtimes.js";
 import {
   listPotentialConfiguredChannelPresenceSignals,

@@ -1,4 +1,4 @@
-import type { AcpRuntime, AcpRuntimeHandle } from "@openclaw/acp-core/runtime/types";
+import type { AcpRuntime, AcpRuntimeHandle } from "@dexagent/acp-core/runtime/types";
 import { logVerbose } from "../../globals.js";
 import { AcpRuntimeError, formatAcpErrorChain, toAcpRuntimeError } from "../runtime/errors.js";
 import { clearAcpTurnActive, markAcpTurnActive } from "./active-turns.js";

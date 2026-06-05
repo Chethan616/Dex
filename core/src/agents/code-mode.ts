@@ -5,9 +5,9 @@ import { Worker } from "node:worker_threads";
 import {
   isFutureDateTimestampMs,
   resolveExpiresAtMsFromDurationSeconds,
-} from "@openclaw/normalization-core/number-coercion";
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
-import { uniqueValues } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/number-coercion";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
+import { uniqueValues } from "@dexagent/normalization-core/string-normalization";
 import { Type } from "typebox";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { resolveAgentConfig } from "./agent-scope-config.js";

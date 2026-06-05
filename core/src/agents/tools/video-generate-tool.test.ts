@@ -1,4 +1,4 @@
-import { MAX_VIDEO_BYTES } from "@openclaw/media-core/constants";
+import { MAX_VIDEO_BYTES } from "@dexagent/media-core/constants";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../../config/config.js";
 import * as mediaStore from "../../media/store.js";

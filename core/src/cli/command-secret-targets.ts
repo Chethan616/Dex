@@ -1,6 +1,6 @@
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
-import { sortUniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
+import { sortUniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { listReadOnlyChannelPluginsForConfig } from "../channels/plugins/read-only.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import type {

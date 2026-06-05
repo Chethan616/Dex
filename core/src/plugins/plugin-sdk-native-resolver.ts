@@ -48,10 +48,10 @@ export type InstallOpenClawPluginSdkNativeResolverOptions = {
 
 const moduleWithResolver = Module as ModuleWithResolver;
 const nodeResolveFilenameProperty = "_resolveFilename" as const;
-const PLUGIN_SDK_PACKAGE_PREFIXES = ["openclaw/plugin-sdk", "@openclaw/plugin-sdk"] as const;
+const PLUGIN_SDK_PACKAGE_PREFIXES = ["openclaw/plugin-sdk", "@dexagent/plugin-sdk"] as const;
 const INTERNAL_CORE_PACKAGE_ALIASES = [
   {
-    packageName: "@openclaw/normalization-core",
+    packageName: "@dexagent/normalization-core",
     packageDir: "normalization-core",
     subpaths: [
       ["", "index.ts"],
@@ -62,7 +62,7 @@ const INTERNAL_CORE_PACKAGE_ALIASES = [
     ],
   },
   {
-    packageName: "@openclaw/media-core",
+    packageName: "@dexagent/media-core",
     packageDir: "media-core",
     subpaths: [
       ["", "index.ts"],
@@ -79,7 +79,7 @@ const INTERNAL_CORE_PACKAGE_ALIASES = [
     ],
   },
   {
-    packageName: "@openclaw/llm-core",
+    packageName: "@dexagent/llm-core",
     packageDir: "llm-core",
     subpaths: [
       ["", "index.ts"],
@@ -293,11 +293,11 @@ function listInternalCorePackageNativeAliases(
   const internalCorePackageAliases = [
     ...INTERNAL_CORE_PACKAGE_ALIASES,
     {
-      packageName: "@openclaw/acp-core",
+      packageName: "@dexagent/acp-core",
       packageDir: "acp-core",
       subpaths: listWorkspacePackageExportAliasEntries({
         packageRoot,
-        packageName: "@openclaw/acp-core",
+        packageName: "@dexagent/acp-core",
         packageDir: "acp-core",
       }).map((entry) => [entry.subpath, entry.srcFile] as const),
     },

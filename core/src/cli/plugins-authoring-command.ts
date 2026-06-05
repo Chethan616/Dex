@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { getToolPluginMetadata, type ToolPluginMetadata } from "../plugin-sdk/tool-plugin.js";
 import {
   loadPluginManifest,

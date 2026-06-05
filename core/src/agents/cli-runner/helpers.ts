@@ -2,12 +2,12 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { MAX_IMAGE_BYTES } from "@openclaw/media-core/constants";
-import { extensionForMime } from "@openclaw/media-core/mime";
+import { MAX_IMAGE_BYTES } from "@dexagent/media-core/constants";
+import { extensionForMime } from "@dexagent/media-core/mime";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { KeyedAsyncQueue } from "openclaw/plugin-sdk/keyed-async-queue";
 import { isAcpRuntimeSpawnAvailable } from "../../acp/runtime/availability.js";
 import type { SourceReplyDeliveryMode } from "../../auto-reply/get-reply-options.types.js";

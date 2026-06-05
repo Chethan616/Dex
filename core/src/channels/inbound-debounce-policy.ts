@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { isControlCommandMessage } from "../auto-reply/command-detection.js";
 import type { CommandNormalizeOptions } from "../auto-reply/commands-registry.js";
 import {

@@ -9,21 +9,21 @@ read_when:
 ---
 
 The **OpenClaw App SDK** is the public client API for apps outside the
-OpenClaw process. Use `@openclaw/sdk` when a script, dashboard, CI job, IDE
+OpenClaw process. Use `@dexagent/sdk` when a script, dashboard, CI job, IDE
 extension, or other external app wants to connect to the Gateway, start agent
 runs, stream events, wait for results, cancel work, or inspect Gateway
 resources.
 
 <Note>
   The App SDK is different from the [Plugin SDK](/plugins/sdk-overview).
-  `@openclaw/sdk` talks to the Gateway from outside OpenClaw.
+  `@dexagent/sdk` talks to the Gateway from outside OpenClaw.
   `openclaw/plugin-sdk/*` is only for plugins that run inside OpenClaw and
   register providers, channels, tools, hooks, or trusted runtimes.
 </Note>
 
 ## What ships today
 
-`@openclaw/sdk` ships with:
+`@dexagent/sdk` ships with:
 
 | Surface                   | Status  | What it does                                                                      |
 | ------------------------- | ------- | --------------------------------------------------------------------------------- |
@@ -63,7 +63,7 @@ Create a client with an explicit Gateway URL, or inject a custom transport for
 tests and embedded app runtimes.
 
 ```typescript
-import { OpenClaw } from "@openclaw/sdk";
+import { OpenClaw } from "@dexagent/sdk";
 
 const oc = new OpenClaw({
   url: "ws://127.0.0.1:18789",
@@ -308,7 +308,7 @@ Use the Plugin SDK when code runs inside OpenClaw:
 - agent harness plugins
 - trusted runtime helpers
 
-App SDK code should import from `@openclaw/sdk`. Plugin code should import from
+App SDK code should import from `@dexagent/sdk`. Plugin code should import from
 documented `openclaw/plugin-sdk/*` subpaths. Do not mix the two contracts.
 
 ## Related

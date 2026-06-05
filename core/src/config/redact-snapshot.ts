@@ -2,9 +2,9 @@ import {
   hasSensitiveUrlHintTag,
   isSensitiveUrlConfigPath,
   redactSensitiveUrlLikeString,
-} from "@openclaw/net-policy/redact-sensitive-url";
-import { isRecord as isObjectRecord } from "@openclaw/normalization-core/record-coerce";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/net-policy/redact-sensitive-url";
+import { isRecord as isObjectRecord } from "@dexagent/normalization-core/record-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import type { ConfigUiHints } from "../shared/config-ui-hints-types.js";
 import {

@@ -3,7 +3,7 @@ import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { sortUniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { sortUniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { resolveOpenClawPackageRootSync } from "../infra/openclaw-root.js";
 import { replaceFileAtomicSync } from "../infra/replace-file.js";
 import type { ConfigSchemaResponse } from "./schema.js";

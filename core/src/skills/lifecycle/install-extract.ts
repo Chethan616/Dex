@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import {
   createTarEntryPreflightChecker,
   extractArchive as extractArchiveSafe,

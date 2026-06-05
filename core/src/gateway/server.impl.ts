@@ -1,5 +1,5 @@
 import { monitorEventLoopDelay, performance } from "node:perf_hooks";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { getActiveEmbeddedRunCount } from "../agents/embedded-agent-runner/run-state.js";
 import { getTotalPendingReplies } from "../auto-reply/reply/dispatcher-registry.js";
 import {

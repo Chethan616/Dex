@@ -1,5 +1,5 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
-import { normalizeSortedUniqueStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
+import { normalizeSortedUniqueStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { getBundledChannelSetupPlugin } from "../channels/plugins/bundled.js";
 import { resolveChannelDefaultAccountId } from "../channels/plugins/helpers.js";
 import { getLoadedChannelPlugin } from "../channels/plugins/index.js";

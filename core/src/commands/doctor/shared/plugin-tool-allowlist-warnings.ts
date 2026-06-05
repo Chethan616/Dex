@@ -1,10 +1,10 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { isRecord as hasRecord } from "@openclaw/normalization-core/record-coerce";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { isRecord as hasRecord } from "@dexagent/normalization-core/record-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import {
   sortUniqueStrings,
   uniqueStrings,
-} from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-normalization";
 import { sanitizeServerName, TOOL_NAME_SEPARATOR } from "../../../agents/agent-bundle-mcp-names.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../../../agents/defaults.js";
 import { compileGlobPatterns, matchesAnyGlobPattern } from "../../../agents/glob-pattern.js";

@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import {
   loadEnabledBundleMcpConfig,
   type BundleMcpConfig,

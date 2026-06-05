@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { formatDateStamp, resolveUserTimezone } from "../../agents/date-time.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { openRootFile } from "../../infra/boundary-file-read.js";

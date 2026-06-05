@@ -3,7 +3,7 @@ import path from "node:path";
 import {
   normalizeOptionalString,
   readStringValue,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { resolveConfigPathCandidate } from "../config/paths.js";
 import type { HookMappingConfig, HooksConfig } from "../config/types.hooks.js";
 import { importFileModule, resolveFunctionModuleExport } from "../hooks/module-loader.js";

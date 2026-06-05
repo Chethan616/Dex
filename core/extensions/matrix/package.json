@@ -18,7 +18,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*",
+    "@dexagent/plugin-sdk": "workspace:*",
     "openclaw": "2026.5.28"
   },
   "peerDependencies": {

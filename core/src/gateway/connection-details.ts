@@ -1,5 +1,5 @@
-import { redactSensitiveUrlLikeString } from "@openclaw/net-policy/redact-sensitive-url";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { redactSensitiveUrlLikeString } from "@dexagent/net-policy/redact-sensitive-url";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { resolveConfigPath, resolveGatewayPort } from "../config/paths.js";
 import type { OpenClawConfig } from "../config/types.js";
 import { isSecureWebSocketUrl } from "./net.js";

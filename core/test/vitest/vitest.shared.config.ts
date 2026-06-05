@@ -202,23 +202,23 @@ export const sharedVitestConfig = {
         replacement: path.join(repoRoot, "extensions", "whatsapp", "api.ts"),
       },
       {
-        find: "@openclaw/gateway-client/readiness",
+        find: "@dexagent/gateway-client/readiness",
         replacement: path.join(repoRoot, "packages", "gateway-client", "src", "readiness.ts"),
       },
       {
-        find: "@openclaw/gateway-client/timeouts",
+        find: "@dexagent/gateway-client/timeouts",
         replacement: path.join(repoRoot, "packages", "gateway-client", "src", "timeouts.ts"),
       },
       {
-        find: "@openclaw/gateway-client",
+        find: "@dexagent/gateway-client",
         replacement: path.join(repoRoot, "packages", "gateway-client", "src", "index.ts"),
       },
       {
-        find: "@openclaw/gateway-protocol/client-info",
+        find: "@dexagent/gateway-protocol/client-info",
         replacement: path.join(repoRoot, "packages", "gateway-protocol", "src", "client-info.ts"),
       },
       {
-        find: "@openclaw/gateway-protocol/connect-error-details",
+        find: "@dexagent/gateway-protocol/connect-error-details",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -228,11 +228,11 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/gateway-protocol/schema",
+        find: "@dexagent/gateway-protocol/schema",
         replacement: path.join(repoRoot, "packages", "gateway-protocol", "src", "schema.ts"),
       },
       {
-        find: "@openclaw/gateway-protocol/startup-unavailable",
+        find: "@dexagent/gateway-protocol/startup-unavailable",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -242,31 +242,31 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/gateway-protocol/version",
+        find: "@dexagent/gateway-protocol/version",
         replacement: path.join(repoRoot, "packages", "gateway-protocol", "src", "version.ts"),
       },
       {
-        find: "@openclaw/gateway-protocol",
+        find: "@dexagent/gateway-protocol",
         replacement: path.join(repoRoot, "packages", "gateway-protocol", "src", "index.ts"),
       },
       {
-        find: "@openclaw/llm-core/diagnostics",
+        find: "@dexagent/llm-core/diagnostics",
         replacement: path.join(repoRoot, "packages", "llm-core", "src", "utils", "diagnostics.ts"),
       },
       {
-        find: "@openclaw/llm-core/event-stream",
+        find: "@dexagent/llm-core/event-stream",
         replacement: path.join(repoRoot, "packages", "llm-core", "src", "utils", "event-stream.ts"),
       },
       {
-        find: "@openclaw/llm-core/validation",
+        find: "@dexagent/llm-core/validation",
         replacement: path.join(repoRoot, "packages", "llm-core", "src", "validation.ts"),
       },
       {
-        find: "@openclaw/llm-core",
+        find: "@dexagent/llm-core",
         replacement: path.join(repoRoot, "packages", "llm-core", "src", "index.ts"),
       },
       {
-        find: "@openclaw/model-catalog-core/configured-model-refs",
+        find: "@dexagent/model-catalog-core/configured-model-refs",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -276,7 +276,7 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/model-catalog-core/model-catalog-refs",
+        find: "@dexagent/model-catalog-core/model-catalog-refs",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -286,7 +286,7 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/model-catalog-core/model-catalog-normalize",
+        find: "@dexagent/model-catalog-core/model-catalog-normalize",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -296,7 +296,7 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/model-catalog-core/model-catalog-types",
+        find: "@dexagent/model-catalog-core/model-catalog-types",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -306,11 +306,11 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/model-catalog-core/provider-id",
+        find: "@dexagent/model-catalog-core/provider-id",
         replacement: path.join(repoRoot, "packages", "model-catalog-core", "src", "provider-id.ts"),
       },
       {
-        find: "@openclaw/model-catalog-core/provider-model-id-normalization",
+        find: "@dexagent/model-catalog-core/provider-model-id-normalization",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -320,7 +320,7 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/model-catalog-core/provider-model-id-normalize",
+        find: "@dexagent/model-catalog-core/provider-model-id-normalize",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -330,19 +330,19 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/model-catalog-core",
+        find: "@dexagent/model-catalog-core",
         replacement: path.join(repoRoot, "packages", "model-catalog-core", "src", "index.ts"),
       },
       {
-        find: "@openclaw/net-policy/ip",
+        find: "@dexagent/net-policy/ip",
         replacement: path.join(repoRoot, "packages", "net-policy", "src", "ip.ts"),
       },
       {
-        find: "@openclaw/net-policy/ipv4",
+        find: "@dexagent/net-policy/ipv4",
         replacement: path.join(repoRoot, "packages", "net-policy", "src", "ipv4.ts"),
       },
       {
-        find: "@openclaw/net-policy/redact-sensitive-url",
+        find: "@dexagent/net-policy/redact-sensitive-url",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -352,15 +352,15 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/net-policy/url-userinfo",
+        find: "@dexagent/net-policy/url-userinfo",
         replacement: path.join(repoRoot, "packages", "net-policy", "src", "url-userinfo.ts"),
       },
       {
-        find: "@openclaw/net-policy",
+        find: "@dexagent/net-policy",
         replacement: path.join(repoRoot, "packages", "net-policy", "src", "index.ts"),
       },
       {
-        find: "@openclaw/normalization-core/number-coercion",
+        find: "@dexagent/normalization-core/number-coercion",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -370,7 +370,7 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/normalization-core/record-coerce",
+        find: "@dexagent/normalization-core/record-coerce",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -380,7 +380,7 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/normalization-core/string-coerce",
+        find: "@dexagent/normalization-core/string-coerce",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -390,7 +390,7 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/normalization-core/string-normalization",
+        find: "@dexagent/normalization-core/string-normalization",
         replacement: path.join(
           repoRoot,
           "packages",
@@ -400,7 +400,7 @@ export const sharedVitestConfig = {
         ),
       },
       {
-        find: "@openclaw/normalization-core",
+        find: "@dexagent/normalization-core",
         replacement: path.join(repoRoot, "packages", "normalization-core", "src", "index.ts"),
       },
       sourcePackageAlias("media-core", "base64"),
@@ -420,7 +420,7 @@ export const sharedVitestConfig = {
         replacement: path.join(repoRoot, "src", "plugin-sdk", `${subpath}.ts`),
       })),
       ...pluginSdkSubpaths.map((subpath) => ({
-        find: `@openclaw/plugin-sdk/${subpath}`,
+        find: `@dexagent/plugin-sdk/${subpath}`,
         replacement: path.join(repoRoot, "packages", "plugin-sdk", "src", `${subpath}.ts`),
       })),
       {

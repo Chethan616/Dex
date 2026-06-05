@@ -1,4 +1,4 @@
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import type { CommandExplanation, CommandRisk } from "../command-explainer/types.js";
 import type { ExecCommandSegment } from "../exec-approvals-analysis.js";
 import { analyzeCommandForPolicy } from "./policy.js";

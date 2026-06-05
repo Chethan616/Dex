@@ -1,5 +1,5 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { isKnownCoreToolId } from "../../../agents/tool-catalog.js";
 import { isToolAllowedByPolicyName } from "../../../agents/tool-policy-match.js";
 import { resolveToolProfilePolicy } from "../../../agents/tool-policy-shared.js";

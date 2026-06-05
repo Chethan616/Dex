@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 
 /** Normalizes optional assistant identity fields and truncates them to the caller's limit. */
 export function coerceIdentityValue(

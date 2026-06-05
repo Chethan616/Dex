@@ -1,4 +1,4 @@
-import type { AcpRuntimeEvent } from "@openclaw/acp-core/runtime/types";
+import type { AcpRuntimeEvent } from "@dexagent/acp-core/runtime/types";
 import { sanitizeForLog } from "../../../packages/terminal-core/src/ansi.js";
 import { formatAcpErrorChain } from "../../acp/runtime/errors.js";
 import { normalizeReplyPayload } from "../../auto-reply/reply/normalize-reply.js";

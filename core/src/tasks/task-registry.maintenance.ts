@@ -1,7 +1,7 @@
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { isAcpTurnActive } from "../acp/control-plane/active-turns.js";
 import { getAcpSessionManager } from "../acp/control-plane/manager.js";
 import {

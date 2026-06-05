@@ -3,7 +3,7 @@ import type {
   NewSessionRequest,
   PromptRequest,
 } from "@agentclientprotocol/sdk";
-import { createInMemorySessionStore } from "@openclaw/acp-core/session";
+import { createInMemorySessionStore } from "@dexagent/acp-core/session";
 import { describe, expect, it, vi } from "vitest";
 import type { EventFrame } from "../../packages/gateway-protocol/src/index.js";
 import type { GatewayClient } from "../gateway/client.js";

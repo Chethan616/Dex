@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { StreamFn } from "../../../agents/runtime/index.js";
 import { streamSimple } from "../../stream.js";
 type AnthropicToolSchemaMode = "openai-functions";

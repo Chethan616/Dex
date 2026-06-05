@@ -1,6 +1,6 @@
-import { asRecord } from "@openclaw/normalization-core/record-coerce";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { asRecord } from "@dexagent/normalization-core/record-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { DEFAULT_ACCOUNT_ID } from "../../routing/session-key.js";
 import { hasConfiguredUnavailableCredentialStatus } from "../account-snapshot-fields.js";
 import type { ChannelAccountSnapshot } from "../plugins/types.public.js";

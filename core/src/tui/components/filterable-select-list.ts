@@ -6,7 +6,7 @@ import {
   SelectList,
   type SelectListTheme,
 } from "@earendil-works/pi-tui";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import chalk from "chalk";
 import { fuzzyFilterLower, prepareSearchItems } from "./fuzzy-filter.js";
 

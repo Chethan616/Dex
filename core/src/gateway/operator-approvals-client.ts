@@ -1,4 +1,4 @@
-import { isLoopbackIpAddress } from "@openclaw/net-policy/ip";
+import { isLoopbackIpAddress } from "@dexagent/net-policy/ip";
 import {
   GATEWAY_CLIENT_MODES,
   GATEWAY_CLIENT_NAMES,

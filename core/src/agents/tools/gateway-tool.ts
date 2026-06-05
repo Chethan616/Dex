@@ -1,9 +1,9 @@
 import { isDeepStrictEqual } from "node:util";
-import { isRecord as isPlainObject } from "@openclaw/normalization-core/record-coerce";
+import { isRecord as isPlainObject } from "@dexagent/normalization-core/record-coerce";
 import {
   normalizeOptionalString,
   readStringValue,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { Type } from "typebox";
 import { isRestartEnabled } from "../../config/commands.flags.js";
 import { parseConfigJson5, resolveConfigSnapshotHash } from "../../config/io.js";

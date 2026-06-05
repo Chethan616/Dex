@@ -1,1 +1,1 @@
-export { asOptionalRecord as asRecord } from "@openclaw/normalization-core/record-coerce";
+export { asOptionalRecord as asRecord } from "@dexagent/normalization-core/record-coerce";

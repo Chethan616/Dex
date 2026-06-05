@@ -1,5 +1,5 @@
 import path from "node:path";
-import { mimeTypeFromFilePath } from "@openclaw/media-core/mime";
+import { mimeTypeFromFilePath } from "@dexagent/media-core/mime";
 import type { AgentMessage } from "../agents/runtime/index.js";
 import { appendSessionTranscriptMessage } from "../config/sessions/transcript-append.js";
 import {

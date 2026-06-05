@@ -1,4 +1,4 @@
-import { asDateTimestampMs } from "@openclaw/normalization-core/number-coercion";
+import { asDateTimestampMs } from "@dexagent/normalization-core/number-coercion";
 import { formatDurationHuman } from "../../../src/infra/format-time/format-duration.ts";
 import { formatRelativeTimestamp } from "../../../src/infra/format-time/format-relative.ts";
 import { t } from "../i18n/index.ts";

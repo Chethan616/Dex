@@ -1,4 +1,4 @@
-import { finiteSecondsToTimerSafeMilliseconds } from "@openclaw/normalization-core/number-coercion";
+import { finiteSecondsToTimerSafeMilliseconds } from "@dexagent/normalization-core/number-coercion";
 import {
   fetchWithSsrFGuard,
   type GuardedFetchOptions,

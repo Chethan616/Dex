@@ -1,4 +1,4 @@
-import { asFiniteNumber } from "@openclaw/normalization-core/number-coercion";
+import { asFiniteNumber } from "@dexagent/normalization-core/number-coercion";
 
 type EmptyAssistantTurnLike = {
   content?: unknown;

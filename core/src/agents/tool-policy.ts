@@ -1,5 +1,5 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { IMPLICIT_ALLOW_ALL_FROM_ALSO_ALLOW } from "./sandbox-tool-policy.js";
 import { expandToolGroups, normalizeToolList, normalizeToolName } from "./tool-policy-shared.js";
 export {

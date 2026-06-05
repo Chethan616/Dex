@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { redactSensitiveUrlLikeString } from "@openclaw/net-policy/redact-sensitive-url";
+import { redactSensitiveUrlLikeString } from "@dexagent/net-policy/redact-sensitive-url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const runCommandWithTimeoutMock = vi.fn();

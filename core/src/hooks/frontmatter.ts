@@ -1,4 +1,4 @@
-import { readStringValue } from "@openclaw/normalization-core/string-coerce";
+import { readStringValue } from "@dexagent/normalization-core/string-coerce";
 import { parseFrontmatterBlock } from "../../packages/markdown-core/src/frontmatter.js";
 import {
   applyOpenClawManifestInstallCommonFields,

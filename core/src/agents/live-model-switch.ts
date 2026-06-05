@@ -14,8 +14,8 @@ import {
 } from "./model-selection.js";
 export { LiveSessionModelSwitchError } from "./live-model-switch-error.js";
 export type LiveSessionModelSelection = EmbeddedRunModelSwitchRequest;
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 
 const OPENAI_PROVIDER_ID = "openai";
 const OPENAI_CODEX_PROVIDER_ID = "openai";

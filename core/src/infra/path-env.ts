@@ -4,7 +4,7 @@ import path from "node:path";
 import {
   normalizeStringEntries,
   normalizeUniqueStringEntries,
-} from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-normalization";
 import { resolveBrewPathDirs } from "./brew.js";
 import { isTruthyEnvValue } from "./env.js";
 

@@ -1,9 +1,9 @@
-import { normalizeModelCatalogProviderRows } from "@openclaw/model-catalog-core/model-catalog-normalize";
-import { normalizeModelCatalogProviderId } from "@openclaw/model-catalog-core/model-catalog-refs";
+import { normalizeModelCatalogProviderRows } from "@dexagent/model-catalog-core/model-catalog-normalize";
+import { normalizeModelCatalogProviderId } from "@dexagent/model-catalog-core/model-catalog-refs";
 import type {
   ModelCatalogProvider,
   NormalizedModelCatalogRow,
-} from "@openclaw/model-catalog-core/model-catalog-types";
+} from "@dexagent/model-catalog-core/model-catalog-types";
 import type { OpenClawProviderIndex } from "./provider-index/index.js";
 
 type ProviderIndexModelCatalogPlanEntry = {

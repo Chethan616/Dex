@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { parseDurationMs } from "../cli/parse-duration.js";
 import { escapeRegExp } from "../shared/regexp.js";
 import { HEARTBEAT_TOKEN } from "./tokens.js";

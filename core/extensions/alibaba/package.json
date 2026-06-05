@@ -5,7 +5,7 @@
   "description": "OpenClaw Alibaba Model Studio video provider plugin",
   "type": "module",
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@dexagent/plugin-sdk": "workspace:*"
   },
   "openclaw": {
     "extensions": [

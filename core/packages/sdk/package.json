@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/sdk",
+  "name": "@dexagent/sdk",
   "version": "0.0.0-private",
   "private": true,
   "files": [
@@ -19,6 +19,6 @@
     "build": "tsdown src/index.ts --no-config --platform node --format esm --dts --out-dir dist --clean"
   },
   "dependencies": {
-    "@openclaw/gateway-client": "workspace:*"
+    "@dexagent/gateway-client": "workspace:*"
   }
 }

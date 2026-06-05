@@ -1,5 +1,5 @@
-import { estimateBase64DecodedBytes } from "@openclaw/media-core/base64";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { estimateBase64DecodedBytes } from "@dexagent/media-core/base64";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import type { AssistantMessage } from "../../llm/types.js";
 import { extractAssistantText } from "../embedded-agent-utils.js";

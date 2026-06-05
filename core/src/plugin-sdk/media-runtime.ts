@@ -4,12 +4,12 @@
  */
 
 export * from "../media/audio.js";
-export * from "@openclaw/media-core/base64";
-export * from "@openclaw/media-core/content-length";
-export * from "@openclaw/media-core/constants";
+export * from "@dexagent/media-core/base64";
+export * from "@dexagent/media-core/content-length";
+export * from "@dexagent/media-core/constants";
 export * from "../media/fetch.js";
 export * from "../media/ffmpeg-limits.js";
-export * from "@openclaw/media-core/inbound-path-policy";
+export * from "@dexagent/media-core/inbound-path-policy";
 export * from "../media/load-options.js";
 export * from "../media/local-media-access.js";
 export * from "../media/local-roots.js";
@@ -40,13 +40,13 @@ export {
   type MediaExecOptions,
   type VideoDimensions,
 } from "../media/media-services.js";
-export * from "@openclaw/media-core/mime";
+export * from "@dexagent/media-core/mime";
 export * from "../media/outbound-attachment.js";
 export * from "../media/png-encode.ts";
 export * from "../media/qr-image.ts";
 export * from "../media/qr-terminal.ts";
-export * from "@openclaw/media-core/read-byte-stream-with-limit";
-export * from "@openclaw/media-core/read-response-with-limit";
+export * from "@dexagent/media-core/read-byte-stream-with-limit";
+export * from "@dexagent/media-core/read-response-with-limit";
 export * from "../media/store.js";
 export * from "../media/temp-files.js";
 export { resolveChannelMediaMaxBytes } from "../channels/plugins/media-limits.js";

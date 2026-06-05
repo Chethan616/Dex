@@ -1,6 +1,6 @@
 import { setTimeout as scheduleNativeTimeout } from "node:timers";
 import { setTimeout as sleep } from "node:timers/promises";
-import { MAX_TIMER_TIMEOUT_MS } from "@openclaw/normalization-core/number-coercion";
+import { MAX_TIMER_TIMEOUT_MS } from "@dexagent/normalization-core/number-coercion";
 import { describe, expect, it, vi } from "vitest";
 import {
   requireTaskByRunId,

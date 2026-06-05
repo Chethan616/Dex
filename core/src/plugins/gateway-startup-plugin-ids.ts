@@ -1,8 +1,8 @@
-import { collectConfiguredModelRefs } from "@openclaw/model-catalog-core/configured-model-refs";
-import { buildModelCatalogMergeKey } from "@openclaw/model-catalog-core/model-catalog-refs";
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { collectConfiguredModelRefs } from "@dexagent/model-catalog-core/configured-model-refs";
+import { buildModelCatalogMergeKey } from "@dexagent/model-catalog-core/model-catalog-refs";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import { collectConfiguredAgentHarnessRuntimes } from "../agents/harness-runtimes.js";
 import { splitTrailingAuthProfile } from "../agents/model-ref-profile.js";
 import {

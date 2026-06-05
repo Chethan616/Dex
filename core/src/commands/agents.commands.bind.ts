@@ -1,4 +1,4 @@
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { listAgentEntries, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import { isRouteBinding, listRouteBindings } from "../config/bindings.js";

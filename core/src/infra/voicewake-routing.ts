@@ -1,6 +1,6 @@
 import path from "node:path";
-import { isRecord as isPlainObject } from "@openclaw/normalization-core/record-coerce";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { isRecord as isPlainObject } from "@dexagent/normalization-core/record-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { resolveStateDir } from "../config/paths.js";
 import {
   classifySessionKeyShape,

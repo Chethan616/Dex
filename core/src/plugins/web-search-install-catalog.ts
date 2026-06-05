@@ -1,5 +1,5 @@
-import { normalizeOptionalString as normalizeString } from "@openclaw/normalization-core/string-coerce";
-import { normalizeTrimmedStringList } from "@openclaw/normalization-core/string-normalization";
+import { normalizeOptionalString as normalizeString } from "@dexagent/normalization-core/string-coerce";
+import { normalizeTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { isRecord } from "../utils.js";
 import { enablePluginInConfig } from "./enable.js";

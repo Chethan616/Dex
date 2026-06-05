@@ -1,6 +1,6 @@
 import path from "node:path";
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { z } from "zod";
 import { isSafeExecutableValue } from "../infra/exec-safety.js";
 import {

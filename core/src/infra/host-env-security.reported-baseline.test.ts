@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { sortUniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { sortUniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { describe, expect, it } from "vitest";
 import {
   isDangerousHostEnvOverrideVarName,

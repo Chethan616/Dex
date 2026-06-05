@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import {
   clearAutoFallbackPrimaryProbeSelection,
   hasLegacyAutoFallbackWithoutOrigin,

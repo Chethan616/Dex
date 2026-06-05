@@ -4,7 +4,7 @@ import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { resolveRuntimeServiceVersion } from "../version.js";
 import { pickBestEffortPrimaryLanIPv4 } from "./network-discovery-display.js";
 

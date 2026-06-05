@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { normalizeAgentId } from "../../routing/session-key.js";
 import { truncateUtf16Safe } from "../../utils.js";
 import type { CronPayload } from "../types.js";

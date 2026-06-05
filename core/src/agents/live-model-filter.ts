@@ -1,6 +1,6 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { parseStrictNonNegativeInteger } from "@openclaw/normalization-core/number-coercion";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { parseStrictNonNegativeInteger } from "@dexagent/normalization-core/number-coercion";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { resolveProviderModernModelRef } from "../plugins/provider-runtime.js";
 import { liveProvidersShareOwningPlugin } from "./live-provider-owner.js";

@@ -1,7 +1,7 @@
 import {
   normalizeOptionalString,
   readStringValue,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import type { OpenClawConfig } from "../../config/types.js";
 import { probeGateway } from "../../gateway/probe.js";
 import {

@@ -1,5 +1,5 @@
-import { asPositiveSafeInteger } from "@openclaw/normalization-core/number-coercion";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { asPositiveSafeInteger } from "@dexagent/normalization-core/number-coercion";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 
 export type SessionTranscriptUpdate = {
   sessionFile: string;

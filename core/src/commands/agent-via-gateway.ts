@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { resolveTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import {
   GATEWAY_CLIENT_MODES,
   GATEWAY_CLIENT_NAMES,

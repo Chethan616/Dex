@@ -1,4 +1,4 @@
-import { isAudioFileName } from "@openclaw/media-core/mime";
+import { isAudioFileName } from "@dexagent/media-core/mime";
 import {
   hasOutboundReplyContent,
   resolveSendableOutboundReplyParts,

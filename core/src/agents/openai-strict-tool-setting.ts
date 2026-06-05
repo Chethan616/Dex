@@ -1,4 +1,4 @@
-import { readStringValue } from "@openclaw/normalization-core/string-coerce";
+import { readStringValue } from "@dexagent/normalization-core/string-coerce";
 import { resolveProviderRequestCapabilities } from "./provider-attribution.js";
 
 type OpenAITransportKind = "stream" | "websocket";

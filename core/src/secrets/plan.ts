@@ -1,5 +1,5 @@
-import { isRecord as isObjectRecord } from "@openclaw/normalization-core/record-coerce";
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { isRecord as isObjectRecord } from "@dexagent/normalization-core/record-coerce";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import type { SecretProviderConfig, SecretRef } from "../config/types.secrets.js";
 import { SecretProviderSchema } from "../config/zod-schema.core.js";
 import { isValidExecSecretRefId, isValidSecretProviderAlias } from "./ref-contract.js";

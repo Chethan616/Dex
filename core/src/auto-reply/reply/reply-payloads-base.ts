@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { ReplyToMode } from "../../config/types.js";
 import { hasReplyPayloadContent } from "../../interactive/payload.js";
 import { copyReplyPayloadMetadata } from "../reply-payload.js";

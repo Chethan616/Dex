@@ -13,7 +13,7 @@ This page is the detailed API reference design for the public
 the [Plugin SDK](/plugins/sdk-overview).
 
 <Note>
-  `@openclaw/sdk` is the external app/client package for talking to the
+  `@dexagent/sdk` is the external app/client package for talking to the
   Gateway. `openclaw/plugin-sdk/*` is the in-process plugin authoring contract.
   Do not import Plugin SDK subpaths from apps that only need to run agents.
 </Note>
@@ -350,9 +350,9 @@ Recommended packages:
 
 | Package                 | Purpose                                                       |
 | ----------------------- | ------------------------------------------------------------- |
-| `@openclaw/sdk`         | Public high-level SDK and generated low-level Gateway client. |
-| `@openclaw/sdk-react`   | Optional React hooks for dashboards and app builders.         |
-| `@openclaw/sdk-testing` | Test helpers and fake Gateway server for app integrations.    |
+| `@dexagent/sdk`         | Public high-level SDK and generated low-level Gateway client. |
+| `@dexagent/sdk-react`   | Optional React hooks for dashboards and app builders.         |
+| `@dexagent/sdk-testing` | Test helpers and fake Gateway server for app integrations.    |
 
 The repo already has `openclaw/plugin-sdk/*` for plugins. Keep that namespace
 separate to avoid confusing plugin authors with app developers.

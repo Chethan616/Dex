@@ -2,7 +2,7 @@ import {
   finiteSecondsToTimerSafeMilliseconds,
   clampTimerTimeoutMs,
   MAX_TIMER_TIMEOUT_MS,
-} from "@openclaw/normalization-core/number-coercion";
+} from "@dexagent/normalization-core/number-coercion";
 import { DEFAULT_LLM_IDLE_TIMEOUT_SECONDS } from "../../../config/agent-timeout-defaults.js";
 import type { OpenClawConfig } from "../../../config/types.openclaw.js";
 import type { StreamFn } from "../../runtime/index.js";

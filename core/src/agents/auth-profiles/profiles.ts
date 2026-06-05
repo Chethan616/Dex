@@ -1,8 +1,8 @@
 import {
   findNormalizedProviderKey,
   normalizeProviderId,
-} from "@openclaw/model-catalog-core/provider-id";
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/model-catalog-core/provider-id";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { normalizeSecretInput } from "../../utils/normalize-secret-input.js";
 import { resolveProviderIdForAuth } from "../provider-auth-aliases.js";
 import { dedupeProfileIds, listProfilesForProvider } from "./profile-list.js";

@@ -1,4 +1,4 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import {
   BASE_THINKING_LEVELS,
   normalizeThinkLevel,
@@ -34,7 +34,7 @@ export type {
 import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import {
   resolveProviderBinaryThinking,
   resolveProviderDefaultThinkingLevel,

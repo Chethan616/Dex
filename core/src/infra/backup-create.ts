@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import { resolveDateTimestampMs } from "@openclaw/normalization-core/number-coercion";
+import { resolveDateTimestampMs } from "@dexagent/normalization-core/number-coercion";
 import {
   buildBackupArchiveBasename,
   buildBackupArchivePath,

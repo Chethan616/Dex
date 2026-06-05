@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { MAX_DATE_TIMESTAMP_MS } from "@openclaw/normalization-core/number-coercion";
+import { MAX_DATE_TIMESTAMP_MS } from "@dexagent/normalization-core/number-coercion";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   createSkillUploadStore,

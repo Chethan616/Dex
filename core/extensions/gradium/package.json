@@ -5,7 +5,7 @@
   "description": "OpenClaw Gradium speech plugin",
   "type": "module",
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@dexagent/plugin-sdk": "workspace:*"
   },
   "openclaw": {
     "extensions": [

@@ -1,4 +1,4 @@
-import { SENSITIVE_URL_HINT_TAG } from "@openclaw/net-policy/redact-sensitive-url";
+import { SENSITIVE_URL_HINT_TAG } from "@dexagent/net-policy/redact-sensitive-url";
 import { describe, expect, it } from "vitest";
 import { computeBaseConfigSchemaResponse } from "./schema-base.js";
 

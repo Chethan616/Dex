@@ -1,4 +1,4 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { listCliRuntimeProviderIds } from "./cli-backends.js";
 import { isCliRuntimeProvider } from "./model-runtime-aliases.js";

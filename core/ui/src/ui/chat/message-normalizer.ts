@@ -2,7 +2,7 @@
  * Message normalization utilities for chat rendering.
  */
 
-import { mediaKindFromMime } from "@openclaw/media-core/constants";
+import { mediaKindFromMime } from "@dexagent/media-core/constants";
 import { stripInboundMetadata } from "../../../../src/auto-reply/reply/strip-inbound-meta.js";
 import { extractCanvasShortcodes } from "../../../../src/chat/canvas-render.js";
 import {

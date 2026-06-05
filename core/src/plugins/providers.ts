@@ -1,5 +1,5 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { sortUniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { sortUniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { splitTrailingAuthProfile } from "../agents/model-ref-profile.js";
 import { compileSafeRegex } from "../security/safe-regex.js";
 import { withBundledPluginVitestCompat } from "./bundled-compat.js";

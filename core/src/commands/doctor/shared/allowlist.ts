@@ -1,4 +1,4 @@
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import type { DoctorAllowFromList } from "../types.js";
 
 export function hasAllowFromEntries(list?: DoctorAllowFromList) {

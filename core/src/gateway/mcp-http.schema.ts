@@ -1,5 +1,5 @@
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
-import { uniqueValues } from "@openclaw/normalization-core/string-normalization";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
+import { uniqueValues } from "@dexagent/normalization-core/string-normalization";
 import { logWarn } from "../logger.js";
 import { resolveGatewayScopedTools } from "./tool-resolution.js";
 

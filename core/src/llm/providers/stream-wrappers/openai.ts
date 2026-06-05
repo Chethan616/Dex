@@ -1,7 +1,7 @@
 import {
   normalizeOptionalLowercaseString,
   readStringValue,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import {
   patchCodexNativeWebSearchPayload,
   resolveCodexNativeSearchActivation,

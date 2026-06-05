@@ -1,5 +1,5 @@
-import { resolveTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
-import { asNullableRecord } from "@openclaw/normalization-core/record-coerce";
+import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
+import { asNullableRecord } from "@dexagent/normalization-core/record-coerce";
 import { styleHealthChannelLine } from "../../packages/terminal-core/src/health-style.js";
 import { isRich } from "../../packages/terminal-core/src/theme.js";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";

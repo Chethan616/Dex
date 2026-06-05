@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import { normalizeCommandBody } from "./commands-registry.js";
 import { stripInboundMetadata } from "./reply/strip-inbound-meta.js";
 

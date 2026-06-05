@@ -1,5 +1,5 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
-import { sortUniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
+import { sortUniqueStrings } from "@dexagent/normalization-core/string-normalization";
 
 export type SafeBinProfile = {
   minPositional?: number;

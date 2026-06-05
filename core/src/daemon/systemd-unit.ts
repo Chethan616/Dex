@@ -1,4 +1,4 @@
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { splitArgsPreservingQuotes } from "./arg-split.js";
 import type { GatewayServiceRenderArgs } from "./service-types.js";
 

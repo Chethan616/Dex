@@ -1,4 +1,4 @@
-import { readStringValue } from "@openclaw/normalization-core/string-coerce";
+import { readStringValue } from "@dexagent/normalization-core/string-coerce";
 
 /** Returns inline string content or the first array text block without scanning later blocks. */
 export function extractFirstTextBlock(message: unknown): string | undefined {

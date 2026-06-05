@@ -3,7 +3,7 @@ import path from "node:path";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import {
   resolveTrajectoryFilePath,
   resolveTrajectoryPointerFilePath,

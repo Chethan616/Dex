@@ -1,8 +1,8 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import type { ModelProviderConfig } from "../config/types.js";
 import { copyRecordEntries } from "../shared/safe-record.js";
 import type { ProviderCatalogContext, ProviderCatalogResult } from "./types.js";

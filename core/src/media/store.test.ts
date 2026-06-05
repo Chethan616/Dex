@@ -904,9 +904,9 @@ describe("media store", () => {
 
   it("prefers header mime extension when sniffed mime lacks mapping", async () => {
     await withTempStore(async (_store, homeLocal) => {
-      vi.doMock("@openclaw/media-core/mime", async () => {
-        const actual = await vi.importActual<typeof import("@openclaw/media-core/mime")>(
-          "@openclaw/media-core/mime",
+      vi.doMock("@dexagent/media-core/mime", async () => {
+        const actual = await vi.importActual<typeof import("@dexagent/media-core/mime")>(
+          "@dexagent/media-core/mime",
         );
         return {
           ...actual,
@@ -926,7 +926,7 @@ describe("media store", () => {
         expect(path.extname(saved.path)).toBe(".ogg");
         expect(saved.path.startsWith(homeLocal)).toBe(true);
       } finally {
-        vi.doUnmock("@openclaw/media-core/mime");
+        vi.doUnmock("@dexagent/media-core/mime");
       }
     });
   });

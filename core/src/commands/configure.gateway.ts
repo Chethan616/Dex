@@ -1,9 +1,9 @@
-import { validateIPv4AddressInput } from "@openclaw/net-policy/ipv4";
+import { validateIPv4AddressInput } from "@dexagent/net-policy/ipv4";
 import {
   normalizeOptionalString,
   readStringValue,
-} from "@openclaw/normalization-core/string-coerce";
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-coerce";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { note } from "../../packages/terminal-core/src/note.js";
 import { formatPortRangeHint } from "../cli/error-format.js";
 import { parsePort } from "../cli/shared/parse-port.js";

@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { SessionEntry } from "../../config/sessions/types.js";
 import type { MsgContext } from "../templating.js";
 

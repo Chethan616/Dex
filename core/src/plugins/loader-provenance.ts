@@ -1,4 +1,4 @@
-import { normalizeTrimmedStringList } from "@openclaw/normalization-core/string-normalization";
+import { normalizeTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
 import type { PluginInstallRecord } from "../config/types.plugins.js";
 import { resolveUserPath } from "../utils.js";
 import { isBundledPluginInsideDevSourceRoot } from "./dev-source-root.js";

@@ -1,8 +1,8 @@
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import type { OpenClawConfig } from "../../config/types.js";
 import type { DirectoryConfigParams } from "./directory-types.js";
 import type { ChannelDirectoryEntry } from "./types.public.js";

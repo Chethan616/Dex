@@ -1,7 +1,7 @@
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
 import {
   migrateSessionEntries,
   type FileEntry as SessionFileEntry,

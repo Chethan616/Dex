@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { sortUniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { sortUniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { note } from "../../../../packages/terminal-core/src/note.js";
 import { shortenHomePath } from "../../../utils.js";
 

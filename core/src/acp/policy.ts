@@ -1,4 +1,4 @@
-import { AcpRuntimeError } from "@openclaw/acp-core/runtime/errors";
+import { AcpRuntimeError } from "@dexagent/acp-core/runtime/errors";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { normalizeAgentId } from "../routing/session-key.js";
 

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { emitDiagnosticEvent } from "../infra/diagnostic-events.js";
 import {
   type EventSessionRoutingPolicy,

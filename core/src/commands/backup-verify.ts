@@ -1,5 +1,5 @@
 import path from "node:path";
-import { readStringValue } from "@openclaw/normalization-core/string-coerce";
+import { readStringValue } from "@dexagent/normalization-core/string-coerce";
 import * as tar from "tar";
 import { type RuntimeEnv, writeRuntimeJson } from "../runtime.js";
 import { isRecord, resolveUserPath } from "../utils.js";

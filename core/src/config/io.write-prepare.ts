@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import { normalizeConfiguredProviderCatalogModelId } from "@openclaw/model-catalog-core/provider-model-id-normalization";
+import { normalizeConfiguredProviderCatalogModelId } from "@dexagent/model-catalog-core/provider-model-id-normalization";
 import { parseConfigPathArrayIndex } from "../shared/path-array-index.js";
 import { isRecord } from "../utils.js";
 import { applyMergePatch } from "./merge-patch.js";

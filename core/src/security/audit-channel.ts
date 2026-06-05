@@ -1,4 +1,4 @@
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import {
   hasConfiguredUnavailableCredentialStatus,
   hasResolvedCredentialValue,

@@ -36,7 +36,15 @@
 param(
     [string]$Target = (Join-Path (Split-Path -Parent $PSScriptRoot) 'core'),
     [string]$MapPath = (Join-Path $PSScriptRoot 'rebrand-map.json'),
-    [switch]$DryRun
+    [switch]$DryRun,
+    # Phase B addition: process only entries whose enclosing `_section` label
+    # contains this substring. Empty/unset means "process everything". Used so
+    # B.5 / B.6 / B.7 can run isolated passes of the same canonical map.
+    [string]$SectionFilter = '',
+    # Phase B addition: split src vs tests passes. `all` (default) processes
+    # every file. `src` skips test files. `tests` ONLY processes test files.
+    [ValidateSet('all','src','tests')]
+    [string]$Mode = 'all'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -50,11 +58,56 @@ if (-not (Test-Path -LiteralPath $MapPath -PathType Leaf)) {
     exit 1
 }
 
+Write-Host ("Target:         {0}" -f $Target) -ForegroundColor Cyan
+Write-Host ("Map:            {0}" -f $MapPath) -ForegroundColor Cyan
+Write-Host ("Mode:           {0}" -f $Mode) -ForegroundColor Cyan
+if ($SectionFilter) {
+    Write-Host ("SectionFilter:  {0}" -f $SectionFilter) -ForegroundColor Cyan
+}
+if ($DryRun) {
+    Write-Host "DryRun: ON (no files will be written)" -ForegroundColor Yellow
+}
+Write-Host ""
+
 $mapRaw = Get-Content -LiteralPath $MapPath -Raw -Encoding UTF8
 $map = $mapRaw | ConvertFrom-Json
 if (-not $map.replacements) {
     Write-Host "rebrand-map.json has no `replacements` array." -ForegroundColor Red
     exit 1
+}
+
+# ---- Path exclusions (build outputs we never modify) -----------------------
+# Without this, broad globs like `**/*.ts` would rewrite TS sources inside
+# node_modules and the build output dir, which silently corrupts deps and
+# regenerates on next install. The audit script uses the same list.
+$ExcludeFragments = @(
+    '\node_modules\', '\dist\', '\.git\', '\.turbo\',
+    '\coverage\', '\.next\', '\.cache\', '\.vscode-test\', '\.venv\'
+)
+# Lockfiles record exact-version + integrity hashes; rewriting them via
+# string substitution corrupts the hash. Let `pnpm install` regenerate
+# the lockfile after the rebrand instead.
+$ExcludeFiles = @('pnpm-lock.yaml', 'package-lock.json', 'yarn.lock', 'shrinkwrap.json')
+function Test-PathExcluded {
+    param([string]$Path)
+    $name = [System.IO.Path]::GetFileName($Path)
+    if ($ExcludeFiles -contains $name) { return $true }
+    foreach ($frag in $ExcludeFragments) {
+        if ($Path -like "*$frag*") { return $true }
+    }
+    return $false
+}
+
+# Test-file detection: anything matching *.test.*, *.spec.*, or under
+# `/test/`, `/tests/`, `/__tests__/`, `/fixtures/`, `/__fixtures__/`.
+function Test-IsTestFile {
+    param([string]$Path)
+    $name = [System.IO.Path]::GetFileName($Path)
+    if ($name -match '\.(test|spec)\.[a-z]+$') { return $true }
+    foreach ($seg in @('\test\','\tests\','\__tests__\','\fixtures\','\__fixtures__\','\test-helpers\')) {
+        if ($Path -like "*$seg*") { return $true }
+    }
+    return $false
 }
 
 # ---- Glob expansion -------------------------------------------------------
@@ -82,6 +135,12 @@ function Resolve-Glob {
     $base = if ($baseSegs.Count -gt 0) { Join-Path $Target ($baseSegs -join '\') } else { $Target }
     if (-not (Test-Path -LiteralPath $base -PathType Container)) { return @() }
     return Get-ChildItem -LiteralPath $base -Recurse -File -Filter $filter -ErrorAction SilentlyContinue |
+        Where-Object {
+            (-not (Test-PathExcluded $_.FullName)) -and
+            ($Mode -eq 'all' -or
+             ($Mode -eq 'src'   -and -not (Test-IsTestFile $_.FullName)) -or
+             ($Mode -eq 'tests' -and       (Test-IsTestFile $_.FullName)))
+        } |
         Select-Object -ExpandProperty FullName
 }
 
@@ -93,8 +152,24 @@ $stats = [ordered]@{
     misses       = @()  # required entries with zero hits
 }
 $touchedFiles = [System.Collections.Generic.HashSet[string]]::new()
+$globCache = @{}
+$currentSection = ''
+$skipBecauseSection = $false
 
 foreach ($entry in $map.replacements) {
+    # Track which `_section` we are inside, so $SectionFilter can scope a run.
+    if ($entry._section) {
+        $currentSection = [string]$entry._section
+        if ($SectionFilter -and ($currentSection -notlike "*$SectionFilter*")) {
+            $skipBecauseSection = $true
+            Write-Host ("Section skipped (filter={0}): {1}" -f $SectionFilter, $currentSection) -ForegroundColor DarkGray
+        } else {
+            $skipBecauseSection = $false
+            Write-Host ("Section: {0}" -f $currentSection) -ForegroundColor Cyan
+        }
+        continue
+    }
+    if ($skipBecauseSection) { continue }
     # Skip section dividers (have only _section).
     if (-not $entry.find) { continue }
     if (-not $entry.replace -and -not $entry.optional) {
@@ -107,7 +182,16 @@ foreach ($entry in $map.replacements) {
     $entryHits  = 0
 
     foreach ($glob in @($entry.files)) {
-        $files = Resolve-Glob -Target $Target -Pattern $glob
+        # Cache glob -> files per (Target, Mode). The rebrand-map has 1700+
+        # entries sharing a small set of globs; without caching, each entry
+        # triggers a fresh Get-ChildItem -Recurse over core/ (~20k files).
+        $cacheKey = "${Mode}::$glob"
+        if ($globCache.ContainsKey($cacheKey)) {
+            $files = $globCache[$cacheKey]
+        } else {
+            $files = Resolve-Glob -Target $Target -Pattern $glob
+            $globCache[$cacheKey] = $files
+        }
         foreach ($file in $files) {
             $content = Get-Content -LiteralPath $file -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
             if ($null -eq $content) { continue }

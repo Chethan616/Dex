@@ -1,4 +1,4 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import { formatCliCommand } from "../cli/command-format.js";
 import {
   commitConfigWriteWithPendingPluginInstalls,

@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/net-policy",
+  "name": "@dexagent/net-policy",
   "version": "0.0.0-private",
   "private": true,
   "files": [

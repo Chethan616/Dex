@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { GatewayClient } from "../gateway/client.js";
 import {
   analyzeArgvCommand,

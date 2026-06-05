@@ -13,7 +13,7 @@ import {
   spinner,
   text,
 } from "@clack/prompts";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { stripAnsi } from "../../packages/terminal-core/src/ansi.js";
 import { note as emitNote } from "../../packages/terminal-core/src/note.js";
 import {

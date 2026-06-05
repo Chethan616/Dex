@@ -2,7 +2,7 @@
  * GitHub Copilot OAuth flow
  */
 
-import { resolveTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
+import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
 import {
   nonNegativeSecondsToSafeMilliseconds,
   positiveSecondsToSafeMilliseconds,

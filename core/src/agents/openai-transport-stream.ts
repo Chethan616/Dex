@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import OpenAI, { AzureOpenAI } from "openai";
 import type { ChatCompletionChunk } from "openai/resources/chat/completions.js";
 import type {

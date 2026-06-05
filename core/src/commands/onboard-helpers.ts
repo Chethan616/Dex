@@ -2,9 +2,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { inspect } from "node:util";
 import { cancel, isCancel } from "@clack/prompts";
-import { resolveTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { visibleWidth } from "../../packages/terminal-core/src/ansi.js";
 import {
   decorativeEmoji,

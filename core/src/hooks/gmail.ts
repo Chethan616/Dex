@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import path from "node:path";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
-import { normalizeUniqueStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
+import { normalizeUniqueStringEntries } from "@dexagent/normalization-core/string-normalization";
 import {
   type OpenClawConfig,
   DEFAULT_GATEWAY_PORT,

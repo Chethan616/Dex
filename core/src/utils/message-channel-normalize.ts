@@ -1,4 +1,4 @@
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { CHANNEL_IDS } from "../channels/ids.js";
 import { listRegisteredChannelPluginIds } from "../channels/registry.js";
 import {

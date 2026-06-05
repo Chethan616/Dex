@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { PluginPackageChannel } from "../plugins/manifest.js";
 import { listBundledChannelCatalogEntries } from "./bundled-channel-catalog-read.js";
 import { CHAT_CHANNEL_ORDER, type ChatChannelId } from "./ids.js";

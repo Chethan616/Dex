@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import type { NodeRegistry, NodeSession } from "./node-registry.js";
 
 const TALK_CAPABILITY = "talk";

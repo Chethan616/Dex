@@ -2,7 +2,7 @@ import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
   readStringValue,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import {
   ErrorCodes,
   errorShape,

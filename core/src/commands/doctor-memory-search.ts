@@ -2,8 +2,8 @@ import fsSync from "node:fs";
 import {
   findNormalizedProviderValue,
   normalizeProviderId,
-} from "@openclaw/model-catalog-core/provider-id";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/model-catalog-core/provider-id";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { note } from "../../packages/terminal-core/src/note.js";
 import {
   resolveAgentDir,

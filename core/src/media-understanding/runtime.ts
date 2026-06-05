@@ -1,5 +1,5 @@
 import path from "node:path";
-import { kindFromMime, mimeTypeFromFilePath } from "@openclaw/media-core/mime";
+import { kindFromMime, mimeTypeFromFilePath } from "@dexagent/media-core/mime";
 import type { OpenClawConfig } from "../config/types.js";
 import { readLocalFileSafely } from "../infra/fs-safe.js";
 import { DEFAULT_MAX_BYTES } from "./defaults.constants.js";

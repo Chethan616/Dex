@@ -1,4 +1,4 @@
-import { readResponseWithLimit } from "@openclaw/media-core/read-response-with-limit";
+import { readResponseWithLimit } from "@dexagent/media-core/read-response-with-limit";
 import type { MsgContext } from "../auto-reply/templating.js";
 import { applyTemplate } from "../auto-reply/templating.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";

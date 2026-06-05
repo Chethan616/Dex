@@ -1,5 +1,5 @@
-import { isAudioFileName } from "@openclaw/media-core/mime";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { isAudioFileName } from "@dexagent/media-core/mime";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { retireSessionMcpRuntime } from "../../agents/agent-bundle-mcp-tools.js";
 import type { ReplyPayload } from "../../auto-reply/reply-payload.js";
 import {

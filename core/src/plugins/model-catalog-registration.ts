@@ -1,7 +1,7 @@
 import type {
   UnifiedModelCatalogEntry,
   UnifiedModelCatalogSource,
-} from "@openclaw/model-catalog-core/model-catalog-types";
+} from "@dexagent/model-catalog-core/model-catalog-types";
 import {
   synthesizeMediaGenerationCatalogEntries,
   type MediaGenerationCatalogKind,

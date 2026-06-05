@@ -1,6 +1,6 @@
 import path from "node:path";
-import { isSensitiveUrlQueryParamName } from "@openclaw/net-policy/redact-sensitive-url";
-import { asOptionalRecord } from "@openclaw/normalization-core/record-coerce";
+import { isSensitiveUrlQueryParamName } from "@dexagent/net-policy/redact-sensitive-url";
+import { asOptionalRecord } from "@dexagent/normalization-core/record-coerce";
 import { isSecretRefShape } from "../config/redact-snapshot.secret-ref.js";
 import { isBlockedObjectKey } from "../infra/prototype-keys.js";
 import { redactSensitiveText } from "./redact.js";

@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { formatToolSummary, resolveToolDisplay } from "../agents/tool-display.js";
 import { shortenHomeInString, shortenHomePath } from "../utils.js";
 

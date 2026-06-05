@@ -3,7 +3,7 @@ import type { RequestPermissionRequest, RequestPermissionResponse } from "@agent
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { sanitizeTerminalText } from "../../packages/terminal-core/src/safe-text.js";
 import {
   materializeWindowsSpawnProgram,

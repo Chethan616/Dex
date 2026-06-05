@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { isEnvironmentFileOnlySource } from "../daemon/service-managed-env.js";
 import type { GatewayServiceEnvironmentValueSource } from "../daemon/service-types.js";
 

@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import type { ConfigUiHint, ConfigUiHints } from "../shared/config-ui-hints-types.js";
 
 export const CONFIG_TAGS = [

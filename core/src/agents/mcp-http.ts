@@ -1,7 +1,7 @@
 import {
   redactSensitiveUrl,
   redactSensitiveUrlLikeString,
-} from "@openclaw/net-policy/redact-sensitive-url";
+} from "@dexagent/net-policy/redact-sensitive-url";
 import { isMcpConfigRecord, toMcpStringRecord } from "./mcp-config-shared.js";
 
 export type HttpMcpTransportType = "sse" | "streamable-http";

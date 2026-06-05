@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 
 /** Infers the largest `<number>b` parameter-size token from a model id or display name. */
 export function inferParamBFromIdOrName(text: string): number | null {

@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 
 export function parseKeyValueOutput(output: string, separator: string): Record<string, string> {
   const entries: Record<string, string> = {};

@@ -258,7 +258,7 @@ export type {
   UnifiedModelCatalogEntry,
   UnifiedModelCatalogKind,
   UnifiedModelCatalogSource,
-} from "@openclaw/model-catalog-core/model-catalog-types";
+} from "@dexagent/model-catalog-core/model-catalog-types";
 export type { OpenClawConfig };
 
 export {

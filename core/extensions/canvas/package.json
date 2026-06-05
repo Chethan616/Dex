@@ -5,7 +5,7 @@
   "description": "OpenClaw Canvas plugin",
   "type": "module",
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@dexagent/plugin-sdk": "workspace:*"
   },
   "dependencies": {
     "@a2ui/lit": "0.10.0",

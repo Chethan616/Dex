@@ -1,4 +1,4 @@
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import type { ChannelId } from "../plugins/types.public.js";
 import { readChannelIngressStoreAllowFromForDmPolicy } from "./runtime.js";
 

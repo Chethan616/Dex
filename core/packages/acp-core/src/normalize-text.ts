@@ -1,1 +1,1 @@
-export { normalizeOptionalString as normalizeText } from "@openclaw/normalization-core/string-coerce";
+export { normalizeOptionalString as normalizeText } from "@dexagent/normalization-core/string-coerce";

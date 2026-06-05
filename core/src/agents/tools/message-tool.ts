@@ -1,5 +1,5 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
-import { sortUniqueStrings, uniqueValues } from "@openclaw/normalization-core/string-normalization";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
+import { sortUniqueStrings, uniqueValues } from "@dexagent/normalization-core/string-normalization";
 import { Type, type TSchema } from "typebox";
 import {
   GATEWAY_CLIENT_IDS,

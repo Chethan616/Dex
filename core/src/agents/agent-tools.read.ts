@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { URL } from "node:url";
-import { detectMime } from "@openclaw/media-core/mime";
+import { detectMime } from "@dexagent/media-core/mime";
 import { isWindowsDrivePath } from "../infra/archive-path.js";
 import {
   canonicalPathFromExistingAncestor,

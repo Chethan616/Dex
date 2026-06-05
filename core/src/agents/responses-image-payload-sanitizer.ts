@@ -1,5 +1,5 @@
-import { sanitizeInlineImageDataUrl as sanitizeSharedInlineImageDataUrl } from "@openclaw/media-core/inline-image-data-url";
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
+import { sanitizeInlineImageDataUrl as sanitizeSharedInlineImageDataUrl } from "@dexagent/media-core/inline-image-data-url";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
 
 const IMAGE_OMITTED_TEXT = "omitted image payload: invalid inline image data";
 

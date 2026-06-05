@@ -1,7 +1,7 @@
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import type { OpenClawConfig } from "../config/types.js";
 import { listChatCommands, listChatCommandsForConfig } from "./commands-registry-list.js";
 import { normalizeCommandBody } from "./commands-registry-normalize.js";

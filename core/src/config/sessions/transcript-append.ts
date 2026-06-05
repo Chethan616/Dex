@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { StringDecoder } from "node:string_decoder";
-import { resolveTimestampMsToIsoString } from "@openclaw/normalization-core/number-coercion";
+import { resolveTimestampMsToIsoString } from "@dexagent/normalization-core/number-coercion";
 import type { AgentMessage } from "../../agents/runtime/index.js";
 import {
   acquireSessionWriteLock,

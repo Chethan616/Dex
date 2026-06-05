@@ -6,11 +6,11 @@ import {
   select as clackSelect,
   text as clackText,
 } from "@clack/prompts";
-import { resolveExpiresAtMsFromDurationMs } from "@openclaw/normalization-core/number-coercion";
+import { resolveExpiresAtMsFromDurationMs } from "@dexagent/normalization-core/number-coercion";
 import {
   normalizeOptionalString,
   normalizeStringifiedOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import {
   stylePromptHint,
   stylePromptMessage,

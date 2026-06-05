@@ -1,4 +1,4 @@
-import { normalizeTrimmedStringList } from "@openclaw/normalization-core/string-normalization";
+import { normalizeTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import {
   resolveExternalCliAuthScopeFromConfig,

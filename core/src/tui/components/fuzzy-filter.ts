@@ -2,7 +2,7 @@
  * Shared fuzzy filtering utilities for select list components.
  */
 
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 
 /**
  * Word boundary characters for matching.

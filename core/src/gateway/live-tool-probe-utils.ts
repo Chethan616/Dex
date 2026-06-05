@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 
 export function hasExpectedToolNonce(text: string, nonceA: string, nonceB: string): boolean {
   return text.includes(nonceA) && text.includes(nonceB);

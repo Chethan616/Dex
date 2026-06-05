@@ -11,7 +11,7 @@
     "@anthropic-ai/vertex-sdk": "0.16.1"
   },
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@dexagent/plugin-sdk": "workspace:*"
   },
   "openclaw": {
     "extensions": [

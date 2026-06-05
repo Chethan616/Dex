@@ -1,11 +1,11 @@
-import { canonicalizeBase64, estimateBase64DecodedBytes } from "@openclaw/media-core/base64";
-import { parseMediaContentLength } from "@openclaw/media-core/content-length";
-import { detectMime } from "@openclaw/media-core/mime";
-import { readResponseWithLimit } from "@openclaw/media-core/read-response-with-limit";
+import { canonicalizeBase64, estimateBase64DecodedBytes } from "@dexagent/media-core/base64";
+import { parseMediaContentLength } from "@dexagent/media-core/content-length";
+import { detectMime } from "@dexagent/media-core/mime";
+import { readResponseWithLimit } from "@dexagent/media-core/read-response-with-limit";
 import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { fetchWithSsrFGuard } from "../infra/net/fetch-guard.js";
 import type { SsrFPolicy } from "../infra/net/ssrf.js";

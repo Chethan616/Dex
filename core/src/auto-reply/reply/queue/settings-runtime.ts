@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import { getLoadedChannelPlugin } from "../../../channels/plugins/index.js";
 import { resolveQueueSettings as resolveQueueSettingsCore } from "./settings.js";
 import type { QueueSettings, ResolveQueueSettingsParams } from "./types.js";

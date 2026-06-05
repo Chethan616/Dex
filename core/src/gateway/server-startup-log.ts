@@ -1,4 +1,4 @@
-import { normalizeSortedUniqueStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeSortedUniqueStringEntries } from "@dexagent/normalization-core/string-normalization";
 import chalk from "chalk";
 import { resolveDefaultAgentId, resolveAgentConfig } from "../agents/agent-scope.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";

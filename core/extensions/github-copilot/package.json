@@ -8,7 +8,7 @@
     "@clack/prompts": "1.4.0"
   },
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@dexagent/plugin-sdk": "workspace:*"
   },
   "openclaw": {
     "extensions": [

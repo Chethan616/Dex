@@ -1,5 +1,5 @@
 import os from "node:os";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { expect, vi } from "vitest";
 import type { SubagentLifecycleHookRunner } from "../plugins/hooks.js";
 

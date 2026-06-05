@@ -1,6 +1,6 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { asDateTimestampMs } from "@openclaw/normalization-core/number-coercion";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { asDateTimestampMs } from "@dexagent/normalization-core/number-coercion";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { coerceSecretRef } from "../config/types.secrets.js";
 import type { AuthProfileCredential, AuthProfileStore } from "./auth-profiles.js";
 

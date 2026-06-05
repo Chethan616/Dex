@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import path from "node:path";
-import { FILE_TYPE_SNIFF_MAX_BYTES } from "@openclaw/media-core/mime";
+import { FILE_TYPE_SNIFF_MAX_BYTES } from "@dexagent/media-core/mime";
 import {
   createPluginRegistryFixture,
   registerTestPlugin,

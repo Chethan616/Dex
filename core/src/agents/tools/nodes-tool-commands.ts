@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { formatErrorMessage } from "../../infra/errors.js";
 import {
   jsonResult,

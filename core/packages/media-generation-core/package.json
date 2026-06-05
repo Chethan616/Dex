@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/media-generation-core",
+  "name": "@dexagent/media-generation-core",
   "version": "0.0.0-private",
   "private": true,
   "files": [

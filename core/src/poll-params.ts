@@ -1,5 +1,5 @@
-import { parseStrictFiniteNumber } from "@openclaw/normalization-core/number-coercion";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { parseStrictFiniteNumber } from "@dexagent/normalization-core/number-coercion";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { readSnakeCaseParamRaw } from "./param-key.js";
 
 type PollCreationParamKind = "string" | "stringArray" | "positiveInteger" | "boolean";

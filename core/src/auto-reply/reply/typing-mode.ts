@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { TypingMode } from "../../config/types.js";
 import type { SourceReplyDeliveryMode } from "../get-reply-options.types.js";
 import { isSilentReplyText, SILENT_REPLY_TOKEN } from "../tokens.js";

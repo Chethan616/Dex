@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { asOptionalRecord } from "@openclaw/normalization-core/record-coerce";
-import { normalizeOptionalString as asNonEmptyString } from "@openclaw/normalization-core/string-coerce";
+import { asOptionalRecord } from "@dexagent/normalization-core/record-coerce";
+import { normalizeOptionalString as asNonEmptyString } from "@dexagent/normalization-core/string-coerce";
 import {
   ErrorCodes,
   errorShape,

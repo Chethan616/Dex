@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { prefixSystemMessage } from "../infra/system-message.js";
 
 const DEFAULT_THREAD_BINDING_FAREWELL_TEXT =

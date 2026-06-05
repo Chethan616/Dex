@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { note } from "../../packages/terminal-core/src/note.js";
 import { resolveDmAllowAuditState } from "../channels/message-access/dm-allow-state.js";
 import { listReadOnlyChannelPluginsForConfig } from "../channels/plugins/read-only.js";

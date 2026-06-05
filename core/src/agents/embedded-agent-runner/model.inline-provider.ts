@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import type { ModelDefinitionConfig, ModelProviderConfig } from "../../config/types.js";
 import { normalizeGoogleApiBaseUrl } from "../../infra/google-api-base-url.js";
 import type { Api } from "../../llm/types.js";

@@ -1,6 +1,6 @@
 import path from "node:path";
-import { resolveTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
-import { asNullableObjectRecord } from "@openclaw/normalization-core/record-coerce";
+import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
+import { asNullableObjectRecord } from "@dexagent/normalization-core/record-coerce";
 import { note } from "../../packages/terminal-core/src/note.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";

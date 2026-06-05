@@ -1,4 +1,4 @@
-import { setCurrentManifestModelIdNormalizationRecords } from "@openclaw/model-catalog-core/provider-model-id-normalization";
+import { setCurrentManifestModelIdNormalizationRecords } from "@dexagent/model-catalog-core/provider-model-id-normalization";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import {
   clearCurrentPluginMetadataSnapshotState,

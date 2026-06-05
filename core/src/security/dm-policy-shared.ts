@@ -1,4 +1,4 @@
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { resolveGroupAllowFromSources } from "../channels/allow-from.js";
 import { resolveControlCommandGate } from "../channels/command-gating.js";
 import { resolveDmAllowAuditState } from "../channels/message-access/dm-allow-state.js";

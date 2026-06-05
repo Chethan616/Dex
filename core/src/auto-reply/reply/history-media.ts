@@ -1,6 +1,6 @@
-import { mimeTypeFromFilePath } from "@openclaw/media-core/mime";
-import { asFiniteNumber } from "@openclaw/normalization-core/number-coercion";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { mimeTypeFromFilePath } from "@dexagent/media-core/mime";
+import { asFiniteNumber } from "@dexagent/normalization-core/number-coercion";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { MsgContext } from "../templating.js";
 import type { HistoryEntry, HistoryMediaEntry } from "./history.types.js";
 

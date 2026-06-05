@@ -188,7 +188,7 @@ vi.mock("../acp/runtime/errors.js", () => ({
     error instanceof Error ? error : new Error(String(error)),
 }));
 
-vi.mock("@openclaw/acp-core/runtime/session-identifiers", () => ({
+vi.mock("@dexagent/acp-core/runtime/session-identifiers", () => ({
   resolveAcpSessionCwd: () => "/tmp",
 }));
 

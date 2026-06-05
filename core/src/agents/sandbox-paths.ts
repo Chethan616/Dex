@@ -1,7 +1,7 @@
 import os from "node:os";
 import path from "node:path";
 import { URL } from "node:url";
-import { isPassThroughRemoteMediaSource } from "@openclaw/media-core/media-source-url";
+import { isPassThroughRemoteMediaSource } from "@dexagent/media-core/media-source-url";
 import { isWindowsDrivePath } from "../infra/archive-path.js";
 import {
   assertNoWindowsNetworkPath,

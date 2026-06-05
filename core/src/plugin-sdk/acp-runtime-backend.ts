@@ -29,7 +29,7 @@ export type {
   AcpRuntimeTurnResult,
   AcpRuntimeTurnResultError,
   AcpSessionUpdateTag,
-} from "@openclaw/acp-core/runtime/types";
+} from "@dexagent/acp-core/runtime/types";
 
 let dispatchAcpRuntimePromise: Promise<
   typeof import("../auto-reply/reply/dispatch-acp.runtime.js")

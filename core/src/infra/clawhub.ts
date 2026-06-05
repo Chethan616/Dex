@@ -2,12 +2,12 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { readResponseWithLimit } from "@openclaw/media-core/read-response-with-limit";
+import { readResponseWithLimit } from "@dexagent/media-core/read-response-with-limit";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-coerce";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { parseStrictPositiveInteger } from "./parse-finite-number.js";
 import { isAtLeast, parseSemver } from "./runtime-guard.js";
 import { compareComparableSemver, parseComparableSemver } from "./semver-compare.js";
@@ -20,7 +20,7 @@ const SKILL_CARD_MAX_BYTES = 256 * 1024;
 
 export type ClawHubPackageFamily = "skill" | "code-plugin" | "bundle-plugin";
 export type ClawHubPackageChannel = "official" | "community" | "private";
-// Keep aligned with @openclaw/plugin-package-contract ExternalPluginCompatibility.
+// Keep aligned with @dexagent/plugin-package-contract ExternalPluginCompatibility.
 export type ClawHubPackageCompatibility = {
   pluginApiRange?: string;
   builtWithOpenClawVersion?: string;

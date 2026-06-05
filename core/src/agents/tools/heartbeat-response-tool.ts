@@ -1,4 +1,4 @@
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
 import { Type } from "typebox";
 import {
   HEARTBEAT_RESPONSE_TOOL_NAME,

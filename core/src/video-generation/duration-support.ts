@@ -1,4 +1,4 @@
-import { uniqueValues } from "@openclaw/normalization-core/string-normalization";
+import { uniqueValues } from "@dexagent/normalization-core/string-normalization";
 import { resolveVideoGenerationModeCapabilities } from "./capabilities.js";
 import type { VideoGenerationProvider } from "./types.js";
 

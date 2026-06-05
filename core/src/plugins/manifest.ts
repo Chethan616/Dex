@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { normalizeModelCatalog } from "@openclaw/model-catalog-core/model-catalog-normalize";
-import { normalizeModelCatalogProviderId } from "@openclaw/model-catalog-core/model-catalog-refs";
+import { normalizeModelCatalog } from "@dexagent/model-catalog-core/model-catalog-normalize";
+import { normalizeModelCatalogProviderId } from "@dexagent/model-catalog-core/model-catalog-refs";
 import type {
   ModelCatalog,
   ModelCatalogAlias,
@@ -13,7 +13,7 @@ import type {
   ModelCatalogStatus,
   ModelCatalogSuppression,
   ModelCatalogTieredCost,
-} from "@openclaw/model-catalog-core/model-catalog-types";
+} from "@dexagent/model-catalog-core/model-catalog-types";
 import { normalizeOptionalString } from "../../packages/normalization-core/src/string-coerce.js";
 import { normalizeTrimmedStringList } from "../../packages/normalization-core/src/string-normalization.js";
 import type { ChannelConfigRuntimeSchema } from "../channels/plugins/types.config.js";

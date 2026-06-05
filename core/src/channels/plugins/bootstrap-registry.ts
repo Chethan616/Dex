@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { listBundledChannelPluginIdsForRoot } from "./bundled-ids.js";
 import { resolveBundledChannelRootScope } from "./bundled-root.js";
 import {

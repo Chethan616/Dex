@@ -1,10 +1,10 @@
-import { resolveSessionIdentityFromMeta } from "@openclaw/acp-core/runtime/session-identity";
+import { resolveSessionIdentityFromMeta } from "@dexagent/acp-core/runtime/session-identity";
 import type {
   AcpRuntime,
   AcpRuntimeCapabilities,
   AcpRuntimeHandle,
   AcpRuntimeStatus,
-} from "@openclaw/acp-core/runtime/types";
+} from "@dexagent/acp-core/runtime/types";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { withAcpRuntimeErrorBoundary } from "../runtime/errors.js";
 import type {

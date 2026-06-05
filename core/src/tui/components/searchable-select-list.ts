@@ -7,8 +7,8 @@ import {
   type SelectListTheme,
   truncateToWidth,
 } from "@earendil-works/pi-tui";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { stripAnsi, visibleWidth } from "../../../packages/terminal-core/src/ansi.js";
 import { findWordBoundaryIndex, fuzzyFilterLower } from "./fuzzy-filter.js";
 

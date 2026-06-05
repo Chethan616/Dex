@@ -1,5 +1,5 @@
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
-import { normalizeOptionalString as readString } from "@openclaw/normalization-core/string-coerce";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
+import { normalizeOptionalString as readString } from "@dexagent/normalization-core/string-coerce";
 import type { ReplyPayload } from "./reply-payload.js";
 import { HEARTBEAT_TOKEN } from "./tokens.js";
 

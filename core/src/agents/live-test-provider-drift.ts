@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { isCloudflareOrHtmlErrorPage } from "../shared/assistant-error-format.js";
 import {
   isAuthErrorMessage,

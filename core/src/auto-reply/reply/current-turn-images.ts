@@ -1,5 +1,5 @@
-import { mimeTypeFromFilePath } from "@openclaw/media-core/mime";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { mimeTypeFromFilePath } from "@dexagent/media-core/mime";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { logVerbose } from "../../globals.js";
 import { formatErrorMessage } from "../../infra/errors.js";

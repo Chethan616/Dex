@@ -1,7 +1,7 @@
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { parseStrictFiniteNumber } from "../infra/parse-finite-number.js";
 import { redactToolPayloadText } from "../logging/redact.js";
 import { resolveExecDetail, type ToolDetailMode } from "./tool-display-exec.js";

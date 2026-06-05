@@ -1,4 +1,4 @@
-import { maxBytesForKind, type MediaKind } from "@openclaw/media-core/constants";
+import { maxBytesForKind, type MediaKind } from "@dexagent/media-core/constants";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 
 const MB = 1024 * 1024;

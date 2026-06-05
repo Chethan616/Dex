@@ -1,8 +1,8 @@
 import {
   findNormalizedProviderValue,
   normalizeProviderId,
-} from "@openclaw/model-catalog-core/provider-id";
-import { normalizeUniqueSingleOrTrimmedStringList } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/model-catalog-core/provider-id";
+import { normalizeUniqueSingleOrTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 
 function dedupeCatalogScopeRefs(values: Array<string | undefined>): string[] {

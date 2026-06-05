@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { isBlockedObjectKey } from "../infra/prototype-keys.js";
 
 export const DEFAULT_ACCOUNT_ID = "default";

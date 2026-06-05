@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 
 export function resolveTranscriptPathForComparison(value: string | undefined): string | undefined {
   const trimmed = normalizeOptionalString(value);

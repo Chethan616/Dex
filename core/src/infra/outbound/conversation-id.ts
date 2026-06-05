@@ -1,7 +1,7 @@
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { stringifyRouteThreadId } from "../../plugin-sdk/channel-route.js";
 
 function resolveExplicitConversationTargetId(target: string): string | undefined {

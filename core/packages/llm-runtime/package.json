@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/llm-runtime",
+  "name": "@dexagent/llm-runtime",
   "version": "0.0.0-private",
   "private": true,
   "files": [
@@ -26,6 +26,6 @@
     }
   },
   "dependencies": {
-    "@openclaw/llm-core": "workspace:*"
+    "@dexagent/llm-core": "workspace:*"
   }
 }

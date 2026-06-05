@@ -1,4 +1,4 @@
-import type { ModelCatalogCost } from "@openclaw/model-catalog-core/model-catalog-types";
+import type { ModelCatalogCost } from "@dexagent/model-catalog-core/model-catalog-types";
 import { DEFAULT_PROVIDER } from "../agents/defaults.js";
 import {
   buildModelAliasIndex,

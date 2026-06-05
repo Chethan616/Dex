@@ -155,19 +155,19 @@ describe("resolveVitestIsolation", () => {
         },
       );
       expect(() =>
-        findAlias(sharedVitestConfig.resolve.alias, `@openclaw/plugin-sdk/${subpath}`),
-      ).toThrow(`missing alias @openclaw/plugin-sdk/${subpath}`);
+        findAlias(sharedVitestConfig.resolve.alias, `@dexagent/plugin-sdk/${subpath}`),
+      ).toThrow(`missing alias @dexagent/plugin-sdk/${subpath}`);
     }
   });
 
   it("aliases private core packages to source for clean checkout tests", () => {
-    expect(findAlias(sharedVitestConfig.resolve.alias, "@openclaw/media-core/mime")).toEqual({
-      find: "@openclaw/media-core/mime",
+    expect(findAlias(sharedVitestConfig.resolve.alias, "@dexagent/media-core/mime")).toEqual({
+      find: "@dexagent/media-core/mime",
       replacement: path.join(process.cwd(), "packages", "media-core", "src", "mime.ts"),
     });
-    expect(findAlias(sharedVitestConfig.resolve.alias, "@openclaw/acp-core/runtime/types")).toEqual(
+    expect(findAlias(sharedVitestConfig.resolve.alias, "@dexagent/acp-core/runtime/types")).toEqual(
       {
-        find: "@openclaw/acp-core/runtime/types",
+        find: "@dexagent/acp-core/runtime/types",
         replacement: path.join(process.cwd(), "packages", "acp-core", "src", "runtime", "types.ts"),
       },
     );

@@ -1,5 +1,5 @@
-import type { NormalizedModelCatalogRow } from "@openclaw/model-catalog-core/model-catalog-types";
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
+import type { NormalizedModelCatalogRow } from "@dexagent/model-catalog-core/model-catalog-types";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import { DEFAULT_CONTEXT_TOKENS } from "../../agents/defaults.js";
 import {
   shouldSuppressBuiltInModel,

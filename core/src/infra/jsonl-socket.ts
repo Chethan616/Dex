@@ -1,6 +1,6 @@
 import net from "node:net";
 import { clearTimeout as clearNodeTimeout, setTimeout as setNodeTimeout } from "node:timers";
-import { resolveTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
+import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
 
 /**
  * Sends one JSONL request line, half-closes the write side, and waits for an accepted response line.

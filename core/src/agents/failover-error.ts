@@ -1,4 +1,4 @@
-import { parseStrictNonNegativeInteger } from "@openclaw/normalization-core/number-coercion";
+import { parseStrictNonNegativeInteger } from "@dexagent/normalization-core/number-coercion";
 import { formatCliCommand } from "../cli/command-format.js";
 import { readErrorName } from "../infra/errors.js";
 import {

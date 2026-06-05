@@ -15,9 +15,9 @@ type CommandResult = {
 const COMMAND_TIMEOUT_MS = 120_000;
 const tempDirs: string[] = [];
 const WORKSPACE_PACKAGE_NAMES = [
-  "@openclaw/gateway-protocol",
-  "@openclaw/gateway-client",
-  "@openclaw/sdk",
+  "@dexagent/gateway-protocol",
+  "@dexagent/gateway-client",
+  "@dexagent/sdk",
 ] as const;
 
 type PackageManifest = {
@@ -236,7 +236,7 @@ describe("OpenClaw SDK package e2e", () => {
       packedPackages.push({ manifest, tarball });
     }
     const sdkTarball =
-      packedPackages.find((pkg) => pkg.manifest.name === "@openclaw/sdk")?.tarball ?? "";
+      packedPackages.find((pkg) => pkg.manifest.name === "@dexagent/sdk")?.tarball ?? "";
     expect(sdkTarball).not.toBe("");
     const registry = await startOpenClawRegistry(packedPackages);
 
@@ -258,7 +258,7 @@ describe("OpenClaw SDK package e2e", () => {
     }
 
     const importScript = `
-      import { GatewayClientTransport, OpenClaw, normalizeGatewayEvent } from "@openclaw/sdk";
+      import { GatewayClientTransport, OpenClaw, normalizeGatewayEvent } from "@dexagent/sdk";
       if (typeof GatewayClientTransport !== "function") throw new Error("missing transport export");
       if (typeof OpenClaw !== "function") throw new Error("missing client export");
       const event = normalizeGatewayEvent({

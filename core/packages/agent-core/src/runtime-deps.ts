@@ -15,7 +15,7 @@ export type AgentCoreCompletionRuntimeDeps = Pick<AgentCoreRuntimeDeps, "complet
 
 function missingRuntimeDep(name: keyof AgentCoreRuntimeDeps): Error {
   return new Error(
-    `@openclaw/agent-core runtime dependency "${name}" is not configured. Pass an AgentCoreRuntimeDeps instance or a streamFn explicitly.`,
+    `@dexagent/agent-core runtime dependency "${name}" is not configured. Pass an AgentCoreRuntimeDeps instance or a streamFn explicitly.`,
   );
 }
 

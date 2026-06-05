@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { isAudioFileName } from "@openclaw/media-core/mime";
-import { asOptionalRecord } from "@openclaw/normalization-core/record-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { isAudioFileName } from "@dexagent/media-core/mime";
+import { asOptionalRecord } from "@dexagent/normalization-core/record-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import {
   buildTtsSupplementMediaPayload,
   getReplyPayloadTtsSupplement,

@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { AgentMessage } from "../agents/runtime/index.js";
 
 export const INPUT_PROVENANCE_KIND_VALUES = [

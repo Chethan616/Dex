@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import JSON5 from "json5";
 import {
   createConfigIO,

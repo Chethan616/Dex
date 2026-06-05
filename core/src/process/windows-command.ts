@@ -1,6 +1,6 @@
 import path from "node:path";
 import process from "node:process";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 
 export function resolveWindowsCommandShim(params: {
   command: string;

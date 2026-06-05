@@ -1,7 +1,7 @@
 import {
   isSensitiveUrlConfigPath,
   SENSITIVE_URL_HINT_TAG,
-} from "@openclaw/net-policy/redact-sensitive-url";
+} from "@dexagent/net-policy/redact-sensitive-url";
 import { z } from "zod";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import type { ConfigUiHints } from "../shared/config-ui-hints-types.js";

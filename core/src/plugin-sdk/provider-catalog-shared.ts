@@ -4,13 +4,13 @@
 // without recursing through provider-specific facades.
 
 import { createHash } from "node:crypto";
-import { normalizeModelCatalog } from "@openclaw/model-catalog-core/model-catalog-normalize";
+import { normalizeModelCatalog } from "@dexagent/model-catalog-core/model-catalog-normalize";
 import type {
   ModelCatalogCost,
   ModelCatalogModel,
   ModelCatalogTieredCost,
-} from "@openclaw/model-catalog-core/model-catalog-types";
-import { findNormalizedProviderKey } from "@openclaw/model-catalog-core/provider-id";
+} from "@dexagent/model-catalog-core/model-catalog-types";
+import { findNormalizedProviderKey } from "@dexagent/model-catalog-core/provider-id";
 import { normalizeConfiguredProviderCatalogModelId } from "../agents/model-ref-shared.js";
 import { resolveProviderRequestCapabilities } from "../agents/provider-attribution.js";
 import type { ModelDefinitionConfig } from "../config/types.models.js";

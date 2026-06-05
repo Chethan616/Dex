@@ -1,4 +1,4 @@
-import { asFiniteNumber } from "@openclaw/normalization-core/number-coercion";
+import { asFiniteNumber } from "@dexagent/normalization-core/number-coercion";
 import { MAX_TIMER_TIMEOUT_MS, resolveTimerTimeoutMs } from "../shared/number-coercion.js";
 import { sleep } from "../utils.js";
 import { generateSecureFraction } from "./secure-random.js";

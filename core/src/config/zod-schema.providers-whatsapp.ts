@@ -1,4 +1,4 @@
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { z } from "zod";
 import { resolveAccountEntry } from "../routing/account-lookup.js";
 import { ToolPolicySchema } from "./zod-schema.agent-runtime.js";

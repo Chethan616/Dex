@@ -1,5 +1,5 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
-import { normalizeStringEntriesLower } from "@openclaw/normalization-core/string-normalization";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
+import { normalizeStringEntriesLower } from "@dexagent/normalization-core/string-normalization";
 import {
   resolveThreadBindingSpawnPolicy,
   supportsAutomaticThreadBindingSpawn,

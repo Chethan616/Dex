@@ -1,4 +1,4 @@
-import { asFiniteNumber } from "@openclaw/normalization-core/number-coercion";
+import { asFiniteNumber } from "@dexagent/normalization-core/number-coercion";
 import { getRuntimeConfig } from "../config/config.js";
 import {
   loadSessionStore,

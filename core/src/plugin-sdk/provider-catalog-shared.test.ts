@@ -1,4 +1,4 @@
-import type { ModelCatalogProvider } from "@openclaw/model-catalog-core/model-catalog-types";
+import type { ModelCatalogProvider } from "@dexagent/model-catalog-core/model-catalog-types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   applyProviderNativeStreamingUsageCompat,

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { readStringValue } from "@openclaw/normalization-core/string-coerce";
+import { readStringValue } from "@dexagent/normalization-core/string-coerce";
 import { resolveStateDir } from "../config/paths.js";
 import type {
   AgentContextLimitsConfig,

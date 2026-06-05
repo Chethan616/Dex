@@ -1,7 +1,7 @@
-import { estimateBase64DecodedBytes } from "@openclaw/media-core/base64";
-import { MAX_IMAGE_BYTES } from "@openclaw/media-core/constants";
-import { extensionForMime, mimeTypeFromFilePath } from "@openclaw/media-core/mime";
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { estimateBase64DecodedBytes } from "@dexagent/media-core/base64";
+import { MAX_IMAGE_BYTES } from "@dexagent/media-core/constants";
+import { extensionForMime, mimeTypeFromFilePath } from "@dexagent/media-core/mime";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import type { PromptImageOrderEntry } from "../media/prompt-image-order.js";

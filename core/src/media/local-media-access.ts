@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { isInboundPathAllowed } from "@openclaw/media-core/inbound-path-policy";
+import { isInboundPathAllowed } from "@dexagent/media-core/inbound-path-policy";
 import { assertNoWindowsNetworkPath } from "../infra/local-file-access.js";
 import { isPathInside } from "../infra/path-guards.js";
 import { getDefaultMediaLocalRoots } from "./local-roots.js";

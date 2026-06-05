@@ -1,8 +1,8 @@
 import {
   asFiniteNumber,
   timestampMsToIsoString,
-} from "@openclaw/normalization-core/number-coercion";
-import { normalizeOptionalString as asString } from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/number-coercion";
+import { normalizeOptionalString as asString } from "@dexagent/normalization-core/string-coerce";
 import { resolveAgentConfig } from "../agents/agent-scope.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { resolveHeartbeatIntervalMs } from "../infra/heartbeat-summary.js";

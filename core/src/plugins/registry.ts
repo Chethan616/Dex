@@ -2,12 +2,12 @@ import path from "node:path";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
-import { uniqueValues } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-coerce";
+import { uniqueValues } from "@dexagent/normalization-core/string-normalization";
 import {
   normalizeStringEntries,
   normalizeUniqueStringEntries,
-} from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-normalization";
 import { clearCodeModeNamespacesForPlugin } from "../agents/code-mode-namespaces.js";
 import {
   getRegisteredAgentHarness,

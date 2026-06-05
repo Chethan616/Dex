@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 
 /** Accepted string literals for boolean parsing beyond actual booleans. */
 export type BooleanParseOptions = {

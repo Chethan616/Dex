@@ -1,4 +1,4 @@
-import { createAssistantMessageEventStream, type Model } from "@openclaw/llm-core";
+import { createAssistantMessageEventStream, type Model } from "@dexagent/llm-core";
 import { afterEach, describe, expect, it } from "vitest";
 import { getApiProvider, registerApiProvider, unregisterApiProviders } from "./api-registry.js";
 

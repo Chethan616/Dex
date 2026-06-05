@@ -4,7 +4,7 @@ import {
   asPositiveSafeInteger,
   isFutureDateTimestampMs,
   resolveExpiresAtMsFromDurationMs,
-} from "@openclaw/normalization-core/number-coercion";
+} from "@dexagent/normalization-core/number-coercion";
 import { safeEqualSecret } from "../security/secret-equal.js";
 
 export const PLUGIN_NODE_CAPABILITY_PATH_PREFIX = "/__openclaw__/cap";

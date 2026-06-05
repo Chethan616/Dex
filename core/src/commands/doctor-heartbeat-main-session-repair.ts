@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { asNullableObjectRecord } from "@openclaw/normalization-core/record-coerce";
+import { asNullableObjectRecord } from "@dexagent/normalization-core/record-coerce";
 import type { note } from "../../packages/terminal-core/src/note.js";
 import { isHeartbeatOkResponse, isHeartbeatUserMessage } from "../auto-reply/heartbeat-filter.js";
 import { formatSessionArchiveTimestamp } from "../config/sessions/artifacts.js";

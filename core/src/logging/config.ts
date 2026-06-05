@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { isRecord as isObjectRecord } from "@openclaw/normalization-core/record-coerce";
+import { isRecord as isObjectRecord } from "@dexagent/normalization-core/record-coerce";
 import JSON5 from "json5";
 import { getCommandPathWithRootOptions } from "../cli/argv.js";
 import { resolveConfigPath } from "../config/paths.js";

@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { Command } from "commander";
 import { getTerminalTableWidth } from "../../../packages/terminal-core/src/table.js";
 import type { OperatorScope } from "../../gateway/method-scopes.js";

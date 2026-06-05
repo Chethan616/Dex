@@ -3,11 +3,11 @@ import path from "node:path";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import {
   normalizeStringEntries,
   sortUniqueStrings,
-} from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-normalization";
 import { normalizeEnvVarKey } from "../infra/host-env-security.js";
 import { parseTcpPort } from "../infra/tcp-port.js";
 import { VERSION } from "../version.js";

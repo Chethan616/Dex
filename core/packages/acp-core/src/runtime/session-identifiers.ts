@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { normalizeText } from "../normalize-text.js";
 import type { SessionAcpIdentity, SessionAcpMeta } from "../types.js";
 import { isSessionIdentityPending, resolveSessionIdentityFromMeta } from "./session-identity.js";

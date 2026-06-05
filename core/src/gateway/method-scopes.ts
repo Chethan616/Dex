@@ -1,4 +1,4 @@
-import { normalizeOptionalString as normalizeSessionActionParam } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString as normalizeSessionActionParam } from "@dexagent/normalization-core/string-coerce";
 import { getPluginRegistryState } from "../plugins/runtime-state.js";
 import { resolveReservedGatewayMethodScope } from "../shared/gateway-method-policy.js";
 import {

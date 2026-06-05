@@ -2,9 +2,9 @@ import { execFile } from "node:child_process";
 import {
   asDateTimestampMs,
   resolveExpiresAtMsFromDurationMs,
-} from "@openclaw/normalization-core/number-coercion";
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/number-coercion";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import {
   ErrorCodes,
   errorShape,

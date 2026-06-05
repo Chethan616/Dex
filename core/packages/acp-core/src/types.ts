@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 
 const ACP_PROVENANCE_MODE_VALUES = ["off", "meta", "meta+receipt"] as const;
 

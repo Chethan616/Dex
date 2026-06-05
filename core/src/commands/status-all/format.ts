@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { resolveGatewayPort } from "../../config/config.js";
 import type { OpenClawConfig } from "../../config/types.js";
 import { resolveControlUiLinks } from "../../gateway/control-ui-links.js";

@@ -8,7 +8,7 @@ import {
   resolvePositiveTimerTimeoutMs,
   resolveTimerTimeoutMs,
   resolveTimestampMsToIsoString,
-} from "@openclaw/normalization-core/number-coercion";
+} from "@dexagent/normalization-core/number-coercion";
 import { z } from "zod";
 import { resolveConfigPath, resolveGatewayLockDir, resolveStateDir } from "../config/paths.js";
 import { isPidAlive } from "../shared/pid-alive.js";

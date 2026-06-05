@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/gateway-protocol",
+  "name": "@dexagent/gateway-protocol",
   "version": "0.0.0-private",
   "private": true,
   "files": [

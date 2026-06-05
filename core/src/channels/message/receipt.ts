@@ -1,4 +1,4 @@
-import { normalizeUniqueStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeUniqueStringEntries } from "@dexagent/normalization-core/string-normalization";
 import type {
   MessageReceipt,
   MessageReceiptPartKind,

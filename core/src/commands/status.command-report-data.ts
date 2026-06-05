@@ -1,4 +1,4 @@
-import { timestampMsToIsoString } from "@openclaw/normalization-core/number-coercion";
+import { timestampMsToIsoString } from "@dexagent/normalization-core/number-coercion";
 import type { ConnectPairingRequiredReason } from "../../packages/gateway-protocol/src/connect-error-details.js";
 import type { RenderTableOptions, TableColumn } from "../../packages/terminal-core/src/table.js";
 import type { HeartbeatEventPayload } from "../infra/heartbeat-events.js";

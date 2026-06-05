@@ -10,7 +10,7 @@ OpenClaw owns the built-in agent runtime directly. The runtime code lives under 
 - `src/agents/embedded-agent-runner/`: built-in agent attempt loop, provider stream adapters, compaction, model selection, and session wiring.
 - `src/agents/sessions/`: session persistence, extension loading, resource discovery, skills, prompts, themes, and TUI-backed tool renderers.
 - `packages/agent-core/`: reusable agent core, lower-level harness types, messages, compaction helpers, prompt templates, and tool/session contracts.
-- `src/agents/runtime/`: OpenClaw facade for `@openclaw/agent-core` plus local proxy utilities.
+- `src/agents/runtime/`: OpenClaw facade for `@dexagent/agent-core` plus local proxy utilities.
 - `src/agents/agent-tools*.ts`: OpenClaw-owned tool definitions, schemas, policy, before/after hook adapters, and host edit support.
 - `src/agents/agent-hooks/`: built-in runtime hooks such as compaction safeguards and context pruning.
 - `src/llm/`: model/provider registry, transport helpers, and provider-specific stream implementations.

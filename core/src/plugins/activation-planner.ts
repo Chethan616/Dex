@@ -1,6 +1,6 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import type { OpenClawConfig } from "../config/types.js";
 import { normalizePluginsConfig } from "./config-state.js";
 import { passesManifestOwnerBasePolicy } from "./manifest-owner-policy.js";

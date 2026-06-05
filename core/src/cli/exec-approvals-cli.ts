@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { Command } from "commander";
 import JSON5 from "json5";
 import { sanitizeForLog } from "../../packages/terminal-core/src/ansi.js";

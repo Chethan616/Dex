@@ -16,7 +16,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*",
+    "@dexagent/plugin-sdk": "workspace:*",
     "@types/ws": "8.18.1",
     "openclaw": "2026.5.28"
   },

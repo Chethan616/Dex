@@ -1,5 +1,5 @@
-import { asFiniteNumber } from "@openclaw/normalization-core/number-coercion";
-import { asOptionalRecord } from "@openclaw/normalization-core/record-coerce";
+import { asFiniteNumber } from "@dexagent/normalization-core/number-coercion";
+import { asOptionalRecord } from "@dexagent/normalization-core/record-coerce";
 import { parseFenceSpans } from "../../packages/markdown-core/src/fences.js";
 
 type CanvasSurface = "assistant_message";

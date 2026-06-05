@@ -1,4 +1,4 @@
-import { validateIPv4AddressInput } from "@openclaw/net-policy/ipv4";
+import { validateIPv4AddressInput } from "@dexagent/net-policy/ipv4";
 import { formatPortRangeHint } from "../cli/error-format.js";
 import {
   normalizeGatewayTokenInput,

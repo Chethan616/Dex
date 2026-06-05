@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { getRuntimeConfig } from "../config/config.js";
 import { updateSessionStore } from "../config/sessions/store.js";
 import { resolveAllAgentSessionStoreTargetsSync } from "../config/sessions/targets.js";

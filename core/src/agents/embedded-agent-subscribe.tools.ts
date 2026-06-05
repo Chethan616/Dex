@@ -1,10 +1,10 @@
-import { asOptionalRecord as readRecord } from "@openclaw/normalization-core/record-coerce";
+import { asOptionalRecord as readRecord } from "@dexagent/normalization-core/record-coerce";
 import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
   readStringValue,
-} from "@openclaw/normalization-core/string-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { getChannelPlugin, normalizeChannelId } from "../channels/plugins/index.js";
 import { normalizeTargetForProvider } from "../infra/outbound/target-normalization.js";
 import { redactSensitiveFieldValue, redactToolPayloadText } from "../logging/redact.js";

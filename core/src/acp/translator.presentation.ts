@@ -6,9 +6,9 @@ import type {
 import {
   toAcpSessionLineageMeta,
   type AcpSessionLineageMeta,
-} from "@openclaw/acp-core/session-lineage-meta";
-import { timestampMsToIsoString } from "@openclaw/normalization-core/number-coercion";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/acp-core/session-lineage-meta";
+import { timestampMsToIsoString } from "@dexagent/normalization-core/number-coercion";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { BASE_THINKING_LEVELS } from "../auto-reply/thinking.shared.js";
 import type { GatewaySessionRow } from "../gateway/session-utils.js";
 

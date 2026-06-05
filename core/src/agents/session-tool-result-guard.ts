@@ -1,5 +1,5 @@
-import { resolveIntegerOption } from "@openclaw/normalization-core/number-coercion";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { resolveIntegerOption } from "@dexagent/normalization-core/number-coercion";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import {
   boundedJsonUtf8Bytes,
   firstEnumerableOwnKeys,

@@ -5,13 +5,13 @@ import type {
   HelloOk,
   RequestFrame,
   ResponseFrame,
-} from "@openclaw/gateway-protocol";
+} from "@dexagent/gateway-protocol";
 import {
   GATEWAY_CLIENT_MODES,
   GATEWAY_CLIENT_NAMES,
   type GatewayClientMode,
   type GatewayClientName,
-} from "@openclaw/gateway-protocol/client-info";
+} from "@dexagent/gateway-protocol/client-info";
 import {
   ConnectErrorDetailCodes,
   formatConnectErrorMessage,
@@ -19,9 +19,9 @@ import {
   readConnectErrorRecoveryAdvice,
   readPairingConnectErrorDetails,
   type ConnectErrorRecoveryAdvice,
-} from "@openclaw/gateway-protocol/connect-error-details";
-import { resolveGatewayStartupRetryAfterMs } from "@openclaw/gateway-protocol/startup-unavailable";
-import { MIN_CLIENT_PROTOCOL_VERSION, PROTOCOL_VERSION } from "@openclaw/gateway-protocol/version";
+} from "@dexagent/gateway-protocol/connect-error-details";
+import { resolveGatewayStartupRetryAfterMs } from "@dexagent/gateway-protocol/startup-unavailable";
+import { MIN_CLIENT_PROTOCOL_VERSION, PROTOCOL_VERSION } from "@dexagent/gateway-protocol/version";
 import ipaddr from "ipaddr.js";
 import { WebSocket, type ClientOptions, type CertMeta } from "ws";
 import { buildDeviceAuthPayloadV3 } from "./device-auth.js";

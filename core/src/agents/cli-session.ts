@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { CliSessionBinding, SessionEntry } from "../config/sessions.js";
 import { normalizeProviderId } from "./model-selection.js";
 

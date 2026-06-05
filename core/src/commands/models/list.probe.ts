@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import { normalizeUniqueStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeUniqueStringEntries } from "@dexagent/normalization-core/string-normalization";
 import {
   resolveAgentDir,
   resolveAgentWorkspaceDir,

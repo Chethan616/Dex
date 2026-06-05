@@ -2,17 +2,17 @@ import { constants as fsConstants } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { mergeInboundPathRoots } from "@openclaw/media-core/inbound-path-policy";
-import { findNormalizedProviderValue } from "@openclaw/model-catalog-core/provider-id";
+import { mergeInboundPathRoots } from "@dexagent/media-core/inbound-path-policy";
+import { findNormalizedProviderValue } from "@dexagent/model-catalog-core/provider-id";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeNullableString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import {
   normalizeStringEntries,
   uniqueStrings,
-} from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-normalization";
 import { isMinimaxVlmModel, isMinimaxVlmProvider } from "../agents/minimax-vlm.js";
 import {
   buildModelAliasIndex,

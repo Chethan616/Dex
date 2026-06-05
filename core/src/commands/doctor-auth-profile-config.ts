@@ -1,8 +1,8 @@
-import { collectConfiguredModelRefs } from "@openclaw/model-catalog-core/configured-model-refs";
+import { collectConfiguredModelRefs } from "@dexagent/model-catalog-core/configured-model-refs";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { splitTrailingAuthProfile } from "../agents/model-ref-profile.js";
 import type { AuthProfileConfig } from "../config/types.auth.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";

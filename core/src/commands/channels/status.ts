@@ -1,4 +1,4 @@
-import { redactSensitiveUrlLikeString } from "@openclaw/net-policy/redact-sensitive-url";
+import { redactSensitiveUrlLikeString } from "@dexagent/net-policy/redact-sensitive-url";
 import { formatDocsLink } from "../../../packages/terminal-core/src/links.js";
 import { theme } from "../../../packages/terminal-core/src/theme.js";
 import { normalizeChannelId } from "../../channels/plugins/index.js";

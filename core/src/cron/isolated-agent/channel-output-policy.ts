@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import { createLazyImportLoader } from "../../shared/lazy-promise.js";
 
 type ChannelPluginRuntime = typeof import("../../channels/plugins/index.js");

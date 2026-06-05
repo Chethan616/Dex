@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { parseRawSessionConversationRef } from "../sessions/session-key-utils.js";
 import type { PluginHookAgentContext } from "./hook-types.js";
 

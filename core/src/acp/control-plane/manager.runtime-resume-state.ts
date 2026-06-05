@@ -1,5 +1,5 @@
-import { resolveSessionIdentityFromMeta } from "@openclaw/acp-core/runtime/session-identity";
-import type { AcpRuntime } from "@openclaw/acp-core/runtime/types";
+import { resolveSessionIdentityFromMeta } from "@dexagent/acp-core/runtime/session-identity";
+import type { AcpRuntime } from "@dexagent/acp-core/runtime/types";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { logVerbose } from "../../globals.js";
 import { formatErrorMessage } from "../../infra/errors.js";

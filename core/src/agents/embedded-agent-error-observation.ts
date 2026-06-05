@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { readLoggingConfig } from "../logging/config.js";
 import { redactIdentifier } from "../logging/redact-identifier.js";
 import { getDefaultRedactPatterns, redactSensitiveText } from "../logging/redact.js";

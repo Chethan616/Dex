@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { normalizeOptionalString as resolveOptionalStringParam } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString as resolveOptionalStringParam } from "@dexagent/normalization-core/string-coerce";
 import {
   ErrorCodes,
   errorShape,

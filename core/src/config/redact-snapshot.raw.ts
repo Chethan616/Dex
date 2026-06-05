@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import JSON5 from "json5";
 
 export function replaceSensitiveValuesInRaw(params: {

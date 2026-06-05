@@ -924,7 +924,7 @@ describe("plugin-sdk package contract guardrails", () => {
       expect(matrixRuntimeDeps.get(dep)).not.toBe("");
       expect(rootRuntimeDeps.has(dep)).toBe(false);
     }
-    expect(rootRuntimeDeps.has("@openclaw/plugin-package-contract")).toBe(false);
+    expect(rootRuntimeDeps.has("@dexagent/plugin-package-contract")).toBe(false);
   });
 
   it("keeps extension sources on public sdk or local package seams", () => {

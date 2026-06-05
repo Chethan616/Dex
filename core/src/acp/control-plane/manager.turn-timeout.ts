@@ -1,5 +1,5 @@
-import type { AcpRuntimeSessionMode } from "@openclaw/acp-core/runtime/types";
-import { clampTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
+import type { AcpRuntimeSessionMode } from "@dexagent/acp-core/runtime/types";
+import { clampTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
 import { resolveAgentTimeoutMs } from "../../agents/timeout.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { logVerbose } from "../../globals.js";

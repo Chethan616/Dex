@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { ChutesOAuthAppConfig } from "../agents/chutes-oauth.js";
 import {
   CHUTES_AUTHORIZE_ENDPOINT,

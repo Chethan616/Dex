@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { isRecord as isJsonObject } from "@openclaw/normalization-core/record-coerce";
+import { isRecord as isJsonObject } from "@dexagent/normalization-core/record-coerce";
 import { listAgentIds, resolveAgentDir } from "../agents/agent-scope.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { formatErrorMessage } from "../infra/errors.js";

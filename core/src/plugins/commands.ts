@@ -5,7 +5,7 @@
  * These commands are processed before built-in commands and before agent invocation.
  */
 
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { resolveBoundAgentIdForSession } from "../agents/session-agent-binding.js";
 import { resolveConversationBindingContext } from "../channels/conversation-binding-context.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";

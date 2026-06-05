@@ -1,4 +1,4 @@
-import { resolveTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
+import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
 import { danger } from "../globals.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { sleepWithAbort } from "./backoff.js";

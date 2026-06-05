@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import { normalizeChatChannelId } from "../channels/ids.js";
 import { normalizeAnyChannelId } from "../channels/registry-normalize.js";
 import { INTERNAL_MESSAGE_CHANNEL } from "./message-channel-constants.js";

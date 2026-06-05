@@ -1,6 +1,6 @@
 import fs from "node:fs";
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { theme } from "../../packages/terminal-core/src/theme.js";
 import { collectChannelDoctorStaleConfigMutations } from "../commands/doctor/shared/channel-doctor.js";
 import { assertConfigWriteAllowedInCurrentMode, readConfigFileSnapshot } from "../config/config.js";

@@ -1,4 +1,4 @@
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import type { TranscriptSessionDescriptor, TranscriptUtterance } from "./provider-types.js";
 
 export type TranscriptsSummary = {

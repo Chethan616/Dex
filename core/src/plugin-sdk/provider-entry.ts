@@ -1,4 +1,4 @@
-import type { UnifiedModelCatalogEntry } from "@openclaw/model-catalog-core/model-catalog-types";
+import type { UnifiedModelCatalogEntry } from "@dexagent/model-catalog-core/model-catalog-types";
 import {
   normalizeStringEntries,
   uniqueStrings,

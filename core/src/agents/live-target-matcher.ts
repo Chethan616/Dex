@@ -1,9 +1,9 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { normalizeGooglePreviewModelId } from "@openclaw/model-catalog-core/provider-model-id-normalize";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { normalizeGooglePreviewModelId } from "@dexagent/model-catalog-core/provider-model-id-normalize";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { liveProvidersShareOwningPlugin } from "./live-provider-owner.js";
 

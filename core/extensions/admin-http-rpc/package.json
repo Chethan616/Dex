@@ -5,7 +5,7 @@
   "description": "OpenClaw admin HTTP RPC endpoint",
   "type": "module",
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@dexagent/plugin-sdk": "workspace:*"
   },
   "openclaw": {
     "extensions": [

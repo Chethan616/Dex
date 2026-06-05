@@ -1,5 +1,5 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
-import { normalizeTrimmedStringList } from "@openclaw/normalization-core/string-normalization";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
+import { normalizeTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
 import { formatToolDetail, resolveToolDisplay } from "../agents/tool-display.js";
 import { formatToolAggregate } from "../auto-reply/tool-meta.js";
 import type {

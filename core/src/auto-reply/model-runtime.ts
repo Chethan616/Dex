@@ -1,7 +1,7 @@
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import type { SessionEntry } from "../config/sessions.js";
 
 export function formatProviderModelRef(providerRaw: string, modelRaw: string): string {

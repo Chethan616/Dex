@@ -1,4 +1,4 @@
-import { normalizeProviderIdForAuth } from "@openclaw/model-catalog-core/provider-id";
+import { normalizeProviderIdForAuth } from "@dexagent/model-catalog-core/provider-id";
 import type { AuthProfileStore } from "../../agents/auth-profiles/types.js";
 import type { AuthProfileCredential } from "../../agents/auth-profiles/types.js";
 import {

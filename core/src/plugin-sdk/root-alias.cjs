@@ -8,36 +8,36 @@ let monolithicSdk = null;
 let diagnosticEventsModule = null;
 const moduleLoaders = new Map();
 const pluginSdkSubpathsCache = new Map();
-const pluginSdkPackageNames = ["openclaw/plugin-sdk", "@openclaw/plugin-sdk"];
+const pluginSdkPackageNames = ["openclaw/plugin-sdk", "@dexagent/plugin-sdk"];
 const pluginSdkSourceExtensions = [".ts", ".mts", ".js", ".mjs", ".cts", ".cjs"];
 const privateQaExcludedPluginSdkSubpaths = new Set(["ssrf-runtime-internal"]);
 const workspacePackageAliases = [
   {
-    name: "@openclaw/llm-core",
+    name: "@dexagent/llm-core",
     subpath: "",
     srcFile: "src/index.ts",
     distFile: "dist/index.mjs",
   },
   {
-    name: "@openclaw/llm-core",
+    name: "@dexagent/llm-core",
     subpath: "diagnostics",
     srcFile: "src/utils/diagnostics.ts",
     distFile: "dist/utils/diagnostics.mjs",
   },
   {
-    name: "@openclaw/llm-core",
+    name: "@dexagent/llm-core",
     subpath: "event-stream",
     srcFile: "src/utils/event-stream.ts",
     distFile: "dist/utils/event-stream.mjs",
   },
   {
-    name: "@openclaw/llm-core",
+    name: "@dexagent/llm-core",
     subpath: "types",
     srcFile: "src/types.ts",
     distFile: "dist/types.mjs",
   },
   {
-    name: "@openclaw/llm-core",
+    name: "@dexagent/llm-core",
     subpath: "validation",
     srcFile: "src/validation.ts",
     distFile: "dist/validation.mjs",
@@ -349,7 +349,7 @@ function buildPluginSdkAliasMap(useDist) {
     }
   }
 
-  // Agent-core intentionally imports @openclaw/llm-core by package name so built
+  // Agent-core intentionally imports @dexagent/llm-core by package name so built
   // package entrypoints share constructor identity. In source-checkout live
   // tests, keep that package specifier on the same source graph instead of
   // falling through to pnpm's package export and requiring a prebuilt dist.

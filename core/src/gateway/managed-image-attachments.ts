@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
-import { isPassThroughRemoteMediaSource } from "@openclaw/media-core/media-source-url";
+import { isPassThroughRemoteMediaSource } from "@dexagent/media-core/media-source-url";
 import { resolveDefaultAgentId } from "../agents/agent-scope-config.js";
 import { getRuntimeConfig } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";

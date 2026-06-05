@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 
 export function extractSimpleExplicitGroupId(raw: string | undefined | null): string | undefined {
   const trimmed = normalizeOptionalString(raw) ?? "";

@@ -1,4 +1,4 @@
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { resolveProviderIdForAuth } from "../provider-auth-aliases.js";
 import type { AuthProfileStore } from "./types.js";
 

@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { resolveAgentIdentity, resolveEffectiveMessagesConfig } from "../agents/identity.js";
 import type { GetReplyOptions } from "../auto-reply/get-reply-options.types.js";
 import {

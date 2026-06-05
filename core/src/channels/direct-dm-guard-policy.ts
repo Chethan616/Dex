@@ -1,4 +1,4 @@
-import { resolveIntegerOption } from "@openclaw/normalization-core/number-coercion";
+import { resolveIntegerOption } from "@dexagent/normalization-core/number-coercion";
 
 export type DirectDmPreCryptoGuardPolicy = {
   allowedKinds: readonly number[];

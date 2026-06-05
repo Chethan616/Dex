@@ -1,4 +1,4 @@
-import { redactSensitiveUrlLikeString } from "@openclaw/net-policy/redact-sensitive-url";
+import { redactSensitiveUrlLikeString } from "@dexagent/net-policy/redact-sensitive-url";
 import { html, nothing, type TemplateResult } from "lit";
 
 type McpServerRow = {

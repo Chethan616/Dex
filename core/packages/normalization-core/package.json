@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/normalization-core",
+  "name": "@dexagent/normalization-core",
   "version": "0.0.0-private",
   "private": true,
   "files": [

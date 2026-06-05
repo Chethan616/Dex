@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/model-catalog-core",
+  "name": "@dexagent/model-catalog-core",
   "version": "0.0.0-private",
   "private": true,
   "files": [

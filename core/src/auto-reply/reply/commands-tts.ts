@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { readLatestAssistantTextFromSessionTranscript } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
 import {

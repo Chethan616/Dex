@@ -1,8 +1,8 @@
 import "../infra/fs-safe-defaults.js";
 import { createHash } from "node:crypto";
 import path from "node:path";
-import { redactSensitiveUrlLikeString } from "@openclaw/net-policy/redact-sensitive-url";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { redactSensitiveUrlLikeString } from "@dexagent/net-policy/redact-sensitive-url";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { sanitizeForLog } from "../../packages/terminal-core/src/ansi.js";
 import { withTempDir } from "../infra/install-source-utils.js";
 import { replaceDirectoryAtomic } from "../infra/replace-file.js";

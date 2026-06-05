@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { sanitizeForLog } from "../../packages/terminal-core/src/ansi.js";
 import { resolveInlineAgentImageAttachments } from "../auto-reply/reply/agent-turn-attachments.js";
 import { sanitizePendingFinalDeliveryText } from "../auto-reply/reply/pending-final-delivery.js";
@@ -226,7 +226,7 @@ type AgentAttemptResult = Awaited<ReturnType<AttemptExecutionRuntime["runAgentAt
 type AcpManagerRuntime = typeof import("../acp/control-plane/manager.js");
 type AcpPolicyRuntime = typeof import("../acp/policy.js");
 type AcpRuntimeErrorsRuntime = typeof import("../acp/runtime/errors.js");
-type AcpSessionIdentifiersRuntime = typeof import("@openclaw/acp-core/runtime/session-identifiers");
+type AcpSessionIdentifiersRuntime = typeof import("@dexagent/acp-core/runtime/session-identifiers");
 type DeliveryRuntime = typeof import("./command/delivery.runtime.js");
 type SessionStoreRuntime = typeof import("./command/session-store.runtime.js");
 type CliCompactionRuntime = typeof import("./command/cli-compaction.js");
@@ -251,7 +251,7 @@ const acpRuntimeErrorsRuntimeLoader = createLazyImportLoader<AcpRuntimeErrorsRun
   () => import("../acp/runtime/errors.js"),
 );
 const acpSessionIdentifiersRuntimeLoader = createLazyImportLoader<AcpSessionIdentifiersRuntime>(
-  () => import("@openclaw/acp-core/runtime/session-identifiers"),
+  () => import("@dexagent/acp-core/runtime/session-identifiers"),
 );
 const deliveryRuntimeLoader = createLazyImportLoader<DeliveryRuntime>(
   () => import("./command/delivery.runtime.js"),

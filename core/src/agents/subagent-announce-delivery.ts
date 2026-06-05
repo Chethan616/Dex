@@ -1,9 +1,9 @@
-import { clampTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { clampTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import {
   normalizeStringEntries,
   uniqueStrings,
-} from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-normalization";
 import { completionRequiresMessageToolDelivery } from "../auto-reply/reply/completion-delivery-policy.js";
 import { isSilentReplyPayloadText, SILENT_REPLY_TOKEN } from "../auto-reply/tokens.js";
 import { getLoadedChannelPluginForRead } from "../channels/plugins/registry-loaded-read.js";

@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { getChannelPlugin, normalizeChannelId } from "../channels/plugins/index.js";
 
 const CORE_MESSAGING_TOOLS = new Set(["sessions_send", "message"]);

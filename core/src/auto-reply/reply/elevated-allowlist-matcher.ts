@@ -1,8 +1,8 @@
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
-import { normalizeAtHashSlug } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-coerce";
+import { normalizeAtHashSlug } from "@dexagent/normalization-core/string-normalization";
 import { CHAT_CHANNEL_ORDER } from "../../channels/registry.js";
 
 export type ExplicitElevatedAllowField = "id" | "from" | "e164" | "name" | "username" | "tag";

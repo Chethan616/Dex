@@ -1,4 +1,4 @@
-import { asNullableRecord } from "@openclaw/normalization-core/record-coerce";
+import { asNullableRecord } from "@dexagent/normalization-core/record-coerce";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 
 export type SkillWorkshopConfig = {

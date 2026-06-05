@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import type { LookupFn } from "../../infra/net/ssrf.js";
 
 export function makeFetchHeaders(map: Record<string, string>): {

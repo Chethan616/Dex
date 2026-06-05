@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "@openclaw/discord": "workspace:*",
-    "@openclaw/plugin-sdk": "workspace:*",
+    "@dexagent/plugin-sdk": "workspace:*",
     "@openclaw/slack": "workspace:*",
     "@openclaw/whatsapp": "workspace:*",
     "openclaw": "2026.5.28"

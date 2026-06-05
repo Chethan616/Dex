@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/media-understanding-common",
+  "name": "@dexagent/media-understanding-common",
   "version": "0.0.0-private",
   "private": true,
   "files": [

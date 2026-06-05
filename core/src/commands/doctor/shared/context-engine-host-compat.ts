@@ -1,5 +1,5 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { normalizeEmbeddedAgentRuntime } from "../../../agents/agent-runtime-id.js";
 import { resolveDefaultAgentDir } from "../../../agents/agent-scope-config.js";
 import { resolveCliBackendConfig } from "../../../agents/cli-backends.js";

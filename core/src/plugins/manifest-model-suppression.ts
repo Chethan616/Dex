@@ -1,5 +1,5 @@
-import { buildModelCatalogMergeKey } from "@openclaw/model-catalog-core/model-catalog-refs";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { buildModelCatalogMergeKey } from "@dexagent/model-catalog-core/model-catalog-refs";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import {
   planManifestModelCatalogSuppressions,

@@ -1,4 +1,4 @@
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 
 export const ACCESS_GROUP_ALLOW_FROM_PREFIX = "accessGroup:";
 

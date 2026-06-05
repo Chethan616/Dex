@@ -1,4 +1,4 @@
-import { asOptionalRecord } from "@openclaw/normalization-core/record-coerce";
+import { asOptionalRecord } from "@dexagent/normalization-core/record-coerce";
 
 function readToolName(value: unknown): string | undefined {
   const record = asOptionalRecord(value);

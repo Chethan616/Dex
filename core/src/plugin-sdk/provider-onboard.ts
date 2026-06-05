@@ -1,7 +1,7 @@
 // Keep provider onboarding helpers dependency-light so bundled provider plugins
 // do not pull heavyweight runtime graphs at activation time.
 
-import { findNormalizedProviderKey } from "@openclaw/model-catalog-core/provider-id";
+import { findNormalizedProviderKey } from "@dexagent/model-catalog-core/provider-id";
 import { resolvePrimaryStringValue } from "../../packages/normalization-core/src/string-coerce.js";
 import { ensureStaticModelAllowlistEntry } from "../agents/model-allowlist-entry.js";
 import { normalizeConfiguredProviderCatalogModelId } from "../agents/model-ref-shared.js";

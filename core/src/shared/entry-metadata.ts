@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 
 /** Resolves entry emoji/homepage with metadata taking precedence over frontmatter aliases. */
 export function resolveEmojiAndHomepage(params: {

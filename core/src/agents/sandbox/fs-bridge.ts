@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import type {
   SandboxBackendCommandResult,
   SandboxFsBridgeContext,

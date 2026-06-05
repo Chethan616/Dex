@@ -2,7 +2,7 @@ import fs from "node:fs";
 import type { IncomingMessage } from "node:http";
 import os from "node:os";
 import path from "node:path";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import type { RawData, WebSocket } from "ws";
 import {
   GATEWAY_CLIENT_IDS,

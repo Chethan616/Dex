@@ -217,12 +217,12 @@ function shouldAlwaysBundleDependency(id: string): boolean {
   return (
     id === "@openclaw/fs-safe" ||
     id.startsWith("@openclaw/fs-safe/") ||
-    id === "@openclaw/normalization-core" ||
-    id.startsWith("@openclaw/normalization-core/") ||
-    id === "@openclaw/media-core" ||
-    id.startsWith("@openclaw/media-core/") ||
-    id === "@openclaw/acp-core" ||
-    id.startsWith("@openclaw/acp-core/") ||
+    id === "@dexagent/normalization-core" ||
+    id.startsWith("@dexagent/normalization-core/") ||
+    id === "@dexagent/media-core" ||
+    id.startsWith("@dexagent/media-core/") ||
+    id === "@dexagent/acp-core" ||
+    id.startsWith("@dexagent/acp-core/") ||
     id === "zod" ||
     id.startsWith("zod/")
   );
@@ -563,8 +563,8 @@ function buildLlmRuntimeDistEntries(): Record<string, string> {
 
 function shouldExternalizeAgentCoreDependency(id: string): boolean {
   return (
-    id === "@openclaw/llm-core" ||
-    id.startsWith("@openclaw/llm-core/") ||
+    id === "@dexagent/llm-core" ||
+    id.startsWith("@dexagent/llm-core/") ||
     id === "ignore" ||
     id === "openclaw" ||
     id.startsWith("openclaw/") ||
@@ -583,8 +583,8 @@ function shouldExternalizeGatewayClientDependency(id: string): boolean {
   return (
     id === "ws" ||
     id.startsWith("ws/") ||
-    id === "@openclaw/gateway-protocol" ||
-    id.startsWith("@openclaw/gateway-protocol/")
+    id === "@dexagent/gateway-protocol" ||
+    id.startsWith("@dexagent/gateway-protocol/")
   );
 }
 
@@ -601,7 +601,7 @@ function shouldExternalizeLlmCoreDependency(id: string): boolean {
 }
 
 function shouldExternalizeLlmRuntimeDependency(id: string): boolean {
-  return id === "@openclaw/llm-core" || id.startsWith("@openclaw/llm-core/");
+  return id === "@dexagent/llm-core" || id.startsWith("@dexagent/llm-core/");
 }
 
 function shouldExternalizeMarkdownCoreDependency(id: string): boolean {

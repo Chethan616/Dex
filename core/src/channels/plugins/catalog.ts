@@ -1,9 +1,9 @@
 import path from "node:path";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import {
   normalizeStringEntries,
   uniqueStrings,
-} from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-normalization";
 import { MANIFEST_KEY } from "../../compat/legacy-names.js";
 import type { PluginInstallRecord } from "../../config/types.plugins.js";
 import { tryReadJsonSync } from "../../infra/json-files.js";

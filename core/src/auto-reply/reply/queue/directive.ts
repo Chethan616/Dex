@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import { parseDurationMs } from "../../../cli/parse-duration.js";
 import { parseStrictPositiveInteger } from "../../../infra/parse-finite-number.js";
 import { skipDirectiveArgPrefix, takeDirectiveToken } from "../directive-parsing.js";

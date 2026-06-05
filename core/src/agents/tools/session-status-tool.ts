@@ -1,5 +1,5 @@
-import { readStringValue } from "@openclaw/normalization-core/string-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { readStringValue } from "@dexagent/normalization-core/string-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { Type } from "typebox";
 import type {
   ElevatedLevel,

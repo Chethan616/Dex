@@ -1,7 +1,7 @@
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { getChatCommands } from "../../auto-reply/commands-registry.data.js";
 import type { SkillCommandSpec } from "../types.js";
 

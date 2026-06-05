@@ -3,7 +3,7 @@ import type { Duplex } from "node:stream";
 import type {
   UnifiedModelCatalogEntry,
   UnifiedModelCatalogKind,
-} from "@openclaw/model-catalog-core/model-catalog-types";
+} from "@dexagent/model-catalog-core/model-catalog-types";
 import type { Command } from "commander";
 import type {
   ApiKeyCredential,

@@ -4,12 +4,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { detectMime, extensionForMime, normalizeMimeType } from "@openclaw/media-core/mime";
+import { detectMime, extensionForMime, normalizeMimeType } from "@dexagent/media-core/mime";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
   normalizeStringifiedOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import type { Command } from "commander";
 import {
   GATEWAY_CLIENT_MODES,

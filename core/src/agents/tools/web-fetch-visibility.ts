@@ -1,7 +1,7 @@
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 
 // CSS property values that indicate an element is hidden
 const HIDDEN_STYLE_PATTERNS: Array<[string, RegExp]> = [

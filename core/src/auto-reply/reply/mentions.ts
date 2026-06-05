@@ -2,7 +2,7 @@ import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { resolveAgentConfig } from "../../agents/agent-scope.js";
 import { resolveMentionPatternPolicy } from "../../channels/mention-pattern-policy.js";
 import type { ChannelId } from "../../channels/plugins/channel-id.types.js";

@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { getReplyPayloadMetadata } from "../auto-reply/reply-payload.js";
 import { redactSensitiveText } from "../logging/redact.js";
 import type {

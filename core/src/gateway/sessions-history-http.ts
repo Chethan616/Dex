@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { getRuntimeConfig } from "../config/io.js";
 import { loadSessionStore } from "../config/sessions.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";

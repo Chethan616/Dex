@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 
 const ALWAYS_SENSITIVE_MODEL_PROVIDER_HEADER_NAMES = new Set([
   "authorization",

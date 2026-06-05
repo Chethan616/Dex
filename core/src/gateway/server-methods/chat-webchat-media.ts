@@ -1,7 +1,7 @@
 import path from "node:path";
-import { estimateBase64DecodedBytes } from "@openclaw/media-core/base64";
-import { isAudioFileName } from "@openclaw/media-core/mime";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { estimateBase64DecodedBytes } from "@dexagent/media-core/base64";
+import { isAudioFileName } from "@dexagent/media-core/mime";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import type { ReplyPayload } from "../../auto-reply/reply-payload.js";
 import { openLocalFileSafely } from "../../infra/fs-safe.js";
 import { assertNoWindowsNetworkPath, safeFileURLToPath } from "../../infra/local-file-access.js";

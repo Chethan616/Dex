@@ -1,4 +1,4 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import { resolveTimerTimeoutMs } from "../shared/number-coercion.js";
 import type { UsageProviderId } from "./provider-usage.types.js";
 

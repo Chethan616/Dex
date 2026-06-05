@@ -1,5 +1,5 @@
-import { readBool, readString } from "@openclaw/acp-core/meta";
-import type { AcpServerOptions } from "@openclaw/acp-core/types";
+import { readBool, readString } from "@dexagent/acp-core/meta";
+import type { AcpServerOptions } from "@dexagent/acp-core/types";
 import type { GatewayClient } from "../gateway/client.js";
 
 type AcpSessionMeta = {

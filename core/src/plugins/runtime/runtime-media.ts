@@ -1,5 +1,5 @@
-import { mediaKindFromMime } from "@openclaw/media-core/constants";
-import { detectMime } from "@openclaw/media-core/mime";
+import { mediaKindFromMime } from "@dexagent/media-core/constants";
+import { detectMime } from "@dexagent/media-core/mime";
 import { isVoiceCompatibleAudio } from "../../media/audio.js";
 import { getImageMetadata, resizeToJpeg } from "../../media/media-services.js";
 import { loadWebMedia } from "../../media/web-media.js";

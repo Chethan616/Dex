@@ -1,4 +1,4 @@
-import { resolveIntegerOption } from "@openclaw/normalization-core/number-coercion";
+import { resolveIntegerOption } from "@dexagent/normalization-core/number-coercion";
 import { ErrorCodes, type ErrorShape } from "../../../../packages/gateway-protocol/src/index.js";
 
 export type UnauthorizedFloodGuardOptions = {

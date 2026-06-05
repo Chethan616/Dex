@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { type NodeMatchCandidate, resolveNodeIdFromCandidates } from "./node-match.js";
 
 type ResolveNodeFromListOptions<TNode extends NodeMatchCandidate> = {

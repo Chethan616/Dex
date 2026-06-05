@@ -1,5 +1,5 @@
 import path from "node:path";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 
 export function isTypeScriptPackageEntry(entryPath: string): boolean {
   return [".ts", ".mts", ".cts"].includes(path.extname(entryPath).toLowerCase());

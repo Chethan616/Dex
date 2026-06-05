@@ -1,4 +1,4 @@
-import { MAX_TIMER_TIMEOUT_MS } from "@openclaw/normalization-core/number-coercion";
+import { MAX_TIMER_TIMEOUT_MS } from "@dexagent/normalization-core/number-coercion";
 import { describe, expect, it } from "vitest";
 import { resolveCronRunTimeoutOverrideMs } from "./isolated-agent/run-timeout.js";
 

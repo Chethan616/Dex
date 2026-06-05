@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "@github/copilot": "1.0.55",
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@dexagent/plugin-sdk": "workspace:*"
   },
   "openclaw": {
     "extensions": [

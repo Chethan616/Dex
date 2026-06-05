@@ -1,7 +1,7 @@
 import {
   normalizeStringEntries,
   sortUniqueStrings,
-} from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-normalization";
 
 export function normalizeSkillFilter(skillFilter?: ReadonlyArray<unknown>): string[] | undefined {
   if (skillFilter === undefined) {

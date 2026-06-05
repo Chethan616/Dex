@@ -3,12 +3,12 @@ import fs from "node:fs/promises";
 import {
   resolveAcpSessionCwd,
   resolveAcpThreadSessionDetailLines,
-} from "@openclaw/acp-core/runtime/session-identifiers";
-import type { AcpRuntimeSessionMode } from "@openclaw/acp-core/runtime/types";
+} from "@dexagent/acp-core/runtime/session-identifiers";
+import type { AcpRuntimeSessionMode } from "@dexagent/acp-core/runtime/types";
 import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { getAcpSessionManager } from "../acp/control-plane/manager.js";
 import type { AcpTurnAttachment } from "../acp/control-plane/manager.types.js";
 import {

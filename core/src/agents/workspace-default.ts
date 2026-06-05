@@ -1,6 +1,6 @@
 import os from "node:os";
 import path from "node:path";
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import { resolveRequiredHomeDir } from "../infra/home-dir.js";
 
 export function resolveDefaultAgentWorkspaceDir(

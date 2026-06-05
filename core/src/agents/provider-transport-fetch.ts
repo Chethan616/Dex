@@ -2,13 +2,13 @@ import {
   isCloudMetadataIpAddress,
   isLinkLocalIpAddress,
   parseCanonicalIpAddress,
-} from "@openclaw/net-policy/ip";
+} from "@dexagent/net-policy/ip";
 import {
   asFiniteNumberInRange,
   clampTimerTimeoutMs,
   parseStrictFiniteNumber,
   parseStrictNonNegativeInteger,
-} from "@openclaw/normalization-core/number-coercion";
+} from "@dexagent/normalization-core/number-coercion";
 import {
   fetchWithSsrFGuard,
   withTrustedEnvProxyGuardedFetchMode,

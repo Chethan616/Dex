@@ -1,9 +1,9 @@
 import path from "node:path";
-import { isRecord as isObjectRecord } from "@openclaw/normalization-core/record-coerce";
+import { isRecord as isObjectRecord } from "@dexagent/normalization-core/record-coerce";
 import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import type { OpenClawConfig } from "../config/types.js";
 import type { TtsAutoMode, TtsConfig, TtsProvider } from "../config/types.tts.js";
 import { tryReadJsonSync } from "../infra/json-files.js";

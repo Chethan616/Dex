@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { splitShellArgs } from "../utils/shell-argv.js";
 import {
   resolveCommandResolutionFromArgv,

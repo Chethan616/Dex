@@ -1,4 +1,4 @@
-import { normalizeArrayBackedTrimmedStringList } from "@openclaw/normalization-core/string-normalization";
+import { normalizeArrayBackedTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
 
 /** Normalize capability/command lists for node approval-surface comparison. */
 export function normalizeNodeApprovalSurfaceList(value: readonly string[] | undefined): string[] {

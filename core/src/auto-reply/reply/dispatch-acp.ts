@@ -1,14 +1,14 @@
-import { formatAcpRuntimeErrorText } from "@openclaw/acp-core/runtime/error-text";
-import { resolveAcpThreadSessionDetailLines } from "@openclaw/acp-core/runtime/session-identifiers";
+import { formatAcpRuntimeErrorText } from "@dexagent/acp-core/runtime/error-text";
+import { resolveAcpThreadSessionDetailLines } from "@dexagent/acp-core/runtime/session-identifiers";
 import {
   isSessionIdentityPending,
   resolveSessionIdentityFromMeta,
-} from "@openclaw/acp-core/runtime/session-identity";
+} from "@dexagent/acp-core/runtime/session-identity";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import { resolveAcpAgentPolicyError, resolveAcpDispatchPolicyError } from "../../acp/policy.js";
 import { type AcpRuntimeError, toAcpRuntimeError } from "../../acp/runtime/errors.js";
 import { resolveAgentDir, resolveAgentWorkspaceDir } from "../../agents/agent-scope.js";

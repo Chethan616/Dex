@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { statSync } from "node:fs";
 import fs from "node:fs/promises";
 import { isDeepStrictEqual } from "node:util";
-import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { withOwnedSessionTranscriptWrites } from "../../../config/sessions/transcript-write-context.js";
 import { resolveGlobalSingleton } from "../../../shared/global-singleton.js";
 import { isSessionWriteLockAcquireError } from "../../session-write-lock-error.js";

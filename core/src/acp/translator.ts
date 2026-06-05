@@ -29,11 +29,11 @@ import type {
   ToolCallLocation,
   ToolKind,
 } from "@agentclientprotocol/sdk";
-import { readBool, readNonNegativeInteger, readString } from "@openclaw/acp-core/meta";
-import { defaultAcpSessionStore, type AcpSessionStore } from "@openclaw/acp-core/session";
-import { toAcpSessionLineageMeta } from "@openclaw/acp-core/session-lineage-meta";
-import { timestampMsToIsoString } from "@openclaw/normalization-core/number-coercion";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { readBool, readNonNegativeInteger, readString } from "@dexagent/acp-core/meta";
+import { defaultAcpSessionStore, type AcpSessionStore } from "@dexagent/acp-core/session";
+import { toAcpSessionLineageMeta } from "@dexagent/acp-core/session-lineage-meta";
+import { timestampMsToIsoString } from "@dexagent/normalization-core/number-coercion";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { EventFrame } from "../../packages/gateway-protocol/src/index.js";
 import type { GatewayClient } from "../gateway/client.js";
 import type { GatewaySessionRow, SessionsListResult } from "../gateway/session-utils.js";

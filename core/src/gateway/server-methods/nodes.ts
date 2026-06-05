@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { resolveTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
+import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
-import { normalizeUniqueTrimmedStringList } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-coerce";
+import { normalizeUniqueTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
 import {
   type ConnectParams,
   ErrorCodes,

@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { resolveSandboxSessionToolsVisibility } from "../../plugin-sdk/session-visibility.js";
 import { isSubagentSessionKey } from "../../routing/session-key.js";

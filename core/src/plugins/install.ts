@@ -3,7 +3,7 @@ import { constants as fsConstants, type Dirent } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { satisfiesPluginApiRange } from "../infra/clawhub.js";
 import { packageNameMatchesId } from "../infra/install-safe-path.js";
 import {

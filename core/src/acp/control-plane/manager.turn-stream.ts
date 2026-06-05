@@ -3,7 +3,7 @@ import type {
   AcpRuntimeEvent,
   AcpRuntimeTurnInput,
   AcpRuntimeTurnResult,
-} from "@openclaw/acp-core/runtime/types";
+} from "@dexagent/acp-core/runtime/types";
 import { AcpRuntimeError } from "../runtime/errors.js";
 import { normalizeAcpErrorCode } from "./manager.utils.js";
 import { normalizeText } from "./runtime-options.js";

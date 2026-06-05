@@ -6,8 +6,8 @@ import {
   isLoopbackIpAddress,
   isPrivateOrLoopbackIpAddress,
   normalizeIpAddress,
-} from "@openclaw/net-policy/ip";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/net-policy/ip";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import type { GatewayBindMode } from "../config/types.gateway.js";
 import {
   resetContainerEnvironmentCacheForTest,

@@ -1,1 +1,1 @@
-export * from "@openclaw/normalization-core/number-coercion";
+export * from "@dexagent/normalization-core/number-coercion";

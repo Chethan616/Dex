@@ -1,5 +1,5 @@
 import os from "node:os";
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import {
   resolveAgentConfig,
   resolveAgentDir,

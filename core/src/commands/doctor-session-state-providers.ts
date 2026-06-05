@@ -1,5 +1,5 @@
-import { normalizeOptionalString as normalizeString } from "@openclaw/normalization-core/string-coerce";
-import { normalizeStringEntriesLower } from "@openclaw/normalization-core/string-normalization";
+import { normalizeOptionalString as normalizeString } from "@dexagent/normalization-core/string-coerce";
+import { normalizeStringEntriesLower } from "@dexagent/normalization-core/string-normalization";
 import { note } from "../../packages/terminal-core/src/note.js";
 import {
   resolveAgentModelFallbacksOverride,

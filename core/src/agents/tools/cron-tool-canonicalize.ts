@@ -1,4 +1,4 @@
-import { timestampMsToIsoString } from "@openclaw/normalization-core/number-coercion";
+import { timestampMsToIsoString } from "@dexagent/normalization-core/number-coercion";
 import { isRecord } from "../../utils.js";
 
 const CRON_SCHEDULE_KINDS = ["at", "every", "cron"] as const;

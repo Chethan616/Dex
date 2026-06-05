@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { isRecord as isPlainObject } from "@openclaw/normalization-core/record-coerce";
+import { isRecord as isPlainObject } from "@dexagent/normalization-core/record-coerce";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import type { OpenClawConfig } from "../config/types.js";
 import type { TtsAutoMode, TtsConfig, TtsMode } from "../config/types.tts.js";
 import { normalizeAccountId, normalizeAgentId } from "../routing/session-key.js";

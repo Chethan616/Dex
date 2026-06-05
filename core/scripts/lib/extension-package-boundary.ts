@@ -81,148 +81,148 @@ export const EXTENSION_PACKAGE_BOUNDARY_BASE_PATHS = {
   "@openclaw/discord/api.js": ["../dist/plugin-sdk/extensions/discord/api.d.ts"],
   "@openclaw/slack/api.js": ["../dist/plugin-sdk/extensions/slack/api.d.ts"],
   "@openclaw/whatsapp/api.js": ["../dist/plugin-sdk/extensions/whatsapp/api.d.ts"],
-  "@openclaw/llm-core": ["../dist/plugin-sdk/packages/llm-core/src/index.d.ts"],
-  "@openclaw/llm-core/diagnostics": [
+  "@dexagent/llm-core": ["../dist/plugin-sdk/packages/llm-core/src/index.d.ts"],
+  "@dexagent/llm-core/diagnostics": [
     "../dist/plugin-sdk/packages/llm-core/src/utils/diagnostics.d.ts",
   ],
-  "@openclaw/llm-core/event-stream": [
+  "@dexagent/llm-core/event-stream": [
     "../dist/plugin-sdk/packages/llm-core/src/utils/event-stream.d.ts",
   ],
-  "@openclaw/llm-core/types": ["../dist/plugin-sdk/packages/llm-core/src/types.d.ts"],
-  "@openclaw/llm-core/validation": ["../dist/plugin-sdk/packages/llm-core/src/validation.d.ts"],
-  "@openclaw/llm-core/*": ["../dist/plugin-sdk/packages/llm-core/src/*.d.ts"],
-  "@openclaw/model-catalog-core": ["../dist/plugin-sdk/packages/model-catalog-core/src/index.d.ts"],
-  "@openclaw/model-catalog-core/configured-model-refs": [
+  "@dexagent/llm-core/types": ["../dist/plugin-sdk/packages/llm-core/src/types.d.ts"],
+  "@dexagent/llm-core/validation": ["../dist/plugin-sdk/packages/llm-core/src/validation.d.ts"],
+  "@dexagent/llm-core/*": ["../dist/plugin-sdk/packages/llm-core/src/*.d.ts"],
+  "@dexagent/model-catalog-core": ["../dist/plugin-sdk/packages/model-catalog-core/src/index.d.ts"],
+  "@dexagent/model-catalog-core/configured-model-refs": [
     "../dist/plugin-sdk/packages/model-catalog-core/src/configured-model-refs.d.ts",
   ],
-  "@openclaw/model-catalog-core/model-catalog-refs": [
+  "@dexagent/model-catalog-core/model-catalog-refs": [
     "../dist/plugin-sdk/packages/model-catalog-core/src/model-catalog-refs.d.ts",
   ],
-  "@openclaw/model-catalog-core/model-catalog-normalize": [
+  "@dexagent/model-catalog-core/model-catalog-normalize": [
     "../dist/plugin-sdk/packages/model-catalog-core/src/model-catalog-normalize.d.ts",
   ],
-  "@openclaw/model-catalog-core/model-catalog-types": [
+  "@dexagent/model-catalog-core/model-catalog-types": [
     "../dist/plugin-sdk/packages/model-catalog-core/src/model-catalog-types.d.ts",
   ],
-  "@openclaw/model-catalog-core/provider-id": [
+  "@dexagent/model-catalog-core/provider-id": [
     "../dist/plugin-sdk/packages/model-catalog-core/src/provider-id.d.ts",
   ],
-  "@openclaw/model-catalog-core/provider-model-id-normalization": [
+  "@dexagent/model-catalog-core/provider-model-id-normalization": [
     "../dist/plugin-sdk/packages/model-catalog-core/src/provider-model-id-normalization.d.ts",
   ],
-  "@openclaw/model-catalog-core/provider-model-id-normalize": [
+  "@dexagent/model-catalog-core/provider-model-id-normalize": [
     "../dist/plugin-sdk/packages/model-catalog-core/src/provider-model-id-normalize.d.ts",
   ],
-  "@openclaw/model-catalog-core/*": ["../dist/plugin-sdk/packages/model-catalog-core/src/*.d.ts"],
-  "@openclaw/markdown-core": ["../dist/plugin-sdk/packages/markdown-core/src/index.d.ts"],
-  "@openclaw/markdown-core/code-spans": [
+  "@dexagent/model-catalog-core/*": ["../dist/plugin-sdk/packages/model-catalog-core/src/*.d.ts"],
+  "@dexagent/markdown-core": ["../dist/plugin-sdk/packages/markdown-core/src/index.d.ts"],
+  "@dexagent/markdown-core/code-spans": [
     "../dist/plugin-sdk/packages/markdown-core/src/code-spans.d.ts",
   ],
-  "@openclaw/markdown-core/fences": ["../dist/plugin-sdk/packages/markdown-core/src/fences.d.ts"],
-  "@openclaw/markdown-core/frontmatter": [
+  "@dexagent/markdown-core/fences": ["../dist/plugin-sdk/packages/markdown-core/src/fences.d.ts"],
+  "@dexagent/markdown-core/frontmatter": [
     "../dist/plugin-sdk/packages/markdown-core/src/frontmatter.d.ts",
   ],
-  "@openclaw/markdown-core/ir": ["../dist/plugin-sdk/packages/markdown-core/src/ir.d.ts"],
-  "@openclaw/markdown-core/render": ["../dist/plugin-sdk/packages/markdown-core/src/render.d.ts"],
-  "@openclaw/markdown-core/render-aware-chunking": [
+  "@dexagent/markdown-core/ir": ["../dist/plugin-sdk/packages/markdown-core/src/ir.d.ts"],
+  "@dexagent/markdown-core/render": ["../dist/plugin-sdk/packages/markdown-core/src/render.d.ts"],
+  "@dexagent/markdown-core/render-aware-chunking": [
     "../dist/plugin-sdk/packages/markdown-core/src/render-aware-chunking.d.ts",
   ],
-  "@openclaw/markdown-core/tables": ["../dist/plugin-sdk/packages/markdown-core/src/tables.d.ts"],
-  "@openclaw/markdown-core/types": ["../dist/plugin-sdk/packages/markdown-core/src/types.d.ts"],
-  "@openclaw/markdown-core/*": ["../dist/plugin-sdk/packages/markdown-core/src/*.d.ts"],
-  "@openclaw/media-generation-core": [
+  "@dexagent/markdown-core/tables": ["../dist/plugin-sdk/packages/markdown-core/src/tables.d.ts"],
+  "@dexagent/markdown-core/types": ["../dist/plugin-sdk/packages/markdown-core/src/types.d.ts"],
+  "@dexagent/markdown-core/*": ["../dist/plugin-sdk/packages/markdown-core/src/*.d.ts"],
+  "@dexagent/media-generation-core": [
     "../dist/plugin-sdk/packages/media-generation-core/src/index.d.ts",
   ],
-  "@openclaw/media-generation-core/capability-model-ref": [
+  "@dexagent/media-generation-core/capability-model-ref": [
     "../dist/plugin-sdk/packages/media-generation-core/src/capability-model-ref.d.ts",
   ],
-  "@openclaw/media-generation-core/catalog": [
+  "@dexagent/media-generation-core/catalog": [
     "../dist/plugin-sdk/packages/media-generation-core/src/catalog.d.ts",
   ],
-  "@openclaw/media-generation-core/model-ref": [
+  "@dexagent/media-generation-core/model-ref": [
     "../dist/plugin-sdk/packages/media-generation-core/src/model-ref.d.ts",
   ],
-  "@openclaw/media-generation-core/normalization": [
+  "@dexagent/media-generation-core/normalization": [
     "../dist/plugin-sdk/packages/media-generation-core/src/normalization.d.ts",
   ],
-  "@openclaw/media-generation-core/*": [
+  "@dexagent/media-generation-core/*": [
     "../dist/plugin-sdk/packages/media-generation-core/src/*.d.ts",
   ],
-  "@openclaw/media-core": ["../dist/plugin-sdk/packages/media-core/src/index.d.ts"],
-  "@openclaw/media-core/base64": ["../dist/plugin-sdk/packages/media-core/src/base64.d.ts"],
-  "@openclaw/media-core/constants": ["../dist/plugin-sdk/packages/media-core/src/constants.d.ts"],
-  "@openclaw/media-core/content-length": [
+  "@dexagent/media-core": ["../dist/plugin-sdk/packages/media-core/src/index.d.ts"],
+  "@dexagent/media-core/base64": ["../dist/plugin-sdk/packages/media-core/src/base64.d.ts"],
+  "@dexagent/media-core/constants": ["../dist/plugin-sdk/packages/media-core/src/constants.d.ts"],
+  "@dexagent/media-core/content-length": [
     "../dist/plugin-sdk/packages/media-core/src/content-length.d.ts",
   ],
-  "@openclaw/media-core/file-name": ["../dist/plugin-sdk/packages/media-core/src/file-name.d.ts"],
-  "@openclaw/media-core/inbound-path-policy": [
+  "@dexagent/media-core/file-name": ["../dist/plugin-sdk/packages/media-core/src/file-name.d.ts"],
+  "@dexagent/media-core/inbound-path-policy": [
     "../dist/plugin-sdk/packages/media-core/src/inbound-path-policy.d.ts",
   ],
-  "@openclaw/media-core/inline-image-data-url": [
+  "@dexagent/media-core/inline-image-data-url": [
     "../dist/plugin-sdk/packages/media-core/src/inline-image-data-url.d.ts",
   ],
-  "@openclaw/media-core/media-source-url": [
+  "@dexagent/media-core/media-source-url": [
     "../dist/plugin-sdk/packages/media-core/src/media-source-url.d.ts",
   ],
-  "@openclaw/media-core/mime": ["../dist/plugin-sdk/packages/media-core/src/mime.d.ts"],
-  "@openclaw/media-core/read-byte-stream-with-limit": [
+  "@dexagent/media-core/mime": ["../dist/plugin-sdk/packages/media-core/src/mime.d.ts"],
+  "@dexagent/media-core/read-byte-stream-with-limit": [
     "../dist/plugin-sdk/packages/media-core/src/read-byte-stream-with-limit.d.ts",
   ],
-  "@openclaw/media-core/read-response-with-limit": [
+  "@dexagent/media-core/read-response-with-limit": [
     "../dist/plugin-sdk/packages/media-core/src/read-response-with-limit.d.ts",
   ],
-  "@openclaw/media-core/*": ["../dist/plugin-sdk/packages/media-core/src/*.d.ts"],
-  "@openclaw/normalization-core/record-coerce": [
+  "@dexagent/media-core/*": ["../dist/plugin-sdk/packages/media-core/src/*.d.ts"],
+  "@dexagent/normalization-core/record-coerce": [
     "../dist/plugin-sdk/packages/normalization-core/src/record-coerce.d.ts",
   ],
-  "@openclaw/normalization-core/string-coerce": [
+  "@dexagent/normalization-core/string-coerce": [
     "../dist/plugin-sdk/packages/normalization-core/src/string-coerce.d.ts",
   ],
-  "@openclaw/normalization-core/*": ["../dist/plugin-sdk/packages/normalization-core/src/*.d.ts"],
+  "@dexagent/normalization-core/*": ["../dist/plugin-sdk/packages/normalization-core/src/*.d.ts"],
   ...buildPackageBoundaryDtsPaths({
-    packageName: "@openclaw/acp-core",
+    packageName: "@dexagent/acp-core",
     packageDir: "acp-core",
   }),
-  "@openclaw/acp-core/*": ["../dist/plugin-sdk/packages/acp-core/src/*.d.ts"],
-  "@openclaw/terminal-core": ["../dist/plugin-sdk/packages/terminal-core/src/index.d.ts"],
-  "@openclaw/terminal-core/ansi": ["../dist/plugin-sdk/packages/terminal-core/src/ansi.d.ts"],
-  "@openclaw/terminal-core/decorative-emoji": [
+  "@dexagent/acp-core/*": ["../dist/plugin-sdk/packages/acp-core/src/*.d.ts"],
+  "@dexagent/terminal-core": ["../dist/plugin-sdk/packages/terminal-core/src/index.d.ts"],
+  "@dexagent/terminal-core/ansi": ["../dist/plugin-sdk/packages/terminal-core/src/ansi.d.ts"],
+  "@dexagent/terminal-core/decorative-emoji": [
     "../dist/plugin-sdk/packages/terminal-core/src/decorative-emoji.d.ts",
   ],
-  "@openclaw/terminal-core/health-style": [
+  "@dexagent/terminal-core/health-style": [
     "../dist/plugin-sdk/packages/terminal-core/src/health-style.d.ts",
   ],
-  "@openclaw/terminal-core/links": ["../dist/plugin-sdk/packages/terminal-core/src/links.d.ts"],
-  "@openclaw/terminal-core/note": ["../dist/plugin-sdk/packages/terminal-core/src/note.d.ts"],
-  "@openclaw/terminal-core/osc-progress": [
+  "@dexagent/terminal-core/links": ["../dist/plugin-sdk/packages/terminal-core/src/links.d.ts"],
+  "@dexagent/terminal-core/note": ["../dist/plugin-sdk/packages/terminal-core/src/note.d.ts"],
+  "@dexagent/terminal-core/osc-progress": [
     "../dist/plugin-sdk/packages/terminal-core/src/osc-progress.d.ts",
   ],
-  "@openclaw/terminal-core/palette": ["../dist/plugin-sdk/packages/terminal-core/src/palette.d.ts"],
-  "@openclaw/terminal-core/progress-line": [
+  "@dexagent/terminal-core/palette": ["../dist/plugin-sdk/packages/terminal-core/src/palette.d.ts"],
+  "@dexagent/terminal-core/progress-line": [
     "../dist/plugin-sdk/packages/terminal-core/src/progress-line.d.ts",
   ],
-  "@openclaw/terminal-core/prompt-select-styled": [
+  "@dexagent/terminal-core/prompt-select-styled": [
     "../dist/plugin-sdk/packages/terminal-core/src/prompt-select-styled.d.ts",
   ],
-  "@openclaw/terminal-core/prompt-select-styled-params": [
+  "@dexagent/terminal-core/prompt-select-styled-params": [
     "../dist/plugin-sdk/packages/terminal-core/src/prompt-select-styled-params.d.ts",
   ],
-  "@openclaw/terminal-core/prompt-style": [
+  "@dexagent/terminal-core/prompt-style": [
     "../dist/plugin-sdk/packages/terminal-core/src/prompt-style.d.ts",
   ],
-  "@openclaw/terminal-core/restore": ["../dist/plugin-sdk/packages/terminal-core/src/restore.d.ts"],
-  "@openclaw/terminal-core/safe-text": [
+  "@dexagent/terminal-core/restore": ["../dist/plugin-sdk/packages/terminal-core/src/restore.d.ts"],
+  "@dexagent/terminal-core/safe-text": [
     "../dist/plugin-sdk/packages/terminal-core/src/safe-text.d.ts",
   ],
-  "@openclaw/terminal-core/stream-writer": [
+  "@dexagent/terminal-core/stream-writer": [
     "../dist/plugin-sdk/packages/terminal-core/src/stream-writer.d.ts",
   ],
-  "@openclaw/terminal-core/table": ["../dist/plugin-sdk/packages/terminal-core/src/table.d.ts"],
-  "@openclaw/terminal-core/terminal-link": [
+  "@dexagent/terminal-core/table": ["../dist/plugin-sdk/packages/terminal-core/src/table.d.ts"],
+  "@dexagent/terminal-core/terminal-link": [
     "../dist/plugin-sdk/packages/terminal-core/src/terminal-link.d.ts",
   ],
-  "@openclaw/terminal-core/theme": ["../dist/plugin-sdk/packages/terminal-core/src/theme.d.ts"],
-  "@openclaw/terminal-core/*": ["../dist/plugin-sdk/packages/terminal-core/src/*.d.ts"],
+  "@dexagent/terminal-core/theme": ["../dist/plugin-sdk/packages/terminal-core/src/theme.d.ts"],
+  "@dexagent/terminal-core/*": ["../dist/plugin-sdk/packages/terminal-core/src/*.d.ts"],
   "@openclaw/*.js": ["../packages/plugin-sdk/dist/extensions/*.d.ts", "../extensions/*"],
   "@openclaw/*": ["../packages/plugin-sdk/dist/extensions/*", "../extensions/*"],
   "openclaw/plugin-sdk/qa-channel": ["../dist/plugin-sdk/src/plugin-sdk/qa-channel.d.ts"],
@@ -230,7 +230,7 @@ export const EXTENSION_PACKAGE_BOUNDARY_BASE_PATHS = {
     "../dist/plugin-sdk/src/plugin-sdk/qa-channel-protocol.d.ts",
   ],
   "openclaw/plugin-sdk/qa-runtime": ["../dist/plugin-sdk/src/plugin-sdk/qa-runtime.d.ts"],
-  "@openclaw/plugin-sdk/*": ["../dist/plugin-sdk/*.d.ts"],
+  "@dexagent/plugin-sdk/*": ["../dist/plugin-sdk/*.d.ts"],
 } as const;
 
 function prefixExtensionPackageBoundaryPaths(
@@ -275,11 +275,11 @@ export const EXTENSION_PACKAGE_BOUNDARY_XAI_PATHS = {
   "@openclaw/qa-channel/api.js": ["../../dist/plugin-sdk/extensions/qa-channel/api.d.ts"],
   "@openclaw/*.js": ["../../packages/plugin-sdk/dist/extensions/*.d.ts", "../*"],
   "@openclaw/*": ["../*"],
-  "@openclaw/plugin-sdk/*": ["../../dist/plugin-sdk/*.d.ts"],
+  "@dexagent/plugin-sdk/*": ["../../dist/plugin-sdk/*.d.ts"],
   "@openclaw/anthropic-vertex/api.js": ["./.boundary-stubs/anthropic-vertex-api.d.ts"],
   "@openclaw/ollama/api.js": ["./.boundary-stubs/ollama-api.d.ts"],
   "@openclaw/ollama/runtime-api.js": ["./.boundary-stubs/ollama-runtime-api.d.ts"],
-  "@openclaw/speech-core/runtime-api.js": ["./.boundary-stubs/speech-core-runtime-api.d.ts"],
+  "@dexagent/speech-core/runtime-api.js": ["./.boundary-stubs/speech-core-runtime-api.d.ts"],
 } as const;
 
 type ExtensionPackageBoundaryTsConfigJson = {

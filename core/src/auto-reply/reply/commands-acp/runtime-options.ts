@@ -1,6 +1,6 @@
-import { resolveAcpSessionIdentifierLinesFromIdentity } from "@openclaw/acp-core/runtime/session-identifiers";
-import { timestampMsToIsoString } from "@openclaw/normalization-core/number-coercion";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { resolveAcpSessionIdentifierLinesFromIdentity } from "@dexagent/acp-core/runtime/session-identifiers";
+import { timestampMsToIsoString } from "@dexagent/normalization-core/number-coercion";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { getAcpSessionManager } from "../../../acp/control-plane/manager.js";
 import {
   parseRuntimeTimeoutSecondsInput,

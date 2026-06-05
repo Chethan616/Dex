@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { normalizeOptionalString as normalizeTrimmedString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString as normalizeTrimmedString } from "@dexagent/normalization-core/string-coerce";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import type {

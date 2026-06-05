@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { AgentMessage } from "../runtime/index.js";
 import { extractToolCallsFromAssistant, extractToolResultId } from "../tool-call-id.js";
 

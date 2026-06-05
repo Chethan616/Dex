@@ -5,7 +5,7 @@
   "description": "OpenClaw Tencent Cloud provider plugin (TokenHub + Token Plan)",
   "type": "module",
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@dexagent/plugin-sdk": "workspace:*"
   },
   "openclaw": {
     "extensions": [

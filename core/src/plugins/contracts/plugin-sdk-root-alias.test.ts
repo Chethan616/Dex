@@ -479,11 +479,11 @@ describe("plugin-sdk root alias", () => {
     expect((lazyModule.moduleExports.slowHelper as () => string)()).toBe("loaded");
     const aliasMap = (lazyModule.createJitiOptions.at(-1)?.alias ?? {}) as Record<string, string>;
     expect(aliasMap["openclaw/plugin-sdk"]).toBe(rootAliasPath);
-    expect(aliasMap["@openclaw/plugin-sdk"]).toBe(rootAliasPath);
+    expect(aliasMap["@dexagent/plugin-sdk"]).toBe(rootAliasPath);
     expect(aliasMap["openclaw/plugin-sdk/group-access"]).toContain(
       path.join("src", "plugin-sdk", "group-access.ts"),
     );
-    expect(aliasMap["@openclaw/plugin-sdk/group-access"]).toContain(
+    expect(aliasMap["@dexagent/plugin-sdk/group-access"]).toContain(
       path.join("src", "plugin-sdk", "group-access.ts"),
     );
   });
@@ -500,7 +500,7 @@ describe("plugin-sdk root alias", () => {
 
     expect((lazyModule.moduleExports.slowHelper as () => string)()).toBe("loaded");
     const aliasMap = (lazyModule.createJitiOptions.at(-1)?.alias ?? {}) as Record<string, string>;
-    expect(aliasMap["@openclaw/llm-core"]).toBe(sourceLlmCorePath);
+    expect(aliasMap["@dexagent/llm-core"]).toBe(sourceLlmCorePath);
   });
 
   it("keeps bootstrap plugin-sdk aliases deterministic and ignores unsafe subpaths", () => {
@@ -522,18 +522,18 @@ describe("plugin-sdk root alias", () => {
     );
     expect(aliasKeys).toEqual([
       "openclaw/plugin-sdk/alpha",
-      "@openclaw/plugin-sdk/alpha",
+      "@dexagent/plugin-sdk/alpha",
       "openclaw/plugin-sdk/group-access",
-      "@openclaw/plugin-sdk/group-access",
+      "@dexagent/plugin-sdk/group-access",
       "openclaw/plugin-sdk/zeta",
-      "@openclaw/plugin-sdk/zeta",
-      "@openclaw/llm-core",
-      "@openclaw/llm-core/diagnostics",
-      "@openclaw/llm-core/event-stream",
-      "@openclaw/llm-core/types",
-      "@openclaw/llm-core/validation",
+      "@dexagent/plugin-sdk/zeta",
+      "@dexagent/llm-core",
+      "@dexagent/llm-core/diagnostics",
+      "@dexagent/llm-core/event-stream",
+      "@dexagent/llm-core/types",
+      "@dexagent/llm-core/validation",
       "openclaw/plugin-sdk",
-      "@openclaw/plugin-sdk",
+      "@dexagent/plugin-sdk",
     ]);
   });
 
@@ -558,11 +558,11 @@ describe("plugin-sdk root alias", () => {
     expect((lazyModule.moduleExports.slowHelper as () => string)()).toBe("loaded");
     const aliasMap = (lazyModule.createJitiOptions.at(-1)?.alias ?? {}) as Record<string, string>;
     expect(aliasMap["openclaw/plugin-sdk/qa-lab"]).toBe(qaLabPath);
-    expect(aliasMap["@openclaw/plugin-sdk/qa-lab"]).toBe(qaLabPath);
+    expect(aliasMap["@dexagent/plugin-sdk/qa-lab"]).toBe(qaLabPath);
     expect(aliasMap).not.toHaveProperty("openclaw/plugin-sdk/../escape");
     expect(aliasMap).not.toHaveProperty("openclaw/plugin-sdk/nested/path");
     expect(aliasMap).not.toHaveProperty("openclaw/plugin-sdk/ssrf-runtime-internal");
-    expect(aliasMap).not.toHaveProperty("@openclaw/plugin-sdk/ssrf-runtime-internal");
+    expect(aliasMap).not.toHaveProperty("@dexagent/plugin-sdk/ssrf-runtime-internal");
   });
 
   it("keeps non-QA private local-only plugin-sdk subpaths out of the CJS root alias", () => {
@@ -585,7 +585,7 @@ describe("plugin-sdk root alias", () => {
     expect((lazyModule.moduleExports.slowHelper as () => string)()).toBe("loaded");
     const aliasMap = (lazyModule.createJitiOptions.at(-1)?.alias ?? {}) as Record<string, string>;
     expect(aliasMap).not.toHaveProperty("openclaw/plugin-sdk/codex-mcp-projection");
-    expect(aliasMap).not.toHaveProperty("@openclaw/plugin-sdk/codex-mcp-projection");
+    expect(aliasMap).not.toHaveProperty("@dexagent/plugin-sdk/codex-mcp-projection");
     expect(aliasMap).not.toHaveProperty("openclaw/plugin-sdk/qa-runtime");
   });
 
@@ -606,7 +606,7 @@ describe("plugin-sdk root alias", () => {
     expect(aliasMap["openclaw/plugin-sdk/channel-runtime"]).toBe(
       path.join(packageRoot, "src", "plugin-sdk", "channel-runtime.mts"),
     );
-    expect(aliasMap["@openclaw/plugin-sdk/channel-runtime"]).toBe(
+    expect(aliasMap["@dexagent/plugin-sdk/channel-runtime"]).toBe(
       path.join(packageRoot, "src", "plugin-sdk", "channel-runtime.mts"),
     );
   });

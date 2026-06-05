@@ -240,8 +240,8 @@ export type PluginRuntimeCore = {
   };
   media: {
     loadWebMedia: typeof import("../../media/web-media.js").loadWebMedia;
-    detectMime: typeof import("@openclaw/media-core/mime").detectMime;
-    mediaKindFromMime: typeof import("@openclaw/media-core/constants").mediaKindFromMime;
+    detectMime: typeof import("@dexagent/media-core/mime").detectMime;
+    mediaKindFromMime: typeof import("@dexagent/media-core/constants").mediaKindFromMime;
     isVoiceCompatibleAudio: typeof import("../../media/audio.js").isVoiceCompatibleAudio;
     getImageMetadata: typeof import("../../media/media-services.js").getImageMetadata;
     resizeToJpeg: typeof import("../../media/media-services.js").resizeToJpeg;

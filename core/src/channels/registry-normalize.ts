@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalLowercaseString } from "@dexagent/normalization-core/string-coerce";
 import type { ChannelId } from "./plugins/channel-id.types.js";
 import { findRegisteredChannelPluginEntry } from "./registry-lookup.js";
 

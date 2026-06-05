@@ -1,6 +1,6 @@
-import { readResponseWithLimit } from "@openclaw/media-core/read-response-with-limit";
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { readResponseWithLimit } from "@dexagent/media-core/read-response-with-limit";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import {
   assertOkOrThrowHttpError,
   createProviderOperationDeadline,

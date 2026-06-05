@@ -1,8 +1,8 @@
 import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
-import { normalizeOptionalTrimmedStringList } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-coerce";
+import { normalizeOptionalTrimmedStringList } from "@dexagent/normalization-core/string-normalization";
 import type { ReplyPayload } from "../../auto-reply/types.js";
 import { getChannelPlugin } from "../../channels/plugins/index.js";
 import type {

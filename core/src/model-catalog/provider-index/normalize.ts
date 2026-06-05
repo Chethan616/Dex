@@ -1,6 +1,6 @@
-import { normalizeModelCatalog } from "@openclaw/model-catalog-core/model-catalog-normalize";
-import { normalizeModelCatalogProviderId } from "@openclaw/model-catalog-core/model-catalog-refs";
-import type { ModelCatalogProvider } from "@openclaw/model-catalog-core/model-catalog-types";
+import { normalizeModelCatalog } from "@dexagent/model-catalog-core/model-catalog-normalize";
+import { normalizeModelCatalogProviderId } from "@dexagent/model-catalog-core/model-catalog-refs";
+import type { ModelCatalogProvider } from "@dexagent/model-catalog-core/model-catalog-types";
 import { parseClawHubPluginSpec } from "../../infra/clawhub-spec.js";
 import { parseRegistryNpmSpec } from "../../infra/npm-registry-spec.js";
 import { isBlockedObjectKey } from "../../infra/prototype-keys.js";

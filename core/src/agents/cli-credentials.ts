@@ -6,7 +6,7 @@ import {
   asDateTimestampMs,
   resolveExpiresAtMsFromDurationMs,
   timestampMsToIsoString,
-} from "@openclaw/normalization-core/number-coercion";
+} from "@dexagent/normalization-core/number-coercion";
 import { formatErrorMessage } from "../infra/errors.js";
 import { loadJsonFile, saveJsonFile } from "../infra/json-file.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";

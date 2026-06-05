@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { isRecord } from "../../../utils.js";
 import type { ChannelAccountSnapshot, ChannelStatusIssue } from "../types.public.js";
 export { isRecord };

@@ -1,10 +1,10 @@
-import { normalizeInboundPathRoots } from "@openclaw/media-core/inbound-path-policy";
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
+import { normalizeInboundPathRoots } from "@dexagent/media-core/inbound-path-policy";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+} from "@dexagent/normalization-core/string-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import {
   findCapabilityProviderById,
   resolveCapabilityModelRefForProviders,

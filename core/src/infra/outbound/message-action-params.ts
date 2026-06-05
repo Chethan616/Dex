@@ -1,6 +1,6 @@
-import { basenameFromAnyPath } from "@openclaw/media-core/file-name";
-import { extensionForMime } from "@openclaw/media-core/mime";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { basenameFromAnyPath } from "@dexagent/media-core/file-name";
+import { extensionForMime } from "@dexagent/media-core/mime";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { assertMediaNotDataUrl, resolveSandboxedMediaSource } from "../../agents/sandbox-paths.js";
 import { readStringArrayParam, readStringParam } from "../../agents/tools/common.js";
 import { resolveChannelMessageToolMediaSourceParamKeys } from "../../channels/plugins/message-action-discovery.js";

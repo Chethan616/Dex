@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import os from "node:os";
-import { MAX_IMAGE_BYTES } from "@openclaw/media-core/constants";
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { MAX_IMAGE_BYTES } from "@dexagent/media-core/constants";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { isAcpRuntimeSpawnAvailable } from "../../../acp/runtime/availability.js";
 import { buildHierarchyReinforcementMessage } from "../../../auto-reply/handoff-summarizer.js";
 import { filterHeartbeatTranscriptArtifacts } from "../../../auto-reply/heartbeat-filter.js";

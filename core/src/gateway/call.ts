@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { isLoopbackIpAddress } from "@openclaw/net-policy/ip";
-import { redactSensitiveUrlLikeString } from "@openclaw/net-policy/redact-sensitive-url";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { isLoopbackIpAddress } from "@dexagent/net-policy/ip";
+import { redactSensitiveUrlLikeString } from "@dexagent/net-policy/redact-sensitive-url";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import {
   GATEWAY_CLIENT_MODES,
   GATEWAY_CLIENT_NAMES,

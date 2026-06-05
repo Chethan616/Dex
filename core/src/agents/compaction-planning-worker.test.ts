@@ -1,4 +1,4 @@
-import { MAX_TIMER_TIMEOUT_MS } from "@openclaw/normalization-core/number-coercion";
+import { MAX_TIMER_TIMEOUT_MS } from "@dexagent/normalization-core/number-coercion";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { compactionPlanningWorkerTesting } from "./compaction-planning-worker.js";
 import { runCompactionPlanningWorkerInput } from "./compaction-planning.worker.js";

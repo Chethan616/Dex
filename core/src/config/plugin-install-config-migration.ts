@@ -1,4 +1,4 @@
-import { isRecord } from "@openclaw/normalization-core/record-coerce";
+import { isRecord } from "@dexagent/normalization-core/record-coerce";
 import { z } from "zod";
 import type { PluginInstallRecord } from "./types.plugins.js";
 import { PluginInstallRecordShape } from "./zod-schema.installs.js";

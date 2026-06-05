@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import JSZip from "jszip";
 import {
   ARCHIVE_LIMIT_ERROR_CODE,

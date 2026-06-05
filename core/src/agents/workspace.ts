@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import syncFs from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { readStringValue } from "@openclaw/normalization-core/string-coerce";
+import { readStringValue } from "@dexagent/normalization-core/string-coerce";
 import { resolveLegacyStateDirs, resolveStateDir } from "../config/paths.js";
 import { openRootFile } from "../infra/boundary-file-read.js";
 import { pathExists } from "../infra/fs-safe.js";

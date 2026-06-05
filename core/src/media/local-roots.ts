@@ -1,7 +1,7 @@
 import path from "node:path";
-import { isPassThroughRemoteMediaSource } from "@openclaw/media-core/media-source-url";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
-import { uniqueStrings } from "@openclaw/normalization-core/string-normalization";
+import { isPassThroughRemoteMediaSource } from "@dexagent/media-core/media-source-url";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
+import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
 import {
   resolveEffectiveToolFsRootExpansionAllowed,

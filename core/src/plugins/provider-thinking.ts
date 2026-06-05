@@ -1,4 +1,4 @@
-import { normalizeProviderId } from "@openclaw/model-catalog-core/provider-id";
+import { normalizeProviderId } from "@dexagent/model-catalog-core/provider-id";
 import { resolveBundledProviderPolicySurface } from "./provider-public-artifacts.js";
 import type {
   ProviderDefaultThinkingPolicyContext,

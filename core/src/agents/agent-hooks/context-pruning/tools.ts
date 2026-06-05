@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { compileGlobPatterns, matchesAnyGlobPattern } from "../../glob-pattern.js";
 import type { ContextPruningToolMatch } from "./settings.js";
 

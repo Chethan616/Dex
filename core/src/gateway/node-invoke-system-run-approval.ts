@@ -1,5 +1,5 @@
-import { asNullableRecord } from "@openclaw/normalization-core/record-coerce";
-import { normalizeNullableString } from "@openclaw/normalization-core/string-coerce";
+import { asNullableRecord } from "@dexagent/normalization-core/record-coerce";
+import { normalizeNullableString } from "@dexagent/normalization-core/string-coerce";
 import {
   GATEWAY_CLIENT_MODES,
   GATEWAY_CLIENT_NAMES,

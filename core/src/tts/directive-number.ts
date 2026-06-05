@@ -1,4 +1,4 @@
-import { parseStrictFiniteNumber } from "@openclaw/normalization-core/number-coercion";
+import { parseStrictFiniteNumber } from "@dexagent/normalization-core/number-coercion";
 import type {
   SpeechDirectiveTokenParseContext,
   SpeechDirectiveTokenParseResult,

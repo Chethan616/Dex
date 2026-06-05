@@ -5,7 +5,7 @@
  * This handler is called before built-in command handlers.
  */
 
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { matchPluginCommand, executePluginCommand } from "../../plugins/commands.js";
 import type { CommandHandler, CommandHandlerResult } from "./commands-types.js";
 

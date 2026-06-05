@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { resolveStateDir } from "../../config/paths.js";
 import { type FileLockOptions, withFileLock } from "../../infra/file-lock.js";
 import { pathExists, root } from "../../infra/fs-safe.js";

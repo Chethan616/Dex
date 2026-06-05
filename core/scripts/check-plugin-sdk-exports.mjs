@@ -42,7 +42,7 @@ const exportedNames = exportMatch[1]
 const exportSet = new Set(exportedNames);
 
 const requiredRuntimeShimEntries = ["compat.js", "root-alias.cjs"];
-const forbiddenPublicDeclarationSpecifiers = ["@openclaw/llm-core"];
+const forbiddenPublicDeclarationSpecifiers = ["@dexagent/llm-core"];
 const requiredSubpathExports = {
   "secret-input-runtime": [
     "coerceSecretRef",

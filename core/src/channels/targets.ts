@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
+import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 
 export type { DirectoryConfigParams } from "./plugins/directory-types.js";
 export type { ChannelDirectoryEntry } from "./plugins/types.public.js";

@@ -1,4 +1,4 @@
-import type { AcpRuntime, AcpRuntimeHandle } from "@openclaw/acp-core/runtime/types";
+import type { AcpRuntime, AcpRuntimeHandle } from "@dexagent/acp-core/runtime/types";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import {
   type AcpRuntimeError,

@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import { coerceFiniteScheduleNumber } from "./schedule-number.js";
 import { normalizeCronStaggerMs } from "./stagger.js";
 

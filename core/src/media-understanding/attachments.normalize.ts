@@ -1,5 +1,5 @@
-import { getFileExtension, isAudioFileName, kindFromMime } from "@openclaw/media-core/mime";
-import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
+import { getFileExtension, isAudioFileName, kindFromMime } from "@dexagent/media-core/mime";
+import { normalizeOptionalString } from "@dexagent/normalization-core/string-coerce";
 import type { MsgContext } from "../auto-reply/templating.js";
 import { assertNoWindowsNetworkPath, safeFileURLToPath } from "../infra/local-file-access.js";
 import type { MediaAttachment } from "./types.js";

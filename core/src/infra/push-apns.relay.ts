@@ -1,9 +1,9 @@
 import { URL } from "node:url";
-import { resolveTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
+import { resolveTimerTimeoutMs } from "@dexagent/normalization-core/number-coercion";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "@openclaw/normalization-core/string-coerce";
+} from "@dexagent/normalization-core/string-coerce";
 import type { GatewayConfig } from "../config/types.gateway.js";
 import {
   loadOrCreateDeviceIdentity,

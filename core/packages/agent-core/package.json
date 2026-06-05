@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/agent-core",
+  "name": "@dexagent/agent-core",
   "version": "0.0.0-private",
   "private": true,
   "files": [
@@ -115,7 +115,7 @@
     }
   },
   "dependencies": {
-    "@openclaw/llm-core": "workspace:*",
+    "@dexagent/llm-core": "workspace:*",
     "ignore": "7.0.5",
     "typebox": "1.1.39",
     "yaml": "2.9.0"
