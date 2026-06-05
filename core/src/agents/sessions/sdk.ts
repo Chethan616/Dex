@@ -141,9 +141,15 @@ function getAttributionHeaders(
   }
 
   if (model.provider === "openrouter" || model.baseUrl.includes("openrouter.ai")) {
+    // Phase B.8: removed hardcoded upstream openclaw.ai referer + OpenClaw
+    // attribution so a fresh Dex install never discloses openclaw.ai to
+    // provider analytics. Users can opt back into a Dex-owned URL via
+    // DEX_PROVIDER_ATTRIBUTION_REFERER and DEX_PROVIDER_ATTRIBUTION_TITLE.
     return {
-      "HTTP-Referer": "https://openclaw.ai",
-      "X-OpenRouter-Title": "OpenClaw",
+      ...(process.env.DEX_PROVIDER_ATTRIBUTION_REFERER
+        ? { "HTTP-Referer": process.env.DEX_PROVIDER_ATTRIBUTION_REFERER }
+        : {}),
+      "X-OpenRouter-Title": process.env.DEX_PROVIDER_ATTRIBUTION_TITLE ?? "Dex",
       "X-OpenRouter-Categories": "cli-agent",
     };
   }

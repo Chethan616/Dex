@@ -471,7 +471,13 @@ function buildOpenRouterAttributionPolicy(
     reviewNote: "Documented app attribution headers. Verified in OpenClaw runtime wrapper.",
     ...identity,
     headers: {
-      "HTTP-Referer": "https://openclaw.ai",
+      // Phase B.8: removed the upstream `https://openclaw.ai` referer so a
+      // fresh Dex install makes zero outbound openclaw.ai disclosures via
+      // attribution headers. Re-add a Dex-owned URL once one exists, or let
+      // the user opt back in via env (DEX_PROVIDER_ATTRIBUTION_REFERER).
+      ...(process.env.DEX_PROVIDER_ATTRIBUTION_REFERER
+        ? { "HTTP-Referer": process.env.DEX_PROVIDER_ATTRIBUTION_REFERER }
+        : {}),
       "X-OpenRouter-Title": identity.product,
       "X-OpenRouter-Categories": OPENROUTER_ATTRIBUTION_CATEGORIES,
     },

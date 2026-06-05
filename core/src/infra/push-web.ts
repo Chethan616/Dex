@@ -36,7 +36,12 @@ const WEB_PUSH_STATE_FILENAME = "push/web-push-subscriptions.json";
 const VAPID_KEYS_FILENAME = "push/vapid-keys.json";
 const MAX_ENDPOINT_LENGTH = 2048;
 const MAX_KEY_LENGTH = 512;
-const DEFAULT_VAPID_SUBJECT = "https://openclaw.ai";
+// Phase B.8: VAPID subject identifies the app owner to web-push services
+// (Google FCM, Apple). The upstream default "https://openclaw.ai" leaked
+// the OpenClaw brand to every web-push subscriber. Users must set
+// DEX_VAPID_SUBJECT (URL or mailto: addr) to enable web push; otherwise
+// the placeholder below tells web-push to treat the source as anonymous.
+const DEFAULT_VAPID_SUBJECT = "mailto:webpush@dex.local";
 
 const withLock = createAsyncLock();
 

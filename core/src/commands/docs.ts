@@ -3,7 +3,13 @@ import { isRich, theme } from "../../packages/terminal-core/src/theme.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import type { RuntimeEnv } from "../runtime.js";
 
-const SEARCH_API = "https://docs.openclaw.ai/api/search";
+// Phase B.8: the upstream `docs.openclaw.ai/api/search` is deliberately NOT
+// used by default so a fresh Dex install makes zero outbound calls to
+// openclaw.ai. Users who still want the OpenClaw docs search can set
+// `DEX_DOCS_SEARCH_URL=https://docs.openclaw.ai/api/search` (or any other
+// docs API). When unset, `dex docs search` returns a friendly message
+// instead of fetching.
+const SEARCH_API = process.env.DEX_DOCS_SEARCH_URL ?? "";
 const SEARCH_TIMEOUT_MS = 30_000;
 
 type DocResult = {
@@ -62,6 +68,11 @@ async function renderMarkdown(markdown: string, runtime: RuntimeEnv) {
 }
 
 async function fetchDocsSearch(query: string): Promise<DocResult[]> {
+  if (!SEARCH_API) {
+    // Phase B.8: opt-in only. Without DEX_DOCS_SEARCH_URL set, return no
+    // results rather than reaching out to a default upstream.
+    return [];
+  }
   const url = new URL(SEARCH_API);
   url.searchParams.set("q", query);
   const controller = new AbortController();
