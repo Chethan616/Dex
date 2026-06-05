@@ -19,7 +19,7 @@
     `optional` flag tolerates.
 
 .PARAMETER Target
-    Root directory to rebrand. Default: D:\project1\core
+    Root directory to rebrand. Default: D:\project1\dex\core
 
 .PARAMETER MapPath
     Path to rebrand-map.json. Default: D:\project1\scripts\rebrand-map.json
@@ -34,7 +34,7 @@
 
 [CmdletBinding()]
 param(
-    [string]$Target = (Join-Path (Split-Path -Parent $PSScriptRoot) 'core'),
+    [string]$Target = (Join-Path (Split-Path -Parent $PSScriptRoot) 'dex\core'),
     [string]$MapPath = (Join-Path $PSScriptRoot 'rebrand-map.json'),
     [switch]$DryRun,
     # Phase B addition: process only entries whose enclosing `_section` label

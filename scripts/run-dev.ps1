@@ -51,27 +51,28 @@ $cleanup = {
     }
 }
 try {
-    # 1. OpenClaw gateway -- Phase 1 must be complete
-    $openclawDir = Join-Path $repoRoot 'vendor\openclaw'
-    if (-not (Test-Path $openclawDir)) {
-        Write-Host "[skip] OpenClaw gateway: vendor\openclaw not found (Phase 1 incomplete)" -ForegroundColor DarkGray
+    # 1. Dex gateway -- Phase 1 must be complete. After Phase B.9 the forked
+    # OpenClaw brain lives at dex/core/. The user-facing binary is `dex`
+    # (bin alias in dex/core/package.json) launching `dex gateway --port ...`.
+    $dexCoreDir = Join-Path $repoRoot 'dex\core'
+    if (-not (Test-Path $dexCoreDir)) {
+        Write-Host "[skip] Dex gateway: dex\core not found (Phase 1 incomplete)" -ForegroundColor DarkGray
     } else {
-        # TODO(Phase 1): replace with the real start command from OpenClaw's docs.
-        # Spec hint: 'openclaw gateway --port 18789 --verbose' -- confirm.
-        $jobs += Start-DevProcess -Name 'openclaw-gateway' -WorkDir $openclawDir -Cmd 'openclaw' -ArgsList @('gateway','--port','18789','--verbose')
+        $jobs += Start-DevProcess -Name 'dex-gateway' -WorkDir $dexCoreDir -Cmd 'dex' -ArgsList @('gateway','--port','18789','--verbose')
     }
 
-    # 2. MCP glue server -- Phase 3 must be complete
+    # 2. MCP driver server -- Phase 3 must be complete. After Phase B.9 the
+    # MCP glue lives under dex/drivers/.
     if (-not $NoMcp) {
-        $glueDir = Join-Path $repoRoot 'glue\windows-desktop-control'
-        $serverPy = Join-Path $glueDir 'server.py'
+        $driverDir = Join-Path $repoRoot 'dex\drivers\windows-desktop-control'
+        $serverPy = Join-Path $driverDir 'server.py'
         if (-not (Test-Path $serverPy)) {
-            Write-Host "[skip] MCP server: glue\windows-desktop-control\server.py not found (Phase 3 incomplete)" -ForegroundColor DarkGray
+            Write-Host "[skip] MCP server: dex\drivers\windows-desktop-control\server.py not found (Phase 3 incomplete)" -ForegroundColor DarkGray
         } else {
-            # TODO(Phase 3): MCP servers usually launch over stdio from the host.
-            # If OpenClaw is configured to spawn this server itself, we don't start it here --
-            # this branch is only for standalone testing.
-            Write-Host "[note] MCP server is launched by OpenClaw via mcporter; not starting standalone." -ForegroundColor DarkGray
+            # MCP servers usually launch over stdio from the gateway host.
+            # If the gateway is configured to spawn this server itself, we do
+            # not start it here -- this branch is only for standalone testing.
+            Write-Host "[note] MCP server is launched by the gateway via mcporter; not starting standalone." -ForegroundColor DarkGray
         }
     }
 

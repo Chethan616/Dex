@@ -41,14 +41,20 @@ param(
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-# ---- Locate openclaw CLI ----
-$openclaw = Get-Command openclaw -ErrorAction SilentlyContinue
-if (-not $openclaw) {
-    Write-Host "openclaw CLI not on PATH. Install: npm install -g openclaw@latest" -ForegroundColor Red
+# ---- Locate Dex CLI (Phase B.9+: binary is `dex` from the dexagent package) ----
+$dexCli = Get-Command dex -ErrorAction SilentlyContinue
+if (-not $dexCli) {
+    # Fall back to the legacy `openclaw` binary so an in-progress upgrade
+    # (pre-publish, pre-link) still has a usable CLI on PATH.
+    $dexCli = Get-Command openclaw -ErrorAction SilentlyContinue
+}
+if (-not $dexCli) {
+    Write-Host "Dex CLI not on PATH. Run from dex/core/: pnpm install" -ForegroundColor Red
+    Write-Host "Once dexagent is on npm: npm install -g dexagent" -ForegroundColor DarkGray
     exit 1
 }
-$openclawCmd = "$env:APPDATA\npm\openclaw.cmd"
-if (-not (Test-Path $openclawCmd)) { $openclawCmd = $openclaw.Source }
+$dexCmd = "$env:APPDATA\npm\$($dexCli.Name).cmd"
+if (-not (Test-Path $dexCmd)) { $dexCmd = $dexCli.Source }
 
 $userSkillsRoot = Join-Path $env:USERPROFILE '.agents\skills'
 if (-not (Test-Path $userSkillsRoot)) { New-Item -ItemType Directory -Path $userSkillsRoot -Force | Out-Null }
@@ -75,17 +81,17 @@ function Register-McpServer {
     # PS 5.1 strips inner quotes when handing JSON-looking args to native exes; escape them.
     $escaped = $json -replace '"','\"'
     Write-Host ("  config = {0}" -f $json) -ForegroundColor DarkGray
-    & $openclawCmd mcp set $Name $escaped
-    if ($LASTEXITCODE -ne 0) { throw "openclaw mcp set $Name returned $LASTEXITCODE" }
-    & $openclawCmd mcp show $Name | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "openclaw mcp show $Name failed -- registration may have rolled back" }
+    & $dexCmd mcp set $Name $escaped
+    if ($LASTEXITCODE -ne 0) { throw "dex mcp set $Name returned $LASTEXITCODE" }
+    & $dexCmd mcp show $Name | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "dex mcp show $Name failed -- registration may have rolled back" }
     Write-Host ("  registered + verified: {0}" -f $Name) -ForegroundColor Green
 }
 
 # ---- 1. windows-desktop-control ---------------------------------------------
 Write-Host ""
 Write-Host "[1/2] windows-desktop-control" -ForegroundColor Cyan
-$wdcDir = Join-Path $repoRoot 'glue\windows-desktop-control'
+$wdcDir = Join-Path $repoRoot 'dex\drivers\windows-desktop-control'
 $ufoVenvPy = Join-Path $repoRoot 'vendor\UFO\.venv\Scripts\python.exe'
 if (-not (Test-Path $ufoVenvPy)) {
     Write-Host ("  WARNING: UFO2 venv missing at {0}" -f $ufoVenvPy) -ForegroundColor Yellow
@@ -102,7 +108,7 @@ Register-McpServer -Name 'windows-desktop-control' -Config @{
 # ---- 2. browser-control -----------------------------------------------------
 Write-Host ""
 Write-Host "[2/2] browser-control" -ForegroundColor Cyan
-$bcDir = Join-Path $repoRoot 'glue\browser-control'
+$bcDir = Join-Path $repoRoot 'dex\drivers\browser-control'
 $bcVenvPy = Join-Path $repoRoot 'vendor\browser-use\.venv\Scripts\python.exe'
 
 if (-not (Test-Path $bcVenvPy)) {

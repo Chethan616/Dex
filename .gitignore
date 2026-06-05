@@ -1,7 +1,11 @@
 # --- secrets & user-pasted keys (never commit) ---
 vendor/UFO/config/ufo/agents.yaml
+# Phase B.9 restructure: vendor/openclaw/ moved to dex/core/. Keep the old
+# pattern as defense-in-depth in case an upstream sync re-vendors briefly.
 vendor/openclaw/.env
 vendor/openclaw/.env.*
+dex/core/.env
+dex/core/.env.*
 **/.env
 **/.env.*
 **/api_keys.json
@@ -26,6 +30,19 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .npm/
+# Phase B.9: dex/core build outputs. core/.gitignore already excludes
+# these inside the workspace, but list them here so a top-level pnpm /
+# corrupted install never leaks dist artifacts into git.
+dex/core/dist/
+dex/core/.turbo/
+dex/core/coverage/
+dex/core/.cache/
+dex/core/.vite/
+dex/core/.vite-temp/
+dex/core/.next/
+# Rebrand idempotency sentinel + migration-script scratch.
+dex/.dex-rebranded
+docs/migration/.scratch/
 
 # --- flutter / dart ---
 app/.dart_tool/

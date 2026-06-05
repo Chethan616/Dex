@@ -14,24 +14,24 @@ Dex is a Windows-first, chat-first control surface for a local AI agent that has
 Flutter app (Dex)
    │  HTTP + WebSocket on 127.0.0.1:18789
    ▼
-OpenClaw (Node 24)                          ← the brain · Anthropic Claude
+Dex gateway (Node 24)                       ← the brain · Anthropic Claude
    │  MCP stdio (picks per-turn based on SKILL.md descriptions)
    ▼
    ┌───────────────────────────┬─────────────────────────────┐
    ▼                           ▼                             ▼
-OpenClaw built-in       windows-desktop-              browser-control
+Dex built-in            windows-desktop-              browser-control
 shell / file / process  control MCP (UFO²)            MCP (browser-use)
                         Python 3.10/3.11              Python 3.11
                         Win32 UIA, Groq Qwen 3        Playwright + Groq Qwen 3
                         run_desktop_task              run_browser_task
 ```
 
-- **OpenClaw** (`vendor/openclaw/`) — sessions, channels, skills, memory, cron, built-in shell tools.
+- **Dex core** (`dex/core/`) — sessions, channels, skills, memory, cron, built-in shell tools. Forked from OpenClaw at commit `7074cf8e23c1f64362c4f8c4bf32971ca94d5221` (see `dex/core/HERITAGE.md` for the heritage commitment); the user-facing binary is `dex` and the npm package name is `dexagent`.
 - **UFO²** (`vendor/UFO/`) — Windows native-app GUI automation via the accessibility tree.
 - **browser-use** (`vendor/browser-use/`) — browser automation via Playwright + an LLM-driven agent.
-- **windows-desktop-control** (`glue/windows-desktop-control/`) — MCP server exposing `run_desktop_task` to Claude.
-- **browser-control** (`glue/browser-control/`) — MCP server exposing `run_browser_task` to Claude.
-- **app/** — the Flutter client. Talks to OpenClaw's local gateway. Implements `design.md`; renders Gemini-style tool chips so the user sees which tool Claude picked.
+- **windows-desktop-control** (`dex/drivers/windows-desktop-control/`) — MCP server exposing `run_desktop_task` to Claude.
+- **browser-control** (`dex/drivers/browser-control/`) — MCP server exposing `run_browser_task` to Claude.
+- **app/** — the Flutter client. Talks to the Dex gateway. Implements `design.md`; renders Gemini-style tool chips so the user sees which tool Claude picked.
 
 ---
 
@@ -67,16 +67,21 @@ D:\project1\
 ├── SECURITY.md                risk surface + isolation
 ├── design.md                  UI/UX spec — single source of design truth
 ├── prompt.md                  build contract — assistant rules of engagement
+├── dex/                       Dex framework (Phase B.9+)
+│   ├── core/                  forked OpenClaw runtime + dex binary
+│   │   ├── HERITAGE.md        origin commit + MIT credit
+│   │   ├── package.json       "name": "dexagent", "bin": { "dex": ... }
+│   │   ├── src/               TS source (post-rebrand: Dex / DEX_*)
+│   │   └── packages/          @dexagent/* workspace packages
+│   └── drivers/               MCP driver servers (Python 3.10/3.11)
+│       ├── windows-desktop-control/  FastMCP wrapper around UFO²
+│       └── browser-control/   FastMCP wrapper around browser-use
 ├── vendor/
-│   ├── openclaw/              pinned commit, do not modify
-│   └── UFO/                   pinned commit, do not modify
-├── glue/
-│   └── windows-desktop-control/
-│       ├── server.py          FastMCP server (<200 lines)
-│       ├── requirements.txt
-│       └── SKILL.md           OpenClaw skill teaching the agent when to call this
+│   ├── UFO/                   pinned commit, do not modify
+│   └── browser-use/           pinned commit, do not modify
+├── docs/migration/            B.1 audit + B.11 migration report
 ├── app/                       Flutter desktop client (com.chethan616.dex)
-└── scripts/                   PowerShell helpers
+└── scripts/                   PowerShell helpers (rebrand / audit / run-dev)
 ```
 
 ---

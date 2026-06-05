@@ -33,7 +33,7 @@
 
 [CmdletBinding()]
 param(
-    [string]$Target = (Join-Path (Split-Path -Parent $PSScriptRoot) 'core'),
+    [string]$Target = (Join-Path (Split-Path -Parent $PSScriptRoot) 'dex\core'),
     [string]$OutputPath = (Join-Path (Split-Path -Parent $PSScriptRoot) 'docs\migration\openclaw-audit.md')
 )
 
