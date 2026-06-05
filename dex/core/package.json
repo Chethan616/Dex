@@ -1,23 +1,34 @@
 {
   "name": "dexagent",
-  "version": "2026.6.2",
+  "version": "2026.6.3",
   "description": "Dex — a calm cockpit for commanding agents you can trust.",
   "publishConfig": {
     "access": "public"
   },
-  "keywords": [],
-  "homepage": "https://github.com/openclaw/openclaw#readme",
+  "keywords": [
+    "dex",
+    "ai-assistant",
+    "agent",
+    "gateway",
+    "anthropic",
+    "claude",
+    "mcp",
+    "windows",
+    "automation"
+  ],
+  "homepage": "https://github.com/Chethan616/Dex#readme",
   "bugs": {
-    "url": "https://github.com/openclaw/openclaw/issues"
+    "url": "https://github.com/Chethan616/Dex/issues"
   },
   "license": "MIT",
   "author": "",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openclaw/openclaw.git"
+    "url": "git+https://github.com/Chethan616/Dex.git",
+    "directory": "dex/core"
   },
   "bin": {
-    "dex": "openclaw.mjs"
+    "dex": "dex.mjs"
   },
   "directories": {
     "doc": "docs",
@@ -27,7 +38,7 @@
     "CHANGELOG.md",
     "LICENSE",
     "npm-shrinkwrap.json",
-    "openclaw.mjs",
+    "dex.mjs",
     "pnpm-workspace.yaml",
     "README.md",
     "THIRD_PARTY_NOTICES.md",
@@ -1417,7 +1428,7 @@
       "default": "./dist/plugin-sdk/llm.js"
     },
     "./extension-api": "./dist/extensionAPI.js",
-    "./cli-entry": "./openclaw.mjs"
+    "./cli-entry": "./dex.mjs"
   },
   "scripts": {
     "android:assemble": "cd apps/android && ./gradlew :app:assemblePlayDebug",
@@ -1594,6 +1605,8 @@
     "mac:open": "open dist/OpenClaw.app",
     "mac:package": "bash scripts/package-mac-app.sh",
     "mac:restart": "bash scripts/restart-mac.sh",
+    "dex": "node scripts/run-node.mjs",
+    "dex:rpc": "node scripts/run-node.mjs agent --mode rpc --json",
     "openclaw": "node scripts/run-node.mjs",
     "openclaw:rpc": "node scripts/run-node.mjs agent --mode rpc --json",
     "perf:issue-78851": "node --import tsx scripts/perf/issue-78851-model-resolution.ts",
@@ -1663,7 +1676,7 @@
     "rtt": "node --import tsx scripts/rtt.ts",
     "runtime-sidecars:check": "node --import tsx scripts/generate-runtime-sidecar-paths-baseline.ts --check",
     "runtime-sidecars:gen": "node --import tsx scripts/generate-runtime-sidecar-paths-baseline.ts --write",
-    "start": "node openclaw.mjs",
+    "start": "node dex.mjs",
     "test": "node scripts/test-projects.mjs",
     "test:all": "pnpm lint && pnpm build && pnpm test && pnpm test:e2e && pnpm test:live && pnpm test:docker:all",
     "test:auth:compat": "node scripts/run-vitest.mjs run --config test/vitest/vitest.gateway.config.ts src/gateway/server.auth.compat-baseline.test.ts src/gateway/client.test.ts src/gateway/reconnect-gating.test.ts && node scripts/run-vitest.mjs run packages/gateway-protocol/src/connect-error-details.test.ts",
