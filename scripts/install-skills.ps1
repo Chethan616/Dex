@@ -13,9 +13,9 @@
          (Claude-Desktop-style JSON config; backslash-escaped for PS 5.1)
       3. Verifies registration with `openclaw mcp show <name>`
 
-    The Groq key from environment is passed through to browser-control so its
-    server.py can authenticate. UFO2 reads its own agents.yaml so we don't
-    plumb a key for windows-desktop-control here.
+    The Gemini key from environment ($env:GEMINI_API_KEY) is passed through
+    to browser-control so its server.py can authenticate. UFO2 reads its own
+    agents.yaml so we don't plumb a key for windows-desktop-control here.
 
 .PARAMETER Force
     Overwrite existing skill directories without confirmation.
@@ -143,14 +143,26 @@ if (-not (Test-Path $bcVenvPy)) {
     }
 }
 
-# Groq key must be in env so the MCP server (spawned by OpenClaw as a subprocess)
-# inherits it. If missing now we still register, but warn -- the user can set
-# the env var system-wide and the spawned server will pick it up.
-$groqKey = $env:GROQ_API_KEY
-if (-not $groqKey) {
-    Write-Host "  WARNING: GROQ_API_KEY not in environment." -ForegroundColor Yellow
-    Write-Host "  browser-control will refuse to run tasks until you set it. The same key" -ForegroundColor DarkGray
-    Write-Host "  you put in vendor\UFO\config\ufo\agents.yaml is fine." -ForegroundColor DarkGray
+# Gemini key must be in env so the MCP server (spawned by dex-core as a
+# subprocess) inherits it. If missing now we still register, but warn -- the
+# user can set the env var system-wide and the spawned server will pick it up.
+# Defaults to Gemini 2.5 Flash-Lite per the 2026-06-06 provider flip; flip via
+# DEX_BROWSER_PROVIDER=groq|anthropic|openai if the user has those keys.
+$geminiKey = $env:GEMINI_API_KEY
+if (-not $geminiKey) {
+    # Try .env.local at the repo root as a last-resort fallback so a user
+    # who configured Dex via the .env.local pattern doesn't have to also
+    # export the var into their shell before running this script.
+    $envFile = Join-Path $repoRoot '.env.local'
+    if (Test-Path $envFile) {
+        $match = Select-String -Path $envFile -Pattern '^GEMINI_API_KEY=(.+)$' | Select-Object -First 1
+        if ($match) { $geminiKey = $match.Matches[0].Groups[1].Value.Trim() }
+    }
+}
+if (-not $geminiKey) {
+    Write-Host "  WARNING: GEMINI_API_KEY not in environment." -ForegroundColor Yellow
+    Write-Host "  browser-control will refuse to run tasks until you set it." -ForegroundColor DarkGray
+    Write-Host "  Get a free-tier key at https://aistudio.google.com/app/apikey" -ForegroundColor DarkGray
 }
 
 Mirror-Skill -Name 'browser-control' -SourceSkillMd (Join-Path $bcDir 'SKILL.md')
@@ -159,16 +171,17 @@ Register-McpServer -Name 'browser-control' -Config @{
     args    = @((Join-Path $bcDir 'server.py'))
     cwd     = $bcDir
     env     = @{
-        GROQ_API_KEY        = ($groqKey | ForEach-Object { if ($_) { $_ } else { '' } })
-        DEX_BROWSER_MODEL   = 'qwen/qwen3-32b'
+        GEMINI_API_KEY      = ($geminiKey | ForEach-Object { if ($_) { $_ } else { '' } })
+        DEX_BROWSER_PROVIDER = 'google'
+        DEX_BROWSER_MODEL   = 'gemini-2.5-flash-lite'
     }
 }
 
 # ---- Done -------------------------------------------------------------------
 Write-Host ""
-Write-Host "Done. Restart the OpenClaw gateway so the new MCP server is picked up:" -ForegroundColor Green
-Write-Host "    openclaw gateway stop" -ForegroundColor DarkGray
-Write-Host "    Start-Process -FilePath `"$env:APPDATA\npm\openclaw.cmd`" -ArgumentList 'gateway','--port','18789' -WindowStyle Hidden" -ForegroundColor DarkGray
+Write-Host "Done. Restart the Dex gateway so the new MCP servers are picked up:" -ForegroundColor Green
+Write-Host "    dex gateway stop" -ForegroundColor DarkGray
+Write-Host "    dex gateway run --force --port 18789" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Three-route smoke test (in Dex):" -ForegroundColor Green
 Write-Host "    1. 'list my desktop'                          -> Shell chip" -ForegroundColor DarkGray

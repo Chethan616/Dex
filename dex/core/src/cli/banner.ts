@@ -107,17 +107,21 @@ export function formatCliBannerLine(version: string, options: BannerOptions = {}
   return `${line1}\n${line2}`;
 }
 
-// Phase B brand swap: the upstream lobster ASCII (spelled OPENCLAW in
-// block letters) is replaced with a clean sand-colored frame. The title
-// "🐚 DEX 🐚" is centered below the frame by `formatCliBannerArtLines`.
-// Same 52-column width and 5-row body height as the upstream art so the
-// existing color-by-char renderer below still works unchanged.
+// Custom DEX ASCII art (Chethan-authored, dropped in 2026-06-06).
+// Spells "DEX" in stylized block letters within a 52-column sand frame so
+// the existing color-by-char renderer below still works unchanged.
+// Source-of-truth lives at D:\project1\dex_ascii.txt; if you regenerate
+// the art, keep the same 52-column width and 7-row body height so the
+// renderer's width math doesn't break.
 const DEX_ASCII_BODY = [
   "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
-  "██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██",
-  "██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██",
-  "██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██",
-  "██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██",
+  "██            ████  █████ █   █                   ██",
+  "██            █░░░█ █░░░░░ █ █ ░                  ██",
+  "██            █░░░█░████░░░ █ ░ ░                 ██",
+  "██            █░░ █░█░░░░  █ █ ░                  ██",
+  "██            ████ ░█████░█ ░ █                   ██",
+  "██             ░░░░ ░░░░░░ ░ ░ ░                  ██",
+  "██              ░░░░  ░░░░░ ░   ░                 ██",
   "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
 ];
 

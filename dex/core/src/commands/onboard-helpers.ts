@@ -163,12 +163,18 @@ export function printWizardHeader(runtime: RuntimeEnv) {
   const title = supportsDecorativeEmoji() && icon ? `${icon} DEX ${icon}` : "DEX";
   const pad = Math.max(0, bannerWidth - visibleWidth(title));
   const titleLine = `${" ".repeat(Math.floor(pad / 2))}${title}${" ".repeat(Math.ceil(pad / 2))}`;
+  // Mirror the cli/banner.ts art (Chethan-authored 2026-06-06 DEX block letters).
+  // Same 52-column frame so this banner reads identically across CLI startup,
+  // wizard intros, and doctor banners.
   const header = [
     "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
-    "██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██",
-    "██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██",
-    "██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██",
-    "██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██",
+    "██            ████  █████ █   █                   ██",
+    "██            █░░░█ █░░░░░ █ █ ░                  ██",
+    "██            █░░░█░████░░░ █ ░ ░                 ██",
+    "██            █░░ █░█░░░░  █ █ ░                  ██",
+    "██            ████ ░█████░█ ░ █                   ██",
+    "██             ░░░░ ░░░░░░ ░ ░ ░                  ██",
+    "██              ░░░░  ░░░░░ ░   ░                 ██",
     "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
     titleLine,
     " ",
