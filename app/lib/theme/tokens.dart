@@ -19,20 +19,26 @@ class DexColors {
   static const Color surface2 = Color(0xFF1C1F24);
   static const Color border = Color(0xFF272B31);
 
-  static const Color text = Color(0xFFE8EAED);
-  static const Color textDim = Color(0xFF9BA1A8);
-  static const Color textFaint = Color(0xFF5C626B);
+  // text -- warm beach-sand family, matching the dex-core terminal palette
+  // (DEX_PALETTE.accent = #D4A574). The conversation reads as sand-on-deep-
+  // navy instead of the old gray-on-near-black that rendered orange-ish on
+  // some Windows monitors.
+  static const Color text = Color(0xFFF0E2C7);      // warm cream
+  static const Color textDim = Color(0xFFB8A37A);   // mid sand-tan
+  static const Color textFaint = Color(0xFF7A6A4E); // deep sand
 
-  // accent -- used sparingly
-  static const Color accent = Color(0xFF5BA8FF);
-  static const Color accentQuiet = Color(0xFF1B2A3D);
+  // accent -- sand (was blue #5BA8FF). Keep usage sparse; the engine
+  // pills + chips already carry semantic color, so accent only paints
+  // primary buttons + focus rings.
+  static const Color accent = Color(0xFFD4A574);
+  static const Color accentQuiet = Color(0xFF2E2418);
 
   // agent state -- semantic, NOT decorative
-  static const Color stateIdle = Color(0xFF5C626B);      // grey
+  static const Color stateIdle = Color(0xFF7A6A4E);      // deep sand (== textFaint family)
   static const Color stateThinking = Color(0xFFB58CFF);  // violet pulse
-  static const Color stateActing = Color(0xFF5BA8FF);    // blue (== accent)
+  static const Color stateActing = Color(0xFFD4A574);    // warm sand (== accent)
   static const Color stateApprove = Color(0xFF3DD68C);   // green
-  static const Color stateAwaiting = Color(0xFFFFB454);  // amber -- the loud one
+  static const Color stateAwaiting = Color(0xFFE0B870);  // muted amber-sand (less loud)
   static const Color stateError = Color(0xFFFF6B6B);     // red
 
   // Map an AgentState enum value to its token color.
@@ -60,24 +66,25 @@ class DexColors {
 class DexColorsLight {
   const DexColorsLight._();
 
-  static const Color bg = Color(0xFFFAFBFC);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surface2 = Color(0xFFF2F4F7);
-  static const Color border = Color(0xFFE2E5EA);
+  // Light mirror -- sand tones on warm-cream bg (was off-white on cool gray).
+  static const Color bg = Color(0xFFFAF6EE);
+  static const Color surface = Color(0xFFFFFCF5);
+  static const Color surface2 = Color(0xFFF1EADD);
+  static const Color border = Color(0xFFD9CFB9);
 
-  static const Color text = Color(0xFF14171A);
-  static const Color textDim = Color(0xFF5C626B);
-  static const Color textFaint = Color(0xFFA8AEB6);
+  static const Color text = Color(0xFF332A1B);     // deep sand-brown
+  static const Color textDim = Color(0xFF6E5F44);  // mid sand
+  static const Color textFaint = Color(0xFFA89882); // pale sand
 
-  static const Color accent = Color(0xFF1F6FEB);
-  static const Color accentQuiet = Color(0xFFD9E6F9);
+  static const Color accent = Color(0xFFB07A38);   // warmer sand for light bg
+  static const Color accentQuiet = Color(0xFFF1E3CC);
 
   // State colors keep the same hue family on light bg.
-  static const Color stateIdle = Color(0xFF8A8F96);
+  static const Color stateIdle = Color(0xFFA89882);
   static const Color stateThinking = Color(0xFF8A5BE6);
-  static const Color stateActing = Color(0xFF1F6FEB);
+  static const Color stateActing = Color(0xFFB07A38);
   static const Color stateApprove = Color(0xFF1FA86E);
-  static const Color stateAwaiting = Color(0xFFD18A1A);
+  static const Color stateAwaiting = Color(0xFFC58A30);
   static const Color stateError = Color(0xFFD64545);
 }
 
