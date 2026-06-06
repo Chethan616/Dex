@@ -15,7 +15,8 @@
  * agent's system prompt with the picked engine.
  */
 
-import type { TaskIntent, TaskKind } from "./types.js";
+import { classifyAppFamily } from "./context-scanner.js";
+import type { AppFamily, TaskIntent, TaskKind } from "./types.js";
 
 const URL_RE = /\b(https?:\/\/[^\s)<>]+)/gi;
 const EXE_RE = /\b([\w-]+\.exe)\b/gi;
@@ -100,4 +101,30 @@ export function parseTaskIntent(rawText: string): TaskIntent {
   );
 
   return { kind, hints, text };
+}
+
+/**
+ * Best-effort AppFamily guess from the hints alone, used when no real
+ * foreground probe is available (e.g., the gateway is preflighting on a
+ * remote machine, or the host has no UIA / Win32 APIs). Returns null when
+ * the hints don't suggest anything; callers should default to "unknown".
+ *
+ * Order matters: URLs win (browser), then known .exe names go through the
+ * shared `classifyAppFamily` table, then explicit "browser" / "game"
+ * keyword hints, finally null.
+ */
+export function inferAppFamilyFromHints(
+  hints: ReadonlyArray<string>,
+): AppFamily | null {
+  if (hints.some((h) => h.startsWith("http://") || h.startsWith("https://"))) {
+    return "browser";
+  }
+  for (const h of hints) {
+    if (!h.endsWith(".exe")) continue;
+    const family = classifyAppFamily(h);
+    if (family !== "unknown") return family;
+  }
+  if (hints.includes("browser")) return "browser";
+  if (hints.includes("game")) return "game";
+  return null;
 }

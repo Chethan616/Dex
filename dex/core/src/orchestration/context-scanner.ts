@@ -118,8 +118,11 @@ export interface ContextScannerProbes {
   uia?: (process: ProcessContext) => Promise<UiaContext>;
   /** Browser CDP probe. Returns browser context or undefined if no browser is active. */
   browser?: (process: ProcessContext) => Promise<BrowserContext | undefined>;
-  /** History lookup. Returns per-engine history snapshots from telemetry. */
-  history?: (process: ProcessContext) => Promise<Record<EngineId, EngineHistory>>;
+  /** History lookup. Returns per-engine history snapshots from telemetry.
+   *  Values may be undefined for engines with no recorded runs yet. */
+  history?: (
+    process: ProcessContext,
+  ) => Promise<Record<EngineId, EngineHistory | undefined>>;
   /** Whether the OS supports screen-capture for OmniParser-style vision. */
   visionCapable?: () => boolean;
   /** Per-probe timeout. Defaults to 50 ms. */
@@ -179,7 +182,7 @@ export async function scanRuntimeContext(
     withTimeout(
       (probes.history ?? defaultHistoryProbe)(process),
       timeoutMs,
-      () => ({}) as Record<EngineId, EngineHistory>,
+      () => ({}) as Record<EngineId, EngineHistory | undefined>,
     ),
   ]);
 
@@ -239,7 +242,8 @@ const defaultBrowserProbe = async (
 
 const defaultHistoryProbe = async (
   _process: ProcessContext,
-): Promise<Record<EngineId, EngineHistory>> => ({});
+): Promise<Record<EngineId, EngineHistory | undefined>> =>
+  ({}) as Record<EngineId, EngineHistory | undefined>;
 
 const defaultVisionCapable = (): boolean => process.platform === "win32";
 

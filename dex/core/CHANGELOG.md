@@ -2,6 +2,45 @@
 
 Repo: https://github.com/Chethan616/Dex
 
+## 2026.6.16 (F.1.a wire-in — orchestrator hint reaches the agent)
+
+### Changes
+
+- `runAgentPreflightFor(userText)` is now called from
+  `cli-runner/prepare.ts` on every agent turn. Before the LLM runs,
+  the orchestrator parses the user's prompt, picks the right engine
+  via the BASE_SCORE_TABLE, and appends a short hint to the system
+  prompt naming the picked engine + matching MCP tool + fallback
+  chain. Claude / Gemini reads it and (almost always) chooses the
+  matching tool instead of guessing.
+- New helpers:
+  - `orchestration/registry.ts` — lazy 4-engine singleton (shell
+    stub + ufo-uia + browser-use + omniparser).
+  - `orchestration/agent-preflight.ts` — synthesizes a foreground
+    probe from the parsed task hints. When the user names a
+    desktop app (system / office / ide family), assumes UIA is
+    reachable so ufo-uia wins over shell for UI-interaction tasks.
+  - `task-intent.ts` gains `inferAppFamilyFromHints` — maps hint
+    list back to AppFamily via the existing classifyAppFamily
+    table.
+
+### Behavior change
+
+- "open notepad and write hello" now routes to **ufo-uia** (was
+  reaching for shell or browser-use depending on phrasing).
+- "open WhatsApp and send myself..." routes to **ufo-uia** for the
+  WhatsApp Desktop case (image1/image2 from 2026-06-06 testing).
+- "take typing test at livechat.com" routes to **browser-use** with
+  the URL hint preserved.
+- "click Start in steam.exe" routes to **omniparser**.
+
+Best-effort: any throw in the preflight is caught + swallowed; the
+turn proceeds without the hint. The preflight overhead is the
+context-scanner's 50ms budget cap, well under the locked latency
+budget.
+
+174 / 174 orchestration tests green (+9 new).
+
 ## 2026.6.15 (Atlas naming locked after offer of four)
 
 ### Changes

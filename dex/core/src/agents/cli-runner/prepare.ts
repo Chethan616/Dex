@@ -1,5 +1,6 @@
 import { uniqueStrings } from "@dexagent/normalization-core/string-normalization";
 import { getRuntimeConfig } from "../../config/config.js";
+import { runAgentPreflightFor } from "../../orchestration/agent-preflight.js";
 import {
   assertContextEngineHostSupport,
   buildGenericCliContextEngineHostSupport,
@@ -524,6 +525,21 @@ export async function prepareCliRunContext(
         systemPrompt: ensureSystemPromptCacheBoundary(systemPrompt),
         systemPromptAddition: mediaTaskSystemPromptAddition,
       });
+    }
+    // Phase F.1.a wire-in: orchestrator preflight hint.
+    //
+    // Run the engine scorer over the user's raw input and append a
+    // short hint listing the picked engine + matching MCP tool name +
+    // fallback chain. The agent reads it on this turn and prefers the
+    // matching tool. Best-effort -- a throw here is caught + swallowed
+    // by the outer catch, so a preflight bug never blocks an agent
+    // turn.
+    const preflightHint = await runAgentPreflightFor(params.prompt);
+    if (preflightHint) {
+      systemPrompt = composeSystemPromptWithHookContext({
+        baseSystemPrompt: ensureSystemPromptCacheBoundary(systemPrompt),
+        appendSystemContext: preflightHint,
+      }) ?? systemPrompt;
     }
   } catch (error) {
     cliBackendLog.warn(`cli prompt-build hook preparation failed: ${String(error)}`);
