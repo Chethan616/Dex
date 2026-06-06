@@ -80,6 +80,25 @@ def _reload_server(monkeypatch: pytest.MonkeyPatch, provider: str):
     return importlib.import_module("server")
 
 
+def test_default_provider_is_google_flash_lite_when_env_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Phase C.6 update: the default provider is google + gemini-2.5-flash-lite
+    so a fresh install with only GEMINI_API_KEY works out of the box."""
+    adapters = _stub_browser_use(monkeypatch)
+    monkeypatch.setenv("GEMINI_API_KEY", "AIza_default")
+    monkeypatch.delenv("DEX_BROWSER_PROVIDER", raising=False)
+    monkeypatch.delenv("DEX_BROWSER_MODEL", raising=False)
+    if "server" in sys.modules:
+        del sys.modules["server"]
+    server = importlib.import_module("server")
+
+    assert server.BROWSER_PROVIDER == "google"
+    llm = server._resolve_browser_llm()
+    assert isinstance(llm, adapters["google"])
+    assert llm.model == "gemini-2.5-flash-lite"
+
+
 def test_groq_uses_groq_adapter_and_default_model(monkeypatch: pytest.MonkeyPatch) -> None:
     adapters = _stub_browser_use(monkeypatch)
     monkeypatch.setenv("GROQ_API_KEY", "gsk_test")

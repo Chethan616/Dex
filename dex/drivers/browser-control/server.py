@@ -5,16 +5,18 @@ A FastMCP stdio server that exposes one tool to the Dex agent:
 
     run_browser_task(goal, url_hint="", timeout_s=180, dry_run=False, headless=False)
 
-Internally builds a `browser_use.Agent` driven by Groq Qwen 3 (text-only,
-no vision), points it at a fresh isolated Chromium spawned by Playwright,
-and lets the agent navigate / click / type its way through the goal.
+Internally builds a `browser_use.Agent` driven by Gemini 2.5 Flash-Lite
+(multimodal, ~10x cheaper than Sonnet, fast TTFT), points it at a fresh
+isolated Chromium spawned by Playwright, and lets the agent navigate /
+click / type its way through the goal. Override with
+DEX_BROWSER_PROVIDER=groq|anthropic|openai when you have those keys.
 
 NOT for native Win32 apps -- use run_desktop_task (windows-desktop-control)
 for Office / Settings / Calculator and similar. The two SKILL.md files
-cross-reference each other so Claude routes correctly.
+cross-reference each other so Dex routes correctly.
 
 Refusal patterns, dry-run shape, result envelope, rate-limit retry are
-shared with windows-desktop-control via glue/_shared/approval.py.
+shared with windows-desktop-control via _shared/approval.py.
 """
 from __future__ import annotations
 
@@ -48,9 +50,11 @@ LOG_DIR = REPO_ROOT / "vendor" / "browser-use" / "logs" / "dex"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# LLM config -- shared Groq key (read from env so it isn't committed).
-# We default to the same model id UFO2 uses so a developer only has to
-# rotate one knob to swap models for both tools.
+# LLM config -- provider key read from env so it isn't committed.
+# Default is Gemini 2.5 Flash-Lite because it's free-tier-friendly,
+# multimodal (works for the Phase E vision-assist path), and matches
+# the UFO2 agents.yaml template default so one Gemini key drives both
+# tools.
 # ---------------------------------------------------------------------------
 GROQ_MODEL = os.environ.get("DEX_BROWSER_MODEL", "qwen/qwen3-32b")
 GROQ_API_KEY_ENV = "GROQ_API_KEY"
@@ -61,15 +65,15 @@ GROQ_API_KEY_ENV = "GROQ_API_KEY"
 # browser-use's per-step planning. Each provider has its own model env
 # var + API-key env var for one-line config flips.
 #
-#   groq    (default)   ChatGroq + qwen/qwen3-32b. Free tier; text-only.
-#   google              ChatGoogle + gemini-2.5-flash-lite. Multimodal,
-#                       ~10x cheaper than Claude Sonnet, ~200-400ms TTFT.
-#   anthropic           ChatAnthropic + claude-sonnet-4-6. Most capable;
-#                       paid; supports vision.
-#   openai              ChatOpenAI + gpt-5. Paid; supports vision.
+#   google  (default)   ChatGoogle + gemini-2.5-flash-lite. Free tier on
+#                       AI Studio; multimodal; ~200-400ms TTFT. Same
+#                       provider UFO2 uses by default.
+#   groq                ChatGroq + qwen/qwen3-32b. Free tier; text-only.
+#   anthropic           ChatAnthropic + claude-sonnet-4-6. Paid; multimodal.
+#   openai              ChatOpenAI + gpt-5. Paid; multimodal.
 #
 # Default model per provider is picked when DEX_BROWSER_MODEL is unset.
-BROWSER_PROVIDER = os.environ.get("DEX_BROWSER_PROVIDER", "groq").lower()
+BROWSER_PROVIDER = os.environ.get("DEX_BROWSER_PROVIDER", "google").lower()
 BROWSER_PROVIDER_DEFAULT_MODEL = {
     "groq": "qwen/qwen3-32b",
     "google": "gemini-2.5-flash-lite",
