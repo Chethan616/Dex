@@ -2,6 +2,42 @@
 
 Repo: https://github.com/Chethan616/Dex
 
+## 2026.6.18 (MCP driver path bug + browser-use vision)
+
+### Fixes
+
+- Both MCP drivers had `REPO_ROOT = parents[2]` which, after Phase B
+  moved them from `glue/<name>/server.py` to
+  `dex/drivers/<name>/server.py`, resolved to `D:\project1\dex`
+  instead of the actual repo root `D:\project1`. Consequences:
+  - **windows-desktop-control:** `UFO_ROOT` pointed at a phantom
+    `dex\vendor\UFO\` tree (auto-created by mkdir(parents=True) on
+    LOG_DIR init). `subprocess.run(cwd=<empty UFO_ROOT>)` then ran
+    `python -m ufo` from a directory with no ufo module → hung
+    importing → parent killed it on timeout. Every "GUI tool keeps
+    timing out" report traces here.
+  - **browser-control:** logs landed in phantom dir; functional code
+    path was unaffected.
+  Fixed both to `parents[3]`. Phantom `dex/vendor/` tree deleted.
+- `windows-desktop-control/server.py` was missing `import os` (added
+  in 2026.6.17 changelog but not in the file). Fixed.
+- `browser-control/server.py` now sets `use_vision = BROWSER_PROVIDER
+  != "groq"`. Was hardcoded `False` because the original default was
+  Groq Qwen 3 (text-only). After the Gemini Flash-Latest flip, the
+  hardcoded `False` made browser-use's LLM see nothing and return
+  "task complete" instantly with steps=[]. Chethan's 2026-06-06
+  report: "browser automation is returning instantly without
+  actually doing anything" -- this was it.
+
+### Known follow-up
+
+- Even after the path fix, UFO² + Gemini Flash-Latest can hit free-tier
+  rate / token limits on multimodal requests (request.log can be 1+ MB
+  with the UIA tree + screenshot). The Gemini API hangs returning a
+  response. Workarounds for the user: switch to a faster Gemini tier,
+  use VISUAL_MODE=False in agents.yaml to skip screenshots, OR use a
+  paid model. Tracked in slash-plan as UFO² hardening item.
+
 ## 2026.6.17 (Windows UTF-8 env for UFO² subprocess)
 
 ### Fixes

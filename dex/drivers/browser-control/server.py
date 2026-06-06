@@ -45,7 +45,12 @@ from mcp.server.fastmcp import FastMCP  # noqa: E402
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-REPO_ROOT = Path(__file__).resolve().parents[2]              # D:\project1
+# Phase B moved this from `glue/browser-control/server.py` (parents[2] was the
+# repo root) to `dex/drivers/browser-control/server.py` -- parents[3] is now
+# the repo root. The old `parents[2]` resolved to `D:\project1\dex` so logs
+# landed under `dex\vendor\browser-use\logs\dex` (a phantom path) instead of
+# the actual `vendor\browser-use\logs\dex` next to the cloned upstream.
+REPO_ROOT = Path(__file__).resolve().parents[3]              # D:\project1
 LOG_DIR = REPO_ROOT / "vendor" / "browser-use" / "logs" / "dex"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -231,8 +236,16 @@ async def _run_agent(
     # url_hint so the agent navigates there as step 1 if provided.
     task = goal if not url_hint else f"Navigate to {url_hint}. Then: {goal}"
 
+    # Vision enables browser-use's "look at the screenshot of the current
+    # page" reasoning step. Without it, on multimodal models like Gemini
+    # Flash-Latest the agent sees nothing and frequently returns "task
+    # complete" instantly with steps=[] -- matching Chethan's 2026-06-06
+    # report that "browser automation returns instantly without actually
+    # doing anything". Groq Qwen 3 is text-only; everything else we
+    # support (Gemini, Claude Sonnet, GPT-5) is multimodal.
+    use_vision = BROWSER_PROVIDER != "groq"
     session = BrowserSession(headless=headless)
-    agent = Agent(task=task, llm=llm, browser_session=session, use_vision=False)
+    agent = Agent(task=task, llm=llm, browser_session=session, use_vision=use_vision)
 
     async def _go() -> Any:
         return await asyncio.wait_for(agent.run(), timeout=timeout_s)

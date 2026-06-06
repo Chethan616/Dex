@@ -19,6 +19,7 @@ families stay in lockstep.
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -41,7 +42,14 @@ from mcp.server.fastmcp import FastMCP  # noqa: E402
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-REPO_ROOT = Path(__file__).resolve().parents[2]                # D:\project1
+# Phase B moved this from `glue/windows-desktop-control/server.py` (parents[2]
+# was the repo root) to `dex/drivers/windows-desktop-control/server.py` --
+# parents[3] is now the repo root. The old `parents[2]` resolved to
+# `D:\project1\dex` and pointed UFO_ROOT / LOG_DIR at a phantom tree, so the
+# subprocess.run() below spawned `python -m ufo` from an empty directory and
+# crashed with ImportError before UFO2 could load. The agent saw that as
+# "GUI tool keeps timing out".
+REPO_ROOT = Path(__file__).resolve().parents[3]                # D:\project1
 UFO_ROOT = REPO_ROOT / "vendor" / "UFO"
 UFO_VENV_PY = UFO_ROOT / ".venv" / "Scripts" / "python.exe"
 LOG_DIR = REPO_ROOT / "vendor" / "UFO" / "logs" / "dex"
