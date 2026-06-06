@@ -1,6 +1,6 @@
 {
   "name": "dexagent",
-  "version": "2026.6.16",
+  "version": "2026.6.17",
   "description": "Dex — a calm cockpit for commanding agents you can trust.",
   "publishConfig": {
     "access": "public"

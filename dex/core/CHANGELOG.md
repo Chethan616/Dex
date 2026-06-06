@@ -2,6 +2,28 @@
 
 Repo: https://github.com/Chethan616/Dex
 
+## 2026.6.17 (Windows UTF-8 env for UFO² subprocess)
+
+### Fixes
+
+- `dex/drivers/windows-desktop-control/server.py` now spawns UFO²
+  with `PYTHONIOENCODING=utf-8` + `PYTHONUNBUFFERED=1`. UFO² prints
+  emoji (✅, 🤔, ℹ️) to stdout; without UTF-8 forcing, the Windows
+  default cp1252 codepage chokes on the first emoji and the
+  subprocess dies with UnicodeEncodeError mid-run. The MCP caller
+  then sees a 120s timeout with no useful error.
+- Two related fixes landed in vendor/UFO this session:
+  - `ufo/prompter/eva_prompter.py`: `len(...) >= 0` was tautologically
+    true; replaced with truthiness check so an empty app_agent_log
+    no longer crashes the evaluation phase with IndexError.
+  - `config/ufo/agents.yaml` (gitignored rendered config): removed
+    `/chat/completions` suffix from API_BASE -- the OpenAI client
+    appends that itself; double-suffix produces 404 from Gemini's
+    OpenAI-compat endpoint.
+
+After these three patches, `open notepad` runs end-to-end through
+Claude → MCP → UFO² → Gemini Flash-Latest → UIA actions.
+
 ## 2026.6.16 (F.1.a wire-in — orchestrator hint reaches the agent)
 
 ### Changes

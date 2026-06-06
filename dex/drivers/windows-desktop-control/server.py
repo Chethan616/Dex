@@ -108,6 +108,13 @@ def run_desktop_task(
     ]
     log_path = LOG_DIR / f"{task_id}.log"
 
+    # UFO2 writes emoji + checkmarks to stdout; on Windows the default
+    # console codepage is cp1252 which can't encode them, so the subprocess
+    # crashes mid-run with UnicodeEncodeError. PYTHONIOENCODING=utf-8 forces
+    # the child Python to use UTF-8 for its own sys.stdout / sys.stderr,
+    # matching our subprocess.run(encoding="utf-8") side. PYTHONUNBUFFERED
+    # gives us prompt log lines for debugging if a hang ever recurs.
+    child_env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1"}
     try:
         proc = subprocess.run(
             cmd,
@@ -118,6 +125,7 @@ def run_desktop_task(
             errors="replace",
             timeout=timeout_s,
             check=False,
+            env=child_env,
         )
     except subprocess.TimeoutExpired as e:
         log_path.write_text(serialize_timeout(e), encoding="utf-8")
