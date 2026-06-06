@@ -235,19 +235,17 @@ class GatewayClient extends ChangeNotifier {
     );
   }
 
+  /// Approval / denial side-channel.
+  ///
+  /// Originally wired to `chat.inject`, but that's a privileged gateway
+  /// method that requires `operator.admin` scope — control-ui clients
+  /// (the Dex desktop app) don't have it, so injects came back as
+  /// `INVALID_REQUEST errorMessage=missing scope: operator.admin`.
+  /// Route through `chat.send` instead so the approval text reads as a
+  /// regular user turn. The agent picks it up the same way and resumes
+  /// the pending tool call.
   Future<void> inject(String text) async {
-    await waitReady();
-    final ws = _ws;
-    if (ws == null) return;
-    ws.sink.add(jsonEncode(<String, dynamic>{
-      'type': 'req',
-      'id': _uuid.v4(),
-      'method': 'chat.inject',
-      'params': <String, dynamic>{
-        'sessionKey': _config.sessionKey,
-        'message': text,
-      },
-    }));
+    await sendMessage(text);
   }
 
   // --------------------------------------------------------------------
