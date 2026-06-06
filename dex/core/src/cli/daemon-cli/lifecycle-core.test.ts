@@ -118,7 +118,7 @@ describe("runServiceRestart token drift", () => {
       service,
       renderStartHints: () => [
         "Restart the container or the service that manages it for openclaw-demo-container.",
-        "openclaw gateway install",
+        "dex gateway install",
       ],
       opts: { json: false },
     });
@@ -414,7 +414,7 @@ describe("runServiceRestart token drift", () => {
     const repairLoadedService = vi.fn(async () => ({
       result: "started" as const,
       message: "Gateway service definition repaired and started.",
-      warnings: ["service was installed by OpenClaw 2026.4.24, current CLI is 2026.5.2"],
+      warnings: ["service was installed by Dex 2026.4.24, current CLI is 2026.5.2"],
       loaded: true,
     }));
 
@@ -436,7 +436,7 @@ describe("runServiceRestart token drift", () => {
     }>();
     expect(payload.result).toBe("started");
     expect(payload.message).toBe("Gateway service definition repaired and started.");
-    expect(payload.warnings?.[0]).toContain("service was installed by OpenClaw");
+    expect(payload.warnings?.[0]).toContain("service was installed by Dex");
     expect(payload.service?.loaded).toBe(true);
   });
 
@@ -451,7 +451,7 @@ describe("runServiceRestart token drift", () => {
     const payload = readJsonLog<{ ok?: boolean; error?: string; hints?: string[] }>();
     expect(payload.ok).toBe(false);
     expect(payload.error).toContain("service needs repair");
-    expect(payload.hints).toEqual(["openclaw gateway install --force"]);
+    expect(payload.hints).toEqual(["dex gateway install --force"]);
     expect(service.restart).not.toHaveBeenCalled();
   });
 
@@ -473,7 +473,7 @@ describe("runServiceRestart token drift", () => {
     await runServiceStart({
       serviceNoun: "Gateway",
       service,
-      renderStartHints: () => ["openclaw gateway install"],
+      renderStartHints: () => ["dex gateway install"],
       opts: { json: true },
     });
 
@@ -485,10 +485,10 @@ describe("runServiceRestart token drift", () => {
     }>();
     expect(payload.ok).toBe(true);
     expect(payload.result).toBe("not-loaded");
-    expect(payload.hints?.includes("openclaw gateway install")).toBe(true);
+    expect(payload.hints?.includes("dex gateway install")).toBe(true);
     expect(
       payload.hintItems?.some(
-        (item) => item.kind === "install" && item.text === "openclaw gateway install",
+        (item) => item.kind === "install" && item.text === "dex gateway install",
       ),
     ).toBe(true);
     expect(service.restart).not.toHaveBeenCalled();

@@ -172,11 +172,11 @@ describe("status-all diagnosis port checks", () => {
 
     const output = params.lines.join("\n");
     expect(output).toContain(
-      "Update restart: failed · managed-service-handoff-failed · run openclaw gateway status --deep",
+      "Update restart: failed · managed-service-handoff-failed · run dex gateway status --deep",
     );
-    expect(output).toContain("Update restart failed; run openclaw gateway status --deep.");
+    expect(output).toContain("Update restart failed; run dex gateway status --deep.");
     expect(output).toContain(
-      "If the service is down, run openclaw gateway restart or openclaw gateway install --force.",
+      "If the service is down, run dex gateway restart or dex gateway install --force.",
     );
   });
 
@@ -199,7 +199,7 @@ describe("status-all diagnosis port checks", () => {
 
     const output = params.lines.join("\n");
     expect(output).toContain(
-      "Update restart: restart pending health verification · run openclaw gateway status --deep",
+      "Update restart: restart pending health verification · run dex gateway status --deep",
     );
     expect(output).toContain(
       "Update restart is still pending; run openclaw update status --json for handoff state.",

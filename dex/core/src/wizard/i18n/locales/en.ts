@@ -128,7 +128,7 @@ export const en = {
       apply: "Apply this migration now?",
       appliedTitle: "Migration applied",
       cancelled: "migration cancelled",
-      complete: "Migration complete. Run `openclaw doctor` next.",
+      complete: "Migration complete. Run `dex doctor` next.",
       previewTitle: "Migration preview",
       source: "Migration source",
       sourceAgentHome: "Source agent home",

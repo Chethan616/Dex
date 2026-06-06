@@ -428,7 +428,7 @@ function formatRuntimeGatewayAuthTokenWarning(): string {
   const base =
     "Gateway auth token was missing. Generated a runtime token for this startup without changing config; restart will generate a different token.";
   if (!isNixMode) {
-    return `${base} Persist one with \`openclaw config set gateway.auth.mode token\` and \`openclaw config set gateway.auth.token <token>\`.`;
+    return `${base} Persist one with \`dex config set gateway.auth.mode token\` and \`dex config set gateway.auth.token <token>\`.`;
   }
   return [
     base,

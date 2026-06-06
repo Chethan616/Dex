@@ -71,7 +71,7 @@ export function formatDoctorNonInteractiveHint(
   env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
 ): string {
   return `Recommended follow-up: run ${formatCliCommand(
-    "openclaw doctor --non-interactive",
+    "dex doctor --non-interactive",
     env,
   )} in a terminal or approvals-capable OpenClaw surface.`;
 }

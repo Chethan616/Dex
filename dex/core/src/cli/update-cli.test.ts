@@ -927,7 +927,7 @@ describe("update-cli", () => {
       .mock.calls.map((call) => String(call[0]))
       .join("\n");
     expect(logOutput).toContain("timed out after 30s");
-    expect(logOutput).toContain("openclaw completion --write-state");
+    expect(logOutput).toContain("dex completion --write-state");
     expect(logOutput).not.toContain("Error: spawnSync");
   });
 
@@ -1027,7 +1027,7 @@ describe("update-cli", () => {
                 reason: "missing-extension-entry: ./dist/index.js",
                 message:
                   'Plugin "demo" failed post-core payload smoke check (missing-extension-entry): ./dist/index.js',
-                guidance: ["Run openclaw doctor --fix to attempt automatic repair."],
+                guidance: ["Run dex doctor --fix to attempt automatic repair."],
               },
             ],
             sync: {
@@ -1683,16 +1683,16 @@ describe("update-cli", () => {
     expect(jsonOutput?.postUpdate?.plugins?.status).toBe("warning");
     expect(pluginWarning(jsonOutput)?.pluginId).toBe("demo");
     expect(pluginWarning(jsonOutput)?.guidance).toEqual([
-      "Run openclaw doctor --fix to attempt automatic repair.",
-      "Run openclaw plugins inspect demo --runtime --json for details.",
+      "Run dex doctor --fix to attempt automatic repair.",
+      "Run dex plugins inspect demo --runtime --json for details.",
     ]);
     expect(pluginWarning(jsonOutput)?.reason).toContain("npm package integrity drift");
     expect(jsonOutput?.postUpdate?.plugins?.npm.outcomes[0]?.status).toBe("error");
     expect(jsonOutput?.postUpdate?.plugins?.npm.outcomes[0]?.message).toContain(
-      "Run openclaw doctor --fix to attempt automatic repair.",
+      "Run dex doctor --fix to attempt automatic repair.",
     );
     expect(jsonOutput?.postUpdate?.plugins?.npm.outcomes[0]?.message).toContain(
-      "Run openclaw plugins inspect demo --runtime --json for details.",
+      "Run dex plugins inspect demo --runtime --json for details.",
     );
   });
 
@@ -1777,8 +1777,8 @@ describe("update-cli", () => {
       .mock.calls.map((call) => String(call[0]))
       .join("\n");
     expect(logs).toContain("Failed to update demo: registry timeout");
-    expect(logs).toContain("Run openclaw doctor --fix to attempt automatic repair.");
-    expect(logs).toContain("Run openclaw plugins inspect demo --runtime --json for details.");
+    expect(logs).toContain("Run dex doctor --fix to attempt automatic repair.");
+    expect(logs).toContain("Run dex plugins inspect demo --runtime --json for details.");
   });
 
   it("marks disabled-after-failure plugin skips as post-update warnings", async () => {
@@ -1802,8 +1802,8 @@ describe("update-cli", () => {
     expect(jsonOutput?.postUpdate?.plugins?.status).toBe("warning");
     expect(pluginWarning(jsonOutput)?.pluginId).toBe("demo");
     expect(pluginWarning(jsonOutput)?.guidance).toEqual([
-      "Run openclaw doctor --fix to attempt automatic repair.",
-      "Run openclaw plugins inspect demo --runtime --json for details.",
+      "Run dex doctor --fix to attempt automatic repair.",
+      "Run dex plugins inspect demo --runtime --json for details.",
     ]);
     expect(pluginOutcome(jsonOutput)?.pluginId).toBe("demo");
     expect(pluginOutcome(jsonOutput)?.status).toBe("skipped");
@@ -1846,10 +1846,10 @@ describe("update-cli", () => {
                     pluginId: "demo",
                     reason: "Failed to update demo: registry timeout",
                     message:
-                      'Plugin "demo" could not be processed after the core update: Failed to update demo: registry timeout Run openclaw doctor --fix to attempt automatic repair. Run openclaw plugins inspect demo --runtime --json for details.',
+                      'Plugin "demo" could not be processed after the core update: Failed to update demo: registry timeout Run dex doctor --fix to attempt automatic repair. Run dex plugins inspect demo --runtime --json for details.',
                     guidance: [
-                      "Run openclaw doctor --fix to attempt automatic repair.",
-                      "Run openclaw plugins inspect demo --runtime --json for details.",
+                      "Run dex doctor --fix to attempt automatic repair.",
+                      "Run dex plugins inspect demo --runtime --json for details.",
                     ],
                   },
                 ],
@@ -1889,7 +1889,7 @@ describe("update-cli", () => {
     expect(jsonOutput?.status).toBe("ok");
     expect(jsonOutput?.reason).toBeUndefined();
     expect(jsonOutput?.postUpdate?.plugins?.warnings?.[0]?.guidance).toContain(
-      "Run openclaw doctor --fix to attempt automatic repair.",
+      "Run dex doctor --fix to attempt automatic repair.",
     );
     expect(jsonOutput?.postUpdate?.plugins?.npm.outcomes[0]?.message).toContain("registry timeout");
   });
@@ -2151,7 +2151,7 @@ describe("update-cli", () => {
       [
         "Package updates cannot run from inside the gateway service process.",
         "That path replaces the active OpenClaw dist tree while the live gateway may still lazy-load old chunks.",
-        "Run `openclaw update` from a shell outside the gateway service, or stop the gateway service first and then update.",
+        "Run `dex update` from a shell outside the gateway service, or stop the gateway service first and then update.",
       ].join("\n"),
     );
     expectPackageInstallSpec("openclaw@latest");
@@ -2182,7 +2182,7 @@ describe("update-cli", () => {
       [
         "Package updates cannot run from inside the gateway service process.",
         "That path replaces the active OpenClaw dist tree while the live gateway may still lazy-load old chunks.",
-        "Run `openclaw update` from a shell outside the gateway service, or stop the gateway service first and then update.",
+        "Run `dex update` from a shell outside the gateway service, or stop the gateway service first and then update.",
       ].join("\n"),
     );
     expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
@@ -2228,7 +2228,7 @@ describe("update-cli", () => {
         [
           "Package updates cannot run from inside the gateway service process.",
           "That path replaces the active OpenClaw dist tree while the live gateway may still lazy-load old chunks.",
-          "Run `openclaw update` from a shell outside the gateway service, or stop the gateway service first and then update.",
+          "Run `dex update` from a shell outside the gateway service, or stop the gateway service first and then update.",
         ].join("\n"),
       );
       expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
@@ -2261,7 +2261,7 @@ describe("update-cli", () => {
       [
         "Package updates cannot run from inside the gateway service process.",
         "That path replaces the active OpenClaw dist tree while the live gateway may still lazy-load old chunks.",
-        "Run `openclaw update` from a shell outside the gateway service, or stop the gateway service first and then update.",
+        "Run `dex update` from a shell outside the gateway service, or stop the gateway service first and then update.",
       ].join("\n"),
     );
     expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
@@ -2279,7 +2279,7 @@ describe("update-cli", () => {
 
     const errors = vi.mocked(defaultRuntime.error).mock.calls.map((call) => String(call[0]));
     expect(errors.join("\n")).toContain(
-      "openclaw update detected it is running inside the gateway process tree.",
+      "dex update detected it is running inside the gateway process tree.",
     );
     expect(errors.join("\n")).toContain("Gateway PID 4242 is an ancestor");
     expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
@@ -2310,7 +2310,7 @@ describe("update-cli", () => {
 
     const errors = vi.mocked(defaultRuntime.error).mock.calls.map((call) => String(call[0]));
     expect(errors.join("\n")).toContain(
-      "openclaw update detected it is running inside the gateway process tree.",
+      "dex update detected it is running inside the gateway process tree.",
     );
     expect(errors.join("\n")).toContain("Gateway PID 4242 is an ancestor");
     expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
@@ -4836,7 +4836,7 @@ describe("update-cli", () => {
       "Git-based updates need a clean working tree before they can switch commits, fetch, or rebase.",
     );
     expect(logs.join("\n")).toContain(
-      "Commit, stash, or discard the local changes, then rerun `openclaw update`.",
+      "Commit, stash, or discard the local changes, then rerun `dex update`.",
     );
     expect(defaultRuntime.exit).toHaveBeenCalledWith(0);
   });
@@ -5587,7 +5587,7 @@ describe("update-cli", () => {
       run: async () => await updateWizardCommand({}),
       requireTty: false,
       expectedError:
-        "Update wizard requires a TTY. Use `openclaw update --channel <stable|beta|dev>` instead.",
+        "Update wizard requires a TTY. Use `dex update --channel <stable|beta|dev>` instead.",
     },
   ] as const)(
     "validates update command invocation errors: $name",

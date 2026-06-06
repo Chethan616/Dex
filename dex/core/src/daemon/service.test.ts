@@ -202,7 +202,7 @@ describe("startGatewayService", () => {
     expect(result.outcome).toBe("repair-required");
     if (result.outcome === "repair-required") {
       expect(formatGatewayServiceStartRepairIssues(result.issues)).toContain(
-        "service was installed by OpenClaw 2026.4.24",
+        "service was installed by Dex 2026.4.24",
       );
     }
     expect(service.restart).not.toHaveBeenCalled();

@@ -73,7 +73,7 @@ export function registerMaintenanceCommands(program: Command) {
       }
       if (hasLintOnlyDoctorOptions(opts)) {
         defaultRuntime.error(
-          "doctor lint options require --lint. Use `openclaw doctor --lint ...`.",
+          "doctor lint options require --lint. Use `dex doctor --lint ...`.",
         );
         defaultRuntime.exit(2);
         return;

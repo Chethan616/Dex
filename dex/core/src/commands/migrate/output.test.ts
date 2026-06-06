@@ -106,14 +106,14 @@ describe("formatMigrationPreview", () => {
     const output = formatMigrationPreview({
       ...plan([skillItem(1)]),
       warnings: [
-        "Some Codex plugins could not be migrated. Run `openclaw migrate codex` after onboarding.",
+        "Some Codex plugins could not be migrated. Run `dex migrate codex` after onboarding.",
       ],
     })
       .map(stripAnsi)
       .join("\n");
 
     expect(output).toContain(
-      "⚠️  Some Codex plugins could not be migrated. Run `openclaw migrate codex` after onboarding.",
+      "⚠️  Some Codex plugins could not be migrated. Run `dex migrate codex` after onboarding.",
     );
   });
 });
@@ -163,17 +163,17 @@ describe("formatMigrationResult", () => {
 
   it("renders warning-backed next steps with a warning glyph", () => {
     const warning =
-      "Some Codex plugins could not be migrated. Run `openclaw migrate codex` after onboarding.";
+      "Some Codex plugins could not be migrated. Run `dex migrate codex` after onboarding.";
     const output = formatMigrationResult({
       ...plan([{ ...pluginItem("google-calendar"), status: "warning" }]),
       warnings: [warning],
-      nextSteps: [warning, "Run openclaw doctor after applying the migration."],
+      nextSteps: [warning, "Run dex doctor after applying the migration."],
     })
       .map(stripAnsi)
       .join("\n");
 
     expect(output).toContain(`⚠️  ${warning}`);
-    expect(output).toContain("• Run openclaw doctor after applying the migration.");
+    expect(output).toContain("• Run dex doctor after applying the migration.");
   });
 
   it("says (Skipped) for user-deselected skill/plugin items", () => {

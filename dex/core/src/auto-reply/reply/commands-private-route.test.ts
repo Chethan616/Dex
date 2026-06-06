@@ -133,7 +133,7 @@ function buildApprovalRequest(): ExecApprovalRequest {
   return {
     id: "diagnostics-private-route",
     request: {
-      command: "openclaw gateway diagnostics export --json",
+      command: "dex gateway diagnostics export --json",
       sessionKey: "agent:main:discord:channel:1487138064806449297",
       turnSourceChannel: "discord",
       turnSourceTo: "channel:1487138064806449297",

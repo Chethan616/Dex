@@ -346,12 +346,12 @@ export async function maybeRepairLegacyFlatAuthProfileStores(params: {
   ];
   if (legacyStores.length > 0) {
     noteLines.push(
-      `- The gateway expects the canonical version/profiles store; ${formatCliCommand("openclaw doctor --fix")} rewrites this legacy shape with a backup.`,
+      `- The gateway expects the canonical version/profiles store; ${formatCliCommand("dex doctor --fix")} rewrites this legacy shape with a backup.`,
     );
   }
   if (awsSdkMarkerStores.length > 0) {
     noteLines.push(
-      `- AWS SDK profile markers are routing metadata, not stored credentials; ${formatCliCommand("openclaw doctor --fix")} moves them to config with a backup.`,
+      `- AWS SDK profile markers are routing metadata, not stored credentials; ${formatCliCommand("dex doctor --fix")} moves them to config with a backup.`,
     );
   }
   note(noteLines.join("\n"), "Auth profiles");
@@ -478,7 +478,7 @@ export async function maybeRepairCanonicalApiKeyFieldAlias(params: {
       `- ${shortenHomePath(entry.authPath)} has ${entry.profileIds.length} profile(s) using the non-canonical "api_key" field; the canonical field is "key".`,
   );
   noteLines.push(
-    `- Runtime auth parsing only reads canonical "key" and "keyRef" fields, so these profiles are silently skipped; ${formatCliCommand("openclaw doctor --fix")} rewrites "api_key" to "key" with a backup.`,
+    `- Runtime auth parsing only reads canonical "key" and "keyRef" fields, so these profiles are silently skipped; ${formatCliCommand("dex doctor --fix")} rewrites "api_key" to "key" with a backup.`,
   );
   note(noteLines.join("\n"), "Auth profiles");
 

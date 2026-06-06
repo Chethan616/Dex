@@ -1044,7 +1044,7 @@ describe("discoverOpenClawPlugins", () => {
     expect(
       result.diagnostics.some(
         (entry) =>
-          entry.pluginId === "source-only-pack" && entry.message.includes("openclaw doctor --fix"),
+          entry.pluginId === "source-only-pack" && entry.message.includes("dex doctor --fix"),
       ),
     ).toBe(false);
     expect(result.diagnostics).toHaveLength(1);
@@ -1168,7 +1168,7 @@ describe("discoverOpenClawPlugins", () => {
       level: "warn",
       pluginId: "guardrail-bridge",
       source: path.join(pluginDir, "openclaw.extension.json"),
-      messageIncludes: 'run "openclaw doctor --fix"',
+      messageIncludes: 'run "dex doctor --fix"',
     });
   });
 

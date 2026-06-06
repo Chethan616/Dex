@@ -83,14 +83,14 @@ function resolveTargetAgentIdOrExit(params: {
   });
   if (!agentId) {
     params.runtime.error(
-      `Unable to resolve agent id. Run ${formatCliCommand("openclaw agents list")} to choose one.`,
+      `Unable to resolve agent id. Run ${formatCliCommand("dex agents list")} to choose one.`,
     );
     params.runtime.exit(1);
     return null;
   }
   if (!hasAgent(params.cfg, agentId)) {
     params.runtime.error(
-      `Agent "${agentId}" not found. Run ${formatCliCommand("openclaw agents list")} to see configured agents.`,
+      `Agent "${agentId}" not found. Run ${formatCliCommand("dex agents list")} to see configured agents.`,
     );
     params.runtime.exit(1);
     return null;
@@ -185,14 +185,14 @@ export async function agentsBindingsCommand(
   const filterAgentId = resolveAgentId(cfg, opts.agent?.trim());
   if (opts.agent && !filterAgentId) {
     runtime.error(
-      `Agent id is required. Run ${formatCliCommand("openclaw agents list")} to choose one.`,
+      `Agent id is required. Run ${formatCliCommand("dex agents list")} to choose one.`,
     );
     runtime.exit(1);
     return;
   }
   if (filterAgentId && !hasAgent(cfg, filterAgentId)) {
     runtime.error(
-      `Agent "${filterAgentId}" not found. Run ${formatCliCommand("openclaw agents list")} to see configured agents.`,
+      `Agent "${filterAgentId}" not found. Run ${formatCliCommand("dex agents list")} to see configured agents.`,
     );
     runtime.exit(1);
     return;

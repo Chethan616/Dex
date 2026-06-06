@@ -270,7 +270,7 @@ describe("maybeRepairSandboxRegistryFiles", () => {
       [
         "Legacy sandbox registry files detected.",
         "- containers: /tmp/openclaw/sandbox/containers.json (2 entries)",
-        "Run openclaw doctor --fix to migrate them to sharded registry files.",
+        "Run dex doctor --fix to migrate them to sharded registry files.",
       ].join("\n"),
       "Sandbox",
     );

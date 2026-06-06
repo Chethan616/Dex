@@ -40,7 +40,7 @@ vi.mock("../../daemon/runtime-hints.js", () => ({
     "Logs: node service log",
     "Restart attempts: node restart log",
   ],
-  buildPlatformServiceStartHints: () => ["openclaw node install", "openclaw node start"],
+  buildPlatformServiceStartHints: () => ["dex node install", "dex node start"],
 }));
 
 vi.mock("../../../packages/terminal-core/src/theme.js", async () => {

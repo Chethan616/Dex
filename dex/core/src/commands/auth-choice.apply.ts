@@ -57,7 +57,7 @@ async function formatDeprecatedProviderChoiceError(
   if (!deprecatedChoice) {
     return undefined;
   }
-  return `Auth choice ${JSON.stringify(authChoice)} is no longer supported. Use ${JSON.stringify(deprecatedChoice.choiceId)} instead, or run ${formatCliCommand("openclaw onboard")} to choose interactively.`;
+  return `Auth choice ${JSON.stringify(authChoice)} is no longer supported. Use ${JSON.stringify(deprecatedChoice.choiceId)} instead, or run ${formatCliCommand("dex onboard")} to choose interactively.`;
 }
 
 export async function applyAuthChoice(
@@ -96,14 +96,14 @@ export async function applyAuthChoice(
     throw new Error(
       [
         `Auth choice "${normalizedParams.authChoice}" was not matched to a provider setup flow.`,
-        `Run ${formatCliCommand("openclaw models auth login --provider <provider>")} for provider auth, or rerun ${formatCliCommand("openclaw onboard")} to choose interactively.`,
+        `Run ${formatCliCommand("dex models auth login --provider <provider>")} for provider auth, or rerun ${formatCliCommand("dex onboard")} to choose interactively.`,
       ].join("\n"),
     );
   }
 
   if (normalizedParams.authChoice === "oauth") {
     throw new Error(
-      `Auth choice "oauth" is no longer supported directly. Use a provider-specific auth entry, or run ${formatCliCommand("openclaw models auth login --provider <provider>")}.`,
+      `Auth choice "oauth" is no longer supported directly. Use a provider-specific auth entry, or run ${formatCliCommand("dex models auth login --provider <provider>")}.`,
     );
   }
 

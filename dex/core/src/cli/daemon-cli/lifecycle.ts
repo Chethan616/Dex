@@ -242,7 +242,7 @@ async function restartGatewayWithoutServiceManager(
   }
   if (pids.length > 1) {
     throw new Error(
-      `multiple gateway processes are listening on port ${port}: ${formatGatewayPidList(pids)}; use "openclaw gateway status --deep" before retrying restart`,
+      `multiple gateway processes are listening on port ${port}: ${formatGatewayPidList(pids)}; use "dex gateway status --deep" before retrying restart`,
     );
   }
   writeGatewayRestartIntentSync({
@@ -376,8 +376,8 @@ export async function runDaemonRestart(opts: DaemonLifecycleOptions = {}): Promi
         }
 
         fail(`Gateway restart timed out after ${restartWaitSeconds}s waiting for health checks.`, [
-          formatCliCommand("openclaw gateway status --deep"),
-          formatCliCommand("openclaw doctor"),
+          formatCliCommand("dex gateway status --deep"),
+          formatCliCommand("dex doctor"),
         ]);
         throw new Error("unreachable after gateway restart health failure");
       }
@@ -443,8 +443,8 @@ export async function runDaemonRestart(opts: DaemonLifecycleOptions = {}): Promi
       }
 
       fail(failure.failMessage, [
-        formatCliCommand("openclaw gateway status --deep"),
-        formatCliCommand("openclaw doctor"),
+        formatCliCommand("dex gateway status --deep"),
+        formatCliCommand("dex doctor"),
       ]);
       throw new Error("unreachable after gateway restart failure");
     },

@@ -265,7 +265,7 @@ export async function ensureConfigReady(params: {
     : commandText(formatCliCommand("dex doctor --fix"));
   params.runtime.error(`${muted("Fix:")} ${fixHint}`);
   params.runtime.error(
-    `${muted("Inspect:")} ${commandText(formatCliCommand("openclaw config validate"))}`,
+    `${muted("Inspect:")} ${commandText(formatCliCommand("dex config validate"))}`,
   );
   params.runtime.error(
     muted(

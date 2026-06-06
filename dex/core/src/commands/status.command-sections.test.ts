@@ -51,8 +51,8 @@ describe("status.command-sections", () => {
     expect(lines).toContain("    critical detail");
     expect(lines).toContain("    muted(Fix: fix it)");
     expect(lines).toContain("muted(… +1 more)");
-    expect(lines.at(-2)).toBe("muted(Full report: cmd:openclaw security audit)");
-    expect(lines.at(-1)).toBe("muted(Deep probe: cmd:openclaw security audit --deep)");
+    expect(lines.at(-2)).toBe("muted(Full report: cmd:dex security audit)");
+    expect(lines.at(-1)).toBe("muted(Deep probe: cmd:dex security audit --deep)");
   });
 
   it("builds verbose sessions rows and returns no rows for empty sessions", () => {
@@ -241,9 +241,9 @@ describe("status.command-sections", () => {
       "",
       "warn(upgrade ready)",
       "Next steps:",
-      "  Need to share?      cmd:openclaw status --all",
-      "  Need to debug live? cmd:openclaw logs --follow",
-      "  Fix reachability first: cmd:openclaw gateway probe",
+      "  Need to share?      cmd:dex status --all",
+      "  Need to debug live? cmd:dex logs --follow",
+      "  Fix reachability first: cmd:dex gateway probe",
     ]);
   });
 
@@ -277,9 +277,9 @@ describe("status.command-sections", () => {
       "warn(Gateway scope upgrade approval required.)",
       "muted(Reason: device is asking for more scopes than currently approved.)",
       "muted(Hint: Review the requested scopes, then approve the pending upgrade.)",
-      "muted(Recovery: cmd:openclaw devices approve req-123)",
-      "muted(Fallback: cmd:openclaw devices approve --latest)",
-      "muted(Inspect: cmd:openclaw devices list)",
+      "muted(Recovery: cmd:dex devices approve req-123)",
+      "muted(Fallback: cmd:dex devices approve --latest)",
+      "muted(Inspect: cmd:dex devices list)",
     ]);
   });
 

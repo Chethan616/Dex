@@ -235,7 +235,7 @@ describe("update-startup", () => {
     const { log, parsed } = await runUpdateCheckAndReadState(channel);
 
     expect(log.info).toHaveBeenCalledWith(
-      `update available (latest): v2.0.0 (current v1.0.0). Run: ${formatCliCommand("openclaw update")}`,
+      `update available (latest): v2.0.0 (current v1.0.0). Run: ${formatCliCommand("dex update")}`,
     );
     expect(parsed.lastNotifiedVersion).toBe("2.0.0");
     expect(parsed.lastAvailableVersion).toBe("2.0.0");

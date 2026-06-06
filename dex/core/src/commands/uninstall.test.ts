@@ -28,7 +28,7 @@ describe("uninstallCommand", () => {
 
     expect(
       cleanupCommandLogMessages(runtime).some((message) =>
-        message.includes("openclaw backup create"),
+        message.includes("dex backup create"),
       ),
     ).toBe(true);
   });
@@ -43,7 +43,7 @@ describe("uninstallCommand", () => {
 
     expect(
       cleanupCommandLogMessages(runtime).some((message) =>
-        message.includes("openclaw backup create"),
+        message.includes("dex backup create"),
       ),
     ).toBe(false);
   });

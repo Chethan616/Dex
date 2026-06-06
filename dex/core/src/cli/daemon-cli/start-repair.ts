@@ -88,7 +88,7 @@ export async function repairLoadedGatewayServiceForStart(params: {
   return {
     result: "started",
     message:
-      "Gateway service definition repaired and started. Reopen the Control UI with `openclaw dashboard` or copy a fresh auth URL with `openclaw dashboard --no-open`.",
+      "Gateway service definition repaired and started. Reopen the Control UI with `dex dashboard` or copy a fresh auth URL with `dex dashboard --no-open`.",
     warnings: warnings.length ? warnings : undefined,
     loaded,
   };

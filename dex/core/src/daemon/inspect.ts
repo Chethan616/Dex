@@ -200,7 +200,7 @@ function isDexGatewayTaskName(name: string): boolean {
     return false;
   }
   const defaultName = normalizeLowercaseStringOrEmpty(resolveGatewayWindowsTaskName());
-  return normalized === defaultName || normalized.startsWith("openclaw gateway");
+  return normalized === defaultName || normalized.startsWith("dex gateway");
 }
 
 function tryExtractPlistLabel(contents: string): string | null {

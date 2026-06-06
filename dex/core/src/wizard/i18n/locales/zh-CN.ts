@@ -127,7 +127,7 @@ export const zh_CN = {
       apply: "现在应用这次迁移？",
       appliedTitle: "迁移已应用",
       cancelled: "迁移已取消",
-      complete: "迁移完成。下一步运行 `openclaw doctor`。",
+      complete: "迁移完成。下一步运行 `dex doctor`。",
       previewTitle: "迁移预览",
       source: "迁移来源",
       sourceAgentHome: "源 agent home",

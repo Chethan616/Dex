@@ -183,7 +183,7 @@ describe("findExtraGatewayServices (linux / scanSystemdDir) — real filesystem"
   );
 
   it.skipIf(!isLinux)(
-    "reports custom-named gateway units that execute openclaw gateway",
+    "reports custom-named gateway units that execute dex gateway",
     async () => {
       const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-test-"));
       const systemdDir = path.join(tmpHome, ".config", "systemd", "user");
@@ -288,7 +288,7 @@ describe("findExtraGatewayServices (darwin / scanLaunchdDir) — real filesystem
     }
   });
 
-  it("reports custom LaunchAgents that execute openclaw gateway", async () => {
+  it("reports custom LaunchAgents that execute dex gateway", async () => {
     const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-test-"));
     const launchdDir = path.join(tmpHome, "Library", "LaunchAgents");
     const plistPath = path.join(launchdDir, "com.example.openclaw-gateway.plist");

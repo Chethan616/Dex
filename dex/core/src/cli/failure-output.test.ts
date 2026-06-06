@@ -14,7 +14,7 @@ describe("formatCliFailureLines", () => {
       "[openclaw] Could not start the CLI.",
       "[openclaw] Reason: config file is invalid",
       "[openclaw] Debug: set DEX_DEBUG=1 to include the stack trace.",
-      "[openclaw] Try: openclaw doctor",
+      "[openclaw] Try: dex doctor",
       "[openclaw] Help: openclaw --help",
     ]);
   });

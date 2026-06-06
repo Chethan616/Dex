@@ -9,7 +9,7 @@ describe("buildSystemdUnit", () => {
       environment: {},
     });
     const execStart = unit.split("\n").find((line) => line.startsWith("ExecStart="));
-    expect(execStart).toBe('ExecStart=/usr/bin/openclaw gateway --name "My Bot"');
+    expect(execStart).toBe('ExecStart=/usr/bin/dex gateway --name "My Bot"');
   });
 
   it("renders control-group kill mode for child-process cleanup", () => {

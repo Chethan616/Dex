@@ -1038,7 +1038,7 @@ describe("buildGatewayConnectionDetails", () => {
     expect((thrown as Error).message).toContain("plaintext ws://");
     expect((thrown as Error).message).toContain("wss://");
     expect((thrown as Error).message).toContain("Tailscale Serve/Funnel");
-    expect((thrown as Error).message).toContain("openclaw doctor --fix");
+    expect((thrown as Error).message).toContain("dex doctor --fix");
   });
 
   it("redacts credential-bearing target URLs from insecure ws:// errors", () => {

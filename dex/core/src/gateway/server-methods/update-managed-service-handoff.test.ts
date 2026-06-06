@@ -153,7 +153,7 @@ describe("managed service update handoff", () => {
     });
 
     expect(result.status).toBe("started");
-    expect(result.command).toBe("openclaw update --yes --timeout 1800");
+    expect(result.command).toBe("dex update --yes --timeout 1800");
     expect(spawnMock).toHaveBeenCalledTimes(1);
     const [execPath, args, options] = spawnMock.mock.calls[0] as unknown as [
       string,

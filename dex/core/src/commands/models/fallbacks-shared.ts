@@ -21,8 +21,8 @@ type DefaultsFallbackKey = "model" | "imageModel";
 
 function listCommandForFallbackKey(key: DefaultsFallbackKey): string {
   return key === "imageModel"
-    ? "openclaw models image-fallbacks list"
-    : "openclaw models fallbacks list";
+    ? "dex models image-fallbacks list"
+    : "dex models fallbacks list";
 }
 
 function getFallbacks(cfg: DexConfig, key: DefaultsFallbackKey): string[] {

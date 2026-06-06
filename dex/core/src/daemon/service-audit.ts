@@ -335,7 +335,7 @@ function auditGatewayToken(
   issues.push({
     code: SERVICE_AUDIT_CODES.gatewayTokenEmbedded,
     message: "Gateway service embeds DEX_GATEWAY_TOKEN and should be reinstalled.",
-    detail: "Run `openclaw gateway install --force` to remove embedded service token.",
+    detail: "Run `dex gateway install --force` to remove embedded service token.",
     level: "recommended",
   });
   const expectedToken = normalizeOptionalString(expectedGatewayToken);
@@ -596,7 +596,7 @@ export function checkTokenDrift(params: {
       code: SERVICE_AUDIT_CODES.gatewayTokenDrift,
       message:
         "Config token differs from service token. The daemon will use the old token after restart.",
-      detail: "Run `openclaw gateway install --force` to sync the token.",
+      detail: "Run `dex gateway install --force` to sync the token.",
       level: "recommended",
     };
   }
@@ -612,7 +612,7 @@ function auditGatewayServiceVersion(command: GatewayServiceCommand, issues: Serv
 
   issues.push({
     code: SERVICE_AUDIT_CODES.gatewayServiceVersionMismatch,
-    message: `Gateway service was installed by OpenClaw ${serviceVersion}; current CLI is ${VERSION}.`,
+    message: `Gateway service was installed by Dex ${serviceVersion}; current CLI is ${VERSION}.`,
     detail: command?.sourcePath,
     level: "recommended",
   });

@@ -133,7 +133,7 @@ describe("printDaemonStatus", () => {
     );
 
     expectMockLineContains(runtime.error, "Gateway runtime PID does not own the listening port");
-    expectMockLineContains(runtime.error, formatCliCommand("openclaw gateway restart"));
+    expectMockLineContains(runtime.error, formatCliCommand("dex gateway restart"));
   });
 
   it("prints established gateway client guidance gathered by deep status", () => {
@@ -214,7 +214,7 @@ describe("printDaemonStatus", () => {
     expectMockLineContains(runtime.error, "ai.openclaw.update.2026.5.12");
     expectMockLineContains(runtime.error, "ai.openclaw.manual-update.1717168800");
     expectMockLineContains(runtime.error, "launchctl remove <label>");
-    expectMockLineContains(runtime.error, formatCliCommand("openclaw gateway restart"));
+    expectMockLineContains(runtime.error, formatCliCommand("dex gateway restart"));
   });
 
   it("prints macOS launchd stdout and suppressed stderr when gateway is not listening", () => {
@@ -544,7 +544,7 @@ describe("printDaemonStatus", () => {
     );
 
     expectMockLineContains(runtime.log, "Plugin version drift: 1 active official plugin");
-    expectMockLineContains(runtime.log, "openclaw gateway status --deep");
+    expectMockLineContains(runtime.log, "dex gateway status --deep");
     expect(runtime.log.mock.calls.map(([line]) => line).join("\n")).not.toContain("whatsapp:");
   });
 
@@ -575,8 +575,8 @@ describe("printDaemonStatus", () => {
     );
 
     expectMockLineContains(runtime.log, "- whatsapp: 2026.5.3 (clawhub)");
-    expectMockLineContains(runtime.log, "openclaw plugins update <plugin-id>");
-    expectMockLineContains(runtime.log, "openclaw gateway restart");
+    expectMockLineContains(runtime.log, "dex plugins update <plugin-id>");
+    expectMockLineContains(runtime.log, "dex gateway restart");
   });
 
   it("does not print systemd user-service hints when a gateway responds", () => {

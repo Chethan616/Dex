@@ -32,7 +32,7 @@ describe("doctor WhatsApp responsiveness", () => {
         " 103 openclaw channels",
         " 104 openclaw tui --local",
         " 105 /usr/bin/openclaw chat",
-        " 106 helper --note 'openclaw tui'",
+        " 106 helper --note 'dex tui'",
         " 107 openclaw-helper openclaw terminal",
         " 108 openclaw --flag tui",
       ].join("\n"),
@@ -40,7 +40,7 @@ describe("doctor WhatsApp responsiveness", () => {
 
     expect(listLocalTuiProcesses()).toEqual([
       { pid: 101, command: "openclaw-tui" },
-      { pid: 104, command: "openclaw tui --local" },
+      { pid: 104, command: "dex tui --local" },
       { pid: 105, command: "/usr/bin/openclaw chat" },
     ]);
   });

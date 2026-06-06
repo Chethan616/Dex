@@ -20,7 +20,7 @@ export async function runNonInteractiveRemoteSetup(params: {
   const remoteUrl = normalizeOptionalString(opts.remoteUrl);
   if (!remoteUrl) {
     runtime.error(
-      `Missing --remote-url for remote mode. Example: ${formatCliCommand("openclaw onboard --non-interactive --mode remote --remote-url ws://127.0.0.1:3000")}.`,
+      `Missing --remote-url for remote mode. Example: ${formatCliCommand("dex onboard --non-interactive --mode remote --remote-url ws://127.0.0.1:3000")}.`,
     );
     runtime.exit(1);
     return;
@@ -60,7 +60,7 @@ export async function runNonInteractiveRemoteSetup(params: {
     runtime.log(`Remote gateway: ${remoteUrl}`);
     runtime.log(`Auth: ${payload.auth}`);
     runtime.log(
-      `Tip: run \`${formatCliCommand("openclaw configure --section web")}\` to store your Brave API key for web_search. Docs: https://docs.openclaw.ai/tools/web`,
+      `Tip: run \`${formatCliCommand("dex configure --section web")}\` to store your Brave API key for web_search. Docs: https://docs.openclaw.ai/tools/web`,
     );
   }
 }

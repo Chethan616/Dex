@@ -233,12 +233,12 @@ describe("bundled plugin load path repair", () => {
           pathLabel: "plugins.load.paths",
         },
       ],
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expect(warnings).toEqual([
       `- plugins.load.paths: bundled plugin path "${legacyPath}" still aliases feishu; OpenClaw loads the packaged bundled plugin from "${bundledPath}".`,
-      '- Run "openclaw doctor --fix" to remove these redundant bundled plugin paths.',
+      '- Run "dex doctor --fix" to remove these redundant bundled plugin paths.',
     ]);
   });
 

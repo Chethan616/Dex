@@ -726,7 +726,7 @@ describe("processGatewayAllowlist", () => {
     });
 
     const result = await runGatewayAllowlist({
-      command: "openclaw config set security.audit.suppressions '[]'",
+      command: "dex config set security.audit.suppressions '[]'",
       security: "full",
       ask: "on-miss",
     });
@@ -745,7 +745,7 @@ describe("processGatewayAllowlist", () => {
     });
 
     const result = await runGatewayAllowlist({
-      command: "openclaw config set security.audit.suppressions '[]'",
+      command: "dex config set security.audit.suppressions '[]'",
       security: "full",
       ask: "on-miss",
       autoReview: true,
@@ -767,7 +767,7 @@ describe("processGatewayAllowlist", () => {
     });
 
     await runGatewayAllowlist({
-      command: "openclaw config set security.audit.suppressions '[]'",
+      command: "dex config set security.audit.suppressions '[]'",
       security: "full",
       ask: "off",
     });
@@ -793,7 +793,7 @@ describe("processGatewayAllowlist", () => {
     });
 
     await runGatewayAllowlist({
-      command: "openclaw config get security.audit.suppressions",
+      command: "dex config get security.audit.suppressions",
       security: "full",
       ask: "on-miss",
     });
@@ -853,7 +853,7 @@ describe("processGatewayAllowlist", () => {
 
     const result = await runGatewayAllowlist({
       command:
-        "openclaw config get security.audit.suppressions; openclaw config set security.audit.suppressions '[]'",
+        "dex config get security.audit.suppressions; dex config set security.audit.suppressions '[]'",
       security: "full",
       ask: "on-miss",
     });
@@ -881,7 +881,7 @@ describe("processGatewayAllowlist", () => {
 
     const result = await runGatewayAllowlist({
       command:
-        "openclaw config get security.audit.suppressions; openclaw config set security.audit.suppressions '[]'",
+        "dex config get security.audit.suppressions; dex config set security.audit.suppressions '[]'",
       security: "full",
       ask: "on-miss",
     });
@@ -907,12 +907,12 @@ describe("processGatewayAllowlist", () => {
       ok: true,
       segments: [
         {
-          raw: "openclaw config get security.audit.suppressions",
+          raw: "dex config get security.audit.suppressions",
           resolution: null,
           argv: ["openclaw", "config", "get", "security.audit.suppressions"],
         },
         {
-          raw: "openclaw config patch --stdin <<'EOF'",
+          raw: "dex config patch --stdin <<'EOF'",
           resolution: null,
           argv: ["openclaw", "config", "patch", "--stdin"],
         },
@@ -926,7 +926,7 @@ describe("processGatewayAllowlist", () => {
     });
 
     const result = await runGatewayAllowlist({
-      command: `openclaw config get security.audit.suppressions; openclaw config patch --stdin <<'EOF'
+      command: `dex config get security.audit.suppressions; dex config patch --stdin <<'EOF'
 {"security":{"audit":{"suppressions":[]}}}
 EOF`,
       security: "full",
@@ -1034,7 +1034,7 @@ EOF`,
     );
 
     const result = await runGatewayAllowlist({
-      command: "openclaw gateway diagnostics export --json",
+      command: "dex gateway diagnostics export --json",
       trigger: "diagnostics",
       approvalFollowupMode: "direct",
       approvalFollowup,

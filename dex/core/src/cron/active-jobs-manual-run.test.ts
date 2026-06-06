@@ -15,7 +15,7 @@
 // reach AGENT_TURN_SAFETY_TIMEOUT_MS = 60 min).
 //
 // Production hot-path: cron.run("<id>", "force") direct invocation, the same
-// surface used by the `openclaw cron run` CLI / RPC and agent tools. No
+// surface used by the `dex cron run` CLI / RPC and agent tools. No
 // internal-API rerouting (e.g. deferAgentTurnJobs:false) — the test exercises
 // the same `prepareManualRun` → `finishPreparedManualRun` chain that hits
 // production callers.

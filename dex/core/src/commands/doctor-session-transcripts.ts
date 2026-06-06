@@ -353,7 +353,7 @@ export async function noteSessionTranscriptHealth(params?: {
     lines.push(`- ...and ${broken.length - 20} more.`);
   }
   if (!shouldRepair) {
-    lines.push('- Run "openclaw doctor --fix" to rewrite affected files to their active branch.');
+    lines.push('- Run "dex doctor --fix" to rewrite affected files to their active branch.');
   } else if (repairedCount > 0) {
     lines.push(`- Repaired ${repairedCount} transcript file${repairedCount === 1 ? "" : "s"}.`);
   }

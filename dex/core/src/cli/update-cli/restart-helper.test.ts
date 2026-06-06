@@ -84,7 +84,7 @@ exit 0
     const runningGuard = 'if ($taskState -eq "Running")';
     const endCommand =
       'Invoke-DexSchtasksWithTimeout -Arguments @("/End", "/TN", $taskName) -TimeoutSeconds 10';
-    const skipEndLog = "openclaw restart skipped schtasks end";
+    const skipEndLog = "dex restart skipped schtasks end";
     const pollLoop = "for ($attempt = 1; $attempt -le 10; $attempt++)";
     const pollCall = `Get-DexListenerPids -Port $port`;
     const forceKillBranch = "if ($attempt -eq 10)";
@@ -240,7 +240,7 @@ exit 1
       const calls = await fs.readFile(callsPath, "utf-8");
 
       expect(result.code).toBe(78);
-      expect(result.stderr).toContain("system-scoped openclaw gateway unit detected");
+      expect(result.stderr).toContain("system-scoped dex gateway unit detected");
       expect(result.stderr).toContain("sudo systemctl restart openclaw-gateway.service");
       expect(calls).toContain("--user is-active --quiet openclaw-gateway.service");
       expect(calls).toContain("is-active --quiet openclaw-gateway.service");
@@ -338,10 +338,10 @@ exit 0
       const log = await fs.readFile(path.join(stateDir, "logs", "gateway-restart.log"), "utf-8");
 
       expect(result.code).toBe(42);
-      expect(log).toContain("openclaw restart attempt source=update target=ai.openclaw.gateway");
+      expect(log).toContain("dex restart attempt source=update target=ai.openclaw.gateway");
       expect(log).toContain("launchctl kickstart -k gui/501/ai.openclaw.gateway");
-      expect(log).toContain("openclaw restart failed source=update status=42");
-      expect(log).not.toContain("openclaw restart done source=update");
+      expect(log).toContain("dex restart failed source=update status=42");
+      expect(log).not.toContain("dex restart done source=update");
     });
 
     it("continues the macOS restart path when log setup fails", async () => {
@@ -432,11 +432,11 @@ exit 0
       expect(content).toContain("function Get-DexScheduledTaskState");
       expect(content).toContain("function Invoke-DexStartupLauncher");
       expect(content).toContain("Get-ScheduledTask -TaskName $TaskName");
-      expect(content).toContain("openclaw restart skipped schtasks end");
+      expect(content).toContain("dex restart skipped schtasks end");
       expect(content).toContain(
         '$launcherPath = Join-Path $env:USERPROFILE ".openclaw\\gateway.cmd"',
       );
-      expect(content).toContain("openclaw restart launched startup fallback");
+      expect(content).toContain("dex restart launched startup fallback");
       expectWindowsRestartWaitOrdering(content);
       expect(content).toContain('del "%~f0" >nul 2>&1');
       expect(content).toContain('rmdir "%DEX_RESTART_SCRIPT_DIR%" >nul 2>&1');

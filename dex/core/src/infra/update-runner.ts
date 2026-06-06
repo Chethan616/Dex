@@ -637,7 +637,7 @@ function normalizeFallbackFailureReason(stepName: string): NonNullable<UpdateRun
     case "global install verify":
     case "global install swap":
       return "global-install-failed";
-    case "openclaw doctor":
+    case "dex doctor":
       return "doctor-failed";
     case "ui:build (post-doctor repair)":
       return "ui-build-failed";
@@ -1371,7 +1371,7 @@ export async function runGatewayUpdate(opts: UpdateRunnerOptions = {}): Promise<
         .catch(() => false);
       if (!doctorEntryExists) {
         steps.push({
-          name: "openclaw doctor entry",
+          name: "dex doctor entry",
           command: `verify ${doctorEntry}`,
           cwd: gitRoot,
           durationMs: 0,
@@ -1386,7 +1386,7 @@ export async function runGatewayUpdate(opts: UpdateRunnerOptions = {}): Promise<
       const doctorNodePath = await resolveStableNodePath(process.execPath);
       const doctorArgv = [doctorNodePath, doctorEntry, "doctor", "--non-interactive", "--fix"];
       const doctorStep = await runStep(
-        step("openclaw doctor", doctorArgv, gitRoot, {
+        step("dex doctor", doctorArgv, gitRoot, {
           DEX_UPDATE_IN_PROGRESS: "1",
           ...(opts.deferConfiguredPluginInstallRepair
             ? { [UPDATE_DEFER_CONFIGURED_PLUGIN_INSTALL_REPAIR_ENV]: "1" }
@@ -1523,7 +1523,7 @@ export async function runGatewayUpdate(opts: UpdateRunnerOptions = {}): Promise<
         const candidateHostVersion = await readPackageVersion(verifiedPackageRoot);
         return await runStep({
           runCommand,
-          name: "openclaw doctor",
+          name: "dex doctor",
           argv: [doctorNodePath, doctorEntry, "doctor", "--non-interactive", "--fix"],
           cwd: verifiedPackageRoot,
           timeoutMs,

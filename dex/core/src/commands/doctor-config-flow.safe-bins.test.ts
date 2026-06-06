@@ -66,13 +66,13 @@ describe("doctor config flow safe bins", () => {
           },
         },
       }),
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expect(warnings.join("\n")).toContain(
       "tools.exec.safeBins includes interpreter/runtime 'python3'",
     );
-    expect(warnings.join("\n")).toContain("openclaw doctor --fix");
+    expect(warnings.join("\n")).toContain("dex doctor --fix");
   });
 
   it("hints safeBinTrustedDirs when safeBins resolve outside default trusted dirs", async () => {

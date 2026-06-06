@@ -40,9 +40,9 @@ vi.mock("../../plugins/official-external-plugin-repair-hints.js", () => ({
           channelId,
           label: channelId === "whatsapp" ? "WhatsApp" : "Feishu",
           installSpec: `@openclaw/${channelId}`,
-          installCommand: `openclaw plugins install @openclaw/${channelId}`,
-          doctorFixCommand: "openclaw doctor --fix",
-          repairHint: `Install the official external plugin with: openclaw plugins install @openclaw/${channelId}, or run: openclaw doctor --fix.`,
+          installCommand: `dex plugins install @openclaw/${channelId}`,
+          doctorFixCommand: "dex doctor --fix",
+          repairHint: `Install the official external plugin with: dex plugins install @openclaw/${channelId}, or run: dex doctor --fix.`,
         }
       : null,
 }));
@@ -297,7 +297,7 @@ describe("resolveMessageChannelSelection", () => {
         channel: "feishu",
       },
       expectedMessage:
-        "Channel is unavailable: feishu. Install the official external plugin with: openclaw plugins install @openclaw/feishu, or run: openclaw doctor --fix.",
+        "Channel is unavailable: feishu. Install the official external plugin with: dex plugins install @openclaw/feishu, or run: dex doctor --fix.",
     },
     {
       params: { cfg: {} as never },
@@ -311,7 +311,7 @@ describe("resolveMessageChannelSelection", () => {
       },
       params: { cfg: { channels: { whatsapp: { enabled: true } } } as never },
       expectedMessage:
-        "Channel is required (no available channels detected). Configured official external channel WhatsApp is missing its plugin. Install the official external plugin with: openclaw plugins install @openclaw/whatsapp, or run: openclaw doctor --fix.",
+        "Channel is required (no available channels detected). Configured official external channel WhatsApp is missing its plugin. Install the official external plugin with: dex plugins install @openclaw/whatsapp, or run: dex doctor --fix.",
     },
     {
       setup: () => {

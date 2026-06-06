@@ -11,9 +11,19 @@ const FORCE_KILL_WAIT_FALLBACK_MS = 4000;
 const WINDOWS_CLOSE_STATE_SETTLE_TIMEOUT_MS = 250;
 
 function resolveCommand(command: string): string {
+  // Node-installed CLI tools the supervisor spawns. On Windows each ships as
+  // a `.cmd` shim (e.g. `gemini.cmd`) in `%APPDATA%\npm\`, and Node's
+  // child_process.spawn() without shell:true fails to find a bare `gemini`
+  // -- the `.cmd` extension is required. Keep this list narrow: only LLM-
+  // backend CLIs the gateway actually spawns end up here.
   return resolveWindowsCommandShim({
     command,
-    cmdCommands: ["npm", "pnpm", "yarn", "npx"],
+    cmdCommands: [
+      "npm", "pnpm", "yarn", "npx",
+      // LLM backends -- added 2026-06-06 to fix `spawn gemini ENOENT` when
+      // the gateway hands off to @google/gemini-cli on Windows.
+      "gemini", "claude", "codex",
+    ],
   });
 }
 

@@ -213,7 +213,7 @@ export function buildStatusAllOverviewRows(params: {
       ...(params.updateRestartValue
         ? [{ Item: "Update restart", Value: params.updateRestartValue }]
         : []),
-      { Item: "Security", Value: `Run: ${formatCliCommand("openclaw security audit --deep")}` },
+      { Item: "Security", Value: `Run: ${formatCliCommand("dex security audit --deep")}` },
     ],
     agentsValue: buildStatusAllAgentsValue({
       agentStatus: params.agentStatus,

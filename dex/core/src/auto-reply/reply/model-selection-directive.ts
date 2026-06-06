@@ -22,7 +22,7 @@ export type ModelDirectiveSelection = {
 };
 
 function formatAddModelCommand(modelRef: string): string {
-  return `openclaw config set agents.defaults.models '${JSON.stringify({ [modelRef]: {} })}' --strict-json --merge`;
+  return `dex config set agents.defaults.models '${JSON.stringify({ [modelRef]: {} })}' --strict-json --merge`;
 }
 
 function formatNotAllowedError(params: {

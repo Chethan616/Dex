@@ -336,7 +336,7 @@ describe("devices cli approve", () => {
     expect(logOutput).toContain("Device Nine");
     expect(logOutput).toContain("Approved: roles: operator; scopes: operator.read");
     expect(logOutput).toContain("Requested scopes exceed the current approval");
-    expect(readRuntimeErrorOutput()).toContain("openclaw devices approve req-abc");
+    expect(readRuntimeErrorOutput()).toContain("dex devices approve req-abc");
     expect(runtime.exit).toHaveBeenCalledWith(1);
     expect(hasGatewayMethod("device.pair.approve")).toBe(false);
   });
@@ -399,7 +399,7 @@ describe("devices cli approve", () => {
 
     expectGatewayCall(0, { method: "device.pair.list" });
     expect(hasGatewayMethod("device.pair.approve")).toBe(false);
-    expect(readRuntimeErrorOutput()).toContain(`openclaw devices approve ${expectedRequestId}`);
+    expect(readRuntimeErrorOutput()).toContain(`dex devices approve ${expectedRequestId}`);
   });
 
   it("falls back to device id when selected pending display name is blank", async () => {
@@ -418,7 +418,7 @@ describe("devices cli approve", () => {
 
     const logOutput = runtime.log.mock.calls.map((c) => readRuntimeCallText(c)).join("\n");
     expect(logOutput).toContain("device-9");
-    expect(readRuntimeErrorOutput()).toContain("openclaw devices approve req-blank");
+    expect(readRuntimeErrorOutput()).toContain("dex devices approve req-blank");
     expect(hasGatewayMethod("device.pair.approve")).toBe(false);
   });
 
@@ -439,7 +439,7 @@ describe("devices cli approve", () => {
 
     const errorOutput = runtime.error.mock.calls.map((c) => readRuntimeCallText(c)).join("\n");
     expect(errorOutput).toContain(
-      "openclaw devices approve req-url --url 'ws://gateway.example:18789/openclaw?cluster=qa lab' --timeout 3000",
+      "dex devices approve req-url --url 'ws://gateway.example:18789/openclaw?cluster=qa lab' --timeout 3000",
     );
     expect(errorOutput).toContain("Reuse the same --token option when rerunning.");
     expect(errorOutput).not.toContain("secret-token");
@@ -463,7 +463,7 @@ describe("devices cli approve", () => {
         requested: { roles: [], scopes: [] },
         approved: null,
       },
-      approveCommand: "openclaw devices approve req-json --url ws://gateway.example:18789 --json",
+      approveCommand: "dex devices approve req-json --url ws://gateway.example:18789 --json",
       requiresAuthFlags: {
         token: false,
         password: false,

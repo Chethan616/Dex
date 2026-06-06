@@ -92,7 +92,7 @@ describe("doctor context-engine host compatibility", () => {
           },
         },
       }),
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expect(warnings).toEqual([]);
@@ -111,7 +111,7 @@ describe("doctor context-engine host compatibility", () => {
           },
         },
       }),
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expect(result.config.plugins?.slots?.contextEngine).toBe("legacy");
@@ -133,7 +133,7 @@ describe("doctor context-engine host compatibility", () => {
     });
     const result = await maybeRepairContextEngineHostCompatibility({
       cfg,
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expect(result.config).toBe(cfg);
@@ -154,7 +154,7 @@ describe("doctor context-engine host compatibility", () => {
     });
     const result = await maybeRepairContextEngineHostCompatibility({
       cfg,
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expect(result.config).toBe(cfg);

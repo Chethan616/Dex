@@ -3197,7 +3197,7 @@ describe("native hook relay command builder", () => {
         executable: "openclaw",
       }),
     ).toBe(
-      "openclaw hooks relay --provider codex --relay-id relay-1 --generation generation-1 --event permission_request --timeout 5000",
+      "dex hooks relay --provider codex --relay-id relay-1 --generation generation-1 --event permission_request --timeout 5000",
     );
   });
 
@@ -3212,7 +3212,7 @@ describe("native hook relay command builder", () => {
         executable: "openclaw",
       }),
     ).toBe(
-      "openclaw hooks relay --provider codex --relay-id relay-1 --generation generation-1 --event pre_tool_use --pre-tool-use-unavailable noop --timeout 5000",
+      "dex hooks relay --provider codex --relay-id relay-1 --generation generation-1 --event pre_tool_use --pre-tool-use-unavailable noop --timeout 5000",
     );
   });
 });

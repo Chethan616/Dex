@@ -256,7 +256,7 @@ export async function runPluginsInspectCommand(
   });
   if (!inspect) {
     defaultRuntime.error(
-      formatMissingPluginMessage({ id, listCommand: "openclaw plugins list --json" }),
+      formatMissingPluginMessage({ id, listCommand: "dex plugins list --json" }),
     );
     return defaultRuntime.exit(1);
   }

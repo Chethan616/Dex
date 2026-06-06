@@ -5596,7 +5596,7 @@ describe("runAgentTurnWithFallback", () => {
     expect(result.kind).toBe("final");
     if (result.kind === "final") {
       expect(result.payload.text).toBe(
-        "⚠️ Model login expired on the gateway for openai. Re-auth with `openclaw models auth login --provider openai`, then try again.",
+        "⚠️ Model login expired on the gateway for openai. Re-auth with `dex models auth login --provider openai`, then try again.",
       );
     }
   });
@@ -5615,7 +5615,7 @@ describe("runAgentTurnWithFallback", () => {
     expect(result.kind).toBe("final");
     if (result.kind === "final") {
       expect(result.payload.text).toBe(
-        "⚠️ Model login expired on the gateway for openai. Re-auth with `openclaw models auth login --provider openai`, then try again.",
+        "⚠️ Model login expired on the gateway for openai. Re-auth with `dex models auth login --provider openai`, then try again.",
       );
     }
   });
@@ -5673,7 +5673,7 @@ describe("runAgentTurnWithFallback", () => {
     expect(result.kind).toBe("final");
     if (result.kind === "final") {
       expect(result.payload.text).toBe(
-        '⚠️ Missing API key for provider "openai". Run `openclaw doctor --fix` to repair stale OpenAI model/session routes, restart the gateway if doctor asks, then try again. If doctor has nothing to repair or the error persists, re-auth with `openclaw models auth login --provider openai` or run `openclaw configure`.',
+        '⚠️ Missing API key for provider "openai". Run `dex doctor --fix` to repair stale OpenAI model/session routes, restart the gateway if doctor asks, then try again. If doctor has nothing to repair or the error persists, re-auth with `dex models auth login --provider openai` or run `dex configure`.',
       );
     }
   });
@@ -5694,7 +5694,7 @@ describe("runAgentTurnWithFallback", () => {
     expect(result.kind).toBe("final");
     if (result.kind === "final") {
       expect(result.payload.text).toContain("Couldn't sign in to openai.");
-      expect(result.payload.text).toContain("openclaw configure");
+      expect(result.payload.text).toContain("dex configure");
       expect(result.payload.text).toContain("(invalid_grant)");
       expect(result.payload.text).not.toContain("Auth profile failover exhausted");
     }
@@ -5711,7 +5711,7 @@ describe("runAgentTurnWithFallback", () => {
     expect(result.kind).toBe("final");
     if (result.kind === "final") {
       expect(result.payload.text).toBe(
-        '⚠️ Missing API key for provider "openai". Run `openclaw doctor --fix` to repair stale OpenAI model/session routes, restart the gateway if doctor asks, then try again. If doctor has nothing to repair or the error persists, re-auth with `openclaw models auth login --provider openai` or run `openclaw configure`.',
+        '⚠️ Missing API key for provider "openai". Run `dex doctor --fix` to repair stale OpenAI model/session routes, restart the gateway if doctor asks, then try again. If doctor has nothing to repair or the error persists, re-auth with `dex models auth login --provider openai` or run `dex configure`.',
       );
     }
   });
@@ -5787,7 +5787,7 @@ describe("runAgentTurnWithFallback", () => {
     expect(result.kind).toBe("final");
     if (result.kind === "final") {
       expect(result.payload.text).toBe(
-        "⚠️ Model login expired on the gateway. Re-auth with `openclaw models auth login`, then try again.",
+        "⚠️ Model login expired on the gateway. Re-auth with `dex models auth login`, then try again.",
       );
     }
   });

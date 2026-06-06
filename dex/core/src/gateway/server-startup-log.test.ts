@@ -28,7 +28,7 @@ describe("gateway startup log", () => {
 
     expect(warn.mock.calls).toEqual([
       [
-        "security warning: dangerous config flags enabled: gateway.controlUi.dangerouslyDisableDeviceAuth=true. Run `openclaw security audit`.",
+        "security warning: dangerous config flags enabled: gateway.controlUi.dangerouslyDisableDeviceAuth=true. Run `dex security audit`.",
       ],
     ]);
   });

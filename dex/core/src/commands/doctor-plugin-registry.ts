@@ -262,7 +262,7 @@ export function maybeRepairStaleManagedNpmBundledPlugins(
           (plugin) =>
             `- ${plugin.pluginId}: ${plugin.packageName}${plugin.version ? `@${plugin.version}` : ""}`,
         ),
-        `Repair with ${formatCliCommand("openclaw doctor --fix")} to remove stale managed npm packages and rebuild the plugin registry.`,
+        `Repair with ${formatCliCommand("dex doctor --fix")} to remove stale managed npm packages and rebuild the plugin registry.`,
       ].join("\n"),
       "Plugin registry",
     );
@@ -298,7 +298,7 @@ export async function maybeRepairStaleLocalBundledPluginInstallRecords(
       [
         "Local bundled plugin install records shadow bundled plugins:",
         ...stale.map((record) => `- ${record.pluginId}: ${shortenHomePath(record.stalePath)}`),
-        `Repair with ${formatCliCommand("openclaw doctor --fix")} to remove stale local install records and rebuild the plugin registry.`,
+        `Repair with ${formatCliCommand("dex doctor --fix")} to remove stale local install records and rebuild the plugin registry.`,
       ].join("\n"),
       "Plugin registry",
     );
@@ -329,7 +329,7 @@ export async function maybeRepairManagedNpmOpenClawPeerLinks(
         [
           "Managed npm OpenClaw host peer links need repair:",
           ...issues.map((issue) => `- ${issue.packageName}: ${issue.reason}`),
-          `Repair with ${formatCliCommand("openclaw doctor --fix")} to relink managed npm plugin packages.`,
+          `Repair with ${formatCliCommand("dex doctor --fix")} to relink managed npm plugin packages.`,
         ].join("\n"),
         "Plugin registry",
       );
@@ -419,7 +419,7 @@ export async function maybeRepairPluginRegistryState(
       note(
         [
           "Persisted plugin registry is missing or stale.",
-          `Repair with ${formatCliCommand("openclaw doctor --fix")} to rebuild ${shortenHomePath(preflight.filePath)} from enabled plugins.`,
+          `Repair with ${formatCliCommand("dex doctor --fix")} to rebuild ${shortenHomePath(preflight.filePath)} from enabled plugins.`,
         ].join("\n"),
         "Plugin registry",
       );

@@ -24,7 +24,7 @@ describe("status update restart formatting", () => {
     );
 
     expect(value).toBe(
-      "warn(failed · managed-service-handoff-failed · run openclaw gateway status --deep · 60000ms)",
+      "warn(failed · managed-service-handoff-failed · run dex gateway status --deep · 60000ms)",
     );
   });
 
@@ -40,7 +40,7 @@ describe("status update restart formatting", () => {
         ...basePayload,
         stats: { ...basePayload.stats, reason: "restart-health-pending" },
       }),
-    ).toBe("restart pending health verification · run openclaw gateway status --deep");
+    ).toBe("restart pending health verification · run dex gateway status --deep");
   });
 
   it("formats verified update restarts with the running gateway version", () => {
@@ -63,7 +63,7 @@ describe("status update restart formatting", () => {
         status: "error",
         stats: { ...basePayload.stats, reason: "managed-service-handoff-failed" },
       }),
-    ).toContain("Update restart failed; run openclaw gateway status --deep.");
+    ).toContain("Update restart failed; run dex gateway status --deep.");
     expect(
       formatUpdateRestartActionLines({
         ...basePayload,

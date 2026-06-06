@@ -262,7 +262,7 @@ describe("doctor preview warnings", () => {
           },
         },
       } as DexConfig,
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
       env: { CODEX_HOME: codexHome, HOME: root },
     });
 
@@ -282,7 +282,7 @@ describe("doctor preview warnings", () => {
           },
         },
       },
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expect(
@@ -309,7 +309,7 @@ describe("doctor preview warnings", () => {
           },
         },
       },
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     const warning = expectSingleWarningContaining(
@@ -323,7 +323,7 @@ describe("doctor preview warnings", () => {
   it("includes stale plugin config warnings", async () => {
     const warnings = await collectDoctorPreviewWarnings({
       cfg: stalePluginConfig(),
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     const warning = expectSingleWarningContaining(
@@ -331,7 +331,7 @@ describe("doctor preview warnings", () => {
       'plugins.allow: stale plugin reference "acpx"',
     );
     expect(warning).toContain("plugins.entries.acpx");
-    expect(warning).toContain('Run "openclaw doctor --fix"');
+    expect(warning).toContain('Run "dex doctor --fix"');
     expect(warning).not.toContain("Auto-removal is paused");
   });
 
@@ -344,7 +344,7 @@ describe("doctor preview warnings", () => {
           },
         },
       },
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expectSingleWarningContaining(warnings, "channels.openclaw-weixin: dangling channel config");
@@ -363,24 +363,24 @@ describe("doctor preview warnings", () => {
           },
         },
       },
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     const warning = expectSingleWarningContaining(
       warnings,
       `plugins.load.paths: legacy bundled plugin path "${legacyPath}"`,
     );
-    expect(warning).toContain('Run "openclaw doctor --fix"');
+    expect(warning).toContain('Run "dex doctor --fix"');
   });
 
   it("includes stale OAuth profile shadow warnings", async () => {
     staleOAuthShadowState.warnings = [
-      '- ~/.dex/agents/telegram/agent/auth-profiles.json has stale OAuth auth profile openai-codex:default. Run "openclaw doctor --fix".',
+      '- ~/.dex/agents/telegram/agent/auth-profiles.json has stale OAuth auth profile openai-codex:default. Run "dex doctor --fix".',
     ];
 
     const warnings = await collectDoctorPreviewWarnings({
       cfg: {},
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expectSingleWarningContaining(warnings, "stale OAuth auth profile openai-codex:default");
@@ -393,7 +393,7 @@ describe("doctor preview warnings", () => {
 
     const warnings = await collectDoctorPreviewWarnings({
       cfg: { tools: { allow: ["fuzzplugin_move_angles"] } },
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expect(
@@ -409,7 +409,7 @@ describe("doctor preview warnings", () => {
 
     const warnings = await collectDoctorPreviewWarnings({
       cfg: stalePluginConfig(),
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     const warning = expectSingleWarningContaining(
@@ -417,7 +417,7 @@ describe("doctor preview warnings", () => {
       'plugins.allow: stale plugin reference "acpx"',
     );
     expect(warning).toContain("Auto-removal is paused");
-    expect(warning).toContain('rerun "openclaw doctor --fix"');
+    expect(warning).toContain('rerun "dex doctor --fix"');
   });
 
   it("warns when a configured channel plugin is disabled explicitly", async () => {
@@ -439,7 +439,7 @@ describe("doctor preview warnings", () => {
           },
         },
       },
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     const warning = expectSingleWarningContaining(
@@ -464,7 +464,7 @@ describe("doctor preview warnings", () => {
           enabled: false,
         },
       },
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     const warning = expectSingleWarningContaining(
@@ -493,7 +493,7 @@ describe("doctor preview warnings", () => {
           },
         },
       },
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expectSingleWarningContaining(
@@ -513,7 +513,7 @@ describe("doctor preview warnings", () => {
           },
         },
       },
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     const warning = expectSingleWarningContaining(warnings, 'tools.profile is "messaging"');

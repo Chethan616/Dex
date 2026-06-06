@@ -144,7 +144,7 @@ describe("doctor session transcript repair", () => {
     const [message, title] = requireFirstMockCall(note, "doctor note") as [string, string];
     expect(title).toBe("Session transcripts");
     expect(message).toContain("legacy state");
-    expect(message).toContain('Run "openclaw doctor --fix"');
+    expect(message).toContain('Run "dex doctor --fix"');
     expect(countNonEmptyLines(await fs.readFile(filePath, "utf-8"))).toBe(3);
   });
 

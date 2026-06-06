@@ -181,7 +181,7 @@ function mockReadGatewayServiceFile(
 }
 
 async function expectExecStartWithoutEnvironment(envFileLine: string) {
-  mockReadGatewayServiceFile(["[Service]", "ExecStart=/usr/bin/openclaw gateway run", envFileLine]);
+  mockReadGatewayServiceFile(["[Service]", "ExecStart=/usr/bin/dex gateway run", envFileLine]);
 
   const command = await readSystemdServiceExecStart({ HOME: TEST_SERVICE_HOME });
   expect(command?.programArguments).toEqual(["/usr/bin/openclaw", "gateway", "run"]);
@@ -914,7 +914,7 @@ describe("resolveSystemdUserUnitPath", () => {
 
 describe("splitArgsPreservingQuotes", () => {
   it("splits on whitespace outside quotes", () => {
-    expect(splitArgsPreservingQuotes('/usr/bin/openclaw gateway start --name "My Bot"')).toEqual([
+    expect(splitArgsPreservingQuotes('/usr/bin/dex gateway start --name "My Bot"')).toEqual([
       "/usr/bin/openclaw",
       "gateway",
       "start",
@@ -966,7 +966,7 @@ describe("parseSystemdEnvAssignments", () => {
 
 describe("parseSystemdExecStart", () => {
   it("preserves quoted arguments", () => {
-    const execStart = '/usr/bin/openclaw gateway start --name "My Bot"';
+    const execStart = '/usr/bin/dex gateway start --name "My Bot"';
     expect(parseSystemdExecStart(execStart)).toEqual([
       "/usr/bin/openclaw",
       "gateway",
@@ -984,7 +984,7 @@ describe("readSystemdServiceExecStart", () => {
 
   it("loads DEX_GATEWAY_TOKEN from EnvironmentFile", async () => {
     const readFileSpy = mockReadGatewayServiceFile(
-      ["[Service]", "ExecStart=/usr/bin/openclaw gateway run", "EnvironmentFile=%h/.openclaw/.env"],
+      ["[Service]", "ExecStart=/usr/bin/dex gateway run", "EnvironmentFile=%h/.openclaw/.env"],
       { [`${TEST_SERVICE_HOME}/.openclaw/.env`]: "DEX_GATEWAY_TOKEN=env-file-token\n" },
     );
 
@@ -997,7 +997,7 @@ describe("readSystemdServiceExecStart", () => {
     mockReadGatewayServiceFile(
       [
         "[Service]",
-        "ExecStart=/usr/bin/openclaw gateway run",
+        "ExecStart=/usr/bin/dex gateway run",
         "EnvironmentFile=%h/.openclaw/.env",
         'Environment="DEX_GATEWAY_TOKEN=inline-token"',
       ],
@@ -1023,7 +1023,7 @@ describe("readSystemdServiceExecStart", () => {
       if (pathValue.endsWith("/openclaw-gateway.service")) {
         return [
           "[Service]",
-          "ExecStart=/usr/bin/openclaw gateway run",
+          "ExecStart=/usr/bin/dex gateway run",
           'EnvironmentFile=%h/.openclaw/first.env "%h/.openclaw/second env.env"',
         ].join("\n");
       }
@@ -1049,7 +1049,7 @@ describe("readSystemdServiceExecStart", () => {
       if (pathValue.endsWith("/openclaw-gateway.service")) {
         return [
           "[Service]",
-          "ExecStart=/usr/bin/openclaw gateway run",
+          "ExecStart=/usr/bin/dex gateway run",
           "EnvironmentFile=./gateway.env ./override.env",
         ].join("\n");
       }
@@ -1078,7 +1078,7 @@ describe("readSystemdServiceExecStart", () => {
       if (pathValue.endsWith("/openclaw-gateway.service")) {
         return [
           "[Service]",
-          "ExecStart=/usr/bin/openclaw gateway run",
+          "ExecStart=/usr/bin/dex gateway run",
           "EnvironmentFile=%h/.openclaw/gateway.env",
         ].join("\n");
       }
@@ -1683,7 +1683,7 @@ describe("systemd service install and uninstall", () => {
 
       const unit = await fs.readFile(unitPath, "utf8");
       expect(unitPath).toMatch(/openclaw-node\.service$/);
-      expect(unit).toContain("openclaw node run");
+      expect(unit).toContain("dex node run");
       expect(execFileMock).toHaveBeenCalledTimes(4);
     });
   });

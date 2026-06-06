@@ -149,7 +149,7 @@ describe("noteMacStaleOpenClawUpdateLaunchdJobs", () => {
     expect(warning).toContain("ai.openclaw.update.2026.5.12");
     expect(warning).toContain("ai.openclaw.manual-update.1717168800");
     expect(warning).toContain("launchctl remove <label>");
-    expect(warning).toContain("openclaw gateway restart");
+    expect(warning).toContain("dex gateway restart");
   });
 
   it("uses service env for gateway platform stale updater warnings", async () => {
@@ -238,7 +238,7 @@ describe("noteMacStaleOpenClawUpdateLaunchdJobs", () => {
     expect(message).toContain("ai.openclaw.update.2026.5.12");
     expect(message).toContain("ai.openclaw.manual-update.1717168800");
     expect(message).toContain("launchctl remove <label>");
-    expect(message).toContain("openclaw gateway restart");
+    expect(message).toContain("dex gateway restart");
   });
 
   it("does nothing when no stale updater jobs exist", async () => {

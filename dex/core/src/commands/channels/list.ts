@@ -308,7 +308,7 @@ export async function channelsListCommand(
       theme.muted(
         showAll
           ? "- no chat channels found"
-          : "- no configured chat channels (run `openclaw channels list --all` to see installable channels)",
+          : "- no configured chat channels (run `dex channels list --all` to see installable channels)",
       ),
     );
   } else {
@@ -338,7 +338,7 @@ export async function channelsListCommand(
   runtime.log("");
   runtime.log(
     theme.muted(
-      "Model provider usage moved out of `channels list` — see `openclaw status` or `openclaw models list`.",
+      "Model provider usage moved out of `channels list` — see `dex status` or `dex models list`.",
     ),
   );
   runtime.log(`Docs: ${formatDocsLink("/gateway/configuration", "gateway/configuration")}`);

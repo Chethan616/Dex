@@ -95,12 +95,12 @@ describe("stale OAuth profile shadow doctor repair", () => {
     });
     const warnings = collectStaleOAuthProfileShadowWarnings({
       hits,
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expect(hits).toHaveLength(1);
     expect(warnings[0]).toContain("stale OAuth auth profile anthropic:default");
-    expect(warnings[0]).toContain("openclaw doctor --fix");
+    expect(warnings[0]).toContain("dex doctor --fix");
     expect(loadPersistedAuthProfileStore(childAgentDir)?.profiles[profileId]).toBeDefined();
   });
 

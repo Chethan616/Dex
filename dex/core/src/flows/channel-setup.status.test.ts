@@ -344,7 +344,7 @@ describe("resolveChannelSetupSelectionContributions", () => {
         "Inbound DM safety defaults to pairing: unknown senders get a pairing code first.",
         "Approve with: openclaw pairing approve <channel> <code>",
         'Open/public DMs require dmPolicy="open" plus allowFrom=["*"].',
-        'For multi-user DMs, isolate sessions with: openclaw config set session.dmScope "per-channel-peer" (or "per-account-channel-peer" for multi-account channels).',
+        'For multi-user DMs, isolate sessions with: dex config set session.dmScope "per-channel-peer" (or "per-account-channel-peer" for multi-account channels).',
         "Docs: https://docs.openclaw.ai/channels/pairing",
         "",
         "bad\\nid: Blurb\\nline",

@@ -32,7 +32,7 @@ afterEach(() => {
   closeDexStateDatabaseForTest();
 });
 
-describe("openclaw state database", () => {
+describe("dex state database", () => {
   it("resolves under the shared state database directory", () => {
     const stateDir = createTempStateDir();
 

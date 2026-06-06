@@ -10,7 +10,7 @@ import { createCliRuntimeCapture, mockRuntimeModule } from "./test-runtime-captu
 
 /**
  * Test for issue #6070:
- * `openclaw config set/unset` must update snapshot.resolved (user config after $include/${ENV},
+ * `dex config set/unset` must update snapshot.resolved (user config after $include/${ENV},
  * but before runtime defaults), so runtime defaults don't leak into the written config.
  */
 
@@ -721,8 +721,8 @@ describe("config cli", () => {
       ).rejects.toThrow("__exit__:1");
 
       expect(mockWriteConfigFile).not.toHaveBeenCalled();
-      expectErrorIncludes("openclaw plugins install <spec>");
-      expectErrorIncludes("openclaw plugins update <plugin-id>");
+      expectErrorIncludes("dex plugins install <spec>");
+      expectErrorIncludes("dex plugins update <plugin-id>");
     });
 
     it("rejects auto-managed meta.lastTouchedVersion config updates (#80849)", async () => {
@@ -1097,7 +1097,7 @@ describe("config cli", () => {
       expectErrorIncludes("This is a plugin packaging issue, not a local config problem.");
       expectErrorIncludes("disable/uninstall the plugin");
       expect(mockError.mock.calls.map((call) => String(call[0])).join("\n")).not.toContain(
-        "openclaw doctor --fix",
+        "dex doctor --fix",
       );
       expect(mockLog).not.toHaveBeenCalled();
     });

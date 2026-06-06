@@ -1093,10 +1093,10 @@ describe("/model chat UX", () => {
     expect(resolved.modelSelection).toBeUndefined();
     expect(resolved.errorText).toContain('Model "openai/gpt-5.5" is not allowed.');
     expect(resolved.errorText).toContain(
-      `openclaw config set agents.defaults.models '{"openai/gpt-5.5":{}}' --strict-json --merge`,
+      `dex config set agents.defaults.models '{"openai/gpt-5.5":{}}' --strict-json --merge`,
     );
     expect(resolved.errorText).toContain("Then retry: /model openai/gpt-5.5 --runtime codex");
-    expect(resolved.errorText).toContain("openclaw plugins enable codex");
+    expect(resolved.errorText).toContain("dex plugins enable codex");
   });
 
   it("treats explicit default /model selection as resettable default", () => {

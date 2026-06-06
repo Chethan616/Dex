@@ -308,7 +308,7 @@ describe("doctor state integrity oauth dir checks", () => {
     const text = stateIntegrityText();
     expect(text).toContain("automatic restart recovery tombstoned");
     expect(text).toContain("agent:main:subagent:wedged-child");
-    expect(text).toContain("openclaw tasks maintenance --apply");
+    expect(text).toContain("dex tasks maintenance --apply");
     expect(hasRepairPromptMessage(confirmRuntimeRepair, "Clear stale aborted recovery flags")).toBe(
       true,
     );
@@ -529,10 +529,10 @@ describe("doctor state integrity oauth dir checks", () => {
     });
     const text = await runStateIntegrityText(cfg);
     expect(text).toContain("recent sessions are missing transcripts");
-    expect(text).toMatch(/openclaw sessions --store ".*sessions\.json"/);
-    expect(text).toMatch(/openclaw sessions cleanup --store ".*sessions\.json" --dry-run/);
+    expect(text).toMatch(/dex sessions --store ".*sessions\.json"/);
+    expect(text).toMatch(/dex sessions cleanup --store ".*sessions\.json" --dry-run/);
     expect(text).toMatch(
-      /openclaw sessions cleanup --store ".*sessions\.json" --enforce --fix-missing/,
+      /dex sessions cleanup --store ".*sessions\.json" --enforce --fix-missing/,
     );
     expect(text).not.toContain("--active");
     expect(text).not.toContain(" ls ");

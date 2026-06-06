@@ -68,7 +68,7 @@ describe("resolveUnusableProfileHint", () => {
           "OAuth token refresh failed for openai-codex: refresh_token_reused. Please try again or re-authenticate.",
       }),
     ).toBe(
-      "- openai-codex:default: re-auth required [refresh_token_reused] — Run `openclaw models auth login --provider openai`.",
+      "- openai-codex:default: re-auth required [refresh_token_reused] — Run `dex models auth login --provider openai`.",
     );
   });
 
@@ -81,7 +81,7 @@ describe("resolveUnusableProfileHint", () => {
           "OAuth token refresh failed for openai-codex: temporary upstream issue. Please try again or re-authenticate.",
       }),
     ).toBe(
-      "- openai-codex:default: OAuth refresh failed — Try again; if this persists, run `openclaw models auth login --provider openai`.",
+      "- openai-codex:default: OAuth refresh failed — Try again; if this persists, run `dex models auth login --provider openai`.",
     );
   });
 
@@ -94,7 +94,7 @@ describe("resolveUnusableProfileHint", () => {
           "OAuth token refresh failed for openai-codex`\nrm -rf /: invalid_grant. Please try again or re-authenticate.",
       }),
     ).toBe(
-      "- openai-codex:default: re-auth required [invalid_grant] — Run `openclaw models auth login --provider openai`.",
+      "- openai-codex:default: re-auth required [invalid_grant] — Run `dex models auth login --provider openai`.",
     );
   });
 

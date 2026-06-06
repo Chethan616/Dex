@@ -12,7 +12,7 @@ const OPENAI_PLUGIN_ID = "openai";
 const BUNDLED_DISCOVERY_COMPAT_RULE: LegacyConfigRule = {
   path: ["plugins", "allow"],
   message:
-    'plugins.allow now gates bundled provider discovery by default; run "openclaw doctor --fix" to preserve legacy bundled provider compatibility as plugins.bundledDiscovery="compat", or set plugins.bundledDiscovery="allowlist" to keep the stricter behavior.',
+    'plugins.allow now gates bundled provider discovery by default; run "dex doctor --fix" to preserve legacy bundled provider compatibility as plugins.bundledDiscovery="compat", or set plugins.bundledDiscovery="allowlist" to keep the stricter behavior.',
   requireSourceLiteral: true,
   match: (value, root) => {
     if (!Array.isArray(value) || value.length === 0) {
@@ -26,7 +26,7 @@ const BUNDLED_DISCOVERY_COMPAT_RULE: LegacyConfigRule = {
 const X_SEARCH_RULE: LegacyConfigRule = {
   path: ["tools", "web", "x_search", "apiKey"],
   message:
-    'tools.web.x_search.apiKey moved to the xAI plugin; use plugins.entries.xai.config.webSearch.apiKey instead. Run "openclaw doctor --fix".',
+    'tools.web.x_search.apiKey moved to the xAI plugin; use plugins.entries.xai.config.webSearch.apiKey instead. Run "dex doctor --fix".',
 };
 
 function rewritePluginIdList(value: unknown): { next: unknown; changed: boolean } {
@@ -108,7 +108,7 @@ export const LEGACY_CONFIG_MIGRATIONS_RUNTIME_PROVIDERS: LegacyConfigMigrationSp
       {
         path: ["plugins"],
         message:
-          'plugins.openai-codex references are retired; use the openai plugin id. Run "openclaw doctor --fix".',
+          'plugins.openai-codex references are retired; use the openai plugin id. Run "dex doctor --fix".',
         requireSourceLiteral: true,
         match: (_value, root) =>
           rewriteLegacyOpenAICodexPluginPolicy(structuredClone(root)).length > 0,

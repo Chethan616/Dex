@@ -594,7 +594,7 @@ export const FIELD_HELP: Record<string, string> = {
   "gateway.nodes.pairing.autoApproveCidrs":
     "Opt-in CIDR/IP allowlist for auto-approving first-time node-role device pairing with no requested scopes. Disabled when unset. Operator, browser, Control UI, and any role, scope, metadata, or public-key upgrade pairing still require manual approval.",
   "gateway.nodes.allowCommands":
-    "Extra node.invoke commands to allow beyond the gateway defaults (array of command strings). Enabling dangerous commands here is a security-sensitive override and is flagged by `openclaw security audit`.",
+    "Extra node.invoke commands to allow beyond the gateway defaults (array of command strings). Enabling dangerous commands here is a security-sensitive override and is flagged by `dex security audit`.",
   "gateway.nodes.denyCommands":
     "Node command names to block even if present in node claims or default allowlist (exact command-name matching only, e.g. `system.run`; does not inspect shell text inside that command).",
   nodeHost:
@@ -616,7 +616,7 @@ export const FIELD_HELP: Record<string, string> = {
   "audio.transcription":
     "Command-based transcription settings for converting audio files into text before agent handling. Keep a simple, deterministic command path here so failures are easy to diagnose in logs.",
   "audio.transcription.command":
-    'Executable + args used to transcribe audio (first token must be a safe binary/path), for example `["whisper-cli", "--model", "small", "{{MediaPath}}"]`. Deprecated `{input}` placeholders are migrated to `{{MediaPath}}` by `openclaw doctor --fix`.',
+    'Executable + args used to transcribe audio (first token must be a safe binary/path), for example `["whisper-cli", "--model", "small", "{{MediaPath}}"]`. Deprecated `{input}` placeholders are migrated to `{{MediaPath}}` by `dex doctor --fix`.',
   "audio.transcription.timeoutSeconds":
     "Maximum time allowed for the transcription command to finish before it is aborted. Increase this for longer recordings, and keep it tight in latency-sensitive deployments.",
   bindings:
@@ -1679,7 +1679,7 @@ export const FIELD_HELP: Record<string, string> = {
   "session.maintenance.maxEntries":
     "Caps total session entry count retained in the store to prevent unbounded growth over time. Use lower limits for constrained environments, or higher limits when longer history is required.",
   "session.maintenance.rotateBytes":
-    'Deprecated and ignored. Do not use for `sessions.json` growth control; OpenClaw no longer creates automatic rotation backups, and "openclaw doctor --fix" removes this key.',
+    'Deprecated and ignored. Do not use for `sessions.json` growth control; OpenClaw no longer creates automatic rotation backups, and "dex doctor --fix" removes this key.',
   "session.maintenance.resetArchiveRetention":
     "Retention for reset transcript archives (`*.reset.<timestamp>`). Accepts a duration (for example `30d`), or `false` to disable cleanup. Defaults to pruneAfter so reset artifacts do not grow forever.",
   "session.maintenance.maxDiskBytes":
@@ -1702,7 +1702,7 @@ export const FIELD_HELP: Record<string, string> = {
   "cron.retry.retryOn":
     "Error types to retry: rate_limit, overloaded, network, timeout, server_error. Use to restrict which errors trigger retries; omit to retry all transient types.",
   "cron.webhook":
-    'Deprecated legacy fallback webhook URL used by `openclaw doctor --fix` to migrate old jobs with `notify=true`. Runtime delivery uses per-job `delivery.mode="webhook"` plus `delivery.to`, or `delivery.completionDestination` when preserving announce delivery.',
+    'Deprecated legacy fallback webhook URL used by `dex doctor --fix` to migrate old jobs with `notify=true`. Runtime delivery uses per-job `delivery.mode="webhook"` plus `delivery.to`, or `delivery.completionDestination` when preserving announce delivery.',
   "cron.webhookToken":
     "Bearer token attached to cron webhook POST deliveries when webhook mode is used. Prefer secret/env substitution and rotate this token regularly if shared webhook endpoints are internet-reachable.",
   "cron.sessionRetention":

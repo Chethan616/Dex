@@ -292,7 +292,7 @@ export function resolveMissingPluginCommandMessage(
       return (
         `The \`openclaw ${normalizedPluginId}\` command is provided by the ` +
         `"${parentPluginId}" plugin, but that bundled plugin is disabled by default. Run ` +
-        `\`openclaw plugins enable ${parentPluginId}\` to enable that CLI surface.`
+        `\`dex plugins enable ${parentPluginId}\` to enable that CLI surface.`
       );
     }
     if (commandAlias.kind === "runtime-slash") {

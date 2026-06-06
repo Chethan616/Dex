@@ -729,7 +729,7 @@ function formatGatewayCloseError(
       "\n- Gateway not yet ready to accept connections (retry after a moment)" +
       "\n- TLS mismatch (connecting with ws:// to a wss:// gateway, or vice versa)" +
       "\n- Gateway crashed or was terminated unexpectedly" +
-      "\nRun `openclaw doctor` for diagnostics.";
+      "\nRun `dex doctor` for diagnostics.";
   }
   return message;
 }

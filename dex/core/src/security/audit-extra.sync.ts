@@ -148,7 +148,7 @@ function formatHooksTokenReuseRemediation(reuse: GatewayAuthSharedSecretReuse): 
   if (reuse.source === "override") {
     return "Rotate hooks.token or the runtime Gateway shared-secret auth value used for this audit; doctor can only repair reuse that is present in persisted config or process env.";
   }
-  return `Run ${formatCliCommand("openclaw doctor --fix")} to rotate a persisted hooks.token, then update external hook senders to use the new hook token.`;
+  return `Run ${formatCliCommand("dex doctor --fix")} to rotate a persisted hooks.token, then update external hook senders to use the new hook token.`;
 }
 
 function hasResolvedGatewayHttpAuth(auth: ResolvedGatewayAuth): boolean {
@@ -557,7 +557,7 @@ export function collectSyncedFolderFindings(params: {
       severity: "warn",
       title: "State/config path looks like a synced folder",
       detail: `stateDir=${params.stateDir}, configPath=${params.configPath}. Synced folders (iCloud/Dropbox/OneDrive/Google Drive) can leak tokens and transcripts onto other devices.`,
-      remediation: `Keep DEX_STATE_DIR on a local-only volume and re-run "${formatCliCommand("openclaw security audit --fix")}".`,
+      remediation: `Keep DEX_STATE_DIR on a local-only volume and re-run "${formatCliCommand("dex security audit --fix")}".`,
     });
   }
   return findings;

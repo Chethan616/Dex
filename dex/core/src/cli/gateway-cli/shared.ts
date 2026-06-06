@@ -12,21 +12,21 @@ function renderGatewayServiceStopHints(env: NodeJS.ProcessEnv = process.env): st
   switch (process.platform) {
     case "darwin":
       return [
-        `Tip: ${formatCliCommand("openclaw gateway stop")}`,
+        `Tip: ${formatCliCommand("dex gateway stop")}`,
         `Or: launchctl bootout gui/$UID/${resolveGatewayLaunchAgentLabel(profile)}`,
       ];
     case "linux":
       return [
-        `Tip: ${formatCliCommand("openclaw gateway stop")}`,
+        `Tip: ${formatCliCommand("dex gateway stop")}`,
         `Or: systemctl --user stop ${resolveGatewaySystemdServiceName(profile)}.service`,
       ];
     case "win32":
       return [
-        `Tip: ${formatCliCommand("openclaw gateway stop")}`,
+        `Tip: ${formatCliCommand("dex gateway stop")}`,
         `Or: schtasks /End /TN "${resolveGatewayWindowsTaskName(profile)}"`,
       ];
     default:
-      return [`Tip: ${formatCliCommand("openclaw gateway stop")}`];
+      return [`Tip: ${formatCliCommand("dex gateway stop")}`];
   }
 }
 

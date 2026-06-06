@@ -185,7 +185,7 @@ export async function noteWhatsappResponsivenessHealth(params: {
       }
     } else {
       warnings.push(
-        `Fix: close those TUI sessions, or run ${formatCliCommand("openclaw doctor --fix")}.`,
+        `Fix: close those TUI sessions, or run ${formatCliCommand("dex doctor --fix")}.`,
       );
     }
   }

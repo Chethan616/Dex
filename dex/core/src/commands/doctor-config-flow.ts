@@ -120,7 +120,7 @@ export async function loadAndMaybeMigrateDoctorConfig(params: {
   let candidate = structuredClone(baseCfg);
   let pendingChanges = false;
   let fixHints: string[] = [];
-  const doctorFixCommand = formatCliCommand("openclaw doctor --fix");
+  const doctorFixCommand = formatCliCommand("dex doctor --fix");
   const sourceMeta = (snapshot.sourceConfig as { meta?: { lastTouchedVersion?: unknown } })?.meta;
   const sourceLastTouchedVersion =
     typeof sourceMeta?.lastTouchedVersion === "string" ? sourceMeta.lastTouchedVersion : undefined;

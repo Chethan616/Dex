@@ -38,7 +38,7 @@ function resolveProviderAuthLoginCommand(params: {
     return undefined;
   }
   const providerId = normalizeProviderIdForAuth(choice.providerId, aliases);
-  return formatCliCommand(`openclaw models auth login --provider ${providerId}`);
+  return formatCliCommand(`dex models auth login --provider ${providerId}`);
 }
 
 export function buildProviderAuthRecoveryHint(params: {
@@ -55,13 +55,13 @@ export function buildProviderAuthRecoveryHint(params: {
     parts.push(`Run \`${loginCommand}\``);
   }
   if (params.includeConfigure !== false) {
-    parts.push(`\`${formatCliCommand("openclaw configure")}\``);
+    parts.push(`\`${formatCliCommand("dex configure")}\``);
   }
   if (params.includeEnvVar) {
     parts.push("set an API key env var");
   }
   if (parts.length === 0) {
-    return `Run \`${formatCliCommand("openclaw configure")}\`.`;
+    return `Run \`${formatCliCommand("dex configure")}\`.`;
   }
   if (parts.length === 1) {
     return `${parts[0]}.`;

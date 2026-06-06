@@ -86,7 +86,7 @@ export async function messageCommand(
     throw new Error(
       `Unknown message action "${actionInput}". Use one of ${CHANNEL_MESSAGE_ACTION_NAMES.join(
         ", ",
-      )}. Example: ${formatCliCommand("openclaw message send --channel <channel> --target <id> --text <message>")}.`,
+      )}. Example: ${formatCliCommand("dex message send --channel <channel> --target <id> --text <message>")}.`,
     );
   }
   const action = actionMatch as ChannelMessageActionName;

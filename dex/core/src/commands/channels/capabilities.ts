@@ -226,7 +226,7 @@ export async function channelsCapabilitiesCommand(
   if (opts.account && (!rawChannel || rawChannel === "all")) {
     runtime.error(
       danger(
-        `--account requires a specific --channel. Run ${formatCliCommand("openclaw channels list")} to choose one.`,
+        `--account requires a specific --channel. Run ${formatCliCommand("dex channels list")} to choose one.`,
       ),
     );
     runtime.exit(1);
@@ -235,7 +235,7 @@ export async function channelsCapabilitiesCommand(
   if (rawTarget && (!rawChannel || rawChannel === "all")) {
     runtime.error(
       danger(
-        `--target requires a specific --channel. Run ${formatCliCommand("openclaw channels list")} to choose one.`,
+        `--target requires a specific --channel. Run ${formatCliCommand("dex channels list")} to choose one.`,
       ),
     );
     runtime.exit(1);
@@ -298,7 +298,7 @@ export async function channelsCapabilitiesCommand(
       runtime.log(
         theme.muted(
           `No configured channel capabilities found. Run ${formatCliCommand(
-            "openclaw channels list --all",
+            "dex channels list --all",
           )} to see available channels.`,
         ),
       );

@@ -231,7 +231,7 @@ export type SessionMaintenanceConfig = {
   pruneDays?: number;
   /** Maximum number of session entries to keep. Default: 500. */
   maxEntries?: number;
-  /** @deprecated Ignored. Run `openclaw doctor --fix` to remove. */
+  /** @deprecated Ignored. Run `dex doctor --fix` to remove. */
   rotateBytes?: number | string;
   /**
    * Retention for archived reset transcripts (`*.reset.<timestamp>`).

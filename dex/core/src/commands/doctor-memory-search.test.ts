@@ -658,7 +658,7 @@ describe("noteMemorySearchHealth", () => {
   });
 
   it("does not warn when key-optional provider (lmstudio) probe was skipped (skipped: true)", async () => {
-    // When `openclaw doctor` runs without --deep, the probe is skipped and returns
+    // When `dex doctor` runs without --deep, the probe is skipped and returns
     // { checked: false, ready: false, skipped: true }. This must NOT produce a
     // false-positive warning — it means readiness was never checked, not that
     // embeddings are unavailable.
@@ -721,7 +721,7 @@ describe("noteMemorySearchHealth", () => {
     const message = firstNoteMessage();
     expect(message).toContain('provider is set to "openai-compatible"');
     expect(message).toContain("remote.baseUrl");
-    expect(message).toContain("openclaw config set");
+    expect(message).toContain("dex config set");
     expect(resolveApiKeyForProvider).not.toHaveBeenCalled();
   });
 
@@ -740,7 +740,7 @@ describe("noteMemorySearchHealth", () => {
     const message = firstNoteMessage();
     expect(message).toContain('provider is set to "openai-compatible"');
     expect(message).toContain("memorySearch.model");
-    expect(message).toContain("openclaw config set");
+    expect(message).toContain("dex config set");
     expect(resolveApiKeyForProvider).not.toHaveBeenCalled();
   });
 
@@ -857,8 +857,8 @@ describe("noteMemorySearchHealth", () => {
 
     const message = firstNoteMessage();
     expect(message).toContain("Gateway memory probe for default agent is not ready");
-    expect(message).toContain("openclaw configure --section model");
-    expect(message).not.toContain("openclaw auth add --provider");
+    expect(message).toContain("dex configure --section model");
+    expect(message).not.toContain("dex auth add --provider");
   });
 
   it("warns for legacy auto mode as OpenAI when no API key is configured", async () => {
@@ -874,7 +874,7 @@ describe("noteMemorySearchHealth", () => {
     const message = firstNoteMessage();
     expect(message).toContain('provider is set to "openai"');
     expect(message).toContain("OPENAI_API_KEY");
-    expect(message).toContain("openclaw configure --section model");
+    expect(message).toContain("dex configure --section model");
   });
 
   it("does not probe unrelated embedding providers for legacy auto mode", async () => {

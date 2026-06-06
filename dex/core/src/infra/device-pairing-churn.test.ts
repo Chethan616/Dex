@@ -77,7 +77,7 @@ describe("device pairing requestId churn", () => {
     expect(readRepair.request.scopes).toEqual(["operator.read"]);
     expect((await listDevicePairing(baseDir)).pending).toHaveLength(1);
 
-    // `openclaw devices approve <requestId>` reconnects with the caller scopes
+    // `dex devices approve <requestId>` reconnects with the caller scopes
     // needed by the gateway. That reconnect supersedes the earlier repair request.
     const approveReconnect = await requestDevicePairing(
       {

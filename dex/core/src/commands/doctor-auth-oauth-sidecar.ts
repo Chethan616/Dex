@@ -227,7 +227,7 @@ export async function maybeRepairLegacyOAuthSidecarProfiles(params: {
               `- Unreferenced sidecar files are left in place because external agent directories outside this scan may still reference them.`,
             ]
           : []),
-        `- ${formatCliCommand("openclaw doctor --fix")} migrates active profiles back to inline OAuth credentials and removes only sidecar files it successfully migrated.`,
+        `- ${formatCliCommand("dex doctor --fix")} migrates active profiles back to inline OAuth credentials and removes only sidecar files it successfully migrated.`,
       ].join("\n"),
       "Auth profiles",
     );

@@ -333,7 +333,7 @@ describe("ensureConfigReady", () => {
       "  - channels.quietchat: invalid",
       "",
       `Fix: ${formatCliCommand("dex doctor --fix")}`,
-      `Inspect: ${formatCliCommand("openclaw config validate")}`,
+      `Inspect: ${formatCliCommand("dex config validate")}`,
       "Status, health, logs, tasks list/audit, and doctor commands still run with invalid config.",
     ]);
     expect(runtime.exit).toHaveBeenCalledWith(1);

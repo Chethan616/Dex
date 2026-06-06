@@ -134,7 +134,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean; d
     }
     defaultRuntime.error(
       warnText(
-        `Recommendation: run "${formatCliCommand("openclaw doctor")}" (or "${formatCliCommand("openclaw doctor --repair")}").`,
+        `Recommendation: run "${formatCliCommand("dex doctor")}" (or "${formatCliCommand("dex doctor --repair")}").`,
       ),
     );
   }
@@ -235,7 +235,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean; d
       );
       defaultRuntime.error(
         warnText(
-          "Check `openclaw --version`, `which openclaw`, and `openclaw gateway status --deep`; if this mismatch is unexpected, update PATH so `openclaw` points to the version you want, or reinstall the Gateway service from that same OpenClaw install.",
+          "Check `openclaw --version`, `which openclaw`, and `dex gateway status --deep`; if this mismatch is unexpected, update PATH so `openclaw` points to the version you want, or reinstall the Gateway service from that same OpenClaw install.",
         ),
       );
     }
@@ -293,7 +293,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean; d
     );
     defaultRuntime.error(
       errorText(
-        `Fix: run ${formatCliCommand("openclaw gateway restart")} and re-check with ${formatCliCommand("openclaw gateway status --deep")}.`,
+        `Fix: run ${formatCliCommand("dex gateway restart")} and re-check with ${formatCliCommand("dex gateway status --deep")}.`,
       ),
     );
     spacer();
@@ -375,7 +375,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean; d
       ),
     );
     defaultRuntime.error(
-      errorText(`Then reinstall: ${formatCliCommand("openclaw gateway install")}`),
+      errorText(`Then reinstall: ${formatCliCommand("dex gateway install")}`),
     );
     spacer();
   }
@@ -390,7 +390,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean; d
     }
     defaultRuntime.error(
       errorText(
-        `Fix after confirming no update is running: launchctl remove <label>, then run ${formatCliCommand("openclaw gateway restart")}.`,
+        `Fix after confirming no update is running: launchctl remove <label>, then run ${formatCliCommand("dex gateway restart")}.`,
       ),
     );
     spacer();
@@ -470,12 +470,12 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean; d
         );
       }
       defaultRuntime.log(
-        `${label("Fix:")} ${formatCliCommand("openclaw plugins update <plugin-id>")} for each drifted plugin, then ${formatCliCommand("openclaw gateway restart")}.`,
+        `${label("Fix:")} ${formatCliCommand("dex plugins update <plugin-id>")} for each drifted plugin, then ${formatCliCommand("dex gateway restart")}.`,
       );
     } else {
       defaultRuntime.log(
         infoText(
-          `Run ${formatCliCommand("openclaw gateway status --deep")} for affected plugin ids and fix commands.`,
+          `Run ${formatCliCommand("dex gateway status --deep")} for affected plugin ids and fix commands.`,
         ),
       );
     }
@@ -496,6 +496,6 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean; d
     spacer();
   }
 
-  defaultRuntime.log(`${label("Troubles:")} run ${formatCliCommand("openclaw status")}`);
+  defaultRuntime.log(`${label("Troubles:")} run ${formatCliCommand("dex status")}`);
   defaultRuntime.log(`${label("Troubleshooting:")} https://docs.openclaw.ai/troubleshooting`);
 }

@@ -125,9 +125,13 @@ function resolveNpmArgvForWindows(argv: string[]): string[] | null {
  * are handled by resolveNpmArgvForWindows to avoid spawn EINVAL (no direct .cmd).
  */
 function resolveCommand(command: string): string {
+  // Add LLM-backend CLI shims so runExec("gemini", ...) resolves to
+  // gemini.cmd on Windows. Mirrors the supervisor adapter list in
+  // process/supervisor/adapters/child.ts (kept in sync by hand; if a
+  // third call site grows the same need, hoist to a shared constant).
   return resolveWindowsCommandShim({
     command,
-    cmdCommands: ["corepack", "pnpm", "yarn"],
+    cmdCommands: ["corepack", "pnpm", "yarn", "gemini", "claude", "codex"],
   });
 }
 

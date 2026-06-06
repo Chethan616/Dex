@@ -783,7 +783,7 @@ describe("maybeRepairGatewayServiceConfig", () => {
       "Gateway service entrypoint does not match the current install.",
       "Gateway service config",
     );
-    expectNoteContaining("openclaw gateway install --force", "Gateway service config");
+    expectNoteContaining("dex gateway install --force", "Gateway service config");
     expect(mocks.stage).not.toHaveBeenCalled();
     expect(mocks.install).not.toHaveBeenCalled();
   });
@@ -1067,7 +1067,7 @@ describe("maybeRepairGatewayServiceConfig", () => {
           "Gateway service entrypoint does not match the current install.",
         );
         expect(consolidated).not.toContain("resolves to a source checkout");
-        const forceMatches = consolidated.match(/openclaw gateway install --force/g) ?? [];
+        const forceMatches = consolidated.match(/dex gateway install --force/g) ?? [];
         expect(forceMatches).toHaveLength(0);
       } finally {
         await fs.rm(root, { recursive: true, force: true });
@@ -1121,7 +1121,7 @@ describe("maybeRepairGatewayServiceConfig", () => {
           "Gateway service entrypoint does not match the current install.",
         );
         expect(auditNote).not.toContain("resolves to a source checkout");
-        expect(gatewayServiceConfigNotes[1]?.[0]).toContain("openclaw gateway install --force");
+        expect(gatewayServiceConfigNotes[1]?.[0]).toContain("dex gateway install --force");
       } finally {
         await fs.rm(root, { recursive: true, force: true });
       }

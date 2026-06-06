@@ -92,9 +92,9 @@ export function formatUnavailableSkillDoctorLines(skills: SkillStatusEntry[]): s
     lines.push(`- ${skill.name}: ${formatMissingSummary(skill)}`);
     lines.push(...formatInstallHints(skill));
   }
-  lines.push(`Disable unused skills: ${formatCliCommand("openclaw doctor --fix")}`);
+  lines.push(`Disable unused skills: ${formatCliCommand("dex doctor --fix")}`);
   lines.push(
-    `Inspect details: ${formatCliCommand("openclaw skills check --agent <id>")} or ${formatCliCommand("openclaw skills info <name> --agent <id>")}`,
+    `Inspect details: ${formatCliCommand("dex skills check --agent <id>")} or ${formatCliCommand("dex skills info <name> --agent <id>")}`,
   );
   return lines;
 }

@@ -16,7 +16,7 @@ const newerConfigHints = [
 ];
 const newerConfigHintItems = newerConfigHints.map((text) => ({ kind: "generic", text }));
 const invalidConfigRecoveryHint = [
-  'Run "openclaw doctor --fix" to repair, then retry.',
+  'Run "dex doctor --fix" to repair, then retry.',
   "If startup is still blocked, inspect the adjacent .bak backup before restoring it manually.",
 ].join("\n");
 const pluginPackagingRecoveryHints = [
@@ -164,7 +164,7 @@ describe("runServiceRestart config pre-flight (#35862)", () => {
     expectLatestRuntimeJson({
       action: "restart",
       ok: false,
-      error: `Gateway restart blocked: Refusing to restart the gateway service because this OpenClaw binary (${VERSION}) is older than the config last written by OpenClaw 9999.1.1.`,
+      error: `Gateway restart blocked: Refusing to restart the gateway service because this Dex binary (${VERSION}) is older than the config last written by Dex 9999.1.1.`,
       hints: newerConfigHints,
       hintItems: newerConfigHintItems,
       warnings: undefined,
@@ -309,7 +309,7 @@ describe("runServiceStop future-config guard", () => {
     expectLatestRuntimeJson({
       action: "stop",
       ok: false,
-      error: `Gateway stop blocked: Refusing to stop the gateway service because this OpenClaw binary (${VERSION}) is older than the config last written by OpenClaw 9999.1.1.`,
+      error: `Gateway stop blocked: Refusing to stop the gateway service because this Dex binary (${VERSION}) is older than the config last written by Dex 9999.1.1.`,
       hints: newerConfigHints,
       hintItems: newerConfigHintItems,
       warnings: undefined,

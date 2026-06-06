@@ -122,15 +122,15 @@ export function registerStatusHealthSessionsCommands(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["openclaw status", "Show channel health + session summary."],
-          ["openclaw status --all", "Full diagnosis (read-only)."],
-          ["openclaw status --json", "Machine-readable output."],
-          ["openclaw status --usage", "Show model provider usage/quota snapshots."],
+          ["dex status", "Show channel health + session summary."],
+          ["dex status --all", "Full diagnosis (read-only)."],
+          ["dex status --json", "Machine-readable output."],
+          ["dex status --usage", "Show model provider usage/quota snapshots."],
           [
-            "openclaw status --deep",
+            "dex status --deep",
             "Run channel probes (WA + Telegram + Discord + Slack + Signal).",
           ],
-          ["openclaw status --deep --timeout 5000", "Tighten probe timeout."],
+          ["dex status --deep --timeout 5000", "Tighten probe timeout."],
         ])}`,
     )
     .addHelpText(
@@ -188,13 +188,13 @@ export function registerStatusHealthSessionsCommands(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["openclaw sessions", "List all sessions."],
-          ["openclaw sessions --agent work", "List sessions for one agent."],
-          ["openclaw sessions --all-agents", "Aggregate sessions across agents."],
-          ["openclaw sessions --active 120", "Only last 2 hours."],
-          ["openclaw sessions --limit 25", "Show the newest 25 sessions."],
-          ["openclaw sessions --json", "Machine-readable output."],
-          ["openclaw sessions --store ./tmp/sessions.json", "Use a specific session store."],
+          ["dex sessions", "List all sessions."],
+          ["dex sessions --agent work", "List sessions for one agent."],
+          ["dex sessions --all-agents", "Aggregate sessions across agents."],
+          ["dex sessions --active 120", "Only last 2 hours."],
+          ["dex sessions --limit 25", "Show the newest 25 sessions."],
+          ["dex sessions --json", "Machine-readable output."],
+          ["dex sessions --store ./tmp/sessions.json", "Use a specific session store."],
         ])}\n\n${theme.muted(
           "Shows token usage per session when the agent reports it; set agents.defaults.contextTokens to cap the window and show %.",
         )}`,
@@ -240,20 +240,20 @@ export function registerStatusHealthSessionsCommands(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["openclaw sessions cleanup --dry-run", "Preview stale/cap cleanup."],
+          ["dex sessions cleanup --dry-run", "Preview stale/cap cleanup."],
           [
-            "openclaw sessions cleanup --dry-run --fix-missing",
+            "dex sessions cleanup --dry-run --fix-missing",
             "Also preview pruning entries with missing transcript files.",
           ],
           [
-            "openclaw sessions cleanup --dry-run --fix-dm-scope",
+            "dex sessions cleanup --dry-run --fix-dm-scope",
             "Preview stale direct-DM rows after returning dmScope to main.",
           ],
-          ["openclaw sessions cleanup --enforce", "Apply maintenance now."],
-          ["openclaw sessions cleanup --agent work --dry-run", "Preview one agent store."],
-          ["openclaw sessions cleanup --all-agents --dry-run", "Preview all agent stores."],
+          ["dex sessions cleanup --enforce", "Apply maintenance now."],
+          ["dex sessions cleanup --agent work --dry-run", "Preview one agent store."],
+          ["dex sessions cleanup --all-agents --dry-run", "Preview all agent stores."],
           [
-            "openclaw sessions cleanup --enforce --store ./tmp/sessions.json",
+            "dex sessions cleanup --enforce --store ./tmp/sessions.json",
             "Use a specific store.",
           ],
         ])}`,
@@ -365,10 +365,10 @@ export function registerStatusHealthSessionsCommands(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["openclaw commitments", "List pending inferred follow-ups."],
-          ["openclaw commitments --all", "List all inferred follow-ups."],
-          ["openclaw commitments --agent work", "List one agent's inferred follow-ups."],
-          ["openclaw commitments dismiss cm_abc123", "Dismiss a follow-up."],
+          ["dex commitments", "List pending inferred follow-ups."],
+          ["dex commitments --all", "List all inferred follow-ups."],
+          ["dex commitments --agent work", "List one agent's inferred follow-ups."],
+          ["dex commitments dismiss cm_abc123", "Dismiss a follow-up."],
         ])}`,
     )
     .action(async (opts) => {

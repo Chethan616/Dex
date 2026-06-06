@@ -4,7 +4,7 @@ import type { DexConfig } from "../config/types.openclaw.js";
 import { parseAgentSessionKey } from "../routing/session-key.js";
 
 /**
- * Catalog #18 — `openclaw sessions --json` reports `agentRuntime.id: "openclaw"` for
+ * Catalog #18 — `dex sessions --json` reports `agentRuntime.id: "openclaw"` for
  * ACP sessions because the old metadata resolver only consulted agent-config
  * policies (env / agent / defaults / implicit fallback to "openclaw"). The session
  * key clearly carries the ACP runtime indicator (the `:acp:` segment), but

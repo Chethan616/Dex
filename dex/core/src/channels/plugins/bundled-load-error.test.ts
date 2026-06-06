@@ -8,7 +8,7 @@ describe("describeBundledChannelLoadError", () => {
     });
     const detail = describeBundledChannelLoadError(err, "nostr");
     expect(detail).toContain("Cannot find module 'nostr-tools'");
-    expect(detail).toContain("openclaw doctor --fix");
+    expect(detail).toContain("dex doctor --fix");
     expect(detail).toContain("channel nostr");
   });
 
@@ -16,7 +16,7 @@ describe("describeBundledChannelLoadError", () => {
     const err = Object.assign(new Error("Cannot find package '@larksuiteoapi/node-sdk'"), {
       code: "ERR_MODULE_NOT_FOUND",
     });
-    expect(describeBundledChannelLoadError(err, "feishu")).toContain("openclaw doctor --fix");
+    expect(describeBundledChannelLoadError(err, "feishu")).toContain("dex doctor --fix");
   });
 
   it("appends the doctor --fix hint when the missing-module code is on a nested cause (native require wrap)", () => {
@@ -31,7 +31,7 @@ describe("describeBundledChannelLoadError", () => {
       { cause: inner },
     );
     const detail = describeBundledChannelLoadError(wrapped, "discord");
-    expect(detail).toContain("openclaw doctor --fix");
+    expect(detail).toContain("dex doctor --fix");
     expect(detail).toContain("channel discord");
     // The detail should still surface the underlying message via the existing
     // formatErrorMessage cause traversal.
@@ -40,7 +40,7 @@ describe("describeBundledChannelLoadError", () => {
 
   it("returns the bare detail when the error is unrelated", () => {
     const detail = describeBundledChannelLoadError(new TypeError("boom"), "whatsapp");
-    expect(detail).not.toContain("openclaw doctor --fix");
+    expect(detail).not.toContain("dex doctor --fix");
     expect(detail).toContain("boom");
   });
 

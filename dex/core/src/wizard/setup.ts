@@ -271,7 +271,7 @@ export async function runSetupWizard(
       );
     }
     await prompter.outro(
-      `Config invalid. Run \`${formatCliCommand("openclaw doctor")}\` to repair it, then re-run setup.`,
+      `Config invalid. Run \`${formatCliCommand("dex doctor")}\` to repair it, then re-run setup.`,
     );
     runtime.exit(1);
     return;
@@ -291,15 +291,15 @@ export async function runSetupWizard(
           ? [`- ... +${compatibilityNotices.length - 4} more`]
           : []),
         "",
-        `Review: ${formatCliCommand("openclaw doctor")}`,
-        `Inspect: ${formatCliCommand("openclaw plugins inspect --all")}`,
+        `Review: ${formatCliCommand("dex doctor")}`,
+        `Inspect: ${formatCliCommand("dex plugins inspect --all")}`,
       ].join("\n"),
       t("wizard.setup.pluginCompatibilityTitle"),
     );
   }
 
   const quickstartHint = t("wizard.setup.flowQuickstartHint", {
-    command: formatCliCommand("openclaw configure"),
+    command: formatCliCommand("dex configure"),
   });
   const manualHint = t("wizard.setup.flowAdvancedHint");
   const migrationDetections = await detectSetupMigrationSources({ config: baseConfig, runtime });

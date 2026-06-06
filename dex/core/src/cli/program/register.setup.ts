@@ -12,9 +12,9 @@ export function registerSetupCommand(program: Command): void {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n` +
-        `  ${theme.command("openclaw setup")}\n` +
+        `  ${theme.command("dex setup")}\n` +
         `    ${theme.muted("Create config, workspace, and session folders.")}\n` +
-        `  ${theme.command("openclaw setup --wizard")}\n` +
+        `  ${theme.command("dex setup --wizard")}\n` +
         `    ${theme.muted("Run full onboarding for auth, models, Gateway, and channels.")}\n\n` +
         `${theme.muted("Docs:")} ${formatDocsLink("/cli/setup", "docs.openclaw.ai/cli/setup")}\n`,
     )

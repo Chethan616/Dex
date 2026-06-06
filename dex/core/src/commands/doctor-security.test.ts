@@ -292,7 +292,7 @@ describe("noteSecurityWarnings gateway exposure", () => {
     const message = lastMessage();
     expect(message).toContain("disables approval forwarding only");
     expect(message).toContain("exec-approvals.json");
-    expect(message).toContain("openclaw approvals get --gateway");
+    expect(message).toContain("dex approvals get --gateway");
   });
 
   it("warns when filesystem tools are disabled but exec remains available", async () => {
@@ -346,7 +346,7 @@ describe("noteSecurityWarnings gateway exposure", () => {
     const message = lastMessage();
     expect(message).toContain("plaintext secret-bearing config fields");
     expect(message).toContain("models.providers.openai.apiKey");
-    expect(message).toContain("openclaw secrets audit --check");
+    expect(message).toContain("dex secrets audit --check");
   });
 
   it("warns when sensitive model provider headers are stored as plaintext in config", async () => {
@@ -700,7 +700,7 @@ describe("noteSecurityWarnings gateway exposure", () => {
     const message = lastMessage();
     expect(message).toContain("[secrets]");
     expect(message).toContain("failed to resolve account");
-    expect(message).toContain("Run: openclaw security audit --deep");
+    expect(message).toContain("Run: dex security audit --deep");
   });
 
   it("skips heartbeat directPolicy warning when delivery is internal-only or explicit", async () => {

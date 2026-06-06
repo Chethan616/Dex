@@ -19,7 +19,7 @@ async function runNonInteractiveMigrationImport(params: {
   const providerId = params.opts.importFrom?.trim();
   if (!providerId) {
     params.runtime.error(
-      `--import-from is required for non-interactive migration import. Run ${formatCliCommand("openclaw migrate list")} to choose a provider.`,
+      `--import-from is required for non-interactive migration import. Run ${formatCliCommand("dex migrate list")} to choose a provider.`,
     );
     params.runtime.exit(1);
     return;
@@ -59,7 +59,7 @@ export async function runNonInteractiveSetup(
   const snapshot = await readConfigFileSnapshot();
   if (snapshot.exists && !snapshot.valid) {
     runtime.error(
-      `Config invalid. Run \`${formatCliCommand("openclaw doctor")}\` to repair it, then re-run setup.`,
+      `Config invalid. Run \`${formatCliCommand("dex doctor")}\` to repair it, then re-run setup.`,
     );
     runtime.exit(1);
     return;
@@ -73,7 +73,7 @@ export async function runNonInteractiveSetup(
   const mode = opts.mode ?? "local";
   if (mode !== "local" && mode !== "remote") {
     runtime.error(
-      `Invalid --mode "${String(mode)}". Use "local" or "remote", or run ${formatCliCommand("openclaw onboard")} for interactive setup.`,
+      `Invalid --mode "${String(mode)}". Use "local" or "remote", or run ${formatCliCommand("dex onboard")} for interactive setup.`,
     );
     runtime.exit(1);
     return;

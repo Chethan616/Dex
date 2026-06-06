@@ -206,27 +206,27 @@ describe("formatCliCommand", () => {
   it.each([
     {
       name: "no profile is set",
-      cmd: "openclaw doctor --fix",
+      cmd: "dex doctor --fix",
       env: {},
-      expected: "openclaw doctor --fix",
+      expected: "dex doctor --fix",
     },
     {
       name: "profile is default",
-      cmd: "openclaw doctor --fix",
+      cmd: "dex doctor --fix",
       env: { DEX_PROFILE: "default" },
-      expected: "openclaw doctor --fix",
+      expected: "dex doctor --fix",
     },
     {
       name: "profile is Default (case-insensitive)",
-      cmd: "openclaw doctor --fix",
+      cmd: "dex doctor --fix",
       env: { DEX_PROFILE: "Default" },
-      expected: "openclaw doctor --fix",
+      expected: "dex doctor --fix",
     },
     {
       name: "profile is invalid",
-      cmd: "openclaw doctor --fix",
+      cmd: "dex doctor --fix",
       env: { DEX_PROFILE: "bad profile" },
-      expected: "openclaw doctor --fix",
+      expected: "dex doctor --fix",
     },
     {
       name: "--profile is already present",
@@ -245,14 +245,14 @@ describe("formatCliCommand", () => {
   });
 
   it("inserts --profile flag when profile is set", () => {
-    expect(formatCliCommand("openclaw doctor --fix", { DEX_PROFILE: "work" })).toBe(
+    expect(formatCliCommand("dex doctor --fix", { DEX_PROFILE: "work" })).toBe(
       "openclaw --profile work doctor --fix",
     );
   });
 
   it("trims whitespace from profile", () => {
-    expect(formatCliCommand("openclaw doctor --fix", { DEX_PROFILE: "  jbopenclaw  " })).toBe(
-      "openclaw --profile jbopenclaw doctor --fix",
+    expect(formatCliCommand("dex doctor --fix", { DEX_PROFILE: "  jbopenclaw  " })).toBe(
+      "openclaw --profile jbdex doctor --fix",
     );
   });
 
@@ -263,28 +263,28 @@ describe("formatCliCommand", () => {
   });
 
   it("handles pnpm wrapper", () => {
-    expect(formatCliCommand("pnpm openclaw doctor", { DEX_PROFILE: "work" })).toBe(
+    expect(formatCliCommand("pnpm dex doctor", { DEX_PROFILE: "work" })).toBe(
       "pnpm openclaw --profile work doctor",
     );
   });
 
   it("inserts --container when a container hint is set", () => {
     expect(
-      formatCliCommand("openclaw gateway status --deep", { DEX_CONTAINER_HINT: "demo" }),
+      formatCliCommand("dex gateway status --deep", { DEX_CONTAINER_HINT: "demo" }),
     ).toBe("openclaw --container demo gateway status --deep");
   });
 
   it("ignores unsafe container hints", () => {
     expect(
-      formatCliCommand("openclaw gateway status --deep", {
+      formatCliCommand("dex gateway status --deep", {
         DEX_CONTAINER_HINT: "demo; rm -rf /",
       }),
-    ).toBe("openclaw gateway status --deep");
+    ).toBe("dex gateway status --deep");
   });
 
   it("preserves both --container and --profile hints", () => {
     expect(
-      formatCliCommand("openclaw doctor", {
+      formatCliCommand("dex doctor", {
         DEX_CONTAINER_HINT: "demo",
         DEX_PROFILE: "work",
       }),
@@ -292,8 +292,8 @@ describe("formatCliCommand", () => {
   });
 
   it("does not prepend --container for update commands", () => {
-    expect(formatCliCommand("openclaw update", { DEX_CONTAINER_HINT: "demo" })).toBe(
-      "openclaw update",
+    expect(formatCliCommand("dex update", { DEX_CONTAINER_HINT: "demo" })).toBe(
+      "dex update",
     );
     expect(
       formatCliCommand("pnpm openclaw update --channel beta", { DEX_CONTAINER_HINT: "demo" }),

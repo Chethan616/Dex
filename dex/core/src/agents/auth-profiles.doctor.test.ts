@@ -40,7 +40,7 @@ describe("formatAuthDoctorHint", () => {
     });
 
     expect(hint).toBe(
-      "Legacy Qwen Portal OAuth profiles are not refreshable. Re-authenticate with a current portal token: openclaw onboard --auth-choice qwen-oauth.",
+      "Legacy Qwen Portal OAuth profiles are not refreshable. Re-authenticate with a current portal token: dex onboard --auth-choice qwen-oauth.",
     );
   });
 });

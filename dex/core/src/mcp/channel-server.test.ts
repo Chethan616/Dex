@@ -89,7 +89,7 @@ function gatewayRequestError(retryable: boolean): Error {
   });
 }
 
-describe("openclaw channel mcp server", () => {
+describe("dex channel mcp server", () => {
   test("keeps initial MCP gateway connection alive through transient connect errors", () => {
     expect(
       shouldRetryInitialMcpGatewayConnect(new Error("gateway request timeout for connect")),

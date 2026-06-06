@@ -185,7 +185,7 @@ describe("runDoctorLintCli", () => {
         ],
       });
       expect(payload.findings[0].message).toContain("Codex plugin is disabled by config");
-      expect(payload.findings[0].fixHint).toContain("openclaw doctor --fix");
+      expect(payload.findings[0].fixHint).toContain("dex doctor --fix");
     } finally {
       stdout.mockRestore();
     }

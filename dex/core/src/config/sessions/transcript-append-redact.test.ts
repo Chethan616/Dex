@@ -224,7 +224,7 @@ describe("appendSessionTranscriptMessage - redaction", () => {
     expect(raw).not.toContain("plainsecretvalue123");
     expect(raw).not.toContain("hunter2");
     expect(raw).toContain("OPENAI_API_KEY=sk-abc…0xyz openclaw health");
-    expect(raw).toContain("openclaw health");
+    expect(raw).toContain("dex health");
 
     const [msg] = readMessages(sessionFile) as Array<{
       content: Array<{

@@ -227,7 +227,7 @@ describe("noteClaudeCliHealth", () => {
       expect(body).toContain("Headless Claude auth: OK (oauth).");
       expect(body).toContain(`OpenClaw auth profile: missing (${CLAUDE_CLI_PROFILE_ID})`);
       expect(body).toContain(
-        "openclaw models auth login --provider anthropic --method cli --set-default",
+        "dex models auth login --provider anthropic --method cli --set-default",
       );
       expect(body).toContain(
         "not created yet; it appears after the first Claude CLI turn in this workspace",

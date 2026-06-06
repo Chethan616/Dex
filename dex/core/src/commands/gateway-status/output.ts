@@ -19,7 +19,7 @@ export type GatewayStatusWarning = {
 };
 
 const noReachableGatewayDiagnostic =
-  "No gateway answered any probe and Bonjour discovery returned no local gateways. Run `openclaw gateway status --deep --require-rpc` to inspect service state, config paths, listener owners, and logs; include `ss -ltnp` or `lsof -nP -iTCP:<port> -sTCP:LISTEN` for the configured port when filing a report.";
+  "No gateway answered any probe and Bonjour discovery returned no local gateways. Run `dex gateway status --deep --require-rpc` to inspect service state, config paths, listener owners, and logs; include `ss -ltnp` or `lsof -nP -iTCP:<port> -sTCP:LISTEN` for the configured port when filing a report.";
 
 function readModelPricingDegradedDetail(health: unknown): string | null {
   if (!health || typeof health !== "object") {

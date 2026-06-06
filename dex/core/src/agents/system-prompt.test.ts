@@ -262,7 +262,7 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).toContain("## OpenClaw Control");
     expect(prompt).toContain("prefer `gateway` tool");
     expect(prompt).toContain("CLI lifecycle only on explicit user request");
-    expect(prompt).toContain("openclaw gateway status|restart|start|stop");
+    expect(prompt).toContain("dex gateway status|restart|start|stop");
     expect(prompt).toContain("`restart`, not stop+start");
     expect(prompt).toContain("Do not invent commands");
   });

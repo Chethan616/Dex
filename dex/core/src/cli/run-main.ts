@@ -670,7 +670,7 @@ export async function runCli(argv: string[] = process.argv) {
       if (await shouldStartOnboardingForFreshInstall(normalizedArgv)) {
         if (!process.stdin.isTTY || !process.stdout.isTTY) {
           console.error(
-            "Onboarding needs an interactive TTY. Use `openclaw onboard --non-interactive --accept-risk ...` for automation.",
+            "Onboarding needs an interactive TTY. Use `dex onboard --non-interactive --accept-risk ...` for automation.",
           );
           process.exitCode = 1;
           return;
@@ -681,7 +681,7 @@ export async function runCli(argv: string[] = process.argv) {
       }
       if (!process.stdin.isTTY || !process.stdout.isTTY) {
         console.error(
-          'Crestodian needs an interactive TTY. Use `openclaw crestodian --message "status"` for one command.',
+          'Crestodian needs an interactive TTY. Use `dex crestodian --message "status"` for one command.',
         );
         process.exitCode = 1;
         return;

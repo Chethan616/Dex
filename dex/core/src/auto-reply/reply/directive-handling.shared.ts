@@ -108,7 +108,7 @@ export function formatElevatedUnavailableText(params: {
   }
   if (params.sessionKey) {
     lines.push(
-      `See: ${formatCliCommand(`openclaw sandbox explain --session ${params.sessionKey}`)}`,
+      `See: ${formatCliCommand(`dex sandbox explain --session ${params.sessionKey}`)}`,
     );
   }
   return lines.join("\n");

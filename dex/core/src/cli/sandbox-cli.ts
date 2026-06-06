@@ -14,30 +14,30 @@ type CommandOptions = Record<string, unknown>;
 
 const SANDBOX_EXAMPLES = {
   main: [
-    ["openclaw sandbox list", "List all sandbox containers."],
-    ["openclaw sandbox list --browser", "List only browser containers."],
-    ["openclaw sandbox recreate --all", "Recreate all containers."],
-    ["openclaw sandbox recreate --session main", "Recreate a specific session."],
-    ["openclaw sandbox recreate --agent mybot", "Recreate agent containers."],
-    ["openclaw sandbox explain", "Explain effective sandbox config."],
+    ["dex sandbox list", "List all sandbox containers."],
+    ["dex sandbox list --browser", "List only browser containers."],
+    ["dex sandbox recreate --all", "Recreate all containers."],
+    ["dex sandbox recreate --session main", "Recreate a specific session."],
+    ["dex sandbox recreate --agent mybot", "Recreate agent containers."],
+    ["dex sandbox explain", "Explain effective sandbox config."],
   ],
   list: [
-    ["openclaw sandbox list", "List all sandbox containers."],
-    ["openclaw sandbox list --browser", "List only browser containers."],
-    ["openclaw sandbox list --json", "JSON output."],
+    ["dex sandbox list", "List all sandbox containers."],
+    ["dex sandbox list --browser", "List only browser containers."],
+    ["dex sandbox list --json", "JSON output."],
   ],
   recreate: [
-    ["openclaw sandbox recreate --all", "Recreate all containers."],
-    ["openclaw sandbox recreate --session main", "Recreate a specific session."],
-    ["openclaw sandbox recreate --agent mybot", "Recreate a specific agent (includes sub-agents)."],
-    ["openclaw sandbox recreate --browser --all", "Recreate only browser containers."],
-    ["openclaw sandbox recreate --all --force", "Skip confirmation."],
+    ["dex sandbox recreate --all", "Recreate all containers."],
+    ["dex sandbox recreate --session main", "Recreate a specific session."],
+    ["dex sandbox recreate --agent mybot", "Recreate a specific agent (includes sub-agents)."],
+    ["dex sandbox recreate --browser --all", "Recreate only browser containers."],
+    ["dex sandbox recreate --all --force", "Skip confirmation."],
   ],
   explain: [
-    ["openclaw sandbox explain", "Show effective sandbox config."],
-    ["openclaw sandbox explain --session agent:main:main", "Explain a specific session."],
-    ["openclaw sandbox explain --agent work", "Explain an agent sandbox."],
-    ["openclaw sandbox explain --json", "JSON output."],
+    ["dex sandbox explain", "Show effective sandbox config."],
+    ["dex sandbox explain --session agent:main:main", "Explain a specific session."],
+    ["dex sandbox explain --agent work", "Explain an agent sandbox."],
+    ["dex sandbox explain --json", "JSON output."],
   ],
 } as const;
 

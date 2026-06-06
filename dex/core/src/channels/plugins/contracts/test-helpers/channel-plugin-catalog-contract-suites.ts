@@ -220,7 +220,7 @@ export function describeChannelPluginCatalogEntriesContract() {
               $schema: "./manifest.schema.json",
               schemaVersion: 1,
               description:
-                "Extension manifest. Declares plugin packages that OpenClaw can discover during onboarding and install on demand via `openclaw plugins install`.",
+                "Extension manifest. Declares plugin packages that OpenClaw can discover during onboarding and install on demand via `dex plugins install`.",
               entries: [
                 {
                   name: "@wecom/wecom-openclaw-plugin",
@@ -334,7 +334,7 @@ export function describeChannelPluginCatalogEntriesContract() {
               $schema: "./manifest.schema.json",
               schemaVersion: 1,
               description:
-                "Extension manifest. Declares plugin packages that OpenClaw can discover during onboarding and install on demand via `openclaw plugins install`.",
+                "Extension manifest. Declares plugin packages that OpenClaw can discover during onboarding and install on demand via `dex plugins install`.",
               entries: [
                 {
                   source: "external",
@@ -406,7 +406,7 @@ export function describeChannelPluginCatalogEntriesContract() {
               $schema: "./manifest.schema.json",
               schemaVersion: 1,
               description:
-                "Extension manifest. Declares plugin packages that OpenClaw can discover during onboarding and install on demand via `openclaw plugins install`.",
+                "Extension manifest. Declares plugin packages that OpenClaw can discover during onboarding and install on demand via `dex plugins install`.",
               entries: [
                 {
                   name: "openclaw-plugin-yuanbao",

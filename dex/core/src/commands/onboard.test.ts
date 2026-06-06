@@ -69,7 +69,7 @@ describe("setupWizardCommand", () => {
 
     expect(runtime.error).toHaveBeenCalledOnce();
     expect(runtime.error).toHaveBeenCalledWith(
-      `Invalid --secret-input-mode. Use "plaintext" or "ref", or run ${formatCliCommand("openclaw onboard")} for the interactive setup.`,
+      `Invalid --secret-input-mode. Use "plaintext" or "ref", or run ${formatCliCommand("dex onboard")} for the interactive setup.`,
     );
     expect(runtime.exit).toHaveBeenCalledWith(1);
     expect(mocks.runInteractiveSetup).not.toHaveBeenCalled();
@@ -164,7 +164,7 @@ describe("setupWizardCommand", () => {
 
     expect(runtime.error).toHaveBeenCalledOnce();
     expect(runtime.error).toHaveBeenCalledWith(
-      `Invalid --reset-scope. Use "config", "config+creds+sessions", or "full". Run ${formatCliCommand("openclaw onboard --reset --reset-scope config")} for a config-only reset.`,
+      `Invalid --reset-scope. Use "config", "config+creds+sessions", or "full". Run ${formatCliCommand("dex onboard --reset --reset-scope config")} for a config-only reset.`,
     );
     expect(runtime.exit).toHaveBeenCalledWith(1);
     expect(mocks.handleReset).not.toHaveBeenCalled();

@@ -72,9 +72,9 @@ export async function setupInternalHooks(
       `Enabled ${selected.length} hook${selected.length > 1 ? "s" : ""}: ${selected.join(", ")}`,
       "",
       "You can manage hooks later with:",
-      `  ${formatCliCommand("openclaw hooks list")}`,
-      `  ${formatCliCommand("openclaw hooks enable <name>")}`,
-      `  ${formatCliCommand("openclaw hooks disable <name>")}`,
+      `  ${formatCliCommand("dex hooks list")}`,
+      `  ${formatCliCommand("dex hooks enable <name>")}`,
+      `  ${formatCliCommand("dex hooks disable <name>")}`,
     ].join("\n"),
     t("wizard.hooks.configuredTitle"),
   );

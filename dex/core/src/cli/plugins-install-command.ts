@@ -156,7 +156,7 @@ async function installBundledPluginSource(params: {
     : prepareConfigForDisabledBundledInstall(params.snapshot.config, params.bundledSource.pluginId);
   const configWarning = shouldEnable
     ? ""
-    : `Installed bundled plugin "${params.bundledSource.pluginId}" without enabling it because it requires configuration first. Configure it, then run \`openclaw plugins enable ${params.bundledSource.pluginId}\`.`;
+    : `Installed bundled plugin "${params.bundledSource.pluginId}" without enabling it because it requires configuration first. Configure it, then run \`dex plugins enable ${params.bundledSource.pluginId}\`.`;
   await persistPluginInstall({
     snapshot: {
       config: configBase,
@@ -511,13 +511,13 @@ async function loadConfigFromSnapshotForInstall(
 ): Promise<ConfigSnapshotForInstallPersist> {
   if (resolvePluginInstallInvalidConfigPolicy(request) !== "allow-plugin-recovery") {
     throw buildInvalidPluginInstallConfigError(
-      "Config invalid; run `openclaw doctor --fix` before installing plugins.",
+      "Config invalid; run `dex doctor --fix` before installing plugins.",
     );
   }
   const parsed = (snapshot.parsed ?? {}) as Record<string, unknown>;
   if (!snapshot.exists || Object.keys(parsed).length === 0) {
     throw buildInvalidPluginInstallConfigError(
-      "Config file could not be parsed; run `openclaw doctor` to repair it.",
+      "Config file could not be parsed; run `dex doctor` to repair it.",
     );
   }
   if (
@@ -527,7 +527,7 @@ async function loadConfigFromSnapshotForInstall(
   ) {
     const pluginLabel = request.bundledPluginId ?? "the requested plugin";
     throw buildInvalidPluginInstallConfigError(
-      `Config invalid outside the plugin recovery path for ${pluginLabel}; run \`openclaw doctor --fix\` before reinstalling it.`,
+      `Config invalid outside the plugin recovery path for ${pluginLabel}; run \`dex doctor --fix\` before reinstalling it.`,
     );
   }
   let nextConfig = snapshot.config;
@@ -593,13 +593,13 @@ export async function runPluginInstallCommand(params: {
   if (opts.marketplace) {
     if (opts.link) {
       runtime.error(
-        `--link is not supported with --marketplace. Remove --link, or install a local path with ${formatCliCommand("openclaw plugins install --link <path>")}.`,
+        `--link is not supported with --marketplace. Remove --link, or install a local path with ${formatCliCommand("dex plugins install --link <path>")}.`,
       );
       return runtime.exit(1);
     }
     if (opts.pin) {
       runtime.error(
-        `--pin is not supported with --marketplace. Use ${formatCliCommand("openclaw plugins install <plugin> --marketplace <name>")} without --pin.`,
+        `--pin is not supported with --marketplace. Use ${formatCliCommand("dex plugins install <plugin> --marketplace <name>")} without --pin.`,
       );
       return runtime.exit(1);
     }
@@ -608,25 +608,25 @@ export async function runPluginInstallCommand(params: {
   const gitSpec = parseGitPluginSpec(raw);
   if (gitPrefix && !gitSpec) {
     runtime.error(
-      `Unsupported git plugin spec: ${raw}. Use ${formatCliCommand("openclaw plugins install git:<repo>@<ref>")}.`,
+      `Unsupported git plugin spec: ${raw}. Use ${formatCliCommand("dex plugins install git:<repo>@<ref>")}.`,
     );
     return runtime.exit(1);
   }
   if (gitSpec && opts.link) {
     runtime.error(
-      `--link is not supported with git: installs. Use ${formatCliCommand("openclaw plugins install git:<repo>@<ref>")} for Git installs or ${formatCliCommand("openclaw plugins install --link <path>")} for local paths.`,
+      `--link is not supported with git: installs. Use ${formatCliCommand("dex plugins install git:<repo>@<ref>")} for Git installs or ${formatCliCommand("dex plugins install --link <path>")} for local paths.`,
     );
     return runtime.exit(1);
   }
   if (gitSpec && opts.pin) {
     runtime.error(
-      `--pin is not supported with git: installs. Pin the ref in the spec instead, for example ${formatCliCommand("openclaw plugins install git:<repo>@<ref>")}.`,
+      `--pin is not supported with git: installs. Pin the ref in the spec instead, for example ${formatCliCommand("dex plugins install git:<repo>@<ref>")}.`,
     );
     return runtime.exit(1);
   }
   if (opts.link && opts.force) {
     runtime.error(
-      `--force is not supported with --link. Linked plugins point at the source path directly; remove --force and re-run ${formatCliCommand("openclaw plugins install --link <path>")}.`,
+      `--force is not supported with --link. Linked plugins point at the source path directly; remove --force and re-run ${formatCliCommand("dex plugins install --link <path>")}.`,
     );
     return runtime.exit(1);
   }
@@ -785,7 +785,7 @@ export async function runPluginInstallCommand(params: {
 
   if (opts.link) {
     runtime.error(
-      `--link requires a local path. Run ${formatCliCommand("openclaw plugins install --link <path>")}.`,
+      `--link requires a local path. Run ${formatCliCommand("dex plugins install --link <path>")}.`,
     );
     return runtime.exit(1);
   }
@@ -794,7 +794,7 @@ export async function runPluginInstallCommand(params: {
   if (npmPrefixSpec !== null) {
     if (!npmPrefixSpec) {
       runtime.error(
-        `Unsupported npm plugin spec: missing package. Use ${formatCliCommand("openclaw plugins install npm:<package>")}.`,
+        `Unsupported npm plugin spec: missing package. Use ${formatCliCommand("dex plugins install npm:<package>")}.`,
       );
       return runtime.exit(1);
     }
@@ -831,7 +831,7 @@ export async function runPluginInstallCommand(params: {
   if (npmPackPath !== null) {
     if (!npmPackPath) {
       runtime.error(
-        `Unsupported npm-pack plugin spec: missing archive path. Use ${formatCliCommand("openclaw plugins install npm-pack:<path-to.tgz>")}.`,
+        `Unsupported npm-pack plugin spec: missing archive path. Use ${formatCliCommand("dex plugins install npm-pack:<path-to.tgz>")}.`,
       );
       return runtime.exit(1);
     }
@@ -877,7 +877,7 @@ export async function runPluginInstallCommand(params: {
     ])
   ) {
     runtime.error(
-      `Plugin path not found: ${resolved}. Check the path, or install from npm with ${formatCliCommand("openclaw plugins install npm:<package>")}.`,
+      `Plugin path not found: ${resolved}. Check the path, or install from npm with ${formatCliCommand("dex plugins install npm:<package>")}.`,
     );
     return runtime.exit(1);
   }

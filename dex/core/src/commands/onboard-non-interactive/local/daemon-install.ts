@@ -33,7 +33,7 @@ export async function installGatewayDaemonNonInteractive(params: {
     process.platform === "linux" ? await isSystemdUserServiceAvailable() : true;
   if (process.platform === "linux" && !systemdAvailable) {
     runtime.log(
-      "Systemd user services are unavailable; skipping service install. Use a direct shell run (`openclaw gateway run`) or rerun without --install-daemon on this session.",
+      "Systemd user services are unavailable; skipping service install. Use a direct shell run (`dex gateway run`) or rerun without --install-daemon on this session.",
     );
     return { installed: false, skippedReason: "systemd-user-unavailable" };
   }

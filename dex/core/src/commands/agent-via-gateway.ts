@@ -619,12 +619,12 @@ async function agentViaGatewayCommand(
   const explicitSessionKey = opts.sessionKey?.trim();
   if (!body) {
     throw new Error(
-      `Missing message. Use ${formatCliCommand('openclaw agent --message "..." --agent <id>')} or pass --to/--session-key/--session-id for an existing conversation.`,
+      `Missing message. Use ${formatCliCommand('dex agent --message "..." --agent <id>')} or pass --to/--session-key/--session-id for an existing conversation.`,
     );
   }
   if (!opts.to && !opts.sessionId && !opts.agent && !explicitSessionKey) {
     throw new Error(
-      `No target session selected. Use --agent <id>, --session-key <key>, --session-id <id>, or --to <E.164>. Run ${formatCliCommand("openclaw agents list")} to see agents.`,
+      `No target session selected. Use --agent <id>, --session-key <key>, --session-id <id>, or --to <E.164>. Run ${formatCliCommand("dex agents list")} to see agents.`,
     );
   }
 
@@ -635,7 +635,7 @@ async function agentViaGatewayCommand(
     const knownAgents = listAgentIds(cfg);
     if (!knownAgents.includes(agentId)) {
       throw new Error(
-        `Unknown agent id "${agentIdRaw}". Use "${formatCliCommand("openclaw agents list")}" to see configured agents.`,
+        `Unknown agent id "${agentIdRaw}". Use "${formatCliCommand("dex agents list")}" to see configured agents.`,
       );
     }
   }

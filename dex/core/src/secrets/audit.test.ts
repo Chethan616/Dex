@@ -677,7 +677,7 @@ describe("secrets audit", () => {
     },
   );
 
-  it("does not flag non-sensitive routing headers in openclaw config", async () => {
+  it("does not flag non-sensitive routing headers in dex config", async () => {
     await writeJsonFile(fixture.configPath, {
       models: {
         providers: {
@@ -711,7 +711,7 @@ describe("secrets audit", () => {
     ).toBe(false);
   });
 
-  it("keeps request headers in openclaw config covered by plaintext audit", async () => {
+  it("keeps request headers in dex config covered by plaintext audit", async () => {
     await writeJsonFile(fixture.configPath, {
       models: {
         providers: {

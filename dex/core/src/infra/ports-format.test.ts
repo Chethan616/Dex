@@ -10,7 +10,7 @@ import {
   isSingleExpectedGatewayListener,
 } from "./ports-format.js";
 
-const gatewayAlreadyRunningHint = `Gateway already running locally. Stop it (${formatCliCommand("openclaw gateway stop")}) or use a different port.`;
+const gatewayAlreadyRunningHint = `Gateway already running locally. Stop it (${formatCliCommand("dex gateway stop")}) or use a different port.`;
 const multipleListenersHint =
   "Multiple listeners detected; ensure only one gateway/tunnel per port unless intentionally running isolated profiles.";
 
@@ -28,7 +28,7 @@ describe("ports-format", () => {
     expect(
       buildPortHints(
         [
-          { commandLine: "node dist/index.js openclaw gateway" },
+          { commandLine: "node dist/index.js dex gateway" },
           { commandLine: "ssh -N -L 18789:127.0.0.1:18789" },
           { commandLine: "python -m http.server 18789" },
         ],

@@ -261,7 +261,7 @@ describe("command-analysis risks", () => {
         "--channel",
         "whatsapp",
       ]),
-    ).toContain("openclaw channels login --channel whatsapp");
+    ).toContain("dex channels login --channel whatsapp");
   });
 
   it("checks both effective and original argv for segment inline eval", () => {

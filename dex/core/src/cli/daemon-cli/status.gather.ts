@@ -332,7 +332,7 @@ export type DaemonStatus = {
    * Plugin version drift report. Surfaces active official external plugins
    * whose installed version does not match the running gateway version, which
    * can happen after `npm install -g openclaw@<v>` updates the gateway binary
-   * without a corresponding `openclaw plugins update`.
+   * without a corresponding `dex plugins update`.
    */
   pluginVersionDrift?: PluginVersionDriftReport;
 };

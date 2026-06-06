@@ -336,7 +336,7 @@ function emitKeychainOnlyMigrationHintOnce(profileId: string): void {
   keychainOnlyMigrationHintEmitted = true;
   log.warn(
     "Legacy Codex OAuth credentials are stored only in macOS Keychain on this host. " +
-      "Headless paths cannot prompt for Keychain access; run `openclaw doctor --fix` " +
+      "Headless paths cannot prompt for Keychain access; run `dex doctor --fix` " +
       "from an interactive terminal to migrate them back to inline auth-profiles.json credentials.",
     { profileId },
   );

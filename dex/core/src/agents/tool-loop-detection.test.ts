@@ -655,7 +655,7 @@ describe("tool-loop-detection", () => {
 
     it("keeps changing empty-output exec failures below the global no-progress breaker", () => {
       const state = createState();
-      const params = { command: "openclaw flaky-helper" };
+      const params = { command: "dex flaky-helper" };
 
       for (let index = 0; index < GLOBAL_CIRCUIT_BREAKER_THRESHOLD; index += 1) {
         recordSuccessfulCall(

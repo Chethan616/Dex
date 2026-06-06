@@ -88,7 +88,7 @@ export async function dashboardCommand(
   if (resolvedToken.unresolvedRefReason) {
     runtime.log(`Token auto-auth unavailable: ${resolvedToken.unresolvedRefReason}`);
     runtime.log(
-      "Set DEX_GATEWAY_TOKEN in this shell or resolve your secret provider, then rerun `openclaw dashboard`.",
+      "Set DEX_GATEWAY_TOKEN in this shell or resolve your secret provider, then rerun `dex dashboard`.",
     );
   }
 

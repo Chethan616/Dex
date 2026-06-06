@@ -645,7 +645,7 @@ export async function noteStateIntegrity(
         `- State directory is under macOS cloud-synced storage (${displayStateDir}; ${cloudSyncedStateDir.storage}).`,
         "- This can cause slow I/O and sync/lock races for sessions and credentials.",
         "- Prefer a local non-synced state dir (for example: ~/.dex).",
-        `  Set locally: DEX_STATE_DIR=~/.dex ${formatCliCommand("openclaw doctor")}`,
+        `  Set locally: DEX_STATE_DIR=~/.dex ${formatCliCommand("dex doctor")}`,
       ].join("\n"),
     );
   }
@@ -881,9 +881,9 @@ export async function noteStateIntegrity(
       warnings.push(
         [
           `- ${missing.length}/${recentTranscriptCandidates.length} recent sessions are missing transcripts.`,
-          `  Verify sessions in store: ${formatCliCommand(`openclaw sessions --store "${absoluteStorePath}"`)}`,
-          `  Preview cleanup impact: ${formatCliCommand(`openclaw sessions cleanup --store "${absoluteStorePath}" --dry-run`)}`,
-          `  Prune missing entries: ${formatCliCommand(`openclaw sessions cleanup --store "${absoluteStorePath}" --enforce --fix-missing`)}`,
+          `  Verify sessions in store: ${formatCliCommand(`dex sessions --store "${absoluteStorePath}"`)}`,
+          `  Preview cleanup impact: ${formatCliCommand(`dex sessions cleanup --store "${absoluteStorePath}" --dry-run`)}`,
+          `  Prune missing entries: ${formatCliCommand(`dex sessions cleanup --store "${absoluteStorePath}" --enforce --fix-missing`)}`,
         ].join("\n"),
       );
     }
@@ -901,7 +901,7 @@ export async function noteStateIntegrity(
             .slice(0, 3)
             .map(([key]) => key)
             .join(", ")}`,
-          `  Fix: ${formatCliCommand("openclaw tasks maintenance --apply")}`,
+          `  Fix: ${formatCliCommand("dex tasks maintenance --apply")}`,
         ].join("\n"),
       );
       const repairWedged = await prompter.confirmRuntimeRepair({

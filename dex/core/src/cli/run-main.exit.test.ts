@@ -1070,7 +1070,7 @@ describe("runCli exit behavior", () => {
 
       expect(process.exitCode).toBe(1);
       expect(errorSpy).toHaveBeenCalledWith(
-        "Onboarding needs an interactive TTY. Use `openclaw onboard --non-interactive --accept-risk ...` for automation.",
+        "Onboarding needs an interactive TTY. Use `dex onboard --non-interactive --accept-risk ...` for automation.",
       );
       expect(setupWizardCommandMock).not.toHaveBeenCalled();
       expect(runCrestodianMock).not.toHaveBeenCalled();

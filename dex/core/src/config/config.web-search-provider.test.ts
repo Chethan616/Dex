@@ -478,7 +478,7 @@ describe("web search provider config", () => {
     }
     const issue = findValidationMessage(res.issues, "tools.web.search.provider");
     expect(issue.message).toBe(
-      'web_search provider is not available: brave (install or enable plugin "brave", then run openclaw doctor --fix)',
+      'web_search provider is not available: brave (install or enable plugin "brave", then run dex doctor --fix)',
     );
     expectAllowedValuesInclude(issue, ["brave"]);
   });

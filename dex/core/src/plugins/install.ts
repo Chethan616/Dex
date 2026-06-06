@@ -1679,7 +1679,7 @@ async function runInstallSourceScan(params: {
   } catch (err) {
     return {
       ok: false,
-      error: `${params.subject} installation blocked: code safety scan failed (${String(err)}). Run "openclaw security audit --deep" for details.`,
+      error: `${params.subject} installation blocked: code safety scan failed (${String(err)}). Run "dex security audit --deep" for details.`,
       code: PLUGIN_INSTALL_ERROR_CODE.SECURITY_SCAN_FAILED,
     };
   }

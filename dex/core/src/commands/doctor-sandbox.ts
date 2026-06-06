@@ -380,7 +380,7 @@ export async function maybeRepairSandboxRegistryFiles(prompter: DoctorPrompter):
       [
         "Legacy sandbox registry files detected.",
         ...legacyFiles.map(formatLegacyRegistryInspectionLine),
-        `Run ${formatCliCommand("openclaw doctor --fix")} to migrate them to sharded registry files.`,
+        `Run ${formatCliCommand("dex doctor --fix")} to migrate them to sharded registry files.`,
       ].join("\n"),
       "Sandbox",
     );

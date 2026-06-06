@@ -17,7 +17,7 @@ export function resolveAcpInstallCommandHint(cfg: DexConfig): string {
   if (backendId === "acpx") {
     const workspaceLocalPath = path.join(workspaceDir, "extensions", "acpx");
     if (existsSync(workspaceLocalPath)) {
-      return `openclaw plugins install ${workspaceLocalPath}`;
+      return `dex plugins install ${workspaceLocalPath}`;
     }
     const bundledInstallHint = resolveBundledPluginInstallCommandHint({
       pluginId: backendId,
@@ -34,7 +34,7 @@ export function resolveAcpInstallCommandHint(cfg: DexConfig): string {
         return bundledInstallHint;
       }
     }
-    return "openclaw plugins install acpx";
+    return "dex plugins install acpx";
   }
   return `Install and enable the plugin that provides ACP backend "${backendId}".`;
 }

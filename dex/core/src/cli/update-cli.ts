@@ -54,16 +54,16 @@ export function registerUpdateCli(program: Command) {
     .option("--yes", "Skip confirmation prompts (non-interactive)", false)
     .addHelpText("after", () => {
       const examples = [
-        ["openclaw update", "Update a source checkout (git)"],
-        ["openclaw update --channel beta", "Switch to beta channel (git + npm)"],
-        ["openclaw update --channel dev", "Switch to dev channel (git + npm)"],
-        ["openclaw update --tag beta", "One-off update to a dist-tag or version"],
-        ["openclaw update --tag main", "One-off package update from GitHub main"],
-        ["openclaw update --dry-run", "Preview actions without changing anything"],
-        ["openclaw update --no-restart", "Update without restarting the service"],
-        ["openclaw update --json", "Output result as JSON"],
-        ["openclaw update --yes", "Non-interactive (accept downgrade prompts)"],
-        ["openclaw update wizard", "Interactive update wizard"],
+        ["dex update", "Update a source checkout (git)"],
+        ["dex update --channel beta", "Switch to beta channel (git + npm)"],
+        ["dex update --channel dev", "Switch to dev channel (git + npm)"],
+        ["dex update --tag beta", "One-off update to a dist-tag or version"],
+        ["dex update --tag main", "One-off package update from GitHub main"],
+        ["dex update --dry-run", "Preview actions without changing anything"],
+        ["dex update --no-restart", "Update without restarting the service"],
+        ["dex update --json", "Output result as JSON"],
+        ["dex update --yes", "Non-interactive (accept downgrade prompts)"],
+        ["dex update wizard", "Interactive update wizard"],
         ["openclaw --update", "Shorthand for openclaw update"],
       ] as const;
       const fmtExamples = examples
@@ -167,9 +167,9 @@ ${theme.muted("Docs:")} ${formatDocsLink("/cli/update", "docs.openclaw.ai/cli/up
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["openclaw update status", "Show channel + version status."],
-          ["openclaw update status --json", "JSON output."],
-          ["openclaw update status --timeout 10", "Custom timeout."],
+          ["dex update status", "Show channel + version status."],
+          ["dex update status --json", "JSON output."],
+          ["dex update status --timeout 10", "Custom timeout."],
         ])}\n\n${theme.heading("Notes:")}\n${theme.muted(
           "- Shows current update channel (stable/beta/dev) and source",
         )}\n${theme.muted("- Includes git tag/branch/SHA for source checkouts")}\n\n${theme.muted(

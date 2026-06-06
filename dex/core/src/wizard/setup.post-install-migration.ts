@@ -117,7 +117,7 @@ function describeCandidate(candidate: ResolvedProviderCandidate): string {
 }
 
 function logMigrationHint(runtime: RuntimeEnv, candidate: ResolvedProviderCandidate): void {
-  const command = formatCliCommand(`openclaw migrate ${candidate.provider.id} --dry-run`);
+  const command = formatCliCommand(`dex migrate ${candidate.provider.id} --dry-run`);
   runtime.log(`Detected ${describeCandidate(candidate)}. Preview migration with ${command}.`);
 }
 
@@ -159,7 +159,7 @@ function applyMigrationConfigPatches(
  * that was just installed during onboarding. In non-interactive mode this is
  * a no-op apart from a hint line so scripted setups never mutate state
  * unexpectedly. The actual migration UI (skill/plugin checkboxes, confirm
- * prompt) is owned by `openclaw migrate <provider>`; this helper only owns
+ * prompt) is owned by `dex migrate <provider>`; this helper only owns
  * the gate prompt.
  */
 export async function offerPostInstallMigrations(
@@ -228,7 +228,7 @@ export async function offerPostInstallMigrations(
     } catch (error) {
       params.runtime.log(
         `${candidate.provider.label} migration failed: ${formatErrorMessage(error)}. ` +
-          `Re-run with ${formatCliCommand(`openclaw migrate ${candidate.provider.id} --dry-run`)} to inspect.`,
+          `Re-run with ${formatCliCommand(`dex migrate ${candidate.provider.id} --dry-run`)} to inspect.`,
       );
     } finally {
       await preparation?.dispose?.();

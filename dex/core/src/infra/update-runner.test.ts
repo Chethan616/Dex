@@ -1987,7 +1987,7 @@ describe("runGatewayUpdate", () => {
 
     expect(result.status).toBe("ok");
     expect(calls).toContain(doctorCommand);
-    expect(result.steps.map((step) => step.name)).toContain("openclaw doctor");
+    expect(result.steps.map((step) => step.name)).toContain("dex doctor");
     expect(doctorEnv?.DEX_UPDATE_IN_PROGRESS).toBe("1");
     expect(doctorEnv?.DEX_UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE).toBe("1");
     expect(doctorEnv?.DEX_COMPATIBILITY_HOST_VERSION).toBe("2.0.0");
@@ -2028,7 +2028,7 @@ describe("runGatewayUpdate", () => {
     expect(result.reason).toBe("doctor-failed");
     expect(calls).toContain(doctorCommand);
     const lastStep = result.steps.at(-1);
-    expect(lastStep?.name).toBe("openclaw doctor");
+    expect(lastStep?.name).toBe("dex doctor");
     expect(lastStep?.exitCode).toBe(1);
     expect(lastStep?.stderrTail).toBe("doctor refused migration");
   });
@@ -2348,7 +2348,7 @@ describe("runGatewayUpdate", () => {
 
     expect(result.status).toBe("error");
     expect(result.reason).toBe("doctor-entry-missing");
-    expect(result.steps.some((step) => step.name === "openclaw doctor entry")).toBe(true);
+    expect(result.steps.some((step) => step.name === "dex doctor entry")).toBe(true);
     expect(result.steps.at(-1)?.name).toMatch(/^git rollback/);
   });
 

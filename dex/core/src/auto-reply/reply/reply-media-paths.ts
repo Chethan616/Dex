@@ -69,7 +69,7 @@ export function createReplyMediaPathNormalizer(params: {
   requesterSenderE164?: string;
 }): (payload: ReplyPayload) => Promise<ReplyPayload> {
   // Prefer an explicit agentId so callers without a resolved sessionKey (e.g.
-  // `openclaw agent --deliver` with `--reply-channel/--reply-to`) still get
+  // `dex agent --deliver` with `--reply-channel/--reply-to`) still get
   // the stricter agent-scoped file-read policy applied during staging.
   const agentId =
     params.agentId ??

@@ -714,7 +714,7 @@ describe("startHeartbeatRunner", () => {
   });
 
   it("preserves immediate delivery for repeated bare wake reasons", async () => {
-    // 'wake' is the immediate-path reason from `openclaw system event --mode now`
+    // 'wake' is the immediate-path reason from `dex system event --mode now`
     // and must NOT be deferred. Verify the runner allows multiple back-to-back
     // wake requests through (subject only to the flood guard backstop).
     useFakeHeartbeatTime();

@@ -336,7 +336,7 @@ export class DexChannelBridge {
       inputPreview: params.inputPreview,
     });
     if (this.verbose) {
-      process.stderr.write(`openclaw mcp: pending Claude permission ${params.requestId}\n`);
+      process.stderr.write(`dex mcp: pending Claude permission ${params.requestId}\n`);
     }
   }
 
@@ -359,7 +359,7 @@ export class DexChannelBridge {
     } catch (error) {
       if (this.verbose && !this.closed) {
         process.stderr.write(
-          `openclaw mcp: notification ${notification.method} failed: ${String(error)}\n`,
+          `dex mcp: notification ${notification.method} failed: ${String(error)}\n`,
         );
       }
     }

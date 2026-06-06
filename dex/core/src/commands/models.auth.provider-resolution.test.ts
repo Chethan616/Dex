@@ -40,7 +40,7 @@ describe("resolveRequestedLoginProviderOrThrow", () => {
     expect(() =>
       resolveRequestedLoginProviderOrThrow(loadedProviders, "google-antigravity"),
     ).toThrowError(
-      'Unknown provider "google-antigravity". Loaded providers: google-gemini-cli, minimax-portal. Verify plugins via `openclaw plugins list --json`.',
+      'Unknown provider "google-antigravity". Loaded providers: google-gemini-cli, minimax-portal. Verify plugins via `dex plugins list --json`.',
     );
   });
 });

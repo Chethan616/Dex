@@ -32,7 +32,7 @@ afterEach(() => {
   closeDexStateDatabaseForTest();
 });
 
-describe("openclaw agent database", () => {
+describe("dex agent database", () => {
   it("resolves under the per-agent state directory", () => {
     const stateDir = createTempStateDir();
 

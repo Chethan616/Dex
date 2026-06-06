@@ -387,7 +387,7 @@ async function channelsAddCommandImpl(
       `${formatUnsupportedChannelActionMessage({
         channel,
         action: "non-interactive add",
-      })} Run ${formatCliCommand("openclaw channels add")} with no flags for guided setup.`,
+      })} Run ${formatCliCommand("dex channels add")} with no flags for guided setup.`,
     );
     runtime.exit(1);
     return;

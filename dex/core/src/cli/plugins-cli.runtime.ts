@@ -171,7 +171,7 @@ function collectConfiguredRuntimePluginWarnings(params: {
     }
     const installSpec = formatConfiguredRuntimePluginInstallSpec(candidate);
     return [
-      `- Configured runtime "${runtimeId}" requires the ${candidate.label} plugin, but no enabled "${runtimeId}" plugin was found. Run "openclaw doctor --fix" to install ${installSpec}, or install it manually with "openclaw plugins install ${installSpec}".`,
+      `- Configured runtime "${runtimeId}" requires the ${candidate.label} plugin, but no enabled "${runtimeId}" plugin was found. Run "dex doctor --fix" to install ${installSpec}, or install it manually with "dex plugins install ${installSpec}".`,
     ];
   });
 }
@@ -314,7 +314,7 @@ export async function runPluginsRegistryCommand(opts: PluginRegistryOptions): Pr
   ];
   if (inspection.refreshReasons.length > 0) {
     lines.push(`${theme.muted("Refresh reasons:")} ${inspection.refreshReasons.join(", ")}`);
-    lines.push(`${theme.muted("Repair:")} ${theme.command("openclaw plugins registry --refresh")}`);
+    lines.push(`${theme.muted("Repair:")} ${theme.command("dex plugins registry --refresh")}`);
   }
   defaultRuntime.log(lines.join("\n"));
 }
@@ -345,7 +345,7 @@ export async function runPluginsDoctorCommand(): Promise<void> {
   const stalePluginConfigHits = scanStalePluginConfig(sourceCfg ?? cfg, process.env);
   const stalePluginConfigWarnings = collectStalePluginConfigWarnings({
     hits: stalePluginConfigHits,
-    doctorFixCommand: "openclaw doctor --fix",
+    doctorFixCommand: "dex doctor --fix",
     autoRepairBlocked: isStalePluginAutoRepairBlocked(sourceCfg ?? cfg, process.env),
   });
   const configuredRuntimePluginWarnings = collectConfiguredRuntimePluginWarnings({

@@ -1057,6 +1057,6 @@ describe("skills cli commands", () => {
     expect(defaultRuntime.log).not.toHaveBeenCalled();
     expect(runtimeErrors).toStrictEqual([]);
     expect(runtimeStdout.at(-1)).toContain("calendar");
-    expect(runtimeStdout.at(-1)).toContain("openclaw skills search");
+    expect(runtimeStdout.at(-1)).toContain("dex skills search");
   });
 });

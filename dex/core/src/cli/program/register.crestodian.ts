@@ -17,10 +17,10 @@ export function registerCrestodianCommand(program: Command) {
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
           ["openclaw", "Start Crestodian."],
-          ["openclaw crestodian", "Start Crestodian explicitly."],
-          ['openclaw crestodian -m "status"', "Run one status request."],
+          ["dex crestodian", "Start Crestodian explicitly."],
+          ['dex crestodian -m "status"', "Run one status request."],
           [
-            'openclaw crestodian -m "set default model openai/gpt-5.2" --yes',
+            'dex crestodian -m "set default model openai/gpt-5.2" --yes',
             "Apply a typed config write.",
           ],
         ])}`,

@@ -67,23 +67,23 @@ export function registerAgentTurnCommand(
         `
 ${theme.heading("Examples:")}
 ${formatHelpExamples([
-  ['openclaw agent --to +15555550123 --message "status update"', "Start a new session."],
-  ['openclaw agent --agent ops --message "Summarize logs"', "Use a specific agent."],
+  ['dex agent --to +15555550123 --message "status update"', "Start a new session."],
+  ['dex agent --agent ops --message "Summarize logs"', "Use a specific agent."],
   [
-    'openclaw agent --session-key agent:ops:incident-42 --message "Summarize status"',
+    'dex agent --session-key agent:ops:incident-42 --message "Summarize status"',
     "Target an exact session key.",
   ],
   [
-    'openclaw agent --session-id 1234 --message "Summarize inbox" --thinking medium',
+    'dex agent --session-id 1234 --message "Summarize inbox" --thinking medium',
     "Target a session with explicit thinking level.",
   ],
   [
-    'openclaw agent --to +15555550123 --message "Trace logs" --verbose on --json',
+    'dex agent --to +15555550123 --message "Trace logs" --verbose on --json',
     "Enable verbose logging and JSON output.",
   ],
-  ['openclaw agent --to +15555550123 --message "Summon reply" --deliver', "Deliver reply."],
+  ['dex agent --to +15555550123 --message "Summon reply" --deliver', "Deliver reply."],
   [
-    'openclaw agent --agent ops --message "Generate report" --deliver --reply-channel slack --reply-to "#reports"',
+    'dex agent --agent ops --message "Generate report" --deliver --reply-channel slack --reply-to "#reports"',
     "Send reply to a different channel/target.",
   ],
 ])}

@@ -495,7 +495,7 @@ export function createCronTool(opts?: CronToolOptions, deps?: CronToolDeps): Any
     displaySummary: CRON_TOOL_DISPLAY_SUMMARY,
     description: `Manage Gateway cron jobs and wake events: reminders, check-back-later, delayed follow-ups, recurring work. Do not emulate scheduling with exec sleep/process polling.
 
-Main cron => system events for heartbeat. Isolated cron => background task in \`openclaw tasks\`.
+Main cron => system events for heartbeat. Isolated cron => background task in \`dex tasks\`.
 
 ACTIONS:
 - status: scheduler status

@@ -70,14 +70,14 @@ async function expectSymlinkSwapDuringPreflightToAvoidErrors(params: {
 describe("exec interactive OpenClaw channel login guard", () => {
   it("recognizes direct and package-runner channel login commands before execution", () => {
     expect(
-      parseOpenClawChannelsLoginShellCommand("openclaw channels login --channel whatsapp"),
+      parseOpenClawChannelsLoginShellCommand("dex channels login --channel whatsapp"),
     ).toBe(true);
     expect(
       parseOpenClawChannelsLoginShellCommand(
         "pnpm exec openclaw channels login --channel whatsapp --verbose",
       ),
     ).toBe(true);
-    expect(parseOpenClawChannelsLoginShellCommand("openclaw channels status --deep")).toBe(false);
+    expect(parseOpenClawChannelsLoginShellCommand("dex channels status --deep")).toBe(false);
   });
 
   it("blocks interactive channel login commands from exec", async () => {
@@ -85,17 +85,17 @@ describe("exec interactive OpenClaw channel login guard", () => {
 
     await expect(
       tool.execute("call-openclaw-channel-login", {
-        command: "openclaw channels login --channel whatsapp --verbose",
+        command: "dex channels login --channel whatsapp --verbose",
       }),
     ).rejects.toThrow(/exec cannot run interactive OpenClaw channel login commands/);
     await expect(
       tool.execute("call-wrapped-openclaw-channel-login", {
-        command: "sudo -u openclaw bash -lc 'openclaw channels login --channel whatsapp'",
+        command: "sudo -u openclaw bash -lc 'dex channels login --channel whatsapp'",
       }),
     ).rejects.toThrow(/exec cannot run interactive OpenClaw channel login commands/);
     await expect(
       tool.execute("call-clustered-sudo-channel-login", {
-        command: "sudo -EH bash -lc 'openclaw channels login --channel whatsapp'",
+        command: "sudo -EH bash -lc 'dex channels login --channel whatsapp'",
       }),
     ).rejects.toThrow(/exec cannot run interactive OpenClaw channel login commands/);
     await expect(
@@ -105,7 +105,7 @@ describe("exec interactive OpenClaw channel login guard", () => {
     ).rejects.toThrow(/exec cannot run interactive OpenClaw channel login commands/);
     await expect(
       tool.execute("call-env-s-trailing-channel-login", {
-        command: "env -S 'openclaw channels' login --channel whatsapp",
+        command: "env -S 'dex channels' login --channel whatsapp",
       }),
     ).rejects.toThrow(/exec cannot run interactive OpenClaw channel login commands/);
   });

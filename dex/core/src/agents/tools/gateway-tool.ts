@@ -326,7 +326,7 @@ function assertGatewayConfigMutationAllowed(params: {
   }
 
   // Block writes that newly enable any dangerous config flag.
-  // Uses the same flag enumeration as `openclaw security audit`.
+  // Uses the same flag enumeration as `dex security audit`.
   const currentFlags = new Set(
     collectEnabledInsecureOrDangerousFlags(params.currentConfig as DexConfig),
   );

@@ -36,10 +36,10 @@ describe("resolveMissingOfficialExternalChannelPluginRepairHint", () => {
       channelId: "feishu",
       label: "Feishu",
       installSpec: "@openclaw/feishu",
-      installCommand: "openclaw plugins install @openclaw/feishu",
-      doctorFixCommand: "openclaw doctor --fix",
+      installCommand: "dex plugins install @openclaw/feishu",
+      doctorFixCommand: "dex doctor --fix",
       repairHint:
-        "Install the official external plugin with: openclaw plugins install @openclaw/feishu, or run: openclaw doctor --fix.",
+        "Install the official external plugin with: dex plugins install @openclaw/feishu, or run: dex doctor --fix.",
     });
   });
 
@@ -64,7 +64,7 @@ describe("resolveMissingOfficialExternalChannelPluginRepairHint", () => {
       channelId: "whatsapp",
       label: "WhatsApp",
       installSpec: "clawhub:@openclaw/whatsapp",
-      installCommand: "openclaw plugins install clawhub:@openclaw/whatsapp",
+      installCommand: "dex plugins install clawhub:@openclaw/whatsapp",
     });
   });
 

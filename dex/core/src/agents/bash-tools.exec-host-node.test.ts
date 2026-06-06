@@ -1070,10 +1070,10 @@ describe("executeNodeHostCommand", () => {
 
   it("requires human approval when prepared shell payload has multiple commands", async () => {
     const chainPlan = {
-      argv: ["/bin/sh", "-lc", "openclaw status; id"],
+      argv: ["/bin/sh", "-lc", "dex status; id"],
       cwd: "/tmp/work",
-      commandText: `/bin/sh -lc "openclaw status; id"`,
-      commandPreview: "openclaw status; id",
+      commandText: `/bin/sh -lc "dex status; id"`,
+      commandPreview: "dex status; id",
       agentId: "prepared-agent",
       sessionKey: "prepared-session",
     };
@@ -1091,15 +1091,15 @@ describe("executeNodeHostCommand", () => {
           ? [
               {
                 resolution: null,
-                argv: ["/bin/sh", "-lc", "openclaw status; id"],
-                raw: `/bin/sh -lc "openclaw status; id"`,
+                argv: ["/bin/sh", "-lc", "dex status; id"],
+                raw: `/bin/sh -lc "dex status; id"`,
               },
             ]
           : [
               {
                 resolution: null,
                 argv: ["openclaw", "status"],
-                raw: "openclaw status",
+                raw: "dex status",
               },
               {
                 resolution: null,
@@ -1123,7 +1123,7 @@ describe("executeNodeHostCommand", () => {
     });
 
     const result = await executeNodeHostCommand({
-      command: "openclaw status; id",
+      command: "dex status; id",
       workdir: "/tmp/work",
       env: {},
       security: "allowlist",
@@ -1144,10 +1144,10 @@ describe("executeNodeHostCommand", () => {
 
   it("does not treat read-only suppression inspections as wrapper writes", async () => {
     const wrapperPlan = {
-      argv: ["/bin/sh", "-lc", "openclaw config get security.audit.suppressions"],
+      argv: ["/bin/sh", "-lc", "dex config get security.audit.suppressions"],
       cwd: "/tmp/work",
-      commandText: `/bin/sh -lc "openclaw config get security.audit.suppressions"`,
-      commandPreview: "openclaw config get security.audit.suppressions",
+      commandText: `/bin/sh -lc "dex config get security.audit.suppressions"`,
+      commandPreview: "dex config get security.audit.suppressions",
       agentId: "prepared-agent",
       sessionKey: "prepared-session",
     };
@@ -1165,13 +1165,13 @@ describe("executeNodeHostCommand", () => {
           command.startsWith("/bin/sh")
             ? {
                 resolution: null,
-                argv: ["/bin/sh", "-lc", "openclaw config get security.audit.suppressions"],
-                raw: `/bin/sh -lc "openclaw config get security.audit.suppressions"`,
+                argv: ["/bin/sh", "-lc", "dex config get security.audit.suppressions"],
+                raw: `/bin/sh -lc "dex config get security.audit.suppressions"`,
               }
             : {
                 resolution: null,
                 argv: ["openclaw", "config", "get", "security.audit.suppressions"],
-                raw: "openclaw config get security.audit.suppressions",
+                raw: "dex config get security.audit.suppressions",
               },
         ],
         segmentAllowlistEntries: [],
@@ -1189,7 +1189,7 @@ describe("executeNodeHostCommand", () => {
     });
 
     const result = await executeNodeHostCommand({
-      command: "openclaw config get security.audit.suppressions",
+      command: "dex config get security.audit.suppressions",
       workdir: "/tmp/work",
       env: {},
       security: "allowlist",
@@ -1585,7 +1585,7 @@ describe("executeNodeHostCommand", () => {
     });
 
     const result = await executeNodeHostCommand({
-      command: "openclaw config set security.audit.suppressions '[]'",
+      command: "dex config set security.audit.suppressions '[]'",
       workdir: "/tmp/work",
       env: {},
       security: "allowlist",

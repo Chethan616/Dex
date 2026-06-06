@@ -52,7 +52,7 @@ export function formatCliParseErrorOutput(
     return lines(
       theme.error(`OpenClaw does not know the command ${quote(command)}.`),
       formatHelpHint(options.argv, { root: true }),
-      `${theme.muted("Plugin command?")} ${theme.command(formatCliCommand("openclaw plugins list"))}`,
+      `${theme.muted("Plugin command?")} ${theme.command(formatCliCommand("dex plugins list"))}`,
       formatDocsHint(),
     );
   }

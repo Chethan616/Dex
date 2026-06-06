@@ -181,7 +181,7 @@ function isReleasedVersion(version: string): boolean {
 
 /**
  * Lazily resolve the local node host's nodeId from ~/.dex/node.json.
- * Process-stable: only changes on `openclaw node install`, which requires restart.
+ * Process-stable: only changes on `dex node install`, which requires restart.
  */
 let cachedLocalNodeId: string | null | undefined;
 function resolveLocalNodeId(): string | null {

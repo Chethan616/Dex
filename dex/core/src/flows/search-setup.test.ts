@@ -202,7 +202,7 @@ describe("runSearchSetupFlow", () => {
         options: expect.arrayContaining([
           expect.objectContaining({
             label: "暂时跳过",
-            hint: "稍后可用 openclaw configure --section web 配置",
+            hint: "稍后可用 dex configure --section web 配置",
           }),
         ]),
       }),

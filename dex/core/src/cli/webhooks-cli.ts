@@ -112,7 +112,7 @@ function parseGmailSetupOptions(raw: Record<string, unknown>): GmailSetupOptions
   const account = normalizeOptionalString(accountRaw) ?? "";
   if (!account) {
     throw new Error(
-      `--account is required. Example: ${formatCliCommand("openclaw webhooks gmail setup --account default")}.`,
+      `--account is required. Example: ${formatCliCommand("dex webhooks gmail setup --account default")}.`,
     );
   }
   const common = parseGmailCommonOptions(raw);

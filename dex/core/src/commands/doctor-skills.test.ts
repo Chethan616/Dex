@@ -86,7 +86,7 @@ describe("doctor skills", () => {
 
     expect(lines.join("\n")).toContain("places: bins: goplaces; env: GOOGLE_MAPS_API_KEY");
     expect(lines.join("\n")).toContain("install option: Install goplaces (brew)");
-    expect(lines.join("\n")).toContain("openclaw doctor --fix");
+    expect(lines.join("\n")).toContain("dex doctor --fix");
   });
 
   it("surfaces a GH_CONFIG_DIR hint when the github skill is eligible but auth lives at a different HOME", () => {

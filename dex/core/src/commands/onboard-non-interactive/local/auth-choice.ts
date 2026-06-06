@@ -45,7 +45,7 @@ export async function applyNonInteractiveAuthChoice(params: {
   const requestedSecretInputMode = normalizeSecretInputModeInput(opts.secretInputMode);
   if (opts.secretInputMode && !requestedSecretInputMode) {
     runtime.error(
-      `Invalid --secret-input-mode. Use "plaintext" or "ref", or run ${formatCliCommand("openclaw onboard")} for interactive setup.`,
+      `Invalid --secret-input-mode. Use "plaintext" or "ref", or run ${formatCliCommand("dex onboard")} for interactive setup.`,
     );
     runtime.exit(1);
     return null;

@@ -127,7 +127,7 @@ export const zh_TW = {
       apply: "現在套用這次遷移？",
       appliedTitle: "遷移已套用",
       cancelled: "遷移已取消",
-      complete: "遷移完成。下一步執行 `openclaw doctor`。",
+      complete: "遷移完成。下一步執行 `dex doctor`。",
       previewTitle: "遷移預覽",
       source: "遷移來源",
       sourceAgentHome: "來源 agent home",

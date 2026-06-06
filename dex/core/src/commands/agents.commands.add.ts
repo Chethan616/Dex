@@ -122,7 +122,7 @@ export async function agentsAddCommand(
 
   if (nonInteractive && !workspaceFlag) {
     runtime.error(
-      `Non-interactive agent creation requires --workspace. Re-run ${formatCliCommand("openclaw agents add <id> --workspace <path>")} or omit flags to use the wizard.`,
+      `Non-interactive agent creation requires --workspace. Re-run ${formatCliCommand("dex agents add <id> --workspace <path>")} or omit flags to use the wizard.`,
     );
     runtime.exit(1);
     return;
@@ -131,14 +131,14 @@ export async function agentsAddCommand(
   if (nonInteractive) {
     if (!nameInput) {
       runtime.error(
-        `Agent name is required in non-interactive mode. Run ${formatCliCommand("openclaw agents add <id> --workspace <path>")}.`,
+        `Agent name is required in non-interactive mode. Run ${formatCliCommand("dex agents add <id> --workspace <path>")}.`,
       );
       runtime.exit(1);
       return;
     }
     if (!workspaceFlag) {
       runtime.error(
-        `Non-interactive agent creation requires --workspace. Re-run ${formatCliCommand("openclaw agents add <id> --workspace <path>")} or omit flags to use the wizard.`,
+        `Non-interactive agent creation requires --workspace. Re-run ${formatCliCommand("dex agents add <id> --workspace <path>")} or omit flags to use the wizard.`,
       );
       runtime.exit(1);
       return;
@@ -146,7 +146,7 @@ export async function agentsAddCommand(
     const agentId = normalizeAgentId(nameInput);
     if (agentId === DEFAULT_AGENT_ID) {
       runtime.error(
-        `"${DEFAULT_AGENT_ID}" is reserved. Choose another name, or run ${formatCliCommand("openclaw agents list")} to inspect the default agent.`,
+        `"${DEFAULT_AGENT_ID}" is reserved. Choose another name, or run ${formatCliCommand("dex agents list")} to inspect the default agent.`,
       );
       runtime.exit(1);
       return;
@@ -156,7 +156,7 @@ export async function agentsAddCommand(
     }
     if (findAgentEntryIndex(listAgentEntries(cfg), agentId) >= 0) {
       runtime.error(
-        `Agent "${agentId}" already exists. Run ${formatCliCommand("openclaw agents list")} to inspect configured agents.`,
+        `Agent "${agentId}" already exists. Run ${formatCliCommand("dex agents list")} to inspect configured agents.`,
       );
       runtime.exit(1);
       return;

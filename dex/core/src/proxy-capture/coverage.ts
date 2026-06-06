@@ -185,6 +185,6 @@ export function maybeWarnAboutDebugProxyCoverage(
     `[openclaw proxy] debug proxy coverage: ${summary.captured}/${summary.total} captured, ${summary.proxyOnly} proxy-only, ${summary.uncovered} uncovered.`,
   );
   warn(
-    `[openclaw proxy] remaining gaps: ${partial.map((entry) => entry.id).join(", ")}. Run \`openclaw proxy coverage\` for details.`,
+    `[openclaw proxy] remaining gaps: ${partial.map((entry) => entry.id).join(", ")}. Run \`dex proxy coverage\` for details.`,
   );
 }

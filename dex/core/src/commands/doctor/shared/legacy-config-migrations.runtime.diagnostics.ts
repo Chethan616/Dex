@@ -12,7 +12,7 @@ function isLegacyMemoryPressureBundleConfig(value: unknown): boolean {
 const MEMORY_PRESSURE_BUNDLE_RULE: LegacyConfigRule = {
   path: ["diagnostics", "memoryPressureBundle"],
   message:
-    'diagnostics.memoryPressureBundle was renamed; use diagnostics.memoryPressureSnapshot instead. Run "openclaw doctor --fix".',
+    'diagnostics.memoryPressureBundle was renamed; use diagnostics.memoryPressureSnapshot instead. Run "dex doctor --fix".',
   match: isLegacyMemoryPressureBundleConfig,
   requireSourceLiteral: true,
 };

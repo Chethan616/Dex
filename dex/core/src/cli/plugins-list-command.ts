@@ -74,7 +74,7 @@ export async function runPluginsListCommand(
   if (list.length === 0) {
     runtime.log(
       theme.muted(
-        `No plugins found. Run ${formatCliCommand("openclaw plugins install <plugin>")} to add one, or ${formatCliCommand("openclaw plugins list --json")} to inspect raw discovery state.`,
+        `No plugins found. Run ${formatCliCommand("dex plugins install <plugin>")} to add one, or ${formatCliCommand("dex plugins list --json")} to inspect raw discovery state.`,
       ),
     );
     return;

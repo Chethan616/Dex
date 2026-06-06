@@ -580,8 +580,8 @@ export function buildInvalidConfigPostCoreUpdateResult(): {
   result: PostCorePluginUpdateResult;
 } {
   const guidance = [
-    "Run `openclaw doctor` to inspect the config validation errors.",
-    "Once the config parses, rerun `openclaw update`.",
+    "Run `dex doctor` to inspect the config validation errors.",
+    "Once the config parses, rerun `dex update`.",
   ];
   const message =
     "Plugin post-update convergence skipped because the config is invalid; refusing to restart the gateway with an unverified plugin set.";
@@ -718,13 +718,13 @@ export async function recoverLaunchAgentAndRecheckGatewayHealth(params: {
 }
 
 function formatPostUpdateGatewayRecoveryLine(platform: NodeJS.Platform): string {
-  const restartCommand = replaceCliName(formatCliCommand("openclaw gateway restart"), CLI_NAME);
+  const restartCommand = replaceCliName(formatCliCommand("dex gateway restart"), CLI_NAME);
   const installCommand = replaceCliName(
     formatCliCommand("dex gateway install --force"),
     CLI_NAME,
   );
   const statusCommand = replaceCliName(
-    formatCliCommand("openclaw gateway status --deep"),
+    formatCliCommand("dex gateway status --deep"),
     CLI_NAME,
   );
   if (platform === "darwin") {
@@ -769,9 +769,9 @@ type ManagedServiceRootRedirect = {
 };
 
 function formatGatewayAncestryBlockMessage(pid: number): string {
-  return `openclaw update detected it is running inside the gateway process tree.
+  return `dex update detected it is running inside the gateway process tree.
 Gateway PID ${pid} is an ancestor of this process, so this updater cannot safely stop or restart the gateway that owns it.
-Run \`${replaceCliName(formatCliCommand("openclaw update"), CLI_NAME)}\` from a shell outside the gateway service, or stop the gateway service first and then update.`;
+Run \`${replaceCliName(formatCliCommand("dex update"), CLI_NAME)}\` from a shell outside the gateway service, or stop the gateway service first and then update.`;
 }
 
 function parsePositivePid(value: unknown): number | null {
@@ -1018,8 +1018,8 @@ async function resolvePackageRuntimePreflightError(params: {
     `${runtimeLabel} is too old for openclaw@${targetLabel}.`,
     `The requested package requires ${status.nodeEngine}.`,
     runtime.nodeRunner
-      ? "Upgrade the Node runtime that owns the managed Gateway service, then rerun `openclaw update`."
-      : "Upgrade Node to 22.19+ or Node 24, then rerun `openclaw update`.",
+      ? "Upgrade the Node runtime that owns the managed Gateway service, then rerun `dex update`."
+      : "Upgrade Node to 22.19+ or Node 24, then rerun `dex update`.",
     "Bare `npm i -g openclaw` can silently install an older compatible release.",
     "After upgrading Node, use `npm i -g openclaw@latest`.",
   ].join("\n");
@@ -1295,7 +1295,7 @@ async function tryInstallShellCompletion(opts: {
       if (!opts.skipPrompt) {
         defaultRuntime.log(
           theme.muted(
-            `Skipped. Run \`${replaceCliName(formatCliCommand("openclaw completion --install"), CLI_NAME)}\` later to enable.`,
+            `Skipped. Run \`${replaceCliName(formatCliCommand("dex completion --install"), CLI_NAME)}\` later to enable.`,
           ),
         );
       }
@@ -2042,7 +2042,7 @@ async function maybeRestartService(params: {
           ]
         : []),
       `Restart log: ${resolveGatewayRestartLogPath(params.serviceEnv ?? process.env)}`,
-      `Run \`${replaceCliName(formatCliCommand("openclaw gateway status --deep"), CLI_NAME)}\` for details.`,
+      `Run \`${replaceCliName(formatCliCommand("dex gateway status --deep"), CLI_NAME)}\` for details.`,
       ...formatPostUpdateGatewayRecoveryInstructions(params.result),
     ];
     if (params.opts.json) {
@@ -2185,7 +2185,7 @@ async function maybeRestartService(params: {
         defaultRuntime.log(theme.warn(`Gateway: restart failed: ${String(err)}`));
         defaultRuntime.log(
           theme.muted(
-            `You may need to restart the service manually: ${replaceCliName(formatCliCommand("openclaw gateway restart"), CLI_NAME)}`,
+            `You may need to restart the service manually: ${replaceCliName(formatCliCommand("dex gateway restart"), CLI_NAME)}`,
           ),
         );
       }
@@ -2202,13 +2202,13 @@ async function maybeRestartService(params: {
     if (params.result.mode === "npm" || params.result.mode === "pnpm") {
       defaultRuntime.log(
         theme.muted(
-          `Tip: Run \`${replaceCliName(formatCliCommand("openclaw doctor"), CLI_NAME)}\`, then \`${replaceCliName(formatCliCommand("openclaw gateway restart"), CLI_NAME)}\` to apply updates to a running gateway.`,
+          `Tip: Run \`${replaceCliName(formatCliCommand("dex doctor"), CLI_NAME)}\`, then \`${replaceCliName(formatCliCommand("dex gateway restart"), CLI_NAME)}\` to apply updates to a running gateway.`,
         ),
       );
     } else {
       defaultRuntime.log(
         theme.muted(
-          `Tip: Run \`${replaceCliName(formatCliCommand("openclaw gateway restart"), CLI_NAME)}\` to apply updates to a running gateway.`,
+          `Tip: Run \`${replaceCliName(formatCliCommand("dex gateway restart"), CLI_NAME)}\` to apply updates to a running gateway.`,
         ),
       );
     }
@@ -3372,7 +3372,7 @@ async function updateCommandInternal(opts: UpdateCommandOptions): Promise<void> 
         [
           "Package updates cannot run from inside the gateway service process.",
           "That path replaces the active OpenClaw dist tree while the live gateway may still lazy-load old chunks.",
-          `Run \`${replaceCliName(formatCliCommand("openclaw update"), CLI_NAME)}\` from a shell outside the gateway service, or stop the gateway service first and then update.`,
+          `Run \`${replaceCliName(formatCliCommand("dex update"), CLI_NAME)}\` from a shell outside the gateway service, or stop the gateway service first and then update.`,
         ].join("\n"),
       );
       defaultRuntime.exit(1);
@@ -3458,13 +3458,13 @@ async function updateCommandInternal(opts: UpdateCommandOptions): Promise<void> 
         ),
       );
       defaultRuntime.log(
-        theme.muted("Commit, stash, or discard the local changes, then rerun `openclaw update`."),
+        theme.muted("Commit, stash, or discard the local changes, then rerun `dex update`."),
       );
     }
     if (result.reason === "not-git-install") {
       defaultRuntime.log(
         theme.warn(
-          `Skipped: this OpenClaw install isn't a git checkout, and the package manager couldn't be detected. Update via your package manager, then run \`${replaceCliName(formatCliCommand("openclaw doctor"), CLI_NAME)}\` and \`${replaceCliName(formatCliCommand("openclaw gateway restart"), CLI_NAME)}\`.`,
+          `Skipped: this OpenClaw install isn't a git checkout, and the package manager couldn't be detected. Update via your package manager, then run \`${replaceCliName(formatCliCommand("dex doctor"), CLI_NAME)}\` and \`${replaceCliName(formatCliCommand("dex gateway restart"), CLI_NAME)}\`.`,
         ),
       );
       defaultRuntime.log(

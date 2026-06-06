@@ -67,7 +67,7 @@ describe("runCrestodianTui", () => {
     expect(options.session).toBe("agent:crestodian:main");
     expect(options.historyLimit).toBe(200);
     expect(options.config).toEqual({});
-    expect(options.title).toBe("openclaw crestodian");
+    expect(options.title).toBe("dex crestodian");
     if (!options.backend || typeof options.backend !== "object") {
       throw new Error("expected crestodian TUI backend");
     }

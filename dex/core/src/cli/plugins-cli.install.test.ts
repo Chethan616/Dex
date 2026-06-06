@@ -507,7 +507,7 @@ describe("plugins cli install", () => {
     await expect(runPluginsCommand(["plugins", "install", "alpha"])).rejects.toThrow("__exit__:1");
 
     expect(runtimeErrors.at(-1)).toContain(
-      "Config invalid; run `openclaw doctor --fix` before installing plugins.",
+      "Config invalid; run `dex doctor --fix` before installing plugins.",
     );
     expect(installPluginFromMarketplace).not.toHaveBeenCalled();
     expect(installPluginFromNpmSpec).not.toHaveBeenCalled();
@@ -1338,7 +1338,7 @@ describe("plugins cli install", () => {
     ).rejects.toThrow("__exit__:1");
 
     expect(installPluginFromGitSpec).not.toHaveBeenCalled();
-    expect(runtimeErrors.at(-1)).toContain("openclaw plugins install git:<repo>@<ref>");
+    expect(runtimeErrors.at(-1)).toContain("dex plugins install git:<repo>@<ref>");
   });
 
   it("passes dangerous force unsafe install to marketplace installs", async () => {
@@ -1537,7 +1537,7 @@ describe("plugins cli install", () => {
     ).rejects.toThrow("__exit__:1");
 
     expect(runtimeErrors.at(-1)).toContain(
-      "Use `openclaw plugins update <id-or-npm-spec>` to upgrade the tracked plugin, or rerun install with `--force` to replace it.",
+      "Use `dex plugins update <id-or-npm-spec>` to upgrade the tracked plugin, or rerun install with `--force` to replace it.",
     );
     expect(runtimeErrors.at(-1)).not.toContain("Also not a valid hook pack");
   });
@@ -1879,7 +1879,7 @@ describe("plugins cli install", () => {
     parseClawHubPluginSpec.mockReturnValue({ name: "demo" });
     installPluginFromClawHub.mockResolvedValue({
       ok: false,
-      error: 'Use "openclaw skills install demo" instead.',
+      error: 'Use "dex skills install demo" instead.',
       code: "skill_package",
     });
 
@@ -1888,7 +1888,7 @@ describe("plugins cli install", () => {
     );
 
     expect(installPluginFromNpmSpec).not.toHaveBeenCalled();
-    expect(runtimeErrors.at(-1)).toContain('Use "openclaw skills install demo" instead.');
+    expect(runtimeErrors.at(-1)).toContain('Use "dex skills install demo" instead.');
   });
 
   it("falls back to installing hook packs from npm specs", async () => {

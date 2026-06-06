@@ -23,7 +23,7 @@ const REV_PAD = 6;
 const CTRL_PAD = 20;
 
 function formatFlowLookupMiss(lookup: string): string {
-  return `TaskFlow not found: ${lookup}. Run ${formatCliCommand("openclaw tasks flow list")} to see recent flow ids.`;
+  return `TaskFlow not found: ${lookup}. Run ${formatCliCommand("dex tasks flow list")} to see recent flow ids.`;
 }
 
 function truncate(value: string, maxChars: number) {
@@ -179,7 +179,7 @@ export async function flowsListCommand(
   }
   if (flows.length === 0) {
     runtime.log(
-      `No TaskFlows found. Run ${formatCliCommand("openclaw tasks list")} to inspect standalone background tasks.`,
+      `No TaskFlows found. Run ${formatCliCommand("dex tasks list")} to inspect standalone background tasks.`,
     );
     return;
   }

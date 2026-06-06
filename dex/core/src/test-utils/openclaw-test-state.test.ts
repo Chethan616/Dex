@@ -13,7 +13,7 @@ async function expectPathMissing(targetPath: string): Promise<void> {
   throw new Error(`expected missing path: ${targetPath}`);
 }
 
-describe("openclaw test state", () => {
+describe("dex test state", () => {
   it("creates an isolated home layout with spawn env and restores process env", async () => {
     const previousHome = process.env.HOME;
     const previousOpenClawHome = process.env.DEX_HOME;

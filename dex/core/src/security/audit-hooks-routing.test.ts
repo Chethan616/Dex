@@ -139,7 +139,7 @@ describe("security audit hooks ingress findings", () => {
     const finding = getFinding(findings, "hooks.token_reuse_gateway_token");
     expect(finding?.title).toContain("Gateway password");
     expect(finding?.detail).toContain("gateway.auth password");
-    expect(finding?.remediation).toContain("openclaw doctor --fix");
+    expect(finding?.remediation).toContain("dex doctor --fix");
   });
 
   it("flags hooks token reuse of trusted-proxy local password fallback as critical", () => {
@@ -333,7 +333,7 @@ describe("security audit hooks ingress findings", () => {
 
     const finding = getFinding(report.findings, "hooks.token_reuse_gateway_token");
     expect(finding?.severity).toBe("critical");
-    expect(finding?.remediation).toContain("openclaw doctor --fix");
+    expect(finding?.remediation).toContain("dex doctor --fix");
   });
 
   it("flags hooks token reuse of SecretRef-backed trusted-proxy password fallback", async () => {

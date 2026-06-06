@@ -442,7 +442,7 @@ export type ConfigAuditScrubResult = {
   rewritten: number;
   skipped: number;
   // True when the scrub detected concurrent appends mid-rewrite and refused
-  // to swap the file. Caller should re-run `openclaw doctor --fix` once the
+  // to swap the file. Caller should re-run `dex doctor --fix` once the
   // gateway is idle. No on-disk content was modified on abort.
   aborted: boolean;
 };

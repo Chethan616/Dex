@@ -71,13 +71,13 @@ describe("doctor legacy toolsBySender helpers", () => {
           targetKey: "id:owner",
         },
       ],
-      doctorFixCommand: "openclaw doctor --fix",
+      doctorFixCommand: "dex doctor --fix",
     });
 
     expect(warnings).toEqual([
       "- Found 1 legacy untyped toolsBySender key (for example channels.whatsapp.groups.123@g.us.toolsBySender.owner).",
       "- Untyped sender keys are deprecated; use explicit prefixes (id:, e164:, username:, name:).",
-      '- Run "openclaw doctor --fix" to migrate legacy keys to typed id: entries.',
+      '- Run "dex doctor --fix" to migrate legacy keys to typed id: entries.',
     ]);
   });
 });

@@ -712,7 +712,7 @@ describe("maybeRepairPluginRegistryState", () => {
     const notes = vi.mocked(note).mock.calls.join("\n");
     expect(notes).toContain("Managed npm OpenClaw host peer links need repair");
     expect(notes).toContain("codex-plugin");
-    expect(notes).toContain("openclaw doctor --fix");
+    expect(notes).toContain("dex doctor --fix");
     expect(fs.existsSync(linkPath)).toBe(false);
   });
 });

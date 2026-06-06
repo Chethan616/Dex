@@ -193,7 +193,7 @@ describe("probeGatewayMemoryStatus", () => {
         ok: false,
         checked: false,
         error:
-          "memory embedding readiness not checked; run `openclaw memory status --deep` to probe",
+          "memory embedding readiness not checked; run `dex memory status --deep` to probe",
       },
     });
 

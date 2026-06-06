@@ -449,8 +449,8 @@ describe("runDaemonRestart health checks", () => {
     const error = await expectRestartError(runDaemonRestart({ json: true }));
     expect(error.message).toBe("Gateway restart timed out after 60s waiting for health checks.");
     expect(error.hints).toEqual([
-      formatCliCommand("openclaw gateway status --deep"),
-      formatCliCommand("openclaw doctor"),
+      formatCliCommand("dex gateway status --deep"),
+      formatCliCommand("dex doctor"),
     ]);
     expect(terminateStaleGatewayPids).not.toHaveBeenCalled();
     expect(renderRestartDiagnostics).toHaveBeenCalledTimes(1);
@@ -499,8 +499,8 @@ describe("runDaemonRestart health checks", () => {
       "Gateway restart failed after 13s: service stayed stopped and health checks never came up.",
     );
     expect(error.hints).toEqual([
-      formatCliCommand("openclaw gateway status --deep"),
-      formatCliCommand("openclaw doctor"),
+      formatCliCommand("dex gateway status --deep"),
+      formatCliCommand("dex doctor"),
     ]);
     expect(terminateStaleGatewayPids).not.toHaveBeenCalled();
     expect(renderRestartDiagnostics).toHaveBeenCalledTimes(1);

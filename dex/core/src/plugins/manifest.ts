@@ -254,7 +254,7 @@ export type PluginManifestSetup = {
 };
 
 export type PluginManifestQaRunner = {
-  /** Subcommand mounted beneath `openclaw qa`, for example `matrix`. */
+  /** Subcommand mounted beneath `dex qa`, for example `matrix`. */
   commandName: string;
   /** Optional user-facing help text for fallback host stubs. */
   description?: string;

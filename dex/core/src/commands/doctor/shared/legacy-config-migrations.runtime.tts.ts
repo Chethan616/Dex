@@ -470,13 +470,13 @@ const LEGACY_TTS_PROVIDER_RULES: LegacyConfigRule[] = [
   {
     path: ["messages", "tts"],
     message:
-      'messages.tts legacy provider aliases/keys are legacy; use provider: "microsoft" and messages.tts.providers.<provider>. Run "openclaw doctor --fix".',
+      'messages.tts legacy provider aliases/keys are legacy; use provider: "microsoft" and messages.tts.providers.<provider>. Run "dex doctor --fix".',
     match: (value) => hasLegacyTtsProviderKeys(value),
   },
   {
     path: ["plugins", "entries"],
     message:
-      'plugins.entries.voice-call.config.tts legacy provider aliases/keys are legacy; use provider: "microsoft" and plugins.entries.voice-call.config.tts.providers.<provider>. Run "openclaw doctor --fix".',
+      'plugins.entries.voice-call.config.tts legacy provider aliases/keys are legacy; use provider: "microsoft" and plugins.entries.voice-call.config.tts.providers.<provider>. Run "dex doctor --fix".',
     match: (value) => hasLegacyPluginEntryTtsProviderKeys(value),
   },
 ];
@@ -484,24 +484,24 @@ const LEGACY_TTS_PROVIDER_RULES: LegacyConfigRule[] = [
 const LEGACY_TTS_ENABLED_RULES: LegacyConfigRule[] = [
   {
     path: ["messages", "tts"],
-    message: 'messages.tts.enabled is legacy; use messages.tts.auto. Run "openclaw doctor --fix".',
+    message: 'messages.tts.enabled is legacy; use messages.tts.auto. Run "dex doctor --fix".',
     match: (value) => hasLegacyTtsEnabled(value),
   },
   {
     path: ["agents"],
-    message: 'agents.*.tts.enabled is legacy; use agents.*.tts.auto. Run "openclaw doctor --fix".',
+    message: 'agents.*.tts.enabled is legacy; use agents.*.tts.auto. Run "dex doctor --fix".',
     match: (value) => hasLegacyTtsEnabledInAgentLocations(value),
   },
   {
     path: ["channels"],
     message:
-      'channels.*.tts.enabled is legacy; use channels.*.tts.auto. Run "openclaw doctor --fix".',
+      'channels.*.tts.enabled is legacy; use channels.*.tts.auto. Run "dex doctor --fix".',
     match: (value) => hasLegacyTtsEnabledInChannelLocations(value),
   },
   {
     path: ["plugins", "entries"],
     message:
-      'plugins.entries.voice-call.config.tts.enabled is legacy; use plugins.entries.voice-call.config.tts.auto. Run "openclaw doctor --fix".',
+      'plugins.entries.voice-call.config.tts.enabled is legacy; use plugins.entries.voice-call.config.tts.auto. Run "dex doctor --fix".',
     match: (value) => hasLegacyTtsEnabledInPluginLocations(value),
   },
 ];
@@ -510,25 +510,25 @@ const LEGACY_TTS_SPEAKER_SELECTION_RULES: LegacyConfigRule[] = [
   {
     path: ["messages", "tts"],
     message:
-      'messages.tts speaker selection fields voice/voiceName/voiceId are legacy; use speakerVoice or speakerVoiceId. Run "openclaw doctor --fix".',
+      'messages.tts speaker selection fields voice/voiceName/voiceId are legacy; use speakerVoice or speakerVoiceId. Run "dex doctor --fix".',
     match: (value) => hasLegacyTtsSpeakerSelection(value),
   },
   {
     path: ["agents"],
     message:
-      'agents.*.tts speaker selection fields voice/voiceName/voiceId are legacy; use speakerVoice or speakerVoiceId. Run "openclaw doctor --fix".',
+      'agents.*.tts speaker selection fields voice/voiceName/voiceId are legacy; use speakerVoice or speakerVoiceId. Run "dex doctor --fix".',
     match: (value) => hasLegacyTtsSpeakerSelectionInAgentLocations(value),
   },
   {
     path: ["channels"],
     message:
-      'channels.*.tts speaker selection fields voice/voiceName/voiceId are legacy; use speakerVoice or speakerVoiceId. Run "openclaw doctor --fix".',
+      'channels.*.tts speaker selection fields voice/voiceName/voiceId are legacy; use speakerVoice or speakerVoiceId. Run "dex doctor --fix".',
     match: (value) => hasLegacyTtsSpeakerSelectionInChannelLocations(value),
   },
   {
     path: ["plugins", "entries"],
     message:
-      'plugins.entries.voice-call.config.tts speaker selection fields voice/voiceName/voiceId are legacy; use speakerVoice or speakerVoiceId. Run "openclaw doctor --fix".',
+      'plugins.entries.voice-call.config.tts speaker selection fields voice/voiceName/voiceId are legacy; use speakerVoice or speakerVoiceId. Run "dex doctor --fix".',
     match: (value) => hasLegacyTtsSpeakerSelectionInPluginLocations(value),
   },
 ];

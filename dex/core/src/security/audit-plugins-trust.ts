@@ -498,7 +498,7 @@ export async function collectPluginsTrustFindings(params: {
         title: "Plugin index records drift from installed package versions",
         detail: `Detected plugin install metadata drift:\n${pluginVersionDrift.map((entry) => `- ${entry}`).join("\n")}`,
         remediation:
-          "Run `openclaw plugins update --all` (or reinstall affected plugins) to refresh install metadata.",
+          "Run `dex plugins update --all` (or reinstall affected plugins) to refresh install metadata.",
       });
     }
   }
@@ -560,7 +560,7 @@ export async function collectPluginsTrustFindings(params: {
         title: "Hook install records drift from installed package versions",
         detail: `Detected hook install metadata drift:\n${hookVersionDrift.map((entry) => `- ${entry}`).join("\n")}`,
         remediation:
-          "Run `openclaw hooks update --all` (or reinstall affected hooks) to refresh install metadata.",
+          "Run `dex hooks update --all` (or reinstall affected hooks) to refresh install metadata.",
       });
     }
   }

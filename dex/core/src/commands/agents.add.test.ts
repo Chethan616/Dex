@@ -134,7 +134,7 @@ describe("agents add command", () => {
 
     expect(runtime.error).toHaveBeenCalledOnce();
     expect(runtime.error).toHaveBeenCalledWith(
-      `Non-interactive agent creation requires --workspace. Re-run ${formatCliCommand("openclaw agents add <id> --workspace <path>")} or omit flags to use the wizard.`,
+      `Non-interactive agent creation requires --workspace. Re-run ${formatCliCommand("dex agents add <id> --workspace <path>")} or omit flags to use the wizard.`,
     );
     expect(runtime.exit).toHaveBeenCalledWith(1);
     expect(writeConfigFileMock).not.toHaveBeenCalled();
@@ -149,7 +149,7 @@ describe("agents add command", () => {
 
     expect(runtime.error).toHaveBeenCalledOnce();
     expect(runtime.error).toHaveBeenCalledWith(
-      `Non-interactive agent creation requires --workspace. Re-run ${formatCliCommand("openclaw agents add <id> --workspace <path>")} or omit flags to use the wizard.`,
+      `Non-interactive agent creation requires --workspace. Re-run ${formatCliCommand("dex agents add <id> --workspace <path>")} or omit flags to use the wizard.`,
     );
     expect(runtime.exit).toHaveBeenCalledWith(1);
     expect(writeConfigFileMock).not.toHaveBeenCalled();

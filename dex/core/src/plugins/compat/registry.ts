@@ -536,7 +536,7 @@ export const PLUGIN_COMPAT_RECORDS = [
     deprecated: "2026-04-25",
     warningStarts: "2026-04-25",
     removeAfter: "2026-07-25",
-    replacement: "`openclaw plugins registry --refresh` and `openclaw doctor --fix`",
+    replacement: "`dex plugins registry --refresh` and `dex doctor --fix`",
     docsPath: "/cli/plugins#registry",
     surfaces: ["DEX_DISABLE_PERSISTED_PLUGIN_REGISTRY", "plugin registry reads"],
     diagnostics: ["persisted-registry-disabled"],
@@ -550,7 +550,7 @@ export const PLUGIN_COMPAT_RECORDS = [
     deprecated: "2026-04-25",
     warningStarts: "2026-04-25",
     removeAfter: "2026-07-25",
-    replacement: "`openclaw plugins registry --refresh` and `openclaw doctor --fix`",
+    replacement: "`dex plugins registry --refresh` and `dex doctor --fix`",
     docsPath: "/cli/plugins#registry",
     surfaces: [
       "DEX_DISABLE_PLUGIN_REGISTRY_MIGRATION",

@@ -65,7 +65,7 @@ export type ShouldDeferInput = {
  * | scheduled     | Defer if now < nextDueMs   | Defer if now < nextDueMs                |
  * | event         | Run (bootstrap responsive) | Defer if now < nextDueMs OR within floor |
  *
- * Immediate is for documented wake-now delivery paths such as `openclaw system
+ * Immediate is for documented wake-now delivery paths such as `dex system
  * event --mode now`, task completion follow-ups, cron `--wake now`, and
  * `/hooks/wake mode=now`. Event is for external/system notifications such as
  * background exec exits, node notification changes, hook/cron next-heartbeat

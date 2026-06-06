@@ -2665,7 +2665,7 @@ function formatLegacyLosslessCompactionWarning(params: {
     "- Legacy Lossless compaction config should use the Lossless context-engine slot for Codex.",
     ...configLines,
     params.canAutoFix
-      ? "- Run `openclaw doctor --fix`: it migrates legacy Lossless compaction config to the Lossless context-engine slot."
+      ? "- Run `dex doctor --fix`: it migrates legacy Lossless compaction config to the Lossless context-engine slot."
       : "- Move the Lossless config manually; doctor will not overwrite an existing non-Lossless context-engine slot or collapse conflicting per-agent summary models.",
   ].join("\n");
 }
@@ -2676,7 +2676,7 @@ function formatDisabledCodexPluginWarning(params: {
 }): string {
   const fixHint = params.blockedOutsideEntry
     ? "- Enable plugin loading and remove `codex` from plugins.deny, or set the affected OpenAI models to an OpenClaw runtime policy."
-    : "- Run `openclaw doctor --fix`: it enables plugins.entries.codex, or set the affected OpenAI models to an OpenClaw runtime policy.";
+    : "- Run `dex doctor --fix`: it enables plugins.entries.codex, or set the affected OpenAI models to an OpenClaw runtime policy.";
   return [
     "- Codex runtime is selected, but the Codex plugin is disabled.",
     ...params.hits.map(
@@ -2751,7 +2751,7 @@ export function collectCodexRouteWarnings(params: {
               hit.runtime ? `; current runtime is "${hit.runtime}"` : ""
             }.`,
         ),
-        "- Run `openclaw doctor --fix`: it rewrites configured model refs and stale sessions to `openai/*`, moves Codex intent to provider/model runtime policy, and clears old whole-agent runtime pins.",
+        "- Run `dex doctor --fix`: it rewrites configured model refs and stale sessions to `openai/*`, moves Codex intent to provider/model runtime policy, and clears old whole-agent runtime pins.",
       ].join("\n"),
     );
   }
@@ -2803,7 +2803,7 @@ export function collectCodexRouteWarnings(params: {
       formatUnsupportedCompactionWarning({
         hits: fixableHits,
         fixHint:
-          "- Run `openclaw doctor --fix`: it removes unsupported Codex compaction overrides.",
+          "- Run `dex doctor --fix`: it removes unsupported Codex compaction overrides.",
       }),
     );
   }
@@ -3047,7 +3047,7 @@ export async function maybeRepairCodexSessionRoutes(params: {
               [
                 "- Legacy `openai-codex/*` session route state detected.",
                 `- Affected sessions: ${stale.length}.`,
-                "- Run `openclaw doctor --fix` to rewrite stale session model/provider pins across all agent session stores.",
+                "- Run `dex doctor --fix` to rewrite stale session model/provider pins across all agent session stores.",
               ].join("\n"),
             ]
           : [],

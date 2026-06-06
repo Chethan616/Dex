@@ -127,8 +127,8 @@ export function uiProtocolFreshnessIssueToHealthFinding(
     path: issue.uiIndexPath,
     fixHint: issue.canBuild
       ? issue.kind === "missing-assets"
-        ? "Run `openclaw doctor --fix` to build Control UI assets."
-        : "Run `openclaw doctor --fix --force` to rebuild Control UI assets, or run `pnpm ui:build`."
+        ? "Run `dex doctor --fix` to build Control UI assets."
+        : "Run `dex doctor --fix --force` to rebuild Control UI assets, or run `pnpm ui:build`."
       : "Install from a source checkout with ui/ sources, then run `pnpm ui:build`.",
   };
 }

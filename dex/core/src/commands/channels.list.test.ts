@@ -375,10 +375,10 @@ describe("channels list", () => {
       channelId: "discord",
       label: "Discord",
       installSpec: "@openclaw/discord",
-      installCommand: "openclaw plugins install @openclaw/discord",
-      doctorFixCommand: "openclaw doctor --fix",
+      installCommand: "dex plugins install @openclaw/discord",
+      doctorFixCommand: "dex doctor --fix",
       repairHint:
-        "Install the official external plugin with: openclaw plugins install @openclaw/discord, or run: openclaw doctor --fix.",
+        "Install the official external plugin with: dex plugins install @openclaw/discord, or run: dex doctor --fix.",
     });
     mocks.readConfigFileSnapshot.mockResolvedValue({
       ...baseConfigSnapshot,
@@ -406,7 +406,7 @@ describe("channels list", () => {
     expect(output).toContain("configured");
     expect(output).toContain("disabled");
     expect(output).toContain(
-      "run openclaw plugins install @openclaw/discord or openclaw doctor --fix",
+      "run dex plugins install @openclaw/discord or dex doctor --fix",
     );
     expect(output).not.toContain("no configured chat channels");
   });
@@ -423,10 +423,10 @@ describe("channels list", () => {
       channelId: "discord",
       label: "Discord",
       installSpec: "@openclaw/discord",
-      installCommand: "openclaw plugins install @openclaw/discord",
-      doctorFixCommand: "openclaw doctor --fix",
+      installCommand: "dex plugins install @openclaw/discord",
+      doctorFixCommand: "dex doctor --fix",
       repairHint:
-        "Install the official external plugin with: openclaw plugins install @openclaw/discord, or run: openclaw doctor --fix.",
+        "Install the official external plugin with: dex plugins install @openclaw/discord, or run: dex doctor --fix.",
     });
     mocks.readConfigFileSnapshot.mockResolvedValue({
       ...baseConfigSnapshot,

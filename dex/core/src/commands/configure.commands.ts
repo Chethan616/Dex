@@ -28,7 +28,7 @@ export async function configureCommandFromSectionsArg(
 
   if (invalid.length > 0) {
     runtime.error(
-      `Invalid --section: ${invalid.join(", ")}. Expected one of: ${CONFIGURE_WIZARD_SECTIONS.join(", ")}. Run ${formatCliCommand("openclaw configure")} without --section to use the full wizard.`,
+      `Invalid --section: ${invalid.join(", ")}. Expected one of: ${CONFIGURE_WIZARD_SECTIONS.join(", ")}. Run ${formatCliCommand("dex configure")} without --section to use the full wizard.`,
     );
     runtime.exit(1);
     return;

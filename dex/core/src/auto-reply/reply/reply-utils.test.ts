@@ -70,7 +70,7 @@ describe("matchesMentionWithExplicit", () => {
       },
       {
         name: "falls back to regex when explicit cannot resolve",
-        text: "openclaw please",
+        text: "dex please",
         mentionRegexes,
         explicit: {
           hasAnyMention: true,

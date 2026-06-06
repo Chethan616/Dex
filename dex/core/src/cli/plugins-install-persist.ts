@@ -110,7 +110,7 @@ function logShadowedNpmInstallWarning(params: {
         `Warning: installed plugin "${params.pluginId}" is not the active source because a config-selected plugin with the same id is currently selected:`,
         `  active config source: ${shortenHomePath(active.source)}`,
         `  installed npm source: ${shortenHomePath(installedSource)}`,
-        "Run `openclaw plugins doctor` for repair options.",
+        "Run `dex plugins doctor` for repair options.",
       ].join("\n"),
     ),
   );

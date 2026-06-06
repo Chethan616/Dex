@@ -89,7 +89,7 @@ describe("redactTranscriptMessage", () => {
     expect(argumentsValue.command).toBe("OPENAI_API_KEY=sk-abc…0xyz openclaw health");
     expect(argumentsValue.env.nested[0]).toBe("token sk-abc…0xyz");
     expect(argumentsValue.count).toBe(1);
-    expect(serializedArguments).toContain("openclaw health");
+    expect(serializedArguments).toContain("dex health");
     expect(block.arguments).not.toBe(
       (msgContent(msg) as Array<{ arguments: unknown }>)[0].arguments,
     );

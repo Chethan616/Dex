@@ -21,7 +21,7 @@ const detectRespawnSupervisorMock = vi.fn<() => RespawnSupervisor | null>(() => 
 const startManagedServiceUpdateHandoffMock = vi.fn(async () => ({
   status: "started" as const,
   pid: 12345,
-  command: "openclaw update --yes --timeout 1800",
+  command: "dex update --yes --timeout 1800",
   logPath: "/tmp/openclaw-update-run-handoff/handoff.log",
 }));
 
@@ -127,8 +127,8 @@ vi.mock("./update-managed-service-handoff.js", () => ({
   startManagedServiceUpdateHandoff: startManagedServiceUpdateHandoffMock,
   formatManagedServiceUpdateCommand: (timeoutMs?: number) =>
     timeoutMs
-      ? `openclaw update --yes --timeout ${Math.ceil(timeoutMs / 1000)}`
-      : "openclaw update --yes",
+      ? `dex update --yes --timeout ${Math.ceil(timeoutMs / 1000)}`
+      : "dex update --yes",
   buildManagedServiceHandoffUnavailableMessage: (command: string) =>
     `Run \`${command}\` from a shell outside the gateway service.`,
 }));
@@ -389,7 +389,7 @@ describe("update.run restart scheduling", () => {
     ).toEqual({
       status: "started",
       pid: 12345,
-      command: "openclaw update --yes --timeout 1800",
+      command: "dex update --yes --timeout 1800",
     });
     expect(payload?.sentinel?.path).toBe("/tmp/sentinel.json");
     const sentinel = readCapturedPayload();
@@ -489,9 +489,9 @@ describe("update.run restart scheduling", () => {
     expect(payload?.result?.reason).toBe("managed-service-handoff-unavailable");
     expect(payload?.handoff).toEqual({
       status: "unavailable",
-      command: "openclaw update --yes --timeout 1800",
+      command: "dex update --yes --timeout 1800",
       message:
-        "Run `openclaw update --yes --timeout 1800` from a shell outside the gateway service.",
+        "Run `dex update --yes --timeout 1800` from a shell outside the gateway service.",
     });
   });
 

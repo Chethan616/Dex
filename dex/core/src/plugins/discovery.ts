@@ -864,7 +864,7 @@ function addLegacyNpmDeclarationDiagnostic(params: {
     level: "warn",
     pluginId: declaration.pluginId,
     source: declaration.source,
-    message: `legacy npm plugin declaration ignored for "${declaration.pluginId}"; run "openclaw doctor --fix" to install ${declaration.npmSpec} into the managed plugin root`,
+    message: `legacy npm plugin declaration ignored for "${declaration.pluginId}"; run "dex doctor --fix" to install ${declaration.npmSpec} into the managed plugin root`,
   });
   return true;
 }
