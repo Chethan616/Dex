@@ -19,7 +19,7 @@ const execFileAsync = promisify(execFile);
 
 const WINDOWS_UNSAFE_CMD_CHARS_RE = /[&|<>^%\r\n]/;
 
-function isWindowsBatchCommand(resolvedCommand: string): boolean {
+export function isWindowsBatchCommand(resolvedCommand: string): boolean {
   if (process.platform !== "win32") {
     return false;
   }
@@ -42,11 +42,11 @@ function escapeForCmdExe(arg: string): string {
   return `"${arg.replace(/"/g, '""')}"`;
 }
 
-function buildCmdExeCommandLine(resolvedCommand: string, args: string[]): string {
+export function buildCmdExeCommandLine(resolvedCommand: string, args: string[]): string {
   return [escapeForCmdExe(resolvedCommand), ...args.map(escapeForCmdExe)].join(" ");
 }
 
-function resolveTrustedWindowsCmdExe(): string {
+export function resolveTrustedWindowsCmdExe(): string {
   if (process.platform !== "win32") {
     return "cmd.exe";
   }

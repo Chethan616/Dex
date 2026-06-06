@@ -1,5 +1,10 @@
 import type { ChildProcessWithoutNullStreams, SpawnOptions } from "node:child_process";
 import { createWindowsOutputDecoder } from "../../../infra/windows-encoding.js";
+import {
+  buildCmdExeCommandLine,
+  isWindowsBatchCommand,
+  resolveTrustedWindowsCmdExe,
+} from "../../exec.js";
 import { signalProcessTree } from "../../kill-tree.js";
 import { prepareOomScoreAdjustedSpawn } from "../../linux-oom-score.js";
 import { spawnWithFallback } from "../../spawn-utils.js";
@@ -43,6 +48,18 @@ export async function createChildAdapter(params: {
 }): Promise<ChildAdapter> {
   const resolvedArgv = [...params.argv];
   resolvedArgv[0] = resolveCommand(resolvedArgv[0] ?? "");
+  // Windows + Node 18.20.2+: direct .cmd / .bat spawns are rejected with
+  // EINVAL (CVE-2024-27980 mitigation). Wrap them in cmd.exe /d /s /c so
+  // the supervisor's `spawn('gemini.cmd', ...)` becomes
+  // `spawn('C:\Windows\System32\cmd.exe', ['/d','/s','/c','gemini.cmd ...'])`.
+  // Mirrors process/exec.ts:resolveChildProcessInvocation -- the only
+  // mechanism Node currently allows for batch-script execution.
+  let cmdWrapped = false;
+  if (isWindowsBatchCommand(resolvedArgv[0] ?? "")) {
+    const cmdLine = buildCmdExeCommandLine(resolvedArgv[0] ?? "", resolvedArgv.slice(1));
+    resolvedArgv.splice(0, resolvedArgv.length, resolveTrustedWindowsCmdExe(), "/d", "/s", "/c", cmdLine);
+    cmdWrapped = true;
+  }
   const baseEnv = params.env ? toStringEnv(params.env) : undefined;
   const preparedSpawn = prepareOomScoreAdjustedSpawn(resolvedArgv[0] ?? "", resolvedArgv.slice(1), {
     env: baseEnv,
@@ -61,7 +78,10 @@ export async function createChildAdapter(params: {
     stdio: ["pipe", "pipe", "pipe"],
     detached: useDetached,
     windowsHide: true,
-    windowsVerbatimArguments: params.windowsVerbatimArguments,
+    // When we hand-built the cmd.exe command line above, force
+    // windowsVerbatimArguments so Node doesn't double-quote our already-
+    // quoted argv -- matching the runExec invariant in process/exec.ts.
+    windowsVerbatimArguments: cmdWrapped ? true : params.windowsVerbatimArguments,
   };
   if (stdinMode === "inherit") {
     options.stdio = ["inherit", "pipe", "pipe"];
