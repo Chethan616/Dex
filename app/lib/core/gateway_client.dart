@@ -249,6 +249,28 @@ class GatewayClient extends ChangeNotifier {
     await sendMessage(text);
   }
 
+  /// Stop the current agent turn.
+  ///
+  /// Best-effort: the gateway's `chat.abort` cancels the LLM stream
+  /// immediately, but a subprocess (UFO² / browser-use) may keep running
+  /// until it finishes its current step. The Flutter store flips the
+  /// running chip + LiveEntry to "failed" right away regardless, so the
+  /// UI is honest about the user's intent.
+  Future<void> abort({String? runId}) async {
+    if (!isReady) return;
+    final ws = _ws;
+    if (ws == null) return;
+    ws.sink.add(jsonEncode(<String, dynamic>{
+      'type': 'req',
+      'id': _uuid.v4(),
+      'method': 'chat.abort',
+      'params': <String, dynamic>{
+        'sessionKey': _config.sessionKey,
+        if (runId != null) 'runId': runId,
+      },
+    }));
+  }
+
   // --------------------------------------------------------------------
   // Frame parsing
   // --------------------------------------------------------------------

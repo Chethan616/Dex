@@ -106,6 +106,65 @@ class ConversationStore extends ChangeNotifier {
     }
   }
 
+  /// True when an agent turn is in flight (we sent a chat.send and the
+  /// final/aborted/error frame hasn't landed yet). Drives the Stop button
+  /// visibility.
+  bool get isBusy => _streaming.isNotEmpty || _state == AgentState.thinking ||
+      _state == AgentState.acting || _state == AgentState.awaiting;
+
+  /// The most-recent in-flight runId, or null if no turn is streaming.
+  /// The Stop button passes this to `client.abort(runId: ...)` so the
+  /// gateway only cancels the specific run, not the whole session.
+  String? get currentRunId =>
+      _streaming.isEmpty ? null : _streaming.keys.last;
+
+  // -----------------------------------------------------------------
+  // Stop the current turn / clear the conversation
+  // -----------------------------------------------------------------
+
+  /// Best-effort interrupt of the running agent turn. The gateway
+  /// cancels the LLM stream immediately; a long-running tool subprocess
+  /// (UFO² / browser-use) may not stop until its current step finishes,
+  /// so we flip the UI state to error right away to be honest about
+  /// what we know vs. what we hope.
+  Future<void> stop() async {
+    final runId = currentRunId;
+    await _client.abort(runId: runId);
+    // Flip any streaming bubble + running chip to a clean "stopped" state.
+    for (final entry in _streaming.entries) {
+      final idx = _messages.indexWhere((m) => m.id == entry.value);
+      if (idx >= 0) {
+        _messages[idx] = _messages[idx].copyWith(streaming: false);
+      }
+    }
+    _streaming.clear();
+    for (var i = 0; i < _messages.length; i++) {
+      final m = _messages[i];
+      if (m.speaker == MessageSpeaker.toolChip &&
+          m.chipState == ToolChipState.running) {
+        _messages[i] = m.copyWith(chipState: ToolChipState.failed);
+      }
+    }
+    _pending = null;
+    _lastPendingChipId = null;
+    _setState(AgentState.idle);
+    notifyListeners();
+  }
+
+  /// Wipe the visible conversation buffer. Does NOT clear the gateway's
+  /// session memory -- the agent will still remember prior turns server-
+  /// side until a future "reset session" call exists. This is purely the
+  /// local view, so the user can get a clean canvas without restarting.
+  void clearMessages() {
+    _messages.clear();
+    _streaming.clear();
+    _toolByCallId.clear();
+    _lastPendingChipId = null;
+    _pending = null;
+    _setState(AgentState.idle);
+    notifyListeners();
+  }
+
   // -----------------------------------------------------------------
   // Approval / denial of a pending Action Preview
   // -----------------------------------------------------------------

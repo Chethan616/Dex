@@ -200,6 +200,9 @@ class _ConversationColumnState extends State<_ConversationColumn> {
           bottom: DexSpace.lg,
           child: CommandBar(
             onSubmit: (t) => widget.store.sendHumanMessage(t),
+            onStop: widget.store.stop,
+            onClear: widget.store.clearMessages,
+            isBusy: widget.store.isBusy,
           ),
         ),
       ],

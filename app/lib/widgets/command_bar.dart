@@ -10,9 +10,23 @@ import 'package:flutter/services.dart';
 import '../theme/tokens.dart';
 
 class CommandBar extends StatefulWidget {
-  const CommandBar({super.key, required this.onSubmit});
+  const CommandBar({
+    super.key,
+    required this.onSubmit,
+    this.onStop,
+    this.onClear,
+    this.isBusy = false,
+  });
 
   final ValueChanged<String> onSubmit;
+  /// Called when the user presses the Stop button. Visible only when
+  /// [isBusy] is true (an agent turn is in flight).
+  final VoidCallback? onStop;
+  /// Called when the user presses the Clear button. Wipes the local
+  /// conversation buffer; gateway session memory is unaffected.
+  final VoidCallback? onClear;
+  /// Drives Stop button visibility.
+  final bool isBusy;
 
   @override
   State<CommandBar> createState() => _CommandBarState();
@@ -110,6 +124,19 @@ class _CommandBarState extends State<CommandBar> {
                       ),
                     ),
                   ),
+                  if (widget.isBusy && widget.onStop != null)
+                    IconButton(
+                      icon: const Icon(Icons.stop_rounded, size: 18),
+                      color: DexColors.stateError,
+                      onPressed: widget.onStop,
+                      tooltip: 'Stop (interrupt current turn)',
+                    ),
+                  if (widget.onClear != null)
+                    IconButton(
+                      icon: const Icon(Icons.delete_sweep_rounded, size: 16),
+                      onPressed: widget.onClear,
+                      tooltip: 'Clear conversation (local only)',
+                    ),
                   IconButton(
                     icon: const Icon(Icons.send_rounded, size: 16),
                     onPressed: _submit,

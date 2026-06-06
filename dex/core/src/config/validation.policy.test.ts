@@ -66,7 +66,7 @@ describe("config validation SecretRef policy guards", () => {
       const issue = requireIssue(result.issues, "hooks.token");
       expect(issue.message).toContain("SecretRef objects are not supported at hooks.token");
       expect(issue.message).toContain(
-        "https://docs.openclaw.ai/reference/secretref-credential-surface",
+        "https://docs.dex.run/reference/secretref-credential-surface",
       );
       expect(
         result.issues.some(

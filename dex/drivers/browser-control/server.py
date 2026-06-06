@@ -134,7 +134,7 @@ mcp = FastMCP("browser-control")
 
 
 @mcp.tool()
-def run_browser_task(
+async def run_browser_task(
     goal: str,
     url_hint: str = "",
     timeout_s: int = 180,
@@ -198,8 +198,11 @@ def run_browser_task(
 
     log_path = LOG_DIR / f"{task_id}.log"
     try:
-        # browser-use is async-first; run its event loop synchronously here.
-        outcome = asyncio.run(_run_agent(goal, url_hint, timeout_s, headless, log_path))
+        # FastMCP runs us inside its own event loop, so asyncio.run() would
+        # raise RuntimeError("asyncio.run() cannot be called from a running
+        # event loop"). Await _run_agent directly -- this is the recommended
+        # pattern for async MCP tools.
+        outcome = await _run_agent(goal, url_hint, timeout_s, headless, log_path)
     except Exception as e:  # noqa: BLE001 -- surface any error to chat
         log_path.write_text(
             serialize_run("browser-use Agent", -1, "", "".join(traceback.format_exception(e))),

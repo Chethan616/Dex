@@ -161,7 +161,7 @@ export function registerSecurityCli(program: Command) {
       const muted = (text: string) => (rich ? theme.muted(text) : text);
 
       const lines: string[] = [];
-      lines.push(heading("OpenClaw security audit"));
+      lines.push(heading("Dex security audit"));
       lines.push(muted(`Summary: ${formatSummary(report.summary)}`));
       if ((report.suppressedFindings?.length ?? 0) > 0) {
         lines.push(muted(`Suppressed: ${report.suppressedFindings?.length ?? 0} configured`));

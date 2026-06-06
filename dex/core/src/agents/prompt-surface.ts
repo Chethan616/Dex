@@ -9,7 +9,7 @@ export function buildOpenClawToolFallbackText(params: {
 }): string {
   if (isOpenClawMainPromptSurface(params.surface)) {
     return [
-      "OpenClaw lists the standard tools above. This runtime enables:",
+      "Dex lists the standard tools above. This runtime enables:",
       "- grep: search file contents for patterns",
       "- find: find files by glob pattern",
       "- ls: list directory contents",
@@ -30,7 +30,7 @@ export function buildOpenClawToolFallbackText(params: {
     ].join("\n");
   }
 
-  return "No OpenClaw tool list is injected for this runtime prompt surface. Use only tools exposed directly by the active backend.";
+  return "No Dex tool list is injected for this runtime prompt surface. Use only tools exposed directly by the active backend.";
 }
 
 export function shouldRenderOpenClawToolWorkflowHints(params: {

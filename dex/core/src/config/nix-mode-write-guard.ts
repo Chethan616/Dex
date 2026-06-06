@@ -1,7 +1,7 @@
 import { resolveIsNixMode } from "./paths.js";
 
 export const NIX_DEX_AGENT_FIRST_URL = "https://github.com/openclaw/nix-openclaw#quick-start";
-export const DEX_NIX_OVERVIEW_URL = "https://docs.openclaw.ai/install/nix";
+export const DEX_NIX_OVERVIEW_URL = "https://docs.dex.run/install/nix";
 
 export class NixModeConfigMutationError extends Error {
   readonly code = "DEX_NIX_MODE_CONFIG_IMMUTABLE";

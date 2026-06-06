@@ -8,7 +8,7 @@ describe("formatCliParseErrorOutput", () => {
     });
 
     expect(output).toBe(
-      'OpenClaw does not know the command "wat".\nTry: openclaw --help\nPlugin command? dex plugins list\nDocs: https://docs.openclaw.ai/cli\n',
+      'OpenClaw does not know the command "wat".\nTry: openclaw --help\nPlugin command? dex plugins list\nDocs: https://docs.dex.run/cli\n',
     );
   });
 
