@@ -381,10 +381,10 @@ describe("models.pricing", () => {
   });
 });
 
-describe("crestodian.rescue", () => {
+describe("conch.rescue", () => {
   it("accepts documented rescue config", () => {
     const result = DexSchema.safeParse({
-      crestodian: {
+      conch: {
         rescue: {
           enabled: "auto",
           ownerDmOnly: false,
@@ -397,7 +397,7 @@ describe("crestodian.rescue", () => {
 
   it("accepts boolean rescue enablement", () => {
     const result = DexSchema.safeParse({
-      crestodian: {
+      conch: {
         rescue: {
           enabled: true,
           ownerDmOnly: true,
@@ -409,7 +409,7 @@ describe("crestodian.rescue", () => {
 
   it("rejects unknown rescue keys", () => {
     const result = DexSchema.safeParse({
-      crestodian: {
+      conch: {
         rescue: {
           enabled: true,
           shell: true,

@@ -180,8 +180,8 @@ export function registerOnboardCommand(program: Command): void {
     const { defaultRuntime } = await import("../../runtime.js");
     await runCommandWithRuntime(defaultRuntime, async () => {
       if (opts.modern) {
-        const { runCrestodian } = await import("../../crestodian/crestodian.js");
-        await runCrestodian({
+        const { runConch } = await import("../../conch/conch.js");
+        await runConch({
           message: opts.nonInteractive ? "overview" : undefined,
           yes: false,
           json: Boolean(opts.json),

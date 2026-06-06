@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { registerOnboardCommand } from "./register.onboard.js";
 
 const mocks = vi.hoisted(() => ({
-  runCrestodian: vi.fn(),
+  runConch: vi.fn(),
   setupWizardCommandMock: vi.fn(),
   runtime: {
     log: vi.fn(),
@@ -48,8 +48,8 @@ vi.mock("../../commands/onboard.js", () => ({
   setupWizardCommand: mocks.setupWizardCommandMock,
 }));
 
-vi.mock("../../crestodian/crestodian.js", () => ({
-  runCrestodian: mocks.runCrestodian,
+vi.mock("../../conch/conch.js", () => ({
+  runConch: mocks.runConch,
 }));
 
 vi.mock("../../runtime.js", () => ({
@@ -74,7 +74,7 @@ describe("registerOnboardCommand", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.runCrestodian.mockResolvedValue(undefined);
+    mocks.runConch.mockResolvedValue(undefined);
     setupWizardCommandMock.mockResolvedValue(undefined);
   });
 
@@ -82,7 +82,7 @@ describe("registerOnboardCommand", () => {
     await runCli(["onboard"]);
 
     expect(setupWizardOptions().installDaemon).toBeUndefined();
-    expect(mocks.runCrestodian).not.toHaveBeenCalled();
+    expect(mocks.runConch).not.toHaveBeenCalled();
   });
 
   it("sets installDaemon from explicit install flags and prioritizes --skip-daemon", async () => {
@@ -164,11 +164,11 @@ describe("registerOnboardCommand", () => {
     expect(runtime.exit).toHaveBeenCalledWith(1);
   });
 
-  it("routes --modern to Crestodian", async () => {
+  it("routes --modern to Conch", async () => {
     await runCli(["onboard", "--modern", "--json"]);
 
     expect(setupWizardCommandMock).not.toHaveBeenCalled();
-    expect(mocks.runCrestodian).toHaveBeenCalledWith({
+    expect(mocks.runConch).toHaveBeenCalledWith({
       message: undefined,
       yes: false,
       json: true,
@@ -180,7 +180,7 @@ describe("registerOnboardCommand", () => {
     await runCli(["onboard", "--modern", "--non-interactive"]);
 
     expect(setupWizardCommandMock).not.toHaveBeenCalled();
-    expect(mocks.runCrestodian).toHaveBeenCalledWith({
+    expect(mocks.runConch).toHaveBeenCalledWith({
       message: "overview",
       yes: false,
       json: false,

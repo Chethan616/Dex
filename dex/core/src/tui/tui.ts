@@ -1296,7 +1296,7 @@ export async function runTui(opts: RunTuiOptions): Promise<TuiResult> {
     exitRequested = true;
     exitResult = {
       exitReason: result?.exitReason ?? "exit",
-      ...(result?.crestodianMessage ? { crestodianMessage: result.crestodianMessage } : {}),
+      ...(result?.conchMessage ? { conchMessage: result.conchMessage } : {}),
     };
     const hardExitTimer = setTimeout(
       forceExit,

@@ -1647,7 +1647,7 @@
                     "group": "Gateway and service",
                     "pages": [
                       "cli/backup",
-                      "cli/crestodian",
+                      "cli/conch",
                       "cli/daemon",
                       "cli/doctor",
                       "cli/gateway",

@@ -5,8 +5,8 @@ import {
   rewriteUpdateFlagArgv,
   resolveMissingPluginCommandMessage,
   shouldEnsureCliPath,
-  shouldStartCrestodianForBareRoot,
-  shouldStartCrestodianForModernOnboard,
+  shouldStartConchForBareRoot,
+  shouldStartConchForModernOnboard,
   shouldStartProxyForCli,
   shouldUseBrowserHelpFastPath,
   shouldUseNodesHelpFastPath,
@@ -139,24 +139,24 @@ describe("shouldEnsureCliPath", () => {
   });
 });
 
-describe("shouldStartCrestodianForBareRoot", () => {
-  it("starts Crestodian for bare root invocations", () => {
-    expect(shouldStartCrestodianForBareRoot(["node", "openclaw"])).toBe(true);
-    expect(shouldStartCrestodianForBareRoot(["node", "openclaw", "--profile", "work"])).toBe(true);
-    expect(shouldStartCrestodianForBareRoot(["node", "openclaw", "--dev"])).toBe(true);
+describe("shouldStartConchForBareRoot", () => {
+  it("starts Conch for bare root invocations", () => {
+    expect(shouldStartConchForBareRoot(["node", "openclaw"])).toBe(true);
+    expect(shouldStartConchForBareRoot(["node", "openclaw", "--profile", "work"])).toBe(true);
+    expect(shouldStartConchForBareRoot(["node", "openclaw", "--dev"])).toBe(true);
   });
 
-  it("does not start Crestodian for help, version, or commands", () => {
-    expect(shouldStartCrestodianForBareRoot(["node", "openclaw", "--help"])).toBe(false);
-    expect(shouldStartCrestodianForBareRoot(["node", "openclaw", "-V"])).toBe(false);
-    expect(shouldStartCrestodianForBareRoot(["node", "openclaw", "status"])).toBe(false);
+  it("does not start Conch for help, version, or commands", () => {
+    expect(shouldStartConchForBareRoot(["node", "openclaw", "--help"])).toBe(false);
+    expect(shouldStartConchForBareRoot(["node", "openclaw", "-V"])).toBe(false);
+    expect(shouldStartConchForBareRoot(["node", "openclaw", "status"])).toBe(false);
   });
 });
 
-describe("shouldStartCrestodianForModernOnboard", () => {
-  it("starts Crestodian before heavy command registration for modern onboard", () => {
+describe("shouldStartConchForModernOnboard", () => {
+  it("starts Conch before heavy command registration for modern onboard", () => {
     expect(
-      shouldStartCrestodianForModernOnboard([
+      shouldStartConchForModernOnboard([
         "node",
         "openclaw",
         "onboard",
@@ -168,9 +168,9 @@ describe("shouldStartCrestodianForModernOnboard", () => {
   });
 
   it("keeps classic onboard and help on the normal command path", () => {
-    expect(shouldStartCrestodianForModernOnboard(["node", "openclaw", "onboard"])).toBe(false);
+    expect(shouldStartConchForModernOnboard(["node", "openclaw", "onboard"])).toBe(false);
     expect(
-      shouldStartCrestodianForModernOnboard(["node", "openclaw", "onboard", "--modern", "--help"]),
+      shouldStartConchForModernOnboard(["node", "openclaw", "onboard", "--modern", "--help"]),
     ).toBe(false);
   });
 });

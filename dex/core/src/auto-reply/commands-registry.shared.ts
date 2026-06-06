@@ -261,9 +261,9 @@ export function buildBuiltinChatCommands(
       ],
     }),
     defineChatCommand({
-      key: "crestodian",
-      description: "Run the Crestodian setup and repair helper.",
-      textAlias: "/crestodian",
+      key: "conch",
+      description: "Run the Conch setup and repair helper.",
+      textAlias: "/conch",
       acceptsArgs: true,
       scope: "text",
       category: "management",

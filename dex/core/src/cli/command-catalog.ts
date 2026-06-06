@@ -52,7 +52,7 @@ export type CliCommandCatalogEntry = {
 
 export const cliCommandCatalog: readonly CliCommandCatalogEntry[] = [
   {
-    commandPath: ["crestodian"],
+    commandPath: ["conch"],
     policy: { bypassConfigGuard: true, loadPlugins: "never", ensureCliPath: false },
   },
   {

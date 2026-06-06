@@ -2,6 +2,98 @@
 
 Repo: https://github.com/Chethan616/Dex
 
+## 2026.6.14 (rename Crestodian → Conch, F.1.a orchestrator preflight)
+
+### Changes
+
+- The embedded local helper agent is renamed: **Crestodian → Conch**
+  (a conch is a shell, matching the Dex 🐚 brand). 76 files swept;
+  39 paths renamed including `src/crestodian/` → `src/conch/`,
+  `src/auto-reply/reply/commands-crestodian.ts` → `commands-conch.ts`,
+  and the e2e Docker scripts. CLI prose: "Hi, I'm Conch", "Conch
+  retracts into shell. Bye."
+- Orchestrator F.1.a foundation: `task-intent.ts` + `preflight.ts`
+  land as new files under `src/orchestration/`. Heuristic task-intent
+  parser (no LLM cost) + single async entry point combining context
+  scanner + scorer + router + a system-prompt hint formatter. The
+  hint integration into the agent turn loop is a follow-up commit.
+- 165 / 165 orchestration tests green (+20 from F.1.a).
+
+## 2026.6.13 (clean agent identity, Stop+Clear, asyncio fix)
+
+User-facing fixes Chethan flagged during 2026.6.12 testing.
+
+### Changes
+
+- Agent system prompt no longer says "OpenClaw" — the identity line,
+  section headers, docs URLs, source URL, workspace scratch path, and
+  tool fallback prose all read "Dex" now. This is why the agent
+  occasionally answered "won't work until that's fixed at the OpenClaw
+  level"; Claude had been told it was OpenClaw.
+- Custom DEX block-letter ASCII art (Chethan-authored, dropped in via
+  `dex_ascii.txt`) appears in `dex --version`, `dex gateway`, and
+  `dex onboard` banners.
+- Flutter command bar gains a Stop button (calls `chat.abort` to
+  interrupt the current turn) and a Clear button (wipes local
+  conversation buffer). Stop is hidden when idle, shown in error red
+  when busy.
+
+### Fixes
+
+- `browser-control` MCP server crashed with
+  `RuntimeError: asyncio.run() cannot be called from a running event
+  loop`. The tool function is now `async def` and awaits
+  `_run_agent(...)` directly — the recommended FastMCP async pattern.
+
+## 2026.6.12 (filename rename + deep wizard prose sweep)
+
+### Changes
+
+- Config filename `openclaw.json` → `dex.json`. Legacy filename still
+  readable, so existing installs migrate transparently on next boot.
+- Wizard intros / outros / heading titles: `OpenClaw doctor` →
+  `Dex doctor`, `OpenClaw setup` → `Dex setup`, `OpenClaw configure`
+  → `Dex configure`, `OpenClaw status` → `Dex status`, etc.
+- Wizard prose + en/zh-CN/zh-TW locale files: "Dex runs great on
+  WSL2", "Dex is a hobby project and still in beta", "control Dex",
+  "Don't run Dex if you're not comfortable...".
+- Docs URLs: `docs.openclaw.ai/...` → `docs.dex.run/...`.
+
+## 2026.6.11 (custom ASCII + MCP wiring)
+
+### Changes
+
+- Custom DEX ASCII art from `dex_ascii.txt` lands in the 52-column
+  sand frame used by `cli/banner.ts` and `commands/onboard-helpers.ts`.
+- `scripts/install-skills.ps1` defaults to Gemini Flash-Lite via
+  `GEMINI_API_KEY` + `DEX_BROWSER_PROVIDER=google` +
+  `DEX_BROWSER_MODEL=gemini-2.5-flash-lite`. Auto-scrapes the key
+  from repo-root `.env.local` when the calling shell hasn't sourced
+  it.
+
+## 2026.6.10 (Windows: wrap .cmd in cmd.exe /d /s /c)
+
+### Fixes
+
+- Supervisor adapter wraps `.cmd` / `.bat` spawns in
+  `cmd.exe /d /s /c <args>` with `windowsVerbatimArguments=true` so
+  Node 18.20.2+ doesn't reject them with `EINVAL`
+  (post-CVE-2024-27980). Mirrors what `runExec` already does in
+  `process/exec.ts`; the supervisor was missing this layer.
+
+## 2026.6.9 (rebrand sweep + gemini.cmd resolution)
+
+### Fixes
+
+- Wizard banner stopped rendering `🦞 OPENCLAW 🦞`; replaced with
+  the same sand-framed `🐚 DEX 🐚` art `cli/banner.ts` uses.
+- Doctor / status / startup messages say `dex <subcmd>` not
+  `openclaw <subcmd>` — 258 src + 214 test files swept.
+- `process/supervisor/adapters/child.ts` learns about Node-installed
+  CLI shims (`gemini`, `claude`, `codex`) so
+  `spawn('gemini', ...)` resolves to `gemini.cmd` on Windows
+  instead of `ENOENT`.
+
 ## 2026.6.8 (Dex rebrand release + visual polish)
 
 This release lands the final visual rebrand: the lobster ASCII art is gone,
@@ -523,7 +615,7 @@ github.com/Chethan616/Dex.
 - Crabbox: keep the local wrapper's provider validation synced with the installed Crabbox binary while preserving supported aliases such as `docker` and `blacksmith`. (#85302) Thanks @hxy91819.
 - Maintainer skills: add `openclaw-landable-bug-sweep` for producing five small, reviewed, CI-green OpenClaw bugfix PRs from issue/PR sweeps.
 - Control UI/chat: add search and Load More pagination to the chat session picker, keeping initial session loads bounded while making older conversations reachable. (#85237) Thanks @amknight.
-- CLI/onboarding: start classic onboarding when bare `openclaw` runs before an authored config exists, while keeping configured installs on Crestodian. (#72343) Thanks @fuller-stack-dev.
+- CLI/onboarding: start classic onboarding when bare `openclaw` runs before an authored config exists, while keeping configured installs on Conch. (#72343) Thanks @fuller-stack-dev.
 - Agents/runtime: internalize the former Pi agent runtime into OpenClaw, remove legacy package dependencies, and keep Pi-named SDK aliases only as deprecated plugin compatibility.
 - Discord: allow configuring a bounded `agentComponents.ttlMs` callback registry lifetime for long-running component workflows, with per-account overrides and a 24-hour cap. (#84189) Thanks @100menotu001.
 - xAI/Grok: reuse xAI OAuth auth profiles for Grok `web_search`, thread active-agent auth through web search, add Grok model aliases, and let media providers declare default operation timeouts. (#85182) Thanks @fuller-stack-dev.
@@ -3370,7 +3462,7 @@ github.com/Chethan616/Dex.
 - Plugins/ClawHub: persist ClawPack digest metadata on ClawHub plugin install and update records so registry refreshes and download verification can reuse stored artifact facts. Thanks @vincentkoc.
 - Plugins/ClawHub: allow official bundled-plugin cutovers to record ClawHub artifact metadata while preserving npm as the launch default for bare package specs. Thanks @vincentkoc.
 - Plugins/onboarding: allow install-on-demand provider setup entries to persist ClawHub artifact metadata after explicit ClawHub installs while retaining npm/local fallback paths. Thanks @vincentkoc.
-- Plugins/Crestodian: add ClawHub plugin search plus Crestodian plugin list/search/install/uninstall operations, with approval and audit coverage for install and uninstall.
+- Plugins/Conch: add ClawHub plugin search plus Conch plugin list/search/install/uninstall operations, with approval and audit coverage for install and uninstall.
 - Channels/thread bindings: replace split subagent/ACP thread-spawn toggles with `threadBindings.spawnSessions`, default thread-bound spawns on, and let `openclaw doctor --fix` migrate the legacy keys. (#75943)
 - Providers/OpenAI: add `extraBody`/`extra_body` passthrough for OpenAI-compatible TTS endpoints, so custom speech servers can receive fields such as `lang` in `/audio/speech` requests. Fixes #39900. Thanks @R3NK0R.
 - Dependencies: refresh workspace dependency pins, including TypeBox 1.1.37, AWS SDK 3.1041.0, Microsoft Teams 2.0.9, and Marked 18.0.3. Thanks @mariozechner, @aws, and @microsoft.
@@ -3487,7 +3579,7 @@ github.com/Chethan616/Dex.
 - Discord: prioritize interaction callbacks ahead of stale background REST work without polling active REST buckets, validate oversized gateway payloads and member-intent requests before send, and forward explicit component payloads from message actions. (#75363)
 - Active Memory: use the configured recall timeout as the blocking prompt-build hook budget by default and move cold-start setup grace behind explicit `setupGraceTimeoutMs` config, so the plugin no longer silently extends 15000 ms configs to 45000 ms on the main lane. Fixes #75843. Thanks @vishutdhar.
 - Plugins/web-provider: reuse the active gateway plugin registry for runtime web provider resolution after deriving the same candidate plugin ids as the loader path, avoiding a redundant `loadOpenClawPlugins` call on every request while preserving origin and scope filters. Fixes #75513. Thanks @jochen.
-- Crestodian/CLI: exit non-zero when interactive Crestodian is invoked without a TTY, so scripts and CI no longer treat the setup error as success. Fixes #73646 and supersedes #73928 and #74059. Thanks @bittoby, @luyao618, and @Linux2010.
+- Conch/CLI: exit non-zero when interactive Conch is invoked without a TTY, so scripts and CI no longer treat the setup error as success. Fixes #73646 and supersedes #73928 and #74059. Thanks @bittoby, @luyao618, and @Linux2010.
 - Cron: keep implicit/default isolated cron announce deliveries out of the main session awareness queue, so isolated jobs do not accumulate in the main conversation. Fixes #61426. Thanks @Lihannon.
 - Subagents: avoid duplicate parent-visible replies when a parent uses `sessions_send` on its own persistent native subagent session, while preserving announce delivery for async sends. Fixes #73550. Thanks @sylviazhang2006-design.
 - Web search/Brave: add opt-in `brave.http` diagnostics for Brave request URLs/query params, response status/timing, and cache hit/miss/write events without logging API keys or response bodies. Fixes #55196. Thanks @mecampbellsoup.
@@ -3835,7 +3927,7 @@ github.com/Chethan616/Dex.
 - Slack: require bot-authored room messages with `allowBots=true` to come from an explicitly channel-allowlisted bot or from a room where an explicit Slack owner is present, so broad bot relays cannot run unattended. Fixes #59284. Thanks @andrewhong-translucent.
 - Signal: derive `getAttachment` HTTP response caps from `channels.signal.mediaMaxMb` with base64 headroom, so inbound photos and videos no longer drop behind the 1 MiB RPC default. Fixes #73564. Thanks @heyhudson.
 - Signal: keep the long-lived receive SSE monitor open while idle instead of applying the 10s RPC/check deadline, so `signal-cli` 0.14.3 event streams no longer reconnect before inbound messages arrive. Fixes #74741. Thanks @fgabelmannjr and @k7n4n5t3w4rt.
-- CLI/progress: suppress nested progress spinners and line clears while TUI input owns raw stdin, so Crestodian `/status` no longer disturbs the active input row. (#75003) Thanks @velvet-shark.
+- CLI/progress: suppress nested progress spinners and line clears while TUI input owns raw stdin, so Conch `/status` no longer disturbs the active input row. (#75003) Thanks @velvet-shark.
 - Models/OpenAI Codex: restore `openai-codex/gpt-5.4-mini` for ChatGPT/Codex OAuth PI runs after live OAuth proof, and align the manifest, forward-compat metadata, docs, and regression tests so stale cron and heartbeat configs resolve again. Fixes #74451. Thanks @0xCyda, @hclsys, and @Marvae.
 - Plugins/runtime-deps: always write a dependency map in generated runtime-deps install manifests, so npm does not crash or prune staged bundled-plugin packages when the plan is empty. Fixes #74949. Thanks @hclsys.
 - Telegram: use durable message edits for streaming previews instead of native draft state, so generated replies no longer flicker through draft-to-message transitions that look like duplicates. (#75073) Thanks @obviyus.
@@ -4813,7 +4905,7 @@ github.com/Chethan616/Dex.
 - Plugin startup and install paths move to the cold persisted registry, cutting broad manifest scans while making plugin update, repair, provider discovery, and install metadata more deterministic. Thanks @vincentkoc and @shakkernerd.
 - OpenTelemetry coverage expands across model calls, token usage, tool loops, harness runs, exec processes, outbound delivery, context assembly, and memory pressure with bounded low-cardinality attributes. Thanks @vincentkoc, @jlapenna, @Lidang-Jiang, and @oc-factus.
 - Browser automation gets safer tab URLs, iframe-aware role snapshots, CDP readiness tuning, headless one-shot launch, and deeper browser doctor probes for slow hosts. Thanks @beat843796 and @BenediktSchackenberg.
-- Control UI and setup flows add PWA/Web Push support, Crestodian first-run repair, TUI setup, context mode selection, and a shorter startup greeting. Thanks @eduardocruz, @SebTardif, and @kevinlin-openai.
+- Control UI and setup flows add PWA/Web Push support, Conch first-run repair, TUI setup, context mode selection, and a shorter startup greeting. Thanks @eduardocruz, @SebTardif, and @kevinlin-openai.
 - Install/update hardening covers Windows, macOS, Linux, Docker, bundled plugin runtime deps, Node service restarts, LaunchAgent token rotation, and mixed-version gateway verification. Thanks @Kobevictor, @igormf, @abhinas90, @jsompis, @Solvely-Colin, and @gucasbrg.
 
 ### Changes
@@ -4829,7 +4921,7 @@ github.com/Chethan616/Dex.
 - Browser/config: allow local managed Chrome launch discovery and post-launch CDP readiness timeouts to be raised for slower hosts such as Raspberry Pi. Fixes #66803. Thanks @beat843796.
 - Discord: allow `channels.discord.voice.model` to override the LLM used for voice channel responses while keeping STT and TTS on their existing media settings. (#64368) Thanks @mrdavey.
 - Browser/CLI: add `openclaw browser start --headless` as a one-shot local managed browser launch override without rewriting persisted browser config. Thanks @BenediktSchackenberg.
-- CLI/Crestodian/TUI: add the first-run setup helper, local planner fallback, full-TUI interactive Crestodian, startup progress indicators, context mode selector, and a shorter startup greeting. (#71720, #71760) Thanks @SebTardif and @kevinlin-openai.
+- CLI/Conch/TUI: add the first-run setup helper, local planner fallback, full-TUI interactive Conch, startup progress indicators, context mode selector, and a shorter startup greeting. (#71720, #71760) Thanks @SebTardif and @kevinlin-openai.
 - Plugins: migrate the local plugin registry automatically during package install/update, keeping install metadata in the plugin index while indexing existing plugin manifests for the new cold registry path. Thanks @vincentkoc and @shakkernerd.
 - Plugins/doctor: make `openclaw doctor --fix` refresh the plugin index and cold registry index when needed without treating plugin install records as authored config. Thanks @vincentkoc and @shakkernerd.
 - Plugins/hooks: add before-agent-finalize hooks, cron `jobId` hook context, bounded native permission fingerprints, and Codex MCP hook relay support. (#71765, #71758, #71707) Thanks @vincentkoc and @pashpashpash.

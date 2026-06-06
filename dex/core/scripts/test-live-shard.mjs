@@ -217,12 +217,12 @@ export function selectLiveShardFiles(shard, files = collectAllLiveTestFiles()) {
       return files.filter((file) => file.startsWith("src/agents/"));
     case "native-live-src-gateway":
       return files.filter(
-        (file) => file.startsWith("src/gateway/") || file.startsWith("src/crestodian/"),
+        (file) => file.startsWith("src/gateway/") || file.startsWith("src/conch/"),
       );
     case "native-live-src-gateway-core":
       return files.filter(
         (file) =>
-          (file.startsWith("src/gateway/") || file.startsWith("src/crestodian/")) &&
+          (file.startsWith("src/gateway/") || file.startsWith("src/conch/")) &&
           !isGatewayBackendLiveTest(file) &&
           !isGatewayProfilesLiveTest(file),
       );

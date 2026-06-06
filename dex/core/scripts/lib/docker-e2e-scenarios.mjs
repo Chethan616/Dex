@@ -419,10 +419,10 @@ export const mainLanes = [
       stateScenario: "empty",
     },
   ),
-  lane("crestodian-rescue", "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:crestodian-rescue", {
+  lane("conch-rescue", "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:conch-rescue", {
     stateScenario: "empty",
   }),
-  lane("crestodian-planner", "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:crestodian-planner", {
+  lane("conch-planner", "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:conch-planner", {
     stateScenario: "empty",
   }),
   serviceLane(
@@ -484,8 +484,8 @@ export const mainLanes = [
     stateScenario: "empty",
   }),
   lane(
-    "crestodian-first-run",
-    "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:crestodian-first-run",
+    "conch-first-run",
+    "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:conch-first-run",
     { stateScenario: "empty" },
   ),
   lane(

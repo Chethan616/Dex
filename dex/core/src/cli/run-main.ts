@@ -32,8 +32,8 @@ import {
   resolveMissingPluginCommandMessage as resolveMissingPluginCommandMessageFromPolicy,
   rewriteUpdateFlagArgv,
   shouldEnsureCliPath,
-  shouldStartCrestodianForBareRoot,
-  shouldStartCrestodianForModernOnboard,
+  shouldStartConchForBareRoot,
+  shouldStartConchForModernOnboard,
   shouldStartProxyForCli,
   shouldUseBrowserHelpFastPath,
   shouldUseNodesHelpFastPath,
@@ -47,8 +47,8 @@ export {
   resolvePrecomputedSubcommandHelpFastPath,
   rewriteUpdateFlagArgv,
   shouldEnsureCliPath,
-  shouldStartCrestodianForBareRoot,
-  shouldStartCrestodianForModernOnboard,
+  shouldStartConchForBareRoot,
+  shouldStartConchForModernOnboard,
   shouldStartProxyForCli,
   shouldUseBrowserHelpFastPath,
   shouldUseNodesHelpFastPath,
@@ -75,7 +75,7 @@ const loadCliRegistryLoaderModule = async () => await import("../plugins/cli-reg
 const loadManifestCommandAliasesRuntimeModule = async () =>
   await import("../plugins/manifest-command-aliases.runtime.js");
 const loadProxyLifecycleModule = async () => await import("../infra/net/proxy/proxy-lifecycle.js");
-const loadCrestodianModule = async () => await import("../crestodian/crestodian.js");
+const loadConchModule = async () => await import("../conch/conch.js");
 const loadProgressModule = async () => await import("./progress.js");
 
 function createGatewayCliMainStartupTrace(argv: string[]) {
@@ -261,7 +261,7 @@ function isUnconfiguredConfigSnapshot(
 }
 
 export async function shouldStartOnboardingForFreshInstall(argv: string[]): Promise<boolean> {
-  if (!shouldStartCrestodianForBareRoot(argv)) {
+  if (!shouldStartConchForBareRoot(argv)) {
     return false;
   }
   const { readConfigFileSnapshot } = await import("../config/config.js");
@@ -660,13 +660,13 @@ export async function runCli(argv: string[] = process.argv) {
       }
     }
 
-    const shouldRunBareRootCrestodian = shouldStartCrestodianForBareRoot(normalizedArgv);
-    const shouldRunModernOnboardCrestodian = shouldStartCrestodianForModernOnboard(normalizedArgv);
-    if (shouldRunBareRootCrestodian || shouldRunModernOnboardCrestodian) {
+    const shouldRunBareRootConch = shouldStartConchForBareRoot(normalizedArgv);
+    const shouldRunModernOnboardConch = shouldStartConchForModernOnboard(normalizedArgv);
+    if (shouldRunBareRootConch || shouldRunModernOnboardConch) {
       await ensureCliEnvProxyDispatcher();
     }
 
-    if (shouldRunBareRootCrestodian) {
+    if (shouldRunBareRootConch) {
       if (await shouldStartOnboardingForFreshInstall(normalizedArgv)) {
         if (!process.stdin.isTTY || !process.stdout.isTTY) {
           console.error(
@@ -681,15 +681,15 @@ export async function runCli(argv: string[] = process.argv) {
       }
       if (!process.stdin.isTTY || !process.stdout.isTTY) {
         console.error(
-          'Crestodian needs an interactive TTY. Use `dex crestodian --message "status"` for one command.',
+          'Conch needs an interactive TTY. Use `dex conch --message "status"` for one command.',
         );
         process.exitCode = 1;
         return;
       }
-      const { runCrestodian } = await loadCrestodianModule();
+      const { runConch } = await loadConchModule();
       const { createCliProgress } = await loadProgressModule();
       const progress = createCliProgress({
-        label: "Starting Crestodian…",
+        label: "Starting Conch…",
         indeterminate: true,
         delayMs: 0,
         fallback: "none",
@@ -703,17 +703,17 @@ export async function runCli(argv: string[] = process.argv) {
         progress.done();
       };
       try {
-        await runCrestodian({ onReady: stopProgress });
+        await runConch({ onReady: stopProgress });
       } finally {
         stopProgress();
       }
       return;
     }
 
-    if (shouldRunModernOnboardCrestodian) {
-      const { runCrestodian } = await loadCrestodianModule();
+    if (shouldRunModernOnboardConch) {
+      const { runConch } = await loadConchModule();
       const nonInteractive = normalizedArgv.includes("--non-interactive");
-      await runCrestodian({
+      await runConch({
         message: nonInteractive ? "overview" : undefined,
         yes: false,
         json: normalizedArgv.includes("--json"),

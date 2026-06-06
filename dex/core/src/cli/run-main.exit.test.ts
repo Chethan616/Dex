@@ -52,7 +52,7 @@ const readConfigFileSnapshotMock = vi.hoisted(() =>
   })),
 );
 const setupWizardCommandMock = vi.hoisted(() => vi.fn(async () => {}));
-const runCrestodianMock = vi.hoisted(() =>
+const runConchMock = vi.hoisted(() =>
   vi.fn<(options?: unknown) => Promise<void>>(async () => {}),
 );
 const commanderParseAsyncMock = vi.hoisted(() => vi.fn(async () => {}));
@@ -76,14 +76,14 @@ const maybeRunCliInContainerMock = vi.hoisted(() =>
   >((argv: string[]) => ({ handled: false, argv })),
 );
 
-function requireRunCrestodianOptions(index = 0): { onReady?: unknown } {
-  const call = runCrestodianMock.mock.calls[index];
+function requireRunConchOptions(index = 0): { onReady?: unknown } {
+  const call = runConchMock.mock.calls[index];
   if (!call) {
-    throw new Error(`expected runCrestodian call ${index}`);
+    throw new Error(`expected runConch call ${index}`);
   }
   expect(typeof call[0]).toBe("object");
   if (typeof call[0] !== "object" || call[0] === null) {
-    throw new Error(`expected runCrestodian call ${index} to receive options`);
+    throw new Error(`expected runConch call ${index} to receive options`);
   }
   return call[0] as { onReady?: unknown };
 }
@@ -252,8 +252,8 @@ vi.mock("../commands/onboard.js", () => ({
   setupWizardCommand: setupWizardCommandMock,
 }));
 
-vi.mock("../crestodian/crestodian.js", () => ({
-  runCrestodian: runCrestodianMock,
+vi.mock("../conch/conch.js", () => ({
+  runConch: runConchMock,
 }));
 
 vi.mock("./progress.js", () => ({
@@ -557,7 +557,7 @@ describe("runCli exit behavior", () => {
     expect(outputPrecomputedRootHelpTextMock).toHaveBeenCalledTimes(1);
     expect(hasEnvHttpProxyAgentConfiguredMock).not.toHaveBeenCalled();
     expect(ensureGlobalUndiciEnvProxyDispatcherMock).not.toHaveBeenCalled();
-    expect(runCrestodianMock).not.toHaveBeenCalled();
+    expect(runConchMock).not.toHaveBeenCalled();
   });
 
   it("renders setup/onboard/configure help without building the full program", async () => {
@@ -1007,7 +1007,7 @@ describe("runCli exit behavior", () => {
 
     expect(readConfigFileSnapshotMock).toHaveBeenCalledTimes(1);
     expect(setupWizardCommandMock).toHaveBeenCalledWith({});
-    expect(runCrestodianMock).not.toHaveBeenCalled();
+    expect(runConchMock).not.toHaveBeenCalled();
     expect(tryRouteCliMock).not.toHaveBeenCalled();
     expect(buildProgramMock).not.toHaveBeenCalled();
   });
@@ -1025,7 +1025,7 @@ describe("runCli exit behavior", () => {
 
     expect(readConfigFileSnapshotMock).toHaveBeenCalledTimes(1);
     expect(setupWizardCommandMock).toHaveBeenCalledWith({});
-    expect(runCrestodianMock).not.toHaveBeenCalled();
+    expect(runConchMock).not.toHaveBeenCalled();
     expect(tryRouteCliMock).not.toHaveBeenCalled();
     expect(buildProgramMock).not.toHaveBeenCalled();
   });
@@ -1046,7 +1046,7 @@ describe("runCli exit behavior", () => {
 
     expect(readConfigFileSnapshotMock).toHaveBeenCalledTimes(1);
     expect(setupWizardCommandMock).toHaveBeenCalledWith({});
-    expect(runCrestodianMock).not.toHaveBeenCalled();
+    expect(runConchMock).not.toHaveBeenCalled();
     expect(tryRouteCliMock).not.toHaveBeenCalled();
     expect(buildProgramMock).not.toHaveBeenCalled();
   });
@@ -1073,7 +1073,7 @@ describe("runCli exit behavior", () => {
         "Onboarding needs an interactive TTY. Use `dex onboard --non-interactive --accept-risk ...` for automation.",
       );
       expect(setupWizardCommandMock).not.toHaveBeenCalled();
-      expect(runCrestodianMock).not.toHaveBeenCalled();
+      expect(runConchMock).not.toHaveBeenCalled();
       expect(tryRouteCliMock).not.toHaveBeenCalled();
       expect(buildProgramMock).not.toHaveBeenCalled();
     } finally {
@@ -1092,20 +1092,20 @@ describe("runCli exit behavior", () => {
     }
   });
 
-  it("keeps bare root invocations on Crestodian when config already exists", async () => {
+  it("keeps bare root invocations on Conch when config already exists", async () => {
     await withInteractiveTty(async () => {
       await runCli(["node", "openclaw"]);
     });
 
     expect(readConfigFileSnapshotMock).toHaveBeenCalledTimes(1);
     expect(setupWizardCommandMock).not.toHaveBeenCalled();
-    expect(runCrestodianMock).toHaveBeenCalledOnce();
-    const crestodianOptions = requireRunCrestodianOptions();
-    expect(crestodianOptions).toEqual({ onReady: crestodianOptions.onReady });
-    expect(crestodianOptions.onReady).toBeTypeOf("function");
+    expect(runConchMock).toHaveBeenCalledOnce();
+    const conchOptions = requireRunConchOptions();
+    expect(conchOptions).toEqual({ onReady: conchOptions.onReady });
+    expect(conchOptions.onReady).toBeTypeOf("function");
   });
 
-  it("bootstraps env proxy before bare Crestodian startup", async () => {
+  it("bootstraps env proxy before bare Conch startup", async () => {
     hasEnvHttpProxyAgentConfiguredMock.mockReturnValue(true);
     const stdinTty = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
     const stdoutTty = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
@@ -1128,29 +1128,29 @@ describe("runCli exit behavior", () => {
     }
 
     expect(ensureGlobalUndiciEnvProxyDispatcherMock).toHaveBeenCalledTimes(1);
-    expect(runCrestodianMock).toHaveBeenCalledOnce();
-    const crestodianOptions = requireRunCrestodianOptions();
-    expect(crestodianOptions).toEqual({ onReady: crestodianOptions.onReady });
-    expect(crestodianOptions.onReady).toBeTypeOf("function");
+    expect(runConchMock).toHaveBeenCalledOnce();
+    const conchOptions = requireRunConchOptions();
+    expect(conchOptions).toEqual({ onReady: conchOptions.onReady });
+    expect(conchOptions.onReady).toBeTypeOf("function");
     expect(ensureGlobalUndiciEnvProxyDispatcherMock.mock.invocationCallOrder[0]).toBeLessThan(
-      runCrestodianMock.mock.invocationCallOrder[0],
+      runConchMock.mock.invocationCallOrder[0],
     );
   });
 
-  it("bootstraps env proxy before modern onboard Crestodian startup", async () => {
+  it("bootstraps env proxy before modern onboard Conch startup", async () => {
     hasEnvHttpProxyAgentConfiguredMock.mockReturnValue(true);
 
     await runCli(["node", "openclaw", "onboard", "--modern", "--json"]);
 
     expect(ensureGlobalUndiciEnvProxyDispatcherMock).toHaveBeenCalledTimes(1);
-    expect(runCrestodianMock).toHaveBeenCalledWith({
+    expect(runConchMock).toHaveBeenCalledWith({
       message: undefined,
       yes: false,
       json: true,
       interactive: true,
     });
     expect(ensureGlobalUndiciEnvProxyDispatcherMock.mock.invocationCallOrder[0]).toBeLessThan(
-      runCrestodianMock.mock.invocationCallOrder[0],
+      runConchMock.mock.invocationCallOrder[0],
     );
   });
 

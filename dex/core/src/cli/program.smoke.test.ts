@@ -5,7 +5,7 @@ import {
   ensureConfigReady,
   installBaseProgramMocks,
   installSmokeProgramMocks,
-  runCrestodian,
+  runConch,
   runTui,
   runtime,
   setupCommand,
@@ -48,7 +48,7 @@ describe("cli program (smoke)", () => {
     program = createProgram();
     vi.clearAllMocks();
     runTui.mockResolvedValue(undefined);
-    runCrestodian.mockResolvedValue(undefined);
+    runConch.mockResolvedValue(undefined);
     ensureConfigReady.mockResolvedValue(undefined);
   });
 
@@ -68,9 +68,9 @@ describe("cli program (smoke)", () => {
     expect(options?.forceProcessExitOnReturn).toBe(true);
   });
 
-  it("runs crestodian one-shot requests", async () => {
-    await runProgram(["crestodian", "--message", "status"]);
-    const options = firstMockArg(runCrestodian) as {
+  it("runs conch one-shot requests", async () => {
+    await runProgram(["conch", "--message", "status"]);
+    const options = firstMockArg(runConch) as {
       message?: string;
       yes?: boolean;
       json?: boolean;

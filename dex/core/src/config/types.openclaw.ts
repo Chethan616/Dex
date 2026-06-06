@@ -10,7 +10,7 @@ import type { BrowserConfig } from "./types.browser.js";
 import type { ChannelsConfig } from "./types.channels.js";
 import type { CliConfig } from "./types.cli.js";
 import type { CommitmentsConfig } from "./types.commitments.js";
-import type { CrestodianConfig } from "./types.crestodian.js";
+import type { ConchConfig } from "./types.conch.js";
 import type { CronConfig } from "./types.cron.js";
 import type { DiscoveryConfig, GatewayConfig, TalkConfig } from "./types.gateway.js";
 import type { HooksConfig } from "./types.hooks.js";
@@ -90,7 +90,7 @@ export type DexConfig = {
   logging?: LoggingConfig;
   security?: SecurityConfig;
   cli?: CliConfig;
-  crestodian?: CrestodianConfig;
+  conch?: ConchConfig;
   update?: {
     /** Update channel for git + npm installs ("stable", "beta", or "dev"). */
     channel?: "stable" | "beta" | "dev";

@@ -427,7 +427,7 @@ const McpConfigSchema = z
   .strict()
   .optional();
 
-const CrestodianSchema = z
+const ConchSchema = z
   .object({
     rescue: z
       .object({
@@ -580,7 +580,7 @@ export const DexSchema = z
       })
       .strict()
       .optional(),
-    crestodian: CrestodianSchema,
+    conch: ConchSchema,
     update: z
       .object({
         channel: z.union([z.literal("stable"), z.literal("beta"), z.literal("dev")]).optional(),

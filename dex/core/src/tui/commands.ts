@@ -93,7 +93,7 @@ export function getSlashCommands(options: SlashCommandOptions = {}): SlashComman
     ...(options.local ? [{ name: "auth", description: "Run provider auth/login flow" }] : []),
     { name: "agent", description: "Switch agent (or open picker)" },
     { name: "agents", description: "Open agent picker" },
-    { name: "crestodian", description: "Return to Crestodian" },
+    { name: "conch", description: "Return to Conch" },
     { name: "session", description: "Switch session (or open picker)" },
     { name: "sessions", description: "Open session picker" },
     {
@@ -187,7 +187,7 @@ export function helpText(options: SlashCommandOptions = {}): string {
     "/gwstatus",
     ...(options.local ? ["/auth [provider]"] : []),
     "/agent <id> (or /agents)",
-    "/crestodian [request]",
+    "/conch [request]",
     "/session <key> (or /sessions)",
     "/model <provider/model> (or /models)",
     `/think <${thinkLevels}>`,

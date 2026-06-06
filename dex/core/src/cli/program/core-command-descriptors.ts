@@ -5,7 +5,7 @@ export type CoreCliCommandDescriptor = NamedCommandDescriptor;
 
 const coreCliCommandCatalog = defineCommandDescriptorCatalog([
   {
-    name: "crestodian",
+    name: "conch",
     description: "Open the interactive setup and repair assistant",
     hasSubcommands: false,
   },

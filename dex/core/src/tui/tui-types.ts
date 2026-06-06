@@ -18,11 +18,11 @@ export type TuiOptions = {
   forceProcessExitOnReturn?: boolean;
 };
 
-export type TuiExitReason = "exit" | "return-to-crestodian";
+export type TuiExitReason = "exit" | "return-to-conch";
 
 export type TuiResult = {
   exitReason: TuiExitReason;
-  crestodianMessage?: string;
+  conchMessage?: string;
 };
 
 export type ChatEvent = {

@@ -96,7 +96,7 @@ export function shouldEnsureCliPath(argv: string[]): boolean {
   const invocation = resolveCliArgvInvocation(argv);
   if (
     invocation.hasHelpOrVersion ||
-    shouldStartCrestodianForBareRoot(argv) ||
+    shouldStartConchForBareRoot(argv) ||
     isBareParentDefaultHelpArgv(argv)
   ) {
     return false;
@@ -191,12 +191,12 @@ export function resolvePrecomputedSubcommandHelpFastPath(
   return resolveStrictPrecomputedSubcommandHelpCommand(argv);
 }
 
-export function shouldStartCrestodianForBareRoot(argv: string[]): boolean {
+export function shouldStartConchForBareRoot(argv: string[]): boolean {
   const invocation = resolveCliArgvInvocation(argv);
   return invocation.commandPath.length === 0 && !invocation.hasHelpOrVersion;
 }
 
-export function shouldStartCrestodianForModernOnboard(argv: string[]): boolean {
+export function shouldStartConchForModernOnboard(argv: string[]): boolean {
   const invocation = resolveCliArgvInvocation(argv);
   return (
     invocation.commandPath[0] === "onboard" &&
