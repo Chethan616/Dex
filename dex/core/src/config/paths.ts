@@ -21,8 +21,12 @@ export const isNixMode = resolveIsNixMode();
 // Support the remaining legacy pre-rebrand state dir.
 const LEGACY_STATE_DIRNAMES = [".clawdbot"] as const;
 const NEW_STATE_DIRNAME = ".dex";
-const CONFIG_FILENAME = "openclaw.json";
-const LEGACY_CONFIG_FILENAMES = ["clawdbot.json"] as const;
+const CONFIG_FILENAME = "dex.json";
+// Both prior filenames are still read transparently; if only the legacy
+// file exists, callers of `resolveExistingConfigPath()` get the legacy
+// path back AND the doctor's --fix migration writes a fresh dex.json
+// alongside it. Manual rename is unnecessary.
+const LEGACY_CONFIG_FILENAMES = ["openclaw.json", "clawdbot.json"] as const;
 
 function resolveDefaultHomeDir(): string {
   return resolveRequiredHomeDir(process.env, os.homedir);

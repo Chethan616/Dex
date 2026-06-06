@@ -38,18 +38,19 @@ class GatewayConfig {
     this.token,
   });
 
-  /// Load gateway config from `%USERPROFILE%\.dex\openclaw.json`, falling
-  /// back to the legacy `%USERPROFILE%\.openclaw\openclaw.json` location
-  /// for one cycle while users finish migrating off it (Phase B.5 moved
-  /// the directory; the filename rename ships in v1.4). Returns defaults
-  /// if neither location is present -- the client then surfaces a clear
-  /// "authentication required" error in the UI.
+  /// Load gateway config. Search order:
+  ///   1. `%USERPROFILE%\.dex\dex.json`         (current canonical)
+  ///   2. `%USERPROFILE%\.dex\openclaw.json`    (legacy filename; pre-2026.6.12)
+  ///   3. `%USERPROFILE%\.openclaw\openclaw.json` (legacy dir; pre-Phase B.5)
+  /// Returns defaults if none of the three are present — the client then
+  /// surfaces a clear "authentication required" error in the UI.
   static GatewayConfig fromLocalConfig({String sessionKey = 'dex-desktop'}) {
     final home = Platform.environment['USERPROFILE'] ??
         Platform.environment['HOME'] ??
         '';
     final sep = Platform.pathSeparator;
     final candidates = <String>[
+      '$home$sep.dex${sep}dex.json',
       '$home$sep.dex${sep}openclaw.json',
       '$home$sep.openclaw${sep}openclaw.json',
     ];
@@ -121,7 +122,7 @@ class GatewayClient extends ChangeNotifier {
     }
     if (_config.token == null || _config.token!.isEmpty) {
       _setState(GatewayConnState.failed,
-          error: 'No auth token. Run `dex onboard` first; ~\\.dex\\openclaw.json should contain gateway.auth.token.');
+          error: 'No auth token. Run `dex onboard` first; ~\\.dex\\dex.json should contain gateway.auth.token.');
       return;
     }
 

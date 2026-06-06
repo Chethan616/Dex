@@ -38,6 +38,6 @@ export function getSecurityNoteMessage(): string {
     formatCliCommand("dex security audit --fix"),
     "",
     heading(t("wizard.security.learnMore")),
-    "- https://docs.openclaw.ai/gateway/security",
+    "- https://docs.dex.run/gateway/security",
   ].join("\n");
 }

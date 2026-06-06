@@ -34,7 +34,7 @@ export async function buildStatusCommandReportLines(params: {
   footerLines: string[];
 }) {
   const lines: string[] = [];
-  lines.push(params.heading("OpenClaw status"));
+  lines.push(params.heading("Dex status"));
 
   appendStatusReportSections({
     lines,

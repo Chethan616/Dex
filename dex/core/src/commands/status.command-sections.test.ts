@@ -167,7 +167,7 @@ describe("status.command-sections", () => {
       "  Session selected: deepseek/deepseek-v4-flash",
       "  Reason: session override",
       "  Clear with: /model zhipu/glm-4.5-air or /reset",
-      "  Docs: https://docs.openclaw.ai/concepts/models#selection-source-and-fallback-behavior",
+      "  Docs: https://docs.dex.run/concepts/models#selection-source-and-fallback-behavior",
     ]);
   });
 
@@ -236,8 +236,8 @@ describe("status.command-sections", () => {
         gatewayReachable: false,
       }),
     ).toEqual([
-      "FAQ: https://docs.openclaw.ai/faq",
-      "Troubleshooting: https://docs.openclaw.ai/troubleshooting",
+      "FAQ: https://docs.dex.run/faq",
+      "Troubleshooting: https://docs.dex.run/troubleshooting",
       "",
       "warn(upgrade ready)",
       "Next steps:",

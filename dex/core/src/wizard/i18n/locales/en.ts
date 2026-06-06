@@ -98,7 +98,7 @@ export const en = {
       websocketUrl: "Gateway WebSocket URL",
     },
     gatewayTailscale: {
-      docsNote: "Docs:\nhttps://docs.openclaw.ai/gateway/tailscale\nhttps://docs.openclaw.ai/web",
+      docsNote: "Docs:\nhttps://docs.dex.run/gateway/tailscale\nhttps://docs.dex.run/web",
       funnel: "Funnel",
       funnelHint: "Public HTTPS via Tailscale Funnel (internet)",
       missingBinNote:
@@ -242,7 +242,7 @@ export const en = {
       flowAdvancedHint: "Choose Gateway port, network exposure, Tailscale, and auth.",
       flowQuickstart: "QuickStart (recommended)",
       flowQuickstartHint: "Recommended local setup. Change details later with {command}.",
-      intro: "OpenClaw setup",
+      intro: "Dex setup",
       invalidConfigTitle: "Invalid config",
       keepCurrent: "Keep current values",
       localGateway: "Local gateway (this machine)",
@@ -293,14 +293,14 @@ export const en = {
         "Multi-user/shared inbox: split trust boundaries (separate gateway/credentials, ideally separate OS users/hosts).",
       baselineStrongModel:
         "Use the strongest available model for any bot with tools or untrusted inboxes.",
-      beta: "OpenClaw is a hobby project and still in beta. Expect sharp edges.",
+      beta: "Dex is a hobby project and still in beta. Expect sharp edges.",
       confirm:
         "I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue?",
       hardeningRequired:
-        "If you're not comfortable with security hardening and access control, don't run OpenClaw.",
+        "If you're not comfortable with security hardening and access control, don't run Dex.",
       learnMore: "Learn more",
-      notMultitenant: "OpenClaw is not a hostile multi-tenant boundary by default.",
-      personalAgent: "By default, OpenClaw is a personal agent: one trusted operator boundary.",
+      notMultitenant: "Dex is not a hostile multi-tenant boundary by default.",
+      personalAgent: "By default, Dex is a personal agent: one trusted operator boundary.",
       promptRisk: "A bad prompt can trick it into doing unsafe things.",
       recommendedBaseline: "Recommended baseline",
       runRegularly: "Run regularly",
@@ -316,7 +316,7 @@ export const en = {
       containerBrewManual:
         "Use a custom image with Homebrew preinstalled or install those dependencies manually.",
       containerInstallsTitle: "Container skill installs",
-      docsLine: "Docs: https://docs.openclaw.ai/skills",
+      docsLine: "Docs: https://docs.dex.run/skills",
       enterEnv: "Enter {env}",
       homebrewCommand: "Show Homebrew install command?",
       homebrewInstallTitle: "Homebrew install",
@@ -914,10 +914,10 @@ export const en = {
       codexNativeSearchOnly: "Used only for Codex-capable models.",
       codexNativeSearchTitle: "Codex native search",
       controlUiTitle: "Control UI",
-      controlUiDocs: "Docs: https://docs.openclaw.ai/web/control-ui",
-      dashboardCopyPaste: "Copy/paste this URL in a browser on this machine to control OpenClaw.",
+      controlUiDocs: "Docs: https://docs.dex.run/web/control-ui",
+      dashboardCopyPaste: "Copy/paste this URL in a browser on this machine to control Dex.",
       dashboardLinkWithToken: "Dashboard link (with token): {url}",
-      dashboardOpened: "Opened in your browser. Keep that tab to control OpenClaw.",
+      dashboardOpened: "Opened in your browser. Keep that tab to control Dex.",
       dashboardOpenAnytime: "Open the dashboard anytime: {command}",
       dashboardReady: "Dashboard ready",
       dashboardTokenMemory:
@@ -967,9 +967,9 @@ export const en = {
       nodeIos: "iOS app (camera/canvas)",
       nodeMac: "macOS app (system + notifications)",
       optionalApps: "Optional apps",
-      outroDashboardLink: "Onboarding complete. Use the dashboard link above to control OpenClaw.",
+      outroDashboardLink: "Onboarding complete. Use the dashboard link above to control Dex.",
       outroDashboardOpened:
-        "Onboarding complete. Dashboard opened; keep that tab to control OpenClaw.",
+        "Onboarding complete. Dashboard opened; keep that tab to control Dex.",
       outroSeeded:
         "Onboarding complete. Web UI seeded in the background; open it anytime with the dashboard link above.",
       quickstartNodeRuntime: "QuickStart uses Node for the Gateway service (stable + supported).",
@@ -977,7 +977,7 @@ export const en = {
       rerunInstallDaemon: "Or rerun with: {command}",
       restart: "Restart",
       securityReminder:
-        "Running agents on your computer is risky — harden your setup: https://docs.openclaw.ai/security",
+        "Running agents on your computer is risky — harden your setup: https://docs.dex.run/security",
       secretRefAuthFailed: "Could not resolve {field} SecretRef for setup auth.",
       skipHealthNextTime: "Or skip this probe next time: {command}",
       skipControlUi: "Skipping Control UI/TUI prompts.",
@@ -989,7 +989,7 @@ export const en = {
       systemdUnavailable:
         "Systemd user services are unavailable. Skipping lingering checks and service install.",
       terminalHatch: "Hatch in Terminal (recommended)",
-      webDocs: "Docs: https://docs.openclaw.ai/tools/web",
+      webDocs: "Docs: https://docs.dex.run/tools/web",
       webSearchAutoDetected: "Web search is available via {provider} (auto-detected).",
       webSearchDisabled: "Web search ({provider}) is configured but disabled.",
       webSearchEnabled:
@@ -1015,7 +1015,7 @@ export const en = {
       whatNow: 'What now: https://openclaw.ai/showcase ("What People Are Building").',
       whatNowTitle: "What now",
       workspaceBackupTitle: "Workspace backup",
-      workspaceDocs: "Docs: https://docs.openclaw.ai/concepts/agent-workspace",
+      workspaceDocs: "Docs: https://docs.dex.run/concepts/agent-workspace",
       workspaceReady: "Your workspace is ready.",
     },
     gatewayNotes: {

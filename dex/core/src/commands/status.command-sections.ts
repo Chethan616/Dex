@@ -379,7 +379,7 @@ export function buildStatusModelSelectionLines(params: {
       `  Session selected: ${selected}`,
       `  Reason: ${sess.modelSelectionReason ?? "session override"}`,
       `  Clear with: /model ${configured} or /reset`,
-      "  Docs: https://docs.openclaw.ai/concepts/models#selection-source-and-fallback-behavior",
+      "  Docs: https://docs.dex.run/concepts/models#selection-source-and-fallback-behavior",
     );
   }
   if (mismatches.length > limit) {
@@ -396,8 +396,8 @@ export function buildStatusFooterLines(params: {
   gatewayReachable: boolean;
 }) {
   return [
-    "FAQ: https://docs.openclaw.ai/faq",
-    "Troubleshooting: https://docs.openclaw.ai/troubleshooting",
+    "FAQ: https://docs.dex.run/faq",
+    "Troubleshooting: https://docs.dex.run/troubleshooting",
     ...(params.updateHint ? ["", params.warn(params.updateHint)] : []),
     "Next steps:",
     `  Need to share?      ${params.formatCliCommand("dex status --all")}`,

@@ -6,7 +6,7 @@ import type { RuntimeEnv } from "../runtime.js";
 // Phase B.8: the upstream `docs.openclaw.ai/api/search` is deliberately NOT
 // used by default so a fresh Dex install makes zero outbound calls to
 // openclaw.ai. Users who still want the OpenClaw docs search can set
-// `DEX_DOCS_SEARCH_URL=https://docs.openclaw.ai/api/search` (or any other
+// `DEX_DOCS_SEARCH_URL=https://docs.dex.run/api/search` (or any other
 // docs API). When unset, `dex docs search` returns a friendly message
 // instead of fetching.
 const SEARCH_API = process.env.DEX_DOCS_SEARCH_URL ?? "";
@@ -123,7 +123,7 @@ export async function docsSearchCommand(queryParts: string[], runtime: RuntimeEn
       runtime.log(`${theme.muted("Docs:")} ${docs}`);
       runtime.log(`${theme.muted("Search:")} ${formatCliCommand('dex docs "your query"')}`);
     } else {
-      runtime.log("Docs: https://docs.openclaw.ai/");
+      runtime.log("Docs: https://docs.dex.run/");
       runtime.log(`Search: ${formatCliCommand('dex docs "your query"')}`);
     }
     return;

@@ -1124,7 +1124,7 @@ describe("statusCommand", () => {
     ]);
     const logs = await runStatusAndGetLogs({ verbose: true });
     for (const token of [
-      "OpenClaw status",
+      "Dex status",
       "Overview",
       "Security audit",
       "Skipped in fast status",

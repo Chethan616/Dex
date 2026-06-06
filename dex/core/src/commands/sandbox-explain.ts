@@ -32,7 +32,7 @@ type SandboxExplainOptions = {
   json: boolean;
 };
 
-const SANDBOX_DOCS_URL = "https://docs.openclaw.ai/sandbox";
+const SANDBOX_DOCS_URL = "https://docs.dex.run/sandbox";
 
 function normalizeExplainSessionKey(params: {
   cfg: DexConfig;

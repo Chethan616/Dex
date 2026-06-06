@@ -69,7 +69,7 @@ export async function setupWizardCommand(
     runtime.error(
       [
         "Non-interactive setup requires explicit risk acknowledgement.",
-        "Read: https://docs.openclaw.ai/security",
+        "Read: https://docs.dex.run/security",
         `Re-run with: ${formatCliCommand("dex onboard --non-interactive --accept-risk ...")}`,
       ].join("\n"),
     );
@@ -89,10 +89,10 @@ export async function setupWizardCommand(
   if (process.platform === "win32") {
     runtime.log(
       [
-        "Windows detected - OpenClaw runs great on WSL2!",
+        "Windows detected - Dex runs great on WSL2!",
         "Native Windows might be trickier.",
         "Quick setup: wsl --install (one command, one reboot)",
-        "Guide: https://docs.openclaw.ai/windows",
+        "Guide: https://docs.dex.run/windows",
       ].join("\n"),
     );
   }

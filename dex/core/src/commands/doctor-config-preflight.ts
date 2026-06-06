@@ -141,7 +141,7 @@ export async function runDoctorConfigPreflight(
       await recoverConfigFromLastKnownGood({ snapshot, reason: "doctor-invalid-config" })
     ) {
       note(
-        "Restored openclaw.json from last-known-good; original saved as .clobbered.*.",
+        "Restored dex.json from last-known-good; original saved as .clobbered.*.",
         "Config",
       );
       snapshot = addDoctorLegacyIssues(await readConfigFileSnapshot(readOptions));

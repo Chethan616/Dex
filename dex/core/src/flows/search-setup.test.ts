@@ -17,7 +17,7 @@ const mockGrokProvider = vi.hoisted(() => ({
   pluginId: "xai",
   label: "Grok",
   hint: "Search with xAI",
-  docsUrl: "https://docs.openclaw.ai/tools/web",
+  docsUrl: "https://docs.dex.run/tools/web",
   requiresCredential: true,
   credentialLabel: "xAI API key",
   placeholder: "xai-...",
@@ -318,7 +318,7 @@ describe("runSearchSetupFlow", () => {
         "Secret references enabled — OpenClaw will store a reference instead of the API key.",
         "Env var: XAI_API_KEY.",
         "Set XAI_API_KEY in the Gateway environment.",
-        "Docs: https://docs.openclaw.ai/tools/web",
+        "Docs: https://docs.dex.run/tools/web",
       ].join("\n"),
       "Web search",
     );

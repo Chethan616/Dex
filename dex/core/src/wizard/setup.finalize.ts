@@ -367,8 +367,8 @@ export async function finalizeSetupWizard(
         await prompter.note(
           [
             t("common.docs"),
-            "https://docs.openclaw.ai/gateway/health",
-            "https://docs.openclaw.ai/gateway/troubleshooting",
+            "https://docs.dex.run/gateway/health",
+            "https://docs.dex.run/gateway/troubleshooting",
           ].join("\n"),
           t("wizard.finalize.healthCheckHelp"),
         );
@@ -384,8 +384,8 @@ export async function finalizeSetupWizard(
       await prompter.note(
         [
           t("common.docs"),
-          "https://docs.openclaw.ai/gateway/health",
-          "https://docs.openclaw.ai/gateway/troubleshooting",
+          "https://docs.dex.run/gateway/health",
+          "https://docs.dex.run/gateway/troubleshooting",
         ].join("\n"),
         t("wizard.finalize.healthCheckHelp"),
       );
@@ -662,7 +662,7 @@ export async function finalizeSetupWizard(
           `  ${formatCliCommand("dex configure --section web")}`,
           "",
           t("wizard.finalize.webSearchGetKey", {
-            url: entry?.signupUrl ?? "https://docs.openclaw.ai/tools/web",
+            url: entry?.signupUrl ?? "https://docs.dex.run/tools/web",
           }),
           t("wizard.finalize.webDocs"),
         ].join("\n"),

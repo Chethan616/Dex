@@ -56,7 +56,7 @@ describe("docsSearchCommand", () => {
     if (!(url instanceof URL)) {
       throw new Error("expected docs search to call fetch with a URL");
     }
-    expect(url.href).toBe("https://docs.openclaw.ai/api/search?q=plugin+allowlist");
+    expect(url.href).toBe("https://docs.dex.run/api/search?q=plugin+allowlist");
     expect(init).toMatchObject({ headers: { Accept: "application/json" } });
   });
 
@@ -77,7 +77,7 @@ describe("docsSearchCommand", () => {
           results: [
             {
               title: "Plugin allowlist",
-              link: "https://docs.openclaw.ai/plugins/allowlist",
+              link: "https://docs.dex.run/plugins/allowlist",
               snippet: "How to configure the allowlist.",
             },
           ],

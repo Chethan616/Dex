@@ -262,7 +262,7 @@ export function parseIsoDateRange(params: {
       message: string;
       docs: string;
     } {
-  const docs = params.docs ?? "https://docs.openclaw.ai/tools/web";
+  const docs = params.docs ?? "https://docs.dex.run/tools/web";
   const dateAfter = params.rawDateAfter ? normalizeToIsoDate(params.rawDateAfter) : undefined;
   if (params.rawDateAfter && !dateAfter) {
     return {
@@ -350,7 +350,7 @@ export function parseWebSearchTimeFilters<Provider extends WebSearchFreshnessPro
       message: string;
       docs: string;
     } {
-  const docs = params.docs ?? "https://docs.openclaw.ai/tools/web";
+  const docs = params.docs ?? "https://docs.dex.run/tools/web";
   const freshness = params.rawFreshness
     ? normalizeFreshness(params.rawFreshness, params.freshnessProvider)
     : undefined;
@@ -442,7 +442,7 @@ function describeUnsupportedSearchFilter(name: UnsupportedWebSearchFilterName): 
 export function buildUnsupportedSearchFilterResponse(
   params: Record<string, unknown>,
   provider: string,
-  docs = "https://docs.openclaw.ai/tools/web",
+  docs = "https://docs.dex.run/tools/web",
 ):
   | {
       error: string;

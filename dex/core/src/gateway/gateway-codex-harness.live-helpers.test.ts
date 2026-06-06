@@ -166,7 +166,7 @@ describe("gateway codex harness live helpers", () => {
   });
 
   it("accepts the compact status-card pointer emitted by current codex", () => {
-    const text = "OpenClaw status shown above.";
+    const text = "Dex status shown above.";
 
     expect(
       EXPECTED_CODEX_STATUS_COMMAND_TEXT.some((expectedText) => text.includes(expectedText)),
@@ -313,7 +313,7 @@ describe("gateway codex harness live helpers", () => {
       "- In the sandbox, `codex models` failed because the kernel disallows unprivileged user namespaces.",
       "- Outside the sandbox, `codex` is not on `PATH`.",
       "",
-      "Current session model from OpenClaw status is `openai/gpt-5.5`.",
+      "Current session model from Dex status is `openai/gpt-5.5`.",
     ].join("\n");
 
     expectRecognizedCodexModelsCommandText(text);

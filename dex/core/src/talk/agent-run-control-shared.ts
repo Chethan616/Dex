@@ -253,7 +253,7 @@ export function buildRealtimeVoiceAgentControlSpeechMessage(text: string): strin
   return [
     "Internal OpenClaw voice control result.",
     "Do not call openclaw_agent_consult or any other tool for this message.",
-    "Speak this exact OpenClaw status to the voice call, without adding, removing, or rephrasing words.",
+    "Speak this exact Dex status to the voice call, without adding, removing, or rephrasing words.",
     `Status: ${JSON.stringify(text)}`,
   ].join("\n");
 }

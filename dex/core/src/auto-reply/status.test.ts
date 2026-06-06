@@ -1679,7 +1679,7 @@ describe("buildStatusMessage", () => {
     );
     expect(normalized).toContain("Clear with: /model zhipu/glm-4.5-air or /reset");
     expect(normalized).toContain(
-      "Docs: https://docs.openclaw.ai/concepts/models#selection-source-and-fallback-behavior",
+      "Docs: https://docs.dex.run/concepts/models#selection-source-and-fallback-behavior",
     );
   });
 
