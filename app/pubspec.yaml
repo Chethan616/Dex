@@ -22,7 +22,16 @@ dependencies:
   uuid: ^4.4.0
 
   # Localized timestamps in the conversation. Built into the Dart ecosystem.
-  intl: ^0.19.0
+  intl: ^0.20.2
+
+  # Desktop UI primitives (v1.3 plan section 12.2). Hux drives the Card /
+  # Button / Input / BottomSheet shape on Windows + Linux; shadcn_ui covers
+  # dense dashboard surfaces (Live panel's running-engine card + the v1.2
+  # LiveEntry list coming next) where the shadcn Card + Badge vocabulary
+  # fits better. Mobile is native (Kotlin Compose + SwiftUI), so these
+  # deps stay desktop-only.
+  hux: ^1.2.1
+  shadcn_ui: ^0.54.0
 
 dev_dependencies:
   flutter_test:

@@ -5,6 +5,7 @@
 // pane resize, save sizes to a tiny preferences file.
 
 import 'package:flutter/material.dart';
+import 'package:hux/hux.dart';
 
 import '../core/models/device.dart';
 import '../core/models/message.dart';
@@ -300,35 +301,27 @@ class _LivePanel extends StatelessWidget {
 }
 
 /// "Currently routing through engine X" — the Live panel's running-state
-/// surface. Renders the EnginePill in its non-dense form plus the goal
-/// label that's being driven. C.7-flutter ships this; v1.2 will grow it
-/// into a full LiveEntry list.
+/// surface. Wraps the engine pill + goal label in a [HuxCard] so the v1.2
+/// Live panel rebuild inherits the Hux dashboard vocabulary out of the
+/// box. Tokens (`DexColors.surface`, `DexColors.border`) still drive the
+/// look; Hux is the structure.
 class _RunningEngineCard extends StatelessWidget {
   const _RunningEngineCard({required this.message});
   final Message message;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(DexSpace.lg),
-      decoration: BoxDecoration(
-        color: DexColors.surface,
-        borderRadius: DexRadius.rmd,
-        border: Border.all(color: DexColors.border),
-      ),
+    // HuxCard.action slot is narrow, so the engine pill lives inside the
+    // child column instead of in action. This is the same shape v1.2's
+    // LiveEntry list cards will use.
+    return HuxCard(
+      title: 'Running',
+      backgroundColor: DexColors.surface,
+      borderColor: DexColors.border,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                'Running',
-                style: DexType.caption(color: DexColors.textDim),
-              ),
-              const Spacer(),
-              EnginePill(engine: message.engine!, dense: false),
-            ],
-          ),
+          EnginePill(engine: message.engine!, dense: false),
           const SizedBox(height: DexSpace.sm),
           Text(
             message.toolGoal ?? '',
