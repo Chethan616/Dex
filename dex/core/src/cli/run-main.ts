@@ -32,8 +32,8 @@ import {
   resolveMissingPluginCommandMessage as resolveMissingPluginCommandMessageFromPolicy,
   rewriteUpdateFlagArgv,
   shouldEnsureCliPath,
-  shouldStartConchForBareRoot,
-  shouldStartConchForModernOnboard,
+  shouldStartAtlasForBareRoot,
+  shouldStartAtlasForModernOnboard,
   shouldStartProxyForCli,
   shouldUseBrowserHelpFastPath,
   shouldUseNodesHelpFastPath,
@@ -47,8 +47,8 @@ export {
   resolvePrecomputedSubcommandHelpFastPath,
   rewriteUpdateFlagArgv,
   shouldEnsureCliPath,
-  shouldStartConchForBareRoot,
-  shouldStartConchForModernOnboard,
+  shouldStartAtlasForBareRoot,
+  shouldStartAtlasForModernOnboard,
   shouldStartProxyForCli,
   shouldUseBrowserHelpFastPath,
   shouldUseNodesHelpFastPath,
@@ -75,7 +75,7 @@ const loadCliRegistryLoaderModule = async () => await import("../plugins/cli-reg
 const loadManifestCommandAliasesRuntimeModule = async () =>
   await import("../plugins/manifest-command-aliases.runtime.js");
 const loadProxyLifecycleModule = async () => await import("../infra/net/proxy/proxy-lifecycle.js");
-const loadConchModule = async () => await import("../conch/conch.js");
+const loadAtlasModule = async () => await import("../atlas/atlas.js");
 const loadProgressModule = async () => await import("./progress.js");
 
 function createGatewayCliMainStartupTrace(argv: string[]) {
@@ -261,7 +261,7 @@ function isUnconfiguredConfigSnapshot(
 }
 
 export async function shouldStartOnboardingForFreshInstall(argv: string[]): Promise<boolean> {
-  if (!shouldStartConchForBareRoot(argv)) {
+  if (!shouldStartAtlasForBareRoot(argv)) {
     return false;
   }
   const { readConfigFileSnapshot } = await import("../config/config.js");
@@ -660,13 +660,13 @@ export async function runCli(argv: string[] = process.argv) {
       }
     }
 
-    const shouldRunBareRootConch = shouldStartConchForBareRoot(normalizedArgv);
-    const shouldRunModernOnboardConch = shouldStartConchForModernOnboard(normalizedArgv);
-    if (shouldRunBareRootConch || shouldRunModernOnboardConch) {
+    const shouldRunBareRootAtlas = shouldStartAtlasForBareRoot(normalizedArgv);
+    const shouldRunModernOnboardAtlas = shouldStartAtlasForModernOnboard(normalizedArgv);
+    if (shouldRunBareRootAtlas || shouldRunModernOnboardAtlas) {
       await ensureCliEnvProxyDispatcher();
     }
 
-    if (shouldRunBareRootConch) {
+    if (shouldRunBareRootAtlas) {
       if (await shouldStartOnboardingForFreshInstall(normalizedArgv)) {
         if (!process.stdin.isTTY || !process.stdout.isTTY) {
           console.error(
@@ -681,15 +681,15 @@ export async function runCli(argv: string[] = process.argv) {
       }
       if (!process.stdin.isTTY || !process.stdout.isTTY) {
         console.error(
-          'Conch needs an interactive TTY. Use `dex conch --message "status"` for one command.',
+          'Atlas needs an interactive TTY. Use `dex atlas --message "status"` for one command.',
         );
         process.exitCode = 1;
         return;
       }
-      const { runConch } = await loadConchModule();
+      const { runAtlas } = await loadAtlasModule();
       const { createCliProgress } = await loadProgressModule();
       const progress = createCliProgress({
-        label: "Starting Conch…",
+        label: "Starting Atlas…",
         indeterminate: true,
         delayMs: 0,
         fallback: "none",
@@ -703,17 +703,17 @@ export async function runCli(argv: string[] = process.argv) {
         progress.done();
       };
       try {
-        await runConch({ onReady: stopProgress });
+        await runAtlas({ onReady: stopProgress });
       } finally {
         stopProgress();
       }
       return;
     }
 
-    if (shouldRunModernOnboardConch) {
-      const { runConch } = await loadConchModule();
+    if (shouldRunModernOnboardAtlas) {
+      const { runAtlas } = await loadAtlasModule();
       const nonInteractive = normalizedArgv.includes("--non-interactive");
-      await runConch({
+      await runAtlas({
         message: nonInteractive ? "overview" : undefined,
         yes: false,
         json: normalizedArgv.includes("--json"),

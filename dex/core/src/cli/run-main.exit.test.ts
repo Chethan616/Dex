@@ -52,7 +52,7 @@ const readConfigFileSnapshotMock = vi.hoisted(() =>
   })),
 );
 const setupWizardCommandMock = vi.hoisted(() => vi.fn(async () => {}));
-const runConchMock = vi.hoisted(() =>
+const runAtlasMock = vi.hoisted(() =>
   vi.fn<(options?: unknown) => Promise<void>>(async () => {}),
 );
 const commanderParseAsyncMock = vi.hoisted(() => vi.fn(async () => {}));
@@ -76,14 +76,14 @@ const maybeRunCliInContainerMock = vi.hoisted(() =>
   >((argv: string[]) => ({ handled: false, argv })),
 );
 
-function requireRunConchOptions(index = 0): { onReady?: unknown } {
-  const call = runConchMock.mock.calls[index];
+function requireRunAtlasOptions(index = 0): { onReady?: unknown } {
+  const call = runAtlasMock.mock.calls[index];
   if (!call) {
-    throw new Error(`expected runConch call ${index}`);
+    throw new Error(`expected runAtlas call ${index}`);
   }
   expect(typeof call[0]).toBe("object");
   if (typeof call[0] !== "object" || call[0] === null) {
-    throw new Error(`expected runConch call ${index} to receive options`);
+    throw new Error(`expected runAtlas call ${index} to receive options`);
   }
   return call[0] as { onReady?: unknown };
 }
@@ -252,8 +252,8 @@ vi.mock("../commands/onboard.js", () => ({
   setupWizardCommand: setupWizardCommandMock,
 }));
 
-vi.mock("../conch/conch.js", () => ({
-  runConch: runConchMock,
+vi.mock("../atlas/atlas.js", () => ({
+  runAtlas: runAtlasMock,
 }));
 
 vi.mock("./progress.js", () => ({
@@ -557,7 +557,7 @@ describe("runCli exit behavior", () => {
     expect(outputPrecomputedRootHelpTextMock).toHaveBeenCalledTimes(1);
     expect(hasEnvHttpProxyAgentConfiguredMock).not.toHaveBeenCalled();
     expect(ensureGlobalUndiciEnvProxyDispatcherMock).not.toHaveBeenCalled();
-    expect(runConchMock).not.toHaveBeenCalled();
+    expect(runAtlasMock).not.toHaveBeenCalled();
   });
 
   it("renders setup/onboard/configure help without building the full program", async () => {
@@ -1007,7 +1007,7 @@ describe("runCli exit behavior", () => {
 
     expect(readConfigFileSnapshotMock).toHaveBeenCalledTimes(1);
     expect(setupWizardCommandMock).toHaveBeenCalledWith({});
-    expect(runConchMock).not.toHaveBeenCalled();
+    expect(runAtlasMock).not.toHaveBeenCalled();
     expect(tryRouteCliMock).not.toHaveBeenCalled();
     expect(buildProgramMock).not.toHaveBeenCalled();
   });
@@ -1025,7 +1025,7 @@ describe("runCli exit behavior", () => {
 
     expect(readConfigFileSnapshotMock).toHaveBeenCalledTimes(1);
     expect(setupWizardCommandMock).toHaveBeenCalledWith({});
-    expect(runConchMock).not.toHaveBeenCalled();
+    expect(runAtlasMock).not.toHaveBeenCalled();
     expect(tryRouteCliMock).not.toHaveBeenCalled();
     expect(buildProgramMock).not.toHaveBeenCalled();
   });
@@ -1046,7 +1046,7 @@ describe("runCli exit behavior", () => {
 
     expect(readConfigFileSnapshotMock).toHaveBeenCalledTimes(1);
     expect(setupWizardCommandMock).toHaveBeenCalledWith({});
-    expect(runConchMock).not.toHaveBeenCalled();
+    expect(runAtlasMock).not.toHaveBeenCalled();
     expect(tryRouteCliMock).not.toHaveBeenCalled();
     expect(buildProgramMock).not.toHaveBeenCalled();
   });
@@ -1073,7 +1073,7 @@ describe("runCli exit behavior", () => {
         "Onboarding needs an interactive TTY. Use `dex onboard --non-interactive --accept-risk ...` for automation.",
       );
       expect(setupWizardCommandMock).not.toHaveBeenCalled();
-      expect(runConchMock).not.toHaveBeenCalled();
+      expect(runAtlasMock).not.toHaveBeenCalled();
       expect(tryRouteCliMock).not.toHaveBeenCalled();
       expect(buildProgramMock).not.toHaveBeenCalled();
     } finally {
@@ -1092,20 +1092,20 @@ describe("runCli exit behavior", () => {
     }
   });
 
-  it("keeps bare root invocations on Conch when config already exists", async () => {
+  it("keeps bare root invocations on Atlas when config already exists", async () => {
     await withInteractiveTty(async () => {
       await runCli(["node", "openclaw"]);
     });
 
     expect(readConfigFileSnapshotMock).toHaveBeenCalledTimes(1);
     expect(setupWizardCommandMock).not.toHaveBeenCalled();
-    expect(runConchMock).toHaveBeenCalledOnce();
-    const conchOptions = requireRunConchOptions();
-    expect(conchOptions).toEqual({ onReady: conchOptions.onReady });
-    expect(conchOptions.onReady).toBeTypeOf("function");
+    expect(runAtlasMock).toHaveBeenCalledOnce();
+    const atlasOptions = requireRunAtlasOptions();
+    expect(atlasOptions).toEqual({ onReady: atlasOptions.onReady });
+    expect(atlasOptions.onReady).toBeTypeOf("function");
   });
 
-  it("bootstraps env proxy before bare Conch startup", async () => {
+  it("bootstraps env proxy before bare Atlas startup", async () => {
     hasEnvHttpProxyAgentConfiguredMock.mockReturnValue(true);
     const stdinTty = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
     const stdoutTty = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
@@ -1128,29 +1128,29 @@ describe("runCli exit behavior", () => {
     }
 
     expect(ensureGlobalUndiciEnvProxyDispatcherMock).toHaveBeenCalledTimes(1);
-    expect(runConchMock).toHaveBeenCalledOnce();
-    const conchOptions = requireRunConchOptions();
-    expect(conchOptions).toEqual({ onReady: conchOptions.onReady });
-    expect(conchOptions.onReady).toBeTypeOf("function");
+    expect(runAtlasMock).toHaveBeenCalledOnce();
+    const atlasOptions = requireRunAtlasOptions();
+    expect(atlasOptions).toEqual({ onReady: atlasOptions.onReady });
+    expect(atlasOptions.onReady).toBeTypeOf("function");
     expect(ensureGlobalUndiciEnvProxyDispatcherMock.mock.invocationCallOrder[0]).toBeLessThan(
-      runConchMock.mock.invocationCallOrder[0],
+      runAtlasMock.mock.invocationCallOrder[0],
     );
   });
 
-  it("bootstraps env proxy before modern onboard Conch startup", async () => {
+  it("bootstraps env proxy before modern onboard Atlas startup", async () => {
     hasEnvHttpProxyAgentConfiguredMock.mockReturnValue(true);
 
     await runCli(["node", "openclaw", "onboard", "--modern", "--json"]);
 
     expect(ensureGlobalUndiciEnvProxyDispatcherMock).toHaveBeenCalledTimes(1);
-    expect(runConchMock).toHaveBeenCalledWith({
+    expect(runAtlasMock).toHaveBeenCalledWith({
       message: undefined,
       yes: false,
       json: true,
       interactive: true,
     });
     expect(ensureGlobalUndiciEnvProxyDispatcherMock.mock.invocationCallOrder[0]).toBeLessThan(
-      runConchMock.mock.invocationCallOrder[0],
+      runAtlasMock.mock.invocationCallOrder[0],
     );
   });
 

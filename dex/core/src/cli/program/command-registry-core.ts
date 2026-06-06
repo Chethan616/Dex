@@ -52,9 +52,9 @@ const coreEntrySpecs: readonly CommandGroupDescriptorSpec<
   ...withProgramOnlySpecs(
     defineImportedProgramCommandGroupSpecs([
       {
-        commandNames: ["conch"],
-        loadModule: () => import("./register.conch.js"),
-        exportName: "registerConchCommand",
+        commandNames: ["atlas"],
+        loadModule: () => import("./register.atlas.js"),
+        exportName: "registerAtlasCommand",
       },
       {
         commandNames: ["setup"],

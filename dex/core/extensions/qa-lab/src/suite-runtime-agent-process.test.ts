@@ -161,7 +161,7 @@ describe("qa suite runtime agent process helpers", () => {
         alternateModel: "openai/gpt-5.5-mini",
         providerMode: "mock-openai",
       } as never,
-      ["conch", "-m", "overview"],
+      ["atlas", "-m", "overview"],
       {
         env: {
           DEX_STATE_DIR: "/tmp/isolated-state",
@@ -179,7 +179,7 @@ describe("qa suite runtime agent process helpers", () => {
     expect(spawnCall?.[0]).toBe("/usr/bin/node");
     expect(spawnCall?.[1]).toEqual([
       path.join("/repo", "dist", "index.js"),
-      "conch",
+      "atlas",
       "-m",
       "overview",
     ]);

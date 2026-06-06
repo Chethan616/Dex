@@ -427,7 +427,7 @@ const McpConfigSchema = z
   .strict()
   .optional();
 
-const ConchSchema = z
+const AtlasSchema = z
   .object({
     rescue: z
       .object({
@@ -580,7 +580,7 @@ export const DexSchema = z
       })
       .strict()
       .optional(),
-    conch: ConchSchema,
+    atlas: AtlasSchema,
     update: z
       .object({
         channel: z.union([z.literal("stable"), z.literal("beta"), z.literal("dev")]).optional(),

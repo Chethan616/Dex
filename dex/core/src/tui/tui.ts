@@ -1296,7 +1296,7 @@ export async function runTui(opts: RunTuiOptions): Promise<TuiResult> {
     exitRequested = true;
     exitResult = {
       exitReason: result?.exitReason ?? "exit",
-      ...(result?.conchMessage ? { conchMessage: result.conchMessage } : {}),
+      ...(result?.atlasMessage ? { atlasMessage: result.atlasMessage } : {}),
     };
     const hardExitTimer = setTimeout(
       forceExit,

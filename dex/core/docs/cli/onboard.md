@@ -44,13 +44,13 @@ openclaw onboard --mode remote --remote-url wss://gateway-host:18789
 
 `--flow import` uses plugin-owned migration providers such as Hermes. It only runs against a fresh OpenClaw setup; if existing config, credentials, sessions, or workspace memory/identity files are present, reset or choose a fresh setup before importing.
 
-`--modern` starts the Conch conversational onboarding preview. Without
+`--modern` starts the Atlas conversational onboarding preview. Without
 `--modern`, `openclaw onboard` keeps the classic onboarding flow.
 
 On a fresh install where the active config file is missing or has no authored
 settings (empty or metadata-only), bare `openclaw` also starts the classic
 onboarding flow. Once a config file has authored settings, bare `openclaw`
-opens Conch instead.
+opens Atlas instead.
 
 Plaintext `ws://` is accepted for loopback, private IP literals, `.local`, and
 Tailnet `*.ts.net` gateway URLs. For other trusted private-DNS names, set

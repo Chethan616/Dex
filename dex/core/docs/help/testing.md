@@ -90,20 +90,20 @@ When debugging real providers/models (requires real creds):
     `npm-pack:`, verifies the dependency under the managed npm project root,
     then asks a live OpenAI model to call the plugin tool and return the hidden
     slug.
-- Conch rescue command smoke: `pnpm test:live:conch-rescue-channel`
+- Atlas rescue command smoke: `pnpm test:live:atlas-rescue-channel`
   - Opt-in belt-and-suspenders check for the message-channel rescue command
-    surface. It exercises `/conch status`, queues a persistent model
-    change, replies `/conch yes`, and verifies the audit/config write path.
-- Conch planner Docker smoke: `pnpm test:docker:conch-planner`
-  - Runs Conch in a configless container with a fake Claude CLI on `PATH`
+    surface. It exercises `/atlas status`, queues a persistent model
+    change, replies `/atlas yes`, and verifies the audit/config write path.
+- Atlas planner Docker smoke: `pnpm test:docker:atlas-planner`
+  - Runs Atlas in a configless container with a fake Claude CLI on `PATH`
     and verifies the fuzzy planner fallback translates into an audited typed
     config write.
-- Conch first-run Docker smoke: `pnpm test:docker:conch-first-run`
+- Atlas first-run Docker smoke: `pnpm test:docker:atlas-first-run`
   - Starts from an empty OpenClaw state dir, verifies the modern onboard
-    Conch entrypoint, applies setup/model/agent/Discord plugin + SecretRef
+    Atlas entrypoint, applies setup/model/agent/Discord plugin + SecretRef
     writes, validates config, and verifies audit entries. The same Ring 0 setup
     path is also covered in QA Lab by
-    `pnpm openclaw qa suite --scenario conch-ring-zero-setup`.
+    `pnpm openclaw qa suite --scenario atlas-ring-zero-setup`.
 - Moonshot/Kimi cost smoke: with `MOONSHOT_API_KEY` set, run
   `openclaw models list --provider moonshot --json`, then run an isolated
   `openclaw agent --local --session-id live-kimi-cost --message 'Reply exactly: KIMI_LIVE_OK' --thinking off --json`

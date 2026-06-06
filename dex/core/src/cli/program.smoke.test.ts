@@ -5,7 +5,7 @@ import {
   ensureConfigReady,
   installBaseProgramMocks,
   installSmokeProgramMocks,
-  runConch,
+  runAtlas,
   runTui,
   runtime,
   setupCommand,
@@ -48,7 +48,7 @@ describe("cli program (smoke)", () => {
     program = createProgram();
     vi.clearAllMocks();
     runTui.mockResolvedValue(undefined);
-    runConch.mockResolvedValue(undefined);
+    runAtlas.mockResolvedValue(undefined);
     ensureConfigReady.mockResolvedValue(undefined);
   });
 
@@ -68,9 +68,9 @@ describe("cli program (smoke)", () => {
     expect(options?.forceProcessExitOnReturn).toBe(true);
   });
 
-  it("runs conch one-shot requests", async () => {
-    await runProgram(["conch", "--message", "status"]);
-    const options = firstMockArg(runConch) as {
+  it("runs atlas one-shot requests", async () => {
+    await runProgram(["atlas", "--message", "status"]);
+    const options = firstMockArg(runAtlas) as {
       message?: string;
       yes?: boolean;
       json?: boolean;

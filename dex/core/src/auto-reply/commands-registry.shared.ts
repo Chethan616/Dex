@@ -261,9 +261,9 @@ export function buildBuiltinChatCommands(
       ],
     }),
     defineChatCommand({
-      key: "conch",
-      description: "Run the Conch setup and repair helper.",
-      textAlias: "/conch",
+      key: "atlas",
+      description: "Run the Atlas setup and repair helper.",
+      textAlias: "/atlas",
       acceptsArgs: true,
       scope: "text",
       category: "management",

@@ -33,10 +33,10 @@ describe("getSlashCommands", () => {
     const commands = getSlashCommands();
     const status = commands.find((command) => command.name === "status");
     const gatewayStatus = commands.find((command) => command.name === "gateway-status");
-    const conch = commands.find((command) => command.name === "conch");
+    const atlas = commands.find((command) => command.name === "atlas");
     expect(status?.description).toBe("Show current status.");
     expect(gatewayStatus?.description).toBe("Show gateway status summary");
-    expect(conch?.description).toBe("Return to Conch");
+    expect(atlas?.description).toBe("Return to Atlas");
   });
 
   it("distinguishes new-session and reset command descriptions", () => {
@@ -103,6 +103,6 @@ describe("helpText", () => {
     expect(output).toContain("/elev <on|off|ask|full>");
     expect(output).toContain("/gateway-status");
     expect(output).toContain("/gwstatus");
-    expect(output).toContain("/conch [request]");
+    expect(output).toContain("/atlas [request]");
   });
 });

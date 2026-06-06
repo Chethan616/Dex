@@ -381,10 +381,10 @@ describe("models.pricing", () => {
   });
 });
 
-describe("conch.rescue", () => {
+describe("atlas.rescue", () => {
   it("accepts documented rescue config", () => {
     const result = DexSchema.safeParse({
-      conch: {
+      atlas: {
         rescue: {
           enabled: "auto",
           ownerDmOnly: false,
@@ -397,7 +397,7 @@ describe("conch.rescue", () => {
 
   it("accepts boolean rescue enablement", () => {
     const result = DexSchema.safeParse({
-      conch: {
+      atlas: {
         rescue: {
           enabled: true,
           ownerDmOnly: true,
@@ -409,7 +409,7 @@ describe("conch.rescue", () => {
 
   it("rejects unknown rescue keys", () => {
     const result = DexSchema.safeParse({
-      conch: {
+      atlas: {
         rescue: {
           enabled: true,
           shell: true,

@@ -5,8 +5,8 @@ import {
   rewriteUpdateFlagArgv,
   resolveMissingPluginCommandMessage,
   shouldEnsureCliPath,
-  shouldStartConchForBareRoot,
-  shouldStartConchForModernOnboard,
+  shouldStartAtlasForBareRoot,
+  shouldStartAtlasForModernOnboard,
   shouldStartProxyForCli,
   shouldUseBrowserHelpFastPath,
   shouldUseNodesHelpFastPath,
@@ -139,24 +139,24 @@ describe("shouldEnsureCliPath", () => {
   });
 });
 
-describe("shouldStartConchForBareRoot", () => {
-  it("starts Conch for bare root invocations", () => {
-    expect(shouldStartConchForBareRoot(["node", "openclaw"])).toBe(true);
-    expect(shouldStartConchForBareRoot(["node", "openclaw", "--profile", "work"])).toBe(true);
-    expect(shouldStartConchForBareRoot(["node", "openclaw", "--dev"])).toBe(true);
+describe("shouldStartAtlasForBareRoot", () => {
+  it("starts Atlas for bare root invocations", () => {
+    expect(shouldStartAtlasForBareRoot(["node", "openclaw"])).toBe(true);
+    expect(shouldStartAtlasForBareRoot(["node", "openclaw", "--profile", "work"])).toBe(true);
+    expect(shouldStartAtlasForBareRoot(["node", "openclaw", "--dev"])).toBe(true);
   });
 
-  it("does not start Conch for help, version, or commands", () => {
-    expect(shouldStartConchForBareRoot(["node", "openclaw", "--help"])).toBe(false);
-    expect(shouldStartConchForBareRoot(["node", "openclaw", "-V"])).toBe(false);
-    expect(shouldStartConchForBareRoot(["node", "openclaw", "status"])).toBe(false);
+  it("does not start Atlas for help, version, or commands", () => {
+    expect(shouldStartAtlasForBareRoot(["node", "openclaw", "--help"])).toBe(false);
+    expect(shouldStartAtlasForBareRoot(["node", "openclaw", "-V"])).toBe(false);
+    expect(shouldStartAtlasForBareRoot(["node", "openclaw", "status"])).toBe(false);
   });
 });
 
-describe("shouldStartConchForModernOnboard", () => {
-  it("starts Conch before heavy command registration for modern onboard", () => {
+describe("shouldStartAtlasForModernOnboard", () => {
+  it("starts Atlas before heavy command registration for modern onboard", () => {
     expect(
-      shouldStartConchForModernOnboard([
+      shouldStartAtlasForModernOnboard([
         "node",
         "openclaw",
         "onboard",
@@ -168,9 +168,9 @@ describe("shouldStartConchForModernOnboard", () => {
   });
 
   it("keeps classic onboard and help on the normal command path", () => {
-    expect(shouldStartConchForModernOnboard(["node", "openclaw", "onboard"])).toBe(false);
+    expect(shouldStartAtlasForModernOnboard(["node", "openclaw", "onboard"])).toBe(false);
     expect(
-      shouldStartConchForModernOnboard(["node", "openclaw", "onboard", "--modern", "--help"]),
+      shouldStartAtlasForModernOnboard(["node", "openclaw", "onboard", "--modern", "--help"]),
     ).toBe(false);
   });
 });

@@ -180,8 +180,8 @@ export function registerOnboardCommand(program: Command): void {
     const { defaultRuntime } = await import("../../runtime.js");
     await runCommandWithRuntime(defaultRuntime, async () => {
       if (opts.modern) {
-        const { runConch } = await import("../../conch/conch.js");
-        await runConch({
+        const { runAtlas } = await import("../../atlas/atlas.js");
+        await runAtlas({
           message: opts.nonInteractive ? "overview" : undefined,
           yes: false,
           json: Boolean(opts.json),

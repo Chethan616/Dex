@@ -419,10 +419,10 @@ export const mainLanes = [
       stateScenario: "empty",
     },
   ),
-  lane("conch-rescue", "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:conch-rescue", {
+  lane("atlas-rescue", "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:atlas-rescue", {
     stateScenario: "empty",
   }),
-  lane("conch-planner", "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:conch-planner", {
+  lane("atlas-planner", "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:atlas-planner", {
     stateScenario: "empty",
   }),
   serviceLane(
@@ -484,8 +484,8 @@ export const mainLanes = [
     stateScenario: "empty",
   }),
   lane(
-    "conch-first-run",
-    "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:conch-first-run",
+    "atlas-first-run",
+    "DEX_SKIP_DOCKER_BUILD=1 pnpm test:docker:atlas-first-run",
     { stateScenario: "empty" },
   ),
   lane(

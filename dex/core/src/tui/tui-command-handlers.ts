@@ -126,7 +126,7 @@ export function createCommandHandlers(context: CommandHandlerContext) {
   const setAgent = async (id: string) => {
     state.currentAgentId = normalizeAgentId(id);
     await setSession("");
-    chatLog.addSystem(`agent set to ${state.currentAgentId}; use /conch to return`);
+    chatLog.addSystem(`agent set to ${state.currentAgentId}; use /atlas to return`);
   };
 
   const closeOverlayAndRender = () => {
@@ -436,13 +436,13 @@ export function createCommandHandlers(context: CommandHandlerContext) {
           await sendMessage(raw);
         }
         break;
-      case "conch":
+      case "atlas":
         chatLog.addSystem(
-          args ? `returning to Conch with request: ${args}` : "returning to Conch",
+          args ? `returning to Atlas with request: ${args}` : "returning to Atlas",
         );
         requestExit({
-          exitReason: "return-to-conch",
-          ...(args ? { conchMessage: args } : {}),
+          exitReason: "return-to-atlas",
+          ...(args ? { atlasMessage: args } : {}),
         });
         break;
       case "session":

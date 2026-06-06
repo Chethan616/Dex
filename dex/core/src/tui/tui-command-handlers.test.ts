@@ -496,16 +496,16 @@ describe("tui command handlers", () => {
     expect(addSystem).toHaveBeenCalledWith("Version: 1.2.3");
   });
 
-  it("returns to Conch with an optional request", async () => {
+  it("returns to Atlas with an optional request", async () => {
     const { handleCommand, addSystem, requestExit, sendChat } = createHarness();
 
-    await handleCommand("/conch restart gateway");
+    await handleCommand("/atlas restart gateway");
 
     expect(sendChat).not.toHaveBeenCalled();
-    expect(addSystem).toHaveBeenCalledWith("returning to Conch with request: restart gateway");
+    expect(addSystem).toHaveBeenCalledWith("returning to Atlas with request: restart gateway");
     expect(requestExit).toHaveBeenCalledWith({
-      exitReason: "return-to-conch",
-      conchMessage: "restart gateway",
+      exitReason: "return-to-atlas",
+      atlasMessage: "restart gateway",
     });
   });
 
@@ -520,14 +520,14 @@ describe("tui command handlers", () => {
     expect(addSystem).not.toHaveBeenCalled();
   });
 
-  it("leaves a Conch breadcrumb after switching agents", async () => {
+  it("leaves a Atlas breadcrumb after switching agents", async () => {
     const { handleCommand, addSystem, setSession, state } = createHarness();
 
     await handleCommand("/agent Work");
 
     expect(state.currentAgentId).toBe("work");
     expect(setSession).toHaveBeenCalledWith("");
-    expect(addSystem).toHaveBeenCalledWith("agent set to work; use /conch to return");
+    expect(addSystem).toHaveBeenCalledWith("agent set to work; use /atlas to return");
   });
 
   it("marks the generated runId as local before gateway events arrive", async () => {

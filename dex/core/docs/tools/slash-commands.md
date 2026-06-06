@@ -233,7 +233,7 @@ plugins.
     | `/status` | Show execution/runtime status, Gateway and system uptime, plus provider usage/quota |
     | `/goal [status\|start\|pause\|resume\|complete\|block\|clear] ...` | Manage the current session's durable [goal](/tools/goal) |
     | `/diagnostics [note]` | Owner-only support-report flow. Asks for exec approval every time |
-    | `/conch <request>` | Run the Conch setup and repair helper from an owner DM |
+    | `/atlas <request>` | Run the Atlas setup and repair helper from an owner DM |
     | `/tasks` | List active/recent background tasks for the current session |
     | `/context [list\|detail\|map\|json]` | Explain how context is assembled |
     | `/whoami` | Show your sender id. Alias: `/id` |

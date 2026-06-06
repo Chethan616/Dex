@@ -18,11 +18,11 @@ export type TuiOptions = {
   forceProcessExitOnReturn?: boolean;
 };
 
-export type TuiExitReason = "exit" | "return-to-conch";
+export type TuiExitReason = "exit" | "return-to-atlas";
 
 export type TuiResult = {
   exitReason: TuiExitReason;
-  conchMessage?: string;
+  atlasMessage?: string;
 };
 
 export type ChatEvent = {
