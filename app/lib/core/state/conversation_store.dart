@@ -16,6 +16,8 @@ import '../models/agent_state.dart';
 import '../models/engine.dart';
 import '../models/gateway_event.dart';
 import '../models/message.dart';
+import '../models/tool_activity.dart';
+import '../tool_registry.dart';
 
 class ConversationStore extends ChangeNotifier {
   ConversationStore(this._client) {
@@ -40,6 +42,30 @@ class ConversationStore extends ChangeNotifier {
   AgentState get state => _state;
   ActionPreview? get pending => _pending;
 
+  // -----------------------------------------------------------------
+  // v1.2 Live Tool Activity tracking (rendered in the Live panel
+  // straight from raw toolCall + toolResult events; no LLM tokens
+  // spent narrating "I'm running command X").
+  // -----------------------------------------------------------------
+  static const int _activityBufferCap = 50;
+  final List<ToolActivity> _activities = <ToolActivity>[];
+
+  /// All known tool activities, most-recent first. The Live panel renders
+  /// the currently-running one as a full card and shows the last few
+  /// completed ones as collapsed rows. Bounded so a long session can't
+  /// leak memory.
+  List<ToolActivity> get activities =>
+      List<ToolActivity>.unmodifiable(_activities);
+
+  /// The most recent activity that's still running (if any). Drives the
+  /// "currently running" card at the top of the Live panel.
+  ToolActivity? get currentActivity {
+    for (final a in _activities) {
+      if (a.state == ToolActivityState.running) return a;
+    }
+    return null;
+  }
+
   /// Most-recent running tool-chip message, or `null` when nothing is
   /// currently running. The Live panel uses this to render the "currently
   /// routing through engine X" card while [state] is `acting`. Cheap O(n)
@@ -62,6 +88,14 @@ class ConversationStore extends ChangeNotifier {
   @visibleForTesting
   void addMessageForTesting(Message m) {
     _messages.add(m);
+    notifyListeners();
+  }
+
+  /// Test-only seam: inject a ToolActivity at the front of the list +
+  /// notify. v1.2 Live panel renders these directly.
+  @visibleForTesting
+  void addActivityForTesting(ToolActivity a) {
+    _activities.insert(0, a);
     notifyListeners();
   }
 
@@ -147,6 +181,17 @@ class ConversationStore extends ChangeNotifier {
     }
     _pending = null;
     _lastPendingChipId = null;
+    // v1.2: any running ActivityCard gets the abort state so the user sees
+    // exactly which tool was interrupted.
+    for (var i = 0; i < _activities.length; i++) {
+      if (_activities[i].state == ToolActivityState.running) {
+        _activities[i] = _activities[i].copyWith(
+          state: ToolActivityState.aborted,
+          ok: false,
+          endedAt: DateTime.now(),
+        );
+      }
+    }
     _setState(AgentState.idle);
     notifyListeners();
   }
@@ -159,6 +204,7 @@ class ConversationStore extends ChangeNotifier {
     _messages.clear();
     _streaming.clear();
     _toolByCallId.clear();
+    _activities.clear();
     _lastPendingChipId = null;
     _pending = null;
     _setState(AgentState.idle);
@@ -292,6 +338,7 @@ class ConversationStore extends ChangeNotifier {
     //
     // engine is inferred from toolName via engineForToolId() until the
     // gateway emits a structured engineAttempt frame (C.7+).
+    final engineId = engineForToolId(toolName);
     _messages.add(Message(
       id: chipId,
       speaker: MessageSpeaker.toolChip,
@@ -300,8 +347,29 @@ class ConversationStore extends ChangeNotifier {
       toolId: toolName,
       toolGoal: goalLabel,
       chipState: ToolChipState.running,
-      engine: engineForToolId(toolName),
+      engine: engineId,
     ));
+
+    // v1.2 Live Tool Activity: append a running activity card the Live
+    // panel renders straight from this event. The LLM doesn't have to
+    // narrate "I'm running X" -- the user sees the args and (when the
+    // result lands) the output, no extra tokens.
+    final argsMap = args is Map ? Map<String, dynamic>.from(args) : null;
+    _activities.insert(
+      0,
+      ToolActivity(
+        callId: callId,
+        toolId: toolName,
+        displayName: descriptorFor(toolName).friendlyName,
+        engine: engineId,
+        args: argsMap,
+        goalLabel: goalLabel,
+        startedAt: DateTime.now(),
+      ),
+    );
+    if (_activities.length > _activityBufferCap) {
+      _activities.removeRange(_activityBufferCap, _activities.length);
+    }
     _messages.add(Message(
       id: actionId,
       speaker: MessageSpeaker.action,
@@ -366,7 +434,42 @@ class ConversationStore extends ChangeNotifier {
       ));
     }
 
+    // v1.2 Live Tool Activity: flip the matching activity card to done /
+    // failed with the captured output. Pull every signal the result frame
+    // carries: structured steps, summary, stdout, stderr, result text.
+    _updateActivity(evt.runId, ok: ok, payload: payload, result: result);
+
     notifyListeners();
+  }
+
+  void _updateActivity(
+    String callId, {
+    required bool ok,
+    required Map<String, dynamic> payload,
+    required Map<String, dynamic> result,
+  }) {
+    final idx = _activities.indexWhere((a) => a.callId == callId);
+    if (idx < 0) return;
+    final lines = <String>[];
+    final steps = (result['steps'] as List?)?.cast<String>();
+    if (steps != null) lines.addAll(steps);
+    final stdoutText = (result['stdout'] ?? result['log'] ?? result['log_excerpt']) as String?;
+    if (stdoutText != null && stdoutText.trim().isNotEmpty) {
+      lines.addAll(stdoutText.split('\n').take(40));
+    }
+    final stderrText = result['stderr'] as String?;
+    if (stderrText != null && stderrText.trim().isNotEmpty) {
+      lines.add('--- stderr ---');
+      lines.addAll(stderrText.split('\n').take(20));
+    }
+    final summary = (payload['summary'] ?? result['summary'] ?? result['text']) as String?;
+    _activities[idx] = _activities[idx].copyWith(
+      state: ok ? ToolActivityState.done : ToolActivityState.failed,
+      ok: ok,
+      endedAt: DateTime.now(),
+      outputLines: lines.map((l) => l.length > 200 ? '${l.substring(0, 199)}…' : l).toList(),
+      summary: summary,
+    );
   }
 
   static const _toolLabelMax = 80;

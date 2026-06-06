@@ -4,6 +4,7 @@
 import 'package:dex/core/gateway_client.dart';
 import 'package:dex/core/models/engine.dart';
 import 'package:dex/core/models/message.dart';
+import 'package:dex/core/models/tool_activity.dart';
 import 'package:dex/core/state/conversation_store.dart';
 import 'package:dex/main.dart';
 import 'package:dex/widgets/tool_chip.dart';
@@ -20,6 +21,22 @@ Message _runningChip({EngineId engine = EngineId.browserUse, String goal = 'take
     toolGoal: goal,
     chipState: ToolChipState.running,
     engine: engine,
+  );
+}
+
+ToolActivity _runningActivity({
+  EngineId engine = EngineId.browserUse,
+  String goal = 'livechat typing test',
+  String toolId = 'run_browser_task',
+}) {
+  return ToolActivity(
+    callId: 'call-1',
+    toolId: toolId,
+    displayName: 'Browser',
+    engine: engine,
+    args: <String, dynamic>{'goal': goal, 'url_hint': 'https://livechat.com'},
+    goalLabel: goal,
+    startedAt: DateTime.now(),
   );
 }
 
@@ -40,7 +57,7 @@ void main() {
   });
 
   group('Live panel running-engine card', () {
-    testWidgets('shows engine pill + goal when a running chip exists', (tester) async {
+    testWidgets('shows ActivityCard with engine pill + tool + goal when a running activity exists', (tester) async {
       tester.view.physicalSize = const Size(1400, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -54,20 +71,33 @@ void main() {
       await tester.pump();
 
       // Before injection: "No pending action." copy is visible in the Live
-      // column. After injecting a running chip with engine=browser-use,
-      // the running-engine card replaces it.
+      // column. After injecting a running ToolActivity, the v1.2 ActivityCard
+      // replaces it with engine pill + tool name + state badge + args block.
       expect(find.text('No pending action.'), findsOneWidget);
 
-      store.addMessageForTesting(_runningChip(
+      store.addActivityForTesting(_runningActivity(
         engine: EngineId.browserUse,
         goal: 'livechat typing test',
+        toolId: 'run_browser_task',
       ));
       await tester.pump();
 
       expect(find.text('No pending action.'), findsNothing);
-      expect(find.text('Running'), findsOneWidget);
+      // Engine pill text
       expect(find.text('browser-use'), findsAtLeastNWidgets(1));
-      expect(find.text('livechat typing test'), findsAtLeastNWidgets(1));
+      // Friendly display name in the card header
+      expect(find.text('Browser'), findsAtLeastNWidgets(1));
+      // Raw tool id rendered above the args block
+      expect(find.text('run_browser_task'), findsAtLeastNWidgets(1));
+      // Goal appears as an arg row ("goal: livechat typing test"). We assert
+      // the goal substring exists via byWidgetPredicate -- the Text widget
+      // uses Text.rich so a literal find.text wouldn't match.
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is RichText && w.text.toPlainText().contains('livechat typing test'),
+        ),
+        findsAtLeastNWidgets(1),
+      );
     });
 
     testWidgets('runningEngineChip getter returns the latest running chip', (tester) async {

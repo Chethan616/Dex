@@ -5,16 +5,17 @@
 // pane resize, save sizes to a tiny preferences file.
 
 import 'package:flutter/material.dart';
-import 'package:hux/hux.dart';
 
 import '../core/models/device.dart';
 import '../core/models/message.dart';
 import '../core/models/skill.dart';
+import '../core/models/tool_activity.dart';
 import '../core/state/conversation_store.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/action_preview_card.dart';
 import '../widgets/action_step.dart';
+import '../widgets/activity_card.dart';
 import '../widgets/agent_status_pill.dart';
 import '../widgets/command_bar.dart';
 import '../widgets/connection_banner.dart';
@@ -277,7 +278,9 @@ class _LivePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final preview = store.pending;
-    final runningChip = store.runningEngineChip;
+    final activities = store.activities;
+    final running = store.currentActivity;
+    final completed = activities.where((a) => a.state != ToolActivityState.running).toList();
     return Container(
       color: DexColors.bg,
       padding: const EdgeInsets.all(DexSpace.lg),
@@ -286,52 +289,39 @@ class _LivePanel extends StatelessWidget {
         children: [
           Text('Live', style: DexType.caption(color: DexColors.textFaint)),
           const SizedBox(height: DexSpace.sm),
-          if (preview != null)
+          // Pending Action Preview keeps top priority (amber).
+          if (preview != null) ...[
             ActionPreviewCard(
               preview: preview,
               onApprove: store.approve,
               onDeny: store.deny,
-            )
-          else if (runningChip != null && runningChip.engine != null)
-            _RunningEngineCard(message: runningChip)
-          else
+            ),
+            const SizedBox(height: DexSpace.md),
+          ],
+          // Currently-running activity (or empty hint).
+          if (running != null)
+            ActivityCard(activity: running)
+          else if (preview == null && activities.isEmpty)
             _CollapsedLive(state: store.state),
-          const Spacer(),
-        ],
-      ),
-    );
-  }
-}
-
-/// "Currently routing through engine X" — the Live panel's running-state
-/// surface. Wraps the engine pill + goal label in a [HuxCard] so the v1.2
-/// Live panel rebuild inherits the Hux dashboard vocabulary out of the
-/// box. Tokens (`DexColors.surface`, `DexColors.border`) still drive the
-/// look; Hux is the structure.
-class _RunningEngineCard extends StatelessWidget {
-  const _RunningEngineCard({required this.message});
-  final Message message;
-
-  @override
-  Widget build(BuildContext context) {
-    // HuxCard.action slot is narrow, so the engine pill lives inside the
-    // child column instead of in action. This is the same shape v1.2's
-    // LiveEntry list cards will use.
-    return HuxCard(
-      title: 'Running',
-      backgroundColor: DexColors.surface,
-      borderColor: DexColors.border,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          EnginePill(engine: message.engine!, dense: false),
-          const SizedBox(height: DexSpace.sm),
-          Text(
-            message.toolGoal ?? '',
-            style: DexType.mono(color: DexColors.text),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
+          // Last few completed activities collapsed to one-liners.
+          if (completed.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: DexSpace.sm),
+              child: Text(
+                'Recent',
+                style: DexType.caption(color: DexColors.textFaint),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                children: completed
+                    .take(15)
+                    .map((a) => ActivityCard(activity: a, compact: true))
+                    .toList(growable: false),
+              ),
+            ),
+          ] else
+            const Spacer(),
         ],
       ),
     );
