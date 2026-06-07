@@ -3,7 +3,7 @@ windows-desktop-control -- the Dex MCP glue for native Windows GUIs (UFO2).
 
 A FastMCP stdio server that exposes one tool to the Dex agent:
 
-    run_desktop_task(goal, app_hint="", timeout_s=120, dry_run=False)
+    run_desktop_task(goal, app_hint="", timeout_s=300, dry_run=False)
 
 It launches Microsoft UFO2 as a subprocess to drive Windows GUIs by their
 accessibility tree, returns a structured summary the LLM can read, and
@@ -65,7 +65,7 @@ mcp = FastMCP("windows-desktop-control")
 def run_desktop_task(
     goal: str,
     app_hint: str = "",
-    timeout_s: int = 120,
+    timeout_s: int = 300,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Drive a Windows application GUI to accomplish a natural-language goal.
@@ -78,7 +78,13 @@ def run_desktop_task(
     Args:
         goal: Plain-language task, e.g. "in Excel, sum column B".
         app_hint: Optional app to focus first, e.g. "Excel".
-        timeout_s: Hard timeout, clamped to [1, 600].
+        timeout_s: Hard timeout in seconds, clamped to [1, 600]. Default
+            300s because UFO2 runs Gemini Flash-Latest through an OpenAI-
+            compatible client and a single multimodal planning step
+            commonly takes 30-60s on the free tier; 5 minutes leaves room
+            for 4-5 sequential steps. Bump higher only if you're on a
+            slower tier; UFO2 can also hit Windows kill-tree quirks above
+            10 min.
         dry_run: If true, return what would run without executing.
 
     Returns:
@@ -137,7 +143,25 @@ def run_desktop_task(
         )
     except subprocess.TimeoutExpired as e:
         log_path.write_text(serialize_timeout(e), encoding="utf-8")
-        return result(False, f"timeout after {timeout_s}s", [], task_id, log_path)
+        # Surface the LAST partial stdout/stderr the subprocess managed to
+        # write before we killed it. Previously the result was just
+        # "timeout after Ns" with empty steps -- the Flutter Activity card
+        # then had nothing actionable. Now the user sees the round/step
+        # UFO2 was on (e.g. "Round 1, Step 1, Agent: HostAgent") so they
+        # know whether Gemini hung at planning or at action.
+        partial_stdout = (e.stdout or b"").decode("utf-8", errors="replace") if isinstance(e.stdout, bytes) else (e.stdout or "")
+        partial_stderr = (e.stderr or b"").decode("utf-8", errors="replace") if isinstance(e.stderr, bytes) else (e.stderr or "")
+        tail_lines: list[str] = []
+        for source in (partial_stdout, partial_stderr):
+            tail_lines.extend(line for line in source.strip().splitlines()[-8:] if line.strip())
+        last_progress = next(
+            (l for l in reversed(tail_lines) if "Round" in l or "Step" in l or "Phase" in l),
+            None,
+        )
+        summary = f"timeout after {timeout_s}s"
+        if last_progress:
+            summary = f"{summary} (last progress: {last_progress.strip()[:120]})"
+        return result(False, summary, tail_lines[-6:], task_id, log_path)
     except FileNotFoundError as e:
         return result(False, f"failed to launch UFO2 ({e})", [], task_id, None)
 
@@ -161,12 +185,23 @@ def _resolve_python() -> Path | None:
 
 def _summarize(stdout: str, stderr: str, rc: int) -> tuple[str, list[str]]:
     """UFO2 logs verbosely to its own files; stdout is normally quiet at
-    WARNING. When something does print, surface the tail."""
-    tail = (stdout.strip().splitlines() or stderr.strip().splitlines())[-5:]
+    WARNING. When something does print, surface the tail. On non-zero
+    exits we always also surface stderr so the Flutter Activity card
+    shows the actual Python traceback / authlib warning / Gemini API
+    error instead of just 'UFO2 exited with code N'."""
     if rc == 0:
+        tail = (stdout.strip().splitlines() or stderr.strip().splitlines())[-5:]
         head = tail[-1] if tail else "completed"
         return head, tail
-    return f"UFO2 exited with code {rc}", tail
+    stderr_tail = stderr.strip().splitlines()[-8:]
+    stdout_tail = stdout.strip().splitlines()[-4:]
+    # Pick the most useful single-line summary -- prefer the last stderr
+    # line (Python errors land there), fall back to stdout tail.
+    head_line = (stderr_tail[-1] if stderr_tail else (stdout_tail[-1] if stdout_tail else "")).strip()
+    summary = f"UFO2 exited with code {rc}"
+    if head_line:
+        summary = f"{summary}: {head_line[:140]}"
+    return summary, stdout_tail + stderr_tail
 
 
 if __name__ == "__main__":

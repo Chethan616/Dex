@@ -2,6 +2,34 @@
 
 Repo: https://github.com/Chethan616/Dex
 
+## 2026.6.19 (UFO² hardening — longer default timeout + visible stderr)
+
+### Fixes
+
+- `windows-desktop-control/server.py` defaults `timeout_s` from 120 →
+  300 seconds. UFO2 runs Gemini Flash-Latest through an OpenAI-compat
+  client; a single multimodal planning step commonly takes 30-60s on
+  the free tier, so 120s only allowed 2 steps before the parent killed
+  the subprocess. 300s leaves room for a real 4-5 step task. Still
+  clamped to [1, 600]; bump higher only on slow tiers.
+- Timeout path now surfaces the LAST partial stdout/stderr UFO2
+  managed to write before kill. Previously the result was just
+  `"timeout after 120s"` with empty `steps[]` so the Flutter Activity
+  card had nothing actionable. New summary reads e.g.
+  `"timeout after 300s (last progress: Round 1, Step 2, Agent:
+  AppAgent)"` — Chethan can immediately tell whether Gemini hung at
+  planning or action.
+- Non-zero-exit path now appends stderr tail (last 8 lines) to the
+  result steps and pulls the most useful one-line error into the
+  summary. Previously the Activity card just showed
+  `"UFO2 exited with code N"` and stderr disappeared into the per-task
+  log only.
+
+From the slash-plan "UFO² hardening — open follow-ups" section.
+Does not change UFO2's LLM model — that's still the user's
+agents.yaml choice (Gemini Flash-Latest by default; switch to a paid
+tier or Claude/OpenAI for real performance).
+
 ## 2026.6.18 (MCP driver path bug + browser-use vision)
 
 ### Fixes
