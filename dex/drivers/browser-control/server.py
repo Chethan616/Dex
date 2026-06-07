@@ -228,6 +228,8 @@ async def _run_agent(
     """
     from browser_use import Agent, BrowserSession  # type: ignore[import-not-found]
 
+    from canvas_detection import make_canvas_hint  # type: ignore[import-not-found]
+
     # Provider-aware LLM construction (Phase C.6). Falls back to Groq Qwen 3
     # when DEX_BROWSER_PROVIDER is unset.
     llm = _resolve_browser_llm()
@@ -235,6 +237,16 @@ async def _run_agent(
     # The browser-use agent reads the task at construction; we prepend the
     # url_hint so the agent navigates there as step 1 if provided.
     task = goal if not url_hint else f"Navigate to {url_hint}. Then: {goal}"
+
+    # Phase E.3: when the target URL belongs to a known canvas-heavy site
+    # (Figma, Miro, Canva, web games, ...), prepend a hint nudging the
+    # browser-use LLM toward pixel-coordinate clicks instead of wasted DOM
+    # selector probes. Cheap pure-function check; no Playwright DOM scan
+    # required (that comes in a follow-up when OmniParser MCP is available
+    # to pre-parse the canvas elements for the LLM).
+    canvas_hint = make_canvas_hint(url_hint) if url_hint else None
+    if canvas_hint:
+        task = f"{canvas_hint}\n\n{task}"
 
     # Vision enables browser-use's "look at the screenshot of the current
     # page" reasoning step. Without it, on multimodal models like Gemini
