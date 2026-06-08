@@ -1,14 +1,17 @@
 // Dex -- entry point.
 //
 // Boots the app, wires the GatewayClient + ConversationStore, and hands the
-// home screen the listenable store. v1.2 Phase 11 adds a window_manager
-// + system_tray pair so closing the window hides to the tray instead of
-// killing the gateway connection.
+// home screen the listenable store. v1.2 Phase 11 layered on:
+//   - window_manager + tray_manager: closing the window hides to the
+//     tray instead of killing the gateway connection.
+//   - hotkey_manager: system-scope Ctrl+K summons the SpotlightOverlay
+//     even when Dex is hidden in the tray.
 
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'core/gateway_client.dart';
@@ -16,6 +19,11 @@ import 'core/state/conversation_store.dart';
 import 'platform/win/tray.dart';
 import 'screens/home_desktop.dart';
 import 'theme/theme.dart';
+import 'widgets/spotlight_overlay.dart';
+
+/// Lets the global-hotkey handler call into Navigator from a non-widget
+/// context. Same key bound onto the MaterialApp below.
+final GlobalKey<NavigatorState> dexNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +50,37 @@ Future<void> main() async {
 
   final store = ConversationStore(client);
 
+  // Register the global Ctrl+K hotkey AFTER the store + tray exist so
+  // the handler has everything it needs. Failures are non-fatal --
+  // the in-app Shortcuts on CommandBar still bind Ctrl+K within the
+  // window, so the worst case is "no summon while hidden in tray".
+  if (Platform.isWindows) {
+    await _registerSpotlightHotkey(store);
+  }
+
   runApp(DexApp(store: store));
+}
+
+Future<void> _registerSpotlightHotkey(ConversationStore store) async {
+  try {
+    await hotKeyManager.unregisterAll();
+    final hotKey = HotKey(
+      key: PhysicalKeyboardKey.keyK,
+      modifiers: [HotKeyModifier.control],
+      scope: HotKeyScope.system,
+    );
+    await hotKeyManager.register(
+      hotKey,
+      keyDownHandler: (_) {
+        final ctx = dexNavigatorKey.currentContext;
+        if (ctx == null) return;
+        SpotlightOverlay.show(ctx, store);
+      },
+    );
+  } catch (e, st) {
+    // Don't crash the app over a hotkey registration failure.
+    debugPrint('[dex] spotlight hotkey registration failed: $e\n$st');
+  }
 }
 
 void unawaited(Future<void> _) {}
@@ -89,6 +127,7 @@ class _DexAppState extends State<DexApp> with WindowListener {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Dex',
+      navigatorKey: dexNavigatorKey,
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       theme: buildDexLightTheme(),

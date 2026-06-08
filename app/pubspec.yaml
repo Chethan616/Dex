@@ -42,6 +42,11 @@ dependencies:
   tray_manager: ^0.5.0
   shared_preferences: ^2.3.0
 
+  # System-scope Ctrl+K hotkey for the SpotlightOverlay summon. Same
+  # leanflutter family as window_manager + tray_manager so the API
+  # shape matches and there's a single maintainer to track.
+  hotkey_manager: ^0.2.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
