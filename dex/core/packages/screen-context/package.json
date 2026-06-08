@@ -1,0 +1,18 @@
+{
+  "name": "@dexagent/screen-context",
+  "version": "0.0.0-scaffold",
+  "private": true,
+  "description": "Live screen context for cross-device reasoning. Capture the active window, extract structured text/UI state, return it to a paired client — without ever stealing focus or rearranging the user's workspace. SCAFFOLD ONLY — implementation gated on Phase H.1 verification. See README.md.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "echo 'scaffold — no build target until H.3+'",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5",
+    "vitest": "^1"
+  }
+}
