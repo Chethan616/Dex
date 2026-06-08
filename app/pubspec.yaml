@@ -33,6 +33,15 @@ dependencies:
   hux: ^1.2.1
   shadcn_ui: ^0.54.0
 
+  # v1.2 Phase 11 — Windows chrome. Close the window → hide to tray
+  # instead of killing the gateway connection; tray_manager renders the
+  # icon + menu (same author as window_manager, modern Flutter desktop
+  # API, no uuid conflict). shared_preferences persists the
+  # "Quit on close" override the user can flip from the tray menu.
+  window_manager: ^0.4.3
+  tray_manager: ^0.5.0
+  shared_preferences: ^2.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -40,6 +49,14 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Bundled assets.
+  assets:
+    # 16x16 + 32x32 multi-resolution ICO used by the system_tray init.
+    # The runner already ships an app_icon.ico under windows/runner/resources/;
+    # we mirror it here so it ends up inside the Flutter bundle and can be
+    # resolved via rootBundle at runtime.
+    - assets/tray/dex.ico
 
   # FONTS:
   # Geist + Geist Mono (OFL-1.1) are referenced by name in lib/theme/tokens.dart.
