@@ -2,6 +2,7 @@
 // name), Invite/Share button on the right, agent status pill alongside.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../core/models/agent_state.dart';
 import '../../theme/tokens.dart';
@@ -42,7 +43,7 @@ class ChatHeader extends StatelessWidget {
           if (onInvite != null)
             OutlinedButton.icon(
               onPressed: onInvite,
-              icon: const Icon(Icons.group_add_outlined, size: 14),
+              icon: const Icon(LucideIcons.user_plus, size: 14),
               label: Text('Invite',
                   style: DexType.label(color: DexColors.text)),
               style: OutlinedButton.styleFrom(

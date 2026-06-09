@@ -3,6 +3,7 @@
 // real flows lands in follow-up PRs.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
 
@@ -28,13 +29,13 @@ extension ComposerAddActionX on ComposerAddAction {
       };
 
   IconData get icon => switch (this) {
-        ComposerAddAction.files => Icons.attach_file_rounded,
-        ComposerAddAction.generateImage => Icons.image_outlined,
-        ComposerAddAction.deepResearch => Icons.public_rounded,
-        ComposerAddAction.podcast => Icons.headphones_rounded,
-        ComposerAddAction.quiz => Icons.quiz_outlined,
-        ComposerAddAction.screenshot => Icons.crop_rounded,
-        ComposerAddAction.connectors => Icons.extension_outlined,
+        ComposerAddAction.files => LucideIcons.paperclip,
+        ComposerAddAction.generateImage => LucideIcons.image,
+        ComposerAddAction.deepResearch => LucideIcons.globe,
+        ComposerAddAction.podcast => LucideIcons.headphones,
+        ComposerAddAction.quiz => LucideIcons.circle_question_mark,
+        ComposerAddAction.screenshot => LucideIcons.crop,
+        ComposerAddAction.connectors => LucideIcons.puzzle,
       };
 
   String? get badge => switch (this) {
@@ -107,7 +108,7 @@ class _AddRow extends StatelessWidget {
             ),
           ],
           if (action.hasSubmenu)
-            const Icon(Icons.chevron_right_rounded,
+            const Icon(LucideIcons.chevron_right,
                 size: 16, color: DexColors.textFaint),
         ],
       ),

@@ -3,6 +3,7 @@
 // gateway frames will route the choice through to the brain.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 enum ComposerMode { smart, deeper, study, search }
 
@@ -22,9 +23,9 @@ extension ComposerModeX on ComposerMode {
       };
 
   IconData get icon => switch (this) {
-        ComposerMode.smart => Icons.auto_awesome_rounded,
-        ComposerMode.deeper => Icons.psychology_alt_rounded,
-        ComposerMode.study => Icons.school_rounded,
-        ComposerMode.search => Icons.travel_explore_rounded,
+        ComposerMode.smart => LucideIcons.sparkles,
+        ComposerMode.deeper => LucideIcons.brain,
+        ComposerMode.study => LucideIcons.graduation_cap,
+        ComposerMode.search => LucideIcons.globe,
       };
 }

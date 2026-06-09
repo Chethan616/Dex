@@ -47,6 +47,15 @@ dependencies:
   # shape matches and there's a single maintainer to track.
   hotkey_manager: ^0.2.3
 
+  # Lucide line icons (MIT). Single-weight, line-only by design --
+  # no filled/bold variants -- which matches the "premium, not bolded"
+  # icon brief. Replaces Material's filled Icons.X across the app.
+  # Using flutter_lucide (maintained fork) because the original
+  # `lucide_icons` package still extends IconData, which Flutter now
+  # seals (final class) -- so the original fails to compile under
+  # modern SDKs. Same constant names (LucideIcons.X).
+  flutter_lucide: ^1.11.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

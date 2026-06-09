@@ -13,32 +13,31 @@ import 'package:flutter/material.dart';
 class DexColors {
   const DexColors._();
 
-  // base -- dark
-  static const Color bg = Color(0xFF0B0C0E);
-  static const Color surface = Color(0xFF141619);
-  static const Color surface2 = Color(0xFF1C1F24);
-  static const Color border = Color(0xFF272B31);
+  // base -- dark, unambiguously cool. Aligned with DexSurface.bgGradient
+  // so panels and the background read as one neutral family even under
+  // Windows Night Light.
+  static const Color bg = Color(0xFF0A0C10);
+  static const Color surface = Color(0xFF13161B);
+  static const Color surface2 = Color(0xFF181C22);
+  static const Color border = Color(0xFF272B33);
 
-  // text -- warm beach-sand family, matching the dex-core terminal palette
-  // (DEX_PALETTE.accent = #D4A574). The conversation reads as sand-on-deep-
-  // navy instead of the old gray-on-near-black that rendered orange-ish on
-  // some Windows monitors.
-  static const Color text = Color(0xFFF0E2C7);      // warm cream
-  static const Color textDim = Color(0xFFB8A37A);   // mid sand-tan
-  static const Color textFaint = Color(0xFF7A6A4E); // deep sand
+  // text -- off-white through cool gray. No warm sand bias; chat copy
+  // reads as a premium dark-mode product rather than a beach theme.
+  static const Color text = Color(0xFFE6E8EC);      // off-white
+  static const Color textDim = Color(0xFF9CA1AB);   // cool mid-gray
+  static const Color textFaint = Color(0xFF646973); // cool deep gray
 
-  // accent -- sand (was blue #5BA8FF). Keep usage sparse; the engine
-  // pills + chips already carry semantic color, so accent only paints
-  // primary buttons + focus rings.
-  static const Color accent = Color(0xFFD4A574);
-  static const Color accentQuiet = Color(0xFF2E2418);
+  // accent -- subtle cool blue used for primary buttons + focus rings.
+  // Sparse usage: engine pills + chips carry semantic color on their own.
+  static const Color accent = Color(0xFF6EA8FE);
+  static const Color accentQuiet = Color(0xFF1A2030);
 
   // agent state -- semantic, NOT decorative
-  static const Color stateIdle = Color(0xFF7A6A4E);      // deep sand (== textFaint family)
+  static const Color stateIdle = Color(0xFF646973);      // cool gray (== textFaint)
   static const Color stateThinking = Color(0xFFB58CFF);  // violet pulse
-  static const Color stateActing = Color(0xFFD4A574);    // warm sand (== accent)
+  static const Color stateActing = Color(0xFF6EA8FE);    // cool blue (== accent)
   static const Color stateApprove = Color(0xFF3DD68C);   // green
-  static const Color stateAwaiting = Color(0xFFE0B870);  // muted amber-sand (less loud)
+  static const Color stateAwaiting = Color(0xFFFFB454);  // amber (only warm hit -- semantic urgency)
   static const Color stateError = Color(0xFFFF6B6B);     // red
 
   // Map an AgentState enum value to its token color.
@@ -128,16 +127,16 @@ class DexRadius {
 class DexSurface {
   const DexSurface._();
 
-  // Background gradient -- dark navy-sand fade for the home wallpaper.
-  // Top is the deep `bg`; bottom adds a touch of `surface2` so the gradient
-  // reads warm without using a photographic image.
+  // Background gradient -- cool dark-gray fade for the home wallpaper.
+  // Blue-biased stops keep the surface unambiguously cool even under
+  // Windows Night Light, so the page never reads warm/amber.
   static const LinearGradient bgGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: <Color>[
-      Color(0xFF0B0C0E),
-      Color(0xFF13161B),
-      Color(0xFF1C1F24),
+      Color(0xFF0A0C10),
+      Color(0xFF101319),
+      Color(0xFF161A21),
     ],
     stops: <double>[0.0, 0.55, 1.0],
   );

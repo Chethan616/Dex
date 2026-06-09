@@ -8,6 +8,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../core/state/conversation_store.dart';
 import '../platform/win/tray.dart';
@@ -135,7 +136,7 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.search_rounded,
+                              const Icon(LucideIcons.search,
                                   size: 18, color: DexColors.textDim),
                               const SizedBox(width: DexSpace.md),
                               Expanded(

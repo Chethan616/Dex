@@ -49,54 +49,56 @@ class EmptyHome extends StatelessWidget {
           padding: const EdgeInsets.symmetric(
             horizontal: DexSpace.xxl, vertical: DexSpace.xxl,
           ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 880),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: DexSpace.xxxl),
-                  Text(
-                    'Hi $greetingName, what should we dive into today?',
-                    textAlign: TextAlign.center,
-                    style: DexType.title(color: DexColors.text),
-                  ),
-                  const SizedBox(height: DexSpace.xl),
-                  DexComposer(
-                    onSubmit: onSubmit,
-                    isBusy: isBusy,
-                    onStop: onStop,
-                    onVision: onVision,
-                    onVoice: onVoice,
-                    onAddAction: onAddAction,
-                  ),
-                  const SizedBox(height: DexSpace.lg),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: DexSpace.sm,
-                    runSpacing: DexSpace.sm,
-                    children: suggestions
-                        .map((s) => SuggestionChip(
-                              label: s,
-                              onTap: () => onSubmit(s),
-                            ))
-                        .toList(growable: false),
-                  ),
-                  const SizedBox(height: DexSpace.xxl),
-                  _Cards(
-                    wide: wide,
-                    files: recentFiles,
-                    chats: recentChats,
-                    onSelectFile: onSelectFile,
-                    onSelectChat: onSelectChat,
-                  ),
-                  const SizedBox(height: DexSpace.xxl),
-                  Text(
-                    'Dex is an agent and may make mistakes. Every action shows a preview first.',
-                    textAlign: TextAlign.center,
-                    style: DexType.caption(color: DexColors.textFaint),
-                  ),
-                ],
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 880),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Hi $greetingName, what should we dive into today?',
+                      textAlign: TextAlign.center,
+                      style: DexType.title(color: DexColors.text),
+                    ),
+                    const SizedBox(height: DexSpace.xl),
+                    DexComposer(
+                      onSubmit: onSubmit,
+                      isBusy: isBusy,
+                      onStop: onStop,
+                      onVision: onVision,
+                      onVoice: onVoice,
+                      onAddAction: onAddAction,
+                    ),
+                    const SizedBox(height: DexSpace.lg),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: DexSpace.sm,
+                      runSpacing: DexSpace.sm,
+                      children: suggestions
+                          .map((s) => SuggestionChip(
+                                label: s,
+                                onTap: () => onSubmit(s),
+                              ))
+                          .toList(growable: false),
+                    ),
+                    const SizedBox(height: DexSpace.xxl),
+                    _Cards(
+                      wide: wide,
+                      files: recentFiles,
+                      chats: recentChats,
+                      onSelectFile: onSelectFile,
+                      onSelectChat: onSelectChat,
+                    ),
+                    Text(
+                      'Dex is an agent and may make mistakes. Every action shows a preview first.',
+                      textAlign: TextAlign.center,
+                      style: DexType.caption(color: DexColors.textFaint),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

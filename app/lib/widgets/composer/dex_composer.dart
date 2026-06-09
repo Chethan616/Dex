@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
 import 'add_menu.dart';
@@ -249,7 +250,7 @@ class _Toolbar extends StatelessWidget {
       children: [
         _RoundIconButton(
           key: addKey,
-          icon: Icons.add_rounded,
+          icon: LucideIcons.plus,
           tooltip: 'Add files, image, research...',
           onTap: onAdd,
         ),
@@ -258,14 +259,14 @@ class _Toolbar extends StatelessWidget {
         const Spacer(),
         if (onVision != null)
           _RoundIconButton(
-            icon: Icons.visibility_outlined,
+            icon: LucideIcons.eye,
             tooltip: 'Share screen with Dex',
             onTap: onVision,
           ),
         if (onVoice != null) ...[
           const SizedBox(width: DexSpace.xs),
           _RoundIconButton(
-            icon: Icons.graphic_eq_rounded,
+            icon: LucideIcons.mic,
             tooltip: 'Talk to Dex',
             onTap: onVoice,
           ),
@@ -273,7 +274,7 @@ class _Toolbar extends StatelessWidget {
         const SizedBox(width: DexSpace.xs),
         if (isBusy && onStop != null)
           _RoundIconButton(
-            icon: Icons.stop_rounded,
+            icon: LucideIcons.square,
             tooltip: 'Stop',
             tint: DexColors.stateError,
             onTap: onStop,
@@ -346,7 +347,7 @@ class _SendButton extends StatelessWidget {
             ),
           ),
           child: Icon(
-            Icons.arrow_upward_rounded,
+            LucideIcons.arrow_up,
             size: 18,
             color: enabled ? DexColors.bg : DexColors.textFaint,
           ),
@@ -382,7 +383,7 @@ class _ModePill extends StatelessWidget {
             const SizedBox(width: DexSpace.xs),
             Text(mode.label, style: DexType.label(color: DexColors.text)),
             const SizedBox(width: 2),
-            const Icon(Icons.expand_more_rounded,
+            const Icon(LucideIcons.chevron_down,
                 size: 14, color: DexColors.textDim),
           ],
         ),

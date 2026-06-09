@@ -7,6 +7,7 @@
 // (most still TODO placeholder screens, per the plan).
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../theme/tokens.dart';
 import 'home/recent_chats_card.dart';
@@ -72,47 +73,47 @@ class DexSidebar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _NavItem(
-                    icon: Icons.edit_square,
+                    icon: LucideIcons.file_plus,
                     label: 'New chat',
                     expanded: expanded,
                     onTap: onNewChat,
                   ),
                   _NavItem(
-                    icon: Icons.collections_bookmark_outlined,
+                    icon: LucideIcons.library,
                     label: 'Library',
                     expanded: expanded,
                     onTap: onLibrary,
                   ),
                   _NavItem(
-                    icon: Icons.check_box_outlined,
+                    icon: LucideIcons.square_check,
                     label: 'Tasks',
                     badge: 'PREVIEW',
                     expanded: expanded,
                     onTap: onTasks,
                   ),
                   _NavItem(
-                    icon: Icons.folder_outlined,
+                    icon: LucideIcons.folder,
                     label: 'Projects',
                     expanded: expanded,
-                    trailing: const Icon(Icons.add_rounded,
+                    trailing: const Icon(LucideIcons.plus,
                         size: 16, color: DexColors.textDim),
                     onTap: onNewProject,
                   ),
                   const _Divider(),
                   _NavItem(
-                    icon: Icons.explore_outlined,
+                    icon: LucideIcons.compass,
                     label: 'Discover',
                     expanded: expanded,
                     onTap: onDiscover,
                   ),
                   _NavItem(
-                    icon: Icons.auto_awesome_outlined,
+                    icon: LucideIcons.sparkles,
                     label: 'Imagine',
                     expanded: expanded,
                     onTap: onImagine,
                   ),
                   _NavItem(
-                    icon: Icons.apps_rounded,
+                    icon: LucideIcons.layout_grid,
                     label: 'Experiments',
                     expanded: expanded,
                     onTap: onExperiments,
@@ -182,8 +183,8 @@ class _Header extends StatelessWidget {
           IconButton(
             icon: Icon(
               expanded
-                  ? Icons.menu_open_rounded
-                  : Icons.menu_rounded,
+                  ? LucideIcons.panel_left_close
+                  : LucideIcons.menu,
               size: 18,
             ),
             color: DexColors.textDim,
@@ -302,7 +303,7 @@ class _ChatRow extends StatelessWidget {
                 ),
               ),
               if (active)
-                const Icon(Icons.more_horiz_rounded,
+                const Icon(LucideIcons.ellipsis,
                     size: 14, color: DexColors.textFaint),
             ],
           ),

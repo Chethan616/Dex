@@ -3,6 +3,7 @@
 // optional callbacks so screens can disable any subset.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
 
@@ -33,32 +34,32 @@ class MessageActionsRow extends StatelessWidget {
       child: Row(
         children: [
           _IconAction(
-            icon: Icons.thumb_up_outlined,
+            icon: LucideIcons.thumbs_up,
             tooltip: 'Like',
             onTap: onLike,
           ),
           _IconAction(
-            icon: Icons.thumb_down_outlined,
+            icon: LucideIcons.thumbs_down,
             tooltip: 'Dislike',
             onTap: onDislike,
           ),
           _IconAction(
-            icon: Icons.share_outlined,
+            icon: LucideIcons.share_2,
             tooltip: 'Share',
             onTap: onShare,
           ),
           _IconAction(
-            icon: Icons.content_copy_outlined,
+            icon: LucideIcons.copy,
             tooltip: 'Copy',
             onTap: onCopy,
           ),
           _IconAction(
-            icon: Icons.volume_up_outlined,
+            icon: LucideIcons.volume_2,
             tooltip: 'Read aloud',
             onTap: onReadAloud,
           ),
           _IconAction(
-            icon: Icons.refresh_rounded,
+            icon: LucideIcons.refresh_cw,
             tooltip: 'Regenerate',
             onTap: onRegenerate,
           ),
@@ -66,7 +67,7 @@ class MessageActionsRow extends StatelessWidget {
           if (onEditInPage != null)
             TextButton.icon(
               onPressed: onEditInPage,
-              icon: const Icon(Icons.edit_outlined, size: 14),
+              icon: const Icon(LucideIcons.pencil, size: 14),
               label: Text('Edit in a page',
                   style: DexType.label(color: DexColors.text)),
               style: TextButton.styleFrom(
