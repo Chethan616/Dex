@@ -145,16 +145,25 @@ ThemeData buildDexDarkTheme() {
       ),
     ),
 
+    // iOS-style switch: white thumb on a vivid spring-green track when
+    // on, soft gray thumb on a muted navy track when off. Green is the
+    // universal "active" signal in Apple's design language; pops on
+    // the navy gradient without competing with the blue accent that's
+    // reserved for primary buttons.
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected)) return DexColors.bg;
+        if (states.contains(WidgetState.selected)) return Colors.white;
         return DexColors.textDim;
       }),
       trackColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) return DexColors.stateApprove;
         return DexColors.surface2;
       }),
-      trackOutlineColor: WidgetStatePropertyAll(DexColors.border),
+      trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return DexColors.stateApprove;
+        return DexColors.border;
+      }),
+      trackOutlineWidth: const WidgetStatePropertyAll(1),
     ),
   );
 }

@@ -56,7 +56,27 @@ class DexSidebar extends StatelessWidget {
       duration: const Duration(milliseconds: 160),
       curve: Curves.easeOutCubic,
       width: width,
-      color: DexColors.bg,
+      decoration: BoxDecoration(
+        // Sidebar reads as a "panel" sitting on top of the wallpaper
+        // gradient -- a slightly deeper vertical fade that harmonises
+        // with the bg's top-to-bottom navy shift. The hairline right
+        // border replaces the old VerticalDivider so we don't end up
+        // with a double line between the rail and the content.
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0xFF0A132E),
+            Color(0xFF050B1F),
+          ],
+        ),
+        border: const Border(
+          right: BorderSide(
+            color: Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.06),
+            width: 1,
+          ),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

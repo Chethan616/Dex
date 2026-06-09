@@ -116,7 +116,6 @@ class _HomeDesktopState extends State<HomeDesktop> {
                     onAvatarTap: _openProfile,
                     onSelectChat: (_) {},
                   ),
-                  const VerticalDivider(width: 1, color: DexColors.border),
                   Expanded(
                     child: Stack(
                       children: [
