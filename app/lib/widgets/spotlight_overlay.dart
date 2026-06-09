@@ -92,26 +92,35 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: const <ShortcutActivator, Intent>{
-        SingleActivator(LogicalKeyboardKey.escape): _DismissIntent(),
-      },
-      child: Actions(
-        actions: <Type, Action<Intent>>{
-          _DismissIntent: CallbackAction<_DismissIntent>(
-            onInvoke: (_) {
-              _dismiss();
-              return null;
-            },
-          ),
+    // Material(type: MaterialType.transparency) is REQUIRED because
+    // showGeneralDialog's pageBuilder doesn't wrap the page in a
+    // Material ancestor, and our TextField + InkResponse descendants
+    // throw "No Material widget found" without one. Transparency means
+    // we don't get a solid background -- our acrylic Container does
+    // the surface work.
+    return Material(
+      type: MaterialType.transparency,
+      child: Shortcuts(
+        shortcuts: const <ShortcutActivator, Intent>{
+          SingleActivator(LogicalKeyboardKey.escape): _DismissIntent(),
         },
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 96),
+        child: Actions(
+          actions: <Type, Action<Intent>>{
+            _DismissIntent: CallbackAction<_DismissIntent>(
+              onInvoke: (_) {
+                _dismiss();
+                return null;
+              },
+            ),
+          },
+          // Alignment(0, -0.55) keeps the panel about a third from the
+          // top regardless of window size -- closer to macOS Spotlight's
+          // "above-center" feel than a fixed pixel offset would be.
+          child: SafeArea(
             child: Align(
-              alignment: Alignment.topCenter,
+              alignment: const Alignment(0, -0.55),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 620),
+                constraints: const BoxConstraints(maxWidth: 640),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -137,7 +146,7 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
                           child: Row(
                             children: [
                               const Icon(LucideIcons.search,
-                                  size: 18, color: DexColors.textDim),
+                                  size: 20, color: DexColors.textDim),
                               const SizedBox(width: DexSpace.md),
                               Expanded(
                                 child: KeyboardListener(
@@ -159,7 +168,7 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
                                       enabledBorder: InputBorder.none,
                                       focusedBorder: InputBorder.none,
                                       filled: false,
-                                      hintText: 'Message Dex',
+                                      hintText: 'Ask Dex anything...',
                                       hintStyle: DexType.body(
                                         color: DexColors.textFaint,
                                       ),
