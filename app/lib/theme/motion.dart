@@ -19,6 +19,10 @@ class DexMotion {
   static const Duration press = Duration(milliseconds: 110);
   static const Duration entry = Duration(milliseconds: 420);
 
+  // Dialog presentation -- more deliberate than menu hover, so dampened
+  // motion can decelerate smoothly without feeling rushed.
+  static const Duration dialog = Duration(milliseconds: 260);
+
   // Standard curves.
   static const Curve easeOut = Curves.easeOutCubic;
   static const Curve easeInOut = Curves.easeInOutCubic;
@@ -28,6 +32,16 @@ class DexMotion {
   static const Curve spring = Curves.easeOutBack;
   static const Curve gentle = Curves.fastOutSlowIn;
   static const Curve expressiveEntry = Curves.easeOutCubic;
+
+  // Dampened decelerate -- Material 3's "emphasized decelerate" cubic.
+  // Smooth fast-start / soft-finish without any overshoot, the kind of
+  // motion iOS sheets use. Right for dialogs and dropdowns where a
+  // spring's overshoot would feel jittery rather than confident.
+  static const Curve dampened = Cubic(0.22, 1.0, 0.36, 1.0);
+
+  // Emphasized accelerate -- mirror curve for dismissals so they feel
+  // quick to start and decisive on the way out.
+  static const Curve emphasizedAccelerate = Cubic(0.3, 0.0, 0.8, 0.15);
 
   // Stagger between successive action steps + home-section entries.
   static const Duration stepStagger = Duration(milliseconds: 40);

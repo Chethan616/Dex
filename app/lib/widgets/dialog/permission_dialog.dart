@@ -31,20 +31,27 @@ class PermissionDialog extends StatelessWidget {
       barrierDismissible: true,
       barrierLabel: 'Dismiss permission',
       barrierColor: Colors.black.withValues(alpha: 0.35),
-      transitionDuration: DexMotion.hover,
+      transitionDuration: DexMotion.dialog,
       pageBuilder: (_, _, _) =>
           PermissionDialog(title: title, description: description),
       transitionBuilder: (ctx, anim, _, child) {
         final reduce = MediaQuery.of(ctx).disableAnimations;
         if (reduce) return child;
-        final spring = CurvedAnimation(parent: anim, curve: DexMotion.spring);
+        // Dampened decelerate (Material 3 emphasized decelerate) for
+        // a smooth, confident landing -- no spring overshoot. Fade
+        // + 16px slide-up + 0.96→1.0 scale, all driven by the same
+        // dampened curve so the components arrive together.
+        final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
         return FadeTransition(
-          opacity: anim,
+          opacity: eased,
           child: AnimatedBuilder(
-            animation: spring,
-            builder: (_, c) => Transform.scale(
-              scale: 0.94 + 0.06 * spring.value,
-              child: c,
+            animation: eased,
+            builder: (_, c) => Transform.translate(
+              offset: Offset(0, (1 - eased.value) * 16),
+              child: Transform.scale(
+                scale: 0.96 + 0.04 * eased.value,
+                child: c,
+              ),
             ),
             child: child,
           ),

@@ -39,19 +39,25 @@ class SettingsDialog extends StatefulWidget {
       barrierDismissible: true,
       barrierLabel: 'Dismiss settings',
       barrierColor: Colors.black.withValues(alpha: 0.4),
-      transitionDuration: DexMotion.hover,
+      transitionDuration: DexMotion.dialog,
       pageBuilder: (_, _, _) => SettingsDialog(initialTab: initial),
       transitionBuilder: (ctx, anim, _, child) {
         final reduce = MediaQuery.of(ctx).disableAnimations;
         if (reduce) return child;
-        final spring = CurvedAnimation(parent: anim, curve: DexMotion.spring);
+        // Same dampened landing as the permission dialog: smooth fade
+        // + soft slide-up + gentle scale. No spring overshoot --
+        // a big modal jittering on entry would feel cheap.
+        final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
         return FadeTransition(
-          opacity: anim,
+          opacity: eased,
           child: AnimatedBuilder(
-            animation: spring,
-            builder: (_, c) => Transform.scale(
-              scale: 0.95 + 0.05 * spring.value,
-              child: c,
+            animation: eased,
+            builder: (_, c) => Transform.translate(
+              offset: Offset(0, (1 - eased.value) * 20),
+              child: Transform.scale(
+                scale: 0.97 + 0.03 * eased.value,
+                child: c,
+              ),
             ),
             child: child,
           ),

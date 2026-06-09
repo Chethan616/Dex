@@ -68,15 +68,22 @@ class GlossyMenu {
       transitionBuilder: (ctx, anim, _, child) {
         final reduce = MediaQuery.of(ctx).disableAnimations;
         if (reduce) return child;
-        final spring = CurvedAnimation(parent: anim, curve: DexMotion.spring);
+        // Dampened decelerate -- same curve the dialogs use, so the
+        // whole popup family lands with one motion language. Fade
+        // + tiny 6px slide-down from the anchor + soft scale, no
+        // spring overshoot.
+        final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
         return FadeTransition(
-          opacity: anim,
+          opacity: eased,
           child: AnimatedBuilder(
-            animation: spring,
-            builder: (_, c) => Transform.scale(
-              scale: 0.94 + 0.06 * spring.value,
-              alignment: Alignment.topLeft,
-              child: c,
+            animation: eased,
+            builder: (_, c) => Transform.translate(
+              offset: Offset(0, (1 - eased.value) * -6),
+              child: Transform.scale(
+                scale: 0.96 + 0.04 * eased.value,
+                alignment: Alignment.topLeft,
+                child: c,
+              ),
             ),
             child: child,
           ),
