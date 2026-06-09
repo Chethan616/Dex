@@ -4,8 +4,10 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
+import '../glossy_menu.dart';
 
 class VoiceSettingsPanel extends StatefulWidget {
   const VoiceSettingsPanel({super.key, required this.onClose});
@@ -101,7 +103,7 @@ class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
   }
 }
 
-class _Dropdown extends StatelessWidget {
+class _Dropdown extends StatefulWidget {
   const _Dropdown({
     required this.value,
     required this.options,
@@ -112,19 +114,72 @@ class _Dropdown extends StatelessWidget {
   final ValueChanged<String> onChanged;
 
   @override
+  State<_Dropdown> createState() => _DropdownState();
+}
+
+class _DropdownState extends State<_Dropdown> {
+  final GlobalKey _key = GlobalKey();
+
+  Future<void> _openMenu() async {
+    final ctx = _key.currentContext;
+    if (ctx == null) return;
+    final box = ctx.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final anchor = box.localToGlobal(Offset(0, box.size.height + 6));
+    final picked = await GlossyMenu.show<String>(
+      context: context,
+      anchor: anchor,
+      width: 220,
+      entries: <GlossyMenuEntry<String>>[
+        for (final o in widget.options)
+          GlossyMenuItem<String>(
+            value: o,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(o,
+                      style: DexType.label(
+                        color: o == widget.value
+                            ? DexColors.accent
+                            : DexColors.text,
+                      )),
+                ),
+                if (o == widget.value)
+                  const Icon(LucideIcons.check,
+                      size: 14, color: DexColors.accent),
+              ],
+            ),
+          ),
+      ],
+    );
+    if (picked != null) widget.onChanged(picked);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return DropdownButton<String>(
-      value: value,
-      dropdownColor: DexColors.surface2,
-      underline: const SizedBox.shrink(),
-      style: DexType.label(color: DexColors.text),
-      iconEnabledColor: DexColors.textDim,
-      items: options
-          .map((o) => DropdownMenuItem<String>(value: o, child: Text(o)))
-          .toList(growable: false),
-      onChanged: (v) {
-        if (v != null) onChanged(v);
-      },
+    return InkWell(
+      key: _key,
+      borderRadius: DexRadius.rsm,
+      onTap: _openMenu,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DexSpace.md, vertical: DexSpace.xs,
+        ),
+        decoration: BoxDecoration(
+          color: DexColors.surface,
+          borderRadius: DexRadius.rsm,
+          border: Border.all(color: DexColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(widget.value, style: DexType.label(color: DexColors.text)),
+            const SizedBox(width: DexSpace.sm),
+            const Icon(LucideIcons.chevron_down,
+                size: 14, color: DexColors.textDim),
+          ],
+        ),
+      ),
     );
   }
 }
