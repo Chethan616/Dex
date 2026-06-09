@@ -1,10 +1,22 @@
-# Dex — Security model and risk surface
+# Dex — Security Model & Risk Surface
 
-Dex puts an LLM with **shell access and GUI control** on the user's machine. This file documents what the risks are, what we do to contain them, and what the user is expected to do themselves. Read this before shipping or before letting anyone else run Dex.
+> **Who should read this:** Anyone shipping Dex, anyone reviewing a PR that touches `glue/`, and any user who wants to understand what they're agreeing to when they click Approve.
 
 ---
 
-## Threat model in one paragraph
+## TL;DR
+
+Dex gives an LLM eyes and hands on your Windows desktop. That's powerful and genuinely risky. Three things keep it from going sideways:
+
+1. **You approve every action** before it runs — no silent clicks.
+2. **The tools are narrow** — no shell escalation, no file writes, no process spawning through the MCP layer.
+3. **Isolation is on the roadmap**, not v1 — right now UFO² runs on your real desktop.
+
+If you're in a hurry, at least read the [Known Risks](#known-risks-and-gaps-honest-list) and [What You Own](#what-the-user-owns) sections.
+
+---
+
+## Threat Model in One Paragraph
 
 The brain (OpenClaw + Claude) can route requests to the hands (UFO² via the `windows-desktop-control` MCP tool). A malicious prompt, a confused-deputy attack, or a careless natural-language instruction could in principle make the hands click destructive things in real apps. Our defenses are: **isolated execution** (Picture-in-Picture / virtual desktop), **ask-first by default** (the user sees and approves every action before it runs), and **scoped tools** (no shell escalation paths plumbed through the MCP server).
 
