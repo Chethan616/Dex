@@ -1,0 +1,396 @@
+// The chat composer. Used in EmptyHome (centered, large) and ChatView
+// (docked bottom, full-width). Acrylic surface with the + menu, the mode
+// pill, vision and voice buttons, and a send affordance.
+
+import 'dart:ui';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../theme/tokens.dart';
+import 'add_menu.dart';
+import 'composer_mode.dart';
+import 'mode_menu.dart';
+
+class DexComposer extends StatefulWidget {
+  const DexComposer({
+    super.key,
+    required this.onSubmit,
+    this.onStop,
+    this.isBusy = false,
+    this.hint = 'Message Dex',
+    this.autofocus = true,
+    this.onVision,
+    this.onVoice,
+    this.onAddAction,
+  });
+
+  final ValueChanged<String> onSubmit;
+  final VoidCallback? onStop;
+  final bool isBusy;
+  final String hint;
+  final bool autofocus;
+  final VoidCallback? onVision;
+  final VoidCallback? onVoice;
+  final ValueChanged<ComposerAddAction>? onAddAction;
+
+  @override
+  State<DexComposer> createState() => _DexComposerState();
+}
+
+class _DexComposerState extends State<DexComposer> {
+  late final TextEditingController _ctrl;
+  late final FocusNode _focus;
+  ComposerMode _mode = ComposerMode.smart;
+  bool _hasText = false;
+
+  final GlobalKey _addKey = GlobalKey();
+  final GlobalKey _modeKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController();
+    _ctrl.addListener(_onText);
+    _focus = FocusNode();
+    if (widget.autofocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.removeListener(_onText);
+    _ctrl.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _onText() {
+    final has = _ctrl.text.trim().isNotEmpty;
+    if (has != _hasText) setState(() => _hasText = has);
+  }
+
+  void _submit() {
+    final t = _ctrl.text.trim();
+    if (t.isEmpty) return;
+    widget.onSubmit(t);
+    _ctrl.clear();
+    _focus.requestFocus();
+  }
+
+  Future<void> _openAdd() async {
+    final ctx = _addKey.currentContext;
+    if (ctx == null) return;
+    final box = ctx.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final anchor = box.localToGlobal(Offset(0, -box.size.height));
+    final picked = await AddMenu.show(context: context, anchor: anchor);
+    if (picked != null) widget.onAddAction?.call(picked);
+  }
+
+  Future<void> _openMode() async {
+    final ctx = _modeKey.currentContext;
+    if (ctx == null) return;
+    final box = ctx.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final anchor = box.localToGlobal(Offset(0, -box.size.height));
+    final picked = await ModeMenu.show(
+      context: context, anchor: anchor, current: _mode,
+    );
+    if (picked != null && mounted) setState(() => _mode = picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Shortcuts(
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.keyK, control: true):
+            _FocusComposerIntent(),
+        SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+            _FocusComposerIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _FocusComposerIntent:
+              CallbackAction<_FocusComposerIntent>(onInvoke: (_) {
+            _focus.requestFocus();
+            return null;
+          }),
+        },
+        child: ClipRRect(
+          borderRadius: DexRadius.rxl,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: DexSurface.blurSigma,
+              sigmaY: DexSurface.blurSigma,
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: DexColors.surface2.withValues(
+                  alpha: DexSurface.acrylicAlpha,
+                ),
+                borderRadius: DexRadius.rxl,
+                border: Border.all(color: DexColors.border),
+                boxShadow: DexElevation.floating,
+              ),
+              padding: const EdgeInsets.fromLTRB(
+                DexSpace.lg, DexSpace.md, DexSpace.md, DexSpace.sm,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _Input(
+                    controller: _ctrl,
+                    focusNode: _focus,
+                    hint: widget.hint,
+                    onSubmit: _submit,
+                  ),
+                  const SizedBox(height: DexSpace.sm),
+                  _Toolbar(
+                    addKey: _addKey,
+                    modeKey: _modeKey,
+                    mode: _mode,
+                    isBusy: widget.isBusy,
+                    hasText: _hasText,
+                    onAdd: _openAdd,
+                    onMode: _openMode,
+                    onVision: widget.onVision,
+                    onVoice: widget.onVoice,
+                    onStop: widget.onStop,
+                    onSubmit: _submit,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Input extends StatelessWidget {
+  const _Input({
+    required this.controller,
+    required this.focusNode,
+    required this.hint,
+    required this.onSubmit,
+  });
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final String hint;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return KeyboardListener(
+      focusNode: FocusNode(skipTraversal: true),
+      onKeyEvent: (e) {
+        if (e is KeyDownEvent &&
+            e.logicalKey == LogicalKeyboardKey.enter &&
+            !HardwareKeyboard.instance.isShiftPressed) {
+          onSubmit();
+        }
+      },
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        maxLines: 6,
+        minLines: 1,
+        style: DexType.body(color: DexColors.text),
+        decoration: InputDecoration(
+          isCollapsed: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: DexSpace.sm),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          filled: false,
+          hintText: hint,
+          hintStyle: DexType.body(color: DexColors.textFaint),
+        ),
+        textInputAction: TextInputAction.newline,
+      ),
+    );
+  }
+}
+
+class _Toolbar extends StatelessWidget {
+  const _Toolbar({
+    required this.addKey,
+    required this.modeKey,
+    required this.mode,
+    required this.isBusy,
+    required this.hasText,
+    required this.onAdd,
+    required this.onMode,
+    required this.onVision,
+    required this.onVoice,
+    required this.onStop,
+    required this.onSubmit,
+  });
+
+  final GlobalKey addKey;
+  final GlobalKey modeKey;
+  final ComposerMode mode;
+  final bool isBusy;
+  final bool hasText;
+  final VoidCallback onAdd;
+  final VoidCallback onMode;
+  final VoidCallback? onVision;
+  final VoidCallback? onVoice;
+  final VoidCallback? onStop;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _RoundIconButton(
+          key: addKey,
+          icon: Icons.add_rounded,
+          tooltip: 'Add files, image, research...',
+          onTap: onAdd,
+        ),
+        const SizedBox(width: DexSpace.sm),
+        _ModePill(key: modeKey, mode: mode, onTap: onMode),
+        const Spacer(),
+        if (onVision != null)
+          _RoundIconButton(
+            icon: Icons.visibility_outlined,
+            tooltip: 'Share screen with Dex',
+            onTap: onVision,
+          ),
+        if (onVoice != null) ...[
+          const SizedBox(width: DexSpace.xs),
+          _RoundIconButton(
+            icon: Icons.graphic_eq_rounded,
+            tooltip: 'Talk to Dex',
+            onTap: onVoice,
+          ),
+        ],
+        const SizedBox(width: DexSpace.xs),
+        if (isBusy && onStop != null)
+          _RoundIconButton(
+            icon: Icons.stop_rounded,
+            tooltip: 'Stop',
+            tint: DexColors.stateError,
+            onTap: onStop,
+          )
+        else
+          _SendButton(enabled: hasText, onTap: onSubmit),
+      ],
+    );
+  }
+}
+
+class _RoundIconButton extends StatelessWidget {
+  const _RoundIconButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.tint,
+  });
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final Color? tint;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = tint ?? DexColors.textDim;
+    return Tooltip(
+      message: tooltip,
+      child: InkResponse(
+        onTap: onTap,
+        radius: 20,
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: DexColors.surface.withValues(alpha: 0.4),
+            shape: BoxShape.circle,
+            border: Border.all(color: DexColors.border),
+          ),
+          child: Icon(icon, size: 18, color: color),
+        ),
+      ),
+    );
+  }
+}
+
+class _SendButton extends StatelessWidget {
+  const _SendButton({required this.enabled, required this.onTap});
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Send (Enter)',
+      child: InkResponse(
+        onTap: enabled ? onTap : null,
+        radius: 20,
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: enabled ? DexColors.accent : DexColors.surface,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: enabled ? DexColors.accent : DexColors.border,
+            ),
+          ),
+          child: Icon(
+            Icons.arrow_upward_rounded,
+            size: 18,
+            color: enabled ? DexColors.bg : DexColors.textFaint,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ModePill extends StatelessWidget {
+  const _ModePill({super.key, required this.mode, required this.onTap});
+  final ComposerMode mode;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: DexRadius.rpill,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DexSpace.md, vertical: 6,
+        ),
+        decoration: BoxDecoration(
+          color: DexColors.surface.withValues(alpha: 0.4),
+          borderRadius: DexRadius.rpill,
+          border: Border.all(color: DexColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(mode.icon, size: 14, color: DexColors.textDim),
+            const SizedBox(width: DexSpace.xs),
+            Text(mode.label, style: DexType.label(color: DexColors.text)),
+            const SizedBox(width: 2),
+            const Icon(Icons.expand_more_rounded,
+                size: 14, color: DexColors.textDim),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FocusComposerIntent extends Intent {
+  const _FocusComposerIntent();
+}

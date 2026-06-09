@@ -52,7 +52,7 @@ Future<void> main() async {
 
   // Register the global Ctrl+K hotkey AFTER the store + tray exist so
   // the handler has everything it needs. Failures are non-fatal --
-  // the in-app Shortcuts on CommandBar still bind Ctrl+K within the
+  // the in-app Shortcuts on DexComposer still bind Ctrl+K within the
   // window, so the worst case is "no summon while hidden in tray".
   if (Platform.isWindows) {
     await _registerSpotlightHotkey(store);

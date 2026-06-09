@@ -111,6 +111,51 @@ ThemeData buildDexDarkTheme() {
       thickness: const WidgetStatePropertyAll(6),
       radius: const Radius.circular(3),
     ),
+
+    dialogTheme: DialogThemeData(
+      backgroundColor: DexColors.surface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: DexRadius.rlg,
+        side: const BorderSide(color: DexColors.border, width: 1),
+      ),
+      titleTextStyle: DexType.heading(color: DexColors.text),
+      contentTextStyle: DexType.body(color: DexColors.textDim),
+    ),
+
+    popupMenuTheme: PopupMenuThemeData(
+      color: DexColors.surface2,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: DexRadius.rmd,
+        side: const BorderSide(color: DexColors.border, width: 1),
+      ),
+      textStyle: DexType.label(color: DexColors.text),
+    ),
+
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: DexColors.surface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: DexRadius.lg),
+        side: const BorderSide(color: DexColors.border, width: 1),
+      ),
+    ),
+
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return DexColors.bg;
+        return DexColors.textDim;
+      }),
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return DexColors.stateApprove;
+        return DexColors.surface2;
+      }),
+      trackOutlineColor: WidgetStatePropertyAll(DexColors.border),
+    ),
   );
 }
 

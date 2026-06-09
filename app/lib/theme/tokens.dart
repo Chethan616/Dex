@@ -112,9 +112,53 @@ class DexRadius {
   static const Radius sm = Radius.circular(6);    // chips, inputs
   static const Radius md = Radius.circular(10);   // cards
   static const Radius lg = Radius.circular(16);   // sheets, modals
+  static const Radius xl = Radius.circular(20);   // composer pill, bubbles
+  static const Radius pill = Radius.circular(999); // suggestion chips, mode pills
   static const BorderRadius rsm = BorderRadius.all(sm);
   static const BorderRadius rmd = BorderRadius.all(md);
   static const BorderRadius rlg = BorderRadius.all(lg);
+  static const BorderRadius rxl = BorderRadius.all(xl);
+  static const BorderRadius rpill = BorderRadius.all(pill);
+}
+
+// =============================================================================
+//    SURFACE -- gradient + acrylic alphas for the Copilot-style shell.
+// =============================================================================
+
+class DexSurface {
+  const DexSurface._();
+
+  // Background gradient -- dark navy-sand fade for the home wallpaper.
+  // Top is the deep `bg`; bottom adds a touch of `surface2` so the gradient
+  // reads warm without using a photographic image.
+  static const LinearGradient bgGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: <Color>[
+      Color(0xFF0B0C0E),
+      Color(0xFF13161B),
+      Color(0xFF1C1F24),
+    ],
+    stops: <double>[0.0, 0.55, 1.0],
+  );
+
+  static const LinearGradient bgGradientLight = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: <Color>[
+      Color(0xFFFAF6EE),
+      Color(0xFFF4ECDB),
+      Color(0xFFE9DDC2),
+    ],
+    stops: <double>[0.0, 0.55, 1.0],
+  );
+
+  // Acrylic alpha applied to surface2 for floating panels (composer,
+  // popup menus, spotlight overlay, settings cards). Pair with a
+  // BackdropFilter blur of 14 to read as Fluent acrylic.
+  static const double acrylicAlpha = 0.82;
+  static const double acrylicAlphaQuiet = 0.66;
+  static const double blurSigma = 14;
 }
 
 // =============================================================================
