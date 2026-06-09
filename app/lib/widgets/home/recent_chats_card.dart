@@ -2,6 +2,7 @@
 // a HomeCard. Tapping a row opens the conversation through onSelect.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
 import 'home_card.dart';
@@ -26,7 +27,7 @@ class RecentChatsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return HomeCard(
-      icon: Icons.chat_bubble_outline_rounded,
+      icon: LucideIcons.message_square,
       title: 'Keep talking to Dex',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -62,7 +63,7 @@ class _Row extends StatelessWidget {
                 borderRadius: DexRadius.rsm,
                 border: Border.all(color: DexColors.border),
               ),
-              child: const Icon(Icons.chat_bubble_rounded,
+              child: const Icon(LucideIcons.message_square,
                   size: 12, color: DexColors.textDim),
             ),
             const SizedBox(width: DexSpace.md),
@@ -78,7 +79,7 @@ class _Row extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.more_horiz_rounded,
+            const Icon(LucideIcons.ellipsis,
                 size: 14, color: DexColors.textFaint),
           ],
         ),

@@ -2,6 +2,7 @@
 // Sub-screens (e.g. View memory) replace the right pane in place.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
 import 'tabs/about_tab.dart';
@@ -120,7 +121,7 @@ class _Header extends StatelessWidget {
                 style: DexType.heading(color: DexColors.text)),
           ),
           IconButton(
-            icon: const Icon(Icons.close_rounded, size: 18),
+            icon: const Icon(LucideIcons.x, size: 18),
             color: DexColors.textDim,
             onPressed: onClose,
           ),

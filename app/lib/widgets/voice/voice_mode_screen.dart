@@ -2,6 +2,7 @@
 // "I'm listening" label, four bottom controls (close, vision, mic, settings).
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
 import 'animated_wave_background.dart';
@@ -51,26 +52,26 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _ControlButton(
-                        icon: Icons.close_rounded,
+                        icon: LucideIcons.x,
                         tooltip: 'Exit voice mode',
                         onTap: () => Navigator.of(context).maybePop(),
                       ),
                       const SizedBox(width: DexSpace.sm),
                       _ControlButton(
-                        icon: Icons.visibility_outlined,
+                        icon: LucideIcons.glasses,
                         tooltip: 'Share screen',
                         onTap: () {},
                       ),
                       const SizedBox(width: DexSpace.sm),
                       _ControlButton(
-                        icon: Icons.mic_rounded,
+                        icon: LucideIcons.mic,
                         tooltip: 'Mute',
                         accent: true,
                         onTap: () {},
                       ),
                       const SizedBox(width: DexSpace.sm),
                       _ControlButton(
-                        icon: Icons.settings_outlined,
+                        icon: LucideIcons.settings,
                         tooltip: 'Voice settings',
                         onTap: () => setState(() => _settingsOpen = true),
                       ),

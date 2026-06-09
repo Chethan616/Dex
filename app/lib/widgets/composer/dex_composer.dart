@@ -259,7 +259,7 @@ class _Toolbar extends StatelessWidget {
         const Spacer(),
         if (onVision != null)
           _RoundIconButton(
-            icon: LucideIcons.eye,
+            icon: LucideIcons.glasses,
             tooltip: 'Share screen with Dex',
             onTap: onVision,
           ),

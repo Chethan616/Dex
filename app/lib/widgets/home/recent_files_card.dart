@@ -2,6 +2,7 @@
 // filenames from the host; tapping a row routes through onSelect.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
 import 'home_card.dart';
@@ -10,7 +11,7 @@ class RecentFileItem {
   const RecentFileItem({
     required this.name,
     required this.when,
-    this.icon = Icons.insert_drive_file_outlined,
+    this.icon = LucideIcons.file,
   });
   final String name;
   final String when;
@@ -30,9 +31,9 @@ class RecentFilesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return HomeCard(
-      icon: Icons.attach_file_rounded,
+      icon: LucideIcons.paperclip,
       title: 'Attach a recent file to chat',
-      trailing: const Icon(Icons.info_outline_rounded,
+      trailing: const Icon(LucideIcons.info,
           size: 14, color: DexColors.textFaint),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -83,7 +84,7 @@ class _Row extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.more_horiz_rounded,
+            const Icon(LucideIcons.ellipsis,
                 size: 14, color: DexColors.textFaint),
           ],
         ),

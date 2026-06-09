@@ -1,6 +1,7 @@
 // Bottom-left avatar dropdown shown from the sidebar footer.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
 
@@ -36,12 +37,12 @@ class ProfileMenu {
           child: _Header(),
         ),
         const PopupMenuDivider(),
-        _row(ProfileMenuAction.settings, Icons.settings_outlined, 'Settings'),
-        _row(ProfileMenuAction.memory, Icons.psychology_outlined, 'Memory'),
-        _row(ProfileMenuAction.reminders, Icons.alarm_rounded, 'Reminders'),
-        _row(ProfileMenuAction.feedback, Icons.feedback_outlined, 'Give feedback'),
+        _row(ProfileMenuAction.settings, LucideIcons.settings, 'Settings'),
+        _row(ProfileMenuAction.memory, LucideIcons.brain, 'Memory'),
+        _row(ProfileMenuAction.reminders, LucideIcons.alarm_clock, 'Reminders'),
+        _row(ProfileMenuAction.feedback, LucideIcons.message_circle, 'Give feedback'),
         const PopupMenuDivider(),
-        _row(ProfileMenuAction.signOut, Icons.logout_rounded, 'Sign out'),
+        _row(ProfileMenuAction.signOut, LucideIcons.log_out, 'Sign out'),
       ],
     );
   }

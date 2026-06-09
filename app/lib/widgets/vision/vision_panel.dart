@@ -4,6 +4,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
 
@@ -50,7 +51,7 @@ class _VisionPanelState extends State<VisionPanel> {
                           style: DexType.heading(color: DexColors.text)),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 18),
+                      icon: const Icon(LucideIcons.x, size: 18),
                       color: DexColors.textDim,
                       onPressed: widget.onClose,
                     ),
@@ -141,7 +142,7 @@ class _AppRow extends StatelessWidget {
               borderRadius: DexRadius.rsm,
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.window_outlined,
+            child: const Icon(LucideIcons.app_window,
                 size: 14, color: DexColors.textDim),
           ),
           const SizedBox(width: DexSpace.md),

@@ -2,6 +2,7 @@
 // lives behind a follow-up PR; v1 just renders the list + Connect buttons.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../theme/tokens.dart';
 import '../settings_row.dart';
@@ -28,7 +29,7 @@ const _entries = <ConnectorEntry>[
   ConnectorEntry(
     id: 'cloud-drive',
     name: 'Cloud drive',
-    icon: Icons.cloud_outlined,
+    icon: LucideIcons.cloud,
     description: 'Search, analyse, read, create, edit, and download files in your cloud drive.',
     developer: 'Generic',
     category: 'Productivity',
@@ -36,7 +37,7 @@ const _entries = <ConnectorEntry>[
   ConnectorEntry(
     id: 'mail',
     name: 'Mail',
-    icon: Icons.mail_outline_rounded,
+    icon: LucideIcons.mail,
     description: 'Search, analyse, read, create, edit, and send messages in your inbox.',
     developer: 'Generic',
     category: 'Productivity',
@@ -44,7 +45,7 @@ const _entries = <ConnectorEntry>[
   ConnectorEntry(
     id: 'calendar',
     name: 'Calendar',
-    icon: Icons.calendar_today_outlined,
+    icon: LucideIcons.calendar,
     description: 'Search, analyse, read, create, and edit events on your calendar.',
     developer: 'Generic',
     category: 'Productivity',
@@ -52,7 +53,7 @@ const _entries = <ConnectorEntry>[
   ConnectorEntry(
     id: 'contacts',
     name: 'Contacts',
-    icon: Icons.person_outline_rounded,
+    icon: LucideIcons.user,
     description: 'Search and analyse your contacts.',
     developer: 'Generic',
     category: 'Productivity',
@@ -60,7 +61,7 @@ const _entries = <ConnectorEntry>[
   ConnectorEntry(
     id: 'docs',
     name: 'Documents',
-    icon: Icons.description_outlined,
+    icon: LucideIcons.file_text,
     description: 'Read, analyse, and edit your saved documents.',
     developer: 'Generic',
     category: 'Productivity',
@@ -68,7 +69,7 @@ const _entries = <ConnectorEntry>[
   ConnectorEntry(
     id: 'tasks',
     name: 'Tasks',
-    icon: Icons.checklist_rounded,
+    icon: LucideIcons.list_checks,
     description: 'Create, complete, and triage tasks from inside Dex.',
     developer: 'Generic',
     category: 'Productivity',
@@ -168,7 +169,7 @@ class _Row extends StatelessWidget {
               ),
               child: const Text('Connect'),
             ),
-            const Icon(Icons.chevron_right_rounded,
+            const Icon(LucideIcons.chevron_right,
                 size: 16, color: DexColors.textFaint),
           ],
         ),

@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../theme/tokens.dart';
 
@@ -39,7 +40,7 @@ class _MemoryAddState extends State<MemoryAdd> {
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                icon: const Icon(LucideIcons.arrow_left, size: 18),
                 color: DexColors.textDim,
                 onPressed: widget.onBack,
               ),
@@ -99,7 +100,7 @@ class _MemoryAddState extends State<MemoryAdd> {
           const SizedBox(height: DexSpace.sm),
           TextButton.icon(
             onPressed: () {},
-            icon: const Icon(Icons.add_rounded, size: 14),
+            icon: const Icon(LucideIcons.plus, size: 14),
             label: const Text('Add another link'),
           ),
           const SizedBox(height: DexSpace.lg),
@@ -179,7 +180,7 @@ class _PromptBox extends StatelessWidget {
           const SizedBox(width: DexSpace.sm),
           OutlinedButton.icon(
             onPressed: () => Clipboard.setData(ClipboardData(text: text)),
-            icon: const Icon(Icons.content_copy_rounded, size: 14),
+            icon: const Icon(LucideIcons.copy, size: 14),
             label: const Text('Copy'),
             style: OutlinedButton.styleFrom(
               foregroundColor: DexColors.text,
@@ -219,7 +220,7 @@ class DottedDropZone extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.upload_file_rounded,
+            Icon(LucideIcons.file_up,
                 size: 18, color: DexColors.textDim),
             const SizedBox(height: DexSpace.sm),
             Text('Upload or drop documents here',

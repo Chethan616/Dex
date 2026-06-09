@@ -2,6 +2,7 @@
 // label+control row, and an info paragraph below a row.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
 
@@ -72,7 +73,7 @@ class SettingsLinkRow extends StatelessWidget {
     required this.label,
     this.description,
     this.onTap,
-    this.trailingIcon = Icons.chevron_right_rounded,
+    this.trailingIcon = LucideIcons.chevron_right,
   });
   final String label;
   final String? description;

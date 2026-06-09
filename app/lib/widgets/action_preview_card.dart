@@ -2,6 +2,7 @@
 // mono steps, Approve (accent) / Deny. Highest-contrast element by design.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../core/models/action_preview.dart';
 import '../theme/motion.dart';
@@ -38,7 +39,7 @@ class ActionPreviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.warning_amber_rounded, size: 16, color: DexColors.stateAwaiting),
+              Icon(LucideIcons.triangle_alert, size: 16, color: DexColors.stateAwaiting),
               const SizedBox(width: DexSpace.sm),
               Text(
                 'Action Preview',

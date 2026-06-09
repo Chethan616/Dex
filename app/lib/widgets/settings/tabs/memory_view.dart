@@ -2,6 +2,7 @@
 // has remembered and lets the user delete or add new ones.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../theme/tokens.dart';
 import '../settings_row.dart';
@@ -26,7 +27,7 @@ class _MemoryViewState extends State<MemoryView> {
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                icon: const Icon(LucideIcons.arrow_left, size: 18),
                 color: DexColors.textDim,
                 onPressed: widget.onBack,
               ),
@@ -122,7 +123,7 @@ class _Fact extends StatelessWidget {
               child: Text(text, style: DexType.label(color: DexColors.text)),
             ),
             IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, size: 14),
+              icon: const Icon(LucideIcons.trash_2, size: 14),
               color: DexColors.textDim,
               onPressed: onDelete,
             ),

@@ -14,6 +14,7 @@
 //   bash / read / write / process / edit       -> shell
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
 
@@ -42,28 +43,28 @@ EngineDescriptor descriptorForEngine(EngineId id) {
       return EngineDescriptor(
         id: id,
         label: 'shell',
-        icon: Icons.terminal,
+        icon: LucideIcons.terminal,
         color: DexColors.textDim,
       );
     case EngineId.ufoUia:
       return EngineDescriptor(
         id: id,
         label: 'ufo-uia',
-        icon: Icons.desktop_windows,
+        icon: LucideIcons.monitor,
         color: DexColors.accent,
       );
     case EngineId.browserUse:
       return EngineDescriptor(
         id: id,
         label: 'browser-use',
-        icon: Icons.public,
+        icon: LucideIcons.globe,
         color: DexColors.stateActing,
       );
     case EngineId.omniparser:
       return EngineDescriptor(
         id: id,
         label: 'omniparser',
-        icon: Icons.visibility,
+        icon: LucideIcons.eye,
         color: DexColors.stateAwaiting,
       );
   }

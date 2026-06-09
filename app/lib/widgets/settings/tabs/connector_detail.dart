@@ -1,6 +1,7 @@
 // Detail view for a single connector entry: About + Details + Connect.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../theme/tokens.dart';
 import 'connectors_tab.dart';
@@ -20,7 +21,7 @@ class ConnectorDetail extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                icon: const Icon(LucideIcons.arrow_left, size: 18),
                 color: DexColors.textDim,
                 onPressed: onBack,
               ),
