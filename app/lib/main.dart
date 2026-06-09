@@ -71,9 +71,21 @@ Future<void> _registerSpotlightHotkey(ConversationStore store) async {
     );
     await hotKeyManager.register(
       hotKey,
-      keyDownHandler: (_) {
+      keyDownHandler: (_) async {
+        // When the main window is already focused, the in-app
+        // DexComposer Shortcuts handle Ctrl+K -- they focus the
+        // docked composer directly. Stacking a modal overlay on top
+        // would just steal focus from that composer, which is the
+        // "why does the overlay open when I'm already in the app"
+        // pain. So we no-op the system hotkey while focused and
+        // only fire the spotlight from background / hidden.
+        if (await windowManager.isFocused()) return;
+        // dexNavigatorKey.currentContext is a GlobalKey lookup, not a
+        // captured BuildContext, so it's safe across the await above.
+        // ignore: use_build_context_synchronously
         final ctx = dexNavigatorKey.currentContext;
         if (ctx == null) return;
+        // ignore: use_build_context_synchronously
         SpotlightOverlay.show(ctx, store);
       },
     );

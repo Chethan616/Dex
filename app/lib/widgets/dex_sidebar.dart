@@ -20,7 +20,6 @@ class DexSidebar extends StatelessWidget {
     required this.recentChats,
     required this.activeChatId,
     required this.userName,
-    required this.userPlan,
     this.onNewChat,
     this.onLibrary,
     this.onTasks,
@@ -30,7 +29,6 @@ class DexSidebar extends StatelessWidget {
     this.onExperiments,
     this.onSelectChat,
     this.onAvatarTap,
-    this.onUpgrade,
   });
 
   final bool expanded;
@@ -38,7 +36,6 @@ class DexSidebar extends StatelessWidget {
   final List<RecentChatItem> recentChats;
   final String? activeChatId;
   final String userName;
-  final String userPlan;
   final VoidCallback? onNewChat;
   final VoidCallback? onLibrary;
   final VoidCallback? onTasks;
@@ -48,7 +45,6 @@ class DexSidebar extends StatelessWidget {
   final VoidCallback? onExperiments;
   final ValueChanged<RecentChatItem>? onSelectChat;
   final VoidCallback? onAvatarTap;
-  final VoidCallback? onUpgrade;
 
   static const double _collapsedWidth = 72;
   static const double _expandedWidth = 240;
@@ -136,9 +132,7 @@ class DexSidebar extends StatelessWidget {
           _Footer(
             expanded: expanded,
             userName: userName,
-            userPlan: userPlan,
             onAvatarTap: onAvatarTap,
-            onUpgrade: onUpgrade,
           ),
         ],
       ),
@@ -326,16 +320,12 @@ class _Footer extends StatelessWidget {
   const _Footer({
     required this.expanded,
     required this.userName,
-    required this.userPlan,
     required this.onAvatarTap,
-    required this.onUpgrade,
   });
 
   final bool expanded;
   final String userName;
-  final String userPlan;
   final VoidCallback? onAvatarTap;
-  final VoidCallback? onUpgrade;
 
   @override
   Widget build(BuildContext context) {
@@ -364,28 +354,10 @@ class _Footer extends StatelessWidget {
           if (expanded) ...[
             const SizedBox(width: DexSpace.sm),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(userName,
-                      style: DexType.label(color: DexColors.text),
-                      overflow: TextOverflow.ellipsis),
-                  Text(userPlan,
-                      style: DexType.caption(color: DexColors.textFaint)),
-                ],
-              ),
+              child: Text(userName,
+                  style: DexType.label(color: DexColors.text),
+                  overflow: TextOverflow.ellipsis),
             ),
-            if (onUpgrade != null)
-              TextButton(
-                onPressed: onUpgrade,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DexSpace.md, vertical: DexSpace.xs,
-                  ),
-                ),
-                child: Text('Upgrade',
-                    style: DexType.label(color: DexColors.accent)),
-              ),
           ],
         ],
       ),

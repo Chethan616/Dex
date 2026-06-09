@@ -23,28 +23,28 @@ class ActionPreviewPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visible = preview != null;
-    return AnimatedSlide(
-      offset: visible ? Offset.zero : const Offset(1.05, 0),
+    // AnimatedSize collapses the panel to width: 0 when there's no
+    // preview so the main content area gets the full remaining space
+    // and centers correctly. Previously the panel reserved 380px even
+    // when empty, which pulled the home greeting off-center.
+    return AnimatedSize(
       duration: DexMotion.respecting(context, DexMotion.slow),
       curve: DexMotion.respectingCurve(context, DexMotion.easeOut),
-      child: AnimatedOpacity(
-        opacity: visible ? 1 : 0,
-        duration: DexMotion.respecting(context, DexMotion.medium),
-        child: SizedBox(
-          width: 380,
-          child: Container(
-            color: DexColors.bg,
-            padding: const EdgeInsets.all(DexSpace.lg),
-            child: visible
-                ? ActionPreviewCard(
-                    preview: preview!,
-                    onApprove: onApprove,
-                    onDeny: onDeny,
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ),
-      ),
+      alignment: Alignment.centerLeft,
+      child: visible
+          ? SizedBox(
+              width: 380,
+              child: Container(
+                color: DexColors.bg,
+                padding: const EdgeInsets.all(DexSpace.lg),
+                child: ActionPreviewCard(
+                  preview: preview!,
+                  onApprove: onApprove,
+                  onDeny: onDeny,
+                ),
+              ),
+            )
+          : const SizedBox(width: 0),
     );
   }
 }

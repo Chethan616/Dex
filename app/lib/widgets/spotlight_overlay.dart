@@ -3,7 +3,6 @@
 // input, instant submit -> ConversationStore.
 
 import 'dart:async';
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -11,7 +10,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../core/state/conversation_store.dart';
-import '../platform/win/tray.dart';
 import '../theme/tokens.dart';
 import 'home/suggestion_chip.dart';
 
@@ -30,10 +28,13 @@ class SpotlightOverlay extends StatefulWidget {
   static Future<void> show(BuildContext context, ConversationStore store) {
     if (_visible) return Future<void>.value();
     _visible = true;
-    if (Platform.isWindows) {
-      // ignore: discarded_futures
-      DexTray.instance.showWindow();
-    }
+    // NOTE: deliberately no DexTray.showWindow() here. A summon that
+    // forces the main window to the foreground is not what the user
+    // wants -- they want a passive overlay that floats over whatever
+    // they're already doing. A truly global Spotlight (one that renders
+    // even when the main window is hidden) needs a separate borderless
+    // floating window via desktop_multi_window; until that lands, the
+    // overlay only renders when the Flutter window is already mounted.
     return showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
