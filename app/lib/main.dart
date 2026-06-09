@@ -1,14 +1,22 @@
 // Dex -- entry point.
 //
-// Boots the app, wires the GatewayClient + ConversationStore, and hands the
-// home screen the listenable store. v1.2 Phase 11 layered on:
+// Single binary, two windows: the main Dex shell (default) and a
+// borderless Spotlight overlay window spawned on-demand via the Ctrl+K
+// global hotkey. desktop_multi_window routes every launch through this
+// same main(); we inspect WindowController.fromCurrentEngine() to
+// decide which one we are.
+//
+// Layers in the main window:
 //   - window_manager + tray_manager: closing the window hides to the
 //     tray instead of killing the gateway connection.
-//   - hotkey_manager: system-scope Ctrl+K summons the SpotlightOverlay
-//     even when Dex is hidden in the tray.
+//   - hotkey_manager: system-scope Ctrl+K. When Dex is unfocused, the
+//     handler spawns the Spotlight sub-window; when focused, it lets
+//     the in-app DexComposer Shortcut take over.
 
+import 'dart:async';
 import 'dart:io';
 
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,8 +27,12 @@ import 'core/gateway_client.dart';
 import 'core/state/conversation_store.dart';
 import 'platform/win/tray.dart';
 import 'screens/home_desktop.dart';
+import 'spotlight_window.dart';
 import 'theme/theme.dart';
-import 'widgets/spotlight_overlay.dart';
+
+/// IPC channel name used by the Spotlight sub-window to send the user's
+/// prompt back to the main window's ConversationStore.
+const String dexSpotlightChannel = 'dex.spotlight';
 
 /// Lets the global-hotkey handler call into Navigator from a non-widget
 /// context. Same key bound onto the MaterialApp below.
@@ -32,12 +44,20 @@ Future<void> main() async {
     const ApplicationSwitcherDescription(label: 'Dex'),
   );
 
+  // desktop_multi_window routes every launch through this same main().
+  // The current window's `arguments` tells us which one we are.
+  final currentWindow = await WindowController.fromCurrentEngine();
+  if (currentWindow.arguments == 'spotlight') {
+    await runSpotlightWindow(currentWindow);
+    return;
+  }
+
+  // ---------- MAIN WINDOW ----------
+
   // Window + tray init on Windows (no-op on other platforms for now;
   // macOS / Linux land in v1.3 platform abstraction).
   if (Platform.isWindows) {
     await windowManager.ensureInitialized();
-    // Intercept the close button so the WindowListener can decide
-    // between hide-to-tray and quit per the user's preference.
     await windowManager.setPreventClose(true);
     await DexTray.instance.init();
   }
@@ -46,23 +66,44 @@ Future<void> main() async {
   // rename to dex.json ships in v1.4); see GatewayConfig.fromLocalConfig
   // for the one-cycle ~/.openclaw/ fallback.
   final client = GatewayClient(GatewayConfig.fromLocalConfig());
-  // Best-effort connect; the UI shows the live connection state.
   unawaited(client.connect());
 
   final store = ConversationStore(client);
 
-  // Register the global Ctrl+K hotkey AFTER the store + tray exist so
-  // the handler has everything it needs. Failures are non-fatal --
-  // the in-app Shortcuts on DexComposer still bind Ctrl+K within the
-  // window, so the worst case is "no summon while hidden in tray".
+  // IPC handler: when the Spotlight sub-window submits a prompt, route
+  // it to the main store. Restoring the main window happens here so the
+  // user can see the streamed reply land.
+  const spotlight = WindowMethodChannel(dexSpotlightChannel);
+  await spotlight.setMethodCallHandler((call) async {
+    if (call.method == 'sendPrompt') {
+      final text = (call.arguments as String?)?.trim() ?? '';
+      if (text.isEmpty) return null;
+      unawaited(_handleSpotlightPrompt(store, text));
+      return 'ok';
+    }
+    return null;
+  });
+
   if (Platform.isWindows) {
-    await _registerSpotlightHotkey(store);
+    await _registerSpotlightHotkey();
   }
 
   runApp(DexApp(store: store));
 }
 
-Future<void> _registerSpotlightHotkey(ConversationStore store) async {
+Future<void> _handleSpotlightPrompt(
+  ConversationStore store,
+  String text,
+) async {
+  // Bring the main window forward so the reply is visible. The
+  // Spotlight sub-window itself closes from inside its own onSubmit.
+  if (Platform.isWindows) {
+    await DexTray.instance.showWindow();
+  }
+  await store.sendHumanMessage(text);
+}
+
+Future<void> _registerSpotlightHotkey() async {
   try {
     await hotKeyManager.unregisterAll();
     final hotKey = HotKey(
@@ -74,24 +115,25 @@ Future<void> _registerSpotlightHotkey(ConversationStore store) async {
       hotKey,
       keyDownHandler: (_) async {
         // When the main window is already focused, the in-app
-        // DexComposer Shortcuts handle Ctrl+K -- they focus the
-        // docked composer directly. Stacking a modal overlay on top
-        // would just steal focus from that composer, which is the
-        // "why does the overlay open when I'm already in the app"
-        // pain. So we no-op the system hotkey while focused and
-        // only fire the spotlight from background / hidden.
+        // DexComposer Shortcut handles Ctrl+K -- it focuses the
+        // docked composer. We no-op the system hotkey in that case so
+        // the user isn't punished with a modal stealing focus.
         if (await windowManager.isFocused()) return;
-        // dexNavigatorKey.currentContext is a GlobalKey lookup, not a
-        // captured BuildContext, so it's safe across the await above.
-        // ignore: use_build_context_synchronously
-        final ctx = dexNavigatorKey.currentContext;
-        if (ctx == null) return;
-        // ignore: use_build_context_synchronously
-        SpotlightOverlay.show(ctx, store);
+        // Spawn the Spotlight as a separate borderless always-on-top
+        // window over whatever the user is currently doing. The main
+        // Dex window stays hidden / in the background until the user
+        // actually submits a prompt.
+        try {
+          final win = await WindowController.create(
+            const WindowConfiguration(arguments: 'spotlight'),
+          );
+          await win.show();
+        } catch (e, st) {
+          debugPrint('[dex] spotlight window spawn failed: $e\n$st');
+        }
       },
     );
   } catch (e, st) {
-    // Don't crash the app over a hotkey registration failure.
     debugPrint('[dex] spotlight hotkey registration failed: $e\n$st');
   }
 }
@@ -101,8 +143,8 @@ void unawaited(Future<void> _) {}
 /// App-wide scroll behavior: hides the scrollbar so the home, chat, and
 /// settings panels read as one calm Apple-style surface. Scrolling
 /// (wheel, trackpad, drag) still works -- only the visible bar is gone.
-class _DexScrollBehavior extends MaterialScrollBehavior {
-  const _DexScrollBehavior();
+class DexScrollBehavior extends MaterialScrollBehavior {
+  const DexScrollBehavior();
 
   @override
   Widget buildScrollbar(
@@ -150,8 +192,6 @@ class _DexAppState extends State<DexApp> with WindowListener {
 
   @override
   void onWindowClose() async {
-    // setPreventClose(true) routes the X here. Per the user's pref:
-    // either hide to tray (default) or exit cleanly.
     if (!Platform.isWindows) return;
     if (DexTray.instance.quitOnClose) {
       await DexTray.instance.quit();
@@ -169,7 +209,7 @@ class _DexAppState extends State<DexApp> with WindowListener {
       themeMode: ThemeMode.dark,
       theme: buildDexLightTheme(),
       darkTheme: buildDexDarkTheme(),
-      scrollBehavior: const _DexScrollBehavior(),
+      scrollBehavior: const DexScrollBehavior(),
       home: HomeDesktop(store: widget.store),
     );
   }

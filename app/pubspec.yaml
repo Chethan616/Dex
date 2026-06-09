@@ -55,6 +55,7 @@ dependencies:
   # seals (final class) -- so the original fails to compile under
   # modern SDKs. Same constant names (LucideIcons.X).
   flutter_lucide: ^1.11.0
+  desktop_multi_window: ^0.3.0
 
 dev_dependencies:
   flutter_test:
