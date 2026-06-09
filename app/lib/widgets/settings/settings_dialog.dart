@@ -1,9 +1,12 @@
 // The Settings modal. Left rail of tab labels, right pane of contents.
 // Sub-screens (e.g. View memory) replace the right pane in place.
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
 import 'tabs/about_tab.dart';
 import 'tabs/account_tab.dart';
@@ -31,10 +34,29 @@ class SettingsDialog extends StatefulWidget {
 
   static Future<void> show(BuildContext context,
       {SettingsTab initial = SettingsTab.preferences}) {
-    return showDialog<void>(
+    return showGeneralDialog<void>(
       context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss settings',
       barrierColor: Colors.black.withValues(alpha: 0.4),
-      builder: (_) => SettingsDialog(initialTab: initial),
+      transitionDuration: DexMotion.hover,
+      pageBuilder: (_, _, _) => SettingsDialog(initialTab: initial),
+      transitionBuilder: (ctx, anim, _, child) {
+        final reduce = MediaQuery.of(ctx).disableAnimations;
+        if (reduce) return child;
+        final spring = CurvedAnimation(parent: anim, curve: DexMotion.spring);
+        return FadeTransition(
+          opacity: anim,
+          child: AnimatedBuilder(
+            animation: spring,
+            builder: (_, c) => Transform.scale(
+              scale: 0.95 + 0.05 * spring.value,
+              child: c,
+            ),
+            child: child,
+          ),
+        );
+      },
     );
   }
 
@@ -53,34 +75,50 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: DexColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: DexRadius.rlg,
-        side: const BorderSide(color: DexColors.border),
-      ),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: 760, minHeight: 540, maxHeight: 640,
-        ),
-        child: Column(
-          children: [
-            _Header(onClose: () => Navigator.of(context).maybePop()),
-            const Divider(height: 1, color: DexColors.border),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _TabList(
-                    current: _tab,
-                    onSelect: (t) => setState(() => _tab = t),
-                  ),
-                  const VerticalDivider(width: 1, color: DexColors.border),
-                  Expanded(child: _content(_tab)),
-                ],
+    return Material(
+      type: MaterialType.transparency,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: 760, minHeight: 540, maxHeight: 640,
+          ),
+          child: ClipRRect(
+            borderRadius: DexRadius.rlg,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: DexSurface.blurSigma,
+                sigmaY: DexSurface.blurSigma,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: DexSurface.glossyGradient(),
+                  borderRadius: DexRadius.rlg,
+                  border: DexSurface.glossyBorder(),
+                  boxShadow: DexSurface.glossyShadow,
+                ),
+                child: Column(
+                  children: [
+                    _Header(onClose: () => Navigator.of(context).maybePop()),
+                    const Divider(height: 1, color: DexColors.border),
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _TabList(
+                            current: _tab,
+                            onSelect: (t) => setState(() => _tab = t),
+                          ),
+                          const VerticalDivider(
+                              width: 1, color: DexColors.border),
+                          Expanded(child: _content(_tab)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

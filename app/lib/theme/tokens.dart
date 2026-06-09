@@ -130,19 +130,22 @@ class DexRadius {
 class DexSurface {
   const DexSurface._();
 
-  // Background gradient -- bright blue/black wallpaper. Top edge is
-  // near-black with a blue tint so window chrome doesn't fight; bottom
-  // transitions into a rich royal navy so the chat reads like it's
-  // sitting on a polished cool surface, not a flat gray slab.
-  static const LinearGradient bgGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
+  // Background gradient -- a localised "fog" effect. A vivid blue glow
+  // sits in the bottom-left corner of the wallpaper (like a single
+  // light source bleeding into the room) and fades smoothly into a
+  // deep navy-black across the rest of the screen. Implemented as a
+  // RadialGradient so the brightness is concentrated rather than
+  // washing the whole panel like the old top-to-bottom linear did.
+  static const RadialGradient bgGradient = RadialGradient(
+    center: Alignment(-0.85, 0.95),
+    radius: 1.4,
     colors: <Color>[
+      Color(0xFF4F8CFF),
+      Color(0xFF1F3580),
+      Color(0xFF0A1235),
       Color(0xFF040A1A),
-      Color(0xFF0E1B45),
-      Color(0xFF193373),
     ],
-    stops: <double>[0.0, 0.55, 1.0],
+    stops: <double>[0.0, 0.22, 0.55, 1.0],
   );
 
   static const LinearGradient bgGradientLight = LinearGradient(

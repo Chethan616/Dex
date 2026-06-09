@@ -32,12 +32,10 @@ class _VisionPanelState extends State<VisionPanel> {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: DexColors.surface2.withValues(
-                alpha: DexSurface.acrylicAlpha,
-              ),
+              gradient: DexSurface.glossyGradient(),
               borderRadius: DexRadius.rmd,
-              border: Border.all(color: DexColors.border),
-              boxShadow: DexElevation.floating,
+              border: DexSurface.glossyBorder(),
+              boxShadow: DexSurface.glossyShadow,
             ),
             padding: const EdgeInsets.all(DexSpace.lg),
             child: Column(

@@ -59,9 +59,24 @@ class _HomeDesktopState extends State<HomeDesktop> {
 
   static const List<RecentChatItem> _recentChats = <RecentChatItem>[
     RecentChatItem(
+      id: 'dns',
+      title: 'Change Wi-Fi DNS to 1.1.1.1',
+      when: 'Today',
+    ),
+    RecentChatItem(
+      id: 'figma',
+      title: 'Export Figma frame as PNG',
+      when: 'Yesterday',
+    ),
+    RecentChatItem(
       id: 'pebble',
       title: 'Searching for pebble.exe file',
       when: 'Saturday',
+    ),
+    RecentChatItem(
+      id: 'aadhaar',
+      title: 'Find my Aadhaar card',
+      when: '2 days ago',
     ),
   ];
 

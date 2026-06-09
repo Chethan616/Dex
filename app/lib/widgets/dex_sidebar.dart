@@ -142,8 +142,20 @@ class DexSidebar extends StatelessWidget {
                     onTap: onExperiments,
                   ),
                   if (expanded && recentChats.isNotEmpty) ...[
-                    const _Divider(),
-                    const SizedBox(height: DexSpace.sm),
+                    const SizedBox(height: DexSpace.lg),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        DexSpace.md, 0, DexSpace.md, DexSpace.xs,
+                      ),
+                      child: Text(
+                        'History',
+                        style: DexType.caption(color: DexColors.textDim)
+                            .copyWith(
+                          letterSpacing: 0.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                     ...recentChats.map(
                       (c) => _ChatRow(
                         chat: c,
@@ -183,27 +195,13 @@ class _Header extends StatelessWidget {
             ? MainAxisAlignment.start
             : MainAxisAlignment.center,
         children: [
-          if (expanded) ...[
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: DexColors.accent,
-                borderRadius: DexRadius.rsm,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                'D',
-                style: DexType.label(color: DexColors.bg).copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(width: DexSpace.sm),
+          if (expanded)
             Expanded(
-              child: Text('Dex', style: DexType.label(color: DexColors.text)),
+              child: Text(
+                'Dex',
+                style: DexType.heading(color: DexColors.text),
+              ),
             ),
-          ],
           IconButton(
             icon: Icon(
               expanded
@@ -260,6 +258,9 @@ class _NavItem extends StatelessWidget {
               horizontal: DexSpace.md, vertical: DexSpace.sm,
             ),
             child: Row(
+              mainAxisAlignment: expanded
+                  ? MainAxisAlignment.start
+                  : MainAxisAlignment.center,
               children: [
                 Icon(icon, size: 18, color: DexColors.textDim),
                 if (expanded) ...[
@@ -379,6 +380,9 @@ class _Footer extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(DexSpace.md),
       child: Row(
+        mainAxisAlignment: expanded
+            ? MainAxisAlignment.start
+            : MainAxisAlignment.center,
         children: [
           avatar,
           if (expanded) ...[

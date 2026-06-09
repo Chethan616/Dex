@@ -27,10 +27,16 @@ class ActionPreviewCard extends StatelessWidget {
       duration: DexMotion.respecting(context, DexMotion.medium),
       curve: DexMotion.respectingCurve(context, DexMotion.easeOut),
       decoration: BoxDecoration(
-        color: DexColors.surface,
+        // Keeps the amber stroke (the "needs your attention" signal
+        // from design.md) but upgrades the fill from a flat surface
+        // to the same glossy gradient every other floating card in
+        // the app uses, so the preview reads as one family with the
+        // composer / spotlight / dialogs while still standing out
+        // via its border colour.
+        gradient: DexSurface.glossyGradient(),
         borderRadius: DexRadius.rmd,
         border: Border.all(color: DexColors.stateAwaiting, width: 1.5),
-        boxShadow: DexElevation.floating,
+        boxShadow: DexSurface.glossyShadow,
       ),
       padding: const EdgeInsets.all(DexSpace.lg),
       child: Column(

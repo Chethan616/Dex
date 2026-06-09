@@ -95,12 +95,17 @@ Future<void> _handleSpotlightPrompt(
   ConversationStore store,
   String text,
 ) async {
-  // Bring the main window forward so the reply is visible. The
-  // Spotlight sub-window itself closes from inside its own onSubmit.
+  // Push the message into the store FIRST. sendHumanMessage's
+  // synchronous prefix (append + state flip + notifyListeners) runs
+  // before any await, so by the time we yield, the home pane has
+  // already rebuilt from EmptyHome → ChatView. THEN bring the main
+  // window forward and the user lands directly on the streaming
+  // reply instead of seeing a one-frame flash of the empty home.
+  final delivery = store.sendHumanMessage(text);
   if (Platform.isWindows) {
     await DexTray.instance.showWindow();
   }
-  await store.sendHumanMessage(text);
+  await delivery;
 }
 
 /// Mutex preventing two Ctrl+K presses from racing through
