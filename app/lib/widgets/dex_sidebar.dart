@@ -56,21 +56,28 @@ class DexSidebar extends StatelessWidget {
       duration: const Duration(milliseconds: 160),
       curve: Curves.easeOutCubic,
       width: width,
-      decoration: BoxDecoration(
-        // Sidebar reads as a "panel" sitting on top of the wallpaper
-        // gradient -- a slightly deeper vertical fade that harmonises
-        // with the bg's top-to-bottom navy shift. The hairline right
-        // border replaces the old VerticalDivider so we don't end up
-        // with a double line between the rail and the content.
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        // Sidebar reads as a translucent panel sitting on the bg
+        // gradient. Three-stop vertical fade with a brighter top
+        // (catches the implied light source) settling into the deep
+        // navy of the wallpaper. Two hairline white-alpha edges -- top
+        // for the glass-edge highlight, right to replace the old
+        // VerticalDivider between rail and content.
+        gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: <Color>[
-            Color(0xFF0A132E),
+            Color(0xFF14213F),
+            Color(0xFF0B142E),
             Color(0xFF050B1F),
           ],
+          stops: <double>[0.0, 0.4, 1.0],
         ),
-        border: const Border(
+        border: Border(
+          top: BorderSide(
+            color: Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.08),
+            width: 1,
+          ),
           right: BorderSide(
             color: Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.06),
             width: 1,
@@ -172,23 +179,26 @@ class _Header extends StatelessWidget {
         DexSpace.md, DexSpace.lg, DexSpace.sm, 0,
       ),
       child: Row(
+        mainAxisAlignment: expanded
+            ? MainAxisAlignment.start
+            : MainAxisAlignment.center,
         children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: DexColors.accent,
-              borderRadius: DexRadius.rsm,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              'D',
-              style: DexType.label(color: DexColors.bg).copyWith(
-                fontWeight: FontWeight.w700,
+          if (expanded) ...[
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: DexColors.accent,
+                borderRadius: DexRadius.rsm,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'D',
+                style: DexType.label(color: DexColors.bg).copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-          ),
-          if (expanded) ...[
             const SizedBox(width: DexSpace.sm),
             Expanded(
               child: Text('Dex', style: DexType.label(color: DexColors.text)),

@@ -103,6 +103,45 @@ Future<void> _handleSpotlightPrompt(
   await store.sendHumanMessage(text);
 }
 
+/// Mutex preventing two Ctrl+K presses from racing through
+/// `_summonSpotlight` before the first `getAll()` resolves and the
+/// second can see the in-flight window. Resets in `finally`.
+bool _spotlightSpawning = false;
+
+/// Summon the Spotlight sub-window. Idempotent: if one is already
+/// alive (e.g. user hit Ctrl+K twice), re-show that one instead of
+/// spawning a duplicate.
+///
+/// IMPORTANT: we do NOT call `win.show()` on the freshly-created
+/// controller. The sub-window's own `windowManager.show()` inside
+/// `waitUntilReadyToShow` is what reveals it -- after its first
+/// frame is painted. Showing it pre-frame is what produced the
+/// brief white flash before the glossy panel rendered.
+Future<void> _summonSpotlight() async {
+  if (_spotlightSpawning) return;
+  _spotlightSpawning = true;
+  try {
+    try {
+      final existing = (await WindowController.getAll())
+          .where((w) => w.arguments == 'spotlight')
+          .toList(growable: false);
+      if (existing.isNotEmpty) {
+        await existing.first.show();
+        return;
+      }
+    } catch (_) {
+      // getAll() failed -- fall through and try to spawn anyway.
+    }
+    await WindowController.create(
+      const WindowConfiguration(arguments: 'spotlight'),
+    );
+  } catch (e, st) {
+    debugPrint('[dex] spotlight spawn failed: $e\n$st');
+  } finally {
+    _spotlightSpawning = false;
+  }
+}
+
 Future<void> _registerSpotlightHotkey() async {
   try {
     await hotKeyManager.unregisterAll();
@@ -119,18 +158,7 @@ Future<void> _registerSpotlightHotkey() async {
         // docked composer. We no-op the system hotkey in that case so
         // the user isn't punished with a modal stealing focus.
         if (await windowManager.isFocused()) return;
-        // Spawn the Spotlight as a separate borderless always-on-top
-        // window over whatever the user is currently doing. The main
-        // Dex window stays hidden / in the background until the user
-        // actually submits a prompt.
-        try {
-          final win = await WindowController.create(
-            const WindowConfiguration(arguments: 'spotlight'),
-          );
-          await win.show();
-        } catch (e, st) {
-          debugPrint('[dex] spotlight window spawn failed: $e\n$st');
-        }
+        await _summonSpotlight();
       },
     );
   } catch (e, st) {
