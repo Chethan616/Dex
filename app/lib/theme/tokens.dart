@@ -130,22 +130,24 @@ class DexRadius {
 class DexSurface {
   const DexSurface._();
 
-  // Background gradient -- a localised "fog" effect. A vivid blue glow
-  // sits in the bottom-left corner of the wallpaper (like a single
-  // light source bleeding into the room) and fades smoothly into a
-  // deep navy-black across the rest of the screen. Implemented as a
-  // RadialGradient so the brightness is concentrated rather than
-  // washing the whole panel like the old top-to-bottom linear did.
+  // Background gradient -- a wide "fog" glow centred below the screen.
+  // The original linear gradient went dark-at-top → royal-navy-at-bottom;
+  // this radial does the same vertical distribution but with a soft
+  // fog/light-source character instead of a flat linear fade. The
+  // glow's focal point sits beneath the screen at Alignment(0, 1.3)
+  // and a generous radius (1.5) lets the brightness diffuse all along
+  // the bottom edge -- not just one corner -- before fading up into
+  // deep navy-black at the top.
   static const RadialGradient bgGradient = RadialGradient(
-    center: Alignment(-0.85, 0.95),
-    radius: 1.4,
+    center: Alignment(0, 1.3),
+    radius: 1.5,
     colors: <Color>[
       Color(0xFF4F8CFF),
       Color(0xFF1F3580),
       Color(0xFF0A1235),
       Color(0xFF040A1A),
     ],
-    stops: <double>[0.0, 0.22, 0.55, 1.0],
+    stops: <double>[0.0, 0.3, 0.65, 1.0],
   );
 
   static const LinearGradient bgGradientLight = LinearGradient(
