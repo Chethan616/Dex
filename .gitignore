@@ -73,3 +73,7 @@ Thumbs.db
 logs/
 scratch/
 .notes-scratch/
+
+# Claude Code per-user permission allowlist. Often contains transient
+# API keys via Bash(curl ...) entries -- never commit.
+.claude/settings.local.json
