@@ -9,6 +9,7 @@
 
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
@@ -97,6 +98,30 @@ Future<void> _registerSpotlightHotkey(ConversationStore store) async {
 
 void unawaited(Future<void> _) {}
 
+/// App-wide scroll behavior: hides the scrollbar so the home, chat, and
+/// settings panels read as one calm Apple-style surface. Scrolling
+/// (wheel, trackpad, drag) still works -- only the visible bar is gone.
+class _DexScrollBehavior extends MaterialScrollBehavior {
+  const _DexScrollBehavior();
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
+  }
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => <PointerDeviceKind>{
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
+}
+
 class DexApp extends StatefulWidget {
   const DexApp({super.key, required this.store});
 
@@ -144,6 +169,7 @@ class _DexAppState extends State<DexApp> with WindowListener {
       themeMode: ThemeMode.dark,
       theme: buildDexLightTheme(),
       darkTheme: buildDexDarkTheme(),
+      scrollBehavior: const _DexScrollBehavior(),
       home: HomeDesktop(store: widget.store),
     );
   }

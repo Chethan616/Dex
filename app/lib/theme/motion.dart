@@ -13,12 +13,25 @@ class DexMotion {
   static const Duration slow = Duration(milliseconds: 220);   // approval sheet rise (mobile)
   static const Duration breathing = Duration(milliseconds: 1200); // thinking pulse
 
+  // Expressive / Apple-leaning durations for hover, press, entry. Longer
+  // than the base ladder so the easing has room to read.
+  static const Duration hover = Duration(milliseconds: 180);
+  static const Duration press = Duration(milliseconds: 110);
+  static const Duration entry = Duration(milliseconds: 420);
+
   // Standard curves.
   static const Curve easeOut = Curves.easeOutCubic;
   static const Curve easeInOut = Curves.easeInOutCubic;
 
-  // Stagger between successive action steps.
+  // Expressive curves -- light spring on press/hover, soft overshoot on
+  // entry. Used by SuggestionChip, NavRail rows, FadeInUp.
+  static const Curve spring = Curves.easeOutBack;
+  static const Curve gentle = Curves.fastOutSlowIn;
+  static const Curve expressiveEntry = Curves.easeOutCubic;
+
+  // Stagger between successive action steps + home-section entries.
   static const Duration stepStagger = Duration(milliseconds: 40);
+  static const Duration entryStagger = Duration(milliseconds: 70);
 
   /// Returns [d] if motion is allowed by the platform, or Duration.zero if
   /// the user has requested reduced motion. Use this everywhere a tween or
