@@ -13,29 +13,29 @@ import 'package:flutter/material.dart';
 class DexColors {
   const DexColors._();
 
-  // base -- dark, unambiguously cool. Aligned with DexSurface.bgGradient
-  // so panels and the background read as one neutral family even under
-  // Windows Night Light.
-  static const Color bg = Color(0xFF0A0C10);
-  static const Color surface = Color(0xFF13161B);
-  static const Color surface2 = Color(0xFF181C22);
-  static const Color border = Color(0xFF272B33);
+  // base -- bright cool blue/black family. Aligned with DexSurface.
+  // bgGradient so the wallpaper, the sidebar, and the elevated panels
+  // all read as one Apple-Materials-style palette: deep navy bottoms,
+  // near-black tops, vivid blue accents.
+  static const Color bg = Color(0xFF050B1F);
+  static const Color surface = Color(0xFF0C1530);
+  static const Color surface2 = Color(0xFF152244);
+  static const Color border = Color(0xFF2A3858);
 
-  // text -- off-white through cool gray. No warm sand bias; chat copy
-  // reads as a premium dark-mode product rather than a beach theme.
-  static const Color text = Color(0xFFE6E8EC);      // off-white
-  static const Color textDim = Color(0xFF9CA1AB);   // cool mid-gray
-  static const Color textFaint = Color(0xFF646973); // cool deep gray
+  // text -- off-white through cool gray with a barely-there cool tint.
+  static const Color text = Color(0xFFECEFF7);      // off-white
+  static const Color textDim = Color(0xFF9BA3B8);   // cool mid-gray
+  static const Color textFaint = Color(0xFF5E677F); // deep cool gray
 
-  // accent -- subtle cool blue used for primary buttons + focus rings.
-  // Sparse usage: engine pills + chips carry semantic color on their own.
-  static const Color accent = Color(0xFF6EA8FE);
-  static const Color accentQuiet = Color(0xFF1A2030);
+  // accent -- vivid sky blue for primary buttons + focus rings. Brighter
+  // than the previous muted #6EA8FE so it pops against the navy gradient.
+  static const Color accent = Color(0xFF60A5FF);
+  static const Color accentQuiet = Color(0xFF1A2547);
 
   // agent state -- semantic, NOT decorative
-  static const Color stateIdle = Color(0xFF646973);      // cool gray (== textFaint)
+  static const Color stateIdle = Color(0xFF5E677F);      // cool gray (== textFaint)
   static const Color stateThinking = Color(0xFFB58CFF);  // violet pulse
-  static const Color stateActing = Color(0xFF6EA8FE);    // cool blue (== accent)
+  static const Color stateActing = Color(0xFF60A5FF);    // sky blue (== accent)
   static const Color stateApprove = Color(0xFF3DD68C);   // green
   static const Color stateAwaiting = Color(0xFFFFB454);  // amber (only warm hit -- semantic urgency)
   static const Color stateError = Color(0xFFFF6B6B);     // red
@@ -108,10 +108,13 @@ class DexSpace {
 
 class DexRadius {
   const DexRadius._();
-  static const Radius sm = Radius.circular(6);    // chips, inputs
-  static const Radius md = Radius.circular(10);   // cards
-  static const Radius lg = Radius.circular(16);   // sheets, modals
-  static const Radius xl = Radius.circular(20);   // composer pill, bubbles
+  // Apple-leaning corner ladder. Larger than Material defaults so cards
+  // feel pillowy + iOS-Materials-ish; smaller details (chips, inputs)
+  // still stay tight at 8px.
+  static const Radius sm = Radius.circular(8);     // chips, inputs
+  static const Radius md = Radius.circular(14);    // cards, surfaces
+  static const Radius lg = Radius.circular(20);    // sheets, modals
+  static const Radius xl = Radius.circular(28);    // composer pill, big bubbles
   static const Radius pill = Radius.circular(999); // suggestion chips, mode pills
   static const BorderRadius rsm = BorderRadius.all(sm);
   static const BorderRadius rmd = BorderRadius.all(md);
@@ -127,16 +130,17 @@ class DexRadius {
 class DexSurface {
   const DexSurface._();
 
-  // Background gradient -- cool dark-gray fade for the home wallpaper.
-  // Blue-biased stops keep the surface unambiguously cool even under
-  // Windows Night Light, so the page never reads warm/amber.
+  // Background gradient -- bright blue/black wallpaper. Top edge is
+  // near-black with a blue tint so window chrome doesn't fight; bottom
+  // transitions into a rich royal navy so the chat reads like it's
+  // sitting on a polished cool surface, not a flat gray slab.
   static const LinearGradient bgGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: <Color>[
-      Color(0xFF0A0C10),
-      Color(0xFF101319),
-      Color(0xFF161A21),
+      Color(0xFF040A1A),
+      Color(0xFF0E1B45),
+      Color(0xFF193373),
     ],
     stops: <double>[0.0, 0.55, 1.0],
   );
@@ -158,6 +162,47 @@ class DexSurface {
   static const double acrylicAlpha = 0.82;
   static const double acrylicAlphaQuiet = 0.66;
   static const double blurSigma = 14;
+
+  // ---------------- glossy helpers (Apple Materials-ish) ----------------
+  // Cards / composer / overlay surfaces opt into glossiness via these
+  // three primitives: a top-left-bright bottom-right-dim gradient, a
+  // hairline white-alpha edge highlight, and a soft drop shadow.
+
+  /// Top-left → bottom-right gradient sheen for elevated cards. `alpha`
+  /// is the base opacity for the whole gradient (pass acrylicAlpha to
+  /// match the existing composer treatment).
+  static LinearGradient glossyGradient({double alpha = acrylicAlpha}) {
+    final hi = (alpha).clamp(0.0, 1.0);
+    final lo = (alpha * 0.85).clamp(0.0, 1.0);
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: <Color>[
+        Color.fromRGBO(0x26, 0x3C, 0x6E, hi), // top-left brighter navy
+        Color.fromRGBO(0x0A, 0x12, 0x2A, lo), // bottom-right deep navy
+      ],
+    );
+  }
+
+  /// Hairline white-alpha border for the top edge of a glossy card.
+  /// Sits over the gradient and gives the "glass edge" highlight Apple
+  /// uses on Materials surfaces.
+  static Border glossyBorder() => Border.all(
+        color: const Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.08),
+        width: 1,
+      );
+
+  /// Soft drop shadow under glossy floating surfaces. Slightly deeper
+  /// + spread-negative compared to DexElevation.floating so the card
+  /// reads as lifted off the gradient bg rather than glued to it.
+  static const List<BoxShadow> glossyShadow = <BoxShadow>[
+    BoxShadow(
+      color: Color.fromRGBO(0, 0, 0, 0.35),
+      blurRadius: 28,
+      spreadRadius: -6,
+      offset: Offset(0, 14),
+    ),
+  ];
 }
 
 // =============================================================================

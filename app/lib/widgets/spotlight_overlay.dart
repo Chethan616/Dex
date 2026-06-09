@@ -134,12 +134,10 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
                         ),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: DexColors.surface2.withValues(
-                              alpha: DexSurface.acrylicAlpha,
-                            ),
+                            gradient: DexSurface.glossyGradient(),
                             borderRadius: DexRadius.rxl,
-                            border: Border.all(color: DexColors.border),
-                            boxShadow: DexElevation.floating,
+                            border: DexSurface.glossyBorder(),
+                            boxShadow: DexSurface.glossyShadow,
                           ),
                           padding: const EdgeInsets.fromLTRB(
                             DexSpace.lg, DexSpace.md, DexSpace.lg, DexSpace.md,

@@ -32,11 +32,12 @@ class HomeCard extends StatelessWidget {
         ),
         child: Container(
           decoration: BoxDecoration(
-            color: DexColors.surface2.withValues(
+            gradient: DexSurface.glossyGradient(
               alpha: DexSurface.acrylicAlphaQuiet,
             ),
             borderRadius: DexRadius.rmd,
-            border: Border.all(color: DexColors.border),
+            border: DexSurface.glossyBorder(),
+            boxShadow: DexSurface.glossyShadow,
           ),
           padding: const EdgeInsets.all(DexSpace.md),
           child: Column(
