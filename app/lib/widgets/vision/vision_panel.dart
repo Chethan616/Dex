@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
+import '../refractive_edge.dart';
 
 class VisionPanel extends StatefulWidget {
   const VisionPanel({super.key, required this.onClose});
@@ -23,22 +24,24 @@ class _VisionPanelState extends State<VisionPanel> {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 380,
-      child: ClipRRect(
-        borderRadius: DexRadius.rmd,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: DexSurface.blurSigma,
-            sigmaY: DexSurface.blurSigma,
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: DexSurface.glossyGradient(),
-              borderRadius: DexRadius.rmd,
-              border: DexSurface.glossyBorder(),
-              boxShadow: DexSurface.glossyShadow,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          borderRadius: DexRadius.rmd,
+          boxShadow: DexSurface.glossyShadow,
+        ),
+        child: RefractiveEdge(
+          radius: DexRadius.rmd,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: DexSurface.blurSigma,
+              sigmaY: DexSurface.blurSigma,
             ),
-            padding: const EdgeInsets.all(DexSpace.lg),
-            child: Column(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: DexSurface.glossyGradient(),
+              ),
+              padding: const EdgeInsets.all(DexSpace.lg),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -84,6 +87,7 @@ class _VisionPanelState extends State<VisionPanel> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

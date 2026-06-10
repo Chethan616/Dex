@@ -8,6 +8,7 @@ import '../core/models/action_preview.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'action_step.dart';
+import 'refractive_edge.dart';
 
 class ActionPreviewCard extends StatelessWidget {
   const ActionPreviewCard({
@@ -23,23 +24,31 @@ class ActionPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Two-shell structure: outer amber-stroked container preserves the
+    // design.md "needs your attention" signal; the inner RefractiveEdge
+    // + glossy gradient gives the same apple-grade glass treatment the
+    // rest of the chrome uses. Amber stays the loudest element so the
+    // user's eye still lands here first.
     return AnimatedContainer(
       duration: DexMotion.respecting(context, DexMotion.medium),
       curve: DexMotion.respectingCurve(context, DexMotion.easeOut),
       decoration: BoxDecoration(
-        // Keeps the amber stroke (the "needs your attention" signal
-        // from design.md) but upgrades the fill from a flat surface
-        // to the same glossy gradient every other floating card in
-        // the app uses, so the preview reads as one family with the
-        // composer / spotlight / dialogs while still standing out
-        // via its border colour.
-        gradient: DexSurface.glossyGradient(),
         borderRadius: DexRadius.rmd,
         border: Border.all(color: DexColors.stateAwaiting, width: 1.5),
         boxShadow: DexSurface.glossyShadow,
       ),
-      padding: const EdgeInsets.all(DexSpace.lg),
-      child: Column(
+      // 1.5px inset to clear the amber stroke before the refractive rim
+      // starts, so the two stack visibly rather than overlap.
+      padding: const EdgeInsets.all(1.5),
+      child: RefractiveEdge(
+        radius: BorderRadius.circular(10),
+        intensity: 0.85,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: DexSurface.glossyGradient(),
+          ),
+          padding: const EdgeInsets.all(DexSpace.lg),
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -79,6 +88,8 @@ class ActionPreviewCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+        ),
       ),
     );
   }

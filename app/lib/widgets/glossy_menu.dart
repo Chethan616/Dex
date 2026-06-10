@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import 'refractive_edge.dart';
 
 /// Which side of the trigger button the menu should land on by default.
 /// The layout delegate can still flip the choice when the preferred
@@ -216,32 +217,36 @@ class _GlossyMenuCard<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       type: MaterialType.transparency,
-      child: ClipRRect(
-        borderRadius: DexRadius.rmd,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: DexSurface.blurSigma,
-            sigmaY: DexSurface.blurSigma,
-          ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: DexSurface.glossyGradient(),
-              borderRadius: DexRadius.rmd,
-              border: DexSurface.glossyBorder(),
-              boxShadow: DexSurface.glossyShadow,
+      child: DecoratedBox(
+        // Shadow on outer box so it isn't clipped by the rounded mask.
+        decoration: const BoxDecoration(
+          borderRadius: DexRadius.rmd,
+          boxShadow: DexSurface.glossyShadow,
+        ),
+        child: RefractiveEdge(
+          radius: DexRadius.rmd,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: DexSurface.blurSigma,
+              sigmaY: DexSurface.blurSigma,
             ),
-            // The parent CustomSingleChildLayout already pinned width
-            // and capped maxHeight; SingleChildScrollView lets the
-            // column scroll internally when entries exceed that cap
-            // (e.g. on very small windows).
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: DexSpace.xs),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: entries
-                    .map((e) => _renderEntry(context, e))
-                    .toList(growable: false),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: DexSurface.glossyGradient(),
+              ),
+              // The parent CustomSingleChildLayout already pinned width
+              // and capped maxHeight; SingleChildScrollView lets the
+              // column scroll internally when entries exceed that cap
+              // (e.g. on very small windows).
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(vertical: DexSpace.xs),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: entries
+                      .map((e) => _renderEntry(context, e))
+                      .toList(growable: false),
+                ),
               ),
             ),
           ),

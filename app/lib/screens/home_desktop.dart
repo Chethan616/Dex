@@ -20,6 +20,7 @@ import '../widgets/dialog/permission_dialog.dart';
 import '../widgets/home/empty_home.dart';
 import '../widgets/home/recent_chats_card.dart';
 import '../widgets/home/recent_files_card.dart';
+import '../widgets/living_background.dart';
 import '../widgets/profile/profile_menu.dart';
 import '../widgets/settings/settings_dialog.dart';
 import '../widgets/vision/vision_panel.dart';
@@ -132,8 +133,7 @@ class _HomeDesktopState extends State<HomeDesktop> {
       builder: (context, _) {
         final hasMessages = widget.store.messages.isNotEmpty;
         return Scaffold(
-          body: DecoratedBox(
-            decoration: const BoxDecoration(gradient: DexSurface.bgGradient),
+          body: LivingBackground(
             child: SafeArea(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -6,6 +6,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../theme/tokens.dart';
+import '../refractive_edge.dart';
 
 class HomeCard extends StatelessWidget {
   const HomeCard({
@@ -23,41 +24,46 @@ class HomeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: DexRadius.rmd,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: DexSurface.blurSigma,
-          sigmaY: DexSurface.blurSigma,
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: DexSurface.glossyGradient(
-              alpha: DexSurface.acrylicAlphaQuiet,
-            ),
-            borderRadius: DexRadius.rmd,
-            border: DexSurface.glossyBorder(),
-            boxShadow: DexSurface.glossyShadow,
+    return DecoratedBox(
+      // Shadow on the outer box so the rounded mask doesn't clip the
+      // lift -- same pattern the composer uses now.
+      decoration: const BoxDecoration(
+        borderRadius: DexRadius.rmd,
+        boxShadow: DexSurface.glossyShadow,
+      ),
+      child: RefractiveEdge(
+        radius: DexRadius.rmd,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: DexSurface.blurSigma,
+            sigmaY: DexSurface.blurSigma,
           ),
-          padding: const EdgeInsets.all(DexSpace.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, size: 14, color: DexColors.textDim),
-                  const SizedBox(width: DexSpace.sm),
-                  Expanded(
-                    child: Text(title,
-                        style: DexType.label(color: DexColors.text)),
-                  ),
-                  if (trailing != null) trailing!,
-                ],
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: DexSurface.glossyGradient(
+                alpha: DexSurface.acrylicAlphaQuiet,
               ),
-              const SizedBox(height: DexSpace.sm),
-              child,
-            ],
+            ),
+            padding: const EdgeInsets.all(DexSpace.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 14, color: DexColors.textDim),
+                    const SizedBox(width: DexSpace.sm),
+                    Expanded(
+                      child: Text(title,
+                          style: DexType.label(color: DexColors.text)),
+                    ),
+                    if (trailing != null) trailing!,
+                  ],
+                ),
+                const SizedBox(height: DexSpace.sm),
+                child,
+              ],
+            ),
           ),
         ),
       ),

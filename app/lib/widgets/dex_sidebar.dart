@@ -60,9 +60,13 @@ class DexSidebar extends StatelessWidget {
         // Sidebar reads as a translucent panel sitting on the bg
         // gradient. Three-stop vertical fade with a brighter top
         // (catches the implied light source) settling into the deep
-        // navy of the wallpaper. Two hairline white-alpha edges -- top
-        // for the glass-edge highlight, right to replace the old
-        // VerticalDivider between rail and content.
+        // navy of the wallpaper. Apple-grade refractive treatment on
+        // the two visible edges:
+        //   - top: bright white-alpha highlight ("lit edge")
+        //   - right: sky-blue tint that reads as the bg fog leaking
+        //            through the glass into the content area
+        // Together they make the rail look like an etched glass panel
+        // sitting on top of the wallpaper rather than a flat slab.
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -75,11 +79,15 @@ class DexSidebar extends StatelessWidget {
         ),
         border: Border(
           top: BorderSide(
-            color: Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.08),
+            color: Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.12),
             width: 1,
           ),
           right: BorderSide(
-            color: Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.06),
+            // Sky-blue-tinted edge -- picks up DexSurface.bgGradient's
+            // sky-blue glow and refracts it where the rail meets the
+            // content. Pure-white would read as a flat hairline; the
+            // tint makes it feel alive.
+            color: Color.fromRGBO(0x6E, 0xA8, 0xFF, 0.18),
             width: 1,
           ),
         ),

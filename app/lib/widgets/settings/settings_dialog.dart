@@ -8,6 +8,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
+import '../refractive_edge.dart';
 import 'tabs/about_tab.dart';
 import 'tabs/account_tab.dart';
 import 'tabs/connectors_tab.dart';
@@ -88,21 +89,23 @@ class _SettingsDialogState extends State<SettingsDialog> {
           constraints: const BoxConstraints(
             maxWidth: 760, minHeight: 540, maxHeight: 640,
           ),
-          child: ClipRRect(
-            borderRadius: DexRadius.rlg,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: DexSurface.blurSigma,
-                sigmaY: DexSurface.blurSigma,
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: DexSurface.glossyGradient(),
-                  borderRadius: DexRadius.rlg,
-                  border: DexSurface.glossyBorder(),
-                  boxShadow: DexSurface.glossyShadow,
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              borderRadius: DexRadius.rlg,
+              boxShadow: DexSurface.glossyShadow,
+            ),
+            child: RefractiveEdge(
+              radius: DexRadius.rlg,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: DexSurface.blurSigma,
+                  sigmaY: DexSurface.blurSigma,
                 ),
-                child: Column(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: DexSurface.glossyGradient(),
+                  ),
+                  child: Column(
                   children: [
                     _Header(onClose: () => Navigator.of(context).maybePop()),
                     const Divider(height: 1, color: DexColors.border),
@@ -124,6 +127,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               ),
             ),
+          ),
           ),
         ),
       ),

@@ -1,10 +1,13 @@
 // Full-screen voice-mode surface. Animated wave background, centered
 // "I'm listening" label, four bottom controls (close, vision, mic, settings).
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
+import '../refractive_edge.dart';
 import 'animated_wave_background.dart';
 import 'voice_settings_panel.dart';
 
@@ -35,47 +38,55 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> {
             right: 0,
             bottom: DexSpace.xxl,
             child: Center(
-              child: ClipRRect(
-                borderRadius: DexRadius.rpill,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DexSpace.lg, vertical: DexSpace.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: DexColors.surface2.withValues(
-                      alpha: DexSurface.acrylicAlpha,
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  borderRadius: DexRadius.rpill,
+                  boxShadow: DexSurface.glossyShadow,
+                ),
+                child: RefractiveEdge(
+                  radius: DexRadius.rpill,
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(
+                      sigmaX: DexSurface.blurSigma,
+                      sigmaY: DexSurface.blurSigma,
                     ),
-                    borderRadius: DexRadius.rpill,
-                    border: Border.all(color: DexColors.border),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _ControlButton(
-                        icon: LucideIcons.x,
-                        tooltip: 'Exit voice mode',
-                        onTap: () => Navigator.of(context).maybePop(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DexSpace.lg, vertical: DexSpace.sm,
                       ),
-                      const SizedBox(width: DexSpace.sm),
-                      _ControlButton(
-                        icon: LucideIcons.glasses,
-                        tooltip: 'Share screen',
-                        onTap: () {},
+                      decoration: BoxDecoration(
+                        gradient: DexSurface.glossyGradient(),
                       ),
-                      const SizedBox(width: DexSpace.sm),
-                      _ControlButton(
-                        icon: LucideIcons.mic,
-                        tooltip: 'Mute',
-                        accent: true,
-                        onTap: () {},
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _ControlButton(
+                            icon: LucideIcons.x,
+                            tooltip: 'Exit voice mode',
+                            onTap: () => Navigator.of(context).maybePop(),
+                          ),
+                          const SizedBox(width: DexSpace.sm),
+                          _ControlButton(
+                            icon: LucideIcons.glasses,
+                            tooltip: 'Share screen',
+                            onTap: () {},
+                          ),
+                          const SizedBox(width: DexSpace.sm),
+                          _ControlButton(
+                            icon: LucideIcons.mic,
+                            tooltip: 'Mute',
+                            accent: true,
+                            onTap: () {},
+                          ),
+                          const SizedBox(width: DexSpace.sm),
+                          _ControlButton(
+                            icon: LucideIcons.settings,
+                            tooltip: 'Voice settings',
+                            onTap: () => setState(() => _settingsOpen = true),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: DexSpace.sm),
-                      _ControlButton(
-                        icon: LucideIcons.settings,
-                        tooltip: 'Voice settings',
-                        onTap: () => setState(() => _settingsOpen = true),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),

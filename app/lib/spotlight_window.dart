@@ -23,6 +23,7 @@ import 'main.dart' show DexScrollBehavior, dexSpotlightChannel;
 import 'theme/theme.dart';
 import 'theme/tokens.dart';
 import 'widgets/home/suggestion_chip.dart';
+import 'widgets/refractive_edge.dart';
 
 /// Default suggestions surfaced under the overlay's input. Same shape
 /// as the in-app SpotlightOverlay had so users recognise the surface.
@@ -139,6 +140,13 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
     }
   }
 
+  void _onAttach() {
+    // Placeholder for the rich-paste / file-attach flow. Commit 3
+    // wires this to super_drag_and_drop + super_clipboard so the
+    // attach circle accepts any file type (images, PDFs, .exe, etc.)
+    // dropped or pasted in.
+  }
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -158,81 +166,109 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
           },
           child: Padding(
             padding: const EdgeInsets.all(DexSpace.lg),
-            child: Center(
+            // Move the overlay up ~25% so it sits in the top-third of
+            // the window like macOS Spotlight rather than dead-center.
+            // Less visually heavy, and leaves room for suggestion chips
+            // to ripple in beneath without crowding.
+            child: Align(
+              alignment: const Alignment(0, -0.55),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  ClipRRect(
-                    borderRadius: DexRadius.rxl,
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(
-                        sigmaX: DexSurface.blurSigma,
-                        sigmaY: DexSurface.blurSigma,
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: DexSurface.glossyGradient(),
-                          borderRadius: DexRadius.rxl,
-                          border: DexSurface.glossyBorder(),
-                          boxShadow: DexSurface.glossyShadow,
-                        ),
-                        padding: const EdgeInsets.fromLTRB(
-                          DexSpace.lg, DexSpace.md, DexSpace.lg, DexSpace.md,
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(LucideIcons.search,
-                                size: 20, color: DexColors.textDim),
-                            const SizedBox(width: DexSpace.md),
-                            Expanded(
-                              child: KeyboardListener(
-                                focusNode: FocusNode(skipTraversal: true),
-                                onKeyEvent: (e) {
-                                  if (e is KeyDownEvent &&
-                                      e.logicalKey == LogicalKeyboardKey.enter &&
-                                      !HardwareKeyboard.instance.isShiftPressed) {
-                                    _submit();
-                                  }
-                                },
-                                child: TextField(
-                                  controller: _ctrl,
-                                  focusNode: _focus,
-                                  enabled: !_submitting,
-                                  style: DexType.body(color: DexColors.text),
-                                  decoration: InputDecoration(
-                                    isCollapsed: true,
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    filled: false,
-                                    hintText: 'Ask Dex anything...',
-                                    hintStyle: DexType.body(
-                                      color: DexColors.textFaint,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: DecoratedBox(
+                          decoration: const BoxDecoration(
+                            borderRadius: DexRadius.rxl,
+                            boxShadow: DexSurface.glossyShadow,
+                          ),
+                          // Stronger rim than in-app surfaces -- the
+                          // overlay floats over arbitrary content
+                          // (browser / Notepad / whatever), so it
+                          // needs a more present edge to register as
+                          // a separate object.
+                          child: RefractiveEdge(
+                            radius: DexRadius.rxl,
+                            thickness: 1.4,
+                            intensity: 1.6,
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(
+                                sigmaX: DexSurface.blurSigma,
+                                sigmaY: DexSurface.blurSigma,
+                              ),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: DexSurface.glossyGradient(),
+                                ),
+                                padding: const EdgeInsets.fromLTRB(
+                                  DexSpace.lg, DexSpace.md, DexSpace.lg, DexSpace.md,
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(LucideIcons.search,
+                                        size: 20, color: DexColors.textDim),
+                                    const SizedBox(width: DexSpace.md),
+                                    Expanded(
+                                      child: KeyboardListener(
+                                        focusNode: FocusNode(skipTraversal: true),
+                                        onKeyEvent: (e) {
+                                          if (e is KeyDownEvent &&
+                                              e.logicalKey == LogicalKeyboardKey.enter &&
+                                              !HardwareKeyboard.instance.isShiftPressed) {
+                                            _submit();
+                                          }
+                                        },
+                                        child: TextField(
+                                          controller: _ctrl,
+                                          focusNode: _focus,
+                                          enabled: !_submitting,
+                                          style: DexType.body(color: DexColors.text),
+                                          decoration: InputDecoration(
+                                            isCollapsed: true,
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            filled: false,
+                                            hintText: 'Ask Dex anything...',
+                                            hintStyle: DexType.body(
+                                              color: DexColors.textFaint,
+                                            ),
+                                          ),
+                                          textInputAction: TextInputAction.send,
+                                          onSubmitted: (_) => _submit(),
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                  textInputAction: TextInputAction.send,
-                                  onSubmitted: (_) => _submit(),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: DexSpace.sm, vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: DexColors.surface,
+                                        borderRadius: DexRadius.rsm,
+                                        border: Border.all(color: DexColors.border),
+                                      ),
+                                      child: Text(
+                                        'esc',
+                                        style: DexType.caption(color: DexColors.textFaint),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: DexSpace.sm, vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: DexColors.surface,
-                                borderRadius: DexRadius.rsm,
-                                border: Border.all(color: DexColors.border),
-                              ),
-                              child: Text(
-                                'esc',
-                                style: DexType.caption(color: DexColors.textFaint),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
+                      // Separate circular attach button -- detached from
+                      // the input pill, sits to the right with 12px gap.
+                      // Tap is wired to a no-op placeholder for now;
+                      // rich-paste support arrives in Commit 3.
+                      const SizedBox(width: 12),
+                      _AttachCircle(onTap: _onAttach),
+                    ],
                   ),
                   const SizedBox(height: DexSpace.md),
                   Wrap(
@@ -256,4 +292,65 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
 
 class _DismissIntent extends Intent {
   const _DismissIntent();
+}
+
+/// The detached "+" circle that sits to the right of the search pill.
+/// Carries the same glossy + refractive treatment as the pill itself so
+/// the two read as a matched pair, with a 12px breathing gap between
+/// them per the design ask.
+class _AttachCircle extends StatefulWidget {
+  const _AttachCircle({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  State<_AttachCircle> createState() => _AttachCircleState();
+}
+
+class _AttachCircleState extends State<_AttachCircle> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: DexSurface.glossyShadow,
+          ),
+          child: RefractiveEdge(
+            radius: BorderRadius.circular(28),
+            thickness: 1.4,
+            intensity: 1.6,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: DexSurface.blurSigma,
+                sigmaY: DexSurface.blurSigma,
+              ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                curve: Curves.easeOutCubic,
+                width: 52,
+                height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: DexSurface.glossyGradient(),
+                ),
+                child: Icon(
+                  LucideIcons.plus,
+                  size: 20,
+                  color: _hovered ? DexColors.accent : DexColors.text,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

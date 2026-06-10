@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
+import '../refractive_edge.dart';
 
 class PermissionDialog extends StatelessWidget {
   const PermissionDialog({
@@ -67,22 +68,24 @@ class PermissionDialog extends StatelessWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
-          child: ClipRRect(
-            borderRadius: DexRadius.rlg,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: DexSurface.blurSigma,
-                sigmaY: DexSurface.blurSigma,
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: DexSurface.glossyGradient(),
-                  borderRadius: DexRadius.rlg,
-                  border: DexSurface.glossyBorder(),
-                  boxShadow: DexSurface.glossyShadow,
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              borderRadius: DexRadius.rlg,
+              boxShadow: DexSurface.glossyShadow,
+            ),
+            child: RefractiveEdge(
+              radius: DexRadius.rlg,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: DexSurface.blurSigma,
+                  sigmaY: DexSurface.blurSigma,
                 ),
-                padding: const EdgeInsets.all(DexSpace.xl),
-                child: Column(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: DexSurface.glossyGradient(),
+                  ),
+                  padding: const EdgeInsets.all(DexSpace.xl),
+                  child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -117,6 +120,7 @@ class PermissionDialog extends StatelessWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/tokens.dart';
 import '../glossy_dropdown.dart';
+import '../refractive_edge.dart';
 
 class VoiceSettingsPanel extends StatefulWidget {
   const VoiceSettingsPanel({super.key, required this.onClose});
@@ -28,22 +29,24 @@ class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 320,
-      child: ClipRRect(
-        borderRadius: DexRadius.rmd,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: DexSurface.blurSigma,
-            sigmaY: DexSurface.blurSigma,
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: DexSurface.glossyGradient(),
-              borderRadius: DexRadius.rmd,
-              border: DexSurface.glossyBorder(),
-              boxShadow: DexSurface.glossyShadow,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          borderRadius: DexRadius.rmd,
+          boxShadow: DexSurface.glossyShadow,
+        ),
+        child: RefractiveEdge(
+          radius: DexRadius.rmd,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: DexSurface.blurSigma,
+              sigmaY: DexSurface.blurSigma,
             ),
-            padding: const EdgeInsets.all(DexSpace.lg),
-            child: Column(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: DexSurface.glossyGradient(),
+              ),
+              padding: const EdgeInsets.all(DexSpace.lg),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -94,6 +97,7 @@ class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
               ],
             ),
           ),
+        ),
         ),
       ),
     );

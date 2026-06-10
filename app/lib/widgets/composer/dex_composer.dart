@@ -9,6 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
+import '../living_background.dart';
+import '../refractive_edge.dart';
 import 'add_menu.dart';
 import 'composer_mode.dart';
 import 'mode_menu.dart';
@@ -70,6 +72,14 @@ class _DexComposerState extends State<DexComposer> {
   void _onText() {
     final has = _ctrl.text.trim().isNotEmpty;
     if (has != _hasText) setState(() => _hasText = has);
+    // Each keystroke briefly brightens the wallpaper fog. Subtle
+    // (0.3 intensity) so it reads as ambient feedback rather than a
+    // strobe -- the fog flares and decays in ~600ms, so a typist
+    // sees a steady soft glow under their input rather than per-key
+    // flickers.
+    if (mounted) {
+      LivingBackground.of(context)?.pulse(0.3);
+    }
   }
 
   void _submit() {
@@ -119,48 +129,55 @@ class _DexComposerState extends State<DexComposer> {
             return null;
           }),
         },
-        child: ClipRRect(
-          borderRadius: DexRadius.rxl,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: DexSurface.blurSigma,
-              sigmaY: DexSurface.blurSigma,
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: DexSurface.glossyGradient(),
-                borderRadius: DexRadius.rxl,
-                border: DexSurface.glossyBorder(),
-                boxShadow: DexSurface.glossyShadow,
+        child: DecoratedBox(
+          // Shadow lives on the OUTER box so it isn't clipped by the
+          // rounded-rect mask -- the previous structure had the shadow
+          // on the Container _inside_ ClipRRect, which silently
+          // swallowed the lift.
+          decoration: const BoxDecoration(
+            borderRadius: DexRadius.rxl,
+            boxShadow: DexSurface.glossyShadow,
+          ),
+          child: RefractiveEdge(
+            radius: DexRadius.rxl,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: DexSurface.blurSigma,
+                sigmaY: DexSurface.blurSigma,
               ),
-              padding: const EdgeInsets.fromLTRB(
-                DexSpace.lg, DexSpace.md, DexSpace.md, DexSpace.sm,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _Input(
-                    controller: _ctrl,
-                    focusNode: _focus,
-                    hint: widget.hint,
-                    onSubmit: _submit,
-                  ),
-                  const SizedBox(height: DexSpace.sm),
-                  _Toolbar(
-                    addKey: _addKey,
-                    modeKey: _modeKey,
-                    mode: _mode,
-                    isBusy: widget.isBusy,
-                    hasText: _hasText,
-                    onAdd: _openAdd,
-                    onMode: _openMode,
-                    onVision: widget.onVision,
-                    onVoice: widget.onVoice,
-                    onStop: widget.onStop,
-                    onSubmit: _submit,
-                  ),
-                ],
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: DexSurface.glossyGradient(),
+                ),
+                padding: const EdgeInsets.fromLTRB(
+                  DexSpace.lg, DexSpace.md, DexSpace.md, DexSpace.sm,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _Input(
+                      controller: _ctrl,
+                      focusNode: _focus,
+                      hint: widget.hint,
+                      onSubmit: _submit,
+                    ),
+                    const SizedBox(height: DexSpace.sm),
+                    _Toolbar(
+                      addKey: _addKey,
+                      modeKey: _modeKey,
+                      mode: _mode,
+                      isBusy: widget.isBusy,
+                      hasText: _hasText,
+                      onAdd: _openAdd,
+                      onMode: _openMode,
+                      onVision: widget.onVision,
+                      onVoice: widget.onVoice,
+                      onStop: widget.onStop,
+                      onSubmit: _submit,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
