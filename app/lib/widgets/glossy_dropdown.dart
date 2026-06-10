@@ -38,11 +38,15 @@ class _GlossyDropdownState extends State<GlossyDropdown> {
     if (ctx == null) return;
     final box = ctx.findRenderObject() as RenderBox?;
     if (box == null) return;
-    final anchor = box.localToGlobal(Offset(0, box.size.height + 6));
+    final trigger = box.localToGlobal(Offset.zero) & box.size;
     setState(() => _open = true);
     final picked = await GlossyMenu.show<String>(
       context: context,
-      anchor: anchor,
+      trigger: trigger,
+      // Dropdown buttons want the menu to fall under them by default.
+      // GlossyMenu's positioning delegate flips upward only if the
+      // measured menu would clip past the bottom edge.
+      prefer: MenuDropDirection.down,
       width: widget.width,
       entries: <GlossyMenuEntry<String>>[
         for (final o in widget.options)

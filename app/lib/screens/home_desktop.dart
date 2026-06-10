@@ -84,8 +84,25 @@ class _HomeDesktopState extends State<HomeDesktop> {
 
   void _openProfile() async {
     final picked = await ProfileMenu.show(context);
-    if (picked == ProfileMenuAction.settings && mounted) {
-      await SettingsDialog.show(context);
+    if (!mounted || picked == null) return;
+    // Route each profile menu action to its real destination. Settings
+    // opens straight onto the right tab so Memory / Reminders feel
+    // like first-class screens rather than "go find it in Settings".
+    // Reminders has no real screen yet; routes to Settings preferences
+    // until the Reminders screen lands in the next commit.
+    switch (picked) {
+      case ProfileMenuAction.settings:
+        await SettingsDialog.show(context);
+      case ProfileMenuAction.memory:
+        await SettingsDialog.show(context, initial: SettingsTab.memory);
+      case ProfileMenuAction.reminders:
+        await SettingsDialog.show(context);
+      case ProfileMenuAction.feedback:
+        // existing -- feedback flow lands in a follow-up
+        break;
+      case ProfileMenuAction.signOut:
+        // existing -- sign-out lands when auth is wired
+        break;
     }
   }
 

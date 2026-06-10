@@ -85,8 +85,8 @@ class _DexComposerState extends State<DexComposer> {
     if (ctx == null) return;
     final box = ctx.findRenderObject() as RenderBox?;
     if (box == null) return;
-    final anchor = box.localToGlobal(Offset(0, -box.size.height));
-    final picked = await AddMenu.show(context: context, anchor: anchor);
+    final trigger = box.localToGlobal(Offset.zero) & box.size;
+    final picked = await AddMenu.show(context: context, trigger: trigger);
     if (picked != null) widget.onAddAction?.call(picked);
   }
 
@@ -95,9 +95,9 @@ class _DexComposerState extends State<DexComposer> {
     if (ctx == null) return;
     final box = ctx.findRenderObject() as RenderBox?;
     if (box == null) return;
-    final anchor = box.localToGlobal(Offset(0, -box.size.height));
+    final trigger = box.localToGlobal(Offset.zero) & box.size;
     final picked = await ModeMenu.show(
-      context: context, anchor: anchor, current: _mode,
+      context: context, trigger: trigger, current: _mode,
     );
     if (picked != null && mounted) setState(() => _mode = picked);
   }
@@ -300,21 +300,26 @@ class _RoundIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = tint ?? DexColors.textDim;
-    return Tooltip(
-      message: tooltip,
-      child: InkResponse(
-        onTap: onTap,
-        radius: 20,
-        child: Container(
-          width: 36,
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: DexColors.surface.withValues(alpha: 0.4),
-            shape: BoxShape.circle,
-            border: Border.all(color: DexColors.border),
+    return MouseRegion(
+      cursor: onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      child: Tooltip(
+        message: tooltip,
+        child: InkResponse(
+          onTap: onTap,
+          radius: 20,
+          child: Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: DexColors.surface.withValues(alpha: 0.4),
+              shape: BoxShape.circle,
+              border: Border.all(color: DexColors.border),
+            ),
+            child: Icon(icon, size: 18, color: color),
           ),
-          child: Icon(icon, size: 18, color: color),
         ),
       ),
     );
@@ -328,26 +333,29 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Send (Enter)',
-      child: InkResponse(
-        onTap: enabled ? onTap : null,
-        radius: 20,
-        child: Container(
-          width: 36,
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: enabled ? DexColors.accent : DexColors.surface,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: enabled ? DexColors.accent : DexColors.border,
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: Tooltip(
+        message: 'Send (Enter)',
+        child: InkResponse(
+          onTap: enabled ? onTap : null,
+          radius: 20,
+          child: Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: enabled ? DexColors.accent : DexColors.surface,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: enabled ? DexColors.accent : DexColors.border,
+              ),
             ),
-          ),
-          child: Icon(
-            LucideIcons.arrow_up,
-            size: 18,
-            color: enabled ? DexColors.bg : DexColors.textFaint,
+            child: Icon(
+              LucideIcons.arrow_up,
+              size: 18,
+              color: enabled ? DexColors.bg : DexColors.textFaint,
+            ),
           ),
         ),
       ),
@@ -362,28 +370,31 @@ class _ModePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: DexRadius.rpill,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DexSpace.md, vertical: 6,
-        ),
-        decoration: BoxDecoration(
-          color: DexColors.surface.withValues(alpha: 0.4),
-          borderRadius: DexRadius.rpill,
-          border: Border.all(color: DexColors.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(mode.icon, size: 14, color: DexColors.textDim),
-            const SizedBox(width: DexSpace.xs),
-            Text(mode.label, style: DexType.label(color: DexColors.text)),
-            const SizedBox(width: 2),
-            const Icon(LucideIcons.chevron_down,
-                size: 14, color: DexColors.textDim),
-          ],
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: DexRadius.rpill,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DexSpace.md, vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: DexColors.surface.withValues(alpha: 0.4),
+            borderRadius: DexRadius.rpill,
+            border: Border.all(color: DexColors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(mode.icon, size: 14, color: DexColors.textDim),
+              const SizedBox(width: DexSpace.xs),
+              Text(mode.label, style: DexType.label(color: DexColors.text)),
+              const SizedBox(width: 2),
+              const Icon(LucideIcons.chevron_down,
+                  size: 14, color: DexColors.textDim),
+            ],
+          ),
         ),
       ),
     );

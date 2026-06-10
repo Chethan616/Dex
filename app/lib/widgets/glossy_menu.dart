@@ -1,16 +1,27 @@
 // Shared glossy popup menu. Used by the composer's mode picker + add
-// menu, the user-profile dropdown, and the voice-mode language picker.
-// Replaces Flutter's stock showMenu (which can't do gradient surfaces)
-// with a custom showGeneralDialog that mounts a glossy card with the
-// same blur + edge-highlight + spring-in entry as the chat composer.
+// menu, the user-profile dropdown, the voice-mode language picker,
+// and the Settings tab dropdowns.
+//
+// Layout: a [CustomSingleChildLayout] measures the menu's intrinsic
+// height after layout, then picks a drop direction (above the trigger
+// or below it) based on which side has room. If neither has room for
+// the full menu, the card constrains its height and scrolls internally
+// so the menu never escapes the viewport. This is what fixes the
+// "mode picker / + menu goes off-screen in the chat view" complaint.
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+
+/// Which side of the trigger button the menu should land on by default.
+/// The layout delegate can still flip the choice when the preferred
+/// side doesn't have room, so this is a hint not a hard rule.
+enum MenuDropDirection { up, down }
 
 /// Entries that a [GlossyMenu] can render. Sealed so the menu can pattern-
 /// match: tappable items, non-interactive headers, simple dividers.
@@ -43,14 +54,20 @@ class GlossyMenuDivider<T> extends GlossyMenuEntry<T> {
 class GlossyMenu {
   GlossyMenu._();
 
-  /// Show a glossy popup anchored at [anchor] (screen-global top-left).
+  /// Show a glossy popup positioned relative to [trigger] (the screen
+  /// rect of the button that opened it). The menu lands on the [prefer]
+  /// side of the trigger if there's room, otherwise flips. If neither
+  /// side fits the full content, the card clamps to the viewport and
+  /// scrolls inside.
+  ///
   /// Returns the value of the tapped [GlossyMenuItem], or null if the
   /// barrier was dismissed.
   static Future<T?> show<T>({
     required BuildContext context,
-    required Offset anchor,
+    required Rect trigger,
     required List<GlossyMenuEntry<T>> entries,
     double width = 260,
+    MenuDropDirection prefer = MenuDropDirection.up,
   }) {
     return showGeneralDialog<T>(
       context: context,
@@ -60,8 +77,9 @@ class GlossyMenu {
       transitionDuration: DexMotion.hover,
       pageBuilder: (ctx, _, _) {
         return _GlossyMenuLayer<T>(
-          anchor: anchor,
+          trigger: trigger,
           width: width,
+          prefer: prefer,
           entries: entries,
         );
       },
@@ -95,33 +113,103 @@ class GlossyMenu {
 
 class _GlossyMenuLayer<T> extends StatelessWidget {
   const _GlossyMenuLayer({
-    required this.anchor,
+    required this.trigger,
     required this.width,
+    required this.prefer,
     required this.entries,
   });
-  final Offset anchor;
+  final Rect trigger;
   final double width;
+  final MenuDropDirection prefer;
   final List<GlossyMenuEntry<T>> entries;
 
   @override
   Widget build(BuildContext context) {
-    final screen = MediaQuery.sizeOf(context);
-    final left = anchor.dx.clamp(DexSpace.md, screen.width - width - DexSpace.md);
-    return Stack(
-      children: [
-        Positioned(
-          left: left,
-          top: anchor.dy.clamp(DexSpace.md, screen.height - DexSpace.md),
-          child: _GlossyMenuCard<T>(width: width, entries: entries),
-        ),
-      ],
+    return CustomSingleChildLayout(
+      delegate: _MenuPositionDelegate(
+        trigger: trigger,
+        width: width,
+        prefer: prefer,
+      ),
+      child: _GlossyMenuCard<T>(entries: entries),
     );
   }
 }
 
-class _GlossyMenuCard<T> extends StatelessWidget {
-  const _GlossyMenuCard({required this.width, required this.entries});
+/// Picks the menu's final on-screen rect after the card has measured
+/// itself. Tries the preferred side first; if the card is taller than
+/// that side has room for, flips to the other side; if neither side
+/// fits, the card already had its maxHeight clamped via
+/// [getConstraintsForChild] so it will scroll internally.
+class _MenuPositionDelegate extends SingleChildLayoutDelegate {
+  _MenuPositionDelegate({
+    required this.trigger,
+    required this.width,
+    required this.prefer,
+  });
+
+  final Rect trigger;
   final double width;
+  final MenuDropDirection prefer;
+
+  static const double _margin = 16.0;
+  static const double _gap = 6.0;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    // Pin the width; the height gets the larger of the two sides minus
+    // the trigger gap, so the card can scroll inside if its intrinsic
+    // height blows past that.
+    final aboveRoom = math.max(0.0, trigger.top - _margin - _gap);
+    final belowRoom =
+        math.max(0.0, constraints.maxHeight - trigger.bottom - _margin - _gap);
+    final maxHeight = math.max(aboveRoom, belowRoom);
+    return BoxConstraints(
+      minWidth: width,
+      maxWidth: width,
+      minHeight: 0,
+      maxHeight: math.max(120, maxHeight),
+    );
+  }
+
+  @override
+  Offset getPositionForChild(Size parentSize, Size childSize) {
+    // X: align under the trigger's left edge, clamp to viewport.
+    final maxLeft = math.max(_margin, parentSize.width - childSize.width - _margin);
+    final left = trigger.left.clamp(_margin, maxLeft);
+
+    // Y: pick a direction. Default to caller's preference, flip when
+    // the preferred side can't fit the measured child.
+    final aboveRoom = trigger.top - _margin - _gap;
+    final belowRoom = parentSize.height - trigger.bottom - _margin - _gap;
+
+    final bool dropUp;
+    if (prefer == MenuDropDirection.up) {
+      dropUp = childSize.height <= aboveRoom || aboveRoom >= belowRoom;
+    } else {
+      dropUp = childSize.height > belowRoom && aboveRoom > belowRoom;
+    }
+
+    final double top;
+    if (dropUp) {
+      top = trigger.top - childSize.height - _gap;
+    } else {
+      top = trigger.bottom + _gap;
+    }
+    final maxTop = math.max(_margin, parentSize.height - childSize.height - _margin);
+    return Offset(left.toDouble(), top.clamp(_margin, maxTop));
+  }
+
+  @override
+  bool shouldRelayout(_MenuPositionDelegate oldDelegate) {
+    return trigger != oldDelegate.trigger ||
+        width != oldDelegate.width ||
+        prefer != oldDelegate.prefer;
+  }
+}
+
+class _GlossyMenuCard<T> extends StatelessWidget {
+  const _GlossyMenuCard({required this.entries});
   final List<GlossyMenuEntry<T>> entries;
 
   @override
@@ -135,21 +223,26 @@ class _GlossyMenuCard<T> extends StatelessWidget {
             sigmaX: DexSurface.blurSigma,
             sigmaY: DexSurface.blurSigma,
           ),
-          child: Container(
-            width: width,
+          child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: DexSurface.glossyGradient(),
               borderRadius: DexRadius.rmd,
               border: DexSurface.glossyBorder(),
               boxShadow: DexSurface.glossyShadow,
             ),
-            padding: const EdgeInsets.symmetric(vertical: DexSpace.xs),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: entries
-                  .map((e) => _renderEntry(context, e))
-                  .toList(growable: false),
+            // The parent CustomSingleChildLayout already pinned width
+            // and capped maxHeight; SingleChildScrollView lets the
+            // column scroll internally when entries exceed that cap
+            // (e.g. on very small windows).
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: DexSpace.xs),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: entries
+                    .map((e) => _renderEntry(context, e))
+                    .toList(growable: false),
+              ),
             ),
           ),
         ),

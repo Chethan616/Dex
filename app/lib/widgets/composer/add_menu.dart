@@ -54,11 +54,15 @@ extension ComposerAddActionX on ComposerAddAction {
 class AddMenu {
   static Future<ComposerAddAction?> show({
     required BuildContext context,
-    required Offset anchor,
+    required Rect trigger,
   }) {
     return GlossyMenu.show<ComposerAddAction>(
       context: context,
-      anchor: anchor,
+      trigger: trigger,
+      // Same as the mode pill -- drops up from the composer toolbar
+      // by default, flips down if the chat is so short the menu
+      // wouldn't fit above.
+      prefer: MenuDropDirection.up,
       width: 280,
       entries: <GlossyMenuEntry<ComposerAddAction>>[
         for (final a in ComposerAddAction.values)

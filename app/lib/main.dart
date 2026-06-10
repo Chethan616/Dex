@@ -21,6 +21,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'core/gateway_client.dart';
@@ -59,6 +60,7 @@ Future<void> main() async {
   if (Platform.isWindows) {
     await windowManager.ensureInitialized();
     await windowManager.setPreventClose(true);
+    await _restoreWindowState();
     await DexTray.instance.init();
   }
 
@@ -89,6 +91,49 @@ Future<void> main() async {
   }
 
   runApp(DexApp(store: store));
+}
+
+/// Read the saved window size + position + maximized flag and apply
+/// them before the first frame. `waitUntilReadyToShow` lets us call
+/// `maximize`/`setBounds` against the OS window without the user
+/// seeing the default-sized window flash before the restore lands.
+Future<void> _restoreWindowState() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final maximized = prefs.getBool(prefsKeyWindowMaximized) ?? false;
+    final rawBounds = prefs.getString(prefsKeyWindowBounds);
+    final savedBounds = _parseBounds(rawBounds);
+
+    // The window is invisible until the tray click brings it in; we
+    // still apply state here so the FIRST show is correctly shaped.
+    await windowManager.waitUntilReadyToShow(null, () async {
+      if (maximized) {
+        await windowManager.maximize();
+      } else if (savedBounds != null) {
+        await windowManager.setBounds(savedBounds);
+      }
+    });
+  } catch (e, st) {
+    debugPrint('[dex] window state restore failed: $e\n$st');
+  }
+}
+
+/// Parse `"x,y,w,h"` back into a [Rect]. Returns null on any malformed
+/// input so a corrupt prefs blob never breaks the restore path.
+Rect? _parseBounds(String? raw) {
+  if (raw == null || raw.isEmpty) return null;
+  final parts = raw.split(',');
+  if (parts.length != 4) return null;
+  final values = <double>[];
+  for (final part in parts) {
+    final v = double.tryParse(part.trim());
+    if (v == null || !v.isFinite) return null;
+    values.add(v);
+  }
+  // Reject zero/negative sizes; they would produce a fully collapsed
+  // window the user can't grab. Defer to a fresh default.
+  if (values[2] <= 0 || values[3] <= 0) return null;
+  return Rect.fromLTWH(values[0], values[1], values[2], values[3]);
 }
 
 Future<void> _handleSpotlightPrompt(
@@ -207,6 +252,12 @@ class DexApp extends StatefulWidget {
 }
 
 class _DexAppState extends State<DexApp> with WindowListener {
+  /// Debounce timer for bounds writes. Without it, dragging a window
+  /// to a new position would fire dozens of onWindowMove ticks per
+  /// second, each scheduling a prefs write. 300ms is the same window
+  /// used by other apps that persist drag state (Linear, VS Code).
+  Timer? _boundsSaveDebounce;
+
   @override
   void initState() {
     super.initState();
@@ -220,6 +271,7 @@ class _DexAppState extends State<DexApp> with WindowListener {
     if (Platform.isWindows) {
       windowManager.removeListener(this);
     }
+    _boundsSaveDebounce?.cancel();
     super.dispose();
   }
 
@@ -231,6 +283,53 @@ class _DexAppState extends State<DexApp> with WindowListener {
     } else {
       await DexTray.instance.hideToTray();
     }
+  }
+
+  @override
+  void onWindowResize() => _scheduleBoundsSave();
+
+  @override
+  void onWindowMove() => _scheduleBoundsSave();
+
+  @override
+  void onWindowMaximize() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(prefsKeyWindowMaximized, true);
+  }
+
+  @override
+  void onWindowUnmaximize() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(prefsKeyWindowMaximized, false);
+    // After the unmaximize lands, immediately persist the natural
+    // restore-bounds so a follow-up launch lands in the same shape.
+    _scheduleBoundsSave();
+  }
+
+  void _scheduleBoundsSave() {
+    _boundsSaveDebounce?.cancel();
+    _boundsSaveDebounce = Timer(const Duration(milliseconds: 300), () async {
+      try {
+        // Don't persist bounds while maximized -- the OS reports the
+        // maximized rect, not the restore rect, so saving it would
+        // collapse the next launch into "maximized but at full screen
+        // coords" if the user unmaximized first.
+        if (await windowManager.isMaximized()) return;
+        final bounds = await windowManager.getBounds();
+        if (!bounds.size.isFinite ||
+            bounds.width <= 0 ||
+            bounds.height <= 0) {
+          return;
+        }
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          prefsKeyWindowBounds,
+          '${bounds.left},${bounds.top},${bounds.width},${bounds.height}',
+        );
+      } catch (e, st) {
+        debugPrint('[dex] window bounds save failed: $e\n$st');
+      }
+    });
   }
 
   @override

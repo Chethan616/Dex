@@ -95,16 +95,21 @@ class _IconAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkResponse(
-        onTap: onTap,
-        radius: 16,
-        child: Container(
-          width: 28,
-          height: 28,
-          alignment: Alignment.center,
-          child: Icon(icon, size: 14, color: DexColors.textDim),
+    return MouseRegion(
+      cursor: onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      child: Tooltip(
+        message: tooltip,
+        child: InkResponse(
+          onTap: onTap,
+          radius: 16,
+          child: Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            child: Icon(icon, size: 14, color: DexColors.textDim),
+          ),
         ),
       ),
     );

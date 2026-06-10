@@ -109,26 +109,29 @@ class _ControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkResponse(
-        onTap: onTap,
-        radius: 22,
-        child: Container(
-          width: 40,
-          height: 40,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: accent ? DexColors.accent : DexColors.surface,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: accent ? DexColors.accent : DexColors.border,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Tooltip(
+        message: tooltip,
+        child: InkResponse(
+          onTap: onTap,
+          radius: 22,
+          child: Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: accent ? DexColors.accent : DexColors.surface,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: accent ? DexColors.accent : DexColors.border,
+              ),
             ),
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: accent ? DexColors.bg : DexColors.textDim,
+            child: Icon(
+              icon,
+              size: 18,
+              color: accent ? DexColors.bg : DexColors.textDim,
+            ),
           ),
         ),
       ),

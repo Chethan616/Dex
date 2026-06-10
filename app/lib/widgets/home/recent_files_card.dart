@@ -52,10 +52,12 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: DexRadius.rsm,
-      child: Padding(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: DexRadius.rsm,
+        child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: DexSpace.sm, vertical: DexSpace.sm,
         ),
@@ -88,6 +90,7 @@ class _Row extends StatelessWidget {
                 size: 14, color: DexColors.textFaint),
           ],
         ),
+      ),
       ),
     );
   }

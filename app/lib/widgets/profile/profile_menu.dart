@@ -20,13 +20,16 @@ class ProfileMenu {
   static Future<ProfileMenuAction?> show(BuildContext context) {
     final overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox;
-    // Anchor in the bottom-left of the screen, just above the sidebar's
-    // footer avatar. The card itself is 260 wide so we leave 16px gutter
-    // off the left edge.
-    final anchor = Offset(16, overlay.size.height - 360);
+    // The sidebar avatar isn't routed up to us, so synthesise a 36x36
+    // trigger rect at the bottom-left where the avatar lives. The
+    // menu's positioning delegate drops UP from there into the room
+    // above, so the popup lands floating over the sidebar.
+    final size = overlay.size;
+    final trigger = Rect.fromLTWH(16, size.height - 56, 36, 36);
     return GlossyMenu.show<ProfileMenuAction>(
       context: context,
-      anchor: anchor,
+      trigger: trigger,
+      prefer: MenuDropDirection.up,
       width: 260,
       entries: const <GlossyMenuEntry<ProfileMenuAction>>[
         GlossyMenuHeader<ProfileMenuAction>(child: _ProfileHeader()),

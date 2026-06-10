@@ -76,6 +76,12 @@ ThemeData buildDexDarkTheme() {
       hintStyle: DexType.body(color: DexColors.textFaint),
     ),
 
+    // Every Material button surface emits the OS pointer hand on
+    // hover -- the standard Windows desktop affordance the user
+    // expected. `enabledMouseCursor` defaults to `defer` on
+    // ButtonStyle which falls back to the system default; setting
+    // it to `click` opts in to SystemMouseCursors.click without
+    // touching the disabled state.
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: DexColors.accent,
@@ -86,6 +92,7 @@ ThemeData buildDexDarkTheme() {
         ),
         shape: const RoundedRectangleBorder(borderRadius: DexRadius.rsm),
         textStyle: DexType.label(),
+        enabledMouseCursor: SystemMouseCursors.click,
       ),
     ),
 
@@ -97,6 +104,26 @@ ThemeData buildDexDarkTheme() {
         ),
         shape: const RoundedRectangleBorder(borderRadius: DexRadius.rsm),
         textStyle: DexType.label(),
+        enabledMouseCursor: SystemMouseCursors.click,
+      ),
+    ),
+
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: DexColors.text,
+        side: const BorderSide(color: DexColors.border),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DexSpace.lg, vertical: DexSpace.md,
+        ),
+        shape: const RoundedRectangleBorder(borderRadius: DexRadius.rsm),
+        textStyle: DexType.label(),
+        enabledMouseCursor: SystemMouseCursors.click,
+      ),
+    ),
+
+    iconButtonTheme: const IconButtonThemeData(
+      style: ButtonStyle(
+        mouseCursor: WidgetStatePropertyAll(SystemMouseCursors.click),
       ),
     ),
 

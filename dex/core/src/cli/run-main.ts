@@ -813,7 +813,7 @@ export async function runCli(argv: string[] = process.argv) {
           return;
         }
         for (const line of formatCliFailureLines({
-          title: "OpenClaw hit an unexpected runtime error.",
+          title: "Dex hit an unexpected runtime error.",
           error,
           argv: normalizedArgv,
         })) {

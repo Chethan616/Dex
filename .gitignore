@@ -77,3 +77,12 @@ scratch/
 # Claude Code per-user permission allowlist. Often contains transient
 # API keys via Bash(curl ...) entries -- never commit.
 .claude/settings.local.json
+
+# Scratch drops at project root -- screenshots / reference photos /
+# scratch text. Lives only locally; never commit.
+/image*.png
+/future.png
+/dex_ascii.txt
+/Dex — Implementation Plan.txt
+/copilot-ref/
+/image-tobedeleted.png

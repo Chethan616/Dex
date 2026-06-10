@@ -46,42 +46,45 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: DexRadius.rsm,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DexSpace.sm, vertical: DexSpace.sm,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: DexColors.surface,
-                borderRadius: DexRadius.rsm,
-                border: Border.all(color: DexColors.border),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: DexRadius.rsm,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DexSpace.sm, vertical: DexSpace.sm,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: DexColors.surface,
+                  borderRadius: DexRadius.rsm,
+                  border: Border.all(color: DexColors.border),
+                ),
+                child: const Icon(LucideIcons.message_square,
+                    size: 12, color: DexColors.textDim),
               ),
-              child: const Icon(LucideIcons.message_square,
-                  size: 12, color: DexColors.textDim),
-            ),
-            const SizedBox(width: DexSpace.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(chat.title,
-                      style: DexType.label(color: DexColors.text),
-                      overflow: TextOverflow.ellipsis),
-                  Text(chat.when,
-                      style: DexType.caption(color: DexColors.textFaint)),
-                ],
+              const SizedBox(width: DexSpace.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(chat.title,
+                        style: DexType.label(color: DexColors.text),
+                        overflow: TextOverflow.ellipsis),
+                    Text(chat.when,
+                        style: DexType.caption(color: DexColors.textFaint)),
+                  ],
+                ),
               ),
-            ),
-            const Icon(LucideIcons.ellipsis,
-                size: 14, color: DexColors.textFaint),
-          ],
+              const Icon(LucideIcons.ellipsis,
+                  size: 14, color: DexColors.textFaint),
+            ],
+          ),
         ),
       ),
     );

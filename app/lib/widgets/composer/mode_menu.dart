@@ -11,12 +11,18 @@ import 'composer_mode.dart';
 class ModeMenu {
   static Future<ComposerMode?> show({
     required BuildContext context,
-    required Offset anchor,
+    required Rect trigger,
     required ComposerMode current,
   }) {
     return GlossyMenu.show<ComposerMode>(
       context: context,
-      anchor: anchor,
+      trigger: trigger,
+      // The mode pill sits at the bottom of the composer, so the menu
+      // wants to drop UP into the room above. GlossyMenu's positioning
+      // delegate falls back to "drop down" automatically if the
+      // measured menu can't fit above (small windows / chat near the
+      // top edge).
+      prefer: MenuDropDirection.up,
       width: 280,
       entries: <GlossyMenuEntry<ComposerMode>>[
         for (final m in ComposerMode.values)
