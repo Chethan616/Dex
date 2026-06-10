@@ -150,7 +150,15 @@ bool Win32Window::Create(const std::wstring& title,
 }
 
 bool Win32Window::Show() {
-  return ShowWindow(window_handle_, SW_SHOWNORMAL);
+  // SW_SHOW preserves whatever state Flutter set up before the runner
+  // got here (maximize, custom size, custom position). The Flutter
+  // template ships SW_SHOWNORMAL, which per the Win32 docs explicitly
+  // restores a maximized window to its "original size and position"
+  // -- breaking our maximize-state-on-launch restore. SW_SHOW just
+  // activates the window in its CURRENT size + position, which is
+  // exactly what we want when the Dart side has already configured
+  // bounds + maximize via window_manager.waitUntilReadyToShow.
+  return ShowWindow(window_handle_, SW_SHOW);
 }
 
 // static

@@ -316,6 +316,26 @@ class _DexAppState extends State<DexApp> with WindowListener {
     super.initState();
     if (Platform.isWindows) {
       windowManager.addListener(this);
+      // Belt-and-suspenders: even with the win32_window.cpp Show()
+      // fix that swaps SW_SHOWNORMAL → SW_SHOW, re-apply the
+      // maximized state after the first frame paints. If anything
+      // in the runner path ever clobbers the maximize again, this
+      // catches it.
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final shouldMaximize =
+              prefs.getBool(prefsKeyWindowMaximized) ?? false;
+          if (shouldMaximize && !await windowManager.isMaximized()) {
+            await windowManager.maximize();
+            debugPrint(
+              '[dex] window re-maximized after first frame',
+            );
+          }
+        } catch (e, st) {
+          debugPrint('[dex] post-frame maximize re-apply failed: $e\n$st');
+        }
+      });
     }
   }
 
