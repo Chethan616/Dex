@@ -92,6 +92,9 @@ class _DexComposerState extends State<DexComposer> {
   void _submit() {
     final t = _ctrl.text.trim();
     if (t.isEmpty && _attachments.isEmpty) return;
+    // Stronger flare on submission than on a keystroke -- the fog
+    // visibly "answers" the send.
+    LivingBackground.of(context)?.pulse(0.8);
     widget.onSubmit(t);
     _ctrl.clear();
     if (_attachments.isNotEmpty) {

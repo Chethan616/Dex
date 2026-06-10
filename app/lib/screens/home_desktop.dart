@@ -10,6 +10,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../core/models/agent_state.dart';
 import '../core/state/conversation_store.dart';
 import '../theme/tokens.dart';
 import '../widgets/chat/action_preview_panel.dart';
@@ -135,6 +136,8 @@ class _HomeDesktopState extends State<HomeDesktop> {
         final hasMessages = widget.store.messages.isNotEmpty;
         return Scaffold(
           body: LivingBackground(
+            activity: widget.store,
+            isActive: () => widget.store.state == AgentState.acting,
             child: SafeArea(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
