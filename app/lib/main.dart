@@ -94,9 +94,17 @@ Future<void> main() async {
 }
 
 /// Read the saved window size + position + maximized flag and apply
-/// them before the first frame. `waitUntilReadyToShow` lets us call
-/// `maximize`/`setBounds` against the OS window without the user
-/// seeing the default-sized window flash before the restore lands.
+/// them before the first frame. The previous implementation passed
+/// `null` options to `waitUntilReadyToShow` and called `setBounds`
+/// from the callback, but by that point the C++ runner has already
+/// triggered `Show()` on the default-sized window -- you'd see a
+/// flash from default → restored size, or worse the resize wouldn't
+/// stick at all on some Windows builds.
+///
+/// Fix: pass `WindowOptions(size: ...)` directly so window_manager
+/// applies the size synchronously inside its own ready-to-show
+/// handshake, BEFORE the runner calls Show(). Position has to be
+/// set separately (WindowOptions has no position field).
 Future<void> _restoreWindowState() async {
   try {
     final prefs = await SharedPreferences.getInstance();
@@ -104,17 +112,62 @@ Future<void> _restoreWindowState() async {
     final rawBounds = prefs.getString(prefsKeyWindowBounds);
     final savedBounds = _parseBounds(rawBounds);
 
-    // The window is invisible until the tray click brings it in; we
-    // still apply state here so the FIRST show is correctly shaped.
-    await windowManager.waitUntilReadyToShow(null, () async {
+    final options = WindowOptions(
+      size: savedBounds != null
+          ? Size(savedBounds.width, savedBounds.height)
+          : null,
+    );
+
+    await windowManager.waitUntilReadyToShow(options, () async {
+      // Position lands here -- it isn't part of WindowOptions, so
+      // we set it explicitly after the runner is ready to show.
+      if (savedBounds != null) {
+        await windowManager.setPosition(
+          Offset(savedBounds.left, savedBounds.top),
+        );
+      }
       if (maximized) {
         await windowManager.maximize();
-      } else if (savedBounds != null) {
-        await windowManager.setBounds(savedBounds);
       }
     });
+
+    debugPrint(
+      '[dex] window restored: maximized=$maximized '
+      'bounds=${savedBounds?.toString() ?? "none"}',
+    );
   } catch (e, st) {
     debugPrint('[dex] window state restore failed: $e\n$st');
+  }
+}
+
+/// Synchronous bounds save -- called from `onWindowClose` so even a
+/// quick "resize → hide-to-tray" sequence captures the latest state.
+/// The debounced listener path inside `_DexAppState` covers the more
+/// common interactive drag/resize tracking.
+Future<void> _persistBoundsNow() async {
+  try {
+    final maximized = await windowManager.isMaximized();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(prefsKeyWindowMaximized, maximized);
+    if (!maximized) {
+      // Only persist bounds while NOT maximized -- the maximized
+      // rect would otherwise overwrite the restore rect on next
+      // launch.
+      final bounds = await windowManager.getBounds();
+      if (bounds.size.isFinite &&
+          bounds.width > 0 &&
+          bounds.height > 0) {
+        await prefs.setString(
+          prefsKeyWindowBounds,
+          '${bounds.left},${bounds.top},${bounds.width},${bounds.height}',
+        );
+      }
+    }
+    debugPrint(
+      '[dex] window state saved (close): maximized=$maximized',
+    );
+  } catch (e, st) {
+    debugPrint('[dex] window state save (close) failed: $e\n$st');
   }
 }
 
@@ -278,6 +331,12 @@ class _DexAppState extends State<DexApp> with WindowListener {
   @override
   void onWindowClose() async {
     if (!Platform.isWindows) return;
+    // Cancel any pending debounced save and capture the latest bounds
+    // synchronously before we hide/quit. Otherwise a quick "resize →
+    // X" sequence would lose state because the 300ms debounce never
+    // fires.
+    _boundsSaveDebounce?.cancel();
+    await _persistBoundsNow();
     if (DexTray.instance.quitOnClose) {
       await DexTray.instance.quit();
     } else {
