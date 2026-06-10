@@ -65,9 +65,9 @@ class EmptyHome extends StatelessWidget {
                   children: [
                     _FadeInUp(
                       index: 0,
-                      child: Text(
-                        'Hi $greetingName, what should we dive into today?',
-                        textAlign: TextAlign.center,
+                      child: _Typewriter(
+                        text:
+                            'Hi $greetingName, what should we dive into today?',
                         style: DexType.title(color: DexColors.text),
                       ),
                     ),
@@ -127,6 +127,81 @@ class EmptyHome extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Streams the greeting in one character at a time over ~700ms so the
+/// home screen reads as alive on first mount rather than the title
+/// "plopping" in. Reserves layout for the full text from the first
+/// frame to avoid the page reflowing as chars land. Reduced-motion
+/// users get the full string immediately.
+class _Typewriter extends StatefulWidget {
+  const _Typewriter({required this.text, required this.style});
+  final String text;
+  final TextStyle style;
+
+  @override
+  State<_Typewriter> createState() => _TypewriterState();
+}
+
+class _TypewriterState extends State<_Typewriter>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduce = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduce) {
+      return Text(
+        widget.text,
+        textAlign: TextAlign.center,
+        style: widget.style,
+      );
+    }
+    // Pre-size the layout by stacking the visible-typed text on top of
+    // a fully-transparent copy of the full string. That way the
+    // surrounding column doesn't jump as characters land.
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Opacity(
+          opacity: 0,
+          child: Text(
+            widget.text,
+            textAlign: TextAlign.center,
+            style: widget.style,
+          ),
+        ),
+        AnimatedBuilder(
+          animation: _ctrl,
+          builder: (context, _) {
+            // easeOutCubic so the last few chars don't feel rushed.
+            final t = Curves.easeOutCubic.transform(_ctrl.value);
+            final count = (widget.text.length * t).round();
+            return Text(
+              widget.text.substring(0, count),
+              textAlign: TextAlign.center,
+              style: widget.style,
+            );
+          },
+        ),
+      ],
     );
   }
 }

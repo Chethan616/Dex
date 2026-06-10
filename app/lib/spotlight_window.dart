@@ -19,9 +19,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:super_drag_and_drop/super_drag_and_drop.dart';
+
 import 'main.dart' show DexScrollBehavior, dexSpotlightChannel;
 import 'theme/theme.dart';
 import 'theme/tokens.dart';
+import 'widgets/composer/attachments.dart';
 import 'widgets/home/suggestion_chip.dart';
 import 'widgets/refractive_edge.dart';
 
@@ -99,6 +102,13 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
   late final FocusNode _focus;
   bool _submitting = false;
 
+  // Attachments collected via Ctrl+V paste, drop onto the panel, or
+  // tapping the + circle. Rendered as a chip strip above the input.
+  // The IPC payload back to the main window stays text-only for now;
+  // attachment paths get serialised into the prompt prefix until the
+  // gateway has a real attachments protocol.
+  final List<AttachedItem> _attachments = <AttachedItem>[];
+
   @override
   void initState() {
     super.initState();
@@ -116,17 +126,47 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
 
   Future<void> _submit([String? text]) async {
     final t = (text ?? _ctrl.text).trim();
-    if (t.isEmpty || _submitting) return;
+    if (t.isEmpty && _attachments.isEmpty) return;
+    if (_submitting) return;
     setState(() => _submitting = true);
+    // Serialise attachments into a prompt prefix until the gateway
+    // has a structured attachments protocol. File URIs are passed
+    // verbatim; pasted text/image attachments are summarised.
+    final prefix = _attachments.isEmpty
+        ? ''
+        : '${_attachments.map(_formatAttachment).join('\n')}\n';
+    final payload = '$prefix$t';
     const channel = WindowMethodChannel(dexSpotlightChannel);
     try {
-      await channel.invokeMethod<void>('sendPrompt', t);
+      await channel.invokeMethod<void>('sendPrompt', payload);
     } catch (e, st) {
       // Even if IPC failed, still close the window -- the user expects
       // dismissal on submit. Logging so a real failure shows up.
       debugPrint('[dex] spotlight sendPrompt failed: $e\n$st');
     }
     await _dismiss();
+  }
+
+  String _formatAttachment(AttachedItem a) {
+    return switch (a.kind) {
+      AttachmentKind.file => '[attached file: ${a.fileUri ?? a.name}]',
+      AttachmentKind.image => '[attached image: ${a.name}]',
+      AttachmentKind.text => '[attached text: ${a.text ?? ""}]',
+    };
+  }
+
+  void _addAttachments(List<AttachedItem> items) {
+    if (items.isEmpty || !mounted) return;
+    setState(() => _attachments.addAll(items));
+  }
+
+  void _removeAttachment(String id) {
+    setState(() => _attachments.removeWhere((a) => a.id == id));
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    final items = await extractClipboardItems();
+    if (items.isNotEmpty) _addAttachments(items);
   }
 
   Future<void> _dismiss() async {
@@ -141,30 +181,47 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
   }
 
   void _onAttach() {
-    // Placeholder for the rich-paste / file-attach flow. Commit 3
-    // wires this to super_drag_and_drop + super_clipboard so the
-    // attach circle accepts any file type (images, PDFs, .exe, etc.)
-    // dropped or pasted in.
+    // Tap the + circle → behaves like a paste: capture whatever is
+    // on the clipboard and add it as an attachment chip. The full
+    // file-picker path lands in v1.3.
+    _pasteFromClipboard();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      type: MaterialType.transparency,
-      child: Shortcuts(
-        shortcuts: const <ShortcutActivator, Intent>{
-          SingleActivator(LogicalKeyboardKey.escape): _DismissIntent(),
-        },
-        child: Actions(
-          actions: <Type, Action<Intent>>{
-            _DismissIntent: CallbackAction<_DismissIntent>(
-              onInvoke: (_) {
-                _dismiss();
-                return null;
-              },
-            ),
+    return DropRegion(
+      formats: kAcceptedDropFormats,
+      hitTestBehavior: HitTestBehavior.opaque,
+      onDropOver: (event) async => DropOperation.copy,
+      onPerformDrop: (event) async {
+        final items = await extractDroppedItems(event);
+        _addAttachments(items);
+      },
+      child: Material(
+        type: MaterialType.transparency,
+        child: Shortcuts(
+          shortcuts: const <ShortcutActivator, Intent>{
+            SingleActivator(LogicalKeyboardKey.escape): _DismissIntent(),
+            SingleActivator(LogicalKeyboardKey.keyV, control: true):
+                _SpotlightPasteIntent(),
+            SingleActivator(LogicalKeyboardKey.keyV, meta: true):
+                _SpotlightPasteIntent(),
           },
-          child: Padding(
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              _DismissIntent: CallbackAction<_DismissIntent>(
+                onInvoke: (_) {
+                  _dismiss();
+                  return null;
+                },
+              ),
+              _SpotlightPasteIntent:
+                  CallbackAction<_SpotlightPasteIntent>(onInvoke: (_) {
+                _pasteFromClipboard();
+                return null;
+              }),
+            },
+            child: Padding(
             padding: const EdgeInsets.all(DexSpace.lg),
             // Move the overlay up ~25% so it sits in the top-third of
             // the window like macOS Spotlight rather than dead-center.
@@ -175,6 +232,10 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  AttachmentStrip(
+                    items: _attachments,
+                    onRemove: _removeAttachment,
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -286,12 +347,17 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
           ),
         ),
       ),
+      ),
     );
   }
 }
 
 class _DismissIntent extends Intent {
   const _DismissIntent();
+}
+
+class _SpotlightPasteIntent extends Intent {
+  const _SpotlightPasteIntent();
 }
 
 /// The detached "+" circle that sits to the right of the search pill.

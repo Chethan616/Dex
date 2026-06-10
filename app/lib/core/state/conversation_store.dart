@@ -16,6 +16,7 @@ import '../models/agent_state.dart';
 import '../models/engine.dart';
 import '../models/gateway_event.dart';
 import '../models/message.dart';
+import '../models/reminder.dart';
 import '../models/tool_activity.dart';
 import '../tool_registry.dart';
 
@@ -34,6 +35,41 @@ class ConversationStore extends ChangeNotifier {
   final List<Message> _messages = <Message>[];
   AgentState _state = AgentState.idle;
   ActionPreview? _pending;
+
+  // Reminders are in-memory only for v1; the real backend lands when
+  // dex-core ships a `reminders.*` gateway namespace. The list is kept
+  // ordered by due time ascending so the UI doesn't have to re-sort.
+  final List<Reminder> _reminders = <Reminder>[];
+
+  List<Reminder> get reminders => List<Reminder>.unmodifiable(_reminders);
+
+  /// Add a new reminder. Inserts in due-order so the upcoming list
+  /// reads naturally. Returns the created Reminder so callers can
+  /// reference its id immediately (e.g. for an undo affordance).
+  Reminder addReminder({required String text, required DateTime due}) {
+    final r = Reminder(
+      id: _uuid.v4(),
+      text: text,
+      due: due,
+      createdAt: DateTime.now(),
+    );
+    final i = _reminders.indexWhere((other) => other.due.isAfter(due));
+    if (i < 0) {
+      _reminders.add(r);
+    } else {
+      _reminders.insert(i, r);
+    }
+    notifyListeners();
+    return r;
+  }
+
+  /// Cancel by id. No-op if the id isn't found (e.g. double-cancel
+  /// from an undo).
+  void cancelReminder(String id) {
+    final before = _reminders.length;
+    _reminders.removeWhere((r) => r.id == id);
+    if (_reminders.length != before) notifyListeners();
+  }
 
   // Map runId -> message id so streaming deltas land in the right bubble.
   final Map<String, String> _streaming = <String, String>{};

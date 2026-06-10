@@ -9,10 +9,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'home/recent_chats_card.dart';
 
-class DexSidebar extends StatelessWidget {
+class DexSidebar extends StatefulWidget {
   const DexSidebar({
     super.key,
     required this.expanded,
@@ -50,8 +51,54 @@ class DexSidebar extends StatelessWidget {
   static const double _expandedWidth = 240;
 
   @override
+  State<DexSidebar> createState() => _DexSidebarState();
+}
+
+class _DexSidebarState extends State<DexSidebar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _entry;
+
+  @override
+  void initState() {
+    super.initState();
+    // One-shot slide-in from the left when the home shell first
+    // mounts. 360ms is long enough to read as a deliberate reveal
+    // rather than a jolt; the dampened decelerate curve matches
+    // the dialog / menu entry motion language.
+    _entry = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 360),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _entry.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final width = expanded ? _expandedWidth : _collapsedWidth;
+    final width = widget.expanded
+        ? DexSidebar._expandedWidth
+        : DexSidebar._collapsedWidth;
+    final body = _buildBody(width);
+    final reduce = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduce) return body;
+    return AnimatedBuilder(
+      animation: _entry,
+      builder: (context, child) {
+        final t = DexMotion.dampened.transform(_entry.value);
+        return Transform.translate(
+          offset: Offset((1 - t) * -width, 0),
+          child: Opacity(opacity: t, child: child),
+        );
+      },
+      child: body,
+    );
+  }
+
+  Widget _buildBody(double width) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 160),
       curve: Curves.easeOutCubic,
@@ -95,7 +142,7 @@ class DexSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Header(expanded: expanded, onToggle: onToggle),
+          _Header(expanded: widget.expanded, onToggle: widget.onToggle),
           const SizedBox(height: DexSpace.sm),
           Expanded(
             child: SingleChildScrollView(
@@ -106,50 +153,50 @@ class DexSidebar extends StatelessWidget {
                   _NavItem(
                     icon: LucideIcons.file_plus,
                     label: 'New chat',
-                    expanded: expanded,
-                    onTap: onNewChat,
+                    expanded: widget.expanded,
+                    onTap: widget.onNewChat,
                   ),
                   _NavItem(
                     icon: LucideIcons.library,
                     label: 'Library',
-                    expanded: expanded,
-                    onTap: onLibrary,
+                    expanded: widget.expanded,
+                    onTap: widget.onLibrary,
                   ),
                   _NavItem(
                     icon: LucideIcons.square_check,
                     label: 'Tasks',
                     badge: 'PREVIEW',
-                    expanded: expanded,
-                    onTap: onTasks,
+                    expanded: widget.expanded,
+                    onTap: widget.onTasks,
                   ),
                   _NavItem(
                     icon: LucideIcons.folder,
                     label: 'Projects',
-                    expanded: expanded,
+                    expanded: widget.expanded,
                     trailing: const Icon(LucideIcons.plus,
                         size: 16, color: DexColors.textDim),
-                    onTap: onNewProject,
+                    onTap: widget.onNewProject,
                   ),
                   const _Divider(),
                   _NavItem(
                     icon: LucideIcons.compass,
                     label: 'Discover',
-                    expanded: expanded,
-                    onTap: onDiscover,
+                    expanded: widget.expanded,
+                    onTap: widget.onDiscover,
                   ),
                   _NavItem(
                     icon: LucideIcons.sparkles,
                     label: 'Imagine',
-                    expanded: expanded,
-                    onTap: onImagine,
+                    expanded: widget.expanded,
+                    onTap: widget.onImagine,
                   ),
                   _NavItem(
                     icon: LucideIcons.layout_grid,
                     label: 'Experiments',
-                    expanded: expanded,
-                    onTap: onExperiments,
+                    expanded: widget.expanded,
+                    onTap: widget.onExperiments,
                   ),
-                  if (expanded && recentChats.isNotEmpty) ...[
+                  if (widget.expanded && widget.recentChats.isNotEmpty) ...[
                     const SizedBox(height: DexSpace.lg),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(
@@ -164,11 +211,11 @@ class DexSidebar extends StatelessWidget {
                         ),
                       ),
                     ),
-                    ...recentChats.map(
+                    ...widget.recentChats.map(
                       (c) => _ChatRow(
                         chat: c,
-                        active: c.id == activeChatId,
-                        onTap: () => onSelectChat?.call(c),
+                        active: c.id == widget.activeChatId,
+                        onTap: () => widget.onSelectChat?.call(c),
                       ),
                     ),
                   ],
@@ -177,9 +224,9 @@ class DexSidebar extends StatelessWidget {
             ),
           ),
           _Footer(
-            expanded: expanded,
-            userName: userName,
-            onAvatarTap: onAvatarTap,
+            expanded: widget.expanded,
+            userName: widget.userName,
+            onAvatarTap: widget.onAvatarTap,
           ),
         ],
       ),

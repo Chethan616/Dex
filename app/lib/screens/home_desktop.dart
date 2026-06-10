@@ -21,6 +21,7 @@ import '../widgets/home/empty_home.dart';
 import '../widgets/home/recent_chats_card.dart';
 import '../widgets/home/recent_files_card.dart';
 import '../widgets/living_background.dart';
+import 'reminders_screen.dart';
 import '../widgets/profile/profile_menu.dart';
 import '../widgets/settings/settings_dialog.dart';
 import '../widgets/vision/vision_panel.dart';
@@ -97,7 +98,7 @@ class _HomeDesktopState extends State<HomeDesktop> {
       case ProfileMenuAction.memory:
         await SettingsDialog.show(context, initial: SettingsTab.memory);
       case ProfileMenuAction.reminders:
-        await SettingsDialog.show(context);
+        await RemindersScreen.show(context, widget.store);
       case ProfileMenuAction.feedback:
         // existing -- feedback flow lands in a follow-up
         break;

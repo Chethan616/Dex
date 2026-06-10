@@ -8,10 +8,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import 'package:super_drag_and_drop/super_drag_and_drop.dart';
+
 import '../../theme/tokens.dart';
 import '../living_background.dart';
 import '../refractive_edge.dart';
 import 'add_menu.dart';
+import 'attachments.dart';
 import 'composer_mode.dart';
 import 'mode_menu.dart';
 
@@ -46,6 +49,10 @@ class _DexComposerState extends State<DexComposer> {
   late final FocusNode _focus;
   ComposerMode _mode = ComposerMode.smart;
   bool _hasText = false;
+
+  // Attachments ride along with the next submitted prompt. The chip
+  // strip above the input shows them; submit/clear empties the list.
+  final List<AttachedItem> _attachments = <AttachedItem>[];
 
   final GlobalKey _addKey = GlobalKey();
   final GlobalKey _modeKey = GlobalKey();
@@ -84,10 +91,36 @@ class _DexComposerState extends State<DexComposer> {
 
   void _submit() {
     final t = _ctrl.text.trim();
-    if (t.isEmpty) return;
+    if (t.isEmpty && _attachments.isEmpty) return;
     widget.onSubmit(t);
     _ctrl.clear();
+    if (_attachments.isNotEmpty) {
+      setState(_attachments.clear);
+    }
     _focus.requestFocus();
+  }
+
+  void _addAttachments(List<AttachedItem> items) {
+    if (items.isEmpty || !mounted) return;
+    setState(() => _attachments.addAll(items));
+  }
+
+  void _removeAttachment(String id) {
+    setState(() => _attachments.removeWhere((a) => a.id == id));
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    // Ctrl+V intercept: if the clipboard has rich content (image / file
+    // / long text), capture it as an attachment. Plain short text falls
+    // through to the default TextField paste so it still lands in the
+    // input buffer.
+    final items = await extractClipboardItems();
+    if (items.isNotEmpty) {
+      _addAttachments(items);
+    } else {
+      // Fall through to native paste for plain short text.
+      _focus.requestFocus();
+    }
   }
 
   Future<void> _openAdd() async {
@@ -114,22 +147,47 @@ class _DexComposerState extends State<DexComposer> {
 
   @override
   Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: const <ShortcutActivator, Intent>{
-        SingleActivator(LogicalKeyboardKey.keyK, control: true):
-            _FocusComposerIntent(),
-        SingleActivator(LogicalKeyboardKey.keyK, meta: true):
-            _FocusComposerIntent(),
+    return DropRegion(
+      formats: kAcceptedDropFormats,
+      hitTestBehavior: HitTestBehavior.opaque,
+      onDropOver: (event) async {
+        // Accept the drop -- super_drag_and_drop wants us to declare
+        // intent here so the OS shows the right "copy" cursor over
+        // the composer pill.
+        return DropOperation.copy;
       },
-      child: Actions(
-        actions: <Type, Action<Intent>>{
-          _FocusComposerIntent:
-              CallbackAction<_FocusComposerIntent>(onInvoke: (_) {
-            _focus.requestFocus();
-            return null;
-          }),
+      onPerformDrop: (event) async {
+        final items = await extractDroppedItems(event);
+        _addAttachments(items);
+      },
+      child: Shortcuts(
+        shortcuts: const <ShortcutActivator, Intent>{
+          SingleActivator(LogicalKeyboardKey.keyK, control: true):
+              _FocusComposerIntent(),
+          SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+              _FocusComposerIntent(),
+          // Ctrl+V / Cmd+V → rich paste path. If the clipboard holds
+          // an image / file / long text we capture it as an attachment;
+          // short plain text falls through to the default TextField
+          // paste so the user can still paste short snippets normally.
+          SingleActivator(LogicalKeyboardKey.keyV, control: true):
+              _PasteIntent(),
+          SingleActivator(LogicalKeyboardKey.keyV, meta: true):
+              _PasteIntent(),
         },
-        child: DecoratedBox(
+        child: Actions(
+          actions: <Type, Action<Intent>>{
+            _FocusComposerIntent:
+                CallbackAction<_FocusComposerIntent>(onInvoke: (_) {
+              _focus.requestFocus();
+              return null;
+            }),
+            _PasteIntent: CallbackAction<_PasteIntent>(onInvoke: (_) {
+              _pasteFromClipboard();
+              return null;
+            }),
+          },
+          child: DecoratedBox(
           // Shadow lives on the OUTER box so it isn't clipped by the
           // rounded-rect mask -- the previous structure had the shadow
           // on the Container _inside_ ClipRRect, which silently
@@ -156,6 +214,10 @@ class _DexComposerState extends State<DexComposer> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    AttachmentStrip(
+                      items: _attachments,
+                      onRemove: _removeAttachment,
+                    ),
                     _Input(
                       controller: _ctrl,
                       focusNode: _focus,
@@ -182,6 +244,7 @@ class _DexComposerState extends State<DexComposer> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -420,4 +483,8 @@ class _ModePill extends StatelessWidget {
 
 class _FocusComposerIntent extends Intent {
   const _FocusComposerIntent();
+}
+
+class _PasteIntent extends Intent {
+  const _PasteIntent();
 }
