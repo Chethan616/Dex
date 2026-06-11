@@ -1,18 +1,28 @@
-// Detail view for a single connector entry: About + Details + Connect.
+// Detail view for a single connector entry: About + How to connect +
+// Details, with the live status chip carried over from the list.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../../../core/connectors.dart';
 import '../../../theme/tokens.dart';
 import 'connectors_tab.dart';
 
 class ConnectorDetail extends StatelessWidget {
-  const ConnectorDetail({super.key, required this.entry, required this.onBack});
+  const ConnectorDetail({
+    super.key,
+    required this.entry,
+    required this.status,
+    required this.onBack,
+  });
   final ConnectorEntry entry;
+  final ConnectorStatus status;
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
+    final hint = entry.connectHint;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(DexSpace.lg),
       child: Column(
@@ -46,10 +56,7 @@ class ConnectorDetail extends StatelessWidget {
                 child: Text(entry.name,
                     style: DexType.heading(color: DexColors.text)),
               ),
-              ElevatedButton(
-                onPressed: () {},
-                child: const Text('Connect'),
-              ),
+              ConnectorStatusChip(status: status),
             ],
           ),
           const SizedBox(height: DexSpace.xl),
@@ -57,13 +64,70 @@ class ConnectorDetail extends StatelessWidget {
           const SizedBox(height: DexSpace.xs),
           Text(entry.description,
               style: DexType.body(color: DexColors.textDim)),
+          if (hint != null && status != ConnectorStatus.connected) ...[
+            const SizedBox(height: DexSpace.xl),
+            Text('How to connect',
+                style: DexType.label(color: DexColors.text)),
+            const SizedBox(height: DexSpace.xs),
+            _HintBox(hint: hint),
+          ],
           const SizedBox(height: DexSpace.xl),
           Text('Details', style: DexType.label(color: DexColors.text)),
           const SizedBox(height: DexSpace.sm),
           _DetailRow(label: 'Developer', value: entry.developer),
-          _DetailRow(label: 'Category', value: entry.category),
-          _DetailRow(label: 'More info', value: 'docs.dex'),
-          _DetailRow(label: 'Privacy policy', value: 'docs.dex/privacy'),
+          _DetailRow(label: 'Category', value: entry.category.label),
+          _DetailRow(
+            label: 'Status',
+            value: switch (status) {
+              ConnectorStatus.connected => 'Connected',
+              ConnectorStatus.builtin => 'Built into Dex',
+              ConnectorStatus.available => 'Not connected',
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Mono command box with a copy affordance — the connect hint is
+/// usually a `dex` CLI one-liner.
+class _HintBox extends StatelessWidget {
+  const _HintBox({required this.hint});
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(DexSpace.sm),
+      decoration: BoxDecoration(
+        color: DexColors.surface,
+        borderRadius: DexRadius.rsm,
+        border: Border.all(color: DexColors.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(hint, style: DexType.mono(color: DexColors.textDim)),
+          ),
+          InkWell(
+            borderRadius: DexRadius.rsm,
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: hint));
+              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                const SnackBar(
+                  content: Text('Copied'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: Icon(LucideIcons.copy,
+                  size: 14, color: DexColors.textFaint),
+            ),
+          ),
         ],
       ),
     );
@@ -80,12 +144,18 @@ class _DetailRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: DexSpace.xs),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
+          SizedBox(
+            width: 120,
             child: Text(label,
                 style: DexType.label(color: DexColors.textDim)),
           ),
-          Text(value, style: DexType.label(color: DexColors.text)),
+          Expanded(
+            child: Text(value,
+                style: DexType.label(color: DexColors.text),
+                textAlign: TextAlign.right),
+          ),
         ],
       ),
     );

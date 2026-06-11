@@ -23,7 +23,7 @@ extension on SettingsTab {
         SettingsTab.preferences => 'Preferences',
         SettingsTab.memory => 'Memory',
         SettingsTab.account => 'Account',
-        SettingsTab.connectors => 'Connectors',
+        SettingsTab.connectors => 'Connectors & Apps',
         SettingsTab.privacy => 'Privacy',
         SettingsTab.about => 'About',
       };
