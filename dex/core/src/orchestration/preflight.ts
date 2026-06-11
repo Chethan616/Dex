@@ -129,6 +129,13 @@ export function buildEnginePreflightHint(args: {
         "via the tools above; never tell the user you're unable to operate " +
         "applications."
       : null,
+    // Channel sends beat GUI automation by minutes. When the user has a
+    // messenger paired as a Dex channel, the `message` tool delivers
+    // text/files in ONE call -- GUI-driving the messenger app is the
+    // last resort, not the default.
+    "Sending a message or file via WhatsApp/Telegram/Discord/Slack: if " +
+      "that channel is paired, use the `message` tool (one call). Only " +
+      "fall back to driving the messenger's UI when no channel is paired.",
     fallbackLine,
   ]
     .filter((line): line is string => line !== null && line !== "")

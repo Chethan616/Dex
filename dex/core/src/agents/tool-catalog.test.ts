@@ -40,6 +40,10 @@ describe("tool-catalog", () => {
       "sessions_yield",
       "subagents",
       "session_status",
+      // Dex default: desktop sessions can drive the browser tool and send
+      // via paired channels (see tool-catalog.ts rationale comments).
+      "browser",
+      "message",
       "cron",
       "get_goal",
       "create_goal",
