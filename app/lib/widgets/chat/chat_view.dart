@@ -3,8 +3,8 @@
 
 import 'package:flutter/material.dart';
 
-import '../../core/models/agent_state.dart';
 import '../../core/models/message.dart';
+import '../../core/models/tool_activity.dart';
 import '../../core/state/conversation_store.dart';
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
@@ -14,9 +14,9 @@ import '../composer/dex_composer.dart';
 import '../connection_banner.dart';
 import '../message_agent_prose.dart';
 import '../message_human.dart';
-import '../tool_chip.dart';
 import 'chat_header.dart';
 import 'day_separator.dart';
+import 'step_row.dart';
 
 class ChatView extends StatefulWidget {
   const ChatView({
@@ -130,7 +130,16 @@ class _ChatViewState extends State<ChatView> {
       case MessageSpeaker.agent:
         return MessageAgentProse(message: m);
       case MessageSpeaker.toolChip:
-        return ToolChip(message: m);
+        // agent-zero-style compact step line; expands on click into the
+        // correlated ToolActivity's detail (args + output).
+        ToolActivity? activity;
+        for (final a in widget.store.activities) {
+          if (a.callId == m.callId) {
+            activity = a;
+            break;
+          }
+        }
+        return StepRow(message: m, activity: activity);
       case MessageSpeaker.action:
         final steps = m.steps ?? const [];
         return Padding(
