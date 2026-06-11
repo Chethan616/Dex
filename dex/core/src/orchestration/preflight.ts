@@ -111,16 +111,41 @@ export function buildEnginePreflightHint(args: {
     `Prefer the matching MCP tool: \`${toolName}\`. ` +
       "If you must deviate (e.g. the picked tool returned an error you can't fix), " +
       "say so explicitly in your reply and pick from the fallbacks.",
+    task.kind === "compound"
+      ? "This looks like a multi-step task. Chain tools as needed: " +
+        "`browser-control__run_browser_task` for steps inside a web page, " +
+        "`windows-desktop-control__run_desktop_task` for steps inside a native " +
+        "Windows app's UI, and `exec` for file/CLI steps. Do NOT fall back to " +
+        "screenshots + SendKeys when one of these tools covers the step."
+      : null,
+    // OS-state sub-steps are where small models waste minutes driving
+    // Settings UI (and then time out). Steer those to exec even when the
+    // overall turn routed to a GUI engine.
+    primary.engine !== "shell" || task.kind === "compound"
+      ? "OS state reads/writes (wallpaper, resolution, DNS, services, " +
+        "registry, env vars, screenshots) are one-line PowerShell jobs -- " +
+        "use `exec` for those sub-steps instead of driving a Settings UI. " +
+        "You CAN open and drive desktop apps (WhatsApp, Excel, Settings) " +
+        "via the tools above; never tell the user you're unable to operate " +
+        "applications."
+      : null,
     fallbackLine,
   ]
     .filter((line): line is string => line !== null && line !== "")
     .join("\n");
 }
 
-/** Map of EngineId → the canonical MCP tool the agent should call. */
+/**
+ * Map of EngineId → the canonical tool id the agent should call.
+ * MCP tools surface to the agent NAMESPACED as `<server>__<tool>`
+ * (verified against a live `dex agent` tool listing) -- an unprefixed
+ * name like `run_desktop_task` doesn't match anything in the agent's
+ * tool list, so a small model never connects the hint to the tool.
+ * Shell is the built-in `exec` tool (there is no `bash` tool id).
+ */
 const MCP_TOOL_FOR_ENGINE: Record<EngineId, string> = {
-  shell: "bash",
-  "ufo-uia": "run_desktop_task",
-  "browser-use": "run_browser_task",
-  omniparser: "parse_screen",
+  shell: "exec",
+  "ufo-uia": "windows-desktop-control__run_desktop_task",
+  "browser-use": "browser-control__run_browser_task",
+  omniparser: "omniparser__parse_screen",
 };

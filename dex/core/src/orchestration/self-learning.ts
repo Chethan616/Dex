@@ -47,13 +47,13 @@ import type {
  */
 export function buildEngineHistoryProbe(
   store: TelemetryStore,
-): (process: ProcessContext) => Promise<Record<EngineId, EngineHistory>> {
+): (process: ProcessContext) => Promise<Record<EngineId, EngineHistory | undefined>> {
   return async (process) => {
+    const out = {} as Record<EngineId, EngineHistory | undefined>;
     if (!process.name) {
-      return {};
+      return out;
     }
     const stats = store.statsByEngine(process.name);
-    const out: Record<EngineId, EngineHistory> = {};
     for (const [engineId, s] of Object.entries(stats)) {
       out[engineId as EngineId] = {
         runs: s.runs,

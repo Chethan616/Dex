@@ -67,6 +67,16 @@ const APP_FAMILY_TABLE: Record<string, AppFamily> = {
   "notepad.exe": "system",
   "calc.exe": "system",
   "systemsettings.exe": "system",
+  // messaging desktop clients -- native/Electron apps with workable UIA
+  // trees, so they route to ufo-uia ("open WhatsApp and send hi" must
+  // not fall to unknown, where the agent improvises with SendKeys).
+  "whatsapp.exe": "system",
+  "telegram.exe": "system",
+  "discord.exe": "system",
+  "slack.exe": "system",
+  "ms-teams.exe": "system",
+  "teams.exe": "system",
+  "signal.exe": "system",
 };
 
 /** Heuristic: known game engines / launchers. */
