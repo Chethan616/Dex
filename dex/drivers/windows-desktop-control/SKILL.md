@@ -25,6 +25,28 @@ Use `run_desktop_task` for tasks happening inside a native Win32 app's UI:
 - Reading or editing files — use the shell/edit tools.
 - Pure data work (parsing, math, transforms) — do it inline.
 
+## Prefer shell when possible
+
+Before calling `run_desktop_task`, check whether the goal (or a sub-step of
+it) is one of these shell-solvable patterns — if so, use the `exec` tool
+instead. A PowerShell one-liner finishes in seconds; navigating Settings UI
+for the same result takes minutes and can time out:
+
+- Current wallpaper → `(Get-ItemProperty 'HKCU:\Control Panel\Desktop').WallPaper` (the live image also sits at `%AppData%\Microsoft\Windows\Themes\TranscodedWallpaper`)
+- Launch an app → `start <name>` / `Start-Process` (then drive its UI with `run_desktop_task` only if the task continues INSIDE the app)
+- DNS change → `Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ServerAddresses 1.1.1.1`
+- Display resolution / audio device → PowerShell + `DisplaySwitch.exe` / CIM
+- Service start/stop → `Start-Service` / `Stop-Service`
+- Env vars → `[Environment]::SetEnvironmentVariable(...)`
+- Registry read/write → `Get-ItemProperty` / `Set-ItemProperty`
+- Full-screen screenshot → PowerShell `System.Drawing` capture (no GUI driving needed)
+
+For compound tasks, mix freely: shell for the data step, `run_desktop_task`
+for the GUI step. Example: "send my wallpaper to X on WhatsApp" = `exec`
+(copy `TranscodedWallpaper` to a `.png`) THEN `run_desktop_task` (attach the
+file in WhatsApp). You CAN open and drive desktop apps like WhatsApp — never
+tell the user you're unable to operate applications.
+
 ## How to call
 
 ```jsonc
@@ -38,7 +60,7 @@ run_desktop_task({
 
 - `goal` — one clear sentence. Include the operation, the target app, and any cell/file/range that matters.
 - `app_hint` — the app to focus first. Omit if obvious from the goal.
-- `timeout_s` — hard cap, 1-600s. Default 120 is fine for one app-step. Bump for multi-step flows.
+- `timeout_s` — hard cap, 1-600s. Default 300. Settings / Control-Panel navigation and multi-window flows need the full default; only lower it for trivial single-window steps.
 - `dry_run` — `true` to plan without executing. **Not currently wired** in v1; prefer the user-confirmation rule below.
 
 Returns: `{ ok, summary, steps, task_id, log_path }`. `ok=false` means the task failed or was refused — surface `summary` to the user.
