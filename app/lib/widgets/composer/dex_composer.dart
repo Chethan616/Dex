@@ -79,14 +79,9 @@ class _DexComposerState extends State<DexComposer> {
   void _onText() {
     final has = _ctrl.text.trim().isNotEmpty;
     if (has != _hasText) setState(() => _hasText = has);
-    // Each keystroke briefly brightens the wallpaper fog. Subtle
-    // (0.3 intensity) so it reads as ambient feedback rather than a
-    // strobe -- the fog flares and decays in ~600ms, so a typist
-    // sees a steady soft glow under their input rather than per-key
-    // flickers.
-    if (mounted) {
-      LivingBackground.of(context)?.pulse(0.3);
-    }
+    // No per-keystroke fog pulse: rapid typing read as flicker. The
+    // fog breathes continuously on its own (see LivingBackground);
+    // only submission fires a flare.
   }
 
   void _submit() {

@@ -2,14 +2,17 @@
 //
 // Wraps the home shell in a Stack whose bottom layer is a set of
 // three independently-drifting radial fog blobs over a deep navy
-// base — the same trick macOS lock-screen wallpapers use. Each blob
-// has its own anchor, drift amplitude, and incommensurate periods,
-// so the composite pattern never visibly repeats and the eye reads
-// continuous fluid motion rather than a looping ellipse.
+// base — the same trick macOS lock-screen wallpapers use. Every
+// periodic term completes an INTEGER number of cycles per master
+// loop, so the 60s wrap is mathematically seamless (no snap), while
+// distinct cycle counts + phases per blob keep the composite from
+// ever reading as a loop.
 //
-// A separate pulse controller momentarily brightens the blobs on
-// message-send and while the agent is acting (plus a softer
-// keystroke pulse from the composer).
+// The fog also "breathes" on its own: each blob's brightness + size
+// ride two superimposed sine swells (~8.6s and ~15s), phase-staggered
+// per blob, so the glow wanders in and out the way clouds do instead
+// of strobing in lockstep. A separate pulse controller momentarily
+// brightens the blobs on message-send and while the agent is acting.
 //
 // Performance: one AnimationController for drift, one CustomPainter
 // that draws three radial gradients onto the same Rect with additive
@@ -69,12 +72,13 @@ class _LivingBackgroundState extends State<LivingBackground>
   @override
   void initState() {
     super.initState();
-    // ~22s master loop. Each blob multiplies this by its own
-    // incommensurate factors, so the composite never visibly
-    // repeats -- it just keeps flowing.
+    // 60s master loop. Every sine in the painter completes integer
+    // cycles per loop, so the wrap at t=1.0 -> 0.0 is seamless --
+    // the old 22s loop used fractional cycle counts and visibly
+    // snapped to a new position on every wrap.
     _drift = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 22),
+      duration: const Duration(seconds: 60),
     )..repeat();
 
     // Pulse rides on its own 600ms controller; pulse() restarts it
@@ -205,38 +209,54 @@ class _FogBlob {
   final double alpha; // base opacity of the blob's heart
 }
 
+// Drift periods are integer cycles per 60s master loop -- seamless
+// wrap -- with distinct counts + phases per blob so the trio never
+// reads as one synchronized ellipse.
 const List<_FogBlob> _kBlobs = <_FogBlob>[
-  // Big, bright primary — sweeps along the bottom edge.
+  // Big, bright primary — anchored at bottom CENTER, slow 30s sway.
   _FogBlob(
-    anchorX: -0.35, anchorY: 1.15,
-    ampX: 0.55, ampY: 0.18,
-    periodX: 1.0, periodY: 0.63,
+    anchorX: 0.0, anchorY: 1.15,
+    ampX: 0.30, ampY: 0.14,
+    periodX: 2.0, periodY: 1.0,
     phase: 0.0,
     radius: 1.35,
     color: Color(0xFF4F8CFF),
     alpha: 0.55,
   ),
-  // Mid-tone secondary — counter-drifts from the right.
+  // Mid-tone secondary — counter-drifts just right of centre.
   _FogBlob(
-    anchorX: 0.55, anchorY: 1.25,
-    ampX: 0.42, ampY: 0.22,
-    periodX: 0.71, periodY: 1.13,
+    anchorX: 0.35, anchorY: 1.25,
+    ampX: 0.28, ampY: 0.18,
+    periodX: 3.0, periodY: 2.0,
     phase: 2.1,
     radius: 1.15,
     color: Color(0xFF2E5BC4),
     alpha: 0.50,
   ),
-  // Deep tertiary — slow vertical breath near centre.
+  // Deep tertiary — balances from just left of centre, one majestic
+  // 60s horizontal pass.
   _FogBlob(
-    anchorX: 0.10, anchorY: 1.05,
-    ampX: 0.30, ampY: 0.30,
-    periodX: 0.47, periodY: 0.89,
+    anchorX: -0.35, anchorY: 1.05,
+    ampX: 0.26, ampY: 0.24,
+    periodX: 1.0, periodY: 3.0,
     phase: 4.2,
     radius: 1.5,
     color: Color(0xFF1F3580),
     alpha: 0.60,
   ),
 ];
+
+/// Breathing swell frequencies, in integer cycles per 60s loop so the
+/// wrap stays seamless. 7 cycles ≈ 8.6s (a calm resting breath) plus a
+/// slower 4-cycle ≈ 15s under-swell; the two superimposed drift in and
+/// out of phase, so the breath wanders instead of ticking.
+const double _kBreathCyclesA = 7.0;
+const double _kBreathCyclesB = 4.0;
+
+/// How much the breath swells brightness (fraction of base alpha).
+/// Kept gentle -- size + brightness moving TOGETHER is what reads as
+/// breathing; a big alpha swing alone reads as flicker.
+const double _kBreathDepth = 0.12;
 
 class _FogPainter extends CustomPainter {
   _FogPainter({required this.t, required this.pulse});
@@ -257,6 +277,14 @@ class _FogPainter extends CustomPainter {
     final theta = t * 2 * math.pi;
 
     for (final blob in _kBlobs) {
+      // Continuous breathing, per blob: two superimposed sine swells
+      // whose phases are staggered by the blob's own phase, so the
+      // three glows inhale at slightly different moments -- clouds,
+      // not a synchronized strobe. Range is 0..1 (0.5 ± 0.3 ± 0.2).
+      final breath = 0.5 +
+          0.30 * math.sin(theta * _kBreathCyclesA + blob.phase) +
+          0.20 * math.sin(theta * _kBreathCyclesB + blob.phase * 1.7 + 0.9);
+
       // Sine drift on each axis with the blob's own frequency +
       // phase. Amplitudes are large (0.3-0.55 of a half-screen) so
       // motion reads as flow, not frame-stepping.
@@ -266,14 +294,21 @@ class _FogPainter extends CustomPainter {
           blob.anchorY + math.cos(theta * blob.periodY + blob.phase) * blob.ampY;
 
       // Pulse flares each blob's heart: brighter colour + a touch
-      // more alpha while a message sends / the agent acts.
+      // more alpha while a message sends / the agent acts. The
+      // baseline alpha rides the breath swell so the fog visibly
+      // inhales/exhales even with no input at all.
       final flare = (pulse * 0.35).clamp(0.0, 1.0);
       final heart = Color.lerp(blob.color, const Color(0xFFA9C8FF), flare)!;
-      final a = (blob.alpha * (1.0 + pulse * 0.30)).clamp(0.0, 1.0);
+      final a = (blob.alpha *
+              (1.0 - _kBreathDepth / 2 + _kBreathDepth * breath) *
+              (1.0 + pulse * 0.30))
+          .clamp(0.0, 1.0);
 
       final gradient = RadialGradient(
         center: Alignment(cx, cy),
-        radius: blob.radius,
+        // The blob swells slightly on the inhale — size + brightness
+        // moving together is what reads as "breathing".
+        radius: blob.radius * (1.0 + 0.06 * breath),
         colors: <Color>[
           heart.withValues(alpha: a),
           blob.color.withValues(alpha: a * 0.45),
