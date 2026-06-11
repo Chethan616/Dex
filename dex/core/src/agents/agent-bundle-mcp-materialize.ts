@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import type { DexConfig } from "../config/types.openclaw.js";
+import { emitTrustedDiagnosticEvent } from "../infra/diagnostic-events.js";
 import { logWarn } from "../logger.js";
 import { setPluginToolMeta, type PluginToolMcpMeta } from "../plugins/tools.js";
 import {
@@ -364,9 +365,43 @@ export async function materializeBundleMcpToolsForRun(params: {
   const tools = buildBundleMcpToolsFromCatalog({
     catalog,
     reservedToolNames: params.reservedToolNames,
-    createExecute: (tool) => async (_toolCallId: string, input: unknown) => {
+    createExecute: (tool) => async (toolCallId: string, input: unknown) => {
       params.runtime.markUsed();
-      const result = await params.runtime.callTool(tool.serverName, tool.toolName, input);
+      // Bundle-MCP execute bypasses wrapToolWithBeforeToolCallHook, so the
+      // session-activity tracker never sees these calls. Long MCP tools
+      // (UFO² desktop automation holds the request for minutes) then read
+      // as a session with no progress -- the stuck-session watchdog
+      // classifies the run stalled_agent_run and aborts it MID-CALL. The
+      // started/completed/error events register the call as live tool
+      // work, flipping classification to blocked_tool_call, which only
+      // recovers after the abort ceiling (the MCP requestTimeoutMs ends a
+      // truly hung call first).
+      const eventBase = {
+        sessionId: params.runtime.sessionId,
+        ...(params.runtime.sessionKey ? { sessionKey: params.runtime.sessionKey } : {}),
+        toolName: `${tool.serverName}${TOOL_NAME_SEPARATOR}${tool.toolName}`,
+        toolSource: "mcp" as const,
+        ...(toolCallId ? { toolCallId } : {}),
+      };
+      emitTrustedDiagnosticEvent({ type: "tool.execution.started", ...eventBase });
+      const startedAt = Date.now();
+      let result: CallToolResult;
+      try {
+        result = await params.runtime.callTool(tool.serverName, tool.toolName, input);
+      } catch (err) {
+        emitTrustedDiagnosticEvent({
+          type: "tool.execution.error",
+          ...eventBase,
+          durationMs: Date.now() - startedAt,
+          errorCategory: "mcp_call_failed",
+        });
+        throw err;
+      }
+      emitTrustedDiagnosticEvent({
+        type: "tool.execution.completed",
+        ...eventBase,
+        durationMs: Date.now() - startedAt,
+      });
       return toAgentToolResult({
         serverName: tool.serverName,
         toolName: tool.toolName,

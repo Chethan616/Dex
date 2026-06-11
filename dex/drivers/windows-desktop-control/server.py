@@ -204,5 +204,28 @@ def _summarize(stdout: str, stderr: str, rc: int) -> tuple[str, list[str]]:
     return summary, stdout_tail + stderr_tail
 
 
+def _warm_up_ufo() -> None:
+    """Fire-and-forget `python -m ufo --help` at server startup.
+
+    UFO2 imports are ~3s warm but MINUTES on a cold machine: Windows
+    Defender real-time scans every .py/.pyd in the venv on first load
+    after boot, and the first real task pays that bill inside its
+    timeout_s budget (observed: a 300s run that never reached step 1).
+    Warming at server start moves the scan + bytecode caching to gateway
+    boot, where nobody is waiting on a reply.
+    """
+    try:
+        subprocess.Popen(
+            [str(UFO_VENV_PY), "-m", "ufo", "--help"],
+            cwd=str(UFO_ROOT),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except OSError:
+        pass  # venv missing -- run_desktop_task surfaces the real error.
+
+
 if __name__ == "__main__":
+    _warm_up_ufo()
     mcp.run()  # stdio transport
