@@ -21,6 +21,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
+import 'core/prompt_history.dart';
 import 'main.dart' show DexScrollBehavior, dexSpotlightChannel;
 import 'theme/theme.dart';
 import 'theme/tokens.dart';
@@ -124,10 +125,42 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
     super.dispose();
   }
 
+  // Shell-style recall for the spotlight's single-line input. The
+  // spotlight runs in its own Flutter engine, so this PromptHistory is
+  // a separate per-overlay buffer from the main composer's.
+  int _historyIndex = -1;
+  String _historyDraft = '';
+
+  void _recallPrev() {
+    final h = PromptHistory.instance.entries;
+    if (h.isEmpty || _historyIndex >= h.length - 1) return;
+    if (_historyIndex < 0) _historyDraft = _ctrl.text;
+    _historyIndex += 1;
+    _applyRecall(h[h.length - 1 - _historyIndex]);
+  }
+
+  void _recallNext() {
+    if (_historyIndex < 0) return;
+    _historyIndex -= 1;
+    final h = PromptHistory.instance.entries;
+    _applyRecall(
+      _historyIndex < 0 ? _historyDraft : h[h.length - 1 - _historyIndex],
+    );
+  }
+
+  void _applyRecall(String text) {
+    _ctrl.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
   Future<void> _submit([String? text]) async {
     final t = (text ?? _ctrl.text).trim();
     if (t.isEmpty && _attachments.isEmpty) return;
     if (_submitting) return;
+    PromptHistory.instance.push(t);
+    _historyIndex = -1;
     setState(() => _submitting = true);
     // Serialise attachments into a prompt prefix until the gateway
     // has a structured attachments protocol. File URIs are passed
@@ -275,10 +308,16 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                                       child: KeyboardListener(
                                         focusNode: FocusNode(skipTraversal: true),
                                         onKeyEvent: (e) {
-                                          if (e is KeyDownEvent &&
-                                              e.logicalKey == LogicalKeyboardKey.enter &&
+                                          if (e is! KeyDownEvent) return;
+                                          if (e.logicalKey == LogicalKeyboardKey.enter &&
                                               !HardwareKeyboard.instance.isShiftPressed) {
                                             _submit();
+                                          } else if (e.logicalKey ==
+                                              LogicalKeyboardKey.arrowUp) {
+                                            _recallPrev();
+                                          } else if (e.logicalKey ==
+                                              LogicalKeyboardKey.arrowDown) {
+                                            _recallNext();
                                           }
                                         },
                                         child: TextField(

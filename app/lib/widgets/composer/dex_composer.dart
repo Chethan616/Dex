@@ -10,6 +10,8 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
+import '../../core/prompt_history.dart';
+import '../../core/send_options.dart';
 import '../../theme/tokens.dart';
 import '../living_background.dart';
 import '../refractive_edge.dart';
@@ -50,6 +52,13 @@ class _DexComposerState extends State<DexComposer> {
   ComposerMode _mode = ComposerMode.smart;
   bool _hasText = false;
 
+  // Shell-style prompt recall. -1 = live input; 0+ = offset back into
+  // PromptHistory (0 = most recent). _draft stashes whatever the user had
+  // typed before they started browsing history so arrow-down returns it.
+  int _historyIndex = -1;
+  String _historyDraft = '';
+  bool _applyingHistory = false;
+
   // Attachments ride along with the next submitted prompt. The chip
   // strip above the input shows them; submit/clear empties the list.
   final List<AttachedItem> _attachments = <AttachedItem>[];
@@ -79,6 +88,9 @@ class _DexComposerState extends State<DexComposer> {
   void _onText() {
     final has = _ctrl.text.trim().isNotEmpty;
     if (has != _hasText) setState(() => _hasText = has);
+    // A manual edit ends history browsing -- the recalled prompt becomes
+    // the live draft (guard skips the programmatic recall writes).
+    if (!_applyingHistory) _historyIndex = -1;
     // No per-keystroke fog pulse: rapid typing read as flicker. The
     // fog breathes continuously on its own (see LivingBackground);
     // only submission fires a flare.
@@ -90,12 +102,67 @@ class _DexComposerState extends State<DexComposer> {
     // Stronger flare on submission than on a keystroke -- the fog
     // visibly "answers" the send.
     LivingBackground.of(context)?.pulse(0.8);
+    PromptHistory.instance.push(t);
+    _historyIndex = -1;
+    // Map the mode pill onto real chat.send params (see SendOptions).
+    switch (_mode) {
+      case ComposerMode.fast:
+        SendOptions.fastMode = true;
+        SendOptions.thinking = 'off';
+        break;
+      case ComposerMode.deeper:
+        SendOptions.fastMode = null;
+        SendOptions.thinking = 'high';
+        break;
+      case ComposerMode.smart:
+      case ComposerMode.study:
+      case ComposerMode.search:
+        SendOptions.clear();
+        break;
+    }
     widget.onSubmit(t);
     _ctrl.clear();
     if (_attachments.isNotEmpty) {
       setState(_attachments.clear);
     }
     _focus.requestFocus();
+  }
+
+  // ---- shell-style history recall (up/down arrows) ----
+
+  void _recallPrev() {
+    final sel = _ctrl.selection;
+    // Only when the caret sits at the very start (or the field is empty):
+    // inside multi-line text, arrow-up must keep navigating lines.
+    final atStart =
+        _ctrl.text.isEmpty || (sel.isCollapsed && sel.baseOffset <= 0);
+    if (!atStart) return;
+    final h = PromptHistory.instance.entries;
+    if (h.isEmpty || _historyIndex >= h.length - 1) return;
+    if (_historyIndex < 0) _historyDraft = _ctrl.text;
+    _historyIndex += 1;
+    _applyHistoryText(h[h.length - 1 - _historyIndex]);
+  }
+
+  void _recallNext() {
+    if (_historyIndex < 0) return;
+    final sel = _ctrl.selection;
+    final atEnd = sel.isCollapsed && sel.baseOffset >= _ctrl.text.length;
+    if (!atEnd) return;
+    _historyIndex -= 1;
+    final h = PromptHistory.instance.entries;
+    _applyHistoryText(
+      _historyIndex < 0 ? _historyDraft : h[h.length - 1 - _historyIndex],
+    );
+  }
+
+  void _applyHistoryText(String text) {
+    _applyingHistory = true;
+    _ctrl.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    _applyingHistory = false;
   }
 
   void _addAttachments(List<AttachedItem> items) {
@@ -221,6 +288,8 @@ class _DexComposerState extends State<DexComposer> {
                       focusNode: _focus,
                       hint: widget.hint,
                       onSubmit: _submit,
+                      onHistoryPrev: _recallPrev,
+                      onHistoryNext: _recallNext,
                     ),
                     const SizedBox(height: DexSpace.sm),
                     _Toolbar(
@@ -254,21 +323,29 @@ class _Input extends StatelessWidget {
     required this.focusNode,
     required this.hint,
     required this.onSubmit,
+    this.onHistoryPrev,
+    this.onHistoryNext,
   });
   final TextEditingController controller;
   final FocusNode focusNode;
   final String hint;
   final VoidCallback onSubmit;
+  final VoidCallback? onHistoryPrev;
+  final VoidCallback? onHistoryNext;
 
   @override
   Widget build(BuildContext context) {
     return KeyboardListener(
       focusNode: FocusNode(skipTraversal: true),
       onKeyEvent: (e) {
-        if (e is KeyDownEvent &&
-            e.logicalKey == LogicalKeyboardKey.enter &&
+        if (e is! KeyDownEvent) return;
+        if (e.logicalKey == LogicalKeyboardKey.enter &&
             !HardwareKeyboard.instance.isShiftPressed) {
           onSubmit();
+        } else if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
+          onHistoryPrev?.call();
+        } else if (e.logicalKey == LogicalKeyboardKey.arrowDown) {
+          onHistoryNext?.call();
         }
       },
       child: TextField(

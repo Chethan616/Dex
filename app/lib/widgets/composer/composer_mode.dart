@@ -5,10 +5,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-enum ComposerMode { smart, deeper, study, search }
+enum ComposerMode { fast, smart, deeper, study, search }
 
 extension ComposerModeX on ComposerMode {
   String get label => switch (this) {
+        ComposerMode.fast => 'Fast',
         ComposerMode.smart => 'Smart',
         ComposerMode.deeper => 'Think deeper',
         ComposerMode.study => 'Study and learn',
@@ -16,6 +17,7 @@ extension ComposerModeX on ComposerMode {
       };
 
   String get description => switch (this) {
+        ComposerMode.fast => 'Instant replies — skips deep thinking',
         ComposerMode.smart => 'Thinks deeply or quickly based on the task',
         ComposerMode.deeper => 'Better for more complex topics',
         ComposerMode.study => 'Guided learning and quizzes',
@@ -23,6 +25,7 @@ extension ComposerModeX on ComposerMode {
       };
 
   IconData get icon => switch (this) {
+        ComposerMode.fast => LucideIcons.zap,
         ComposerMode.smart => LucideIcons.sparkles,
         ComposerMode.deeper => LucideIcons.brain,
         ComposerMode.study => LucideIcons.graduation_cap,

@@ -25,6 +25,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 
 import 'models/gateway_event.dart';
+import 'send_options.dart';
 
 enum GatewayConnState { disconnected, connecting, handshaking, ready, failed }
 
@@ -231,6 +232,11 @@ class GatewayClient extends ChangeNotifier {
         'sessionKey': _config.sessionKey,
         'message': text,
         'idempotencyKey': idempotencyKey,
+        // Per-turn mode from the composer pill (ChatSendParamsSchema
+        // supports both natively): Fast -> fastMode+thinking off,
+        // Think deeper -> thinking high.
+        if (SendOptions.thinking != null) 'thinking': SendOptions.thinking,
+        if (SendOptions.fastMode != null) 'fastMode': SendOptions.fastMode,
       },
     }));
 
