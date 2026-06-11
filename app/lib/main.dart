@@ -21,7 +21,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'core/gateway_client.dart';
@@ -57,10 +56,13 @@ Future<void> main() async {
 
   // Window + tray init on Windows (no-op on other platforms for now;
   // macOS / Linux land in v1.3 platform abstraction).
+  // Window geometry (size, position, maximized) is persisted and
+  // restored NATIVELY by the runner (win32_window.cpp) via the standard
+  // WINDOWPLACEMENT registry round-trip -- the window is already in the
+  // right shape before the first frame, so no Dart-side restore exists.
   if (Platform.isWindows) {
     await windowManager.ensureInitialized();
     await windowManager.setPreventClose(true);
-    await _restoreWindowState();
     await DexTray.instance.init();
   }
 
@@ -91,102 +93,6 @@ Future<void> main() async {
   }
 
   runApp(DexApp(store: store));
-}
-
-/// Read the saved window size + position + maximized flag and apply
-/// them before the first frame. The previous implementation passed
-/// `null` options to `waitUntilReadyToShow` and called `setBounds`
-/// from the callback, but by that point the C++ runner has already
-/// triggered `Show()` on the default-sized window -- you'd see a
-/// flash from default → restored size, or worse the resize wouldn't
-/// stick at all on some Windows builds.
-///
-/// Fix: pass `WindowOptions(size: ...)` directly so window_manager
-/// applies the size synchronously inside its own ready-to-show
-/// handshake, BEFORE the runner calls Show(). Position has to be
-/// set separately (WindowOptions has no position field).
-Future<void> _restoreWindowState() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final maximized = prefs.getBool(prefsKeyWindowMaximized) ?? false;
-    final rawBounds = prefs.getString(prefsKeyWindowBounds);
-    final savedBounds = _parseBounds(rawBounds);
-
-    final options = WindowOptions(
-      size: savedBounds != null
-          ? Size(savedBounds.width, savedBounds.height)
-          : null,
-    );
-
-    await windowManager.waitUntilReadyToShow(options, () async {
-      // Position lands here -- it isn't part of WindowOptions, so
-      // we set it explicitly after the runner is ready to show.
-      if (savedBounds != null) {
-        await windowManager.setPosition(
-          Offset(savedBounds.left, savedBounds.top),
-        );
-      }
-      if (maximized) {
-        await windowManager.maximize();
-      }
-    });
-
-    debugPrint(
-      '[dex] window restored: maximized=$maximized '
-      'bounds=${savedBounds?.toString() ?? "none"}',
-    );
-  } catch (e, st) {
-    debugPrint('[dex] window state restore failed: $e\n$st');
-  }
-}
-
-/// Synchronous bounds save -- called from `onWindowClose` so even a
-/// quick "resize → hide-to-tray" sequence captures the latest state.
-/// The debounced listener path inside `_DexAppState` covers the more
-/// common interactive drag/resize tracking.
-Future<void> _persistBoundsNow() async {
-  try {
-    final maximized = await windowManager.isMaximized();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(prefsKeyWindowMaximized, maximized);
-    if (!maximized) {
-      // Only persist bounds while NOT maximized -- the maximized
-      // rect would otherwise overwrite the restore rect on next
-      // launch.
-      final bounds = await windowManager.getBounds();
-      if (bounds.size.isFinite &&
-          bounds.width > 0 &&
-          bounds.height > 0) {
-        await prefs.setString(
-          prefsKeyWindowBounds,
-          '${bounds.left},${bounds.top},${bounds.width},${bounds.height}',
-        );
-      }
-    }
-    debugPrint(
-      '[dex] window state saved (close): maximized=$maximized',
-    );
-  } catch (e, st) {
-    debugPrint('[dex] window state save (close) failed: $e\n$st');
-  }
-}
-
-/// Parse `"x,y,w,h"` back into a [Rect]. Returns null on any malformed
-/// input so a corrupt prefs blob never breaks the restore path.
-Rect? _parseBounds(String? raw) {
-  if (raw == null || raw.isEmpty) return null;
-  final parts = raw.split(',');
-  if (parts.length != 4) return null;
-  final values = <double>[];
-  for (final part in parts) {
-    final v = double.tryParse(part.trim());
-    if (v == null || !v.isFinite) return null;
-    values.add(v);
-  }
-  // Reject zero/negative sizes; they would produce a fully collapsed
-  // window the user can't grab. Defer to a fresh default.
-  if (values[2] <= 0 || values[3] <= 0) return null;
-  return Rect.fromLTWH(values[0], values[1], values[2], values[3]);
 }
 
 Future<void> _handleSpotlightPrompt(
@@ -305,37 +211,11 @@ class DexApp extends StatefulWidget {
 }
 
 class _DexAppState extends State<DexApp> with WindowListener {
-  /// Debounce timer for bounds writes. Without it, dragging a window
-  /// to a new position would fire dozens of onWindowMove ticks per
-  /// second, each scheduling a prefs write. 300ms is the same window
-  /// used by other apps that persist drag state (Linear, VS Code).
-  Timer? _boundsSaveDebounce;
-
   @override
   void initState() {
     super.initState();
     if (Platform.isWindows) {
       windowManager.addListener(this);
-      // Belt-and-suspenders: even with the win32_window.cpp Show()
-      // fix that swaps SW_SHOWNORMAL → SW_SHOW, re-apply the
-      // maximized state after the first frame paints. If anything
-      // in the runner path ever clobbers the maximize again, this
-      // catches it.
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          final shouldMaximize =
-              prefs.getBool(prefsKeyWindowMaximized) ?? false;
-          if (shouldMaximize && !await windowManager.isMaximized()) {
-            await windowManager.maximize();
-            debugPrint(
-              '[dex] window re-maximized after first frame',
-            );
-          }
-        } catch (e, st) {
-          debugPrint('[dex] post-frame maximize re-apply failed: $e\n$st');
-        }
-      });
     }
   }
 
@@ -344,71 +224,19 @@ class _DexAppState extends State<DexApp> with WindowListener {
     if (Platform.isWindows) {
       windowManager.removeListener(this);
     }
-    _boundsSaveDebounce?.cancel();
     super.dispose();
   }
 
   @override
   void onWindowClose() async {
     if (!Platform.isWindows) return;
-    // Cancel any pending debounced save and capture the latest bounds
-    // synchronously before we hide/quit. Otherwise a quick "resize →
-    // X" sequence would lose state because the 300ms debounce never
-    // fires.
-    _boundsSaveDebounce?.cancel();
-    await _persistBoundsNow();
+    // Geometry persistence happens natively on WM_DESTROY
+    // (win32_window.cpp), so close just routes to tray-hide or quit.
     if (DexTray.instance.quitOnClose) {
       await DexTray.instance.quit();
     } else {
       await DexTray.instance.hideToTray();
     }
-  }
-
-  @override
-  void onWindowResize() => _scheduleBoundsSave();
-
-  @override
-  void onWindowMove() => _scheduleBoundsSave();
-
-  @override
-  void onWindowMaximize() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(prefsKeyWindowMaximized, true);
-  }
-
-  @override
-  void onWindowUnmaximize() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(prefsKeyWindowMaximized, false);
-    // After the unmaximize lands, immediately persist the natural
-    // restore-bounds so a follow-up launch lands in the same shape.
-    _scheduleBoundsSave();
-  }
-
-  void _scheduleBoundsSave() {
-    _boundsSaveDebounce?.cancel();
-    _boundsSaveDebounce = Timer(const Duration(milliseconds: 300), () async {
-      try {
-        // Don't persist bounds while maximized -- the OS reports the
-        // maximized rect, not the restore rect, so saving it would
-        // collapse the next launch into "maximized but at full screen
-        // coords" if the user unmaximized first.
-        if (await windowManager.isMaximized()) return;
-        final bounds = await windowManager.getBounds();
-        if (!bounds.size.isFinite ||
-            bounds.width <= 0 ||
-            bounds.height <= 0) {
-          return;
-        }
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-          prefsKeyWindowBounds,
-          '${bounds.left},${bounds.top},${bounds.width},${bounds.height}',
-        );
-      } catch (e, st) {
-        debugPrint('[dex] window bounds save failed: $e\n$st');
-      }
-    });
   }
 
   @override

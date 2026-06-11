@@ -92,6 +92,11 @@ class Win32Window {
 
   bool quit_on_close_ = false;
 
+  // True when the saved WINDOWPLACEMENT from the previous session says
+  // the window should open maximized. Set in Create(), consumed by
+  // Show().
+  bool restore_maximized_ = false;
+
   // window handle for top level window.
   HWND window_handle_ = nullptr;
 

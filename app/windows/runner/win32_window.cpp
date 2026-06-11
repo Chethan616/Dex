@@ -29,6 +29,48 @@ constexpr const wchar_t kGetPreferredBrightnessRegValue[] = L"AppsUseLightTheme"
 // The number of Win32Window objects that currently exist.
 static int g_active_window_count = 0;
 
+/// Registry home for the persisted window placement. The same
+/// WINDOWPLACEMENT round-trip every native Windows app does: save the
+/// restore rect + maximized flag on destroy, reapply before first show,
+/// so "maximize → quit → relaunch" reopens maximized and "unmaximize"
+/// lands back on the remembered custom rect.
+constexpr const wchar_t kPlacementRegKey[] = L"Software\\com.chethan616\\dex";
+constexpr const wchar_t kPlacementRegValue[] = L"window_placement";
+
+void SaveWindowPlacement(HWND hwnd) {
+  WINDOWPLACEMENT placement{};
+  placement.length = sizeof(placement);
+  if (!GetWindowPlacement(hwnd, &placement)) {
+    return;
+  }
+  // The live showCmd may be SW_HIDE (window closed to tray) or
+  // SW_SHOWMINIMIZED; normalize to the state the next launch should
+  // open in. IsZoomed survives SW_HIDE; a window minimized FROM
+  // maximized carries WPF_RESTORETOMAXIMIZED instead.
+  const bool maximized =
+      IsZoomed(hwnd) || (placement.flags & WPF_RESTORETOMAXIMIZED) != 0;
+  placement.showCmd = maximized ? SW_SHOWMAXIMIZED : SW_SHOWNORMAL;
+  HKEY key;
+  if (RegCreateKeyExW(HKEY_CURRENT_USER, kPlacementRegKey, 0, nullptr, 0,
+                      KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) {
+    return;
+  }
+  RegSetValueExW(key, kPlacementRegValue, 0, REG_BINARY,
+                 reinterpret_cast<const BYTE*>(&placement), sizeof(placement));
+  RegCloseKey(key);
+}
+
+bool LoadWindowPlacement(WINDOWPLACEMENT* placement) {
+  DWORD size = sizeof(*placement);
+  if (RegGetValueW(HKEY_CURRENT_USER, kPlacementRegKey, kPlacementRegValue,
+                   RRF_RT_REG_BINARY, nullptr, placement,
+                   &size) != ERROR_SUCCESS) {
+    return false;
+  }
+  return size == sizeof(*placement) &&
+         placement->length == sizeof(*placement);
+}
+
 using EnableNonClientDpiScaling = BOOL __stdcall(HWND hwnd);
 
 // Scale helper to convert logical scaler values to physical using passed in
@@ -146,19 +188,29 @@ bool Win32Window::Create(const std::wstring& title,
 
   UpdateTheme(window);
 
+  // Reapply the previous session's placement while the window is still
+  // hidden. SetWindowPlacement with SW_HIDE moves/sizes the invisible
+  // window; Show() (first Flutter frame) then reveals it maximized or
+  // normal per the saved state -- no flash from default-size → restored.
+  WINDOWPLACEMENT placement{};
+  placement.length = sizeof(placement);
+  if (LoadWindowPlacement(&placement)) {
+    restore_maximized_ = placement.showCmd == SW_SHOWMAXIMIZED;
+    placement.showCmd = SW_HIDE;
+    SetWindowPlacement(window, &placement);
+  }
+
   return OnCreate();
 }
 
 bool Win32Window::Show() {
-  // SW_SHOW preserves whatever state Flutter set up before the runner
-  // got here (maximize, custom size, custom position). The Flutter
+  // First reveal after Create(): honor the saved placement. The Flutter
   // template ships SW_SHOWNORMAL, which per the Win32 docs explicitly
-  // restores a maximized window to its "original size and position"
-  // -- breaking our maximize-state-on-launch restore. SW_SHOW just
-  // activates the window in its CURRENT size + position, which is
-  // exactly what we want when the Dart side has already configured
-  // bounds + maximize via window_manager.waitUntilReadyToShow.
-  return ShowWindow(window_handle_, SW_SHOW);
+  // restores a maximized window to its "original size and position" --
+  // SW_SHOWMAXIMIZED opens straight into maximized, and SW_SHOW
+  // activates the window in its CURRENT (restored) size + position.
+  return ShowWindow(window_handle_,
+                    restore_maximized_ ? SW_SHOWMAXIMIZED : SW_SHOW);
 }
 
 // static
@@ -188,6 +240,9 @@ Win32Window::MessageHandler(HWND hwnd,
                             LPARAM const lparam) noexcept {
   switch (message) {
     case WM_DESTROY:
+      // Capture the final placement for next-launch restore while the
+      // handle is still valid (it stays usable until WM_NCDESTROY).
+      SaveWindowPlacement(hwnd);
       window_handle_ = nullptr;
       Destroy();
       if (quit_on_close_) {

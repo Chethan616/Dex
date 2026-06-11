@@ -21,16 +21,9 @@ import 'package:window_manager/window_manager.dart';
 /// When true, hitting X exits the process instead of hiding to tray.
 const String prefsKeyQuitOnClose = 'dex.window.quitOnClose';
 
-/// True when the window was maximized at last save. Applied on launch
-/// in [main.dart] via `windowManager.waitUntilReadyToShow` so the
-/// window comes back in the same shape -- maximized stays maximized,
-/// windowed stays windowed.
-const String prefsKeyWindowMaximized = 'dex.window.maximized';
-
-/// Saved bounds in `"x,y,w,h"` form. Restored when the window opens
-/// non-maximized. Written by the WindowListener overrides in main.dart,
-/// debounced so we don't thrash prefs on every drag tick.
-const String prefsKeyWindowBounds = 'dex.window.bounds';
+// NOTE: window size/position/maximized persistence moved to the native
+// runner (win32_window.cpp WINDOWPLACEMENT registry round-trip) -- the
+// old dex.window.maximized / dex.window.bounds prefs keys are gone.
 
 class DexTray with TrayListener {
   DexTray._();
