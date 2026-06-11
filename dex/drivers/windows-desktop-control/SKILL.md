@@ -22,6 +22,7 @@ Use `run_desktop_task` for tasks happening inside a native Win32 app's UI:
 ## When NOT to use this
 
 - **Anything inside a webpage** (forms, scraping, web-based tests, multi-page flows in Chrome / Edge / Vivaldi / Firefox) → use `run_browser_task` (browser-control skill). UFO2 can technically poke a browser's window chrome, but it's the wrong tool for DOM-level work.
+- **Sending messages/files via WhatsApp, Telegram, Discord, or Slack when that channel is PAIRED in Dex** → use the `message` tool (one call, seconds). Only GUI-drive a messenger app when no channel is paired.
 - Reading or editing files — use the shell/edit tools.
 - Pure data work (parsing, math, transforms) — do it inline.
 

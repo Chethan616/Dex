@@ -22,6 +22,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -34,7 +35,6 @@ from _shared.approval import (  # noqa: E402 (path manipulation must precede imp
     new_task_id,
     result,
     serialize_run,
-    serialize_timeout,
 )
 
 from mcp.server.fastmcp import FastMCP  # noqa: E402
@@ -126,33 +126,79 @@ def run_desktop_task(
     # console codepage is cp1252 which can't encode them, so the subprocess
     # crashes mid-run with UnicodeEncodeError. PYTHONIOENCODING=utf-8 forces
     # the child Python to use UTF-8 for its own sys.stdout / sys.stderr,
-    # matching our subprocess.run(encoding="utf-8") side. PYTHONUNBUFFERED
-    # gives us prompt log lines for debugging if a hang ever recurs.
+    # matching our file-capture side. PYTHONUNBUFFERED makes log lines land
+    # promptly so the live quota scan below actually sees them.
     child_env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1"}
+    # Popen + poll loop (NOT subprocess.run): a dead-quota LLM key makes
+    # UFO2 sit in 429 retry-backoff for the FULL timeout while producing
+    # nothing -- observed 2026-06-11 with gemini free-tier daily quota
+    # exhausted. Scanning stderr live lets us kill the run within seconds
+    # and tell the user the actual problem instead of "timeout after 300s".
+    stdout_path = LOG_DIR / f"{task_id}.stdout.txt"
+    stderr_path = LOG_DIR / f"{task_id}.stderr.txt"
+    rc: int | None = None
+    quota_error: str | None = None
     try:
-        proc = subprocess.run(
+        with open(stdout_path, "w", encoding="utf-8", errors="replace") as out_f, \
+             open(stderr_path, "w", encoding="utf-8", errors="replace") as err_f:
+            proc = subprocess.Popen(
+                cmd,
+                cwd=str(UFO_ROOT),
+                stdout=out_f,
+                stderr=err_f,
+                env=child_env,
+            )
+            deadline = time.monotonic() + timeout_s
+            while True:
+                rc = proc.poll()
+                if rc is not None:
+                    break
+                quota_error = _scan_quota_error(stderr_path)
+                if quota_error is not None:
+                    proc.kill()
+                    proc.wait(timeout=15)
+                    break
+                if time.monotonic() >= deadline:
+                    proc.kill()
+                    proc.wait(timeout=15)
+                    break
+                time.sleep(2)
+    except FileNotFoundError as e:
+        return result(False, f"failed to launch UFO2 ({e})", [], task_id, None)
+
+    stdout = stdout_path.read_text(encoding="utf-8", errors="replace")
+    stderr = stderr_path.read_text(encoding="utf-8", errors="replace")
+    log_path.write_text(
+        serialize_run(
             cmd,
-            cwd=str(UFO_ROOT),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout_s,
-            check=False,
-            env=child_env,
+            rc,
+            stdout,
+            stderr,
+            extra={
+                "timeout_s": timeout_s,
+                **({"quota_error": quota_error} if quota_error else {}),
+            },
+        ),
+        encoding="utf-8",
+    )
+
+    if quota_error is not None:
+        return result(
+            False,
+            "LLM quota exhausted -- UFO2's model returned 429 "
+            f"({quota_error[:160]}). Switch the desktop-automation model in "
+            "vendor/UFO/config/ufo/agents.yaml or wait for the quota reset. "
+            "GUI automation cannot run until the model has quota.",
+            stderr.strip().splitlines()[-6:],
+            task_id,
+            log_path,
         )
-    except subprocess.TimeoutExpired as e:
-        log_path.write_text(serialize_timeout(e), encoding="utf-8")
-        # Surface the LAST partial stdout/stderr the subprocess managed to
-        # write before we killed it. Previously the result was just
-        # "timeout after Ns" with empty steps -- the Flutter Activity card
-        # then had nothing actionable. Now the user sees the round/step
-        # UFO2 was on (e.g. "Round 1, Step 1, Agent: HostAgent") so they
-        # know whether Gemini hung at planning or at action.
-        partial_stdout = (e.stdout or b"").decode("utf-8", errors="replace") if isinstance(e.stdout, bytes) else (e.stdout or "")
-        partial_stderr = (e.stderr or b"").decode("utf-8", errors="replace") if isinstance(e.stderr, bytes) else (e.stderr or "")
+
+    if rc is None:
+        # Timed out. Surface the LAST partial output so the Activity card
+        # shows the round/step UFO2 was on instead of nothing actionable.
         tail_lines: list[str] = []
-        for source in (partial_stdout, partial_stderr):
+        for source in (stdout, stderr):
             tail_lines.extend(line for line in source.strip().splitlines()[-8:] if line.strip())
         last_progress = next(
             (l for l in reversed(tail_lines) if "Round" in l or "Step" in l or "Phase" in l),
@@ -162,16 +208,9 @@ def run_desktop_task(
         if last_progress:
             summary = f"{summary} (last progress: {last_progress.strip()[:120]})"
         return result(False, summary, tail_lines[-6:], task_id, log_path)
-    except FileNotFoundError as e:
-        return result(False, f"failed to launch UFO2 ({e})", [], task_id, None)
 
-    log_path.write_text(
-        serialize_run(cmd, proc.returncode, proc.stdout, proc.stderr),
-        encoding="utf-8",
-    )
-
-    summary, steps = _summarize(proc.stdout, proc.stderr, proc.returncode)
-    return result(proc.returncode == 0, summary, steps, task_id, log_path)
+    summary, steps = _summarize(stdout, stderr, rc)
+    return result(rc == 0, summary, steps, task_id, log_path)
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +220,26 @@ def _resolve_python() -> Path | None:
     if UFO_VENV_PY.exists():
         return UFO_VENV_PY
     return Path(sys.executable) if Path(sys.executable).exists() else None
+
+
+# Provider-agnostic quota/rate-limit signatures. Gemini's OpenAI-compat
+# endpoint raises openai.RateLimitError with "Error code: 429" and a
+# RESOURCE_EXHAUSTED status; OpenAI/Groq use the same RateLimitError class.
+_QUOTA_PATTERNS = ("RateLimitError", "RESOURCE_EXHAUSTED", "Error code: 429")
+
+
+def _scan_quota_error(stderr_path: Path) -> str | None:
+    """Return the first quota-exhaustion line from the live stderr file,
+    or None. Reads the whole file each poll -- UFO2 stderr stays small
+    (warnings only at --log-level WARNING)."""
+    try:
+        text = stderr_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    for line in text.splitlines():
+        if any(p in line for p in _QUOTA_PATTERNS):
+            return line.strip()
+    return None
 
 
 def _summarize(stdout: str, stderr: str, rc: int) -> tuple[str, list[str]]:
