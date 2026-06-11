@@ -600,7 +600,7 @@ describe("buildServiceEnvironment", () => {
     expect(env.DEX_SERVICE_KIND).toBe("gateway");
     expect(typeof env.DEX_SERVICE_VERSION).toBe("string");
     expect(env.DEX_SYSTEMD_UNIT).toBe("openclaw-gateway.service");
-    expect(env.DEX_WINDOWS_TASK_NAME).toBe("OpenClaw Gateway");
+    expect(env.DEX_WINDOWS_TASK_NAME).toBe("Dex Gateway");
     if (process.platform === "darwin") {
       expect(env.DEX_LAUNCHD_LABEL).toBe("ai.openclaw.gateway");
     }
@@ -679,7 +679,7 @@ describe("buildServiceEnvironment", () => {
       port: 18789,
     });
     expect(env.DEX_SYSTEMD_UNIT).toBe("openclaw-gateway-work.service");
-    expect(env.DEX_WINDOWS_TASK_NAME).toBe("OpenClaw Gateway (work)");
+    expect(env.DEX_WINDOWS_TASK_NAME).toBe("Dex Gateway (work)");
     if (process.platform === "darwin") {
       expect(env.DEX_LAUNCHD_LABEL).toBe("ai.openclaw.work");
     }
@@ -765,7 +765,7 @@ describe("buildServiceEnvironment", () => {
     });
 
     expect(env).not.toHaveProperty("PATH");
-    expect(env.DEX_WINDOWS_TASK_NAME).toBe("OpenClaw Gateway");
+    expect(env.DEX_WINDOWS_TASK_NAME).toBe("Dex Gateway");
   });
 
   it("prepends extra runtime directories to the gateway service PATH", () => {
@@ -902,7 +902,7 @@ describe("buildNodeServiceEnvironment", () => {
       platform: "win32",
     });
 
-    expect(env.DEX_WINDOWS_TASK_NAME).toBe("OpenClaw Node");
+    expect(env.DEX_WINDOWS_TASK_NAME).toBe("Dex Node");
     expect(env.DEX_WINDOWS_TASK_HIDDEN_LAUNCHER).toBe("1");
     expect(env.DEX_TASK_SCRIPT_NAME).toBe("node.cmd");
   });

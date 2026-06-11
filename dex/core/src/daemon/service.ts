@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { normalizeLowercaseStringOrEmpty } from "@dexagent/normalization-core/string-coerce";
 import { VERSION } from "../version.js";
+import { migrateLegacyWindowsTaskName } from "./constants.js";
 import { assertFutureConfigActionAllowed } from "./future-config-guard.js";
 import {
   installLaunchAgent,
@@ -104,6 +105,13 @@ function mergeGatewayServiceEnv(
     if (value) {
       merged[key] = value;
     }
+  }
+  // Service scripts persisted by pre-rename installs (<= 2026.6.20) carry the
+  // OpenClaw task name; re-persisting it would pin the legacy registration
+  // forever. Migrate it so install regenerates under the canonical Dex name.
+  const taskName = merged.DEX_WINDOWS_TASK_NAME?.trim();
+  if (taskName) {
+    merged.DEX_WINDOWS_TASK_NAME = migrateLegacyWindowsTaskName(taskName);
   }
   return merged;
 }

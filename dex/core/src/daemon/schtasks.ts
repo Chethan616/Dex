@@ -14,6 +14,7 @@ import { sleep } from "../utils.js";
 import { parseCmdScriptCommandLine, quoteCmdScriptArg } from "./cmd-argv.js";
 import { assertNoCmdLineBreak, parseCmdSetAssignment, renderCmdSetAssignment } from "./cmd-set.js";
 import {
+  migrateLegacyWindowsTaskName,
   NODE_SERVICE_KIND,
   resolveGatewayServiceDescription,
   resolveGatewayWindowsTaskName,
@@ -37,7 +38,9 @@ import type {
 function resolveTaskName(env: GatewayServiceEnv): string {
   const override = env.DEX_WINDOWS_TASK_NAME?.trim();
   if (override) {
-    return override;
+    // Stale OpenClaw names from pre-rename installs migrate to the Dex
+    // name so cleanupLegacyScheduledTask can remove the old registration.
+    return migrateLegacyWindowsTaskName(override);
   }
   return resolveGatewayWindowsTaskName(env.DEX_PROFILE);
 }
@@ -985,7 +988,7 @@ async function updateExistingScheduledTask(params: {
   // upgraders keep the prior buggy defaults rather than losing the task.
   const upgradeXmlPath = await writeTaskXmlTempFile(
     buildScheduledTaskXml({
-      taskDescription: params.description ?? "OpenClaw Gateway",
+      taskDescription: params.description ?? "Dex Gateway",
       taskUser: resolveTaskUser(params.env),
       launchPath: params.taskLaunchPath,
     }),
@@ -1139,6 +1142,28 @@ async function runScheduledTaskOrThrow(params: {
   await launchFallbackTaskScript(params.env);
 }
 
+/**
+ * Pre-rename installs (<= 2026.6.20) registered the Windows task as
+ * "OpenClaw Gateway" / "OpenClaw Node". Stop + delete that legacy task when
+ * (re)installing under the Dex name, otherwise the old entry keeps launching
+ * a second gateway at logon alongside the Dex-named one. Best-effort: a
+ * missing legacy task is the normal case.
+ */
+async function cleanupLegacyScheduledTask(taskName: string): Promise<void> {
+  const legacyName = taskName
+    .replace(/^Dex Gateway/, "OpenClaw Gateway")
+    .replace(/^Dex Node/, "OpenClaw Node");
+  if (legacyName === taskName) {
+    return;
+  }
+  const query = await execSchtasks(["/Query", "/TN", legacyName]);
+  if (query.code !== 0) {
+    return;
+  }
+  await execSchtasks(["/End", "/TN", legacyName]);
+  await execSchtasks(["/Delete", "/F", "/TN", legacyName]);
+}
+
 async function activateScheduledTask(params: {
   env: GatewayServiceEnv;
   stdout: NodeJS.WritableStream;
@@ -1146,10 +1171,11 @@ async function activateScheduledTask(params: {
   taskLaunchPath: string;
   description?: string;
 }) {
-  const taskDescription = params.description ?? "OpenClaw Gateway";
+  const taskDescription = params.description ?? "Dex Gateway";
 
   const taskName = resolveTaskName(params.env);
   const quotedLaunchPath = quoteSchtasksArg(params.taskLaunchPath);
+  await cleanupLegacyScheduledTask(taskName);
 
   if (await updateExistingScheduledTask({ ...params, taskName, quotedLaunchPath })) {
     return;

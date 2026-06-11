@@ -73,7 +73,7 @@ const {
 } = await import("./schtasks.js");
 
 function resolveStartupEntryPath(env: Record<string, string>, extension = "cmd") {
-  const taskName = env.DEX_WINDOWS_TASK_NAME ?? "OpenClaw Gateway";
+  const taskName = env.DEX_WINDOWS_TASK_NAME ?? "Dex Gateway";
   return path.join(
     env.APPDATA,
     "Microsoft",
@@ -115,7 +115,7 @@ function makeNodeServiceEnv(env: Record<string, string>): Record<string, string>
   return {
     ...env,
     DEX_SERVICE_KIND: "node",
-    DEX_WINDOWS_TASK_NAME: "OpenClaw Node",
+    DEX_WINDOWS_TASK_NAME: "Dex Node",
   };
 }
 
@@ -187,11 +187,25 @@ function expectGatewayTermination(pid: number) {
   expect(killProcessTree).toHaveBeenCalledWith(pid, { graceMs: 300 });
 }
 
+/** Read/stop/restart paths: availability query + Dex-name query (missing). */
 function addStartupFallbackMissingResponses(
   extraResponses: Array<{ code: number; stdout: string; stderr: string }> = [],
 ) {
   schtasksResponses.push(
     { code: 0, stdout: "", stderr: "" },
+    { code: 1, stdout: "", stderr: "not found" },
+    ...extraResponses,
+  );
+}
+
+/** Install path: same as above plus the legacy "OpenClaw ..." cleanup probe
+ *  that activateScheduledTask runs before the Dex-name query. */
+function addInstallMissingResponses(
+  extraResponses: Array<{ code: number; stdout: string; stderr: string }> = [],
+) {
+  schtasksResponses.push(
+    { code: 0, stdout: "", stderr: "" },
+    { code: 1, stdout: "", stderr: "not found" },
     { code: 1, stdout: "", stderr: "not found" },
     ...extraResponses,
   );
@@ -211,7 +225,7 @@ function installNodeScheduledTask(env: Record<string, string>, stdout = new Pass
     env: {
       ...env,
       DEX_SERVICE_KIND: "node",
-      DEX_WINDOWS_TASK_NAME: "OpenClaw Node",
+      DEX_WINDOWS_TASK_NAME: "Dex Node",
     },
     stdout,
     programArguments: ["node", "openclaw", "node", "run", "--host", "127.0.0.1", "--port", "18789"],
@@ -229,7 +243,7 @@ function fastForwardTaskStartWait(): void {
 }
 
 function addAcceptedRunNeverStartsResponses(): void {
-  addStartupFallbackMissingResponses([
+  addInstallMissingResponses([
     { code: 0, stdout: "", stderr: "" },
     { code: 0, stdout: "", stderr: "" },
     { code: 0, stdout: "", stderr: "" },
@@ -335,7 +349,7 @@ describe("Windows startup fallback", () => {
 
   it("falls back to a Startup-folder launcher when schtasks create returns localized access denied", async () => {
     await withWindowsEnv("openclaw-win-startup-", async ({ env }) => {
-      addStartupFallbackMissingResponses([{ code: 1, stdout: "", stderr: "错误: 拒绝访问。" }]);
+      addInstallMissingResponses([{ code: 1, stdout: "", stderr: "错误: 拒绝访问。" }]);
 
       await installGatewayScheduledTask(env);
 
@@ -360,6 +374,8 @@ describe("Windows startup fallback", () => {
   it("falls back to a Startup-folder launcher when schtasks availability is slow", async () => {
     await withWindowsEnv("openclaw-win-startup-", async ({ env }) => {
       schtasksResponses.push(
+        { code: 124, stdout: "", stderr: "schtasks produced no output for 30000ms" },
+        // Extra response covers the legacy "OpenClaw Gateway" cleanup probe.
         { code: 124, stdout: "", stderr: "schtasks produced no output for 30000ms" },
         { code: 124, stdout: "", stderr: "schtasks produced no output for 30000ms" },
         { code: 124, stdout: "", stderr: "schtasks produced no output for 30000ms" },
@@ -530,7 +546,7 @@ describe("Windows startup fallback", () => {
   it("does not report a node task as running from a gateway listener", async () => {
     await withWindowsEnv("openclaw-win-startup-", async ({ env }) => {
       env.DEX_SERVICE_KIND = "node";
-      env.DEX_WINDOWS_TASK_NAME = "OpenClaw Node";
+      env.DEX_WINDOWS_TASK_NAME = "Dex Node";
       findVerifiedGatewayListenerPidsOnPortSync.mockReturnValue([4242]);
       schtasksResponses.push(
         { code: 0, stdout: "", stderr: "" },
@@ -551,7 +567,7 @@ describe("Windows startup fallback", () => {
       const nodeEnv = {
         ...env,
         DEX_SERVICE_KIND: "node",
-        DEX_WINDOWS_TASK_NAME: "OpenClaw Node",
+        DEX_WINDOWS_TASK_NAME: "Dex Node",
       };
       await writeNodeScript(nodeEnv);
       findVerifiedGatewayListenerPidsOnPortSync.mockReturnValue([4242]);

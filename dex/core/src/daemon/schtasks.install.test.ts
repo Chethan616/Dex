@@ -73,17 +73,23 @@ describe("installScheduledTask", () => {
     });
   }
 
+  // installScheduledTask probes for a pre-rename "OpenClaw Gateway" task
+  // (removing it when present) before touching the Dex-named task, so call
+  // [1] is always the legacy-cleanup query.
   function expectInitialTaskQueries(): void {
     expect(schtasksCalls[0]).toEqual(["/Query"]);
     expect(schtasksCalls[1]).toEqual(["/Query", "/TN", "OpenClaw Gateway"]);
+    expect(schtasksCalls[2]).toEqual(["/Query", "/TN", "Dex Gateway"]);
   }
 
   function expectTaskRunCall(index: number): void {
-    expect(schtasksCalls[index]).toEqual(["/Run", "/TN", "OpenClaw Gateway"]);
+    expect(schtasksCalls[index]).toEqual(["/Run", "/TN", "Dex Gateway"]);
   }
 
   it("writes quoted set assignments and escapes metacharacters", async () => {
     await withUserProfileDir(async (_tmpDir, env) => {
+      // availability ok, legacy probe missing; defaults (ok) cover the rest.
+      schtasksResponses.push(okSchtasksResponse, missingTaskResponse);
       const { scriptPath } = await installScheduledTask({
         env,
         stdout: new PassThrough(),
@@ -151,18 +157,17 @@ describe("installScheduledTask", () => {
         sourcePath: scriptPath,
       });
 
-      expect(schtasksCalls[0]).toEqual(["/Query"]);
-      expect(schtasksCalls[1]).toEqual(["/Query", "/TN", "OpenClaw Gateway"]);
-      expect(schtasksCalls[2]?.[0]).toBe("/Change");
+      expectInitialTaskQueries();
+      expect(schtasksCalls[3]?.[0]).toBe("/Change");
       // Battery-flag XML re-apply runs between /Change and /Run on upgrades.
-      expect(schtasksCalls[3]?.slice(0, 5)).toEqual([
+      expect(schtasksCalls[4]?.slice(0, 5)).toEqual([
         "/Create",
         "/F",
         "/TN",
-        "OpenClaw Gateway",
+        "Dex Gateway",
         "/XML",
       ]);
-      expect(schtasksCalls[4]).toEqual(["/Run", "/TN", "OpenClaw Gateway"]);
+      expectTaskRunCall(5);
     });
   });
 
@@ -200,19 +205,19 @@ describe("installScheduledTask", () => {
 
   it("uses /Create when the task does not exist yet", async () => {
     await withUserProfileDir(async (_tmpDir, env) => {
-      schtasksResponses.push(okSchtasksResponse, missingTaskResponse);
+      schtasksResponses.push(okSchtasksResponse, missingTaskResponse, missingTaskResponse);
 
       await installDefaultGatewayTask(env);
 
       expectInitialTaskQueries();
-      expect(schtasksCalls[2]?.[0]).toBe("/Create");
-      expectTaskRunCall(3);
+      expect(schtasksCalls[3]?.[0]).toBe("/Create");
+      expectTaskRunCall(4);
     });
   });
 
   it("creates hidden launcher Windows tasks when requested", async () => {
     await withUserProfileDir(async (_tmpDir, env) => {
-      schtasksResponses.push(okSchtasksResponse, missingTaskResponse);
+      schtasksResponses.push(okSchtasksResponse, missingTaskResponse, missingTaskResponse);
 
       const { scriptPath } = await installDefaultGatewayTask({
         ...env,
@@ -226,24 +231,24 @@ describe("installScheduledTask", () => {
       expectInitialTaskQueries();
       // `/Create /XML` argv shape: ["/Create", "/F", "/TN", "<name>", "/XML", "<path>", "/RU", "<user>", "/NP"].
       // The XML payload is what carries the SC, RL, TR, and battery settings now.
-      expect(schtasksCalls[2]?.slice(0, 5)).toEqual([
+      expect(schtasksCalls[3]?.slice(0, 5)).toEqual([
         "/Create",
         "/F",
         "/TN",
-        "OpenClaw Gateway",
+        "Dex Gateway",
         "/XML",
       ]);
-      expect(schtasksCalls[2]?.slice(6)).toEqual(["/RU", "WORKSTATION\\alice", "/NP"]);
+      expect(schtasksCalls[3]?.slice(6)).toEqual(["/RU", "WORKSTATION\\alice", "/NP"]);
       expect(launcher).toContain("WScript.Shell");
       expect(launcher).toContain(scriptPath);
       expect(launcher).toContain(`Run """${scriptPath}""", 0, False`);
-      expectTaskRunCall(3);
+      expectTaskRunCall(4);
     });
   });
 
   it("creates the Scheduled Task via XML with battery start/continue enabled (#59299)", async () => {
     await withUserProfileDir(async (_tmpDir, env) => {
-      schtasksResponses.push(okSchtasksResponse, missingTaskResponse);
+      schtasksResponses.push(okSchtasksResponse, missingTaskResponse, missingTaskResponse);
 
       await installDefaultGatewayTask({
         ...env,
@@ -254,11 +259,11 @@ describe("installScheduledTask", () => {
       // `/Create` must use `/XML <path>` so battery flags can be set; the
       // CLI flag form (`/SC ONLOGON /RL LIMITED /TR ...`) cannot express
       // `DisallowStartIfOnBatteries`/`StopIfGoingOnBatteries`.
-      const createCall = schtasksCalls[2];
+      const createCall = schtasksCalls[3];
       expect(createCall?.[0]).toBe("/Create");
       expect(createCall).toContain("/XML");
 
-      const captured = xmlPayloadCaptures.find((entry) => entry.index === 2);
+      const captured = xmlPayloadCaptures.find((entry) => entry.index === 3);
       expect(captured).toBeDefined();
       const xml = captured?.xml ?? "";
       expect(xml).toContain("<DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>");
@@ -273,7 +278,7 @@ describe("installScheduledTask", () => {
 
   it("omits /RU for workgroup accounts so schtasks can use the current local user", async () => {
     await withUserProfileDir(async (_tmpDir, env) => {
-      schtasksResponses.push(okSchtasksResponse, missingTaskResponse);
+      schtasksResponses.push(okSchtasksResponse, missingTaskResponse, missingTaskResponse);
 
       await installDefaultGatewayTask({
         ...env,
@@ -282,21 +287,23 @@ describe("installScheduledTask", () => {
       });
 
       expectInitialTaskQueries();
-      const createCall = schtasksCalls[2];
-      expect(createCall?.slice(0, 5)).toEqual(["/Create", "/F", "/TN", "OpenClaw Gateway", "/XML"]);
+      const createCall = schtasksCalls[3];
+      expect(createCall?.slice(0, 5)).toEqual(["/Create", "/F", "/TN", "Dex Gateway", "/XML"]);
       expect(createCall).not.toContain("/RU");
-      const captured = xmlPayloadCaptures.find((entry) => entry.index === 2);
+      const captured = xmlPayloadCaptures.find((entry) => entry.index === 3);
       expect(captured?.xml).toContain("<UserId>alice</UserId>");
       expect(captured?.xml).not.toContain("<GroupId>S-1-5-32-545</GroupId>");
-      expectTaskRunCall(3);
+      expectTaskRunCall(4);
     });
   });
 
   it("re-applies the XML on /Change so upgraded tasks adopt battery flags (#59299)", async () => {
     await withUserProfileDir(async (_tmpDir, env) => {
-      // /Query yes, /Query /TN yes, /Change ok, /Create /XML ok (upgrade), /Run ok.
+      // /Query yes, legacy probe missing, /Query /TN yes, /Change ok,
+      // /Create /XML ok (upgrade), /Run ok.
       schtasksResponses.push(
         okSchtasksResponse,
+        missingTaskResponse,
         okSchtasksResponse,
         okSchtasksResponse,
         okSchtasksResponse,
@@ -306,30 +313,32 @@ describe("installScheduledTask", () => {
       await installDefaultGatewayTask(env);
 
       expectInitialTaskQueries();
-      expect(schtasksCalls[2]?.[0]).toBe("/Change");
-      expect(schtasksCalls[3]?.slice(0, 5)).toEqual([
+      expect(schtasksCalls[3]?.[0]).toBe("/Change");
+      expect(schtasksCalls[4]?.slice(0, 5)).toEqual([
         "/Create",
         "/F",
         "/TN",
-        "OpenClaw Gateway",
+        "Dex Gateway",
         "/XML",
       ]);
-      const upgradeCapture = xmlPayloadCaptures.find((entry) => entry.index === 3);
+      const upgradeCapture = xmlPayloadCaptures.find((entry) => entry.index === 4);
       expect(upgradeCapture).toBeDefined();
       const upgradeXml = upgradeCapture?.xml ?? "";
       expect(upgradeXml).toContain(
         "<DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>",
       );
       expect(upgradeXml).toContain("<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>");
-      expectTaskRunCall(4);
+      expectTaskRunCall(5);
     });
   });
 
   it("updates existing tasks to use the hidden launcher when requested", async () => {
     await withUserProfileDir(async (_tmpDir, env) => {
-      // /Query, /Query /TN, /Change (TR-only), /Create /XML (upgrade re-apply), /Run.
+      // /Query, legacy probe missing, /Query /TN, /Change (TR-only),
+      // /Create /XML (upgrade re-apply), /Run.
       schtasksResponses.push(
         okSchtasksResponse,
+        missingTaskResponse,
         okSchtasksResponse,
         okSchtasksResponse,
         okSchtasksResponse,
@@ -345,44 +354,51 @@ describe("installScheduledTask", () => {
       const launcherPath = scriptPath.replace(/\.cmd$/i, ".vbs");
 
       expectInitialTaskQueries();
-      expect(schtasksCalls[2]).toEqual([
+      expect(schtasksCalls[3]).toEqual([
         "/Change",
         "/TN",
-        "OpenClaw Gateway",
+        "Dex Gateway",
         "/TR",
         expect.stringContaining("gateway.vbs"),
       ]);
-      expect(schtasksCalls[2]?.[4]).toContain(launcherPath);
+      expect(schtasksCalls[3]?.[4]).toContain(launcherPath);
       // Upgrade XML re-apply runs after /Change so older tasks pick up battery flags.
-      expect(schtasksCalls[3]?.slice(0, 5)).toEqual([
+      expect(schtasksCalls[4]?.slice(0, 5)).toEqual([
         "/Create",
         "/F",
         "/TN",
-        "OpenClaw Gateway",
+        "Dex Gateway",
         "/XML",
       ]);
-      expectTaskRunCall(4);
+      expectTaskRunCall(5);
     });
   });
 
   it("falls back to /Create when /Change fails on an existing task", async () => {
     await withUserProfileDir(async (_tmpDir, env) => {
-      schtasksResponses.push(okSchtasksResponse, okSchtasksResponse, accessDeniedResponse);
+      schtasksResponses.push(
+        okSchtasksResponse,
+        missingTaskResponse,
+        okSchtasksResponse,
+        accessDeniedResponse,
+      );
 
       await installDefaultGatewayTask(env);
 
       expectInitialTaskQueries();
-      expect(schtasksCalls[2]?.[0]).toBe("/Change");
-      expect(schtasksCalls[3]?.[0]).toBe("/Create");
-      expectTaskRunCall(4);
+      expect(schtasksCalls[3]?.[0]).toBe("/Change");
+      expect(schtasksCalls[4]?.[0]).toBe("/Create");
+      expectTaskRunCall(5);
     });
   });
 
   it("throws when /Run fails after updating an existing task", async () => {
     await withUserProfileDir(async (_tmpDir, env) => {
-      // /Query, /Query /TN, /Change, /Create XML upgrade re-apply, /Run (fails).
+      // /Query, legacy probe missing, /Query /TN, /Change, /Create XML
+      // upgrade re-apply, /Run (fails).
       schtasksResponses.push(
         okSchtasksResponse,
+        missingTaskResponse,
         okSchtasksResponse,
         okSchtasksResponse,
         okSchtasksResponse,
@@ -394,9 +410,9 @@ describe("installScheduledTask", () => {
       );
 
       expectInitialTaskQueries();
-      expect(schtasksCalls[2]?.[0]).toBe("/Change");
-      expect(schtasksCalls[3]?.[0]).toBe("/Create");
-      expectTaskRunCall(4);
+      expect(schtasksCalls[3]?.[0]).toBe("/Change");
+      expect(schtasksCalls[4]?.[0]).toBe("/Create");
+      expectTaskRunCall(5);
     });
   });
 
@@ -404,6 +420,7 @@ describe("installScheduledTask", () => {
     await withUserProfileDir(async (_tmpDir, env) => {
       schtasksResponses.push(
         okSchtasksResponse,
+        missingTaskResponse,
         missingTaskResponse,
         okSchtasksResponse,
         accessDeniedResponse,
@@ -414,8 +431,8 @@ describe("installScheduledTask", () => {
       );
 
       expectInitialTaskQueries();
-      expect(schtasksCalls[2]?.[0]).toBe("/Create");
-      expectTaskRunCall(3);
+      expect(schtasksCalls[3]?.[0]).toBe("/Create");
+      expectTaskRunCall(4);
     });
   });
 
