@@ -1,6 +1,15 @@
 # 🐚 Dex — A calm cockpit for commanding agents you can trust
 
-`dexagent` is the **brain** behind Dex — a Windows-first personal AI assistant. It's a chat-first control surface for an agent that has *hands* on your machine. The agent reasons about what you asked for, **previews every action before it runs**, then executes inside an isolated Picture-in-Picture desktop.
+`dexagent` is an **agentic framework for your real computer** — one brain that routes every task to the right hands:
+
+- **Shell + files** — built-in tools for anything a one-liner solves
+- **Windows apps** — Microsoft UFO² drives native app UIs through the accessibility tree
+- **Your own browser** — browser-use / the built-in `browser` tool drive the browser you actually use (Vivaldi, Brave, Edge, Chrome)
+- **Vision** — OmniParser for pixel-only surfaces (games, canvases)
+- **Apps & services** — 60+ bundled skills (GitHub, Discord, Notion, email, ...) plus a remote skill registry, installable from the Dex UI
+- **Paired messengers** — send texts/files via WhatsApp / Telegram / Discord / Slack channels with the one-call `message` tool
+
+The agent reasons about what you asked for, an orchestrator scores which engine should act (<100 ms, no extra LLM call), **every step streams live into the UI**, and you can stop it at any time.
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
