@@ -93,9 +93,68 @@ class _ConnectorsTabState extends State<ConnectorsTab> {
         ],
       ),
       const SizedBox(height: DexSpace.md),
-      _SearchField(controller: _search),
+      _SearchField(
+        controller: _search,
+        onSubmitted: (q) => q.trim().isEmpty
+            ? _store.clearSearch()
+            : _store.searchRemote(q),
+        searching: _store.searching,
+      ),
       const SizedBox(height: DexSpace.md),
+      if (_store.installNote != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: DexSpace.sm),
+          child: Text(_store.installNote!,
+              style: DexType.caption(color: DexColors.textDim)),
+        ),
     ];
+
+    // ClawHub search hits: skills the user can one-click install from the
+    // remote registry (gateway skills.search / skills.install RPCs).
+    if (_store.searchResults.isNotEmpty) {
+      children
+        ..add(Padding(
+          padding: const EdgeInsets.only(
+            top: DexSpace.xs, bottom: DexSpace.xs,
+          ),
+          child: Text(
+            'FROM THE SKILL REGISTRY',
+            style: DexType.caption(color: DexColors.textFaint)
+                .copyWith(letterSpacing: 1.1),
+          ),
+        ))
+        ..addAll(_store.searchResults.map((r) => _RemoteSkillRow(
+              skill: r,
+              installing: _store.isInstalling(r.slug),
+              alreadyInstalled:
+                  _store.skills.any((s) => s.name == r.slug),
+              onInstall: () => _store.installSkill(r.slug),
+            )));
+    }
+
+    // Installed skills (bundled + workspace) from skills.status -- the
+    // real app-integration surface: github, discord, notion, email, ...
+    final skillQuery = _search.text.trim().toLowerCase();
+    final visibleSkills = _store.skills
+        .where((s) =>
+            skillQuery.isEmpty ||
+            s.name.toLowerCase().contains(skillQuery) ||
+            s.description.toLowerCase().contains(skillQuery))
+        .toList(growable: false);
+    if (visibleSkills.isNotEmpty) {
+      children
+        ..add(Padding(
+          padding: const EdgeInsets.only(
+            top: DexSpace.md, bottom: DexSpace.xs,
+          ),
+          child: Text(
+            'INSTALLED SKILLS',
+            style: DexType.caption(color: DexColors.textFaint)
+                .copyWith(letterSpacing: 1.1),
+          ),
+        ))
+        ..addAll(visibleSkills.map((s) => _SkillRow(skill: s)));
+    }
 
     if (entries.isEmpty) {
       children.add(Padding(
@@ -143,8 +202,14 @@ class _ConnectorsTabState extends State<ConnectorsTab> {
 }
 
 class _SearchField extends StatelessWidget {
-  const _SearchField({required this.controller});
+  const _SearchField({
+    required this.controller,
+    required this.onSubmitted,
+    this.searching = false,
+  });
   final TextEditingController controller;
+  final ValueChanged<String> onSubmitted;
+  final bool searching;
 
   @override
   Widget build(BuildContext context) {
@@ -167,19 +232,169 @@ class _SearchField extends StatelessWidget {
               controller: controller,
               style: DexType.body(color: DexColors.text),
               cursorColor: DexColors.text,
+              onSubmitted: onSubmitted,
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                hintText: 'Search connectors — WhatsApp, browser, Gemini…',
+                hintText:
+                    'Search connectors & skills — Enter searches the registry',
                 hintStyle: DexType.body(color: DexColors.textFaint),
               ),
             ),
           ),
-          if (controller.text.isNotEmpty)
+          if (searching)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: DexSpace.sm),
+              child: SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.4,
+                  color: DexColors.textFaint,
+                ),
+              ),
+            )
+          else if (controller.text.isNotEmpty)
             IconButton(
               icon: const Icon(LucideIcons.x, size: 14),
               color: DexColors.textFaint,
               onPressed: controller.clear,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One installed skill from skills.status. Status chip mirrors the
+/// connector vocabulary: eligible -> Ready (green), missing setup ->
+/// outline, disabled -> dim.
+class _SkillRow extends StatelessWidget {
+  const _SkillRow({required this.skill});
+  final SkillInfo skill;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = skill.disabled
+        ? ('Disabled', DexColors.textFaint)
+        : skill.eligible
+            ? ('Ready', DexColors.stateApprove)
+            : ('Setup needed', DexColors.stateAwaiting);
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DexSpace.xs, vertical: DexSpace.sm,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: DexColors.surface,
+              borderRadius: DexRadius.rsm,
+              border: Border.all(color: DexColors.border),
+            ),
+            child: skill.emoji != null && skill.emoji!.isNotEmpty
+                ? Text(skill.emoji!, style: const TextStyle(fontSize: 14))
+                : const Icon(LucideIcons.puzzle,
+                    size: 16, color: DexColors.textDim),
+          ),
+          const SizedBox(width: DexSpace.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(skill.name, style: DexType.label(color: DexColors.text)),
+                Text(
+                  skill.description,
+                  style: DexType.caption(color: DexColors.textFaint),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: DexSpace.sm),
+          Text(label, style: DexType.caption(color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+/// One ClawHub search hit with a one-click Install button.
+class _RemoteSkillRow extends StatelessWidget {
+  const _RemoteSkillRow({
+    required this.skill,
+    required this.installing,
+    required this.alreadyInstalled,
+    required this.onInstall,
+  });
+  final RemoteSkill skill;
+  final bool installing;
+  final bool alreadyInstalled;
+  final VoidCallback onInstall;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DexSpace.xs, vertical: DexSpace.sm,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: DexColors.surface,
+              borderRadius: DexRadius.rsm,
+              border: Border.all(color: DexColors.border),
+            ),
+            child: const Icon(LucideIcons.cloud_download,
+                size: 16, color: DexColors.textDim),
+          ),
+          const SizedBox(width: DexSpace.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(skill.name, style: DexType.label(color: DexColors.text)),
+                Text(
+                  skill.description,
+                  style: DexType.caption(color: DexColors.textFaint),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: DexSpace.sm),
+          if (alreadyInstalled)
+            Text('Installed',
+                style: DexType.caption(color: DexColors.stateApprove))
+          else if (installing)
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.6,
+                color: DexColors.textFaint,
+              ),
+            )
+          else
+            OutlinedButton(
+              onPressed: onInstall,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: DexColors.text,
+                side: const BorderSide(color: DexColors.border),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DexSpace.md, vertical: DexSpace.xs,
+                ),
+              ),
+              child: const Text('Install'),
             ),
         ],
       ),

@@ -23,7 +23,7 @@ enum ConnectorStatus { builtin, connected, available }
 enum ConnectorCategory {
   engines('Automation engines'),
   builtins('Built-in tools'),
-  channels('Messaging & channels'),
+  channels('Paired messengers'),
   providers('AI providers'),
   web('Web & search'),
   speech('Speech & voice');
@@ -493,23 +493,98 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
   ),
 ];
 
-/// Fetches the gateway config snapshot once and exposes live connector
-/// statuses. Tolerant of a dead gateway: [config] stays null and every
-/// non-builtin entry renders as Available.
+/// One installed (bundled or workspace) skill from the gateway's
+/// `skills.status` report (SkillStatusEntry in dex-core).
+class SkillInfo {
+  const SkillInfo({
+    required this.name,
+    required this.description,
+    required this.bundled,
+    required this.eligible,
+    required this.disabled,
+    this.emoji,
+    this.homepage,
+  });
+
+  final String name;
+  final String description;
+  final bool bundled;
+  final bool eligible;
+  final bool disabled;
+  final String? emoji;
+  final String? homepage;
+
+  static SkillInfo? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final name = raw['name'];
+    if (name is! String || name.isEmpty) return null;
+    return SkillInfo(
+      name: name,
+      description: (raw['description'] as String?) ?? '',
+      bundled: raw['bundled'] == true,
+      eligible: raw['eligible'] == true,
+      disabled: raw['disabled'] == true,
+      emoji: raw['emoji'] as String?,
+      homepage: raw['homepage'] as String?,
+    );
+  }
+}
+
+/// One remote skill from the ClawHub registry (`skills.search`).
+class RemoteSkill {
+  const RemoteSkill({
+    required this.slug,
+    required this.name,
+    required this.description,
+  });
+
+  final String slug;
+  final String name;
+  final String description;
+
+  static RemoteSkill? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final slug = (raw['slug'] ?? raw['name'] ?? raw['id']) as Object?;
+    if (slug is! String || slug.isEmpty) return null;
+    return RemoteSkill(
+      slug: slug,
+      name: (raw['displayName'] ?? raw['title'] ?? raw['name'] ?? slug)
+          .toString(),
+      description:
+          (raw['description'] ?? raw['summary'] ?? '').toString(),
+    );
+  }
+}
+
+/// Fetches the gateway config snapshot + installed-skills report and
+/// exposes live connector statuses, plus ClawHub search/install.
+/// Tolerant of a dead gateway: everything stays empty/Available.
 class ConnectorsStore extends ChangeNotifier {
   ConnectorsStore();
 
   Map<String, dynamic>? _config;
+  List<SkillInfo> _skills = const <SkillInfo>[];
+  List<RemoteSkill> _searchResults = const <RemoteSkill>[];
   bool _loading = false;
+  bool _searching = false;
   String? _error;
+  String? _installNote;
+  final Set<String> _installing = <String>{};
 
   Map<String, dynamic>? get config => _config;
+  List<SkillInfo> get skills => _skills;
+  List<RemoteSkill> get searchResults => _searchResults;
   bool get loading => _loading;
+  bool get searching => _searching;
   String? get error => _error;
+  String? get installNote => _installNote;
+  bool isInstalling(String slug) => _installing.contains(slug);
 
-  int get connectedCount => kConnectorCatalog
-      .where((e) => e.statusIn(_config) == ConnectorStatus.connected)
-      .length;
+  int get connectedCount =>
+      kConnectorCatalog
+          .where((e) => e.statusIn(_config) == ConnectorStatus.connected)
+          .length +
+      _skills.where((s) => s.eligible && !s.disabled).length;
 
   Future<void> refresh() async {
     final client = GatewayClient.current;
@@ -518,17 +593,90 @@ class ConnectorsStore extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final payload = await client.request('config.get');
       // config.get responds with a redacted ConfigFileSnapshot; the
       // parsed config object lives under one of these keys depending
       // on dex-core version.
+      final payload = await client.request('config.get');
       final cfg = payload['config'] ?? payload['parsed'] ?? payload;
       _config = (cfg is Map) ? cfg.cast<String, dynamic>() : null;
     } catch (e) {
       _error = e.toString();
       debugPrint('[dex] connectors config.get failed: $e');
+    }
+    try {
+      // SkillStatusReport: {workspaceDir, skills: SkillStatusEntry[]}.
+      final report = await client.request('skills.status');
+      final raw = report['skills'];
+      _skills = raw is List
+          ? raw
+              .map(SkillInfo.fromJson)
+              .whereType<SkillInfo>()
+              .toList(growable: false)
+          : const <SkillInfo>[];
+    } catch (e) {
+      debugPrint('[dex] connectors skills.status failed: $e');
+    }
+    _loading = false;
+    notifyListeners();
+  }
+
+  /// ClawHub keyword search (the registry behind
+  /// docs.openclaw.ai/tools/skills). Results render with Install buttons.
+  Future<void> searchRemote(String query) async {
+    final client = GatewayClient.current;
+    final q = query.trim();
+    if (client == null || q.isEmpty) return;
+    _searching = true;
+    notifyListeners();
+    try {
+      final payload = await client.request(
+        'skills.search',
+        params: <String, dynamic>{'query': q, 'limit': 12},
+        timeout: const Duration(seconds: 20),
+      );
+      final raw = payload['results'];
+      _searchResults = raw is List
+          ? raw
+              .map(RemoteSkill.fromJson)
+              .whereType<RemoteSkill>()
+              .toList(growable: false)
+          : const <RemoteSkill>[];
+    } catch (e) {
+      _installNote = 'Skill search failed: $e';
+      debugPrint('[dex] skills.search failed: $e');
     } finally {
-      _loading = false;
+      _searching = false;
+      notifyListeners();
+    }
+  }
+
+  void clearSearch() {
+    if (_searchResults.isEmpty && !_searching) return;
+    _searchResults = const <RemoteSkill>[];
+    _searching = false;
+    notifyListeners();
+  }
+
+  Future<void> installSkill(String slug) async {
+    final client = GatewayClient.current;
+    if (client == null || _installing.contains(slug)) return;
+    _installing.add(slug);
+    _installNote = null;
+    notifyListeners();
+    try {
+      final res = await client.request(
+        'skills.install',
+        params: <String, dynamic>{'source': 'clawhub', 'slug': slug},
+        timeout: const Duration(seconds: 60),
+      );
+      _installNote =
+          (res['message'] as String?) ?? 'Installed $slug';
+      await refresh();
+    } catch (e) {
+      _installNote = 'Install failed: $e';
+      debugPrint('[dex] skills.install($slug) failed: $e');
+    } finally {
+      _installing.remove(slug);
       notifyListeners();
     }
   }
