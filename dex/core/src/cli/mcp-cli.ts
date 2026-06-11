@@ -562,11 +562,11 @@ async function probeMcpServersOrFail(params: {
 }
 
 export function registerMcpCli(program: Command) {
-  const mcp = program.command("mcp").description("Manage OpenClaw MCP config and channel bridge");
+  const mcp = program.command("mcp").description("Manage Dex MCP config and channel bridge");
 
   mcp
     .command("serve")
-    .description("Expose OpenClaw channels over MCP stdio")
+    .description("Expose Dex channels over MCP stdio")
     .option("--url <url>", "Gateway WebSocket URL (defaults to gateway.remote.url when configured)")
     .option("--token <token>", "Gateway token (if required)")
     .option("--token-file <path>", "Read gateway token from file")

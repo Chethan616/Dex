@@ -446,7 +446,7 @@ async function resolveUnownedCliPrimaryMessage(params: {
       resolveToolOwner: resolveManifestToolOwner,
       resolveCliCommandSurfaceOwner: () => cliCommandSurfaceOwner,
     }) ??
-    `Unknown command: openclaw ${params.primary}. No built-in command or plugin CLI metadata owns "${params.primary}".`
+    `Unknown command: dex ${params.primary}. No built-in command or plugin CLI metadata owns "${params.primary}".`
   );
 }
 
@@ -643,8 +643,8 @@ export async function runCli(argv: string[] = process.argv) {
     }
 
     // Reject unowned command roots before help/version routing, so that
-    // `openclaw <typo> --help` surfaces the same Unknown command error as
-    // `openclaw <typo>` instead of silently showing generic top-level help.
+    // `dex <typo> --help` surfaces the same Unknown command error as
+    // `dex <typo>` instead of silently showing generic top-level help.
     // Runs after legitimate precomputed help fast paths so known help commands
     // still dispatch normally. See #81077.
     {
