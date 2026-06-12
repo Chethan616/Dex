@@ -132,30 +132,6 @@ class _ConnectorsTabState extends State<ConnectorsTab> {
             )));
     }
 
-    // Installed skills (bundled + workspace) from skills.status -- the
-    // real app-integration surface: github, discord, notion, email, ...
-    final skillQuery = _search.text.trim().toLowerCase();
-    final visibleSkills = _store.skills
-        .where((s) =>
-            skillQuery.isEmpty ||
-            s.name.toLowerCase().contains(skillQuery) ||
-            s.description.toLowerCase().contains(skillQuery))
-        .toList(growable: false);
-    if (visibleSkills.isNotEmpty) {
-      children
-        ..add(Padding(
-          padding: const EdgeInsets.only(
-            top: DexSpace.md, bottom: DexSpace.xs,
-          ),
-          child: Text(
-            'INSTALLED SKILLS',
-            style: DexType.caption(color: DexColors.textFaint)
-                .copyWith(letterSpacing: 1.1),
-          ),
-        ))
-        ..addAll(visibleSkills.map((s) => _SkillRow(skill: s)));
-    }
-
     if (entries.isEmpty) {
       children.add(Padding(
         padding: const EdgeInsets.symmetric(vertical: DexSpace.xl),
@@ -191,6 +167,32 @@ class _ConnectorsTabState extends State<ConnectorsTab> {
       }
     }
 
+    // Installed skills (bundled + workspace) from skills.status -- the
+    // real app-integration surface: github, discord, notion, email, ...
+    // Rendered LAST: it's the longest list, so the curated connector
+    // catalog stays above the fold.
+    final skillQuery = _search.text.trim().toLowerCase();
+    final visibleSkills = _store.skills
+        .where((s) =>
+            skillQuery.isEmpty ||
+            s.name.toLowerCase().contains(skillQuery) ||
+            s.description.toLowerCase().contains(skillQuery))
+        .toList(growable: false);
+    if (visibleSkills.isNotEmpty) {
+      children
+        ..add(Padding(
+          padding: const EdgeInsets.only(
+            top: DexSpace.md, bottom: DexSpace.xs,
+          ),
+          child: Text(
+            'INSTALLED SKILLS',
+            style: DexType.caption(color: DexColors.textFaint)
+                .copyWith(letterSpacing: 1.1),
+          ),
+        ))
+        ..addAll(visibleSkills.map((s) => _SkillRow(skill: s)));
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(DexSpace.lg),
       child: Column(
@@ -201,7 +203,9 @@ class _ConnectorsTabState extends State<ConnectorsTab> {
   }
 }
 
-class _SearchField extends StatelessWidget {
+/// Pill-shaped search input with a focus ring (accent border + soft glow
+/// when active), inline Enter-key hint, busy spinner, and clear button.
+class _SearchField extends StatefulWidget {
   const _SearchField({
     required this.controller,
     required this.onSubmitted,
@@ -212,53 +216,107 @@ class _SearchField extends StatelessWidget {
   final bool searching;
 
   @override
+  State<_SearchField> createState() => _SearchFieldState();
+}
+
+class _SearchFieldState extends State<_SearchField> {
+  final FocusNode _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_onFocus);
+  }
+
+  void _onFocus() => setState(() {});
+
+  @override
+  void dispose() {
+    _focus.removeListener(_onFocus);
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 36,
+    final focused = _focus.hasFocus;
+    final borderColor = focused
+        ? DexColors.accent.withValues(alpha: 0.65)
+        : DexColors.border;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOut,
+      height: 42,
       decoration: BoxDecoration(
-        color: DexColors.surface,
-        borderRadius: DexRadius.rsm,
-        border: Border.all(color: DexColors.border),
+        color: focused
+            ? DexColors.surface2.withValues(alpha: 0.7)
+            : DexColors.surface,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor),
+        boxShadow: focused
+            ? <BoxShadow>[
+                BoxShadow(
+                  color: DexColors.accent.withValues(alpha: 0.12),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ]
+            : const <BoxShadow>[],
       ),
+      padding: const EdgeInsets.symmetric(horizontal: DexSpace.md),
       child: Row(
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: DexSpace.sm),
-            child: Icon(LucideIcons.search,
-                size: 14, color: DexColors.textFaint),
-          ),
+          Icon(LucideIcons.search,
+              size: 15,
+              color: focused ? DexColors.accent : DexColors.textFaint),
+          const SizedBox(width: DexSpace.sm),
           Expanded(
             child: TextField(
-              controller: controller,
+              controller: widget.controller,
+              focusNode: _focus,
               style: DexType.body(color: DexColors.text),
-              cursorColor: DexColors.text,
-              onSubmitted: onSubmitted,
+              cursorColor: DexColors.accent,
+              onSubmitted: widget.onSubmitted,
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                hintText:
-                    'Search connectors & skills — Enter searches the registry',
+                hintText: 'Search connectors, apps & skills…',
                 hintStyle: DexType.body(color: DexColors.textFaint),
               ),
             ),
           ),
-          if (searching)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: DexSpace.sm),
-              child: SizedBox(
-                width: 12,
-                height: 12,
-                child: CircularProgressIndicator(
-                  strokeWidth: 1.4,
-                  color: DexColors.textFaint,
-                ),
+          if (widget.searching)
+            const SizedBox(
+              width: 13,
+              height: 13,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.4,
+                color: DexColors.textFaint,
               ),
             )
-          else if (controller.text.isNotEmpty)
-            IconButton(
-              icon: const Icon(LucideIcons.x, size: 14),
-              color: DexColors.textFaint,
-              onPressed: controller.clear,
+          else if (widget.controller.text.isNotEmpty)
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: widget.controller.clear,
+                child: const Icon(LucideIcons.circle_x,
+                    size: 15, color: DexColors.textFaint),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DexSpace.sm, vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: DexColors.surface2,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: DexColors.border),
+              ),
+              child: Text(
+                'Enter ↵ registry',
+                style: DexType.caption(color: DexColors.textFaint),
+              ),
             ),
         ],
       ),

@@ -103,8 +103,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Microsoft UFO² · Dex driver',
     category: ConnectorCategory.engines,
     probePaths: <String>['mcp.servers.windows-desktop-control'],
-    connectHint: 'scripts\\install-skills.ps1 registers this MCP server, '
-        'or: dex mcp add windows-desktop-control',
+    connectHint: r'.\scripts\install-skills.ps1  # registers both MCP servers',
   ),
   ConnectorEntry(
     id: 'browser-control',
@@ -116,8 +115,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'browser-use · Dex driver',
     category: ConnectorCategory.engines,
     probePaths: <String>['mcp.servers.browser-control'],
-    connectHint: 'scripts\\install-skills.ps1 registers this MCP server, '
-        'or: dex mcp add browser-control',
+    connectHint: r'.\scripts\install-skills.ps1  # registers both MCP servers',
   ),
   ConnectorEntry(
     id: 'omniparser',
@@ -129,8 +127,8 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Microsoft OmniParser · Dex driver',
     category: ConnectorCategory.engines,
     probePaths: <String>['mcp.servers.omniparser'],
-    connectHint: 'dex mcp add omniparser (downloads the vision model on '
-        'first use, ~2 GB)',
+    connectHint:
+        'dex mcp add --help  # register the vision server (~2 GB model on first use)',
   ),
 
   // ----- Built-in tools (always on) -----
@@ -204,7 +202,8 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Dex channel plugin',
     category: ConnectorCategory.channels,
     probePaths: <String>['channels.whatsapp', 'plugins.entries.whatsapp'],
-    connectHint: 'dex channels add whatsapp  (scan the QR with your phone)',
+    connectHint:
+        'dex channels add --channel whatsapp  # scan the QR with your phone',
   ),
   ConnectorEntry(
     id: 'telegram',
@@ -214,7 +213,8 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Dex channel plugin',
     category: ConnectorCategory.channels,
     probePaths: <String>['channels.telegram', 'plugins.entries.telegram'],
-    connectHint: 'dex channels add telegram  (needs a @BotFather bot token)',
+    connectHint:
+        'dex channels add --channel telegram --bot-token <token>  # token from @BotFather',
   ),
   ConnectorEntry(
     id: 'discord',
@@ -224,7 +224,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Dex channel plugin',
     category: ConnectorCategory.channels,
     probePaths: <String>['channels.discord', 'plugins.entries.discord'],
-    connectHint: 'dex channels add discord',
+    connectHint: 'dex channels add --channel discord --bot-token <token>',
   ),
   ConnectorEntry(
     id: 'slack',
@@ -234,7 +234,8 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Dex channel plugin',
     category: ConnectorCategory.channels,
     probePaths: <String>['channels.slack', 'plugins.entries.slack'],
-    connectHint: 'dex channels add slack',
+    connectHint:
+        'dex channels add --channel slack  # see dex channels add --help for tokens',
   ),
   ConnectorEntry(
     id: 'signal',
@@ -244,7 +245,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Dex channel plugin',
     category: ConnectorCategory.channels,
     probePaths: <String>['channels.signal', 'plugins.entries.signal'],
-    connectHint: 'dex channels add signal',
+    connectHint: 'dex channels add --channel signal',
   ),
   ConnectorEntry(
     id: 'imessage',
@@ -254,7 +255,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Dex channel plugin',
     category: ConnectorCategory.channels,
     probePaths: <String>['channels.imessage', 'plugins.entries.imessage'],
-    connectHint: 'dex channels add imessage',
+    connectHint: 'dex channels add --channel imessage  # requires a Mac',
   ),
   ConnectorEntry(
     id: 'matrix',
@@ -264,7 +265,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Dex channel plugin',
     category: ConnectorCategory.channels,
     probePaths: <String>['channels.matrix', 'plugins.entries.matrix'],
-    connectHint: 'dex channels add matrix',
+    connectHint: 'dex channels add --channel matrix',
   ),
   ConnectorEntry(
     id: 'msteams',
@@ -274,7 +275,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Dex channel plugin',
     category: ConnectorCategory.channels,
     probePaths: <String>['channels.msteams', 'plugins.entries.msteams'],
-    connectHint: 'dex channels add msteams',
+    connectHint: 'dex channels add --channel msteams',
   ),
   ConnectorEntry(
     id: 'googlechat',
@@ -284,7 +285,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Dex channel plugin',
     category: ConnectorCategory.channels,
     probePaths: <String>['channels.googlechat', 'plugins.entries.googlechat'],
-    connectHint: 'dex channels add googlechat',
+    connectHint: 'dex channels add --channel googlechat',
   ),
   ConnectorEntry(
     id: 'voice-call',
@@ -294,7 +295,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Dex channel plugin',
     category: ConnectorCategory.channels,
     probePaths: <String>['channels.voice-call', 'plugins.entries.voice-call'],
-    connectHint: 'dex channels add voice-call',
+    connectHint: 'dex plugins enable voice-call',
   ),
 
   // ----- AI providers (the brain) -----
@@ -310,8 +311,8 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
       'auth.profiles.anthropic:default',
       'plugins.entries.anthropic',
     ],
-    connectHint: 'dex onboard — paste an Anthropic API key, or sign in '
-        'with Claude Code (console.anthropic.com/account/keys)',
+    connectHint:
+        'dex onboard  # paste an Anthropic key (console.anthropic.com/account/keys)',
   ),
   ConnectorEntry(
     id: 'google',
@@ -326,8 +327,8 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
       'auth.profiles.google:default',
       'plugins.entries.google',
     ],
-    connectHint: 'dex onboard — paste a Gemini API key '
-        '(aistudio.google.com/app/apikey)',
+    connectHint:
+        'dex onboard  # paste a Gemini key (aistudio.google.com/app/apikey)',
   ),
   ConnectorEntry(
     id: 'groq',
@@ -342,7 +343,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
       'auth.profiles.groq:default',
       'plugins.entries.groq',
     ],
-    connectHint: 'Paste a Groq key in Settings (console.groq.com/keys)',
+    connectHint: 'dex onboard  # paste a Groq key (console.groq.com/keys)',
   ),
   ConnectorEntry(
     id: 'openai',
@@ -356,7 +357,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
       'auth.profiles.openai:default',
       'plugins.entries.openai',
     ],
-    connectHint: 'dex onboard (platform.openai.com/api-keys)',
+    connectHint: 'dex onboard  # key from platform.openai.com/api-keys',
   ),
   ConnectorEntry(
     id: 'openrouter',
@@ -369,7 +370,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
       'models.providers.openrouter',
       'plugins.entries.openrouter',
     ],
-    connectHint: 'dex onboard (openrouter.ai/keys)',
+    connectHint: 'dex onboard  # key from openrouter.ai/keys',
   ),
   ConnectorEntry(
     id: 'ollama',
@@ -382,7 +383,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
       'models.providers.ollama',
       'plugins.entries.ollama',
     ],
-    connectHint: 'Install Ollama, then: dex onboard',
+    connectHint: 'dex onboard  # after installing Ollama (ollama.com)',
   ),
   ConnectorEntry(
     id: 'mistral',
@@ -395,7 +396,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
       'models.providers.mistral',
       'plugins.entries.mistral',
     ],
-    connectHint: 'dex onboard (console.mistral.ai/api-keys)',
+    connectHint: 'dex onboard  # key from console.mistral.ai/api-keys',
   ),
   ConnectorEntry(
     id: 'xai',
@@ -417,7 +418,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Brave',
     category: ConnectorCategory.web,
     probePaths: <String>['plugins.entries.brave', 'tools.web.search.brave'],
-    connectHint: 'dex plugins enable brave (brave.com/search/api)',
+    connectHint: 'dex plugins enable brave  # key from brave.com/search/api',
   ),
   ConnectorEntry(
     id: 'tavily',
@@ -427,7 +428,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Tavily',
     category: ConnectorCategory.web,
     probePaths: <String>['plugins.entries.tavily'],
-    connectHint: 'dex plugins enable tavily (app.tavily.com)',
+    connectHint: 'dex plugins enable tavily  # key from app.tavily.com',
   ),
   ConnectorEntry(
     id: 'firecrawl',
@@ -437,7 +438,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Firecrawl',
     category: ConnectorCategory.web,
     probePaths: <String>['plugins.entries.firecrawl'],
-    connectHint: 'dex plugins enable firecrawl (firecrawl.dev)',
+    connectHint: 'dex plugins enable firecrawl  # key from firecrawl.dev',
   ),
   ConnectorEntry(
     id: 'exa',
@@ -447,7 +448,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Exa',
     category: ConnectorCategory.web,
     probePaths: <String>['plugins.entries.exa'],
-    connectHint: 'dex plugins enable exa (dashboard.exa.ai)',
+    connectHint: 'dex plugins enable exa  # key from dashboard.exa.ai',
   ),
   ConnectorEntry(
     id: 'perplexity',
@@ -469,7 +470,7 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'ElevenLabs',
     category: ConnectorCategory.speech,
     probePaths: <String>['plugins.entries.elevenlabs'],
-    connectHint: 'dex plugins enable elevenlabs (elevenlabs.io)',
+    connectHint: 'dex plugins enable elevenlabs  # key from elevenlabs.io',
   ),
   ConnectorEntry(
     id: 'deepgram',
@@ -479,7 +480,8 @@ const List<ConnectorEntry> kConnectorCatalog = <ConnectorEntry>[
     developer: 'Deepgram',
     category: ConnectorCategory.speech,
     probePaths: <String>['plugins.entries.deepgram'],
-    connectHint: 'dex plugins enable deepgram (console.deepgram.com)',
+    connectHint:
+        'dex plugins enable deepgram  # key from console.deepgram.com',
   ),
   ConnectorEntry(
     id: 'azure-speech',
