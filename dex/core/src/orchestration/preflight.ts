@@ -135,7 +135,11 @@ export function buildEnginePreflightHint(args: {
     // last resort, not the default.
     "Sending a message or file via WhatsApp/Telegram/Discord/Slack: if " +
       "that channel is paired, use the `message` tool (one call). Only " +
-      "fall back to driving the messenger's UI when no channel is paired.",
+      "fall back to driving the messenger's UI when no channel is paired. " +
+      "WhatsApp targets: use `me` to send to the user themselves (never " +
+      "ask for their number); other recipients need the FULL international " +
+      "number (country code + number, no + or spaces) -- a bare national " +
+      "number silently delivers to nobody.",
     fallbackLine,
   ]
     .filter((line): line is string => line !== null && line !== "")

@@ -33,7 +33,7 @@ it) is one of these shell-solvable patterns — if so, use the `exec` tool
 instead. A PowerShell one-liner finishes in seconds; navigating Settings UI
 for the same result takes minutes and can time out:
 
-- Current wallpaper → `(Get-ItemProperty 'HKCU:\Control Panel\Desktop').WallPaper` (the live image also sits at `%AppData%\Microsoft\Windows\Themes\TranscodedWallpaper`)
+- Current wallpaper → copy `$env:APPDATA\Microsoft\Windows\Themes\TranscodedWallpaper` to a `.png` — this file ALWAYS exists and is the live image. (The registry `HKCU:\Control Panel\Desktop\WallPaper` path can point at a moved/deleted file — observed ENOENT in practice.)
 - Launch an app → `start <name>` / `Start-Process` (then drive its UI with `run_desktop_task` only if the task continues INSIDE the app)
 - DNS change → `Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ServerAddresses 1.1.1.1`
 - Display resolution / audio device → PowerShell + `DisplaySwitch.exe` / CIM

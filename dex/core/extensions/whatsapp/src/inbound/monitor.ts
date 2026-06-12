@@ -1267,6 +1267,8 @@ export async function attachWebInboxToSocket(
     defaultAccountId: options.accountId,
     resolveOutboundMentions: ({ jid, text }) => resolveOutboundMentionsForGroup(jid, text),
     authDir: options.authDir,
+    resolveSelfJid: () =>
+      (getCurrentSock()?.user as { id?: string | null } | undefined)?.id ?? null,
   });
 
   return {

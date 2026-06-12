@@ -52,11 +52,30 @@ export function createWebSendApi(params: {
   // proactive sends to LID-addressed contacts reach the recipient instead of
   // ending up in a sender-only ghost chat (#67378). Defaults to PN-only.
   authDir?: string;
+  // Returns the linked account's own JID so `me`/`self` targets resolve to
+  // the user's own chat. Without this, "send X to myself" forces the agent
+  // to ask for a phone number -- and a bare national number silently
+  // misroutes (e.g. "9030257617" parses as country code 90 = Turkey and
+  // WhatsApp accepts the send to the nonexistent JID without error).
+  resolveSelfJid?: () => string | null | undefined;
 }) {
-  const resolveOutboundJid = (recipient: string): string =>
-    params.authDir
+  const resolveOutboundJid = (recipient: string): string => {
+    const stripped = recipient.replace(/^whatsapp:/i, "").trim();
+    if (/^(me|self|myself)$/i.test(stripped)) {
+      const selfJid = params.resolveSelfJid?.();
+      if (!selfJid) {
+        throw new Error(
+          "self target unavailable: WhatsApp channel is not connected yet",
+        );
+      }
+      // Baileys reports the own id with a device suffix ("…7617:33@s.whatsapp.net");
+      // chats are addressed without it.
+      return selfJid.replace(/:\d+(?=@)/, "");
+    }
+    return params.authDir
       ? toWhatsappJidWithLid(recipient, { authDir: params.authDir })
       : toWhatsappJid(recipient);
+  };
   const resolveMentions = async (
     jid: string,
     text: string,
