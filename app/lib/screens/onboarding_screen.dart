@@ -22,6 +22,7 @@ import '../theme/tokens.dart';
 import '../widgets/glossy_dropdown.dart';
 import '../widgets/living_background.dart';
 import '../widgets/refractive_edge.dart';
+import '../widgets/secret_field.dart';
 import '../widgets/settings/whatsapp_pair_dialog.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -37,7 +38,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _step = 0;
 
   final TextEditingController _keyCtrl = TextEditingController();
-  bool _keyObscured = true;
   String _brainModel = kBrainModels.first;
   bool _applying = false;
   String? _applyError;
@@ -188,11 +188,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           : 'Dex thinks with Google Gemini. One free key powers everything — '
               'chat, desktop automation, and browsing.',
       children: [
-        _KeyField(
+        SecretField(
           controller: _keyCtrl,
-          obscured: _keyObscured,
-          onToggleObscure: () =>
-              setState(() => _keyObscured = !_keyObscured),
+          hint: 'AIza…  /  AQ.…',
         ),
         const SizedBox(height: DexSpace.xs),
         _LinkRow(
@@ -353,62 +351,6 @@ class _FeatureRow extends StatelessWidget {
           const SizedBox(width: DexSpace.md),
           Expanded(
             child: Text(text, style: DexType.body(color: DexColors.textDim)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _KeyField extends StatelessWidget {
-  const _KeyField({
-    required this.controller,
-    required this.obscured,
-    required this.onToggleObscure,
-  });
-  final TextEditingController controller;
-  final bool obscured;
-  final VoidCallback onToggleObscure;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: DexSpace.md),
-      decoration: BoxDecoration(
-        color: DexColors.surface,
-        borderRadius: DexRadius.rsm,
-        border: Border.all(color: DexColors.border),
-      ),
-      child: Row(
-        children: [
-          const Icon(LucideIcons.key_round,
-              size: 14, color: DexColors.textFaint),
-          const SizedBox(width: DexSpace.sm),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              obscureText: obscured,
-              style: DexType.mono(color: DexColors.text),
-              cursorColor: DexColors.accent,
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: 'AIza…  /  AQ.…',
-                hintStyle: DexType.mono(color: DexColors.textFaint),
-              ),
-            ),
-          ),
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: onToggleObscure,
-              child: Icon(
-                obscured ? LucideIcons.eye : LucideIcons.eye_off,
-                size: 15,
-                color: DexColors.textFaint,
-              ),
-            ),
           ),
         ],
       ),

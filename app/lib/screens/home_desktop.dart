@@ -29,8 +29,12 @@ import '../widgets/vision/vision_panel.dart';
 import '../widgets/voice/voice_mode_screen.dart';
 
 class HomeDesktop extends StatefulWidget {
-  const HomeDesktop({super.key, required this.store});
+  const HomeDesktop({super.key, required this.store, this.onSignOut});
   final ConversationStore store;
+
+  /// Provided by the app root: clears the local account flag and
+  /// routes back to the login screen.
+  final VoidCallback? onSignOut;
 
   @override
   State<HomeDesktop> createState() => _HomeDesktopState();
@@ -104,8 +108,7 @@ class _HomeDesktopState extends State<HomeDesktop> {
         // existing -- feedback flow lands in a follow-up
         break;
       case ProfileMenuAction.signOut:
-        // existing -- sign-out lands when auth is wired
-        break;
+        widget.onSignOut?.call();
     }
   }
 

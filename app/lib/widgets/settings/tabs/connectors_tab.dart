@@ -295,27 +295,14 @@ class _SearchFieldState extends State<_SearchField> {
               ),
             )
           else if (widget.controller.text.isNotEmpty)
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
+            Tooltip(
+              message: 'Clear',
+              child: InkResponse(
+                radius: 14,
                 onTap: widget.controller.clear,
+                mouseCursor: SystemMouseCursors.click,
                 child: const Icon(LucideIcons.circle_x,
                     size: 15, color: DexColors.textFaint),
-              ),
-            )
-          else
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DexSpace.sm, vertical: 2,
-              ),
-              decoration: BoxDecoration(
-                color: DexColors.surface2,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: DexColors.border),
-              ),
-              child: Text(
-                'Enter ↵ registry',
-                style: DexType.caption(color: DexColors.textFaint),
               ),
             ),
         ],

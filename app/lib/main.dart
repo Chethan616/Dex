@@ -23,14 +23,17 @@ import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'core/account.dart';
 import 'core/dex_setup.dart';
 import 'core/gateway_client.dart';
 import 'core/state/conversation_store.dart';
 import 'platform/win/tray.dart';
 import 'screens/home_desktop.dart';
+import 'screens/login_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'spotlight_window.dart';
 import 'theme/theme.dart';
+import 'widgets/living_background.dart';
 
 /// IPC channel name used by the Spotlight sub-window to send the user's
 /// prompt back to the main window's ConversationStore.
@@ -213,18 +216,31 @@ class DexApp extends StatefulWidget {
 }
 
 class _DexAppState extends State<DexApp> with WindowListener {
-  /// First-run gate: when the engine config or the brain key is
-  /// missing, route to onboarding instead of the cockpit. Flips once
-  /// the user finishes (or when a configured machine starts normally).
+  /// Launch routing, in order:
+  ///   1. signed out            -> LoginScreen (identity is local-only
+  ///                               for now; the flow exists for future
+  ///                               auth to slot into)
+  ///   2. engine/key missing    -> OnboardingScreen
+  ///   3. otherwise             -> the cockpit
+  /// `null` = still reading prefs (one frame of living background).
+  bool? _signedIn;
   late bool _needsOnboarding;
 
   @override
   void initState() {
     super.initState();
     _needsOnboarding = DexSetup.read().needsOnboarding;
+    DexAccount.load().then((a) {
+      if (mounted) setState(() => _signedIn = a.signedIn);
+    });
     if (Platform.isWindows) {
       windowManager.addListener(this);
     }
+  }
+
+  Future<void> _signOut() async {
+    await DexAccount.signOut();
+    if (mounted) setState(() => _signedIn = false);
   }
 
   @override
@@ -257,16 +273,33 @@ class _DexAppState extends State<DexApp> with WindowListener {
       theme: buildDexLightTheme(),
       darkTheme: buildDexDarkTheme(),
       scrollBehavior: const DexScrollBehavior(),
-      home: _needsOnboarding
-          ? OnboardingScreen(
-              onFinished: () {
-                // Reconnect with whatever the wizard just wrote, then
-                // enter the cockpit.
-                unawaited(widget.store.client.connect());
-                setState(() => _needsOnboarding = false);
-              },
-            )
-          : HomeDesktop(store: widget.store),
+      home: _buildRoot(),
     );
+  }
+
+  Widget _buildRoot() {
+    if (_signedIn == null) {
+      // Prefs still loading -- one calm frame, no flash of login.
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: LivingBackground(child: SizedBox.expand()),
+      );
+    }
+    if (_signedIn == false) {
+      return LoginScreen(
+        onSignedIn: () => setState(() => _signedIn = true),
+      );
+    }
+    if (_needsOnboarding) {
+      return OnboardingScreen(
+        onFinished: () {
+          // Reconnect with whatever the wizard just wrote, then enter
+          // the cockpit.
+          unawaited(widget.store.client.connect());
+          setState(() => _needsOnboarding = false);
+        },
+      );
+    }
+    return HomeDesktop(store: widget.store, onSignOut: _signOut);
   }
 }

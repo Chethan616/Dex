@@ -2,14 +2,15 @@
 // consumer via DexSetup) + device presence.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/account.dart';
 import '../../../core/dex_setup.dart';
 import '../../../core/models/device.dart';
 import '../../../theme/tokens.dart';
 import '../../device_chip.dart';
 import '../../glossy_dropdown.dart';
+import '../../secret_field.dart';
 import '../settings_row.dart';
 
 class AccountTab extends StatefulWidget {
@@ -30,14 +31,22 @@ class _AccountTabState extends State<AccountTab> {
 
   late DexSetupState _setup;
   final TextEditingController _keyCtrl = TextEditingController();
-  bool _keyObscured = true;
   bool _applying = false;
   String? _note;
+  String _accountName = 'Dex user';
+  String? _accountEmail;
 
   @override
   void initState() {
     super.initState();
     _setup = DexSetup.read();
+    DexAccount.load().then((a) {
+      if (!mounted) return;
+      setState(() {
+        _accountName = a.name?.isNotEmpty == true ? a.name! : 'Dex user';
+        _accountEmail = a.email;
+      });
+    });
   }
 
   @override
@@ -108,48 +117,11 @@ class _AccountTabState extends State<AccountTab> {
           style: DexType.caption(color: DexColors.textFaint),
         ),
         const SizedBox(height: DexSpace.md),
-        Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: DexSpace.md),
-          decoration: BoxDecoration(
-            color: DexColors.surface,
-            borderRadius: DexRadius.rsm,
-            border: Border.all(color: DexColors.border),
-          ),
-          child: Row(
-            children: [
-              const Icon(LucideIcons.key_round,
-                  size: 14, color: DexColors.textFaint),
-              const SizedBox(width: DexSpace.sm),
-              Expanded(
-                child: TextField(
-                  controller: _keyCtrl,
-                  obscureText: _keyObscured,
-                  style: DexType.mono(color: DexColors.text),
-                  cursorColor: DexColors.accent,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    border: InputBorder.none,
-                    hintText: _setup.hasBrainKey
-                        ? 'Gemini key set (…${_setup.geminiKeyTail}) — paste to replace'
-                        : 'Paste your Gemini API key',
-                    hintStyle: DexType.mono(color: DexColors.textFaint),
-                  ),
-                ),
-              ),
-              MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  onTap: () => setState(() => _keyObscured = !_keyObscured),
-                  child: Icon(
-                    _keyObscured ? LucideIcons.eye : LucideIcons.eye_off,
-                    size: 14,
-                    color: DexColors.textFaint,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        SecretField(
+          controller: _keyCtrl,
+          hint: _setup.hasBrainKey
+              ? 'Key set (…${_setup.geminiKeyTail}) — paste to replace'
+              : 'Paste your Gemini API key',
         ),
         const SizedBox(height: DexSpace.xs),
         MouseRegion(
@@ -217,7 +189,8 @@ class _AccountTabState extends State<AccountTab> {
           children: [
             SettingsRow(
               label: 'Name',
-              control: Text('Dex user',
+              description: _accountEmail,
+              control: Text(_accountName,
                   style: DexType.label(color: DexColors.text)),
             ),
             const Divider(),
