@@ -23,10 +23,12 @@ import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'core/dex_setup.dart';
 import 'core/gateway_client.dart';
 import 'core/state/conversation_store.dart';
 import 'platform/win/tray.dart';
 import 'screens/home_desktop.dart';
+import 'screens/onboarding_screen.dart';
 import 'spotlight_window.dart';
 import 'theme/theme.dart';
 
@@ -211,9 +213,15 @@ class DexApp extends StatefulWidget {
 }
 
 class _DexAppState extends State<DexApp> with WindowListener {
+  /// First-run gate: when the engine config or the brain key is
+  /// missing, route to onboarding instead of the cockpit. Flips once
+  /// the user finishes (or when a configured machine starts normally).
+  late bool _needsOnboarding;
+
   @override
   void initState() {
     super.initState();
+    _needsOnboarding = DexSetup.read().needsOnboarding;
     if (Platform.isWindows) {
       windowManager.addListener(this);
     }
@@ -249,7 +257,16 @@ class _DexAppState extends State<DexApp> with WindowListener {
       theme: buildDexLightTheme(),
       darkTheme: buildDexDarkTheme(),
       scrollBehavior: const DexScrollBehavior(),
-      home: HomeDesktop(store: widget.store),
+      home: _needsOnboarding
+          ? OnboardingScreen(
+              onFinished: () {
+                // Reconnect with whatever the wizard just wrote, then
+                // enter the cockpit.
+                unawaited(widget.store.client.connect());
+                setState(() => _needsOnboarding = false);
+              },
+            )
+          : HomeDesktop(store: widget.store),
     );
   }
 }

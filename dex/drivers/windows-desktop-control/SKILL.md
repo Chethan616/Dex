@@ -35,7 +35,7 @@ for the same result takes minutes and can time out:
 
 - Current wallpaper → copy `$env:APPDATA\Microsoft\Windows\Themes\TranscodedWallpaper` to a `.png` — this file ALWAYS exists and is the live image. (The registry `HKCU:\Control Panel\Desktop\WallPaper` path can point at a moved/deleted file — observed ENOENT in practice.)
 - Launch an app → `start <name>` / `Start-Process` (then drive its UI with `run_desktop_task` only if the task continues INSIDE the app)
-- DNS change → `Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ServerAddresses 1.1.1.1`
+- DNS change → `Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ServerAddresses 1.1.1.1` — NEEDS ADMIN. Run elevated via `Start-Process powershell -Verb RunAs -ArgumentList '-Command','Set-DnsClientServerAddress -InterfaceAlias Wi-Fi -ServerAddresses 1.1.1.1,1.0.0.1'` (user approves ONE UAC prompt), then verify with `Get-DnsClientServerAddress -InterfaceAlias "Wi-Fi"`. NEVER navigate the Settings UI for DNS — it times out.
 - Display resolution / audio device → PowerShell + `DisplaySwitch.exe` / CIM
 - Service start/stop → `Start-Service` / `Stop-Service`
 - Env vars → `[Environment]::SetEnvironmentVariable(...)`

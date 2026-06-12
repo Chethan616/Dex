@@ -1,10 +1,15 @@
-// Account tab. Reuses device_chip for "This device" presence.
+// Account tab. Secrets (API keys + model selection wired to every
+// consumer via DexSetup) + device presence.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/dex_setup.dart';
 import '../../../core/models/device.dart';
 import '../../../theme/tokens.dart';
 import '../../device_chip.dart';
+import '../../glossy_dropdown.dart';
 import '../settings_row.dart';
 
 class AccountTab extends StatefulWidget {
@@ -23,6 +28,184 @@ class _AccountTabState extends State<AccountTab> {
 
   bool _phoneLinked = false;
 
+  late DexSetupState _setup;
+  final TextEditingController _keyCtrl = TextEditingController();
+  bool _keyObscured = true;
+  bool _applying = false;
+  String? _note;
+
+  @override
+  void initState() {
+    super.initState();
+    _setup = DexSetup.read();
+  }
+
+  @override
+  void dispose() {
+    _keyCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _apply() async {
+    setState(() {
+      _applying = true;
+      _note = null;
+    });
+    try {
+      final key = _keyCtrl.text.trim();
+      if (key.isNotEmpty) {
+        await DexSetup.applyGeminiKey(key);
+        _keyCtrl.clear();
+      }
+      _setup = DexSetup.read();
+      _note = 'Applied. Restart the gateway to pick up key changes.';
+    } catch (e) {
+      _note = 'Apply failed: $e';
+    } finally {
+      if (mounted) setState(() => _applying = false);
+    }
+  }
+
+  Future<void> _setBrainModel(String model) async {
+    try {
+      await DexSetup.applyBrainModel(model);
+      setState(() {
+        _setup = DexSetup.read();
+        _note = 'Brain model set. Takes effect on the next turn.';
+      });
+    } catch (e) {
+      setState(() => _note = 'Model change failed: $e');
+    }
+  }
+
+  Future<void> _setHandsModel(String model) async {
+    try {
+      await DexSetup.applyHandsModel(model);
+      setState(() {
+        _setup = DexSetup.read();
+        _note = 'Hands model set. Applies to the next desktop task.';
+      });
+    } catch (e) {
+      setState(() => _note = 'Model change failed: $e');
+    }
+  }
+
+  Widget _secrets() {
+    final brainModel = kBrainModels.contains(_setup.brainModel)
+        ? _setup.brainModel!
+        : kBrainModels.first;
+    final handsModel = kHandsModels.contains(_setup.handsModel)
+        ? _setup.handsModel!
+        : kHandsModels.first;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Secrets', style: DexType.label(color: DexColors.text)),
+        const SizedBox(height: DexSpace.xs),
+        Text(
+          'One Gemini key powers the brain, web search, browsing, and '
+          'desktop automation. Stored locally, never leaves this machine.',
+          style: DexType.caption(color: DexColors.textFaint),
+        ),
+        const SizedBox(height: DexSpace.md),
+        Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: DexSpace.md),
+          decoration: BoxDecoration(
+            color: DexColors.surface,
+            borderRadius: DexRadius.rsm,
+            border: Border.all(color: DexColors.border),
+          ),
+          child: Row(
+            children: [
+              const Icon(LucideIcons.key_round,
+                  size: 14, color: DexColors.textFaint),
+              const SizedBox(width: DexSpace.sm),
+              Expanded(
+                child: TextField(
+                  controller: _keyCtrl,
+                  obscureText: _keyObscured,
+                  style: DexType.mono(color: DexColors.text),
+                  cursorColor: DexColors.accent,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    border: InputBorder.none,
+                    hintText: _setup.hasBrainKey
+                        ? 'Gemini key set (…${_setup.geminiKeyTail}) — paste to replace'
+                        : 'Paste your Gemini API key',
+                    hintStyle: DexType.mono(color: DexColors.textFaint),
+                  ),
+                ),
+              ),
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () => setState(() => _keyObscured = !_keyObscured),
+                  child: Icon(
+                    _keyObscured ? LucideIcons.eye : LucideIcons.eye_off,
+                    size: 14,
+                    color: DexColors.textFaint,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: DexSpace.xs),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () =>
+                launchUrl(Uri.parse('https://aistudio.google.com/app/apikey')),
+            child: Text(
+              'Get a free Gemini key →',
+              style: DexType.caption(color: DexColors.accent),
+            ),
+          ),
+        ),
+        const SizedBox(height: DexSpace.md),
+        SettingsRow(
+          label: 'Brain model',
+          description: 'Reasoning, planning, chat.',
+          control: GlossyDropdown(
+            value: brainModel,
+            options: kBrainModels,
+            onChanged: _setBrainModel,
+            width: 260,
+          ),
+        ),
+        SettingsRow(
+          label: 'Hands model',
+          description: 'UFO² desktop automation (agents.yaml).',
+          control: GlossyDropdown(
+            value: handsModel,
+            options: kHandsModels,
+            onChanged: _setHandsModel,
+            width: 260,
+          ),
+        ),
+        const SizedBox(height: DexSpace.sm),
+        Row(
+          children: [
+            _StatusDot(label: 'Brain key', ok: _setup.hasBrainKey),
+            _StatusDot(label: 'Web search', ok: _setup.webSearchKeySet),
+            _StatusDot(label: 'Browser', ok: _setup.browserEnvKeySet),
+            _StatusDot(label: 'Desktop', ok: _setup.handsKeySet),
+            const Spacer(),
+            ElevatedButton(
+              onPressed: _applying ? null : _apply,
+              child: Text(_applying ? 'Applying…' : 'Apply'),
+            ),
+          ],
+        ),
+        if (_note != null) ...[
+          const SizedBox(height: DexSpace.sm),
+          Text(_note!, style: DexType.caption(color: DexColors.textDim)),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -37,6 +220,9 @@ class _AccountTabState extends State<AccountTab> {
               control: Text('Dex user',
                   style: DexType.label(color: DexColors.text)),
             ),
+            const Divider(),
+            _secrets(),
+            const Divider(),
             const SizedBox(height: DexSpace.sm),
             Text('This device',
                 style: DexType.caption(color: DexColors.textFaint)),
@@ -73,6 +259,33 @@ class _AccountTabState extends State<AccountTab> {
             SettingsLinkRow(label: 'Parental controls', onTap: () {}),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Tiny per-consumer key-status indicator (green = configured).
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({required this.label, required this.ok});
+  final String label;
+  final bool ok;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = ok ? DexColors.stateApprove : DexColors.textFaint;
+    return Padding(
+      padding: const EdgeInsets.only(right: DexSpace.md),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 5),
+          Text(label, style: DexType.caption(color: color)),
+        ],
       ),
     );
   }

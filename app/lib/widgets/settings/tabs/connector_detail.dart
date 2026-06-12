@@ -7,6 +7,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../core/connectors.dart';
 import '../../../theme/tokens.dart';
+import '../whatsapp_pair_dialog.dart';
 import 'connectors_tab.dart';
 
 class ConnectorDetail extends StatelessWidget {
@@ -23,6 +24,9 @@ class ConnectorDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hint = entry.connectHint;
+    // WhatsApp pairs fully in-app (gateway web.login QR flow); other
+    // connectors fall back to the copyable CLI command for now.
+    final canPairInApp = entry.id == 'whatsapp';
     return SingleChildScrollView(
       padding: const EdgeInsets.all(DexSpace.lg),
       child: Column(
@@ -56,6 +60,13 @@ class ConnectorDetail extends StatelessWidget {
                 child: Text(entry.name,
                     style: DexType.heading(color: DexColors.text)),
               ),
+              if (canPairInApp && status != ConnectorStatus.connected) ...[
+                ElevatedButton(
+                  onPressed: () => WhatsAppPairDialog.show(context),
+                  child: const Text('Pair now'),
+                ),
+                const SizedBox(width: DexSpace.sm),
+              ],
               ConnectorStatusChip(status: status),
             ],
           ),

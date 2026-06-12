@@ -401,9 +401,12 @@ class GatewayClient extends ChangeNotifier {
         },
         // Role + scopes verified from src/shared/operator-scope-compat.ts.
         // chat.send needs operator.write; config.get / channels.status
-        // (the Connectors & Apps panel) need operator.read.
+        // (the Connectors & Apps panel) need operator.read;
+        // web.login.start/wait (in-app WhatsApp QR pairing) need
+        // operator.admin. Local insecure-auth control-ui clients keep
+        // their declared scopes (message-handler.ts:840-844).
         'role': 'operator',
-        'scopes': <String>['operator.read', 'operator.write'],
+        'scopes': <String>['operator.read', 'operator.write', 'operator.admin'],
         'auth': <String, dynamic>{'token': _config.token},
       },
     }));
