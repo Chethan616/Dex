@@ -93,6 +93,78 @@ BROWSER_PROVIDER_API_KEY_ENV = {
 }
 
 
+# Provider-agnostic quota/rate-limit signatures (mirrors the
+# windows-desktop-control scan). Gemini's endpoint surfaces
+# RESOURCE_EXHAUSTED; the OpenAI-family SDKs raise RateLimitError.
+_QUOTA_PATTERNS = ("RateLimitError", "RESOURCE_EXHAUSTED", "Error code: 429")
+
+# Chromium-family executables Playwright can drive via executable_path.
+# Firefox/IE defaults fall back to the bundled Chromium.
+_CHROMIUM_EXE_NAMES = {
+    "chrome.exe",
+    "msedge.exe",
+    "brave.exe",
+    "vivaldi.exe",
+    "opera.exe",
+    "opera_gx.exe",
+    "chromium.exe",
+    "arc.exe",
+}
+
+
+def _detect_default_browser_executable() -> str | None:
+    """Resolve the USER'S default browser executable on Windows.
+
+    People don't all run Chrome -- Vivaldi/Brave/Edge defaults are common.
+    Reads the http UserChoice ProgId and resolves its open command, so the
+    browser the task pops up is the one the user actually lives in (their
+    own profile stays untouched: Playwright launches the exe with a fresh
+    user-data-dir, which also avoids profile-lock conflicts with a running
+    instance). Returns None for non-Chromium defaults or any registry
+    miss -- callers fall back to Playwright's bundled Chromium.
+    """
+    if sys.platform != "win32":
+        return None
+    try:
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\Shell\Associations"
+            r"\UrlAssociations\http\UserChoice",
+        ) as key:
+            prog_id = winreg.QueryValueEx(key, "ProgId")[0]
+        with winreg.OpenKey(
+            winreg.HKEY_CLASSES_ROOT, rf"{prog_id}\shell\open\command"
+        ) as key:
+            command = winreg.QueryValueEx(key, None)[0]
+    except OSError:
+        return None
+    exe = command.split('"')[1] if command.startswith('"') else command.split(" ")[0]
+    if Path(exe).name.lower() not in _CHROMIUM_EXE_NAMES or not Path(exe).exists():
+        return None
+    return exe
+
+
+def _build_session_kwargs(headless: bool) -> dict[str, Any]:
+    """BrowserSession kwargs honoring, in order: DEX_BROWSER_EXECUTABLE,
+    DEX_BROWSER_CHANNEL, the detected Windows default browser, then
+    Playwright's bundled Chromium."""
+    kwargs: dict[str, Any] = {"headless": headless}
+    explicit_exe = os.environ.get("DEX_BROWSER_EXECUTABLE", "").strip()
+    if explicit_exe and Path(explicit_exe).exists():
+        kwargs["executable_path"] = explicit_exe
+        return kwargs
+    channel = os.environ.get("DEX_BROWSER_CHANNEL", "").strip()
+    if channel:
+        kwargs["channel"] = channel
+        return kwargs
+    detected = _detect_default_browser_executable()
+    if detected:
+        kwargs["executable_path"] = detected
+    return kwargs
+
+
 def _resolve_browser_llm():
     """Build the browser-use LLM adapter for the selected provider.
 
@@ -209,10 +281,24 @@ async def run_browser_task(
         # pattern for async MCP tools.
         outcome = await _run_agent(goal, url_hint, timeout_s, headless, log_path)
     except Exception as e:  # noqa: BLE001 -- surface any error to chat
+        err_text = "".join(traceback.format_exception(e))
         log_path.write_text(
-            serialize_run("browser-use Agent", -1, "", "".join(traceback.format_exception(e))),
+            serialize_run("browser-use Agent", -1, "", err_text),
             encoding="utf-8",
         )
+        # Quota exhaustion deserves a clear, actionable message instead of
+        # a stack-trace head -- observed 2026-06-11 with the shared Gemini
+        # free-tier key (RESOURCE_EXHAUSTED, daily quota).
+        if any(p in err_text for p in _QUOTA_PATTERNS):
+            return result(
+                False,
+                "LLM quota exhausted -- the browser model returned 429. "
+                "Switch DEX_BROWSER_PROVIDER / DEX_BROWSER_MODEL (e.g. to a "
+                "Groq key) or wait for the quota reset.",
+                [],
+                task_id,
+                log_path,
+            )
         return result(False, f"browser-use error: {type(e).__name__}: {e}", [], task_id, log_path)
 
     return result(outcome["ok"], outcome["summary"], outcome["steps"], task_id, log_path)
@@ -256,7 +342,9 @@ async def _run_agent(
     # doing anything". Groq Qwen 3 is text-only; everything else we
     # support (Gemini, Claude Sonnet, GPT-5) is multimodal.
     use_vision = BROWSER_PROVIDER != "groq"
-    session = BrowserSession(headless=headless)
+    # I.1.d: drive the user's own default browser (Vivaldi/Brave/Edge/...)
+    # when it's Chromium-based; bundled Chromium otherwise.
+    session = BrowserSession(**_build_session_kwargs(headless))
     agent = Agent(task=task, llm=llm, browser_session=session, use_vision=use_vision)
 
     async def _go() -> Any:

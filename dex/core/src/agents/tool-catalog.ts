@@ -202,7 +202,11 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     label: "browser",
     description: "Control web browser",
     sectionId: "ui",
-    profiles: [],
+    // Dex product default: the desktop agent can drive the browser tool
+    // (incl. the user's own Chromium-family browser via profile:"user").
+    // Upstream kept this opt-in; without it every web ask fell through to
+    // GUI automation of the browser window -- the wrong hands.
+    profiles: ["coding"],
     includeInOpenClawGroup: true,
   },
   {
@@ -217,7 +221,11 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     label: "message",
     description: "Send messages",
     sectionId: "messaging",
-    profiles: ["messaging"],
+    // Dex product default: "send my wallpaper to myself on WhatsApp" must
+    // be ONE message-tool call when the channel is paired. Upstream scoped
+    // this to the messaging profile only, which forced Dex desktop
+    // sessions (coding profile) into GUI-automating messenger apps.
+    profiles: ["coding", "messaging"],
     includeInOpenClawGroup: true,
   },
   {

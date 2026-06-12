@@ -190,6 +190,7 @@ import {
   prependAgentSteeringPrompt,
   releasePendingAgentSteeringItems,
 } from "../../subagent-registry.js";
+import { runAgentPreflightFor } from "../../../orchestration/agent-preflight.js";
 import { ensureSystemPromptCacheBoundary } from "../../system-prompt-cache-boundary.js";
 import { buildSystemPromptParams } from "../../system-prompt-params.js";
 import { buildSystemPromptReport } from "../../system-prompt-report.js";
@@ -1914,6 +1915,22 @@ export async function runEmbeddedAttempt(
       tools: effectiveTools,
     });
     let systemPromptText = attemptSystemPrompt.systemPrompt;
+    // F.1.a wire-in for embedded runs. The orchestrator's engine hint was
+    // previously injected only in cli-runner/prepare.ts, so gateway
+    // sessions (which run embedded) never saw it -- the model had no
+    // routing signal toward the UFO²/browser-use MCP tools and improvised
+    // with shell/SendKeys instead. Best-effort by contract:
+    // runAgentPreflightFor returns "" on any internal error.
+    if (!isRawModelRun && typeof params.prompt === "string" && params.prompt.trim()) {
+      const enginePreflightHint = await runAgentPreflightFor(params.prompt);
+      if (enginePreflightHint) {
+        systemPromptText =
+          composeSystemPromptWithHookContext({
+            baseSystemPrompt: ensureSystemPromptCacheBoundary(systemPromptText),
+            appendSystemContext: enginePreflightHint,
+          }) ?? systemPromptText;
+      }
+    }
     prepStages.mark("system-prompt");
 
     const compactionTimeoutMs = resolveCompactionTimeoutMs(params.config);

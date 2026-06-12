@@ -177,7 +177,10 @@ export async function createWaSocket(
     version,
     logger,
     printQRInTerminal: false,
-    browser: ["openclaw", "cli", VERSION],
+    // First element is the device name WhatsApp shows under Linked
+    // devices ("Google Chrome (<name>)") -- a user-visible product
+    // string, so it says Dex, not the upstream id.
+    browser: ["Dex", "cli", VERSION],
     syncFullHistory: false,
     markOnlineOnConnect: false,
     ...socketTiming,

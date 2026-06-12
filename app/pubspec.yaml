@@ -47,6 +47,23 @@ dependencies:
   # shape matches and there's a single maintainer to track.
   hotkey_manager: ^0.2.3
 
+  # Rich clipboard + drag-drop for the composer + spotlight. Same
+  # author (irondash); production-proven in Zed editor. Apache 2.0.
+  # Accepts paste/drop of arbitrary file types: images, PDFs, docs,
+  # .exe, video, anything else. No native edits required.
+  super_clipboard: ^0.8.0
+  super_drag_and_drop: ^0.8.0
+
+  # Lucide line icons (MIT). Single-weight, line-only by design --
+  # no filled/bold variants -- which matches the "premium, not bolded"
+  # icon brief. Replaces Material's filled Icons.X across the app.
+  # Using flutter_lucide (maintained fork) because the original
+  # `lucide_icons` package still extends IconData, which Flutter now
+  # seals (final class) -- so the original fails to compile under
+  # modern SDKs. Same constant names (LucideIcons.X).
+  flutter_lucide: ^1.11.0
+  desktop_multi_window: ^0.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

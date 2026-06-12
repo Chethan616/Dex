@@ -1,5 +1,6 @@
-// Human message -- right-aligned, no decorative bubble. Speaker separation
-// comes from space + a small label, per design.md section 7.
+// Human message -- right-aligned rounded bubble. The bubble carries the
+// speaker signal; we drop the "you" caption to match the cleaner chat
+// surface introduced with the redesign.
 
 import 'package:flutter/material.dart';
 
@@ -14,17 +15,29 @@ class MessageHuman extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: DexSpace.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Text('you', style: DexType.caption(color: DexColors.textFaint)),
-          const SizedBox(height: 2),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
-            child: Text(
-              message.text ?? '',
-              textAlign: TextAlign.right,
-              style: DexType.body(color: DexColors.text),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DexSpace.lg, vertical: DexSpace.md,
+              ),
+              decoration: BoxDecoration(
+                color: DexColors.surface2,
+                borderRadius: const BorderRadius.only(
+                  topLeft: DexRadius.xl,
+                  topRight: DexRadius.xl,
+                  bottomLeft: DexRadius.xl,
+                  bottomRight: DexRadius.sm,
+                ),
+                border: Border.all(color: DexColors.border),
+              ),
+              child: Text(
+                message.text ?? '',
+                style: DexType.body(color: DexColors.text),
+              ),
             ),
           ),
         ],

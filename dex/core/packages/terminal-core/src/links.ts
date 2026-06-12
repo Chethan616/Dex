@@ -1,9 +1,3 @@
-import { formatTerminalLink } from "./terminal-link.js";
-
-function resolveDocsRoot(): string {
-  return "https://docs.openclaw.ai";
-}
-
 export function formatDocsLink(
   _path: string | undefined | null,
   _label?: string,

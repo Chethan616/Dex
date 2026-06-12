@@ -1,7 +1,7 @@
-// OpenClaw Control – Service Worker
+// Dex Control – Service Worker
 // Handles offline caching and push notifications.
 
-const CACHE_PREFIX = "openclaw-control-";
+const CACHE_PREFIX = "dex-control-";
 const EMBEDDED_CACHE_VERSION = "__DEX_CONTROL_UI_BUILD_ID__";
 const URL_CACHE_VERSION = new URL(self.location.href).searchParams
   .get("v")
@@ -107,10 +107,10 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data.json();
   } catch {
-    data = { title: "OpenClaw", body: event.data.text() };
+    data = { title: "Dex", body: event.data.text() };
   }
 
-  const title = data.title || "OpenClaw";
+  const title = data.title || "Dex";
   const options = {
     body: data.body || "",
     icon: "./apple-touch-icon.png",

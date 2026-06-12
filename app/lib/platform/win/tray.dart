@@ -21,6 +21,10 @@ import 'package:window_manager/window_manager.dart';
 /// When true, hitting X exits the process instead of hiding to tray.
 const String prefsKeyQuitOnClose = 'dex.window.quitOnClose';
 
+// NOTE: window size/position/maximized persistence moved to the native
+// runner (win32_window.cpp WINDOWPLACEMENT registry round-trip) -- the
+// old dex.window.maximized / dex.window.bounds prefs keys are gone.
+
 class DexTray with TrayListener {
   DexTray._();
   static final DexTray instance = DexTray._();

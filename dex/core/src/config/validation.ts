@@ -662,6 +662,22 @@ function mapZodIssueToConfigIssue(issue: unknown): ConfigValidationIssue {
   const pathItem = formatConfigPath(toConfigPathSegments(record?.path));
   const message = typeof record?.message === "string" ? record.message : "Invalid input";
 
+  // Bundled zod chunks can lose the en locale registration, collapsing
+  // every issue message to "Invalid input". unrecognized_keys carries the
+  // offending keys structurally, so rebuild the message from them instead
+  // of trusting zod's locale -- a root-level typo like `config set
+  // model.default ...` must name the bad key, not say "Invalid input".
+  if (record?.code === "unrecognized_keys" && Array.isArray(record.keys)) {
+    const keys = record.keys.filter((key): key is string => typeof key === "string");
+    if (keys.length > 0) {
+      const label = keys.length === 1 ? "key" : "keys";
+      return {
+        path: pathItem,
+        message: `Unrecognized ${label}: ${keys.map((key) => `"${key}"`).join(", ")}`,
+      };
+    }
+  }
+
   // Numeric ceiling/floor hints (too_big / too_small with numeric origin).
   // Append a parenthesized bound alongside Zod's native message,
   // matching the clarity that enum/union rejections get via (allowed: …).

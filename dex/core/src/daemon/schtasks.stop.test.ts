@@ -172,7 +172,7 @@ describe("Scheduled Task stop/restart cleanup", () => {
     await withPreparedGatewayTask(async ({ env, stdout }) => {
       pushSuccessfulSchtasksResponses(3);
       env.DEX_SERVICE_KIND = "node";
-      env.DEX_WINDOWS_TASK_NAME = "OpenClaw Node";
+      env.DEX_WINDOWS_TASK_NAME = "Dex Node";
       findVerifiedGatewayListenerPidsOnPortSync.mockReturnValue([4242]);
       inspectPortUsage.mockResolvedValue(busyPortUsage(4242));
 
@@ -183,8 +183,8 @@ describe("Scheduled Task stop/restart cleanup", () => {
       expect(killProcessTree).not.toHaveBeenCalled();
       expect(schtasksCalls).toEqual([
         ["/Query"],
-        ["/Query", "/TN", "OpenClaw Node"],
-        ["/End", "/TN", "OpenClaw Node"],
+        ["/Query", "/TN", "Dex Node"],
+        ["/End", "/TN", "Dex Node"],
       ]);
     });
   });
@@ -206,11 +206,11 @@ describe("Scheduled Task stop/restart cleanup", () => {
       expect(inspectPortUsage).toHaveBeenCalledTimes(2);
       expect(schtasksCalls).toEqual([
         ["/Query"],
-        ["/Query", "/TN", "OpenClaw Gateway"],
-        ["/End", "/TN", "OpenClaw Gateway"],
-        ["/Run", "/TN", "OpenClaw Gateway"],
+        ["/Query", "/TN", "Dex Gateway"],
+        ["/End", "/TN", "Dex Gateway"],
+        ["/Run", "/TN", "Dex Gateway"],
         ["/Query"],
-        ["/Query", "/TN", "OpenClaw Gateway", "/V", "/FO", "LIST"],
+        ["/Query", "/TN", "Dex Gateway", "/V", "/FO", "LIST"],
       ]);
     });
   });
@@ -219,7 +219,7 @@ describe("Scheduled Task stop/restart cleanup", () => {
     await withPreparedGatewayTask(async ({ env, stdout }) => {
       pushSuccessfulSchtasksResponses(4);
       env.DEX_SERVICE_KIND = "node";
-      env.DEX_WINDOWS_TASK_NAME = "OpenClaw Node";
+      env.DEX_WINDOWS_TASK_NAME = "Dex Node";
       findVerifiedGatewayListenerPidsOnPortSync.mockReturnValue([5151]);
       inspectPortUsage.mockResolvedValue(busyPortUsage(5151));
 
@@ -232,11 +232,11 @@ describe("Scheduled Task stop/restart cleanup", () => {
       expect(killProcessTree).not.toHaveBeenCalled();
       expect(schtasksCalls).toEqual([
         ["/Query"],
-        ["/Query", "/TN", "OpenClaw Node"],
-        ["/End", "/TN", "OpenClaw Node"],
-        ["/Run", "/TN", "OpenClaw Node"],
+        ["/Query", "/TN", "Dex Node"],
+        ["/End", "/TN", "Dex Node"],
+        ["/Run", "/TN", "Dex Node"],
         ["/Query"],
-        ["/Query", "/TN", "OpenClaw Node", "/V", "/FO", "LIST"],
+        ["/Query", "/TN", "Dex Node", "/V", "/FO", "LIST"],
       ]);
     });
   });
@@ -253,7 +253,7 @@ describe("Scheduled Task stop/restart cleanup", () => {
       await expect(restartScheduledTask({ env, stdout })).rejects.toThrow(
         "schtasks run failed: ERROR: Access is denied.",
       );
-      expect(schtasksCalls.at(-1)).toEqual(["/Run", "/TN", "OpenClaw Gateway"]);
+      expect(schtasksCalls.at(-1)).toEqual(["/Run", "/TN", "Dex Gateway"]);
     });
   });
 });

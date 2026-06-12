@@ -1,0 +1,141 @@
+// Floating voice settings panel: language + voice grid. Dex ships its own
+// voice name set (no reuse of any other product's voice catalogue).
+
+import 'dart:ui';
+
+import 'package:flutter/material.dart';
+
+import '../../theme/tokens.dart';
+import '../glossy_dropdown.dart';
+import '../refractive_edge.dart';
+
+class VoiceSettingsPanel extends StatefulWidget {
+  const VoiceSettingsPanel({super.key, required this.onClose});
+  final VoidCallback onClose;
+
+  static const List<String> voices = <String>[
+    'Dune', 'Mesa', 'Sandstorm', 'Canyon', 'Oasis', 'Arroyo', 'Saguaro', 'Atlas',
+  ];
+
+  @override
+  State<VoiceSettingsPanel> createState() => _VoiceSettingsPanelState();
+}
+
+class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
+  String _voice = VoiceSettingsPanel.voices.first;
+  String _lang = 'Auto-detect';
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 320,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          borderRadius: DexRadius.rmd,
+          boxShadow: DexSurface.glossyShadow,
+        ),
+        child: RefractiveEdge(
+          radius: DexRadius.rmd,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: DexSurface.blurSigma,
+              sigmaY: DexSurface.blurSigma,
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: DexSurface.glossyGradient(),
+              ),
+              padding: const EdgeInsets.all(DexSpace.lg),
+              child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text('Language',
+                          style: DexType.label(color: DexColors.text)),
+                    ),
+                    GlossyDropdown(
+                      value: _lang,
+                      options: const ['Auto-detect', 'English', 'Spanish', 'French'],
+                      onChanged: (v) => setState(() => _lang = v),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DexSpace.sm),
+                Text('Choose the language for voice conversations.',
+                    style: DexType.caption(color: DexColors.textFaint)),
+                const SizedBox(height: DexSpace.lg),
+                Text('Voice', style: DexType.label(color: DexColors.text)),
+                const SizedBox(height: DexSpace.sm),
+                GridView.count(
+                  shrinkWrap: true,
+                  crossAxisCount: 2,
+                  mainAxisSpacing: DexSpace.sm,
+                  crossAxisSpacing: DexSpace.sm,
+                  childAspectRatio: 2.6,
+                  children: VoiceSettingsPanel.voices
+                      .map((v) => _VoiceTile(
+                            label: v,
+                            selected: v == _voice,
+                            onTap: () => setState(() => _voice = v),
+                          ))
+                      .toList(growable: false),
+                ),
+                const SizedBox(height: DexSpace.md),
+                Text('Your conversation resets when you change voices.',
+                    style: DexType.caption(color: DexColors.textFaint)),
+                const SizedBox(height: DexSpace.md),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: widget.onClose,
+                    child: const Text('Close'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        ),
+      ),
+    );
+  }
+}
+
+
+class _VoiceTile extends StatelessWidget {
+  const _VoiceTile({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: DexRadius.rsm,
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? DexColors.accentQuiet : DexColors.surface,
+          borderRadius: DexRadius.rsm,
+          border: Border.all(
+            color: selected ? DexColors.accent : DexColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: DexType.label(
+            color: selected ? DexColors.accent : DexColors.text,
+          ),
+        ),
+      ),
+    );
+  }
+}

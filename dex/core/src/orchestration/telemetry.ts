@@ -118,7 +118,7 @@ export class MemoryTelemetryStore implements TelemetryStore {
   }
 
   statsByEngine(processName: string): Record<EngineId, EngineRunStats> {
-    const out: Record<EngineId, EngineRunStats> = {};
+    const out = {} as Record<EngineId, EngineRunStats>;
     for (const row of this.rows) {
       if (row.processName !== processName) continue;
       const key = row.engineId;

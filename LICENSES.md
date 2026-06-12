@@ -14,6 +14,7 @@ Status legend: `✓ verified` · `△ pending` (filled in during the phase that 
 | Microsoft UFO² | MIT (per README badge) | `MIT` | https://github.com/microsoft/UFO | △ pending — confirm in Phase 2 by reading `vendor/UFO/LICENSE` |
 | browser-use | MIT (per manifest.json) | `MIT` | https://github.com/browser-use/browser-use | △ pending — confirm by reading `vendor/browser-use/LICENSE` |
 | Playwright (transitive of browser-use) | Apache-2.0 | `Apache-2.0` | https://github.com/microsoft/playwright | △ pending |
+| agent-zero (UI/UX + prompt-architecture reference; concepts ported into Dex step rows + modes) | MIT (© Agent Zero, s.r.o.) | `MIT` | https://github.com/agent0ai/agent-zero — pinned `f9d8167a0004632ea7d8b37f585f392c39865919`, cloned 2026-06-11 | ✓ confirmed in `vendor/agent-zero/LICENSE` |
 
 ### External `@openclaw/*` npm dependencies (preserved upstream, NOT rebranded)
 

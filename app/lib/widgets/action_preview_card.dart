@@ -2,11 +2,13 @@
 // mono steps, Approve (accent) / Deny. Highest-contrast element by design.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../core/models/action_preview.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'action_step.dart';
+import 'refractive_edge.dart';
 
 class ActionPreviewCard extends StatelessWidget {
   const ActionPreviewCard({
@@ -22,23 +24,37 @@ class ActionPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Two-shell structure: outer amber-stroked container preserves the
+    // design.md "needs your attention" signal; the inner RefractiveEdge
+    // + glossy gradient gives the same apple-grade glass treatment the
+    // rest of the chrome uses. Amber stays the loudest element so the
+    // user's eye still lands here first.
     return AnimatedContainer(
       duration: DexMotion.respecting(context, DexMotion.medium),
       curve: DexMotion.respectingCurve(context, DexMotion.easeOut),
       decoration: BoxDecoration(
-        color: DexColors.surface,
         borderRadius: DexRadius.rmd,
         border: Border.all(color: DexColors.stateAwaiting, width: 1.5),
-        boxShadow: DexElevation.floating,
+        boxShadow: DexSurface.glossyShadow,
       ),
-      padding: const EdgeInsets.all(DexSpace.lg),
-      child: Column(
+      // 1.5px inset to clear the amber stroke before the refractive rim
+      // starts, so the two stack visibly rather than overlap.
+      padding: const EdgeInsets.all(1.5),
+      child: RefractiveEdge(
+        radius: BorderRadius.circular(10),
+        intensity: 0.85,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: DexSurface.glossyGradient(),
+          ),
+          padding: const EdgeInsets.all(DexSpace.lg),
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              Icon(Icons.warning_amber_rounded, size: 16, color: DexColors.stateAwaiting),
+              Icon(LucideIcons.triangle_alert, size: 16, color: DexColors.stateAwaiting),
               const SizedBox(width: DexSpace.sm),
               Text(
                 'Action Preview',
@@ -72,6 +88,8 @@ class ActionPreviewCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+        ),
       ),
     );
   }

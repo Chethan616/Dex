@@ -6,6 +6,7 @@
 // picks a tool the registry hasn't been taught about yet.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 class ToolDescriptor {
   final String friendlyName;
@@ -16,20 +17,20 @@ class ToolDescriptor {
 /// Lookup keyed by MCP tool id (the `name` exposed by each MCP server).
 const Map<String, ToolDescriptor> _toolRegistry = <String, ToolDescriptor>{
   // Dex-built MCP servers.
-  'windows-desktop-control': ToolDescriptor('Windows app', Icons.desktop_windows),
-  'browser-control':         ToolDescriptor('Browser',     Icons.public),
+  'windows-desktop-control': ToolDescriptor('Windows app', LucideIcons.monitor),
+  'browser-control':         ToolDescriptor('Browser',     LucideIcons.globe),
 
   // Dex brain's built-in tools that we want to surface explicitly.
-  'bash':    ToolDescriptor('Shell',      Icons.terminal),
-  'process': ToolDescriptor('Process',    Icons.memory),
-  'read':    ToolDescriptor('File read',  Icons.description),
-  'write':   ToolDescriptor('File write', Icons.edit_document),
-  'edit':    ToolDescriptor('File edit',  Icons.edit_note),
-  'browser': ToolDescriptor('Browser',    Icons.public),
+  'bash':    ToolDescriptor('Shell',      LucideIcons.terminal),
+  'process': ToolDescriptor('Process',    LucideIcons.cpu),
+  'read':    ToolDescriptor('File read',  LucideIcons.file_text),
+  'write':   ToolDescriptor('File write', LucideIcons.file_pen),
+  'edit':    ToolDescriptor('File edit',  LucideIcons.pencil_line),
+  'browser': ToolDescriptor('Browser',    LucideIcons.globe),
 
   // Common bare tool names that show up from agent runtimes.
-  'run_desktop_task': ToolDescriptor('Windows app', Icons.desktop_windows),
-  'run_browser_task': ToolDescriptor('Browser',     Icons.public),
+  'run_desktop_task': ToolDescriptor('Windows app', LucideIcons.monitor),
+  'run_browser_task': ToolDescriptor('Browser',     LucideIcons.globe),
 };
 
 ToolDescriptor descriptorFor(String toolId) {
@@ -44,5 +45,5 @@ ToolDescriptor descriptorFor(String toolId) {
     final hit = _toolRegistry[v];
     if (hit != null) return hit;
   }
-  return ToolDescriptor(toolId, Icons.extension);
+  return ToolDescriptor(toolId, LucideIcons.puzzle);
 }

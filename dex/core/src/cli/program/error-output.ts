@@ -37,8 +37,14 @@ function formatHelpHint(argv: string[] | undefined, options?: { root?: boolean }
   return `${theme.muted("Try:")} ${theme.command(resolveHelpCommand(argv, options))}`;
 }
 
-function formatDocsHint(): string {
-  return `${theme.muted("Docs:")} ${formatDocsLink("/cli", "docs.openclaw.ai/cli")}`;
+function formatDocsHint(): string | undefined {
+  // formatDocsLink is stubbed empty until Dex has a docs site; emitting a
+  // bare "Docs:" line would read as broken output.
+  const link = formatDocsLink("/cli", "docs.dex/cli");
+  if (!link) {
+    return undefined;
+  }
+  return `${theme.muted("Docs:")} ${link}`;
 }
 
 export function formatCliParseErrorOutput(
@@ -50,7 +56,7 @@ export function formatCliParseErrorOutput(
   if (unknownCommand) {
     const command = unknownCommand[1] ?? "";
     return lines(
-      theme.error(`OpenClaw does not know the command ${quote(command)}.`),
+      theme.error(`Dex does not know the command ${quote(command)}.`),
       formatHelpHint(options.argv, { root: true }),
       `${theme.muted("Plugin command?")} ${theme.command(formatCliCommand("dex plugins list"))}`,
       formatDocsHint(),
@@ -61,7 +67,7 @@ export function formatCliParseErrorOutput(
   if (unknownOption) {
     const option = unknownOption[1] ?? "";
     return lines(
-      theme.error(`OpenClaw does not recognize option ${quote(option)}.`),
+      theme.error(`Dex does not recognize option ${quote(option)}.`),
       formatHelpHint(options.argv),
     );
   }
@@ -89,7 +95,7 @@ export function formatCliParseErrorOutput(
   }
 
   return lines(
-    theme.error(`OpenClaw could not parse this command: ${message}`),
+    theme.error(`Dex could not parse this command: ${message}`),
     formatHelpHint(options.argv),
   );
 }

@@ -103,6 +103,11 @@ Register-McpServer -Name 'windows-desktop-control' -Config @{
     command = $ufoVenvPy
     args    = @((Join-Path $wdcDir 'server.py'))
     cwd     = $wdcDir
+    # dex-core's MCP client defaults to a 60s request timeout; UFO2 tasks
+    # legitimately run up to server.py's 300s cap. Without this the gateway
+    # kills run_desktop_task with "MCP error -32001: Request timed out"
+    # long before UFO2 finishes. 330s = server cap + wind-down margin.
+    requestTimeoutMs = 330000
 }
 
 # ---- 2. browser-control -----------------------------------------------------
@@ -170,6 +175,9 @@ Register-McpServer -Name 'browser-control' -Config @{
     command = $bcVenvPy
     args    = @((Join-Path $bcDir 'server.py'))
     cwd     = $bcDir
+    # Browser tasks default to 180s in server.py; 210s leaves wind-down
+    # margin over dex-core's 60s MCP-client default (see note above).
+    requestTimeoutMs = 210000
     env     = @{
         GEMINI_API_KEY      = ($geminiKey | ForEach-Object { if ($_) { $_ } else { '' } })
         DEX_BROWSER_PROVIDER = 'google'

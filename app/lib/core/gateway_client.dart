@@ -25,6 +25,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 
 import 'models/gateway_event.dart';
+import 'send_options.dart';
 
 enum GatewayConnState { disconnected, connecting, handshaking, ready, failed }
 
@@ -85,7 +86,14 @@ class GatewayConfig {
 }
 
 class GatewayClient extends ChangeNotifier {
-  GatewayClient(this._config);
+  GatewayClient(this._config) {
+    current = this;
+  }
+
+  /// The most recently constructed client. Dex runs exactly one gateway
+  /// connection per window; surfaces that live outside the store-passing
+  /// tree (Settings dialog tabs) reach the connection through this.
+  static GatewayClient? current;
 
   final GatewayConfig _config;
   final _uuid = const Uuid();
@@ -224,6 +232,11 @@ class GatewayClient extends ChangeNotifier {
         'sessionKey': _config.sessionKey,
         'message': text,
         'idempotencyKey': idempotencyKey,
+        // Per-turn mode from the composer pill (ChatSendParamsSchema
+        // supports both natively): Fast -> fastMode+thinking off,
+        // Think deeper -> thinking high.
+        if (SendOptions.thinking != null) 'thinking': SendOptions.thinking,
+        if (SendOptions.fastMode != null) 'fastMode': SendOptions.fastMode,
       },
     }));
 
@@ -234,6 +247,54 @@ class GatewayClient extends ChangeNotifier {
         throw TimeoutException('gateway did not ack chat.send within 30s');
       },
     );
+  }
+
+  /// Generic request/response RPC against the gateway. Resolves with the
+  /// res frame's payload on ok; throws [StateError] when the gateway
+  /// rejects the method (bad scope, unknown method, invalid params).
+  ///
+  /// Used by the Connectors & Apps panel for `config.get` /
+  /// `channels.status`; any read-scope gateway method works.
+  Future<Map<String, dynamic>> request(
+    String method, {
+    Map<String, dynamic> params = const <String, dynamic>{},
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
+    await waitReady();
+    final ws = _ws;
+    if (ws == null) {
+      throw StateError('gateway socket missing');
+    }
+    final reqId = _uuid.v4();
+    final completer = Completer<Map<String, dynamic>>();
+    StreamSubscription<dynamic>? once;
+    once = events.listen((evt) {
+      if (evt.raw?['_correlationId'] != reqId) return;
+      final ok = evt.raw?['_resOk'] == true;
+      if (ok) {
+        final payload =
+            (evt.raw?['payload'] as Map?)?.cast<String, dynamic>() ??
+                const <String, dynamic>{};
+        if (!completer.isCompleted) completer.complete(payload);
+      } else {
+        final err = (evt.raw?['error'] as Map?)?.cast<String, dynamic>();
+        if (!completer.isCompleted) {
+          completer.completeError(
+              StateError('$method rejected: ${err ?? evt.raw}'));
+        }
+      }
+      once?.cancel();
+    });
+    ws.sink.add(jsonEncode(<String, dynamic>{
+      'type': 'req',
+      'id': reqId,
+      'method': method,
+      'params': params,
+    }));
+    return completer.future.timeout(timeout, onTimeout: () {
+      once?.cancel();
+      throw TimeoutException('$method timed out after ${timeout.inSeconds}s');
+    });
   }
 
   /// Approval / denial side-channel.
@@ -339,9 +400,10 @@ class GatewayClient extends ChangeNotifier {
           'mode': 'ui',                  // GATEWAY_CLIENT_MODES.UI
         },
         // Role + scopes verified from src/shared/operator-scope-compat.ts.
-        // chat.send needs operator.write.
+        // chat.send needs operator.write; config.get / channels.status
+        // (the Connectors & Apps panel) need operator.read.
         'role': 'operator',
-        'scopes': <String>['operator.write'],
+        'scopes': <String>['operator.read', 'operator.write'],
         'auth': <String, dynamic>{'token': _config.token},
       },
     }));

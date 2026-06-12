@@ -13,32 +13,31 @@ import 'package:flutter/material.dart';
 class DexColors {
   const DexColors._();
 
-  // base -- dark
-  static const Color bg = Color(0xFF0B0C0E);
-  static const Color surface = Color(0xFF141619);
-  static const Color surface2 = Color(0xFF1C1F24);
-  static const Color border = Color(0xFF272B31);
+  // base -- bright cool blue/black family. Aligned with DexSurface.
+  // bgGradient so the wallpaper, the sidebar, and the elevated panels
+  // all read as one Apple-Materials-style palette: deep navy bottoms,
+  // near-black tops, vivid blue accents.
+  static const Color bg = Color(0xFF050B1F);
+  static const Color surface = Color(0xFF0C1530);
+  static const Color surface2 = Color(0xFF152244);
+  static const Color border = Color(0xFF2A3858);
 
-  // text -- warm beach-sand family, matching the dex-core terminal palette
-  // (DEX_PALETTE.accent = #D4A574). The conversation reads as sand-on-deep-
-  // navy instead of the old gray-on-near-black that rendered orange-ish on
-  // some Windows monitors.
-  static const Color text = Color(0xFFF0E2C7);      // warm cream
-  static const Color textDim = Color(0xFFB8A37A);   // mid sand-tan
-  static const Color textFaint = Color(0xFF7A6A4E); // deep sand
+  // text -- off-white through cool gray with a barely-there cool tint.
+  static const Color text = Color(0xFFECEFF7);      // off-white
+  static const Color textDim = Color(0xFF9BA3B8);   // cool mid-gray
+  static const Color textFaint = Color(0xFF5E677F); // deep cool gray
 
-  // accent -- sand (was blue #5BA8FF). Keep usage sparse; the engine
-  // pills + chips already carry semantic color, so accent only paints
-  // primary buttons + focus rings.
-  static const Color accent = Color(0xFFD4A574);
-  static const Color accentQuiet = Color(0xFF2E2418);
+  // accent -- vivid sky blue for primary buttons + focus rings. Brighter
+  // than the previous muted #6EA8FE so it pops against the navy gradient.
+  static const Color accent = Color(0xFF60A5FF);
+  static const Color accentQuiet = Color(0xFF1A2547);
 
   // agent state -- semantic, NOT decorative
-  static const Color stateIdle = Color(0xFF7A6A4E);      // deep sand (== textFaint family)
+  static const Color stateIdle = Color(0xFF5E677F);      // cool gray (== textFaint)
   static const Color stateThinking = Color(0xFFB58CFF);  // violet pulse
-  static const Color stateActing = Color(0xFFD4A574);    // warm sand (== accent)
+  static const Color stateActing = Color(0xFF60A5FF);    // sky blue (== accent)
   static const Color stateApprove = Color(0xFF3DD68C);   // green
-  static const Color stateAwaiting = Color(0xFFE0B870);  // muted amber-sand (less loud)
+  static const Color stateAwaiting = Color(0xFFFFB454);  // amber (only warm hit -- semantic urgency)
   static const Color stateError = Color(0xFFFF6B6B);     // red
 
   // Map an AgentState enum value to its token color.
@@ -109,12 +108,106 @@ class DexSpace {
 
 class DexRadius {
   const DexRadius._();
-  static const Radius sm = Radius.circular(6);    // chips, inputs
-  static const Radius md = Radius.circular(10);   // cards
-  static const Radius lg = Radius.circular(16);   // sheets, modals
+  // Apple-leaning corner ladder. Larger than Material defaults so cards
+  // feel pillowy + iOS-Materials-ish; smaller details (chips, inputs)
+  // still stay tight at 8px.
+  static const Radius sm = Radius.circular(8);     // chips, inputs
+  static const Radius md = Radius.circular(14);    // cards, surfaces
+  static const Radius lg = Radius.circular(20);    // sheets, modals
+  static const Radius xl = Radius.circular(28);    // composer pill, big bubbles
+  static const Radius pill = Radius.circular(999); // suggestion chips, mode pills
   static const BorderRadius rsm = BorderRadius.all(sm);
   static const BorderRadius rmd = BorderRadius.all(md);
   static const BorderRadius rlg = BorderRadius.all(lg);
+  static const BorderRadius rxl = BorderRadius.all(xl);
+  static const BorderRadius rpill = BorderRadius.all(pill);
+}
+
+// =============================================================================
+//    SURFACE -- gradient + acrylic alphas for the Copilot-style shell.
+// =============================================================================
+
+class DexSurface {
+  const DexSurface._();
+
+  // Background gradient -- a wide "fog" glow centred below the screen.
+  // The original linear gradient went dark-at-top → royal-navy-at-bottom;
+  // this radial does the same vertical distribution but with a soft
+  // fog/light-source character instead of a flat linear fade. The
+  // glow's focal point sits beneath the screen at Alignment(0, 1.3)
+  // and a generous radius (1.5) lets the brightness diffuse all along
+  // the bottom edge -- not just one corner -- before fading up into
+  // deep navy-black at the top.
+  static const RadialGradient bgGradient = RadialGradient(
+    center: Alignment(0, 1.3),
+    radius: 1.5,
+    colors: <Color>[
+      Color(0xFF4F8CFF),
+      Color(0xFF1F3580),
+      Color(0xFF0A1235),
+      Color(0xFF040A1A),
+    ],
+    stops: <double>[0.0, 0.3, 0.65, 1.0],
+  );
+
+  static const LinearGradient bgGradientLight = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: <Color>[
+      Color(0xFFFAF6EE),
+      Color(0xFFF4ECDB),
+      Color(0xFFE9DDC2),
+    ],
+    stops: <double>[0.0, 0.55, 1.0],
+  );
+
+  // Acrylic alpha applied to surface2 for floating panels (composer,
+  // popup menus, spotlight overlay, settings cards). Pair with a
+  // BackdropFilter blur of 14 to read as Fluent acrylic.
+  static const double acrylicAlpha = 0.82;
+  static const double acrylicAlphaQuiet = 0.66;
+  static const double blurSigma = 14;
+
+  // ---------------- glossy helpers (Apple Materials-ish) ----------------
+  // Cards / composer / overlay surfaces opt into glossiness via these
+  // three primitives: a top-left-bright bottom-right-dim gradient, a
+  // hairline white-alpha edge highlight, and a soft drop shadow.
+
+  /// Top-left → bottom-right gradient sheen for elevated cards. `alpha`
+  /// is the base opacity for the whole gradient (pass acrylicAlpha to
+  /// match the existing composer treatment).
+  static LinearGradient glossyGradient({double alpha = acrylicAlpha}) {
+    final hi = (alpha).clamp(0.0, 1.0);
+    final lo = (alpha * 0.85).clamp(0.0, 1.0);
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: <Color>[
+        Color.fromRGBO(0x26, 0x3C, 0x6E, hi), // top-left brighter navy
+        Color.fromRGBO(0x0A, 0x12, 0x2A, lo), // bottom-right deep navy
+      ],
+    );
+  }
+
+  /// Hairline white-alpha border for the top edge of a glossy card.
+  /// Sits over the gradient and gives the "glass edge" highlight Apple
+  /// uses on Materials surfaces.
+  static Border glossyBorder() => Border.all(
+        color: const Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.08),
+        width: 1,
+      );
+
+  /// Soft drop shadow under glossy floating surfaces. Slightly deeper
+  /// + spread-negative compared to DexElevation.floating so the card
+  /// reads as lifted off the gradient bg rather than glued to it.
+  static const List<BoxShadow> glossyShadow = <BoxShadow>[
+    BoxShadow(
+      color: Color.fromRGBO(0, 0, 0, 0.35),
+      blurRadius: 28,
+      spreadRadius: -6,
+      offset: Offset(0, 14),
+    ),
+  ];
 }
 
 // =============================================================================
