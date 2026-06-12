@@ -112,6 +112,10 @@ def run_desktop_task(
             None,
         )
 
+    # Cold-start gate: the first task waits for the boot warmup to finish
+    # so it spawns into a warm (Defender-scanned, bytecode-cached) venv.
+    _await_warmup()
+
     request = goal if not app_hint else f"In {app_hint}, {goal}"
     cmd = [
         str(py), "-m", "ufo",
@@ -263,18 +267,26 @@ def _summarize(stdout: str, stderr: str, rc: int) -> tuple[str, list[str]]:
     return summary, stdout_tail + stderr_tail
 
 
-def _warm_up_ufo() -> None:
-    """Fire-and-forget `python -m ufo --help` at server startup.
+# Warmup subprocess handle. The first real task GATES on this finishing
+# (see _await_warmup) -- spawning a second cold python while the warmup
+# is still paying the Defender venv-scan bill starves BOTH processes;
+# observed twice as a 300s run with zero stdout/stderr.
+_warmup_proc: subprocess.Popen | None = None
+_warmup_done = False
 
-    UFO2 imports are ~3s warm but MINUTES on a cold machine: Windows
+
+def _warm_up_ufo() -> None:
+    """Spawn `python -m ufo --help` at server startup.
+
+    UFO2 imports are ~1-3s warm but MINUTES on a cold machine: Windows
     Defender real-time scans every .py/.pyd in the venv on first load
-    after boot, and the first real task pays that bill inside its
-    timeout_s budget (observed: a 300s run that never reached step 1).
-    Warming at server start moves the scan + bytecode caching to gateway
-    boot, where nobody is waiting on a reply.
+    after boot. Warming at server start moves that bill to gateway boot;
+    the first task then waits for the warmup instead of double-spawning
+    into the same cold scan.
     """
+    global _warmup_proc
     try:
-        subprocess.Popen(
+        _warmup_proc = subprocess.Popen(
             [str(UFO_VENV_PY), "-m", "ufo", "--help"],
             cwd=str(UFO_ROOT),
             stdout=subprocess.DEVNULL,
@@ -283,6 +295,23 @@ def _warm_up_ufo() -> None:
         )
     except OSError:
         pass  # venv missing -- run_desktop_task surfaces the real error.
+
+
+def _await_warmup(max_wait_s: int = 240) -> None:
+    """Block the FIRST task until the warmup subprocess exits (or the
+    grace cap passes). Runs outside the task's own timeout budget, so a
+    cold-start Defender scan no longer eats the user's 300s."""
+    global _warmup_done, _warmup_proc
+    if _warmup_done:
+        return
+    proc = _warmup_proc
+    if proc is not None:
+        try:
+            proc.wait(timeout=max_wait_s)
+        except subprocess.TimeoutExpired:
+            pass  # proceed anyway; better than blocking forever
+    _warmup_done = True
+    _warmup_proc = None
 
 
 if __name__ == "__main__":
