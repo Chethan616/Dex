@@ -110,8 +110,8 @@ def run_desktop_task(
     if py is None:
         return result(
             False,
-            "UFO2 Python not found. Install Python 3.10/3.11, create venv at "
-            "vendor/UFO/.venv, then `pip install -r vendor/UFO/requirements.txt`.",
+            "UFO2 Python not found. Run `dex engines setup` to build it "
+            "(clones UFO² + creates its venv under ~/.dex/engines/UFO).",
             [],
             task_id,
             None,
@@ -195,9 +195,9 @@ def run_desktop_task(
         return result(
             False,
             "LLM quota exhausted -- UFO2's model returned 429 "
-            f"({quota_error[:160]}). Switch the desktop-automation model in "
-            "vendor/UFO/config/ufo/agents.yaml or wait for the quota reset. "
-            "GUI automation cannot run until the model has quota.",
+            f"({quota_error[:160]}). Move the hands to a free Groq key in the "
+            "Dex app (Settings -> Account -> Secrets -> Offload to Groq), or "
+            "wait for the quota reset. GUI automation needs model quota.",
             stderr.strip().splitlines()[-6:],
             task_id,
             log_path,

@@ -9,9 +9,11 @@
 # Prereqs (build machine only):
 #   - Flutter SDK, Node 24, pnpm (the dev stack you already have)
 #   - WiX v5:  dotnet tool install --global wix
-#   - Working venvs at vendor/UFO/.venv + vendor/browser-use/.venv
-#     (they are packaged as-is — venvs are machine-arch specific, which
-#     is fine: we build on x64 Windows for x64 Windows)
+#   - Engine venvs built via `dex engines setup` into ~/.dex/engines
+#     (clones UFO², pip-installs browser-use + Playwright Chromium).
+#     Override the source with $env:DEX_ENGINES_DIR; falls back to a
+#     local vendor/ tree if one exists. Venvs are packaged as-is — they
+#     are arch-specific, which is fine: x64 Windows builds for x64.
 #
 # Usage:
 #   .\scripts\build-installer.ps1                 # full build
@@ -93,12 +95,26 @@ Stage "Staging MCP drivers"
 Copy-Item (Join-Path $repo 'dex\drivers') (Join-Path $runtime 'drivers') -Recurse -Force
 
 Stage "Staging UFO² + browser-use (sources + prebuilt venvs; this is the big copy)"
+# Engines are NOT vendored in the repo anymore. Build them on this
+# machine first with `dex engines setup` (clones UFO, pip-installs
+# browser-use + Playwright) into ~/.dex/engines, then bundle from there.
+# Fall back to a local vendor/ tree if one still exists (transition).
+$enginesSrc = if ($env:DEX_ENGINES_DIR) { $env:DEX_ENGINES_DIR }
+              elseif (Test-Path (Join-Path $env:USERPROFILE '.dex\engines\UFO')) {
+                  Join-Path $env:USERPROFILE '.dex\engines'
+              } else { Join-Path $repo 'vendor' }
+Stage "  engine source: $enginesSrc"
+$ufoSrc = Join-Path $enginesSrc 'UFO'
+$browserSrc = Join-Path $enginesSrc 'browser-use'
+if (-not (Test-Path (Join-Path $ufoSrc '.venv')) -or -not (Test-Path (Join-Path $browserSrc '.venv'))) {
+    throw "Missing engine venvs under $enginesSrc. Run ``dex engines setup`` first (builds ~/.dex/engines)."
+}
 $vendorOut = Join-Path $runtime 'vendor'
 New-Item -ItemType Directory -Force $vendorOut | Out-Null
 # robocopy excludes the giant caches that the runtimes don't need.
-robocopy (Join-Path $repo 'vendor\UFO') (Join-Path $vendorOut 'UFO') /E /NFL /NDL /NJH /NJS `
+robocopy $ufoSrc (Join-Path $vendorOut 'UFO') /E /NFL /NDL /NJH /NJS `
     /XD .git logs __pycache__ | Out-Null
-robocopy (Join-Path $repo 'vendor\browser-use') (Join-Path $vendorOut 'browser-use') /E /NFL /NDL /NJH /NJS `
+robocopy $browserSrc (Join-Path $vendorOut 'browser-use') /E /NFL /NDL /NJH /NJS `
     /XD .git logs __pycache__ playwright-cache | Out-Null
 
 # ---- 4b. Windowless gateway launcher (Startup-folder shortcut targets it) ---

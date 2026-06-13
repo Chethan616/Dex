@@ -1,3 +1,11 @@
+# --- vendored engine runtimes (NOT in the repo) ---
+# The repo is just the Dex agent (dex/) + the Flutter app (app/). The
+# heavy Python engines (UFO² ~1.7G, browser-use ~429M) are NOT vendored:
+# `dex engines setup` clones/pip-installs them into ~/.dex/engines, and
+# the MSI bundles prebuilt venvs from a build machine. vendor/ may still
+# exist locally as a working setup, but it never enters the repo.
+/vendor/
+
 # --- secrets & user-pasted keys (never commit) ---
 vendor/UFO/config/ufo/agents.yaml
 # Phase B.9 restructure: vendor/openclaw/ moved to dex/core/. Keep the old
