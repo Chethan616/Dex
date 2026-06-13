@@ -12,11 +12,20 @@ import '../refractive_edge.dart';
 import 'tabs/about_tab.dart';
 import 'tabs/account_tab.dart';
 import 'tabs/connectors_tab.dart';
+import 'tabs/diagnostics_tab.dart';
 import 'tabs/memory_tab.dart';
 import 'tabs/preferences_tab.dart';
 import 'tabs/privacy_tab.dart';
 
-enum SettingsTab { preferences, memory, account, connectors, privacy, about }
+enum SettingsTab {
+  preferences,
+  memory,
+  account,
+  connectors,
+  diagnostics,
+  privacy,
+  about,
+}
 
 extension on SettingsTab {
   String get label => switch (this) {
@@ -24,6 +33,7 @@ extension on SettingsTab {
         SettingsTab.memory => 'Memory',
         SettingsTab.account => 'Account',
         SettingsTab.connectors => 'Connectors & Apps',
+        SettingsTab.diagnostics => 'Diagnostics',
         SettingsTab.privacy => 'Privacy',
         SettingsTab.about => 'About',
       };
@@ -144,6 +154,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
         return const AccountTab();
       case SettingsTab.connectors:
         return const ConnectorsTab();
+      case SettingsTab.diagnostics:
+        return const DiagnosticsTab();
       case SettingsTab.privacy:
         return const PrivacyTab();
       case SettingsTab.about:

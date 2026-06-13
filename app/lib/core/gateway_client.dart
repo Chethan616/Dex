@@ -24,6 +24,7 @@ import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 
+import 'log.dart';
 import 'models/gateway_event.dart';
 import 'send_options.dart';
 
@@ -116,6 +117,13 @@ class GatewayClient extends ChangeNotifier {
     if (_state == s && error == _lastError) return;
     _state = s;
     _lastError = error;
+    // Surface every connection transition in the in-app Diagnostics
+    // panel; failures are errors, the rest are info.
+    if (s == GatewayConnState.failed) {
+      DexLog.e('gateway', error ?? 'connection failed');
+    } else {
+      DexLog.i('gateway', error == null ? s.name : '${s.name}: $error');
+    }
     notifyListeners();
   }
 
@@ -279,6 +287,7 @@ class GatewayClient extends ChangeNotifier {
       } else {
         final err = (evt.raw?['error'] as Map?)?.cast<String, dynamic>();
         if (!completer.isCompleted) {
+          DexLog.e('rpc', '$method rejected: ${err ?? evt.raw}');
           completer.completeError(
               StateError('$method rejected: ${err ?? evt.raw}'));
         }
@@ -293,6 +302,7 @@ class GatewayClient extends ChangeNotifier {
     }));
     return completer.future.timeout(timeout, onTimeout: () {
       once?.cancel();
+      DexLog.e('rpc', '$method timed out after ${timeout.inSeconds}s');
       throw TimeoutException('$method timed out after ${timeout.inSeconds}s');
     });
   }

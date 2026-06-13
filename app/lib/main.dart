@@ -27,6 +27,7 @@ import 'core/account.dart';
 import 'core/dex_setup.dart';
 import 'core/gateway_client.dart';
 import 'core/gateway_process.dart';
+import 'core/log.dart';
 import 'core/onboarding_request.dart';
 import 'core/state/conversation_store.dart';
 import 'platform/win/tray.dart';
@@ -47,6 +48,9 @@ final GlobalKey<NavigatorState> dexNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Route uncaught framework + zone errors into the in-app Diagnostics
+  // panel so crashes are visible without a console.
+  DexLog.installGlobalHandlers();
   SystemChrome.setApplicationSwitcherDescription(
     const ApplicationSwitcherDescription(label: 'Dex'),
   );

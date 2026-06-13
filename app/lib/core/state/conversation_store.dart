@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../gateway_client.dart';
+import '../log.dart';
 import '../models/action_preview.dart';
 import '../models/action_step.dart';
 import '../models/agent_state.dart';
@@ -313,6 +314,13 @@ class ConversationStore extends ChangeNotifier {
   void _applyErrorOrAborted(GatewayEvent evt) {
     final aborted = evt.kind == GatewayEventKind.aborted;
     final detail = (evt.deltaText ?? '').trim();
+    // Mirror to Diagnostics so a failed turn leaves a trace even after
+    // the chat bubble scrolls away.
+    if (aborted) {
+      DexLog.w('agent', 'run aborted${detail.isEmpty ? '' : ': $detail'}');
+    } else {
+      DexLog.e('agent', 'turn error${detail.isEmpty ? '' : ': $detail'}');
+    }
     final text = aborted
         ? 'That run was stopped before it finished.'
             '${detail.isEmpty ? '' : ' ($detail)'} Try sending it again.'
