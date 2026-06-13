@@ -72,6 +72,21 @@ class DexSetupState {
   bool get needsOnboarding => !hasConfig || !hasGatewayToken || !hasBrainKey;
 }
 
+/// Health of one built-in automation engine, resolved from the live
+/// dex.json mcp.servers entry by checking its python + driver on disk.
+class EngineStatus {
+  const EngineStatus({
+    required this.label,
+    required this.ready,
+    required this.detail,
+  });
+  final String label;
+  final bool ready;
+
+  /// Resolved python path when ready, else a one-line reason.
+  final String detail;
+}
+
 class DexSetup {
   DexSetup._();
 
@@ -126,6 +141,42 @@ class DexSetup {
       if (yaml.existsSync()) return yaml;
     }
     return null;
+  }
+
+  /// Live health of the built-in engines, checked against disk. Reads
+  /// each engine's mcp.servers entry (written by the installer /
+  /// `dex engines setup` / install-skills) and verifies its python venv
+  /// + driver server.py exist, so the app can SHOW "ready / unavailable"
+  /// instead of the user guessing why a task did nothing.
+  static List<EngineStatus> engineStatus() {
+    final servers = (_readJson(dexJsonFile)['mcp'] as Map?)?['servers'] as Map?;
+    return <EngineStatus>[
+      _engineStatus(servers, 'windows-desktop-control', 'Desktop · UFO²'),
+      _engineStatus(servers, 'browser-control', 'Browser · browser-use'),
+    ];
+  }
+
+  static EngineStatus _engineStatus(Map? servers, String id, String label) {
+    final s = servers?[id] as Map?;
+    if (s == null) {
+      return EngineStatus(
+          label: label, ready: false, detail: 'not configured — run `dex engines setup`');
+    }
+    if (s['enabled'] == false) {
+      return EngineStatus(label: label, ready: false, detail: 'disabled in config');
+    }
+    final cmd = (s['command'] as String?)?.trim();
+    final args = s['args'];
+    final serverPy = (args is List && args.isNotEmpty) ? args.first as String? : null;
+    if (cmd == null || cmd.isEmpty || !File(cmd).existsSync()) {
+      return EngineStatus(
+          label: label, ready: false, detail: 'python venv missing: ${cmd ?? '(unset)'}');
+    }
+    if (serverPy == null || serverPy.isEmpty || !File(serverPy).existsSync()) {
+      return EngineStatus(
+          label: label, ready: false, detail: 'driver missing: ${serverPy ?? '(unset)'}');
+    }
+    return EngineStatus(label: label, ready: true, detail: cmd);
   }
 
   static DexSetupState read() {

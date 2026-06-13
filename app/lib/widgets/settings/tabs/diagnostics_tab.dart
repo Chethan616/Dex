@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../../../core/dex_setup.dart';
 import '../../../core/log.dart';
 import '../../../theme/tokens.dart';
 import '../settings_row.dart';
@@ -76,6 +77,8 @@ class _DiagnosticsTabState extends State<DiagnosticsTab> {
               ],
             ),
             const SizedBox(height: DexSpace.md),
+            _EnginesHealth(),
+            const SizedBox(height: DexSpace.md),
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -141,6 +144,85 @@ class _DiagnosticsTabState extends State<DiagnosticsTab> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Built-in engine health, read from disk. A stateful refresh lets the
+// user re-check after running `dex engines setup` without reopening.
+class _EnginesHealth extends StatefulWidget {
+  @override
+  State<_EnginesHealth> createState() => _EnginesHealthState();
+}
+
+class _EnginesHealthState extends State<_EnginesHealth> {
+  late List<EngineStatus> _engines = DexSetup.engineStatus();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: DexColors.surface,
+        borderRadius: DexRadius.rmd,
+        border: Border.all(color: DexColors.border),
+      ),
+      padding: const EdgeInsets.symmetric(
+          horizontal: DexSpace.md, vertical: DexSpace.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('Engines',
+                    style: DexType.label(color: DexColors.textDim)),
+              ),
+              InkWell(
+                onTap: () =>
+                    setState(() => _engines = DexSetup.engineStatus()),
+                borderRadius: DexRadius.rsm,
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(LucideIcons.refresh_cw,
+                      size: 13, color: DexColors.textFaint),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DexSpace.xs),
+          for (final e in _engines)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    e.ready ? LucideIcons.circle_check : LucideIcons.circle_alert,
+                    size: 14,
+                    color: e.ready ? DexColors.stateApprove : DexColors.stateAwaiting,
+                  ),
+                  const SizedBox(width: DexSpace.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(e.label,
+                            style: DexType.caption(color: DexColors.text)),
+                        Text(
+                          e.ready ? 'ready' : e.detail,
+                          style: DexType.mono(color: DexColors.textFaint)
+                              .copyWith(fontSize: 10.5),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
