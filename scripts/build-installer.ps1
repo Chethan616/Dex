@@ -101,6 +101,23 @@ robocopy (Join-Path $repo 'vendor\UFO') (Join-Path $vendorOut 'UFO') /E /NFL /ND
 robocopy (Join-Path $repo 'vendor\browser-use') (Join-Path $vendorOut 'browser-use') /E /NFL /NDL /NJH /NJS `
     /XD .git logs __pycache__ playwright-cache | Out-Null
 
+# ---- 4b. Windowless gateway launcher (Startup-folder shortcut targets it) ---
+Stage "Writing start-gateway.vbs (logon auto-start, no console window)"
+$vbs = @'
+' Dex gateway launcher. Starts the bundled gateway with NO console window
+' (WScript.Shell.Run mode 0 = hidden, False = do not wait). The Startup-
+' folder shortcut from Dex.wxs points wscript.exe at this file, so the
+' gateway -- with its built-in UFO2 + browser-use engines -- is up at logon.
+Dim sh, fso, base, node, entry
+Set sh = CreateObject("WScript.Shell")
+Set fso = CreateObject("Scripting.FileSystemObject")
+base = fso.GetParentFolderName(WScript.ScriptFullName)
+node = base & "\runtime\node\node.exe"
+entry = base & "\runtime\dexagent\dex.mjs"
+sh.Run """" & node & """ """ & entry & """ gateway run --port 18789", 0, False
+'@
+Set-Content -Path (Join-Path $payload 'start-gateway.vbs') -Value $vbs -Encoding ASCII
+
 # ---- 5. WiX build -------------------------------------------------------------
 Stage "Building Dex.msi (WiX v5)"
 Push-Location (Join-Path $repo 'installer')

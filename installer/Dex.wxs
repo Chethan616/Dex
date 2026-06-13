@@ -16,6 +16,16 @@
   app/lib/core/gateway_process.dart), so the installed app spawns its
   own gateway with zero external installs and zero terminals.
 
+  Gateway auto-start at logon: a shortcut in the user's Startup folder
+  launches payload\start-gateway.vbs (emitted by build-installer.ps1),
+  a windowless wrapper that runs `node dex.mjs gateway run`. So the
+  gateway -- with its built-in UFO²/browser-use engines -- is up at
+  logon and channels (WhatsApp etc.) keep listening before the app is
+  even opened. The app's probe-then-spawn (gateway_process.dart) finds
+  the already-running gateway and just connects; if the Startup task
+  didn't run, the app spawns one. Either way: no terminal. Uninstall
+  removes the shortcut with its component.
+
   Build: dotnet tool install -g wix   (once)
          scripts\build-installer.ps1  (assembles payload + runs wix)
 -->
@@ -41,6 +51,8 @@
       <Directory Id="DexMenuFolder" Name="Dex" />
     </StandardDirectory>
 
+    <StandardDirectory Id="StartupFolder" />
+
     <!-- WiX v5 wildcard harvest of the staged payload tree. -->
     <Files Include="payload\**" Directory="INSTALLFOLDER" />
 
@@ -54,6 +66,25 @@
       <RegistryValue Root="HKCU"
                      Key="Software\com.chethan616\dex"
                      Name="installed"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+
+    <!-- Auto-start the gateway at logon via a Startup-folder shortcut to
+         the windowless launcher. wscript runs start-gateway.vbs hidden so
+         there's no console. Removed on uninstall with this component. -->
+    <Component Id="DexGatewayAutostart" Directory="StartupFolder">
+      <Shortcut Id="DexGatewayStartup"
+                Name="Dex Gateway"
+                Description="Starts the Dex gateway (built-in UFO² + browser-use) at logon"
+                Target="[System64Folder]wscript.exe"
+                Arguments="&quot;[INSTALLFOLDER]start-gateway.vbs&quot;"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="RemoveDexStartup" On="uninstall" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\com.chethan616\dex"
+                     Name="autostart"
                      Type="integer"
                      Value="1"
                      KeyPath="yes" />
