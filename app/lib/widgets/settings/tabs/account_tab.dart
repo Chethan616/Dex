@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/account.dart';
 import '../../../core/dex_setup.dart';
+import '../../../core/onboarding_request.dart';
 import '../../../core/models/device.dart';
 import '../../../theme/tokens.dart';
 import '../../device_chip.dart';
@@ -229,6 +230,15 @@ class _AccountTabState extends State<AccountTab> {
               child: const Text('Delete account'),
             ),
             const Divider(),
+            SettingsLinkRow(
+              label: 'Run setup again',
+              onTap: () {
+                // Close Settings, then the app root swaps to the
+                // onboarding tour (keys, model, app pairing).
+                dexOnboardingRequested.value = true;
+                Navigator.of(context).maybePop();
+              },
+            ),
             SettingsLinkRow(label: 'Parental controls', onTap: () {}),
           ],
         ),

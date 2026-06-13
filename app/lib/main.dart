@@ -26,6 +26,8 @@ import 'package:window_manager/window_manager.dart';
 import 'core/account.dart';
 import 'core/dex_setup.dart';
 import 'core/gateway_client.dart';
+import 'core/gateway_process.dart';
+import 'core/onboarding_request.dart';
 import 'core/state/conversation_store.dart';
 import 'platform/win/tray.dart';
 import 'screens/home_desktop.dart';
@@ -71,11 +73,14 @@ Future<void> main() async {
     await DexTray.instance.init();
   }
 
-  // Read gateway URL + auth token from ~\.dex\openclaw.json (the filename
-  // rename to dex.json ships in v1.4); see GatewayConfig.fromLocalConfig
-  // for the one-cycle ~/.openclaw/ fallback.
+  // Read gateway URL + auth token from ~\.dex\dex.json; see
+  // GatewayConfig.fromLocalConfig for the legacy-filename fallbacks.
   final client = GatewayClient(GatewayConfig.fromLocalConfig());
-  unawaited(client.connect());
+  // Dex owns its brain: when no gateway is listening, spawn the bundled
+  // (or npm-installed) dexagent runtime DETACHED -- the user never
+  // opens a terminal. Connection proceeds either way; the banner
+  // explains if both paths fail.
+  unawaited(GatewayManager.ensureRunning().then((_) => client.connect()));
 
   final store = ConversationStore(client);
 
@@ -225,6 +230,7 @@ class _DexAppState extends State<DexApp> with WindowListener {
   /// `null` = still reading prefs (one frame of living background).
   bool? _signedIn;
   late bool _needsOnboarding;
+  bool _onboardSeen = true;
 
   @override
   void initState() {
@@ -233,9 +239,18 @@ class _DexAppState extends State<DexApp> with WindowListener {
     DexAccount.load().then((a) {
       if (mounted) setState(() => _signedIn = a.signedIn);
     });
+    DexAccount.onboardingSeen().then((seen) {
+      if (mounted) setState(() => _onboardSeen = seen);
+    });
+    // "Run setup again" from Settings flips this notifier.
+    dexOnboardingRequested.addListener(_onOnboardingRequested);
     if (Platform.isWindows) {
       windowManager.addListener(this);
     }
+  }
+
+  void _onOnboardingRequested() {
+    if (dexOnboardingRequested.value && mounted) setState(() {});
   }
 
   Future<void> _signOut() async {
@@ -245,6 +260,7 @@ class _DexAppState extends State<DexApp> with WindowListener {
 
   @override
   void dispose() {
+    dexOnboardingRequested.removeListener(_onOnboardingRequested);
     if (Platform.isWindows) {
       windowManager.removeListener(this);
     }
@@ -290,13 +306,21 @@ class _DexAppState extends State<DexApp> with WindowListener {
         onSignedIn: () => setState(() => _signedIn = true),
       );
     }
-    if (_needsOnboarding) {
+    // Onboarding shows when: the engine/key is missing, OR this account
+    // hasn't seen the tour yet (fresh sign-up on a configured machine),
+    // OR Settings requested a re-run.
+    if (_needsOnboarding || !_onboardSeen || dexOnboardingRequested.value) {
       return OnboardingScreen(
         onFinished: () {
           // Reconnect with whatever the wizard just wrote, then enter
           // the cockpit.
           unawaited(widget.store.client.connect());
-          setState(() => _needsOnboarding = false);
+          unawaited(DexAccount.setOnboardingSeen(true));
+          dexOnboardingRequested.value = false;
+          setState(() {
+            _needsOnboarding = false;
+            _onboardSeen = true;
+          });
         },
       );
     }

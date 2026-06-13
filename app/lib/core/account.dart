@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 const String _kSignedIn = 'dex.account.signedIn';
 const String _kName = 'dex.account.name';
 const String _kEmail = 'dex.account.email';
+const String _kOnboardSeen = 'dex.onboarding.seen';
 
 class DexAccount {
   DexAccount._({required this.signedIn, this.name, this.email});
@@ -39,5 +40,18 @@ class DexAccount {
   static Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kSignedIn, false);
+  }
+
+  /// Whether the onboarding tour has been completed on this machine.
+  /// Separate from the engine-config check: a fresh account sees the
+  /// tour ONCE even when the machine is already configured.
+  static Future<bool> onboardingSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kOnboardSeen) ?? false;
+  }
+
+  static Future<void> setOnboardingSeen(bool seen) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kOnboardSeen, seen);
   }
 }

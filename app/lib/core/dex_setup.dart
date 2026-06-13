@@ -22,6 +22,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
@@ -100,10 +101,13 @@ class DexSetup {
     f.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(data));
   }
 
-  /// agents.yaml lives in the repo checkout. Derive the repo root from
-  /// the registered windows-desktop-control MCP server path
-  /// (`<repo>/dex/drivers/windows-desktop-control/server.py`) so the
-  /// app finds it no matter where dex.exe runs from.
+  /// agents.yaml lives next to the UFO² runtime. Derive its base from
+  /// the registered windows-desktop-control MCP server path so the app
+  /// finds it no matter where dex.exe runs from. Two layouts:
+  ///   dev:    `<repo>\dex\drivers\wdc\server.py` -> `<repo>\vendor\UFO`
+  ///           (3 hops up from the server dir)
+  ///   bundle: `<install>\runtime\drivers\wdc\server.py`
+  ///           -> `<install>\runtime\vendor\UFO` (2 hops up)
   static File? agentsYamlFile() {
     final cfg = _readJson(dexJsonFile);
     final servers = (cfg['mcp'] as Map?)?['servers'] as Map?;
@@ -111,14 +115,17 @@ class DexSetup {
     final args = wdc?['args'];
     final serverPy = (args is List && args.isNotEmpty) ? args.first : null;
     if (serverPy is! String || serverPy.isEmpty) return null;
-    // server.py -> windows-desktop-control -> drivers -> dex -> <repo>
-    var dir = File(serverPy).parent;
-    for (var i = 0; i < 3; i++) {
-      dir = dir.parent;
+    var dir = File(serverPy).parent.parent; // = drivers\
+    for (final hops in <int>[1, 2]) {
+      var base = dir;
+      for (var i = 0; i < hops; i++) {
+        base = base.parent;
+      }
+      final yaml = File(
+          '${base.path}${_sep}vendor${_sep}UFO${_sep}config${_sep}ufo${_sep}agents.yaml');
+      if (yaml.existsSync()) return yaml;
     }
-    final yaml = File(
-        '${dir.path}${_sep}vendor${_sep}UFO${_sep}config${_sep}ufo${_sep}agents.yaml');
-    return yaml.existsSync() ? yaml : null;
+    return null;
   }
 
   static DexSetupState read() {
@@ -240,6 +247,86 @@ class DexSetup {
     defaults['model'] = model;
     agents['defaults'] = defaults;
     cfg['agents'] = agents;
+    _writeJson(dexJsonFile, cfg);
+  }
+
+  // ---- installer / first-boot plumbing ---------------------------------
+
+  /// Bundled runtime root (`<exeDir>\runtime`) when running from the
+  /// MSI install; null on dev machines.
+  static Directory? bundledRuntimeDir() {
+    final exeDir = File(Platform.resolvedExecutable).parent.path;
+    final dir = Directory('$exeDir${_sep}runtime');
+    return dir.existsSync() ? dir : null;
+  }
+
+  /// Create a minimal `~/.dex/dex.json` when none exists (fresh MSI
+  /// install): random gateway token + local control-ui auth + sane
+  /// model default. The gateway and this app then share the token.
+  static Future<void> ensureBaseConfig() async {
+    if (dexJsonFile.existsSync()) return;
+    final rng = Random.secure();
+    final token = List<int>.generate(32, (_) => rng.nextInt(256))
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
+    _writeJson(dexJsonFile, <String, dynamic>{
+      'gateway': <String, dynamic>{
+        'auth': <String, dynamic>{'token': token},
+        'controlUi': <String, dynamic>{'allowInsecureAuth': true},
+      },
+      'agents': <String, dynamic>{
+        'defaults': <String, dynamic>{
+          'model': <String, dynamic>{
+            'primary': kBrainModels.first,
+            'fallbacks': kBrainModels.sublist(1, 3),
+          },
+        },
+      },
+    });
+  }
+
+  /// Register the BUNDLED engines (MSI layout) as MCP servers in
+  /// dex.json. The drivers resolve their vendor runtimes via
+  /// `parents[3]` of server.py, which lands on `<install>\runtime\` --
+  /// exactly where the installer stages vendor\UFO and
+  /// vendor\browser-use. No-op on dev machines (no bundled runtime).
+  static Future<void> registerBundledEngines() async {
+    final runtime = bundledRuntimeDir();
+    if (runtime == null) return;
+    final r = runtime.path;
+    final ufoPy =
+        '$r${_sep}vendor${_sep}UFO$_sep.venv${_sep}Scripts${_sep}python.exe';
+    final bcPy =
+        '$r${_sep}vendor${_sep}browser-use$_sep.venv${_sep}Scripts${_sep}python.exe';
+    final wdcDir = '$r${_sep}drivers${_sep}windows-desktop-control';
+    final bcDir = '$r${_sep}drivers${_sep}browser-control';
+
+    final cfg = _readJson(dexJsonFile);
+    final mcp = (cfg['mcp'] as Map?)?.cast<String, dynamic>() ?? {};
+    final servers = (mcp['servers'] as Map?)?.cast<String, dynamic>() ?? {};
+    // Preserve any env the user already has (the Gemini key write
+    // updates it separately).
+    final prevEnv = ((servers['browser-control'] as Map?)?['env'] as Map?)
+            ?.cast<String, dynamic>() ??
+        <String, dynamic>{
+          'DEX_BROWSER_PROVIDER': 'google',
+          'DEX_BROWSER_MODEL': 'gemini-2.5-flash-lite',
+        };
+    servers['windows-desktop-control'] = <String, dynamic>{
+      'command': ufoPy,
+      'args': <String>['$wdcDir${_sep}server.py'],
+      'cwd': wdcDir,
+      'requestTimeoutMs': 330000,
+    };
+    servers['browser-control'] = <String, dynamic>{
+      'command': bcPy,
+      'args': <String>['$bcDir${_sep}server.py'],
+      'cwd': bcDir,
+      'requestTimeoutMs': 210000,
+      'env': prevEnv,
+    };
+    mcp['servers'] = servers;
+    cfg['mcp'] = mcp;
     _writeJson(dexJsonFile, cfg);
   }
 

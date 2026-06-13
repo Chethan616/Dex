@@ -78,6 +78,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _applyError = null;
     });
     try {
+      // Fresh MSI install: create the base config (gateway token) and
+      // register the bundled engines before any key writes. Both are
+      // no-ops on already-configured dev machines.
+      await DexSetup.ensureBaseConfig();
+      await DexSetup.registerBundledEngines();
       if (key.isNotEmpty) await DexSetup.applyGeminiKey(key);
       await DexSetup.applyBrainModel(
         _brainModel,
