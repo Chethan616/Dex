@@ -1,5 +1,6 @@
 import { normalizeConfiguredMcpServers } from "../config/mcp-config-normalize.js";
 import type { DexConfig } from "../config/types.openclaw.js";
+import { resolveBuiltinEngineServers } from "../engines/builtin-engines.js";
 import {
   loadEnabledBundleMcpConfig,
   type BundleMcpConfig,
@@ -69,12 +70,23 @@ export function loadMergedBundleMcpConfig(params: {
       ([name]) => !disabledConfiguredNames.has(name),
     ),
   );
+  // Builtin automation engines (UFO² / browser-use) self-register when
+  // their runtimes resolve on this machine -- Dex ships its own hands.
+  // Lowest-precedence layer: plugins and user config both override, and
+  // a same-name user entry with enabled:false disables a builtin.
+  const builtinEngines = Object.fromEntries(
+    Object.entries(resolveBuiltinEngineServers(params.cfg).servers).filter(
+      ([name]) => !disabledConfiguredNames.has(name),
+    ),
+  );
   const mapConfiguredServer = params.mapConfiguredServer ?? ((server) => server);
 
   return {
     config: {
-      // OpenClaw config is the owner-managed layer, so it overrides bundle defaults.
+      // Precedence: builtin engines < plugin bundle servers < user config
+      // (the owner-managed layer always wins).
       mcpServers: {
+        ...builtinEngines,
         ...enabledBundleMcp,
         ...Object.fromEntries(
           Object.entries(enabledConfiguredMcp).map(([name, server]) => [

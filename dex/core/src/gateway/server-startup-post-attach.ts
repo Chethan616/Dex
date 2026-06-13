@@ -7,6 +7,7 @@ import type { CliDeps } from "../cli/deps.types.js";
 import { resolveStateDir } from "../config/paths.js";
 import type { GatewayTailscaleMode } from "../config/types.gateway.js";
 import type { DexConfig } from "../config/types.openclaw.js";
+import { resolveBuiltinEngineServers } from "../engines/builtin-engines.js";
 import { hasConfiguredInternalHooks } from "../hooks/configured.js";
 import { isTruthyEnvValue } from "../infra/env.js";
 import type { scheduleGatewayUpdateCheck } from "../infra/update-startup.js";
@@ -1293,6 +1294,16 @@ export async function startGatewayPostAttachRuntime(
     : waitForSidecarStartTurn().then(async () => {
         await loadStartupPluginsIfNeeded();
         params.log.info("starting channels and sidecars...");
+        // Builtin engines: Dex ships its own hands. One log line per
+        // engine so "are my engines alive" never needs guessing.
+        for (const status of resolveBuiltinEngineServers(params.gatewayPluginConfigAtStart)
+          .statuses) {
+          params.log.info(
+            `[engines] ${status.label}: ${
+              status.available ? "ready (builtin)" : `unavailable (${status.reason})`
+            }`,
+          );
+        }
         const loaderStatsBefore = getPluginModuleLoaderStats();
         const result = await measureStartup(params.startupTrace, "sidecars.total", () =>
           runtimeDeps.startGatewaySidecars({
