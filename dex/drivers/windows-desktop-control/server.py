@@ -50,9 +50,14 @@ from mcp.server.fastmcp import FastMCP  # noqa: E402
 # crashed with ImportError before UFO2 could load. The agent saw that as
 # "GUI tool keeps timing out".
 REPO_ROOT = Path(__file__).resolve().parents[3]                # D:\project1
-UFO_ROOT = REPO_ROOT / "vendor" / "UFO"
+# UFO² lives at vendor/UFO in the dev repo and the MSI bundle, but an npm
+# install places it at ~/.dex/engines/UFO via `dex engines setup`. Honor
+# DEX_UFO_ROOT so the driver finds UFO wherever it actually was installed;
+# builtin-engines.ts sets it when UFO resolves outside the vendor tree.
+_ufo_root_env = os.environ.get("DEX_UFO_ROOT", "").strip()
+UFO_ROOT = Path(_ufo_root_env) if _ufo_root_env else REPO_ROOT / "vendor" / "UFO"
 UFO_VENV_PY = UFO_ROOT / ".venv" / "Scripts" / "python.exe"
-LOG_DIR = REPO_ROOT / "vendor" / "UFO" / "logs" / "dex"
+LOG_DIR = UFO_ROOT / "logs" / "dex"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------

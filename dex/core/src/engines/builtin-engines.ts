@@ -152,6 +152,13 @@ export function resolveBuiltinEngineServers(cfg?: DexConfig): {
   const desktopServer = path.join(driversBase, "windows-desktop-control", "server.py");
   const desktopPython = resolveVenvPython(driversBase, "UFO", "DEX_UFO_PYTHON");
   if (fs.existsSync(desktopServer) && desktopPython) {
+    // The driver defaults UFO_ROOT to <repo>/vendor/UFO, but the venv may
+    // live elsewhere (npm: ~/.dex/engines/UFO/.venv). UFO root is the
+    // grandparent of the venv python (<root>/.venv/Scripts/python.exe), so
+    // tell the driver where UFO actually is via DEX_UFO_ROOT.
+    const ufoRoot =
+      process.env.DEX_UFO_ROOT?.trim() ||
+      path.dirname(path.dirname(path.dirname(desktopPython)));
     servers["windows-desktop-control"] = {
       command: desktopPython,
       args: [desktopServer],
@@ -160,6 +167,7 @@ export function resolveBuiltinEngineServers(cfg?: DexConfig): {
       // MCP request must outlive the driver's own budget or the
       // gateway kills legit runs mid-task (observed 2026-06-11).
       requestTimeoutMs: 330_000,
+      env: { DEX_UFO_ROOT: ufoRoot },
     } as BundleMcpServerConfig;
     statuses.push({ id: "windows-desktop-control", label: "desktop (UFO²)", available: true });
   } else {
