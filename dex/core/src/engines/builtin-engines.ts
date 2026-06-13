@@ -30,6 +30,7 @@
  */
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { DexConfig } from "../config/types.openclaw.js";
@@ -91,8 +92,24 @@ function resolveVenvPython(driversBase: string, vendorName: string, envVar: stri
   if (fromEnv && fs.existsSync(fromEnv)) {
     return fromEnv;
   }
-  for (const base of [path.dirname(driversBase), path.dirname(path.dirname(driversBase))]) {
-    const python = path.join(base, "vendor", vendorName, ".venv", "Scripts", "python.exe");
+  const candidates = [
+    // Dev repo + MSI bundle: vendor/<x>/.venv next to (or one up from)
+    // the drivers dir.
+    path.join(path.dirname(driversBase), "vendor", vendorName, ".venv", "Scripts", "python.exe"),
+    path.join(
+      path.dirname(path.dirname(driversBase)),
+      "vendor",
+      vendorName,
+      ".venv",
+      "Scripts",
+      "python.exe",
+    ),
+    // npm install: drivers ship in the package but the heavy venv does
+    // not. A local venv setup places it in this stable user-data home,
+    // independent of where the package lives.
+    path.join(os.homedir(), ".dex", "engines", vendorName, ".venv", "Scripts", "python.exe"),
+  ];
+  for (const python of candidates) {
     if (fs.existsSync(python)) {
       return python;
     }

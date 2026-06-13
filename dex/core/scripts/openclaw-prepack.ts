@@ -1,7 +1,8 @@
 #!/usr/bin/env -S node --import tsx
 
 import { spawnSync, type SpawnSyncOptions } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { cpSync, existsSync, readdirSync, rmSync } from "node:fs";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { formatErrorMessage } from "../src/infra/errors.ts";
 import { writePackageDistInventory } from "../src/infra/package-dist-inventory.ts";
@@ -159,10 +160,38 @@ async function writeDistInventory(): Promise<void> {
   await writePackageDistInventory(process.cwd());
 }
 
+// The engine drivers live at dex/drivers (sibling of this package), but
+// `npm pack` can only include files UNDER the package root. Copy the
+// small Python driver sources (server.py, SKILL.md, requirements.txt)
+// into dex/core/drivers at pack time so a published `dexagent` carries
+// the built-in engines' integration point. The heavy venvs are NOT
+// shipped here -- they come from the MSI bundle or a local venv setup;
+// builtin-engines.ts resolves them from ~/.dex/engines or the bundle.
+// The copied dir is gitignored; this keeps the source-of-truth single.
+function copyDriversIntoPackage(): void {
+  const src = path.resolve(process.cwd(), "..", "drivers");
+  const dest = path.resolve(process.cwd(), "drivers");
+  if (!existsSync(src)) {
+    console.error(`prepack: drivers source not found at ${src}; skipping driver carry.`);
+    return;
+  }
+  rmSync(dest, { recursive: true, force: true });
+  cpSync(src, dest, {
+    recursive: true,
+    filter: (from) => {
+      const base = path.basename(from);
+      // Never carry caches or per-machine venvs into the tarball.
+      return base !== "__pycache__" && base !== ".venv" && base !== "logs";
+    },
+  });
+  console.error(`prepack: carried engine drivers into ${dest}`);
+}
+
 async function main(): Promise<void> {
   runPnpm(["build"]);
   runPnpm(["ui:build"]);
   ensurePreparedArtifacts();
+  copyDriversIntoPackage();
   await writeDistInventory();
   runBuildSmoke();
   await preparePackageChangelog();
