@@ -32,7 +32,9 @@ class _AccountTabState extends State<AccountTab> {
 
   late DexSetupState _setup;
   final TextEditingController _keyCtrl = TextEditingController();
+  final TextEditingController _groqCtrl = TextEditingController();
   bool _applying = false;
+  bool _applyingGroq = false;
   String? _note;
   String _accountName = 'Dex user';
   String? _accountEmail;
@@ -53,6 +55,7 @@ class _AccountTabState extends State<AccountTab> {
   @override
   void dispose() {
     _keyCtrl.dispose();
+    _groqCtrl.dispose();
     super.dispose();
   }
 
@@ -73,6 +76,25 @@ class _AccountTabState extends State<AccountTab> {
       _note = 'Apply failed: $e';
     } finally {
       if (mounted) setState(() => _applying = false);
+    }
+  }
+
+  Future<void> _applyGroq() async {
+    final key = _groqCtrl.text.trim();
+    if (key.isEmpty) return;
+    setState(() {
+      _applyingGroq = true;
+      _note = null;
+    });
+    try {
+      await DexSetup.applyGroqKey(key);
+      _groqCtrl.clear();
+      _setup = DexSetup.read();
+      _note = 'Hands moved to Groq. Restart the gateway to pick it up.';
+    } catch (e) {
+      _note = 'Groq apply failed: $e';
+    } finally {
+      if (mounted) setState(() => _applyingGroq = false);
     }
   }
 
@@ -170,6 +192,50 @@ class _AccountTabState extends State<AccountTab> {
               child: Text(_applying ? 'Applying…' : 'Apply'),
             ),
           ],
+        ),
+        const Divider(),
+        Row(
+          children: [
+            Expanded(
+              child: Text('Offload the hands to Groq',
+                  style: DexType.label(color: DexColors.text)),
+            ),
+            if (_setup.handsOnGroq)
+              _StatusDot(label: 'On Groq', ok: true),
+          ],
+        ),
+        const SizedBox(height: DexSpace.xs),
+        Text(
+          'Hitting Gemini\'s daily quota? Put UFO² + browser-use on a free '
+          'Groq key so they stop eating the brain\'s Gemini quota. The brain '
+          'stays on Gemini. Re-apply your Gemini key above to switch back.',
+          style: DexType.caption(color: DexColors.textFaint),
+        ),
+        const SizedBox(height: DexSpace.sm),
+        SecretField(
+          controller: _groqCtrl,
+          hint: _setup.groqKeyTail != null
+              ? 'Groq key set (…${_setup.groqKeyTail}) — paste to replace'
+              : 'Paste a Groq API key (optional)',
+        ),
+        const SizedBox(height: DexSpace.xs),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () => launchUrl(Uri.parse('https://console.groq.com/keys')),
+            child: Text(
+              'Get a free Groq key →',
+              style: DexType.caption(color: DexColors.accent),
+            ),
+          ),
+        ),
+        const SizedBox(height: DexSpace.sm),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ElevatedButton(
+            onPressed: _applyingGroq ? null : _applyGroq,
+            child: Text(_applyingGroq ? 'Applying…' : 'Use Groq for hands'),
+          ),
         ),
         if (_note != null) ...[
           const SizedBox(height: DexSpace.sm),

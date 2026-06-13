@@ -321,11 +321,25 @@ class ConversationStore extends ChangeNotifier {
     } else {
       DexLog.e('agent', 'turn error${detail.isEmpty ? '' : ': $detail'}');
     }
+    // Quota/rate-limit is the most common failure on the free Gemini tier.
+    // Give it an actionable message instead of a raw 429 dump.
+    final lower = detail.toLowerCase();
+    final isQuota = !aborted &&
+        (lower.contains('resource_exhausted') ||
+            lower.contains('rate-limit') ||
+            lower.contains('rate limit') ||
+            lower.contains('quota') ||
+            lower.contains('429'));
     final text = aborted
         ? 'That run was stopped before it finished.'
             '${detail.isEmpty ? '' : ' ($detail)'} Try sending it again.'
-        : 'Something went wrong on that turn'
-            '${detail.isEmpty ? '.' : ': $detail'}';
+        : isQuota
+            ? 'All models are rate-limited right now — the free Gemini tier '
+                'quota is used up (it resets daily). To stop this happening, '
+                'give the hands their own free Groq key in Settings → Account '
+                '→ Secrets, which keeps their quota separate from the brain.'
+            : 'Something went wrong on that turn'
+                '${detail.isEmpty ? '.' : ': $detail'}';
 
     // Reuse the streaming bubble when one exists for this run -- the
     // partial text the agent managed to say stays, with the error line

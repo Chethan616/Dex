@@ -40,6 +40,15 @@ const List<String> kHandsModels = <String>[
   'gemini-2.5-flash',
 ];
 
+/// OpenAI-compatible endpoints UFO² (agents.yaml) points at per provider.
+const String _kGeminiApiBase =
+    'https://generativelanguage.googleapis.com/v1beta/openai/';
+const String _kGroqApiBase = 'https://api.groq.com/openai/v1/chat/completions';
+
+/// Groq's free text model the hands use when offloaded off Gemini. Matches
+/// the browser-control server default (DEX_BROWSER_MODEL → qwen/qwen3-32b).
+const String _kGroqHandsModel = 'qwen/qwen3-32b';
+
 class DexSetupState {
   const DexSetupState({
     required this.hasConfig,
@@ -51,6 +60,8 @@ class DexSetupState {
     required this.handsKeySet,
     required this.browserEnvKeySet,
     required this.webSearchKeySet,
+    required this.handsOnGroq,
+    required this.groqKeyTail,
   });
 
   final bool hasConfig;
@@ -64,6 +75,13 @@ class DexSetupState {
   final bool handsKeySet;
   final bool browserEnvKeySet;
   final bool webSearchKeySet;
+
+  /// True when the hands (UFO² + browser-use) are offloaded to Groq,
+  /// keeping their quota separate from the brain's Gemini quota.
+  final bool handsOnGroq;
+
+  /// Last 4 chars of the stored Groq key, or null when unset.
+  final String? groqKeyTail;
 
   bool get hasBrainKey => geminiKeyTail != null;
 
@@ -201,6 +219,10 @@ class DexSetup {
     final webSearchKey =
         (((cfg['models'] as Map?)?['providers'] as Map?)?['google'] as Map?)?['apiKey'];
 
+    final handsOnGroq =
+        (browserEnv?['DEX_BROWSER_PROVIDER'] as String?)?.toLowerCase() == 'groq';
+    final groqKey = (browserEnv?['GROQ_API_KEY'] as String?)?.trim();
+
     String? handsModel;
     var handsKeySet = false;
     final yaml = agentsYamlFile();
@@ -228,6 +250,10 @@ class DexSetup {
       browserEnvKeySet:
           ((browserEnv?['GEMINI_API_KEY']) as String?)?.isNotEmpty == true,
       webSearchKeySet: webSearchKey is String && webSearchKey.isNotEmpty,
+      handsOnGroq: handsOnGroq,
+      groqKeyTail: (groqKey != null && groqKey.isNotEmpty)
+          ? groqKey.substring(groqKey.length >= 4 ? groqKey.length - 4 : 0)
+          : null,
     );
   }
 
@@ -267,7 +293,13 @@ class DexSetup {
     final bc = (servers['browser-control'] as Map?)?.cast<String, dynamic>();
     if (bc != null) {
       final env = (bc['env'] as Map?)?.cast<String, dynamic>() ?? {};
+      // Reset the browser hands fully to Gemini: provider + key, and drop
+      // any prior Groq override so re-applying the Gemini key is a clean
+      // baseline (the Groq path below is the explicit opt-in override).
+      env['DEX_BROWSER_PROVIDER'] = 'google';
       env['GEMINI_API_KEY'] = k;
+      env.remove('GROQ_API_KEY');
+      env.remove('DEX_BROWSER_MODEL');
       bc['env'] = env;
       servers['browser-control'] = bc;
       mcp['servers'] = servers;
@@ -275,15 +307,59 @@ class DexSetup {
     }
     _writeJson(dexJsonFile, cfg);
 
-    // 3. UFO² agents.yaml (all active API_KEY lines).
+    // 3. UFO² agents.yaml: key + Gemini endpoint on every active block, so
+    // re-applying Gemini also restores the base if it was on Groq.
     final yaml = agentsYamlFile();
     if (yaml != null) {
-      final text = yaml.readAsStringSync();
-      final updated = text.replaceAllMapped(
-        RegExp(r'^(\s*API_KEY:\s*")[^"]*(")', multiLine: true),
-        (m) => '${m.group(1)}$k${m.group(2)}',
-      );
-      yaml.writeAsStringSync(updated);
+      var text = yaml.readAsStringSync();
+      text = _rewriteYamlField(text, 'API_KEY', k);
+      text = _rewriteYamlField(text, 'API_BASE', _kGeminiApiBase);
+      yaml.writeAsStringSync(text);
+    }
+  }
+
+  /// Rewrite every ACTIVE `FIELD: "..."` line (commented examples start
+  /// with `#`, so `^\s*FIELD` skips them).
+  static String _rewriteYamlField(String text, String field, String value) {
+    return text.replaceAllMapped(
+      RegExp('^(\\s*$field:\\s*")[^"]*(")', multiLine: true),
+      (m) => '${m.group(1)}$value${m.group(2)}',
+    );
+  }
+
+  /// Move the HANDS (UFO² + browser-use) onto a free Groq key, keeping
+  /// their quota separate from the brain's Gemini quota. The brain +
+  /// web_search stay on Gemini. Re-apply the Gemini key to undo.
+  static Future<void> applyGroqKey(String key) async {
+    final k = key.trim();
+    if (k.isEmpty) throw ArgumentError('empty key');
+
+    // browser-use → Groq via env (server defaults model to qwen/qwen3-32b
+    // when DEX_BROWSER_MODEL is unset).
+    final cfg = _readJson(dexJsonFile);
+    final mcp = (cfg['mcp'] as Map?)?.cast<String, dynamic>() ?? {};
+    final servers = (mcp['servers'] as Map?)?.cast<String, dynamic>() ?? {};
+    final bc = (servers['browser-control'] as Map?)?.cast<String, dynamic>();
+    if (bc != null) {
+      final env = (bc['env'] as Map?)?.cast<String, dynamic>() ?? {};
+      env['DEX_BROWSER_PROVIDER'] = 'groq';
+      env['GROQ_API_KEY'] = k;
+      env.remove('DEX_BROWSER_MODEL');
+      bc['env'] = env;
+      servers['browser-control'] = bc;
+      mcp['servers'] = servers;
+      cfg['mcp'] = mcp;
+      _writeJson(dexJsonFile, cfg);
+    }
+
+    // UFO² → Groq: key + Groq endpoint + Groq model on every active block.
+    final yaml = agentsYamlFile();
+    if (yaml != null) {
+      var text = yaml.readAsStringSync();
+      text = _rewriteYamlField(text, 'API_KEY', k);
+      text = _rewriteYamlField(text, 'API_BASE', _kGroqApiBase);
+      text = _rewriteYamlField(text, 'API_MODEL', _kGroqHandsModel);
+      yaml.writeAsStringSync(text);
     }
   }
 
