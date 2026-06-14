@@ -16,6 +16,7 @@ export function registerTuiCli(program: Command) {
     .option("--token <token>", "Gateway token (if required)")
     .option("--password <password>", "Gateway password (if required)")
     .option("--session <key>", 'Session key (default: "main", or "global" when scope is global)')
+    .option("--new", "Start a fresh chat in a new auto-generated session", false)
     .option("--deliver", "Deliver assistant replies", false)
     .option("--thinking <level>", "Thinking level override")
     .option("--message <text>", "Send an initial message after connecting")
@@ -46,13 +47,22 @@ export function registerTuiCli(program: Command) {
         if (historyLimit === undefined) {
           throw new Error("--history-limit must be a positive integer.");
         }
+        // `--new` opens a fresh conversation by minting a unique session
+        // key (an explicit --session still wins). Without it you resume
+        // the default "main" session and see its history.
+        if (opts.new && opts.session) {
+          throw new Error("--new cannot be combined with --session (it makes its own key).");
+        }
+        const session = opts.new
+          ? `chat-${new Date().toISOString().replace(/[:.]/g, "-").replace("Z", "")}`
+          : (opts.session as string | undefined);
         const { runTui } = await import("../tui/tui.js");
         await runTui({
           local: isLocal,
           url: opts.url as string | undefined,
           token: opts.token as string | undefined,
           password: opts.password as string | undefined,
-          session: opts.session as string | undefined,
+          session,
           deliver: Boolean(opts.deliver),
           thinking: opts.thinking as string | undefined,
           message: opts.message as string | undefined,
