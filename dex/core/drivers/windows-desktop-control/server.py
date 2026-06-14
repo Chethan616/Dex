@@ -73,10 +73,15 @@ def run_desktop_task(
 ) -> dict[str, Any]:
     """Drive a Windows application GUI to accomplish a natural-language goal.
 
-    Use ONLY for tasks that need a real native Win32 app's GUI: Office,
-    Calculator, Settings panels, file dialogs, etc. For browser tasks use
-    `run_browser_task`. For pure file/shell work the agent should use its
-    own shell tool instead.
+    Use ONLY to INTERACT with an already-relevant native Win32 app's GUI:
+    Office, Calculator, Settings panels, file dialogs, etc.
+
+    DO NOT use this just to OPEN/LAUNCH an app. "open notepad", "open
+    whatsapp", "start chrome" are shell tasks — use the `exec` tool
+    (`Start-Process notepad` / `Start-Process "WhatsApp"`), which is
+    instant and reliable. Reserve run_desktop_task for clicking/typing
+    inside an app once it's the thing you must manipulate. For browser
+    tasks use `run_browser_task`; for file/shell work use the shell tool.
 
     Args:
         goal: Plain-language task, e.g. "in Excel, sum column B".

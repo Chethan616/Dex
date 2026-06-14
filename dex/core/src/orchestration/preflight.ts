@@ -111,6 +111,13 @@ export function buildEnginePreflightHint(args: {
     `Prefer the matching MCP tool: \`${toolName}\`. ` +
       "If you must deviate (e.g. the picked tool returned an error you can't fix), " +
       "say so explicitly in your reply and pick from the fallbacks.",
+    // Launching an app is a shell job, not GUI automation. Small models
+    // otherwise route "open notepad" to run_desktop_task (UFO²), which is
+    // slow and can hang on cold start. Make the cheap path explicit.
+    "Just OPENING/launching an app (open notepad, open whatsapp, start " +
+      "chrome) is a one-line `exec`: `Start-Process notepad` / " +
+      "`Start-Process \"WhatsApp\"`. Only use run_desktop_task to " +
+      "click/type INSIDE an app after it's open, never to open one.",
     task.kind === "compound"
       ? "This looks like a multi-step task. Chain tools as needed: " +
         "`browser-control__run_browser_task` for steps inside a web page, " +
