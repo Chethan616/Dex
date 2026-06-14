@@ -16,12 +16,14 @@
  * surface.
  *
  * Resolution (each engine registers only when ALL its pieces exist):
- *   drivers dir: DEX_DRIVERS_DIR → <pkgRoot>/drivers (npm carry) →
- *                <pkgRoot>/../drivers (dev repo AND the MSI layout,
- *                where runtime/dexagent sits beside runtime/drivers)
- *   venv python: DEX_UFO_PYTHON / DEX_BROWSER_PYTHON →
- *                <driversBase>/../vendor/<x>/.venv  (MSI layout) →
- *                <driversBase>/../../vendor/<x>/.venv (dev repo)
+ *   drivers dir: DEX_DRIVERS_DIR → <pkgRoot>/drivers (the drivers now
+ *                live INSIDE the package at dex/core/drivers, so this
+ *                covers dev, npm, and the MSI's runtime/dexagent/drivers)
+ *                → <pkgRoot>/../drivers (legacy/defensive fallback)
+ *   venv python: DEX_UFO_PYTHON / DEX_BROWSER_PYTHON → vendor/<x>/.venv
+ *                walking 1-3 levels up from the drivers dir (covers the
+ *                MSI runtime/vendor and the dev repo-root vendor) →
+ *                ~/.dex/engines/<x>/.venv (the `dex engines setup` home)
  *
  * Product defaults are BAKED IN here — request timeouts sized to the
  * drivers' own task caps, browser provider/model, and the Gemini key
@@ -92,29 +94,31 @@ function resolveVenvPython(driversBase: string, vendorName: string, envVar: stri
   if (fromEnv && fs.existsSync(fromEnv)) {
     return fromEnv;
   }
-  const candidates = [
-    // Dev repo + MSI bundle: vendor/<x>/.venv next to (or one up from)
-    // the drivers dir.
-    path.join(path.dirname(driversBase), "vendor", vendorName, ".venv", "Scripts", "python.exe"),
-    path.join(
-      path.dirname(path.dirname(driversBase)),
-      "vendor",
-      vendorName,
-      ".venv",
-      "Scripts",
-      "python.exe",
-    ),
-    // npm install: drivers ship in the package but the heavy venv does
-    // not. A local venv setup places it in this stable user-data home,
-    // independent of where the package lives.
-    path.join(os.homedir(), ".dex", "engines", vendorName, ".venv", "Scripts", "python.exe"),
-  ];
-  for (const python of candidates) {
+  // Walk 1-3 levels up from the drivers dir looking for vendor/<x>/.venv.
+  // Drivers now sit at dex/core/drivers (dev) / dexagent/drivers (npm,
+  // MSI), so the vendor tree can be 1 (MSI runtime/vendor), 2, or 3
+  // (dev repo-root vendor) levels up depending on layout.
+  let base = driversBase;
+  for (let i = 0; i < 3; i += 1) {
+    base = path.dirname(base);
+    const python = path.join(base, "vendor", vendorName, ".venv", "Scripts", "python.exe");
     if (fs.existsSync(python)) {
       return python;
     }
   }
-  return null;
+  // npm install: drivers ship in the package but the heavy venv does
+  // not. `dex engines setup` places it in this stable user-data home,
+  // independent of where the package lives.
+  const enginesHome = path.join(
+    os.homedir(),
+    ".dex",
+    "engines",
+    vendorName,
+    ".venv",
+    "Scripts",
+    "python.exe",
+  );
+  return fs.existsSync(enginesHome) ? enginesHome : null;
 }
 
 function resolveGoogleApiKey(cfg?: DexConfig): string | undefined {

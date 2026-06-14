@@ -29,7 +29,7 @@ function Test-Phase0 {
     $needed = @(
         'PLAN.md', 'README.md', 'LICENSES.md', 'SECURITY.md',
         'scripts\setup-windows.ps1', 'scripts\run-dev.ps1', 'scripts\verify-phase.ps1',
-        'vendor', 'dex\drivers\windows-desktop-control', 'app', 'scripts'
+        'dex\core\drivers\windows-desktop-control', 'app', 'scripts'
     )
     $missing = $needed | Where-Object { -not (Test-Path (Join-Path $repoRoot $_)) }
     if ($missing.Count -gt 0) {
@@ -61,7 +61,7 @@ function Test-Phase2 {
 }
 
 function Test-Phase3 {
-    $server = Join-Path $repoRoot 'dex\drivers\windows-desktop-control\server.py'
+    $server = Join-Path $repoRoot 'dex\core\drivers\windows-desktop-control\server.py'
     if (-not (Test-Path $server)) {
         Write-Host "Phase 3 FAIL -- server.py not found" -ForegroundColor Red
         return 1
@@ -71,7 +71,7 @@ function Test-Phase3 {
 }
 
 function Test-Phase4 {
-    $skill = Join-Path $repoRoot 'dex\drivers\windows-desktop-control\SKILL.md'
+    $skill = Join-Path $repoRoot 'dex\core\drivers\windows-desktop-control\SKILL.md'
     if (-not (Test-Path $skill)) {
         Write-Host "Phase 4 FAIL -- SKILL.md not authored" -ForegroundColor Red
         return 1

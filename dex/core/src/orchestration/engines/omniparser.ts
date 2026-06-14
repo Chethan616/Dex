@@ -2,7 +2,7 @@
  * OmniParser engine adapter — Phase C.5.
  *
  * AutomationEngine implementation that talks to the Python MCP server at
- * `dex/drivers/omniparser/server.py`. The actual MCP transport is owned
+ * `dex/core/drivers/omniparser/server.py`. The actual MCP transport is owned
  * by the gateway; this adapter is the contract glue between the
  * orchestration router and the running driver.
  *
@@ -82,7 +82,7 @@ export class OmniParserEngine implements AutomationEngine {
           kind: "engine-unavailable",
           message:
             "OmniParser MCP transport not wired. Phase C.7 connects this adapter " +
-            "to the running dex/drivers/omniparser/server.py via the gateway.",
+            "to the running dex/core/drivers/omniparser/server.py via the gateway.",
         },
         steps: [],
         durationMs: Date.now() - start,

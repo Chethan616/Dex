@@ -91,7 +91,7 @@ function Register-McpServer {
 # ---- 1. windows-desktop-control ---------------------------------------------
 Write-Host ""
 Write-Host "[1/2] windows-desktop-control" -ForegroundColor Cyan
-$wdcDir = Join-Path $repoRoot 'dex\drivers\windows-desktop-control'
+$wdcDir = Join-Path $repoRoot 'dex\core\drivers\windows-desktop-control'
 $ufoVenvPy = Join-Path $repoRoot 'vendor\UFO\.venv\Scripts\python.exe'
 if (-not (Test-Path $ufoVenvPy)) {
     Write-Host ("  WARNING: UFO2 venv missing at {0}" -f $ufoVenvPy) -ForegroundColor Yellow
@@ -113,7 +113,7 @@ Register-McpServer -Name 'windows-desktop-control' -Config @{
 # ---- 2. browser-control -----------------------------------------------------
 Write-Host ""
 Write-Host "[2/2] browser-control" -ForegroundColor Cyan
-$bcDir = Join-Path $repoRoot 'dex\drivers\browser-control'
+$bcDir = Join-Path $repoRoot 'dex\core\drivers\browser-control'
 $bcVenvPy = Join-Path $repoRoot 'vendor\browser-use\.venv\Scripts\python.exe'
 
 if (-not (Test-Path $bcVenvPy)) {

@@ -90,10 +90,10 @@ Get-ChildItem "$tmpPrefix\node_modules" -Exclude 'dexagent','.package-lock.json'
     Copy-Item -Destination (Join-Path $runtime 'dexagent\node_modules') -Recurse -Force
 Remove-Item $tarPath -Force
 
-# ---- 4. Drivers + vendor runtimes -------------------------------------------
-Stage "Staging MCP drivers"
-Copy-Item (Join-Path $repo 'dex\drivers') (Join-Path $runtime 'drivers') -Recurse -Force
-
+# ---- 4. Vendor runtimes (drivers ship INSIDE the dexagent package now) ------
+# The MCP driver sources travel inside the dexagent tarball (dex/core/drivers
+# → runtime\dexagent\drivers), so there's no separate drivers copy. Only the
+# heavy Python venvs need staging here.
 Stage "Staging UFO² + browser-use (sources + prebuilt venvs; this is the big copy)"
 # Engines are NOT vendored in the repo anymore. Build them on this
 # machine first with `dex engines setup` (clones UFO, pip-installs

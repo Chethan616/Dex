@@ -2,7 +2,7 @@
  * UfoUiaEngine — Phase E.2.
  *
  * AutomationEngine adapter for the `windows-desktop-control` MCP server
- * (`dex/drivers/windows-desktop-control/server.py`). The router picks
+ * (`dex/core/drivers/windows-desktop-control/server.py`). The router picks
  * this engine when the active foreground is a native Win32 app whose UIA
  * tree is reachable (Office, Settings, Notepad, Calculator, IDEs, …).
  *
@@ -106,7 +106,7 @@ export class UfoUiaEngine implements AutomationEngine {
           kind: "engine-unavailable",
           message:
             "windows-desktop-control MCP transport not wired. The gateway " +
-            "connects this adapter to dex/drivers/windows-desktop-control/server.py " +
+            "connects this adapter to dex/core/drivers/windows-desktop-control/server.py " +
             "at startup.",
         },
         steps: [],

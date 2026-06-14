@@ -16,7 +16,7 @@
  * sense organ".
  *
  * Concrete implementation lands in E.1 (wraps the existing
- * dex/drivers/omniparser/server.py parse_screen MCP tool). E.0 ships
+ * dex/core/drivers/omniparser/server.py parse_screen MCP tool). E.0 ships
  * the interface so engine adapters can start declaring their `vision?:
  * VisionService` slot without depending on the impl yet.
  */

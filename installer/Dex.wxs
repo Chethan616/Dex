@@ -7,8 +7,8 @@
   installer\payload\ :
     payload\                      Flutter release build (dex.exe, data\, *.dll)
     payload\runtime\node\         portable Node 24 (node.exe + lib)
-    payload\runtime\dexagent\     dexagent package (dist\, dex.mjs, node_modules\)
-    payload\runtime\drivers\      dex\drivers (MCP servers + SKILL.md)
+    payload\runtime\dexagent\     dexagent package (dist\, dex.mjs, node_modules\,
+                                  drivers\ — MCP servers ship INSIDE the package)
     payload\runtime\vendor\UFO\   UFO² source + prebuilt .venv
     payload\runtime\vendor\browser-use\  browser-use source + prebuilt .venv
 

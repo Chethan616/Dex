@@ -136,10 +136,11 @@ class DexSetup {
 
   /// agents.yaml lives next to the UFO² runtime. Derive its base from
   /// the registered windows-desktop-control MCP server path so the app
-  /// finds it no matter where dex.exe runs from. Two layouts:
-  ///   dev:    `<repo>\dex\drivers\wdc\server.py` -> `<repo>\vendor\UFO`
-  ///           (3 hops up from the server dir)
-  ///   bundle: `<install>\runtime\drivers\wdc\server.py`
+  /// finds it no matter where dex.exe runs from. Drivers now live inside
+  /// the package (dex/core/drivers), so layouts are:
+  ///   dev:    `<repo>\dex\core\drivers\wdc\server.py` -> `<repo>\vendor\UFO`
+  ///           (drivers dir is 3 hops below the repo root)
+  ///   bundle: `<install>\runtime\dexagent\drivers\wdc\server.py`
   ///           -> `<install>\runtime\vendor\UFO` (2 hops up)
   static File? agentsYamlFile() {
     final cfg = _readJson(dexJsonFile);
@@ -149,7 +150,7 @@ class DexSetup {
     final serverPy = (args is List && args.isNotEmpty) ? args.first : null;
     if (serverPy is! String || serverPy.isEmpty) return null;
     var dir = File(serverPy).parent.parent; // = drivers\
-    for (final hops in <int>[1, 2]) {
+    for (final hops in <int>[1, 2, 3]) {
       var base = dir;
       for (var i = 0; i < hops; i++) {
         base = base.parent;
@@ -413,10 +414,10 @@ class DexSetup {
   }
 
   /// Register the BUNDLED engines (MSI layout) as MCP servers in
-  /// dex.json. The drivers resolve their vendor runtimes via
-  /// `parents[3]` of server.py, which lands on `<install>\runtime\` --
-  /// exactly where the installer stages vendor\UFO and
-  /// vendor\browser-use. No-op on dev machines (no bundled runtime).
+  /// dex.json. Drivers now ship INSIDE the dexagent package, so they land
+  /// at `<install>\runtime\dexagent\drivers\`; the prebuilt venvs sit at
+  /// `<install>\runtime\vendor\`. No-op on dev machines (no bundled
+  /// runtime). The driver honors DEX_UFO_ROOT so UFO resolves correctly.
   static Future<void> registerBundledEngines() async {
     final runtime = bundledRuntimeDir();
     if (runtime == null) return;
@@ -425,8 +426,9 @@ class DexSetup {
         '$r${_sep}vendor${_sep}UFO$_sep.venv${_sep}Scripts${_sep}python.exe';
     final bcPy =
         '$r${_sep}vendor${_sep}browser-use$_sep.venv${_sep}Scripts${_sep}python.exe';
-    final wdcDir = '$r${_sep}drivers${_sep}windows-desktop-control';
-    final bcDir = '$r${_sep}drivers${_sep}browser-control';
+    final wdcDir =
+        '$r${_sep}dexagent${_sep}drivers${_sep}windows-desktop-control';
+    final bcDir = '$r${_sep}dexagent${_sep}drivers${_sep}browser-control';
 
     final cfg = _readJson(dexJsonFile);
     final mcp = (cfg['mcp'] as Map?)?.cast<String, dynamic>() ?? {};

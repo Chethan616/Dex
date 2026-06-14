@@ -11,6 +11,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../core/dex_setup.dart';
+import '../../../core/gateway_client.dart';
+import '../../../core/gateway_process.dart';
 import '../../../core/log.dart';
 import '../../../theme/tokens.dart';
 import '../settings_row.dart';
@@ -24,11 +26,24 @@ class DiagnosticsTab extends StatefulWidget {
 
 class _DiagnosticsTabState extends State<DiagnosticsTab> {
   final ScrollController _scroll = ScrollController();
+  bool _restarting = false;
 
   @override
   void dispose() {
     _scroll.dispose();
     super.dispose();
+  }
+
+  Future<void> _restartGateway() async {
+    setState(() => _restarting = true);
+    DexLog.i('gateway', 'restart requested from Diagnostics');
+    final ok = await GatewayManager.restart();
+    if (ok) {
+      await GatewayClient.current?.connect();
+    } else {
+      DexLog.e('gateway', 'restart did not bring a gateway back up');
+    }
+    if (mounted) setState(() => _restarting = false);
   }
 
   Color _levelColor(DexLogLevel level) => switch (level) {
@@ -56,6 +71,12 @@ class _DiagnosticsTabState extends State<DiagnosticsTab> {
                   ),
                 ),
                 const SizedBox(width: DexSpace.sm),
+                _ActionButton(
+                  icon: LucideIcons.rotate_cw,
+                  label: _restarting ? 'Restarting…' : 'Restart gateway',
+                  onTap: _restarting ? null : _restartGateway,
+                ),
+                const SizedBox(width: DexSpace.xs),
                 _ActionButton(
                   icon: LucideIcons.copy,
                   label: 'Copy',
@@ -236,7 +257,7 @@ class _ActionButton extends StatelessWidget {
   });
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

@@ -71,6 +71,43 @@ class GatewayManager {
     return null;
   }
 
+  /// Kill whatever is listening on [port] (Windows: netstat → taskkill).
+  /// Used by restart() so a stale gateway (spawned by us, the Startup
+  /// launcher, or a terminal) is replaced cleanly.
+  static Future<void> _killPort(int port) async {
+    try {
+      final res = await Process.run('netstat', ['-ano']);
+      final pids = <String>{};
+      for (final line in (res.stdout as String).split('\n')) {
+        if (!line.contains(':$port')) continue;
+        if (!line.toUpperCase().contains('LISTENING')) continue;
+        final pid = line.trim().split(RegExp(r'\s+')).last;
+        if (pid != '0' && int.tryParse(pid) != null) pids.add(pid);
+      }
+      for (final pid in pids) {
+        await Process.run('taskkill', <String>['/PID', pid, '/F', '/T']);
+        DexLog.i('gateway', 'killed pid $pid on :$port');
+      }
+    } catch (e) {
+      DexLog.w('gateway', 'killPort failed: $e');
+    }
+  }
+
+  /// Stop the current gateway and start a fresh one. The in-app
+  /// "Restart gateway" action so picking up a new build (or recovering a
+  /// wedged gateway) never needs a terminal.
+  static Future<bool> restart({int port = 18789}) async {
+    DexLog.i('gateway', 'restart requested');
+    await _killPort(port);
+    final deadline = DateTime.now().add(const Duration(seconds: 10));
+    while (DateTime.now().isBefore(deadline)) {
+      if (!await _portOpen(port)) break;
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+    }
+    spawnedByApp = false;
+    return ensureRunning(port: port);
+  }
+
   /// Probe; spawn when down; wait until the port accepts (or give up).
   /// Returns true when a gateway is reachable afterwards.
   static Future<bool> ensureRunning({int port = 18789}) async {

@@ -42,14 +42,12 @@ from mcp.server.fastmcp import FastMCP  # noqa: E402
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-# Phase B moved this from `glue/windows-desktop-control/server.py` (parents[2]
-# was the repo root) to `dex/drivers/windows-desktop-control/server.py` --
-# parents[3] is now the repo root. The old `parents[2]` resolved to
-# `D:\project1\dex` and pointed UFO_ROOT / LOG_DIR at a phantom tree, so the
-# subprocess.run() below spawned `python -m ufo` from an empty directory and
-# crashed with ImportError before UFO2 could load. The agent saw that as
-# "GUI tool keeps timing out".
-REPO_ROOT = Path(__file__).resolve().parents[3]                # D:\project1
+# Drivers now live INSIDE the package at dex/core/drivers/<driver>/server.py,
+# so the repo root is parents[4] (…/dex/core/drivers/windows-desktop-control →
+# drivers → core → dex → repo). This default only matters when DEX_UFO_ROOT is
+# unset; builtin-engines.ts sets DEX_UFO_ROOT to UFO's real location for every
+# gateway-launched run, so the parents[N] math is just a dev fallback.
+REPO_ROOT = Path(__file__).resolve().parents[4]                # repo root
 # UFO² lives at vendor/UFO in the dev repo and the MSI bundle, but an npm
 # install places it at ~/.dex/engines/UFO via `dex engines setup`. Honor
 # DEX_UFO_ROOT so the driver finds UFO wherever it actually was installed;

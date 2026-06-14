@@ -2,7 +2,7 @@
  * BrowserUseEngine — Phase E.2.
  *
  * AutomationEngine adapter for the `browser-control` MCP server
- * (`dex/drivers/browser-control/server.py`). The router picks this
+ * (`dex/core/drivers/browser-control/server.py`). The router picks this
  * engine when the active foreground process is a browser AND a usable
  * DOM is reachable; the engine then drives `browser-use` over MCP to
  * navigate / click / type through the goal.
@@ -106,7 +106,7 @@ export class BrowserUseEngine implements AutomationEngine {
           kind: "engine-unavailable",
           message:
             "browser-control MCP transport not wired. Phase E.3 connects this " +
-            "adapter to the running dex/drivers/browser-control/server.py via the " +
+            "adapter to the running dex/core/drivers/browser-control/server.py via the " +
             "gateway.",
         },
         steps: [],
