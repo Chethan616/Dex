@@ -109,10 +109,31 @@ function setupUfo(pythonArgv: string[], force: boolean): boolean {
   }
   const py = venvPython(dir);
   const reqs = path.join(dir, "requirements.txt");
+  // Pin setuptools<81 + wheel in the venv and disable build isolation for
+  // the requirements: UFO² pins an old pandas that builds from source and
+  // its setup.py imports pkg_resources, which setuptools 81+ removed. With
+  // --no-build-isolation the build uses the venv's setuptools<81 (which
+  // still ships pkg_resources). numpy/cython are common source-build deps.
   const ok =
-    run("pip install", py, ["-m", "pip", "install", "--upgrade", "pip"]) &&
+    run("pip upgrade", py, ["-m", "pip", "install", "--upgrade", "pip"]) &&
+    run("pin build tools", py, [
+      "-m",
+      "pip",
+      "install",
+      "setuptools<81",
+      "wheel",
+      "cython",
+      "numpy",
+    ]) &&
     (fs.existsSync(reqs)
-      ? run("pip install -r requirements", py, ["-m", "pip", "install", "-r", reqs])
+      ? run("pip install -r requirements", py, [
+          "-m",
+          "pip",
+          "install",
+          "--no-build-isolation",
+          "-r",
+          reqs,
+        ])
       : true) &&
     run("pip install mcp", py, ["-m", "pip", "install", "mcp"]);
   if (ok) {

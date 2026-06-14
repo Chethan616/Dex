@@ -145,21 +145,40 @@ class DexSetup {
   static File? agentsYamlFile() {
     final cfg = _readJson(dexJsonFile);
     final servers = (cfg['mcp'] as Map?)?['servers'] as Map?;
-    final wdc = servers?['windows-desktop-control'] as Map?;
-    final args = wdc?['args'];
-    final serverPy = (args is List && args.isNotEmpty) ? args.first : null;
-    if (serverPy is! String || serverPy.isEmpty) return null;
-    var dir = File(serverPy).parent.parent; // = drivers\
-    for (final hops in <int>[1, 2, 3]) {
-      var base = dir;
-      for (var i = 0; i < hops; i++) {
-        base = base.parent;
-      }
+    final wdc = (servers?['windows-desktop-control'] as Map?)?.cast<String, dynamic>();
+
+    // Most robust: the driver's own UFO root. When the engine lives at
+    // ~/.dex/engines/UFO (post-vendor), DEX_UFO_ROOT names it directly,
+    // so agents.yaml is <DEX_UFO_ROOT>/config/ufo/agents.yaml.
+    final ufoRoot = ((wdc?['env'] as Map?)?['DEX_UFO_ROOT'] as String?)?.trim();
+    if (ufoRoot != null && ufoRoot.isNotEmpty) {
       final yaml = File(
-          '${base.path}${_sep}vendor${_sep}UFO${_sep}config${_sep}ufo${_sep}agents.yaml');
+          '$ufoRoot${_sep}config${_sep}ufo${_sep}agents.yaml');
       if (yaml.existsSync()) return yaml;
     }
-    return null;
+
+    // Fallback: walk up from the registered server.py toward a sibling
+    // vendor/UFO (dev repo or MSI layout). Skipped when no mcp.servers
+    // entry exists (built-in resolution is in use).
+    final args = wdc?['args'];
+    final serverPy = (args is List && args.isNotEmpty) ? args.first : null;
+    if (serverPy is String && serverPy.isNotEmpty) {
+      final dir = File(serverPy).parent.parent; // = drivers\
+      for (final hops in <int>[1, 2, 3]) {
+        var base = dir;
+        for (var i = 0; i < hops; i++) {
+          base = base.parent;
+        }
+        final yaml = File(
+            '${base.path}${_sep}vendor${_sep}UFO${_sep}config${_sep}ufo${_sep}agents.yaml');
+        if (yaml.existsSync()) return yaml;
+      }
+    }
+    // Canonical engines home (post-vendor: `dex engines setup` /
+    // migrated UFO live here, and built-in resolution uses it).
+    final home = File(
+        '$_home$_sep.dex${_sep}engines${_sep}UFO${_sep}config${_sep}ufo${_sep}agents.yaml');
+    return home.existsSync() ? home : null;
   }
 
   /// Live health of the built-in engines, checked against disk. Reads
