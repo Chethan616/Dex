@@ -13,9 +13,11 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/connectors.dart';
 import '../core/dex_setup.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
@@ -238,28 +240,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // ---- step 3: apps -----------------------------------------------------
 
   Widget _apps() {
+    // Show the whole messenger lineup, not just WhatsApp. Tap any tile to
+    // link it — WhatsApp pairs in-app (QR); the rest show their one-line
+    // connect command. The user links only what they use; everything is
+    // also in Settings → Connectors & Apps later.
+    final channels = kConnectorCatalog
+        .where((c) => c.category == ConnectorCategory.channels && !c.builtin)
+        .toList(growable: false);
     return _StepShell(
       icon: LucideIcons.message_circle,
       title: 'Connect your apps',
       subtitle:
-          'Pair WhatsApp now and Dex can send you files and messages with a '
-          'single tool call. More apps live in Settings → Connectors & Apps.',
+          'Tap an app to link it — set up the ones you use now, add more '
+          'anytime in Settings → Connectors & Apps.',
       children: [
-        _ConnectRow(
-          icon: LucideIcons.message_circle,
-          name: 'WhatsApp',
-          status: _whatsappLinked ? 'Linked' : 'Scan a QR with your phone',
-          linked: _whatsappLinked,
-          onTap: () async {
-            final ok = await WhatsAppPairDialog.show(context);
-            if (ok && mounted) setState(() => _whatsappLinked = true);
-          },
-        ),
-        const SizedBox(height: DexSpace.sm),
-        Text(
-          'Telegram, Discord, Slack and 60+ skills can be connected any time '
-          'from Settings.',
-          style: DexType.caption(color: DexColors.textFaint),
+        Wrap(
+          spacing: DexSpace.sm,
+          runSpacing: DexSpace.sm,
+          children: [
+            for (final c in channels)
+              _AppTile(
+                icon: c.icon,
+                name: c.name,
+                linked: c.id == 'whatsapp' && _whatsappLinked,
+                onTap: () async {
+                  if (c.id == 'whatsapp') {
+                    final ok = await WhatsAppPairDialog.show(context);
+                    if (ok && mounted) setState(() => _whatsappLinked = true);
+                  } else {
+                    await _showConnectSheet(c);
+                  }
+                },
+              ),
+          ],
         ),
         const Spacer(),
         Row(
@@ -272,6 +285,47 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ],
         ),
       ],
+    );
+  }
+
+  Future<void> _showConnectSheet(ConnectorEntry entry) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: DexColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: DexRadius.rmd),
+        title: Row(
+          children: [
+            Icon(entry.icon, size: 18, color: DexColors.accent),
+            const SizedBox(width: DexSpace.sm),
+            Expanded(
+              child: Text('Connect ${entry.name}',
+                  style: DexType.label(color: DexColors.text)),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(entry.description,
+                style: DexType.caption(color: DexColors.textDim)),
+            if (entry.connectHint != null) ...[
+              const SizedBox(height: DexSpace.md),
+              _CommandBox(entry.connectHint!),
+              const SizedBox(height: DexSpace.xs),
+              Text('Run this, then restart the gateway to finish linking.',
+                  style: DexType.caption(color: DexColors.textFaint)),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Done', style: DexType.label(color: DexColors.accent)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -386,56 +440,92 @@ class _LinkRow extends StatelessWidget {
   }
 }
 
-class _ConnectRow extends StatelessWidget {
-  const _ConnectRow({
+// Compact tappable app tile for the onboarding apps grid. WhatsApp shows a
+// green check when paired in-app; the rest open a connect sheet on tap.
+class _AppTile extends StatelessWidget {
+  const _AppTile({
     required this.icon,
     required this.name,
-    required this.status,
     required this.linked,
     required this.onTap,
   });
   final IconData icon;
   final String name;
-  final String status;
   final bool linked;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(DexSpace.md),
-      decoration: BoxDecoration(
-        color: DexColors.surface,
-        borderRadius: DexRadius.rmd,
-        border: Border.all(color: DexColors.border),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18,
-              color: linked ? DexColors.stateApprove : DexColors.textDim),
-          const SizedBox(width: DexSpace.md),
-          Expanded(
+    return SizedBox(
+      width: 104,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+                vertical: DexSpace.md, horizontal: DexSpace.sm),
+            decoration: BoxDecoration(
+              color: DexColors.surface,
+              borderRadius: DexRadius.rmd,
+              border: Border.all(
+                  color: linked ? DexColors.stateApprove : DexColors.border),
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(name, style: DexType.label(color: DexColors.text)),
-                Text(status,
-                    style: DexType.caption(color: DexColors.textFaint)),
+                Icon(icon,
+                    size: 22,
+                    color: linked ? DexColors.stateApprove : DexColors.textDim),
+                const SizedBox(height: DexSpace.sm),
+                Text(name,
+                    style: DexType.caption(color: DexColors.text),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                if (linked)
+                  Text('linked',
+                      style: DexType.caption(color: DexColors.stateApprove)
+                          .copyWith(fontSize: 10)),
               ],
             ),
           ),
-          if (linked)
-            const Icon(LucideIcons.circle_check,
-                size: 18, color: DexColors.stateApprove)
-          else
-            OutlinedButton(
-              onPressed: onTap,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: DexColors.text,
-                side: const BorderSide(color: DexColors.border),
-              ),
-              child: const Text('Pair'),
+        ),
+      ),
+    );
+  }
+}
+
+// Monospace command box with a copy button, for connect-sheet hints.
+class _CommandBox extends StatelessWidget {
+  const _CommandBox(this.command);
+  final String command;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: DexColors.bg,
+        borderRadius: DexRadius.rsm,
+        border: Border.all(color: DexColors.border),
+      ),
+      padding: const EdgeInsets.fromLTRB(DexSpace.sm, DexSpace.xs, DexSpace.xs, DexSpace.xs),
+      child: Row(
+        children: [
+          Expanded(
+            child: SelectableText(command,
+                style: DexType.mono(color: DexColors.textDim)
+                    .copyWith(fontSize: 11.5)),
+          ),
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: IconButton(
+              icon: const Icon(LucideIcons.copy, size: 14),
+              color: DexColors.textFaint,
+              tooltip: 'Copy',
+              onPressed: () =>
+                  Clipboard.setData(ClipboardData(text: command)),
             ),
+          ),
         ],
       ),
     );
