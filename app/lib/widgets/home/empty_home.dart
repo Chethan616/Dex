@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../core/dex_taglines.dart';
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
 import '../composer/add_menu.dart';
@@ -67,10 +68,20 @@ class EmptyHome extends StatelessWidget {
                   children: [
                     _FadeInUp(
                       index: 0,
-                      child: _Typewriter(
-                        text:
-                            'Hi $greetingName, what should we dive into today?',
-                        style: DexType.title(color: DexColors.text),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Hi $greetingName',
+                              style: DexType.label(color: DexColors.textDim)),
+                          const SizedBox(height: DexSpace.xs),
+                          // A witty tagline from the same set the CLI banner
+                          // shows — picked once per launch (dexSessionTagline).
+                          _Typewriter(
+                            text: dexSessionTagline,
+                            style: DexType.title(color: DexColors.text),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: DexSpace.xl),
