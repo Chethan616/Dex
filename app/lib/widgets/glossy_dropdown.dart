@@ -6,6 +6,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'glossy_menu.dart';
@@ -91,30 +93,39 @@ class _GlossyDropdownState extends State<GlossyDropdown> {
         duration: DexMotion.respecting(context, DexMotion.hover),
         curve: DexMotion.respectingCurve(context, DexMotion.gentle),
         decoration: BoxDecoration(
-          color: DexColors.surface.withValues(alpha: 0.6),
           borderRadius: DexRadius.rsm,
           border: Border.all(color: activeBorder),
         ),
-        child: InkWell(
-          borderRadius: DexRadius.rsm,
-          onTap: _openMenu,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DexSpace.md, vertical: DexSpace.xs,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(widget.value, style: DexType.label(color: DexColors.text)),
-                const SizedBox(width: DexSpace.sm),
-                AnimatedRotation(
-                  turns: _open ? 0.5 : 0,
-                  duration: DexMotion.respecting(context, DexMotion.hover),
-                  curve: DexMotion.respectingCurve(context, DexMotion.gentle),
-                  child: const Icon(LucideIcons.chevron_down,
-                      size: 14, color: DexColors.textDim),
-                ),
-              ],
+        child: GlassContainer(
+          useOwnLayer: true,
+          shape: const LiquidRoundedSuperellipse(borderRadius: 8),
+          settings: const LiquidGlassSettings(
+            glassColor: Color.fromRGBO(20, 34, 68, 0.35),
+            blur: 8,
+            thickness: 10,
+          ),
+          child: InkWell(
+            borderRadius: DexRadius.rsm,
+            onTap: _openMenu,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DexSpace.md, vertical: DexSpace.xs,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(widget.value,
+                      style: DexType.label(color: DexColors.text)),
+                  const SizedBox(width: DexSpace.sm),
+                  AnimatedRotation(
+                    turns: _open ? 0.5 : 0,
+                    duration: DexMotion.respecting(context, DexMotion.hover),
+                    curve: DexMotion.respectingCurve(context, DexMotion.gentle),
+                    child: const Icon(LucideIcons.chevron_down,
+                        size: 14, color: DexColors.textDim),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

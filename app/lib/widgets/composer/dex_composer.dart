@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
@@ -484,27 +485,14 @@ class _RoundIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = tint ?? DexColors.textDim;
-    return MouseRegion(
-      cursor: onTap != null
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
-      child: Tooltip(
-        message: tooltip,
-        child: InkResponse(
-          onTap: onTap,
-          radius: 20,
-          child: Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: DexColors.surface.withValues(alpha: 0.4),
-              shape: BoxShape.circle,
-              border: Border.all(color: DexColors.border),
-            ),
-            child: Icon(icon, size: 18, color: color),
-          ),
-        ),
+    return Tooltip(
+      message: tooltip,
+      child: GlassIconButton(
+        icon: Icon(icon, size: 18, color: color),
+        onPressed: onTap,
+        size: 36,
+        useOwnLayer: true,
+        glowColor: tint,
       ),
     );
   }
@@ -517,31 +505,18 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      child: Tooltip(
-        message: 'Send (Enter)',
-        child: InkResponse(
-          onTap: enabled ? onTap : null,
-          radius: 20,
-          child: Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: enabled ? DexColors.accent : DexColors.surface,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: enabled ? DexColors.accent : DexColors.border,
-              ),
-            ),
-            child: Icon(
-              LucideIcons.arrow_up,
-              size: 18,
-              color: enabled ? DexColors.bg : DexColors.textFaint,
-            ),
-          ),
+    return Tooltip(
+      message: 'Send (Enter)',
+      child: GlassIconButton(
+        icon: Icon(
+          LucideIcons.arrow_up,
+          size: 18,
+          color: enabled ? DexColors.accent : DexColors.textFaint,
         ),
+        onPressed: enabled ? onTap : null,
+        size: 36,
+        useOwnLayer: true,
+        glowColor: enabled ? DexColors.accent : null,
       ),
     );
   }

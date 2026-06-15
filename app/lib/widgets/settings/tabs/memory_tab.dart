@@ -4,6 +4,7 @@
 // /MEMORY.md the agent reads.
 
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../../core/dex_memory.dart';
 import '../../../theme/tokens.dart';
@@ -65,7 +66,7 @@ class _MemoryTabState extends State<MemoryTab> {
           children: [
             SettingsRow(
               label: 'Personalisation and memory',
-              control: Switch(
+              control: GlassSwitch(
                 value: _personalisation,
                 onChanged: _setPersonalisation,
               ),

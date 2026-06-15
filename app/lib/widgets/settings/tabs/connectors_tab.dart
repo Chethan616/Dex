@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../../core/connectors.dart';
 import '../../../theme/tokens.dart';
@@ -239,74 +240,15 @@ class _SearchFieldState extends State<_SearchField> {
 
   @override
   Widget build(BuildContext context) {
-    final focused = _focus.hasFocus;
-    final borderColor = focused
-        ? DexColors.accent.withValues(alpha: 0.65)
-        : DexColors.border;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      curve: Curves.easeOut,
-      height: 42,
-      decoration: BoxDecoration(
-        color: focused
-            ? DexColors.surface2.withValues(alpha: 0.7)
-            : DexColors.surface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor),
-        boxShadow: focused
-            ? <BoxShadow>[
-                BoxShadow(
-                  color: DexColors.accent.withValues(alpha: 0.12),
-                  blurRadius: 12,
-                  spreadRadius: 1,
-                ),
-              ]
-            : const <BoxShadow>[],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: DexSpace.md),
-      child: Row(
-        children: [
-          Icon(LucideIcons.search,
-              size: 15,
-              color: focused ? DexColors.accent : DexColors.textFaint),
-          const SizedBox(width: DexSpace.sm),
-          Expanded(
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focus,
-              style: DexType.body(color: DexColors.text),
-              cursorColor: DexColors.accent,
-              onSubmitted: widget.onSubmitted,
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: 'Search connectors, apps & skills…',
-                hintStyle: DexType.body(color: DexColors.textFaint),
-              ),
-            ),
-          ),
-          if (widget.searching)
-            const SizedBox(
-              width: 13,
-              height: 13,
-              child: CircularProgressIndicator(
-                strokeWidth: 1.4,
-                color: DexColors.textFaint,
-              ),
-            )
-          else if (widget.controller.text.isNotEmpty)
-            Tooltip(
-              message: 'Clear',
-              child: InkResponse(
-                radius: 14,
-                onTap: widget.controller.clear,
-                mouseCursor: SystemMouseCursors.click,
-                child: const Icon(LucideIcons.circle_x,
-                    size: 15, color: DexColors.textFaint),
-              ),
-            ),
-        ],
-      ),
+    // Real liquid-glass search bar — brings its own frosted surface, focus
+    // glow, and the tap-to-clear X-circle. onChanged drives the live local
+    // filter; onSubmitted fires the ClawHub remote search.
+    return GlassSearchBar(
+      controller: widget.controller,
+      focusNode: _focus,
+      placeholder: 'Search connectors, apps & skills…',
+      onChanged: (_) => setState(() {}),
+      onSubmitted: widget.onSubmitted,
     );
   }
 }
