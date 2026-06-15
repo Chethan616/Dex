@@ -13,6 +13,7 @@ import '../../core/dex_memory.dart';
 import '../../core/gateway_client.dart';
 import '../../core/gateway_process.dart';
 import '../../theme/tokens.dart';
+import '../dex_toast.dart';
 import '../model_picker.dart';
 import '../settings/settings_dialog.dart';
 
@@ -224,9 +225,7 @@ class SlashCommands {
   }
 
   static void _snack(BuildContext context, String msg) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
-    );
+    dexToast(context, msg);
   }
 
   static Future<void> _planned(BuildContext context, String title, String body) {

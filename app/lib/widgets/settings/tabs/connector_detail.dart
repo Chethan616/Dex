@@ -8,6 +8,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../../core/connectors.dart';
 import '../../../theme/tokens.dart';
 import '../connector_guide_sheet.dart';
+import '../../dex_toast.dart';
 import '../whatsapp_pair_dialog.dart';
 import 'connectors_tab.dart';
 
@@ -150,12 +151,7 @@ class _HintBox extends StatelessWidget {
             borderRadius: DexRadius.rsm,
             onTap: () {
               Clipboard.setData(ClipboardData(text: hint));
-              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                const SnackBar(
-                  content: Text('Copied'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
+              dexToast(context, 'Copied');
             },
             child: const Padding(
               padding: EdgeInsets.all(4),

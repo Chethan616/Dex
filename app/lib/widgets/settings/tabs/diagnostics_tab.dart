@@ -15,6 +15,7 @@ import '../../../core/gateway_client.dart';
 import '../../../core/gateway_process.dart';
 import '../../../core/log.dart';
 import '../../../theme/tokens.dart';
+import '../../dex_toast.dart';
 import '../settings_row.dart';
 
 class DiagnosticsTab extends StatefulWidget {
@@ -82,11 +83,7 @@ class _DiagnosticsTabState extends State<DiagnosticsTab> {
                   label: 'Copy',
                   onTap: () async {
                     await Clipboard.setData(ClipboardData(text: DexLog.dump()));
-                    if (context.mounted) {
-                      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                        const SnackBar(content: Text('Logs copied')),
-                      );
-                    }
+                    if (context.mounted) dexToast(context, 'Logs copied');
                   },
                 ),
                 const SizedBox(width: DexSpace.xs),

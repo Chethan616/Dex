@@ -11,6 +11,7 @@ import '../../../core/onboarding_request.dart';
 import '../../../core/models/device.dart';
 import '../../../theme/tokens.dart';
 import '../../device_chip.dart';
+import '../../dex_toast.dart';
 import '../../glossy_dropdown.dart';
 import '../../secret_field.dart';
 import '../settings_row.dart';
@@ -144,9 +145,7 @@ class _AccountTabState extends State<AccountTab> {
     // Route back to login by re-running onboarding/login gate.
     dexOnboardingRequested.value = false;
     Navigator.of(context).maybePop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Local profile deleted. Restart Dex to sign in again.')),
-    );
+    dexToast(context, 'Local profile deleted. Restart Dex to sign in again.');
   }
 
   Future<void> _setHandsModel(String model) async {
