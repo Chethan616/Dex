@@ -54,12 +54,9 @@ class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
                 const SizedBox(height: DexSpace.lg),
                 Text('Voice', style: DexType.label(color: DexColors.text)),
                 const SizedBox(height: DexSpace.sm),
-                GridView.count(
-                  shrinkWrap: true,
-                  crossAxisCount: 2,
-                  mainAxisSpacing: DexSpace.sm,
-                  crossAxisSpacing: DexSpace.sm,
-                  childAspectRatio: 2.6,
+                Wrap(
+                  spacing: DexSpace.sm,
+                  runSpacing: DexSpace.sm,
                   children: VoiceSettingsPanel.voices
                       .map((v) => _VoiceTile(
                             label: v,
@@ -100,14 +97,18 @@ class _VoiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Selectable voice options as liquid-glass chips (their own press
-    // physics + frosted surface), filling the grid cell.
-    return GlassChip(
-      label: label,
-      selected: selected,
-      selectedColor: DexColors.accent,
-      onTap: onTap,
-      labelStyle: DexType.label(
-        color: selected ? DexColors.accent : DexColors.text,
+    // physics + frosted surface). MouseRegion adds the hand cursor —
+    // GlassChip doesn't set one itself.
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GlassChip(
+        label: label,
+        selected: selected,
+        selectedColor: DexColors.accent,
+        onTap: onTap,
+        labelStyle: DexType.label(
+          color: selected ? DexColors.accent : DexColors.text,
+        ),
       ),
     );
   }

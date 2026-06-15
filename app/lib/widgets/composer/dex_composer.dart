@@ -17,7 +17,6 @@ import '../living_background.dart';
 import 'add_menu.dart';
 import 'attachments.dart';
 import 'composer_mode.dart';
-import 'mode_menu.dart';
 import 'slash_commands.dart';
 
 class DexComposer extends StatefulWidget {
@@ -67,7 +66,6 @@ class _DexComposerState extends State<DexComposer> {
   // strip above the input shows them; submit/clear empties the list.
   final List<AttachedItem> _attachments = <AttachedItem>[];
 
-  final GlobalKey _modeKey = GlobalKey();
 
   @override
   void initState() {
@@ -245,18 +243,6 @@ class _DexComposerState extends State<DexComposer> {
     _focus.requestFocus();
   }
 
-  Future<void> _openMode() async {
-    final ctx = _modeKey.currentContext;
-    if (ctx == null) return;
-    final box = ctx.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final trigger = box.localToGlobal(Offset.zero) & box.size;
-    final picked = await ModeMenu.show(
-      context: context, trigger: trigger, current: _mode,
-    );
-    if (picked != null && mounted) setState(() => _mode = picked);
-  }
-
   @override
   Widget build(BuildContext context) {
     return DropRegion(
@@ -327,12 +313,11 @@ class _DexComposerState extends State<DexComposer> {
                 ),
                 const SizedBox(height: DexSpace.sm),
                 _Toolbar(
-                  modeKey: _modeKey,
                   mode: _mode,
                   isBusy: widget.isBusy,
                   hasText: _hasText,
                   onAddAction: widget.onAddAction,
-                  onMode: _openMode,
+                  onModeSelected: (m) => setState(() => _mode = m),
                   onVision: widget.onVision,
                   onVoice: widget.onVoice,
                   onStop: widget.onStop,
@@ -402,24 +387,22 @@ class _Input extends StatelessWidget {
 
 class _Toolbar extends StatelessWidget {
   const _Toolbar({
-    required this.modeKey,
     required this.mode,
     required this.isBusy,
     required this.hasText,
     required this.onAddAction,
-    required this.onMode,
+    required this.onModeSelected,
     required this.onVision,
     required this.onVoice,
     required this.onStop,
     required this.onSubmit,
   });
 
-  final GlobalKey modeKey;
   final ComposerMode mode;
   final bool isBusy;
   final bool hasText;
   final ValueChanged<ComposerAddAction>? onAddAction;
-  final VoidCallback onMode;
+  final ValueChanged<ComposerMode> onModeSelected;
   final VoidCallback? onVision;
   final VoidCallback? onVoice;
   final VoidCallback? onStop;
@@ -447,7 +430,20 @@ class _Toolbar extends StatelessWidget {
           ],
         ),
         const SizedBox(width: DexSpace.sm),
-        _ModePill(key: modeKey, mode: mode, onTap: onMode),
+        GlassMenu(
+          quality: GlassQuality.premium,
+          menuWidth: 280,
+          triggerBuilder: (context, toggle) =>
+              _ModePill(mode: mode, onTap: toggle),
+          items: [
+            for (final m in ComposerMode.values)
+              GlassMenuItem(
+                title: m.label,
+                icon: Icon(m.icon),
+                onTap: () => onModeSelected(m),
+              ),
+          ],
+        ),
         const Spacer(),
         if (onVision != null)
           _RoundIconButton(
@@ -493,14 +489,19 @@ class _RoundIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = tint ?? DexColors.textDim;
-    return Tooltip(
-      message: tooltip,
-      child: GlassIconButton(
-        icon: Icon(icon, size: 18, color: color),
-        onPressed: onTap,
-        size: 36,
-        useOwnLayer: true,
-        glowColor: tint,
+    return MouseRegion(
+      cursor: onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      child: Tooltip(
+        message: tooltip,
+        child: GlassIconButton(
+          icon: Icon(icon, size: 18, color: color),
+          onPressed: onTap,
+          size: 36,
+          useOwnLayer: true,
+          glowColor: tint,
+        ),
       ),
     );
   }
@@ -513,7 +514,10 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
+    return MouseRegion(
+      cursor:
+          enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: Tooltip(
       message: 'Send (Enter)',
       child: GlassIconButton(
         icon: Icon(
@@ -526,12 +530,13 @@ class _SendButton extends StatelessWidget {
         useOwnLayer: true,
         glowColor: enabled ? DexColors.accent : null,
       ),
+      ),
     );
   }
 }
 
 class _ModePill extends StatelessWidget {
-  const _ModePill({super.key, required this.mode, required this.onTap});
+  const _ModePill({required this.mode, required this.onTap});
   final ComposerMode mode;
   final VoidCallback onTap;
 

@@ -4,9 +4,9 @@
 // a jump to the memory controls. Toggles persist via DexPrefs.
 
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../../core/dex_prefs.dart';
+import '../../dex_switch.dart';
 import '../../../theme/tokens.dart';
 import '../settings_dialog.dart' show SettingsTab;
 import '../settings_row.dart';
@@ -43,7 +43,7 @@ class _PrivacyTabState extends State<PrivacyTab> {
           children: [
             SettingsRow(
               label: 'Context clues',
-              control: GlassSwitch(
+              control: DexSwitch(
                 value: _contextClues,
                 onChanged: (v) {
                   setState(() => _contextClues = v);
@@ -57,7 +57,7 @@ class _PrivacyTabState extends State<PrivacyTab> {
             ),
             SettingsRow(
               label: 'Share anonymous diagnostics',
-              control: GlassSwitch(
+              control: DexSwitch(
                 value: _diagnostics,
                 onChanged: (v) {
                   setState(() => _diagnostics = v);

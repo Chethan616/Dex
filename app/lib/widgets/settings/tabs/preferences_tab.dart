@@ -7,9 +7,9 @@
 //   - Auto start       writes a HKCU Run entry
 
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../../core/dex_prefs.dart';
+import '../../dex_switch.dart';
 import '../../../main.dart' show registerSpotlightHotkey;
 import '../../../platform/win/tray.dart';
 import '../../../theme/tokens.dart';
@@ -104,7 +104,7 @@ class _PreferencesTabState extends State<PreferencesTab> {
             const Divider(),
             SettingsRow(
               label: 'Auto start on log in',
-              control: GlassSwitch(
+              control: DexSwitch(
                 value: _autoStart,
                 onChanged: (v) {
                   setState(() => _autoStart = v);
@@ -114,7 +114,7 @@ class _PreferencesTabState extends State<PreferencesTab> {
             ),
             SettingsRow(
               label: 'On close, keep the app running',
-              control: GlassSwitch(
+              control: DexSwitch(
                 value: _keepRunning,
                 onChanged: (v) {
                   setState(() => _keepRunning = v);
@@ -141,7 +141,7 @@ class _PreferencesTabState extends State<PreferencesTab> {
             ),
             SettingsRow(
               label: "Listen for 'Hey, Dex' to start a conversation",
-              control: GlassSwitch(
+              control: DexSwitch(
                 value: _wakeWord,
                 onChanged: (v) {
                   setState(() => _wakeWord = v);
@@ -153,7 +153,7 @@ class _PreferencesTabState extends State<PreferencesTab> {
             ),
             SettingsRow(
               label: 'Vision session text editing',
-              control: GlassSwitch(
+              control: DexSwitch(
                 value: _visionTextEditing,
                 onChanged: (v) {
                   setState(() => _visionTextEditing = v);

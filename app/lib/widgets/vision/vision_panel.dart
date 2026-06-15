@@ -3,10 +3,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../theme/tokens.dart';
 import '../dex_glass.dart';
+import '../dex_switch.dart';
 
 class VisionPanel extends StatefulWidget {
   const VisionPanel({super.key, required this.onClose});
@@ -50,7 +50,7 @@ class _VisionPanelState extends State<VisionPanel> {
                       child: Text('Start with voice',
                           style: DexType.label(color: DexColors.text)),
                     ),
-                    GlassSwitch(
+                    DexSwitch(
                       value: _startWithVoice,
                       onChanged: (v) => setState(() => _startWithVoice = v),
                     ),

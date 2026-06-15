@@ -8,6 +8,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 import 'package:uuid/uuid.dart';
@@ -270,15 +271,18 @@ class _AttachmentChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 240),
+      child: GlassContainer(
+      useOwnLayer: true,
+      shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+      settings: const LiquidGlassSettings(
+        glassColor: Color.fromRGBO(20, 34, 68, 0.4),
+        blur: 8,
+        thickness: 10,
+      ),
       padding: const EdgeInsets.fromLTRB(
         DexSpace.sm, 4, 4, 4,
-      ),
-      constraints: const BoxConstraints(maxWidth: 240),
-      decoration: BoxDecoration(
-        color: DexColors.surface.withValues(alpha: 0.5),
-        borderRadius: DexRadius.rpill,
-        border: Border.all(color: DexColors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -328,6 +332,7 @@ class _AttachmentChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
