@@ -11,7 +11,6 @@
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +26,7 @@ import 'theme/theme.dart';
 import 'theme/tokens.dart';
 import 'widgets/composer/attachments.dart';
 import 'widgets/home/suggestion_chip.dart';
-import 'widgets/refractive_edge.dart';
+import 'widgets/dex_glass.dart';
 
 /// Default suggestions surfaced under the overlay's input. Same shape
 /// as the in-app SpotlightOverlay had so users recognise the surface.
@@ -273,33 +272,13 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Flexible(
-                        child: DecoratedBox(
-                          decoration: const BoxDecoration(
-                            borderRadius: DexRadius.rxl,
-                            boxShadow: DexSurface.glossyShadow,
+                        child: DexGlass(
+                          radius: 28,
+                          glow: 0.4,
+                          padding: const EdgeInsets.fromLTRB(
+                            DexSpace.lg, DexSpace.md, DexSpace.lg, DexSpace.md,
                           ),
-                          // Stronger rim than in-app surfaces -- the
-                          // overlay floats over arbitrary content
-                          // (browser / Notepad / whatever), so it
-                          // needs a more present edge to register as
-                          // a separate object.
-                          child: RefractiveEdge(
-                            radius: DexRadius.rxl,
-                            thickness: 1.4,
-                            intensity: 1.6,
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(
-                                sigmaX: DexSurface.blurSigma,
-                                sigmaY: DexSurface.blurSigma,
-                              ),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: DexSurface.glossyGradient(),
-                                ),
-                                padding: const EdgeInsets.fromLTRB(
-                                  DexSpace.lg, DexSpace.md, DexSpace.lg, DexSpace.md,
-                                ),
-                                child: Row(
+                          child: Row(
                                   children: [
                                     const Icon(LucideIcons.search,
                                         size: 20, color: DexColors.textDim),
@@ -357,9 +336,6 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                                     ),
                                   ],
                                 ),
-                              ),
-                            ),
-                          ),
                         ),
                       ),
                       // Separate circular attach button -- detached from
@@ -423,34 +399,17 @@ class _AttachCircleState extends State<_AttachCircle> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: DexSurface.glossyShadow,
-          ),
-          child: RefractiveEdge(
-            radius: BorderRadius.circular(28),
-            thickness: 1.4,
-            intensity: 1.6,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: DexSurface.blurSigma,
-                sigmaY: DexSurface.blurSigma,
-              ),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 120),
-                curve: Curves.easeOutCubic,
-                width: 52,
-                height: 52,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: DexSurface.glossyGradient(),
-                ),
-                child: Icon(
-                  LucideIcons.plus,
-                  size: 20,
-                  color: _hovered ? DexColors.accent : DexColors.text,
-                ),
+        child: DexGlass(
+          radius: 26,
+          padding: EdgeInsets.zero,
+          child: SizedBox(
+            width: 52,
+            height: 52,
+            child: Center(
+              child: Icon(
+                LucideIcons.plus,
+                size: 20,
+                color: _hovered ? DexColors.accent : DexColors.text,
               ),
             ),
           ),

@@ -10,8 +10,6 @@
 // provider key, browser-control env, UFO² agents.yaml — one key, every
 // consumer. Routed from main.dart when DexSetupState.needsOnboarding.
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
@@ -21,9 +19,9 @@ import '../core/connectors.dart';
 import '../core/dex_setup.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../widgets/dex_glass.dart';
 import '../widgets/glossy_dropdown.dart';
 import '../widgets/living_background.dart';
-import '../widgets/refractive_edge.dart';
 import '../widgets/secret_field.dart';
 import '../widgets/settings/connector_guide_sheet.dart';
 import '../widgets/settings/whatsapp_pair_dialog.dart';
@@ -110,23 +108,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560, maxHeight: 620),
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                borderRadius: DexRadius.rlg,
-                boxShadow: DexSurface.glossyShadow,
-              ),
-              child: RefractiveEdge(
-                radius: DexRadius.rlg,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(
-                    sigmaX: DexSurface.blurSigma,
-                    sigmaY: DexSurface.blurSigma,
-                  ),
-                  child: Container(
-                    decoration:
-                        BoxDecoration(gradient: DexSurface.glossyGradient()),
-                    padding: const EdgeInsets.all(DexSpace.xl),
-                    child: Column(
+            child: DexGlass(
+              radius: 20,
+              padding: const EdgeInsets.all(DexSpace.xl),
+              child: Column(
                       children: [
                         Expanded(
                           child: PageView(
@@ -145,12 +130,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ],
                     ),
                   ),
-                ),
               ),
             ),
           ),
-        ),
-      ),
     );
   }
 

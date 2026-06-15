@@ -5,16 +5,14 @@
 // into. Appears before onboarding on first launch; sign-out from the
 // profile menu routes back here.
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../core/account.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../widgets/dex_glass.dart';
 import '../widgets/living_background.dart';
-import '../widgets/refractive_edge.dart';
 import '../widgets/secret_field.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -72,23 +70,10 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 440),
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                borderRadius: DexRadius.rlg,
-                boxShadow: DexSurface.glossyShadow,
-              ),
-              child: RefractiveEdge(
-                radius: DexRadius.rlg,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(
-                    sigmaX: DexSurface.blurSigma,
-                    sigmaY: DexSurface.blurSigma,
-                  ),
-                  child: Container(
-                    decoration:
-                        BoxDecoration(gradient: DexSurface.glossyGradient()),
-                    padding: const EdgeInsets.all(DexSpace.xl),
-                    child: Column(
+            child: DexGlass(
+              radius: 20,
+              padding: const EdgeInsets.all(DexSpace.xl),
+              child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -179,10 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-            ),
-          ),
         ),
-      ),
     );
   }
 }

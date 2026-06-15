@@ -12,7 +12,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
@@ -20,7 +19,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../core/gateway_client.dart';
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
-import '../refractive_edge.dart';
+import '../dex_glass.dart';
 
 class WhatsAppPairDialog extends StatefulWidget {
   const WhatsAppPairDialog({super.key});
@@ -170,23 +169,10 @@ class _WhatsAppPairDialogState extends State<WhatsAppPairDialog> {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              borderRadius: DexRadius.rlg,
-              boxShadow: DexSurface.glossyShadow,
-            ),
-            child: RefractiveEdge(
-              radius: DexRadius.rlg,
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: DexSurface.blurSigma,
-                  sigmaY: DexSurface.blurSigma,
-                ),
-                child: Container(
-                  decoration:
-                      BoxDecoration(gradient: DexSurface.glossyGradient()),
-                  padding: const EdgeInsets.all(DexSpace.xl),
-                  child: Column(
+          child: DexGlass(
+            radius: 20,
+            padding: const EdgeInsets.all(DexSpace.xl),
+            child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -212,12 +198,9 @@ class _WhatsAppPairDialogState extends State<WhatsAppPairDialog> {
                       ..._body(context),
                     ],
                   ),
-                ),
-              ),
             ),
           ),
         ),
-      ),
     );
   }
 

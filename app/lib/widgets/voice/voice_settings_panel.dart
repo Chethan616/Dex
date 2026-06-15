@@ -1,13 +1,11 @@
 // Floating voice settings panel: language + voice grid. Dex ships its own
 // voice name set (no reuse of any other product's voice catalogue).
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../theme/tokens.dart';
+import '../dex_glass.dart';
 import '../glossy_dropdown.dart';
-import '../refractive_edge.dart';
 
 class VoiceSettingsPanel extends StatefulWidget {
   const VoiceSettingsPanel({super.key, required this.onClose});
@@ -29,24 +27,10 @@ class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 320,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          borderRadius: DexRadius.rmd,
-          boxShadow: DexSurface.glossyShadow,
-        ),
-        child: RefractiveEdge(
-          radius: DexRadius.rmd,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: DexSurface.blurSigma,
-              sigmaY: DexSurface.blurSigma,
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: DexSurface.glossyGradient(),
-              ),
-              padding: const EdgeInsets.all(DexSpace.lg),
-              child: Column(
+      child: DexGlass(
+        radius: 14,
+        padding: const EdgeInsets.all(DexSpace.lg),
+        child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -96,9 +80,6 @@ class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
                 ),
               ],
             ),
-          ),
-        ),
-        ),
       ),
     );
   }

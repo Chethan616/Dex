@@ -1,13 +1,11 @@
 // Full-screen voice-mode surface. Animated wave background, centered
 // "I'm listening" label, four bottom controls (close, vision, mic, settings).
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
-import '../refractive_edge.dart';
+import '../dex_glass.dart';
 import 'animated_wave_background.dart';
 import 'voice_settings_panel.dart';
 
@@ -38,26 +36,12 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> {
             right: 0,
             bottom: DexSpace.xxl,
             child: Center(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  borderRadius: DexRadius.rpill,
-                  boxShadow: DexSurface.glossyShadow,
+              child: DexGlass(
+                radius: 30,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DexSpace.lg, vertical: DexSpace.sm,
                 ),
-                child: RefractiveEdge(
-                  radius: DexRadius.rpill,
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(
-                      sigmaX: DexSurface.blurSigma,
-                      sigmaY: DexSurface.blurSigma,
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DexSpace.lg, vertical: DexSpace.sm,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: DexSurface.glossyGradient(),
-                      ),
-                      child: Row(
+                child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _ControlButton(
@@ -86,9 +70,6 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> {
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                ),
               ),
             ),
           ),

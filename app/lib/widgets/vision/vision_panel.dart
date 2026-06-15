@@ -1,13 +1,11 @@
 // Floating "share with Dex" panel. Picks a screen or app to stream to the
 // agent. v1 renders the chrome only; real capture wiring lands later.
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/tokens.dart';
-import '../refractive_edge.dart';
+import '../dex_glass.dart';
 
 class VisionPanel extends StatefulWidget {
   const VisionPanel({super.key, required this.onClose});
@@ -24,24 +22,10 @@ class _VisionPanelState extends State<VisionPanel> {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 380,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          borderRadius: DexRadius.rmd,
-          boxShadow: DexSurface.glossyShadow,
-        ),
-        child: RefractiveEdge(
-          radius: DexRadius.rmd,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: DexSurface.blurSigma,
-              sigmaY: DexSurface.blurSigma,
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: DexSurface.glossyGradient(),
-              ),
-              padding: const EdgeInsets.all(DexSpace.lg),
-              child: Column(
+      child: DexGlass(
+        radius: 14,
+        padding: const EdgeInsets.all(DexSpace.lg),
+        child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -85,9 +69,6 @@ class _VisionPanelState extends State<VisionPanel> {
                 _AppRow(name: 'Browser', onShare: widget.onClose),
               ],
             ),
-          ),
-        ),
-      ),
       ),
     );
   }
