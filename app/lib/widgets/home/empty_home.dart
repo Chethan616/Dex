@@ -30,6 +30,7 @@ class EmptyHome extends StatelessWidget {
     this.onAddAction,
     this.onSelectFile,
     this.onSelectChat,
+    this.onClear,
   });
 
   final String greetingName;
@@ -44,6 +45,7 @@ class EmptyHome extends StatelessWidget {
   final ValueChanged<ComposerAddAction>? onAddAction;
   final ValueChanged<RecentFileItem>? onSelectFile;
   final ValueChanged<RecentChatItem>? onSelectChat;
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +83,7 @@ class EmptyHome extends StatelessWidget {
                         onVision: onVision,
                         onVoice: onVoice,
                         onAddAction: onAddAction,
+                        onClear: onClear,
                       ),
                     ),
                     const SizedBox(height: DexSpace.lg),

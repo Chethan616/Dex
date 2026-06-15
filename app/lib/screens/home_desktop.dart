@@ -167,6 +167,7 @@ class _HomeDesktopState extends State<HomeDesktop> {
                                   onVision: _toggleVision,
                                   onVoice: _openVoice,
                                   onAddAction: _handleAdd,
+                                  onClear: widget.store.clearMessages,
                                 )
                               : EmptyHome(
                                   greetingName: _greetingName,
@@ -179,6 +180,7 @@ class _HomeDesktopState extends State<HomeDesktop> {
                                   onVision: _toggleVision,
                                   onVoice: _openVoice,
                                   onAddAction: _handleAdd,
+                                  onClear: widget.store.clearMessages,
                                 ),
                         ),
                         if (_visionOpen)

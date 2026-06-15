@@ -399,8 +399,70 @@ class DexSetup {
     model['primary'] = primary;
     if (fallbacks != null) model['fallbacks'] = fallbacks;
     defaults['model'] = model;
+    // `agents.defaults.models` (PLURAL) is an allowlist when present: a
+    // model not listed there is rejected and the brain falls back. So if
+    // the user has one, add the chosen model to it; if absent, leave it
+    // (no allowlist = everything allowed).
+    final allow = (defaults['models'] as Map?)?.cast<String, dynamic>();
+    if (allow != null && !allow.containsKey(primary)) {
+      allow[primary] = <String, dynamic>{};
+      defaults['models'] = allow;
+    }
     agents['defaults'] = defaults;
     cfg['agents'] = agents;
+    _writeJson(dexJsonFile, cfg);
+  }
+
+  /// True when a provider has an API key configured (auth profile or the
+  /// `models.providers.[id].apiKey` field). Local providers like Ollama
+  /// need no key, so they read as configured.
+  static bool providerConfigured(String provider) {
+    if (provider == 'ollama') return true;
+    final cfg = _readJson(dexJsonFile);
+    final providerKey = (((cfg['models'] as Map?)?['providers'] as Map?)?[provider]
+        as Map?)?['apiKey'];
+    if (providerKey is String && providerKey.isNotEmpty) return true;
+    final profiles =
+        ((_readJson(authProfilesFile)['profiles']) as Map?)?.cast<String, dynamic>();
+    final prof = (profiles?['$provider:default'] as Map?)?.cast<String, dynamic>();
+    final key = (prof?['key'] as String?)?.trim();
+    return key != null && key.isNotEmpty;
+  }
+
+  /// Generic "save any provider's API key", mirroring [applyGeminiKey] but
+  /// for any provider id (anthropic, openai, groq, openrouter, mistral,
+  /// xai, ...). Writes the auth profile + the `models.providers.[id].apiKey`
+  /// so both the auth layer and provider config see it. Google/Groq keep
+  /// their richer fan-out methods (they also touch the engines).
+  static Future<void> applyProviderKey(String provider, String key) async {
+    final k = key.trim();
+    if (k.isEmpty) throw ArgumentError('empty key');
+    if (provider == 'google') {
+      await applyGeminiKey(k);
+      return;
+    }
+
+    final auth = _readJson(authProfilesFile);
+    auth['version'] ??= 1;
+    final profiles =
+        (auth['profiles'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    profiles['$provider:default'] = <String, dynamic>{
+      'type': 'api_key',
+      'provider': provider,
+      'key': k,
+    };
+    auth['profiles'] = profiles;
+    _writeJson(authProfilesFile, auth);
+
+    final cfg = _readJson(dexJsonFile);
+    final models = (cfg['models'] as Map?)?.cast<String, dynamic>() ?? {};
+    final providers =
+        (models['providers'] as Map?)?.cast<String, dynamic>() ?? {};
+    final p = (providers[provider] as Map?)?.cast<String, dynamic>() ?? {};
+    p['apiKey'] = k;
+    providers[provider] = p;
+    models['providers'] = providers;
+    cfg['models'] = models;
     _writeJson(dexJsonFile, cfg);
   }
 

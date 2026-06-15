@@ -37,6 +37,7 @@ import 'screens/login_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'spotlight_window.dart';
 import 'theme/theme.dart';
+import 'widgets/composer/slash_commands.dart';
 import 'widgets/living_background.dart';
 
 /// IPC channel name used by the Spotlight sub-window to send the user's
@@ -122,6 +123,26 @@ Future<void> _handleSpotlightPrompt(
   ConversationStore store,
   String text,
 ) async {
+  // A slash command from the spotlight runs in the main window (it owns
+  // the navigator + dialogs), then we surface that window.
+  if (SlashCommands.looksLikeCommand(text)) {
+    if (Platform.isWindows) await DexTray.instance.showWindow();
+    // Re-read the navigator context AFTER surfacing the window so it's
+    // current; null only if the app has no live route yet.
+    final ctx = dexNavigatorKey.currentContext;
+    if (ctx != null && ctx.mounted) {
+      await SlashCommands.handle(
+        SlashContext(
+          context: ctx,
+          sendMessage: store.sendHumanMessage,
+          onStop: store.stop,
+          onClear: store.clearMessages,
+        ),
+        text,
+      );
+    }
+    return;
+  }
   // Push the message into the store FIRST. sendHumanMessage's
   // synchronous prefix (append + state flip + notifyListeners) runs
   // before any await, so by the time we yield, the home pane has

@@ -19,6 +19,7 @@ import 'add_menu.dart';
 import 'attachments.dart';
 import 'composer_mode.dart';
 import 'mode_menu.dart';
+import 'slash_commands.dart';
 
 class DexComposer extends StatefulWidget {
   const DexComposer({
@@ -31,6 +32,7 @@ class DexComposer extends StatefulWidget {
     this.onVision,
     this.onVoice,
     this.onAddAction,
+    this.onClear,
   });
 
   final ValueChanged<String> onSubmit;
@@ -41,6 +43,9 @@ class DexComposer extends StatefulWidget {
   final VoidCallback? onVision;
   final VoidCallback? onVoice;
   final ValueChanged<ComposerAddAction>? onAddAction;
+
+  /// Clears the current conversation (used by the /clear slash command).
+  final VoidCallback? onClear;
 
   @override
   State<DexComposer> createState() => _DexComposerState();
@@ -85,9 +90,22 @@ class _DexComposerState extends State<DexComposer> {
     super.dispose();
   }
 
+  // Slash palette: visible while the user is typing a command NAME
+  // (`/` with no space yet). `_slashToken` is the text after the slash.
+  String? _slashToken;
+
   void _onText() {
     final has = _ctrl.text.trim().isNotEmpty;
-    if (has != _hasText) setState(() => _hasText = has);
+    final text = _ctrl.text;
+    final token = (text.startsWith('/') && !text.contains(' '))
+        ? text.substring(1)
+        : null;
+    if (has != _hasText || token != _slashToken) {
+      setState(() {
+        _hasText = has;
+        _slashToken = token;
+      });
+    }
     // A manual edit ends history browsing -- the recalled prompt becomes
     // the live draft (guard skips the programmatic recall writes).
     if (!_applyingHistory) _historyIndex = -1;
@@ -96,9 +114,38 @@ class _DexComposerState extends State<DexComposer> {
     // only submission fires a flare.
   }
 
-  void _submit() {
+  /// Run a palette pick: commands with args get `/name ` written so the
+  /// user can add args; arg-less commands run immediately.
+  Future<void> _runCommand(SlashCommand cmd) async {
+    if (cmd.argsHint.isNotEmpty) {
+      _applyHistoryText('/${cmd.name} ');
+      setState(() => _slashToken = null);
+      _focus.requestFocus();
+      return;
+    }
+    _ctrl.clear();
+    setState(() => _slashToken = null);
+    await SlashCommands.handle(_slashCtx(), '/${cmd.name}');
+  }
+
+  SlashContext _slashCtx() => SlashContext(
+        context: context,
+        sendMessage: widget.onSubmit,
+        onStop: widget.onStop,
+        onClear: widget.onClear,
+      );
+
+  Future<void> _submit() async {
     final t = _ctrl.text.trim();
     if (t.isEmpty && _attachments.isEmpty) return;
+    // Slash commands run locally and never reach the agent.
+    if (SlashCommands.looksLikeCommand(t)) {
+      _ctrl.clear();
+      setState(() => _slashToken = null);
+      await SlashCommands.handle(_slashCtx(), t);
+      _focus.requestFocus();
+      return;
+    }
     // Stronger flare on submission than on a keystroke -- the fog
     // visibly "answers" the send.
     LivingBackground.of(context)?.pulse(0.8);
@@ -283,6 +330,11 @@ class _DexComposerState extends State<DexComposer> {
                       items: _attachments,
                       onRemove: _removeAttachment,
                     ),
+                    if (_slashToken != null)
+                      _SlashPalette(
+                        token: _slashToken!,
+                        onPick: _runCommand,
+                      ),
                     _Input(
                       controller: _ctrl,
                       focusNode: _focus,
@@ -551,6 +603,67 @@ class _ModePill extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// Live command palette shown above the input while typing `/name`.
+class _SlashPalette extends StatelessWidget {
+  const _SlashPalette({required this.token, required this.onPick});
+  final String token;
+  final ValueChanged<SlashCommand> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final matches = SlashCommands.matching(token);
+    if (matches.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: DexSpace.sm),
+      constraints: const BoxConstraints(maxHeight: 220),
+      decoration: BoxDecoration(
+        color: DexColors.surface.withValues(alpha: 0.6),
+        borderRadius: DexRadius.rmd,
+        border: Border.all(color: DexColors.border),
+      ),
+      child: ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.all(DexSpace.xs),
+        children: [
+          for (final c in matches)
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: InkWell(
+                onTap: () => onPick(c),
+                borderRadius: DexRadius.rsm,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: DexSpace.sm, vertical: DexSpace.sm),
+                  child: Row(
+                    children: [
+                      Icon(c.icon, size: 15, color: DexColors.textDim),
+                      const SizedBox(width: DexSpace.sm),
+                      Text('/${c.name}',
+                          style: DexType.mono(color: DexColors.text)
+                              .copyWith(fontSize: 12.5)),
+                      if (c.argsHint.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Text(c.argsHint,
+                            style: DexType.caption(color: DexColors.textFaint)),
+                      ],
+                      const SizedBox(width: DexSpace.md),
+                      Expanded(
+                        child: Text(c.description,
+                            style: DexType.caption(color: DexColors.textDim),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
