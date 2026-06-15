@@ -116,13 +116,15 @@ class GatewayManager {
       return true;
     }
 
+    DexLog.i('gateway', 'nothing on :$port — locating dexagent launcher');
     final entry = _findGatewayEntry();
     if (entry == null) {
       DexLog.e('gateway',
-          'dexagent launcher (dex.mjs) not found — install dexagent globally or run the MSI');
+          'dexagent launcher (dex.mjs) not found under <exe>\\runtime\\dexagent or %APPDATA%\\npm\\node_modules\\dexagent — install with `npm i -g dexagent` or run the MSI');
       return false;
     }
     final node = _findNode();
+    DexLog.i('gateway', 'launcher: $entry · node: $node');
     try {
       // Detached: no console window, survives app exit. The gateway
       // writes its own log under %TEMP%\openclaw. `run` = foreground

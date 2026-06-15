@@ -755,7 +755,7 @@ export async function runCli(argv: string[] = process.argv) {
     const suppressStartupProgress = hasJsonOutputFlag(parseArgv);
     const { createCliProgress } = await loadProgressModule();
     const startupProgress = createCliProgress({
-      label: "Loading OpenClaw CLI…",
+      label: "Loading Dex CLI…",
       indeterminate: true,
       delayMs: 0,
       ...(suppressStartupProgress ? { enabled: false } : {}),

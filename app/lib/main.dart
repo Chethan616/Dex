@@ -24,6 +24,7 @@ import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'core/account.dart';
+import 'core/dex_prefs.dart';
 import 'core/dex_setup.dart';
 import 'core/gateway_client.dart';
 import 'core/gateway_process.dart';
@@ -65,6 +66,10 @@ Future<void> main() async {
 
   // ---------- MAIN WINDOW ----------
 
+  // Load UI preferences (theme, hotkey, autostart, ...) before the first
+  // frame so the app opens in the user's chosen theme with no flash.
+  await DexPrefs.init();
+
   // Window + tray init on Windows (no-op on other platforms for now;
   // macOS / Linux land in v1.3 platform abstraction).
   // Window geometry (size, position, maximized) is persisted and
@@ -79,7 +84,13 @@ Future<void> main() async {
 
   // Read gateway URL + auth token from ~\.dex\dex.json; see
   // GatewayConfig.fromLocalConfig for the legacy-filename fallbacks.
-  final client = GatewayClient(GatewayConfig.fromLocalConfig());
+  final gatewayConfig = GatewayConfig.fromLocalConfig();
+  final client = GatewayClient(gatewayConfig);
+  // First line in Diagnostics so the panel is never empty: states the
+  // target + whether we have a token, the two things that decide whether
+  // a connection can even be attempted.
+  DexLog.i('app',
+      'Dex started — gateway ${gatewayConfig.url}, token ${gatewayConfig.token?.isNotEmpty == true ? 'present' : 'MISSING (run setup)'}');
   // Dex owns its brain: when no gateway is listening, spawn the bundled
   // (or npm-installed) dexagent runtime DETACHED -- the user never
   // opens a terminal. Connection proceeds either way; the banner
@@ -102,9 +113,7 @@ Future<void> main() async {
     return null;
   });
 
-  if (Platform.isWindows) {
-    await _registerSpotlightHotkey();
-  }
+  await registerSpotlightHotkey();
 
   runApp(DexApp(store: store));
 }
@@ -165,19 +174,20 @@ Future<void> _summonSpotlight() async {
   }
 }
 
-Future<void> _registerSpotlightHotkey() async {
+/// Register (or clear) the global summon hotkey from the saved pref.
+/// Called at startup and again whenever Settings changes the choice, so
+/// the binding is always live. "None" leaves no system hotkey registered.
+Future<void> registerSpotlightHotkey() async {
+  if (!Platform.isWindows) return;
   try {
     await hotKeyManager.unregisterAll();
-    final hotKey = HotKey(
-      key: PhysicalKeyboardKey.keyK,
-      modifiers: [HotKeyModifier.control],
-      scope: HotKeyScope.system,
-    );
+    final binding = _hotKeyFor(DexPrefs.hotkey);
+    if (binding == null) return; // "None" -- nothing registered.
     await hotKeyManager.register(
-      hotKey,
+      binding,
       keyDownHandler: (_) async {
         // When the main window is already focused, the in-app
-        // DexComposer Shortcut handles Ctrl+K -- it focuses the
+        // DexComposer Shortcut handles the summon key -- it focuses the
         // docked composer. We no-op the system hotkey in that case so
         // the user isn't punished with a modal stealing focus.
         if (await windowManager.isFocused()) return;
@@ -188,6 +198,20 @@ Future<void> _registerSpotlightHotkey() async {
     debugPrint('[dex] spotlight hotkey registration failed: $e\n$st');
   }
 }
+
+HotKey? _hotKeyFor(String label) => switch (label) {
+      'Ctrl+K' => HotKey(
+          key: PhysicalKeyboardKey.keyK,
+          modifiers: [HotKeyModifier.control],
+          scope: HotKeyScope.system,
+        ),
+      'Alt+Space' => HotKey(
+          key: PhysicalKeyboardKey.space,
+          modifiers: [HotKeyModifier.alt],
+          scope: HotKeyScope.system,
+        ),
+      _ => null, // "None"
+    };
 
 void unawaited(Future<void> _) {}
 
@@ -285,15 +309,18 @@ class _DexAppState extends State<DexApp> with WindowListener {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Dex',
-      navigatorKey: dexNavigatorKey,
-      debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.dark,
-      theme: buildDexLightTheme(),
-      darkTheme: buildDexDarkTheme(),
-      scrollBehavior: const DexScrollBehavior(),
-      home: _buildRoot(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: DexPrefs.themeMode,
+      builder: (context, mode, _) => MaterialApp(
+        title: 'Dex',
+        navigatorKey: dexNavigatorKey,
+        debugShowCheckedModeBanner: false,
+        themeMode: mode,
+        theme: buildDexLightTheme(),
+        darkTheme: buildDexDarkTheme(),
+        scrollBehavior: const DexScrollBehavior(),
+        home: _buildRoot(),
+      ),
     );
   }
 

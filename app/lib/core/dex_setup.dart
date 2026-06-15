@@ -267,8 +267,15 @@ class DexSetup {
       brainFallbacks: fallbacks,
       handsModel: handsModel,
       handsKeySet: handsKeySet,
+      // Browser is configured when its key is resolvable: either an
+      // explicit browser-control env key, OR the google provider key the
+      // built-in browser engine injects at runtime (resolveGoogleApiKey).
+      // Without the OR, a built-in-engine setup (no mcp.servers entry)
+      // shows Browser grey even though it's fully keyed. See
+      // engines/builtin-engines.ts (GEMINI_API_KEY from providers.google).
       browserEnvKeySet:
-          ((browserEnv?['GEMINI_API_KEY']) as String?)?.isNotEmpty == true,
+          ((browserEnv?['GEMINI_API_KEY']) as String?)?.isNotEmpty == true ||
+              (webSearchKey is String && webSearchKey.isNotEmpty),
       webSearchKeySet: webSearchKey is String && webSearchKey.isNotEmpty,
       handsOnGroq: handsOnGroq,
       groqKeyTail: (groqKey != null && groqKey.isNotEmpty)

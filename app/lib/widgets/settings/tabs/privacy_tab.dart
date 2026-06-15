@@ -1,23 +1,35 @@
-// Privacy tab. Toggles for context use, training, transcript, plus links
-// to managing shared data and exporting history.
+// Privacy tab. Local-first agent, so this surfaces the controls that
+// actually mean something on this machine: whether Dex may read the
+// active window/screen for context, an optional diagnostics opt-in, and
+// a jump to the memory controls. Toggles persist via DexPrefs.
 
 import 'package:flutter/material.dart';
 
+import '../../../core/dex_prefs.dart';
 import '../../../theme/tokens.dart';
+import '../settings_dialog.dart' show SettingsTab;
 import '../settings_row.dart';
 
 class PrivacyTab extends StatefulWidget {
-  const PrivacyTab({super.key});
+  const PrivacyTab({super.key, this.onNavigate});
+
+  /// Lets a link jump to another settings tab (e.g. Memory).
+  final void Function(SettingsTab)? onNavigate;
+
   @override
   State<PrivacyTab> createState() => _PrivacyTabState();
 }
 
 class _PrivacyTabState extends State<PrivacyTab> {
-  bool _contextClues = true;
-  bool _videoTranscript = false;
-  bool _trainOnChat = true;
-  bool _trainOnVoice = false;
-  bool _diagnostics = true;
+  late bool _contextClues;
+  late bool _diagnostics;
+
+  @override
+  void initState() {
+    super.initState();
+    _contextClues = DexPrefs.contextClues;
+    _diagnostics = DexPrefs.diagnostics;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,48 +44,34 @@ class _PrivacyTabState extends State<PrivacyTab> {
               label: 'Context clues',
               control: Switch(
                 value: _contextClues,
-                onChanged: (v) => setState(() => _contextClues = v),
+                onChanged: (v) {
+                  setState(() => _contextClues = v);
+                  DexPrefs.setContextClues(v);
+                },
               ),
               description:
-                  'Dex may give better answers based on the current window, open tabs, or browsing history.',
+                  'Allow Dex to read the current window, open tabs, or what is '
+                  'on screen to give better answers. Everything stays on this '
+                  'machine.',
             ),
             SettingsRow(
-              label: 'Video transcript',
-              control: Switch(
-                value: _videoTranscript,
-                onChanged: (v) => setState(() => _videoTranscript = v),
-              ),
-              description:
-                  'Dex may surface video highlights with timestamps based on the video transcript.',
-            ),
-            SettingsRow(
-              label: 'Training on conversation activity',
-              control: Switch(
-                value: _trainOnChat,
-                onChanged: (v) => setState(() => _trainOnChat = v),
-              ),
-              description:
-                  'Allow conversations with Dex to help train future models.',
-            ),
-            SettingsRow(
-              label: 'Training on voice conversations',
-              control: Switch(
-                value: _trainOnVoice,
-                onChanged: (v) => setState(() => _trainOnVoice = v),
-              ),
-            ),
-            const Divider(),
-            SettingsLinkRow(label: 'Manage shared links', onTap: () {}),
-            SettingsLinkRow(
-                label: 'Manage personalisation and memory', onTap: () {}),
-            SettingsLinkRow(label: 'Export or delete history', onTap: () {}),
-            const Divider(),
-            SettingsRow(
-              label: 'Optional diagnostic data sharing',
+              label: 'Share anonymous diagnostics',
               control: Switch(
                 value: _diagnostics,
-                onChanged: (v) => setState(() => _diagnostics = v),
+                onChanged: (v) {
+                  setState(() => _diagnostics = v);
+                  DexPrefs.setDiagnostics(v);
+                },
               ),
+              description:
+                  'Off by default. Dex sends no usage data unless you turn '
+                  'this on.',
+            ),
+            const Divider(),
+            SettingsLinkRow(
+              label: 'Manage personalisation and memory',
+              description: 'View, add, or delete what Dex remembers about you.',
+              onTap: () => widget.onNavigate?.call(SettingsTab.memory),
             ),
           ],
         ),

@@ -376,7 +376,7 @@ describe("runCli exit behavior", () => {
     await runCli(["node", "openclaw", "config"]);
 
     expect(createCliProgressMock).toHaveBeenCalledWith({
-      label: "Loading OpenClaw CLI…",
+      label: "Loading Dex CLI…",
       indeterminate: true,
       delayMs: 0,
     });
@@ -394,7 +394,7 @@ describe("runCli exit behavior", () => {
     await runCli(["node", "openclaw", "sessions", "--json", "--limit", "all"]);
 
     expect(createCliProgressMock).toHaveBeenCalledWith({
-      label: "Loading OpenClaw CLI…",
+      label: "Loading Dex CLI…",
       indeterminate: true,
       delayMs: 0,
       enabled: false,

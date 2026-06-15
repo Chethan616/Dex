@@ -144,6 +144,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
     );
   }
 
+  void _navigate(SettingsTab t) => setState(() => _tab = t);
+
   Widget _content(SettingsTab t) {
     switch (t) {
       case SettingsTab.preferences:
@@ -157,7 +159,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
       case SettingsTab.diagnostics:
         return const DiagnosticsTab();
       case SettingsTab.privacy:
-        return const PrivacyTab();
+        return PrivacyTab(onNavigate: _navigate);
       case SettingsTab.about:
         return const AboutTab();
     }

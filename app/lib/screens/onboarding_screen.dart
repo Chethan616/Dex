@@ -25,6 +25,7 @@ import '../widgets/glossy_dropdown.dart';
 import '../widgets/living_background.dart';
 import '../widgets/refractive_edge.dart';
 import '../widgets/secret_field.dart';
+import '../widgets/settings/connector_guide_sheet.dart';
 import '../widgets/settings/whatsapp_pair_dialog.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -310,11 +311,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           children: [
             Text(entry.description,
                 style: DexType.caption(color: DexColors.textDim)),
-            if (entry.connectHint != null) ...[
+            if (ConnectorGuideSheet.hasGuide(entry.id)) ...[
               const SizedBox(height: DexSpace.md),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    ConnectorGuideSheet.show(context,
+                        connectorId: entry.id, title: entry.name);
+                  },
+                  icon: const Icon(LucideIcons.book_open, size: 14),
+                  label: const Text('How to link, step by step'),
+                  style: TextButton.styleFrom(
+                      foregroundColor: DexColors.accent),
+                ),
+              ),
+            ],
+            if (entry.connectHint != null) ...[
+              const SizedBox(height: DexSpace.sm),
               _CommandBox(entry.connectHint!),
               const SizedBox(height: DexSpace.xs),
-              Text('Run this, then restart the gateway to finish linking.',
+              Text('Or run this, then restart the gateway to finish linking.',
                   style: DexType.caption(color: DexColors.textFaint)),
             ],
           ],

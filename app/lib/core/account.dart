@@ -42,6 +42,18 @@ class DexAccount {
     await prefs.setBool(_kSignedIn, false);
   }
 
+  /// Clear the local identity entirely: name, email, signed-in flag, and
+  /// the onboarding-seen marker. The agent stack (keys/models/channels)
+  /// is untouched — this only removes the local profile, so the next
+  /// launch lands on the login screen.
+  static Future<void> deleteLocal() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kName);
+    await prefs.remove(_kEmail);
+    await prefs.remove(_kOnboardSeen);
+    await prefs.setBool(_kSignedIn, false);
+  }
+
   /// Whether the onboarding tour has been completed on this machine.
   /// Separate from the engine-config check: a fresh account sees the
   /// tour ONCE even when the machine is already configured.

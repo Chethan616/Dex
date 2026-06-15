@@ -1,8 +1,11 @@
-// Memory tab -- personalization toggle, microsoft-usage-equivalent toggle
-// (Dex calls it "Cloud diagnostics"), plus links to the view + add screens.
+// Memory tab -- personalisation toggle (gates whether MEMORY.md is loaded),
+// a live count of stored facts, plus links to the view + add screens.
+// Backed by DexMemory so everything reflects the real ~/.dex/workspace
+// /MEMORY.md the agent reads.
 
 import 'package:flutter/material.dart';
 
+import '../../../core/dex_memory.dart';
 import '../../../theme/tokens.dart';
 import '../settings_row.dart';
 import 'memory_add.dart';
@@ -15,19 +18,44 @@ class MemoryTab extends StatefulWidget {
 }
 
 class _MemoryTabState extends State<MemoryTab> {
-  bool _personalisation = true;
-  bool _cloudDiagnostics = true;
+  late bool _personalisation;
+  late int _factCount;
   bool _showAdd = false;
   bool _showView = false;
 
   @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  void _refresh() {
+    _personalisation = DexMemory.isEnabled;
+    _factCount = _personalisation ? DexMemory.read().length : 0;
+  }
+
+  void _setPersonalisation(bool v) {
+    DexMemory.setEnabled(v);
+    setState(_refresh);
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (_showAdd) {
-      return MemoryAdd(onBack: () => setState(() => _showAdd = false));
+      return MemoryAdd(onBack: () => setState(() {
+            _showAdd = false;
+            _refresh();
+          }));
     }
     if (_showView) {
-      return MemoryView(onBack: () => setState(() => _showView = false));
+      return MemoryView(onBack: () => setState(() {
+            _showView = false;
+            _refresh();
+          }));
     }
+    final viewDesc = _factCount == 0
+        ? 'Nothing remembered yet.'
+        : '$_factCount ${_factCount == 1 ? 'fact' : 'facts'} stored.';
     return SingleChildScrollView(
       padding: const EdgeInsets.all(DexSpace.lg),
       child: SettingsSection(
@@ -39,30 +67,28 @@ class _MemoryTabState extends State<MemoryTab> {
               label: 'Personalisation and memory',
               control: Switch(
                 value: _personalisation,
-                onChanged: (v) => setState(() => _personalisation = v),
+                onChanged: _setPersonalisation,
               ),
               description:
-                  'Your conversation history, facts, and instructions will be used to personalise Dex.',
-            ),
-            SettingsRow(
-              label: 'Cloud diagnostics',
-              control: Switch(
-                value: _cloudDiagnostics,
-                onChanged: (v) => setState(() => _cloudDiagnostics = v),
-              ),
-              description:
-                  'Let Dex use anonymised telemetry from your local sessions to improve quality.',
+                  'Dex remembers durable facts and preferences in one compact '
+                  'file it reads each session. Turn off to stop using it '
+                  '(your saved facts are kept, just set aside).',
             ),
             const Divider(),
             SettingsLinkRow(
               label: 'Add or import memory',
               description:
-                  'Bring in info from other AI products, social media links, and files.',
-              onTap: () => setState(() => _showAdd = true),
+                  'Bring in info from other AI products, social links, and files.',
+              onTap: _personalisation
+                  ? () => setState(() => _showAdd = true)
+                  : null,
             ),
             SettingsLinkRow(
               label: 'View memory',
-              onTap: () => setState(() => _showView = true),
+              description: viewDesc,
+              onTap: _personalisation
+                  ? () => setState(() => _showView = true)
+                  : null,
             ),
           ],
         ),

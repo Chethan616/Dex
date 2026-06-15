@@ -80,6 +80,9 @@ flutter:
     # we mirror it here so it ends up inside the Flutter bundle and can be
     # resolved via rootBundle at runtime.
     - assets/tray/dex.ico
+    # Per-app "how to link" guides shown by ConnectorGuideSheet when a
+    # user taps an app in onboarding / Connectors & Apps.
+    - assets/guides/
 
   # FONTS:
   # Geist + Geist Mono (OFL-1.1) are referenced by name in lib/theme/tokens.dart.

@@ -2,6 +2,7 @@
 // consumer via DexSetup) + device presence.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/account.dart';
@@ -27,8 +28,6 @@ class _AccountTabState extends State<AccountTab> {
     state: DeviceConnection.online,
     capabilities: <String>['desktop', 'files', 'web'],
   );
-
-  bool _phoneLinked = false;
 
   late DexSetupState _setup;
   final TextEditingController _keyCtrl = TextEditingController();
@@ -108,6 +107,46 @@ class _AccountTabState extends State<AccountTab> {
     } catch (e) {
       setState(() => _note = 'Model change failed: $e');
     }
+  }
+
+  Future<void> _confirmDelete() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: DexColors.surface2,
+        title: Text('Delete local profile?',
+            style: DexType.label(color: DexColors.text)),
+        content: Text(
+          'This clears your name, email, and sign-in on this machine. Your '
+          'API keys, models, and paired apps stay. You can sign in again '
+          'after restarting Dex.',
+          style: DexType.body(color: DexColors.textDim),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: DexColors.stateError,
+              foregroundColor: DexColors.bg,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await DexAccount.deleteLocal();
+    if (!mounted) return;
+    // Route back to login by re-running onboarding/login gate.
+    dexOnboardingRequested.value = false;
+    Navigator.of(context).maybePop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Local profile deleted. Restart Dex to sign in again.')),
+    );
   }
 
   Future<void> _setHandsModel(String model) async {
@@ -269,26 +308,26 @@ class _AccountTabState extends State<AccountTab> {
             const SizedBox(height: DexSpace.sm),
             const DeviceChip(device: _device),
             const Divider(),
-            SettingsRow(
-              label: 'Phone connection',
-              control: Switch(
-                value: _phoneLinked,
-                onChanged: (v) => setState(() => _phoneLinked = v),
-              ),
+            SettingsLinkRow(
+              label: 'Connect a phone',
               description:
-                  'Send or retrieve text messages, access contacts, and more by linking your phone.',
+                  'Pairing from the Dex mobile app arrives in a later release.',
+              trailingIcon: LucideIcons.smartphone,
+              // No onTap: shown as an honest "coming soon" row, not a
+              // toggle that does nothing.
             ),
             const Divider(),
             Text('Delete account',
                 style: DexType.label(color: DexColors.text)),
             const SizedBox(height: DexSpace.xs),
             Text(
-              'If you delete and later re-activate, your local data may not be restored.',
+              'Clears your local Dex profile (name, email, sign-in). Your API '
+              'keys, models, and paired apps are NOT affected.',
               style: DexType.caption(color: DexColors.textFaint),
             ),
             const SizedBox(height: DexSpace.md),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: _confirmDelete,
               style: ElevatedButton.styleFrom(
                 backgroundColor: DexColors.stateError,
                 foregroundColor: DexColors.bg,
@@ -305,7 +344,6 @@ class _AccountTabState extends State<AccountTab> {
                 Navigator.of(context).maybePop();
               },
             ),
-            SettingsLinkRow(label: 'Parental controls', onTap: () {}),
           ],
         ),
       ),

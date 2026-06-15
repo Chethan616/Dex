@@ -1,11 +1,13 @@
-// View memory sub-screen reached from the Memory tab. Lists the facts Dex
-// has remembered and lets the user delete or add new ones.
+// View memory sub-screen reached from the Memory tab. Lists the real facts
+// Dex has stored in ~/.dex/workspace/MEMORY.md and lets the user add or
+// delete them. Backed by DexMemory, so edits land in the same file the
+// agent reads as long-term memory.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../../../core/dex_memory.dart';
 import '../../../theme/tokens.dart';
-import '../settings_row.dart';
 
 class MemoryView extends StatefulWidget {
   const MemoryView({super.key, required this.onBack});
@@ -15,7 +17,27 @@ class MemoryView extends StatefulWidget {
 }
 
 class _MemoryViewState extends State<MemoryView> {
-  final List<String> _facts = <String>[];
+  late List<MemoryFact> _facts;
+
+  @override
+  void initState() {
+    super.initState();
+    _facts = DexMemory.read();
+  }
+
+  void _reload() => setState(() => _facts = DexMemory.read());
+
+  Future<void> _add() async {
+    final text = await _promptForFact(context);
+    if (text == null || text.trim().isEmpty) return;
+    DexMemory.addFact(text.trim());
+    _reload();
+  }
+
+  void _delete(MemoryFact f) {
+    DexMemory.deleteFact(f);
+    _reload();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,9 +64,9 @@ class _MemoryViewState extends State<MemoryView> {
           else
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: _facts.map((f) => _Fact(text: f, onDelete: () {
-                    setState(() => _facts.remove(f));
-                  })).toList(growable: false),
+              children: _facts
+                  .map((f) => _Fact(text: f.text, onDelete: () => _delete(f)))
+                  .toList(growable: false),
             ),
           const SizedBox(height: DexSpace.md),
           if (_facts.isNotEmpty)
@@ -63,8 +85,40 @@ class _MemoryViewState extends State<MemoryView> {
       ),
     );
   }
+}
 
-  void _add() => setState(() => _facts.add('New fact ${_facts.length + 1}'));
+/// Small modal that collects one fact's text.
+Future<String?> _promptForFact(BuildContext context) {
+  final ctrl = TextEditingController();
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: DexColors.surface2,
+      title: Text('Remember a fact',
+          style: DexType.label(color: DexColors.text)),
+      content: TextField(
+        controller: ctrl,
+        autofocus: true,
+        maxLines: 3,
+        minLines: 1,
+        style: DexType.body(color: DexColors.text),
+        decoration: const InputDecoration(
+          hintText: 'Example: I prefer concise, bulleted answers.',
+        ),
+        onSubmitted: (v) => Navigator.of(ctx).pop(v),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(ctx).pop(ctrl.text),
+          child: const Text('Save'),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Empty extends StatelessWidget {
@@ -125,6 +179,7 @@ class _Fact extends StatelessWidget {
             IconButton(
               icon: const Icon(LucideIcons.trash_2, size: 14),
               color: DexColors.textDim,
+              tooltip: 'Forget this',
               onPressed: onDelete,
             ),
           ],

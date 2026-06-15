@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../../../core/dex_memory.dart';
 import '../../../theme/tokens.dart';
 
 class MemoryAdd extends StatefulWidget {
@@ -21,6 +22,7 @@ class _MemoryAddState extends State<MemoryAdd> {
   final _pasteCtrl = TextEditingController();
   final _factsCtrl = TextEditingController();
   final _linksCtrl = TextEditingController();
+  String? _saved;
 
   @override
   void dispose() {
@@ -28,6 +30,36 @@ class _MemoryAddState extends State<MemoryAdd> {
     _factsCtrl.dispose();
     _linksCtrl.dispose();
     super.dispose();
+  }
+
+  // Ingest the imported response + typed facts + links into MEMORY.md.
+  // Each non-empty line becomes its own bullet; a link gets a short prefix
+  // so the agent knows it's a reference it can fetch.
+  void _save() {
+    var added = 0;
+    void add(String? raw, {String? prefix}) {
+      final text = raw?.trim();
+      if (text == null || text.isEmpty) return;
+      for (final line in text.split('\n')) {
+        final l = line.trim();
+        if (l.isEmpty) continue;
+        DexMemory.addFact(prefix != null ? '$prefix$l' : l);
+        added++;
+      }
+    }
+
+    add(_pasteCtrl.text);
+    add(_factsCtrl.text);
+    add(_linksCtrl.text, prefix: 'Reference link: ');
+    if (added == 0) {
+      setState(() => _saved = 'Nothing to save — add some facts or a link first.');
+      return;
+    }
+    _pasteCtrl.clear();
+    _factsCtrl.clear();
+    _linksCtrl.clear();
+    setState(() =>
+        _saved = 'Saved $added ${added == 1 ? 'item' : 'items'} to memory.');
   }
 
   @override
@@ -107,6 +139,22 @@ class _MemoryAddState extends State<MemoryAdd> {
           Text('Upload files', style: DexType.label(color: DexColors.text)),
           const SizedBox(height: DexSpace.sm),
           DottedDropZone(onTap: () {}),
+          const SizedBox(height: DexSpace.lg),
+          Row(
+            children: [
+              if (_saved != null)
+                Expanded(
+                  child: Text(_saved!,
+                      style: DexType.caption(color: DexColors.textDim)),
+                )
+              else
+                const Spacer(),
+              ElevatedButton(
+                onPressed: _save,
+                child: const Text('Save to memory'),
+              ),
+            ],
+          ),
         ],
       ),
     );
