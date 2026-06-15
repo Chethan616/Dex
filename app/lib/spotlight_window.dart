@@ -197,8 +197,26 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
   }
 
   Future<void> _pasteFromClipboard() async {
+    // Rich content (image / file) becomes an attachment chip.
     final items = await extractClipboardItems();
-    if (items.isNotEmpty) _addAttachments(items);
+    if (items.isNotEmpty) {
+      _addAttachments(items);
+      return;
+    }
+    // Plain text: the Ctrl+V Shortcut intercepts the default TextField
+    // paste, so insert the clipboard text at the caret ourselves —
+    // otherwise text paste silently does nothing in the overlay.
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text;
+    if (text == null || text.isEmpty) return;
+    final sel = _ctrl.selection;
+    final start = sel.isValid ? sel.start : _ctrl.text.length;
+    final end = sel.isValid ? sel.end : _ctrl.text.length;
+    final next = _ctrl.text.replaceRange(start, end, text);
+    _ctrl.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: start + text.length),
+    );
   }
 
   Future<void> _dismiss() async {

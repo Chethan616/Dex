@@ -12,6 +12,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'home/recent_chats_card.dart';
+import 'profile/profile_menu.dart';
 
 class DexSidebar extends StatefulWidget {
   const DexSidebar({
@@ -29,7 +30,7 @@ class DexSidebar extends StatefulWidget {
     this.onImagine,
     this.onExperiments,
     this.onSelectChat,
-    this.onAvatarTap,
+    this.onProfileAction,
   });
 
   final bool expanded;
@@ -45,7 +46,7 @@ class DexSidebar extends StatefulWidget {
   final VoidCallback? onImagine;
   final VoidCallback? onExperiments;
   final ValueChanged<RecentChatItem>? onSelectChat;
-  final VoidCallback? onAvatarTap;
+  final ValueChanged<ProfileMenuAction>? onProfileAction;
 
   static const double _collapsedWidth = 72;
   static const double _expandedWidth = 240;
@@ -226,7 +227,7 @@ class _DexSidebarState extends State<DexSidebar>
           _Footer(
             expanded: widget.expanded,
             userName: widget.userName,
-            onAvatarTap: widget.onAvatarTap,
+            onProfileAction: widget.onProfileAction,
           ),
         ],
       ),
@@ -406,31 +407,33 @@ class _Footer extends StatelessWidget {
   const _Footer({
     required this.expanded,
     required this.userName,
-    required this.onAvatarTap,
+    required this.onProfileAction,
   });
 
   final bool expanded;
   final String userName;
-  final VoidCallback? onAvatarTap;
+  final ValueChanged<ProfileMenuAction>? onProfileAction;
 
   @override
   Widget build(BuildContext context) {
     final initial = userName.isNotEmpty ? userName[0].toUpperCase() : 'D';
-    final avatar = InkResponse(
-      onTap: onAvatarTap,
-      radius: 22,
-      child: Container(
-        width: 32,
-        height: 32,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: DexColors.surface2,
-          shape: BoxShape.circle,
-          border: Border.all(color: DexColors.border),
-        ),
-        child: Text(initial,
-            style: DexType.label(color: DexColors.text)),
+    final avatarDot = Container(
+      width: 32,
+      height: 32,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: DexColors.surface2,
+        shape: BoxShape.circle,
+        border: Border.all(color: DexColors.border),
       ),
+      child: Text(initial, style: DexType.label(color: DexColors.text)),
+    );
+    // The avatar opens a real GlassPopover profile card (custom content +
+    // close callback). Each row fires onProfileAction and self-closes.
+    final avatar = ProfilePopover(
+      userName: userName,
+      onAction: onProfileAction ?? (_) {},
+      child: avatarDot,
     );
     return Padding(
       padding: const EdgeInsets.all(DexSpace.md),

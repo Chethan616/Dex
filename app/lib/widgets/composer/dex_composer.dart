@@ -221,17 +221,29 @@ class _DexComposerState extends State<DexComposer> {
   }
 
   Future<void> _pasteFromClipboard() async {
-    // Ctrl+V intercept: if the clipboard has rich content (image / file
-    // / long text), capture it as an attachment. Plain short text falls
-    // through to the default TextField paste so it still lands in the
-    // input buffer.
+    // Rich content (image / file) becomes an attachment chip.
     final items = await extractClipboardItems();
     if (items.isNotEmpty) {
       _addAttachments(items);
-    } else {
-      // Fall through to native paste for plain short text.
-      _focus.requestFocus();
+      return;
     }
+    // Plain text: the Ctrl+V Shortcut intercepts the default TextField
+    // paste, so insert the clipboard text at the caret ourselves.
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text;
+    if (text == null || text.isEmpty) {
+      _focus.requestFocus();
+      return;
+    }
+    final sel = _ctrl.selection;
+    final start = sel.isValid ? sel.start : _ctrl.text.length;
+    final end = sel.isValid ? sel.end : _ctrl.text.length;
+    final next = _ctrl.text.replaceRange(start, end, text);
+    _ctrl.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: start + text.length),
+    );
+    _focus.requestFocus();
   }
 
   Future<void> _openAdd() async {

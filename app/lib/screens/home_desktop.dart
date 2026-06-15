@@ -89,15 +89,11 @@ class _HomeDesktopState extends State<HomeDesktop> {
 
   void _toggleSidebar() => setState(() => _sidebarExpanded = !_sidebarExpanded);
 
-  void _openProfile() async {
-    final picked = await ProfileMenu.show(context);
-    if (!mounted || picked == null) return;
-    // Route each profile menu action to its real destination. Settings
-    // opens straight onto the right tab so Memory / Reminders feel
-    // like first-class screens rather than "go find it in Settings".
-    // Reminders has no real screen yet; routes to Settings preferences
-    // until the Reminders screen lands in the next commit.
-    switch (picked) {
+  // Routes a profile-popover action to its real destination. The popover
+  // (GlassPopover in the sidebar) closes itself before calling this.
+  Future<void> _handleProfileAction(ProfileMenuAction action) async {
+    if (!mounted) return;
+    switch (action) {
       case ProfileMenuAction.settings:
         await SettingsDialog.show(context);
       case ProfileMenuAction.memory:
@@ -105,7 +101,7 @@ class _HomeDesktopState extends State<HomeDesktop> {
       case ProfileMenuAction.reminders:
         await RemindersScreen.show(context, widget.store);
       case ProfileMenuAction.feedback:
-        // existing -- feedback flow lands in a follow-up
+        // feedback flow lands in a follow-up
         break;
       case ProfileMenuAction.signOut:
         widget.onSignOut?.call();
@@ -152,7 +148,7 @@ class _HomeDesktopState extends State<HomeDesktop> {
                     activeChatId: null,
                     userName: 'Dex user',
                     onNewChat: widget.store.clearMessages,
-                    onAvatarTap: _openProfile,
+                    onProfileAction: _handleProfileAction,
                     onSelectChat: (_) {},
                   ),
                   Expanded(

@@ -1,12 +1,13 @@
-// Bottom-left avatar dropdown shown from the sidebar footer.
-// Routes through GlossyMenu so the popup picks up the same glossy
-// gradient + edge highlight + spring entry as the rest of the chrome.
+// Profile popover shown from the sidebar avatar — a real GlassPopover with
+// custom content + close callback (the "Custom content with close callback"
+// pattern from the package's overlays example): avatar + name header, then
+// action rows that fire onAction and self-close.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../theme/tokens.dart';
-import '../glossy_menu.dart';
 
 enum ProfileMenuAction {
   settings,
@@ -16,91 +17,140 @@ enum ProfileMenuAction {
   signOut,
 }
 
-class ProfileMenu {
-  static Future<ProfileMenuAction?> show(BuildContext context) {
-    final overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
-    // The sidebar avatar isn't routed up to us, so synthesise a 36x36
-    // trigger rect at the bottom-left where the avatar lives. The
-    // menu's positioning delegate drops UP from there into the room
-    // above, so the popup lands floating over the sidebar.
-    final size = overlay.size;
-    final trigger = Rect.fromLTWH(16, size.height - 56, 36, 36);
-    return GlossyMenu.show<ProfileMenuAction>(
-      context: context,
-      trigger: trigger,
-      prefer: MenuDropDirection.up,
-      width: 260,
-      entries: const <GlossyMenuEntry<ProfileMenuAction>>[
-        GlossyMenuHeader<ProfileMenuAction>(child: _ProfileHeader()),
-        GlossyMenuDivider<ProfileMenuAction>(),
-        GlossyMenuItem<ProfileMenuAction>(
-          value: ProfileMenuAction.settings,
-          child: _Row(icon: LucideIcons.settings, label: 'Settings'),
+/// Wraps [child] (the avatar) in a GlassPopover. Tapping the avatar opens a
+/// frosted profile card; picking a row calls [onAction] and closes.
+class ProfilePopover extends StatelessWidget {
+  const ProfilePopover({
+    super.key,
+    required this.child,
+    required this.userName,
+    required this.onAction,
+  });
+
+  final Widget child;
+  final String userName;
+  final ValueChanged<ProfileMenuAction> onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = userName.isNotEmpty ? userName[0].toUpperCase() : 'D';
+    return GlassPopover(
+      quality: GlassQuality.premium, // morph; falls back to standard on Skia
+      popoverWidth: 248,
+      popoverHeight: 312,
+      triggerBuilder: (context, toggle) => MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(onTap: toggle, child: child),
+      ),
+      contentBuilder: (context, close) => Padding(
+        padding: const EdgeInsets.all(DexSpace.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(colors: [
+                      DexColors.accent.withValues(alpha: 0.9),
+                      DexColors.stateThinking.withValues(alpha: 0.9),
+                    ]),
+                  ),
+                  child: Text(initial,
+                      style: DexType.heading(color: DexColors.bg)),
+                ),
+                const SizedBox(width: DexSpace.md),
+                Expanded(
+                  child: Text(userName,
+                      style: DexType.label(color: DexColors.text),
+                      overflow: TextOverflow.ellipsis),
+                ),
+              ],
+            ),
+            const SizedBox(height: DexSpace.md),
+            const Divider(height: 1, color: DexColors.border),
+            const SizedBox(height: DexSpace.xs),
+            _Row(
+              icon: LucideIcons.settings,
+              label: 'Settings',
+              onTap: () {
+                close();
+                onAction(ProfileMenuAction.settings);
+              },
+            ),
+            _Row(
+              icon: LucideIcons.brain,
+              label: 'Memory',
+              onTap: () {
+                close();
+                onAction(ProfileMenuAction.memory);
+              },
+            ),
+            _Row(
+              icon: LucideIcons.alarm_clock,
+              label: 'Reminders',
+              onTap: () {
+                close();
+                onAction(ProfileMenuAction.reminders);
+              },
+            ),
+            _Row(
+              icon: LucideIcons.message_circle,
+              label: 'Give feedback',
+              onTap: () {
+                close();
+                onAction(ProfileMenuAction.feedback);
+              },
+            ),
+            const SizedBox(height: DexSpace.xs),
+            const Divider(height: 1, color: DexColors.border),
+            const SizedBox(height: DexSpace.xs),
+            _Row(
+              icon: LucideIcons.log_out,
+              label: 'Sign out',
+              onTap: () {
+                close();
+                onAction(ProfileMenuAction.signOut);
+              },
+            ),
+          ],
         ),
-        GlossyMenuItem<ProfileMenuAction>(
-          value: ProfileMenuAction.memory,
-          child: _Row(icon: LucideIcons.brain, label: 'Memory'),
-        ),
-        GlossyMenuItem<ProfileMenuAction>(
-          value: ProfileMenuAction.reminders,
-          child: _Row(icon: LucideIcons.alarm_clock, label: 'Reminders'),
-        ),
-        GlossyMenuItem<ProfileMenuAction>(
-          value: ProfileMenuAction.feedback,
-          child: _Row(icon: LucideIcons.message_circle, label: 'Give feedback'),
-        ),
-        GlossyMenuDivider<ProfileMenuAction>(),
-        GlossyMenuItem<ProfileMenuAction>(
-          value: ProfileMenuAction.signOut,
-          child: _Row(icon: LucideIcons.log_out, label: 'Sign out'),
-        ),
-      ],
+      ),
     );
   }
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.icon, required this.label});
+  const _Row({required this.icon, required this.label, required this.onTap});
   final IconData icon;
   final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: DexColors.textDim),
-        const SizedBox(width: DexSpace.md),
-        Text(label, style: DexType.label(color: DexColors.text)),
-      ],
-    );
-  }
-}
-
-class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader();
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: DexColors.surface,
-            shape: BoxShape.circle,
-            border: Border.all(color: DexColors.border),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: DexRadius.rsm,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DexSpace.sm, vertical: DexSpace.sm,
           ),
-          child: Text('D', style: DexType.label(color: DexColors.text)),
+          child: Row(
+            children: [
+              Icon(icon, size: 16, color: DexColors.textDim),
+              const SizedBox(width: DexSpace.md),
+              Text(label, style: DexType.label(color: DexColors.text)),
+            ],
+          ),
         ),
-        const SizedBox(width: DexSpace.md),
-        Expanded(
-          child: Text('Dex user',
-              style: DexType.label(color: DexColors.text),
-              overflow: TextOverflow.ellipsis),
-        ),
-      ],
+      ),
     );
   }
 }
