@@ -2,6 +2,7 @@
 // voice name set (no reuse of any other product's voice catalogue).
 
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../theme/tokens.dart';
 import '../dex_glass.dart';
@@ -98,24 +99,15 @@ class _VoiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    // Selectable voice options as liquid-glass chips (their own press
+    // physics + frosted surface), filling the grid cell.
+    return GlassChip(
+      label: label,
+      selected: selected,
+      selectedColor: DexColors.accent,
       onTap: onTap,
-      borderRadius: DexRadius.rsm,
-      child: Container(
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? DexColors.accentQuiet : DexColors.surface,
-          borderRadius: DexRadius.rsm,
-          border: Border.all(
-            color: selected ? DexColors.accent : DexColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: DexType.label(
-            color: selected ? DexColors.accent : DexColors.text,
-          ),
-        ),
+      labelStyle: DexType.label(
+        color: selected ? DexColors.accent : DexColors.text,
       ),
     );
   }
