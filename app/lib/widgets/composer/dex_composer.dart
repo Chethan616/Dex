@@ -2,8 +2,6 @@
 // (docked bottom, full-width). Acrylic surface with the + menu, the mode
 // pill, vision and voice buttons, and a send affordance.
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
@@ -13,8 +11,8 @@ import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 import '../../core/prompt_history.dart';
 import '../../core/send_options.dart';
 import '../../theme/tokens.dart';
+import '../dex_glass.dart';
 import '../living_background.dart';
-import '../refractive_edge.dart';
 import 'add_menu.dart';
 import 'attachments.dart';
 import 'composer_mode.dart';
@@ -299,70 +297,49 @@ class _DexComposerState extends State<DexComposer> {
               return null;
             }),
           },
-          child: DecoratedBox(
-          // Shadow lives on the OUTER box so it isn't clipped by the
-          // rounded-rect mask -- the previous structure had the shadow
-          // on the Container _inside_ ClipRRect, which silently
-          // swallowed the lift.
-          decoration: const BoxDecoration(
-            borderRadius: DexRadius.rxl,
-            boxShadow: DexSurface.glossyShadow,
-          ),
-          child: RefractiveEdge(
-            radius: DexRadius.rxl,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: DexSurface.blurSigma,
-                sigmaY: DexSurface.blurSigma,
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: DexSurface.glossyGradient(),
+          child: DexGlass(
+            radius: 28,
+            padding: const EdgeInsets.fromLTRB(
+              DexSpace.lg, DexSpace.md, DexSpace.md, DexSpace.sm,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AttachmentStrip(
+                  items: _attachments,
+                  onRemove: _removeAttachment,
                 ),
-                padding: const EdgeInsets.fromLTRB(
-                  DexSpace.lg, DexSpace.md, DexSpace.md, DexSpace.sm,
+                if (_slashToken != null)
+                  _SlashPalette(
+                    token: _slashToken!,
+                    onPick: _runCommand,
+                  ),
+                _Input(
+                  controller: _ctrl,
+                  focusNode: _focus,
+                  hint: widget.hint,
+                  onSubmit: _submit,
+                  onHistoryPrev: _recallPrev,
+                  onHistoryNext: _recallNext,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    AttachmentStrip(
-                      items: _attachments,
-                      onRemove: _removeAttachment,
-                    ),
-                    if (_slashToken != null)
-                      _SlashPalette(
-                        token: _slashToken!,
-                        onPick: _runCommand,
-                      ),
-                    _Input(
-                      controller: _ctrl,
-                      focusNode: _focus,
-                      hint: widget.hint,
-                      onSubmit: _submit,
-                      onHistoryPrev: _recallPrev,
-                      onHistoryNext: _recallNext,
-                    ),
-                    const SizedBox(height: DexSpace.sm),
-                    _Toolbar(
-                      addKey: _addKey,
-                      modeKey: _modeKey,
-                      mode: _mode,
-                      isBusy: widget.isBusy,
-                      hasText: _hasText,
-                      onAdd: _openAdd,
-                      onMode: _openMode,
-                      onVision: widget.onVision,
-                      onVoice: widget.onVoice,
-                      onStop: widget.onStop,
-                      onSubmit: _submit,
-                    ),
-                  ],
+                const SizedBox(height: DexSpace.sm),
+                _Toolbar(
+                  addKey: _addKey,
+                  modeKey: _modeKey,
+                  mode: _mode,
+                  isBusy: widget.isBusy,
+                  hasText: _hasText,
+                  onAdd: _openAdd,
+                  onMode: _openMode,
+                  onVision: widget.onVision,
+                  onVoice: widget.onVoice,
+                  onStop: widget.onStop,
+                  onSubmit: _submit,
                 ),
-              ),
+              ],
             ),
           ),
-        ),
       ),
       ),
     );

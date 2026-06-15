@@ -4,13 +4,11 @@
 // the composer card and popup menus so every floating surface in Dex
 // reads as one family.
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
-import '../refractive_edge.dart';
+import '../dex_glass.dart';
 
 class PermissionDialog extends StatelessWidget {
   const PermissionDialog({
@@ -68,24 +66,10 @@ class PermissionDialog extends StatelessWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              borderRadius: DexRadius.rlg,
-              boxShadow: DexSurface.glossyShadow,
-            ),
-            child: RefractiveEdge(
-              radius: DexRadius.rlg,
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: DexSurface.blurSigma,
-                  sigmaY: DexSurface.blurSigma,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: DexSurface.glossyGradient(),
-                  ),
-                  padding: const EdgeInsets.all(DexSpace.xl),
-                  child: Column(
+          child: DexGlass(
+            radius: 20,
+            padding: const EdgeInsets.all(DexSpace.xl),
+            child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -116,11 +100,8 @@ class PermissionDialog extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-            ),
           ),
         ),
-      ),
       ),
     );
   }

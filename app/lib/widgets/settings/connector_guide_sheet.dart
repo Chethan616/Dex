@@ -12,7 +12,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
-import '../refractive_edge.dart';
+import '../dex_glass.dart';
 
 class ConnectorGuideSheet extends StatelessWidget {
   const ConnectorGuideSheet({
@@ -68,19 +68,9 @@ class ConnectorGuideSheet extends StatelessWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              borderRadius: DexRadius.rlg,
-              boxShadow: DexSurface.glossyShadow,
-            ),
-            child: RefractiveEdge(
-              radius: DexRadius.rlg,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: DexSurface.glossyGradient(),
-                  borderRadius: DexRadius.rlg,
-                ),
-                child: Column(
+          child: DexGlass(
+            radius: 20,
+            child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Padding(
@@ -128,9 +118,7 @@ class ConnectorGuideSheet extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
             ),
-          ),
         ),
       ),
     );

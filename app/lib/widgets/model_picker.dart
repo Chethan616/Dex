@@ -14,7 +14,7 @@ import '../core/dex_setup.dart';
 import '../core/models_catalog.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
-import 'refractive_edge.dart';
+import 'dex_glass.dart';
 import 'secret_field.dart';
 
 class ModelPicker extends StatefulWidget {
@@ -128,19 +128,9 @@ class _ModelPickerState extends State<ModelPicker> {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              borderRadius: DexRadius.rlg,
-              boxShadow: DexSurface.glossyShadow,
-            ),
-            child: RefractiveEdge(
-              radius: DexRadius.rlg,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: DexSurface.glossyGradient(),
-                  borderRadius: DexRadius.rlg,
-                ),
-                child: Column(
+          child: DexGlass(
+            radius: 20,
+            child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Padding(
@@ -185,9 +175,7 @@ class _ModelPickerState extends State<ModelPicker> {
                       ),
                   ],
                 ),
-              ),
             ),
-          ),
         ),
       ),
     );

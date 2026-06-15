@@ -1,14 +1,12 @@
 // The Settings modal. Left rail of tab labels, right pane of contents.
 // Sub-screens (e.g. View memory) replace the right pane in place.
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
-import '../refractive_edge.dart';
+import '../dex_glass.dart';
 import 'tabs/about_tab.dart';
 import 'tabs/account_tab.dart';
 import 'tabs/connectors_tab.dart';
@@ -99,45 +97,28 @@ class _SettingsDialogState extends State<SettingsDialog> {
           constraints: const BoxConstraints(
             maxWidth: 760, minHeight: 540, maxHeight: 640,
           ),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              borderRadius: DexRadius.rlg,
-              boxShadow: DexSurface.glossyShadow,
-            ),
-            child: RefractiveEdge(
-              radius: DexRadius.rlg,
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: DexSurface.blurSigma,
-                  sigmaY: DexSurface.blurSigma,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: DexSurface.glossyGradient(),
-                  ),
-                  child: Column(
-                  children: [
-                    _Header(onClose: () => Navigator.of(context).maybePop()),
-                    const Divider(height: 1, color: DexColors.border),
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _TabList(
-                            current: _tab,
-                            onSelect: (t) => setState(() => _tab = t),
-                          ),
-                          const VerticalDivider(
-                              width: 1, color: DexColors.border),
-                          Expanded(child: _content(_tab)),
-                        ],
+          child: DexGlass(
+            radius: 20,
+            child: Column(
+              children: [
+                _Header(onClose: () => Navigator.of(context).maybePop()),
+                const Divider(height: 1, color: DexColors.border),
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _TabList(
+                        current: _tab,
+                        onSelect: (t) => setState(() => _tab = t),
                       ),
-                    ),
-                  ],
+                      const VerticalDivider(
+                          width: 1, color: DexColors.border),
+                      Expanded(child: _content(_tab)),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ),
           ),
         ),
       ),
