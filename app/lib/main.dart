@@ -21,6 +21,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'core/account.dart';
@@ -56,6 +57,12 @@ Future<void> main() async {
   SystemChrome.setApplicationSwitcherDescription(
     const ApplicationSwitcherDescription(label: 'Dex'),
   );
+
+  // Pre-warm the liquid-glass shaders before the first frame (both the
+  // main window and the spotlight sub-window paths run through here, so
+  // both get warm shaders and no white flash). Non-critical: it no-ops on
+  // renderers without shader-filter support.
+  await LiquidGlassWidgets.initialize();
 
   // desktop_multi_window routes every launch through this same main().
   // The current window's `arguments` tells us which one we are.
@@ -116,7 +123,14 @@ Future<void> main() async {
 
   await registerSpotlightHotkey();
 
-  runApp(DexApp(store: store));
+  // Wrap the whole app in the liquid-glass infrastructure so every Glass*
+  // widget inherits app-wide defaults + adaptive quality. Dark/light glass
+  // variants follow the platform brightness.
+  runApp(LiquidGlassWidgets.wrap(
+    adaptiveQuality: true,
+    theme: const GlassThemeData(),
+    child: DexApp(store: store),
+  ));
 }
 
 Future<void> _handleSpotlightPrompt(
