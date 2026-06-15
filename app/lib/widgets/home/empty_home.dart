@@ -52,7 +52,6 @@ class EmptyHome extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 900;
         return SingleChildScrollView(
           padding: const EdgeInsets.symmetric(
             horizontal: DexSpace.xxl, vertical: DexSpace.xxl,
@@ -69,10 +68,11 @@ class EmptyHome extends StatelessWidget {
                     _FadeInUp(
                       index: 0,
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('Hi $greetingName',
+                              textAlign: TextAlign.center,
                               style: DexType.label(color: DexColors.textDim)),
                           const SizedBox(height: DexSpace.xs),
                           // A witty tagline from the same set the CLI banner
@@ -112,19 +112,8 @@ class EmptyHome extends StatelessWidget {
                             .toList(growable: false),
                       ),
                     ),
-                    const SizedBox(height: DexSpace.xxl),
                     _FadeInUp(
                       index: 3,
-                      child: _Cards(
-                        wide: wide,
-                        files: recentFiles,
-                        chats: recentChats,
-                        onSelectFile: onSelectFile,
-                        onSelectChat: onSelectChat,
-                      ),
-                    ),
-                    _FadeInUp(
-                      index: 4,
                       child: Padding(
                         padding: const EdgeInsets.only(top: DexSpace.lg),
                         child: Text(
@@ -279,42 +268,6 @@ class _FadeInUpState extends State<_FadeInUp>
   }
 }
 
-class _Cards extends StatelessWidget {
-  const _Cards({
-    required this.wide,
-    required this.files,
-    required this.chats,
-    required this.onSelectFile,
-    required this.onSelectChat,
-  });
-
-  final bool wide;
-  final List<RecentFileItem> files;
-  final List<RecentChatItem> chats;
-  final ValueChanged<RecentFileItem>? onSelectFile;
-  final ValueChanged<RecentChatItem>? onSelectChat;
-
-  @override
-  Widget build(BuildContext context) {
-    final filesCard = RecentFilesCard(files: files, onSelect: onSelectFile);
-    final chatsCard = RecentChatsCard(chats: chats, onSelect: onSelectChat);
-    if (!wide) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          filesCard,
-          const SizedBox(height: DexSpace.md),
-          chatsCard,
-        ],
-      );
-    }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: filesCard),
-        const SizedBox(width: DexSpace.md),
-        Expanded(child: chatsCard),
-      ],
-    );
-  }
-}
+// (Recent files/chats cards were removed from the empty home so the hero
+// — greeting, tagline, composer, chips — stays vertically centered with
+// no scroll. Recents live in the sidebar.)

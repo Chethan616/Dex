@@ -52,10 +52,17 @@ class DexGlass extends StatelessWidget {
       shape: LiquidRoundedSuperellipse(borderRadius: radius),
       padding: padding,
       glowIntensity: glow,
+      // Minimal quality = a plain BackdropFilter frost + specular rim, with
+      // ZERO custom shader invocations. The standard/premium shader re-samples
+      // the (animated) backdrop on every frame + on hover rebuilds, which made
+      // the edge light shimmer/jitter as the cursor moved inside panels.
+      // Minimal is a stable frosted panel — the right call for large static
+      // surfaces. Interactive bits (chips/buttons) keep their own reactivity.
+      quality: GlassQuality.minimal,
       settings: LiquidGlassSettings(
-        glassColor: tint ?? const Color.fromRGBO(10, 18, 42, 0.32),
-        blur: 14,
-        thickness: 16,
+        glassColor: tint ?? const Color.fromRGBO(12, 20, 44, 0.55),
+        blur: 18,
+        thickness: 14,
       ),
       child: child,
     );
