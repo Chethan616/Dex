@@ -16,6 +16,7 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
@@ -356,12 +357,28 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                                 ),
                         ),
                       ),
-                      // Separate circular attach button -- detached from
-                      // the input pill, sits to the right with 12px gap.
-                      // Tap is wired to a no-op placeholder for now;
-                      // rich-paste support arrives in Commit 3.
+                      // Circular + button — opens a liquid-glass GlassMenu
+                      // (teardrop morph) with attach actions instead of a
+                      // bare tap.
                       const SizedBox(width: 12),
-                      _AttachCircle(onTap: _onAttach),
+                      GlassMenu(
+                        quality: GlassQuality.premium,
+                        menuWidth: 240,
+                        triggerBuilder: (context, toggle) =>
+                            _AttachCircle(onTap: toggle),
+                        items: [
+                          GlassMenuItem(
+                            title: 'Paste from clipboard',
+                            icon: const Icon(LucideIcons.clipboard),
+                            onTap: _pasteFromClipboard,
+                          ),
+                          GlassMenuItem(
+                            title: 'Attach image or file',
+                            icon: const Icon(LucideIcons.paperclip),
+                            onTap: _onAttach,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                   const SizedBox(height: DexSpace.md),

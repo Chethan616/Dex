@@ -67,7 +67,6 @@ class _DexComposerState extends State<DexComposer> {
   // strip above the input shows them; submit/clear empties the list.
   final List<AttachedItem> _attachments = <AttachedItem>[];
 
-  final GlobalKey _addKey = GlobalKey();
   final GlobalKey _modeKey = GlobalKey();
 
   @override
@@ -246,16 +245,6 @@ class _DexComposerState extends State<DexComposer> {
     _focus.requestFocus();
   }
 
-  Future<void> _openAdd() async {
-    final ctx = _addKey.currentContext;
-    if (ctx == null) return;
-    final box = ctx.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final trigger = box.localToGlobal(Offset.zero) & box.size;
-    final picked = await AddMenu.show(context: context, trigger: trigger);
-    if (picked != null) widget.onAddAction?.call(picked);
-  }
-
   Future<void> _openMode() async {
     final ctx = _modeKey.currentContext;
     if (ctx == null) return;
@@ -338,12 +327,11 @@ class _DexComposerState extends State<DexComposer> {
                 ),
                 const SizedBox(height: DexSpace.sm),
                 _Toolbar(
-                  addKey: _addKey,
                   modeKey: _modeKey,
                   mode: _mode,
                   isBusy: widget.isBusy,
                   hasText: _hasText,
-                  onAdd: _openAdd,
+                  onAddAction: widget.onAddAction,
                   onMode: _openMode,
                   onVision: widget.onVision,
                   onVoice: widget.onVoice,
@@ -414,12 +402,11 @@ class _Input extends StatelessWidget {
 
 class _Toolbar extends StatelessWidget {
   const _Toolbar({
-    required this.addKey,
     required this.modeKey,
     required this.mode,
     required this.isBusy,
     required this.hasText,
-    required this.onAdd,
+    required this.onAddAction,
     required this.onMode,
     required this.onVision,
     required this.onVoice,
@@ -427,12 +414,11 @@ class _Toolbar extends StatelessWidget {
     required this.onSubmit,
   });
 
-  final GlobalKey addKey;
   final GlobalKey modeKey;
   final ComposerMode mode;
   final bool isBusy;
   final bool hasText;
-  final VoidCallback onAdd;
+  final ValueChanged<ComposerAddAction>? onAddAction;
   final VoidCallback onMode;
   final VoidCallback? onVision;
   final VoidCallback? onVoice;
@@ -443,11 +429,22 @@ class _Toolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _RoundIconButton(
-          key: addKey,
-          icon: LucideIcons.plus,
-          tooltip: 'Add files, image, research...',
-          onTap: onAdd,
+        GlassMenu(
+          quality: GlassQuality.premium,
+          menuWidth: 264,
+          triggerBuilder: (context, toggle) => _RoundIconButton(
+            icon: LucideIcons.plus,
+            tooltip: 'Add files, image, research...',
+            onTap: toggle,
+          ),
+          items: [
+            for (final a in ComposerAddAction.values)
+              GlassMenuItem(
+                title: a.label,
+                icon: Icon(a.icon),
+                onTap: () => onAddAction?.call(a),
+              ),
+          ],
         ),
         const SizedBox(width: DexSpace.sm),
         _ModePill(key: modeKey, mode: mode, onTap: onMode),
@@ -483,7 +480,6 @@ class _Toolbar extends StatelessWidget {
 
 class _RoundIconButton extends StatelessWidget {
   const _RoundIconButton({
-    super.key,
     required this.icon,
     required this.tooltip,
     required this.onTap,
