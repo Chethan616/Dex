@@ -8,6 +8,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../theme/tokens.dart';
+import '../menu_glass.dart';
 
 enum ProfileMenuAction {
   settings,
@@ -38,6 +39,7 @@ class ProfilePopover extends StatelessWidget {
     return GlassMenu(
       quality: GlassQuality.premium,
       menuWidth: 248,
+      settings: kDexMenuGlass,
       triggerBuilder: (context, toggle) => MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(onTap: toggle, child: child),

@@ -23,12 +23,11 @@ import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
 import 'core/prompt_history.dart';
 import 'main.dart' show DexScrollBehavior, dexSpotlightChannel;
+import 'theme/motion.dart';
 import 'theme/theme.dart';
 import 'theme/tokens.dart';
 import 'widgets/composer/attachments.dart';
-import 'widgets/dex_glass.dart';
-import 'widgets/glass_badge_button.dart';
-import 'widgets/home/suggestion_chip.dart';
+import 'widgets/menu_glass.dart';
 
 /// Default suggestions surfaced under the overlay's input. Same shape
 /// as the in-app SpotlightOverlay had so users recognise the surface.
@@ -51,7 +50,7 @@ Future<void> runSpotlightWindow(WindowController self) async {
   try {
     await windowManager.ensureInitialized();
     const opts = WindowOptions(
-      size: Size(640, 360),
+      size: Size(720, 420),
       backgroundColor: Colors.transparent,
       skipTaskbar: true,
       titleBarStyle: TitleBarStyle.hidden,
@@ -280,10 +279,12 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
             // Less visually heavy, and leaves room for suggestion chips
             // to ripple in beneath without crowding.
             child: Align(
-              alignment: const Alignment(0, -0.55),
+              alignment: const Alignment(0, -0.48),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  _SpotlightOverlayHeader(submitting: _submitting),
+                  const SizedBox(height: DexSpace.sm),
                   AttachmentStrip(
                     items: _attachments,
                     onRemove: _removeAttachment,
@@ -292,12 +293,21 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Flexible(
-                        // Neutral frosted liquid glass — the previous overlay
-                        // look, no blue accent / glow. DexGlass carries the
-                        // frost + soft shadow; RepaintBoundary isolates the
-                        // caret so it can't re-dirty the backdrop each tick.
-                        child: DexGlass(
-                          radius: 28,
+                        child: GlassContainer(
+                          // Rich premium liquid glass for the ask pill — the
+                          // overlay floats over a static desktop, so the full
+                          // refraction + glow read cleanly without flicker.
+                          useOwnLayer: true,
+                          quality: GlassQuality.premium,
+                          shape: const LiquidRoundedSuperellipse(
+                            borderRadius: 28,
+                          ),
+                          settings: const LiquidGlassSettings(
+                            glassColor: kDexMenuTint,
+                            blur: 18,
+                            thickness: 18,
+                            glowIntensity: 0.4,
+                          ),
                           padding: const EdgeInsets.fromLTRB(
                             DexSpace.lg, DexSpace.md, DexSpace.lg, DexSpace.md,
                           ),
@@ -305,7 +315,7 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                               child: Row(
                                   children: [
                                     const Icon(LucideIcons.search,
-                                        size: 20, color: DexColors.textDim),
+                                        size: 20, color: DexColors.accent),
                                     const SizedBox(width: DexSpace.md),
                                     Expanded(
                                       child: KeyboardListener(
@@ -344,20 +354,7 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                                         ),
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: DexSpace.sm, vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: DexColors.surface,
-                                        borderRadius: DexRadius.rsm,
-                                        border: Border.all(color: DexColors.border),
-                                      ),
-                                      child: Text(
-                                        'esc',
-                                        style: DexType.caption(color: DexColors.textFaint),
-                                      ),
-                                    ),
+                                    const _SpotlightKeycap(label: 'esc'),
                                   ],
                                 ),
                             ),
@@ -370,11 +367,9 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                       GlassMenu(
                         quality: GlassQuality.premium,
                         menuWidth: 240,
-                        triggerBuilder: (context, toggle) => GlassBadgeButton(
-                          icon: LucideIcons.plus,
-                          onTap: toggle,
-                          size: 52,
-                        ),
+                        settings: kDexMenuGlass,
+                        triggerBuilder: (context, toggle) =>
+                            _SpotlightAddButton(onTap: toggle),
                         items: [
                           GlassMenuItem(
                             title: 'Paste from clipboard',
@@ -397,7 +392,8 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                     runSpacing: DexSpace.sm,
                     children: _suggestions
                         .map((s) =>
-                            SuggestionChip(label: s, onTap: () => _submit(s)))
+                            _SpotlightSuggestionChip(
+                                label: s, onTap: () => _submit(s)))
                         .toList(growable: false),
                   ),
                 ],
@@ -406,6 +402,204 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
           ),
         ),
       ),
+      ),
+    );
+  }
+}
+
+class _SpotlightOverlayHeader extends StatelessWidget {
+  const _SpotlightOverlayHeader({required this.submitting});
+  final bool submitting;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 620,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DexSpace.md,
+              vertical: DexSpace.xs,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  kDexMenuAccentSurface,
+                  kDexMenuTint.withValues(alpha: 0.82),
+                ],
+              ),
+              borderRadius: DexRadius.rpill,
+              border: Border.all(color: kDexMenuAccentBorder),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  LucideIcons.sparkles,
+                  size: 14,
+                  color: DexColors.accent,
+                ),
+                const SizedBox(width: DexSpace.xs),
+                Text('Dex', style: DexType.label(color: DexColors.text)),
+                const SizedBox(width: DexSpace.xs),
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: submitting
+                        ? DexColors.stateThinking
+                        : DexColors.accent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+        ],
+      ),
+    );
+  }
+}
+
+class _SpotlightAddButton extends StatefulWidget {
+  const _SpotlightAddButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  State<_SpotlightAddButton> createState() => _SpotlightAddButtonState();
+}
+
+class _SpotlightAddButtonState extends State<_SpotlightAddButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = _hovered || _pressed;
+    final scale = _pressed ? 0.96 : (_hovered ? 1.04 : 1.0);
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() {
+        _hovered = false;
+        _pressed = false;
+      }),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: scale,
+          duration: DexMotion.respecting(context, DexMotion.press),
+          curve: DexMotion.respectingCurve(context, DexMotion.easeOut),
+          child: AnimatedContainer(
+            duration: DexMotion.respecting(context, DexMotion.hover),
+            curve: DexMotion.respectingCurve(context, DexMotion.dampened),
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  active
+                      ? kDexMenuAccentSurfaceHover
+                      : kDexMenuAccentSurface,
+                  kDexMenuTint,
+                ],
+              ),
+              border: Border.all(
+                color: active
+                    ? kDexMenuAccentBorderHover
+                    : kDexMenuAccentBorder,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: DexColors.accent.withValues(alpha: active ? 0.28 : 0.16),
+                  blurRadius: active ? 24 : 18,
+                  spreadRadius: -7,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: const Icon(
+              LucideIcons.plus,
+              size: 20,
+              color: DexColors.accent,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SpotlightSuggestionChip extends StatelessWidget {
+  const _SpotlightSuggestionChip({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  IconData get _icon {
+    return switch (label) {
+      'Open this file' => LucideIcons.file_search,
+      'Summarise this tab' => LucideIcons.panel_top,
+      'Take a screenshot' => LucideIcons.scan,
+      'Send an email' => LucideIcons.send,
+      _ => LucideIcons.sparkles,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Real liquid-glass chip — squash/stretch jelly + glow on press come for
+    // free from GlassChip (which composes GlassButton). Premium quality is
+    // fine here: the overlay floats over a static desktop, no drifting fog.
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GlassChip(
+        label: label,
+        onTap: onTap,
+        icon: Icon(_icon, color: DexColors.accent),
+        iconColor: DexColors.accent,
+        labelStyle: DexType.label(color: DexColors.text),
+        useOwnLayer: true,
+        quality: GlassQuality.premium,
+        settings: kDexChipGlass,
+      ),
+    );
+  }
+}
+
+class _SpotlightKeycap extends StatelessWidget {
+  const _SpotlightKeycap({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DexSpace.sm,
+        vertical: 3,
+      ),
+      decoration: BoxDecoration(
+        color: kDexMenuTint.withValues(alpha: 0.74),
+        borderRadius: DexRadius.rsm,
+        border: Border.all(color: kDexMenuAccentBorder),
+      ),
+      child: Text(
+        label,
+        style: DexType.caption(color: DexColors.accent),
       ),
     );
   }

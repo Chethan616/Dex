@@ -8,6 +8,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../theme/tokens.dart';
+import 'menu_glass.dart';
 
 class GlossyDropdown extends StatelessWidget {
   const GlossyDropdown({
@@ -28,17 +29,19 @@ class GlossyDropdown extends StatelessWidget {
     return GlassMenu(
       quality: GlassQuality.premium,
       menuWidth: width,
+      settings: kDexMenuGlass,
       triggerBuilder: (context, toggle) => MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
           onTap: toggle,
           child: GlassContainer(
             useOwnLayer: true,
+            quality: GlassQuality.minimal,
             shape: const LiquidRoundedSuperellipse(borderRadius: 10),
             settings: const LiquidGlassSettings(
-              glassColor: Color.fromRGBO(20, 34, 68, 0.4),
-              blur: 8,
-              thickness: 10,
+              glassColor: kDexMenuAccentSurface,
+              blur: 10,
+              thickness: 12,
             ),
             padding: const EdgeInsets.symmetric(
               horizontal: DexSpace.md, vertical: DexSpace.sm,
@@ -53,7 +56,7 @@ class GlossyDropdown extends StatelessWidget {
                 ),
                 const SizedBox(width: DexSpace.sm),
                 const Icon(LucideIcons.chevron_down,
-                    size: 14, color: DexColors.textDim),
+                    size: 14, color: DexColors.accent),
               ],
             ),
           ),

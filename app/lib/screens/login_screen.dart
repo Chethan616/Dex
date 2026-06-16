@@ -68,13 +68,16 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: LivingBackground(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: DexGlass(
-              radius: 20,
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(DexSpace.xl),
-              child: Column(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: DexGlass(
+                  radius: 20,
+                  padding: const EdgeInsets.all(DexSpace.xl),
+                  child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -137,6 +140,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             foregroundColor: DexColors.bg,
                             padding: const EdgeInsets.symmetric(
                                 vertical: DexSpace.md),
+                            minimumSize: const Size.fromHeight(44),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: DexRadius.rsm,
+                            ),
                           ),
                           child: Text(_busy
                               ? 'One moment…'
@@ -162,12 +169,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: DexSpace.xs),
                       ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+            ),
+          ),
         ),
     );
   }
 }
-

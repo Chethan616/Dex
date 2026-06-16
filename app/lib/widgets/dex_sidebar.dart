@@ -12,6 +12,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'home/recent_chats_card.dart';
+import 'menu_glass.dart';
 import 'profile/profile_menu.dart';
 
 class DexSidebar extends StatefulWidget {
@@ -422,11 +423,18 @@ class _Footer extends StatelessWidget {
       height: 32,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: DexColors.surface2,
         shape: BoxShape.circle,
-        border: Border.all(color: DexColors.border),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            kDexMenuAccentSurface,
+            kDexMenuTint,
+          ],
+        ),
+        border: Border.all(color: kDexMenuAccentBorder),
       ),
-      child: Text(initial, style: DexType.label(color: DexColors.text)),
+      child: Text(initial, style: DexType.label(color: DexColors.accent)),
     );
     // The avatar opens a real GlassPopover profile card (custom content +
     // close callback). Each row fires onProfileAction and self-closes.

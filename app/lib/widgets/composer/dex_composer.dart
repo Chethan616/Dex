@@ -11,9 +11,11 @@ import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
 import '../../core/prompt_history.dart';
 import '../../core/send_options.dart';
+import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
 import '../dex_glass.dart';
 import '../living_background.dart';
+import '../menu_glass.dart';
 import 'add_menu.dart';
 import 'attachments.dart';
 import 'composer_mode.dart';
@@ -423,6 +425,7 @@ class _Toolbar extends StatelessWidget {
         GlassMenu(
           quality: GlassQuality.premium,
           menuWidth: 264,
+          settings: kDexMenuGlass,
           triggerBuilder: (context, toggle) => _RoundIconButton(
             icon: LucideIcons.plus,
             onTap: toggle,
@@ -440,6 +443,7 @@ class _Toolbar extends StatelessWidget {
         GlassMenu(
           quality: GlassQuality.premium,
           menuWidth: 280,
+          settings: kDexMenuGlass,
           triggerBuilder: (context, toggle) =>
               _ModePill(mode: mode, onTap: toggle),
           items: [
@@ -484,34 +488,110 @@ class _Toolbar extends StatelessWidget {
   }
 }
 
-/// Clear-crystal glass toolbar button — the EXACT material of the mode pill
-/// (own layer, minimal quality, white-0.10 tint) so +, vision, voice and send
-/// read as one set with the mode pill beside them. No tooltip, no glow.
-class _GlassToolButton extends StatelessWidget {
-  const _GlassToolButton({required this.icon, required this.onTap});
-  final Widget icon;
+/// Accent toolbar surface for +, mode, vision, voice and send.
+///
+/// The composer is already frosted, so this stays shader-free and animates
+/// cheaply while matching the opened menu's blue accent.
+class _GlassToolButton extends StatefulWidget {
+  const _GlassToolButton({
+    required this.child,
+    required this.onTap,
+    this.padding = const EdgeInsets.all(9),
+    this.radius = 16,
+    this.minWidth = 36,
+    this.minHeight = 36,
+  });
+
+  final Widget child;
   final VoidCallback? onTap;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+  final double minWidth;
+  final double minHeight;
+
+  @override
+  State<_GlassToolButton> createState() => _GlassToolButtonState();
+}
+
+class _GlassToolButtonState extends State<_GlassToolButton> {
+  bool _hovered = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
+    final enabled = widget.onTap != null;
+    final active = enabled && (_hovered || _pressed);
+    final fill = enabled
+        ? (active ? kDexMenuAccentSurfaceHover : kDexMenuAccentSurface)
+        : kDexMenuTint.withValues(alpha: 0.38);
+    final border = enabled
+        ? (active ? kDexMenuAccentBorderHover : kDexMenuAccentBorder)
+        : Colors.white.withValues(alpha: 0.07);
+    final scale = _pressed ? 0.96 : (_hovered ? 1.03 : 1.0);
+
     return MouseRegion(
-      cursor: onTap != null
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      onEnter: enabled ? (_) => setState(() => _hovered = true) : null,
+      onExit: enabled
+          ? (_) => setState(() {
+                _hovered = false;
+                _pressed = false;
+              })
+          : null,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: GlassContainer(
-          useOwnLayer: true,
-          quality: GlassQuality.minimal,
-          shape: const LiquidRoundedSuperellipse(borderRadius: 16),
-          settings: const LiquidGlassSettings(
-            glassColor: Color.fromRGBO(255, 255, 255, 0.10),
-            blur: 8,
-            thickness: 10,
+        onTap: widget.onTap,
+        onTapDown:
+            enabled ? (_) => setState(() => _pressed = true) : null,
+        onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+        onTapCancel:
+            enabled ? () => setState(() => _pressed = false) : null,
+        child: AnimatedScale(
+          scale: scale,
+          duration: DexMotion.respecting(context, DexMotion.press),
+          curve: DexMotion.respectingCurve(context, DexMotion.easeOut),
+          child: AnimatedContainer(
+            duration: DexMotion.respecting(context, DexMotion.hover),
+            curve: DexMotion.respectingCurve(context, DexMotion.dampened),
+            constraints: BoxConstraints(
+              minWidth: widget.minWidth,
+              minHeight: widget.minHeight,
+            ),
+            padding: widget.padding,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(widget.radius),
+              border: Border.all(color: border),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  fill,
+                  kDexMenuTint.withValues(alpha: enabled ? 0.68 : 0.32),
+                ],
+              ),
+              boxShadow: active
+                  ? <BoxShadow>[
+                      BoxShadow(
+                        color: DexColors.accent.withValues(alpha: 0.18),
+                        blurRadius: 18,
+                        spreadRadius: -6,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                  : const <BoxShadow>[],
+            ),
+            child: IconTheme.merge(
+              data: IconThemeData(
+                color: enabled ? DexColors.accent : DexColors.textFaint,
+              ),
+              child: DefaultTextStyle.merge(
+                style: DexType.label(
+                  color: enabled ? DexColors.text : DexColors.textFaint,
+                ),
+                child: widget.child,
+              ),
+            ),
           ),
-          padding: const EdgeInsets.all(9),
-          child: icon,
         ),
       ),
     );
@@ -532,7 +612,7 @@ class _RoundIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return _GlassToolButton(
       onTap: onTap,
-      icon: Icon(icon, size: 18, color: tint ?? DexColors.textDim),
+      child: Icon(icon, size: 18, color: tint ?? DexColors.accent),
     );
   }
 }
@@ -546,7 +626,7 @@ class _SendButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return _GlassToolButton(
       onTap: enabled ? onTap : null,
-      icon: Icon(
+      child: Icon(
         LucideIcons.arrow_up,
         size: 18,
         color: enabled ? DexColors.accent : DexColors.textFaint,
@@ -562,39 +642,27 @@ class _ModePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Clear crystal glass pill that matches the round + button (same
-    // near-transparent glass, neutral glyphs) instead of a tinted chip.
-    // Its backdrop is the composer's static frost, so the rim doesn't
-    // shimmer.
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: GlassContainer(
-          useOwnLayer: true,
-          quality: GlassQuality.minimal,
-          shape: const LiquidRoundedSuperellipse(borderRadius: 18),
-          settings: const LiquidGlassSettings(
-            glassColor: Color.fromRGBO(255, 255, 255, 0.10),
-            blur: 8,
-            thickness: 10,
+    return _GlassToolButton(
+      onTap: onTap,
+      radius: 18,
+      minHeight: 36,
+      padding: const EdgeInsets.symmetric(
+        horizontal: DexSpace.md,
+        vertical: 7,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(mode.icon, size: 14, color: DexColors.accent),
+          const SizedBox(width: DexSpace.xs),
+          Text(mode.label, style: DexType.label(color: DexColors.text)),
+          const SizedBox(width: 2),
+          const Icon(
+            LucideIcons.chevron_down,
+            size: 14,
+            color: DexColors.accent,
           ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: DexSpace.md, vertical: 6,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(mode.icon, size: 14, color: DexColors.textDim),
-              const SizedBox(width: DexSpace.xs),
-              Text(mode.label, style: DexType.label(color: DexColors.text)),
-              const SizedBox(width: 2),
-              const Icon(LucideIcons.chevron_down,
-                  size: 14, color: DexColors.textDim),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }

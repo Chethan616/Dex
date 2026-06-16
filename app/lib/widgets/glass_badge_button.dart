@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../theme/tokens.dart';
+import 'menu_glass.dart';
 
 class GlassBadgeButton extends StatelessWidget {
   const GlassBadgeButton({
@@ -41,18 +42,18 @@ class GlassBadgeButton extends StatelessWidget {
         icon: Icon(
           icon,
           size: size * 0.42,
-          color: iconColor ?? (enabled ? DexColors.text : DexColors.textFaint),
+          color: iconColor ?? (enabled ? DexColors.accent : DexColors.textFaint),
         ),
         onPressed: onTap,
         size: size,
         useOwnLayer: true,
-        quality: GlassQuality.premium,
-        glowColor: glowColor,
+        quality: GlassQuality.minimal,
+        glowColor: glowColor ?? (enabled ? DexColors.accent : null),
         settings: const LiquidGlassSettings(
-          glassColor: Color.fromRGBO(255, 255, 255, 0.12),
+          glassColor: kDexMenuAccentSurface,
           blur: 10,
-          thickness: 16,
-          glowIntensity: 0.5,
+          thickness: 12,
+          glowIntensity: 0.35,
         ),
       ),
     );

@@ -7,6 +7,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
 import '../dex_glass.dart';
+import '../menu_glass.dart';
 import 'tabs/about_tab.dart';
 import 'tabs/account_tab.dart';
 import 'tabs/connectors_tab.dart';
@@ -207,13 +208,18 @@ class _TabList extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color:
-                          active ? DexColors.surface2 : Colors.transparent,
+                          active ? kDexMenuAccentSurface : Colors.transparent,
                       borderRadius: DexRadius.rsm,
+                      border: Border.all(
+                        color: active
+                            ? kDexMenuAccentBorder
+                            : Colors.transparent,
+                      ),
                     ),
                     child: Text(
                       t.label,
                       style: DexType.label(
-                        color: active ? DexColors.text : DexColors.textDim,
+                        color: active ? DexColors.accent : DexColors.textDim,
                       ),
                     ),
                   ),

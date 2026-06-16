@@ -105,13 +105,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: LivingBackground(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 620),
-            child: DexGlass(
-              radius: 20,
-              padding: const EdgeInsets.all(DexSpace.xl),
-              child: Column(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(DexSpace.xl),
+            child: Center(
+              child: ConstrainedBox(
+                constraints:
+                    const BoxConstraints(maxWidth: 560, maxHeight: 620),
+                child: DexGlass(
+                  radius: 20,
+                  padding: const EdgeInsets.all(DexSpace.xl),
+                  child: Column(
                       children: [
                         Expanded(
                           child: PageView(
@@ -128,11 +132,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         const SizedBox(height: DexSpace.md),
                         _StepDots(current: _step, count: 4),
                       ],
+                      ),
                     ),
                   ),
+                ),
               ),
-            ),
-          ),
+        ),
+      ),
     );
   }
 
@@ -552,9 +558,11 @@ class _PrimaryButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: DexColors.accent,
         foregroundColor: DexColors.bg,
+        minimumSize: const Size(0, 44),
         padding: const EdgeInsets.symmetric(
           horizontal: DexSpace.xl, vertical: DexSpace.md,
         ),
+        shape: const RoundedRectangleBorder(borderRadius: DexRadius.rsm),
       ),
       child: Text(label),
     );
