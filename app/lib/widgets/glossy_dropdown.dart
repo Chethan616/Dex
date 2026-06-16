@@ -28,6 +28,10 @@ class GlossyDropdown extends StatelessWidget {
     return GlassMenu(
       quality: GlassQuality.premium,
       menuWidth: width,
+      // Accent selection pill — the highlight that slides onto the active /
+      // hovered option when the menu opens. This is the canonical dropdown
+      // look every other dropdown + popmenu in the app matches.
+      selectionColor: DexColors.accent.withValues(alpha: 0.28),
       triggerBuilder: (context, toggle) => MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
@@ -63,6 +67,7 @@ class GlossyDropdown extends StatelessWidget {
         for (final o in options)
           GlassMenuItem(
             title: o,
+            isSelected: o == value,
             icon: o == value
                 ? const Icon(LucideIcons.check, color: DexColors.accent)
                 : null,

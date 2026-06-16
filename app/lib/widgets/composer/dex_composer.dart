@@ -423,6 +423,7 @@ class _Toolbar extends StatelessWidget {
         GlassMenu(
           quality: GlassQuality.premium,
           menuWidth: 264,
+          selectionColor: DexColors.accent.withValues(alpha: 0.28),
           triggerBuilder: (context, toggle) => _RoundIconButton(
             icon: LucideIcons.plus,
             onTap: toggle,
@@ -440,14 +441,16 @@ class _Toolbar extends StatelessWidget {
         GlassMenu(
           quality: GlassQuality.premium,
           menuWidth: 280,
+          selectionColor: DexColors.accent.withValues(alpha: 0.28),
           triggerBuilder: (context, toggle) =>
               _ModePill(mode: mode, onTap: toggle),
           items: [
             for (final m in ComposerMode.values)
               GlassMenuItem(
                 title: m.label,
-                // Accent the active mode (the accent-on-open look of the
-                // voice-settings Language dropdown).
+                // Accent selection pill on the active mode — the accent-on-
+                // open look of the voice-settings Language dropdown.
+                isSelected: m == mode,
                 icon: Icon(
                   m.icon,
                   color: m == mode ? DexColors.accent : DexColors.textDim,

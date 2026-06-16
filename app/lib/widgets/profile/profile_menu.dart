@@ -17,8 +17,9 @@ enum ProfileMenuAction {
   signOut,
 }
 
-/// Wraps [child] (the avatar) in a GlassPopover. Tapping the avatar opens a
-/// frosted profile card; picking a row calls [onAction] and closes.
+/// Wraps [child] (the avatar) in the same GlassMenu the dropdowns use, so the
+/// profile menu matches the voice-settings Language dropdown exactly: accent
+/// selection pill, premium morph, accent glyphs (Sign out destructive-red).
 class ProfilePopover extends StatelessWidget {
   const ProfilePopover({
     super.key,
@@ -34,137 +35,71 @@ class ProfilePopover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final initial = userName.isNotEmpty ? userName[0].toUpperCase() : 'D';
-    return GlassPopover(
-      quality: GlassQuality.premium, // morph; falls back to standard on Skia
-      popoverWidth: 248,
-      popoverHeight: 312,
+    return GlassMenu(
+      quality: GlassQuality.premium,
+      menuWidth: 248,
+      selectionColor: DexColors.accent.withValues(alpha: 0.28),
       triggerBuilder: (context, toggle) => MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(onTap: toggle, child: child),
       ),
-      contentBuilder: (context, close) => Padding(
-        padding: const EdgeInsets.all(DexSpace.md),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(colors: [
-                      DexColors.accent.withValues(alpha: 0.9),
-                      DexColors.stateThinking.withValues(alpha: 0.9),
-                    ]),
-                  ),
-                  child: Text(initial,
-                      style: DexType.heading(color: DexColors.bg)),
-                ),
-                const SizedBox(width: DexSpace.md),
-                Expanded(
-                  child: Text(userName,
-                      style: DexType.label(color: DexColors.text),
-                      overflow: TextOverflow.ellipsis),
-                ),
-              ],
-            ),
-            const SizedBox(height: DexSpace.md),
-            const Divider(height: 1, color: DexColors.border),
-            const SizedBox(height: DexSpace.xs),
-            _Row(
-              icon: LucideIcons.settings,
-              label: 'Settings',
-              onTap: () {
-                close();
-                onAction(ProfileMenuAction.settings);
-              },
-            ),
-            _Row(
-              icon: LucideIcons.brain,
-              label: 'Memory',
-              onTap: () {
-                close();
-                onAction(ProfileMenuAction.memory);
-              },
-            ),
-            _Row(
-              icon: LucideIcons.alarm_clock,
-              label: 'Reminders',
-              onTap: () {
-                close();
-                onAction(ProfileMenuAction.reminders);
-              },
-            ),
-            _Row(
-              icon: LucideIcons.message_circle,
-              label: 'Give feedback',
-              onTap: () {
-                close();
-                onAction(ProfileMenuAction.feedback);
-              },
-            ),
-            const SizedBox(height: DexSpace.xs),
-            const Divider(height: 1, color: DexColors.border),
-            const SizedBox(height: DexSpace.xs),
-            _Row(
-              icon: LucideIcons.log_out,
-              label: 'Sign out',
-              destructive: true,
-              onTap: () {
-                close();
-                onAction(ProfileMenuAction.signOut);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Row extends StatelessWidget {
-  const _Row({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.destructive = false,
-  });
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool destructive;
-
-  @override
-  Widget build(BuildContext context) {
-    final tint = destructive ? DexColors.stateError : DexColors.accent;
-    final textColor = destructive ? DexColors.stateError : DexColors.text;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: DexRadius.rsm,
-        // Set the cursor on the InkWell too — inside the GlassPopover overlay
-        // the ancestor MouseRegion alone didn't always flip the pointer.
-        mouseCursor: SystemMouseCursors.click,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DexSpace.sm, vertical: DexSpace.sm,
-          ),
+      items: [
+        GlassMenuLabel(
+          height: 52,
           child: Row(
             children: [
-              // Accent-tinted glyphs, matching the composer mode pill; Sign
-              // out is red (destructive).
-              Icon(icon, size: 16, color: tint),
-              const SizedBox(width: DexSpace.md),
-              Text(label, style: DexType.label(color: textColor)),
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: [
+                    DexColors.accent.withValues(alpha: 0.9),
+                    DexColors.stateThinking.withValues(alpha: 0.9),
+                  ]),
+                ),
+                child: Text(initial, style: DexType.label(color: DexColors.bg)),
+              ),
+              const SizedBox(width: DexSpace.sm),
+              Expanded(
+                child: Text(userName,
+                    style: DexType.label(color: DexColors.text),
+                    overflow: TextOverflow.ellipsis),
+              ),
             ],
           ),
         ),
-      ),
+        const GlassMenuDivider(),
+        GlassMenuItem(
+          title: 'Settings',
+          icon: const Icon(LucideIcons.settings, color: DexColors.accent),
+          onTap: () => onAction(ProfileMenuAction.settings),
+        ),
+        GlassMenuItem(
+          title: 'Memory',
+          icon: const Icon(LucideIcons.brain, color: DexColors.accent),
+          onTap: () => onAction(ProfileMenuAction.memory),
+        ),
+        GlassMenuItem(
+          title: 'Reminders',
+          icon: const Icon(LucideIcons.alarm_clock, color: DexColors.accent),
+          onTap: () => onAction(ProfileMenuAction.reminders),
+        ),
+        GlassMenuItem(
+          title: 'Give feedback',
+          icon: const Icon(LucideIcons.message_circle, color: DexColors.accent),
+          onTap: () => onAction(ProfileMenuAction.feedback),
+        ),
+        const GlassMenuDivider(),
+        GlassMenuItem(
+          title: 'Sign out',
+          icon: const Icon(LucideIcons.log_out),
+          isDestructive: true,
+          onTap: () => onAction(ProfileMenuAction.signOut),
+        ),
+      ],
     );
   }
 }
+
