@@ -245,6 +245,19 @@ async function restartGatewayWithoutServiceManager(
       `multiple gateway processes are listening on port ${port}: ${formatGatewayPidList(pids)}; use "dex gateway status --deep" before retrying restart`,
     );
   }
+  // Windows has no cross-process reload signal: SIGUSR1 is the in-process
+  // restart trigger on macOS/Linux, but `process.kill(pid, "SIGUSR1")` throws
+  // ERR_UNKNOWN_SIGNAL on win32, and an unmanaged gateway has no supervisor to
+  // respawn it after a terminate. Fail with an actionable message instead of a
+  // raw TypeError; the Dex app's Diagnostics → Restart gateway does a
+  // kill+respawn that works here.
+  if (process.platform === "win32") {
+    throw new Error(
+      `Hot-restarting an unmanaged gateway isn't supported on Windows (no cross-process reload signal). ` +
+        `Use the Dex app (Diagnostics → Restart gateway), or run "dex gateway stop" then start it again. ` +
+        `Listener pid on port ${port}: ${pids[0]}.`,
+    );
+  }
   writeGatewayRestartIntentSync({
     targetPid: pids[0],
     reason: "gateway.restart",
