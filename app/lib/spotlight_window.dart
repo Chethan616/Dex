@@ -370,8 +370,6 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                       GlassMenu(
                         quality: GlassQuality.premium,
                         menuWidth: 240,
-                        selectionColor:
-                            DexColors.accent.withValues(alpha: 0.28),
                         triggerBuilder: (context, toggle) => GlassBadgeButton(
                           icon: LucideIcons.plus,
                           onTap: toggle,

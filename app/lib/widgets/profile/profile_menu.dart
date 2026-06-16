@@ -38,7 +38,6 @@ class ProfilePopover extends StatelessWidget {
     return GlassMenu(
       quality: GlassQuality.premium,
       menuWidth: 248,
-      selectionColor: DexColors.accent.withValues(alpha: 0.28),
       triggerBuilder: (context, toggle) => MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(onTap: toggle, child: child),
