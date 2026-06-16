@@ -52,103 +52,107 @@ class EmptyHome extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Only show the recent-activity cards when the window is tall enough
-        // to fit the whole hero + cards without scrolling. On short / scaled
-        // displays they're dropped so the centered hero never scrolls.
-        final showCards = constraints.maxHeight > 820 &&
+        // No scroll view: the hero (greeting + composer + chips) is centered
+        // in the flexible top region; the recent cards + disclaimer pin to the
+        // bottom. Cards only render when the window is tall enough so the hero
+        // never gets squeezed or pushed into a scroll.
+        final showCards = constraints.maxHeight > 760 &&
             (recentFiles.isNotEmpty || recentChats.isNotEmpty);
-        return SingleChildScrollView(
-          // Clamping (not bouncing) physics: with the hero sized to at least
-          // the viewport height, content that fits can't be dragged/bounced —
-          // it only scrolls when it genuinely overflows (small windows).
-          physics: const ClampingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(
-            horizontal: DexSpace.xxl, vertical: DexSpace.xl,
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DexSpace.xxl, DexSpace.lg, DexSpace.xxl, DexSpace.lg,
           ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 880),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _FadeInUp(
-                      index: 0,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Hi $greetingName',
-                              textAlign: TextAlign.center,
-                              style: DexType.label(color: DexColors.textDim)),
-                          const SizedBox(height: DexSpace.xs),
-                          // A witty tagline from the same set the CLI banner
-                          // shows — picked once per launch (dexSessionTagline).
-                          _Typewriter(
-                            text: dexSessionTagline,
-                            style: DexType.title(color: DexColors.text),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: DexSpace.xl),
-                    _FadeInUp(
-                      index: 1,
-                      child: DexComposer(
-                        onSubmit: onSubmit,
-                        isBusy: isBusy,
-                        onStop: onStop,
-                        onVision: onVision,
-                        onVoice: onVoice,
-                        onAddAction: onAddAction,
-                        onClear: onClear,
-                      ),
-                    ),
-                    const SizedBox(height: DexSpace.lg),
-                    _FadeInUp(
-                      index: 2,
-                      child: Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: DexSpace.sm,
-                        runSpacing: DexSpace.sm,
-                        children: suggestions
-                            .map((s) => SuggestionChip(
-                                  label: s,
-                                  onTap: () => onSubmit(s),
-                                ))
-                            .toList(growable: false),
-                      ),
-                    ),
-                    if (showCards)
-                      _FadeInUp(
-                        index: 3,
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: DexSpace.xl),
-                          child: _Cards(
-                            recentFiles: recentFiles,
-                            recentChats: recentChats,
-                            onSelectFile: onSelectFile,
-                            onSelectChat: onSelectChat,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 880),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _FadeInUp(
+                          index: 0,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Hi $greetingName',
+                                  textAlign: TextAlign.center,
+                                  style:
+                                      DexType.label(color: DexColors.textDim)),
+                              const SizedBox(height: DexSpace.xs),
+                              // A witty tagline from the same set the CLI
+                              // banner shows — picked once per launch.
+                              _Typewriter(
+                                text: dexSessionTagline,
+                                style: DexType.title(color: DexColors.text),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    _FadeInUp(
-                      index: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: DexSpace.lg),
-                        child: Text(
-                          'Dex is an agent and may make mistakes. Every action shows a preview first.',
-                          textAlign: TextAlign.center,
-                          style: DexType.caption(color: DexColors.textFaint),
+                        const SizedBox(height: DexSpace.xl),
+                        _FadeInUp(
+                          index: 1,
+                          child: DexComposer(
+                            onSubmit: onSubmit,
+                            isBusy: isBusy,
+                            onStop: onStop,
+                            onVision: onVision,
+                            onVoice: onVoice,
+                            onAddAction: onAddAction,
+                            onClear: onClear,
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: DexSpace.lg),
+                        _FadeInUp(
+                          index: 2,
+                          child: Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: DexSpace.sm,
+                            runSpacing: DexSpace.sm,
+                            children: suggestions
+                                .map((s) => SuggestionChip(
+                                      label: s,
+                                      onTap: () => onSubmit(s),
+                                    ))
+                                .toList(growable: false),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              if (showCards)
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 880),
+                    child: _FadeInUp(
+                      index: 3,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: DexSpace.md),
+                        child: _Cards(
+                          recentFiles: recentFiles,
+                          recentChats: recentChats,
+                          onSelectFile: onSelectFile,
+                          onSelectChat: onSelectChat,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              _FadeInUp(
+                index: 4,
+                child: Text(
+                  'Dex is an agent and may make mistakes. Every action shows a preview first.',
+                  textAlign: TextAlign.center,
+                  style: DexType.caption(color: DexColors.textFaint),
+                ),
+              ),
+            ],
           ),
         );
       },

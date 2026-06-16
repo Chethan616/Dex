@@ -13,6 +13,7 @@ import '../../core/prompt_history.dart';
 import '../../core/send_options.dart';
 import '../../theme/tokens.dart';
 import '../dex_glass.dart';
+import '../glass_badge_button.dart';
 import '../living_background.dart';
 import 'add_menu.dart';
 import 'attachments.dart';
@@ -481,43 +482,6 @@ class _Toolbar extends StatelessWidget {
   }
 }
 
-/// A square liquid-glass toolbar button that matches the mode pill (same
-/// clear-crystal glass, minimal quality, neutral glyph). Used for +, vision,
-/// voice and send so the whole composer toolbar reads as one material.
-class _GlassToolButton extends StatelessWidget {
-  const _GlassToolButton({
-    required this.icon,
-    required this.onTap,
-  });
-  final Widget icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: onTap != null
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: GlassContainer(
-          useOwnLayer: true,
-          quality: GlassQuality.minimal,
-          shape: const LiquidRoundedSuperellipse(borderRadius: 16),
-          settings: const LiquidGlassSettings(
-            glassColor: Color.fromRGBO(255, 255, 255, 0.10),
-            blur: 8,
-            thickness: 10,
-          ),
-          padding: const EdgeInsets.all(9),
-          child: icon,
-        ),
-      ),
-    );
-  }
-}
-
 class _RoundIconButton extends StatelessWidget {
   const _RoundIconButton({
     required this.icon,
@@ -532,12 +496,13 @@ class _RoundIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: _GlassToolButton(
-        onTap: onTap,
-        icon: Icon(icon, size: 18, color: tint ?? DexColors.textDim),
-      ),
+    return GlassBadgeButton(
+      icon: icon,
+      tooltip: tooltip,
+      onTap: onTap,
+      size: 38,
+      iconColor: tint,
+      glowColor: tint,
     );
   }
 }
@@ -549,16 +514,14 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Send (Enter)',
-      child: _GlassToolButton(
-        onTap: enabled ? onTap : null,
-        icon: Icon(
-          LucideIcons.arrow_up,
-          size: 18,
-          color: enabled ? DexColors.accent : DexColors.textFaint,
-        ),
-      ),
+    // Accent glow on the send badge so a tap visibly blooms.
+    return GlassBadgeButton(
+      icon: LucideIcons.arrow_up,
+      tooltip: 'Send (Enter)',
+      onTap: enabled ? onTap : null,
+      size: 38,
+      iconColor: enabled ? DexColors.accent : DexColors.textFaint,
+      glowColor: enabled ? DexColors.accent : null,
     );
   }
 }

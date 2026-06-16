@@ -28,7 +28,7 @@ class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 320,
+      width: 360,
       child: DexGlass(
         radius: 14,
         padding: const EdgeInsets.all(DexSpace.lg),

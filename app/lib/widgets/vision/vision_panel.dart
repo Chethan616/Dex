@@ -8,6 +8,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../theme/tokens.dart';
 import '../dex_glass.dart';
 import '../dex_switch.dart';
+import '../glass_badge_button.dart';
 
 class VisionPanel extends StatefulWidget {
   const VisionPanel({super.key, required this.onClose});
@@ -37,15 +38,12 @@ class _VisionPanelState extends State<VisionPanel> {
                       child: Text('Dex Vision',
                           style: DexType.heading(color: DexColors.text)),
                     ),
-                    MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GlassIconButton(
-                        icon: const Icon(LucideIcons.x,
-                            size: 16, color: DexColors.textDim),
-                        onPressed: widget.onClose,
-                        size: 30,
-                        useOwnLayer: true,
-                      ),
+                    GlassBadgeButton(
+                      icon: LucideIcons.x,
+                      tooltip: 'Close',
+                      onTap: widget.onClose,
+                      size: 32,
+                      iconColor: DexColors.textDim,
                     ),
                   ],
                 ),

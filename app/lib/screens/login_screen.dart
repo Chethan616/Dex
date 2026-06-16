@@ -12,6 +12,7 @@ import '../core/account.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/dex_glass.dart';
+import '../widgets/glass_text_field.dart';
 import '../widgets/living_background.dart';
 import '../widgets/secret_field.dart';
 
@@ -101,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? Padding(
                                   padding: const EdgeInsets.only(
                                       bottom: DexSpace.md),
-                                  child: _PlainField(
+                                  child: DexGlassField(
                                     controller: _name,
                                     hint: 'Name',
                                     icon: LucideIcons.user,
@@ -109,10 +110,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                 )
                               : const SizedBox(width: double.infinity),
                         ),
-                        _PlainField(
+                        DexGlassField(
                           controller: _email,
                           hint: 'Email',
                           icon: LucideIcons.mail,
+                          keyboardType: TextInputType.emailAddress,
                         ),
                         const SizedBox(height: DexSpace.md),
                         SecretField(
@@ -169,86 +171,3 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-/// Unmasked sibling of SecretField with the same focus-ring language.
-class _PlainField extends StatefulWidget {
-  const _PlainField({
-    required this.controller,
-    required this.hint,
-    required this.icon,
-  });
-  final TextEditingController controller;
-  final String hint;
-  final IconData icon;
-
-  @override
-  State<_PlainField> createState() => _PlainFieldState();
-}
-
-class _PlainFieldState extends State<_PlainField> {
-  final FocusNode _focus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    _focus.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final focused = _focus.hasFocus;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      curve: Curves.easeOut,
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: DexSpace.md),
-      decoration: BoxDecoration(
-        color: focused
-            ? DexColors.surface2.withValues(alpha: 0.7)
-            : DexColors.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: focused
-              ? DexColors.accent.withValues(alpha: 0.65)
-              : DexColors.border,
-        ),
-        boxShadow: focused
-            ? <BoxShadow>[
-                BoxShadow(
-                  color: DexColors.accent.withValues(alpha: 0.12),
-                  blurRadius: 12,
-                  spreadRadius: 1,
-                ),
-              ]
-            : const <BoxShadow>[],
-      ),
-      child: Row(
-        children: [
-          Icon(widget.icon,
-              size: 15,
-              color: focused ? DexColors.accent : DexColors.textFaint),
-          const SizedBox(width: DexSpace.sm),
-          Expanded(
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focus,
-              style: DexType.body(color: DexColors.text),
-              cursorColor: DexColors.accent,
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: widget.hint,
-                hintStyle: DexType.body(color: DexColors.textFaint),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

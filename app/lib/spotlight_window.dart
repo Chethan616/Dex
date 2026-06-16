@@ -26,6 +26,7 @@ import 'main.dart' show DexScrollBehavior, dexSpotlightChannel;
 import 'theme/theme.dart';
 import 'theme/tokens.dart';
 import 'widgets/composer/attachments.dart';
+import 'widgets/glass_badge_button.dart';
 import 'widgets/home/suggestion_chip.dart';
 
 /// Default suggestions surfaced under the overlay's input. Same shape
@@ -385,27 +386,22 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                           ),
                         ),
                       ),
-                      // Circular + button — opens a liquid-glass GlassMenu
-                      // (teardrop morph) with attach actions instead of a
-                      // bare tap.
+                      // Trailing liquid-glass badge row — the macOS Spotlight
+                      // pattern (pill + circular icon badges). Jelly press +
+                      // clear-crystal glass, matching the composer toolbar.
                       const SizedBox(width: 12),
-                      GlassMenu(
-                        quality: GlassQuality.premium,
-                        menuWidth: 240,
-                        triggerBuilder: (context, toggle) =>
-                            _AttachCircle(onTap: toggle),
-                        items: [
-                          GlassMenuItem(
-                            title: 'Paste from clipboard',
-                            icon: const Icon(LucideIcons.clipboard),
-                            onTap: _pasteFromClipboard,
-                          ),
-                          GlassMenuItem(
-                            title: 'Attach image or file',
-                            icon: const Icon(LucideIcons.paperclip),
-                            onTap: _onAttach,
-                          ),
-                        ],
+                      GlassBadgeButton(
+                        icon: LucideIcons.clipboard,
+                        tooltip: 'Paste from clipboard',
+                        onTap: _pasteFromClipboard,
+                        size: 52,
+                      ),
+                      const SizedBox(width: 10),
+                      GlassBadgeButton(
+                        icon: LucideIcons.paperclip,
+                        tooltip: 'Attach image or file',
+                        onTap: _onAttach,
+                        size: 52,
                       ),
                     ],
                   ),
@@ -436,40 +432,4 @@ class _DismissIntent extends Intent {
 
 class _SpotlightPasteIntent extends Intent {
   const _SpotlightPasteIntent();
-}
-
-/// The detached "+" circle that sits to the right of the search pill.
-/// Carries the same glossy + refractive treatment as the pill itself so
-/// the two read as a matched pair, with a 12px breathing gap between
-/// them per the design ask.
-class _AttachCircle extends StatefulWidget {
-  const _AttachCircle({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  State<_AttachCircle> createState() => _AttachCircleState();
-}
-
-class _AttachCircleState extends State<_AttachCircle> {
-  @override
-  Widget build(BuildContext context) {
-    // Real liquid-glass icon button — squash/stretch jelly on press + the
-    // premium refraction, matching the overlay pill's material.
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GlassIconButton(
-        icon: const Icon(LucideIcons.plus, size: 22, color: DexColors.text),
-        onPressed: widget.onTap,
-        size: 52,
-        useOwnLayer: true,
-        quality: GlassQuality.premium,
-        settings: const LiquidGlassSettings(
-          glassColor: Color.fromRGBO(18, 30, 60, 0.40),
-          blur: 16,
-          thickness: 22,
-          glowIntensity: 0.6,
-        ),
-      ),
-    );
-  }
 }

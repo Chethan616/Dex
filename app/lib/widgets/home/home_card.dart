@@ -25,6 +25,9 @@ class HomeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DexGlass(
       radius: 14,
+      // Lighter, more translucent tint than the default deep-navy panel so
+      // the recent cards read as real liquid glass, not flat boxes.
+      tint: const Color.fromRGBO(34, 52, 96, 0.34),
       padding: const EdgeInsets.all(DexSpace.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -330,6 +330,16 @@ class ConversationStore extends ChangeNotifier {
             lower.contains('rate limit') ||
             lower.contains('quota') ||
             lower.contains('429'));
+    // A bare "LLM request failed" with no provider detail almost always means
+    // the brain couldn't reach its provider (bad/missing key, wrong model, or
+    // a stale gateway that loaded an old model). Make it actionable instead of
+    // cryptic.
+    final isProviderFail = !aborted &&
+        !isQuota &&
+        (lower.contains('llm request failed') ||
+            lower.contains('all models failed') ||
+            lower.contains('no model') ||
+            lower.contains('provider'));
     final text = aborted
         ? 'That run was stopped before it finished.'
             '${detail.isEmpty ? '' : ' ($detail)'} Try sending it again.'
@@ -338,8 +348,13 @@ class ConversationStore extends ChangeNotifier {
                 'quota is used up (it resets daily). To stop this happening, '
                 'give the hands their own free Groq key in Settings → Account '
                 '→ Secrets, which keeps their quota separate from the brain.'
-            : 'Something went wrong on that turn'
-                '${detail.isEmpty ? '.' : ': $detail'}';
+            : isProviderFail
+                ? "Dex couldn't reach the model provider. Check your API key "
+                    'and selected model in Settings → Account → Secrets, then '
+                    'restart the gateway from Settings → Diagnostics. '
+                    '(Details: $detail)'
+                : 'Something went wrong on that turn'
+                    '${detail.isEmpty ? '.' : ': $detail'}';
 
     // Reuse the streaming bubble when one exists for this run -- the
     // partial text the agent managed to say stays, with the error line

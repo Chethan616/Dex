@@ -61,9 +61,9 @@ class _Row extends StatelessWidget {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: DexColors.surface,
+                  color: Colors.white.withValues(alpha: 0.06),
                   borderRadius: DexRadius.rsm,
-                  border: Border.all(color: DexColors.border),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
                 ),
                 child: const Icon(LucideIcons.message_square,
                     size: 12, color: DexColors.textDim),

@@ -68,6 +68,15 @@ class ConnectorEntry {
     if (builtin) return ConnectorStatus.builtin;
     if (config == null) return ConnectorStatus.available;
     for (final path in probePaths) {
+      // A channel reads as Connected only when it's actually linked/paired
+      // (its `channels.<id>` node exists, written at pair time) — NOT merely
+      // because its plugin is enabled. So ignore plugin-enable probes for
+      // channels; otherwise enabling a channel by default would falsely show
+      // every messenger as Connected before the user ever pairs.
+      if (category == ConnectorCategory.channels &&
+          path.startsWith('plugins.entries.')) {
+        continue;
+      }
       final v = _resolvePath(config, path);
       if (v == null) continue;
       if (v is Map && v['enabled'] == false) continue;

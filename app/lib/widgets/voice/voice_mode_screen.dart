@@ -3,10 +3,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../theme/tokens.dart';
 import '../dex_glass.dart';
+import '../glass_badge_button.dart';
 import 'animated_wave_background.dart';
 import 'voice_settings_panel.dart';
 
@@ -75,11 +75,22 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> {
             ),
           ),
           if (_settingsOpen)
-            Positioned(
-              right: DexSpace.xl,
-              bottom: DexSpace.xxxl + 40,
-              child: VoiceSettingsPanel(
-                onClose: () => setState(() => _settingsOpen = false),
+            // Anchored bottom-right within the safe area + a hard right
+            // margin so the 360-wide panel is always fully on-screen
+            // (it used to clip the rightmost voice chips against the edge).
+            Positioned.fill(
+              child: SafeArea(
+                child: Align(
+                  alignment: Alignment.bottomRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      right: DexSpace.lg, bottom: DexSpace.xxl,
+                    ),
+                    child: VoiceSettingsPanel(
+                      onClose: () => setState(() => _settingsOpen = false),
+                    ),
+                  ),
+                ),
               ),
             ),
         ],
@@ -102,22 +113,13 @@ class _ControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: Tooltip(
-        message: tooltip,
-        child: GlassIconButton(
-          icon: Icon(
-            icon,
-            size: 18,
-            color: accent ? DexColors.accent : DexColors.textDim,
-          ),
-          onPressed: onTap,
-          size: 44,
-          useOwnLayer: true,
-          glowColor: accent ? DexColors.accent : null,
-        ),
-      ),
+    return GlassBadgeButton(
+      icon: icon,
+      tooltip: tooltip,
+      onTap: onTap,
+      size: 48,
+      iconColor: accent ? DexColors.accent : DexColors.textDim,
+      glowColor: accent ? DexColors.accent : null,
     );
   }
 }

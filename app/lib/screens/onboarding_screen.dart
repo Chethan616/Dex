@@ -246,14 +246,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 icon: c.icon,
                 name: c.name,
                 linked: c.id == 'whatsapp' && _whatsappLinked,
-                onTap: () async {
-                  if (c.id == 'whatsapp') {
-                    final ok = await WhatsAppPairDialog.show(context);
-                    if (ok && mounted) setState(() => _whatsappLinked = true);
-                  } else {
-                    await _showConnectSheet(c);
-                  }
-                },
+                onTap: () => _showConnectSheet(c),
               ),
           ],
         ),
@@ -320,6 +313,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ],
         ),
         actions: [
+          // WhatsApp pairs in-app: scan the QR right here, no CLI.
+          if (entry.id == 'whatsapp')
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                final ok = await WhatsAppPairDialog.show(context);
+                if (ok && mounted) setState(() => _whatsappLinked = true);
+              },
+              icon: const Icon(LucideIcons.qr_code, size: 14),
+              label: const Text('Pair now (scan QR)'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: DexColors.accent,
+                foregroundColor: DexColors.bg,
+              ),
+            ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text('Done', style: DexType.label(color: DexColors.accent)),
