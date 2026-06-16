@@ -290,7 +290,12 @@ class _DexComposerState extends State<DexComposer> {
             padding: const EdgeInsets.fromLTRB(
               DexSpace.lg, DexSpace.md, DexSpace.md, DexSpace.sm,
             ),
-            child: Column(
+            // RepaintBoundary isolates the caret blink + text edits so they
+            // don't re-dirty the glass backdrop each frame — that re-sample
+            // (with the fog moving behind) was the "vibrating light" while
+            // typing.
+            child: RepaintBoundary(
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -324,6 +329,7 @@ class _DexComposerState extends State<DexComposer> {
                   onSubmit: _submit,
                 ),
               ],
+            ),
             ),
           ),
       ),

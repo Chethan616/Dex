@@ -144,7 +144,9 @@ class _Row extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, size: 16, color: DexColors.textDim),
+              // Accent-tinted glyphs, matching the composer mode pill so
+              // the profile popover speaks the same liquid-glass accent.
+              Icon(icon, size: 16, color: DexColors.accent),
               const SizedBox(width: DexSpace.md),
               Text(label, style: DexType.label(color: DexColors.text)),
             ],

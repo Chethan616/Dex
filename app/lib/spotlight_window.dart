@@ -291,16 +291,38 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Flexible(
-                        child: DexGlass(
-                          radius: 28,
-                          glow: 0.4,
-                          padding: const EdgeInsets.fromLTRB(
-                            DexSpace.lg, DexSpace.md, DexSpace.lg, DexSpace.md,
+                        // Pure liquid-glass pill, same recipe as the composer
+                        // mode pill (own layer, minimal quality, deep-navy
+                        // tint) so the two read as one material. A drop shadow
+                        // gives the floating overlay depth; no reactive glow.
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: DexSurface.glossyShadow,
                           ),
-                          child: Row(
+                          child: GlassContainer(
+                            useOwnLayer: true,
+                            quality: GlassQuality.minimal,
+                            shape: const LiquidRoundedSuperellipse(
+                              borderRadius: 28,
+                            ),
+                            settings: const LiquidGlassSettings(
+                              glassColor: Color.fromRGBO(20, 34, 68, 0.42),
+                              blur: 14,
+                              thickness: 12,
+                            ),
+                            padding: const EdgeInsets.fromLTRB(
+                              DexSpace.lg, DexSpace.md, DexSpace.lg, DexSpace.md,
+                            ),
+                            // RepaintBoundary isolates the blinking caret so it
+                            // can't re-dirty the glass backdrop each tick —
+                            // that re-sample was the "vibrating light" while
+                            // typing.
+                            child: RepaintBoundary(
+                              child: Row(
                                   children: [
                                     const Icon(LucideIcons.search,
-                                        size: 20, color: DexColors.textDim),
+                                        size: 20, color: DexColors.accent),
                                     const SizedBox(width: DexSpace.md),
                                     Expanded(
                                       child: KeyboardListener(
@@ -355,6 +377,8 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                                     ),
                                   ],
                                 ),
+                            ),
+                          ),
                         ),
                       ),
                       // Circular + button — opens a liquid-glass GlassMenu
