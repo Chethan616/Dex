@@ -84,21 +84,36 @@ class DexGlass extends StatelessWidget {
         child: child,
       );
     } else {
-      // Plain frosted panel — no liquid specular, so a drifting backdrop
-      // can't make the edge "vibrate". A touch more opaque than the rim
-      // variant so the fog behind doesn't bleed through and shimmer.
+      // Frosted panel with a STATIC glass sheen instead of the package's
+      // animated specular rim. The rim shader re-samples the drifting fog
+      // every frame, which is what made the message pill's edge light
+      // flicker on hover / typing; a baked diagonal highlight reads as glass
+      // but never animates, so it's flicker-free. Translucent tint keeps it
+      // glassy (not a flat grey box).
       final r = BorderRadius.circular(radius);
       panel = ClipRRect(
         borderRadius: r,
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             padding: padding,
             decoration: BoxDecoration(
-              color: tint ?? const Color.fromRGBO(12, 20, 44, 0.74),
+              color: tint ?? const Color.fromRGBO(18, 30, 60, 0.46),
               borderRadius: r,
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.06),
+                color: Colors.white.withValues(alpha: 0.10),
+              ),
+            ),
+            foregroundDecoration: BoxDecoration(
+              borderRadius: r,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color.fromRGBO(255, 255, 255, 0.07),
+                  Color.fromRGBO(255, 255, 255, 0.0),
+                ],
+                stops: [0.0, 0.45],
               ),
             ),
             child: child,

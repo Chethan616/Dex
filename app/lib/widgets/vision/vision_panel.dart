@@ -40,7 +40,6 @@ class _VisionPanelState extends State<VisionPanel> {
                     ),
                     GlassBadgeButton(
                       icon: LucideIcons.x,
-                      tooltip: 'Close',
                       onTap: widget.onClose,
                       size: 32,
                       iconColor: DexColors.textDim,

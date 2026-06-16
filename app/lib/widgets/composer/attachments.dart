@@ -275,9 +275,12 @@ class _AttachmentChip extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 240),
       child: GlassContainer(
       useOwnLayer: true,
+      // Neutral clear-crystal glass (no blue accent), minimal quality so the
+      // chip rim doesn't flicker over the drifting fog.
+      quality: GlassQuality.minimal,
       shape: const LiquidRoundedSuperellipse(borderRadius: 16),
       settings: const LiquidGlassSettings(
-        glassColor: Color.fromRGBO(20, 34, 68, 0.4),
+        glassColor: Color.fromRGBO(255, 255, 255, 0.10),
         blur: 8,
         thickness: 10,
       ),

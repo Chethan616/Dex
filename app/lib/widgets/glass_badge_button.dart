@@ -18,7 +18,6 @@ class GlassBadgeButton extends StatelessWidget {
     super.key,
     required this.icon,
     required this.onTap,
-    this.tooltip,
     this.iconColor,
     this.glowColor,
     this.size = 44,
@@ -26,18 +25,17 @@ class GlassBadgeButton extends StatelessWidget {
 
   final IconData icon;
   final VoidCallback? onTap;
-  final String? tooltip;
   final Color? iconColor;
 
-  /// When set, the jelly press also blooms this colour (e.g. the accent on
-  /// the send button so a tap glows).
+  /// When set, the jelly press also blooms this colour.
   final Color? glowColor;
   final double size;
 
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
-    final button = MouseRegion(
+    // No Tooltip on purpose — hover hints were removed app-wide.
+    return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
       child: GlassIconButton(
         icon: Icon(
@@ -58,7 +56,5 @@ class GlassBadgeButton extends StatelessWidget {
         ),
       ),
     );
-    if (tooltip == null) return button;
-    return Tooltip(message: tooltip!, child: button);
   }
 }

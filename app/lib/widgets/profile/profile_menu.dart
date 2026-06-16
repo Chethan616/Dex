@@ -113,6 +113,7 @@ class ProfilePopover extends StatelessWidget {
             _Row(
               icon: LucideIcons.log_out,
               label: 'Sign out',
+              destructive: true,
               onTap: () {
                 close();
                 onAction(ProfileMenuAction.signOut);
@@ -126,29 +127,40 @@ class ProfilePopover extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.icon, required this.label, required this.onTap});
+  const _Row({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+  });
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool destructive;
 
   @override
   Widget build(BuildContext context) {
+    final tint = destructive ? DexColors.stateError : DexColors.accent;
+    final textColor = destructive ? DexColors.stateError : DexColors.text;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: InkWell(
         onTap: onTap,
         borderRadius: DexRadius.rsm,
+        // Set the cursor on the InkWell too — inside the GlassPopover overlay
+        // the ancestor MouseRegion alone didn't always flip the pointer.
+        mouseCursor: SystemMouseCursors.click,
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: DexSpace.sm, vertical: DexSpace.sm,
           ),
           child: Row(
             children: [
-              // Accent-tinted glyphs, matching the composer mode pill so
-              // the profile popover speaks the same liquid-glass accent.
-              Icon(icon, size: 16, color: DexColors.accent),
+              // Accent-tinted glyphs, matching the composer mode pill; Sign
+              // out is red (destructive).
+              Icon(icon, size: 16, color: tint),
               const SizedBox(width: DexSpace.md),
-              Text(label, style: DexType.label(color: DexColors.text)),
+              Text(label, style: DexType.label(color: textColor)),
             ],
           ),
         ),

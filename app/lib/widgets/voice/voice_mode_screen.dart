@@ -47,26 +47,22 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> {
                         children: [
                           _ControlButton(
                             icon: LucideIcons.x,
-                            tooltip: 'Exit voice mode',
                             onTap: () => Navigator.of(context).maybePop(),
                           ),
                           const SizedBox(width: DexSpace.sm),
                           _ControlButton(
                             icon: LucideIcons.glasses,
-                            tooltip: 'Share screen',
                             onTap: () {},
                           ),
                           const SizedBox(width: DexSpace.sm),
                           _ControlButton(
                             icon: LucideIcons.mic,
-                            tooltip: 'Mute',
                             accent: true,
                             onTap: () {},
                           ),
                           const SizedBox(width: DexSpace.sm),
                           _ControlButton(
                             icon: LucideIcons.settings,
-                            tooltip: 'Voice settings',
                             onTap: () => setState(() => _settingsOpen = true),
                           ),
                         ],
@@ -102,12 +98,10 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> {
 class _ControlButton extends StatelessWidget {
   const _ControlButton({
     required this.icon,
-    required this.tooltip,
     required this.onTap,
     this.accent = false,
   });
   final IconData icon;
-  final String tooltip;
   final VoidCallback onTap;
   final bool accent;
 
@@ -115,7 +109,6 @@ class _ControlButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassBadgeButton(
       icon: icon,
-      tooltip: tooltip,
       onTap: onTap,
       size: 48,
       iconColor: accent ? DexColors.accent : DexColors.textDim,

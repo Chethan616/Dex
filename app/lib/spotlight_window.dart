@@ -16,7 +16,6 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
@@ -26,6 +25,7 @@ import 'main.dart' show DexScrollBehavior, dexSpotlightChannel;
 import 'theme/theme.dart';
 import 'theme/tokens.dart';
 import 'widgets/composer/attachments.dart';
+import 'widgets/dex_glass.dart';
 import 'widgets/glass_badge_button.dart';
 import 'widgets/home/suggestion_chip.dart';
 
@@ -291,39 +291,16 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Flexible(
-                        // Pure liquid-glass pill, same recipe as the composer
-                        // mode pill (own layer, minimal quality, deep-navy
-                        // tint) so the two read as one material. A drop shadow
-                        // gives the floating overlay depth; no reactive glow.
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: DexSurface.glossyShadow,
+                        // Neutral frosted liquid glass — the previous overlay
+                        // look, no blue accent / glow. DexGlass carries the
+                        // frost + soft shadow; RepaintBoundary isolates the
+                        // caret so it can't re-dirty the backdrop each tick.
+                        child: DexGlass(
+                          radius: 28,
+                          padding: const EdgeInsets.fromLTRB(
+                            DexSpace.lg, DexSpace.md, DexSpace.lg, DexSpace.md,
                           ),
-                          child: GlassContainer(
-                            useOwnLayer: true,
-                            // Premium = the full liquid pipeline (jelly morph
-                            // + refraction). The overlay floats over a static
-                            // desktop, so there's no drifting backdrop to make
-                            // it shimmer — we get the rich glass here.
-                            quality: GlassQuality.premium,
-                            shape: const LiquidRoundedSuperellipse(
-                              borderRadius: 28,
-                            ),
-                            settings: const LiquidGlassSettings(
-                              glassColor: Color.fromRGBO(18, 30, 60, 0.40),
-                              blur: 16,
-                              thickness: 22,
-                              glowIntensity: 0.6,
-                            ),
-                            padding: const EdgeInsets.fromLTRB(
-                              DexSpace.lg, DexSpace.md, DexSpace.lg, DexSpace.md,
-                            ),
-                            // RepaintBoundary isolates the blinking caret so it
-                            // can't re-dirty the glass backdrop each tick —
-                            // that re-sample was the "vibrating light" while
-                            // typing.
-                            child: RepaintBoundary(
+                          child: RepaintBoundary(
                               child: Row(
                                   children: [
                                     const Icon(LucideIcons.search,
@@ -384,22 +361,19 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                                 ),
                             ),
                           ),
-                        ),
                       ),
                       // Trailing liquid-glass badge row — the macOS Spotlight
-                      // pattern (pill + circular icon badges). Jelly press +
-                      // clear-crystal glass, matching the composer toolbar.
+                      // pattern (pill + circular icon badges). Neutral glass,
+                      // no hint text.
                       const SizedBox(width: 12),
                       GlassBadgeButton(
                         icon: LucideIcons.clipboard,
-                        tooltip: 'Paste from clipboard',
                         onTap: _pasteFromClipboard,
                         size: 52,
                       ),
                       const SizedBox(width: 10),
                       GlassBadgeButton(
                         icon: LucideIcons.paperclip,
-                        tooltip: 'Attach image or file',
                         onTap: _onAttach,
                         size: 52,
                       ),
