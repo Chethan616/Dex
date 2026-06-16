@@ -36,10 +36,10 @@ import 'platform/win/tray.dart';
 import 'screens/home_desktop.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/splash_screen.dart';
 import 'spotlight_window.dart';
 import 'theme/theme.dart';
 import 'widgets/composer/slash_commands.dart';
-import 'widgets/living_background.dart';
 
 /// IPC channel name used by the Spotlight sub-window to send the user's
 /// prompt back to the main window's ConversationStore.
@@ -295,10 +295,17 @@ class _DexAppState extends State<DexApp> with WindowListener {
   late bool _needsOnboarding;
   bool _onboardSeen = true;
 
+  // Splash holds the first ~2.2s so the off-screen warm strip compiles the
+  // glass shaders before the cockpit paints — smooth on the very first use.
+  bool _splashDone = false;
+
   @override
   void initState() {
     super.initState();
     _needsOnboarding = DexSetup.read().needsOnboarding;
+    Future<void>.delayed(const Duration(milliseconds: 2200), () {
+      if (mounted) setState(() => _splashDone = true);
+    });
     DexAccount.load().then((a) {
       if (mounted) setState(() => _signedIn = a.signedIn);
     });
@@ -360,12 +367,9 @@ class _DexAppState extends State<DexApp> with WindowListener {
   }
 
   Widget _buildRoot() {
-    if (_signedIn == null) {
-      // Prefs still loading -- one calm frame, no flash of login.
-      return const Scaffold(
-        backgroundColor: Colors.transparent,
-        body: LivingBackground(child: SizedBox.expand()),
-      );
+    if (!_splashDone || _signedIn == null) {
+      // Branded splash while prefs load + glass shaders warm up.
+      return const SplashScreen();
     }
     if (_signedIn == false) {
       return LoginScreen(

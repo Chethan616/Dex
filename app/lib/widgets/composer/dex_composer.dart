@@ -287,13 +287,12 @@ class _DexComposerState extends State<DexComposer> {
           },
           child: DexGlass(
             radius: 28,
-            // Flicker-free glass: rim:false swaps the package's animated
-            // specular edge (which re-samples the drifting fog every frame —
-            // the "flickering edge light") for a baked static sheen, while
-            // keeping the frosted translucent look. RepaintBoundary isolates
-            // caret/text repaints from the backdrop.
+            // Flicker-free clear-crystal glass: rim:false swaps the package's
+            // animated specular edge (the "flickering edge light") for a baked
+            // static sheen, and the clear white tint matches the toolbar + and
+            // mode pill so it reads as bright crystal, not a grey panel.
             rim: false,
-            tint: const Color.fromRGBO(22, 36, 70, 0.46),
+            tint: const Color.fromRGBO(255, 255, 255, 0.10),
             padding: const EdgeInsets.fromLTRB(
               DexSpace.lg, DexSpace.md, DexSpace.md, DexSpace.sm,
             ),
@@ -447,7 +446,12 @@ class _Toolbar extends StatelessWidget {
             for (final m in ComposerMode.values)
               GlassMenuItem(
                 title: m.label,
-                icon: Icon(m.icon),
+                // Accent the active mode (the accent-on-open look of the
+                // voice-settings Language dropdown).
+                icon: Icon(
+                  m.icon,
+                  color: m == mode ? DexColors.accent : DexColors.textDim,
+                ),
                 onTap: () => onModeSelected(m),
               ),
           ],

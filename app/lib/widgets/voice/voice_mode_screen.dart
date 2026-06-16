@@ -47,6 +47,7 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> {
                         children: [
                           _ControlButton(
                             icon: LucideIcons.x,
+                            danger: true,
                             onTap: () => Navigator.of(context).maybePop(),
                           ),
                           const SizedBox(width: DexSpace.sm),
@@ -100,10 +101,14 @@ class _ControlButton extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.accent = false,
+    this.danger = false,
   });
   final IconData icon;
   final VoidCallback onTap;
   final bool accent;
+
+  /// Close/destructive control — blooms red on press.
+  final bool danger;
 
   @override
   Widget build(BuildContext context) {
@@ -111,8 +116,16 @@ class _ControlButton extends StatelessWidget {
       icon: icon,
       onTap: onTap,
       size: 48,
-      iconColor: accent ? DexColors.accent : DexColors.textDim,
-      glowColor: accent ? DexColors.accent : null,
+      iconColor: danger
+          ? DexColors.stateError
+          : accent
+              ? DexColors.accent
+              : DexColors.textDim,
+      glowColor: danger
+          ? DexColors.stateError
+          : accent
+              ? DexColors.accent
+              : null,
     );
   }
 }

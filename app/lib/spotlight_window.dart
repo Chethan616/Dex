@@ -16,6 +16,7 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
@@ -362,20 +363,30 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                             ),
                           ),
                       ),
-                      // Trailing liquid-glass badge row — the macOS Spotlight
-                      // pattern (pill + circular icon badges). Neutral glass,
-                      // no hint text.
+                      // Trailing + badge — tapping it opens the liquid-glass
+                      // GlassMenu (teardrop morph) with the attach actions,
+                      // the overlay you had before.
                       const SizedBox(width: 12),
-                      GlassBadgeButton(
-                        icon: LucideIcons.clipboard,
-                        onTap: _pasteFromClipboard,
-                        size: 52,
-                      ),
-                      const SizedBox(width: 10),
-                      GlassBadgeButton(
-                        icon: LucideIcons.paperclip,
-                        onTap: _onAttach,
-                        size: 52,
+                      GlassMenu(
+                        quality: GlassQuality.premium,
+                        menuWidth: 240,
+                        triggerBuilder: (context, toggle) => GlassBadgeButton(
+                          icon: LucideIcons.plus,
+                          onTap: toggle,
+                          size: 52,
+                        ),
+                        items: [
+                          GlassMenuItem(
+                            title: 'Paste from clipboard',
+                            icon: const Icon(LucideIcons.clipboard),
+                            onTap: _pasteFromClipboard,
+                          ),
+                          GlassMenuItem(
+                            title: 'Attach image or file',
+                            icon: const Icon(LucideIcons.paperclip),
+                            onTap: _onAttach,
+                          ),
+                        ],
                       ),
                     ],
                   ),
