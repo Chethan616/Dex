@@ -7,6 +7,8 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../core/dex_memory.dart';
 import '../../../theme/tokens.dart';
+import '../../dex_glass.dart';
+import '../../glass_back_button.dart';
 
 class MemoryAdd extends StatefulWidget {
   const MemoryAdd({super.key, required this.onBack});
@@ -71,11 +73,7 @@ class _MemoryAddState extends State<MemoryAdd> {
         children: [
           Row(
             children: [
-              IconButton(
-                icon: const Icon(LucideIcons.arrow_left, size: 18),
-                color: DexColors.textDim,
-                onPressed: widget.onBack,
-              ),
+              GlassBackButton(onTap: widget.onBack),
               const SizedBox(width: DexSpace.sm),
               Text('Add or import memory',
                   style: DexType.heading(color: DexColors.text)),
@@ -212,13 +210,10 @@ class _PromptBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return DexGlass(
+      shadow: false,
+      radius: 10,
       padding: const EdgeInsets.all(DexSpace.md),
-      decoration: BoxDecoration(
-        color: DexColors.surface,
-        borderRadius: DexRadius.rsm,
-        border: Border.all(color: DexColors.border),
-      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -250,30 +245,27 @@ class DottedDropZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: DexRadius.rmd,
-      child: Container(
-        height: 110,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: DexColors.surface,
-          borderRadius: DexRadius.rmd,
-          border: Border.all(
-            color: DexColors.border,
-            style: BorderStyle.solid,
-            width: 1,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: DexGlass(
+          shadow: false,
+          radius: 12,
+          child: SizedBox(
+            height: 110,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(LucideIcons.file_up,
+                    size: 18, color: DexColors.textDim),
+                const SizedBox(height: DexSpace.sm),
+                Text('Upload or drop documents here',
+                    style: DexType.caption(color: DexColors.textFaint)),
+              ],
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(LucideIcons.file_up,
-                size: 18, color: DexColors.textDim),
-            const SizedBox(height: DexSpace.sm),
-            Text('Upload or drop documents here',
-                style: DexType.caption(color: DexColors.textFaint)),
-          ],
         ),
       ),
     );

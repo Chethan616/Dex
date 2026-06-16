@@ -53,6 +53,10 @@ class EmptyHome extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
+          // Clamping (not bouncing) physics: with the hero sized to at least
+          // the viewport height, content that fits can't be dragged/bounced —
+          // it only scrolls when it genuinely overflows (small windows).
+          physics: const ClampingScrollPhysics(),
           padding: const EdgeInsets.symmetric(
             horizontal: DexSpace.xxl, vertical: DexSpace.xxl,
           ),
@@ -112,8 +116,21 @@ class EmptyHome extends StatelessWidget {
                             .toList(growable: false),
                       ),
                     ),
+                    if (recentFiles.isNotEmpty || recentChats.isNotEmpty)
+                      _FadeInUp(
+                        index: 3,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: DexSpace.xl),
+                          child: _Cards(
+                            recentFiles: recentFiles,
+                            recentChats: recentChats,
+                            onSelectFile: onSelectFile,
+                            onSelectChat: onSelectChat,
+                          ),
+                        ),
+                      ),
                     _FadeInUp(
-                      index: 3,
+                      index: 4,
                       child: Padding(
                         padding: const EdgeInsets.only(top: DexSpace.lg),
                         child: Text(
@@ -268,6 +285,43 @@ class _FadeInUpState extends State<_FadeInUp>
   }
 }
 
-// (Recent files/chats cards were removed from the empty home so the hero
-// — greeting, tagline, composer, chips — stays vertically centered with
-// no scroll. Recents live in the sidebar.)
+/// The two recent-activity cards (recent files + recent chats) under the
+/// hero. Each renders only when its list is non-empty; with both present
+/// they split the row evenly, with one it spans full width.
+class _Cards extends StatelessWidget {
+  const _Cards({
+    required this.recentFiles,
+    required this.recentChats,
+    this.onSelectFile,
+    this.onSelectChat,
+  });
+
+  final List<RecentFileItem> recentFiles;
+  final List<RecentChatItem> recentChats;
+  final ValueChanged<RecentFileItem>? onSelectFile;
+  final ValueChanged<RecentChatItem>? onSelectChat;
+
+  @override
+  Widget build(BuildContext context) {
+    final cards = <Widget>[
+      if (recentFiles.isNotEmpty)
+        Expanded(
+          child: RecentFilesCard(files: recentFiles, onSelect: onSelectFile),
+        ),
+      if (recentChats.isNotEmpty)
+        Expanded(
+          child: RecentChatsCard(chats: recentChats, onSelect: onSelectChat),
+        ),
+    ];
+    if (cards.isEmpty) return const SizedBox.shrink();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < cards.length; i++) ...[
+          if (i > 0) const SizedBox(width: DexSpace.lg),
+          cards[i],
+        ],
+      ],
+    );
+  }
+}

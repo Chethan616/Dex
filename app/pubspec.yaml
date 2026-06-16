@@ -65,6 +65,11 @@ dependencies:
   desktop_multi_window: ^0.3.0
   url_launcher: ^6.3.2
 
+  # The CupertinoIcons font. The liquid_glass_widgets fields (GlassSearchBar
+  # clear/search glyphs, GlassPasswordField lock + eye toggle) draw from
+  # CupertinoIcons; without this font those glyphs render as tofu boxes.
+  cupertino_icons: ^1.0.8
+
   # iOS-26-style liquid glass UI kit (shader glass + jelly physics).
   # Path dep to the vendored repo at the project root so we build the
   # exact code. Renders the lightweight glass on Windows/Skia; the high

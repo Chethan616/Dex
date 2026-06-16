@@ -306,9 +306,12 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                             shape: const LiquidRoundedSuperellipse(
                               borderRadius: 28,
                             ),
+                            // Clear crystal — a near-transparent white tint
+                            // (no navy / blue accent) so the overlay reads as
+                            // pure glass over whatever's on screen.
                             settings: const LiquidGlassSettings(
-                              glassColor: Color.fromRGBO(20, 34, 68, 0.42),
-                              blur: 14,
+                              glassColor: Color.fromRGBO(255, 255, 255, 0.10),
+                              blur: 16,
                               thickness: 12,
                             ),
                             padding: const EdgeInsets.fromLTRB(
@@ -322,7 +325,7 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                               child: Row(
                                   children: [
                                     const Icon(LucideIcons.search,
-                                        size: 20, color: DexColors.accent),
+                                        size: 20, color: DexColors.textDim),
                                     const SizedBox(width: DexSpace.md),
                                     Expanded(
                                       child: KeyboardListener(
@@ -468,7 +471,7 @@ class _AttachCircleState extends State<_AttachCircle> {
               child: Icon(
                 LucideIcons.plus,
                 size: 20,
-                color: _hovered ? DexColors.accent : DexColors.text,
+                color: _hovered ? DexColors.text : DexColors.textDim,
               ),
             ),
           ),

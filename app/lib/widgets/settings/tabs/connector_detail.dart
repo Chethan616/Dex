@@ -9,6 +9,7 @@ import '../../../core/connectors.dart';
 import '../../../theme/tokens.dart';
 import '../connector_guide_sheet.dart';
 import '../../dex_toast.dart';
+import '../../glass_back_button.dart';
 import '../whatsapp_pair_dialog.dart';
 import 'connectors_tab.dart';
 
@@ -36,11 +37,7 @@ class ConnectorDetail extends StatelessWidget {
         children: [
           Row(
             children: [
-              IconButton(
-                icon: const Icon(LucideIcons.arrow_left, size: 18),
-                color: DexColors.textDim,
-                onPressed: onBack,
-              ),
+              GlassBackButton(onTap: onBack),
             ],
           ),
           const SizedBox(height: DexSpace.sm),

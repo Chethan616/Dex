@@ -287,13 +287,15 @@ class _DexComposerState extends State<DexComposer> {
           },
           child: DexGlass(
             radius: 28,
+            // No liquid edge rim: the composer sits directly over the
+            // drifting fog, and the moving specular rim re-sampled it every
+            // frame — that was the "vibrating light" while typing. Plain
+            // frost is stable. (RepaintBoundary still isolates caret/text
+            // repaints from the backdrop for good measure.)
+            rim: false,
             padding: const EdgeInsets.fromLTRB(
               DexSpace.lg, DexSpace.md, DexSpace.md, DexSpace.sm,
             ),
-            // RepaintBoundary isolates the caret blink + text edits so they
-            // don't re-dirty the glass backdrop each frame — that re-sample
-            // (with the fog moving behind) was the "vibrating light" while
-            // typing.
             child: RepaintBoundary(
               child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -548,9 +550,10 @@ class _ModePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // A real liquid-glass pill (own layer, minimal quality so the rim
-    // stays stable while the fog moves behind it) instead of the old flat
-    // surface chip — matches the GlassMenu that drops out of it.
+    // Clear crystal glass pill that matches the round + button (same
+    // near-transparent glass, neutral glyphs) instead of a tinted chip.
+    // Its backdrop is the composer's static frost, so the rim doesn't
+    // shimmer.
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
@@ -561,8 +564,8 @@ class _ModePill extends StatelessWidget {
           quality: GlassQuality.minimal,
           shape: const LiquidRoundedSuperellipse(borderRadius: 18),
           settings: const LiquidGlassSettings(
-            glassColor: Color.fromRGBO(20, 34, 68, 0.38),
-            blur: 12,
+            glassColor: Color.fromRGBO(255, 255, 255, 0.10),
+            blur: 8,
             thickness: 10,
           ),
           padding: const EdgeInsets.symmetric(
@@ -571,7 +574,7 @@ class _ModePill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(mode.icon, size: 14, color: DexColors.accent),
+              Icon(mode.icon, size: 14, color: DexColors.textDim),
               const SizedBox(width: DexSpace.xs),
               Text(mode.label, style: DexType.label(color: DexColors.text)),
               const SizedBox(width: 2),

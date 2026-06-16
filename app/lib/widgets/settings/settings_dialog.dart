@@ -99,6 +99,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
           ),
           child: DexGlass(
             radius: 20,
+            // No liquid edge rim on the settings panel — it sits over the
+            // dimmed home + drifting fog, and the moving specular read as a
+            // "vibrating" edge light. Plain frost is stable.
+            rim: false,
             child: Column(
               children: [
                 _Header(onClose: () => Navigator.of(context).maybePop()),

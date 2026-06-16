@@ -233,6 +233,16 @@ class _SearchField extends StatelessWidget {
             onSubmitted: onSubmitted,
             useOwnLayer: true,
             height: 48,
+            // On focus the bar shrinks and a circle-X dismiss pill slides in
+            // from the right (the iMessage "Search messages" pattern). Tapping
+            // it clears the field + the remote search and dismisses focus.
+            showsCancelButton: true,
+            cancelIcon: const Icon(LucideIcons.circle_x,
+                size: 20, color: DexColors.textFaint),
+            onCancel: () {
+              controller.clear();
+              onSubmitted('');
+            },
             searchIconColor: DexColors.textFaint,
             clearIconColor: DexColors.textFaint,
             textStyle: DexType.body(color: DexColors.text),

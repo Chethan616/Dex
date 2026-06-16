@@ -8,6 +8,8 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../core/dex_memory.dart';
 import '../../../theme/tokens.dart';
+import '../../dex_glass.dart';
+import '../../glass_back_button.dart';
 
 class MemoryView extends StatefulWidget {
   const MemoryView({super.key, required this.onBack});
@@ -48,11 +50,7 @@ class _MemoryViewState extends State<MemoryView> {
         children: [
           Row(
             children: [
-              IconButton(
-                icon: const Icon(LucideIcons.arrow_left, size: 18),
-                color: DexColors.textDim,
-                onPressed: widget.onBack,
-              ),
+              GlassBackButton(onTap: widget.onBack),
               const SizedBox(width: DexSpace.sm),
               Text('View memory',
                   style: DexType.heading(color: DexColors.text)),
@@ -127,13 +125,10 @@ class _Empty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return DexGlass(
+      shadow: false,
+      radius: 14,
       padding: const EdgeInsets.all(DexSpace.xl),
-      decoration: BoxDecoration(
-        color: DexColors.surface2,
-        borderRadius: DexRadius.rmd,
-        border: Border.all(color: DexColors.border),
-      ),
       child: Column(
         children: [
           Text('Manage what Dex remembers about you',
@@ -162,14 +157,11 @@ class _Fact extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: DexSpace.xs),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DexSpace.md, vertical: DexSpace.sm,
-        ),
-        decoration: BoxDecoration(
-          color: DexColors.surface,
-          borderRadius: DexRadius.rsm,
-          border: Border.all(color: DexColors.border),
+      child: DexGlass(
+        shadow: false,
+        radius: 10,
+        padding: const EdgeInsets.only(
+          left: DexSpace.md, top: 2, bottom: 2, right: DexSpace.xs,
         ),
         child: Row(
           children: [
