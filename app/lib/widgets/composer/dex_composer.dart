@@ -287,12 +287,11 @@ class _DexComposerState extends State<DexComposer> {
           },
           child: DexGlass(
             radius: 28,
-            // No liquid edge rim: the composer sits directly over the
-            // drifting fog, and the moving specular rim re-sampled it every
-            // frame — that was the "vibrating light" while typing. Plain
-            // frost is stable. (RepaintBoundary still isolates caret/text
-            // repaints from the backdrop for good measure.)
-            rim: false,
+            // Glassy translucent surface (minimal quality = a stable frost
+            // with no per-frame specular re-sample, so it reads as real glass
+            // without the greyed-out flat look). RepaintBoundary isolates the
+            // caret/text repaints from the backdrop.
+            tint: const Color.fromRGBO(22, 36, 70, 0.46),
             padding: const EdgeInsets.fromLTRB(
               DexSpace.lg, DexSpace.md, DexSpace.md, DexSpace.sm,
             ),
@@ -482,6 +481,43 @@ class _Toolbar extends StatelessWidget {
   }
 }
 
+/// A square liquid-glass toolbar button that matches the mode pill (same
+/// clear-crystal glass, minimal quality, neutral glyph). Used for +, vision,
+/// voice and send so the whole composer toolbar reads as one material.
+class _GlassToolButton extends StatelessWidget {
+  const _GlassToolButton({
+    required this.icon,
+    required this.onTap,
+  });
+  final Widget icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: GlassContainer(
+          useOwnLayer: true,
+          quality: GlassQuality.minimal,
+          shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+          settings: const LiquidGlassSettings(
+            glassColor: Color.fromRGBO(255, 255, 255, 0.10),
+            blur: 8,
+            thickness: 10,
+          ),
+          padding: const EdgeInsets.all(9),
+          child: icon,
+        ),
+      ),
+    );
+  }
+}
+
 class _RoundIconButton extends StatelessWidget {
   const _RoundIconButton({
     required this.icon,
@@ -496,20 +532,11 @@ class _RoundIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = tint ?? DexColors.textDim;
-    return MouseRegion(
-      cursor: onTap != null
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
-      child: Tooltip(
-        message: tooltip,
-        child: GlassIconButton(
-          icon: Icon(icon, size: 18, color: color),
-          onPressed: onTap,
-          size: 36,
-          useOwnLayer: true,
-          glowColor: tint,
-        ),
+    return Tooltip(
+      message: tooltip,
+      child: _GlassToolButton(
+        onTap: onTap,
+        icon: Icon(icon, size: 18, color: tint ?? DexColors.textDim),
       ),
     );
   }
@@ -522,22 +549,15 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor:
-          enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      child: Tooltip(
+    return Tooltip(
       message: 'Send (Enter)',
-      child: GlassIconButton(
+      child: _GlassToolButton(
+        onTap: enabled ? onTap : null,
         icon: Icon(
           LucideIcons.arrow_up,
           size: 18,
           color: enabled ? DexColors.accent : DexColors.textFaint,
         ),
-        onPressed: enabled ? onTap : null,
-        size: 36,
-        useOwnLayer: true,
-        glowColor: enabled ? DexColors.accent : null,
-      ),
       ),
     );
   }

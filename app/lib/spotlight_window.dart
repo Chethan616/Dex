@@ -27,7 +27,6 @@ import 'theme/theme.dart';
 import 'theme/tokens.dart';
 import 'widgets/composer/attachments.dart';
 import 'widgets/home/suggestion_chip.dart';
-import 'widgets/dex_glass.dart';
 
 /// Default suggestions surfaced under the overlay's input. Same shape
 /// as the in-app SpotlightOverlay had so users recognise the surface.
@@ -302,17 +301,19 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                           ),
                           child: GlassContainer(
                             useOwnLayer: true,
-                            quality: GlassQuality.minimal,
+                            // Premium = the full liquid pipeline (jelly morph
+                            // + refraction). The overlay floats over a static
+                            // desktop, so there's no drifting backdrop to make
+                            // it shimmer — we get the rich glass here.
+                            quality: GlassQuality.premium,
                             shape: const LiquidRoundedSuperellipse(
                               borderRadius: 28,
                             ),
-                            // Clear crystal — a near-transparent white tint
-                            // (no navy / blue accent) so the overlay reads as
-                            // pure glass over whatever's on screen.
                             settings: const LiquidGlassSettings(
-                              glassColor: Color.fromRGBO(255, 255, 255, 0.10),
+                              glassColor: Color.fromRGBO(18, 30, 60, 0.40),
                               blur: 16,
-                              thickness: 12,
+                              thickness: 22,
+                              glowIntensity: 0.6,
                             ),
                             padding: const EdgeInsets.fromLTRB(
                               DexSpace.lg, DexSpace.md, DexSpace.lg, DexSpace.md,
@@ -450,31 +451,23 @@ class _AttachCircle extends StatefulWidget {
 }
 
 class _AttachCircleState extends State<_AttachCircle> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
+    // Real liquid-glass icon button — squash/stretch jelly on press + the
+    // premium refraction, matching the overlay pill's material.
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        child: DexGlass(
-          radius: 26,
-          padding: EdgeInsets.zero,
-          child: SizedBox(
-            width: 52,
-            height: 52,
-            child: Center(
-              child: Icon(
-                LucideIcons.plus,
-                size: 20,
-                color: _hovered ? DexColors.text : DexColors.textDim,
-              ),
-            ),
-          ),
+      child: GlassIconButton(
+        icon: const Icon(LucideIcons.plus, size: 22, color: DexColors.text),
+        onPressed: widget.onTap,
+        size: 52,
+        useOwnLayer: true,
+        quality: GlassQuality.premium,
+        settings: const LiquidGlassSettings(
+          glassColor: Color.fromRGBO(18, 30, 60, 0.40),
+          blur: 16,
+          thickness: 22,
+          glowIntensity: 0.6,
         ),
       ),
     );

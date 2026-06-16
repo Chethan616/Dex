@@ -52,13 +52,18 @@ class EmptyHome extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Only show the recent-activity cards when the window is tall enough
+        // to fit the whole hero + cards without scrolling. On short / scaled
+        // displays they're dropped so the centered hero never scrolls.
+        final showCards = constraints.maxHeight > 820 &&
+            (recentFiles.isNotEmpty || recentChats.isNotEmpty);
         return SingleChildScrollView(
           // Clamping (not bouncing) physics: with the hero sized to at least
           // the viewport height, content that fits can't be dragged/bounced —
           // it only scrolls when it genuinely overflows (small windows).
           physics: const ClampingScrollPhysics(),
           padding: const EdgeInsets.symmetric(
-            horizontal: DexSpace.xxl, vertical: DexSpace.xxl,
+            horizontal: DexSpace.xxl, vertical: DexSpace.xl,
           ),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
@@ -116,7 +121,7 @@ class EmptyHome extends StatelessWidget {
                             .toList(growable: false),
                       ),
                     ),
-                    if (recentFiles.isNotEmpty || recentChats.isNotEmpty)
+                    if (showCards)
                       _FadeInUp(
                         index: 3,
                         child: Padding(
