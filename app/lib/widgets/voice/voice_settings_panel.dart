@@ -2,6 +2,7 @@
 // voice name set (no reuse of any other product's voice catalogue).
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../theme/tokens.dart';
@@ -38,6 +39,25 @@ class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
                 Row(
                   children: [
                     Expanded(
+                      child: Text('Voice settings',
+                          style: DexType.heading(color: DexColors.text)),
+                    ),
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GlassIconButton(
+                        icon: const Icon(LucideIcons.x,
+                            size: 16, color: DexColors.textDim),
+                        onPressed: widget.onClose,
+                        size: 30,
+                        useOwnLayer: true,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DexSpace.lg),
+                Row(
+                  children: [
+                    Expanded(
                       child: Text('Language',
                           style: DexType.label(color: DexColors.text)),
                     ),
@@ -68,14 +88,6 @@ class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
                 const SizedBox(height: DexSpace.md),
                 Text('Your conversation resets when you change voices.',
                     style: DexType.caption(color: DexColors.textFaint)),
-                const SizedBox(height: DexSpace.md),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: widget.onClose,
-                    child: const Text('Close'),
-                  ),
-                ),
               ],
             ),
       ),

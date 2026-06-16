@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../theme/tokens.dart';
 import '../dex_glass.dart';
@@ -105,26 +106,16 @@ class _ControlButton extends StatelessWidget {
       cursor: SystemMouseCursors.click,
       child: Tooltip(
         message: tooltip,
-        child: InkResponse(
-          onTap: onTap,
-          radius: 22,
-          child: Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: accent ? DexColors.accent : DexColors.surface,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: accent ? DexColors.accent : DexColors.border,
-              ),
-            ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: accent ? DexColors.bg : DexColors.textDim,
-            ),
+        child: GlassIconButton(
+          icon: Icon(
+            icon,
+            size: 18,
+            color: accent ? DexColors.accent : DexColors.textDim,
           ),
+          onPressed: onTap,
+          size: 44,
+          useOwnLayer: true,
+          glowColor: accent ? DexColors.accent : null,
         ),
       ),
     );

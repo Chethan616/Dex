@@ -542,24 +542,30 @@ class _ModePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A real liquid-glass pill (own layer, minimal quality so the rim
+    // stays stable while the fog moves behind it) instead of the old flat
+    // surface chip — matches the GlassMenu that drops out of it.
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: InkWell(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        borderRadius: DexRadius.rpill,
-        child: Container(
+        child: GlassContainer(
+          useOwnLayer: true,
+          quality: GlassQuality.minimal,
+          shape: const LiquidRoundedSuperellipse(borderRadius: 18),
+          settings: const LiquidGlassSettings(
+            glassColor: Color.fromRGBO(20, 34, 68, 0.38),
+            blur: 12,
+            thickness: 10,
+          ),
           padding: const EdgeInsets.symmetric(
             horizontal: DexSpace.md, vertical: 6,
-          ),
-          decoration: BoxDecoration(
-            color: DexColors.surface.withValues(alpha: 0.4),
-            borderRadius: DexRadius.rpill,
-            border: Border.all(color: DexColors.border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(mode.icon, size: 14, color: DexColors.textDim),
+              Icon(mode.icon, size: 14, color: DexColors.accent),
               const SizedBox(width: DexSpace.xs),
               Text(mode.label, style: DexType.label(color: DexColors.text)),
               const SizedBox(width: 2),
