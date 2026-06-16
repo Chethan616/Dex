@@ -204,9 +204,13 @@ class _ConnectorsTabState extends State<ConnectorsTab> {
   }
 }
 
-/// Pill-shaped search input with a focus ring (accent border + soft glow
-/// when active), inline Enter-key hint, busy spinner, and clear button.
-class _SearchField extends StatefulWidget {
+/// The real package GlassSearchBar (apple_messages "Search messages"
+/// style) — own glass layer, built-in animated clear X-circle, accent
+/// search glyph. The live list filter runs off the controller listener
+/// in the parent, so typing filters immediately; Enter triggers the
+/// ClawHub remote search. A subtle spinner overlays the right edge while
+/// the remote search is in flight.
+class _SearchField extends StatelessWidget {
   const _SearchField({
     required this.controller,
     required this.onSubmitted,
@@ -217,86 +221,32 @@ class _SearchField extends StatefulWidget {
   final bool searching;
 
   @override
-  State<_SearchField> createState() => _SearchFieldState();
-}
-
-class _SearchFieldState extends State<_SearchField> {
-  final FocusNode _focus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(_onFocus);
-  }
-
-  void _onFocus() => setState(() {});
-
-  @override
-  void dispose() {
-    _focus.removeListener(_onFocus);
-    _focus.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final focused = _focus.hasFocus;
-    // A real glass pill (own-layer GlassContainer) holding the magnifier,
-    // the field, and the tap-to-clear X-circle that appears once there's
-    // text — the iMessage "search messages" pattern. The live list filter
-    // runs off the controller listener in the parent, so typing filters
-    // immediately and the X clears it.
-    return GlassContainer(
-      useOwnLayer: true,
-      shape: const LiquidRoundedSuperellipse(borderRadius: 22),
-      settings: const LiquidGlassSettings(
-        glassColor: Color.fromRGBO(20, 34, 68, 0.35),
-        blur: 10,
-        thickness: 12,
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: DexSpace.md, vertical: 9,
-      ),
-      child: Row(
+    return MouseRegion(
+      cursor: SystemMouseCursors.text,
+      child: Stack(
+        alignment: Alignment.centerRight,
         children: [
-          Icon(LucideIcons.search,
-              size: 15,
-              color: focused ? DexColors.accent : DexColors.textFaint),
-          const SizedBox(width: DexSpace.sm),
-          Expanded(
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focus,
-              style: DexType.body(color: DexColors.text),
-              cursorColor: DexColors.accent,
-              onSubmitted: widget.onSubmitted,
-              decoration: InputDecoration(
-                isDense: true,
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: 'Search connectors, apps & skills…',
-                hintStyle: DexType.body(color: DexColors.textFaint),
-              ),
-            ),
+          GlassSearchBar(
+            controller: controller,
+            placeholder: 'Search connectors, apps & skills…',
+            onSubmitted: onSubmitted,
+            useOwnLayer: true,
+            height: 48,
+            searchIconColor: DexColors.textFaint,
+            clearIconColor: DexColors.textFaint,
+            textStyle: DexType.body(color: DexColors.text),
+            placeholderStyle: DexType.body(color: DexColors.textFaint),
           ),
-          if (widget.searching)
-            const SizedBox(
-              width: 13,
-              height: 13,
-              child: CircularProgressIndicator(
-                strokeWidth: 1.4,
-                color: DexColors.textFaint,
-              ),
-            )
-          else if (widget.controller.text.isNotEmpty)
-            Tooltip(
-              message: 'Clear',
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  onTap: () => setState(widget.controller.clear),
-                  child: const Icon(LucideIcons.circle_x,
-                      size: 16, color: DexColors.textFaint),
+          if (searching)
+            const Padding(
+              padding: EdgeInsets.only(right: DexSpace.lg),
+              child: SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.6,
+                  color: DexColors.textFaint,
                 ),
               ),
             ),
