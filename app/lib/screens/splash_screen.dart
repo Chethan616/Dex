@@ -9,11 +9,11 @@
 // already warm and the first interaction is smooth.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../theme/tokens.dart';
 import '../widgets/dex_glass.dart';
+import '../widgets/dex_logo.dart';
 import '../widgets/glossy_dropdown.dart';
 import '../widgets/living_background.dart';
 
@@ -40,8 +40,7 @@ class SplashScreen extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(LucideIcons.sparkles,
-                        size: 40, color: DexColors.accent),
+                    const DexLogo(size: 72),
                     const SizedBox(height: DexSpace.md),
                     Text('Dex', style: DexType.title(color: DexColors.text)),
                     const SizedBox(height: DexSpace.lg),

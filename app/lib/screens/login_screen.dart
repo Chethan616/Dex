@@ -1,4 +1,4 @@
-// Login / Create account — identity surface, UI-only for now.
+// Login / Create account â€” identity surface, UI-only for now.
 //
 // No backend: the form persists name + email locally (DexAccount) so
 // the app has a real sign-in/sign-out FLOW for future auth to slot
@@ -12,6 +12,7 @@ import '../core/account.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/dex_glass.dart';
+import '../widgets/dex_logo.dart';
 import '../widgets/glass_text_field.dart';
 import '../widgets/living_background.dart';
 import '../widgets/secret_field.dart';
@@ -76,25 +77,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 constraints: const BoxConstraints(maxWidth: 440),
                 child: DexGlass(
                   radius: 20,
+                  rim: true,
                   padding: const EdgeInsets.all(DexSpace.xl),
                   child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SizedBox(height: DexSpace.sm),
-                        const Icon(LucideIcons.sparkles,
-                            size: 32, color: DexColors.accent),
+                        const DexLogo(size: 56),
                         const SizedBox(height: DexSpace.md),
                         Text(
                           _creating ? 'Create your account' : 'Welcome back',
                           textAlign: TextAlign.center,
-                          style: DexType.heading(color: DexColors.text),
+                          style: DexType.title(color: DexColors.text),
                         ),
                         const SizedBox(height: DexSpace.xs),
                         Text(
                           'Your cockpit, your machine. Everything stays local.',
                           textAlign: TextAlign.center,
-                          style: DexType.caption(color: DexColors.textFaint),
+                          style: DexType.caption(color: DexColors.textDim),
                         ),
                         const SizedBox(height: DexSpace.xl),
                         AnimatedSize(
@@ -133,21 +134,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: DexColors.stateError)),
                         ],
                         const SizedBox(height: DexSpace.lg),
-                        ElevatedButton(
-                          onPressed: _busy ? null : _submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: DexColors.accent,
-                            foregroundColor: DexColors.bg,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: DexSpace.md),
-                            minimumSize: const Size.fromHeight(44),
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: DexRadius.rsm,
-                            ),
-                          ),
-                          child: Text(_busy
-                              ? 'One moment…'
-                              : (_creating ? 'Create account' : 'Sign in')),
+                        PremiumButton(
+                          label: _creating ? 'Create account' : 'Sign in',
+                          onTap: _submit,
+                          busy: _busy,
                         ),
                         const SizedBox(height: DexSpace.md),
                         MouseRegion(
@@ -176,6 +166,75 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+    );
+  }
+}
+
+
+class PremiumButton extends StatelessWidget {
+  const PremiumButton({
+    super.key,
+    required this.label,
+    this.onTap,
+    this.busy = false,
+  });
+
+  final String label;
+  final VoidCallback? onTap;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null && !busy;
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: GestureDetector(
+        onTap: enabled ? onTap : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          height: 46,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: enabled
+                ? const LinearGradient(
+                    colors: [
+                      DexColors.accent,
+                      Color(0xFF8BA5FF),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: enabled ? null : DexColors.border,
+            boxShadow: enabled
+                ? [
+                    BoxShadow(
+                      color: DexColors.accent.withValues(alpha: 0.25),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    )
+                  ] 
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(DexColors.bg),
+                  ),
+                )
+              : Text(
+                  label,
+                  style: DexType.label(color: DexColors.bg).copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+        ),
+      ),
     );
   }
 }

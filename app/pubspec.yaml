@@ -82,6 +82,17 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # Generates the Windows runner .ico (and other platform icons) from the
+  # 1024x1024 transparent Dex orb. Run: dart run flutter_launcher_icons
+  flutter_launcher_icons: ^0.14.1
+
+# App-icon generation from the brand orb (assets/brand/dex_app_icon.png).
+flutter_launcher_icons:
+  image_path: "assets/brand/dex_app_icon.png"
+  windows:
+    generate: true
+    image_path: "assets/brand/dex_app_icon.png"
+    icon_size: 256
 
 flutter:
   uses-material-design: true
@@ -93,6 +104,9 @@ flutter:
     # we mirror it here so it ends up inside the Flutter bundle and can be
     # resolved via rootBundle at runtime.
     - assets/tray/dex.ico
+    # The Dex brand orb (1024x1024, transparent bg) — used by the in-app
+    # DexLogo (splash, login) and the source for generated launcher icons.
+    - assets/brand/dex_app_icon.png
     # Per-app "how to link" guides shown by ConnectorGuideSheet when a
     # user taps an app in onboarding / Connectors & Apps.
     - assets/guides/
