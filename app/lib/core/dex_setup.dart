@@ -362,23 +362,9 @@ class DexSetup {
     models['providers'] = providers;
     cfg['models'] = models;
 
-    // Promote Gemini to PRIMARY brain model. Groq's free tier caps at 12K
-    // tokens/min — Dex's ~24K-token prompt is rejected (413) every turn, so
-    // Groq can only ever be a fallback for small turns. Gemini's free tier
-    // handles the full prompt. Without this, pasting a Gemini key leaves the
-    // primary stuck on Groq and every message fails over noisily.
-    final agents = (cfg['agents'] as Map?)?.cast<String, dynamic>() ?? {};
-    final defaults = (agents['defaults'] as Map?)?.cast<String, dynamic>() ?? {};
-    defaults['model'] = <String, dynamic>{
-      'primary': 'google/gemini-2.5-flash',
-      'fallbacks': <String>[
-        'google/gemini-2.5-flash-lite',
-        'google/gemini-2.0-flash',
-        'groq/llama-3.3-70b-versatile',
-      ],
-    };
-    agents['defaults'] = defaults;
-    cfg['agents'] = agents;
+    // NOTE: keys are credentials only — the Brain/Hands dropdowns pick which
+    // model runs. We deliberately do NOT set agents.defaults.model here, so
+    // re-applying the Gemini key never clobbers a Groq brain the user chose.
 
     // Autonomy: let the operator run admin commands (DNS, service control,
     // installs) instead of handing the user manual steps. exec's elevated
@@ -394,35 +380,7 @@ class DexSetup {
       },
     };
     cfg['tools'] = tools;
-
-    final mcp = (cfg['mcp'] as Map?)?.cast<String, dynamic>() ?? {};
-    final servers = (mcp['servers'] as Map?)?.cast<String, dynamic>() ?? {};
-    final bc = (servers['browser-control'] as Map?)?.cast<String, dynamic>();
-    if (bc != null) {
-      final env = (bc['env'] as Map?)?.cast<String, dynamic>() ?? {};
-      // Reset the browser hands fully to Gemini: provider + key, and drop
-      // any prior Groq override so re-applying the Gemini key is a clean
-      // baseline (the Groq path below is the explicit opt-in override).
-      env['DEX_BROWSER_PROVIDER'] = 'google';
-      env['GEMINI_API_KEY'] = k;
-      env.remove('GROQ_API_KEY');
-      env.remove('DEX_BROWSER_MODEL');
-      bc['env'] = env;
-      servers['browser-control'] = bc;
-      mcp['servers'] = servers;
-      cfg['mcp'] = mcp;
-    }
     _writeJson(dexJsonFile, cfg);
-
-    // 3. UFO² agents.yaml: key + Gemini endpoint on every active block, so
-    // re-applying Gemini also restores the base if it was on Groq.
-    final yaml = agentsYamlFile();
-    if (yaml != null) {
-      var text = yaml.readAsStringSync();
-      text = _rewriteYamlField(text, 'API_KEY', k);
-      text = _rewriteYamlField(text, 'API_BASE', _kGeminiApiBase);
-      yaml.writeAsStringSync(text);
-    }
   }
 
   /// Rewrite every ACTIVE `FIELD: "..."` line (commented examples start
