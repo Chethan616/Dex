@@ -90,7 +90,8 @@ class _AccountTabState extends State<AccountTab> {
       await DexSetup.applyGroqKey(key);
       _groqCtrl.clear();
       _setup = DexSetup.read();
-      _note = 'Hands moved to Groq. Restart the gateway to pick it up.';
+      _note = 'Groq set as brain (Llama 4 Scout) + hands. Restart the '
+          'gateway (Diagnostics) to pick it up.';
     } catch (e) {
       _note = 'Groq apply failed: $e';
     } finally {
@@ -199,12 +200,14 @@ class _AccountTabState extends State<AccountTab> {
         const SizedBox(height: DexSpace.md),
         SettingsRow(
           label: 'Brain model',
-          description: 'Reasoning, planning, chat.',
+          description: 'Reasoning, planning, chat. Groq resets per-minute '
+              '(no daily wall) — pick Llama 4 Scout if Gemini keeps running out.',
           control: GlossyDropdown(
             value: brainModel,
             options: kBrainModels,
             onChanged: _setBrainModel,
-            width: 260,
+            labelFor: brainModelLabel,
+            width: 320,
           ),
         ),
         SettingsRow(
@@ -235,7 +238,7 @@ class _AccountTabState extends State<AccountTab> {
         Row(
           children: [
             Expanded(
-              child: Text('Offload the hands to Groq',
+              child: Text('Use Groq (no daily limit)',
                   style: DexType.label(color: DexColors.text)),
             ),
             if (_setup.handsOnGroq)
@@ -244,9 +247,11 @@ class _AccountTabState extends State<AccountTab> {
         ),
         const SizedBox(height: DexSpace.xs),
         Text(
-          'Hitting Gemini\'s daily quota? Put UFO² + browser-use on a free '
-          'Groq key so they stop eating the brain\'s Gemini quota. The brain '
-          'stays on Gemini. Re-apply your Gemini key above to switch back.',
+          'Gemini\'s free tier resets DAILY and runs out fast. Groq resets '
+          'every MINUTE — paste a free Groq key here and Dex uses it for the '
+          'BRAIN (Llama 4 Scout) and the hands, so you stop hitting the '
+          'daily wall. Re-apply your Gemini key above to switch back. '
+          'Get a key → console.groq.com/keys',
           style: DexType.caption(color: DexColors.textFaint),
         ),
         const SizedBox(height: DexSpace.sm),

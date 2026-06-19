@@ -1,4 +1,4 @@
-// Pill-shaped dropdown trigger that opens a liquid-glass GlassMenu — the
+// Pill-shaped dropdown trigger that opens a liquid-glass GlassMenu â€” the
 // one with the iOS-26 teardrop morph (premium; falls back to standard on
 // Skia). A check sits next to the active option. Used by every Settings
 // dropdown + the voice-mode language picker, so all of them morph.
@@ -17,6 +17,7 @@ class GlossyDropdown extends StatelessWidget {
     required this.options,
     required this.onChanged,
     this.width = 240,
+    this.labelFor,
   });
 
   final String value;
@@ -24,10 +25,14 @@ class GlossyDropdown extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final double width;
 
+  /// Optional display transform: the dropdown keeps `value`/`options` as the
+  /// real underlying ids but renders these labels. Defaults to identity.
+  final String Function(String)? labelFor;
+
   @override
   Widget build(BuildContext context) {
-    return GlassMenu(
-      quality: GlassQuality.premium,
+    return FogAwareGlassMenu(
+      quality: GlassQuality.minimal,
       menuWidth: width,
       settings: kDexMenuGlass,
       triggerBuilder: (context, toggle) => MouseRegion(
@@ -50,7 +55,7 @@ class GlossyDropdown extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Flexible(
-                  child: Text(value,
+                  child: Text((labelFor ?? (s) => s)(value),
                       style: DexType.label(color: DexColors.text),
                       overflow: TextOverflow.ellipsis),
                 ),
@@ -65,7 +70,7 @@ class GlossyDropdown extends StatelessWidget {
       items: [
         for (final o in options)
           GlassMenuItem(
-            title: o,
+            title: (labelFor ?? (s) => s)(o),
             // Selected option: accent check + accent text (the voice-settings
             // Language dropdown look). No background pill.
             icon: o == value

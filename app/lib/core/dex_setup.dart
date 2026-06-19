@@ -33,7 +33,25 @@ const List<String> kBrainModels = <String>[
   'google/gemini-2.5-flash',
   'google/gemini-2.0-flash',
   'google/gemini-flash-latest',
+  // Groq (needs a Groq key). Limits reset per-MINUTE, not daily — Scout's
+  // 30K tok/min fits Dex's full prompt; 70b's 12K would 413 on big turns.
+  'groq/meta-llama/llama-4-scout-17b-16e-instruct',
+  'groq/llama-3.3-70b-versatile',
 ];
+
+/// Friendly labels for the brain-model dropdown so users don't see raw
+/// `provider/model` ids. Falls back to the raw id when unmapped.
+const Map<String, String> kModelLabels = <String, String>{
+  'google/gemini-2.5-flash-lite': 'Gemini 2.5 Flash-Lite (daily quota)',
+  'google/gemini-2.5-flash': 'Gemini 2.5 Flash (daily quota)',
+  'google/gemini-2.0-flash': 'Gemini 2.0 Flash (daily quota)',
+  'google/gemini-flash-latest': 'Gemini Flash (latest, daily quota)',
+  'groq/meta-llama/llama-4-scout-17b-16e-instruct':
+      'Groq · Llama 4 Scout — no daily limit (recommended)',
+  'groq/llama-3.3-70b-versatile': 'Groq · Llama 3.3 70B (12K/min cap)',
+};
+
+String brainModelLabel(String id) => kModelLabels[id] ?? id;
 
 const List<String> kHandsModels = <String>[
   'gemini-2.5-flash-lite',
@@ -387,12 +405,57 @@ class DexSetup {
     );
   }
 
-  /// Move the HANDS (UFO² + browser-use) onto a free Groq key, keeping
-  /// their quota separate from the brain's Gemini quota. The brain +
-  /// web_search stay on Gemini. Re-apply the Gemini key to undo.
+  /// Use a free Groq key for Dex. Groq's limits reset PER MINUTE (not daily
+  /// like Gemini), so this removes the "quota used up for the day" wall.
+  /// Sets the BRAIN to Llama 4 Scout (30K tokens/min — fits Dex's full
+  /// prompt; llama-3.3-70b's 12K would 413) with Gemini as fallback, and
+  /// moves the hands (UFO² + browser-use) onto Groq too. Re-apply the
+  /// Gemini key to put the brain back on Gemini.
   static Future<void> applyGroqKey(String key) async {
     final k = key.trim();
     if (k.isEmpty) throw ArgumentError('empty key');
+
+    // Brain on Groq: auth profile + provider key + model list + primary.
+    final auth = _readJson(authProfilesFile);
+    auth['version'] ??= 1;
+    final profiles =
+        (auth['profiles'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    profiles['groq:default'] = <String, dynamic>{
+      'type': 'api_key',
+      'provider': 'groq',
+      'key': k,
+    };
+    auth['profiles'] = profiles;
+    _writeJson(authProfilesFile, auth);
+
+    final brainCfg = _readJson(dexJsonFile);
+    final models = (brainCfg['models'] as Map?)?.cast<String, dynamic>() ?? {};
+    final providers =
+        (models['providers'] as Map?)?.cast<String, dynamic>() ?? {};
+    providers['groq'] = <String, dynamic>{
+      'api': 'openai-completions',
+      'baseUrl': 'https://api.groq.com/openai/v1',
+      'apiKey': k,
+      'models': <Map<String, dynamic>>[
+        {'id': 'meta-llama/llama-4-scout-17b-16e-instruct', 'name': 'Llama 4 Scout'},
+        {'id': 'llama-3.3-70b-versatile', 'name': 'Llama 3.3 70B'},
+      ],
+    };
+    models['providers'] = providers;
+    brainCfg['models'] = models;
+    final agents = (brainCfg['agents'] as Map?)?.cast<String, dynamic>() ?? {};
+    final defaults = (agents['defaults'] as Map?)?.cast<String, dynamic>() ?? {};
+    defaults['model'] = <String, dynamic>{
+      'primary': 'groq/meta-llama/llama-4-scout-17b-16e-instruct',
+      'fallbacks': <String>[
+        'groq/llama-3.3-70b-versatile',
+        'google/gemini-2.5-flash',
+        'google/gemini-2.5-flash-lite',
+      ],
+    };
+    agents['defaults'] = defaults;
+    brainCfg['agents'] = agents;
+    _writeJson(dexJsonFile, brainCfg);
 
     // browser-use → Groq via env (server defaults model to qwen/qwen3-32b
     // when DEX_BROWSER_MODEL is unset).
