@@ -17,6 +17,7 @@ import '../message_human.dart';
 import 'chat_header.dart';
 import 'day_separator.dart';
 import 'step_row.dart';
+import 'task_plan_card.dart';
 
 class ChatView extends StatefulWidget {
   const ChatView({
@@ -103,6 +104,16 @@ class _ChatViewState extends State<ChatView> {
             ),
           ),
         ),
+        if (widget.store.plan.isNotEmpty)
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 880),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: DexSpace.lg),
+                child: TaskPlanCard(steps: widget.store.plan),
+              ),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(
             DexSpace.lg, 0, DexSpace.lg, DexSpace.lg,

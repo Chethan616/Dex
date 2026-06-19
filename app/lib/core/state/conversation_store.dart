@@ -17,6 +17,7 @@ import '../models/agent_state.dart';
 import '../models/engine.dart';
 import '../models/gateway_event.dart';
 import '../models/message.dart';
+import '../models/plan_step.dart';
 import '../models/reminder.dart';
 import '../models/tool_activity.dart';
 import '../tool_registry.dart';
@@ -75,9 +76,18 @@ class ConversationStore extends ChangeNotifier {
   // Map runId -> message id so streaming deltas land in the right bubble.
   final Map<String, String> _streaming = <String, String>{};
 
+  // Live task plan from the agent's `update_plan` tool. Replaced wholesale
+  // on each update_plan call; cleared when a new human turn starts so the
+  // checklist always reflects the current task.
+  List<PlanStep> _plan = const <PlanStep>[];
+
   List<Message> get messages => List<Message>.unmodifiable(_messages);
   AgentState get state => _state;
   ActionPreview? get pending => _pending;
+
+  /// The agent's current task plan (empty when there's no active plan).
+  /// Drives the live checklist card so the user sees steps, not "thinking…".
+  List<PlanStep> get plan => List<PlanStep>.unmodifiable(_plan);
 
   // -----------------------------------------------------------------
   // v1.2 Live Tool Activity tracking (rendered in the Live panel
@@ -142,6 +152,9 @@ class ConversationStore extends ChangeNotifier {
   Future<void> sendHumanMessage(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
+
+    // New turn → drop the previous task's plan checklist.
+    _plan = const <PlanStep>[];
 
     _messages.add(Message(
       id: _uuid.v4(),
@@ -434,6 +447,21 @@ class ConversationStore extends ChangeNotifier {
     final payload = (raw['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
     final toolName = (payload['name'] ?? payload['toolName'] ?? payload['tool'] ?? raw['event']) as String? ?? 'tool';
     final args = payload['args'] ?? payload['arguments'] ?? payload['params'];
+
+    // update_plan is meta: it carries the agent's step checklist, not an
+    // action. Feed the live plan card and skip the generic chip/activity so
+    // it doesn't clutter the conversation as just another tool row.
+    if (toolName == 'update_plan') {
+      final argsMap = args is Map ? args : const {};
+      final parsed = PlanStep.listFromArgs(argsMap['plan']);
+      if (parsed.isNotEmpty) {
+        _plan = parsed;
+        _setState(AgentState.acting);
+        notifyListeners();
+      }
+      return;
+    }
+
     final goalLabel = _summarizeArgs(toolName, args);
 
     final callId = evt.runId.isNotEmpty ? evt.runId : _uuid.v4();
