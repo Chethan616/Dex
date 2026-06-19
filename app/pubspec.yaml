@@ -71,12 +71,11 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # iOS-26-style liquid glass UI kit (shader glass + jelly physics).
-  # Path dep to the vendored repo at the project root so we build the
-  # exact code. Renders the lightweight glass on Windows/Skia; the high
-  # level Glass* widgets degrade gracefully (raw LiquidGlass is Impeller
-  # only and we never use it directly).
-  liquid_glass_widgets:
-    path: ../liquid_glass_widgets-main
+  # Published OSS package (MIT) pulled from pub.dev — no vendored folder.
+  # Renders the lightweight glass on Windows/Skia; the high-level Glass*
+  # widgets degrade gracefully (raw LiquidGlass is Impeller-only and we
+  # never use it directly).
+  liquid_glass_widgets: ^0.17.0
 
 dev_dependencies:
   flutter_test:

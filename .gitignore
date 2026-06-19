@@ -94,3 +94,10 @@ scratch/
 /Dex — Implementation Plan.txt
 /copilot-ref/
 /image-tobedeleted.png
+
+# graphify knowledge-graph output (large, regenerable dev artifact, never shipped)
+graphify-out/
+**/graphify-out/
+
+# Codex scratch
+.codex/

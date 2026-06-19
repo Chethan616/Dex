@@ -92,6 +92,9 @@ class _HomeDesktopState extends State<HomeDesktop> {
   // Routes a profile-popover action to its real destination. The popover
   // (GlassPopover in the sidebar) closes itself before calling this.
   Future<void> _handleProfileAction(ProfileMenuAction action) async {
+    // Wait for the popup menu's exit animation to finish before starting a heavy
+    // dialog animation to avoid overlapping BackdropFilters, which causes stutter.
+    await Future.delayed(const Duration(milliseconds: 350));
     if (!mounted) return;
     switch (action) {
       case ProfileMenuAction.settings:
