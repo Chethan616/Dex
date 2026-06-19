@@ -333,6 +333,21 @@ class DexSetup {
     agents['defaults'] = defaults;
     cfg['agents'] = agents;
 
+    // Autonomy: let the operator run admin commands (DNS, service control,
+    // installs) instead of handing the user manual steps. exec's elevated
+    // path is gated behind tools.elevated.allowFrom.<provider>; the desktop
+    // app reaches the gateway as provider 'webchat'. '*' = the owner on this
+    // single-user machine — each elevated command still triggers Windows UAC.
+    final tools = (cfg['tools'] as Map?)?.cast<String, dynamic>() ?? {};
+    tools['elevated'] = <String, dynamic>{
+      'enabled': true,
+      'allowFrom': <String, dynamic>{
+        'webchat': <String>['*'],
+        'openclaw': <String>['*'],
+      },
+    };
+    cfg['tools'] = tools;
+
     final mcp = (cfg['mcp'] as Map?)?.cast<String, dynamic>() ?? {};
     final servers = (mcp['servers'] as Map?)?.cast<String, dynamic>() ?? {};
     final bc = (servers['browser-control'] as Map?)?.cast<String, dynamic>();
