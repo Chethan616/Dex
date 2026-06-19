@@ -446,8 +446,49 @@ class DexSetup {
     return (key != null && key.isNotEmpty) ? key : null;
   }
 
+  /// Clear per-session model pins (`modelOverride` / `providerOverride` etc.)
+  /// the gateway persists in agents/*/sessions/sessions.json. It prefers
+  /// those over agents.defaults.model, so a stale auto-pin (e.g. a dead
+  /// Gemini) silently overrides whatever the user picks. We clear them on
+  /// every model change so the new selection wins; takes effect on the next
+  /// gateway restart (the running gateway holds sessions in memory).
+  static void clearSessionModelOverrides() {
+    final dir = Directory('$_home$_sep.dex${_sep}agents');
+    if (!dir.existsSync()) return;
+    const pinFields = <String>[
+      'model',
+      'modelOverride',
+      'providerOverride',
+      'modelOverrideSource',
+      'providerOverrideSource',
+      'modelProvider',
+      'contextTokens',
+    ];
+    for (final f in dir.listSync(recursive: true)) {
+      if (f is! File || !f.path.endsWith('sessions.json')) continue;
+      try {
+        final j = jsonDecode(f.readAsStringSync());
+        if (j is! Map) continue;
+        var changed = false;
+        for (final v in j.values) {
+          if (v is Map) {
+            for (final k in pinFields) {
+              if (v.remove(k) != null) changed = true;
+            }
+          }
+        }
+        if (changed) {
+          f.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(j));
+        }
+      } catch (_) {
+        // A malformed/locked session store isn't worth failing the apply.
+      }
+    }
+  }
+
   static Future<void> applyBrainModel(String primary,
       {List<String>? fallbacks}) async {
+    clearSessionModelOverrides();
     final cfg = _readJson(dexJsonFile);
     final agents = (cfg['agents'] as Map?)?.cast<String, dynamic>() ?? {};
     final defaults = (agents['defaults'] as Map?)?.cast<String, dynamic>() ?? {};
