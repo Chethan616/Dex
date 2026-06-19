@@ -90,8 +90,8 @@ class _AccountTabState extends State<AccountTab> {
       await DexSetup.applyGroqKey(key);
       _groqCtrl.clear();
       _setup = DexSetup.read();
-      _note = 'Groq set as brain (Llama 4 Scout) + hands. Restart the '
-          'gateway (Diagnostics) to pick it up.';
+      _note = 'Groq key saved. Now pick a Groq model in the Brain/Hands '
+          'dropdowns above, then restart the gateway (Diagnostics).';
     } catch (e) {
       _note = 'Groq apply failed: $e';
     } finally {
@@ -212,12 +212,14 @@ class _AccountTabState extends State<AccountTab> {
         ),
         SettingsRow(
           label: 'Hands model',
-          description: 'UFO² desktop automation (agents.yaml).',
+          description: 'Drives UFO² desktop automation + browser-use. Pick '
+              'any provider — its key is used automatically.',
           control: GlossyDropdown(
             value: handsModel,
             options: kHandsModels,
             onChanged: _setHandsModel,
-            width: 260,
+            labelFor: brainModelLabel,
+            width: 320,
           ),
         ),
         const SizedBox(height: DexSpace.sm),
@@ -238,7 +240,7 @@ class _AccountTabState extends State<AccountTab> {
         Row(
           children: [
             Expanded(
-              child: Text('Use Groq (no daily limit)',
+              child: Text('Groq API key (no daily limit)',
                   style: DexType.label(color: DexColors.text)),
             ),
             if (_setup.handsOnGroq)
@@ -247,10 +249,10 @@ class _AccountTabState extends State<AccountTab> {
         ),
         const SizedBox(height: DexSpace.xs),
         Text(
-          'Gemini\'s free tier resets DAILY and runs out fast. Groq resets '
-          'every MINUTE — paste a free Groq key here and Dex uses it for the '
-          'BRAIN (Llama 4 Scout) and the hands, so you stop hitting the '
-          'daily wall. Re-apply your Gemini key above to switch back. '
+          'Gemini\'s free tier resets DAILY and runs out fast; Groq resets '
+          'every MINUTE. Paste a free Groq key here, then pick a Groq model '
+          '(e.g. Llama 4 Scout) in the Brain and/or Hands dropdowns above — '
+          'the key powers whichever Groq model you select. '
           'Get a key → console.groq.com/keys',
           style: DexType.caption(color: DexColors.textFaint),
         ),

@@ -336,38 +336,60 @@ class ConversationStore extends ChangeNotifier {
     }
     // Quota/rate-limit is the most common failure on the free Gemini tier.
     // Give it an actionable message instead of a raw 429 dump.
+    // Classify the failure into one clean, actionable message. The raw
+    // provider detail (multi-model failure dump) is mirrored to Diagnostics
+    // logs above — we deliberately keep it OUT of the chat bubble so the
+    // user sees a fix, not a stack of provider errors.
     final lower = detail.toLowerCase();
+    final isSuspended = !aborted &&
+        (lower.contains('suspended') ||
+            lower.contains('permission_denied') ||
+            lower.contains('permission denied') ||
+            lower.contains('api key not valid') ||
+            lower.contains('(403)'));
+    final isTooLarge = !aborted &&
+        (lower.contains('request too large') ||
+            lower.contains('tokens per minute') ||
+            lower.contains('reduce your message') ||
+            lower.contains('(413)') ||
+            lower.contains('context length'));
     final isQuota = !aborted &&
+        !isTooLarge &&
         (lower.contains('resource_exhausted') ||
             lower.contains('rate-limit') ||
             lower.contains('rate limit') ||
             lower.contains('quota') ||
             lower.contains('429'));
-    // A bare "LLM request failed" with no provider detail almost always means
-    // the brain couldn't reach its provider (bad/missing key, wrong model, or
-    // a stale gateway that loaded an old model). Make it actionable instead of
-    // cryptic.
     final isProviderFail = !aborted &&
         !isQuota &&
+        !isTooLarge &&
+        !isSuspended &&
         (lower.contains('llm request failed') ||
             lower.contains('all models failed') ||
             lower.contains('no model') ||
             lower.contains('provider'));
+    const groqHint =
+        'Settings → Account → Secrets → set the Brain model to '
+        '“Groq · Llama 4 Scout” (no daily limit), then restart the gateway '
+        'in Settings → Diagnostics.';
     final text = aborted
-        ? 'That run was stopped before it finished.'
-            '${detail.isEmpty ? '' : ' ($detail)'} Try sending it again.'
-        : isQuota
-            ? 'All models are rate-limited right now — the free Gemini tier '
-                'quota is used up (it resets daily). To stop this happening, '
-                'give the hands their own free Groq key in Settings → Account '
-                '→ Secrets, which keeps their quota separate from the brain.'
-            : isProviderFail
-                ? "Dex couldn't reach the model provider. Check your API key "
-                    'and selected model in Settings → Account → Secrets, then '
-                    'restart the gateway from Settings → Diagnostics. '
-                    '(Details: $detail)'
-                : 'Something went wrong on that turn'
-                    '${detail.isEmpty ? '.' : ': $detail'}';
+        ? 'That run was stopped before it finished. Try sending it again.'
+        : isSuspended
+            ? 'Your model API key was rejected (expired, invalid, or '
+                'suspended). $groqHint'
+            : isTooLarge
+                ? 'This conversation got too long for the model’s per-minute '
+                    'token limit. Start a new chat to reset it — or switch to a '
+                    'higher-limit brain model. $groqHint'
+                : isQuota
+                    ? 'The free Gemini tier’s daily quota is used up. Groq '
+                        'resets every minute (no daily wall) — $groqHint'
+                    : isProviderFail
+                        ? "Dex couldn’t reach the model. Check your key and "
+                            'selected model in Settings → Account → Secrets, '
+                            'then restart the gateway in Settings → Diagnostics.'
+                        : 'Something went wrong on that turn. Check Settings → '
+                            'Diagnostics for details.';
 
     // Reuse the streaming bubble when one exists for this run -- the
     // partial text the agent managed to say stays, with the error line

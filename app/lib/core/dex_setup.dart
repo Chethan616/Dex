@@ -53,19 +53,20 @@ const Map<String, String> kModelLabels = <String, String>{
 
 String brainModelLabel(String id) => kModelLabels[id] ?? id;
 
+// Hands (UFO² + browser-use) models, same provider/model format as the
+// brain so one dropdown lists everything. applyHandsModel writes the
+// matching endpoint + key into agents.yaml + the browser env.
 const List<String> kHandsModels = <String>[
-  'gemini-2.5-flash-lite',
-  'gemini-2.5-flash',
+  'google/gemini-2.5-flash-lite',
+  'google/gemini-2.5-flash',
+  'groq/meta-llama/llama-4-scout-17b-16e-instruct',
+  'groq/llama-3.3-70b-versatile',
 ];
 
 /// OpenAI-compatible endpoints UFO² (agents.yaml) points at per provider.
 const String _kGeminiApiBase =
     'https://generativelanguage.googleapis.com/v1beta/openai/';
 const String _kGroqApiBase = 'https://api.groq.com/openai/v1/chat/completions';
-
-/// Groq's free text model the hands use when offloaded off Gemini. Matches
-/// the browser-control server default (DEX_BROWSER_MODEL → qwen/qwen3-32b).
-const String _kGroqHandsModel = 'qwen/qwen3-32b';
 
 class DexSetupState {
   const DexSetupState({
@@ -214,25 +215,45 @@ class DexSetup {
 
   static EngineStatus _engineStatus(Map? servers, String id, String label) {
     final s = servers?[id] as Map?;
-    if (s == null) {
-      return EngineStatus(
-          label: label, ready: false, detail: 'not configured — run `dex engines setup`');
-    }
-    if (s['enabled'] == false) {
+    if (s != null && s['enabled'] == false) {
       return EngineStatus(label: label, ready: false, detail: 'disabled in config');
     }
-    final cmd = (s['command'] as String?)?.trim();
-    final args = s['args'];
-    final serverPy = (args is List && args.isNotEmpty) ? args.first as String? : null;
-    if (cmd == null || cmd.isEmpty || !File(cmd).existsSync()) {
-      return EngineStatus(
-          label: label, ready: false, detail: 'python venv missing: ${cmd ?? '(unset)'}');
+    // Explicit mcp.servers registration (installer / install-skills): ready
+    // only when both its python venv and driver server.py exist on disk.
+    if (s != null) {
+      final cmd = (s['command'] as String?)?.trim();
+      final args = s['args'];
+      final serverPy = (args is List && args.isNotEmpty) ? args.first as String? : null;
+      final cmdOk = cmd != null && cmd.isNotEmpty && File(cmd).existsSync();
+      final pyOk =
+          serverPy != null && serverPy.isNotEmpty && File(serverPy).existsSync();
+      if (cmdOk && pyOk) {
+        return EngineStatus(label: label, ready: true, detail: cmd);
+      }
     }
-    if (serverPy == null || serverPy.isEmpty || !File(serverPy).existsSync()) {
-      return EngineStatus(
-          label: label, ready: false, detail: 'driver missing: ${serverPy ?? '(unset)'}');
+    // Built-in resolution (Phase K): no mcp.servers entry, or a stale one.
+    // The gateway resolves + runs the engine from the canonical engines
+    // home, so if its venv exists the engine is ready — no manual setup.
+    final builtin = _builtinEngineVenv(id);
+    if (builtin != null) {
+      return EngineStatus(label: label, ready: true, detail: 'built-in · $builtin');
     }
-    return EngineStatus(label: label, ready: true, detail: cmd);
+    return EngineStatus(
+        label: label, ready: false, detail: 'not installed — run `dex engines setup`');
+  }
+
+  /// Canonical built-in engine venv python under ~/.dex/engines, or null if
+  /// it isn't installed there. Mirrors builtin-engines.ts resolution.
+  static String? _builtinEngineVenv(String id) {
+    final sub = id == 'windows-desktop-control'
+        ? 'UFO'
+        : id == 'browser-control'
+            ? 'browser-use'
+            : null;
+    if (sub == null) return null;
+    final py = File(
+        '$_home$_sep.dex${_sep}engines$_sep$sub$_sep.venv${_sep}Scripts${_sep}python.exe');
+    return py.existsSync() ? py.path : null;
   }
 
   static DexSetupState read() {
@@ -266,9 +287,17 @@ class DexSetup {
     final yaml = agentsYamlFile();
     if (yaml != null) {
       final text = yaml.readAsStringSync();
-      final m = RegExp(r'^\s*API_MODEL:\s*"([^"]+)"', multiLine: true)
-          .firstMatch(text);
-      handsModel = m?.group(1);
+      final raw = RegExp(r'^\s*API_MODEL:\s*"([^"]+)"', multiLine: true)
+          .firstMatch(text)
+          ?.group(1);
+      // Map the raw agents.yaml model back to a provider/model id so it
+      // matches the unified Hands dropdown. Provider comes from API_BASE.
+      final base = RegExp(r'^\s*API_BASE:\s*"([^"]+)"', multiLine: true)
+              .firstMatch(text)
+              ?.group(1) ??
+          '';
+      final prov = base.contains('groq') ? 'groq' : 'google';
+      handsModel = raw != null ? '$prov/$raw' : null;
       final k = RegExp(r'^\s*API_KEY:\s*"([^"]*)"', multiLine: true)
           .firstMatch(text)
           ?.group(1);
@@ -405,17 +434,16 @@ class DexSetup {
     );
   }
 
-  /// Use a free Groq key for Dex. Groq's limits reset PER MINUTE (not daily
-  /// like Gemini), so this removes the "quota used up for the day" wall.
-  /// Sets the BRAIN to Llama 4 Scout (30K tokens/min — fits Dex's full
-  /// prompt; llama-3.3-70b's 12K would 413) with Gemini as fallback, and
-  /// moves the hands (UFO² + browser-use) onto Groq too. Re-apply the
-  /// Gemini key to put the brain back on Gemini.
+  /// Save a Groq API key. Keys are just credentials — the Brain and Hands
+  /// dropdowns pick WHICH model runs. Groq's limits reset PER MINUTE (not
+  /// daily like Gemini), so once a Groq model is selected the daily wall is
+  /// gone. Writes the groq auth profile + models.providers.groq (key + the
+  /// tool-calling model catalog) so any groq/* model in the dropdowns can
+  /// authenticate.
   static Future<void> applyGroqKey(String key) async {
     final k = key.trim();
     if (k.isEmpty) throw ArgumentError('empty key');
 
-    // Brain on Groq: auth profile + provider key + model list + primary.
     final auth = _readJson(authProfilesFile);
     auth['version'] ??= 1;
     final profiles =
@@ -428,8 +456,8 @@ class DexSetup {
     auth['profiles'] = profiles;
     _writeJson(authProfilesFile, auth);
 
-    final brainCfg = _readJson(dexJsonFile);
-    final models = (brainCfg['models'] as Map?)?.cast<String, dynamic>() ?? {};
+    final cfg = _readJson(dexJsonFile);
+    final models = (cfg['models'] as Map?)?.cast<String, dynamic>() ?? {};
     final providers =
         (models['providers'] as Map?)?.cast<String, dynamic>() ?? {};
     providers['groq'] = <String, dynamic>{
@@ -442,48 +470,22 @@ class DexSetup {
       ],
     };
     models['providers'] = providers;
-    brainCfg['models'] = models;
-    final agents = (brainCfg['agents'] as Map?)?.cast<String, dynamic>() ?? {};
-    final defaults = (agents['defaults'] as Map?)?.cast<String, dynamic>() ?? {};
-    defaults['model'] = <String, dynamic>{
-      'primary': 'groq/meta-llama/llama-4-scout-17b-16e-instruct',
-      'fallbacks': <String>[
-        'groq/llama-3.3-70b-versatile',
-        'google/gemini-2.5-flash',
-        'google/gemini-2.5-flash-lite',
-      ],
-    };
-    agents['defaults'] = defaults;
-    brainCfg['agents'] = agents;
-    _writeJson(dexJsonFile, brainCfg);
+    cfg['models'] = models;
+    _writeJson(dexJsonFile, cfg);
+  }
 
-    // browser-use → Groq via env (server defaults model to qwen/qwen3-32b
-    // when DEX_BROWSER_MODEL is unset).
+  /// The saved API key for a provider (from models.providers.[id].apiKey,
+  /// falling back to the auth profile), or null. Used by applyHandsModel to
+  /// write the matching key into agents.yaml / browser env.
+  static String? _providerKey(String provider) {
     final cfg = _readJson(dexJsonFile);
-    final mcp = (cfg['mcp'] as Map?)?.cast<String, dynamic>() ?? {};
-    final servers = (mcp['servers'] as Map?)?.cast<String, dynamic>() ?? {};
-    final bc = (servers['browser-control'] as Map?)?.cast<String, dynamic>();
-    if (bc != null) {
-      final env = (bc['env'] as Map?)?.cast<String, dynamic>() ?? {};
-      env['DEX_BROWSER_PROVIDER'] = 'groq';
-      env['GROQ_API_KEY'] = k;
-      env.remove('DEX_BROWSER_MODEL');
-      bc['env'] = env;
-      servers['browser-control'] = bc;
-      mcp['servers'] = servers;
-      cfg['mcp'] = mcp;
-      _writeJson(dexJsonFile, cfg);
-    }
-
-    // UFO² → Groq: key + Groq endpoint + Groq model on every active block.
-    final yaml = agentsYamlFile();
-    if (yaml != null) {
-      var text = yaml.readAsStringSync();
-      text = _rewriteYamlField(text, 'API_KEY', k);
-      text = _rewriteYamlField(text, 'API_BASE', _kGroqApiBase);
-      text = _rewriteYamlField(text, 'API_MODEL', _kGroqHandsModel);
-      yaml.writeAsStringSync(text);
-    }
+    final pk = (((cfg['models'] as Map?)?['providers'] as Map?)?[provider]
+        as Map?)?['apiKey'];
+    if (pk is String && pk.trim().isNotEmpty) return pk.trim();
+    final prof = ((_readJson(authProfilesFile)['profiles']) as Map?)
+        ?.cast<String, dynamic>()['$provider:default'] as Map?;
+    final key = (prof?['key'] as String?)?.trim();
+    return (key != null && key.isNotEmpty) ? key : null;
   }
 
   static Future<void> applyBrainModel(String primary,
@@ -643,16 +645,47 @@ class DexSetup {
     _writeJson(dexJsonFile, cfg);
   }
 
-  static Future<void> applyHandsModel(String model) async {
-    final yaml = agentsYamlFile();
-    if (yaml == null) {
-      throw StateError('agents.yaml not found (is the desktop driver registered?)');
+  /// Set the hands (UFO² + browser-use) model. [id] is `provider/model`
+  /// (e.g. `groq/meta-llama/llama-4-scout-17b-16e-instruct` or
+  /// `google/gemini-2.5-flash-lite`). Writes the matching endpoint + key +
+  /// model into agents.yaml AND the browser-control env, so the one Hands
+  /// dropdown drives both engines and uses the right provider's key.
+  static Future<void> applyHandsModel(String id) async {
+    final slash = id.indexOf('/');
+    final provider = slash > 0 ? id.substring(0, slash) : 'google';
+    final rawModel = slash > 0 ? id.substring(slash + 1) : id;
+    final isGroq = provider == 'groq';
+    final key = _providerKey(provider);
+    if (key == null) {
+      throw StateError('No $provider API key saved — add it in Secrets first.');
     }
-    final text = yaml.readAsStringSync();
-    final updated = text.replaceAllMapped(
-      RegExp(r'^(\s*API_MODEL:\s*")[^"]*(")', multiLine: true),
-      (m) => '${m.group(1)}$model${m.group(2)}',
-    );
-    yaml.writeAsStringSync(updated);
+
+    // UFO² agents.yaml: endpoint + key + model on every active block.
+    final yaml = agentsYamlFile();
+    if (yaml != null) {
+      var text = yaml.readAsStringSync();
+      text = _rewriteYamlField(text, 'API_BASE',
+          isGroq ? _kGroqApiBase : _kGeminiApiBase);
+      text = _rewriteYamlField(text, 'API_KEY', key);
+      text = _rewriteYamlField(text, 'API_MODEL', rawModel);
+      yaml.writeAsStringSync(text);
+    }
+
+    // browser-use env: provider + key + model.
+    final cfg = _readJson(dexJsonFile);
+    final mcp = (cfg['mcp'] as Map?)?.cast<String, dynamic>() ?? {};
+    final servers = (mcp['servers'] as Map?)?.cast<String, dynamic>() ?? {};
+    final bc = (servers['browser-control'] as Map?)?.cast<String, dynamic>();
+    if (bc != null) {
+      final env = (bc['env'] as Map?)?.cast<String, dynamic>() ?? {};
+      env['DEX_BROWSER_PROVIDER'] = isGroq ? 'groq' : 'google';
+      env[isGroq ? 'GROQ_API_KEY' : 'GEMINI_API_KEY'] = key;
+      env['DEX_BROWSER_MODEL'] = rawModel;
+      bc['env'] = env;
+      servers['browser-control'] = bc;
+      mcp['servers'] = servers;
+      cfg['mcp'] = mcp;
+      _writeJson(dexJsonFile, cfg);
+    }
   }
 }
