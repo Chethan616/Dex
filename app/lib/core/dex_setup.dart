@@ -315,6 +315,24 @@ class DexSetup {
     models['providers'] = providers;
     cfg['models'] = models;
 
+    // Promote Gemini to PRIMARY brain model. Groq's free tier caps at 12K
+    // tokens/min — Dex's ~24K-token prompt is rejected (413) every turn, so
+    // Groq can only ever be a fallback for small turns. Gemini's free tier
+    // handles the full prompt. Without this, pasting a Gemini key leaves the
+    // primary stuck on Groq and every message fails over noisily.
+    final agents = (cfg['agents'] as Map?)?.cast<String, dynamic>() ?? {};
+    final defaults = (agents['defaults'] as Map?)?.cast<String, dynamic>() ?? {};
+    defaults['model'] = <String, dynamic>{
+      'primary': 'google/gemini-2.5-flash',
+      'fallbacks': <String>[
+        'google/gemini-2.5-flash-lite',
+        'google/gemini-2.0-flash',
+        'groq/llama-3.3-70b-versatile',
+      ],
+    };
+    agents['defaults'] = defaults;
+    cfg['agents'] = agents;
+
     final mcp = (cfg['mcp'] as Map?)?.cast<String, dynamic>() ?? {};
     final servers = (mcp['servers'] as Map?)?.cast<String, dynamic>() ?? {};
     final bc = (servers['browser-control'] as Map?)?.cast<String, dynamic>();
