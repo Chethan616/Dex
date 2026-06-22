@@ -30,6 +30,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
+import 'menu_glass.dart';
 
 class LivingBackground extends StatefulWidget {
   const LivingBackground({
@@ -78,7 +79,15 @@ class _LivingBackgroundState extends State<LivingBackground>
   final _FogRepaint _repaint = _FogRepaint();
   int _lastPaintMs = 0;
 
+  // Repaint once when the last menu closes so the fog resumes crisply.
+  void _onMenuCount() {
+    if (mounted && kGlassMenuOpenCount.value == 0) _repaint.bump();
+  }
+
   void _onTick() {
+    // Freeze the fog entirely while a glass menu is open so its morph gets
+    // the whole frame budget (the slow drift is imperceptible meanwhile).
+    if (kGlassMenuOpenCount.value > 0) return;
     final now = DateTime.now().millisecondsSinceEpoch;
     if (now - _lastPaintMs >= 32) {
       _lastPaintMs = now;
@@ -117,6 +126,7 @@ class _LivingBackgroundState extends State<LivingBackground>
 
     _drift.addListener(_onTick);
     _pulse.addListener(_onTick);
+    kGlassMenuOpenCount.addListener(_onMenuCount);
 
     _wasActive = widget.isActive?.call() ?? false;
     widget.activity?.addListener(_onActivity);
@@ -145,6 +155,7 @@ class _LivingBackgroundState extends State<LivingBackground>
     widget.activity?.removeListener(_onActivity);
     _drift.removeListener(_onTick);
     _pulse.removeListener(_onTick);
+    kGlassMenuOpenCount.removeListener(_onMenuCount);
     _repaint.dispose();
     _drift.dispose();
     _pulse.dispose();

@@ -7,6 +7,13 @@
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
+/// Count of liquid-glass menus currently open. LivingBackground freezes its
+/// fog repaint while this is > 0 so the menu's open-morph gets the full GPU
+/// frame budget (no full-screen fog re-paint competing for it). The fog drift
+/// is a 60s loop, so freezing it for the ~400ms a menu is open is invisible.
+/// Wire every GlassMenu through [FogAwareGlassMenu] to keep this accurate.
+final ValueNotifier<int> kGlassMenuOpenCount = ValueNotifier<int>(0);
+
 const Color kDexMenuTint = Color.fromRGBO(14, 24, 48, 0.82);
 const Color kDexMenuAccentSurface = Color.fromRGBO(28, 56, 108, 0.74);
 const Color kDexMenuAccentSurfaceHover = Color.fromRGBO(36, 72, 136, 0.88);
@@ -28,3 +35,59 @@ const LiquidGlassSettings kDexChipGlass = LiquidGlassSettings(
   blur: 12,
   thickness: 16,
 );
+
+/// A [GlassMenu] that bumps [kGlassMenuOpenCount] while it's open, so the
+/// living-background fog freezes during the morph and the open animation
+/// stays buttery. A drop-in replacement for GlassMenu — same look, same
+/// premium morph, just balanced open/close accounting.
+class FogAwareGlassMenu extends StatefulWidget {
+  const FogAwareGlassMenu({
+    super.key,
+    required this.triggerBuilder,
+    required this.items,
+    this.menuWidth = 200,
+    this.quality,
+    this.settings,
+  });
+
+  final Widget Function(BuildContext context, VoidCallback toggle)
+      triggerBuilder;
+  final List<Widget> items;
+  final double menuWidth;
+  final GlassQuality? quality;
+  final LiquidGlassSettings? settings;
+
+  @override
+  State<FogAwareGlassMenu> createState() => _FogAwareGlassMenuState();
+}
+
+class _FogAwareGlassMenuState extends State<FogAwareGlassMenu> {
+  bool _open = false;
+
+  void _setOpen(bool open) {
+    if (open == _open) return;
+    _open = open;
+    kGlassMenuOpenCount.value += open ? 1 : -1;
+  }
+
+  @override
+  void dispose() {
+    if (_open) kGlassMenuOpenCount.value -= 1;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassMenu(
+      menuWidth: widget.menuWidth,
+      quality: widget.quality,
+      settings: widget.settings,
+      onClose: () => _setOpen(false),
+      triggerBuilder: (ctx, toggle) => widget.triggerBuilder(ctx, () {
+        _setOpen(!_open);
+        toggle();
+      }),
+      items: widget.items,
+    );
+  }
+}

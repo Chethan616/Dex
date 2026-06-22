@@ -19,7 +19,7 @@
   Gateway auto-start at logon: a shortcut in the user's Startup folder
   launches payload\start-gateway.vbs (emitted by build-installer.ps1),
   a windowless wrapper that runs `node dex.mjs gateway run`. So the
-  gateway -- with its built-in UFO²/browser-use engines -- is up at
+  gateway (with its built-in UFO²/browser-use engines) is up at
   logon and channels (WhatsApp etc.) keep listening before the app is
   even opened. The app's probe-then-spawn (gateway_process.dart) finds
   the already-running gateway and just connects; if the Startup task
@@ -34,7 +34,7 @@
       Name="Dex"
       Manufacturer="Chethan"
       Version="1.0.0"
-      UpgradeCode="7e1b62cf-1f4f-4a3e-9d3a-dex000000001"
+      UpgradeCode="7e1b62cf-1f4f-4a3e-9d3a-decc00000001"
       Scope="perUser"
       Compressed="yes">
 
@@ -53,8 +53,8 @@
 
     <StandardDirectory Id="StartupFolder" />
 
-    <!-- WiX v5 wildcard harvest of the staged payload tree. -->
-    <Files Include="payload\**" Directory="INSTALLFOLDER" />
+    <!-- Reference the dynamically grouped components to bypass the 65k component limit. -->
+    <ComponentGroupRef Id="PayloadComponents" />
 
     <Component Id="DexShortcuts" Directory="DexMenuFolder">
       <Shortcut Id="DexStartMenu"

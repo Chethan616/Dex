@@ -67,7 +67,15 @@ class _AccountTabState extends State<AccountTab> {
     try {
       final key = _keyCtrl.text.trim();
       if (key.isNotEmpty) {
-        await DexSetup.applyGeminiKey(key);
+        final brainModel = kBrainModels.contains(_setup.brainModel)
+            ? _setup.brainModel!
+            : kBrainModels.first;
+        final isGroq = brainModel.startsWith('groq/');
+        if (isGroq) {
+          await DexSetup.applyGroqKey(key);
+        } else {
+          await DexSetup.applyGeminiKey(key);
+        }
         _keyCtrl.clear();
       }
       _setup = DexSetup.read();
@@ -168,31 +176,39 @@ class _AccountTabState extends State<AccountTab> {
     final handsModel = kHandsModels.contains(_setup.handsModel)
         ? _setup.handsModel!
         : kHandsModels.first;
+    final isGroqBrain = brainModel.startsWith('groq/');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text('Secrets', style: DexType.label(color: DexColors.text)),
         const SizedBox(height: DexSpace.xs),
         Text(
-          'One Gemini key powers the brain, web search, browsing, and '
-          'desktop automation. Stored locally, never leaves this machine.',
+          isGroqBrain
+              ? 'One Groq key powers the brain. Stored locally, never leaves this machine.'
+              : 'One Gemini key powers the brain, web search, browsing, and '
+                  'desktop automation. Stored locally, never leaves this machine.',
           style: DexType.caption(color: DexColors.textFaint),
         ),
         const SizedBox(height: DexSpace.md),
         SecretField(
           controller: _keyCtrl,
-          hint: _setup.hasBrainKey
-              ? 'Key set (…${_setup.geminiKeyTail}) — paste to replace'
-              : 'Paste your Gemini API key',
+          hint: isGroqBrain
+              ? (_setup.groqKeyTail != null
+                  ? 'Groq key set (…${_setup.groqKeyTail}) — paste to replace'
+                  : 'Paste your Groq API key')
+              : (_setup.hasBrainKey
+                  ? 'Key set (…${_setup.geminiKeyTail}) — paste to replace'
+                  : 'Paste your Gemini API key'),
         ),
         const SizedBox(height: DexSpace.xs),
         MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
-            onTap: () =>
-                launchUrl(Uri.parse('https://aistudio.google.com/app/apikey')),
+            onTap: () => launchUrl(Uri.parse(isGroqBrain
+                ? 'https://console.groq.com/keys'
+                : 'https://aistudio.google.com/app/apikey')),
             child: Text(
-              'Get a free Gemini key →',
+              isGroqBrain ? 'Get a Groq key here →' : 'Get a free Gemini key →',
               style: DexType.caption(color: DexColors.accent),
             ),
           ),

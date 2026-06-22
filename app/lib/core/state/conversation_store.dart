@@ -270,7 +270,28 @@ class ConversationStore extends ChangeNotifier {
     _pending = null;
     _setState(AgentState.acting);
     notifyListeners();
-    await _client.inject('Approved. Proceed with: ${p.title}');
+    if (p.isApprovalRequest) {
+      try {
+        await _client.request(
+          'exec.approval.resolve',
+          params: <String, dynamic>{
+            'id': p.id,
+            'decision': 'allow-once',
+          },
+        );
+      } catch (e) {
+        _setState(AgentState.error);
+        _messages.add(Message(
+          id: _uuid.v4(),
+          speaker: MessageSpeaker.agent,
+          ts: DateTime.now(),
+          text: 'Failed to resolve approval: $e',
+        ));
+        notifyListeners();
+      }
+    } else {
+      await _client.inject('Approved. Proceed with: ${p.title}');
+    }
   }
 
   Future<void> deny() async {
@@ -289,7 +310,27 @@ class ConversationStore extends ChangeNotifier {
     }
     _setState(AgentState.idle);
     notifyListeners();
-    await _client.inject('Denied. Do not run: ${p.title}');
+    if (p.isApprovalRequest) {
+      try {
+        await _client.request(
+          'exec.approval.resolve',
+          params: <String, dynamic>{
+            'id': p.id,
+            'decision': 'deny',
+          },
+        );
+      } catch (e) {
+        _messages.add(Message(
+          id: _uuid.v4(),
+          speaker: MessageSpeaker.agent,
+          ts: DateTime.now(),
+          text: 'Failed to deny approval: $e',
+        ));
+        notifyListeners();
+      }
+    } else {
+      await _client.inject('Denied. Do not run: ${p.title}');
+    }
   }
 
   // -----------------------------------------------------------------
@@ -308,6 +349,9 @@ class ConversationStore extends ChangeNotifier {
         break;
       case GatewayEventKind.toolResult:
         _applyToolResult(evt);
+        break;
+      case GatewayEventKind.approvalRequested:
+        _applyApprovalRequested(evt);
         break;
       case GatewayEventKind.error:
       case GatewayEventKind.aborted:
@@ -599,6 +643,35 @@ class ConversationStore extends ChangeNotifier {
     // carries: structured steps, summary, stdout, stderr, result text.
     _updateActivity(evt.runId, ok: ok, payload: payload, result: result);
 
+    notifyListeners();
+  }
+
+  void _applyApprovalRequested(GatewayEvent evt) {
+    final raw = evt.raw ?? const <String, dynamic>{};
+    final payload = (raw['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final id = payload['id'] as String? ?? '';
+    final request = (payload['request'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final command = (request['command'] as String? ?? request['commandPreview'] as String? ?? '').trim();
+    if (id.isEmpty || command.isEmpty) return;
+
+    final warningText = (request['warningText'] as String?)?.trim() ?? '';
+    final displayCommand = warningText.isNotEmpty ? '$warningText\n\n$command' : command;
+
+    final step = ActionStep(
+      text: displayCommand,
+      state: ActionStepState.queued,
+      ts: DateTime.now(),
+    );
+
+    _pending = ActionPreview(
+      id: id,
+      title: 'Command Execution Approval',
+      appHint: 'Requires authorization to run',
+      steps: [step],
+      ts: DateTime.now(),
+      isApprovalRequest: true,
+    );
+    _setState(AgentState.awaiting);
     notifyListeners();
   }
 

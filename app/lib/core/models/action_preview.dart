@@ -28,11 +28,16 @@ class ActionPreview {
   /// ignores it for too long).
   final DateTime ts;
 
+  /// True if this preview represents a gateway approval request that must
+  /// be resolved via Gateway RPC rather than chat inject injection.
+  final bool isApprovalRequest;
+
   const ActionPreview({
     required this.id,
     required this.title,
     required this.steps,
     required this.ts,
     this.appHint,
+    this.isApprovalRequest = false,
   });
 }

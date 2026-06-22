@@ -21,6 +21,8 @@ import '../core/state/conversation_store.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../widgets/dex_glass.dart';
+import '../widgets/menu_glass.dart';
+import '../widgets/glass_badge_button.dart';
 
 const String _prefsKeyBriefingDismissed = 'dex.reminders.briefing.dismissed';
 
@@ -29,8 +31,10 @@ class RemindersScreen extends StatefulWidget {
 
   final ConversationStore store;
 
-  static Future<void> show(BuildContext context, ConversationStore store) {
-    return showGeneralDialog<void>(
+  static Future<void> show(BuildContext context, ConversationStore store) async {
+    kGlassMenuOpenCount.value++;
+    try {
+      return await showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss reminders',
@@ -38,25 +42,15 @@ class RemindersScreen extends StatefulWidget {
       transitionDuration: DexMotion.dialog,
       pageBuilder: (_, _, _) => RemindersScreen(store: store),
       transitionBuilder: (ctx, anim, _, child) {
-        final reduce = MediaQuery.of(ctx).disableAnimations;
-        if (reduce) return child;
-        final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
-        return FadeTransition(
-          opacity: eased,
-          child: AnimatedBuilder(
-            animation: eased,
-            builder: (_, c) => Transform.translate(
-              offset: Offset(0, (1 - eased.value) * 20),
-              child: Transform.scale(
-                scale: 0.97 + 0.03 * eased.value,
-                child: c,
-              ),
-            ),
-            child: child,
-          ),
-        );
+        // final reduce = MediaQuery.of(ctx).disableAnimations;
+        // if (reduce) return child;
+        // final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
+        return DexMotion.buildDialogTransition(ctx, anim, child);
       },
     );
+    } finally {
+      kGlassMenuOpenCount.value--;
+    }
   }
 
   @override
@@ -216,11 +210,12 @@ class _Header extends StatelessWidget {
             child: Text('Reminders',
                 style: DexType.heading(color: DexColors.text)),
           ),
-          IconButton(
-            icon: const Icon(LucideIcons.x, size: 18),
-            color: DexColors.textDim,
-            onPressed: onClose,
-            tooltip: 'Close',
+          GlassBadgeButton(
+            icon: LucideIcons.x,
+            onTap: onClose,
+            size: 32,
+            iconColor: DexColors.stateError,
+            glowColor: DexColors.stateError,
           ),
         ],
       ),
@@ -461,15 +456,12 @@ class _ReminderRow extends StatelessWidget {
                 ],
               ),
             ),
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: IconButton(
-                icon: const Icon(LucideIcons.x, size: 14),
-                color: DexColors.textFaint,
-                onPressed: onCancel,
-                tooltip: 'Cancel reminder',
-                visualDensity: VisualDensity.compact,
-              ),
+            GlassBadgeButton(
+              icon: LucideIcons.x,
+              onTap: onCancel,
+              size: 28,
+              iconColor: DexColors.stateError,
+              glowColor: DexColors.stateError,
             ),
           ],
         ),

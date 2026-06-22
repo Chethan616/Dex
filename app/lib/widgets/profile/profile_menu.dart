@@ -1,4 +1,4 @@
-// Profile popover shown from the sidebar avatar — a real GlassPopover with
+// Profile popover shown from the sidebar avatar â€” a real GlassPopover with
 // custom content + close callback (the "Custom content with close callback"
 // pattern from the package's overlays example): avatar + name header, then
 // action rows that fire onAction and self-close.
@@ -36,8 +36,8 @@ class ProfilePopover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final initial = userName.isNotEmpty ? userName[0].toUpperCase() : 'D';
-    return GlassMenu(
-      quality: GlassQuality.premium,
+    return FogAwareGlassMenu(
+      quality: GlassQuality.minimal,
       menuWidth: 248,
       settings: kDexMenuGlass,
       triggerBuilder: (context, toggle) => MouseRegion(

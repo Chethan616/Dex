@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
 import '../dex_glass.dart';
+import '../menu_glass.dart';
 
 class PermissionDialog extends StatelessWidget {
   const PermissionDialog({
@@ -24,8 +25,10 @@ class PermissionDialog extends StatelessWidget {
     BuildContext context, {
     required String title,
     required String description,
-  }) {
-    return showGeneralDialog<bool>(
+  }) async {
+    kGlassMenuOpenCount.value++;
+    try {
+      return await showGeneralDialog<bool>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss permission',
@@ -33,30 +36,12 @@ class PermissionDialog extends StatelessWidget {
       transitionDuration: DexMotion.dialog,
       pageBuilder: (_, _, _) =>
           PermissionDialog(title: title, description: description),
-      transitionBuilder: (ctx, anim, _, child) {
-        final reduce = MediaQuery.of(ctx).disableAnimations;
-        if (reduce) return child;
-        // Dampened decelerate (Material 3 emphasized decelerate) for
-        // a smooth, confident landing -- no spring overshoot. Fade
-        // + 16px slide-up + 0.96→1.0 scale, all driven by the same
-        // dampened curve so the components arrive together.
-        final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
-        return FadeTransition(
-          opacity: eased,
-          child: AnimatedBuilder(
-            animation: eased,
-            builder: (_, c) => Transform.translate(
-              offset: Offset(0, (1 - eased.value) * 16),
-              child: Transform.scale(
-                scale: 0.96 + 0.04 * eased.value,
-                child: c,
-              ),
-            ),
-            child: child,
-          ),
-        );
-      },
-    );
+      transitionBuilder: (ctx, anim, _, child) =>
+          DexMotion.buildDialogTransition(ctx, anim, child),
+      );
+    } finally {
+      kGlassMenuOpenCount.value--;
+    }
   }
 
   @override
@@ -68,6 +53,7 @@ class PermissionDialog extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 360),
           child: DexGlass(
             radius: 20,
+            rim: false,
             padding: const EdgeInsets.all(DexSpace.xl),
             child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -106,3 +92,4 @@ class PermissionDialog extends StatelessWidget {
     );
   }
 }
+

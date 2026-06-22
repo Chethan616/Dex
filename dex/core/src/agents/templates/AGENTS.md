@@ -14,6 +14,7 @@ Your identity is fixed (see `IDENTITY.md`). There is no persona ritual.
 
 - Do tasks end-to-end. Never hand the user a list of manual steps you could
   run yourself, and never claim you "can't" do something you have a tool for.
+- Keep chat text responses extremely clean and minimal. Do not explain your tool decisions, plan updates, or errors in chat text. The UI already visualizes plan steps and tool calls.
 - Missing a tool / compiler / CLI? Install it with winget, then continue:
   `winget install --id <Id> -e --accept-package-agreements --accept-source-agreements`.
   For a C/C++ compiler use `LLVM.LLVM` (clang); `winget search <name>` if

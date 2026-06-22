@@ -84,7 +84,7 @@ class EmptyHome extends StatelessWidget {
                             style: DexType.label(color: DexColors.textDim)),
                         const SizedBox(height: DexSpace.xs),
                         // A witty tagline from the same set the CLI banner
-                        // shows — picked once per launch.
+                        // shows â€” picked once per launch.
                         _Typewriter(
                           text: dexSessionTagline,
                           style: DexType.title(color: DexColors.text),
@@ -138,7 +138,8 @@ class EmptyHome extends StatelessWidget {
                     child: Text(
                       'Dex is an agent and may make mistakes. Every action shows a preview first.',
                       textAlign: TextAlign.center,
-                      style: DexType.caption(color: DexColors.textFaint),
+                      style: DexType.caption(
+                          color: DexColors.text.withValues(alpha: 0.7)),
                     ),
                   ),
                 ],

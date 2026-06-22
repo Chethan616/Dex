@@ -36,7 +36,7 @@ class DexGlassField extends StatelessWidget {
           ? null
           : Icon(icon, size: 18, color: DexColors.textFaint),
       textStyle: DexType.body(color: DexColors.text),
-      placeholderStyle: DexType.body(color: DexColors.textFaint),
+      placeholderStyle: DexType.body(color: DexColors.textDim),
     );
   }
 }

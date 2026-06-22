@@ -10,6 +10,7 @@ import '../../../core/dex_memory.dart';
 import '../../../theme/tokens.dart';
 import '../../dex_glass.dart';
 import '../../glass_back_button.dart';
+import '../../glass_badge_button.dart';
 
 class MemoryView extends StatefulWidget {
   const MemoryView({super.key, required this.onBack});
@@ -168,11 +169,12 @@ class _Fact extends StatelessWidget {
             Expanded(
               child: Text(text, style: DexType.label(color: DexColors.text)),
             ),
-            IconButton(
-              icon: const Icon(LucideIcons.trash_2, size: 14),
-              color: DexColors.textDim,
-              tooltip: 'Forget this',
-              onPressed: onDelete,
+            GlassBadgeButton(
+              icon: LucideIcons.trash_2,
+              onTap: onDelete,
+              size: 28,
+              iconColor: DexColors.stateError,
+              glowColor: DexColors.stateError,
             ),
           ],
         ),

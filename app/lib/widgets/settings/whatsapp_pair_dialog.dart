@@ -20,26 +20,33 @@ import '../../core/gateway_client.dart';
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
 import '../dex_glass.dart';
+import '../glass_badge_button.dart';
+import '../menu_glass.dart';
 
 class WhatsAppPairDialog extends StatefulWidget {
   const WhatsAppPairDialog({super.key});
 
   /// Returns true when pairing completed.
   static Future<bool> show(BuildContext context) async {
-    final ok = await showGeneralDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Dismiss pairing',
-      barrierColor: Colors.black.withValues(alpha: 0.4),
-      transitionDuration: DexMotion.dialog,
-      pageBuilder: (_, _, _) => const WhatsAppPairDialog(),
-      transitionBuilder: (ctx, anim, _, child) {
-        if (MediaQuery.of(ctx).disableAnimations) return child;
-        final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
-        return FadeTransition(opacity: eased, child: child);
-      },
-    );
-    return ok ?? false;
+    kGlassMenuOpenCount.value++;
+    try {
+      final ok = await showGeneralDialog<bool>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: 'Dismiss pairing',
+        barrierColor: Colors.black.withValues(alpha: 0.4),
+        transitionDuration: DexMotion.dialog,
+        pageBuilder: (_, _, _) => const WhatsAppPairDialog(),
+        transitionBuilder: (ctx, anim, _, child) {
+          // if (MediaQuery.of(ctx).disableAnimations) return child;
+          // final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
+          return DexMotion.buildDialogTransition(ctx, anim, child);
+        },
+      );
+      return ok ?? false;
+    } finally {
+      kGlassMenuOpenCount.value--;
+    }
   }
 
   @override
@@ -171,6 +178,7 @@ class _WhatsAppPairDialogState extends State<WhatsAppPairDialog> {
           constraints: const BoxConstraints(maxWidth: 420),
           child: DexGlass(
             radius: 20,
+            rim: false,
             padding: const EdgeInsets.all(DexSpace.xl),
             child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -186,11 +194,12 @@ class _WhatsAppPairDialogState extends State<WhatsAppPairDialog> {
                                 style:
                                     DexType.heading(color: DexColors.text)),
                           ),
-                          IconButton(
-                            icon: const Icon(LucideIcons.x, size: 16),
-                            color: DexColors.textDim,
-                            onPressed: () =>
-                                Navigator.of(context).pop(false),
+                          GlassBadgeButton(
+                            icon: LucideIcons.x,
+                            onTap: () => Navigator.of(context).pop(false),
+                            size: 30,
+                            iconColor: DexColors.stateError,
+                            glowColor: DexColors.stateError,
                           ),
                         ],
                       ),

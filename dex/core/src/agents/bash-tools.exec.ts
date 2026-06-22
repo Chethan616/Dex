@@ -1319,7 +1319,7 @@ export function createExecTool(
     defaults?.backgroundMs ?? readEnvInt("DEX_BASH_YIELD_MS", "PI_BASH_YIELD_MS"),
     10_000,
     10,
-    120_000,
+    1_800_000,
   );
   const allowBackground = defaults?.allowBackground ?? true;
   const defaultTimeoutSec =
@@ -1493,14 +1493,14 @@ export function createExecTool(
       if (!allowBackground && (backgroundRequested || yieldRequested)) {
         warnings.push("Warning: background execution is disabled; running synchronously.");
       }
-      const yieldWindow = allowBackground
+      const yieldWindow = allowBackground && params.background !== false
         ? backgroundRequested
           ? 0
           : clampWithDefault(
               params.yieldMs ?? defaultBackgroundMs,
               defaultBackgroundMs,
               10,
-              120_000,
+              1_800_000,
             )
         : null;
       const elevatedDefaults = defaults?.elevated;
@@ -1797,6 +1797,7 @@ export function createExecTool(
           agentId,
           sessionKey: defaults?.sessionKey,
           bashElevated: elevatedDefaults,
+          elevated: elevatedRequested,
           turnSourceChannel: defaults?.messageProvider,
           turnSourceTo: defaults?.currentChannelId,
           turnSourceAccountId: defaults?.accountId,
@@ -1857,6 +1858,7 @@ export function createExecTool(
         notifyDeliveryContext,
         timeoutSec: effectiveTimeout,
         onUpdate,
+        elevated: elevatedRequested,
       });
 
       let yielded = false;

@@ -15,28 +15,32 @@ import '../core/models_catalog.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'dex_glass.dart';
+import 'menu_glass.dart';
 import 'secret_field.dart';
+import 'glass_badge_button.dart';
 
 class ModelPicker extends StatefulWidget {
   const ModelPicker({super.key});
 
-  static Future<void> show(BuildContext context) {
-    return showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Dismiss model picker',
-      barrierColor: Colors.black.withValues(alpha: 0.4),
-      transitionDuration: DexMotion.dialog,
-      pageBuilder: (_, _, _) => const ModelPicker(),
-      transitionBuilder: (ctx, anim, _, child) {
-        if (MediaQuery.of(ctx).disableAnimations) return child;
-        final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
-        return FadeTransition(
-          opacity: eased,
-          child: Transform.scale(scale: 0.97 + 0.03 * eased.value, child: child),
-        );
-      },
-    );
+  static Future<void> show(BuildContext context) async {
+    kGlassMenuOpenCount.value++;
+    try {
+      return await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: 'Dismiss model picker',
+        barrierColor: Colors.black.withValues(alpha: 0.4),
+        transitionDuration: DexMotion.dialog,
+        pageBuilder: (_, _, _) => const ModelPicker(),
+        transitionBuilder: (ctx, anim, _, child) {
+          // if (MediaQuery.of(ctx).disableAnimations) return child;
+          // final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
+          return DexMotion.buildDialogTransition(ctx, anim, child);
+        },
+      );
+    } finally {
+      kGlassMenuOpenCount.value--;
+    }
   }
 
   @override
@@ -130,6 +134,7 @@ class _ModelPickerState extends State<ModelPicker> {
           constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
           child: DexGlass(
             radius: 20,
+            rim: false,
             child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -142,10 +147,12 @@ class _ModelPickerState extends State<ModelPicker> {
                             child: Text('Choose a model',
                                 style: DexType.heading(color: DexColors.text)),
                           ),
-                          IconButton(
-                            icon: const Icon(LucideIcons.x, size: 18),
-                            color: DexColors.textDim,
-                            onPressed: () => Navigator.of(context).maybePop(),
+                          GlassBadgeButton(
+                            icon: LucideIcons.x,
+                            onTap: () => Navigator.of(context).maybePop(),
+                            size: 32,
+                            iconColor: DexColors.stateError,
+                            glowColor: DexColors.stateError,
                           ),
                         ],
                       ),
@@ -276,3 +283,4 @@ class _ModelRow extends StatelessWidget {
     );
   }
 }
+

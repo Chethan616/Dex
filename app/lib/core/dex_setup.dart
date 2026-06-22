@@ -66,7 +66,7 @@ const List<String> kHandsModels = <String>[
 /// OpenAI-compatible endpoints UFO² (agents.yaml) points at per provider.
 const String _kGeminiApiBase =
     'https://generativelanguage.googleapis.com/v1beta/openai/';
-const String _kGroqApiBase = 'https://api.groq.com/openai/v1/chat/completions';
+const String _kGroqApiBase = 'https://api.groq.com/openai/v1';
 
 class DexSetupState {
   const DexSetupState({
@@ -336,6 +336,11 @@ class DexSetup {
   static Future<void> applyGeminiKey(String key) async {
     final k = key.trim();
     if (k.isEmpty) throw ArgumentError('empty key');
+    if (!k.startsWith('AIza') && !k.startsWith('AQ.')) {
+      throw ArgumentError(
+        'Invalid Gemini API key. Gemini API keys must start with "AIza" or "AQ.".'
+      );
+    }
 
     // 1. Brain auth profile.
     final auth = _readJson(authProfilesFile);
@@ -401,6 +406,11 @@ class DexSetup {
   static Future<void> applyGroqKey(String key) async {
     final k = key.trim();
     if (k.isEmpty) throw ArgumentError('empty key');
+    if (!k.startsWith('gsk_')) {
+      throw ArgumentError(
+        'Invalid Groq API key. Groq API keys must start with "gsk_".'
+      );
+    }
 
     final auth = _readJson(authProfilesFile);
     auth['version'] ??= 1;
@@ -536,6 +546,10 @@ class DexSetup {
     if (k.isEmpty) throw ArgumentError('empty key');
     if (provider == 'google') {
       await applyGeminiKey(k);
+      return;
+    }
+    if (provider == 'groq') {
+      await applyGroqKey(k);
       return;
     }
 
