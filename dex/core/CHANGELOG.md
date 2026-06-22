@@ -2,6 +2,45 @@
 
 Repo: https://github.com/Chethan616/Dex
 
+## 2026.6.24 (Windows UAC elevation, Visual Approvals, and general stability fixes)
+
+### Changes
+
+- Added backend support for executing command processes with elevated permissions on Windows (`opts.elevated` parameter propagation through `runExecProcess`, `processGatewayAllowlist`, and `runExecProcess` in the gateway).
+- Elevated Windows runs generate a temporary powershell script in the workspace, execute it via `Start-Process powershell -Verb RunAs -Wait`, tail logs dynamically, and parse exit codes.
+- Implemented an interactive operator approvals flow inside the Flutter client:
+  - Added event mapping for `exec.approval.requested` in the client.
+  - Implemented the custom `ActionPreviewCard` in `conversation_store.dart` for prompt approvals.
+  - Added interactive Approve/Deny buttons to resolve the permission request RPC.
+
+### Fixes
+
+- Resolved a duplicate `exitFilePath` declaration compiler error in `bash-tools.exec-runtime.ts` that caused rollups/builds to fail.
+- Fixed standard directory generation errors on Windows drive roots.
+- Hardened backend instructions to eliminate chat plan/narration leakage before executing tool calls.
+
+## 2026.6.23 (I have no more ideas for catchy release titles 😭🙏 just testing stuff)
+
+### Changes
+
+- `dex/drivers/browser-control/canvas_detection.py` ships the
+  heuristic canvas-detection layer. Known canvas-heavy domains
+  (Figma, Miro, Canva, Lucidchart, Excalidraw, Draw.io, Whimsical,
+  Mural, Tableau, Looker Studio, Google Maps, agar.io, krunker.io,
+  shellshock.io, skribbl.io) are matched against the `url_hint`
+  before browser-use's Agent is constructed.
+- When the target URL matches, a hint is prepended to the task:
+  *"[Dex canvas hint] The target page is a known canvas-heavy site
+  (<host>). Standard DOM selectors will not work for the main
+  drawing area. Use vision to read the screenshot and click via
+  pixel coordinates via page.mouse.click(x, y). Save a step by
+  skipping the initial DOM-selector probe."* The hint reaches
+  browser-use's LLM on every step without needing per-step hooks.
+- 29 new pytest cases in `test_canvas_detection.py` covering known
+  domains, sub-domain match, non-canvas URLs, invalid URLs,
+  registry hygiene (no leading www, no trailing slash, all
+  lowercase).
+
 ## 2026.6.20 (Phase E.3 — canvas detection hook in browser-control)
 
 ### Changes

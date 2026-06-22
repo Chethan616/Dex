@@ -61,4 +61,25 @@ class DexMotion {
     final reduce = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     return reduce ? Curves.linear : c;
   }
+
+  /// A beautiful, premium, buttery-smooth transition for dialogs.
+  /// Combination of: FadeTransition + ScaleTransition (0.95 -> 1.0) + SlideTransition (vertical).
+  static Widget buildDialogTransition(
+      BuildContext context, Animation<double> animation, Widget child) {
+    if (MediaQuery.of(context).disableAnimations) return child;
+    final eased = CurvedAnimation(parent: animation, curve: dampened);
+    return FadeTransition(
+      opacity: eased,
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 0.95, end: 1.0).animate(eased),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.0, 0.04),
+            end: Offset.zero,
+          ).animate(eased),
+          child: child,
+        ),
+      ),
+    );
+  }
 }

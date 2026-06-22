@@ -458,7 +458,7 @@ class GatewayClient extends ChangeNotifier {
         // operator.admin. Local insecure-auth control-ui clients keep
         // their declared scopes (message-handler.ts:840-844).
         'role': 'operator',
-        'scopes': <String>['operator.read', 'operator.write', 'operator.admin'],
+        'scopes': <String>['operator.read', 'operator.write', 'operator.admin', 'operator.approvals'],
         'auth': <String, dynamic>{'token': _config.token},
       },
     }));
@@ -556,6 +556,8 @@ class GatewayClient extends ChangeNotifier {
         default:
           kind = GatewayEventKind.other;
       }
+    } else if (event == 'exec.approval.requested' || event == 'plugin.approval.requested') {
+      kind = GatewayEventKind.approvalRequested;
     } else if (event.contains('tool.call') || event.contains('mcp.call')) {
       kind = GatewayEventKind.toolCall;
     } else if (event.contains('tool.result') || event.contains('mcp.result')) {

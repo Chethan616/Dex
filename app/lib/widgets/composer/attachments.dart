@@ -15,6 +15,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
+import '../glass_badge_button.dart';
 
 enum AttachmentKind { image, file, text }
 
@@ -316,23 +317,12 @@ class _AttachmentChip extends StatelessWidget {
                 style: DexType.caption(color: DexColors.textFaint)),
           ],
           const SizedBox(width: 4),
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onRemove,
-              child: Container(
-                width: 18,
-                height: 18,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: DexColors.surface,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(LucideIcons.x,
-                    size: 10, color: DexColors.textDim),
-              ),
-            ),
+          GlassBadgeButton(
+            icon: LucideIcons.x,
+            onTap: onRemove,
+            size: 20,
+            iconColor: DexColors.stateError,
+            glowColor: DexColors.stateError,
           ),
         ],
       ),

@@ -266,7 +266,7 @@ class _DexComposerState extends State<DexComposer> {
               _FocusComposerIntent(),
           SingleActivator(LogicalKeyboardKey.keyK, meta: true):
               _FocusComposerIntent(),
-          // Ctrl+V / Cmd+V → rich paste path. If the clipboard holds
+          // Ctrl+V / Cmd+V â†’ rich paste path. If the clipboard holds
           // an image / file / long text we capture it as an attachment;
           // short plain text falls through to the default TextField
           // paste so the user can still paste short snippets normally.
@@ -387,7 +387,7 @@ class _Input extends StatelessWidget {
           focusedBorder: InputBorder.none,
           filled: false,
           hintText: hint,
-          hintStyle: DexType.body(color: DexColors.textFaint),
+          hintStyle: DexType.body(color: DexColors.text.withValues(alpha: 0.6)),
         ),
         textInputAction: TextInputAction.newline,
       ),
@@ -422,8 +422,8 @@ class _Toolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        GlassMenu(
-          quality: GlassQuality.premium,
+        FogAwareGlassMenu(
+          quality: GlassQuality.minimal,
           menuWidth: 264,
           settings: kDexMenuGlass,
           triggerBuilder: (context, toggle) => _RoundIconButton(
@@ -440,8 +440,8 @@ class _Toolbar extends StatelessWidget {
           ],
         ),
         const SizedBox(width: DexSpace.sm),
-        GlassMenu(
-          quality: GlassQuality.premium,
+        FogAwareGlassMenu(
+          quality: GlassQuality.minimal,
           menuWidth: 280,
           settings: kDexMenuGlass,
           triggerBuilder: (context, toggle) =>

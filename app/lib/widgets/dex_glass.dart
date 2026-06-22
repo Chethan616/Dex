@@ -32,7 +32,7 @@ class DexGlass extends StatelessWidget {
     this.shadow = true,
     this.tint,
     this.glow = 0.0,
-    this.rim = true,
+    this.rim = false,
   });
 
   final Widget child;

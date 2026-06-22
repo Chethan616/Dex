@@ -77,6 +77,7 @@ export type ProcessGatewayAllowlistParams = {
   agentId?: string;
   sessionKey?: string;
   bashElevated?: ExecElevatedDefaults;
+  elevated?: boolean;
   turnSourceChannel?: string;
   turnSourceTo?: string;
   turnSourceAccountId?: string;
@@ -743,6 +744,7 @@ export async function processGatewayAllowlist(
           scopeKey: params.scopeKey,
           sessionKey: params.notifySessionKey ?? params.sessionKey,
           timeoutSec: effectiveTimeout,
+          elevated: params.elevated,
         });
       } catch {
         await sendExecApprovalFollowupResult(

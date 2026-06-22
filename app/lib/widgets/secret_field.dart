@@ -40,7 +40,7 @@ class SecretField extends StatelessWidget {
       useOwnLayer: true,
       glowColor: DexColors.accent,
       textStyle: DexType.mono(color: DexColors.text),
-      placeholderStyle: DexType.mono(color: DexColors.textFaint),
+      placeholderStyle: DexType.mono(color: DexColors.textDim),
     );
   }
 }

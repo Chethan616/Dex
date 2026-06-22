@@ -981,6 +981,12 @@ function createHostWriteOperations(root: string, options?: { workspaceOnly?: boo
     return {
       mkdir: async (dir: string) => {
         const resolved = resolveHostPath(dir);
+        try {
+          const stats = await fs.stat(resolved);
+          if (stats.isDirectory()) {
+            return;
+          }
+        } catch {}
         await fs.mkdir(resolved, { recursive: true });
       },
       writeFile: writeHostFile,
@@ -998,6 +1004,12 @@ function createHostWriteOperations(root: string, options?: { workspaceOnly?: boo
       const relative = toRelativeWorkspacePath(root, dir, { allowRoot: true });
       const resolved = relative ? path.resolve(root, relative) : path.resolve(root);
       await assertSandboxPath({ filePath: resolved, cwd: root, root });
+      try {
+        const stats = await fs.stat(resolved);
+        if (stats.isDirectory()) {
+          return;
+        }
+      } catch {}
       await fs.mkdir(resolved, { recursive: true });
     },
     writeFile: (absolutePath: string, content: string) =>

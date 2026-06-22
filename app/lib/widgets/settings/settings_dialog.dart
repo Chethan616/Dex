@@ -7,6 +7,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
 import '../dex_glass.dart';
+import '../glass_badge_button.dart';
 import '../menu_glass.dart';
 import 'tabs/about_tab.dart';
 import 'tabs/account_tab.dart';
@@ -43,8 +44,10 @@ class SettingsDialog extends StatefulWidget {
   final SettingsTab initialTab;
 
   static Future<void> show(BuildContext context,
-      {SettingsTab initial = SettingsTab.preferences}) {
-    return showGeneralDialog<void>(
+      {SettingsTab initial = SettingsTab.preferences}) async {
+    kGlassMenuOpenCount.value++;
+    try {
+      return await showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss settings',
@@ -52,28 +55,18 @@ class SettingsDialog extends StatefulWidget {
       transitionDuration: DexMotion.dialog,
       pageBuilder: (_, _, _) => SettingsDialog(initialTab: initial),
       transitionBuilder: (ctx, anim, _, child) {
-        final reduce = MediaQuery.of(ctx).disableAnimations;
-        if (reduce) return child;
+        // final reduce = MediaQuery.of(ctx).disableAnimations;
+        // if (reduce) return child;
         // Same dampened landing as the permission dialog: smooth fade
         // + soft slide-up + gentle scale. No spring overshoot --
         // a big modal jittering on entry would feel cheap.
-        final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
-        return FadeTransition(
-          opacity: eased,
-          child: AnimatedBuilder(
-            animation: eased,
-            builder: (_, c) => Transform.translate(
-              offset: Offset(0, (1 - eased.value) * 20),
-              child: Transform.scale(
-                scale: 0.97 + 0.03 * eased.value,
-                child: c,
-              ),
-            ),
-            child: child,
-          ),
-        );
+        // final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
+        return DexMotion.buildDialogTransition(ctx, anim, child);
       },
     );
+    } finally {
+      kGlassMenuOpenCount.value--;
+    }
   }
 
   @override
@@ -100,7 +93,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
           ),
           child: DexGlass(
             radius: 20,
-            // No liquid edge rim on the settings panel — it sits over the
+            // No liquid edge rim on the settings panel â€” it sits over the
             // dimmed home + drifting fog, and the moving specular read as a
             // "vibrating" edge light. Plain frost is stable.
             rim: false,
@@ -168,10 +161,12 @@ class _Header extends StatelessWidget {
             child: Text('Settings',
                 style: DexType.heading(color: DexColors.text)),
           ),
-          IconButton(
-            icon: const Icon(LucideIcons.x, size: 18),
-            color: DexColors.textDim,
-            onPressed: onClose,
+          GlassBadgeButton(
+            icon: LucideIcons.x,
+            onTap: onClose,
+            size: 32,
+            iconColor: DexColors.stateError,
+            glowColor: DexColors.stateError,
           ),
         ],
       ),
@@ -232,3 +227,4 @@ class _TabList extends StatelessWidget {
     );
   }
 }
+

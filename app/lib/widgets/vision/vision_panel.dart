@@ -42,7 +42,7 @@ class _VisionPanelState extends State<VisionPanel> {
                       icon: LucideIcons.x,
                       onTap: widget.onClose,
                       size: 32,
-                      iconColor: DexColors.textDim,
+                      iconColor: DexColors.stateError,
                       glowColor: DexColors.stateError,
                     ),
                   ],

@@ -70,8 +70,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _applyBrain() async {
     final key = _keyCtrl.text.trim();
-    if (key.isEmpty && !_state.hasBrainKey) {
-      setState(() => _applyError = 'Paste your Gemini API key to continue.');
+    final isGroq = _brainModel.startsWith('groq/');
+    if (key.isEmpty && !(isGroq ? (_state.groqKeyTail != null) : _state.hasBrainKey)) {
+      setState(() => _applyError = isGroq
+          ? 'Paste your Groq API key to continue.'
+          : 'Paste your Gemini API key to continue.');
       return;
     }
     setState(() {
@@ -84,7 +87,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       // no-ops on already-configured dev machines.
       await DexSetup.ensureBaseConfig();
       await DexSetup.registerBundledEngines();
-      if (key.isNotEmpty) await DexSetup.applyGeminiKey(key);
+      if (key.isNotEmpty) {
+        if (isGroq) {
+          await DexSetup.applyGroqKey(key);
+        } else {
+          await DexSetup.applyGeminiKey(key);
+        }
+      }
       await DexSetup.applyBrainModel(
         _brainModel,
         fallbacks: kBrainModels
@@ -114,6 +123,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const BoxConstraints(maxWidth: 560, maxHeight: 620),
                 child: DexGlass(
                   radius: 20,
+                  rim: true,
                   padding: const EdgeInsets.all(DexSpace.xl),
                   child: Column(
                       children: [
@@ -175,23 +185,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // ---- step 2: brain ----------------------------------------------------
 
   Widget _brain() {
+    final isGroq = _brainModel.startsWith('groq/');
+    final hasKey = isGroq ? (_state.groqKeyTail != null) : _state.hasBrainKey;
+    final subtitle = isGroq
+        ? (hasKey
+            ? 'A Groq key ending in …${_state.groqKeyTail} is already set. '
+                'Paste a new one to replace it, or continue.'
+            : 'Dex thinks with Groq. Paste your Groq API key (starts with "gsk_") — '
+                'resets per-minute, no daily limit.')
+        : (hasKey
+            ? 'A Gemini key ending in …${_state.geminiKeyTail} is already set. '
+                'Paste a new one to replace it, or continue.'
+            : 'Dex thinks with Google Gemini. One free key powers everything — '
+                'chat, desktop automation, and browsing.');
     return _StepShell(
       icon: LucideIcons.key_round,
       title: 'Connect the brain',
-      subtitle: _state.hasBrainKey
-          ? 'A Gemini key ending in …${_state.geminiKeyTail} is already set. '
-              'Paste a new one to replace it, or continue.'
-          : 'Dex thinks with Google Gemini. One free key powers everything — '
-              'chat, desktop automation, and browsing.',
+      subtitle: subtitle,
       children: [
         SecretField(
           controller: _keyCtrl,
-          hint: 'AIza…  /  AQ.…',
+          hint: isGroq ? 'gsk_…' : 'AIza…  /  AQ.…',
         ),
         const SizedBox(height: DexSpace.xs),
         _LinkRow(
-          label: "Don't have one? Get a free Gemini key",
-          url: 'https://aistudio.google.com/app/apikey',
+          label: isGroq
+              ? "Don't have one? Get a Groq key here"
+              : "Don't have one? Get a free Gemini key",
+          url: isGroq
+              ? 'https://console.groq.com/keys'
+              : 'https://aistudio.google.com/app/apikey',
         ),
         const SizedBox(height: DexSpace.lg),
         Row(
@@ -217,8 +240,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             _GhostButton(label: 'Back', onTap: () => _go(0)),
             const Spacer(),
             _PrimaryButton(
-              label: _applying ? 'Applying…' : 'Continue',
+              label: 'Continue',
               onTap: _applying ? null : _applyBrain,
+              busy: _applying,
             ),
           ],
         ),
@@ -547,24 +571,64 @@ class _CommandBox extends StatelessWidget {
 }
 
 class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({required this.label, required this.onTap});
+  const _PrimaryButton({required this.label, required this.onTap, this.busy = false});
   final String label;
   final VoidCallback? onTap;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: DexColors.accent,
-        foregroundColor: DexColors.bg,
-        minimumSize: const Size(0, 44),
-        padding: const EdgeInsets.symmetric(
-          horizontal: DexSpace.xl, vertical: DexSpace.md,
+    final enabled = onTap != null && !busy;
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: GestureDetector(
+        onTap: enabled ? onTap : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: DexSpace.xl),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: enabled
+                ? const LinearGradient(
+                    colors: [
+                      DexColors.accent,
+                      Color(0xFF8BA5FF),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: enabled ? null : DexColors.border,
+            boxShadow: enabled
+                ? [
+                    BoxShadow(
+                      color: DexColors.accent.withValues(alpha: 0.25),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: busy
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(DexColors.bg),
+                  ),
+                )
+              : Text(
+                  label,
+                  style: DexType.label(color: DexColors.bg).copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
         ),
-        shape: const RoundedRectangleBorder(borderRadius: DexRadius.rsm),
       ),
-      child: Text(label),
     );
   }
 }

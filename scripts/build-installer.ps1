@@ -134,11 +134,85 @@ sh.Run """" & node & """ """ & entry & """ gateway run --port 18789", 0, False
 '@
 Set-Content -Path (Join-Path $payload 'start-gateway.vbs') -Value $vbs -Encoding ASCII
 
+# ---- 4c. Generate payload.wxs to bypass 65k component limit ------------------
+Stage "Generating payload.wxs component groups"
+$wxsFile = Join-Path $repo 'installer\payload.wxs'
+$xml = [System.Text.StringBuilder]::new()
+$xml.AppendLine('<?xml version="1.0" encoding="UTF-8"?>')
+$xml.AppendLine('<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">')
+$xml.AppendLine('  <Fragment>')
+$xml.AppendLine('    <ComponentGroup Id="PayloadComponents">')
+
+$files = Get-ChildItem -Path $payload -Recurse -File
+$grouped = $files | Group-Object DirectoryName
+$compIndex = 0
+
+foreach ($group in $grouped) {
+    $dirPath = $group.Name
+    $relPath = ""
+    if ($dirPath -ne $payload) {
+        $relPath = $dirPath.Substring($payload.Length + 1)
+    }
+    
+    $guid = [Guid]::NewGuid().ToString()
+    $compIndex++
+    
+    $xml.Append("      <Component Id=`"cmp_$compIndex`" Directory=`"INSTALLFOLDER`"")
+    if ($relPath) {
+        $escapedRelPath = [System.Security.SecurityElement]::Escape($relPath)
+        $xml.Append(" Subdirectory=`"$escapedRelPath`"")
+    }
+    $xml.Append(" Guid=`"$guid`"")
+    $xml.AppendLine(">")
+
+    $isFirst = $true
+    foreach ($file in $group.Group) {
+        $sourcePath = $file.FullName
+        $relSource = "payload" + $sourcePath.Substring($payload.Length)
+        $escapedSource = [System.Security.SecurityElement]::Escape($relSource)
+        
+        $fileId = "file_$($compIndex)_$([Guid]::NewGuid().ToString().Replace('-', ''))"
+        
+        $xml.Append("        <File Id=`"$fileId`" Source=`"$escapedSource`"")
+        if ($isFirst) {
+            $xml.Append(" KeyPath=`"yes`"")
+            $isFirst = $false
+        }
+        $xml.AppendLine(" />")
+    }
+    $xml.AppendLine("      </Component>")
+}
+
+$xml.AppendLine('    </ComponentGroup>')
+$xml.AppendLine('  </Fragment>')
+$xml.AppendLine('</Wix>')
+
+[System.IO.File]::WriteAllText($wxsFile, $xml.ToString(), [System.Text.Encoding]::UTF8)
+Write-Host "WiX payload fragment written to $wxsFile with $compIndex components."
+
 # ---- 5. WiX build -------------------------------------------------------------
-Stage "Building Dex.msi (WiX v5)"
+Stage "Building Dex.msi (WiX)"
+$wixPath = "wix"
+if (-not (Get-Command wix -ErrorAction SilentlyContinue)) {
+    # Search in common locations
+    $wixSearch = Get-ChildItem -Path "C:\Program Files\WiX Toolset v*\bin\wix.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($wixSearch) {
+        $wixPath = $wixSearch.FullName
+        Write-Host "Found wix at: $wixPath"
+    } else {
+        $wixSearch = Get-ChildItem -Path "C:\Program Files (x86)\WiX Toolset v*\bin\wix.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($wixSearch) {
+            $wixPath = $wixSearch.FullName
+            Write-Host "Found wix at: $wixPath"
+        }
+    }
+}
+
 Push-Location (Join-Path $repo 'installer')
-wix build Dex.wxs -o Dex.msi
-if ($LASTEXITCODE -ne 0) { throw "wix build failed (dotnet tool install --global wix)" }
+# Accept OSMF EULA (required for WiX v7)
+& $wixPath eula accept wix7 2>$null | Out-Null
+& $wixPath build Dex.wxs payload.wxs -o Dex.msi
+if ($LASTEXITCODE -ne 0) { throw "wix build failed" }
 Pop-Location
 
 $msi = Join-Path $repo 'installer\Dex.msi'

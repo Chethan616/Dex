@@ -298,7 +298,7 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                           // overlay floats over a static desktop, so the full
                           // refraction + glow read cleanly without flicker.
                           useOwnLayer: true,
-                          quality: GlassQuality.premium,
+                          quality: GlassQuality.minimal,
                           shape: const LiquidRoundedSuperellipse(
                             borderRadius: 28,
                           ),
@@ -364,8 +364,8 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
                       // GlassMenu (teardrop morph) with the attach actions,
                       // the overlay you had before.
                       const SizedBox(width: 12),
-                      GlassMenu(
-                        quality: GlassQuality.premium,
+                      FogAwareGlassMenu(
+                        quality: GlassQuality.minimal,
                         menuWidth: 240,
                         settings: kDexMenuGlass,
                         triggerBuilder: (context, toggle) =>
@@ -574,7 +574,7 @@ class _SpotlightSuggestionChip extends StatelessWidget {
         iconColor: DexColors.accent,
         labelStyle: DexType.label(color: DexColors.text),
         useOwnLayer: true,
-        quality: GlassQuality.premium,
+        quality: GlassQuality.minimal,
         settings: kDexChipGlass,
       ),
     );

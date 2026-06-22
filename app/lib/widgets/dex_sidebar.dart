@@ -49,8 +49,8 @@ class DexSidebar extends StatefulWidget {
   final ValueChanged<RecentChatItem>? onSelectChat;
   final ValueChanged<ProfileMenuAction>? onProfileAction;
 
-  static const double _collapsedWidth = 72;
-  static const double _expandedWidth = 240;
+  static const double _collapsedWidth = 80;
+  static const double _expandedWidth = 280;
 
   @override
   State<DexSidebar> createState() => _DexSidebarState();
@@ -105,7 +105,10 @@ class _DexSidebarState extends State<DexSidebar>
       duration: const Duration(milliseconds: 160),
       curve: Curves.easeOutCubic,
       width: width,
-      decoration: const BoxDecoration(
+      margin: const EdgeInsets.all(DexSpace.md),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
         // Sidebar reads as a translucent panel sitting on the bg
         // gradient. Three-stop vertical fade with a brighter top
         // (catches the implied light source) settling into the deep
@@ -126,19 +129,9 @@ class _DexSidebarState extends State<DexSidebar>
           ],
           stops: <double>[0.0, 0.4, 1.0],
         ),
-        border: Border(
-          top: BorderSide(
-            color: Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.12),
-            width: 1,
-          ),
-          right: BorderSide(
-            // Sky-blue-tinted edge -- picks up DexSurface.bgGradient's
-            // sky-blue glow and refracts it where the rail meets the
-            // content. Pure-white would read as a flat hairline; the
-            // tint makes it feel alive.
-            color: Color.fromRGBO(0x6E, 0xA8, 0xFF, 0.18),
-            width: 1,
-          ),
+        border: Border.all(
+          color: const Color.fromRGBO(0x6E, 0xA8, 0xFF, 0.18),
+          width: 1,
         ),
       ),
       child: Column(

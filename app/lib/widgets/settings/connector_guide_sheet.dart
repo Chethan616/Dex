@@ -13,6 +13,8 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
 import '../dex_glass.dart';
+import '../menu_glass.dart';
+import '../glass_badge_button.dart';
 
 class ConnectorGuideSheet extends StatelessWidget {
   const ConnectorGuideSheet({
@@ -38,27 +40,26 @@ class ConnectorGuideSheet extends StatelessWidget {
     BuildContext context, {
     required String connectorId,
     required String title,
-  }) {
-    return showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Dismiss guide',
-      barrierColor: Colors.black.withValues(alpha: 0.4),
-      transitionDuration: DexMotion.dialog,
-      pageBuilder: (_, _, _) =>
-          ConnectorGuideSheet(connectorId: connectorId, title: title),
-      transitionBuilder: (ctx, anim, _, child) {
-        if (MediaQuery.of(ctx).disableAnimations) return child;
-        final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
-        return FadeTransition(
-          opacity: eased,
-          child: Transform.scale(
-            scale: 0.97 + 0.03 * eased.value,
-            child: child,
-          ),
-        );
-      },
-    );
+  }) async {
+    kGlassMenuOpenCount.value++;
+    try {
+      return await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: 'Dismiss guide',
+        barrierColor: Colors.black.withValues(alpha: 0.4),
+        transitionDuration: DexMotion.dialog,
+        pageBuilder: (_, _, _) =>
+            ConnectorGuideSheet(connectorId: connectorId, title: title),
+        transitionBuilder: (ctx, anim, _, child) {
+          // if (MediaQuery.of(ctx).disableAnimations) return child;
+          // final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
+          return DexMotion.buildDialogTransition(ctx, anim, child);
+        },
+      );
+    } finally {
+      kGlassMenuOpenCount.value--;
+    }
   }
 
   @override
@@ -82,10 +83,12 @@ class ConnectorGuideSheet extends StatelessWidget {
                             child: Text('Connect $title',
                                 style: DexType.heading(color: DexColors.text)),
                           ),
-                          IconButton(
-                            icon: const Icon(LucideIcons.x, size: 18),
-                            color: DexColors.textDim,
-                            onPressed: () => Navigator.of(context).maybePop(),
+                          GlassBadgeButton(
+                            icon: LucideIcons.x,
+                            onTap: () => Navigator.of(context).maybePop(),
+                            size: 32,
+                            iconColor: DexColors.stateError,
+                            glowColor: DexColors.stateError,
                           ),
                         ],
                       ),

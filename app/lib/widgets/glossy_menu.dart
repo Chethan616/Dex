@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'dex_glass.dart';
+import 'menu_glass.dart';
 
 /// Which side of the trigger button the menu should land on by default.
 /// The layout delegate can still flip the choice when the preferred
@@ -68,8 +69,10 @@ class GlossyMenu {
     required List<GlossyMenuEntry<T>> entries,
     double width = 260,
     MenuDropDirection prefer = MenuDropDirection.up,
-  }) {
-    return showGeneralDialog<T>(
+  }) async {
+    kGlassMenuOpenCount.value++;
+    try {
+      return await showGeneralDialog<T>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss menu',
@@ -86,28 +89,16 @@ class GlossyMenu {
       transitionBuilder: (ctx, anim, _, child) {
         final reduce = MediaQuery.of(ctx).disableAnimations;
         if (reduce) return child;
-        // Dampened decelerate -- same curve the dialogs use, so the
-        // whole popup family lands with one motion language. Fade
-        // + tiny 6px slide-down from the anchor + soft scale, no
-        // spring overshoot.
+        // Dampened decelerate curve for the fade. We omit the transform/scale
+        // because animating the clip/bounds of a BackdropFilter triggers
+        // severe shader compilation and frame drops on Skia.
         final eased = CurvedAnimation(parent: anim, curve: DexMotion.dampened);
-        return FadeTransition(
-          opacity: eased,
-          child: AnimatedBuilder(
-            animation: eased,
-            builder: (_, c) => Transform.translate(
-              offset: Offset(0, (1 - eased.value) * -6),
-              child: Transform.scale(
-                scale: 0.96 + 0.04 * eased.value,
-                alignment: Alignment.topLeft,
-                child: c,
-              ),
-            ),
-            child: child,
-          ),
-        );
+        return FadeTransition(opacity: eased, child: child);
       },
     );
+    } finally {
+      kGlassMenuOpenCount.value--;
+    }
   }
 }
 
@@ -218,6 +209,7 @@ class _GlossyMenuCard<T> extends StatelessWidget {
       type: MaterialType.transparency,
       child: DexGlass(
         radius: 14,
+        rim: false,
         // The parent CustomSingleChildLayout already pinned width and
         // capped maxHeight; SingleChildScrollView lets the column scroll
         // internally when entries exceed that cap.

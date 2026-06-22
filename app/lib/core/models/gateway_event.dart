@@ -22,6 +22,9 @@ enum GatewayEventKind {
   /// conversation.
   toolResult,
 
+  /// Gateway broadcasted an approval request.
+  approvalRequested,
+
   /// Error / aborted -- terminal.
   error,
   aborted,

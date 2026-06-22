@@ -101,3 +101,11 @@ graphify-out/
 
 # Codex scratch
 .codex/
+
+# --- installer build outputs ---
+installer/payload/
+installer/*.msi
+installer/*.wixpdb
+installer/*.wixobj
+installer/*.wixlib
+installer/payload.wxs

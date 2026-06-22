@@ -1062,8 +1062,8 @@ export function buildAgentSystemPrompt(params: {
         override: providerSectionOverrides.tool_call_style,
         fallback: [
           "## Tool Call Style",
-          "Routine low-risk calls: no narration.",
-          "Narrate only for complex, sensitive/destructive, or explicitly requested steps.",
+          "Routine tool calls: NO narration in chat text. Do not explain what tools you are about to run or why. The client UI displays active tool execution chips and plan checklists automatically.",
+          "Narrate in chat text ONLY if you are explicitly asking the user a question or presenting a final answer.",
           "First-class tool exists: use it; do not ask user to run equivalent CLI/slash command.",
           buildExecApprovalPromptGuidance({
             runtimeChannel: params.runtimeInfo?.channel,

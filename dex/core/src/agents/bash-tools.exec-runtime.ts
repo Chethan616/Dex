@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs/promises";
 import { normalizeStringEntries } from "@dexagent/normalization-core/string-normalization";
 import { emitDiagnosticEvent } from "../infra/diagnostic-events.js";
 import {
@@ -54,7 +55,7 @@ import {
 } from "./bash-tools.shared.js";
 import { buildCursorPositionResponse, stripDsrRequests } from "./pty-dsr.js";
 import { maybeWrapCommandWithShellSnapshot } from "./shell-snapshot.js";
-import { getShellConfig, sanitizeBinaryOutput } from "./shell-utils.js";
+import { getShellConfig, resolvePowerShellPath, sanitizeBinaryOutput } from "./shell-utils.js";
 
 export { execSchema } from "./bash-tools.schemas.js";
 
@@ -663,6 +664,7 @@ export async function runExecProcess(opts: {
   notifyDeliveryContext?: DeliveryContext;
   timeoutSec: number | null;
   onUpdate?: (partialResult: AgentToolResult<ExecToolDetails>) => void;
+  elevated?: boolean;
 }): Promise<ExecProcessHandle> {
   const startedAt = Date.now();
   const sessionId = createSessionSlug();
@@ -789,6 +791,38 @@ export async function runExecProcess(opts: {
         env: NodeJS.ProcessEnv;
         stdinMode: "pipe-open";
       } = await (async () => {
+    const isWindowsElevated = process.platform === "win32" && opts.elevated === true;
+    if (isWindowsElevated) {
+      const elevatedDir = path.join(opts.workdir, ".dex-elevated");
+      await fs.mkdir(elevatedDir, { recursive: true });
+      const scriptPath = path.join(elevatedDir, `run-${sessionId}.ps1`);
+      const logFilePath = path.join(elevatedDir, `output-${sessionId}.log`);
+      const exitFilePath = path.join(elevatedDir, `exit-${sessionId}.txt`);
+      const scriptContent = `$OutputEncoding = [System.Text.Encoding]::UTF8
+Set-Location -LiteralPath '${opts.workdir.replace(/'/g, "''")}'
+& {
+${Object.entries(shellRuntimeEnv)
+  .filter(([key]) => !key.includes("="))
+  .map(([key, val]) => `  \${env:${key}} = '${val.replace(/'/g, "''")}'`)
+  .join("\n")}
+  & {
+    ${execCommand}
+  }
+} *>&1 | Out-File -LiteralPath '${logFilePath.replace(/'/g, "''")}' -Encoding utf8
+$SiblingSuccess = $?
+$exitCode = if ($LASTEXITCODE -ne $null) { $LASTEXITCODE } else { if ($SiblingSuccess) { 0 } else { 1 } }
+$exitCode | Out-File -LiteralPath '${exitFilePath.replace(/'/g, "''")}' -Encoding utf8
+`;
+      await fs.writeFile(scriptPath, scriptContent, "utf8");
+      const pwsh = resolvePowerShellPath();
+      const runCommandStr = `Start-Process powershell -Verb RunAs -Wait -ArgumentList @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', '${scriptPath.replace(/'/g, "''")}')`;
+      return {
+        mode: "child" as const,
+        argv: [pwsh, "-NoProfile", "-NonInteractive", "-Command", runCommandStr],
+        env: process.env,
+        stdinMode: "pipe-closed" as const,
+      };
+    }
     if (opts.sandbox) {
       const backendExecSpec = await opts.sandbox.buildExecSpec?.({
         command: execCommand,
@@ -953,6 +987,29 @@ export async function runExecProcess(opts: {
   session.stdin = managedRun.stdin;
   session.pid = managedRun.pid;
 
+  const isWindowsElevated = process.platform === "win32" && opts.elevated === true;
+  let lastSize = 0;
+  let tailInterval: NodeJS.Timeout | undefined;
+  if (isWindowsElevated) {
+    const logFilePath = path.join(opts.workdir, ".dex-elevated", `output-${sessionId}.log`);
+    tailInterval = setInterval(async () => {
+      try {
+        const stat = await fs.stat(logFilePath);
+        if (stat.size > lastSize) {
+          const fd = await fs.open(logFilePath, "r");
+          const buffer = Buffer.alloc(stat.size - lastSize);
+          await fd.read(buffer, 0, stat.size - lastSize, lastSize);
+          await fd.close();
+          const chunk = buffer.toString("utf8").replace(/^\uFEFF/, "");
+          handleStdout(chunk);
+          lastSize = stat.size;
+        }
+      } catch (err) {
+        // Ignore
+      }
+    }, 200);
+  }
+
   const promise = managedRun
     .wait()
     .then(async (exit): Promise<ExecProcessOutcome> => {
@@ -961,15 +1018,62 @@ export async function runExecProcess(opts: {
       // the `session.exited` guard before it flips to true.
       updatesDisabled = true;
 
+      if (tailInterval) {
+        clearInterval(tailInterval);
+      }
+
+      // Read final stdout chunk if any remains
+      if (isWindowsElevated) {
+        const logFilePath = path.join(opts.workdir, ".dex-elevated", `output-${sessionId}.log`);
+        try {
+          const stat = await fs.stat(logFilePath);
+          if (stat.size > lastSize) {
+            const fd = await fs.open(logFilePath, "r");
+            const buffer = Buffer.alloc(stat.size - lastSize);
+            await fd.read(buffer, 0, stat.size - lastSize, lastSize);
+            await fd.close();
+            const chunk = buffer.toString("utf8").replace(/^\uFEFF/, "");
+            handleStdout(chunk);
+          }
+        } catch {
+          // Ignore
+        }
+      }
+
+      let exitCode = exit.exitCode;
+      if (isWindowsElevated) {
+        const exitFilePath = path.join(opts.workdir, ".dex-elevated", `exit-${sessionId}.txt`);
+        try {
+          const exitContent = await fs.readFile(exitFilePath, "utf8");
+          const parsedExit = parseInt(exitContent.trim(), 10);
+          if (!isNaN(parsedExit)) {
+            exitCode = parsedExit;
+          }
+        } catch {
+          // Ignore
+        }
+
+        // Clean up temp files
+        const elevatedDir = path.join(opts.workdir, ".dex-elevated");
+        const scriptPath = path.join(elevatedDir, `run-${sessionId}.ps1`);
+        const logFilePath = path.join(elevatedDir, `output-${sessionId}.log`);
+        await fs.rm(scriptPath, { force: true }).catch(() => {});
+        await fs.rm(logFilePath, { force: true }).catch(() => {});
+        await fs.rm(exitFilePath, { force: true }).catch(() => {});
+      }
+
       const durationMs = Date.now() - startedAt;
       const outcome = buildExecExitOutcome({
-        exit,
+        exit: {
+          ...exit,
+          exitCode,
+        },
         aggregated: session.aggregated.trim(),
         durationMs,
         timeoutSec: opts.timeoutSec,
       });
 
-      markExited(session, exit.exitCode, exit.exitSignal, outcome.status, exit.reason);
+      markExited(session, exitCode, exit.exitSignal, outcome.status, exit.reason);
       maybeNotifyOnExit(session, outcome.status);
       if (!session.child && session.stdin) {
         session.stdin.destroyed = true;
@@ -977,7 +1081,7 @@ export async function runExecProcess(opts: {
       if (opts.sandbox?.finalizeExec) {
         await opts.sandbox.finalizeExec({
           status: outcome.status,
-          exitCode: exit.exitCode ?? null,
+          exitCode: exitCode ?? null,
           timedOut: exit.timedOut,
           token: sandboxFinalizeToken,
         });
@@ -991,8 +1095,21 @@ export async function runExecProcess(opts: {
       });
       return outcome;
     })
-    .catch((err: unknown): ExecProcessOutcome => {
+    .catch(async (err: unknown): Promise<ExecProcessOutcome> => {
       updatesDisabled = true;
+      if (tailInterval) {
+        clearInterval(tailInterval);
+      }
+      if (isWindowsElevated) {
+        // Clean up temp files
+        const elevatedDir = path.join(opts.workdir, ".dex-elevated");
+        const scriptPath = path.join(elevatedDir, `run-${sessionId}.ps1`);
+        const logFilePath = path.join(elevatedDir, `output-${sessionId}.log`);
+        const exitFilePath = path.join(elevatedDir, `exit-${sessionId}.txt`);
+        await fs.rm(scriptPath, { force: true }).catch(() => {});
+        await fs.rm(logFilePath, { force: true }).catch(() => {});
+        await fs.rm(exitFilePath, { force: true }).catch(() => {});
+      }
       markExited(session, null, null, "failed");
       maybeNotifyOnExit(session, "failed");
       const outcome = buildExecRuntimeErrorOutcome({
