@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Dex installer (WiX v5). Per-user MSI: no admin prompt, installs to
+  %LocalAppData%\Programs\Dex with a Start Menu shortcut.
+
+  The payload tree is assembled by scripts\build-installer.ps1 into
+  installer\payload\ :
+    payload\                      Flutter release build (dex.exe, data\, *.dll)
+    payload\runtime\node\         portable Node 24 (node.exe + lib)
+    payload\runtime\dexagent\     dexagent package (dist\, dex.mjs, node_modules\,
+                                  drivers\ — MCP servers ship INSIDE the package)
+    payload\runtime\vendor\UFO\   UFO² source + prebuilt .venv
+    payload\runtime\vendor\browser-use\  browser-use source + prebuilt .venv
+
+  Dex.exe resolves runtime\node + runtime\dexagent FIRST (see
+  app/lib/core/gateway_process.dart), so the installed app spawns its
+  own gateway with zero external installs and zero terminals.
+
+  Gateway auto-start at logon: a shortcut in the user's Startup folder
+  launches payload\start-gateway.vbs (emitted by build-installer.ps1),
+  a windowless wrapper that runs `node dex.mjs gateway run`. So the
+  gateway -- with its built-in UFO²/browser-use engines -- is up at
+  logon and channels (WhatsApp etc.) keep listening before the app is
+  even opened. The app's probe-then-spawn (gateway_process.dart) finds
+  the already-running gateway and just connects; if the Startup task
+  didn't run, the app spawns one. Either way: no terminal. Uninstall
+  removes the shortcut with its component.
+
+  Build: dotnet tool install -g wix   (once)
+         scripts\build-installer.ps1  (assembles payload + runs wix)
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+      Name="Dex"
+      Manufacturer="Chethan"
+      Version="1.0.0"
+      UpgradeCode="7e1b62cf-1f4f-4a3e-9d3a-dex000000001"
+      Scope="perUser"
+      Compressed="yes">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Dex is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="Dex" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="DexMenuFolder" Name="Dex" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="StartupFolder" />
+
+    <!-- WiX v5 wildcard harvest of the staged payload tree. -->
+    <Files Include="payload\**" Directory="INSTALLFOLDER" />
+
+    <Component Id="DexShortcuts" Directory="DexMenuFolder">
+      <Shortcut Id="DexStartMenu"
+                Name="Dex"
+                Description="A calm cockpit for commanding agents you can trust"
+                Target="[INSTALLFOLDER]dex.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="RemoveDexMenuFolder" On="uninstall" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\com.chethan616\dex"
+                     Name="installed"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+
+    <!-- Auto-start the gateway at logon via a Startup-folder shortcut to
+         the windowless launcher. wscript runs start-gateway.vbs hidden so
+         there's no console. Removed on uninstall with this component. -->
+    <Component Id="DexGatewayAutostart" Directory="StartupFolder">
+      <Shortcut Id="DexGatewayStartup"
+                Name="Dex Gateway"
+                Description="Starts the Dex gateway (built-in UFO² + browser-use) at logon"
+                Target="[System64Folder]wscript.exe"
+                Arguments="&quot;[INSTALLFOLDER]start-gateway.vbs&quot;"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="RemoveDexStartup" On="uninstall" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\com.chethan616\dex"
+                     Name="autostart"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+  </Package>
+</Wix>

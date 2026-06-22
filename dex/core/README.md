@@ -33,7 +33,15 @@ dex gateway --port 18789
 
 ## What's in this package
 
-The `dexagent` npm package ships the Dex gateway runtime: sessions, channels, skills, memory, cron, built-in shell + filesystem tools, and the WebSocket / HTTP gateway clients talk to. The Flutter app (the user-facing UI), the Windows/browser MCP drivers (`run_desktop_task` / `run_browser_task`), and the vendored UFO² / browser-use Python runtimes live in the **parent project** at [github.com/Chethan616/Dex](https://github.com/Chethan616/Dex).
+The `dexagent` npm package ships the Dex gateway runtime — sessions, channels, skills, memory, cron, built-in shell + filesystem tools, the WebSocket / HTTP gateway — **and its own hands**: the Windows-desktop (UFO²) and browser (browser-use) MCP drivers register as **built-in engines** automatically, no `mcp.servers` config needed. That self-contained integration is what makes Dex more than an agent gateway.
+
+What the package does *not* carry is the heavy Python runtimes those drivers need (UFO² + browser-use + Playwright Chromium are ~1 GB and machine-specific — too large for an npm tarball). The engines resolve their Python venvs, in order, from:
+
+1. `DEX_UFO_PYTHON` / `DEX_BROWSER_PYTHON` env overrides;
+2. a sibling `vendor/<engine>/.venv` (the dev repo and the MSI bundle layout);
+3. `~/.dex/engines/<engine>/.venv` (a local venv setup home).
+
+So there are two ways to get working hands: install the **all-in-one Dex installer** (`.msi`, bundles prebuilt venvs — zero setup), or `npm i -g dexagent` for the brain + drivers and provide the venvs via one of the paths above. The Flutter app (the user-facing UI) lives in the **parent project** at [github.com/Chethan616/Dex](https://github.com/Chethan616/Dex).
 
 ## Architecture
 

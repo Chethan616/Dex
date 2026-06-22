@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadMergedBundleMcpConfig, toCliBundleMcpServerConfig } from "./bundle-mcp-config.js";
 
 const mocks = vi.hoisted(() => ({
@@ -13,10 +13,18 @@ const mocks = vi.hoisted(() => ({
     },
     diagnostics: [],
   },
+  builtinEngines: {
+    servers: {} as Record<string, unknown>,
+    statuses: [] as unknown[],
+  },
 }));
 
 vi.mock("../plugins/bundle-mcp.js", () => ({
   loadEnabledBundleMcpConfig: () => mocks.bundleMcp,
+}));
+
+vi.mock("../engines/builtin-engines.js", () => ({
+  resolveBuiltinEngineServers: () => mocks.builtinEngines,
 }));
 
 describe("loadMergedBundleMcpConfig", () => {
@@ -95,5 +103,64 @@ describe("loadMergedBundleMcpConfig", () => {
     });
 
     expect(merged.config.mcpServers).not.toHaveProperty("bundleProbe");
+  });
+
+  describe("builtin engines layer", () => {
+    afterEach(() => {
+      mocks.builtinEngines.servers = {};
+    });
+
+    it("registers builtin engines with no user mcp config at all", () => {
+      mocks.builtinEngines.servers = {
+        "windows-desktop-control": { command: "python", args: ["wdc.py"] },
+        "browser-control": { command: "python", args: ["bc.py"] },
+      };
+
+      const merged = loadMergedBundleMcpConfig({ workspaceDir: "/workspace" });
+
+      expect(merged.config.mcpServers).toHaveProperty("windows-desktop-control");
+      expect(merged.config.mcpServers).toHaveProperty("browser-control");
+    });
+
+    it("lets a same-name user mcp.servers entry override the builtin engine", () => {
+      mocks.builtinEngines.servers = {
+        "browser-control": { command: "python", args: ["builtin.py"] },
+      };
+
+      const merged = loadMergedBundleMcpConfig({
+        workspaceDir: "/workspace",
+        cfg: {
+          mcp: {
+            servers: {
+              "browser-control": { command: "node", args: ["custom.mjs"] },
+            },
+          },
+        },
+      });
+
+      expect(merged.config.mcpServers["browser-control"]).toEqual({
+        command: "node",
+        args: ["custom.mjs"],
+      });
+    });
+
+    it("lets a disabled user entry tombstone a builtin engine", () => {
+      mocks.builtinEngines.servers = {
+        "windows-desktop-control": { command: "python", args: ["wdc.py"] },
+      };
+
+      const merged = loadMergedBundleMcpConfig({
+        workspaceDir: "/workspace",
+        cfg: {
+          mcp: {
+            servers: {
+              "windows-desktop-control": { enabled: false },
+            },
+          },
+        },
+      });
+
+      expect(merged.config.mcpServers).not.toHaveProperty("windows-desktop-control");
+    });
   });
 });

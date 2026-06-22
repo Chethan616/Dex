@@ -62,12 +62,12 @@ try {
     }
 
     # 2. MCP driver server -- Phase 3 must be complete. After Phase B.9 the
-    # MCP glue lives under dex/drivers/.
+    # MCP glue lives under dex/core/drivers/.
     if (-not $NoMcp) {
-        $driverDir = Join-Path $repoRoot 'dex\drivers\windows-desktop-control'
+        $driverDir = Join-Path $repoRoot 'dex\core\drivers\windows-desktop-control'
         $serverPy = Join-Path $driverDir 'server.py'
         if (-not (Test-Path $serverPy)) {
-            Write-Host "[skip] MCP server: dex\drivers\windows-desktop-control\server.py not found (Phase 3 incomplete)" -ForegroundColor DarkGray
+            Write-Host "[skip] MCP server: dex\core\drivers\windows-desktop-control\server.py not found (Phase 3 incomplete)" -ForegroundColor DarkGray
         } else {
             # MCP servers usually launch over stdio from the gateway host.
             # If the gateway is configured to spawn this server itself, we do

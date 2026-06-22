@@ -1,4 +1,3 @@
-import { formatCliCommand } from "../cli/command-format.js";
 import type { PairingChannel } from "./pairing-store.types.js";
 
 export function buildPairingReply(params: {
@@ -6,20 +5,19 @@ export function buildPairingReply(params: {
   idLine: string;
   code: string;
 }): string {
-  const { channel, idLine, code } = params;
-  const approveCommand = formatCliCommand(`dex pairing approve ${channel} ${code}`);
+  // Sent to whoever messages Dex before they're paired. Keep it human and
+  // Dex-branded -- no upstream product name, and no developer CLI dumped on
+  // a stranger. The owner approves the code on their side (Dex app).
+  const { idLine, code } = params;
   return [
-    "OpenClaw: access not configured.",
+    "Hi! This is Dex, a personal assistant — it's not connected to you yet.",
     "",
     idLine,
-    "Pairing code:",
+    "Your pairing code:",
     "```",
     code,
     "```",
     "",
-    "Ask the bot owner to approve with:",
-    "```",
-    approveCommand,
-    "```",
+    "Share this code with Dex's owner to get access.",
   ].join("\n");
 }

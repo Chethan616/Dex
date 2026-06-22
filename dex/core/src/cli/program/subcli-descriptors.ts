@@ -168,6 +168,12 @@ const subCliCommandCatalog = defineCommandDescriptorCatalog([
     hasSubcommands: true,
   },
   {
+    name: "engines",
+    description: "Set up and inspect the built-in automation engines (UFO² + browser-use)",
+    hasSubcommands: true,
+    parentDefaultHelp: true,
+  },
+  {
     name: "update",
     description: "Update Dex and inspect update channel status",
     hasSubcommands: true,

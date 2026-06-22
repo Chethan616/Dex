@@ -1,6 +1,6 @@
 {
   "name": "dexagent",
-  "version": "2026.6.20",
+  "version": "2026.6.23",
   "description": "Dex — a calm cockpit for commanding agents you can trust.",
   "publishConfig": {
     "access": "public"
@@ -42,6 +42,7 @@
     "pnpm-workspace.yaml",
     "README.md",
     "THIRD_PARTY_NOTICES.md",
+    "drivers/",
     "dist/",
     "!dist/.buildstamp",
     "!dist/.runtime-postbuildstamp",

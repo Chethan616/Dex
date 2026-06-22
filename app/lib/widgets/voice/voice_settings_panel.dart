@@ -1,13 +1,13 @@
 // Floating voice settings panel: language + voice grid. Dex ships its own
 // voice name set (no reuse of any other product's voice catalogue).
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../theme/tokens.dart';
+import '../dex_glass.dart';
 import '../glossy_dropdown.dart';
-import '../refractive_edge.dart';
 
 class VoiceSettingsPanel extends StatefulWidget {
   const VoiceSettingsPanel({super.key, required this.onClose});
@@ -28,28 +28,33 @@ class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 320,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          borderRadius: DexRadius.rmd,
-          boxShadow: DexSurface.glossyShadow,
-        ),
-        child: RefractiveEdge(
-          radius: DexRadius.rmd,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: DexSurface.blurSigma,
-              sigmaY: DexSurface.blurSigma,
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: DexSurface.glossyGradient(),
-              ),
-              padding: const EdgeInsets.all(DexSpace.lg),
-              child: Column(
+      width: 360,
+      child: DexGlass(
+        radius: 14,
+        padding: const EdgeInsets.all(DexSpace.lg),
+        child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text('Voice settings',
+                          style: DexType.heading(color: DexColors.text)),
+                    ),
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GlassIconButton(
+                        icon: const Icon(LucideIcons.x,
+                            size: 16, color: DexColors.textDim),
+                        onPressed: widget.onClose,
+                        size: 30,
+                        useOwnLayer: true,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DexSpace.lg),
                 Row(
                   children: [
                     Expanded(
@@ -69,12 +74,9 @@ class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
                 const SizedBox(height: DexSpace.lg),
                 Text('Voice', style: DexType.label(color: DexColors.text)),
                 const SizedBox(height: DexSpace.sm),
-                GridView.count(
-                  shrinkWrap: true,
-                  crossAxisCount: 2,
-                  mainAxisSpacing: DexSpace.sm,
-                  crossAxisSpacing: DexSpace.sm,
-                  childAspectRatio: 2.6,
+                Wrap(
+                  spacing: DexSpace.sm,
+                  runSpacing: DexSpace.sm,
                   children: VoiceSettingsPanel.voices
                       .map((v) => _VoiceTile(
                             label: v,
@@ -86,19 +88,8 @@ class _VoiceSettingsPanelState extends State<VoiceSettingsPanel> {
                 const SizedBox(height: DexSpace.md),
                 Text('Your conversation resets when you change voices.',
                     style: DexType.caption(color: DexColors.textFaint)),
-                const SizedBox(height: DexSpace.md),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: widget.onClose,
-                    child: const Text('Close'),
-                  ),
-                ),
               ],
             ),
-          ),
-        ),
-        ),
       ),
     );
   }
@@ -117,23 +108,18 @@ class _VoiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: DexRadius.rsm,
-      child: Container(
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? DexColors.accentQuiet : DexColors.surface,
-          borderRadius: DexRadius.rsm,
-          border: Border.all(
-            color: selected ? DexColors.accent : DexColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: DexType.label(
-            color: selected ? DexColors.accent : DexColors.text,
-          ),
+    // Selectable voice options as liquid-glass chips (their own press
+    // physics + frosted surface). MouseRegion adds the hand cursor —
+    // GlassChip doesn't set one itself.
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GlassChip(
+        label: label,
+        selected: selected,
+        selectedColor: DexColors.accent,
+        onTap: onTap,
+        labelStyle: DexType.label(
+          color: selected ? DexColors.accent : DexColors.text,
         ),
       ),
     );

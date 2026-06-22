@@ -8,13 +8,19 @@ Status legend: `✓ verified` · `△ pending` (filled in during the phase that 
 
 ## Vendored repositories
 
+> The repo itself contains only the Dex agent (`dex/`) and the Flutter app
+> (`app/`). The automation **engines** (UFO² + browser-use) are no longer
+> vendored — they're fetched/built into `~/.dex/engines` by `dex engines
+> setup`, or bundled prebuilt in the MSI. agent-zero was reference-only;
+> its step-row UI + mode concepts were ported into Dex and its source was
+> removed (2026-06-13).
+
 | Component | License | SPDX | Source | Status |
 |---|---|---|---|---|
 | **Dex core** (forked from OpenClaw, see `dex/core/HERITAGE.md`) | MIT | `MIT` | https://github.com/openclaw/openclaw — heritage commit `7074cf8e23c1f64362c4f8c4bf32971ca94d5221`, forked 2026-06-04 | ✓ MIT preserved in `dex/core/LICENSE`; original per-file copyright headers intact per MIT |
-| Microsoft UFO² | MIT (per README badge) | `MIT` | https://github.com/microsoft/UFO | △ pending — confirm in Phase 2 by reading `vendor/UFO/LICENSE` |
-| browser-use | MIT (per manifest.json) | `MIT` | https://github.com/browser-use/browser-use | △ pending — confirm by reading `vendor/browser-use/LICENSE` |
-| Playwright (transitive of browser-use) | Apache-2.0 | `Apache-2.0` | https://github.com/microsoft/playwright | △ pending |
-| agent-zero (UI/UX + prompt-architecture reference; concepts ported into Dex step rows + modes) | MIT (© Agent Zero, s.r.o.) | `MIT` | https://github.com/agent0ai/agent-zero — pinned `f9d8167a0004632ea7d8b37f585f392c39865919`, cloned 2026-06-11 | ✓ confirmed in `vendor/agent-zero/LICENSE` |
+| Microsoft UFO² | MIT (per README badge) | `MIT` | https://github.com/microsoft/UFO | Runtime engine — NOT vendored in the repo. Fetched by `dex engines setup` (git clone) or bundled prebuilt in the MSI. MIT attribution travels with the bundled copy. |
+| browser-use | MIT (per manifest.json) | `MIT` | https://github.com/browser-use/browser-use | Runtime engine — NOT vendored. pip-installed into the engine venv by `dex engines setup`; bundled prebuilt in the MSI. |
+| Playwright (transitive of browser-use) | Apache-2.0 | `Apache-2.0` | https://github.com/microsoft/playwright | Installed into the browser-use venv (`playwright install chromium`). |
 
 ### External `@openclaw/*` npm dependencies (preserved upstream, NOT rebranded)
 

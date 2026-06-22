@@ -21,14 +21,25 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'core/account.dart';
+import 'core/dex_prefs.dart';
+import 'core/dex_setup.dart';
 import 'core/gateway_client.dart';
+import 'core/gateway_process.dart';
+import 'core/log.dart';
+import 'core/onboarding_request.dart';
 import 'core/state/conversation_store.dart';
 import 'platform/win/tray.dart';
 import 'screens/home_desktop.dart';
+import 'screens/login_screen.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/splash_screen.dart';
 import 'spotlight_window.dart';
 import 'theme/theme.dart';
+import 'widgets/composer/slash_commands.dart';
 
 /// IPC channel name used by the Spotlight sub-window to send the user's
 /// prompt back to the main window's ConversationStore.
@@ -40,9 +51,18 @@ final GlobalKey<NavigatorState> dexNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Route uncaught framework + zone errors into the in-app Diagnostics
+  // panel so crashes are visible without a console.
+  DexLog.installGlobalHandlers();
   SystemChrome.setApplicationSwitcherDescription(
     const ApplicationSwitcherDescription(label: 'Dex'),
   );
+
+  // Pre-warm the liquid-glass shaders before the first frame (both the
+  // main window and the spotlight sub-window paths run through here, so
+  // both get warm shaders and no white flash). Non-critical: it no-ops on
+  // renderers without shader-filter support.
+  await LiquidGlassWidgets.initialize();
 
   // desktop_multi_window routes every launch through this same main().
   // The current window's `arguments` tells us which one we are.
@@ -53,6 +73,10 @@ Future<void> main() async {
   }
 
   // ---------- MAIN WINDOW ----------
+
+  // Load UI preferences (theme, hotkey, autostart, ...) before the first
+  // frame so the app opens in the user's chosen theme with no flash.
+  await DexPrefs.init();
 
   // Window + tray init on Windows (no-op on other platforms for now;
   // macOS / Linux land in v1.3 platform abstraction).
@@ -66,11 +90,20 @@ Future<void> main() async {
     await DexTray.instance.init();
   }
 
-  // Read gateway URL + auth token from ~\.dex\openclaw.json (the filename
-  // rename to dex.json ships in v1.4); see GatewayConfig.fromLocalConfig
-  // for the one-cycle ~/.openclaw/ fallback.
-  final client = GatewayClient(GatewayConfig.fromLocalConfig());
-  unawaited(client.connect());
+  // Read gateway URL + auth token from ~\.dex\dex.json; see
+  // GatewayConfig.fromLocalConfig for the legacy-filename fallbacks.
+  final gatewayConfig = GatewayConfig.fromLocalConfig();
+  final client = GatewayClient(gatewayConfig);
+  // First line in Diagnostics so the panel is never empty: states the
+  // target + whether we have a token, the two things that decide whether
+  // a connection can even be attempted.
+  DexLog.i('app',
+      'Dex started — gateway ${gatewayConfig.url}, token ${gatewayConfig.token?.isNotEmpty == true ? 'present' : 'MISSING (run setup)'}');
+  // Dex owns its brain: when no gateway is listening, spawn the bundled
+  // (or npm-installed) dexagent runtime DETACHED -- the user never
+  // opens a terminal. Connection proceeds either way; the banner
+  // explains if both paths fail.
+  unawaited(GatewayManager.ensureRunning().then((_) => client.connect()));
 
   final store = ConversationStore(client);
 
@@ -88,17 +121,42 @@ Future<void> main() async {
     return null;
   });
 
-  if (Platform.isWindows) {
-    await _registerSpotlightHotkey();
-  }
+  await registerSpotlightHotkey();
 
-  runApp(DexApp(store: store));
+  // Wrap the whole app in the liquid-glass infrastructure so every Glass*
+  // widget inherits app-wide defaults + adaptive quality. Dark/light glass
+  // variants follow the platform brightness.
+  runApp(LiquidGlassWidgets.wrap(
+    adaptiveQuality: true,
+    theme: const GlassThemeData(),
+    child: DexApp(store: store),
+  ));
 }
 
 Future<void> _handleSpotlightPrompt(
   ConversationStore store,
   String text,
 ) async {
+  // A slash command from the spotlight runs in the main window (it owns
+  // the navigator + dialogs), then we surface that window.
+  if (SlashCommands.looksLikeCommand(text)) {
+    if (Platform.isWindows) await DexTray.instance.showWindow();
+    // Re-read the navigator context AFTER surfacing the window so it's
+    // current; null only if the app has no live route yet.
+    final ctx = dexNavigatorKey.currentContext;
+    if (ctx != null && ctx.mounted) {
+      await SlashCommands.handle(
+        SlashContext(
+          context: ctx,
+          sendMessage: store.sendHumanMessage,
+          onStop: store.stop,
+          onClear: store.clearMessages,
+        ),
+        text,
+      );
+    }
+    return;
+  }
   // Push the message into the store FIRST. sendHumanMessage's
   // synchronous prefix (append + state flip + notifyListeners) runs
   // before any await, so by the time we yield, the home pane has
@@ -151,19 +209,20 @@ Future<void> _summonSpotlight() async {
   }
 }
 
-Future<void> _registerSpotlightHotkey() async {
+/// Register (or clear) the global summon hotkey from the saved pref.
+/// Called at startup and again whenever Settings changes the choice, so
+/// the binding is always live. "None" leaves no system hotkey registered.
+Future<void> registerSpotlightHotkey() async {
+  if (!Platform.isWindows) return;
   try {
     await hotKeyManager.unregisterAll();
-    final hotKey = HotKey(
-      key: PhysicalKeyboardKey.keyK,
-      modifiers: [HotKeyModifier.control],
-      scope: HotKeyScope.system,
-    );
+    final binding = _hotKeyFor(DexPrefs.hotkey);
+    if (binding == null) return; // "None" -- nothing registered.
     await hotKeyManager.register(
-      hotKey,
+      binding,
       keyDownHandler: (_) async {
         // When the main window is already focused, the in-app
-        // DexComposer Shortcut handles Ctrl+K -- it focuses the
+        // DexComposer Shortcut handles the summon key -- it focuses the
         // docked composer. We no-op the system hotkey in that case so
         // the user isn't punished with a modal stealing focus.
         if (await windowManager.isFocused()) return;
@@ -174,6 +233,20 @@ Future<void> _registerSpotlightHotkey() async {
     debugPrint('[dex] spotlight hotkey registration failed: $e\n$st');
   }
 }
+
+HotKey? _hotKeyFor(String label) => switch (label) {
+      'Ctrl+K' => HotKey(
+          key: PhysicalKeyboardKey.keyK,
+          modifiers: [HotKeyModifier.control],
+          scope: HotKeyScope.system,
+        ),
+      'Alt+Space' => HotKey(
+          key: PhysicalKeyboardKey.space,
+          modifiers: [HotKeyModifier.alt],
+          scope: HotKeyScope.system,
+        ),
+      _ => null, // "None"
+    };
 
 void unawaited(Future<void> _) {}
 
@@ -211,16 +284,53 @@ class DexApp extends StatefulWidget {
 }
 
 class _DexAppState extends State<DexApp> with WindowListener {
+  /// Launch routing, in order:
+  ///   1. signed out            -> LoginScreen (identity is local-only
+  ///                               for now; the flow exists for future
+  ///                               auth to slot into)
+  ///   2. engine/key missing    -> OnboardingScreen
+  ///   3. otherwise             -> the cockpit
+  /// `null` = still reading prefs (one frame of living background).
+  bool? _signedIn;
+  late bool _needsOnboarding;
+  bool _onboardSeen = true;
+
+  // Splash holds the first ~2.2s so the off-screen warm strip compiles the
+  // glass shaders before the cockpit paints — smooth on the very first use.
+  bool _splashDone = false;
+
   @override
   void initState() {
     super.initState();
+    _needsOnboarding = DexSetup.read().needsOnboarding;
+    Future<void>.delayed(const Duration(milliseconds: 2200), () {
+      if (mounted) setState(() => _splashDone = true);
+    });
+    DexAccount.load().then((a) {
+      if (mounted) setState(() => _signedIn = a.signedIn);
+    });
+    DexAccount.onboardingSeen().then((seen) {
+      if (mounted) setState(() => _onboardSeen = seen);
+    });
+    // "Run setup again" from Settings flips this notifier.
+    dexOnboardingRequested.addListener(_onOnboardingRequested);
     if (Platform.isWindows) {
       windowManager.addListener(this);
     }
   }
 
+  void _onOnboardingRequested() {
+    if (dexOnboardingRequested.value && mounted) setState(() {});
+  }
+
+  Future<void> _signOut() async {
+    await DexAccount.signOut();
+    if (mounted) setState(() => _signedIn = false);
+  }
+
   @override
   void dispose() {
+    dexOnboardingRequested.removeListener(_onOnboardingRequested);
     if (Platform.isWindows) {
       windowManager.removeListener(this);
     }
@@ -241,15 +351,49 @@ class _DexAppState extends State<DexApp> with WindowListener {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Dex',
-      navigatorKey: dexNavigatorKey,
-      debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.dark,
-      theme: buildDexLightTheme(),
-      darkTheme: buildDexDarkTheme(),
-      scrollBehavior: const DexScrollBehavior(),
-      home: HomeDesktop(store: widget.store),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: DexPrefs.themeMode,
+      builder: (context, mode, _) => MaterialApp(
+        title: 'Dex',
+        navigatorKey: dexNavigatorKey,
+        debugShowCheckedModeBanner: false,
+        themeMode: mode,
+        theme: buildDexLightTheme(),
+        darkTheme: buildDexDarkTheme(),
+        scrollBehavior: const DexScrollBehavior(),
+        home: _buildRoot(),
+      ),
     );
+  }
+
+  Widget _buildRoot() {
+    if (!_splashDone || _signedIn == null) {
+      // Branded splash while prefs load + glass shaders warm up.
+      return const SplashScreen();
+    }
+    if (_signedIn == false) {
+      return LoginScreen(
+        onSignedIn: () => setState(() => _signedIn = true),
+      );
+    }
+    // Onboarding shows when: the engine/key is missing, OR this account
+    // hasn't seen the tour yet (fresh sign-up on a configured machine),
+    // OR Settings requested a re-run.
+    if (_needsOnboarding || !_onboardSeen || dexOnboardingRequested.value) {
+      return OnboardingScreen(
+        onFinished: () {
+          // Reconnect with whatever the wizard just wrote, then enter
+          // the cockpit.
+          unawaited(widget.store.client.connect());
+          unawaited(DexAccount.setOnboardingSeen(true));
+          dexOnboardingRequested.value = false;
+          setState(() {
+            _needsOnboarding = false;
+            _onboardSeen = true;
+          });
+        },
+      );
+    }
+    return HomeDesktop(store: widget.store, onSignOut: _signOut);
   }
 }

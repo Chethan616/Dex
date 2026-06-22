@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../core/dex_taglines.dart';
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
 import '../composer/add_menu.dart';
@@ -30,6 +31,7 @@ class EmptyHome extends StatelessWidget {
     this.onAddAction,
     this.onSelectFile,
     this.onSelectChat,
+    this.onClear,
   });
 
   final String greetingName;
@@ -44,84 +46,102 @@ class EmptyHome extends StatelessWidget {
   final ValueChanged<ComposerAddAction>? onAddAction;
   final ValueChanged<RecentFileItem>? onSelectFile;
   final ValueChanged<RecentChatItem>? onSelectChat;
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 900;
-        return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DexSpace.xxl, vertical: DexSpace.xxl,
+        // No scroll view: the hero (greeting + composer + chips) is centered
+        // in the flexible top region; the recent cards + disclaimer pin to the
+        // bottom. Cards only render when the window is tall enough so the hero
+        // never gets squeezed or pushed into a scroll.
+        final showCards = constraints.maxHeight > 760 &&
+            (recentFiles.isNotEmpty || recentChats.isNotEmpty);
+        // Everything is one vertically-centered group (no scroll, no big
+        // gap pushing the cards to the floor) so the hero, chips and recent
+        // cards read as a single balanced composition.
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DexSpace.xxl, DexSpace.lg, DexSpace.xxl, DexSpace.lg,
           ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 880),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _FadeInUp(
-                      index: 0,
-                      child: _Typewriter(
-                        text:
-                            'Hi $greetingName, what should we dive into today?',
-                        style: DexType.title(color: DexColors.text),
-                      ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 880),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _FadeInUp(
+                    index: 0,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Hi $greetingName',
+                            textAlign: TextAlign.center,
+                            style: DexType.label(color: DexColors.textDim)),
+                        const SizedBox(height: DexSpace.xs),
+                        // A witty tagline from the same set the CLI banner
+                        // shows — picked once per launch.
+                        _Typewriter(
+                          text: dexSessionTagline,
+                          style: DexType.title(color: DexColors.text),
+                        ),
+                      ],
                     ),
+                  ),
+                  const SizedBox(height: DexSpace.xl),
+                  _FadeInUp(
+                    index: 1,
+                    child: DexComposer(
+                      onSubmit: onSubmit,
+                      isBusy: isBusy,
+                      onStop: onStop,
+                      onVision: onVision,
+                      onVoice: onVoice,
+                      onAddAction: onAddAction,
+                      onClear: onClear,
+                    ),
+                  ),
+                  const SizedBox(height: DexSpace.lg),
+                  _FadeInUp(
+                    index: 2,
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: DexSpace.sm,
+                      runSpacing: DexSpace.sm,
+                      children: suggestions
+                          .map((s) => SuggestionChip(
+                                label: s,
+                                onTap: () => onSubmit(s),
+                              ))
+                          .toList(growable: false),
+                    ),
+                  ),
+                  if (showCards) ...[
                     const SizedBox(height: DexSpace.xl),
-                    _FadeInUp(
-                      index: 1,
-                      child: DexComposer(
-                        onSubmit: onSubmit,
-                        isBusy: isBusy,
-                        onStop: onStop,
-                        onVision: onVision,
-                        onVoice: onVoice,
-                        onAddAction: onAddAction,
-                      ),
-                    ),
-                    const SizedBox(height: DexSpace.lg),
-                    _FadeInUp(
-                      index: 2,
-                      child: Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: DexSpace.sm,
-                        runSpacing: DexSpace.sm,
-                        children: suggestions
-                            .map((s) => SuggestionChip(
-                                  label: s,
-                                  onTap: () => onSubmit(s),
-                                ))
-                            .toList(growable: false),
-                      ),
-                    ),
-                    const SizedBox(height: DexSpace.xxl),
                     _FadeInUp(
                       index: 3,
                       child: _Cards(
-                        wide: wide,
-                        files: recentFiles,
-                        chats: recentChats,
+                        recentFiles: recentFiles,
+                        recentChats: recentChats,
                         onSelectFile: onSelectFile,
                         onSelectChat: onSelectChat,
                       ),
                     ),
-                    _FadeInUp(
-                      index: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: DexSpace.lg),
-                        child: Text(
-                          'Dex is an agent and may make mistakes. Every action shows a preview first.',
-                          textAlign: TextAlign.center,
-                          style: DexType.caption(color: DexColors.textFaint),
-                        ),
-                      ),
-                    ),
                   ],
-                ),
+                  const SizedBox(height: DexSpace.lg),
+                  _FadeInUp(
+                    index: 4,
+                    child: Text(
+                      'Dex is an agent and may make mistakes. Every action shows a preview first.',
+                      textAlign: TextAlign.center,
+                      style: DexType.caption(color: DexColors.textFaint),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -265,41 +285,42 @@ class _FadeInUpState extends State<_FadeInUp>
   }
 }
 
+/// The two recent-activity cards (recent files + recent chats) under the
+/// hero. Each renders only when its list is non-empty; with both present
+/// they split the row evenly, with one it spans full width.
 class _Cards extends StatelessWidget {
   const _Cards({
-    required this.wide,
-    required this.files,
-    required this.chats,
-    required this.onSelectFile,
-    required this.onSelectChat,
+    required this.recentFiles,
+    required this.recentChats,
+    this.onSelectFile,
+    this.onSelectChat,
   });
 
-  final bool wide;
-  final List<RecentFileItem> files;
-  final List<RecentChatItem> chats;
+  final List<RecentFileItem> recentFiles;
+  final List<RecentChatItem> recentChats;
   final ValueChanged<RecentFileItem>? onSelectFile;
   final ValueChanged<RecentChatItem>? onSelectChat;
 
   @override
   Widget build(BuildContext context) {
-    final filesCard = RecentFilesCard(files: files, onSelect: onSelectFile);
-    final chatsCard = RecentChatsCard(chats: chats, onSelect: onSelectChat);
-    if (!wide) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          filesCard,
-          const SizedBox(height: DexSpace.md),
-          chatsCard,
-        ],
-      );
-    }
+    final cards = <Widget>[
+      if (recentFiles.isNotEmpty)
+        Expanded(
+          child: RecentFilesCard(files: recentFiles, onSelect: onSelectFile),
+        ),
+      if (recentChats.isNotEmpty)
+        Expanded(
+          child: RecentChatsCard(chats: recentChats, onSelect: onSelectChat),
+        ),
+    ];
+    if (cards.isEmpty) return const SizedBox.shrink();
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: filesCard),
-        const SizedBox(width: DexSpace.md),
-        Expanded(child: chatsCard),
+        for (var i = 0; i < cards.length; i++) ...[
+          if (i > 0) const SizedBox(width: DexSpace.lg),
+          cards[i],
+        ],
       ],
     );
   }

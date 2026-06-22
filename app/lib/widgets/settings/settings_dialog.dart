@@ -1,22 +1,30 @@
 // The Settings modal. Left rail of tab labels, right pane of contents.
 // Sub-screens (e.g. View memory) replace the right pane in place.
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
-import '../refractive_edge.dart';
+import '../dex_glass.dart';
+import '../menu_glass.dart';
 import 'tabs/about_tab.dart';
 import 'tabs/account_tab.dart';
 import 'tabs/connectors_tab.dart';
+import 'tabs/diagnostics_tab.dart';
 import 'tabs/memory_tab.dart';
 import 'tabs/preferences_tab.dart';
 import 'tabs/privacy_tab.dart';
 
-enum SettingsTab { preferences, memory, account, connectors, privacy, about }
+enum SettingsTab {
+  preferences,
+  memory,
+  account,
+  connectors,
+  diagnostics,
+  privacy,
+  about,
+}
 
 extension on SettingsTab {
   String get label => switch (this) {
@@ -24,6 +32,7 @@ extension on SettingsTab {
         SettingsTab.memory => 'Memory',
         SettingsTab.account => 'Account',
         SettingsTab.connectors => 'Connectors & Apps',
+        SettingsTab.diagnostics => 'Diagnostics',
         SettingsTab.privacy => 'Privacy',
         SettingsTab.about => 'About',
       };
@@ -89,50 +98,39 @@ class _SettingsDialogState extends State<SettingsDialog> {
           constraints: const BoxConstraints(
             maxWidth: 760, minHeight: 540, maxHeight: 640,
           ),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              borderRadius: DexRadius.rlg,
-              boxShadow: DexSurface.glossyShadow,
-            ),
-            child: RefractiveEdge(
-              radius: DexRadius.rlg,
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: DexSurface.blurSigma,
-                  sigmaY: DexSurface.blurSigma,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: DexSurface.glossyGradient(),
-                  ),
-                  child: Column(
-                  children: [
-                    _Header(onClose: () => Navigator.of(context).maybePop()),
-                    const Divider(height: 1, color: DexColors.border),
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _TabList(
-                            current: _tab,
-                            onSelect: (t) => setState(() => _tab = t),
-                          ),
-                          const VerticalDivider(
-                              width: 1, color: DexColors.border),
-                          Expanded(child: _content(_tab)),
-                        ],
+          child: DexGlass(
+            radius: 20,
+            // No liquid edge rim on the settings panel — it sits over the
+            // dimmed home + drifting fog, and the moving specular read as a
+            // "vibrating" edge light. Plain frost is stable.
+            rim: false,
+            child: Column(
+              children: [
+                _Header(onClose: () => Navigator.of(context).maybePop()),
+                const Divider(height: 1, color: DexColors.border),
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _TabList(
+                        current: _tab,
+                        onSelect: (t) => setState(() => _tab = t),
                       ),
-                    ),
-                  ],
+                      const VerticalDivider(
+                          width: 1, color: DexColors.border),
+                      Expanded(child: _content(_tab)),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ),
           ),
         ),
       ),
     );
   }
+
+  void _navigate(SettingsTab t) => setState(() => _tab = t);
 
   Widget _content(SettingsTab t) {
     switch (t) {
@@ -144,8 +142,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
         return const AccountTab();
       case SettingsTab.connectors:
         return const ConnectorsTab();
+      case SettingsTab.diagnostics:
+        return const DiagnosticsTab();
       case SettingsTab.privacy:
-        return const PrivacyTab();
+        return PrivacyTab(onNavigate: _navigate);
       case SettingsTab.about:
         return const AboutTab();
     }
@@ -208,13 +208,18 @@ class _TabList extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color:
-                          active ? DexColors.surface2 : Colors.transparent,
+                          active ? kDexMenuAccentSurface : Colors.transparent,
                       borderRadius: DexRadius.rsm,
+                      border: Border.all(
+                        color: active
+                            ? kDexMenuAccentBorder
+                            : Colors.transparent,
+                      ),
                     ),
                     child: Text(
                       t.label,
                       style: DexType.label(
-                        color: active ? DexColors.text : DexColors.textDim,
+                        color: active ? DexColors.accent : DexColors.textDim,
                       ),
                     ),
                   ),

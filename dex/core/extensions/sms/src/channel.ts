@@ -105,7 +105,7 @@ const resolveSmsDmPolicy = createScopedDmSecurityResolver<ResolvedSmsAccount>({
   resolveAllowFrom: (account) => account.allowFrom,
   policyPathSuffix: "dmPolicy",
   defaultPolicy: "pairing",
-  approveHint: "openclaw pairing approve sms <code>",
+  approveHint: "dex pairing approve sms <code>",
   normalizeEntry: normalizeSmsAllowFrom,
 });
 

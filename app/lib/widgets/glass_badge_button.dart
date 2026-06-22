@@ -1,0 +1,61 @@
+// GlassBadgeButton — the circular liquid-glass icon badge that is Dex's
+// shared "actiony + round" control, modelled on macOS Tahoe Spotlight's
+// trailing icon badges (App Store / folder / layers / files).
+//
+// Wraps the package GlassIconButton, which already ships the squash/stretch
+// jelly press physics + a directional glow. We render it at premium quality
+// with a clear-crystal tint so the whole set (spotlight badges, composer
+// toolbar, vision + voice control bars) reads as one material — and a tap
+// visibly springs + (optionally) glows.
+
+import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
+import '../theme/tokens.dart';
+import 'menu_glass.dart';
+
+class GlassBadgeButton extends StatelessWidget {
+  const GlassBadgeButton({
+    super.key,
+    required this.icon,
+    required this.onTap,
+    this.iconColor,
+    this.glowColor,
+    this.size = 44,
+  });
+
+  final IconData icon;
+  final VoidCallback? onTap;
+  final Color? iconColor;
+
+  /// When set, the jelly press also blooms this colour.
+  final Color? glowColor;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    // No Tooltip on purpose — hover hints were removed app-wide.
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: GlassIconButton(
+        icon: Icon(
+          icon,
+          size: size * 0.42,
+          color: iconColor ?? (enabled ? DexColors.accent : DexColors.textFaint),
+        ),
+        onPressed: onTap,
+        size: size,
+        useOwnLayer: true,
+        quality: GlassQuality.minimal,
+        glowColor: glowColor ?? (enabled ? DexColors.accent : null),
+        settings: const LiquidGlassSettings(
+          glassColor: kDexMenuAccentSurface,
+          blur: 10,
+          thickness: 12,
+          glowIntensity: 0.35,
+        ),
+      ),
+    );
+  }
+}

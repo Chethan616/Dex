@@ -8,7 +8,7 @@ import '../core/models/action_preview.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'action_step.dart';
-import 'refractive_edge.dart';
+import 'dex_glass.dart';
 
 class ActionPreviewCard extends StatelessWidget {
   const ActionPreviewCard({
@@ -40,15 +40,11 @@ class ActionPreviewCard extends StatelessWidget {
       // 1.5px inset to clear the amber stroke before the refractive rim
       // starts, so the two stack visibly rather than overlap.
       padding: const EdgeInsets.all(1.5),
-      child: RefractiveEdge(
-        radius: BorderRadius.circular(10),
-        intensity: 0.85,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: DexSurface.glossyGradient(),
-          ),
-          padding: const EdgeInsets.all(DexSpace.lg),
-          child: Column(
+      child: DexGlass(
+        radius: 10,
+        shadow: false,
+        padding: const EdgeInsets.all(DexSpace.lg),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -89,7 +85,6 @@ class ActionPreviewCard extends StatelessWidget {
           ),
         ],
       ),
-        ),
       ),
     );
   }

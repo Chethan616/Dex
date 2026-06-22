@@ -7,6 +7,10 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../core/connectors.dart';
 import '../../../theme/tokens.dart';
+import '../connector_guide_sheet.dart';
+import '../../dex_toast.dart';
+import '../../glass_back_button.dart';
+import '../whatsapp_pair_dialog.dart';
 import 'connectors_tab.dart';
 
 class ConnectorDetail extends StatelessWidget {
@@ -23,6 +27,9 @@ class ConnectorDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hint = entry.connectHint;
+    // WhatsApp pairs fully in-app (gateway web.login QR flow); other
+    // connectors fall back to the copyable CLI command for now.
+    final canPairInApp = entry.id == 'whatsapp';
     return SingleChildScrollView(
       padding: const EdgeInsets.all(DexSpace.lg),
       child: Column(
@@ -30,11 +37,7 @@ class ConnectorDetail extends StatelessWidget {
         children: [
           Row(
             children: [
-              IconButton(
-                icon: const Icon(LucideIcons.arrow_left, size: 18),
-                color: DexColors.textDim,
-                onPressed: onBack,
-              ),
+              GlassBackButton(onTap: onBack),
             ],
           ),
           const SizedBox(height: DexSpace.sm),
@@ -56,6 +59,13 @@ class ConnectorDetail extends StatelessWidget {
                 child: Text(entry.name,
                     style: DexType.heading(color: DexColors.text)),
               ),
+              if (canPairInApp && status != ConnectorStatus.connected) ...[
+                ElevatedButton(
+                  onPressed: () => WhatsAppPairDialog.show(context),
+                  child: const Text('Pair now'),
+                ),
+                const SizedBox(width: DexSpace.sm),
+              ],
               ConnectorStatusChip(status: status),
             ],
           ),
@@ -64,7 +74,30 @@ class ConnectorDetail extends StatelessWidget {
           const SizedBox(height: DexSpace.xs),
           Text(entry.description,
               style: DexType.body(color: DexColors.textDim)),
-          if (hint != null && status != ConnectorStatus.connected) ...[
+          if (status != ConnectorStatus.connected &&
+              ConnectorGuideSheet.hasGuide(entry.id)) ...[
+            const SizedBox(height: DexSpace.xl),
+            Text('How to connect',
+                style: DexType.label(color: DexColors.text)),
+            const SizedBox(height: DexSpace.xs),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () => ConnectorGuideSheet.show(context,
+                    connectorId: entry.id, title: entry.name),
+                icon: const Icon(LucideIcons.book_open, size: 14),
+                label: const Text('Step-by-step guide'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: DexColors.text,
+                  side: const BorderSide(color: DexColors.border),
+                ),
+              ),
+            ),
+            if (hint != null) ...[
+              const SizedBox(height: DexSpace.sm),
+              _HintBox(hint: hint),
+            ],
+          ] else if (hint != null && status != ConnectorStatus.connected) ...[
             const SizedBox(height: DexSpace.xl),
             Text('How to connect',
                 style: DexType.label(color: DexColors.text)),
@@ -115,12 +148,7 @@ class _HintBox extends StatelessWidget {
             borderRadius: DexRadius.rsm,
             onTap: () {
               Clipboard.setData(ClipboardData(text: hint));
-              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                const SnackBar(
-                  content: Text('Copied'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
+              dexToast(context, 'Copied');
             },
             child: const Padding(
               padding: EdgeInsets.all(4),

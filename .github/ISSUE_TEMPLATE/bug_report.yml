@@ -1,0 +1,60 @@
+name: Bug report
+description: Something in Dex is broken or behaving unexpectedly.
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the report! Please fill this in so we can reproduce it.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, and what went wrong?
+      placeholder: I opened Settings → Diagnostics and the gateway showed disconnected with empty logs.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Launch Dex
+        2. Open ...
+        3. See ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - App / UI
+        - Agent / gateway
+        - Engines (desktop / browser)
+        - Channels (WhatsApp, Telegram, ...)
+        - Other / not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Dex version / build
+      placeholder: e.g. 2026.6.22, feat/liquid-glass-ui
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: Windows 11 26200
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: For agent/gateway issues, paste the Settings → Diagnostics log.
+      render: shell

@@ -2,23 +2,24 @@
 // (docked bottom, full-width). Acrylic surface with the + menu, the mode
 // pill, vision and voice buttons, and a send affordance.
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
 import '../../core/prompt_history.dart';
 import '../../core/send_options.dart';
+import '../../theme/motion.dart';
 import '../../theme/tokens.dart';
+import '../dex_glass.dart';
 import '../living_background.dart';
-import '../refractive_edge.dart';
+import '../menu_glass.dart';
 import 'add_menu.dart';
 import 'attachments.dart';
 import 'composer_mode.dart';
-import 'mode_menu.dart';
+import 'slash_commands.dart';
 
 class DexComposer extends StatefulWidget {
   const DexComposer({
@@ -31,6 +32,7 @@ class DexComposer extends StatefulWidget {
     this.onVision,
     this.onVoice,
     this.onAddAction,
+    this.onClear,
   });
 
   final ValueChanged<String> onSubmit;
@@ -41,6 +43,9 @@ class DexComposer extends StatefulWidget {
   final VoidCallback? onVision;
   final VoidCallback? onVoice;
   final ValueChanged<ComposerAddAction>? onAddAction;
+
+  /// Clears the current conversation (used by the /clear slash command).
+  final VoidCallback? onClear;
 
   @override
   State<DexComposer> createState() => _DexComposerState();
@@ -63,8 +68,6 @@ class _DexComposerState extends State<DexComposer> {
   // strip above the input shows them; submit/clear empties the list.
   final List<AttachedItem> _attachments = <AttachedItem>[];
 
-  final GlobalKey _addKey = GlobalKey();
-  final GlobalKey _modeKey = GlobalKey();
 
   @override
   void initState() {
@@ -85,9 +88,22 @@ class _DexComposerState extends State<DexComposer> {
     super.dispose();
   }
 
+  // Slash palette: visible while the user is typing a command NAME
+  // (`/` with no space yet). `_slashToken` is the text after the slash.
+  String? _slashToken;
+
   void _onText() {
     final has = _ctrl.text.trim().isNotEmpty;
-    if (has != _hasText) setState(() => _hasText = has);
+    final text = _ctrl.text;
+    final token = (text.startsWith('/') && !text.contains(' '))
+        ? text.substring(1)
+        : null;
+    if (has != _hasText || token != _slashToken) {
+      setState(() {
+        _hasText = has;
+        _slashToken = token;
+      });
+    }
     // A manual edit ends history browsing -- the recalled prompt becomes
     // the live draft (guard skips the programmatic recall writes).
     if (!_applyingHistory) _historyIndex = -1;
@@ -96,9 +112,38 @@ class _DexComposerState extends State<DexComposer> {
     // only submission fires a flare.
   }
 
-  void _submit() {
+  /// Run a palette pick: commands with args get `/name ` written so the
+  /// user can add args; arg-less commands run immediately.
+  Future<void> _runCommand(SlashCommand cmd) async {
+    if (cmd.argsHint.isNotEmpty) {
+      _applyHistoryText('/${cmd.name} ');
+      setState(() => _slashToken = null);
+      _focus.requestFocus();
+      return;
+    }
+    _ctrl.clear();
+    setState(() => _slashToken = null);
+    await SlashCommands.handle(_slashCtx(), '/${cmd.name}');
+  }
+
+  SlashContext _slashCtx() => SlashContext(
+        context: context,
+        sendMessage: widget.onSubmit,
+        onStop: widget.onStop,
+        onClear: widget.onClear,
+      );
+
+  Future<void> _submit() async {
     final t = _ctrl.text.trim();
     if (t.isEmpty && _attachments.isEmpty) return;
+    // Slash commands run locally and never reach the agent.
+    if (SlashCommands.looksLikeCommand(t)) {
+      _ctrl.clear();
+      setState(() => _slashToken = null);
+      await SlashCommands.handle(_slashCtx(), t);
+      _focus.requestFocus();
+      return;
+    }
     // Stronger flare on submission than on a keystroke -- the fog
     // visibly "answers" the send.
     LivingBackground.of(context)?.pulse(0.8);
@@ -175,39 +220,29 @@ class _DexComposerState extends State<DexComposer> {
   }
 
   Future<void> _pasteFromClipboard() async {
-    // Ctrl+V intercept: if the clipboard has rich content (image / file
-    // / long text), capture it as an attachment. Plain short text falls
-    // through to the default TextField paste so it still lands in the
-    // input buffer.
+    // Rich content (image / file) becomes an attachment chip.
     final items = await extractClipboardItems();
     if (items.isNotEmpty) {
       _addAttachments(items);
-    } else {
-      // Fall through to native paste for plain short text.
-      _focus.requestFocus();
+      return;
     }
-  }
-
-  Future<void> _openAdd() async {
-    final ctx = _addKey.currentContext;
-    if (ctx == null) return;
-    final box = ctx.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final trigger = box.localToGlobal(Offset.zero) & box.size;
-    final picked = await AddMenu.show(context: context, trigger: trigger);
-    if (picked != null) widget.onAddAction?.call(picked);
-  }
-
-  Future<void> _openMode() async {
-    final ctx = _modeKey.currentContext;
-    if (ctx == null) return;
-    final box = ctx.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final trigger = box.localToGlobal(Offset.zero) & box.size;
-    final picked = await ModeMenu.show(
-      context: context, trigger: trigger, current: _mode,
+    // Plain text: the Ctrl+V Shortcut intercepts the default TextField
+    // paste, so insert the clipboard text at the caret ourselves.
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text;
+    if (text == null || text.isEmpty) {
+      _focus.requestFocus();
+      return;
+    }
+    final sel = _ctrl.selection;
+    final start = sel.isValid ? sel.start : _ctrl.text.length;
+    final end = sel.isValid ? sel.end : _ctrl.text.length;
+    final next = _ctrl.text.replaceRange(start, end, text);
+    _ctrl.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: start + text.length),
     );
-    if (picked != null && mounted) setState(() => _mode = picked);
+    _focus.requestFocus();
   }
 
   @override
@@ -252,65 +287,55 @@ class _DexComposerState extends State<DexComposer> {
               return null;
             }),
           },
-          child: DecoratedBox(
-          // Shadow lives on the OUTER box so it isn't clipped by the
-          // rounded-rect mask -- the previous structure had the shadow
-          // on the Container _inside_ ClipRRect, which silently
-          // swallowed the lift.
-          decoration: const BoxDecoration(
-            borderRadius: DexRadius.rxl,
-            boxShadow: DexSurface.glossyShadow,
-          ),
-          child: RefractiveEdge(
-            radius: DexRadius.rxl,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: DexSurface.blurSigma,
-                sigmaY: DexSurface.blurSigma,
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: DexSurface.glossyGradient(),
+          child: DexGlass(
+            radius: 28,
+            // Flicker-free clear-crystal glass: rim:false swaps the package's
+            // animated specular edge (the "flickering edge light") for a baked
+            // static sheen, and the clear white tint matches the toolbar + and
+            // mode pill so it reads as bright crystal, not a grey panel.
+            rim: false,
+            tint: const Color.fromRGBO(255, 255, 255, 0.10),
+            padding: const EdgeInsets.fromLTRB(
+              DexSpace.lg, DexSpace.md, DexSpace.md, DexSpace.sm,
+            ),
+            child: RepaintBoundary(
+              child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AttachmentStrip(
+                  items: _attachments,
+                  onRemove: _removeAttachment,
                 ),
-                padding: const EdgeInsets.fromLTRB(
-                  DexSpace.lg, DexSpace.md, DexSpace.md, DexSpace.sm,
+                if (_slashToken != null)
+                  _SlashPalette(
+                    token: _slashToken!,
+                    onPick: _runCommand,
+                  ),
+                _Input(
+                  controller: _ctrl,
+                  focusNode: _focus,
+                  hint: widget.hint,
+                  onSubmit: _submit,
+                  onHistoryPrev: _recallPrev,
+                  onHistoryNext: _recallNext,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    AttachmentStrip(
-                      items: _attachments,
-                      onRemove: _removeAttachment,
-                    ),
-                    _Input(
-                      controller: _ctrl,
-                      focusNode: _focus,
-                      hint: widget.hint,
-                      onSubmit: _submit,
-                      onHistoryPrev: _recallPrev,
-                      onHistoryNext: _recallNext,
-                    ),
-                    const SizedBox(height: DexSpace.sm),
-                    _Toolbar(
-                      addKey: _addKey,
-                      modeKey: _modeKey,
-                      mode: _mode,
-                      isBusy: widget.isBusy,
-                      hasText: _hasText,
-                      onAdd: _openAdd,
-                      onMode: _openMode,
-                      onVision: widget.onVision,
-                      onVoice: widget.onVoice,
-                      onStop: widget.onStop,
-                      onSubmit: _submit,
-                    ),
-                  ],
+                const SizedBox(height: DexSpace.sm),
+                _Toolbar(
+                  mode: _mode,
+                  isBusy: widget.isBusy,
+                  hasText: _hasText,
+                  onAddAction: widget.onAddAction,
+                  onModeSelected: (m) => setState(() => _mode = m),
+                  onVision: widget.onVision,
+                  onVoice: widget.onVoice,
+                  onStop: widget.onStop,
+                  onSubmit: _submit,
                 ),
-              ),
+              ],
+            ),
             ),
           ),
-        ),
       ),
       ),
     );
@@ -372,26 +397,22 @@ class _Input extends StatelessWidget {
 
 class _Toolbar extends StatelessWidget {
   const _Toolbar({
-    required this.addKey,
-    required this.modeKey,
     required this.mode,
     required this.isBusy,
     required this.hasText,
-    required this.onAdd,
-    required this.onMode,
+    required this.onAddAction,
+    required this.onModeSelected,
     required this.onVision,
     required this.onVoice,
     required this.onStop,
     required this.onSubmit,
   });
 
-  final GlobalKey addKey;
-  final GlobalKey modeKey;
   final ComposerMode mode;
   final bool isBusy;
   final bool hasText;
-  final VoidCallback onAdd;
-  final VoidCallback onMode;
+  final ValueChanged<ComposerAddAction>? onAddAction;
+  final ValueChanged<ComposerMode> onModeSelected;
   final VoidCallback? onVision;
   final VoidCallback? onVoice;
   final VoidCallback? onStop;
@@ -401,26 +422,55 @@ class _Toolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _RoundIconButton(
-          key: addKey,
-          icon: LucideIcons.plus,
-          tooltip: 'Add files, image, research...',
-          onTap: onAdd,
+        GlassMenu(
+          quality: GlassQuality.premium,
+          menuWidth: 264,
+          settings: kDexMenuGlass,
+          triggerBuilder: (context, toggle) => _RoundIconButton(
+            icon: LucideIcons.plus,
+            onTap: toggle,
+          ),
+          items: [
+            for (final a in ComposerAddAction.values)
+              GlassMenuItem(
+                title: a.label,
+                icon: Icon(a.icon),
+                onTap: () => onAddAction?.call(a),
+              ),
+          ],
         ),
         const SizedBox(width: DexSpace.sm),
-        _ModePill(key: modeKey, mode: mode, onTap: onMode),
+        GlassMenu(
+          quality: GlassQuality.premium,
+          menuWidth: 280,
+          settings: kDexMenuGlass,
+          triggerBuilder: (context, toggle) =>
+              _ModePill(mode: mode, onTap: toggle),
+          items: [
+            for (final m in ComposerMode.values)
+              GlassMenuItem(
+                title: m.label,
+                // Active mode: accent check + accent text (the voice-settings
+                // Language dropdown look); others keep their mode glyph.
+                icon: m == mode
+                    ? const Icon(LucideIcons.check, color: DexColors.accent)
+                    : Icon(m.icon, color: DexColors.textDim),
+                titleStyle:
+                    m == mode ? DexType.label(color: DexColors.accent) : null,
+                onTap: () => onModeSelected(m),
+              ),
+          ],
+        ),
         const Spacer(),
         if (onVision != null)
           _RoundIconButton(
             icon: LucideIcons.glasses,
-            tooltip: 'Share screen with Dex',
             onTap: onVision,
           ),
         if (onVoice != null) ...[
           const SizedBox(width: DexSpace.xs),
           _RoundIconButton(
             icon: LucideIcons.mic,
-            tooltip: 'Talk to Dex',
             onTap: onVoice,
           ),
         ],
@@ -428,7 +478,6 @@ class _Toolbar extends StatelessWidget {
         if (isBusy && onStop != null)
           _RoundIconButton(
             icon: LucideIcons.square,
-            tooltip: 'Stop',
             tint: DexColors.stateError,
             onTap: onStop,
           )
@@ -439,44 +488,131 @@ class _Toolbar extends StatelessWidget {
   }
 }
 
+/// Accent toolbar surface for +, mode, vision, voice and send.
+///
+/// The composer is already frosted, so this stays shader-free and animates
+/// cheaply while matching the opened menu's blue accent.
+class _GlassToolButton extends StatefulWidget {
+  const _GlassToolButton({
+    required this.child,
+    required this.onTap,
+    this.padding = const EdgeInsets.all(9),
+    this.radius = 16,
+    this.minWidth = 36,
+    this.minHeight = 36,
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+  final double minWidth;
+  final double minHeight;
+
+  @override
+  State<_GlassToolButton> createState() => _GlassToolButtonState();
+}
+
+class _GlassToolButtonState extends State<_GlassToolButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.onTap != null;
+    final active = enabled && (_hovered || _pressed);
+    final fill = enabled
+        ? (active ? kDexMenuAccentSurfaceHover : kDexMenuAccentSurface)
+        : kDexMenuTint.withValues(alpha: 0.38);
+    final border = enabled
+        ? (active ? kDexMenuAccentBorderHover : kDexMenuAccentBorder)
+        : Colors.white.withValues(alpha: 0.07);
+    final scale = _pressed ? 0.96 : (_hovered ? 1.03 : 1.0);
+
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      onEnter: enabled ? (_) => setState(() => _hovered = true) : null,
+      onExit: enabled
+          ? (_) => setState(() {
+                _hovered = false;
+                _pressed = false;
+              })
+          : null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onTapDown:
+            enabled ? (_) => setState(() => _pressed = true) : null,
+        onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+        onTapCancel:
+            enabled ? () => setState(() => _pressed = false) : null,
+        child: AnimatedScale(
+          scale: scale,
+          duration: DexMotion.respecting(context, DexMotion.press),
+          curve: DexMotion.respectingCurve(context, DexMotion.easeOut),
+          child: AnimatedContainer(
+            duration: DexMotion.respecting(context, DexMotion.hover),
+            curve: DexMotion.respectingCurve(context, DexMotion.dampened),
+            constraints: BoxConstraints(
+              minWidth: widget.minWidth,
+              minHeight: widget.minHeight,
+            ),
+            padding: widget.padding,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(widget.radius),
+              border: Border.all(color: border),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  fill,
+                  kDexMenuTint.withValues(alpha: enabled ? 0.68 : 0.32),
+                ],
+              ),
+              boxShadow: active
+                  ? <BoxShadow>[
+                      BoxShadow(
+                        color: DexColors.accent.withValues(alpha: 0.18),
+                        blurRadius: 18,
+                        spreadRadius: -6,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                  : const <BoxShadow>[],
+            ),
+            child: IconTheme.merge(
+              data: IconThemeData(
+                color: enabled ? DexColors.accent : DexColors.textFaint,
+              ),
+              child: DefaultTextStyle.merge(
+                style: DexType.label(
+                  color: enabled ? DexColors.text : DexColors.textFaint,
+                ),
+                child: widget.child,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _RoundIconButton extends StatelessWidget {
   const _RoundIconButton({
-    super.key,
     required this.icon,
-    required this.tooltip,
     required this.onTap,
     this.tint,
   });
   final IconData icon;
-  final String tooltip;
   final VoidCallback? onTap;
   final Color? tint;
 
   @override
   Widget build(BuildContext context) {
-    final color = tint ?? DexColors.textDim;
-    return MouseRegion(
-      cursor: onTap != null
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
-      child: Tooltip(
-        message: tooltip,
-        child: InkResponse(
-          onTap: onTap,
-          radius: 20,
-          child: Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: DexColors.surface.withValues(alpha: 0.4),
-              shape: BoxShape.circle,
-              border: Border.all(color: DexColors.border),
-            ),
-            child: Icon(icon, size: 18, color: color),
-          ),
-        ),
-      ),
+    return _GlassToolButton(
+      onTap: onTap,
+      child: Icon(icon, size: 18, color: tint ?? DexColors.accent),
     );
   }
 }
@@ -488,69 +624,106 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      child: Tooltip(
-        message: 'Send (Enter)',
-        child: InkResponse(
-          onTap: enabled ? onTap : null,
-          radius: 20,
-          child: Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: enabled ? DexColors.accent : DexColors.surface,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: enabled ? DexColors.accent : DexColors.border,
-              ),
-            ),
-            child: Icon(
-              LucideIcons.arrow_up,
-              size: 18,
-              color: enabled ? DexColors.bg : DexColors.textFaint,
-            ),
-          ),
-        ),
+    return _GlassToolButton(
+      onTap: enabled ? onTap : null,
+      child: Icon(
+        LucideIcons.arrow_up,
+        size: 18,
+        color: enabled ? DexColors.accent : DexColors.textFaint,
       ),
     );
   }
 }
 
 class _ModePill extends StatelessWidget {
-  const _ModePill({super.key, required this.mode, required this.onTap});
+  const _ModePill({required this.mode, required this.onTap});
   final ComposerMode mode;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: DexRadius.rpill,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DexSpace.md, vertical: 6,
+    return _GlassToolButton(
+      onTap: onTap,
+      radius: 18,
+      minHeight: 36,
+      padding: const EdgeInsets.symmetric(
+        horizontal: DexSpace.md,
+        vertical: 7,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(mode.icon, size: 14, color: DexColors.accent),
+          const SizedBox(width: DexSpace.xs),
+          Text(mode.label, style: DexType.label(color: DexColors.text)),
+          const SizedBox(width: 2),
+          const Icon(
+            LucideIcons.chevron_down,
+            size: 14,
+            color: DexColors.accent,
           ),
-          decoration: BoxDecoration(
-            color: DexColors.surface.withValues(alpha: 0.4),
-            borderRadius: DexRadius.rpill,
-            border: Border.all(color: DexColors.border),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(mode.icon, size: 14, color: DexColors.textDim),
-              const SizedBox(width: DexSpace.xs),
-              Text(mode.label, style: DexType.label(color: DexColors.text)),
-              const SizedBox(width: 2),
-              const Icon(LucideIcons.chevron_down,
-                  size: 14, color: DexColors.textDim),
-            ],
-          ),
-        ),
+        ],
+      ),
+    );
+  }
+}
+
+// Live command palette shown above the input while typing `/name`.
+class _SlashPalette extends StatelessWidget {
+  const _SlashPalette({required this.token, required this.onPick});
+  final String token;
+  final ValueChanged<SlashCommand> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final matches = SlashCommands.matching(token);
+    if (matches.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: DexSpace.sm),
+      constraints: const BoxConstraints(maxHeight: 220),
+      decoration: BoxDecoration(
+        color: DexColors.surface.withValues(alpha: 0.6),
+        borderRadius: DexRadius.rmd,
+        border: Border.all(color: DexColors.border),
+      ),
+      child: ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.all(DexSpace.xs),
+        children: [
+          for (final c in matches)
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: InkWell(
+                onTap: () => onPick(c),
+                borderRadius: DexRadius.rsm,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: DexSpace.sm, vertical: DexSpace.sm),
+                  child: Row(
+                    children: [
+                      Icon(c.icon, size: 15, color: DexColors.textDim),
+                      const SizedBox(width: DexSpace.sm),
+                      Text('/${c.name}',
+                          style: DexType.mono(color: DexColors.text)
+                              .copyWith(fontSize: 12.5)),
+                      if (c.argsHint.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Text(c.argsHint,
+                            style: DexType.caption(color: DexColors.textFaint)),
+                      ],
+                      const SizedBox(width: DexSpace.md),
+                      Expanded(
+                        child: Text(c.description,
+                            style: DexType.caption(color: DexColors.textDim),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

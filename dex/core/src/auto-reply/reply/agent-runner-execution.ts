@@ -2715,7 +2715,7 @@ export async function runAgentTurnWithFallback(params: {
           kind: "final",
           payload: markAgentRunFailureReplyPayload({
             text: shouldSurfaceToControlUi
-              ? `⚠️ Agent failed before reply: ${embeddedErrorText}.\nLogs: openclaw logs --follow`
+              ? `⚠️ Agent failed before reply: ${embeddedErrorText}.\nLogs: dex logs --follow`
               : (providerRequestError?.userMessage ??
                 PROVIDER_CONVERSATION_STATE_ERROR_USER_MESSAGE),
           }),
@@ -2739,7 +2739,7 @@ export async function runAgentTurnWithFallback(params: {
           const switchErrorText = shouldSurfaceToControlUi
             ? "⚠️ Agent failed before reply: model switch could not be completed. " +
               "The requested model may be temporarily unavailable.\n" +
-              "Logs: openclaw logs --follow"
+              "Logs: dex logs --follow"
             : isVerboseFailureDetailEnabled(params.resolvedVerboseLevel)
               ? "⚠️ Agent failed before reply: model switch could not be completed. " +
                 "The requested model may be temporarily unavailable. Please try again shortly."
@@ -2916,7 +2916,7 @@ export async function runAgentTurnWithFallback(params: {
             : isContextOverflow
               ? "⚠️ Context overflow — prompt too large for this model. Try a shorter message or a larger-context model."
               : shouldSurfaceToControlUi
-                ? `⚠️ Agent failed before reply: ${trimmedMessage}.\nLogs: openclaw logs --follow`
+                ? `⚠️ Agent failed before reply: ${trimmedMessage}.\nLogs: dex logs --follow`
                 : (externalRunFailureReply?.text ?? genericFallbackText);
       const userVisibleFallbackText = resolveExternalRunFailureTextForConversation({
         text: fallbackText,

@@ -10,12 +10,14 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../gateway_client.dart';
+import '../log.dart';
 import '../models/action_preview.dart';
 import '../models/action_step.dart';
 import '../models/agent_state.dart';
 import '../models/engine.dart';
 import '../models/gateway_event.dart';
 import '../models/message.dart';
+import '../models/plan_step.dart';
 import '../models/reminder.dart';
 import '../models/tool_activity.dart';
 import '../tool_registry.dart';
@@ -74,9 +76,18 @@ class ConversationStore extends ChangeNotifier {
   // Map runId -> message id so streaming deltas land in the right bubble.
   final Map<String, String> _streaming = <String, String>{};
 
+  // Live task plan from the agent's `update_plan` tool. Replaced wholesale
+  // on each update_plan call; cleared when a new human turn starts so the
+  // checklist always reflects the current task.
+  List<PlanStep> _plan = const <PlanStep>[];
+
   List<Message> get messages => List<Message>.unmodifiable(_messages);
   AgentState get state => _state;
   ActionPreview? get pending => _pending;
+
+  /// The agent's current task plan (empty when there's no active plan).
+  /// Drives the live checklist card so the user sees steps, not "thinking…".
+  List<PlanStep> get plan => List<PlanStep>.unmodifiable(_plan);
 
   // -----------------------------------------------------------------
   // v1.2 Live Tool Activity tracking (rendered in the Live panel
@@ -141,6 +152,9 @@ class ConversationStore extends ChangeNotifier {
   Future<void> sendHumanMessage(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
+
+    // New turn → drop the previous task's plan checklist.
+    _plan = const <PlanStep>[];
 
     _messages.add(Message(
       id: _uuid.v4(),
@@ -313,11 +327,69 @@ class ConversationStore extends ChangeNotifier {
   void _applyErrorOrAborted(GatewayEvent evt) {
     final aborted = evt.kind == GatewayEventKind.aborted;
     final detail = (evt.deltaText ?? '').trim();
+    // Mirror to Diagnostics so a failed turn leaves a trace even after
+    // the chat bubble scrolls away.
+    if (aborted) {
+      DexLog.w('agent', 'run aborted${detail.isEmpty ? '' : ': $detail'}');
+    } else {
+      DexLog.e('agent', 'turn error${detail.isEmpty ? '' : ': $detail'}');
+    }
+    // Quota/rate-limit is the most common failure on the free Gemini tier.
+    // Give it an actionable message instead of a raw 429 dump.
+    // Classify the failure into one clean, actionable message. The raw
+    // provider detail (multi-model failure dump) is mirrored to Diagnostics
+    // logs above — we deliberately keep it OUT of the chat bubble so the
+    // user sees a fix, not a stack of provider errors.
+    final lower = detail.toLowerCase();
+    final isSuspended = !aborted &&
+        (lower.contains('suspended') ||
+            lower.contains('permission_denied') ||
+            lower.contains('permission denied') ||
+            lower.contains('api key not valid') ||
+            lower.contains('(403)'));
+    final isTooLarge = !aborted &&
+        (lower.contains('request too large') ||
+            lower.contains('tokens per minute') ||
+            lower.contains('reduce your message') ||
+            lower.contains('(413)') ||
+            lower.contains('context length'));
+    final isQuota = !aborted &&
+        !isTooLarge &&
+        (lower.contains('resource_exhausted') ||
+            lower.contains('rate-limit') ||
+            lower.contains('rate limit') ||
+            lower.contains('quota') ||
+            lower.contains('429'));
+    final isProviderFail = !aborted &&
+        !isQuota &&
+        !isTooLarge &&
+        !isSuspended &&
+        (lower.contains('llm request failed') ||
+            lower.contains('all models failed') ||
+            lower.contains('no model') ||
+            lower.contains('provider'));
+    const groqHint =
+        'Settings → Account → Secrets → set the Brain model to '
+        '“Groq · Llama 4 Scout” (no daily limit), then restart the gateway '
+        'in Settings → Diagnostics.';
     final text = aborted
-        ? 'That run was stopped before it finished.'
-            '${detail.isEmpty ? '' : ' ($detail)'} Try sending it again.'
-        : 'Something went wrong on that turn'
-            '${detail.isEmpty ? '.' : ': $detail'}';
+        ? 'That run was stopped before it finished. Try sending it again.'
+        : isSuspended
+            ? 'Your model API key was rejected (expired, invalid, or '
+                'suspended). $groqHint'
+            : isTooLarge
+                ? 'This conversation got too long for the model’s per-minute '
+                    'token limit. Start a new chat to reset it — or switch to a '
+                    'higher-limit brain model. $groqHint'
+                : isQuota
+                    ? 'The free Gemini tier’s daily quota is used up. Groq '
+                        'resets every minute (no daily wall) — $groqHint'
+                    : isProviderFail
+                        ? "Dex couldn’t reach the model. Check your key and "
+                            'selected model in Settings → Account → Secrets, '
+                            'then restart the gateway in Settings → Diagnostics.'
+                        : 'Something went wrong on that turn. Check Settings → '
+                            'Diagnostics for details.';
 
     // Reuse the streaming bubble when one exists for this run -- the
     // partial text the agent managed to say stays, with the error line
@@ -397,6 +469,21 @@ class ConversationStore extends ChangeNotifier {
     final payload = (raw['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
     final toolName = (payload['name'] ?? payload['toolName'] ?? payload['tool'] ?? raw['event']) as String? ?? 'tool';
     final args = payload['args'] ?? payload['arguments'] ?? payload['params'];
+
+    // update_plan is meta: it carries the agent's step checklist, not an
+    // action. Feed the live plan card and skip the generic chip/activity so
+    // it doesn't clutter the conversation as just another tool row.
+    if (toolName == 'update_plan') {
+      final argsMap = args is Map ? args : const {};
+      final parsed = PlanStep.listFromArgs(argsMap['plan']);
+      if (parsed.isNotEmpty) {
+        _plan = parsed;
+        _setState(AgentState.acting);
+        notifyListeners();
+      }
+      return;
+    }
+
     final goalLabel = _summarizeArgs(toolName, args);
 
     final callId = evt.runId.isNotEmpty ? evt.runId : _uuid.v4();

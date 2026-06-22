@@ -1,13 +1,14 @@
 // Floating "share with Dex" panel. Picks a screen or app to stream to the
 // agent. v1 renders the chrome only; real capture wiring lands later.
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../theme/tokens.dart';
-import '../refractive_edge.dart';
+import '../dex_glass.dart';
+import '../dex_switch.dart';
+import '../glass_badge_button.dart';
 
 class VisionPanel extends StatefulWidget {
   const VisionPanel({super.key, required this.onClose});
@@ -24,24 +25,10 @@ class _VisionPanelState extends State<VisionPanel> {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 380,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          borderRadius: DexRadius.rmd,
-          boxShadow: DexSurface.glossyShadow,
-        ),
-        child: RefractiveEdge(
-          radius: DexRadius.rmd,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: DexSurface.blurSigma,
-              sigmaY: DexSurface.blurSigma,
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: DexSurface.glossyGradient(),
-              ),
-              padding: const EdgeInsets.all(DexSpace.lg),
-              child: Column(
+      child: DexGlass(
+        radius: 14,
+        padding: const EdgeInsets.all(DexSpace.lg),
+        child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -51,10 +38,12 @@ class _VisionPanelState extends State<VisionPanel> {
                       child: Text('Dex Vision',
                           style: DexType.heading(color: DexColors.text)),
                     ),
-                    IconButton(
-                      icon: const Icon(LucideIcons.x, size: 18),
-                      color: DexColors.textDim,
-                      onPressed: widget.onClose,
+                    GlassBadgeButton(
+                      icon: LucideIcons.x,
+                      onTap: widget.onClose,
+                      size: 32,
+                      iconColor: DexColors.textDim,
+                      glowColor: DexColors.stateError,
                     ),
                   ],
                 ),
@@ -65,7 +54,7 @@ class _VisionPanelState extends State<VisionPanel> {
                       child: Text('Start with voice',
                           style: DexType.label(color: DexColors.text)),
                     ),
-                    Switch(
+                    DexSwitch(
                       value: _startWithVoice,
                       onChanged: (v) => setState(() => _startWithVoice = v),
                     ),
@@ -85,9 +74,6 @@ class _VisionPanelState extends State<VisionPanel> {
                 _AppRow(name: 'Browser', onShare: widget.onClose),
               ],
             ),
-          ),
-        ),
-      ),
       ),
     );
   }
@@ -100,19 +86,37 @@ class _Thumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: DexRadius.rsm,
-      child: Container(
-        height: 110,
-        decoration: BoxDecoration(
-          color: DexColors.surface,
-          borderRadius: DexRadius.rsm,
-          border: Border.all(color: DexColors.border),
+    // Liquid-glass screen preview tile. Minimal quality keeps the rim
+    // stable; a faint monitor glyph reads as the share target.
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: GlassContainer(
+          useOwnLayer: true,
+          quality: GlassQuality.minimal,
+          shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+          settings: const LiquidGlassSettings(
+            glassColor: Color.fromRGBO(20, 34, 68, 0.38),
+            blur: 14,
+            thickness: 12,
+          ),
+          padding: const EdgeInsets.all(DexSpace.sm),
+          child: SizedBox(
+            height: 96,
+            width: double.infinity,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(LucideIcons.monitor,
+                    size: 26, color: DexColors.textDim),
+                const SizedBox(height: DexSpace.sm),
+                Text(label, style: DexType.label(color: DexColors.text)),
+              ],
+            ),
+          ),
         ),
-        alignment: Alignment.bottomCenter,
-        padding: const EdgeInsets.all(DexSpace.sm),
-        child: Text(label, style: DexType.label(color: DexColors.text)),
       ),
     );
   }
@@ -125,42 +129,33 @@ class _AppRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GlassContainer(
+      useOwnLayer: true,
+      quality: GlassQuality.minimal,
+      shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+      settings: const LiquidGlassSettings(
+        glassColor: Color.fromRGBO(20, 34, 68, 0.32),
+        blur: 12,
+        thickness: 10,
+      ),
       padding: const EdgeInsets.symmetric(
         horizontal: DexSpace.sm, vertical: DexSpace.sm,
       ),
-      decoration: BoxDecoration(
-        color: DexColors.surface,
-        borderRadius: DexRadius.rsm,
-        border: Border.all(color: DexColors.border),
-      ),
       child: Row(
         children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: DexColors.surface2,
-              borderRadius: DexRadius.rsm,
-            ),
-            alignment: Alignment.center,
-            child: const Icon(LucideIcons.app_window,
-                size: 14, color: DexColors.textDim),
-          ),
+          const Icon(LucideIcons.app_window,
+              size: 16, color: DexColors.textDim),
           const SizedBox(width: DexSpace.md),
           Expanded(
             child: Text(name, style: DexType.label(color: DexColors.text)),
           ),
-          OutlinedButton(
-            onPressed: onShare,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: DexColors.text,
-              side: const BorderSide(color: DexColors.border),
-              padding: const EdgeInsets.symmetric(
-                horizontal: DexSpace.md, vertical: DexSpace.xs,
-              ),
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GlassChip(
+              label: 'Share',
+              onTap: onShare,
+              labelStyle: DexType.label(color: DexColors.accent),
             ),
-            child: const Text('Share'),
           ),
         ],
       ),

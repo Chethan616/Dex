@@ -11,8 +11,6 @@
 // All state lives on ConversationStore.reminders; this screen is a
 // pure view that mutates via addReminder / cancelReminder.
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:intl/intl.dart';
@@ -22,7 +20,7 @@ import '../core/models/reminder.dart';
 import '../core/state/conversation_store.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
-import '../widgets/refractive_edge.dart';
+import '../widgets/dex_glass.dart';
 
 const String _prefsKeyBriefingDismissed = 'dex.reminders.briefing.dismissed';
 
@@ -137,23 +135,9 @@ class _RemindersScreenState extends State<RemindersScreen> {
           constraints: const BoxConstraints(
             maxWidth: 600, minHeight: 480, maxHeight: 640,
           ),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              borderRadius: DexRadius.rlg,
-              boxShadow: DexSurface.glossyShadow,
-            ),
-            child: RefractiveEdge(
-              radius: DexRadius.rlg,
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: DexSurface.blurSigma,
-                  sigmaY: DexSurface.blurSigma,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: DexSurface.glossyGradient(),
-                  ),
-                  child: AnimatedBuilder(
+          child: DexGlass(
+            radius: 20,
+            child: AnimatedBuilder(
                     animation: widget.store,
                     builder: (context, _) {
                       final reminders = widget.store.reminders;
@@ -210,9 +194,6 @@ class _RemindersScreenState extends State<RemindersScreen> {
                 ),
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }

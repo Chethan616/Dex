@@ -76,9 +76,9 @@ score = 0.40 * base
 | `router.ts` | C.3 | Sort + return top + fallback chain |
 | `telemetry.ts` | C.4 | SQLite writer keyed by (process_name, engine_id) |
 | `self-learning.ts` | C.4 | Periodic Beta-prior update job |
-| `engines/ufo-uia.ts` | C.3+ | Adapter for `dex/drivers/windows-desktop-control/` |
-| `engines/browser-use.ts` | C.3+ | Adapter for `dex/drivers/browser-control/` |
-| `engines/omniparser.ts` | C.5 | Adapter for `dex/drivers/omniparser/` (NEW driver) |
+| `engines/ufo-uia.ts` | C.3+ | Adapter for `dex/core/drivers/windows-desktop-control/` |
+| `engines/browser-use.ts` | C.3+ | Adapter for `dex/core/drivers/browser-control/` |
+| `engines/omniparser.ts` | C.5 | Adapter for `dex/core/drivers/omniparser/` (NEW driver) |
 | `engines/shell.ts` | C.3 | Dex built-in shell tool adapter |
 
 ## Why deterministic routing, not LLM-driven

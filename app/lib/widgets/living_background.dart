@@ -69,6 +69,23 @@ class _LivingBackgroundState extends State<LivingBackground>
   late final LivingBackgroundController _controller;
   bool _wasActive = false;
 
+  // Repaint throttle: the drift + pulse controllers tick at vsync (60fps),
+  // but the fog is a 60s loop so 30fps is visually identical — and every
+  // glass surface in the app re-composites its BackdropFilter whenever the
+  // fog repaints, so halving the fog's frame rate roughly halves that
+  // app-wide cost. The painter still reads the live controller values, so
+  // motion stays smooth; we just paint half as often.
+  final _FogRepaint _repaint = _FogRepaint();
+  int _lastPaintMs = 0;
+
+  void _onTick() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - _lastPaintMs >= 32) {
+      _lastPaintMs = now;
+      _repaint.bump();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -98,6 +115,9 @@ class _LivingBackgroundState extends State<LivingBackground>
       },
     );
 
+    _drift.addListener(_onTick);
+    _pulse.addListener(_onTick);
+
     _wasActive = widget.isActive?.call() ?? false;
     widget.activity?.addListener(_onActivity);
   }
@@ -123,6 +143,9 @@ class _LivingBackgroundState extends State<LivingBackground>
   @override
   void dispose() {
     widget.activity?.removeListener(_onActivity);
+    _drift.removeListener(_onTick);
+    _pulse.removeListener(_onTick);
+    _repaint.dispose();
     _drift.dispose();
     _pulse.dispose();
     super.dispose();
@@ -139,7 +162,8 @@ class _LivingBackgroundState extends State<LivingBackground>
           // animation from invalidating siblings on every tick.
           RepaintBoundary(
             child: AnimatedBuilder(
-              animation: Listenable.merge(<Listenable>[_drift, _pulse]),
+              // Driven by the 30fps throttle, not the raw vsync controllers.
+              animation: _repaint,
               builder: (_, _) {
                 return CustomPaint(
                   painter: _FogPainter(
@@ -155,6 +179,14 @@ class _LivingBackgroundState extends State<LivingBackground>
       ),
     );
   }
+}
+
+/// A tiny notifier the fog repaints listen to. Bumped by the state's frame
+/// throttle (~30fps) rather than the raw 60fps controllers, so the fog —
+/// and every glass BackdropFilter that samples it — re-composites half as
+/// often with no visible change to the slow drift.
+class _FogRepaint extends ChangeNotifier {
+  void bump() => notifyListeners();
 }
 
 class LivingBackgroundController {

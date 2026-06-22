@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../../core/connectors.dart';
 import '../../../theme/tokens.dart';
@@ -203,9 +204,13 @@ class _ConnectorsTabState extends State<ConnectorsTab> {
   }
 }
 
-/// Pill-shaped search input with a focus ring (accent border + soft glow
-/// when active), inline Enter-key hint, busy spinner, and clear button.
-class _SearchField extends StatefulWidget {
+/// The real package GlassSearchBar (apple_messages "Search messages"
+/// style) — own glass layer, built-in animated clear X-circle, accent
+/// search glyph. The live list filter runs off the controller listener
+/// in the parent, so typing filters immediately; Enter triggers the
+/// ClawHub remote search. A subtle spinner overlays the right edge while
+/// the remote search is in flight.
+class _SearchField extends StatelessWidget {
   const _SearchField({
     required this.controller,
     required this.onSubmitted,
@@ -216,106 +221,45 @@ class _SearchField extends StatefulWidget {
   final bool searching;
 
   @override
-  State<_SearchField> createState() => _SearchFieldState();
-}
-
-class _SearchFieldState extends State<_SearchField> {
-  final FocusNode _focus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(_onFocus);
-  }
-
-  void _onFocus() => setState(() {});
-
-  @override
-  void dispose() {
-    _focus.removeListener(_onFocus);
-    _focus.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final focused = _focus.hasFocus;
-    final borderColor = focused
-        ? DexColors.accent.withValues(alpha: 0.65)
-        : DexColors.border;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      curve: Curves.easeOut,
-      height: 42,
-      decoration: BoxDecoration(
-        color: focused
-            ? DexColors.surface2.withValues(alpha: 0.7)
-            : DexColors.surface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor),
-        boxShadow: focused
-            ? <BoxShadow>[
-                BoxShadow(
-                  color: DexColors.accent.withValues(alpha: 0.12),
-                  blurRadius: 12,
-                  spreadRadius: 1,
-                ),
-              ]
-            : const <BoxShadow>[],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: DexSpace.md),
-      child: Row(
+    return MouseRegion(
+      cursor: SystemMouseCursors.text,
+      child: Stack(
+        alignment: Alignment.centerRight,
         children: [
-          Icon(LucideIcons.search,
-              size: 15,
-              color: focused ? DexColors.accent : DexColors.textFaint),
-          const SizedBox(width: DexSpace.sm),
-          Expanded(
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focus,
-              style: DexType.body(color: DexColors.text),
-              cursorColor: DexColors.accent,
-              onSubmitted: widget.onSubmitted,
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: 'Search connectors, apps & skills…',
-                hintStyle: DexType.body(color: DexColors.textFaint),
-              ),
-            ),
+          GlassSearchBar(
+            controller: controller,
+            placeholder: 'Search connectors, apps & skills…',
+            onSubmitted: onSubmitted,
+            useOwnLayer: true,
+            height: 48,
+            // On focus the bar shrinks and a dismiss pill slides in from the
+            // right (the iMessage "Search messages" pattern). The pill owns
+            // clearing, so the inline ×-circle is hidden (transparent) — one
+            // clean X, not two. Tapping the pill clears field + remote search.
+            showsCancelButton: true,
+            cancelIcon: const Icon(LucideIcons.x,
+                size: 18, color: DexColors.stateError),
+            cancelButtonColor: DexColors.stateError,
+            onCancel: () {
+              controller.clear();
+              onSubmitted('');
+            },
+            searchIconColor: DexColors.textFaint,
+            clearIconColor: Colors.transparent,
+            textStyle: DexType.body(color: DexColors.text),
+            placeholderStyle: DexType.body(color: DexColors.textFaint),
           ),
-          if (widget.searching)
-            const SizedBox(
-              width: 13,
-              height: 13,
-              child: CircularProgressIndicator(
-                strokeWidth: 1.4,
-                color: DexColors.textFaint,
-              ),
-            )
-          else if (widget.controller.text.isNotEmpty)
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: widget.controller.clear,
-                child: const Icon(LucideIcons.circle_x,
-                    size: 15, color: DexColors.textFaint),
-              ),
-            )
-          else
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DexSpace.sm, vertical: 2,
-              ),
-              decoration: BoxDecoration(
-                color: DexColors.surface2,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: DexColors.border),
-              ),
-              child: Text(
-                'Enter ↵ registry',
-                style: DexType.caption(color: DexColors.textFaint),
+          if (searching)
+            const Padding(
+              padding: EdgeInsets.only(right: DexSpace.lg),
+              child: SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.6,
+                  color: DexColors.textFaint,
+                ),
               ),
             ),
         ],

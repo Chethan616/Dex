@@ -24,6 +24,7 @@ import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 
+import 'log.dart';
 import 'models/gateway_event.dart';
 import 'send_options.dart';
 
@@ -107,6 +108,16 @@ class GatewayClient extends ChangeNotifier {
   Completer<void>? _readyCompleter;
   String? _connectReqId;
 
+  // A freshly (re)started gateway opens its TCP port BEFORE it can accept
+  // the WS handshake — the handshake comes back "UNAVAILABLE: gateway
+  // starting; retry shortly", or the socket is refused/closed mid-boot.
+  // That's transient, so we retry the whole connect a bounded number of
+  // times instead of failing the readyCompleter (which used to crash the
+  // app with an unhandled "Bad state" and made Restart look broken).
+  int _connectRetries = 0;
+  static const int _maxConnectRetries = 20; // ~20 × 900ms ≈ 18s boot window
+  bool _retrying = false; // suppresses _onDone/_onError during a retry teardown
+
   GatewayConnState get state => _state;
   String? get lastError => _lastError;
   bool get isReady => _state == GatewayConnState.ready;
@@ -116,6 +127,13 @@ class GatewayClient extends ChangeNotifier {
     if (_state == s && error == _lastError) return;
     _state = s;
     _lastError = error;
+    // Surface every connection transition in the in-app Diagnostics
+    // panel; failures are errors, the rest are info.
+    if (s == GatewayConnState.failed) {
+      DexLog.e('gateway', error ?? 'connection failed');
+    } else {
+      DexLog.i('gateway', error == null ? s.name : '${s.name}: $error');
+    }
     notifyListeners();
   }
 
@@ -136,12 +154,19 @@ class GatewayClient extends ChangeNotifier {
 
     _setState(GatewayConnState.connecting);
     _readyCompleter = Completer<void>();
+    _connectRetries = 0;
+    await _openSocket();
+  }
 
+  /// Open the WS + start listening. Reused by connect() and by each retry
+  /// while the gateway is still booting. Keeps the same _readyCompleter so a
+  /// caller awaiting waitReady() resolves once the gateway is actually up.
+  Future<void> _openSocket() async {
     try {
       // Use IOWebSocketChannel so we can send a matching Origin header.
-      // The OpenClaw gateway runs an origin allowlist (origin-check.ts) that
-      // accepts the loopback URL it's bound to. Without this header dart:io
-      // sends no Origin and the gateway rejects us with "origin not allowed".
+      // The gateway runs an origin allowlist (origin-check.ts) that accepts
+      // the loopback URL it's bound to. Without this header dart:io sends no
+      // Origin and the gateway rejects us with "origin not allowed".
       final origin = 'http://${_config.url.host}:${_config.url.port}';
       final ws = IOWebSocketChannel.connect(
         _config.url,
@@ -158,17 +183,42 @@ class GatewayClient extends ChangeNotifier {
       );
       // We DON'T send the connect req here. We wait for the server's
       // `connect.challenge` event (see _onFrame). That keeps us aligned with
-      // OpenClaw's handshake-pending state machine.
+      // the gateway's handshake-pending state machine.
     } catch (e) {
-      _setState(GatewayConnState.failed, error: 'connect failed: $e');
-      _readyCompleter?.completeError(e);
-      _readyCompleter = null;
+      // Socket refused (port not up yet during a restart) — retry.
+      _retryOrFail('connect failed: $e');
     }
+  }
+
+  /// Retry the connection if the failure is a transient boot race and we
+  /// haven't exhausted retries; otherwise fail the readyCompleter for real.
+  void _retryOrFail(String message) {
+    if (_connectRetries >= _maxConnectRetries) {
+      _setState(GatewayConnState.failed, error: message);
+      if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
+        _readyCompleter!.completeError(StateError(message));
+      }
+      _readyCompleter = null;
+      return;
+    }
+    _connectRetries += 1;
+    _retrying = true; // _onDone/_onError must ignore this intentional teardown
+    _sub?.cancel();
+    _sub = null;
+    _ws?.sink.close();
+    _ws = null;
+    _setState(GatewayConnState.connecting); // not "failed" — we're retrying
+    Future<void>.delayed(const Duration(milliseconds: 900), () {
+      _retrying = false;
+      if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
+        _openSocket();
+      }
+    });
   }
 
   /// Block until the gateway has accepted our connect req. Throws if we
   /// transition to failed before becoming ready.
-  Future<void> waitReady({Duration timeout = const Duration(seconds: 8)}) async {
+  Future<void> waitReady({Duration timeout = const Duration(seconds: 30)}) async {
     if (_state == GatewayConnState.ready) return;
     if (_state == GatewayConnState.disconnected ||
         _state == GatewayConnState.failed) {
@@ -279,6 +329,7 @@ class GatewayClient extends ChangeNotifier {
       } else {
         final err = (evt.raw?['error'] as Map?)?.cast<String, dynamic>();
         if (!completer.isCompleted) {
+          DexLog.e('rpc', '$method rejected: ${err ?? evt.raw}');
           completer.completeError(
               StateError('$method rejected: ${err ?? evt.raw}'));
         }
@@ -293,6 +344,7 @@ class GatewayClient extends ChangeNotifier {
     }));
     return completer.future.timeout(timeout, onTimeout: () {
       once?.cancel();
+      DexLog.e('rpc', '$method timed out after ${timeout.inSeconds}s');
       throw TimeoutException('$method timed out after ${timeout.inSeconds}s');
     });
   }
@@ -401,9 +453,12 @@ class GatewayClient extends ChangeNotifier {
         },
         // Role + scopes verified from src/shared/operator-scope-compat.ts.
         // chat.send needs operator.write; config.get / channels.status
-        // (the Connectors & Apps panel) need operator.read.
+        // (the Connectors & Apps panel) need operator.read;
+        // web.login.start/wait (in-app WhatsApp QR pairing) need
+        // operator.admin. Local insecure-auth control-ui clients keep
+        // their declared scopes (message-handler.ts:840-844).
         'role': 'operator',
-        'scopes': <String>['operator.read', 'operator.write'],
+        'scopes': <String>['operator.read', 'operator.write', 'operator.admin'],
         'auth': <String, dynamic>{'token': _config.token},
       },
     }));
@@ -416,16 +471,32 @@ class GatewayClient extends ChangeNotifier {
     if (id != null && id == _connectReqId) {
       // Handshake response.
       if (ok) {
+        _connectRetries = 0;
         _setState(GatewayConnState.ready);
         if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
           _readyCompleter!.complete();
         }
       } else {
         final err = (frame['error'] as Map?)?.cast<String, dynamic>();
-        final msg = err != null ? '${err['code']}: ${err['message']}' : 'connect rejected';
-        _setState(GatewayConnState.failed, error: msg);
-        if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
-          _readyCompleter!.completeError(StateError(msg));
+        final code = (err?['code'] ?? '').toString();
+        final message = (err?['message'] ?? '').toString();
+        final msg = err != null ? '$code: $message' : 'connect rejected';
+        // A just-restarted gateway answers the handshake with UNAVAILABLE /
+        // "gateway starting; retry shortly" until init finishes — retry
+        // instead of failing (this was the "Restart doesn't work" bug).
+        final lower = '$code $message'.toLowerCase();
+        final retryable = code == 'UNAVAILABLE' ||
+            lower.contains('gateway starting') ||
+            lower.contains('retry shortly') ||
+            lower.contains('starting');
+        if (retryable) {
+          _retryOrFail(msg);
+        } else {
+          _setState(GatewayConnState.failed, error: msg);
+          if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
+            _readyCompleter!.completeError(StateError(msg));
+          }
+          _readyCompleter = null;
         }
       }
       return;
@@ -503,23 +574,30 @@ class GatewayClient extends ChangeNotifier {
   }
 
   void _onDone() {
-    _setState(GatewayConnState.disconnected);
+    if (_retrying) return; // intentional teardown between retries
     _ws = null;
+    // Socket closed while still handshaking → the gateway is likely still
+    // booting (restart race). Retry instead of failing the completer.
     if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
-      _readyCompleter!.completeError(StateError('socket closed before handshake'));
+      _retryOrFail('socket closed before handshake');
+      return;
     }
+    _setState(GatewayConnState.disconnected);
   }
 
   void _onError(Object err, StackTrace st) {
+    if (_retrying) return; // intentional teardown between retries
+    // Mid-handshake socket error during a (re)start is transient — retry.
+    if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
+      _retryOrFail(err.toString());
+      return;
+    }
     _setState(GatewayConnState.failed, error: err.toString());
     _events.add(GatewayEvent(
       kind: GatewayEventKind.error,
       runId: '',
       raw: {'error': err.toString()},
     ));
-    if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
-      _readyCompleter!.completeError(err);
-    }
   }
 
   @override
