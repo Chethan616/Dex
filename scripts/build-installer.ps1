@@ -50,8 +50,11 @@ if (-not $SkipFlutter) {
 }
 $flutterOut = Join-Path $repo 'app\build\windows\x64\runner\Release'
 if (-not (Test-Path "$flutterOut\dex.exe")) { throw "missing $flutterOut\dex.exe -- run without -SkipFlutter" }
-Stage "Staging app files"
+Stage "Staging app files (as main executable Dex.exe)"
 Copy-Item "$flutterOut\*" $payload -Recurse -Force
+if (Test-Path (Join-Path $payload 'dex.exe')) {
+    Rename-Item (Join-Path $payload 'dex.exe') 'Dex.exe'
+}
 
 # ---- 2. Portable Node -------------------------------------------------------
 $nodeDir = Join-Path $runtime 'node'
@@ -133,6 +136,14 @@ entry = base & "\runtime\dexagent\dex.mjs"
 sh.Run """" & node & """ """ & entry & """ gateway run --port 18789", 0, False
 '@
 Set-Content -Path (Join-Path $payload 'start-gateway.vbs') -Value $vbs -Encoding ASCII
+
+# ---- 4bb. CLI launcher script wrapper ---------------------------------------
+Stage "Writing Dex-Cli.cmd wrapper (makes CLI executable globally)"
+$cliCmd = @'
+@echo off
+"%~dp0runtime\node\node.exe" "%~dp0runtime\dexagent\dex.mjs" %*
+'@
+Set-Content -Path (Join-Path $payload 'Dex-Cli.cmd') -Value $cliCmd -Encoding ASCII
 
 # ---- 4c. Generate payload.wxs to bypass 65k component limit ------------------
 Stage "Generating payload.wxs component groups"

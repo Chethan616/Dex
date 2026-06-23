@@ -60,12 +60,29 @@
       <Shortcut Id="DexStartMenu"
                 Name="Dex"
                 Description="A calm cockpit for commanding agents you can trust"
-                Target="[INSTALLFOLDER]dex.exe"
+                Target="[INSTALLFOLDER]Dex.exe"
                 WorkingDirectory="INSTALLFOLDER" />
       <RemoveFolder Id="RemoveDexMenuFolder" On="uninstall" />
       <RegistryValue Root="HKCU"
                      Key="Software\com.chethan616\dex"
                      Name="installed"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+
+    <!-- Environment PATH modification to expose Dex-Cli command -->
+    <Component Id="DexCliPath" Directory="INSTALLFOLDER">
+      <Environment Id="PATH"
+                   Name="PATH"
+                   Value="[INSTALLFOLDER]"
+                   Separator=";"
+                   Action="set"
+                   Part="last"
+                   System="no" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\com.chethan616\dex"
+                     Name="clipath"
                      Type="integer"
                      Value="1"
                      KeyPath="yes" />
