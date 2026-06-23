@@ -154,15 +154,15 @@ $xml.AppendLine('<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">')
 $xml.AppendLine('  <Fragment>')
 $xml.AppendLine('    <ComponentGroup Id="PayloadComponents">')
 
-$files = Get-ChildItem -Path $payload -Recurse -File
+$files = Get-ChildItem -LiteralPath "\\?\$payload" -Recurse -File
 $grouped = $files | Group-Object DirectoryName
 $compIndex = 0
 
 foreach ($group in $grouped) {
     $dirPath = $group.Name
     $relPath = ""
-    if ($dirPath -ne $payload) {
-        $relPath = $dirPath.Substring($payload.Length + 1)
+    if ($dirPath -ne "\\?\$payload") {
+        $relPath = $dirPath.Substring(("\\?\$payload").Length + 1)
     }
     
     $guid = [Guid]::NewGuid().ToString()
@@ -179,7 +179,7 @@ foreach ($group in $grouped) {
     $isFirst = $true
     foreach ($file in $group.Group) {
         $sourcePath = $file.FullName
-        $relSource = "payload" + $sourcePath.Substring($payload.Length)
+        $relSource = "payload" + $sourcePath.Substring(("\\?\$payload").Length)
         $escapedSource = [System.Security.SecurityElement]::Escape($relSource)
         
         $fileId = "file_$($compIndex)_$([Guid]::NewGuid().ToString().Replace('-', ''))"
