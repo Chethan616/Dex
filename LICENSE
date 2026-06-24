@@ -3,7 +3,7 @@ MIT License
 Copyright (c) 2026 Chethan616
 
 Dex is a downstream of OpenClaw (https://github.com/openclaw/openclaw) and
-builds on Microsoft UFO², browser-use, and liquid_glass_widgets — see
+builds on Microsoft UFO2, browser-use, and liquid_glass_widgets - see
 dex/core/HERITAGE.md and LICENSES.md for upstream attribution. Their original
 copyright and MIT/Apache notices are preserved in their respective sources.
 

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="en-us" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <String Id="WelcomeDlgDescription" Value="The Setup Wizard will install Dex on your computer. Click Next to continue or Cancel to exit the Setup Wizard.&#13;&#10;&#13;&#10;Support Dex at github.com/chethan616/Dex" />
+</WixLocalization>

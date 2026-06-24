@@ -84,7 +84,7 @@ Stage "Installing dexagent runtime into payload (production deps)"
 $tmpPrefix = Join-Path $env:TEMP 'dex-installer-npm'
 if (Test-Path $tmpPrefix) { Remove-Item $tmpPrefix -Recurse -Force }
 New-Item -ItemType Directory -Force $tmpPrefix | Out-Null
-npm install --prefix $tmpPrefix $tarPath --omit=dev --no-audit --no-fund
+npm install --prefix $tmpPrefix $tarPath --omit=dev --no-audit --no-fund --prefer-offline --fetch-timeout=60000
 if ($LASTEXITCODE -ne 0) { throw "npm install of dexagent tarball failed" }
 Copy-Item "$tmpPrefix\node_modules\dexagent" (Join-Path $runtime 'dexagent') -Recurse -Force
 # Hoisted production deps must travel with the package:
@@ -149,10 +149,10 @@ Set-Content -Path (Join-Path $payload 'Dex-Cli.cmd') -Value $cliCmd -Encoding AS
 Stage "Generating payload.wxs component groups"
 $wxsFile = Join-Path $repo 'installer\payload.wxs'
 $xml = [System.Text.StringBuilder]::new()
-$xml.AppendLine('<?xml version="1.0" encoding="UTF-8"?>')
-$xml.AppendLine('<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">')
-$xml.AppendLine('  <Fragment>')
-$xml.AppendLine('    <ComponentGroup Id="PayloadComponents">')
+[void]$xml.AppendLine('<?xml version="1.0" encoding="UTF-8"?>')
+[void]$xml.AppendLine('<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">')
+[void]$xml.AppendLine('  <Fragment>')
+[void]$xml.AppendLine('    <ComponentGroup Id="PayloadComponents">')
 
 $files = Get-ChildItem -LiteralPath "\\?\$payload" -Recurse -File
 $grouped = $files | Group-Object DirectoryName
@@ -168,13 +168,13 @@ foreach ($group in $grouped) {
     $guid = [Guid]::NewGuid().ToString()
     $compIndex++
     
-    $xml.Append("      <Component Id=`"cmp_$compIndex`" Directory=`"INSTALLFOLDER`"")
+    [void]$xml.Append("      <Component Id=`"cmp_$compIndex`" Directory=`"INSTALLFOLDER`"")
     if ($relPath) {
         $escapedRelPath = [System.Security.SecurityElement]::Escape($relPath)
-        $xml.Append(" Subdirectory=`"$escapedRelPath`"")
+        [void]$xml.Append(" Subdirectory=`"$escapedRelPath`"")
     }
-    $xml.Append(" Guid=`"$guid`"")
-    $xml.AppendLine(">")
+    [void]$xml.Append(" Guid=`"$guid`"")
+    [void]$xml.AppendLine(">")
 
     $isFirst = $true
     foreach ($file in $group.Group) {
@@ -184,22 +184,36 @@ foreach ($group in $grouped) {
         
         $fileId = "file_$($compIndex)_$([Guid]::NewGuid().ToString().Replace('-', ''))"
         
-        $xml.Append("        <File Id=`"$fileId`" Source=`"$escapedSource`"")
+        [void]$xml.Append("        <File Id=`"$fileId`" Source=`"$escapedSource`"")
         if ($isFirst) {
-            $xml.Append(" KeyPath=`"yes`"")
+            [void]$xml.Append(" KeyPath=`"yes`"")
             $isFirst = $false
         }
-        $xml.AppendLine(" />")
+        [void]$xml.AppendLine(" />")
     }
-    $xml.AppendLine("      </Component>")
+    [void]$xml.AppendLine("      </Component>")
 }
 
-$xml.AppendLine('    </ComponentGroup>')
-$xml.AppendLine('  </Fragment>')
-$xml.AppendLine('</Wix>')
+[void]$xml.AppendLine('    </ComponentGroup>')
+[void]$xml.AppendLine('  </Fragment>')
+[void]$xml.AppendLine('</Wix>')
 
 [System.IO.File]::WriteAllText($wxsFile, $xml.ToString(), [System.Text.Encoding]::UTF8)
 Write-Host "WiX payload fragment written to $wxsFile with $compIndex components."
+
+# ---- 4d. Generate License.rtf from LICENSE ---------------------------------
+Stage "Generating License.rtf for WiX UI"
+$licenseSource = Join-Path $repo 'LICENSE'
+$licenseDest = Join-Path $repo 'installer\License.rtf'
+if (Test-Path $licenseSource) {
+    $txt = Get-Content $licenseSource -Raw
+    $rtf = "{\rtf1\ansi\deff0{\fonttbl{\f0\fnil\fcharset0 Arial;}}\viewkind4\uc1 " + 
+           $txt.Replace("\", "\\").Replace("{", "\{").Replace("}", "\}").Replace("`n", "\par`n") + "}"
+    Set-Content -Path $licenseDest -Value $rtf -Encoding ASCII
+} else {
+    $rtf = "{\rtf1\ansi\deff0{\fonttbl{\f0\fnil\fcharset0 Arial;}}\viewkind4\uc1\b Dex License Agreement\b0\par\par MIT License\par}"
+    Set-Content -Path $licenseDest -Value $rtf -Encoding ASCII
+}
 
 # ---- 5. WiX build -------------------------------------------------------------
 Stage "Building Dex.msi (WiX)"
@@ -222,7 +236,7 @@ if (-not (Get-Command wix -ErrorAction SilentlyContinue)) {
 Push-Location (Join-Path $repo 'installer')
 # Accept OSMF EULA (required for WiX v7)
 & $wixPath eula accept wix7 2>$null | Out-Null
-& $wixPath build Dex.wxs payload.wxs -o Dex.msi
+& $wixPath build Dex.wxs payload.wxs Dex.wxl -ext WixToolset.UI.wixext -o Dex.msi
 if ($LASTEXITCODE -ne 0) { throw "wix build failed" }
 Pop-Location
 

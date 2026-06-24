@@ -29,7 +29,8 @@
   Build: dotnet tool install -g wix   (once)
          scripts\build-installer.ps1  (assembles payload + runs wix)
 -->
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package
       Name="Dex"
       Manufacturer="Chethan"
@@ -52,10 +53,9 @@
     </StandardDirectory>
 
     <StandardDirectory Id="StartupFolder" />
+    <StandardDirectory Id="DesktopFolder" />
 
-    <!-- Reference the dynamically grouped components to bypass the 65k component limit. -->
-    <ComponentGroupRef Id="PayloadComponents" />
-
+    <!-- Core shortcuts (Start Menu) -->
     <Component Id="DexShortcuts" Directory="DexMenuFolder">
       <Shortcut Id="DexStartMenu"
                 Name="Dex"
@@ -66,6 +66,21 @@
       <RegistryValue Root="HKCU"
                      Key="Software\com.chethan616\dex"
                      Name="installed"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+
+    <!-- Desktop Shortcut component -->
+    <Component Id="DexDesktopShortcut" Directory="DesktopFolder">
+      <Shortcut Id="DexDesktop"
+                Name="Dex"
+                Description="A calm cockpit for commanding agents you can trust"
+                Target="[INSTALLFOLDER]Dex.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\com.chethan616\dex"
+                     Name="desktopshortcut"
                      Type="integer"
                      Value="1"
                      KeyPath="yes" />
@@ -88,9 +103,7 @@
                      KeyPath="yes" />
     </Component>
 
-    <!-- Auto-start the gateway at logon via a Startup-folder shortcut to
-         the windowless launcher. wscript runs start-gateway.vbs hidden so
-         there's no console. Removed on uninstall with this component. -->
+    <!-- Auto-start the gateway at logon via a Startup-folder shortcut -->
     <Component Id="DexGatewayAutostart" Directory="StartupFolder">
       <Shortcut Id="DexGatewayStartup"
                 Name="Dex Gateway"
@@ -106,5 +119,25 @@
                      Value="1"
                      KeyPath="yes" />
     </Component>
+
+    <!-- Setup Feature Hierarchy -->
+    <Feature Id="MainFeature" Title="Dex Application" Description="Installs the core Dex desktop application, the command-line interface, portable Node runtime, and the agent engines (UFO and browser-use)." Level="1" AllowAbsent="no" ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentGroupRef Id="PayloadComponents" />
+      <ComponentRef Id="DexShortcuts" />
+      <ComponentRef Id="DexCliPath" />
+    </Feature>
+
+    <Feature Id="DesktopShortcutFeature" Title="Create Desktop Shortcut" Description="Creates a shortcut to Dex on your desktop." Level="1">
+      <ComponentRef Id="DexDesktopShortcut" />
+    </Feature>
+
+    <Feature Id="GatewayAutostartFeature" Title="Auto-Start Gateway at Logon" Description="Automatically starts the background Dex gateway at Windows logon so channels and skills are immediately active." Level="1">
+      <ComponentRef Id="DexGatewayAutostart" />
+    </Feature>
+
+    <!-- Setup Wizard Dialog UI Configuration -->
+    <ui:WixUI Id="WixUI_FeatureTree" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
   </Package>
 </Wix>
