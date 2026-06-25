@@ -53,15 +53,10 @@ export class GatewayServer {
 
   private async handleMessage(ws: WebSocket, msg: any) {
     const type = msg.type || (msg.method ? 'jsonrpc' : '');
-    const id = msg.id;
-
-    if (!id) {
-      ws.send(JSON.stringify({ type: 'error', error: 'Missing message ID' }));
-      return;
-    }
+    const id = msg.id || `query_${Date.now()}`;
 
     if (type === 'query' || (type === 'jsonrpc' && msg.method === 'query')) {
-      const rawQuery = msg.query || (msg.params && msg.params.query);
+      const rawQuery = msg.query || msg.text || (msg.params && (msg.params.query || msg.params.text));
       if (!rawQuery) {
         this.sendError(ws, id, 'Missing query parameter', type === 'jsonrpc');
         return;
@@ -122,6 +117,16 @@ export class GatewayServer {
           }
         });
 
+        // Format a text reply suitable for simple channel bots
+        let replyText = '';
+        if (result) {
+          if (Array.isArray(result)) {
+            replyText = result.map(r => r.result || r.error || JSON.stringify(r)).join('\n');
+          } else {
+            replyText = result.result || result.error || JSON.stringify(result);
+          }
+        }
+
         if (ws.readyState === WebSocket.OPEN) {
           if (type === 'jsonrpc') {
             ws.send(JSON.stringify({
@@ -133,7 +138,8 @@ export class GatewayServer {
             ws.send(JSON.stringify({
               type: 'reply',
               id,
-              result
+              result,
+              text: replyText
             }));
           }
         }

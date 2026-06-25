@@ -55,7 +55,8 @@ describe('GatewayServer WebSocket integration tests', () => {
             expect(msg).toEqual({
               type: 'reply',
               id: 'query_123',
-              result: { status: 'done', result: 'mock output' }
+              result: { status: 'done', result: 'mock output' },
+              text: 'mock output'
             });
             client.close();
             resolve();
