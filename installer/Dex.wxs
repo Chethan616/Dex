@@ -139,5 +139,16 @@
     <ui:WixUI Id="WixUI_FeatureTree" />
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
 
+    <!-- Custom Action to terminate any running gateway on port 18789 before copying/removing files -->
+    <CustomAction Id="KillGateway"
+                  Directory="INSTALLFOLDER"
+                  ExeCommand="powershell.exe -NoProfile -Command &quot;Get-Process -Id (Get-NetTCPConnection -LocalPort 18789 -State Listen -ErrorAction SilentlyContinue).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue&quot;"
+                  Execute="immediate"
+                  Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="KillGateway" Before="InstallValidate" />
+    </InstallExecuteSequence>
+
   </Package>
 </Wix>
