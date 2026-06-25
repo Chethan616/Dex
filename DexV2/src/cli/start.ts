@@ -19,7 +19,7 @@ function isServerRunning(port = 18789): Promise<boolean> {
 }
 
 export async function startCommand() {
-  ensureAdmin();
+  ensureAdmin(false);
   const port = 18789;
   const running = await isServerRunning(port);
 
