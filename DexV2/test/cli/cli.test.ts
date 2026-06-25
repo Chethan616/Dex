@@ -27,7 +27,8 @@ vi.mock('child_process', () => {
     spawn: vi.fn().mockReturnValue({
       pid: 9999,
       unref: vi.fn()
-    })
+    }),
+    execSync: vi.fn().mockReturnValue(Buffer.from('admin'))
   };
 });
 

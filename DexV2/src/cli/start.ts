@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import WebSocket from 'ws';
 import { getDexDir } from '../utils/platform.js';
+import { ensureAdmin } from '../utils/elevate.js';
 
 function isServerRunning(port = 18789): Promise<boolean> {
   return new Promise((resolve) => {
@@ -18,6 +19,7 @@ function isServerRunning(port = 18789): Promise<boolean> {
 }
 
 export async function startCommand() {
+  ensureAdmin();
   const port = 18789;
   const running = await isServerRunning(port);
 

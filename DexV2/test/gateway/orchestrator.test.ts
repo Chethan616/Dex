@@ -95,4 +95,21 @@ describe('AgentOrchestrator tests', () => {
     expect(mockExecute).toHaveBeenCalledWith('exec', { c: 'rmdir /s /q testdir' });
     expect(result2.status).toBe('done');
   });
+
+  test('Tier 1: empty LLM response throws a descriptive error message', async () => {
+    vi.spyOn(GeminiProvider.prototype, 'chat').mockImplementation(async function* () {
+      // Yield nothing, representing empty/blocked response
+    });
+
+    const stepEvents: any[] = [];
+
+    await expect(
+      orchestrator.runQuery('q_empty', 'some query', {
+        onStepEvent: (e) => stepEvents.push(e),
+        onPendingAction: async () => true
+      })
+    ).rejects.toThrow(/The LLM returned an empty response.*verify that your GEMINI_API_KEY is valid/);
+
+    expect(stepEvents.some(e => e.status === 'failed' && e.error && e.error.includes('empty response'))).toBe(true);
+  });
 });

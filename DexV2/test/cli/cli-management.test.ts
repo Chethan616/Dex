@@ -10,6 +10,7 @@ vi.mock('child_process', () => {
     exec: vi.fn().mockImplementation((cmd, callback) => {
       setTimeout(() => callback(null, 'stopped', ''), 10);
     }),
+    execSync: vi.fn().mockReturnValue(Buffer.from('admin')),
     spawn: vi.fn().mockReturnValue({
       pid: 12345,
       unref: vi.fn()

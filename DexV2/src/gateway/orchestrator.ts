@@ -209,6 +209,17 @@ export class AgentOrchestrator {
     }
 
     // Parse the JSON output
+    if (!llmResponseText.trim()) {
+      const errorMsg = "The LLM returned an empty response. Please verify that your GEMINI_API_KEY is valid and not rate-limited or blocked by safety filters.";
+      callbacks.onStepEvent({
+        stepId: `thinking_${Date.now()}`,
+        name: 'LLM Planning',
+        status: 'failed',
+        error: errorMsg
+      });
+      throw new Error(errorMsg);
+    }
+
     let payload: any;
     try {
       const cleanJson = this.extractJson(llmResponseText);

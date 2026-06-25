@@ -1,7 +1,9 @@
 import { exec } from 'child_process';
 import os from 'os';
+import { ensureAdmin } from '../utils/elevate.js';
 
 export function stopCommand(): Promise<void> {
+  ensureAdmin();
   return new Promise((resolve) => {
     console.log('Stopping Dex gateway daemon...');
     
