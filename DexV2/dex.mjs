@@ -4,6 +4,8 @@ import { program } from 'commander';
 import { startCommand } from './dist/cli/start.js';
 import { chatCommand } from './dist/cli/chat.js';
 import { initCommand } from './dist/cli/init.js';
+import { stopCommand } from './dist/cli/stop.js';
+import { restartCommand } from './dist/cli/restart.js';
 
 program
   .name('dex')
@@ -30,6 +32,42 @@ program
       await startCommand();
     } catch (err) {
       console.error('Error starting Dex daemon:', err);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('stop')
+  .description('Stop the background Dex gateway daemon.')
+  .action(async () => {
+    try {
+      await stopCommand();
+    } catch (err) {
+      console.error('Error stopping Dex daemon:', err);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('end')
+  .description('Stop the background Dex gateway daemon. (Alias of stop)')
+  .action(async () => {
+    try {
+      await stopCommand();
+    } catch (err) {
+      console.error('Error stopping Dex daemon:', err);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('restart')
+  .description('Restarts the background Dex gateway daemon.')
+  .action(async () => {
+    try {
+      await restartCommand();
+    } catch (err) {
+      console.error('Error restarting Dex daemon:', err);
       process.exit(1);
     }
   });

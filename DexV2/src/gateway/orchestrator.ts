@@ -251,13 +251,29 @@ export class AgentOrchestrator {
     }
   }
 
+  private sanitizeJsonString(raw: string): string {
+    let clean = raw.trim();
+
+    // Strip single-line comments: // ...
+    clean = clean.replace(/\/\/.*$/gm, '');
+
+    // Strip multi-line comments: /* ... */
+    clean = clean.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    // Remove trailing commas before closing braces/brackets
+    clean = clean.replace(/,(\s*[\]}])/g, '$1');
+
+    return clean;
+  }
+
   private extractJson(text: string): string {
     const startIdx = text.indexOf('{');
     const endIdx = text.lastIndexOf('}');
+    let rawJson = text.trim();
     if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-      return text.substring(startIdx, endIdx + 1);
+      rawJson = text.substring(startIdx, endIdx + 1);
     }
-    return text.trim();
+    return this.sanitizeJsonString(rawJson);
   }
 
   private async executeDeterministicAction(

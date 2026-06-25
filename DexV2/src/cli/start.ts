@@ -49,6 +49,7 @@ export async function startCommand() {
   const child = spawn('node', [launcherPath], {
     detached: true,
     stdio: ['ignore', out, err],
+    windowsHide: true,
     env: {
       ...process.env
     }
