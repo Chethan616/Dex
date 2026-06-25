@@ -56,6 +56,22 @@ const DETERMINISTIC_MAP: Record<string, DeterministicAction> = {
   'turn on screen': { tool: 'shell', cmd: '(New-Object -ComObject WScript.Shell).SendKeys([char]0)' },
 };
 
+import { getAppShortcuts } from './shortcuts.js';
+
 export function tryDeterministic(normalized: string): DeterministicAction | null {
-  return DETERMINISTIC_MAP[normalized.toLowerCase().trim()] || null;
+  const norm = normalized.toLowerCase().trim();
+  const directMatch = DETERMINISTIC_MAP[norm];
+  if (directMatch) return directMatch;
+
+  const openMatch = norm.match(/^(?:open|launch|start)\s+(.+)$/i);
+  if (openMatch) {
+    const appName = openMatch[1].trim();
+    const shortcuts = getAppShortcuts();
+    const shortcutPath = shortcuts.get(appName);
+    if (shortcutPath) {
+      return { tool: 'shell', cmd: `Start-Process "${shortcutPath}"` };
+    }
+  }
+
+  return null;
 }
