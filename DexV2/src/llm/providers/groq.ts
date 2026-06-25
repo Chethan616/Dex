@@ -30,7 +30,7 @@ export class GroqProvider implements LLMProvider {
     const url = 'https://api.groq.com/openai/v1/chat/completions';
 
     const systemPrompt = `Dex: Windows automation agent, full admin. Respond ONLY with JSON matching the provided schema. No prose.
-Available Tools:\n` + (params.tools?.map(t => `${t.name}: ${t.description}`).join('\n') || '');
+Available Tools:\n` + (params.tools?.map(t => `${t.name}: ${t.description} (Args Schema: ${JSON.stringify(t.inputSchema)})`).join('\n') || '');
 
     const messages = [
       { role: 'system', content: systemPrompt },

@@ -215,9 +215,15 @@ export async function executeTool(name: string, args: any): Promise<string> {
   
   switch (name) {
     case 'exec':
+      if (typeof args?.c !== 'string') {
+        throw new Error(`Missing or invalid command argument 'c' for exec tool.`);
+      }
       return runPowerShell(args.c);
 
     case 'clipboard':
+      if (typeof args?.op !== 'string') {
+        throw new Error(`Missing or invalid operation argument 'op' for clipboard tool.`);
+      }
       if (args.op === 'read') {
         return runPowerShell('Get-Clipboard');
       } else {
@@ -228,6 +234,9 @@ export async function executeTool(name: string, args: any): Promise<string> {
       }
 
     case 'notify': {
+      if (typeof args?.text !== 'string') {
+        throw new Error(`Missing or invalid notification argument 'text' for notify tool.`);
+      }
       const text = args.text || '';
       const title = 'Dex Agent';
       const escapedText = text.replace(/"/g, '`"');
@@ -246,6 +255,9 @@ export async function executeTool(name: string, args: any): Promise<string> {
     }
 
     case 'voice': {
+      if (typeof args?.text !== 'string') {
+        throw new Error(`Missing or invalid argument 'text' for voice tool.`);
+      }
       const text = args.text || '';
       const escapedText = text.replace(/"/g, '`"');
       const psCommand = `Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak("${escapedText}")`;
@@ -253,12 +265,18 @@ export async function executeTool(name: string, args: any): Promise<string> {
     }
 
     case 'search': {
+      if (typeof args?.query !== 'string') {
+        throw new Error(`Missing or invalid argument 'query' for search tool.`);
+      }
       const pathArg = args.path || process.cwd();
       const results = searchFiles(args.query, pathArg);
       return results.join('\n') || 'No files found matching the query.';
     }
 
     case 'schedule': {
+      if (typeof args?.action !== 'string' || typeof args?.name !== 'string') {
+        throw new Error(`Missing or invalid action/name arguments for schedule tool.`);
+      }
       // Manage Windows Task Scheduler
       let cmd = '';
       if (args.action === 'create') {
@@ -272,18 +290,33 @@ export async function executeTool(name: string, args: any): Promise<string> {
     }
 
     case 'code':
+      if (typeof args?.lang !== 'string' || typeof args?.code !== 'string') {
+        throw new Error(`Missing or invalid lang/code arguments for code sandbox tool.`);
+      }
       return executeSandbox(args.lang, args.code);
 
     case 'sql':
+      if (typeof args?.query !== 'string' || typeof args?.dbPath !== 'string') {
+        throw new Error(`Missing or invalid query/dbPath arguments for sql tool.`);
+      }
       return executeSql(args.query, args.dbPath);
 
     case 'jq':
+      if (typeof args?.query !== 'string' || typeof args?.filePath !== 'string') {
+        throw new Error(`Missing or invalid query/filePath arguments for jq tool.`);
+      }
       return executeJq(args.query, args.filePath);
 
     case 'http':
+      if (typeof args?.method !== 'string' || typeof args?.url !== 'string') {
+        throw new Error(`Missing or invalid method/url arguments for http tool.`);
+      }
       return executeHttp(args);
 
     case 'git': {
+      if (typeof args?.op !== 'string') {
+        throw new Error(`Missing or invalid argument 'op' for git tool.`);
+      }
       let gitCmd = `git ${args.op}`;
       if (args.op === 'commit' && args.msg) {
         gitCmd = `git commit -m "${args.msg.replace(/"/g, '\\"')}"`;
@@ -292,11 +325,17 @@ export async function executeTool(name: string, args: any): Promise<string> {
     }
 
     case 'desktop': {
+      if (typeof args?.goal !== 'string') {
+        throw new Error(`Missing or invalid argument 'goal' for desktop tool.`);
+      }
       const driverPath = path.resolve(process.cwd(), 'drivers', 'windows-desktop', 'server.py');
       return callMcpTool(driverPath, 'run_desktop_task', args);
     }
 
     case 'browser': {
+      if (typeof args?.goal !== 'string') {
+        throw new Error(`Missing or invalid argument 'goal' for browser tool.`);
+      }
       const driverPath = path.resolve(process.cwd(), 'drivers', 'browser-control', 'server.py');
       return callMcpTool(driverPath, 'run_browser_task', args);
     }

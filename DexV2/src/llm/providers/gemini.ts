@@ -31,7 +31,7 @@ export class GeminiProvider implements LLMProvider {
 
     // System prompt and tools details combined
     const systemPrompt = `Dex: Windows automation agent, full admin. Respond ONLY with JSON matching the provided schema. No prose.
-Available Tools:\n` + (params.tools?.map(t => `${t.name}: ${t.description}`).join('\n') || '');
+Available Tools:\n` + (params.tools?.map(t => `${t.name}: ${t.description} (Args Schema: ${JSON.stringify(t.inputSchema)})`).join('\n') || '');
 
     const requestBody: any = {
       contents: params.messages.map(m => ({
@@ -118,7 +118,7 @@ Available Tools:\n` + (params.tools?.map(t => `${t.name}: ${t.description}`).joi
     const url = `https://generativelanguage.googleapis.com/v1beta/cachedContents?key=${apiKey}`;
 
     const systemPrompt = `Dex: Windows automation agent, full admin. Respond ONLY with JSON matching the provided schema. No prose.
-Available Tools:\n` + (tools.map(t => `${t.name}: ${t.description}`).join('\n') || '');
+Available Tools:\n` + (tools.map(t => `${t.name}: ${t.description} (Args Schema: ${JSON.stringify(t.inputSchema)})`).join('\n') || '');
 
     const requestBody = {
       model: 'models/gemini-2.5-flash',
