@@ -36,16 +36,14 @@
       Manufacturer="Chethan"
       Version="1.0.0"
       UpgradeCode="7e1b62cf-1f4f-4a3e-9d3a-decc00000001"
-      Scope="perUser"
+      Scope="perMachine"
       Compressed="yes">
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of Dex is already installed." />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
-    <StandardDirectory Id="LocalAppDataFolder">
-      <Directory Id="ProgramsFolder" Name="Programs">
-        <Directory Id="INSTALLFOLDER" Name="Dex" />
-      </Directory>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Dex" />
     </StandardDirectory>
 
     <StandardDirectory Id="ProgramMenuFolder">
@@ -63,7 +61,7 @@
                 Target="[INSTALLFOLDER]Dex.exe"
                 WorkingDirectory="INSTALLFOLDER" />
       <RemoveFolder Id="RemoveDexMenuFolder" On="uninstall" />
-      <RegistryValue Root="HKCU"
+      <RegistryValue Root="HKLM"
                      Key="Software\com.chethan616\dex"
                      Name="installed"
                      Type="integer"
@@ -78,7 +76,7 @@
                 Description="A calm cockpit for commanding agents you can trust"
                 Target="[INSTALLFOLDER]Dex.exe"
                 WorkingDirectory="INSTALLFOLDER" />
-      <RegistryValue Root="HKCU"
+      <RegistryValue Root="HKLM"
                      Key="Software\com.chethan616\dex"
                      Name="desktopshortcut"
                      Type="integer"
@@ -94,8 +92,8 @@
                    Separator=";"
                    Action="set"
                    Part="last"
-                   System="no" />
-      <RegistryValue Root="HKCU"
+                   System="yes" />
+      <RegistryValue Root="HKLM"
                      Key="Software\com.chethan616\dex"
                      Name="clipath"
                      Type="integer"
@@ -112,7 +110,7 @@
                 Arguments="&quot;[INSTALLFOLDER]start-gateway.vbs&quot;"
                 WorkingDirectory="INSTALLFOLDER" />
       <RemoveFolder Id="RemoveDexStartup" On="uninstall" />
-      <RegistryValue Root="HKCU"
+      <RegistryValue Root="HKLM"
                      Key="Software\com.chethan616\dex"
                      Name="autostart"
                      Type="integer"
