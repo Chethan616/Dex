@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 # Test approval.py
-from _shared.approval import check_refusal, BROWSER_REFUSE_PATTERNS
+from _shared.approval import check_refusal, BROWSER_REFUSE_PATTERNS  # type: ignore
 refusal = check_refusal("format c:")
 assert refusal is not None, "Should refuse format c:"
 print("OK COMMON_REFUSE_PATTERNS check passed")
@@ -16,7 +16,7 @@ print("OK BROWSER_REFUSE_PATTERNS check passed")
 
 # Test canvas_detection.py
 sys.path.insert(0, str(Path(__file__).resolve().parent / "browser-control"))
-from canvas_detection import is_canvas_dominant_url, make_canvas_hint
+from canvas_detection import is_canvas_dominant_url, make_canvas_hint  # type: ignore
 assert is_canvas_dominant_url("https://figma.com/file/abc") is True, "Figma should be canvas dominant"
 assert is_canvas_dominant_url("https://google.com") is False, "Google should not be canvas dominant"
 hint = make_canvas_hint("https://miro.com/app/board/123")

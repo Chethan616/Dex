@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # Make the current folder importable so canvas_detection can always be resolved.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _shared.approval import (  # noqa: E402
+from _shared.approval import (  # type: ignore # noqa: E402
     BROWSER_REFUSE_PATTERNS,
     check_refusal,
     dry_run_ack,
@@ -29,7 +29,7 @@ from _shared.approval import (  # noqa: E402
     with_rate_limit_retry,
 )
 
-from mcp.server.fastmcp import FastMCP  # noqa: E402
+from mcp.server.fastmcp import FastMCP  # type: ignore # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -130,16 +130,16 @@ def _resolve_browser_llm():
         BROWSER_PROVIDER_DEFAULT_MODEL[provider],
     )
     if provider == "groq":
-        from browser_use import ChatGroq
+        from browser_use import ChatGroq  # type: ignore
         return ChatGroq(model=model, api_key=api_key)
     if provider == "google":
-        from browser_use import ChatGoogle
+        from browser_use import ChatGoogle  # type: ignore
         return ChatGoogle(model=model, api_key=api_key)
     if provider == "anthropic":
-        from browser_use import ChatAnthropic
+        from browser_use import ChatAnthropic  # type: ignore
         return ChatAnthropic(model=model, api_key=api_key)
     if provider == "openai":
-        from browser_use import ChatOpenAI
+        from browser_use import ChatOpenAI  # type: ignore
         return ChatOpenAI(model=model, api_key=api_key)
     raise RuntimeError(
         f"DEX_BROWSER_PROVIDER={provider!r} fell through provider switch.",
@@ -223,8 +223,8 @@ async def run_browser_task(
 async def _run_agent(
     goal: str, url_hint: str, timeout_s: int, headless: bool, log_path: Path,
 ) -> dict[str, Any]:
-    from browser_use import Agent, BrowserSession
-    from canvas_detection import make_canvas_hint
+    from browser_use import Agent, BrowserSession  # type: ignore
+    from canvas_detection import make_canvas_hint  # type: ignore
 
     llm = _resolve_browser_llm()
     task = goal if not url_hint else f"Navigate to {url_hint}. Then: {goal}"

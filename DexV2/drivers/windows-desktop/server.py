@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # Make the current folder importable.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _shared.approval import (  # noqa: E402 (path manipulation must precede import)
+from _shared.approval import (  # type: ignore # noqa: E402 (path manipulation must precede import)
     check_refusal,
     dry_run_ack,
     new_task_id,
@@ -31,7 +31,7 @@ from _shared.approval import (  # noqa: E402 (path manipulation must precede imp
     serialize_run,
 )
 
-from mcp.server.fastmcp import FastMCP  # noqa: E402
+from mcp.server.fastmcp import FastMCP  # type: ignore # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Paths
