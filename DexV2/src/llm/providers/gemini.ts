@@ -46,7 +46,7 @@ Available Tools:\n` + (params.tools?.map(t => `${t.name}: ${t.description}`).joi
 
     if (params.responseSchema) {
       requestBody.generationConfig.responseMimeType = 'application/json';
-      requestBody.generationConfig.responseSchema = params.responseSchema;
+      requestBody.generationConfig.responseSchema = cleanGeminiSchema(params.responseSchema);
     }
 
     if (params.cacheKey) {
@@ -145,4 +145,23 @@ Available Tools:\n` + (tools.map(t => `${t.name}: ${t.description}`).join('\n') 
     logger.info(MODULE, `Context cache created: ${data.name}`);
     return data.name; // returns "cachedContents/abc123"
   }
+}
+
+function cleanGeminiSchema(schema: any): any {
+  if (!schema || typeof schema !== 'object') {
+    return schema;
+  }
+  
+  if (Array.isArray(schema)) {
+    return schema.map(cleanGeminiSchema);
+  }
+
+  const result: any = {};
+  for (const key of Object.keys(schema)) {
+    if (key === 'additionalProperties') {
+      continue;
+    }
+    result[key] = cleanGeminiSchema(schema[key]);
+  }
+  return result;
 }
