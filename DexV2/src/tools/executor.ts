@@ -74,6 +74,35 @@ function executeSandbox(lang: 'python' | 'node', code: string): string {
   }
 }
 
+function codeToCommand(lang: string, code: string): string | null {
+  const encoded = Buffer.from(code, 'utf-8').toString('base64');
+  const normalizedLang = lang.toLowerCase();
+
+  if (normalizedLang === 'python' || normalizedLang === 'py') {
+    return `python -c "import base64; exec(base64.b64decode('${encoded}').decode('utf-8'))"`;
+  }
+
+  if (normalizedLang === 'node' || normalizedLang === 'javascript' || normalizedLang === 'js') {
+    return `node -e "eval(Buffer.from('${encoded}', 'base64').toString('utf8'))"`;
+  }
+
+  return null;
+}
+
+function resolveExecCommand(args: any): string | null {
+  if (typeof args === 'string') return args;
+  if (!args || typeof args !== 'object') return null;
+
+  if (typeof args.c === 'string') return args.c;
+  if (typeof args.cmd === 'string') return args.cmd;
+  if (typeof args.command === 'string') return args.command;
+  if (typeof args.lang === 'string' && typeof args.code === 'string') {
+    return codeToCommand(args.lang, args.code);
+  }
+
+  return null;
+}
+
 function executeSql(query: string, dbPath: string): Promise<string> {
   return new Promise((resolve) => {
     const db = new sqlite3.Database(dbPath, (err) => {
@@ -214,11 +243,13 @@ export async function executeTool(name: string, args: any): Promise<string> {
   logger.info(MODULE, `Executing tool "${name}" with args: ${JSON.stringify(args)}`);
   
   switch (name) {
-    case 'exec':
-      if (typeof args?.c !== 'string') {
+    case 'exec': {
+      const command = resolveExecCommand(args);
+      if (!command) {
         throw new Error(`Missing or invalid command argument 'c' for exec tool.`);
       }
-      return runPowerShell(args.c);
+      return runPowerShell(command);
+    }
 
     case 'clipboard':
       if (typeof args?.op !== 'string') {

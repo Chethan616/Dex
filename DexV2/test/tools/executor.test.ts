@@ -9,6 +9,11 @@ describe('tool executor tests', () => {
     expect(res).toBe('Dex V2 test');
   });
 
+  test('exec accepts common command aliases', async () => {
+    await expect(executeTool('exec', { cmd: 'Write-Output "cmd alias"' })).resolves.toBe('cmd alias');
+    await expect(executeTool('exec', { command: 'Write-Output "command alias"' })).resolves.toBe('command alias');
+  });
+
   test('clipboard read and write', async () => {
     // Write text to clipboard
     await executeTool('clipboard', { op: 'write', text: 'Dex Clipboard Content' });

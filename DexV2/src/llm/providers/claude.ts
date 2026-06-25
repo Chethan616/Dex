@@ -30,6 +30,7 @@ export class ClaudeProvider implements LLMProvider {
     const url = 'https://api.anthropic.com/v1/messages';
 
     const systemPrompt = `Dex: Windows automation agent, full admin. Respond ONLY with JSON matching the provided schema. No prose.
+Output Schema:\n${params.responseSchema ? JSON.stringify(params.responseSchema) : 'none'}
 Available Tools:\n` + (params.tools?.map(t => `${t.name}: ${t.description} (Args Schema: ${JSON.stringify(t.inputSchema)})`).join('\n') || '');
 
     const system = [

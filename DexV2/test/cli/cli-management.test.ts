@@ -71,4 +71,22 @@ describe('Resilient JSON parser tests', () => {
     expect(parsed.t).toBe('exec');
     expect(parsed.a.c).toBe("echo 'hello'");
   });
+
+  test('recovers from missing commas between object properties', () => {
+    const orchestrator = new AgentOrchestrator() as any;
+
+    const testJson = `
+      {
+        "t": "exec"
+        "a": {
+          "cmd": "Write-Output 'hello'"
+        }
+      }
+    `;
+
+    const parsed = orchestrator.parseJsonPayload(testJson);
+
+    expect(parsed.t).toBe('exec');
+    expect(parsed.a.cmd).toBe("Write-Output 'hello'");
+  });
 });

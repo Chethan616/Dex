@@ -1,5 +1,14 @@
 import { DeterministicAction } from './types.js';
 
+const EXPLORER_LOCATIONS: Record<string, string> = {
+  downloads: '$env:USERPROFILE\\Downloads',
+  documents: '$env:USERPROFILE\\Documents',
+  desktop: '$env:USERPROFILE\\Desktop',
+  pictures: '$env:USERPROFILE\\Pictures',
+  music: '$env:USERPROFILE\\Music',
+  videos: '$env:USERPROFILE\\Videos',
+};
+
 const DETERMINISTIC_MAP: Record<string, DeterministicAction> = {
   'open notepad': { tool: 'shell', cmd: 'Start-Process notepad' },
   'open calc': { tool: 'shell', cmd: 'Start-Process calc' },
@@ -11,6 +20,8 @@ const DETERMINISTIC_MAP: Record<string, DeterministicAction> = {
   'open chrome': { tool: 'shell', cmd: 'Start-Process chrome' },
   'open msedge': { tool: 'shell', cmd: 'Start-Process msedge' },
   'open firefox': { tool: 'shell', cmd: 'Start-Process firefox' },
+  'open browser': { tool: 'shell', cmd: 'Start-Process "https://www.google.com"' },
+  'open web': { tool: 'shell', cmd: 'Start-Process "https://www.google.com"' },
   'open taskmgr': { tool: 'shell', cmd: 'Start-Process taskmgr' },
   'open regedit': { tool: 'shell', cmd: 'Start-Process regedit' },
   'open control': { tool: 'shell', cmd: 'Start-Process control' },
@@ -44,6 +55,11 @@ const DETERMINISTIC_MAP: Record<string, DeterministicAction> = {
   'uptime': { tool: 'shell', cmd: '(Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime' },
   'device manager': { tool: 'shell', cmd: 'Start-Process devmgmt.msc' },
   'services': { tool: 'shell', cmd: 'Start-Process services.msc' },
+  'startup apps': { tool: 'shell', cmd: 'Start-Process ms-settings:startupapps' },
+  'startup applications': { tool: 'shell', cmd: 'Start-Process ms-settings:startupapps' },
+  'startup folder': { tool: 'shell', cmd: 'Start-Process explorer.exe "shell:startup"' },
+  'network adapters': { tool: 'shell', cmd: 'Start-Process ncpa.cpl' },
+  'adapter settings': { tool: 'shell', cmd: 'Start-Process ncpa.cpl' },
   'event viewer': { tool: 'shell', cmd: 'Start-Process eventvwr.msc' },
   'disk management': { tool: 'shell', cmd: 'Start-Process diskmgmt.msc' },
   'environment variables': { tool: 'shell', cmd: 'Start-Process rundll32.exe sysdm.cpl,EditEnvironmentVariables' },
@@ -58,10 +74,94 @@ const DETERMINISTIC_MAP: Record<string, DeterministicAction> = {
 
 import { getAppShortcuts } from './shortcuts.js';
 
+function compactName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function cleanQuotedText(text: string): string {
+  return text.trim().replace(/^["']|["']$/g, '');
+}
+
+function getExplorerLocationTarget(location: string): string | null {
+  const key = location.trim().toLowerCase();
+  return EXPLORER_LOCATIONS[key] || null;
+}
+
+function tryDesktopRecipe(normalized: string): DeterministicAction | null {
+  const paintMatch = normalized.match(/^draw\s+(.+?)\s+in\s+(?:paint|mspaint)$/i);
+  if (paintMatch) {
+    const subject = cleanQuotedText(paintMatch[1]);
+    return {
+      tool: 'desktop',
+      app: 'mspaint',
+      app_hint: 'Paint',
+      label: 'Paint Drawing Recipe',
+      goal: `use the visible Paint canvas to draw ${subject}, keep the drawing visible, and do not save unless the user explicitly asked to save it`,
+    };
+  }
+
+  const wordMatch = normalized.match(/^(?:write\s+text|type)\s+(.+?)\s+in\s+(?:word|winword)(?:\s+doc(?:ument)?)?$/i);
+  if (wordMatch) {
+    const text = cleanQuotedText(wordMatch[1]);
+    return {
+      tool: 'desktop',
+      app: 'winword',
+      app_hint: 'Microsoft Word',
+      label: 'Word Writing Recipe',
+      goal: `enter this exact text into a blank Word document and leave the document open: ${text}`,
+    };
+  }
+
+  const explorerOpenMatch = normalized.match(/^open\s+explorer\s+to\s+(.+)$/i);
+  if (explorerOpenMatch) {
+    const location = cleanQuotedText(explorerOpenMatch[1]);
+    const target = getExplorerLocationTarget(location);
+    if (target) {
+      return {
+        tool: 'desktop',
+        app: 'explorer.exe',
+        app_hint: 'File Explorer',
+        label: 'Explorer Navigation Recipe',
+        goal: `navigate the active File Explorer window to ${location}`,
+        cmd: `Start-Process explorer.exe "${target}"`,
+      };
+    }
+  }
+
+  const explorerSearchMatch = normalized.match(/^search\s+for\s+(.+?)\s+in\s+explorer$/i);
+  if (explorerSearchMatch) {
+    const query = cleanQuotedText(explorerSearchMatch[1]);
+    return {
+      tool: 'desktop',
+      app: 'explorer.exe',
+      app_hint: 'File Explorer',
+      label: 'Explorer Search Recipe',
+      goal: `use the File Explorer search box to search for ${query} and show the results`,
+    };
+  }
+
+  const explorerFolderMatch = normalized.match(/^create\s+folder\s+(.+?)\s+in\s+explorer$/i);
+  if (explorerFolderMatch) {
+    const folderName = cleanQuotedText(explorerFolderMatch[1]);
+    return {
+      tool: 'desktop',
+      app: 'explorer.exe',
+      app_hint: 'File Explorer',
+      label: 'Explorer Folder Recipe',
+      goal: `create a new folder named ${folderName} in the active File Explorer window`,
+    };
+  }
+
+  return null;
+}
+
 export function tryDeterministic(normalized: string): DeterministicAction | null {
   const norm = normalized.toLowerCase().trim();
   const directMatch = DETERMINISTIC_MAP[norm];
   if (directMatch) return directMatch;
+
+  const recipeMatch = tryDesktopRecipe(norm);
+  if (recipeMatch) return recipeMatch;
 
   const openMatch = norm.match(/^(?:open|launch|start)\s+(.+)$/i);
   if (openMatch) {
@@ -70,6 +170,13 @@ export function tryDeterministic(normalized: string): DeterministicAction | null
     const shortcutPath = shortcuts.get(appName);
     if (shortcutPath) {
       return { tool: 'shell', cmd: `Start-Process "${shortcutPath}"` };
+    }
+
+    const compactAppName = compactName(appName);
+    for (const [shortcutName, path] of shortcuts.entries()) {
+      if (compactName(shortcutName) === compactAppName) {
+        return { tool: 'shell', cmd: `Start-Process "${path}"` };
+      }
     }
   }
 

@@ -2,7 +2,7 @@ import { TaskIntent } from './types.js';
 import { tryDeterministic } from './deterministic.js';
 import { tryParametric } from './parametric.js';
 
-const TIER2_TRIGGERS = /\b(plan|schedule|if|draw|coordinate|compile|compare|analyze|summarize|report|automate|script|loop)\b/i;
+const TIER2_TRIGGERS = /\b(plan|schedule|if|draw|coordinate|compile|compare|analyze|summarize|report|automate|script|program|loop)\b/i;
 
 export function classifyTier(intent: TaskIntent): TaskIntent {
   if (intent.kind === 'compound' && intent.subIntents) {

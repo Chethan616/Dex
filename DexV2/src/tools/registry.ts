@@ -1,10 +1,26 @@
 import { ToolDef } from '../llm/types.js';
 
+const LOCALLY_AVAILABLE_TOOLS = new Set([
+  'exec',
+  'clipboard',
+  'notify',
+  'search',
+  'schedule',
+  'voice',
+  'desktop',
+  'browser',
+  'http',
+  'git',
+  'sql',
+  'jq',
+  'code',
+]);
+
 const TOOL_REGISTRY: Record<string, ToolDef> = {
   // A. OS & Core System Tools
   exec: {
     name: 'exec',
-    description: 'Execute PowerShell / command-line statements with full Admin privileges.',
+    description: 'Execute PowerShell / command-line statements with full Admin privileges. Use for creating/saving files, launching apps, opening cmd windows, and scripts that need user input.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -164,7 +180,7 @@ const TOOL_REGISTRY: Record<string, ToolDef> = {
   },
   code: {
     name: 'code',
-    description: 'Execute sandboxed Python or Node.js logic.',
+    description: 'Execute short, non-interactive sandboxed Python or Node.js logic. Do not use for saved scripts, GUI apps, Notepad, cmd windows, or code that asks the user for input.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -359,8 +375,13 @@ const TOOL_REGISTRY: Record<string, ToolDef> = {
   }
 };
 
+export function isToolAvailable(name: string): boolean {
+  return LOCALLY_AVAILABLE_TOOLS.has(name);
+}
+
 export function resolveToolDefs(names: string[]): ToolDef[] {
   return names
+    .filter(isToolAvailable)
     .map(name => TOOL_REGISTRY[name])
     .filter((t): t is ToolDef => !!t);
 }

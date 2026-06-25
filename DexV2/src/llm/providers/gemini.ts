@@ -27,10 +27,12 @@ export class GeminiProvider implements LLMProvider {
 
   async *chat(params: ChatParams): AsyncGenerator<StreamChunk> {
     const apiKey = this.getApiKey();
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+    const isStructuredRequest = !!params.responseSchema;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:${isStructuredRequest ? 'generateContent' : 'streamGenerateContent'}${isStructuredRequest ? '' : '?alt=sse'}&key=${apiKey}`.replace('generateContent&', 'generateContent?');
 
     // System prompt and tools details combined
     const systemPrompt = `Dex: Windows automation agent, full admin. Respond ONLY with JSON matching the provided schema. No prose.
+Output Schema:\n${params.responseSchema ? JSON.stringify(params.responseSchema) : 'none'}
 Available Tools:\n` + (params.tools?.map(t => `${t.name}: ${t.description} (Args Schema: ${JSON.stringify(t.inputSchema)})`).join('\n') || '');
 
     const requestBody: any = {
@@ -68,6 +70,17 @@ Available Tools:\n` + (params.tools?.map(t => `${t.name}: ${t.description} (Args
     if (!response.ok) {
       const errText = await response.text();
       throw new Error(`Gemini API error: ${response.statusText} (${response.status}) - ${errText}`);
+    }
+
+    if (isStructuredRequest) {
+      const json = await response.json();
+      const text = json.candidates?.[0]?.content?.parts
+        ?.map((part: any) => part.text || '')
+        .join('');
+      if (text) {
+        yield { text };
+      }
+      return;
     }
 
     const reader = response.body?.getReader();

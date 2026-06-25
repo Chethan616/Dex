@@ -15,6 +15,7 @@ export interface DeterministicAction {
   goal?: string; // used for desktop or browser automation goal
   app?: string;  // used for desktop app name
   app_hint?: string; // used for desktop app target
+  label?: string; // optional human-friendly step label
   ch?: string;   // messaging channel
   to?: string;   // recipient address / identifier
   txt?: string;  // message content string

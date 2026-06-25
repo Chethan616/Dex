@@ -11,17 +11,17 @@ export const TOOL_CLUSTERS: Record<string, string[]> = {
   "calculation":    ["code", "exec"],
   
   // Comms
-  "messaging-wa":   ["whatsapp", "exec"],
-  "messaging-tg":   ["telegram", "exec"],
-  "messaging-slack":["slack", "exec"],
-  "messaging-teams":["teams", "exec"],
-  "messaging-discord":["discord", "exec"],
+  "messaging-wa":   ["whatsapp", "desktop", "browser", "exec"],
+  "messaging-tg":   ["telegram", "desktop", "browser", "exec"],
+  "messaging-slack":["slack", "browser", "exec"],
+  "messaging-teams":["teams", "desktop", "browser", "exec"],
+  "messaging-discord":["discord", "browser", "desktop", "exec"],
   
   // Workspace
-  "email":          ["gmail", "exec"],
-  "calendar":       ["gcal", "exec"],
-  "docs":           ["gdocs", "gdrive", "exec"],
-  "sheets":         ["gsheets", "gdrive", "exec"],
+  "email":          ["gmail", "browser", "exec"],
+  "calendar":       ["gcal", "browser", "exec"],
+  "docs":           ["gdocs", "gdrive", "browser", "exec"],
+  "sheets":         ["gsheets", "gdrive", "browser", "exec"],
   
   // Dev
   "vcs/git":        ["git", "exec"],
@@ -178,12 +178,15 @@ export function classifyClusterByRules(normalized: string): string | null {
   if (/\bgit\b|\bgithub\b|\bcommit\b|\bpush\b|\bpull\b|\bclone\b/.test(norm)) return 'vcs/git';
   if (/\bsql\b|\bpostgres\b|\bmysql\b|\bsqlite\b|\bdatabase\b|\bquery\b/.test(norm)) return 'database';
   
+  if (/\bnotepad\b|\bcmd\b|\bcommand prompt\b|\bterminal\b|\bpowershell\b|\bword\b|\bwinword\b|\bpaint\b|\bmspaint\b|\bexplorer\b|\bfile explorer\b/.test(norm)) return 'gui-automation';
+  if (/\bdownload(?:s)?\b/.test(norm) && /\b(write|create|save|script|program|file)\b/.test(norm)) return 'gui-automation';
+  if (/\b(write|create|save)\b.*\b(py|python|node|script|program)\b/.test(norm)) return 'file-ops';
   if (/\bcalculate\b|\bmath\b|\beval\b|\brun python\b|\brun node\b/.test(norm)) return 'calculation';
-  if (/\btask scheduler\b|\bcron\b|\bschedule task\b/.test(norm)) return 'system-config';
+  if (/\btask scheduler\b|\bcron\b|\bschedule task\b|\badapter\b|\bservice\b|\bregistry\b|\bstartup app\b|\benvironment variable\b/.test(norm)) return 'system-config';
   if (/\bsearch file\b|\bfind file\b|\bclipboard\b|\bcopy to\b/.test(norm)) return 'file-ops';
   if (/\bscreenshot\b|\bscreen capture\b|\blook at screen\b/.test(norm)) return 'visual/screen';
   
-  if (/\bbrowser\b|\bchrome\b|\bfirefox\b|\bedge\b|\bwebsite\b|\bweb page\b|\bsearch the web\b/.test(norm)) return 'web-browsing';
+  if (/\bbrowser\b|\bchrome\b|\bfirefox\b|\bedge\b|\bwebsite\b|\bweb page\b|\bsearch the web\b|\bopen web\b/.test(norm)) return 'web-browsing';
   if (/\bclick\b|\btype\b|\bopen app\b|\bdesktop\b/.test(norm)) return 'gui-automation';
 
   return null;

@@ -23,6 +23,13 @@ describe('intent router', () => {
       expect(classifyClusterByRules('git push origin branch')).toBe('vcs/git');
       expect(classifyClusterByRules('query sqlite table')).toBe('database');
     });
+
+    test('routes desktop script authoring requests away from the code sandbox', () => {
+      expect(classifyClusterByRules('write a py program in notepad save it in downloads and run it in cmd')).toBe('gui-automation');
+      expect(classifyClusterByRules('open web')).toBe('web-browsing');
+      expect(classifyClusterByRules('draw a circle in paint')).toBe('gui-automation');
+      expect(classifyClusterByRules('disable wifi adapter')).toBe('system-config');
+    });
   });
 
   describe('semantic routing fallback', () => {
@@ -65,6 +72,21 @@ describe('intent router', () => {
       
       const tools = await getRelevantTools(intent);
       expect(tools.length).toBeLessThanOrEqual(5);
+    });
+
+    test('falls back to browser automation for workspace tasks without native connectors', async () => {
+      const intent: TaskIntent = {
+        raw: 'send this file by email',
+        normalized: 'send this file by email',
+        kind: 'single-shot',
+        tier: 1
+      };
+
+      const tools = await getRelevantTools(intent);
+      const names = tools.map(t => t.name);
+      expect(names).toContain('browser');
+      expect(names).toContain('exec');
+      expect(names).not.toContain('gmail');
     });
   });
 });

@@ -64,6 +64,106 @@ describe('LLM Providers fetch wrappers', () => {
     expect(chunks[0].text).toBe('hello');
   });
 
+  test('GeminiProvider uses non-streaming endpoint for structured JSON plans', async () => {
+    process.env.GEMINI_API_KEY = 'mock-gemini-key';
+
+    const mockResponse = {
+      ok: true,
+      async json() {
+        return {
+          candidates: [{
+            content: {
+              parts: [{ text: '{"steps":[{"t":"exec","a":{"c":"echo hello"}}]}' }]
+            }
+          }]
+        };
+      }
+    };
+
+    let fetchUrl = '';
+    let fetchOptions: any = null;
+
+    global.fetch = vi.fn().mockImplementation((url, options) => {
+      fetchUrl = url as string;
+      fetchOptions = options;
+      return Promise.resolve(mockResponse as any);
+    });
+
+    const provider = new GeminiProvider();
+    const chunks = [];
+    for await (const chunk of provider.chat({
+      messages: [{ role: 'user', content: 'test' }],
+      model: 'gemini-2.5-flash',
+      tier: 2,
+      responseSchema: {
+        type: 'object',
+        properties: { steps: { type: 'array' } },
+        required: ['steps']
+      }
+    })) {
+      chunks.push(chunk);
+    }
+
+    expect(fetchUrl).toContain(':generateContent?key=mock-gemini-key');
+    expect(fetchUrl).not.toContain('streamGenerateContent');
+    const body = JSON.parse(fetchOptions.body);
+    expect(body.generationConfig.responseMimeType).toBe('application/json');
+    expect(body.generationConfig.responseSchema.properties.steps.type).toBe('array');
+    expect(chunks[0].text).toContain('"steps"');
+  });
+
+  test('ClaudeProvider includes planner output schema in the system prompt', async () => {
+    process.env.ANTHROPIC_API_KEY = 'mock-claude-key';
+
+    const mockResponse = {
+      ok: true,
+      body: {
+        getReader() {
+          let count = 0;
+          return {
+            async read() {
+              if (count === 0) {
+                count++;
+                const encoder = new TextEncoder();
+                return {
+                  done: false,
+                  value: encoder.encode('data: {"type": "content_block_delta", "delta": {"text": "{\\"steps\\":[]}"}}\n')
+                };
+              }
+              return { done: true, value: undefined };
+            },
+            releaseLock() {}
+          };
+        }
+      }
+    };
+
+    let fetchOptions: any = null;
+
+    global.fetch = vi.fn().mockImplementation((_url, options) => {
+      fetchOptions = options;
+      return Promise.resolve(mockResponse as any);
+    });
+
+    const provider = new ClaudeProvider();
+    for await (const _chunk of provider.chat({
+      messages: [{ role: 'user', content: 'test' }],
+      model: 'claude-sonnet-4-5',
+      tier: 2,
+      responseSchema: {
+        type: 'object',
+        properties: { steps: { type: 'array' } },
+        required: ['steps']
+      }
+    })) {
+      // Drain stream
+    }
+
+    const body = JSON.parse(fetchOptions.body);
+    expect(body.system[0].text).toContain('Output Schema:');
+    expect(body.system[0].text).toContain('"steps"');
+  });
+
   test('ClaudeProvider sets Anthropic headers and cache_control', async () => {
     process.env.ANTHROPIC_API_KEY = 'mock-claude-key';
 

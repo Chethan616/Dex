@@ -6,10 +6,13 @@ export function parseIntent(raw: string): TaskIntent {
 
   // Heuristic split for compound intents (e.g. separated by "and then", "then", or "and")
   const compoundDelimiters = /\b(and then|then|and)\b/i;
-  const parts = normalized
-    .split(compoundDelimiters)
-    .map(p => p.trim())
-    .filter(p => p && !/^(and then|then|and)$/i.test(p));
+  const preserveContext = /\b(and then|then|and)\b[\s\S]*\b(it|that|them)\b/i.test(normalized);
+  const parts = preserveContext
+    ? [normalized]
+    : normalized
+      .split(compoundDelimiters)
+      .map(p => p.trim())
+      .filter(p => p && !/^(and then|then|and)$/i.test(p));
 
   let kind: IntentKind = 'single-shot';
   
@@ -18,7 +21,7 @@ export function parseIntent(raw: string): TaskIntent {
 
   if (correctionKeywords.test(normalized)) {
     kind = 'correction';
-  } else if (followupKeywords.test(normalized)) {
+  } else if (!preserveContext && followupKeywords.test(normalized)) {
     kind = 'followup';
   } else if (parts.length > 1) {
     kind = 'compound';

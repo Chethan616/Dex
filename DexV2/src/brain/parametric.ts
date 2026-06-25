@@ -6,6 +6,37 @@ export interface ParametricAction {
   template: (params: Record<string, string>) => DeterministicAction;
 }
 
+function normalizeRegistryPath(path: string): string {
+  const trimmed = path.trim().replace(/\//g, '\\');
+  return trimmed
+    .replace(/^hkey_current_user/i, 'HKCU:')
+    .replace(/^hkey_local_machine/i, 'HKLM:')
+    .replace(/^hkey_classes_root/i, 'HKCR:')
+    .replace(/^hkey_users/i, 'HKU:')
+    .replace(/^hkey_current_config/i, 'HKCC:')
+    .replace(/^HK(CU|LM|CR|U|CC)(?!:)/i, 'HK$1:');
+}
+
+function adapterNamePattern(target: string): string {
+  const normalized = target.trim().toLowerCase();
+  if (['wifi', 'wi-fi', 'wireless', 'wlan'].includes(normalized)) return '*Wi-Fi*';
+  if (['ethernet', 'lan'].includes(normalized)) return '*Ethernet*';
+  if (['network', 'internet', 'all'].includes(normalized)) return '*';
+  return `*${target.trim()}*`;
+}
+
+function buildAdapterCommand(verb: 'Enable' | 'Disable', target: string): string {
+  const pattern = adapterNamePattern(target);
+  return `Get-NetAdapter -Name "${pattern}" -ErrorAction SilentlyContinue | ${verb}-NetAdapter -Confirm:$false -ErrorAction SilentlyContinue`;
+}
+
+function serviceStartupType(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'automatic') return 'Automatic';
+  if (normalized === 'disabled') return 'Disabled';
+  return 'Manual';
+}
+
 const PARAMETRIC_ACTIONS: ParametricAction[] = [
   // 1-2. Volume controls
   {
@@ -33,9 +64,29 @@ const PARAMETRIC_ACTIONS: ParametricAction[] = [
   },
   // 9-10. DNS configuration
   {
-    pattern: /^(?:set\s+)?(?:dns|DNS)\s+(?:to\s+)?(\d[\d.]+)(?:\s+(\d[\d.]+))?$/i,
+    pattern: /^(?:(?:set|change|update)\s+)?(?:primary\s+)?dns(?:\s+server)?\s+(?:to\s+)?(\d[\d.]+)(?:\s+(\d[\d.]+))?$/i,
     extract: m => ({ p: m[1], s: m[2] ?? '8.8.4.4' }),
     template: p => ({ tool: 'shell', cmd: `Set-DnsClientServerAddress -InterfaceAlias (Get-NetAdapter | Where-Object Status -eq 'Up').Name -ServerAddresses ('${p.p}','${p.s}')` }),
+  },
+  {
+    pattern: /^(?:enable|turn on)\s+(wifi|wi-fi|wireless|ethernet|network)\s+adapter$/i,
+    extract: m => ({ target: m[1] }),
+    template: p => ({ tool: 'shell', cmd: buildAdapterCommand('Enable', p.target) }),
+  },
+  {
+    pattern: /^(?:disable|turn off)\s+(wifi|wi-fi|wireless|ethernet|network)\s+adapter$/i,
+    extract: m => ({ target: m[1] }),
+    template: p => ({ tool: 'shell', cmd: buildAdapterCommand('Disable', p.target) }),
+  },
+  {
+    pattern: /^(?:enable|turn on)\s+adapter\s+(.+)$/i,
+    extract: m => ({ target: m[1].trim() }),
+    template: p => ({ tool: 'shell', cmd: buildAdapterCommand('Enable', p.target) }),
+  },
+  {
+    pattern: /^(?:disable|turn off)\s+adapter\s+(.+)$/i,
+    extract: m => ({ target: m[1].trim() }),
+    template: p => ({ tool: 'shell', cmd: buildAdapterCommand('Disable', p.target) }),
   },
   // 11-13. Delete files & folders
   {
@@ -49,7 +100,7 @@ const PARAMETRIC_ACTIONS: ParametricAction[] = [
     template: p => ({ tool: 'shell', cmd: `Remove-Item -Path "${p.path}" -Recurse -Force` }),
   },
   {
-    pattern: /^(?:delete|remove)\s+(.+)$/i,
+    pattern: /^(?:delete|remove)\s+(?!registry\s+(?:value|key)\b)(?!startup\s+app\b)(.+)$/i,
     extract: m => ({ path: m[1].trim() }),
     template: p => ({ tool: 'shell', cmd: `Remove-Item -Path "${p.path}" -Recurse -Force` }),
   },
@@ -152,6 +203,11 @@ const PARAMETRIC_ACTIONS: ParametricAction[] = [
     extract: m => ({ name: m[1].trim() }),
     template: p => ({ tool: 'shell', cmd: `Restart-Service -Name "${p.name}" -Force` }),
   },
+  {
+    pattern: /^(?:set\s+)?service\s+(.+?)\s+startup\s+(?:to\s+)?(automatic|manual|disabled)$/i,
+    extract: m => ({ name: m[1].trim(), startup: m[2].trim() }),
+    template: p => ({ tool: 'shell', cmd: `Set-Service -Name "${p.name}" -StartupType ${serviceStartupType(p.startup)}` }),
+  },
   // 35. Test net connection
   {
     pattern: /^net\s+connection\s+(.+)$/i,
@@ -238,6 +294,41 @@ const PARAMETRIC_ACTIONS: ParametricAction[] = [
     pattern: /^go\s+to\s+(.+)$/i,
     extract: m => ({ url: m[1].trim() }),
     template: p => ({ tool: 'shell', cmd: `Start-Process "${p.url}"` }),
+  },
+  {
+    pattern: /^set\s+registry\s+string\s+(.+?)\s+name\s+(.+?)\s+to\s+(.+)$/i,
+    extract: m => ({ path: normalizeRegistryPath(m[1]), name: m[2].trim(), value: m[3].trim() }),
+    template: p => ({ tool: 'shell', cmd: `New-Item -Path "${p.path}" -Force | Out-Null; New-ItemProperty -Path "${p.path}" -Name "${p.name}" -Value "${p.value}" -PropertyType String -Force | Out-Null` }),
+  },
+  {
+    pattern: /^set\s+registry\s+dword\s+(.+?)\s+name\s+(.+?)\s+to\s+(\d+)$/i,
+    extract: m => ({ path: normalizeRegistryPath(m[1]), name: m[2].trim(), value: m[3].trim() }),
+    template: p => ({ tool: 'shell', cmd: `New-Item -Path "${p.path}" -Force | Out-Null; New-ItemProperty -Path "${p.path}" -Name "${p.name}" -Value ${p.value} -PropertyType DWord -Force | Out-Null` }),
+  },
+  {
+    pattern: /^delete\s+registry\s+value\s+(.+?)\s+name\s+(.+)$/i,
+    extract: m => ({ path: normalizeRegistryPath(m[1]), name: m[2].trim() }),
+    template: p => ({ tool: 'shell', cmd: `Remove-ItemProperty -Path "${p.path}" -Name "${p.name}" -ErrorAction SilentlyContinue` }),
+  },
+  {
+    pattern: /^create\s+registry\s+key\s+(.+)$/i,
+    extract: m => ({ path: normalizeRegistryPath(m[1]) }),
+    template: p => ({ tool: 'shell', cmd: `New-Item -Path "${p.path}" -Force | Out-Null` }),
+  },
+  {
+    pattern: /^delete\s+registry\s+key\s+(.+)$/i,
+    extract: m => ({ path: normalizeRegistryPath(m[1]) }),
+    template: p => ({ tool: 'shell', cmd: `Remove-Item -Path "${p.path}" -Recurse -Force -ErrorAction SilentlyContinue` }),
+  },
+  {
+    pattern: /^(?:add|enable)\s+startup\s+app\s+(.+?)\s+path\s+(.+)$/i,
+    extract: m => ({ name: m[1].trim(), path: m[2].trim() }),
+    template: p => ({ tool: 'shell', cmd: `New-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "${p.name}" -Value "${p.path}" -PropertyType String -Force | Out-Null` }),
+  },
+  {
+    pattern: /^(?:disable|remove)\s+startup\s+app\s+(.+)$/i,
+    extract: m => ({ name: m[1].trim() }),
+    template: p => ({ tool: 'shell', cmd: `Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "${p.name}" -ErrorAction SilentlyContinue` }),
   },
 ];
 
