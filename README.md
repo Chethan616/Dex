@@ -2,7 +2,7 @@
 
 A calm cockpit for commanding agents you can trust.
 
-Dex is a Windows-first, chat-first control surface for a local AI agent that has *hands* on your machine — it can drive real Windows app GUIs (Office, browsers, settings panels, anything with a UI) by reasoning about what you asked for and previewing every action before it runs.
+Dex is a Windows-first, chat-first control surface for a local AI agent that has *hands* on your machine — it can drive real Windows app GUIs (Office, browsers, settings panels, anything with a UI Automation tree), not just shell commands.
 
 > **v1 is desktop Windows only.** Mobile, macOS, and Linux are in the roadmap but not built. See `prompt.md` §9 for the scope boundary.
 
@@ -26,7 +26,7 @@ shell / file / process  control MCP (UFO²)            MCP (browser-use)
                         run_desktop_task              run_browser_task
 ```
 
-- **Dex core** (`dex/core/`) — sessions, channels, skills, memory, cron, built-in shell tools. Forked from OpenClaw at commit `7074cf8e23c1f64362c4f8c4bf32971ca94d5221` (see `dex/core/HERITAGE.md` for the heritage commitment); the user-facing binary is `dex` and the npm package name is `dexagent`.
+- **Dex core** (`dex/core/`) — sessions, channels, skills, memory, cron, built-in shell tools. Forked from OpenClaw at commit `7074cf8e23c1f64362c4f8c4bf32971ca94d5221` (see `dex/core/HERITAGE.md`).
 - **UFO²** (`vendor/UFO/`) — Windows native-app GUI automation via the accessibility tree.
 - **browser-use** (`vendor/browser-use/`) — browser automation via Playwright + an LLM-driven agent.
 - **windows-desktop-control** (`dex/drivers/windows-desktop-control/`) — MCP server exposing `run_desktop_task` to Claude.
@@ -95,6 +95,92 @@ Recorded so builds are reproducible. Update only when intentionally bumping.
 | `core/` (Dex brain — fork of `openclaw/openclaw`) | `7074cf8e23c1f64362c4f8c4bf32971ca94d5221` | 2026-06-03 — see `core/HERITAGE.md` |
 | `microsoft/UFO`            | `adef15b8789b015356977ed742916de2da644509` | 2026-05-26 |
 | `browser-use/browser-use`  | `4931a7e0217cf9c64450348b96511733263c9268` | 2026-06-01 |
+
+---
+
+## Workflow
+
+```mermaid
+graph TD
+    %% Styling
+    classDef layer fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef core fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef backend fill:#f1f8e9,stroke:#689f38,stroke-width:2px;
+    classDef bus fill:#fff3e0,stroke:#f57c00,stroke-width:2px,shape:circle;
+
+    %% Layer 1 & 2: Transport & Security
+    subgraph Communication [Layer 1 & 2: Transport & Security]
+        direction LR
+        WA(WhatsApp)
+        TG(Telegram)
+        DC(Discord)
+        CLI(CLI)
+        
+        OG{Owner Gate}
+        
+        WA --> OG
+        TG --> OG
+        DC --> OG
+        CLI --> OG
+    end
+
+    %% Drop unauthorized
+    Drop((Dropped))
+    OG -.->|Unauthorized| Drop
+
+    %% Layer 3: Gateway
+    GW(Layer 3: Gateway):::core
+    OG -->|Authorized User| GW
+
+    %% Layer 6: Event Bus
+    EB((Layer 6:\nEvent Bus)):::bus
+    GW -.->|Subscribes| EB
+    EB -.->|Streams to| WA
+
+    %% Layer 4: Brain & Orchestrator
+    subgraph CoreEngine [Layer 4 & 5: The Core Engine]
+        direction TB
+        
+        subgraph Brain [Brain: Planning Only]
+            direction TB
+            B1[1. Intent Normalization]
+            B2[2. Semantic Cache]
+            B3[3. Tier Classification]
+            B4[4. Execution Planner]
+            B1 --> B2 --> B3 --> B4
+        end
+
+        subgraph Orchestrator [Orchestrator: Coordination]
+            direction TB
+            O1[Agent Registry]
+            O2[Dispatcher]
+            O3[Retry / Recovery]
+            O1 --> O2 <--> O3
+        end
+        
+        Brain ===>|Generates Execution Plan| Orchestrator
+    end
+
+    GW ===>|TaskRequest| Brain
+    Orchestrator -.->|Emits 'Thinking' Events| EB
+
+    %% Layer 7: Agents & Backends
+    subgraph Execution [Layer 7: Replaceable Execution Backends]
+        direction TB
+        DA[Desktop Agent] --> DA_B(Agent-S3 / UIA Capture)
+        BA[Browser Agent] --> BA_B(browser-use)
+        WA_A[Workspace Agent] --> WA_B(Google, MS365, Slack MCPs)
+        SA[System Agent] --> SA_B(Persistent Elevated Shell Host)
+    end
+    
+    class DA,BA,WA_A,SA core;
+    class DA_B,BA_B,WA_B,SA_B backend;
+
+    Orchestrator ===>|Resolves via Capabilities| DA
+    Orchestrator ===>|Resolves via Capabilities| BA
+    Orchestrator ===>|Resolves via Capabilities| WA_A
+    Orchestrator ===>|Resolves via Capabilities| SA
+```
 
 ---
 
