@@ -1,0 +1,8 @@
+fastapi>=0.109.0
+uvicorn>=0.27.0
+pyautogui>=0.9.54
+Pillow>=10.2.0
+anthropic>=0.36.0
+python-dotenv>=1.0.0
+uiautomation>=2.0.18
+requests>=2.31.0

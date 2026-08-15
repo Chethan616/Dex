@@ -1,0 +1,33 @@
+system:
+  instance_id: "dex-master-workstation"
+  hotkey: "Alt+Space"
+
+owner:
+  whatsapp: null
+  telegram_id: null
+  discord_id: null
+  slack_user_id: null
+  trigger_prefix: "@dex"
+
+llm:
+  default_provider: "anthropic"
+  planner_model_tier1: "claude-sonnet-4-6"
+  planner_model_tier3: "claude-opus-4-8"
+
+backends:
+  desktop:
+    grounding_endpoint: "http://127.0.0.1:8080"
+  browser:
+    default_backend: "browser_use"
+  workspace:
+    google_mcp_args: ["-y", "taylorwilsdon-google-workspace-mcp"]
+    ms365_mcp_args: ["-y", "@softeria/ms-365-mcp-server"]
+    slack_mcp_args: ["-y", "@korotovsky/slack-mcp-server"]
+
+daemon:
+  pipe_name: "\\\\.\\pipe\\dex_privileged_daemon"
+
+mesh:
+  enabled: false
+  discovery: "mdns"
+  websocket_port: 8765

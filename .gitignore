@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+data/evidence/
+data/sessions/
+data/cache/
+data/telemetry.db
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
