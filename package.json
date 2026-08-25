@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "ts-node src/main.ts",
     "build": "tsc",
-    "start": "node dist/src/main.js"
+    "start": "node dist/src/main.js",
+    "typecheck": "tsc --noEmit",
+    "test:ws": "ts-node tests/smoke_ws.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",

@@ -10,3 +10,9 @@ __pycache__/
 *.pyo
 .venv/
 *.egg-info/
+
+# Flutter
+ui/dex-bar/build/
+ui/dex-bar/.dart_tool/
+ui/dex-bar/windows/flutter/ephemeral/
+.flutter-plugins-dependencies

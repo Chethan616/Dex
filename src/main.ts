@@ -6,8 +6,11 @@ import { Brain } from '../core/brain/planner';
 import { Gateway } from '../core/gateway';
 import { AgentRegistry } from '../core/orchestrator/registry';
 import { Orchestrator } from '../core/orchestrator/orchestrator';
+import { CancellationRegistry } from '../core/orchestrator/cancellation';
+import { ConfirmationManager } from '../core/confirmation/confirmation_manager';
 import { ReliabilityLayer } from '../core/reliability/observation_engine';
 import { EvidenceStore } from '../core/reliability/evidence_store';
+import { DexServer } from '../core/server/ws_server';
 import { SystemAgent } from '../agents/system/system_agent';
 import { DesktopAgent } from '../agents/desktop/desktop_agent';
 import { startCli } from '../channels/cli';
@@ -31,12 +34,24 @@ function main(): void {
   registry.register(new SystemAgent());
   registry.register(new DesktopAgent());
 
-  const orchestrator = new Orchestrator(registry, reliability, fullAccess);
+  const confirmations = new ConfirmationManager();
+  const cancellation = new CancellationRegistry();
+
+  const orchestrator = new Orchestrator(registry, reliability, fullAccess, confirmations, cancellation);
   const ownerGate = new OwnerGate({});
   const brain = new Brain(apiKey);
   const gateway = new Gateway(ownerGate, brain, orchestrator);
 
-  startCli(gateway).catch((err) => {
+  if (process.env.DEX_UI_SERVER !== 'false') {
+    const server = new DexServer(gateway, confirmations, cancellation, {
+      port: parseInt(process.env.DEX_UI_PORT ?? '8770', 10),
+      fullAccess,
+      evidenceDir: 'data/evidence',
+    });
+    server.start();
+  }
+
+  startCli(gateway, confirmations).catch((err) => {
     console.error('Fatal:', err);
     process.exit(1);
   });

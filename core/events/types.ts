@@ -5,6 +5,8 @@ export type EventType =
   | 'selecting'
   | 'executing'
   | 'retrying'
+  | 'awaiting'
+  | 'cancelled'
   | 'done'
   | 'failed';
 
@@ -58,3 +60,35 @@ export interface VerificationResult {
 }
 
 export type TaskStatus = 'COMPLETED' | 'FAILED' | 'ABORTED' | 'CANCELLED';
+
+/**
+ * A pending Tier 1/2/3 approval. `stepVersion` is a content hash of the step —
+ * an approval card built for an older version of a step cannot approve a newer one.
+ */
+export interface ConfirmationRequest {
+  requestId: string;
+  stepId: string;
+  stepVersion: string;
+  capability: string;
+  action: string;
+  params: Record<string, unknown>;
+  tier: 1 | 2 | 3 | 4;
+  /** Plain-language description of exactly what will happen if approved. */
+  description: string;
+  createdAt: number;
+  expiresAt: number;
+}
+
+/**
+ * `approved_session` is Tier 3 only — pre-approve this capability:action for the
+ * rest of the session. Tier 2 must re-ask every time and the manager enforces
+ * that server-side, not by hiding a button.
+ * `handed_off` is Tier 1 only — the owner did it themselves; DEX continues.
+ */
+export type ConfirmationVerdict =
+  | 'approved'
+  | 'approved_session'
+  | 'handed_off'
+  | 'rejected'
+  | 'cancelled'
+  | 'expired';

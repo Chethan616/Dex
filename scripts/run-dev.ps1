@@ -1,16 +1,18 @@
 <#
 .SYNOPSIS
 DEX V3 development startup.
-Launches: daemon (requires elevation) + Desktop Agent server + TypeScript CLI.
+Launches: daemon (requires elevation) + Desktop Agent server + TypeScript core + Dex Bar UI.
 
 .PARAMETER DaemonOnly      Start only the privileged daemon
 .PARAMETER CoreOnly        Start only TypeScript core (daemon + desktop already running)
 .PARAMETER NoDesktop       Skip the Desktop Agent server (Slice 1 only)
+.PARAMETER NoUi            Skip the Flutter Dex Bar (CLI only)
 #>
 param(
     [switch]$DaemonOnly,
     [switch]$CoreOnly,
-    [switch]$NoDesktop
+    [switch]$NoDesktop,
+    [switch]$NoUi
 )
 
 $ErrorActionPreference = 'Stop'
@@ -52,7 +54,24 @@ if (-not $CoreOnly -and -not $NoDesktop) {
     Start-Sleep -Milliseconds 1000
 }
 
+if (-not $DaemonOnly -and -not $NoUi) {
+    $exe = 'ui/dex-bar/build/windows/x64/runner/Debug/dex_bar.exe'
+    if (-not (Test-Path $exe)) {
+        Write-Host 'Dex Bar not built yet — building (first run takes ~1 min)...' -ForegroundColor Cyan
+        Push-Location 'ui/dex-bar'
+        flutter build windows --debug
+        Pop-Location
+    }
+    if (Test-Path $exe) {
+        Write-Host 'Starting Dex Bar (Alt+Space to summon)...' -ForegroundColor Cyan
+        $ui = Start-Process $exe -PassThru
+        Write-Host "Dex Bar PID: $($ui.Id)" -ForegroundColor DarkGray
+    } else {
+        Write-Host 'Dex Bar build failed — continuing with CLI only.' -ForegroundColor Yellow
+    }
+}
+
 if (-not $DaemonOnly) {
-    Write-Host 'Starting DEX Core (CLI)...' -ForegroundColor Cyan
+    Write-Host 'Starting DEX Core (CLI + UI server)...' -ForegroundColor Cyan
     npx ts-node src/main.ts
 }
