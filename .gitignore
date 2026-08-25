@@ -1,18 +1,51 @@
 node_modules/
 dist/
+*.tsbuildinfo
+
+# Secrets — never commit. Runtime secrets belong in the OS credential store
+# (core/secrets/credential_store.ts), not in any file here.
 .env
+.env.*
+!.env.example
+*.dpapi
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+token.json
+client_secret*.json
+
+# Runtime data — evidence contains screenshots of the owner's screen
 data/evidence/
 data/sessions/
 data/cache/
 data/telemetry.db
+data/*.db
+*.log
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
 .venv/
+venv/
 *.egg-info/
+.pytest_cache/
 
 # Flutter
 ui/dex-bar/build/
 ui/dex-bar/.dart_tool/
 ui/dex-bar/windows/flutter/ephemeral/
 .flutter-plugins-dependencies
+.dart_tool/
+
+# Local scratch
+scratchpad/
+scratch_*
+*.local
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini

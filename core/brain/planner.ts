@@ -1,7 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { DexRequest, ExecutionPlan, ExecutionStep } from '../events/types';
 import { normalize } from './normalizer';
 import { emit } from '../events/bus';
+import { LlmProvider, ToolSpec } from '../llm/provider';
+import { buildBrainProvider } from '../llm/providers';
 
 const SYSTEM_PROMPT = `You are the planning brain of DEX, a personal Windows AI automation system.
 
@@ -118,10 +119,10 @@ interface RawPlan {
   steps: RawStep[];
 }
 
-const plannerTool: Anthropic.Tool = {
+const plannerTool: ToolSpec = {
   name: 'create_execution_plan',
   description: "Create a structured execution plan as a dependency graph (DAG) to fulfill the owner's request",
-  input_schema: {
+  schema: {
     type: 'object' as const,
     properties: {
       intent: {
@@ -177,45 +178,61 @@ const plannerTool: Anthropic.Tool = {
 };
 
 export class Brain {
-  private client: Anthropic;
+  private provider: LlmProvider;
 
-  constructor(apiKey: string, private model = 'claude-sonnet-4-6') {
-    this.client = new Anthropic({ apiKey });
+  /**
+   * Takes a provider rather than an API key so the Brain has no idea which
+   * vendor is answering — that choice lives in core/llm and is one env var.
+   */
+  constructor(provider?: LlmProvider) {
+    this.provider = provider ?? buildBrainProvider();
+  }
+
+  get model(): string {
+    return this.provider.label;
   }
 
   async plan(request: DexRequest): Promise<ExecutionPlan> {
-    emit('routing', `Brain thinking (${this.model})...`, request.requestId);
+    emit('routing', `Brain thinking (${this.provider.label})...`, request.requestId);
 
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: 2048,
+    const raw = (await this.provider.callTool({
       system: SYSTEM_PROMPT,
-      tools: [plannerTool],
-      tool_choice: { type: 'any' },
-      messages: [{ role: 'user', content: normalize(request.text) }],
-    });
+      user: normalize(request.text),
+      tool: plannerTool,
+      maxTokens: 2048,
+    })) as unknown as RawPlan;
 
-    const toolUse = response.content.find((b) => b.type === 'tool_use');
-    if (!toolUse || toolUse.type !== 'tool_use') {
-      throw new Error('Brain did not return an execution plan');
+    if (!Array.isArray(raw?.steps) || raw.steps.length === 0) {
+      throw new Error('Brain returned a plan with no steps');
     }
-
-    const raw = toolUse.input as RawPlan;
 
     const steps: ExecutionStep[] = raw.steps.map((s, i) => ({
       id: s.id ?? `step_${i + 1}`,
       capability: s.capability,
       action: s.action,
       params: s.params ?? {},
-      confirmationTier: (s.confirmationTier as 1 | 2 | 3 | 4) ?? 4,
+      confirmationTier: clampTier(s.confirmationTier),
       dependsOn: s.dependsOn ?? [],
     }));
 
     return {
       requestId: request.requestId,
-      intent: raw.intent,
+      intent: raw.intent ?? request.text,
       tier: (raw.tier as 1 | 2 | 3) ?? 1,
       steps,
     };
   }
+}
+
+/**
+ * The planner's tier feeds the confirmation gate, so a model that mislabels it
+ * weakens a safety control. Measured: gpt-oss-120b tagged trivial reads as
+ * Tier 1. An out-of-range or missing value becomes Tier 2 — ask the owner —
+ * because the safe direction to fail is "confirm something harmless", never
+ * "silently run something destructive".
+ */
+function clampTier(value: unknown): 1 | 2 | 3 | 4 {
+  const tier = Number(value);
+  if (tier === 1 || tier === 2 || tier === 3 || tier === 4) return tier;
+  return 2;
 }

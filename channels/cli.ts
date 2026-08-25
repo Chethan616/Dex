@@ -37,8 +37,18 @@ export async function startCli(
 ): Promise<void> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-  const ask = (prompt: string): Promise<string> =>
-    new Promise((resolve) => rl.question(prompt, resolve));
+  // `null` means stdin closed. That is how a piped run ends
+  // (`echo "..." | npm run dev`), so it has to unwind cleanly rather than
+  // throwing ERR_USE_AFTER_CLOSE out of a bare readline callback.
+  let stdinClosed = false;
+  rl.on('close', () => { stdinClosed = true; });
+
+  const ask = (prompt: string): Promise<string | null> =>
+    new Promise((resolve) => {
+      if (stdinClosed) return resolve(null);
+      rl.once('close', () => resolve(null));
+      rl.question(prompt, resolve);
+    });
 
   // The CLI is an approval surface too — same manager, same version check.
   confirmations.registerProvider({
@@ -68,7 +78,11 @@ export async function startCli(
         ? 'approve? [y]es / [s]ession / [N]o '
         : 'approve? [y/N] ';
 
-    const answer = (await ask(prompt)).trim().toLowerCase();
+    // stdin gone mid-approval: nobody is there to say yes, so this is a
+    // rejection. Defaulting to approval because the pipe closed would be the
+    // worst possible reading of silence.
+    const raw = await ask(prompt);
+    const answer = (raw ?? '').trim().toLowerCase();
 
     const verdict = request.tier === 1
       ? (answer.startsWith('y') ? 'handed_off' : 'rejected')
@@ -86,7 +100,13 @@ export async function startCli(
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const raw = (await ask('dex> ')).trim();
+    const answer = await ask('dex> ');
+    if (answer === null) {
+      console.log('');
+      rl.close();
+      return;
+    }
+    const raw = answer.trim();
     if (!raw) continue;
     if (raw === 'exit' || raw === 'quit') {
       rl.close();

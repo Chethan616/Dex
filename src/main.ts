@@ -19,11 +19,18 @@ import { defaultRoutes, defaultServers } from '../agents/workspace/servers';
 import { startCli } from '../channels/cli';
 
 function main(): void {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    console.error('\x1b[31mERROR: ANTHROPIC_API_KEY not set.\x1b[0m Copy .env.example to .env and add your key.');
+  // Which vendor answers is core/llm's business, not main's. All main needs to
+  // know is whether *some* provider could be built, so it can say something
+  // useful instead of throwing a stack trace at the owner.
+  let brain: Brain;
+  try {
+    brain = new Brain();
+  } catch (err) {
+    console.error(`[31mERROR:[0m ${err instanceof Error ? err.message : err}`);
     process.exit(1);
+    return;
   }
+  console.log(`[90m[brain][0m ${brain.model}`);
 
   const fullAccess = process.env.FULL_ACCESS === 'true';
   if (fullAccess) {
@@ -52,7 +59,6 @@ function main(): void {
 
   const orchestrator = new Orchestrator(registry, reliability, fullAccess, confirmations, cancellation);
   const ownerGate = new OwnerGate({});
-  const brain = new Brain(apiKey);
   const gateway = new Gateway(ownerGate, brain, orchestrator);
 
   if (process.env.DEX_UI_SERVER !== 'false') {
