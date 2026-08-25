@@ -1,17 +1,20 @@
 <#
 .SYNOPSIS
 DEX V3 development startup.
-Launches: daemon (requires elevation) + Desktop Agent server + TypeScript core + Dex Bar UI.
+Launches: daemon (requires elevation) + Desktop Agent server + Browser Agent server
++ TypeScript core + Dex Bar UI.
 
 .PARAMETER DaemonOnly      Start only the privileged daemon
 .PARAMETER CoreOnly        Start only TypeScript core (daemon + desktop already running)
 .PARAMETER NoDesktop       Skip the Desktop Agent server (Slice 1 only)
+.PARAMETER NoBrowser       Skip the Browser Agent server (no web tasks)
 .PARAMETER NoUi            Skip the Flutter Dex Bar (CLI only)
 #>
 param(
     [switch]$DaemonOnly,
     [switch]$CoreOnly,
     [switch]$NoDesktop,
+    [switch]$NoBrowser,
     [switch]$NoUi
 )
 
@@ -51,6 +54,13 @@ if (-not $CoreOnly -and -not $NoDesktop) {
     Write-Host 'Starting Desktop Agent Server...' -ForegroundColor Cyan
     $desktop = Start-Process python -ArgumentList 'agents/desktop/server.py' -PassThru -WindowStyle Minimized
     Write-Host "Desktop Agent PID: $($desktop.Id)" -ForegroundColor DarkGray
+    Start-Sleep -Milliseconds 1000
+}
+
+if (-not $CoreOnly -and -not $NoBrowser) {
+    Write-Host 'Starting Browser Agent Server...' -ForegroundColor Cyan
+    $browser = Start-Process python -ArgumentList 'agents/browser/server.py' -PassThru -WindowStyle Minimized
+    Write-Host "Browser Agent PID: $($browser.Id)" -ForegroundColor DarkGray
     Start-Sleep -Milliseconds 1000
 }
 

@@ -43,6 +43,12 @@ Every action a backend can take is classified into exactly one of four tiers. Th
 
 Confirmations are **signed and versioned**: an approval request carries the specific request id and step version it was generated for, and only resolves that exact one. A card the owner approved five minutes ago cannot be silently reused to approve a different, newer version of the step — if the step changed, a new confirmation is required.
 
+**Tier 1 is raised by backends, not only by plans.** A CAPTCHA is not something the Brain can foresee at planning time; it appears halfway through a task, on a page nobody predicted. So a backend can raise a hand-off *mid-step*: it parks its live state, the owner gets the same Tier 1 card they would have got from a plan, and the backend resumes where it stopped once they say they're done. Implementation: `ConfirmationManager.requestHandoff`, reached through the `AgentContext` the Orchestrator passes into every step.
+
+**Hand-offs are not covered by Full Access.** Tiers 2, 3 and 4 exist to ask permission, and Full Access is the owner saying they've granted it in advance. Tier 1 is not a permission question — it's a capability one. No level of privilege lets Dex read a CAPTCHA, clear a bot check, or know a password the owner never told it. If a hand-off is raised with nobody attached to answer, it fails fast rather than auto-approving, because auto-approving would mean claiming a wall was cleared when it wasn't.
+
+**Hand-offs are bounded.** Two per task. After that Dex reports that the site won't let it through, instead of asking a third time. The point of escalating to the owner is to get past something once — not to convert an infinite retry loop into an infinite interruption loop.
+
 ---
 
 ## 3. Untrusted content
@@ -60,6 +66,7 @@ A secondary, much weaker layer — pattern-matching known injection phrases like
 Hard rules for the Desktop and System backends:
 
 - Never automate password manager apps or password-manager websites.
+- Never type into a password, one-time-code, or OTP-named field. The browser's `type_text` primitive enforces this at the point of action — it inspects the element and refuses, whatever the plan said — and raises a hand-off instead.
 - Never change Windows security or privacy settings, and never act on a security/privacy permission prompt on the owner's behalf.
 - Never use Windows-key shortcuts (no `Win`, `Win+...`, or other OS-key combinations).
 - **Never automate a terminal window** (PowerShell, Command Prompt, Windows Terminal) via UI clicking or typing. This is exactly why the System backend exists as a separate thing from the Desktop backend: registry, DNS, power-plan, and similar changes always go through its direct API/PowerShell calls through the Tool Runtime, never through "open a terminal and type a command" via the GUI.
@@ -71,6 +78,12 @@ Hard rules for the Desktop and System backends:
 ## 5. Secrets
 
 Never in `config.yaml`, or any file that's plausible to commit or share. Pipe names, cluster/session secrets, API keys, and node credentials live in `.env` (gitignored) or the OS credential store, and nowhere else. A config file can reference the *name* of an environment variable; it never holds the value.
+
+**Workspace/MCP credentials use the store, not `.env`.** `core/secrets/credential_store.ts` encrypts each secret with DPAPI in `CurrentUser` scope, so the ciphertext under `%LOCALAPPDATA%\DEX\credentials` is bound to this Windows account on this machine and is inert anywhere else. Plaintext never appears on a command line or in a child process's environment on the way in — it moves over stdin, base64-encoded so no console codepage can corrupt it. Set them with `npm run cred -- set <name>`; `npm run cred -- list` shows what's stored and what's still missing without printing any values.
+
+An MCP server gets a deliberately narrow environment: `PATH`, the Windows profile paths, and exactly the secrets that server declares. It does not inherit `ANTHROPIC_API_KEY`, daemon pipe names, or channel tokens. A third-party server process should be able to do its job and learn nothing else about the machine it's running on.
+
+Reading from `.env` still works as a bootstrap path for a fresh checkout, and warns each time it's used, naming the command that moves the value into the store. That warning is the point — plaintext-on-disk is a migration state, not a resting place.
 
 This is a deliberate correction: it's easy to end up with an example config that has a secret-shaped placeholder sitting a few sections above a comment saying secrets don't belong in config files. If those two things are ever in tension in a draft, the rule wins, not the example.
 

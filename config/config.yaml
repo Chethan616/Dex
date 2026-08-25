@@ -18,11 +18,23 @@ backends:
   desktop:
     grounding_endpoint: "http://127.0.0.1:8080"
   browser:
+    # Autonomous reasoning loop (browser-use) vs exact selector-driven
+    # primitives. The Brain chooses per step; this is only the default for
+    # run_task. Server: agents/browser/server.py on 127.0.0.1:8766
     default_backend: "browser_use"
+    port: 8766
+    headless: false          # see BROWSER_HEADLESS in .env.example
+    max_steps: 25
+    max_handoffs: 2          # after this, DEX stops asking about a CAPTCHA
   workspace:
-    google_mcp_args: ["-y", "taylorwilsdon-google-workspace-mcp"]
-    ms365_mcp_args: ["-y", "@softeria/ms-365-mcp-server"]
-    slack_mcp_args: ["-y", "@korotovsky/slack-mcp-server"]
+    # Spawn commands live in agents/workspace/servers.ts and are overridable
+    # per-environment (DEX_GOOGLE_MCP_CMD, DEX_GOOGLE_MCP_ARGS, ...).
+    # Credentials are NEVER here — OS credential store only:
+    #   npm run cred -- set google_oauth_client_secret
+    default_provider: "google"
+    google_mcp: "uvx workspace-mcp"
+    ms365_mcp: "npx -y @softeria/ms-365-mcp-server"
+    slack_mcp: "npx -y @korotovsky/slack-mcp-server"   # Slice 7
 
 daemon:
   pipe_name: "\\\\.\\pipe\\dex_privileged_daemon"

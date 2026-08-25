@@ -271,15 +271,39 @@ No screen capture. Structured calls against Windows APIs, PowerShell, `netsh`, `
 
 Every mutable action here captures before-state, applies, verifies the read-back, and — where the change is reversible — can roll back to the captured before-state.
 
-### 10.3 Browser backend — pluggable
+### 10.3 Browser backend — two modes, one process
 
-| Backend | License | Shape | Best for |
-|---|---|---|---|
-| **agent-browser** *(default)* | Apache 2.0 | Low-level CLI primitives (open/click/type/snapshot) that the Brain drives step-by-step. Also automates Electron apps (VS Code, Discord, Figma, Spotify). | Most tasks — one reasoning loop, true per-action visibility |
-| **webbrain** *(alt)* | MIT | Browser extension acting inside the owner's real signed-in session; local-model capable; ships its own MCP server | Tasks that need the actual day-to-day browser profile |
-| **browser-use** *(alt)* | MIT | Self-contained agent with its own internal decision loop (Playwright-backed), can also attach to an existing Chrome instance over CDP to reuse an already-logged-in session | Tasks fine running autonomously in a scratch or CDP-attached profile |
+`agents/browser/server.py` owns a real Chrome and exposes both modes on
+127.0.0.1:8766. The Brain picks per step; neither is a "try harder" fallback for
+the other.
 
-agent-browser is the default because its shape matches §4's visibility principle most directly — Dex's own Brain makes every click decision instead of delegating to a second independent reasoning loop with its own context.
+| Mode | Shape | Best for |
+|---|---|---|
+| **browser-use** (`run_task`) | Self-contained agent with its own reasoning loop, driving Chrome over CDP | Open-ended tasks on pages Dex has never seen |
+| **primitives** (`navigate` / `click` / `type_text` / `extract`) | Exact CSS selectors, no model in the path | Known pages, and every verification |
+
+Verification always runs through the primitives path, against the live DOM,
+*before* the page is torn down — §9's rule that a backend never grades its own
+work. A `run_task` step carries `verify_url_contains` / `verify_text_on_page` /
+`verify_selector`, and the browser process checks them itself at the moment the
+agent says it is finished. A step with no hint can only ever be reported
+`UNVERIFIABLE`.
+
+**Human walls.** The web has three things Dex must not attempt: CAPTCHAs, bot
+interstitials, and password fields. `agents/browser/walls.py` inspects URL,
+title and DOM after every step; the first hit stops the agent mid-run, parks the
+live session, and raises a Tier 1 hand-off through the normal confirmation path
+(§12). The owner solves it in the window that is already open, presses
+*Done, continue*, and the same agent resumes on the same page with its history
+intact. After two hand-offs on one task Dex stops asking and reports that the
+site will not let it through — a bounded loop, not an infinite one.
+
+The browser is deliberately **not** headless. A hand-off that says "solve the
+CAPTCHA in the open browser window" is a lie if there is no window.
+
+The `type_text` primitive refuses password, `one-time-code` and OTP-named fields
+outright and offers the hand-off instead, so the rule holds even when a plan
+names such a field explicitly.
 
 ### 10.4 Workspace backend — unified MCP runtime
 
@@ -291,7 +315,31 @@ Workspace backend → MCP runtime → Google Workspace / Microsoft 365 / Slack /
 
 - **Google:** [taylorwilsdon/google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp) (MIT).
 - **Microsoft 365:** [Softeria/ms-365-mcp-server](https://github.com/Softeria/ms-365-mcp-server) (MIT), activated by preset (`mail`, `outlook`, `teams`).
-- **Slack:** [korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server) (MIT) — stealth mode or OAuth mode; posting gated behind explicit config.
+- **Slack:** [korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server) (MIT) — stealth mode or OAuth mode; posting gated behind explicit config. *(Slice 7)*
+
+Servers are spawned lazily on first use and kept alive for the session; they are
+child processes and are closed with the core.
+
+**The Brain never names a vendor tool.** It plans against Dex's own vocabulary
+(`send_email`, `search_drive`), and `agents/workspace/tool_binding.ts` resolves
+that against whatever the live server advertises in `tools/list`, then fills the
+tool's declared input schema by matching Dex's canonical parameter names against
+the schema's property names. A renamed tool or a different provider produces a
+readable resolution error, not a crash — and a plan written for Gmail keeps
+working when the owner moves to Outlook.
+
+**Writes are read back.** `send_email` and `create_calendar_event` pull the
+created resource back through a *different* tool before the step is called
+verified. When no resource id comes back there is nothing to check, and the step
+is reported `UNVERIFIABLE` rather than assumed good — the Orchestrator lets the
+task continue with the caveat visible instead of retrying and sending the same
+mail twice.
+
+**Credentials never touch a file Dex reads as config.** They live in the OS
+credential store (`core/secrets/credential_store.ts`, DPAPI CurrentUser scope),
+are decrypted at spawn time, and are handed only to the MCP child process — via
+a deliberately narrow environment that does not inherit Dex's own API key.
+Managed with `npm run cred -- set <name>`.
 
 ### 10.5 Device backend — Device Mesh
 
@@ -321,7 +369,7 @@ Full detail and implementation in [SAFETY.md](./SAFETY.md); summary here:
 3. Message from the owner in a group *without* the prefix → ignored silently.
 4. Message from anyone else, anywhere → ignored silently. No error, no acknowledgement.
 
-Every backend action is additionally classified into one of four confirmation tiers (hand-off required / always confirm / confirm-once / no confirmation) rather than a single "owner only" flag. Confirmations are signed and versioned — an approval only applies to the exact step/request version that generated it, so a stale confirmation card can't be replayed against a newer, different request. Full tier table and the reasoning behind each classification: SAFETY.md §2.
+Every backend action is additionally classified into one of four confirmation tiers (hand-off required / always confirm / confirm-once / no confirmation) rather than a single "owner only" flag. Tier 1 hand-offs are also raised *mid-step* by a backend that hits something only a person can do (§10.3) — and unlike the other three tiers, a hand-off is **not** bypassed by Full Access. Full Access means the owner already trusts Dex to act without being asked; it cannot give Dex eyes that read a CAPTCHA or a password only the owner knows. Confirmations are signed and versioned — an approval only applies to the exact step/request version that generated it, so a stale confirmation card can't be replayed against a newer, different request. Full tier table and the reasoning behind each classification: SAFETY.md §2.
 
 ---
 

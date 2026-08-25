@@ -1,3 +1,5 @@
+import { AgentContext, AgentResult } from '../events/types';
+
 export interface Agent {
   name: string;
   capabilities: string[];
@@ -6,7 +8,13 @@ export interface Agent {
     params: Record<string, unknown>,
     requestId: string,
     stepId: string,
-  ): Promise<{ success: boolean; data?: unknown; error?: string }>;
+    /**
+     * Optional so agents that never need to pause the owner (System, Desktop)
+     * can ignore it. Long-running agents that can hit a human-only wall —
+     * a CAPTCHA, a login form — take it and call `handoff`.
+     */
+    ctx?: AgentContext,
+  ): Promise<AgentResult>;
 }
 
 export class AgentRegistry {
@@ -24,5 +32,10 @@ export class AgentRegistry {
 
   list(): string[] {
     return [...this.capabilityMap.keys()];
+  }
+
+  /** Distinct agents, for status reporting — an agent with 3 capabilities appears once. */
+  agents(): Agent[] {
+    return [...new Set(this.capabilityMap.values())];
   }
 }

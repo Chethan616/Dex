@@ -3,6 +3,7 @@ import {
   ConfirmationRequest,
   ConfirmationVerdict,
   ExecutionStep,
+  HandoffRequest,
 } from '../events/types';
 import { emit } from '../events/bus';
 
@@ -23,6 +24,7 @@ interface Pending {
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000;
+const HANDOFF_TIMEOUT_MS = 300_000;
 
 /** Deterministic content hash — changing any field of a step changes its version. */
 export function stepVersion(step: ExecutionStep): string {
@@ -50,7 +52,11 @@ export class ConfirmationManager {
   /** Tier 3 pre-approvals granted this session, keyed `capability:action`. */
   private preApproved = new Set<string>();
 
-  constructor(private timeoutMs = DEFAULT_TIMEOUT_MS) {}
+  constructor(
+    private timeoutMs = DEFAULT_TIMEOUT_MS,
+    /** Longer than an approval: solving a CAPTCHA or signing in takes a while. */
+    private handoffTimeoutMs = HANDOFF_TIMEOUT_MS,
+  ) {}
 
   private static scopeKey(step: ExecutionStep): string {
     return `${step.capability}:${step.action}`;
@@ -139,6 +145,75 @@ export class ConfirmationManager {
         }
       }
     });
+  }
+
+  /**
+   * Pause mid-step and ask the owner to do something DEX cannot — solve a
+   * CAPTCHA, clear an SSL warning, sign in. Resolves true once they say it is
+   * done.
+   *
+   * Deliberately NOT bypassed by Full Access. Full Access removes the need to
+   * *ask permission*; it does not give DEX hands that can read a CAPTCHA. If
+   * nobody is watching, this expires and the step fails — which is correct, and
+   * far better than a browser agent looping on an unsolvable page.
+   */
+  async requestHandoff(
+    requestId: string,
+    stepId: string,
+    capability: string,
+    action: string,
+    handoff: HandoffRequest,
+  ): Promise<boolean> {
+    if (this.providers.length === 0) {
+      emit(
+        'failed',
+        `Hand-off needed but no owner is attached — ${handoff.reason}`,
+        requestId,
+        stepId,
+      );
+      return false;
+    }
+
+    const timeoutMs = handoff.timeoutMs ?? this.handoffTimeoutMs;
+    const now = Date.now();
+    const request: ConfirmationRequest = {
+      requestId,
+      stepId,
+      stepVersion: createHash('sha256')
+        .update(`handoff|${stepId}|${handoff.reason}|${handoff.instruction}`)
+        .digest('hex')
+        .slice(0, 12),
+      capability,
+      action,
+      params: { reason: handoff.reason },
+      tier: 1,
+      description: handoff.instruction,
+      createdAt: now,
+      expiresAt: now + timeoutMs,
+    };
+
+    const key = this.key(requestId, stepId);
+    // A step can hit two walls in a row (login, then CAPTCHA). Close the older
+    // card before opening the next so the owner never sees two live cards for
+    // one step, and so `respond` is never ambiguous about which one it answers.
+    if (this.pending.has(key)) this.settle(key, 'cancelled');
+
+    emit('awaiting', `[Tier 1] Hand-off — ${handoff.reason}`, requestId, stepId, request);
+
+    const verdict = await new Promise<ConfirmationVerdict>((resolve) => {
+      const timer = setTimeout(() => this.settle(key, 'expired'), timeoutMs);
+      this.pending.set(key, { request, resolve, timer });
+      for (const provider of this.providers) {
+        try {
+          provider.present(request);
+        } catch (err) {
+          emit('failed', `Confirmation provider "${provider.name}" threw: ${err}`, requestId, stepId);
+        }
+      }
+    });
+
+    // settle() maps `handed_off` to `approved` before resolving.
+    return verdict === 'approved';
   }
 
   /**

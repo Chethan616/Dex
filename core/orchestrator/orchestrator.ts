@@ -1,4 +1,4 @@
-import { ExecutionPlan, ExecutionStep, TaskStatus } from '../events/types';
+import { AgentContext, ExecutionPlan, ExecutionStep, TaskStatus } from '../events/types';
 import { AgentRegistry } from './registry';
 import { CancellationRegistry } from './cancellation';
 import { ReliabilityLayer } from '../reliability/observation_engine';
@@ -105,14 +105,18 @@ export class Orchestrator {
 
     emit('executing', `${step.action}(${JSON.stringify(step.params)})`, requestId, step.id);
 
-    const result = await agent.execute(step.action, step.params, requestId, step.id);
+    const ctx = this.contextFor(step, requestId);
+    const result = await agent.execute(step.action, step.params, requestId, step.id, ctx);
 
     if (!result.success) {
+      // A step the owner declined mid-flight is a decision, not a failure to
+      // report as one — the cancel path already told them what happened.
+      if (this.cancellation.isCancelled(requestId)) return 'cancelled';
       emit('failed', `${step.id} failed: ${result.error ?? 'unknown error'}`, requestId, step.id);
       return 'failed';
     }
 
-    const verification = await this.reliability.verify(step, beforeState, requestId);
+    const verification = await this.reliability.verify(step, beforeState, requestId, result);
 
     if (verification.status === 'VERIFIED') {
       emit('done', `${step.id} verified ✓ — ${verification.reason}`, requestId, step.id);
@@ -131,7 +135,20 @@ export class Orchestrator {
       return 'ok';
     }
 
-    // FAILED verification — one retry
+    // FAILED verification. One retry — but only if running it again could
+    // plausibly go differently. A CAPTCHA the owner already declined, or a tool
+    // the server does not have, will fail identically and cost the owner
+    // another wait for the privilege.
+    if (result.retryable === false) {
+      emit(
+        'failed',
+        `${step.id} failed and cannot be retried — ${verification.reason}`,
+        requestId,
+        step.id,
+      );
+      return 'failed';
+    }
+
     emit(
       'retrying',
       `${step.id} verification failed (${verification.reason}) — retrying`,
@@ -139,8 +156,8 @@ export class Orchestrator {
       step.id,
     );
 
-    const retry = await agent.execute(step.action, step.params, requestId, step.id);
-    const retryVerification = await this.reliability.verify(step, beforeState, requestId);
+    const retry = await agent.execute(step.action, step.params, requestId, step.id, ctx);
+    const retryVerification = await this.reliability.verify(step, beforeState, requestId, retry);
 
     if (retry.success && retryVerification.status !== 'FAILED') {
       emit('done', `${step.id} verified on retry ✓`, requestId, step.id);
@@ -150,6 +167,28 @@ export class Orchestrator {
 
     emit('failed', `${step.id} failed after retry`, requestId, step.id);
     return 'failed';
+  }
+
+  /**
+   * What an agent can reach back for while a step is in flight.
+   *
+   * `handoff` is not gated on Full Access, and that is the whole point of
+   * keeping it separate from the confirmation gate below. Full Access says the
+   * owner already trusts DEX to act without asking. It does not, and cannot,
+   * give DEX eyes that can read a CAPTCHA or a password only the owner knows.
+   */
+  private contextFor(step: ExecutionStep, requestId: string): AgentContext {
+    return {
+      handoff: (handoff) =>
+        this.confirmations.requestHandoff(
+          requestId,
+          step.id,
+          step.capability,
+          step.action,
+          handoff,
+        ),
+      isCancelled: () => this.cancellation.isCancelled(requestId),
+    };
   }
 
   /**

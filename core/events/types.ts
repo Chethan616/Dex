@@ -48,6 +48,37 @@ export interface AgentResult {
   success: boolean;
   data?: unknown;
   error?: string;
+  /**
+   * False when re-running the step cannot help — a declined hand-off, a hard
+   * login wall, a page that will ask for the same CAPTCHA again. The
+   * Orchestrator honours this instead of burning its retry budget.
+   */
+  retryable?: boolean;
+}
+
+/**
+ * A pause mid-step for something DEX genuinely cannot do: solve a CAPTCHA,
+ * clear an SSL interstitial, type a password. Distinct from a confirmation —
+ * nobody is approving anything, the owner is doing the work and DEX resumes.
+ */
+export interface HandoffRequest {
+  /** What blocked DEX, e.g. "CAPTCHA on the checkout page". */
+  reason: string;
+  /** What the owner has to do, in the imperative. */
+  instruction: string;
+  timeoutMs?: number;
+}
+
+/**
+ * Handed to an agent for the duration of one step. Lets a long-running agent
+ * reach back into the confirmation and cancellation machinery instead of
+ * spinning or failing outright.
+ */
+export interface AgentContext {
+  /** Resolves true once the owner says they did it, false if declined/expired. */
+  handoff(request: HandoffRequest): Promise<boolean>;
+  /** Checked between an agent's own internal steps so cancel is responsive. */
+  isCancelled(): boolean;
 }
 
 export type VerificationStatus = 'VERIFIED' | 'FAILED' | 'UNVERIFIABLE';

@@ -13,6 +13,9 @@ import { EvidenceStore } from '../core/reliability/evidence_store';
 import { DexServer } from '../core/server/ws_server';
 import { SystemAgent } from '../agents/system/system_agent';
 import { DesktopAgent } from '../agents/desktop/desktop_agent';
+import { BrowserAgent } from '../agents/browser/browser_agent';
+import { WorkspaceAgent } from '../agents/workspace/workspace_agent';
+import { defaultRoutes, defaultServers } from '../agents/workspace/servers';
 import { startCli } from '../channels/cli';
 
 function main(): void {
@@ -33,6 +36,16 @@ function main(): void {
   const registry = new AgentRegistry();
   registry.register(new SystemAgent());
   registry.register(new DesktopAgent());
+  registry.register(new BrowserAgent());
+
+  // MCP servers are spawned on first use, not here — starting three OAuth
+  // handshakes at boot would make `npm run dev` feel broken for anyone who has
+  // not connected an account yet.
+  const workspace = new WorkspaceAgent({
+    servers: defaultServers(),
+    routes: defaultRoutes(),
+  });
+  registry.register(workspace);
 
   const confirmations = new ConfirmationManager();
   const cancellation = new CancellationRegistry();
@@ -50,6 +63,20 @@ function main(): void {
     });
     server.start();
   }
+
+  // MCP servers are child processes. Without this they outlive the core and
+  // pile up one orphan per restart.
+  let closing = false;
+  const shutdown = async (signal: string) => {
+    if (closing) return;
+    closing = true;
+    console.log(`
+${signal} — closing workspace servers…`);
+    await workspace.close().catch(() => undefined);
+    process.exit(0);
+  };
+  process.on('SIGINT', () => void shutdown('SIGINT'));
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
   startCli(gateway, confirmations).catch((err) => {
     console.error('Fatal:', err);

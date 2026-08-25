@@ -1,17 +1,20 @@
 {
   "name": "dexv3",
   "version": "0.1.0",
-  "description": "DEX V3 — Personal AI automation system for Windows",
+  "description": "DEX V3 \u2014 Personal AI automation system for Windows",
   "main": "dist/src/main.js",
   "scripts": {
     "dev": "ts-node src/main.ts",
     "build": "tsc",
     "start": "node dist/src/main.js",
     "typecheck": "tsc --noEmit",
-    "test:ws": "ts-node tests/smoke_ws.ts"
+    "test:ws": "ts-node tests/smoke_ws.ts",
+    "cred": "ts-node scripts/dex-cred.ts",
+    "test:slice4": "ts-node tests/smoke_slice4.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "dotenv": "^16.4.5",
     "ws": "^8.16.0"
   },

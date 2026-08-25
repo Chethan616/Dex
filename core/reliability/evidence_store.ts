@@ -8,6 +8,8 @@ export interface EvidenceRecord {
   action: string;
   params: Record<string, unknown>;
   beforeState?: unknown;
+  /** What the agent claimed, kept alongside what verification made of it. */
+  agentResult?: { success: boolean; data?: unknown };
   verificationResult: VerificationResult;
   timestamp: number;
 }
