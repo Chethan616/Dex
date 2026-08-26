@@ -3,6 +3,7 @@ import { AgentRegistry } from './registry';
 import { CancellationRegistry } from './cancellation';
 import { ReliabilityLayer } from '../reliability/observation_engine';
 import { Telemetry } from '../memory/telemetry';
+import { ArtifactStore } from '../memory/artifacts';
 import { ConfirmationManager } from '../confirmation/confirmation_manager';
 import { emit } from '../events/bus';
 
@@ -17,7 +18,11 @@ export class Orchestrator {
     private cancellation: CancellationRegistry = new CancellationRegistry(),
     /** Records what each step actually did, for the usage history. */
     private telemetry: Telemetry = new Telemetry(),
+    /** Records what steps actually produced, so later requests can refer to it. */
+    private artifacts: ArtifactStore = new ArtifactStore(),
   ) {}
+
+  private sessionId = '';
 
   async execute(plan: ExecutionPlan): Promise<{ status: TaskStatus; summary: string }> {
     const { requestId, steps, intent } = plan;
@@ -26,6 +31,7 @@ export class Orchestrator {
 
     const completed = new Set<string>();
     const remaining = [...steps];
+    this.sessionId = plan.sessionId ?? '';
 
     try {
       while (remaining.length > 0) {
@@ -129,6 +135,13 @@ export class Orchestrator {
     }
 
     const verification = await this.reliability.verify(step, beforeState, requestId, result);
+
+    // Only from a step that verified. An artifact recorded for something that
+    // did not happen makes "the report" resolve to a file that was never
+    // written, and the owner has no reason to doubt it.
+    if (verification.status !== 'FAILED') {
+      this.artifacts.recordFromStep(step, result, requestId, this.sessionId);
+    }
 
     this.telemetry.step({
       requestId,

@@ -4,6 +4,10 @@ import { OwnerGate } from './owner_gate';
 import { Brain } from './brain/planner';
 import { Orchestrator } from './orchestrator/orchestrator';
 import { Telemetry } from './memory/telemetry';
+import { ArtifactStore } from './memory/artifacts';
+import { ReferenceResolver } from './memory/references';
+import { SemanticCache } from './memory/semantic_cache';
+import { SessionStore } from './memory/sessions';
 import { WorkflowStore } from './workflows/store';
 import { expandWorkflows } from './workflows/expand';
 import { emit } from './events/bus';
@@ -16,11 +20,14 @@ export interface GatewayResult {
   workflow?: string;
   /** Set when this task looks worth saving — the UI and CLI offer it. */
   suggestSave?: { text: string; times: number };
+  /**
+   * Set when a reference like "the report" matched more than one thing. Nothing
+   * was run; the owner has to say which they meant.
+   */
+  needsClarification?: string;
 }
 
 export class Gateway {
-  private sessionMap = new Map<string, string>();
-
   /** The last freshly planned task, so it can be saved as a workflow. */
   private lastPlanned?: { plan: ExecutionPlan; text: string };
 
@@ -30,6 +37,10 @@ export class Gateway {
     private orchestrator: Orchestrator,
     private telemetry = new Telemetry(),
     private workflows = new WorkflowStore(),
+    private sessions = new SessionStore(),
+    private artifacts = new ArtifactStore(),
+    private references = new ReferenceResolver(artifacts),
+    private cache = new SemanticCache(),
   ) {}
 
   async handle(
@@ -38,8 +49,9 @@ export class Gateway {
     text: string,
   ): Promise<GatewayResult> {
     const requestId = randomUUID();
-    const sessionId = this.sessionMap.get(senderId) ?? randomUUID();
-    this.sessionMap.set(senderId, sessionId);
+    // Keyed by time rather than by sender: Dex has one owner, so a task begun
+    // on a phone and followed up at the desk is the same conversation.
+    const sessionId = this.sessions.current(source).id;
 
     const request: DexRequest = {
       requestId,
@@ -58,13 +70,38 @@ export class Gateway {
 
     emit('thinking', `"${request.text}"`, requestId);
 
+    // ── what does "the report" mean? ──────────────────────────────────────
+    // Resolved before anything runs. An unresolvable reference has to stop the
+    // task rather than be passed through: an agent handed the literal words
+    // "the report" will either fail confusingly or act on the wrong thing.
+    const refs = this.references.resolve(request.text);
+    if (refs.ambiguous.length > 0) {
+      const question = ReferenceResolver.question(refs.ambiguous[0]);
+      emit('awaiting', question, requestId);
+      this.telemetry.startTask({ requestId, sessionId, source, text: request.text });
+      this.telemetry.finishTask(requestId, 'ABORTED');
+      return {
+        status: 'ABORTED',
+        summary: 'Need to know which one you meant',
+        requestId,
+        needsClarification: question,
+      };
+    }
+
+    if (refs.resolved.length > 0) {
+      request.text = this.references.substitute(request.text, refs.resolved);
+      for (const r of refs.resolved) {
+        emit('thinking', `"${r.phrase}" → ${r.match.name} (${r.reason})`, requestId);
+      }
+    }
+
     // ── the free path ─────────────────────────────────────────────────────
     // An explicit `run <name>`, or a phrase that re-says something already
     // saved. Either way the steps are already known to work, so there is
     // nothing for the Brain to decide.
     const direct = this.resolveWorkflow(request.text);
     if (direct) {
-      return this.runPlan(request, direct.plan, direct.name);
+      return this.runPlan(request, direct.plan, direct.name, sessionId);
     }
 
     this.telemetry.startTask({
@@ -74,6 +111,18 @@ export class Gateway {
       text: request.text,
       provider: this.brain.model,
     });
+
+    // A request Dex has already planned, asked in different words. Cheaper
+    // than the Brain and, being a plan that completed once, no less reliable.
+    const cached = await this.cache.lookup(request.text, requestId);
+    if (cached) {
+      emit(
+        'routing',
+        `Reusing the plan for "${cached.originalText}" (${(cached.similarity * 100).toFixed(0)}% match)`,
+        requestId,
+      );
+      return this.runPlan(request, cached.plan, undefined, sessionId);
+    }
 
     let plan: ExecutionPlan;
     try {
@@ -98,12 +147,16 @@ export class Gateway {
       );
     }
 
+    finalPlan.sessionId = sessionId;
     this.telemetry.planned(requestId, finalPlan);
     const result = await this.orchestrator.execute(finalPlan);
     this.telemetry.finishTask(requestId, result.status);
 
     if (result.status === 'COMPLETED') {
       this.lastPlanned = { plan: finalPlan, text: request.text };
+      // Only successful plans are cached. Serving a known-broken plan faster is
+      // not an optimisation.
+      void this.cache.remember(request.text, finalPlan);
     }
 
     return {
@@ -156,23 +209,28 @@ export class Gateway {
     return undefined;
   }
 
+  /** Run a plan that did not come from the Brain — a workflow, or a cache hit. */
   private async runPlan(
     request: DexRequest,
     plan: ExecutionPlan,
-    workflow: string,
+    workflow: string | undefined,
+    sessionId: string,
   ): Promise<GatewayResult> {
-    emit('routing', `Saved workflow "${workflow}" — no planning needed`, plan.requestId);
+    if (workflow) {
+      emit('routing', `Saved workflow "${workflow}" — no planning needed`, plan.requestId);
+    }
 
     this.telemetry.startTask({
       requestId: plan.requestId,
-      sessionId: request.sessionId,
+      sessionId,
       source: request.source,
       text: request.text,
       workflow,
     });
+    plan.sessionId = sessionId;
     this.telemetry.planned(plan.requestId, plan);
 
-    this.workflows.markRun(workflow);
+    if (workflow) this.workflows.markRun(workflow);
     const result = await this.orchestrator.execute(plan);
     this.telemetry.finishTask(plan.requestId, result.status);
 

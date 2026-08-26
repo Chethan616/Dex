@@ -73,6 +73,39 @@ CREATE TABLE IF NOT EXISTS workflows (
   run_count    INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_workflows_shape ON workflows(shape);
+
+CREATE TABLE IF NOT EXISTS artifacts (
+  id          TEXT PRIMARY KEY,
+  request_id  TEXT NOT NULL,
+  session_id  TEXT NOT NULL,
+  kind        TEXT NOT NULL,
+  name        TEXT NOT NULL,
+  locator     TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_artifacts_created ON artifacts(created_at);
+CREATE INDEX IF NOT EXISTS idx_artifacts_session ON artifacts(session_id);
+
+CREATE TABLE IF NOT EXISTS plan_cache (
+  id          TEXT PRIMARY KEY,
+  text        TEXT NOT NULL,
+  vector      BLOB NOT NULL,
+  plan        TEXT NOT NULL,
+  created_at  INTEGER NOT NULL,
+  hits        INTEGER DEFAULT 0,
+  last_hit_at INTEGER
+);
+
+-- One row per logical conversation, across every channel. Dex has a single
+-- owner, so a task started on a phone and followed up at the desk is one
+-- session however it arrived.
+CREATE TABLE IF NOT EXISTS sessions (
+  id            TEXT PRIMARY KEY,
+  started_at    INTEGER NOT NULL,
+  last_seen_at  INTEGER NOT NULL,
+  channels      TEXT NOT NULL DEFAULT '[]'
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_seen ON sessions(last_seen_at);
 `;
 
 let handle: Database | null = null;

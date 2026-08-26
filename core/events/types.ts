@@ -30,6 +30,8 @@ export interface ExecutionStep {
 
 export interface ExecutionPlan {
   requestId: string;
+  /** Which conversation this belongs to, so artifacts can be attributed. */
+  sessionId?: string;
   intent: string;
   tier: 1 | 2 | 3;
   steps: ExecutionStep[];
