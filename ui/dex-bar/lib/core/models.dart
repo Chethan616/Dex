@@ -183,3 +183,136 @@ class EvidenceRecord {
     );
   }
 }
+
+/// A task Dex worked out once and kept, so it never has to plan it again.
+class SavedWorkflow {
+  const SavedWorkflow({
+    required this.name,
+    required this.description,
+    required this.params,
+    required this.steps,
+    required this.runCount,
+    required this.triggerText,
+  });
+
+  final String name;
+  final String description;
+
+  /// Values the owner varied, in the order `run <name> …` expects them.
+  final List<String> params;
+  final int steps;
+  final int runCount;
+
+  /// What was originally said. Shown so a workflow's purpose is recognisable
+  /// even when its name has stopped being.
+  final String triggerText;
+
+  factory SavedWorkflow.fromJson(Map<String, dynamic> json) => SavedWorkflow(
+        name: json['name'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        params: List<String>.from((json['params'] as List?) ?? const []),
+        steps: json['steps'] as int? ?? 0,
+        runCount: json['runCount'] as int? ?? 0,
+        triggerText: json['triggerText'] as String? ?? '',
+      );
+}
+
+/// One entry in the history of what has been asked.
+class TaskRecord {
+  const TaskRecord({
+    required this.text,
+    required this.status,
+    required this.startedAt,
+    this.intent,
+    this.workflow,
+    this.durationMs,
+  });
+
+  final String text;
+  final String? status;
+  final int startedAt;
+  final String? intent;
+
+  /// Set when this ran from a saved workflow rather than a fresh plan.
+  final String? workflow;
+  final int? durationMs;
+
+  bool get succeeded => status == 'COMPLETED';
+
+  factory TaskRecord.fromJson(Map<String, dynamic> json) => TaskRecord(
+        text: json['text'] as String? ?? '',
+        status: json['status'] as String?,
+        startedAt: json['startedAt'] as int? ?? 0,
+        intent: json['intent'] as String?,
+        workflow: json['workflow'] as String?,
+        durationMs: json['durationMs'] as int?,
+      );
+}
+
+class DayCount {
+  const DayCount(this.day, this.tasks);
+  final String day;
+  final int tasks;
+}
+
+class ActionCount {
+  const ActionCount(this.action, this.capability, this.runs, this.failures);
+  final String action;
+  final String capability;
+  final int runs;
+  final int failures;
+}
+
+/// What Dex has been used for lately.
+class UsageStats {
+  const UsageStats({
+    required this.totalTasks,
+    required this.completed,
+    required this.failed,
+    required this.brainCalls,
+    required this.workflowRuns,
+    required this.byDay,
+    required this.topActions,
+  });
+
+  final int totalTasks;
+  final int completed;
+  final int failed;
+
+  /// Tasks that needed a planning call, versus tasks replayed from a workflow.
+  /// The second number is planning calls that did not have to happen.
+  final int brainCalls;
+  final int workflowRuns;
+
+  final List<DayCount> byDay;
+  final List<ActionCount> topActions;
+
+  factory UsageStats.fromJson(Map<String, dynamic> json) => UsageStats(
+        totalTasks: json['totalTasks'] as int? ?? 0,
+        completed: json['completed'] as int? ?? 0,
+        failed: json['failed'] as int? ?? 0,
+        brainCalls: json['brainCalls'] as int? ?? 0,
+        workflowRuns: json['workflowRuns'] as int? ?? 0,
+        byDay: ((json['byDay'] as List?) ?? const [])
+            .map((d) => DayCount(
+                  (d as Map)['day'] as String? ?? '',
+                  d['tasks'] as int? ?? 0,
+                ))
+            .toList(),
+        topActions: ((json['topActions'] as List?) ?? const [])
+            .map((a) => ActionCount(
+                  (a as Map)['action'] as String? ?? '',
+                  a['capability'] as String? ?? '',
+                  a['runs'] as int? ?? 0,
+                  a['failures'] as int? ?? 0,
+                ))
+            .toList(),
+      );
+}
+
+/// Dex noticing you keep doing the same thing.
+class SaveSuggestion {
+  const SaveSuggestion(this.text, this.times);
+  final String text;
+  final int times;
+}

@@ -10,6 +10,7 @@ import '../core/models.dart';
 import '../theme/tokens.dart';
 import '../widgets/command_input.dart';
 import '../widgets/confirmation_card.dart';
+import '../widgets/library_panel.dart';
 import '../widgets/step_stream.dart';
 import 'mission_control.dart';
 
@@ -80,8 +81,12 @@ class _DexBarState extends State<DexBar> {
     });
   }
 
+  /// The workflows / history / usage panel.
+  bool _library = false;
+
   bool get _expanded =>
       _missionControl ||
+      _library ||
       client.current != null ||
       client.pending.isNotEmpty ||
       client.connection == CoreConnection.noCore;
@@ -168,10 +173,24 @@ class _DexBarState extends State<DexBar> {
                         onSubmit: _submit,
                         onCancel: client.cancelCurrent,
                         onOpenMissionControl: _toggleMissionControl,
+                        onOpenLibrary: () => setState(() {
+                          _library = !_library;
+                          _resize();
+                        }),
                       ),
                       if (_expanded) Divider(height: 1, color: t.border),
                       if (client.connection == CoreConnection.noCore)
                         Expanded(child: _CoreOffline(message: client.connectionError))
+                      else if (_library)
+                        Expanded(
+                          child: LibraryPanel(
+                            client: client,
+                            onClose: () => setState(() {
+                              _library = false;
+                              _resize();
+                            }),
+                          ),
+                        )
                       else if (_expanded) ...[
                         for (final req in live)
                           ConfirmationCard(
@@ -185,6 +204,18 @@ class _DexBarState extends State<DexBar> {
                         else
                           const Spacer(),
                         if (run?.status != null) _ResultBar(run: run!),
+                        // Dex noticing repetition is only useful if it says so
+                        // where the owner is already looking.
+                        if (client.saveSuggestion != null)
+                          _SaveSuggestionBar(
+                            suggestion: client.saveSuggestion!,
+                            onSave: (name) {
+                              client.saveLastAsWorkflow(name);
+                              setState(() {});
+                            },
+                            onDismiss: () =>
+                                setState(() => client.saveSuggestion = null),
+                          ),
                       ],
                     ],
                   ),
@@ -271,6 +302,106 @@ class _CoreOffline extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// "You have done this three times — want to keep it?"
+///
+/// Shown inline under a finished task rather than as a dialog: the owner is
+/// already looking here, and a modal would interrupt something they just
+/// successfully finished.
+class _SaveSuggestionBar extends StatefulWidget {
+  const _SaveSuggestionBar({
+    required this.suggestion,
+    required this.onSave,
+    required this.onDismiss,
+  });
+
+  final SaveSuggestion suggestion;
+  final ValueChanged<String> onSave;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_SaveSuggestionBar> createState() => _SaveSuggestionBarState();
+}
+
+class _SaveSuggestionBarState extends State<_SaveSuggestionBar> {
+  final _name = TextEditingController();
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  bool get _valid => RegExp(r'^[a-z0-9][a-z0-9_-]*$').hasMatch(_name.text.trim());
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.dex;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        DexTokens.spaceLg, 0, DexTokens.spaceLg, DexTokens.spaceSm,
+      ),
+      padding: const EdgeInsets.all(DexTokens.spaceSm),
+      decoration: BoxDecoration(
+        color: t.eventColor('routing').withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(DexTokens.radiusSm),
+        border: Border.all(color: t.eventColor('routing').withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Done this ${widget.suggestion.times}× — save it as a workflow?',
+              style: DexType.sans(size: 11.5, color: t.textMuted),
+            ),
+          ),
+          SizedBox(
+            width: 110,
+            child: TextField(
+              controller: _name,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) {
+                if (_valid) widget.onSave(_name.text.trim());
+              },
+              style: DexType.mono(size: 11.5, color: t.text),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+                hintText: 'name',
+                hintStyle: DexType.mono(size: 11.5, color: t.textFaint),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(DexTokens.radiusSm),
+                  borderSide: BorderSide(color: t.border),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: _valid ? () => widget.onSave(_name.text.trim()) : null,
+            child: Opacity(
+              opacity: _valid ? 1 : 0.35,
+              child: Text(
+                'Save',
+                style: DexType.sans(
+                  size: 12,
+                  color: t.eventColor('done'),
+                  weight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: widget.onDismiss,
+            child: Icon(Icons.close, size: 14, color: t.textFaint),
+          ),
+        ],
       ),
     );
   }

@@ -34,6 +34,11 @@ type Inbound =
   | { type: 'full_access'; enabled: boolean }
   | { type: 'get_status' }
   | { type: 'get_evidence'; requestId: string }
+  | { type: 'get_workflows' }
+  | { type: 'save_workflow'; name: string; description?: string }
+  | { type: 'delete_workflow'; name: string }
+  | { type: 'get_history'; query?: string; limit?: number }
+  | { type: 'get_stats'; days?: number }
   | { type: 'ping' };
 
 export interface DexServerOptions {
@@ -208,6 +213,63 @@ export class DexServer {
           records: this.readEvidence(msg.requestId),
         });
 
+      // ── history and saved workflows ─────────────────────────────────
+      // Read-only queries answered straight from the local database. A
+      // workflow is *run* through `submit` ("run backup D:\\") rather than a
+      // separate path, so replays go through the same Owner Gate,
+      // confirmation tiers and event stream as anything else.
+      case 'get_workflows':
+        return this.send(socket, {
+          type: 'workflows',
+          workflows: this.gateway.workflowStore.list().map((w) => ({
+            name: w.name,
+            description: w.description,
+            params: w.params,
+            steps: w.template.length,
+            runCount: w.runCount,
+            triggerText: w.triggerText,
+            lastRunAt: w.lastRunAt ?? null,
+          })),
+        });
+
+      case 'save_workflow': {
+        try {
+          const saved = this.gateway.saveLast(msg.name, msg.description);
+          this.broadcastWorkflows();
+          return this.send(socket, {
+            type: 'workflow_saved',
+            name: saved.name,
+            params: saved.params,
+            steps: saved.template.length,
+          });
+        } catch (err) {
+          return this.send(socket, {
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
+      case 'delete_workflow': {
+        const removed = this.gateway.workflowStore.delete(msg.name);
+        if (removed) this.broadcastWorkflows();
+        return this.send(socket, { type: 'workflow_deleted', name: msg.name, removed });
+      }
+
+      case 'get_history':
+        return this.send(socket, {
+          type: 'history',
+          tasks: msg.query
+            ? this.gateway.telemetryStore.search(msg.query, msg.limit ?? 30)
+            : this.gateway.telemetryStore.recent(msg.limit ?? 30),
+        });
+
+      case 'get_stats':
+        return this.send(socket, {
+          type: 'stats',
+          stats: this.gateway.telemetryStore.summary(msg.days ?? 7),
+        });
+
       default:
         return this.send(socket, { type: 'error', message: 'Unknown message type' });
     }
@@ -294,6 +356,22 @@ export class DexServer {
 
   private send(socket: WebSocket, payload: unknown): void {
     if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(payload));
+  }
+
+  /** Every client sees the list change, not just the one that changed it. */
+  private broadcastWorkflows(): void {
+    this.broadcast({
+      type: 'workflows',
+      workflows: this.gateway.workflowStore.list().map((w) => ({
+        name: w.name,
+        description: w.description,
+        params: w.params,
+        steps: w.template.length,
+        runCount: w.runCount,
+        triggerText: w.triggerText,
+        lastRunAt: w.lastRunAt ?? null,
+      })),
+    });
   }
 
   private broadcast(payload: { type: string; event?: DexEvent; request?: ConfirmationRequest; [k: string]: unknown }): void {

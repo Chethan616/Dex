@@ -2,6 +2,7 @@ import { AgentContext, AgentResult, ExecutionPlan, ExecutionStep, TaskStatus } f
 import { AgentRegistry } from './registry';
 import { CancellationRegistry } from './cancellation';
 import { ReliabilityLayer } from '../reliability/observation_engine';
+import { Telemetry } from '../memory/telemetry';
 import { ConfirmationManager } from '../confirmation/confirmation_manager';
 import { emit } from '../events/bus';
 
@@ -14,6 +15,8 @@ export class Orchestrator {
     private fullAccess: boolean = false,
     private confirmations: ConfirmationManager = new ConfirmationManager(),
     private cancellation: CancellationRegistry = new CancellationRegistry(),
+    /** Records what each step actually did, for the usage history. */
+    private telemetry: Telemetry = new Telemetry(),
   ) {}
 
   async execute(plan: ExecutionPlan): Promise<{ status: TaskStatus; summary: string }> {
@@ -126,6 +129,17 @@ export class Orchestrator {
     }
 
     const verification = await this.reliability.verify(step, beforeState, requestId, result);
+
+    this.telemetry.step({
+      requestId,
+      stepId: step.id,
+      capability: step.capability,
+      action: step.action,
+      tier: step.confirmationTier,
+      status: verification.status === 'FAILED' ? 'failed' : 'ok',
+      verification: verification.status,
+      escalatedTo: result.escalate,
+    });
 
     if (verification.status === 'VERIFIED') {
       emit('done', `${step.id} verified ✓ — ${verification.reason}`, requestId, step.id);

@@ -7,7 +7,7 @@ export async function verifyStep(
   _beforeState: unknown,
   agentResult?: AgentResult,
 ): Promise<VerificationResult> {
-  if (step.capability === 'can_control_os') return verifyOsStep(step);
+  if (step.capability === 'can_control_os') return verifyOsStep(step, agentResult);
   if (step.capability === 'can_control_app') return verifyAppStep(step, agentResult);
   if (step.capability === 'can_control_gui') return verifyGuiStep(step);
   if (step.capability === 'can_browse_web') return verifyBrowserStep(step, agentResult);
@@ -258,14 +258,14 @@ function verifyWorkspaceStep(
   };
 }
 
-function verifyOsStep(step: ExecutionStep): VerificationResult {
+function verifyOsStep(step: ExecutionStep, agentResult?: AgentResult): VerificationResult {
   switch (step.action) {
     case 'set_dns':
       return verifyDns(step.params as { primary: string; secondary?: string });
     case 'set_power_plan':
       return verifyPowerPlan(step.params as { plan: string });
     case 'set_volume':
-      return { status: 'UNVERIFIABLE', reason: 'Volume read-back not yet implemented' };
+      return verifyVolume(step, agentResult);
     case 'set_wifi':
       return { status: 'UNVERIFIABLE', reason: 'WiFi state read-back not yet implemented' };
     case 'get_dns':
@@ -282,6 +282,30 @@ function verifyOsStep(step: ExecutionStep): VerificationResult {
         reason: `No verification logic for action: ${step.action}`,
       };
   }
+}
+
+/**
+ * The audio handler reads the endpoint back after setting it, so this checks a
+ * fact rather than an intention. Windows snaps to the nearest representable
+ * step, so an exact match is not required — being within a step of what was
+ * asked for is the honest bar.
+ */
+function verifyVolume(step: ExecutionStep, agentResult?: AgentResult): VerificationResult {
+  const data = agentResult?.data as { level?: number; requested?: number } | undefined;
+  if (data?.level == null) {
+    return { status: 'UNVERIFIABLE', reason: 'Volume handler returned no read-back' };
+  }
+
+  const wanted = Number(data.requested ?? step.params.level);
+  const actual = Number(data.level);
+
+  return Math.abs(actual - wanted) <= 1
+    ? { status: 'VERIFIED', reason: `Endpoint reports ${actual}%`, afterState: actual }
+    : {
+        status: 'FAILED',
+        reason: `Asked for ${wanted}% but the endpoint reports ${actual}%`,
+        afterState: actual,
+      };
 }
 
 function verifyDns(params: { primary: string; secondary?: string }): VerificationResult {

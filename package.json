@@ -12,7 +12,8 @@
     "cred": "ts-node scripts/dex-cred.ts",
     "test:slice4": "ts-node tests/smoke_slice4.ts",
     "test:slice45": "ts-node tests/smoke_slice45.ts",
-    "test:e2e": "ts-node tests/e2e_tier2.ts"
+    "test:e2e": "ts-node tests/e2e_tier2.ts",
+    "test:workflows": "ts-node tests/smoke_workflows.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",

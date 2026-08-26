@@ -11,6 +11,9 @@ import { ConfirmationManager } from '../core/confirmation/confirmation_manager';
 import { ReliabilityLayer } from '../core/reliability/observation_engine';
 import { EvidenceStore } from '../core/reliability/evidence_store';
 import { DexServer } from '../core/server/ws_server';
+import { Telemetry } from '../core/memory/telemetry';
+import { WorkflowStore } from '../core/workflows/store';
+import { quietSqliteWarning } from '../core/memory/db';
 import { SystemAgent } from '../agents/system/system_agent';
 import { DesktopAgent } from '../agents/desktop/desktop_agent';
 import { AppAgent } from '../agents/app/app_agent';
@@ -20,6 +23,8 @@ import { defaultRoutes, defaultServers } from '../agents/workspace/servers';
 import { startCli } from '../channels/cli';
 
 function main(): void {
+  quietSqliteWarning();
+
   // Which vendor answers is core/llm's business, not main's. All main needs to
   // know is whether *some* provider could be built, so it can say something
   // useful instead of throwing a stack trace at the owner.
@@ -60,9 +65,14 @@ function main(): void {
   const confirmations = new ConfirmationManager();
   const cancellation = new CancellationRegistry();
 
-  const orchestrator = new Orchestrator(registry, reliability, fullAccess, confirmations, cancellation);
+  const telemetry = new Telemetry();
+  const workflows = new WorkflowStore();
+
+  const orchestrator = new Orchestrator(
+    registry, reliability, fullAccess, confirmations, cancellation, telemetry,
+  );
   const ownerGate = new OwnerGate({});
-  const gateway = new Gateway(ownerGate, brain, orchestrator);
+  const gateway = new Gateway(ownerGate, brain, orchestrator, telemetry, workflows);
 
   if (process.env.DEX_UI_SERVER !== 'false') {
     const server = new DexServer(gateway, confirmations, cancellation, {

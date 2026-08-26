@@ -99,6 +99,19 @@ class GatewayClient extends ChangeNotifier {
     _backoffMs = (_backoffMs * 2).clamp(500, 8000);
   }
 
+  /// Saved workflows, newest-used first. Populated on connect.
+  List<SavedWorkflow> workflows = [];
+
+  /// Past tasks from the core's database, for the history panel. Distinct from
+  /// `history`, which holds the runs this session has watched live.
+  List<TaskRecord> pastTasks = [];
+
+  /// Usage summary for the stats panel.
+  UsageStats? stats;
+
+  /// Set when the core notices this task is one you keep repeating.
+  SaveSuggestion? saveSuggestion;
+
   void _onDisconnected() {
     _sub?.cancel();
     _sub = null;
@@ -128,6 +141,7 @@ class GatewayClient extends ChangeNotifier {
         fullAccess = msg['fullAccess'] as bool? ?? false;
         _loadPending(msg['pending']);
         _send({'type': 'get_status'});
+        _send({'type': 'get_workflows'});
         break;
 
       // A status frame may be partial (e.g. broadcast after clearing
@@ -186,6 +200,34 @@ class GatewayClient extends ChangeNotifier {
         evidence = (msg['records'] as List? ?? const [])
             .map((r) => EvidenceRecord.fromJson(Map<String, dynamic>.from(r as Map)))
             .toList();
+        break;
+
+      case 'workflows':
+        workflows = (msg['workflows'] as List)
+            .map((w) => SavedWorkflow.fromJson(Map<String, dynamic>.from(w as Map)))
+            .toList();
+        break;
+
+      case 'workflow_saved':
+        lastNotice = 'Saved "${msg['name']}" — ${msg['steps']} step(s).';
+        saveSuggestion = null;
+        _send({'type': 'get_workflows'});
+        break;
+
+      case 'workflow_deleted':
+        lastNotice = msg['removed'] == true
+            ? 'Forgot "${msg['name']}".'
+            : 'No workflow named "${msg['name']}".';
+        break;
+
+      case 'history':
+        pastTasks = (msg['tasks'] as List)
+            .map((t) => TaskRecord.fromJson(Map<String, dynamic>.from(t as Map)))
+            .toList();
+        break;
+
+      case 'stats':
+        stats = UsageStats.fromJson(Map<String, dynamic>.from(msg['stats'] as Map));
         break;
 
       case 'error':
@@ -271,6 +313,19 @@ class GatewayClient extends ChangeNotifier {
     run.status = msg['status'] as String?;
     run.summary = msg['summary'] as String?;
     run.finishedAt = DateTime.now().millisecondsSinceEpoch;
+
+    // The core only offers this once a task has genuinely been repeated, so it
+    // is worth surfacing rather than filing away.
+    final suggest = msg['suggestSave'];
+    if (suggest is Map) {
+      saveSuggestion = SaveSuggestion(
+        suggest['text'] as String? ?? '',
+        suggest['times'] as int? ?? 0,
+      );
+    }
+
+    // A replay changes the workflow's run count, so the list is now stale.
+    if (msg['workflow'] != null) refreshWorkflows();
     run.phase = switch (run.status) {
       'COMPLETED' => TaskPhase.done,
       'CANCELLED' => TaskPhase.cancelled,
@@ -288,6 +343,26 @@ class GatewayClient extends ChangeNotifier {
   }
 
   // ---- commands -----------------------------------------------------------
+
+  void refreshWorkflows() => _send({'type': 'get_workflows'});
+
+  void refreshHistory({String? query}) =>
+      _send({'type': 'get_history', if (query != null && query.isNotEmpty) 'query': query});
+
+  void refreshStats({int days = 7}) => _send({'type': 'get_stats', 'days': days});
+
+  void saveLastAsWorkflow(String name) =>
+      _send({'type': 'save_workflow', 'name': name});
+
+  void deleteWorkflow(String name) => _send({'type': 'delete_workflow', 'name': name});
+
+  /// Workflows run through the normal submit path so a replay passes the same
+  /// Owner Gate, confirmation tiers and event stream as anything typed.
+  void runWorkflow(SavedWorkflow workflow, List<String> args) {
+    final quoted = args.map((a) => a.contains(' ') ? '"$a"' : a).join(' ');
+    final suffix = quoted.isEmpty ? '' : ' $quoted';
+    submit('run ${workflow.name}$suffix');
+  }
 
   void submit(String text) {
     if (connection != CoreConnection.connected) return;

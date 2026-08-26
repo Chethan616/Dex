@@ -15,6 +15,7 @@ class CommandInput extends StatelessWidget {
     required this.onSubmit,
     required this.onCancel,
     required this.onOpenMissionControl,
+    required this.onOpenLibrary,
   });
 
   final TextEditingController controller;
@@ -24,6 +25,9 @@ class CommandInput extends StatelessWidget {
   final ValueChanged<String> onSubmit;
   final VoidCallback onCancel;
   final VoidCallback onOpenMissionControl;
+
+  /// Saved workflows, history, and what Dex gets used for.
+  final VoidCallback onOpenLibrary;
 
   bool get _busy =>
       phase == TaskPhase.thinking || phase == TaskPhase.running || phase == TaskPhase.awaiting;
@@ -79,6 +83,11 @@ class CommandInput extends StatelessWidget {
           ] else
             _KeyHint(label: 'Enter', tokens: t),
           const SizedBox(width: DexTokens.spaceSm),
+          _IconTap(
+            tooltip: 'Workflows, history and usage',
+            icon: Icons.bookmarks_outlined,
+            onTap: onOpenLibrary,
+          ),
           _IconTap(
             tooltip: 'Mission Control  (Ctrl+M)',
             icon: Icons.grid_view_rounded,

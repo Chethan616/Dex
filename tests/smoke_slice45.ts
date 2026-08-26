@@ -11,6 +11,9 @@ import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
 
+// Isolated database — see the note in tests/smoke_ws.ts.
+process.env.DEX_DB = path.join(os.tmpdir(), 'dex-slice45-test.db');
+
 import { AgentContext, AgentResult, ExecutionPlan, ExecutionStep } from '../core/events/types';
 import { AgentRegistry } from '../core/orchestrator/registry';
 import { Orchestrator } from '../core/orchestrator/orchestrator';

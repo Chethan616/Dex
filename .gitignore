@@ -22,6 +22,11 @@ data/sessions/
 data/cache/
 data/telemetry.db
 data/*.db
+# SQLite WAL sidecars — same content as the database, and "data/*.db"
+# does not match them. They hold the owner's task history.
+data/*.db-shm
+data/*.db-wal
+data/*.db-journal
 *.log
 
 # Python
