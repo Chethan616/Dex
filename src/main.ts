@@ -13,6 +13,7 @@ import { EvidenceStore } from '../core/reliability/evidence_store';
 import { DexServer } from '../core/server/ws_server';
 import { SystemAgent } from '../agents/system/system_agent';
 import { DesktopAgent } from '../agents/desktop/desktop_agent';
+import { AppAgent } from '../agents/app/app_agent';
 import { BrowserAgent } from '../agents/browser/browser_agent';
 import { WorkspaceAgent } from '../agents/workspace/workspace_agent';
 import { defaultRoutes, defaultServers } from '../agents/workspace/servers';
@@ -41,7 +42,9 @@ function main(): void {
   const reliability = new ReliabilityLayer(evidenceStore);
 
   const registry = new AgentRegistry();
-  registry.register(new SystemAgent());
+  const systemAgent = new SystemAgent();
+  registry.register(systemAgent);
+  registry.register(new AppAgent());
   registry.register(new DesktopAgent());
   registry.register(new BrowserAgent());
 
@@ -69,6 +72,11 @@ function main(): void {
     });
     server.start();
   }
+
+  // Ask the daemon whether it implements everything the Brain will offer to
+  // plan. Fire-and-forget: it must not delay the prompt, and a daemon that is
+  // simply not running is a separate, already-reported condition.
+  void systemAgent.checkForDrift().catch(() => undefined);
 
   // MCP servers are child processes. Without this they outlive the core and
   // pile up one orphan per restart.

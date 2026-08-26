@@ -1,4 +1,4 @@
-import { AgentContext, ExecutionPlan, ExecutionStep, TaskStatus } from '../events/types';
+import { AgentContext, AgentResult, ExecutionPlan, ExecutionStep, TaskStatus } from '../events/types';
 import { AgentRegistry } from './registry';
 import { CancellationRegistry } from './cancellation';
 import { ReliabilityLayer } from '../reliability/observation_engine';
@@ -84,6 +84,7 @@ export class Orchestrator {
     step: ExecutionStep,
     requestId: string,
     completed: Set<string>,
+    escalated = false,
   ): Promise<StepOutcome> {
     emit('selecting', `${step.id} → ${step.capability}:${step.action}`, requestId, step.id);
 
@@ -106,7 +107,15 @@ export class Orchestrator {
     emit('executing', `${step.action}(${JSON.stringify(step.params)})`, requestId, step.id);
 
     const ctx = this.contextFor(step, requestId);
-    const result = await agent.execute(step.action, step.params, requestId, step.id, ctx);
+    let result = await agent.execute(step.action, step.params, requestId, step.id, ctx);
+
+    // The agent hit the edge of its mechanism rather than failing. Hand the
+    // same step to the tier that can actually do it. Once only — see `escalate`
+    // in AgentResult for why this must not chain.
+    if (!result.success && result.escalate && !escalated) {
+      const escalation = await this.escalate(step, result.escalate, requestId, ctx);
+      if (escalation) result = escalation;
+    }
 
     if (!result.success) {
       // A step the owner declined mid-flight is a decision, not a failure to
@@ -167,6 +176,49 @@ export class Orchestrator {
 
     emit('failed', `${step.id} failed after retry`, requestId, step.id);
     return 'failed';
+  }
+
+  /**
+   * Re-dispatch a step to a more capable tier.
+   *
+   * The Brain plans against what it can know at planning time; it cannot know
+   * whether a particular application exposes an accessibility tree. So the
+   * cheap deterministic tier tries first, and when it reports that the target
+   * is genuinely unreachable by its mechanism, execution moves outward here.
+   *
+   * The step keeps its confirmation tier and its id — this is the same step
+   * being done a different way, not a new one, so nothing gets re-approved and
+   * the evidence trail stays continuous.
+   */
+  private async escalate(
+    step: ExecutionStep,
+    capability: string,
+    requestId: string,
+    ctx: AgentContext,
+  ): Promise<AgentResult | undefined> {
+    if (capability === step.capability) return undefined;
+
+    const agent = this.registry.resolve(capability);
+    if (!agent) {
+      emit(
+        'failed',
+        `${step.id} wanted to escalate to "${capability}" but no agent provides it`,
+        requestId,
+        step.id,
+      );
+      return undefined;
+    }
+
+    if (this.cancellation.isCancelled(requestId)) return undefined;
+
+    emit(
+      'selecting',
+      `${step.id} → escalating ${step.capability} → ${capability}`,
+      requestId,
+      step.id,
+    );
+
+    return agent.execute(step.action, step.params, requestId, step.id, ctx);
   }
 
   /**

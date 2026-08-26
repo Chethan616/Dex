@@ -8,6 +8,7 @@ export async function verifyStep(
   agentResult?: AgentResult,
 ): Promise<VerificationResult> {
   if (step.capability === 'can_control_os') return verifyOsStep(step);
+  if (step.capability === 'can_control_app') return verifyAppStep(step, agentResult);
   if (step.capability === 'can_control_gui') return verifyGuiStep(step);
   if (step.capability === 'can_browse_web') return verifyBrowserStep(step, agentResult);
   if (step.capability.startsWith('can_access_')) return verifyWorkspaceStep(step, agentResult);
@@ -15,6 +16,100 @@ export async function verifyStep(
     status: 'UNVERIFIABLE',
     reason: `No verification policy for capability: ${step.capability}`,
   };
+}
+
+// ── applications (UI Automation) ─────────────────────────────────────────────
+
+const APP_READS = new Set(['list_elements', 'read_element', 'window_state', 'wait_for']);
+
+/**
+ * The strongest verification in Dex, and the cheapest.
+ *
+ * The vision tier can only ask "does a file exist afterwards". This tier reads
+ * the control it just touched straight back out of the accessibility tree, so
+ * "the text was set" is a fact about the live UI rather than an agent's report
+ * of its own success. The driver does that read-back at the moment of writing —
+ * the only moment it is knowable — and this function holds it to it.
+ */
+function verifyAppStep(
+  step: ExecutionStep,
+  agentResult?: AgentResult,
+): VerificationResult {
+  if (APP_READS.has(step.action)) {
+    return { status: 'VERIFIED', reason: 'Read-only UI Automation query' };
+  }
+
+  const data = (agentResult?.data ?? {}) as {
+    verified?: boolean;
+    wrote?: string;
+    read_back?: string;
+    method?: string;
+    was?: boolean;
+    now?: boolean;
+    element?: { name?: string };
+    path?: string[];
+  };
+
+  if (step.action === 'set_text') {
+    if (data.verified === true) {
+      return {
+        status: 'VERIFIED',
+        reason: `Field read back exactly as written ("${truncate(data.wrote ?? '')}")`,
+        afterState: data.read_back,
+      };
+    }
+    // Some controls legitimately refuse to report their value back. That is
+    // "could not check", not "worked" — the Orchestrator continues but the
+    // owner sees the caveat instead of a false tick.
+    if (!data.read_back) {
+      return {
+        status: 'UNVERIFIABLE',
+        reason: `${step.action} completed but the control would not report its value back`,
+      };
+    }
+    return {
+      status: 'FAILED',
+      reason:
+        `Field does not contain what was written — wanted "${truncate(data.wrote ?? '')}", ` +
+        `got "${truncate(data.read_back)}"`,
+      afterState: data.read_back,
+    };
+  }
+
+  if (step.action === 'toggle') {
+    return data.verified
+      ? { status: 'VERIFIED', reason: `Toggle is now ${data.now ? 'on' : 'off'}` }
+      : {
+          status: 'FAILED',
+          reason: `Toggle did not change — still ${data.now ? 'on' : 'off'}`,
+        };
+  }
+
+  if (step.action === 'click_element') {
+    const name = data.element?.name ?? step.params.name;
+    // A click is verified by the fact that a real control accepted a real
+    // invocation. Whether the app then did the right thing is the *next*
+    // step's business to check.
+    return data.method
+      ? {
+          status: 'VERIFIED',
+          reason: `Invoked "${name}" via ${data.method}`,
+          afterState: data.method,
+        }
+      : { status: 'UNVERIFIABLE', reason: 'Click reported no activation method' };
+  }
+
+  if (step.action === 'select_menu') {
+    return data.path?.length
+      ? { status: 'VERIFIED', reason: `Menu path taken: ${data.path.join(' > ')}` }
+      : { status: 'FAILED', reason: 'Menu path was not taken' };
+  }
+
+  return { status: 'UNVERIFIABLE', reason: `No verification policy for ${step.action}` };
+}
+
+function truncate(text: string, max = 60): string {
+  return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
 // ── web ──────────────────────────────────────────────────────────────────────

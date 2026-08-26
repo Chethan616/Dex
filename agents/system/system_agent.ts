@@ -1,6 +1,7 @@
 import * as net from 'net';
 import { Agent } from '../../core/orchestrator/registry';
 import { emit } from '../../core/events/bus';
+import { OS_ACTION_NAMES } from '../../core/brain/capabilities';
 
 const PIPE_PATH = '\\\\.\\pipe\\dex_privileged_daemon';
 const TIMEOUT_MS = 30_000;
@@ -15,6 +16,51 @@ interface DaemonResponse {
 export class SystemAgent implements Agent {
   name = 'SystemAgent';
   capabilities = ['can_control_os'];
+
+  private driftChecked = false;
+
+  /**
+   * Ask the daemon what it can do, and compare with what the Brain is told it
+   * can do.
+   *
+   * These were two hand-maintained lists in two languages and they drifted:
+   * the planner offered actions the daemon had never implemented, so the Brain
+   * planned them and the owner watched a task die on "Unknown action" halfway
+   * through. Checking once per session turns that into one clear message before
+   * anything is attempted.
+   *
+   * Deliberately non-fatal. A daemon that is merely *older* than the core still
+   * does most of its job, and refusing to start would be a worse failure than
+   * the one being reported.
+   */
+  async checkForDrift(): Promise<{ ok: boolean; missing: string[] }> {
+    if (this.driftChecked) return { ok: true, missing: [] };
+    this.driftChecked = true;
+
+    const result = await this.execute('describe', {}, 'startup', 'drift_check');
+    if (!result.success) {
+      // Daemon down is a separate, already-reported problem.
+      return { ok: true, missing: [] };
+    }
+
+    const available = new Set(
+      ((result.data as { actions?: string[] })?.actions ?? []),
+    );
+    const missing = OS_ACTION_NAMES.filter((action) => !available.has(action));
+
+    if (missing.length > 0) {
+      emit(
+        'failed',
+        `Daemon is missing ${missing.length} action(s) the planner advertises: ` +
+          `${missing.join(', ')}. Update the daemon, or remove them from ` +
+          `core/brain/capabilities.ts — planning them will fail at run time.`,
+        'startup',
+      );
+      return { ok: false, missing };
+    }
+
+    return { ok: true, missing: [] };
+  }
 
   execute(
     action: string,

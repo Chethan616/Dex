@@ -54,6 +54,18 @@ export interface AgentResult {
    * Orchestrator honours this instead of burning its retry budget.
    */
   retryable?: boolean;
+  /**
+   * A capability that *can* do what this agent could not — set by an agent that
+   * has hit the edge of its own mechanism rather than a real failure. The
+   * canonical case is the UI Automation tier meeting a window that draws its
+   * own controls: it cannot see them, but the vision tier can. The Orchestrator
+   * re-dispatches the same step to whichever agent owns this capability.
+   *
+   * Escalation only ever moves *outward* to a more capable, more expensive
+   * tier, and only once per step — otherwise two agents could hand a step back
+   * and forth forever.
+   */
+  escalate?: string;
 }
 
 /**

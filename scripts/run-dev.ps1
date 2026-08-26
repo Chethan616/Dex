@@ -8,6 +8,7 @@ Launches: daemon (requires elevation) + Desktop Agent server + Browser Agent ser
 .PARAMETER CoreOnly        Start only TypeScript core (daemon + desktop already running)
 .PARAMETER NoDesktop       Skip the Desktop Agent server (Slice 1 only)
 .PARAMETER NoBrowser       Skip the Browser Agent server (no web tasks)
+.PARAMETER NoApp           Skip the App Agent server (no UI Automation tier)
 .PARAMETER NoUi            Skip the Flutter Dex Bar (CLI only)
 #>
 param(
@@ -15,6 +16,7 @@ param(
     [switch]$CoreOnly,
     [switch]$NoDesktop,
     [switch]$NoBrowser,
+    [switch]$NoApp,
     [switch]$NoUi
 )
 
@@ -55,6 +57,13 @@ if (-not $CoreOnly -and -not $NoDesktop) {
     $desktop = Start-Process python -ArgumentList 'agents/desktop/server.py' -PassThru -WindowStyle Minimized
     Write-Host "Desktop Agent PID: $($desktop.Id)" -ForegroundColor DarkGray
     Start-Sleep -Milliseconds 1000
+}
+
+if (-not $CoreOnly -and -not $NoApp) {
+    Write-Host 'Starting App Agent Server (UI Automation)...' -ForegroundColor Cyan
+    $appAgent = Start-Process python -ArgumentList 'agents/app/server.py' -PassThru -WindowStyle Minimized
+    Write-Host "App Agent PID: $($appAgent.Id)" -ForegroundColor DarkGray
+    Start-Sleep -Milliseconds 800
 }
 
 if (-not $CoreOnly -and -not $NoBrowser) {

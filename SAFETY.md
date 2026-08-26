@@ -39,7 +39,17 @@ Every action a backend can take is classified into exactly one of four tiers. Th
 | **3 — Pre-approval works** | Confirm once, remembered for that session or task | logging into a site the request implied ("check my Gmail"); moving or renaming a file; writing a new file; sending an SMS from a phone node |
 | **4 — No confirmation** | Runs silently | reading a page, file, or email; downloading a file; navigating a browser; checking WiFi/process/service status; applying a known power plan; setting DNS |
 
-**One deliberate narrowing:** registry writes are *not* blanket tier 4. Only writes to an explicit allowlist of known keys — the ones the `gaming_optimize` and `os_optimize` composites already touch — run silently. Any registry write outside that allowlist is tier 3 at best. An arbitrary key write is a materially different risk than a key Dex already knows the effect of, and "registry" as a whole is too coarse a bucket to hand a blanket pass.
+**One deliberate narrowing:** registry writes are *not* blanket tier 4. An arbitrary key write is a materially different risk than a key Dex already knows the effect of, and "registry" as a whole is too coarse a bucket to hand a blanket pass. `classify_write` in `daemon/handlers/registry_handler.py` sorts every path into one of three bands:
+
+| Band | Behaviour | Covers |
+|---|---|---|
+| **GREEN** | silent | Dex's own keys, and the specific known-effect tweaks the `gaming_optimize` / `os_optimize` composites touch |
+| **AMBER** | Tier 2 confirmation | general `HKCU\Software\*`, `HKLM\SOFTWARE\*` |
+| **RED** | refused | `\Policies\`, `\CurrentControlSet\Services\`, Winlogon, LSA, Defender, `\Run`/`\RunOnce`, Image File Execution Options, UAC |
+
+**RED stays refused under Full Access, and that is the point.** Full Access means the owner pre-granted *elevation* — Dex stops asking for admin. "Never change Windows security or privacy settings" is a separate rule about what may be done at all. Collapsing the two would quietly turn a convenience toggle into a security bypass, so the refusal is unconditional and there is a test asserting it fires with `FULL_ACCESS=true`.
+
+An earlier version had only two Dex-owned paths on the allowlist, which meant any real registry work required Full Access and therefore bypassed *every* confirmation. The choice was "useless" or "unlimited"; banding is what makes a middle possible.
 
 Confirmations are **signed and versioned**: an approval request carries the specific request id and step version it was generated for, and only resolves that exact one. A card the owner approved five minutes ago cannot be silently reused to approve a different, newer version of the step — if the step changed, a new confirmation is required.
 
@@ -66,7 +76,9 @@ A secondary, much weaker layer — pattern-matching known injection phrases like
 Hard rules for the Desktop and System backends:
 
 - Never automate password manager apps or password-manager websites.
-- Never type into a password, one-time-code, or OTP-named field. The browser's `type_text` primitive enforces this at the point of action — it inspects the element and refuses, whatever the plan said — and raises a hand-off instead.
+- Never type into a password, one-time-code, or OTP-named field. Enforced at the point of action in *both* interactive tiers — the browser's `type_text` inspects the element, and the application tier's `set_text` checks `IsPassword` on the UIA control — so it holds whatever the plan said, and raises a hand-off instead.
+- Never open a terminal, console, or PowerShell window as an application. `launch_app` refuses them by name; system work goes through typed daemon handlers, never a shell an agent types into.
+- Never act on an ambiguous window. Two open windows matching a title raises rather than picking one — the next step is usually typing into it, and the wrong guess overwrites whatever someone was working on.
 - Never change Windows security or privacy settings, and never act on a security/privacy permission prompt on the owner's behalf.
 - Never use Windows-key shortcuts (no `Win`, `Win+...`, or other OS-key combinations).
 - **Never automate a terminal window** (PowerShell, Command Prompt, Windows Terminal) via UI clicking or typing. This is exactly why the System backend exists as a separate thing from the Desktop backend: registry, DNS, power-plan, and similar changes always go through its direct API/PowerShell calls through the Tool Runtime, never through "open a terminal and type a command" via the GUI.

@@ -10,8 +10,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+from handlers.app_handler import AppHandler
+from handlers.audio_handler import AudioHandler
 from handlers.network_handler import NetworkHandler
 from handlers.power_handler import PowerHandler
+from handlers.process_handler import ProcessHandler
 from handlers.registry_handler import RegistryHandler
 from handlers.shell_runner import ShellRunner
 
@@ -25,16 +28,41 @@ log = logging.getLogger('DexDaemon')
 PIPE_NAME = r'\\.\pipe\dex_privileged_daemon'
 
 DISPATCH = {
-    'set_dns':         NetworkHandler.set_dns,
-    'get_dns':         NetworkHandler.get_dns,
-    'set_wifi':        NetworkHandler.set_wifi,
-    'get_wifi_status': NetworkHandler.get_wifi_status,
-    'set_power_plan':  PowerHandler.set_power_plan,
-    'get_power_plan':  PowerHandler.get_power_plan,
-    'registry_read':   RegistryHandler.read,
-    'registry_write':  RegistryHandler.write,
-    'run_shell':       ShellRunner.run,
+    'set_dns':          NetworkHandler.set_dns,
+    'get_dns':          NetworkHandler.get_dns,
+    'set_wifi':         NetworkHandler.set_wifi,
+    'get_wifi_status':  NetworkHandler.get_wifi_status,
+    'set_power_plan':   PowerHandler.set_power_plan,
+    'get_power_plan':   PowerHandler.get_power_plan,
+    'registry_read':    RegistryHandler.read,
+    'registry_write':   RegistryHandler.write,
+    'registry_classify': RegistryHandler.classify,
+    'run_shell':        ShellRunner.run,
+    'get_volume':       AudioHandler.get_volume,
+    'set_volume':       AudioHandler.set_volume,
+    'set_mute':         AudioHandler.set_mute,
+    'list_processes':   ProcessHandler.list_processes,
+    'kill_process':     ProcessHandler.kill_process,
+    'launch_app':       AppHandler.launch_app,
+    'close_app':        AppHandler.close_app,
 }
+
+
+def _describe(_params: dict) -> dict:
+    """
+    What this daemon can actually do.
+
+    Exists to kill a whole class of bug: the Brain's prompt advertises an action
+    list, the dispatch table implements one, and the two were maintained by hand
+    in separate files. They drifted -- the planner offered set_volume and
+    friends that the daemon had never heard of, so the Brain confidently planned
+    steps that came back "Unknown action" mid-task. Now the daemon is the single
+    source of truth and the core checks itself against it at startup.
+    """
+    return {'actions': sorted(DISPATCH.keys()), 'version': '0.2.0'}
+
+
+DISPATCH['describe'] = _describe
 
 
 def handle(msg: dict) -> dict:

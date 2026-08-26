@@ -242,6 +242,18 @@ execute
 
 Internally still called "agents" in conversation, but the interface each one implements is an **Execution Backend** — today's Agent-S3 or browser-use can be replaced tomorrow without the Brain, Orchestrator, or Registry noticing.
 
+**Windows work climbs a ladder, cheapest rung first.** Three backends can act on the desktop, and they are not interchangeable — each is strictly more capable and strictly more expensive than the one below it.
+
+| Tier | Capability | Mechanism | Cost |
+|---|---|---|---|
+| 1 | `can_control_os` | Win32 / PowerShell via the daemon. No window involved. | microseconds, exact |
+| 2 | `can_control_app` | UI Automation — resolve a control **by name** and invoke it | milliseconds, exact |
+| 3 | `can_control_gui` | Screenshot → vision model → pixel coordinates → mouse | seconds, tokens, a GPU, and it can miss |
+
+The Brain picks the lowest tier that can do the job (§5), from an explicit decision procedure rather than a preference — "prefer X" gets ignored under pressure, "if A then B" does not. Volume, DNS, power, processes, services, registry, and *launching an application* are all Tier 1; there is no reason to drive a GUI for any of them.
+
+**What the Brain cannot know is handled at run time.** Whether a given application exposes a usable accessibility tree is not knowable at planning time, so Tier 2 tries first and, when it finds no tree, returns `escalate: 'can_control_gui'` instead of failing. The Orchestrator re-dispatches that same step — same id, same confirmation tier, continuous evidence trail — to the vision backend. Escalation moves outward only, once per step, and is logged, so the step stream shows *why* Dex started using its eyes.
+
 ### 10.1 Desktop backend — Agent-S3
 
 **Foundation:** [simular-ai/Agent-S3](https://github.com/simular-ai/Agent-S/tree/s3), Apache 2.0, forked and wrapped rather than modified.
@@ -270,6 +282,24 @@ No screen capture. Structured calls against Windows APIs, PowerShell, `netsh`, `
 **Tool set:** `registry_read/write/delete` (write scoped to an explicit allowlist — see SAFETY.md) · `power_plan_list/create/apply` · `network_dns_set/flush` · `network_wifi_list/connect/forget` · `bluetooth_device_list/pair/disconnect` · `process_list/kill/priority_set` · `service_list/start/stop/set_startup` · `audio_endpoint_list/set_default` · `gaming_optimize` (composite) · `os_optimize` (composite).
 
 Every mutable action here captures before-state, applies, verifies the read-back, and — where the change is reversible — can roll back to the captured before-state.
+
+**The daemon is the source of truth for its own tool set.** It answers a `describe` action listing every action it implements, and the core compares that against what the Brain is told it can plan (`core/brain/capabilities.ts`) at startup. This exists because the two lists were previously maintained by hand in two languages and drifted: the planner advertised `set_volume`, `get_volume`, `list_processes` and `kill_process`, the daemon implemented none of them, and the owner watched tasks die on `Unknown action` halfway through. A mismatch is now one clear message before anything is attempted.
+
+**Registry writes are banded, not binary.** `classify_write` sorts a path into GREEN (Dex-owned and known-effect keys — silent), AMBER (general application settings — Tier 2 confirmation), or RED (Group Policy, `Services`, Winlogon, LSA, Defender, autostart, IFEO, UAC — refused). RED stays refused **under Full Access**: Full Access means the owner pre-granted *elevation* so Dex stops asking for admin, while "never change Windows security or privacy settings" is a separate rule about what may be done at all. Collapsing the two would turn a convenience toggle into a security bypass.
+
+### 10.2b Application backend — UI Automation
+
+`agents/app/server.py` on 127.0.0.1:8767, wrapping `agents/app/uia_driver.py`.
+
+The rung between "talk to the OS" and "look at the screen". It asks Windows what a window contains and invokes the control by name: `list_elements` · `click_element` · `set_text` · `read_element` · `toggle` · `select_menu` · `wait_for` · `window_state`.
+
+- **`set_text` uses ValuePattern, never keystrokes.** SendKeys goes wherever focus happens to be, so a window stealing focus mid-type sprays the text elsewhere — the failure that once put a task description into a browser address bar. ValuePattern writes to the control or fails.
+- **`wait_for` replaces guessed sleeps**, so multi-step tasks synchronise on the UI actually being ready.
+- **Verification is the strongest in the system.** `set_text` reads the value straight back out of the tree at the moment of writing and the Reliability Layer holds it to that; a mismatch is `FAILED` even when the agent reported success. Compare the vision tier, which can only ask whether a file appeared afterwards.
+- **Ambiguity is refused, not guessed.** Two windows matching "Notepad" raises rather than picking one — during development the sole match was the owner's document with unsaved work in it, and the next step was `set_text`.
+- **Password and one-time-code fields are refused at the point of action**, whatever the plan said, and offered as a Tier 1 hand-off instead.
+
+Where it stops is the honest boundary: applications that draw their own interface — games, canvases, image editors — expose no tree, and those escalate to Tier 3.
 
 ### 10.3 Browser backend — two modes, one process
 
