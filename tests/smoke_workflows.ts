@@ -34,6 +34,8 @@ import { Telemetry } from '../core/memory/telemetry';
 import { matchShape, shapeOf } from '../core/workflows/shape';
 // eslint-disable-next-line import/first
 import { WorkflowStore } from '../core/workflows/store';
+// eslint-disable-next-line import/first
+import { WORKFLOW_CAPABILITY, expandWorkflows } from '../core/workflows/expand';
 
 let passed = 0;
 let failed = 0;
@@ -181,6 +183,87 @@ function testWorkflows(): void {
   check('an unusable name is rejected', badName.includes('lowercase'), badName);
 }
 
+// ── expansion ────────────────────────────────────────────────────────────────
+
+function testExpansion(): void {
+  section('Expansion — the Brain picks a workflow, the steps come from disk');
+
+  const store = new WorkflowStore();
+  store.save({ name: 'vol2', requestText: 'set volume to 30', plan: volumePlan });
+
+  // What the Brain emits when it recognises "make it louder" as the volume
+  // workflow: a choice and an argument, never the steps themselves.
+  const chosen: ExecutionPlan = planFor([
+    {
+      id: 'step_1',
+      capability: WORKFLOW_CAPABILITY,
+      action: 'vol2',
+      params: { level: 70 },
+      confirmationTier: 4,
+      dependsOn: [],
+    },
+  ]);
+
+  const { plan: out, expanded } = expandWorkflows(chosen, store);
+  check('the workflow is expanded', expanded.join() === 'vol2', expanded.join());
+  check(
+    'into the saved steps, not anything the model wrote',
+    out.steps.length === 1 && out.steps[0].action === 'set_volume',
+    JSON.stringify(out.steps[0]),
+  );
+  check(
+    "with the Brain's argument bound in",
+    out.steps[0].params.level === 70,
+    JSON.stringify(out.steps[0].params),
+  );
+  check(
+    'and ids namespaced so two workflows cannot collide',
+    out.steps[0].id === 'step_1_step_1',
+    out.steps[0].id,
+  );
+
+  // Anything that depended on the workflow step must now wait for the last
+  // step it became, or it would start while the workflow is still running.
+  const withDep: ExecutionPlan = planFor([
+    { id: 'w', capability: WORKFLOW_CAPABILITY, action: 'vol2', params: { level: 40 }, confirmationTier: 4, dependsOn: [] },
+    { id: 'after', capability: 'can_control_os', action: 'get_volume', params: {}, confirmationTier: 4, dependsOn: ['w'] },
+  ]);
+  const rewired = expandWorkflows(withDep, store).plan;
+  const after = rewired.steps.find((s) => s.id === 'after');
+  check(
+    'dependencies are rewired to the expanded steps',
+    after?.dependsOn.join() === 'w_step_1',
+    JSON.stringify(after?.dependsOn),
+  );
+
+  // A plan referencing something deleted must fail loudly, not quietly do less
+  // than the owner asked for.
+  const ghost: ExecutionPlan = planFor([
+    { id: 'step_1', capability: WORKFLOW_CAPABILITY, action: 'no_such_workflow', params: {}, confirmationTier: 4, dependsOn: [] },
+  ]);
+  const ghostOut = expandWorkflows(ghost, store);
+  check(
+    'a missing workflow keeps the step so it fails visibly',
+    ghostOut.expanded.length === 0 && ghostOut.plan.steps.length === 1,
+    JSON.stringify(ghostOut.plan.steps),
+  );
+
+  const noArgs: ExecutionPlan = planFor([
+    { id: 'step_1', capability: WORKFLOW_CAPABILITY, action: 'vol2', params: {}, confirmationTier: 4, dependsOn: [] },
+  ]);
+  check(
+    'a workflow missing its argument is not silently run',
+    expandWorkflows(noArgs, store).expanded.length === 0,
+  );
+
+  check(
+    'a plan with no workflow steps is returned untouched',
+    expandWorkflows(volumePlan, store).plan === volumePlan,
+  );
+
+  store.delete('vol2');
+}
+
 // ── history ──────────────────────────────────────────────────────────────────
 
 function testTelemetry(): void {
@@ -255,6 +338,7 @@ function main(): void {
   console.log('\x1b[1mDEX — usage history and saved workflows\x1b[0m');
   testShape();
   testWorkflows();
+  testExpansion();
   testTelemetry();
 
   console.log(`\n${passed} passed, ${failed} failed`);

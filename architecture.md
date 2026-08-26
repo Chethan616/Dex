@@ -377,6 +377,50 @@ Designed in §15. Not part of core V3.
 
 ---
 
+## 10.6 Saved workflows
+
+A task Dex worked out once, kept so it never has to work it out again.
+`core/workflows/`, backed by the same local SQLite file as the usage history.
+
+**Why replay beats re-planning.** The saved steps are the ones already observed
+working. A fresh planning call is another chance to pick a different capability,
+mislabel a confirmation tier, or simply have an off day. Re-solving a solved
+problem is a risk, not a neutral cost.
+
+**Three ways to reach one**, in increasing order of what they cost:
+
+| Route | Cost | How |
+|---|---|---|
+| `run vol 55` | nothing | explicit name and arguments |
+| "set volume to 42" | nothing | request *shape* matches a saved one; the differing values become the arguments |
+| "make it louder" | one planning call | the Brain picks the workflow and supplies arguments |
+
+The third route is the one that matters, and it is why the shape matcher is not
+enough on its own. "sound increase", "make it louder" and "bump the volume" are
+the same intent as "set volume to 30" and share none of its words — string
+comparison cannot bridge that, and a model trivially can. So saved workflows are
+advertised to the planner as a `can_run_workflow` capability, described by name,
+parameters and the phrasing they were first saved from.
+
+**The model chooses; it does not author.** A `run_workflow` step names a workflow
+and supplies arguments. `expandWorkflows` then replaces that step with the saved
+steps before anything executes, so what runs is what was verified working, with
+its own confirmation tiers and its own verification. There is no second
+execution path. Expansion namespaces step ids, rewires dependencies onto the
+last expanded step, refuses to run a workflow whose arguments are missing, and
+bounds nesting depth.
+
+**Parameters are inferred, not asked for.** On save, each literal in the original
+request is looked for in the plan's own step parameters. A value the plan used
+becomes a parameter named after the field it filled; a value that appears
+nowhere was phrasing, and is left alone. Shape matching is exact — never fuzzy —
+because running the wrong recipe with the owner's numbers substituted into it is
+far worse than paying for one planning call.
+
+Dex offers to save a task after the same shape has succeeded three times.
+
+---
+
 ## 11. Communication layer
 
 All channels are pure transport — receive, pass approved requests to the Gateway, deliver results back. No AI logic lives here.

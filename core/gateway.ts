@@ -5,6 +5,7 @@ import { Brain } from './brain/planner';
 import { Orchestrator } from './orchestrator/orchestrator';
 import { Telemetry } from './memory/telemetry';
 import { WorkflowStore } from './workflows/store';
+import { expandWorkflows } from './workflows/expand';
 import { emit } from './events/bus';
 
 export interface GatewayResult {
@@ -84,18 +85,36 @@ export class Gateway {
       return { status: 'FAILED', summary: msg, requestId };
     }
 
-    this.telemetry.planned(requestId, plan);
-    const result = await this.orchestrator.execute(plan);
+    // The Brain may have chosen a saved workflow rather than planning from
+    // scratch. Swap those steps for the ones already known to work, before
+    // anything runs — so they carry their own confirmation tiers and are
+    // verified like any other step.
+    const { plan: finalPlan, expanded } = expandWorkflows(plan, this.workflows);
+    if (expanded.length > 0) {
+      emit(
+        'routing',
+        `Using saved workflow${expanded.length > 1 ? 's' : ''}: ${expanded.join(', ')}`,
+        requestId,
+      );
+    }
+
+    this.telemetry.planned(requestId, finalPlan);
+    const result = await this.orchestrator.execute(finalPlan);
     this.telemetry.finishTask(requestId, result.status);
 
     if (result.status === 'COMPLETED') {
-      this.lastPlanned = { plan, text: request.text };
+      this.lastPlanned = { plan: finalPlan, text: request.text };
     }
 
     return {
       ...result,
       requestId,
-      suggestSave: this.suggestion(request.text, plan, result.status),
+      // A task that reused a workflow is not a fresh one to offer saving.
+      workflow: expanded[0],
+      suggestSave:
+        expanded.length > 0
+          ? undefined
+          : this.suggestion(request.text, finalPlan, result.status),
     };
   }
 

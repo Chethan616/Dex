@@ -3,9 +3,15 @@ import { normalize } from './normalizer';
 import { emit } from '../events/bus';
 import { LlmProvider, ToolSpec } from '../llm/provider';
 import { buildBrainProvider } from '../llm/providers';
-import { ROUTING_RULES, capabilityCatalogue } from './capabilities';
+import {
+  ROUTING_RULES,
+  WorkflowSummary,
+  capabilityCatalogue,
+  workflowCatalogue,
+} from './capabilities';
 
-const SYSTEM_PROMPT = `You are the planning brain of DEX, a personal Windows AI automation system.
+function systemPrompt(workflows: WorkflowSummary[]): string {
+  return `You are the planning brain of DEX, a personal Windows AI automation system.
 
 Your ONLY job: analyze the owner's request and produce a structured execution plan.
 You plan. You never execute.
@@ -13,7 +19,7 @@ You plan. You never execute.
 DEX has three ways to act, in increasing order of cost and decreasing order of
 reliability. Always reach for the cheapest one that can do the job.
 
-${capabilityCatalogue()}
+${capabilityCatalogue()}${workflowCatalogue(workflows)}
 
 ${ROUTING_RULES}
 
@@ -33,6 +39,7 @@ CONFIRMATION TIERS (assign per step, based on what happens if it goes wrong):
   confirmation costs the owner a click; a missing one can cost them data.
 
 Call create_execution_plan with the structured plan.`;
+}
 
 interface RawStep {
   id?: string;
@@ -75,6 +82,7 @@ const plannerTool: ToolSpec = {
               enum: [
                 'can_control_os',
                 'can_control_app',
+                'can_run_workflow',
                 'can_control_gui',
                 'can_browse_web',
                 'can_access_email',
@@ -115,7 +123,15 @@ export class Brain {
    * Takes a provider rather than an API key so the Brain has no idea which
    * vendor is answering — that choice lives in core/llm and is one env var.
    */
-  constructor(provider?: LlmProvider) {
+  constructor(
+    provider?: LlmProvider,
+    /**
+     * Supplies the saved workflows to advertise. A callback rather than a list
+     * because workflows are saved and forgotten while Dex runs, and a snapshot
+     * taken at construction would go stale immediately.
+     */
+    private workflows: () => WorkflowSummary[] = () => [],
+  ) {
     this.provider = provider ?? buildBrainProvider();
   }
 
@@ -127,7 +143,7 @@ export class Brain {
     emit('routing', `Brain thinking (${this.provider.label})...`, request.requestId);
 
     const raw = (await this.provider.callTool({
-      system: SYSTEM_PROMPT,
+      system: systemPrompt(this.workflows()),
       user: normalize(request.text),
       tool: plannerTool,
       maxTokens: 2048,

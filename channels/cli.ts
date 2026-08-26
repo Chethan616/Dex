@@ -189,7 +189,10 @@ function handleLocalCommand(gateway: Gateway, raw: string): void {
         console.log(
           last
             ? `Usage: /save <name>   (would save: "${last.text}", ${last.steps} step(s))`
-            : 'Nothing to save yet — run a task first.',
+            // The common case is that the last task already ran from a saved
+            // workflow, so there is genuinely nothing new to keep.
+            : 'Nothing new to save — the last task either failed or already ran '
+              + 'from a saved workflow. Try /workflows.',
         );
         return;
       }

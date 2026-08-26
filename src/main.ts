@@ -25,12 +25,26 @@ import { startCli } from '../channels/cli';
 function main(): void {
   quietSqliteWarning();
 
+  // Created before the Brain, which needs to read it to advertise workflows.
+  const workflowStore = new WorkflowStore();
+
   // Which vendor answers is core/llm's business, not main's. All main needs to
   // know is whether *some* provider could be built, so it can say something
   // useful instead of throwing a stack trace at the owner.
   let brain: Brain;
   try {
-    brain = new Brain();
+    // The Brain is shown the saved workflows so it can pick one from any
+    // phrasing — "make it louder" should reach the volume workflow even though
+    // it shares no words with how it was saved.
+    brain = new Brain(undefined, () =>
+      workflowStore.list().map((w) => ({
+        name: w.name,
+        description: w.description,
+        params: w.params,
+        triggerText: w.triggerText,
+        steps: w.template.length,
+      })),
+    );
   } catch (err) {
     console.error(`[31mERROR:[0m ${err instanceof Error ? err.message : err}`);
     process.exit(1);
@@ -66,13 +80,12 @@ function main(): void {
   const cancellation = new CancellationRegistry();
 
   const telemetry = new Telemetry();
-  const workflows = new WorkflowStore();
 
   const orchestrator = new Orchestrator(
     registry, reliability, fullAccess, confirmations, cancellation, telemetry,
   );
   const ownerGate = new OwnerGate({});
-  const gateway = new Gateway(ownerGate, brain, orchestrator, telemetry, workflows);
+  const gateway = new Gateway(ownerGate, brain, orchestrator, telemetry, workflowStore);
 
   if (process.env.DEX_UI_SERVER !== 'false') {
     const server = new DexServer(gateway, confirmations, cancellation, {

@@ -73,6 +73,54 @@ function render(actions: Record<string, ActionSpec>): string {
 
 export const OS_ACTION_NAMES = Object.keys(OS_ACTIONS);
 
+export interface WorkflowSummary {
+  name: string;
+  description: string;
+  params: string[];
+  /** What the owner originally said — the best clue to what this is for. */
+  triggerText: string;
+  steps: number;
+}
+
+/**
+ * Saved workflows, described so the planner can pick one from any phrasing.
+ *
+ * This is the half that string matching cannot do. "sound increase", "make it
+ * louder" and "bump the volume" are the same request as "set volume to 30" and
+ * share none of its words. Understanding that is exactly what the model is for
+ * — so it chooses the workflow and supplies the arguments, while the steps
+ * themselves still come from what was already verified working.
+ */
+export function workflowCatalogue(workflows: WorkflowSummary[]): string {
+  if (workflows.length === 0) return '';
+
+  const lines = workflows.map((w) => {
+    const params = w.params.length
+      ? `params: { ${w.params.map((p) => `${p}: string | number`).join(', ')} }`
+      : 'params: {}';
+    return (
+      `  - ${w.name}  ${params}\n` +
+      `      ${w.description}\n` +
+      `      first saved from: "${w.triggerText}"  (${w.steps} step${w.steps === 1 ? '' : 's'})`
+    );
+  });
+
+  return `
+
+CAPABILITY: can_run_workflow   [PREFER THIS when one of these fits]
+  Tasks the owner has already done and saved. Running one replays steps that
+  are known to work, so it is faster and more reliable than planning the same
+  thing again. Set "action" to the workflow name.
+
+  Match on INTENT, not wording. "make it louder", "sound up" and "volume 60"
+  should all reach a volume workflow. If a saved workflow does what the owner
+  is asking, use it — even when they said it completely differently.
+
+  Supply every parameter it lists. If the owner did not give a value and you
+  cannot infer a sensible one, plan the task normally instead.
+${lines.join('\n')}`;
+}
+
 export function capabilityCatalogue(): string {
   return `CAPABILITY: can_control_os   [TIER 1 — always prefer this]
   Direct Windows control through the privileged daemon. No window is opened, no
