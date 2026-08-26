@@ -42,6 +42,14 @@ export interface DexRequest {
   senderId: string;
   text: string;
   timestamp: number;
+  /**
+   * Direct message or group. The Owner Gate treats these differently: in a
+   * group even the owner must address Dex explicitly, or every sentence they
+   * type to another person becomes a command.
+   */
+  chatType?: 'direct' | 'group';
+  /** Where to reply. Distinct from senderId — a group has many senders. */
+  chatId?: string;
 }
 
 export interface AgentResult {

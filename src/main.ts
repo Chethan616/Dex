@@ -21,6 +21,11 @@ import { BrowserAgent } from '../agents/browser/browser_agent';
 import { WorkspaceAgent } from '../agents/workspace/workspace_agent';
 import { defaultRoutes, defaultServers } from '../agents/workspace/servers';
 import { startCli } from '../channels/cli';
+import { ChannelAdapter, ChannelRuntime } from '../channels/base_channel';
+import { TelegramChannel } from '../channels/telegram';
+import { DiscordChannel } from '../channels/discord';
+import { WhatsAppChannel } from '../channels/whatsapp';
+import { CredentialStore } from '../core/secrets/credential_store';
 
 function main(): void {
   quietSqliteWarning();
@@ -84,7 +89,17 @@ function main(): void {
   const orchestrator = new Orchestrator(
     registry, reliability, fullAccess, confirmations, cancellation, telemetry,
   );
-  const ownerGate = new OwnerGate({});
+  const credentials = new CredentialStore();
+
+  // Owner identity per channel. Ids are not secret — they are the equivalent of
+  // a username — so they read from the environment; the bot *tokens* below come
+  // from the OS credential store.
+  const ownerGate = new OwnerGate({
+    telegram_id: process.env.DEX_OWNER_TELEGRAM ?? null,
+    discord_id: process.env.DEX_OWNER_DISCORD ?? null,
+    whatsapp: process.env.DEX_OWNER_WHATSAPP ?? null,
+    trigger_prefix: process.env.DEX_TRIGGER_PREFIX ?? '@dex',
+  });
   const gateway = new Gateway(ownerGate, brain, orchestrator, telemetry, workflowStore);
 
   if (process.env.DEX_UI_SERVER !== 'false') {
@@ -110,10 +125,13 @@ function main(): void {
     console.log(`
 ${signal} — closing workspace servers…`);
     await workspace.close().catch(() => undefined);
+    await Promise.all(started.map((c) => c.stop().catch(() => undefined)));
     process.exit(0);
   };
   process.on('SIGINT', () => void shutdown('SIGINT'));
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
+
+  void startChannels(gateway, ownerGate, confirmations, credentials);
 
   startCli(gateway, confirmations).catch((err) => {
     console.error('Fatal:', err);
@@ -122,3 +140,60 @@ ${signal} — closing workspace servers…`);
 }
 
 main();
+
+
+/** Adapters that are running, so shutdown can close them. */
+const started: ChannelAdapter[] = [];
+
+/**
+ * Start every channel the owner has actually configured.
+ *
+ * A channel needs two things: a bot token, and the owner's id on that platform.
+ * Missing either is a normal state — most people will not wire up all three —
+ * so it is reported once and skipped, never treated as an error.
+ *
+ * Refusing to start without an owner id is deliberate rather than defensive:
+ * a bot listening with no configured owner would reject every message anyway,
+ * and a bot that is *running* but silently ignoring everything is far harder to
+ * diagnose than one that says why it did not start.
+ */
+async function startChannels(
+  gateway: Gateway,
+  ownerGate: OwnerGate,
+  confirmations: ConfirmationManager,
+  credentials: CredentialStore,
+): Promise<void> {
+  const runtime = new ChannelRuntime(gateway, ownerGate, confirmations);
+
+  const telegramToken = credentials.resolve('telegram_bot_token', 'TELEGRAM_BOT_TOKEN');
+  if (telegramToken && process.env.DEX_OWNER_TELEGRAM) {
+    started.push(new TelegramChannel(telegramToken, runtime));
+  } else if (telegramToken) {
+    console.warn('[33m[telegram][0m token found but DEX_OWNER_TELEGRAM is unset — not starting.');
+  }
+
+  const discordToken = credentials.resolve('discord_bot_token', 'DISCORD_BOT_TOKEN');
+  if (discordToken && process.env.DEX_OWNER_DISCORD) {
+    started.push(new DiscordChannel(discordToken, runtime));
+  } else if (discordToken) {
+    console.warn('[33m[discord][0m token found but DEX_OWNER_DISCORD is unset — not starting.');
+  }
+
+  // WhatsApp pairs by QR rather than a token, so its opt-in is explicit.
+  if (process.env.DEX_WHATSAPP === 'true' && process.env.DEX_OWNER_WHATSAPP) {
+    started.push(new WhatsAppChannel(runtime));
+  }
+
+  for (const channel of started) {
+    try {
+      await channel.start();
+    } catch (err) {
+      // One channel failing to connect must not take the others, or the CLI,
+      // down with it.
+      console.warn(
+        `[33m[${channel.name.toLowerCase()}][0m did not start — ` +
+          `${err instanceof Error ? err.message : err}`,
+      );
+    }
+  }
+}
