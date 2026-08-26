@@ -7,11 +7,19 @@ Measured on a synthetic UI with known control centres, the same model produced:
     "reply with {"x": <int>, "y": <int>}"      Save button off by 1359 px
     normalized box, 0-1000                     Save button off by 1 px
 
-Same model, same screenshot, same target. Asking a vision model for raw pixel
-coordinates in a 2560-wide image asks it to be a ruler; asking for a normalized
-box asks it to point. So every backend here uses a normalized format and
-converts afterwards, and the parser accepts every shape these models actually
-emit rather than one canonical one.
+Same model, same screenshot, same target. Asking a general vision model for raw
+pixel coordinates in a 2560-wide image asks it to be a ruler; a normalized box
+asks it to point.
+
+UI-TARS is the exception, and it earns it: trained for this task, it answers in
+the pixel space of the image it was given and is *more* accurate that way.
+Measured against the same fixture — 6px median versus Gemini's 22px, at 0.4s a
+call instead of 1.5s. So the coordinate convention is declared per backend
+rather than guessed, because guessing it wrong moves the click by hundreds of
+pixels while looking entirely reasonable.
+
+Every backend downscales first. A 2560x1440 screenshot does not merely run
+slowly through Qwen2.5-VL — it kills the runner outright.
 
 Backends, in the order they are preferred:
   1. UI-TARS via Ollama  — local, free, unlimited, trained for exactly this
@@ -45,7 +53,7 @@ NORMALIZED_PROMPT = (
 )
 
 
-def parse_point(text: str, width: int, height: int) -> dict | None:
+def parse_point(text: str, width: int, height: int, space: str = 'image') -> dict | None:
     """
     Accept every coordinate shape these models emit, and convert to pixels.
 
@@ -65,41 +73,86 @@ def parse_point(text: str, width: int, height: int) -> dict | None:
         nums = [float(n) for n in box.group(1).split(',')]
         if len(nums) == 4:
             ymin, xmin, ymax, xmax = nums
-            return _scale((xmin + xmax) / 2, (ymin + ymax) / 2, width, height, normalized=True)
+            return _to_pixels((xmin + xmax) / 2, (ymin + ymax) / 2, 'normalized', width, height)
 
     obj = re.search(r'\{[^{}]*"x"\s*:\s*(-?[\d.]+)[^{}]*"y"\s*:\s*(-?[\d.]+)[^{}]*\}', text)
     if obj:
-        return _scale(float(obj.group(1)), float(obj.group(2)), width, height)
+        return _to_pixels(float(obj.group(1)), float(obj.group(2)), space, width, height)
 
     point = re.search(r'<point>\s*(-?[\d.]+)[,\s]+(-?[\d.]+)\s*</point>', text)
     if point:
-        return _scale(float(point.group(1)), float(point.group(2)), width, height)
+        return _to_pixels(float(point.group(1)), float(point.group(2)), space, width, height)
 
     action = re.search(r'start_box\s*=\s*[\'"]?\(?\s*(-?[\d.]+)[,\s]+(-?[\d.]+)', text)
     if action:
-        return _scale(float(action.group(1)), float(action.group(2)), width, height)
+        return _to_pixels(float(action.group(1)), float(action.group(2)), space, width, height)
 
     pair = re.search(r'[\(\[]\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*[\)\]]', text)
     if pair:
-        return _scale(float(pair.group(1)), float(pair.group(2)), width, height)
+        return _to_pixels(float(pair.group(1)), float(pair.group(2)), space, width, height)
 
     loose = re.findall(r'-?\d+\.?\d*', text)
     if len(loose) >= 2:
-        return _scale(float(loose[0]), float(loose[1]), width, height)
+        return _to_pixels(float(loose[0]), float(loose[1]), space, width, height)
 
     return None
 
 
-def _scale(x: float, y: float, width: int, height: int, normalized: bool | None = None) -> dict:
+def _to_pixels(x: float, y: float, space: str, width: int, height: int) -> dict:
     """
-    UI-TARS 1.5 emits 0-1000; older builds emit absolute pixels. Both fitting
-    inside 0-1000 on a larger screen means normalized.
+    Convert a model's answer into screen pixels.
+
+    The convention is passed in rather than guessed. An earlier version inferred
+    it — "both values under 1000 means normalized" — which is wrong exactly when
+    it matters: UI-TARS answering (992, 637) about a 1154px-wide image is
+    absolute, and treating it as normalized moves the click 150px.
+
+      'normalized'  0-1000 grid          (Gemini, Claude)
+      'image'       pixels of the image the model was given (UI-TARS)
     """
-    if normalized is None:
-        normalized = x <= 1000 and y <= 1000 and (width > 1000 or height > 1000)
-    if normalized:
+    if space == 'normalized':
         return {'x': int(x / 1000 * width), 'y': int(y / 1000 * height)}
     return {'x': int(x), 'y': int(y)}
+
+
+# Qwen2.5-VL — which UI-TARS 1.5 is built on — expands an image into vision
+# tokens by area. A 2560x1440 screenshot (3.7M px) does not merely run slowly:
+# it takes the llama-server runner down with it, and Ollama reports only
+# "an error was encountered while running the model".
+#
+# Measured on an RX 6800M (12 GB):
+#     3.7M px  crashes the runner
+#     1.0M px  works, 0.4s median once warm
+#     0.75M px works, and noticeably less accurate
+MAX_IMAGE_PIXELS = 1_000_000
+
+
+def prepare_image(screenshot_b64: str, max_pixels: int = MAX_IMAGE_PIXELS):
+    """
+    Shrink a screenshot to something a vision model can actually take.
+
+    Returns the encoded image plus the factors needed to map a coordinate in
+    that image back to the real screen. Losing those factors is how a grounded
+    click lands in the wrong half of a 4K display.
+    """
+    import base64
+    import io
+
+    from PIL import Image
+
+    with Image.open(io.BytesIO(base64.b64decode(screenshot_b64))) as img:
+        width, height = img.size
+        scale = min((max_pixels / (width * height)) ** 0.5, 1.0)
+        if scale >= 1.0:
+            return screenshot_b64, width, height, 1.0, 1.0
+
+        new_w, new_h = int(width * scale), int(height * scale)
+        resized = img.resize((new_w, new_h), Image.LANCZOS)
+        buf = io.BytesIO()
+        resized.convert('RGB').save(buf, format='PNG')
+        encoded = base64.b64encode(buf.getvalue()).decode()
+
+    return encoded, new_w, new_h, width / new_w, height / new_h
 
 
 def _dimensions(screenshot_b64: str) -> tuple[int, int]:
@@ -124,13 +177,13 @@ class UITarsGrounding:
         import requests
 
         try:
-            width, height = _dimensions(screenshot_b64)
+            image, width, height, sx, sy = prepare_image(screenshot_b64)
             resp = requests.post(
                 f'{self.endpoint}/api/generate',
                 json={
                     'model': self.model,
                     'prompt': UITARS_PROMPT.format(target=target),
-                    'images': [screenshot_b64],
+                    'images': [image],
                     'stream': False,
                     'options': {'temperature': 0, 'num_predict': 64},
                 },
@@ -139,7 +192,14 @@ class UITarsGrounding:
             if not resp.ok:
                 log.error('UI-TARS HTTP %s: %s', resp.status_code, resp.text[:200])
                 return None
-            return parse_point(resp.json().get('response', ''), width, height)
+
+            # UI-TARS answers in the pixel space of the image it was handed, so
+            # the answer has to come back through the same resize.
+            point = parse_point(resp.json().get('response', ''), width, height, space='image')
+            return None if point is None else {
+                'x': int(point['x'] * sx),
+                'y': int(point['y'] * sy),
+            }
         except Exception as exc:  # noqa: BLE001
             log.error('UI-TARS grounding error: %s', exc)
         return None
@@ -156,10 +216,13 @@ class GeminiGrounding:
         import urllib.request
 
         try:
+            # Normalized output means the resize does not change the mapping —
+            # it only saves tokens and upload time.
+            image, _, _, _, _ = prepare_image(screenshot_b64)
             width, height = _dimensions(screenshot_b64)
             body = {
                 'contents': [{'parts': [
-                    {'inline_data': {'mime_type': 'image/png', 'data': screenshot_b64}},
+                    {'inline_data': {'mime_type': 'image/png', 'data': image}},
                     {'text': NORMALIZED_PROMPT.format(target=target)},
                 ]}],
                 # Thinking adds latency and tokens to what is a pointing task.
@@ -173,7 +236,8 @@ class GeminiGrounding:
             with urllib.request.urlopen(req, timeout=90) as resp:
                 data = json.loads(resp.read())
             return parse_point(
-                data['candidates'][0]['content']['parts'][0]['text'], width, height,
+                data['candidates'][0]['content']['parts'][0]['text'],
+                width, height, space='normalized',
             )
         except Exception as exc:  # noqa: BLE001
             log.error('Gemini grounding error: %s', exc)
@@ -188,6 +252,7 @@ class ClaudeGrounding:
 
     def resolve(self, screenshot_b64: str, target: str) -> dict | None:
         try:
+            image, _, _, _, _ = prepare_image(screenshot_b64)
             width, height = _dimensions(screenshot_b64)
             response = self.client.messages.create(
                 model=os.environ.get('DEX_GROUNDING_MODEL_ANTHROPIC', 'claude-sonnet-4-6'),
@@ -200,14 +265,14 @@ class ClaudeGrounding:
                             'source': {
                                 'type': 'base64',
                                 'media_type': 'image/png',
-                                'data': screenshot_b64,
+                                'data': image,
                             },
                         },
                         {'type': 'text', 'text': NORMALIZED_PROMPT.format(target=target)},
                     ],
                 }],
             )
-            return parse_point(response.content[0].text, width, height)
+            return parse_point(response.content[0].text, width, height, space='normalized')
         except Exception as exc:  # noqa: BLE001
             log.error('Claude grounding error: %s', exc)
         return None
