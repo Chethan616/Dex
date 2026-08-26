@@ -23,6 +23,11 @@ const KNOWN: Record<string, string> = {
   ms365_client_secret: 'Microsoft 365 MCP — client secret',
   ms365_tenant_id: 'Microsoft 365 MCP — directory (tenant) id',
   ms365_account_email: 'Which Microsoft account DEX acts as',
+  telegram_bot_token: 'Telegram bot token from @BotFather',
+  discord_bot_token: 'Discord bot token from the developer portal',
+  groq_api_key: 'Groq API key — the Brain',
+  gemini_api_key: 'Google AI Studio key',
+  anthropic_api_key: 'Anthropic API key',
 };
 
 function promptHidden(question: string): Promise<string> {

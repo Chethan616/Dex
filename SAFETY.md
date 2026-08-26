@@ -15,6 +15,14 @@ Every message from every channel hits this before anything else.
 3. **Message from the owner in a group without the prefix** → ignored silently.
 4. **Message from anyone else, anywhere** → ignored silently. No error, no acknowledgement — an unauthorized sender gets no signal that Dex exists.
 
+**Silence is the feature, not laziness.** Replying "you are not authorised" confirms the bot is listening, tells someone probing that their id is merely *wrong* rather than that nothing is there, and turns every group Dex sits in into somewhere it talks back.
+
+**One implementation, not one per channel.** `core/owner_gate.ts` decides, and it returns the decision *and the text to run* together — stripping the prefix and allowing the message are the same decision, and separating them invites a caller to act on one without the other. The Telegram, Discord and WhatsApp adapters contain no authorisation logic at all: three copies of this check would be three chances to get it wrong, and the failure mode is a stranger driving the owner's desktop.
+
+**A channel refuses to start without a configured owner.** A bot listening with no owner set rejects everything anyway — but a bot that is *running* and silently ignoring every message is far harder to diagnose than one that says why it did not start.
+
+Two near-misses the tests pin down: `@dexter is a good name` must not match the `@dex` prefix, and neither must `tell @dex to do X`. The prefix counts only at the start, as a whole token. A substring match there runs a command nobody issued.
+
 ```yaml
 owner:
   whatsapp: "<phone>@s.whatsapp.net"

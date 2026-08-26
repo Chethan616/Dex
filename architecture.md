@@ -434,6 +434,18 @@ All channels are pure transport — receive, pass approved requests to the Gatew
 
 ---
 
+## 11.1 Remote channels
+
+Telegram (grammY, MIT), Discord (discord.js, Apache-2.0) and WhatsApp (Baileys, GPL-3.0) all reach Dex through `channels/base_channel.ts`. The adapters know only how their own platform delivers a message and edits one; the Owner Gate decision, progress streaming and approvals are shared, so there is exactly one copy of each.
+
+**Progress is one edited message, not a stream of them.** Every step would otherwise be its own notification on a phone. Edits are coalesced to roughly one a second — every chat API rate-limits them, and a burst of steps would be dropped rather than delayed. A failed progress edit never fails the task it was describing.
+
+**Approvals work from the phone.** A Tier 1–3 confirmation raised while a chat task is running goes to that chat with a four-character code — short enough to retype on a phone keyboard — answered with `/yes ab12`, `/no ab12`, or `/done ab12` for a hand-off. The `stepVersion` travels with the answer, so an approval typed against a step that has since been rewritten is refused server-side exactly as it is from the Dex Bar.
+
+**WhatsApp is optional on purpose.** Baileys is `require()`d at start rather than imported, and is not a declared dependency. It is GPL-3.0, which would pull this project into that licence's scope if statically linked and ever distributed; and it is an unofficial client that reverse-engineers WhatsApp Web, so accounts using it can be banned. Telegram and Discord are official APIs. That trade belongs to the owner, not to `npm install`.
+
+---
+
 ## 12. Owner Gate & permission tiers
 
 Full detail and implementation in [SAFETY.md](./SAFETY.md); summary here:
