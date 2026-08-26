@@ -200,6 +200,63 @@ Weights: `mradermacher/UI-TARS-1.5-7B-GGUF` on HuggingFace. ByteDance ships only
 safetensors (for vLLM, which needs Linux + CUDA), so GGUF is the practical route
 on Windows.
 
+```
+FROM ./UI-TARS-1.5-7B.Q6_K.gguf
+FROM ./UI-TARS-1.5-7B.mmproj-f16.gguf
+```
+
+Two `FROM` lines — weights, then projector. Then
+`ollama create ui-tars -f Modelfile`.
+
+**Verify it can see, not just that it loaded.** A model with a broken projector
+answers plausibly about images it never received. Put a random number in an
+image and ask the model to read it back; it cannot guess four digits.
+
+### Screenshots must be downscaled — and 1M pixels is the number
+
+Dex handles this in `prepare_image`, but it is worth knowing why, because the
+failure is loud and the tuning is counter-intuitive.
+
+A full 2560x1440 screenshot **crashes the llama-server runner**. Ollama reports
+only "an error was encountered while running the model". The limit is VRAM in
+the vision encoder, not context — full resolution is ~4,600 vision tokens, which
+fits an 8k window, and raising the context to 32k does not help.
+
+Measured on a 12 GB RX 6800M against a fixture with known control centres:
+
+| pixels | median error | within 40px | per call |
+|---|---|---|---|
+| 0.50M | 132 px | 0/8 | 3.8 s |
+| **1.00M** | **6 px** | **6/8** | **1.7 s** |
+| 1.50M | 12 px | 7/8 | 3.8 s |
+| 3.69M | *crashes* | — | — |
+
+Downscaling too far is catastrophic rather than gradual — at 0.5M the model is
+essentially guessing. And **more pixels is not monotonically better**: 1.5M is
+worse on median than 1.0M. This is a resolution the model prefers, not a budget
+to spend.
+
+So more VRAM buys **speed, not accuracy**. There is no "run it without
+downscaling" configuration worth chasing; a 24 GB card would let the full image
+through and measure no better. The quantisation floor at 1.0M is ±1.9 screen
+pixels against an observed error of ~6 px, so the downscale is not what limits
+precision either.
+
+### How it compares
+
+Against the same fixture, local UI-TARS versus Gemini:
+
+| | UI-TARS (local) | Gemini 2.5 Flash |
+|---|---|---|
+| median error | **6 px** | 22 px |
+| within 40 px | **6/8** | 5/8 |
+| latency | **~1.7 s** | ~1.5 s |
+| quota | none | project-dependent; a free tier was measured at 20/day |
+| screenshots | never leave the machine | uploaded |
+
+Gemini's worst misses were menu items (535 px on one); UI-TARS resolves all five
+to 6 px. Local is the default for that reason as much as for cost.
+
 ---
 
 ## 6. LLM providers

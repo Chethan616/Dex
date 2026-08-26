@@ -120,10 +120,26 @@ def _to_pixels(x: float, y: float, space: str, width: int, height: int) -> dict:
 # it takes the llama-server runner down with it, and Ollama reports only
 # "an error was encountered while running the model".
 #
-# Measured on an RX 6800M (12 GB):
-#     3.7M px  crashes the runner
-#     1.0M px  works, 0.4s median once warm
-#     0.75M px works, and noticeably less accurate
+# The limit is VRAM in the vision encoder, not context. Full resolution is only
+# ~4,600 vision tokens, which fits an 8k window easily, and raising the context
+# to 32k does not stop the crash.
+#
+# Measured against a fixture with known control centres, on an RX 6800M (12 GB):
+#
+#     pixels     median err   within 40px   per call
+#     0.50M        132 px        0/8          3.8 s
+#     1.00M          6 px        6/8          1.7 s     <- default
+#     1.50M         12 px        7/8          3.8 s
+#     3.69M        crashes
+#
+# Two things worth keeping from that. Downscaling too far is catastrophic, not
+# gradual — at 0.5M the model is essentially guessing. And more pixels is NOT
+# monotonically better: 1.5M is worse on median than 1.0M, so this is a
+# resolution the model prefers rather than a budget to spend. Hardware with more
+# VRAM buys speed here, not accuracy.
+#
+# The quantisation floor at 1.0M is +/-1.9 screen px, and observed error is ~6 px,
+# so the downscale is not what limits precision.
 MAX_IMAGE_PIXELS = 1_000_000
 
 
