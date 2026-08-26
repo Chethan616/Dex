@@ -446,6 +446,70 @@ Telegram (grammY, MIT), Discord (discord.js, Apache-2.0) and WhatsApp (Baileys, 
 
 ---
 
+## 11.2 Memory
+
+`core/memory/` — all local, all in the same SQLite file as the usage history.
+
+**Sessions are keyed by time, not by channel.** Dex has one owner, so a task
+begun on a phone and followed up at the desk twenty minutes later is the same
+conversation and there is nobody else it could belong to. The previous
+behaviour — a map keyed by sender id, held in memory — gave each channel its own
+history and lost all of it on restart, so one person talking to Dex two ways was
+two strangers. A 90-minute idle gap starts a new session, short enough that
+tomorrow's first request does not inherit tonight's references.
+
+**Artifacts are derived from what steps did, not what plans intended.** A file
+written, a page a browser task ended on, an email whose id was read back. A step
+that failed, or whose write could not be verified, leaves nothing — "probably
+sent" is not something to let the owner refer back to.
+
+**A reference that fits two things equally well forces a question.** This is the
+slice's production gate, and it is worth stating as a principle: a resolver that
+quietly picks the newer candidate is right most of the time and silently wrong
+the rest, and the owner cannot tell which happened — they asked for "the report"
+and got *a* report. Scoring runs exact name, then name-contains, then kind, and
+recency breaks ties only *within* a band, never promoting a weaker match. A
+candidate from hours ago does not create ambiguity, because asking about things
+nobody is confused by trains the owner to click through questions unread.
+
+### The semantic cache, and why it is narrower than planned
+
+The intent was to skip the Brain when a request is one Dex has already planned,
+phrased differently. Measured on `nomic-embed-text` against
+*"check my unread email"*:
+
+```
+100.0%  same        check my unread email
+ 90.8%  DIFFERENT   archive my unread email     <- destructive
+ 89.1%  same        do I have unread emails
+ 77.8%  same        show me unread messages
+ 58.5%  DIFFERENT   delete all my emails
+ 51.5%  same        any new mail?
+```
+
+**The groups do not separate.** "archive my unread email" scores higher than
+four genuine paraphrases, because embeddings measure *topic* and these requests
+differ in *intent* — same subject, opposite effect. No threshold admits the
+paraphrases without admitting the archive.
+
+So the cache is made safe by construction rather than by tuning: **only plans
+whose every step is Tier 4 are stored or served.** A wrongly served read-only
+plan wastes an action; a wrongly served destructive one deletes something.
+Anything that sends, installs, writes or deletes goes to the Brain every time,
+however familiar it looks. The check runs on write *and* on read, so a plan
+stored by an older build is refused and evicted rather than trusted.
+
+That leaves a genuinely narrow feature — near-restatements of read-only
+requests. It is kept because the reasoning is worth preserving in code, and
+because the guard is what would have to exist anyway.
+
+Embeddings come from Ollama's `/api/embed` rather than a sentence-transformers
+subprocess: Ollama is already running for the vision tier, so this adds no
+second Python process. Without it the cache is inert, which is the same as not
+having one.
+
+---
+
 ## 12. Owner Gate & permission tiers
 
 Full detail and implementation in [SAFETY.md](./SAFETY.md); summary here:
