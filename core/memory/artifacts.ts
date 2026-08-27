@@ -72,7 +72,11 @@ export class ArtifactStore {
     }
 
     if (step.action === 'launch_app' && typeof params.name === 'string') {
-      found.push({ kind: 'app', name: params.name, locator: String(data.launched ?? params.name) });
+      // The locator is the name the owner used, NOT what was executed. Windows
+      // launches Calculator through a `calc.exe` stub that exits immediately,
+      // so "close the app" resolving to "calc.exe" gives close_app a process
+      // that does not exist and a window title that never appears.
+      found.push({ kind: 'app', name: params.name, locator: params.name });
     }
 
     if (step.action === 'registry_write' && typeof params.path === 'string') {

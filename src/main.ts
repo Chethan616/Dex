@@ -27,6 +27,15 @@ import { DiscordChannel } from '../channels/discord';
 import { WhatsAppChannel } from '../channels/whatsapp';
 import { CredentialStore } from '../core/secrets/credential_store';
 
+/**
+ * Adapters that are running, so shutdown can close them.
+ *
+ * Declared above main() deliberately. main() is invoked at module load, and a
+ * `const` further down the file is still in its temporal dead zone then — which
+ * threw ReferenceError on every start until it was moved here.
+ */
+const started: ChannelAdapter[] = [];
+
 function main(): void {
   quietSqliteWarning();
 
@@ -142,8 +151,6 @@ ${signal} — closing workspace servers…`);
 main();
 
 
-/** Adapters that are running, so shutdown can close them. */
-const started: ChannelAdapter[] = [];
 
 /**
  * Start every channel the owner has actually configured.

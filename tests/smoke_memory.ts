@@ -180,6 +180,59 @@ function testReferences(): void {
     'asking about things nobody is confused by trains the owner to click through questions',
   );
 
+  // The same thing recorded twice is one thing the owner could mean. Opening
+  // an app twice must not produce "which Calculator do you mean?".
+  db().prepare('DELETE FROM artifacts').run();
+  for (let i = 0; i < 3; i += 1) {
+    store.save({
+      requestId: `r${i}`, sessionId: 's', kind: 'app',
+      name: 'Calculator', locator: 'Calculator',
+    });
+  }
+  const repeated = resolver.resolve('close the app');
+  check(
+    'the same artifact recorded repeatedly is not ambiguous',
+    repeated.ambiguous.length === 0 && repeated.resolved[0]?.match.name === 'Calculator',
+    JSON.stringify({ resolved: repeated.resolved.length, ambiguous: repeated.ambiguous.length }),
+  );
+
+  // Identity is kind-dependent: an app IS its name, so the same app recorded
+  // with a different locator (older builds stored the launcher stub) is still
+  // one app.
+  store.save({
+    requestId: 'r8', sessionId: 's', kind: 'app',
+    name: 'Calculator', locator: 'calc.exe',
+  });
+  const legacy = resolver.resolve('close the app');
+  check(
+    'an app recorded under two different locators is still one app',
+    legacy.ambiguous.length === 0,
+    JSON.stringify(legacy.ambiguous[0]?.candidates.map((c) => `${c.name}|${c.locator}`)),
+  );
+
+  // But two files sharing a name in different folders are genuinely different.
+  db().prepare('DELETE FROM artifacts').run();
+  const t = Date.now();
+  store.save({ requestId: 'a', sessionId: 's', kind: 'file', name: 'notes.txt', locator: 'C:\a\notes.txt' });
+  store.save({ requestId: 'b', sessionId: 's', kind: 'file', name: 'notes.txt', locator: 'C:\b\notes.txt' });
+  db().prepare('UPDATE artifacts SET created_at = ?').run(t - 60_000);
+  db().prepare("UPDATE artifacts SET created_at = ? WHERE locator LIKE '%b%'").run(t - 30_000);
+  check(
+    'two files with the same name in different folders stay a real choice',
+    resolver.resolve('open the notes.txt').ambiguous.length === 1,
+  );
+
+  // But two genuinely different apps still are.
+  db().prepare('DELETE FROM artifacts').run();
+  store.save({ requestId: 'r7', sessionId: 's', kind: 'app', name: 'Calculator', locator: 'Calculator' });
+  store.save({ requestId: 'r9', sessionId: 's', kind: 'app', name: 'Notepad', locator: 'Notepad' });
+  const twoApps = resolver.resolve('close the app');
+  check(
+    'two different apps still force a question',
+    twoApps.ambiguous.length === 1,
+    JSON.stringify(twoApps.ambiguous[0]?.candidates.map((c) => c.name)),
+  );
+
   section('References — what should NOT be treated as one');
 
   check('"the volume" is not an artifact', resolver.resolve('turn the volume down').resolved.length === 0);

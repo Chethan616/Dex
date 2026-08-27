@@ -16,7 +16,8 @@
     "test:workflows": "ts-node tests/smoke_workflows.ts",
     "test:channels": "ts-node tests/smoke_channels.ts",
     "test:memory": "ts-node tests/smoke_memory.ts",
-    "test:e2e-memory": "ts-node tests/e2e_memory.ts"
+    "test:e2e-memory": "ts-node tests/e2e_memory.ts",
+    "test:boot": "ts-node tests/smoke_boot.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",

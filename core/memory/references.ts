@@ -95,7 +95,12 @@ export class ReferenceResolver {
       if (scored.length === 0) continue;
 
       const best = scored[0];
-      const tied = scored.filter((entry) => entry.points === best.points);
+
+      // Two records of the same thing are not a choice. Running an app twice
+      // leaves two artifacts, and asking "which Calculator do you mean?" when
+      // both are the same Calculator is noise — the kind of question that
+      // teaches the owner to stop reading them.
+      const tied = dedupe(scored.filter((entry) => entry.points === best.points));
 
       // The production gate. Two artifacts fitting equally well is not a
       // tie-break problem — it is a question only the owner can answer.
@@ -131,6 +136,39 @@ export class ReferenceResolver {
       .join('\n');
     return `Which "${ambiguity.phrase}" do you mean?\n${options}`;
   }
+}
+
+/**
+ * What makes two artifacts the same thing — which depends on what kind of
+ * thing it is.
+ *
+ * An application *is* its name: Calculator opened three times is one
+ * Calculator, and its locator has varied across versions of Dex (it was once
+ * the launcher stub `calc.exe`, now the friendly name). A file, page or message
+ * *is* its locator: two files can share a name in different folders and are
+ * genuinely different things.
+ *
+ * Getting this wrong in either direction is visible to the owner — collapse too
+ * eagerly and a real choice disappears; collapse too little and Dex asks which
+ * Calculator you meant.
+ */
+function identityOf(artifact: Artifact): string {
+  const byName = artifact.kind === 'app' || artifact.kind === 'setting';
+  const key = byName ? artifact.name : artifact.locator;
+  return `${artifact.kind}:${key.trim().toLowerCase()}`;
+}
+
+/** Collapse candidates that point at the same thing, newest kept. */
+function dedupe<T extends { artifact: Artifact }>(entries: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const entry of entries) {
+    const identity = identityOf(entry.artifact);
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    out.push(entry);
+  }
+  return out;
 }
 
 /**

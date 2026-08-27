@@ -104,13 +104,32 @@ class AppHandler:
             if result.returncode == 0:
                 return {'closed': image, 'method': 'taskkill', 'graceful': True}
 
-        closed = _close_windows_titled(name)
-        if closed:
-            return {'closed': closed, 'method': 'WM_CLOSE', 'graceful': True}
+        # Several things the window might be called. A packaged app is launched
+        # through a stub, so the name that started it ("calc.exe") is rarely the
+        # name on the window ("Calculator").
+        for candidate in _title_candidates(name, image):
+            closed = _close_windows_titled(candidate)
+            if closed:
+                return {'closed': closed, 'method': 'WM_CLOSE', 'graceful': True}
 
         raise RuntimeError(
-            f'Nothing to close for "{name}" — no process named {image} and no window titled it'
+            f'Nothing to close for "{name}" — no process named {image}, '
+            f'and no window titled any of {_title_candidates(name, image)}'
         )
+
+
+def _title_candidates(name: str, image: str) -> list:
+    """Names a window might carry, most specific first, de-duplicated."""
+    friendly = [k for k, v in KNOWN.items() if v.lower() == image.lower()]
+    options = [name, name.removesuffix('.exe'), image.removesuffix('.exe'), *friendly]
+
+    seen, out = set(), []
+    for option in options:
+        cleaned = option.strip()
+        if cleaned and cleaned.lower() not in seen:
+            seen.add(cleaned.lower())
+            out.append(cleaned)
+    return out
 
 
 def _process_running(image: str) -> bool:
@@ -121,22 +140,39 @@ def _process_running(image: str) -> bool:
     return image.lower() in listing.lower()
 
 
-def _close_windows_titled(title_contains: str) -> list:
-    """Post WM_CLOSE to each top-level window matching the title."""
+def _close_windows_titled(name: str) -> list:
+    """
+    Post WM_CLOSE to top-level windows belonging to this application.
+
+    Matching is exact, prefix, or suffix — never a bare substring. Windows title
+    bars follow "Document - AppName", so the suffix rule is what finds them,
+    while a substring rule would let a short candidate like "calc" close
+    whatever unrelated window happened to contain those letters. Closing the
+    wrong window is not recoverable by retrying.
+    """
     try:
         import win32con
         import win32gui
     except ImportError as exc:  # pragma: no cover
         raise RuntimeError('close_app needs pywin32 for packaged apps') from exc
 
-    needle = title_contains.lower()
+    needle = name.lower().strip()
     closed = []
+
+    def belongs_to_app(title: str) -> bool:
+        lowered = title.lower().strip()
+        return (
+            lowered == needle
+            or lowered.endswith(f' - {needle}')
+            or lowered.endswith(f'- {needle}')
+            or lowered.startswith(needle)
+        )
 
     def visit(hwnd, _):
         if not win32gui.IsWindowVisible(hwnd):
             return
         text = win32gui.GetWindowText(hwnd) or ''
-        if text and needle in text.lower():
+        if text and belongs_to_app(text):
             win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
             closed.append(text)
 

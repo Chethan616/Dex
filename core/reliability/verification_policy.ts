@@ -276,6 +276,10 @@ function verifyOsStep(step: ExecutionStep, agentResult?: AgentResult): Verificat
       return { status: 'VERIFIED', reason: 'Read-only action — no state to verify' };
     case 'kill_process':
       return verifyProcessGone(step.params as { name?: string; pid?: number });
+    case 'launch_app':
+      return verifyAppOpen(step, agentResult);
+    case 'close_app':
+      return verifyAppClosed(step, agentResult);
     default:
       return {
         status: 'UNVERIFIABLE',
@@ -392,6 +396,84 @@ function verifyGuiStep(step: ExecutionStep): VerificationResult {
     status: 'UNVERIFIABLE',
     reason: 'No GUI verification hints provided (add verify_file to step params)',
   };
+}
+
+/**
+ * A launch is verified by a window existing, not by the launcher returning.
+ *
+ * Packaged apps make that distinction matter: `calc.exe` starts Calculator and
+ * exits immediately, so a process check finds nothing while the app is plainly
+ * on screen. The window is the thing the owner asked for.
+ */
+function verifyAppOpen(step: ExecutionStep, agentResult?: AgentResult): VerificationResult {
+  const requested = String((step.params as { name?: string }).name ?? '');
+  const launched = String((agentResult?.data as { launched?: string })?.launched ?? requested);
+
+  const titles = windowTitles();
+  if (titles === null) {
+    return { status: 'UNVERIFIABLE', reason: 'Could not read the window list' };
+  }
+
+  const needles = [requested, launched.replace(/\.exe$/i, '')]
+    .map((n) => n.trim().toLowerCase())
+    .filter(Boolean);
+
+  const hit = titles.find((t) => needles.some((n) => t.toLowerCase().includes(n)));
+  return hit
+    ? { status: 'VERIFIED', reason: `Window open: "${hit}"`, afterState: hit }
+    : {
+        status: 'FAILED',
+        reason: `${requested} was launched but no window appeared`,
+        afterState: titles.slice(0, 8),
+      };
+}
+
+/** The mirror image: the window is gone. */
+function verifyAppClosed(step: ExecutionStep, agentResult?: AgentResult): VerificationResult {
+  const requested = String((step.params as { name?: string }).name ?? '')
+    .replace(/\.exe$/i, '')
+    .trim()
+    .toLowerCase();
+
+  const titles = windowTitles();
+  if (titles === null) {
+    return { status: 'UNVERIFIABLE', reason: 'Could not read the window list' };
+  }
+
+  const still = titles.find((t) => requested && t.toLowerCase().includes(requested));
+  if (!still) {
+    const closed = (agentResult?.data as { closed?: unknown })?.closed;
+    return {
+      status: 'VERIFIED',
+      reason: `No window matching "${requested}" remains`,
+      afterState: closed,
+    };
+  }
+
+  // close_app asks politely rather than killing, so an unsaved-changes prompt
+  // legitimately keeps the window up. That is not a failure to report as one —
+  // the owner has been asked a question and needs to answer it.
+  return {
+    status: 'UNVERIFIABLE',
+    reason: `"${still}" is still open — it may be asking about unsaved changes`,
+    afterState: still,
+  };
+}
+
+/** Visible top-level window titles, or null if they cannot be read. */
+function windowTitles(): string[] | null {
+  try {
+    const out = execSync(
+      'powershell -NoProfile -Command "Get-Process | Where-Object { $_.MainWindowTitle } | ' +
+        'Select-Object -ExpandProperty MainWindowTitle"',
+      { encoding: 'utf8', timeout: 15000, windowsHide: true },
+    );
+    return out.split(String.fromCharCode(10))
+      .map((l) => l.trim())
+      .filter(Boolean);
+  } catch {
+    return null;
+  }
 }
 
 function verifyProcessGone(params: { name?: string; pid?: number }): VerificationResult {
