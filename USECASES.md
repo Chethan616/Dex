@@ -101,14 +101,22 @@ extract     pulls text by CSS selector
 type_text   REFUSED on a password field, hand-off offered instead
 ```
 
-**Autonomous browsing** ("find me a flight to Bangalore next Friday") —
-🚧 Blocked. The code is complete, including the part that matters most: a
-CAPTCHA, bot check or password field stops the agent mid-run, parks the live
-browser, and asks you to clear it, then resumes on the same page. Bounded to two
-hand-offs before it admits the site will not let it through.
+**Autonomous browsing** — ✅ Verified, running on a Groq free tier:
 
-Blocked because `agents/browser/browser_use_backend.py` still requires an
-**Anthropic key** — the provider work covered the Brain but not this agent.
+```
+you> (task) read the heading on this page and report it
+     4 steps: wait, wait, click, done
+     result: "Example Domains"
+     verified: FALSE — page no longer shows "Example Domain"
+```
+
+That second line is the system working. The agent clicked when told not to,
+navigated away, and *reported success*. The live-DOM check disagreed and Dex
+sided with the page. A return value is a claim, not proof.
+
+Also here: a CAPTCHA, bot check or password field stops the agent mid-run, parks
+the live browser, asks you to clear it, then resumes on the same page — bounded
+to two hand-offs before it admits the site will not let it through. 🧪 Tested.
 
 ---
 
@@ -284,10 +292,9 @@ Not features so much as rules that hold everywhere:
 
 Stated plainly, because the gaps matter more than the list above:
 
-- **Two agents still require an Anthropic key** — the browser's autonomous loop
-  and the desktop Worker. The provider abstraction covered the Brain only. With
-  just a Groq key, Tiers 1 and 2 work fully; Tier 3 and autonomous browsing do
-  not.
+- **The desktop vision Worker still requires an Anthropic key.** Grounding
+  ("where is the Save button") runs locally; deciding *what* to click does not.
+  Everything else — Brain, browser, Tiers 1 and 2 — runs on a Groq free tier.
 - **Nothing has run against live Google, Telegram or Discord credentials.**
 - **No scheduling.** Dex acts when asked; it cannot run something every morning.
 - **Your own scripts are not pluggable yet** — that is the Plugin SDK, where

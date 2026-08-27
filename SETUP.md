@@ -276,6 +276,29 @@ $env:DEX_BRAIN_MODEL    = "openai/gpt-oss-120b"
 Free-tier rate limits are handled — Dex honours `Retry-After` and backs off
 rather than failing the task.
 
+### Which Groq model for the browser agent
+
+Measured against browser-use's real 17 KB output schema, not chosen from
+reputation. `ToolCallingModels` inside browser-use contains only
+`moonshotai/kimi-k2-instruct`, so every other model goes through Groq's
+`response_format: json_schema`, and support for that is what decides viability:
+
+| model | result |
+|---|---|
+| **`qwen/qwen3.8-27b`** | **3/3 correct element, 0 reasoning tokens** — the default |
+| `openai/gpt-oss-120b` | correct, but ~158 of 203 output tokens spent thinking |
+| `openai/gpt-oss-20b` | correct, cheapest, less consistent |
+| `qwen/qwen3.6-27b` | **`json_validate_failed`** — cannot hold the schema |
+| `groq/compound-mini` | rejects `json_schema` outright |
+
+Override with `BROWSER_MODEL`; switch vendor with `DEX_BROWSER_PROVIDER`.
+
+**The binding limit is 8,000 tokens per minute**, not requests (1,000/day).
+browser-use's default system prompt is 5,273 tokens *per step*, which exhausts
+that budget before the second step — so on Groq Dex switches on `flash_mode`
+(a 516-token prompt), trims the DOM to 15,000 characters, caps history at 8
+items, and disables vision. Groq serves no vision models anyway.
+
 ---
 
 ## 7. Credentials — the DPAPI store

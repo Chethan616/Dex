@@ -20,7 +20,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-from browser_use import Agent, BrowserSession, ChatAnthropic
+from browser_use import Agent, BrowserSession
 
 from primitives import check_page, has_spec
 from walls import Wall, detect_wall
@@ -58,11 +58,41 @@ class WallHit(Exception):
 
 
 class BrowserBackend:
-    def __init__(self, api_key: str, model: str, headless: bool) -> None:
+    def __init__(self, provider: str, api_key: str, model: str, headless: bool) -> None:
+        self.provider = provider
         self.api_key = api_key
         self.model = model
         self.headless = headless
         self.runs: dict[str, BrowserRun] = {}
+
+    def _llm(self):
+        """
+        The model driving the browsing loop.
+
+        Groq is the default because it is the free tier most people will have,
+        and because measurement says it works: against browser-use's real 17 KB
+        output schema, qwen3.8-27b picked the correct element 3/3 with zero
+        reasoning tokens, while qwen3.6-27b failed Groq's own schema validation
+        and the gpt-oss models spent ~158 of 203 output tokens thinking.
+        """
+        if self.provider == 'groq':
+            from browser_use import ChatGroq
+            return ChatGroq(model=self.model, api_key=self.api_key)
+
+        from browser_use import ChatAnthropic
+        return ChatAnthropic(model=self.model, api_key=self.api_key)
+
+    @property
+    def _thrifty(self) -> bool:
+        """
+        Whether to run in the low-token configuration.
+
+        Not a preference on Groq — a requirement. Its free tier allows 8,000
+        tokens per minute, and browser-use's default system prompt is 5,273
+        tokens *per step*, so the budget is gone before the second step. Flash
+        mode swaps that prompt for a 516-token one.
+        """
+        return self.provider == 'groq' 
 
     # -- lifecycle -----------------------------------------------------------
 
@@ -82,7 +112,7 @@ class BrowserBackend:
 
         agent = Agent(
             task=task,
-            llm=ChatAnthropic(model=self.model, api_key=self.api_key),
+            llm=self._llm(),
             browser_session=session,
             # DEX runs its own retry and loop policy in the Orchestrator; a
             # second, invisible one underneath it makes failures unreadable.
@@ -91,6 +121,12 @@ class BrowserBackend:
             # nonsense. Keep steps small and legible.
             max_actions_per_step=3,
             enable_signal_handler=False,
+            # See _thrifty: on Groq these are what make a 25-step task fit
+            # inside 8,000 tokens per minute at all.
+            flash_mode=self._thrifty,
+            use_vision=not self._thrifty,
+            max_clickable_elements_length=15_000 if self._thrifty else 40_000,
+            max_history_items=8 if self._thrifty else None,
         )
 
         run = BrowserRun(

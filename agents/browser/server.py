@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))   # agents/credentials.py
 
 from dotenv import load_dotenv
 
@@ -41,8 +42,36 @@ from pydantic import BaseModel
 from browser_use_backend import DEFAULT_MAX_STEPS, BrowserBackend, env_flag
 from primitives import PrimitiveBrowser
 
-API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
-MODEL = os.environ.get('BROWSER_MODEL', 'claude-sonnet-4-6')
+from credentials import resolve as resolve_credential
+
+# Groq first: it is the free tier most owners will have, and it is what the
+# model choice below was measured against. Anthropic is used when its key is the
+# one present, or when DEX_BROWSER_PROVIDER says so.
+#
+# Defaults are measured, not guessed. Against browser-use's real 17 KB output
+# schema, qwen3.8-27b chose the correct element 3/3 with zero reasoning tokens;
+# qwen3.6-27b failed Groq's own schema validation; gpt-oss-120b was correct but
+# spent ~158 of 203 output tokens thinking, which a 25-step loop cannot afford
+# inside an 8,000 token-per-minute budget.
+DEFAULT_MODELS = {
+    'groq': 'qwen/qwen3.8-27b',
+    'anthropic': 'claude-sonnet-4-6',
+}
+
+
+def _pick_provider() -> tuple:
+    wanted = os.environ.get('DEX_BROWSER_PROVIDER', '').lower()
+
+    groq = resolve_credential('groq_api_key', 'GROQ_API_KEY')
+    anthropic = resolve_credential('anthropic_api_key', 'ANTHROPIC_API_KEY')
+
+    if wanted == 'anthropic' or (not wanted and not groq and anthropic):
+        return 'anthropic', anthropic or ''
+    return 'groq', groq or ''
+
+
+PROVIDER, API_KEY = _pick_provider()
+MODEL = os.environ.get('BROWSER_MODEL') or DEFAULT_MODELS.get(PROVIDER, '')
 PORT = int(os.environ.get('BROWSER_AGENT_PORT', '8766'))
 
 # Headed by default and it matters: a Tier 1 hand-off asks the owner to solve a
@@ -57,7 +86,9 @@ _primitives = PrimitiveBrowser(headless=HEADLESS)
 def autonomous() -> BrowserBackend:
     global _autonomous
     if _autonomous is None:
-        _autonomous = BrowserBackend(api_key=API_KEY, model=MODEL, headless=HEADLESS)
+        _autonomous = BrowserBackend(
+            provider=PROVIDER, api_key=API_KEY, model=MODEL, headless=HEADLESS,
+        )
     return _autonomous
 
 
@@ -112,6 +143,7 @@ def health() -> dict[str, Any]:
     return {
         'status': 'ok',
         'headless': HEADLESS,
+        'provider': PROVIDER,
         'model': MODEL,
         'has_api_key': bool(API_KEY),
         'open_sessions': len(_autonomous.runs) if _autonomous else 0,
@@ -123,7 +155,10 @@ async def run_task(req: RunTaskRequest) -> dict[str, Any]:
     if not API_KEY:
         return {
             'success': False,
-            'error': 'ANTHROPIC_API_KEY not set in .env',
+            'error': (
+                f'No API key for the browser agent ({PROVIDER}). '
+                f'Set one with: npm run cred -- set {PROVIDER}_api_key'
+            ),
             'retryable': False,
         }
     log.info('[%s] task: %s', req.step_id, req.task)
@@ -196,7 +231,12 @@ def _bad(message: str) -> dict[str, Any]:
 # -- entry --------------------------------------------------------------------
 
 if __name__ == '__main__':
-    log.info('Browser Agent Server on 127.0.0.1:%s (headless=%s)', PORT, HEADLESS)
+    log.info(
+        'Browser Agent Server on 127.0.0.1:%s (headless=%s, %s/%s)',
+        PORT, HEADLESS, PROVIDER, MODEL,
+    )
     if not API_KEY:
-        log.warning('ANTHROPIC_API_KEY not set - only the primitives backend will work')
+        log.warning(
+            'No %s key - only the deterministic primitives backend will work', PROVIDER,
+        )
     uvicorn.run(app, host='127.0.0.1', port=PORT, log_level='warning')
