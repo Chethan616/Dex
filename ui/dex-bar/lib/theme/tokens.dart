@@ -1,47 +1,80 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-/// Every colour, radius, duration and text style DEX uses. Nothing in the
-/// widget tree hardcodes a colour — it all resolves through [DexTokens].
+import 'palette.dart';
+import 'type.dart';
+
+export 'palette.dart' show DexPalette, contrastRatio;
+export 'type.dart' show DexType;
+
+/// Spacing, radius, motion, layout and the resolved [DexPalette].
+///
+/// Widgets never name a colour literal and never name a font size — both
+/// resolve through here, so a design change is a change to two files rather
+/// than to ninety call sites.
 @immutable
 class DexTokens extends ThemeExtension<DexTokens> {
-  const DexTokens({
-    required this.bg,
-    required this.surface,
-    required this.surfaceRaised,
-    required this.border,
-    required this.borderStrong,
-    required this.text,
-    required this.textMuted,
-    required this.textFaint,
-    required this.accent,
-    required this.accentMuted,
-    required this.eventColors,
-    required this.tierColors,
-    required this.shadow,
-  });
+  const DexTokens(this.palette);
 
-  final Color bg;
-  final Color surface;
-  final Color surfaceRaised;
-  final Color border;
-  final Color borderStrong;
-  final Color text;
-  final Color textMuted;
-  final Color textFaint;
-  final Color accent;
-  final Color accentMuted;
+  final DexPalette palette;
 
-  /// Event-type → prefix colour in the step stream.
-  final Map<String, Color> eventColors;
+  // Surfaces and text, forwarded so existing call sites read unchanged.
+  Color get bg => palette.bg;
+  Color get surface => palette.surface;
+  Color get surfaceRaised => palette.surfaceRaised;
+  Color get border => palette.border;
+  Color get borderStrong => palette.borderStrong;
+  Color get text => palette.text;
+  Color get textMuted => palette.textMuted;
+  Color get textFaint => palette.textFaint;
+  Color get accent => palette.accent;
+  Color get accentMuted => palette.accentMuted;
+  Color get shadow => palette.shadow;
+  Color get focusRing => palette.focusRing;
 
-  /// Confirmation tier → chip colour. Lower tier = higher risk = hotter colour.
-  final Map<int, Color> tierColors;
+  // The six tones.
+  Color get neutral => palette.neutral;
+  Color get info => palette.info;
+  Color get warn => palette.warn;
+  Color get attention => palette.attention;
+  Color get positive => palette.positive;
+  Color get negative => palette.negative;
 
-  final Color shadow;
+  /// Event type → tone.
+  ///
+  /// Ten types, six tones. `thinking` and `routing` share `neutral` because
+  /// they are Dex narrating itself rather than reporting a state — giving them
+  /// their own hues implied a distinction that does not exist, and spent two of
+  /// the ten colours a reader has to learn.
+  Color eventColor(String type) => switch (type) {
+        'thinking' || 'routing' => neutral,
+        'planning' || 'executing' => info,
+        'selecting' || 'retrying' => warn,
+        'awaiting' || 'cancelled' => attention,
+        'done' => positive,
+        'failed' => negative,
+        _ => neutral,
+      };
 
-  Color eventColor(String type) => eventColors[type] ?? textMuted;
-  Color tierColor(int tier) => tierColors[tier] ?? textMuted;
+  /// Confirmation tier → tone. Lower tier means higher consequence.
+  Color tierColor(int tier) => switch (tier) {
+        1 => negative,
+        2 => warn,
+        3 => attention,
+        _ => positive,
+      };
+
+  /// Icon and word for an event type, so the step stream can lead with a glyph
+  /// instead of spending 148px on a right-aligned text gutter.
+  static IconData eventGlyph(String type) => switch (type) {
+        'done' => Icons.check_rounded,
+        'failed' => Icons.close_rounded,
+        'awaiting' => Icons.pan_tool_alt_outlined,
+        'cancelled' => Icons.block_rounded,
+        'retrying' => Icons.refresh_rounded,
+        'executing' => Icons.play_arrow_rounded,
+        'planning' || 'selecting' => Icons.chevron_right_rounded,
+        _ => Icons.more_horiz_rounded,
+      };
 
   static const radiusSm = 6.0;
   static const radiusMd = 10.0;
@@ -58,126 +91,29 @@ class DexTokens extends ThemeExtension<DexTokens> {
   static const durSlow = Duration(milliseconds: 380);
 
   static const barWidth = 760.0;
-  static const barRestHeight = 92.0;
-  static const barActiveHeight = 560.0;
+
+  /// One row and its padding. The old 92 was a 16px input inside 76px of
+  /// chrome — a launcher should be mostly the thing you type into.
+  static const barRestHeight = 56.0;
+
+  /// Ceiling only. The bar measures its own content and asks for that,
+  /// clamped into [barRestHeight, barMaxHeight]; it no longer opens to a fixed
+  /// 560 and pads the gap with an empty Spacer.
+  static const barMaxHeight = 620.0;
+
   static const missionWidth = 1080.0;
   static const missionHeight = 780.0;
 
-  static final DexTokens dark = DexTokens(
-    bg: const Color(0xFF0A0A0B),
-    surface: const Color(0xFF121214),
-    surfaceRaised: const Color(0xFF1A1A1E),
-    border: const Color(0xFF232328),
-    borderStrong: const Color(0xFF33333A),
-    text: const Color(0xFFEDEDEF),
-    textMuted: const Color(0xFF8B8B94),
-    textFaint: const Color(0xFF5A5A63),
-    accent: const Color(0xFF6E8EFF),
-    accentMuted: const Color(0xFF2A3358),
-    shadow: const Color(0x99000000),
-    eventColors: const {
-      'thinking': Color(0xFF8B8B94),
-      'routing': Color(0xFF8B8B94),
-      'planning': Color(0xFF6ECBF5),
-      'selecting': Color(0xFFF2C97D),
-      'executing': Color(0xFF7AA2F7),
-      'retrying': Color(0xFFFFAE6B),
-      'awaiting': Color(0xFFC792EA),
-      'cancelled': Color(0xFFB08CD6),
-      'done': Color(0xFF5FD79A),
-      'failed': Color(0xFFFF7B72),
-    },
-    tierColors: const {
-      1: Color(0xFFFF7B72),
-      2: Color(0xFFFFAE6B),
-      3: Color(0xFFF2C97D),
-      4: Color(0xFF5FD79A),
-    },
-  );
-
-  static final DexTokens light = DexTokens(
-    bg: const Color(0xFFFBFBFC),
-    surface: const Color(0xFFFFFFFF),
-    surfaceRaised: const Color(0xFFF4F4F6),
-    border: const Color(0xFFE3E3E7),
-    borderStrong: const Color(0xFFCFCFD6),
-    text: const Color(0xFF121215),
-    textMuted: const Color(0xFF63636D),
-    textFaint: const Color(0xFF95959F),
-    accent: const Color(0xFF3B5BDB),
-    accentMuted: const Color(0xFFDDE3FB),
-    shadow: const Color(0x22000000),
-    eventColors: const {
-      'thinking': Color(0xFF63636D),
-      'routing': Color(0xFF63636D),
-      'planning': Color(0xFF0B7285),
-      'selecting': Color(0xFF9A6A00),
-      'executing': Color(0xFF2F53C4),
-      'retrying': Color(0xFFB35309),
-      'awaiting': Color(0xFF7A3EAF),
-      'cancelled': Color(0xFF7A3EAF),
-      'done': Color(0xFF148452),
-      'failed': Color(0xFFC33025),
-    },
-    tierColors: const {
-      1: Color(0xFFC33025),
-      2: Color(0xFFB35309),
-      3: Color(0xFF9A6A00),
-      4: Color(0xFF148452),
-    },
-  );
+  static const dark = DexTokens(DexPalette.dark);
+  static const light = DexTokens(DexPalette.light);
 
   @override
-  DexTokens copyWith({
-    Color? bg,
-    Color? surface,
-    Color? surfaceRaised,
-    Color? border,
-    Color? borderStrong,
-    Color? text,
-    Color? textMuted,
-    Color? textFaint,
-    Color? accent,
-    Color? accentMuted,
-    Map<String, Color>? eventColors,
-    Map<int, Color>? tierColors,
-    Color? shadow,
-  }) {
-    return DexTokens(
-      bg: bg ?? this.bg,
-      surface: surface ?? this.surface,
-      surfaceRaised: surfaceRaised ?? this.surfaceRaised,
-      border: border ?? this.border,
-      borderStrong: borderStrong ?? this.borderStrong,
-      text: text ?? this.text,
-      textMuted: textMuted ?? this.textMuted,
-      textFaint: textFaint ?? this.textFaint,
-      accent: accent ?? this.accent,
-      accentMuted: accentMuted ?? this.accentMuted,
-      eventColors: eventColors ?? this.eventColors,
-      tierColors: tierColors ?? this.tierColors,
-      shadow: shadow ?? this.shadow,
-    );
-  }
+  DexTokens copyWith({DexPalette? palette}) => DexTokens(palette ?? this.palette);
 
   @override
   DexTokens lerp(ThemeExtension<DexTokens>? other, double t) {
     if (other is! DexTokens) return this;
-    return DexTokens(
-      bg: Color.lerp(bg, other.bg, t)!,
-      surface: Color.lerp(surface, other.surface, t)!,
-      surfaceRaised: Color.lerp(surfaceRaised, other.surfaceRaised, t)!,
-      border: Color.lerp(border, other.border, t)!,
-      borderStrong: Color.lerp(borderStrong, other.borderStrong, t)!,
-      text: Color.lerp(text, other.text, t)!,
-      textMuted: Color.lerp(textMuted, other.textMuted, t)!,
-      textFaint: Color.lerp(textFaint, other.textFaint, t)!,
-      accent: Color.lerp(accent, other.accent, t)!,
-      accentMuted: Color.lerp(accentMuted, other.accentMuted, t)!,
-      eventColors: t < 0.5 ? eventColors : other.eventColors,
-      tierColors: t < 0.5 ? tierColors : other.tierColors,
-      shadow: Color.lerp(shadow, other.shadow, t)!,
-    );
+    return DexTokens(palette.lerpTo(other.palette, t));
   }
 }
 
@@ -185,51 +121,46 @@ extension DexThemeContext on BuildContext {
   DexTokens get dex => Theme.of(this).extension<DexTokens>()!;
 }
 
-/// Geist for prose, Geist Mono for anything the machine produced.
-class DexType {
-  static TextStyle sans({
-    double size = 14,
-    FontWeight weight = FontWeight.w400,
-    Color? color,
-    double? height,
-    double? spacing,
-  }) =>
-      GoogleFonts.geist(
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        height: height,
-        letterSpacing: spacing,
-      );
-
-  static TextStyle mono({
-    double size = 12.5,
-    FontWeight weight = FontWeight.w400,
-    Color? color,
-    double? height,
-    double? spacing,
-  }) =>
-      GoogleFonts.geistMono(
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        height: height ?? 1.5,
-        letterSpacing: spacing,
-      );
-}
-
 ThemeData buildDexTheme(Brightness brightness) {
   final tokens = brightness == Brightness.dark ? DexTokens.dark : DexTokens.light;
+  final p = tokens.palette;
+
   return ThemeData(
     brightness: brightness,
     scaffoldBackgroundColor: Colors.transparent,
+    fontFamily: DexType.sansFamily,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: tokens.accent,
+      seedColor: p.accent,
       brightness: brightness,
-      surface: tokens.surface,
+      surface: p.surface,
     ),
     extensions: [tokens],
     splashFactory: NoSplash.splashFactory,
     highlightColor: Colors.transparent,
+    // Focus is drawn by each primitive as an explicit ring; Material's own
+    // overlay would sit under our borders and read as a smudge.
+    focusColor: Colors.transparent,
+    hoverColor: Colors.transparent,
+    tooltipTheme: TooltipThemeData(
+      textStyle: DexType.caption(color: p.text),
+      decoration: BoxDecoration(
+        color: p.surfaceRaised,
+        borderRadius: BorderRadius.circular(DexTokens.radiusSm),
+        border: Border.all(color: p.border),
+      ),
+      waitDuration: const Duration(milliseconds: 500),
+    ),
+    // One tab style for Mission Control and the Library panel. They had
+    // different indicator colours, indicator sizes and label styles.
+    tabBarTheme: TabBarThemeData(
+      labelStyle: DexType.label(strong: true),
+      unselectedLabelStyle: DexType.label(),
+      labelColor: p.text,
+      unselectedLabelColor: p.textMuted,
+      indicatorColor: p.accent,
+      indicatorSize: TabBarIndicatorSize.label,
+      dividerColor: p.border,
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
+    ),
   );
 }

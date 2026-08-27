@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/models.dart';
 import '../theme/tokens.dart';
+import 'primitives/primitives.dart';
 
 /// The plan DAG, laid out as dependency waves — each row is a set of steps that
 /// can run in parallel; arrows down mean "waits for the row above".
@@ -22,7 +23,10 @@ class PlanView extends StatelessWidget {
       if (!seen.add(id)) return 0; // cycle guard
       final step = byId[id];
       if (step == null || step.dependsOn.isEmpty) return depth[id] = 0;
-      final d = step.dependsOn.map((p) => resolve(p, seen)).reduce((a, b) => a > b ? a : b) + 1;
+      final d = step.dependsOn
+              .map((p) => resolve(p, seen))
+              .reduce((a, b) => a > b ? a : b) +
+          1;
       return depth[id] = d;
     }
 
@@ -30,7 +34,8 @@ class PlanView extends StatelessWidget {
       resolve(s.id, <String>{});
     }
 
-    final maxDepth = depth.values.isEmpty ? 0 : depth.values.reduce((a, b) => a > b ? a : b);
+    final maxDepth =
+        depth.values.isEmpty ? 0 : depth.values.reduce((a, b) => a > b ? a : b);
     return List.generate(
       maxDepth + 1,
       (d) => plan.steps.where((s) => depth[s.id] == d).toList(),
@@ -67,18 +72,29 @@ class PlanView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(plan.intent, style: DexType.sans(size: 14, color: t.text, weight: FontWeight.w500)),
+        Text(plan.intent, style: DexType.title(color: t.text)),
         const SizedBox(height: DexTokens.spaceXs),
-        Text(
-          'Tier ${plan.tier} · ${plan.steps.length} step${plan.steps.length == 1 ? '' : 's'} · ${waves.length} wave${waves.length == 1 ? '' : 's'}',
-          style: DexType.mono(size: 10.5, color: t.textFaint),
+        Row(
+          children: [
+            DexTag('Tier ${plan.tier}', tone: t.tierColor(plan.tier)),
+            const SizedBox(width: DexTokens.spaceSm),
+            Text(
+              '${plan.steps.length} step${plan.steps.length == 1 ? '' : 's'} · '
+              '${waves.length} wave${waves.length == 1 ? '' : 's'}',
+              style: DexType.codeSm(color: t.textFaint),
+            ),
+          ],
         ),
-        const SizedBox(height: DexTokens.spaceMd),
+        const SizedBox(height: DexTokens.spaceLg),
         for (var i = 0; i < waves.length; i++) ...[
           if (i > 0)
             Padding(
-              padding: const EdgeInsets.only(left: 14, top: 2, bottom: 2),
-              child: Icon(Icons.arrow_downward_rounded, size: 13, color: t.borderStrong),
+              padding: const EdgeInsets.only(left: 16, top: 3, bottom: 3),
+              child: Icon(
+                Icons.arrow_downward_rounded,
+                size: 13,
+                color: t.borderStrong,
+              ),
             ),
           Wrap(
             spacing: DexTokens.spaceSm,
@@ -105,23 +121,24 @@ class _StepNode extends StatelessWidget {
     final t = context.dex;
 
     final (Color color, IconData icon) = switch (status) {
-      'done' => (t.eventColor('done'), Icons.check_rounded),
-      'failed' => (t.eventColor('failed'), Icons.close_rounded),
-      'running' => (t.eventColor('executing'), Icons.play_arrow_rounded),
-      'awaiting' => (t.eventColor('awaiting'), Icons.pause_rounded),
-      'cancelled' => (t.eventColor('cancelled'), Icons.block_rounded),
+      'done' => (t.positive, Icons.check_rounded),
+      'failed' => (t.negative, Icons.close_rounded),
+      'running' => (t.info, Icons.play_arrow_rounded),
+      'awaiting' => (t.attention, Icons.pan_tool_alt_outlined),
+      'cancelled' => (t.attention, Icons.block_rounded),
       _ => (t.textFaint, Icons.circle_outlined),
     };
+    final pending = status == 'pending';
 
     return AnimatedContainer(
       duration: DexTokens.durMed,
       constraints: const BoxConstraints(maxWidth: 300),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: status == 'pending' ? t.surface : color.withValues(alpha: 0.08),
+        color: pending ? t.surface : color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(DexTokens.radiusMd),
         border: Border.all(
-          color: status == 'pending' ? t.border : color.withValues(alpha: 0.4),
+          color: pending ? t.border : color.withValues(alpha: 0.40),
         ),
       ),
       child: Row(
@@ -137,12 +154,12 @@ class _StepNode extends StatelessWidget {
                 Text(
                   step.action,
                   overflow: TextOverflow.ellipsis,
-                  style: DexType.mono(size: 11.5, color: t.text, weight: FontWeight.w500),
+                  style: DexType.code(color: t.text, strong: true),
                 ),
                 Text(
                   '${step.id} · ${step.capability} · T${step.confirmationTier}',
                   overflow: TextOverflow.ellipsis,
-                  style: DexType.mono(size: 9.5, color: t.textFaint),
+                  style: DexType.codeSm(color: t.textFaint),
                 ),
               ],
             ),

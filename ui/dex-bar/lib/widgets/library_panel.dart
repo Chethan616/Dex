@@ -4,6 +4,7 @@ import '../core/gateway_client.dart';
 import '../core/models.dart';
 import '../core/window_activity.dart';
 import '../theme/tokens.dart';
+import 'primitives/primitives.dart';
 
 /// Saved workflows, past tasks, and what Dex actually gets used for.
 ///
@@ -20,7 +21,8 @@ class LibraryPanel extends StatefulWidget {
   State<LibraryPanel> createState() => _LibraryPanelState();
 }
 
-class _LibraryPanelState extends State<LibraryPanel> with SingleTickerProviderStateMixin {
+class _LibraryPanelState extends State<LibraryPanel>
+    with SingleTickerProviderStateMixin {
   late final TabController _tabs = TabController(length: 3, vsync: this);
   final _search = TextEditingController();
 
@@ -47,15 +49,14 @@ class _LibraryPanelState extends State<LibraryPanel> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     final t = context.dex;
 
-    return Container(
+    return DexPanel(
       margin: const EdgeInsets.fromLTRB(
-        DexTokens.spaceLg, DexTokens.spaceSm, DexTokens.spaceLg, DexTokens.spaceSm,
+        DexTokens.spaceLg,
+        DexTokens.spaceSm,
+        DexTokens.spaceLg,
+        DexTokens.spaceSm,
       ),
-      decoration: BoxDecoration(
-        color: t.surfaceRaised,
-        borderRadius: BorderRadius.circular(DexTokens.radiusMd),
-        border: Border.all(color: t.border),
-      ),
+      clip: true,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -64,13 +65,6 @@ class _LibraryPanelState extends State<LibraryPanel> with SingleTickerProviderSt
               Expanded(
                 child: TabBar(
                   controller: _tabs,
-                  labelStyle: DexType.sans(size: 12, weight: FontWeight.w600),
-                  unselectedLabelStyle: DexType.sans(size: 12),
-                  labelColor: t.text,
-                  unselectedLabelColor: t.textMuted,
-                  indicatorColor: t.eventColor('done'),
-                  indicatorSize: TabBarIndicatorSize.label,
-                  dividerColor: Colors.transparent,
                   tabs: const [
                     Tab(text: 'Workflows', height: 38),
                     Tab(text: 'History', height: 38),
@@ -78,16 +72,19 @@ class _LibraryPanelState extends State<LibraryPanel> with SingleTickerProviderSt
                   ],
                 ),
               ),
-              IconButton(
-                icon: Icon(Icons.close, size: 16, color: t.textMuted),
-                onPressed: widget.onClose,
-                tooltip: 'Close',
+              const SizedBox(width: DexTokens.spaceSm),
+              DexIconButton(
+                icon: Icons.close,
+                tooltip: 'Close  (Esc)',
+                size: 15,
+                onTap: widget.onClose,
               ),
+              const SizedBox(width: DexTokens.spaceSm),
             ],
           ),
           Divider(height: 1, color: t.border),
           SizedBox(
-            height: 260,
+            height: 268,
             child: TabBarView(
               controller: _tabs,
               children: [_workflows(t), _history(t), _usage(t)],
@@ -129,31 +126,31 @@ class _LibraryPanelState extends State<LibraryPanel> with SingleTickerProviderSt
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(
-            DexTokens.spaceMd, DexTokens.spaceSm, DexTokens.spaceMd, 0,
+            DexTokens.spaceMd,
+            DexTokens.spaceMd,
+            DexTokens.spaceMd,
+            0,
           ),
-          child: TextField(
+          child: DexField(
             controller: _search,
-            style: DexType.sans(size: 12.5, color: t.text),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: 'Search what you have asked…',
-              hintStyle: DexType.sans(size: 12.5, color: t.textFaint),
-              prefixIcon: Icon(Icons.search, size: 15, color: t.textFaint),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(DexTokens.radiusSm),
-                borderSide: BorderSide(color: t.border),
-              ),
-            ),
-            onSubmitted: (q) => setState(() => widget.client.refreshHistory(query: q)),
+            hint: 'Search what you have asked…',
+            prefix: Icons.search,
+            onSubmitted: (q) =>
+                setState(() => widget.client.refreshHistory(query: q)),
           ),
         ),
         Expanded(
           child: widget.client.pastTasks.isEmpty
-              ? _empty(t, 'Nothing recorded yet.', 'Every task you run is kept here, locally.')
+              ? _empty(
+                  t,
+                  'Nothing recorded yet.',
+                  'Every task you run is kept here, locally.',
+                )
               : ListView.builder(
                   padding: const EdgeInsets.all(DexTokens.spaceMd),
                   itemCount: widget.client.pastTasks.length,
-                  itemBuilder: (context, i) => _historyRow(t, widget.client.pastTasks[i]),
+                  itemBuilder: (context, i) =>
+                      _historyRow(t, widget.client.pastTasks[i]),
                 ),
         ),
       ],
@@ -162,15 +159,20 @@ class _LibraryPanelState extends State<LibraryPanel> with SingleTickerProviderSt
 
   Widget _historyRow(DexTokens t, TaskRecord task) {
     final when = DateTime.fromMillisecondsSinceEpoch(task.startedAt);
+    final tone = task.succeeded ? t.positive : t.negative;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: DexTokens.spaceSm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            task.succeeded ? Icons.check : Icons.close,
-            size: 13,
-            color: task.succeeded ? t.eventColor('done') : t.eventColor('failed'),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(
+              task.succeeded ? Icons.check_rounded : Icons.close_rounded,
+              size: 13,
+              color: tone,
+            ),
           ),
           const SizedBox(width: DexTokens.spaceSm),
           Expanded(
@@ -179,21 +181,23 @@ class _LibraryPanelState extends State<LibraryPanel> with SingleTickerProviderSt
               children: [
                 Text(
                   task.text,
-                  style: DexType.sans(size: 12.5, color: t.text),
+                  style: DexType.body(color: t.text),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
                 Row(
                   children: [
                     Text(
-                      '${when.day}/${when.month} ${when.hour.toString().padLeft(2, '0')}:'
+                      '${when.day}/${when.month} '
+                      '${when.hour.toString().padLeft(2, '0')}:'
                       '${when.minute.toString().padLeft(2, '0')}',
-                      style: DexType.mono(size: 10, color: t.textFaint),
+                      style: DexType.codeSm(color: t.textFaint),
                     ),
                     if (task.workflow != null) ...[
-                      const SizedBox(width: 6),
+                      const SizedBox(width: DexTokens.spaceSm),
                       // Worth marking: these cost no planning call.
-                      _pill(t, task.workflow!, t.eventColor('routing')),
+                      DexTag(task.workflow!, tone: t.neutral, uppercase: false),
                     ],
                   ],
                 ),
@@ -223,68 +227,83 @@ class _LibraryPanelState extends State<LibraryPanel> with SingleTickerProviderSt
         Row(
           children: [
             _stat(t, '${stats.totalTasks}', 'tasks'),
-            _stat(t, '${stats.completed}', 'completed', t.eventColor('done')),
-            if (stats.failed > 0) _stat(t, '${stats.failed}', 'failed', t.eventColor('failed')),
+            _stat(t, '${stats.completed}', 'completed', t.positive),
+            if (stats.failed > 0) _stat(t, '${stats.failed}', 'failed', t.negative),
             if (stats.workflowRuns > 0)
-              _stat(t, '${stats.workflowRuns}', 'replayed', t.eventColor('routing')),
+              _stat(t, '${stats.workflowRuns}', 'replayed', t.info),
           ],
         ),
         if (stats.workflowRuns > 0) ...[
-          const SizedBox(height: DexTokens.spaceSm),
+          const SizedBox(height: DexTokens.spaceXs),
           Text(
-            '${stats.workflowRuns} planning call${stats.workflowRuns == 1 ? '' : 's'} '
-            'avoided by saved workflows',
-            style: DexType.sans(size: 11, color: t.textMuted),
+            '${stats.workflowRuns} planning call'
+            '${stats.workflowRuns == 1 ? '' : 's'} avoided by saved workflows',
+            style: DexType.caption(color: t.textMuted),
           ),
         ],
-        const SizedBox(height: DexTokens.spaceMd),
+        const SizedBox(height: DexTokens.spaceLg),
         if (stats.byDay.isNotEmpty) ...[
-          Text('Per day', style: DexType.sans(size: 11.5, color: t.textMuted)),
-          const SizedBox(height: 6),
+          _sectionLabel(t, 'Per day'),
           for (final day in stats.byDay)
             Padding(
-              padding: const EdgeInsets.only(bottom: 3),
+              padding: const EdgeInsets.only(bottom: 4),
               child: Row(
                 children: [
                   SizedBox(
-                    width: 58,
-                    child: Text(day.day.substring(5),
-                        style: DexType.mono(size: 10, color: t.textFaint)),
-                  ),
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value: day.tasks / peak,
-                      minHeight: 5,
-                      backgroundColor: t.surface,
-                      valueColor: AlwaysStoppedAnimation(t.eventColor('executing')),
+                    width: 46,
+                    child: Text(
+                      day.day.substring(5),
+                      style: DexType.codeSm(color: t.textFaint),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  Text('${day.tasks}', style: DexType.mono(size: 10, color: t.textMuted)),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: day.tasks / peak,
+                        minHeight: 6,
+                        backgroundColor: t.surface,
+                        valueColor: AlwaysStoppedAnimation(t.info),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: DexTokens.spaceSm),
+                  SizedBox(
+                    width: 22,
+                    child: Text(
+                      '${day.tasks}',
+                      textAlign: TextAlign.right,
+                      style: DexType.codeSm(color: t.textMuted),
+                    ),
+                  ),
                 ],
               ),
             ),
         ],
         if (stats.topActions.isNotEmpty) ...[
-          const SizedBox(height: DexTokens.spaceMd),
-          Text('Most used', style: DexType.sans(size: 11.5, color: t.textMuted)),
-          const SizedBox(height: 6),
+          const SizedBox(height: DexTokens.spaceLg),
+          _sectionLabel(t, 'Most used'),
           for (final action in stats.topActions.take(6))
             Padding(
-              padding: const EdgeInsets.only(bottom: 3),
+              padding: const EdgeInsets.only(bottom: 4),
               child: Row(
                 children: [
                   SizedBox(
                     width: 34,
-                    child: Text('${action.runs}×',
-                        style: DexType.mono(size: 11, color: t.textMuted)),
+                    child: Text(
+                      '${action.runs}×',
+                      style: DexType.codeSm(color: t.textMuted),
+                    ),
                   ),
                   Expanded(
-                    child: Text(action.action,
-                        style: DexType.mono(size: 11.5, color: t.text)),
+                    child: Text(
+                      action.action,
+                      overflow: TextOverflow.ellipsis,
+                      style: DexType.code(color: t.text),
+                    ),
                   ),
                   if (action.failures > 0)
-                    _pill(t, '${action.failures} failed', t.eventColor('failed')),
+                    DexTag('${action.failures} failed', tone: t.negative),
                 ],
               ),
             ),
@@ -295,24 +314,20 @@ class _LibraryPanelState extends State<LibraryPanel> with SingleTickerProviderSt
 
   // ── shared bits ───────────────────────────────────────────────────────────
 
+  Widget _sectionLabel(DexTokens t, String text) => Padding(
+        padding: const EdgeInsets.only(bottom: DexTokens.spaceSm),
+        child: Text(text, style: DexType.caption(color: t.textMuted, strong: true)),
+      );
+
   Widget _stat(DexTokens t, String value, String label, [Color? color]) => Padding(
-        padding: const EdgeInsets.only(right: DexTokens.spaceLg),
+        padding: const EdgeInsets.only(right: DexTokens.spaceXl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(value, style: DexType.mono(size: 19, color: color ?? t.text)),
-            Text(label, style: DexType.sans(size: 10.5, color: t.textMuted)),
+            Text(value, style: DexType.display(color: color ?? t.text)),
+            Text(label, style: DexType.caption(color: t.textMuted)),
           ],
         ),
-      );
-
-  Widget _pill(DexTokens t, String text, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Text(text, style: DexType.mono(size: 9.5, color: color)),
       );
 
   Widget _empty(DexTokens t, String title, String detail) => Center(
@@ -321,12 +336,12 @@ class _LibraryPanelState extends State<LibraryPanel> with SingleTickerProviderSt
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(title, style: DexType.sans(size: 13, color: t.textMuted)),
-              const SizedBox(height: 4),
+              Text(title, style: DexType.body(color: t.textMuted, strong: true)),
+              const SizedBox(height: DexTokens.spaceXs),
               Text(
                 detail,
                 textAlign: TextAlign.center,
-                style: DexType.sans(size: 11.5, color: t.textFaint, height: 1.4),
+                style: DexType.caption(color: t.textFaint),
               ),
             ],
           ),
@@ -365,7 +380,8 @@ class _WorkflowTileState extends State<_WorkflowTile> {
   bool get _armed => WindowActivity.safeToAccept;
 
   void _run() {
-    widget.client.runWorkflow(widget.workflow, _args.map((c) => c.text.trim()).toList());
+    widget.client
+        .runWorkflow(widget.workflow, _args.map((c) => c.text.trim()).toList());
   }
 
   @override
@@ -374,38 +390,35 @@ class _WorkflowTileState extends State<_WorkflowTile> {
     final w = widget.workflow;
     final ready = _armed && _args.every((c) => c.text.trim().isNotEmpty);
 
-    return Container(
+    return DexPanel(
+      raised: false,
+      radius: DexTokens.radiusSm,
       padding: const EdgeInsets.all(DexTokens.spaceMd),
-      decoration: BoxDecoration(
-        color: t.surface,
-        borderRadius: BorderRadius.circular(DexTokens.radiusSm),
-        border: Border.all(color: t.border),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(w.name, style: DexType.mono(size: 13, color: t.text, weight: FontWeight.w600)),
-              const SizedBox(width: 6),
-              Text('${w.steps} step${w.steps == 1 ? '' : 's'}',
-                  style: DexType.mono(size: 10, color: t.textFaint)),
-              if (w.runCount > 0) ...[
-                const SizedBox(width: 6),
-                Text('· run ${w.runCount}×',
-                    style: DexType.mono(size: 10, color: t.textFaint)),
-              ],
+              Text(w.name, style: DexType.code(color: t.text, strong: true)),
+              const SizedBox(width: DexTokens.spaceSm),
+              Text(
+                '${w.steps} step${w.steps == 1 ? '' : 's'}'
+                '${w.runCount > 0 ? ' · run ${w.runCount}×' : ''}',
+                style: DexType.codeSm(color: t.textFaint),
+              ),
               const Spacer(),
-              InkWell(
+              DexIconButton(
+                icon: Icons.delete_outline,
+                tooltip: 'Forget "${w.name}"',
+                size: 15,
                 onTap: () => widget.client.deleteWorkflow(w.name),
-                child: Icon(Icons.delete_outline, size: 15, color: t.textFaint),
               ),
             ],
           ),
           const SizedBox(height: 2),
           Text(
             w.description.isEmpty ? w.triggerText : w.description,
-            style: DexType.sans(size: 11.5, color: t.textMuted),
+            style: DexType.caption(color: t.textMuted),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -413,54 +426,25 @@ class _WorkflowTileState extends State<_WorkflowTile> {
           Row(
             children: [
               for (var i = 0; i < w.params.length; i++) ...[
-                SizedBox(
-                  width: 96,
-                  child: TextField(
-                    controller: _args[i],
-                    onChanged: (_) => setState(() {}),
-                    style: DexType.mono(size: 11.5, color: t.text),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
-                      hintText: w.params[i],
-                      hintStyle: DexType.mono(size: 11.5, color: t.textFaint),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(DexTokens.radiusSm),
-                        borderSide: BorderSide(color: t.border),
-                      ),
-                    ),
-                  ),
+                DexField(
+                  controller: _args[i],
+                  hint: w.params[i],
+                  mono: true,
+                  width: 100,
+                  onChanged: (_) => setState(() {}),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: DexTokens.spaceXs),
               ],
               const Spacer(),
-              // Null when not ready, so an unarmed control is not in the
-              // gesture arena at all — same rule as the confirmation card.
-              GestureDetector(
-                onTap: ready ? _run : null,
-                child: AnimatedOpacity(
-                  duration: DexTokens.durFast,
-                  opacity: ready ? 1 : 0.35,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: t.eventColor('done').withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(DexTokens.radiusSm),
-                      border: Border.all(
-                        color: t.eventColor('done').withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: Text(
-                      'Run',
-                      style: DexType.sans(
-                        size: 12,
-                        color: t.eventColor('done'),
-                        weight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
+              DexButton(
+                label: 'Run',
+                variant: DexButtonVariant.primary,
+                tone: t.positive,
+                dense: true,
+                // Disabled means out of the gesture arena entirely — the same
+                // rule the confirmation card relies on.
+                enabled: ready,
+                onTap: _run,
               ),
             ],
           ),

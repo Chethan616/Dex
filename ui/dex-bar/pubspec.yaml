@@ -37,7 +37,7 @@ dependencies:
   window_manager: ^0.5.2
   hotkey_manager: ^0.2.3
   web_socket_channel: ^3.0.3
-  google_fonts: ^8.2.1
+  shared_preferences: ^2.3.3
 
 dev_dependencies:
   flutter_test:
@@ -60,6 +60,21 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Bundled, not fetched. google_fonts pulled Geist over HTTP on first run,
+  # which meant an offline launch silently rendered Roboto -- in an app whose
+  # own docs promise nothing leaves the machine.
+  #
+  # These are the variable faces (wght 100-900). Weight is selected with
+  # FontVariation in lib/theme/type.dart, so every step on the ramp is a real
+  # axis instance rather than a synthesised bold.
+  fonts:
+    - family: Geist
+      fonts:
+        - asset: fonts/Geist.ttf
+    - family: GeistMono
+      fonts:
+        - asset: fonts/GeistMono.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

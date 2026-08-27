@@ -2,17 +2,25 @@ import 'package:flutter/material.dart';
 
 import '../core/gateway_client.dart';
 import '../core/models.dart';
+import '../core/theme_controller.dart';
 import '../theme/tokens.dart';
 import '../widgets/access_chip.dart';
 import '../widgets/plan_view.dart';
+import '../widgets/primitives/primitives.dart';
 import '../widgets/step_stream.dart';
 
 /// Expanded view: plan DAG, live stream, evidence, and task history.
 class MissionControl extends StatefulWidget {
-  const MissionControl({super.key, required this.client, required this.onClose});
+  const MissionControl({
+    super.key,
+    required this.client,
+    required this.onClose,
+    this.theme,
+  });
 
   final GatewayClient client;
   final VoidCallback onClose;
+  final ThemeController? theme;
 
   @override
   State<MissionControl> createState() => _MissionControlState();
@@ -23,7 +31,10 @@ class _MissionControlState extends State<MissionControl> {
 
   GatewayClient get client => widget.client;
 
-  TaskRun? get _run => _selected ?? client.current ?? (client.history.isNotEmpty ? client.history.first : null);
+  TaskRun? get _run =>
+      _selected ??
+      client.current ??
+      (client.history.isNotEmpty ? client.history.first : null);
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +43,7 @@ class _MissionControlState extends State<MissionControl> {
 
     return Column(
       children: [
-        _Header(client: client, onClose: widget.onClose),
+        _Header(client: client, onClose: widget.onClose, theme: widget.theme),
         Divider(height: 1, color: t.border),
         if (client.lastNotice != null) _Notice(client: client),
         Expanded(
@@ -40,7 +51,7 @@ class _MissionControlState extends State<MissionControl> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(
-                width: 240,
+                width: 250,
                 child: _HistoryList(
                   client: client,
                   selected: run,
@@ -62,10 +73,11 @@ class _MissionControlState extends State<MissionControl> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.client, required this.onClose});
+  const _Header({required this.client, required this.onClose, this.theme});
 
   final GatewayClient client;
   final VoidCallback onClose;
+  final ThemeController? theme;
 
   @override
   Widget build(BuildContext context) {
@@ -79,57 +91,26 @@ class _Header extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text('DEX', style: DexType.sans(size: 15, color: t.text, weight: FontWeight.w700, spacing: 1.2)),
+          Text('DEX', style: DexType.display(color: t.text, strong: true)),
           const SizedBox(width: DexTokens.spaceSm),
-          Text('Mission Control', style: DexType.sans(size: 13, color: t.textMuted)),
+          Text('Mission Control', style: DexType.body(color: t.textMuted)),
           const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: t.surfaceRaised,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: t.border),
-            ),
-            child: Text(
-              connected ? 'core connected' : 'core offline',
-              style: DexType.mono(
-                size: 10.5,
-                color: connected ? t.eventColor('done') : t.eventColor('failed'),
-              ),
-            ),
+          DexTag.round(
+            connected ? 'core connected' : 'core offline',
+            tone: connected ? t.positive : t.negative,
+            filled: false,
           ),
           if (client.preApprovals.isNotEmpty) ...[
             const SizedBox(width: DexTokens.spaceSm),
             Tooltip(
-              message:
-                  'Pre-approved this session:\n${client.preApprovals.join('\n')}\n\nClick to revoke.',
-              textStyle: DexType.sans(size: 11, color: t.text),
-              decoration: BoxDecoration(
-                color: t.surfaceRaised,
-                borderRadius: BorderRadius.circular(DexTokens.radiusSm),
-                border: Border.all(color: t.border),
-              ),
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  onTap: client.clearPreApprovals,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: t.tierColor(3).withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: t.tierColor(3).withValues(alpha: 0.4)),
-                    ),
-                    child: Text(
-                      '${client.preApprovals.length} pre-approved',
-                      style: DexType.sans(
-                        size: 11.5,
-                        color: t.tierColor(3),
-                        weight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
+              message: 'Pre-approved this session:\n'
+                  '${client.preApprovals.join('\n')}\n\nClick to revoke.',
+              child: DexButton(
+                label: '${client.preApprovals.length} pre-approved',
+                variant: DexButtonVariant.primary,
+                tone: t.tierColor(3),
+                dense: true,
+                onTap: client.clearPreApprovals,
               ),
             ),
           ],
@@ -139,13 +120,19 @@ class _Header extends StatelessWidget {
             serviceState: client.daemonService,
             onToggle: client.setFullAccess,
           ),
-          const SizedBox(width: DexTokens.spaceSm),
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: onClose,
-              child: Icon(Icons.close_rounded, size: 17, color: t.textMuted),
+          const SizedBox(width: DexTokens.spaceXs),
+          if (theme != null)
+            DexIconButton(
+              icon: theme!.icon,
+              tooltip: '${theme!.label}\nClick to change.',
+              size: 16,
+              onTap: theme!.cycle,
             ),
+          DexIconButton(
+            icon: Icons.close_rounded,
+            tooltip: 'Close  (Ctrl+M)',
+            size: 17,
+            onTap: onClose,
           ),
         ],
       ),
@@ -164,24 +151,22 @@ class _Notice extends StatelessWidget {
     return Container(
       width: double.infinity,
       color: t.accentMuted,
-      padding: const EdgeInsets.symmetric(
-        horizontal: DexTokens.spaceLg,
-        vertical: DexTokens.spaceSm,
+      padding: const EdgeInsets.fromLTRB(
+        DexTokens.spaceLg,
+        DexTokens.spaceSm,
+        DexTokens.spaceSm,
+        DexTokens.spaceSm,
       ),
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              client.lastNotice!,
-              style: DexType.sans(size: 12, color: t.text),
-            ),
+            child: Text(client.lastNotice!, style: DexType.body(color: t.text)),
           ),
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: client.dismissNotice,
-              child: Icon(Icons.close_rounded, size: 14, color: t.textMuted),
-            ),
+          DexIconButton(
+            icon: Icons.close_rounded,
+            tooltip: 'Dismiss',
+            size: 14,
+            onTap: client.dismissNotice,
           ),
         ],
       ),
@@ -190,7 +175,11 @@ class _Notice extends StatelessWidget {
 }
 
 class _HistoryList extends StatelessWidget {
-  const _HistoryList({required this.client, required this.selected, required this.onSelect});
+  const _HistoryList({
+    required this.client,
+    required this.selected,
+    required this.onSelect,
+  });
 
   final GatewayClient client;
   final TaskRun? selected;
@@ -206,7 +195,7 @@ class _HistoryList extends StatelessWidget {
 
     if (runs.isEmpty) {
       return Center(
-        child: Text('No tasks yet', style: DexType.sans(size: 12, color: t.textFaint)),
+        child: Text('No tasks yet', style: DexType.body(color: t.textFaint)),
       );
     }
 
@@ -217,34 +206,49 @@ class _HistoryList extends StatelessWidget {
         final run = runs[i];
         final isSelected = identical(run, selected);
         final color = switch (run.phase) {
-          TaskPhase.done => t.eventColor('done'),
-          TaskPhase.failed => t.eventColor('failed'),
-          TaskPhase.cancelled => t.eventColor('cancelled'),
-          TaskPhase.awaiting => t.eventColor('awaiting'),
-          _ => t.eventColor('executing'),
+          TaskPhase.done => t.positive,
+          TaskPhase.failed => t.negative,
+          TaskPhase.cancelled => t.attention,
+          TaskPhase.awaiting => t.attention,
+          _ => t.info,
         };
 
-        return MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DexTokens.spaceSm,
+            2,
+            DexTokens.spaceSm,
+            2,
+          ),
+          child: FocusRing(
+            enabled: true,
             onTap: () => onSelect(run),
+            semanticLabel: run.prompt,
             child: Container(
-              margin: const EdgeInsets.fromLTRB(DexTokens.spaceSm, 2, DexTokens.spaceSm, 2),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
               decoration: BoxDecoration(
                 color: isSelected ? t.surfaceRaised : Colors.transparent,
                 borderRadius: BorderRadius.circular(DexTokens.radiusSm),
-                border: Border.all(color: isSelected ? t.border : Colors.transparent),
+                border: Border.all(
+                  color: isSelected ? t.border : Colors.transparent,
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                       ),
                       const SizedBox(width: DexTokens.spaceSm),
                       Expanded(
@@ -252,7 +256,7 @@ class _HistoryList extends StatelessWidget {
                           run.prompt,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: DexType.sans(size: 12.5, color: t.text),
+                          style: DexType.body(color: t.text),
                         ),
                       ),
                     ],
@@ -261,8 +265,9 @@ class _HistoryList extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(left: 14),
                     child: Text(
-                      '${run.status ?? run.phase.name} · ${(run.elapsed.inMilliseconds / 1000).toStringAsFixed(1)}s',
-                      style: DexType.mono(size: 10, color: t.textFaint),
+                      '${run.status ?? run.phase.name} · '
+                      '${(run.elapsed.inMilliseconds / 1000).toStringAsFixed(1)}s',
+                      style: DexType.codeSm(color: t.textFaint),
                     ),
                   ),
                 ],
@@ -294,13 +299,6 @@ class _RunDetail extends StatelessWidget {
           TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            dividerColor: t.border,
-            indicatorColor: t.accent,
-            indicatorSize: TabBarIndicatorSize.label,
-            labelColor: t.text,
-            unselectedLabelColor: t.textMuted,
-            labelStyle: DexType.sans(size: 12.5, weight: FontWeight.w500),
-            unselectedLabelStyle: DexType.sans(size: 12.5),
             onTap: (i) {
               if (i == 2 && requestId.isNotEmpty) client.loadEvidence(requestId);
             },
@@ -317,7 +315,10 @@ class _RunDetail extends StatelessWidget {
                 SingleChildScrollView(
                   padding: const EdgeInsets.all(DexTokens.spaceLg),
                   child: run.plan == null
-                      ? Text('No plan yet', style: DexType.sans(size: 12, color: t.textFaint))
+                      ? Text(
+                          'No plan yet',
+                          style: DexType.body(color: t.textFaint),
+                        )
                       : PlanView(plan: run.plan!, events: run.events),
                 ),
                 _EvidencePanel(client: client, requestId: requestId),
@@ -344,7 +345,7 @@ class _EvidencePanel extends StatelessWidget {
       return Center(
         child: Text(
           'No evidence recorded for this task',
-          style: DexType.sans(size: 12, color: t.textFaint),
+          style: DexType.body(color: t.textFaint),
         ),
       );
     }
@@ -354,45 +355,36 @@ class _EvidencePanel extends StatelessWidget {
       itemCount: client.evidence.length,
       itemBuilder: (context, i) {
         final e = client.evidence[i];
+        // UNVERIFIABLE is not a lesser success — it is Dex saying it could not
+        // check. It gets the same warn tone as a retry, never the done tone.
         final color = switch (e.status) {
-          'VERIFIED' => t.eventColor('done'),
-          'FAILED' => t.eventColor('failed'),
-          _ => t.eventColor('selecting'),
+          'VERIFIED' => t.positive,
+          'FAILED' => t.negative,
+          _ => t.warn,
         };
 
-        return Container(
+        return DexPanel(
+          raised: false,
           margin: const EdgeInsets.only(bottom: DexTokens.spaceSm),
           padding: const EdgeInsets.all(DexTokens.spaceMd),
-          decoration: BoxDecoration(
-            color: t.surface,
-            borderRadius: BorderRadius.circular(DexTokens.radiusMd),
-            border: Border.all(color: t.border),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      e.status,
-                      style: DexType.mono(size: 9.5, color: color, weight: FontWeight.w600),
-                    ),
-                  ),
+                  DexTag(e.status, tone: color),
                   const SizedBox(width: DexTokens.spaceSm),
-                  Text(
-                    '${e.stepId} · ${e.action}',
-                    style: DexType.mono(size: 11.5, color: t.text),
+                  Expanded(
+                    child: Text(
+                      '${e.stepId} · ${e.action}',
+                      overflow: TextOverflow.ellipsis,
+                      style: DexType.code(color: t.text),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: DexTokens.spaceSm),
-              SelectableText(e.reason, style: DexType.mono(size: 11, color: t.textMuted)),
+              SelectableText(e.reason, style: DexType.codeSm(color: t.textMuted)),
               if (e.afterState != null) ...[
                 const SizedBox(height: DexTokens.spaceSm),
                 Container(
@@ -405,7 +397,7 @@ class _EvidencePanel extends StatelessWidget {
                   child: SelectableText(
                     e.afterState.toString(),
                     maxLines: 12,
-                    style: DexType.mono(size: 10.5, color: t.textFaint),
+                    style: DexType.codeSm(color: t.textFaint),
                   ),
                 ),
               ],
@@ -428,11 +420,15 @@ class _Empty extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.dashboard_customize_outlined, size: 28, color: tokens.textFaint),
+          Icon(
+            Icons.dashboard_customize_outlined,
+            size: 26,
+            color: tokens.textFaint,
+          ),
           const SizedBox(height: DexTokens.spaceMd),
           Text(
             'Run a task to see its plan, stream and evidence',
-            style: DexType.sans(size: 12.5, color: tokens.textFaint),
+            style: DexType.body(color: tokens.textFaint),
           ),
         ],
       ),

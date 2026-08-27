@@ -4,6 +4,7 @@ import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'core/gateway_client.dart';
+import 'core/theme_controller.dart';
 import 'core/window_activity.dart';
 import 'screens/dex_bar.dart';
 import 'theme/tokens.dart';
@@ -45,6 +46,7 @@ class DexApp extends StatefulWidget {
 
 class _DexAppState extends State<DexApp> with WindowListener {
   final _client = GatewayClient();
+  final _theme = ThemeController();
 
   @override
   void initState() {
@@ -52,6 +54,7 @@ class _DexAppState extends State<DexApp> with WindowListener {
     windowManager.addListener(this);
     _client.addListener(_surfaceWhenNeeded);
     _client.connect();
+    _theme.load();
     _registerHotkey();
   }
 
@@ -142,26 +145,30 @@ class _DexAppState extends State<DexApp> with WindowListener {
     windowManager.removeListener(this);
     _client.removeListener(_surfaceWhenNeeded);
     hotKeyManager.unregisterAll();
+    _theme.dispose();
     _client.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'DEX',
-      theme: buildDexTheme(Brightness.light),
-      darkTheme: buildDexTheme(Brightness.dark),
-      themeMode: ThemeMode.system,
-      // Real pointer movement is what distinguishes an aimed click from the
-      // synthetic one Windows injects when a window is raised.
-      home: Listener(
-        onPointerHover: (_) => WindowActivity.notePointerMoved(),
-        onPointerMove: (_) => WindowActivity.notePointerMoved(),
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: DexBar(client: _client),
+    return ListenableBuilder(
+      listenable: _theme,
+      builder: (context, _) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'DEX',
+        theme: buildDexTheme(Brightness.light),
+        darkTheme: buildDexTheme(Brightness.dark),
+        themeMode: _theme.mode,
+        // Real pointer movement is what distinguishes an aimed click from the
+        // synthetic one Windows injects when a window is raised.
+        home: Listener(
+          onPointerHover: (_) => WindowActivity.notePointerMoved(),
+          onPointerMove: (_) => WindowActivity.notePointerMoved(),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: DexBar(client: _client, theme: _theme),
+          ),
         ),
       ),
     );
