@@ -283,7 +283,42 @@ the bot is listening and tells someone probing that their id is merely wrong.
 
 ---
 
-## 9. Seeing what you use it for
+## 9. Doing things without being asked
+
+✅ Verified — fired on the real clock, not a fake one.
+
+```
+you> /every every weekday at 07:30 as standup: summarise my calendar
+     Scheduled "standup" — Mon,Tue,Wed,Thu,Fri at 07:30
+       summarise my calendar
+       next: 31/8/2026, 7:30:00 am
+       runs unattended: steps needing approval are refused, not queued
+
+you> /schedules
+standup  Mon,Tue,Wed,Thu,Fri at 07:30
+  summarise my calendar
+  ran 4× (0 failed), last COMPLETED · next 31/8/2026, 7:30:00 am
+```
+
+Say it how you like — `every day at 8`, `every monday at 9pm`,
+`every 30 minutes`, or a cron expression if you prefer. `/pause`, `/resume` and
+`/unschedule` do what they say.
+
+Two things it deliberately does **not** do:
+
+- **It does not catch up.** A machine asleep from 2am to 9am wakes to nothing
+  pending. Replaying seven missed hourly runs at once is how one job becomes
+  seven emails and a rate limit — what was missed is recorded, not replayed.
+- **It does not approve on your behalf.** A schedule firing at 3am has nobody
+  to answer a confirmation card, so any step that needs one is refused and
+  reported, rather than waiting for an answer that is not coming. It will not
+  quietly take the "no UI attached, auto-approve" path either — that is a
+  convenience for someone sitting at a terminal, and a hole in a job that runs
+  while you sleep. Steps that need approval run under Full Access or not at all.
+
+---
+
+## 10. Seeing what you use it for
 
 ✅ Verified.
 ```
@@ -303,7 +338,7 @@ leaves the machine.
 
 ---
 
-## 10. How it protects you
+## 11. How it protects you
 
 Not features so much as rules that hold everywhere:
 
@@ -332,7 +367,6 @@ Stated plainly, because the gaps matter more than the list above:
   ("where is the Save button") runs locally; deciding *what* to click does not.
   Everything else — Brain, browser, Tiers 1 and 2 — runs on a Groq free tier.
 - **Nothing has run against live Google, Telegram or Discord credentials.**
-- **No scheduling.** Dex acts when asked; it cannot run something every morning.
 - **Your own scripts are not pluggable yet** — that is the Plugin SDK, where
   they get permission gating and crash isolation rather than running as
   LocalSystem unsandboxed.
@@ -347,8 +381,10 @@ Stated plainly, because the gaps matter more than the list above:
 v0.1.0  core loop + desktop agent          v0.5.0  workflows + usage history
 v0.2.0  Flutter Dex Bar                    v0.6.0  Telegram/Discord/WhatsApp
 v0.3.0  browser + workspace                v0.7.0  memory & cross-channel
-v0.4.0  deterministic-first tiers          ← current
+v0.4.0  deterministic-first tiers          v0.7.1  Dex Bar design system
+                                           v0.8.0  scheduler          ← current
 ```
 
-**199 automated tests** across nine suites. Remaining: Slice 7 (Slack,
-scheduler, plugin SDK) and Slice 8 (device mesh).
+**240+ automated checks** across twelve suites, plus a conformance harness that
+drives every advertised OS action against the real daemon. Remaining: Slack, the
+Plugin SDK (Slice 7) and the device mesh (Slice 8).

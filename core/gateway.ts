@@ -148,6 +148,10 @@ export class Gateway {
     }
 
     finalPlan.sessionId = sessionId;
+    // A schedule fires whether or not anyone is at the machine, so the plan
+    // carries that fact to the Orchestrator rather than the Orchestrator
+    // guessing from the source.
+    finalPlan.unattended = request.source === 'schedule';
     this.telemetry.planned(requestId, finalPlan);
     const result = await this.orchestrator.execute(finalPlan);
     this.telemetry.finishTask(requestId, result.status);
@@ -228,6 +232,7 @@ export class Gateway {
       workflow,
     });
     plan.sessionId = sessionId;
+    plan.unattended = request.source === 'schedule';
     this.telemetry.planned(plan.requestId, plan);
 
     if (workflow) this.workflows.markRun(workflow);

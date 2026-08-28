@@ -30,6 +30,16 @@ export interface ExecutionStep {
 
 export interface ExecutionPlan {
   requestId: string;
+  /**
+   * Nobody is watching this run.
+   *
+   * Set for schedules, which fire whether or not the owner is at the machine.
+   * The Orchestrator refuses any step that would need a confirmation card
+   * rather than waiting for an answer that is not coming — and, more to the
+   * point, rather than taking the ConfirmationManager's headless auto-approve,
+   * which is a convenience for an interactive CLI and a hole at 3am.
+   */
+  unattended?: boolean;
   /** Which conversation this belongs to, so artifacts can be attributed. */
   sessionId?: string;
   intent: string;
@@ -40,7 +50,7 @@ export interface ExecutionPlan {
 export interface DexRequest {
   requestId: string;
   sessionId: string;
-  source: 'cli' | 'telegram' | 'discord' | 'whatsapp' | 'slack' | 'flutter';
+  source: 'cli' | 'telegram' | 'discord' | 'whatsapp' | 'slack' | 'flutter' | 'schedule';
   senderId: string;
   text: string;
   timestamp: number;

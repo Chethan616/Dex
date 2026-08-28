@@ -72,7 +72,15 @@ export class OwnerGate {
     // Local surfaces. The CLI runs as the owner by definition, and the Flutter
     // bar is restricted to loopback with a token at the connection level —
     // there is no remote sender to identify here.
-    if (request.source === 'cli' || request.source === 'flutter') {
+    //
+    // A schedule is the owner acting, deferred: creating it was the authorised
+    // act, and firing it is that act arriving later. There is no sender to
+    // check because nobody sent it.
+    if (
+      request.source === 'cli' ||
+      request.source === 'flutter' ||
+      request.source === 'schedule'
+    ) {
       return text ? { allow: true, text } : { allow: false, reason: 'Empty message' };
     }
 

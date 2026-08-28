@@ -3,6 +3,8 @@ import { Gateway } from '../core/gateway';
 import { bus } from '../core/events/bus';
 import { DexEvent, ConfirmationRequest } from '../core/events/types';
 import { ConfirmationManager } from '../core/confirmation/confirmation_manager';
+import { ScheduleStore } from '../core/scheduler/store';
+import { describeCron, parseSchedule } from '../core/scheduler/cron';
 
 const COLOR: Record<string, string> = {
   thinking:  '\x1b[90m',
@@ -128,6 +130,8 @@ export async function startCli(
     '\x1b[90m  /save <name>   save the last task as a workflow\n' +
       '  /workflows     list saved workflows      /forget <name>\n' +
       '  /history [q]   what you have asked       /stats [days]\n' +
+      '  /every <when> as <name>: <task>          /schedules\n' +
+      '  /unschedule <name>        /pause <name>  /resume <name>\n' +
       '  run <name> …   replay a workflow         exit\x1b[0m\n',
   );
 
@@ -177,6 +181,9 @@ export async function startCli(
  * Kept out of the natural-language path deliberately — "/stats" should show
  * statistics, not be interpreted as a request to do something about them.
  */
+/** One store for the command handler; the engine keeps its own. */
+const schedules = new ScheduleStore();
+
 function handleLocalCommand(gateway: Gateway, raw: string): void {
   const [command, ...rest] = raw.slice(1).split(/\s+/);
   const arg = rest.join(' ').trim();
@@ -208,6 +215,77 @@ function handleLocalCommand(gateway: Gateway, raw: string): void {
       } catch (err) {
         console.log(`\x1b[31m${err instanceof Error ? err.message : err}\x1b[0m`);
       }
+      return;
+    }
+
+    case 'every': {
+      // /every every day at 8 as morning: check my unread email
+      // /every 0 8 * * 1-5 as standup: summarise my calendar
+      const match = arg.match(/^(.+?)\s+as\s+([a-z0-9_-]+)\s*:\s*(.+)$/i);
+      if (!match) {
+        console.log('Usage: /every <when> as <name>: <task>');
+        console.log(dim('  /every every day at 8 as morning: check my unread email'));
+        console.log(dim('  /every every weekday at 07:30 as standup: summarise my calendar'));
+        console.log(dim('  /every 30 minutes as ping: check my wifi status'));
+        return;
+      }
+
+      const [, when, name, task] = match;
+      try {
+        const cron = parseSchedule(when.replace(/^every\s+/i, 'every '));
+        const saved = schedules.save({ name, cron, request: task });
+        const next = ScheduleStore.nextFire(saved);
+        console.log(
+          `[32mScheduled[0m "${saved.name}" — ${describeCron(cron)}`,
+        );
+        console.log(dim(`  ${saved.request}`));
+        console.log(dim(`  next: ${next ? next.toLocaleString() : 'never'}`));
+        // Said once, at the moment it can still be changed. A scheduled run
+        // has nobody to answer a confirmation card, so anything above Tier 4
+        // is refused when it fires rather than waiting for an answer.
+        console.log(
+          dim('  runs unattended: steps needing approval are refused, not queued'),
+        );
+      } catch (err) {
+        console.log(`[31m${err instanceof Error ? err.message : err}[0m`);
+      }
+      return;
+    }
+
+    case 'schedules': {
+      const all = schedules.list();
+      if (all.length === 0) {
+        console.log(dim('No schedules. Add one with /every <when> as <name>: <task>'));
+        return;
+      }
+      for (const sch of all) {
+        const next = sch.enabled ? ScheduleStore.nextFire(sch) : null;
+        const state = sch.enabled ? '' : ' [33m(paused)[0m';
+        console.log(`[1m${sch.name}[0m  ${ScheduleStore.describe(sch)}${state}`);
+        console.log(dim(`  ${sch.request}`));
+        const ran = sch.runCount
+          ? `ran ${sch.runCount}× (${sch.failCount} failed), last ${sch.lastStatus}`
+          : 'never run';
+        console.log(dim(`  ${ran}${next ? ` · next ${next.toLocaleString()}` : ''}`));
+      }
+      return;
+    }
+
+    case 'unschedule': {
+      if (!arg) return console.log('Usage: /unschedule <name>');
+      console.log(
+        schedules.delete(arg)
+          ? `Removed schedule "${arg}"`
+          : `No schedule named "${arg}"`,
+      );
+      return;
+    }
+
+    case 'pause':
+    case 'resume': {
+      if (!arg) return console.log(`Usage: /${command} <name>`);
+      const ok = schedules.setEnabled(arg, command === 'resume');
+      console.log(ok ? `"${arg}" ${command}d` : `No schedule named "${arg}"`);
       return;
     }
 

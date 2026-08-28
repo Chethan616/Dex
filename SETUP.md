@@ -540,6 +540,7 @@ npm run test:boot         # the core actually starts
 npm run test:daemon       # subprocess failure detection, single-instance
 npm run test:scripts      # every .ps1 parses and is encoded so it will
 npm run test:full-access  # downgrade, RED always asks, hand-offs survive
+npm run test:scheduler    # cron, missed runs, unattended approval refusal
 npm run test:e2e          # drives a real Windows app (needs daemon + app server)
 
 npm run conformance       # every advertised action, against the real daemon

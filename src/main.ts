@@ -13,6 +13,7 @@ import { EvidenceStore } from '../core/reliability/evidence_store';
 import { DexServer } from '../core/server/ws_server';
 import { Telemetry } from '../core/memory/telemetry';
 import { WorkflowStore } from '../core/workflows/store';
+import { Scheduler } from '../core/scheduler/scheduler';
 import { quietSqliteWarning } from '../core/memory/db';
 import { DaemonDescription, SystemAgent } from '../agents/system/system_agent';
 import { DesktopAgent } from '../agents/desktop/desktop_agent';
@@ -149,12 +150,20 @@ function main(): void {
     closing = true;
     console.log(`
 ${signal} — closing workspace servers…`);
+    scheduler.stop();
     await workspace.close().catch(() => undefined);
     await Promise.all(started.map((c) => c.stop().catch(() => undefined)));
     process.exit(0);
   };
   process.on('SIGINT', () => void shutdown('SIGINT'));
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
+
+  // Schedules fire whether or not anyone is watching, so they are started
+  // last — after the agents are registered and the daemon has been asked what
+  // it can do. A schedule that fires into a half-built registry is worse than
+  // one that fires a few seconds late.
+  const scheduler = new Scheduler(gateway);
+  scheduler.start();
 
   void startChannels(gateway, ownerGate, confirmations, credentials);
 

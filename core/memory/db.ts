@@ -106,6 +106,26 @@ CREATE TABLE IF NOT EXISTS sessions (
   channels      TEXT NOT NULL DEFAULT '[]'
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_seen ON sessions(last_seen_at);
+
+-- Things Dex should do without being asked.
+--
+-- last_fired_at is what stops a restart re-running something already done: the
+-- engine only fires a schedule whose due minute is newer than this.
+--
+-- Nobody is watching an unattended run, so what a schedule is allowed to
+-- contain is decided when it is created, not when it fires at 3am.
+CREATE TABLE IF NOT EXISTS schedules (
+  name          TEXT PRIMARY KEY,
+  cron          TEXT NOT NULL,
+  request       TEXT NOT NULL,
+  created_at    INTEGER NOT NULL,
+  enabled       INTEGER NOT NULL DEFAULT 1,
+  last_fired_at INTEGER,
+  last_status   TEXT,
+  run_count     INTEGER NOT NULL DEFAULT 0,
+  fail_count    INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_schedules_enabled ON schedules(enabled);
 `;
 
 let handle: Database | null = null;

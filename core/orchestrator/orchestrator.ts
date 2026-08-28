@@ -33,6 +33,9 @@ export class Orchestrator {
 
   private sessionId = '';
 
+  /** True while running a plan nobody is watching. See gateStep. */
+  private unattended = false;
+
   async execute(plan: ExecutionPlan): Promise<{ status: TaskStatus; summary: string }> {
     const { requestId, steps, intent } = plan;
 
@@ -41,6 +44,7 @@ export class Orchestrator {
     const completed = new Set<string>();
     const remaining = [...steps];
     this.sessionId = plan.sessionId ?? '';
+    this.unattended = plan.unattended === true;
 
     try {
       while (remaining.length > 0) {
@@ -333,6 +337,27 @@ export class Orchestrator {
     const red = await this.redBandReason(step, requestId);
 
     if (!red && step.confirmationTier >= 4) return 'ok';
+
+    // Nobody is watching, so nobody can answer. Refuse rather than wait for a
+    // card that will expire — and rather than fall through to the
+    // ConfirmationManager's headless auto-approve, which is a reasonable
+    // convenience for someone sitting at a CLI and a hole in a job that fires
+    // at 3am with the UI closed.
+    //
+    // Full Access does not rescue a RED path: it is the one thing that always
+    // asks, and a schedule cannot.
+    if (this.unattended && (red || !this.hasFullAccess())) {
+      emit(
+        'failed',
+        `${step.id} needs approval (Tier ${step.confirmationTier}` +
+          `${red ? `, RED — ${red}` : ''}) and this run is unattended. ` +
+          'Scheduled tasks cannot answer a confirmation. Either run it yourself, ' +
+          'or enable Full Access for the tiers it needs.',
+        requestId,
+        step.id,
+      );
+      return 'cancelled';
+    }
 
     if (!red && this.hasFullAccess()) {
       emit(
