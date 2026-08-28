@@ -348,6 +348,16 @@ export const PROBES: Record<string, Probe> = {
     tier: 'destructive',
     proves: 'the wireless adapter is really disabled and re-enabled',
     async skip(ctx) {
+      // Deliberately gated behind its own flag, on top of --destructive.
+      //
+      // It is the only probe that can cut the operator off from the machine it
+      // is running on. When its restore failed once here, the network it would
+      // have needed to fix itself was the network it had just taken down. That
+      // is not a risk to bundle in with "run the thorough suite" — it has to be
+      // asked for, in those words, every time.
+      if (!process.argv.includes('--allow-network-drop')) {
+        return 'needs --allow-network-drop as well: this disconnects you';
+      }
       const status = await ctx.call('get_wifi_status');
       return status.enabled ? null : 'no wireless adapter is enabled to toggle';
     },
@@ -367,7 +377,22 @@ export const PROBES: Record<string, Probe> = {
       const now = await ctx.call('get_wifi_status');
       if (now.enabled) return;
 
-      await ctx.call('set_wifi', { enabled: true });
+      // Retry: bringing a radio back is slower and less reliable than taking it
+      // down, and this is the one restore where giving up strands the machine.
+      let lastError = '';
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        const result = await ctx.attempt('set_wifi', { enabled: true });
+        if (result.success) break;
+        lastError = result.error ?? 'unknown';
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      const back = await ctx.call('get_wifi_status');
+      if (!back.enabled) {
+        throw new Error(
+          `wifi is still down after three attempts (${lastError}). ` +
+            'Re-enable it by hand: netsh interface set interface "Wi-Fi" enable',
+        );
+      }
       // Coming back is the part that matters — a harness that leaves the
       // network down has done more harm than the bug it was looking for.
       await ctx.verify(

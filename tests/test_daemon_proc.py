@@ -12,9 +12,11 @@ so that failure was never raised, and the error text came back as the success
 payload. `set_dns` reported success while changing nothing, for every run it
 has ever had, and the telemetry database recorded those runs as COMPLETED.
 
-Also covers the daemon's single-instance guard: several daemons can serve one
-named pipe at once and answer unpredictably, which is the other half of "it
-works, then it doesn't".
+Also covers single-instance exclusivity. A named pipe accepts many server
+instances under one name by design, so a second daemon does not fail to start --
+it joins the rota and requests go to whichever answers first. Seven had
+accumulated here. FILE_FLAG_FIRST_PIPE_INSTANCE makes the OS refuse the second
+one atomically, on the pipe itself.
 
 Run: python tests/test_daemon_proc.py
 """
@@ -151,8 +153,8 @@ def try_start_once():
     )
 
 
-# Works whether or not a daemon is already up: if one is, the guard should
-# already be refusing; if not, start one and check the second is refused.
+# Works whether or not a daemon is already up: if one is, the second must be
+# refused; if not, start one and check the next is refused.
 already_running = False
 probe = subprocess.Popen(
     [sys.executable, str(daemon_py)],
@@ -167,19 +169,90 @@ if probe.poll() is not None:
         probe.returncode == 1,
         f'exit={probe.returncode} {output[:100]}',
     )
-    check('and says why', 'already serving this session' in output, output[:120])
+    check('and says why', 'already owns' in output, output[:120])
 else:
     try:
         second = try_start_once()
         output = second.stdout + second.stderr
         check('a second daemon refuses to start', second.returncode == 1, output[:120])
-        check('and says why', 'already serving this session' in output, output[:120])
+        check('and says why', 'already owns' in output, output[:120])
     finally:
         probe.kill()
         probe.wait(timeout=10)
 
 if already_running:
     print('note the guard was exercised against a daemon that was already up')
+
+
+# ── the two properties that make this strict, not merely guarded ────────────
+
+def alive_daemons():
+    """Real python processes running DexDaemon.py, parents and children both."""
+    listing = subprocess.run(
+        ['powershell', '-NoProfile', '-Command',
+         "(Get-CimInstance Win32_Process | Where-Object { $_.Name -like 'python*' "
+         "-and $_.CommandLine -match 'DexDaemon' }).Count"],
+        capture_output=True, text=True, timeout=30,
+    ).stdout.strip()
+    return int(listing or 0)
+
+
+def stop_all():
+    subprocess.run(
+        ['powershell', '-NoProfile', '-File',
+         str(ROOT / 'scripts' / 'stop-dex.ps1'), '-Quiet'],
+        capture_output=True, text=True, timeout=60,
+    )
+    time.sleep(0.6)
+
+
+stop_all()
+
+# Racing start: two launched at the same instant. A mutex checked-then-set would
+# let both through; claiming the pipe is atomic, so exactly one can win.
+racers = [start_daemon() for _ in range(4)]
+time.sleep(4)
+survivors = [r for r in racers if r.poll() is None]
+refused = [r for r in racers if r.poll() == 1]
+check(
+    'exactly one of four simultaneous starts survives',
+    len(survivors) == 1,
+    f'{len(survivors)} survived, {len(refused)} refused',
+)
+check(
+    'every loser exits non-zero rather than lingering',
+    len(refused) == 3,
+    f'{len(refused)} of 3 refused',
+)
+for r in survivors + refused:
+    if r.poll() is None:
+        r.kill()
+    r.wait(timeout=10)
+
+# No claim can outlive the process that made it. Windows destroys a process's
+# pipe instances when it dies, so a daemon killed mid-flight -- which is how the
+# seven strays were made -- cannot block the next one from starting.
+stop_all()
+victim = start_daemon()
+time.sleep(2.5)
+check('a daemon starts cleanly after the field is cleared', victim.poll() is None)
+victim.kill()
+victim.wait(timeout=10)
+stop_all()
+time.sleep(1.0)
+
+replacement = start_daemon()
+time.sleep(2.5)
+check(
+    'a killed daemon leaves no claim behind',
+    replacement.poll() is None,
+    'the replacement was refused, so something stale is still holding the pipe',
+)
+replacement.kill()
+replacement.wait(timeout=10)
+stop_all()
+
+check('the field is empty afterwards', alive_daemons() == 0, f'{alive_daemons()} left')
 
 
 print()

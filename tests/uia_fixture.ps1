@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 A disposable window for testing the UI Automation tier.
 

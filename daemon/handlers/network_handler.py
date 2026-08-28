@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 
 from ._proc import CommandFailed, run
 
@@ -92,14 +93,33 @@ class NetworkHandler:
             raise RuntimeError('No wireless adapters found')
         for adp in adapters:
             run(['netsh', 'interface', 'set', 'interface', adp, action])
-        return {'adapters': adapters, 'enabled': enabled}
+
+        # Windows takes a moment to bring the radio back, and answering before
+        # that makes an enable look like it did not work.
+        if enabled:
+            _settle_until(adapters, want_enabled=True)
+
+        return {
+            'adapters': adapters,
+            'enabled': enabled,
+            'state': _admin_state(),
+        }
 
     @staticmethod
     def get_wifi_status(params: dict) -> dict:
         adapters = _wireless_adapters()
-        return {'raw': run(['netsh', 'wlan', 'show', 'interfaces']),
-                'adapters': adapters,
-                'enabled': bool(adapters)}
+        state = _admin_state()
+        # Present is not the same as on. Get-NetAdapter lists the hardware even
+        # when it is disabled -- which is the whole point of using it -- so the
+        # enabled flag has to come from the administrative state, not from the
+        # adapter merely existing.
+        enabled = any(state.get(a) for a in adapters)
+        return {
+            'adapters': adapters,
+            'enabled': enabled,
+            'state': {a: state.get(a, False) for a in adapters},
+            'raw': _wlan_raw(),
+        }
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -160,6 +180,40 @@ def _dns_for(adapter: str) -> dict:
     return _dns_table().get(adapter, {'source': 'unknown', 'servers': []})
 
 
+def _wlan_raw() -> str:
+    """`netsh wlan show interfaces`, which exits non-zero when nothing is up."""
+    try:
+        return run(['netsh', 'wlan', 'show', 'interfaces'])
+    except CommandFailed as err:
+        return str(err)
+
+
+def _admin_state() -> dict:
+    """
+    {adapter: enabled} for every interface Windows knows about.
+
+    `netsh interface show interface` is the one source that lists disabled
+    adapters *and* says whether they are administratively enabled.
+    """
+    state = {}
+    for line in run(['netsh', 'interface', 'show', 'interface']).splitlines():
+        parts = line.split()
+        if len(parts) >= 4 and parts[0] in ('Enabled', 'Disabled'):
+            state[' '.join(parts[3:])] = parts[0] == 'Enabled'
+    return state
+
+
+def _settle_until(adapters: list, want_enabled: bool, timeout: float = 12.0) -> bool:
+    """Wait for the adapters to reach the requested state, or give up saying so."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        state = _admin_state()
+        if all(state.get(a, False) == want_enabled for a in adapters):
+            return True
+        time.sleep(0.5)
+    return False
+
+
 def _active_adapters() -> list:
     """
     Adapters that are both enabled and connected.
@@ -178,11 +232,38 @@ def _active_adapters() -> list:
 
 
 def _wireless_adapters() -> list:
+    """
+    Wireless adapters, **including disabled ones**.
+
+    This used to read `netsh wlan show interfaces`, which lists nothing once the
+    adapter is disabled. So `set_wifi(False)` worked and `set_wifi(True)` then
+    raised "No wireless adapters found" — Dex could turn the wireless off and
+    could not turn it back on. A one-way door, and the worst possible one:
+    the failure removes the network you would use to fix it.
+
+    Get-NetAdapter reports the hardware whatever its administrative state, which
+    is the question actually being asked.
+    """
+    try:
+        output = run([
+            'powershell', '-NoProfile', '-NonInteractive', '-Command',
+            "Get-NetAdapter -Physical | "
+            "Where-Object { $_.PhysicalMediaType -like '*802.11*' } | "
+            "ForEach-Object { $_.Name }",
+        ], timeout=25)
+        adapters = [line.strip() for line in output.splitlines() if line.strip()]
+        if adapters:
+            return adapters
+    except CommandFailed:
+        pass
+
+    # Fallback for a machine without the NetAdapter module. Only sees enabled
+    # adapters, which is why it is not the primary source.
     try:
         output = run(['netsh', 'wlan', 'show', 'interfaces'])
     except CommandFailed:
-        # No WLAN service on this machine is a fact about the hardware, not an
-        # error worth propagating to a caller that just asked what exists.
+        # No WLAN service is a fact about the hardware, not an error worth
+        # propagating to a caller that just asked what exists.
         return []
     return [
         line.split(':', 1)[1].strip()

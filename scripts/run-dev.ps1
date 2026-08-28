@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 DEX V3 development startup.
 Launches: daemon (requires elevation) + Desktop Agent server + Browser Agent server

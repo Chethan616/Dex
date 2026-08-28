@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Full Access, one time. Registers the DEX daemon to start elevated at logon.
 

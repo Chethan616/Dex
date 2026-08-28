@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 DEX V3 first-time setup. Installs all dependencies.
 #>

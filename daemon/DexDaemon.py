@@ -5,8 +5,10 @@ Accepts JSON commands over a named pipe, dispatches to handlers.
 """
 import json
 import logging
+import os
 import sys
 import threading
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -19,12 +21,44 @@ from handlers.process_handler import ProcessHandler
 from handlers.registry_handler import RegistryHandler
 from handlers.shell_runner import ShellRunner
 
+def _log_handlers() -> list:
+    """
+    Console when there is one, and always a file.
+
+    Started from a terminal the daemon's output is right there. Started by the
+    logon task it has nowhere to go at all, so a daemon that dies on startup
+    dies silently and the only symptom anywhere is "Daemon not running" from a
+    client that cannot see why. A background process with no log is a process
+    you cannot debug.
+    """
+    handlers = [logging.StreamHandler(sys.stdout)]
+
+    base = os.environ.get('LOCALAPPDATA') or str(Path.home() / 'AppData' / 'Local')
+    log_dir = Path(base) / 'DEX'
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        handlers.append(
+            RotatingFileHandler(
+                log_dir / 'daemon.log', maxBytes=1_000_000, backupCount=2,
+                encoding='utf-8',
+            )
+        )
+    except OSError:
+        # A daemon that cannot open its log still has a job to do.
+        pass
+
+    return handlers
+
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(name)s — %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)],
+    format='%(asctime)s [%(levelname)s] %(name)s - %(message)s',
+    handlers=_log_handlers(),
 )
 log = logging.getLogger('DexDaemon')
+log.info('Log file: %s', Path(
+    os.environ.get('LOCALAPPDATA') or Path.home() / 'AppData' / 'Local'
+) / 'DEX' / 'daemon.log')
 
 PIPE_NAME = r'\\.\pipe\dex_privileged_daemon'
 
@@ -119,52 +153,145 @@ def handle(msg: dict) -> dict:
         return {'id': msg_id, 'success': False, 'error': str(exc)}
 
 
+def _pipe_security():
+    """
+    An explicit DACL on the pipe: the owner, SYSTEM, Administrators. Nobody else.
+
+    Two reasons this is not optional.
+
+    Security: SAFETY.md requires the pipe to carry an explicit DACL, because
+    anything that can open it can ask the daemon to change DNS or write the
+    registry. Passing None inherits the creating token's default, which is not a
+    decision anyone made.
+
+    Function: the default DACL on a pipe created by an *elevated* process does
+    not admit the same user's ordinary, medium-integrity processes. So the
+    moment the daemon started running elevated -- the whole point of Full Access
+    -- the unelevated core could no longer talk to it, and got ACCESS_DENIED
+    reported as "Daemon not running". Naming the owner's own SID is what makes
+    an elevated daemon usable by the desktop it serves.
+
+    Returns None if the security machinery is unavailable, which is not worth
+    refusing to start over on a machine where nothing else works either.
+    """
+    try:
+        import ntsecuritycon
+        import win32api
+        import win32security
+    except ImportError:  # pragma: no cover
+        log.warning('pywin32 security modules missing — pipe uses the default DACL')
+        return None
+
+    token = win32security.OpenProcessToken(
+        win32api.GetCurrentProcess(), win32security.TOKEN_QUERY,
+    )
+    owner_sid = win32security.GetTokenInformation(token, win32security.TokenUser)[0]
+
+    dacl = win32security.ACL()
+    for sid in (
+        owner_sid,
+        win32security.CreateWellKnownSid(win32security.WinLocalSystemSid),
+        win32security.CreateWellKnownSid(win32security.WinBuiltinAdministratorsSid),
+    ):
+        dacl.AddAccessAllowedAce(
+            win32security.ACL_REVISION, ntsecuritycon.FILE_ALL_ACCESS, sid,
+        )
+
+    descriptor = win32security.SECURITY_DESCRIPTOR()
+    # (present=1, dacl, defaulted=0) — an empty-but-present DACL denies everyone,
+    # so this must be the populated one.
+    descriptor.SetSecurityDescriptorDacl(1, dacl, 0)
+
+    attributes = win32security.SECURITY_ATTRIBUTES()
+    attributes.SECURITY_DESCRIPTOR = descriptor
+    log.info(
+        'Pipe DACL: owner %s, SYSTEM, Administrators',
+        win32security.ConvertSidToStringSid(owner_sid),
+    )
+    return attributes
+
+
 def serve():
     try:
         import win32pipe
         import win32file
         import pywintypes
+        import winerror
     except ImportError:
         log.error('pywin32 not installed. Run: pip install pywin32')
         sys.exit(1)
 
-    log.info(f'Listening on {PIPE_NAME}')
+    # Exclusivity is enforced by the operating system, on the thing actually
+    # being contended.
+    #
+    # A named pipe accepts many *server* instances under one name by design, so
+    # a second daemon does not fail to start -- it joins the rota and Windows
+    # hands each client connection to whichever instance is free. Seven had
+    # accumulated on the development machine from previous runs, several of them
+    # executing weeks-old handler code, and a request was served by whichever
+    # answered first. The same command worked, then did not, with nothing having
+    # changed in between.
+    #
+    # FILE_FLAG_FIRST_PIPE_INSTANCE is the exact primitive for this: the create
+    # succeeds only if no instance of this pipe exists, and fails with
+    # ERROR_ACCESS_DENIED otherwise. It is atomic, so two daemons launched at the
+    # same instant cannot both win, and it needs no cleanup -- Windows destroys
+    # a process's pipe instances when it dies, so a crashed daemon cannot leave
+    # a claim behind that blocks the next one.
+    #
+    # A mutex was tried first and is strictly worse: advisory, held beside the
+    # resource rather than on it, and one more thing to keep in step.
+    first = True
+    security = _pipe_security()
 
-    # One thread per connection, and the next pipe instance is created before
-    # the current one is served.
-    #
-    # This loop used to run the client inline: create instance, accept, serve
-    # until disconnect, close, create the next one. Between the close and the
-    # next create there is no instance listening at all, so a client connecting
-    # in that window gets ERROR_FILE_NOT_FOUND -- which the System Agent
-    # reports, accurately but misleadingly, as "Daemon not running".
-    #
-    # Every step of a plan opens its own connection, so a two-step task races
-    # this window every time. It is the second half of "it works, then it
-    # doesn't, with nothing changed in between"; the first half was several
-    # daemons sharing the pipe. Measured: nine of seventeen conformance probes
-    # failed this way on a serial loop, none on this one.
     while True:
-        pipe = win32pipe.CreateNamedPipe(
-            PIPE_NAME,
-            win32pipe.PIPE_ACCESS_DUPLEX,
-            win32pipe.PIPE_TYPE_BYTE | win32pipe.PIPE_READMODE_BYTE | win32pipe.PIPE_WAIT,
-            win32pipe.PIPE_UNLIMITED_INSTANCES,
-            65536,
-            65536,
-            0,
-            None,  # TODO production: restrict DACL to admin + SYSTEM only
-        )
+        mode = win32pipe.PIPE_ACCESS_DUPLEX
+        if first:
+            mode |= win32pipe.FILE_FLAG_FIRST_PIPE_INSTANCE
 
+        try:
+            pipe = win32pipe.CreateNamedPipe(
+                PIPE_NAME,
+                mode,
+                win32pipe.PIPE_TYPE_BYTE | win32pipe.PIPE_READMODE_BYTE | win32pipe.PIPE_WAIT,
+                win32pipe.PIPE_UNLIMITED_INSTANCES,
+                65536,
+                65536,
+                0,
+                security,
+            )
+        except pywintypes.error as exc:
+            if first and exc.winerror == winerror.ERROR_ACCESS_DENIED:
+                log.error(
+                    'Another DEX daemon already owns %s. Two daemons on one pipe '
+                    'answer requests unpredictably, often with different code. '
+                    'Stop the running one first:  scripts/stop-dex.ps1',
+                    PIPE_NAME,
+                )
+                sys.exit(1)
+            raise
+
+        if first:
+            log.info(f'Listening on {PIPE_NAME}')
+            first = False
+
+        # Accept, hand off, and immediately create the next instance.
+        #
+        # This loop used to serve the client inline and only create the next
+        # instance afterwards, so between one client disconnecting and the next
+        # instance existing there was no listener at all. Every step of a plan
+        # opens its own connection, so a multi-step task raced that window on
+        # each step and got ERROR_FILE_NOT_FOUND, which the System Agent
+        # reports -- accurately but misleadingly -- as "Daemon not running".
+        # Measured: nine of seventeen conformance probes failed that way.
         win32pipe.ConnectNamedPipe(pipe, None)
         log.info('Client connected')
 
-        worker = threading.Thread(
+        threading.Thread(
             target=_handle_connection,
             args=(pipe, win32file, pywintypes),
             daemon=True,
-        )
-        worker.start()
+        ).start()
 
 
 def _handle_connection(pipe, win32file, pywintypes):
@@ -210,51 +337,7 @@ def _serve_client(pipe, win32file, pywintypes):
             break
 
 
-_SINGLETON_HANDLE = None
-
-
-def claim_single_instance() -> bool:
-    """
-    Refuse to start when a daemon is already serving this session.
-
-    Windows named pipes allow many *server* instances under one name, so a
-    second daemon does not fail to bind the way a TCP listener would — it
-    quietly joins the rota, and each client connection is handed to whichever
-    instance happens to be free.
-
-    Seven of these had accumulated on the development machine, left behind by
-    previous `run-dev.ps1` runs, several of them running weeks-old handler code.
-    Requests were served by whichever answered first, so the same command worked
-    and then did not with nothing having changed in between. That is close to
-    undebuggable from the outside, and it is exactly the sort of failure the
-    owner reports as "it just doesn't work sometimes".
-
-    Local\\ rather than Global\\ because the scope that matters is the session:
-    one daemon per logged-in desktop.
-    """
-    global _SINGLETON_HANDLE
-    import ctypes
-
-    ERROR_ALREADY_EXISTS = 183
-    kernel32 = ctypes.windll.kernel32
-    handle = kernel32.CreateMutexW(None, False, 'Local\\DexDaemonSingleton')
-    if kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
-        return False
-
-    # Held for the life of the process. Dropping it would release the claim.
-    _SINGLETON_HANDLE = handle
-    return True
-
-
 if __name__ == '__main__':
-    if not claim_single_instance():
-        log.error(
-            'Another DEX daemon is already serving this session. Two daemons on '
-            'one pipe answer requests unpredictably — often with different code. '
-            'Stop the running one first:  scripts/stop-dex.ps1'
-        )
-        sys.exit(1)
-
     log.info('DEX Daemon starting...')
     try:
         serve()

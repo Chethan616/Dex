@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Revoke Full Access. Removes the elevated logon task and stops the daemon.
 
