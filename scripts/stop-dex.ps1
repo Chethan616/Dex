@@ -59,6 +59,10 @@ if ($task -and $task.State -eq 'Running') {
 $patterns = 'DexDaemon\.py', 'daemon_service\.py', 'agents[\\/](desktop|app|browser)[\\/]server\.py'
 $regex = ($patterns -join '|')
 
+# The headless core is a node process with no window, so there is nothing to
+# close by hand. Matched separately because it is not python.
+$coreRegex = 'ts-node.*src[\/]main\.ts'
+
 $visible = Get-CimInstance Win32_Process |
     Where-Object { $_.Name -like 'python*' -and $_.CommandLine -and $_.CommandLine -match $regex }
 
@@ -68,6 +72,15 @@ foreach ($p in $visible) {
             elseif ($p.CommandLine -match 'app') { 'app agent' }
             else { 'browser agent' }
     Say "  stopping $what (pid $($p.ProcessId))" DarkGray
+    Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
+    $stopped++
+}
+
+# 2b. The headless core.
+$cores = Get-CimInstance Win32_Process |
+    Where-Object { $_.Name -like 'node*' -and $_.CommandLine -and $_.CommandLine -match $coreRegex }
+foreach ($p in $cores) {
+    Say "  stopping core (pid $($p.ProcessId))" DarkGray
     Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
     $stopped++
 }

@@ -29,6 +29,17 @@ BANDS = {
     r'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run': 'red',
     r'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon': 'red',
     r'HKLM\SOFTWARE\Microsoft\Windows Defender': 'red',
+
+    # Prefix matching must respect path boundaries. A bare startswith() made
+    # every key that merely began with the same letters Dex-owned, so
+    # HKCU\Software\DEXTERITY classified GREEN — written silently, and
+    # *created*, since GREEN is the one band allowed to create its own keys.
+    # Found by a conformance probe that picked a name starting with "Dex".
+    r'HKCU\Software\DEXTERITY': 'amber',
+    r'HKCU\Software\DEXConformance': 'amber',
+    r'HKCU\Control Panel\DesktopIcons': 'amber',
+    r'HKCU\Software\DEX': 'green',
+    r'HKCU\Software\DEX\Nested\Deeper': 'green',
 }
 
 RED_PATH = r'HKLM\SYSTEM\CurrentControlSet\Services\x'

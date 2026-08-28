@@ -56,10 +56,27 @@ if (-not $python) { throw 'python is not on PATH.' }
 $resolved = & $python -c "import sys; print(sys.executable)"
 if ($resolved) { $python = $resolved.Trim() }
 
+# pythonw.exe, not python.exe. python.exe is a console-subsystem binary, so
+# Windows gives it a console window -- an "Administrator: python.exe" terminal
+# sitting on the desktop for the life of the session. Setting Hidden on the task
+# does not reliably suppress it. pythonw is the GUI-subsystem build of the same
+# interpreter and allocates no console at all.
+#
+# The daemon logs to %LOCALAPPDATA%\DEX\daemon.log, which is the only output
+# once there is no console -- and DexDaemon._log_handlers skips its stream
+# handler when sys.stdout is None, which under pythonw it always is.
+$pythonw = Join-Path (Split-Path $python -Parent) 'pythonw.exe'
+if (Test-Path $pythonw) {
+    $python = $pythonw
+} else {
+    Write-Host 'pythonw.exe not found beside python.exe — the daemon will have a console window.' -ForegroundColor Yellow
+}
+
 $daemon = Join-Path (Get-Location) 'daemon\DexDaemon.py'
 if (-not (Test-Path $daemon)) { throw "Not found: $daemon" }
 
 Write-Host "Python : $python" -ForegroundColor DarkGray
+Write-Host 'Window : none (pythonw, hidden task)' -ForegroundColor DarkGray
 Write-Host "Daemon : $daemon" -ForegroundColor DarkGray
 
 # Stop anything already running, including strays from earlier dev sessions.
@@ -84,7 +101,7 @@ $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" 
 $settings = New-ScheduledTaskSettingsSet `
     -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) `
-    -MultipleInstances IgnoreNew
+    -MultipleInstances IgnoreNew -Hidden
 
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
     -Principal $principal -Settings $settings `

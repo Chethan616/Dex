@@ -47,6 +47,10 @@ RED_PATTERNS = [
 ]
 
 
+def _flag(name: str) -> bool:
+    return os.environ.get(name, '').strip().lower() == 'true'
+
+
 def classify_write(path):
     """
     Return (band, reason) for a registry path: 'green' | 'amber' | 'red'.
@@ -60,9 +64,15 @@ def classify_write(path):
         if re.search(pattern, normalised, re.IGNORECASE):
             return 'red', what
 
-    upper = normalised.upper()
+    upper = normalised.upper().rstrip('\\')
     for prefix in GREEN_PREFIXES:
-        if upper.startswith(prefix.upper()):
+        allowed = prefix.upper().rstrip('\\')
+        # The boundary matters. A bare startswith() made every key beginning
+        # with the same letters Dex-owned, so HKCU\Software\DEXTERITY matched
+        # HKCU\Software\DEX and was written silently -- and created, since
+        # GREEN is the band allowed to create its own keys. A prefix must end at
+        # a path separator or at the end of the path.
+        if upper == allowed or upper.startswith(allowed + '\\'):
             return 'green', 'Dex-owned or known-safe key'
 
     return 'amber', 'general application setting'
@@ -126,14 +136,19 @@ class RegistryHandler:
 
         band, reason = classify_write(path)
 
-        if band == 'red':
-            # Deliberately unconditional — Full Access does not reach this line.
+        if band == 'red' and not _flag('DEX_ALLOW_RED'):
+            # Full Access does not reach this line, and never sets DEX_ALLOW_RED.
+            # Turning off every prompt and unlocking the sharpest keys in Windows
+            # should not be the same gesture, so they are separate switches.
             raise PermissionError(
-                f'Refused: {path} controls {reason}. Dex never changes Windows '
-                'security or policy settings, including in Full Access mode.'
+                f'Refused: {path} controls {reason}. This is the RED band — '
+                'Group Policy, services, Winlogon, LSA, Defender, autostart and '
+                'UAC. Set DEX_ALLOW_RED=true to make it possible; even then the '
+                'core forces a confirmation card, and Full Access does not '
+                'bypass it.'
             )
 
-        full_access = os.environ.get('DEX_FULL_ACCESS', '').lower() == 'true'
+        full_access = _flag('DEX_FULL_ACCESS') or _flag('FULL_ACCESS')
         if band == 'amber' and not full_access:
             # The Brain marks these Tier 2 so the owner sees a card first. One
             # arriving here unconfirmed means the confirmation was skipped.
@@ -151,8 +166,18 @@ class RegistryHandler:
         # tree it unambiguously owns. It is not allowed to invent new keys
         # inside somebody else's tree, so AMBER still has to find what it edits.
         opener = winreg.CreateKeyEx if band == 'green' else winreg.OpenKey
-        with opener(hive, subkey, 0, winreg.KEY_WRITE) as key:
-            winreg.SetValueEx(key, name, 0, reg_type, value)
+        try:
+            with opener(hive, subkey, 0, winreg.KEY_WRITE) as key:
+                winreg.SetValueEx(key, name, 0, reg_type, value)
+        except FileNotFoundError:
+            # Only GREEN creates what is missing. Anywhere else, a key that does
+            # not exist is the answer -- and saying so beats the raw
+            # "[WinError 2] The system cannot find the file specified", which
+            # reads like a missing program rather than a missing key.
+            raise ValueError(
+                f'Key does not exist: {path}. Dex creates keys only under its '
+                'own tree; elsewhere it edits what is already there.'
+            ) from None
 
         log.info('Registry write [%s]: %s\\%s = %r', band, path, name, value)
 

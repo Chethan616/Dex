@@ -13,7 +13,16 @@ export class Orchestrator {
   constructor(
     private registry: AgentRegistry,
     private reliability: ReliabilityLayer,
-    private fullAccess: boolean = false,
+    /**
+     * Boolean, or a function evaluated per step.
+     *
+     * A function, because Full Access is not a fact about the config — it is a
+     * fact about the daemon. Configured-on but not actually elevated used to be
+     * the worst state available: confirmations skipped for actions that then
+     * failed at the daemon anyway. `src/main.ts` passes a getter that reports
+     * on only once the daemon has said `elevated: true`.
+     */
+    private fullAccess: boolean | (() => boolean) = false,
     private confirmations: ConfirmationManager = new ConfirmationManager(),
     private cancellation: CancellationRegistry = new CancellationRegistry(),
     /** Records what each step actually did, for the usage history. */
@@ -270,14 +279,62 @@ export class Orchestrator {
     };
   }
 
+  private hasFullAccess(): boolean {
+    return typeof this.fullAccess === 'function' ? this.fullAccess() : this.fullAccess;
+  }
+
   /**
-   * Tier 4 runs silently. Tier 1–3 need the owner unless Full Access is on, in
-   * which case the daemon already runs as LocalSystem and no prompt is possible.
+   * The consequence of a RED registry path, or null if this step is not one.
+   *
+   * Asks the daemon's own classifier rather than reimplementing the pattern
+   * list here — one policy, in one place, and the daemon enforces it again
+   * independently when the write arrives. Two gates, because untrusted content
+   * reaches the planner: a web page Dex reads can propose steps, and these are
+   * the keys it would aim for. A gate outside the process the model talks to is
+   * the one that cannot be argued past.
+   *
+   * Classification failure is treated as RED. Not knowing whether a key is
+   * dangerous is not a reason to assume it is safe.
+   */
+  private async redBandReason(
+    step: ExecutionStep,
+    requestId: string,
+  ): Promise<string | null> {
+    if (step.action !== 'registry_write') return null;
+    const path = String((step.params as { path?: unknown }).path ?? '');
+    if (!path) return null;
+
+    const agent = this.registry.resolve('can_control_os');
+    if (!agent) return null;
+
+    try {
+      const verdict = await agent.execute(
+        'registry_classify', { path }, requestId, step.id,
+      );
+      const data = verdict.data as { band?: string; reason?: string } | undefined;
+      if (!verdict.success) return 'could not be classified';
+      return data?.band === 'red' ? (data.reason ?? 'a Windows security setting') : null;
+    } catch {
+      return 'could not be classified';
+    }
+  }
+
+  /**
+   * Tier 4 runs silently. Tier 1–3 need the owner unless Full Access is on —
+   * which means the daemon is running elevated in the owner's session, so a
+   * prompt would be asking permission the owner already granted.
+   *
+   * RED registry paths are the exception and always ask. See `redBandReason`.
    */
   private async gateStep(step: ExecutionStep, requestId: string): Promise<StepOutcome> {
-    if (step.confirmationTier >= 4) return 'ok';
+    // RED registry paths are decided here, before anything else, because this
+    // is the one class of step whose tier the planner is not allowed to choose
+    // and Full Access is not allowed to skip.
+    const red = await this.redBandReason(step, requestId);
 
-    if (this.fullAccess) {
+    if (!red && step.confirmationTier >= 4) return 'ok';
+
+    if (!red && this.hasFullAccess()) {
       emit(
         'executing',
         `[Full Access] Bypassing Tier ${step.confirmationTier} confirmation`,
@@ -287,7 +344,20 @@ export class Orchestrator {
       return 'ok';
     }
 
-    const verdict = await this.confirmations.request(step, requestId);
+    if (red) {
+      emit(
+        'awaiting',
+        `${step.action} touches a RED registry key — ${red}. ` +
+          'This always asks, even with Full Access on.',
+        requestId,
+        step.id,
+      );
+    }
+
+    const verdict = await this.confirmations.request(
+      red ? { ...step, confirmationTier: 2 } : step,
+      requestId,
+    );
 
     if (verdict === 'approved') return 'ok';
 

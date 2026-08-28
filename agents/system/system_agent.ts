@@ -15,6 +15,16 @@ const NEEDS_ELEVATION = ['set_dns', 'set_wifi', 'set_power_plan', 'registry_writ
  */
 const NEEDS_DESKTOP_SESSION = ['set_volume', 'set_mute', 'launch_app', 'close_app'];
 
+/** What `describe` returns. Mirrors `_describe` in daemon/DexDaemon.py. */
+export interface DaemonDescription {
+  actions?: string[];
+  version?: string;
+  elevated?: boolean;
+  session_id?: number | null;
+  full_access?: boolean;
+  allow_red?: boolean;
+}
+
 interface DaemonResponse {
   id: string;
   success: boolean;
@@ -27,6 +37,21 @@ export class SystemAgent implements Agent {
   capabilities = ['can_control_os'];
 
   private driftChecked = false;
+  private described: Promise<DaemonDescription | null> | null = null;
+
+  /**
+   * What the daemon says it is: actions, elevation, session, mode.
+   *
+   * Cached, because two callers want it at startup — the drift check and the
+   * Full Access report — and asking twice would mean they could disagree.
+   */
+  describe(): Promise<DaemonDescription | null> {
+    this.described ??= this.execute('describe', {}, 'startup', 'describe').then(
+      (result) => (result.success ? (result.data as DaemonDescription) : null),
+      () => null,
+    );
+    return this.described;
+  }
 
   /**
    * Ask the daemon what it can do, and compare with what the Brain is told it
@@ -46,17 +71,11 @@ export class SystemAgent implements Agent {
     if (this.driftChecked) return { ok: true, missing: [] };
     this.driftChecked = true;
 
-    const result = await this.execute('describe', {}, 'startup', 'drift_check');
-    if (!result.success) {
+    const described = await this.describe();
+    if (!described) {
       // Daemon down is a separate, already-reported problem.
       return { ok: true, missing: [] };
     }
-
-    const described = result.data as {
-      actions?: string[];
-      elevated?: boolean;
-      session_id?: number | null;
-    };
 
     this.reportPrivilege(described);
 
@@ -93,10 +112,7 @@ export class SystemAgent implements Agent {
    *                  appears on a desktop nobody can see. Elevated and useless
    *                  for half the actions is the confusing case worth naming.
    */
-  private reportPrivilege(described: {
-    elevated?: boolean;
-    session_id?: number | null;
-  }): void {
+  private reportPrivilege(described: DaemonDescription): void {
     if (described?.elevated === false) {
       emit(
         'failed',

@@ -12,15 +12,16 @@ from pathlib import Path
 
 # Make sibling modules importable
 sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))   # agents/dex_logging.py
 
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent.parent / '.env')
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(name)s — %(message)s',
-)
-log = logging.getLogger('DesktopServer')
+from dex_logging import configure as _configure_logging
+
+# No console under pythonw, so the default stderr handler would raise on
+# startup and the file is the only output. See agents/dex_logging.py.
+log = _configure_logging('desktop')
 
 import anthropic
 from fastapi import FastAPI

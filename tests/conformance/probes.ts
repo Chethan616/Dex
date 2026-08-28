@@ -284,34 +284,69 @@ export const PROBES: Record<string, Probe> = {
 
   registry_write: {
     tier: 'roundtrip',
-    proves: 'a GREEN-band write lands and reads back, and an AMBER one is refused unconfirmed',
+    proves: 'the three write bands behave as documented, in whichever mode is on',
     async run(ctx) {
-      const path = 'HKCU\\Software\\DEX';
-      const value = 'conformance-probe';
-      const data = await ctx.call('registry_write', {
-        path,
-        name: 'ConformanceProbe',
-        value,
-      });
-      assert(data.band === 'green', `expected green band, got ${data.band}`);
-      assert(data.verified, `write did not read back: ${data.read_back}`);
+      const mode = await ctx.call('describe');
 
-      // The band policy is the point of the feature, so prove the other half.
+      // GREEN — Dex's own tree. Writes, creates the key if absent, reads back.
+      const green = await ctx.call('registry_write', {
+        path: 'HKCU\\Software\\DEX',
+        name: 'ConformanceProbe',
+        value: 'conformance-probe',
+      });
+      assert(green.band === 'green', `expected green band, got ${green.band}`);
+      assert(green.verified, `write did not read back: ${green.read_back}`);
+
+      // AMBER — asserted by *which* error comes back, not merely that one does.
+      //
+      // The previous version asserted only that the write failed, and passed
+      // because the key did not exist rather than because policy refused it.
+      // Once Full Access turned on and amber became allowed, the assertion was
+      // checking nothing at all. Distinguishing the two errors is the whole
+      // point, and it needs no real third-party key to be touched.
       const amber = await ctx.attempt('registry_write', {
-        path: 'HKCU\\Software\\SomeVendor',
+        path: 'HKCU\\Software\\DexConformanceNoSuchVendor',
         name: 'x',
         value: 'y',
       });
-      assert(!amber.success, 'an AMBER write went through without confirmation');
+      assert(!amber.success, 'an AMBER write to a non-existent key should not succeed');
 
+      if (mode.full_access) {
+        assert(
+          /does not exist/i.test(amber.error ?? ''),
+          `Full Access is on, so AMBER should be permitted and fail only on the ` +
+            `missing key. Got: ${amber.error}`,
+        );
+      } else {
+        assert(
+          /confirmation|Tier 2/i.test(amber.error ?? ''),
+          `Full Access is off, so AMBER should be refused pending confirmation. ` +
+            `Got: ${amber.error}`,
+        );
+      }
+
+      // RED — refused unless separately opted in, whatever Full Access says.
       const red = await ctx.attempt('registry_write', {
         path: 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
         name: 'x',
         value: 'y',
       });
-      assert(!red.success, 'a RED write was not refused');
+      if (mode.allow_red) {
+        // Opted in: the daemon permits it, and the core forces a confirmation
+        // card. Nothing here should reach the key silently.
+        ctx.note('RED unlocked — the core gate is what asks');
+      } else {
+        assert(!red.success, 'a RED write was not refused');
+        assert(
+          /DEX_ALLOW_RED/.test(red.error ?? ''),
+          `the refusal should say how to enable it. Got: ${red.error}`,
+        );
+      }
 
-      ctx.note(`${path}\\ConformanceProbe left in place (Dex-owned key)`);
+      ctx.note(
+        `green ok · amber ${mode.full_access ? 'permitted' : 'refused'} · ` +
+          `red ${mode.allow_red ? 'unlocked' : 'refused'}`,
+      );
     },
   },
 

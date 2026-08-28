@@ -20,7 +20,8 @@
     "test:boot": "ts-node tests/smoke_boot.ts",
     "conformance": "ts-node tests/conformance/run.ts",
     "test:daemon": "python tests/test_daemon_proc.py",
-    "test:scripts": "powershell -NoProfile -ExecutionPolicy Bypass -File tests/check_scripts.ps1"
+    "test:scripts": "powershell -NoProfile -ExecutionPolicy Bypass -File tests/check_scripts.ps1",
+    "test:full-access": "ts-node tests/smoke_full_access.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",

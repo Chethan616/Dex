@@ -30,8 +30,18 @@ def _log_handlers() -> list:
     dies silently and the only symptom anywhere is "Daemon not running" from a
     client that cannot see why. A background process with no log is a process
     you cannot debug.
+
+    **The stdout check is load-bearing.** The daemon runs under `pythonw.exe` so
+    that it has no console window, and pythonw sets `sys.stdout` to None.
+    `logging.StreamHandler(None)` falls back to stderr, which is also None, and
+    raises while this module is still being imported — a daemon that dies before
+    it can write the log that would have explained why. The file handler exists
+    precisely so there is somewhere to look when there is no console, so it must
+    not depend on there being one.
     """
-    handlers = [logging.StreamHandler(sys.stdout)]
+    handlers: list = []
+    if sys.stdout is not None:
+        handlers.append(logging.StreamHandler(sys.stdout))
 
     base = os.environ.get('LOCALAPPDATA') or str(Path.home() / 'AppData' / 'Local')
     log_dir = Path(base) / 'DEX'
@@ -130,7 +140,19 @@ def _privilege() -> dict:
     except Exception:  # noqa: BLE001 - a daemon that cannot introspect still serves
         pass
 
-    return {'elevated': elevated, 'session_id': session}
+    return {
+        'elevated': elevated,
+        'session_id': session,
+        # What this daemon will actually do, so one call answers "what mode am
+        # I in" instead of the core inferring it from its own config and being
+        # wrong whenever the two disagree.
+        'full_access': _flag('DEX_FULL_ACCESS') or _flag('FULL_ACCESS'),
+        'allow_red': _flag('DEX_ALLOW_RED'),
+    }
+
+
+def _flag(name: str) -> bool:
+    return os.environ.get(name, '').strip().lower() == 'true'
 
 
 DISPATCH['describe'] = _describe

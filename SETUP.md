@@ -53,21 +53,28 @@ Dex needs one LLM for planning. **Groq is the cheapest place to start** — see
 npm run cred -- set groq_api_key      # paste when prompted; input is hidden
 ```
 
-Then, in three terminals:
+Then start everything:
 
 ```powershell
-python daemon/DexDaemon.py            # 1. OS control (named pipe)
-python agents/app/server.py           # 2. UI Automation tier  (127.0.0.1:8767)
-npm run dev                           # 3. the core + CLI
+.\scripts\run-dev.ps1              # windowless — Alt+Space for the Dex Bar
+.\scripts\run-dev.ps1 -Console     # windows and the dex> prompt, for development
+.\scripts\stop-dex.ps1             # stop it all
+```
+
+Use `stop-dex.ps1` rather than closing windows — see §8 for why that matters
+more than it sounds.
+
+While developing, the pieces run individually too:
+
+```powershell
+python daemon/DexDaemon.py            # OS control (named pipe)
+python agents/app/server.py           # UI Automation tier  (127.0.0.1:8767)
+npm run dev                           # the core + CLI
 ```
 
 ```
 dex> what is my current dns
 ```
-
-`scripts/run-dev.ps1` starts all of it in one command once you are past the
-first run. `scripts/stop-dex.ps1` stops it — use it rather than closing windows,
-and see §8 for why.
 
 **Then prove it actually works**, before trusting anything:
 
@@ -392,11 +399,29 @@ It stops the task, kills what it can see, then **probes the pipe** — an
 unelevated shell cannot read an elevated process's command line, so a process
 list is not evidence. It exits non-zero if anything still answers.
 
+### Nothing on screen
+
+Everything runs windowless. The daemon and the three agent servers run under
+`pythonw.exe` — the GUI-subsystem build of the same interpreter, which
+allocates no console — and the core runs headless. The Flutter Dex Bar on
+`Alt+Space` is the only thing you see.
+
+```powershell
+.\scripts\run-dev.ps1              # windowless; Alt+Space for the bar
+.\scripts\run-dev.ps1 -Console     # windows back, plus the dex> prompt
+```
+
+`pythonw` sets **both `sys.stdout` and `sys.stderr` to None**, so the default
+`logging.StreamHandler` raises during startup — a process that dies before it
+can log why, with no console to show the traceback. Both
+`daemon/DexDaemon.py` and `agents/dex_logging.py` add a stream handler only
+when there is a stream. Anything new that runs this way must do the same.
+
 ### Where it logs
 
-`%LOCALAPPDATA%\DEX\daemon.log`. Started by the logon task the daemon has no
-console, so without this a startup failure is invisible and the only symptom
-anywhere is a client saying "Daemon not running".
+`%LOCALAPPDATA%\DEX\` — `daemon.log`, `app.log`, `browser.log`, `desktop.log`,
+`core.log`. With no console these files are the only output there is, which is
+why the logging went in before the windows came off.
 
 ### The pipe's DACL
 
@@ -407,14 +432,55 @@ pipe created by an elevated process with the default DACL does **not** admit the
 same user's ordinary processes, so the unelevated core could not talk to its own
 elevated daemon.
 
+### It is only on when it is real
+
+Full Access is on when it is *configured* **and** the daemon reports
+`elevated: true`. Configured-but-not-elevated — a removed task, a committed
+`FULL_ACCESS=true`, a task that failed to start — used to be the worst state
+available: confirmations skipped for privileged actions that then failed at the
+daemon anyway. It now downgrades to cards and says so:
+
+```
+[Full Access] ON   elevated, session 1, confirmations bypassed, RED locked
+[Full Access] OFF  configured, but the daemon is not elevated — using cards
+```
+
+`DEX_FULL_ACCESS` is the name. `FULL_ACCESS` is still read so an existing `.env`
+keeps working.
+
+### The RED band, and how to reach it
+
+RED — Group Policy, `\Services\`, Winlogon, LSA, Defender, `\Run`, IFEO, UAC —
+is refused by default. To make it possible:
+
+```powershell
+[Environment]::SetEnvironmentVariable('DEX_ALLOW_RED','true','User')
+```
+
+Set by hand, never by the installer: turning off every prompt and unlocking the
+sharpest keys in Windows should not be the same gesture. Even then it is never
+silent — **two independent gates**:
+
+1. The Orchestrator classifies every `registry_write` through the daemon's
+   `registry_classify` *before* gating it, and forces a RED path to Tier 2
+   whatever tier the planner assigned and whatever Full Access says. A card
+   always appears, naming what the key controls.
+2. The daemon refuses RED anyway unless `DEX_ALLOW_RED=true`, so a core that has
+   been bypassed entirely still cannot reach these keys.
+
+Two gates because untrusted content reaches the planner. A web page or email
+Dex reads can propose steps, and RED is where that would aim; a gate outside the
+process the model talks to is the one that cannot be argued past.
+
 **Full Access grants elevation, not permission.** Two things it deliberately does
 *not* do:
 
-- **Registry RED-band keys stay refused.** Group Policy, `\Services\`, Winlogon,
-  LSA, Defender, `\Run`, IFEO, UAC. "Never change Windows security settings" is a
-  separate rule from "stop asking for admin", and collapsing the two turns a
-  convenience toggle into a security bypass. There is a test asserting the
-  refusal fires with `FULL_ACCESS=true`.
+- **Registry RED-band keys are never silent.** Refused outright by default, and
+  even with `DEX_ALLOW_RED=true` they always raise a card. "Never change Windows
+  security settings without asking" is a separate rule from "stop asking for
+  admin", and collapsing the two turns a convenience toggle into a security
+  bypass. `npm run test:full-access` asserts the card appears with Full Access
+  on and the step marked Tier 4.
 - **Tier 1 hand-offs still happen.** No amount of privilege lets Dex read a
   CAPTCHA or a password.
 
@@ -473,6 +539,7 @@ npm run test:memory       # references, sessions, semantic cache
 npm run test:boot         # the core actually starts
 npm run test:daemon       # subprocess failure detection, single-instance
 npm run test:scripts      # every .ps1 parses and is encoded so it will
+npm run test:full-access  # downgrade, RED always asks, hand-offs survive
 npm run test:e2e          # drives a real Windows app (needs daemon + app server)
 
 npm run conformance       # every advertised action, against the real daemon

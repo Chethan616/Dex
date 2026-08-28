@@ -14,7 +14,7 @@ import { DexServer } from '../core/server/ws_server';
 import { Telemetry } from '../core/memory/telemetry';
 import { WorkflowStore } from '../core/workflows/store';
 import { quietSqliteWarning } from '../core/memory/db';
-import { SystemAgent } from '../agents/system/system_agent';
+import { DaemonDescription, SystemAgent } from '../agents/system/system_agent';
 import { DesktopAgent } from '../agents/desktop/desktop_agent';
 import { AppAgent } from '../agents/app/app_agent';
 import { BrowserAgent } from '../agents/browser/browser_agent';
@@ -66,15 +66,14 @@ function main(): void {
   }
   console.log(`[90m[brain][0m ${brain.model}`);
 
-  const fullAccess = process.env.FULL_ACCESS === 'true';
-  if (fullAccess) {
-    // Not LocalSystem. A service in session 0 cannot reach the owner's audio
-    // endpoint or desktop, so Full Access runs the daemon elevated *in this
-    // session* — see scripts/install-daemon-service.ps1.
-    console.log(
-      '\x1b[32m[Full Access]\x1b[0m Daemon runs elevated in your session — no admin prompts.',
-    );
-  }
+  // DEX_FULL_ACCESS is the name; FULL_ACCESS is still read so an existing .env
+  // keeps working. One idea had two names, which is one too many.
+  const fullAccessConfigured =
+    process.env.DEX_FULL_ACCESS === 'true' || process.env.FULL_ACCESS === 'true';
+
+  // Configured is not the same as real. Full Access turns on only once the
+  // daemon says it is actually elevated — see reportAccess below.
+  let fullAccessEffective = false;
 
   const evidenceStore = new EvidenceStore('data/evidence');
   const reliability = new ReliabilityLayer(evidenceStore);
@@ -101,7 +100,8 @@ function main(): void {
   const telemetry = new Telemetry();
 
   const orchestrator = new Orchestrator(
-    registry, reliability, fullAccess, confirmations, cancellation, telemetry,
+    registry, reliability, () => fullAccessEffective,
+    confirmations, cancellation, telemetry,
   );
   const credentials = new CredentialStore();
 
@@ -119,7 +119,9 @@ function main(): void {
   if (process.env.DEX_UI_SERVER !== 'false') {
     const server = new DexServer(gateway, confirmations, cancellation, {
       port: parseInt(process.env.DEX_UI_PORT ?? '8770', 10),
-      fullAccess,
+      get fullAccess() {
+        return fullAccessEffective;
+      },
       evidenceDir: 'data/evidence',
     });
     server.start();
@@ -129,6 +131,15 @@ function main(): void {
   // plan. Fire-and-forget: it must not delay the prompt, and a daemon that is
   // simply not running is a separate, already-reported condition.
   void systemAgent.checkForDrift().catch(() => undefined);
+
+  // ...and whether Full Access is real, which only the daemon can answer.
+  void systemAgent
+    .describe()
+    .then((daemon) => {
+      fullAccessEffective = fullAccessConfigured && daemon?.elevated === true;
+      reportAccess(fullAccessConfigured, fullAccessEffective, daemon);
+    })
+    .catch(() => undefined);
 
   // MCP servers are child processes. Without this they outlive the core and
   // pile up one orphan per restart.
@@ -147,10 +158,51 @@ ${signal} — closing workspace servers…`);
 
   void startChannels(gateway, ownerGate, confirmations, credentials);
 
+  // Headless: no console, so no CLI. `startCli` builds a readline over stdin,
+  // and with no console stdin is already closed — `close` fires at once and the
+  // prompt ends before it starts. The Dex Bar is the interface; the WebSocket
+  // server is what keeps the process alive.
+  if (process.env.DEX_HEADLESS === 'true') {
+    console.log('[headless] no console — the Dex Bar is the interface.');
+    return;
+  }
+
   startCli(gateway, confirmations).catch((err) => {
     console.error('Fatal:', err);
     process.exit(1);
   });
+}
+
+/**
+ * Say what Full Access is actually doing, once, in one line.
+ *
+ * Configured-but-not-elevated was previously invisible, and it is the worst
+ * state available: confirmations skipped for privileged actions that then fail
+ * at the daemon anyway. It now downgrades to cards and says why.
+ */
+function reportAccess(
+  configured: boolean,
+  effective: boolean,
+  daemon: DaemonDescription | null,
+): void {
+  if (!configured) return;
+
+  if (effective) {
+    const red = daemon?.allow_red ? 'RED unlocked (always confirmed)' : 'RED locked';
+    console.log(
+      `[32m[Full Access] ON[0m  elevated, session ${daemon?.session_id}, ` +
+        `confirmations bypassed, ${red}`,
+    );
+    return;
+  }
+
+  console.log(
+    '[33m[Full Access] OFF[0m  configured, but the daemon is not ' +
+      'elevated — using confirmation cards.',
+  );
+  console.log(
+    '                       Fix it once:  .\scripts\install-daemon-service.ps1',
+  );
 }
 
 main();

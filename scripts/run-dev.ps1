@@ -10,6 +10,10 @@ Launches: daemon (requires elevation) + Desktop Agent server + Browser Agent ser
 .PARAMETER NoBrowser       Skip the Browser Agent server (no web tasks)
 .PARAMETER NoApp           Skip the App Agent server (no UI Automation tier)
 .PARAMETER NoUi            Skip the Flutter Dex Bar (CLI only)
+.PARAMETER Console         Show every process in its own window and keep the
+                           dex> prompt. Default is windowless: the Dex Bar is
+                           the only thing on screen and everything logs to
+                           %LOCALAPPDATA%\DEX\*.log.
 #>
 param(
     [switch]$DaemonOnly,
@@ -17,7 +21,8 @@ param(
     [switch]$NoDesktop,
     [switch]$NoBrowser,
     [switch]$NoApp,
-    [switch]$NoUi
+    [switch]$NoUi,
+    [switch]$Console
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,6 +36,20 @@ if (-not (Test-Path '.env')) {
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
     [Security.Principal.WindowsBuiltInRole]::Administrator
 )
+
+# Windowless by default. python.exe is a console-subsystem binary, so each
+# server used to put a terminal on the desktop; pythonw is the same interpreter
+# built for the GUI subsystem and allocates no console at all. Their output goes
+# to %LOCALAPPDATA%\DEX\*.log, which is why that logging went in first — with
+# no window, the file is the only place left to look.
+$py = if ($Console) { 'python' } else { 'pythonw' }
+$style = if ($Console) { 'Minimized' } else { 'Hidden' }
+
+if (-not $Console) {
+    Write-Host 'Windowless. Logs: ' -NoNewline -ForegroundColor DarkGray
+    Write-Host "$env:LOCALAPPDATA\DEX\*.log" -ForegroundColor DarkGray
+    Write-Host 'Use -Console for windows and the dex> prompt.' -ForegroundColor DarkGray
+}
 
 if (-not $CoreOnly) {
     # Clear strays before starting anything.
@@ -52,7 +71,7 @@ if (-not $CoreOnly) {
         Start-Sleep -Seconds 2
     } else {
         Write-Host 'Starting DEX Daemon (standalone)...' -ForegroundColor Cyan
-        $daemon = Start-Process python -ArgumentList 'daemon/DexDaemon.py' -PassThru -WindowStyle Minimized
+        $daemon = Start-Process $py -ArgumentList 'daemon/DexDaemon.py' -PassThru -WindowStyle $style
         Write-Host "Daemon PID: $($daemon.Id)" -ForegroundColor DarkGray
         Start-Sleep -Milliseconds 800
 
@@ -68,21 +87,21 @@ if (-not $CoreOnly) {
 
 if (-not $CoreOnly -and -not $NoDesktop) {
     Write-Host 'Starting Desktop Agent Server...' -ForegroundColor Cyan
-    $desktop = Start-Process python -ArgumentList 'agents/desktop/server.py' -PassThru -WindowStyle Minimized
+    $desktop = Start-Process $py -ArgumentList 'agents/desktop/server.py' -PassThru -WindowStyle $style
     Write-Host "Desktop Agent PID: $($desktop.Id)" -ForegroundColor DarkGray
     Start-Sleep -Milliseconds 1000
 }
 
 if (-not $CoreOnly -and -not $NoApp) {
     Write-Host 'Starting App Agent Server (UI Automation)...' -ForegroundColor Cyan
-    $appAgent = Start-Process python -ArgumentList 'agents/app/server.py' -PassThru -WindowStyle Minimized
+    $appAgent = Start-Process $py -ArgumentList 'agents/app/server.py' -PassThru -WindowStyle $style
     Write-Host "App Agent PID: $($appAgent.Id)" -ForegroundColor DarkGray
     Start-Sleep -Milliseconds 800
 }
 
 if (-not $CoreOnly -and -not $NoBrowser) {
     Write-Host 'Starting Browser Agent Server...' -ForegroundColor Cyan
-    $browser = Start-Process python -ArgumentList 'agents/browser/server.py' -PassThru -WindowStyle Minimized
+    $browser = Start-Process $py -ArgumentList 'agents/browser/server.py' -PassThru -WindowStyle $style
     Write-Host "Browser Agent PID: $($browser.Id)" -ForegroundColor DarkGray
     Start-Sleep -Milliseconds 1000
 }
@@ -105,6 +124,23 @@ if (-not $DaemonOnly -and -not $NoUi) {
 }
 
 if (-not $DaemonOnly) {
-    Write-Host 'Starting DEX Core (CLI + UI server)...' -ForegroundColor Cyan
-    npx ts-node src/main.ts
+    if ($Console) {
+        Write-Host 'Starting DEX Core (CLI + UI server)...' -ForegroundColor Cyan
+        npx ts-node src/main.ts
+    } else {
+        # Headless: no console, so no dex> prompt. main.ts skips startCli, which
+        # would otherwise build a readline over a stdin that is already closed
+        # and end the moment it began. The Dex Bar is the interface.
+        Write-Host 'Starting DEX Core (headless — Alt+Space for the bar)...' -ForegroundColor Cyan
+        $env:DEX_HEADLESS = 'true'
+        $core = Start-Process node `
+            -ArgumentList '-r', 'ts-node/register', 'src/main.ts' `
+            -PassThru -WindowStyle Hidden `
+            -RedirectStandardOutput "$env:LOCALAPPDATA\DEX\core.log" `
+            -RedirectStandardError  "$env:LOCALAPPDATA\DEX\core.err.log"
+        Write-Host "Core PID: $($core.Id)" -ForegroundColor DarkGray
+        Write-Host ''
+        Write-Host 'Dex is running. Alt+Space for the bar.' -ForegroundColor Green
+        Write-Host 'Stop everything with: .\scripts\stop-dex.ps1' -ForegroundColor DarkGray
+    }
 }

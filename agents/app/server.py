@@ -27,12 +27,13 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))   # agents/dex_logging.py
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(name)s - %(message)s',
-)
-log = logging.getLogger('AppServer')
+from dex_logging import configure as _configure_logging
+
+# No console under pythonw, so the default stderr handler would raise on
+# startup and the file is the only output. See agents/dex_logging.py.
+log = _configure_logging('app')
 
 import uvicorn
 from fastapi import FastAPI
