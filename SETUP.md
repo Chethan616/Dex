@@ -66,7 +66,21 @@ dex> what is my current dns
 ```
 
 `scripts/run-dev.ps1` starts all of it in one command once you are past the
-first run.
+first run. `scripts/stop-dex.ps1` stops it — use it rather than closing windows,
+and see §8 for why.
+
+**Then prove it actually works**, before trusting anything:
+
+```powershell
+npm run conformance
+```
+
+This drives every advertised OS action against the real daemon and reports what
+works. Un-elevated you should see 15 pass and `set_dns` failing with *"requires
+elevation"* — that is the correct answer, not a broken install. §8 fixes it.
+
+Do not skip this step. Until it existed, fourteen of the seventeen actions Dex
+advertises had never once been executed, and the documentation said they worked.
 
 ---
 
@@ -361,6 +375,38 @@ and `launch_app` is not a fix. A scheduled task with `RunLevel Highest` gives
 elevation *and* your session. The daemon reports both facts through `describe`,
 and the core warns at startup if either is wrong.
 
+### Only one daemon, ever
+
+The daemon claims its pipe with `FILE_FLAG_FIRST_PIPE_INSTANCE`, so a second one
+cannot start — it exits 1 saying so. This is not tidiness. A named pipe accepts
+many *server* instances under one name, so before this a second daemon simply
+joined the rota and Windows handed each connection to whichever was free. Seven
+had accumulated from previous `run-dev.ps1` runs, several executing weeks-old
+handler code, and the same command worked or did not depending on who answered.
+
+```powershell
+.\scripts\stop-dex.ps1     # stops the logon task and any hand-started daemon
+```
+
+It stops the task, kills what it can see, then **probes the pipe** — an
+unelevated shell cannot read an elevated process's command line, so a process
+list is not evidence. It exits non-zero if anything still answers.
+
+### Where it logs
+
+`%LOCALAPPDATA%\DEX\daemon.log`. Started by the logon task the daemon has no
+console, so without this a startup failure is invisible and the only symptom
+anywhere is a client saying "Daemon not running".
+
+### The pipe's DACL
+
+The pipe grants your SID, SYSTEM and Administrators, and nothing else. Anything
+that can open it can ask the daemon to change DNS or write the registry, so this
+is a security boundary — but it is also load-bearing for a different reason: a
+pipe created by an elevated process with the default DACL does **not** admit the
+same user's ordinary processes, so the unelevated core could not talk to its own
+elevated daemon.
+
 **Full Access grants elevation, not permission.** Two things it deliberately does
 *not* do:
 
@@ -423,7 +469,13 @@ npm run test:workflows    # saved workflows + usage history
 npm run test:slice45      # execution tiers, registry bands, escalation
 npm run test:slice4       # browser hand-offs, MCP, credential store
 npm run test:ws           # WebSocket protocol, stale-approval guard
+npm run test:memory       # references, sessions, semantic cache
+npm run test:boot         # the core actually starts
+npm run test:daemon       # subprocess failure detection, single-instance
+npm run test:scripts      # every .ps1 parses and is encoded so it will
 npm run test:e2e          # drives a real Windows app (needs daemon + app server)
+
+npm run conformance       # every advertised action, against the real daemon
 
 cd ui\dex-bar; flutter analyze; flutter test
 ```
@@ -431,11 +483,47 @@ cd ui\dex-bar; flutter analyze; flutter test
 None of these need an API key. `test:e2e` needs the daemon and app server
 running; it brings its own WinForms window and closes it afterwards.
 
-**On writing tests here:** always set `DEX_DB` to a temp path before importing
-anything. Tests share the real database otherwise — a workflow saved during
-development once hijacked six confirmation-tier tests by matching their requests
-and replaying instead of planning, silently removing the tiers those tests exist
-to verify.
+### The conformance harness
+
+`npm run conformance` is the one that answers "does this actually work". It
+walks `OS_ACTION_NAMES` from `core/brain/capabilities.ts` — the list the Brain
+itself is shown — and drives each action against the real daemon over the real
+pipe, confirming through the same `verifyStep` the Orchestrator uses. Each probe
+reads current state first and restores it after.
+
+**An advertised action with no probe fails the run.** Add an action to
+`capabilities.ts` and you must add a probe in `tests/conformance/probes.ts`, or
+the build stops. That rule exists because fourteen actions reached production
+having never been executed once; fixing them individually would have left the
+fifteenth in the same state.
+
+Tiers, and how to ask for them:
+
+```powershell
+npm run conformance                              # read-only + round-trip
+npm run conformance -- --destructive             # adds kill_process
+npm run conformance -- --destructive --allow-network-drop   # adds set_wifi
+```
+
+`set_wifi` needs its own flag on top of `--destructive` because it is the only
+probe that can cut you off from the machine it is running on. Do not pass it on
+a machine you care about or are connected to remotely.
+
+### On writing tests here
+
+Make `import './support/isolate';` the **first** import of every test. It points
+`DEX_DB` at a temp file and sets `DEX_TEST`, and `core/memory/db.ts` now throws
+if a test opens the real database.
+
+This is not hygiene. Eight of eleven test files wrote to `data/dex.db`, and the
+result was two `set_dns` tasks recorded as COMPLETED — written by a suite running
+against a mocked agent, for an action that had never reached the daemon. Reading
+the history to find out what worked, which is the obvious thing to do and the
+thing that eventually found the bug, gave a confident wrong answer for weeks.
+(A workflow saved during development had separately hijacked six
+confirmation-tier tests by matching their requests and replaying instead of
+planning.) Run `npx ts-node scripts/prune-test-rows.ts` if you find fixtures in
+your real history.
 
 Anything that drives a GUI must **bring its own window**. An early version of the
 e2e test targeted "Notepad"; Windows 11 Notepad uses tabs, so launching it joins
@@ -453,10 +541,20 @@ core/        brain (planning) · orchestrator (execution) · reliability (verifi
              confirmation · workflows · memory · secrets · server (WebSocket)
 agents/      system (daemon IPC) · app (UI Automation) · browser · workspace (MCP) · desktop (vision)
 channels/    cli · telegram · discord · whatsapp · base_channel (shared logic)
-daemon/      elevated Python service + typed handlers
-ui/dex-bar/  Flutter Windows overlay
-tests/       one suite per slice
+daemon/      elevated Python daemon + typed handlers (_proc.py is the shell boundary)
+ui/dex-bar/  Flutter Windows overlay — theme/ tokens, widgets/primitives/
+scripts/     run-dev · stop-dex · install/uninstall-daemon-service · prune-test-rows
+tests/       one suite per slice, plus conformance/ (every action, for real)
 ```
+
+Two files carry more weight than their size suggests:
+
+- `core/brain/capabilities.ts` — the single list of what Dex can be asked to do.
+  The planner's prompt is generated from it, the daemon is checked against it at
+  startup, and the conformance harness iterates it. Adding an action anywhere
+  else does not add an action.
+- `daemon/handlers/_proc.py` — the only place a handler decides whether a
+  command succeeded. Everything that shells out goes through it.
 
 ### The rules that matter
 
@@ -468,14 +566,30 @@ tests/       one suite per slice
    was read back. "Could not check" is `UNVERIFIABLE`, never success.
 4. **Climb the ladder.** Tier 1 (direct API) → Tier 2 (UI Automation) → Tier 3
    (vision). Never drive a GUI for something with an API.
-5. **Add an action in one place.** `core/brain/capabilities.ts` is what the
-   planner is told; the daemon's `describe` is what actually exists; the core
-   compares them at startup. They drifted once, and the symptom was tasks dying
-   on `Unknown action` mid-run.
+5. **Add an action in one place, and prove it runs.**
+   `core/brain/capabilities.ts` is what the planner is told; the daemon's
+   `describe` is what actually exists; the core compares them at startup. They
+   drifted once, and the symptom was tasks dying on `Unknown action` mid-run.
+   Every advertised action also needs a probe in `tests/conformance/probes.ts`
+   or `npm run conformance` fails — being *implemented* was never the same as
+   being *exercised*, and fourteen of them shipped without ever running.
+6. **A failed subprocess is a failure whichever stream carried the message.**
+   Shell out through `daemon/handlers/_proc.py`, never `subprocess.run` directly.
+   netsh reports errors on **stdout**, exits 1, and leaves stderr empty; a guard
+   of `if returncode != 0 and result.stderr` let every DNS failure through as a
+   success for the life of the project.
+7. **Never build a one-way door.** `set_wifi` could disable an adapter and not
+   re-enable it, because it enumerated adapters from a source that stops listing
+   them once they are off — and the network you would need to fix it was the one
+   it had just taken down. If an action can undo itself, test the undo.
+8. **Save `.ps1` files as UTF-8 *with* a BOM.** Windows PowerShell 5.1 reads
+   them as ANSI otherwise, so an em-dash in a comment becomes mojibake and can
+   break a string twenty lines later. `install-daemon-service.ps1` had never once
+   parsed because of this. `npm run test:scripts` checks it.
 
 ### Version control
 
-- One **annotated tag per shipped slice** — `v0.1.0` … `v0.6.0`.
+- One **annotated tag per shipped slice** — `v0.1.0` … `v0.7.1`.
 - One **feature branch per slice**: `feat/sliceN-name`.
 - Merged back to `v3/dex` with **`--no-ff`**, so the branch stays visible.
 - `main` is still the V2 code and has not been touched.
@@ -500,7 +614,12 @@ database) and the SQLite **WAL sidecars** — `data/*.db` does not match
 
 | Symptom | Cause |
 |---|---|
-| `Daemon not running` | start `python daemon/DexDaemon.py` |
+| `Daemon not running` | start it, or `.\scripts\stop-dex.ps1` then start — see the three rows below |
+| `Daemon not running` but the log says `Listening` | you are talking to an elevated daemon from an unelevated core and the pipe DACL is wrong (§8). Check `%LOCALAPPDATA%\DEX\daemon.log` |
+| `Another DEX daemon already owns …` | one is running. `.\scripts\stop-dex.ps1` |
+| A command works, then the same command does not | almost always more than one daemon before this was enforced. `.\scripts\stop-dex.ps1` and check it exits 0 |
+| `requires elevation (Run as administrator)` | the daemon is not elevated — §8 |
+| `set_dns` succeeds but nothing changed | you are on a build before the `_proc` fix; netsh reports failure on stdout |
 | App agent `/health` says `uia: false` | `pip install uiautomation` |
 | Ollama outputs `@@@@@` | stale Vulkan ICD — pin `GGML_VK_VISIBLE_DEVICES` (§5) |
 | `AMD driver is too old` | update Adrenalin; expect Vulkan, not ROCm, on RDNA2 mobile |
@@ -510,6 +629,7 @@ database) and the SQLite **WAL sidecars** — `data/*.db` does not match
 | Discord messages arrive empty | MESSAGE CONTENT intent not enabled |
 | Telegram bot silent | `DEX_OWNER_TELEGRAM` unset or not your numeric id |
 | A workflow runs when you did not expect | its saved *shape* matched — `/workflows`, then `/forget <name>` |
-| Tests fail after local use | set `DEX_DB` to a temp path (§10) |
+| Tests fail after local use | the test is missing `import './support/isolate';` (§10) |
+| `A test tried to open the real database` | same — add the isolate import as the first line |
 
 `DEX_DEBUG=true` logs gate refusals and MCP stderr.
