@@ -33,22 +33,36 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 )
 
 if (-not $CoreOnly) {
-    if (-not $isAdmin) {
-        Write-Host 'WARNING: Not running as Administrator.' -ForegroundColor Yellow
-        Write-Host 'System Agent (DNS/registry changes) requires elevation.' -ForegroundColor Yellow
-        Write-Host 'Run install-daemon-service.ps1 once as Admin to set up Full Access.' -ForegroundColor Yellow
-        Write-Host ''
-    }
+    # Clear strays before starting anything.
+    #
+    # This is not tidiness. Windows named pipes allow many server instances
+    # under one name, so a second daemon does not fail to start -- it joins the
+    # rota and requests go to whichever instance answers first. Seven had
+    # accumulated here from previous runs, several running weeks-old handler
+    # code, which is why the same command worked one minute and not the next.
+    & (Join-Path $PSScriptRoot 'stop-dex.ps1') -Quiet
 
-    # Check if daemon service is already running
-    $svc = Get-Service -Name 'DexDaemon' -ErrorAction SilentlyContinue
-    if ($svc -and $svc.Status -eq 'Running') {
-        Write-Host 'DexDaemon service already running (Full Access mode).' -ForegroundColor Green
+    # Full Access installs an elevated logon task that runs the daemon in this
+    # session. If it exists, let it own the daemon rather than starting a
+    # second, unprivileged one alongside it.
+    $task = Get-ScheduledTask -TaskName 'DexDaemon' -ErrorAction SilentlyContinue
+    if ($task) {
+        Write-Host 'Starting DEX Daemon via the elevated logon task (Full Access)...' -ForegroundColor Green
+        Start-ScheduledTask -TaskName 'DexDaemon'
+        Start-Sleep -Seconds 2
     } else {
         Write-Host 'Starting DEX Daemon (standalone)...' -ForegroundColor Cyan
         $daemon = Start-Process python -ArgumentList 'daemon/DexDaemon.py' -PassThru -WindowStyle Minimized
         Write-Host "Daemon PID: $($daemon.Id)" -ForegroundColor DarkGray
         Start-Sleep -Milliseconds 800
+
+        if (-not $isAdmin) {
+            Write-Host ''
+            Write-Host 'The daemon is NOT elevated. These will fail:' -ForegroundColor Yellow
+            Write-Host '  set_dns, set_wifi, set_power_plan, HKLM registry writes' -ForegroundColor Yellow
+            Write-Host 'Fix it once:  .\scripts\install-daemon-service.ps1  (as Administrator)' -ForegroundColor Yellow
+            Write-Host ''
+        }
     }
 }
 

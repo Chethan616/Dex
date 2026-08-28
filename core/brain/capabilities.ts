@@ -21,8 +21,9 @@ export interface ActionSpec {
 
 /** Tier 1 — direct OS control through the privileged daemon. No UI involved. */
 export const OS_ACTIONS: Record<string, ActionSpec> = {
-  set_dns: { params: '{ primary: string (IPv4), secondary?: string, adapter?: string (omit = all) }' },
-  get_dns: { params: '{}' },
+  set_dns: { params: '{ primary?: string (IPv4), secondary?: string, adapter?: string (omit = all active), dhcp?: boolean }',
+    note: 'dhcp: true puts the adapter back on automatic — use it for "reset my dns"' },
+  get_dns: { params: '{ adapter?: string }' },
   set_wifi: { params: '{ enabled: boolean }' },
   get_wifi_status: { params: '{}' },
   set_power_plan: { params: '{ plan: "balanced" | "high_performance" | "power_saver" }' },

@@ -339,12 +339,27 @@ do its job and learn nothing else about the machine.
 
 ## 8. Full Access
 
-One UAC prompt, then never again — the daemon runs as a `LocalSystem` Windows
-service.
+One UAC prompt, then never again — the daemon runs **elevated, in your own
+session**, started by a logon task.
 
 ```powershell
-.\scripts\install-daemon-service.ps1     # one UAC prompt
+.\scripts\install-daemon-service.ps1     # one UAC prompt, run as Administrator
+npm run conformance                      # describe should say elevated=true, session=1
 ```
+
+Without this, `set_dns`, `set_wifi`, `set_power_plan` and HKLM registry writes
+fail. They now say so — before the fix they failed silently and reported
+success, because netsh writes its errors to stdout and the handler only checked
+stderr.
+
+**Not a LocalSystem service, deliberately.** This used to install one, and it
+never worked — `daemon/daemon_service.py` could not even be imported. It would
+have been the wrong target regardless: a service runs in session 0, isolated
+from your desktop, where the audio endpoint is not yours and a launched app
+appears on a desktop nobody is looking at. Fixing DNS by breaking `set_volume`
+and `launch_app` is not a fix. A scheduled task with `RunLevel Highest` gives
+elevation *and* your session. The daemon reports both facts through `describe`,
+and the core warns at startup if either is wrong.
 
 **Full Access grants elevation, not permission.** Two things it deliberately does
 *not* do:

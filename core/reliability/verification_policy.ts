@@ -261,13 +261,16 @@ function verifyWorkspaceStep(
 function verifyOsStep(step: ExecutionStep, agentResult?: AgentResult): VerificationResult {
   switch (step.action) {
     case 'set_dns':
-      return verifyDns(step.params as { primary: string; secondary?: string });
+      return verifyDns(
+        step.params as { primary?: string; secondary?: string; dhcp?: boolean; adapter?: string },
+        agentResult,
+      );
     case 'set_power_plan':
       return verifyPowerPlan(step.params as { plan: string });
     case 'set_volume':
       return verifyVolume(step, agentResult);
     case 'set_wifi':
-      return { status: 'UNVERIFIABLE', reason: 'WiFi state read-back not yet implemented' };
+      return verifyWifi(step.params as { enabled?: boolean });
     case 'get_dns':
     case 'get_power_plan':
     case 'get_volume':
@@ -312,30 +315,154 @@ function verifyVolume(step: ExecutionStep, agentResult?: AgentResult): Verificat
       };
 }
 
-function verifyDns(params: { primary: string; secondary?: string }): VerificationResult {
+/**
+ * Read DNS back per adapter, not as one blob of text.
+ *
+ * This used to ask whether the primary appeared anywhere in the whole netsh
+ * output. On this machine Ethernet is statically set to 8.8.8.8 while Wi-Fi
+ * takes its DNS from DHCP, so "set Wi-Fi to 8.8.8.8" would have verified off
+ * Ethernet's pre-existing value while Wi-Fi was untouched. A check that passes
+ * without the action having happened is worse than no check, because it is
+ * trusted.
+ */
+function verifyDns(
+  params: { primary?: string; secondary?: string; dhcp?: boolean; adapter?: string },
+  agentResult?: AgentResult,
+): VerificationResult {
+  let table: Record<string, { source: string; servers: string[] }>;
   try {
-    const output = execSync('netsh interface ipv4 show dnsservers', {
-      encoding: 'utf8',
-      timeout: 10000,
-    });
-    if (output.includes(params.primary)) {
-      return {
-        status: 'VERIFIED',
-        reason: `DNS primary ${params.primary} confirmed in netsh output`,
-        afterState: output.trim(),
-      };
-    }
-    return {
-      status: 'FAILED',
-      reason: `Expected DNS ${params.primary} not found in current DNS config`,
-      afterState: output.trim(),
-    };
+    table = parseDnsTable(
+      execSync('netsh interface ipv4 show dnsservers', {
+        encoding: 'utf8',
+        timeout: 10000,
+      }),
+    );
   } catch (err) {
     return {
       status: 'UNVERIFIABLE',
       reason: `Could not read DNS state: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
+
+  // Check exactly the adapters the handler says it configured. Falling back to
+  // "every adapter" would reintroduce the bug in a quieter form.
+  const data = agentResult?.data as { adapters?: string[] } | undefined;
+  const adapters = data?.adapters ?? (params.adapter ? [params.adapter] : []);
+  if (adapters.length === 0) {
+    return {
+      status: 'UNVERIFIABLE',
+      reason: 'set_dns did not report which adapters it configured',
+    };
+  }
+
+  const wrong: string[] = [];
+  for (const adapter of adapters) {
+    const entry = table[adapter];
+    if (!entry) {
+      wrong.push(`${adapter}: not present in netsh output`);
+      continue;
+    }
+    if (params.dhcp) {
+      if (entry.source !== 'dhcp') wrong.push(`${adapter}: still ${entry.source}`);
+    } else if (!params.primary) {
+      wrong.push(`${adapter}: no primary was requested`);
+    } else if (!entry.servers.includes(params.primary)) {
+      wrong.push(
+        `${adapter}: expected ${params.primary}, found ${
+          entry.servers.length ? entry.servers.join(', ') : 'nothing'
+        }`,
+      );
+    }
+  }
+
+  const state = Object.fromEntries(adapters.map((a) => [a, table[a]]));
+
+  return wrong.length === 0
+    ? {
+        status: 'VERIFIED',
+        reason: params.dhcp
+          ? `${adapters.join(', ')} back on DHCP`
+          : `${params.primary} confirmed on ${adapters.join(', ')}`,
+        afterState: state,
+      }
+    : { status: 'FAILED', reason: wrong.join('; '), afterState: state };
+}
+
+/**
+ * A disabled wireless adapter disappears from `netsh wlan show interfaces`
+ * entirely — the command reports there is no wireless interface on the system.
+ * That absence is the read-back, and it is independent of what the handler
+ * claimed, which is the point.
+ */
+function verifyWifi(params: { enabled?: boolean }): VerificationResult {
+  const wanted = params.enabled !== false;
+  let output = '';
+  try {
+    output = execSync('netsh wlan show interfaces', {
+      encoding: 'utf8',
+      timeout: 10000,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  } catch (err) {
+    // netsh exits non-zero when the WLAN service has nothing to report, which
+    // is exactly the "disabled" observation rather than a failure to observe.
+    output = (err as { stdout?: string }).stdout ?? '';
+  }
+
+  const present = /^\s*Name\s*:/m.test(output);
+
+  if (present === wanted) {
+    return {
+      status: 'VERIFIED',
+      reason: wanted
+        ? 'A wireless interface is present and enabled'
+        : 'No wireless interface is present — adapter is disabled',
+      afterState: output.trim().slice(0, 400),
+    };
+  }
+
+  return {
+    status: 'FAILED',
+    reason: wanted
+      ? 'Asked to enable wifi but no wireless interface is present'
+      : 'Asked to disable wifi but a wireless interface is still present',
+    afterState: output.trim().slice(0, 400),
+  };
+}
+
+/**
+ * netsh groups DNS under "Configuration for interface <name>", then reports
+ * either a DHCP line or a static one, with additional servers on their own
+ * continuation lines.
+ */
+function parseDnsTable(raw: string): Record<string, { source: string; servers: string[] }> {
+  const table: Record<string, { source: string; servers: string[] }> = {};
+  let current: string | null = null;
+
+  for (const line of raw.split(/\r?\n/)) {
+    const header = line.trim().match(/^Configuration for interface "(.+)"$/);
+    if (header) {
+      current = header[1];
+      table[current] = { source: 'unknown', servers: [] };
+      continue;
+    }
+    if (!current) continue;
+
+    const addresses = (value: string) =>
+      value.match(/\d+\.\d+\.\d+\.\d+/g) ?? [];
+
+    if (line.includes('through DHCP')) {
+      table[current].source = 'dhcp';
+      table[current].servers = addresses(line);
+    } else if (line.includes('Statically Configured')) {
+      table[current].source = 'static';
+      table[current].servers = addresses(line);
+    } else if (/^\s+\d+\.\d+\.\d+\.\d+\s*$/.test(line)) {
+      table[current].servers.push(line.trim());
+    }
+  }
+
+  return table;
 }
 
 function verifyPowerPlan(params: { plan: string }): VerificationResult {

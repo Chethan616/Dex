@@ -15,6 +15,7 @@
  *
  * Run: npm run test:boot
  */
+import './support/isolate';
 import { spawn } from 'child_process';
 import * as os from 'os';
 import * as path from 'path';
@@ -49,6 +50,7 @@ function boot(): Promise<BootResult> {
           ...process.env,
           // A disposable database, and no WebSocket port to collide with a
           // running instance.
+          DEX_TEST: '1',
           DEX_DB: path.join(os.tmpdir(), `dex-boot-${Date.now()}.db`),
           DEX_UI_SERVER: 'false',
         },

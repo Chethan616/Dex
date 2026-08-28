@@ -120,6 +120,20 @@ let handle: Database | null = null;
 export function db(file = process.env.DEX_DB || path.join('data', 'dex.db')): Database {
   if (handle) return handle;
 
+  // A test that can write to the real store is a test that can lie about
+  // production. This one did: `data/dex.db` ended up holding two `set_dns`
+  // tasks marked COMPLETED, written by a suite running against a mocked agent,
+  // for an action that had never once reached the daemon. Anyone reading the
+  // history to find out what actually worked — including the investigation
+  // that eventually found the real bug — was reading fiction.
+  const resolved = path.resolve(file);
+  if (process.env.DEX_TEST === '1' && resolved === path.resolve('data', 'dex.db')) {
+    throw new Error(
+      'A test tried to open the real database at data/dex.db.\n' +
+        "Add `import '../support/isolate';` as the FIRST import of the test.",
+    );
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { DatabaseSync } = require('node:sqlite') as {
     DatabaseSync: new (p: string) => Database;

@@ -42,11 +42,25 @@ you> set my volume to 35
 
 **Network**
 ```
-you> what is my current dns
-     ✓ step_1 verified
+you> set my dns to 1.1.1.1
+     set_dns({"primary":"1.1.1.1"})
+     ✗ netsh failed (1): The requested operation requires elevation
+       — this needs an elevated daemon. Run scripts/install-daemon-service.ps1
 ```
-✅ Verified. Also: `set_dns`, `set_wifi`, `get_wifi_status`.
-DNS changes are checked against `netsh` output, not the command's exit code.
+🚧 `set_dns` needs an elevated daemon and says so. `get_dns`, `get_wifi_status`
+✅ Verified.
+
+That message is the feature. Until recently this step reported **success** and
+changed nothing: netsh writes its errors to stdout, exits 1, and leaves stderr
+empty, and the handler only raised when stderr was non-empty. The verification
+layer then read DNS back, disagreed, and reported a bare `FAILED` with no cause.
+Reading the telemetry afterwards showed `set_dns` had never once executed in the
+project's history — the only DNS rows were written by a test against a mocked
+agent.
+
+DNS is now read back **per adapter**. The old check asked whether the address
+appeared anywhere in the netsh output, which on a machine with a statically
+configured Ethernet port passes without the action having happened at all.
 
 **Applications**
 ```
@@ -58,9 +72,31 @@ you> open calculator
 unsaved work stays your decision. A launch is proven by a **window existing**,
 which matters because packaged apps exit their launcher immediately.
 
-**Power, processes, registry** — 🧪 Tested.
-`set_power_plan`, `list_processes`, `kill_process` (refuses system-critical
-processes and ambiguous names), `registry_read`, `registry_write`.
+**Power, processes, registry** — ✅ Verified by `npm run conformance`.
+`set_power_plan`, `get_power_plan`, `list_processes`, `kill_process` (refuses
+system-critical processes and ambiguous names), `registry_read`,
+`registry_write`, `registry_classify`, `run_shell`.
+
+### How that "verified" is earned
+
+Every claim in this section is produced by a harness, not by reading the code:
+
+```
+npm run conformance                  read-only + round-trip
+npm run conformance -- --destructive adds wifi and process-kill
+```
+
+It walks `OS_ACTION_NAMES` from `core/brain/capabilities.ts` — **the same list
+the Brain is shown** — and drives each action against the real daemon over the
+real pipe, confirming through the same `verifyStep` the Orchestrator uses. Each
+probe reads the current value first and puts it back afterwards, including
+putting DNS back on DHCP if that is where it started.
+
+An advertised action with no probe **fails the run**. That rule exists because
+of what the telemetry showed: of seventeen advertised actions, three had ever
+executed. The rest were written, catalogued, documented here as working, and
+never run once. Fixing them one at a time would have left the next one to be
+added in exactly the same state.
 
 ---
 

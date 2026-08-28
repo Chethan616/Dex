@@ -4,6 +4,7 @@
  *
  *   npx ts-node tests/stub_core.ts
  */
+import './support/isolate';
 import { DexServer } from '../core/server/ws_server';
 import { ConfirmationManager } from '../core/confirmation/confirmation_manager';
 import { CancellationRegistry } from '../core/orchestrator/cancellation';

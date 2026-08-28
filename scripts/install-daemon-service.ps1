@@ -1,62 +1,127 @@
 <#
 .SYNOPSIS
-One-time Full Access setup. Installs the DEX Daemon as a Windows Service (LocalSystem).
-After this, DEX never asks for admin privileges again — even for registry writes.
+Full Access, one time. Registers the DEX daemon to start elevated at logon.
 
-Requires: Run as Administrator (once, ever).
+.DESCRIPTION
+Consent once, here, and DEX never asks for administrator again.
+
+WHY A SCHEDULED TASK AND NOT A SERVICE
+--------------------------------------
+This script used to install DexDaemon as a Windows Service running as
+LocalSystem. That was the wrong target twice over.
+
+First, it never worked: daemon/daemon_service.py could not even be imported
+(it reassigned __bases__ on a plain class, which CPython refuses), so the
+one-time setup had never once completed. Nothing checked, so nobody noticed.
+
+Second, and more important, it would have made things worse if it had. A
+LocalSystem service runs in session 0, isolated from the desktop since Vista.
+From there the audio endpoint is not yours, so set_volume would silently stop
+working, and a launched app would appear on a desktop nobody is looking at.
+Fixing DNS by breaking volume and app launching is not a fix.
+
+What is actually needed is elevation *inside your own session*. A scheduled
+task with RunLevel Highest, triggered at logon and running as you, gives
+exactly that: administrator rights, your desktop, your audio endpoint, and no
+UAC prompt after this one.
+
+.PARAMETER NoStart
+Register the task but do not start the daemon now.
 #>
+param([switch]$NoStart)
+
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
+
+$TaskName = 'DexDaemon'
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
     [Security.Principal.WindowsBuiltInRole]::Administrator
 )
 if (-not $isAdmin) {
-    Write-Host 'This script requires Administrator — this is the ONE-TIME prompt.' -ForegroundColor Yellow
-    Write-Host 'Re-run in an elevated PowerShell, then you will never need it again.' -ForegroundColor Yellow
+    Write-Host ''
+    Write-Host 'This needs Administrator once — and only once.' -ForegroundColor Yellow
+    Write-Host 'Right-click PowerShell, Run as administrator, then:' -ForegroundColor Yellow
+    Write-Host "    cd '$(Get-Location)'" -ForegroundColor DarkGray
+    Write-Host '    .\scripts\install-daemon-service.ps1' -ForegroundColor DarkGray
+    Write-Host ''
+    Write-Host 'After that DEX starts elevated at logon and never prompts again.' -ForegroundColor Yellow
     exit 1
 }
 
-Write-Host 'Installing DEX Daemon as a Windows Service (LocalSystem)...' -ForegroundColor Cyan
+# Resolve a real python.exe. "python" on PATH is often a shim that re-launches
+# a second process, which would leave the task tracking the wrong one.
+$python = (Get-Command python -ErrorAction SilentlyContinue).Source
+if (-not $python) { throw 'python is not on PATH.' }
+$resolved = & $python -c "import sys; print(sys.executable)"
+if ($resolved) { $python = $resolved.Trim() }
 
-# Stop and remove existing service if present
-$svc = Get-Service -Name 'DexDaemon' -ErrorAction SilentlyContinue
-if ($svc) {
-    Write-Host 'Removing existing DexDaemon service...' -ForegroundColor DarkGray
-    if ($svc.Status -eq 'Running') { Stop-Service 'DexDaemon' -Force }
-    python daemon/daemon_service.py remove
+$daemon = Join-Path (Get-Location) 'daemon\DexDaemon.py'
+if (-not (Test-Path $daemon)) { throw "Not found: $daemon" }
+
+Write-Host "Python : $python" -ForegroundColor DarkGray
+Write-Host "Daemon : $daemon" -ForegroundColor DarkGray
+
+# Stop anything already running, including strays from earlier dev sessions.
+# Several daemons can serve one named pipe at once and answer unpredictably.
+& (Join-Path $PSScriptRoot 'stop-dex.ps1') -Quiet
+
+if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
+    Write-Host 'Replacing the existing task...' -ForegroundColor DarkGray
+    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
 }
 
-# Install and start
-python daemon/daemon_service.py install
-python daemon/daemon_service.py start
+$action = New-ScheduledTaskAction -Execute $python `
+    -Argument "`"$daemon`"" -WorkingDirectory (Get-Location).Path
 
-# Confirm service is running
-$svc = Get-Service -Name 'DexDaemon' -ErrorAction SilentlyContinue
-if ($svc -and $svc.Status -eq 'Running') {
-    Write-Host 'DexDaemon service is RUNNING.' -ForegroundColor Green
-} else {
-    Write-Host 'WARNING: Service installed but may not have started yet. Check Event Viewer.' -ForegroundColor Yellow
-}
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 
-# Set DEX_FULL_ACCESS as a system env var so the service process can read it
-[System.Environment]::SetEnvironmentVariable('DEX_FULL_ACCESS', 'true', 'Machine')
-Write-Host 'System env DEX_FULL_ACCESS=true set.' -ForegroundColor DarkGray
+# Run as the logged-in user, elevated. Interactive is what keeps it in your
+# session rather than session 0.
+$principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" `
+    -LogonType Interactive -RunLevel Highest
 
-# Write FULL_ACCESS=true into .env
-if (Test-Path '.env') {
-    $env = Get-Content '.env' -Raw
-    if ($env -match 'FULL_ACCESS=') {
-        $env = $env -replace 'FULL_ACCESS=\S*', 'FULL_ACCESS=true'
+$settings = New-ScheduledTaskSettingsSet `
+    -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+    -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) `
+    -MultipleInstances IgnoreNew
+
+Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
+    -Principal $principal -Settings $settings `
+    -Description 'DEX privileged daemon — elevated, in the owner session.' | Out-Null
+
+Write-Host "Registered scheduled task '$TaskName' (elevated, at logon)." -ForegroundColor Green
+
+if (-not $NoStart) {
+    Start-ScheduledTask -TaskName $TaskName
+    Start-Sleep -Seconds 2
+    $info = Get-ScheduledTask -TaskName $TaskName | Get-ScheduledTaskInfo
+    if ($info.LastTaskResult -eq 0 -or $info.LastTaskResult -eq 267009) {
+        Write-Host 'Daemon started.' -ForegroundColor Green
     } else {
-        $env = $env.TrimEnd() + "`nFULL_ACCESS=true`n"
+        Write-Host "Task result: $($info.LastTaskResult) — check Task Scheduler." -ForegroundColor Yellow
     }
-    Set-Content '.env' $env -Encoding utf8
-} else {
-    Add-Content '.env' 'FULL_ACCESS=true'
 }
+
+# FULL_ACCESS relaxes confirmation tiers. It does NOT relax the RED registry
+# band: security and policy keys stay refused whatever the privilege level.
+# Elevation decides who gets asked; the band decides what is done at all.
+if (Test-Path '.env') {
+    $envText = Get-Content '.env' -Raw
+    if ($envText -match 'FULL_ACCESS=') {
+        $envText = $envText -replace 'FULL_ACCESS=\S*', 'FULL_ACCESS=true'
+    } else {
+        $envText = $envText.TrimEnd() + "`nFULL_ACCESS=true`n"
+    }
+    Set-Content '.env' $envText -Encoding utf8
+} else {
+    Set-Content '.env' "FULL_ACCESS=true`n" -Encoding utf8
+}
+[System.Environment]::SetEnvironmentVariable('DEX_FULL_ACCESS', 'true', 'Machine')
 
 Write-Host ''
 Write-Host 'Full Access enabled.' -ForegroundColor Green
-Write-Host 'DEX Daemon runs as LocalSystem and auto-starts on every Windows boot.' -ForegroundColor Green
-Write-Host 'No admin prompts — ever again.' -ForegroundColor Green
+Write-Host 'Verify it:  npm run conformance' -ForegroundColor DarkGray
+Write-Host '  describe should now report elevated=true, session=1 (not 0),' -ForegroundColor DarkGray
+Write-Host '  and set_dns should pass.' -ForegroundColor DarkGray
+Write-Host 'Undo it:    .\scripts\uninstall-daemon-service.ps1' -ForegroundColor DarkGray

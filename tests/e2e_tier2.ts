@@ -24,6 +24,7 @@
  *
  * Run: npm run test:e2e
  */
+import './support/isolate';
 import { spawnSync } from 'child_process';
 
 import { AppAgent } from '../agents/app/app_agent';

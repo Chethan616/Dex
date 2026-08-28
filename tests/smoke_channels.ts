@@ -10,6 +10,7 @@
  *
  * Run: npm run test:channels
  */
+import './support/isolate';
 import { ChannelRuntime, Inbound, Reply } from '../channels/base_channel';
 import { ConfirmationManager } from '../core/confirmation/confirmation_manager';
 import { OwnerGate } from '../core/owner_gate';

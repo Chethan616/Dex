@@ -2,6 +2,7 @@
  * Slice 3 smoke test: protocol + stale-approval guard + cancellation.
  * Runs the real DexServer / ConfirmationManager / Orchestrator against a stub agent.
  */
+import './support/isolate';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -10,11 +11,6 @@ import * as path from 'path';
 // this the suite reads the owner's real workflow library, and a saved workflow
 // whose shape matches a test request replays instead of planning — which
 // silently removes the confirmation tiers these checks exist to verify.
-process.env.DEX_DB = path.join(
-  fs.mkdtempSync(path.join(os.tmpdir(), 'dex-ws-')),
-  'test.db',
-);
-
 import WebSocket from 'ws';
 import { DexServer } from '../core/server/ws_server';
 import { ConfirmationManager, stepVersion } from '../core/confirmation/confirmation_manager';

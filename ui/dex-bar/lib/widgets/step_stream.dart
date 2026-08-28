@@ -39,6 +39,23 @@ class _StepStreamState extends State<StepStream> {
   final _scroll = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    // Jump to the newest line on the first frame too, not only when the count
+    // changes. A stream built with events already in it — reopening Mission
+    // Control, or coming back to a task that has been running while the bar was
+    // hidden — otherwise opens at the oldest line, which is the least useful
+    // one. Now that the bar stops growing at a ceiling and scrolls instead,
+    // this is the difference between seeing the latest step and seeing the
+    // first.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) {
+        _scroll.jumpTo(_scroll.position.maxScrollExtent);
+      }
+    });
+  }
+
+  @override
   void didUpdateWidget(covariant StepStream old) {
     super.didUpdateWidget(old);
     if (widget.events.length != old.events.length) {

@@ -12,6 +12,8 @@ from __future__ import annotations
 import logging
 import subprocess
 
+from ._proc import try_run
+
 log = logging.getLogger('ProcessHandler')
 
 # Ending any of these takes the desktop down with it. There is no plausible
@@ -97,16 +99,21 @@ class ProcessHandler:
         else:
             targets = [int(pid)]
 
-        ended, failed = [], []
+        ended, failed, reasons = [], [], []
         for target in targets:
-            result = subprocess.run(
-                ['taskkill', '/PID', str(target), '/F'],
-                capture_output=True, text=True, timeout=15,
-            )
-            (ended if result.returncode == 0 else failed).append(target)
+            result = try_run(['taskkill', '/PID', str(target), '/F'])
+            if result.ok:
+                ended.append(target)
+            else:
+                failed.append(target)
+                reasons.append(f'{target}: {result.message}')
 
         if not ended:
-            raise RuntimeError(f'Could not end {failed} — it may need higher privileges')
+            # Say what taskkill said. The old message guessed "it may need
+            # higher privileges" for every failure, which sent the reader after
+            # elevation when the real answer was usually that the process had
+            # already exited.
+            raise RuntimeError(f'Could not end {failed} — {"; ".join(reasons)}')
 
         log.info('Ended pids %s', ended)
         return {'ended': ended, 'failed': failed}

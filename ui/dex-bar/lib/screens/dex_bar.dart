@@ -43,10 +43,6 @@ const _collapseAfter = Duration(seconds: 6);
 const _streamAlone = 440.0;
 const _streamWithCard = 170.0;
 
-/// Height change big enough to be a change of state rather than another line
-/// of output. Comfortably above one step line (~20px) and well below the
-/// smallest state transition (rest to running is ~120px).
-const _recentreAt = 80.0;
 
 class _DexBarState extends State<DexBar> {
   final _controller = TextEditingController();
@@ -113,6 +109,9 @@ class _DexBarState extends State<DexBar> {
 
   Size? _lastSize;
 
+  /// Set when the bar leaves the rest row; cleared when it returns to it.
+  bool _anchored = false;
+
   /// Fit the window to what is actually on screen.
   ///
   /// The bar used to snap to a fixed 560px the instant a task started, so a
@@ -136,13 +135,13 @@ class _DexBarState extends State<DexBar> {
 
   void _applySize(Size size) {
     if (_lastSize == size) return;
-    final previous = _lastSize;
     _lastSize = size;
 
     // window_manager only reports user-driven geometry changes, so mark this
     // one ourselves — once now and once after the animation lands, so the
     // confirmation card's settle clock starts when the window stops moving.
     WindowActivity.markThrough(const Duration(milliseconds: 350));
+
     // Not animated. The window used to hold two sizes, so a native resize
     // animation was a nice touch between them; now that height tracks content,
     // an animated window lags a content column already laid out at full size,
@@ -150,25 +149,69 @@ class _DexBarState extends State<DexBar> {
     // sitting below the frame until it catches up. The content has its own
     // entrance animations; the frame should just be the right size.
     windowManager.setSize(size);
+    _position(size);
+  }
 
-    // Re-centre on a step change in size, not on every change.
-    //
-    // The old bar had two heights and re-centred on both, which was fine.
-    // Height now tracks content, so centring on every event would walk the bar
-    // up the screen a few pixels at a time while the owner is reading it —
-    // `setSize` keeps the top-left anchored, which is the "grows downward" the
-    // design asks for.
-    //
-    // But top-anchored growth alone is wrong too: a bar centred while it was
-    // one row tall runs off the bottom of the screen once a confirmation card
-    // opens under it, and what falls off is the card's buttons. So a large
-    // jump — appearing, a card opening, a task finishing — re-centres and is
-    // guaranteed to fit, while line-by-line growth inside a state does not
-    // move the window at all.
-    final widthChanged = previous == null || previous.width != size.width;
-    final stepChange =
-        previous != null && (size.height - previous.height).abs() >= _recentreAt;
-    if (widthChanged || stepChange) windowManager.center();
+  /// Take a position once per task, then hold it.
+  ///
+  /// Three behaviours were tried here. Re-centring on every size change walked
+  /// the bar up the screen a few pixels per event, moving the text under the
+  /// eye of whoever was reading it. Re-centring only on large jumps still moved
+  /// it at the two moments most likely to matter — a card opening, a task
+  /// finishing. Never moving at all let a bar that was centred while one row
+  /// tall grow off the bottom of the screen, and what fell off was the
+  /// confirmation card's buttons.
+  ///
+  /// So: anchor once, on the way out of the rest row, at the position a
+  /// *full-height* bar would occupy. Everything after that grows downward into
+  /// room already reserved, and the window does not move again until the task
+  /// settles and the bar collapses. Old output scrolls up inside a frame that
+  /// stays where it was put.
+  void _position(Size size) {
+    if (_missionControl) {
+      windowManager.center();
+      _anchored = false;
+      return;
+    }
+
+    final atRest = size.height <= DexTokens.barRestHeight;
+    if (atRest) {
+      // Back to one row: centre it, and let the next task anchor afresh.
+      windowManager.center();
+      _anchored = false;
+      return;
+    }
+
+    if (_anchored) return;
+    _anchored = true;
+
+    final screen = _logicalScreen();
+    if (screen == null) {
+      windowManager.center();
+      return;
+    }
+
+    // Centred for the ceiling, not for the current height, so the bar has the
+    // room it may still need. `windowManager.center()` cannot express this —
+    // it can only centre for the size the window is right now.
+    final x = ((screen.width - size.width) / 2).clamp(0.0, screen.width);
+    final y = ((screen.height - DexTokens.barMaxHeight) / 2)
+        .clamp(0.0, screen.height);
+    windowManager.setPosition(Offset(x.roundToDouble(), y.roundToDouble()));
+  }
+
+  /// The display this window is on, in the same units as the window's size.
+  ///
+  /// The view's ratio, not `display.devicePixelRatio` — on Windows the latter
+  /// reports 1.0 even at 125% scaling, which would silently mix physical and
+  /// logical pixels and put the bar most of a bar-width off centre.
+  Size? _logicalScreen() {
+    final view = View.maybeOf(context);
+    if (view == null) return null;
+    final ratio = view.devicePixelRatio;
+    if (ratio <= 0) return null;
+    final logical = view.display.size / ratio;
+    return logical.width > 0 && logical.height > 0 ? logical : null;
   }
 
   void _submit(String text) {

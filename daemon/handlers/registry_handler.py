@@ -144,7 +144,14 @@ class RegistryHandler:
 
         winreg, hive, subkey = _parse(path)
         reg_type = params.get('type', winreg.REG_SZ)
-        with winreg.OpenKey(hive, subkey, 0, winreg.KEY_WRITE) as key:
+
+        # Create the key if it is missing, but only in the GREEN band. Dex is
+        # allowed to make its own keys -- HKCU\Software\DEX does not exist on a
+        # fresh machine, and OpenKey alone meant Dex could not write to the one
+        # tree it unambiguously owns. It is not allowed to invent new keys
+        # inside somebody else's tree, so AMBER still has to find what it edits.
+        opener = winreg.CreateKeyEx if band == 'green' else winreg.OpenKey
+        with opener(hive, subkey, 0, winreg.KEY_WRITE) as key:
             winreg.SetValueEx(key, name, 0, reg_type, value)
 
         log.info('Registry write [%s]: %s\\%s = %r', band, path, name, value)

@@ -3,6 +3,7 @@ import 'package:dex_bar/core/models.dart';
 import 'package:dex_bar/screens/dex_bar.dart';
 import 'package:dex_bar/theme/tokens.dart';
 import 'package:dex_bar/widgets/command_input.dart';
+import 'package:dex_bar/widgets/step_stream.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,7 +39,9 @@ void main() {
               calls.add('resize');
             }
             // center() lands here too, as a position-only setBounds.
-            if (args['x'] != null && args['y'] != null) calls.add('centre');
+            // center() and setPosition() both arrive as a position-only
+            // setBounds; either way the window moved.
+            if (args['x'] != null && args['y'] != null) calls.add('move');
           case 'getBounds':
             return <String, dynamic>{
               'x': 0.0,
@@ -167,36 +170,94 @@ void main() {
     expect(find.text('Cancel task'), findsOneWidget);
   });
 
-  testWidgets('a step change re-centres; another line of output does not',
+  testWidgets('the window is positioned once per task, then left alone',
       (tester) async {
     final client = GatewayClient()..connection = CoreConnection.connected;
     client.current = _run(events: 2);
     await show(tester, client);
     await settle(tester);
 
-    // Opening from the rest row is a step change and must re-centre, or the
-    // bar grows downward from a position centred for one row and its bottom
-    // ends up off-screen.
-    expect(calls, contains('centre'));
+    // Leaving the rest row anchors the window. It has to happen: a bar
+    // positioned while it was one row tall grows off the bottom of the screen
+    // once a card opens under it, and what falls off is the Approve button.
+    expect(
+      calls.where((c) => c == 'move'),
+      hasLength(1),
+      reason: 'expected exactly one reposition on open, got: $calls',
+    );
+
+    for (var i = 0; i < 20; i++) {
+      calls.clear();
+      client.current!.events.add(
+        DexEvent(
+          type: 'executing',
+          message: 'another line $i',
+          requestId: 'r1',
+          timestamp: 100 + i,
+          stepId: 'step_$i',
+        ),
+      );
+      client.notifyListeners();
+      await settle(tester);
+
+      expect(
+        calls,
+        isNot(contains('move')),
+        reason: 'output must never move the window — it moved on line $i',
+      );
+    }
+  });
+
+  testWidgets('growth stops at the ceiling and the stream scrolls instead',
+      (tester) async {
+    final client = GatewayClient()..connection = CoreConnection.connected;
+    client.current = _run(events: 60);
+    await show(tester, client);
+    final tall = await settle(tester);
+
+    expect(tall, lessThanOrEqualTo(DexTokens.barMaxHeight));
+
+    // Sixty events do not fit; the list must be scrollable and pinned to the
+    // newest line, so old output scrolls up out of view rather than pushing
+    // the window taller.
+    // .first is the ListView's own Scrollable; each SelectableText below it
+    // brings one of its own.
+    final scrollable = find
+        .descendant(of: find.byType(StepStream), matching: find.byType(Scrollable))
+        .first;
+
+    final position = tester.state<ScrollableState>(scrollable).position;
+    expect(
+      position.maxScrollExtent,
+      greaterThan(0),
+      reason: 'the stream should be scrolling, not growing',
+    );
+    expect(
+      position.pixels,
+      moreOrLessEquals(position.maxScrollExtent, epsilon: 1),
+      reason: 'the newest line should be the one you can see',
+    );
+  });
+
+  testWidgets('collapsing back to rest re-centres, ready for the next task',
+      (tester) async {
+    final client = GatewayClient()..connection = CoreConnection.connected;
+    client.current = _run(events: 3);
+    await show(tester, client);
+    await settle(tester);
+    expect(calls.where((c) => c == 'move'), hasLength(1));
 
     calls.clear();
-    client.current!.events.add(
-      const DexEvent(
-        type: 'executing',
-        message: 'one more line',
-        requestId: 'r1',
-        timestamp: 99,
-        stepId: 'step_9',
-      ),
-    );
+    client.current = null;
     client.notifyListeners();
     await settle(tester);
 
-    expect(calls, contains('resize'), reason: 'the bar still grows');
+    expect(requested.last.height, DexTokens.barRestHeight);
     expect(
       calls,
-      isNot(contains('centre')),
-      reason: 'one more step line must not walk the window up the screen',
+      contains('move'),
+      reason: 'back at rest the bar should centre again, so the next task '
+          'anchors from a sensible place',
     );
   });
 

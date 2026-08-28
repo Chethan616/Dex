@@ -6,6 +6,15 @@ import { OS_ACTION_NAMES } from '../../core/brain/capabilities';
 const PIPE_PATH = '\\\\.\\pipe\\dex_privileged_daemon';
 const TIMEOUT_MS = 30_000;
 
+/** Actions that cannot work without administrator rights. */
+const NEEDS_ELEVATION = ['set_dns', 'set_wifi', 'set_power_plan', 'registry_write'];
+
+/**
+ * Actions bound to the interactive desktop. The audio endpoint and the window
+ * list both belong to a session, not to the machine.
+ */
+const NEEDS_DESKTOP_SESSION = ['set_volume', 'set_mute', 'launch_app', 'close_app'];
+
 interface DaemonResponse {
   id: string;
   success: boolean;
@@ -43,9 +52,15 @@ export class SystemAgent implements Agent {
       return { ok: true, missing: [] };
     }
 
-    const available = new Set(
-      ((result.data as { actions?: string[] })?.actions ?? []),
-    );
+    const described = result.data as {
+      actions?: string[];
+      elevated?: boolean;
+      session_id?: number | null;
+    };
+
+    this.reportPrivilege(described);
+
+    const available = new Set(described?.actions ?? []);
     const missing = OS_ACTION_NAMES.filter((action) => !available.has(action));
 
     if (missing.length > 0) {
@@ -60,6 +75,49 @@ export class SystemAgent implements Agent {
     }
 
     return { ok: true, missing: [] };
+  }
+
+  /**
+   * Say up front what this daemon will and will not be able to do.
+   *
+   * Both of these were previously invisible, and both produce failures that
+   * look like nothing at all:
+   *
+   *   not elevated   netsh and powercfg fail. Until the `_proc` boundary was
+   *                  fixed they failed *silently*, so `set_dns` reported
+   *                  success and changed nothing.
+   *
+   *   session 0      the daemon is running as a service, cut off from the
+   *                  desktop. It can still change DNS, but the audio endpoint
+   *                  it reaches is not the owner's and an app it launches
+   *                  appears on a desktop nobody can see. Elevated and useless
+   *                  for half the actions is the confusing case worth naming.
+   */
+  private reportPrivilege(described: {
+    elevated?: boolean;
+    session_id?: number | null;
+  }): void {
+    if (described?.elevated === false) {
+      emit(
+        'failed',
+        'Daemon is not elevated: ' +
+          `${NEEDS_ELEVATION.join(', ')} will fail. Run ` +
+          'scripts/install-daemon-service.ps1 once, or start the daemon from ' +
+          'an Administrator terminal.',
+        'startup',
+      );
+    }
+
+    if (described?.session_id === 0) {
+      emit(
+        'failed',
+        'Daemon is running in session 0, isolated from the desktop: ' +
+          `${NEEDS_DESKTOP_SESSION.join(', ')} will not affect this desktop. ` +
+          'It should run elevated in your own session, not as a LocalSystem ' +
+          'service.',
+        'startup',
+      );
+    }
   }
 
   execute(

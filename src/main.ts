@@ -68,7 +68,12 @@ function main(): void {
 
   const fullAccess = process.env.FULL_ACCESS === 'true';
   if (fullAccess) {
-    console.log('\x1b[32m[Full Access]\x1b[0m Daemon runs as LocalSystem — no admin prompts.');
+    // Not LocalSystem. A service in session 0 cannot reach the owner's audio
+    // endpoint or desktop, so Full Access runs the daemon elevated *in this
+    // session* — see scripts/install-daemon-service.ps1.
+    console.log(
+      '\x1b[32m[Full Access]\x1b[0m Daemon runs elevated in your session — no admin prompts.',
+    );
   }
 
   const evidenceStore = new EvidenceStore('data/evidence');
