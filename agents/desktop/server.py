@@ -107,4 +107,14 @@ if __name__ == '__main__':
         log.error('ANTHROPIC_API_KEY not set — edit .env before starting')
         sys.exit(1)
     log.info(f'Desktop Agent Server starting on port {PORT}')
-    uvicorn.run(app, host='127.0.0.1', port=PORT, log_level='warning')
+    # log_config=None is load-bearing, not tidiness.
+    #
+    # uvicorn's default logging config attaches StreamHandlers to stdout and
+    # stderr. Under pythonw.exe -- which is how these servers run so they have
+    # no console window -- both are None, and uvicorn dies the moment it
+    # configures logging. The symptom is the worst kind: the line above is
+    # written to the log, then nothing, and the port never opens.
+    #
+    # None means "leave logging alone", so uvicorn inherits the file handler
+    # dex_logging already installed.
+    uvicorn.run(app, host='127.0.0.1', port=PORT, log_level='warning', log_config=None)

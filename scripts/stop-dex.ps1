@@ -76,7 +76,16 @@ foreach ($p in $visible) {
     $stopped++
 }
 
-# 2b. The headless core.
+# 2b. The Dex Bar. It is the UI, so "stop everything" has to include it --
+#     otherwise the bar stays on screen showing "Core not connected" forever.
+$bars = Get-Process dex_bar -ErrorAction SilentlyContinue
+foreach ($p in $bars) {
+    Say "  stopping Dex Bar (pid $($p.Id))" DarkGray
+    Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+    $stopped++
+}
+
+# 2c. The headless core.
 $cores = Get-CimInstance Win32_Process |
     Where-Object { $_.Name -like 'node*' -and $_.CommandLine -and $_.CommandLine -match $coreRegex }
 foreach ($p in $cores) {

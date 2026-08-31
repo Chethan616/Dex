@@ -85,21 +85,21 @@ if (-not $CoreOnly) {
     }
 }
 
-if (-not $CoreOnly -and -not $NoDesktop) {
+if (-not $CoreOnly -and -not $DaemonOnly -and -not $NoDesktop) {
     Write-Host 'Starting Desktop Agent Server...' -ForegroundColor Cyan
     $desktop = Start-Process $py -ArgumentList 'agents/desktop/server.py' -PassThru -WindowStyle $style
     Write-Host "Desktop Agent PID: $($desktop.Id)" -ForegroundColor DarkGray
     Start-Sleep -Milliseconds 1000
 }
 
-if (-not $CoreOnly -and -not $NoApp) {
+if (-not $CoreOnly -and -not $DaemonOnly -and -not $NoApp) {
     Write-Host 'Starting App Agent Server (UI Automation)...' -ForegroundColor Cyan
     $appAgent = Start-Process $py -ArgumentList 'agents/app/server.py' -PassThru -WindowStyle $style
     Write-Host "App Agent PID: $($appAgent.Id)" -ForegroundColor DarkGray
     Start-Sleep -Milliseconds 800
 }
 
-if (-not $CoreOnly -and -not $NoBrowser) {
+if (-not $CoreOnly -and -not $DaemonOnly -and -not $NoBrowser) {
     Write-Host 'Starting Browser Agent Server...' -ForegroundColor Cyan
     $browser = Start-Process $py -ArgumentList 'agents/browser/server.py' -PassThru -WindowStyle $style
     Write-Host "Browser Agent PID: $($browser.Id)" -ForegroundColor DarkGray
