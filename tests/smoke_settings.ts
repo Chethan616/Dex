@@ -305,6 +305,39 @@ try {
   globalThis.fetch = originalFetch;
 }
 
+let budgetCalls = 0;
+const requestedBudgets: number[] = [];
+globalThis.fetch = (async (_input, init) => {
+  budgetCalls += 1;
+  const body = JSON.parse(String(init?.body ?? '{}')) as { max_tokens?: number };
+  requestedBudgets.push(Number(body.max_tokens));
+  if (budgetCalls === 1) {
+    return new Response(
+      JSON.stringify({ error: { message: 'Request too large for tokens per minute limit' } }),
+      { status: 413 },
+    );
+  }
+  return new Response(
+    JSON.stringify({ choices: [{ message: { content: '{"steps":[]}' } }] }),
+    { status: 200 },
+  );
+}) as typeof fetch;
+try {
+  const provider = new OpenAiCompatProvider('test-key', 'test-model', 'http://test.invalid', 'test');
+  await provider.callTool({
+    system: 'Plan the request.',
+    user: 'open notepad',
+    maxTokens: 8192,
+    tool: { name: 'create_execution_plan', description: 'Create a plan', schema: {} },
+  });
+  check(
+    'backs off the output budget when Groq rejects an oversized request',
+    budgetCalls === 2 && requestedBudgets[0] > requestedBudgets[1] && requestedBudgets[1] === 2048,
+  );
+} finally {
+  globalThis.fetch = originalFetch;
+}
+
 fs.rmSync(tmp, { recursive: true, force: true });
 
 console.log(failures === 0 ? '\nAll settings checks passed.' : `\n${failures} check(s) failed.`);

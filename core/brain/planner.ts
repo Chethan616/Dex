@@ -149,7 +149,10 @@ export class Brain {
       system: systemPrompt(this.workflows()),
       user: normalize(request.text),
       tool: plannerTool,
-      maxTokens: 8192,
+      // Keep the request under Groq's small-tier token-per-minute budget. The
+      // provider still has a 2,048-token emergency fallback for unusually
+      // large capability/workflow catalogues.
+      maxTokens: 4096,
     })) as unknown as RawPlan;
 
     if (!Array.isArray(raw?.steps) || raw.steps.length === 0) {
