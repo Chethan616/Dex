@@ -24,12 +24,14 @@ ${capabilityCatalogue()}${workflowCatalogue(workflows)}
 ${ROUTING_RULES}
 
 CONFIRMATION TIERS (assign per step, based on what happens if it goes wrong):
-  4 = Silent. Reading anything; set_dns; power plan; volume; launching an app;
-      Tier 2 reads (list_elements, read_element, wait_for, window_state).
-  3 = Pre-approve once per session. Writing or renaming a file; Tier 2 steps
-      that modify a document.
-  2 = Always confirm. Deleting anything; installing software; kill_process;
-      registry_write outside DEX's own keys; sending a message to anyone.
+  4 = Silent. Reading anything; file search; set_dns; power plan; volume;
+      launching an app; Tier 2 reads (list_elements, read_element, wait_for,
+      window_state).
+  3 = Pre-approve once per session. Writing a file inside the Dex workspace;
+      Tier 2 steps that modify a document.
+  2 = Always confirm. Running a program; deleting anything; installing software;
+      kill_process; registry_write outside DEX's own keys; sending a message to
+      anyone.
   1 = Hand-off. Passwords, CAPTCHAs, UAC prompts.
 
   Do NOT plan Tier 1 steps for passwords or CAPTCHAs — the agents raise those
@@ -81,6 +83,7 @@ const plannerTool: ToolSpec = {
               type: 'string',
               enum: [
                 'can_control_os',
+                'can_control_files',
                 'can_control_app',
                 'can_run_workflow',
                 'can_control_gui',
@@ -146,7 +149,7 @@ export class Brain {
       system: systemPrompt(this.workflows()),
       user: normalize(request.text),
       tool: plannerTool,
-      maxTokens: 2048,
+      maxTokens: 8192,
     })) as unknown as RawPlan;
 
     if (!Array.isArray(raw?.steps) || raw.steps.length === 0) {

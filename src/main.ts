@@ -20,6 +20,7 @@ import { DesktopAgent } from '../agents/desktop/desktop_agent';
 import { AppAgent } from '../agents/app/app_agent';
 import { BrowserAgent } from '../agents/browser/browser_agent';
 import { WorkspaceAgent } from '../agents/workspace/workspace_agent';
+import { FileAgent } from '../agents/files/file_agent';
 import { defaultRoutes, defaultServers } from '../agents/workspace/servers';
 import { startCli } from '../channels/cli';
 import { ChannelAdapter, ChannelRuntime } from '../channels/base_channel';
@@ -99,6 +100,7 @@ function main(): void {
   registry.register(new AppAgent());
   registry.register(new DesktopAgent());
   registry.register(new BrowserAgent());
+  registry.register(new FileAgent());
 
   // MCP servers are spawned on first use, not here — starting three OAuth
   // handshakes at boot would make `npm run dev` feel broken for anyone who has

@@ -30,7 +30,7 @@ export class OpenAiCompatProvider implements LlmProvider {
   }
 
   async callTool(request: ToolCallRequest): Promise<Record<string, unknown>> {
-    const body = {
+    const baseBody = {
       model: this.model,
       messages: [
         { role: 'system', content: request.system },
@@ -44,7 +44,6 @@ export class OpenAiCompatProvider implements LlmProvider {
           parameters: request.tool.schema,
         },
       }],
-      tool_choice: 'required',
       // Reasoning models spend output tokens thinking before they emit the
       // call. Too small a budget and the response comes back empty with
       // finish_reason=length — measured, not theoretical.
@@ -53,47 +52,92 @@ export class OpenAiCompatProvider implements LlmProvider {
     };
 
     return withRetry(async () => {
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
+      let lastError = 'no tool call';
+      for (const mode of ['required', 'auto'] as const) {
+        const body = {
+          ...baseBody,
+          tool_choice: mode,
+          messages: mode === 'required'
+            ? baseBody.messages
+            : [
+                { role: 'system', content: `${request.system}\n\n` +
+                  'If the tool call cannot be emitted, return only one JSON object ' +
+                  'matching the requested tool arguments. Do not apologize or explain.' },
+                { role: 'user', content: request.user },
+              ],
+        };
+        const response = await fetch(`${this.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
 
-      if (response.status === 429 || response.status >= 500) {
-        throw new RateLimited(
-          `${this.label} returned ${response.status}`,
-          retryAfterMs(response.headers.get('retry-after')),
-        );
-      }
-      if (!response.ok) {
-        throw new Error(`${this.label}: HTTP ${response.status} — ${(await response.text()).slice(0, 300)}`);
+        if (response.status === 429 || response.status >= 500) {
+          throw new RateLimited(
+            `${this.label} returned ${response.status}`,
+            retryAfterMs(response.headers.get('retry-after')),
+          );
+        }
+
+        const raw = await response.text();
+        if (!response.ok) {
+          // Some OpenAI-compatible gateways reject a required tool when the
+          // model emits ordinary text. Give the same request one structured
+          // JSON fallback instead of turning a recoverable planner response
+          // into an immediate task failure.
+          if (mode === 'required' && response.status === 400 &&
+              /tool choice|required|did not call|failed_generation/i.test(raw)) {
+            lastError = raw.slice(0, 300);
+            continue;
+          }
+          throw new Error(`${this.label}: HTTP ${response.status} — ${raw.slice(0, 300)}`);
+        }
+
+        let data: {
+          choices?: Array<{
+            message?: {
+              content?: string | null;
+              tool_calls?: Array<{ function?: { arguments?: string } }>;
+            };
+            finish_reason?: string;
+          }>;
+        };
+        try {
+          data = JSON.parse(raw) as typeof data;
+        } catch {
+          lastError = 'returned invalid JSON';
+          continue;
+        }
+
+        const choice = data.choices?.[0];
+        const call = choice?.message?.tool_calls?.[0];
+        if (call?.function?.arguments) {
+          try {
+            return JSON.parse(call.function.arguments) as Record<string, unknown>;
+          } catch {
+            lastError = 'returned unparseable tool arguments';
+            continue;
+          }
+        }
+
+        const content = choice?.message?.content;
+        if (typeof content === 'string' && content.trim()) {
+          try {
+            return extractJsonObject(content);
+          } catch (err) {
+            lastError = err instanceof Error ? err.message : String(err);
+          }
+        } else {
+          lastError = choice?.finish_reason === 'length'
+            ? 'ran out of output tokens before returning a plan'
+            : `returned no tool call (finish_reason=${choice?.finish_reason ?? 'unknown'})`;
+        }
       }
 
-      const data = await response.json() as {
-        choices?: Array<{
-          message?: { tool_calls?: Array<{ function?: { arguments?: string } }> };
-          finish_reason?: string;
-        }>;
-      };
-
-      const call = data.choices?.[0]?.message?.tool_calls?.[0];
-      if (!call?.function?.arguments) {
-        const reason = data.choices?.[0]?.finish_reason;
-        throw new Error(
-          reason === 'length'
-            ? `${this.label} ran out of output tokens before calling the tool — raise max_tokens`
-            : `${this.label} returned no tool call (finish_reason=${reason ?? 'unknown'})`,
-        );
-      }
-
-      try {
-        return JSON.parse(call.function.arguments) as Record<string, unknown>;
-      } catch {
-        throw new Error(`${this.label} returned unparseable tool arguments`);
-      }
+      throw new Error(`${this.label} could not produce a planning tool call — ${lastError}`);
     }, { label: this.label });
   }
 }

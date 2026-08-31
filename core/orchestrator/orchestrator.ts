@@ -205,19 +205,32 @@ export class Orchestrator {
       return 'failed';
     }
 
+    const recheckOnly = this.recheckWithoutRepeating(step);
     emit(
       'retrying',
-      `${step.id} verification failed (${verification.reason}) — retrying`,
+      `${step.id} verification failed (${verification.reason}) — ` +
+        `${recheckOnly ? 'rechecking without repeating the action' : 'retrying'}`,
       requestId,
       step.id,
     );
 
-    const retry = await agent.execute(step.action, step.params, requestId, step.id, ctx);
+    // Launching a window, starting a program, or opening a location is not a
+    // safe retry: the first invocation may have succeeded while verification
+    // was still catching up. Re-read the state instead of creating a second
+    // Notepad, Explorer window, or game process.
+    const retry = recheckOnly
+      ? result
+      : await agent.execute(step.action, step.params, requestId, step.id, ctx);
     const retryVerification = await this.reliability.verify(step, beforeState, requestId, retry);
 
     if (retry.success && retryVerification.status !== 'FAILED') {
       this.captureCompletionDetail(step, retryVerification.reason, completionDetails);
-      emit('done', `${step.id} verified on retry ✓`, requestId, step.id);
+      emit(
+        'done',
+        `${step.id} verified ${recheckOnly ? 'after recheck' : 'on retry'} ✓`,
+        requestId,
+        step.id,
+      );
       completed.add(step.id);
       return 'ok';
     }
@@ -226,18 +239,22 @@ export class Orchestrator {
     return 'failed';
   }
 
-  /**
-   * Keep read results in the task's final answer. The agent already returned
-   * the live value; this is only the presentation bridge that prevents the
-   * result from being replaced by the planner's intent.
-   */
+  private recheckWithoutRepeating(step: ExecutionStep): boolean {
+    if (step.action === 'launch_app' || step.action === 'run_program') return true;
+    return step.action === 'find_files' && step.params.open_location === true;
+  }
+
+  /** Keep live file/code results in the task's final answer. */
   private captureCompletionDetail(
     step: ExecutionStep,
     reason: string,
     details: string[],
   ): void {
-    if (step.capability !== 'can_control_app' || step.action !== 'read_element') return;
-    if (!reason.startsWith('Read "') || details.includes(reason)) return;
+    const isUsefulResult =
+      (step.capability === 'can_control_app' && step.action === 'read_element') ||
+      (step.capability === 'can_control_files' &&
+        ['find_files', 'write_file', 'run_program'].includes(step.action));
+    if (!isUsefulResult || details.includes(reason)) return;
     details.push(reason);
   }
 

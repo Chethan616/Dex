@@ -51,7 +51,9 @@ export class ArtifactStore {
     const data = (result.data ?? {}) as Record<string, unknown>;
 
     // A file the plan said it would produce, and verification confirmed.
-    const file = params.verify_file ?? params.path ?? params.file;
+    const file = step.action === 'write_file'
+      ? data.path ?? params.path
+      : params.verify_file ?? params.path ?? params.file;
     if (typeof file === 'string' && looksLikePath(file)) {
       found.push({ kind: 'file', name: path.basename(file), locator: file });
     }

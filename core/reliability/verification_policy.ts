@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import { execSync } from 'child_process';
+import { createHash } from 'crypto';
 import { AgentResult, ExecutionStep, VerificationResult } from '../events/types';
 
 export async function verifyStep(
@@ -8,6 +9,7 @@ export async function verifyStep(
   agentResult?: AgentResult,
 ): Promise<VerificationResult> {
   if (step.capability === 'can_control_os') return verifyOsStep(step, agentResult);
+  if (step.capability === 'can_control_files') return verifyFileStep(step, agentResult);
   if (step.capability === 'can_control_app') return verifyAppStep(step, agentResult);
   if (step.capability === 'can_control_gui') return verifyGuiStep(step);
   if (step.capability === 'can_browse_web') return verifyBrowserStep(step, agentResult);
@@ -293,7 +295,7 @@ function verifyWorkspaceStep(
   };
 }
 
-function verifyOsStep(step: ExecutionStep, agentResult?: AgentResult): VerificationResult {
+async function verifyOsStep(step: ExecutionStep, agentResult?: AgentResult): Promise<VerificationResult> {
   switch (step.action) {
     case 'set_dns':
       return verifyDns(
@@ -324,6 +326,96 @@ function verifyOsStep(step: ExecutionStep, agentResult?: AgentResult): Verificat
         reason: `No verification logic for action: ${step.action}`,
       };
   }
+}
+
+function verifyFileStep(step: ExecutionStep, agentResult?: AgentResult): VerificationResult {
+  switch (step.action) {
+    case 'find_files':
+      return verifyFileSearch(agentResult);
+    case 'write_file':
+      return verifyFileWrite(agentResult);
+    case 'run_program':
+      return verifyProgram(agentResult);
+    default:
+      return {
+        status: 'UNVERIFIABLE',
+        reason: `No verification logic for file action: ${step.action}`,
+      };
+  }
+}
+
+function verifyFileSearch(agentResult?: AgentResult): VerificationResult {
+  const data = asRecord(agentResult?.data);
+  const rawMatches = Array.isArray(data?.matches) ? data.matches : [];
+  const matches = rawMatches
+    .map((item) => asRecord(item)?.path)
+    .filter((value): value is string => typeof value === 'string' && value.length > 0);
+  const count = typeof data?.count === 'number' ? data.count : matches.length;
+  const opened = typeof data?.opened_location === 'string' ? data.opened_location : '';
+  const shown = matches.slice(0, 5).join(', ');
+  const suffix = shown ? `: ${shown}${matches.length > 5 ? ', …' : ''}` : '';
+  const location = opened ? `; opened ${opened}` : '';
+  return {
+    status: 'VERIFIED',
+    reason: `Found ${count} matching file${count === 1 ? '' : 's'}${suffix}${location}`,
+    afterState: matches,
+  };
+}
+
+function verifyFileWrite(agentResult?: AgentResult): VerificationResult {
+  const data = asRecord(agentResult?.data);
+  const file = typeof data?.path === 'string' ? data.path : '';
+  if (!file || !fs.existsSync(file)) {
+    return { status: 'FAILED', reason: `Written file was not found: ${file || '(no path)'}` };
+  }
+
+  try {
+    const bytes = fs.readFileSync(file);
+    const expectedBytes = typeof data?.bytes === 'number' ? data.bytes : bytes.length;
+    const expectedHash = typeof data?.sha256 === 'string' ? data.sha256 : '';
+    const actualHash = createHash('sha256').update(bytes).digest('hex');
+    if (bytes.length !== expectedBytes || (expectedHash && actualHash !== expectedHash)) {
+      return {
+        status: 'FAILED',
+        reason: `File read-back differs from what was written: ${file}`,
+        afterState: { bytes: bytes.length, sha256: actualHash },
+      };
+    }
+    return {
+      status: 'VERIFIED',
+      reason: `Wrote and read back ${file} (${bytes.length} bytes)`,
+      afterState: { bytes: bytes.length, sha256: actualHash },
+    };
+  } catch (err) {
+    return { status: 'UNVERIFIABLE', reason: `Could not read back ${file}: ${err}` };
+  }
+}
+
+function verifyProgram(agentResult?: AgentResult): VerificationResult {
+  const data = asRecord(agentResult?.data);
+  const file = typeof data?.path === 'string' ? data.path : 'program';
+  if (data?.background === true) {
+    const pid = Number(data.pid);
+    if (!Number.isInteger(pid) || pid <= 0) {
+      return { status: 'FAILED', reason: `${file} returned no running process id` };
+    }
+    try {
+      const listing = execSync(`tasklist /FI "PID eq ${pid}" /FO CSV /NH`, {
+        encoding: 'utf8',
+        timeout: 10000,
+        windowsHide: true,
+      });
+      return listing.includes(String(pid))
+        ? { status: 'VERIFIED', reason: `Running ${file} (pid ${pid})`, afterState: pid }
+        : { status: 'FAILED', reason: `${file} exited before verification`, afterState: pid };
+    } catch (err) {
+      return { status: 'UNVERIFIABLE', reason: `Could not verify ${file}: ${err}` };
+    }
+  }
+
+  return Number(data?.returncode) === 0
+    ? { status: 'VERIFIED', reason: `Ran ${file} successfully`, afterState: data?.stdout }
+    : { status: 'FAILED', reason: `${file} returned a non-zero exit code` };
 }
 
 /**
@@ -567,27 +659,36 @@ function verifyGuiStep(step: ExecutionStep): VerificationResult {
  * exits immediately, so a process check finds nothing while the app is plainly
  * on screen. The window is the thing the owner asked for.
  */
-function verifyAppOpen(step: ExecutionStep, agentResult?: AgentResult): VerificationResult {
+async function verifyAppOpen(step: ExecutionStep, agentResult?: AgentResult): Promise<VerificationResult> {
   const requested = String((step.params as { name?: string }).name ?? '');
   const launched = String((agentResult?.data as { launched?: string })?.launched ?? requested);
-
-  const titles = windowTitles();
-  if (titles === null) {
-    return { status: 'UNVERIFIABLE', reason: 'Could not read the window list' };
-  }
 
   const needles = [requested, launched.replace(/\.exe$/i, '')]
     .map((n) => n.trim().toLowerCase())
     .filter(Boolean);
 
-  const hit = titles.find((t) => needles.some((n) => t.toLowerCase().includes(n)));
-  return hit
-    ? { status: 'VERIFIED', reason: `Window open: "${hit}"`, afterState: hit }
-    : {
-        status: 'FAILED',
-        reason: `${requested} was launched but no window appeared`,
-        afterState: titles.slice(0, 8),
-      };
+  // A launcher returning and a window being visible are different events.
+  // Poll the read-only window list for a short bounded period so a slow app is
+  // not started again while the first instance is still appearing.
+  const deadline = Date.now() + 5_000;
+  let titles: string[] | null = null;
+  while (Date.now() <= deadline) {
+    titles = windowTitles();
+    if (titles === null) {
+      return { status: 'UNVERIFIABLE', reason: 'Could not read the window list' };
+    }
+    const hit = titles.find((t) => needles.some((n) => t.toLowerCase().includes(n)));
+    if (hit) {
+      return { status: 'VERIFIED', reason: `Window open: "${hit}"`, afterState: hit };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+
+  return {
+    status: 'FAILED',
+    reason: `${requested} was launched but no window appeared`,
+    afterState: titles?.slice(0, 8) ?? [],
+  };
 }
 
 /** The mirror image: the window is gone. */

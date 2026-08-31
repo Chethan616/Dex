@@ -22,6 +22,7 @@
     "test:daemon": "python tests/test_daemon_proc.py",
     "test:scripts": "powershell -NoProfile -ExecutionPolicy Bypass -File tests/check_scripts.ps1",
     "test:uia": "python tests/test_uia_matching.py",
+    "test:files": "ts-node tests/smoke_files.ts",
     "test:full-access": "ts-node tests/smoke_full_access.ts",
     "test:scheduler": "ts-node tests/smoke_scheduler.ts",
     "test:settings": "ts-node tests/smoke_settings.ts",

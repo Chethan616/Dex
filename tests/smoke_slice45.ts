@@ -20,7 +20,7 @@ import { CancellationRegistry } from '../core/orchestrator/cancellation';
 import { ConfirmationManager } from '../core/confirmation/confirmation_manager';
 import { ReliabilityLayer } from '../core/reliability/observation_engine';
 import { EvidenceStore } from '../core/reliability/evidence_store';
-import { OS_ACTION_NAMES, capabilityCatalogue } from '../core/brain/capabilities';
+import { OS_ACTION_NAMES, capabilityCatalogue, ROUTING_RULES } from '../core/brain/capabilities';
 
 let passed = 0;
 let failed = 0;
@@ -290,6 +290,8 @@ function testRoutingPrompt(): void {
 
   const catalogue = capabilityCatalogue();
   check('Tier 1 is marked as the preferred tier', catalogue.includes('TIER 1 — always prefer this'));
+  check('local files and code have a deterministic capability', catalogue.includes('can_control_files'));
+  check('game creation is routed to code execution, not screenshots', /create, write, or run source code/.test(ROUTING_RULES));
   check('Tier 3 is marked as a last resort', catalogue.includes('TIER 3 — last resort'));
   check('launch_app is offered on Tier 1, not the GUI tier', /can_control_os[\s\S]*?- launch_app/.test(catalogue));
   check(

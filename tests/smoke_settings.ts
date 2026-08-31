@@ -25,7 +25,7 @@ import { EnvStore } from '../core/settings/env_store';
 import { SettingsService, PUBLIC_ENV_KEYS } from '../core/settings/settings_service';
 import { CREDENTIALS, CREDENTIALS_BY_NAME, BRAIN_PROVIDERS } from '../core/settings/provider_catalog';
 import { resolveCommand } from '../core/settings/which';
-import { extractJsonObject, buildJsonPrompt } from '../core/llm/providers';
+import { OpenAiCompatProvider, extractJsonObject, buildJsonPrompt } from '../core/llm/providers';
 
 let failures = 0;
 
@@ -258,6 +258,37 @@ const insistent = buildJsonPrompt(
   true,
 );
 check('the retry says what went wrong last time', /could not be parsed/.test(insistent));
+
+// Some OpenAI-compatible gateways answer with HTTP 400 when a model emits
+// ordinary text despite tool_choice=required. The provider should retry the
+// same planning request in JSON-only mode, not strand the task at planning.
+const originalFetch = globalThis.fetch;
+let providerCalls = 0;
+globalThis.fetch = (async () => {
+  providerCalls += 1;
+  if (providerCalls === 1) {
+    return new Response(
+      JSON.stringify({ error: { message: 'Tool choice is required, but model did not call a tool' } }),
+      { status: 400 },
+    );
+  }
+  return new Response(
+    JSON.stringify({ choices: [{ message: { content: '{"steps":[{"id":"step_1"}]}' } }] }),
+    { status: 200 },
+  );
+}) as typeof fetch;
+try {
+  const provider = new OpenAiCompatProvider('test-key', 'test-model', 'http://test.invalid', 'test');
+  const fallback = await provider.callTool({
+    system: 'Plan the request.',
+    user: 'write a game',
+    maxTokens: 512,
+    tool: { name: 'create_execution_plan', description: 'Create a plan', schema: {} },
+  });
+  check('recovers when a gateway rejects a missing required tool call', providerCalls === 2 && Array.isArray(fallback.steps));
+} finally {
+  globalThis.fetch = originalFetch;
+}
 
 fs.rmSync(tmp, { recursive: true, force: true });
 

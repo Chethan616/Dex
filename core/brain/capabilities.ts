@@ -41,6 +41,22 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
   run_shell: { params: '{ command: string[] }', note: 'Read-only commands only: ipconfig, netsh, powercfg, tasklist, systeminfo, whoami, hostname' },
 };
 
+/** Tier 1 — direct user-side filesystem and runtime control. No UI involved. */
+export const FILE_ACTIONS: Record<string, ActionSpec> = {
+  find_files: {
+    params: '{ root?: string, query: string, open_location?: boolean, max_results?: number }',
+    note: 'Searches filenames directly; set open_location=true to select a result in File Explorer',
+  },
+  write_file: {
+    params: '{ path: string, content: string }',
+    note: 'Writes UTF-8 source inside the bounded Dex workspace; use for code or a document, Tier 3',
+  },
+  run_program: {
+    params: '{ path: string, runtime?: "python" | "node" | "ruby" | "go", args?: string[], background?: boolean, timeout?: number }',
+    note: 'Runs a program as the signed-in user inside the Dex workspace; use background=true for a GUI/game, Tier 2',
+  },
+};
+
 /** Tier 2 — drive an application through UI Automation. Deterministic, no vision. */
 export const APP_ACTIONS: Record<string, ActionSpec> = {
   list_elements: { params: '{ window: string, control_type?: string }', note: 'Discover what a window offers before acting on it' },
@@ -128,6 +144,12 @@ export function capabilityCatalogue(): string {
   UI is touched. Fastest, most reliable, and verifiable by reading state back.
 ${render(OS_ACTIONS)}
 
+CAPABILITY: can_control_files   [TIER 1 — user-side local workspace]
+  Searches filenames directly and writes or runs code without screenshots,
+  terminals, or File Explorer typing. Writes and execution stay inside the
+  Dex workspace and run as the signed-in user.
+${render(FILE_ACTIONS)}
+
 CAPABILITY: can_control_app   [TIER 2 — for controlling applications]
   Drives an application through Windows UI Automation: finds a control by its
   NAME and invokes it. No screenshots, no coordinates, nothing that can miss by
@@ -147,11 +169,12 @@ ${render(GUI_ACTIONS)}`;
  */
 export const ROUTING_RULES = `HOW TO CHOOSE A CAPABILITY — work down this ladder and stop at the first match:
 
-  1. Is there a can_control_os action for it?  -> use TIER 1.
-     Volume, DNS, wifi, power plans, processes, services, registry, and opening
-     or closing an application are ALL Tier 1. Never open an app by driving the
-     Start menu, and never change a setting by clicking through Settings if an
-     action exists for it.
+  1. Is there a can_control_os or can_control_files action for it?  -> use TIER 1.
+     Volume, DNS, wifi, power plans, processes, services, registry, filename
+     search, file writing, program execution, and opening or closing an
+     application are direct mechanisms. Never open an app by driving the Start
+     menu, never search files through screenshots, and never change a setting
+     by clicking through Settings if an action exists for it.
 
   2. Does it mean operating a normal Windows application?  -> use TIER 2.
      Notepad, File Explorer, Settings, Word, Excel, any standard desktop app.
@@ -159,12 +182,19 @@ export const ROUTING_RULES = `HOW TO CHOOSE A CAPABILITY — work down this ladd
      click_element / set_text / select_menu over anything visual.
 
   3. Only if the target draws its own interface  -> use TIER 3.
-     Games, canvases, image editors, video timelines — UI where there are no
-     real controls to name. If you are unsure, choose TIER 2: it reports back
+     Use this only to interact with an already-running game, canvas, image
+     editor, or video timeline where there are no real controls to name. If the
+     owner asks to create, write, or run source code — including a game — use
+     can_control_files first. If you are unsure, choose TIER 2: it reports back
      when it cannot see the controls, and Dex escalates automatically.
 
   NEVER automate a terminal, console or PowerShell window through Tier 2 or 3.
-  System work goes through Tier 1.
+  System work goes through Tier 1. For local files, use can_control_files:
+  find_files; for code, use write_file followed by run_program. These use the
+  Dex workspace, never a terminal window. A file-location task should normally be:
+    find_files(open_location=true)
+  and a code task should normally be:
+    write_file -> run_program
 
   A typical desktop task is a Tier 1 launch followed by Tier 2 steps. For
   example "open Notepad, type hello, save as test.txt" is:
