@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../core/window_activity.dart';
 import '../../theme/tokens.dart';
 import 'focus_ring.dart';
 
@@ -28,6 +31,7 @@ class DexButton extends StatefulWidget {
     this.enabled = true,
     this.dense = false,
     this.icon,
+    this.consequential = false,
   });
 
   final String label;
@@ -43,18 +47,61 @@ class DexButton extends StatefulWidget {
   final bool dense;
   final IconData? icon;
 
+  /// Require a real pointer movement after the window was raised or moved.
+  ///
+  /// This is for actions that change state outside the UI — deleting a saved
+  /// item, stopping processes, or changing whether a task will run unattended.
+  /// The guard is polled for the same reason as [AccessChip]: a disabled
+  /// FocusableActionDetector cannot receive the hover event that would arm it.
+  final bool consequential;
+
   @override
   State<DexButton> createState() => _DexButtonState();
 }
 
 class _DexButtonState extends State<DexButton> {
   bool _hover = false;
+  bool _armed = false;
+  Timer? _guard;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncGuard();
+  }
+
+  @override
+  void didUpdateWidget(covariant DexButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.consequential != widget.consequential) _syncGuard();
+  }
+
+  void _syncGuard() {
+    _guard?.cancel();
+    _guard = null;
+    if (!widget.consequential) {
+      if (_armed) setState(() => _armed = false);
+      return;
+    }
+    _guard = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (!mounted) return timer.cancel();
+      final armed = WindowActivity.safeToAccept;
+      if (armed != _armed) setState(() => _armed = armed);
+    });
+  }
+
+  @override
+  void dispose() {
+    _guard?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = context.dex;
     final tone = widget.tone ?? t.textMuted;
-    final hover = _hover && widget.enabled;
+    final active = widget.enabled && (!widget.consequential || _armed);
+    final hover = _hover && active;
 
     final (Color bg, Color line, Color fg) = switch (widget.variant) {
       DexButtonVariant.primary => (
@@ -79,7 +126,7 @@ class _DexButtonState extends State<DexButton> {
         : const EdgeInsets.symmetric(horizontal: 13, vertical: 8);
 
     return FocusRing(
-      enabled: widget.enabled,
+      enabled: active,
       onTap: widget.onTap,
       semanticLabel: widget.label,
       onHoverChanged: (v) {
@@ -87,7 +134,7 @@ class _DexButtonState extends State<DexButton> {
       },
       child: AnimatedOpacity(
         duration: DexTokens.durFast,
-        opacity: widget.enabled ? 1 : 0.35,
+        opacity: active ? 1 : 0.35,
         child: AnimatedContainer(
           duration: DexTokens.durFast,
           padding: pad,
@@ -128,6 +175,7 @@ class DexIconButton extends StatefulWidget {
     this.enabled = true,
     this.size = 16,
     this.tone,
+    this.consequential = false,
   });
 
   final IconData icon;
@@ -136,6 +184,7 @@ class DexIconButton extends StatefulWidget {
   final bool enabled;
   final double size;
   final Color? tone;
+  final bool consequential;
 
   @override
   State<DexIconButton> createState() => _DexIconButtonState();
@@ -143,16 +192,52 @@ class DexIconButton extends StatefulWidget {
 
 class _DexIconButtonState extends State<DexIconButton> {
   bool _hover = false;
+  bool _armed = false;
+  Timer? _guard;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncGuard();
+  }
+
+  @override
+  void didUpdateWidget(covariant DexIconButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.consequential != widget.consequential) _syncGuard();
+  }
+
+  void _syncGuard() {
+    _guard?.cancel();
+    _guard = null;
+    if (!widget.consequential) {
+      if (_armed) setState(() => _armed = false);
+      return;
+    }
+    _guard = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (!mounted) return timer.cancel();
+      final armed = WindowActivity.safeToAccept;
+      if (armed != _armed) setState(() => _armed = armed);
+    });
+  }
+
+  @override
+  void dispose() {
+    _guard?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = context.dex;
     final tone = widget.tone ?? t.textMuted;
+    final active = widget.enabled &&
+        (!widget.consequential || _armed);
 
     return Tooltip(
       message: widget.tooltip,
       child: FocusRing(
-        enabled: widget.enabled,
+        enabled: active,
         onTap: widget.onTap,
         semanticLabel: widget.tooltip,
         onHoverChanged: (v) {
@@ -162,7 +247,7 @@ class _DexIconButtonState extends State<DexIconButton> {
           duration: DexTokens.durFast,
           padding: const EdgeInsets.all(5),
           decoration: BoxDecoration(
-            color: _hover && widget.enabled
+            color: _hover && active
                 ? t.surfaceRaised
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(DexTokens.radiusSm),
@@ -170,7 +255,7 @@ class _DexIconButtonState extends State<DexIconButton> {
           child: Icon(
             widget.icon,
             size: widget.size,
-            color: _hover && widget.enabled ? t.text : tone,
+            color: _hover && active ? t.text : tone,
           ),
         ),
       ),

@@ -35,13 +35,18 @@ class ThemeController extends ChangeNotifier {
   ///
   /// System first because it is the right default, and cycling *through* it
   /// rather than offering it as a third button keeps this to one control in a
-  /// header that already carries four.
-  Future<void> cycle() async {
-    _mode = switch (_mode) {
-      ThemeMode.system => ThemeMode.dark,
-      ThemeMode.dark => ThemeMode.light,
-      ThemeMode.light => ThemeMode.system,
-    };
+  /// header that already carries four. Settings offers all three directly,
+  /// where there is room for them.
+  Future<void> cycle() => set(switch (_mode) {
+        ThemeMode.system => ThemeMode.dark,
+        ThemeMode.dark => ThemeMode.light,
+        ThemeMode.light => ThemeMode.system,
+      });
+
+  /// Choose one directly.
+  Future<void> set(ThemeMode mode) async {
+    if (mode == _mode) return;
+    _mode = mode;
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();

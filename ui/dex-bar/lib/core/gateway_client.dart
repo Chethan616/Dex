@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'models.dart';
+import 'settings_models.dart';
 
 enum CoreConnection { disconnected, connecting, connected, noCore }
 
@@ -208,6 +209,33 @@ class GatewayClient extends ChangeNotifier {
             .toList();
         break;
 
+      case 'schedules':
+        schedules = (msg['schedules'] as List? ?? const [])
+            .map((s) => ScheduleRecord.fromJson(Map<String, dynamic>.from(s as Map)))
+            .toList();
+        scheduleBusy = false;
+        break;
+
+      case 'schedule_saved':
+        lastNotice = 'Saved schedule "${msg['name']}".';
+        scheduleBusy = false;
+        refreshSchedules();
+        break;
+
+      case 'schedule_updated':
+        lastNotice = msg['enabled'] == true ? 'Schedule resumed.' : 'Schedule paused.';
+        scheduleBusy = false;
+        refreshSchedules();
+        break;
+
+      case 'schedule_deleted':
+        lastNotice = msg['removed'] == true
+            ? 'Removed schedule "${msg['name']}".'
+            : 'No schedule named "${msg['name']}".';
+        scheduleBusy = false;
+        refreshSchedules();
+        break;
+
       case 'workflow_saved':
         lastNotice = 'Saved "${msg['name']}" — ${msg['steps']} step(s).';
         saveSuggestion = null;
@@ -230,8 +258,31 @@ class GatewayClient extends ChangeNotifier {
         stats = UsageStats.fromJson(Map<String, dynamic>.from(msg['stats'] as Map));
         break;
 
+      case 'settings':
+        settings = SettingsSnapshot.fromJson(
+          Map<String, dynamic>.from(msg['settings'] as Map),
+        );
+        settingsBusy = false;
+        break;
+
+      case 'provider_test':
+        lastProviderTest = ProviderTestResult.fromJson(
+          Map<String, dynamic>.from(msg['result'] as Map),
+        );
+        testingProvider = null;
+        break;
+
+      case 'log':
+        logs[msg['name'] as String? ?? ''] = msg['text'] as String? ?? '';
+        break;
+
       case 'error':
         lastNotice = msg['message'] as String?;
+        // A failed save must not leave Settings spinning forever. The core
+        // replies with either a refreshed snapshot or an error, never both.
+        settingsBusy = false;
+        scheduleBusy = false;
+        testingProvider = null;
         break;
     }
     notifyListeners();
@@ -344,6 +395,59 @@ class GatewayClient extends ChangeNotifier {
 
   // ---- commands -----------------------------------------------------------
 
+  // ---- settings -----------------------------------------------------------
+  //
+  // Everything here round-trips through the core rather than the app touching
+  // the credential store or .env directly. There is one writer for both, and
+  // it already knows the rules: DPAPI encryption, the public-key allow-list,
+  // and preserving the comments in .env that are its only documentation.
+
+  /// What Settings renders. Never contains a secret — see settings_models.dart.
+  SettingsSnapshot? settings;
+
+  /// A save is in flight. The core answers with a fresh snapshot or an error.
+  bool settingsBusy = false;
+
+  /// Which provider is being tested, so its row alone shows a spinner.
+  String? testingProvider;
+  ProviderTestResult? lastProviderTest;
+
+  /// Log name → its tail, for the Logs screen.
+  final Map<String, String> logs = {};
+
+  void refreshSettings() => _send({'type': 'get_settings'});
+
+  /// Store a secret. It goes one way: nothing sends it back.
+  void setCredential(String name, String value) {
+    settingsBusy = true;
+    notifyListeners();
+    _send({'type': 'set_credential', 'name': name, 'value': value});
+  }
+
+  void deleteCredential(String name) {
+    settingsBusy = true;
+    notifyListeners();
+    _send({'type': 'delete_credential', 'name': name});
+  }
+
+  /// Non-secret settings. A null value clears one.
+  void setEnv(Map<String, String?> changes) {
+    settingsBusy = true;
+    notifyListeners();
+    _send({'type': 'set_env', 'changes': changes});
+  }
+
+  /// Spend one real request and report what came back.
+  void testProvider(String provider) {
+    testingProvider = provider;
+    lastProviderTest = null;
+    notifyListeners();
+    _send({'type': 'test_provider', 'provider': provider});
+  }
+
+  void refreshLog(String name, {int lines = 400}) =>
+      _send({'type': 'get_log', 'name': name, 'lines': lines});
+
   void refreshWorkflows() => _send({'type': 'get_workflows'});
 
   void refreshHistory({String? query}) =>
@@ -355,6 +459,31 @@ class GatewayClient extends ChangeNotifier {
       _send({'type': 'save_workflow', 'name': name});
 
   void deleteWorkflow(String name) => _send({'type': 'delete_workflow', 'name': name});
+
+  /// Schedules have their own messages so the page can refresh without
+  /// parsing human-readable CLI output.
+  List<ScheduleRecord> schedules = [];
+  bool scheduleBusy = false;
+
+  void refreshSchedules() => _send({'type': 'get_schedules'});
+
+  void saveSchedule({required String name, required String when, required String request}) {
+    scheduleBusy = true;
+    notifyListeners();
+    _send({'type': 'save_schedule', 'name': name, 'when': when, 'request': request});
+  }
+
+  void setScheduleEnabled(String name, bool enabled) {
+    scheduleBusy = true;
+    notifyListeners();
+    _send({'type': 'set_schedule_enabled', 'name': name, 'enabled': enabled});
+  }
+
+  void deleteSchedule(String name) {
+    scheduleBusy = true;
+    notifyListeners();
+    _send({'type': 'delete_schedule', 'name': name});
+  }
 
   /// Workflows run through the normal submit path so a replay passes the same
   /// Owner Gate, confirmation tiers and event stream as anything typed.

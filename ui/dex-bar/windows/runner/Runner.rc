@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.dex" "\0"
-            VALUE "FileDescription", "dex_bar" "\0"
+            VALUE "FileDescription", "Dex" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "dex_bar" "\0"
+            VALUE "InternalName", "Dex" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.dex. All rights reserved." "\0"
-            VALUE "OriginalFilename", "dex_bar.exe" "\0"
-            VALUE "ProductName", "dex_bar" "\0"
+            VALUE "OriginalFilename", "Dex.exe" "\0"
+            VALUE "ProductName", "Dex" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

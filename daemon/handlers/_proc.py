@@ -27,6 +27,21 @@ from dataclasses import dataclass
 
 DEFAULT_TIMEOUT = 15
 
+# Never let a child put a console on the owner's desktop.
+#
+# This is not belt and braces — it is load-bearing. The daemon and the agents
+# run under `pythonw.exe`, which is the GUI-subsystem build and therefore has
+# no console at all. A console program started from a process with no console
+# gets a **brand new, visible one**. So without this flag every `netsh`, every
+# `tasklist`, every DPAPI decrypt flashes a black rectangle on screen — one per
+# call, in the middle of whatever the owner was doing.
+#
+# The failure is easy to miss in development, where these processes are
+# launched from a terminal and quietly inherit its console instead. It only
+# appears once Dex starts itself, which is exactly when nobody is watching a
+# log. Every subprocess call in the daemon and the agents passes this.
+NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+
 # Phrases Windows uses when a command needed rights the caller did not have.
 # Recognising them is not special-casing an action — every privileged action
 # fails this way, and "requires elevation" is a far more actionable thing to put
@@ -87,6 +102,7 @@ def try_run(cmd: list[str], timeout: int = DEFAULT_TIMEOUT) -> Completed:
     """
     proc = subprocess.run(
         cmd, capture_output=True, text=True, timeout=timeout,
+        creationflags=NO_WINDOW,
     )
     return Completed(proc.returncode, proc.stdout or '', proc.stderr or '')
 

@@ -1,7 +1,7 @@
 {
   "name": "dexv3",
   "version": "0.1.0",
-  "description": "DEX V3 \u2014 Personal AI automation system for Windows",
+  "description": "DEX V3 — Personal AI automation system for Windows",
   "main": "dist/src/main.js",
   "scripts": {
     "dev": "ts-node src/main.ts",
@@ -22,7 +22,9 @@
     "test:daemon": "python tests/test_daemon_proc.py",
     "test:scripts": "powershell -NoProfile -ExecutionPolicy Bypass -File tests/check_scripts.ps1",
     "test:full-access": "ts-node tests/smoke_full_access.ts",
-    "test:scheduler": "ts-node tests/smoke_scheduler.ts"
+    "test:scheduler": "ts-node tests/smoke_scheduler.ts",
+    "test:settings": "ts-node tests/smoke_settings.ts",
+    "test:no-console": "python tests/test_no_console.py"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",

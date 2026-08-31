@@ -1,30 +1,86 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'core/gateway_client.dart';
-import 'core/theme_controller.dart';
-import 'core/window_activity.dart';
-import 'screens/dex_bar.dart';
+import 'app/bar_app.dart';
+import 'app/shell_app.dart';
 import 'theme/tokens.dart';
 
-Future<void> main() async {
+/// Dex has two windows, and they are two processes.
+///
+/// The main window is the application: home, tasks, workflows, logs, settings.
+/// The Alt+Space bar is a frameless strip that appears over whatever you are
+/// doing. Flutter gives one window per process, so the app launches a second
+/// copy of itself with `--bar` and lets that copy own the overlay.
+///
+/// Splitting them costs nothing to keep in sync, because neither holds state:
+/// the core is the single source of truth and broadcasts to every connected
+/// client. A task typed into the bar appears in the main window's stream
+/// because both are watching the same WebSocket, not because they talk to each
+/// other. And the bar process is started into the same job object as the
+/// agents, so it closes when Dex does.
+Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await hotKeyManager.unregisterAll();
   await windowManager.ensureInitialized();
 
+  if (args.contains('--bar')) {
+    await runBarWindow();
+  } else {
+    await runMainWindow();
+  }
+}
+
+/// The application window. Starts on the splash, which is sized for it.
+Future<void> runMainWindow() async {
   await windowManager.waitUntilReadyToShow(
     const WindowOptions(
-      size: Size(DexTokens.barWidth, DexTokens.barRestHeight),
+      size: Size(560, 640),
+      minimumSize: Size(560, 640),
       center: true,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
       titleBarStyle: TitleBarStyle.hidden,
       windowButtonVisibility: false,
+      title: 'Dex',
+    ),
+    () async {
+      await windowManager.setAsFrameless();
+      await windowManager.setHasShadow(true);
+      await windowManager.setResizable(false);
+      await windowManager.show();
+      await windowManager.focus();
+    },
+  );
+
+  runApp(const DexShellApp());
+}
+
+/// Grow from the splash into the application window.
+///
+/// The minimum is lifted first. Setting a size smaller than the current
+/// minimum is silently clamped, so doing this the other way round leaves the
+/// window stuck at splash size with a shell drawn inside it.
+Future<void> growIntoShell() async {
+  await windowManager.setMinimumSize(const Size(940, 640));
+  await windowManager.setSize(const Size(1180, 780));
+  await windowManager.setResizable(true);
+  await windowManager.center();
+  await windowManager.focus();
+}
+
+/// The Alt+Space overlay, in its own process.
+Future<void> runBarWindow() async {
+  await windowManager.waitUntilReadyToShow(
+    const WindowOptions(
+      size: Size(DexTokens.barWidth, DexTokens.barRestHeight),
+      center: true,
+      backgroundColor: Colors.transparent,
+      // Off the taskbar: it is an overlay, not a second application, and a
+      // second Dex entry would be confusing every time you alt-tab.
+      skipTaskbar: true,
+      titleBarStyle: TitleBarStyle.hidden,
+      windowButtonVisibility: false,
       alwaysOnTop: true,
-      title: 'DEX',
+      title: 'Dex',
     ),
     () async {
       await windowManager.setAsFrameless();
@@ -34,143 +90,5 @@ Future<void> main() async {
     },
   );
 
-  runApp(const DexApp());
-}
-
-class DexApp extends StatefulWidget {
-  const DexApp({super.key});
-
-  @override
-  State<DexApp> createState() => _DexAppState();
-}
-
-class _DexAppState extends State<DexApp> with WindowListener {
-  final _client = GatewayClient();
-  final _theme = ThemeController();
-
-  @override
-  void initState() {
-    super.initState();
-    windowManager.addListener(this);
-    _client.addListener(_surfaceWhenNeeded);
-    _client.connect();
-    _theme.load();
-    _registerHotkey();
-  }
-
-  /// Tracks which confirmation we last surfaced for, so the window is raised
-  /// once per card rather than on every event that arrives while it waits.
-  /// Repeatedly calling show/focus fights the owner for focus and re-centres
-  /// the window under their pointer, which is how a stray click lands on a
-  /// button they never aimed at.
-  String? _surfacedFor;
-
-  /// A confirmation card is useless behind a hidden window. If the core asks
-  /// for approval — whoever started the task — bring the bar forward once.
-  Future<void> _surfaceWhenNeeded() async {
-    if (_client.pending.isEmpty) {
-      _surfacedFor = null;
-      return;
-    }
-    final key = _client.pending.keys.first;
-    if (_surfacedFor == key) return;
-    _surfacedFor = key;
-
-    if (await windowManager.isVisible()) return;
-
-    // Mark before and after: show/focus injects a synthetic mouse event whose
-    // delivery can lag the call, so the settle clock has to cover both sides.
-    WindowActivity.mark();
-    await windowManager.show();
-    await windowManager.focus();
-    WindowActivity.markThrough(const Duration(milliseconds: 600));
-  }
-
-  // Any focus change or geometry change can put a control somewhere the
-  // pointer already is. Each one restarts the settle clock that gates the
-  // confirmation card's buttons.
-  @override
-  void onWindowFocus() => WindowActivity.mark();
-
-  @override
-  void onWindowRestore() => WindowActivity.mark();
-
-  @override
-  void onWindowResize() => WindowActivity.mark();
-
-  @override
-  void onWindowResized() => WindowActivity.mark();
-
-  @override
-  void onWindowMove() => WindowActivity.mark();
-
-  @override
-  void onWindowMoved() => WindowActivity.mark();
-
-  /// Alt+Space summons or dismisses the bar from anywhere in Windows.
-  /// Deliberately not a Windows-key shortcut — those are reserved by the OS.
-  Future<void> _registerHotkey() async {
-    final hotKey = HotKey(
-      key: PhysicalKeyboardKey.space,
-      modifiers: [HotKeyModifier.alt],
-      scope: HotKeyScope.system,
-    );
-    try {
-      await hotKeyManager.register(
-        hotKey,
-        keyDownHandler: (_) async {
-          if (await windowManager.isVisible() && await windowManager.isFocused()) {
-            await windowManager.hide();
-          } else {
-            WindowActivity.mark();
-            await windowManager.show();
-            await windowManager.focus();
-            WindowActivity.markThrough(const Duration(milliseconds: 600));
-          }
-        },
-      );
-    } catch (_) {
-      // Another app already owns Alt+Space — the bar still works, just not globally.
-    }
-  }
-
-  @override
-  void onWindowBlur() {
-    // Stay put while a confirmation is waiting; otherwise get out of the way.
-    if (_client.pending.isEmpty && _client.current == null) windowManager.hide();
-  }
-
-  @override
-  void dispose() {
-    windowManager.removeListener(this);
-    _client.removeListener(_surfaceWhenNeeded);
-    hotKeyManager.unregisterAll();
-    _theme.dispose();
-    _client.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _theme,
-      builder: (context, _) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'DEX',
-        theme: buildDexTheme(Brightness.light),
-        darkTheme: buildDexTheme(Brightness.dark),
-        themeMode: _theme.mode,
-        // Real pointer movement is what distinguishes an aimed click from the
-        // synthetic one Windows injects when a window is raised.
-        home: Listener(
-          onPointerHover: (_) => WindowActivity.notePointerMoved(),
-          onPointerMove: (_) => WindowActivity.notePointerMoved(),
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            body: DexBar(client: _client, theme: _theme),
-          ),
-        ),
-      ),
-    );
-  }
+  runApp(const DexBarApp());
 }

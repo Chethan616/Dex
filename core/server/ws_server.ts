@@ -10,6 +10,9 @@ import { ConfirmationRequest, DexEvent } from '../events/types';
 import { ConfirmationManager } from '../confirmation/confirmation_manager';
 import { CancellationRegistry } from '../orchestrator/cancellation';
 import { writeHandshake, removeHandshake } from './handshake';
+import { SettingsService } from '../settings/settings_service';
+import { ScheduleStore } from '../scheduler/store';
+import { parseSchedule } from '../scheduler/cron';
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 const AUTH_GRACE_MS = 3000;
@@ -37,8 +40,18 @@ type Inbound =
   | { type: 'get_workflows' }
   | { type: 'save_workflow'; name: string; description?: string }
   | { type: 'delete_workflow'; name: string }
+  | { type: 'get_schedules' }
+  | { type: 'save_schedule'; name: string; when: string; request: string }
+  | { type: 'set_schedule_enabled'; name: string; enabled: boolean }
+  | { type: 'delete_schedule'; name: string }
   | { type: 'get_history'; query?: string; limit?: number }
   | { type: 'get_stats'; days?: number }
+  | { type: 'get_settings' }
+  | { type: 'set_credential'; name: string; value: string }
+  | { type: 'delete_credential'; name: string }
+  | { type: 'set_env'; changes: Record<string, string | null> }
+  | { type: 'test_provider'; provider: string }
+  | { type: 'get_log'; name: string; lines?: number }
   | { type: 'ping' };
 
 export interface DexServerOptions {
@@ -51,6 +64,8 @@ export class DexServer {
   private wss?: WebSocketServer;
   private clients = new Map<WebSocket, Client>();
   private token = randomBytes(24).toString('hex');
+  private readonly settings = new SettingsService();
+  private readonly schedules = new ScheduleStore();
   private readonly port: number;
   private readonly evidenceDir: string;
 
@@ -256,6 +271,51 @@ export class DexServer {
         return this.send(socket, { type: 'workflow_deleted', name: msg.name, removed });
       }
 
+      // ── schedules ------------------------------------------------------
+      // These mirror the CLI's /every, /schedules, /pause, /resume and
+      // /unschedule commands, but keep the app independent of terminal text.
+      case 'get_schedules':
+        return this.send(socket, this.schedulesPayload());
+
+      case 'save_schedule': {
+        try {
+          const when = String(msg.when ?? '').trim();
+          const request = String(msg.request ?? '').trim();
+          if (!request) throw new Error('A scheduled task needs something to do.');
+          const saved = this.schedules.save({
+            name: msg.name,
+            cron: parseSchedule(when),
+            request,
+          });
+          this.broadcastSchedules();
+          return this.send(socket, { type: 'schedule_saved', name: saved.name });
+        } catch (err) {
+          return this.send(socket, {
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
+      case 'set_schedule_enabled': {
+        const enabled = Boolean(msg.enabled);
+        const changed = this.schedules.setEnabled(msg.name, enabled);
+        if (!changed) {
+          return this.send(socket, {
+            type: 'error',
+            message: `No schedule named "${msg.name}"`,
+          });
+        }
+        this.broadcastSchedules();
+        return this.send(socket, { type: 'schedule_updated', name: msg.name, enabled });
+      }
+
+      case 'delete_schedule': {
+        const removed = this.schedules.delete(msg.name);
+        this.broadcastSchedules();
+        return this.send(socket, { type: 'schedule_deleted', name: msg.name, removed });
+      }
+
       case 'get_history':
         return this.send(socket, {
           type: 'history',
@@ -269,6 +329,85 @@ export class DexServer {
           type: 'stats',
           stats: this.gateway.telemetryStore.summary(msg.days ?? 7),
         });
+
+      // --- Settings -------------------------------------------------------
+      // The whole of Settings goes through the core rather than the app
+      // touching files directly. The credential store is DPAPI-encrypted
+      // against this user, `.env` needs its comments preserved, and both want
+      // one writer — a Flutter process editing them in parallel would be a
+      // second implementation of rules that already exist here.
+
+      case 'get_settings':
+        return this.send(socket, {
+          type: 'settings',
+          settings: await this.settings.describe(),
+        });
+
+      case 'set_credential': {
+        try {
+          this.settings.setCredential(String(msg.name), String(msg.value));
+        } catch (err) {
+          return this.send(socket, {
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
+        // Reply with the refreshed snapshot, never with what was stored.
+        return this.send(socket, {
+          type: 'settings',
+          settings: await this.settings.describe(),
+        });
+      }
+
+      case 'delete_credential': {
+        try {
+          this.settings.deleteCredential(String(msg.name));
+        } catch (err) {
+          return this.send(socket, {
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return this.send(socket, {
+          type: 'settings',
+          settings: await this.settings.describe(),
+        });
+      }
+
+      case 'set_env': {
+        try {
+          this.settings.setEnv(msg.changes ?? {});
+        } catch (err) {
+          return this.send(socket, {
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return this.send(socket, {
+          type: 'settings',
+          settings: await this.settings.describe(),
+        });
+      }
+
+      case 'test_provider':
+        return this.send(socket, {
+          type: 'provider_test',
+          result: await this.settings.test(String(msg.provider)),
+        });
+
+      case 'get_log':
+        try {
+          return this.send(socket, {
+            type: 'log',
+            name: msg.name,
+            text: this.settings.readLog(String(msg.name), msg.lines ?? 400),
+          });
+        } catch (err) {
+          return this.send(socket, {
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
 
       default:
         return this.send(socket, { type: 'error', message: 'Unknown message type' });
@@ -372,6 +511,31 @@ export class DexServer {
         lastRunAt: w.lastRunAt ?? null,
       })),
     });
+  }
+
+  private schedulesPayload(): { type: 'schedules'; schedules: unknown[] } {
+    return {
+      type: 'schedules',
+      schedules: this.schedules.list().map((schedule) => ({
+        name: schedule.name,
+        cron: schedule.cron,
+        description: ScheduleStore.describe(schedule),
+        request: schedule.request,
+        createdAt: schedule.createdAt,
+        enabled: schedule.enabled,
+        lastFiredAt: schedule.lastFiredAt,
+        lastStatus: schedule.lastStatus,
+        runCount: schedule.runCount,
+        failCount: schedule.failCount,
+        nextRun: schedule.enabled
+          ? ScheduleStore.nextFire(schedule)?.toISOString() ?? null
+          : null,
+      })),
+    };
+  }
+
+  private broadcastSchedules(): void {
+    this.broadcast(this.schedulesPayload());
   }
 
   private broadcast(payload: { type: string; event?: DexEvent; request?: ConfirmationRequest; [k: string]: unknown }): void {

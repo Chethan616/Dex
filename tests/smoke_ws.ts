@@ -108,6 +108,28 @@ function requestStatus(ws: WebSocket): Promise<Record<string, unknown>> {
   });
 }
 
+function requestMessage(
+  ws: WebSocket,
+  payload: Record<string, unknown>,
+  type: string,
+): Promise<Record<string, unknown>> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      ws.off('message', handler);
+      reject(new Error(`timed out waiting for ${type}`));
+    }, 5000);
+    const handler = (raw: WebSocket.RawData): void => {
+      const msg = JSON.parse(raw.toString()) as Record<string, unknown>;
+      if (msg.type !== type) return;
+      clearTimeout(timer);
+      ws.off('message', handler);
+      resolve(msg);
+    };
+    ws.on('message', handler);
+    ws.send(JSON.stringify(payload));
+  });
+}
+
 async function main(): Promise<void> {
   const registry = new AgentRegistry();
   registry.register(new StubAgent() as never);
@@ -279,6 +301,53 @@ async function main(): Promise<void> {
 
   const tier3Third = await runOnce(ws, 'approved');
   check('Tier 3 asks again after revoking', tier3Third.raisedCard);
+
+  // --- 7. schedule controls use the app protocol, not CLI text ------------
+  const emptySchedules = await requestMessage(
+    ws,
+    { type: 'get_schedules' },
+    'schedules',
+  );
+  check('schedule list is available over the app protocol', Array.isArray(emptySchedules.schedules));
+
+  const savedSchedule = await requestMessage(
+    ws,
+    {
+      type: 'save_schedule',
+      name: 'smoke-schedule',
+      when: 'every 30 minutes',
+      request: 'check my inbox',
+    },
+    'schedule_saved',
+  );
+  check('a schedule can be saved over the app protocol', savedSchedule.name === 'smoke-schedule');
+
+  const listedSchedules = await requestMessage(
+    ws,
+    { type: 'get_schedules' },
+    'schedules',
+  );
+  const saved = (listedSchedules.schedules as Array<Record<string, unknown>>)
+    .find((schedule) => schedule.name === 'smoke-schedule');
+  check(
+    'saved schedule carries its parsed timing and request',
+    saved?.cron === '*/30 * * * *' && saved.request === 'check my inbox' && saved.enabled === true,
+    JSON.stringify(saved),
+  );
+
+  const pausedSchedule = await requestMessage(
+    ws,
+    { type: 'set_schedule_enabled', name: 'smoke-schedule', enabled: false },
+    'schedule_updated',
+  );
+  check('a schedule can be paused over the app protocol', pausedSchedule.enabled === false);
+
+  const deletedSchedule = await requestMessage(
+    ws,
+    { type: 'delete_schedule', name: 'smoke-schedule' },
+    'schedule_deleted',
+  );
+  check('a schedule can be deleted over the app protocol', deletedSchedule.removed === true);
 
   ws.close();
   console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) failed.`);

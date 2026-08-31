@@ -131,5 +131,14 @@ class Executor:
             'task manager': 'taskmgr.exe',
         }
         cmd = known.get(app_lower, app_name)
-        subprocess.Popen(['cmd', '/c', 'start', '', cmd], shell=False)
+        # cmd.exe is a console program and this agent runs under pythonw, which
+        # has no console to lend it -- so without the flag Windows creates a
+        # new visible one every time Dex opens an application. The application
+        # itself still gets its own window; only the shell that launched it is
+        # suppressed.
+        subprocess.Popen(
+            ['cmd', '/c', 'start', '', cmd],
+            shell=False,
+            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
+        )
         time.sleep(1.5)

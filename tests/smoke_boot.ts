@@ -53,6 +53,10 @@ function boot(): Promise<BootResult> {
           DEX_TEST: '1',
           DEX_DB: path.join(os.tmpdir(), `dex-boot-${Date.now()}.db`),
           DEX_UI_SERVER: 'false',
+          // The boot contract must not depend on a developer having a paid
+          // provider key in their environment. Claude Code is deliberately a
+          // keyless provider; the CLI is only invoked when a task is planned.
+          DEX_BRAIN_PROVIDER: 'claude-code',
         },
         stdio: ['pipe', 'pipe', 'pipe'],
       },

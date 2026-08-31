@@ -78,7 +78,7 @@ foreach ($p in $visible) {
 
 # 2b. The Dex Bar. It is the UI, so "stop everything" has to include it --
 #     otherwise the bar stays on screen showing "Core not connected" forever.
-$bars = Get-Process dex_bar -ErrorAction SilentlyContinue
+$bars = Get-Process Dex, dex_bar -ErrorAction SilentlyContinue
 foreach ($p in $bars) {
     Say "  stopping Dex Bar (pid $($p.Id))" DarkGray
     Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue

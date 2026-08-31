@@ -27,6 +27,7 @@ import { TelegramChannel } from '../channels/telegram';
 import { DiscordChannel } from '../channels/discord';
 import { WhatsAppChannel } from '../channels/whatsapp';
 import { CredentialStore } from '../core/secrets/credential_store';
+import { mirrorConsoleToFile, closeLogFile } from '../core/logging/file_log';
 
 /**
  * Adapters that are running, so shutdown can close them.
@@ -39,6 +40,19 @@ const started: ChannelAdapter[] = [];
 
 function main(): void {
   quietSqliteWarning();
+
+  // Before anything else that might have something to say.
+  //
+  // Headless means started by the app, with no console and no shell
+  // redirecting stdout. Everything printed from here on would otherwise go to
+  // a console nobody can see and be kept nowhere — leaving the core as the one
+  // process in Dex with no diagnostics, in the release where it also became
+  // the one nobody launches from a terminal.
+  if (process.env.DEX_HEADLESS === 'true') {
+    const file = mirrorConsoleToFile('core');
+    process.on('exit', closeLogFile);
+    if (file) console.log(`\x1b[90m[log]\x1b[0m ${file}`);
+  }
 
   // Created before the Brain, which needs to read it to advertise workflows.
   const workflowStore = new WorkflowStore();
@@ -210,7 +224,10 @@ function reportAccess(
       'elevated — using confirmation cards.',
   );
   console.log(
-    '                       Fix it once:  .\scripts\install-daemon-service.ps1',
+    // Raw string: in a normal one, \s and \i are just "s" and "i", and this
+    // line printed ".scriptsinstall-daemon-service.ps1" — an instruction that
+    // cannot be followed, in the message telling someone how to fix Dex.
+    String.raw`                       Fix it once:  .\scripts\install-daemon-service.ps1`,
   );
 }
 

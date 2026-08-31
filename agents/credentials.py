@@ -49,6 +49,10 @@ def get_credential(name: str) -> str | None:
             ['powershell.exe', '-NoProfile', '-NonInteractive', '-EncodedCommand', encoded],
             input=path.read_text(encoding='utf-8'),
             capture_output=True, text=True, timeout=20,
+            # The agents run under pythonw, which has no console -- so a console
+            # child would be given a brand new visible one. Every DPAPI read
+            # would flash a PowerShell window on the owner's desktop.
+            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
         )
         if result.returncode != 0 or not result.stdout.strip():
             return None

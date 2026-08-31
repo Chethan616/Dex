@@ -10,10 +10,11 @@ import 'package:flutter/material.dart';
 /// palette shipped `textFaint` at **2.6:1**, used on 10px labels, and nothing
 /// caught it: it was picked by eye, and by eye it looked fine.
 ///
-/// State colours are held in a deliberately narrow contrast band (dark
-/// 7.6–8.3, light 5.4–7.2) so the step stream reads as one texture. The old
-/// palette spanned 7.6–10.9, which is why amber steps shouted and blue ones
-/// receded when they carry exactly the same weight of meaning.
+/// State colours are held in a deliberately narrow contrast band — dark all
+/// within 0.04 of 7.9:1, light within 0.05 of 6.0:1 — so the step stream reads
+/// as one texture. An earlier palette spanned 7.6–10.9, which is why amber
+/// steps shouted and blue ones receded when they carry exactly the same weight
+/// of meaning.
 @immutable
 class DexPalette {
   const DexPalette({
@@ -79,46 +80,65 @@ class DexPalette {
         'negative': negative,
       };
 
+  /// Playful, and measured.
+  ///
+  /// The surfaces carry a violet cast rather than being neutral grey — the
+  /// cheapest way to stop a dark UI reading as a terminal. The five state tones
+  /// are sky, amber, magenta, mint and coral: saturated enough to feel like
+  /// they are enjoying themselves, and all placed within 0.04 of 7.9:1 on
+  /// surfaceRaised so no one of them shouts louder than the rest.
+  ///
+  /// None of these were picked by eye. Each hue was chosen for character, then
+  /// its lightness solved for the target ratio, then checked against all three
+  /// surfaces. Picking by eye is how the old light palette shipped textFaint at
+  /// 2.6:1 and nobody noticed.
   static const dark = DexPalette(
-    bg: Color(0xFF0A0A0B),
-    surface: Color(0xFF121214),
-    surfaceRaised: Color(0xFF1A1A1E),
-    border: Color(0xFF26262C),
-    borderStrong: Color(0xFF3A3A43),
-    text: Color(0xFFEDEDEF),          // 14.8:1
-    textMuted: Color(0xFF9A9AA4),     //  6.2:1
-    textFaint: Color(0xFF8A8A94),     //  5.1:1  (was 5A5A63 — 2.9:1)
-    accent: Color(0xFF8CA4FF),        //  7.3:1
-    accentMuted: Color(0xFF232B4C),
-    neutral: Color(0xFF9A9AA4),       //  6.2:1  narration, deliberately dimmer
-    info: Color(0xFF8AACF9),          //  7.7:1
-    warn: Color(0xFFDCA85E),          //  8.1:1
-    attention: Color(0xFFC79BEE),     //  7.7:1
-    positive: Color(0xFF4FC98C),      //  8.3:1
-    negative: Color(0xFFFF8A80),      //  7.6:1
+    bg: Color(0xFF0B0A10),
+    surface: Color(0xFF141220),
+    surfaceRaised: Color(0xFF1D1A2B),
+    border: Color(0xFF2C2840),
+    borderStrong: Color(0xFF454063),
+    text: Color(0xFFF1F0F6),          // 15.0:1
+    textMuted: Color(0xFF9F99AF),     //  6.2:1
+    textFaint: Color(0xFF8F8A9F),     //  5.1:1
+    accent: Color(0xFFBA9EFC),        //  7.6:1  violet
+    accentMuted: Color(0xFF2B2450),
+    neutral: Color(0xFF9F99AF),       //  6.2:1  narration, deliberately dimmer
+    info: Color(0xFF60B9F8),          //  7.9:1  sky
+    warn: Color(0xFFECA220),          //  7.9:1  amber
+    attention: Color(0xFFF58EDB),     //  7.9:1  magenta
+    positive: Color(0xFF20C98B),      //  7.9:1  mint
+    negative: Color(0xFFFC948B),      //  7.9:1  coral
     shadow: Color(0x99000000),
-    focusRing: Color(0xFF8CA4FF),
+    focusRing: Color(0xFFBA9EFC),
   );
 
+  /// The same hues, solved against surfaceRaised.
+  ///
+  /// surfaceRaised is the *darkest* of the three light surfaces, which makes it
+  /// the binding constraint for dark text — not white, which is the intuitive
+  /// guess and the wrong one. Tuning against white first produced a textFaint
+  /// that cleared 4.9:1 on white and failed at 4.37:1 on the surface it is
+  /// actually used on.
   static const light = DexPalette(
-    bg: Color(0xFFFBFBFC),
+    bg: Color(0xFFFCFBFF),
     surface: Color(0xFFFFFFFF),
-    surfaceRaised: Color(0xFFF4F4F6),
-    border: Color(0xFFE1E1E6),
-    borderStrong: Color(0xFFC4C4CE),
-    text: Color(0xFF121215),          // 17.0:1
-    textMuted: Color(0xFF55555F),     //  6.7:1
-    textFaint: Color(0xFF6B6B76),     //  4.8:1  (was 95959F — 2.6:1)
-    accent: Color(0xFF3B5BDB),        //  5.2:1
-    accentMuted: Color(0xFFDDE3FB),
-    neutral: Color(0xFF55555F),       //  6.7:1
-    info: Color(0xFF2F53C4),          //  6.1:1
-    warn: Color(0xFF8A5A00),          //  5.4:1
-    attention: Color(0xFF7A3EB4),     //  6.0:1
-    positive: Color(0xFF10704A),      //  5.6:1
-    negative: Color(0xFFB3271C),      //  5.9:1
-    shadow: Color(0x22000000),
-    focusRing: Color(0xFF3B5BDB),
+    surfaceRaised: Color(0xFFF3F0FB),
+    border: Color(0xFFE6E1F3),
+    borderStrong: Color(0xFFC7BFDD),
+    text: Color(0xFF201930),          // 15.0:1
+    textMuted: Color(0xFF5A526D),     //  6.5:1
+    textFaint: Color(0xFF6C637F),     //  5.0:1
+    accent: Color(0xFF7039EF),        //  5.3:1  violet
+    accentMuted: Color(0xFFE6DDFD),
+    neutral: Color(0xFF5A526D),       //  6.5:1
+    info: Color(0xFF0C5F9A),          //  6.0:1
+    warn: Color(0xFF864E00),          //  6.0:1
+    attention: Color(0xFFA81884),     //  6.0:1
+    positive: Color(0xFF026944),      //  6.0:1
+    negative: Color(0xFFB22013),      //  6.0:1
+    shadow: Color(0x22150033),
+    focusRing: Color(0xFF7039EF),
   );
 
   DexPalette lerpTo(DexPalette other, double t) => DexPalette(

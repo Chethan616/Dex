@@ -126,7 +126,7 @@ desktop work, and that path needs no GPU and no vision model at all.
 ```powershell
 cd ui/dex-bar
 flutter build windows --debug
-.\build\windows\x64\runner\Debug\dex_bar.exe
+.\build\windows\x64\runner\Debug\Dex.exe
 ```
 
 `Alt+Space` summons it. It connects to the core over loopback only, using a

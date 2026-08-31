@@ -39,6 +39,28 @@ dependencies:
   web_socket_channel: ^3.0.3
   shared_preferences: ^2.3.3
 
+  # ---- Material 3 Expressive -------------------------------------------------
+  # These are pinned low on purpose, and the low numbers are not staleness.
+  #
+  # Every m3e_* package depends on `motor` for its spring physics. Their 1.x
+  # releases want motor 2.x; material_3_expressive 1.1.1 wants motor 1.x. Ask
+  # pub for "latest" across the family and it silently walks BACK to this exact
+  # set anyway, because it is the only combination that resolves. Bumping one
+  # of these in isolation will look fine and then drag the others down with it.
+  #
+  # Re-check with: flutter pub outdated
+  material_3_expressive: ^1.1.1   # expressive theme, components, colour roles
+  m3e_core: ^0.1.6                # shape/motion tokens the others build on
+  m3e_buttons: ^0.0.6             # the shape-morphing button set
+  m3e_haptics: ^0.0.1             # confirm / complete / refuse feedback
+  m3e_dropdown_menu: ^0.1.0       # expressive menus, used across Settings
+  m3e_dismissible: ^0.1.2         # swipe-away rows (schedules, workflows)
+  flutter_m3shapes_extended: ^1.2.1  # the 35-shape library
+  material_shapes: ^0.0.2         # squircles and friends
+  motor: ^1.1.0                   # spring simulations -- see lib/theme/motion.dart
+  win32: ^6.4.0
+  ffi: ^2.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

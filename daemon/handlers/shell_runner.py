@@ -2,6 +2,8 @@ import subprocess
 import logging
 import os
 
+from ._proc import NO_WINDOW
+
 log = logging.getLogger('ShellRunner')
 
 # Read-only, non-destructive commands only
@@ -34,6 +36,7 @@ class ShellRunner:
             capture_output=True,
             text=True,
             timeout=30,
+            creationflags=NO_WINDOW,
         )
         return {
             'stdout':     result.stdout,

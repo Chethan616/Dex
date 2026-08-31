@@ -16,6 +16,8 @@ import os
 import subprocess
 import time
 
+from ._proc import NO_WINDOW
+
 log = logging.getLogger('AppHandler')
 
 # Shells and terminals. SAFETY.md: system work goes through typed handlers, not
@@ -100,6 +102,7 @@ class AppHandler:
             result = subprocess.run(
                 ['taskkill', '/IM', image],   # no /F: a request, not a kill
                 capture_output=True, text=True, timeout=15,
+                creationflags=NO_WINDOW,
             )
             if result.returncode == 0:
                 return {'closed': image, 'method': 'taskkill', 'graceful': True}
@@ -136,6 +139,7 @@ def _process_running(image: str) -> bool:
     listing = subprocess.run(
         ['tasklist', '/fi', f'IMAGENAME eq {image}', '/fo', 'csv', '/nh'],
         capture_output=True, text=True, timeout=15,
+        creationflags=NO_WINDOW,
     ).stdout
     return image.lower() in listing.lower()
 

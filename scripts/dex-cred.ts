@@ -11,24 +11,21 @@
  */
 import * as readline from 'readline';
 import { CredentialStore } from '../core/secrets/credential_store';
+import { CREDENTIALS } from '../core/settings/provider_catalog';
 
 const store = new CredentialStore();
 
-/** Secrets DEX itself looks for, so `list` can show what is still missing. */
-const KNOWN: Record<string, string> = {
-  google_oauth_client_id: 'Google Workspace MCP — OAuth client id',
-  google_oauth_client_secret: 'Google Workspace MCP — OAuth client secret',
-  google_account_email: 'Which Google account DEX acts as',
-  ms365_client_id: 'Microsoft 365 MCP — application (client) id',
-  ms365_client_secret: 'Microsoft 365 MCP — client secret',
-  ms365_tenant_id: 'Microsoft 365 MCP — directory (tenant) id',
-  ms365_account_email: 'Which Microsoft account DEX acts as',
-  telegram_bot_token: 'Telegram bot token from @BotFather',
-  discord_bot_token: 'Discord bot token from the developer portal',
-  groq_api_key: 'Groq API key — the Brain',
-  gemini_api_key: 'Google AI Studio key',
-  anthropic_api_key: 'Anthropic API key',
-};
+/**
+ * Secrets DEX itself looks for, so `list` can show what is still missing.
+ *
+ * Read from the shared catalogue rather than restated here. This list used to
+ * live in this file and the Settings screen had no way to see it; two copies of
+ * "what credentials exist" is two things to forget to update, and the one that
+ * goes stale is always the one you are not looking at.
+ */
+const KNOWN: Record<string, string> = Object.fromEntries(
+  CREDENTIALS.map((spec) => [spec.name, spec.powers]),
+);
 
 function promptHidden(question: string): Promise<string> {
   return new Promise((resolve) => {

@@ -1,3 +1,4 @@
+import { spawn } from 'child_process';
 import Anthropic from '@anthropic-ai/sdk';
 import { CredentialStore } from '../secrets/credential_store';
 import {
@@ -157,6 +158,14 @@ export function buildBrainProvider(credentials = new CredentialStore()): LlmProv
     (credentials.has('groq_api_key') || process.env.GROQ_API_KEY ? 'groq' : '') ||
     (credentials.has('anthropic_api_key') || process.env.ANTHROPIC_API_KEY ? 'anthropic' : '');
 
+  // Never reached by the fallback chain above, only by being asked for.
+  // Claude Code spends the owner's own subscription session, so it is chosen
+  // deliberately in Settings and never fallen back into because a key happened
+  // to be missing.
+  if (provider === 'claude-code') {
+    return new ClaudeCodeProvider(process.env.DEX_BRAIN_MODEL ?? 'sonnet');
+  }
+
   if (provider === 'groq') {
     const key = credentials.resolve('groq_api_key', 'GROQ_API_KEY');
     if (!key) throw new Error('DEX_BRAIN_PROVIDER=groq but no groq_api_key — run: npm run cred -- set groq_api_key');
@@ -170,8 +179,188 @@ export function buildBrainProvider(credentials = new CredentialStore()): LlmProv
   }
 
   throw new Error(
-    'No Brain provider configured. Store a key and DEX will pick it up:\n' +
+    'No Brain provider configured. Open Settings, or store a key and DEX will\n' +
+      'pick it up:\n' +
       '  npm run cred -- set groq_api_key        (then DEX_BRAIN_PROVIDER=groq)\n' +
-      '  npm run cred -- set anthropic_api_key',
+      '  npm run cred -- set anthropic_api_key\n' +
+      'Or, with no key at all, use the Claude Code you are already signed in to:\n' +
+      '  DEX_BRAIN_PROVIDER=claude-code',
   );
+}
+
+/**
+ * The Brain, running on the Claude Code you are already signed in to.
+ *
+ * The point of this provider is that it needs no API key. If you have a Claude
+ * Pro or Max subscription and the `claude` CLI is signed in on this machine,
+ * Dex plans with it and there is nothing extra to pay. Otherwise Dex needs an
+ * Anthropic or Groq key, which is what the other two providers are for.
+ *
+ * Three things about this are worth knowing before relying on it:
+ *
+ * 1. **It is a text interface, not a tool-calling one.** The CLI in `--print`
+ *    mode returns a string. There is no `tool_use` block to read, so the schema
+ *    is described in the prompt and the reply is parsed. That is strictly less
+ *    reliable than the native tool call `AnthropicProvider` gets, which is why
+ *    the API-key path stays the recommended one and this reports its failures
+ *    loudly instead of pretending.
+ *
+ * 2. **Tools are disabled deliberately.** `--allowedTools ""` and
+ *    `--permission-mode plan` mean the CLI cannot read files, run commands or
+ *    touch the machine. Dex is the agent here; Claude Code is being asked for
+ *    one judgement, and a planner that could quietly go and edit files on its
+ *    own would be a serious and surprising escalation.
+ *
+ * 3. **`--bare` is not passed, on purpose.** That flag forces API-key
+ *    authentication and never reads the OAuth login — it would defeat the whole
+ *    reason this exists.
+ */
+export class ClaudeCodeProvider implements LlmProvider {
+  readonly label: string;
+
+  constructor(
+    private model: string,
+    private cliPath = 'claude',
+    private timeoutMs = 120_000,
+  ) {
+    this.label = `claude-code/${model}`;
+  }
+
+  async callTool(request: ToolCallRequest): Promise<Record<string, unknown>> {
+    return withRetry(async () => {
+      // One retry with a blunter instruction. Models that wrap JSON in prose
+      // usually stop when told a second time; models that cannot produce the
+      // shape at all will not be fixed by a third attempt, and looping on that
+      // just burns the owner's session.
+      let lastError: Error | undefined;
+      for (const insistence of [false, true]) {
+        const raw = await this.ask(buildJsonPrompt(request, insistence));
+        try {
+          return extractJsonObject(raw);
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+        }
+      }
+      throw new Error(
+        `${this.label} did not return JSON matching ${request.tool.name}: ${lastError?.message}`,
+      );
+    }, { label: this.label });
+  }
+
+  private ask(prompt: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const child = spawn(
+        this.cliPath,
+        [
+          '--print',
+          '--output-format', 'json',
+          '--model', this.model,
+          // No tools, no filesystem, no shell. See the note above.
+          '--allowedTools', '',
+          '--permission-mode', 'plan',
+        ],
+        { windowsHide: true, shell: process.platform === 'win32' },
+      );
+
+      let stdout = '';
+      let stderr = '';
+      const timer = setTimeout(() => {
+        child.kill();
+        reject(new Error(`${this.label} timed out after ${this.timeoutMs / 1000}s`));
+      }, this.timeoutMs);
+
+      child.stdout.on('data', (chunk) => { stdout += chunk; });
+      child.stderr.on('data', (chunk) => { stderr += chunk; });
+
+      child.on('error', (err) => {
+        clearTimeout(timer);
+        reject(
+          new Error(
+            `Could not run the Claude Code CLI (${this.cliPath}): ${err.message}. ` +
+              'Install it with: npm i -g @anthropic-ai/claude-code',
+          ),
+        );
+      });
+
+      child.on('close', (code) => {
+        clearTimeout(timer);
+        if (code !== 0) {
+          const detail = stderr.trim() || stdout.trim() || `exit ${code}`;
+          // The two failures worth naming, because their fixes are different.
+          const hint = /not logged in|unauthor|authenticat/i.test(detail)
+            ? ' — run `claude` in a terminal once and sign in'
+            : /rate|limit|usage/i.test(detail)
+              ? ' — your Claude Code usage limit is reached; it resets on its own'
+              : '';
+          reject(new Error(`${this.label} failed: ${detail}${hint}`));
+          return;
+        }
+        resolve(stdout);
+      });
+
+      child.stdin.end(prompt);
+    });
+  }
+}
+
+/**
+ * The CLI's own envelope, then the model's answer inside it.
+ *
+ * `--output-format json` wraps the reply in `{ "result": "..." }` along with
+ * cost and session metadata. The model's JSON is inside that string, often
+ * inside a fenced code block, sometimes with a sentence in front of it. All
+ * three are unwrapped here.
+ */
+export function extractJsonObject(raw: string): Record<string, unknown> {
+  let text = raw.trim();
+
+  try {
+    const envelope = JSON.parse(text) as { result?: unknown; is_error?: boolean };
+    if (typeof envelope.result === 'string') text = envelope.result.trim();
+  } catch {
+    // Not the CLI envelope — treat what we were given as the answer.
+  }
+
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenced) text = fenced[1].trim();
+
+  // Fall back to the outermost braces. Scanning from both ends rather than
+  // regex-matching, because tool arguments contain nested objects.
+  if (!text.startsWith('{')) {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end <= start) {
+      throw new Error(`no JSON object in: ${text.slice(0, 200)}`);
+    }
+    text = text.slice(start, end + 1);
+  }
+
+  const parsed = JSON.parse(text) as unknown;
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('expected a JSON object');
+  }
+  return parsed as Record<string, unknown>;
+}
+
+/** The tool schema, described rather than declared, because this path is text. */
+export function buildJsonPrompt(request: ToolCallRequest, insist: boolean): string {
+  const parts = [
+    request.system,
+    '',
+    `Answer by producing arguments for "${request.tool.name}": ${request.tool.description}`,
+    '',
+    'They must satisfy this JSON Schema:',
+    JSON.stringify(request.tool.schema, null, 2),
+    '',
+    'Reply with the JSON object alone. No prose, no code fence, no explanation.',
+  ];
+  if (insist) {
+    parts.push(
+      '',
+      'Your previous reply could not be parsed. The entire reply must be one ' +
+        'JSON object beginning with { and ending with }, and nothing else.',
+    );
+  }
+  parts.push('', request.user);
+  return parts.join('\n');
 }

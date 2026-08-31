@@ -107,7 +107,7 @@ if (-not $CoreOnly -and -not $DaemonOnly -and -not $NoBrowser) {
 }
 
 if (-not $DaemonOnly -and -not $NoUi) {
-    $exe = 'ui/dex-bar/build/windows/x64/runner/Debug/dex_bar.exe'
+    $exe = 'ui/dex-bar/build/windows/x64/runner/Debug/Dex.exe'
     if (-not (Test-Path $exe)) {
         Write-Host 'Dex Bar not built yet — building (first run takes ~1 min)...' -ForegroundColor Cyan
         Push-Location 'ui/dex-bar'
@@ -133,11 +133,12 @@ if (-not $DaemonOnly) {
         # and end the moment it began. The Dex Bar is the interface.
         Write-Host 'Starting DEX Core (headless — Alt+Space for the bar)...' -ForegroundColor Cyan
         $env:DEX_HEADLESS = 'true'
+        # No -RedirectStandardOutput any more: under DEX_HEADLESS the core
+        # writes its own %LOCALAPPDATA%\DEX\core.log (core/logging/file_log.ts).
+        # Redirecting as well would put two writers on one file.
         $core = Start-Process node `
             -ArgumentList '-r', 'ts-node/register', 'src/main.ts' `
-            -PassThru -WindowStyle Hidden `
-            -RedirectStandardOutput "$env:LOCALAPPDATA\DEX\core.log" `
-            -RedirectStandardError  "$env:LOCALAPPDATA\DEX\core.err.log"
+            -PassThru -WindowStyle Hidden
         Write-Host "Core PID: $($core.Id)" -ForegroundColor DarkGray
         Write-Host ''
         Write-Host 'Dex is running. Alt+Space for the bar.' -ForegroundColor Green

@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import subprocess
 
-from ._proc import try_run
+from ._proc import NO_WINDOW, try_run
 
 log = logging.getLogger('ProcessHandler')
 
@@ -31,6 +31,7 @@ def _tasklist() -> list[dict]:
     output = subprocess.run(
         ['tasklist', '/fo', 'csv', '/nh'],
         capture_output=True, text=True, timeout=15,
+        creationflags=NO_WINDOW,
     ).stdout
 
     processes = []

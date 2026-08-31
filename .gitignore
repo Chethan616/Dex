@@ -50,6 +50,12 @@ scratchpad/
 scratch_*
 *.local
 
+# Local analysis and hardware reports — never part of a source push
+graphify-out/
+battery-report.html
+@AutomationLog.txt
+image[0-9]*.png
+
 # OS
 Thumbs.db
 .DS_Store

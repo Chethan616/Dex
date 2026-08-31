@@ -217,6 +217,54 @@ class SavedWorkflow {
       );
 }
 
+/// A persisted schedule shown in the Schedules destination.
+class ScheduleRecord {
+  const ScheduleRecord({
+    required this.name,
+    required this.cron,
+    required this.description,
+    required this.request,
+    required this.createdAt,
+    required this.enabled,
+    required this.lastFiredAt,
+    required this.lastStatus,
+    required this.runCount,
+    required this.failCount,
+    required this.nextRun,
+  });
+
+  final String name;
+  final String cron;
+  final String description;
+  final String request;
+  final int createdAt;
+  final bool enabled;
+  final int? lastFiredAt;
+  final String? lastStatus;
+  final int runCount;
+  final int failCount;
+  final DateTime? nextRun;
+
+  factory ScheduleRecord.fromJson(Map<String, dynamic> json) => ScheduleRecord(
+        name: json['name'] as String? ?? '',
+        cron: json['cron'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        request: json['request'] as String? ?? '',
+        createdAt: json['createdAt'] as int? ?? 0,
+        enabled: json['enabled'] as bool? ?? false,
+        lastFiredAt: json['lastFiredAt'] as int?,
+        lastStatus: json['lastStatus'] as String?,
+        runCount: json['runCount'] as int? ?? 0,
+        failCount: json['failCount'] as int? ?? 0,
+        nextRun: _date(json['nextRun']),
+      );
+
+  static DateTime? _date(dynamic value) {
+    if (value is! String || value.isEmpty) return null;
+    return DateTime.tryParse(value);
+  }
+}
+
 /// One entry in the history of what has been asked.
 class TaskRecord {
   const TaskRecord({

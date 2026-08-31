@@ -411,6 +411,7 @@ class _WorkflowTileState extends State<_WorkflowTile> {
                 icon: Icons.delete_outline,
                 tooltip: 'Forget "${w.name}"',
                 size: 15,
+                consequential: true,
                 onTap: () => widget.client.deleteWorkflow(w.name),
               ),
             ],
@@ -444,6 +445,7 @@ class _WorkflowTileState extends State<_WorkflowTile> {
                 // Disabled means out of the gesture arena entirely — the same
                 // rule the confirmation card relies on.
                 enabled: ready,
+                consequential: true,
                 onTap: _run,
               ),
             ],
