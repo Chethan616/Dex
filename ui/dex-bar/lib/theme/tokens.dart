@@ -41,13 +41,13 @@ class DexTokens extends ThemeExtension<DexTokens> {
 
   /// Event type → tone.
   ///
-  /// Ten types, six tones. `thinking` and `routing` share `neutral` because
+  /// Eleven types, six tones. `thinking` and `routing` share `neutral` because
   /// they are Dex narrating itself rather than reporting a state — giving them
   /// their own hues implied a distinction that does not exist, and spent two of
   /// the ten colours a reader has to learn.
   Color eventColor(String type) => switch (type) {
         'thinking' || 'routing' => neutral,
-        'planning' || 'executing' => info,
+        'planning' || 'dispatching' || 'executing' => info,
         'selecting' || 'retrying' => warn,
         'awaiting' || 'cancelled' => attention,
         'done' => positive,
@@ -72,6 +72,7 @@ class DexTokens extends ThemeExtension<DexTokens> {
         'cancelled' => Icons.block_rounded,
         'retrying' => Icons.refresh_rounded,
         'executing' => Icons.play_arrow_rounded,
+        'dispatching' => Icons.send_rounded,
         'planning' || 'selecting' => Icons.chevron_right_rounded,
         _ => Icons.more_horiz_rounded,
       };

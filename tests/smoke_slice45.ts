@@ -13,7 +13,14 @@ import * as path from 'path';
 import { spawnSync } from 'child_process';
 
 // Isolated database — see the note in tests/smoke_ws.ts.
-import { AgentContext, AgentResult, ExecutionPlan, ExecutionStep } from '../core/events/types';
+import {
+  AgentContext,
+  AgentResult,
+  AgentSignal,
+  AgentStepSummary,
+  ExecutionPlan,
+  ExecutionStep,
+} from '../core/events/types';
 import { AgentRegistry } from '../core/orchestrator/registry';
 import { Orchestrator } from '../core/orchestrator/orchestrator';
 import { CancellationRegistry } from '../core/orchestrator/cancellation';
@@ -21,6 +28,7 @@ import { ConfirmationManager } from '../core/confirmation/confirmation_manager';
 import { ReliabilityLayer } from '../core/reliability/observation_engine';
 import { EvidenceStore } from '../core/reliability/evidence_store';
 import { OS_ACTION_NAMES, capabilityCatalogue, ROUTING_RULES } from '../core/brain/capabilities';
+import { bus } from '../core/events/bus';
 
 let passed = 0;
 let failed = 0;
@@ -67,14 +75,16 @@ function buildOrchestrator(agents: Array<{ name: string; capabilities: string[] 
   const registry = new AgentRegistry();
   for (const agent of agents) registry.register(agent as never);
   const confirmations = new ConfirmationManager(4_000, 4_000);
+  const cancellation = new CancellationRegistry();
   const reliability = new ReliabilityLayer(
     new EvidenceStore(path.join(os.tmpdir(), 'dex-slice45-evidence')),
   );
   return {
     orchestrator: new Orchestrator(
-      registry, reliability, false, confirmations, new CancellationRegistry(),
+      registry, reliability, false, confirmations, cancellation,
     ),
     confirmations,
+    cancellation,
   };
 }
 
@@ -137,6 +147,90 @@ class ReadingAppAgent {
         value: this.value,
       },
     };
+  }
+}
+
+/** File-tier stand-in used to prove the planner passes handoff context forward. */
+class ContextRecordingFileAgent {
+  name = 'FileAgent';
+  capabilities = ['can_control_files'];
+  contexts: Array<{
+    instruction?: string;
+    previousSteps?: readonly AgentStepSummary[];
+    signal?: AgentSignal;
+  }> = [];
+
+  async execute(
+    _action: string,
+    _params: Record<string, unknown>,
+    _requestId: string,
+    _stepId: string,
+    ctx?: AgentContext,
+  ): Promise<AgentResult> {
+    this.contexts.push({
+      instruction: ctx?.instruction,
+      previousSteps: ctx?.previousSteps,
+      signal: ctx?.signal?.(),
+    });
+    return { success: true, data: { matches: [], count: 0 } };
+  }
+}
+
+/** App-tier stand-in used to prove a retry is explicit and well-described. */
+class RetryContextAppAgent {
+  name = 'AppAgent';
+  capabilities = ['can_control_app'];
+  calls = 0;
+  retryInstruction = '';
+  retrySignal?: AgentSignal;
+
+  async execute(
+    _action: string,
+    _params: Record<string, unknown>,
+    _requestId: string,
+    _stepId: string,
+    ctx?: AgentContext,
+  ): Promise<AgentResult> {
+    this.calls += 1;
+    if (this.calls === 2) {
+      this.retryInstruction = ctx?.instruction ?? '';
+      this.retrySignal = ctx?.signal?.();
+    }
+    return {
+      success: true,
+      data: {
+        wrote: 'hello world',
+        read_back: this.calls === 1 ? 'hello wrld' : 'hello world',
+        verified: this.calls > 1,
+      },
+    };
+  }
+}
+
+/** Long-running stand-in used to prove owner cancellation reaches the agent. */
+class InterruptibleFileAgent {
+  name = 'FileAgent';
+  capabilities = ['can_control_files'];
+  lastSignal?: AgentSignal;
+
+  async execute(
+    _action: string,
+    _params: Record<string, unknown>,
+    _requestId: string,
+    _stepId: string,
+    ctx?: AgentContext,
+  ): Promise<AgentResult> {
+    return new Promise((resolve) => {
+      const timer = setInterval(() => {
+        const signal = ctx?.signal?.();
+        if (!signal) return;
+        this.lastSignal = signal;
+        if (!signal.shouldContinue) {
+          clearInterval(timer);
+          resolve({ success: false, error: signal.message, retryable: false });
+        }
+      }, 10);
+    });
   }
 }
 
@@ -214,6 +308,95 @@ async function testAppVerification(): Promise<void> {
       result.summary,
     );
   }
+}
+
+async function testPlannerAgentProtocol(): Promise<void> {
+  section('Planner handoff — context, signals, and recovery are explicit');
+
+  const agent = new ContextRecordingFileAgent();
+  const { orchestrator } = buildOrchestrator([agent]);
+  const requestId = 'req_slice45_context';
+  const events: Array<{ type: string; message: string; data?: unknown }> = [];
+  const unsubscribe = bus.subscribe(requestId, (event) => events.push(event));
+
+  const result = await orchestrator.execute({
+    requestId,
+    intent: 'find the project files',
+    tier: 1,
+    steps: [
+      step({
+        id: 'step_1',
+        capability: 'can_control_files',
+        action: 'find_files',
+        params: { root: '.', query: 'package' },
+      }),
+      step({
+        id: 'step_2',
+        capability: 'can_control_files',
+        action: 'find_files',
+        params: { root: '.', query: 'test' },
+        dependsOn: ['step_1'],
+      }),
+    ],
+  });
+  unsubscribe();
+
+  const second = agent.contexts[1];
+  const secondPrevious = second?.previousSteps ?? [];
+  const dispatch = events.find((event) => event.type === 'dispatching');
+  const dispatchData = dispatch?.data as { agent?: string; signal?: AgentSignal } | undefined;
+
+  check('dependent steps receive the planner instruction', Boolean(second?.instruction?.includes('Now search')));
+  check(
+    'the next agent receives a safe summary of the completed step',
+    secondPrevious.length === 1 && secondPrevious[0].status === 'succeeded',
+    JSON.stringify(secondPrevious),
+  );
+  check('a normal handoff says continue', second?.signal?.shouldContinue === true);
+  check('a dispatch event names the receiving agent', dispatchData?.agent === 'FileAgent');
+  check('the task completes after both handoffs', result.status === 'COMPLETED', result.summary);
+
+  const retryAgent = new RetryContextAppAgent();
+  const retryOrchestrator = buildOrchestrator([retryAgent]).orchestrator;
+  const retryResult = await retryOrchestrator.execute({
+    requestId: 'req_slice45_retry',
+    intent: 'set the greeting',
+    tier: 1,
+    steps: [step({
+      action: 'set_text',
+      params: { window: 'W', name: 'Editor', text: 'hello world' },
+    })],
+  });
+
+  check('a failed verification asks the same agent to try again', retryAgent.calls === 2);
+  check('the retry signal is true and keeps the attempt number', retryAgent.retrySignal?.shouldRetry === true && retryAgent.retrySignal.attempt === 2);
+  check('the retry instruction explains the previous action', /previous attempt.*did not verify.*try again/i.test(retryAgent.retryInstruction));
+  check('the verified retry lets the plan continue', retryResult.status === 'COMPLETED', retryResult.summary);
+
+  const interruptAgent = new InterruptibleFileAgent();
+  const interruptControl = buildOrchestrator([interruptAgent]);
+  const interruptRequestId = 'req_slice45_interrupt';
+  const running = interruptControl.orchestrator.execute({
+    requestId: interruptRequestId,
+    intent: 'wait for the file agent',
+    tier: 1,
+    steps: [step({
+      capability: 'can_control_files',
+      action: 'find_files',
+      params: { root: '.', query: 'anything' },
+    })],
+  });
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  interruptControl.cancellation.cancel(interruptRequestId);
+  const interrupted = await running;
+
+  check('an owner interrupt reaches the running agent', interruptAgent.lastSignal?.interrupted === true);
+  check(
+    'the interrupt tells the agent to stop',
+    interruptAgent.lastSignal?.shouldContinue === false &&
+      /stop safely/i.test(interruptAgent.lastSignal?.message ?? ''),
+  );
+  check('an interrupted task finishes as cancelled', interrupted.status === 'CANCELLED', interrupted.summary);
 }
 
 function testRegistryBands(): void {
@@ -348,6 +531,7 @@ async function main(): Promise<void> {
   testRegistryBands();
   await testEscalation();
   await testAppVerification();
+  await testPlannerAgentProtocol();
   testUiaDriver();
 
   console.log(`\n${passed} passed, ${failed} failed`);

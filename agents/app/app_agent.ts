@@ -50,6 +50,7 @@ export class AppAgent implements Agent {
 
     const window = String(params.window ?? '');
     emit('executing', `${action}${window ? ` in "${window}"` : ''}`, requestId, stepId);
+    ctx?.report?.('I am checking the target window through its accessibility tree.');
 
     let response: ActResponse;
     try {

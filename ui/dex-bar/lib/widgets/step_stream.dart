@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/models.dart';
 import '../theme/tokens.dart';
+import 'primitives/primitives.dart';
 
 /// The live thinking-steps view: one line per event, newest at the bottom.
 ///
@@ -108,6 +109,7 @@ class _StepLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.dex;
     final color = t.eventColor(event.type);
+    final agent = _agentName(event);
 
     return TweenAnimationBuilder<double>(
       key: ValueKey('${event.timestamp}-${event.message.hashCode}'),
@@ -135,12 +137,16 @@ class _StepLine extends StatelessWidget {
             SizedBox(
               width: 76,
               child: Text(
-                event.type,
+                _eventLabel(event.type),
                 overflow: TextOverflow.ellipsis,
                 style: DexType.codeSm(color: color, strong: true),
               ),
             ),
             const SizedBox(width: DexTokens.spaceSm),
+            if (agent != null) ...[
+              DexTag.round(agent, tone: color, filled: false),
+              const SizedBox(width: DexTokens.spaceSm),
+            ],
             Expanded(
               child: SelectableText(
                 event.message,
@@ -164,4 +170,22 @@ class _StepLine extends StatelessWidget {
       ),
     );
   }
+}
+
+String _eventLabel(String type) => switch (type) {
+      'planning' => 'plan ready',
+      'selecting' => 'choosing',
+      'dispatching' => 'sent',
+      'executing' => 'working',
+      'retrying' => 'recovery',
+      'awaiting' => 'needs you',
+      'cancelled' => 'stopped',
+      _ => type,
+    };
+
+String? _agentName(DexEvent event) {
+  final data = event.data;
+  if (data is! Map) return null;
+  final agent = data['agent'];
+  return agent is String && agent.isNotEmpty ? agent : null;
 }

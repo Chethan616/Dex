@@ -1,5 +1,6 @@
 import * as http from 'http';
 import { Agent } from '../../core/orchestrator/registry';
+import { AgentContext } from '../../core/events/types';
 import { emit } from '../../core/events/bus';
 
 const PORT = parseInt(process.env.DESKTOP_AGENT_PORT ?? '8765', 10);
@@ -19,10 +20,11 @@ export class DesktopAgent implements Agent {
     params: Record<string, unknown>,
     requestId: string,
     stepId: string,
+    ctx?: AgentContext,
   ): Promise<{ success: boolean; data?: unknown; error?: string }> {
     switch (action) {
       case 'run_task':
-        return this.runTask(String(params.task ?? ''), requestId, stepId);
+        return this.runTask(String(params.task ?? ''), requestId, stepId, ctx);
       default:
         return { success: false, error: `DesktopAgent: unknown action "${action}"` };
     }
@@ -32,8 +34,10 @@ export class DesktopAgent implements Agent {
     task: string,
     requestId: string,
     stepId: string,
+    ctx?: AgentContext,
   ): Promise<{ success: boolean; data?: unknown; error?: string }> {
     emit('executing', `Desktop: "${task}"`, requestId, stepId);
+    ctx?.report?.('I am using the visual fallback because the app has no accessible controls.');
 
     let result: RunTaskResponse;
     try {

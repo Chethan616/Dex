@@ -48,6 +48,7 @@ class PlanView extends StatelessWidget {
       if (e.stepId != stepId) continue;
       switch (e.type) {
         case 'selecting':
+        case 'dispatching':
         case 'executing':
         case 'retrying':
           status = 'running';
@@ -62,6 +63,15 @@ class PlanView extends StatelessWidget {
       }
     }
     return status;
+  }
+
+  String? _agentOf(String stepId) {
+    for (final event in events.reversed) {
+      if (event.stepId != stepId || event.data is! Map) continue;
+      final agent = (event.data as Map)['agent'];
+      if (agent is String && agent.isNotEmpty) return agent;
+    }
+    return null;
   }
 
   @override
@@ -101,7 +111,11 @@ class PlanView extends StatelessWidget {
             runSpacing: DexTokens.spaceSm,
             children: [
               for (final step in waves[i])
-                _StepNode(step: step, status: _statusOf(step.id)),
+                _StepNode(
+                  step: step,
+                  status: _statusOf(step.id),
+                  agent: _agentOf(step.id),
+                ),
             ],
           ),
         ],
@@ -111,10 +125,11 @@ class PlanView extends StatelessWidget {
 }
 
 class _StepNode extends StatelessWidget {
-  const _StepNode({required this.step, required this.status});
+  const _StepNode({required this.step, required this.status, this.agent});
 
   final ExecutionStepModel step;
   final String status;
+  final String? agent;
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +172,9 @@ class _StepNode extends StatelessWidget {
                   style: DexType.code(color: t.text, strong: true),
                 ),
                 Text(
-                  '${step.id} · ${step.capability} · T${step.confirmationTier}',
+                  agent == null
+                      ? '${step.id} · ${step.capability} · T${step.confirmationTier}'
+                      : '$agent · ${step.id} · T${step.confirmationTier}',
                   overflow: TextOverflow.ellipsis,
                   style: DexType.codeSm(color: t.textFaint),
                 ),

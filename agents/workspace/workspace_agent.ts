@@ -1,5 +1,5 @@
 import { Agent } from '../../core/orchestrator/registry';
-import { AgentResult } from '../../core/events/types';
+import { AgentContext, AgentResult } from '../../core/events/types';
 import { CredentialStore } from '../../core/secrets/credential_store';
 import { emit } from '../../core/events/bus';
 import { McpPool, McpServerSpec } from './mcp_pool';
@@ -61,6 +61,7 @@ export class WorkspaceAgent implements Agent {
     params: Record<string, unknown>,
     requestId: string,
     stepId: string,
+    ctx?: AgentContext,
   ): Promise<AgentResult> {
     if (action === 'list_tools') return this.listTools(params, requestId, stepId);
 
@@ -72,6 +73,8 @@ export class WorkspaceAgent implements Agent {
         retryable: false,
       };
     }
+
+    ctx?.report?.(`I am connecting to ${server} to complete this step.`);
 
     let tools;
     try {
@@ -102,6 +105,7 @@ export class WorkspaceAgent implements Agent {
     }
 
     emit('executing', `${server}:${resolved.tool.name}`, requestId, stepId);
+    ctx?.report?.(`I am asking ${server} for ${resolved.tool.name}.`);
 
     let outcome;
     try {

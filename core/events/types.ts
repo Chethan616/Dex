@@ -3,6 +3,7 @@ export type EventType =
   | 'routing'
   | 'planning'
   | 'selecting'
+  | 'dispatching'
   | 'executing'
   | 'retrying'
   | 'awaiting'
@@ -101,6 +102,28 @@ export interface HandoffRequest {
   timeoutMs?: number;
 }
 
+/** A safe, human-readable account of a dependency completed before this step. */
+export interface AgentStepSummary {
+  stepId: string;
+  action: string;
+  agent: string;
+  status: 'succeeded' | 'completed' | 'failed' | 'retrying' | 'cancelled';
+  message: string;
+}
+
+/** Cooperative control signal passed to an agent while its step is running. */
+export interface AgentSignal {
+  /** False means the agent must stop at its next safe boundary. */
+  shouldContinue: boolean;
+  /** True when this invocation is an intentional second attempt. */
+  shouldRetry: boolean;
+  /** True when the owner interrupted the task. */
+  interrupted: boolean;
+  /** The complete sentence explaining what the agent should do next. */
+  message: string;
+  attempt: number;
+}
+
 /**
  * Handed to an agent for the duration of one step. Lets a long-running agent
  * reach back into the confirmation and cancellation machinery instead of
@@ -111,6 +134,14 @@ export interface AgentContext {
   handoff(request: HandoffRequest): Promise<boolean>;
   /** Checked between an agent's own internal steps so cancel is responsive. */
   isCancelled(): boolean;
+  /** The planner's sentence for this agent, including relevant prior results. */
+  instruction?: string;
+  /** Dependency summaries, deliberately excluding raw result payloads. */
+  previousSteps?: readonly AgentStepSummary[];
+  /** Poll this during long work instead of guessing whether to continue. */
+  signal?: () => AgentSignal;
+  /** Report a plain-language progress sentence to the live task stream. */
+  report?: (message: string) => void;
 }
 
 export type VerificationStatus = 'VERIFIED' | 'FAILED' | 'UNVERIFIABLE';

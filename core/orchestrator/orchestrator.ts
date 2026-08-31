@@ -1,4 +1,12 @@
-import { AgentContext, AgentResult, ExecutionPlan, ExecutionStep, TaskStatus } from '../events/types';
+import {
+  AgentContext,
+  AgentResult,
+  AgentSignal,
+  AgentStepSummary,
+  ExecutionPlan,
+  ExecutionStep,
+  TaskStatus,
+} from '../events/types';
 import { AgentRegistry } from './registry';
 import { CancellationRegistry } from './cancellation';
 import { ReliabilityLayer } from '../reliability/observation_engine';
@@ -44,6 +52,7 @@ export class Orchestrator {
     const completed = new Set<string>();
     const remaining = [...steps];
     const completionDetails: string[] = [];
+    const stepReports = new Map<string, AgentStepSummary>();
     this.sessionId = plan.sessionId ?? '';
     this.unattended = plan.unattended === true;
 
@@ -61,15 +70,26 @@ export class Orchestrator {
         }
 
         const results = await Promise.allSettled(
-          ready.map((step) => this.executeStep(step, requestId, completed, completionDetails)),
+          ready.map((step) => this.executeStep(
+            step,
+            requestId,
+            completed,
+            completionDetails,
+            stepReports,
+            intent,
+          )),
         );
 
         let sawCancel = false;
+        let sawFailure = false;
         for (const result of results) {
           if (result.status === 'rejected') {
             emit('failed', `Step threw unexpectedly: ${result.reason}`, requestId);
+            sawFailure = true;
           } else if (result.value === 'cancelled') {
             sawCancel = true;
+          } else if (result.value === 'failed') {
+            sawFailure = true;
           }
         }
 
@@ -79,6 +99,14 @@ export class Orchestrator {
 
         if (sawCancel || this.cancellation.isCancelled(requestId)) {
           return this.cancelledResult(requestId, intent);
+        }
+        if (sawFailure) {
+          const failedSteps = ready
+            .filter((step) => stepReports.get(step.id)?.status === 'failed')
+            .map((step) => step.id);
+          const detail = failedSteps.length > 0 ? `: ${failedSteps.join(', ')}` : '';
+          emit('failed', `Stopped because an agent could not complete${detail}`, requestId);
+          return { status: 'FAILED', summary: `Agent could not complete${detail}` };
         }
       }
 
@@ -112,46 +140,121 @@ export class Orchestrator {
     requestId: string,
     completed: Set<string>,
     completionDetails: string[],
+    stepReports: Map<string, AgentStepSummary>,
+    intent: string,
     escalated = false,
+    attempt = 1,
+    retryReason = '',
   ): Promise<StepOutcome> {
-    emit('selecting', `${step.id} → ${step.capability}:${step.action}`, requestId, step.id);
+    emit(
+      'selecting',
+      `Planner selected ${step.id}: ${describeStep(step)}`,
+      requestId,
+      step.id,
+      { capability: step.capability, action: step.action },
+    );
 
     const agent = this.registry.resolve(step.capability);
     if (!agent) {
+      stepReports.set(step.id, {
+        stepId: step.id,
+        action: step.action,
+        agent: 'none',
+        status: 'failed',
+        message: `No agent is registered for ${step.capability}.`,
+      });
       emit(
         'failed',
-        `No agent for capability "${step.capability}" — is it registered?`,
+        `No agent is registered for ${step.capability}.`,
         requestId,
         step.id,
       );
       return 'failed';
     }
 
+    let agentName = agent.name;
+    const previousSteps = step.dependsOn
+      .map((dependency) => stepReports.get(dependency))
+      .filter((report): report is AgentStepSummary => report !== undefined);
+    const instruction = buildAgentInstruction(intent, step, previousSteps, retryReason);
+    const ctx = this.contextFor(step, requestId, {
+      agent: agentName,
+      instruction,
+      previousSteps,
+      attempt,
+      shouldRetry: attempt > 1,
+      signalMessage: retryReason || `Continue with ${describeStep(step)}.`,
+    });
+
     const gate = await this.gateStep(step, requestId);
-    if (gate !== 'ok') return gate;
+    if (gate !== 'ok') {
+      const cancelled = gate === 'cancelled';
+      stepReports.set(step.id, {
+        stepId: step.id,
+        action: step.action,
+        agent: agentName,
+        status: cancelled ? 'cancelled' : 'failed',
+        message: cancelled ? 'The owner stopped this task.' : 'The step was not approved.',
+      });
+      return gate;
+    }
 
     const beforeState = await this.reliability.observe(step, requestId);
 
-    emit('executing', `${step.action}(${JSON.stringify(step.params)})`, requestId, step.id);
-
-    const ctx = this.contextFor(step, requestId);
+    emit(
+      'dispatching',
+      `Sent to ${agentName}: ${instruction}`,
+      requestId,
+      step.id,
+      this.agentEventData(agentName, ctx.signal?.(), previousSteps),
+    );
+    emit(
+      'executing',
+      `${agentName} is working on it.`,
+      requestId,
+      step.id,
+      this.agentEventData(agentName, ctx.signal?.(), previousSteps),
+    );
     let result = await agent.execute(step.action, step.params, requestId, step.id, ctx);
 
     // The agent hit the edge of its mechanism rather than failing. Hand the
     // same step to the tier that can actually do it. Once only — see `escalate`
     // in AgentResult for why this must not chain.
     if (!result.success && result.escalate && !escalated) {
-      const escalation = await this.escalate(step, result.escalate, requestId, ctx);
-      if (escalation) result = escalation;
+      const escalation = await this.escalate(
+        step,
+        result.escalate,
+        requestId,
+        intent,
+        previousSteps,
+        result.error ?? 'the first agent could not reach it',
+      );
+      if (escalation) {
+        result = escalation.result;
+        agentName = escalation.agentName;
+      }
     }
 
     if (!result.success) {
       // A step the owner declined mid-flight is a decision, not a failure to
       // report as one — the cancel path already told them what happened.
       if (this.cancellation.isCancelled(requestId)) return 'cancelled';
-      emit('failed', `${step.id} failed: ${result.error ?? 'unknown error'}`, requestId, step.id);
+      const message = `${agentName} could not complete the step: ${result.error ?? 'unknown error'}`;
+      stepReports.set(step.id, {
+        stepId: step.id,
+        action: step.action,
+        agent: agentName,
+        status: 'failed',
+        message,
+      });
+      emit('failed', message, requestId, step.id, {
+        ...this.agentEventData(agentName, ctx.signal?.(), previousSteps),
+        signal: this.signalFor(requestId, false, false, message, attempt),
+      });
       return 'failed';
     }
+
+    if (this.cancellation.isCancelled(requestId)) return 'cancelled';
 
     const verification = await this.reliability.verify(step, beforeState, requestId, result);
 
@@ -175,18 +278,35 @@ export class Orchestrator {
 
     if (verification.status === 'VERIFIED') {
       this.captureCompletionDetail(step, verification.reason, completionDetails);
-      emit('done', `${step.id} verified ✓ — ${verification.reason}`, requestId, step.id);
+      const message = `${agentName} verified it: ${verification.reason}. The plan can continue.`;
+      stepReports.set(step.id, {
+        stepId: step.id,
+        action: step.action,
+        agent: agentName,
+        status: 'succeeded',
+        message,
+      });
+      emit('done', message, requestId, step.id, {
+        ...this.agentEventData(agentName, ctx.signal?.(), previousSteps),
+        verification: verification.status,
+      });
       completed.add(step.id);
       return 'ok';
     }
 
     if (verification.status === 'UNVERIFIABLE') {
-      emit(
-        'done',
-        `${step.id} completed (unverifiable — ${verification.reason})`,
-        requestId,
-        step.id,
-      );
+      const message = `${agentName} completed it, but verification was unavailable: ${verification.reason}. The plan can continue.`;
+      stepReports.set(step.id, {
+        stepId: step.id,
+        action: step.action,
+        agent: agentName,
+        status: 'completed',
+        message,
+      });
+      emit('done', message, requestId, step.id, {
+        ...this.agentEventData(agentName, ctx.signal?.(), previousSteps),
+        verification: verification.status,
+      });
       completed.add(step.id);
       return 'ok';
     }
@@ -196,46 +316,94 @@ export class Orchestrator {
     // the server does not have, will fail identically and cost the owner
     // another wait for the privilege.
     if (result.retryable === false) {
+      const message = `${agentName} could not verify the step and will not repeat it: ${verification.reason}`;
+      stepReports.set(step.id, {
+        stepId: step.id,
+        action: step.action,
+        agent: agentName,
+        status: 'failed',
+        message,
+      });
       emit(
         'failed',
-        `${step.id} failed and cannot be retried — ${verification.reason}`,
+        message,
         requestId,
         step.id,
+        this.agentEventData(agentName, ctx.signal?.(), previousSteps),
       );
       return 'failed';
     }
 
     const recheckOnly = this.recheckWithoutRepeating(step);
+    const retryMessage = recheckOnly
+      ? `The previous attempt by ${agentName} did not verify: ${verification.reason}. I will check the result again without repeating the action.`
+      : `The previous attempt by ${agentName} did not verify: ${verification.reason}. I am asking the agent to try again.`;
+    stepReports.set(step.id, {
+      stepId: step.id,
+      action: step.action,
+      agent: agentName,
+      status: 'retrying',
+      message: retryMessage,
+    });
     emit(
       'retrying',
-      `${step.id} verification failed (${verification.reason}) — ` +
-        `${recheckOnly ? 'rechecking without repeating the action' : 'retrying'}`,
+      retryMessage,
       requestId,
       step.id,
+      {
+        ...this.agentEventData(agentName, ctx.signal?.(), previousSteps),
+        signal: this.signalFor(requestId, false, !recheckOnly, retryMessage, attempt + 1),
+      },
     );
 
     // Launching a window, starting a program, or opening a location is not a
     // safe retry: the first invocation may have succeeded while verification
     // was still catching up. Re-read the state instead of creating a second
     // Notepad, Explorer window, or game process.
+    const retryCtx = this.contextFor(step, requestId, {
+      agent: agentName,
+      instruction: buildAgentInstruction(intent, step, previousSteps, retryMessage),
+      previousSteps,
+      attempt: attempt + 1,
+      shouldRetry: !recheckOnly,
+      signalMessage: retryMessage,
+    });
     const retry = recheckOnly
       ? result
-      : await agent.execute(step.action, step.params, requestId, step.id, ctx);
+      : await agent.execute(step.action, step.params, requestId, step.id, retryCtx);
+    if (this.cancellation.isCancelled(requestId)) return 'cancelled';
     const retryVerification = await this.reliability.verify(step, beforeState, requestId, retry);
 
     if (retry.success && retryVerification.status !== 'FAILED') {
       this.captureCompletionDetail(step, retryVerification.reason, completionDetails);
-      emit(
-        'done',
-        `${step.id} verified ${recheckOnly ? 'after recheck' : 'on retry'} ✓`,
-        requestId,
-        step.id,
-      );
+      const message = `${agentName} ${recheckOnly ? 'confirmed the result after a recheck' : 'succeeded on the second attempt'}: ${retryVerification.reason}. The plan can continue.`;
+      stepReports.set(step.id, {
+        stepId: step.id,
+        action: step.action,
+        agent: agentName,
+        status: 'succeeded',
+        message,
+      });
+      emit('done', message, requestId, step.id, {
+        ...this.agentEventData(agentName, retryCtx.signal?.(), previousSteps),
+        verification: retryVerification.status,
+      });
       completed.add(step.id);
       return 'ok';
     }
 
-    emit('failed', `${step.id} failed after retry`, requestId, step.id);
+    const message = `${agentName} still could not verify the step after trying again.`;
+    stepReports.set(step.id, {
+      stepId: step.id,
+      action: step.action,
+      agent: agentName,
+      status: 'failed',
+      message,
+    });
+    emit('failed', message, requestId, step.id, {
+      ...this.agentEventData(agentName, retryCtx.signal?.(), previousSteps),
+      signal: this.signalFor(requestId, false, false, message, attempt + 1),
+    });
     return 'failed';
   }
 
@@ -274,8 +442,10 @@ export class Orchestrator {
     step: ExecutionStep,
     capability: string,
     requestId: string,
-    ctx: AgentContext,
-  ): Promise<AgentResult | undefined> {
+    intent: string,
+    previousSteps: readonly AgentStepSummary[],
+    reason: string,
+  ): Promise<{ result: AgentResult; agentName: string } | undefined> {
     if (capability === step.capability) return undefined;
 
     const agent = this.registry.resolve(capability);
@@ -291,14 +461,32 @@ export class Orchestrator {
 
     if (this.cancellation.isCancelled(requestId)) return undefined;
 
+    const instruction = buildAgentInstruction(
+      intent,
+      step,
+      previousSteps,
+      `The first agent could not reach this step: ${reason}. Continue with your mechanism.`,
+    );
+    const ctx = this.contextFor(step, requestId, {
+      agent: agent.name,
+      instruction,
+      previousSteps,
+      attempt: 1,
+      shouldRetry: false,
+      signalMessage: instruction,
+    });
     emit(
-      'selecting',
-      `${step.id} → escalating ${step.capability} → ${capability}`,
+      'dispatching',
+      `The first agent could not reach it, so the planner sent it to ${agent.name}: ${instruction}`,
       requestId,
       step.id,
+      this.agentEventData(agent.name, ctx.signal?.(), previousSteps),
     );
 
-    return agent.execute(step.action, step.params, requestId, step.id, ctx);
+    return {
+      result: await agent.execute(step.action, step.params, requestId, step.id, ctx),
+      agentName: agent.name,
+    };
   }
 
   /**
@@ -309,7 +497,18 @@ export class Orchestrator {
    * owner already trusts DEX to act without asking. It does not, and cannot,
    * give DEX eyes that can read a CAPTCHA or a password only the owner knows.
    */
-  private contextFor(step: ExecutionStep, requestId: string): AgentContext {
+  private contextFor(
+    step: ExecutionStep,
+    requestId: string,
+    options: {
+      agent: string;
+      instruction: string;
+      previousSteps: readonly AgentStepSummary[];
+      attempt: number;
+      shouldRetry: boolean;
+      signalMessage: string;
+    },
+  ): AgentContext {
     return {
       handoff: (handoff) =>
         this.confirmations.requestHandoff(
@@ -320,6 +519,55 @@ export class Orchestrator {
           handoff,
         ),
       isCancelled: () => this.cancellation.isCancelled(requestId),
+      instruction: options.instruction,
+      previousSteps: options.previousSteps,
+      signal: () => this.signalFor(
+        requestId,
+        false,
+        options.shouldRetry,
+        options.signalMessage,
+        options.attempt,
+      ),
+      report: (message: string) => {
+        const clean = message.trim();
+        if (!clean) return;
+        emit(
+          'executing',
+          `${options.agent}: ${clean}`,
+          requestId,
+          step.id,
+          this.agentEventData(options.agent, undefined, options.previousSteps),
+        );
+      },
+    };
+  }
+
+  private signalFor(
+    requestId: string,
+    interrupted: boolean,
+    shouldRetry: boolean,
+    message: string,
+    attempt: number,
+  ): AgentSignal {
+    const cancelled = interrupted || this.cancellation.isCancelled(requestId);
+    return {
+      shouldContinue: !cancelled,
+      shouldRetry: !cancelled && shouldRetry,
+      interrupted: cancelled,
+      message: cancelled ? 'The owner interrupted this task. Stop safely now.' : message,
+      attempt,
+    };
+  }
+
+  private agentEventData(
+    agent: string,
+    signal: AgentSignal | undefined,
+    previousSteps: readonly AgentStepSummary[],
+  ): Record<string, unknown> {
+    return {
+      agent,
+      signal,
+      previous_steps: previousSteps,
     };
   }
 
@@ -435,5 +683,48 @@ export class Orchestrator {
       return 'cancelled';
     }
     return 'cancelled';
+  }
+}
+
+function buildAgentInstruction(
+  intent: string,
+  step: ExecutionStep,
+  previousSteps: readonly AgentStepSummary[],
+  retryReason = '',
+): string {
+  const previous = previousSteps.length > 0
+    ? `Previous steps: ${previousSteps.map((report) => report.message).join(' ')} `
+    : '';
+  const recovery = retryReason ? `${retryReason} ` : '';
+  return `${recovery}Task: "${intent}". ${previous}Now ${describeStep(step)}.`;
+}
+
+function describeStep(step: ExecutionStep): string {
+  const params = step.params;
+  const value = (name: string): string => String(params[name] ?? '').trim();
+  const quoted = (name: string, fallback: string): string => {
+    const text = value(name) || fallback;
+    return `"${text}"`;
+  };
+
+  switch (step.action) {
+    case 'launch_app':
+      return `open ${quoted('name', 'the requested application')}`;
+    case 'close_app':
+      return `close ${quoted('name', 'the requested application')}`;
+    case 'click_element':
+      return `click ${quoted('name', 'the requested control')} in ${quoted('window', 'the target window')}`;
+    case 'set_text':
+      return `set the requested text in ${quoted('name', 'the target field')} in ${quoted('window', 'the target window')}`;
+    case 'read_element':
+      return `read ${quoted('name', 'the requested value')} from ${quoted('window', 'the target window')}`;
+    case 'find_files':
+      return `search ${quoted('root', 'the requested folder')} for filenames related to ${quoted('query', 'the request')}`;
+    case 'write_file':
+      return `write the requested source file ${quoted('path', 'inside the Dex workspace')}`;
+    case 'run_program':
+      return `run ${quoted('path', 'the requested program')} with the installed ${quoted('runtime', 'runtime')}`;
+    default:
+      return `perform ${step.action.replace(/_/g, ' ')}`;
   }
 }

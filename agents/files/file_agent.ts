@@ -34,16 +34,21 @@ export class FileAgent implements Agent {
     params: Record<string, unknown>,
     _requestId: string,
     _stepId: string,
-    _ctx?: AgentContext,
+    ctx?: AgentContext,
   ): Promise<AgentResult> {
     try {
+      const signal = ctx?.signal?.();
+      if (signal && !signal.shouldContinue) {
+        return { success: false, error: signal.message, retryable: false };
+      }
+      ctx?.report?.(progressSentence(action));
       switch (action) {
         case 'find_files':
           return { success: true, data: this.findFiles(params) };
         case 'write_file':
           return { success: true, data: this.writeFile(params) };
         case 'run_program':
-          return { success: true, data: await this.runProgram(params) };
+          return { success: true, data: await this.runProgram(params, ctx) };
         default:
           return {
             success: false,
@@ -117,7 +122,10 @@ export class FileAgent implements Agent {
     };
   }
 
-  private async runProgram(params: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private async runProgram(
+    params: Record<string, unknown>,
+    ctx?: AgentContext,
+  ): Promise<Record<string, unknown>> {
     const relativePath = String(params.path ?? '').trim();
     if (!relativePath) throw new Error('run_program needs a source path in the Dex workspace');
 
@@ -137,10 +145,13 @@ export class FileAgent implements Agent {
 
     const background = params.background !== false;
     const timeout = Math.max(1_000, Math.min(Number(params.timeout ?? 30) * 1_000, 120_000));
-    if (background) {
-      return this.startBackground(command, root, source, runtime);
+    if (ctx?.signal && !ctx.signal().shouldContinue) {
+      throw new Error(ctx.signal().message);
     }
-    return this.runForeground(command, root, source, runtime, timeout);
+    if (background) {
+      return this.startBackground(command, root, source, runtime, ctx);
+    }
+    return this.runForeground(command, root, source, runtime, timeout, ctx);
   }
 
   private async startBackground(
@@ -148,6 +159,7 @@ export class FileAgent implements Agent {
     root: string,
     source: string,
     runtime: string,
+    ctx?: AgentContext,
   ): Promise<Record<string, unknown>> {
     const child = spawn(command[0], command.slice(1), {
       cwd: root,
@@ -157,6 +169,10 @@ export class FileAgent implements Agent {
     });
     child.unref();
     await delay(500);
+    if (ctx?.signal && !ctx.signal().shouldContinue) {
+      child.kill();
+      throw new Error(ctx.signal().message);
+    }
     if (child.exitCode !== null && child.exitCode !== 0) {
       throw new Error(
         `${path.basename(source)} exited immediately with code ${child.exitCode}; ` +
@@ -188,6 +204,7 @@ export class FileAgent implements Agent {
     source: string,
     runtime: string,
     timeout: number,
+    ctx?: AgentContext,
   ): Promise<Record<string, unknown>> {
     return new Promise((resolve, reject) => {
       const child = spawn(command[0], command.slice(1), {
@@ -198,9 +215,22 @@ export class FileAgent implements Agent {
       let stdout = '';
       let stderr = '';
       let finished = false;
-      const timer = setTimeout(() => {
+      let timer: NodeJS.Timeout;
+      const signal = ctx?.signal;
+      const signalTimer = signal
+        ? setInterval(() => {
+            if (finished || signal().shouldContinue) return;
+            finished = true;
+            clearTimeout(timer);
+            if (signalTimer) clearInterval(signalTimer);
+            child.kill();
+            reject(new Error(signal().message));
+          }, 100)
+        : undefined;
+      timer = setTimeout(() => {
         if (finished) return;
         finished = true;
+        if (signalTimer) clearInterval(signalTimer);
         child.kill();
         reject(new Error(`${path.basename(source)} timed out after ${timeout / 1000}s`));
       }, timeout);
@@ -211,12 +241,14 @@ export class FileAgent implements Agent {
         if (finished) return;
         finished = true;
         clearTimeout(timer);
+        if (signalTimer) clearInterval(signalTimer);
         reject(new Error(`Could not run ${path.basename(source)}: ${err.message}`));
       });
       child.on('close', (code) => {
         if (finished) return;
         finished = true;
         clearTimeout(timer);
+        if (signalTimer) clearInterval(signalTimer);
         if (code !== 0) {
           const detail = (stderr.trim() || stdout.trim() || `exited ${code}`).slice(0, 1000);
           reject(new Error(`${path.basename(source)} failed (${code}): ${detail}`));
@@ -356,4 +388,17 @@ function runtimeCommand(source: string, requested: string): string[] {
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function progressSentence(action: string): string {
+  switch (action) {
+    case 'find_files':
+      return 'I am searching filenames directly, without opening a terminal or taking screenshots.';
+    case 'write_file':
+      return 'I am writing the requested file inside the Dex workspace.';
+    case 'run_program':
+      return 'I am starting the requested program as the signed-in user.';
+    default:
+      return 'I am carrying out the planner instruction.';
+  }
 }
