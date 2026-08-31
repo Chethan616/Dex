@@ -28,6 +28,8 @@ import { ConfirmationManager } from '../core/confirmation/confirmation_manager';
 import { ReliabilityLayer } from '../core/reliability/observation_engine';
 import { EvidenceStore } from '../core/reliability/evidence_store';
 import { OS_ACTION_NAMES, capabilityCatalogue, ROUTING_RULES } from '../core/brain/capabilities';
+import { Brain } from '../core/brain/planner';
+import { LlmProvider } from '../core/llm/provider';
 import { bus } from '../core/events/bus';
 
 let passed = 0;
@@ -483,6 +485,55 @@ function testRoutingPrompt(): void {
   );
 }
 
+async function testPlannerParamRepair(): Promise<void> {
+  section('Planner contract — window readiness never becomes an invalid wait');
+
+  const provider: LlmProvider = {
+    label: 'test/planner',
+    async callTool() {
+      return {
+        intent: 'Open Notepad and type today\'s date',
+        tier: 2,
+        steps: [
+          {
+            id: 'step_1',
+            capability: 'can_control_os',
+            action: 'launch_app',
+            params: { name: 'notepad' },
+            confirmationTier: 4,
+            dependsOn: [],
+          },
+          {
+            id: 'step_2',
+            capability: 'can_control_app',
+            action: 'wait_for',
+            params: { window: 'Notepad' },
+            confirmationTier: 4,
+            dependsOn: ['step_1'],
+          },
+        ],
+      };
+    },
+  };
+
+  const planned = await new Brain(provider).plan({
+    requestId: 'req_slice45_planner',
+    sessionId: 'session_slice45',
+    source: 'flutter',
+    senderId: 'owner',
+    text: "open notepad and type today's date",
+    timestamp: Date.now(),
+  });
+  const readiness = planned.steps[1];
+
+  check('window-only wait_for becomes a supported readiness action', readiness?.action === 'window_state');
+  check(
+    'the repaired readiness action keeps the target window',
+    readiness?.params.window === 'Notepad',
+    JSON.stringify(readiness?.params),
+  );
+}
+
 function testUiaDriver(): void {
   section('UIA driver — against the real Windows accessibility tree');
 
@@ -529,6 +580,7 @@ async function main(): Promise<void> {
   testDriftGuard();
   testRoutingPrompt();
   testRegistryBands();
+  await testPlannerParamRepair();
   await testEscalation();
   await testAppVerification();
   await testPlannerAgentProtocol();

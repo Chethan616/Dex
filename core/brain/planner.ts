@@ -159,14 +159,7 @@ export class Brain {
       throw new Error('Brain returned a plan with no steps');
     }
 
-    const steps: ExecutionStep[] = raw.steps.map((s, i) => ({
-      id: s.id ?? `step_${i + 1}`,
-      capability: s.capability,
-      action: s.action,
-      params: s.params ?? {},
-      confirmationTier: clampTier(s.confirmationTier),
-      dependsOn: s.dependsOn ?? [],
-    }));
+    const steps: ExecutionStep[] = raw.steps.map((s, i) => normalizeStep(s, i));
 
     return {
       requestId: request.requestId,
@@ -175,6 +168,46 @@ export class Brain {
       steps,
     };
   }
+}
+
+/**
+ * Models sometimes use `wait_for` as a window-readiness check and omit the
+ * control name. The App Agent's wait operation intentionally requires a name
+ * because it waits on a real accessibility-tree element, not a guessed
+ * sleep. Repair that unambiguous case at the planner boundary so malformed
+ * model output never reaches the agent or becomes a confusing task failure.
+ */
+function normalizeStep(raw: RawStep, index: number): ExecutionStep {
+  const params = { ...(raw.params ?? {}) };
+  const window = nonEmptyString(params.window);
+  const name = nonEmptyString(params.name) ?? nonEmptyString(params.element);
+
+  if (raw.capability === 'can_control_app' && raw.action === 'wait_for') {
+    if (name && !nonEmptyString(params.name)) params.name = name;
+    if (!name && window) {
+      return {
+        id: raw.id ?? `step_${index + 1}`,
+        capability: raw.capability,
+        action: 'window_state',
+        params: { window },
+        confirmationTier: clampTier(raw.confirmationTier),
+        dependsOn: raw.dependsOn ?? [],
+      };
+    }
+  }
+
+  return {
+    id: raw.id ?? `step_${index + 1}`,
+    capability: raw.capability,
+    action: raw.action,
+    params,
+    confirmationTier: clampTier(raw.confirmationTier),
+    dependsOn: raw.dependsOn ?? [],
+  };
+}
+
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
 /**

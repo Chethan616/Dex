@@ -718,6 +718,8 @@ function describeStep(step: ExecutionStep): string {
       return `set the requested text in ${quoted('name', 'the target field')} in ${quoted('window', 'the target window')}`;
     case 'read_element':
       return `read ${quoted('name', 'the requested value')} from ${quoted('window', 'the target window')}`;
+    case 'window_state':
+      return `check that ${quoted('window', 'the target window')} is open and ready`;
     case 'find_files':
       return `search ${quoted('root', 'the requested folder')} for filenames related to ${quoted('query', 'the request')}`;
     case 'write_file':

@@ -65,7 +65,10 @@ export const APP_ACTIONS: Record<string, ActionSpec> = {
   read_element: { params: '{ window: string, name: string }' },
   toggle: { params: '{ window: string, name: string, on: boolean }' },
   select_menu: { params: '{ window: string, path: string[] }  e.g. ["File","Save As"]' },
-  wait_for: { params: '{ window: string, name: string, timeout?: number }', note: 'Use instead of assuming a window is ready' },
+  wait_for: {
+    params: '{ window: string, name: string, timeout?: number }',
+    note: 'Wait for a named control; use window_state when only the window needs to be ready',
+  },
   window_state: { params: '{ window: string }' },
 };
 
@@ -198,5 +201,7 @@ export const ROUTING_RULES = `HOW TO CHOOSE A CAPABILITY — work down this ladd
 
   A typical desktop task is a Tier 1 launch followed by Tier 2 steps. For
   example "open Notepad, type hello, save as test.txt" is:
-    launch_app -> wait_for -> set_text -> select_menu -> set_text -> click_element
-  with no vision anywhere.`;
+    launch_app -> window_state -> set_text -> select_menu -> set_text -> click_element
+  with no vision anywhere. Use wait_for only when the plan knows the NAME of
+  the specific control that must appear; window_state is the readiness check
+  when the window itself is the target.`;
