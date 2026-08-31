@@ -36,6 +36,29 @@ function verifyAppStep(
   agentResult?: AgentResult,
 ): VerificationResult {
   if (APP_READS.has(step.action)) {
+    const data = asRecord(agentResult?.data);
+    if (step.action === 'read_element') {
+      const element = asRecord(data?.element);
+      const name = typeof element?.name === 'string' && element.name
+        ? element.name
+        : String(step.params.name ?? 'element');
+
+      if (data?.redacted === true) {
+        return {
+          status: 'VERIFIED',
+          reason: `Read "${name}" — sensitive value redacted`,
+        };
+      }
+
+      if (data && Object.prototype.hasOwnProperty.call(data, 'value')) {
+        const value = data.value;
+        return {
+          status: 'VERIFIED',
+          reason: `Read "${name}" = ${displayValue(value)}`,
+          afterState: value,
+        };
+      }
+    }
     return { status: 'VERIFIED', reason: 'Read-only UI Automation query' };
   }
 
@@ -110,6 +133,18 @@ function verifyAppStep(
 
 function truncate(text: string, max = 60): string {
   return text.length > max ? `${text.slice(0, max)}…` : text;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === 'object'
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function displayValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '(empty)';
+  const raw = typeof value === 'string' ? value : JSON.stringify(value) ?? String(value);
+  return truncate(raw.replace(/\s+/g, ' ').trim(), 180);
 }
 
 // ── web ──────────────────────────────────────────────────────────────────────

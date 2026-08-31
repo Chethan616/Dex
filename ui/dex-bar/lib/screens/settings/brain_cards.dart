@@ -23,7 +23,7 @@ class BrainCards extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final side = constraints.maxWidth < 900;
+        final side = constraints.maxWidth < 760;
         final cards = [
           Expanded(
             flex: side ? 0 : 1,
@@ -44,11 +44,12 @@ class BrainCards extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: cards.map(_unflex).toList(),
               )
-            : IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: cards,
-                ),
+            : Row(
+                // Let each provider card settle to its own content height. The
+                // old IntrinsicHeight made the shorter Claude card stretch to
+                // the height of the API-key form, leaving a large dead block.
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: cards,
               );
       },
     );
@@ -282,10 +283,17 @@ class _ChoiceCard extends StatelessWidget {
                 if (selected)
                   DexTag('In use', tone: tone)
                 else if (onChoose != null)
-                  DexButton(label: chooseLabel, dense: true, onTap: onChoose!)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DexTag('Ready', tone: t.positive),
+                      const SizedBox(width: DexTokens.spaceSm),
+                      DexButton(label: chooseLabel, dense: true, onTap: onChoose!),
+                    ],
+                  )
                 else
-                  DexTag('Unavailable',
-                      tone: t.textFaint, filled: false, outlined: true),
+                  DexTag('Needs setup',
+                      tone: t.warn, filled: false, outlined: true),
               ],
             ),
             const SizedBox(height: DexTokens.spaceSm),

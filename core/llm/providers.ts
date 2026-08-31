@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import Anthropic from '@anthropic-ai/sdk';
 import { CredentialStore } from '../secrets/credential_store';
+import { resolveCommand } from '../settings/which';
 import {
   LlmProvider,
   RateLimited,
@@ -249,17 +250,29 @@ export class ClaudeCodeProvider implements LlmProvider {
 
   private ask(prompt: string): Promise<string> {
     return new Promise((resolve, reject) => {
+      const invocation = resolveCommand(this.cliPath, [
+        '--print',
+        '--output-format', 'json',
+        '--model', this.model,
+        // No tools, no filesystem, no shell. See the note above.
+        '--allowedTools', '',
+        '--permission-mode', 'plan',
+      ]);
+
+      if (!invocation) {
+        reject(
+          new Error(
+            `Could not find the Claude Code CLI (${this.cliPath}). ` +
+              'Install it with: npm i -g @anthropic-ai/claude-code',
+          ),
+        );
+        return;
+      }
+
       const child = spawn(
-        this.cliPath,
-        [
-          '--print',
-          '--output-format', 'json',
-          '--model', this.model,
-          // No tools, no filesystem, no shell. See the note above.
-          '--allowedTools', '',
-          '--permission-mode', 'plan',
-        ],
-        { windowsHide: true, shell: process.platform === 'win32' },
+        invocation.file,
+        invocation.args,
+        { windowsHide: true },
       );
 
       let stdout = '';

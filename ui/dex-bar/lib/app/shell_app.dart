@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -18,9 +19,8 @@ import '../theme/tokens.dart';
 /// The application: splash, then shell.
 ///
 /// This process owns the supervisor, which means it owns every other Dex
-/// process. Closing this window ends all of them — enforced by the job object
-/// in win32_spawn.dart rather than by anything here, so it holds even when
-/// this code does not get to run.
+/// process. Hiding this window leaves the process and its resident bar alive;
+/// the explicit Quit Dex action still ends the whole job.
 class DexShellApp extends StatefulWidget {
   const DexShellApp({super.key});
 
@@ -35,6 +35,7 @@ class _DexShellAppState extends State<DexShellApp> with WindowListener {
   final _shell = GlobalKey<DexShellState>();
 
   bool _ready = false;
+  bool _quitting = false;
   SpawnedProcess? _bar;
 
   @override
@@ -62,9 +63,8 @@ class _DexShellAppState extends State<DexShellApp> with WindowListener {
 
   /// Launch the overlay as a second copy of this executable.
   ///
-  /// It is spawned through the same job object as the agents, so it closes
-  /// when this window does. A stale bar left behind after the app quits would
-  /// be a window with no way to reach it and no way to close it.
+  /// It is spawned through the same job object as the agents. The job stays
+  /// alive while the main window is hidden and closes it when Dex quits.
   void _startBarWindow() {
     if (_bar != null) return;
     try {
@@ -76,6 +76,12 @@ class _DexShellAppState extends State<DexShellApp> with WindowListener {
     } catch (_) {
       // Not fatal. Alt+Space stops working; the app does not.
     }
+  }
+
+  Future<void> _quitDex() async {
+    _quitting = true;
+    await windowManager.setPreventClose(false);
+    await windowManager.destroy();
   }
 
   /// Hotkeys owned by this window.
@@ -109,6 +115,14 @@ class _DexShellAppState extends State<DexShellApp> with WindowListener {
   // and the Full Access chip.
   @override
   void onWindowFocus() => WindowActivity.mark();
+
+  @override
+  void onWindowClose() {
+    if (_quitting) return;
+    // The bar is intentionally resident. Closing the main window is a hide
+    // action so Alt+Space remains available over other applications.
+    unawaited(windowManager.hide());
+  }
 
   @override
   void onWindowRestore() => WindowActivity.mark();
@@ -158,6 +172,7 @@ class _DexShellAppState extends State<DexShellApp> with WindowListener {
                           client: _client,
                           supervisor: _supervisor,
                           theme: _theme,
+                          onQuit: _quitDex,
                         )
                       : SplashScreen(
                           supervisor: _supervisor,

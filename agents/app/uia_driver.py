@@ -222,32 +222,84 @@ def _match(control: Any, name: str, control_type: str | None) -> bool:
             return False
 
     target = _norm(name)
-    candidates = [
-        _norm(getattr(control, 'Name', '') or ''),
-        (getattr(control, 'AutomationId', '') or '').lower(),
-    ]
-    # Exact first, then prefix — "Save" must not match "Save As" when both exist.
-    return any(c == target for c in candidates) or any(
-        c.startswith(target) for c in candidates if c
-    )
+    visible_name = _norm(getattr(control, 'Name', '') or '')
+
+    # A visible accessible name is the user-facing identity of a control.
+    # AutomationId is only a fallback for controls that do not expose a name;
+    # Windows pages sometimes reuse an id for a different card or link than
+    # the one currently visible. Matching both fields equally caused a request
+    # for "System" to invoke a Network card whose visible name was
+    # "G-VTT Connected, open".
+    candidate = visible_name or (
+        getattr(control, 'AutomationId', '') or ''
+    ).strip().lower()
+    if not candidate:
+        return False
+
+    # Exact first, then prefix — "Save" must not match "Save As" when both
+    # exist. A whole-word match also handles labels such as "Power & battery"
+    # when the planner calls the destination simply "Battery".
+    if candidate == target or candidate.startswith(target):
+        return True
+    target_words = re.findall(r'[a-z0-9]+', target)
+    candidate_words = re.findall(r'[a-z0-9]+', candidate)
+    return len(target_words) == 1 and target_words[0] in candidate_words
 
 
 def _find_element(window: Any, name: str, control_type: str | None = None) -> Any:
-    exact: list[Any] = []
-    loose: list[Any] = []
+    controls = list(_walk(window))
     seen_names: list[str] = []
-
-    for control, _ in _walk(window):
+    for control, _ in controls:
         label = getattr(control, 'Name', '') or ''
         if label:
             seen_names.append(label)
-        if _match(control, name, control_type):
-            (exact if _norm(label) == _norm(name) else loose).append(control)
+
+    def collect(type_filter: str | None) -> tuple[list[Any], list[Any]]:
+        exact: list[Any] = []
+        loose: list[Any] = []
+        for control, _ in controls:
+            label = getattr(control, 'Name', '') or ''
+            if _match(control, name, type_filter):
+                (exact if _norm(label) == _norm(name) else loose).append(control)
+        return exact, loose
+
+    exact, loose = collect(control_type)
+    type_fallback = False
+
+    # Windows frequently exposes a navigation item as ListItemControl even
+    # when the planner reasonably described it as a button. The accessible
+    # name is still precise, so if the type hint found nothing, retry by name
+    # rather than failing or accepting an unrelated AutomationId match.
+    if control_type and not any(
+        getattr(control, 'IsEnabled', True) for control in (*exact, *loose)
+    ):
+        exact, loose = collect(None)
+        type_fallback = True
+
+    def fallback_score(control: Any) -> int:
+        """Prefer a visible, focusable action over a duplicate wrapper node."""
+        score = 0
+        if bool(getattr(control, 'IsKeyboardFocusable', False)):
+            score += 4
+        try:
+            rect = control.BoundingRectangle
+            if rect.right > rect.left and rect.bottom > rect.top:
+                score += 2
+        except Exception:  # noqa: BLE001
+            pass
+        control_name = (getattr(control, 'ControlTypeName', '') or '').lower()
+        if 'text' not in control_name and 'menubar' not in control_name:
+            score += 1
+        return score
 
     for pool in (exact, loose):
-        for control in pool:
-            if getattr(control, 'IsEnabled', True):
-                return control
+        enabled = [
+            control for control in pool if getattr(control, 'IsEnabled', True)
+        ]
+        if enabled:
+            if type_fallback:
+                return max(enabled, key=fallback_score)
+            return enabled[0]
         if pool:
             raise ElementNotFound(f'"{name}" exists but is disabled', seen_names[:25])
 
@@ -391,6 +443,13 @@ def read_element(window_title: str, name: str) -> dict[str, Any]:
     def run() -> dict[str, Any]:
         window = _find_window(window_title)
         control = _find_element(window, name)
+        element = _describe(control)
+        if bool(getattr(control, 'IsPassword', False)):
+            return {
+                'element': element.as_dict(),
+                'value': None,
+                'redacted': True,
+            }
         value = ''
         try:
             pattern = control.GetPattern(auto.PatternId.ValuePattern)
@@ -398,7 +457,7 @@ def read_element(window_title: str, name: str) -> dict[str, Any]:
                 value = pattern.Value or ''
         except Exception:  # noqa: BLE001
             pass
-        return {'element': _describe(control).as_dict(), 'value': value}
+        return {'element': element.as_dict(), 'value': value}
 
     return in_com(run)
 

@@ -124,6 +124,22 @@ class WorkingAppAgent {
   }
 }
 
+/** Tier 2 stand-in that returns a live value from a generic UI element read. */
+class ReadingAppAgent {
+  name = 'AppAgent';
+  capabilities = ['can_control_app'];
+  constructor(private value: string) {}
+  async execute(): Promise<AgentResult> {
+    return {
+      success: true,
+      data: {
+        element: { name: 'Battery level' },
+        value: this.value,
+      },
+    };
+  }
+}
+
 // ── tests ────────────────────────────────────────────────────────────────────
 
 async function testEscalation(): Promise<void> {
@@ -181,6 +197,21 @@ async function testAppVerification(): Promise<void> {
       'a mismatched read-back FAILS even though the agent said success',
       result.status === 'FAILED',
       `${result.status} — ${result.summary}`,
+    );
+  }
+
+  {
+    const { orchestrator } = buildOrchestrator([new ReadingAppAgent('87%')]);
+    const result = await orchestrator.execute(
+      plan([step({
+        action: 'read_element',
+        params: { window: 'Settings', name: 'Battery level' },
+      })]),
+    );
+    check(
+      'a live read value reaches the task summary',
+      result.status === 'COMPLETED' && result.summary.includes('87%'),
+      result.summary,
     );
   }
 }

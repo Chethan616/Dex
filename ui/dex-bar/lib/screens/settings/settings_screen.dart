@@ -31,11 +31,13 @@ class SettingsScreen extends StatefulWidget {
     required this.client,
     required this.supervisor,
     required this.theme,
+    required this.onQuit,
   });
 
   final GatewayClient client;
   final Supervisor supervisor;
   final ThemeController theme;
+  final Future<void> Function() onQuit;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -86,10 +88,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         DexTokens.spaceXl * 2,
       ),
       children: [
+        _SettingsHeader(settings: settings),
         _Section(
           title: 'The Brain',
           blurb: 'What Dex thinks with. Pick one.',
           child: BrainCards(client: widget.client, settings: settings),
+        ),
+        _Section(
+          title: 'How a request moves',
+          blurb: 'The model makes the plan; Dex keeps control of the machine.',
+          child: _HowDexWorks(settings: settings),
         ),
         _Section(
           title: 'Full Access',
@@ -138,9 +146,209 @@ class _SettingsScreenState extends State<SettingsScreen> {
             supervisor: widget.supervisor,
             settings: settings,
             theme: widget.theme,
+            onQuit: widget.onQuit,
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SettingsHeader extends StatelessWidget {
+  const _SettingsHeader({required this.settings});
+
+  final SettingsSnapshot settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.dex;
+    final provider = settings.brainProviders
+            .where((item) => item.id == settings.brainProvider)
+            .map((item) => item.label)
+            .firstOrNull ??
+        (settings.brainProvider.isEmpty ? 'Not configured' : settings.brainProvider);
+    final statusTone = settings.brainProvider.isEmpty
+        ? t.warn
+        : settings.usingClaudeCode
+            ? t.attention
+            : t.positive;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: DexTokens.spaceXl),
+      child: DexEntrance(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Settings', style: DexType.display(color: t.text, strong: true)),
+                  const SizedBox(height: DexTokens.spaceXs),
+                  Text(
+                    'Choose how Dex thinks, what it can reach, and what stays yours.',
+                    style: DexType.body(color: t.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: DexTokens.spaceMd),
+            DexTag.round(
+              settings.brainProvider.isEmpty ? 'Needs setup' : '$provider active',
+              tone: statusTone,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HowDexWorks extends StatelessWidget {
+  const _HowDexWorks({required this.settings});
+
+  final SettingsSnapshot settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.dex;
+    final provider = settings.brainProviders
+            .where((item) => item.id == settings.brainProvider)
+            .map((item) => item.label)
+            .firstOrNull ??
+        (settings.brainProvider.isEmpty ? 'your selected brain' : settings.brainProvider);
+    final brainDetail = settings.usingClaudeCode
+        ? 'Claude Code returns the plan through your signed-in local CLI.'
+        : '$provider turns your request into a structured plan.';
+
+    final stages = [
+      _FlowStageData(
+        index: '01',
+        title: 'Brain',
+        detail: '$brainDetail It does not click or type.',
+        icon: Icons.psychology_alt_outlined,
+        tone: t.accent,
+      ),
+      _FlowStageData(
+        index: '02',
+        title: 'Core',
+        detail: 'Checks the plan, asks for approval, runs steps, and verifies results.',
+        icon: Icons.account_tree_outlined,
+        tone: t.info,
+      ),
+      _FlowStageData(
+        index: '03',
+        title: 'Agents',
+        detail: 'OS, app, browser, and vision workers perform the actual action.',
+        icon: Icons.precision_manufacturing_outlined,
+        tone: t.positive,
+      ),
+    ];
+
+    return DexPanel(
+      accent: t.info,
+      padding: const EdgeInsets.all(DexTokens.spaceLg),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 720;
+          final children = <Widget>[];
+          for (var i = 0; i < stages.length; i++) {
+            if (i > 0) {
+              children.add(
+                Icon(
+                  wide ? Icons.arrow_forward_rounded : Icons.arrow_downward_rounded,
+                  size: 16,
+                  color: t.textFaint,
+                ),
+              );
+            }
+            final stage = _FlowStage(data: stages[i]);
+            children.add(wide ? Expanded(child: stage) : stage);
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'One request, three responsibilities',
+                style: DexType.title(color: t.text, strong: true),
+              ),
+              const SizedBox(height: DexTokens.spaceLg),
+              wide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: children,
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: children,
+                    ),
+              const SizedBox(height: DexTokens.spaceLg),
+              Text(
+                'Claude Code is another Brain option. It supplies a plan through its local CLI; Dex still owns the tools, permissions, and verification.',
+                style: DexType.caption(color: t.textMuted),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FlowStageData {
+  const _FlowStageData({
+    required this.index,
+    required this.title,
+    required this.detail,
+    required this.icon,
+    required this.tone,
+  });
+
+  final String index;
+  final String title;
+  final String detail;
+  final IconData icon;
+  final Color tone;
+}
+
+class _FlowStage extends StatelessWidget {
+  const _FlowStage({required this.data});
+
+  final _FlowStageData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.dex;
+    return Padding(
+      padding: const EdgeInsets.all(DexTokens.spaceSm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: data.tone.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(DexTokens.radiusSm),
+              border: Border.all(color: data.tone.withValues(alpha: 0.35)),
+            ),
+            child: Icon(data.icon, size: 16, color: data.tone),
+          ),
+          const SizedBox(width: DexTokens.spaceSm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${data.index}  ${data.title}', style: DexType.label(color: t.text, strong: true)),
+                const SizedBox(height: 3),
+                Text(data.detail, style: DexType.caption(color: t.textMuted)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -485,12 +693,14 @@ class _GeneralSection extends StatelessWidget {
     required this.supervisor,
     required this.settings,
     required this.theme,
+    required this.onQuit,
   });
 
   final GatewayClient client;
   final Supervisor supervisor;
   final SettingsSnapshot settings;
   final ThemeController theme;
+  final Future<void> Function() onQuit;
 
   @override
   Widget build(BuildContext context) {
@@ -538,10 +748,19 @@ class _GeneralSection extends StatelessWidget {
                 onTap: supervisor.stopAll,
               ),
               const SizedBox(width: DexTokens.spaceMd),
+              DexButton(
+                label: 'Quit Dex',
+                icon: Icons.close_rounded,
+                dense: true,
+                tone: t.negative,
+                consequential: true,
+                onTap: onQuit,
+              ),
+              const SizedBox(width: DexTokens.spaceMd),
               Expanded(
                 child: Text(
-                  'Stops the agents and the core. The elevated daemon keeps '
-                  'running — it belongs to the logon task.',
+                  'The close button hides Dex so Alt+Space stays available. '
+                  'Quit Dex ends the app and its child processes.',
                   style: DexType.caption(color: t.textFaint),
                 ),
               ),

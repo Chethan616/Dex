@@ -5,6 +5,7 @@ import { promisify } from 'util';
 import { buildBrainProvider } from '../llm/providers';
 import { CredentialStore } from '../secrets/credential_store';
 import { EnvStore } from './env_store';
+import { resolveCommand } from './which';
 import {
   BRAIN_PROVIDERS,
   CREDENTIALS,
@@ -212,19 +213,28 @@ export class SettingsService {
  * token on every Settings load would be rude.
  */
 export async function describeClaudeCode(): Promise<ClaudeCodeStatus> {
-  let version: string | undefined;
-  try {
-    const { stdout } = await run('claude', ['--version'], {
-      timeout: 8000,
-      windowsHide: true,
-    });
-    version = stdout.trim().split(/\s+/)[0];
-  } catch {
+  const invocation = resolveCommand('claude', ['--version']);
+  if (!invocation) {
     return {
       installed: false,
       signedIn: false,
       reason:
         'The Claude Code CLI is not on PATH. Install it with: npm i -g @anthropic-ai/claude-code',
+    };
+  }
+
+  let version: string | undefined;
+  try {
+    const { stdout, stderr } = await run(invocation.file, invocation.args, {
+      timeout: 8000,
+      windowsHide: true,
+    });
+    version = (stdout.trim() || stderr.trim()).split(/\s+/)[0];
+  } catch (err) {
+    return {
+      installed: true,
+      signedIn: false,
+      reason: `Claude Code was found but could not start: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
 

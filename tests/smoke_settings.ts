@@ -24,6 +24,7 @@ import * as path from 'path';
 import { EnvStore } from '../core/settings/env_store';
 import { SettingsService, PUBLIC_ENV_KEYS } from '../core/settings/settings_service';
 import { CREDENTIALS, CREDENTIALS_BY_NAME, BRAIN_PROVIDERS } from '../core/settings/provider_catalog';
+import { resolveCommand } from '../core/settings/which';
 import { extractJsonObject, buildJsonPrompt } from '../core/llm/providers';
 
 let failures = 0;
@@ -179,6 +180,27 @@ check(
     .readFileSync(path.join(__dirname, '..', 'core', 'llm', 'providers.ts'), 'utf8')
     .includes("? 'claude-code'"),
 );
+
+// Windows npm CLIs are `.cmd` shims. The app must resolve the shim from PATH
+// and invoke it through cmd.exe without depending on a developer's profile.
+const fakeBin = path.join(tmp, 'bin');
+fs.mkdirSync(fakeBin);
+const fakeCli = path.join(fakeBin, process.platform === 'win32' ? 'fake-cli.cmd' : 'fake-cli');
+fs.writeFileSync(fakeCli, '', 'utf8');
+const previousPath = process.env.PATH;
+const previousPathext = process.env.PATHEXT;
+process.env.PATH = fakeBin;
+if (process.platform === 'win32') process.env.PATHEXT = '.CMD;.EXE';
+const fakeInvocation = resolveCommand('fake-cli', ['--version']);
+check('resolves a CLI from PATH', fakeInvocation != null);
+if (process.platform === 'win32') {
+  check('routes Windows shims through cmd.exe', fakeInvocation?.file.toLowerCase().endsWith('cmd.exe') ?? false);
+  check('keeps the resolved shim as an argument', fakeInvocation?.args.includes(fakeCli) ?? false);
+}
+if (previousPath === undefined) delete process.env.PATH;
+else process.env.PATH = previousPath;
+if (previousPathext === undefined) delete process.env.PATHEXT;
+else process.env.PATHEXT = previousPathext;
 
 // ---------------------------------------------------------------------------
 // The Claude Code reply parser

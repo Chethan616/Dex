@@ -16,8 +16,9 @@ import 'theme/tokens.dart';
 /// the core is the single source of truth and broadcasts to every connected
 /// client. A task typed into the bar appears in the main window's stream
 /// because both are watching the same WebSocket, not because they talk to each
-/// other. And the bar process is started into the same job object as the
-/// agents, so it closes when Dex does.
+/// other. The main window can be hidden without stopping the process, so the
+/// bar remains available through Alt+Space. Choosing Quit Dex is what actually
+/// ends the process and its child job.
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
@@ -46,6 +47,9 @@ Future<void> runMainWindow() async {
       await windowManager.setAsFrameless();
       await windowManager.setHasShadow(true);
       await windowManager.setResizable(false);
+      // Closing the main window means "hide". The resident bar and its core
+      // must stay alive until the user explicitly chooses Quit Dex.
+      await windowManager.setPreventClose(true);
       await windowManager.show();
       await windowManager.focus();
     },

@@ -21,6 +21,7 @@
     "conformance": "ts-node tests/conformance/run.ts",
     "test:daemon": "python tests/test_daemon_proc.py",
     "test:scripts": "powershell -NoProfile -ExecutionPolicy Bypass -File tests/check_scripts.ps1",
+    "test:uia": "python tests/test_uia_matching.py",
     "test:full-access": "ts-node tests/smoke_full_access.ts",
     "test:scheduler": "ts-node tests/smoke_scheduler.ts",
     "test:settings": "ts-node tests/smoke_settings.ts",

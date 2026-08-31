@@ -43,6 +43,7 @@ export class Orchestrator {
 
     const completed = new Set<string>();
     const remaining = [...steps];
+    const completionDetails: string[] = [];
     this.sessionId = plan.sessionId ?? '';
     this.unattended = plan.unattended === true;
 
@@ -60,7 +61,7 @@ export class Orchestrator {
         }
 
         const results = await Promise.allSettled(
-          ready.map((step) => this.executeStep(step, requestId, completed)),
+          ready.map((step) => this.executeStep(step, requestId, completed, completionDetails)),
         );
 
         let sawCancel = false;
@@ -89,8 +90,12 @@ export class Orchestrator {
         };
       }
 
-      emit('done', `Done: ${intent}`, requestId);
-      return { status: 'COMPLETED', summary: intent };
+      const detail = completionDetails.length > 0
+        ? ` — ${completionDetails.join('; ')}`
+        : '';
+      const summary = `${intent}${detail}`;
+      emit('done', `Done: ${summary}`, requestId, undefined, completionDetails);
+      return { status: 'COMPLETED', summary };
     } finally {
       this.cancellation.clear(requestId);
       this.confirmations.cancelAll(requestId);
@@ -106,6 +111,7 @@ export class Orchestrator {
     step: ExecutionStep,
     requestId: string,
     completed: Set<string>,
+    completionDetails: string[],
     escalated = false,
   ): Promise<StepOutcome> {
     emit('selecting', `${step.id} → ${step.capability}:${step.action}`, requestId, step.id);
@@ -168,6 +174,7 @@ export class Orchestrator {
     });
 
     if (verification.status === 'VERIFIED') {
+      this.captureCompletionDetail(step, verification.reason, completionDetails);
       emit('done', `${step.id} verified ✓ — ${verification.reason}`, requestId, step.id);
       completed.add(step.id);
       return 'ok';
@@ -209,6 +216,7 @@ export class Orchestrator {
     const retryVerification = await this.reliability.verify(step, beforeState, requestId, retry);
 
     if (retry.success && retryVerification.status !== 'FAILED') {
+      this.captureCompletionDetail(step, retryVerification.reason, completionDetails);
       emit('done', `${step.id} verified on retry ✓`, requestId, step.id);
       completed.add(step.id);
       return 'ok';
@@ -216,6 +224,21 @@ export class Orchestrator {
 
     emit('failed', `${step.id} failed after retry`, requestId, step.id);
     return 'failed';
+  }
+
+  /**
+   * Keep read results in the task's final answer. The agent already returned
+   * the live value; this is only the presentation bridge that prevents the
+   * result from being replaced by the planner's intent.
+   */
+  private captureCompletionDetail(
+    step: ExecutionStep,
+    reason: string,
+    details: string[],
+  ): void {
+    if (step.capability !== 'can_control_app' || step.action !== 'read_element') return;
+    if (!reason.startsWith('Read "') || details.includes(reason)) return;
+    details.push(reason);
   }
 
   /**

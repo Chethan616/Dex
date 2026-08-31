@@ -30,11 +30,13 @@ class DexShell extends StatefulWidget {
     required this.client,
     required this.supervisor,
     required this.theme,
+    required this.onQuit,
   });
 
   final GatewayClient client;
   final Supervisor supervisor;
   final ThemeController theme;
+  final Future<void> Function() onQuit;
 
   @override
   State<DexShell> createState() => DexShellState();
@@ -115,6 +117,7 @@ class DexShellState extends State<DexShell> {
             client: widget.client,
             supervisor: widget.supervisor,
             theme: widget.theme,
+            onQuit: widget.onQuit,
           ),
       };
 }
@@ -164,8 +167,8 @@ class _TitleBar extends StatelessWidget {
               ),
               DexIconButton(
                 icon: Icons.close_rounded,
-                tooltip: 'Close Dex — the agents close with it',
-                onTap: windowManager.close,
+                tooltip: 'Hide Dex — Alt+Space keeps working',
+                onTap: windowManager.hide,
               ),
               const SizedBox(width: DexTokens.spaceSm),
             ],

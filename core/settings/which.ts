@@ -50,3 +50,30 @@ export function which(command: string): string | null {
   }
   return null;
 }
+
+export interface CommandInvocation {
+  file: string;
+  args: string[];
+}
+
+/**
+ * Resolve a command and turn Windows shell shims into a real executable call.
+ *
+ * npm installs CLIs as `.cmd` files on Windows. Node can find those files on
+ * PATH, but it cannot execute one with `execFile`/`spawn` directly. Calling
+ * cmd.exe with the resolved path keeps argument boundaries intact and avoids
+ * relying on the caller's interactive shell or a user-specific install path.
+ */
+export function resolveCommand(command: string, args: string[] = []): CommandInvocation | null {
+  const resolved = which(command);
+  if (!resolved) return null;
+
+  if (process.platform === 'win32' && /\.(cmd|bat)$/i.test(resolved)) {
+    return {
+      file: process.env.ComSpec ?? 'cmd.exe',
+      args: ['/d', '/c', resolved, ...args],
+    };
+  }
+
+  return { file: resolved, args };
+}
