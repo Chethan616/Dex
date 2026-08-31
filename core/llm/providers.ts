@@ -142,6 +142,12 @@ export class OpenAiCompatProvider implements LlmProvider {
   }
 }
 
+/** Empty settings fields must restore the provider default, not become a model ID. */
+export function configuredBrainModel(fallback: string): string {
+  const configured = process.env.DEX_BRAIN_MODEL?.trim();
+  return configured || fallback;
+}
+
 export class AnthropicProvider implements LlmProvider {
   readonly label: string;
   private client: Anthropic;
@@ -208,19 +214,19 @@ export function buildBrainProvider(credentials = new CredentialStore()): LlmProv
   // deliberately in Settings and never fallen back into because a key happened
   // to be missing.
   if (provider === 'claude-code') {
-    return new ClaudeCodeProvider(process.env.DEX_BRAIN_MODEL ?? 'sonnet');
+    return new ClaudeCodeProvider(configuredBrainModel('sonnet'));
   }
 
   if (provider === 'groq') {
     const key = credentials.resolve('groq_api_key', 'GROQ_API_KEY');
     if (!key) throw new Error('DEX_BRAIN_PROVIDER=groq but no groq_api_key — run: npm run cred -- set groq_api_key');
-    return new OpenAiCompatProvider(key, process.env.DEX_BRAIN_MODEL ?? 'openai/gpt-oss-120b');
+    return new OpenAiCompatProvider(key, configuredBrainModel('openai/gpt-oss-120b'));
   }
 
   if (provider === 'anthropic') {
     const key = credentials.resolve('anthropic_api_key', 'ANTHROPIC_API_KEY');
     if (!key) throw new Error('DEX_BRAIN_PROVIDER=anthropic but no anthropic_api_key — run: npm run cred -- set anthropic_api_key');
-    return new AnthropicProvider(key, process.env.DEX_BRAIN_MODEL ?? 'claude-sonnet-4-6');
+    return new AnthropicProvider(key, configuredBrainModel('claude-sonnet-4-6'));
   }
 
   throw new Error(

@@ -25,7 +25,7 @@ import { EnvStore } from '../core/settings/env_store';
 import { SettingsService, PUBLIC_ENV_KEYS } from '../core/settings/settings_service';
 import { CREDENTIALS, CREDENTIALS_BY_NAME, BRAIN_PROVIDERS } from '../core/settings/provider_catalog';
 import { resolveCommand } from '../core/settings/which';
-import { OpenAiCompatProvider, extractJsonObject, buildJsonPrompt } from '../core/llm/providers';
+import { OpenAiCompatProvider, configuredBrainModel, extractJsonObject, buildJsonPrompt } from '../core/llm/providers';
 
 let failures = 0;
 
@@ -180,6 +180,21 @@ check(
     .readFileSync(path.join(__dirname, '..', 'core', 'llm', 'providers.ts'), 'utf8')
     .includes("? 'claude-code'"),
 );
+
+const previousProvider = process.env.DEX_BRAIN_PROVIDER;
+const previousModel = process.env.DEX_BRAIN_MODEL;
+process.env.DEX_BRAIN_PROVIDER = 'groq';
+process.env.DEX_BRAIN_MODEL = '   ';
+check(
+  'a blank model setting restores the provider default',
+  configuredBrainModel('openai/gpt-oss-120b') === 'openai/gpt-oss-120b',
+);
+const normalized = await settings.describe();
+check('Settings displays the same default it will actually use', normalized.brain.model === 'openai/gpt-oss-120b');
+if (previousProvider === undefined) delete process.env.DEX_BRAIN_PROVIDER;
+else process.env.DEX_BRAIN_PROVIDER = previousProvider;
+if (previousModel === undefined) delete process.env.DEX_BRAIN_MODEL;
+else process.env.DEX_BRAIN_MODEL = previousModel;
 
 // Windows npm CLIs are `.cmd` shims. The app must resolve the shim from PATH
 // and invoke it through cmd.exe without depending on a developer's profile.

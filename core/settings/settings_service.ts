@@ -45,14 +45,22 @@ export class SettingsService {
     const credentials = CREDENTIALS.map((spec) =>
       this.describeCredential(spec, stored, env),
     );
+    const provider = String(
+      process.env.DEX_BRAIN_PROVIDER ?? env.DEX_BRAIN_PROVIDER ?? '',
+    ).trim().toLowerCase();
+    const configuredModel = String(
+      process.env.DEX_BRAIN_MODEL ?? env.DEX_BRAIN_MODEL ?? '',
+    ).trim();
+    const model = configuredModel ||
+      BRAIN_PROVIDERS.find((candidate) => candidate.id === provider)?.defaultModel ||
+      '';
 
     return {
       credentials,
       brainProviders: BRAIN_PROVIDERS,
       brain: {
-        provider: (process.env.DEX_BRAIN_PROVIDER ?? env.DEX_BRAIN_PROVIDER ?? '')
-          .toLowerCase(),
-        model: process.env.DEX_BRAIN_MODEL ?? env.DEX_BRAIN_MODEL ?? '',
+        provider,
+        model,
       },
       claudeCode: await describeClaudeCode(),
       env: publicEnv(env),
