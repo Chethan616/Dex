@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test:ws": "ts-node tests/smoke_ws.ts",
     "cred": "ts-node scripts/dex-cred.ts",
+    "mesh": "ts-node scripts/dex-mesh.ts",
     "test:slice4": "ts-node tests/smoke_slice4.ts",
     "test:slice45": "ts-node tests/smoke_slice45.ts",
     "test:e2e": "ts-node tests/e2e_tier2.ts",
@@ -30,7 +31,10 @@
     "test:apps": "python tests/test_app_resolver.py",
     "test:policy": "python tests/test_command_policy.py",
     "test:capabilities": "ts-node tests/smoke_capabilities.ts",
-    "test:delivery": "ts-node tests/smoke_delivery.ts"
+    "test:delivery": "ts-node tests/smoke_delivery.ts",
+    "test:mesh": "ts-node tests/smoke_mesh.ts",
+    "test:mesh-relay": "ts-node tests/smoke_mesh_relay.ts",
+    "test:mesh-interop": "ts-node tests/smoke_mesh_interop.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",

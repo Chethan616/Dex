@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0d10" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>" />
+  <title>Dex Mesh</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">Dex <span>Mesh</span></div>
+    <div id="link" class="link link--off" title="relay link">offline</div>
+  </header>
+
+  <!-- ── pairing ─────────────────────────────────────────────────────────── -->
+  <section id="pairing" class="card">
+    <h1>Pair with your PC</h1>
+    <p class="muted">
+      On the PC, open Dex → Settings → Mesh and press <b>Pair a phone</b>. It
+      shows a code. Enter it here, or scan the QR.
+    </p>
+    <label class="field">
+      <span>Relay URL</span>
+      <input id="relayUrl" type="url" inputmode="url" autocomplete="off"
+             placeholder="wss://dex-mesh-relay.example.workers.dev" />
+    </label>
+    <label class="field">
+      <span>Pairing code</span>
+      <input id="pairCode" type="text" autocomplete="off" autocapitalize="off"
+             spellcheck="false" placeholder="v1.xxxxxxxx.xxxx" />
+    </label>
+    <button id="pairBtn" class="primary">Pair</button>
+    <p id="pairMsg" class="msg" hidden></p>
+  </section>
+
+  <!-- ── the console ─────────────────────────────────────────────────────── -->
+  <section id="console" class="console" hidden>
+    <div id="stream" class="stream" aria-live="polite"></div>
+
+    <form id="promptForm" class="prompt">
+      <input id="prompt" type="text" autocomplete="off"
+             placeholder="Ask your PC to do something…" />
+      <button type="submit" class="primary" aria-label="send">↑</button>
+    </form>
+
+    <button id="unpair" class="ghost">Unpair this device</button>
+  </section>
+
+  <template id="tpl-event">
+    <div class="ev">
+      <span class="ev__dot"></span>
+      <div class="ev__body"><span class="ev__type"></span><span class="ev__msg"></span></div>
+    </div>
+  </template>
+
+  <template id="tpl-confirm">
+    <div class="confirm">
+      <div class="confirm__head">
+        <span class="confirm__tier"></span>
+        <code class="confirm__cap"></code>
+      </div>
+      <p class="confirm__desc"></p>
+      <div class="confirm__actions">
+        <button class="confirm__no ghost">Deny</button>
+        <button class="confirm__once">Approve once</button>
+        <button class="confirm__session primary" hidden>Approve for session</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-file">
+    <div class="file">
+      <div class="file__meta"><b class="file__name"></b><span class="file__size muted"></span></div>
+      <progress class="file__bar" max="100" value="0"></progress>
+      <a class="file__dl primary" hidden download>Save</a>
+    </div>
+  </template>
+
+  <script src="js/protocol.js"></script>
+  <script src="js/crypto.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/mesh.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

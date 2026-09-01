@@ -74,3 +74,6 @@ app/build/
 app/.dart_tool/
 ui/dex-bar/build/
 ui/dex-bar/.dart_tool/
+
+# Mesh relay build output
+mesh-relay/dist/

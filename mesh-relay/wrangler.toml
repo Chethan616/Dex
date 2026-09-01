@@ -1,0 +1,11 @@
+name = "dex-mesh-relay"
+main = "worker.js"
+compatibility_date = "2024-09-01"
+
+[[durable_objects.bindings]]
+name = "MESH_ROOM"
+class_name = "MeshRoom"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["MeshRoom"]
