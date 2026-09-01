@@ -14,6 +14,7 @@ export async function verifyStep(
   if (step.capability === 'can_control_gui') return verifyGuiStep(step);
   if (step.capability === 'can_browse_web') return verifyBrowserStep(step, agentResult);
   if (step.capability.startsWith('can_access_')) return verifyWorkspaceStep(step, agentResult);
+  if (step.capability === 'can_deliver') return verifyDelivery(agentResult);
   return {
     status: 'UNVERIFIABLE',
     reason: `No verification policy for capability: ${step.capability}`,
@@ -151,7 +152,7 @@ function displayValue(value: unknown): string {
 
 // ── web ──────────────────────────────────────────────────────────────────────
 
-const BROWSER_READS = new Set(['navigate', 'read_page', 'extract']);
+const BROWSER_READS = new Set(['navigate', 'read_page', 'extract', 'screenshot']);
 
 /**
  * The browser process runs the actual check against the live DOM before the
@@ -313,7 +314,35 @@ async function verifyOsStep(step: ExecutionStep, agentResult?: AgentResult): Pro
     case 'get_volume':
     case 'get_wifi_status':
     case 'list_processes':
+    case 'get_env':
+    case 'classify_command':
+    case 'get_display':
+    case 'get_brightness':
       return { status: 'VERIFIED', reason: 'Read-only action — no state to verify' };
+
+    // Both read the value back from the OS rather than trusting the handler's
+    // own report. set_display already tests the mode before applying it, but
+    // "the driver accepted it" and "the display is now in it" are different
+    // claims and only the second one is evidence.
+    case 'set_display':
+      return verifyDisplay(agentResult);
+
+    case 'set_brightness':
+      return verifyBrightness(agentResult);
+
+    case 'set_env':
+      return verifyEnv(step.params as { name?: string; value?: unknown; scope?: string });
+
+    // Verified by its own exit code, which is the only evidence there is.
+    //
+    // A command's effect is whatever it did, and Dex cannot know what that was
+    // supposed to be. What it can do is refuse to call a non-zero exit a
+    // success — which is exactly the failure mode `set_dns` had for months,
+    // where a program wrote its error to stdout, exited 1, and was reported as
+    // having worked.
+    case 'run_command':
+    case 'run_shell':
+      return verifyCommand(agentResult);
     case 'kill_process':
       return verifyProcessGone(step.params as { name?: string; pid?: number });
     case 'launch_app':
@@ -336,6 +365,27 @@ function verifyFileStep(step: ExecutionStep, agentResult?: AgentResult): Verific
       return verifyFileWrite(agentResult);
     case 'run_program':
       return verifyProgram(agentResult);
+
+    // The new file operations, all verified the same way: the thing they
+    // claim to have produced has to be on disk, at the size they reported.
+    case 'download_file':
+    case 'copy_file':
+    case 'move_file':
+      return verifyFileExists(agentResult);
+
+    case 'delete_file':
+      return verifyFileGone(agentResult);
+
+    // Reads. Nothing changed, so there is nothing to check — but the data
+    // itself is what the owner asked for, and the Orchestrator collects it.
+    case 'read_file':
+    case 'list_dir':
+    case 'hash_file':
+      return { status: 'VERIFIED', reason: 'Read-only action — no state to verify' };
+
+    case 'rename_files':
+      return verifyRename(agentResult);
+
     default:
       return {
         status: 'UNVERIFIABLE',
@@ -661,10 +711,11 @@ function verifyGuiStep(step: ExecutionStep): VerificationResult {
  */
 async function verifyAppOpen(step: ExecutionStep, agentResult?: AgentResult): Promise<VerificationResult> {
   const requested = String((step.params as { name?: string }).name ?? '');
-  const launched = String((agentResult?.data as { launched?: string })?.launched ?? requested);
+  const data = agentResult?.data as { launched?: string; image?: string } | undefined;
+  const launched = String(data?.launched ?? requested);
 
-  const needles = [requested, launched.replace(/\.exe$/i, '')]
-    .map((n) => n.trim().toLowerCase())
+  const needles = [requested, launched.replace(/\.exe$/i, ''), data?.image ?? '']
+    .map((n) => normaliseTitle(n))
     .filter(Boolean);
 
   // A launcher returning and a window being visible are different events.
@@ -677,18 +728,56 @@ async function verifyAppOpen(step: ExecutionStep, agentResult?: AgentResult): Pr
     if (titles === null) {
       return { status: 'UNVERIFIABLE', reason: 'Could not read the window list' };
     }
-    const hit = titles.find((t) => needles.some((n) => t.toLowerCase().includes(n)));
+    const hit = titles.find((t) =>
+      needles.some((n) => normaliseTitle(t).includes(n)),
+    );
     if (hit) {
       return { status: 'VERIFIED', reason: `Window open: "${hit}"`, afterState: hit };
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
 
+  // No window. Before calling that a failure, ask whether the process is
+  // there — because for several real applications it will be.
+  //
+  // Edge is the case that forced this. Its launcher hands off to an existing
+  // background instance and exits immediately, and the window then appears
+  // under a different process, sometimes after more than five seconds. Dex
+  // launched Edge correctly, Edge opened, and the step was reported FAILED.
+  //
+  // A running process with no window yet is genuinely "could not check", which
+  // is what UNVERIFIABLE means here. Nothing running at all is still a failure,
+  // so the check that catches a launch doing nothing is unchanged — it now just
+  // uses more evidence rather than less.
+  const image = String(data?.image ?? '').replace(/\.exe$/i, '');
+  if (image && processRunning(image)) {
+    return {
+      status: 'UNVERIFIABLE',
+      reason: `${requested} is running, but no window had appeared within 5s — `
+        + 'some applications hand off to a background instance and open late',
+      afterState: image,
+    };
+  }
+
   return {
     status: 'FAILED',
-    reason: `${requested} was launched but no window appeared`,
+    reason: `${requested} was launched but neither a window nor a process appeared`,
     afterState: titles?.slice(0, 8) ?? [],
   };
+}
+
+/** Is anything by this image name running? Windowless counts. */
+function processRunning(image: string): boolean {
+  try {
+    const list = execSync(`tasklist /fi "IMAGENAME eq ${image}.exe" /fo csv /nh`, {
+      encoding: 'utf8',
+      timeout: 10_000,
+      windowsHide: true,
+    });
+    return list.toLowerCase().includes(`${image.toLowerCase()}.exe`);
+  } catch {
+    return false;
+  }
 }
 
 /** The mirror image: the window is gone. */
@@ -755,4 +844,281 @@ function verifyProcessGone(params: { name?: string; pid?: number }): Verificatio
       reason: `Could not check process list: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
+}
+
+/**
+ * A command is verified by its exit code and nothing else.
+ *
+ * Dex cannot know what `git commit` was supposed to achieve, so it does not
+ * pretend to. What it will not do is call a failure a success — the shape of
+ * bug that let `set_dns` report VERIFIED for months while never once running,
+ * because the handler only raised when stderr was non-empty and netsh writes
+ * its errors to stdout.
+ *
+ * A non-zero exit is reported with the program's own message, because that
+ * message is almost always the actual answer: "not a git repository",
+ * "no such file", "permission denied".
+ */
+function verifyCommand(agentResult?: AgentResult): VerificationResult {
+  const data = agentResult?.data as
+    | { returncode?: number; stderr?: string; stdout?: string; command?: string }
+    | undefined;
+
+  if (data?.returncode == null) {
+    return { status: 'UNVERIFIABLE', reason: 'The command returned no exit code' };
+  }
+
+  if (data.returncode === 0) {
+    return { status: 'VERIFIED', reason: 'The command completed', afterState: 0 };
+  }
+
+  const said = (data.stderr || data.stdout || '').trim().split('\n')[0].slice(0, 200);
+  return {
+    status: 'FAILED',
+    reason: said
+      ? `Exit ${data.returncode}: ${said}`
+      : `The command exited with code ${data.returncode}`,
+    afterState: data.returncode,
+  };
+}
+
+/**
+ * Read the variable back from the registry, not from the handler's own report.
+ *
+ * The handler returns what it wrote; the registry says what is stored. Those
+ * are the same thing right up until a write silently fails, and only the second
+ * one is evidence.
+ */
+function verifyEnv(
+  params: { name?: string; value?: unknown; scope?: string },
+): VerificationResult {
+  const name = String(params.name ?? '');
+  if (!name) return { status: 'UNVERIFIABLE', reason: 'No variable named' };
+
+  const scope = String(params.scope ?? 'user').toLowerCase();
+  const key =
+    scope === 'machine'
+      ? 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+      : 'HKCU\Environment';
+
+  let stored: string | null = null;
+  try {
+    const output = execSync(`reg query "${key}" /v "${name}"`, {
+      encoding: 'utf8',
+      timeout: 10_000,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const match = output.match(/REG_(?:EXPAND_)?SZ\s+(.*)$/m);
+    stored = match ? match[1].trim() : null;
+  } catch {
+    stored = null;
+  }
+
+  // A removal is verified by absence, which is what the missing key means.
+  if (params.value === null || params.value === undefined) {
+    return stored === null
+      ? { status: 'VERIFIED', reason: `${name} is no longer set` }
+      : { status: 'FAILED', reason: `${name} is still set to ${stored}` };
+  }
+
+  if (stored === null) {
+    return { status: 'FAILED', reason: `${name} is not in the registry after the write` };
+  }
+
+  const wanted = String(params.value);
+  // An append lands inside a longer value, so containment is the right test
+  // there; an exact set should match outright.
+  return stored === wanted || stored.includes(wanted)
+    ? { status: 'VERIFIED', reason: `${name} reads back as ${truncate(stored)}`, afterState: stored }
+    : {
+        status: 'FAILED',
+        reason: `${name} reads back as ${truncate(stored)}, not ${truncate(wanted)}`,
+        afterState: stored,
+      };
+}
+
+/**
+ * A window title, reduced to the characters that carry meaning.
+ *
+ * Written because of a real one. Edge titles its own window
+ * "New tab - Profile 1 - Microsoft​Edge" — with a ZERO WIDTH SPACE between
+ * "Microsoft" and "Edge". It is invisible on screen, it survives lowercasing,
+ * and it makes `title.includes('microsoft edge')` false forever. So Dex could
+ * launch Edge perfectly and then report that no window had appeared.
+ *
+ * Nothing invisible should ever decide whether a name matches, so the whole
+ * class goes: zero-width spaces and joiners, non-breaking spaces, and runs of
+ * ordinary whitespace collapsed to one.
+ */
+export function normaliseTitle(text: string): string {
+  return text
+    .replace(/[​-‍﻿]/g, '')
+    .replace(/[   ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/** The display is in the mode that was asked for, read back after the change. */
+function verifyDisplay(agentResult?: AgentResult): VerificationResult {
+  const data = agentResult?.data as
+    | { requested?: string; resolution?: string; refresh_hz?: number; was?: string }
+    | undefined;
+
+  if (!data?.resolution) {
+    return { status: 'UNVERIFIABLE', reason: 'The display handler reported no mode' };
+  }
+
+  const wanted = String(data.requested ?? '').split(' @ ')[0];
+  if (wanted && wanted !== data.resolution) {
+    return {
+      status: 'FAILED',
+      reason: `Asked for ${wanted} but the display reports ${data.resolution}`,
+      afterState: data.resolution,
+    };
+  }
+
+  return {
+    status: 'VERIFIED',
+    reason: `Display is ${data.resolution} at ${data.refresh_hz}Hz`,
+    afterState: data.resolution,
+  };
+}
+
+/**
+ * Brightness, within a tolerance.
+ *
+ * Panels quantise: ask for 40 and a monitor with sixteen steps gives you 40 or
+ * 44 and is not wrong. An exact-equality check here would report a working
+ * change as a failure, which is the kind of false alarm that teaches people to
+ * ignore the real ones.
+ */
+function verifyBrightness(agentResult?: AgentResult): VerificationResult {
+  const data = agentResult?.data as
+    | { requested?: number; level?: number; supported?: boolean }
+    | undefined;
+
+  if (data?.supported === false) {
+    return { status: 'UNVERIFIABLE', reason: 'This display does not report brightness' };
+  }
+  if (typeof data?.level !== 'number') {
+    return { status: 'UNVERIFIABLE', reason: 'The panel did not report a brightness level' };
+  }
+
+  const wanted = Number(data.requested);
+  return Math.abs(data.level - wanted) <= 5
+    ? { status: 'VERIFIED', reason: `Panel reports ${data.level}%`, afterState: data.level }
+    : {
+        status: 'FAILED',
+        reason: `Asked for ${wanted}% but the panel reports ${data.level}%`,
+        afterState: data.level,
+      };
+}
+
+/**
+ * Was it actually sent?
+ *
+ * The distinction that matters: a file Dex could not deliver is NOT a failure
+ * of the task — the download happened, the file exists — but it is absolutely
+ * not a success either, because the owner asked for it on their phone and it
+ * is on a PC they are away from. UNVERIFIABLE with the reason is the honest
+ * middle, and it keeps the path in the message so they can still get at it.
+ */
+function verifyDelivery(agentResult?: AgentResult): VerificationResult {
+  const data = agentResult?.data as
+    | { delivered?: boolean; to?: string; name?: string; reason?: string; path?: string }
+    | undefined;
+
+  if (data?.delivered === true) {
+    return {
+      status: 'VERIFIED',
+      reason: `Sent ${data.name ?? 'the file'} to ${data.to}`,
+      afterState: data.to,
+    };
+  }
+
+  return {
+    status: 'UNVERIFIABLE',
+    reason: data?.reason
+      ? `Not sent — ${data.reason}${data.path ? `. It is at ${data.path}` : ''}`
+      : 'The delivery agent did not say whether it sent anything',
+  };
+}
+
+/**
+ * The file the step says it produced is there, and is the size it said.
+ *
+ * Both halves matter. `existsSync` alone would pass for a zero-byte file left
+ * behind by a download that died mid-stream — which is exactly the case
+ * downloadFile deletes on the way out, and exactly the one worth catching if
+ * that ever stops working.
+ */
+function verifyFileExists(agentResult?: AgentResult): VerificationResult {
+  const data = agentResult?.data as
+    | { path?: string; to?: string; bytes?: number; name?: string }
+    | undefined;
+
+  const target = data?.path ?? data?.to;
+  if (!target) {
+    return { status: 'UNVERIFIABLE', reason: 'The step reported no path' };
+  }
+  if (!fs.existsSync(target)) {
+    return { status: 'FAILED', reason: `${target} is not on disk`, afterState: null };
+  }
+
+  const actual = fs.statSync(target).size;
+  if (typeof data?.bytes === 'number' && actual !== data.bytes) {
+    return {
+      status: 'FAILED',
+      reason: `${target} is ${actual} bytes, not the ${data.bytes} reported`,
+      afterState: actual,
+    };
+  }
+
+  return {
+    status: 'VERIFIED',
+    reason: `${data?.name ?? target} is on disk (${actual} bytes)`,
+    afterState: target,
+  };
+}
+
+/** The opposite: it is gone, or in the Recycle Bin, which is the same to us. */
+function verifyFileGone(agentResult?: AgentResult): VerificationResult {
+  const data = agentResult?.data as { path?: string; method?: string } | undefined;
+  if (!data?.path) {
+    return { status: 'UNVERIFIABLE', reason: 'The step reported no path' };
+  }
+  return fs.existsSync(data.path)
+    ? { status: 'FAILED', reason: `${data.path} is still there` }
+    : {
+        status: 'VERIFIED',
+        reason: `Removed to the ${data.method === 'permanent' ? 'void' : 'Recycle Bin'}`,
+        afterState: null,
+      };
+}
+
+/**
+ * A rename that only planned is verified as having changed nothing.
+ *
+ * This is the preview call, and reporting it as VERIFIED with a count is the
+ * point — the owner is meant to read that count before approving the real one.
+ */
+function verifyRename(agentResult?: AgentResult): VerificationResult {
+  const data = agentResult?.data as
+    | { applied?: boolean; renamed?: number; would_rename?: number; folder?: string }
+    | undefined;
+
+  if (data?.applied === false) {
+    return {
+      status: 'VERIFIED',
+      reason: `Nothing changed — ${data.would_rename ?? 0} file(s) would be renamed`,
+      afterState: 0,
+    };
+  }
+  return {
+    status: 'VERIFIED',
+    reason: `Renamed ${data?.renamed ?? 0} file(s) in ${data?.folder ?? 'the folder'}`,
+    afterState: data?.renamed ?? 0,
+  };
 }

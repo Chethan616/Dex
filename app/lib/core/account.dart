@@ -1,0 +1,69 @@
+// Local account identity — UI-only auth for now.
+//
+// There is no backend: "signing in" just persists a display name +
+// email in SharedPreferences so the app has an identity surface
+// (greeting, Account tab, profile menu) and a real sign-in/sign-out
+// FLOW to hang future auth on. Sign-out clears the flag and routes
+// back to the login screen; nothing about the agent stack (keys,
+// models, channels) is touched by account state.
+
+import 'package:shared_preferences/shared_preferences.dart';
+
+const String _kSignedIn = 'dex.account.signedIn';
+const String _kName = 'dex.account.name';
+const String _kEmail = 'dex.account.email';
+const String _kOnboardSeen = 'dex.onboarding.seen';
+
+class DexAccount {
+  DexAccount._({required this.signedIn, this.name, this.email});
+
+  final bool signedIn;
+  final String? name;
+  final String? email;
+
+  static Future<DexAccount> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    return DexAccount._(
+      signedIn: prefs.getBool(_kSignedIn) ?? false,
+      name: prefs.getString(_kName),
+      email: prefs.getString(_kEmail),
+    );
+  }
+
+  static Future<void> signIn({required String name, required String email}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kSignedIn, true);
+    await prefs.setString(_kName, name.trim());
+    await prefs.setString(_kEmail, email.trim());
+  }
+
+  static Future<void> signOut() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kSignedIn, false);
+  }
+
+  /// Clear the local identity entirely: name, email, signed-in flag, and
+  /// the onboarding-seen marker. The agent stack (keys/models/channels)
+  /// is untouched — this only removes the local profile, so the next
+  /// launch lands on the login screen.
+  static Future<void> deleteLocal() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kName);
+    await prefs.remove(_kEmail);
+    await prefs.remove(_kOnboardSeen);
+    await prefs.setBool(_kSignedIn, false);
+  }
+
+  /// Whether the onboarding tour has been completed on this machine.
+  /// Separate from the engine-config check: a fresh account sees the
+  /// tour ONCE even when the machine is already configured.
+  static Future<bool> onboardingSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kOnboardSeen) ?? false;
+  }
+
+  static Future<void> setOnboardingSeen(bool seen) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kOnboardSeen, seen);
+  }
+}

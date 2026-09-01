@@ -60,3 +60,17 @@ image[0-9]*.png
 Thumbs.db
 .DS_Store
 desktop.ini
+
+# The v1 tree, kept locally for reference. It is a fork of another project and
+# has no bearing on this one — nothing here imports from it.
+Dex-main/
+
+# Personal documents that happen to live in the working folder.
+*.docx
+image*.png
+
+# Flutter build output.
+app/build/
+app/.dart_tool/
+ui/dex-bar/build/
+ui/dex-bar/.dart_tool/

@@ -11,6 +11,8 @@ import { SessionStore } from './memory/sessions';
 import { WorkflowStore } from './workflows/store';
 import { expandWorkflows } from './workflows/expand';
 import { emit } from './events/bus';
+import { factsForPhrasing, renderFacts, worthPhrasing } from './brain/answer';
+import { DeliveryTarget, delivery } from './delivery/registry';
 
 export interface GatewayResult {
   status: TaskStatus;
@@ -25,6 +27,15 @@ export interface GatewayResult {
    * was run; the owner has to say which they meant.
    */
   needsClarification?: string;
+  /**
+   * What Dex has to tell the owner: the reply to a question, or the phrased
+   * result of a task that read something.
+   *
+   * Distinct from `summary`, which describes what was *done*. A read used to
+   * report "Done: Retrieve the current Windows power plan" and never say what
+   * the plan was — the value existed and was thrown away.
+   */
+  answer?: string;
 }
 
 export class Gateway {
@@ -43,12 +54,60 @@ export class Gateway {
     private cache = new SemanticCache(),
   ) {}
 
+  /**
+   * Handle one request.
+   *
+   * A thin wrapper so the delivery target is released on every path out —
+   * success, failure, refusal, or a throw. A `DeliveryTarget` holds a live
+   * connection to a chat, and one left behind is both a leaked handle and a
+   * stale address a later task could deliver to.
+   */
+  /**
+   * Swap the brain for a newly-configured one, in place.
+   *
+   * Called when Settings changes the provider. Without it the change would sit
+   * in settings.json until the next restart, and a settings screen whose effect
+   * is invisible until you restart — with nothing saying so — is worse than one
+   * that refuses the change.
+   *
+   * The workflow callback is preserved: it is a live view of the saved
+   * workflows, and rebuilding without it would silently stop the planner being
+   * able to choose one.
+   */
+  rebuildBrain(): void {
+    this.brain = new Brain(undefined, this.brain.workflowSource);
+    emit('routing', `Brain is now ${this.brain.model}`, '');
+  }
+
   async handle(
     source: DexRequest['source'],
     senderId: string,
     text: string,
+    /**
+     * Where to send anything this task produces.
+     *
+     * Supplied by the channel that received the message, so "send it to me"
+     * resolves to the conversation that asked rather than to whichever adapter
+     * happened to speak last. Absent for the CLI and the desktop app, where
+     * the owner is already at the machine the file is on.
+     */
+    deliverTo?: DeliveryTarget,
   ): Promise<GatewayResult> {
     const requestId = randomUUID();
+    if (deliverTo) delivery.register(requestId, deliverTo);
+    try {
+      return await this.dispatch(requestId, source, senderId, text);
+    } finally {
+      delivery.release(requestId);
+    }
+  }
+
+  private async dispatch(
+    requestId: string,
+    source: DexRequest['source'],
+    senderId: string,
+    text: string,
+  ): Promise<GatewayResult> {
     // Keyed by time rather than by sender: Dex has one owner, so a task begun
     // on a phone and followed up at the desk is the same conversation.
     const sessionId = this.sessions.current(source).id;
@@ -134,6 +193,19 @@ export class Gateway {
       return { status: 'FAILED', summary: msg, requestId };
     }
 
+    // A question rather than a task. Nothing to execute, nothing to verify,
+    // nothing to cache — the answer is the whole result.
+    //
+    // Deliberately before workflow expansion and before the Orchestrator: an
+    // empty plan reaching either of those is a plan that "completed" without
+    // doing anything, which reports as success and teaches the owner to trust
+    // a green tick that means nothing.
+    if (plan.steps.length === 0 && plan.reply) {
+      emit('done', plan.reply, requestId);
+      this.telemetry.finishTask(requestId, 'ANSWERED');
+      return { status: 'ANSWERED', summary: plan.reply, requestId, answer: plan.reply };
+    }
+
     // The Brain may have chosen a saved workflow rather than planning from
     // scratch. Swap those steps for the ones already known to work, before
     // anything runs — so they carry their own confirmation tiers and are
@@ -163,8 +235,11 @@ export class Gateway {
       void this.cache.remember(request.text, finalPlan);
     }
 
+    const answer = await this.finish(request, result);
+
     return {
       ...result,
+      answer,
       requestId,
       // A task that reused a workflow is not a fresh one to offer saving.
       workflow: expanded[0],
@@ -173,6 +248,55 @@ export class Gateway {
           ? undefined
           : this.suggestion(request.text, finalPlan, result.status),
     };
+  }
+
+  /**
+   * Close the task with exactly one line, and make it the useful one.
+   *
+   * A completed task used to end with two: the Orchestrator's
+   * "Done: Retrieve the current Windows power plan", then the answer beneath
+   * it. The first is the plan restating the question, it arrives first, and it
+   * is the one that reads as the conclusion — so the thing the owner actually
+   * asked for was the runner-up on its own screen.
+   *
+   * Now there is one closing line. It is the answer when there is one, and
+   * what was done when there is not, because "Opened a web browser" is the
+   * right way to finish an action and there is nothing to answer.
+   */
+  private async finish(
+    request: DexRequest,
+    result: { status: TaskStatus; summary: string; facts?: Record<string, unknown>[] },
+  ): Promise<string | undefined> {
+    if (result.status !== 'COMPLETED') return undefined;
+
+    const answer = await this.answerFor(request, result.facts ?? []);
+    emit('done', answer ?? `Done: ${result.summary}`, request.requestId);
+    return answer;
+  }
+
+  /**
+   * What to tell the owner about what was found.
+   *
+   * The Brain phrases it; if that call cannot be made, the facts are rendered
+   * directly. The fallback is not a degraded mode to be embarrassed about — it
+   * is the guarantee that asking Dex a question always produces an answer, even
+   * when the free tier says no.
+   *
+   * An unattended run never phrases: there is nobody reading it, and a schedule
+   * firing hourly would spend a model call each time to prettify a log line.
+   */
+  private async answerFor(
+    request: DexRequest,
+    facts: Record<string, unknown>[],
+  ): Promise<string | undefined> {
+    if (!worthPhrasing(facts)) return undefined;
+
+    const rendered = renderFacts(facts);
+
+    if (request.source === 'schedule') return rendered || undefined;
+
+    const phrased = await this.brain.phrase(request.text, factsForPhrasing(facts));
+    return phrased ?? rendered ?? undefined;
   }
 
   /**
@@ -239,7 +363,11 @@ export class Gateway {
     const result = await this.orchestrator.execute(plan);
     this.telemetry.finishTask(plan.requestId, result.status);
 
-    return { ...result, requestId: plan.requestId, workflow };
+    // A replayed workflow answers too. "run dns" should report the servers,
+    // not just that it ran — the whole point of saving a read as a workflow.
+    const answer = await this.finish(request, result);
+
+    return { ...result, answer, requestId: plan.requestId, workflow };
   }
 
   /**

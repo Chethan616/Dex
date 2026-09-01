@@ -27,6 +27,14 @@ export interface Reply {
   send(text: string): Promise<string | undefined>;
   /** Replace an earlier message, for live progress. Optional. */
   edit?(handle: string, text: string): Promise<void>;
+  /**
+   * Send a file to this conversation. Optional — not every channel can.
+   *
+   * Where a channel cannot, the delivery agent says where the file is on the
+   * machine instead. That is the honest outcome: the task produced the file,
+   * and only the last step could not happen.
+   */
+  sendFile?(filePath: string, caption?: string): Promise<void>;
 }
 
 export interface ChannelAdapter {
@@ -150,7 +158,16 @@ export class ChannelRuntime {
     });
 
     try {
-      const result = await this.gateway.handle(source, message.senderId, text);
+      // The reply is handed to the Gateway so that "send it to me" resolves to
+      // this conversation. Without it, a plan that produces a file has nowhere
+      // to put it and the owner gets a path to a machine they are away from.
+      const result = await this.gateway.handle(source, message.senderId, text, {
+        source,
+        send: (body: string) => reply.send(body),
+        ...(reply.sendFile
+          ? { sendFile: (file: string, caption?: string) => reply.sendFile!(file, caption) }
+          : {}),
+      });
       if (pendingEdit) clearTimeout(pendingEdit);
 
       const summary =

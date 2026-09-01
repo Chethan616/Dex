@@ -6,6 +6,8 @@ import { createHash } from 'crypto';
 import { Agent } from '../../core/orchestrator/registry';
 import { AgentContext, AgentResult } from '../../core/events/types';
 import { resolveCommand } from '../../core/settings/which';
+import * as ops from './file_ops';
+import { namedFolder, profilePath } from './profile_paths';
 
 const MAX_FILE_BYTES = 2_000_000;
 const MAX_RESULTS = 100;
@@ -49,6 +51,26 @@ export class FileAgent implements Agent {
           return { success: true, data: this.writeFile(params) };
         case 'run_program':
           return { success: true, data: await this.runProgram(params, ctx) };
+
+        // The ordinary file operations. Every one of these resolves its paths
+        // through profilePath, so the "your profile, not Windows" boundary is
+        // decided once rather than re-argued per action.
+        case 'read_file':
+          return { success: true, data: ops.readFile(params) };
+        case 'list_dir':
+          return { success: true, data: ops.listDir(params) };
+        case 'copy_file':
+          return { success: true, data: ops.copyFile(params) };
+        case 'move_file':
+          return { success: true, data: ops.moveFile(params) };
+        case 'rename_files':
+          return { success: true, data: ops.renameFiles(params) };
+        case 'delete_file':
+          return { success: true, data: ops.deleteFile(params) };
+        case 'hash_file':
+          return { success: true, data: ops.hashFile(params) };
+        case 'download_file':
+          return { success: true, data: await ops.downloadFile(params) };
         default:
           return {
             success: false,
@@ -111,7 +133,7 @@ export class FileAgent implements Agent {
     }
 
     const root = workspaceRoot();
-    const destination = workspacePath(relativePath, root);
+    const destination = resolveWritePath(relativePath, root);
     fs.mkdirSync(path.dirname(destination), { recursive: true });
     fs.writeFileSync(destination, content);
     return {
@@ -130,9 +152,9 @@ export class FileAgent implements Agent {
     if (!relativePath) throw new Error('run_program needs a source path in the Dex workspace');
 
     const root = workspaceRoot();
-    const source = workspacePath(relativePath, root);
+    const source = resolveWritePath(relativePath, root);
     if (!fs.existsSync(source) || !fs.statSync(source).isFile()) {
-      throw new Error(`Program not found in the Dex workspace: ${relativePath}`);
+      throw new Error(`No such program: ${source}`);
     }
 
     const runtime = String(params.runtime ?? '').trim().toLowerCase();
@@ -401,4 +423,34 @@ function progressSentence(action: string): string {
     default:
       return 'I am carrying out the planner instruction.';
   }
+}
+
+/**
+ * Where a write or a program run is allowed to land.
+ *
+ * A bare relative path stays in the Dex workspace, exactly as before — that is
+ * the right default for generated code, and every existing plan and test
+ * depends on it. An absolute path, a `~`, or a named folder resolves against
+ * the user profile instead, because "write this to my Documents" is a
+ * reasonable thing to ask and used to be impossible.
+ *
+ * Both routes end at a boundary check. The workspace one cannot escape the
+ * workspace; the profile one cannot escape the profile, reach Windows, or read
+ * Dex's own credential store.
+ */
+function resolveWritePath(raw: string, workspace: string): string {
+  const looksAbsolute = path.isAbsolute(raw) || /^[a-z]:[\/]/i.test(raw);
+  const looksNamed = raw.startsWith('~') || namedFolder(raw.split(/[\/]/)[0]) !== null;
+
+  if (!looksAbsolute && !looksNamed) {
+    return workspacePath(raw, workspace);
+  }
+
+  // A named folder as the first segment: "Documents/notes.txt".
+  const segments = raw.split(/[\/]/);
+  const base = namedFolder(segments[0]);
+  if (base && segments.length > 1) {
+    return profilePath(path.join(base, ...segments.slice(1)));
+  }
+  return profilePath(raw);
 }

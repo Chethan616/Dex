@@ -44,14 +44,17 @@ export class Orchestrator {
   /** True while running a plan nobody is watching. See gateStep. */
   private unattended = false;
 
-  async execute(plan: ExecutionPlan): Promise<{ status: TaskStatus; summary: string }> {
+  async execute(
+    plan: ExecutionPlan,
+  ): Promise<{ status: TaskStatus; summary: string; facts?: Record<string, unknown>[] }> {
     const { requestId, steps, intent } = plan;
 
     emit('planning', `Plan: "${intent}" — ${steps.length} step(s)`, requestId, undefined, plan);
 
     const completed = new Set<string>();
     const remaining = [...steps];
-    const completionDetails: string[] = [];
+    // What the steps found, for the answer the owner is given.
+    const facts: Record<string, unknown>[] = [];
     const stepReports = new Map<string, AgentStepSummary>();
     this.sessionId = plan.sessionId ?? '';
     this.unattended = plan.unattended === true;
@@ -74,7 +77,7 @@ export class Orchestrator {
             step,
             requestId,
             completed,
-            completionDetails,
+            facts,
             stepReports,
             intent,
           )),
@@ -118,12 +121,16 @@ export class Orchestrator {
         };
       }
 
-      const detail = completionDetails.length > 0
-        ? ` — ${completionDetails.join('; ')}`
-        : '';
-      const summary = `${intent}${detail}`;
-      emit('done', `Done: ${summary}`, requestId, undefined, completionDetails);
-      return { status: 'COMPLETED', summary };
+      // Deliberately no terminal event here.
+      //
+      // This used to emit "Done: Retrieve the current Windows power plan" — the
+      // plan's restatement of the question — and the Gateway then emitted the
+      // actual answer underneath it. Two closing lines, the first of which
+      // said nothing, and the first is the one that reads as the conclusion.
+      //
+      // The Gateway emits exactly one, because only the Gateway knows whether
+      // there is an answer to give. See Gateway.finish.
+      return { status: 'COMPLETED', summary: intent, facts };
     } finally {
       this.cancellation.clear(requestId);
       this.confirmations.cancelAll(requestId);
@@ -139,7 +146,7 @@ export class Orchestrator {
     step: ExecutionStep,
     requestId: string,
     completed: Set<string>,
-    completionDetails: string[],
+    facts: Record<string, unknown>[],
     stepReports: Map<string, AgentStepSummary>,
     intent: string,
     escalated = false,
@@ -277,7 +284,7 @@ export class Orchestrator {
     });
 
     if (verification.status === 'VERIFIED') {
-      this.captureCompletionDetail(step, verification.reason, completionDetails);
+      this.captureCompletionDetail(step, result, facts);
       const message = `${agentName} verified it: ${verification.reason}. The plan can continue.`;
       stepReports.set(step.id, {
         stepId: step.id,
@@ -375,7 +382,7 @@ export class Orchestrator {
     const retryVerification = await this.reliability.verify(step, beforeState, requestId, retry);
 
     if (retry.success && retryVerification.status !== 'FAILED') {
-      this.captureCompletionDetail(step, retryVerification.reason, completionDetails);
+      this.captureCompletionDetail(step, result, facts);
       const message = `${agentName} ${recheckOnly ? 'confirmed the result after a recheck' : 'succeeded on the second attempt'}: ${retryVerification.reason}. The plan can continue.`;
       stepReports.set(step.id, {
         stepId: step.id,
@@ -413,17 +420,36 @@ export class Orchestrator {
   }
 
   /** Keep live file/code results in the task's final answer. */
+  /**
+   * Keep what a step actually found, so the owner can be told.
+   *
+   * This used to be an allow-list of four actions carrying the *verification
+   * reason* — which for a read is the string "Read-only action — no state to
+   * verify". So "what's my power plan" finished with the plan's restatement of
+   * the question and never the answer, while `result.data` sat unused two lines
+   * away. Both halves were wrong: the wrong actions, and the wrong field.
+   *
+   * Now any step that read something contributes its data. The test is the
+   * shape of the action name rather than a list, so an action added later is
+   * included without anyone remembering to come back here — which is exactly
+   * how the previous list went stale.
+   */
   private captureCompletionDetail(
     step: ExecutionStep,
-    reason: string,
-    details: string[],
+    result: AgentResult,
+    facts: Record<string, unknown>[],
   ): void {
-    const isUsefulResult =
-      (step.capability === 'can_control_app' && step.action === 'read_element') ||
-      (step.capability === 'can_control_files' &&
-        ['find_files', 'write_file', 'run_program'].includes(step.action));
-    if (!isUsefulResult || details.includes(reason)) return;
-    details.push(reason);
+    if (!isReadShaped(step.action)) return;
+    if (result.data === undefined || result.data === null) return;
+
+    facts.push({
+      action: step.action,
+      // Objects pass through as they are; a bare string or number is wrapped so
+      // the phrasing pass always receives the same shape.
+      ...(typeof result.data === 'object' && !Array.isArray(result.data)
+        ? (result.data as Record<string, unknown>)
+        : { value: result.data }),
+    });
   }
 
   /**
@@ -729,4 +755,30 @@ function describeStep(step: ExecutionStep): string {
     default:
       return `perform ${step.action.replace(/_/g, ' ')}`;
   }
+}
+
+/**
+ * Did this step read something, rather than change something?
+ *
+ * Shape, not a list. The previous version named four actions explicitly and
+ * went stale the moment a fifth was added — which is how every `get_*` action
+ * came to complete without telling the owner anything. A naming convention the
+ * whole codebase already follows is a better test than a list somebody has to
+ * remember to update.
+ */
+export function isReadShaped(action: string): boolean {
+  return (
+    // Verb first: get_dns, list_processes, read_file, hash_file.
+    /^(get|list|read|find|search|query|describe|check|hash)_/.test(action) ||
+    // Verb last: registry_read, get_wifi_status, window_state. Dex names a few
+    // actions noun-first, and the first version of this missed every one of
+    // them — registry_read was found by the test, not by review.
+    /_(read|status|state|classify|info)$/.test(action) ||
+    // Names that follow neither convention.
+    action === 'run_shell' ||
+    action === 'run_command' ||
+    action === 'extract' ||
+    action === 'read_page' ||
+    action === 'screenshot'
+  );
 }

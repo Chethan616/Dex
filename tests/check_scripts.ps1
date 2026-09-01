@@ -20,8 +20,11 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $failures = 0
 
+# Dex-main is the v1 tree kept alongside for reference — a fork of someone
+# else's project. Its scripts are not ours to hold to this standard, and a
+# failure in them says nothing about whether Dex works.
 foreach ($file in Get-ChildItem -Path $root -Filter '*.ps1' -Recurse |
-        Where-Object { $_.FullName -notmatch '\\(node_modules|build|\.dart_tool)\\' }) {
+        Where-Object { $_.FullName -notmatch '\\(node_modules|build|\.dart_tool|Dex-main)\\' }) {
 
     $relative = $file.FullName.Substring($root.Length + 1)
 

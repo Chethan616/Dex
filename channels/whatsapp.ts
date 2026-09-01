@@ -104,6 +104,21 @@ export class WhatsAppChannel implements ChannelAdapter {
             await socket.sendMessage(chatId, { text: body });
             return undefined;
           },
+          // This is what makes "download that and send it to my phone" work.
+          //
+          // Sent as a document rather than as an image or a video, whatever
+          // the file is. WhatsApp re-encodes media: a screenshot sent as an
+          // image comes back smaller and lossier, and a zip is not media at
+          // all. A document arrives as the bytes that left the machine, which
+          // is the whole point of retrieving a file.
+          sendFile: async (filePath, caption) => {
+            await socket.sendMessage(chatId, {
+              document: { url: filePath },
+              fileName: path.basename(filePath),
+              mimetype: mimeFor(filePath),
+              caption,
+            });
+          },
         };
 
         await this.runtime.handle(
@@ -135,8 +150,53 @@ function normaliseJid(jid: string): string {
 // than imported so this file compiles whether or not the package is installed.
 interface WaSocket {
   ev: { on(event: string, handler: (payload: never) => void): void };
-  sendMessage(jid: string, content: { text: string }): Promise<unknown>;
+  sendMessage(
+    jid: string,
+    content:
+      | { text: string }
+      | {
+          document: { url: string };
+          fileName: string;
+          mimetype: string;
+          caption?: string;
+        },
+  ): Promise<unknown>;
   end(err?: Error): void;
+}
+
+/**
+ * A content type for the file, from its extension.
+ *
+ * WhatsApp shows a generic grey box for `application/octet-stream` and the
+ * right icon plus a preview for a type it recognises. Guessing from the
+ * extension is enough — the bytes are sent unchanged either way, so a wrong
+ * guess costs an icon, not the file.
+ */
+function mimeFor(filePath: string): string {
+  const extension = path.extname(filePath).toLowerCase();
+  return {
+    '.zip': 'application/zip',
+    '.7z': 'application/x-7z-compressed',
+    '.rar': 'application/vnd.rar',
+    '.tar': 'application/x-tar',
+    '.gz': 'application/gzip',
+    '.pdf': 'application/pdf',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.mp4': 'video/mp4',
+    '.mp3': 'audio/mpeg',
+    '.txt': 'text/plain',
+    '.md': 'text/markdown',
+    '.csv': 'text/csv',
+    '.json': 'application/json',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    '.exe': 'application/vnd.microsoft.portable-executable',
+  }[extension] ?? 'application/octet-stream';
 }
 
 interface WaConnectionUpdate {

@@ -128,10 +128,12 @@ class ResumeRequest(BaseModel):
 
 
 class PrimitiveRequest(BaseModel):
-    op: str                       # navigate | read | click | type | extract | verify
+    op: str      # navigate | read | click | type | extract | screenshot | verify
     url: str | None = None
     selector: str | None = None
     text: str | None = None
+    path: str | None = None
+    full_page: bool | None = None
     verify: VerifySpec | None = None
 
 
@@ -207,6 +209,14 @@ async def primitive(req: PrimitiveRequest) -> dict[str, Any]:
 
         if req.op == 'extract':
             return {'success': True, 'data': await _primitives.extract(req.selector)}
+
+        if req.op == 'screenshot':
+            return {
+                'success': True,
+                'data': await _primitives.screenshot(
+                    req.path, True if req.full_page is None else req.full_page,
+                ),
+            }
 
         if req.op == 'verify':
             spec = req.verify.model_dump() if req.verify else {}

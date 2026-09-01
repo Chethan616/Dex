@@ -130,12 +130,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     onCancelTask: client.cancelCurrent,
                   ),
                 ),
+              // The answer first, above the working. What Dex found is the
+              // thing that was asked for; how it got there is supporting
+              // detail, and burying "Balanced" under nine step lines is how a
+              // read came to look like it reported nothing.
+              if (client.current?.answer != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: DexTokens.spaceLg),
+                  child: _Answer(text: client.current!.answer!),
+                ),
               if (events.isNotEmpty)
                 DexPanel(
                   padding: const EdgeInsets.all(DexTokens.spaceLg),
                   child: StepStream(events: events, shrinkWrap: true),
                 )
-              else if (pending.isEmpty)
+              else if (pending.isEmpty && client.current?.answer == null)
                 _Empty(client: client),
               const SizedBox(height: DexTokens.spaceXl),
               _RecentTasks(client: client),
@@ -283,6 +292,48 @@ class _RecentTasks extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// What Dex has to say.
+///
+/// Its own panel, not another line in the step stream. The stream is a record
+/// of what Dex did; this is the thing that was asked for, and the two have
+/// been the same colour and the same size for long enough that a read looked
+/// like it had reported nothing at all.
+///
+/// Selectable, because the answer is often a value someone wants to copy — a
+/// hash, a DNS server, a file path.
+class _Answer extends StatelessWidget {
+  const _Answer({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.dex;
+    return DexEntrance(
+      child: DexPanel(
+        padding: const EdgeInsets.all(DexTokens.spaceLg),
+        accent: t.info,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(Icons.chat_bubble_outline_rounded, size: 15, color: t.info),
+            ),
+            const SizedBox(width: DexTokens.spaceMd),
+            Expanded(
+              child: SelectableText(
+                text,
+                style: DexType.body(color: t.text),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

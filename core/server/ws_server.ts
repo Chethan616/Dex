@@ -51,6 +51,10 @@ type Inbound =
   | { type: 'delete_credential'; name: string }
   | { type: 'set_env'; changes: Record<string, string | null> }
   | { type: 'test_provider'; provider: string }
+  | { type: 'set_brain'; provider: string; model?: string }
+  | { type: 'set_config'; changes: Record<string, unknown> }
+  | { type: 'claude_signin' }
+  | { type: 'get_health' }
   | { type: 'get_log'; name: string; lines?: number }
   | { type: 'ping' };
 
@@ -388,6 +392,54 @@ export class DexServer {
           settings: await this.settings.describe(),
         });
       }
+
+      // Choosing the brain from the app rather than from a file.
+      case 'set_brain': {
+        const outcome = this.settings.setBrain(
+          String(msg.provider),
+          String(msg.model ?? ''),
+        );
+        if (!outcome.ok) {
+          return this.send(socket, { type: 'error', message: outcome.reason });
+        }
+        // Rebuilt now, not at the next restart. A settings screen whose change
+        // only takes effect after a restart it never mentions is a settings
+        // screen that lies.
+        this.gateway.rebuildBrain();
+        return this.send(socket, {
+          type: 'settings',
+          settings: await this.settings.describe(),
+        });
+      }
+
+      case 'set_config': {
+        try {
+          this.settings.setConfig(msg.changes ?? {});
+        } catch (err) {
+          return this.send(socket, {
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return this.send(socket, {
+          type: 'settings',
+          settings: await this.settings.describe(),
+        });
+      }
+
+      // Kick off `claude setup-token` so signing in is a button rather than an
+      // instruction to go and open a terminal.
+      case 'get_health':
+        return this.send(socket, {
+          type: 'health',
+          capabilities: await this.settings.health(),
+        });
+
+      case 'claude_signin':
+        return this.send(socket, {
+          type: 'claude_signin_result',
+          result: await this.settings.startClaudeSignIn(),
+        });
 
       case 'test_provider':
         return this.send(socket, {

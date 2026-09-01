@@ -1,4 +1,5 @@
-import { execFile } from 'child_process';
+import * as net from 'net';
+import { execFile, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
@@ -8,10 +9,12 @@ import { EnvStore } from './env_store';
 import { resolveCommand } from './which';
 import {
   BRAIN_PROVIDERS,
+  CLAUDE_MODELS,
   CREDENTIALS,
   CREDENTIALS_BY_NAME,
   CredentialSpec,
 } from './provider_catalog';
+import { DexConfig, readConfig, updateConfig } from './config_store';
 
 const run = promisify(execFile);
 
@@ -41,23 +44,25 @@ export class SettingsService {
   async describe(): Promise<SettingsSnapshot> {
     const stored = new Set(this.credentials.list());
     const env = this.env.read();
+    const config = readConfig();
 
     const credentials = CREDENTIALS.map((spec) =>
       this.describeCredential(spec, stored, env),
     );
-    const provider = String(
-      process.env.DEX_BRAIN_PROVIDER ?? env.DEX_BRAIN_PROVIDER ?? '',
-    ).trim().toLowerCase();
-    const configuredModel = String(
-      process.env.DEX_BRAIN_MODEL ?? env.DEX_BRAIN_MODEL ?? '',
-    ).trim();
-    const model = configuredModel ||
+    // The provider that will actually answer, not merely the one written down.
+    // With nothing chosen, Dex falls back to whichever key is stored, and a
+    // screen reporting "none" beside a core that is planning fine is a lie the
+    // owner cannot see through.
+    const provider = effectiveBrainProvider(this.credentials);
+    const model = config.brainModel ||
       BRAIN_PROVIDERS.find((candidate) => candidate.id === provider)?.defaultModel ||
       '';
 
     return {
       credentials,
       brainProviders: BRAIN_PROVIDERS,
+      claudeModels: CLAUDE_MODELS,
+      config,
       brain: {
         provider,
         model,
@@ -123,6 +128,66 @@ export class SettingsService {
     return this.credentials.delete(name);
   }
 
+  /** Choose the brain. Refuses a provider that cannot answer. */
+  setBrain(provider: string, model: string): { ok: boolean; reason?: string } {
+    return setBrain(provider, model, this.credentials);
+  }
+
+  /** Non-secret settings, in Dex's own settings.json. */
+  setConfig(changes: Record<string, unknown>): DexConfig {
+    const allowed: (keyof DexConfig)[] = [
+      'brainProvider', 'brainModel', 'browserAgent', 'desktopAgent',
+      'telegramOwner', 'discordOwner', 'whatsappOwner', 'whatsappEnabled',
+      'browserHeadless', 'theme',
+    ];
+    const clean: Partial<DexConfig> = {};
+    for (const [key, value] of Object.entries(changes)) {
+      if (!allowed.includes(key as keyof DexConfig)) {
+        throw new Error(`${key} is not a Dex setting`);
+      }
+      (clean as Record<string, unknown>)[key] = value;
+    }
+    return updateConfig(clean);
+  }
+
+  /**
+   * Sign in to Claude Code from the app.
+   *
+   * `claude setup-token` opens the browser flow and prints a token. It is
+   * launched detached rather than captured: the flow is interactive and can
+   * take a minute, and holding the WebSocket open on it would look like Dex
+   * had frozen. The card polls `describe` afterwards and turns green when the
+   * credential file appears — the same check the status uses, so there is one
+   * definition of "signed in".
+   */
+  async startClaudeSignIn(): Promise<{ started: boolean; reason?: string }> {
+    const invocation = resolveCommand('claude', ['setup-token']);
+    if (!invocation) {
+      return {
+        started: false,
+        reason: 'The Claude Code CLI is not installed. Install it with: npm i -g @anthropic-ai/claude-code',
+      };
+    }
+
+    try {
+      const child = spawn(invocation.file, invocation.args, {
+        detached: true,
+        stdio: 'ignore',
+        // Deliberately NOT windowsHide. This is the one place a console is
+        // wanted: `setup-token` is interactive and prints a URL and a prompt.
+        // Hiding it would leave the owner waiting on a window that never came.
+        windowsHide: false,
+      });
+      child.unref();
+      return { started: true };
+    } catch (err) {
+      return {
+        started: false,
+        reason: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
   /** Non-secret settings, written back into `.env` with its comments intact. */
   setEnv(changes: Record<string, string | null>): void {
     for (const key of Object.keys(changes)) {
@@ -181,6 +246,101 @@ export class SettingsService {
         error: err instanceof Error ? err.message : String(err),
       };
     }
+  }
+
+  /**
+   * Which parts of Dex are actually alive right now.
+   *
+   * Probed, not assumed. The Connectors screen used to list twenty
+   * integrations — Slack, Signal, iMessage, Teams — that this Dex has never
+   * had, each with an Install button wired to a gateway that no longer exists.
+   * A capability list that cannot be checked is a brochure; this one asks.
+   */
+  async health(): Promise<CapabilityHealth[]> {
+    const stored = new Set(this.credentials.list());
+    const config = readConfig();
+
+    const [browser, appAgent, vision] = await Promise.all([
+      probePort(Number(process.env.BROWSER_AGENT_PORT ?? 8766)),
+      probePort(Number(process.env.APP_AGENT_PORT ?? 8767)),
+      probePort(Number(process.env.DESKTOP_AGENT_PORT ?? 8765)),
+    ]);
+
+    const daemon = await probePipe('dex_privileged_daemon');
+
+    return [
+      {
+        id: 'os', name: 'Windows control', group: 'built in',
+        detail: 'Volume, DNS, Wi-Fi, power, display, brightness, processes, registry, apps',
+        ok: daemon,
+        reason: daemon ? undefined : 'The privileged daemon is not running.',
+      },
+      {
+        id: 'commands', name: 'Commands', group: 'built in',
+        detail: 'git, npm, compilers, rg, netstat, PowerShell — classified before they run',
+        ok: daemon,
+        reason: daemon ? undefined : 'Runs through the daemon, which is not running.',
+      },
+      {
+        id: 'files', name: 'Files', group: 'built in',
+        detail: 'Read, write, search, copy, rename, hash, download — inside your profile',
+        ok: true,
+      },
+      {
+        id: 'apps', name: 'Application control', group: 'agents',
+        detail: 'Drives apps by control name through UI Automation. No screenshots',
+        ok: appAgent,
+        reason: appAgent ? undefined : 'The app agent is not running.',
+      },
+      {
+        id: 'web', name: 'Browser', group: 'agents',
+        detail: 'Navigates, reads pages, fills forms, screenshots',
+        ok: browser,
+        reason: browser ? undefined : 'The browser agent is not running.',
+      },
+      {
+        id: 'vision', name: 'Vision', group: 'agents',
+        detail: 'Reads the screen when an app exposes no controls. Last resort',
+        ok: vision,
+        reason: vision
+          ? undefined
+          : 'Not running. It needs an Anthropic API key for its worker loop.',
+      },
+      {
+        id: 'telegram', name: 'Telegram', group: 'chat',
+        detail: 'Send Dex tasks from your phone, and receive files back',
+        ok: stored.has('telegram_bot_token') && Boolean(config.telegramOwner),
+        reason: !stored.has('telegram_bot_token')
+          ? 'Add a bot token in Intelligence.'
+          : !config.telegramOwner
+            ? 'Set your Telegram user id, or the bot refuses everyone.'
+            : undefined,
+      },
+      {
+        id: 'discord', name: 'Discord', group: 'chat',
+        detail: 'Same, through a Discord bot',
+        ok: stored.has('discord_bot_token') && Boolean(config.discordOwner),
+        reason: !stored.has('discord_bot_token')
+          ? 'Add a bot token in Intelligence.'
+          : !config.discordOwner
+            ? 'Set your Discord user id.'
+            : undefined,
+      },
+      {
+        id: 'whatsapp', name: 'WhatsApp', group: 'chat',
+        detail: 'Pairs by QR. Unofficial client — accounts using it can be banned',
+        ok: config.whatsappEnabled && Boolean(config.whatsappOwner),
+        reason: config.whatsappEnabled
+          ? (config.whatsappOwner ? undefined : 'Set your WhatsApp number.')
+          : 'Off by default. Turn it on only if you accept the ban risk.',
+      },
+      {
+        id: 'workspace', name: 'Email, calendar and files', group: 'accounts',
+        detail: 'Gmail, Calendar and Drive — or the Microsoft 365 equivalents',
+        ok: stored.has('google_oauth_client_id') || stored.has('ms365_client_id'),
+        reason: 'Add Google or Microsoft credentials in Intelligence.',
+      },
+    ];
   }
 
   /** Tail one of the log files for the Logs screen. */
@@ -321,9 +481,112 @@ export interface ProviderTestResult {
 export interface SettingsSnapshot {
   credentials: CredentialStatus[];
   brainProviders: typeof BRAIN_PROVIDERS;
+  claudeModels: typeof CLAUDE_MODELS;
+  config: DexConfig;
   brain: { provider: string; model: string };
   claudeCode: ClaudeCodeStatus;
   env: Record<string, string>;
   credentialStore: string;
   envFile: string;
+}
+
+/**
+ * Which provider will actually answer, not merely which one is configured.
+ *
+ * `buildBrainProvider` falls back through the stored keys when nothing is
+ * chosen, so an unset configuration still plans — on Groq, usually. Reporting
+ * the configured value in that case shows "none selected" on a Settings screen
+ * belonging to a Dex that is planning perfectly well, and the owner has no way
+ * to tell which is true. This mirrors the fallback so the screen agrees with
+ * the behaviour.
+ */
+export function effectiveBrainProvider(credentials: CredentialStore): string {
+  const config = readConfig();
+  const chosen = (config.brainProvider || process.env.DEX_BRAIN_PROVIDER || '').toLowerCase();
+  if (chosen) return chosen;
+
+  if (credentials.has('groq_api_key') || process.env.GROQ_API_KEY) return 'groq';
+  if (credentials.has('anthropic_api_key') || process.env.ANTHROPIC_API_KEY) return 'anthropic';
+  return '';
+}
+
+/**
+ * Is Claude Code signed in, and what would it cost to fix if not?
+ *
+ * Split from describeClaudeCode's boolean so the app can offer the right
+ * action: a missing CLI needs an install, a signed-out one needs `claude` run
+ * once in a terminal. They are different problems with different fixes and the
+ * card says which.
+ */
+export async function claudeSignIn(): Promise<ClaudeCodeStatus> {
+  return describeClaudeCode();
+}
+
+/** Change the brain, and say whether it will actually work. */
+export function setBrain(
+  provider: string,
+  model: string,
+  credentials: CredentialStore,
+): { ok: boolean; reason?: string } {
+  const spec = BRAIN_PROVIDERS.find((p) => p.id === provider);
+  if (!spec) return { ok: false, reason: `Unknown provider: ${provider}` };
+
+  // Refuse a provider that cannot possibly answer, rather than accepting the
+  // choice and failing on the owner's next request. The failure would arrive
+  // one screen away from the setting that caused it.
+  if (spec.credential && !credentials.has(spec.credential) && !process.env[spec.credential.toUpperCase()]) {
+    return {
+      ok: false,
+      reason: `${spec.label} needs its API key first — add it above, then select it.`,
+    };
+  }
+
+  updateConfig({ brainProvider: provider, brainModel: model });
+  return { ok: true };
+}
+
+export interface CapabilityHealth {
+  id: string;
+  name: string;
+  /** `built in`, `agents`, `chat`, `accounts` — for grouping on screen. */
+  group: string;
+  detail: string;
+  ok: boolean;
+  /** What to do about it, when it is not ok. */
+  reason?: string;
+}
+
+/** Is something listening? A connect and an immediate close, nothing more. */
+function probePort(port: number, timeout = 800): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const done = (result: boolean): void => {
+      socket.destroy();
+      resolve(result);
+    };
+    socket.setTimeout(timeout);
+    socket.once('connect', () => done(true));
+    socket.once('timeout', () => done(false));
+    socket.once('error', () => done(false));
+    socket.connect(port, '127.0.0.1');
+  });
+}
+
+/**
+ * Is the daemon serving its pipe?
+ *
+ * Read from the pipe namespace rather than by connecting. The daemon serves a
+ * fixed number of instances and a probe that opened one would consume it —
+ * a health check that degrades the thing it checks is worse than none.
+ */
+async function probePipe(name: string): Promise<boolean> {
+  try {
+    return fs
+      // '\\\\.\\pipe\\' — the pipe namespace. Not String.raw: its closing
+      // backtick would be escaped by the trailing backslash this path needs.
+      .readdirSync('\\\\.\\pipe\\')
+      .some((entry) => entry.toLowerCase() === name.toLowerCase());
+  } catch {
+    return false;
+  }
 }

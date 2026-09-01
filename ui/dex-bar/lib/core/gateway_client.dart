@@ -363,6 +363,7 @@ class GatewayClient extends ChangeNotifier {
 
     run.status = msg['status'] as String?;
     run.summary = msg['summary'] as String?;
+    run.answer = msg['answer'] as String?;
     run.finishedAt = DateTime.now().millisecondsSinceEpoch;
 
     // The core only offers this once a task has genuinely been repeated, so it
@@ -379,6 +380,9 @@ class GatewayClient extends ChangeNotifier {
     if (msg['workflow'] != null) refreshWorkflows();
     run.phase = switch (run.status) {
       'COMPLETED' => TaskPhase.done,
+      // A question, answered. Nothing ran, so it is not a task that completed
+      // — and the stats should not count "who are you" as work Dex performed.
+      'ANSWERED' => TaskPhase.answered,
       'CANCELLED' => TaskPhase.cancelled,
       _ => TaskPhase.failed,
     };

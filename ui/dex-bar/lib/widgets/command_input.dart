@@ -136,6 +136,9 @@ class _PhaseDotState extends State<_PhaseDot>
       TaskPhase.running => t.eventColor('executing'),
       TaskPhase.awaiting => t.eventColor('awaiting'),
       TaskPhase.done => t.eventColor('done'),
+      // An answered question reads as a conversation, not as work completed —
+      // a green tick for "who are you" implies something ran that did not.
+      TaskPhase.answered => t.info,
       TaskPhase.failed => t.eventColor('failed'),
       TaskPhase.cancelled => t.eventColor('cancelled'),
     };

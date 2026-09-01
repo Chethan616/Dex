@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import Anthropic from '@anthropic-ai/sdk';
 import { CredentialStore } from '../secrets/credential_store';
+import { readConfig } from '../settings/config_store';
 import { resolveCommand } from '../settings/which';
 import {
   LlmProvider,
@@ -161,10 +162,24 @@ export class OpenAiCompatProvider implements LlmProvider {
   }
 }
 
-/** Empty settings fields must restore the provider default, not become a model ID. */
+/**
+ * Which model to use, in precedence order: Settings, then environment, then
+ * the provider's own default.
+ *
+ * Settings has to win. The app writes settings.json and the owner picks a model
+ * on a screen; a stale `DEX_BRAIN_MODEL` in a developer's `.env` silently
+ * overriding that choice is exactly the bug this ordering prevents — it was
+ * live, and the symptom was Settings showing Haiku while the core planned on
+ * Sonnet, with nothing on screen disagreeing.
+ *
+ * An empty string in either place means "not set", not "use a model called
+ * empty string", so it falls through to the default rather than becoming one.
+ */
 export function configuredBrainModel(fallback: string): string {
-  const configured = process.env.DEX_BRAIN_MODEL?.trim();
-  return configured || fallback;
+  const fromSettings = readConfig().brainModel?.trim();
+  if (fromSettings) return fromSettings;
+  const fromEnv = process.env.DEX_BRAIN_MODEL?.trim();
+  return fromEnv || fallback;
 }
 
 export class AnthropicProvider implements LlmProvider {
@@ -218,7 +233,17 @@ export class AnthropicProvider implements LlmProvider {
  * core/secrets/credential_store.ts. Nothing here reads config.yaml.
  */
 export function buildBrainProvider(credentials = new CredentialStore()): LlmProvider {
-  const configured = (process.env.DEX_BRAIN_PROVIDER ?? '').toLowerCase();
+  // Settings first, environment second.
+  //
+  // The app owns configuration now — it writes settings.json, not .env — so a
+  // provider chosen in the UI has to win over a stale variable in a developer's
+  // shell. The environment is still read so an existing checkout keeps working
+  // and so a one-off `DEX_BRAIN_PROVIDER=groq npm run dev` still does what it
+  // looks like it does.
+  const settings = readConfig();
+  const configured = (
+    settings.brainProvider || process.env.DEX_BRAIN_PROVIDER || ''
+  ).toLowerCase();
 
   // Presence check only — `has` does not decrypt and does not warn. Resolving
   // both keys eagerly would nag the owner about a plaintext key belonging to a
@@ -233,7 +258,7 @@ export function buildBrainProvider(credentials = new CredentialStore()): LlmProv
   // deliberately in Settings and never fallen back into because a key happened
   // to be missing.
   if (provider === 'claude-code') {
-    return new ClaudeCodeProvider(configuredBrainModel('sonnet'));
+    return new ClaudeCodeProvider(configuredBrainModel('haiku'));
   }
 
   if (provider === 'groq') {

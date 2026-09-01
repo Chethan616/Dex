@@ -28,6 +28,55 @@ hands back to you and carries on afterwards.
 
 ---
 
+## 0. Answering, not just doing
+
+✅ Verified live.
+
+Dex used to finish a question by restating it:
+
+```
+you> whats my power plan
+     ✓ Done: Retrieve the current Windows power plan
+```
+
+The plan was `high_performance`. It was read, verified, and thrown away — the
+one channel that could have carried it was an allow-list of four actions
+carrying the *verification reason* rather than the value. Now:
+
+```
+you> whats my power plan
+     ✓ You're on the high performance power plan.
+
+you> what is my dns
+     ✓ Your DNS servers are 1.1.1.1 and 1.0.0.1.
+
+you> what is listening on my ports
+     ✓ You have TCP ports 135 (PID 1900), 445 (PID 4), 5040 (PID 11948)… all LISTENING.
+```
+
+The values come from the step data; the sentence around them is written by the
+Brain from those values alone — never from page text or file contents a step
+happened to read. If that call cannot be made, Dex renders the data itself
+rather than saying nothing. On a free tier that is not a rare path, and it is
+why asking Dex a question always produces an answer.
+
+**And it can just talk.** A request with nothing to do no longer throws:
+
+```
+you> what can u do
+     I can automate Windows tasks directly: control system settings (volume,
+     DNS, Wi-Fi, power plans), manage files, launch and interact with apps,
+     browse the web, and access email, calendar or cloud drives.
+
+you> who are you
+     I'm Dex, your personal Windows AI automation assistant.
+```
+
+Grounded in the real capability list, which is in the prompt — so it describes
+what Dex actually has rather than what a model imagines it might.
+
+---
+
 ## 1. Controlling Windows directly — no GUI involved
 
 The fastest and most reliable tier. No window opens, nothing is clicked, and
@@ -67,10 +116,55 @@ configured Ethernet port passes without the action having happened at all.
 you> open calculator
      launch_app({"name":"Calculator"})
      ✓ verified — Window open: "Calculator"
+
+you> open chrome
+     ✓ verified — C:\Program Files\Google\Chrome\Application\chrome.exe
 ```
 ✅ Verified. `close_app` asks the window to close rather than killing it, so
 unsaved work stays your decision. A launch is proven by a **window existing**,
 which matters because packaged apps exit their launcher immediately.
+
+Opening anything other than a System32 program used to fail:
+
+```
+you> open chrome
+     ✗ [WinError 2] The system cannot find the file specified
+```
+
+No browser installer puts itself on PATH, and PATH was the only place Dex
+looked. Resolution now follows Windows' own order — the curated names, the
+**App Paths** registry key that `start chrome` reads, PATH, Start Menu display
+names (which is what makes "Microsoft Edge" findable), then packaged Store
+apps. A failure names all five and suggests the nearest matches, because
+`WinError 2` told you neither what was looked for nor where.
+
+One thing worth knowing, since it cost an afternoon: Edge titles its own window
+`Microsoft⁠Edge` with a **zero-width space** in the middle. Invisible, survives
+lowercasing, and made "did an Edge window appear" false forever. Window titles
+are now compared with invisible characters stripped.
+
+**Running commands** — ✅ Verified. `run_command` classifies every command into
+three bands, the same way the registry is banded:
+
+| | |
+|---|---|
+| **GREEN** | runs silently — `git status`, `rg`, `netstat`, `Get-FileHash`, `tasklist`, version probes |
+| **AMBER** | asks first, silent under Full Access — `git commit`, `npm install`, compilers, `mkdir`, setting an environment variable |
+| **RED** | refused — `format`, `diskpart`, `bcdedit`, `net user`, `shutdown`, service creation, and anything that hides what it runs |
+
+Two rules make that a boundary rather than a decoration. **An unrecognised
+command is AMBER, never GREEN** — a classifier that permits what it does not
+recognise fails open, and the thing on the other side is a planner that reads
+web pages. And **PowerShell is judged by what it calls**, not by being
+PowerShell; `iex`, `-EncodedCommand`, and a download piped into a shell are RED
+on sight, because they are not commands so much as ways of not saying what the
+command is.
+
+**Environment variables** — ✅ Verified. `set_env` writes the registry *and*
+broadcasts `WM_SETTINGCHANGE`, so a new shell sees the change. `setx` alone
+does the first and not the second, which is why "I set it and it didn't work"
+is the usual outcome. `append: true` adds to PATH rather than replacing it.
+Windows' own variables — `SystemRoot`, `ComSpec`, `PATHEXT` — are refused.
 
 **Power, processes, registry** — ✅ Verified by `npm run conformance`.
 `set_power_plan`, `get_power_plan`, `list_processes`, `kill_process` (refuses
@@ -128,7 +222,45 @@ agent overwrites the document you were working in.
 
 ---
 
+## 2.5 Files
+
+✅ Verified. Anywhere under your user profile — Documents, Downloads, Desktop,
+projects — and **refused** in `C:\Windows`, `Program Files`, other people's
+profiles, and Dex's own credential store. That last one matters: the store is
+inside the profile, so a profile-wide rule would have included it, and Dex
+would have been able to read its own encrypted secrets through an ordinary file
+action.
+
+```
+find_files · read_file · list_dir · write_file · run_program
+copy_file · move_file · rename_files · delete_file · hash_file
+```
+
+Two of these can lose work, and both are shaped so they cannot do it quietly:
+
+- **`rename_files` plans before it acts.** The first call returns exactly what
+  it would rename and changes nothing; the confirmation card can show you the
+  list because the list exists before the work does. A bulk rename that
+  silently touches 400 files is not something you recover from by reading a log.
+- **`delete_file` uses the Recycle Bin.** Permanent deletion is a separate,
+  explicit flag. "Delete" meaning "unrecoverable" is not a promise automation
+  should make on your behalf by default.
+
+Paths understand what you call things: `downloads`, `desktop`, `documents` —
+including this machine's OneDrive-redirected Desktop, where a literal
+`~/Desktop` finds nothing at all.
+
+---
+
 ## 3. The web
+
+**The planner can finally reach it.** `can_browse_web` was a legal value in the
+planner's schema and appeared **nowhere** in the capability catalogue it reads,
+so for three slices the browser agent was built, registered, verified against
+real Chrome — and invisible. "Open chrome and log on to X" became `launch_app`
+plus a series of GUI clicks, instead of one browser task. The catalogue now
+documents it, and the enum is generated from the catalogue so the two cannot
+drift apart again.
 
 **Exact browsing** — ✅ Verified against real Chrome:
 ```
@@ -372,6 +504,14 @@ Stated plainly, because the gaps matter more than the list above:
   LocalSystem unsandboxed.
 - **One machine.** No device mesh, so "send this to my phone" has nowhere to go.
 - **Windows only**, by design.
+- **The free tier runs out.** Groq's free plan has a daily quota as well as a
+  per-minute one, and both arrive as the same HTTP 429. Dex now tells you which
+  it hit and roughly when it clears, rather than waiting silently — a retry
+  header asking for 2,510 seconds used to become a forty-two minute hang that
+  looked exactly like a crash. Add a second provider in Settings if you use Dex
+  hard.
+- **PDF conversion is not built.** It is on the list; nothing implements it yet,
+  so `pdf_to_text` is not advertised and Dex will not claim it can.
 
 ---
 
@@ -385,6 +525,8 @@ v0.4.0  deterministic-first tiers          v0.7.1  Dex Bar design system
                                            v0.8.0  scheduler          ← current
 ```
 
-**240+ automated checks** across twelve suites, plus a conformance harness that
-drives every advertised OS action against the real daemon. Remaining: Slack, the
-Plugin SDK (Slice 7) and the device mesh (Slice 8).
+**280+ automated checks** across seventeen suites, plus a conformance harness
+that drives every advertised OS action against the real daemon — currently
+18/20, the two gaps being `set_dns`, which needs the elevated daemon, and
+nothing else. Remaining: Slack, the Plugin SDK (Slice 7) and the device mesh
+(Slice 8).

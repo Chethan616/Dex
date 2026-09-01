@@ -31,6 +31,7 @@ import { OS_ACTION_NAMES, capabilityCatalogue, ROUTING_RULES } from '../core/bra
 import { Brain } from '../core/brain/planner';
 import { LlmProvider } from '../core/llm/provider';
 import { bus } from '../core/events/bus';
+import { renderFacts } from '../core/brain/answer';
 
 let passed = 0;
 let failed = 0;
@@ -304,10 +305,21 @@ async function testAppVerification(): Promise<void> {
         params: { window: 'Settings', name: 'Battery level' },
       })]),
     );
+    // The value used to be glued onto the summary string. It now travels as
+    // structured data in `facts`, which the Gateway phrases into an answer and
+    // renders directly when the phrasing call cannot be made. The property
+    // being defended is unchanged — a value Dex read must reach the owner —
+    // but it is checked at the place that now carries it.
     check(
-      'a live read value reaches the task summary',
-      result.status === 'COMPLETED' && result.summary.includes('87%'),
-      result.summary,
+      'a live read value survives as a fact',
+      result.status === 'COMPLETED'
+        && JSON.stringify(result.facts ?? []).includes('87%'),
+      JSON.stringify(result.facts ?? []),
+    );
+    check(
+      'and renders into something the owner can read',
+      renderFacts(result.facts ?? []).includes('87%'),
+      renderFacts(result.facts ?? []),
     );
   }
 }

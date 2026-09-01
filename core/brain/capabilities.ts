@@ -38,7 +38,36 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
   registry_read: { params: '{ path: string, name: string }' },
   registry_write: { params: '{ path: string, name: string, value: any, type?: number }', note: 'Tier 2 unless the key is Dex-owned. Security/policy keys are refused outright' },
   registry_classify: { params: '{ path: string }', note: 'Ask which band a registry path falls in before planning a write' },
-  run_shell: { params: '{ command: string[] }', note: 'Read-only commands only: ipconfig, netsh, powercfg, tasklist, systeminfo, whoami, hostname' },
+  // `run_shell` is deliberately NOT advertised any more.
+  //
+  // The daemon still implements it, so saved workflows that use it keep
+  // working. But offering the planner two shell actions where one is a strict
+  // subset of the other is a trap, and it sprang immediately: asked what was
+  // listening on the ports, the model reasoned "netstat is read-only, so
+  // run_shell" and hit that action's seven-program allowlist. It was not
+  // wrong about netstat; it was choosing between two things that should be
+  // one. run_command runs every command run_shell would, silently, and
+  // classifies the rest.
+  run_command: {
+    params: '{ command: string[], cwd?: string, timeout?: number }',
+    note: 'Any command, classified before it runs. git, npm, pip, compilers, rg, netstat, Get-FileHash, PowerShell. Reads run silently; changes ask first; destructive ones are refused. Always pass the command as a LIST of arguments',
+  },
+  classify_command: {
+    params: '{ command: string[] }',
+    note: 'Ask which band a command falls into before planning it — same idea as registry_classify',
+  },
+  get_display: { params: '{}', note: 'Current resolution and refresh rate, plus every mode this display accepts' },
+  set_display: {
+    params: '{ resolution?: string (e.g. "1920x1080"), width?: number, height?: number, refresh_hz?: number }',
+    note: 'Sets resolution and refresh rate directly. NEVER click through Settings for this — call get_display first if you need to know what is available. Tier 2',
+  },
+  get_brightness: { params: '{}' },
+  set_brightness: { params: '{ level: number (0-100) }', note: 'Built-in laptop panels only; external monitors report unsupported' },
+  get_env: { params: '{ name?: string }', note: 'Omit name for every variable' },
+  set_env: {
+    params: '{ name: string, value: string | null, scope?: "user" | "machine", append?: boolean }',
+    note: 'Persists and notifies Windows, so a new shell sees it. append=true adds to PATH rather than replacing it. value=null removes. Tier 2',
+  },
 };
 
 /** Tier 1 — direct user-side filesystem and runtime control. No UI involved. */
@@ -53,7 +82,27 @@ export const FILE_ACTIONS: Record<string, ActionSpec> = {
   },
   run_program: {
     params: '{ path: string, runtime?: "python" | "node" | "ruby" | "go", args?: string[], background?: boolean, timeout?: number }',
-    note: 'Runs a program as the signed-in user inside the Dex workspace; use background=true for a GUI/game, Tier 2',
+    note: 'Runs a program as the signed-in user; use background=true for a GUI/game, Tier 2',
+  },
+  read_file: { params: '{ path: string }', note: 'Text files up to 2 MB; for bigger ones search with run_command and rg' },
+  list_dir: { params: '{ path: string, pattern?: string }', note: 'path takes a folder name — "downloads", "desktop", "documents" — or a full path' },
+  copy_file: { params: '{ from: string, to: string, overwrite?: boolean }' },
+  move_file: { params: '{ from: string, to: string, overwrite?: boolean }', note: 'Tier 2' },
+  rename_files: {
+    params: '{ folder: string, pattern?: string, find?: string, replace?: string, prefix?: string, suffix?: string, apply?: boolean }',
+    note: 'Call it FIRST with apply omitted to see exactly what would change, show that to the owner, then call again with apply=true. Tier 2',
+  },
+  delete_file: {
+    params: '{ path: string, permanent?: boolean }',
+    note: 'Goes to the Recycle Bin unless permanent=true. Tier 2',
+  },
+  download_file: {
+    params: '{ url: string, into?: string, filename?: string, max_bytes?: number }',
+    note: 'Fetches a web address to a file on disk — into defaults to Downloads. No login, no JavaScript: if the link needs a session, use can_browse_web. Pair with can_deliver send_file to get it to a phone. Tier 2',
+  },
+  hash_file: {
+    params: '{ path: string, algorithm?: "sha256" | "sha1" | "md5" | "sha512", expected?: string }',
+    note: 'Pass expected to check a download against a published checksum',
   },
 };
 
@@ -70,6 +119,63 @@ export const APP_ACTIONS: Record<string, ActionSpec> = {
     note: 'Wait for a named control; use window_state when only the window needs to be ready',
   },
   window_state: { params: '{ window: string }' },
+};
+
+/**
+ * The web — a real agent that was invisible to the planner.
+ *
+ * These actions have existed and worked since slice 4. `planner.ts` allowed a
+ * step to name `can_browse_web`, but `capabilityCatalogue()` documented no such
+ * capability, so the model was told the name was legal and never told what it
+ * could do with it. The result was that "open chrome and log on to X" planned a
+ * `launch_app` and then GUI steps, instead of one browser task — the exact
+ * drift this file's header warns about, one level up.
+ */
+export const WEB_ACTIONS: Record<string, ActionSpec> = {
+  navigate: { params: '{ url: string }', note: 'Opens a real browser window and goes there' },
+  read_page: { params: '{}', note: 'The current page as text — use before deciding what to click' },
+  extract: { params: '{ selector: string }', note: 'Text of elements matching a CSS selector' },
+  click: { params: '{ selector?: string, text?: string }' },
+  type_text: { params: '{ selector: string, text: string }', note: 'Refuses password fields; Dex hands those to the owner' },
+  screenshot: { params: '{ path?: string, full_page?: boolean }', note: 'Saves a PNG and returns where it went' },
+  run_task: {
+    params: '{ task: string, url?: string }',
+    note: 'Autonomous multi-step browsing. Use for anything needing judgement across pages — logging in, searching, filling a form',
+  },
+};
+
+/** Email, calendar and files through MCP. Also missing from the catalogue. */
+export const WORKSPACE_ACTIONS: Record<string, ActionSpec> = {
+  search_email: { params: '{ query: string, limit?: number }' },
+  read_email: { params: '{ id: string }' },
+  send_email: { params: '{ to: string, subject: string, body: string }', note: 'Tier 2 — always confirm before sending to a person' },
+  list_calendar_events: { params: '{ start?: string, end?: string }' },
+  create_calendar_event: { params: '{ title: string, start: string, end: string, attendees?: string[] }', note: 'Tier 2' },
+  search_drive: { params: '{ query: string }' },
+  read_drive_file: { params: '{ id: string }' },
+};
+
+/**
+ * Sending something back to the person who asked.
+ *
+ * The half of "download that zip and send it to my phone" that happens after
+ * the download. It exists so the owner can retrieve things from this machine
+ * while away from it — the file lands here, and Dex puts it in the
+ * conversation they asked from.
+ *
+ * The target is never chosen by the plan. It is the chat the request arrived
+ * in, looked up by request id, so "send it to me" cannot be talked into
+ * meaning a different conversation.
+ */
+export const DELIVERY_ACTIONS: Record<string, ActionSpec> = {
+  send_file: {
+    params: '{ path: string, caption?: string }',
+    note: 'Sends a file to the chat this request came from — WhatsApp, Telegram or Discord. If the request came from the desktop app there is nowhere to send it, and Dex reports where the file is instead. Tier 2',
+  },
+  send_message: {
+    params: '{ text: string }',
+    note: 'A message back to the same chat, for progress worth saying out loud',
+  },
 };
 
 /** Tier 3 — vision. Last resort. */
@@ -147,10 +253,13 @@ export function capabilityCatalogue(): string {
   UI is touched. Fastest, most reliable, and verifiable by reading state back.
 ${render(OS_ACTIONS)}
 
-CAPABILITY: can_control_files   [TIER 1 — user-side local workspace]
-  Searches filenames directly and writes or runs code without screenshots,
-  terminals, or File Explorer typing. Writes and execution stay inside the
-  Dex workspace and run as the signed-in user.
+CAPABILITY: can_control_files   [TIER 1 — files, anywhere in the owner's profile]
+  Finds, reads, writes, copies, renames, hashes and deletes files without
+  screenshots, terminals, or File Explorer typing. Works anywhere under the
+  owner's user profile — Documents, Downloads, Desktop, projects — and is
+  refused in Windows, Program Files, and Dex's own credential store. A bare
+  relative path means the Dex workspace; say "Downloads/x.txt" or a full path
+  to work elsewhere.
 ${render(FILE_ACTIONS)}
 
 CAPABILITY: can_control_app   [TIER 2 — for controlling applications]
@@ -160,11 +269,69 @@ CAPABILITY: can_control_app   [TIER 2 — for controlling applications]
   standard WinUI / WPF / WinForms application.
 ${render(APP_ACTIONS)}
 
+CAPABILITY: can_browse_web   [TIER 2 — anything on the internet]
+  Drives a real browser directly. This is how Dex uses the web — never by
+  launching a browser and clicking through it. navigate/read_page/extract for
+  something specific; run_task when the job needs judgement across several
+  pages, such as logging in or searching.
+${render(WEB_ACTIONS)}
+
+CAPABILITY: can_access_email / can_access_calendar / can_access_drive   [TIER 2]
+  Mail, calendar and files through a connected account. Plan against these
+  names; Dex resolves them to whatever the live server offers, so a plan
+  written for Gmail still works on Outlook. Needs the account connected in
+  Settings — if it is not, the step reports that rather than failing obscurely.
+${render(WORKSPACE_ACTIONS)}
+
+CAPABILITY: can_deliver   [TIER 2 — send something back to this conversation]
+  For requests that arrive from a phone. Fetch or produce a file on this PC,
+  then send it to the chat that asked — which is how the owner retrieves
+  something while away from the machine. Pair it with can_control_files:
+    "download <url> and send it to me"  ->  download_file  then  send_file
+    "send me that screenshot"           ->  screenshot     then  send_file
+${render(DELIVERY_ACTIONS)}
+
 CAPABILITY: can_control_gui   [TIER 3 — last resort, slow and fallible]
   Takes a screenshot, asks a vision model where things are, moves the mouse.
   Costs tokens, needs a GPU, and can click the wrong thing.
 ${render(GUI_ACTIONS)}`;
 }
+
+/**
+ * Which capabilities exist, derived from the catalogue above.
+ *
+ * The planner's schema enum is generated from this rather than written beside
+ * it. The two were maintained by hand and drifted: the enum offered
+ * `can_browse_web`, `can_access_email`, `can_access_calendar` and
+ * `can_access_drive` while the catalogue described none of them, so the model
+ * was allowed to name four capabilities it had never been shown the actions
+ * for. `tests/smoke_capabilities.ts` asserts the two agree.
+ */
+export const CAPABILITY_NAMES = [
+  'can_control_os',
+  'can_control_files',
+  'can_control_app',
+  'can_browse_web',
+  'can_access_email',
+  'can_access_calendar',
+  'can_access_drive',
+  'can_deliver',
+  'can_run_workflow',
+  'can_control_gui',
+] as const;
+
+/** Every action name, by capability — for the drift check and the tests. */
+export const ACTIONS_BY_CAPABILITY: Record<string, string[]> = {
+  can_control_os: Object.keys(OS_ACTIONS),
+  can_control_files: Object.keys(FILE_ACTIONS),
+  can_control_app: Object.keys(APP_ACTIONS),
+  can_browse_web: Object.keys(WEB_ACTIONS),
+  can_access_email: ['search_email', 'read_email', 'send_email'],
+  can_access_calendar: ['list_calendar_events', 'create_calendar_event'],
+  can_access_drive: ['search_drive', 'read_drive_file'],
+  can_deliver: Object.keys(DELIVERY_ACTIONS),
+  can_control_gui: Object.keys(GUI_ACTIONS),
+};
 
 /**
  * The routing ladder. Stated as a decision procedure rather than advice,
@@ -179,12 +346,47 @@ export const ROUTING_RULES = `HOW TO CHOOSE A CAPABILITY — work down this ladd
      menu, never search files through screenshots, and never change a setting
      by clicking through Settings if an action exists for it.
 
-  2. Does it mean operating a normal Windows application?  -> use TIER 2.
-     Notepad, File Explorer, Settings, Word, Excel, any standard desktop app.
-     Clicking buttons, filling fields, choosing menu items. Prefer
-     click_element / set_text / select_menu over anything visual.
+  2. Is it on the internet — a website, a login, a search, a download page?
+     -> use can_browse_web. ALWAYS. Never launch_app a browser and then drive
+     it with can_control_app or can_control_gui: Dex has a real browser it
+     controls directly, and clicking through a browser window is slower, less
+     reliable, and cannot read the page it landed on.
+       "log in to example.com"        -> can_browse_web run_task
+       "what does this page say"      -> can_browse_web read_page
+       "screenshot that site"         -> can_browse_web screenshot
+     The only reason to launch_app a browser is if the owner asked for the
+     browser itself to be open, with nothing to do in it.
 
-  3. Only if the target draws its own interface  -> use TIER 3.
+  3. Before reaching for TIER 2, ask: could a command do this instead?
+     If yes, use run_command. This is the single most common planning mistake,
+     and it looks like this:
+
+       WRONG  open Settings -> wait -> click Display -> click Resolution ->
+              click "1920 x 1080" -> click Keep changes           (8 steps)
+       RIGHT  set_display({resolution: "1920x1080"})               (1 step)
+
+     Eight steps is eight chances to fail on a label Microsoft renamed, and
+     that plan really did fail — on "1920 x 1080" versus the "1920 × 1080"
+     Settings actually shows. The API does not care what the dropdown is
+     called this year.
+
+     **The Settings app is a front end for APIs Dex can already call.** Almost
+     nothing in it is a job for TIER 2. Before planning a click into Settings,
+     look for a can_control_os action; if there is one, that is the answer.
+     If there is no action and no command, only then use TIER 2.
+
+  4. Does it mean operating a normal Windows application?  -> use TIER 2.
+     Notepad, File Explorer, Word, Excel, any standard desktop app — software
+     that genuinely offers no other way in. Clicking buttons, filling fields,
+     choosing menu items. Prefer click_element / set_text / select_menu over
+     anything visual.
+
+     When you must click a named item you have not seen, call list_elements
+     first and use a name from what it returns. Do not invent a label — a
+     guessed "(Recommended)" or "x" instead of "×" fails against a control that
+     is sitting right there.
+
+  5. Only if the target draws its own interface  -> use TIER 3.
      Use this only to interact with an already-running game, canvas, image
      editor, or video timeline where there are no real controls to name. If the
      owner asks to create, write, or run source code — including a game — use

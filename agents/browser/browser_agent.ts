@@ -100,6 +100,18 @@ export class BrowserAgent implements Agent {
           requestId,
           stepId,
         );
+      case 'screenshot':
+        return this.primitive(
+          'screenshot',
+          {
+            path: params.path ? String(params.path) : null,
+            // Full page unless told otherwise: a viewport crop of a long page
+            // is rarely what "screenshot this site" means.
+            full_page: params.full_page !== false,
+          },
+          requestId,
+          stepId,
+        );
       default:
         return {
           success: false,

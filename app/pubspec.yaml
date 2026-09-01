@@ -1,0 +1,131 @@
+name: dex
+description: "Dex - a calm cockpit for commanding agents you can trust."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.0
+
+# Dependency budget (prompt.md section 8): a small handful, each justified.
+# Anything new requires an entry in LICENSES.md and a one-line rationale.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # REST calls to the OpenClaw gateway (initial handshake + occasional fetches).
+  http: ^1.2.0
+
+  # JSON-RPC over WebSocket to ws://127.0.0.1:18789 (the OpenClaw gateway).
+  web_socket_channel: ^3.0.0
+
+  # Stable v4 UUIDs for idempotencyKey and sessionKey in the gateway protocol.
+  uuid: ^4.4.0
+
+  # Localized timestamps in the conversation. Built into the Dart ecosystem.
+  intl: ^0.20.2
+
+  # Desktop UI primitives (v1.3 plan section 12.2). Hux drives the Card /
+  # Button / Input / BottomSheet shape on Windows + Linux; shadcn_ui covers
+  # dense dashboard surfaces (Live panel's running-engine card + the v1.2
+  # LiveEntry list coming next) where the shadcn Card + Badge vocabulary
+  # fits better. Mobile is native (Kotlin Compose + SwiftUI), so these
+  # deps stay desktop-only.
+  hux: ^1.2.1
+  shadcn_ui: ^0.54.0
+
+  # v1.2 Phase 11 — Windows chrome. Close the window → hide to tray
+  # instead of killing the gateway connection; tray_manager renders the
+  # icon + menu (same author as window_manager, modern Flutter desktop
+  # API, no uuid conflict). shared_preferences persists the
+  # "Quit on close" override the user can flip from the tray menu.
+  window_manager: ^0.4.3
+  tray_manager: ^0.5.0
+  shared_preferences: ^2.3.0
+
+  # System-scope Ctrl+K hotkey for the SpotlightOverlay summon. Same
+  # leanflutter family as window_manager + tray_manager so the API
+  # shape matches and there's a single maintainer to track.
+  hotkey_manager: ^0.2.3
+
+  # Rich clipboard + drag-drop for the composer + spotlight. Same
+  # author (irondash); production-proven in Zed editor. Apache 2.0.
+  # Accepts paste/drop of arbitrary file types: images, PDFs, docs,
+  # .exe, video, anything else. No native edits required.
+  super_clipboard: ^0.8.0
+  super_drag_and_drop: ^0.8.0
+
+  # Lucide line icons (MIT). Single-weight, line-only by design --
+  # no filled/bold variants -- which matches the "premium, not bolded"
+  # icon brief. Replaces Material's filled Icons.X across the app.
+  # Using flutter_lucide (maintained fork) because the original
+  # `lucide_icons` package still extends IconData, which Flutter now
+  # seals (final class) -- so the original fails to compile under
+  # modern SDKs. Same constant names (LucideIcons.X).
+  flutter_lucide: ^1.11.0
+  desktop_multi_window: ^0.3.0
+  url_launcher: ^6.3.2
+
+  # The CupertinoIcons font. The liquid_glass_widgets fields (GlassSearchBar
+  # clear/search glyphs, GlassPasswordField lock + eye toggle) draw from
+  # CupertinoIcons; without this font those glyphs render as tofu boxes.
+  cupertino_icons: ^1.0.8
+
+  # iOS-26-style liquid glass UI kit (shader glass + jelly physics).
+  # Published OSS package (MIT) pulled from pub.dev — no vendored folder.
+  # Renders the lightweight glass on Windows/Skia; the high-level Glass*
+  # widgets degrade gracefully (raw LiquidGlass is Impeller-only and we
+  # never use it directly).
+  liquid_glass_widgets: ^0.17.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  # Generates the Windows runner .ico (and other platform icons) from the
+  # 1024x1024 transparent Dex orb. Run: dart run flutter_launcher_icons
+  flutter_launcher_icons: ^0.14.1
+
+# App-icon generation from the brand orb (assets/brand/dex_app_icon.png).
+flutter_launcher_icons:
+  image_path: "assets/brand/dex_app_icon.png"
+  windows:
+    generate: true
+    image_path: "assets/brand/dex_app_icon.png"
+    icon_size: 256
+
+flutter:
+  uses-material-design: true
+
+  # Bundled assets.
+  assets:
+    # 16x16 + 32x32 multi-resolution ICO used by the system_tray init.
+    # The runner already ships an app_icon.ico under windows/runner/resources/;
+    # we mirror it here so it ends up inside the Flutter bundle and can be
+    # resolved via rootBundle at runtime.
+    - assets/tray/dex.ico
+    # The Dex brand orb (1024x1024, transparent bg) — used by the in-app
+    # DexLogo (splash, login) and the source for generated launcher icons.
+    - assets/brand/dex_app_icon.png
+    # Per-app "how to link" guides shown by ConnectorGuideSheet when a
+    # user taps an app in onboarding / Connectors & Apps.
+    - assets/guides/
+
+  # FONTS:
+  # Geist + Geist Mono (OFL-1.1) are referenced by name in lib/theme/tokens.dart.
+  # Until the .ttf files are dropped into app/assets/fonts/, the system stack
+  # fallback (Segoe UI / Cascadia Code) is used at runtime -- the app still
+  # builds and runs.
+  #
+  # To enable Geist:
+  #   1. Download the variable .ttf files (see app/assets/fonts/README.md).
+  #   2. Uncomment the asset+font sections below and run `flutter pub get`.
+  #
+  # assets:
+  #   - assets/fonts/
+  # fonts:
+  #   - family: Geist
+  #     fonts:
+  #       - asset: assets/fonts/Geist-VariableFont_wght.ttf
+  #   - family: GeistMono
+  #     fonts:
+  #       - asset: assets/fonts/GeistMono-VariableFont_wght.ttf

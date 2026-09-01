@@ -187,7 +187,229 @@ export const PROBES: Record<string, Probe> = {
     },
   },
 
+  classify_command: {
+    tier: 'readonly',
+    proves: 'the command bands answer, and RED still means RED',
+    async run(ctx) {
+      const cases: Array<[string[], string]> = [
+        [['git', 'status'], 'green'],
+        [['Get-FileHash', 'x'], 'green'],
+        [['npm', 'install', 'express'], 'amber'],
+        [['gcc', 'main.c'], 'amber'],
+        [['some-unknown-tool'], 'amber'],
+        [['format', 'C:'], 'red'],
+        [['powershell', '-EncodedCommand', 'abc'], 'red'],
+      ];
+      for (const [command, expected] of cases) {
+        const data = await ctx.call('classify_command', { command });
+        assert(
+          data.band === expected,
+          `${command.join(' ')} classified ${data.band}, expected ${expected}`,
+        );
+      }
+      ctx.note(`${cases.length} commands banded correctly`);
+    },
+  },
+
+  run_command: {
+    tier: 'readonly',
+    proves: 'a GREEN command runs and a RED one is refused whatever the caller says',
+    async run(ctx) {
+      const data = await ctx.call('run_command', { command: ['whoami'] });
+      assert(data.returncode === 0, `whoami exited ${data.returncode}`);
+      assert(data.stdout.trim().length > 0, 'whoami produced no output');
+      assert(data.band === 'green', `whoami classified ${data.band}`);
+
+      // The band is the boundary, so prove it holds. A probe that only
+      // exercises the happy path proves the feature works and says nothing
+      // about whether the guard does.
+      const refused = await ctx.attempt('run_command', { command: ['format', 'C:'] });
+      assert(!refused.success, 'run_command ran a RED command');
+      assert(
+        /RED band/i.test(refused.error ?? ''),
+        `refusal did not say why: ${refused.error}`,
+      );
+
+      const outside = await ctx.attempt('run_command', {
+        command: ['whoami'],
+        cwd: 'C:\Windows\System32',
+      });
+      assert(!outside.success, 'run_command worked outside the user profile');
+
+      // run_shell is no longer advertised to the planner, but the daemon still
+      // implements it for saved workflows written before run_command existed.
+      // Exercised here so dropping it from the catalogue did not silently drop
+      // it from the tests as well.
+      const legacy = await ctx.call('run_shell', { command: ['hostname'] });
+      assert(legacy.stdout.trim().length > 0, 'run_shell produced no output');
+      const legacyRefused = await ctx.attempt('run_shell', { command: ['netstat'] });
+      assert(!legacyRefused.success, 'run_shell ran outside its own allowlist');
+
+      ctx.note(data.stdout.trim());
+    },
+  },
+
+  get_env: {
+    tier: 'readonly',
+    proves: 'environment variables read back, from the registry as well as this process',
+    async run(ctx) {
+      const data = await ctx.call('get_env', { name: 'PATH' });
+      assert(
+        typeof data.value === 'string' && data.value.length > 0,
+        'PATH came back empty',
+      );
+      const all = await ctx.call('get_env', {});
+      assert(all.user && typeof all.user === 'object', 'no user variables returned');
+      ctx.note(`PATH is ${String(data.value).split(';').length} entries`);
+    },
+  },
+
+  get_display: {
+    tier: 'readonly',
+    proves: 'the display mode reads back, with the list of modes it will accept',
+    async run(ctx) {
+      const data = await ctx.call('get_display', {});
+      assert(Number(data.width) > 0 && Number(data.height) > 0,
+        `nonsense resolution: ${data.width}x${data.height}`);
+      assert(Array.isArray(data.available) && data.available.length > 0,
+        'no available modes reported');
+      ctx.note(`${data.resolution} @ ${data.refresh_hz}Hz · ${data.available.length} modes`);
+    },
+  },
+
+  get_brightness: {
+    tier: 'readonly',
+    proves: 'brightness reads, or says plainly that this display cannot report it',
+    async run(ctx) {
+      const data = await ctx.call('get_brightness', {});
+      // An external monitor genuinely cannot answer. Saying so is the correct
+      // result, not a failure — what would be wrong is a plausible zero.
+      assert(
+        data.supported === true ? typeof data.level === 'number' : typeof data.reason === 'string',
+        'neither a level nor a reason came back',
+      );
+      ctx.note(data.supported ? `${data.level}%` : String(data.reason).slice(0, 60));
+    },
+  },
+
   // ── round trip: change something, prove it, put it back ───────────────────
+
+  set_display: {
+    tier: 'roundtrip',
+    proves: 'the resolution really changes, reads back, and an impossible one is refused',
+    capture: (ctx) => ctx.call('get_display', {}),
+    async run(ctx, before) {
+      // Move to a mode the driver actually offers and that is not the current
+      // one, so an unchanged display fails rather than passing by accident.
+      const other = (before.available as Array<Record<string, number>>).find(
+        (m) => m.width !== before.width || m.height !== before.height,
+      );
+      if (!other) {
+        ctx.note('only one mode available; nothing to switch to');
+        return;
+      }
+
+      const result = await ctx.attempt('set_display', {
+        resolution: `${other.width}x${other.height}`,
+        refresh_hz: other.refresh_hz,
+      });
+      assert(result.success, `set_display failed: ${result.error}`);
+
+      const after = await ctx.call('get_display', {});
+      assert(
+        Number(after.width) === other.width && Number(after.height) === other.height,
+        `asked for ${other.width}x${other.height}, display reports ${after.resolution}`,
+      );
+
+      // The guard that matters: an unsupported mode must be refused with the
+      // display untouched, not attempted and left half-applied.
+      const absurd = await ctx.attempt('set_display', { resolution: '9999x9999' });
+      assert(!absurd.success, 'set_display accepted a mode the display cannot do');
+      const stillThere = await ctx.call('get_display', {});
+      assert(
+        Number(stillThere.width) === other.width,
+        'a refused mode still disturbed the display',
+      );
+
+      ctx.note(`${before.resolution} -> ${after.resolution}`);
+    },
+    async restore(ctx, before) {
+      await ctx.attempt('set_display', {
+        width: before.width,
+        height: before.height,
+        refresh_hz: before.refresh_hz,
+      });
+    },
+  },
+
+  set_brightness: {
+    tier: 'roundtrip',
+    proves: 'brightness moves and reads back at the new level',
+    capture: (ctx) => ctx.call('get_brightness', {}),
+    async skip(ctx) {
+      const current = await ctx.call('get_brightness', {});
+      return current.supported === true
+        ? null
+        : 'this display does not report brightness (normal for external monitors)';
+    },
+    async run(ctx, before) {
+      const target = Number(before.level) > 50 ? 40 : 80;
+      const result = await ctx.attempt('set_brightness', { level: target });
+      assert(result.success, `set_brightness failed: ${result.error}`);
+
+      const after = await ctx.call('get_brightness', {});
+      assert(
+        Math.abs(Number(after.level) - target) <= 5,
+        `asked for ${target}%, panel reports ${after.level}%`,
+      );
+      ctx.note(`${before.level}% -> ${after.level}%`);
+    },
+    async restore(ctx, before) {
+      if (before.supported) await ctx.attempt('set_brightness', { level: before.level });
+    },
+  },
+
+
+
+  set_env: {
+    tier: 'roundtrip',
+    proves: 'a variable is written, reads back from the registry, and can be removed',
+    capture: (ctx) => ctx.call('get_env', { name: 'DEX_CONFORMANCE_PROBE' }),
+    async run(ctx) {
+      const value = `probe-${Date.now()}`;
+      const result = await ctx.attempt('set_env', {
+        name: 'DEX_CONFORMANCE_PROBE',
+        value,
+        scope: 'user',
+      });
+      assert(result.success, `set_env failed: ${result.error}`);
+
+      // Read it back from the registry rather than trusting the write's own
+      // report — the two agree right up until a write silently fails.
+      const after = await ctx.call('get_env', { name: 'DEX_CONFORMANCE_PROBE' });
+      assert(
+        after.user === value,
+        `stored value is ${after.user}, expected ${value}`,
+      );
+
+      const protectedWrite = await ctx.attempt('set_env', {
+        name: 'SystemRoot',
+        value: 'C:\Nope',
+      });
+      assert(!protectedWrite.success, 'set_env rewrote a protected Windows variable');
+
+      ctx.note(`set and read back ${value}`);
+    },
+    async restore(ctx) {
+      await ctx.attempt('set_env', {
+        name: 'DEX_CONFORMANCE_PROBE',
+        value: null,
+        scope: 'user',
+      });
+    },
+  },
+
+
 
   set_volume: {
     tier: 'roundtrip',

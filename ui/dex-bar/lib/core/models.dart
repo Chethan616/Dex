@@ -124,7 +124,7 @@ class ConfirmationRequest {
       );
 }
 
-enum TaskPhase { idle, thinking, running, awaiting, done, failed, cancelled }
+enum TaskPhase { idle, thinking, running, awaiting, done, answered, failed, cancelled }
 
 class TaskRun {
   TaskRun({required this.requestId, required this.prompt, required this.startedAt});
@@ -142,6 +142,15 @@ class TaskRun {
   TaskPhase phase = TaskPhase.thinking;
   String? status;
   String? summary;
+
+  /// What Dex has to say: the reply to a question, or the phrased result of a
+  /// task that read something.
+  ///
+  /// Distinct from [summary], which describes what was *done*. A read used to
+  /// finish with "Retrieve the current Windows power plan" and never say what
+  /// the plan was, because the value was computed and thrown away.
+  String? answer;
+
   int? finishedAt;
 
   Duration get elapsed => Duration(

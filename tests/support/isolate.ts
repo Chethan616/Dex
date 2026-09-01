@@ -24,9 +24,14 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dex-test-'));
 
 process.env.DEX_TEST = '1';
 process.env.DEX_DB = path.join(dir, 'dex.db');
+// ...and its settings. Without this the suite reads the owner's real
+// settings.json, so a test asserting a default fails on a machine where
+// someone has chosen something else — which is exactly what happened.
+process.env.DEX_CONFIG = path.join(dir, 'settings.json');
 
 /** Where this test's throwaway database lives, if it needs to look. */
 export const testDbPath = process.env.DEX_DB;
+export const testConfigPath = process.env.DEX_CONFIG;
 
 process.on('exit', () => {
   try {

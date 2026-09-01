@@ -19,6 +19,7 @@ import { DaemonDescription, SystemAgent } from '../agents/system/system_agent';
 import { DesktopAgent } from '../agents/desktop/desktop_agent';
 import { AppAgent } from '../agents/app/app_agent';
 import { BrowserAgent } from '../agents/browser/browser_agent';
+import { DeliveryAgent } from '../agents/delivery/delivery_agent';
 import { WorkspaceAgent } from '../agents/workspace/workspace_agent';
 import { FileAgent } from '../agents/files/file_agent';
 import { defaultRoutes, defaultServers } from '../agents/workspace/servers';
@@ -29,6 +30,7 @@ import { DiscordChannel } from '../channels/discord';
 import { WhatsAppChannel } from '../channels/whatsapp';
 import { CredentialStore } from '../core/secrets/credential_store';
 import { mirrorConsoleToFile, closeLogFile } from '../core/logging/file_log';
+import { readConfig } from '../core/settings/config_store';
 
 /**
  * Adapters that are running, so shutdown can close them.
@@ -100,6 +102,7 @@ function main(): void {
   registry.register(new AppAgent());
   registry.register(new DesktopAgent());
   registry.register(new BrowserAgent());
+  registry.register(new DeliveryAgent());
   registry.register(new FileAgent());
 
   // MCP servers are spawned on first use, not here — starting three OAuth
@@ -274,6 +277,29 @@ async function startChannels(
   // WhatsApp pairs by QR rather than a token, so its opt-in is explicit.
   if (process.env.DEX_WHATSAPP === 'true' && process.env.DEX_OWNER_WHATSAPP) {
     started.push(new WhatsAppChannel(runtime));
+  }
+
+  // The device mesh — reaching this PC from a phone with no shared network.
+  //
+  // Wired here, ahead of the implementation, so the mesh work lands as new
+  // files under channels/mesh/ and never edits this one. It is a ChannelAdapter
+  // like any other, which is what earns it the owner gate, the live step
+  // stream, confirmation cards and file delivery without writing any of them
+  // again. See docs/MESH.md.
+  const mesh = readConfig();
+  if (mesh.meshEnabled && mesh.meshRelayUrl) {
+    try {
+      // Loaded lazily: until the mesh ships, this module does not exist, and a
+      // missing optional channel must not stop Dex starting.
+      const { MeshChannel } = require('../channels/mesh/mesh_channel') as {
+        MeshChannel: new (runtime: ChannelRuntime) => ChannelAdapter;
+      };
+      started.push(new MeshChannel(runtime));
+    } catch {
+      console.warn(
+        '[33m[mesh][0m enabled in settings but not installed yet — skipping.',
+      );
+    }
   }
 
   for (const channel of started) {

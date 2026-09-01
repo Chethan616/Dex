@@ -4,6 +4,7 @@ import { emit } from '../events/bus';
 import { LlmProvider, ToolSpec } from '../llm/provider';
 import { buildBrainProvider } from '../llm/providers';
 import {
+  CAPABILITY_NAMES,
   ROUTING_RULES,
   WorkflowSummary,
   capabilityCatalogue,
@@ -40,6 +41,21 @@ CONFIRMATION TIERS (assign per step, based on what happens if it goes wrong):
   When unsure between two tiers, pick the more cautious one. A needless
   confirmation costs the owner a click; a missing one can cost them data.
 
+WHEN THERE IS NOTHING TO DO
+
+  Some requests are not tasks. "what can you do", "who are you", "hello",
+  "which of these should I use" — these want an answer, not an action.
+
+  For those, set "reply" to the answer and leave "steps" empty. Do not invent a
+  step to justify replying, and do not reply and act in the same plan: if the
+  request needs work done, plan the work and say nothing.
+
+  Answer as Dex, in the second person, briefly — two or three sentences unless
+  more is genuinely wanted. Ground it in the capability list above: that list
+  is exactly what you can do, and claiming anything outside it is a promise the
+  owner will discover is false the first time they try it. If you are asked for
+  something Dex cannot do, say so plainly and name the nearest thing it can.
+
 Call create_execution_plan with the structured plan.`;
 }
 
@@ -56,6 +72,7 @@ interface RawPlan {
   intent: string;
   tier: number;
   steps: RawStep[];
+  reply?: string;
 }
 
 const plannerTool: ToolSpec = {
@@ -73,6 +90,12 @@ const plannerTool: ToolSpec = {
         enum: [1, 2, 3],
         description: '1 = single step, 2 = multi-step single agent, 3 = multi-agent DAG',
       },
+      reply: {
+        type: 'string',
+        description:
+          'The answer, when the request is a question or conversation rather ' +
+          'than a task. Leave steps empty when this is set.',
+      },
       steps: {
         type: 'array',
         items: {
@@ -81,17 +104,10 @@ const plannerTool: ToolSpec = {
             id: { type: 'string', description: 'Unique step ID, e.g. step_1' },
             capability: {
               type: 'string',
-              enum: [
-                'can_control_os',
-                'can_control_files',
-                'can_control_app',
-                'can_run_workflow',
-                'can_control_gui',
-                'can_browse_web',
-                'can_access_email',
-                'can_access_calendar',
-                'can_access_drive',
-              ],
+              // Generated, not restated. This enum and the catalogue in
+              // capabilities.ts were two hand-kept lists and they drifted —
+              // four capabilities were legal here and undocumented there.
+              enum: [...CAPABILITY_NAMES],
               description: 'Which capability to use',
             },
             action: { type: 'string', description: 'Which action within that capability' },
@@ -138,6 +154,18 @@ export class Brain {
     this.provider = provider ?? buildBrainProvider();
   }
 
+  /**
+   * The live view of saved workflows this Brain was built with.
+   *
+   * Exposed so the Gateway can carry it across when it rebuilds the Brain for
+   * a new provider. Rebuilding without it would leave a planner that cannot
+   * choose a saved workflow, and nothing would say so — the plans would just
+   * quietly get more expensive.
+   */
+  get workflowSource(): () => WorkflowSummary[] {
+    return this.workflows;
+  }
+
   get model(): string {
     return this.provider.label;
   }
@@ -155,11 +183,30 @@ export class Brain {
       maxTokens: 4096,
     })) as unknown as RawPlan;
 
-    if (!Array.isArray(raw?.steps) || raw.steps.length === 0) {
-      throw new Error('Brain returned a plan with no steps');
+    const rawSteps = Array.isArray(raw?.steps) ? raw.steps : [];
+    const reply = typeof raw?.reply === 'string' ? raw.reply.trim() : '';
+
+    // A plan may answer or act, never both.
+    //
+    // Not tidiness — a safety boundary. If a plan could act *and* narrate, the
+    // narration would be written before the steps ran, so it could not describe
+    // what happened; and a step that reads a web page could shape what the
+    // owner is told about that page. Answers come from requests that do
+    // nothing; results come from A2's phrasing pass, which sees only step data.
+    if (rawSteps.length === 0) {
+      if (!reply) {
+        throw new Error('Brain returned neither steps nor a reply');
+      }
+      return {
+        requestId: request.requestId,
+        intent: raw.intent ?? request.text,
+        tier: 1,
+        steps: [],
+        reply,
+      };
     }
 
-    const steps: ExecutionStep[] = raw.steps.map((s, i) => normalizeStep(s, i));
+    const steps: ExecutionStep[] = rawSteps.map((s, i) => normalizeStep(s, i));
 
     return {
       requestId: request.requestId,
@@ -168,7 +215,72 @@ export class Brain {
       steps,
     };
   }
+
+  /**
+   * Turn what the steps actually returned into a sentence.
+   *
+   * Dex used to finish a read with the plan's own restatement of the question —
+   * "Done: Retrieve the current Windows power plan" — while the answer sat
+   * unused in the agent's result. This is the pass that says "You're on the
+   * Balanced power plan" instead.
+   *
+   * Two rules make this safe to run on a system built around verifying rather
+   * than assuming:
+   *
+   *   - It is given ONLY the structured data the steps returned. Never page
+   *     text, never file contents. Untrusted content does not get a second
+   *     route into a message that reads as Dex speaking.
+   *   - It must not alter values. The prompt says so, and the caller keeps the
+   *     raw facts, so a wrong number is a visible disagreement rather than the
+   *     only thing on screen.
+   *
+   * Returns null on any failure — rate limit, timeout, empty answer. The caller
+   * falls back to rendering the facts directly, because an unanswered question
+   * is a worse outcome than a plainly formatted one.
+   */
+  async phrase(request: string, facts: Record<string, unknown>[]): Promise<string | null> {
+    if (facts.length === 0) return null;
+
+    try {
+      const answer = (await this.provider.callTool({
+        system:
+          'You are Dex, reporting what you just found on the owner\'s Windows PC.\n' +
+          'You are given the exact data the system returned. State it in one or two\n' +
+          'short sentences, in the second person.\n\n' +
+          'Rules:\n' +
+          '  - Use the values exactly as given. Never round, convert, reorder or\n' +
+          '    invent one. If a value looks odd, report it as it is.\n' +
+          '  - Mention only what is in the data. Add no advice and no commentary.\n' +
+          '  - If the data does not answer the question, say what was found instead.\n' +
+          '  - No preamble. Do not say "the data shows".',
+        user:
+          `The owner asked: ${request}\n\n` +
+          `The system returned:\n${JSON.stringify(facts, null, 2)}`,
+        tool: answerTool,
+        maxTokens: 512,
+      })) as { answer?: unknown };
+
+      const text = typeof answer?.answer === 'string' ? answer.answer.trim() : '';
+      return text || null;
+    } catch {
+      // Rate limits are routine on a free tier and must not turn a successful
+      // task into a failed one.
+      return null;
+    }
+  }
 }
+
+const answerTool: ToolSpec = {
+  name: 'report',
+  description: 'Report the result to the owner in one or two sentences',
+  schema: {
+    type: 'object' as const,
+    properties: {
+      answer: { type: 'string', description: 'What to tell the owner' },
+    },
+    required: ['answer'],
+  },
+};
 
 /**
  * Models sometimes use `wait_for` as a window-readiness check and omit the

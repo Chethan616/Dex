@@ -51,6 +51,12 @@ export class DiscordChannel implements ChannelAdapter {
           const existing = await message.channel.messages.fetch(handle).catch(() => null);
           await existing?.edit(text);
         },
+        sendFile: async (filePath, caption) => {
+          await message.reply({
+            content: caption,
+            files: [filePath],
+          });
+        },
       };
 
       await this.runtime.handle(

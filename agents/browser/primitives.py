@@ -22,7 +22,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from browser_use import BrowserSession
@@ -242,8 +245,72 @@ class PrimitiveBrowser:
             'matches': [_clean(str(v)) for v in (values or [])],
         }
 
+    async def screenshot(
+        self,
+        path: str | None = None,
+        full_page: bool = True,
+    ) -> dict[str, Any]:
+        """
+        Save what the page looks like, and say where it went.
+
+        Full-page by default. A viewport-only capture of a long page is almost
+        never what someone means by "screenshot that site", and cropping is
+        something they can do afterwards while un-cropping is not.
+
+        The file lands in the owner's Pictures folder unless they name a path,
+        and the path is checked the same way every other file write is — a
+        screenshot is a file write, and it does not get its own weaker rule
+        because it came from the browser.
+        """
+        session = await self.session()
+
+        target = _screenshot_path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        page = await session.get_current_page()
+        await page.screenshot(path=str(target), full_page=bool(full_page))
+
+        return {
+            'path': str(target),
+            'url': await session.get_current_page_url(),
+            'title': await session.get_current_page_title(),
+            'full_page': bool(full_page),
+            'bytes': target.stat().st_size if target.exists() else 0,
+        }
+
     async def verify(self, spec: dict[str, Any]) -> dict[str, Any]:
         return await check_page(await self.session(), spec)
+
+
+def _screenshot_path(raw: str | None) -> Path:
+    """
+    Where a screenshot may be written.
+
+    Inside the user profile, like every other file Dex writes. A browser
+    primitive that could write anywhere would be a way around the file
+    boundary, reached by asking for a screenshot instead of a file.
+    """
+    home = Path.home().resolve()
+
+    if raw:
+        candidate = Path(os.path.expandvars(str(raw))).expanduser()
+        if not candidate.is_absolute():
+            candidate = home / 'Pictures' / candidate
+        candidate = candidate.resolve()
+        try:
+            candidate.relative_to(home)
+        except ValueError:
+            raise PermissionError(
+                f'Refused: {candidate} is outside your user profile. '
+                'Screenshots go in folders you own.'
+            ) from None
+        return candidate
+
+    stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+    pictures = home / 'OneDrive' / 'Pictures'
+    if not pictures.exists():
+        pictures = home / 'Pictures'
+    return pictures / 'Dex' / f'screenshot-{stamp}.png'
 
 
 def _clean(text: str) -> str:

@@ -46,12 +46,25 @@ export interface ExecutionPlan {
   intent: string;
   tier: 1 | 2 | 3;
   steps: ExecutionStep[];
+  /**
+   * An answer, for a request that was a question rather than a task.
+   *
+   * Set only when `steps` is empty. "what can you do" and "who are you" used to
+   * throw — every input had to become a tool plan or fail — and this is the
+   * path that lets Dex reply instead. A plan never both acts and replies; see
+   * the note in planner.ts for why that separation is load-bearing.
+   */
+  reply?: string;
 }
 
 export interface DexRequest {
   requestId: string;
   sessionId: string;
-  source: 'cli' | 'telegram' | 'discord' | 'whatsapp' | 'slack' | 'flutter' | 'schedule';
+  // 'mesh' is the remote web client — a phone or another machine reaching this
+  // PC over the relay. Declared here rather than added later so the mesh work
+  // can land as new files only, without editing anything the core team is
+  // touching. See docs/MESH.md.
+  source: 'cli' | 'telegram' | 'discord' | 'whatsapp' | 'slack' | 'flutter' | 'schedule' | 'mesh';
   senderId: string;
   text: string;
   timestamp: number;
@@ -153,7 +166,17 @@ export interface VerificationResult {
   afterState?: unknown;
 }
 
-export type TaskStatus = 'COMPLETED' | 'FAILED' | 'ABORTED' | 'CANCELLED';
+/**
+ * ANSWERED is distinct from COMPLETED on purpose. Nothing ran, so there is
+ * nothing verified and nothing to save as a workflow — and the usage stats
+ * should not count "who are you" as a task Dex performed.
+ */
+export type TaskStatus =
+  | 'COMPLETED'
+  | 'ANSWERED'
+  | 'FAILED'
+  | 'ABORTED'
+  | 'CANCELLED';
 
 /**
  * A pending Tier 1/2/3 approval. `stepVersion` is a content hash of the step —

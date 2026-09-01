@@ -17,6 +17,7 @@ import subprocess
 import time
 
 from ._proc import NO_WINDOW
+from .app_resolver import AppNotFound, Resolution, resolve
 
 log = logging.getLogger('AppHandler')
 
@@ -28,6 +29,12 @@ REFUSED = {
 }
 
 # Friendly names the owner actually says -> what Windows needs to start them.
+#
+# Short on purpose. This is a shortcut past the resolver for the things people
+# say constantly and for names that are genuinely ambiguous ("settings" is a
+# shell protocol, not a file). Everything else — browsers, Office, Spotify,
+# whatever is installed — is found by app_resolver, which is why this list does
+# not need to grow every time something new is installed.
 KNOWN = {
     'notepad': 'notepad.exe',
     'calculator': 'calc.exe',
@@ -40,7 +47,24 @@ KNOWN = {
     'wordpad': 'write.exe',
     'snipping tool': 'ms-screenclip:',
     'control panel': 'control.exe',
+    # Browsers. Named here so "browser" and the short forms land somewhere
+    # definite; the full paths still come from App Paths at resolve time.
+    'chrome': 'chrome.exe',
+    'google chrome': 'chrome.exe',
+    'edge': 'msedge.exe',
+    'microsoft edge': 'msedge.exe',
+    'firefox': 'firefox.exe',
+    'brave': 'brave.exe',
+    'opera': 'opera.exe',
 }
+
+# What "open a browser" should mean, best first. Resolved in order until one is
+# actually installed — the planner asking for "any browser" should not fail
+# because the first name on a list happens not to be on this machine.
+BROWSER_PREFERENCE = ['chrome.exe', 'msedge.exe', 'firefox.exe', 'brave.exe']
+
+# Requests that mean "a browser, I don't mind which".
+ANY_BROWSER = {'browser', 'a browser', 'any browser', 'web browser', 'internet'}
 
 
 class AppHandler:
@@ -59,22 +83,43 @@ class AppHandler:
                 'System work goes through the daemon, not a shell window.'
             )
 
-        target = KNOWN.get(key, raw)
+        if key in ANY_BROWSER:
+            resolution = _first_installed_browser()
+        else:
+            resolution = resolve(raw, KNOWN)
 
-        if target.endswith(':') or '://' in target:
-            # Shell protocol (ms-settings:) — start via the shell association.
-            os.startfile(target)  # noqa: S606
+        if resolution.is_shell:
+            # Shell protocol ("ms-settings:"), a Start Menu shortcut, or a
+            # packaged app's AppsFolder id — none of which CreateProcess can
+            # take. startfile hands it to the shell, which is what a
+            # double-click does and what honours a shortcut's own arguments.
+            os.startfile(resolution.target)  # noqa: S606
+        elif resolution.method == 'start_menu':
+            os.startfile(resolution.target)  # noqa: S606
         else:
             subprocess.Popen(
-                target, shell=False,
+                [resolution.target, *resolution.args], shell=False,
                 creationflags=getattr(subprocess, 'DETACHED_PROCESS', 0),
             )
 
         # Give the window a moment to exist so a following Tier 2 step finds it
         # rather than racing the launch.
         time.sleep(float(params.get('settle', 1.2)))
-        log.info('Launched %s (from %r)', target, raw)
-        return {'launched': target, 'requested': raw}
+        log.info('Launched %s via %s (from %r)',
+                 resolution.target, resolution.method, raw)
+        return {
+            'launched': resolution.display or resolution.target,
+            'path': resolution.target,
+            # The executable stem, for verification to match against.
+            #
+            # A display name is not always findable in a window title: Edge
+            # calls itself "Microsoft<zero-width-space>Edge" on its own title
+            # bar, so "microsoft edge" never matches. "msedge" does, and it is
+            # the name the process actually has.
+            'image': os.path.splitext(os.path.basename(resolution.target))[0],
+            'found_via': resolution.method,
+            'requested': raw,
+        }
 
     @staticmethod
     def close_app(params: dict) -> dict:
@@ -119,6 +164,29 @@ class AppHandler:
             f'Nothing to close for "{name}" — no process named {image}, '
             f'and no window titled any of {_title_candidates(name, image)}'
         )
+
+
+def _first_installed_browser() -> Resolution:
+    """
+    "Open a browser" — whichever one is actually here.
+
+    Asking for Edge by name and not having it is a failure worth reporting.
+    Asking for *a* browser and being told Edge is missing is not: the request
+    named no preference, so the resolver should keep going. This is why the
+    original "open any browser" failed — the planner picked "Microsoft Edge",
+    a display name that resolved to nothing, and the whole task stopped.
+    """
+    for candidate in BROWSER_PREFERENCE:
+        try:
+            return resolve(candidate, KNOWN)
+        except AppNotFound:
+            continue
+
+    raise AppNotFound(
+        'a browser',
+        [f'browser preferences ({", ".join(BROWSER_PREFERENCE)})'],
+        [],
+    )
 
 
 def _title_candidates(name: str, image: str) -> list:

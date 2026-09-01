@@ -26,11 +26,16 @@
     "test:full-access": "ts-node tests/smoke_full_access.ts",
     "test:scheduler": "ts-node tests/smoke_scheduler.ts",
     "test:settings": "ts-node tests/smoke_settings.ts",
-    "test:no-console": "python tests/test_no_console.py"
+    "test:no-console": "python tests/test_no_console.py",
+    "test:apps": "python tests/test_app_resolver.py",
+    "test:policy": "python tests/test_command_policy.py",
+    "test:capabilities": "ts-node tests/smoke_capabilities.ts",
+    "test:delivery": "ts-node tests/smoke_delivery.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
     "discord.js": "^14.27.0",
     "dotenv": "^16.4.5",
     "grammy": "^1.45.1",

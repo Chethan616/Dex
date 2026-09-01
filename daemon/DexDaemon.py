@@ -20,6 +20,8 @@ from handlers.power_handler import PowerHandler
 from handlers.process_handler import ProcessHandler
 from handlers.registry_handler import RegistryHandler
 from handlers.shell_runner import ShellRunner
+from handlers.env_handler import EnvHandler
+from handlers.display_handler import DisplayHandler
 
 def _log_handlers() -> list:
     """
@@ -83,6 +85,14 @@ DISPATCH = {
     'registry_write':   RegistryHandler.write,
     'registry_classify': RegistryHandler.classify,
     'run_shell':        ShellRunner.run,
+    'run_command':      ShellRunner.run_command,
+    'classify_command': ShellRunner.classify_command,
+    'get_env':          EnvHandler.get_env,
+    'set_env':          EnvHandler.set_env,
+    'get_display':      DisplayHandler.get_display,
+    'set_display':      DisplayHandler.set_display,
+    'get_brightness':   DisplayHandler.get_brightness,
+    'set_brightness':   DisplayHandler.set_brightness,
     'get_volume':       AudioHandler.get_volume,
     'set_volume':       AudioHandler.set_volume,
     'set_mute':         AudioHandler.set_mute,

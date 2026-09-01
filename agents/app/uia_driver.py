@@ -209,9 +209,52 @@ def _walk(root: Any, limit: int = MAX_ELEMENTS, max_depth: int = MAX_DEPTH):
             continue
 
 
+# Characters Windows renders that nobody types, mapped to what a person would
+# write instead.
+#
+# This exists because of a failure that read as a Dex bug and was really a
+# typography one. Asked to set the display to 1080p, the planner produced
+# `1920 x 1080` and Settings offers `1920 × 1080` — U+00D7 MULTIPLICATION SIGN,
+# not the letter x. The names look identical on screen, compared unequal, and
+# the step failed against a control that was right there in the list Dex had
+# already printed.
+#
+# The same class of thing bites elsewhere: Edge puts a zero-width space in its
+# own window title, and Windows uses real en-dashes and curly quotes in labels.
+# Anything that looks like plain text to a reader is treated as plain text here.
+_TYPOGRAPHY = {
+    '×': 'x',        # × multiplication sign — display resolutions
+    '–': '-',        # – en dash
+    '—': '-',        # — em dash
+    '‐': '-',        # ‐ hyphen
+    '‑': '-',        # ‑ non-breaking hyphen
+    '‘': "'",        # ' left single quote
+    '’': "'",        # ' right single quote
+    '“': '"',        # " left double quote
+    '”': '"',        # " right double quote
+    ' ': ' ',        # non-breaking space
+    ' ': ' ',        # figure space
+    ' ': ' ',        # narrow no-break space
+    '​': '',         # zero-width space
+    '‌': '',         # zero-width non-joiner
+    '‍': '',         # zero-width joiner
+    '﻿': '',         # BOM / zero-width no-break space
+}
+
+_TYPOGRAPHY_TABLE = str.maketrans(_TYPOGRAPHY)
+
+
 def _norm(text: str) -> str:
     # Windows puts accelerators in labels: "&Save", "Save (Ctrl+S)".
+    #
+    # The trailing-parenthesis strip is also what lets a planner's invented
+    # "(Recommended)" suffix match the real "1920 × 1080" — it guesses that
+    # from the phrase "1080p" without having seen the list, and the real
+    # "(Recommended)" is on a different entry entirely.
     text = re.sub(r'\s*\(.*?\)\s*$', '', text or '')
+    text = text.translate(_TYPOGRAPHY_TABLE)
+    # Collapse whitespace so "1920  ×  1080" and "1920 x 1080" agree.
+    text = re.sub(r'\s+', ' ', text)
     return text.replace('&', '').strip().lower()
 
 

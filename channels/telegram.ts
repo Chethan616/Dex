@@ -1,4 +1,4 @@
-import { Bot } from 'grammy';
+import { Bot, InputFile } from 'grammy';
 import { ChannelAdapter, ChannelRuntime, Reply } from './base_channel';
 
 /**
@@ -36,6 +36,12 @@ export class TelegramChannel implements ChannelAdapter {
           await ctx.api
             .editMessageText(ctx.chat.id, Number(handle), text, { parse_mode: 'Markdown' })
             .catch(() => ctx.api.editMessageText(ctx.chat.id, Number(handle), text));
+        },
+        // As a document, always. Telegram compresses anything sent as a photo,
+        // and a screenshot the owner asked to be sent should arrive as the
+        // screenshot rather than as a smaller picture of one.
+        sendFile: async (filePath, caption) => {
+          await ctx.replyWithDocument(new InputFile(filePath), { caption });
         },
       };
 

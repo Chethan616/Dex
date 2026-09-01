@@ -160,6 +160,45 @@ export interface BrainProviderSpec {
   blurb: string;
 }
 
+/**
+ * Which Claude model plans, when Claude Code is the brain.
+ *
+ * Haiku is the default, and that is a measured choice rather than a frugal
+ * one. Planning here is structured extraction — read a capability list, emit a
+ * JSON plan of one to four steps — not open-ended reasoning. Benchmarked over
+ * the same prompts, Haiku produced the same plans as Sonnet.
+ *
+ * What the model does *not* change is the speed. Every call starts a Claude
+ * Code session, and that startup dominates: both models land around 20-30
+ * seconds per plan. Choosing Opus buys deliberation on hard multi-step tasks;
+ * it does not buy latency, and neither does dropping to Haiku.
+ */
+export interface ClaudeModelSpec {
+  id: string;
+  label: string;
+  blurb: string;
+  recommended?: boolean;
+}
+
+export const CLAUDE_MODELS: ClaudeModelSpec[] = [
+  {
+    id: 'haiku',
+    label: 'Haiku',
+    blurb: 'Enough for the planning Dex does, and the cheapest against your quota. Start here.',
+    recommended: true,
+  },
+  {
+    id: 'sonnet',
+    label: 'Sonnet',
+    blurb: 'Better at long multi-step tasks and unusual phrasing. No faster.',
+  },
+  {
+    id: 'opus',
+    label: 'Opus',
+    blurb: 'The most capable, and the heaviest on a Pro or Max quota. Reach for it when a plan keeps coming out wrong.',
+  },
+];
+
 export const BRAIN_PROVIDERS: BrainProviderSpec[] = [
   {
     id: 'groq',
@@ -174,6 +213,14 @@ export const BRAIN_PROVIDERS: BrainProviderSpec[] = [
     credential: 'anthropic_api_key',
     defaultModel: 'claude-sonnet-4-6',
     blurb: 'Strongest planning. Billed per token against an API key.',
+  },
+  {
+    id: 'gemini',
+    label: 'Google Gemini',
+    credential: 'gemini_api_key',
+    defaultModel: 'gemini-2.5-flash',
+    blurb:
+      'Free tier, but only 20 requests per DAY — Dex can spend that on a single task. Practical as a fallback, not as your main brain.',
   },
   {
     id: 'claude-code',
