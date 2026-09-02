@@ -14,6 +14,7 @@ import { Telemetry } from '../memory/telemetry';
 import { ArtifactStore } from '../memory/artifacts';
 import { ConfirmationManager } from '../confirmation/confirmation_manager';
 import { describeUnresolved, findRefs, resolveStepRefs } from './step_refs';
+import { worthRetrying } from '../reliability/exit_codes';
 import { emit } from '../events/bus';
 
 type StepOutcome = 'ok' | 'failed' | 'cancelled';
@@ -550,7 +551,18 @@ export class Orchestrator {
     // plausibly go differently. A CAPTCHA the owner already declined, or a tool
     // the server does not have, will fail identically and cost the owner
     // another wait for the privilege.
-    if (result.retryable === false) {
+    // A command whose exit code means the goal already holds is never repeated.
+    //
+    // winget answering "already installed" is not a flaky result: the second
+    // attempt returns the identical code by definition. Retrying it is how one
+    // step took a minute and forty-four seconds to arrive nowhere.
+    const settled = result.retryable === false
+      || !worthRetrying(
+        (result.data as { command?: unknown } | undefined)?.command,
+        Number((result.data as { returncode?: unknown } | undefined)?.returncode ?? 0),
+      );
+
+    if (settled) {
       const message = `${agentName} could not verify the step and will not repeat it: ${verification.reason}`;
       stepReports.set(step.id, {
         stepId: step.id,

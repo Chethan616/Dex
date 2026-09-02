@@ -643,15 +643,86 @@ class PrimitiveBrowser:
         dom = await _safe_state(session)
 
         wall = detect_wall(landed, snap['title'], dom, task='')
-        signed_in = wall is None and host_of(landed) == host_of(url)
+        state, why = await self._session_state(browser, wall, landed, url)
 
         return {
             'url': landed,
-            'signed_in': signed_in,
+            # Three-valued on purpose. See _session_state.
+            'state': state,
+            'signed_in': state == 'signed_in',
+            'reason': why,
             'wall': None if wall is None else wall.kind,
-            'reason': None if wall is None else wall.reason,
             'has_credential': lookup(landed) is not None,
+            'login_url': self._login_hint(landed, url),
         }
+
+    async def _session_state(
+        self, browser: str | None, wall, landed: str, asked: str,
+    ) -> tuple:
+        """
+        Signed in, signed out, or genuinely unknown.
+
+        This used to be `wall is None and same host`, which is not evidence of a
+        session — it is the absence of evidence against one. Asked about
+        vtop.vit.ac.in it landed on the marketing page, found no password field
+        and no /login in the URL, and reported the owner was signed in. They
+        were not; the portal had simply not been asked to show a login form yet.
+
+        So decide from what the page actually contains, using map_page — which
+        reads the document rather than the rendered text, and therefore sees a
+        sign-out link inside a collapsed profile menu:
+
+            a password field, or a Login control      -> signed out
+            a Logout / Sign out control, or a profile -> signed in
+            neither                                   -> unknown
+
+        Unknown is a real answer and is returned as one. A landing page tells
+        you nothing about your session, and saying so lets a plan navigate to
+        the login page and look properly instead of proceeding on a guess.
+        """
+        if wall is not None and wall.kind in ('password', 'login', 'captcha'):
+            return 'signed_out', wall.reason
+
+        if host_of(landed) != host_of(asked):
+            return 'signed_out', f'{host_of(asked)} redirected to {host_of(landed)}'
+
+        page = await self.map_page(browser=browser)
+        elements = page.get('elements', [])
+
+        for element in elements:
+            if str(element.get('field', '')).lower() == 'password':
+                return 'signed_out', 'the page is showing a password field'
+
+        labels = [str(e.get('text', '')).strip().lower() for e in elements]
+        hrefs = [str(e.get('href', '')).lower() for e in elements]
+
+        if any(_matches(text, _SIGNED_IN_WORDS) for text in labels) or any(
+            any(word in href for word in ('logout', 'signout', 'sign-out'))
+            for href in hrefs
+        ):
+            return 'signed_in', 'the page offers a way to sign out'
+
+        if any(_matches(text, _SIGNED_OUT_WORDS) for text in labels):
+            return 'signed_out', 'the page is offering a way to sign in'
+
+        return 'unknown', (
+            'this page shows neither a way in nor a way out, so it says nothing '
+            'about the session — try the login page for this site'
+        )
+
+    @staticmethod
+    def _login_hint(landed: str, asked: str) -> str:
+        """
+        Where the login form probably is.
+
+        A bare host is rarely the login page — vtop.vit.ac.in serves marketing
+        and keeps its form at /vtop/login. If the page redirected somewhere with
+        "login" in it, that redirect is the site telling us where; otherwise the
+        landed URL is the best guess available and the agent will look.
+        """
+        if any(word in landed.lower() for word in ('login', 'signin', 'sign-in', 'auth')):
+            return landed
+        return landed or asked
 
     async def sign_in(
         self, url: str, browser: str | None = None,
@@ -833,3 +904,21 @@ def _score(element: dict, wanted: list[str]) -> int:
         if element.get('visible'):
             score += 1
     return score
+
+
+# Words that mean a session exists, and words that mean it does not.
+#
+# Matched as whole words against a control's visible label, so "Login" matches
+# and "Blogin" does not, and neither does the "log in" inside a sentence of
+# marketing copy on a landing page.
+_SIGNED_IN_WORDS = ('logout', 'log out', 'sign out', 'signout', 'my account',
+                    'my profile', 'dashboard')
+_SIGNED_OUT_WORDS = ('login', 'log in', 'sign in', 'signin', 'sign up')
+
+
+def _matches(text: str, words: tuple) -> bool:
+    stripped = text.strip().lower().rstrip(':>').strip()
+    # Equality rather than containment. A page of prose that happens to contain
+    # "sign in" is not a page offering a sign-in control, and the difference is
+    # the whole reason this check exists.
+    return stripped in words

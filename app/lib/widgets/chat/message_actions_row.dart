@@ -10,6 +10,8 @@ import '../../theme/tokens.dart';
 class MessageActionsRow extends StatelessWidget {
   const MessageActionsRow({
     super.key,
+    this.liked = false,
+    this.disliked = false,
     this.onLike,
     this.onDislike,
     this.onShare,
@@ -18,6 +20,10 @@ class MessageActionsRow extends StatelessWidget {
     this.onRegenerate,
     this.onEditInPage,
   });
+
+  /// Whether this answer has been voted on, so the icon can show it.
+  final bool liked;
+  final bool disliked;
 
   final VoidCallback? onLike;
   final VoidCallback? onDislike;

@@ -51,17 +51,43 @@ NOT_CHROMIUM = {
 }
 
 
-def profile_dir() -> str:
+def profile_dir(browser: str | None = None) -> str:
     """
-    Dex's own browser profile.
+    Dex's own browser profile, one per browser.
 
     Beside the logs and the settings, in %LOCALAPPDATA%\\DEX, so everything Dex
     keeps about itself is in one place the owner can inspect or delete.
+
+    **One directory per browser, not one overall.** Chromium allows a single
+    process per profile directory, so a Chromium session holding this path made
+    a later Vivaldi launch sit on the lock until it timed out — the "open
+    vivaldi and go to instagram" failure, which took a minute and forty seconds
+    to say nothing useful.
+
+    Separate directories also mean Dex's Vivaldi and the owner's Vivaldi are
+    different processes with different profiles, so both run at once and Dex is
+    signed in only to what the owner signed *Dex* into.
     """
     base = os.environ.get('LOCALAPPDATA') or os.environ.get('USERPROFILE') or '.'
-    path = Path(base) / 'DEX' / 'browser-profile'
+    path = Path(base) / 'DEX' / 'browser-profile' / _profile_leaf(browser)
     path.mkdir(parents=True, exist_ok=True)
     return str(path)
+
+
+def _profile_leaf(browser: str | None) -> str:
+    """
+    A directory name from a browser name.
+
+    `default` for Playwright's own Chromium. Anything else is reduced to safe
+    characters, because the name reaches here from a plan and could be a path.
+    """
+    name = (browser or '').strip().lower()
+    if not name:
+        return 'default'
+    if os.path.sep in name or name.endswith('.exe'):
+        name = Path(name).stem
+    safe = ''.join(c if c.isalnum() else '-' for c in name).strip('-')
+    return safe or 'default'
 
 
 def resolve(name: str | None) -> str | None:
@@ -154,7 +180,7 @@ def session_kwargs(browser: str | None, headless: bool) -> dict:
     kwargs: dict = {
         'headless': headless,
         'args': [
-            f'--user-data-dir={profile_dir()}',
+            f'--user-data-dir={profile_dir(browser)}',
             '--no-first-run',
             '--no-default-browser-check',
         ],

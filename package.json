@@ -42,7 +42,8 @@
     "test:trace": "python tests/test_image_trace.py",
     "test:canvas": "ts-node tests/smoke_canvas.ts",
     "test:routes": "ts-node tests/smoke_site_routes.ts",
-    "test:site-creds": "python tests/test_site_credentials.py"
+    "test:site-creds": "python tests/test_site_credentials.py",
+    "test:exit-codes": "ts-node tests/test_exit_codes.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",

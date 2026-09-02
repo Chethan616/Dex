@@ -2,8 +2,12 @@
 // trailing action row (like / share / regenerate / etc.) when the
 // message is no longer streaming.
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../core/dex_gateway.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../core/models/message.dart';
@@ -56,6 +60,120 @@ class _ThinkingDotsState extends State<_ThinkingDots>
   }
 }
 
+/// The row under an answer, doing what its icons say.
+///
+/// Every one of these was `() {}` except Copy — six buttons that looked live
+/// and did nothing. A control that does nothing is worse than a missing one,
+/// because it teaches the owner that the interface lies.
+///
+/// Like and dislike are the interesting pair. They are the only signal in the
+/// whole system that Dex did not generate about itself: verification says
+/// whether a step did what it claimed, and this says whether the task was what
+/// the owner actually wanted. A task can verify every step and still answer
+/// the wrong question.
+class _Actions extends StatefulWidget {
+  const _Actions({
+    required this.message,
+    required this.text,
+    this.onRegenerate,
+    this.onEditInPage,
+  });
+
+  final Message message;
+  final String text;
+  final VoidCallback? onRegenerate;
+  final VoidCallback? onEditInPage;
+
+  @override
+  State<_Actions> createState() => _ActionsState();
+}
+
+class _ActionsState extends State<_Actions> {
+  /// 1 liked, -1 disliked, 0 no opinion. Local so the icon can respond at once
+  /// rather than waiting for a round trip to say what the owner just clicked.
+  int _verdict = 0;
+
+  void _vote(int next) {
+    // Clicking the same thumb again takes it back. An opinion you cannot
+    // withdraw is a trap.
+    final settled = _verdict == next ? 0 : next;
+    setState(() => _verdict = settled);
+
+    final requestId = widget.message.requestId;
+    if (requestId == null || requestId.isEmpty) return;
+    DexGatewayClient.current?.sendFeedback(
+      requestId,
+      settled == 1 ? 'up' : settled == -1 ? 'down' : 'none',
+    );
+  }
+
+  /// The answer plus where it came from, for pasting somewhere else.
+  void _share() {
+    final when = widget.message.ts.toLocal().toString().split('.').first;
+    Clipboard.setData(ClipboardData(
+      text: 'Dex — $when\n\n${widget.text}\n',
+    ));
+    _toast('Copied, with the timestamp.');
+  }
+
+  /// Windows' own speech synthesiser.
+  ///
+  /// Through PowerShell rather than a package: SAPI has shipped in Windows for
+  /// twenty years, and a plugin for one button would be a dependency to keep
+  /// current forever. Hidden window, and the text is passed as an argument
+  /// rather than interpolated into the script, so an answer containing a quote
+  /// cannot become part of the command.
+  Future<void> _readAloud() async {
+    if (!Platform.isWindows) return;
+    final spoken = widget.text.length > 4000
+        ? widget.text.substring(0, 4000)
+        : widget.text;
+    try {
+      await Process.start(
+        'powershell',
+        [
+          '-NoProfile',
+          '-WindowStyle', 'Hidden',
+          '-Command',
+          r'Add-Type -AssemblyName System.Speech; '
+              r'$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; '
+              r'$s.Speak([Console]::In.ReadToEnd())',
+        ],
+        mode: ProcessStartMode.detached,
+        runInShell: false,
+      ).then((process) {
+        process.stdin.write(spoken);
+        process.stdin.close();
+      });
+    } catch (e) {
+      _toast('Could not read it aloud: $e');
+    }
+  }
+
+  void _toast(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => MessageActionsRow(
+        liked: _verdict == 1,
+        disliked: _verdict == -1,
+        onLike: () => _vote(1),
+        onDislike: () => _vote(-1),
+        onShare: _share,
+        onCopy: () {
+          Clipboard.setData(ClipboardData(text: widget.text));
+          _toast('Copied.');
+        },
+        onReadAloud: _readAloud,
+        onRegenerate: widget.onRegenerate,
+        onEditInPage: widget.onEditInPage,
+      );
+}
+
 class MessageAgentProse extends StatelessWidget {
   const MessageAgentProse({
     super.key,
@@ -90,12 +208,9 @@ class MessageAgentProse extends StatelessWidget {
               ),
             ),
           if (showActions && !streaming && text.isNotEmpty)
-            MessageActionsRow(
-              onLike: () {},
-              onDislike: () {},
-              onShare: () {},
-              onCopy: () => Clipboard.setData(ClipboardData(text: text)),
-              onReadAloud: () {},
+            _Actions(
+              message: message,
+              text: text,
               onRegenerate: onRegenerate,
               onEditInPage: onEditInPage,
             ),

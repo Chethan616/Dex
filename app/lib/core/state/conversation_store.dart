@@ -279,6 +279,7 @@ class ConversationStore extends ChangeNotifier {
         _applyResult(frame);
         break;
       case DexFrameKind.error:
+        _activeRequestId = frame.requestId;
         _say(frame.message);
         _setState(AgentState.error);
         break;
@@ -434,15 +435,24 @@ class ConversationStore extends ChangeNotifier {
   // Building what the UI renders
   // ---------------------------------------------------------------------------
 
-  void _say(String text) {
+  void _say(String text, {String? requestId}) {
     _messages.add(Message(
       id: _uuid.v4(),
       speaker: MessageSpeaker.agent,
       ts: DateTime.now(),
       text: text,
+      // Which task this line is about, so a thumbs-up has something to attach
+      // to. Absent for Dex's own housekeeping lines, which are not a task.
+      requestId: requestId ?? _activeRequestId,
     ));
     notifyListeners();
   }
+
+  /// The task currently running, for attributing feedback and retries.
+  String? _activeRequestId;
+
+  /// What the last request said, so Retry can re-send it verbatim.
+  String? _lastPrompt;
 
   List<PlanStep> _planFrom(Map<String, dynamic>? data) {
     final steps = data?['steps'];

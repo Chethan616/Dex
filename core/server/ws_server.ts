@@ -58,6 +58,7 @@ type Inbound =
   | { type: 'get_health' }
   | { type: 'get_log'; name: string; lines?: number }
   | { type: 'capture_screen' }
+  | { type: 'feedback'; requestId: string; verdict: 'up' | 'down' | 'none' }
   | { type: 'ping' };
 
 export interface DexServerOptions {
@@ -308,6 +309,12 @@ export class DexServer {
       // intent. Renaming one is the owner claiming it: it becomes `named`, it
       // outranks the learned ones, and the cap will never evict it. It is also
       // how a workflow gets a name short enough to type after `run`.
+      case 'feedback': {
+        const verdict = msg.verdict === 'up' ? 1 : msg.verdict === 'down' ? -1 : null;
+        this.gateway.telemetryStore.recordFeedback(msg.requestId, verdict);
+        return this.send(socket, { type: 'feedback_ack', requestId: msg.requestId });
+      }
+
       case 'rename_workflow': {
         try {
           const renamed = this.gateway.workflowStore.rename(msg.from, msg.to);

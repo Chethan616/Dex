@@ -24,6 +24,11 @@ class Message {
   final bool streaming;          // true while delta frames are still arriving
 
   // ----- toolChip fields (v1.1 + C.7-flutter) -------------------------------
+  /// The task this message reports on, when it reports on one.
+  ///
+  /// Needed so feedback can be recorded against something. Without it, a
+  /// thumbs-up is a click with nowhere to go — which is what it was.
+  final String? requestId;
   final String? callId;          // correlates chip <-> action card + result
   final String? toolId;          // raw MCP tool name; routed through tool_registry
   final String? toolGoal;        // short, truncated label for the chip
@@ -40,6 +45,7 @@ class Message {
     this.steps,
     this.appHint,
     this.streaming = false,
+    this.requestId,
     this.callId,
     this.toolId,
     this.toolGoal,

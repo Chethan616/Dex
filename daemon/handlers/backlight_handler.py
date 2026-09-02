@@ -244,10 +244,14 @@ class BacklightHandler:
             }
 
         described = provider.describe()
+        holding = _holders()
         return {
             'present': True,
             'supports_brightness': True,
             **described,
+            # Reported by the read too, so a plan can mention it before trying
+            # rather than only after the change fails to stick.
+            'held_by': holding,
         }
 
     @staticmethod
@@ -299,10 +303,23 @@ class BacklightHandler:
         # interface is write-only: there is no way to read the colour back, so
         # "the keyboard accepted it" is the strongest true statement available.
         changed['applied'] = 'sent'
-        if _armoury_crate_running():
+
+        # Say who else is driving the lights.
+        #
+        # The write really was accepted; the keyboard confirms that. Whether it
+        # is still purple a second later depends on whether something is
+        # re-asserting its own profile, and that is a question this can answer
+        # cheaply and the owner cannot answer at all from a success message.
+        holding = _holders()
+        if holding:
+            names = ', '.join(holding)
+            changed['held_by'] = holding
             changed['note'] = (
-                'Armoury Crate is running and may re-assert its own lighting '
-                'profile within a few seconds. Close it if the change does not stick.'
+                f'The keyboard accepted it, but {names} '
+                f'{"is" if len(holding) == 1 else "are"} running and will '
+                're-apply its own lighting within a few seconds. Close it, or '
+                'set the colour there instead — two programs cannot both own '
+                'the lights.'
             )
         return changed
 
@@ -370,16 +387,51 @@ NAMED_COLORS = {
 }
 
 
-def _armoury_crate_running() -> bool:
-    """
-    Whether the vendor's own software is holding the device.
+# Software that owns the lighting and re-asserts its own profile.
+#
+# This list is the difference between a useful answer and a baffling one. Asked
+# to set the keyboard to purple, Dex sent the report, the keyboard accepted it,
+# and nothing changed — because G-Helper was running and re-applied its own
+# colours immediately after. Dex reported plain success, because the check only
+# looked for `ArmouryCrate.exe` and there was no such process: what was actually
+# running was `GHelper`, `ArmouryCrateControlInterface` and
+# `ArmouryCrateKeyControl`.
+#
+# Names are matched as prefixes, without .exe, because every one of these ships
+# under several executable names across versions.
+LIGHTING_HOLDERS = (
+    ('ghelper', 'G-Helper'),
+    ('armourycrate', 'Armoury Crate'),
+    ('asusservice', 'Armoury Crate'),
+    ('lightingservice', 'Aura / Armoury Crate lighting service'),
+    ('aurasync', 'Aura Sync'),
+    ('rog', 'ROG software'),
+    ('icue', 'iCUE'),
+    ('corsair', 'iCUE'),
+    ('synapse', 'Razer Synapse'),
+    ('razer', 'Razer Synapse'),
+    ('ghub', 'Logitech G HUB'),
+    ('lghub', 'Logitech G HUB'),
+    ('signalrgb', 'SignalRGB'),
+    ('msimystic', 'MSI Mystic Light'),
+    ('openrgb', 'OpenRGB'),
+)
 
-    Not a failure — the report is still accepted — but it is the single most
-    common reason a colour change does not stick, and naming it costs one
-    process lookup.
+
+def _holders() -> list:
     """
-    result = try_run(
-        ['tasklist', '/FI', 'IMAGENAME eq ArmouryCrate.exe', '/NH'],
-        timeout=10,
-    )
-    return bool(result and 'ArmouryCrate' in (result.stdout or ''))
+    Which lighting programs are running right now.
+
+    One `tasklist` call, parsed here rather than filtered by the OS, because a
+    per-name filter would be a dozen subprocesses to answer one question.
+    """
+    result = try_run(['tasklist', '/FO', 'CSV', '/NH'], timeout=15)
+    if not result or result.returncode != 0:
+        return []
+
+    running = (result.stdout or '').lower()
+    found = []
+    for needle, label in LIGHTING_HOLDERS:
+        if needle in running and label not in found:
+            found.append(label)
+    return found

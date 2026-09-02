@@ -121,6 +121,10 @@ class DexGatewayClient extends ChangeNotifier {
 
   void refreshWorkflows() => _send({'type': 'get_workflows'});
 
+  /// Tell the core what you thought of a task.
+  void sendFeedback(String requestId, String verdict) =>
+      _send({'type': 'feedback', 'requestId': requestId, 'verdict': verdict});
+
   void forgetWorkflow(String name) =>
       _send({'type': 'delete_workflow', 'name': name});
 

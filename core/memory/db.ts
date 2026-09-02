@@ -42,7 +42,11 @@ CREATE TABLE IF NOT EXISTS tasks (
   provider     TEXT,
   workflow     TEXT,
   started_at   INTEGER NOT NULL,
-  finished_at  INTEGER
+  finished_at  INTEGER,
+  -- 1 for a thumbs-up, -1 for a thumbs-down, null for no opinion. The owner
+  -- saying whether a task actually did what they wanted is the only ground
+  -- truth this system has; every other signal is Dex marking its own homework.
+  feedback     INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_shape   ON tasks(shape);
 CREATE INDEX IF NOT EXISTS idx_tasks_started ON tasks(started_at);
@@ -208,6 +212,7 @@ function migrate(database: Database): void {
   const additions = [
     "ALTER TABLE workflows ADD COLUMN origin TEXT NOT NULL DEFAULT 'named'",
     'ALTER TABLE workflows ADD COLUMN fail_count INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE tasks ADD COLUMN feedback INTEGER',
   ];
   for (const sql of additions) {
     try {

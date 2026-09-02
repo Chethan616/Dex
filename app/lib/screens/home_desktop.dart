@@ -225,7 +225,6 @@ class _HomeDesktopState extends State<HomeDesktop> {
                               ? ChatView(
                                   store: widget.store,
                                   title: 'Conversation',
-                                  onInvite: () {},
                                   onVision: _toggleVision,
                                   onVoice: _openVoice,
                                   onAddAction: _handleAdd,

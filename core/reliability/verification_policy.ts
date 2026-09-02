@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import { execSync } from 'child_process';
 import { createHash } from 'crypto';
 import { AgentResult, ExecutionStep, VerificationResult } from '../events/types';
+import { meaningOf } from './exit_codes';
 
 export async function verifyStep(
   step: ExecutionStep,
@@ -1003,7 +1004,7 @@ function verifyProcessGone(params: { name?: string; pid?: number }): Verificatio
  */
 function verifyCommand(agentResult?: AgentResult): VerificationResult {
   const data = agentResult?.data as
-    | { returncode?: number; stderr?: string; stdout?: string; command?: string }
+    | { returncode?: number; stderr?: string; stdout?: string; command?: unknown }
     | undefined;
 
   if (data?.returncode == null) {
@@ -1012,6 +1013,21 @@ function verifyCommand(agentResult?: AgentResult): VerificationResult {
 
   if (data.returncode === 0) {
     return { status: 'VERIFIED', reason: 'The command completed', afterState: 0 };
+  }
+
+  // Some programs use a non-zero exit to report a fact rather than a failure.
+  //
+  // Asked to set up a C compiler, Dex ran winget, got 2316632107 — "already
+  // installed, nothing to upgrade" — called it a failure, retried the identical
+  // command, and spent a minute and forty-four seconds arriving at the state
+  // the plan wanted in the first place. See exit_codes.ts for the table.
+  const meaning = meaningOf(data.command, data.returncode);
+  if (meaning) {
+    return {
+      status: 'VERIFIED',
+      reason: `The command reported: ${meaning.reason}`,
+      afterState: data.returncode,
+    };
   }
 
   const said = (data.stderr || data.stdout || '').trim().split('\n')[0].slice(0, 200);

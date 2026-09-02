@@ -117,6 +117,23 @@ export class Telemetry {
       .run(status, Date.now(), Date.now(), requestId);
   }
 
+  /**
+   * What the owner thought of a task.
+   *
+   * The only signal here that Dex did not generate itself. Verification says
+   * whether a step did what it claimed; this says whether the whole thing was
+   * what the owner wanted, and those are different questions — a task can
+   * verify every step and still answer the wrong one.
+   *
+   * Recorded against the request, so it survives into the history and can rank
+   * a saved workflow later.
+   */
+  recordFeedback(requestId: string, verdict: 1 | -1 | null): void {
+    db()
+      .prepare('UPDATE tasks SET feedback = ? WHERE request_id = ?')
+      .run(verdict, requestId);
+  }
+
   /** How many times this shape of request has succeeded before. */
   timesRepeated(text: string): number {
     const { shape } = shapeOf(text);

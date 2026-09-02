@@ -111,10 +111,31 @@ export class SettingsService {
 
   /** Store a secret. The value is never echoed back, here or anywhere. */
   setCredential(name: string, value: string): void {
+    const trimmed = value.trim();
+    if (!trimmed) throw new Error('A credential cannot be empty');
+
+    // A site sign-in, rather than one of the provider keys in the catalogue.
+    //
+    // The catalogue is a fixed list because a typo'd `grok_api_key` should be
+    // refused rather than silently stored and never read. But site credentials
+    // are named after whatever host the owner has an account on, so there is no
+    // list to be on — the Settings card that stores them called this method and
+    // got "Unknown credential: site.vtop.vit.ac.in", which is why signing in to
+    // the portal then reported no saved credential. Nothing had ever been
+    // stored.
+    //
+    // Validated as a hostname instead, so the name is still checked; it just is
+    // not checked against a list it could never be on.
+    if (isSiteCredential(name)) {
+      this.credentials.set(name, trimmed);
+      // Deliberately NOT mirrored into process.env, unlike a provider key. A
+      // site password has no business in the environment, where it would be
+      // inherited by every child process Dex spawns.
+      return;
+    }
+
     const spec = CREDENTIALS_BY_NAME.get(name);
     if (!spec) throw new Error(`Unknown credential: ${name}`);
-    const trimmed = value.trim();
-    if (!trimmed) throw new Error(`${spec.label} cannot be empty`);
     this.credentials.set(name, trimmed);
 
     // Make it usable now rather than at the next restart. buildBrainProvider
@@ -123,6 +144,7 @@ export class SettingsService {
   }
 
   deleteCredential(name: string): boolean {
+    if (isSiteCredential(name)) return this.credentials.delete(name);
     if (!CREDENTIALS_BY_NAME.has(name)) throw new Error(`Unknown credential: ${name}`);
     delete process.env[name.toUpperCase()];
     return this.credentials.delete(name);
@@ -589,4 +611,21 @@ async function probePipe(name: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * `site.vtop.vit.ac.in` — a sign-in for one host.
+ *
+ * Deliberately strict about the shape. The name becomes a filename in the
+ * credential store, and it is also the key `sign_in` looks up after resolving
+ * a page's real host, so a name that is not a hostname is a credential nothing
+ * will ever match. Requiring at least one dot rejects `site.localhost` and
+ * `site.` alike; rejecting a trailing dot keeps this in step with `host_of` in
+ * agents/browser/site_credentials.py, which strips one.
+ */
+export function isSiteCredential(name: string): boolean {
+  if (!name.startsWith('site.')) return false;
+  const host = name.slice(5);
+  if (host.length === 0 || host.length > 253) return false;
+  return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(host);
 }

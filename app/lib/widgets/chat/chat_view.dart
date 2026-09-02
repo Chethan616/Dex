@@ -24,7 +24,6 @@ class ChatView extends StatefulWidget {
     super.key,
     required this.store,
     required this.title,
-    this.onInvite,
     this.onVision,
     this.onVoice,
     this.onAddAction,
@@ -33,7 +32,6 @@ class ChatView extends StatefulWidget {
 
   final ConversationStore store;
   final String title;
-  final VoidCallback? onInvite;
   final VoidCallback? onVision;
   final VoidCallback? onVoice;
   final ValueChanged<ComposerAddAction>? onAddAction;
@@ -79,7 +77,6 @@ class _ChatViewState extends State<ChatView> {
         ChatHeader(
           title: widget.title,
           state: widget.store.state,
-          onInvite: widget.onInvite,
         ),
         ConnectionBanner(client: widget.store.client),
         const Divider(height: 1, color: DexColors.border),
