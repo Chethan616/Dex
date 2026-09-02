@@ -2,6 +2,7 @@ import * as http from 'http';
 import { Agent } from '../../core/orchestrator/registry';
 import { AgentContext, AgentResult } from '../../core/events/types';
 import { emit } from '../../core/events/bus';
+import { readConfig } from '../../core/settings/config_store';
 import { SiteRouteStore, describeRoute } from '../../core/memory/site_routes';
 
 const PORT = parseInt(process.env.BROWSER_AGENT_PORT ?? '8766', 10);
@@ -206,6 +207,7 @@ ${task}` : task;
         start_url: params.start_url ? String(params.start_url) : null,
         max_steps: params.max_steps ? Number(params.max_steps) : undefined,
         browser: browserOf(params),
+        mode: composerMode(),
         verify: Object.keys(verify).length ? verify : null,
         request_id: requestId,
         step_id: stepId,
@@ -672,4 +674,24 @@ function browserOf(params: Record<string, unknown>): string | null {
   const named = params.browser ?? params.in_browser ?? params.app;
   const text = typeof named === 'string' ? named.trim() : '';
   return text || null;
+}
+
+/**
+ * Which of the composer's three modes is selected, as the browser agent says it.
+ *
+ * Reused rather than re-plumbed: the composer already applies Fast/Smart/Think
+ * deeper by setting the brain's model, so the model *is* the mode and there is
+ * no second thing to keep in step. Reading it here means the browsing loop runs
+ * at whatever the owner picked for the task, which is what they asked for —
+ * one control, meaning the same thing everywhere.
+ */
+function composerMode(): string {
+  const model = (readConfig().brainModel ?? '').toLowerCase();
+  if (model.includes('opus')) return 'deeper';
+  if (model.includes('haiku')) return 'fast';
+  if (model.includes('sonnet')) return 'smart';
+  // An API-key provider has one model and no modes; the browser agent picks
+  // its own default rather than inventing a mode from a model name it does
+  // not recognise.
+  return 'smart';
 }

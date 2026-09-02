@@ -61,18 +61,49 @@ DEFAULT_MODELS = {
 
 
 def _pick_provider() -> tuple:
+    """
+    Which model drives the browsing loop.
+
+    Claude Code is the default, and it is the reason the browser agent stopped
+    being a link-opener: the free-tier configuration it replaces ran a small
+    model with vision off and the element list truncated. It needs no API key,
+    it follows the composer's Fast/Smart/Deeper modes, and it can see the page.
+
+    An explicit DEX_BROWSER_PROVIDER still wins, and a machine with a Groq or
+    Anthropic key but no Claude Code CLI falls back to it, so nothing that
+    worked before stops working.
+    """
     wanted = os.environ.get('DEX_BROWSER_PROVIDER', '').lower()
 
     groq = resolve_credential('groq_api_key', 'GROQ_API_KEY')
     anthropic = resolve_credential('anthropic_api_key', 'ANTHROPIC_API_KEY')
 
-    if wanted == 'anthropic' or (not wanted and not groq and anthropic):
+    if wanted == 'claude-code':
+        return 'claude-code', ''
+    if wanted == 'anthropic':
         return 'anthropic', anthropic or ''
-    return 'groq', groq or ''
+    if wanted == 'groq':
+        return 'groq', groq or ''
+
+    if _has_claude_code():
+        return 'claude-code', ''
+    if groq:
+        return 'groq', groq
+    if anthropic:
+        return 'anthropic', anthropic
+    return 'groq', ''
+
+
+def _has_claude_code() -> bool:
+    """Whether the CLI is installed. Signed-in-ness is discovered on first use."""
+    import shutil
+    return bool(
+        shutil.which('claude') or shutil.which('claude.cmd') or shutil.which('claude.exe')
+    )
 
 
 PROVIDER, API_KEY = _pick_provider()
-MODEL = os.environ.get('BROWSER_MODEL') or DEFAULT_MODELS.get(PROVIDER, '')
+MODEL = os.environ.get('BROWSER_MODEL') or DEFAULT_MODELS.get(PROVIDER, 'smart')
 PORT = int(os.environ.get('BROWSER_AGENT_PORT', '8766'))
 
 # Headed by default and it matters: a Tier 1 hand-off asks the owner to solve a
@@ -124,6 +155,7 @@ class RunTaskRequest(BaseModel):
     # Playwright's own Chromium. Resolved before anything launches, so an
     # uninstalled browser fails by name rather than silently using another one.
     browser: str | None = None
+    mode: str | None = None
     request_id: str = ''
     step_id: str = ''
 
@@ -162,14 +194,16 @@ def health() -> dict[str, Any]:
         'headless': HEADLESS,
         'provider': PROVIDER,
         'model': MODEL,
-        'has_api_key': bool(API_KEY),
+        'has_api_key': bool(API_KEY) or PROVIDER == 'claude-code',
         'open_sessions': len(_autonomous.runs) if _autonomous else 0,
     }
 
 
 @app.post('/run-task')
 async def run_task(req: RunTaskRequest) -> dict[str, Any]:
-    if not API_KEY:
+    # Claude Code authenticates through the CLI's own session, so an absent API
+    # key is the normal state there rather than a misconfiguration.
+    if PROVIDER != 'claude-code' and not API_KEY:
         return {
             'success': False,
             'error': (
@@ -184,7 +218,7 @@ async def run_task(req: RunTaskRequest) -> dict[str, Any]:
         start_url=req.start_url,
         max_steps=req.max_steps,
         verify=req.verify.model_dump() if req.verify else None,
-        browser=req.browser,
+        browser=req.browser, mode=req.mode,
     )
 
 
@@ -343,7 +377,7 @@ if __name__ == '__main__':
         'Browser Agent Server on 127.0.0.1:%s (headless=%s, %s/%s)',
         PORT, HEADLESS, PROVIDER, MODEL,
     )
-    if not API_KEY:
+    if PROVIDER != 'claude-code' and not API_KEY:
         log.warning(
             'No %s key - only the deterministic primitives backend will work', PROVIDER,
         )

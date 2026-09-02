@@ -68,16 +68,32 @@ class BrowserBackend:
         self.headless = headless
         self.runs: dict[str, BrowserRun] = {}
 
-    def _llm(self):
+    def _llm(self, mode: str | None = None):
         """
         The model driving the browsing loop.
 
-        Groq is the default because it is the free tier most people will have,
-        and because measurement says it works: against browser-use's real 17 KB
-        output schema, qwen3.8-27b picked the correct element 3/3 with zero
-        reasoning tokens, while qwen3.6-27b failed Groq's own schema validation
-        and the gpt-oss models spent ~158 of 203 output tokens thinking.
+        Claude Code first, because it is the subscription the owner already has
+        and because the composer's own three modes should mean the same thing
+        everywhere in Dex — Fast is Haiku whether it is planning a task or
+        deciding which link to click.
+
+        The measured cost of that choice, on a real vision call:
+
+            claude-code/haiku    5.3s
+            claude-code/sonnet   6.2s
+
+        against roughly a second for a Groq call. A fifteen-step browse is
+        therefore about ninety seconds rather than fifteen — slower, and far
+        more capable, because the alternative was a small model shown a
+        truncated text dump of the page with vision switched off.
+
+        Groq and Anthropic remain, so a machine configured for either keeps
+        working and an owner who wants speed over capability can have it.
         """
+        if self.provider == 'claude-code':
+            from claude_code_llm import ChatClaudeCode
+            return ChatClaudeCode(mode=mode or self.model)
+
         if self.provider == 'groq':
             from browser_use import ChatGroq
             return ChatGroq(model=self.model, api_key=self.api_key)
@@ -95,7 +111,11 @@ class BrowserBackend:
         tokens *per step*, so the budget is gone before the second step. Flash
         mode swaps that prompt for a 516-token one.
         """
-        return self.provider == 'groq' 
+        # Only Groq. Claude Code has no per-minute token budget to fit inside,
+        # so the whole reason for the cut-down configuration disappears — and
+        # with it the truncated element list and the disabled screenshots that
+        # made the agent "just open links".
+        return self.provider == 'groq'
 
     # -- lifecycle -----------------------------------------------------------
 
@@ -106,6 +126,7 @@ class BrowserBackend:
         max_steps: int = DEFAULT_MAX_STEPS,
         verify: dict[str, Any] | None = None,
         browser: str | None = None,
+        mode: str | None = None,
     ) -> dict[str, Any]:
         session_id = uuid.uuid4().hex[:12]
         # From the pool, not built here.
@@ -121,7 +142,7 @@ class BrowserBackend:
 
         agent = Agent(
             task=task,
-            llm=self._llm(),
+            llm=self._llm(mode),
             browser_session=session,
             # DEX runs its own retry and loop policy in the Orchestrator; a
             # second, invisible one underneath it makes failures unreadable.

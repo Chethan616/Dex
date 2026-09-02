@@ -451,8 +451,6 @@ class ConversationStore extends ChangeNotifier {
   /// The task currently running, for attributing feedback and retries.
   String? _activeRequestId;
 
-  /// What the last request said, so Retry can re-send it verbatim.
-  String? _lastPrompt;
 
   List<PlanStep> _planFrom(Map<String, dynamic>? data) {
     final steps = data?['steps'];
