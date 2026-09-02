@@ -192,7 +192,9 @@ function displayValue(value: unknown): string {
 
 // ── web ──────────────────────────────────────────────────────────────────────
 
-const BROWSER_READS = new Set(['navigate', 'read_page', 'extract', 'screenshot']);
+const BROWSER_READS = new Set([
+  'navigate', 'read_page', 'extract', 'screenshot', 'session_status',
+]);
 
 /**
  * The browser process runs the actual check against the live DOM before the
@@ -206,6 +208,62 @@ function verifyBrowserStep(
 ): VerificationResult {
   if (BROWSER_READS.has(step.action)) {
     return { status: 'VERIFIED', reason: 'Read-only browsing — nothing changed to verify' };
+  }
+
+  // Signing in is verified by asking the site, not by the owner saying they
+  // did it. `sign_in` re-checks the session after the hand-off and only
+  // succeeds when the site agrees, so what arrives here is already evidence.
+  if (step.action === 'sign_in') {
+    const session = (agentResult?.data ?? {}) as { signed_in?: boolean; host?: string };
+    return session.signed_in
+      ? {
+          status: 'VERIFIED',
+          reason: `${session.host ?? 'The site'} reports a signed-in session`,
+          afterState: session.host,
+        }
+      : { status: 'FAILED', reason: 'Still not signed in after the hand-off' };
+  }
+
+  // A download is verified by a file existing with bytes in it. "The click
+  // worked" is a claim about a click; a file on disk is the thing that was
+  // asked for.
+  if (step.action === 'download_current') {
+    const download = (agentResult?.data ?? {}) as {
+      downloaded?: boolean; path?: string; bytes?: number; reason?: string;
+    };
+    if (!download.downloaded || !download.path) {
+      return {
+        status: 'FAILED',
+        reason: download.reason ?? 'Nothing was downloaded',
+      };
+    }
+    if (!fs.existsSync(download.path)) {
+      return {
+        status: 'FAILED',
+        reason: `The download reported ${download.path}, but nothing is there`,
+      };
+    }
+    const size = fs.statSync(download.path).size;
+    return size > 0
+      ? {
+          status: 'VERIFIED',
+          reason: `${download.path} — ${Math.round(size / 1024)} KB on disk`,
+          afterState: download.path,
+        }
+      : { status: 'FAILED', reason: `${download.path} is empty` };
+  }
+
+  // A route is only worth anything if it has steps in it.
+  if (step.action === 'learn_route') {
+    const route = (agentResult?.data ?? {}) as { steps?: unknown[]; goal?: string };
+    const count = route.steps?.length ?? 0;
+    return count > 0
+      ? {
+          status: 'VERIFIED',
+          reason: `Recorded ${count} step(s) to "${route.goal}"`,
+          afterState: count,
+        }
+      : { status: 'FAILED', reason: 'Nothing was recorded' };
   }
 
   const data = (agentResult?.data ?? {}) as {
@@ -462,6 +520,7 @@ function verifyFileStep(step: ExecutionStep, agentResult?: AgentResult): Verific
     // Reads. Nothing changed, so there is nothing to check — but the data
     // itself is what the owner asked for, and the Orchestrator collects it.
     case 'read_file':
+    case 'read_document':
     case 'list_dir':
     case 'hash_file':
       return { status: 'VERIFIED', reason: 'Read-only action — no state to verify' };

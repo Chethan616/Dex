@@ -40,7 +40,9 @@
     "test:autosave": "ts-node tests/smoke_autosave.ts",
     "test:backlight": "python tests/test_backlight.py",
     "test:trace": "python tests/test_image_trace.py",
-    "test:canvas": "ts-node tests/smoke_canvas.ts"
+    "test:canvas": "ts-node tests/smoke_canvas.ts",
+    "test:routes": "ts-node tests/smoke_site_routes.ts",
+    "test:site-creds": "python tests/test_site_credentials.py"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",

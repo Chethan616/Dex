@@ -132,6 +132,23 @@ CREATE TABLE IF NOT EXISTS schedules (
   fail_count    INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_schedules_enabled ON schedules(enabled);
+
+-- How to get somewhere on a site whose pages do not say what they are.
+--
+-- The click path, not a URL: portals built on server-side session state answer
+-- a bare GET of an inner page with a timeout screen, so the path is the durable
+-- thing and the destination is not. See core/memory/site_routes.ts.
+CREATE TABLE IF NOT EXISTS site_routes (
+  origin         TEXT NOT NULL,
+  goal           TEXT NOT NULL,
+  steps          TEXT NOT NULL,
+  created_at     INTEGER NOT NULL,
+  last_worked_at INTEGER,
+  run_count      INTEGER NOT NULL DEFAULT 0,
+  fail_count     INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (origin, goal)
+);
+CREATE INDEX IF NOT EXISTS idx_site_routes_origin ON site_routes(origin);
 `;
 
 let handle: Database | null = null;

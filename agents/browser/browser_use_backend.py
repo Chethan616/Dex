@@ -23,6 +23,7 @@ from typing import Any
 from browser_use import Agent, BrowserSession
 
 import browser_choice
+import session_pool
 
 from primitives import check_page, has_spec
 from walls import Wall, detect_wall
@@ -107,12 +108,13 @@ class BrowserBackend:
         browser: str | None = None,
     ) -> dict[str, Any]:
         session_id = uuid.uuid4().hex[:12]
-        # A named browser, and Dex's own profile so a signed-in site stays
-        # signed in between tasks. Without the profile every run started
-        # logged out of everything, which is why a task like "message
-        # myself on Instagram" could never complete on its own.
-        session = BrowserSession(**browser_choice.session_kwargs(browser, self.headless))
-        await session.start()
+        # From the pool, not built here.
+        #
+        # Dex's persistent profile is what keeps a signed-in site signed in
+        # between tasks, and Chromium allows one process per profile — so this
+        # cannot own a browser of its own without racing PrimitiveBrowser for
+        # the lock. The pool owns it; this borrows it. See session_pool.
+        session = await session_pool.POOL.acquire(browser, self.headless)
 
         if start_url:
             await session.navigate_to(start_url)
@@ -194,6 +196,10 @@ class BrowserBackend:
 
         async def on_step_end(agent: Agent) -> None:
             run.steps_used += 1
+            # Keep the pool from reaping this browser out from under a long
+            # task. The idle clock is only read when something else acquires,
+            # but a twenty-minute browsing job is exactly when that happens.
+            session_pool.POOL.touch(run.session)
             url = await _safe(run.session.get_current_page_url(), '')
             run.steps.append(
                 {'step': run.steps_used, 'url': url, 'action': _last_action(agent)}
@@ -301,12 +307,16 @@ class BrowserBackend:
         await self._teardown(run)
 
     async def _teardown(self, run: BrowserRun) -> None:
+        """
+        Close the agent. Deliberately NOT the browser.
+
+        The browser belongs to the pool now, and it outliving the task is the
+        point: it is what carries a signed-in session from `sign_in` to the work
+        that follows, and from one request to the next. The pool closes it when
+        it has been idle long enough — see session_pool.IDLE_TIMEOUT.
+        """
         try:
             await run.agent.close()
-        except Exception:  # noqa: BLE001
-            pass
-        try:
-            await run.session.kill()
         except Exception:  # noqa: BLE001
             pass
 

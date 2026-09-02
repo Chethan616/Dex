@@ -75,6 +75,8 @@ export class FileAgent implements Agent {
           return { success: true, data: ops.extractArchive(params) };
         case 'trace_image':
           return { success: true, data: await ops.traceImage(params) };
+        case 'read_document':
+          return { success: true, data: ops.readDocument(params) };
         default:
           return {
             success: false,

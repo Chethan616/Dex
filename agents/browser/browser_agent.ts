@@ -2,6 +2,7 @@ import * as http from 'http';
 import { Agent } from '../../core/orchestrator/registry';
 import { AgentContext, AgentResult } from '../../core/events/types';
 import { emit } from '../../core/events/bus';
+import { SiteRouteStore, describeRoute } from '../../core/memory/site_routes';
 
 const PORT = parseInt(process.env.BROWSER_AGENT_PORT ?? '8766', 10);
 
@@ -64,6 +65,9 @@ export class BrowserAgent implements Agent {
   name = 'BrowserAgent';
   capabilities = ['can_browse_web'];
 
+  /** What Dex has been shown about sites whose pages do not say what they are. */
+  private routes = new SiteRouteStore();
+
   async execute(
     action: string,
     params: Record<string, unknown>,
@@ -74,6 +78,25 @@ export class BrowserAgent implements Agent {
     switch (action) {
       case 'run_task':
         return this.runTask(params, requestId, stepId, ctx);
+      case 'sign_in':
+        return this.signIn(params, requestId, stepId, ctx);
+      case 'session_status':
+        return this.primitive(
+          'session_status',
+          { url: String(params.url ?? ''), browser: browserOf(params) },
+          requestId,
+          stepId,
+        );
+      case 'download_current':
+        return this.primitive(
+          'download_current',
+          { text: params.name ? String(params.name) : null, browser: browserOf(params) },
+          requestId,
+          stepId,
+          ctx,
+        );
+      case 'learn_route':
+        return this.learnRoute(params, requestId, stepId, ctx);
       case 'navigate':
         return this.primitive(
           'navigate',
@@ -137,6 +160,27 @@ export class BrowserAgent implements Agent {
     const task = String(params.task ?? '');
     if (!task) return { success: false, error: 'run_task needs a task', retryable: false };
 
+    // Has Dex been shown the way before?
+    //
+    // A route is a hint, never a cage: the agent is told what worked last time
+    // and told to check each step still exists. A portal that has been
+    // redesigned falls back to reading pages and reasoning, which is exactly
+    // the behaviour there was before routes existed.
+    const startUrl = params.start_url ? String(params.start_url) : '';
+    const route = startUrl ? this.routes.find(startUrl, task) : undefined;
+    const instruction = route ? `${describeRoute(route)}
+
+${task}` : task;
+    if (route) {
+      emit(
+        'routing',
+        `Following the route to "${route.goal}" on ${route.origin} ` +
+          `(${route.steps.length} steps, worked ${route.runCount}×)`,
+        requestId,
+        stepId,
+      );
+    }
+
     const verify: VerifySpec = {};
     if (params.verify_url_contains) verify.url_contains = String(params.verify_url_contains);
     if (params.verify_text_on_page) verify.text_on_page = String(params.verify_text_on_page);
@@ -147,7 +191,7 @@ export class BrowserAgent implements Agent {
     let response: TaskResponse;
     try {
       response = await this.post<TaskResponse>('/run-task', {
-        task,
+        task: instruction,
         start_url: params.start_url ? String(params.start_url) : null,
         max_steps: params.max_steps ? Number(params.max_steps) : undefined,
         browser: browserOf(params),
@@ -158,6 +202,22 @@ export class BrowserAgent implements Agent {
     } catch (err) {
       return this.transportFailure(err, requestId, stepId);
     }
+
+    // A route that led somewhere is worth keeping; one that did not is on its
+    // way to being forgotten. Two failures in a row and it goes — see
+    // SiteRouteStore.markFailed.
+    const scoreRoute = (ok: boolean): void => {
+      if (!route) return;
+      if (ok) this.routes.markWorked(route.origin, route.goal);
+      else if (this.routes.markFailed(route.origin, route.goal)) {
+        emit(
+          'routing',
+          `Forgot the route to "${route.goal}" — it has stopped working.`,
+          requestId,
+          stepId,
+        );
+      }
+    };
 
     for (let handoffs = 0; response.needs_handoff; handoffs += 1) {
       const wall = response.needs_handoff;
@@ -224,6 +284,11 @@ export class BrowserAgent implements Agent {
 
     this.streamSteps(response.steps, requestId, stepId);
 
+    // Whether a remembered route actually got there. Only counted on the real
+    // outcome, not on a hand-off along the way: the owner solving a CAPTCHA
+    // says nothing about whether the route was right.
+    scoreRoute(response.success === true);
+
     if (!response.success) {
       emit('failed', `Browser: ${response.error ?? 'unknown error'}`, requestId, stepId);
       return {
@@ -246,6 +311,230 @@ export class BrowserAgent implements Agent {
   }
 
   // -- deterministic ---------------------------------------------------------
+
+  /**
+   * Fill a stored credential, then hand the CAPTCHA to the owner.
+   *
+   * The step always ends in a hand-off, even when both fields were filled,
+   * because what comes next is a CAPTCHA and that is deliberately not Dex's to
+   * solve — it is the control the site put there to keep automation out. What
+   * Dex removes is the typing, not the checkpoint.
+   *
+   * Nothing here ever sees the password. The agent process reads it from DPAPI
+   * at the moment of typing and reports which fields it filled, never what went
+   * into them — so the event stream, the transcript and the telemetry database
+   * stay clean. See agents/browser/site_credentials.py.
+   */
+  private async signIn(
+    params: Record<string, unknown>,
+    requestId: string,
+    stepId: string,
+    ctx?: AgentContext,
+  ): Promise<AgentResult> {
+    const url = String(params.url ?? '');
+    if (!url) {
+      return { success: false, error: 'sign_in needs a url', retryable: false };
+    }
+
+    let response: PrimitiveResponse;
+    try {
+      response = await this.post<PrimitiveResponse>('/primitive', {
+        op: 'sign_in',
+        url,
+        browser: browserOf(params),
+      });
+    } catch (err) {
+      return this.transportFailure(err, requestId, stepId);
+    }
+
+    if (!response.success) {
+      return { success: false, error: response.error ?? 'sign_in failed', retryable: false };
+    }
+
+    const data = (response.data ?? {}) as {
+      filled?: string[];
+      reason?: string;
+      host?: string;
+      url?: string;
+    };
+    const filled = data.filled ?? [];
+
+    if (!ctx) {
+      // No owner attached — a schedule, or a headless run. Say what is true:
+      // the fields are filled and the login is not finished.
+      return {
+        success: false,
+        error: `${data.reason ?? 'Sign-in needs the owner'} — nobody is watching this run.`,
+        retryable: false,
+        data,
+      };
+    }
+
+    emit(
+      'awaiting',
+      filled.length > 0
+        ? `Filled ${filled.join(' and ')} on ${data.host ?? url}. Over to you for the CAPTCHA.`
+        : `Could not fill anything on ${data.host ?? url}.`,
+      requestId,
+      stepId,
+    );
+
+    const done = await ctx.handoff({
+      reason: `Sign in to ${data.host ?? url}`,
+      instruction: data.reason ?? 'Finish signing in in the open window.',
+      timeoutMs: 300_000,
+    });
+
+    if (!done) {
+      return {
+        success: false,
+        error: 'Sign-in was not completed.',
+        retryable: false,
+        data,
+      };
+    }
+
+    // Ask the site, rather than trusting the owner's click. "I signed in" and
+    // "the session works" are different claims, and only one of them is
+    // checkable.
+    let check: PrimitiveResponse;
+    try {
+      check = await this.post<PrimitiveResponse>('/primitive', {
+        op: 'session_status',
+        url,
+        browser: browserOf(params),
+      });
+    } catch (err) {
+      return this.transportFailure(err, requestId, stepId);
+    }
+
+    const status = (check.data ?? {}) as { signed_in?: boolean; url?: string };
+    if (!status.signed_in) {
+      return {
+        success: false,
+        error: `Still not signed in to ${data.host ?? url}.`,
+        retryable: true,
+        data: status,
+      };
+    }
+
+    return {
+      success: true,
+      data: { ...status, host: data.host, filled },
+    };
+  }
+
+  /**
+   * Watch the owner find something once, and remember the way.
+   *
+   * The alternative is reasoning about an unlabelled portal on every run, which
+   * costs a model call per page and takes a different turn each time. Being
+   * shown once costs a minute and is then free and identical forever.
+   */
+  private async learnRoute(
+    params: Record<string, unknown>,
+    requestId: string,
+    stepId: string,
+    ctx?: AgentContext,
+  ): Promise<AgentResult> {
+    const url = String(params.url ?? '');
+    const goal = String(params.goal ?? '');
+    if (!url || !goal) {
+      return {
+        success: false,
+        error: 'learn_route needs a url and a goal — what should it get you?',
+        retryable: false,
+      };
+    }
+    if (!ctx) {
+      return {
+        success: false,
+        error: 'learn_route needs the owner to drive; nobody is watching this run.',
+        retryable: false,
+      };
+    }
+
+    try {
+      await this.post<PrimitiveResponse>('/primitive', {
+        op: 'record_route', url, goal, browser: browserOf(params),
+      });
+    } catch (err) {
+      return this.transportFailure(err, requestId, stepId);
+    }
+
+    emit('awaiting', `Recording the way to "${goal}" — click through it.`, requestId, stepId);
+
+    const done = await ctx.handoff({
+      reason: `Show Dex where "${goal}" is`,
+      instruction:
+        'Click your way to it in the open browser window. Dex is noting what ' +
+        'each thing is called. Choose "Done, continue" when you are on the page.',
+      timeoutMs: 600_000,
+    });
+
+    let stopped: PrimitiveResponse;
+    try {
+      stopped = await this.post<PrimitiveResponse>('/primitive', {
+        op: 'stop_recording', browser: browserOf(params),
+      });
+    } catch (err) {
+      return this.transportFailure(err, requestId, stepId);
+    }
+
+    if (!done) {
+      return { success: false, error: 'Recording was cancelled.', retryable: false };
+    }
+
+    const data = (stopped.data ?? {}) as {
+      steps?: Array<Record<string, unknown>>;
+      landed_on?: string;
+      origin?: string;
+    };
+    const steps = data.steps ?? [];
+
+    if (steps.length === 0) {
+      return {
+        success: false,
+        // Distinguished from a failure, because it usually means the owner was
+        // already on the page and clicked nothing.
+        error:
+          'Nothing was recorded — no clicks happened. If you were already on ' +
+          'the page, start from the portal home and click through from there.',
+        retryable: false,
+      };
+    }
+
+    // Save it here rather than leaving it to the plan. A recording the owner
+    // spent a minute on that then needs a second step to keep is a recording
+    // that gets lost the first time a plan is one step shorter than expected.
+    const saved = this.routes.save({
+      origin: data.origin ?? url,
+      goal,
+      steps: steps.map((step) => ({
+        text: String(step.text ?? ''),
+        selector: step.selector ? String(step.selector) : undefined,
+        url: step.url ? String(step.url) : undefined,
+      })),
+    });
+
+    emit(
+      'routing',
+      `Remembered the way to "${saved.goal}" on ${saved.origin}: ` +
+        saved.steps.map((step) => `"${step.text}"`).join(' → '),
+      requestId,
+      stepId,
+    );
+
+    return {
+      success: true,
+      data: {
+        goal: saved.goal,
+        origin: saved.origin,
+        steps: saved.steps,
+        landedOn: data.landed_on,
+      },
+    };
+  }
 
   private async primitive(
     op: string,

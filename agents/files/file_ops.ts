@@ -632,3 +632,38 @@ export async function traceImage(
 
   return JSON.parse(result.stdout) as Record<string, unknown>;
 }
+
+/**
+ * What a document actually says.
+ *
+ * `readFile` handles text. A curriculum, a syllabus, an invoice, a report — the
+ * things worth fetching from a portal — are PDFs, and a PDF read as text is a
+ * few kilobytes of binary noise with a handful of recognisable words in it.
+ * That is worse than failing, because it looks like content.
+ *
+ * Runs `read_document.py`, which uses pypdf — already installed here. Named for
+ * documents rather than for PDFs so DOCX can join it later without every plan
+ * that says `read_document` needing to change.
+ */
+export function readDocument(params: Record<string, unknown>): Record<string, unknown> {
+  const source = profilePath(String(params.path ?? ''), true);
+  if (!fs.existsSync(source)) {
+    throw new PathRefused(source, 'there is no document there');
+  }
+
+  const script = path.join(__dirname, 'read_document.py');
+  const result = spawnSync(
+    'python',
+    [script, source, String(params.max_chars ?? 60_000)],
+    { encoding: 'utf8', windowsHide: true, timeout: 120_000, maxBuffer: 32 * 1024 * 1024 },
+  );
+
+  if (result.status !== 0) {
+    throw new Error(
+      `Could not read ${path.basename(source)}: ` +
+        `${(result.stderr || `python exited ${result.status}`).trim().slice(-400)}`,
+    );
+  }
+
+  return JSON.parse(result.stdout) as Record<string, unknown>;
+}

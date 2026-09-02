@@ -20,6 +20,7 @@ import '../../../core/models/brain_settings.dart';
 import '../../../theme/tokens.dart';
 import '../../glass_text_field.dart';
 import '../full_access_card.dart';
+import '../site_signin_card.dart';
 
 class IntelligenceTab extends StatefulWidget {
   const IntelligenceTab({super.key, required this.client});
@@ -93,6 +94,14 @@ class _IntelligenceTabState extends State<IntelligenceTab> {
         ),
         const SizedBox(height: 14),
         FullAccessCard(client: widget.client),
+
+        const SizedBox(height: 32),
+        const _SectionTitle('Site sign-ins'),
+        const _SectionBlurb(
+          'A login Dex can fill for you, on one site and nowhere else.',
+        ),
+        const SizedBox(height: 14),
+        SiteSignInCard(client: widget.client),
 
         const SizedBox(height: 32),
         const _SectionTitle('Where things are kept'),

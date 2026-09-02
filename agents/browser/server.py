@@ -41,6 +41,7 @@ from pydantic import BaseModel
 
 from browser_use_backend import DEFAULT_MAX_STEPS, BrowserBackend, env_flag
 from primitives import PrimitiveBrowser
+from route_recorder import RouteRecorder
 
 from credentials import resolve as resolve_credential
 
@@ -133,6 +134,7 @@ class ResumeRequest(BaseModel):
 
 class PrimitiveRequest(BaseModel):
     op: str      # navigate | read | click | type | extract | screenshot | verify
+                 #  | sign_in | session_status | download_current
     url: str | None = None
     selector: str | None = None
     text: str | None = None
@@ -140,6 +142,14 @@ class PrimitiveRequest(BaseModel):
     full_page: bool | None = None
     verify: VerifySpec | None = None
     browser: str | None = None
+    goal: str | None = None
+
+
+# A recording in progress, if any.
+#
+# One at a time and process-global, because there is one owner and one pair of
+# hands: two simultaneous recordings would be two people driving one browser.
+_recording: RouteRecorder | None = None
 
 
 # -- routes -------------------------------------------------------------------
@@ -203,18 +213,26 @@ async def primitive(req: PrimitiveRequest) -> dict[str, Any]:
         if req.op == 'click':
             if not req.selector:
                 return _bad('click needs a selector')
-            return {'success': True, 'data': await _primitives.click(req.selector)}
+            return {
+                'success': True,
+                'data': await _primitives.click(req.selector, req.browser),
+            }
 
         if req.op == 'type':
             if not req.selector:
                 return _bad('type needs a selector')
             return {
                 'success': True,
-                'data': await _primitives.type_text(req.selector, req.text or ''),
+                'data': await _primitives.type_text(
+                    req.selector, req.text or '', req.browser,
+                ),
             }
 
         if req.op == 'extract':
-            return {'success': True, 'data': await _primitives.extract(req.selector)}
+            return {
+                'success': True,
+                'data': await _primitives.extract(req.selector, req.browser),
+            }
 
         if req.op == 'screenshot':
             return {
@@ -222,6 +240,71 @@ async def primitive(req: PrimitiveRequest) -> dict[str, Any]:
                 'data': await _primitives.screenshot(
                     req.path, True if req.full_page is None else req.full_page,
                 ),
+            }
+
+        if req.op == 'session_status':
+            if not req.url:
+                return _bad('session_status needs a url')
+            return {
+                'success': True,
+                'data': await _primitives.session_status(req.url, req.browser),
+            }
+
+        if req.op == 'sign_in':
+            if not req.url:
+                return _bad('sign_in needs a url')
+            # needs_owner is carried up so the Orchestrator raises the hand-off
+            # card rather than treating a half-finished login as a success.
+            data = await _primitives.sign_in(req.url, req.browser)
+            return {
+                'success': True,
+                'data': data,
+                'needs_owner': bool(data.get('needs_owner')),
+            }
+
+        if req.op == 'download_current':
+            return {
+                'success': True,
+                'data': await _primitives.download_current(req.text, req.browser),
+            }
+
+        if req.op == 'record_route':
+            global _recording
+            if not req.url or not req.goal:
+                return _bad('record_route needs a url and a goal')
+            session = await _primitives.session(req.browser)
+            await session.navigate_to(req.url)
+            _recording = RouteRecorder(session, req.url, req.goal)
+            await _recording.start()
+            return {
+                'success': True,
+                'data': {
+                    'recording': True,
+                    'goal': req.goal,
+                    'url': req.url,
+                    'instruction': (
+                        'Click your way to it in the open window. Dex is noting '
+                        'what each thing is called. Say when you are there.'
+                    ),
+                },
+                'needs_owner': True,
+            }
+
+        if req.op == 'stop_recording':
+            if _recording is None:
+                return _bad('nothing is being recorded')
+            recorder, _recording = _recording, None
+            steps = await recorder.stop()
+            snap = await _primitives.read(req.browser)
+            return {
+                'success': True,
+                'data': {
+                    'goal': recorder.goal,
+                    'origin': recorder.origin,
+                    'steps': steps,
+                    'landed_on': snap.get('url'),
+                    'title': snap.get('title'),
+                },
             }
 
         if req.op == 'verify':

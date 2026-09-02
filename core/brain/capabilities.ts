@@ -37,15 +37,15 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
   close_app: { params: '{ name: string }', note: 'Asks the window to close; does not force-kill' },
   find_program: {
     params: '{ name: string, version?: boolean }',
-    note: 'Is it installed, and where? Returns { found, path, version, source }. Ask BEFORE installing anything and again AFTER, because an installer exit code is a claim and a version string is evidence. Never raises for "not installed" — that is an answer',
+    note: 'Is it installed, and where? { found, path, version, source }. Ask before installing and again after — a version string is evidence, an exit code is not. Not-installed is an answer, not an error',
   },
   get_keyboard_backlight: {
     params: '{}',
-    note: 'Whether this keyboard has a controllable backlight at all, and what it supports: { present, provider, brightness, levels, supportsColor }. Most keyboards have none — check this before offering to change anything',
+    note: '{ present, provider, brightness, levels, supportsColor }. Most keyboards have no controllable backlight — ask before offering to change one',
   },
   set_keyboard_backlight: {
     params: '{ brightness?: number, color?: string }',
-    note: 'brightness 0..levels-1; color as #RRGGBB or a name like "red". Colour only where supportsColor is true. Call get_keyboard_backlight first',
+    note: 'brightness 0..levels-1; color as #RRGGBB or a name. Colour only where supportsColor. Check get_keyboard_backlight first',
   },
   capture_screen: {
     params: '{ path?: string, region?: [x, y, width, height] }',
@@ -116,13 +116,17 @@ export const FILE_ACTIONS: Record<string, ActionSpec> = {
     params: '{ path: string, permanent?: boolean }',
     note: 'Goes to the Recycle Bin unless permanent=true. Tier 2',
   },
+  read_document: {
+    params: '{ path: string, max_chars?: number }',
+    note: 'The text of a PDF. Use this and never read_file for a PDF, which returns binary noise that looks like content',
+  },
   trace_image: {
     params: '{ path: string, detail?: "sketch" | "fine" }',
-    note: 'Turns a picture into outline strokes something can draw. Returns { strokes } with normalised 0-1 coordinates. It is a traced sketch, not a reproduction — say so',
+    note: 'A picture to outline strokes, normalised 0-1. A traced sketch, not a reproduction — say so',
   },
   extract_archive: {
     params: '{ path: string, to?: string }',
-    note: 'Unpacks a .zip/.tar/.tar.gz. Returns { extractedTo, root } — `root` is the folder actually holding the files, which is what goes on PATH. Refuses an archive whose entries would write outside the destination',
+    note: 'Unpacks .zip/.tar/.tar.gz. Returns { extractedTo, root }; "root" is the folder holding the files and is what goes on PATH',
   },
   download_file: {
     params: '{ url: string, into?: string, filename?: string, max_bytes?: number }',
@@ -143,7 +147,7 @@ export const APP_ACTIONS: Record<string, ActionSpec> = {
   toggle: { params: '{ window: string, name: string, on: boolean }' },
   set_value: {
     params: '{ window: string, name: string, value: number }',
-    note: 'Sliders and spinners — anything with a range. Clamps to its reported minimum and maximum and reads the value back, so a slider that snaps back is a failure rather than a silent no-op. This is how the Photos Adjust panel is driven',
+    note: 'Sliders and spinners. Clamps to the control\u2019s own range and reads back, so one that snaps back fails rather than passing silently',
   },
   select_menu: { params: '{ window: string, path: string[] }  e.g. ["File","Save As"]' },
   wait_for: {
@@ -170,16 +174,32 @@ export const APP_ACTIONS: Record<string, ActionSpec> = {
 export const WEB_ACTIONS: Record<string, ActionSpec> = {
   navigate: {
     params: '{ url: string, browser?: string }',
-    note: 'Opens a real browser window and goes there. browser names one the owner asked for — "vivaldi", "chrome", "edge" — and is omitted otherwise',
+    note: 'Opens a real browser and goes there. Set browser only when the owner named one ("vivaldi", "chrome")',
   },
   read_page: { params: '{}', note: 'The current page as text — use before deciding what to click' },
   extract: { params: '{ selector: string }', note: 'Text of elements matching a CSS selector' },
   click: { params: '{ selector?: string, text?: string }' },
   type_text: { params: '{ selector: string, text: string }', note: 'Refuses password fields; Dex hands those to the owner' },
   screenshot: { params: '{ path?: string, full_page?: boolean }', note: 'Saves a PNG and returns where it went' },
+  session_status: {
+    params: '{ url: string, browser?: string }',
+    note: 'Is this site still signed in? Ask FIRST for anything behind a login',
+  },
+  sign_in: {
+    params: '{ url: string, browser?: string }',
+    note: 'Fills the credential the owner stored for that exact site, then hands the CAPTCHA to them. The session is kept, so this is once per day, not per task',
+  },
+  download_current: {
+    params: '{ name?: string, browser?: string }',
+    note: 'Saves what the signed-in page offered. Use for anything behind a login: download_file has no session and fetches the login page',
+  },
+  learn_route: {
+    params: '{ url: string, goal: string }',
+    note: 'Watch the owner click their way to something once and remember it. Only when they ask Dex to learn or remember where something is',
+  },
   run_task: {
     params: '{ task: string, url?: string, browser?: string }',
-    note: 'Autonomous multi-step browsing. Use for anything needing judgement across pages — searching, filling a form, sending a message. Dex keeps its own signed-in browser profile, so a site the owner signed into once stays signed in',
+    note: 'Autonomous multi-step browsing, for anything needing judgement across pages. Dex keeps its own signed-in profile. Set start_url so a remembered route can be found',
   },
 };
 
@@ -314,16 +334,9 @@ CAPABILITY: can_browse_web   [TIER 2 — anything on the internet]
   something specific; run_task when the job needs judgement across several
   pages, such as searching or sending a message.
 
-  When the owner names a browser — "open vivaldi and go to instagram" — pass
-  browser:"vivaldi". Do NOT launch_app it and then drive the window: that is
-  the Tier 3 route this capability exists to avoid. Any Chromium-based browser
-  works; Firefox and Safari are refused by name.
-
-  Dex has its own browser profile and keeps it, so a site the owner signed into
-  once is still signed in later. That is what makes "message myself on
-  instagram" a task rather than a login prompt. If a site does ask to sign in,
-  run_task hands off to the owner rather than typing anything — Dex never fills
-  a password.
+  When the owner names a browser, pass browser:"vivaldi" — never launch_app it
+  and drive the window. Any Chromium browser works; Firefox is refused by name.
+  Dex keeps its own profile, so a site signed into once stays signed in.
 ${render(WEB_ACTIONS)}
 
 CAPABILITY: can_access_email / can_access_calendar / can_access_drive   [TIER 2]
@@ -525,23 +538,41 @@ INSTALLING AND SETTING UP A TOOL
        compiler that installs and cannot compile has not been set up, and the
        only way to know is to try.
 
-  Say which route you took and what the version was. "Installed gcc" is not an
-  answer; "gcc 14.2.0 is on PATH and compiled and ran a test program" is.
+  Say the version. "Installed gcc" is not an answer; "gcc 14.2.0 is on PATH and
+  compiled and ran a test program" is.
 
 EDITING AN IMAGE
 
-  Resize, crop to numbers, rotate, convert, compress, thumbnail?
-    -> write_file a short Python script using Pillow, then run_program it.
-       Deterministic, verifiable, no window opens, and it works on a hundred
-       files as easily as on one. PREFER THIS.
+  Resize, crop to numbers, rotate, convert, compress?
+    -> write_file a short Pillow script, then run_program it. Deterministic and
+       no window opens. PREFER THIS.
 
-  Asked for the Photos app by name, or for something only its UI does —
-  auto-enhance, the filter presets, spot fix?
+  Asked for the Photos app by name, or for something only its UI does?
     -> launch_app "Photos" -> window_state -> click_element "Edit"
        -> set_value on the sliders (Brightness, Contrast, Saturation...)
        -> click_element "Save a copy"
-    Never "Save". The original is the owner's, and an edit Dex cannot undo is
-    not an edit Dex should make in place.
+    Never "Save": an edit Dex cannot undo is not one to make in place.
+
+ANYTHING BEHIND A LOGIN — a university portal, a bank, a dashboard
+
+  Dex keeps its own browser profile, so a site signed into once stays signed in.
+  The plan for a portal is therefore almost always:
+
+    1. session_status(url)     is it still signed in? Ask FIRST.
+    2. sign_in(url)            ONLY if it is not. Fills the stored credential
+                               and hands the CAPTCHA to the owner.
+    3. run_task(...)           the actual job, with start_url set to the portal
+    4. download_current(...)   for a file. NEVER download_file behind a login:
+                               it has no session and fetches the login page.
+    5. read_document(path)     say what is in it, do not just report a path
+
+  Set start_url on run_task whenever the site is one Dex may have been shown
+  before — that is what lets a remembered route be found and followed.
+
+  If the owner asks Dex to LEARN or REMEMBER where something is on a site, that
+  is learn_route: they click through it once and Dex notes what each thing is
+  called. Do not plan learn_route unless they asked for it — it needs them
+  sitting there.
 
 DRAWING A PICTURE
 
