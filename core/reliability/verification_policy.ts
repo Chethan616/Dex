@@ -102,6 +102,46 @@ function verifyAppStep(
     };
   }
 
+  if (step.action === 'draw_strokes') {
+    const drawing = data as unknown as { drawn?: number; points?: number; cancelled?: boolean };
+    if (drawing.cancelled) {
+      return { status: 'FAILED', reason: `Stopped after ${drawing.drawn ?? 0} strokes` };
+    }
+    // Verified by strokes actually delivered, not by the call returning. A
+    // drawing that reports zero strokes drew nothing, whatever it says.
+    return (drawing.drawn ?? 0) > 0
+      ? {
+          status: 'VERIFIED',
+          reason: `Drew ${drawing.drawn} strokes (${drawing.points ?? 0} points)`,
+          afterState: drawing.drawn,
+        }
+      : { status: 'FAILED', reason: 'No strokes were drawn' };
+  }
+
+  if (step.action === 'set_value') {
+    const slider = data as unknown as {
+      verified?: boolean; was?: number; now?: number;
+      set?: number; wanted?: number; clamped?: boolean; range?: [number, number];
+    };
+    if (slider.verified) {
+      const note = slider.clamped
+        ? ` (asked for ${slider.wanted}, clamped into ${slider.range?.join('-')})`
+        : '';
+      return {
+        status: 'VERIFIED',
+        reason: `Slider read back at ${slider.now}${note}`,
+        afterState: slider.now,
+      };
+    }
+    // A slider bound to something that rejects the value snaps straight back,
+    // and the only thing that sees it is the read-back.
+    return {
+      status: 'FAILED',
+      reason: `Slider did not hold the value — set ${slider.set}, reads ${slider.now}`,
+      afterState: slider.now,
+    };
+  }
+
   if (step.action === 'toggle') {
     return data.verified
       ? { status: 'VERIFIED', reason: `Toggle is now ${data.now ? 'on' : 'off'}` }
@@ -318,7 +358,22 @@ async function verifyOsStep(step: ExecutionStep, agentResult?: AgentResult): Pro
     case 'classify_command':
     case 'get_display':
     case 'get_brightness':
+    case 'find_program':
+    case 'get_keyboard_backlight':
       return { status: 'VERIFIED', reason: 'Read-only action — no state to verify' };
+
+    // The lighting interface is write-only: there is no way to read a colour
+    // back off the keyboard. So the honest verdict is UNVERIFIABLE with the
+    // reason said out loud, not VERIFIED because the write returned true.
+    // Brightness on a provider that can read it back is checked in the handler,
+    // which raises when the value did not take.
+    case 'set_keyboard_backlight':
+      return {
+        status: 'UNVERIFIABLE',
+        reason:
+          'The keyboard accepted the change. Lighting cannot be read back, so ' +
+          'Dex cannot confirm it is visible — look at the keyboard',
+      };
 
     // Both read the value back from the OS rather than trusting the handler's
     // own report. set_display already tests the mode before applying it, but

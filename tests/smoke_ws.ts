@@ -280,6 +280,23 @@ async function main(): Promise<void> {
   );
 
   // --- 6. Tier 3 pre-approval sticks for the session -----------------------
+  //
+  // Forget what Dex has learned first.
+  //
+  // Every successful task is now saved as a workflow keyed on the shape of the
+  // request, and a repeat of that request replays the saved plan instead of
+  // asking the Brain. That is the intended behaviour and it is what makes a
+  // second run free — but it means the StubBrain below is no longer consulted,
+  // so `confirmationTier = 3` would never reach the Orchestrator and this
+  // section would silently test the tier-2 plan saved by section 3.
+  //
+  // The tiers themselves are unaffected: a replayed workflow carries the tier
+  // it was saved with and still raises its card. This is about which mechanism
+  // answers, not about whether confirmations hold.
+  for (const saved of gateway.workflowStore.list()) {
+    gateway.workflowStore.delete(saved.name);
+  }
+
   step.confirmationTier = 3;
   const tier3First = await runOnce(ws, 'approved_session');
   check('Tier 3 raises a card the first time', tier3First.raisedCard);

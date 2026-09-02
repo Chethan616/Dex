@@ -30,6 +30,8 @@ from typing import Any
 
 from browser_use import BrowserSession
 
+import browser_choice
+
 # Refuses to type into these, whatever the selector says. SAFETY.md: DEX never
 # fills a password, and a "type" primitive is exactly how that rule gets
 # quietly broken.
@@ -141,36 +143,53 @@ def has_spec(spec: dict[str, Any] | None) -> bool:
 
 
 class PrimitiveBrowser:
-    """One long-lived browser for deterministic work, started on first use."""
+    """
+    Long-lived browsers for deterministic work, started on first use.
+
+    One per browser rather than one overall. A task that asks for Vivaldi and a
+    task that asks for the default cannot share a session — they are different
+    processes — and keeping the first one that happened to start would mean the
+    second request quietly ran somewhere else and reported success.
+
+    Every one of them uses Dex's own persistent profile, so a site signed into
+    once stays signed in. See browser_choice.
+    """
 
     def __init__(self, headless: bool) -> None:
         self.headless = headless
-        self._session: BrowserSession | None = None
+        self._sessions: dict[str, BrowserSession] = {}
         self._lock = asyncio.Lock()
 
-    async def session(self) -> BrowserSession:
+    async def session(self, browser: str | None = None) -> BrowserSession:
+        key = (browser or '').strip().lower()
         async with self._lock:
-            if self._session is None:
-                session = BrowserSession(headless=self.headless)
+            existing = self._sessions.get(key)
+            if existing is None:
+                # Raises for a browser that is not installed or cannot be
+                # driven, before anything is launched — a clear failure beats
+                # silently using a different browser than the one asked for.
+                kwargs = browser_choice.session_kwargs(browser, self.headless)
+                session = BrowserSession(**kwargs)
                 await session.start()
-                self._session = session
-            return self._session
+                self._sessions[key] = session
+                existing = session
+            return existing
 
     async def close(self) -> None:
-        session, self._session = self._session, None
-        if session is not None:
+        sessions, self._sessions = list(self._sessions.values()), {}
+        for session in sessions:
             try:
                 await session.kill()
             except Exception:  # noqa: BLE001
                 pass
 
-    async def navigate(self, url: str) -> dict[str, Any]:
-        session = await self.session()
+    async def navigate(self, url: str, browser: str | None = None) -> dict[str, Any]:
+        session = await self.session(browser)
         await session.navigate_to(url)
         return await snapshot(session)
 
-    async def read(self) -> dict[str, Any]:
-        return await snapshot(await self.session())
+    async def read(self, browser: str | None = None) -> dict[str, Any]:
+        return await snapshot(await self.session(browser))
 
     async def click(self, selector: str) -> dict[str, Any]:
         session = await self.session()

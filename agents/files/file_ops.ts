@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
+import { spawnSync } from 'child_process';
 import { PathRefused, folderPath, profilePath } from './profile_paths';
 
 /**
@@ -475,4 +476,159 @@ function fileNameFrom(disposition: string | null, url: URL): string {
 
   const fromPath = path.basename(decodeURIComponent(url.pathname));
   return fromPath && fromPath !== '/' ? fromPath : `${url.hostname}-download`;
+}
+
+/**
+ * Unpack an archive, without letting it write outside the boundary.
+ *
+ * The other half of `downloadFile`. A toolchain that is not on winget arrives
+ * as a zip — w64devkit, a portable JDK, ffmpeg — and until now Dex could fetch
+ * one and then had no way to open it.
+ *
+ * Uses `tar.exe`, which has shipped in Windows since 1803 and handles zip as
+ * well as tar and tar.gz. That avoids a Node dependency for something the OS
+ * already does, and it is the same reasoning as using ctypes over a HID
+ * library elsewhere in this project.
+ *
+ * **Zip slip is the reason the entries are checked rather than trusted.** An
+ * archive entry is a filename chosen by whoever made the archive, and
+ * `../../../Windows/System32/x.dll` is a perfectly legal one. `profilePath`
+ * guards where Dex is *told* to extract; it cannot guard where the archive
+ * decides to put things once tar is running. So every entry is listed first and
+ * anything absolute, drive-qualified, or containing `..` refuses the whole
+ * archive — not just that entry, because an archive carrying one of those is
+ * not an archive with a bad file in it, it is a hostile archive.
+ */
+export function extractArchive(params: Record<string, unknown>): Record<string, unknown> {
+  const archive = profilePath(String(params.path ?? ''), true);
+
+  if (!fs.existsSync(archive)) {
+    throw new PathRefused(archive, 'there is no archive there');
+  }
+
+  // Default: a folder beside the archive, named after it. "Where did it go?"
+  // should have an obvious answer.
+  const fallback = archive.replace(/\.(zip|tar|tgz|gz|tar\.gz)$/i, '') || `${archive}-extracted`;
+  const destination = profilePath(String(params.to ?? fallback));
+
+  const listed = listEntries(archive);
+  const unsafe = listed.filter(isEscaping);
+  if (unsafe.length > 0) {
+    throw new PathRefused(
+      path.basename(archive),
+      `it contains ${unsafe.length} entr${unsafe.length === 1 ? 'y' : 'ies'} that ` +
+        `would write outside ${destination} — for example "${unsafe[0]}". An ` +
+        'archive that does that is not one Dex will open.',
+    );
+  }
+
+  fs.mkdirSync(destination, { recursive: true });
+
+  const result = spawnSync('tar', ['-xf', archive, '-C', destination], {
+    encoding: 'utf8',
+    windowsHide: true,
+    timeout: 300_000,
+  });
+
+  if (result.status !== 0) {
+    throw new Error(
+      `Could not extract ${path.basename(archive)}: ` +
+        `${(result.stderr || result.stdout || `tar exited ${result.status}`).trim().slice(0, 300)}`,
+    );
+  }
+
+  // What a later step needs is the directory holding the files, and an archive
+  // that wraps everything in one folder — which most toolchains do — makes the
+  // destination itself the wrong answer. Report both.
+  const entries = fs.readdirSync(destination, { withFileTypes: true });
+  const singleRoot = entries.length === 1 && entries[0].isDirectory()
+    ? path.join(destination, entries[0].name)
+    : destination;
+
+  return {
+    archive,
+    extractedTo: destination,
+    // Where the contents actually are: the folder to put on PATH.
+    root: singleRoot,
+    entries: listed.length,
+  };
+}
+
+/** Every path inside the archive, as tar reports them. */
+function listEntries(archive: string): string[] {
+  const result = spawnSync('tar', ['-tf', archive], {
+    encoding: 'utf8',
+    windowsHide: true,
+    timeout: 120_000,
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `Could not read ${path.basename(archive)}: ` +
+        `${(result.stderr || 'not a readable archive').trim().slice(0, 200)}`,
+    );
+  }
+  return (result.stdout || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Whether an entry would land outside the folder it is extracted into.
+ *
+ * Checked on the archive's own text rather than by resolving against the
+ * destination, because the question is about the entry, and an entry that says
+ * `C:\Windows\...` is wrong wherever it is unpacked.
+ */
+function isEscaping(entry: string): boolean {
+  const normalised = entry.replace(/\\/g, '/');
+  if (normalised.startsWith('/')) return true;
+  if (/^[A-Za-z]:/.test(normalised)) return true;
+  return normalised.split('/').includes('..');
+}
+
+/**
+ * Turn a picture into strokes something can draw.
+ *
+ * Runs `agents/files/image_trace.py`, because the work is edge detection and
+ * contour walking and Python already has Pillow and numpy in this project. No
+ * model is involved: the same image traces the same way every time.
+ *
+ * The result carries a `note` saying what it actually is — an outline sketch,
+ * not a reproduction — and that note travels all the way to the owner rather
+ * than being dropped somewhere in the middle.
+ */
+export async function traceImage(
+  params: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const source = profilePath(String(params.path ?? ''), true);
+  if (!fs.existsSync(source)) {
+    throw new PathRefused(source, 'there is no image there');
+  }
+
+  const script = path.join(__dirname, 'image_trace.py');
+  const runner = [
+    'import sys, json',
+    // Contour simplification is recursive and a detailed photo goes deep.
+    'sys.setrecursionlimit(20000)',
+    `sys.path.insert(0, ${JSON.stringify(path.dirname(script))})`,
+    'from image_trace import trace_image',
+    'print(json.dumps(trace_image(json.loads(sys.argv[1]))))',
+  ].join('; ');
+
+  const result = spawnSync(
+    'python',
+    ['-c', runner, JSON.stringify({ path: source, detail: params.detail ?? 'sketch' })],
+    { encoding: 'utf8', windowsHide: true, timeout: 180_000, maxBuffer: 64 * 1024 * 1024 },
+  );
+
+  if (result.status !== 0) {
+    throw new Error(
+      `Could not trace ${path.basename(source)}: ` +
+        `${(result.stderr || `python exited ${result.status}`).trim().slice(-400)}`,
+    );
+  }
+
+  return JSON.parse(result.stdout) as Record<string, unknown>;
 }

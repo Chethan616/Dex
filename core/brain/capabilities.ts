@@ -35,6 +35,18 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
   kill_process: { params: '{ name?: string, pid?: number, all?: boolean }', note: 'Tier 2 — ending a process can lose unsaved work' },
   launch_app: { params: '{ name: string }', note: 'Use this to open ANY app. Never open apps through the GUI tiers' },
   close_app: { params: '{ name: string }', note: 'Asks the window to close; does not force-kill' },
+  find_program: {
+    params: '{ name: string, version?: boolean }',
+    note: 'Is it installed, and where? Returns { found, path, version, source }. Ask BEFORE installing anything and again AFTER, because an installer exit code is a claim and a version string is evidence. Never raises for "not installed" — that is an answer',
+  },
+  get_keyboard_backlight: {
+    params: '{}',
+    note: 'Whether this keyboard has a controllable backlight at all, and what it supports: { present, provider, brightness, levels, supportsColor }. Most keyboards have none — check this before offering to change anything',
+  },
+  set_keyboard_backlight: {
+    params: '{ brightness?: number, color?: string }',
+    note: 'brightness 0..levels-1; color as #RRGGBB or a name like "red". Colour only where supportsColor is true. Call get_keyboard_backlight first',
+  },
   capture_screen: {
     params: '{ path?: string, region?: [x, y, width, height] }',
     // The other screenshot in this catalogue is can_browse_web's, which
@@ -104,6 +116,14 @@ export const FILE_ACTIONS: Record<string, ActionSpec> = {
     params: '{ path: string, permanent?: boolean }',
     note: 'Goes to the Recycle Bin unless permanent=true. Tier 2',
   },
+  trace_image: {
+    params: '{ path: string, detail?: "sketch" | "fine" }',
+    note: 'Turns a picture into outline strokes something can draw. Returns { strokes } with normalised 0-1 coordinates. It is a traced sketch, not a reproduction — say so',
+  },
+  extract_archive: {
+    params: '{ path: string, to?: string }',
+    note: 'Unpacks a .zip/.tar/.tar.gz. Returns { extractedTo, root } — `root` is the folder actually holding the files, which is what goes on PATH. Refuses an archive whose entries would write outside the destination',
+  },
   download_file: {
     params: '{ url: string, into?: string, filename?: string, max_bytes?: number }',
     note: 'Fetches a web address to a file on disk — into defaults to Downloads. No login, no JavaScript: if the link needs a session, use can_browse_web. Pair with can_deliver send_file to get it to a phone. Tier 2',
@@ -121,12 +141,20 @@ export const APP_ACTIONS: Record<string, ActionSpec> = {
   set_text: { params: '{ window: string, name: string, text: string }', note: 'Sets the field directly; never types keystrokes' },
   read_element: { params: '{ window: string, name: string }' },
   toggle: { params: '{ window: string, name: string, on: boolean }' },
+  set_value: {
+    params: '{ window: string, name: string, value: number }',
+    note: 'Sliders and spinners — anything with a range. Clamps to its reported minimum and maximum and reads the value back, so a slider that snaps back is a failure rather than a silent no-op. This is how the Photos Adjust panel is driven',
+  },
   select_menu: { params: '{ window: string, path: string[] }  e.g. ["File","Save As"]' },
   wait_for: {
     params: '{ window: string, name: string, timeout?: number }',
     note: 'Wait for a named control; use window_state when only the window needs to be ready',
   },
   window_state: { params: '{ window: string }' },
+  draw_strokes: {
+    params: '{ window: string, strokes: <from trace_image> }',
+    note: 'Draws the strokes onto the app’s canvas with the real mouse, a batch at a time so Stop works. Refuses unless that window is in front. Tier 2 — it takes over the pointer for minutes',
+  },
 };
 
 /**
@@ -140,15 +168,18 @@ export const APP_ACTIONS: Record<string, ActionSpec> = {
  * drift this file's header warns about, one level up.
  */
 export const WEB_ACTIONS: Record<string, ActionSpec> = {
-  navigate: { params: '{ url: string }', note: 'Opens a real browser window and goes there' },
+  navigate: {
+    params: '{ url: string, browser?: string }',
+    note: 'Opens a real browser window and goes there. browser names one the owner asked for — "vivaldi", "chrome", "edge" — and is omitted otherwise',
+  },
   read_page: { params: '{}', note: 'The current page as text — use before deciding what to click' },
   extract: { params: '{ selector: string }', note: 'Text of elements matching a CSS selector' },
   click: { params: '{ selector?: string, text?: string }' },
   type_text: { params: '{ selector: string, text: string }', note: 'Refuses password fields; Dex hands those to the owner' },
   screenshot: { params: '{ path?: string, full_page?: boolean }', note: 'Saves a PNG and returns where it went' },
   run_task: {
-    params: '{ task: string, url?: string }',
-    note: 'Autonomous multi-step browsing. Use for anything needing judgement across pages — logging in, searching, filling a form',
+    params: '{ task: string, url?: string, browser?: string }',
+    note: 'Autonomous multi-step browsing. Use for anything needing judgement across pages — searching, filling a form, sending a message. Dex keeps its own signed-in browser profile, so a site the owner signed into once stays signed in',
   },
 };
 
@@ -281,7 +312,18 @@ CAPABILITY: can_browse_web   [TIER 2 — anything on the internet]
   Drives a real browser directly. This is how Dex uses the web — never by
   launching a browser and clicking through it. navigate/read_page/extract for
   something specific; run_task when the job needs judgement across several
-  pages, such as logging in or searching.
+  pages, such as searching or sending a message.
+
+  When the owner names a browser — "open vivaldi and go to instagram" — pass
+  browser:"vivaldi". Do NOT launch_app it and then drive the window: that is
+  the Tier 3 route this capability exists to avoid. Any Chromium-based browser
+  works; Firefox and Safari are refused by name.
+
+  Dex has its own browser profile and keeps it, so a site the owner signed into
+  once is still signed in later. That is what makes "message myself on
+  instagram" a task rather than a login prompt. If a site does ask to sign in,
+  run_task hands off to the owner rather than typing anything — Dex never fills
+  a password.
 ${render(WEB_ACTIONS)}
 
 CAPABILITY: can_access_email / can_access_calendar / can_access_drive   [TIER 2]
@@ -452,4 +494,60 @@ USING WHAT AN EARLIER STEP FOUND
   Set run_command's "timeout" to what the command will really need, in seconds.
   Pinging four servers ten times each is forty round trips and will not finish
   in the default thirty; a benchmark that measures too much simply times out
-  and the value is never produced. Measure less, or ask for longer.`;
+  and the value is never produced. Measure less, or ask for longer.
+
+INSTALLING AND SETTING UP A TOOL
+
+  "set up a C compiler", "install ffmpeg", "get rust working" are all the same
+  plan with different nouns:
+
+    1. find_program(name)          already there? Say the version and STOP.
+                                   Reinstalling something that works wastes
+                                   the owner's time and bandwidth.
+    2. install it:
+         run_command ["winget","install","--id","<id>","-e",
+                      "--accept-package-agreements",
+                      "--accept-source-agreements"]
+       winget is first because it puts the tool on PATH itself, so steps 3 and
+       4 usually become unnecessary. If winget has no package for it:
+         download_file  ->  extract_archive
+    3. set_env(name:"PATH", value:"{{step_N.output.root}}", append:true)
+       ONLY on the download route. Use the "root" the extraction reported, not
+       a path you guessed. set_env broadcasts the change, so a new shell sees
+       it without a logout.
+    4. find_program(name) AGAIN. The version it prints is the proof; the
+       installer's exit code is not.
+    5. PROVE IT WORKS. Installed is not set up:
+         write_file  a tiny source file that uses the tool
+         run_program compile or run it
+         and check the OUTPUT, not just the exit code
+       For a compiler that means a hello-world compiled and then executed. A
+       compiler that installs and cannot compile has not been set up, and the
+       only way to know is to try.
+
+  Say which route you took and what the version was. "Installed gcc" is not an
+  answer; "gcc 14.2.0 is on PATH and compiled and ran a test program" is.
+
+EDITING AN IMAGE
+
+  Resize, crop to numbers, rotate, convert, compress, thumbnail?
+    -> write_file a short Python script using Pillow, then run_program it.
+       Deterministic, verifiable, no window opens, and it works on a hundred
+       files as easily as on one. PREFER THIS.
+
+  Asked for the Photos app by name, or for something only its UI does —
+  auto-enhance, the filter presets, spot fix?
+    -> launch_app "Photos" -> window_state -> click_element "Edit"
+       -> set_value on the sliders (Brightness, Contrast, Saturation...)
+       -> click_element "Save a copy"
+    Never "Save". The original is the owner's, and an edit Dex cannot undo is
+    not an edit Dex should make in place.
+
+DRAWING A PICTURE
+
+  "draw this in Paint", "sketch that photo":
+    1. trace_image(path)   turns the reference into outline strokes
+    2. launch_app "Paint" -> window_state
+    3. draw_strokes(window, strokes: {{step_1.output.strokes}})
+  It draws a line sketch, stroke by stroke, with the real mouse. Say that is
+  what it will be — a traced outline, not a reproduction of the photo.`;

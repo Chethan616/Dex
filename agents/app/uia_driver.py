@@ -526,6 +526,75 @@ def toggle(window_title: str, name: str, on: bool) -> dict[str, Any]:
     return settled(run)
 
 
+def set_value(window_title: str, name: str, value: float) -> dict[str, Any]:
+    """
+    Sliders, spinners, progress-style controls — anything with a range.
+
+    The third pattern, and the missing one. Invoke covers buttons, Value covers
+    text fields, Toggle covers checkboxes, and everything that slides was
+    unreachable: the whole Adjust panel in the Photos app, every volume and
+    brightness slider in a third-party application, zoom controls, trim
+    handles.
+
+    Two things it does that a bare SetValue would not:
+
+    **Clamps to the control's own range.** A slider that reports 0-100 and one
+    that reports 0-1 look identical to a planner reading "brightness". Asking
+    for 60 on the second is out of range, and UIA's answer to out of range is
+    an exception that says nothing useful. The control is asked what it accepts
+    and the value is brought inside it, with the clamp reported so the caller
+    can see it happened.
+
+    **Reads back.** Same rule as set_text: the value the control holds
+    afterwards is the fact, and SetValue returning without raising is not. A
+    slider bound to something that rejects the value snaps back, and only a
+    read-back sees that.
+    """
+    def run() -> dict[str, Any]:
+        window = _find_window(window_title)
+        control = _find_element(window, name)
+
+        try:
+            pattern = control.GetPattern(auto.PatternId.RangeValuePattern)
+        except Exception:  # noqa: BLE001
+            pattern = None
+        if not pattern:
+            raise NotActionable(
+                f'"{name}" has no range to set. Use set_text for a text field, '
+                'toggle for a checkbox, or click_element for a button.'
+            )
+
+        if pattern.IsReadOnly:
+            raise NotActionable(f'"{name}" is read-only')
+
+        low = pattern.Minimum
+        high = pattern.Maximum
+        wanted = float(value)
+        clamped = min(max(wanted, low), high)
+
+        was = pattern.Value
+        pattern.SetValue(clamped)
+        after = pattern.Value
+
+        # Sliders quantise. A control with a step of 5 asked for 63 lands on 65,
+        # and that is correct behaviour rather than a failure — so the tolerance
+        # is the control's own step, not an arbitrary epsilon.
+        step = pattern.SmallChange or 0
+        tolerance = max(abs(step), (high - low) / 1000.0, 1e-9)
+
+        return {
+            'was': was,
+            'now': after,
+            'wanted': wanted,
+            'set': clamped,
+            'range': [low, high],
+            'clamped': clamped != wanted,
+            'verified': abs(after - clamped) <= tolerance,
+        }
+
+    return settled(run)
+
+
 def select_menu(window_title: str, path: list[str]) -> dict[str, Any]:
     """Walk a menu path such as ["File", "Save As"], expanding as it goes."""
     def run() -> dict[str, Any]:

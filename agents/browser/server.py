@@ -119,6 +119,10 @@ class RunTaskRequest(BaseModel):
     start_url: str | None = None
     max_steps: int = DEFAULT_MAX_STEPS
     verify: VerifySpec | None = None
+    # Which browser to drive: "vivaldi", "chrome", a full path, or nothing for
+    # Playwright's own Chromium. Resolved before anything launches, so an
+    # uninstalled browser fails by name rather than silently using another one.
+    browser: str | None = None
     request_id: str = ''
     step_id: str = ''
 
@@ -135,6 +139,7 @@ class PrimitiveRequest(BaseModel):
     path: str | None = None
     full_page: bool | None = None
     verify: VerifySpec | None = None
+    browser: str | None = None
 
 
 # -- routes -------------------------------------------------------------------
@@ -169,6 +174,7 @@ async def run_task(req: RunTaskRequest) -> dict[str, Any]:
         start_url=req.start_url,
         max_steps=req.max_steps,
         verify=req.verify.model_dump() if req.verify else None,
+        browser=req.browser,
     )
 
 
@@ -189,10 +195,10 @@ async def primitive(req: PrimitiveRequest) -> dict[str, Any]:
         if req.op == 'navigate':
             if not req.url:
                 return _bad('navigate needs a url')
-            return {'success': True, 'data': await _primitives.navigate(req.url)}
+            return {'success': True, 'data': await _primitives.navigate(req.url, req.browser)}
 
         if req.op == 'read':
-            return {'success': True, 'data': await _primitives.read()}
+            return {'success': True, 'data': await _primitives.read(req.browser)}
 
         if req.op == 'click':
             if not req.selector:

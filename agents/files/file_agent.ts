@@ -71,6 +71,10 @@ export class FileAgent implements Agent {
           return { success: true, data: ops.hashFile(params) };
         case 'download_file':
           return { success: true, data: await ops.downloadFile(params) };
+        case 'extract_archive':
+          return { success: true, data: ops.extractArchive(params) };
+        case 'trace_image':
+          return { success: true, data: await ops.traceImage(params) };
         default:
           return {
             success: false,

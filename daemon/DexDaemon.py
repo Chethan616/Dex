@@ -23,6 +23,8 @@ from handlers.shell_runner import ShellRunner
 from handlers.env_handler import EnvHandler
 from handlers.display_handler import DisplayHandler
 from handlers.screen_handler import ScreenHandler
+from handlers.backlight_handler import BacklightHandler
+from handlers.program_handler import ProgramHandler
 
 def _log_handlers() -> list:
     """
@@ -102,6 +104,9 @@ DISPATCH = {
     'launch_app':       AppHandler.launch_app,
     'close_app':        AppHandler.close_app,
     'capture_screen':   ScreenHandler.capture,
+    'find_program':     ProgramHandler.find_program,
+    'get_keyboard_backlight': BacklightHandler.get_keyboard_backlight,
+    'set_keyboard_backlight': BacklightHandler.set_keyboard_backlight,
 }
 
 

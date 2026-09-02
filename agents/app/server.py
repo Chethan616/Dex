@@ -40,6 +40,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 import uia_driver as uia
+import canvas_driver
 
 PORT = int(os.environ.get('APP_AGENT_PORT', '8767'))
 
@@ -47,13 +48,17 @@ app = FastAPI(title='DEX App Agent', version='0.1.0')
 
 
 class ActRequest(BaseModel):
-    op: str                       # list | click | set_text | read | toggle | menu | wait | state
+    op: str                       # list | click | set_text | set_value | read | toggle | menu | wait | state | find_canvas | draw
     window: str = ''
     name: str | None = None
     control_type: str | None = None
     text: str | None = None
     path: list[str] | None = None
     on: bool | None = None
+    value: float | None = None
+    strokes: list | None = None
+    canvas: dict | None = None
+    settle: float = 0.0
     timeout: float = 10.0
     request_id: str = ''
     step_id: str = ''
@@ -143,6 +148,22 @@ def _dispatch(req: ActRequest) -> Any:
     if req.op == 'read':
         _need(req.name, 'read needs a name')
         return uia.read_element(req.window, req.name)
+
+    if req.op == 'find_canvas':
+        return canvas_driver.find_canvas(req.window)
+
+    if req.op == 'draw':
+        if not req.strokes:
+            raise ValueError('draw needs strokes')
+        return canvas_driver.draw_strokes(
+            req.window, req.strokes, req.canvas, req.settle,
+        )
+
+    if req.op == 'set_value':
+        _need(req.name, 'set_value needs a name')
+        if req.value is None:
+            raise ValueError('set_value needs a numeric value')
+        return uia.set_value(req.window, req.name, float(req.value))
 
     if req.op == 'toggle':
         _need(req.name, 'toggle needs a name')

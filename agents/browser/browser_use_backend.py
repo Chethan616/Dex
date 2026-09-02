@@ -22,6 +22,8 @@ from typing import Any
 
 from browser_use import Agent, BrowserSession
 
+import browser_choice
+
 from primitives import check_page, has_spec
 from walls import Wall, detect_wall
 
@@ -102,9 +104,14 @@ class BrowserBackend:
         start_url: str | None = None,
         max_steps: int = DEFAULT_MAX_STEPS,
         verify: dict[str, Any] | None = None,
+        browser: str | None = None,
     ) -> dict[str, Any]:
         session_id = uuid.uuid4().hex[:12]
-        session = BrowserSession(headless=self.headless)
+        # A named browser, and Dex's own profile so a signed-in site stays
+        # signed in between tasks. Without the profile every run started
+        # logged out of everything, which is why a task like "message
+        # myself on Instagram" could never complete on its own.
+        session = BrowserSession(**browser_choice.session_kwargs(browser, self.headless))
         await session.start()
 
         if start_url:

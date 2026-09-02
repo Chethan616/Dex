@@ -37,7 +37,10 @@
     "app:debug": "cd app && flutter run -d windows",
     "test:step-refs": "ts-node tests/smoke_step_refs.ts",
     "test:repair": "ts-node tests/smoke_repair.ts",
-    "test:autosave": "ts-node tests/smoke_autosave.ts"
+    "test:autosave": "ts-node tests/smoke_autosave.ts",
+    "test:backlight": "python tests/test_backlight.py",
+    "test:trace": "python tests/test_image_trace.py",
+    "test:canvas": "ts-node tests/smoke_canvas.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",

@@ -75,9 +75,14 @@ export class BrowserAgent implements Agent {
       case 'run_task':
         return this.runTask(params, requestId, stepId, ctx);
       case 'navigate':
-        return this.primitive('navigate', { url: String(params.url ?? '') }, requestId, stepId);
+        return this.primitive(
+          'navigate',
+          { url: String(params.url ?? ''), browser: browserOf(params) },
+          requestId,
+          stepId,
+        );
       case 'read_page':
-        return this.primitive('read', {}, requestId, stepId);
+        return this.primitive('read', { browser: browserOf(params) }, requestId, stepId);
       case 'click':
         return this.primitive(
           'click',
@@ -145,6 +150,7 @@ export class BrowserAgent implements Agent {
         task,
         start_url: params.start_url ? String(params.start_url) : null,
         max_steps: params.max_steps ? Number(params.max_steps) : undefined,
+        browser: browserOf(params),
         verify: Object.keys(verify).length ? verify : null,
         request_id: requestId,
         step_id: stepId,
@@ -351,4 +357,19 @@ function hostOf(url: string): string {
   } catch {
     return url;
   }
+}
+
+/**
+ * Which browser the step asked for, if any.
+ *
+ * Null means Playwright's own Chromium, which is the right default: it is
+ * always present and always the version Dex was tested against. A name is
+ * honoured only when the owner said one — "open Vivaldi and go to instagram"
+ * means Vivaldi, and quietly using something else would be answering a
+ * different question.
+ */
+function browserOf(params: Record<string, unknown>): string | null {
+  const named = params.browser ?? params.in_browser ?? params.app;
+  const text = typeof named === 'string' ? named.trim() : '';
+  return text || null;
 }

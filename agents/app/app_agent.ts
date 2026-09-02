@@ -39,6 +39,14 @@ export class AppAgent implements Agent {
     stepId: string,
     ctx?: AgentContext,
   ): Promise<AgentResult> {
+    // Drawing is not one call. See drawStrokes.
+    if (action === 'draw_strokes') {
+      return drawStrokesImpl(
+        (path, body) => this.post(path, body),
+        params, requestId, stepId, ctx,
+      );
+    }
+
     const op = OPS[action];
     if (!op) {
       return {
@@ -62,6 +70,7 @@ export class AppAgent implements Agent {
         text: params.text ?? null,
         path: params.path ?? null,
         on: params.on ?? null,
+        value: params.value ?? null,
         timeout: params.timeout ?? 10,
         request_id: requestId,
         step_id: stepId,
@@ -155,6 +164,130 @@ export class AppAgent implements Agent {
   }
 }
 
+/**
+ * Draw a traced image onto a canvas, in batches.
+ *
+ * Batching is the whole design. A four-hundred-stroke drawing takes minutes of
+ * real mouse movement, and this is exactly the operation someone watches and
+ * then wants to stop — so the strokes go over in slices, and between slices
+ * two things happen that cannot happen inside one long call: the owner's Stop
+ * is noticed, and progress is reported.
+ *
+ * The canvas is measured once and passed back in with every batch. Measuring
+ * per batch would let a nudged window shift the drawing halfway through.
+ */
+async function drawStrokesImpl(
+  post: <T>(path: string, body: unknown) => Promise<T>,
+  params: Record<string, unknown>,
+  requestId: string,
+  stepId: string,
+  ctx?: AgentContext,
+): Promise<AgentResult> {
+  const window = String(params.window ?? '');
+  const strokes = normaliseStrokes(params.strokes);
+
+  if (strokes.length === 0) {
+    return {
+      success: false,
+      error: 'draw_strokes needs strokes — run trace_image first',
+      retryable: false,
+    };
+  }
+
+  let canvas: Record<string, unknown>;
+  try {
+    canvas = await post<Record<string, unknown>>('/act', {
+      op: 'find_canvas', window, request_id: requestId, step_id: stepId,
+    });
+  } catch (err) {
+    return {
+      success: false,
+      error: `Could not find the drawing area in "${window}": ${
+        err instanceof Error ? err.message : String(err)}`,
+      retryable: false,
+    };
+  }
+
+  emit(
+    'executing',
+    `Drawing ${strokes.length} strokes into "${window}" ` +
+      `(canvas found by ${canvas.method})`,
+    requestId,
+    stepId,
+  );
+
+  let drawn = 0;
+  let points = 0;
+
+  for (let i = 0; i < strokes.length; i += DRAW_BATCH) {
+    // Between batches, not inside one. This is the only place a drawing can
+    // be interrupted, and without it Stop would mean "stop in four minutes".
+    if (ctx?.isCancelled?.()) {
+      return {
+        success: false,
+        error: `Stopped after ${drawn} of ${strokes.length} strokes.`,
+        retryable: false,
+        data: { drawn, points, cancelled: true },
+      };
+    }
+
+    const batch = strokes.slice(i, i + DRAW_BATCH);
+    let result: { drawn?: number; points?: number };
+    try {
+      result = await post<{ drawn?: number; points?: number }>('/act', {
+        op: 'draw',
+        window,
+        strokes: batch,
+        canvas,
+        request_id: requestId,
+        step_id: stepId,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return {
+        success: false,
+        // The foreground check fires here, and it is worth surfacing as itself
+        // rather than as a generic agent failure.
+        error: `${message} (stopped after ${drawn} strokes)`,
+        retryable: false,
+        data: { drawn, points },
+      };
+    }
+
+    drawn += result.drawn ?? 0;
+    points += result.points ?? 0;
+
+    const done = Math.min(i + DRAW_BATCH, strokes.length);
+    emit(
+      'executing',
+      `Drawn ${done} of ${strokes.length} strokes`,
+      requestId,
+      stepId,
+    );
+    ctx?.report?.(`Drawing: ${done} of ${strokes.length} strokes.`);
+  }
+
+  return { success: true, data: { drawn, points, canvas, window } };
+}
+
+/**
+ * How many strokes go over in one call.
+ *
+ * Small enough that Stop feels immediate — a batch is a second or two of mouse
+ * movement — and large enough that the HTTP round trip is not the bottleneck.
+ */
+const DRAW_BATCH = 12;
+
+/** Accepts the tracer's output, or a bare list of point lists. */
+function normaliseStrokes(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') {
+    const strokes = (value as { strokes?: unknown }).strokes;
+    if (Array.isArray(strokes)) return strokes;
+  }
+  return [];
+}
+
 /** Dex's action vocabulary -> the server's op names. */
 const OPS: Record<string, string> = {
   list_elements: 'list',
@@ -163,6 +296,7 @@ const OPS: Record<string, string> = {
   set_text: 'set_text',
   read_element: 'read',
   toggle: 'toggle',
+  set_value: 'set_value',
   select_menu: 'menu',
   wait_for: 'wait',
 };

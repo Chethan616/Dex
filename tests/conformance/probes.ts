@@ -627,6 +627,86 @@ export const PROBES: Record<string, Probe> = {
     },
   },
 
+  find_program: {
+    tier: 'readonly',
+    proves: 'a program is found by the same ladder Windows uses, and a missing one is an answer rather than an error',
+    async run(ctx) {
+      // node is running this test, so it is definitionally installed.
+      const found = await ctx.call('find_program', { name: 'node' });
+      assert(found.found === true, 'node was not found, but node is running this');
+      assert(typeof found.path === 'string' && found.path.length > 0, 'no path');
+      assert(/^v?\d/.test(String(found.version ?? '')), `no version: ${found.version}`);
+
+      // The half that matters for the install recipe: not-installed must be
+      // data, not an exception, or a plan cannot branch on it.
+      const missing = await ctx.call('find_program', {
+        name: 'dex-conformance-no-such-program',
+      });
+      assert(missing.found === false, 'a nonexistent program was reported found');
+      assert(typeof missing.reason === 'string', 'no reason given for not found');
+
+      ctx.note(`node ${found.version} via ${found.source}`);
+    },
+  },
+
+  get_keyboard_backlight: {
+    tier: 'readonly',
+    proves: 'the backlight is described honestly, present or not',
+    async run(ctx) {
+      const data = await ctx.call('get_keyboard_backlight');
+      assert(typeof data.present === 'boolean', 'present is not a boolean');
+
+      if (!data.present) {
+        // A machine with no backlight must say why, because "check first" is
+        // only useful if the answer explains itself.
+        assert(typeof data.reason === 'string' && data.reason.length > 20,
+          'absent backlight gave no usable reason');
+        ctx.note('no controllable backlight on this machine');
+        return;
+      }
+
+      assert(typeof data.provider === 'string', 'no provider named');
+      assert(typeof data.levels === 'number' && data.levels > 1,
+        `implausible level count: ${data.levels}`);
+      ctx.note(`${data.provider} · ${data.levels} levels · ` +
+        `${data.supports_color ? 'colour' : 'brightness only'}`);
+    },
+  },
+
+  set_keyboard_backlight: {
+    tier: 'roundtrip',
+    proves: 'brightness is set and out-of-range values are refused by name',
+    async skip(ctx) {
+      const data = await ctx.call('get_keyboard_backlight');
+      return data.present ? null : 'no controllable keyboard backlight here';
+    },
+    async capture(ctx) {
+      return ctx.call('get_keyboard_backlight');
+    },
+    async run(ctx, before: any) {
+      const top = (before.levels as number) - 1;
+      const result = await ctx.attempt('set_keyboard_backlight', { brightness: top });
+      assert(result.success, `set_keyboard_backlight failed: ${result.error}`);
+
+      // The boundary matters more than the happy path: a provider that accepts
+      // anything is a provider that will silently do nothing.
+      const refused = await ctx.attempt('set_keyboard_backlight', { brightness: 99 });
+      assert(!refused.success, 'an out-of-range brightness was accepted');
+
+      const empty = await ctx.attempt('set_keyboard_backlight', {});
+      assert(!empty.success, 'a request that changes nothing was accepted');
+
+      ctx.note(`brightness ${top} via ${(result.data as any)?.provider}`);
+    },
+    // Put it back where it was. There is no read-back for colour, so only
+    // brightness is restored — and only if it was readable to begin with.
+    async restore(ctx, before: any) {
+      if (typeof before?.brightness === 'number') {
+        await ctx.call('set_keyboard_backlight', { brightness: before.brightness });
+      }
+    },
+  },
+
   // ── destructive: opt in with --destructive ────────────────────────────────
 
   set_wifi: {

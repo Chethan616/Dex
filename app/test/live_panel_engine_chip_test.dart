@@ -6,7 +6,6 @@ import 'package:dex/core/models/engine.dart';
 import 'package:dex/core/models/message.dart';
 import 'package:dex/core/models/tool_activity.dart';
 import 'package:dex/core/state/conversation_store.dart';
-import 'package:dex/main.dart';
 import 'package:dex/widgets/tool_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:dex/widgets/activity_card.dart';
