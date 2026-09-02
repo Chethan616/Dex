@@ -4,6 +4,7 @@ import { CredentialStore } from '../secrets/credential_store';
 import { readConfig } from '../settings/config_store';
 import { resolveCommand } from '../settings/which';
 import {
+  Cancelled,
   LlmProvider,
   RateLimited,
   ToolCallRequest,
@@ -81,6 +82,9 @@ export class OpenAiCompatProvider implements LlmProvider {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(body),
+            // Stop aborts the socket. Without this the request completes and is
+            // billed whatever the owner did.
+            signal: request.signal,
           });
 
           if (response.status === 429 || response.status >= 500) {
@@ -158,7 +162,7 @@ export class OpenAiCompatProvider implements LlmProvider {
       }
 
       throw new Error(`${this.label} could not produce a planning tool call — ${lastError}`);
-    }, { label: this.label });
+    }, { label: this.label, signal: request.signal });
   }
 }
 
@@ -206,7 +210,7 @@ export class AnthropicProvider implements LlmProvider {
           }],
           tool_choice: { type: 'any' },
           messages: [{ role: 'user', content: request.user }],
-        });
+        }, { signal: request.signal });
       } catch (err) {
         const status = (err as { status?: number }).status;
         if (status === 429 || (status ?? 0) >= 500) {
@@ -221,7 +225,7 @@ export class AnthropicProvider implements LlmProvider {
         throw new Error(`${this.label} returned no tool call`);
       }
       return toolUse.input as Record<string, unknown>;
-    }, { label: this.label });
+    }, { label: this.label, signal: request.signal });
   }
 }
 
@@ -316,7 +320,21 @@ export class ClaudeCodeProvider implements LlmProvider {
   constructor(
     private model: string,
     private cliPath = 'claude',
-    private timeoutMs = 120_000,
+    /**
+     * Five minutes, not two.
+     *
+     * Measured on this machine: "what is my current power plan" plans in 13.4s;
+     * "create a custom power plan optimised for battery" took 64.6s and, on
+     * another run of the same request, timed out past 120s. The CLI is a
+     * subprocess that starts cold and returns one blob at the end, so a large
+     * plan is a lot of output tokens and the variance is enormous — the same
+     * request produced fifteen steps once and three another time.
+     *
+     * 120s had no headroom, and losing at the deadline throws away everything
+     * generated so far. The heartbeat in Brain.plan is the other half of this:
+     * a long ceiling with no sign of life is worse than a short one.
+     */
+    private timeoutMs = 300_000,
   ) {
     this.label = `claude-code/${model}`;
   }
@@ -329,7 +347,7 @@ export class ClaudeCodeProvider implements LlmProvider {
       // just burns the owner's session.
       let lastError: Error | undefined;
       for (const insistence of [false, true]) {
-        const raw = await this.ask(buildJsonPrompt(request, insistence));
+        const raw = await this.ask(buildJsonPrompt(request, insistence), request.signal);
         try {
           return extractJsonObject(raw);
         } catch (err) {
@@ -339,11 +357,15 @@ export class ClaudeCodeProvider implements LlmProvider {
       throw new Error(
         `${this.label} did not return JSON matching ${request.tool.name}: ${lastError?.message}`,
       );
-    }, { label: this.label });
+    }, { label: this.label, signal: request.signal });
   }
 
-  private ask(prompt: string): Promise<string> {
+  private ask(prompt: string, signal?: AbortSignal): Promise<string> {
     return new Promise((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(new Cancelled());
+        return;
+      }
       const invocation = resolveCommand(this.cliPath, [
         '--print',
         '--output-format', 'json',
@@ -371,16 +393,43 @@ export class ClaudeCodeProvider implements LlmProvider {
 
       let stdout = '';
       let stderr = '';
+      let stopped = false;
       const timer = setTimeout(() => {
         child.kill();
-        reject(new Error(`${this.label} timed out after ${this.timeoutMs / 1000}s`));
+        // Name the model and the way out. "Timed out" alone leaves the owner
+        // with nothing to do but try the identical thing again.
+        reject(new Error(
+          `${this.label} did not answer within ${Math.round(this.timeoutMs / 1000)}s. ` +
+          'The Claude Code CLI starts cold and returns the whole plan at once, ' +
+          'so a large plan can take minutes. Try a smaller request, switch the ' +
+          'composer to Fast (Haiku), or add an Anthropic key in Settings — the ' +
+          'API path answers in seconds because there is no CLI to start.',
+        ));
       }, this.timeoutMs);
+
+      // Stop kills the CLI.
+      //
+      // This is where a cancelled task cost the most: `claude --print` keeps
+      // generating until it has a whole answer, on the owner's own subscription,
+      // and nothing was going to read it. Killing the process is the only way to
+      // stop that — there is no socket to abort, and the parent had already
+      // walked away from the promise.
+      const onAbort = () => {
+        stopped = true;
+        clearTimeout(timer);
+        child.kill();
+        reject(new Cancelled());
+      };
+      signal?.addEventListener('abort', onAbort, { once: true });
+      const release = () => signal?.removeEventListener('abort', onAbort);
 
       child.stdout.on('data', (chunk) => { stdout += chunk; });
       child.stderr.on('data', (chunk) => { stderr += chunk; });
 
       child.on('error', (err) => {
         clearTimeout(timer);
+        release();
+        if (stopped) return;
         reject(
           new Error(
             `Could not run the Claude Code CLI (${this.cliPath}): ${err.message}. ` +
@@ -391,6 +440,10 @@ export class ClaudeCodeProvider implements LlmProvider {
 
       child.on('close', (code) => {
         clearTimeout(timer);
+        release();
+        // Killed by Stop. The promise is already rejected with Cancelled, and a
+        // non-zero exit from our own kill is not a failure to report.
+        if (stopped) return;
         if (code !== 0) {
           const detail = stderr.trim() || stdout.trim() || `exit ${code}`;
           // The two failures worth naming, because their fixes are different.

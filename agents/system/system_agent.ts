@@ -4,7 +4,37 @@ import { emit } from '../../core/events/bus';
 import { OS_ACTION_NAMES } from '../../core/brain/capabilities';
 
 const PIPE_PATH = '\\\\.\\pipe\\dex_privileged_daemon';
+/**
+ * How long to wait for the daemon, when the step does not say.
+ *
+ * Almost every action is a registry read or an API call and answers in
+ * milliseconds, so a short default is right: a daemon that has died should be
+ * reported quickly, not waited on for a minute.
+ *
+ * `run_command` is the exception, and it was silently broken by this constant.
+ * A plan that benchmarks four DNS servers asks for `timeout: 60`, the daemon
+ * honours it, and this killed the connection at 30s and reported "Daemon
+ * timeout" — so the requested timeout was a value the caller could set and
+ * nothing would obey. See `timeoutFor`.
+ */
 const TIMEOUT_MS = 30_000;
+
+/** Long enough for a real build or install; short enough to still be a bound. */
+const MAX_TIMEOUT_MS = 600_000;
+
+/**
+ * The step's own timeout, in milliseconds, or the default.
+ *
+ * A little longer than asked: the daemon's own timer starts after the pipe
+ * round trip and the process spawn, so expiring at exactly the requested value
+ * would race it and report our timeout instead of the daemon's more specific
+ * one.
+ */
+function timeoutFor(params: Record<string, unknown>): number {
+  const seconds = Number(params.timeout);
+  if (!Number.isFinite(seconds) || seconds <= 0) return TIMEOUT_MS;
+  return Math.min(seconds * 1000 + 5_000, MAX_TIMEOUT_MS);
+}
 
 /** Actions that cannot work without administrator rights. */
 const NEEDS_ELEVATION = ['set_dns', 'set_wifi', 'set_power_plan', 'registry_write'];
@@ -157,10 +187,17 @@ export class SystemAgent implements Agent {
         resolve(result);
       };
 
+      const waitMs = timeoutFor(params);
       const timer = setTimeout(() => {
-        emit('failed', `Daemon timeout after ${TIMEOUT_MS / 1000}s`, requestId, stepId);
-        done({ success: false, error: `Daemon timeout after ${TIMEOUT_MS / 1000}s` });
-      }, TIMEOUT_MS);
+        const seconds = Math.round(waitMs / 1000);
+        emit('failed', `Daemon timeout after ${seconds}s`, requestId, stepId);
+        done({
+          success: false,
+          error:
+            `The daemon did not answer within ${seconds}s. ` +
+            'If the command genuinely needs longer, raise the step\'s timeout.',
+        });
+      }, waitMs);
 
       client.on('connect', () => {
         client.write(payload);

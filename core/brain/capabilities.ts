@@ -35,6 +35,14 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
   kill_process: { params: '{ name?: string, pid?: number, all?: boolean }', note: 'Tier 2 — ending a process can lose unsaved work' },
   launch_app: { params: '{ name: string }', note: 'Use this to open ANY app. Never open apps through the GUI tiers' },
   close_app: { params: '{ name: string }', note: 'Asks the window to close; does not force-kill' },
+  capture_screen: {
+    params: '{ path?: string, region?: [x, y, width, height] }',
+    // The other screenshot in this catalogue is can_browse_web's, which
+    // photographs a web page inside the browser agent. This one photographs the
+    // actual desktop, which is what "screenshot that error and send it to me"
+    // means. Naming them differently is the point.
+    note: 'Photographs the real desktop (all monitors) and returns the PNG path. For a web page use can_browse_web screenshot instead. Pair with send_file to deliver it',
+  },
   registry_read: { params: '{ path: string, name: string }' },
   registry_write: { params: '{ path: string, name: string, value: any, type?: number }', note: 'Tier 2 unless the key is Dex-owned. Security/policy keys are refused outright' },
   registry_classify: { params: '{ path: string }', note: 'Ask which band a registry path falls in before planning a write' },
@@ -406,4 +414,42 @@ export const ROUTING_RULES = `HOW TO CHOOSE A CAPABILITY — work down this ladd
     launch_app -> window_state -> set_text -> select_menu -> set_text -> click_element
   with no vision anywhere. Use wait_for only when the plan knows the NAME of
   the specific control that must appear; window_state is the readiness check
-  when the window itself is the target.`;
+  when the window itself is the target.
+
+USING WHAT AN EARLIER STEP FOUND
+
+  A step can use a value another step produced. Write the reference in that
+  step's params and list the step it needs in dependsOn:
+
+    {{step_1.output}}                  everything step_1 returned
+    {{step_1.output.best_primary}}     one field
+    {{step_1.output.adapters.Wi-Fi}}   nested, dots all the way down
+    {{step_1.output.modes[0].width}}   an item in a list
+
+  A value that is exactly one reference keeps its type — a number arrives as a
+  number. A reference inside a longer string is substituted as text, which is
+  what a command line needs.
+
+    "test several DNS servers and switch to the fastest"
+      step_1  run_command   measure them and print the winner as JSON
+      step_2  set_dns       primary: "{{step_1.output.best_primary}}"
+                            dependsOn: ["step_1"]
+
+  Only refer to a step you have listed in dependsOn, and only to a field that
+  step will really return. A reference to something that does not exist stops
+  the task — it is not passed through as text, because a placeholder reaching a
+  real action is how "Invalid IP: {{step_1.output.best_primary}}" happens.
+
+  If a command must produce a value for a later step, have it print JSON on
+  stdout, and point straight at its fields — the parsing is done for you:
+
+      step_1  run_command   ... | ConvertTo-Json -Compress
+      step_2  set_dns       primary: "{{step_1.output.best_primary}}"
+
+  A field of a JSON object is something you can point at; a line of prose is
+  not. If a command prints a table, nothing can be extracted from it.
+
+  Set run_command's "timeout" to what the command will really need, in seconds.
+  Pinging four servers ten times each is forty round trips and will not finish
+  in the default thirty; a benchmark that measures too much simply times out
+  and the value is never produced. Measure less, or ask for longer.`;

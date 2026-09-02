@@ -131,27 +131,20 @@ Future<List<AttachedItem>> extractDroppedItems(
   return out;
 }
 
-/// Read the user's clipboard (Ctrl+V path) and produce attachments for
-/// any non-plaintext payload (image, file, big text). Returns an empty
-/// list when only short plain text is on the clipboard — that path is
-/// left to the default TextField paste so short text still flows into
-/// the input box rather than appearing as a chip.
+/// Read the clipboard (the Ctrl+V path) and produce attachments for anything
+/// that is not text: an image, or a file.
+///
+/// Text — any amount of it — returns an empty list, so the composer's paste
+/// handler puts it in the input box where it can be read and edited.
 Future<List<AttachedItem>> extractClipboardItems() async {
   final clipboard = SystemClipboard.instance;
   if (clipboard == null) return const [];
   final reader = await clipboard.read();
   try {
     final attachment = await _readItem(reader);
-    if (attachment != null) {
-      // Skip "short text" chips — short plain text should land in the
-      // input via the default paste behaviour.
-      if (attachment.kind == AttachmentKind.text &&
-          (attachment.text?.length ?? 0) < 200) {
-        return const [];
-      }
-      return <AttachedItem>[attachment];
-    }
-    return const [];
+    // Text never reaches here any more — see the end of _readItem. The length
+    // test that used to live at this spot is what made pasting unpredictable.
+    return attachment == null ? const [] : <AttachedItem>[attachment];
   } catch (e, st) {
     debugPrint('[dex] clipboard reader failed: $e\n$st');
     return const [];
@@ -203,23 +196,18 @@ Future<AttachedItem?> _readItem(DataReader reader) async {
     }
   }
 
-  // Long text -- 200+ chars; chip representation. Short text falls
-  // through to caller (so it lands in the input box).
-  if (reader.canProvide(Formats.plainText)) {
-    final completer = Completer<AttachedItem?>();
-    reader.getValue<String>(Formats.plainText, (text) {
-      if (text == null || text.isEmpty) {
-        completer.complete(null);
-        return;
-      }
-      completer.complete(AttachedItem.fromLongText(text));
-    }, onError: (e) {
-      debugPrint('[dex] text read failed: $e');
-      completer.complete(null);
-    });
-    return completer.future;
-  }
-
+  // Text is text. It goes in the input box, however much of it there is.
+  //
+  // There was a branch here that turned any paste over 200 characters into an
+  // attachment chip labelled with its first forty characters. The threshold was
+  // invisible, so the same gesture did two different things depending on how
+  // much you had copied: paste a sentence and it appears in the box, paste a
+  // paragraph and it vanishes into a chip you cannot read, edit, or add a
+  // question to. Pasting an error message or a block of config — which is most
+  // of why anyone pastes into Dex — hit the second case every time.
+  //
+  // Only things that genuinely are not text become attachments: files, by
+  // reference, and images, by bytes. Both are handled above.
   return null;
 }
 

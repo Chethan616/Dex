@@ -70,7 +70,13 @@ CREATE TABLE IF NOT EXISTS workflows (
   plan         TEXT NOT NULL,
   created_at   INTEGER NOT NULL,
   last_run_at  INTEGER,
-  run_count    INTEGER DEFAULT 0
+  run_count    INTEGER DEFAULT 0,
+  -- 'learned' = saved automatically after a task succeeded; 'named' = the
+  -- owner asked for it by name. Named ones outrank learned ones and are never
+  -- evicted by the cap.
+  origin       TEXT NOT NULL DEFAULT 'named',
+  -- Replays that failed. Two and it is forgotten -- see WorkflowStore.
+  fail_count   INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_workflows_shape ON workflows(shape);
 
@@ -165,9 +171,35 @@ export function db(file = process.env.DEX_DB || path.join('data', 'dex.db')): Da
   // WAL so a long-running task writing telemetry never blocks the UI reading it.
   database.exec('PRAGMA journal_mode = WAL;');
   database.exec(SCHEMA);
+  migrate(database);
 
   handle = database;
   return handle;
+}
+
+/**
+ * Columns added to a table that already exists.
+ *
+ * `CREATE TABLE IF NOT EXISTS` does nothing to a database that already has the
+ * table, so a new column in SCHEMA never reaches an existing install — the
+ * owner's own machine being the first place that matters. Each ALTER is tried
+ * and its "duplicate column" error ignored, which is the whole migration
+ * strategy this needs: additive, idempotent, and no version table to keep in
+ * step with anything.
+ */
+function migrate(database: Database): void {
+  const additions = [
+    "ALTER TABLE workflows ADD COLUMN origin TEXT NOT NULL DEFAULT 'named'",
+    'ALTER TABLE workflows ADD COLUMN fail_count INTEGER NOT NULL DEFAULT 0',
+  ];
+  for (const sql of additions) {
+    try {
+      database.exec(sql);
+    } catch {
+      // Already there. The only other way this fails is a database that cannot
+      // be written to at all, which the next statement will report properly.
+    }
+  }
 }
 
 export function closeDb(): void {

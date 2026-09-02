@@ -21,6 +21,31 @@ export interface ToolCallRequest {
   user: string;
   tool: ToolSpec;
   maxTokens: number;
+  /**
+   * Fires when the owner presses Stop. Every provider must honour it — that is
+   * the difference between Stop meaning "stop" and Stop meaning "stop showing
+   * me this", which is what it meant while the model kept generating.
+   */
+  signal?: AbortSignal;
+}
+
+/**
+ * The owner stopped the task. Distinct from a failure so nothing retries it,
+ * reports it as an error, or tells them something went wrong: nothing did.
+ */
+export class Cancelled extends Error {
+  constructor(message = 'Cancelled by owner') {
+    super(message);
+    this.name = 'Cancelled';
+  }
+}
+
+/** True for both our own Cancelled and the DOMException `fetch` throws. */
+export function isAbort(err: unknown): boolean {
+  return (
+    err instanceof Cancelled ||
+    (err instanceof Error && (err.name === 'AbortError' || err.name === 'Cancelled'))
+  );
 }
 
 export interface LlmProvider {
@@ -62,17 +87,23 @@ const MAX_RETRY_WAIT_MS = 90_000;
  */
 export async function withRetry<T>(
   operation: () => Promise<T>,
-  { attempts = 4, baseMs = 1_000, label = 'request' }: {
-    attempts?: number; baseMs?: number; label?: string;
+  { attempts = 4, baseMs = 1_000, label = 'request', signal }: {
+    attempts?: number; baseMs?: number; label?: string; signal?: AbortSignal;
   } = {},
 ): Promise<T> {
   let lastError: unknown;
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
+    // A rate-limit wait is where a cancelled task used to sit longest: up to 90
+    // seconds asleep, then four more attempts, all for a plan nobody wants.
+    if (signal?.aborted) throw new Cancelled();
     try {
       return await operation();
     } catch (err) {
       lastError = err;
+      // Never retry a stop. Retrying is how the owner pressing Stop once
+      // becomes four more requests.
+      if (isAbort(err)) throw err;
       const isLast = attempt === attempts - 1;
       if (isLast || !(err instanceof RateLimited)) break;
 
@@ -98,11 +129,28 @@ export async function withRetry<T>(
         `\x1b[33m[llm]\x1b[0m ${label} rate-limited — waiting ${Math.round(wait / 1000)}s ` +
           `(attempt ${attempt + 1}/${attempts})`,
       );
-      await new Promise((resolve) => setTimeout(resolve, wait));
+      // Interruptible: Stop during a 40-second rate-limit wait has to be
+      // instant, not "instant in 40 seconds".
+      await sleep(wait, signal);
     }
   }
 
   throw lastError;
+}
+
+/** A wait that Stop can cut short. */
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new Cancelled());
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
 /** Seconds, or an HTTP-date, or nothing at all — all three appear in the wild. */

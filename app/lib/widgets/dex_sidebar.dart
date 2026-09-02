@@ -2,9 +2,20 @@
 //   - Collapsed: 72px wide, icon column only.
 //   - Expanded: 240px wide, full labels + recent chats list + user footer.
 //
-// Sections mirror the Copilot IA -- New chat / Library / Tasks / Projects /
-// Discover / Imagine / Experiments -- but the destinations are Dex's own
-// (most still TODO placeholder screens, per the plan).
+// Every item here goes somewhere that exists.
+//
+// It used to mirror the Copilot information architecture -- Library, Tasks,
+// Projects, Discover, Imagine, Experiments -- and its own comment admitted the
+// destinations were "most still TODO placeholder screens". Six of the seven
+// items did nothing: home_desktop passed a handler for New chat and for none of
+// the others, so tapping one was indistinguishable from the app having frozen.
+// A navigation rail that mostly does not navigate is worse than a short one,
+// because the owner cannot tell which half works -- and Imagine and Experiments
+// name features Dex does not have and will not grow by being clicked.
+//
+// What replaced them is what Dex actually is: the conversation, the workflows
+// it has learned, the schedules it will fire, the capabilities it can reach
+// right now, and the log of what it did. Each one opens a real screen.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
@@ -24,12 +35,11 @@ class DexSidebar extends StatefulWidget {
     required this.activeChatId,
     required this.userName,
     this.onNewChat,
-    this.onLibrary,
-    this.onTasks,
-    this.onNewProject,
-    this.onDiscover,
-    this.onImagine,
-    this.onExperiments,
+    this.onWorkflows,
+    this.onSchedules,
+    this.onCapabilities,
+    this.onLogs,
+    this.onSettings,
     this.onSelectChat,
     this.onProfileAction,
   });
@@ -40,12 +50,20 @@ class DexSidebar extends StatefulWidget {
   final String? activeChatId;
   final String userName;
   final VoidCallback? onNewChat;
-  final VoidCallback? onLibrary;
-  final VoidCallback? onTasks;
-  final VoidCallback? onNewProject;
-  final VoidCallback? onDiscover;
-  final VoidCallback? onImagine;
-  final VoidCallback? onExperiments;
+
+  /// Settings → Memory: the saved plans, and how often each has replayed.
+  final VoidCallback? onWorkflows;
+
+  /// The schedules screen — what Dex will do without being asked.
+  final VoidCallback? onSchedules;
+
+  /// Settings → Connectors: the daemon and each agent, probed live.
+  final VoidCallback? onCapabilities;
+
+  /// Settings → Diagnostics: time-ordered logs, filtered by level and source.
+  final VoidCallback? onLogs;
+
+  final VoidCallback? onSettings;
   final ValueChanged<RecentChatItem>? onSelectChat;
   final ValueChanged<ProfileMenuAction>? onProfileAction;
 
@@ -152,44 +170,35 @@ class _DexSidebarState extends State<DexSidebar>
                     onTap: widget.onNewChat,
                   ),
                   _NavItem(
-                    icon: LucideIcons.library,
-                    label: 'Library',
+                    icon: LucideIcons.repeat,
+                    label: 'Workflows',
                     expanded: widget.expanded,
-                    onTap: widget.onLibrary,
+                    onTap: widget.onWorkflows,
                   ),
                   _NavItem(
-                    icon: LucideIcons.square_check,
-                    label: 'Tasks',
-                    badge: 'PREVIEW',
+                    icon: LucideIcons.clock,
+                    label: 'Schedules',
                     expanded: widget.expanded,
-                    onTap: widget.onTasks,
-                  ),
-                  _NavItem(
-                    icon: LucideIcons.folder,
-                    label: 'Projects',
-                    expanded: widget.expanded,
-                    trailing: const Icon(LucideIcons.plus,
-                        size: 16, color: DexColors.textDim),
-                    onTap: widget.onNewProject,
+                    onTap: widget.onSchedules,
                   ),
                   const _Divider(),
                   _NavItem(
-                    icon: LucideIcons.compass,
-                    label: 'Discover',
+                    icon: LucideIcons.plug,
+                    label: 'Capabilities',
                     expanded: widget.expanded,
-                    onTap: widget.onDiscover,
+                    onTap: widget.onCapabilities,
                   ),
                   _NavItem(
-                    icon: LucideIcons.sparkles,
-                    label: 'Imagine',
+                    icon: LucideIcons.scroll_text,
+                    label: 'Logs',
                     expanded: widget.expanded,
-                    onTap: widget.onImagine,
+                    onTap: widget.onLogs,
                   ),
                   _NavItem(
-                    icon: LucideIcons.layout_grid,
-                    label: 'Experiments',
+                    icon: LucideIcons.settings,
+                    label: 'Settings',
                     expanded: widget.expanded,
-                    onTap: widget.onExperiments,
+                    onTap: widget.onSettings,
                   ),
                   if (widget.expanded && widget.recentChats.isNotEmpty) ...[
                     const SizedBox(height: DexSpace.lg),
@@ -275,28 +284,26 @@ class _NavItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.expanded,
-    this.badge,
-    this.trailing,
     this.onTap,
-    this.active = false,
   });
 
   final IconData icon;
   final String label;
   final bool expanded;
-  final String? badge;
-  final Widget? trailing;
   final VoidCallback? onTap;
-  final bool active;
 
   @override
   Widget build(BuildContext context) {
-    final bg = active ? DexColors.surface2 : Colors.transparent;
-    return Padding(
+    const bg = Colors.transparent;
+    // No Tooltip at all when the label is already on screen.
+    //
+    // This was `Tooltip(message: expanded ? '' : label)`, which still builds a
+    // Tooltip — with its overlay entry and its own MouseRegion — in order to
+    // show nothing. Six of them, on the one widget that is always mounted,
+    // each arming a hover timer and inserting an overlay for an empty string.
+    final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
-      child: Tooltip(
-        message: expanded ? '' : label,
-        child: InkWell(
+      child: InkWell(
           onTap: onTap,
           borderRadius: DexRadius.rsm,
           child: Container(
@@ -320,30 +327,13 @@ class _NavItem extends StatelessWidget {
                         style: DexType.label(color: DexColors.text),
                         overflow: TextOverflow.ellipsis),
                   ),
-                  if (badge != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DexSpace.xs, vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DexColors.surface2,
-                        borderRadius: DexRadius.rsm,
-                        border: Border.all(color: DexColors.border),
-                      ),
-                      child: Text(badge!,
-                          style: DexType.caption(color: DexColors.textDim)),
-                    ),
-                  if (trailing != null) ...[
-                    const SizedBox(width: DexSpace.xs),
-                    trailing!,
-                  ],
                 ],
               ],
             ),
           ),
         ),
-      ),
     );
+    return expanded ? row : Tooltip(message: label, child: row);
   }
 }
 
@@ -370,10 +360,19 @@ class _ChatRow extends StatelessWidget {
           ),
           child: Row(
             children: [
+              // A failed task keeps its place in the history and says so. The
+              // ones that went wrong are usually the ones worth re-opening.
+              if (chat.failed) ...[
+                const Icon(LucideIcons.circle_x,
+                    size: 12, color: DexColors.stateError),
+                const SizedBox(width: DexSpace.xs),
+              ],
               Expanded(
                 child: Text(
                   chat.title,
-                  style: DexType.label(color: DexColors.text),
+                  style: DexType.label(
+                    color: chat.failed ? DexColors.textDim : DexColors.text,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

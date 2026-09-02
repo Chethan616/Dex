@@ -84,10 +84,21 @@ function main(): void {
   }
   console.log(`[90m[brain][0m ${brain.model}`);
 
-  // DEX_FULL_ACCESS is the name; FULL_ACCESS is still read so an existing .env
-  // keeps working. One idea had two names, which is one too many.
+  // Settings first, environment second — the same order as everything else the
+  // app owns.
+  //
+  // This read only the environment, which is why granting Full Access appeared
+  // to do nothing: the install script set a *Machine* variable, and a Machine
+  // variable does not reach a process that is already running. The owner granted
+  // it, the core kept saying it was off, and the only fix was a logout. It is a
+  // setting now, and settings.json is re-read on the next start.
+  //
+  // DEX_FULL_ACCESS and FULL_ACCESS are both still honoured so an existing
+  // checkout keeps working.
   const fullAccessConfigured =
-    process.env.DEX_FULL_ACCESS === 'true' || process.env.FULL_ACCESS === 'true';
+    readConfig().fullAccess === true ||
+    process.env.DEX_FULL_ACCESS === 'true' ||
+    process.env.FULL_ACCESS === 'true';
 
   // Configured is not the same as real. Full Access turns on only once the
   // daemon says it is actually elevated — see reportAccess below.
@@ -143,6 +154,22 @@ function main(): void {
         return fullAccessEffective;
       },
       evidenceDir: 'data/evidence',
+      // For the composer's Take screenshot, which is a direct Tier 4 read.
+      agents: registry,
+      // Called after the Full Access script finishes, so the toggle reflects
+      // what the daemon says rather than what the script intended. Re-reads
+      // settings.json too: the script wrote the owner's choice there, and this
+      // process still has the value it read at startup.
+      recheckFullAccess: async () => {
+        const configured =
+          readConfig().fullAccess === true ||
+          process.env.DEX_FULL_ACCESS === 'true' ||
+          process.env.FULL_ACCESS === 'true';
+        const daemon = await systemAgent.describe().catch(() => null);
+        fullAccessEffective = configured && daemon?.elevated === true;
+        reportAccess(configured, fullAccessEffective, daemon);
+        return fullAccessEffective;
+      },
     });
     server.start();
   }
@@ -188,10 +215,10 @@ ${signal} — closing workspace servers…`);
 
   // Headless: no console, so no CLI. `startCli` builds a readline over stdin,
   // and with no console stdin is already closed — `close` fires at once and the
-  // prompt ends before it starts. The Dex Bar is the interface; the WebSocket
+  // prompt ends before it starts. The Dex app is the interface; the WebSocket
   // server is what keeps the process alive.
   if (process.env.DEX_HEADLESS === 'true') {
-    console.log('[headless] no console — the Dex Bar is the interface.');
+    console.log('[headless] no console — the Dex app is the interface.');
     return;
   }
 

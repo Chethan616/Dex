@@ -18,6 +18,7 @@
  * what produced the two fake DNS successes; a conformance harness that mocked
  * anything would be theatre.
  */
+import fs from 'fs';
 import { AgentResult, ExecutionStep } from '../../core/events/types';
 
 export type Tier = 'readonly' | 'roundtrip' | 'destructive';
@@ -596,6 +597,33 @@ export const PROBES: Record<string, Probe> = {
       const result = await ctx.attempt('close_app', params);
       assert(result.success, `close_app failed: ${result.error}`);
       await ctx.verify('close_app', params, result as AgentResult);
+    },
+  },
+
+  capture_screen: {
+    tier: 'roundtrip',
+    proves: 'a real PNG of the real desktop lands on disk, at a plausible size',
+    async run(ctx) {
+      const params = {};
+      const result = await ctx.attempt('capture_screen', params);
+      assert(result.success, `capture_screen failed: ${result.error}`);
+
+      const data = result.data as
+        { path?: string; width?: number; height?: number; bytes?: number };
+      assert(typeof data?.path === 'string' && data.path.length > 0,
+        'no path was returned');
+      assert(fs.existsSync(data.path!), `nothing at ${data.path}`);
+
+      // A capture from the wrong desktop session succeeds and produces a
+      // picture of nothing. Size is the cheapest way to notice: a real
+      // screenshot of a real desktop does not compress to a few hundred bytes.
+      assert((data.bytes ?? 0) > 10_000,
+        `${data.bytes} bytes — that is not a screenshot of anything`);
+      assert((data.width ?? 0) > 100 && (data.height ?? 0) > 100,
+        `implausible dimensions ${data.width}x${data.height}`);
+
+      await ctx.verify('capture_screen', params, result as AgentResult);
+      fs.unlinkSync(data.path!);
     },
   },
 

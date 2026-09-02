@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_multi_window
+  file_selector_windows
   hotkey_manager_windows
   irondash_engine_context
   screen_retriever_windows

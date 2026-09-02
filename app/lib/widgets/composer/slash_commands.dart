@@ -10,8 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../core/dex_memory.dart';
-import '../../core/gateway_client.dart';
-import '../../core/gateway_process.dart';
+import '../../core/dex_gateway.dart';
+import '../../core/supervisor/supervisor.dart';
 import '../../theme/tokens.dart';
 import '../dex_toast.dart';
 import '../model_picker.dart';
@@ -126,13 +126,24 @@ class SlashCommands {
       name: 'restart',
       icon: LucideIcons.rotate_cw,
       argsHint: '',
-      description: 'Restart the gateway',
+      description: 'Restart the Dex core',
       run: (ctx, _) async {
-        _snack(ctx.context, 'Restarting gateway…');
-        final ok = await GatewayManager.restart();
-        if (ok) await GatewayClient.current?.connect();
+        // This called GatewayManager, which spawned `dexagent/dex.mjs` — the
+        // v1 OpenClaw gateway, a program this Dex does not have. The command
+        // could only ever fail. The supervisor starts the real core and this
+        // asks it to do that again.
+        final supervisor = Supervisor.current;
+        if (supervisor == null) {
+          _snack(ctx.context, 'No supervisor — start Dex from the app.');
+          return;
+        }
+        _snack(ctx.context, 'Restarting the core…');
+        await supervisor.restart('core');
+        await DexGatewayClient.current?.connect();
         if (ctx.context.mounted) {
-          _snack(ctx.context, ok ? 'Gateway restarted.' : 'Restart failed — see Diagnostics.');
+          final ok = supervisor.step('core').status == BootStatus.done;
+          _snack(ctx.context,
+              ok ? 'Core restarted.' : 'Restart failed — see Diagnostics.');
         }
       },
     ),
@@ -140,9 +151,9 @@ class SlashCommands {
       name: 'reconnect',
       icon: LucideIcons.plug,
       argsHint: '',
-      description: 'Reconnect to the gateway',
+      description: 'Reconnect to the Dex core',
       run: (ctx, _) async {
-        await GatewayClient.current?.connect();
+        await DexGatewayClient.current?.connect();
         if (ctx.context.mounted) _snack(ctx.context, 'Reconnecting…');
       },
     ),

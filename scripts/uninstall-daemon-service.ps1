@@ -10,6 +10,12 @@ re-install or run the daemon from an Administrator terminal.
 Also removes the old LocalSystem service if one is left over from before the
 scheduled-task approach, so an upgrade does not leave two daemons behind.
 #>
+param(
+    # Called from inside a running Dex. Leaves the app and the core running --
+    # see stop-dex.ps1.
+    [switch]$KeepUi
+)
+
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
@@ -23,7 +29,7 @@ if (-not $isAdmin) {
     exit 1
 }
 
-& (Join-Path $PSScriptRoot 'stop-dex.ps1') -Quiet
+& (Join-Path $PSScriptRoot 'stop-dex.ps1') -Quiet -DaemonOnly:$KeepUi
 
 if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
@@ -40,6 +46,15 @@ if ($svc) {
     Write-Host 'Removed the legacy DexDaemon service.' -ForegroundColor Green
 }
 
+# Cleared in the settings store the app reads. The old .env line and the Machine
+# environment variable are cleared too, so a checkout that still has either does
+# not keep claiming Full Access after it has been revoked.
+$settings = Join-Path $env:LOCALAPPDATA 'DEX\settings.json'
+if (Test-Path $settings) {
+    $config = Get-Content $settings -Raw | ConvertFrom-Json
+    $config | Add-Member -NotePropertyName fullAccess -NotePropertyValue $false -Force
+    $config | ConvertTo-Json -Depth 8 | Set-Content $settings -Encoding utf8
+}
 if (Test-Path '.env') {
     $envText = Get-Content '.env' -Raw
     if ($envText -match 'FULL_ACCESS=') {

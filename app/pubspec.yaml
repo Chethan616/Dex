@@ -76,6 +76,9 @@ dependencies:
   # widgets degrade gracefully (raw LiquidGlass is Impeller-only and we
   # never use it directly).
   liquid_glass_widgets: ^0.17.0
+  win32: 5.15.0
+  ffi: 2.1.4
+  file_selector: ^1.1.0
 
 dev_dependencies:
   flutter_test:

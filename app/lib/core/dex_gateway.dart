@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import 'log.dart';
 import 'models/brain_settings.dart';
 import 'models/capability_health.dart';
 
@@ -122,6 +123,14 @@ class DexGatewayClient extends ChangeNotifier {
 
   void forgetWorkflow(String name) =>
       _send({'type': 'delete_workflow', 'name': name});
+
+  /// Give a learned workflow a name of your own.
+  ///
+  /// Workflows save themselves now, under a slug derived from the intent.
+  /// Renaming one claims it: it stops being evictable, it outranks the learned
+  /// ones, and the name is what `run <name>` accepts.
+  void renameWorkflow(String from, String to) =>
+      _send({'type': 'rename_workflow', 'from': from, 'to': to});
 
   void refreshSettings() => _send({'type': 'get_settings'});
 
@@ -259,6 +268,33 @@ class DexGatewayClient extends ChangeNotifier {
   void _send(Map<String, dynamic> payload) =>
       _channel?.sink.add(jsonEncode(payload));
 
+  /// Whoever is waiting on `capture_screen`.
+  ///
+  /// The protocol is a stream of one-way frames, not a request/response — the
+  /// step events are the reason it is shaped that way. This one call needs an
+  /// answer, so it keeps a single Completer rather than growing a correlation
+  /// layer for it. Menu items cannot overlap: the menu closes on the first tap.
+  Completer<String?>? _capture;
+
+  /// Photograph the desktop and return where the PNG landed.
+  ///
+  /// Null if the core is not connected, the daemon refused, or nothing answered
+  /// in ten seconds — the caller attaches nothing rather than a broken path.
+  Future<String?> captureScreen() {
+    if (connection != DexConnection.connected) return Future<String?>.value(null);
+    _capture?.complete(null);
+    final pending = Completer<String?>();
+    _capture = pending;
+    _send({'type': 'capture_screen'});
+    return pending.future.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        _capture = null;
+        return null;
+      },
+    );
+  }
+
   void _onMessage(dynamic raw) {
     Map<String, dynamic> msg;
     try {
@@ -283,6 +319,17 @@ class DexGatewayClient extends ChangeNotifier {
         fullAccess = msg['fullAccess'] as bool? ?? fullAccess;
         daemonService = msg['daemonService'] as String? ?? daemonService;
         notifyListeners();
+        return;
+
+      case 'capture_screen_result':
+        final waiting = _capture;
+        _capture = null;
+        if (msg['ok'] == true) {
+          waiting?.complete(msg['path'] as String?);
+        } else {
+          DexLog.w('capture', msg['message'] as String? ?? 'capture failed');
+          waiting?.complete(null);
+        }
         return;
 
       case 'full_access_result':

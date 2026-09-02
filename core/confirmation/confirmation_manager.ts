@@ -52,6 +52,28 @@ export class ConfirmationManager {
   /** Tier 3 pre-approvals granted this session, keyed `capability:action`. */
   private preApproved = new Set<string>();
 
+  /**
+   * Approvals that cover the rest of ONE plan, keyed `requestId::scope`.
+   *
+   * A plan that changes a Windows power scheme is thirteen `powercfg` calls,
+   * because that is how powercfg works — one per setting. Asking thirteen times
+   * is not thirteen decisions, it is one decision and twelve obstacles, and the
+   * owner answered the first card, watched eleven more queue up behind it, and
+   * cancelled. The task failed on the interface, not on anything it was doing.
+   *
+   * So an approval can cover a scope for the remainder of the request that
+   * raised it. Three properties keep that from becoming a hole:
+   *
+   *   - It is scoped to one `requestId`. The next task asks again, and the set
+   *     is dropped when the plan ends, whatever the outcome.
+   *   - The scope is the daemon's own description of the effect
+   *     ("change a Windows power setting"), not the command text, so approving
+   *     one power setting does not approve a file deletion in the same plan.
+   *   - Only the Orchestrator passes a scope, and only for shell commands the
+   *     daemon has classified. Nothing else in Dex can opt into it.
+   */
+  private planApproved = new Set<string>();
+
   constructor(
     private timeoutMs = DEFAULT_TIMEOUT_MS,
     /** Longer than an approval: solving a CAPTCHA or signing in takes a while. */
@@ -92,11 +114,32 @@ export class ConfirmationManager {
    * Block until the owner answers. With no provider attached (headless dev),
    * auto-approves rather than hanging forever.
    */
-  async request(step: ExecutionStep, requestId: string): Promise<ConfirmationVerdict> {
+  async request(
+    step: ExecutionStep,
+    requestId: string,
+    /**
+     * What this approval covers for the rest of this plan. See `planApproved`.
+     * Omitted everywhere except the Orchestrator's classified shell commands.
+     */
+    planScope?: string,
+  ): Promise<ConfirmationVerdict> {
     const scope = ConfirmationManager.scopeKey(step);
 
     if (step.confirmationTier === 3 && this.preApproved.has(scope)) {
       emit('executing', `[Tier 3] Pre-approved this session — ${scope}`, requestId, step.id);
+      return 'approved';
+    }
+
+    const planKey = planScope ? `${requestId}::${planScope}` : '';
+    if (planKey && this.planApproved.has(planKey)) {
+      // Said out loud, every time. A step that runs without a card still has to
+      // appear in the transcript with the reason it did.
+      emit(
+        'executing',
+        `Already approved for this task — ${planScope}`,
+        requestId,
+        step.id,
+      );
       return 'approved';
     }
 
@@ -134,7 +177,7 @@ export class ConfirmationManager {
       request,
     );
 
-    return new Promise<ConfirmationVerdict>((resolve) => {
+    const verdict = await new Promise<ConfirmationVerdict>((resolve) => {
       const timer = setTimeout(() => this.settle(key, 'expired'), this.timeoutMs);
       this.pending.set(key, { request, resolve, timer });
       for (const provider of this.providers) {
@@ -145,6 +188,9 @@ export class ConfirmationManager {
         }
       }
     });
+
+    if (planKey && verdict === 'approved') this.planApproved.add(planKey);
+    return verdict;
   }
 
   /**
@@ -246,10 +292,19 @@ export class ConfirmationManager {
     return { accepted: true };
   }
 
-  /** Close every pending confirmation for a request (used when a task is cancelled). */
+  /**
+   * Close every pending confirmation for a request, and forget anything it
+   * approved for the rest of its plan.
+   *
+   * Called when a task is cancelled and again when it ends, so a plan-scoped
+   * approval cannot outlive the plan that earned it.
+   */
   cancelAll(requestId: string): void {
     for (const [key, entry] of this.pending) {
       if (entry.request.requestId === requestId) this.settle(key, 'cancelled');
+    }
+    for (const key of this.planApproved) {
+      if (key.startsWith(`${requestId}::`)) this.planApproved.delete(key);
     }
   }
 

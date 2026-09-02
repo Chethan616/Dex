@@ -44,6 +44,22 @@ export interface DexConfig {
 
   theme: 'system' | 'light' | 'dark';
 
+  /**
+   * Whether the owner has granted Full Access.
+   *
+   * It lived in `.env` and in a Machine environment variable, written by the
+   * install script. Both were wrong. `.env` is a file this project does not
+   * want to have — configuration belongs in this store, which the app reads and
+   * writes — and a Machine variable is not visible to a process that was
+   * already running, so the setting the owner had just granted was invisible
+   * until they logged out.
+   *
+   * Configured is still not the same as effective. This says the owner asked
+   * for it; only the daemon reporting `elevated: true` turns it on. See
+   * reportAccess in src/main.ts.
+   */
+  fullAccess: boolean;
+
   // ── Device mesh ───────────────────────────────────────────────────────────
   // Reaching this PC from a phone when neither Bluetooth nor a shared network
   // is available. Declared here so the mesh work adds files rather than
@@ -75,6 +91,7 @@ const DEFAULTS: DexConfig = {
   whatsappEnabled: false,
   browserHeadless: false,
   theme: 'system',
+  fullAccess: false,
   meshEnabled: false,
   meshRelayUrl: '',
   meshDeviceId: '',

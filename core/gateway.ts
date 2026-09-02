@@ -12,6 +12,7 @@ import { WorkflowStore } from './workflows/store';
 import { expandWorkflows } from './workflows/expand';
 import { emit } from './events/bus';
 import { factsForPhrasing, renderFacts, worthPhrasing } from './brain/answer';
+import { isAbort } from './llm/provider';
 import { DeliveryTarget, delivery } from './delivery/registry';
 
 export interface GatewayResult {
@@ -52,7 +53,14 @@ export class Gateway {
     private artifacts = new ArtifactStore(),
     private references = new ReferenceResolver(artifacts),
     private cache = new SemanticCache(),
-  ) {}
+  ) {
+    // The Orchestrator repairs a failed step by asking the Brain what the
+    // earlier steps actually returned. It is built before this, so it is told
+    // here rather than at its own construction — and told again by
+    // rebuildBrain, or a provider change would leave it repairing with the old
+    // model.
+    this.orchestrator.usePlanner(this.brain);
+  }
 
   /**
    * Handle one request.
@@ -76,6 +84,7 @@ export class Gateway {
    */
   rebuildBrain(): void {
     this.brain = new Brain(undefined, this.brain.workflowSource);
+    this.orchestrator.usePlanner(this.brain);
     emit('routing', `Brain is now ${this.brain.model}`, '');
   }
 
@@ -111,6 +120,12 @@ export class Gateway {
     // Keyed by time rather than by sender: Dex has one owner, so a task begun
     // on a phone and followed up at the desk is the same conversation.
     const sessionId = this.sessions.current(source).id;
+
+    // The same signal the Orchestrator's step boundaries watch. Taken here
+    // because the planning call happens before the Orchestrator exists for this
+    // task, and it is the part Stop most needs to reach — see
+    // CancellationRegistry.
+    const stop = this.orchestrator.cancellations.signal(requestId);
 
     const request: DexRequest = {
       requestId,
@@ -158,7 +173,7 @@ export class Gateway {
     // An explicit `run <name>`, or a phrase that re-says something already
     // saved. Either way the steps are already known to work, so there is
     // nothing for the Brain to decide.
-    const direct = this.resolveWorkflow(request.text);
+    const direct = this.resolveWorkflow(request.text, requestId);
     if (direct) {
       return this.runPlan(request, direct.plan, direct.name, sessionId);
     }
@@ -185,12 +200,22 @@ export class Gateway {
 
     let plan: ExecutionPlan;
     try {
-      plan = await this.brain.plan(request);
+      plan = await this.brain.plan(request, stop);
     } catch (err) {
+      // Stopping is not an error. It used to be reported as
+      // "Planning error: Cancelled", which reads as something having gone
+      // wrong when the owner is the one who decided.
+      if (isAbort(err)) return this.stopped(requestId, request.text);
       const msg = err instanceof Error ? err.message : String(err);
       emit('failed', `Planning error: ${msg}`, requestId);
       this.telemetry.finishTask(requestId, 'FAILED');
       return { status: 'FAILED', summary: msg, requestId };
+    }
+
+    // Stop pressed while the model was thinking. The plan arrived; nothing is
+    // going to run it.
+    if (this.orchestrator.cancellations.isCancelled(requestId)) {
+      return this.stopped(requestId, request.text);
     }
 
     // A question rather than a task. Nothing to execute, nothing to verify,
@@ -233,9 +258,38 @@ export class Gateway {
       // Only successful plans are cached. Serving a known-broken plan faster is
       // not an optimisation.
       void this.cache.remember(request.text, finalPlan);
+
+      // And remembered as a script, with the values the owner chose turned into
+      // parameters. Not offered, not gated on three repeats: saved.
+      //
+      // Before this, saving was reachable only from the CLI and only after the
+      // identical request had succeeded three times — so in practice nothing
+      // was ever saved, and every request paid for a planning call however many
+      // times it had been asked. A task that worked is knowledge; the second
+      // time it is asked should be free.
+      //
+      // Skipped for a replay, just above: re-running something already saved is
+      // not new knowledge, and re-saving it would only reset what it has
+      // learned about itself.
+      if (expanded.length === 0) {
+        const learned = this.workflows.autoSave({
+          plan: finalPlan,
+          requestText: request.text,
+        });
+        if (learned) {
+          emit(
+            'routing',
+            `Remembered as "${learned.name}"` +
+              (learned.params.length > 0
+                ? ` — ${learned.params.join(', ')} can change next time`
+                : ' — ask again and it replays with no planning call'),
+            requestId,
+          );
+        }
+      }
     }
 
-    const answer = await this.finish(request, result);
+    const answer = await this.finish(request, result, stop);
 
     return {
       ...result,
@@ -266,10 +320,11 @@ export class Gateway {
   private async finish(
     request: DexRequest,
     result: { status: TaskStatus; summary: string; facts?: Record<string, unknown>[] },
+    stop?: AbortSignal,
   ): Promise<string | undefined> {
     if (result.status !== 'COMPLETED') return undefined;
 
-    const answer = await this.answerFor(request, result.facts ?? []);
+    const answer = await this.answerFor(request, result.facts ?? [], stop);
     emit('done', answer ?? `Done: ${result.summary}`, request.requestId);
     return answer;
   }
@@ -288,6 +343,7 @@ export class Gateway {
   private async answerFor(
     request: DexRequest,
     facts: Record<string, unknown>[],
+    stop?: AbortSignal,
   ): Promise<string | undefined> {
     if (!worthPhrasing(facts)) return undefined;
 
@@ -295,8 +351,23 @@ export class Gateway {
 
     if (request.source === 'schedule') return rendered || undefined;
 
-    const phrased = await this.brain.phrase(request.text, factsForPhrasing(facts));
+    // A stopped task still shows what it found, but pays nothing more to make
+    // it read nicely. `phrase` returns null on an aborted signal.
+    const phrased = await this.brain.phrase(request.text, factsForPhrasing(facts), stop);
     return phrased ?? rendered ?? undefined;
+  }
+
+  /**
+   * One terminal state for "the owner pressed Stop".
+   *
+   * The task is closed here and now — recorded as CANCELLED, one line on
+   * screen — rather than falling through to a failure path that would blame
+   * something. Stop is a decision, and the transcript should say so.
+   */
+  private stopped(requestId: string, text: string): GatewayResult {
+    emit('cancelled', `Stopped: "${text}"`, requestId);
+    this.telemetry.finishTask(requestId, 'CANCELLED');
+    return { status: 'CANCELLED', summary: 'Stopped by owner', requestId };
   }
 
   /**
@@ -306,8 +377,19 @@ export class Gateway {
    * Returns undefined for anything else, so the caller falls through to the
    * Brain. Failing to match is never an error — it just costs a planning call.
    */
-  private resolveWorkflow(text: string): { plan: ExecutionPlan; name: string } | undefined {
-    const requestId = randomUUID();
+  private resolveWorkflow(
+    text: string,
+    /**
+     * The id this task is already known by.
+     *
+     * This used to mint a fresh one, so a workflow run emitted its early events
+     * under the request's id and everything after under the plan's. Stop and the
+     * approval cards both address a task by id, so neither could reach a task
+     * that ran from a saved workflow — the one path where they are needed most,
+     * because a workflow is the thing the owner runs repeatedly.
+     */
+    requestId: string,
+  ): { plan: ExecutionPlan; name: string } | undefined {
 
     // `run backup D:\` — the form for when you know exactly what you want.
     const explicit = text.match(/^\s*(?:run|do)\s+([a-z0-9][a-z0-9_-]*)\s*(.*)$/i);
@@ -362,6 +444,15 @@ export class Gateway {
     if (workflow) this.workflows.markRun(workflow);
     const result = await this.orchestrator.execute(plan);
     this.telemetry.finishTask(plan.requestId, result.status);
+
+    // A saved plan that no longer works has to stop being trusted. Two failures
+    // in a row and a learned workflow is forgotten — see markFailed. This is
+    // the counterweight to saving automatically: without it, one plan that
+    // happened to succeed once would be replayed confidently forever, skipping
+    // the Brain every time.
+    if (workflow && result.status === 'FAILED') {
+      this.workflows.markFailed(workflow);
+    }
 
     // A replayed workflow answers too. "run dns" should report the servers,
     // not just that it ran — the whole point of saving a read as a workflow.

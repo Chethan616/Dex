@@ -14,6 +14,7 @@
 //     the in-app DexComposer Shortcut take over.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
@@ -29,6 +30,8 @@ import 'core/dex_gateway.dart';
 import 'core/window_activity.dart';
 import 'core/log.dart';
 import 'core/state/conversation_store.dart';
+import 'core/supervisor/dex_paths.dart';
+import 'core/supervisor/supervisor.dart';
 import 'platform/win/tray.dart';
 import 'screens/home_desktop.dart';
 import 'screens/splash_screen.dart';
@@ -93,12 +96,34 @@ Future<void> main() async {
   // target + whether we have a token, the two things that decide whether
   // a connection can even be attempted.
   DexLog.i('app', 'Dex started — core handshake ${DexGatewayClient.handshakeFile.path}');
-  // Dex owns its brain: when no gateway is listening, spawn the bundled
-  // (or npm-installed) dexagent runtime DETACHED -- the user never
-  // opens a terminal. Connection proceeds either way; the banner
-  // explains if both paths fail.
-  // The core is started by the supervisor, not from here. Connecting retries
-  // on its own backoff, so starting before the core is listening is fine.
+
+  // Opening Dex starts Dex.
+  //
+  // This used to say "the core is started by the supervisor, not from here" —
+  // and the supervisor lived in ui/dex-bar, a different application. So running
+  // this app on its own started nothing: it connected to whatever happened to
+  // already be listening, and when nothing was, it showed "core not running"
+  // with no way to fix it from inside. The only cure was to go and run
+  // RUN.bat first, which is not a thing an app should require of anyone.
+  //
+  // The supervisor is now here. It probes before it starts anything, so a warm
+  // machine costs a few hundred milliseconds and nothing is started twice —
+  // which matters most for the daemon, where a second copy on the same named
+  // pipe answers requests unpredictably.
+  //
+  // Which optional agents to start comes from settings.json — the same file
+  // the core reads and the Settings screen writes, so turning the browser
+  // agent off there actually stops it being launched rather than only hiding
+  // it. Read directly because the core is not up yet to be asked.
+  final config = _readConfig();
+  final supervisor = Supervisor(
+    startBrowserAgent: config['browserAgent'] as bool? ?? true,
+    startDesktopAgent: config['desktopAgent'] as bool? ?? false,
+  );
+  unawaited(supervisor.boot());
+
+  // Connecting runs alongside the boot rather than after it: the client retries
+  // on its own backoff, so it simply succeeds the moment the core is listening.
   unawaited(client.connect());
 
   final store = ConversationStore(client);
@@ -125,8 +150,28 @@ Future<void> main() async {
   runApp(LiquidGlassWidgets.wrap(
     adaptiveQuality: true,
     theme: const GlassThemeData(),
-    child: DexApp(store: store),
+    child: DexApp(store: store, supervisor: supervisor),
   ));
+}
+
+/// The core's settings.json, read from disk.
+///
+/// Only for the two agent toggles the supervisor needs before anything is
+/// running. Everything else goes through the core over the socket — this is
+/// the one moment where there is no socket to go through yet.
+///
+/// Missing or unreadable is a normal state on a first run, and the defaults
+/// below are the same ones the core uses.
+Map<String, dynamic> _readConfig() {
+  try {
+    final file = DexPaths.settingsFile;
+    if (!file.existsSync()) return const {};
+    final decoded = jsonDecode(file.readAsStringSync());
+    return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
+  } catch (e) {
+    DexLog.w('app', 'settings.json could not be read: $e');
+    return const {};
+  }
 }
 
 Future<void> _handleSpotlightPrompt(
@@ -271,32 +316,67 @@ class DexScrollBehavior extends MaterialScrollBehavior {
 }
 
 class DexApp extends StatefulWidget {
-  const DexApp({super.key, required this.store});
+  const DexApp({super.key, required this.store, this.supervisor});
 
   final ConversationStore store;
+
+  /// The boot in progress. Null in widget tests, where nothing is spawned and
+  /// the splash falls back to its old fixed hold.
+  final Supervisor? supervisor;
 
   @override
   State<DexApp> createState() => _DexAppState();
 }
 
 class _DexAppState extends State<DexApp> with WindowListener {
-  /// Launch routing: splash while the shaders warm, then the cockpit.
+  /// Launch routing: the boot sequence, then the cockpit.
   ///
   /// There is no sign-in step and no onboarding gate — see _buildRoot.
 
-  // Splash holds the first ~2.2s so the off-screen warm strip compiles the
-  // glass shaders before the cockpit paints — smooth on the very first use.
+  /// Whether the splash has handed over.
+  ///
+  /// This was a 2.2-second timer, chosen so the off-screen warm strip had time
+  /// to compile the glass shaders. It now waits on the supervisor instead: the
+  /// shaders still warm during that time, but the thing the owner is actually
+  /// waiting for is the core, and a fixed hold either cuts it off or wastes
+  /// their time. The floor stays so a warm start does not flash past.
   bool _splashDone = false;
 
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(const Duration(milliseconds: 2200), () {
-      if (mounted) setState(() => _splashDone = true);
-    });
+    _watchBoot();
     if (Platform.isWindows) {
       windowManager.addListener(this);
     }
+  }
+
+  /// Leave the splash when the boot is finished, or after the shader floor if
+  /// there is no boot to wait for.
+  ///
+  /// Deliberately leaves on `!booting` rather than on `ready`: a failed
+  /// optional agent, or even a failed core, still opens the app. A degraded Dex
+  /// that says what is broken — the splash rows stay visible, and Diagnostics
+  /// is one click away — beats a splash screen the owner cannot get past.
+  Future<void> _watchBoot() async {
+    const floor = Duration(milliseconds: 1200);
+    final started = DateTime.now();
+
+    final supervisor = widget.supervisor;
+    if (supervisor != null) {
+      // A fresh clone runs `npm install` here, which is minutes; a warm machine
+      // is a few probes. Neither is a number a timer could have known.
+      while (mounted && (supervisor.booting || supervisor.steps.every(
+              (s) => s.status == BootStatus.pending))) {
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+      }
+    }
+
+    final elapsed = DateTime.now().difference(started);
+    if (elapsed < floor) {
+      await Future<void>.delayed(floor - elapsed);
+    }
+    if (mounted) setState(() => _splashDone = true);
   }
 
   // Any focus or geometry change can put a control where the pointer already
@@ -323,6 +403,9 @@ class _DexAppState extends State<DexApp> with WindowListener {
     if (Platform.isWindows) {
       windowManager.removeListener(this);
     }
+    // The job object takes the children when this process dies, whatever the
+    // cause. This is the tidy path; that is the guaranteed one.
+    widget.supervisor?.stopAll();
     super.dispose();
   }
 
@@ -364,8 +447,11 @@ class _DexAppState extends State<DexApp> with WindowListener {
 
   Widget _buildRoot() {
     if (!_splashDone) {
-      // Branded splash while the glass shaders warm up.
-      return const SplashScreen();
+      // The boot sequence, one row per process. See splash_screen.dart.
+      return SplashScreen(
+        supervisor: widget.supervisor,
+        onSkip: () => setState(() => _splashDone = true),
+      );
     }
     // No sign-in.
     //

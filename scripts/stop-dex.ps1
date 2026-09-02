@@ -22,7 +22,19 @@ the first time:
 So this stops the task, kills what it can see, and then *checks the pipe*.
 Whether something answers is the only honest answer to "is a daemon running".
 #>
-param([switch]$Quiet)
+param(
+    [switch]$Quiet,
+    # Stop the daemon and the agent servers, and leave the Dex app and its core
+    # alone.
+    #
+    # This exists because install-daemon-service.ps1 calls this script, and the
+    # app calls that script when the owner turns Full Access on. Without this
+    # switch, granting Full Access from inside Dex killed Dex: section 2b shot
+    # the app and 2c shot the core, so the gesture that was meant to give Dex
+    # more power closed it instead, and what the owner saw afterwards was
+    # "core not running — could not reach the core on port 8770".
+    [switch]$DaemonOnly
+)
 
 $ErrorActionPreference = 'Stop'
 $PipeName = 'dex_privileged_daemon'
@@ -78,16 +90,24 @@ foreach ($p in $visible) {
 
 # 2b. The Dex Bar. It is the UI, so "stop everything" has to include it --
 #     otherwise the bar stays on screen showing "Core not connected" forever.
-$bars = Get-Process Dex, dex_bar -ErrorAction SilentlyContinue
+#     Unless we were asked for the daemon only, in which case the UI is the
+#     thing that called us and is waiting for an answer.
+$bars = if ($DaemonOnly) { @() }
+        else { Get-Process Dex, dex_bar -ErrorAction SilentlyContinue }
 foreach ($p in $bars) {
     Say "  stopping Dex Bar (pid $($p.Id))" DarkGray
     Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
     $stopped++
 }
 
-# 2c. The headless core.
-$cores = Get-CimInstance Win32_Process |
-    Where-Object { $_.Name -like 'node*' -and $_.CommandLine -and $_.CommandLine -match $coreRegex }
+# 2c. The headless core. Same reason as 2b: under -DaemonOnly it is the process
+#     that asked for this and it has to survive to report what happened.
+$cores = if ($DaemonOnly) { @() }
+         else {
+             Get-CimInstance Win32_Process |
+                 Where-Object { $_.Name -like 'node*' -and $_.CommandLine -and
+                                $_.CommandLine -match $coreRegex }
+         }
 foreach ($p in $cores) {
     Say "  stopping core (pid $($p.ProcessId))" DarkGray
     Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue

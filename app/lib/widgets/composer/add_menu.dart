@@ -1,9 +1,20 @@
-// The + button menu on the composer. Lists attach/generate/research-style
-// actions. v1 dispatches selections to a single callback; the wiring to
-// real flows lands in follow-up PRs.
+// The + button menu on the composer.
 //
-// Routes through GlossyMenu so the popup gets the same glassy gradient
-// + edge highlight + spring entry as the composer it sits on.
+// It listed seven actions and its own comment said the wiring "lands in
+// follow-up PRs". Four of them described a product Dex is not: Generate image,
+// Start deep research, Create a podcast, Take a quiz — two of them wearing a
+// "5 remaining" quota badge for a quota that does not exist. Selecting any of
+// them showed a snackbar with the label of the thing that had not happened.
+//
+// What is left is what Dex can actually do with something you hand it:
+//
+//   Add images or files   attach them to the next request; the composer
+//                         already reads drops and pastes into the same strip
+//   Take screenshot       the browser agent's `screenshot` action
+//   Use connectors        Settings -> Connectors, probed live
+//
+// Routes through GlossyMenu so the popup gets the same glassy gradient, edge
+// highlight and spring entry as the composer it sits on.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
@@ -13,10 +24,6 @@ import '../glossy_menu.dart';
 
 enum ComposerAddAction {
   files,
-  generateImage,
-  deepResearch,
-  podcast,
-  quiz,
   screenshot,
   connectors,
 }
@@ -24,31 +31,23 @@ enum ComposerAddAction {
 extension ComposerAddActionX on ComposerAddAction {
   String get label => switch (this) {
         ComposerAddAction.files => 'Add images or files',
-        ComposerAddAction.generateImage => 'Generate image',
-        ComposerAddAction.deepResearch => 'Start deep research',
-        ComposerAddAction.podcast => 'Create a podcast',
-        ComposerAddAction.quiz => 'Take a quiz',
         ComposerAddAction.screenshot => 'Take screenshot',
-        ComposerAddAction.connectors => 'Use connectors',
+        ComposerAddAction.connectors => 'Use connectors and apps',
+      };
+
+  /// One line under the label saying what will happen. The old menu had none,
+  /// which is part of how four impossible actions went unnoticed.
+  String get hint => switch (this) {
+        ComposerAddAction.files => 'Attach them to your next message',
+        ComposerAddAction.screenshot => 'Capture the screen and attach it',
+        ComposerAddAction.connectors => 'See what Dex can reach right now',
       };
 
   IconData get icon => switch (this) {
         ComposerAddAction.files => LucideIcons.paperclip,
-        ComposerAddAction.generateImage => LucideIcons.image,
-        ComposerAddAction.deepResearch => LucideIcons.globe,
-        ComposerAddAction.podcast => LucideIcons.headphones,
-        ComposerAddAction.quiz => LucideIcons.circle_question_mark,
         ComposerAddAction.screenshot => LucideIcons.crop,
         ComposerAddAction.connectors => LucideIcons.puzzle,
       };
-
-  String? get badge => switch (this) {
-        ComposerAddAction.deepResearch => '5 remaining',
-        ComposerAddAction.podcast => '3 remaining',
-        _ => null,
-      };
-
-  bool get hasSubmenu => this == ComposerAddAction.connectors;
 }
 
 class AddMenu {
@@ -82,30 +81,24 @@ class _AddRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(action.icon, size: 16, color: DexColors.textDim),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(action.icon, size: 16, color: DexColors.textDim),
+        ),
         const SizedBox(width: DexSpace.md),
         Expanded(
-          child: Text(action.label,
-              style: DexType.label(color: DexColors.text)),
-        ),
-        if (action.badge != null) ...[
-          const SizedBox(width: DexSpace.sm),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DexSpace.sm, vertical: 2,
-            ),
-            decoration: BoxDecoration(
-              color: DexColors.accentQuiet,
-              borderRadius: DexRadius.rpill,
-            ),
-            child: Text(action.badge!,
-                style: DexType.caption(color: DexColors.accent)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(action.label, style: DexType.label(color: DexColors.text)),
+              const SizedBox(height: 1),
+              Text(action.hint,
+                  style: DexType.caption(color: DexColors.textFaint)),
+            ],
           ),
-        ],
-        if (action.hasSubmenu)
-          const Icon(LucideIcons.chevron_right,
-              size: 16, color: DexColors.textFaint),
+        ),
       ],
     );
   }

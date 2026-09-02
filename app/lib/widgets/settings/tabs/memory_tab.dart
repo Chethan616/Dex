@@ -80,14 +80,15 @@ class _MemoryTabState extends State<MemoryTab> {
 
         const _Title('Saved workflows'),
         const _Blurb(
-          'A workflow replays a task without asking the model to plan it '
-          'again — faster, and the same steps every time.',
+          'Every task that works is saved here on its own, with the values you '
+          'chose turned into parameters. Ask for the same thing again and it '
+          'replays with your new values and no planning call at all.',
         ),
         const SizedBox(height: 12),
         if (workflows.isEmpty)
           const _Card(
             child: Text(
-              'None saved. After a task you are happy with, ask Dex to save it.',
+              'Nothing yet. Finish a task and it appears here.',
               style: TextStyle(color: DexColors.textFaint, fontSize: 12),
             ),
           )
@@ -96,6 +97,8 @@ class _MemoryTabState extends State<MemoryTab> {
             _WorkflowRow(
               workflow: w,
               onForget: () => client.forgetWorkflow(w['name'] as String? ?? ''),
+              onRename: (to) =>
+                  client.renameWorkflow(w['name'] as String? ?? '', to),
             ),
 
         const SizedBox(height: 24),
@@ -236,16 +239,27 @@ class _Stat extends StatelessWidget {
 }
 
 class _WorkflowRow extends StatelessWidget {
-  const _WorkflowRow({required this.workflow, required this.onForget});
+  const _WorkflowRow({
+    required this.workflow,
+    required this.onForget,
+    required this.onRename,
+  });
 
   final Map<String, dynamic> workflow;
   final VoidCallback onForget;
+  final ValueChanged<String> onRename;
 
   @override
   Widget build(BuildContext context) {
+    final name = workflow['name'] as String? ?? '';
     final runs = workflow['runCount'] as int? ?? 0;
+    final params = (workflow['params'] as List?)?.cast<String>() ?? const [];
+    final learned = workflow['origin'] != 'named';
+    final failures = workflow['failCount'] as int? ?? 0;
+
     return _Card(
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Column(
@@ -253,24 +267,27 @@ class _WorkflowRow extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      workflow['name'] as String? ?? '',
-                      style: const TextStyle(
-                        color: DexColors.text,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                    Flexible(
+                      child: Text(
+                        name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: DexColors.text,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      '${workflow['steps'] ?? 0} steps'
-                      '${runs > 0 ? '  ·  run $runs×' : ''}',
-                      style: const TextStyle(
-                          color: DexColors.textFaint, fontSize: 11),
-                    ),
+                    // Learned, not chosen. Worth saying: it explains the slug
+                    // of a name, and that renaming it is available.
+                    if (learned)
+                      const _Tag(text: 'learned', tone: DexColors.textFaint),
+                    if (!learned)
+                      const _Tag(text: 'named', tone: DexColors.accent),
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   (workflow['description'] as String?)?.isNotEmpty == true
                       ? workflow['description'] as String
@@ -280,21 +297,128 @@ class _WorkflowRow extends StatelessWidget {
                   style: const TextStyle(
                       color: DexColors.textDim, fontSize: 11.5, height: 1.4),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  [
+                    '${workflow['steps'] ?? 0} steps',
+                    if (runs > 0) 'replayed $runs×',
+                    // The line that explains what a workflow is *for*.
+                    if (params.isNotEmpty)
+                      'you can change ${params.join(', ')}'
+                    else
+                      'no parameters',
+                    if (failures > 0) 'failed $failures× recently',
+                  ].join('  ·  '),
+                  style: TextStyle(
+                    color: failures > 0
+                        ? DexColors.stateAwaiting
+                        : DexColors.textFaint,
+                    fontSize: 10.5,
+                  ),
+                ),
               ],
             ),
           ),
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: onForget,
-              child: const Text('Forget',
-                  style: TextStyle(color: DexColors.stateError, fontSize: 11.5)),
-            ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _Action(
+                label: learned ? 'Name it' : 'Rename',
+                tone: DexColors.accent,
+                onTap: () => _rename(context, name),
+              ),
+              const SizedBox(height: 6),
+              _Action(
+                label: 'Forget',
+                tone: DexColors.stateError,
+                onTap: onForget,
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+
+  Future<void> _rename(BuildContext context, String current) async {
+    final controller = TextEditingController(text: current);
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: DexColors.surface,
+        title: const Text('Name this workflow',
+            style: TextStyle(color: DexColors.text, fontSize: 15)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'A named workflow is yours: it is never forgotten automatically, '
+              'and you can run it by name.',
+              style: TextStyle(color: DexColors.textDim, fontSize: 12, height: 1.5),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              style: const TextStyle(color: DexColors.text, fontSize: 13),
+              decoration: const InputDecoration(
+                hintText: 'lowercase letters, digits, - or _',
+                hintStyle: TextStyle(color: DexColors.textFaint, fontSize: 12),
+              ),
+              onSubmitted: (value) => Navigator.of(context).pop(value),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    final name = chosen?.trim() ?? '';
+    if (name.isNotEmpty && name != current) onRename(name);
+  }
+}
+
+class _Tag extends StatelessWidget {
+  const _Tag({required this.text, required this.tone});
+  final String text;
+  final Color tone;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: tone.withValues(alpha: 0.4)),
+        ),
+        child: Text(text, style: TextStyle(color: tone, fontSize: 9.5)),
+      );
+}
+
+class _Action extends StatelessWidget {
+  const _Action({required this.label, required this.tone, required this.onTap});
+  final String label;
+  final Color tone;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Text(label, style: TextStyle(color: tone, fontSize: 11.5)),
+        ),
+      );
 }
 
 class _TaskRow extends StatelessWidget {

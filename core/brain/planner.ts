@@ -166,22 +166,62 @@ export class Brain {
     return this.workflows;
   }
 
+  /**
+   * A "still thinking" line every 15 seconds until the caller clears it.
+   *
+   * Fifteen because the first one should land while the owner is still
+   * expecting something, and because a line every few seconds is noise rather
+   * than reassurance. `unref` so a pending beat cannot hold the process open.
+   */
+  private beat(requestId: string): NodeJS.Timeout {
+    const started = Date.now();
+    const timer = setInterval(() => {
+      const seconds = Math.round((Date.now() - started) / 1000);
+      emit('thinking', `Still planning — ${seconds}s (${this.provider.label})`, requestId);
+    }, 15_000);
+    timer.unref?.();
+    return timer;
+  }
+
   get model(): string {
     return this.provider.label;
   }
 
-  async plan(request: DexRequest): Promise<ExecutionPlan> {
+  /**
+   * @param signal fires when the owner presses Stop. Passed to the provider so
+   * the model stops generating, rather than finishing a plan for a task that no
+   * longer exists — see CancellationRegistry.
+   */
+  async plan(request: DexRequest, signal?: AbortSignal): Promise<ExecutionPlan> {
     emit('routing', `Brain thinking (${this.provider.label})...`, request.requestId);
 
-    const raw = (await this.provider.callTool({
-      system: systemPrompt(this.workflows()),
-      user: normalize(request.text),
-      tool: plannerTool,
-      // Keep the request under Groq's small-tier token-per-minute budget. The
-      // provider still has a 2,048-token emergency fallback for unusually
-      // large capability/workflow catalogues.
-      maxTokens: 4096,
-    })) as unknown as RawPlan;
+    // Say that it is still going.
+    //
+    // A complex plan through the Claude Code CLI takes over a minute, and the
+    // CLI returns nothing at all until it is finished. Sixty-five seconds of
+    // silence is indistinguishable from a hang — which is what it looked like,
+    // right up to the moment it failed at the old two-minute deadline.
+    //
+    // Emitted here rather than in the provider: the requestId lives on this
+    // side, and this is the only place that knows a plan is what is being
+    // waited for.
+    const heartbeat = this.beat(request.requestId);
+
+    let raw: RawPlan;
+    try {
+      raw = (await this.provider.callTool({
+        signal,
+        system: systemPrompt(this.workflows()),
+        user: normalize(request.text),
+        tool: plannerTool,
+        // Keep the request under Groq's small-tier token-per-minute budget. The
+        // provider still has a 2,048-token emergency fallback for unusually
+        // large capability/workflow catalogues.
+        maxTokens: 4096,
+      })) as unknown as RawPlan;
+    } finally {
+      clearInterval(heartbeat);
+    }
 
     const rawSteps = Array.isArray(raw?.steps) ? raw.steps : [];
     const reply = typeof raw?.reply === 'string' ? raw.reply.trim() : '';
@@ -217,6 +257,91 @@ export class Brain {
   }
 
   /**
+   * A step failed. Re-plan what is left, given what actually happened.
+   *
+   * Deliberately not a retry. Retrying is right when running the same thing
+   * again might go differently — a flaky window, a slow service — and the
+   * Orchestrator already does that for a step that ran but did not verify.
+   * This is for the other kind: a step that failed because the plan was wrong,
+   * where running it again produces the identical error forever.
+   *
+   * The case it was built from: `set_dns` was handed
+   * `{{step_1.output.best_primary}}` and answered "Invalid IP". Retrying passes
+   * the same twenty-nine characters again. What was needed was to look at what
+   * step_1 actually returned — `best_primary: "1.1.1.1"` — and fix step_2.
+   *
+   * So this is given three things a fresh `plan()` call would not have: the
+   * failure message, the real outputs of the steps that succeeded, and the
+   * steps that have not run yet. It replans only those.
+   *
+   * Returns null on any failure, including a model that declines. A task that
+   * cannot be repaired fails the way it already would have; nothing here can
+   * make the outcome worse than not trying.
+   */
+  async repair(
+    input: {
+      intent: string;
+      failedStep: ExecutionStep;
+      failure: string;
+      /** What the completed steps returned, keyed by step id. */
+      outputs: ReadonlyMap<string, unknown>;
+      /** The failed step and everything after it — what may be replaced. */
+      remaining: ExecutionStep[];
+    },
+    signal?: AbortSignal,
+  ): Promise<{ steps: ExecutionStep[]; reason: string } | null> {
+    if (signal?.aborted) return null;
+
+    const evidence = [...input.outputs.entries()]
+      .map(([id, data]) => `  ${id} returned: ${truncate(JSON.stringify(data))}`)
+      .join('\n') || '  (nothing — no earlier step produced data)';
+
+    try {
+      const raw = (await this.provider.callTool({
+        signal,
+        system:
+          'You are the planning brain of DEX. A step of a plan you made has ' +
+          'failed, and you are fixing it.\n\n' +
+          `${capabilityCatalogue()}\n\n${ROUTING_RULES}\n\n` +
+          'Rules for a repair:\n' +
+          '  - Replace ONLY the steps listed as not yet run. The steps that\n' +
+          '    already succeeded have changed the machine and will not be\n' +
+          '    repeated.\n' +
+          '  - Use the data above. If a step failed because it was given a\n' +
+          '    placeholder or a wrong value, the real value is usually in what\n' +
+          '    an earlier step returned — put that value in directly.\n' +
+          '  - Keep the same confirmation tiers. A repair is not a way to make\n' +
+          '    a step quieter than it was.\n' +
+          '  - If the failure cannot be fixed by replanning — a missing\n' +
+          '    capability, a refused command, hardware that is not there —\n' +
+          '    return an empty steps list and say why. That is a real answer.',
+        user:
+          `The owner asked: ${input.intent}\n\n` +
+          `What the completed steps returned:\n${evidence}\n\n` +
+          `The step that failed:\n  ${JSON.stringify(input.failedStep)}\n\n` +
+          `Its error:\n  ${input.failure}\n\n` +
+          'Steps not yet run, which you may replace:\n' +
+          input.remaining.map((s) => `  ${JSON.stringify(s)}`).join('\n'),
+        tool: repairTool,
+        maxTokens: 4096,
+      })) as unknown as { steps?: RawStep[]; reason?: unknown };
+
+      const steps = Array.isArray(raw?.steps) ? raw.steps : [];
+      if (steps.length === 0) return null;
+
+      return {
+        steps: steps.map((s, i) => normalizeStep(s, i)),
+        reason: typeof raw?.reason === 'string' && raw.reason.trim()
+          ? raw.reason.trim()
+          : 'replanned the remaining steps',
+      };
+    } catch {
+      // A repair that cannot be made leaves the task failing as it already was.
+      return null;
+    }
+  }
+
+  /**
    * Turn what the steps actually returned into a sentence.
    *
    * Dex used to finish a read with the plan's own restatement of the question —
@@ -238,11 +363,17 @@ export class Brain {
    * falls back to rendering the facts directly, because an unanswered question
    * is a worse outcome than a plainly formatted one.
    */
-  async phrase(request: string, facts: Record<string, unknown>[]): Promise<string | null> {
+  async phrase(
+    request: string,
+    facts: Record<string, unknown>[],
+    signal?: AbortSignal,
+  ): Promise<string | null> {
     if (facts.length === 0) return null;
+    if (signal?.aborted) return null;
 
     try {
       const answer = (await this.provider.callTool({
+        signal,
         system:
           'You are Dex, reporting what you just found on the owner\'s Windows PC.\n' +
           'You are given the exact data the system returned. State it in one or two\n' +
@@ -268,6 +399,45 @@ export class Brain {
       return null;
     }
   }
+}
+
+/** The repair's own schema — the same step shape, plus a reason to show. */
+const repairTool: ToolSpec = {
+  name: 'repair_plan',
+  description: 'Replace the steps that have not run yet, using what the completed steps returned',
+  schema: {
+    type: 'object' as const,
+    properties: {
+      reason: {
+        type: 'string',
+        description:
+          'One line on what was wrong and what you changed. Shown to the owner.',
+      },
+      steps: {
+        type: 'array',
+        description:
+          'The replacement steps. Empty if this cannot be fixed by replanning.',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            capability: { type: 'string', enum: [...CAPABILITY_NAMES] },
+            action: { type: 'string' },
+            params: { type: 'object' },
+            confirmationTier: { type: 'integer', enum: [1, 2, 3, 4] },
+            dependsOn: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['id', 'capability', 'action', 'params', 'confirmationTier', 'dependsOn'],
+        },
+      },
+    },
+    required: ['reason', 'steps'],
+  },
+};
+
+/** Long outputs are evidence, not the payload. Keep the prompt affordable. */
+function truncate(text: string, max = 600): string {
+  return text.length <= max ? text : `${text.slice(0, max)}… (${text.length} chars)`;
 }
 
 const answerTool: ToolSpec = {

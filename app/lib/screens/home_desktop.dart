@@ -10,6 +10,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../core/dex_gateway.dart';
 import '../core/models/agent_state.dart';
 import '../core/state/conversation_store.dart';
 import '../theme/tokens.dart';
@@ -64,28 +65,75 @@ class _HomeDesktopState extends State<HomeDesktop> {
     RecentFileItem(name: 'README.md', when: 'Yesterday'),
   ];
 
-  static const List<RecentChatItem> _recentChats = <RecentChatItem>[
-    RecentChatItem(
-      id: 'dns',
-      title: 'Change Wi-Fi DNS to 1.1.1.1',
-      when: 'Today',
-    ),
-    RecentChatItem(
-      id: 'figma',
-      title: 'Export Figma frame as PNG',
-      when: 'Yesterday',
-    ),
-    RecentChatItem(
-      id: 'pebble',
-      title: 'Searching for pebble.exe file',
-      when: 'Saturday',
-    ),
-    RecentChatItem(
-      id: 'aadhaar',
-      title: 'Find my Aadhaar card',
-      when: '2 days ago',
-    ),
-  ];
+  /// What was actually asked, newest first.
+  ///
+  /// These four rows were `const` — "Change Wi-Fi DNS to 1.1.1.1", "Export
+  /// Figma frame as PNG", "Searching for pebble.exe file", "Find my Aadhaar
+  /// card". None of them had ever happened. A history that is decoration is
+  /// worse than no history: it is the one part of the app whose entire job is
+  /// to be a record, and it was fiction.
+  ///
+  /// The real thing is in telemetry, which the Memory tab already reads. This
+  /// is the same feed, through the same client.
+  List<RecentChatItem> get _recentChats {
+    final tasks = DexGatewayClient.current?.history ?? const [];
+    return [
+      for (final task in tasks.take(20))
+        RecentChatItem(
+          id: task['requestId'] as String? ?? '',
+          title: (task['text'] as String? ?? '').trim(),
+          when: _ago(task['startedAt'] as int?),
+          // Failures stay in the list. A record that quietly drops what went
+          // wrong is a highlight reel, and the failures are the ones worth
+          // seeing again.
+          failed: _isFailure(task['status'] as String?),
+        ),
+    ].where((c) => c.title.isNotEmpty).toList(growable: false);
+  }
+
+  static bool _isFailure(String? status) =>
+      status != null && status != 'COMPLETED' && status != 'ANSWERED';
+
+  static String _ago(int? epochMs) {
+    if (epochMs == null) return '';
+    final then = DateTime.fromMillisecondsSinceEpoch(epochMs);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(then.year, then.month, then.day);
+    final days = today.difference(day).inDays;
+
+    if (days <= 0) return 'Today';
+    if (days == 1) return 'Yesterday';
+    if (days < 7) return '$days days ago';
+    if (days < 14) return 'Last week';
+    return '${then.day}/${then.month}';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // The list is only as good as the last refresh. Once when the core comes
+    // up, and again whenever the store settles, which is when a task has just
+    // finished and added a row.
+    DexGatewayClient.current?.refreshHistory();
+    widget.store.addListener(_onStoreChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.store.removeListener(_onStoreChanged);
+    super.dispose();
+  }
+
+  bool _wasBusy = false;
+
+  void _onStoreChanged() {
+    // Only on the busy -> idle edge. Refreshing on every frame of a streaming
+    // task would ask the core for the history sixty times a second.
+    final busy = widget.store.isBusy;
+    if (_wasBusy && !busy) DexGatewayClient.current?.refreshHistory();
+    _wasBusy = busy;
+  }
 
   void _toggleSidebar() => setState(() => _sidebarExpanded = !_sidebarExpanded);
 
@@ -151,8 +199,23 @@ class _HomeDesktopState extends State<HomeDesktop> {
                     activeChatId: null,
                     userName: 'Dex user',
                     onNewChat: widget.store.clearMessages,
+                    // Each one opens a screen that exists and shows live data.
+                    // Six of these used to be null, so the rail looked broken.
+                    onWorkflows: () =>
+                        SettingsDialog.show(context, initial: SettingsTab.memory),
+                    onSchedules: () =>
+                        RemindersScreen.show(context, widget.store),
+                    onCapabilities: () => SettingsDialog.show(
+                        context, initial: SettingsTab.connectors),
+                    onLogs: () => SettingsDialog.show(
+                        context, initial: SettingsTab.diagnostics),
+                    onSettings: () => SettingsDialog.show(context),
                     onProfileAction: _handleProfileAction,
-                    onSelectChat: (_) {},
+                    // Re-ask it. Deliberately not "reopen the conversation":
+                    // messages have never been persisted, so restoring one
+                    // would show an empty transcript under a real title, which
+                    // is a worse lie than starting the task again.
+                    onSelectChat: (chat) => widget.store.sendHumanMessage(chat.title),
                   ),
                   Expanded(
                     child: Stack(
@@ -207,14 +270,16 @@ class _HomeDesktopState extends State<HomeDesktop> {
     );
   }
 
+  /// What is left of the + menu after the composer has handled its own.
+  ///
+  /// Attaching files and taking a screenshot both end in an attachment, so the
+  /// composer does those itself. Connectors is a screen, so it lands here.
+  ///
+  /// This used to be the whole handler, and all it did was show a snackbar
+  /// with the label of the thing that had not happened.
   void _handleAdd(ComposerAddAction action) {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    messenger?.showSnackBar(
-      SnackBar(
-        content: Text(action.label),
-        backgroundColor: DexColors.surface2,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (action == ComposerAddAction.connectors) {
+      SettingsDialog.show(context, initial: SettingsTab.connectors);
+    }
   }
 }

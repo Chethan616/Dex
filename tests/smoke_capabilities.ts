@@ -103,6 +103,7 @@ console.log('\n— the 25 use cases have actions to reach —');
 const needed: [string, Record<string, unknown>][] = [
   ['run_command', OS_ACTIONS],
   ['classify_command', OS_ACTIONS],
+  ['capture_screen', OS_ACTIONS],
   ['get_env', OS_ACTIONS],
   ['set_env', OS_ACTIONS],
   ['get_display', OS_ACTIONS],

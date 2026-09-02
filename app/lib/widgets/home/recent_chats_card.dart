@@ -8,10 +8,22 @@ import '../../theme/tokens.dart';
 import 'home_card.dart';
 
 class RecentChatItem {
-  const RecentChatItem({required this.id, required this.title, required this.when});
+  const RecentChatItem({
+    required this.id,
+    required this.title,
+    required this.when,
+    this.failed = false,
+  });
   final String id;
   final String title;
   final String when;
+
+  /// Whether the task ended badly.
+  ///
+  /// Failures stay in the history and are marked. A record that quietly drops
+  /// what went wrong is a highlight reel, and the failures are usually the ones
+  /// worth looking at again.
+  final bool failed;
 }
 
 class RecentChatsCard extends StatelessWidget {

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
 import '../../core/dex_gateway.dart';
@@ -54,7 +55,15 @@ class DexComposer extends StatefulWidget {
 class _DexComposerState extends State<DexComposer> {
   late final TextEditingController _ctrl;
   late final FocusNode _focus;
-  ComposerMode _mode = ComposerMode.smart;
+  /// Fast — Haiku — is the default.
+  ///
+  /// It was Smart, which is Sonnet. Measured on this machine the two plan a
+  /// GUI task in 27.8s and 28.8s: the Claude Code CLI's own startup dominates,
+  /// so Sonnet buys about a second of wall clock and costs several times the
+  /// tokens on every single request, including "what can you do". Haiku plans
+  /// the automation and UIA work this app actually does, and Smart is one tap
+  /// away for the plans that keep coming out wrong.
+  ComposerMode _mode = ComposerMode.fast;
   bool _hasText = false;
 
   // Shell-style prompt recall. -1 = live input; 0+ = offset back into
@@ -212,6 +221,36 @@ class _DexComposerState extends State<DexComposer> {
     setState(() => _attachments.removeWhere((a) => a.id == id));
   }
 
+  /// The + menu. Two of the three do their work here, because both end in an
+  /// attachment and the attachment strip belongs to this widget.
+  Future<void> _handleAdd(ComposerAddAction action) async {
+    switch (action) {
+      case ComposerAddAction.files:
+        const images = XTypeGroup(
+          label: 'Images',
+          extensions: <String>['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'],
+        );
+        const anything = XTypeGroup(label: 'All files');
+        final picked = await openFiles(acceptedTypeGroups: [images, anything]);
+        if (picked.isEmpty) return;
+        _addAttachments([
+          for (final file in picked) AttachedItem.fromFileUri(Uri.file(file.path)),
+        ]);
+
+      case ComposerAddAction.screenshot:
+        // A real capture, through the daemon, in the owner's own session —
+        // the same `capture_screen` action the planner can reach. The file it
+        // writes is attached by reference, so the next message can be
+        // "what is wrong here" about a picture Dex actually took.
+        final path = await DexGatewayClient.current?.captureScreen();
+        if (path == null || path.isEmpty) return;
+        _addAttachments([AttachedItem.fromFileUri(Uri.file(path))]);
+
+      case ComposerAddAction.connectors:
+        widget.onAddAction?.call(action);
+    }
+  }
+
   Future<void> _pasteFromClipboard() async {
     // Rich content (image / file) becomes an attachment chip.
     final items = await extractClipboardItems();
@@ -318,7 +357,10 @@ class _DexComposerState extends State<DexComposer> {
                   mode: _mode,
                   isBusy: widget.isBusy,
                   hasText: _hasText,
-                  onAddAction: widget.onAddAction,
+                  // Intercepted rather than passed straight up: two of the
+                  // three actions produce attachments, and the attachment
+                  // strip lives in this State. The rest bubble to the screen.
+                  onAddAction: _handleAdd,
                   onModeSelected: (m) => setState(() => _mode = m),
                   onVision: widget.onVision,
                   onVoice: widget.onVoice,

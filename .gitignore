@@ -20,6 +20,7 @@ client_secret*.json
 data/evidence/
 data/sessions/
 data/cache/
+data/test-evidence/
 data/telemetry.db
 data/*.db
 # SQLite WAL sidecars — same content as the database, and "data/*.db"

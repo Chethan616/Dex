@@ -13,9 +13,31 @@ import { ReliabilityLayer } from '../reliability/observation_engine';
 import { Telemetry } from '../memory/telemetry';
 import { ArtifactStore } from '../memory/artifacts';
 import { ConfirmationManager } from '../confirmation/confirmation_manager';
+import { describeUnresolved, findRefs, resolveStepRefs } from './step_refs';
 import { emit } from '../events/bus';
 
 type StepOutcome = 'ok' | 'failed' | 'cancelled';
+
+/**
+ * The one thing the Orchestrator needs from the Brain.
+ *
+ * Narrowed to a single method rather than importing the Brain itself. The
+ * Orchestrator's job is to run a plan; knowing how plans are made is the
+ * Gateway's business, and a dependency on the whole planner here would be one
+ * more edge in a graph that is already busy.
+ */
+export interface PlanRepairer {
+  repair(
+    input: {
+      intent: string;
+      failedStep: ExecutionStep;
+      failure: string;
+      outputs: ReadonlyMap<string, unknown>;
+      remaining: ExecutionStep[];
+    },
+    signal?: AbortSignal,
+  ): Promise<{ steps: ExecutionStep[]; reason: string } | null>;
+}
 
 export class Orchestrator {
   constructor(
@@ -39,10 +61,56 @@ export class Orchestrator {
     private artifacts: ArtifactStore = new ArtifactStore(),
   ) {}
 
+  /**
+   * The cancellation registry this Orchestrator runs against.
+   *
+   * Exposed so the Gateway can take the same AbortSignal for the planning call.
+   * Planning happens before the Orchestrator is involved at all, and it is the
+   * longest and most expensive part of a task — Stop has to reach it, and this
+   * is the one registry both halves have to agree on.
+   */
+  get cancellations(): CancellationRegistry {
+    return this.cancellation;
+  }
+
   private sessionId = '';
 
   /** True while running a plan nobody is watching. See gateStep. */
   private unattended = false;
+
+  /**
+   * What each completed step actually returned, keyed by step id.
+   *
+   * The reason a plan can now pass a value along its own edges. Held as
+   * per-plan state beside sessionId rather than threaded through executeStep,
+   * which already takes nine arguments.
+   *
+   * This is `AgentResult.data` unchanged — not the prose summary the agents
+   * see, and not the flattened `facts` the closing answer is built from. A
+   * reference like `{{step_1.output.best_primary}}` reads from here.
+   */
+  private outputs = new Map<string, unknown>();
+
+  /** Plan repairs spent on the current task. See `repairPlan`. */
+  private repairs = 0;
+
+  /** One. A repair loop is a worse outcome than a clean failure. */
+  private static readonly MAX_REPAIRS = 1;
+
+  private brain?: PlanRepairer;
+
+  /**
+   * Lend the Orchestrator a planner, so a failed step can be repaired.
+   *
+   * Set by the Gateway rather than passed to the constructor, and re-set when
+   * the Gateway swaps providers — the Orchestrator is built first, and a
+   * snapshot taken then would go stale the moment Settings changed the model.
+   * Absent is a supported state: without it, a failed step fails, which is
+   * exactly what happened before repairs existed.
+   */
+  usePlanner(brain: PlanRepairer): void {
+    this.brain = brain;
+  }
 
   async execute(
     plan: ExecutionPlan,
@@ -53,11 +121,16 @@ export class Orchestrator {
 
     const completed = new Set<string>();
     const remaining = [...steps];
+    // Which step ids this task is waiting on. Starts as the plan's, and is
+    // rewritten when a repair replaces some of them — see repairPlan.
+    const expected = new Set(steps.map((s) => s.id));
     // What the steps found, for the answer the owner is given.
     const facts: Record<string, unknown>[] = [];
     const stepReports = new Map<string, AgentStepSummary>();
     this.sessionId = plan.sessionId ?? '';
     this.unattended = plan.unattended === true;
+    this.outputs.clear();
+    this.repairs = 0;
 
     try {
       while (remaining.length > 0) {
@@ -104,20 +177,41 @@ export class Orchestrator {
           return this.cancelledResult(requestId, intent);
         }
         if (sawFailure) {
-          const failedSteps = ready
-            .filter((step) => stepReports.get(step.id)?.status === 'failed')
-            .map((step) => step.id);
-          const detail = failedSteps.length > 0 ? `: ${failedSteps.join(', ')}` : '';
+          const failed = ready.filter(
+            (step) => stepReports.get(step.id)?.status === 'failed',
+          );
+
+          // Before giving up: show the Brain what actually happened and let it
+          // fix what is left. See repairPlan.
+          const repaired = await this.repairPlan(
+            failed[0],
+            stepReports,
+            remaining,
+            intent,
+            requestId,
+          );
+          if (repaired) {
+            remaining.length = 0;
+            remaining.push(...repaired);
+            // The plan is no longer the plan. Without this, the completeness
+            // check below still looks for the step that was replaced, never
+            // finds it in `completed`, and reports a repaired task as failed.
+            for (const step of failed) expected.delete(step.id);
+            for (const step of repaired) expected.add(step.id);
+            continue;
+          }
+
+          const detail = failed.length > 0 ? `: ${failed.map((s) => s.id).join(', ')}` : '';
           emit('failed', `Stopped because an agent could not complete${detail}`, requestId);
           return { status: 'FAILED', summary: `Agent could not complete${detail}` };
         }
       }
 
-      const failed = steps.filter((s) => !completed.has(s.id));
-      if (failed.length > 0) {
+      const missing = [...expected].filter((id) => !completed.has(id));
+      if (missing.length > 0) {
         return {
           status: 'FAILED',
-          summary: `Failed steps: ${failed.map((s) => s.id).join(', ')}`,
+          summary: `Failed steps: ${missing.join(', ')}`,
         };
       }
 
@@ -135,6 +229,101 @@ export class Orchestrator {
       this.cancellation.clear(requestId);
       this.confirmations.cancelAll(requestId);
     }
+  }
+
+  /**
+   * A step failed. Ask the Brain to fix the rest of the plan, once.
+   *
+   * The Orchestrator already retries one class of failure: a step that ran but
+   * did not verify, where doing it again might genuinely go differently. This
+   * is the other class — a step that failed because the plan was wrong, where
+   * running it again produces the identical error forever. `set_dns` handed
+   * `{{step_1.output.best_primary}}` will answer "Invalid IP" every time.
+   *
+   * What makes this a repair rather than a guess is the evidence: the Brain is
+   * given what the completed steps actually returned, so it can see the value
+   * the failed step should have had.
+   *
+   * Four boundaries, and each of them is load-bearing:
+   *
+   *   - **Once.** A repair loop is a worse outcome than a clean failure: it
+   *     spends the owner's tokens and their time to arrive at the same place.
+   *   - **Completed steps are never replaced.** They have already changed the
+   *     machine. Only the failed step and what had not run yet are up for
+   *     replanning, so nothing is done twice.
+   *   - **Repaired steps are gated like any others.** They go back through the
+   *     same loop, so `gateStep` still runs and a Tier 2 step still raises a
+   *     card. A repair cannot launder a step past a confirmation.
+   *   - **Never after a stop.** Cancelling is a decision, not a fault.
+   *
+   * Returns the replacement steps, or null to let the task fail as it was
+   * going to.
+   */
+  private async repairPlan(
+    failedStep: ExecutionStep | undefined,
+    stepReports: Map<string, AgentStepSummary>,
+    remaining: readonly ExecutionStep[],
+    intent: string,
+    requestId: string,
+  ): Promise<ExecutionStep[] | null> {
+    if (!failedStep || !this.brain) return null;
+    if (this.repairs >= Orchestrator.MAX_REPAIRS) return null;
+    if (this.cancellation.isCancelled(requestId)) return null;
+
+    // Nobody is watching an unattended run, and a repair is a fresh model call
+    // whose steps may need approving. Failing at 3am is the honest outcome.
+    if (this.unattended) return null;
+
+    this.repairs += 1;
+    const failure = stepReports.get(failedStep.id)?.message ?? 'the step failed';
+
+    emit(
+      'routing',
+      `${failedStep.id} failed — looking at what the earlier steps returned and replanning the rest`,
+      requestId,
+      failedStep.id,
+    );
+
+    const repaired = await this.brain.repair(
+      {
+        intent,
+        failedStep,
+        failure,
+        outputs: this.outputs,
+        // The failed step is offered for replacement alongside the ones that
+        // never ran: it is the one most likely to be what was wrong.
+        remaining: [failedStep, ...remaining],
+      },
+      this.cancellation.signal(requestId),
+    );
+
+    if (!repaired || repaired.steps.length === 0) {
+      emit(
+        'failed',
+        'That could not be fixed by replanning.',
+        requestId,
+        failedStep.id,
+      );
+      return null;
+    }
+
+    // The repaired steps start from a clean slate: anything they depended on
+    // has either completed (and is in `outputs`) or is being replaced. A
+    // dependency on a step that no longer exists would deadlock the loop.
+    const ids = new Set(repaired.steps.map((s) => s.id));
+    const steps = repaired.steps.map((s) => ({
+      ...s,
+      dependsOn: s.dependsOn.filter((d) => ids.has(d)),
+    }));
+
+    emit(
+      'planning',
+      `Replanned: ${repaired.reason} — ${steps.length} step(s) to go`,
+      requestId,
+      undefined,
+      { requestId, intent, tier: 2, steps },
+    );
+    return steps;
   }
 
   private cancelledResult(requestId: string, intent: string): { status: TaskStatus; summary: string } {
@@ -222,6 +411,39 @@ export class Orchestrator {
       step.id,
       this.agentEventData(agentName, ctx.signal?.(), previousSteps),
     );
+    // Fill in whatever an earlier step produced.
+    //
+    // Deliberately after gateStep, so the confirmation card and the daemon's
+    // band classification both see the real command rather than a template.
+    // Approving `{{step_1.output.command}}` would be approving nothing.
+    const refs = findRefs(step.params);
+    if (refs.length > 0) {
+      const resolution = resolveStepRefs(step.params, this.outputs);
+      if (resolution.unresolved.length > 0) {
+        // Never pass an unresolved reference through. `set_dns` was handed the
+        // literal string `{{step_1.output.best_primary}}` and answered
+        // "Invalid IP" — the placeholder reaching a real action is the whole
+        // bug, and passing it through is how it happens.
+        const message = describeUnresolved(resolution.unresolved, this.outputs);
+        stepReports.set(step.id, {
+          stepId: step.id,
+          action: step.action,
+          agent: agentName,
+          status: 'failed',
+          message,
+        });
+        emit('failed', `${step.id}: ${message}`, requestId, step.id);
+        return 'failed';
+      }
+      step = { ...step, params: resolution.params };
+      emit(
+        'executing',
+        `Filled in from earlier steps: ${refs.join(', ')}`,
+        requestId,
+        step.id,
+      );
+    }
+
     let result = await agent.execute(step.action, step.params, requestId, step.id, ctx);
 
     // The agent hit the edge of its mechanism rather than failing. Hand the
@@ -297,6 +519,8 @@ export class Orchestrator {
         ...this.agentEventData(agentName, ctx.signal?.(), previousSteps),
         verification: verification.status,
       });
+      // What it returned, kept so a later step can use it. See `outputs`.
+      this.outputs.set(step.id, result.data);
       completed.add(step.id);
       return 'ok';
     }
@@ -314,6 +538,10 @@ export class Orchestrator {
         ...this.agentEventData(agentName, ctx.signal?.(), previousSteps),
         verification: verification.status,
       });
+      // Unverifiable is not untrue — the step ran and returned something, there
+      // was simply no independent way to confirm it. A later step may still
+      // need the value, and withholding it would be its own kind of lie.
+      this.outputs.set(step.id, result.data);
       completed.add(step.id);
       return 'ok';
     }
@@ -638,6 +866,53 @@ export class Orchestrator {
   }
 
   /**
+   * What the daemon says a shell command actually does.
+   *
+   * The planner guesses a confirmation tier from the words of the request. The
+   * daemon classifies the command itself, with the same rules it will apply
+   * when it runs it. When those two disagree the daemon is right, and it was
+   * disagreeing constantly in both directions:
+   *
+   *   too high  `powercfg /list` and `git status` are reads the daemon runs
+   *             silently, planned as Tier 2 because "power" sounded serious.
+   *             Every read raised a card.
+   *   too low   a command the planner thought harmless is AMBER at the daemon,
+   *             and ran with no card at all.
+   *
+   * So for shell steps the band decides. Cheap enough to ask per step — it is a
+   * local pipe call against a pure function, no process is started.
+   *
+   * Returns null when there is nothing to classify or the daemon cannot be
+   * reached, and the planner's tier stands: an unreachable daemon must not
+   * quietly turn a confirmation off.
+   */
+  private async commandBand(
+    step: ExecutionStep,
+    requestId: string,
+  ): Promise<{ band: string; reason: string } | null> {
+    if (step.action !== 'run_command' && step.action !== 'run_shell') return null;
+
+    const params = step.params as { command?: unknown; args?: unknown };
+    const command = params.command;
+    if (command === undefined || command === null || command === '') return null;
+
+    const agent = this.registry.resolve('can_control_os');
+    if (!agent) return null;
+
+    try {
+      const verdict = await agent.execute(
+        'classify_command', { command }, requestId, step.id,
+      );
+      if (!verdict.success) return null;
+      const data = verdict.data as { band?: string; reason?: string } | undefined;
+      if (!data?.band) return null;
+      return { band: data.band, reason: data.reason ?? 'run a command' };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Tier 4 runs silently. Tier 1–3 need the owner unless Full Access is on —
    * which means the daemon is running elevated in the owner's session, so a
    * prompt would be asking permission the owner already granted.
@@ -649,6 +924,33 @@ export class Orchestrator {
     // is the one class of step whose tier the planner is not allowed to choose
     // and Full Access is not allowed to skip.
     const red = await this.redBandReason(step, requestId);
+
+    // A shell command is judged by the daemon that will run it, not by the
+    // planner's guess. See commandBand.
+    const shell = red ? null : await this.commandBand(step, requestId);
+    let planScope: string | undefined;
+
+    if (shell?.band === 'green') {
+      // GREEN is the daemon's promise that nothing changes. Asking about a read
+      // teaches the owner to click through cards without reading them, which is
+      // how the cards that matter stop working.
+      if (step.confirmationTier < 4) {
+        emit(
+          'executing',
+          `${step.action} is a read (${shell.reason}) — running it without asking`,
+          requestId,
+          step.id,
+        );
+      }
+      return 'ok';
+    }
+
+    if (shell && shell.band !== 'green') {
+      // AMBER, or RED that the daemon will refuse on its own terms. Either way
+      // the owner is asked, whatever tier the planner wrote down.
+      step = { ...step, confirmationTier: step.confirmationTier < 2 ? step.confirmationTier : 2 };
+      planScope = shell.reason;
+    }
 
     if (!red && step.confirmationTier >= 4) return 'ok';
 
@@ -696,6 +998,8 @@ export class Orchestrator {
     const verdict = await this.confirmations.request(
       red ? { ...step, confirmationTier: 2 } : step,
       requestId,
+      // A RED registry key always asks, so it never carries a plan scope.
+      red ? undefined : planScope,
     );
 
     if (verdict === 'approved') return 'ok';

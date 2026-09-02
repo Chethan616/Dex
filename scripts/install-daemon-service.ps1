@@ -28,7 +28,12 @@ UAC prompt after this one.
 .PARAMETER NoStart
 Register the task but do not start the daemon now.
 #>
-param([switch]$NoStart)
+param(
+    [switch]$NoStart,
+    # Called from inside a running Dex (the Full Access toggle) rather than from
+    # a terminal. Leaves the app and the core running — see stop-dex.ps1.
+    [switch]$KeepUi
+)
 
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
@@ -81,7 +86,7 @@ Write-Host "Daemon : $daemon" -ForegroundColor DarkGray
 
 # Stop anything already running, including strays from earlier dev sessions.
 # Several daemons can serve one named pipe at once and answer unpredictably.
-& (Join-Path $PSScriptRoot 'stop-dex.ps1') -Quiet
+& (Join-Path $PSScriptRoot 'stop-dex.ps1') -Quiet -DaemonOnly:$KeepUi
 
 if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
     Write-Host 'Replacing the existing task...' -ForegroundColor DarkGray
@@ -123,18 +128,24 @@ if (-not $NoStart) {
 # FULL_ACCESS relaxes confirmation tiers. It does NOT relax the RED registry
 # band: security and policy keys stay refused whatever the privilege level.
 # Elevation decides who gets asked; the band decides what is done at all.
-if (Test-Path '.env') {
-    $envText = Get-Content '.env' -Raw
-    if ($envText -match 'FULL_ACCESS=') {
-        $envText = $envText -replace 'FULL_ACCESS=\S*', 'FULL_ACCESS=true'
-    } else {
-        $envText = $envText.TrimEnd() + "`nFULL_ACCESS=true`n"
-    }
-    Set-Content '.env' $envText -Encoding utf8
+# Written to the settings store the app reads, not to a .env and not to a
+# Machine environment variable.
+#
+# Both of those were wrong. This project does not want a .env file, and a
+# Machine variable is invisible to a process that is already running -- so the
+# core kept reporting Full Access off immediately after the owner turned it on,
+# and only a logout fixed it. settings.json is re-read on the next start and is
+# the same file the Settings screen writes.
+$settings = Join-Path $env:LOCALAPPDATA 'DEX\settings.json'
+New-Item -ItemType Directory -Force (Split-Path $settings) | Out-Null
+$config = if (Test-Path $settings) {
+    Get-Content $settings -Raw | ConvertFrom-Json
 } else {
-    Set-Content '.env' "FULL_ACCESS=true`n" -Encoding utf8
+    [PSCustomObject]@{}
 }
-[System.Environment]::SetEnvironmentVariable('DEX_FULL_ACCESS', 'true', 'Machine')
+$config | Add-Member -NotePropertyName fullAccess -NotePropertyValue $true -Force
+$config | ConvertTo-Json -Depth 8 | Set-Content $settings -Encoding utf8
+Write-Host "Recorded in $settings" -ForegroundColor DarkGray
 
 Write-Host ''
 Write-Host 'Full Access enabled.' -ForegroundColor Green

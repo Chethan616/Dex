@@ -2,13 +2,17 @@
 REM ============================================================================
 REM  Dex - start everything.
 REM
-REM  Double-click this, or run it from a terminal. Arguments pass straight
-REM  through to scripts\run-dev.ps1, so "RUN.bat -Console" works.
+REM  Double-click this, or run it from a terminal.
 REM
-REM  It exists because a first run needs four things nobody remembers in the
-REM  right order: dependencies, a .env, a built Dex Bar, and PowerShell being
-REM  willing to run an unsigned script. run-dev.ps1 does the last two; this
-REM  does the first two and then gets out of the way.
+REM  It used to be the only way in: it ran scripts\run-dev.ps1, which started
+REM  the daemon, the agents, the core and the OLD Dex Bar in ui\dex-bar. The
+REM  app in app\ had no way to start any of that, so opening it directly showed
+REM  "core not running" with no way to fix it from inside. The supervisor now
+REM  lives in the app, so this is a convenience rather than a requirement:
+REM  it checks the prerequisites, builds once if needed, and opens Dex.
+REM
+REM  RUN.bat -Console still gives the developer path - run-dev.ps1 with the
+REM  dex> prompt.
 REM
 REM  Keep this file CRLF. cmd.exe mis-parses a batch file with bare LF endings,
 REM  and the failure is baffling: "setlocal" came back as "tlocal".
@@ -60,33 +64,46 @@ if not exist "node_modules" (
 )
 
 REM --- Config ----------------------------------------------------------------
-REM .env is gitignored, so a fresh clone has none. Copying the example gets Dex
-REM to a running state; the model key is the one thing it cannot invent.
-
-if not exist ".env" (
-  echo   No .env found - created one from .env.example
-  copy /y ".env.example" ".env" >nul
-  echo.
-  echo   Dex needs one model to plan with. Add a key now:
-  echo.
-  echo       npm run cred -- set groq_api_key
-  echo.
-  echo   Groq has a free tier and is what Dex is tuned for.
-  echo   Then run this again.
-  goto :fail
-)
+REM No .env is created here, and none is required.
+REM
+REM This used to copy .env.example and then refuse to start until a key was in
+REM it. Dex does not read .env any more: configuration is settings.json under
+REM %LOCALAPPDATA%\DEX and secrets are in the Windows credential store, both
+REM written by the Settings screen. Creating a .env would put a second, stale
+REM source of truth beside the real one - and refusing to start over a missing
+REM one meant a fresh clone could not open the app that asks for the key.
 
 REM --- Go --------------------------------------------------------------------
 REM -ExecutionPolicy Bypass because these scripts are unsigned and Windows
 REM refuses unsigned scripts by default. Scoped to this one process; nothing is
 REM changed machine-wide.
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\run-dev.ps1" %*
-if errorlevel 1 goto :ranbad
+if /i "%~1"=="-Console" (
+  powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\run-dev.ps1" %*
+  if errorlevel 1 goto :ranbad
+  exit /b 0
+)
 
-REM Windowless mode returns as soon as everything is up, with Dex running in
-REM the background - so there is nothing to wait for and no window worth
-REM keeping open. Alt+Space summons the bar.
+set "DEX_APP=app\build\windows\x64\runner\Release\dex.exe"
+
+if not exist "%DEX_APP%" (
+  echo   Building Dex - about a minute, once.
+  pushd app
+  call flutter build windows --release
+  popd
+  if not exist "%DEX_APP%" (
+    echo   [X] The Flutter build failed.
+    goto :fail
+  )
+  echo.
+)
+
+echo   Starting Dex...
+start "" "%DEX_APP%"
+
+REM Nothing to wait for. The app is on screen and it brings the daemon, the
+REM agents and the core up behind its splash, each row going green when the
+REM service answers.
 exit /b 0
 
 :ranbad

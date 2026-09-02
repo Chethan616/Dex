@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/dex_gateway.dart';
+import '../core/supervisor/supervisor.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 
@@ -52,6 +53,17 @@ class ConnectionBanner extends StatelessWidget {
                 ),
                 if (s == DexConnection.noCore ||
                     s == DexConnection.disconnected) ...[
+                  // Retry only reconnects. If the core is not running, there is
+                  // nothing to reconnect to and pressing it forever was the
+                  // whole of the owner's options — so the button that actually
+                  // fixes it is here too, and it is the same supervisor call
+                  // the splash makes.
+                  if (_coreIsDown)
+                    TextButton(
+                      onPressed: _startCore,
+                      child: Text('Start the core',
+                          style: DexType.label(color: DexColors.accent)),
+                    ),
                   TextButton(
                     onPressed: client.connect,
                     child: Text('Retry', style: DexType.label(color: DexColors.accent)),
@@ -65,6 +77,24 @@ class ConnectionBanner extends StatelessWidget {
     );
   }
 
+  /// Whether the supervisor knows the core is not up.
+  ///
+  /// False when there is no supervisor — the Spotlight sub-window, and tests —
+  /// in which case the banner keeps its old behaviour and offers only Retry.
+  bool get _coreIsDown {
+    final step = Supervisor.current?.step('core');
+    return step != null &&
+        step.status != BootStatus.done &&
+        !(Supervisor.current?.booting ?? false);
+  }
+
+  Future<void> _startCore() async {
+    final supervisor = Supervisor.current;
+    if (supervisor == null) return;
+    await supervisor.retry('core');
+    await client.connect();
+  }
+
   (Color, String, String) _describe(DexConnection s, String? err) {
     switch (s) {
       case DexConnection.disconnected:
@@ -76,13 +106,19 @@ class ConnectionBanner extends StatelessWidget {
       case DexConnection.connecting:
         return (DexColors.stateActing, 'connecting', 'Opening the link to the Dex core…');
       case DexConnection.noCore:
-        // Named rather than called "failed": the core is normally started by
-        // the app itself, so this almost always means it is still coming up or
-        // it died — and the log is where that is answered.
+        // Named rather than called "failed": the app starts the core itself, so
+        // this almost always means it is still coming up or it died.
+        //
+        // The supervisor's own reason is preferred over the generic one when
+        // there is one. "the core exited — see core.log" is a fact; "Dex core
+        // is not running" is a restatement of the banner's own title.
+        final detail = Supervisor.current?.step('core').detail;
         return (
           DexColors.stateError,
           'core not running',
-          err ?? r'The Dex core is not listening. See %LOCALAPPDATA%\DEX\core.log',
+          detail ??
+              err ??
+              r'The Dex core is not listening. See %LOCALAPPDATA%\DEX\core.log',
         );
       case DexConnection.connected:
         return (DexColors.stateApprove, 'ready', '');

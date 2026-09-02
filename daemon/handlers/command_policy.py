@@ -48,7 +48,20 @@ RED = 'red'
 
 RED_PATTERNS = [
     # Disks and volumes.
-    (r'\bformat(\.com)?\b', 'formatting a drive'),
+    # `format` only means the disk utility when it is given a drive to format.
+    #
+    # This was `\bformat(\.com)?\b`, which is the single most expensive false
+    # positive this file has had. It matched `Format-Table`, `Format-List`,
+    # `-Format yyyy-MM-dd` and `git log --format=%H` — so every PowerShell
+    # pipeline that ended in a formatter, which is most of the useful ones, was
+    # refused with "this command would format a drive". Dex looked unable to
+    # read anything through PowerShell, and the reason it gave was alarming and
+    # wrong.
+    #
+    # The lookbehind rejects `-format` and `/format`; requiring a drive letter
+    # argument rejects the cmdlets, whose next token is a hyphen. `Format-Volume`
+    # is the real PowerShell equivalent and keeps its own pattern below.
+    (r'(?<![\w/-])format(\.com)?\s+(?:/\S+\s+)*[a-z]:', 'formatting a drive'),
     (r'\bdiskpart\b', 'partitioning disks'),
     (r'\bconvert\s+[a-z]:\s', 'converting a filesystem'),
     (r'\bchkdsk\b.*\s/[frx]\b', 'repairing a volume in place'),
@@ -136,6 +149,26 @@ GREEN_SUBCOMMANDS = {
     'netsh': {'show', 'dump', 'interface', 'wlan', 'advfirewall'},
     'wmic': set(),   # read-only in practice; writes are caught by RED patterns
 }
+
+# Programs whose read/write split is deeper than their first argument.
+#
+# `netsh interface` lists adapters; `netsh interface ip set dns` rewrites the
+# resolver. `powercfg /list` prints the schemes; `powercfg /setacvalueindex`
+# edits one. Both pairs share a first token, so the GREEN_SUBCOMMANDS check —
+# which looks at that token — calls all four reads.
+#
+# Matched against the whole line and checked BEFORE the GREEN name, because the
+# question is what the program is being asked to do, not what it is called.
+# Still AMBER rather than RED: changing a power scheme or a DNS server is
+# exactly what Dex is for. It just is not silent.
+WRITE_SUBCOMMANDS = [
+    (r'\bnetsh\b[^|]*\b(set|add|delete|reset|import)\b', 'change a network setting'),
+    (r'\bpowercfg\b[^|]*\s[/-](setactive|setacvalueindex|setdcvalueindex|'
+     r'duplicatescheme|changename|delete|import|export|hibernate|change|'
+     r'restoredefaultschemes|deviceenablewake|devicedisablewake|'
+     r'setsecuritydescriptor|x|s)\b', 'change a Windows power setting'),
+    (r'\bwmic\b[^|]*\b(call|set|create|delete)\b', 'change a system object through WMI'),
+]
 
 # Version and help flags make any known program GREEN — "javac -version" is a
 # capability probe, not a compile, and every dev-workspace task begins with one.
@@ -269,7 +302,13 @@ def classify(command) -> tuple:
             return GREEN, f'read through {program}'
         return _describe_amber(flat, f'run {program}')
 
-    # 5. Programs with both read and write modes, judged on the subcommand.
+    # 5. Write modes that hide behind a read-looking first argument. Before the
+    #    two GREEN checks below, because those would both let these through.
+    for pattern, what in WRITE_SUBCOMMANDS:
+        if re.search(pattern, flat):
+            return AMBER, what
+
+    # 6. Programs with both read and write modes, judged on the subcommand.
     if program in GREEN_SUBCOMMANDS:
         subcommand = next((a for a in args if not a.startswith('-')), '')
         allowed = GREEN_SUBCOMMANDS[program]
@@ -277,11 +316,11 @@ def classify(command) -> tuple:
             return GREEN, f'read from {program}'
         return _describe_amber(flat, f'run {program} {subcommand}')
 
-    # 6. Plain read-only programs.
+    # 7. Plain read-only programs.
     if program in GREEN_PROGRAMS:
         return GREEN, f'run {program}'
 
-    # 7. Everything else. Unknown is AMBER — see the module docstring.
+    # 8. Everything else. Unknown is AMBER — see the module docstring.
     return _describe_amber(flat, f'run {program or "a command"}')
 
 

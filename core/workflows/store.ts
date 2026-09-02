@@ -28,6 +28,16 @@ export interface Workflow {
   createdAt: number;
   lastRunAt?: number;
   runCount: number;
+  /**
+   * `learned` — saved automatically when a task succeeded.
+   * `named`   — the owner asked for it by name and calls it by name.
+   *
+   * Named ones outrank learned ones in the list the Brain is shown, and are
+   * never evicted by the cap. A name is a statement that this one matters.
+   */
+  origin: 'learned' | 'named';
+  /** Replays that failed. See `markFailed`. */
+  failCount: number;
 }
 
 const NAME_RE = /^[a-z0-9][a-z0-9_-]{0,47}$/;
@@ -52,6 +62,7 @@ export class WorkflowStore {
     plan: ExecutionPlan;
     requestText: string;
     description?: string;
+    origin?: 'learned' | 'named';
   }): Workflow {
     const name = input.name.trim().toLowerCase();
     if (!NAME_RE.test(name)) {
@@ -105,14 +116,18 @@ export class WorkflowStore {
       template,
       createdAt: Date.now(),
       runCount: 0,
+      origin: input.origin ?? 'named',
+      failCount: 0,
     };
 
     db()
       .prepare(
         `INSERT OR REPLACE INTO workflows
-         (name, description, trigger_text, shape, params, plan, created_at, run_count)
+         (name, description, trigger_text, shape, params, plan, created_at,
+          run_count, origin, fail_count)
          VALUES (?, ?, ?, ?, ?, ?, ?,
-                 COALESCE((SELECT run_count FROM workflows WHERE name = ?), 0))`,
+                 COALESCE((SELECT run_count FROM workflows WHERE name = ?), 0),
+                 ?, 0)`,
       )
       .run(
         workflow.name,
@@ -123,8 +138,10 @@ export class WorkflowStore {
         JSON.stringify(workflow.template),
         workflow.createdAt,
         workflow.name,
+        workflow.origin,
       );
 
+    this.prune();
     return workflow;
   }
 
@@ -136,8 +153,14 @@ export class WorkflowStore {
   }
 
   list(): Workflow[] {
+    // Named first, then by how often each has actually been useful. This is the
+    // order the Brain is shown, so the ones that have earned their place are
+    // the ones it sees first.
     return (db()
-      .prepare('SELECT * FROM workflows ORDER BY run_count DESC, created_at DESC')
+      .prepare(
+        "SELECT * FROM workflows "
+        + "ORDER BY (origin = 'named') DESC, run_count DESC, created_at DESC",
+      )
       .all() as Array<Record<string, unknown>>).map(hydrate);
   }
 
@@ -150,8 +173,158 @@ export class WorkflowStore {
 
   markRun(name: string): void {
     db()
-      .prepare('UPDATE workflows SET run_count = run_count + 1, last_run_at = ? WHERE name = ?')
+      .prepare(
+        'UPDATE workflows SET run_count = run_count + 1, last_run_at = ?, '
+        + 'fail_count = 0 WHERE name = ?',
+      )
       .run(Date.now(), name.trim().toLowerCase());
+  }
+
+  /**
+   * A replay failed. Two failures in a row and the workflow is forgotten.
+   *
+   * This is what makes saving automatically safe to do. Without it, a plan that
+   * happened to succeed once is remembered forever and replayed confidently
+   * every time the request is re-said — and a saved plan is *more* dangerous
+   * than a fresh one, because it skips the Brain entirely and nothing gets a
+   * second look at it.
+   *
+   * Two rather than one: a workflow can fail for reasons that have nothing to
+   * do with the plan — the daemon down, a site moved, the machine offline — and
+   * throwing away good knowledge over one bad night is its own kind of wrong.
+   * `markRun` resets the count, so it takes two failures with no success
+   * between them.
+   */
+  markFailed(name: string): void {
+    const key = name.trim().toLowerCase();
+    db()
+      .prepare('UPDATE workflows SET fail_count = fail_count + 1 WHERE name = ?')
+      .run(key);
+
+    const row = db()
+      .prepare('SELECT fail_count, origin FROM workflows WHERE name = ?')
+      .get(key) as { fail_count?: number; origin?: string } | undefined;
+
+    // A named workflow is the owner's, not Dex's, and is never deleted out from
+    // under them. The count is still recorded so the UI can say it is failing.
+    if (row && row.origin === 'learned' && Number(row.fail_count ?? 0) >= 2) {
+      this.delete(key);
+    }
+  }
+
+  /**
+   * Save a task that just worked, without being asked.
+   *
+   * Every completed task becomes a reusable script, so the next time the same
+   * thing is asked it replays with new parameters and costs no model call at
+   * all. That is the whole point of remembering: the second time should be
+   * free. Before this, saving was reachable only from the CLI and only after
+   * the identical request had succeeded three times, so almost nothing was ever
+   * saved.
+   *
+   * Returns the workflow, or undefined when there is nothing worth saving.
+   *
+   * Deliberately quiet about failure. This runs after a task the owner already
+   * considers finished; an error here must not turn a success into a failure,
+   * and there is nothing they could do about it if it did.
+   */
+  autoSave(input: { plan: ExecutionPlan; requestText: string }): Workflow | undefined {
+    try {
+      const text = input.requestText.trim();
+      if (!text || input.plan.steps.length === 0) return undefined;
+
+      // Already known. Update it in place rather than growing a twin: the
+      // parameters are re-derived from the same shape, so the newer plan wins.
+      const { shape } = shapeOf(text);
+      const existing = db()
+        .prepare('SELECT name, origin FROM workflows WHERE shape = ?')
+        .get(shape) as { name?: string; origin?: string } | undefined;
+
+      // A workflow the owner named is theirs. Dex does not quietly rewrite it.
+      if (existing?.origin === 'named') return undefined;
+
+      const name = existing?.name ?? this.freeName(input.plan.intent || text);
+      return this.save({
+        name,
+        plan: input.plan,
+        requestText: text,
+        description: input.plan.intent,
+        origin: 'learned',
+      });
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * A slug from the intent, with a number appended if it is taken.
+   *
+   * The name matters less than it used to — nothing has to type it — but it is
+   * what appears in the UI and what `run <name>` accepts, so it should read
+   * like the task rather than like a hash.
+   */
+  private freeName(source: string): string {
+    const base = source
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .split('-')
+      .filter(Boolean)
+      .slice(0, 4)
+      .join('-')
+      .slice(0, 40) || 'task';
+
+    if (!this.get(base)) return base;
+    for (let i = 2; i < 100; i += 1) {
+      const candidate = `${base}-${i}`.slice(0, 48);
+      if (!this.get(candidate)) return candidate;
+    }
+    return `${base}-${Date.now().toString(36)}`.slice(0, 48);
+  }
+
+  /**
+   * Keep the store from growing without bound.
+   *
+   * Learned workflows arrive on their own now, so something has to take them
+   * away again. Least useful goes first — fewest runs, longest untouched — and
+   * a workflow the owner named is never evicted, because naming it was them
+   * saying it mattered.
+   */
+  private prune(limit = 200): void {
+    db()
+      .prepare(
+        "DELETE FROM workflows WHERE name IN ("
+        + "  SELECT name FROM workflows WHERE origin = 'learned'"
+        + "  ORDER BY run_count DESC, COALESCE(last_run_at, created_at) DESC"
+        + "  LIMIT -1 OFFSET ?)",
+      )
+      .run(limit);
+  }
+
+  /**
+   * Give a learned workflow a name of the owner's choosing.
+   *
+   * Naming it also claims it: origin becomes `named`, so it outranks the
+   * learned ones and the cap will never evict it.
+   */
+  rename(from: string, to: string): Workflow {
+    const workflow = this.get(from);
+    if (!workflow) throw new Error(`No workflow called "${from}"`);
+
+    const name = to.trim().toLowerCase();
+    if (!NAME_RE.test(name)) {
+      throw new Error(
+        `"${to}" is not a usable workflow name — use lowercase letters, digits, - or _`,
+      );
+    }
+    if (name !== workflow.name && this.get(name)) {
+      throw new Error(`"${name}" is already taken`);
+    }
+
+    db()
+      .prepare("UPDATE workflows SET name = ?, origin = 'named' WHERE name = ?")
+      .run(name, workflow.name);
+    return { ...workflow, name, origin: 'named' };
   }
 
   /**
@@ -245,5 +418,7 @@ function hydrate(row: Record<string, unknown>): Workflow {
     createdAt: Number(row.created_at),
     lastRunAt: row.last_run_at == null ? undefined : Number(row.last_run_at),
     runCount: Number(row.run_count ?? 0),
+    origin: row.origin === 'learned' ? 'learned' : 'named',
+    failCount: Number(row.fail_count ?? 0),
   };
 }

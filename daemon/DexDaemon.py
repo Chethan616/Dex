@@ -22,6 +22,7 @@ from handlers.registry_handler import RegistryHandler
 from handlers.shell_runner import ShellRunner
 from handlers.env_handler import EnvHandler
 from handlers.display_handler import DisplayHandler
+from handlers.screen_handler import ScreenHandler
 
 def _log_handlers() -> list:
     """
@@ -100,6 +101,7 @@ DISPATCH = {
     'kill_process':     ProcessHandler.kill_process,
     'launch_app':       AppHandler.launch_app,
     'close_app':        AppHandler.close_app,
+    'capture_screen':   ScreenHandler.capture,
 }
 
 

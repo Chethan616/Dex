@@ -18,6 +18,8 @@ for months without ever executing.
 """
 from __future__ import annotations
 
+import json
+
 import logging
 import os
 import subprocess
@@ -154,7 +156,36 @@ def _execute(command: list, params: dict, band: str, reason: str = '') -> dict:
         # `git diff --quiet` returns 1 to mean "there are changes" — and the
         # caller decides whether that is a failure.
         'ok': result.returncode == 0,
+        # The output, parsed, when it is JSON.
+        #
+        # A later step can point at a field of this — `{{step_1.output.best}}`
+        # — which is how one step uses what another measured. Without it the
+        # winner of a DNS benchmark is a line of text inside `stdout`, and the
+        # only thing pointing at it can produce is the string "stdout".
+        #
+        # Absent rather than null when the output is not JSON, so a reference
+        # to a field of it fails loudly instead of resolving to nothing.
+        **({'json': parsed} if (parsed := _as_json(stdout)) is not None else {}),
     }
+
+
+def _as_json(text: str):
+    """
+    The output as an object, or None.
+
+    Only a complete JSON object or array counts. A bare number or a quoted
+    string is almost always coincidence — `echo 5` is not structured output —
+    and treating it as such would put a `json` field on results that have no
+    structure to offer.
+    """
+    stripped = (text or '').strip()
+    if not stripped or stripped[0] not in '{[':
+        return None
+    try:
+        value = json.loads(stripped)
+    except (ValueError, TypeError):
+        return None
+    return value if isinstance(value, (dict, list)) else None
 
 
 def _clip(text: str) -> tuple:

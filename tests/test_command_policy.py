@@ -156,6 +156,42 @@ for command in (['git', 'status'], ['npm', 'install']):
         failures += 1
         print(f'FAIL guard refused a non-RED command: {" ".join(command)}')
 
+print('\n— a formatter is not a format —')
+# `\bformat\b` matched Format-Table, Format-List, -Format and --format=, so
+# every PowerShell pipeline ending in a formatter was refused with "this command
+# would format a drive". Dex looked unable to read anything through PowerShell,
+# and the reason it gave was both alarming and untrue.
+band('Format-Table in a pipeline',
+     'powershell -Command Get-Process | Format-Table -AutoSize', GREEN)
+band('Format-List in a pipeline',
+     'powershell -Command Get-NetIPConfiguration | Format-List', GREEN)
+band('--format= on git log', ['git', 'log', '--format=%H'], GREEN)
+# The real one still is.
+band('format with a drive', ['format', 'D:', '/fs:ntfs'], RED)
+band('format with switches before the drive',
+     ['format', '/q', '/fs:ntfs', 'D:'], RED)
+band('Format-Volume', 'powershell -Command Format-Volume -DriveLetter D', RED)
+
+print('\n— a write hiding behind a read-looking first argument —')
+# powercfg and netsh are GREEN by name because most of what they do is read.
+# Both modes share a first argument, so the first-token check called
+# `powercfg /setacvalueindex` and `netsh interface ip set dns` reads. They are
+# not. They are exactly the Windows-settings changes Dex exists to make, which
+# is why they are AMBER and not RED — but they are not silent.
+band('powercfg /list', ['powercfg', '/list'], GREEN)
+band('powercfg /getactivescheme', ['powercfg', '/getactivescheme'], GREEN)
+band('powercfg /setacvalueindex',
+     ['powercfg', '/setacvalueindex', 'de5c0de0', 'SUB_PROCESSOR',
+      'PROCTHROTTLEMAX', '100'], AMBER)
+band('powercfg /duplicatescheme',
+     ['powercfg', '/duplicatescheme', '381b4222'], AMBER)
+band('powercfg /setactive', ['powercfg', '/setactive', 'de5c0de0'], AMBER)
+band('netsh show', ['netsh', 'interface', 'show', 'interface'], GREEN)
+band('netsh wlan show', ['netsh', 'wlan', 'show', 'profiles'], GREEN)
+band('netsh set dns',
+     ['netsh', 'interface', 'ip', 'set', 'dns', 'name=Wi-Fi',
+      'static', '1.1.1.1'], AMBER)
+
 print('\n— reasons are written for a person, not echoed back —')
 for command, expect_words in [
     (['npm', 'install', 'express'], 'install'),

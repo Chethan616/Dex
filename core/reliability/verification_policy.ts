@@ -349,12 +349,40 @@ async function verifyOsStep(step: ExecutionStep, agentResult?: AgentResult): Pro
       return verifyAppOpen(step, agentResult);
     case 'close_app':
       return verifyAppClosed(step, agentResult);
+    // A capture is verified by the file being on disk, not by the handler
+    // saying it saved one. This is the same rule as every other write here:
+    // a return value is a claim, and the filesystem is the evidence.
+    case 'capture_screen':
+      return verifyCapturedFile(agentResult);
     default:
       return {
         status: 'UNVERIFIABLE',
         reason: `No verification logic for action: ${step.action}`,
       };
   }
+}
+
+/**
+ * A screenshot exists, or it did not happen.
+ *
+ * Checked on disk and for a non-zero size. An empty PNG is the shape this
+ * fails in when a capture runs from the wrong session — the file appears, the
+ * handler reports success, and the picture is of nothing.
+ */
+function verifyCapturedFile(agentResult?: AgentResult): VerificationResult {
+  const data = agentResult?.data as { path?: string; bytes?: number } | undefined;
+  const target = data?.path;
+  if (!target) {
+    return { status: 'FAILED', reason: 'The capture reported no file path' };
+  }
+  if (!fs.existsSync(target)) {
+    return { status: 'FAILED', reason: `No file at ${target}` };
+  }
+  const size = fs.statSync(target).size;
+  if (size === 0) {
+    return { status: 'FAILED', reason: `${target} is empty — nothing was captured` };
+  }
+  return { status: 'VERIFIED', reason: `Captured ${Math.round(size / 1024)} KB to ${target}` };
 }
 
 function verifyFileStep(step: ExecutionStep, agentResult?: AgentResult): VerificationResult {

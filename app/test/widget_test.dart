@@ -64,7 +64,9 @@ void main() {
     // reasons and takes the test with it. The sidebar and a focusable composer
     // are what "the app booted and you can use it" actually means.
     expect(find.text('New chat'), findsOneWidget);
-    expect(find.text('Library'), findsOneWidget);
+    // Workflows replaced Library. The rail now lists only destinations that
+    // exist — see the note at the top of dex_sidebar.dart.
+    expect(find.text('Workflows'), findsOneWidget);
     expect(find.byType(EditableText), findsOneWidget,
         reason: 'no composer to type into');
 

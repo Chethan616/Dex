@@ -55,22 +55,76 @@ class DexLog {
   /// the Diagnostics affordance so the user notices without opening it.
   static final ValueNotifier<int> errorCount = ValueNotifier<int>(0);
 
+  /// True while `_add` is running, so a listener that logs cannot recurse.
+  ///
+  /// `entries.value = ...` notifies listeners synchronously, and a listener is
+  /// a widget rebuild. If that rebuild throws, `FlutterError.onError` lands
+  /// back here — inside the notification it caused — and the second entry
+  /// notifies again from inside the first. One framework assertion became an
+  /// unbounded loop that filled the buffer, flooded the console and ended in
+  /// "Lost connection to device": the app did not crash from the bug, it
+  /// crashed from reporting it.
+  static bool _emitting = false;
+
+  /// The last message, and how many times running it has arrived.
+  ///
+  /// Flutter's mouse-tracker assertion is the case that matters: once it trips,
+  /// its guard flag is never reset, so it fires again on every single frame —
+  /// sixty identical lines a second for as long as the app lives. Collapsing
+  /// them keeps the one fact ("this is happening, constantly") and drops the
+  /// ten thousand copies of it, which is what made Diagnostics unreadable and
+  /// the console unusable at exactly the moment both were needed.
+  static String _lastKey = '';
+  static int _repeats = 0;
+
   static void _add(DexLogLevel level, String tag, String message) {
-    final entry = DexLogEntry(
-      at: DateTime.now(),
-      level: level,
-      tag: tag,
-      message: message,
-    );
-    // Mirror to the debug console too, so `flutter run` still shows it.
-    debugPrint('[dex] ${entry.toString()}');
-    final next = List<DexLogEntry>.of(entries.value)..add(entry);
-    if (next.length > _cap) {
-      next.removeRange(0, next.length - _cap);
-    }
-    entries.value = next;
-    if (level == DexLogLevel.error) {
-      errorCount.value = errorCount.value + 1;
+    if (_emitting) return;
+    _emitting = true;
+    try {
+      final key = '$level|$tag|$message';
+      final current = entries.value;
+
+      if (key == _lastKey && current.isNotEmpty) {
+        _repeats += 1;
+        // Rewrite the last entry in place rather than appending. No new
+        // notification storm, and the count is more useful than the copies.
+        final collapsed = List<DexLogEntry>.of(current);
+        collapsed[collapsed.length - 1] = DexLogEntry(
+          at: DateTime.now(),
+          level: level,
+          tag: tag,
+          message: '$message  (×${_repeats + 1})',
+        );
+        entries.value = collapsed;
+        // Every 100th, so a wedged app still shows movement in the console
+        // without printing sixty lines a second.
+        if (_repeats % 100 == 0) {
+          debugPrint('[dex] $tag: still repeating (×${_repeats + 1}) — $message');
+        }
+        return;
+      }
+
+      _lastKey = key;
+      _repeats = 0;
+
+      final entry = DexLogEntry(
+        at: DateTime.now(),
+        level: level,
+        tag: tag,
+        message: message,
+      );
+      // Mirror to the debug console too, so `flutter run` still shows it.
+      debugPrint('[dex] ${entry.toString()}');
+      final next = List<DexLogEntry>.of(current)..add(entry);
+      if (next.length > _cap) {
+        next.removeRange(0, next.length - _cap);
+      }
+      entries.value = next;
+      if (level == DexLogLevel.error) {
+        errorCount.value = errorCount.value + 1;
+      }
+    } finally {
+      _emitting = false;
     }
   }
 
@@ -84,6 +138,8 @@ class DexLog {
   static void clear() {
     entries.value = <DexLogEntry>[];
     errorCount.value = 0;
+    _lastKey = '';
+    _repeats = 0;
   }
 
   /// Whole buffer as plain text — the Diagnostics "Copy" action.

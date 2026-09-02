@@ -40,6 +40,7 @@ type Inbound =
   | { type: 'get_workflows' }
   | { type: 'save_workflow'; name: string; description?: string }
   | { type: 'delete_workflow'; name: string }
+  | { type: 'rename_workflow'; from: string; to: string }
   | { type: 'get_schedules' }
   | { type: 'save_schedule'; name: string; when: string; request: string }
   | { type: 'set_schedule_enabled'; name: string; enabled: boolean }
@@ -56,12 +57,36 @@ type Inbound =
   | { type: 'claude_signin' }
   | { type: 'get_health' }
   | { type: 'get_log'; name: string; lines?: number }
+  | { type: 'capture_screen' }
   | { type: 'ping' };
 
 export interface DexServerOptions {
   port?: number;
   fullAccess: boolean;
   evidenceDir?: string;
+  /**
+   * The agent registry, so the one direct action below can be dispatched.
+   * Optional: a server built without it simply reports that no system agent
+   * is registered, rather than failing to construct.
+   */
+  agents?: { resolve(capability: string): {
+    execute(
+      action: string,
+      params: Record<string, unknown>,
+      requestId: string,
+      stepId: string,
+    ): Promise<{ success: boolean; data?: unknown; error?: string }>;
+  } | undefined };
+  /**
+   * Re-ask the daemon whether Full Access is now real, and return the answer.
+   *
+   * Supplied by src/main.ts, which owns that state. Without it the toggle could
+   * only ever say "restart DEX core to apply", and the owner would grant Full
+   * Access, see it reported as off, and reasonably conclude it had not worked.
+   * The daemon has just been started elevated by the script; asking it is a
+   * pipe call away.
+   */
+  recheckFullAccess?: () => Promise<boolean>;
 }
 
 export class DexServer {
@@ -72,6 +97,7 @@ export class DexServer {
   private readonly schedules = new ScheduleStore();
   private readonly port: number;
   private readonly evidenceDir: string;
+  private readonly agents: DexServerOptions['agents'];
 
   constructor(
     private gateway: Gateway,
@@ -79,6 +105,7 @@ export class DexServer {
     private cancellation: CancellationRegistry,
     private opts: DexServerOptions,
   ) {
+    this.agents = opts.agents;
     this.port = opts.port ?? 8770;
     this.evidenceDir = path.resolve(opts.evidenceDir ?? 'data/evidence');
   }
@@ -248,6 +275,12 @@ export class DexServer {
             runCount: w.runCount,
             triggerText: w.triggerText,
             lastRunAt: w.lastRunAt ?? null,
+            // Learned or named, and whether it has started failing. The
+            // Memory tab shows both: a workflow that saved itself is worth
+            // labelling as such, and one that is failing is worth noticing
+            // before it is silently forgotten.
+            origin: w.origin,
+            failCount: w.failCount,
           })),
         });
 
@@ -260,6 +293,28 @@ export class DexServer {
             name: saved.name,
             params: saved.params,
             steps: saved.template.length,
+          });
+        } catch (err) {
+          return this.send(socket, {
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
+      // Give a learned workflow a name.
+      //
+      // Workflows are saved automatically now, under a slug derived from the
+      // intent. Renaming one is the owner claiming it: it becomes `named`, it
+      // outranks the learned ones, and the cap will never evict it. It is also
+      // how a workflow gets a name short enough to type after `run`.
+      case 'rename_workflow': {
+        try {
+          const renamed = this.gateway.workflowStore.rename(msg.from, msg.to);
+          this.broadcast({ type: 'workflow_renamed', workflow: renamed });
+          return this.send(socket, {
+            type: 'workflows',
+            workflows: this.gateway.workflowStore.list(),
           });
         } catch (err) {
           return this.send(socket, {
@@ -435,6 +490,35 @@ export class DexServer {
           capabilities: await this.settings.health(),
         });
 
+      // The composer's "Take screenshot". A direct call rather than a task:
+      // the owner has already said what they want by choosing the menu item,
+      // and routing it through the planner would spend a model call to
+      // rediscover that, then hand back a sentence instead of a path.
+      //
+      // Narrow on purpose. No parameters cross the socket, the action is a
+      // Tier 4 read that changes nothing, and it is the only action reachable
+      // this way — this is not a general "run any action" door.
+      case 'capture_screen': {
+        const agent = this.agents?.resolve('can_control_os');
+        if (!agent) {
+          return this.send(socket, {
+            type: 'capture_screen_result',
+            ok: false,
+            message: 'No system agent is registered.',
+          });
+        }
+        const result = await agent.execute('capture_screen', {}, 'ui', 'capture');
+        const data = result.data as { path?: string } | undefined;
+        return this.send(socket, {
+          type: 'capture_screen_result',
+          ok: result.success && !!data?.path,
+          path: data?.path,
+          message: result.success
+            ? undefined
+            : result.error ?? 'The daemon could not capture the screen.',
+        });
+      }
+
       case 'claude_signin':
         return this.send(socket, {
           type: 'claude_signin_result',
@@ -486,13 +570,21 @@ export class DexServer {
       return this.send(socket, { type: 'error', message: `Script not found: ${script}` });
     }
 
+    // -KeepUi is what makes this safe to call from inside the app.
+    //
+    // The script stops the daemon before replacing it, via stop-dex.ps1 — and
+    // stop-dex.ps1's job is to stop *everything*, including the Dex app and the
+    // headless core. So granting Full Access from Settings killed the app that
+    // was asking for it, and what the owner saw next was "core not running".
+    // The switch tells the script to leave the two processes that are waiting
+    // on it alone.
     const child = spawn(
       'powershell',
       [
         '-NoProfile',
         '-ExecutionPolicy', 'Bypass',
         '-Command',
-        `Start-Process powershell -Verb RunAs -Wait -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','${script}'`,
+        `Start-Process powershell -Verb RunAs -Wait -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','${script}','-KeepUi'`,
       ],
       { windowsHide: true },
     );
@@ -502,15 +594,43 @@ export class DexServer {
     });
 
     child.on('exit', (code) => {
-      const ok = code === 0;
-      this.send(socket, {
-        type: 'full_access_result',
-        enabled,
-        ok,
-        message: ok
-          ? `Full Access ${enabled ? 'enabled' : 'disabled'} — restart DEX core to apply.`
-          : `Elevation cancelled or script failed (exit ${code}).`,
-      });
+      if (code !== 0) {
+        this.send(socket, {
+          type: 'full_access_result',
+          enabled,
+          ok: false,
+          message: `Elevation cancelled or script failed (exit ${code}).`,
+        });
+        return;
+      }
+
+      // Ask the daemon rather than announcing it. The script has just started
+      // an elevated daemon; whether Full Access is actually on is a question
+      // only that daemon can answer, and the answer is available now.
+      void (this.opts.recheckFullAccess?.() ?? Promise.resolve(enabled))
+        .then((effective) => {
+          this.send(socket, {
+            type: 'full_access_result',
+            enabled: effective,
+            ok: true,
+            message: effective === enabled
+              ? `Full Access ${enabled ? 'enabled' : 'disabled'}.`
+              : enabled
+                ? 'The daemon was registered but is not reporting elevation yet. ' +
+                  'It starts at logon — sign out and back in, or start it from ' +
+                  'an Administrator terminal.'
+                : 'Full Access revoked.',
+          });
+          this.broadcast({ type: 'status', fullAccess: effective, preApprovals: [] });
+        })
+        .catch(() => {
+          this.send(socket, {
+            type: 'full_access_result',
+            enabled,
+            ok: true,
+            message: `Full Access ${enabled ? 'enabled' : 'disabled'} — restart DEX core to apply.`,
+          });
+        });
     });
   }
 
