@@ -111,7 +111,6 @@ flutter:
     - assets/brand/dex_app_icon.png
     # Per-app "how to link" guides shown by ConnectorGuideSheet when a
     # user taps an app in onboarding / Connectors & Apps.
-    - assets/guides/
 
   # FONTS:
   # Geist + Geist Mono (OFL-1.1) are referenced by name in lib/theme/tokens.dart.

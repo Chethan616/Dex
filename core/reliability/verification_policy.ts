@@ -193,7 +193,7 @@ function displayValue(value: unknown): string {
 // ── web ──────────────────────────────────────────────────────────────────────
 
 const BROWSER_READS = new Set([
-  'navigate', 'read_page', 'extract', 'screenshot', 'session_status',
+  'navigate', 'read_page', 'extract', 'screenshot', 'session_status', 'map_page',
 ]);
 
 /**

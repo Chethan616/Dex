@@ -80,6 +80,17 @@ export class BrowserAgent implements Agent {
         return this.runTask(params, requestId, stepId, ctx);
       case 'sign_in':
         return this.signIn(params, requestId, stepId, ctx);
+      case 'map_page':
+        return this.primitive(
+          'map_page',
+          {
+            text: params.query ? String(params.query) : null,
+            full_page: params.include_hidden !== false,
+            browser: browserOf(params),
+          },
+          requestId,
+          stepId,
+        );
       case 'session_status':
         return this.primitive(
           'session_status',

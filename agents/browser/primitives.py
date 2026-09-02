@@ -114,6 +114,147 @@ _USERNAME_JS = """
 """
 
 
+# Reading the page the way devtools would, without opening devtools.
+#
+# The problem this solves: a portal where nothing is labelled. `read_page`
+# returns rendered text, and rendered text is exactly what is missing — the
+# curriculum link lives inside a menu that is collapsed, so it is in the
+# document and not on the screen. Asking a model to reason about text it cannot
+# see is asking it to guess.
+#
+# So this queries the DOM directly, the way a person would with the element
+# inspector open, and returns every interactive thing with what it is really
+# called. Three sources of a name, in order of how deliberate they are:
+# aria-label (someone wrote it for a screen reader), title, then visible text.
+#
+# **Hidden things are included and marked**, which is the whole point. A
+# collapsed nav is the normal state of a portal menu, and an element that is
+# not visible right now is often exactly the one to click after opening its
+# parent. Excluding them would reproduce the failure.
+#
+# Nothing is visible to the owner while this runs: it is one Runtime.evaluate
+# over the existing CDP connection, the same call `read_page` already makes. No
+# devtools window opens, nothing is highlighted, and the page is not touched.
+_MAP_PAGE_JS = """
+(() => {
+  const seen = new Set();
+  const out = [];
+
+  const text = (el) => {
+    for (const value of [
+      el.getAttribute('aria-label'),
+      el.getAttribute('title'),
+      el.innerText,
+      el.value,
+      el.getAttribute('placeholder'),
+      el.getAttribute('alt'),
+    ]) {
+      const clean = (value || '').replace(/\\s+/g, ' ').trim();
+      if (clean) return clean.slice(0, 120);
+    }
+    return '';
+  };
+
+  const selectorFor = (el) => {
+    if (el.id) return '#' + CSS.escape(el.id);
+    const name = el.getAttribute('name');
+    if (name) return el.tagName.toLowerCase() + '[name="' + CSS.escape(name) + '"]';
+    const parts = [];
+    let node = el;
+    for (let depth = 0; node && node.nodeType === 1 && depth < 4; depth++) {
+      let part = node.tagName.toLowerCase();
+      if (node.parentElement) {
+        const kin = Array.from(node.parentElement.children)
+          .filter(c => c.tagName === node.tagName);
+        if (kin.length > 1) part += ':nth-of-type(' + (kin.indexOf(node) + 1) + ')';
+      }
+      parts.unshift(part);
+      node = node.parentElement;
+    }
+    return parts.join(' > ');
+  };
+
+  // Where in the page it sits, named the way a person would say it. A portal's
+  // left menu and its main body look identical in a flat list.
+  const regionOf = (el) => {
+    let node = el;
+    for (let depth = 0; node && node.nodeType === 1 && depth < 12; depth++) {
+      const tag = node.tagName.toLowerCase();
+      const role = (node.getAttribute('role') || '').toLowerCase();
+      const id = (node.id || '').toLowerCase();
+      const cls = (node.className && node.className.baseVal !== undefined
+        ? node.className.baseVal : String(node.className || '')).toLowerCase();
+      const hint = id + ' ' + cls;
+      if (tag === 'nav' || role === 'navigation' || /(^|[^a-z])(nav|menu|sidebar)/.test(hint)) return 'nav';
+      if (tag === 'header' || role === 'banner') return 'header';
+      if (tag === 'footer' || role === 'contentinfo') return 'footer';
+      if (tag === 'form') return 'form';
+      if (tag === 'table' || role === 'grid') return 'table';
+      if (tag === 'main' || role === 'main') return 'main';
+      node = node.parentElement;
+    }
+    return 'body';
+  };
+
+  const visible = (el) => {
+    if (!el.getClientRects().length) return false;
+    const style = window.getComputedStyle(el);
+    return style.visibility !== 'hidden' && style.display !== 'none'
+      && parseFloat(style.opacity || '1') > 0.05;
+  };
+
+  const SELECTOR = [
+    'a[href]', 'button', 'input', 'select', 'textarea', 'summary',
+    '[role=link]', '[role=button]', '[role=menuitem]', '[role=tab]',
+    '[role=option]', '[role=treeitem]', '[onclick]', '[data-href]',
+  ].join(',');
+
+  for (const el of document.querySelectorAll(SELECTOR)) {
+    const label = text(el);
+    const tag = el.tagName.toLowerCase();
+    const type = (el.getAttribute('type') || '').toLowerCase();
+
+    // A control with no name is one nothing can ask for by name. Inputs are
+    // the exception: an unnamed box is still a box that can be filled.
+    if (!label && !['input', 'select', 'textarea'].includes(tag)) continue;
+
+    const key = tag + '|' + label + '|' + (el.getAttribute('href') || '');
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const entry = {
+      text: label,
+      tag: tag,
+      selector: selectorFor(el),
+      region: regionOf(el),
+      visible: visible(el),
+    };
+
+    const href = el.getAttribute('href');
+    if (href && !href.startsWith('javascript:')) {
+      try { entry.href = new URL(href, location.href).href; } catch (_) {}
+    }
+    const role = el.getAttribute('role');
+    if (role) entry.role = role;
+    if (tag === 'input' || tag === 'select' || tag === 'textarea') {
+      entry.field = type || tag;
+      // Never the value of a password box, whatever else is reported.
+      if (type !== 'password' && el.value) entry.value = String(el.value).slice(0, 80);
+    }
+
+    out.push(entry);
+    if (out.length >= 400) break;
+  }
+
+  return JSON.stringify({
+    url: location.href,
+    title: document.title,
+    elements: out,
+  });
+})()
+"""
+
+
 # -- session-level helpers ----------------------------------------------------
 
 
@@ -425,6 +566,57 @@ class PrimitiveBrowser:
             'url': before,
         }
 
+    async def map_page(
+        self,
+        query: str | None = None,
+        browser: str | None = None,
+        include_hidden: bool = True,
+    ) -> dict[str, Any]:
+        """
+        Every interactive thing on the page, and what it is really called.
+
+        The answer to a portal whose sections are not labelled. `read_page`
+        gives rendered text; this gives the document — including the menu items
+        that are in the DOM but collapsed, which on a portal is most of them.
+
+        `query` filters and ranks rather than excluding: a search for
+        "curriculum" puts anything matching first and still returns the rest,
+        because the whole reason this exists is that the thing being looked for
+        is probably called something else.
+        """
+        session = await self.session(browser)
+        raw = await evaluate(session, _MAP_PAGE_JS)
+
+        try:
+            data = json.loads(raw) if isinstance(raw, str) else (raw or {})
+        except (TypeError, json.JSONDecodeError):
+            return {'url': '', 'elements': [], 'error': 'the page could not be read'}
+
+        elements = data.get('elements', [])
+        if not include_hidden:
+            elements = [e for e in elements if e.get('visible')]
+
+        matched = 0
+        if query:
+            wanted = [w for w in re.split(r'[^a-z0-9]+', str(query).lower()) if len(w) > 2]
+            if wanted:
+                scored = [(_score(e, wanted), e) for e in elements]
+                matched = sum(1 for score, _ in scored if score > 0)
+                # Ranked, not filtered. The thing being looked for is probably
+                # named something the query does not contain — that is why the
+                # page needed mapping in the first place — so nothing is thrown
+                # away, it is only put in a useful order.
+                scored.sort(key=lambda pair: pair[0], reverse=True)
+                elements = [e for _, e in scored]
+
+        return {
+            'url': data.get('url', ''),
+            'title': data.get('title', ''),
+            'total': len(elements),
+            'matched': matched,
+            'elements': elements[:120],
+        }
+
     async def session_status(
         self, url: str, browser: str | None = None,
     ) -> dict[str, Any]:
@@ -603,3 +795,41 @@ def _safe_name(raw: str, fallback_suffix: str) -> str:
     if not Path(stem).suffix and fallback_suffix:
         stem += fallback_suffix
     return stem
+
+
+def _score(element: dict, wanted: list[str]) -> int:
+    """
+    How likely this element is to be the thing being looked for.
+
+    Text is worth most because it is what a person reads. The href and the
+    selector are worth something because a link called "Course Page" often
+    points at /curriculum, and a generated id often still contains the word —
+    which is exactly the case where the visible label is useless and the markup
+    underneath is not.
+    """
+    label = str(element.get('text', '')).lower()
+    href = str(element.get('href', '')).lower()
+    selector = str(element.get('selector', '')).lower()
+
+    score = 0
+    for word in wanted:
+        if word in label:
+            score += 10
+            # An exact label is a much stronger signal than a substring: on a
+            # page full of "Course Page" and "Course Details", "course" matching
+            # both is not information.
+            if label.strip() == word:
+                score += 8
+        if word in href:
+            score += 4
+        if word in selector:
+            score += 2
+
+    # A visible control in the navigation is more likely to be the way onward
+    # than a hidden one in the footer. A tiebreaker, not a filter.
+    if score > 0:
+        if element.get('region') == 'nav':
+            score += 3
+        if element.get('visible'):
+            score += 1
+    return score

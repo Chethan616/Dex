@@ -134,7 +134,7 @@ class ResumeRequest(BaseModel):
 
 class PrimitiveRequest(BaseModel):
     op: str      # navigate | read | click | type | extract | screenshot | verify
-                 #  | sign_in | session_status | download_current
+                 #  | sign_in | session_status | download_current | map_page
     url: str | None = None
     selector: str | None = None
     text: str | None = None
@@ -239,6 +239,15 @@ async def primitive(req: PrimitiveRequest) -> dict[str, Any]:
                 'success': True,
                 'data': await _primitives.screenshot(
                     req.path, True if req.full_page is None else req.full_page,
+                ),
+            }
+
+        if req.op == 'map_page':
+            return {
+                'success': True,
+                'data': await _primitives.map_page(
+                    req.text, req.browser,
+                    True if req.full_page is None else bool(req.full_page),
                 ),
             }
 

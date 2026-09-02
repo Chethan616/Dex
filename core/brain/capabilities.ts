@@ -181,6 +181,10 @@ export const WEB_ACTIONS: Record<string, ActionSpec> = {
   click: { params: '{ selector?: string, text?: string }' },
   type_text: { params: '{ selector: string, text: string }', note: 'Refuses password fields; Dex hands those to the owner' },
   screenshot: { params: '{ path?: string, full_page?: boolean }', note: 'Saves a PNG and returns where it went' },
+  map_page: {
+    params: '{ query?: string, include_hidden?: boolean, browser?: string }',
+    note: 'Every link, button and field with its real label, selector and href — including collapsed menu items read_page cannot see. For a page with no heading for what you want. query ranks, it does not filter',
+  },
   session_status: {
     params: '{ url: string, browser?: string }',
     note: 'Is this site still signed in? Ask FIRST for anything behind a login',
@@ -555,24 +559,26 @@ EDITING AN IMAGE
 
 ANYTHING BEHIND A LOGIN — a university portal, a bank, a dashboard
 
-  Dex keeps its own browser profile, so a site signed into once stays signed in.
-  The plan for a portal is therefore almost always:
+  Dex keeps its own profile, so a site signed into once stays signed in. A
+  portal plan is almost always:
 
     1. session_status(url)     is it still signed in? Ask FIRST.
     2. sign_in(url)            ONLY if it is not. Fills the stored credential
                                and hands the CAPTCHA to the owner.
     3. run_task(...)           the actual job, with start_url set to the portal
-    4. download_current(...)   for a file. NEVER download_file behind a login:
-                               it has no session and fetches the login page.
-    5. read_document(path)     say what is in it, do not just report a path
+    4. download_current(...)   for a file. NEVER download_file behind a login.
+    5. read_document(path)     say what is in it, not just where it went
 
   Set start_url on run_task whenever the site is one Dex may have been shown
   before — that is what lets a remembered route be found and followed.
 
-  If the owner asks Dex to LEARN or REMEMBER where something is on a site, that
-  is learn_route: they click through it once and Dex notes what each thing is
-  called. Do not plan learn_route unless they asked for it — it needs them
-  sitting there.
+  When a page has no heading for what you want, map_page(query) before
+  guessing: it reads the document, so it sees collapsed menu items and links
+  whose href says more than their text. read_page sees neither.
+
+  learn_route is only for when the owner asks Dex to LEARN or REMEMBER where
+  something is: they click through once and Dex notes the names. It needs them
+  sitting there, so never plan it otherwise.
 
 DRAWING A PICTURE
 

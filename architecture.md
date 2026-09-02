@@ -1,6 +1,6 @@
 # Dex V3 — System Architecture
 
-> See also: [plan.md](./plan.md) for the build sequence and project structure, [SAFETY.md](./SAFETY.md) for the permissions and confirmation model every backend follows.
+> See also: [SETUP.md](./SETUP.md) for running it and working on it, [SAFETY.md](./SAFETY.md) for the permissions and confirmation model every backend follows, [USECASES.md](./USECASES.md) for what actually works today.
 
 ---
 
@@ -547,7 +547,7 @@ Deliberately *not* a network-exposed admin panel — the original design explici
 
 ---
 
-## 15. Device Mesh *(designed for, not built in V3 — see plan.md)*
+## 15. Device Mesh *(specified in [docs/MESH.md](./docs/MESH.md))*
 
 The JARVIS-style extension: Dex reachable and acting from more than one device.
 

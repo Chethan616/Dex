@@ -85,6 +85,17 @@ Hard rules for the Desktop and System backends:
 
 - Never automate password manager apps or password-manager websites.
 - Never type into a password, one-time-code, or OTP-named field. Enforced at the point of action in *both* interactive tiers — the browser's `type_text` inspects the element, and the application tier's `set_text` checks `IsPassword` on the UIA control — so it holds whatever the plan said, and raises a hand-off instead.
+
+  **The one exception, and the four things that bound it.** `sign_in` fills a credential the owner stored by hand for a specific site. It exists because a portal that asks for a password every time is a portal Dex cannot use, and the owner storing their own credential for their own account is an ordinary thing to want.
+
+  It is not a relaxation of the rule above; it is a second, narrower path that `type_text` cannot reach:
+
+  1. **Exact origin.** The credential is bound to one hostname and matched against the page's URL *after redirects* — the page about to receive the keystrokes, not the one that was requested. A subdomain, a suffix lookalike (`vtop.vit.ac.in.evil.com`), a hyphen lookalike, userinfo before the real host (`vtop.vit.ac.in@evil.com`), or the hostname hidden in a query string all get nothing. `tests/test_site_credentials.py` pins every one of those.
+  2. **The model never sees it.** The planner emits `sign_in { url }`. The agent process reads DPAPI at the moment of typing. The secret never enters a prompt, an event, the transcript, a log, or the telemetry database — which is the property that matters, because everything else Dex says about what it is doing is recorded somewhere.
+  3. **Stored by hand, never learned.** There is no code path that writes a credential from something a model produced or a page contained.
+  4. **Only from a plan step named `sign_in`.** Nothing a model decides while reading a page can reach it, because the general-purpose typing primitive still refuses unconditionally.
+
+- Never solve a CAPTCHA, and never build anything that tries. It is the site's control against automation, not the owner's to waive, and Dex is not the party that gets to decide it does not apply. `sign_in` does the typing and hands over the last step. Because the session is then kept in Dex's own browser profile, that is a once-a-day interaction rather than a per-task one — the honest version of the feature, not a degraded one.
 - Never open a terminal, console, or PowerShell window as an application. `launch_app` refuses them by name; system work goes through typed daemon handlers, never a shell an agent types into.
 - Never act on an ambiguous window. Two open windows matching a title raises rather than picking one — the next step is usually typing into it, and the wrong guess overwrites whatever someone was working on.
 - Never change Windows security or privacy settings, and never act on a security/privacy permission prompt on the owner's behalf.

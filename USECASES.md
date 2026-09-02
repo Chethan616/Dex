@@ -525,8 +525,30 @@ v0.4.0  deterministic-first tiers          v0.7.1  Dex Bar design system
                                            v0.8.0  scheduler          ← current
 ```
 
-**280+ automated checks** across seventeen suites, plus a conformance harness
-that drives every advertised OS action against the real daemon — currently
-18/20, the two gaps being `set_dns`, which needs the elevated daemon, and
-nothing else. Remaining: Slack, the Plugin SDK (Slice 7) and the device mesh
-(Slice 8).
+**Automated checks across twenty-five suites**, plus a conformance harness that
+drives every advertised OS action against the real daemon — **27/27**, and the
+run fails if an advertised action has no probe.
+
+---
+
+## Recently added
+
+Each of these is built and tested. The marks mean the same as above.
+
+| | what |
+|---|---|
+| 🧪 | **Values flow between steps.** `{{step_1.output.best_primary}}` in one step's parameters is filled from what an earlier step actually returned. Before this a plan was a graph along which only control flowed — the model wrote that reference, nothing resolved it, and `set_dns` was handed the literal twenty-nine characters. |
+| 🧪 | **A failed step repairs the plan.** Not a retry — retrying an identical wrong value fails identically. The Brain is handed the failure *and what the completed steps returned*, and re-plans what is left. Once per task; steps that already changed something are never re-run. |
+| ✅ | **Every task that works is saved as a parameterised script.** Ask again and it replays with new values and no planning call at all. A saved plan that fails twice in a row is forgotten, which is what makes saving automatically safe. |
+| ✅ | **Installing a tool, end to end.** `find_program` before and after, winget or download-and-extract, PATH set and broadcast, then a hello-world compiled and run — because a compiler that installs and cannot compile has not been set up. |
+| ✅ | **Keyboard backlight**, detected before it is touched. Providers are probed in order and each says what it supports. This machine's ATK WMI interface accepts every brightness write and changes nothing, so it is tried *after* the Aura HID and now reads its own writes back before believing them. |
+| ✅ | **A named browser, that stays signed in.** `browser: "vivaldi"` resolves through the App Paths registry; Dex keeps its own profile, so a site signed into once stays signed in. |
+| ✅ | **Reading a page the way devtools does.** `map_page` returns every link, button and field with its real label, selector and href — including menu items that are in the document but collapsed, which `read_page` cannot see. Verified against a live university portal: 16 elements, four of them hidden. |
+| 🧪 | **Signing in to a site.** A credential stored for one host, filled on that host and nowhere else, that the model never sees. The CAPTCHA is handed to the owner deliberately — see [SAFETY.md](./SAFETY.md). |
+| 🧪 | **Learning the way around an unlabelled site.** The owner clicks through once; Dex records what each thing is actually called and replays it. A route that stops working is forgotten. |
+| 🧪 | **Drawing.** A photograph traced into outline strokes and drawn on a canvas with the real mouse, in batches so Stop works. A line sketch, not a reproduction — and it says so. |
+| 🧪 | **Sliders.** `set_value` through `RangeValuePattern`, clamped to the control's own range and read back, so one that snaps back fails rather than passing silently. |
+| ✅ | **Opening Dex starts Dex.** The app brings up the core, the daemon and the agents itself, and shows each one starting. Before, it connected to whatever happened to be running and said "core not running" when nothing was. |
+
+Remaining: Slack, the Plugin SDK, and the device mesh — which is specified in
+[docs/MESH.md](./docs/MESH.md) and being built on a separate branch.
