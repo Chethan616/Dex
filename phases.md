@@ -8,8 +8,8 @@ Phase 6 lands.
 |---|---|---|
 | 1 | Make it fast, and make failure legible | **done** |
 | 2 | Find anything on this PC | **done** |
-| 3 | Real conversation history, and the navigation around it | next |
-| 4 | Reminders, schedules, and the slash commands | |
+| 3 | Real conversation history, and the navigation around it | **done** |
+| 4 | Reminders, schedules, and the slash commands | next |
 | 5 | Connectors and accounts | |
 | 6 | Your real browser, forked in | |
 
@@ -119,10 +119,44 @@ one killed with the machine, and resume it.
 
 Tests: `npm run test:index` (28 checks).
 
-## Phase 3 — Real conversation history
+## Phase 3 · Real conversation history · **done**
 
-A `messages` table, so clicking a sidebar row opens the conversation instead of
-re-running the request.
+Clicking a sidebar row re-ran the request — not because opening it had been
+left out, but because the request was the only thing on disk. There were
+tasks, steps, workflows, artifacts and schedules, and not one sentence either
+side had said.
+
+`core/memory/conversations.ts` and a `messages` table. Written as messages
+happen rather than reconstructed at the end: a reconstruction loses the step
+that failed, the card that was shown, and the answer in the words it was given
+in. Reopening a thread brings all of it back, steps and artifact cards
+included.
+
+A conversation is not a task. A task is one request and its plan; a
+conversation is the thread the owner sees. The app supplies the id, because
+only the app knows whether they are continuing or have started a new chat.
+
+The row menu carries rename, run again and delete. Deleting removes the
+messages and keeps the tasks — those are what the planner learns from, and
+forgetting a chat should not quietly make Dex worse at the thing it was about.
+Search reaches inside messages, which task history could never do: the answer
+to "what was that path Dex gave me" is in a reply, not a request.
+
+Also landed here, ahead of the phase list:
+
+- **clipboard_read / clipboard_write.** Reading is guarded by two properties of
+  the content: a value the source marked private with a standard exclusion
+  format is not read, and a value shaped like a token or password is reported
+  as present with its text withheld.
+- **describe_file.** "Find UI.png and explain it" planned one step, because
+  finding had an action and looking at what was found had none. An image goes
+  to a model that can see it through the CLI's streaming input; a PDF, DOCX,
+  spreadsheet or text file is read.
+- **artifact cards.** A search result is drawn as rows rather than read out as
+  prose, and a file that was opened is drawn with its description as the body
+  and the image beside it.
+
+Tests: `npm run test:conversations` (20), `npm run test:artifacts` (25).
 
 ## Phase 4 — Reminders, schedules, slash commands
 
