@@ -64,6 +64,35 @@ def skip_dir(name: str) -> bool:
     return name.lower() in SKIP_DIRS or name.startswith('$')
 
 
+# A OneDrive file that is not on this disk.
+#
+# With Files On-Demand a cloud file has a normal name, a normal size, and no
+# bytes. *Opening* it downloads it, silently and over the network. An indexer
+# that reads every file would therefore pull down the owner's entire cloud
+# storage the first time it ran — metered data, hours of transfer, and a full
+# disk, all as a side effect of a search.
+#
+# So a placeholder is indexed by name and never opened. It stays findable, and
+# it is read the moment the owner has the file locally.
+FILE_ATTRIBUTE_OFFLINE = 0x1000
+FILE_ATTRIBUTE_RECALL_ON_OPEN = 0x40000
+FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS = 0x400000
+CLOUD_ONLY = (
+    FILE_ATTRIBUTE_OFFLINE
+    | FILE_ATTRIBUTE_RECALL_ON_OPEN
+    | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
+)
+
+
+def is_cloud_only(path: Path) -> bool:
+    if os.name != 'nt':
+        return False
+    import ctypes
+
+    attributes = ctypes.windll.kernel32.GetFileAttributesW(str(path))
+    return attributes != -1 and bool(attributes & CLOUD_ONLY)
+
+
 def fixed_drives() -> list:
     """Local fixed drives. Network and removable are deliberately not indexed."""
     if os.name != 'nt':
@@ -146,7 +175,7 @@ def crawl(scope: str = 'profile', on_progress=None, read_contents: bool = True) 
             return 'unchanged'
 
         body, kind = ('', 'none')
-        if read_contents:
+        if read_contents and not is_cloud_only(path):
             body, kind = extract(path, info.st_size)
 
         store.upsert(
