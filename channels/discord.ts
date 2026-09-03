@@ -76,6 +76,31 @@ export class DiscordChannel implements ChannelAdapter {
     await this.client.login(this.token);
   }
 
+  /**
+   * DM the owner.
+   *
+   * Discord refuses this unless the bot and the owner share a server and the
+   * owner's privacy settings allow DMs from server members. Both are things
+   * the owner can change, so the error names them rather than reporting a
+   * bare failure.
+   */
+  async sendTo(to: string, text: string): Promise<void> {
+    try {
+      const user = await this.client.users.fetch(to);
+      await user.send(text);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      if (/cannot send messages to this user|50007|Unknown User/i.test(detail)) {
+        throw new Error(
+          'Discord will not deliver it. The bot has to share a server with ' +
+            'you, and your privacy settings have to allow DMs from server ' +
+            `members. (${detail})`,
+        );
+      }
+      throw err;
+    }
+  }
+
   async stop(): Promise<void> {
     await this.client.destroy();
   }

@@ -109,6 +109,18 @@ export class SettingsService {
     }
   }
 
+  /**
+   * Forget a secret.
+   *
+   * Needed because unpairing a channel has to actually remove the token, not
+   * merely stop using it. A token left in the credential store is a token that
+   * comes back the next time something reads it, and the owner who pressed
+   * disconnect would have no way of knowing.
+   */
+  clearCredential(name: string): boolean {
+    return this.credentials.delete(name);
+  }
+
   /** Store a secret. The value is never echoed back, here or anywhere. */
   setCredential(name: string, value: string): void {
     const trimmed = value.trim();

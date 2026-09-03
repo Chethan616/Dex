@@ -25,9 +25,7 @@ import { FileAgent } from '../agents/files/file_agent';
 import { defaultRoutes, defaultServers } from '../agents/workspace/servers';
 import { startCli } from '../channels/cli';
 import { ChannelAdapter, ChannelRuntime } from '../channels/base_channel';
-import { TelegramChannel } from '../channels/telegram';
-import { DiscordChannel } from '../channels/discord';
-import { WhatsAppChannel } from '../channels/whatsapp';
+import { ChannelManager } from '../channels/manager';
 import { CredentialStore } from '../core/secrets/credential_store';
 import { mirrorConsoleToFile, closeLogFile } from '../core/logging/file_log';
 import { readConfig } from '../core/settings/config_store';
@@ -40,6 +38,9 @@ import { readConfig } from '../core/settings/config_store';
  * threw ReferenceError on every start until it was moved here.
  */
 const started: ChannelAdapter[] = [];
+
+/** Held so shutdown can close the chat channels it started. */
+let channelManager: ChannelManager | undefined;
 
 function main(): void {
   quietSqliteWarning();
@@ -136,17 +137,28 @@ function main(): void {
   );
   const credentials = new CredentialStore();
 
-  // Owner identity per channel. Ids are not secret — they are the equivalent of
-  // a username — so they read from the environment; the bot *tokens* below come
-  // from the OS credential store.
+  // Who is allowed to talk to Dex, from the settings the pairing screen writes.
+  //
+  // An id is not a secret — it is the equivalent of a username — so it lives in
+  // settings.json with the rest of the configuration. The bot *tokens* go to
+  // the OS credential store and never appear here.
+  //
+  // This read `DEX_OWNER_TELEGRAM` and friends while `telegramOwner` sat in
+  // the settings store being written by Settings and read by the health check.
+  // The consequence was worse than an inconsistent status: a channel paired in
+  // the app would start, receive the owner's message, and reject it, because
+  // the gate was looking at an environment variable nobody had set. The
+  // environment is still read as a fallback, for a checkout that has one.
+  const ownerConfig = readConfig();
   const ownerGate = new OwnerGate({
-    telegram_id: process.env.DEX_OWNER_TELEGRAM ?? null,
-    discord_id: process.env.DEX_OWNER_DISCORD ?? null,
-    whatsapp: process.env.DEX_OWNER_WHATSAPP ?? null,
+    telegram_id: ownerConfig.telegramOwner || process.env.DEX_OWNER_TELEGRAM || null,
+    discord_id: ownerConfig.discordOwner || process.env.DEX_OWNER_DISCORD || null,
+    whatsapp: ownerConfig.whatsappOwner || process.env.DEX_OWNER_WHATSAPP || null,
     trigger_prefix: process.env.DEX_TRIGGER_PREFIX ?? '@dex',
   });
   const gateway = new Gateway(ownerGate, brain, orchestrator, telemetry, workflowStore);
 
+  let uiServer: DexServer | undefined;
   if (process.env.DEX_UI_SERVER !== 'false') {
     const server = new DexServer(gateway, confirmations, cancellation, {
       port: parseInt(process.env.DEX_UI_PORT ?? '8770', 10),
@@ -156,6 +168,9 @@ function main(): void {
       evidenceDir: 'data/evidence',
       // For the composer's Take screenshot, which is a direct Tier 4 read.
       agents: registry,
+      // So Settings can prove an account connects rather than reporting
+      // that a credential was typed into a box.
+      workspace,
       // Called after the Full Access script finishes, so the toggle reflects
       // what the daemon says rather than what the script intended. Re-reads
       // settings.json too: the script wrote the owner's choice there, and this
@@ -172,6 +187,9 @@ function main(): void {
       },
     });
     void server.start();
+    // Kept, so the chat channels can be handed over once they connect. They
+    // start later and take as long as a network round trip to Telegram.
+    uiServer = server;
   }
 
   // Ask the daemon whether it implements everything the Brain will offer to
@@ -199,6 +217,7 @@ ${signal} — closing workspace servers…`);
     scheduler.stop();
     await workspace.close().catch(() => undefined);
     await Promise.all(started.map((c) => c.stop().catch(() => undefined)));
+    await channelManager?.stopAll().catch(() => undefined);
     process.exit(0);
   };
   process.on('SIGINT', () => void shutdown('SIGINT'));
@@ -211,7 +230,15 @@ ${signal} — closing workspace servers…`);
   const scheduler = new Scheduler(gateway);
   scheduler.start();
 
-  void startChannels(gateway, ownerGate, confirmations, credentials);
+  // Not awaited: a chat platform that is slow to connect must not hold up the
+  // rest of the core. The manager is handed to the socket as soon as it
+  // exists, so the Settings screen can pair a channel the moment it opens.
+  void startChannels(gateway, ownerGate, confirmations, credentials).then(
+    (manager) => {
+      channelManager = manager;
+      uiServer?.useChannels(manager);
+    },
+  );
 
   // Headless: no console, so no CLI. `startCli` builds a readline over stdin,
   // and with no console stdin is already closed — `close` fires at once and the
@@ -270,49 +297,53 @@ main();
 /**
  * Start every channel the owner has actually configured.
  *
- * A channel needs two things: a bot token, and the owner's id on that platform.
- * Missing either is a normal state — most people will not wire up all three —
- * so it is reported once and skipped, never treated as an error.
+ * A channel needs two things: a way in (a bot token, or a scanned QR code) and
+ * the owner's id on that platform. Missing either is a normal state — most
+ * people will not wire up all three — so it is reported and skipped, never
+ * treated as an error.
  *
- * Refusing to start without an owner id is deliberate rather than defensive:
- * a bot listening with no configured owner would reject every message anyway,
- * and a bot that is *running* but silently ignoring everything is far harder to
- * diagnose than one that says why it did not start.
+ * Refusing to start without an owner id is deliberate rather than defensive: a
+ * bot listening with no configured owner would reject every message anyway,
+ * and a bot that is *running* but silently ignoring everything is far harder
+ * to diagnose than one that says why it did not start.
+ *
+ * **Where the configuration comes from changed here.** The owner ids were read
+ * from `process.env.DEX_OWNER_TELEGRAM` and friends, while the settings store
+ * already had `telegramOwner`, the Settings screen already wrote it, and the
+ * health check already read it. So the screen could report Telegram ready
+ * while this function, looking somewhere else entirely, had never started it.
+ * A status computed from different facts than the behaviour is worse than no
+ * status at all.
+ *
+ * The channels now live in a ChannelManager, which also means pairing takes
+ * effect where the owner made it instead of at the next restart.
  */
 async function startChannels(
   gateway: Gateway,
   ownerGate: OwnerGate,
   confirmations: ConfirmationManager,
   credentials: CredentialStore,
-): Promise<void> {
+): Promise<ChannelManager> {
   const runtime = new ChannelRuntime(gateway, ownerGate, confirmations);
+  const manager = new ChannelManager(runtime, credentials);
 
-  const telegramToken = credentials.resolve('telegram_bot_token', 'TELEGRAM_BOT_TOKEN');
-  if (telegramToken && process.env.DEX_OWNER_TELEGRAM) {
-    started.push(new TelegramChannel(telegramToken, runtime));
-  } else if (telegramToken) {
-    console.warn('[33m[telegram][0m token found but DEX_OWNER_TELEGRAM is unset — not starting.');
-  }
-
-  const discordToken = credentials.resolve('discord_bot_token', 'DISCORD_BOT_TOKEN');
-  if (discordToken && process.env.DEX_OWNER_DISCORD) {
-    started.push(new DiscordChannel(discordToken, runtime));
-  } else if (discordToken) {
-    console.warn('[33m[discord][0m token found but DEX_OWNER_DISCORD is unset — not starting.');
-  }
-
-  // WhatsApp pairs by QR rather than a token, so its opt-in is explicit.
-  if (process.env.DEX_WHATSAPP === 'true' && process.env.DEX_OWNER_WHATSAPP) {
-    started.push(new WhatsAppChannel(runtime));
+  for (const state of await manager.sync()) {
+    if (state.running) {
+      console.log(`\x1b[32m[${state.id}]\x1b[0m connected.`);
+    } else if (state.error) {
+      console.warn(`\x1b[33m[${state.id}]\x1b[0m did not start — ${state.error}`);
+    } else if (state.reason !== 'not set up' && state.reason !== 'not switched on') {
+      console.warn(`\x1b[33m[${state.id}]\x1b[0m ${state.reason}.`);
+    }
   }
 
   // The device mesh — reaching this PC from a phone with no shared network.
   //
-  // Wired here, ahead of the implementation, so the mesh work lands as new
-  // files under channels/mesh/ and never edits this one. It is a ChannelAdapter
-  // like any other, which is what earns it the owner gate, the live step
-  // stream, confirmation cards and file delivery without writing any of them
-  // again. See docs/MESH.md.
+  // Not in the manager: it has no token, no owner id and no pairing screen
+  // yet, and folding it in ahead of the implementation would mean inventing
+  // its configuration twice. It is still a ChannelAdapter, which is what earns
+  // it the owner gate, the live step stream, confirmation cards and file
+  // delivery without writing any of them again. See docs/MESH.md.
   const mesh = readConfig();
   if (mesh.meshEnabled && mesh.meshRelayUrl) {
     try {
@@ -321,24 +352,20 @@ async function startChannels(
       const { MeshChannel } = require('../channels/mesh/mesh_channel') as {
         MeshChannel: new (runtime: ChannelRuntime) => ChannelAdapter;
       };
-      started.push(new MeshChannel(runtime));
+      const channel = new MeshChannel(runtime);
+      started.push(channel);
+      await channel.start().catch((err: unknown) => {
+        console.warn(
+          `\x1b[33m[mesh]\x1b[0m did not start — ` +
+            `${err instanceof Error ? err.message : err}`,
+        );
+      });
     } catch {
       console.warn(
-        '[33m[mesh][0m enabled in settings but not installed yet — skipping.',
+        '\x1b[33m[mesh]\x1b[0m enabled in settings but not installed yet — skipping.',
       );
     }
   }
 
-  for (const channel of started) {
-    try {
-      await channel.start();
-    } catch (err) {
-      // One channel failing to connect must not take the others, or the CLI,
-      // down with it.
-      console.warn(
-        `[33m[${channel.name.toLowerCase()}][0m did not start — ` +
-          `${err instanceof Error ? err.message : err}`,
-      );
-    }
-  }
+  return manager;
 }

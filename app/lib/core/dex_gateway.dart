@@ -349,6 +349,28 @@ class DexGatewayClient extends ChangeNotifier {
         return;
 
       // The step stream. This is the whole point.
+      case 'channels':
+        _channels
+          ..clear()
+          ..addAll([
+            for (final row in (msg['channels'] as List? ?? const []))
+              if (row is Map) Map<String, dynamic>.from(row),
+          ]);
+        notifyListeners();
+        break;
+
+      case 'channel_test':
+        connectorTests[msg['channel'] as String? ?? ''] =
+            Map<String, dynamic>.from(msg);
+        notifyListeners();
+        break;
+
+      case 'account_test':
+        connectorTests[msg['account'] as String? ?? msg['key'] as String? ?? ''] =
+            Map<String, dynamic>.from(msg);
+        notifyListeners();
+        break;
+
       case 'reminders':
         _reminders
           ..clear()
@@ -535,6 +557,50 @@ class DexGatewayClient extends ChangeNotifier {
   /// Reminders, soonest first. Pushed by the core when one changes or rings.
   List<Map<String, dynamic>> get reminders => List.unmodifiable(_reminders);
   final List<Map<String, dynamic>> _reminders = [];
+
+  /// Chat channels, with what each one still needs. Pushed when one changes.
+  List<Map<String, dynamic>> get channels => List.unmodifiable(_channels);
+  final List<Map<String, dynamic>> _channels = [];
+
+  /// The last test result, keyed by channel or account name. Cleared when a
+  /// new test starts, so a stale success cannot sit under a failing setup.
+  final Map<String, Map<String, dynamic>> connectorTests = {};
+
+  void listChannels() => _send({'type': 'get_channels'});
+
+  /// Pair a channel. The token goes to the OS credential store on the core
+  /// side; it is never written to settings.json and never kept here.
+  void setChannel(
+    String channel, {
+    String? token,
+    String? owner,
+    bool? enabled,
+  }) {
+    // Built rather than declared with conditional entries: the map is
+    // `dynamic`-valued, so a null-aware entry is meaningless to the analyzer
+    // and an `if` entry trips the opposite lint. Only the fields the caller
+    // actually set are sent, so leaving the token box untouched does not
+    // clear a stored token.
+    final payload = <String, dynamic>{'type': 'set_channel', 'channel': channel};
+    if (token != null) payload['token'] = token;
+    if (owner != null) payload['owner'] = owner;
+    if (enabled != null) payload['enabled'] = enabled;
+    _send(payload);
+  }
+
+  /// Send yourself a message, to prove the whole path rather than claim it.
+  void testChannel(String channel) {
+    connectorTests.remove(channel);
+    notifyListeners();
+    _send({'type': 'test_channel', 'channel': channel});
+  }
+
+  /// Connect to an account for real and report what came back.
+  void testAccount(String account) {
+    connectorTests.remove(account);
+    notifyListeners();
+    _send({'type': 'test_account', 'account': account});
+  }
 
   void listReminders() => _send({'type': 'get_reminders'});
 

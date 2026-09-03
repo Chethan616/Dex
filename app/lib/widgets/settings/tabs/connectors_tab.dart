@@ -14,10 +14,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../core/dex_gateway.dart';
 import '../../../core/models/capability_health.dart';
 import '../../../theme/tokens.dart';
+import '../connector_setup.dart';
 import '../settings_dialog.dart';
 
 const _groupOrder = ['built in', 'agents', 'chat', 'accounts'];
@@ -110,15 +112,129 @@ class _ConnectorsTabState extends State<ConnectorsTab> {
               blurb: _groupBlurb[group] ?? '',
             ),
             const SizedBox(height: 10),
-            for (final capability in health.where((c) => c.group == group))
-              _Row(
-                capability: capability,
-                onFix: capability.reason?.contains('Intelligence') ?? false
-                    ? () => widget.onNavigate?.call(SettingsTab.intelligence)
-                    : null,
-              ),
+            // Chat rows are set up in place. Everything else is a status: the
+            // daemon and the agents are started by Dex and there is nothing to
+            // type. A channel needs a token and an id, and the row that said
+            // "no owner id" used to name a problem with no way to fix it — the
+            // only route was an environment variable and a restart, which the
+            // screen never mentioned.
+            if (group == 'chat')
+              for (final id in const ['telegram', 'discord', 'whatsapp'])
+                ConnectorSetup(channel: id)
+            else
+              for (final capability in health.where((c) => c.group == group))
+                _Row(
+                  capability: capability,
+                  onFix: capability.reason?.contains('Intelligence') ?? false
+                      ? () => widget.onNavigate?.call(SettingsTab.intelligence)
+                      : null,
+                ),
+            if (group == 'accounts') ...[
+              const SizedBox(height: 8),
+              _AccountTest(onNavigate: widget.onNavigate),
+            ],
             const SizedBox(height: 22),
           ],
+        ],
+      ],
+    );
+  }
+}
+
+/// Connect to an account for real, and say what came back.
+///
+/// The row above this reported "available" because a client id was *stored*.
+/// Storing a credential proves somebody typed something into a box — not that
+/// the id is right, the secret matches, consent was granted, or that the
+/// server's runner is even installed. Each of those fails at the first real
+/// request, long after the screen said connected.
+class _AccountTest extends StatefulWidget {
+  const _AccountTest({this.onNavigate});
+  final void Function(SettingsTab)? onNavigate;
+
+  @override
+  State<_AccountTest> createState() => _AccountTestState();
+}
+
+class _AccountTestState extends State<_AccountTest> {
+  bool _asking = false;
+
+  DexGatewayClient? get _client => DexGatewayClient.current;
+  Map<String, dynamic>? get _result => _client?.connectorTests['google'];
+
+  @override
+  void initState() {
+    super.initState();
+    _client?.addListener(_onChange);
+  }
+
+  void _onChange() {
+    if (mounted) setState(() => _asking = false);
+  }
+
+  @override
+  void dispose() {
+    _client?.removeListener(_onChange);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final result = _result;
+    final tools = (result?['tools'] as List?)?.length ?? 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: _asking
+              ? null
+              : () {
+                  setState(() => _asking = true);
+                  _client?.testAccount('google');
+                },
+          borderRadius: DexRadius.rsm,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: DexColors.accentQuiet,
+              borderRadius: DexRadius.rsm,
+              border: Border.all(color: DexColors.border),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(LucideIcons.plug, size: 13, color: DexColors.accent),
+                const SizedBox(width: 6),
+                Text(
+                  // It spawns the MCP server, which on a cold start takes
+                  // seconds. Saying so beats a button that looks stuck.
+                  _asking ? 'Connecting…' : 'Test the connection',
+                  style: DexType.caption(color: DexColors.text),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (result != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            (result['detail'] as String?) ?? '',
+            style: DexType.caption(
+              color: result['ok'] == true
+                  ? DexColors.stateApprove
+                  : DexColors.stateError,
+            ),
+          ),
+          if (tools > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                (result['tools'] as List).take(8).join(', ') +
+                    (tools > 8 ? ' …' : ''),
+                style: DexType.caption(color: DexColors.textFaint),
+              ),
+            ),
         ],
       ],
     );

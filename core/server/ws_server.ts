@@ -13,6 +13,7 @@ import { writeHandshake, removeHandshake } from './handshake';
 import { SettingsService } from '../settings/settings_service';
 import { ScheduleStore } from '../scheduler/store';
 import { parseSchedule } from '../scheduler/cron';
+import { ChannelId, ChannelState } from '../../channels/manager';
 import { Conversations } from '../memory/conversations';
 import { db } from '../memory/db';
 
@@ -49,6 +50,10 @@ type Inbound =
   | { type: 'rename_workflow'; from: string; to: string }
   | { type: 'get_schedules' }
   | { type: 'get_reminders' }
+  | { type: 'get_channels' }
+  | { type: 'set_channel'; channel: ChannelId; token?: string; owner?: string; enabled?: boolean }
+  | { type: 'test_channel'; channel: ChannelId }
+  | { type: 'test_account'; account: string }
   | { type: 'set_reminder'; text: string; at: number }
   | { type: 'snooze_reminder'; name: string; minutes?: number; at?: number }
   | { type: 'complete_reminder'; name: string }
@@ -76,6 +81,31 @@ export interface DexServerOptions {
   port?: number;
   fullAccess: boolean;
   evidenceDir?: string;
+  /**
+   * The chat channels, so pairing takes effect where the owner made it.
+   *
+   * Optional: the CLI and the tests build a server without channels, and a
+   * settings screen that cannot reach them should say so rather than fail to
+   * construct.
+   */
+  channels?: {
+    sync(options?: { restart?: boolean }): Promise<ChannelState[]>;
+    states(): ChannelState[];
+    sendTest(id: ChannelId, text: string): Promise<{ ok: boolean; detail: string }>;
+  };
+  /**
+   * The connected-accounts agent, so Settings can prove a connection instead
+   * of reporting that a credential exists.
+   */
+  workspace?: {
+    probe(key: string): Promise<{
+      key: string;
+      ok: boolean;
+      account?: string;
+      tools: string[];
+      detail: string;
+    }>;
+  };
   /**
    * The agent registry, so the one direct action below can be dispatched.
    * Optional: a server built without it simply reports that no system agent
@@ -142,6 +172,18 @@ export class DexServer {
     this.agents = opts.agents;
     this.port = opts.port ?? 8770;
     this.evidenceDir = path.resolve(opts.evidenceDir ?? 'data/evidence');
+  }
+
+  /**
+   * Hand over the chat channels once they exist.
+   *
+   * A setter rather than a constructor argument because the channels connect
+   * to Telegram and Discord over the network, and the socket must be up before
+   * that finishes — otherwise the app waits on a chat platform to open.
+   */
+  useChannels(channels: DexServerOptions['channels']): void {
+    this.opts.channels = channels;
+    this.broadcastChannels();
   }
 
   /**
@@ -332,6 +374,88 @@ export class DexServer {
           this.stepsInFlight.delete(result.requestId);
         }
         return this.send(socket, { type: 'result', ...result });
+      }
+
+      case 'get_channels':
+        return this.send(socket, this.channelsPayload());
+
+      case 'set_channel': {
+        const id = msg.channel;
+        try {
+          // The token goes to the OS credential store, never to settings.json
+          // and never to a file in the repo. The owner id is not a secret —
+          // it is a username — so it lives with the rest of the settings.
+          if (typeof msg.token === 'string') {
+            const key = id === 'telegram' ? 'telegram_bot_token' : 'discord_bot_token';
+            if (msg.token.trim()) {
+              await this.settings.setCredential(key, msg.token.trim());
+            } else {
+              await this.settings.clearCredential(key);
+            }
+          }
+
+          const changes: Record<string, unknown> = {};
+          if (typeof msg.owner === 'string') {
+            changes[`${id}Owner`] = msg.owner.trim();
+          }
+          if (id === 'whatsapp' && typeof msg.enabled === 'boolean') {
+            changes.whatsappEnabled = msg.enabled;
+          }
+          if (Object.keys(changes).length > 0) this.settings.setConfig(changes);
+        } catch (err) {
+          return this.send(socket, {
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
+
+        // Reconnect now, not at the next restart. A settings screen whose
+        // change only takes effect after a restart it never mentions is a
+        // settings screen that lies — the same reason set_config rebuilds the
+        // Brain in place.
+        await this.opts.channels?.sync({ restart: true });
+        return this.broadcastChannels();
+      }
+
+      case 'test_channel': {
+        const channels = this.opts.channels;
+        if (!channels) {
+          return this.send(socket, {
+            type: 'channel_test',
+            channel: msg.channel,
+            ok: false,
+            detail: 'This core was started without chat channels.',
+          });
+        }
+        const result = await channels.sendTest(
+          msg.channel,
+          'Dex here. If you are reading this, the connection works.',
+        );
+        return this.send(socket, {
+          type: 'channel_test',
+          channel: msg.channel,
+          ...result,
+        });
+      }
+
+      // Connect for real and say what came back.
+      //
+      // Slow on purpose — it spawns the MCP server, which on a cold `uvx` can
+      // take several seconds. That is the cost of an answer that means
+      // something, against an instant one that only says a credential is
+      // stored.
+      case 'test_account': {
+        const workspace = this.opts.workspace;
+        if (!workspace) {
+          return this.send(socket, {
+            type: 'account_test',
+            account: msg.account,
+            ok: false,
+            detail: 'This core was started without connected accounts.',
+          });
+        }
+        const result = await workspace.probe(String(msg.account || 'google'));
+        return this.send(socket, { type: 'account_test', ...result });
       }
 
       case 'get_reminders':
@@ -948,6 +1072,14 @@ export class DexServer {
         at: step.at,
       });
     }
+  }
+
+  private channelsPayload(): { type: string; channels: ChannelState[] } {
+    return { type: 'channels', channels: this.opts.channels?.states() ?? [] };
+  }
+
+  private broadcastChannels(): void {
+    this.broadcast(this.channelsPayload());
   }
 
   private remindersPayload(): { type: string; reminders: unknown[] } {

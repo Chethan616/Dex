@@ -56,6 +56,72 @@ export class WorkspaceAgent implements Agent {
     this.routes = { ...DEFAULT_ROUTES, ...(options.routes ?? {}) };
   }
 
+  /**
+   * Actually connect to an account, and report what came back.
+   *
+   * The Settings screen reported Email, calendar and files as working because
+   * a client id was *stored*. Storing a credential proves somebody typed
+   * something into a box: it does not prove the id is right, the secret
+   * matches, the OAuth consent was granted, or that `uvx` is even installed.
+   * Every one of those fails at the first real request, long after the screen
+   * said connected.
+   *
+   * So this starts the server and asks it what it can do. Listing tools is the
+   * cheapest call that exercises the whole path — spawn, handshake, credential
+   * injection — and the answer is a list the owner can read rather than a
+   * boolean somebody computed.
+   *
+   * Nothing is written and nothing is sent. A probe that posted a test email
+   * would prove more and cost the owner an email.
+   */
+  async probe(key: string): Promise<{
+    key: string;
+    ok: boolean;
+    account?: string;
+    tools: string[];
+    detail: string;
+  }> {
+    try {
+      const tools = await this.pool.tools(key);
+      const account = await this.pool.identity(key);
+      const names = tools.map((tool) => tool.name).sort();
+
+      if (names.length === 0) {
+        return {
+          key,
+          ok: false,
+          account,
+          tools: [],
+          detail: 'The server started but offers no tools — check its version.',
+        };
+      }
+
+      return {
+        key,
+        ok: true,
+        account,
+        tools: names,
+        detail: account
+          ? `Connected as ${account} — ${names.length} tools available`
+          : `Connected — ${names.length} tools available, no account reported`,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return {
+        key,
+        ok: false,
+        tools: [],
+        // The three ways this fails in practice, each with the thing to do
+        // about it. "Failed to connect" on its own sends the owner to the logs.
+        detail: /ENOENT|not recognized|spawn/i.test(message)
+          ? `Could not start the server. Install its runner first — ${message}`
+          : /auth|credential|token|401|403/i.test(message)
+            ? `The account has not been authorised yet — ${message}`
+            : message,
+      };
+    }
+  }
+
   async execute(
     action: string,
     params: Record<string, unknown>,

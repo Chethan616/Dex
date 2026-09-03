@@ -42,6 +42,22 @@ export interface ChannelAdapter {
   readonly name: string;
   start(): Promise<void>;
   stop(): Promise<void>;
+
+  /**
+   * Start a conversation with the owner, rather than replying inside one.
+   *
+   * Optional because not every platform allows it and none of them allow it
+   * unconditionally: a Telegram bot cannot message someone who has never
+   * messaged it, and a Discord bot cannot DM a user who shares no server with
+   * it. That is not a reason to leave it out — it is the reason it exists.
+   * The Settings screen's "send yourself a test message" needs the whole path
+   * exercised, because a token can be valid, the bot can be running, and the
+   * owner id can be a plausible number belonging to somebody else, and every
+   * status in the app would still say connected. A message that arrives is
+   * the only check that covers all of it; a failure here names which part
+   * broke.
+   */
+  sendTo?(to: string, text: string): Promise<void>;
 }
 
 /** Progress edits are rate-limited by every chat API; one a second is plenty. */

@@ -18,6 +18,29 @@ export class TelegramChannel implements ChannelAdapter {
     this.bot = new Bot(token);
   }
 
+  /**
+   * Message the owner directly.
+   *
+   * Telegram will refuse this until the owner has sent the bot something at
+   * least once — bots cannot open a conversation. The error says so plainly
+   * rather than being swallowed, because "press start on your bot first" is
+   * an instruction the owner can follow and "could not send" is not.
+   */
+  async sendTo(to: string, text: string): Promise<void> {
+    try {
+      await this.bot.api.sendMessage(to, text);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      if (/chat not found|bot can't initiate|blocked/i.test(detail)) {
+        throw new Error(
+          `Telegram will not let a bot message you first. Open the bot in ` +
+            `Telegram and send it anything, then try again. (${detail})`,
+        );
+      }
+      throw err;
+    }
+  }
+
   async start(): Promise<void> {
     this.bot.on('message:text', async (ctx) => {
       const from = ctx.from?.id;

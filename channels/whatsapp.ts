@@ -24,9 +24,32 @@ export class WhatsAppChannel implements ChannelAdapter {
   readonly source = 'whatsapp' as const;
   readonly name = 'WhatsApp';
 
-  private socket: { end: (err?: Error) => void } | null = null;
+  private socket:
+    | {
+        end: (err?: Error) => void;
+        sendMessage?: (to: string, content: { text: string }) => Promise<unknown>;
+      }
+    | null = null;
 
   constructor(private runtime: ChannelRuntime, private authDir = path.join('data', 'whatsapp')) {}
+
+  /**
+   * Message the owner.
+   *
+   * WhatsApp addresses are JIDs, and the owner will have typed a phone number.
+   * Converting here rather than asking them to know the format: a number with
+   * a country code and no punctuation is what people have, and
+   * `@s.whatsapp.net` is an implementation detail of the protocol.
+   */
+  async sendTo(to: string, text: string): Promise<void> {
+    const socket = this.socket;
+    if (!socket?.sendMessage) {
+      throw new Error('WhatsApp is not connected — scan the QR code first');
+    }
+    const digits = to.replace(/[^0-9]/g, '');
+    if (!digits) throw new Error(`"${to}" is not a phone number`);
+    await socket.sendMessage(`${digits}@s.whatsapp.net`, { text });
+  }
 
   async start(): Promise<void> {
     let baileys: Record<string, unknown>;
