@@ -29,6 +29,8 @@ class ChatView extends StatefulWidget {
     this.onVoice,
     this.onAddAction,
     this.onClear,
+    this.onNewChat,
+    this.onOpenScreen,
   });
 
   final ConversationStore store;
@@ -37,6 +39,8 @@ class ChatView extends StatefulWidget {
   final VoidCallback? onVoice;
   final ValueChanged<ComposerAddAction>? onAddAction;
   final VoidCallback? onClear;
+  final VoidCallback? onNewChat;
+  final void Function(String screen)? onOpenScreen;
 
   @override
   State<ChatView> createState() => _ChatViewState();
@@ -127,6 +131,8 @@ class _ChatViewState extends State<ChatView> {
                 onVoice: widget.onVoice,
                 onAddAction: widget.onAddAction,
                 onClear: widget.onClear,
+                onNewChat: widget.onNewChat,
+                onOpenScreen: widget.onOpenScreen,
               ),
             ),
           ),

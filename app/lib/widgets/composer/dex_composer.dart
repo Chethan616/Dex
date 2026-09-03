@@ -34,6 +34,8 @@ class DexComposer extends StatefulWidget {
     this.onVoice,
     this.onAddAction,
     this.onClear,
+    this.onNewChat,
+    this.onOpenScreen,
   });
 
   final ValueChanged<String> onSubmit;
@@ -47,6 +49,15 @@ class DexComposer extends StatefulWidget {
 
   /// Clears the current conversation (used by the /clear slash command).
   final VoidCallback? onClear;
+
+  /// Starts a new thread (`/new`). Distinct from onClear, which empties the
+  /// view without ending the conversation.
+  final VoidCallback? onNewChat;
+
+  /// Opens one of the app's screens by name — 'workflows', 'schedules'.
+  /// A callback because which screens exist, and how they open, is the
+  /// shell's business rather than the composer's.
+  final void Function(String screen)? onOpenScreen;
 
   @override
   State<DexComposer> createState() => _DexComposerState();
@@ -101,6 +112,23 @@ class _DexComposerState extends State<DexComposer> {
   // (`/` with no space yet). `_slashToken` is the text after the slash.
   String? _slashToken;
 
+  /// Which command the arrow keys have landed on. Reset whenever the matches
+  /// change: an index into a list that has been replaced points at whatever
+  /// happens to be there now.
+  int _slashIndex = 0;
+
+  List<SlashCommand> get _slashMatches =>
+      _slashToken == null ? const [] : SlashCommands.matching(_slashToken!);
+
+  void _moveSlash(int by) {
+    final matches = _slashMatches;
+    if (matches.isEmpty) return;
+    setState(() {
+      _slashIndex = (_slashIndex + by) % matches.length;
+      if (_slashIndex < 0) _slashIndex += matches.length;
+    });
+  }
+
   void _onText() {
     final has = _ctrl.text.trim().isNotEmpty;
     final text = _ctrl.text;
@@ -111,6 +139,7 @@ class _DexComposerState extends State<DexComposer> {
       setState(() {
         _hasText = has;
         _slashToken = token;
+        _slashIndex = 0;
       });
     }
     // A manual edit ends history browsing -- the recalled prompt becomes
@@ -140,9 +169,23 @@ class _DexComposerState extends State<DexComposer> {
         sendMessage: widget.onSubmit,
         onStop: widget.onStop,
         onClear: widget.onClear,
+        onNewChat: widget.onNewChat,
+        openScreen: widget.onOpenScreen,
       );
 
   Future<void> _submit() async {
+    // Enter takes the highlighted command. Without this the palette was a
+    // list you could look at and then had to finish typing anyway, which is
+    // most of the reason to have one gone.
+    if (_slashToken != null) {
+      final matches = _slashMatches;
+      if (matches.isNotEmpty) {
+        final chosen = matches[_slashIndex.clamp(0, matches.length - 1)];
+        await _runCommand(chosen);
+        return;
+      }
+    }
+
     final t = _ctrl.text.trim();
     if (t.isEmpty && _attachments.isEmpty) return;
     // Slash commands run locally and never reach the agent.
@@ -178,6 +221,13 @@ class _DexComposerState extends State<DexComposer> {
   // ---- shell-style history recall (up/down arrows) ----
 
   void _recallPrev() {
+    // While the palette is open the arrows choose a command. Shell history is
+    // what up-arrow means in an empty composer; it is not what it means with a
+    // list of commands on screen.
+    if (_slashToken != null) {
+      _moveSlash(-1);
+      return;
+    }
     final sel = _ctrl.selection;
     // Only when the caret sits at the very start (or the field is empty):
     // inside multi-line text, arrow-up must keep navigating lines.
@@ -192,6 +242,10 @@ class _DexComposerState extends State<DexComposer> {
   }
 
   void _recallNext() {
+    if (_slashToken != null) {
+      _moveSlash(1);
+      return;
+    }
     if (_historyIndex < 0) return;
     final sel = _ctrl.selection;
     final atEnd = sel.isCollapsed && sel.baseOffset >= _ctrl.text.length;
@@ -343,6 +397,7 @@ class _DexComposerState extends State<DexComposer> {
                   _SlashPalette(
                     token: _slashToken!,
                     onPick: _runCommand,
+                    selected: _slashIndex,
                   ),
                 _Input(
                   controller: _ctrl,
@@ -703,62 +758,162 @@ class _ModePill extends StatelessWidget {
   }
 }
 
-// Live command palette shown above the input while typing `/name`.
+// The command palette, above the input while typing `/name`.
+//
+// Three changes that only work together: matching is fuzzy, so a
+// half-remembered name still finds the command; the list is grouped, so twenty
+// commands can be scanned rather than read; and it is keyboard-first, because
+// a palette you have to reach for the mouse to use is slower than just typing
+// the whole command.
 class _SlashPalette extends StatelessWidget {
-  const _SlashPalette({required this.token, required this.onPick});
+  const _SlashPalette({
+    required this.token,
+    required this.onPick,
+    required this.selected,
+  });
+
   final String token;
   final ValueChanged<SlashCommand> onPick;
+
+  /// Index into the flat match list. The composer owns it, because the
+  /// composer owns the keyboard.
+  final int selected;
 
   @override
   Widget build(BuildContext context) {
     final matches = SlashCommands.matching(token);
-    if (matches.isEmpty) return const SizedBox.shrink();
+
+    if (matches.isEmpty) {
+      // Saying so beats vanishing: an empty palette that disappears reads as
+      // the palette breaking, not as the command not existing.
+      return Container(
+        margin: const EdgeInsets.only(bottom: DexSpace.sm),
+        padding: const EdgeInsets.symmetric(
+            horizontal: DexSpace.md, vertical: DexSpace.sm),
+        decoration: BoxDecoration(
+          color: DexColors.surface.withValues(alpha: 0.6),
+          borderRadius: DexRadius.rmd,
+          border: Border.all(color: DexColors.border),
+        ),
+        child: Text('No command matches "/$token"',
+            style: DexType.caption(color: DexColors.textFaint)),
+      );
+    }
+
+    // Grouped only while browsing. Once something has been typed the order is
+    // relevance, and headings would fight it.
+    final grouped = token.isEmpty;
+    final rows = <Widget>[];
+    SlashGroup? lastGroup;
+
+    for (var i = 0; i < matches.length; i++) {
+      final c = matches[i];
+      if (grouped && c.group != lastGroup) {
+        lastGroup = c.group;
+        rows.add(Padding(
+          padding: const EdgeInsets.fromLTRB(
+              DexSpace.sm, DexSpace.sm, DexSpace.sm, 2),
+          child: Text(
+            c.group.label.toUpperCase(),
+            style: DexType.caption(color: DexColors.textFaint)
+                .copyWith(letterSpacing: 0.6, fontWeight: FontWeight.w600),
+          ),
+        ));
+      }
+      rows.add(_PaletteRow(
+        command: c,
+        active: i == selected,
+        onTap: () => onPick(c),
+      ));
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: DexSpace.sm),
-      constraints: const BoxConstraints(maxHeight: 220),
+      constraints: const BoxConstraints(maxHeight: 260),
       decoration: BoxDecoration(
         color: DexColors.surface.withValues(alpha: 0.6),
         borderRadius: DexRadius.rmd,
         border: Border.all(color: DexColors.border),
       ),
-      child: ListView(
-        shrinkWrap: true,
-        padding: const EdgeInsets.all(DexSpace.xs),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          for (final c in matches)
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: InkWell(
-                onTap: () => onPick(c),
-                borderRadius: DexRadius.rsm,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: DexSpace.sm, vertical: DexSpace.sm),
-                  child: Row(
-                    children: [
-                      Icon(c.icon, size: 15, color: DexColors.textDim),
-                      const SizedBox(width: DexSpace.sm),
-                      Text('/${c.name}',
-                          style: DexType.mono(color: DexColors.text)
-                              .copyWith(fontSize: 12.5)),
-                      if (c.argsHint.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Text(c.argsHint,
-                            style: DexType.caption(color: DexColors.textFaint)),
-                      ],
-                      const SizedBox(width: DexSpace.md),
-                      Expanded(
-                        child: Text(c.description,
-                            style: DexType.caption(color: DexColors.textDim),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(DexSpace.xs),
+              children: rows,
             ),
+          ),
+          // What the keys do, said once rather than discovered by accident.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                DexSpace.sm, 2, DexSpace.sm, DexSpace.sm),
+            child: Row(
+              children: [
+                Text('↑↓ choose    ⏎ run',
+                    style: DexType.caption(color: DexColors.textFaint)),
+                const Spacer(),
+                Text('${selected + 1} of ${matches.length}',
+                    style: DexType.caption(color: DexColors.textFaint)),
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _PaletteRow extends StatelessWidget {
+  const _PaletteRow({
+    required this.command,
+    required this.active,
+    required this.onTap,
+  });
+
+  final SlashCommand command;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: DexRadius.rsm,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: DexSpace.sm, vertical: DexSpace.sm),
+          decoration: BoxDecoration(
+            color: active ? DexColors.accentQuiet : Colors.transparent,
+            borderRadius: DexRadius.rsm,
+          ),
+          child: Row(
+            children: [
+              Icon(command.icon,
+                  size: 15,
+                  color: active ? DexColors.accent : DexColors.textDim),
+              const SizedBox(width: DexSpace.sm),
+              Text('/${command.name}',
+                  style:
+                      DexType.mono(color: DexColors.text).copyWith(fontSize: 12.5)),
+              if (command.argsHint.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                Text(command.argsHint,
+                    style: DexType.caption(color: DexColors.textFaint)),
+              ],
+              const SizedBox(width: DexSpace.md),
+              Expanded(
+                child: Text(command.description,
+                    style: DexType.caption(color: DexColors.textDim),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -32,6 +32,8 @@ class EmptyHome extends StatelessWidget {
     this.onSelectFile,
     this.onSelectChat,
     this.onClear,
+    this.onNewChat,
+    this.onOpenScreen,
   });
 
   final String greetingName;
@@ -47,6 +49,8 @@ class EmptyHome extends StatelessWidget {
   final ValueChanged<RecentFileItem>? onSelectFile;
   final ValueChanged<RecentChatItem>? onSelectChat;
   final VoidCallback? onClear;
+  final VoidCallback? onNewChat;
+  final void Function(String screen)? onOpenScreen;
 
   @override
   Widget build(BuildContext context) {
@@ -103,6 +107,8 @@ class EmptyHome extends StatelessWidget {
                       onVoice: onVoice,
                       onAddAction: onAddAction,
                       onClear: onClear,
+                      onNewChat: onNewChat,
+                      onOpenScreen: onOpenScreen,
                     ),
                   ),
                   const SizedBox(height: DexSpace.lg),

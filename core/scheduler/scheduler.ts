@@ -1,5 +1,6 @@
 import { emit } from '../events/bus';
 import { Cron, matches, parseCron } from './cron';
+import { notify } from './notify';
 import { Schedule, ScheduleStore } from './store';
 
 /** What the scheduler needs from the Gateway. Narrow, so it is easy to fake. */
@@ -84,7 +85,22 @@ export class Scheduler {
     const minute = floorToMinute(at);
     const fired: string[] = [];
 
+    // Reminders first, and by wall clock rather than by cron minute.
+    //
+    // A reminder set for 16:32 is due at 16:32 and every moment after it: if
+    // the machine was asleep then, the owner still wants to be told, which is
+    // the opposite of the rule for recurring schedules. Missing a "summary
+    // every hour" is a summary nobody needs any more; missing "leave for the
+    // dentist" is the whole point of having set it.
+    for (const reminder of this.store.dueReminders(at.getTime())) {
+      if (this.running.has(reminder.name)) continue;
+      fired.push(reminder.name);
+      void this.ring(reminder, minute);
+    }
+
     for (const schedule of this.store.active()) {
+      // Handled above, on its own clock.
+      if (schedule.kind === 'reminder') continue;
       if (this.running.has(schedule.name)) continue;
       if (!this.isDue(schedule, at, minute)) continue;
 
@@ -120,6 +136,42 @@ export class Scheduler {
     // Already done this minute. The guard is what makes a sub-minute tick safe
     // and what stops a restart re-firing something that already ran.
     return (schedule.lastFiredAt ?? 0) < minute;
+  }
+
+  /**
+   * A reminder comes due.
+   *
+   * Nothing is planned and nothing runs — that is the difference between a
+   * reminder and a schedule, and it is why a reminder needs no unattended-risk
+   * assessment. It says a thing to the owner and stops.
+   */
+  private async ring(reminder: Schedule, dueMinute: number): Promise<void> {
+    this.running.add(reminder.name);
+    // Claimed before the toast, so a crash between the two leaves it fired
+    // rather than pending. A reminder shown twice is worse than one shown late.
+    this.store.claim(reminder.name, dueMinute);
+
+    try {
+      const shown = await notify('Dex reminder', reminder.request);
+      this.store.recordResult(reminder.name, shown ? 'COMPLETED' : 'NOT_SHOWN');
+      emit(
+        'done',
+        `Reminder: ${reminder.request}`,
+        'scheduler',
+        undefined,
+        { reminder: reminder.name, dueAt: reminder.onceAt, shown },
+      );
+    } catch (err) {
+      this.store.recordResult(reminder.name, 'FAILED');
+      emit(
+        'failed',
+        `Could not show the reminder "${reminder.request}": ` +
+          `${err instanceof Error ? err.message : err}`,
+        'scheduler',
+      );
+    } finally {
+      this.running.delete(reminder.name);
+    }
   }
 
   private async fire(schedule: Schedule, dueMinute: number): Promise<void> {

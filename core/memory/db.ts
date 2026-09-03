@@ -170,7 +170,23 @@ CREATE TABLE IF NOT EXISTS schedules (
   last_fired_at INTEGER,
   last_status   TEXT,
   run_count     INTEGER NOT NULL DEFAULT 0,
-  fail_count    INTEGER NOT NULL DEFAULT 0
+  fail_count    INTEGER NOT NULL DEFAULT 0,
+  -- A reminder is a schedule that happens once.
+  --
+  -- The same table rather than a second one, because everything around a
+  -- schedule is what a reminder needs too: it survives a restart, it fires on
+  -- a clock nobody is watching, and it must not fire twice. What differs is
+  -- two facts, and two facts do not earn their own store.
+  --
+  -- once_at is the moment it is due, in epoch milliseconds. Null for anything
+  -- recurring, and the cron column is empty for anything one-shot.
+  once_at       INTEGER,
+  -- 'task' asks Dex to do something. 'reminder' tells the owner something and
+  -- runs nothing at all, which is why it needs no unattended-risk assessment.
+  kind          TEXT NOT NULL DEFAULT 'task',
+  -- Set when the owner has dealt with it. Kept rather than deleted so "what
+  -- did I have on this week" can still answer.
+  done_at       INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_schedules_enabled ON schedules(enabled);
 
@@ -250,6 +266,9 @@ function migrate(database: Database): void {
     "ALTER TABLE workflows ADD COLUMN origin TEXT NOT NULL DEFAULT 'named'",
     'ALTER TABLE workflows ADD COLUMN fail_count INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE tasks ADD COLUMN feedback INTEGER',
+    'ALTER TABLE schedules ADD COLUMN once_at INTEGER',
+    "ALTER TABLE schedules ADD COLUMN kind TEXT NOT NULL DEFAULT 'task'",
+    'ALTER TABLE schedules ADD COLUMN done_at INTEGER',
   ];
   for (const sql of additions) {
     try {

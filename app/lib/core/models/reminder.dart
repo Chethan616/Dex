@@ -1,6 +1,10 @@
-// A single user-scheduled reminder. Persisted in-memory on the
-// ConversationStore for v1; the real backend lands when the gateway
-// gets a `reminders.*` namespace.
+// One reminder, as the core holds it.
+//
+// It used to live on a Dart object: created in the app, listed from memory,
+// and gone the moment Dex closed. Nothing ever fired one — the screen let the
+// owner write down a time and quietly forgot it, which is worse than not
+// having the screen. Now this is a view of a row in the schedules table, and
+// the ringing happens in the core whether the app is open or not.
 
 import 'package:flutter/foundation.dart';
 
@@ -11,31 +15,55 @@ class Reminder {
     required this.text,
     required this.due,
     required this.createdAt,
+    this.rang = false,
+    this.done = false,
   });
 
-  /// Stable id (uuid v4) used as the cancel key.
+  /// The core's name for it. The cancel, snooze and complete key.
   final String id;
 
-  /// What the user typed -- "open vtop at 4pm", "remind me to ...".
+  /// What the owner wants to be told.
   final String text;
 
-  /// When the reminder should fire. v1 just stores it; v2 actually
-  /// schedules a notification through the gateway.
+  /// When it is due.
   final DateTime due;
 
-  /// When the user created the reminder. Drives the "added 5 min ago"
-  /// hint on rows that haven't fired yet.
   final DateTime createdAt;
 
-  Reminder copyWith({
-    String? text,
-    DateTime? due,
-  }) {
+  /// It has gone off. The row stays until the owner deals with it, because a
+  /// reminder that has rung and been ignored is the one they most need to see.
+  final bool rang;
+
+  /// The owner has dealt with it.
+  final bool done;
+
+  bool get overdue => !done && due.isBefore(DateTime.now());
+
+  static Reminder? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final id = raw['name'];
+    final text = raw['text'];
+    final at = raw['at'];
+    if (id is! String || text is! String || at is! num) return null;
+
     return Reminder(
       id: id,
-      text: text ?? this.text,
-      due: due ?? this.due,
-      createdAt: createdAt,
+      text: text,
+      due: DateTime.fromMillisecondsSinceEpoch(at.toInt()),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        (raw['createdAt'] as num?)?.toInt() ?? at.toInt(),
+      ),
+      rang: raw['rang'] == true,
+      done: raw['done'] == true,
     );
   }
+
+  Reminder copyWith({String? text, DateTime? due}) => Reminder(
+        id: id,
+        text: text ?? this.text,
+        due: due ?? this.due,
+        createdAt: createdAt,
+        rang: rang,
+        done: done,
+      );
 }

@@ -16,6 +16,12 @@ export interface Schedule {
   lastStatus: string | null;
   runCount: number;
   failCount: number;
+  /** 'task' asks Dex to do something; 'reminder' just tells the owner. */
+  kind: 'task' | 'reminder';
+  /** When a one-shot is due, in epoch ms. Null for anything recurring. */
+  onceAt: number | null;
+  /** When the owner dealt with it. Null while it is still outstanding. */
+  doneAt: number | null;
 }
 
 interface Row {
@@ -28,9 +34,12 @@ interface Row {
   last_status: string | null;
   run_count: number;
   fail_count: number;
+  kind: string | null;
+  once_at: number | null;
+  done_at: number | null;
 }
 
-const NAME_RE = /^[a-z0-9][a-z0-9_-]{0,39}$/;
+const NAME_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
 export class ScheduleStore {
   private handle = db();
@@ -100,6 +109,96 @@ export class ScheduleStore {
   }
 
   /**
+   * Set a reminder.
+   *
+   * A schedule that happens once and asks nothing of Dex. It gets a generated
+   * name because the owner does not name a reminder — they name a schedule,
+   * which is a thing they will refer to again, and a reminder is a thing they
+   * want to be told once and then forget.
+   */
+  remind(input: { text: string; at: number }): Schedule {
+    const text = input.text.trim();
+    if (!text) throw new Error('A reminder needs something to say');
+    if (!Number.isFinite(input.at)) throw new Error('A reminder needs a time');
+
+    const name = `reminder-${input.at}-${Math.random().toString(36).slice(2, 8)}`;
+    this.handle
+      .prepare(
+        `INSERT INTO schedules
+           (name, cron, request, created_at, enabled, kind, once_at)
+         VALUES (?, '', ?, ?, 1, 'reminder', ?)`,
+      )
+      .run(name, text, Date.now(), Math.round(input.at));
+
+    return this.get(name)!;
+  }
+
+  /**
+   * Reminders, soonest first.
+   *
+   * Ones already dealt with are left out by default. They stay on disk so
+   * "what did I have on this week" can still be answered, but a list of things
+   * to do should not be mostly things already done.
+   */
+  reminders({ includeDone = false } = {}): Schedule[] {
+    const rows = this.handle
+      .prepare(
+        `SELECT * FROM schedules
+          WHERE kind = 'reminder' ${includeDone ? '' : 'AND done_at IS NULL'}
+          ORDER BY once_at ASC`,
+      )
+      .all() as unknown as Row[];
+    return rows.map(toSchedule);
+  }
+
+  /** Reminders due at or before `at` that have not fired. */
+  dueReminders(at: number): Schedule[] {
+    const rows = this.handle
+      .prepare(
+        `SELECT * FROM schedules
+          WHERE kind = 'reminder'
+            AND enabled = 1
+            AND done_at IS NULL
+            AND once_at IS NOT NULL
+            AND once_at <= ?
+            AND last_fired_at IS NULL
+          ORDER BY once_at ASC`,
+      )
+      .all(Math.round(at)) as unknown as Row[];
+    return rows.map(toSchedule);
+  }
+
+  /**
+   * Push a reminder out.
+   *
+   * Clears `last_fired_at` on purpose: snoozing means it has not happened yet,
+   * so the thing that stops a reminder firing twice has to be reset or the
+   * snoozed one would never come back.
+   */
+  snooze(name: string, until: number): boolean {
+    const target = name.trim();
+    if (!this.get(target)) return false;
+    this.handle
+      .prepare(
+        `UPDATE schedules
+            SET once_at = ?, last_fired_at = NULL, last_status = NULL, done_at = NULL
+          WHERE name = ?`,
+      )
+      .run(Math.round(until), target);
+    return true;
+  }
+
+  /** Mark a reminder dealt with. Kept, not deleted — see `reminders`. */
+  complete(name: string): boolean {
+    const target = name.trim();
+    if (!this.get(target)) return false;
+    this.handle
+      .prepare('UPDATE schedules SET done_at = ?, enabled = 0 WHERE name = ?')
+      .run(Date.now(), target);
+    return true;
+  }
+
+  /**
    * Claim a due minute, before the task runs.
    *
    * Split from [recordResult] deliberately. Claiming first means a crash
@@ -134,6 +233,14 @@ export class ScheduleStore {
 
   /** When this next fires, or null if the expression can never match. */
   static nextFire(schedule: Schedule, after: Date = new Date()): Date | null {
+    // A one-shot has a moment, not an expression. Parsing its empty cron would
+    // throw, and reporting "never" would be worse: it is due at a time the
+    // owner chose.
+    if (schedule.kind === 'reminder' || !schedule.cron) {
+      if (schedule.onceAt === null) return null;
+      const due = new Date(schedule.onceAt);
+      return due > after ? due : null;
+    }
     return nextRun(parseCron(schedule.cron), after);
   }
 
@@ -153,5 +260,8 @@ function toSchedule(row: Row): Schedule {
     lastStatus: row.last_status,
     runCount: row.run_count,
     failCount: row.fail_count,
+    kind: row.kind === 'reminder' ? 'reminder' : 'task',
+    onceAt: row.once_at ?? null,
+    doneAt: row.done_at ?? null,
   };
 }

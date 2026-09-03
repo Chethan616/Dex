@@ -92,32 +92,29 @@ class ConversationStore extends ChangeNotifier {
   /// another one on the owner each time they answer.
   int get approvalsWaiting => _approvals.length;
 
-  // Reminders are in-memory only, unchanged from before.
-  final List<Reminder> _reminders = <Reminder>[];
+  /// Reminders, from the core.
+  ///
+  /// They used to live in `_reminders` on this object: created here, listed
+  /// from memory, gone on restart, and never fired by anything. Now the core
+  /// holds them and rings them — with a real Windows notification, so a
+  /// reminder reaches the owner whether or not Dex is the window in front of
+  /// them.
+  List<Reminder> get reminders => [
+        for (final row in _client.reminders) ?Reminder.tryParse(row),
+      ];
 
-  List<Reminder> get reminders => List<Reminder>.unmodifiable(_reminders);
+  void refreshReminders() => _client.listReminders();
 
-  Reminder addReminder({required String text, required DateTime due}) {
-    final reminder = Reminder(
-      id: _uuid.v4(),
-      text: text,
-      due: due,
-      createdAt: DateTime.now(),
-    );
-    final at = _reminders.indexWhere((r) => r.due.isAfter(due));
-    if (at == -1) {
-      _reminders.add(reminder);
-    } else {
-      _reminders.insert(at, reminder);
-    }
-    notifyListeners();
-    return reminder;
+  void addReminder({required String text, required DateTime due}) {
+    _client.setReminder(text, due);
   }
 
-  void cancelReminder(String id) {
-    _reminders.removeWhere((r) => r.id == id);
-    notifyListeners();
-  }
+  void snoozeReminder(String id, {int minutes = 10}) =>
+      _client.snoozeReminder(id, minutes: minutes);
+
+  void completeReminder(String id) => _client.completeReminder(id);
+
+  void cancelReminder(String id) => _client.deleteReminder(id);
 
   List<PlanStep> _plan = const <PlanStep>[];
 

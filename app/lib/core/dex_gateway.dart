@@ -349,6 +349,16 @@ class DexGatewayClient extends ChangeNotifier {
         return;
 
       // The step stream. This is the whole point.
+      case 'reminders':
+        _reminders
+          ..clear()
+          ..addAll([
+            for (final row in (msg['reminders'] as List? ?? const []))
+              if (row is Map) Map<String, dynamic>.from(row),
+          ]);
+        notifyListeners();
+        break;
+
       case 'conversations':
         _conversations
           ..clear()
@@ -521,6 +531,27 @@ class DexGatewayClient extends ChangeNotifier {
       List.unmodifiable(_openedMessages);
   final List<Map<String, dynamic>> _openedMessages = [];
   String? openedConversationId;
+
+  /// Reminders, soonest first. Pushed by the core when one changes or rings.
+  List<Map<String, dynamic>> get reminders => List.unmodifiable(_reminders);
+  final List<Map<String, dynamic>> _reminders = [];
+
+  void listReminders() => _send({'type': 'get_reminders'});
+
+  void setReminder(String text, DateTime at) => _send({
+        'type': 'set_reminder',
+        'text': text,
+        'at': at.millisecondsSinceEpoch,
+      });
+
+  void snoozeReminder(String name, {int minutes = 10}) =>
+      _send({'type': 'snooze_reminder', 'name': name, 'minutes': minutes});
+
+  void completeReminder(String name) =>
+      _send({'type': 'complete_reminder', 'name': name});
+
+  void deleteReminder(String name) =>
+      _send({'type': 'delete_reminder', 'name': name});
 
   void listConversations({String? query}) {
     _send({

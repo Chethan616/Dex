@@ -11,6 +11,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../core/dex_memory.dart';
 import '../../core/dex_gateway.dart';
+import '../voice/voice_mode_screen.dart';
 import '../../core/supervisor/supervisor.dart';
 import '../../theme/tokens.dart';
 import '../dex_toast.dart';
@@ -25,6 +26,8 @@ class SlashContext {
     required this.sendMessage,
     this.onStop,
     this.onClear,
+    this.onNewChat,
+    this.openScreen,
   });
   final BuildContext context;
 
@@ -32,9 +35,23 @@ class SlashContext {
   final void Function(String) sendMessage;
   final VoidCallback? onStop;
   final VoidCallback? onClear;
+
+  /// Start a new thread. Distinct from `onClear`, which empties the view
+  /// without ending the conversation.
+  final VoidCallback? onNewChat;
+
+  /// Open one of the app's screens by name — 'workflows', 'schedules'.
+  /// A callback rather than a Navigator push here, because which screens
+  /// exist and how they open is the shell's business, not the composer's.
+  final void Function(String screen)? openScreen;
 }
 
 typedef SlashRun = Future<void> Function(SlashContext ctx, String args);
+
+/// What a command is about. Used only to group the palette, which starts to
+/// matter past a handful: an alphabetical list of twenty is a list you read,
+/// and a grouped one is a list you scan.
+enum SlashGroup { chat, find, remember, run, app }
 
 class SlashCommand {
   const SlashCommand({
@@ -43,14 +60,30 @@ class SlashCommand {
     required this.argsHint,
     required this.description,
     required this.run,
+    this.group = SlashGroup.app,
     this.aliases = const <String>[],
   });
+
   final String name;
   final IconData icon;
   final String argsHint;
   final String description;
   final SlashRun run;
+  final SlashGroup group;
   final List<String> aliases;
+
+  /// Every string this command answers to.
+  Iterable<String> get keys => [name, ...aliases];
+}
+
+extension SlashGroupLabel on SlashGroup {
+  String get label => switch (this) {
+        SlashGroup.chat => 'This chat',
+        SlashGroup.find => 'Find',
+        SlashGroup.remember => 'Remember',
+        SlashGroup.run => 'Run',
+        SlashGroup.app => 'App',
+      };
 }
 
 class SlashCommands {
@@ -157,32 +190,190 @@ class SlashCommands {
         if (ctx.context.mounted) _snack(ctx.context, 'Reconnecting…');
       },
     ),
-    SlashCommand(
-      name: 'vision',
-      icon: LucideIcons.glasses,
-      argsHint: '[question]',
-      description: 'Share your screen with Dex (coming soon)',
-      run: (ctx, _) => _planned(ctx.context, 'Vision',
-          'Screen sharing lets Dex see what you see and act on it. It is '
-          'planned — the command is reserved so it lights up the moment it ships.'),
-    ),
+    // Two commands here used to open a dialog saying they were planned.
+    // A command that exists only to say it does not work is worse than no
+    // command: it takes a name, appears in the palette, and teaches the owner
+    // that the palette is not to be trusted. `/voice` opens the screen that
+    // has been there all along; `/vision` is gone, because nothing behind it
+    // was ever built.
     SlashCommand(
       name: 'voice',
       icon: LucideIcons.mic,
       argsHint: '',
-      description: 'Talk to Dex (coming soon)',
-      run: (ctx, _) => _planned(ctx.context, 'Voice',
-          'Voice mode lets you speak to Dex and hear replies. It is planned; '
-          'the command is reserved for when it ships.'),
+      group: SlashGroup.chat,
+      description: 'Talk to Dex',
+      run: (ctx, _) async {
+        await Navigator.of(ctx.context).push(
+          MaterialPageRoute<void>(builder: (_) => const VoiceModeScreen()),
+        );
+      },
     ),
+
+    // ── finding things ──────────────────────────────────────────────────────
+    SlashCommand(
+      name: 'find',
+      icon: LucideIcons.file_search,
+      argsHint: '<what to look for>',
+      group: SlashGroup.find,
+      aliases: const ['search'],
+      description: 'Search this PC by name and by what is inside a file',
+      run: (ctx, args) async {
+        if (args.isEmpty) {
+          _snack(ctx.context, 'Usage: /find <what to look for>');
+          return;
+        }
+        ctx.sendMessage('Search my pc for $args');
+      },
+    ),
+    SlashCommand(
+      name: 'explain',
+      icon: LucideIcons.eye,
+      argsHint: '<file>',
+      group: SlashGroup.find,
+      description: 'Find a file and say what is in it',
+      run: (ctx, args) async {
+        if (args.isEmpty) {
+          _snack(ctx.context, 'Usage: /explain <file>');
+          return;
+        }
+        ctx.sendMessage('Find $args on my pc, open it and explain what is in it');
+      },
+    ),
+
+    // ── things that happen later ────────────────────────────────────────────
+    SlashCommand(
+      name: 'remind',
+      icon: LucideIcons.alarm_clock,
+      argsHint: '<when> <what>',
+      group: SlashGroup.run,
+      description: 'Set a reminder — "20m stand up", "17:30 leave"',
+      run: (ctx, args) async {
+        final parsed = parseReminder(args);
+        if (parsed == null) {
+          _snack(ctx.context,
+              'Usage: /remind 20m stand up  ·  /remind 17:30 leave for the dentist');
+          return;
+        }
+        DexGatewayClient.current?.setReminder(parsed.text, parsed.at);
+        if (ctx.context.mounted) {
+          _snack(ctx.context, 'Reminder set for ${_when(parsed.at)}.');
+        }
+      },
+    ),
+    SlashCommand(
+      name: 'schedules',
+      icon: LucideIcons.calendar_clock,
+      argsHint: '',
+      group: SlashGroup.run,
+      description: 'Things Dex does on a schedule',
+      run: (ctx, _) async => ctx.openScreen?.call('schedules'),
+    ),
+    SlashCommand(
+      name: 'workflow',
+      icon: LucideIcons.repeat,
+      argsHint: '',
+      group: SlashGroup.run,
+      aliases: const ['workflows'],
+      description: 'Saved workflows',
+      run: (ctx, _) async => ctx.openScreen?.call('workflows'),
+    ),
+
+    // ── the record ──────────────────────────────────────────────────────────
+    SlashCommand(
+      name: 'history',
+      icon: LucideIcons.clock,
+      argsHint: '[words to look for]',
+      group: SlashGroup.remember,
+      description: 'Past conversations, searched by what was said',
+      run: (ctx, args) async {
+        DexGatewayClient.current?.listConversations(query: args);
+        if (ctx.context.mounted) {
+          _snack(
+            ctx.context,
+            args.isEmpty
+                ? 'History is in the sidebar.'
+                : 'Showing conversations mentioning "$args".',
+          );
+        }
+      },
+    ),
+    SlashCommand(
+      name: 'new',
+      icon: LucideIcons.message_square_plus,
+      argsHint: '',
+      group: SlashGroup.chat,
+      description: 'Start a new conversation',
+      run: (ctx, _) async => ctx.onNewChat?.call(),
+    ),
+
     SlashCommand(
       name: 'help',
       icon: LucideIcons.circle_question_mark,
       argsHint: '',
+      group: SlashGroup.app,
       description: 'List commands',
       run: (ctx, _) => _help(ctx.context),
     ),
   ];
+
+  /// A reminder written the way a person writes one.
+  ///
+  /// Two forms, because those are the two people actually use: a duration from
+  /// now ("20m", "2h"), and a time today or tomorrow ("17:30", "5pm"). Anything
+  /// else returns null and the command says what it understands, rather than
+  /// guessing a time and setting a reminder for the wrong moment — which is
+  /// silently useless in a way that no reminder is not.
+  static ({String text, DateTime at})? parseReminder(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return null;
+
+    final space = trimmed.indexOf(' ');
+    if (space < 1) return null;
+    final when = trimmed.substring(0, space).toLowerCase();
+    final what = trimmed.substring(space + 1).trim();
+    if (what.isEmpty) return null;
+
+    final now = DateTime.now();
+
+    final duration = RegExp(r'^(\d+)(m|min|mins|h|hr|hrs|d)$').firstMatch(when);
+    if (duration != null) {
+      final amount = int.parse(duration.group(1)!);
+      final unit = duration.group(2)!;
+      final at = switch (unit) {
+        'h' || 'hr' || 'hrs' => now.add(Duration(hours: amount)),
+        'd' => now.add(Duration(days: amount)),
+        _ => now.add(Duration(minutes: amount)),
+      };
+      return (text: what, at: at);
+    }
+
+    final clock = RegExp(r'^(\d{1,2})(?::(\d{2}))?(am|pm)?$').firstMatch(when);
+    if (clock != null) {
+      var hour = int.parse(clock.group(1)!);
+      final minute = int.parse(clock.group(2) ?? '0');
+      final half = clock.group(3);
+      if (half == 'pm' && hour < 12) hour += 12;
+      if (half == 'am' && hour == 12) hour = 0;
+      if (hour > 23 || minute > 59) return null;
+
+      var at = DateTime(now.year, now.month, now.day, hour, minute);
+      // A time already past today means tomorrow. "Remind me at 9" said at
+      // ten in the morning is not a reminder for eleven hours ago.
+      if (!at.isAfter(now)) at = at.add(const Duration(days: 1));
+      return (text: what, at: at);
+    }
+
+    return null;
+  }
+
+  static String _when(DateTime at) {
+    final delta = at.difference(DateTime.now());
+    if (delta.inMinutes < 60) return 'in ${delta.inMinutes} min';
+    if (delta.inHours < 24) return 'in ${delta.inHours}h';
+    return '${at.day}/${at.month} at '
+        '${at.hour.toString().padLeft(2, '0')}:'
+        '${at.minute.toString().padLeft(2, '0')}';
+  }
 
   /// True if [text] looks like a slash command invocation.
   static bool looksLikeCommand(String text) => text.trimLeft().startsWith('/');
@@ -194,15 +385,59 @@ class SlashCommands {
     return null;
   }
 
-  /// Commands whose name/alias starts with [token] (no leading slash),
-  /// for the live palette. Empty token returns all.
+  /// Commands matching [token], best first.
+  ///
+  /// Prefix matching alone meant `/rem` found `/remind` and `/rmd` found
+  /// nothing, so the palette only helped someone who already knew the name —
+  /// which is the one person who does not need a palette. This scores three
+  /// ways, and the order it produces is the point:
+  ///
+  ///   an exact name    the command you named
+  ///   a prefix         what you were part-way through typing
+  ///   a subsequence    `/wf` for `workflow`, `/hst` for `history`
+  ///
+  /// Ties break on the shorter name, so a short command is never buried under
+  /// a longer one that happens to contain the same letters.
   static List<SlashCommand> matching(String token) {
-    final t = token.toLowerCase();
+    final t = token.toLowerCase().trim();
     if (t.isEmpty) return all;
-    return all
-        .where((c) =>
-            c.name.startsWith(t) || c.aliases.any((a) => a.startsWith(t)))
-        .toList(growable: false);
+
+    final scored = <(int, SlashCommand)>[];
+    for (final c in all) {
+      var best = -1;
+      for (final key in c.keys) {
+        final score = _score(key, t);
+        if (score > best) best = score;
+      }
+      if (best >= 0) scored.add((best, c));
+    }
+
+    scored.sort((a, b) {
+      final byScore = b.$1.compareTo(a.$1);
+      if (byScore != 0) return byScore;
+      return a.$2.name.length.compareTo(b.$2.name.length);
+    });
+    return [for (final entry in scored) entry.$2];
+  }
+
+  /// How well [key] answers to [typed]. Negative means it does not.
+  static int _score(String key, String typed) {
+    if (key == typed) return 1000;
+    if (key.startsWith(typed)) return 500 - key.length;
+    if (key.contains(typed)) return 200 - key.length;
+
+    // A subsequence: every typed letter appears, in order. Tighter runs score
+    // higher, so `hst` prefers `history` over a name where those letters are
+    // scattered across the whole word.
+    var at = 0;
+    var gaps = 0;
+    for (final letter in typed.split('')) {
+      final found = key.indexOf(letter, at);
+      if (found == -1) return -1;
+      gaps += found - at;
+      at = found + 1;
+    }
+    return 100 - gaps;
   }
 
   /// Run [text] as a command. Returns true when [text] was a slash command
@@ -239,23 +474,11 @@ class SlashCommands {
     dexToast(context, msg);
   }
 
-  static Future<void> _planned(BuildContext context, String title, String body) {
-    return showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: DexColors.surface2,
-        title: Text('$title — planned',
-            style: DexType.label(color: DexColors.text)),
-        content: Text(body, style: DexType.body(color: DexColors.textDim)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Got it'),
-          ),
-        ],
-      ),
-    );
-  }
+  // `_planned` lived here: a dialog saying a command was not built yet. Two
+  // commands used it. A command whose only job is to say it does not work
+  // takes a name, sits in the palette, and teaches the owner that the palette
+  // is not to be trusted — so both are gone, one replaced by the screen that
+  // was already there.
 
   static Future<void> _help(BuildContext context) {
     return showDialog<void>(

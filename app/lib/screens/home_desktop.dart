@@ -118,6 +118,21 @@ class _HomeDesktopState extends State<HomeDesktop> {
       (DexGatewayClient.current?.conversations ?? const [])
           .any((c) => c['id'] == id);
 
+  /// Open a screen by name, for the slash commands.
+  ///
+  /// The composer asks for 'workflows' or 'schedules' rather than pushing a
+  /// route itself: which screens exist and how they open belongs here, and a
+  /// command that hard-codes a route breaks quietly the day the route moves.
+  void _openScreen(String screen) {
+    switch (screen) {
+      case 'workflows':
+        SettingsDialog.show(context, initial: SettingsTab.memory);
+      case 'schedules':
+      case 'reminders':
+        RemindersScreen.show(context, widget.store);
+    }
+  }
+
   static bool _isFailure(String? status) =>
       status != null && status != 'COMPLETED' && status != 'ANSWERED';
 
@@ -283,6 +298,8 @@ class _HomeDesktopState extends State<HomeDesktop> {
                                   onVoice: _openVoice,
                                   onAddAction: _handleAdd,
                                   onClear: widget.store.clearMessages,
+                                  onNewChat: widget.store.newConversation,
+                                  onOpenScreen: _openScreen,
                                 )
                               : EmptyHome(
                                   greetingName: _greetingName,
@@ -296,6 +313,8 @@ class _HomeDesktopState extends State<HomeDesktop> {
                                   onVoice: _openVoice,
                                   onAddAction: _handleAdd,
                                   onClear: widget.store.clearMessages,
+                                  onNewChat: widget.store.newConversation,
+                                  onOpenScreen: _openScreen,
                                 ),
                         ),
                         if (_visionOpen)

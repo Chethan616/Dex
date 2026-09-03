@@ -67,6 +67,9 @@ class _RemindersScreenState extends State<RemindersScreen> {
   void initState() {
     super.initState();
     _loadBriefingState();
+    // The list lives in the core now, so the screen asks for it rather than
+    // reading a field that only this process could see.
+    widget.store.refreshReminders();
   }
 
   Future<void> _loadBriefingState() async {
@@ -176,6 +179,10 @@ class _RemindersScreenState extends State<RemindersScreen> {
                                           reminder: r,
                                           onCancel: () =>
                                               widget.store.cancelReminder(r.id),
+                                          onSnooze: () => widget.store
+                                              .snoozeReminder(r.id, minutes: 10),
+                                          onDone: () =>
+                                              widget.store.completeReminder(r.id),
                                         )),
                                 ],
                               ),
@@ -405,14 +412,27 @@ class _EmptyHint extends StatelessWidget {
 }
 
 class _ReminderRow extends StatelessWidget {
-  const _ReminderRow({required this.reminder, required this.onCancel});
+  const _ReminderRow({
+    required this.reminder,
+    required this.onCancel,
+    required this.onSnooze,
+    required this.onDone,
+  });
+
   final Reminder reminder;
   final VoidCallback onCancel;
+  final VoidCallback onSnooze;
+  final VoidCallback onDone;
 
   String _relativeTime(DateTime due) {
     final now = DateTime.now();
     final delta = due.difference(now);
-    if (delta.isNegative) return 'overdue';
+    if (delta.isNegative) {
+      // "Overdue" alone reads as a failure. One that has actually gone off and
+      // is waiting to be dealt with is a different state from one the machine
+      // slept through, and the owner treats them differently.
+      return reminder.rang ? 'rang, still open' : 'overdue';
+    }
     if (delta.inMinutes < 60) return 'in ${delta.inMinutes}m';
     if (delta.inHours < 24) return 'in ${delta.inHours}h';
     if (delta.inDays < 7) {
@@ -432,7 +452,9 @@ class _ReminderRow extends StatelessWidget {
         decoration: BoxDecoration(
           color: DexColors.surface.withValues(alpha: 0.4),
           borderRadius: DexRadius.rsm,
-          border: Border.all(color: DexColors.border),
+          border: Border.all(
+            color: reminder.overdue ? DexColors.stateAwaiting : DexColors.border,
+          ),
         ),
         child: Row(
           children: [
@@ -456,6 +478,27 @@ class _ReminderRow extends StatelessWidget {
                 ],
               ),
             ),
+            // Done, snooze, delete — in that order, because that is how
+            // often each is wanted. Snooze is only offered once it has gone
+            // off; before that, the reminder has not asked anything yet.
+            GlassBadgeButton(
+              icon: LucideIcons.check,
+              onTap: onDone,
+              size: 28,
+              iconColor: DexColors.stateApprove,
+              glowColor: DexColors.stateApprove,
+            ),
+            if (reminder.overdue) ...[
+              const SizedBox(width: DexSpace.xs),
+              GlassBadgeButton(
+                icon: LucideIcons.alarm_clock_plus,
+                onTap: onSnooze,
+                size: 28,
+                iconColor: DexColors.stateAwaiting,
+                glowColor: DexColors.stateAwaiting,
+              ),
+            ],
+            const SizedBox(width: DexSpace.xs),
             GlassBadgeButton(
               icon: LucideIcons.x,
               onTap: onCancel,

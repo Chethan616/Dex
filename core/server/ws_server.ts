@@ -48,6 +48,11 @@ type Inbound =
   | { type: 'delete_workflow'; name: string }
   | { type: 'rename_workflow'; from: string; to: string }
   | { type: 'get_schedules' }
+  | { type: 'get_reminders' }
+  | { type: 'set_reminder'; text: string; at: number }
+  | { type: 'snooze_reminder'; name: string; minutes?: number; at?: number }
+  | { type: 'complete_reminder'; name: string }
+  | { type: 'delete_reminder'; name: string }
   | { type: 'save_schedule'; name: string; when: string; request: string }
   | { type: 'set_schedule_enabled'; name: string; enabled: boolean }
   | { type: 'delete_schedule'; name: string }
@@ -328,6 +333,38 @@ export class DexServer {
         }
         return this.send(socket, { type: 'result', ...result });
       }
+
+      case 'get_reminders':
+        return this.send(socket, this.remindersPayload());
+
+      case 'set_reminder': {
+        const text = String(msg.text ?? '').trim();
+        const at = Number(msg.at);
+        if (!text) return this.send(socket, { type: 'error', message: 'A reminder needs something to say' });
+        if (!Number.isFinite(at)) {
+          return this.send(socket, { type: 'error', message: 'A reminder needs a time' });
+        }
+        this.schedules.remind({ text, at });
+        return this.broadcastReminders();
+      }
+
+      case 'snooze_reminder': {
+        // Minutes from now, or an explicit moment. Minutes is what a snooze
+        // button means; a moment is what a date picker gives.
+        const until = Number.isFinite(Number(msg.at))
+          ? Number(msg.at)
+          : Date.now() + Math.max(1, Number(msg.minutes ?? 10)) * 60_000;
+        this.schedules.snooze(String(msg.name ?? ''), until);
+        return this.broadcastReminders();
+      }
+
+      case 'complete_reminder':
+        this.schedules.complete(String(msg.name ?? ''));
+        return this.broadcastReminders();
+
+      case 'delete_reminder':
+        this.schedules.delete(String(msg.name ?? ''));
+        return this.broadcastReminders();
 
       case 'get_conversations': {
         const query = String(msg.query ?? '').trim();
@@ -911,6 +948,27 @@ export class DexServer {
         at: step.at,
       });
     }
+  }
+
+  private remindersPayload(): { type: string; reminders: unknown[] } {
+    return {
+      type: 'reminders',
+      reminders: this.schedules.reminders().map((reminder) => ({
+        name: reminder.name,
+        text: reminder.request,
+        at: reminder.onceAt,
+        createdAt: reminder.createdAt,
+        // Fired but not yet dealt with. The row still shows, because a
+        // reminder that has gone off and been ignored is exactly the one the
+        // owner most needs to see.
+        rang: reminder.lastFiredAt !== null,
+        done: reminder.doneAt !== null,
+      })),
+    };
+  }
+
+  private broadcastReminders(): void {
+    this.broadcast(this.remindersPayload());
   }
 
   private broadcastConversations(): void {
