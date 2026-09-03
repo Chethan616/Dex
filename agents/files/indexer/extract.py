@@ -97,9 +97,20 @@ def extract(path: Path, size: int) -> tuple:
     """
     Returns `(body, kind)` — the searchable text and how it was obtained.
 
-    Never raises. A file that cannot be read is recorded as 'failed' and stays
-    findable by its name, which is strictly better than an index that stops on
-    the first PDF with a broken xref table.
+    Never raises. A file that cannot be read stays findable by its name, which
+    is strictly better than an index that stops on the first PDF with a broken
+    xref table.
+
+    Two different failures, and the difference decides whether it is ever tried
+    again:
+
+        failed   the file was opened and could not be understood — a corrupt
+                 PDF, a truncated archive. Reading it again will fail again.
+        unread   the file could not be opened at all. On this machine that is
+                 the phone: the CrossDevice folder lists and stats normally,
+                 but reading returns EINVAL while the phone is asleep, and 73
+                 PDFs were marked unreadable for a reason that would be gone by
+                 morning. These are picked up by the next pass.
     """
     ext = path.suffix.lower()
 
@@ -132,8 +143,14 @@ def extract(path: Path, size: int) -> tuple:
             body = clean(_ocr_image(path))
             return (body, 'ocr') if body.strip() else ('', 'skipped')
 
+    except OSError as exc:
+        # Could not be opened. Very often temporary — a phone that is asleep, a
+        # share that dropped, a file being written — so it is left for the next
+        # pass rather than written off.
+        log.debug('could not open %s: %s', path, exc)
+        return '', 'unread'
     except Exception as exc:  # noqa: BLE001 - one unreadable file is not a crawl failure
-        log.debug('could not read %s: %s', path, exc)
+        log.debug('could not parse %s: %s', path, exc)
         return '', 'failed'
 
     return '', 'skipped'

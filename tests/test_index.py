@@ -171,6 +171,20 @@ check('and it is still findable by a word after the damage',
       any('broken_font' in m['path'] for m in found['matches']),
       str([m['name'] for m in found['matches'][:3]]))
 
+# --- a file that could not be opened is tried again ---------------------------
+# The phone folder lists and stats normally, but reading returns EINVAL while
+# the phone is asleep: 73 real PDFs were marked unreadable for a reason that
+# would be gone by morning.
+store.upsert('X:\asleep\phone.pdf', 'phone.pdf', '.pdf', 10, 1.0, '', 'unread', 1.0)
+store.upsert('X:\broken\torn.pdf', 'torn.pdf', '.pdf', 10, 1.0, '', 'failed', 1.0)
+waiting = [row[0] for row in store.pending_contents([])]
+check('a file that could not be opened is queued to try again',
+      'X:\asleep\phone.pdf' in waiting)
+check('a file that was read and could not be parsed is not',
+      'X:\broken\torn.pdf' not in waiting)
+store.forget('X:\asleep\phone.pdf')
+store.forget('X:\broken\torn.pdf')
+
 # --- only one crawler at a time ----------------------------------------------
 check('a second crawl stands down while one is running',
       (store.claim('x') is True) and (store.claim('y') is False))

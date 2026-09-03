@@ -339,6 +339,10 @@ def pending_contents(prefixes: list, limit: int = 200_000) -> list:
     """
     Files recorded by name whose contents have not been read yet.
 
+    Includes the ones a previous pass could not open. That is deliberate: a
+    file on a sleeping phone is not an unreadable file, and marking it read
+    would mean it never gets looked at again.
+
     Ordered by the root they sit under, so the second pass reads the owner's
     Desktop before the rest of the disk — a pass that is only half finished
     should be half finished in the useful direction.
@@ -346,7 +350,8 @@ def pending_contents(prefixes: list, limit: int = 200_000) -> list:
     conn = connect()
     if not prefixes:
         return conn.execute(
-            "SELECT path, size FROM files WHERE content = 'none' LIMIT ?", (limit,),
+            "SELECT path, size FROM files WHERE content IN ('none', 'unread') LIMIT ?",
+            (limit,),
         ).fetchall()
 
     ordering = ' '.join(
@@ -354,7 +359,7 @@ def pending_contents(prefixes: list, limit: int = 200_000) -> list:
     )
     args = [p.lower().rstrip('\/') + '%' for p in prefixes]
     return conn.execute(
-        "SELECT path, size FROM files WHERE content = 'none' "
+        "SELECT path, size FROM files WHERE content IN ('none', 'unread') "
         f'ORDER BY CASE {ordering} ELSE 999 END LIMIT ?',
         [*args, limit],
     ).fetchall()
@@ -371,6 +376,7 @@ def stats() -> dict:
         'with_text': by_kind.get('text', 0),
         'with_ocr': by_kind.get('ocr', 0),
         'not_read': by_kind.get('none', 0) + by_kind.get('skipped', 0),
+        'could_not_open': by_kind.get('unread', 0),
         'failed': by_kind.get('failed', 0),
         'database': str(index_path()),
         'built': get_state('last_crawl'),
@@ -378,7 +384,7 @@ def stats() -> dict:
         # scan has been through OCR, and a search should be able to say which
         # of those two it is answering from.
         'names_done': get_state('names_done'),
-        'pending': by_kind.get('none', 0),
+        'pending': by_kind.get('none', 0) + by_kind.get('unread', 0),
         # Seconds since the running crawl last wrote a batch. None when no
         # crawl has ever run. This is how the core tells a crawl that is
         # working from one that was killed with the machine.
