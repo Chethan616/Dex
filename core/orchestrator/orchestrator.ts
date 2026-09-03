@@ -15,6 +15,7 @@ import { ArtifactStore } from '../memory/artifacts';
 import { ConfirmationManager } from '../confirmation/confirmation_manager';
 import { describeUnresolved, findRefs, resolveStepRefs } from './step_refs';
 import { worthRetrying } from '../reliability/exit_codes';
+import { statusOf } from './liveness';
 import { emit } from '../events/bus';
 
 type StepOutcome = 'ok' | 'failed' | 'cancelled';
@@ -125,6 +126,7 @@ export class Orchestrator {
     // Which step ids this task is waiting on. Starts as the plan's, and is
     // rewritten when a repair replaces some of them — see repairPlan.
     const expected = new Set(steps.map((s) => s.id));
+    this.expectedCount = expected.size;
     // What the steps found, for the answer the owner is given.
     const facts: Record<string, unknown>[] = [];
     const stepReports = new Map<string, AgentStepSummary>();
@@ -199,6 +201,7 @@ export class Orchestrator {
             // finds it in `completed`, and reports a repaired task as failed.
             for (const step of failed) expected.delete(step.id);
             for (const step of repaired) expected.add(step.id);
+            this.expectedCount = expected.size;
             continue;
           }
 
@@ -326,6 +329,33 @@ export class Orchestrator {
     );
     return steps;
   }
+
+  /**
+   * What happens after this step, said out loud.
+   *
+   * The transcript showed what each step did and never what Dex decided as a
+   * result, so a run read as a wall of reports with a failure at the end and no
+   * account of why it stopped there. One line closes every step: what is left,
+   * or that this was the last one.
+   *
+   * Deliberately about the plan rather than the step. "The plan can continue"
+   * was true of every step and therefore told the owner nothing.
+   */
+  private nextLine(
+    step: ExecutionStep,
+    completed: ReadonlySet<string>,
+    outcome: 'ok' | 'stopped',
+  ): string {
+    if (outcome === 'stopped') return 'Stopping here.';
+    // +1 because this step is about to be added to the set by the caller.
+    const done = completed.size + 1;
+    const total = this.expectedCount || done;
+    if (done >= total) return 'That was the last step.';
+    return `Next: step ${done + 1} of ${total}.`;
+  }
+
+  /** How many steps this task is waiting on, kept current across a repair. */
+  private expectedCount = 0;
 
   private cancelledResult(requestId: string, intent: string): { status: TaskStatus; summary: string } {
     emit('cancelled', `Cancelled: ${intent}`, requestId);
@@ -508,7 +538,7 @@ export class Orchestrator {
 
     if (verification.status === 'VERIFIED') {
       this.captureCompletionDetail(step, result, facts);
-      const message = `${agentName} verified it: ${verification.reason}. The plan can continue.`;
+      const message = `Verified — ${verification.reason}. ${this.nextLine(step, completed, 'ok')}`;
       stepReports.set(step.id, {
         stepId: step.id,
         action: step.action,
@@ -527,7 +557,7 @@ export class Orchestrator {
     }
 
     if (verification.status === 'UNVERIFIABLE') {
-      const message = `${agentName} completed it, but verification was unavailable: ${verification.reason}. The plan can continue.`;
+      const message = `Done, unverified — ${verification.reason}. ${this.nextLine(step, completed, 'ok')}`;
       stepReports.set(step.id, {
         stepId: step.id,
         action: step.action,
@@ -623,7 +653,7 @@ export class Orchestrator {
 
     if (retry.success && retryVerification.status !== 'FAILED') {
       this.captureCompletionDetail(step, result, facts);
-      const message = `${agentName} ${recheckOnly ? 'confirmed the result after a recheck' : 'succeeded on the second attempt'}: ${retryVerification.reason}. The plan can continue.`;
+      const message = `${recheckOnly ? 'Confirmed on recheck' : 'Verified on the second attempt'} — ${retryVerification.reason}. ${this.nextLine(step, completed, 'ok')}`;
       stepReports.set(step.id, {
         stepId: step.id,
         action: step.action,
@@ -713,6 +743,21 @@ export class Orchestrator {
     reason: string,
   ): Promise<{ result: AgentResult; agentName: string } | undefined> {
     if (capability === step.capability) return undefined;
+
+    // Registered is not running. Escalating into a tier whose process is not
+    // up spends an HTTP timeout to learn something knowable now — which is
+    // exactly what turned one failed click into fifty-two seconds.
+    const live = await statusOf(capability);
+    if (live.state !== 'ready') {
+      emit(
+        'failed',
+        `${step.id} needed ${capability} to continue, but ${live.reason}.` +
+          (live.fix ? ` Start it with: ${live.fix}` : ''),
+        requestId,
+        step.id,
+      );
+      return undefined;
+    }
 
     const agent = this.registry.resolve(capability);
     if (!agent) {

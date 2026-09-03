@@ -1,6 +1,7 @@
 import { DexRequest, ExecutionPlan, ExecutionStep } from '../events/types';
 import { normalize } from './normalizer';
 import { emit } from '../events/bus';
+import { describeUnavailable, unavailable } from '../orchestrator/liveness';
 import { LlmProvider, ToolSpec } from '../llm/provider';
 import { buildBrainProvider } from '../llm/providers';
 import {
@@ -11,7 +12,7 @@ import {
   workflowCatalogue,
 } from './capabilities';
 
-function systemPrompt(workflows: WorkflowSummary[]): string {
+function systemPrompt(workflows: WorkflowSummary[], unavailable = ''): string {
   return `You are the planning brain of DEX, a personal Windows AI automation system.
 
 Your ONLY job: analyze the owner's request and produce a structured execution plan.
@@ -20,7 +21,7 @@ You plan. You never execute.
 DEX has three ways to act, in increasing order of cost and decreasing order of
 reliability. Always reach for the cheapest one that can do the job.
 
-${capabilityCatalogue()}${workflowCatalogue(workflows)}
+${capabilityCatalogue()}${workflowCatalogue(workflows)}${unavailable}
 
 ${ROUTING_RULES}
 
@@ -205,13 +206,24 @@ export class Brain {
     // Emitted here rather than in the provider: the requestId lives on this
     // side, and this is the only place that knows a plan is what is being
     // waited for.
+    // Which tiers can actually work, asked before the plan rather than
+    // discovered by a step timing out. See core/orchestrator/liveness.ts.
+    const offline = await unavailable().catch(() => []);
+    if (offline.length > 0) {
+      emit(
+        'routing',
+        `Not available: ${offline.map((t) => t.reason).join('; ')}`,
+        request.requestId,
+      );
+    }
+
     const heartbeat = this.beat(request.requestId);
 
     let raw: RawPlan;
     try {
       raw = (await this.provider.callTool({
         signal,
-        system: systemPrompt(this.workflows()),
+        system: systemPrompt(this.workflows(), describeUnavailable(offline)),
         user: normalize(request.text),
         tool: plannerTool,
         // Keep the request under Groq's small-tier token-per-minute budget. The

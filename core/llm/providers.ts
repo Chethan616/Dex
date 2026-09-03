@@ -304,11 +304,25 @@ export function buildBrainProvider(credentials = new CredentialStore()): LlmProv
  *    the API-key path stays the recommended one and this reports its failures
  *    loudly instead of pretending.
  *
- * 2. **Tools are disabled deliberately.** `--allowedTools ""` and
- *    `--permission-mode plan` mean the CLI cannot read files, run commands or
- *    touch the machine. Dex is the agent here; Claude Code is being asked for
- *    one judgement, and a planner that could quietly go and edit files on its
- *    own would be a serious and surprising escalation.
+ * 2. **Tools are disabled deliberately.** `--allowedTools ""` means the CLI
+ *    cannot read files, run commands or touch the machine. Dex is the agent
+ *    here; Claude Code is being asked for one judgement, and a planner that
+ *    could quietly go and edit files on its own would be a serious and
+ *    surprising escalation.
+ *
+ *    `--permission-mode plan` used to be passed alongside it and is not any
+ *    more. It was never the safety property — with no tools there is nothing
+ *    to permit — and it cost real time on every single request. Measured on
+ *    the same request, three runs each:
+ *
+ *        with plan mode     13.2s, 9.7s
+ *        without             6.6s, 6.8s
+ *
+ *    It also occasionally derailed the answer: asked to plan a task, the CLI
+ *    would reply *about* plan mode — "this request doesn't fit the plan-mode
+ *    workflow" — because that flag tells it that editing code is what it is
+ *    for. The browser model hit the same thing and dropping the flag fixed
+ *    both there.
  *
  * 3. **`--bare` is not passed, on purpose.** That flag forces API-key
  *    authentication and never reads the OAuth login — it would defeat the whole
@@ -372,7 +386,6 @@ export class ClaudeCodeProvider implements LlmProvider {
         '--model', this.model,
         // No tools, no filesystem, no shell. See the note above.
         '--allowedTools', '',
-        '--permission-mode', 'plan',
       ]);
 
       if (!invocation) {
