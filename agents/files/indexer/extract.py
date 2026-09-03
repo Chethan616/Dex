@@ -67,6 +67,32 @@ MAX_PDF_PAGES = 30
 MAX_BODY_CHARS = 60_000
 
 
+# The three control characters that carry meaning in running text.
+KEEP = chr(10) + chr(13) + chr(9)
+
+
+def clean(text: str) -> str:
+    """
+    Text safe to put in the index.
+
+    A real Aadhaar PDF on this machine extracts 986 characters, nineteen of
+    which are NUL — glyphs the document's font encoding could not map. SQLite
+    stops at the first one: those 986 characters were stored as **4**, and the
+    only reason a search for "aadhaar" still found the file was that the word
+    happened to appear before the damage.
+
+    Everything below a space goes, except the three that carry meaning in
+    running text. The replacement is a space rather than nothing, so two words
+    either side of a bad glyph do not silently become one.
+    """
+    if not text:
+        return ''
+    return ''.join(
+        character if character >= ' ' or character in KEEP else ' '
+        for character in text
+    )
+
+
 def extract(path: Path, size: int) -> tuple:
     """
     Returns `(body, kind)` — the searchable text and how it was obtained.
@@ -84,26 +110,26 @@ def extract(path: Path, size: int) -> tuple:
         if ext in TEXT_EXT:
             if size > MAX_TEXT_BYTES:
                 return '', 'skipped'
-            return _read_text(path), 'text'
+            return clean(_read_text(path)), 'text'
 
         if ext in PDF_EXT:
-            body = _read_pdf(path)
+            body = clean(_read_pdf(path))
             if body.strip():
                 return body, 'text'
             # A PDF with no text layer is a scan. That is the interesting case.
             if size <= MAX_OCR_BYTES:
-                ocr = _ocr_pdf(path)
+                ocr = clean(_ocr_pdf(path))
                 if ocr.strip():
                     return ocr, 'ocr'
             return '', 'skipped'
 
         if ext in DOCX_EXT:
-            return _read_docx(path), 'text'
+            return clean(_read_docx(path)), 'text'
 
         if ext in IMAGE_EXT:
             if size > MAX_OCR_BYTES:
                 return '', 'skipped'
-            body = _ocr_image(path)
+            body = clean(_ocr_image(path))
             return (body, 'ocr') if body.strip() else ('', 'skipped')
 
     except Exception as exc:  # noqa: BLE001 - one unreadable file is not a crawl failure

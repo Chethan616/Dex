@@ -150,6 +150,27 @@ after = store.stats()['files']
 check('a crawl of one folder keeps the rest of the index',
       after == before + 1, f'{before} -> {after}')
 
+# --- text that a font could not map ------------------------------------------
+# A real Aadhaar PDF on this machine extracts 986 characters, nineteen of them
+# NUL. SQLite stops at the first: those 986 were stored as 4.
+damaged = 'GOVERNMENT' + chr(0) + ' OF INDIA ' + chr(0) + 'AADHAAR'
+check('control characters are replaced, not kept',
+      chr(0) not in extract.clean(damaged))
+check('and the text on the far side survives',
+      'AADHAAR' in extract.clean(damaged), extract.clean(damaged))
+
+(home / 'Documents' / 'broken_font.txt').write_text(damaged, encoding='utf-8')
+crawl.crawl(scope=str(home / 'Documents'))
+stored = store.connect().execute(
+    'SELECT length(body) FROM search WHERE path LIKE ?', ('%broken_font.txt',),
+).fetchone()
+check('a document is not truncated at its first bad glyph',
+      stored is not None and stored[0] >= len(damaged) - 2, str(stored))
+found = search.search('aadhaar', limit=10)
+check('and it is still findable by a word after the damage',
+      any('broken_font' in m['path'] for m in found['matches']),
+      str([m['name'] for m in found['matches'][:3]]))
+
 # --- only one crawler at a time ----------------------------------------------
 check('a second crawl stands down while one is running',
       (store.claim('x') is True) and (store.claim('y') is False))
