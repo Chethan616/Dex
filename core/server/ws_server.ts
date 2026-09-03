@@ -125,7 +125,26 @@ export class DexServer {
 
     this.wss.on('connection', (socket) => this.onConnection(socket));
     this.wss.on('error', (err) => {
-      console.error(`\x1b[31m[ws]\x1b[0m Server error: ${err.message}`);
+      // A core that cannot listen is a core nothing can reach.
+      //
+      // This used to log and carry on, which produced the worst available
+      // state: a live process with no socket and no handshake file, while an
+      // older core still held the port and served stale code. The app said
+      // "core not running" and was right; the log said "Server error" and was
+      // passed over, because every line after it looked like a normal start.
+      //
+      // EADDRINUSE means another core is already up, so the honest response is
+      // to say so and stand down rather than sit there pretending.
+      const busy = (err as NodeJS.ErrnoException).code === 'EADDRINUSE';
+      console.error(
+        `\x1b[31m[ws]\x1b[0m ${
+          busy
+            ? `Port ${this.port} is already in use — another Dex core is ` +
+              'running. Stop it first:  .\\scripts\\stop-dex.ps1'
+            : `Server error: ${err.message}`
+        }`,
+      );
+      if (busy) process.exit(1);
     });
 
     bus.subscribeAll((event) => this.broadcast({ type: 'event', event }));
