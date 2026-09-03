@@ -130,6 +130,89 @@ void main() {
     expect(store.plan[2].status, PlanStepStatus.failed);
   });
 
+  group('history is a record, not a list of requests', () {
+    test('a new thread has an id, and it is stable', () {
+      final first = store.conversationId;
+      expect(first, isNotEmpty);
+      expect(store.conversationId, first,
+          reason: 'a thread must not change id between turns');
+    });
+
+    test('starting a new chat starts a new thread', () {
+      final before = store.conversationId;
+      store.newConversation();
+      expect(store.conversationId, isNot(before));
+      expect(store.messages, isEmpty);
+    });
+
+    test('reopening brings back the steps and the cards, not just the prose', () {
+      // The failure this replaces: the only thing stored was the request, so
+      // clicking a history row could only re-run it.
+      store.restoreForTesting('c1', [
+        {
+          'speaker': 'human',
+          'text': 'find my aadhaar card',
+          'at': 1000,
+        },
+        {
+          'speaker': 'step',
+          'text': 'Verified - found 2 files',
+          'requestId': 'r1',
+          'at': 1100,
+          'detail': {
+            'action': 'find_files',
+            'verification': 'VERIFIED',
+            'artifact': {
+              'kind': 'files',
+              'title': '2 files found',
+              'total': 2,
+              'items': [
+                {'label': 'aadhar.pdf', 'detail': 'C:/Users/cheth/aadhar.pdf'},
+                {'label': 'scan001.jpg', 'detail': 'C:/Users/cheth/scan001.jpg'},
+              ],
+            },
+          },
+        },
+        {
+          'speaker': 'agent',
+          'text': 'Both copies are in your Documents folder.',
+          'at': 1200,
+        },
+      ]);
+
+      expect(store.messages, hasLength(3));
+      expect(store.messages.first.speaker, MessageSpeaker.human);
+      expect(store.messages.last.text, contains('Documents folder'));
+
+      final step = store.messages[1];
+      expect(step.speaker, MessageSpeaker.toolChip);
+      expect(step.chipState, ToolChipState.done);
+      expect(step.artifact, isNotNull,
+          reason: 'the card is the evidence; a thread without it is a summary');
+      expect(step.artifact!.items, hasLength(2));
+    });
+
+    test('a step that failed comes back failed', () {
+      store.restoreForTesting('c2', [
+        {
+          'speaker': 'step',
+          'text': 'could not be resolved',
+          'at': 1,
+          'detail': {'action': 'run_command', 'verification': 'FAILED'},
+        },
+      ]);
+      expect(store.messages.single.chipState, ToolChipState.failed);
+    });
+
+    test('an empty message is skipped rather than drawn blank', () {
+      store.restoreForTesting('c3', [
+        {'speaker': 'agent', 'text': '   ', 'at': 1},
+        {'speaker': 'agent', 'text': 'real', 'at': 2},
+      ]);
+      expect(store.messages, hasLength(1));
+    });
+  });
+
   test('a step is visible while it is still running', () {
     store.applyFrameForTesting(step('planning', data: {
       'steps': [

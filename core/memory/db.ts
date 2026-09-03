@@ -16,13 +16,13 @@ import * as path from 'path';
 
 type Row = Record<string, unknown>;
 
-interface Statement {
+export interface Statement {
   run(...params: unknown[]): { changes: number };
   get(...params: unknown[]): Row | undefined;
   all(...params: unknown[]): Row[];
 }
 
-interface Database {
+export interface Database {
   exec(sql: string): void;
   prepare(sql: string): Statement;
   close(): void;
@@ -109,6 +109,43 @@ CREATE TABLE IF NOT EXISTS plan_cache (
 -- One row per logical conversation, across every channel. Dex has a single
 -- owner, so a task started on a phone and followed up at the desk is one
 -- session however it arrived.
+-- What was actually said.
+--
+-- The sidebar showed history from the tasks table, so clicking a row could only
+-- re-run the request: the request was the only thing on disk. There was no
+-- record of a sentence either side had said, which made "history" a list of
+-- things once asked rather than a record of anything.
+--
+-- Written as messages happen rather than reconstructed at the end. A
+-- reconstruction loses what is worth keeping — the step that failed, the card
+-- that was shown, the answer in the words it was given in.
+CREATE TABLE IF NOT EXISTS messages (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  -- The thread the owner sees. Not a task: a conversation holds however many
+  -- requests they made without starting a new chat.
+  conversation_id TEXT NOT NULL,
+  -- Which task this came from, when it came from one. Null for anything said
+  -- outside a request.
+  request_id      TEXT,
+  speaker         TEXT NOT NULL,
+  text            TEXT NOT NULL,
+  -- Everything needed to redraw the message that is not its text: a step's
+  -- action and verdict, an artifact card. JSON because the shape belongs to
+  -- the app, and a column per field means a migration every time a card gains
+  -- a line.
+  detail          TEXT,
+  at              INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id, at);
+CREATE INDEX IF NOT EXISTS idx_messages_at   ON messages(at);
+
+-- A conversation the owner has renamed. Its own table so a rename is one row
+-- rather than a column on every message in the thread.
+CREATE TABLE IF NOT EXISTS conversation_names (
+  conversation_id TEXT PRIMARY KEY,
+  name            TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
   id            TEXT PRIMARY KEY,
   started_at    INTEGER NOT NULL,

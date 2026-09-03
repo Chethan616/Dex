@@ -41,6 +41,9 @@ class DexSidebar extends StatefulWidget {
     this.onLogs,
     this.onSettings,
     this.onSelectChat,
+    this.onRenameChat,
+    this.onDeleteChat,
+    this.onRerunChat,
     this.onProfileAction,
   });
 
@@ -50,6 +53,12 @@ class DexSidebar extends StatefulWidget {
   final String? activeChatId;
   final String userName;
   final VoidCallback? onNewChat;
+
+  /// Re-running is now something the owner asks for, on the row's menu,
+  /// rather than the only thing a click could mean.
+  final void Function(RecentChatItem chat, String name)? onRenameChat;
+  final void Function(RecentChatItem chat)? onDeleteChat;
+  final void Function(RecentChatItem chat)? onRerunChat;
 
   /// Settings → Memory: the saved plans, and how often each has replayed.
   final VoidCallback? onWorkflows;
@@ -220,6 +229,15 @@ class _DexSidebarState extends State<DexSidebar>
                         chat: c,
                         active: c.id == widget.activeChatId,
                         onTap: () => widget.onSelectChat?.call(c),
+                        onRename: widget.onRenameChat == null
+                            ? null
+                            : (name) => widget.onRenameChat!.call(c, name),
+                        onDelete: widget.onDeleteChat == null
+                            ? null
+                            : () => widget.onDeleteChat!.call(c),
+                        onRerun: widget.onRerunChat == null
+                            ? null
+                            : () => widget.onRerunChat!.call(c),
                       ),
                     ),
                   ],
@@ -337,18 +355,70 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _ChatRow extends StatelessWidget {
-  const _ChatRow({required this.chat, required this.active, required this.onTap});
+class _ChatRow extends StatefulWidget {
+  const _ChatRow({
+    required this.chat,
+    required this.active,
+    required this.onTap,
+    this.onRename,
+    this.onDelete,
+    this.onRerun,
+  });
+
   final RecentChatItem chat;
   final bool active;
   final VoidCallback onTap;
+  final void Function(String name)? onRename;
+  final VoidCallback? onDelete;
+  final VoidCallback? onRerun;
+
+  @override
+  State<_ChatRow> createState() => _ChatRowState();
+}
+
+class _ChatRowState extends State<_ChatRow> {
+  bool _hovered = false;
+
+  /// Rename in place. A dialog for two words would be a lot of ceremony for
+  /// something the owner is doing while scanning a list.
+  Future<void> _rename() async {
+    final controller = TextEditingController(text: widget.chat.title);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: DexColors.surface,
+        title: Text('Rename', style: DexType.label(color: DexColors.text)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: DexType.body(color: DexColors.text),
+          onSubmitted: (value) => Navigator.of(context).pop(value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel', style: DexType.label(color: DexColors.textDim)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: Text('Rename', style: DexType.label(color: DexColors.accent)),
+          ),
+        ],
+      ),
+    );
+    if (name != null) widget.onRename?.call(name);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final chat = widget.chat;
+    final active = widget.active;
+    final onTap = widget.onTap;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: InkWell(
         onTap: onTap,
+        onHover: (over) => setState(() => _hovered = over),
         borderRadius: DexRadius.rsm,
         child: Container(
           padding: const EdgeInsets.symmetric(
@@ -376,15 +446,61 @@ class _ChatRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (active)
-                const Icon(LucideIcons.ellipsis,
-                    size: 14, color: DexColors.textFaint),
+              // Only on hover or when this is the open one, so a list of
+              // thirty threads reads as a list rather than a toolbar.
+              if (_hovered || active)
+                PopupMenuButton<String>(
+                  tooltip: '',
+                  padding: EdgeInsets.zero,
+                  splashRadius: 14,
+                  color: DexColors.surface,
+                  icon: const Icon(LucideIcons.ellipsis,
+                      size: 14, color: DexColors.textFaint),
+                  onSelected: (choice) {
+                    switch (choice) {
+                      case 'rename':
+                        _rename();
+                      case 'rerun':
+                        widget.onRerun?.call();
+                      case 'delete':
+                        widget.onDelete?.call();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    if (widget.onRename != null)
+                      _menuItem('rename', LucideIcons.pencil, 'Rename'),
+                    if (widget.onRerun != null)
+                      _menuItem('rerun', LucideIcons.rotate_ccw, 'Run again'),
+                    if (widget.onDelete != null)
+                      _menuItem('delete', LucideIcons.trash_2, 'Delete',
+                          colour: DexColors.stateError),
+                  ],
+                ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+PopupMenuItem<String> _menuItem(
+  String value,
+  IconData icon,
+  String label, {
+  Color colour = DexColors.text,
+}) {
+  return PopupMenuItem<String>(
+    value: value,
+    height: 34,
+    child: Row(
+      children: [
+        Icon(icon, size: 14, color: colour),
+        const SizedBox(width: DexSpace.sm),
+        Text(label, style: DexType.label(color: colour)),
+      ],
+    ),
+  );
 }
 
 class _Divider extends StatelessWidget {

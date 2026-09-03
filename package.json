@@ -46,7 +46,8 @@
     "test:exit-codes": "ts-node tests/test_exit_codes.ts",
     "test:liveness": "ts-node tests/test_liveness.ts",
     "test:index": "python tests/test_index.py",
-    "test:artifacts": "ts-node tests/smoke_artifacts.ts"
+    "test:artifacts": "ts-node tests/smoke_artifacts.ts",
+    "test:conversations": "ts-node tests/smoke_conversations.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",

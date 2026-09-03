@@ -43,6 +43,22 @@ import '../models/tool_activity.dart';
 class ConversationStore extends ChangeNotifier {
   ConversationStore(this._client) {
     _sub = _client.frames.listen(_onFrame);
+    // Opening a conversation is a request and a reply on the same socket, but
+    // the reply is state on the client rather than a frame in the stream — so
+    // this is where the reopened thread arrives.
+    _client.addListener(_onClientChanged);
+  }
+
+  /// Which conversation the visible thread was last restored from, so a
+  /// notification that changed something else does not rebuild it.
+  String? _restoredFor;
+
+  void _onClientChanged() {
+    final opened = _client.openedConversationId;
+    if (opened == null || opened != _conversationId) return;
+    if (_restoredFor == opened) return;
+    _restoredFor = opened;
+    _restore(_client.openedMessages);
   }
 
   final DexGatewayClient _client;
@@ -134,6 +150,13 @@ class ConversationStore extends ChangeNotifier {
     return null;
   }
 
+  /// Replay a stored thread, as the core would send it.
+  @visibleForTesting
+  void restoreForTesting(String id, List<Map<String, dynamic>> stored) {
+    _conversationId = id;
+    _restore(stored);
+  }
+
   @visibleForTesting
   void addMessageForTesting(Message m) {
     _messages.add(m);
@@ -155,6 +178,97 @@ class ConversationStore extends ChangeNotifier {
   // Owner -> Dex
   // ---------------------------------------------------------------------------
 
+  /// The thread these messages belong to.
+  ///
+  /// Created here rather than by the core, because only this side knows
+  /// whether the owner is continuing or has started a new chat. Made lazily on
+  /// the first message so opening the app and closing it again does not leave
+  /// an empty conversation in the history.
+  String? _conversationId;
+
+  String get conversationId => _conversationId ??= _uuid.v4();
+
+  /// Whether anything has been said in this thread yet.
+  bool get isFresh => _messages.isEmpty;
+
+  /// Start a new chat. The old one stays on disk; this just stops writing to it.
+  void newConversation() {
+    _conversationId = null;
+    _client.conversationId = null;
+    _restoredFor = null;
+    _messages.clear();
+    _plan = const <PlanStep>[];
+    _activities.clear();
+    _pending = null;
+    _approvals.clear();
+    _setState(AgentState.idle);
+    notifyListeners();
+  }
+
+  /// Open a conversation from the history.
+  ///
+  /// This is the whole point of Phase 3. Clicking a row used to re-run the
+  /// request — the only thing stored was the request, so re-running it was the
+  /// only thing a click could mean. Now the thread comes back: every message,
+  /// every step, as it was.
+  Future<void> openConversation(String id) async {
+    if (id.isEmpty) return;
+    _conversationId = id;
+    _client.conversationId = id;
+    _restoredFor = null;
+
+    _messages.clear();
+    _plan = const <PlanStep>[];
+    _activities.clear();
+    _pending = null;
+    _approvals.clear();
+    _setState(AgentState.idle);
+    notifyListeners();
+
+    _client.openConversation(id);
+  }
+
+  /// Replace the visible thread with what the core sent back.
+  void _restore(List<Map<String, dynamic>> stored) {
+    _messages.clear();
+    for (final row in stored) {
+      final text = (row['text'] as String? ?? '').trim();
+      if (text.isEmpty) continue;
+      final detail = row['detail'] is Map
+          ? Map<String, dynamic>.from(row['detail'] as Map)
+          : const <String, dynamic>{};
+
+      final speaker = switch (row['speaker'] as String? ?? '') {
+        'human' => MessageSpeaker.human,
+        'step' => MessageSpeaker.toolChip,
+        _ => MessageSpeaker.agent,
+      };
+
+      _messages.add(Message(
+        id: _uuid.v4(),
+        speaker: speaker,
+        ts: DateTime.fromMillisecondsSinceEpoch(
+          (row['at'] as num?)?.toInt() ?? DateTime.now().millisecondsSinceEpoch,
+        ),
+        text: text,
+        requestId: row['requestId'] as String?,
+        // A reopened step keeps its verdict and its card. Without these the
+        // thread comes back as prose with the evidence stripped out, which is
+        // a summary of the conversation rather than the conversation.
+        callId: speaker == MessageSpeaker.toolChip ? row['requestId'] as String? : null,
+        toolId: detail['action'] as String?,
+        toolGoal: detail['action'] as String?,
+        chipState: speaker == MessageSpeaker.toolChip
+            ? (detail['verification'] == 'FAILED'
+                ? ToolChipState.failed
+                : ToolChipState.done)
+            : null,
+        artifact: Artifact.tryParse(detail['artifact']),
+      ));
+    }
+    notifyListeners();
+  }
+
   Future<void> sendHumanMessage(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
@@ -165,6 +279,10 @@ class ConversationStore extends ChangeNotifier {
     _activities.clear();
     _pending = null;
     _approvals.clear();
+
+    // Claims an id for this thread if it does not have one yet, so the core
+    // knows which conversation to write the turn into.
+    _client.conversationId = conversationId;
 
     _messages.add(Message(
       id: _uuid.v4(),
@@ -198,6 +316,10 @@ class ConversationStore extends ChangeNotifier {
     _say('Stopping…');
   }
 
+  /// Wipe the screen without ending the thread.
+  ///
+  /// Distinct from `newConversation`, which starts a new one. This is for
+  /// clearing a view; that is for starting a chat.
   void clearMessages() {
     _messages.clear();
     _activities.clear();
@@ -638,6 +760,7 @@ class ConversationStore extends ChangeNotifier {
   @override
   void dispose() {
     _sub.cancel();
+    _client.removeListener(_onClientChanged);
     super.dispose();
   }
 }

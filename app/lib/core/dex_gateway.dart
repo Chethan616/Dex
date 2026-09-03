@@ -349,6 +349,35 @@ class DexGatewayClient extends ChangeNotifier {
         return;
 
       // The step stream. This is the whole point.
+      case 'conversations':
+        _conversations
+          ..clear()
+          ..addAll([
+            for (final row in (msg['conversations'] as List? ?? const []))
+              if (row is Map) Map<String, dynamic>.from(row),
+          ]);
+        notifyListeners();
+        break;
+
+      case 'conversation':
+        openedConversationId = msg['conversationId'] as String?;
+        _openedMessages
+          ..clear()
+          ..addAll([
+            for (final row in (msg['messages'] as List? ?? const []))
+              if (row is Map) Map<String, dynamic>.from(row),
+          ]);
+        notifyListeners();
+        break;
+
+      case 'conversation_deleted':
+        if (openedConversationId == msg['conversationId']) {
+          openedConversationId = null;
+          _openedMessages.clear();
+        }
+        notifyListeners();
+        break;
+
       case 'event':
         final event = Map<String, dynamic>.from(msg['event'] as Map);
         final requestId = event['requestId'] as String? ?? '';
@@ -475,9 +504,50 @@ class DexGatewayClient extends ChangeNotifier {
 
   // ---- commands -------------------------------------------------------------
 
+  /// The thread the next request belongs to.
+  ///
+  /// Set by the app, not invented by the core: only the app knows whether the
+  /// owner is continuing a conversation or has started a new one, and the text
+  /// of a request says nothing about which.
+  String? conversationId;
+
+  /// Conversations, newest first. Pushed by the core when one changes.
+  List<Map<String, dynamic>> get conversations =>
+      List.unmodifiable(_conversations);
+  final List<Map<String, dynamic>> _conversations = [];
+
+  /// The messages of the conversation last opened, if any.
+  List<Map<String, dynamic>> get openedMessages =>
+      List.unmodifiable(_openedMessages);
+  final List<Map<String, dynamic>> _openedMessages = [];
+  String? openedConversationId;
+
+  void listConversations({String? query}) {
+    _send({
+      'type': 'get_conversations',
+      if (query != null && query.isNotEmpty) 'query': query,
+    });
+  }
+
+  void openConversation(String id) {
+    _send({'type': 'open_conversation', 'conversationId': id});
+  }
+
+  void renameConversation(String id, String name) {
+    _send({'type': 'rename_conversation', 'conversationId': id, 'name': name});
+  }
+
+  void deleteConversation(String id) {
+    _send({'type': 'delete_conversation', 'conversationId': id});
+  }
+
   void submit(String text) {
     currentRequestId = null;
-    _send({'type': 'submit', 'text': text});
+    _send({
+      'type': 'submit',
+      'text': text,
+      if (conversationId != null) 'conversationId': conversationId,
+    });
   }
 
   void cancel() {

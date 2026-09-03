@@ -13,6 +13,8 @@ import { writeHandshake, removeHandshake } from './handshake';
 import { SettingsService } from '../settings/settings_service';
 import { ScheduleStore } from '../scheduler/store';
 import { parseSchedule } from '../scheduler/cron';
+import { Conversations } from '../memory/conversations';
+import { db } from '../memory/db';
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 const AUTH_GRACE_MS = 3000;
@@ -24,7 +26,11 @@ interface Client {
 
 type Inbound =
   | { type: 'auth'; token: string }
-  | { type: 'submit'; text: string }
+  | { type: 'submit'; text: string; conversationId?: string }
+  | { type: 'get_conversations'; query?: string }
+  | { type: 'open_conversation'; conversationId: string }
+  | { type: 'rename_conversation'; conversationId: string; name: string }
+  | { type: 'delete_conversation'; conversationId: string }
   | {
       type: 'respond';
       requestId: string;
@@ -96,6 +102,25 @@ export class DexServer {
   private token = randomBytes(24).toString('hex');
   private readonly settings = new SettingsService();
   private readonly schedules = new ScheduleStore();
+  /** What was said, so history is a record rather than a list of requests. */
+  private readonly conversations = new Conversations(db());
+
+  /**
+   * Steps of tasks currently running, keyed by request.
+   *
+   * Held here rather than written straight through because a step event knows
+   * its request but not its conversation — the conversation belongs to the
+   * submit that started it, and that call has not returned yet. Flushed when
+   * it does.
+   *
+   * Bounded: a task that somehow never finishes drops its oldest steps rather
+   * than growing without limit.
+   */
+  private readonly stepsInFlight = new Map<string, Array<{
+    text: string;
+    detail: Record<string, unknown>;
+    at: number;
+  }>>();
   private readonly port: number;
 
   /** True once this process actually bound the port. See the cleanup below. */
@@ -163,7 +188,10 @@ export class DexServer {
       }
     });
 
-    bus.subscribeAll((event) => this.broadcast({ type: 'event', event }));
+    bus.subscribeAll((event) => {
+      this.rememberStep(event);
+      this.broadcast({ type: 'event', event });
+    });
 
     this.confirmations.registerProvider({
       name: 'flutter',
@@ -271,8 +299,72 @@ export class DexServer {
       case 'submit': {
         const text = String(msg.text ?? '').trim();
         if (!text) return this.send(socket, { type: 'error', message: 'Empty command' });
+
+        // The thread this belongs to. Supplied by the app, because only the
+        // app knows whether the owner is continuing a conversation or has
+        // started a new one — the core cannot tell those apart from the text.
+        const conversationId = String(msg.conversationId ?? '').trim();
+
+        if (conversationId) {
+          this.conversations.append({ conversationId, speaker: 'human', text });
+        }
+
         const result = await this.gateway.handle('flutter', 'local_owner', text);
+
+        if (conversationId) {
+          // Steps first, then the answer: that is the order they happened in,
+          // and a thread that reads out of order is worse than none.
+          this.flushSteps(conversationId, result.requestId);
+          this.conversations.append({
+            conversationId,
+            requestId: result.requestId,
+            speaker: 'agent',
+            text: result.summary ?? '',
+            detail: { status: result.status },
+          });
+          this.broadcastConversations();
+        } else {
+          this.stepsInFlight.delete(result.requestId);
+        }
         return this.send(socket, { type: 'result', ...result });
+      }
+
+      case 'get_conversations': {
+        const query = String(msg.query ?? '').trim();
+        return this.send(socket, {
+          type: 'conversations',
+          query: query || undefined,
+          conversations: query
+            ? this.conversations.search(query)
+            : this.conversations.list(),
+        });
+      }
+
+      case 'open_conversation': {
+        const id = String(msg.conversationId ?? '').trim();
+        return this.send(socket, {
+          type: 'conversation',
+          conversationId: id,
+          messages: id ? this.conversations.messages(id) : [],
+        });
+      }
+
+      case 'rename_conversation': {
+        this.conversations.rename(
+          String(msg.conversationId ?? ''),
+          String(msg.name ?? ''),
+        );
+        return this.broadcastConversations();
+      }
+
+      case 'delete_conversation': {
+        const removed = this.conversations.remove(String(msg.conversationId ?? ''));
+        this.broadcastConversations();
+        return this.send(socket, {
+          type: 'conversation_deleted',
+          conversationId: String(msg.conversationId ?? ''),
+          messages: removed,
+        });
       }
 
       case 'respond': {
@@ -765,6 +857,67 @@ export class DexServer {
           : null,
       })),
     };
+  }
+
+  /**
+   * Push the conversation list to every client.
+   *
+   * Sent rather than polled, so the sidebar updates the moment a turn ends
+   * instead of on the next time something happens to ask.
+   */
+  /**
+   * Keep a finished step, so reopening the thread shows what was done.
+   *
+   * Only terminal events. `selecting` and `executing` are the live commentary
+   * of a step in progress; a thread reopened tomorrow wants what happened, not
+   * the narration of it happening.
+   */
+  private rememberStep(event: DexEvent): void {
+    if (!event.stepId) return;
+    if (event.type !== 'done' && event.type !== 'failed') return;
+
+    const detail = (event.data ?? {}) as Record<string, unknown>;
+    const steps = this.stepsInFlight.get(event.requestId) ?? [];
+    steps.push({
+      text: event.message,
+      detail: {
+        action: detail.action,
+        capability: detail.capability,
+        verification: event.type === 'failed' ? 'FAILED' : detail.verification,
+        artifact: detail.artifact,
+      },
+      at: event.timestamp,
+    });
+
+    // A step list this long means something is wrong with the plan, not with
+    // the record; keep the most recent rather than all of them.
+    if (steps.length > 200) steps.splice(0, steps.length - 200);
+    this.stepsInFlight.set(event.requestId, steps);
+  }
+
+  /** Write a finished task's steps into the thread it belonged to. */
+  private flushSteps(conversationId: string, requestId: string): void {
+    const steps = this.stepsInFlight.get(requestId);
+    this.stepsInFlight.delete(requestId);
+    if (!steps) return;
+
+    for (const step of steps) {
+      this.conversations.append({
+        conversationId,
+        requestId,
+        speaker: 'step',
+        text: step.text,
+        detail: step.detail,
+        at: step.at,
+      });
+    }
+  }
+
+  private broadcastConversations(): void {
+    this.broadcast({
+      type: 'conversations',
+      conversations: this.conversations.list(),
+    });
   }
 
   private broadcastSchedules(): void {
