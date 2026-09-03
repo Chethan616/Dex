@@ -250,6 +250,57 @@ export const PROBES: Record<string, Probe> = {
     },
   },
 
+  clipboard_read: {
+    tier: 'readonly',
+    proves: 'the clipboard reads back, and a credential on it is withheld',
+    async run(ctx) {
+      const marker = `dex-probe-${Date.now()}`;
+      await ctx.call('clipboard_write', { text: marker });
+
+      const plain = await ctx.call('clipboard_read', {});
+      assert(plain.kind === 'text', `expected text, got ${String(plain.kind)}`);
+      assert(plain.text === marker, `clipboard read back ${String(plain.text)}`);
+
+      // The half that matters. A password manager copies a secret to the
+      // clipboard and it sits there until something overwrites it; an
+      // assistant that reads it into a transcript has leaked it.
+      await ctx.call('clipboard_write', { text: 'ghp_conformanceprobe12345678' });
+      const secret = await ctx.call('clipboard_read', {});
+      assert(
+        typeof secret.withheld === 'string' && secret.text === undefined,
+        'a token-shaped value was handed over instead of withheld',
+      );
+      assert(
+        typeof secret.characters === 'number' && secret.characters > 0,
+        'the owner was not even told the clipboard had something on it',
+      );
+
+      // Left as it was found, near enough — a probe should not eat what the
+      // owner had copied for their own use any longer than it must.
+      await ctx.call('clipboard_write', { text: '' });
+      ctx.note(`round-tripped ${marker.length} characters; ${String(secret.withheld)}`);
+    },
+  },
+
+  clipboard_write: {
+    tier: 'roundtrip',
+    proves: 'text put on the clipboard is what comes back off it',
+    capture: (ctx) => ctx.call('clipboard_read', {}),
+    async run(ctx) {
+      const value = `probe-${Date.now()}`;
+      await ctx.call('clipboard_write', { text: value });
+      const back = await ctx.call('clipboard_read', {});
+      assert(back.text === value, `wrote ${value}, read ${String(back.text)}`);
+      ctx.note(`${value} written and read back`);
+    },
+    async restore(ctx, before) {
+      const previous = before as { text?: string } | undefined;
+      if (typeof previous?.text === 'string') {
+        await ctx.call('clipboard_write', { text: previous.text });
+      }
+    },
+  },
+
   get_env: {
     tier: 'readonly',
     proves: 'environment variables read back, from the registry as well as this process',

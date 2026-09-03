@@ -71,6 +71,84 @@ void main() {
     });
   });
 
+  group('a file that was opened', () {
+    test('a reading artifact carries the prose and the file', () {
+      final artifact = Artifact.tryParse({
+        'kind': 'reading',
+        'title': 'UI.png',
+        'total': 1,
+        'file': 'C:/Users/cheth/Desktop/UI/UI.png',
+        'body': 'A grid of phone mockups in several colour themes.',
+        'note': 'haiku looking at the image',
+        'items': [
+          {'label': 'UI.png', 'detail': 'C:/Users/cheth/Desktop/UI/UI.png'},
+        ],
+      });
+
+      expect(artifact, isNotNull);
+      expect(artifact!.kind, 'reading');
+      expect(artifact.body, contains('phone mockups'));
+      expect(artifact.file, endsWith('UI.png'));
+    });
+
+    testWidgets('the description is shown, and it is selectable',
+        (tester) async {
+      // Selectable because the point of reading a document is usually to take
+      // something out of it.
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ArtifactCard(
+              artifact: Artifact.tryParse({
+                'kind': 'reading',
+                'title': 'report.pdf',
+                'total': 1,
+                'body': 'Quarterly report. Revenue up 12 percent.',
+                'note': '12 pages',
+                'items': [
+                  {'label': 'report.pdf', 'detail': 'C:/x/report.pdf'},
+                ],
+              })!,
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      expect(find.text('report.pdf'), findsOneWidget);
+      expect(find.text('12 pages'), findsOneWidget);
+      expect(
+        find.widgetWithText(SelectableText, 'Quarterly report. Revenue up 12 percent.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a missing image file does not take the card down',
+        (tester) async {
+      // The file may have moved between the search and the render.
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ArtifactCard(
+              artifact: Artifact.tryParse({
+                'kind': 'reading',
+                'title': 'gone.png',
+                'total': 1,
+                'file': 'C:/nowhere/gone.png',
+                'body': 'It was a picture of something.',
+                'items': [{'label': 'gone.png'}],
+              })!,
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('It was a picture of something.'), findsOneWidget);
+    });
+  });
+
   group('what the card shows', () {
     Widget wrap(Artifact artifact) => MaterialApp(
           home: Scaffold(

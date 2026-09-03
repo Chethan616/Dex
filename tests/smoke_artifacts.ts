@@ -91,6 +91,59 @@ check('but still reports the true total', capped?.total === 9000);
 check('an action with no structure gets no card', describeArtifact('set_volume', { level: 35 }) === undefined);
 check('and neither does an empty search', describeArtifact('find_files', { count: 0, matches: [] }) === undefined);
 
+console.log('\nreading -- one file, opened');
+
+const described = describeArtifact('describe_file', {
+  path: 'C:/Users/cheth/Desktop/UI/UI.png',
+  name: 'UI.png',
+  kind: 'image',
+  bytes: 3116032,
+  description: 'A grid of smartphone mockups showing the same interface in several colour themes.',
+  read_by: 'haiku looking at the image',
+});
+
+check('a described file produces a reading card', described?.kind === 'reading');
+check('titled by the file', described?.title === 'UI.png', described?.title);
+check(
+  'the description is the body, not a footnote',
+  described?.body?.includes('smartphone mockups') === true,
+);
+check(
+  'and the file is named so the card can show it',
+  described?.file?.endsWith('UI.png') === true,
+  described?.file,
+);
+check('with what read it', described?.note?.includes('haiku') === true, described?.note);
+
+const read = describeArtifact('read_document', {
+  path: 'C:/x/report.pdf',
+  name: 'report.pdf',
+  kind: 'document',
+  pages: 12,
+  text: 'Quarterly report. Revenue up.',
+});
+check('a document read produces one too', read?.kind === 'reading');
+check('and says how long it was', read?.note?.includes('12 page') === true, read?.note);
+
+check(
+  'a file that could not be read produces no card',
+  describeArtifact('describe_file', { name: 'x.bin', kind: 'unreadable' }) === undefined,
+);
+
+// The prose must not read the whole document out loud either.
+const forModelReading = factsForPhrasing([{
+  action: 'describe_file',
+  name: 'UI.png',
+  kind: 'image',
+  description: 'A '.repeat(4000),
+}])[0];
+check(
+  'a long description reaches the model clipped, not whole',
+  String(forModelReading.description).length < 700,
+  String(String(forModelReading.description).length),
+);
+
+
 console.log('\nprose — the sentence stops repeating the card');
 
 const facts = [{ action: 'find_files', ...searchResult }];

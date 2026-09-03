@@ -78,6 +78,11 @@ export class FileAgent implements Agent {
           return { success: true, data: await ops.traceImage(params) };
         case 'read_document':
           return { success: true, data: ops.readDocument(params) };
+        case 'describe_file':
+          return {
+            success: true,
+            data: await ops.describeFile(params, ctx),
+          };
         default:
           return {
             success: false,

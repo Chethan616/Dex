@@ -502,7 +502,7 @@ export class ClaudeCodeProvider implements LlmProvider {
  * flag forces API-key authentication and never reads the OAuth login, which
  * would defeat the whole point.
  */
-function cliEnvironment(): NodeJS.ProcessEnv {
+export function cliEnvironment(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   for (const name of [
     // Auth sources that outrank the claude.ai login.

@@ -43,7 +43,13 @@ const SKIPPED_KEYS = new Set([
  *
  * The count survives, because "20 files" is the part a sentence says well.
  */
-const DRAWN_KEYS = new Set(['matches', 'items', 'entries', 'files', 'results']);
+const DRAWN_KEYS = new Set([
+  'matches', 'items', 'entries', 'files', 'results',
+  // A described image or a document that was read: the card carries the
+  // prose, and repeating it in the sentence above it says the same thing
+  // twice at length.
+  'description', 'text',
+]);
 
 /** Whether this fact's list is already on screen as a card. */
 function isDrawn(fact: Record<string, unknown>, key: string): boolean {
@@ -152,6 +158,14 @@ export function factsForPhrasing(
       // over whole. Given twenty file records it will read out twenty file
       // records; given "20 files, the first is X" it writes the sentence that
       // belongs above the card.
+      if (isDrawn(fact, key) && typeof value === 'string') {
+        // Kept, but clipped hard: the model still needs to know what the file
+        // said in order to answer a question about it, and it does not need
+        // eight thousand words to write two sentences.
+        cleaned[key] = value.length > 600 ? `${value.slice(0, 600)}…` : value;
+        continue;
+      }
+
       if (isDrawn(fact, key) && Array.isArray(value)) {
         const first = value[0];
         const name = first && typeof first === 'object'

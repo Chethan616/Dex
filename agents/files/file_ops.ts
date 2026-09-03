@@ -3,6 +3,7 @@ import * as path from 'path';
 import { createHash } from 'crypto';
 import { spawnSync } from 'child_process';
 import { PathRefused, folderPath, profilePath } from './profile_paths';
+import { canDescribe, describeImage } from '../../core/llm/vision';
 
 /**
  * The ordinary things people do to files.
@@ -666,4 +667,100 @@ export function readDocument(params: Record<string, unknown>): Record<string, un
   }
 
   return JSON.parse(result.stdout) as Record<string, unknown>;
+}
+
+
+/**
+ * What is in this file, whatever kind of file it is.
+ *
+ * The gap this fills: asked to "find UI.png and explain it", Dex found the
+ * file and stopped. Finding is `find_files`; looking at what was found had no
+ * action at all, so the plan had nowhere to go and the answer was a list of
+ * one path.
+ *
+ * Routing by kind rather than making the owner pick:
+ *
+ *   an image      goes to a model that can see it
+ *   a document    is read as text — PDF, DOCX, spreadsheets, code, plain text
+ *   anything else reports what is knowable without opening it
+ *
+ * The owner's own words are passed through as the question. "What is the
+ * error in this screenshot" and "what colours are in this mockup" want
+ * different answers about the same image, and replacing both with "describe
+ * this image" throws that away.
+ */
+export async function describeFile(
+  params: Record<string, unknown>,
+  ctx?: { isCancelled(): boolean; report?: (message: string) => void },
+): Promise<Record<string, unknown>> {
+  const source = profilePath(String(params.path ?? ''), true);
+  if (!fs.existsSync(source)) {
+    throw new PathRefused(source, 'there is nothing there to look at');
+  }
+
+  const question = String(params.question ?? '').trim()
+    || 'What is this? Describe what it contains.';
+  const name = path.basename(source);
+  const stat = fs.statSync(source);
+
+  if (canDescribe(source)) {
+    ctx?.report?.(`Looking at ${name}.`);
+    // Cancellation reaches the CLI through an AbortSignal, so the owner's
+    // Stop ends a vision call instead of waiting out its two-minute ceiling.
+    const stop = new AbortController();
+    const watch = setInterval(() => {
+      if (ctx?.isCancelled()) stop.abort();
+    }, 250);
+    let seen;
+    try {
+      seen = await describeImage(source, question, {
+        model: String(params.model ?? 'sonnet'),
+        signal: stop.signal,
+      });
+    } finally {
+      clearInterval(watch);
+    }
+    return {
+      path: source,
+      name,
+      kind: 'image',
+      bytes: stat.size,
+      description: seen.description,
+      read_by: `${seen.model} looking at the image`,
+    };
+  }
+
+  // Not an image. Read it as text, and let the failure say which kind of file
+  // it could not read rather than "unsupported".
+  let document: Record<string, unknown>;
+  try {
+    document = readDocument({ path: source, max_chars: params.max_chars ?? 20_000 });
+  } catch (err) {
+    return {
+      path: source,
+      name,
+      kind: 'unreadable',
+      bytes: stat.size,
+      modified: stat.mtimeMs,
+      description: `This is a ${path.extname(source) || 'file with no extension'} of ` +
+        `${Math.round(stat.size / 1024)} KB. Its contents could not be read: ` +
+        `${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+
+  const text = typeof document.text === 'string' ? document.text : '';
+  return {
+    path: source,
+    name,
+    kind: 'document',
+    bytes: stat.size,
+    pages: document.pages,
+    characters: text.length,
+    // The text itself, for the phrasing step to summarise. Deliberately not
+    // summarised here: a second model call to compress text that is about to
+    // be read by a model anyway is a round trip for nothing.
+    text: text.slice(0, 20_000),
+    truncated: text.length > 20_000,
+    question,
+  };
 }

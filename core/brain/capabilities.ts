@@ -83,6 +83,14 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
   },
   get_brightness: { params: '{}' },
   set_brightness: { params: '{ level: number (0-100) }', note: 'Built-in laptop panels only; external monitors report unsupported' },
+  clipboard_read: {
+    params: '{ allow_secret?: boolean }',
+    note: 'What is on the clipboard: text, files copied in Explorer, or an image. Text that looks like a password or token is withheld; pass allow_secret only if the owner said it is not a credential. Tier 2',
+  },
+  clipboard_write: {
+    params: '{ text: string }',
+    note: 'Put text on the clipboard, replacing what is there. Tier 2',
+  },
   get_env: { params: '{ name?: string }', note: 'Omit name for every variable' },
   set_env: {
     params: '{ name: string, value: string | null, scope?: "user" | "machine", append?: boolean }',
@@ -94,7 +102,7 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
 export const FILE_ACTIONS: Record<string, ActionSpec> = {
   find_files: {
     params: '{ query: string, scope?: "pc" | "profile" | string, also_called?: string[], open_location?: boolean, max_results?: number }',
-    note: 'Searches a local index of every drive by name AND by what is written inside the file, including OCR of scans and photos — so an Aadhaar card saved as scan001.jpg is found by the word "aadhaar". scope: "pc" for the whole PC, "profile" (default) for the folders under the home directory, or a folder name like "desktop". Pass also_called with other names the document might go by ("govt id", "CV") when the request is vague. Each result says why it matched. Set open_location=true to select a result in File Explorer',
+    note: 'Searches a local index of every drive by name AND by what is inside the file, OCR included - so an Aadhaar card saved as scan001.jpg is found by the word "aadhaar". scope: "pc" for the whole PC, "profile" (default), or a folder like "desktop". Pass also_called with other names the document might go by ("govt id", "CV") when the request is vague. Each result says why it matched. open_location=true selects one in File Explorer',
   },
   write_file: {
     params: '{ path: string, content: string }',
@@ -103,6 +111,10 @@ export const FILE_ACTIONS: Record<string, ActionSpec> = {
   run_program: {
     params: '{ path: string, runtime?: "python" | "node" | "ruby" | "go", args?: string[], background?: boolean, timeout?: number }',
     note: 'Runs a program as the signed-in user; use background=true for a GUI/game, Tier 2',
+  },
+  describe_file: {
+    params: '{ path: string, question?: string, model?: "haiku" | "sonnet" | "opus" }',
+    note: 'Look at a file and say what is in it: an image goes to a model that can see it, a PDF, DOCX, spreadsheet or text file is read. Pass the request wording as question. The second half of finding a file and explaining it',
   },
   read_file: { params: '{ path: string }', note: 'Text files up to 2 MB; for bigger ones search with run_command and rg' },
   list_dir: { params: '{ path: string, pattern?: string }', note: 'path takes a folder name — "downloads", "desktop", "documents" — or a full path' },

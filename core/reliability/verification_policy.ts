@@ -505,6 +505,8 @@ function verifyFileStep(step: ExecutionStep, agentResult?: AgentResult): Verific
       return verifyFileSearch(agentResult);
     case 'write_file':
       return verifyFileWrite(agentResult);
+    case 'describe_file':
+      return verifyDescription(agentResult);
     case 'run_program':
       return verifyProgram(agentResult);
 
@@ -567,6 +569,42 @@ function verifyFileSearch(agentResult?: AgentResult): VerificationResult {
     status: 'VERIFIED',
     reason: `Found ${count} matching file${count === 1 ? '' : 's'}${suffix}${location}${how}`,
     afterState: matches,
+  };
+}
+
+/**
+ * A description is verified by there being one.
+ *
+ * Nothing here can check whether the model described the image *correctly* —
+ * that is the owner's judgement, and claiming otherwise would be the kind of
+ * verification that only ever passes. What it can check is that something was
+ * actually read: a step that returned an empty description succeeded as far
+ * as the agent was concerned and told the owner nothing.
+ */
+function verifyDescription(agentResult?: AgentResult): VerificationResult {
+  const data = asRecord(agentResult?.data);
+  const description = typeof data?.description === 'string' ? data.description : '';
+  const text = typeof data?.text === 'string' ? data.text : '';
+  const name = typeof data?.name === 'string' ? data.name : 'the file';
+  const kind = typeof data?.kind === 'string' ? data.kind : 'file';
+
+  if (kind === 'unreadable') {
+    return {
+      status: 'UNVERIFIABLE',
+      reason: description || `${name} could not be read`,
+    };
+  }
+
+  const body = description || text;
+  if (!body.trim()) {
+    return { status: 'FAILED', reason: `Nothing came back about ${name}` };
+  }
+
+  return {
+    status: 'VERIFIED',
+    reason: kind === 'image'
+      ? `Looked at ${name} and described it in ${body.trim().split(/\s+/).length} words`
+      : `Read ${body.length.toLocaleString()} characters from ${name}`,
   };
 }
 

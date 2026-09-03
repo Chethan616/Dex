@@ -1120,6 +1120,8 @@ function describeStep(step: ExecutionStep): string {
       return `check that ${quoted('window', 'the target window')} is open and ready`;
     case 'find_files':
       return `search ${quoted('scope', 'this PC')} for files matching ${quoted('query', 'the request')}, by name and by what is written inside them`;
+    case 'describe_file':
+      return `look at ${quoted('path', 'the file')} and say what is in it`;
     case 'write_file':
       return `write the requested source file ${quoted('path', 'inside the Dex workspace')}`;
     case 'run_program':

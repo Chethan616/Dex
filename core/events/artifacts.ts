@@ -42,7 +42,17 @@ export interface ArtifactItem {
 }
 
 export interface Artifact {
-  kind: 'files';
+  /**
+   * What shape to draw.
+   *
+   *   files     a list of results, one row each
+   *   reading   one file that was opened and understood — a described image,
+   *             a document that was read
+   *
+   * Named rather than inferred, so a second kind does not have to pretend to
+   * be the first and the app never guesses from the fields present.
+   */
+  kind: 'files' | 'reading';
   /** The card's heading. */
   title: string;
   items: ArtifactItem[];
@@ -50,6 +60,10 @@ export interface Artifact {
   total: number;
   /** What was searched, and how much of it — shown under the heading. */
   note?: string;
+  /** For `reading`: the prose itself, which is the substance of the card. */
+  body?: string;
+  /** For `reading`: the file on disk, so the card can preview and open it. */
+  file?: string;
 }
 
 /**
@@ -61,7 +75,52 @@ export function describeArtifact(action: string, data: unknown): Artifact | unde
   const record = data as Record<string, unknown>;
 
   if (action === 'find_files') return describeFiles(record);
+  if (action === 'describe_file' || action === 'read_document') {
+    return describeReading(record);
+  }
   return undefined;
+}
+
+/**
+ * One file that was opened, and what it turned out to contain.
+ *
+ * Different from a search result and drawn differently: a search answers
+ * "which file", and this answers "what is in it". The prose is the substance
+ * rather than a footnote, and the file is named so the card can show the
+ * image the description is about — a description of a picture, with no
+ * picture, asks the owner to take it on faith.
+ */
+function describeReading(data: Record<string, unknown>): Artifact | undefined {
+  const file = typeof data.path === 'string' ? data.path : '';
+  const name = typeof data.name === 'string' && data.name ? data.name : basename(file);
+  const body = typeof data.description === 'string' && data.description
+    ? data.description
+    : typeof data.text === 'string' ? data.text : '';
+  if (!body.trim()) return undefined;
+
+  const kind = typeof data.kind === 'string' ? data.kind : '';
+  const bytes = typeof data.bytes === 'number' ? data.bytes : undefined;
+  const pages = typeof data.pages === 'number' ? data.pages : undefined;
+  const readBy = typeof data.read_by === 'string' ? data.read_by : '';
+
+  return {
+    kind: 'reading',
+    title: name || 'the file',
+    items: [{
+      label: name || 'the file',
+      detail: file || undefined,
+      reasons: kind ? [kind] : undefined,
+      bytes,
+    }],
+    total: 1,
+    body: body.slice(0, 8_000),
+    file: file || undefined,
+    note: [
+      readBy,
+      pages !== undefined ? `${pages} page${pages === 1 ? '' : 's'}` : '',
+      typeof data.truncated === 'boolean' && data.truncated ? 'shown in part' : '',
+    ].filter(Boolean).join(' · ') || undefined,
+  };
 }
 
 function describeFiles(data: Record<string, unknown>): Artifact | undefined {

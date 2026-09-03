@@ -37,6 +37,8 @@ class ArtifactCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (artifact.kind == 'reading') return _Reading(artifact: artifact);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: DexSpace.sm),
       child: DexGlass(
@@ -75,6 +77,114 @@ class ArtifactCard extends StatelessWidget {
             ],
             const SizedBox(height: DexSpace.sm),
             for (final item in artifact.items) _ItemRow(item: item),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One file that was opened, and what it turned out to contain.
+///
+/// Drawn differently from a search result because it answers a different
+/// question: a list says *which* file, this says *what is in it*. So the prose
+/// is the body of the card rather than a footnote, and an image is shown
+/// alongside the words about it — a description of a picture with no picture
+/// asks the owner to take it on faith.
+class _Reading extends StatelessWidget {
+  const _Reading({required this.artifact});
+
+  final Artifact artifact;
+
+  static const _imageTypes = {
+    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp',
+  };
+
+  bool get _isImage {
+    final file = artifact.file;
+    if (file == null) return false;
+    final dot = file.lastIndexOf('.');
+    return dot != -1 && _imageTypes.contains(file.substring(dot).toLowerCase());
+  }
+
+  Future<void> _reveal() async {
+    final file = artifact.file;
+    if (file == null) return;
+    try {
+      await Process.run('explorer.exe', ['/select,', file]);
+    } on ProcessException {
+      // A file that has moved since is not worth a dialog.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final file = artifact.file;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: DexSpace.sm),
+      child: DexGlass(
+        radius: 14,
+        padding: const EdgeInsets.all(DexSpace.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(_isImage ? LucideIcons.image : LucideIcons.file_text,
+                    size: 15, color: DexColors.accent),
+                const SizedBox(width: DexSpace.xs),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _reveal,
+                    child: MouseRegion(
+                      cursor: file == null
+                          ? MouseCursor.defer
+                          : SystemMouseCursors.click,
+                      child: Text(
+                        artifact.title,
+                        style: DexType.label(color: DexColors.text),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (artifact.note != null) ...[
+              const SizedBox(height: 2),
+              Text(artifact.note!,
+                  style: DexType.caption(color: DexColors.textFaint)),
+            ],
+
+            // The picture the words are about. Bounded in height so a tall
+            // screenshot does not push the description off the screen, and
+            // silently absent if the file has moved.
+            if (_isImage && file != null) ...[
+              const SizedBox(height: DexSpace.sm),
+              ClipRRect(
+                borderRadius: DexRadius.rsm,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 260),
+                  child: Image.file(
+                    File(file),
+                    fit: BoxFit.contain,
+                    alignment: Alignment.centerLeft,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+            ],
+
+            if (artifact.body != null) ...[
+              const SizedBox(height: DexSpace.md),
+              SelectableText(
+                artifact.body!,
+                style: DexType.body(color: DexColors.text),
+              ),
+            ],
           ],
         ),
       ),

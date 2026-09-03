@@ -63,10 +63,13 @@ class Artifact {
     required this.items,
     required this.total,
     this.note,
+    this.body,
+    this.file,
   });
 
-  /// Only 'files' today. Named rather than assumed so a second kind does not
-  /// have to pretend to be the first.
+  /// 'files' for a list of results, 'reading' for one file that was opened.
+  /// Named rather than inferred from which fields are present, so a third
+  /// kind does not have to pretend to be one of the first two.
   final String kind;
   final String title;
   final List<ArtifactItem> items;
@@ -76,6 +79,14 @@ class Artifact {
 
   /// What was searched, and how much of it.
   final String? note;
+
+  /// For 'reading': the description or extracted text. The substance of the
+  /// card rather than a footnote on it.
+  final String? body;
+
+  /// For 'reading': the file on disk. A description of a picture with no
+  /// picture asks the owner to take it on faith.
+  final String? file;
 
   /// Returns null for anything that is not a well-formed artifact, so a
   /// malformed frame degrades to the ordinary message rather than an error.
@@ -101,6 +112,12 @@ class Artifact {
       total: raw['total'] is num ? (raw['total'] as num).toInt() : items.length,
       note: raw['note'] is String && (raw['note'] as String).isNotEmpty
           ? raw['note'] as String
+          : null,
+      body: raw['body'] is String && (raw['body'] as String).isNotEmpty
+          ? raw['body'] as String
+          : null,
+      file: raw['file'] is String && (raw['file'] as String).isNotEmpty
+          ? raw['file'] as String
           : null,
     );
   }
