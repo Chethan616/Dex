@@ -9,8 +9,8 @@ Phase 6 lands.
 | 1 | Make it fast, and make failure legible | **done** |
 | 2 | Find anything on this PC | **done** |
 | 3 | Real conversation history, and the navigation around it | **done** |
-| 4 | Reminders, schedules, and the slash commands | next |
-| 5 | Connectors and accounts | |
+| 4 | Reminders, schedules, and the slash commands | **done** |
+| 5 | Connectors and accounts | next |
 | 6 | Your real browser, forked in | |
 
 ---
@@ -158,10 +158,36 @@ Also landed here, ahead of the phase list:
 
 Tests: `npm run test:conversations` (20), `npm run test:artifacts` (25).
 
-## Phase 4 — Reminders, schedules, slash commands
+## Phase 4 · Reminders, schedules, slash commands · **done**
 
-Wire the reminders screen to the scheduler that already exists; rebuild the
-command palette.
+The reminders screen was 471 lines over a list on a Dart object. Nothing
+persisted it and nothing ever fired one — the owner could write down a time and
+the app quietly forgot it, which is worse than not having the screen.
+
+A reminder is now a schedule that happens once, in the same table: everything
+around a schedule is what a reminder needs, and what differs is two facts,
+which do not earn their own store. Two rules differ from cron, and both matter:
+
+- **Due means due**, not "due this minute". A missed hourly summary is one
+  nobody needs any more; a missed "leave for the dentist" is the whole reason
+  the reminder existed. One that came due while the machine slept still rings.
+- **Snoozing clears the fired mark**, or the guard that stops a reminder
+  ringing twice would stop the snoozed one coming back at all.
+
+It rings with a real Windows toast raised by the core, so it reaches the owner
+whether or not Dex is the window in front of them.
+
+The slash palette matched by prefix — `/rem` found `/remind`, `/rmd` found
+nothing — so it helped only someone who already knew the name, who is the one
+person who does not need a palette. Matching is fuzzy now, ranked exact >
+prefix > letters-in-order; the list is grouped while browsing and ordered by
+relevance once something is typed; arrows and Enter drive it.
+
+Two commands existed only to say they were not built. `/voice` opens the screen
+that was already there, `/vision` is gone, and `/find`, `/explain`, `/remind`,
+`/workflow`, `/schedules`, `/history` and `/new` are new.
+
+Tests: `npm run test:reminders` (22), `flutter test` slash commands (17).
 
 ## Phase 5 — Connectors and accounts
 
