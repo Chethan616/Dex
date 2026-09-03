@@ -29,6 +29,8 @@ interface ActResponse {
  * Orchestrator re-dispatches on.
  */
 export class AppAgent implements Agent {
+  /** An HTTP proxy: the work happens in a Python process on this port. */
+  endpoint = PORT;
   name = 'AppAgent';
   capabilities = ['can_control_app'];
 

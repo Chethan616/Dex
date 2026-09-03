@@ -12,6 +12,8 @@ interface RunTaskResponse {
 }
 
 export class DesktopAgent implements Agent {
+  /** An HTTP proxy: the work happens in a Python process on this port. */
+  endpoint = PORT;
   name = 'DesktopAgent';
   capabilities = ['can_control_gui'];
 

@@ -93,8 +93,8 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
 /** Tier 1 — direct user-side filesystem and runtime control. No UI involved. */
 export const FILE_ACTIONS: Record<string, ActionSpec> = {
   find_files: {
-    params: '{ root?: string, query: string, open_location?: boolean, max_results?: number }',
-    note: 'Searches filenames directly; set open_location=true to select a result in File Explorer',
+    params: '{ query: string, scope?: "pc" | "profile" | string, also_called?: string[], open_location?: boolean, max_results?: number }',
+    note: 'Searches a local index of every drive by name AND by what is written inside the file, including OCR of scans and photos — so an Aadhaar card saved as scan001.jpg is found by the word "aadhaar". scope: "pc" for the whole PC, "profile" (default) for the folders under the home directory, or a folder name like "desktop". Pass also_called with other names the document might go by ("govt id", "CV") when the request is vague. Each result says why it matched. Set open_location=true to select a result in File Explorer',
   },
   write_file: {
     params: '{ path: string, content: string }',
@@ -487,7 +487,7 @@ export const ROUTING_RULES = `HOW TO CHOOSE A CAPABILITY — work down this ladd
   System work goes through Tier 1. For local files, use can_control_files:
   find_files; for code, use write_file followed by run_program. These use the
   Dex workspace, never a terminal window. A file-location task should normally be:
-    find_files(open_location=true)
+    find_files(scope="pc", open_location=true)
   and a code task should normally be:
     write_file -> run_program
 

@@ -8,6 +8,7 @@ import { AgentContext, AgentResult } from '../../core/events/types';
 import { resolveCommand } from '../../core/settings/which';
 import * as ops from './file_ops';
 import { namedFolder, profilePath } from './profile_paths';
+import { ensureIndex, IndexMatch, searchIndex } from './file_index';
 
 const MAX_FILE_BYTES = 2_000_000;
 const MAX_RESULTS = 100;
@@ -93,14 +94,115 @@ export class FileAgent implements Agent {
     }
   }
 
+  /**
+   * Find a file anywhere the owner might have put it.
+   *
+   * This used to walk `Downloads` and match filenames. Asked to "search for
+   * aadhaar card files in my pc" it searched one folder and reported fifty
+   * Android build resources; asked for `UI.png` on the Desktop it missed a
+   * file called exactly that. Both are the same defect — one folder, and no
+   * idea what a file contains.
+   *
+   * Now it asks the index, which knows every fixed drive and has read the
+   * text and OCR'd the scans. `scope` is what the owner said: 'pc' means the
+   * PC, 'profile' is the default, and a path means that folder.
+   *
+   * The live walk is kept as the fallback for the first minutes after
+   * install, when the index is still being built. It says so in the result
+   * rather than passing off a partial answer as a complete one.
+   */
   private findFiles(params: Record<string, unknown>): Record<string, unknown> {
     const query = String(params.query ?? params.name ?? '').trim();
     if (!query) throw new Error('find_files needs a filename query');
 
-    const root = searchRoot(String(params.root ?? 'Downloads'));
-    const terms = queryTerms(query);
+    const scope = String(params.scope ?? params.root ?? 'profile').trim();
     const requestedLimit = Number(params.max_results ?? 40);
     const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 40, MAX_RESULTS));
+    const extraTerms = Array.isArray(params.also_called)
+      ? params.also_called.map((term) => String(term))
+      : [];
+
+    // A named folder narrows the index; 'pc' and 'profile' do not.
+    const narrowed = scope.toLowerCase() === 'pc' || scope.toLowerCase() === 'profile'
+      ? undefined
+      : searchRoot(scope);
+
+    const { stats, building } = ensureIndex(scope.toLowerCase() === 'pc' ? 'pc' : 'profile');
+
+    if (stats && stats.files > 0) {
+      const found = searchIndex(query, { limit, under: narrowed, terms: extraTerms });
+      const matches = found.matches.map((match: IndexMatch) => ({
+        name: match.name,
+        path: match.path,
+        directory: path.dirname(match.path),
+        why: match.why,
+        snippet: match.snippet || undefined,
+      }));
+
+      // A file saved a minute ago is not in the index yet, and "not indexed"
+      // must never be reported as "not on this PC". When the index has nothing
+      // to say, the folder is walked live before answering — the slow path,
+      // taken only when the fast one came back empty.
+      if (matches.length === 0) {
+        const fresh = this.walkForNames(query, narrowed ?? searchRoot('profile'), limit);
+        for (const match of fresh.matches) {
+          matches.push({ ...match, why: ['filename'], snippet: undefined });
+        }
+      }
+
+      const openedLocation = params.open_location === true
+        ? openLocation(narrowed ?? os.homedir(), matches)
+        : undefined;
+
+      return {
+        scope: narrowed ?? scope,
+        query,
+        searched_for: found.searched_for,
+        restricted_to: found.restricted_to ?? undefined,
+        count: matches.length,
+        truncated: found.total > matches.length,
+        searched: `${stats.files} files indexed, ${stats.with_ocr} of them scans read by OCR`,
+        indexed_at: stats.built ?? undefined,
+        matches,
+        opened_location: openedLocation,
+      };
+    }
+
+    // No index yet. Walk what we can and be explicit that this is the narrow
+    // answer, so nothing downstream reads "0 matches" as "not on this PC".
+    const root = narrowed ?? searchRoot('profile');
+    const { matches, terms, truncated } = this.walkForNames(query, root, limit);
+
+    const openedLocation = params.open_location === true
+      ? openLocation(root, matches)
+      : undefined;
+    return {
+      scope: root,
+      query,
+      query_terms: terms,
+      count: matches.length,
+      truncated,
+      matches,
+      opened_location: openedLocation,
+      searched: building
+        ? 'filenames only — the file index is still being built, so this searched one folder by name'
+        : 'filenames only — the file index is not available, so this searched one folder by name',
+      partial: true,
+    };
+  }
+
+  /**
+   * Filenames under one folder, read from disk right now.
+   *
+   * Kept because an index is always slightly behind the disk. It is the whole
+   * answer before the first crawl finishes, and the second opinion afterwards.
+   */
+  private walkForNames(query: string, root: string, limit: number): {
+    matches: Array<{ name: string; path: string; directory: string }>;
+    terms: string[];
+    truncated: boolean;
+  } {
+    const terms = queryTerms(query);
     const matches: Array<{ name: string; path: string; directory: string }> = [];
     let truncated = false;
 
@@ -113,19 +215,7 @@ export class FileAgent implements Agent {
       matches.push({ name: file.name, path: file.fullPath, directory: file.directory });
     });
     matches.sort((left, right) => left.path.localeCompare(right.path));
-
-    const openedLocation = params.open_location === true
-      ? openLocation(root, matches)
-      : undefined;
-    return {
-      root,
-      query,
-      query_terms: terms,
-      count: matches.length,
-      truncated,
-      matches,
-      opened_location: openedLocation,
-    };
+    return { matches, terms, truncated };
   }
 
   private writeFile(params: Record<string, unknown>): Record<string, unknown> {
@@ -310,6 +400,8 @@ function workspacePath(raw: string, root: string): string {
 
 function searchRoot(raw: string): string {
   const home = os.homedir();
+  const named = raw.trim().toLowerCase();
+  if (named === 'profile' || named === 'pc' || named === '') return home;
   const aliases: Record<string, string[]> = {
     desktop: [path.join(home, 'Desktop'), path.join(home, 'OneDrive', 'Desktop')],
     documents: [path.join(home, 'Documents'), path.join(home, 'OneDrive', 'Documents')],

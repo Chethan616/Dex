@@ -548,9 +548,24 @@ function verifyFileSearch(agentResult?: AgentResult): VerificationResult {
   const shown = matches.slice(0, 5).join(', ');
   const suffix = shown ? `: ${shown}${matches.length > 5 ? ', …' : ''}` : '';
   const location = opened ? `; opened ${opened}` : '';
+  const searched = typeof data?.searched === 'string' ? data.searched : '';
+
+  // "No matches" is only an answer when the whole scope was actually looked
+  // at. While the index is still building, the same empty result means "not
+  // found yet", and reporting that as VERIFIED is how a search of one folder
+  // came back as a confident statement about the entire PC.
+  if (count === 0 && data?.partial === true) {
+    return {
+      status: 'UNVERIFIABLE',
+      reason: `No matches yet — ${searched || 'the file index is still being built'}`,
+      afterState: matches,
+    };
+  }
+
+  const how = searched ? ` (${searched})` : '';
   return {
     status: 'VERIFIED',
-    reason: `Found ${count} matching file${count === 1 ? '' : 's'}${suffix}${location}`,
+    reason: `Found ${count} matching file${count === 1 ? '' : 's'}${suffix}${location}${how}`,
     afterState: matches,
   };
 }

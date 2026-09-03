@@ -744,21 +744,6 @@ export class Orchestrator {
   ): Promise<{ result: AgentResult; agentName: string } | undefined> {
     if (capability === step.capability) return undefined;
 
-    // Registered is not running. Escalating into a tier whose process is not
-    // up spends an HTTP timeout to learn something knowable now — which is
-    // exactly what turned one failed click into fifty-two seconds.
-    const live = await statusOf(capability);
-    if (live.state !== 'ready') {
-      emit(
-        'failed',
-        `${step.id} needed ${capability} to continue, but ${live.reason}.` +
-          (live.fix ? ` Start it with: ${live.fix}` : ''),
-        requestId,
-        step.id,
-      );
-      return undefined;
-    }
-
     const agent = this.registry.resolve(capability);
     if (!agent) {
       emit(
@@ -768,6 +753,28 @@ export class Orchestrator {
         step.id,
       );
       return undefined;
+    }
+
+    // Registered is not running. Escalating into a tier whose process is not
+    // up spends an HTTP timeout to learn something knowable now — which is
+    // exactly what turned one failed click into fifty-two seconds.
+    //
+    // Asked only of an agent that *has* a process to be down: `endpoint` marks
+    // the HTTP proxies. An agent running inside the core is up whenever the
+    // core is, and probing the network about it could only ever produce a
+    // wrong answer.
+    if (agent.endpoint !== undefined) {
+      const live = await statusOf(capability);
+      if (live.state !== 'ready') {
+        emit(
+          'failed',
+          `${step.id} needed ${capability} to continue, but ${live.reason}.` +
+            (live.fix ? ` Start it with: ${live.fix}` : ''),
+          requestId,
+          step.id,
+        );
+        return undefined;
+      }
     }
 
     if (this.cancellation.isCancelled(requestId)) return undefined;
@@ -1108,7 +1115,7 @@ function describeStep(step: ExecutionStep): string {
     case 'window_state':
       return `check that ${quoted('window', 'the target window')} is open and ready`;
     case 'find_files':
-      return `search ${quoted('root', 'the requested folder')} for filenames related to ${quoted('query', 'the request')}`;
+      return `search ${quoted('scope', 'this PC')} for files matching ${quoted('query', 'the request')}, by name and by what is written inside them`;
     case 'write_file':
       return `write the requested source file ${quoted('path', 'inside the Dex workspace')}`;
     case 'run_program':

@@ -3,6 +3,16 @@ import { AgentContext, AgentResult } from '../events/types';
 export interface Agent {
   name: string;
   capabilities: string[];
+  /**
+   * The port this agent's server listens on, when it has one.
+   *
+   * Three of the agents are HTTP proxies to a separate Python process; the
+   * rest run inside the core. Only the first kind can be registered and not
+   * running, and only that kind is worth probing before an escalation. An
+   * agent that lives in this process is up whenever the core is, so asking
+   * the network about it would be a probe that can only ever be wrong.
+   */
+  endpoint?: number;
   execute(
     action: string,
     params: Record<string, unknown>,

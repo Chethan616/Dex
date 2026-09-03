@@ -63,6 +63,8 @@ interface PrimitiveResponse {
  * same page once they say they are done.
  */
 export class BrowserAgent implements Agent {
+  /** An HTTP proxy: the work happens in a Python process on this port. */
+  endpoint = PORT;
   name = 'BrowserAgent';
   capabilities = ['can_browse_web'];
 
