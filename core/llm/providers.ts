@@ -401,7 +401,7 @@ export class ClaudeCodeProvider implements LlmProvider {
       const child = spawn(
         invocation.file,
         invocation.args,
-        { windowsHide: true },
+        { windowsHide: true, env: cliEnvironment() },
       );
 
       let stdout = '';
@@ -474,6 +474,57 @@ export class ClaudeCodeProvider implements LlmProvider {
       child.stdin.end(prompt);
     });
   }
+}
+
+/**
+ * The environment the Claude Code CLI is given, with the auth overrides removed.
+ *
+ * This provider exists to use the subscription the owner is already signed in
+ * to. The CLI honours several things that quietly take precedence over that
+ * login, and when one of them is present it refuses with:
+ *
+ *     claude.ai connectors are disabled because ANTHROPIC_API_KEY or another
+ *     auth source is set and takes precedence over your claude.ai login
+ *
+ * — which is accurate, and fatal, and nothing the owner did on purpose. An
+ * `ANTHROPIC_API_KEY` reaches the core several ways: the shell that launched
+ * the app, a machine variable set months ago, or Settings storing an Anthropic
+ * key, which mirrors it into `process.env` so the API provider can use it.
+ * That last one is the sharp edge: configuring the *other* provider breaks
+ * this one, invisibly, and the two have no reason to interfere.
+ *
+ * The `CLAUDE_CODE_*` and `CLAUDECODE` variables are stripped for a related
+ * reason. They mark a process as running inside a Claude Code session, and a
+ * core started from one inherits them — so the CLI Dex spawns believes it is a
+ * nested child of that session rather than a fresh invocation.
+ *
+ * `--bare` is still not passed, for the same reason none of this is kept: that
+ * flag forces API-key authentication and never reads the OAuth login, which
+ * would defeat the whole point.
+ */
+function cliEnvironment(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  for (const name of [
+    // Auth sources that outrank the claude.ai login.
+    'ANTHROPIC_API_KEY',
+    'ANTHROPIC_AUTH_TOKEN',
+    'ANTHROPIC_BASE_URL',
+    'CLAUDE_CODE_USE_BEDROCK',
+    'CLAUDE_CODE_USE_VERTEX',
+    // Parent-session markers.
+    'CLAUDECODE',
+    'CLAUDE_PID',
+    'CLAUDE_CODE_ENTRYPOINT',
+    'CLAUDE_CODE_SESSION_ID',
+    'CLAUDE_CODE_CHILD_SESSION',
+    'CLAUDE_CODE_BRIDGE_SESSION_ID',
+    'CLAUDE_CODE_MESSAGING_SOCKET',
+    'CLAUDE_CODE_MESSAGING_TOKEN',
+    'CLAUDE_CODE_SSE_PORT',
+  ]) {
+    delete env[name];
+  }
+  return env;
 }
 
 /**

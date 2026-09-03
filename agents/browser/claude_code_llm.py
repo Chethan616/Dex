@@ -171,6 +171,7 @@ class ChatClaudeCode:
             stderr=asyncio.subprocess.PIPE,
             # No console window, matching every other subprocess in Dex.
             creationflags=0x08000000 if os.name == 'nt' else 0,
+            env=_cli_environment(),
         )
 
         try:
@@ -199,6 +200,39 @@ class ChatClaudeCode:
             raise RuntimeError(f'{self.name} failed: {detail[:400]}{hint}')
 
         return result
+
+
+# Auth sources that outrank the claude.ai login, and parent-session markers.
+#
+# The CLI refuses outright when one of the first group is present:
+#
+#     claude.ai connectors are disabled because ANTHROPIC_API_KEY or another
+#     auth source is set and takes precedence over your claude.ai login
+#
+# which is accurate and fatal. An ANTHROPIC_API_KEY reaches this process from
+# the shell that launched Dex, from a machine variable, or from Settings storing
+# an Anthropic key — that last one meaning "configure the API provider" silently
+# breaks the subscription provider. The second group marks a process as running
+# inside a Claude Code session, which a Dex started from one inherits, so the CLI
+# spawned here would believe it is a nested child rather than a fresh call.
+#
+# Mirrors cliEnvironment() in core/llm/providers.ts. Two spawn sites, one rule.
+_STRIPPED = (
+    'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL',
+    'CLAUDE_CODE_USE_BEDROCK', 'CLAUDE_CODE_USE_VERTEX',
+    'CLAUDECODE', 'CLAUDE_PID', 'CLAUDE_CODE_ENTRYPOINT',
+    'CLAUDE_CODE_SESSION_ID', 'CLAUDE_CODE_CHILD_SESSION',
+    'CLAUDE_CODE_BRIDGE_SESSION_ID', 'CLAUDE_CODE_MESSAGING_SOCKET',
+    'CLAUDE_CODE_MESSAGING_TOKEN', 'CLAUDE_CODE_SSE_PORT',
+)
+
+
+def _cli_environment() -> dict:
+    """This process's environment, minus anything that overrides the login."""
+    env = dict(os.environ)
+    for name in _STRIPPED:
+        env.pop(name, None)
+    return env
 
 
 class _Completion:
