@@ -167,6 +167,8 @@ class ResumeRequest(BaseModel):
 class PrimitiveRequest(BaseModel):
     op: str      # navigate | read | click | type | extract | screenshot | verify
                  #  | sign_in | session_status | download_current | map_page
+                 #  | page_model | fill_form | click_text | wait_for
+                 #  | extract_table | scroll | press_key | go_back | reload
     url: str | None = None
     selector: str | None = None
     text: str | None = None
@@ -175,6 +177,12 @@ class PrimitiveRequest(BaseModel):
     verify: VerifySpec | None = None
     browser: str | None = None
     goal: str | None = None
+    # The verbs added with actions.py.
+    fields: dict | None = None
+    submit: bool | None = None
+    timeout: float | None = None
+    idle: bool | None = None
+    which: object | None = None
 
 
 # A recording in progress, if any.
@@ -275,6 +283,41 @@ async def primitive(req: PrimitiveRequest) -> dict[str, Any]:
                     req.path, True if req.full_page is None else req.full_page,
                 ),
             }
+
+        if req.op == 'page_model':
+            return {'success': True, 'data': await _primitives.page_model(req.browser)}
+
+        if req.op == 'fill_form':
+            return {'success': True, 'data': await _primitives.fill_form(
+                req.fields or {}, req.browser, bool(req.submit))}
+
+        if req.op == 'click_text':
+            return {'success': True, 'data': await _primitives.click_text(
+                req.text, req.selector, req.browser)}
+
+        if req.op == 'wait_for':
+            return {'success': True, 'data': await _primitives.wait_for(
+                req.browser, req.timeout or 20.0,
+                text=req.text, selector=req.selector, url=req.url,
+                idle=bool(req.idle))}
+
+        if req.op == 'extract_table':
+            return {'success': True, 'data': await _primitives.extract_table(
+                req.which if req.which is not None else 0, req.browser)}
+
+        if req.op == 'scroll':
+            return {'success': True, 'data': await _primitives.scroll(
+                req.text or 'down', req.browser)}
+
+        if req.op == 'press_key':
+            return {'success': True, 'data': await _primitives.press_key(
+                req.text or 'Enter', req.browser)}
+
+        if req.op == 'go_back':
+            return {'success': True, 'data': await _primitives.go_back(req.browser)}
+
+        if req.op == 'reload':
+            return {'success': True, 'data': await _primitives.reload(req.browser)}
 
         if req.op == 'map_page':
             return {

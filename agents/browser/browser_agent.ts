@@ -81,6 +81,80 @@ export class BrowserAgent implements Agent {
         return this.runTask(params, requestId, stepId, ctx);
       case 'sign_in':
         return this.signIn(params, requestId, stepId, ctx);
+      case 'page_model':
+        return this.primitive('page_model', { browser: browserOf(params) }, requestId, stepId);
+
+      case 'fill_form':
+        return this.primitive(
+          'fill_form',
+          {
+            fields: params.fields ?? params.values ?? {},
+            submit: params.submit === true,
+            browser: browserOf(params),
+          },
+          requestId,
+          stepId,
+        );
+
+      case 'click':
+        // By visible text first, because that is what a plan can know from
+        // reading a page. A selector still works when one is given.
+        return this.primitive(
+          'click_text',
+          {
+            text: params.text ? String(params.text) : null,
+            selector: params.selector ? String(params.selector) : null,
+            browser: browserOf(params),
+          },
+          requestId,
+          stepId,
+        );
+
+      case 'wait_for':
+        return this.primitive(
+          'wait_for',
+          {
+            text: params.text ? String(params.text) : null,
+            selector: params.selector ? String(params.selector) : null,
+            url: params.url ? String(params.url) : null,
+            idle: params.idle === true,
+            timeout: params.timeout ? Number(params.timeout) : 20,
+            browser: browserOf(params),
+          },
+          requestId,
+          stepId,
+        );
+
+      case 'extract_table':
+        return this.primitive(
+          'extract_table',
+          { which: params.which ?? params.table ?? 0, browser: browserOf(params) },
+          requestId,
+          stepId,
+        );
+
+      case 'scroll':
+        return this.primitive(
+          'scroll',
+          { text: String(params.direction ?? params.to ?? 'down'), browser: browserOf(params) },
+          requestId,
+          stepId,
+        );
+
+      case 'press_key':
+        return this.primitive(
+          'press_key',
+          { text: String(params.key ?? 'Enter'), browser: browserOf(params) },
+          requestId,
+          stepId,
+        );
+
+      case 'go_back':
+        return this.primitive('go_back', { browser: browserOf(params) }, requestId, stepId);
+
+      case 'reload':
+        return this.primitive('reload', { browser: browserOf(params) }, requestId, stepId);
+
       case 'map_page':
         return this.primitive(
           'map_page',
@@ -118,13 +192,6 @@ export class BrowserAgent implements Agent {
         );
       case 'read_page':
         return this.primitive('read', { browser: browserOf(params) }, requestId, stepId);
-      case 'click':
-        return this.primitive(
-          'click',
-          { selector: String(params.selector ?? '') },
-          requestId,
-          stepId,
-        );
       case 'type_text':
         return this.primitive(
           'type',

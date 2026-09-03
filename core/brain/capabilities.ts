@@ -178,12 +178,35 @@ export const WEB_ACTIONS: Record<string, ActionSpec> = {
   },
   read_page: { params: '{}', note: 'The current page as text — use before deciding what to click' },
   extract: { params: '{ selector: string }', note: 'Text of elements matching a CSS selector' },
-  click: { params: '{ selector?: string, text?: string }' },
+  page_model: {
+    params: '{ browser?: string }',
+    note: 'Forms with each field\u2019s real label, type and options, tables as rows, every clickable thing including collapsed menus',
+  },
+  fill_form: {
+    params: '{ fields: { "Field label": "value" }, submit?: boolean, browser?: string }',
+    note: 'Fills by LABEL not selector \u2014 { "Username": "21BCE1234" }. Selects, radios, checkboxes. Names what it could not fill. Refuses passwords - use sign_in',
+  },
+  click: {
+    params: '{ text?: string, selector?: string, browser?: string }',
+    note: 'Prefer text \u2014 click({ text: "Course Page" }) \u2014',
+  },
+  wait_for: {
+    params: '{ text?: string, selector?: string, url?: string, idle?: boolean, timeout?: number }',
+    note: 'Use after a click that navigates \u2014 acting too early is the commonest browsing failure',
+  },
+  extract_table: {
+    params: '{ which?: number | string }',
+    note: 'A table as rows of objects. which is an index or a column name',
+  },
+  scroll: { params: '{ direction?: "down" | "up" | "bottom" | "top" }' },
+  press_key: { params: '{ key: string }', note: 'Enter to submit, Escape to dismiss' },
+  go_back: { params: '{}' },
+  reload: { params: '{}' },
   type_text: { params: '{ selector: string, text: string }', note: 'Refuses password fields; Dex hands those to the owner' },
   screenshot: { params: '{ path?: string, full_page?: boolean }', note: 'Saves a PNG and returns where it went' },
   map_page: {
     params: '{ query?: string, include_hidden?: boolean, browser?: string }',
-    note: 'Every link, button and field with its real label, selector and href — including collapsed menu items read_page cannot see. For a page with no heading for what you want. query ranks, it does not filter',
+    note: 'Links, buttons and fields with real labels and hrefs, collapsed menus included. query ranks, it does not filter',
   },
   session_status: {
     params: '{ url: string, browser?: string }',
@@ -477,41 +500,27 @@ export const ROUTING_RULES = `HOW TO CHOOSE A CAPABILITY — work down this ladd
 
 USING WHAT AN EARLIER STEP FOUND
 
-  A step can use a value another step produced. Write the reference in that
-  step's params and list the step it needs in dependsOn:
+  A step can use what another produced. Put the reference in its params and
+  list that step in dependsOn:
 
     {{step_1.output}}                  everything step_1 returned
     {{step_1.output.best_primary}}     one field
-    {{step_1.output.adapters.Wi-Fi}}   nested, dots all the way down
     {{step_1.output.modes[0].width}}   an item in a list
 
-  A value that is exactly one reference keeps its type — a number arrives as a
-  number. A reference inside a longer string is substituted as text, which is
-  what a command line needs.
+  A value that is exactly one reference keeps its type; inside a longer string
+  it is substituted as text.
 
     "test several DNS servers and switch to the fastest"
-      step_1  run_command   measure them and print the winner as JSON
+      step_1  run_command   measure them, print the winner as JSON
       step_2  set_dns       primary: "{{step_1.output.best_primary}}"
                             dependsOn: ["step_1"]
 
-  Only refer to a step you have listed in dependsOn, and only to a field that
-  step will really return. A reference to something that does not exist stops
-  the task — it is not passed through as text, because a placeholder reaching a
-  real action is how "Invalid IP: {{step_1.output.best_primary}}" happens.
+  Only refer to a step in dependsOn, and only to a field it will really return.
+  A reference to something that does not exist stops the task rather than being
+  passed through as text. If a command must produce a value for a later step,
+  have it print JSON — a field of a JSON object can be pointed at; a line of
+  prose cannot.
 
-  If a command must produce a value for a later step, have it print JSON on
-  stdout, and point straight at its fields — the parsing is done for you:
-
-      step_1  run_command   ... | ConvertTo-Json -Compress
-      step_2  set_dns       primary: "{{step_1.output.best_primary}}"
-
-  A field of a JSON object is something you can point at; a line of prose is
-  not. If a command prints a table, nothing can be extracted from it.
-
-  Set run_command's "timeout" to what the command will really need, in seconds.
-  Pinging four servers ten times each is forty round trips and will not finish
-  in the default thirty; a benchmark that measures too much simply times out
-  and the value is never produced. Measure less, or ask for longer.
 
 INSTALLING AND SETTING UP A TOOL
 
@@ -547,38 +556,16 @@ INSTALLING AND SETTING UP A TOOL
 
 EDITING AN IMAGE
 
-  Resize, crop to numbers, rotate, convert, compress?
-    -> write_file a short Pillow script, then run_program it. Deterministic and
-       no window opens. PREFER THIS.
+  Resize, crop, rotate, convert, compress, thumbnail?
+    -> write_file a short Pillow script, then run_program. Deterministic,
+       verifiable, no window, works on a hundred files as easily as one.
+       PREFER THIS.
 
   Asked for the Photos app by name, or for something only its UI does?
     -> launch_app "Photos" -> window_state -> click_element "Edit"
-       -> set_value on the sliders (Brightness, Contrast, Saturation...)
-       -> click_element "Save a copy"
+       -> set_value on the sliders -> click_element "Save a copy"
     Never "Save": an edit Dex cannot undo is not one to make in place.
 
-ANYTHING BEHIND A LOGIN — a university portal, a bank, a dashboard
-
-  Dex keeps its own profile, so a site signed into once stays signed in. A
-  portal plan is almost always:
-
-    1. session_status(url)     is it still signed in? Ask FIRST.
-    2. sign_in(url)            ONLY if it is not. Fills the stored credential
-                               and hands the CAPTCHA to the owner.
-    3. run_task(...)           the actual job, with start_url set to the portal
-    4. download_current(...)   for a file. NEVER download_file behind a login.
-    5. read_document(path)     say what is in it, not just where it went
-
-  Set start_url on run_task whenever the site is one Dex may have been shown
-  before — that is what lets a remembered route be found and followed.
-
-  When a page has no heading for what you want, map_page(query) before
-  guessing: it reads the document, so it sees collapsed menu items and links
-  whose href says more than their text. read_page sees neither.
-
-  learn_route is only for when the owner asks Dex to LEARN or REMEMBER where
-  something is: they click through once and Dex notes the names. It needs them
-  sitting there, so never plan it otherwise.
 
 DRAWING A PICTURE
 

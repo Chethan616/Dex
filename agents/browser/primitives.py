@@ -31,7 +31,9 @@ from typing import Any
 
 from browser_use import BrowserSession
 
+import actions as verbs
 import browser_choice
+import page_model
 import session_pool
 from site_credentials import host_of, lookup
 from walls import detect_wall
@@ -565,6 +567,106 @@ class PrimitiveBrowser:
             'bytes': target.stat().st_size,
             'url': before,
         }
+
+    async def page_model(self, browser: str | None = None) -> dict[str, Any]:
+        """
+        The page as structure: forms, tables, actions, nav, frames.
+
+        The observation the browsing loop runs on. `read_page` gives rendered
+        text — which a screenshot already shows — and this gives the things
+        acting needs and a picture cannot carry: a field's real label, a
+        select's options, a link's href, a menu item that is in the document
+        but collapsed.
+        """
+        session = await self.session(browser)
+        raw = await evaluate(session, page_model.PAGE_MODEL_JS)
+        return page_model.parse(raw)
+
+    async def fill_form(
+        self, values: dict, browser: str | None = None, submit: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Fill fields by what they are called, then optionally submit.
+
+        `{'Username': '21BCE1234', 'Campus': 'Vellore'}` — labels, not
+        selectors, so a plan survives the site changing its markup.
+        """
+        session = await self.session(browser)
+        model = page_model.parse(await evaluate(session, page_model.PAGE_MODEL_JS))
+        result = await verbs.fill_form(session, evaluate, model, values or {})
+
+        if submit and result.get('filled'):
+            forms = model.get('forms', [])
+            button = next((s for f in forms for s in f.get('submit', [])), None)
+            if button:
+                result['submitted'] = await verbs.click(
+                    session, evaluate, {'selector': button['selector']})
+            else:
+                result['submitted'] = await verbs.press_key(session, evaluate, 'Enter')
+
+        result['url'] = await session.get_current_page_url()
+        return result
+
+    async def click_text(
+        self, text: str | None = None, selector: str | None = None,
+        browser: str | None = None,
+    ) -> dict[str, Any]:
+        """Click by visible text — what a person would say — or by selector."""
+        session = await self.session(browser)
+        outcome = await verbs.click(
+            session, evaluate, {'text': text, 'selector': selector})
+        if not outcome.get('ok'):
+            model = page_model.parse(await evaluate(session, page_model.PAGE_MODEL_JS))
+            # Say what there was instead, so the next attempt is informed.
+            outcome['available'] = [
+                a['text'] for a in model.get('actions', []) if a.get('visible')
+            ][:30]
+        await asyncio.sleep(0.4)
+        outcome['url'] = await session.get_current_page_url()
+        return outcome
+
+    async def wait_for(
+        self, browser: str | None = None, timeout: float = 20.0, **spec,
+    ) -> dict[str, Any]:
+        """Wait for text, a selector, a URL, or the page to go idle."""
+        session = await self.session(browser)
+        return await verbs.wait_for(session, evaluate, snapshot, spec, timeout)
+
+    async def extract_table(
+        self, which: Any = 0, browser: str | None = None,
+    ) -> dict[str, Any]:
+        """A table as rows of objects, by index or by a column name."""
+        session = await self.session(browser)
+        model = page_model.parse(await evaluate(session, page_model.PAGE_MODEL_JS))
+        return await verbs.extract_table(session, evaluate, model, which)
+
+    async def scroll(
+        self, amount: Any = 'down', browser: str | None = None,
+    ) -> dict[str, Any]:
+        session = await self.session(browser)
+        return await verbs.scroll(session, evaluate, amount)
+
+    async def press_key(
+        self, key: str = 'Enter', browser: str | None = None,
+    ) -> dict[str, Any]:
+        session = await self.session(browser)
+        result = await verbs.press_key(session, evaluate, key)
+        await asyncio.sleep(0.3)
+        result['url'] = await session.get_current_page_url()
+        return result
+
+    async def go_back(self, browser: str | None = None) -> dict[str, Any]:
+        """A wrong turn should be recoverable without starting again."""
+        session = await self.session(browser)
+        await evaluate(session, 'history.back()')
+        await asyncio.sleep(0.6)
+        return await snapshot(session)
+
+    async def reload(self, browser: str | None = None) -> dict[str, Any]:
+        session = await self.session(browser)
+        await evaluate(session, 'location.reload()')
+        await asyncio.sleep(1.0)
+        return await snapshot(session)
 
     async def map_page(
         self,
