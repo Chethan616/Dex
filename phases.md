@@ -88,7 +88,36 @@ down. And the crawler's six threads each ran `PRAGMA journal_mode = WAL` on a
 new database at once — "database is locked", on the first crawl and never
 again.
 
-Tests: `npm run test:index` (19 checks).
+**What the first real crawl exposed.** Run against this machine rather than a
+fixture, it spent 21,000 files and 1,885 OCR calls inside `.codex`, `.gemini`,
+`.claude`, `.antigravity-ide` and `.cursor` — every AI tool's session cache —
+and had still not reached the Desktop. Four fixes, each a rule rather than a
+list of names:
+
+- **a leading dot means cache, not documents.** Naming those five folders would
+  have fixed today and missed the sixth tool installed next month. Hidden and
+  system folders go with them.
+- **the owner's folders are crawled first** — Desktop, Documents, Downloads,
+  Pictures, CrossDevice, OneDrive — so a half-finished crawl is finished in
+  the useful direction. Where they *are* is read from the registry: on this
+  machine the Desktop is not under the home directory at all, because OneDrive
+  moved it.
+- **network drives are indexed.** A mapped share is somewhere files really are.
+  Removable media stays out: indexed today, absent tomorrow.
+- **names before contents.** Reading as it walked managed 18 files a second, so
+  nothing was findable for the first hour — including files whose name was the
+  whole answer. Batching the writes and taking the size and timestamps from the
+  directory listing rather than a second syscall took the names pass from 35 to
+  ~120 files a second; contents fill in behind it.
+
+Two more found by running it: a second crawl started while the first was going
+produced "database is locked" from a sixty-second `busy_timeout` — SQLite
+refuses a read-then-write transaction immediately rather than waiting — so the
+writers retry and a crawl now claims the index before starting. And the crawl
+writes a heartbeat, so a core starting up can tell a crawl that is working from
+one killed with the machine, and resume it.
+
+Tests: `npm run test:index` (28 checks).
 
 ## Phase 3 — Real conversation history
 
