@@ -129,6 +129,59 @@ def upsert(path: str, name: str, ext: str, size: int, modified: float,
         )
 
 
+def write(action) -> None:
+    """
+    Run a write, waiting out another process that is mid-batch.
+
+    `busy_timeout` covers a writer that arrives while another holds the lock,
+    but not the case that actually happens here: a transaction that begins by
+    reading and then tries to write after someone else has committed. SQLite
+    answers that one with SQLITE_BUSY immediately and does not apply the
+    timeout, because retrying is only safe if the caller re-reads — which is
+    exactly what starting the batch again does.
+
+    Seen for real when a second crawl was started while the first was running:
+    "database is locked", from a `busy_timeout` of sixty seconds.
+    """
+    delay = 0.05
+    for attempt in range(8):
+        try:
+            action()
+            return
+        except sqlite3.OperationalError as exc:
+            if 'locked' not in str(exc) and 'busy' not in str(exc):
+                raise
+            if attempt == 7:
+                raise
+            time.sleep(delay)
+            delay = min(delay * 2, 2.0)
+
+
+def claim(scope: str, stale_after: float = 300.0) -> bool:
+    """
+    Take the right to be the crawler, if nobody else holds it.
+
+    One crawl at a time, because two of them do not go twice as fast: SQLite
+    serialises writers, so a second crawler mostly waits, and the two together
+    do less work than either alone would.
+
+    The claim goes stale on its own. A crawl is a detached process that can be
+    killed with the machine, and a lock that outlives the process holding it
+    would mean the index silently stops updating until someone deletes a row
+    they do not know about.
+    """
+    age = _heartbeat_age()
+    if get_state('crawling') and age is not None and age < stale_after:
+        return False
+    set_state('crawling', scope)
+    set_state('heartbeat', str(time.time()))
+    return True
+
+
+def release() -> None:
+    set_state('crawling', '')
+
+
 def known(paths: list) -> dict:
     """`{path: (modified, size, content)}` for the ones already recorded."""
     if not paths:
@@ -160,11 +213,15 @@ def touch_many(paths: list, now: float) -> None:
     if not paths:
         return
     conn = connect()
-    with conn:
-        conn.executemany(
-            'UPDATE files SET indexed_at = ? WHERE path = ?',
-            [(now, path) for path in paths],
-        )
+
+    def go() -> None:
+        with conn:
+            conn.executemany(
+                'UPDATE files SET indexed_at = ? WHERE path = ?',
+                [(now, path) for path in paths],
+            )
+
+    write(go)
 
 
 def upsert_many(rows: list, now: float) -> None:
@@ -182,23 +239,27 @@ def upsert_many(rows: list, now: float) -> None:
     if not rows:
         return
     conn = connect()
-    with conn:
-        conn.executemany(
-            'INSERT INTO files (path, name, ext, size, modified, indexed_at, content) '
-            'VALUES (?, ?, ?, ?, ?, ?, ?) '
-            'ON CONFLICT(path) DO UPDATE SET '
-            'name=excluded.name, ext=excluded.ext, size=excluded.size, '
-            'modified=excluded.modified, indexed_at=excluded.indexed_at, '
-            'content=excluded.content',
-            [(r[0], r[1], r[2], r[3], r[4], now, r[6]) for r in rows],
-        )
-        conn.executemany(
-            'DELETE FROM search WHERE path = ?', [(r[0],) for r in rows],
-        )
-        conn.executemany(
-            'INSERT INTO search (path, path_text, body) VALUES (?, ?, ?)',
-            [(r[0], tokenise_path(r[0]), r[5] or '') for r in rows],
-        )
+
+    def go() -> None:
+        with conn:
+            conn.executemany(
+                'INSERT INTO files (path, name, ext, size, modified, indexed_at, content) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?) '
+                'ON CONFLICT(path) DO UPDATE SET '
+                'name=excluded.name, ext=excluded.ext, size=excluded.size, '
+                'modified=excluded.modified, indexed_at=excluded.indexed_at, '
+                'content=excluded.content',
+                [(r[0], r[1], r[2], r[3], r[4], now, r[6]) for r in rows],
+            )
+            conn.executemany(
+                'DELETE FROM search WHERE path = ?', [(r[0],) for r in rows],
+            )
+            conn.executemany(
+                'INSERT INTO search (path, path_text, body) VALUES (?, ?, ?)',
+                [(r[0], tokenise_path(r[0]), r[5] or '') for r in rows],
+            )
+
+    write(go)
 
 
 def tokenise_path(path: str) -> str:
@@ -322,6 +383,7 @@ def stats() -> dict:
         # crawl has ever run. This is how the core tells a crawl that is
         # working from one that was killed with the machine.
         'heartbeat_age': _heartbeat_age(),
+        'crawling': bool(get_state('crawling')),
     }
 
 

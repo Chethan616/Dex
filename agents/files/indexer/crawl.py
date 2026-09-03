@@ -331,6 +331,13 @@ def crawl(scope: str = 'profile', on_progress=None, read_contents: bool = True) 
     and size, and a rescan writes one integer for each rather than
     re-tokenising every path on the disk.
     """
+    if not store.claim(scope):
+        # Another crawl is already walking this disk. Two of them do not go
+        # twice as fast — SQLite serialises writers, so the second mostly waits
+        # and the pair get less done than one would.
+        return {'scope': scope, 'skipped': 'a crawl is already running',
+                'seconds': 0.0}
+
     started = time.time()
     seen = indexed = skipped = 0
     batch: list = []
@@ -387,6 +394,7 @@ def crawl(scope: str = 'profile', on_progress=None, read_contents: bool = True) 
 
     store.set_state('last_crawl', time.strftime('%Y-%m-%d %H:%M:%S'))
     store.set_state('last_scope', scope)
+    store.release()
 
     return {
         'scope': scope,

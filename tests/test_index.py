@@ -150,6 +150,13 @@ after = store.stats()['files']
 check('a crawl of one folder keeps the rest of the index',
       after == before + 1, f'{before} -> {after}')
 
+# --- only one crawler at a time ----------------------------------------------
+check('a second crawl stands down while one is running',
+      (store.claim('x') is True) and (store.claim('y') is False))
+store.release()
+check('and the claim is free again once it is released', store.claim('z') is True)
+store.release()
+
 # --- rescanning is cheap -----------------------------------------------------
 again = crawl.crawl(scope=str(home))
 check('unchanged files are not re-read', again['unchanged'] > 40 and again['indexed'] == 0,
