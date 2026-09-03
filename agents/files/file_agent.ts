@@ -8,7 +8,7 @@ import { AgentContext, AgentResult } from '../../core/events/types';
 import { resolveCommand } from '../../core/settings/which';
 import * as ops from './file_ops';
 import { namedFolder, profilePath } from './profile_paths';
-import { ensureIndex, IndexMatch, searchIndex } from './file_index';
+import { ensureIndex, IndexMatch, IndexStats, searchIndex } from './file_index';
 
 const MAX_FILE_BYTES = 2_000_000;
 const MAX_RESULTS = 100;
@@ -161,7 +161,7 @@ export class FileAgent implements Agent {
         restricted_to: found.restricted_to ?? undefined,
         count: matches.length,
         truncated: found.total > matches.length,
-        searched: `${stats.files} files indexed, ${stats.with_ocr} of them scans read by OCR`,
+        searched: describeIndex(stats),
         indexed_at: stats.built ?? undefined,
         matches,
         opened_location: openedLocation,
@@ -398,26 +398,65 @@ function workspacePath(raw: string, root: string): string {
   return candidate;
 }
 
+/**
+ * The folder a search should be confined to.
+ *
+ * Read-only, so this is deliberately wider than the boundary on the write
+ * operations. It used to refuse anything outside the user profile, which is
+ * the same defect as defaulting to Downloads wearing a safety hat: a file on
+ * another drive is still the owner's file, and "search my pc" that silently means
+ * "search part of it" is how a search reports absence it never checked.
+ *
+ * What stays refused is the operating system's own trees. Not for safety —
+ * they are readable anyway — but because walking them is minutes of work that
+ * can only return things the owner did not put there.
+ */
 function searchRoot(raw: string): string {
   const home = os.homedir();
   const named = raw.trim().toLowerCase();
   if (named === 'profile' || named === 'pc' || named === '') return home;
+
   const aliases: Record<string, string[]> = {
     desktop: [path.join(home, 'Desktop'), path.join(home, 'OneDrive', 'Desktop')],
     documents: [path.join(home, 'Documents'), path.join(home, 'OneDrive', 'Documents')],
     downloads: [path.join(home, 'Downloads'), path.join(home, 'OneDrive', 'Downloads')],
     'download folder': [path.join(home, 'Downloads'), path.join(home, 'OneDrive', 'Downloads')],
+    pictures: [path.join(home, 'Pictures'), path.join(home, 'OneDrive', 'Pictures')],
   };
-  const candidates = aliases[raw.trim().toLowerCase()];
+  const candidates = aliases[named];
   const root = path.resolve(candidates?.find((candidate) => fs.existsSync(candidate)) ?? raw);
-  const relative = path.relative(home, root);
-  if (relative.startsWith('..') || path.isAbsolute(relative)) {
-    throw new Error('File search is limited to folders in the user profile');
+
+  const lowered = root.toLowerCase();
+  const systemTrees = ['c:\\windows', 'c:\\program files', 'c:\\programdata'];
+  if (systemTrees.some((tree) => lowered.startsWith(tree))) {
+    throw new Error('File search does not walk the Windows and Program Files trees');
   }
   if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
     throw new Error(`Search folder does not exist: ${root}`);
   }
   return root;
+}
+
+/**
+ * What the index actually looked at, in a sentence.
+ *
+ * The names pass finishes long before the contents pass, and during that gap a
+ * search really can only answer by filename. Saying so is the difference
+ * between "no aadhaar card on this PC" and "no file *named* that yet" — the
+ * first is a claim the index cannot support until the second pass is done.
+ */
+function describeIndex(stats: IndexStats): string {
+  const parts = [`${stats.files.toLocaleString()} files indexed by name`];
+  if (stats.with_text || stats.with_ocr) {
+    parts.push(
+      `${(stats.with_text + stats.with_ocr).toLocaleString()} read for content` +
+        (stats.with_ocr ? `, ${stats.with_ocr.toLocaleString()} of them scans put through OCR` : ''),
+    );
+  }
+  if (stats.pending) {
+    parts.push(`${stats.pending.toLocaleString()} still to be read, so a match on contents alone may not be there yet`);
+  }
+  return parts.join('; ');
 }
 
 type FileEntry = { name: string; fullPath: string; directory: string };

@@ -43,6 +43,9 @@ def check(name: str, condition: bool, detail: str = '') -> None:
         print(f'  FAIL  {name}' + (f' -- {detail}' if detail else ''))
 
 
+PNG = bytes([0x89]) + b'PNG' + bytes([13, 10, 26, 10])
+
+
 def make_tree(root: Path) -> None:
     """A miniature of the disk that produced the failures."""
     (root / 'Desktop' / 'UI' / 'UI INSPIRATIONS').mkdir(parents=True)
@@ -63,7 +66,20 @@ def make_tree(root: Path) -> None:
     (junk / 'aadhar_res.png.flat').write_bytes(b'flat')
     modules = root / 'project' / 'node_modules' / 'thing'
     modules.mkdir(parents=True)
-    (modules / 'ui.png').write_bytes(b'\x89PNG\r\n\x1a\n')
+    (modules / 'ui.png').write_bytes(PNG)
+
+    # Every AI tool's cache. A first crawl spent 21,000 files and 1,885 OCR
+    # calls inside these and had still not reached the Desktop.
+    for tool in ('.codex', '.gemini', '.claude', '.antigravity-ide', '.cursor'):
+        cache = root / tool / 'sessions'
+        cache.mkdir(parents=True)
+        (cache / 'aadhaar_prompt.png').write_bytes(PNG)
+        (cache / 'ui.png').write_bytes(PNG)
+
+    # Where phone transfers land, and therefore where a scan actually is.
+    phone = root / 'CrossDevice' / 'OnePlus 11R 5G' / 'storage' / 'Download'
+    phone.mkdir(parents=True)
+    (phone / 'aadhar.txt').write_text('AADHAAR 1234 5678 9012', encoding='utf-8')
 
 
 print('file index')
@@ -76,6 +92,10 @@ check('crawl indexes the tree', report['indexed'] > 40, str(report))
 paths = [r[0] for r in store.connect().execute('SELECT path FROM files')]
 check('build output is not indexed', not any('intermediates' in p for p in paths))
 check('node_modules is not indexed', not any('node_modules' in p for p in paths))
+check('dotted tool caches are not indexed',
+      not any(f'{os.sep}.' in p for p in paths),
+      str([p for p in paths if f'{os.sep}.' in p][:2]))
+check('a phone-transfer folder IS indexed', any('CrossDevice' in p for p in paths))
 
 # --- the UI.png failure ------------------------------------------------------
 found = search.search('find UI.png on my desktop', limit=5)
@@ -90,6 +110,24 @@ names = [m['name'] for m in found['matches']]
 check('a card named scan001 is found by its text', 'scan001.txt' in names, str(names[:5]))
 check('"aadhar" also searches for "uidai"', 'uidai' in found['searched_for'])
 check('no build junk in the answer', not any('.flat' in n for n in names), str(names))
+
+# --- the owner's folders are crawled before their tool caches ----------------
+ordered = [str(r) for r in crawl.roots('profile')]
+check('the crawl starts in the owner folders, not alphabetically',
+      any(r.lower().endswith('desktop') for r in ordered[:3]), str(ordered[:3]))
+check('the home directory comes after them', ordered[-1] == str(Path.home()), ordered[-1])
+check('"pc" reaches every drive, network included',
+      len(crawl.roots('pc')) > len(crawl.roots('profile')))
+check('a moved folder is found where Windows says it is, not where it used to be',
+      crawl.known_folder('Desktop') is None
+      or crawl.known_folder('Desktop').is_dir(),
+      str(crawl.known_folder('Desktop')))
+
+# --- a scan on the phone transfer folder ------------------------------------
+found = search.search('aadhar card', limit=5)
+check('a card in the CrossDevice folder is found',
+      any('CrossDevice' in m['path'] for m in found['matches']),
+      str([m['path'][-40:] for m in found['matches'][:3]]))
 
 # --- extensions are a filter, not a search term ------------------------------
 words, extensions = search.terms_of('find aadhar card png jpeg or pdf in my pc')

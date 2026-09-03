@@ -47,6 +47,12 @@ export interface IndexStats {
   failed: number;
   database: string;
   built: string | null;
+  /** When the fast pass finished. Set long before `built`. */
+  names_done?: string | null;
+  /** Files recorded by name whose contents have not been read yet. */
+  pending?: number;
+  /** Seconds since a running crawl last committed a batch; null if none ever ran. */
+  heartbeat_age?: number | null;
   ocr_available?: boolean;
 }
 
@@ -135,20 +141,32 @@ export function ensureIndex(scope = 'profile'): { stats: IndexStats | null; buil
     return { stats: null, building: false };
   }
 
-  if (stats.files === 0 && !crawlStarted) {
+  if (crawlStarted) return { stats, building: stats.files === 0 };
+
+  // A crawl is a detached process, so it can be killed with the machine
+  // halfway through. `heartbeat_age` is how long ago the last one wrote a
+  // batch: recent means it is still working and starting a second would only
+  // make them fight for the write lock; stale with work outstanding means it
+  // died, and nobody will finish reading those files unless we start it again.
+  const working = stats.heartbeat_age !== null
+    && stats.heartbeat_age !== undefined
+    && stats.heartbeat_age < HEARTBEAT_STALE_S;
+  if (working) return { stats, building: stats.files === 0 };
+
+  if (stats.files === 0) {
     crawlStarted = startCrawl(scope);
     return { stats, building: crawlStarted };
   }
 
-  // A rescan when the index has gone stale. This is what keeps the index
-  // roughly current without a filesystem watcher: unchanged files are
-  // recognised by mtime and size and never reopened, so a rescan of a disk
-  // costs a stat per file rather than a read. Started, never waited for.
-  if (!crawlStarted && isStale(stats.built)) {
+  // Contents left unread by a crawl that stopped, or an index gone stale.
+  if ((stats.pending ?? 0) > 0 || isStale(stats.built)) {
     crawlStarted = startCrawl(scope);
   }
   return { stats, building: false };
 }
+
+/** A crawl silent for this long is not running any more. */
+const HEARTBEAT_STALE_S = 300;
 
 /** Six hours. Long enough not to churn, short enough that a search is not archaeology. */
 const STALE_AFTER_MS = 6 * 60 * 60 * 1000;

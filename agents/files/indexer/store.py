@@ -22,6 +22,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import threading
+import time
 from pathlib import Path
 
 # One connection per thread. SQLite objects are not shareable across threads and
@@ -128,6 +129,78 @@ def upsert(path: str, name: str, ext: str, size: int, modified: float,
         )
 
 
+def known(paths: list) -> dict:
+    """`{path: (modified, size, content)}` for the ones already recorded."""
+    if not paths:
+        return {}
+    conn = connect()
+    out: dict = {}
+    # Chunked because SQLite limits how many parameters one statement may
+    # carry, and a crawl batch can be larger than that limit.
+    for start in range(0, len(paths), 400):
+        chunk = paths[start:start + 400]
+        placeholders = ','.join('?' for _ in chunk)
+        for path, modified, size, content in conn.execute(
+            f'SELECT path, modified, size, content FROM files WHERE path IN ({placeholders})',
+            chunk,
+        ):
+            out[path] = (modified, size, content)
+    return out
+
+
+def touch_many(paths: list, now: float) -> None:
+    """
+    Mark files as still present, without touching their text.
+
+    The difference between this and a full upsert is the whole cost of a
+    rescan. An unchanged file needs one integer written; rewriting its
+    full-text row instead means re-tokenising every path on the disk to
+    discover that nothing has changed.
+    """
+    if not paths:
+        return
+    conn = connect()
+    with conn:
+        conn.executemany(
+            'UPDATE files SET indexed_at = ? WHERE path = ?',
+            [(now, path) for path in paths],
+        )
+
+
+def upsert_many(rows: list, now: float) -> None:
+    """
+    Record many files in one transaction.
+
+    One transaction per file measured at about 35 files a second on this
+    machine, against 330 for the same work batched: the cost is the commit,
+    not the write. A crawl is hundreds of thousands of files, so this is the
+    difference between an index that is ready in minutes and one that is ready
+    after lunch.
+
+    `rows` are `(path, name, ext, size, modified, body, kind)`.
+    """
+    if not rows:
+        return
+    conn = connect()
+    with conn:
+        conn.executemany(
+            'INSERT INTO files (path, name, ext, size, modified, indexed_at, content) '
+            'VALUES (?, ?, ?, ?, ?, ?, ?) '
+            'ON CONFLICT(path) DO UPDATE SET '
+            'name=excluded.name, ext=excluded.ext, size=excluded.size, '
+            'modified=excluded.modified, indexed_at=excluded.indexed_at, '
+            'content=excluded.content',
+            [(r[0], r[1], r[2], r[3], r[4], now, r[6]) for r in rows],
+        )
+        conn.executemany(
+            'DELETE FROM search WHERE path = ?', [(r[0],) for r in rows],
+        )
+        conn.executemany(
+            'INSERT INTO search (path, path_text, body) VALUES (?, ?, ?)',
+            [(r[0], tokenise_path(r[0]), r[5] or '') for r in rows],
+        )
+
+
 def tokenise_path(path: str) -> str:
     """
     A path as words.
@@ -201,6 +274,31 @@ def sweep(before: float, under: list | None = None) -> int:
     return len(stale)
 
 
+def pending_contents(prefixes: list, limit: int = 200_000) -> list:
+    """
+    Files recorded by name whose contents have not been read yet.
+
+    Ordered by the root they sit under, so the second pass reads the owner's
+    Desktop before the rest of the disk — a pass that is only half finished
+    should be half finished in the useful direction.
+    """
+    conn = connect()
+    if not prefixes:
+        return conn.execute(
+            "SELECT path, size FROM files WHERE content = 'none' LIMIT ?", (limit,),
+        ).fetchall()
+
+    ordering = ' '.join(
+        f'WHEN lower(path) LIKE ? THEN {rank}' for rank, _ in enumerate(prefixes)
+    )
+    args = [p.lower().rstrip('\/') + '%' for p in prefixes]
+    return conn.execute(
+        "SELECT path, size FROM files WHERE content = 'none' "
+        f'ORDER BY CASE {ordering} ELSE 999 END LIMIT ?',
+        [*args, limit],
+    ).fetchall()
+
+
 def stats() -> dict:
     conn = connect()
     total = conn.execute('SELECT COUNT(*) FROM files').fetchone()[0]
@@ -215,7 +313,26 @@ def stats() -> dict:
         'failed': by_kind.get('failed', 0),
         'database': str(index_path()),
         'built': get_state('last_crawl'),
+        # Names first: the index is fully searchable by name long before every
+        # scan has been through OCR, and a search should be able to say which
+        # of those two it is answering from.
+        'names_done': get_state('names_done'),
+        'pending': by_kind.get('none', 0),
+        # Seconds since the running crawl last wrote a batch. None when no
+        # crawl has ever run. This is how the core tells a crawl that is
+        # working from one that was killed with the machine.
+        'heartbeat_age': _heartbeat_age(),
     }
+
+
+def _heartbeat_age() -> float | None:
+    raw = get_state('heartbeat')
+    if not raw:
+        return None
+    try:
+        return round(time.time() - float(raw), 1)
+    except ValueError:
+        return None
 
 
 def set_state(key: str, value: str) -> None:
