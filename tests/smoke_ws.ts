@@ -145,7 +145,7 @@ async function main(): Promise<void> {
     fullAccess: false,
     evidenceDir: 'data/evidence',
   });
-  server.start();
+  await server.start();
 
   const hs = JSON.parse(fs.readFileSync(handshakePath(), 'utf8'));
   check('handshake file written with port + token', hs.port === PORT && typeof hs.token === 'string' && hs.token.length > 20);

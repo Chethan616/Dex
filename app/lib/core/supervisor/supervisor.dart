@@ -506,7 +506,14 @@ class Supervisor extends ChangeNotifier {
     }
 
     try {
-      if (DexPaths.handshakeFile.existsSync()) {
+      // Only when nothing is listening.
+      //
+      // Deleting it unconditionally was half of a loop that made a working
+      // core disappear: this removed the file, the spawned core lost the port
+      // and exited, and its exit handler removed the file again. The stale-file
+      // case this guards against is a core that was killed — and a killed core
+      // is not listening, so the check catches it too.
+      if (DexPaths.handshakeFile.existsSync() && !(await Probe.core()).up) {
         DexPaths.handshakeFile.deleteSync();
       }
     } catch (_) {

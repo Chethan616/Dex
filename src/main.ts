@@ -171,7 +171,7 @@ function main(): void {
         return fullAccessEffective;
       },
     });
-    server.start();
+    void server.start();
   }
 
   // Ask the daemon whether it implements everything the Brain will offer to

@@ -95,6 +95,15 @@ class Probe {
   }) async {
     final file = DexPaths.handshakeFile;
     if (!file.existsSync()) {
+      // No file is not the same as no core.
+      //
+      // A second core that lost the race for the port used to delete this on
+      // its way out, leaving a perfectly healthy core running and invisible —
+      // and the supervisor would then start a third, which would also lose,
+      // and also delete it. Ask the port before concluding anything.
+      if (await _portOpen(8770, timeout)) {
+        return HealthReport.up(detail: {'port': 8770, 'handshake': 'missing'});
+      }
       return HealthReport.down('the core has not written its handshake file');
     }
 
@@ -114,6 +123,17 @@ class Probe {
       return HealthReport.down('the core is not listening on port $port');
     } on TimeoutException {
       return HealthReport.down('the core did not accept a connection');
+    }
+  }
+
+  /// Is anything listening there? The question behind "is the core up".
+  static Future<bool> _portOpen(int port, Duration timeout) async {
+    try {
+      final socket = await Socket.connect('127.0.0.1', port, timeout: timeout);
+      socket.destroy();
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

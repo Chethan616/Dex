@@ -97,6 +97,9 @@ export class DexServer {
   private readonly settings = new SettingsService();
   private readonly schedules = new ScheduleStore();
   private readonly port: number;
+
+  /** True once this process actually bound the port. See the cleanup below. */
+  private ownsHandshake = false;
   private readonly evidenceDir: string;
   private readonly agents: DexServerOptions['agents'];
 
@@ -111,7 +114,15 @@ export class DexServer {
     this.evidenceDir = path.resolve(opts.evidenceDir ?? 'data/evidence');
   }
 
-  start(): void {
+  /**
+   * Bind, and resolve once the socket is really listening.
+   *
+   * Returns a promise because the handshake file is written on the `listening`
+   * event now, not at construction — so "start() returned" and "the core is
+   * reachable" are no longer the same moment, and a caller that reads the
+   * handshake immediately would find nothing there.
+   */
+  start(): Promise<void> {
     this.wss = new WebSocketServer({
       host: '127.0.0.1',
       port: this.port,
@@ -144,7 +155,12 @@ export class DexServer {
             : `Server error: ${err.message}`
         }`,
       );
-      if (busy) process.exit(1);
+      if (busy) {
+        // Leave without running the cleanup: the file on disk belongs to the
+        // core that won the port.
+        this.ownsHandshake = false;
+        process.exit(1);
+      }
     });
 
     bus.subscribeAll((event) => this.broadcast({ type: 'event', event }));
@@ -156,20 +172,39 @@ export class DexServer {
         this.broadcast({ type: 'confirmation_closed', requestId, stepId }),
     });
 
-    const file = writeHandshake({
-      port: this.port,
-      token: this.token,
-      pid: process.pid,
-      version: '0.1.0',
-      startedAt: Date.now(),
+    // Announced only once the socket is really listening.
+    //
+    // This used to run at construction, so a core that then failed to bind had
+    // already overwritten the handshake of the core that owned the port — and
+    // the app, reading that file, was pointed at a process about to exit.
+    // "Listening" is a fact the server reports; writing the file before it is
+    // a claim.
+    const listening = new Promise<void>((resolve) => {
+      this.wss?.once('listening', () => resolve());
     });
 
-    console.log(`\x1b[36m[ws]\x1b[0m Listening on 127.0.0.1:${this.port}`);
-    console.log(`\x1b[90m[ws]\x1b[0m Handshake: ${file}`);
+    this.wss.on('listening', () => {
+      this.ownsHandshake = true;
+      const file = writeHandshake({
+        port: this.port,
+        token: this.token,
+        pid: process.pid,
+        version: '0.1.0',
+        startedAt: Date.now(),
+      });
+      console.log(`\x1b[36m[ws]\x1b[0m Listening on 127.0.0.1:${this.port}`);
+      console.log(`\x1b[90m[ws]\x1b[0m Handshake: ${file}`);
+    });
 
-    const cleanup = (): void => removeHandshake();
+    const cleanup = (): void => {
+      // Only the core that bound the port may remove the file. The loser
+      // deleting it is exactly how a healthy core became invisible.
+      if (this.ownsHandshake) removeHandshake();
+    };
     process.on('exit', cleanup);
     process.on('SIGINT', () => { cleanup(); process.exit(0); });
+
+    return listening;
   }
 
   private onConnection(socket: WebSocket): void {
