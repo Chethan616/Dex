@@ -2,7 +2,14 @@
 // `update_plan` tool (`plan: [{step, status}]`). Rendered as a checklist so
 // the user watches concrete progress instead of a blank "thinking…".
 
-enum PlanStepStatus { pending, inProgress, completed }
+/// What happened to a step.
+///
+/// `failed` exists because the checklist used to have no word for it: a step
+/// that failed in a tenth of a second was marked completed and drawn with the
+/// same tick as work that succeeded. Three steps, two of them failed, and the
+/// plan read 3/3 — the display said the task had gone fine while the
+/// transcript above it said the opposite.
+enum PlanStepStatus { pending, inProgress, completed, failed }
 
 class PlanStep {
   const PlanStep({required this.label, required this.status});
@@ -16,6 +23,8 @@ class PlanStep {
         return PlanStepStatus.inProgress;
       case 'completed':
         return PlanStepStatus.completed;
+      case 'failed':
+        return PlanStepStatus.failed;
       default:
         return PlanStepStatus.pending;
     }

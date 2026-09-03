@@ -353,7 +353,10 @@ class ConversationStore extends ChangeNotifier {
       case 'failed':
         if (frame.stepId != null) {
           _finishActivity(_key(frame), ok: false, summary: frame.message);
-          _markPlan(frame.stepId!, PlanStepStatus.completed);
+          // Not `completed`. A step that failed is finished, but saying so
+          // with the same tick as a step that worked is the display lying
+          // about the outcome.
+          _markPlan(frame.stepId!, PlanStepStatus.failed);
         } else {
           _say(frame.message);
           _setState(AgentState.error);
@@ -513,7 +516,8 @@ class ConversationStore extends ChangeNotifier {
       return;
     }
 
-    final pending = _plan.indexWhere((s) => s.status != PlanStepStatus.completed);
+    final pending = _plan.indexWhere((s) =>
+        s.status != PlanStepStatus.completed && s.status != PlanStepStatus.failed);
     if (pending == -1) return;
     _plan = [
       for (var i = 0; i < _plan.length; i++)

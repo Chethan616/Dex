@@ -18,7 +18,12 @@ class TaskPlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (steps.isEmpty) return const SizedBox.shrink();
-    final done = steps.where((s) => s.status == PlanStepStatus.completed).length;
+    final done = steps
+        .where((s) =>
+            s.status == PlanStepStatus.completed ||
+            s.status == PlanStepStatus.failed)
+        .length;
+    final failed = steps.where((s) => s.status == PlanStepStatus.failed).length;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: DexSpace.sm),
       child: DexGlass(
@@ -36,6 +41,16 @@ class TaskPlanCard extends StatelessWidget {
                 Text('Plan',
                     style: DexType.label(color: DexColors.text)),
                 const Spacer(),
+                // The failures, said out loud. "3/3" beside two red rows
+                // reads as success at a glance, which is the one thing it
+                // was not.
+                if (failed > 0) ...[
+                  Text(
+                    failed == 1 ? '1 failed' : '$failed failed',
+                    style: DexType.caption(color: DexColors.stateError),
+                  ),
+                  const SizedBox(width: DexSpace.sm),
+                ],
                 Text('$done/${steps.length}',
                     style: DexType.caption(color: DexColors.textFaint)),
               ],
@@ -57,11 +72,13 @@ class _StepRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icon, color) = switch (step.status) {
       PlanStepStatus.completed => (LucideIcons.circle_check, DexColors.accent),
+      PlanStepStatus.failed => (LucideIcons.circle_x, DexColors.stateError),
       PlanStepStatus.inProgress => (LucideIcons.loader, DexColors.stateActing),
       PlanStepStatus.pending => (LucideIcons.circle, DexColors.textFaint),
     };
     final textColor = switch (step.status) {
       PlanStepStatus.completed => DexColors.textDim,
+      PlanStepStatus.failed => DexColors.text,
       PlanStepStatus.inProgress => DexColors.text,
       PlanStepStatus.pending => DexColors.textFaint,
     };

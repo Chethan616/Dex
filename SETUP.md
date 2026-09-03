@@ -45,6 +45,45 @@ npm run dev
 .\RUN.bat -NoUi
 ```
 
+### After you change something
+
+There is no build step for the core. It runs from TypeScript source
+(`node -r ts-node/register src/main.ts`), so a code change needs a **restart**,
+not a rebuild — and `npm run build` is only for producing `dist/`, which nothing
+in the normal path uses. The same goes for the Python agents and the daemon.
+
+The Flutter app is the one part that is compiled, so a change to anything under
+`app/lib/` does need building.
+
+The whole thing, from a checkout:
+
+```powershell
+.\scripts\stop-dex.ps1     # nothing left over from the last run
+cd app
+flutter run -d windows     # builds the app, which starts the core and the agents
+```
+
+Or, for the standalone executable:
+
+```powershell
+cd app
+flutter build windows
+.\build\windows\x64\runner\Release\dex.exe
+```
+
+A quick check that the core itself is healthy, without the app:
+
+```powershell
+npm run typecheck
+npm run dev                # `dex>` prompt; Ctrl-C to stop
+```
+
+**If a change does not seem to have taken effect**, it is almost always an old
+core still running — the app finds a live one and attaches to it rather than
+starting a second. `.\scripts\stop-dex.ps1` first, and it checks the named
+pipe afterwards, because whether something answers is the only honest answer to
+"is it still running".
+
 ### Stopping it
 
 Closing the app stops everything it started. To be sure — after a crash, or when

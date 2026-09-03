@@ -1,6 +1,7 @@
 import { ExecutionPlan, ExecutionStep } from '../events/types';
 import { emit } from '../events/bus';
 import { WorkflowStore } from './store';
+import { renameStepRefs } from '../orchestrator/step_refs';
 
 /**
  * Turning a plan's `run_workflow` steps into the real steps they stand for.
@@ -114,9 +115,15 @@ export function expandWorkflows(
     store.markRun(workflow.name);
   }
 
+  // Both the edges and the values. `dependsOn` says which step to wait for;
+  // `{{step_1.output}}` inside params says which step's result to use, and
+  // leaving that pointing at a renamed step is how two steps failed in a
+  // tenth of a second each, for a value that was sitting right there under a
+  // name nothing had told them about.
   const rewired = steps.map((s) => ({
     ...s,
     dependsOn: s.dependsOn.map((d) => rewrite.get(d) ?? d),
+    params: renameStepRefs(s.params, rewrite),
   }));
 
   const next: ExecutionPlan = { ...plan, steps: rewired };

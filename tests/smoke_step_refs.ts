@@ -23,6 +23,7 @@ import {
   describeUnresolved,
   findRefs,
   hasStepRefs,
+  renameStepRefs,
   resolveStepRefs,
 } from '../core/orchestrator/step_refs';
 
@@ -260,6 +261,58 @@ check('findRefs lists them in order, for the event line', () => {
     findRefs({ a: '{{step_1.output.best_primary}}', b: ['{{step_2.output.plan}}'] }),
     ['{{step_1.output.best_primary}}', '{{step_2.output.plan}}'],
   );
+});
+
+check('a renamed step takes its references with it', () => {
+  // Expanding a workflow renames its steps so two workflows in one plan do
+  // not collide on `step_1`. The references live in params, as text, and were
+  // left pointing at the old name:
+  //
+  //   step_2: {{step_1.output}} could not be resolved.
+  //           Available: step_1_step_1.output {root, query, count, matches...}
+  //
+  // The value was right there, under a name nothing had told step_2 about.
+  const rename = new Map([['step_1', 'step_1_step_1']]);
+  const renamed = renameStepRefs(
+    {
+      command: ['start', '{{step_1.output}}'],
+      path: '{{step_1.output.matches[0].path}}',
+      nested: { deep: 'see {{step_1.output.count}} results' },
+    },
+    rename,
+  );
+
+  assert.deepStrictEqual(renamed.command, ['start', '{{step_1_step_1.output}}']);
+  assert.strictEqual(renamed.path, '{{step_1_step_1.output.matches[0].path}}');
+  assert.strictEqual(
+    (renamed.nested as Record<string, unknown>).deep,
+    'see {{step_1_step_1.output.count}} results',
+  );
+});
+
+check('a reference to a step that was not renamed is left alone', () => {
+  const renamed = renameStepRefs(
+    { a: '{{step_2.output}}', b: '{{level}}', c: 'plain text' },
+    new Map([['step_1', 'step_1_step_1']]),
+  );
+  assert.strictEqual(renamed.a, '{{step_2.output}}');
+  assert.strictEqual(renamed.b, '{{level}}');
+  assert.strictEqual(renamed.c, 'plain text');
+});
+
+check('renaming and resolving agree on what a reference is', () => {
+  // The two halves share one regex on purpose: a second definition somewhere
+  // else is how they drift apart and a rename stops covering a form that
+  // resolution still accepts.
+  const renamed = renameStepRefs(
+    { p: '{{ step_1.output.a }}' },
+    new Map([['step_1', 'step_1_step_1']]),
+  );
+  const { unresolved } = resolveStepRefs(
+    renamed,
+    new Map([['step_1_step_1', { a: 'value' }]]),
+  );
+  assert.deepStrictEqual(unresolved, []);
 });
 
 console.log();

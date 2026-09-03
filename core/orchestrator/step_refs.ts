@@ -65,6 +65,53 @@ export function resolveStepRefs(
 }
 
 /** True if anything anywhere in `params` is a reference. Cheap pre-check. */
+/**
+ * Rewrite the step ids inside `{{step_N.output}}` references.
+ *
+ * Needed because a plan's step ids are not always the ids the planner wrote.
+ * Expanding a workflow renames its steps to keep two workflows in one plan
+ * from colliding on `step_1`, and `dependsOn` is rewired to match — but the
+ * references live inside `params`, as text, and were left pointing at the old
+ * name:
+ *
+ *     step_2: {{step_1.output}} could not be resolved.
+ *             Available: step_1_step_1.output {root, query, count, matches…}
+ *
+ * The value was right there, under a name nothing had told step_2 about. Two
+ * steps failed instantly for a rename they could not see.
+ *
+ * Renaming is done here, beside the parser, so there is one definition of what
+ * a reference looks like. A second regex somewhere else is how the two drift.
+ */
+export function renameStepRefs(
+  params: Record<string, unknown>,
+  rename: ReadonlyMap<string, string>,
+): Record<string, unknown> {
+  if (rename.size === 0) return params;
+
+  const rewriteText = (text: string): string =>
+    text.replace(REFERENCE, (whole, stepId: string, path: string) => {
+      const renamed = rename.get(stepId);
+      return renamed ? `{{${renamed}.output${path}}}` : whole;
+    });
+
+  const rewrite = (value: unknown): unknown => {
+    if (typeof value === 'string') return rewriteText(value);
+    if (Array.isArray(value)) return value.map(rewrite);
+    if (value !== null && typeof value === 'object') {
+      const out: Record<string, unknown> = {};
+      for (const [key, inner] of Object.entries(value as Record<string, unknown>)) {
+        out[key] = rewrite(inner);
+      }
+      return out;
+    }
+    return value;
+  };
+
+  return rewrite(params) as Record<string, unknown>;
+}
+
+
 export function hasStepRefs(params: Record<string, unknown>): boolean {
   return findRefs(params).length > 0;
 }

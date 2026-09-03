@@ -223,6 +223,60 @@ function testExpansion(): void {
     out.steps[0].id,
   );
 
+  // The other half of that rename, and the one that was missing. A later step
+  // does not only *wait* for the workflow, it uses what the workflow returned:
+  //
+  //   step_2: {{step_1.output}} could not be resolved.
+  //           Available: step_1_step_1.output {root, query, count, matches...}
+  //
+  // The value was there under a name nothing had told step_2 about, so two
+  // steps failed in a tenth of a second each for a rename they could not see.
+  const withRef: ExecutionPlan = planFor([
+    {
+      id: 'step_1',
+      capability: WORKFLOW_CAPABILITY,
+      action: 'vol2',
+      params: { level: 55 },
+      confirmationTier: 4,
+      dependsOn: [],
+    },
+    {
+      id: 'step_2',
+      capability: 'can_control_os',
+      action: 'run_command',
+      params: { command: ['start', '{{step_1.output}}'] },
+      confirmationTier: 4,
+      dependsOn: ['step_1'],
+    },
+    {
+      id: 'step_3',
+      capability: 'can_control_files',
+      action: 'trace_image',
+      params: { path: '{{step_1.output.matches[0].path}}', detail: 'fine' },
+      confirmationTier: 4,
+      dependsOn: ['step_1'],
+    },
+  ]);
+
+  const refs = expandWorkflows(withRef, store).plan;
+  const later = refs.steps.filter((step) => step.id === 'step_2' || step.id === 'step_3');
+  check(
+    'a reference to a renamed step is rewritten with it',
+    JSON.stringify(later[0].params.command) ===
+      JSON.stringify(['start', '{{step_1_step_1.output}}']),
+    JSON.stringify(later[0].params),
+  );
+  check(
+    'including one that reaches into the result',
+    later[1].params.path === '{{step_1_step_1.output.matches[0].path}}',
+    String(later[1].params.path),
+  );
+  check(
+    'and everything else in the params is left alone',
+    later[1].params.detail === 'fine',
+    JSON.stringify(later[1].params),
+  );
+
   // Anything that depended on the workflow step must now wait for the last
   // step it became, or it would start while the workflow is still running.
   const withDep: ExecutionPlan = planFor([

@@ -106,6 +106,30 @@ void main() {
     expect(reported.artifact!.items.first.label, 'aadhar.pdf');
   });
 
+  test('a failed step is drawn as failed, not ticked', () {
+    // Three steps, two of which failed in a tenth of a second each. The
+    // checklist read 3/3 with three blue ticks, which said the task had gone
+    // fine while the transcript directly above it said the opposite.
+    store.applyFrameForTesting(step('planning', data: {
+      'steps': [
+        {'action': 'find_files', 'params': {'query': 'UI.png'}},
+        {'action': 'run_command', 'params': <String, dynamic>{}},
+        {'action': 'trace_image', 'params': <String, dynamic>{}},
+      ],
+    }));
+
+    store.applyFrameForTesting(
+        step('done', stepId: 'step_1', message: 'Verified'));
+    store.applyFrameForTesting(step('failed',
+        stepId: 'step_2', message: 'could not be resolved'));
+    store.applyFrameForTesting(step('failed',
+        stepId: 'step_3', message: 'could not be resolved'));
+
+    expect(store.plan[0].status, PlanStepStatus.completed);
+    expect(store.plan[1].status, PlanStepStatus.failed);
+    expect(store.plan[2].status, PlanStepStatus.failed);
+  });
+
   test('a step is visible while it is still running', () {
     store.applyFrameForTesting(step('planning', data: {
       'steps': [
