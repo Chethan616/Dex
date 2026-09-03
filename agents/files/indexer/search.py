@@ -101,6 +101,104 @@ def widen(extensions: list) -> list:
     return out
 
 
+def name_tokens(name: str) -> list:
+    """
+    A filename as the words a person would say it contains.
+
+    `facebook-ui-redesign.png` is facebook, ui, redesign, png.
+    `watch-quicklook-38@2x.png` is watch, quicklook, 38, 2x, png — and
+    critically, **not** "ui", even though the letters are sitting there in
+    the middle of "quicklook".
+
+    That was a real result: asked for `ui.png`, the search returned three
+    Apple Watch icons, because `LIKE '%ui%'` is happy to match inside a word.
+    Splitting on separators and case changes is what makes "ui" a word rather
+    than a substring.
+    """
+    return [piece.lower() for piece in WORD.findall(name)]
+
+
+# One word of a filename.
+#
+# The alternation is ordered, and the order is the whole trick:
+#
+#   [A-Z]+(?![a-z])   a run of capitals not starting a word -- the "UI" in
+#                     `MyUIFile`, which a plain lower-to-upper rule misses
+#                     because there is no lowercase letter before the F
+#   [A-Z][a-z]*       an ordinary capitalised word
+#   [a-z]+ | [0-9]+   the rest
+WORD = re.compile(r'[A-Z]+(?![a-z])|[A-Z][a-z]*|[a-z]+|[0-9]+')
+
+
+# How well a filename matches one search word. Lower is better, to match bm25.
+#
+# The gap between the bands is deliberately wide. These are different kinds of
+# answer, not degrees of one, and a file whose name *is* the query should never
+# be crowded by a file that merely contains the letters.
+EXACT_STEM = -1000     # `UI.png` for "ui" — this is the file
+WORD_IN_NAME = -300    # `facebook-ui-redesign.png` — "ui" is one of its words
+PREFIX_OF_WORD = -120  # `uicomponents.png` — a word starts with it
+BURIED = -8            # "ui" inside "quicklook" — almost certainly a coincidence
+
+# Content matches live on the same scale, so one relevance cutoff can weigh a
+# filename match against a text match. They were being added raw from bm25,
+# which ranges over single digits — next to a name score of -1000 that is
+# indistinguishable from no match at all, and an Aadhaar card found only by the
+# word printed on it would have been cut as noise.
+CONTENT_HIT = -250     # the words inside the file matched
+FOLDER_HIT = -60       # only the folder path matched, which is a weak signal
+
+# How far below the best a result may be and still be worth showing.
+#
+# Asked for `ui.png`, the search returned five results: the file itself, one
+# file with "ui" as a word in its name, and three Apple Watch icons whose only
+# claim was the "ui" inside "quicklook". All five were labelled "filename",
+# which made a list of two answers and three coincidences look like a list of
+# five answers.
+#
+# A ratio rather than a fixed floor, because it has to mean the same thing for
+# a query with a perfect hit and one with only weak ones: when nothing matches
+# well, the weak matches are the answer and are all shown.
+RELEVANCE_FLOOR = 0.08
+
+# How many filename candidates to score per word.
+#
+# Generous, because scoring happens in Python and the SQL can only order by a
+# proxy. Measured at about a fifth of a second on a 130,000-file index, which
+# is worth paying to stop a limit from deciding the answer.
+NAME_CANDIDATES = 400
+
+
+def name_score(name: str, word: str) -> float:
+    """
+    How strongly this filename answers this word.
+
+    Weighted by how much of the name the match accounts for. Both
+    `chethankrishna_resume_new.pdf` and `AudioFocusResumePolicyTest.kt` have
+    "resume" as one of their words, so on the bands alone they tie — but it is
+    one word in three against one in six, and the first is far more likely to
+    be what someone asking for "my resume" meant.
+    """
+    lowered = name.lower()
+    stem = lowered.rsplit('.', 1)[0]
+    if stem == word:
+        return EXACT_STEM
+
+    tokens = name_tokens(name)
+    # Floored rather than unbounded, so a long name is ranked lower and not
+    # dismissed. The floor was a half to begin with, which clamped a four-word
+    # name and a six-word one to the same value and left
+    # `AudioFocusResumePolicyTest.kt` tied with `chethankrishna_resume_new.pdf`
+    # on a search for "my resume".
+    share = max(0.25, 2.0 / (1 + len(tokens)))
+
+    if word in tokens:
+        return WORD_IN_NAME * share
+    if any(token.startswith(word) for token in tokens):
+        return PREFIX_OF_WORD * share
+    return BURIED if word in lowered else 0.0
+
+
 def terms_of(query: str) -> tuple:
     """
     A request, split into what to search for and what to filter by.
@@ -134,6 +232,66 @@ def expand(words: list, extra: list | None = None) -> list:
         if cleaned and cleaned not in out:
             out.append(cleaned)
     return out
+
+
+def groups_of(words: list, extra: list | None = None) -> list:
+    """
+    Each search word together with the other names it goes by.
+
+    Grouped rather than flattened because "aadhar" and "aadhaar" are one idea
+    and must count as one requirement, not two. A file matching either has
+    matched the thing the owner asked for.
+    """
+    out = []
+    for word in words:
+        group = [word] + [t for t in ALSO_MEANS.get(word, []) if t != word]
+        out.append(group)
+    if extra:
+        out.append([str(t).strip().lower() for t in extra if str(t).strip()])
+    return [g for g in out if g]
+
+
+def how_common(conn, group: list) -> int:
+    """
+    How many files this word appears in the name of.
+
+    The point of asking is that query words are not equally selective. In
+    "aadhar card", "aadhar" names three files on this machine and "card" names
+    five hundred — every Dart and Kotlin card widget in every project. Treating
+    them as equal claims is what put `animated_card.dart` in a list of Aadhaar
+    cards.
+
+    Counted as *tokens*, through the full-text index, not as substrings.
+    That distinction decided the answer here: "uid" appears inside 175
+    filenames on this machine and is a word in none of them - it is the
+    middle of "guide" and "build". Counted as substrings the Aadhaar group
+    looked more common than "card", so the filter kept the card widgets and
+    dropped the cards.
+    """
+    total = 0
+    for term in group:
+        if ' ' in term:
+            continue  # a phrase is for the content pass, not for filenames
+        try:
+            row = conn.execute(
+                'SELECT COUNT(*) FROM search WHERE search MATCH ?',
+                (f'path_text : {term}',),
+            ).fetchone()
+        except Exception:  # noqa: BLE001 - a term FTS cannot parse is not a crash
+            continue
+        total += row[0] if row else 0
+    return total
+
+
+def only_answers_a_common_word(entry: dict, key: set) -> bool:
+    """
+    Whether this result matched none of the query's distinctive words.
+
+    `animated_card.dart` matched "card" and nothing else, while the query's
+    distinctive word was "aadhar". It is not a worse answer to the question —
+    it is an answer to a different one.
+    """
+    return not (entry.get('matched') or set()) & key
 
 
 def _fts_query(terms: list) -> str:
@@ -183,6 +341,16 @@ def search(query: str, limit: int = 25, extra_terms: list | None = None,
     terms = expand(words, extra_terms)
     conn = store.connect()
 
+    # The query's most distinctive word, decided by how many filenames carry
+    # it rather than by a list of words to ignore. What is generic depends on
+    # the disk: "card" is noise on a machine full of Flutter projects and is
+    # not on someone else's.
+    groups = groups_of(words, extra_terms)
+    key_group: set = set()
+    if len(groups) > 1:
+        rarest = min(groups, key=lambda g: how_common(conn, g))
+        key_group = set(rarest)
+
     ext_clause, ext_args = '', []
     if extensions:
         widened = widen([e.lower() for e in extensions])
@@ -202,20 +370,43 @@ def search(query: str, limit: int = 25, extra_terms: list | None = None,
         rows = conn.execute(
             'SELECT f.path, f.name, f.ext, f.size, f.modified, f.content '
             'FROM files f WHERE lower(f.name) LIKE ?' + ext_clause + under_clause +
-            ' LIMIT ?',
-            [f'%{word}%', *ext_args, *under_args, limit * 4],
+            # Shortest names first, and only then a limit.
+            #
+            # There was no ordering here, so `LIMIT` took whichever rows the
+            # scan reached first: on a word matching 4,591 files, one of the
+            # two copies of `UI.png` simply fell outside the window and the
+            # search reported one when there were two. A limit without an
+            # order is a random sample.
+            #
+            # Length is the right proxy: a file whose name *is* the word is
+            # the shortest name that can contain it, so the strongest matches
+            # are exactly the ones this keeps.
+            ' ORDER BY length(f.name) LIMIT ?',
+            [f'%{word}%', *ext_args, *under_args, NAME_CANDIDATES],
         ).fetchall()
         for path, name, ext, size, modified, kind in rows:
+            gain = name_score(name, word)
+            if gain == 0.0:
+                continue
+
             entry = found.setdefault(path, {
                 'path': path, 'name': name, 'ext': ext, 'size': size,
                 'modified': modified, 'why': [], 'snippet': '', 'kind': kind,
                 'score': 0.0,
             })
-            if 'filename' not in entry['why']:
-                entry['why'].append('filename')
-            # An exact stem match is the strongest signal there is.
-            stem = name.lower().rsplit('.', 1)[0]
-            entry['score'] -= 100 if stem == word else 40
+            entry['score'] += gain
+            entry.setdefault('matched', set()).add(word)
+
+            # Say which kind of name match it was, because "filename" on both
+            # `UI.png` and `watch-quicklook-38@2x.png` is what made a list of
+            # coincidences look like a list of answers.
+            label = (
+                'exact name' if gain == EXACT_STEM
+                else 'name contains it' if gain == BURIED
+                else 'filename'
+            )
+            if label not in entry['why']:
+                entry['why'].append(label)
 
     # --- by content ---------------------------------------------------------
     expression = _fts_query(terms)
@@ -236,21 +427,56 @@ def search(query: str, limit: int = 25, extra_terms: list | None = None,
                 'modified': modified, 'why': [], 'snippet': '', 'kind': kind,
                 'score': 0.0,
             })
-            entry['score'] += float(score or 0)
-            if snip and not entry['snippet']:
-                entry['snippet'] = snip.strip()[:200]
-                entry['why'].append('OCR text' if kind == 'ocr' else 'text inside')
-            if not entry['why'] and any(w in path_text.lower() for w in words):
-                entry['why'].append('folder name')
+
+            # Tokens, for the same reason `how_common` counts them: "uid" is
+            # inside "guide", and a substring test here let `card.png` under
+            # `flutter-widget-positioning-guide` claim it had matched the
+            # query's distinctive word.
+            haystack = set(name_tokens(name)) | set(name_tokens(path_text))
+            body_text = (snip or '').lower()
+            for term in terms:
+                if ' ' in term:
+                    if term in body_text:
+                        entry.setdefault('matched', set()).add(term)
+                elif term in haystack or term in set(name_tokens(body_text)):
+                    entry.setdefault('matched', set()).add(term)
+
+            # bm25 as the tiebreaker within a band, not as the score itself.
+            if snip and snip.strip():
+                if not entry['snippet']:
+                    entry['snippet'] = snip.strip()[:200]
+                    entry['why'].append('OCR text' if kind == 'ocr' else 'text inside')
+                entry['score'] += CONTENT_HIT + float(score or 0)
+            elif not entry['why']:
+                if any(w in path_text.lower() for w in words):
+                    entry['why'].append('folder name')
+                entry['score'] += FOLDER_HIT + float(score or 0)
             hit = [t for t in terms if t not in words
                    and t in (name + ' ' + (snip or '')).lower()]
             if hit and not any(w.startswith('also called') for w in entry['why']):
                 entry['why'].append(f'also called "{hit[0]}"')
 
-    matches = sorted(found.values(), key=lambda m: m['score'])
+    ranked = sorted(found.values(), key=lambda m: m['score'])
+
+    # Results that answer only the common word go first, before the score
+    # cutoff — a file whose name *is* "card" scores well on a query about
+    # Aadhaar cards, and no amount of score arithmetic separates it from a
+    # real answer. Skipped when nothing matched the distinctive word, because
+    # then these are all there is.
+    dropped = 0
+    if key_group:
+        strong = [m for m in ranked if not only_answers_a_common_word(m, key_group)]
+        if strong:
+            dropped = len(ranked) - len(strong)
+            ranked = strong
+
+    kept, weak = cut_off(ranked)
+    matches, dropped = kept, dropped + weak
+
     for match in matches:
         match.pop('score', None)
         match.pop('kind', None)
+        match.pop('matched', None)
         if not match['why']:
             match['why'] = ['matched']
 
@@ -260,5 +486,32 @@ def search(query: str, limit: int = 25, extra_terms: list | None = None,
         'restricted_to': extensions or None,
         'matches': matches[:limit],
         'total': len(matches),
+        # Said rather than hidden. "5 files found" that silently meant "2 good
+        # ones and 3 coincidences" is the failure; "2 found, 3 weaker ones not
+        # shown" is an answer the owner can act on.
+        'also_matched_weakly': dropped,
         'index': store.stats(),
     }
+
+
+def cut_off(ranked: list) -> tuple:
+    """
+    Keep the results that answer the question; count the rest.
+
+    Everything within `RELEVANCE_FLOOR` of the best result stays. When the best
+    result is strong that cuts hard — an exact filename match at -1000 keeps
+    anything at -80 or better and drops a coincidental substring at -8. When
+    nothing matches well it cuts nothing, because then the weak matches are all
+    there is and hiding them would be answering "not found" to a question that
+    did find something.
+    """
+    if not ranked:
+        return [], 0
+
+    best = ranked[0]['score']
+    if best >= 0:
+        return ranked, 0
+
+    threshold = best * RELEVANCE_FLOOR
+    kept = [m for m in ranked if m['score'] <= threshold]
+    return kept, len(ranked) - len(kept)

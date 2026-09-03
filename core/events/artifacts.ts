@@ -91,12 +91,23 @@ function describeFiles(data: Record<string, unknown>): Artifact | undefined {
   const total = typeof data.count === 'number' ? data.count : items.length;
   const query = typeof data.query === 'string' ? data.query : '';
 
+  // Results the search ranked as too weak to show. Said rather than hidden:
+  // a search that quietly dropped 77 near-misses and one that found only 3
+  // look identical otherwise, and the owner cannot tell whether to rephrase.
+  const weak = typeof data.also_matched_weakly === 'number'
+    ? data.also_matched_weakly
+    : 0;
+
   return {
     kind: 'files',
     title: total === 1 ? '1 file found' : `${total} files found`,
     items,
     total,
-    note: [query && `for "${query}"`, typeof data.searched === 'string' ? data.searched : '']
+    note: [
+      query && `for "${query}"`,
+      weak > 0 ? `${weak} weaker match${weak === 1 ? '' : 'es'} not shown` : '',
+      typeof data.searched === 'string' ? data.searched : '',
+    ]
       .filter(Boolean)
       .join(' · ') || undefined,
   };

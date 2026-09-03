@@ -36,6 +36,8 @@ export interface IndexSearch {
   restricted_to: string[] | null;
   matches: IndexMatch[];
   total: number;
+  /** Ranked too weakly to show. Counted so the answer can say so. */
+  also_matched_weakly: number;
   index: IndexStats;
 }
 

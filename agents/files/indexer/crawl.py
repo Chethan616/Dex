@@ -52,6 +52,75 @@ SKIP_DIRS = {
 # Never descended into, matched on the full path prefix.
 SKIP_PREFIXES = ('c:\\windows', 'c:\\program files', 'c:\\programdata')
 
+# Uninstall keys, which is where Windows records what is installed and where.
+UNINSTALL_KEYS = (
+    ('HKLM', 'SOFTWARE'),
+    ('HKLM', 'SOFTWARE\\WOW6432Node'),
+    ('HKCU', 'SOFTWARE'),
+)
+
+
+def installed_locations() -> tuple:
+    """
+    Where installed programs live, asked of Windows rather than guessed.
+
+    `SKIP_PREFIXES` covers the three standard directories, and misses every
+    program installed anywhere else. On this machine that is Visual Studio
+    Code at `D:\\Microsoft VS Code`, whose extension folder contains two
+    copies of `resume.svg` — so a search for "my resume" returned editor icons
+    ahead of the owner's actual CV, both of them a perfectly exact match on
+    the name.
+
+    A rule about paths could not have caught that, and a list of program names
+    would go stale the next time something is installed. The registry already
+    knows, on every drive, and it is the same source `find_program` uses.
+    """
+    if os.name != 'nt':
+        return ()
+
+    import winreg
+
+    hives = {'HKLM': winreg.HKEY_LOCAL_MACHINE, 'HKCU': winreg.HKEY_CURRENT_USER}
+    found: set = set()
+
+    for hive_name, prefix in UNINSTALL_KEYS:
+        path = prefix + '\\Microsoft\\Windows\\CurrentVersion\\Uninstall'
+        try:
+            key = winreg.OpenKey(hives[hive_name], path)
+        except OSError:
+            continue
+        try:
+            count = winreg.QueryInfoKey(key)[0]
+            for index in range(count):
+                try:
+                    with winreg.OpenKey(key, winreg.EnumKey(key, index)) as entry:
+                        location, _ = winreg.QueryValueEx(entry, 'InstallLocation')
+                except OSError:
+                    continue
+                cleaned = str(location or '').strip().strip('"').rstrip('\\/')
+                # A short value is a drive root or rubbish, and skipping a
+                # drive root would skip the disk.
+                if len(cleaned) > 3:
+                    found.add(cleaned.lower())
+        finally:
+            key.Close()
+
+    return tuple(sorted(found))
+
+
+_installed: tuple | None = None
+
+
+def skip_prefixes() -> tuple:
+    """The standard directories plus wherever else programs were installed."""
+    global _installed
+    if _installed is None:
+        try:
+            _installed = installed_locations()
+        except Exception:  # noqa: BLE001 - an unreadable registry is not a crawl failure
+            _installed = ()
+    return SKIP_PREFIXES + _installed
+
 # A crawl is mostly waiting on the disk and on OCR, so threads help even in
 # Python. Modest, because the owner is using the machine at the same time.
 WORKERS = 6
@@ -261,7 +330,7 @@ def walk(root: Path, seen_dirs: set | None = None):
         current = stack.pop()
         lowered = str(current).lower()
 
-        if any(lowered.startswith(prefix) for prefix in SKIP_PREFIXES):
+        if any(lowered.startswith(prefix) for prefix in skip_prefixes()):
             continue
 
         # Already walked under an earlier root. The owner's folders sit inside

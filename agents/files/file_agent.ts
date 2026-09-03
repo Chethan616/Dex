@@ -161,6 +161,7 @@ export class FileAgent implements Agent {
         restricted_to: found.restricted_to ?? undefined,
         count: matches.length,
         truncated: found.total > matches.length,
+        also_matched_weakly: found.also_matched_weakly,
         searched: describeIndex(stats),
         indexed_at: stats.built ?? undefined,
         matches,

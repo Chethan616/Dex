@@ -102,7 +102,38 @@ found = search.search('find UI.png on my desktop', limit=5)
 names = [m['name'] for m in found['matches']]
 check('UI.png is found at all', 'UI.png' in names, str(names[:5]))
 check('UI.png ranks first among 40 decoys', names[:1] == ['UI.png'], str(names[:3]))
-check('and it says why', 'filename' in found['matches'][0]['why'] if names else False)
+# "filename" on both `UI.png` and `watch-quicklook-38@2x.png` is what made a
+# list of two answers and three coincidences look like five answers, so the
+# reason distinguishes them now.
+check('and it says the name matched exactly',
+      'exact name' in found['matches'][0]['why'] if names else False,
+      str(found['matches'][0]['why']) if names else '')
+
+# --- a coincidence is not a match --------------------------------------------
+# `watch-quicklook-38@2x.png` was returned for "ui.png", three times, because
+# `LIKE '%ui%'` is happy to match the middle of "quicklook".
+(home / 'Desktop' / 'UI' / 'watch-quicklook-38@2x.png').write_bytes(PNG)
+(home / 'Desktop' / 'UI' / 'facebook-ui-redesign.png').write_bytes(PNG)
+crawl.crawl(scope=str(home / 'Desktop'))
+
+check('a word is a word, not a substring',
+      'ui' not in search.name_tokens('watch-quicklook-38@2x.png'),
+      str(search.name_tokens('watch-quicklook-38@2x.png')))
+check('and camelCase is a word boundary too',
+      'ui' in search.name_tokens('MyUIFile.png'),
+      str(search.name_tokens('MyUIFile.png')))
+check('an exact name beats a word in a name beats a coincidence',
+      search.name_score('UI.png', 'ui')
+      < search.name_score('facebook-ui-redesign.png', 'ui')
+      < search.name_score('watch-quicklook-38@2x.png', 'ui'))
+
+found = search.search('ui.png', limit=10)
+names = [m['name'] for m in found['matches']]
+check('the coincidence is not shown at all',
+      not any('quicklook' in n for n in names), str(names))
+check('but the file itself is, first', names[:1] == ['UI.png'], str(names[:3]))
+check('and the ones dropped are counted, not silently gone',
+      found['also_matched_weakly'] >= 1, str(found['also_matched_weakly']))
 
 # --- the Aadhaar failure -----------------------------------------------------
 found = search.search('Search for aadhar card files in my pc', limit=5)
