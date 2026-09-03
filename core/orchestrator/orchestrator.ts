@@ -15,6 +15,7 @@ import { ArtifactStore } from '../memory/artifacts';
 import { ConfirmationManager } from '../confirmation/confirmation_manager';
 import { describeUnresolved, findRefs, resolveStepRefs } from './step_refs';
 import { worthRetrying } from '../reliability/exit_codes';
+import { describeArtifact } from '../events/artifacts';
 import { statusOf } from './liveness';
 import { emit } from '../events/bus';
 
@@ -549,6 +550,7 @@ export class Orchestrator {
       emit('done', message, requestId, step.id, {
         ...this.agentEventData(agentName, ctx.signal?.(), previousSteps),
         verification: verification.status,
+        artifact: describeArtifact(step.action, result.data),
       });
       // What it returned, kept so a later step can use it. See `outputs`.
       this.outputs.set(step.id, result.data);
@@ -568,6 +570,7 @@ export class Orchestrator {
       emit('done', message, requestId, step.id, {
         ...this.agentEventData(agentName, ctx.signal?.(), previousSteps),
         verification: verification.status,
+        artifact: describeArtifact(step.action, result.data),
       });
       // Unverifiable is not untrue — the step ran and returned something, there
       // was simply no independent way to confirm it. A later step may still
@@ -664,6 +667,7 @@ export class Orchestrator {
       emit('done', message, requestId, step.id, {
         ...this.agentEventData(agentName, retryCtx.signal?.(), previousSteps),
         verification: retryVerification.status,
+        artifact: describeArtifact(step.action, result.data),
       });
       completed.add(step.id);
       return 'ok';

@@ -51,6 +51,61 @@ void main() {
     expect(store.plan.every((s) => s.status == PlanStepStatus.pending), isTrue);
   });
 
+  test('a repaired plan ticks the step that actually finished', () {
+    // Real ids from a repaired plan: `step_1_step_1` and `step_1_step_2`.
+    // Reading the first number in each made both of them step one, so the
+    // second step ran, finished, and the checklist stayed at 1/2 with a
+    // hollow circle beside work that was already done.
+    store.applyFrameForTesting(step('planning', data: {
+      'steps': [
+        {'action': 'find_files', 'params': {'query': 'aadhar'}},
+        {'action': 'find_files', 'params': {'query': 'aadhaar'}},
+      ],
+    }));
+
+    store.applyFrameForTesting(
+        step('done', stepId: 'step_1_step_1', message: 'Verified'));
+    store.applyFrameForTesting(
+        step('done', stepId: 'step_1_step_2', message: 'Verified'));
+
+    expect(
+      store.plan.map((s) => s.status),
+      everyElement(PlanStepStatus.completed),
+      reason: 'both steps finished, so both rows must be ticked',
+    );
+  });
+
+  test('a file search is drawn as a card, not read out', () {
+    store.applyFrameForTesting(step('planning', data: {
+      'steps': [
+        {'action': 'find_files', 'params': {'query': 'aadhar'}},
+      ],
+    }));
+    store.applyFrameForTesting(step('selecting',
+        stepId: 'step_1',
+        message: 'search for files',
+        data: {'action': 'find_files', 'capability': 'can_control_files'}));
+    store.applyFrameForTesting(
+        step('done', stepId: 'step_1', message: 'Verified', data: {
+      'artifact': {
+        'kind': 'files',
+        'title': '2 files found',
+        'total': 2,
+        'items': [
+          {'label': 'aadhar.pdf', 'detail': 'C:/Users/cheth/aadhar.pdf'},
+          {'label': 'scan001.jpg', 'detail': 'C:/Users/cheth/scan001.jpg'},
+        ],
+      },
+    }));
+
+    final reported = store.messages.lastWhere(
+      (m) => m.speaker == MessageSpeaker.toolChip,
+    );
+    expect(reported.artifact, isNotNull);
+    expect(reported.artifact!.items, hasLength(2));
+    expect(reported.artifact!.items.first.label, 'aadhar.pdf');
+  });
+
   test('a step is visible while it is still running', () {
     store.applyFrameForTesting(step('planning', data: {
       'steps': [

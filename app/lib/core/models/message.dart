@@ -8,6 +8,7 @@
 // rich Action card can be correlated and updated together.
 
 import 'action_step.dart';
+import 'artifact.dart';
 import 'engine.dart';
 
 enum MessageSpeaker { human, agent, action, toolChip }
@@ -37,6 +38,13 @@ class Message {
   /// the Live panel both render an engine pill when this is non-null.
   final EngineId? engine;
 
+  /// What the step produced, when it has enough structure to draw.
+  ///
+  /// A list of files is a list; rendering it as a paragraph was the bug this
+  /// carries the fix for. Null for every step whose result a sentence covers,
+  /// which is most of them.
+  final Artifact? artifact;
+
   const Message({
     required this.id,
     required this.speaker,
@@ -51,6 +59,7 @@ class Message {
     this.toolGoal,
     this.chipState,
     this.engine,
+    this.artifact,
   });
 
   Message copyWith({

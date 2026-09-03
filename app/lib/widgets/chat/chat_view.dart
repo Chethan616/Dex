@@ -16,6 +16,7 @@ import '../message_agent_prose.dart';
 import '../message_human.dart';
 import 'chat_header.dart';
 import 'day_separator.dart';
+import 'artifact_card.dart';
 import 'step_row.dart';
 import 'task_plan_card.dart';
 
@@ -149,6 +150,19 @@ class _ChatViewState extends State<ChatView> {
             activity = a;
             break;
           }
+        }
+        // The step line, and under it what the step produced — when that is
+        // something with structure. The card replaces the paragraph that used
+        // to read out every path three times.
+        if (m.artifact != null) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              StepRow(message: m, activity: activity),
+              ArtifactCard(artifact: m.artifact!),
+            ],
+          );
         }
         return StepRow(message: m, activity: activity);
       case MessageSpeaker.action:

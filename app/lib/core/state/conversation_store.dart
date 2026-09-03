@@ -34,6 +34,7 @@ import '../models/action_preview.dart';
 import '../models/action_step.dart';
 import '../models/agent_state.dart';
 import '../models/engine.dart';
+import '../models/artifact.dart';
 import '../models/message.dart';
 import '../models/plan_step.dart';
 import '../models/reminder.dart';
@@ -335,7 +336,12 @@ class ConversationStore extends ChangeNotifier {
           // A step finished. The message carries the verification — "read back
           // as 35%", "Window open: Calculator" — which is the sentence worth
           // keeping on the card.
-          _finishActivity(_key(frame), ok: true, summary: frame.message);
+          _finishActivity(
+            _key(frame),
+            ok: true,
+            summary: frame.message,
+            artifact: Artifact.tryParse((frame.dataMap ?? const {})['artifact']),
+          );
           _markPlan(frame.stepId!, PlanStepStatus.completed);
         } else {
           // No step id: this is the task's closing line. The result frame
@@ -487,8 +493,17 @@ class ConversationStore extends ChangeNotifier {
     // trailing number is the index. When it is not — a planner naming steps
     // `step_4_wait_settings` — the first pending entry is advanced instead,
     // which keeps the checklist moving rather than freezing on a name mismatch.
-    final match = RegExp(r'(\d+)').firstMatch(stepId);
-    final index = match != null ? int.parse(match.group(1)!) - 1 : -1;
+    //
+    // The *last* number, not the first. A repaired plan numbers its steps
+    // `step_1_step_1` and `step_1_step_2`, and taking the first match read
+    // both as step one: the second step ran, finished, and the checklist sat
+    // at 1/2 with a hollow circle next to work that was already done. A
+    // progress display that under-reports is worse than none, because it
+    // looks like something is stuck.
+    final numbers = RegExp(r'(\d+)').allMatches(stepId).toList();
+    final index = numbers.isNotEmpty
+        ? int.parse(numbers.last.group(1)!) - 1
+        : -1;
 
     if (index >= 0 && index < _plan.length) {
       _plan = [
@@ -551,7 +566,12 @@ class ConversationStore extends ChangeNotifier {
     );
   }
 
-  void _finishActivity(String stepId, {required bool ok, String? summary}) {
+  void _finishActivity(
+    String stepId, {
+    required bool ok,
+    String? summary,
+    Artifact? artifact,
+  }) {
     final at = _activities.indexWhere((a) => a.callId == stepId);
     if (at != -1) {
       _activities[at] = _activities[at].copyWith(
@@ -574,6 +594,7 @@ class ConversationStore extends ChangeNotifier {
           toolGoal: m.toolGoal,
           engine: m.engine,
           chipState: ok ? ToolChipState.done : ToolChipState.failed,
+          artifact: artifact,
         );
         break;
       }

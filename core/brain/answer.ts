@@ -11,6 +11,8 @@
  * should not spend a model call to phrase a line into a log.
  */
 
+import { describeArtifact } from '../events/artifacts';
+
 /** Values worth naming when they appear, in the order a person would say them. */
 const PREFERRED_KEYS = [
   'plan', 'level', 'muted', 'enabled', 'status', 'state', 'value',
@@ -22,6 +24,33 @@ const SKIPPED_KEYS = new Set([
   'action', 'guid', 'raw', 'requested', 'found_via', 'ok', 'success',
   'truncated', 'band', 'what_it_does', 'sha256', 'relative_path',
 ]);
+
+/**
+ * Values the app draws as a card, and prose must therefore not repeat.
+ *
+ * Suppressed only when a card actually exists for that action — asked by
+ * `describeArtifact`, not assumed from the key name. The first version keyed
+ * off the name alone and silently swallowed `list_dir`'s entries, which have
+ * no card: the listing simply stopped being reported. A rule that hides
+ * information has to be tied to the thing that shows it instead.
+ *
+ * A search that found twenty files was being read out as
+ * `matches name=… path=… directory=…, name=… (+12 more)` — every path three
+ * times, in a paragraph. The list is still in the result, still available to a
+ * later step, and now rendered as rows the owner can scan and click; saying it
+ * again in a sentence is not thoroughness, it is the same information in the
+ * shape that suits it least.
+ *
+ * The count survives, because "20 files" is the part a sentence says well.
+ */
+const DRAWN_KEYS = new Set(['matches', 'items', 'entries', 'files', 'results']);
+
+/** Whether this fact's list is already on screen as a card. */
+function isDrawn(fact: Record<string, unknown>, key: string): boolean {
+  if (!DRAWN_KEYS.has(key)) return false;
+  const action = typeof fact.action === 'string' ? fact.action : '';
+  return describeArtifact(action, fact) !== undefined;
+}
 
 /**
  * Render the collected step data as plain text.
@@ -45,7 +74,8 @@ export function renderFacts(facts: Record<string, unknown>[]): string {
 function renderOne(fact: Record<string, unknown>): string {
   const entries = Object.entries(fact).filter(
     ([key, value]) =>
-      !SKIPPED_KEYS.has(key) && value !== undefined && value !== null && value !== '',
+      !SKIPPED_KEYS.has(key) && !isDrawn(fact, key) &&
+      value !== undefined && value !== null && value !== '',
   );
   if (entries.length === 0) return '';
 
@@ -117,6 +147,21 @@ export function factsForPhrasing(
     for (const [key, value] of Object.entries(fact)) {
       if (key !== 'action' && SKIPPED_KEYS.has(key)) continue;
       if (value === undefined || value === null || value === '') continue;
+
+      // A list the app draws is summarised for the model rather than handed
+      // over whole. Given twenty file records it will read out twenty file
+      // records; given "20 files, the first is X" it writes the sentence that
+      // belongs above the card.
+      if (isDrawn(fact, key) && Array.isArray(value)) {
+        const first = value[0];
+        const name = first && typeof first === 'object'
+          ? (first as Record<string, unknown>).name ?? (first as Record<string, unknown>).path
+          : first;
+        cleaned[key] = value.length === 1
+          ? `1 result: ${String(name ?? '')}`
+          : `${value.length} results, the closest being ${String(name ?? '')}`;
+        continue;
+      }
       cleaned[key] = clip(value);
     }
     return cleaned;
