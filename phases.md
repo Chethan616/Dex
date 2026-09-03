@@ -10,8 +10,8 @@ Phase 6 lands.
 | 2 | Find anything on this PC | **done** |
 | 3 | Real conversation history, and the navigation around it | **done** |
 | 4 | Reminders, schedules, and the slash commands | **done** |
-| 5 | Connectors and accounts | next |
-| 6 | Your real browser, forked in | |
+| 5 | Connectors and accounts | **done** |
+| 6 | Your real browser, forked in | next |
 
 ---
 
@@ -189,10 +189,40 @@ that was already there, `/vision` is gone, and `/find`, `/explain`, `/remind`,
 
 Tests: `npm run test:reminders` (22), `flutter test` slash commands (17).
 
-## Phase 5 — Connectors and accounts
+## Phase 5 · Connectors and accounts · **done**
 
-Telegram, Discord, WhatsApp pairing from Settings. Google Workspace OAuth end
-to end.
+The Connectors tab could report a channel's state and do nothing about it. The
+only way to pair one was an environment variable and a restart, which the
+screen never mentioned — so the row saying "no owner id" named a problem with
+no way to fix it.
+
+Underneath was worse: owner ids were read from `DEX_OWNER_TELEGRAM` while
+`telegramOwner` sat in the settings store, written by Settings and read by the
+health check. The screen could report Telegram ready while the core, looking
+somewhere else, had never started it — and the OwnerGate, reading the same
+empty variable, would have rejected the owner's own messages if it had.
+
+`channels/manager.ts` reads the settings the screen writes and starts and stops
+channels while Dex runs, so pairing takes effect where it was made. Tokens go
+to the OS credential store; ids are usernames and live with the settings.
+
+**Send yourself a test message** is the point of the screen. Everything else on
+it is a claim — a token can be valid, the bot can be running, and the owner id
+can be a plausible number belonging to somebody else, and every status would
+still say connected. The adapters gained `sendTo`, and a failure names which
+part broke: Telegram will not let a bot message you first, Discord needs a
+shared server, and both are things the owner can go and change.
+
+Connected accounts got the same treatment. "Email, calendar and files" reported
+available because a client id was *stored*. Testing now starts the MCP server
+and lists its tools — the cheapest call that exercises spawn, handshake and
+credential injection — and the answer is a list rather than a boolean.
+
+Nothing here was run against a live Google, Telegram or Discord account: the
+adapters are faked in the tests, and what is checked is which facts the manager
+reads and what it does with them.
+
+Tests: `npm run test:connectors` (21).
 
 ## Phase 6 — Your real browser, forked in
 
