@@ -285,6 +285,65 @@ ${task}` : task;
       return this.transportFailure(err, requestId, stepId);
     }
 
+    // A run that worked is a route nobody had to be asked for.
+    //
+    // Routes only ever came from `learn_route` — the owner driving once while
+    // Dex watched. Everything else started from nothing every time, which is
+    // how "change my GitHub status" became twenty-five steps of looking for a
+    // settings page that does not have it. The status control is on the
+    // profile page, and no amount of reasoning finds that faster than
+    // remembering it.
+    //
+    // So a successful browse writes down the path it took. Not a hardcoded map
+    // of GitHub — a record of what worked here, on this site, for this goal,
+    // which is the same thing `learn_route` produces and is scored and
+    // forgotten by the same rules when it stops working.
+    const rememberPath = (data: Record<string, unknown>): void => {
+      if (route) return;  // There was already one; markWorked has it.
+
+      const steps = Array.isArray(data.steps) ? data.steps : [];
+      const path: Array<{ text: string; url?: string }> = [];
+
+      for (const entry of steps) {
+        const step = entry as Record<string, unknown>;
+        const action = typeof step.action === 'string' ? step.action : '';
+        const url = typeof step.url === 'string' ? step.url : undefined;
+        // Only the steps that moved: a wait or a scroll is not part of the
+        // path, and recording them would teach Dex to repeat the hesitation.
+        if (!action || /^(wait|scroll|screenshot|extract|read)/i.test(action)) continue;
+        path.push({ text: action.slice(0, 200), url });
+      }
+
+      // One step is not a route — it is a URL, and the planner can already
+      // navigate. Anything longer is knowledge worth keeping.
+      if (path.length < 2) return;
+
+      // The store normalises this itself, so the raw URL is fine — and using
+      // its own rule means a route saved here and one saved by learn_route
+      // land under the same key rather than two that never match.
+      const origin = typeof data.url === 'string' && data.url
+        ? data.url
+        : String(params.start_url ?? '');
+      if (!origin) return;
+
+      const goal = String(params.task ?? '').slice(0, 120).trim();
+      if (!goal) return;
+
+      try {
+        this.routes.save({ origin, goal, steps: path });
+        emit(
+          'routing',
+          `Remembered how to do that on ${origin} — ${path.length} steps, so ` +
+            'next time is direct.',
+          requestId,
+          stepId,
+        );
+      } catch {
+        // A route that cannot be written is a slower task next time, not a
+        // failed one.
+      }
+    };
+
     // A route that led somewhere is worth keeping; one that did not is on its
     // way to being forgotten. Two failures in a row and it goes — see
     // SiteRouteStore.markFailed.
@@ -370,6 +429,13 @@ ${task}` : task;
     // outcome, not on a hand-off along the way: the owner solving a CAPTCHA
     // says nothing about whether the route was right.
     scoreRoute(response.success === true);
+
+    // And write down the path if there was not one already. A run that worked
+    // is the cheapest possible lesson: nobody had to be asked, and nothing was
+    // hardcoded about this site.
+    if (response.success === true) {
+      rememberPath(response as unknown as Record<string, unknown>);
+    }
 
     if (!response.success) {
       emit('failed', `Browser: ${response.error ?? 'unknown error'}`, requestId, stepId);

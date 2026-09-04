@@ -68,6 +68,21 @@ class BrowserBackend:
         self.headless = headless
         self.runs: dict[str, BrowserRun] = {}
 
+    async def ask(self, prompt: str, mode: str | None = None) -> str:
+        """
+        One turn of the model, with no browser attached.
+
+        For the owner-browser loop, which cannot use browser_use at all — the
+        page is behind the extension's WebSocket rather than a CDP connection
+        this process owns. Routed through the same `_llm` so the owner's
+        provider and their Fast/Smart choice apply there too, rather than the
+        loop quietly picking its own.
+        """
+        from browser_use.llm.messages import UserMessage
+
+        reply = await self._llm(mode).ainvoke([UserMessage(content=prompt)])
+        return getattr(reply, 'completion', None) or str(reply)
+
     def _llm(self, mode: str | None = None):
         """
         The model driving the browsing loop.

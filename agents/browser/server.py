@@ -136,7 +136,8 @@ async def lifespan(_app: FastAPI):
 
 
 import browser_choice
-from bridge import bridge
+import bridge_agent
+from bridge import bridge, routing
 
 app = FastAPI(title='DEX Browser Agent', version='0.1.0', lifespan=lifespan)
 
@@ -225,6 +226,40 @@ async def run_task(req: RunTaskRequest) -> dict[str, Any]:
             'retryable': False,
         }
     log.info('[%s] task: %s', req.step_id, req.task)
+
+    # Which browser should do this.
+    #
+    # The rule was written and never called, which is why a request to change a
+    # GitHub status ran in the browser Dex launched — signed in to nothing —
+    # hit the password wall, and then spent twenty-five steps looking for a way
+    # in. The owner's own browser was open the whole time with the extension
+    # attached.
+    where = routing(req.task)
+
+    if where == 'owner':
+        log.info('[%s] using the owner browser (attached)', req.step_id)
+        result = await bridge_agent.run(req.task, _ask_model)
+        result.setdefault('browser', 'owner')
+        return result
+
+    if where == 'owner-unavailable':
+        # Said, rather than quietly substituted. Dex's own browser is signed in
+        # to nothing, so running this there produces a confident answer about
+        # somebody else's logged-out view of the page — which is what happened.
+        return {
+            'success': False,
+            'error': (
+                'This needs the browser you are signed in to, and none is '
+                'attached. Open Chrome with the Dex extension loaded. '
+                "Dex's own browser cannot help here: Chrome deliberately "
+                'blocks every other way into a signed-in profile — a copied '
+                'profile arrives signed out, and remote debugging is refused '
+                'on the default profile.'
+            ),
+            'retryable': False,
+            'browser': 'owner-unavailable',
+        }
+
     return await autonomous().start_task(
         task=req.task,
         start_url=req.start_url,
@@ -232,6 +267,16 @@ async def run_task(req: RunTaskRequest) -> dict[str, Any]:
         verify=req.verify.model_dump() if req.verify else None,
         browser=req.browser, mode=req.mode,
     )
+
+
+async def _ask_model(prompt: str) -> str:
+    """
+    One turn of the model, for the owner-browser loop.
+
+    Routed through the same backend the autonomous path uses, so the owner's
+    choice of provider and model applies here too.
+    """
+    return await autonomous().ask(prompt)
 
 
 @app.post('/resume')
