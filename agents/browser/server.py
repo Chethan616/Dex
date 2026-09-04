@@ -15,6 +15,7 @@ Start: python agents/browser/server.py
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sys
@@ -287,6 +288,33 @@ async def open_profile(req: OpenProfileRequest) -> dict[str, Any]:
     if not result.get('ok'):
         return _bad(result.get('error', 'could not open the profile'))
     return {'success': True, 'data': result}
+
+
+@app.get('/handshake')
+async def handshake() -> dict[str, Any]:
+    """
+    Where the core is, and the token to talk to it.
+
+    For the extension's chat panel, which cannot read
+    the core's handshake file on disk - an extension has no filesystem
+    access. It can reach 127.0.0.1, so the address is handed over here.
+
+    This is not a widening of anything. The token authenticates a *loopback*
+    socket, and anything able to call this endpoint can already reach that
+    socket; both are refused from anywhere but this machine. What it protects
+    against is a web page reaching the core, and a web page cannot call this
+    either — there is no CORS header, so the browser blocks the read before it
+    starts. The extension is exempt because it holds a host permission the
+    owner granted when they installed it.
+    """
+    base = os.environ.get('LOCALAPPDATA') or os.environ.get('USERPROFILE') or '.'
+    path = Path(base) / 'DEX' / 'ui.json'
+    if not path.exists():
+        return _bad('the core is not running')
+    try:
+        return json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, ValueError) as exc:
+        return _bad(f'could not read the handshake: {exc}')
 
 
 @app.get('/extension/status')

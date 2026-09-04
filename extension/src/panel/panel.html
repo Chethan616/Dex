@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dex</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body>
+    <header>
+      <span class="dot" id="dot"></span>
+      <span id="state">connecting…</span>
+    </header>
+
+    <main id="thread">
+      <p class="hint" id="hint">
+        Ask Dex something. It can act on this page and on the machine.
+      </p>
+    </main>
+
+    <form id="composer">
+      <textarea
+        id="input"
+        rows="1"
+        placeholder="Message Dex"
+        autocomplete="off"
+      ></textarea>
+      <button type="submit" id="send" title="Send">↑</button>
+      <button type="button" id="stop" title="Stop" hidden>■</button>
+    </form>
+
+    <script src="panel.js"></script>
+  </body>
+</html>

@@ -20,13 +20,20 @@ Chrome, Edge, Brave, Vivaldi — anything Chromium:
 Firefox: `about:debugging` → **This Firefox** → **Load Temporary Add-on** →
 choose `manifest-firefox.json`.
 
+**Chrome 152 will not do this for you.** Google removed `--load-extension`,
+and the documented escape hatch with it — measured here, Chrome registers zero
+extensions from that flag while the same folder loads in two seconds under
+Chromium. Dex switches Developer mode on in its own profile so the step above
+is one click, and its own browser loads the extension automatically, but the
+manual load is Chrome's rule and not something Dex can work around.
+
 It connects on its own when Dex's browser agent is running. Settings →
 Connectors shows whether a browser is really attached, and the number of tools
 it registered — a fact to check rather than a claim to trust.
 
 ## What changed from upstream
 
-Two things, both marked `FORK CHANGE` in the source.
+Three things, the first two marked `FORK CHANGE` in the source.
 
 **It dials Dex instead of a bridge process.** Upstream connected to
 `ws://localhost:5555`, where `opendia-mcp` was listening, and if that failed it
@@ -35,6 +42,18 @@ its browser agent hosts the socket itself at `ws://127.0.0.1:8766/extension` —
 so there is one address and nothing to discover. Dropping the scan also stops
 the extension knocking on half a dozen localhost ports belonging to whatever
 else you happen to be running.
+
+**A chat panel.** Upstream has no panel: OpenDia is a bridge, and whoever is
+using it is typing somewhere else. Dex has a conversation, and asking it about
+the page in front of you should not mean alt-tabbing to another window to type
+the question. Click the toolbar icon and it opens beside the page.
+
+It talks to the core directly rather than through this extension's socket. That
+socket is Dex driving the browser — requests out, tool results back. A person
+asking Dex to do something is the opposite direction, and multiplexing two
+unrelated protocols over one connection to avoid a second WebSocket would be a
+worse trade. The core's address comes from `/handshake` on the browser agent,
+because an extension cannot read a file on disk.
 
 **Branding.** Name, description and title in the manifests.
 

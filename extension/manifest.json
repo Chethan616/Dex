@@ -10,12 +10,13 @@
     "128": "icons/icon-128.png"
   },
   "permissions": [
-    "tabs",
     "activeTab",
-    "storage",
-    "scripting",
     "bookmarks",
-    "history"
+    "history",
+    "scripting",
+    "sidePanel",
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -25,8 +26,7 @@
     "type": "module"
   },
   "action": {
-    "default_popup": "src/popup/popup.html",
-    "default_title": "Dex"
+    "default_title": "Dex \u2014 open the chat panel"
   },
   "content_scripts": [
     {
@@ -49,5 +49,8 @@
         "<all_urls>"
       ]
     }
-  ]
+  ],
+  "side_panel": {
+    "default_path": "src/panel/panel.html"
+  }
 }

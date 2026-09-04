@@ -2030,3 +2030,22 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   return true; // Keep the message channel open
 });
+
+// ── the chat panel ─────────────────────────────────────────────────────────
+//
+// FORK CHANGE. Upstream has no panel: OpenDia is a bridge, and the person
+// using it is typing somewhere else entirely. Dex has a conversation, and
+// asking it about the page in front of you should not mean alt-tabbing to
+// another window to type the question.
+//
+// Clicking the toolbar icon opens it. The popup that used to be there is gone
+// — two things cannot both own that click, and a panel that stays open beside
+// the page is worth more than a popup that closes the moment you look away.
+if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
+  chrome.sidePanel
+    .setPanelBehavior({ openPanelOnActionClick: true })
+    .catch(() => {
+      // Firefox, or a Chromium without the API. The extension still works —
+      // this is the only part that does not.
+    });
+}
