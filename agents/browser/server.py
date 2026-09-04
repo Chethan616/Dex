@@ -36,7 +36,7 @@ from dex_logging import configure as _configure_logging
 log = _configure_logging('browser')
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 from browser_use_backend import DEFAULT_MAX_STEPS, BrowserBackend, env_flag
@@ -133,6 +133,8 @@ async def lifespan(_app: FastAPI):
         await _autonomous.close_all()
     await _primitives.close()
 
+
+from bridge import bridge
 
 app = FastAPI(title='DEX Browser Agent', version='0.1.0', lifespan=lifespan)
 
@@ -239,6 +241,56 @@ async def resume(req: ResumeRequest) -> dict[str, Any]:
 @app.post('/abandon')
 async def abandon(req: ResumeRequest) -> dict[str, Any]:
     return {'closed': await autonomous().abandon(req.session_id)}
+
+
+# ── the owner's own browser ────────────────────────────────────────────────
+#
+# The extension dials in here. This replaces `opendia-mcp`, the Node bridge
+# that used to sit between the extension and an MCP client: this process is
+# already a server, and hosting the socket here is what makes the browser's
+# tools ordinary Dex actions rather than opaque MCP calls that would bypass
+# the confirmation ladder entirely. See bridge.py.
+#
+# Port 5555 is where the extension looks first, and it is kept so an
+# unmodified build of the upstream extension still finds Dex.
+
+
+@app.websocket('/extension')
+async def extension_socket(socket: WebSocket) -> None:
+    await socket.accept()
+    try:
+        await bridge.attach(socket)
+    except WebSocketDisconnect:
+        await bridge.detach('the browser closed the connection')
+    except Exception as exc:  # noqa: BLE001 - one bad browser is not a crash
+        log.warning('extension socket failed: %s', exc)
+        await bridge.detach(str(exc))
+
+
+@app.get('/extension/status')
+async def extension_status() -> dict[str, Any]:
+    """Whether a browser is really attached, and what it can do."""
+    return {'success': True, 'data': bridge.status()}
+
+
+class BrowserToolRequest(BaseModel):
+    method: str
+    params: dict[str, Any] = {}
+
+
+@app.post('/extension/call')
+async def extension_call(req: BrowserToolRequest) -> dict[str, Any]:
+    """
+    Run one tool in the owner's browser.
+
+    Errors come back in the same `{success: false, error}` shape as every other
+    endpoint here, so the TypeScript side does not learn a second failure
+    convention for this one path.
+    """
+    try:
+        return {'success': True, 'data': await bridge.call(req.method, req.params)}
+    except Exception as exc:  # noqa: BLE001
+        return _bad(str(exc))
 
 
 @app.post('/primitive')

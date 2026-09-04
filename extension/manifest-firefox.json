@@ -1,0 +1,52 @@
+{
+  "manifest_version": 2,
+  "name": "Dex",
+  "version": "1.0.0",
+  "description": "Lets Dex act in the browser you are already signed into.",
+  "applications": {
+    "gecko": {
+      "id": "opendia@aaronjmars.com",
+      "strict_min_version": "109.0"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "storage",
+    "bookmarks",
+    "history",
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": [
+      "src/polyfill/browser-polyfill.min.js",
+      "src/background/background.js"
+    ],
+    "persistent": true
+  },
+  "browser_action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "OpenDia"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/polyfill/browser-polyfill.min.js",
+        "src/content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    "src/polyfill/browser-polyfill.min.js"
+  ]
+}

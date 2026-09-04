@@ -49,7 +49,9 @@
     "test:artifacts": "ts-node tests/smoke_artifacts.ts",
     "test:conversations": "ts-node tests/smoke_conversations.ts",
     "test:reminders": "ts-node tests/smoke_reminders.ts",
-    "test:connectors": "ts-node tests/smoke_connectors.ts"
+    "test:connectors": "ts-node tests/smoke_connectors.ts",
+    "test:browser-tools": "ts-node tests/smoke_browser_tools.ts",
+    "test:bridge": "python tests/test_bridge.py"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",

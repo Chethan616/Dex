@@ -1,0 +1,49 @@
+# Third-party code in Dex
+
+## OpenDia — `extension/`
+
+Dex's browser extension is a fork of **OpenDia** by Aeon Inc.
+
+    https://github.com/aeonfun/opendia
+    Copyright (c) 2025 Aeon Inc
+    MIT License — the full text is in extension/LICENSE.opendia
+
+MIT permits the fork and requires the copyright notice and licence text to
+travel with the code, which is what this file and `extension/LICENSE.opendia`
+are for.
+
+### What was taken, and what was not
+
+Taken: `opendia-extension/` — the MV3 extension itself. Its background service
+worker, its content script, and the page-understanding work inside them are the
+part that is hard to write and easy to underestimate. Two thousand lines of
+each, most of it about the ways real pages differ from the DOM you expect.
+
+Dropped: `opendia-mcp/` — a Node server whose only job was to bridge that
+extension to an MCP client over stdio. Dex's browser agent is already a server,
+so it hosts the WebSocket itself.
+
+That removes a process, a protocol and a port, but tidiness is not the reason.
+
+**Tools arriving over MCP would bypass Dex's safety machinery.** An MCP tool is
+opaque: it is called and it returns. Nothing classifies it, nothing assigns it
+a confirmation tier, nothing verifies afterwards that it did what it said. On
+that path, "post a tweet" would simply happen. Hosted natively, the same
+capability goes through what every other action goes through — a confirmation
+card before anything consequential, verification against the live page after,
+and the rule that anything a page said is data rather than instruction.
+
+### What this costs
+
+Their anti-detection work for Twitter, LinkedIn and Facebook becomes ours to
+maintain as those sites change; upstream fixes stop arriving for free. And this
+is Dex driving the browser that holds the owner's bank and their email, rather
+than a profile Dex signed into itself — so the blast radius of a page trying to
+steer it is everything they are signed into. The untrusted-content rule covers
+that and is restated in `extension/README.md`. Both were accepted deliberately
+when this was chosen; they are written down so the choice stays visible.
+
+### Changes made
+
+Recorded in `extension/README.md` so the difference from upstream is one file
+away rather than a diff away.

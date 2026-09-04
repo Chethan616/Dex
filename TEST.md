@@ -206,7 +206,65 @@ seconds because it really starts the server.
 
 ## Phase 6 — Your real browser
 
-*Filled in when the phase lands.*
+This one needs installing before it can be tested.
+
+**Load the extension.** `chrome://extensions` → Developer mode → **Load
+unpacked** → pick the `extension/` folder. Firefox: `about:debugging` → This
+Firefox → Load Temporary Add-on → `extension/manifest-firefox.json`.
+
+**Check it attached.** Settings → Connectors. It should say a browser is
+attached and how many tools it registered. If it says nothing is attached, the
+browser agent is not running — Settings → Connectors will say that too.
+
+**A read, which needs no card.**
+
+```
+what is on the page I have open right now
+```
+
+Should answer from the tab in front of you, with no confirmation card. Dex's
+own browser could not have answered this at all — it has different tabs.
+
+**Something only your browser can do.**
+
+```
+open my vtop and get my attendance
+```
+
+No separate sign-in, because it is the browser you are already signed into.
+This is the whole reason for the phase.
+
+**A click should ask first.**
+
+```
+open my twitter and post "testing dex"
+```
+
+Expect a confirmation card **before** anything is posted. On a site you are
+signed into, a click sends, posts or buys, and nothing in the page reliably
+says which — so it asks. Decline it and nothing should happen.
+
+**Your history is not a free read.**
+
+```
+what did I look at yesterday
+```
+
+Should ask once before reading your browsing history, then remember the
+answer.
+
+**Routing.** A public page should still use Dex's own browser:
+
+```
+get the top story from news.ycombinator.com
+```
+
+That runs in the separate profile, which cannot touch your session. Only tasks
+that need to *be you* go to your browser.
+
+**Close the browser mid-task.** Start something, then quit the browser. The
+step should fail at once saying the browser went away — not sit for a minute
+waiting for an answer that is not coming.
 
 ---
 
