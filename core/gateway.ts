@@ -14,6 +14,7 @@ import { emit } from './events/bus';
 import { factsForPhrasing, renderFacts, worthPhrasing } from './brain/answer';
 import { isAbort } from './llm/provider';
 import { DeliveryTarget, delivery } from './delivery/registry';
+import { dropDuplicateSteps } from './orchestrator/duplicate_steps';
 
 export interface GatewayResult {
   status: TaskStatus;
@@ -243,6 +244,25 @@ export class Gateway {
         requestId,
       );
     }
+
+    // The same read, twice, in one plan.
+    //
+    // Asked for an Aadhaar card, the planner searched for "aadhar" and then
+    // for "aadhaar": two passes over a 247,000-file index, five seconds, two
+    // identical cards on screen — and the second could not find anything the
+    // first had not, because the search expands the spelling itself before it
+    // runs. The catalogue now says not to, and this is the part that does not
+    // depend on the model having read it.
+    const { plan: deduped, dropped } = dropDuplicateSteps(finalPlan);
+    if (dropped.length > 0) {
+      emit(
+        'planning',
+        `Dropped ${dropped.length} repeated step${dropped.length > 1 ? 's' : ''} ` +
+          'that would have searched for the same thing again',
+        requestId,
+      );
+    }
+    Object.assign(finalPlan, deduped);
 
     finalPlan.sessionId = sessionId;
     // A schedule fires whether or not anyone is at the machine, so the plan

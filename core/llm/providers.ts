@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { CredentialStore } from '../secrets/credential_store';
 import { readConfig } from '../settings/config_store';
 import { resolveCommand } from '../settings/which';
+import { killTree } from './kill_tree';
 import {
   Cancelled,
   LlmProvider,
@@ -408,7 +409,7 @@ export class ClaudeCodeProvider implements LlmProvider {
       let stderr = '';
       let stopped = false;
       const timer = setTimeout(() => {
-        child.kill();
+        killTree(child.pid, () => child.kill());
         // Name the model and the way out. "Timed out" alone leaves the owner
         // with nothing to do but try the identical thing again.
         reject(new Error(
@@ -430,7 +431,11 @@ export class ClaudeCodeProvider implements LlmProvider {
       const onAbort = () => {
         stopped = true;
         clearTimeout(timer);
-        child.kill();
+        // The whole tree, not just what was spawned. On Windows `claude` is a
+        // .cmd shim, so this process is cmd.exe and the CLI doing the work is
+        // its child — `child.kill()` left it generating to the end of a reply
+        // nobody would read, on the owner's own subscription. See kill_tree.ts.
+        killTree(child.pid, () => child.kill());
         reject(new Cancelled());
       };
       signal?.addEventListener('abort', onAbort, { once: true });

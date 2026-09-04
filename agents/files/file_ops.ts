@@ -4,6 +4,7 @@ import { createHash } from 'crypto';
 import { spawnSync } from 'child_process';
 import { PathRefused, folderPath, profilePath } from './profile_paths';
 import { canDescribe, describeImage } from '../../core/llm/vision';
+import { makeReadable } from '../../core/llm/readable';
 
 /**
  * The ordinary things people do to files.
@@ -748,14 +749,27 @@ export async function describeFile(
     };
   }
 
-  const text = typeof document.text === 'string' ? document.text : '';
+  const raw = typeof document.text === 'string' ? document.text : '';
+
+  // Laid out before it is shown.
+  //
+  // PDF extraction gives no layout: doubled spaces, fields run together, and
+  // boxes where a font could not map a glyph. A one-page Aadhaar card came out
+  // as a wall of that, printed verbatim, and everything in it was correct and
+  // unreadable. A small model reformats it — the same facts, laid out — and if
+  // that fails for any reason the original is what shows, which is what showed
+  // before.
+  const readable = await makeReadable(raw, { signal: undefined });
+  const text = readable.text;
+
   return {
     path: source,
     name,
     kind: 'document',
+    laid_out: readable.tidied,
     bytes: stat.size,
     pages: document.pages,
-    characters: text.length,
+    characters: raw.length,
     // The text itself, for the phrasing step to summarise. Deliberately not
     // summarised here: a second model call to compress text that is about to
     // be read by a model anyway is a round trip for nothing.

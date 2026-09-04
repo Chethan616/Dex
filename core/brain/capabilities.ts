@@ -102,7 +102,7 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
 export const FILE_ACTIONS: Record<string, ActionSpec> = {
   find_files: {
     params: '{ query: string, scope?: "pc" | "profile" | string, also_called?: string[], open_location?: boolean, max_results?: number }',
-    note: 'Searches a local index of every drive by name AND by what is inside the file, OCR included - so an Aadhaar card saved as scan001.jpg is found by the word "aadhaar". scope: "pc" for the whole PC, "profile" (default), or a folder like "desktop". Pass also_called with other names the document might go by ("govt id", "CV") when the request is vague. Each result says why it matched. open_location=true selects one in File Explorer',
+    note: 'Searches every drive by name AND by contents, OCR included - a card saved as scan001.jpg is found by the word inside it. Expands spellings itself, so ONE call covers aadhar/aadhaar/uid. scope: "pc", "profile" (default), or a folder. also_called adds other names. open_location=true reveals one in Explorer',
   },
   write_file: {
     params: '{ path: string, content: string }',
@@ -114,7 +114,7 @@ export const FILE_ACTIONS: Record<string, ActionSpec> = {
   },
   describe_file: {
     params: '{ path: string, question?: string, model?: "haiku" | "sonnet" | "opus" }',
-    note: 'Look at a file and say what is in it: an image goes to a model that can see it, a PDF, DOCX, spreadsheet or text file is read. Pass the request wording as question. The second half of finding a file and explaining it',
+    note: 'Look at a file and say what is in it: an image goes to a model that can see it, a document is read. Pass the request wording as question',
   },
   read_file: { params: '{ path: string }', note: 'Text files up to 2 MB; for bigger ones search with run_command and rg' },
   list_dir: { params: '{ path: string, pattern?: string }', note: 'path takes a folder name — "downloads", "desktop", "documents" — or a full path' },
@@ -500,6 +500,9 @@ export const ROUTING_RULES = `HOW TO CHOOSE A CAPABILITY — work down this ladd
   find_files; for code, use write_file followed by run_program. These use the
   Dex workspace, never a terminal window. A file-location task should normally be:
     find_files(scope="pc", open_location=true)
+  NEVER plan two find_files for spellings of one word - one call covers them.
+  To read what was found, chain it:
+    find_files(query="X") -> describe_file(path="{{step_1.output.matches[0].path}}")
   and a code task should normally be:
     write_file -> run_program
 
