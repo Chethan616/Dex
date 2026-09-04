@@ -269,6 +269,12 @@ async def extension_socket(socket: WebSocket) -> None:
         await bridge.detach(str(exc))
 
 
+@app.get('/profiles')
+async def profiles() -> dict[str, Any]:
+    """The owner's own Chrome profiles, so Settings can offer them by name."""
+    return {'success': True, 'data': {'profiles': browser_choice.owner_profiles()}}
+
+
 class OpenProfileRequest(BaseModel):
     browser: str | None = None
     url: str = ''

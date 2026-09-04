@@ -32,6 +32,7 @@ Two consequences worth stating:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import time
@@ -103,7 +104,20 @@ class SessionPool:
             # Raises for a browser that is not installed or cannot be driven,
             # before anything launches. A clear failure beats silently using a
             # different browser than the one that was asked for.
-            kwargs = browser_choice.session_kwargs(browser, headless)
+            # Which profile: Dex's own, or the owner's real one if they have
+            # chosen it in Settings.
+            #
+            # Read from settings.json per launch rather than from the
+            # environment at startup. The agent is a long-lived process the
+            # app spawns once, so an environment variable would mean changing
+            # the setting did nothing until the next restart — and a settings
+            # screen whose change only takes effect after a restart it never
+            # mentions is the thing this project keeps removing.
+            chosen = _chosen_profile()
+            kwargs = browser_choice.session_kwargs(
+                browser, headless,
+                owner_profile_match=chosen or None,
+            )
             kwargs['accept_downloads'] = True
             kwargs['downloads_path'] = downloads_dir()
 
@@ -173,6 +187,27 @@ class SessionPool:
             entry = self._entries.pop(key)
             log.info('closing an idle browser (%ds)', int(now - entry.last_used))
             await _kill(entry.session)
+
+
+def _chosen_profile() -> str:
+    """
+    The profile the owner picked in Settings, or empty for Dex's own.
+
+    Read straight from settings.json, which the core owns and writes. The
+    alternative — the core passing it down at spawn time — would be one more
+    thing to keep in step, for a value that is read once per browser launch.
+    """
+    override = os.environ.get('DEX_CONFIG')
+    if override:
+        path = Path(override)
+    else:
+        base = os.environ.get('LOCALAPPDATA') or os.environ.get('USERPROFILE') or '.'
+        path = Path(base) / 'DEX' / 'settings.json'
+
+    try:
+        return str(json.loads(path.read_text(encoding='utf-8')).get('browserProfile', '')).strip()
+    except (OSError, ValueError):
+        return ''
 
 
 def _alive(session: BrowserSession) -> bool:

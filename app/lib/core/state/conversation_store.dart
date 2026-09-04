@@ -39,6 +39,7 @@ import '../models/message.dart';
 import '../models/plan_step.dart';
 import '../models/reminder.dart';
 import '../models/tool_activity.dart';
+import '../attention.dart';
 
 class ConversationStore extends ChangeNotifier {
   ConversationStore(this._client) {
@@ -448,6 +449,10 @@ class ConversationStore extends ChangeNotifier {
 
       case 'awaiting':
         _setState(AgentState.awaiting);
+        // A hand-off: a password or a CAPTCHA, which Dex never does itself.
+        // The task is stopped until the owner acts, so it says so where they
+        // are rather than where they are not.
+        unawaited(Attention.needed(reason: 'Dex needs you to do something'));
         break;
 
       case 'done':
@@ -503,6 +508,15 @@ class ConversationStore extends ChangeNotifier {
 
     _showHead();
     notifyListeners();
+
+    // A question that blocks a task, asked of someone who is almost certainly
+    // looking at the browser Dex is driving. Leaving it behind three windows
+    // means the task waits until they happen to come back and find it.
+    //
+    // Safe because of WindowActivity: raising a window on Windows injects a
+    // click at the cursor, and a control arms only once the pointer has moved
+    // since the raise — so the card cannot answer itself.
+    unawaited(Attention.needed(reason: 'a confirmation is waiting'));
   }
 
   /// Put the head of the approval queue on screen.

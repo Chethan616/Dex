@@ -172,6 +172,70 @@ def extension_dir() -> str:
     return str(Path(__file__).resolve().parents[2] / 'extension')
 
 
+def owner_profiles() -> list[dict]:
+    """
+    The owner's real Chrome profiles, from Chrome's own index.
+
+    Read rather than guessed: the folder is `Profile 1` or `Profile 3` with no
+    relation to the name on it, and only `Local State` knows which is which.
+    """
+    base = Path(os.environ.get('LOCALAPPDATA', '')) / 'Google' / 'Chrome' / 'User Data'
+    state = base / 'Local State'
+    if not state.exists():
+        return []
+
+    try:
+        data = json.loads(state.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return []
+
+    cache = data.get('profile', {}).get('info_cache', {})
+    last = data.get('profile', {}).get('last_used', '')
+
+    return [
+        {
+            'directory': folder,
+            'name': meta.get('name', folder),
+            'email': meta.get('user_name', ''),
+            'user_data_dir': str(base),
+            'last_used': folder == last,
+        }
+        for folder, meta in cache.items()
+    ]
+
+
+def owner_profile(match: str = '') -> dict | None:
+    """
+    One of the owner's own profiles, by name, email or folder.
+
+    Empty picks whichever Chrome used last, which is the one they were in.
+    """
+    profiles = owner_profiles()
+    if not profiles:
+        return None
+
+    wanted = match.strip().lower()
+    if not wanted:
+        for profile in profiles:
+            if profile['last_used']:
+                return profile
+        return profiles[0]
+
+    for profile in profiles:
+        if wanted in (
+            profile['name'].lower(),
+            profile['email'].lower(),
+            profile['directory'].lower(),
+        ):
+            return profile
+
+    # A partial name, because "chethankrishna" should find "Chethankrishna".
+    for profile in profiles:
+        if wanted in profile['name'].lower() or wanted in profile['email'].lower():
+            return profile
+    return None
+
+
 def prepare_profile(browser: str | None = None) -> dict:
     """
     Make Dex's profile behave like a browser somebody actually uses.
@@ -362,7 +426,11 @@ def open_profile(browser: str | None = None, url: str = '') -> dict:
     }
 
 
-def session_kwargs(browser: str | None, headless: bool) -> dict:
+def session_kwargs(
+    browser: str | None,
+    headless: bool,
+    owner_profile_match: str | None = None,
+) -> dict:
     """
     What to hand `BrowserSession`, for a named browser with a kept profile.
 
@@ -374,6 +442,53 @@ def session_kwargs(browser: str | None, headless: bool) -> dict:
     modal that sits on top of it.
     """
     extension = extension_dir()
+
+    # The owner's own Chrome — and the reason this is not the way to be them.
+    #
+    # It works, in the sense that Chrome starts. What it does not do is arrive
+    # signed in. browser_use copies the profile to a temp directory rather than
+    # driving the original ("Copied profile (Profile 1) and Local State to temp
+    # directory"), which is the right call — it avoids corrupting a live
+    # profile and the one-process-per-directory lock. But Chrome 127 added
+    # App-Bound Encryption, which ties cookie decryption to the browser's own
+    # identity precisely so that a copied profile cannot carry a session. That
+    # is an anti-infostealer measure and Dex is not going to defeat it.
+    #
+    # Measured: with this pointed at the owner's real profile,
+    # github.com/settings/profile redirects to the login page.
+    #
+    # So a browser that looks like theirs and is signed in to nothing is worse
+    # than one that admits it — the owner would reasonably expect their
+    # accounts. The way to act as them is the extension, driving the Chrome
+    # they already have open, where the session is real and never copied. See
+    # bridge.routing.
+    #
+    # Kept because it is still the right thing for a profile with nothing in
+    # it, and because `open_profile` uses the same lookup to open their real
+    # Chrome for them.
+    if owner_profile_match is not None:
+        profile = owner_profile(owner_profile_match)
+        if profile is None:
+            raise RuntimeError(
+                'No Chrome profile of the owner could be found. Chrome keeps '
+                'them under %LOCALAPPDATA%\\Google\\Chrome\\User Data.',
+            )
+        return {
+            'headless': headless,
+            'user_data_dir': profile['user_data_dir'],
+            # A field, like user_data_dir. browser_use defaults it to
+            # 'Default' and writes its own --profile-directory, so the one
+            # passed in args was overwritten and Chrome opened an empty
+            # profile — signed in to nothing, which is the opposite of the
+            # point. Verified on the launched process both ways.
+            'profile_directory': profile['directory'],
+            'executable_path': resolve('chrome'),
+            'args': [
+                '--no-first-run',
+                '--no-default-browser-check',
+                '--disable-blink-features=AutomationControlled',
+            ],
+        }
 
     kwargs: dict = {
         'headless': headless,

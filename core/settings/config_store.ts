@@ -42,6 +42,22 @@ export interface DexConfig {
   /** Whether the browser runs without a visible window. */
   browserHeadless: boolean;
 
+  /**
+   * Which Chrome profile Dex browses in.
+   *
+   * Empty means Dex's own — isolated, signed in to nothing, and safe for
+   * anything public. A profile name or email means the owner's real one,
+   * which is what makes "change my GitHub pins" possible at all: Chrome will
+   * no longer let a program install an extension, so the profile where they
+   * loaded it by hand and are already signed in is worth more than an empty
+   * one Dex controls.
+   *
+   * It is a real choice and not a convenience. In their own profile a mistake
+   * lands on their account, which is why every consequential action still
+   * raises a card.
+   */
+  browserProfile: string;
+
   theme: 'system' | 'light' | 'dark';
 
   /**
@@ -90,6 +106,7 @@ const DEFAULTS: DexConfig = {
   whatsappOwner: '',
   whatsappEnabled: false,
   browserHeadless: false,
+  browserProfile: '',
   theme: 'system',
   fullAccess: false,
   meshEnabled: false,

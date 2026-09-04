@@ -183,7 +183,7 @@ export class SettingsService {
     const allowed: (keyof DexConfig)[] = [
       'brainProvider', 'brainModel', 'browserAgent', 'desktopAgent',
       'telegramOwner', 'discordOwner', 'whatsappOwner', 'whatsappEnabled',
-      'browserHeadless', 'theme',
+      'browserHeadless', 'browserProfile', 'theme',
     ];
     const clean: Partial<DexConfig> = {};
     for (const [key, value] of Object.entries(changes)) {

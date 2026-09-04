@@ -230,6 +230,24 @@ OWNER_ONLY = frozenset({
     'get_selected_text',
 })
 
+# Sites where being signed in *is* the task.
+#
+# Not a security list — Dex can open any of these in its own browser and see
+# the logged-out page. It is a list of places where the logged-out page is a
+# useless answer to the question that was asked, so the attached browser is the
+# only one worth using.
+#
+# This matters more than it looks. Chrome 127's App-Bound Encryption means a
+# copied profile arrives signed out — measured, github.com/settings/profile
+# redirects to login — so the extension is not one way to be the owner, it is
+# the only way.
+SIGNED_IN_SITES = (
+    'github.com', 'instagram.com', 'x.com', 'twitter.com', 'linkedin.com',
+    'mail.google.com', 'gmail', 'drive.google.com', 'calendar.google.com',
+    'facebook.com', 'reddit.com', 'youtube.com', 'vtop', 'vit.ac.in',
+    'whatsapp', 'discord.com', 'netflix', 'amazon', 'bank',
+)
+
 
 def routing(goal: str, needs_session: bool = False) -> str:
     """
@@ -253,8 +271,10 @@ def routing(goal: str, needs_session: bool = False) -> str:
         for word in (
             'my ', 'logged in', 'signed in', 'account', 'inbox', 'bookmark',
             'history', 'this tab', 'open tab', 'currently open',
+            'post ', 'share ', 'send ', 'follow ', 'like ', 'comment',
+            'pin ', 'unpin', 'star ', 'repo',
         )
-    )
+    ) or any(site in lowered for site in SIGNED_IN_SITES)
 
     if signed_in and bridge.attached:
         return 'owner'

@@ -16,6 +16,7 @@ import { parseSchedule } from '../scheduler/cron';
 import { ChannelId, ChannelState } from '../../channels/manager';
 import { Conversations } from '../memory/conversations';
 import { db } from '../memory/db';
+import { readConfig } from '../settings/config_store';
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 const AUTH_GRACE_MS = 3000;
@@ -63,6 +64,7 @@ type Inbound =
     }
   | { type: 'get_accounts' }
   | { type: 'open_browser_profile'; browser?: string }
+  | { type: 'get_browser_profiles' }
   | { type: 'set_reminder'; text: string; at: number }
   | { type: 'snooze_reminder'; name: string; minutes?: number; at?: number }
   | { type: 'complete_reminder'; name: string }
@@ -455,6 +457,26 @@ export class DexServer {
       // here is the owner's decision to make: this is the profile Dex browses
       // with, so an account signed in here is one Dex can act as. Nothing is
       // automated and no password is ever seen; it launches a window and stops.
+      // The owner's own Chrome profiles, so Settings can offer them by name
+      // rather than asking for a folder called "Profile 1".
+      case 'get_browser_profiles': {
+        try {
+          const response = await fetch('http://127.0.0.1:8766/profiles');
+          const payload = (await response.json()) as {
+            success?: boolean; data?: { profiles?: unknown[] };
+          };
+          return this.send(socket, {
+            type: 'browser_profiles',
+            profiles: payload.data?.profiles ?? [],
+            chosen: readConfig().browserProfile ?? '',
+          });
+        } catch {
+          return this.send(socket, {
+            type: 'browser_profiles', profiles: [], chosen: '',
+          });
+        }
+      }
+
       case 'open_browser_profile': {
         try {
           const response = await fetch('http://127.0.0.1:8766/open-profile', {
