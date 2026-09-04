@@ -110,6 +110,17 @@ export class SettingsService {
   }
 
   /**
+   * Which secrets exist, by name.
+   *
+   * Names only, never values — the rule at the top of this file. A screen
+   * needs to know whether a client secret is stored, which is a different
+   * question from what it is, and only one of them has a safe answer.
+   */
+  storedCredentials(): string[] {
+    return this.credentials.list();
+  }
+
+  /**
    * Forget a secret.
    *
    * Needed because unpairing a channel has to actually remove the token, not

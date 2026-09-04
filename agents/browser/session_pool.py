@@ -107,6 +107,28 @@ class SessionPool:
             kwargs['accept_downloads'] = True
             kwargs['downloads_path'] = downloads_dir()
 
+            # The session outlives any one agent run.
+            #
+            # Without this, browser_use resets the session when an agent run
+            # ends — `on_BrowserStopEvent - Calling reset(force=True,
+            # keep_alive=None)` — which tears down every target and mapping it
+            # owns. That is correct for a script that runs one agent and exits,
+            # and wrong here for two reasons.
+            #
+            # The one that actually broke: a password wall stops the agent so
+            # the owner can type it. The owner types it, clears the wall, and
+            # Dex starts a second agent on the same session — except the
+            # session was reset when the first one stopped, so it has no live
+            # target. Every browser-state request came back empty
+            # ("Expected at least one handler to return a non-None result"),
+            # three in a row, and the run gave up. From the outside it looked
+            # like Dex closed the browser the moment you finished signing in.
+            #
+            # The second: this is a *pool*. A session reset behind the pool's
+            # back is a session the pool still believes in and hands to the
+            # next task.
+            kwargs['keep_alive'] = True
+
             session = BrowserSession(**kwargs)
             await session.start()
             self._entries[key] = _Entry(session)

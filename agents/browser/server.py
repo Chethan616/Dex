@@ -134,6 +134,7 @@ async def lifespan(_app: FastAPI):
     await _primitives.close()
 
 
+import browser_choice
 from bridge import bridge
 
 app = FastAPI(title='DEX Browser Agent', version='0.1.0', lifespan=lifespan)
@@ -265,6 +266,27 @@ async def extension_socket(socket: WebSocket) -> None:
     except Exception as exc:  # noqa: BLE001 - one bad browser is not a crash
         log.warning('extension socket failed: %s', exc)
         await bridge.detach(str(exc))
+
+
+class OpenProfileRequest(BaseModel):
+    browser: str | None = None
+    url: str = ''
+
+
+@app.post('/open-profile')
+async def open_profile(req: OpenProfileRequest) -> dict[str, Any]:
+    """
+    Open Dex's browser profile so the owner can sign in to their accounts.
+
+    Signing in once here saves the hand-off on every site afterwards: Dex
+    browses with this profile, so an account signed in here is an account Dex
+    can already act as. Nothing is automated and no password is ever seen — it
+    launches a browser and stops.
+    """
+    result = browser_choice.open_profile(req.browser, req.url)
+    if not result.get('ok'):
+        return _bad(result.get('error', 'could not open the profile'))
+    return {'success': True, 'data': result}
 
 
 @app.get('/extension/status')

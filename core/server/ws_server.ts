@@ -54,6 +54,15 @@ type Inbound =
   | { type: 'set_channel'; channel: ChannelId; token?: string; owner?: string; enabled?: boolean }
   | { type: 'test_channel'; channel: ChannelId }
   | { type: 'test_account'; account: string }
+  | {
+      type: 'set_account';
+      account: string;
+      clientId?: string;
+      clientSecret?: string;
+      email?: string;
+    }
+  | { type: 'get_accounts' }
+  | { type: 'open_browser_profile'; browser?: string }
   | { type: 'set_reminder'; text: string; at: number }
   | { type: 'snooze_reminder'; name: string; minutes?: number; at?: number }
   | { type: 'complete_reminder'; name: string }
@@ -436,6 +445,82 @@ export class DexServer {
           channel: msg.channel,
           ...result,
         });
+      }
+
+      // Open the browser Dex uses, so the owner can sign in to their own
+      // accounts in it once instead of clearing a hand-off on every site.
+      //
+      // Dex keeps a separate profile so its browsing cannot touch the owner's
+      // session — right, and it means Dex is signed in to nothing. Signing in
+      // here is the owner's decision to make: this is the profile Dex browses
+      // with, so an account signed in here is one Dex can act as. Nothing is
+      // automated and no password is ever seen; it launches a window and stops.
+      case 'open_browser_profile': {
+        try {
+          const response = await fetch('http://127.0.0.1:8766/open-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ browser: msg.browser ?? null }),
+          });
+          const payload = (await response.json()) as {
+            success?: boolean; data?: unknown; error?: string;
+          };
+          return this.send(socket, {
+            type: 'browser_profile_opened',
+            ok: payload.success === true,
+            ...(payload.data as object ?? {}),
+            error: payload.error,
+          });
+        } catch (err) {
+          return this.send(socket, {
+            type: 'browser_profile_opened',
+            ok: false,
+            error:
+              'The browser agent is not running, so there is no profile to '
+              + `open. (${err instanceof Error ? err.message : err})`,
+          });
+        }
+      }
+
+      case 'get_accounts':
+        return this.send(socket, await this.accountsPayload());
+
+      case 'set_account': {
+        // Google's are two secrets and an email. The secrets go to the OS
+        // credential store; the email is not one and goes there too only
+        // because the MCP server wants it as an environment variable at spawn
+        // time, which is where every other credential for that server comes
+        // from. Nothing lands in settings.json and nothing lands in a file in
+        // the repo.
+        const account = String(msg.account || 'google');
+        const fields: Array<[string, unknown]> = account === 'google'
+          ? [
+              ['google_oauth_client_id', msg.clientId],
+              ['google_oauth_client_secret', msg.clientSecret],
+              ['google_account_email', msg.email],
+            ]
+          : [
+              ['ms365_client_id', msg.clientId],
+              ['ms365_client_secret', msg.clientSecret],
+              ['ms365_account_email', msg.email],
+            ];
+
+        try {
+          for (const [name, value] of fields) {
+            if (typeof value !== 'string') continue;
+            if (value.trim()) {
+              await this.settings.setCredential(name, value.trim());
+            } else {
+              this.settings.clearCredential(name);
+            }
+          }
+        } catch (err) {
+          return this.send(socket, {
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return this.send(socket, await this.accountsPayload());
       }
 
       // Connect for real and say what came back.
@@ -1072,6 +1157,40 @@ export class DexServer {
         at: step.at,
       });
     }
+  }
+
+  /**
+   * Which halves of each account's setup are present.
+   *
+   * Never the values. A screen that could echo a client secret back is a
+   * screen that has the secret in memory on the way there, and the owner has
+   * no reason to read it — they need to know whether one is stored, which is a
+   * different question with a safe answer.
+   */
+  private async accountsPayload(): Promise<{ type: string; accounts: unknown[] }> {
+    const stored = new Set(await this.settings.storedCredentials());
+    return {
+      type: 'accounts',
+      accounts: [
+        {
+          id: 'google',
+          name: 'Google Workspace',
+          detail: 'Gmail, Calendar and Drive',
+          hasClientId: stored.has('google_oauth_client_id'),
+          hasClientSecret: stored.has('google_oauth_client_secret'),
+          email: undefined,
+          hasEmail: stored.has('google_account_email'),
+        },
+        {
+          id: 'ms365',
+          name: 'Microsoft 365',
+          detail: 'Outlook, Calendar and OneDrive',
+          hasClientId: stored.has('ms365_client_id'),
+          hasClientSecret: stored.has('ms365_client_secret'),
+          hasEmail: stored.has('ms365_account_email'),
+        },
+      ],
+    };
   }
 
   private channelsPayload(): { type: string; channels: ChannelState[] } {

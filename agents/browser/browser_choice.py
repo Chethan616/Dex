@@ -166,6 +166,99 @@ def _find(name: str) -> str | None:
     return found.target
 
 
+def open_profile(browser: str | None = None, url: str = '') -> dict:
+    """
+    Open Dex's own browser profile, for the owner to sign in with.
+
+    The gap this fills: Dex keeps a separate profile so its browsing cannot
+    touch the owner's session, which is right, and it means Dex is signed in to
+    nothing. Every task behind a login then hits the hand-off — Dex stops, the
+    owner types the password, Dex resumes — once per site per session. Doing
+    that on VTOP, on Gmail and on a bank is three interruptions to answer one
+    question.
+
+    Signing in *once*, in this profile, fixes all of them at once. It is the
+    owner's choice to make: this profile is where Dex browses, so an account
+    signed in here is an account Dex can act as.
+
+    Deliberately not headless and deliberately not driven. This launches a
+    browser and walks away — no automation attaches, nothing is typed, and Dex
+    never sees the password. The owner signs in the way they would anywhere
+    else, closes the window, and the cookies are there for the next task.
+
+    Refuses to launch while Dex is using the profile: Chromium allows one
+    process per profile directory, so a second launch would sit on the lock and
+    then fail with something that says nothing about why.
+    """
+    import subprocess
+
+    executable = resolve(browser)
+    if executable is None and browser:
+        return {
+            'ok': False,
+            'error': f'{browser} is not installed, or Dex cannot find it.',
+        }
+
+    directory = profile_dir(browser)
+
+    if executable is None:
+        # Playwright's bundled Chromium. It has no stable path Dex should hard
+        # code, so this is the one case where there is nothing to launch and
+        # saying so beats guessing.
+        return {
+            'ok': False,
+            'profile': directory,
+            'error': (
+                'That is Playwright\'s own Chromium, which has no window to open '
+                'for signing in. Choose Chrome, Edge, Brave or Vivaldi instead.'
+            ),
+        }
+
+    lock = Path(directory) / 'SingletonLock'
+    if lock.exists():
+        return {
+            'ok': False,
+            'profile': directory,
+            'error': (
+                'Dex is using that profile right now. Chromium allows one '
+                'process per profile, so close what Dex has open and try again.'
+            ),
+        }
+
+    args = [
+        executable,
+        f'--user-data-dir={directory}',
+        '--no-first-run',
+        '--no-default-browser-check',
+    ]
+    if url:
+        args.append(url)
+
+    try:
+        # Detached: this outlives the request, because the owner is going to
+        # spend a few minutes in it.
+        subprocess.Popen(
+            args,
+            creationflags=(
+                subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+                if os.name == 'nt' else 0
+            ),
+            close_fds=True,
+        )
+    except OSError as err:
+        return {'ok': False, 'profile': directory, 'error': str(err)}
+
+    return {
+        'ok': True,
+        'profile': directory,
+        'browser': browser or 'chrome',
+        'detail': (
+            'Signed in here, Dex is signed in too — this is the profile it '
+            'browses with. Close the window when you are done.'
+        ),
+    }
+
+
 def session_kwargs(browser: str | None, headless: bool) -> dict:
     """
     What to hand `BrowserSession`, for a named browser with a kept profile.

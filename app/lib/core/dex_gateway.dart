@@ -349,6 +349,21 @@ class DexGatewayClient extends ChangeNotifier {
         return;
 
       // The step stream. This is the whole point.
+      case 'browser_profile_opened':
+        browserProfileResult = Map<String, dynamic>.from(msg);
+        notifyListeners();
+        break;
+
+      case 'accounts':
+        _accounts
+          ..clear()
+          ..addAll([
+            for (final row in (msg['accounts'] as List? ?? const []))
+              if (row is Map) Map<String, dynamic>.from(row),
+          ]);
+        notifyListeners();
+        break;
+
       case 'channels':
         _channels
           ..clear()
@@ -567,6 +582,42 @@ class DexGatewayClient extends ChangeNotifier {
   final Map<String, Map<String, dynamic>> connectorTests = {};
 
   void listChannels() => _send({'type': 'get_channels'});
+
+  /// Connected accounts, and which halves of each setup are stored. Never the
+  /// values — a screen that could show a client secret is a screen that had it.
+  List<Map<String, dynamic>> get accounts => List.unmodifiable(_accounts);
+  final List<Map<String, dynamic>> _accounts = [];
+
+  void listAccounts() => _send({'type': 'get_accounts'});
+
+  /// The last "open Dex's browser" result, so the button can say what happened.
+  Map<String, dynamic>? browserProfileResult;
+
+  /// Open the browser Dex uses, for the owner to sign in to their accounts.
+  ///
+  /// Dex keeps its own profile so its browsing cannot touch the owner's
+  /// session — which also means Dex is signed in to nothing, and every site
+  /// behind a login costs a hand-off. Signing in here once fixes all of them.
+  void openBrowserProfile({String? browser}) {
+    browserProfileResult = null;
+    notifyListeners();
+    final payload = <String, dynamic>{'type': 'open_browser_profile'};
+    if (browser != null) payload['browser'] = browser;
+    _send(payload);
+  }
+
+  void setAccount(
+    String account, {
+    String? clientId,
+    String? clientSecret,
+    String? email,
+  }) {
+    final payload = <String, dynamic>{'type': 'set_account', 'account': account};
+    if (clientId != null) payload['clientId'] = clientId;
+    if (clientSecret != null) payload['clientSecret'] = clientSecret;
+    if (email != null) payload['email'] = email;
+    _send(payload);
+  }
 
   /// Pair a channel. The token goes to the OS credential store on the core
   /// side; it is never written to settings.json and never kept here.
