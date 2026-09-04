@@ -28,6 +28,7 @@ which is a blast radius the owner chooses one site at a time.
 from __future__ import annotations
 
 import logging
+import json
 import os
 import sys
 from pathlib import Path
@@ -166,6 +167,36 @@ def _find(name: str) -> str | None:
     return found.target
 
 
+def extension_dir() -> str:
+    """The forked OpenDia extension, in this checkout."""
+    return str(Path(__file__).resolve().parents[2] / 'extension')
+
+
+def enable_developer_mode(browser: str | None = None) -> bool:
+    """
+    Turn on Developer mode in Dex's profile, so loading the extension is one
+    click rather than a settings hunt.
+
+    Chrome keeps this in the profile's Preferences as an ordinary boolean. It
+    is not one of the hash-protected values, so writing it is safe — unlike
+    forging an extension entry, which Chrome detects and disables.
+
+    Returns False when there is no profile yet: Chrome writes Preferences on
+    first run, so this is called after the profile has been used at least once.
+    """
+    prefs = Path(profile_dir(browser)) / 'Default' / 'Preferences'
+    if not prefs.exists():
+        return False
+
+    try:
+        data = json.loads(prefs.read_text(encoding='utf-8'))
+        data.setdefault('extensions', {}).setdefault('ui', {})['developer_mode'] = True
+        prefs.write_text(json.dumps(data), encoding='utf-8')
+        return True
+    except (OSError, ValueError):
+        return False
+
+
 def open_profile(browser: str | None = None, url: str = '') -> dict:
     """
     Open Dex's own browser profile, for the owner to sign in with.
@@ -225,11 +256,18 @@ def open_profile(browser: str | None = None, url: str = '') -> dict:
             ),
         }
 
+    # Developer mode on, so the one manual step Chrome now insists on is a
+    # single click rather than a hunt through settings.
+    developer_mode = enable_developer_mode(browser)
+
     args = [
         executable,
         f'--user-data-dir={directory}',
         '--no-first-run',
         '--no-default-browser-check',
+        # Harmless where it is ignored, and it still works on Chromium builds
+        # that have not removed it.
+        f'--load-extension={extension_dir()}',
     ]
     if url:
         args.append(url)
@@ -252,9 +290,22 @@ def open_profile(browser: str | None = None, url: str = '') -> dict:
         'ok': True,
         'profile': directory,
         'browser': browser or 'chrome',
+        'extension': extension_dir(),
+        'developer_mode': developer_mode,
         'detail': (
             'Signed in here, Dex is signed in too — this is the profile it '
             'browses with. Close the window when you are done.'
+        ),
+        # Said rather than left for the owner to discover. Chrome 152 removed
+        # command-line extension loading, so this is the one step Dex cannot
+        # do for them.
+        'extension_note': (
+            'Chrome no longer lets a program install an extension, so load it '
+            'once: chrome://extensions → Load unpacked → pick the folder '
+            'above. Developer mode is already on.'
+            if developer_mode else
+            'To let Dex act in this browser, load the extension once from '
+            'chrome://extensions → Developer mode → Load unpacked.'
         ),
     }
 
@@ -270,12 +321,40 @@ def session_kwargs(browser: str | None, headless: bool) -> dict:
     page every task starts on, and `--no-default-browser-check` suppresses the
     modal that sits on top of it.
     """
+    extension = extension_dir()
+
     kwargs: dict = {
         'headless': headless,
+        # A field, not a flag.
+        #
+        # This was `--user-data-dir=…` in args, and browser_use ignored it and
+        # launched into its own temp directory instead — verified on the live
+        # process: `user-data-dir=…\Temp\browser-use-user-data-…`. So every
+        # session started signed out, and the profile design was doing nothing.
+        # Which is also why signing in to a site never seemed to stick.
+        'user_data_dir': profile_dir(browser),
         'args': [
-            f'--user-data-dir={profile_dir(browser)}',
             '--no-first-run',
             '--no-default-browser-check',
+            # The Dex extension, loaded every time Dex drives a browser itself.
+            #
+            # Playwright's Chromium still honours this switch. Chrome 152 does
+            # not — Google removed `--load-extension` outright, and the
+            # documented escape hatch
+            # (--disable-features=DisableLoadExtensionCommandLineSwitch) is
+            # gone with it. Verified on this machine: the extension attaches in
+            # two seconds under Playwright's Chromium with all eighteen tools,
+            # and Chrome registers zero extensions from the same flag.
+            #
+            # So this covers Dex's own browser. The owner's Chrome has to be
+            # told once by hand, which is Chrome's decision rather than Dex's;
+            # `open_profile` makes that one click.
+            f'--load-extension={extension}',
+            # Both, together. Chromium ignores --load-extension on its own in
+            # an automated launch; the pair is what actually loads it, and was
+            # what the working test used. Disabling everything else costs
+            # nothing here because Dex's profile has nothing else.
+            f'--disable-extensions-except={extension}',
         ],
     }
 
