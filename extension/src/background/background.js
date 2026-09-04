@@ -3,6 +3,11 @@ if (typeof browser === 'undefined' && typeof chrome !== 'undefined') {
   globalThis.browser = chrome;
 }
 
+// FORK CHANGE. The DevTools Protocol, for the three things ordinary extension
+// APIs are not allowed to do: put a file into an upload, click so the page
+// believes it, and know what a download actually wrote. See src/background/cdp.js.
+import * as cdp from './cdp.js';
+
 // Browser detection
 const browserInfo = {
   isFirefox: typeof browser !== 'undefined' && browser.runtime.getManifest().applications?.gecko,
@@ -29,6 +34,10 @@ let lastKnownPorts = { websocket: 8766, http: 8766 };
 let safetyModeEnabled = false;
 const WRITE_EDIT_TOOLS = [
   'element_click',
+  'element_click_trusted',
+  'element_upload_file',
+  'page_download_to',
+  'page_press_key',
   'element_fill'
 ];
 
@@ -1030,7 +1039,146 @@ function getAvailableTools() {
         required: ["mode"]
       }
     },
+
+    // ── FORK CHANGE: the DevTools Protocol tools ────────────────────────────
+    //
+    // Declared here like every other tool, so Dex assigns each a confirmation
+    // tier in core/brain/browser_tools.ts and nothing arrives unclassified.
+    {
+      name: "element_upload_file",
+      description: "Put a file from this computer into a page's file upload. Use after page_analyze to get element_id, or omit it to use the page's only file input. This is the ONLY way to upload — a page's file input cannot be set any other way.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          element_id: { type: "string", description: "The upload control, from page_analyze" },
+          paths: {
+            type: "array",
+            items: { type: "string" },
+            description: "Absolute paths on this computer, e.g. C:\Users\me\file.pdf"
+          },
+          tab_id: { type: "number", description: "Tab to act on. Omit for the active one" }
+        },
+        required: ["paths"]
+      }
+    },
+    {
+      name: "element_click_trusted",
+      description: "Click as a real mouse would, with the full pointer sequence. Use when element_click appeared to work but nothing happened — many widgets ignore synthetic clicks.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          element_id: { type: "string", description: "The element, from page_analyze" },
+          x: { type: "number", description: "Viewport x, if there is no element id" },
+          y: { type: "number", description: "Viewport y, if there is no element id" },
+          tab_id: { type: "number" }
+        },
+        required: []
+      }
+    },
+    {
+      name: "page_download_to",
+      description: "Download into a directory Dex chose and report the exact file that arrived. Pass trigger_element_id to click the download control as part of the same operation, so nothing is missed in the gap.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          directory: { type: "string", description: "Absolute directory to save into" },
+          trigger_element_id: { type: "string", description: "Control to click to start it" },
+          timeout_ms: { type: "number", description: "How long to wait. Default 120000" },
+          tab_id: { type: "number" }
+        },
+        required: ["directory"]
+      }
+    },
+    {
+      name: "page_press_key",
+      description: "Press a key in the page: Enter, Tab, Escape, Backspace, ArrowUp, ArrowDown, or a literal character.",
+      inputSchema: {
+        type: "object",
+        properties: { key: { type: "string" }, tab_id: { type: "number" } },
+        required: ["key"]
+      }
+    },
+    {
+      name: "page_screenshot",
+      description: "A PNG of the page, returned as base64. Use when the page has to be looked at rather than read.",
+      inputSchema: {
+        type: "object",
+        properties: { full_page: { type: "boolean" }, tab_id: { type: "number" } },
+        required: []
+      }
+    },
+    {
+      name: "page_history",
+      description: "Go back or forward in this tab. delta -1 is back, 1 is forward.",
+      inputSchema: {
+        type: "object",
+        properties: { delta: { type: "number", default: -1 }, tab_id: { type: "number" } },
+        required: []
+      }
+    },
+    {
+      name: "panel_open",
+      description: "Show the Dex panel in this browser, so a task can be watched beside the page.",
+      inputSchema: { type: "object", properties: {}, required: [] }
+    },
+    {
+      name: "debugger_detach",
+      description: "Stop debugging a tab, which removes Chrome's debugging banner. Call when browser work is finished.",
+      inputSchema: {
+        type: "object",
+        properties: { tab_id: { type: "number", description: "Omit to detach from every tab" } },
+        required: []
+      }
+    },
   ];
+}
+
+/**
+ * FORK CHANGE. Show the Dex panel.
+ *
+ * `chrome.sidePanel.open()` requires a user gesture, and a WebSocket frame is
+ * not one — Chrome is explicit about this, and it is the right rule: a page
+ * should not be able to make a browser open its own UI. So this tries the real
+ * side panel first, because when it works it is what the owner wants, and falls
+ * back to a small always-on-top window when Chrome refuses.
+ *
+ * The fallback is not a consolation prize. It docks beside the page, shows the
+ * same panel.html, and unlike the side panel it survives switching tabs.
+ */
+async function openDexPanel(params = {}) {
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+
+  if (chrome.sidePanel?.open && tab?.windowId !== undefined) {
+    try {
+      await chrome.sidePanel.setOptions({
+        tabId: tab.id,
+        path: 'src/panel/panel.html',
+        enabled: true,
+      });
+      await chrome.sidePanel.open({ windowId: tab.windowId });
+      return { opened: 'side_panel', tab_id: tab.id };
+    } catch (err) {
+      console.log('side panel refused, using a window instead:', err?.message);
+    }
+  }
+
+  // Already open? Focus it rather than stacking a second one.
+  const existing = await chrome.windows.getAll({ populate: true });
+  for (const win of existing) {
+    if (win.tabs?.some((t) => t.url?.includes('src/panel/panel.html'))) {
+      await chrome.windows.update(win.id, { focused: true });
+      return { opened: 'existing_window', window_id: win.id };
+    }
+  }
+
+  const created = await chrome.windows.create({
+    url: chrome.runtime.getURL('src/panel/panel.html'),
+    type: 'popup',
+    width: 420,
+    height: 720,
+    focused: true,
+  });
+  return { opened: 'window', window_id: created.id };
 }
 
 // Handle MCP requests with enhanced automation tools
@@ -1051,6 +1199,32 @@ async function handleMCPRequest(message) {
 
     switch (method) {
       // New automation tools with background tab support
+      // FORK CHANGE: the DevTools Protocol tools. See src/background/cdp.js.
+      case "element_upload_file":
+        result = await cdp.uploadFile(params);
+        break;
+      case "element_click_trusted":
+        result = await cdp.clickTrusted(params);
+        break;
+      case "page_download_to":
+        result = await cdp.downloadTo(params);
+        break;
+      case "page_press_key":
+        result = await cdp.pressKey(params);
+        break;
+      case "page_screenshot":
+        result = await cdp.screenshot(params);
+        break;
+      case "page_history":
+        result = await cdp.history(params);
+        break;
+      case "debugger_detach":
+        result = await cdp.detach(params);
+        break;
+      case "panel_open":
+        result = await openDexPanel(params);
+        break;
+
       case "page_analyze":
         result = await sendToContentScript('analyze', params, params.tab_id);
         break;

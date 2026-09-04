@@ -136,6 +136,47 @@ export const BROWSER_TOOLS: Record<string, BrowserToolSpec> = {
     params: '{ url?: string, title?: string, folder?: string }',
     note: "Add to the owner's bookmarks",
   },
+  // ── the DevTools Protocol tools ─────────────────────────────────────────
+  //
+  // Tiered by what they can do to the owner, like the rest. Uploading a file
+  // and clicking for real are Tier 2 for the same reason element_click is: on
+  // a site they are signed into, this sends, posts or buys. Reading the page
+  // as a picture is not.
+  element_upload_file: {
+    tier: 2,
+    params: '{ element_id?: string, paths: string[], tab_id?: number }',
+    note: 'Put a file from this PC into a page upload. The ONLY way to upload - a page file input cannot be set any other way',
+  },
+  element_click_trusted: {
+    tier: 2,
+    params: '{ element_id?: string, x?: number, y?: number, tab_id?: number }',
+    note: 'Click as a real mouse does. Use when element_click seemed to work but nothing happened',
+  },
+  page_download_to: {
+    tier: 2,
+    params: '{ directory: string, trigger_element_id?: string, timeout_ms?: number, tab_id?: number }',
+    note: 'Download into a chosen folder and report the exact file. Returns the name, so a later step can point at it',
+  },
+  page_press_key: {
+    tier: 2,
+    params: '{ key: string, tab_id?: number }',
+    note: 'Enter, Tab, Escape, an arrow, or a character. Enter submits, which is the consequential part',
+  },
+  page_screenshot: {
+    tier: 4,
+    params: '{ full_page?: boolean, tab_id?: number }',
+    note: 'The page as a PNG. Reading only',
+  },
+  page_history: {
+    tier: 3,
+    params: '{ delta?: number, tab_id?: number }',
+    note: 'Back (-1) or forward (1) in this tab',
+  },
+  debugger_detach: {
+    tier: 4,
+    params: '{ tab_id?: number }',
+    note: "Stop debugging, removing Chrome's debugging banner. Call when browser work is done",
+  },
   page_style: {
     tier: 2,
     params: '{ css?: string, selector?: string }',

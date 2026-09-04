@@ -278,6 +278,67 @@ async function main(): Promise<void> {
       'a placeholder reached the action');
   }
 
+  console.log('\n— a repair that is the failed step again is refused —');
+
+  {
+    // The model, handed "this step failed", answering with the same step. The
+    // old behaviour ran it, failed identically, and spent a model call and the
+    // owner's patience to get there.
+    const same: ExecutionStep[] = [{
+      id: 'step_2',
+      capability: 'can_control_os',
+      action: 'set_dns',
+      params: { primary: 'not-an-ip', secondary: '1.0.0.1' },
+      confirmationTier: 4,
+      dependsOn: [],
+    }];
+    const brain = new FakeBrain(same);
+    const { orchestrator, agent } = build(brain);
+    const result = await orchestrator.execute(dnsPlan('not-an-ip'));
+
+    check('the task fails rather than repeating itself', result.status === 'FAILED', result.summary);
+    check('the Brain was still asked once', brain.asked === 1, String(brain.asked));
+    check('and set_dns was not run a third time',
+      agent.calls.filter((c) => c.action === 'set_dns').length <= 2,
+      String(agent.calls.filter((c) => c.action === 'set_dns').length));
+  }
+
+  console.log('\n— a repair may not reach for a browser through the app tier —');
+
+  {
+    // The improvisation that ended the GitHub run: run_task refused, and the
+    // repair answered with "open Chrome" as a window action. Two windows were
+    // called "New Tab - Google Chrome", there was no name that told them
+    // apart, and the task stopped on a question the owner could not answer.
+    const viaWindow: ExecutionStep[] = [{
+      id: 'step_2b',
+      capability: 'can_control_app',
+      action: 'wait_for',
+      params: { window: 'Chrome' },
+      confirmationTier: 4,
+      dependsOn: [],
+    }];
+    const brain = new FakeBrain(viaWindow);
+    const { orchestrator, agent } = build(brain);
+    const result = await orchestrator.execute(dnsPlan('not-an-ip'));
+
+    check('the task fails rather than improvising', result.status === 'FAILED', result.summary);
+    check('and the window step was never run',
+      !agent.calls.some((c) => c.action === 'wait_for'),
+      'a browser was opened through the app tier');
+  }
+
+  console.log('\n— what did work is still reported —');
+
+  {
+    const brain = new FakeBrain(null);
+    const { orchestrator } = build(brain);
+    const result = await orchestrator.execute(dnsPlan('not-an-ip'));
+    check('a failed task carries the facts its earlier steps found',
+      Array.isArray(result.facts),
+      JSON.stringify(result.facts));
+  }
+
   console.log();
   if (failures > 0) {
     console.log(`${failures} check(s) failed.`);

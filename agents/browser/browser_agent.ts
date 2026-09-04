@@ -32,9 +32,19 @@ interface BrowserStep {
   action: string;
 }
 
+/** A file the run produced, ready for a later step to point at. */
+interface BrowserDownload {
+  path: string;
+  name: string;
+  bytes?: number | null;
+}
+
 interface TaskResponse {
   success: boolean;
   session_id?: string;
+  /** What the task answered in prose, when it ran in the owner's browser. */
+  answer?: string;
+  downloads?: BrowserDownload[];
   steps?: BrowserStep[];
   url?: string;
   result?: string | null;
@@ -183,6 +193,8 @@ export class BrowserAgent implements Agent {
           stepId,
           ctx,
         );
+      case 'open_browser':
+        return this.openOwnerBrowser(params, requestId, stepId);
       case 'learn_route':
         return this.learnRoute(params, requestId, stepId, ctx);
       case 'navigate':
@@ -443,15 +455,30 @@ ${task}` : task;
         success: false,
         error: response.error ?? 'Browser task failed',
         retryable: response.retryable ?? true,
-        data: { url: response.url, steps: response.steps },
+        // A run can fail after it downloaded something. Reporting the file
+        // anyway is how the owner keeps what did work.
+        data: {
+          url: response.url,
+          steps: response.steps,
+          downloads: response.downloads ?? [],
+        },
       };
     }
 
     return {
       success: true,
       data: {
-        result: response.result ?? null,
+        // `answer` when the run was in the owner's browser, `result` when it
+        // was Dex's. One field either way, so the closing answer and any
+        // `{{step_N.output.result}}` reference do not have to know which
+        // browser did the work.
+        result: response.result ?? response.answer ?? null,
         url: response.url,
+        // Files the run produced. This is what lets a browser step hand work
+        // to a file step: `{{step_N.output.downloads[0].path}}` into move_file
+        // or run_program. Always an array, so the reference shape is the same
+        // whether or not anything downloaded.
+        downloads: response.downloads ?? [],
         steps: response.steps,
         verification: response.verification ?? null,
       },
@@ -579,6 +606,55 @@ ${task}` : task;
    * costs a model call per page and takes a different turn each time. Being
    * shown once costs a minute and is then free and identical forever.
    */
+  /**
+   * Open the browser the owner is signed into.
+   *
+   * The dead end this removes: Dex refused a GitHub task because no browser
+   * was attached and told the owner to open Chrome — something Dex can do. The
+   * planner then improvised, opened Chrome through the app tier, found two
+   * windows both called "New Tab - Google Chrome", and stopped.
+   *
+   * Their profile, not Dex's, because the extension lives there and the
+   * session is theirs. Nothing is driven: a window opens and the extension in
+   * it attaches on its own.
+   */
+  private async openOwnerBrowser(
+    params: Record<string, unknown>,
+    requestId: string,
+    stepId: string,
+  ): Promise<AgentResult> {
+    try {
+      const response = await this.post<{ success?: boolean; error?: string; data?: unknown }>(
+        '/open-owner-browser', {
+          profile: String(params.profile ?? ''),
+          url: String(params.url ?? ''),
+        },
+      );
+
+      if (response.success !== true) {
+        return {
+          success: false,
+          error: String((response as Record<string, unknown>).error ?? 'could not open the browser'),
+          retryable: false,
+        };
+      }
+
+      const data = (response.data ?? {}) as Record<string, unknown>;
+      emit(
+        'routing',
+        data.attached === true
+          ? `Opened ${String(data.profile ?? 'Chrome')} — the extension is attached.`
+          : `Opened ${String(data.profile ?? 'Chrome')}. The extension has not ` +
+            'attached; load it once from chrome://extensions.',
+        requestId,
+        stepId,
+      );
+      return { success: true, data };
+    } catch (err) {
+      return this.transportFailure(err, requestId, stepId);
+    }
+  }
+
   private async learnRoute(
     params: Record<string, unknown>,
     requestId: string,

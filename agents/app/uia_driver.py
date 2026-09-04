@@ -146,6 +146,27 @@ def _describe(control: Any) -> Element:
     )
 
 
+def _foreground(windows: list) -> Any | None:
+    """
+    Whichever of these is the active window, or None.
+
+    Matched on the native handle rather than on the title, because the title is
+    exactly what failed to distinguish them.
+    """
+    try:
+        import ctypes
+
+        active = ctypes.windll.user32.GetForegroundWindow()
+        if not active:
+            return None
+        for win in windows:
+            if getattr(win, 'NativeWindowHandle', None) == active:
+                return win
+    except Exception as exc:  # noqa: BLE001 - falls through to the refusal
+        log.debug('could not read the foreground window: %s', exc)
+    return None
+
+
 def _find_window(title_contains: str, timeout: float = FIND_TIMEOUT) -> Any:
     """
     Resolve a window title to exactly one window.
@@ -182,6 +203,30 @@ def _find_window(title_contains: str, timeout: float = FIND_TIMEOUT) -> Any:
 
         if len(loose) > 1:
             titles = [(getattr(w, 'Name', '') or '').strip() for w in loose]
+
+            # Windows that cannot be told apart by name.
+            #
+            # Refusing and asking the owner to "name the one you mean exactly"
+            # is the right answer when the titles differ — a scratch Notepad
+            # and the document they have been writing in all afternoon are
+            # different windows and Dex must not choose. It is an impossible
+            # question when the titles are identical: two windows both called
+            # "New Tab - Google Chrome" have no name that distinguishes them,
+            # so the owner has nothing to answer with and the task simply
+            # stops. That happened.
+            #
+            # When they are the same, the one in front is the one meant. It is
+            # the window the owner is looking at, and the alternative is not a
+            # safer choice — it is no choice at all.
+            if len(set(titles)) == 1:
+                front = _foreground(loose)
+                if front is not None:
+                    log.info(
+                        'several windows named %r; using the one in front',
+                        titles[0],
+                    )
+                    return front
+
             raise AmbiguousWindow(
                 f'{len(loose)} open windows match "{title_contains}". '
                 'Name the one you mean exactly.',

@@ -267,7 +267,16 @@ class ConversationStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> sendHumanMessage(String text) async {
+  /// Send this turn to the Dex panel in the owner's browser instead of here.
+  ///
+  /// Same thread, different place to watch it: the panel opens beside the page
+  /// and the steps appear there. Everything before the send is identical to an
+  /// ordinary turn, so the message is in this conversation either way.
+  Future<void> sendToBrowserPanel(String text) async {
+    await sendHumanMessage(text, toPanel: true);
+  }
+
+  Future<void> sendHumanMessage(String text, {bool toPanel = false}) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
 
@@ -298,7 +307,11 @@ class ConversationStore extends ChangeNotifier {
       return;
     }
 
-    _client.submit(trimmed);
+    if (toPanel) {
+      _client.sendToPanel(trimmed);
+    } else {
+      _client.submit(trimmed);
+    }
   }
 
   /// True while a turn is in flight. Drives the Stop button.

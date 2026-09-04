@@ -37,7 +37,7 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
   close_app: { params: '{ name: string }', note: 'Asks the window to close; does not force-kill' },
   find_program: {
     params: '{ name: string, version?: boolean }',
-    note: 'Is it installed, and where? { found, path, version, source }. Ask before installing and again after — a version string is evidence, an exit code is not. Not-installed is an answer, not an error',
+    note: 'Is it installed, and where? { found, path, version, source }. Ask before installing and again after — a version string is evidence, an exit code is not. Not-installed is an answer',
   },
   get_keyboard_backlight: {
     params: '{}',
@@ -70,7 +70,7 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
   // classifies the rest.
   run_command: {
     params: '{ command: string[], cwd?: string, timeout?: number }',
-    note: 'Any command, classified before it runs. git, npm, pip, compilers, rg, netstat, Get-FileHash, PowerShell. Reads run silently; changes ask first; destructive ones are refused. Always pass the command as a LIST of arguments',
+    note: 'Any command, classified before it runs. git, npm, pip, compilers, rg, netstat, PowerShell. Reads run silently; changes ask first; destructive ones are refused. Pass the command as a LIST of arguments',
   },
   classify_command: {
     params: '{ command: string[] }',
@@ -85,13 +85,13 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
   set_brightness: { params: '{ level: number (0-100) }', note: 'Built-in laptop panels only; external monitors report unsupported' },
   clipboard_read: {
     params: '{ allow_secret?: boolean }',
-    note: 'What is on the clipboard: text, files copied in Explorer, or an image. Text that looks like a password or token is withheld; pass allow_secret only if the owner said it is not a credential. Tier 2',
+    note: 'What is on the clipboard: text, files copied in Explorer, or an image. Text that looks like a password or token is withheld unless allow_secret. Tier 2',
   },
   clipboard_write: {
     params: '{ text: string }',
     note: 'Put text on the clipboard, replacing what is there. Tier 2',
   },
-  get_env: { params: '{ name?: string }', note: 'Omit name for every variable' },
+  get_env: { params: '{ name?: string }', note: 'Omit name for all' },
   set_env: {
     params: '{ name: string, value: string | null, scope?: "user" | "machine", append?: boolean }',
     note: 'Persists and notifies Windows, so a new shell sees it. append=true adds to PATH rather than replacing it. value=null removes. Tier 2',
@@ -102,7 +102,7 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
 export const FILE_ACTIONS: Record<string, ActionSpec> = {
   find_files: {
     params: '{ query: string, scope?: "pc" | "profile" | string, also_called?: string[], open_location?: boolean, max_results?: number }',
-    note: 'Searches every drive by name AND by contents, OCR included - a card saved as scan001.jpg is found by the word inside it. Expands spellings itself, so ONE call covers aadhar/aadhaar/uid. scope: "pc", "profile" (default), or a folder. also_called adds other names. open_location=true reveals one in Explorer',
+    note: 'Every drive, by name AND by contents, OCR included - scan001.jpg is found by a word inside it. Expands spellings, so ONE call covers aadhar/aadhaar/uid. scope: "pc", "profile" (default), or a folder',
   },
   write_file: {
     params: '{ path: string, content: string }',
@@ -110,7 +110,7 @@ export const FILE_ACTIONS: Record<string, ActionSpec> = {
   },
   run_program: {
     params: '{ path: string, runtime?: "python" | "node" | "ruby" | "go", args?: string[], background?: boolean, timeout?: number }',
-    note: 'Runs a program as the signed-in user; use background=true for a GUI/game, Tier 2',
+    note: 'Runs a program as the signed-in user. background=true for a GUI app. Tier 2',
   },
   describe_file: {
     params: '{ path: string, question?: string, model?: "haiku" | "sonnet" | "opus" }',
@@ -142,7 +142,7 @@ export const FILE_ACTIONS: Record<string, ActionSpec> = {
   },
   download_file: {
     params: '{ url: string, into?: string, filename?: string, max_bytes?: number }',
-    note: 'Fetches a web address to a file on disk — into defaults to Downloads. No login, no JavaScript: if the link needs a session, use can_browse_web. Pair with can_deliver send_file to get it to a phone. Tier 2',
+    note: 'Fetches a web address to a file on disk — into defaults to Downloads. No login, no JavaScript: if the link needs a session, use can_browse_web. Tier 2',
   },
   hash_file: {
     params: '{ path: string, algorithm?: "sha256" | "sha1" | "md5" | "sha512", expected?: string }',
@@ -152,7 +152,7 @@ export const FILE_ACTIONS: Record<string, ActionSpec> = {
 
 /** Tier 2 — drive an application through UI Automation. Deterministic, no vision. */
 export const APP_ACTIONS: Record<string, ActionSpec> = {
-  list_elements: { params: '{ window: string, control_type?: string }', note: 'Discover what a window offers before acting on it' },
+  list_elements: { params: '{ window: string, control_type?: string }', note: 'What a window offers, before acting' },
   click_element: { params: '{ window: string, name: string, control_type?: string }' },
   set_text: { params: '{ window: string, name: string, text: string }', note: 'Sets the field directly; never types keystrokes' },
   read_element: { params: '{ window: string, name: string }' },
@@ -211,7 +211,7 @@ export const WEB_ACTIONS: Record<string, ActionSpec> = {
     note: 'A table as rows of objects. which is an index or a column name',
   },
   scroll: { params: '{ direction?: "down" | "up" | "bottom" | "top" }' },
-  press_key: { params: '{ key: string }', note: 'Enter to submit, Escape to dismiss' },
+  press_key: { params: '{ key: string }', note: 'Enter submits, Escape dismisses' },
   go_back: { params: '{}' },
   reload: { params: '{}' },
   type_text: { params: '{ selector: string, text: string }', note: 'Refuses password fields; Dex hands those to the owner' },
@@ -219,6 +219,10 @@ export const WEB_ACTIONS: Record<string, ActionSpec> = {
   map_page: {
     params: '{ query?: string, include_hidden?: boolean, browser?: string }',
     note: 'Links, buttons and fields with real labels and hrefs, collapsed menus included. query ranks, it does not filter',
+  },
+  open_browser: {
+    params: '{ profile?: string, url?: string }',
+    note: 'Open the browser the owner is signed into, with their profile and the Dex extension. Use FIRST when a task needs one of their accounts. Never open Chrome via the app tier',
   },
   session_status: {
     params: '{ url: string, browser?: string }',
@@ -230,15 +234,15 @@ export const WEB_ACTIONS: Record<string, ActionSpec> = {
   },
   download_current: {
     params: '{ name?: string, browser?: string }',
-    note: 'Saves what the signed-in page offered. Use for anything behind a login: download_file has no session and fetches the login page',
+    note: 'Saves what the signed-in page offered. download_file has no session and would fetch the login page',
   },
   learn_route: {
     params: '{ url: string, goal: string }',
-    note: 'Watch the owner click their way to something once and remember it. Only when they ask Dex to learn or remember where something is',
+    note: 'Watch the owner click their way to something once and remember it. Only when they ask Dex to learn where something is',
   },
   run_task: {
     params: '{ task: string, url?: string, browser?: string }',
-    note: 'Autonomous multi-step browsing, for anything needing judgement across pages. Dex keeps its own signed-in profile. Set start_url so a remembered route can be found',
+    note: 'Multi-step browsing needing judgement. Runs in the browser the owner is signed into, opening it if needed - so it can upload a file and act as them. Returns downloads[]: point a later step at {{step_N.output.downloads[0].path}}. Set start_url so a remembered route is found',
   },
 };
 
@@ -268,7 +272,7 @@ export const WORKSPACE_ACTIONS: Record<string, ActionSpec> = {
 export const DELIVERY_ACTIONS: Record<string, ActionSpec> = {
   send_file: {
     params: '{ path: string, caption?: string }',
-    note: 'Sends a file to the chat this request came from — WhatsApp, Telegram or Discord. If the request came from the desktop app there is nowhere to send it, and Dex reports where the file is instead. Tier 2',
+    note: 'Sends a file to the chat this request came from — WhatsApp, Telegram or Discord. From the desktop app there is nowhere to send it, so Dex says where the file is. Tier 2',
   },
   send_message: {
     params: '{ text: string }',

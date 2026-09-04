@@ -698,6 +698,20 @@ class DexGatewayClient extends ChangeNotifier {
     });
   }
 
+  /// Send a prompt to the Dex panel in the owner's browser.
+  ///
+  /// The task runs there rather than here, beside the page it is about. The
+  /// same conversation id travels with it, so the turns land in this thread and
+  /// the two views are one conversation rather than two.
+  void sendToPanel(String text) {
+    currentRequestId = null;
+    _send({
+      'type': 'to_panel',
+      'text': text,
+      if (conversationId != null) 'conversationId': conversationId,
+    });
+  }
+
   void cancel() {
     final id = currentRequestId;
     if (id == null || id.isEmpty) return;

@@ -28,10 +28,10 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
-if (-not (Test-Path '.env')) {
-    Write-Host 'ERROR: .env not found. Copy .env.example to .env and fill in ANTHROPIC_API_KEY.' -ForegroundColor Red
-    exit 1
-}
+# No .env check. Dex stopped reading .env: settings live in
+# %LOCALAPPDATA%\DEX\settings.json and secrets in the Windows credential store,
+# because the owner asked for no .env files in the project. This script was
+# still refusing to start without one.
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
     [Security.Principal.WindowsBuiltInRole]::Administrator
@@ -107,19 +107,22 @@ if (-not $CoreOnly -and -not $DaemonOnly -and -not $NoBrowser) {
 }
 
 if (-not $DaemonOnly -and -not $NoUi) {
-    $exe = 'ui/dex-bar/build/windows/x64/runner/Debug/Dex.exe'
+    # The Dex app, which lives in app/. This used to build ui/dex-bar, which
+    # was replaced and no longer exists, so this branch silently did nothing
+    # for anyone who ran it.
+    $exe = 'app/build/windows/x64/runner/Release/dex.exe'
     if (-not (Test-Path $exe)) {
-        Write-Host 'Dex Bar not built yet — building (first run takes ~1 min)...' -ForegroundColor Cyan
-        Push-Location 'ui/dex-bar'
-        flutter build windows --debug
+        Write-Host 'Dex not built yet - building (first run takes a few minutes)...' -ForegroundColor Cyan
+        Push-Location 'app'
+        flutter build windows --release
         Pop-Location
     }
     if (Test-Path $exe) {
-        Write-Host 'Starting Dex Bar (Alt+Space to summon)...' -ForegroundColor Cyan
+        Write-Host 'Starting Dex...' -ForegroundColor Cyan
         $ui = Start-Process $exe -PassThru
-        Write-Host "Dex Bar PID: $($ui.Id)" -ForegroundColor DarkGray
+        Write-Host "Dex PID: $($ui.Id)" -ForegroundColor DarkGray
     } else {
-        Write-Host 'Dex Bar build failed — continuing with CLI only.' -ForegroundColor Yellow
+        Write-Host 'Dex build failed - continuing with CLI only.' -ForegroundColor Yellow
     }
 }
 

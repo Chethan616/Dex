@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from typing import Any
 
 from bridge import bridge
@@ -57,6 +58,12 @@ How to work:
   element ids; they come from the analysis and change between pages.
 - Prefer navigating straight to a known URL over clicking through menus.
 - After an action that changes the page, analyze again before the next one.
+- If element_click appears to work but the page does not change, use
+  element_click_trusted — many controls ignore a synthetic click.
+- To upload a file, use element_upload_file with the path you were given. Do
+  not click the upload button and wait for a dialog; there is no dialog.
+- To download, use page_download_to with the directory you were given, passing
+  the download control as trigger_element_id. It reports the exact file.
 - When the task is done, reply with {"done": true, "answer": "..."}.
 - If the page shows you are signed out, stop and say so — do not try to sign
   in, and never type a password.
@@ -93,6 +100,13 @@ async def run(task: str, ask_model, *, on_step=None) -> dict[str, Any]:
     available = [t.get('name') for t in bridge.tools()]
     history: list[str] = []
     steps: list[dict] = []
+    # Files this run produced, so a later Dex step can point at one.
+    #
+    # Without this the browser could do the work and Dex could not pick it up:
+    # run_task returned a sentence and a URL, and `{{step_N.output...}}` had no
+    # path to resolve. Compressing a PDF on a website and then moving the result
+    # to another drive is two steps that could not be joined.
+    downloads: list[dict] = []
 
     for number in range(1, MAX_STEPS + 1):
         prompt = (
@@ -112,10 +126,12 @@ async def run(task: str, ask_model, *, on_step=None) -> dict[str, Any]:
             continue
 
         if choice.get('done'):
+            await _detach(available)
             return {
                 'success': True,
                 'answer': str(choice.get('answer', '')),
                 'steps': steps,
+                'downloads': downloads,
                 'browser': 'the owner browser',
             }
 
@@ -130,8 +146,21 @@ async def run(task: str, ask_model, *, on_step=None) -> dict[str, Any]:
             result = await bridge.call(tool, params)
             summary = _summarise(result)
             history.append(f'  [{number}] {tool} -> {summary}')
-            steps.append({'step': number, 'tool': tool, 'params': params,
-                          'result': summary})
+            steps.append({
+                'step': number,
+                'tool': tool,
+                # `action` as well as `tool`, because the route recorder in
+                # browser_agent.ts reads `action` — so a run that worked here
+                # teaches the same remembered route an autonomous run does,
+                # with no second code path.
+                'action': tool,
+                'url': _url_of(result),
+                'params': params,
+                'result': summary,
+            })
+            landed = _download_of(result)
+            if landed:
+                downloads.append(landed)
         except Exception as exc:  # noqa: BLE001 - reported, not raised
             history.append(f'  [{number}] {tool} failed: {exc}')
             steps.append({'step': number, 'tool': tool, 'params': params,
@@ -140,6 +169,7 @@ async def run(task: str, ask_model, *, on_step=None) -> dict[str, Any]:
         if on_step:
             on_step(steps[-1] if steps else {'step': number, 'tool': tool})
 
+    await _detach(available)
     return {
         'success': False,
         'error': (
@@ -148,8 +178,51 @@ async def run(task: str, ask_model, *, on_step=None) -> dict[str, Any]:
             'something the task did not say.'
         ),
         'steps': steps,
+        'downloads': downloads,
         'retryable': False,
     }
+
+
+async def _detach(available: list) -> None:
+    """
+    Stop debugging, so Chrome's debugging banner goes away.
+
+    Attaching is what makes file upload and a trusted click possible, and the
+    banner is Chrome telling the owner that happened — which is correct. Leaving
+    it up after the task ends is not: it would sit there for the rest of the
+    session implying Dex is still in the page.
+    """
+    if 'debugger_detach' not in available:
+        return
+    try:
+        await bridge.call('debugger_detach', {})
+    except Exception as exc:  # noqa: BLE001 - a banner is not worth failing over
+        log.debug('could not detach the debugger: %s', exc)
+
+
+def _download_of(result: Any) -> dict | None:
+    """A completed download in a tool result, as a path Dex can point at."""
+    if not isinstance(result, dict) or result.get('downloaded') is not True:
+        return None
+    directory = str(result.get('directory', ''))
+    name = str(result.get('file', ''))
+    if not directory or not name:
+        return None
+    return {
+        'path': str(Path(directory) / name),
+        'name': str(result.get('suggested_name') or name),
+        'bytes': result.get('bytes'),
+    }
+
+
+def _url_of(result: Any) -> str:
+    """Whatever page this happened on, for the remembered route."""
+    if isinstance(result, dict):
+        for key in ('url', 'href', 'page_url'):
+            value = result.get(key)
+            if isinstance(value, str):
+                return value
+    return ''
 
 
 def _parse(raw: str) -> dict | None:

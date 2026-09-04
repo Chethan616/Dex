@@ -54,6 +54,9 @@ $UpdateUrl = 'http://127.0.0.1:8766/extension/update.xml'
 
 $PolicyKey = 'HKLM:\SOFTWARE\Policies\Google\Chrome'
 $ListKey = Join-Path $PolicyKey 'ExtensionInstallForcelist'
+# Chrome's own name for it. Suppresses the debugging banner for the extensions
+# listed here and no others.
+$SilentKey = Join-Path $PolicyKey 'SilentDebuggerExtensionAPI'
 
 function Assert-Elevated {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -83,6 +86,10 @@ if ($Remove) {
 
   # Only if it is empty. Chrome may have other policies that are not ours to
   # delete.
+  if (Test-Path $SilentKey) {
+    Remove-Item -Path $SilentKey -Recurse -Force
+    Write-Host '  Debugging banner restored.'
+  }
   if (Test-Path $PolicyKey) {
     $key = Get-Item $PolicyKey
     if ($key.SubKeyCount -eq 0 -and $key.ValueCount -eq 0) {
@@ -109,10 +116,25 @@ if (-not (Test-Path $crx)) {
 New-Item -Path $ListKey -Force | Out-Null
 Set-ItemProperty -Path $ListKey -Name '1' -Value "$ExtensionId;$UpdateUrl"
 
+# Silence the debugging bar for this extension.
+#
+# Dex uses chrome.debugger for the three things ordinary extension APIs are not
+# permitted to do: put a file into an upload, click so the page believes it, and
+# know what a download actually wrote. Chrome shows "Dex started debugging this
+# browser" whenever that is attached, which is a correct warning about a real
+# capability — it is here as a separate, named decision rather than something
+# that happens quietly alongside the install.
+#
+# Set for this extension id only, not globally. Any other extension that
+# attaches a debugger still raises the bar, which is the point of the bar.
+New-Item -Path $SilentKey -Force | Out-Null
+Set-ItemProperty -Path $SilentKey -Name '1' -Value $ExtensionId
+
 Write-Host ''
 Write-Host '  Policy set.' -ForegroundColor Green
 Write-Host "    $ExtensionId"
 Write-Host "    $UpdateUrl"
+Write-Host '    debugging banner silenced for this extension only'
 Write-Host ''
 Write-Host '  Two things have to be true for Chrome to install it:'
 Write-Host '    the browser agent is running (it serves the manifest and the CRX)'

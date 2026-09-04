@@ -342,7 +342,24 @@ export class Gateway {
     result: { status: TaskStatus; summary: string; facts?: Record<string, unknown>[] },
     stop?: AbortSignal,
   ): Promise<string | undefined> {
-    if (result.status !== 'COMPLETED') return undefined;
+    if (result.status === 'CANCELLED') return undefined;
+
+    if (result.status !== 'COMPLETED') {
+      // A failed task that still learned something.
+      //
+      // This used to return immediately, so a task that read four things and
+      // then failed on the fifth told the owner only that it failed. The
+      // orchestrator now carries `facts` out with the failure, and this is
+      // where they become a sentence. Nothing here claims the task succeeded —
+      // the `failed` event was already emitted and stands.
+      const found = result.facts ?? [];
+      if (found.length === 0) return undefined;
+
+      const partial = await this.answerFor(request, found, stop);
+      if (!partial) return undefined;
+      emit('done', `Before it stopped: ${partial}`, request.requestId);
+      return partial;
+    }
 
     const answer = await this.answerFor(request, result.facts ?? [], stop);
     emit('done', answer ?? `Done: ${result.summary}`, request.requestId);

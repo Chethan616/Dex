@@ -28,7 +28,8 @@ interface Client {
 
 type Inbound =
   | { type: 'auth'; token: string }
-  | { type: 'submit'; text: string; conversationId?: string }
+  | { type: 'submit'; text: string; conversationId?: string; from?: string }
+  | { type: 'to_panel'; text: string; conversationId?: string }
   | { type: 'get_conversations'; query?: string }
   | { type: 'open_conversation'; conversationId: string }
   | { type: 'rename_conversation'; conversationId: string; name: string }
@@ -385,6 +386,31 @@ export class DexServer {
           this.stepsInFlight.delete(result.requestId);
         }
         return this.send(socket, { type: 'result', ...result });
+      }
+
+      case 'to_panel': {
+        // Send a prompt to the Dex panel in the owner's browser.
+        //
+        // The panel has been a full chat client of this server since Phase 6 —
+        // it authenticates and sends `submit` like the app does. What did not
+        // exist was anything going the other way with an address on it: every
+        // client sees the same broadcast, so there was no way to say "this one
+        // is for the panel".
+        //
+        // This is that. The app sends `to_panel`, the panel picks it up and
+        // runs it, and the run happens beside the page instead of behind a
+        // window the owner has to alt-tab to.
+        const text = String(msg.text ?? '').trim();
+        if (!text) return this.send(socket, { type: 'error', message: 'Nothing to send' });
+
+        await this.openBrowserPanel();
+        this.broadcast({
+          type: 'panel',
+          action: 'prompt',
+          text,
+          conversationId: String(msg.conversationId ?? ''),
+        });
+        return this.send(socket, { type: 'panel_sent', text });
       }
 
       case 'get_channels':
@@ -1213,6 +1239,29 @@ export class DexServer {
         },
       ],
     };
+  }
+
+  /**
+   * Make the Dex panel visible in the owner's browser.
+   *
+   * Asked of the browser agent, which asks the extension, because only code
+   * running inside Chrome can open a side panel. Best-effort on purpose: a
+   * panel that will not open is a worse view of a task that still runs, not a
+   * reason to refuse to run it.
+   */
+  private async openBrowserPanel(): Promise<void> {
+    try {
+      const port = process.env.BROWSER_AGENT_PORT ?? '8766';
+      await fetch(`http://127.0.0.1:${port}/panel/open`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+        signal: AbortSignal.timeout(20_000),
+      });
+    } catch (err) {
+      // Nothing to say here beyond the panel not opening; the task still runs.
+      void err;
+    }
   }
 
   private channelsPayload(): { type: string; channels: ChannelState[] } {

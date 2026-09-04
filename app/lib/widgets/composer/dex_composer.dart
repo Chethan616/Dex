@@ -26,6 +26,7 @@ class DexComposer extends StatefulWidget {
   const DexComposer({
     super.key,
     required this.onSubmit,
+    this.onSubmitToPanel,
     this.onStop,
     this.isBusy = false,
     this.hint = 'Message Dex',
@@ -39,6 +40,9 @@ class DexComposer extends StatefulWidget {
   });
 
   final ValueChanged<String> onSubmit;
+
+  /// Send this turn to the Dex panel in the owner's browser. Drives /browser.
+  final ValueChanged<String>? onSubmitToPanel;
   final VoidCallback? onStop;
   final bool isBusy;
   final String hint;
@@ -167,6 +171,7 @@ class _DexComposerState extends State<DexComposer> {
   SlashContext _slashCtx() => SlashContext(
         context: context,
         sendMessage: widget.onSubmit,
+        sendToPanel: widget.onSubmitToPanel,
         onStop: widget.onStop,
         onClear: widget.onClear,
         onNewChat: widget.onNewChat,

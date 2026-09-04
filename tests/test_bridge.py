@@ -181,24 +181,37 @@ async def main() -> None:
     print('\nrouting')
 
     fresh = BrowserBridge()
-    check('with nothing attached, a public page goes to Dex own browser',
-          routing('read the docs on example.com') == 'dex')
-    check('and a signed-in task says the owner browser is unavailable',
-          routing('what is in my inbox') == 'owner-unavailable',
+
+    # With nothing attached, the answer is to open one — not to guess from the
+    # words in the goal, and not to refuse. The old router read the task for
+    # 'my ' and a list of site names, which meant any task phrased outside that
+    # list quietly ran in a browser signed in to nothing.
+    check('with nothing attached, Dex opens the owner browser',
+          routing('read the docs on example.com') == 'open',
+          routing('read the docs on example.com'))
+    check('and it does not matter how the task is worded',
+          routing('what is in my inbox') == 'open',
           routing('what is in my inbox'))
+    check('background work still goes to Dex own browser',
+          routing('scrape example.com', background=True) == 'dex',
+          routing('scrape example.com', background=True))
 
     # Attach the module-level bridge the router actually consults.
     extension2 = FakeExtension({})
     task2 = await attached(bridge_module.bridge, extension2)
 
-    check('with a browser attached, a signed-in task goes to it',
+    check('attached, a signed-in task goes to the owner browser',
           routing('open my vtop and get my attendance') == 'owner',
           routing('open my vtop and get my attendance'))
-    check('a public scrape still goes to Dex own browser',
-          routing('get the price from example.com') == 'dex',
+    check('attached, a public scrape goes there too - it is their session',
+          routing('get the price from example.com') == 'owner',
           routing('get the price from example.com'))
-    check('asked explicitly, it uses the owner browser',
-          routing('go to example.com', needs_session=True) == 'owner')
+    check('background work is the one thing that still goes elsewhere',
+          routing('scrape example.com', background=True) == 'dex',
+          routing('scrape example.com', background=True))
+    check('a task that needs their session overrides background',
+          routing('post this', needs_session=True, background=True) == 'owner',
+          routing('post this', needs_session=True, background=True))
 
     await bridge_module.bridge.detach('done')
     task2.cancel()

@@ -16,6 +16,7 @@ import { ConfirmationManager } from '../confirmation/confirmation_manager';
 import { describeUnresolved, findRefs, resolveStepRefs } from './step_refs';
 import { worthRetrying } from '../reliability/exit_codes';
 import { describeArtifact } from '../events/artifacts';
+import { repeatsFailedStep } from './duplicate_steps';
 import { statusOf } from './liveness';
 import { emit } from '../events/bus';
 
@@ -41,6 +42,26 @@ export interface PlanRepairer {
     signal?: AbortSignal,
   ): Promise<{ steps: ExecutionStep[]; reason: string } | null>;
 }
+
+/**
+ * Is this step opening a browser through the window/app tier?
+ *
+ * `launch_app` is the right way to open any app and is not the problem. The
+ * problem is a plan reaching for a browser *window* — clicking, focusing,
+ * waiting on it by title — when what it actually wants is a browser it can
+ * drive, which is open_browser.
+ */
+function isBrowserThroughAppTier(step: ExecutionStep): boolean {
+  if (step.capability !== 'can_control_app' && step.capability !== 'can_control_gui') {
+    return false;
+  }
+  const named = [step.params.window, step.params.name, step.params.app]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ');
+  return BROWSER_NAME.test(named);
+}
+
+const BROWSER_NAME = /(chrome|edge|firefox|brave|opera|chromium)/i;
 
 export class Orchestrator {
   constructor(
@@ -207,15 +228,35 @@ export class Orchestrator {
           }
 
           const detail = failed.length > 0 ? `: ${failed.map((s) => s.id).join(', ')}` : '';
-          emit('failed', `Stopped because an agent could not complete${detail}`, requestId);
-          return { status: 'FAILED', summary: `Agent could not complete${detail}` };
+          const done = [...completed];
+          emit('failed', `Stopped because an agent could not complete${detail}`, requestId, undefined, {
+            completedSteps: done,
+          });
+          // What the steps that DID work found, carried out with the failure.
+          //
+          // This used to return the status and a sentence, and nothing else.
+          // Nine steps could succeed and everything they discovered was thrown
+          // away at the tenth, because the Gateway builds its answer from
+          // `facts` and never saw them. The owner got one red line and no way
+          // to tell whether anything had happened. Failing is not a reason to
+          // withhold what was already learned.
+          return {
+            status: 'FAILED',
+            summary: `Agent could not complete${detail}`,
+            facts,
+          };
         }
       }
 
       const missing = [...expected].filter((id) => !completed.has(id));
       if (missing.length > 0) {
+        // Said out loud. This path used to return FAILED with no event at all,
+        // so the transcript ended on the last step that worked and nothing
+        // explained why the task stopped.
+        emit('failed', `Never finished: ${missing.join(', ')}`, requestId);
         return {
           status: 'FAILED',
+          facts,
           summary: `Failed steps: ${missing.join(', ')}`,
         };
       }
@@ -306,6 +347,40 @@ export class Orchestrator {
       emit(
         'failed',
         'That could not be fixed by replanning.',
+        requestId,
+        failedStep.id,
+      );
+      return null;
+    }
+
+    // A repair that is the failed step again is not a repair.
+    //
+    // Running it spends another model call and another wait to arrive at the
+    // same failure, and the owner watches Dex try the identical thing twice.
+    // Saying so is the better outcome, and it is also the honest one.
+    if (repeatsFailedStep(failedStep, repaired.steps)) {
+      emit(
+        'failed',
+        `Replanning came back with the same ${failedStep.action} that just failed, so it was not run again.`,
+        requestId,
+        failedStep.id,
+      );
+      return null;
+    }
+
+    // Never reach for a browser through the app tier.
+    //
+    // This is the improvisation that ended the GitHub run: run_task refused
+    // because no browser was attached, and the repair answered with "open
+    // Chrome" as a window action — which found two windows both called "New
+    // Tab - Google Chrome", had no name to tell them apart, and stopped. Dex
+    // has open_browser for this, and it opens the profile the owner is signed
+    // in to rather than whichever window happens to answer.
+    const viaWindow = repaired.steps.find((step) => isBrowserThroughAppTier(step));
+    if (viaWindow) {
+      emit(
+        'failed',
+        `Replanning tried to open a browser with ${viaWindow.action}. That is what open_browser is for, so it was refused.`,
         requestId,
         failedStep.id,
       );
@@ -655,7 +730,12 @@ export class Orchestrator {
     const retryVerification = await this.reliability.verify(step, beforeState, requestId, retry);
 
     if (retry.success && retryVerification.status !== 'FAILED') {
-      this.captureCompletionDetail(step, result, facts);
+      // `retry`, not `result`.
+      //
+      // `result` is the attempt that failed verification. Reporting its data as
+      // the outcome means the closing answer quotes the run that did not work,
+      // which is the opposite of what a second attempt is for.
+      this.captureCompletionDetail(step, retry, facts);
       const message = `${recheckOnly ? 'Confirmed on recheck' : 'Verified on the second attempt'} — ${retryVerification.reason}. ${this.nextLine(step, completed, 'ok')}`;
       stepReports.set(step.id, {
         stepId: step.id,
@@ -669,6 +749,14 @@ export class Orchestrator {
         verification: retryVerification.status,
         artifact: describeArtifact(step.action, result.data),
       });
+      // What it returned, kept so a later step can use it.
+      //
+      // This line was missing, and its absence is why a plan could fall over
+      // one step after it recovered. The VERIFIED and UNVERIFIABLE paths both
+      // record the output; this one marked the step completed and recorded
+      // nothing, so `{{step_N.output.path}}` in the next step resolved to
+      // nothing and failed hard — after the step it referred to had worked.
+      this.outputs.set(step.id, retry.data);
       completed.add(step.id);
       return 'ok';
     }

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "ts-node src/main.ts",
     "build": "tsc",
+    "rebuild": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/rebuild.ps1",
+    "rebuild:fast": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/rebuild.ps1 -Fast",
     "start": "node dist/src/main.js",
     "typecheck": "tsc --noEmit",
     "test:ws": "ts-node tests/smoke_ws.ts",
@@ -36,6 +38,7 @@
     "app": "cd app && flutter run --release -d windows",
     "app:debug": "cd app && flutter run -d windows",
     "test:step-refs": "ts-node tests/smoke_step_refs.ts",
+    "test:handoff": "ts-node tests/smoke_handoff.ts",
     "test:repair": "ts-node tests/smoke_repair.ts",
     "test:autosave": "ts-node tests/smoke_autosave.ts",
     "test:backlight": "python tests/test_backlight.py",
@@ -52,6 +55,7 @@
     "test:connectors": "ts-node tests/smoke_connectors.ts",
     "test:browser-tools": "ts-node tests/smoke_browser_tools.ts",
     "test:bridge": "python tests/test_bridge.py",
+    "test:owner-primitives": "python tests/test_owner_primitives.py",
     "test:browser-session": "python tests/test_browser_session.py",
     "test:kill-tree": "ts-node tests/smoke_kill_tree.ts",
     "test:profile": "python tests/test_profile_persistence.py"

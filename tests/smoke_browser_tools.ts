@@ -35,7 +35,19 @@ function section(title: string): void {
 section('Every tool is classified');
 
 const names = Object.keys(BROWSER_TOOLS);
-check('all eighteen are declared', names.length === 18, String(names.length));
+// Eighteen from the OpenDia fork, plus the seven Dex added over the DevTools
+// Protocol for the things ordinary extension APIs are not allowed to do.
+check('all twenty-five are declared', names.length === 25, String(names.length));
+check(
+  'uploading a file is declared, and is not a free action',
+  BROWSER_TOOLS.element_upload_file?.tier === 2,
+  String(BROWSER_TOOLS.element_upload_file?.tier),
+);
+check(
+  'reading the page as a picture is free',
+  BROWSER_TOOLS.page_screenshot?.tier === 4,
+  String(BROWSER_TOOLS.page_screenshot?.tier),
+);
 check(
   'each has a tier, params and a sentence saying what it does',
   names.every((n) => {

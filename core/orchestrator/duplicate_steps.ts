@@ -79,6 +79,25 @@ function fingerprint(step: ExecutionStep): string {
   return `${step.capability}:${step.action}:${params}`;
 }
 
+/**
+ * Is this repair just the failed step again?
+ *
+ * A repair is a fresh model call, and a model handed "this step failed" will
+ * sometimes answer with the same step. Running it produces the same failure,
+ * one plan repair later and with the owner watching — which is worse than
+ * saying plainly that it could not be fixed.
+ *
+ * Compared on fingerprint, so a reworded `task` string counts as different and
+ * gets its chance, while the identical call does not.
+ */
+export function repeatsFailedStep(
+  failed: ExecutionStep,
+  repaired: readonly ExecutionStep[],
+): boolean {
+  const before = fingerprint(failed);
+  return repaired.some((step) => fingerprint(step) === before);
+}
+
 export interface Deduped {
   plan: ExecutionPlan;
   /** Ids of the steps that were dropped, for the event line. */

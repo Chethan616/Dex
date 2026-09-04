@@ -311,6 +311,65 @@ def enable_developer_mode(browser: str | None = None) -> bool:
         return False
 
 
+def open_owner_browser(profile_match: str | None = None, url: str = '') -> dict:
+    """
+    Open the owner's own Chrome, in their own profile.
+
+    Not Dex's profile: the extension is installed in theirs and the session is
+    theirs. Nothing is automated — this launches a window and returns, and the
+    extension inside it dials Dex on its own.
+
+    Chromium allows one process per profile directory, so if their Chrome is
+    already running this hands the request to that instance and it opens a tab
+    there. That is the behaviour wanted: a second window in the same profile is
+    fine, a second *process* is what fails.
+    """
+    import subprocess
+
+    executable = resolve('chrome')
+    if executable is None:
+        return {'ok': False, 'error': 'Chrome is not installed, or Dex cannot find it.'}
+
+    profile = owner_profile(profile_match or '')
+    if profile is None:
+        return {
+            'ok': False,
+            'error': (
+                'No Chrome profile could be found. Chrome keeps them under '
+                'AppData\\Local\\Google\\Chrome\\User Data.'
+            ),
+        }
+
+    args = [
+        executable,
+        f'--profile-directory={profile["directory"]}',
+        '--no-first-run',
+        '--no-default-browser-check',
+    ]
+    if url:
+        args.append(url)
+
+    try:
+        subprocess.Popen(
+            args,
+            creationflags=(
+                subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+                if os.name == 'nt' else 0
+            ),
+            close_fds=True,
+        )
+    except OSError as err:
+        return {'ok': False, 'error': str(err)}
+
+    return {
+        'ok': True,
+        'profile': profile['name'],
+        'email': profile['email'],
+        'directory': profile['directory'],
+        'detail': f'Opened Chrome as {profile["name"]}.',
+    }
+
+
 def open_profile(browser: str | None = None, url: str = '') -> dict:
     """
     Open Dex's own browser profile, for the owner to sign in with.

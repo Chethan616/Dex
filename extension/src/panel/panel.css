@@ -139,3 +139,36 @@ button {
 button:hover { border-color: var(--accent); }
 button[disabled] { opacity: 0.4; cursor: default; }
 #stop { color: var(--error); }
+
+/* An approval, raised where the step was raised.
+ *
+ * Same shape as .card, with an amber left edge because that is what the app
+ * uses for a step waiting on the owner — the two views of one decision should
+ * not look like two different things. */
+.confirm {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--awaiting);
+  border-radius: 10px;
+  padding: 10px 11px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.confirm p {
+  margin: 0;
+  flex: 1 1 100%;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.confirm button {
+  width: auto;
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
+.confirm button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+}

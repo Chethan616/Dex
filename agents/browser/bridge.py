@@ -230,57 +230,44 @@ OWNER_ONLY = frozenset({
     'get_selected_text',
 })
 
-# Sites where being signed in *is* the task.
-#
-# Not a security list — Dex can open any of these in its own browser and see
-# the logged-out page. It is a list of places where the logged-out page is a
-# useless answer to the question that was asked, so the attached browser is the
-# only one worth using.
-#
-# This matters more than it looks. Chrome 127's App-Bound Encryption means a
-# copied profile arrives signed out — measured, github.com/settings/profile
-# redirects to login — so the extension is not one way to be the owner, it is
-# the only way.
-SIGNED_IN_SITES = (
-    'github.com', 'instagram.com', 'x.com', 'twitter.com', 'linkedin.com',
-    'mail.google.com', 'gmail', 'drive.google.com', 'calendar.google.com',
-    'facebook.com', 'reddit.com', 'youtube.com', 'vtop', 'vit.ac.in',
-    'whatsapp', 'discord.com', 'netflix', 'amazon', 'bank',
-)
-
-
-def routing(goal: str, needs_session: bool = False) -> str:
+def routing(goal: str, needs_session: bool = False, *, background: bool = False) -> str:
     """
-    Which browser should run this, and why.
+    Which browser should run this.
 
-    The rule, stated rather than left to accident:
+    This used to guess from a list of words — `'my '`, `'post '`, `'pin '` — and
+    a list of site names, and default to Dex's own browser when none of them
+    matched. That was wrong twice over. It is a hardcoded set of cases, so any
+    task phrased outside it went to the wrong browser; and the default was
+    backwards, because Dex's own browser is signed in to nothing and answering
+    from a logged-out page looks exactly like answering correctly.
 
-      the owner's browser   when the task needs to be *them* — a site they are
-                            signed into, their bookmarks, the tab in front of
-                            them. Nothing else can do these at all.
-      Dex's own browser     everything else. It is isolated, it can be headless,
-                            it can run while the owner works, and a mistake in
-                            it cannot touch their session.
+    The rule is now a fact rather than a guess:
 
-    Defaulting the other way would mean every scrape of a public page ran
-    inside the browser holding their bank.
+      the owner's browser   whenever one is attached. It is their real session,
+                            their extensions, the tab in front of them. There is
+                            no task it does worse.
+      Dex's own browser     when the caller asked for background work, or when
+                            nothing is attached. It is isolated and can run
+                            headless while the owner works, which is the only
+                            thing it is better at.
+
+    `needs_session` is kept for callers that already know the answer — a
+    sign-in, a bookmark — and forces the owner's browser or an honest refusal
+    rather than a silent substitution.
     """
-    lowered = goal.lower()
-    signed_in = needs_session or any(
-        word in lowered
-        for word in (
-            'my ', 'logged in', 'signed in', 'account', 'inbox', 'bookmark',
-            'history', 'this tab', 'open tab', 'currently open',
-            'post ', 'share ', 'send ', 'follow ', 'like ', 'comment',
-            'pin ', 'unpin', 'star ', 'repo',
-        )
-    ) or any(site in lowered for site in SIGNED_IN_SITES)
+    if background and not needs_session:
+        # Explicitly asked to run out of the way. Driving the owner's browser
+        # would steal the window they are working in.
+        return 'dex'
 
-    if signed_in and bridge.attached:
+    if bridge.attached:
         return 'owner'
-    if signed_in and not bridge.attached:
-        # Said rather than silently substituted. Dex's browser is not signed in
-        # as them, so it would answer a different question and look right doing
-        # it.
-        return 'owner-unavailable'
-    return 'dex'
+
+    # Nothing attached, and Dex can fix that.
+    #
+    # The old answer here was a refusal telling the owner to open Chrome —
+    # something Dex can do itself, and the reason a GitHub task ended with the
+    # planner improvising a window action and stopping on two identically
+    # named windows. `open` means: open their browser, wait for the extension,
+    # then run there.
+    return 'open'

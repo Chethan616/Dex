@@ -24,6 +24,7 @@ class SlashContext {
   const SlashContext({
     required this.context,
     required this.sendMessage,
+    this.sendToPanel,
     this.onStop,
     this.onClear,
     this.onNewChat,
@@ -33,6 +34,10 @@ class SlashContext {
 
   /// Send text to the agent as a normal turn (used by /image).
   final void Function(String) sendMessage;
+
+  /// Send text to the Dex panel in the owner's browser, which opens beside the
+  /// page. Null when the composer was built without it.
+  final void Function(String)? sendToPanel;
   final VoidCallback? onStop;
   final VoidCallback? onClear;
 
@@ -223,6 +228,28 @@ class SlashCommands {
           return;
         }
         ctx.sendMessage('Search my pc for $args');
+      },
+    ),
+    SlashCommand(
+      name: 'browser',
+      icon: LucideIcons.globe,
+      argsHint: '<what to do on the web>',
+      group: SlashGroup.find,
+      aliases: const ['web', 'chrome'],
+      description: 'Run this in the browser you are signed in to, beside the page',
+      run: (ctx, args) async {
+        if (args.isEmpty) {
+          _snack(ctx.context, 'Usage: /browser <what to do on the web>');
+          return;
+        }
+        final toPanel = ctx.sendToPanel;
+        if (toPanel == null) {
+          // Not wired here, so send it normally rather than dropping it — the
+          // routing rule sends browser work to their browser anyway.
+          ctx.sendMessage(args);
+          return;
+        }
+        toPanel(args);
       },
     ),
     SlashCommand(

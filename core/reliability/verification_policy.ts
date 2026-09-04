@@ -211,6 +211,24 @@ function verifyBrowserStep(
     return { status: 'VERIFIED', reason: 'Read-only browsing — nothing changed to verify' };
   }
 
+  // Opening the owner's browser.
+  //
+  // No page changed, so there is no DOM to check. What there is to check is
+  // whether the extension attached, because that is the entire point of the
+  // step - a window that opened and did not attach has not made the next step
+  // possible, and calling it verified would hide that.
+  if (step.action === 'open_browser') {
+    const data = (agentResult?.data ?? {}) as Record<string, unknown>;
+    return data.attached === true
+      ? { status: 'VERIFIED', reason: 'The browser opened and the extension attached' }
+      : {
+          status: 'UNVERIFIABLE',
+          reason:
+            'The browser opened, but the Dex extension has not attached to it. ' +
+            'Load it once from chrome://extensions and it stays.',
+        };
+  }
+
   // Signing in is verified by asking the site, not by the owner saying they
   // did it. `sign_in` re-checks the session after the hand-off and only
   // succeeds when the site agrees, so what arrives here is already evidence.

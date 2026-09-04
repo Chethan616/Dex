@@ -125,6 +125,7 @@ class _ChatViewState extends State<ChatView> {
               constraints: const BoxConstraints(maxWidth: 880),
               child: DexComposer(
                 onSubmit: widget.store.sendHumanMessage,
+                onSubmitToPanel: widget.store.sendToBrowserPanel,
                 isBusy: widget.store.isBusy,
                 onStop: widget.store.stop,
                 onVision: widget.onVision,
