@@ -41,6 +41,7 @@ class DexSidebar extends StatefulWidget {
     this.onLogs,
     this.onSettings,
     this.onSelectChat,
+    this.onSearchChats,
     this.onRenameChat,
     this.onDeleteChat,
     this.onRerunChat,
@@ -56,6 +57,8 @@ class DexSidebar extends StatefulWidget {
 
   /// Re-running is now something the owner asks for, on the row's menu,
   /// rather than the only thing a click could mean.
+  /// Search across what was said, not only what was asked.
+  final void Function(String query)? onSearchChats;
   final void Function(RecentChatItem chat, String name)? onRenameChat;
   final void Function(RecentChatItem chat)? onDeleteChat;
   final void Function(RecentChatItem chat)? onRerunChat;
@@ -86,6 +89,10 @@ class DexSidebar extends StatefulWidget {
 class _DexSidebarState extends State<DexSidebar>
     with SingleTickerProviderStateMixin {
   late final AnimationController _entry;
+
+  /// The history search box, opened from the History heading.
+  final _search = TextEditingController();
+  bool _searching = false;
 
   @override
   void initState() {
@@ -172,12 +179,21 @@ class _DexSidebarState extends State<DexSidebar>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // New chat first and alone: it is the one thing here the
+                  // owner does many times a day, and grouping it with the
+                  // screens made it one of six equal rows.
                   _NavItem(
                     icon: LucideIcons.file_plus,
                     label: 'New chat',
                     expanded: widget.expanded,
                     onTap: widget.onNewChat,
                   ),
+
+                  // Two headings rather than one divider. The rail mixes
+                  // things Dex does for you with places you go to look at
+                  // something, and reading it as one list means reading all
+                  // six every time to find either.
+                  if (widget.expanded) const _RailHeading('Automate'),
                   _NavItem(
                     icon: LucideIcons.repeat,
                     label: 'Workflows',
@@ -190,7 +206,11 @@ class _DexSidebarState extends State<DexSidebar>
                     expanded: widget.expanded,
                     onTap: widget.onSchedules,
                   ),
-                  const _Divider(),
+
+                  if (widget.expanded)
+                    const _RailHeading('This machine')
+                  else
+                    const _Divider(),
                   _NavItem(
                     icon: LucideIcons.plug,
                     label: 'Capabilities',
@@ -215,17 +235,88 @@ class _DexSidebarState extends State<DexSidebar>
                       padding: const EdgeInsets.fromLTRB(
                         DexSpace.md, 0, DexSpace.md, DexSpace.xs,
                       ),
-                      child: Text(
-                        'History',
-                        style: DexType.caption(color: DexColors.textDim)
-                            .copyWith(
-                          letterSpacing: 0.5,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      child: Row(
+                        children: [
+                          Text(
+                            'History',
+                            style: DexType.caption(color: DexColors.textDim)
+                                .copyWith(
+                              letterSpacing: 0.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const Spacer(),
+                          // Searching *inside* messages is the thing task
+                          // history could never do — the answer to "what was
+                          // that path Dex gave me" is in a reply, not a
+                          // request. It is worth a control rather than only a
+                          // slash command nobody knows about.
+                          _IconAction(
+                            icon: _searching
+                                ? LucideIcons.x
+                                : LucideIcons.search,
+                            onTap: () => setState(() {
+                              _searching = !_searching;
+                              if (!_searching) {
+                                _search.clear();
+                                widget.onSearchChats?.call('');
+                              }
+                            }),
+                          ),
+                        ],
                       ),
                     ),
-                    ...widget.recentChats.map(
-                      (c) => _ChatRow(
+                    if (_searching)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          DexSpace.md, 0, DexSpace.md, DexSpace.sm,
+                        ),
+                        child: TextField(
+                          controller: _search,
+                          autofocus: true,
+                          style: DexType.caption(color: DexColors.text),
+                          onChanged: (value) =>
+                              widget.onSearchChats?.call(value.trim()),
+                          decoration: InputDecoration(
+                            hintText: 'words anyone said…',
+                            hintStyle:
+                                DexType.caption(color: DexColors.textFaint),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 8),
+                            filled: true,
+                            fillColor: DexColors.surface2,
+                            border: OutlineInputBorder(
+                              borderRadius: DexRadius.rsm,
+                              borderSide:
+                                  const BorderSide(color: DexColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: DexRadius.rsm,
+                              borderSide:
+                                  const BorderSide(color: DexColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: DexRadius.rsm,
+                              borderSide:
+                                  const BorderSide(color: DexColors.accent),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ..._grouped(widget.recentChats).expand((entry) => [
+                      if (entry.$1 != null)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            DexSpace.md, DexSpace.sm, DexSpace.md, 2,
+                          ),
+                          child: Text(
+                            entry.$1!,
+                            style: DexType.caption(color: DexColors.textFaint),
+                          ),
+                        ),
+                      ...entry.$2.map(
+                        (c) => _ChatRow(
                         chat: c,
                         active: c.id == widget.activeChatId,
                         onTap: () => widget.onSelectChat?.call(c),
@@ -239,7 +330,8 @@ class _DexSidebarState extends State<DexSidebar>
                             ? null
                             : () => widget.onRerunChat!.call(c),
                       ),
-                    ),
+                      ),
+                    ]),
                   ],
                 ],
               ),
@@ -254,6 +346,81 @@ class _DexSidebarState extends State<DexSidebar>
       ),
     );
   }
+}
+
+/// History, split into the buckets a person thinks in.
+///
+/// `when` is already a phrase — "2h ago" — and a phrase cannot be bucketed.
+/// Twenty rows of "2h ago", "5h ago", "yesterday" read as one list; under
+/// Today / Yesterday / Earlier the same rows are scannable.
+///
+/// Rows with no timestamp keep their order and get no heading, so a core from
+/// before conversations existed still shows its history rather than nothing.
+List<(String?, List<RecentChatItem>)> _grouped(List<RecentChatItem> chats) {
+  if (chats.every((c) => c.at == null)) return [(null, chats)];
+
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final yesterday = today.subtract(const Duration(days: 1));
+
+  final buckets = <String, List<RecentChatItem>>{
+    'Today': [],
+    'Yesterday': [],
+    'Earlier': [],
+  };
+
+  for (final chat in chats) {
+    final at = chat.at;
+    if (at == null) {
+      buckets['Earlier']!.add(chat);
+    } else if (!at.isBefore(today)) {
+      buckets['Today']!.add(chat);
+    } else if (!at.isBefore(yesterday)) {
+      buckets['Yesterday']!.add(chat);
+    } else {
+      buckets['Earlier']!.add(chat);
+    }
+  }
+
+  return [
+    for (final entry in buckets.entries)
+      if (entry.value.isNotEmpty) (entry.key, entry.value),
+  ];
+}
+
+class _RailHeading extends StatelessWidget {
+  const _RailHeading(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DexSpace.md, DexSpace.md, DexSpace.md, DexSpace.xs,
+        ),
+        child: Text(
+          label.toUpperCase(),
+          style: DexType.caption(color: DexColors.textFaint).copyWith(
+            letterSpacing: 0.8,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+}
+
+class _IconAction extends StatelessWidget {
+  const _IconAction({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: DexRadius.rsm,
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: Icon(icon, size: 13, color: DexColors.textFaint),
+        ),
+      );
 }
 
 class _Header extends StatelessWidget {

@@ -13,10 +13,19 @@ class RecentChatItem {
     required this.title,
     required this.when,
     this.failed = false,
+    this.at,
   });
   final String id;
   final String title;
   final String when;
+
+  /// When it last happened, for grouping the sidebar by day.
+  ///
+  /// `when` is already a phrase — "2h ago" — and a phrase cannot be sorted or
+  /// bucketed. Twenty rows of "2h ago", "5h ago", "yesterday" read as one
+  /// undifferentiated list; the same rows under Today / Yesterday / Earlier
+  /// are scannable.
+  final DateTime? at;
 
   /// Whether the task ended badly.
   ///

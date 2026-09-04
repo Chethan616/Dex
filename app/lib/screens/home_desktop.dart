@@ -89,6 +89,10 @@ class _HomeDesktopState extends State<HomeDesktop> {
             id: thread['id'] as String? ?? '',
             title: (thread['title'] as String? ?? '').trim(),
             when: _ago((thread['lastAt'] as num?)?.toInt()),
+            at: thread['lastAt'] is num
+                ? DateTime.fromMillisecondsSinceEpoch(
+                    (thread['lastAt'] as num).toInt())
+                : null,
             // Failures stay in the list. A record that quietly drops what went
             // wrong is a highlight reel, and the failures are the ones worth
             // seeing again.
@@ -279,6 +283,8 @@ class _HomeDesktopState extends State<HomeDesktop> {
                         widget.store.sendHumanMessage(chat.title);
                       }
                     },
+                    onSearchChats: (query) =>
+                        DexGatewayClient.current?.listConversations(query: query),
                     onRenameChat: (chat, name) =>
                         DexGatewayClient.current?.renameConversation(chat.id, name),
                     onDeleteChat: (chat) =>
