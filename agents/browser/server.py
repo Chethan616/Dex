@@ -37,7 +37,7 @@ from dex_logging import configure as _configure_logging
 log = _configure_logging('browser')
 
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 from browser_use_backend import DEFAULT_MAX_STEPS, BrowserBackend, env_flag
@@ -288,6 +288,48 @@ async def open_profile(req: OpenProfileRequest) -> dict[str, Any]:
     if not result.get('ok'):
         return _bad(result.get('error', 'could not open the profile'))
     return {'success': True, 'data': result}
+
+
+# ── installing the extension without asking the owner to ───────────────────
+#
+# Chrome 152 removed --load-extension. The one route left is the enterprise
+# policy ExtensionInstallForcelist, which wants a packed CRX and an update
+# manifest over HTTP — it refuses a file:// URL. This process is already an
+# HTTP server on loopback, so it serves both.
+#
+# Nothing here is reachable off this machine: the server binds 127.0.0.1 only.
+
+EXTENSION_ID = 'joachahcdjdaeeiiocbooimlfbojagmm'
+
+
+def _dist(name: str) -> Path:
+    return Path(__file__).resolve().parents[2] / 'dist' / name
+
+
+@app.get('/extension/update.xml')
+async def extension_update_manifest() -> Response:
+    """The update manifest Chrome's policy fetches."""
+    crx = 'http://127.0.0.1:8766/extension/dex.crx'
+    xml = (
+        "<?xml version='1.0' encoding='UTF-8'?>"
+        "<gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>"
+        f"<app appid='{EXTENSION_ID}'>"
+        f"<updatecheck codebase='{crx}' version='1.0.0' />"
+        '</app></gupdate>'
+    )
+    return Response(content=xml, media_type='text/xml')
+
+
+@app.get('/extension/dex.crx')
+async def extension_crx() -> Response:
+    """The packed extension itself."""
+    crx = _dist('dex-extension.crx')
+    if not crx.exists():
+        return Response(content=b'', status_code=404)
+    return Response(
+        content=crx.read_bytes(),
+        media_type='application/x-chrome-extension',
+    )
 
 
 @app.get('/handshake')

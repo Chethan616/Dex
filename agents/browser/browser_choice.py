@@ -172,6 +172,56 @@ def extension_dir() -> str:
     return str(Path(__file__).resolve().parents[2] / 'extension')
 
 
+def prepare_profile(browser: str | None = None) -> dict:
+    """
+    Make Dex's profile behave like a browser somebody actually uses.
+
+    Two settings, and the reason is the same for both: this profile is where
+    the owner signs in to Instagram, GitHub, VTOP and their bank so that Dex
+    can act as them. A profile that forgets a login every session turns every
+    task into a hand-off, which is exactly what signing in was meant to stop.
+
+        credentials_enable_service     offer to save passwords
+        password_manager_leak_detection off — it sends a hash of every password
+                                        typed here to Google, and this profile
+                                        exists to be automated. That is not a
+                                        trade the owner agreed to.
+
+    Cookies are what actually keep a session, and those were already being
+    thrown away for a different reason: `--user-data-dir` was passed as a
+    launch argument, which browser_use ignores, so every session ran in a fresh
+    temp directory. That is fixed in `session_kwargs`; this is the rest of it.
+
+    Chrome writes Preferences on exit, so anything set here while it is running
+    is overwritten. Callers do this before launching.
+    """
+    prefs_file = Path(profile_dir(browser)) / 'Default' / 'Preferences'
+    if not prefs_file.exists():
+        return {'ok': False, 'reason': 'the profile has not been used yet'}
+
+    try:
+        data = json.loads(prefs_file.read_text(encoding='utf-8'))
+
+        extensions = data.setdefault('extensions', {})
+        extensions.setdefault('ui', {})['developer_mode'] = True
+
+        # Save passwords, and offer to.
+        data['credentials_enable_service'] = True
+        data['credentials_enable_autosignin'] = True
+        profile = data.setdefault('profile', {})
+        profile['password_manager_enabled'] = True
+
+        # Not the leak check. It hashes every password typed in this profile
+        # and sends it to Google; a profile that exists to be driven by an
+        # assistant should not be doing that quietly.
+        data.setdefault('profile', {})['password_manager_leak_detection'] = False
+
+        prefs_file.write_text(json.dumps(data), encoding='utf-8')
+        return {'ok': True, 'developer_mode': True, 'passwords': True}
+    except (OSError, ValueError) as err:
+        return {'ok': False, 'reason': str(err)}
+
+
 def enable_developer_mode(browser: str | None = None) -> bool:
     """
     Turn on Developer mode in Dex's profile, so loading the extension is one
@@ -256,9 +306,11 @@ def open_profile(browser: str | None = None, url: str = '') -> dict:
             ),
         }
 
-    # Developer mode on, so the one manual step Chrome now insists on is a
-    # single click rather than a hunt through settings.
-    developer_mode = enable_developer_mode(browser)
+    # Developer mode on, and passwords remembered — done now, because Chrome
+    # rewrites Preferences on exit and would undo anything written while it is
+    # running.
+    prepared = prepare_profile(browser)
+    developer_mode = prepared.get('ok', False)
 
     args = [
         executable,
@@ -355,6 +407,15 @@ def session_kwargs(browser: str | None, headless: bool) -> dict:
             # what the working test used. Disabling everything else costs
             # nothing here because Dex's profile has nothing else.
             f'--disable-extensions-except={extension}',
+            # Sites that check for automation see an ordinary browser.
+            #
+            # Not about evading detection for its own sake: this is the
+            # owner's own signed-in session, and Instagram and GitHub degrade
+            # or block a session that announces itself as automated — which
+            # would break the thing they signed in for. It also stops Chrome
+            # disabling its own password manager, which it does under the
+            # automation flag.
+            '--disable-blink-features=AutomationControlled',
         ],
     }
 
