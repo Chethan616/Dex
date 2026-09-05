@@ -2244,6 +2244,18 @@ chrome.tabs?.onActivated?.addListener(() => {
 
 // Handle messages from popup
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // FORK CHANGE. A page loaded, which means this worker is running again.
+  //
+  // Sent by the content script on every page. Delivering it is what started
+  // the worker; connecting is what makes the browser reachable by Dex again.
+  // connect() returns immediately when the socket is already open, so this
+  // costs nothing on a healthy browser.
+  if (request.action === "dex_page_loaded") {
+    connectionManager.connect().catch(() => {});
+    sendResponse({ ok: true });
+    return;
+  }
+
   if (request.action === "getStatus") {
     sendResponse(connectionManager.getStatus());
   } else if (request.action === "getToolCount") {

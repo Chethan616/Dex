@@ -2280,4 +2280,27 @@ const THEME_PRESETS = {
 // Initialize the automation system
 const browserAutomation = new BrowserAutomation();
 
+/**
+ * FORK CHANGE. Wake the background worker.
+ *
+ * This content script has always run on every page and has only ever *listened*.
+ * That is the whole reason Dex kept losing the browser: under MV3 the extension
+ * has no persistent page, Chrome stops the service worker when it is idle, and
+ * a worker with nothing to wake it stays stopped for the rest of the session.
+ * Chrome's own record of the extension said so plainly — `serviceworkerevents:
+ * []`, meaning Chrome believed there was no event worth starting it for.
+ *
+ * A message from a content script always starts the worker. So one line, sent
+ * on every page load, is enough: the browser cannot be used without waking the
+ * part of Dex that talks to it. Fire and forget — a page that loads while the
+ * worker is already up simply gets no answer, and there is nothing to do about
+ * a failure here except carry on browsing.
+ */
+try {
+  chrome.runtime?.sendMessage?.({ action: 'dex_page_loaded', url: location.href })
+    ?.catch?.(() => {});
+} catch {
+  // The extension context can be gone mid-navigation. Not worth a console line.
+}
+
 } // End of injection guard

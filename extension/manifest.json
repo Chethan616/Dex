@@ -1,7 +1,7 @@
 {
     "manifest_version":  3,
     "name":  "Dex",
-    "version":  "1.0.3",
+    "version":  "1.0.4",
     "description":  "Lets Dex act in the browser you are already signed into.",
     "icons":  {
                   "16":  "icons/icon-16.png",
@@ -28,7 +28,7 @@
                        "type":  "module"
                    },
     "action":  {
-                   "default_title":  "Dex â€” open the chat panel"
+                   "default_title":  "Dex Ã¢â‚¬â€ open the chat panel"
                },
     "content_scripts":  [
                             {

@@ -208,7 +208,9 @@ def owner_profile(match: str = '') -> dict | None:
     """
     One of the owner's own profiles, by name, email or folder.
 
-    Empty picks whichever Chrome used last, which is the one they were in.
+    Empty picks the one Dex can actually work in — see `_best`. It used to pick
+    whichever Chrome used last, which is not the same thing and broke exactly
+    when it mattered.
     """
     profiles = owner_profiles()
     if not profiles:
@@ -216,10 +218,7 @@ def owner_profile(match: str = '') -> dict | None:
 
     wanted = match.strip().lower()
     if not wanted:
-        for profile in profiles:
-            if profile['last_used']:
-                return profile
-        return profiles[0]
+        return _best(profiles)
 
     for profile in profiles:
         if wanted in (
@@ -234,6 +233,118 @@ def owner_profile(match: str = '') -> dict | None:
         if wanted in profile['name'].lower() or wanted in profile['email'].lower():
             return profile
     return None
+
+
+def _best(profiles: list[dict]) -> dict:
+    """
+    Which of the owner's profiles Dex should use, on evidence.
+
+    This was `last_used`, and `last_used` turned out to be a phantom. Chrome had
+    acquired a second profile — folder "Profile", named "Your Chrome", signed
+    into nothing, no extensions — and because something had touched it most
+    recently, Dex opened *that* and then reported that the Dex extension had not
+    attached. It had not: it was in the other profile, where the owner lives.
+
+    So recency is the last thing considered rather than the first. Ranked by
+    what actually makes a profile usable:
+
+      the extension is in it   decisive. It is the only profile Dex can act in
+                               at all, so if one has it, that is the answer.
+      it is signed in          a profile with an account on it is the one the
+                               owner works in. An empty one is scaffolding.
+      Chrome used it last      the old rule, kept as a tie-breaker between
+                               profiles that are equally real.
+    """
+    def rank(profile: dict) -> tuple:
+        return (
+            0 if _extension_in(profile) else 1,
+            0 if profile.get('email') else 1,
+            0 if profile.get('last_used') else 1,
+        )
+
+    return sorted(profiles, key=rank)[0]
+
+
+def _extension_in(profile: dict) -> bool:
+    """Is the Dex extension installed in this profile? Asked of Chrome's record."""
+    return _extension_entry(profile) is not None
+
+
+def _extension_entry(profile: dict) -> tuple[str, dict] | None:
+    """
+    The Dex extension's id and Chrome's record of it in this profile, or None.
+
+    Matched on the path it was loaded from: an unpacked extension's id is
+    derived from that path rather than from a signing key, so the path is the
+    only stable thing to recognise it by.
+    """
+    prefs = Path(profile['user_data_dir']) / profile['directory'] / 'Secure Preferences'
+    if not prefs.exists():
+        return None
+    try:
+        data = json.loads(prefs.read_text(encoding='utf-8', errors='ignore'))
+    except (OSError, ValueError):
+        return None
+
+    here = str(extension_dir()).lower()
+    for ext_id, entry in (data.get('extensions', {}).get('settings', {}) or {}).items():
+        if str(entry.get('path', '')).lower() == here:
+            return ext_id, entry
+    return None
+
+
+def extension_state(profile_match: str = '') -> dict:
+    """
+    What Chrome itself says about the Dex extension in the owner's profile.
+
+    Asked rather than assumed, because the assumption was wrong in a way that
+    wasted the owner's time: when nothing attached, Dex said "load it once from
+    chrome://extensions" — and it was already loaded. The real trouble was one
+    step further in and invisible from outside.
+
+    Chrome keeps the answer in `Secure Preferences`, not `Preferences`, and it
+    is specific enough to act on:
+
+      disable_reasons      why it is switched off, if it is.
+      serviceworkerevents  which events Chrome will start the background worker
+                           for. **Empty means never.** A worker registered
+                           before its listeners existed is one Chrome has no
+                           reason to start again, and that is the state an
+                           update leaves behind until the extension is reloaded
+                           once.
+      registration.version the manifest version Chrome registered, which drifts
+                           from the one on disk after any repack.
+    """
+    profile = owner_profile(profile_match or '')
+    if profile is None:
+        return {'known': False}
+
+    found = _extension_entry(profile)
+    if found is None:
+        return {'known': True, 'installed': False, 'profile': profile['name']}
+
+    ext_id, entry = found
+    registered = (entry.get('service_worker_registration_info') or {}).get('version', '')
+    return {
+        'known': True,
+        'installed': True,
+        'id': ext_id,
+        'disabled': bool(entry.get('disable_reasons')),
+        'disable_reasons': entry.get('disable_reasons') or [],
+        'registered_version': registered,
+        'manifest_version': _manifest_version(),
+        'wake_events': list(entry.get('serviceworkerevents') or []),
+        'profile': profile['name'],
+    }
+
+
+def _manifest_version() -> str:
+    try:
+        return str(json.loads(
+            (Path(extension_dir()) / 'manifest.json').read_text(encoding='utf-8')
+        ).get('version', ''))
+    except (OSError, ValueError):
+        return ''
 
 
 def prepare_profile(browser: str | None = None) -> dict:

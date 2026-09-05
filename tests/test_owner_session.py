@@ -169,6 +169,43 @@ async def main() -> None:
     check('the right profile does',
           (owner_session.OwnerSession.running_profile() or {}).get('directory') == 'Profile 1')
 
+    print()
+    print("which profile is the owner's")
+
+    import browser_choice as bc
+
+    # The state that broke a real run. Chrome had acquired a second profile -
+    # folder "Profile", named "Your Chrome", signed into nothing, no extension -
+    # and something had touched it most recently. Dex picked it on last_used,
+    # opened a browser the extension was not in, and reported that the extension
+    # had not attached. It had not: it was in the other profile.
+    phantom = {'directory': 'Profile', 'name': 'Your Chrome', 'email': '',
+               'user_data_dir': 'X', 'last_used': True}
+    real = {'directory': 'Profile 1', 'name': 'Chethankrishna',
+            'email': 'owner@example.com', 'user_data_dir': 'X', 'last_used': False}
+
+    bc._extension_in = lambda profile: profile['directory'] == 'Profile 1'
+    check('the profile with the extension wins, whatever was used last',
+          bc._best([phantom, real])['directory'] == 'Profile 1',
+          bc._best([phantom, real])['directory'])
+
+    # No extension anywhere yet: a profile with an account on it is still the
+    # one the owner works in, and an empty one is scaffolding.
+    bc._extension_in = lambda profile: False
+    check('failing that, the signed-in one wins',
+          bc._best([phantom, real])['directory'] == 'Profile 1',
+          bc._best([phantom, real])['directory'])
+
+    # Nothing to tell them apart: fall back to what Chrome used last, which is
+    # the rule this replaced and is still right when there is no better answer.
+    a = {'directory': 'Profile 1', 'name': 'A', 'email': 'a@x',
+         'user_data_dir': 'X', 'last_used': False}
+    b2 = {'directory': 'Profile 2', 'name': 'B', 'email': 'b@x',
+          'user_data_dir': 'X', 'last_used': True}
+    check('and recency is the tie-breaker, not the rule',
+          bc._best([a, b2])['directory'] == 'Profile 2',
+          bc._best([a, b2])['directory'])
+
     print(f'\n{passed} passed, {failed} failed')
     if failed:
         sys.exit(1)

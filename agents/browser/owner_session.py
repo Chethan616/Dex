@@ -108,10 +108,7 @@ class OwnerSession:
                 if await self._wait_for_extension(ATTACH_TRIES_WARM):
                     return self._answer(True, f'Using the Chrome you have open as {running["name"]}.',
                                         opened=False)
-                return self._give_up(
-                    f'Chrome is open as {running["name"]}, but the Dex extension is not '
-                    'loaded in it. Load it once from chrome://extensions -> Load unpacked.'
-                )
+                return self._give_up(_why_not_attached(running['name']))
 
             # Nothing running: open one, on the page the task is about.
             #
@@ -134,11 +131,8 @@ class OwnerSession:
                 return self._answer(True, str(result.get('detail', 'Opened your browser.')),
                                     opened=True)
 
-            return self._give_up(
-                f'Dex opened Chrome as {result.get("profile")}, but the Dex extension did '
-                'not attach. Load it once from chrome://extensions -> Load unpacked.',
-                opened=True,
-            )
+            return self._give_up(_why_not_attached(str(result.get('profile', ''))),
+                                 opened=True)
 
     def note_task_start(self) -> None:
         """
@@ -211,6 +205,65 @@ class OwnerSession:
             'profile': (self._profile or {}).get('name', ''),
             'detail': detail,
         }
+
+
+def _why_not_attached(profile: str) -> str:
+    """
+    Why Dex cannot reach the browser, from what Chrome actually recorded.
+
+    "Load it once from chrome://extensions" was said to an owner who had loaded
+    it. It was true once and became a reflex, and a wrong instruction costs more
+    than no instruction — they did the thing they were told and it changed
+    nothing.
+
+    So the answer is read rather than assumed, and each case gets the action
+    that actually fixes it.
+    """
+    state = browser_choice.extension_state(profile)
+
+    if not state.get('known'):
+        return (
+            'Dex cannot find a Chrome profile to work in. Chrome keeps them '
+            'under %LOCALAPPDATA%\\Google\\Chrome\\User Data.'
+        )
+
+    where = state.get('profile', profile) or 'your Chrome'
+
+    if not state.get('installed'):
+        return (
+            f'The Dex extension is not installed in {where}. Load it once: '
+            f'chrome://extensions -> Developer mode -> Load unpacked -> '
+            f'{browser_choice.extension_dir()}'
+        )
+
+    if state.get('disabled'):
+        return (
+            f'The Dex extension is installed in {where} but switched off. '
+            'Turn it back on at chrome://extensions.'
+        )
+
+    registered = state.get('registered_version', '')
+    on_disk = state.get('manifest_version', '')
+    stale = registered and on_disk and registered != on_disk
+
+    if stale or not state.get('wake_events'):
+        # The state this whole function exists for. Chrome registered the
+        # background worker before its wake-up listeners existed, so it has no
+        # event it will ever start the worker for — `serviceworkerevents: []`.
+        # One reload registers the current code and it never recurs.
+        detail = f' (Chrome has version {registered}, the files are {on_disk})' if stale else ''
+        return (
+            f'The Dex extension is installed in {where}, but Chrome is not '
+            f'running its background page{detail}. Open chrome://extensions and '
+            'click the reload arrow on Dex. It only needs doing once after an '
+            'update.'
+        )
+
+    return (
+        f'The Dex extension is installed and enabled in {where} but has not '
+        'connected. Opening any page should wake it; if it does not, reload it '
+        'at chrome://extensions.'
+    )
 
 
 def _chrome_command_lines() -> list[str]:
