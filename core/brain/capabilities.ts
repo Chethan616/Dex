@@ -184,50 +184,33 @@ export const APP_ACTIONS: Record<string, ActionSpec> = {
  * drift this file's header warns about, one level up.
  */
 export const WEB_ACTIONS: Record<string, ActionSpec> = {
-  navigate: {
-    params: '{ url: string, browser?: string }',
-    note: 'Opens a real browser and goes there. Set browser only when the owner named one ("vivaldi", "chrome")',
+  // Six, not nineteen.
+  //
+  // The planner used to be offered navigate, click, fill_form, wait_for,
+  // map_page, scroll, press_key, go_back, reload, type_text, page_model,
+  // extract_table, session_status and sign_in as well, and it built plans out
+  // of them. One real example, for "remove the Qwix repo from my pins":
+  //
+  //   navigate -> sign_in -> click -> wait_for("Qwix", 5000) -> map_page -> click
+  //
+  // Six steps, each a separate chance to fail on a label that changed, and a
+  // wait on a literal string with a five-second timeout is a coin flip. It
+  // also planned sign_in for a site the owner was already signed into.
+  //
+  // Those verbs all still exist and still work. They are what the browsing
+  // agent uses, turn by turn, with the page in front of it — which is the only
+  // place the decision "click this, now wait for that" can be made well. What
+  // changed is that a *plan* cannot be built from them any more.
+  //
+  // What is left is one action for a job, and a few for a question about a
+  // single page, because "what does this say" should not cost an agent loop.
+  run_task: {
+    params: '{ task: string, url?: string, browser?: string }',
+    note: 'A whole web job, in the browser the owner is signed into - it opens it, uploads files, and acts as them. Returns downloads[]: a later step points at {{step_N.output.downloads[0].path}}. Set start_url so a remembered route is found',
   },
   read_page: { params: '{}', note: 'The current page as text — use before deciding what to click' },
   extract: { params: '{ selector: string }', note: 'Text of elements matching a CSS selector' },
-  page_model: {
-    params: '{ browser?: string }',
-    note: 'Forms with each field\u2019s real label, type and options, tables as rows, every clickable thing including collapsed menus',
-  },
-  fill_form: {
-    params: '{ fields: { "Field label": "value" }, submit?: boolean, browser?: string }',
-    note: 'Fills by LABEL not selector \u2014 { "Username": "21BCE1234" }. Selects, radios, checkboxes. Names what it could not fill. Refuses passwords - use sign_in',
-  },
-  click: {
-    params: '{ text?: string, selector?: string, browser?: string }',
-    note: 'Prefer text \u2014 click({ text: "Course Page" }) \u2014',
-  },
-  wait_for: {
-    params: '{ text?: string, selector?: string, url?: string, idle?: boolean, timeout?: number }',
-    note: 'Use after a click that navigates \u2014 acting too early is the commonest browsing failure',
-  },
-  extract_table: {
-    params: '{ which?: number | string }',
-    note: 'A table as rows of objects. which is an index or a column name',
-  },
-  scroll: { params: '{ direction?: "down" | "up" | "bottom" | "top" }' },
-  press_key: { params: '{ key: string }', note: 'Enter submits, Escape dismisses' },
-  go_back: { params: '{}' },
-  reload: { params: '{}' },
-  type_text: { params: '{ selector: string, text: string }', note: 'Refuses password fields; Dex hands those to the owner' },
   screenshot: { params: '{ path?: string, full_page?: boolean }', note: 'Saves a PNG and returns where it went' },
-  map_page: {
-    params: '{ query?: string, include_hidden?: boolean, browser?: string }',
-    note: 'Links, buttons and fields with real labels and hrefs, collapsed menus included. query ranks, it does not filter',
-  },
-  session_status: {
-    params: '{ url: string, browser?: string }',
-    note: 'Is this site still signed in? Ask FIRST for anything behind a login',
-  },
-  sign_in: {
-    params: '{ url: string, browser?: string }',
-    note: 'Fills the credential the owner stored for that exact site, then hands the CAPTCHA to them. The session is kept, so this is once per day, not per task',
-  },
   download_current: {
     params: '{ name?: string, browser?: string }',
     note: 'Saves what the signed-in page offered. download_file has no session and would fetch the login page',
@@ -235,10 +218,6 @@ export const WEB_ACTIONS: Record<string, ActionSpec> = {
   learn_route: {
     params: '{ url: string, goal: string }',
     note: 'Watch the owner click their way to something once and remember it. Only when they ask Dex to learn a route',
-  },
-  run_task: {
-    params: '{ task: string, url?: string, browser?: string }',
-    note: 'A whole web job, in the browser the owner is signed into - it opens it, uploads files, and acts as them. Returns downloads[]: a later step points at {{step_N.output.downloads[0].path}}. Set start_url so a remembered route is found',
   },
 };
 
@@ -376,14 +355,15 @@ CAPABILITY: can_browse_web   [TIER 2 — anything on the internet]
   When the owner names a browser, pass browser:"vivaldi" — never launch_app it
   and drive the window. Any Chromium works; Firefox is refused by name.
 
-  **One step, not several.** run_task opens the browser itself and drives it
-  across as many pages as the job needs:
+  **One step for a job.** run_task opens the browser and drives it across as
+  many pages as the job needs, deciding each click with the page in front of it:
 
-    WRONG  navigate github.com -> run_task "change my status"      (2 steps)
-    RIGHT  run_task "open my github profile and change my status"  (1 step)
+    WRONG  navigate -> click -> wait_for -> click       (4 guesses in advance)
+    RIGHT  run_task "open my github profile and unpin Qwix"    (1 step)
 
-  navigate/read_page/extract answer a question about one page. A job with a
-  verb in it - change, post, send, download - is one run_task.
+  read_page, extract and screenshot answer a question about one page. Anything
+  with a verb in it - change, post, send, unpin, buy, download - is one
+  run_task, and it is never preceded by a step that opens or navigates.
 ${render(WEB_ACTIONS)}
 
 CAPABILITY: can_access_email / can_access_calendar / can_access_drive   [TIER 2]
@@ -462,8 +442,10 @@ export const ROUTING_RULES = `HOW TO CHOOSE A CAPABILITY — work down this ladd
      controls directly, and clicking through a browser window is slower, less
      reliable, and cannot read the page it landed on.
        "log in to example.com"        -> can_browse_web run_task
+       "unpin a repo on github"       -> can_browse_web run_task
        "what does this page say"      -> can_browse_web read_page
        "screenshot that site"         -> can_browse_web screenshot
+     Dex is already signed in to their sites, so never plan a sign-in step.
      The only reason to launch_app a browser is if the owner asked for the
      browser itself to be open, with nothing to do in it.
 

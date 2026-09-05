@@ -147,6 +147,113 @@ async def main() -> None:
     check('and refuses a summary longer than its input', recap == '', repr(recap))
 
     print()
+    print()
+    print('the contract')
+
+    def act(tools, **rest):
+        return json.dumps({
+            'evaluation_previous_goal': rest.pop('looked_back', 'ok'),
+            'memory': rest.pop('memory', 'on the page'),
+            'next_goal': 'do the thing',
+            'action': [{'tool': t, 'params': p} for t, p in tools],
+            **rest,
+        })
+
+    # Several actions in one turn. This is the difference between eighteen
+    # model calls and five, and at ~5.5s a call it is the two minutes the owner
+    # spends watching a task.
+    bridge_agent.bridge = FakeBridge()
+    model = Model([
+        act([('page_analyze', {}), ('element_click_trusted', {'element_id': 'el_1'})]),
+        json.dumps({'done': True, 'success': True, 'answer': 'unpinned',
+                    'verified_by': 'the profile now shows 5 pins'}),
+    ])
+    result = await bridge_agent.run('unpin qwix', model)
+    check('a turn can run several actions',
+          len(result['steps']) == 2, str(len(result['steps'])))
+    check('in two model calls, not four',
+          len(model.prompts) == 2, str(len(model.prompts)))
+    check('and success carries the evidence for it',
+          result['success'] is True and 'pins' in result['verified_by'],
+          str(result.get('verified_by')))
+
+    # A run that could not do it says so. This is the one that matters: the old
+    # loop returned success because the model stopped talking.
+    bridge_agent.bridge = FakeBridge()
+    model = Model([json.dumps({
+        'done': True, 'success': False,
+        'answer': 'Qwix is not among the pinned repositories.',
+        'verified_by': '',
+    })])
+    result = await bridge_agent.run('unpin qwix', model)
+    check('a run that failed reports failure, not success',
+          result['success'] is False, str(result))
+    check('and says what it found instead',
+          'not among' in result.get('error', ''), str(result.get('error')))
+
+    # Going round in circles. Three identical attempts and it is told to stop
+    # repeating - while it still has turns left to try something else.
+    bridge_agent.bridge = FakeBridge()
+    same = act([('element_click_trusted', {'element_id': 'el_5'})])
+    model = Model([same] * 6)
+    result = await bridge_agent.run('click the thing', model)
+    clicks = [s for s in result['steps'] if s['tool'] == 'element_click_trusted']
+    check('the same action is not run more than twice over',
+          len(clicks) <= 3, f'{len(clicks)} identical clicks')
+    told = [p for p in model.prompts if 'three times' in p]
+    check('and the loop is told it is repeating itself', bool(told))
+
+    # A failing action stops the rest of the batch: the queue was planned
+    # against a page that did not turn out the way the turn expected.
+    class Breaks(FakeBridge):
+        async def call(self, method, params):
+            self.calls.append((method, params))
+            if method == 'element_fill':
+                raise RuntimeError('no such element')
+            return {'url': 'https://x/'}
+
+    bridge_agent.bridge = Breaks()
+    model = Model([
+        act([('element_fill', {'element_id': 'gone'}),
+             ('element_click_trusted', {'element_id': 'el_2'})]),
+        json.dumps({'done': True, 'success': False, 'answer': 'could not fill'}),
+    ])
+    result = await bridge_agent.run('fill it in', model)
+    check('the rest of a batch is abandoned after a failure',
+          not any(s.get('tool') == 'element_click_trusted' for s in result['steps']),
+          str(result['steps']))
+
+
+    print()
+    print('only tools Dex has classified')
+
+    class Extra(FakeBridge):
+        def tools(self):
+            return super().tools() + [{'name': 'post_a_tweet'}]
+
+    bridge_agent.bridge = Extra()
+    model = Model([json.dumps({'done': True, 'success': True, 'answer': 'ok',
+                               'verified_by': 'the page'})])
+    await bridge_agent.run(
+        'do a thing', model,
+        tool_tiers={'page_analyze': 4, 'page_navigate': 3,
+                    'element_click_trusted': 2, 'element_fill': 2,
+                    'debugger_detach': 4},
+    )
+    offered = model.prompts[0]
+    check('a classified tool is offered', 'element_click_trusted' in offered)
+    check('a tool Dex has never classified is not',
+          'post_a_tweet' not in offered, offered[:300])
+
+    # No table at all is the older shape, and refusing everything would be a
+    # worse answer than the previous behaviour.
+    bridge_agent.bridge = Extra()
+    model = Model([json.dumps({'done': True, 'success': True, 'answer': 'ok',
+                               'verified_by': 'the page'})])
+    await bridge_agent.run('do a thing', model)
+    check('with no table sent, everything the extension offers is used',
+          'post_a_tweet' in model.prompts[0])
+
     print(f'{passed} passed, {failed} failed')
     if failed:
         sys.exit(1)

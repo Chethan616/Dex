@@ -27,6 +27,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import walls
 from bridge import bridge
 
 log = logging.getLogger('OwnerPrimitives')
@@ -184,6 +185,88 @@ async def _download_current(req: Any) -> dict[str, Any]:
         'path': str(target),
         'name': str(result.get('suggested_name') or target.name),
         'bytes': target.stat().st_size if target.exists() else 0,
+    }
+
+
+async def _session_status(req: Any) -> dict[str, Any]:
+    """
+    Is this site signed in, in the browser the owner actually uses?
+
+    Asked the only way it can be from outside — go there and see whether the
+    site sends us to a login page — which is the same thing `primitives.py`
+    does, so the answer has the same shape and means the same thing.
+    """
+    if not req.url:
+        raise ValueError('session_status needs a url')
+
+    await bridge.call('page_navigate', {'url': req.url})
+    page = await _snapshot()
+    landed = page.get('url', '')
+    text = page.get('text', '')
+
+    wall = walls.detect_wall(landed, page.get('title', ''), text, task='')
+    signed_out = wall is not None and wall.kind in ('login', 'signed_out')
+
+    return {
+        'url': landed,
+        'state': 'signed_out' if signed_out else 'signed_in',
+        'signed_in': not signed_out,
+        'reason': (
+            wall.reason if signed_out
+            else 'The page loaded without asking anyone to sign in.'
+        ),
+        'wall': None if wall is None else wall.kind,
+        'has_credential': False,
+        'login_url': landed if signed_out else None,
+    }
+
+
+async def _sign_in(req: Any) -> dict[str, Any]:
+    """
+    Sign in — which, in the owner's own browser, usually means: already are.
+
+    This verb used to be the one thing with no owner-browser equivalent, so it
+    fell through to Dex's own Playwright browser. That browser is signed in to
+    nothing, so a task on a site the owner was *already signed into* opened a
+    GitHub login page in a browser that was not theirs. From the outside it
+    looked like Dex had signed them out. The log line was:
+
+        [sign_in] sign_in has no owner-browser equivalent; using Dex own
+
+    Falling back is only ever right for work where the browser does not matter.
+    Identity is the one thing where it always does, so this is the last verb
+    that should ever have done it.
+
+    Dex never types a password here. It does not need to: the session is
+    already there. When it genuinely is not, the answer is to ask the owner —
+    in their own window, where their password manager is — rather than to sign
+    in somewhere else on their behalf.
+    """
+    if not req.url:
+        raise ValueError('sign_in needs a url')
+
+    status = await _session_status(req)
+
+    if status['signed_in']:
+        return {
+            'url': status['url'],
+            'filled': [],
+            'needs_owner': False,
+            'already': True,
+            'reason': 'You are already signed in here, in your own browser.',
+        }
+
+    return {
+        'url': status['url'],
+        'filled': [],
+        # The orchestrator raises the hand-off card from this, and the owner
+        # signs in the window that is already in front of them.
+        'needs_owner': True,
+        'already': False,
+        'reason': (
+            f'{status["reason"]} Sign in in the browser window that is open — '
+            'Dex will carry on from there.'
+        ),
     }
 
 
@@ -425,9 +508,8 @@ def _default_capture() -> Path:
     return Path.home() / 'Pictures' / 'Dex' / f'dex-{stamp}.png'
 
 
-# `sign_in` is the one verb deliberately absent. It hands off to the owner and
-# belongs to the session machinery — and in the attached browser they are
-# already signed in, which is the point.
+# Nothing falls back any more. See `_sign_in` for why the one verb that used to
+# was the worst possible choice for it.
 _HANDLERS = {
     'navigate': _navigate,
     'read': _read,
@@ -450,4 +532,6 @@ _HANDLERS = {
     'upload_file': _upload,
     'extract_table': _extract_table,
     'verify': _verify,
+    'session_status': _session_status,
+    'sign_in': _sign_in,
 }

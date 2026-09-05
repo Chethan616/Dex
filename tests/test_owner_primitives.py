@@ -107,9 +107,9 @@ async def main() -> None:
     ]
     absent = [v for v in verbs if v not in owner_primitives._HANDLERS]
     check(
-        'only sign_in has no owner-browser equivalent',
-        absent == ['sign_in'],
-        f'also missing: {absent}',
+        'every verb works in the owner browser - nothing falls back',
+        absent == [],
+        f'missing: {absent}',
     )
     check(
         'and an unknown verb raises rather than silently using the wrong browser',
@@ -164,6 +164,40 @@ async def main() -> None:
     result = await owner_primitives.run('verify', req(verify=None))
     check('an empty spec is not success - nobody said what success looks like',
           result['passed'] is False, str(result))
+
+    print()
+    print('signing in')
+
+    # The bug this covers, in one line from the log:
+    #
+    #     [sign_in] sign_in has no owner-browser equivalent; using Dex own
+    #
+    # sign_in was the one verb with no equivalent here, so it fell through to
+    # Dex own browser - which is signed in to nothing. A task on a site the
+    # owner was already signed into opened a login page in a browser that was
+    # not theirs, and it looked like Dex had signed them out.
+    bridge = Recorder({'tab_list': TABS, 'page_extract_content': CONTENT})
+    owner_primitives.bridge = bridge
+    answer = await owner_primitives.run('sign_in', req(url='https://github.com'))
+    check('in their own browser they are already signed in',
+          answer['already'] is True and answer['needs_owner'] is False,
+          str(answer))
+    check('and no password was typed', answer['filled'] == [], str(answer))
+    check('and no other browser was involved',
+          all(name.startswith(('page_', 'tab_')) for name in bridge.names()),
+          str(bridge.names()))
+
+    # Genuinely signed out: ask the owner, in the window in front of them.
+    LOGIN = {'tabs': [{'active': True, 'url': 'https://github.com/login',
+                       'title': 'Sign in to GitHub'}]}
+    bridge = Recorder({'tab_list': LOGIN,
+                       'page_extract_content': {'content': 'Sign in to GitHub'}})
+    owner_primitives.bridge = bridge
+    answer = await owner_primitives.run('sign_in', req(url='https://github.com'))
+    check('signed out asks the owner rather than signing in elsewhere',
+          answer['needs_owner'] is True, str(answer))
+    check('and points at the window that is already open',
+          'browser window that is open' in answer['reason'], answer['reason'])
 
     print('\ndownloads')
 

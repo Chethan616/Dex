@@ -175,6 +175,9 @@ class RunTaskRequest(BaseModel):
     # where SiteRouteStore lives. Passed in rather than fetched here so there is
     # one route store, and so the same hint reaches both browser paths.
     route: dict | None = None
+    # Each tool's confirmation tier, from core/brain/browser_tools.ts. Sent
+    # rather than duplicated here so there is one table, not two.
+    tool_tiers: dict[str, int] | None = None
     request_id: str = ''
     step_id: str = ''
 
@@ -276,6 +279,7 @@ async def run_task(req: RunTaskRequest) -> dict[str, Any]:
             _ask_model,
             route=req.route,
             profile=owner_session.SESSION.status().get('profile', ''),
+            tool_tiers=req.tool_tiers,
         )
         result.setdefault('browser', 'owner')
         return result
@@ -569,13 +573,24 @@ async def primitive(req: PrimitiveRequest) -> dict[str, Any]:
                 'data': await owner_primitives.run(req.op, req),
                 'browser': 'owner',
             }
-        except owner_primitives.Unsupported:
-            # A verb the extension has no equivalent for — sign_in hands off to
-            # the owner, verify checks the live DOM. Falling through to Dex's
-            # browser is deliberate and narrow, not a silent substitution for
-            # the whole tier.
-            log.info('[%s] %s has no owner-browser equivalent; using Dex own',
-                     req.op, req.op)
+        except owner_primitives.Unsupported as gap:
+            # A verb with no equivalent in the attached browser.
+            #
+            # This used to fall through to Dex's own browser, and the one verb
+            # it ever fell through for was `sign_in` — the single worst choice,
+            # because Dex's browser is signed in to nothing. A task on a site
+            # the owner was already signed into opened a login page in a
+            # browser that was not theirs, and from the outside it looked like
+            # Dex had signed them out.
+            #
+            # Every verb has an equivalent now, so this is a guard rather than
+            # a route. If one is ever missing again, saying so beats answering
+            # the question in a browser that is nobody's.
+            return _bad(
+                f'{gap} cannot be done in your browser, and Dex will not answer '
+                "it in a different one — that browser is signed in to nothing, "
+                'so the answer would be about somebody else.'
+            )
         except Exception as exc:  # noqa: BLE001 - reported, not swallowed
             log.warning('[%s] failed in the owner browser: %s', req.op, exc)
             return _bad(f'{req.op} failed in your browser: {exc}')

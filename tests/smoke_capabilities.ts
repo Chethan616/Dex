@@ -86,8 +86,29 @@ console.log('\n— the web is reachable —');
 
 check('can_browse_web is in the catalogue', catalogue.includes('CAPABILITY: can_browse_web'));
 check('with run_task, for anything needing judgement', 'run_task' in WEB_ACTIONS);
-check('and navigate, for going somewhere specific', 'navigate' in WEB_ACTIONS);
-check('and screenshot', 'screenshot' in WEB_ACTIONS);
+check('and reads, for a question about one page',
+  ['read_page', 'extract', 'screenshot', 'download_current']
+    .every((name) => name in WEB_ACTIONS));
+
+// The verbs a plan must NOT be built from.
+//
+// `navigate` and `screenshot` used to be asserted as present here, and they
+// were, along with click, fill_form, wait_for, map_page and sign_in. So the
+// planner built plans out of them:
+//
+//   navigate -> sign_in -> click -> wait_for("Qwix", 5000) -> map_page -> click
+//
+// Six steps deciding in advance what a page would offer, and a sign-in step for
+// a site the owner was already signed into. They all still exist and still
+// work — the browsing agent uses them turn by turn with the page in front of
+// it, which is where that decision can be made. They are simply not something
+// a plan can contain.
+for (const internal of ['navigate', 'click', 'fill_form', 'wait_for', 'map_page',
+                        'scroll', 'press_key', 'go_back', 'type_text',
+                        'session_status', 'sign_in']) {
+  check(`${internal} is the agent's, not the planner's`, !(internal in WEB_ACTIONS),
+    'a plan built from this is a plan guessing what a page will offer');
+}
 check(
   'the routing rules send web work to it, not to a launched browser',
   /can_browse_web/.test(ROUTING_RULES) && /Never launch_app a browser/.test(ROUTING_RULES),

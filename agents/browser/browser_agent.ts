@@ -4,6 +4,7 @@ import { AgentContext, AgentResult } from '../../core/events/types';
 import { emit } from '../../core/events/bus';
 import { readConfig } from '../../core/settings/config_store';
 import { SiteRouteStore, describeRoute } from '../../core/memory/site_routes';
+import { BROWSER_TOOLS } from '../../core/brain/browser_tools';
 
 const PORT = parseInt(process.env.BROWSER_AGENT_PORT ?? '8766', 10);
 
@@ -47,6 +48,8 @@ interface TaskResponse {
   downloads?: BrowserDownload[];
   /** What the run says it altered. What a verification should check. */
   changed?: string[];
+  /** What on the page the run says proves it worked. Empty means it could not say. */
+  verified_by?: string;
   /** The pages it touched, in order. */
   visited?: string[];
   steps?: BrowserStep[];
@@ -285,6 +288,24 @@ ${task}` : task;
 
     emit('executing', `Browsing: "${task}"`, requestId, stepId);
 
+    // What this run is allowed to do, said before it does it.
+    //
+    // One card approves the whole task, which is the only workable trade — a
+    // card per click would be unusable. That makes it worth saying plainly what
+    // the approval covers, rather than leaving "run_task" to stand for
+    // everything the browser can do.
+    const consequential = Object.entries(BROWSER_TOOLS)
+      .filter(([, spec]) => spec.tier <= 2)
+      .map(([name]) => name);
+    emit(
+      'routing',
+      `In your browser it may: ${consequential.slice(0, 6).join(', ')}` +
+        (consequential.length > 6 ? `, and ${consequential.length - 6} more` : '') +
+        '. It will not type a password or sign you in.',
+      requestId,
+      stepId,
+    );
+
     let response: TaskResponse;
     try {
       response = await this.post<TaskResponse>('/run-task', {
@@ -303,6 +324,21 @@ ${task}` : task;
         route: route
           ? { origin: route.origin, goal: route.goal, steps: route.steps }
           : null,
+        // What each tool is allowed to do to the owner, from the one place it
+        // is declared.
+        //
+        // Until now `tierFor` and `browserToolCatalogue` were referenced only
+        // by tests — nothing in production read them, so the tiers on the
+        // extension's tools were decoration. Phase 6's stated reason for
+        // forking rather than consuming MCP was that native tools "go through
+        // the same path as every other action", and they did not.
+        //
+        // Sent as data rather than reimplemented on the Python side, because
+        // two hand-maintained copies of the same table in two languages is the
+        // exact defect this project has now fixed twice.
+        tool_tiers: Object.fromEntries(
+          Object.entries(BROWSER_TOOLS).map(([name, spec]) => [name, spec.tier]),
+        ),
         verify: Object.keys(verify).length ? verify : null,
         request_id: requestId,
         step_id: stepId,
@@ -498,6 +534,13 @@ ${task}` : task;
         // why an un-hinted run_task graded UNVERIFIABLE every time.
         changed: response.changed ?? [],
         visited: response.visited ?? [],
+        // The run's own evidence for its success. A claim with nothing behind
+        // it is not the same as a checked one, and the verifier tells them
+        // apart rather than believing both.
+        // Undefined means the run did not report a verdict at all (an older
+        // shape); an empty string means it claimed success and could not say
+        // what showed it. Those are different and the verifier treats them so.
+        verified_by: response.verified_by,
         steps: response.steps,
         verification: response.verification ?? null,
       },

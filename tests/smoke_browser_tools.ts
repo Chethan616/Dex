@@ -43,6 +43,43 @@ const names = Object.keys(BROWSER_TOOLS);
 // browser ran it.
 check('every tool is declared', names.length === 29, String(names.length));
 
+// ── the tiers are read, not decoration ───────────────────────────────────────
+//
+// This table sat here being asserted about by tests and read by nothing. The
+// loop that drives the owner's browser called every tool the extension offered,
+// so `element_upload_file` and `page_download_to` ran unclassified — which is
+// precisely what Phase 6 forked the extension to avoid, quietly back again.
+//
+// A test that only checks the table's contents cannot catch that. This checks
+// that production reads it.
+{
+  const agent = readFileSync(
+    join(__dirname, '..', 'agents', 'browser', 'browser_agent.ts'),
+    'utf8',
+  );
+  check(
+    'the browser agent reads the tier table',
+    agent.includes('BROWSER_TOOLS'),
+    'nothing in production imports it, so the tiers mean nothing',
+  );
+  check(
+    'and sends it to the loop that does the clicking',
+    /tool_tiers/.test(agent),
+    'the loop decides what it may call from this',
+  );
+
+  const loop = readFileSync(
+    join(__dirname, '..', 'agents', 'browser', 'bridge_agent.py'),
+    'utf8',
+  );
+  check(
+    'and the loop only offers what is in it',
+    /tool_tiers/.test(loop) && /unclassified/.test(loop),
+    'an unclassified tool must not be driveable',
+  );
+}
+
+
 // ── the two lists cannot drift ───────────────────────────────────────────────
 //
 // The extension declares what it can do; browser_tools.ts declares what each of

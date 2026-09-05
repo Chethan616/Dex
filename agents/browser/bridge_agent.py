@@ -57,6 +57,15 @@ MAX_STEPS = 18
 RECENT_TURNS = 8
 COMPACT_AFTER = 6
 
+# How many actions one turn may queue.
+#
+# A turn is a model call, measured at about 5.5s, so eighteen turns is the two
+# minutes the owner spends watching a task. Batching analyse-then-click into
+# one turn is most of that time back. Capped because a long queue is a plan
+# made against a page the model has not seen yet — the further down the list,
+# the more it is guessing.
+MAX_ACTIONS_PER_TURN = 4
+
 # Tools that change the page rather than read it. What a run altered is what a
 # verification should check, and it is the run's own claim about itself.
 CHANGES_THE_PAGE = frozenset({
@@ -68,28 +77,69 @@ CHANGES_THE_PAGE = frozenset({
 # What the model is told it can do. Deliberately the whole list from the
 # extension rather than a curated subset: it registered them, it knows what it
 # has, and a tool Dex hides is a tool the owner paid for and cannot use.
-SYSTEM = """You are operating a web browser that the owner is already signed
-in to. You act by choosing ONE tool call at a time and seeing what happens.
+# What the model is told, and what it must say back.
+#
+# This asked for "ONE tool call at a time" and a {"done": true} when finished.
+# It never asked whether the *last* action had worked, so a click that changed
+# nothing was indistinguishable from one that worked, and the loop moved on. It
+# had no success flag, so "done" meant "the model stopped", which is how a run
+# that did half the job reported that it had done all of it.
+#
+# The contract below is browser-use's, which is already installed here and
+# already drives the browser Dex launches. Every turn it requires an explicit
+# verdict on the previous action, a memory line, and a list of actions rather
+# than one; before claiming success it requires evidence. Its own system prompt
+# puts the rule better than a paraphrase would: "Partial results with
+# success=false are more valuable than overclaiming success."
+SYSTEM = """You are driving a web browser the owner is already signed in to.
+It is their real browser, with their accounts, on their machine.
+
+Every turn, you say what happened and what to do next:
+
+  evaluation_previous_goal  Did your last actions do what you intended? Look at
+                            the page, not at your intent. "Clicked Unpin but
+                            the dialog is still open. Verdict: Failure" is a
+                            useful turn. Never assume an action worked because
+                            it did not error.
+  memory                    What the next turn needs to know. Where you are,
+                            what you have already tried, what you learned about
+                            where things live on this site.
+  next_goal                 The one thing you are about to achieve.
+  plan_update               Your plan for the rest, revised as you learn. Keep
+                            it short.
+  action                    One or more tool calls to run now, in order.
 
 How to work:
-- Start with page_analyze to see what is actually on the page. Do not guess at
-  element ids; they come from the analysis and change between pages.
+- Start with page_analyze. Element ids come from it and change between pages;
+  never guess one.
+- Put several actions in one turn when you already know they follow — analyze
+  then click, or fill then press Enter. Each turn is a model call and the owner
+  is waiting. But do not queue actions past a point where the page will change
+  in a way you have not seen.
 - Prefer navigating straight to a known URL over clicking through menus.
-- After an action that changes the page, analyze again before the next one.
-- If element_click appears to work but the page does not change, use
-  element_click_trusted — many controls ignore a synthetic click.
-- To upload a file, use element_upload_file with the path you were given. Do
-  not click the upload button and wait for a dialog; there is no dialog.
-- To download, use page_download_to with the directory you were given, passing
-  the download control as trigger_element_id. It reports the exact file.
-- When the task is done, reply with {"done": true, "answer": "..."}.
-- If the page shows you are signed out, stop and say so — do not try to sign
-  in, and never type a password.
+- If element_click seemed to work but nothing changed, use
+  element_click_trusted. Many controls ignore a synthetic click.
+- To upload, use element_upload_file with the path you were given. There is no
+  file dialog to click through.
+- To download, use page_download_to with the directory you were given.
+- You are signed in. Do not look for a login, do not type a password, and if a
+  page does show you signed out, stop and say so.
+- If two turns in a row change nothing, stop repeating and try a different
+  route. If there is no other route, finish with success false and say why.
 
-Answer with ONE JSON object and nothing else:
-  {"tool": "<name>", "params": { ... }, "why": "<short reason>"}
-or
-  {"done": true, "answer": "<what you found or did>"}
+When you are finished, you must have checked. Before saying success is true,
+look at the page and find the thing that shows it: the pin gone, the message
+sent, the file downloaded. Name it in verified_by. If you cannot find it, or
+any part of the request is unmet, success is false — a partial answer with
+success false is worth more than a confident wrong one.
+
+Answer with ONE JSON object and nothing else. To act:
+  {"evaluation_previous_goal": "...", "memory": "...", "next_goal": "...",
+   "plan_update": ["...", "..."],
+   "action": [{"tool": "<name>", "params": { ... }}]}
+To finish:
+  {"done": true, "success": true, "answer": "<what you did or found>",
+   "verified_by": "<what on the page proves it>"}
 """
 
 
@@ -100,6 +150,7 @@ async def run(
     on_step=None,
     route: dict | None = None,
     profile: str = '',
+    tool_tiers: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """
     Run `task` in the attached browser.
@@ -122,7 +173,29 @@ async def run(
             'retryable': False,
         }
 
-    available = [t.get('name') for t in bridge.tools()]
+    offered = [str(t.get('name')) for t in bridge.tools() if t.get('name')]
+
+    # Only tools Dex has classified.
+    #
+    # Every tool carries a confirmation tier saying what it may do to the owner
+    # — and nothing in production read those tiers, so an extension could offer
+    # a tool Dex had never heard of and this loop would drive it. That is the
+    # thing Phase 6 forked the extension to avoid, and it had quietly come back.
+    #
+    # A tool Dex cannot classify is not offered. It is not a security boundary
+    # against a hostile extension — the owner installed it — but it is the
+    # difference between a capability that was reasoned about and one that
+    # arrived.
+    if tool_tiers:
+        available = [name for name in offered if name in tool_tiers]
+        unclassified = [name for name in offered if name not in tool_tiers]
+        if unclassified:
+            log.info('not offering unclassified tools: %s', ', '.join(unclassified))
+    else:
+        # No table sent (an older caller, or a direct test). Offering what the
+        # extension has is the previous behaviour and is better than refusing.
+        available = offered
+        unclassified = []
 
     # A browser with no tools is not a browser Dex can use.
     #
@@ -162,6 +235,9 @@ async def run(
     # Everything older than the recent turns, as a sentence rather than dropped.
     recap = ''
     compacted_turns = 0
+    # What has been attempted, to notice going round in circles. See the check
+    # in the action loop.
+    tried: list[str] = []
 
     for number in range(1, MAX_STEPS + 1):
         recent = history[-RECENT_TURNS:]
@@ -195,66 +271,106 @@ async def run(
         )
 
         raw = await ask_model(prompt)
-        choice = _parse(raw)
+        turn = _parse(raw)
 
-        if choice is None:
-            history.append(f'  [{number}] the model did not answer with a tool call')
+        if turn is None:
+            history.append(f'  [{number}] the model did not answer with an action')
             continue
 
-        if choice.get('done'):
+        # What it says about the turn before this one.
+        #
+        # Recorded whether or not it is flattering. A loop that never writes
+        # down "that click did nothing" is a loop that will click it again.
+        verdict = str(turn.get('evaluation_previous_goal', '')).strip()
+        if verdict:
+            history.append(f'  [{number}] looking back: {verdict}')
+        if turn.get('memory'):
+            world.set('memory', str(turn['memory'])[:400])
+        if turn.get('plan_update'):
+            plan = [str(item) for item in turn['plan_update'] if item][:8]
+            world.set('plan', '\n'.join(f'- {item}' for item in plan))
+
+        if turn.get('done'):
             await _detach(available)
-            return {
-                'success': True,
-                'answer': str(choice.get('answer', '')),
-                'steps': steps,
-                'downloads': downloads,
-                'changed': changed,
-                'visited': _visited(steps),
-                'url': (world.snapshot().get('page', '') or '').split('  ·  ')[0],
-                'browser': 'the owner browser',
-            }
+            return _finished(turn, steps, downloads, changed, world)
 
-        tool = str(choice.get('tool', ''))
-        params = choice.get('params') or {}
+        # One or more actions. `action` is a list because a turn is a model call
+        # and the owner is waiting: analyse-then-click is one turn, not two.
+        # A single {"tool": ...} is still accepted, because a model that answers
+        # in the older shape should work rather than stall.
+        batch = turn.get('action')
+        if isinstance(batch, dict):
+            batch = [batch]
+        if not isinstance(batch, list) or not batch:
+            if turn.get('tool'):
+                batch = [{'tool': turn['tool'], 'params': turn.get('params') or {}}]
+            else:
+                history.append(f'  [{number}] the model asked for no action')
+                continue
 
-        if tool not in available:
-            history.append(f'  [{number}] {tool} is not available here')
-            continue
+        for call in batch[:MAX_ACTIONS_PER_TURN]:
+            if not isinstance(call, dict):
+                continue
+            tool = str(call.get('tool', ''))
+            params = call.get('params') or {}
 
-        try:
-            result = await bridge.call(tool, params)
-            summary = _summarise(result)
-            history.append(f'  [{number}] {tool} -> {summary}')
-            steps.append({
-                'step': number,
-                'tool': tool,
-                # `action` as well as `tool`, because the route recorder in
-                # browser_agent.ts reads `action` — so a run that worked here
-                # teaches the same remembered route an autonomous run does,
-                # with no second code path.
-                'action': tool,
-                'url': _url_of(result),
-                'params': params,
-                'result': summary,
-            })
-            landed = _download_of(result)
-            if landed:
-                downloads.append(landed)
-                changed.append(f'downloaded {landed["name"]}')
+            if tool not in available:
+                history.append(f'  [{number}] {tool} is not available here')
+                break
 
-            url, title = world_state.page_of(result)
-            world.page(url, title)
-            if tool in CHANGES_THE_PAGE:
-                what = str(params.get('element_id') or params.get('value') or tool)
-                world.did(f'{tool} {what}'[:90])
-                changed.append(f'{tool} {what}'[:90])
-        except Exception as exc:  # noqa: BLE001 - reported, not raised
-            history.append(f'  [{number}] {tool} failed: {exc}')
-            steps.append({'step': number, 'tool': tool, 'params': params,
-                          'error': str(exc)})
+            # Going round in circles.
+            #
+            # The same tool on the same element twice running has already had
+            # its chance; doing it a third time spends the budget on the answer
+            # that did not work. Told rather than silently stopped, so the model
+            # can choose another route while it still has turns left.
+            fingerprint = f'{tool}:{params.get("element_id") or params.get("url") or ""}'
+            tried.append(fingerprint)
+            if len(tried) >= 3 and len(set(tried[-3:])) == 1:
+                history.append(
+                    f'  [{number}] {tool} has now been tried three times with the '
+                    'same target and changed nothing. Take a different route, or '
+                    'finish with success false.'
+                )
+                break
 
-        if on_step:
-            on_step(steps[-1] if steps else {'step': number, 'tool': tool})
+            try:
+                result = await bridge.call(tool, params)
+                summary = _summarise(result)
+                history.append(f'  [{number}] {tool} -> {summary}')
+                steps.append({
+                    'step': number,
+                    'tool': tool,
+                    # `action` as well as `tool`, because the route recorder in
+                    # browser_agent.ts reads `action` — so a run that worked
+                    # here teaches the same remembered route an autonomous run
+                    # does, with no second code path.
+                    'action': tool,
+                    'url': _url_of(result),
+                    'params': params,
+                    'result': summary,
+                })
+                landed = _download_of(result)
+                if landed:
+                    downloads.append(landed)
+                    changed.append(f'downloaded {landed["name"]}')
+
+                url, title = world_state.page_of(result)
+                world.page(url, title)
+                if tool in CHANGES_THE_PAGE:
+                    what = str(params.get('element_id') or params.get('value') or tool)
+                    world.did(f'{tool} {what}'[:90])
+                    changed.append(f'{tool} {what}'[:90])
+            except Exception as exc:  # noqa: BLE001 - reported, not raised
+                history.append(f'  [{number}] {tool} failed: {exc}')
+                steps.append({'step': number, 'tool': tool, 'params': params,
+                              'error': str(exc)})
+                # The rest of the batch was planned against a page that did not
+                # turn out the way this turn expected. Stop and look.
+                break
+
+            if on_step:
+                on_step(steps[-1])
 
     await _detach(available)
     return {
@@ -269,6 +385,44 @@ async def run(
         'changed': changed,
         'visited': _visited(steps),
         'retryable': False,
+    }
+
+
+def _finished(turn: dict, steps: list, downloads: list, changed: list, world) -> dict:
+    """
+    The run's own verdict on itself.
+
+    `success` used to be implied — the loop returned success because the model
+    had stopped, which is not the same thing and is how a run that did half the
+    job reported that it had done all of it.
+
+    Now the model says so, and has to say what on the page shows it. A claim of
+    success with nothing to point at is downgraded here rather than believed:
+    the verification layer will treat it as unverified, which is the honest
+    reading of "it says it worked and cannot say why".
+    """
+    claimed = turn.get('success')
+    answer = str(turn.get('answer', '')).strip()
+    evidence = str(turn.get('verified_by', '')).strip()
+
+    # Absent means an older-shaped answer; those are taken at their word,
+    # because the alternative is failing runs that did work.
+    success = True if claimed is None else bool(claimed)
+
+    return {
+        'success': success,
+        'answer': answer,
+        'verified_by': evidence,
+        'steps': steps,
+        'downloads': downloads,
+        'changed': changed,
+        'visited': _visited(steps),
+        'url': (world.snapshot().get('page', '') or '').split('  ·  ')[0],
+        'browser': 'the owner browser',
+        **({} if success else {
+            'error': answer or 'The run could not finish what it was asked to do.',
+            'retryable': False,
+        }),
     }
 
 
@@ -377,7 +531,12 @@ def _parse(raw: str) -> dict | None:
                 if depth == 0:
                     try:
                         parsed = json.loads(text[start:index + 1])
-                        if isinstance(parsed, dict) and ('tool' in parsed or 'done' in parsed):
+                        # A turn now answers with `action`, a list. `tool`
+                        # is still accepted so a model replying in the older
+                        # single-call shape works rather than stalling.
+                        if isinstance(parsed, dict) and any(
+                            key in parsed for key in ('action', 'tool', 'done')
+                        ):
                             return parsed
                     except ValueError:
                         pass

@@ -289,6 +289,8 @@ function verifyBrowserStep(
     verification?: { passed: boolean; checks?: Array<{ check: string; passed: boolean }> } | null;
     /** What the run says it altered. Absent means the run does not report it. */
     changed?: string[];
+    /** What on the page the run says proves it worked. */
+    verified_by?: string;
     url?: string;
     text?: string;
     title?: string;
@@ -334,6 +336,33 @@ function verifyBrowserStep(
           status: 'FAILED',
           reason: `Page did not confirm: ${failed.join('; ')}`,
           afterState: data.url,
+        };
+  }
+
+  // The run's own verdict, when it gives one.
+  //
+  // The loop that drives the owner's browser now has to say whether it
+  // succeeded and name what on the page shows it — the contract browser-use
+  // already uses for the browser Dex launches. Before that, "done" meant the
+  // model had stopped talking, and a run that did half the job reported that
+  // it had done all of it.
+  //
+  // A run that reported failure never reaches here: it is a failed step
+  // already. What is left to tell apart is a success that was checked from one
+  // that was merely asserted, and "it worked and I cannot say how" is exactly
+  // the claim that was wrong before.
+  if (typeof data.verified_by === 'string') {
+    const evidence = data.verified_by.trim();
+    return evidence
+      ? {
+          status: 'VERIFIED',
+          reason: `Checked on the page: ${evidence}`,
+          afterState: typeof data.url === 'string' ? data.url : undefined,
+        }
+      : {
+          status: 'UNVERIFIABLE',
+          reason: 'The run says it succeeded but could not say what on the page shows it.',
+          afterState: typeof data.url === 'string' ? data.url : undefined,
         };
   }
 

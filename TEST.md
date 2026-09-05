@@ -365,6 +365,42 @@ unverified".
 
 ---
 
+## Phase 9 — One browser agent, and it knows whether it worked
+
+**The task that kept failing.** *"Open github and remove the repo named Qwix
+from my repo pins."* Three things to watch:
+
+- the plan card shows **one** step, not six
+- no sign-in page opens, and no second browser
+- if it cannot do it, it says so — a red step, not a tick
+
+**Never a sign-in step again.** Dex is already signed in to your sites in your
+own browser, so a plan should never contain `sign in`, and neither should it
+contain `wait for`, `map page` or `click` as steps. Those are the agent's tools
+now, used with the page in front of it. If you ever see one in a plan card,
+that is a regression.
+
+**It has to show its work.** Ask for something that cannot be done — unpin a
+repo that is not pinned. It should come back saying so, and the step should be
+red. A run now has to name what on the page proves it succeeded; a run that
+claims success without naming anything shows as *"says it succeeded but could
+not say what shows it"* rather than a tick.
+
+**Speed.** The step should be noticeably quicker than the ~1m53s it used to
+take. A turn is a model call at about five and a half seconds, and the loop now
+puts several actions in one turn instead of one.
+
+**Going in circles.** If a page will not cooperate, the agent should try
+something different rather than the same click three times. Look at the step
+list: the same tool on the same element more than twice over is the old
+behaviour.
+
+**Signed out.** Sign out of a site, then ask Dex for something on it. It should
+hand the browser to you — the window already open — and carry on after you sign
+in. It must never open a second browser to sign in to.
+
+---
+
 ## When something looks wrong
 
 **The change did not take effect.** Almost always an old core still running.
