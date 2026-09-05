@@ -14,6 +14,8 @@
  * rather than harmless.
  */
 import { BROWSER_TOOLS, browserToolCatalogue, tierFor } from '../core/brain/browser_tools';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 let passed = 0;
 let failed = 0;
@@ -35,9 +37,47 @@ function section(title: string): void {
 section('Every tool is classified');
 
 const names = Object.keys(BROWSER_TOOLS);
-// Eighteen from the OpenDia fork, plus the seven Dex added over the DevTools
-// Protocol for the things ordinary extension APIs are not allowed to do.
-check('all twenty-five are declared', names.length === 25, String(names.length));
+// Eighteen from the OpenDia fork, plus the ones Dex added over the DevTools
+// Protocol: the things ordinary extension APIs are not allowed to do, and the
+// selector-scoped reads that keep an action's answer the same shape whichever
+// browser ran it.
+check('every tool is declared', names.length === 29, String(names.length));
+
+// ── the two lists cannot drift ───────────────────────────────────────────────
+//
+// The extension declares what it can do; browser_tools.ts declares what each of
+// those may do to the owner. Two hand-maintained lists in two languages is the
+// exact shape of the bug this project already fixed once for the daemon, and it
+// happened again here: `panel_open` was added to the extension and nowhere
+// else, so `tierFor` fell to its default and Dex would have raised a
+// confirmation card to open its own panel.
+{
+  const source = readFileSync(
+    join(__dirname, '..', 'extension', 'src', 'background', 'background.js'),
+    'utf8',
+  );
+  const inExtension = [...source.matchAll(/^ {6}name: "([a-z_]+)",$/gm)].map((m) => m[1]);
+
+  check(
+    'the extension declares tools at all (the pattern still matches)',
+    inExtension.length > 20,
+    String(inExtension.length),
+  );
+
+  const untiered = inExtension.filter((name) => !(name in BROWSER_TOOLS));
+  check(
+    'every tool the extension offers has a tier',
+    untiered.length === 0,
+    `untiered: ${untiered.join(', ')}`,
+  );
+
+  const phantom = names.filter((name) => !inExtension.includes(name));
+  check(
+    'and Dex declares no tool the extension does not have',
+    phantom.length === 0,
+    `not in the extension: ${phantom.join(', ')}`,
+  );
+}
 check(
   'uploading a file is declared, and is not a free action',
   BROWSER_TOOLS.element_upload_file?.tier === 2,

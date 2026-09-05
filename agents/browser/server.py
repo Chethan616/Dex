@@ -506,6 +506,25 @@ async def panel_open() -> dict[str, Any]:
         return _bad(f'could not open the panel: {exc}')
 
 
+@app.post('/extension/reload')
+async def extension_reload() -> dict[str, Any]:
+    """
+    Ask the extension to reload itself, so it runs the code on disk.
+
+    Called by `npm run rebuild`. An unpacked extension keeps running whatever
+    Chrome registered until its worker is reloaded, so a rebuild used to end
+    with a trip to chrome://extensions and a click on the reload arrow — every
+    time, for the rest of the project's life. This is that click.
+    """
+    if not bridge.attached:
+        return _bad('No browser is attached, so there is nothing to reload.')
+    try:
+        await bridge.call('extension_reload', {})
+    except Exception as exc:  # noqa: BLE001 - reloading drops the socket mid-reply
+        log.info('extension reload: %s', exc)
+    return {'success': True, 'data': {'reloading': True}}
+
+
 @app.get('/extension/status')
 async def extension_status() -> dict[str, Any]:
     """Whether a browser is really attached, and what it can do."""

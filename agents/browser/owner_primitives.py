@@ -63,13 +63,21 @@ async def _read(req: Any) -> dict[str, Any]:
 
 
 async def _extract(req: Any) -> dict[str, Any]:
-    # A selector, when there is one, is honoured through the analysis rather
-    # than by querying the DOM directly — the extension's content script is the
-    # only thing on the page, and it already knows what is there.
-    content = await bridge.call('page_extract_content', {
-        'content_type': 'article' if not req.selector else 'main',
-    })
-    return {'text': _text_of(content), 'selector': req.selector}
+    """
+    The same answer `extract` gives in Dex's own browser.
+
+    Shape parity is the point. This returned `{text, selector}` while the
+    Playwright side returns `{url, matches: [...]}`, so routing a step to the
+    owner's browser silently changed what the next step received. A plan does
+    not know which browser ran it and must not have to.
+    """
+    if not req.selector:
+        return await _snapshot()
+
+    if not await _has('page_query_text'):
+        raise Unsupported('extract by selector')
+
+    return _dict(await bridge.call('page_query_text', {'selector': req.selector}))
 
 
 async def _map_page(req: Any) -> dict[str, Any]:
@@ -235,9 +243,32 @@ async def _extract_table(req: Any) -> dict[str, Any]:
     thing Dex's own browser would render as a login prompt and report as an
     empty table.
     """
-    content = await bridge.call('page_extract_content', {'content_type': 'table'})
-    rows = content.get('rows') if isinstance(content, dict) else None
-    return {'rows': rows if isinstance(rows, list) else [], 'text': _text_of(content)}
+    if not await _has('page_tables'):
+        raise Unsupported('extract_table')
+
+    found = await bridge.call('page_tables', {})
+    tables = found if isinstance(found, list) else []
+    if not tables:
+        return {'ok': False, 'why': 'no table on this page'}
+
+    which = req.which if req.which is not None else 0
+    if isinstance(which, str):
+        target = which.strip().lower()
+        chosen = next(
+            (t for t in tables
+             if any(target in str(h).lower() for h in t.get('headers', []))),
+            None,
+        )
+        if chosen is None:
+            return {'ok': False, 'why': f'no table with a "{which}" column',
+                    'tables': [t.get('headers') for t in tables]}
+    else:
+        index = int(which or 0)
+        if index >= len(tables):
+            return {'ok': False, 'why': f'only {len(tables)} table(s) on this page'}
+        chosen = tables[index]
+
+    return {'ok': True, **chosen}
 
 
 async def _upload(req: Any) -> dict[str, Any]:
@@ -253,15 +284,43 @@ async def _upload(req: Any) -> dict[str, Any]:
 # ── the parts both halves need ──────────────────────────────────────────────
 
 async def _snapshot() -> dict[str, Any]:
-    """Where we are and what is here, in the shape primitives.py returns."""
+    """
+    Where we are and what is here, in the shape primitives.py returns.
+
+    `text` is the page's text, and it has to actually be that. This asked
+    page_extract_content for an "article", which returns nothing on a page that
+    is not one — example.com came back with the right url, the right title and
+    an empty string, and a plan reading the page would have concluded it was
+    blank.
+    """
     tabs = await bridge.call('tab_list', {'check_content_script': False})
     active = _active_tab(tabs)
-    content = await bridge.call('page_extract_content', {'content_type': 'article'})
+
+    text = ''
+    if await _has('page_query_text'):
+        body = _dict(await bridge.call('page_query_text', {'selector': 'body'}))
+        text = ' '.join(str(m) for m in (body.get('matches') or []))[:200_000]
+    if not text:
+        # An older extension, or a page the query could not run on.
+        text = _text_of(await bridge.call('page_extract_content', {'content_type': 'article'}))
+
     return {
         'url': active.get('url', ''),
         'title': active.get('title', ''),
-        'text': _text_of(content),
+        'text': text,
     }
+
+
+async def _has(tool: str) -> bool:
+    """
+    Does the attached extension offer this tool?
+
+    Asked rather than assumed: the extension in the owner's browser can be an
+    older build than the files on disk, because Chrome runs the version it
+    registered until the worker restarts. A tool that is missing should mean a
+    slightly worse answer, not an exception.
+    """
+    return any(t.get('name') == tool for t in bridge.tools())
 
 
 async def _find(target: str, goal: str | None) -> str:

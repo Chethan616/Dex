@@ -234,6 +234,37 @@ if (-not (Test-Path $exe)) {
 Start-Process $exe
 Ok 'started - the app brings up the daemon, agents and core'
 
+# ── the extension picks up the new code ─────────────────────────────────────
+#
+# An unpacked extension runs whatever Chrome registered until its worker is
+# reloaded. That used to mean a trip to chrome://extensions and a click on the
+# reload arrow after every rebuild. Dex asks it to reload itself instead, and
+# says so plainly when it cannot reach it.
+Step 'Extension in your browser'
+# The app has just been started and brings the agents up behind it, so this
+# waits rather than asking something that is not listening yet.
+$agent = $null
+foreach ($try in 1..20) {
+    try {
+        $agent = Invoke-RestMethod -Uri 'http://127.0.0.1:8766/health' -TimeoutSec 2
+        break
+    } catch { Start-Sleep -Milliseconds 1500 }
+}
+try {
+    if (-not $agent) { throw 'the browser agent did not come up' }
+    $status = Invoke-RestMethod -Uri 'http://127.0.0.1:8766/extension/status' -TimeoutSec 4
+    if ($status.data.attached) {
+        Invoke-RestMethod -Uri 'http://127.0.0.1:8766/extension/reload' -Method Post -TimeoutSec 8 | Out-Null
+        Ok 'asked it to reload - it reconnects on its own'
+    } else {
+        Ok 'no browser attached; it will run the new code when Chrome next opens'
+    }
+} catch {
+    Ok 'could not reach the browser agent; the extension picks this up on its next start'
+}
+
+
+
 Write-Host ''
 Write-Host 'If the Dex extension is not loaded in your Chrome yet:' -ForegroundColor Yellow
 Write-Host "  chrome://extensions -> Developer mode -> Load unpacked -> $repo\extension"

@@ -162,6 +162,16 @@ export const BROWSER_TOOLS: Record<string, BrowserToolSpec> = {
     params: '{ key: string, tab_id?: number }',
     note: 'Enter, Tab, Escape, an arrow, or a character. Enter submits, which is the consequential part',
   },
+  page_query_text: {
+    tier: 4,
+    params: '{ selector: string, tab_id?: number }',
+    note: 'Text of everything matching a CSS selector. Reading only',
+  },
+  page_tables: {
+    tier: 4,
+    params: '{ tab_id?: number }',
+    note: 'Every table on the page, as headers and rows. Reading only',
+  },
   page_screenshot: {
     tier: 4,
     params: '{ full_page?: boolean, tab_id?: number }',
@@ -171,6 +181,16 @@ export const BROWSER_TOOLS: Record<string, BrowserToolSpec> = {
     tier: 3,
     params: '{ delta?: number, tab_id?: number }',
     note: 'Back (-1) or forward (1) in this tab',
+  },
+  extension_reload: {
+    tier: 4,
+    params: '{}',
+    note: 'Reload the Dex extension so it runs new code. Only after a Dex update',
+  },
+  panel_open: {
+    tier: 4,
+    params: '{}',
+    note: 'Show the Dex panel in the browser, so a task can be watched beside the page',
   },
   debugger_detach: {
     tier: 4,

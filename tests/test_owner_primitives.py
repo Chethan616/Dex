@@ -54,6 +54,14 @@ class Recorder:
         self.calls: list[tuple[str, dict]] = []
         self.answers = answers or {}
         self.attached = True
+        self.ready = True
+        # Whatever this fake was told to answer is what it offers. That is also
+        # the real contract: the extension in the owner's browser can be older
+        # than the files on disk, so a tool missing has to be survivable.
+        self._offers = set(self.answers)
+
+    def tools(self) -> list[dict]:
+        return [{'name': name} for name in self._offers]
 
     async def call(self, method: str, params: dict) -> object:
         self.calls.append((method, params))

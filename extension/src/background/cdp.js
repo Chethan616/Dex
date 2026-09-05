@@ -310,6 +310,60 @@ export async function downloadTo({ directory, trigger_element_id, timeout_ms, ta
   });
 }
 
+/**
+ * The text of everything matching a CSS selector, and the tables on the page.
+ *
+ * Here because the same Dex action must return the same shape whichever browser
+ * ran it. `extract` against Playwright answers `{url, matches: [...]}`, and the
+ * extension's own page_extract_content answers with an article — so routing
+ * `extract` to the owner's browser silently changed the shape a plan depended
+ * on. A test caught it; a plan would have caught it later and worse.
+ *
+ * Not an eval tool. It takes a selector and returns text, so a page cannot be
+ * made to run whatever a model was talked into asking for.
+ */
+export async function queryText({ selector, tab_id }) {
+  if (!selector) throw new Error('page_query_text needs a selector.');
+  const tabId = await resolveTab(tab_id);
+
+  return withDebugger(tabId, async (target) => {
+    const { result } = await send(target, 'Runtime.evaluate', {
+      expression: `JSON.stringify({
+        url: location.href,
+        matches: Array.from(document.querySelectorAll(${JSON.stringify(selector)}))
+          .map((el) => (el.innerText || '').trim())
+          .filter(Boolean)
+          .slice(0, 200),
+      })`,
+      returnByValue: true,
+    });
+    if (result.subtype === 'error') {
+      throw new Error(`"${selector}" is not a selector this page accepts.`);
+    }
+    return JSON.parse(result.value);
+  });
+}
+
+/** Every table on the page, as headers and rows. Same shape both browsers use. */
+export async function tables({ tab_id }) {
+  const tabId = await resolveTab(tab_id);
+
+  return withDebugger(tabId, async (target) => {
+    const { result } = await send(target, 'Runtime.evaluate', {
+      expression: `JSON.stringify(Array.from(document.querySelectorAll('table')).map((t) => {
+        const cells = (row) => Array.from(row.cells).map((c) => (c.innerText || '').trim());
+        const rows = Array.from(t.rows);
+        const head = rows.find((r) => r.querySelector('th'));
+        const headers = head ? cells(head) : [];
+        const body = rows.filter((r) => r !== head).map(cells);
+        return { headers, rows: body.slice(0, 500) };
+      }))`,
+      returnByValue: true,
+    });
+    return JSON.parse(result.value || '[]');
+  });
+}
+
 /** Detach from a tab, or from every tab. The debugging bar goes with it. */
 export async function detach({ tab_id }) {
   const targets = tab_id ? [Number(tab_id)] : [...attached.keys()];

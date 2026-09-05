@@ -1145,6 +1145,29 @@ function getAvailableTools() {
       }
     },
     {
+      name: "page_query_text",
+      description: "The text of every element matching a CSS selector. Reading only.",
+      inputSchema: {
+        type: "object",
+        properties: { selector: { type: "string" }, tab_id: { type: "number" } },
+        required: ["selector"]
+      }
+    },
+    {
+      name: "page_tables",
+      description: "Every table on the page, as headers and rows. Reading only.",
+      inputSchema: {
+        type: "object",
+        properties: { tab_id: { type: "number" } },
+        required: []
+      }
+    },
+    {
+      name: "extension_reload",
+      description: "Reload the Dex extension so it picks up new code. Drops the connection briefly; it reconnects on its own.",
+      inputSchema: { type: "object", properties: {}, required: [] }
+    },
+    {
       name: "panel_open",
       description: "Show the Dex panel in this browser, so a task can be watched beside the page.",
       inputSchema: { type: "object", properties: {}, required: [] }
@@ -1252,8 +1275,25 @@ async function handleMCPRequest(message) {
       case "debugger_detach":
         result = await cdp.detach(params);
         break;
+      case "page_query_text":
+        result = await cdp.queryText(params);
+        break;
+      case "page_tables":
+        result = await cdp.tables(params);
+        break;
       case "panel_open":
         result = await openDexPanel(params);
+        break;
+      case "extension_reload":
+        // FORK CHANGE. Pick up new code without the owner clicking anything.
+        //
+        // An unpacked extension runs whatever Chrome registered until the
+        // worker is reloaded, so every Dex rebuild meant a trip to
+        // chrome://extensions and a click on the reload arrow. This is that
+        // click. The answer is sent before reloading, because reloading ends
+        // this worker and with it the socket carrying the reply.
+        result = { reloading: true };
+        setTimeout(() => chrome.runtime.reload(), 200);
         break;
 
       case "page_analyze":
