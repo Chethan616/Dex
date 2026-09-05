@@ -126,10 +126,19 @@ class ConnectionManager {
           tools: tools
         }));
 
-        // Setup heartbeat for persistent connections
-        if (!this.isServiceWorker) {
-          this.setupHeartbeat();
-        }
+        // FORK CHANGE. The heartbeat runs on service workers too.
+        //
+        // Upstream skipped it on Chrome as an optimisation for a page that does
+        // not need one. Under MV3 it is the opposite: Chrome terminates an idle
+        // service worker after 30 seconds, and since Chrome 116 WebSocket
+        // traffic is what resets that timer. Skipping the heartbeat is
+        // therefore the instruction to die.
+        //
+        // Measured, in browser.log: attached with 26 tools at 12:33:56,
+        // "the browser disconnected" at 12:34:26 — thirty seconds to the
+        // second — and the next Dex step found nothing attached, opened a
+        // second Chrome window looking for it, and failed.
+        this.setupHeartbeat();
       };
 
       socket.onmessage = async (event) => {
@@ -148,11 +157,14 @@ class ConnectionManager {
         if (event.code !== 1000 && event.code !== 1001) {
           console.log('🔄 Abnormal WebSocket closure, will attempt reconnection');
 
-          if (!this.isServiceWorker) {
-            // Firefox: Attempt to reconnect
-            this.scheduleReconnect();
-          }
-          // Chrome: Will reconnect on next message
+          // FORK CHANGE. Chrome reconnects too.
+          //
+          // "Chrome: will reconnect on next message" was the plan, and there is
+          // no next message: background.js registers no tab, navigation or
+          // alarm listeners, so nothing wakes the worker. The socket closed and
+          // stayed closed for the rest of the session, and the only cures were
+          // restarting Chrome or clicking the toolbar icon.
+          this.scheduleReconnect();
         } else {
           console.log('🔄 Normal WebSocket closure');
         }
@@ -222,6 +234,22 @@ class ConnectionManager {
         this.connect().catch(() => {});
       }
     }, 15000); // More frequent heartbeat for better reliability
+  }
+
+  /**
+   * FORK CHANGE. The alarm that outlives the worker.
+   *
+   * setInterval keeps a *live* worker alive, but it dies with it — so once
+   * Chrome has torn the worker down for any reason (an update, memory
+   * pressure, a genuinely idle hour), nothing is left to bring it back.
+   *
+   * chrome.alarms survives that: the alarm fires, Chrome starts the worker to
+   * deliver it, and the handler reconnects. One minute is the floor Chrome
+   * enforces for a released extension, so that is the period.
+   */
+  setupKeepAlive() {
+    if (!chrome.alarms) return;
+    chrome.alarms.create('dex-keepalive', { periodInMinutes: 1 });
   }
 
   clearHeartbeat() {
@@ -2174,6 +2202,45 @@ setTimeout(() => {
     console.log('Initial connection attempt failed:', error.message);
   });
 }, 1000);
+
+// FORK CHANGE. Everything that should wake the worker and find the socket.
+//
+// A service worker exists only while something is happening to it. This
+// registered nothing but a runtime.onMessage listener from the popup, so after
+// Chrome tore it down there was no event in the world that would start it
+// again — and Dex, on the other side, saw a browser that had simply stopped
+// existing while its window sat there open.
+//
+// Each of these is a moment when Dex plausibly wants the browser and the socket
+// might be gone. Reconnecting is cheap and idempotent: connect() returns
+// immediately if the socket is already open.
+connectionManager.setupKeepAlive();
+
+if (chrome.alarms) {
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name !== 'dex-keepalive') return;
+    connectionManager.connect().catch(() => {});
+  });
+}
+
+// Startup and install: the worker is running anyway, so take the socket with it.
+chrome.runtime.onStartup?.addListener(() => {
+  connectionManager.setupKeepAlive();
+  connectionManager.connect().catch(() => {});
+});
+chrome.runtime.onInstalled?.addListener(() => {
+  connectionManager.setupKeepAlive();
+  connectionManager.connect().catch(() => {});
+});
+
+// The owner using their browser. A page finishing loading is the single best
+// signal that there is something here worth being connected for.
+chrome.tabs?.onUpdated?.addListener((tabId, info) => {
+  if (info.status === 'complete') connectionManager.connect().catch(() => {});
+});
+chrome.tabs?.onActivated?.addListener(() => {
+  connectionManager.connect().catch(() => {});
+});
 
 // Handle messages from popup
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {

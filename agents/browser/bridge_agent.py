@@ -36,6 +36,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import world_state
 from bridge import bridge
 
 log = logging.getLogger('BridgeAgent')
@@ -46,6 +47,23 @@ log = logging.getLogger('BridgeAgent')
 # change a GitHub status, because it was signed out and kept looking for a way
 # in. Signed in, the same task is four or five steps.
 MAX_STEPS = 18
+
+# How many turns stay verbatim, and when the rest gets summarised.
+#
+# Verbatim is what the next decision needs: the exact element id that failed,
+# the exact text that came back. Older than that, what matters is the shape —
+# "signed in, reached the profile page, the status control was not where the
+# route said" — which is a sentence, not eight lines of tool output.
+RECENT_TURNS = 8
+COMPACT_AFTER = 6
+
+# Tools that change the page rather than read it. What a run altered is what a
+# verification should check, and it is the run's own claim about itself.
+CHANGES_THE_PAGE = frozenset({
+    'element_click', 'element_click_trusted', 'element_fill',
+    'element_upload_file', 'page_download_to', 'page_press_key',
+    'add_bookmark', 'page_style',
+})
 
 # What the model is told it can do. Deliberately the whole list from the
 # extension rather than a curated subset: it registered them, it knows what it
@@ -75,7 +93,14 @@ or
 """
 
 
-async def run(task: str, ask_model, *, on_step=None) -> dict[str, Any]:
+async def run(
+    task: str,
+    ask_model,
+    *,
+    on_step=None,
+    route: dict | None = None,
+    profile: str = '',
+) -> dict[str, Any]:
     """
     Run `task` in the attached browser.
 
@@ -107,14 +132,48 @@ async def run(task: str, ask_model, *, on_step=None) -> dict[str, Any]:
     # path to resolve. Compressing a PDF on a website and then moving the result
     # to another drive is two steps that could not be joined.
     downloads: list[dict] = []
+    # What the run changed, so a verification can check the claim instead of
+    # grading the whole thing UNVERIFIABLE for want of anything to test.
+    changed: list[str] = []
+
+    # What the loop already knows, so it stops rediscovering it. See world_state.
+    world = world_state.WorldState()
+    world.set('goal', task)
+    world.browser(len(available), profile)
+    world.known(route)
+
+    # Everything older than the recent turns, as a sentence rather than dropped.
+    recap = ''
+    compacted_turns = 0
 
     for number in range(1, MAX_STEPS + 1):
+        recent = history[-RECENT_TURNS:]
+        older = history[:-RECENT_TURNS]
+
+        # Compaction, not truncation.
+        #
+        # This was history[-12:] and nothing else, so a long task forgot how it
+        # began — which is how a run starts going in circles: it no longer
+        # remembers that it already tried the thing it is about to try again.
+        # Summarising costs one cheap call, and only once there is enough
+        # history to be worth summarising.
+        if len(older) >= COMPACT_AFTER and len(older) > compacted_turns:
+            recap = await _compact(older, recap, ask_model)
+            compacted_turns = len(older)
+            # Everything has to be said again: the turns that carried it are
+            # no longer in the prompt.
+            world.forget_what_was_shown()
+
+        state = world.render(full=(number == 1))
+
         prompt = (
             f'{SYSTEM}\n'
             f'Tools available: {", ".join(sorted(available))}\n\n'
             f'Task: {task}\n\n'
-            f'What has happened so far:\n'
-            + ('\n'.join(history[-12:]) if history else '  nothing yet')
+            + (f'{state}\n\n' if state else '')
+            + (f'Earlier, in short:\n  {recap}\n\n' if recap else '')
+            + f'What has happened so far:\n'
+            + ('\n'.join(recent) if recent else '  nothing yet')
             + '\n\nYour next single step:'
         )
 
@@ -132,6 +191,9 @@ async def run(task: str, ask_model, *, on_step=None) -> dict[str, Any]:
                 'answer': str(choice.get('answer', '')),
                 'steps': steps,
                 'downloads': downloads,
+                'changed': changed,
+                'visited': _visited(steps),
+                'url': (world.snapshot().get('page', '') or '').split('  ·  ')[0],
                 'browser': 'the owner browser',
             }
 
@@ -161,6 +223,14 @@ async def run(task: str, ask_model, *, on_step=None) -> dict[str, Any]:
             landed = _download_of(result)
             if landed:
                 downloads.append(landed)
+                changed.append(f'downloaded {landed["name"]}')
+
+            url, title = world_state.page_of(result)
+            world.page(url, title)
+            if tool in CHANGES_THE_PAGE:
+                what = str(params.get('element_id') or params.get('value') or tool)
+                world.did(f'{tool} {what}'[:90])
+                changed.append(f'{tool} {what}'[:90])
         except Exception as exc:  # noqa: BLE001 - reported, not raised
             history.append(f'  [{number}] {tool} failed: {exc}')
             steps.append({'step': number, 'tool': tool, 'params': params,
@@ -179,6 +249,8 @@ async def run(task: str, ask_model, *, on_step=None) -> dict[str, Any]:
         ),
         'steps': steps,
         'downloads': downloads,
+        'changed': changed,
+        'visited': _visited(steps),
         'retryable': False,
     }
 
@@ -198,6 +270,49 @@ async def _detach(available: list) -> None:
         await bridge.call('debugger_detach', {})
     except Exception as exc:  # noqa: BLE001 - a banner is not worth failing over
         log.debug('could not detach the debugger: %s', exc)
+
+
+async def _compact(older: list[str], summary: str, ask_model) -> str:
+    """
+    Everything before the recent turns, as one paragraph.
+
+    The alternative was dropping it, which is what happened before: a task
+    longer than twelve turns lost its own beginning, and a loop that cannot
+    remember what it already tried tries it again. Codex compacts for the same
+    reason and it is the right trade — one cheap call buys a run that still
+    knows what it is doing at turn thirty.
+
+    A failure here returns the previous summary rather than raising. A vaguer
+    memory is a worse run; no run at all is a broken one.
+    """
+    prompt = (
+        'Summarise what a browser automation has done so far, in at most four '
+        'sentences. Keep: what worked, what failed and why, and anything '
+        'learned about where things are on this site. Drop pleasantries and '
+        'exact element ids.\n\n'
+        + (f'Summary so far:\n{summary}\n\n' if summary else '')
+        + 'Turns since then:\n' + '\n'.join(older[-40:])
+    )
+    try:
+        answer = (await ask_model(prompt) or '').strip()
+    except Exception as exc:  # noqa: BLE001 - a vaguer memory, not a failure
+        log.debug('could not compact the history: %s', exc)
+        return summary
+
+    # A "summary" longer than what it summarised is not one.
+    if not answer or len(answer) > sum(len(line) for line in older):
+        return summary
+    return answer.replace('\n', ' ')[:1200]
+
+
+def _visited(steps: list[dict]) -> list[str]:
+    """The pages this run touched, in order, without repeats."""
+    seen: list[str] = []
+    for step in steps:
+        url = str(step.get('url', ''))
+        if url and url not in seen:
+            seen.append(url)
+    return seen
 
 
 def _download_of(result: Any) -> dict | None:

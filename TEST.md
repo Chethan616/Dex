@@ -320,6 +320,51 @@ answer a browser problem by opening Chrome as a window.
 
 ---
 
+## Phase 8 — One web step, one session
+
+**The task that used to fail.** *"open github and change my status."* Watch the
+plan card: it should be **one** step, not an `open_browser` followed by a
+`run_task`. One Chrome window, and it finishes.
+
+**Count the windows.** Before and after, in PowerShell:
+
+```powershell
+@(Get-Process chrome -ErrorAction SilentlyContinue).Count
+```
+
+It must not grow by more than the one window the task needed. A second window
+appearing on the second step is the exact bug this phase removes.
+
+**With Chrome already open.** Open Chrome yourself, then run the same task. Dex
+should use the window that is there and launch nothing.
+
+**The bridge stays up.** This was the real cause: Chrome kills an idle extension
+service worker after thirty seconds, and the extension had reconnect switched
+off. Leave Dex idle for two minutes, then run a web task. It should work with no
+delay and no new window. To watch it directly:
+
+```powershell
+Get-Content "$env:LOCALAPPDATA\DEX\browser.log" -Tail 20 -Wait
+```
+
+`the browser disconnected` about thirty seconds after attaching is the old
+behaviour. It should not happen now, and if the socket does drop it should
+reconnect on its own within a minute.
+
+**A long task.** Something needing fifteen-plus turns. It should still know what
+it was asked for at the end rather than drifting — the older turns are
+summarised into the prompt instead of being dropped.
+
+**The knowledge.** Run the status task twice. The second run should be visibly
+shorter: what the first run found out about that site is handed to the second
+rather than rediscovered.
+
+**Verification that says something.** A web task that changes nothing while
+being asked to change something should now report a failure, not "done,
+unverified".
+
+---
+
 ## When something looks wrong
 
 **The change did not take effect.** Almost always an old core still running.

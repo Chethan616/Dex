@@ -56,6 +56,9 @@
     "test:browser-tools": "ts-node tests/smoke_browser_tools.ts",
     "test:bridge": "python tests/test_bridge.py",
     "test:owner-primitives": "python tests/test_owner_primitives.py",
+    "test:owner-session": "python tests/test_owner_session.py",
+    "test:world-state": "python tests/test_world_state.py",
+    "test:bridge-agent": "python tests/test_bridge_agent.py",
     "test:browser-session": "python tests/test_browser_session.py",
     "test:kill-tree": "ts-node tests/smoke_kill_tree.ts",
     "test:profile": "python tests/test_profile_persistence.py"

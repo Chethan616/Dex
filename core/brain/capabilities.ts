@@ -220,10 +220,6 @@ export const WEB_ACTIONS: Record<string, ActionSpec> = {
     params: '{ query?: string, include_hidden?: boolean, browser?: string }',
     note: 'Links, buttons and fields with real labels and hrefs, collapsed menus included. query ranks, it does not filter',
   },
-  open_browser: {
-    params: '{ profile?: string, url?: string }',
-    note: 'Open the browser the owner is signed into, with their profile and the Dex extension. Use FIRST when a task needs one of their accounts. Never open Chrome via the app tier',
-  },
   session_status: {
     params: '{ url: string, browser?: string }',
     note: 'Is this site still signed in? Ask FIRST for anything behind a login',
@@ -238,11 +234,11 @@ export const WEB_ACTIONS: Record<string, ActionSpec> = {
   },
   learn_route: {
     params: '{ url: string, goal: string }',
-    note: 'Watch the owner click their way to something once and remember it. Only when they ask Dex to learn where something is',
+    note: 'Watch the owner click their way to something once and remember it. Only when they ask Dex to learn a route',
   },
   run_task: {
     params: '{ task: string, url?: string, browser?: string }',
-    note: 'Multi-step browsing needing judgement. Runs in the browser the owner is signed into, opening it if needed - so it can upload a file and act as them. Returns downloads[]: point a later step at {{step_N.output.downloads[0].path}}. Set start_url so a remembered route is found',
+    note: 'A whole web job, in the browser the owner is signed into - it opens it, uploads files, and acts as them. Returns downloads[]: a later step points at {{step_N.output.downloads[0].path}}. Set start_url so a remembered route is found',
   },
 };
 
@@ -378,8 +374,16 @@ CAPABILITY: can_browse_web   [TIER 2 — anything on the internet]
   pages, such as searching or sending a message.
 
   When the owner names a browser, pass browser:"vivaldi" — never launch_app it
-  and drive the window. Any Chromium browser works; Firefox is refused by name.
-  Dex keeps its own profile, so a site signed into once stays signed in.
+  and drive the window. Any Chromium works; Firefox is refused by name.
+
+  **One step, not several.** run_task opens the browser itself and drives it
+  across as many pages as the job needs:
+
+    WRONG  navigate github.com -> run_task "change my status"      (2 steps)
+    RIGHT  run_task "open my github profile and change my status"  (1 step)
+
+  navigate/read_page/extract answer a question about one page. A job with a
+  verb in it - change, post, send, download - is one run_task.
 ${render(WEB_ACTIONS)}
 
 CAPABILITY: can_access_email / can_access_calendar / can_access_drive   [TIER 2]

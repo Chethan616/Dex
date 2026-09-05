@@ -45,6 +45,10 @@ interface TaskResponse {
   /** What the task answered in prose, when it ran in the owner's browser. */
   answer?: string;
   downloads?: BrowserDownload[];
+  /** What the run says it altered. What a verification should check. */
+  changed?: string[];
+  /** The pages it touched, in order. */
+  visited?: string[];
   steps?: BrowserStep[];
   url?: string;
   result?: string | null;
@@ -289,6 +293,16 @@ ${task}` : task;
         max_steps: params.max_steps ? Number(params.max_steps) : undefined,
         browser: browserOf(params),
         mode: composerMode(),
+        // The remembered route travels with the task.
+        //
+        // It already reached the autonomous browser as prose prepended to the
+        // instruction. The extension loop never got it at all, so "the status
+        // control is on the profile page, not in settings" was relearned from
+        // scratch on every run. Sent as data so that loop can put it in its
+        // world state rather than parse it back out of a sentence.
+        route: route
+          ? { origin: route.origin, goal: route.goal, steps: route.steps }
+          : null,
         verify: Object.keys(verify).length ? verify : null,
         request_id: requestId,
         step_id: stepId,
@@ -479,6 +493,11 @@ ${task}` : task;
         // or run_program. Always an array, so the reference shape is the same
         // whether or not anything downloaded.
         downloads: response.downloads ?? [],
+        // What it says it changed, and where it went. A run that reports
+        // neither is a run whose verification has nothing to test, which is
+        // why an un-hinted run_task graded UNVERIFIABLE every time.
+        changed: response.changed ?? [],
+        visited: response.visited ?? [],
         steps: response.steps,
         verification: response.verification ?? null,
       },

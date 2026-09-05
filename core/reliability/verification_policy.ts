@@ -287,6 +287,8 @@ function verifyBrowserStep(
 
   const data = (agentResult?.data ?? {}) as {
     verification?: { passed: boolean; checks?: Array<{ check: string; passed: boolean }> } | null;
+    /** What the run says it altered. Absent means the run does not report it. */
+    changed?: string[];
     url?: string;
     text?: string;
     title?: string;
@@ -335,12 +337,58 @@ function verifyBrowserStep(
         };
   }
 
+  // What the run says it changed.
+  //
+  // Before this, a run_task with no verify hints was always UNVERIFIABLE — the
+  // most common shape of web step, and the one Dex could say least about. The
+  // run now reports what it altered, and a run that changed nothing while being
+  // asked to change something is a failure with evidence rather than a shrug.
+  const changed = Array.isArray(data.changed) ? (data.changed as string[]) : undefined;
+  if (changed !== undefined) {
+    if (changed.length > 0) {
+      return {
+        status: 'VERIFIED',
+        reason: `Changed: ${changed.slice(0, 3).join('; ')}`,
+        afterState: typeof data.url === 'string' ? data.url : undefined,
+      };
+    }
+    if (asksForAChange(step)) {
+      return {
+        status: 'FAILED',
+        reason:
+          'The task asked for something to change and the run changed nothing — ' +
+          'it only read pages.',
+        afterState: typeof data.url === 'string' ? data.url : undefined,
+      };
+    }
+    // Reading was the job. Nothing changed and nothing was meant to.
+    return {
+      status: 'VERIFIED',
+      reason: 'Read-only browsing — nothing was changed, and nothing was asked to be',
+      afterState: typeof data.url === 'string' ? data.url : undefined,
+    };
+  }
+
   return {
     status: 'UNVERIFIABLE',
     reason:
       'No verification hints on this step — add verify_url_contains, ' +
       'verify_text_on_page or verify_selector so success can be checked',
   };
+}
+
+/**
+ * Does this task ask for something to happen, or only to be read?
+ *
+ * On the verb, because that is what the owner wrote and it is the only
+ * statement of intent the step carries. "What is in my inbox" changing nothing
+ * is correct; "send that email" changing nothing is not.
+ */
+function asksForAChange(step: ExecutionStep): boolean {
+  const task = String((step.params as { task?: unknown }).task ?? '').toLowerCase();
+  return /(change|set|update|edit|post|send|share|reply|comment|like|follow|unfollow|remove|delete|unpin|pin|add|buy|order|book|submit|upload|download|save|rename|clear)/.test(
+    task,
+  );
 }
 
 function expectations(

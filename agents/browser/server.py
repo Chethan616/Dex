@@ -139,6 +139,7 @@ async def lifespan(_app: FastAPI):
 import browser_choice
 import bridge_agent
 import owner_primitives
+import owner_session
 
 # How long to wait for the extension after opening the owner's Chrome.
 #
@@ -170,6 +171,10 @@ class RunTaskRequest(BaseModel):
     # uninstalled browser fails by name rather than silently using another one.
     browser: str | None = None
     mode: str | None = None
+    # What a previous run found out about this site, looked up on the Dex side
+    # where SiteRouteStore lives. Passed in rather than fetched here so there is
+    # one route store, and so the same hint reaches both browser paths.
+    route: dict | None = None
     request_id: str = ''
     step_id: str = ''
 
@@ -236,6 +241,10 @@ async def run_task(req: RunTaskRequest) -> dict[str, Any]:
         }
     log.info('[%s] task: %s', req.step_id, req.task)
 
+    # A new task forgets what the last one learned about the browser, so
+    # loading the extension between tasks takes effect immediately.
+    owner_session.SESSION.note_task_start()
+
     # Which browser should do this.
     #
     # The owner's, whenever one can be reached. Dex's own browser is signed in
@@ -248,7 +257,9 @@ async def run_task(req: RunTaskRequest) -> dict[str, Any]:
         # Nothing attached, so open it. Refusing here and telling the owner to
         # open Chrome is what sent the planner improvising a window action, and
         # it stopped on two windows with the same name.
-        opened = await _attach_owner_browser(req.step_id)
+        # The start URL goes with the request, so the browser arrives on the
+        # page rather than on a blank tab that then needs navigating away from.
+        opened = await _attach_owner_browser(req.step_id, req.start_url or '')
         where = 'owner' if opened else 'unavailable'
 
     if where == 'owner':
@@ -260,7 +271,12 @@ async def run_task(req: RunTaskRequest) -> dict[str, Any]:
             await bridge.call('panel_open', {})
         except Exception as exc:  # noqa: BLE001
             log.debug('[%s] could not open the panel: %s', req.step_id, exc)
-        result = await bridge_agent.run(req.task, _ask_model)
+        result = await bridge_agent.run(
+            req.task,
+            _ask_model,
+            route=req.route,
+            profile=owner_session.SESSION.status().get('profile', ''),
+        )
         result.setdefault('browser', 'owner')
         return result
 
@@ -288,40 +304,18 @@ async def run_task(req: RunTaskRequest) -> dict[str, Any]:
     )
 
 
-async def _attach_owner_browser(step_id: str = '') -> bool:
+async def _attach_owner_browser(step_id: str = '', url: str = '') -> bool:
     """
-    Open the owner's Chrome and wait for the extension to dial in.
+    Make sure there is a browser Dex can act in. See owner_session.
 
-    Returns whether it attached. Opening is quick; attaching is the extension
-    starting its service worker and connecting, which is what actually has to
-    be true before anything can run there.
+    This used to launch Chrome itself, every time it was asked, with no URL and
+    no check for a Chrome already running — which is what opened a second window
+    on the second step of every web plan. The session owns that decision now.
     """
-    if bridge.attached:
-        return True
-
-    result = browser_choice.open_owner_browser(None, '')
-    if not result.get('ok'):
-        log.warning('[%s] could not open the owner browser: %s',
-                    step_id, result.get('error'))
-        return False
-
-    log.info('[%s] opened %s, waiting for the extension',
-             step_id, result.get('profile'))
-    for _ in range(ATTACH_WAIT_TRIES):
-        await asyncio.sleep(ATTACH_POLL_S)
-        if bridge.attached:
-            return True
-    return False
-
-
-async def _ask_model(prompt: str) -> str:
-    """
-    One turn of the model, for the owner-browser loop.
-
-    Routed through the same backend the autonomous path uses, so the owner's
-    choice of provider and model applies here too.
-    """
-    return await autonomous().ask(prompt)
+    answer = await owner_session.SESSION.ensure(url)
+    if not answer['attached']:
+        log.info('[%s] %s', step_id, answer['detail'])
+    return bool(answer['attached'])
 
 
 @app.post('/resume')
@@ -378,42 +372,24 @@ class OpenOwnerBrowserRequest(BaseModel):
 @app.post('/open-owner-browser')
 async def open_owner_browser(req: OpenOwnerBrowserRequest) -> dict[str, Any]:
     """
-    Open the browser the owner is signed into, with their own profile.
+    Make sure the browser the owner is signed into is open and reachable.
 
-    The step that made this necessary: Dex refused a GitHub task because no
-    browser was attached and told the owner to open Chrome — which Dex could
-    have done itself. The planner then improvised, opened Chrome through the
-    app tier, found two windows both called "New Tab - Google Chrome", and
-    stopped.
-
-    Their real profile, not Dex's, because the extension is installed there and
-    the session is theirs. Nothing is driven: it opens a window and stops, and
-    the extension in it attaches on its own.
+    Kept as an endpoint because the panel and the app both use it, but it no
+    longer launches anything itself — `owner_session` decides whether a browser
+    needs opening at all. That decision used to be made here, badly: it checked
+    only whether the extension was attached, and launched Chrome whenever it was
+    not. Against a Chrome that was already running, that is the command for a
+    new empty window, and that window is what the owner watched appear on every
+    step after the first.
     """
-    if bridge.attached:
-        return {
-            'success': True,
-            'data': {
-                'already': True,
-                'detail': 'A browser is already attached.',
-                **bridge.status(),
-            },
-        }
+    answer = await owner_session.SESSION.ensure(req.url, profile_match=req.profile or '')
 
-    result = browser_choice.open_owner_browser(req.profile or None, req.url)
-    if not result.get('ok'):
-        return _bad(result.get('error', 'could not open the browser'))
-
-    # Give the extension a moment to dial in, so the answer says whether it
-    # actually worked rather than only that a window was asked for.
-    for _ in range(20):
-        await asyncio.sleep(0.75)
-        if bridge.attached:
-            break
+    if not answer['ok']:
+        return _bad(answer['detail'])
 
     return {
         'success': True,
-        'data': {**result, 'attached': bridge.attached, **bridge.status()},
+        'data': {**answer, **bridge.status()},
     }
 
 
