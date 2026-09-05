@@ -147,6 +147,20 @@ class BrowserBridge:
             return False
         return (time.time() - self._last_seen) < STALE_AFTER_S
 
+    @property
+    def ready(self) -> bool:
+        """
+        Attached *and* able to do anything.
+
+        These are two different facts and treating them as one produced a run
+        that reported success having done nothing: the socket opened, Dex
+        started the task, and the extension's `register` message — the one
+        carrying the tools — had not arrived yet. The model was asked to drive
+        a browser with an empty tool list and correctly answered that it could
+        not, and that was recorded as a completed task.
+        """
+        return self.attached and len(self._tools) > 0
+
     def status(self) -> dict:
         """What Settings shows. Facts, not a claim that it is connected."""
         return {
@@ -260,7 +274,7 @@ def routing(goal: str, needs_session: bool = False, *, background: bool = False)
         # would steal the window they are working in.
         return 'dex'
 
-    if bridge.attached:
+    if bridge.ready:
         return 'owner'
 
     # Nothing attached, and Dex can fix that.

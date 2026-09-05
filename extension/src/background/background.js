@@ -1204,7 +1204,10 @@ async function openDexPanel(params = {}) {
     type: 'popup',
     width: 420,
     height: 720,
-    focused: true,
+    // Not focused. A focused panel becomes the last focused window, and then
+    // "the active tab" is Dex's own panel rather than the page the task is
+    // about. The owner can see it without it taking the keyboard from them.
+    focused: false,
   });
   return { opened: 'window', window_id: created.id };
 }

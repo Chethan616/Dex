@@ -63,6 +63,12 @@ class FakeBridge:
     def __init__(self, attached: bool = False) -> None:
         self.attached = attached
 
+    @property
+    def ready(self) -> bool:
+        # Attached and useful are one and the same for a fake with no tools to
+        # register. The distinction is tested where it matters, in the bridge.
+        return self.attached
+
 
 class Launches:
     """Records what would have been launched, and launches nothing."""

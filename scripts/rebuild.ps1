@@ -148,31 +148,52 @@ if (-not $Extension -and $newestExt -and $newestExt.LastWriteTime -le $packed) {
     if (-not (Test-Path $chromeExe)) {
         Ok 'Chrome not found - skipping the CRX'
     } else {
-        # Bump the version in both places, together. Chrome ignores an update
-        # whose version has not moved, so a CRX with new code and an old
-        # version number is a repack that changes nothing.
-        $manifestPath = 'extension\manifest.json'
-        $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
-        $parts = $manifest.version.Split('.')
+        # The packed copy gets a new version. The source manifest does not.
+        #
+        # This used to bump `extension\manifest.json` itself, and that was a
+        # small mistake with a daily cost: Chrome then saw the unpacked
+        # extension as a different version from the one it had registered, and
+        # the owner had to click reload on chrome://extensions after every
+        # single rebuild. The version only matters for the CRX, where Chrome
+        # ignores an update whose version has not moved.
+        #
+        # Left alone, an unpacked extension re-reads its files whenever the
+        # service worker starts, so a code change takes effect on its own.
+        $version = '1.0.0'
+        if (Test-Path 'dist\update.xml') {
+            # Anchored on updatecheck: the file's first line is the XML
+            # declaration, which also says version='1.0', and matching that
+            # turned 1.0.5 into 1.1.
+            $current = Select-String -Path 'dist\update.xml' -Pattern "updatecheck.*version='([0-9.]+)'"
+            if ($current) { $version = $current.Matches[0].Groups[1].Value }
+        }
+        $parts = $version.Split('.')
         $parts[-1] = [string]([int]$parts[-1] + 1)
         $version = $parts -join '.'
+
+        # Packed from a copy, so the source tree keeps the version Chrome has.
+        $staging = Join-Path $env:TEMP 'dex-extension-pack'
+        if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
+        Copy-Item 'extension' $staging -Recurse
+        $stagedManifest = Join-Path $staging 'manifest.json'
+        $manifest = Get-Content $stagedManifest -Raw | ConvertFrom-Json
         $manifest.version = $version
         # No BOM. PowerShell 5.1's -Encoding utf8 writes one, and a manifest
         # that starts with a byte-order mark is not valid JSON to anything
         # stricter than Chrome - every tool that reads it here choked.
         [System.IO.File]::WriteAllText(
-            (Join-Path $repo $manifestPath),
+            $stagedManifest,
             ($manifest | ConvertTo-Json -Depth 20),
             (New-Object System.Text.UTF8Encoding $false)
         )
-        Ok "version -> $version"
 
-        & $chromeExe "--pack-extension=$repo\extension" "--pack-extension-key=$repo\$pem" | Out-Null
+        & $chromeExe "--pack-extension=$staging" "--pack-extension-key=$repo\$pem" | Out-Null
         Start-Sleep -Milliseconds 700
 
-        if (Test-Path 'extension.crx') {
+        $packed = Join-Path (Split-Path $staging -Parent) 'dex-extension-pack.crx'
+        if (Test-Path $packed) {
             New-Item -ItemType Directory -Force -Path 'dist' | Out-Null
-            Move-Item 'extension.crx' $crx -Force
+            Move-Item $packed $crx -Force
             $xml = @"
 <?xml version='1.0' encoding='UTF-8'?>
 <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
@@ -186,7 +207,8 @@ if (-not $Extension -and $newestExt -and $newestExt.LastWriteTime -le $packed) {
                 $xml,
                 (New-Object System.Text.UTF8Encoding $false)
             )
-            Ok "packed $crx and update.xml at $version"
+            Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue
+            Ok "packed $crx at $version - the unpacked extension is untouched, so no reload"
         } else {
             Bad 'crx' 'chrome --pack-extension produced no crx'
         }

@@ -44,6 +44,7 @@ def check(name: str, ok: bool, detail: str = '') -> None:
 
 class FakeBridge:
     attached = True
+    ready = True
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict]] = []

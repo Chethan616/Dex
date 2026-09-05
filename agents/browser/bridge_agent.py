@@ -111,7 +111,7 @@ async def run(
     `on_step` is called with each step as it happens, so the owner watches it
     rather than waiting for a verdict.
     """
-    if not bridge.attached:
+    if not bridge.ready:
         return {
             'success': False,
             'error': (
@@ -123,6 +123,23 @@ async def run(
         }
 
     available = [t.get('name') for t in bridge.tools()]
+
+    # A browser with no tools is not a browser Dex can use.
+    #
+    # This ran once with an empty list: the socket had opened but the
+    # extension's tool registration had not arrived. The model was asked to
+    # drive a page with nothing to drive it with, answered honestly that it
+    # could not, and the run was recorded as a success with zero steps. A task
+    # that did nothing must not report that it did something.
+    if not available:
+        return {
+            'success': False,
+            'error': (
+                'The browser is connected but has not said what it can do yet. '
+                'Nothing was attempted. Try again in a moment.'
+            ),
+            'retryable': True,
+        }
     history: list[str] = []
     steps: list[dict] = []
     # Files this run produced, so a later Dex step can point at one.

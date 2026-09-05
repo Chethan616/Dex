@@ -84,7 +84,7 @@ class OwnerSession:
         reporting success into a window it cannot touch.
         """
         async with self._lock:
-            if bridge.attached:
+            if bridge.ready:
                 return self._answer(True, 'A browser is already attached.', opened=False)
 
             if self._gave_up_recently():
@@ -183,11 +183,18 @@ class OwnerSession:
     # ── internals ───────────────────────────────────────────────────────────
 
     async def _wait_for_extension(self, tries: int) -> bool:
+        """
+        Wait until the browser can actually be driven.
+
+        On `ready` rather than `attached`: the socket opens a moment before the
+        extension sends the message listing its tools, and a task that starts in
+        that gap is handed a browser with nothing it can do.
+        """
         for _ in range(tries):
-            if bridge.attached:
+            if bridge.ready:
                 return True
             await asyncio.sleep(ATTACH_POLL_S)
-        return bridge.attached
+        return bridge.ready
 
     def _gave_up_recently(self) -> bool:
         return self._gave_up_at > 0 and (time.time() - self._gave_up_at) < GAVE_UP_FOR_S

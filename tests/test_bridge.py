@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import sys
 from pathlib import Path
 
@@ -178,6 +179,28 @@ async def main() -> None:
     task.cancel()
 
     # ── which browser answers ───────────────────────────────────────────────
+    # ── connected is not the same as usable ─────────────────────────────────
+    print()
+    print('ready')
+
+    gap = BrowserBridge()
+    check('a bridge with no socket is neither attached nor ready',
+          not gap.attached and not gap.ready)
+
+    # The gap that produced a false success: the socket is open, so `attached`
+    # is true, but the extension has not yet sent the message listing its
+    # tools. A task started here is handed a browser it cannot drive, and the
+    # model correctly reported that it did nothing - which was recorded as a
+    # completed task.
+    gap._socket = object()
+    gap._last_seen = time.time()
+    check('a socket with no tools yet is attached', gap.attached is True)
+    check('but not ready', gap.ready is False)
+
+    gap._tools = [{'name': 'page_analyze'}]
+    check('and ready once the tools arrive', gap.ready is True)
+
+
     print('\nrouting')
 
     fresh = BrowserBridge()

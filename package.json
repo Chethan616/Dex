@@ -29,6 +29,7 @@
     "test:scheduler": "ts-node tests/smoke_scheduler.ts",
     "test:settings": "ts-node tests/smoke_settings.ts",
     "test:no-console": "python tests/test_no_console.py",
+    "test:python-names": "python tests/test_python_names.py",
     "test:apps": "python tests/test_app_resolver.py",
     "test:policy": "python tests/test_command_policy.py",
     "test:capabilities": "ts-node tests/smoke_capabilities.ts",

@@ -284,12 +284,8 @@ async def run_task(req: RunTaskRequest) -> dict[str, Any]:
         return {
             'success': False,
             'error': (
-                'Dex opened your Chrome but the Dex extension did not attach, '
-                'so it cannot act as you. Load it once from chrome://extensions '
-                "-> Load unpacked, and it stays. Dex's own browser cannot stand "
-                'in: Chrome deliberately blocks every other way into a '
-                'signed-in profile, so a copied profile arrives signed out and '
-                'remote debugging is refused on the default one.'
+                owner_session.SESSION.status().get('reason')
+                or 'Dex could not reach the browser you are signed in to.'
             ),
             'retryable': False,
             'browser': 'unavailable',
@@ -302,6 +298,17 @@ async def run_task(req: RunTaskRequest) -> dict[str, Any]:
         verify=req.verify.model_dump() if req.verify else None,
         browser=req.browser, mode=req.mode,
     )
+
+
+async def _ask_model(prompt: str) -> str:
+    """
+    One turn of the model, for the owner-browser loop.
+
+    Routed through the same backend the autonomous path uses, so the owner's
+    choice of provider and model applies to both browsers rather than one of
+    them quietly using something else.
+    """
+    return await autonomous().ask(prompt)
 
 
 async def _attach_owner_browser(step_id: str = '', url: str = '') -> bool:
@@ -487,7 +494,7 @@ async def panel_open() -> dict[str, Any]:
     steps appear beside the page rather than in a window they have to alt-tab
     to. Opening the browser first because a panel needs somewhere to be.
     """
-    if not bridge.attached and not await _attach_owner_browser('panel'):
+    if not bridge.ready and not await _attach_owner_browser('panel'):
         return _bad(
             'Dex could not reach your browser. Open Chrome and load the Dex '
             'extension once from chrome://extensions -> Load unpacked.'
@@ -536,7 +543,7 @@ async def primitive(req: PrimitiveRequest) -> dict[str, Any]:
     # logged-out version of every page with complete confidence. That is the
     # whole of "it doesn't open my chrome profile every time": not intermittent,
     # just invisible.
-    if bridge.attached and req.browser != 'dex':
+    if bridge.ready and req.browser != 'dex':
         try:
             return {
                 'success': True,

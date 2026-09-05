@@ -314,13 +314,31 @@ def _elements_of(analysis: Any) -> list[dict]:
 
 
 def _active_tab(tabs: Any) -> dict:
+    """
+    The page the owner is looking at — never one of Dex's own.
+
+    "The active tab" was not good enough. Opening the Dex panel as a window
+    makes it the active tab, so a task reported on Dex's own panel instead of
+    the page it was asked about. Measured, on the first end-to-end run: "the
+    page title is Dex (chrome-extension://.../panel.html)".
+    """
     rows = tabs.get('tabs') if isinstance(tabs, dict) else tabs
     if not isinstance(rows, list):
         return {}
-    for row in rows:
-        if isinstance(row, dict) and row.get('active'):
+
+    real = [
+        row for row in rows
+        if isinstance(row, dict) and not _is_dex_page(str(row.get('url', '')))
+    ]
+    for row in real:
+        if row.get('active'):
             return row
-    return rows[0] if rows and isinstance(rows[0], dict) else {}
+    return real[0] if real else {}
+
+
+def _is_dex_page(url: str) -> bool:
+    """Dex's own surfaces, and the browser's, which are never the subject."""
+    return url.startswith(('chrome-extension://', 'devtools://', 'chrome://newtab', 'about:blank'))
 
 
 def _text_of(content: Any) -> str:

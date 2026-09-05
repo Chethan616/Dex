@@ -78,6 +78,11 @@ async function withDebugger(tabId, work) {
   }
 }
 
+/** Escape an id for a CSS selector. `CSS.escape` is DOM-only; workers have none. */
+function cssEscape(value) {
+  return String(value).replace(/[^a-zA-Z0-9_-]/g, (ch) => '\\' + ch);
+}
+
 /** One CDP command. Rejects with the protocol's own message, which is specific. */
 function send(target, method, params = {}) {
   return new Promise((resolve, reject) => {
@@ -89,12 +94,43 @@ function send(target, method, params = {}) {
   });
 }
 
-/** The tab a tool should act on: the one named, or the active one. */
+/**
+ * The tab a tool should act on: the one named, or the page the owner is on.
+ *
+ * "The active tab" is not good enough. Opening the Dex panel as a window makes
+ * *it* the last focused window, so a task would analyse Dex's own panel and
+ * report on that — which is exactly what happened the first time this ran end
+ * to end: "the page title is Dex (chrome-extension://.../panel.html)".
+ *
+ * So Dex's own pages are never the answer. Nor is any other extension page, a
+ * devtools window, or the new-tab page: none of them is the thing the owner
+ * asked about.
+ */
 async function resolveTab(tabId) {
   if (tabId) return Number(tabId);
-  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  if (!tab) throw new Error('No active tab to work in.');
-  return tab.id;
+
+  const real = (tab) =>
+    tab &&
+    typeof tab.url === 'string' &&
+    !tab.url.startsWith('chrome-extension://') &&
+    !tab.url.startsWith('devtools://') &&
+    !tab.url.startsWith('chrome://newtab');
+
+  const [focused] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  if (real(focused)) return focused.id;
+
+  // The focused thing is Dex's own. Fall back to the active tab of a normal
+  // window, most recently used first.
+  const windows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });
+  for (const win of windows.reverse()) {
+    const active = (win.tabs || []).find((t) => t.active && real(t));
+    if (active) return active.id;
+  }
+
+  const [any] = (await chrome.tabs.query({})).filter(real);
+  if (any) return any.id;
+
+  throw new Error('There is no ordinary page open to work in.');
 }
 
 /**
@@ -125,7 +161,11 @@ export async function uploadFile({ element_id, paths, tab_id }) {
     // than a guess.
     const { nodeIds } = await send(target, 'DOM.querySelectorAll', {
       nodeId: root.nodeId,
-      selector: `[data-opendia-id="${element_id}"], #${CSS.escape(element_id)}`,
+      // `CSS.escape` is a DOM API and there is no DOM in a service worker —
+      // calling it here would have thrown the first time anyone uploaded a
+      // file. The id comes from page_analyze, so escaping it by hand is both
+      // sufficient and honest about what it is.
+      selector: `[data-opendia-id="${cssEscape(element_id)}"], #${cssEscape(element_id)}`,
     });
 
     let nodeId = nodeIds && nodeIds[0];
