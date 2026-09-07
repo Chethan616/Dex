@@ -491,6 +491,121 @@ Not features so much as rules that hold everywhere:
 
 ---
 
+## 12. Reviewer use-case catalogue — why machine access matters
+
+The strongest DEX story is not “a language model knows Windows.” It is:
+
+```
+observe the real machine → explain the evidence → propose the smallest safe fix
+→ ask when the action is consequential → act through a local tool → verify again
+```
+
+That distinction solves the problem behind a vague support question such as
+“Windows is broken; I do not know the error.” A remote ChatGPT/Groq call can
+reason about structured evidence, but it cannot see this PC by itself. DEX is
+the local bridge: it collects the relevant state, sends only the necessary
+facts to the selected model, executes approved PowerShell/OS/UI actions on the
+machine, and reads the result back. The model proposes; DEX's policy and
+verification layers decide what may actually run.
+
+### Windows diagnosis and repair — the flagship scenario
+
+**Request:** “My printer/Wi-Fi/audio/app is not working. I do not know the
+error. Find the cause and fix it.”
+
+**DEX flow:**
+
+1. Identify the affected device, application, window, service, or network
+   adapter instead of guessing from the wording.
+2. Collect local evidence with read-only actions first: process/service state,
+   device status, event or application logs, network configuration, relevant
+   registry values, and the visible Windows dialog.
+3. Give the model a compact, redacted evidence bundle and ask it to rank likely
+   causes and propose a reversible plan.
+4. Apply the least invasive fix through a typed, policy-checked PowerShell
+   command or a named Windows control. If the setting exists only in a GUI,
+   use UI Automation to inspect and click the real control; use screen vision
+   only when no accessible control exists.
+5. Read the state back, repeat the original symptom check, and show the user
+   the evidence. If elevation, a password, CAPTCHA, or an ambiguous window is
+   required, pause and hand control back to the owner.
+
+**Reviewer demo examples:**
+
+| User says | DEX investigates | Safe repair and proof |
+|---|---|---|
+| “The printer is offline.” | Enumerates the printer, spooler state, queue, and reachable port. | Restarts only the affected spooler path after approval, then confirms the queue is available. |
+| “Wi-Fi says connected but nothing loads.” | Reads adapter state, gateway, DNS, proxy, and a small connectivity probe. | Repairs the selected DNS/proxy or renews the adapter only with the right tier; reads DNS and connectivity back. |
+| “This app will not start.” | Resolves the installed app, checks its launch result, window, exit code, and recent app error. | Launches or repairs the app through its real Windows entry point and verifies a matching window exists. |
+| “There is no sound.” | Reads endpoint, mute state, volume, and default-device status. | Selects the named endpoint or unmutes it, then verifies the endpoint reports the requested state. |
+| “Windows updated but the device is still wrong.” | Separates the visible symptom from services, driver/device status, and pending restart. | Performs only an approved, reversible action; never silently changes policy keys or reboots the machine. |
+
+This is already aligned with DEX's Windows building blocks: `run_command`
+for PowerShell/CLI diagnostics, registry reads and classification, named app
+resolution, UI Automation (`list_elements`, `click_element`, `set_text`,
+`toggle`, `wait_for`), and read-back verification. The use case is not a
+promise that every Windows fault is automatically repairable; it is a clear
+contract for how DEX behaves when the fault is unclear.
+
+### Cross-domain scenarios for a live review
+
+| Domain | Example request | What the reviewer should see |
+|---|---|---|
+| Browser research | “Open MrBeast's latest Instagram post and show me a screenshot.” | DEX resolves the account, uses the persistent Vivaldi session, opens the post, verifies the author/post/media, then captures evidence. It does not retry the same home-page navigation until the step budget expires. |
+| Authenticated web work | “Open the bank portal and show my recent transactions.” | DEX reuses the owner-approved browser profile, never types a password, pauses for MFA/CAPTCHA, and resumes from the same live page after hand-off. |
+| Office work | “Find the Q3 variance in my workbook and explain it.” | DEX locates the workbook, reads the relevant sheet/range, grounds the explanation in returned values, and does not edit the workbook unless asked. |
+| Email and calendar | “Find the travel email and put the departure on my calendar.” | DEX searches first, asks which message if several match, proposes the event, confirms the write, and reads the created event back. |
+| Developer workflow | “Why does this Windows build fail and fix it.” | DEX gathers the exact command, exit code, and relevant output, lets the model reason over evidence, applies a bounded fix, reruns the test, and reports the diff/result. |
+| Files and media | “Organize these downloads by type.” | DEX previews the planned moves, keeps protected/system/credential paths out of scope, moves to recoverable locations, and verifies the resulting directory state. |
+| Network/dev environment | “The local API is not responding.” | DEX checks the listening process/port, endpoint, firewall-relevant evidence, and logs before suggesting a repair; it never hides a failed command behind a green result. |
+| Accessibility and GUI-only apps | “Click the Save button in this legacy app.” | DEX prefers named controls and UI Automation, refuses an ambiguous window, and uses vision/mouse fallback only when the accessible tree cannot represent the control. |
+
+### Best working model and routing
+
+The best working configuration is a hybrid, not an LLM-only loop:
+
+1. **Deterministic DEX actions first** for Windows state, files, known app
+   controls, URL navigation, and verification. These are fast, cheap, and
+   reproducible.
+2. **Groq for reasoning** when the next step is ambiguous. The current
+   configured browser/brain model is `openai/gpt-oss-120b`; the provider is
+   selected in Settings and is not coupled to Claude Code.
+3. **Local UI Automation or PowerShell** for the actual machine change. The
+   model does not receive unrestricted shell access; DEX applies command policy,
+   confirmation tiers, and elevation boundaries locally.
+4. **Vision only as a fallback** for canvas/legacy interfaces where no DOM or
+   accessibility control exists.
+
+This routing also makes failures diagnosable. A Groq quota or response failure
+should say “the reasoning provider was unavailable”; a browser loop, wrong
+profile, failed command, or missing Windows verification should identify the
+local subsystem. They are different failures and must not be collapsed into a
+generic “agent failed” message.
+
+### Reviewer demo checklist
+
+Use these requests in order so the architecture is visible rather than merely
+described:
+
+```
+1. “What is my DNS?”
+   → read-only local evidence and a grounded answer.
+2. “Open calculator.”
+   → named app launch and window verification.
+3. “My sound is muted; diagnose it and ask before changing it.”
+   → inspect → explain → confirmation → repair → read-back.
+4. “Open MrBeast's latest Instagram post and show a screenshot.”
+   → persistent browser session, account-specific adapter, exact post proof.
+5. “Find the Q3 report; do not choose if there are two.”
+   → ambiguity is surfaced instead of guessed.
+6. “Run the build and fix the error.”
+   → command evidence, bounded repair, and a rerun proving the outcome.
+```
+
+The review result should be judged by evidence: the final state, the command or
+control used, the verification result, and any confirmation/handoff — not by a
+confident sentence from the model.
+
 ## What it cannot do yet
 
 Stated plainly, because the gaps matter more than the list above:

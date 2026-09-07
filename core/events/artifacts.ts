@@ -78,7 +78,75 @@ export function describeArtifact(action: string, data: unknown): Artifact | unde
   if (action === 'describe_file' || action === 'read_document') {
     return describeReading(record);
   }
+  if (action === 'run_task' || action === 'screenshot') {
+    const shot = describeBrowserScreenshot(record);
+    if (shot) return shot;
+  }
   return undefined;
+}
+
+function describeBrowserScreenshot(data: Record<string, unknown>): Artifact | undefined {
+  const filePath = typeof data.screenshot_path === 'string' && data.screenshot_path
+    ? data.screenshot_path
+    : typeof data.path === 'string' && data.path && /\.(png|jpg|jpeg|webp)$/i.test(data.path)
+    ? data.path
+    : undefined;
+
+  if (!filePath) return undefined;
+
+  // Hard gate: never surface a screenshot as verified evidence when the
+  // task-specific post check failed. An unverified screenshot is worse than
+  // no screenshot — it looks like proof while proving nothing.
+  const verif = data.verification as Record<string, unknown> | null | undefined;
+  if (verif && typeof verif === 'object') {
+    if (verif.target_reached === false) return undefined;
+    if (verif.login_modal_detected === true) return undefined;
+    if (verif.passed === false) return undefined;
+  }
+
+  const resultText = typeof data.result === 'string' ? data.result : '';
+  const postUrl = typeof data.post_url === 'string' ? data.post_url : '';
+  const account = typeof data.account === 'string' ? data.account : '';
+  const caption = typeof data.caption === 'string' ? data.caption : '';
+
+  // Reject contradictory success-while-admitting-failure
+  const CONTRADICTORY_PHRASES = [
+    "requested url wasn't loaded",
+    "requested post wasn't loaded",
+    "couldn't open requested post",
+    "fell back to profile",
+    "target not reached",
+    "post was not loaded",
+    "post wasn't loaded",
+    "wasn't loaded",
+  ];
+  const combined = `${resultText} ${caption}`.toLowerCase();
+  if (CONTRADICTORY_PHRASES.some((p) => combined.includes(p))) return undefined;
+
+  let title = 'Browser Screenshot';
+  if (account) {
+    title = `@${account} latest post`;
+  } else if (postUrl) {
+    title = 'Instagram Post';
+  } else if (resultText) {
+    title = resultText.slice(0, 60);
+  }
+
+  const body = caption || resultText || postUrl || 'Screenshot captured after browser state verification.';
+
+  return {
+    kind: 'reading',
+    title,
+    items: [{
+      label: title,
+      detail: filePath,
+      reasons: ['screenshot', 'verified'],
+    }],
+    total: 1,
+    body: body.slice(0, 8_000),
+    file: filePath,
+    note: postUrl || 'Verified browser state',
+  };
 }
 
 /**

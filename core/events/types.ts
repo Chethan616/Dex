@@ -31,6 +31,8 @@ export interface ExecutionStep {
 
 export interface ExecutionPlan {
   requestId: string;
+  /** Fresh execution identity; never copied from a saved template or result. */
+  taskId?: string;
   /**
    * Nobody is watching this run.
    *

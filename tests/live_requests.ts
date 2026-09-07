@@ -7,9 +7,9 @@
  * with quota, so it can fail for reasons that have nothing to do with the code.
  * It exists because the failures this release fixes were all found by *using*
  * Dex, and the only way to know they are fixed is to use it again — the same
- * five sentences from the screenshots, through the same path the Dex Bar takes.
+ * five sentences from the screenshots, through the same path the Flutter app takes.
  *
- * Connects the way the Dex Bar does, through the handshake file, so it proves
+ * Connects the way the Flutter app does, through the handshake file, so it proves
  * the same route rather than a convenient one.
  */
 import * as fs from 'fs';

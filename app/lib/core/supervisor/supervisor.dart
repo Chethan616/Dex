@@ -295,7 +295,7 @@ class Supervisor extends ChangeNotifier {
 
     // No .env is created here.
     //
-    // The Dex Bar's copy of this wrote one — copying .env.example, or an empty
+    // The previous UI copy of this wrote one — copying .env.example, or an empty
     // file — because that is what RUN.bat did and the core read its config from
     // there. It does not any more: settings.json in the state directory is the
     // config store, the app writes it, and secrets live in the DPAPI credential
@@ -493,7 +493,7 @@ class Supervisor extends ChangeNotifier {
   ///
   /// DEX_HEADLESS=true makes main.ts skip startCli, which would otherwise build
   /// a readline over a stdin that is already closed and end the moment it
-  /// began. The bar and this window are the interface.
+  /// began. The Flutter app and this window are the interface.
   ///
   /// A stale handshake file is deleted first. It survives a killed core, and
   /// leaving it would let the readiness probe pass against a port nobody is

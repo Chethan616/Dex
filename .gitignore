@@ -40,9 +40,6 @@ venv/
 .pytest_cache/
 
 # Flutter
-ui/dex-bar/build/
-ui/dex-bar/.dart_tool/
-ui/dex-bar/windows/flutter/ephemeral/
 .flutter-plugins-dependencies
 .dart_tool/
 
@@ -73,6 +70,4 @@ image*.png
 # Flutter build output.
 app/build/
 app/.dart_tool/
-ui/dex-bar/build/
-ui/dex-bar/.dart_tool/
 .claude/settings.json

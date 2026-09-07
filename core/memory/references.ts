@@ -34,12 +34,13 @@ const NOT_A_THING = new Set([
 /** Words that name a *kind* of artifact rather than a specific one. */
 const KIND_WORDS: Record<string, ArtifactKind> = {
   file: 'file', document: 'file', doc: 'file', report: 'file', note: 'file',
-  spreadsheet: 'file', pdf: 'file', screenshot: 'file',
+  spreadsheet: 'file', pdf: 'file', screenshot: 'file', image: 'file', photo: 'file', picture: 'file',
   email: 'email', mail: 'email', message: 'email',
   event: 'event', meeting: 'event', appointment: 'event',
   page: 'page', site: 'page', website: 'page', link: 'page', tab: 'page',
   app: 'app', application: 'app', program: 'app', window: 'app',
   setting: 'setting',
+  post: 'post', reel: 'post', update: 'post',
 };
 
 export interface Resolution {
@@ -80,7 +81,12 @@ export class ReferenceResolver {
    * "you said its name" is not.
    */
   resolve(text: string, sinceMs = LOOKBACK_MS): ReferenceOutcome {
-    const pool = this.artifacts.recent(60, sinceMs);
+    const isDownstreamAction = /\b(send|share|download|email|post|delete|like|comment|buy|purchase)\b/i.test(text);
+    const rawPool = this.artifacts.recent(60, sinceMs);
+    // Hard gate: Only verified artifacts may be used for downstream side-effect actions
+    const pool = isDownstreamAction
+      ? rawPool.filter((a) => !a.verificationStatus || a.verificationStatus === 'verified')
+      : rawPool;
     const resolved: Resolution[] = [];
     const ambiguous: Ambiguity[] = [];
 
@@ -122,8 +128,13 @@ export class ReferenceResolver {
   substitute(text: string, resolutions: Resolution[]): string {
     let out = text;
     for (const { phrase, match } of resolutions) {
-      const re = new RegExp(`\\b((?:the|that|this)\\s+${escape(phrase)})\\b`, 'i');
-      out = out.replace(re, `$1 (${match.locator})`);
+      if (phrase === 'that' || phrase === 'it') {
+        const re = new RegExp(`\\b(${phrase})\\b`, 'i');
+        out = out.replace(re, `$1 (${match.locator})`);
+      } else {
+        const re = new RegExp(`\\b((?:the|that|this)\\s+${escape(phrase)})\\b`, 'i');
+        out = out.replace(re, `$1 (${match.locator})`);
+      }
     }
     return out;
   }
@@ -201,12 +212,25 @@ function phrasesIn(text: string): string[] {
     }
   }
 
+  // Conversational demonstratives / pronouns when used with actions: "send that to Veera", "email it to Rahul"
+  if (/\b(?:send|email|share|download|attach|open)\s+(?:that|it)\b/i.test(text) || /\b(?:that|it)\s+(?:to|with)\b/i.test(text)) {
+    const pronoun = /\bthat\b/i.test(text) ? 'that' : 'it';
+    seen.add(pronoun);
+  }
+
   return [...seen];
 }
 
 function score(artifact: Artifact, phrase: string): { points: number; reason: string } {
   const name = artifact.name.toLowerCase();
   const head = phrase.split(/\s+/)[0];
+
+  if (phrase === 'that' || phrase === 'it') {
+    if (artifact.kind === 'post' || artifact.kind === 'file') {
+      return { points: 60, reason: `most recent ${artifact.kind}` };
+    }
+    return { points: 30, reason: `most recent ${artifact.kind}` };
+  }
 
   if (name === phrase) return { points: 100, reason: 'name matches exactly' };
   if (stem(name) === stem(phrase)) return { points: 90, reason: 'name matches' };

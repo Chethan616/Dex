@@ -191,7 +191,7 @@ export class ChannelRuntime {
         `${result.summary}` +
         (result.workflow ? `\n\n_via saved workflow_ \`${result.workflow}\`` : '') +
         (result.suggestSave
-          ? `\n\nYou have done this ${result.suggestSave.times}× — save it from the Dex Bar.`
+          ? `\n\nYou have done this ${result.suggestSave.times}× — save it from Dex.`
           : '');
 
       const body = lines.length ? `${lines.slice(-8).join('\n')}\n\n${summary}` : summary;
@@ -250,7 +250,7 @@ export class ChannelRuntime {
 
     // The stepVersion still travels with the answer, so an approval typed
     // against a step that has since been rewritten is refused server-side —
-    // exactly as it is from the Dex Bar.
+    // exactly as it is from the Flutter app.
     const outcome = this.confirmations.respond(
       entry.request.requestId,
       entry.request.stepId,

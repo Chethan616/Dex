@@ -2,8 +2,8 @@
 SessionManager: Persistent browser session management for DEX.
 
 Responsibilities:
-- Connects to the user's existing browser over CDP when available.
-- Starts the user's selected personal browser profile when needed.
+- Starts one DEX-owned persistent browser profile lazily for normal work.
+- Connects to the user's existing browser over CDP only for explicit Mode B.
 - Prevents multi-process profile collisions via file-based locking.
 - Recovers from browser process crashes and maintains persistent login states.
 """
@@ -139,40 +139,36 @@ def find_browser_executable() -> str | None:
 
 
 def get_user_profile_dir(browser_path: str | Path | None = None) -> Path:
-    """Return the user's existing browser data directory.
+    """Return the single persistent profile owned by DEX.
 
-    DEX previously created a separate Chrome profile here. That discarded the
-    user's existing logins and caused a new blank browser window on each restart.
+    The default execution mode is deliberately isolated from the user's personal
+    browser.  Personal-browser access is an explicit Mode B operation and is
+    resolved separately by the CDP attachment path.
     """
     override = os.environ.get("DEX_BROWSER_USER_DATA_DIR", "").strip().strip('"')
     if override:
         profile_dir = Path(override).expanduser()
-        profile_dir.mkdir(parents=True, exist_ok=True)
         return profile_dir
 
-    selected_browser = browser_path
-    if selected_browser is None and not os.environ.get("DEX_FORCE_PLAYWRIGHT_CHROMIUM"):
-        selected_browser = find_browser_executable()
+    local = _local_app_data()
+    profile_dir = local / "DEX" / "browser-profile" / "profile"
+    return profile_dir
+
+
+def get_personal_profile_dir(browser_path: str | Path | None = None) -> Path:
+    """Best-effort discovery of the user's existing Chromium profile for Mode B."""
+    selected_browser = browser_path or find_browser_executable()
     family = _browser_family(selected_browser)
     local = _local_app_data()
     profile_dirs = {
-        # Vivaldi's Windows installer uses `User` for the live profile on some
-        # versions and `User Data` on others. Prefer the existing root that
-        # contains Local State so saved sessions are never redirected to a new
-        # empty profile.
         "vivaldi": [local / "Vivaldi" / "User", local / "Vivaldi" / "User Data"],
         "chrome": [local / "Google" / "Chrome" / "User Data"],
         "edge": [local / "Microsoft" / "Edge" / "User Data"],
     }
     if family in profile_dirs:
         profile_dir = _existing_data_dir(profile_dirs[family])
-        profile_dir.mkdir(parents=True, exist_ok=True)
         return profile_dir
-
-    # Only use an isolated profile when no supported installed browser exists.
-    profile_dir = local / "DEX" / "browser-profile" / "user_profile"
-    profile_dir.mkdir(parents=True, exist_ok=True)
-    return profile_dir
+    return get_user_profile_dir(browser_path)
 
 
 def get_downloads_dir() -> Path:
@@ -269,20 +265,20 @@ class SessionManager:
     ):
         self.cdp_port = cdp_port
         self.cdp_url = f"http://127.0.0.1:{cdp_port}"
-        force_playwright = bool(os.environ.get("DEX_FORCE_PLAYWRIGHT_CHROMIUM"))
         self._explicit_profile = profile_dir is not None
-        self.browser_path = None if force_playwright or self._explicit_profile else find_browser_executable()
+        # Keep the installed browser identity available for explicit Mode B
+        # diagnostics, but never launch it for ordinary DEX work.
+        self.browser_path = None if self._explicit_profile else find_browser_executable()
         self.browser_family = _browser_family(self.browser_path)
         self.profile_dir = Path(profile_dir) if profile_dir else get_user_profile_dir(self.browser_path)
-        self.profile_dir.mkdir(parents=True, exist_ok=True)
         self.profile_name = os.environ.get("DEX_BROWSER_PROFILE", "Default").strip() or "Default"
-        # Explicit profile paths are used by tests/managed deployments. The normal
-        # app path uses the user's real browser profile and attaches over CDP so Dex
-        # does not own or close the user's browser process.
-        self._use_personal_browser = profile_dir is None and self.browser_path is not None
+        # Mode A is always the DEX-owned profile.  Mode B attaches to the user's
+        # already-running browser only when initialize(mode_hint="owner") is used.
+        self._use_personal_browser = False
         if headless is None:
-            # Check environment variable, default to False (headed for user visibility & auth)
-            self.headless = os.environ.get("DEX_BROWSER_HEADLESS", "").lower() in ("true", "1")
+            configured = os.environ.get("DEX_BROWSER_HEADLESS", "").strip().lower()
+            visible = os.environ.get("DEX_BROWSER_VISIBLE", "").strip().lower()
+            self.headless = False if visible in ("true", "1", "yes") else configured not in ("false", "0", "no")
         else:
             self.headless = headless
 
@@ -323,7 +319,7 @@ class SessionManager:
             mode_hint: If 'owner' or 'user', require Mode B (CDP attachment to the user's browser).
                        If Mode B is requested but unavailable, raises RuntimeError instead of
                        silently falling back — the caller must decide what to do.
-                       If None or 'dex', uses the selected personal browser profile.
+                       If None or 'dex', uses the isolated DEX profile.
         """
         if self.is_connected:
             return self._context
@@ -333,23 +329,15 @@ class SessionManager:
 
         want_mode_b = mode_hint in ("owner", "user", "b", MODE_B_USER_ATTACHED)
 
-        # 1. Try to connect to an existing instance on the CDP port. Only attach
-        # when it is the browser family Dex selected; this prevents an old Chrome
-        # process on port 9222 from hijacking the user's Vivaldi session.
-        cdp_info = await self._get_cdp_version()
-        if cdp_info and self._cdp_matches_selected_browser(cdp_info):
-            try:
-                return await self._attach_to_cdp()
-            except Exception as err:
-                log.warning(f"Failed to connect to existing CDP endpoint: {err}. Launching new session.")
-        elif cdp_info:
-            log.warning(
-                "Ignoring the existing CDP endpoint because it is not the selected "
-                f"browser ({self.browser_family or 'configured browser'})."
-            )
-
-        # If Mode B was explicitly requested but CDP is not available, fail clearly.
+        # Mode B is explicit and attach-only. It must never silently fall back to
+        # the isolated DEX profile or launch a second personal-browser window.
         if want_mode_b:
+            cdp_info = await self._get_cdp_version()
+            if cdp_info and self._cdp_matches_selected_browser(cdp_info):
+                try:
+                    return await self._attach_to_cdp()
+                except Exception as err:
+                    log.warning(f"Failed to connect to existing CDP endpoint: {err}")
             raise RuntimeError(
                 f"[{MODE_B_USER_ATTACHED}] The user's browser is not attachable via CDP on port {self.cdp_port}. "
                 f"Start {self.browser_family or 'your browser'} with "
@@ -357,28 +345,18 @@ class SessionManager:
             )
 
         # 2. Acquire profile lock
+        self.profile_dir.mkdir(parents=True, exist_ok=True)
         if not self._lock.acquire():
             log.warning(f"Profile at {self.profile_dir} appears locked. Checking if port is freed...")
-            # If the process is alive and CDP wasn't responding, give it a moment
-            await asyncio.sleep(1.0)
-            cdp_info = await self._get_cdp_version()
-            if cdp_info and self._cdp_matches_selected_browser(cdp_info):
-                return await self._attach_to_cdp()
             raise RuntimeError(
-                f"The {self.browser_family or 'browser'} profile is already in use and does not expose "
-                f"CDP on port {self.cdp_port}. Close the browser once, then restart Dex so it can reopen "
-                "the same personal profile."
+                f"The DEX browser profile is already in use and does not expose CDP. "
+                "Stop the other DEX browser process before retrying."
             )
 
-        # 3. Launch the selected browser. For the user's real profile, launch it
-        # externally and attach over CDP so the browser survives Dex restarts and
-        # remains the user's normal Vivaldi/Chrome session. Explicit test profiles
-        # retain Playwright's isolated persistent-context behavior.
-        if self._use_personal_browser:
-            return await self._launch_personal_browser()
-
         log.info(f"[{MODE_A_PERSISTENT}] Launching isolated browser context using profile: {self.profile_dir} (headless={self.headless})")
-        chrome_path = None if self._explicit_profile else find_system_chrome()
+        # Playwright's managed Chromium keeps Mode A independent from Vivaldi,
+        # Chrome, and Edge.  The profile remains stable across DEX restarts.
+        chrome_path = None
 
         launch_args = [
             "--no-first-run",
@@ -397,11 +375,7 @@ class SessionManager:
             "downloads_path": str(get_downloads_dir()),
         }
 
-        if chrome_path and not os.environ.get("DEX_FORCE_PLAYWRIGHT_CHROMIUM"):
-            kwargs["executable_path"] = chrome_path
-            log.info(f"Using installed browser at: {chrome_path}")
-        else:
-            log.info("Using Playwright Chromium")
+        log.info("Using Playwright Chromium for the isolated DEX profile")
 
         try:
             self._context = await self._playwright.chromium.launch_persistent_context(**kwargs)
@@ -455,6 +429,7 @@ class SessionManager:
         self._browser = await self._playwright.chromium.connect_over_cdp(self.cdp_url)
         contexts = self._browser.contexts
         self._context = contexts[0] if contexts else await self._browser.new_context()
+        self.profile_dir = get_personal_profile_dir(self.browser_path)
         self._is_cdp_attached = True
         log.info(
             f"[{MODE_B_USER_ATTACHED}] Successfully attached to the user's "
@@ -538,12 +513,12 @@ class SessionManager:
         )
 
     async def _trim_startup_blank_pages(self) -> None:
-        """Keep one initial blank page, but never accumulate startup tabs."""
+        """Remove launch-created blank pages; task binding creates pages on demand."""
         if not self._context:
             return
         blank_urls = {"about:blank", "chrome://newtab/", "vivaldi://newtab/", "edge://newtab/"}
         blank_pages = [page for page in self._context.pages if page.url.lower() in blank_urls]
-        for page in blank_pages[1:]:
+        for page in blank_pages:
             try:
                 await page.close()
             except Exception:
@@ -557,7 +532,7 @@ class SessionManager:
         except Exception:
             pass
         await asyncio.sleep(1.0)
-        return await self.initialize()
+        return await self.initialize(mode_hint=None)
 
     async def close(self, graceful: bool = True) -> None:
         """Clean shutdown of session."""
@@ -573,9 +548,6 @@ class SessionManager:
         finally:
             self._context = None
             self._browser = None
-            # A personal browser launched by Dex is intentionally left running;
-            # CDP attachment lets the next Dex run reuse it without reopening a
-            # new profile or tab. The process handle is only bookkeeping here.
             self._browser_process = None
             self._lock.release()
 

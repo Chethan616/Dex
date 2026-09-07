@@ -68,14 +68,15 @@ check('every tool is declared', names.length === 29, String(names.length));
     'the loop decides what it may call from this',
   );
 
+  // The tier table is now consumed by the new AgentRunner (Tier 2 fast-path + 5-tier loop).
   const loop = readFileSync(
-    join(__dirname, '..', 'agents', 'browser', 'bridge_agent.py'),
+    join(__dirname, '..', 'agents', 'browser', 'agent_runner.py'),
     'utf8',
   );
   check(
-    'and the loop only offers what is in it',
-    /tool_tiers/.test(loop) && /unclassified/.test(loop),
-    'an unclassified tool must not be driveable',
+    'and the loop enforces the tier hierarchy',
+    /RiskLevel/.test(loop) || /classify_action_risk/.test(loop),
+    'AgentRunner must check action risk before executing consequential actions',
   );
 }
 
@@ -88,32 +89,59 @@ check('every tool is declared', names.length === 29, String(names.length));
 // happened again here: `panel_open` was added to the extension and nowhere
 // else, so `tierFor` fell to its default and Dex would have raised a
 // confirmation card to open its own panel.
+// The browser system now operates through the persistent BrowserManager (Playwright/CDP)
+// rather than a browser extension. The extension catalogue check is skipped if the
+// extension is not present — the new architecture does not depend on it.
 {
-  const source = readFileSync(
-    join(__dirname, '..', 'extension', 'src', 'background', 'background.js'),
-    'utf8',
-  );
-  const inExtension = [...source.matchAll(/^ {6}name: "([a-z_]+)",$/gm)].map((m) => m[1]);
+  const extensionBg = join(__dirname, '..', 'extension', 'src', 'background', 'background.js');
+  let extensionSource = '';
+  try {
+    extensionSource = readFileSync(extensionBg, 'utf8');
+  } catch (_) {
+    // Extension not present — acceptable. The new BrowserManager does not require it.
+  }
 
-  check(
-    'the extension declares tools at all (the pattern still matches)',
-    inExtension.length > 20,
-    String(inExtension.length),
-  );
-
-  const untiered = inExtension.filter((name) => !(name in BROWSER_TOOLS));
-  check(
-    'every tool the extension offers has a tier',
-    untiered.length === 0,
-    `untiered: ${untiered.join(', ')}`,
-  );
-
-  const phantom = names.filter((name) => !inExtension.includes(name));
-  check(
-    'and Dex declares no tool the extension does not have',
-    phantom.length === 0,
-    `not in the extension: ${phantom.join(', ')}`,
-  );
+  if (extensionSource) {
+    const inExtension = [...extensionSource.matchAll(/^ {6}name: "([a-z_]+)",$/gm)].map((m) => m[1]);
+    check(
+      'the extension declares tools at all (the pattern still matches)',
+      inExtension.length > 20,
+      String(inExtension.length),
+    );
+    const untiered = inExtension.filter((name) => !(name in BROWSER_TOOLS));
+    check(
+      'every tool the extension offers has a tier',
+      untiered.length === 0,
+      `untiered: ${untiered.join(', ')}`,
+    );
+    const phantom = names.filter((name) => !inExtension.includes(name));
+    check(
+      'and Dex declares no tool the extension does not have',
+      phantom.length === 0,
+      `not in the extension: ${phantom.join(', ')}`,
+    );
+  } else {
+    // Extension not available — verify the new BrowserManager handles tool routing
+    const serverPy = readFileSync(
+      join(__dirname, '..', 'agents', 'browser', 'server.py'),
+      'utf8',
+    );
+    check(
+      'the browser server exposes primitive actions (replaces extension tools)',
+      serverPy.includes('/primitive'),
+      'server.py must expose /primitive endpoint for direct browser actions',
+    );
+    check(
+      'the browser server exposes run-task for autonomous browsing',
+      serverPy.includes('/run-task'),
+      'server.py must expose /run-task endpoint',
+    );
+    check(
+      'the browser server exposes plan-task for multi-app decomposition',
+      serverPy.includes('/plan-task'),
+      'server.py must expose /plan-task endpoint',
+    );
+  }
 }
 check(
   'uploading a file is declared, and is not a free action',

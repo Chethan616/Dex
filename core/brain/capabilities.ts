@@ -311,9 +311,10 @@ export function workflowCatalogue(workflows: WorkflowSummary[]): string {
   return `
 
 CAPABILITY: can_run_workflow   [PREFER THIS when one of these fits]
-  Tasks the owner has already done and saved. Running one replays steps that
-  are known to work, so it is faster and more reliable than planning the same
-  thing again. Set "action" to the workflow name.
+  Reusable workflow templates the owner has already saved. Running one
+  instantiates its parameterised steps for the CURRENT request and executes a
+  fresh task; it never returns an earlier execution result. Set "action" to the
+  workflow name.
 
   Match on INTENT, not wording. "make it louder", "sound up" and "volume 60"
   should all reach a volume workflow. If a saved workflow does what the owner

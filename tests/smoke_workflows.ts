@@ -182,6 +182,142 @@ function testWorkflows(): void {
     badName = err instanceof Error ? err.message : String(err);
   }
   check('an unusable name is rejected', badName.includes('lowercase'), badName);
+
+  section('Browser workflows — templates, not old execution state');
+
+  const oldNetflixUrl = 'https://www.instagram.com/netflixuk/reel/DcqI-RdFeTd/';
+  const instagramRequest = "open sidemen's latest post on instagram";
+  const instagramPlan = planFor([{
+    id: 'step_1',
+    capability: 'can_browse_web',
+    action: 'run_task',
+    params: {
+      task: `Open Sidemen's latest post on Instagram at ${oldNetflixUrl}`,
+      expected_entity: 'Sidemen',
+      screenshot_path: 'C:\\old\\sidemen.png',
+      screenshotPath: 'C:\\old\\sidemen-2.png',
+      verification: { passed: true, post_url: oldNetflixUrl },
+      verificationResult: { passed: true, currentUrl: oldNetflixUrl },
+      artifacts: [{ name: 'old screenshot', locator: 'C:\\old\\sidemen.png' }],
+      artifactIds: ['old-artifact'],
+    },
+    confirmationTier: 2,
+    dependsOn: [],
+  }]);
+
+  const instagram = store.save({
+    name: 'instagram-latest-post',
+    requestText: instagramRequest,
+    plan: instagramPlan,
+  });
+
+  check(
+    'an entity becomes a reusable parameter',
+    instagram.params.includes('entity') && instagram.bindings.some((b) => b.name === 'entity'),
+    JSON.stringify({ params: instagram.params, bindings: instagram.bindings }),
+  );
+  check(
+    'the entity is templated inside browser instructions',
+    String(instagram.template[0].params.task).includes('{{entity}}') &&
+      String(instagram.template[0].params.expected_entity).includes('{{entity}}'),
+    JSON.stringify(instagram.template[0].params),
+  );
+  check(
+    'a discovered URL is not stored in the reusable template',
+    !JSON.stringify(instagram.template).includes(oldNetflixUrl),
+    JSON.stringify(instagram.template),
+  );
+  check(
+    'execution screenshot, verification, and artifact data are separated',
+    !JSON.stringify(instagram.template).includes('old screenshot') &&
+      !JSON.stringify(instagram.template).includes('old\\sidemen.png') &&
+      !JSON.stringify(instagram.template).includes('passed'),
+    JSON.stringify(instagram.template),
+  );
+
+  const ksi = store.matchRequest("open KSI's latest post on instagram");
+  const sidemen = store.matchRequest("open sidemen's latest post on instagram");
+  check('KSI matches the saved Instagram template', ksi?.args.entity === 'KSI', JSON.stringify(ksi));
+  check('Sidemen matches the saved Instagram template', sidemen?.args.entity === 'sidemen', JSON.stringify(sidemen));
+
+  const ksiRun = store.instantiate(instagram, { entity: 'KSI' }, 'request-ksi', 'task-ksi');
+  const sidemenRun = store.instantiate(instagram, { entity: 'Sidemen' }, 'request-sidemen', 'task-sidemen');
+  check(
+    'each remembered workflow run creates a fresh execution instance',
+    ksiRun.executionId !== sidemenRun.executionId &&
+      ksiRun.requestId !== sidemenRun.requestId &&
+      ksiRun.taskId !== sidemenRun.taskId,
+    JSON.stringify({ ksi: ksiRun, sidemen: sidemenRun }),
+  );
+  check(
+    'current parameters are substituted into the fresh plan',
+    ksiRun.plan.steps[0].params.task === "Open KSI's latest post on Instagram at " &&
+      ksiRun.plan.steps[0].params.expected_entity === 'KSI' &&
+      !JSON.stringify(ksiRun.plan).includes(oldNetflixUrl),
+    JSON.stringify(ksiRun.plan.steps[0].params),
+  );
+
+  // Simulate the broken rows already present on an older install. The next
+  // store construction repairs the template in place rather than deleting it.
+  const legacyPlan = JSON.stringify([{
+    id: 'step_1', capability: 'can_browse_web', action: 'run_task',
+    params: { task: `Open Sidemen's latest post on Instagram at ${oldNetflixUrl}` },
+    confirmationTier: 2, dependsOn: [],
+  }]);
+  db().prepare(
+    `INSERT OR REPLACE INTO workflows
+      (name, description, trigger_text, shape, params, plan, created_at, origin, fail_count)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+  ).run(
+    'legacy-instagram', 'legacy', instagramRequest, shapeOf(instagramRequest).shape,
+    '[]', legacyPlan, Date.now(), 'named',
+  );
+  const repairedStore = new WorkflowStore();
+  const repaired = repairedStore.get('legacy-instagram');
+  check(
+    'legacy entity workflows are repaired instead of deleted',
+    repaired?.reusable === true && repaired.params.includes('entity'),
+    JSON.stringify(repaired),
+  );
+  check(
+    'a repaired legacy workflow cannot replay the old Netflix URL',
+      repaired !== undefined && !JSON.stringify(repaired.template).includes(oldNetflixUrl) &&
+      repairedStore.bind(repaired, { entity: 'Sidemen' }, 'request-new', 'task-new').steps[0].params.task ===
+        "Open Sidemen's latest post on Instagram at ",
+    JSON.stringify(repaired),
+  );
+
+  const youtube = store.save({
+    name: 'youtube-latest-video',
+    requestText: "find sidemen's latest video on youtube",
+    plan: planFor([{
+      id: 'step_1', capability: 'can_browse_web', action: 'run_task',
+      params: { task: "Find Sidemen's latest YouTube video", expected_entity: 'Sidemen' },
+      confirmationTier: 2, dependsOn: [],
+    }]),
+  });
+  check(
+    'YouTube entity workflows are parameterized too',
+    youtube.params.includes('entity') &&
+      store.matchRequest("find KSI's latest video on youtube")?.args.entity === 'KSI',
+    JSON.stringify(youtube),
+  );
+
+  const explicitUrl = 'https://example.com/docs';
+  const explicit = store.save({
+    name: 'open-explicit-url',
+    requestText: `open ${explicitUrl}`,
+    plan: planFor([{
+      id: 'step_1', capability: 'can_browse_web', action: 'navigate',
+      params: { url: explicitUrl }, confirmationTier: 2, dependsOn: [],
+    }]),
+  });
+  check(
+    'an explicitly requested URL remains a template parameter',
+    explicit.params.includes('url') && explicit.template[0].params.url === '{{url}}' &&
+      store.matchRequest('open https://example.com/other')?.args.url === 'https://example.com/other',
+    JSON.stringify(explicit),
+  );
 }
 
 // ── expansion ────────────────────────────────────────────────────────────────

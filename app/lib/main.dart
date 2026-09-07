@@ -89,7 +89,7 @@ Future<void> main() async {
   }
 
   // Connection details come from the Dex core's own handshake file, the same
-  // one the Dex Bar reads — never a hardcoded port, and never a second config
+  // one the Flutter app reads — never a hardcoded port, and never a second config
   // that could disagree with the core about where the core is.
   final client = DexGatewayClient();
   // First line in Diagnostics so the panel is never empty: states the
@@ -100,8 +100,8 @@ Future<void> main() async {
   // Opening Dex starts Dex.
   //
   // This used to say "the core is started by the supervisor, not from here" —
-  // and the supervisor lived in ui/dex-bar, a different application. So running
-  // this app on its own started nothing: it connected to whatever happened to
+  // and the supervisor lived in a different application. So running this app
+  // on its own started nothing: it connected to whatever happened to
   // already be listening, and when nothing was, it showed "core not running"
   // with no way to fix it from inside. The only cure was to go and run
   // RUN.bat first, which is not a thing an app should require of anyone.

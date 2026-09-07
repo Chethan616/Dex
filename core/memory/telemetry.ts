@@ -18,6 +18,7 @@ import { db } from './db';
 
 export interface TaskRecord {
   requestId: string;
+  taskId?: string;
   text: string;
   intent?: string;
   status?: TaskStatus;
@@ -47,6 +48,7 @@ export class Telemetry {
 
   startTask(input: {
     requestId: string;
+    taskId?: string;
     sessionId: string;
     source: string;
     text: string;
@@ -57,11 +59,12 @@ export class Telemetry {
     db()
       .prepare(
         `INSERT OR REPLACE INTO tasks
-         (request_id, session_id, source, text, shape, provider, workflow, started_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (request_id, task_id, session_id, source, text, shape, provider, workflow, started_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         input.requestId,
+        input.taskId ?? null,
         input.sessionId,
         input.source,
         input.text,
@@ -149,11 +152,12 @@ export class Telemetry {
   recent(limit = 20): TaskRecord[] {
     return (db()
       .prepare(
-        `SELECT request_id, text, intent, status, step_count, duration_ms, workflow, started_at
+        `SELECT request_id, task_id, text, intent, status, step_count, duration_ms, workflow, started_at
          FROM tasks ORDER BY started_at DESC LIMIT ?`,
       )
       .all(limit) as Array<Record<string, unknown>>).map((r) => ({
       requestId: String(r.request_id),
+      taskId: r.task_id ? String(r.task_id) : undefined,
       text: String(r.text),
       intent: r.intent ? String(r.intent) : undefined,
       status: r.status ? (String(r.status) as TaskStatus) : undefined,
@@ -167,12 +171,13 @@ export class Telemetry {
   search(term: string, limit = 20): TaskRecord[] {
     return (db()
       .prepare(
-        `SELECT request_id, text, intent, status, step_count, duration_ms, workflow, started_at
+        `SELECT request_id, task_id, text, intent, status, step_count, duration_ms, workflow, started_at
          FROM tasks WHERE text LIKE ? OR intent LIKE ?
          ORDER BY started_at DESC LIMIT ?`,
       )
       .all(`%${term}%`, `%${term}%`, limit) as Array<Record<string, unknown>>).map((r) => ({
       requestId: String(r.request_id),
+      taskId: r.task_id ? String(r.task_id) : undefined,
       text: String(r.text),
       intent: r.intent ? String(r.intent) : undefined,
       status: r.status ? (String(r.status) as TaskStatus) : undefined,
@@ -191,7 +196,7 @@ export class Telemetry {
     const repeated = (db()
       .prepare(
         `SELECT t.shape AS shape, MAX(t.text) AS example, COUNT(*) AS n,
-                (SELECT COUNT(*) FROM workflows w WHERE w.shape = t.shape) AS saved
+                (SELECT COUNT(*) FROM workflows w WHERE w.shape = t.shape AND w.reusable = 1) AS saved
          FROM tasks t
          WHERE t.started_at >= ? AND t.status = 'COMPLETED' AND t.workflow IS NULL
          GROUP BY t.shape HAVING n >= 2

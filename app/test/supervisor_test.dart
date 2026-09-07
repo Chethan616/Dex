@@ -2,8 +2,8 @@
 //
 // This exists because the failure it guards against had no symptom until the
 // app was already open: `app/` had no supervisor at all — the one that starts
-// the core lived in `ui/dex-bar`, a different application — so launching Dex on
-// its own started nothing and showed "core not running" with no way to fix it
+// the core lived in a separate UI application — so launching Dex on its own
+// started nothing and showed "core not running" with no way to fix it
 // from inside. Nothing failed; nothing had been asked to happen.
 //
 // The spawning itself needs real processes and is covered by actually running

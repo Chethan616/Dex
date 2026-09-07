@@ -286,7 +286,13 @@ function verifyBrowserStep(
   }
 
   const data = (agentResult?.data ?? {}) as {
-    verification?: { passed: boolean; checks?: Array<{ check: string; passed: boolean }> } | null;
+    verification?: {
+      passed: boolean;
+      target_reached?: boolean;
+      login_modal_detected?: boolean;
+      reason?: string;
+      checks?: Array<{ check: string; passed: boolean }>;
+    } | null;
     /** What the run says it altered. Absent means the run does not report it. */
     changed?: string[];
     /** What on the page the run says proves it worked. */
@@ -296,10 +302,100 @@ function verifyBrowserStep(
     title?: string;
   };
 
+  const taskText = String((step.params as { task?: unknown })?.task ?? '').toLowerCase();
+  const resultText = `${(agentResult as unknown as Record<string, unknown>)?.message ?? ''} ${agentResult?.error ?? ''} ${data.verification?.reason ?? ''}`.toLowerCase();
+
+  // Reject contradictory failure admissions in agent result
+  const contradictory = [
+    "requested url wasn't loaded",
+    "requested post wasn't loaded",
+    "couldn't open requested post",
+    "fell back to profile",
+    "target not reached",
+    "post was not loaded",
+    "post wasn't loaded",
+    "wasn't loaded",
+  ];
+  if (contradictory.some((p) => resultText.includes(p))) {
+    return {
+      status: 'FAILED',
+      reason: `Browser indicated target was not loaded: ${agentResult?.error || (agentResult as unknown as Record<string, unknown>)?.message || data.verification?.reason || 'target not reached'}`,
+      afterState: data.url,
+    };
+  }
+
   if (data.verification) {
+    if (data.verification.target_reached === false) {
+      return {
+        status: 'FAILED',
+        reason: data.verification.reason || 'Target was not reached',
+        afterState: data.url,
+      };
+    }
+    if (data.verification.login_modal_detected) {
+      return {
+        status: 'FAILED',
+        reason: data.verification.reason || 'Login/signup modal is blocking view',
+        afterState: data.url,
+      };
+    }
+
     const failed = (data.verification.checks ?? [])
       .filter((c) => !c.passed)
       .map((c) => c.check);
+
+    // Cross-site contamination check
+    const currentUrl = (data.url || '').toLowerCase();
+    if (taskText.includes('youtube') && currentUrl.includes('instagram.com')) {
+      return {
+        status: 'FAILED',
+        reason: 'Cross-site contamination: requested YouTube but browser is on Instagram',
+        afterState: data.url,
+      };
+    }
+    if (taskText.includes('instagram') && currentUrl.includes('youtube.com')) {
+      return {
+        status: 'FAILED',
+        reason: 'Cross-site contamination: requested Instagram but browser is on YouTube',
+        afterState: data.url,
+      };
+    }
+
+    // Task-specific verification: generic liveliness check is NOT sufficient for specific content tasks!
+    const wantsSpecificItem = /\b(post|reel|video|upload|photo|image|tweet|article)\b/i.test(taskText) ||
+                              taskText.includes('instagram') || taskText.includes('youtube');
+
+    const checks = data.verification.checks ?? [];
+    const isGenericOnly = (data.verification as Record<string, unknown>).is_generic_check === true ||
+      (checks.length > 0 && checks.every((c) =>
+        c.check === 'Page is not blank' ||
+        c.check === 'Page is not error or broken state' ||
+        c.check === 'Not stuck on login wall' ||
+        c.check === 'Page is active' ||
+        c.check.startsWith('URL contains')
+      ));
+
+    const hasTaskSpecificCheck = checks.some((c) => {
+      const cl = c.check.toLowerCase();
+      return cl.includes('post') || cl.includes('video') || cl.includes('author') ||
+             cl.includes('media') || cl.includes('channel') || cl.includes('target');
+    });
+
+    if (wantsSpecificItem && (isGenericOnly || !hasTaskSpecificCheck)) {
+      return {
+        status: 'FAILED',
+        reason: 'Generic browser liveliness passed but task-specific state verification was not performed',
+        afterState: data.url,
+      };
+    }
+
+    if (failed.length > 0) {
+      return {
+        status: 'FAILED',
+        reason: `Checks failed: ${failed.join('; ')}`,
+        afterState: data.url,
+      };
+    }
 
     if (data.verification.passed) {
       return {
@@ -312,7 +408,7 @@ function verifyBrowserStep(
     }
     return {
       status: 'FAILED',
-      reason: `Page did not confirm: ${failed.join('; ') || 'no checks passed'}`,
+      reason: `Page did not confirm: ${failed.join('; ') || data.verification.reason || 'no checks passed'}`,
       afterState: data.url,
     };
   }

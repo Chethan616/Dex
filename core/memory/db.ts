@@ -31,6 +31,7 @@ export interface Database {
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS tasks (
   request_id   TEXT PRIMARY KEY,
+  task_id      TEXT,
   session_id   TEXT,
   source       TEXT,
   text         TEXT NOT NULL,
@@ -71,6 +72,7 @@ CREATE TABLE IF NOT EXISTS workflows (
   trigger_text TEXT NOT NULL,
   shape        TEXT NOT NULL,
   params       TEXT NOT NULL,
+  bindings     TEXT NOT NULL DEFAULT '[]',
   plan         TEXT NOT NULL,
   created_at   INTEGER NOT NULL,
   last_run_at  INTEGER,
@@ -80,7 +82,12 @@ CREATE TABLE IF NOT EXISTS workflows (
   -- evicted by the cap.
   origin       TEXT NOT NULL DEFAULT 'named',
   -- Replays that failed. Two and it is forgotten -- see WorkflowStore.
-  fail_count   INTEGER NOT NULL DEFAULT 0
+  fail_count   INTEGER NOT NULL DEFAULT 0,
+  -- A legacy row with execution-specific state is retained for repair/audit but
+  -- must never be selected as a reusable template.
+  reusable     INTEGER NOT NULL DEFAULT 1,
+  invalid_reason TEXT,
+  template_version INTEGER NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS idx_workflows_shape ON workflows(shape);
 
@@ -263,12 +270,19 @@ export function db(file = process.env.DEX_DB || path.join('data', 'dex.db')): Da
  */
 function migrate(database: Database): void {
   const additions = [
+    'ALTER TABLE tasks ADD COLUMN task_id TEXT',
+    "ALTER TABLE workflows ADD COLUMN bindings TEXT NOT NULL DEFAULT '[]'",
+    'ALTER TABLE workflows ADD COLUMN reusable INTEGER NOT NULL DEFAULT 1',
+    'ALTER TABLE workflows ADD COLUMN invalid_reason TEXT',
+    'ALTER TABLE workflows ADD COLUMN template_version INTEGER NOT NULL DEFAULT 1',
     "ALTER TABLE workflows ADD COLUMN origin TEXT NOT NULL DEFAULT 'named'",
     'ALTER TABLE workflows ADD COLUMN fail_count INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE tasks ADD COLUMN feedback INTEGER',
     'ALTER TABLE schedules ADD COLUMN once_at INTEGER',
     "ALTER TABLE schedules ADD COLUMN kind TEXT NOT NULL DEFAULT 'task'",
     'ALTER TABLE schedules ADD COLUMN done_at INTEGER',
+    "ALTER TABLE artifacts ADD COLUMN verification_status TEXT NOT NULL DEFAULT 'verified'",
+    'ALTER TABLE artifacts ADD COLUMN metadata TEXT',
   ];
   for (const sql of additions) {
     try {

@@ -23,7 +23,7 @@ importantly — reports every place it looked when it fails. A resolver that
 cannot say what it tried is how a one-line registry lookup became a mystery.
 
 The PATH+PATHEXT walk here is the third copy in this repo, after
-`core/settings/which.ts` and `ui/dex-bar/lib/core/supervisor/dex_paths.dart`.
+`core/settings/which.ts` and `app/lib/core/supervisor/dex_paths.dart`.
 Three languages, one algorithm; there is no way to share it across the process
 boundary, so it is written out and labelled rather than quietly duplicated.
 """

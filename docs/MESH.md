@@ -332,8 +332,8 @@ the core accepts the `stepVersion`.
 
 ## 9. Rules
 
-1. **Do not edit** `core/`, `agents/`, `daemon/`, `src/main.ts`, `app/`, or
-   `ui/dex-bar/`. Everything you need is already there. If something is
+1. **Do not edit** `core/`, `agents/`, `daemon/`, `src/main.ts`, or `app/`.
+   Everything you need is already there. If something is
    genuinely missing, open an issue rather than reaching in — that file is
    probably being edited right now.
 2. **New directories only:** `channels/mesh/`, `mesh-relay/`, `web/`.

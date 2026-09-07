@@ -26,7 +26,7 @@ ${capabilityCatalogue()}${workflowCatalogue(workflows)}${unavailable}
 ${ROUTING_RULES}
 
 CONFIRMATION TIERS (assign per step, based on what happens if it goes wrong):
-  4 = Silent. Reading anything; file search; set_dns; power plan; volume;
+  4 = Silent. Reading anything; web browsing/search; file search; set_dns; power plan; volume;
       launching an app; Tier 2 reads (list_elements, read_element, wait_for,
       window_state).
   3 = Pre-approve once per session. Writing a file inside the Dex workspace;
@@ -34,10 +34,8 @@ CONFIRMATION TIERS (assign per step, based on what happens if it goes wrong):
   2 = Always confirm. Running a program; deleting anything; installing software;
       kill_process; registry_write outside DEX's own keys; sending a message to
       anyone.
-  1 = Hand-off. Passwords, CAPTCHAs, UAC prompts.
-
-  Do NOT plan Tier 1 steps for passwords or CAPTCHAs — the agents raise those
-  themselves, mid-step, when they actually hit one.
+  NOTE: Never output Tier 1. Tier 1 is hand-off (passwords/CAPTCHAs) and is only
+  raised dynamically by agents at runtime. Choose between 4, 3, or 2.
 
   When unsure between two tiers, pick the more cautious one. A needless
   confirmation costs the owner a click; a missing one can cost them data.
@@ -118,9 +116,9 @@ const plannerTool: ToolSpec = {
             },
             confirmationTier: {
               type: 'integer',
-              enum: [1, 2, 3, 4],
+              enum: [2, 3, 4],
               description:
-                '4=silent, 3=pre-approve per session, 2=always confirm, 1=hand-off to owner',
+                '4=silent, 3=pre-approve per session, 2=always confirm. Never 1 (hand-offs are raised dynamically by agents at runtime)',
             },
             dependsOn: {
               type: 'array',
@@ -436,7 +434,7 @@ const repairTool: ToolSpec = {
             capability: { type: 'string', enum: [...CAPABILITY_NAMES] },
             action: { type: 'string' },
             params: { type: 'object' },
-            confirmationTier: { type: 'integer', enum: [1, 2, 3, 4] },
+            confirmationTier: { type: 'integer', enum: [2, 3, 4] },
             dependsOn: { type: 'array', items: { type: 'string' } },
           },
           required: ['id', 'capability', 'action', 'params', 'confirmationTier', 'dependsOn'],
@@ -506,13 +504,15 @@ function nonEmptyString(value: unknown): string | undefined {
 
 /**
  * The planner's tier feeds the confirmation gate, so a model that mislabels it
- * weakens a safety control. Measured: gpt-oss-120b tagged trivial reads as
- * Tier 1. An out-of-range or missing value becomes Tier 2 — ask the owner —
- * because the safe direction to fail is "confirm something harmless", never
- * "silently run something destructive".
+ * weakens a safety control. Measured: models tagged trivial reads or browser tasks as
+ * Tier 1 (confusing Execution Tier 1 with Confirmation Tier 1).
+ * Tier 1 is hand-off (passwords/CAPTCHAs) and is NEVER planned up-front; agents raise
+ * handoffs dynamically at runtime. Tier 1 becomes Tier 4 (read), and an out-of-range
+ * value becomes Tier 2 — ask the owner.
  */
 function clampTier(value: unknown): 1 | 2 | 3 | 4 {
   const tier = Number(value);
-  if (tier === 1 || tier === 2 || tier === 3 || tier === 4) return tier;
+  if (tier === 2 || tier === 3 || tier === 4) return tier;
+  if (tier === 1) return 4; // Models confuse execution Tier 1 with confirmation Tier 1
   return 2;
 }

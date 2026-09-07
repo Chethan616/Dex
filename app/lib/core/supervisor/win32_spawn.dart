@@ -24,8 +24,8 @@
 ///
 /// ── on the win32 version ──────────────────────────────────────────────────
 ///
-/// This is the Dex Bar's spawner, ported to `app/` and rewritten against
-/// win32 5.x. The Bar pins win32 ^6, where every BOOL is an extension type
+/// This is the previous UI's spawner, ported to `app/` and rewritten against
+/// win32 5.x. That UI pinned win32 ^6, where every BOOL is an extension type
 /// (`started.value`, `handle.value.address`); this app cannot take win32 6
 /// because super_drag_and_drop pulls device_info_plus, which caps it below
 /// 6.0.0. So handles are plain ints here and BOOLs are compared against zero.

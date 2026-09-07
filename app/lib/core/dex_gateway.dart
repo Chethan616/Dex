@@ -27,7 +27,7 @@ import 'models/capability_health.dart';
 ///
 /// Connection details are never hardcoded. The core writes a handshake file at
 /// `%LOCALAPPDATA%\DEX\ui.json` with the port and a per-run token, and this
-/// reads it — the same file the Dex Bar reads, so both clients agree about
+/// reads it — the same file the Flutter app reads, so both clients agree about
 /// where the core is and neither can drift.
 class DexGatewayClient extends ChangeNotifier {
   /// The client this app is running on.

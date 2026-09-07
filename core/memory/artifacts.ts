@@ -16,18 +16,20 @@ import { db } from './db';
  * which is the point: a reference should only ever resolve to something real.
  */
 
-export type ArtifactKind = 'file' | 'email' | 'event' | 'page' | 'app' | 'setting';
+export type ArtifactKind = 'file' | 'email' | 'event' | 'page' | 'app' | 'setting' | 'post';
 
 export interface Artifact {
   id: string;
   requestId: string;
   sessionId: string;
   kind: ArtifactKind;
-  /** What the owner would call it: "invoice.pdf", "Q3 report", "Notepad". */
+  /** What the owner would call it: "invoice.pdf", "Q3 report", "Notepad", "Sidemen post". */
   name: string;
   /** How to find it again: a path, a URL, a message id. */
   locator: string;
   createdAt: number;
+  verificationStatus?: 'discovered' | 'opened' | 'verified';
+  metadata?: Record<string, unknown>;
 }
 
 export class ArtifactStore {
@@ -49,6 +51,67 @@ export class ArtifactStore {
     const found: Array<Omit<Artifact, 'id' | 'requestId' | 'sessionId' | 'createdAt'>> = [];
     const params = step.params as Record<string, unknown>;
     const data = (result.data ?? {}) as Record<string, unknown>;
+
+    // Structured browser artifacts from BrowserManager
+    if (Array.isArray(data.artifacts)) {
+      for (const item of data.artifacts as Array<Record<string, unknown>>) {
+        if (typeof item.locator === 'string' && typeof item.name === 'string') {
+          const rawKind = String(item.kind || 'page');
+          const kind: ArtifactKind = ['file', 'email', 'event', 'page', 'app', 'setting', 'post'].includes(rawKind)
+            ? (rawKind as ArtifactKind)
+            : 'page';
+          const vStatus = (item.verification_status || item.verificationStatus) as 'discovered' | 'opened' | 'verified' | undefined;
+          const meta = (item.verification_metadata || item.metadata) as Record<string, unknown> | undefined;
+          found.push({
+            kind,
+            name: String(item.name),
+            locator: String(item.locator),
+            verificationStatus: vStatus ?? 'verified',
+            metadata: meta,
+          });
+        }
+      }
+    } else if (data.artifact && typeof data.artifact === 'object') {
+      const item = data.artifact as Record<string, unknown>;
+      if (typeof item.locator === 'string' && typeof item.name === 'string') {
+        const rawKind = String(item.kind || 'page');
+        const kind: ArtifactKind = ['file', 'email', 'event', 'page', 'app', 'setting', 'post'].includes(rawKind)
+          ? (rawKind as ArtifactKind)
+          : 'page';
+        const vStatus = (item.verification_status || item.verificationStatus) as 'discovered' | 'opened' | 'verified' | undefined;
+        const meta = (item.verification_metadata || item.metadata) as Record<string, unknown> | undefined;
+        found.push({
+          kind,
+          name: String(item.name),
+          locator: String(item.locator),
+          verificationStatus: vStatus ?? 'verified',
+          metadata: meta,
+        });
+      }
+    }
+
+    // Direct post result
+    if (typeof data.post_url === 'string' && /^https?:\/\//i.test(data.post_url)) {
+      const acc = typeof data.account === 'string' ? data.account : 'Social';
+      const meta = (data.verification_metadata || data.metadata) as Record<string, unknown> | undefined;
+      found.push({
+        kind: 'post',
+        name: `${acc} latest post`,
+        locator: data.post_url,
+        verificationStatus: (data.verification && (data.verification as Record<string, unknown>).passed) ? 'verified' : 'discovered',
+        metadata: meta,
+      });
+    }
+
+    // Files produced by browser downloads
+    if (Array.isArray(data.downloads)) {
+      for (const dl of data.downloads as Array<Record<string, unknown>>) {
+        const dlPath = dl.path ?? dl.locator;
+        if (typeof dlPath === 'string' && looksLikePath(dlPath)) {
+          found.push({ kind: 'file', name: String(dl.name || dl.filename || path.basename(dlPath)), locator: dlPath });
+        }
+      }
+    }
 
     // A file the plan said it would produce, and verification confirmed.
     const file = step.action === 'write_file'
@@ -74,10 +137,6 @@ export class ArtifactStore {
     }
 
     if (step.action === 'launch_app' && typeof params.name === 'string') {
-      // The locator is the name the owner used, NOT what was executed. Windows
-      // launches Calculator through a `calc.exe` stub that exits immediately,
-      // so "close the app" resolving to "calc.exe" gives close_app a process
-      // that does not exist and a window title that never appears.
       found.push({ kind: 'app', name: params.name, locator: params.name });
     }
 
@@ -93,11 +152,16 @@ export class ArtifactStore {
   }
 
   save(input: Omit<Artifact, 'id' | 'createdAt'>): Artifact {
-    const artifact: Artifact = { ...input, id: randomUUID(), createdAt: Date.now() };
+    const artifact: Artifact = {
+      ...input,
+      id: randomUUID(),
+      createdAt: Date.now(),
+      verificationStatus: input.verificationStatus ?? 'verified',
+    };
     db()
       .prepare(
-        `INSERT INTO artifacts (id, request_id, session_id, kind, name, locator, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO artifacts (id, request_id, session_id, kind, name, locator, created_at, verification_status, metadata)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         artifact.id,
@@ -107,6 +171,8 @@ export class ArtifactStore {
         artifact.name,
         artifact.locator,
         artifact.createdAt,
+        artifact.verificationStatus,
+        artifact.metadata ? JSON.stringify(artifact.metadata) : null,
       );
     return artifact;
   }
@@ -129,6 +195,13 @@ export class ArtifactStore {
 }
 
 function hydrate(row: Record<string, unknown>): Artifact {
+  let meta: Record<string, unknown> | undefined;
+  if (typeof row.metadata === 'string' && row.metadata) {
+    try {
+      meta = JSON.parse(row.metadata) as Record<string, unknown>;
+    } catch {}
+  }
+  const vStatus = row.verification_status;
   return {
     id: String(row.id),
     requestId: String(row.request_id),
@@ -137,6 +210,10 @@ function hydrate(row: Record<string, unknown>): Artifact {
     name: String(row.name),
     locator: String(row.locator),
     createdAt: Number(row.created_at),
+    verificationStatus: (vStatus === 'discovered' || vStatus === 'opened' || vStatus === 'verified')
+      ? vStatus
+      : 'verified',
+    metadata: meta,
   };
 }
 

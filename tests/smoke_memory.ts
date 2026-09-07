@@ -250,6 +250,35 @@ function testReferences(): void {
       return resolver.resolve('email me the report').resolved.length === 0;
     })(),
   );
+
+  // Hard verification gate for downstream side-effects
+  (() => {
+    db().prepare('DELETE FROM artifacts').run();
+    store.save({
+      requestId: 'req_unverified',
+      sessionId: 'sess_1',
+      kind: 'post',
+      name: 'Sidemen latest post',
+      locator: 'https://www.instagram.com/p/12345/',
+      verificationStatus: 'discovered',
+    });
+
+    const unverifiedAttempt = resolver.resolve('send that to Veera');
+    check(
+      'downstream "send that" cannot use an unverified artifact',
+      unverifiedAttempt.resolved.length === 0,
+      `expected 0 resolved but got ${unverifiedAttempt.resolved.length}`,
+    );
+
+    // Promote artifact to verified
+    db().prepare("UPDATE artifacts SET verification_status = 'verified' WHERE name = 'Sidemen latest post'").run();
+    const verifiedAttempt = resolver.resolve('send that to Veera');
+    check(
+      'downstream "send that" succeeds once artifact is verified',
+      verifiedAttempt.resolved.length === 1 && verifiedAttempt.resolved[0].match.name === 'Sidemen latest post',
+      JSON.stringify(verifiedAttempt.resolved.map(r => r.match.name)),
+    );
+  })();
 }
 
 // ── sessions ─────────────────────────────────────────────────────────────────

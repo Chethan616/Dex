@@ -379,13 +379,16 @@ Designed in §15. Not part of core V3.
 
 ## 10.6 Saved workflows
 
-A task Dex worked out once, kept so it never has to work it out again.
+A reusable task template Dex worked out once, kept so it never has to plan the
+same structure again. A template is not an execution result.
 `core/workflows/`, backed by the same local SQLite file as the usage history.
 
-**Why replay beats re-planning.** The saved steps are the ones already observed
-working. A fresh planning call is another chance to pick a different capability,
-mislabel a confirmation tier, or simply have an off day. Re-solving a solved
-problem is a risk, not a neutral cost.
+**Why template reuse beats re-planning.** The saved steps are the ones already
+observed working, but each use creates a fresh execution instance with the
+current request, parameters, request id, task id, browser state, and
+verification. A fresh planning call is another chance to pick a different
+capability, mislabel a confirmation tier, or simply have an off day. Re-solving
+a solved problem is a risk, not a neutral cost.
 
 **Three ways to reach one**, in increasing order of what they cost:
 
@@ -411,11 +414,20 @@ last expanded step, refuses to run a workflow whose arguments are missing, and
 bounds nesting depth.
 
 **Parameters are inferred, not asked for.** On save, each literal in the original
-request is looked for in the plan's own step parameters. A value the plan used
-becomes a parameter named after the field it filled; a value that appears
-nowhere was phrasing, and is left alone. Shape matching is exact — never fuzzy —
-because running the wrong recipe with the owner's numbers substituted into it is
-far worse than paying for one planning call.
+request is looked for in the plan's own step parameters. Concrete possessive
+entities such as `sidemen's` are explicitly treated as parameters, even when
+they are unquoted. A value the plan used becomes a parameter named after the
+field it filled; a value that appears nowhere was phrasing, and is left alone.
+Discovered URLs, screenshots, artifacts, verification results, and browser/task
+state are execution data and are never put in the template. Shape matching is
+exact — never fuzzy — because running the wrong recipe with the owner's
+numbers substituted into it is far worse than paying for one planning call.
+
+The stored objects are separate: `WorkflowTemplate`, `WorkflowExecutionInstance`,
+and `WorkflowExecutionResult`. “Ask again” instantiates and executes the
+template; it never returns the previous execution result. Legacy rows are
+repaired when possible and quarantined when execution-specific data cannot be
+made reusable.
 
 Dex offers to save a task after the same shape has succeeded three times.
 

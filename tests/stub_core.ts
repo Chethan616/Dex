@@ -1,6 +1,6 @@
 /**
  * A DEX core with a stub Brain and a stub agent — everything real except the
- * LLM call. Lets you drive the Dex Bar UI end to end without an API key.
+ * LLM call. Lets you drive the Flutter app end to end without an API key.
  *
  *   npx ts-node tests/stub_core.ts
  */
@@ -29,7 +29,7 @@ class StubBrain {
     emit('routing', 'Brain thinking (stub)…', request.requestId);
     await sleep(600);
 
-    // "status" → a single Tier 4 step: the bar still grows and re-centres, but
+    // "status" → a single Tier 4 step: the app still grows and re-centres, but
     // no confirmation card appears. Useful for isolating resize-related input.
     if (/status/i.test(request.text)) {
       return {
@@ -130,7 +130,7 @@ function main(): void {
     evidenceDir: 'data/evidence',
   }).start();
 
-  console.log('Stub core running. Launch the Dex Bar and type anything.');
+  console.log('Stub core running. Launch the Flutter app and type anything.');
   console.log('Try "open notepad and save a note" for the multi-step GUI plan.');
 }
 

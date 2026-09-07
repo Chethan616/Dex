@@ -5,6 +5,7 @@ import { emit } from '../../core/events/bus';
 import { readConfig } from '../../core/settings/config_store';
 import { SiteRouteStore, describeRoute } from '../../core/memory/site_routes';
 import { BROWSER_TOOLS } from '../../core/brain/browser_tools';
+import { ArtifactStore } from '../../core/memory/artifacts';
 
 const PORT = parseInt(process.env.BROWSER_AGENT_PORT ?? '8766', 10);
 
@@ -58,7 +59,19 @@ interface TaskResponse {
   error?: string;
   retryable?: boolean;
   needs_handoff?: HandoffSignal;
+  needs_confirmation?: { action: string; prompt: string; risk: string; target?: string };
+  artifacts?: Array<{
+    kind: string;
+    name: string;
+    locator: string;
+    verification_status?: 'discovered' | 'opened' | 'verified';
+    verification_metadata?: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
+  }>;
   verification?: { passed: boolean; checks: Array<{ check: string; passed: boolean }> } | null;
+  screenshot_path?: string;
+  target_site?: string;
+  source_site?: string;
 }
 
 interface PrimitiveResponse {
@@ -306,44 +319,53 @@ ${task}` : task;
       stepId,
     );
 
+    // Derive target_site from instruction / start_url to prevent cross-site contamination
+    const tLower = instruction.toLowerCase();
+    let targetSite: string | null = null;
+    if (tLower.includes('instagram')) targetSite = 'instagram.com';
+    else if (tLower.includes('youtube')) targetSite = 'youtube.com';
+    else if (tLower.includes('gmail')) targetSite = 'mail.google.com';
+    else if (tLower.includes('linkedin')) targetSite = 'linkedin.com';
+    else if (tLower.includes('whatsapp')) targetSite = 'web.whatsapp.com';
+    else if (typeof params.start_url === 'string' && params.start_url) {
+      try {
+        targetSite = new URL(params.start_url).hostname;
+      } catch {
+        // invalid URL
+      }
+    }
+
+    const browserRequested = browserOf(params) || (tLower.includes('in my browser') ? 'owner' : null);
+
     let response: TaskResponse;
     try {
       response = await this.post<TaskResponse>('/run-task', {
         task: instruction,
         start_url: params.start_url ? String(params.start_url) : null,
         max_steps: params.max_steps ? Number(params.max_steps) : undefined,
-        browser: browserOf(params),
+        browser: browserRequested,
         mode: composerMode(),
         // The remembered route travels with the task.
-        //
-        // It already reached the autonomous browser as prose prepended to the
-        // instruction. The extension loop never got it at all, so "the status
-        // control is on the profile page, not in settings" was relearned from
-        // scratch on every run. Sent as data so that loop can put it in its
-        // world state rather than parse it back out of a sentence.
         route: route
           ? { origin: route.origin, goal: route.goal, steps: route.steps }
           : null,
-        // What each tool is allowed to do to the owner, from the one place it
-        // is declared.
-        //
-        // Until now `tierFor` and `browserToolCatalogue` were referenced only
-        // by tests — nothing in production read them, so the tiers on the
-        // extension's tools were decoration. Phase 6's stated reason for
-        // forking rather than consuming MCP was that native tools "go through
-        // the same path as every other action", and they did not.
-        //
-        // Sent as data rather than reimplemented on the Python side, because
-        // two hand-maintained copies of the same table in two languages is the
-        // exact defect this project has now fixed twice.
         tool_tiers: Object.fromEntries(
           Object.entries(BROWSER_TOOLS).map(([name, spec]) => [name, spec.tier]),
         ),
         verify: Object.keys(verify).length ? verify : null,
         request_id: requestId,
         step_id: stepId,
+        target_site: targetSite,
+        expected_url: typeof params.expected_url === 'string' ? params.expected_url : null,
+        expected_entity: typeof params.expected_entity === 'string' ? params.expected_entity : null,
       });
     } catch (err) {
+      const errStr = String(err);
+      if (errStr.includes("MODE_B_USER_ATTACHED")) {
+        const cdpMsg = "Your personal browser is not attachable via CDP. Close any browser window started without remote debugging, then start the requested browser with --remote-debugging-port=9222, or let DEX use its isolated background browser.";
+        emit('failed', cdpMsg, requestId, stepId);
+        return { success: false, error: cdpMsg, retryable: false };
+      }
       return this.transportFailure(err, requestId, stepId);
     }
 
@@ -422,6 +444,29 @@ ${task}` : task;
       }
     };
 
+    if (response.needs_confirmation && ctx) {
+      const conf = response.needs_confirmation;
+      emit('awaiting', `Confirmation required: ${conf.prompt}`, requestId, stepId);
+      const approved = await ctx.handoff({
+        reason: conf.prompt,
+        instruction: 'Choose "Done, continue" to confirm, or cancel.',
+        timeoutMs: 120_000,
+      });
+      if (!approved) {
+        return { success: false, error: 'Cancelled by owner', retryable: false };
+      }
+      emit('executing', 'Action confirmed by owner, proceeding...', requestId, stepId);
+      try {
+        response = await this.post<TaskResponse>('/confirm', {
+          confirmed: true,
+          task: instruction,
+          context: { ...params, confirmed: true },
+        });
+      } catch (err) {
+        return this.transportFailure(err, requestId, stepId);
+      }
+    }
+
     for (let handoffs = 0; response.needs_handoff; handoffs += 1) {
       const wall = response.needs_handoff;
       const sessionId = response.session_id;
@@ -495,22 +540,103 @@ ${task}` : task;
     // And write down the path if there was not one already. A run that worked
     // is the cheapest possible lesson: nobody had to be asked, and nothing was
     // hardcoded about this site.
-    if (response.success === true) {
+    if (response.success === true && response.verification?.passed !== false) {
       rememberPath(response as unknown as Record<string, unknown>);
+
+      // Register any produced artifacts in ArtifactStore for cross-turn references
+      if (Array.isArray(response.artifacts)) {
+        const store = new ArtifactStore();
+        const sessId = requestId || 'default';
+        for (const a of response.artifacts) {
+          if (a && typeof a.name === 'string' && typeof a.locator === 'string') {
+            try {
+              store.save({
+                requestId,
+                sessionId: sessId,
+                kind: (a.kind === 'post' || a.kind === 'file' || a.kind === 'page') ? a.kind : 'page',
+                name: a.name,
+                locator: a.locator,
+                verificationStatus: a.verification_status || 'verified',
+                metadata: a.verification_metadata || a.metadata,
+              });
+            } catch {
+              // Ignore duplicate insertion
+            }
+          }
+        }
+      }
     }
 
-    if (!response.success) {
-      emit('failed', `Browser: ${response.error ?? 'unknown error'}`, requestId, stepId);
+    // Hard Verification Gate: Never return success if verification failed
+    const verificationFailed = response.verification !== undefined && response.verification !== null && response.verification.passed === false;
+
+    // Contradictory phrase gate: agent prose admitting failure must not become DONE.
+    // These phrases indicate the agent knows it didn't complete the task but
+    // returned success=true anyway (the core false-success bug).
+    const CONTRADICTORY_PHRASES = [
+      "requested url wasn't loaded",
+      "requested post wasn't loaded",
+      "couldn't open requested post",
+      "fell back to profile",
+      "target not reached",
+      "post was not loaded",
+      "post wasn't loaded",
+      "wasn't loaded",
+    ];
+    const responseText = [
+      typeof response.answer === 'string' ? response.answer : '',
+      typeof response.result === 'string' ? response.result : '',
+      typeof response.error === 'string' ? response.error : '',
+    ].join(' ').toLowerCase();
+    const hasContradictory = CONTRADICTORY_PHRASES.some((p) => responseText.includes(p));
+
+    // Task-specific post verification: target_reached=false is an explicit failure.
+    const verif = response.verification as Record<string, unknown> | null | undefined;
+    const targetNotReached = verif && typeof verif === 'object' && verif.target_reached === false;
+    const loginModalBlocking = verif && typeof verif === 'object' && verif.login_modal_detected === true;
+
+    // Cross-site contamination check: hard reject if response landed on wrong domain
+    let crossSiteMismatch = false;
+    if (targetSite) {
+      const respUrl = (response.url || '').toLowerCase();
+      const respSite = (response.target_site || (verif?.source_site as string) || '').toLowerCase();
+      if (targetSite.includes('youtube') && (respUrl.includes('instagram.com') || respSite.includes('instagram.com'))) {
+        crossSiteMismatch = true;
+      } else if (targetSite.includes('instagram') && (respUrl.includes('youtube.com') || respSite.includes('youtube.com'))) {
+        crossSiteMismatch = true;
+      }
+    }
+
+    if (!response.success || verificationFailed || hasContradictory || targetNotReached || loginModalBlocking || crossSiteMismatch) {
+      let errMsg: string;
+      if (crossSiteMismatch) {
+        errMsg = `Cross-site contamination: requested ${targetSite} but browser ended on ${response.url}`;
+      } else if (hasContradictory) {
+        errMsg = `Task result contained contradictory failure admission: "${responseText.slice(0, 200)}"`;
+      } else if (targetNotReached) {
+        errMsg = (verif as Record<string, unknown>)?.reason as string || 'Target post was not reached';
+      } else if (loginModalBlocking) {
+        errMsg = (verif as Record<string, unknown>)?.reason as string || 'Login/signup modal is blocking content — needs_handoff';
+      } else if (verificationFailed) {
+        errMsg = `Browser verification failed: ${response.verification?.checks?.filter(c => !c.passed).map(c => c.check).join('; ') || 'checks failed'}`;
+      } else {
+        errMsg = response.error ?? 'Browser task failed';
+      }
+
+      emit('failed', `Browser: ${errMsg}`, requestId, stepId);
       return {
         success: false,
-        error: response.error ?? 'Browser task failed',
-        retryable: response.retryable ?? true,
+        error: errMsg,
+        retryable: loginModalBlocking ? false : (response.retryable ?? true),
         // A run can fail after it downloaded something. Reporting the file
         // anyway is how the owner keeps what did work.
         data: {
           url: response.url,
           steps: response.steps,
           downloads: response.downloads ?? [],
+          verification: response.verification ?? null,
+          // Never expose the screenshot when we know the content is wrong.
+          screenshot_path: null,
         },
       };
     }
@@ -537,12 +663,18 @@ ${task}` : task;
         // The run's own evidence for its success. A claim with nothing behind
         // it is not the same as a checked one, and the verifier tells them
         // apart rather than believing both.
-        // Undefined means the run did not report a verdict at all (an older
-        // shape); an empty string means it claimed success and could not say
-        // what showed it. Those are different and the verifier treats them so.
         verified_by: response.verified_by,
         steps: response.steps,
         verification: response.verification ?? null,
+        // Belt-and-suspenders: suppress screenshot if task-specific verification
+        // data indicates target was not actually reached (e.g. adapter set
+        // success=true but verification.target_reached=false).
+        screenshot_path: (
+          (verif && typeof verif === 'object' && (verif.target_reached === false || verif.login_modal_detected === true))
+            ? null
+            : (response.screenshot_path ?? (response as unknown as Record<string, unknown>).screenshot_path ?? null)
+        ),
+        artifacts: response.artifacts ?? [],
       },
     };
   }

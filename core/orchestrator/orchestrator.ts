@@ -634,6 +634,23 @@ export class Orchestrator {
     }
 
     if (verification.status === 'UNVERIFIABLE') {
+      // Hard Verification Gate: Browser tasks must not claim completion without real-state proof
+      if (step.capability === 'can_browse_web') {
+        const message = `Browser task unverified — ${verification.reason}. Real browser state was not proven.`;
+        stepReports.set(step.id, {
+          stepId: step.id,
+          action: step.action,
+          agent: agentName,
+          status: 'failed',
+          message,
+        });
+        emit('failed', message, requestId, step.id, {
+          ...this.agentEventData(agentName, ctx.signal?.(), previousSteps),
+          verification: 'FAILED',
+        });
+        return 'failed';
+      }
+
       const message = `Done, unverified — ${verification.reason}. ${this.nextLine(step, completed, 'ok')}`;
       stepReports.set(step.id, {
         stepId: step.id,

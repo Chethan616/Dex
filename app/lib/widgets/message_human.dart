@@ -18,25 +18,27 @@ class MessageHuman extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DexSpace.lg, vertical: DexSpace.md,
-              ),
-              decoration: BoxDecoration(
-                color: DexColors.surface2,
-                borderRadius: const BorderRadius.only(
-                  topLeft: DexRadius.xl,
-                  topRight: DexRadius.xl,
-                  bottomLeft: DexRadius.xl,
-                  bottomRight: DexRadius.sm,
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DexSpace.lg, vertical: DexSpace.md,
                 ),
-                border: Border.all(color: DexColors.border),
-              ),
-              child: Text(
-                message.text ?? '',
-                style: DexType.body(color: DexColors.text),
+                decoration: BoxDecoration(
+                  color: DexColors.surface2,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: DexRadius.xl,
+                    topRight: DexRadius.xl,
+                    bottomLeft: DexRadius.xl,
+                    bottomRight: DexRadius.sm,
+                  ),
+                  border: Border.all(color: DexColors.border),
+                ),
+                child: Text(
+                  message.text ?? '',
+                  style: DexType.body(color: DexColors.text),
+                ),
               ),
             ),
           ),

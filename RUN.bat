@@ -5,10 +5,10 @@ REM
 REM  Double-click this, or run it from a terminal.
 REM
 REM  It used to be the only way in: it ran scripts\run-dev.ps1, which started
-REM  the daemon, the agents, the core and the OLD Dex Bar in ui\dex-bar. The
-REM  app in app\ had no way to start any of that, so opening it directly showed
-REM  "core not running" with no way to fix it from inside. The supervisor now
-REM  lives in the app, so this is a convenience rather than a requirement:
+REM  the daemon, the agents and the core. The app in app\ had no way to start
+REM  any of that, so opening it directly showed "core not running" with no way
+REM  to fix it from inside. The supervisor now lives in the app, so this is a
+REM  convenience rather than a requirement:
 REM  it checks the prerequisites, builds once if needed, and opens Dex.
 REM
 REM  RUN.bat -Console still gives the developer path - run-dev.ps1 with the

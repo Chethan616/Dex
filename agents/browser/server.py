@@ -33,32 +33,27 @@ from pydantic import BaseModel
 
 from browser_manager import BrowserManager
 from browser_state import BrowserArtifact
+from browser_runtime import BrowserRuntimeManager
 
 PORT = int(os.environ.get("BROWSER_AGENT_PORT", "8766"))
-HEADLESS = os.environ.get("DEX_BROWSER_HEADLESS", "").lower() in ("true", "1")
+_headless_setting = os.environ.get("DEX_BROWSER_HEADLESS", "").strip().lower()
+HEADLESS = _headless_setting not in ("false", "0", "no")
 
 # Singleton BrowserManager
 manager: BrowserManager | None = None
+runtime: BrowserRuntimeManager | None = None
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    global manager
+    global manager, runtime
     log.info(f"Starting Browser Agent server on port {PORT} (headless={HEADLESS})...")
     manager = BrowserManager(headless=HEADLESS)
-    try:
-        # Start or attach once for this Dex run. The selected personal browser
-        # remains available over CDP, so later Dex restarts reuse the same
-        # window/session instead of opening another blank profile.
-        await manager.initialize()
-    except Exception as err:
-        # Keep the HTTP agent available so the UI can show the actionable
-        # one-time Vivaldi restart message; do not fall back to another profile.
-        log.warning(f"Initial browser launch deferred or failed: {err}")
+    runtime = BrowserRuntimeManager(manager)
+    log.info("BROWSER_RUNTIME_STOPPED browser startup is lazy")
     yield
-    if manager:
-        log.info("Shutting down BrowserManager...")
-        await manager.close()
+    if runtime:
+        await runtime.close()
 
 
 app = FastAPI(title="DEX Browser Agent", lifespan=lifespan)
@@ -110,11 +105,22 @@ class PrimitiveRequest(BaseModel):
     model_config = {"extra": "allow"}
 
 
+class OpenOwnerBrowserRequest(BaseModel):
+    """Explicit Mode B request; it never falls back to the DEX profile."""
+    profile: str = ""
+    url: str = ""
+
+
 @app.get("/health")
 @app.get("/status")
 async def health_check():
     is_alive = manager.session.is_connected if manager else False
-    return {"status": "ok", "browser_connected": is_alive, "port": PORT}
+    return {
+        "status": "ok",
+        "browser_connected": is_alive,
+        "runtime_state": runtime.state.value if runtime else "STOPPED",
+        "port": PORT,
+    }
 
 
 @app.get("/state")
@@ -149,7 +155,10 @@ async def run_task(req: RunTaskRequest):
                     "retryable": False,
                 }
 
-        res = await manager.runner.run_task(
+        if not runtime:
+            raise HTTPException(status_code=503, detail="Browser runtime not initialized")
+        res = await runtime.run_task(
+            mode_hint="owner" if want_owner_browser else None,
             task=req.task,
             start_url=req.start_url,
             max_steps=req.max_steps,
@@ -164,6 +173,26 @@ async def run_task(req: RunTaskRequest):
     except Exception as err:
         log.error(f"Error executing run_task: {err}", exc_info=True)
         return {"success": False, "error": str(err), "retryable": True}
+
+
+@app.post("/open-owner-browser")
+async def open_owner_browser(req: OpenOwnerBrowserRequest):
+    """Attach to the user's already-CDP-enabled browser on explicit request."""
+    if not runtime or not manager:
+        raise HTTPException(status_code=503, detail="Browser runtime not initialized")
+    try:
+        await runtime.ensure_running(mode_hint="owner")
+        page = await manager.tabs.new_tab(req.url or None) if req.url else await manager.get_active_page()
+        return {
+            "success": True,
+            "data": {
+                "attached": True,
+                "profile": manager.session.browser_family or req.profile or "personal browser",
+                "url": page.url,
+            },
+        }
+    except Exception as err:
+        return {"success": False, "error": str(err), "retryable": False}
 
 
 @app.post("/resume")
@@ -301,16 +330,23 @@ async def execute_primitive(req: PrimitiveRequest):
 
     try:
         if action == "navigate":
+            if not runtime:
+                raise HTTPException(status_code=503, detail="Browser runtime not initialized")
+            await runtime.ensure_running(mode_hint="owner" if p.get("browser") == "owner" else None)
             url = str(p.get("url") or "about:blank")
             res = await manager.navigation.goto(url)
             return {"success": True, "data": res}
 
         elif action in ("read", "read_page"):
+            if runtime:
+                await runtime.ensure_running(mode_hint="owner" if p.get("browser") == "owner" else None)
             text = await manager.inspector.get_visible_text()
             page = await manager.get_active_page()
             return {"success": True, "data": {"text": text, "url": page.url, "title": await page.title()}}
 
         elif action in ("inspect", "map_page", "page_model"):
+            if runtime:
+                await runtime.ensure_running(mode_hint="owner" if p.get("browser") == "owner" else None)
             compact = await manager.inspector.get_compact_text()
             elements = await manager.inspector.inspect()
             page = await manager.get_active_page()
@@ -360,6 +396,8 @@ async def execute_primitive(req: PrimitiveRequest):
             return {"success": res.success, "data": res.to_dict(), "error": res.error}
 
         elif action == "screenshot":
+            if runtime:
+                await runtime.ensure_running(mode_hint="owner" if p.get("browser") == "owner" else None)
             path = p.get("path")
             full_page = bool(p.get("full_page", False))
             res = await manager.visual.screenshot(save_path=path, full_page=full_page)
@@ -379,6 +417,8 @@ async def execute_primitive(req: PrimitiveRequest):
             return {"success": True, "data": res}
 
         elif action == "open_browser":
+            if runtime:
+                await runtime.ensure_running(mode_hint="owner" if p.get("browser") == "owner" else None)
             url = p.get("url")
             page = await manager.tabs.new_tab(url)
             return {"success": True, "data": {"url": page.url, "attached": True}}
@@ -388,11 +428,15 @@ async def execute_primitive(req: PrimitiveRequest):
             return {"success": True, "data": state.to_dict()}
 
         elif action == "verify":
+            if runtime:
+                await runtime.ensure_running(mode_hint="owner" if p.get("browser") == "owner" else None)
             spec = p.get("spec") or p
             res = await manager.verifier.verify_spec(spec)
             return {"success": res["passed"], "data": res}
 
         elif action == "tabs":
+            if runtime:
+                await runtime.ensure_running(mode_hint="owner" if p.get("browser") == "owner" else None)
             sub = p.get("sub_action", "list")
             if sub == "list":
                 tabs = await manager.tabs.list_tabs()
@@ -431,7 +475,7 @@ async def browser_diagnostics():
     if not manager:
         raise HTTPException(status_code=503, detail="Browser manager not initialized")
     try:
-        diagnostics = await manager.get_diagnostics()
+        diagnostics = await runtime.diagnostics() if runtime else await manager.get_diagnostics()
         return diagnostics
     except Exception as err:
         log.error(f"Error fetching diagnostics: {err}", exc_info=True)

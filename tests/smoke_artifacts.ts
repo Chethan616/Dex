@@ -130,6 +130,18 @@ check(
   describeArtifact('describe_file', { name: 'x.bin', kind: 'unreadable' }) === undefined,
 );
 
+console.log('\nbrowser — visual artifacts drawn for verified screenshots');
+const browserShot = describeArtifact('run_task', {
+  screenshot_path: 'C:\\Users\\cheth\\AppData\\Local\\DEX\\screenshots\\shot1.png',
+  result: 'Verified Sidemen latest post',
+  account: 'sidemen',
+  caption: 'Charity match announcement',
+});
+check('browser run_task with screenshot produces reading artifact', browserShot !== undefined && browserShot.kind === 'reading');
+check('file path is set for Flutter Image.file rendering', browserShot?.file === 'C:\\Users\\cheth\\AppData\\Local\\DEX\\screenshots\\shot1.png');
+check('title indicates identified account', browserShot?.title === '@sidemen latest post');
+check('body contains caption', browserShot?.body === 'Charity match announcement');
+
 // The prose must not read the whole document out loud either.
 const forModelReading = factsForPhrasing([{
   action: 'describe_file',

@@ -88,14 +88,14 @@ foreach ($p in $visible) {
     $stopped++
 }
 
-# 2b. The Dex Bar. It is the UI, so "stop everything" has to include it --
-#     otherwise the bar stays on screen showing "Core not connected" forever.
+# 2b. The Flutter app. It is the UI, so "stop everything" has to include it --
+#     otherwise it stays on screen showing "Core not connected" forever.
 #     Unless we were asked for the daemon only, in which case the UI is the
 #     thing that called us and is waiting for an answer.
-$bars = if ($DaemonOnly) { @() }
-        else { Get-Process Dex, dex_bar -ErrorAction SilentlyContinue }
-foreach ($p in $bars) {
-    Say "  stopping Dex Bar (pid $($p.Id))" DarkGray
+$apps = if ($DaemonOnly) { @() }
+        else { Get-Process Dex -ErrorAction SilentlyContinue }
+foreach ($p in $apps) {
+    Say "  stopping Flutter app (pid $($p.Id))" DarkGray
     Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
     $stopped++
 }

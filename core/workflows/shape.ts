@@ -17,6 +17,8 @@ export interface Shaped {
   shape: string;
   /** The literals that were removed, in the order they appeared. */
   literals: string[];
+  /** The kind of each literal; used to distinguish entities from execution data. */
+  kinds: string[];
 }
 
 /**
@@ -26,6 +28,9 @@ export interface Shaped {
  */
 const MASKS: Array<{ kind: string; re: RegExp }> = [
   { kind: 'str', re: /"[^"]*"|'[^']*'/g },
+  // A possessive account/entity is data, even when it is not quoted. This is
+  // the common browser-workflow shape: "open {entity}'s latest post".
+  { kind: 'entity', re: /\b([a-z][a-z0-9._-]{1,63})['’]s\b/gi },
   { kind: 'url', re: /\bhttps?:\/\/\S+/gi },
   { kind: 'path', re: /\b[a-zA-Z]:\\[^\s,;]*|\\\\[^\s,;]+/g },
   { kind: 'ip', re: /\b\d{1,3}(?:\.\d{1,3}){3}\b/g },
@@ -37,6 +42,7 @@ const NOISE = /\b(please|could you|can you|would you|for me|now|just|kindly|my|t
 
 export function shapeOf(text: string): Shaped {
   const literals: string[] = [];
+  const kinds: string[] = [];
 
   // Masking runs against the ORIGINAL text so literals keep their case. Only
   // the leftover shape is lowercased for comparison. Extracting from a
@@ -46,7 +52,11 @@ export function shapeOf(text: string): Shaped {
 
   for (const { kind, re } of MASKS) {
     working = working.replace(re, (match) => {
-      literals.push(match.replace(/^["']|["']$/g, ''));
+      const literal = kind === 'entity'
+        ? match.replace(/['’]s$/i, '')
+        : match.replace(/^["']|["']$/g, '');
+      literals.push(literal);
+      kinds.push(kind);
       return ` <${kind}> `;
     });
   }
@@ -58,7 +68,7 @@ export function shapeOf(text: string): Shaped {
     .replace(/\s+/g, ' ')
     .trim();
 
-  return { shape, literals };
+  return { shape, literals, kinds };
 }
 
 /**

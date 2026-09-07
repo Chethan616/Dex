@@ -16,10 +16,31 @@ import { isAbort } from './llm/provider';
 import { DeliveryTarget, delivery } from './delivery/registry';
 import { dropDuplicateSteps } from './orchestrator/duplicate_steps';
 
+function emitWorkflowMatch(
+  template: string,
+  currentRequest: string,
+  parameters: Record<string, string>,
+  executionInstance: string,
+  requestId: string,
+  taskId: string,
+): void {
+  emit(
+    'routing',
+    `WORKFLOW_MATCH: template=${template} current_request=${currentRequest} ` +
+      `parameters=${JSON.stringify(parameters)} execution_instance=${executionInstance} ` +
+      `request_id=${requestId} task_id=${taskId}`,
+    requestId,
+    undefined,
+    { template, current_request: currentRequest, parameters, execution_instance: executionInstance, request_id: requestId, task_id: taskId },
+  );
+}
+
 export interface GatewayResult {
   status: TaskStatus;
   summary: string;
   requestId: string;
+  /** Fresh task identity for this execution instance. */
+  taskId: string;
   /** Set when the task ran from a saved workflow instead of a fresh plan. */
   workflow?: string;
   /** Set when this task looks worth saving — the UI and CLI offer it. */
@@ -104,9 +125,10 @@ export class Gateway {
     deliverTo?: DeliveryTarget,
   ): Promise<GatewayResult> {
     const requestId = randomUUID();
+    const taskId = randomUUID();
     if (deliverTo) delivery.register(requestId, deliverTo);
     try {
-      return await this.dispatch(requestId, source, senderId, text);
+      return await this.dispatch(requestId, taskId, source, senderId, text);
     } finally {
       delivery.release(requestId);
     }
@@ -114,6 +136,7 @@ export class Gateway {
 
   private async dispatch(
     requestId: string,
+    taskId: string,
     source: DexRequest['source'],
     senderId: string,
     text: string,
@@ -140,7 +163,7 @@ export class Gateway {
     if (!this.ownerGate.verify(request)) {
       // Silent ignore — no response to non-owners, and nothing recorded about
       // them beyond the fact that something was ignored.
-      return { status: 'ABORTED', summary: 'Unauthorized sender', requestId };
+      return { status: 'ABORTED', summary: 'Unauthorized sender', requestId, taskId };
     }
 
     emit('thinking', `"${request.text}"`, requestId);
@@ -153,12 +176,13 @@ export class Gateway {
     if (refs.ambiguous.length > 0) {
       const question = ReferenceResolver.question(refs.ambiguous[0]);
       emit('awaiting', question, requestId);
-      this.telemetry.startTask({ requestId, sessionId, source, text: request.text });
+      this.telemetry.startTask({ requestId, taskId, sessionId, source, text: request.text });
       this.telemetry.finishTask(requestId, 'ABORTED');
       return {
         status: 'ABORTED',
         summary: 'Need to know which one you meant',
         requestId,
+        taskId,
         needsClarification: question,
       };
     }
@@ -174,13 +198,14 @@ export class Gateway {
     // An explicit `run <name>`, or a phrase that re-says something already
     // saved. Either way the steps are already known to work, so there is
     // nothing for the Brain to decide.
-    const direct = this.resolveWorkflow(request.text, requestId);
+    const direct = this.resolveWorkflow(request.text, requestId, taskId);
     if (direct) {
-      return this.runPlan(request, direct.plan, direct.name, sessionId);
+      return this.runPlan(request, direct.plan, direct.name, sessionId, direct.parameters);
     }
 
     this.telemetry.startTask({
       requestId,
+      taskId,
       sessionId,
       source,
       text: request.text,
@@ -196,7 +221,8 @@ export class Gateway {
         `Reusing the plan for "${cached.originalText}" (${(cached.similarity * 100).toFixed(0)}% match)`,
         requestId,
       );
-      return this.runPlan(request, cached.plan, undefined, sessionId);
+      const freshCachedPlan = { ...cached.plan, requestId, taskId };
+      return this.runPlan(request, freshCachedPlan, undefined, sessionId);
     }
 
     let plan: ExecutionPlan;
@@ -206,17 +232,17 @@ export class Gateway {
       // Stopping is not an error. It used to be reported as
       // "Planning error: Cancelled", which reads as something having gone
       // wrong when the owner is the one who decided.
-      if (isAbort(err)) return this.stopped(requestId, request.text);
+      if (isAbort(err)) return this.stopped(requestId, taskId, request.text);
       const msg = err instanceof Error ? err.message : String(err);
       emit('failed', `Planning error: ${msg}`, requestId);
       this.telemetry.finishTask(requestId, 'FAILED');
-      return { status: 'FAILED', summary: msg, requestId };
+      return { status: 'FAILED', summary: msg, requestId, taskId };
     }
 
     // Stop pressed while the model was thinking. The plan arrived; nothing is
     // going to run it.
     if (this.orchestrator.cancellations.isCancelled(requestId)) {
-      return this.stopped(requestId, request.text);
+      return this.stopped(requestId, taskId, request.text);
     }
 
     // A question rather than a task. Nothing to execute, nothing to verify,
@@ -229,7 +255,7 @@ export class Gateway {
     if (plan.steps.length === 0 && plan.reply) {
       emit('done', plan.reply, requestId);
       this.telemetry.finishTask(requestId, 'ANSWERED');
-      return { status: 'ANSWERED', summary: plan.reply, requestId, answer: plan.reply };
+      return { status: 'ANSWERED', summary: plan.reply, requestId, taskId, answer: plan.reply };
     }
 
     // The Brain may have chosen a saved workflow rather than planning from
@@ -264,6 +290,7 @@ export class Gateway {
     }
     Object.assign(finalPlan, deduped);
 
+    finalPlan.taskId = taskId;
     finalPlan.sessionId = sessionId;
     // A schedule fires whether or not anyone is at the machine, so the plan
     // carries that fact to the Orchestrator rather than the Orchestrator
@@ -302,7 +329,7 @@ export class Gateway {
             `Remembered as "${learned.name}"` +
               (learned.params.length > 0
                 ? ` — ${learned.params.join(', ')} can change next time`
-                : ' — ask again and it replays with no planning call'),
+                : ' — ask again and it instantiates a fresh execution with no planning call'),
             requestId,
           );
         }
@@ -315,6 +342,7 @@ export class Gateway {
       ...result,
       answer,
       requestId,
+      taskId,
       // A task that reused a workflow is not a fresh one to offer saving.
       workflow: expanded[0],
       suggestSave:
@@ -401,10 +429,10 @@ export class Gateway {
    * screen — rather than falling through to a failure path that would blame
    * something. Stop is a decision, and the transcript should say so.
    */
-  private stopped(requestId: string, text: string): GatewayResult {
+  private stopped(requestId: string, taskId: string, text: string): GatewayResult {
     emit('cancelled', `Stopped: "${text}"`, requestId);
     this.telemetry.finishTask(requestId, 'CANCELLED');
-    return { status: 'CANCELLED', summary: 'Stopped by owner', requestId };
+    return { status: 'CANCELLED', summary: 'Stopped by owner', requestId, taskId };
   }
 
   /**
@@ -424,32 +452,46 @@ export class Gateway {
      * approval cards both address a task by id, so neither could reach a task
      * that ran from a saved workflow — the one path where they are needed most,
      * because a workflow is the thing the owner runs repeatedly.
-     */
+    */
     requestId: string,
-  ): { plan: ExecutionPlan; name: string } | undefined {
+    taskId: string,
+  ): { plan: ExecutionPlan; name: string; parameters: Record<string, string> } | undefined {
 
     // `run backup D:\` — the form for when you know exactly what you want.
     const explicit = text.match(/^\s*(?:run|do)\s+([a-z0-9][a-z0-9_-]*)\s*(.*)$/i);
     if (explicit) {
       const workflow = this.workflows.get(explicit[1]);
-      if (workflow) {
+      if (workflow?.reusable) {
         const values = (explicit[2].match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map((v) =>
           v.replace(/^["']|["']$/g, ''),
         );
-        const plan = this.workflows.bind(
+        const parameters = this.workflows.bindPositional(workflow, values);
+        const execution = this.workflows.instantiate(
           workflow,
-          this.workflows.bindPositional(workflow, values),
+          parameters,
           requestId,
+          taskId,
         );
-        return { plan, name: workflow.name };
+        emitWorkflowMatch(workflow.name, text, parameters, execution.executionId, requestId, taskId);
+        return { plan: execution.plan, name: workflow.name, parameters };
       }
     }
 
     const matched = this.workflows.matchRequest(text);
     if (matched) {
+      const execution = this.workflows.instantiate(matched.workflow, matched.args, requestId, taskId);
+      emitWorkflowMatch(
+        matched.workflow.name,
+        text,
+        matched.args,
+        execution.executionId,
+        requestId,
+        taskId,
+      );
       return {
-        plan: this.workflows.bind(matched.workflow, matched.args, requestId),
+        plan: execution.plan,
         name: matched.workflow.name,
+        parameters: matched.args,
       };
     }
 
@@ -462,13 +504,22 @@ export class Gateway {
     plan: ExecutionPlan,
     workflow: string | undefined,
     sessionId: string,
+    parameters?: Record<string, string>,
   ): Promise<GatewayResult> {
     if (workflow) {
-      emit('routing', `Saved workflow "${workflow}" — no planning needed`, plan.requestId);
+      emit(
+        'routing',
+        `Instantiated workflow template "${workflow}" for a fresh execution` +
+          (parameters ? ` (${JSON.stringify(parameters)})` : ''),
+        plan.requestId,
+        undefined,
+        { template: workflow, parameters: parameters ?? {}, taskId: plan.taskId },
+      );
     }
 
     this.telemetry.startTask({
       requestId: plan.requestId,
+      taskId: plan.taskId,
       sessionId,
       source: request.source,
       text: request.text,
@@ -491,11 +542,17 @@ export class Gateway {
       this.workflows.markFailed(workflow);
     }
 
-    // A replayed workflow answers too. "run dns" should report the servers,
+    // A fresh execution from a workflow answers too. "run dns" should report the servers,
     // not just that it ran — the whole point of saving a read as a workflow.
     const answer = await this.finish(request, result);
 
-    return { ...result, answer, requestId: plan.requestId, workflow };
+    return {
+      ...result,
+      answer,
+      requestId: plan.requestId,
+      taskId: plan.taskId ?? `${plan.requestId}:task`,
+      workflow,
+    };
   }
 
   /**
