@@ -46,11 +46,11 @@ async def lifespan(_app: FastAPI):
     global manager
     log.info(f"Starting Browser Agent server on port {PORT} (headless={HEADLESS})...")
     manager = BrowserManager(headless=HEADLESS)
-    try:
-        # Pre-initialize or connect to persistent browser
-        await manager.initialize()
-    except Exception as err:
-        log.warning(f"Initial browser launch deferred or failed: {err}")
+    # Browser startup is lazy. Initializing here used to create a separate
+    # headed Chrome profile and leave an about:blank tab behind every time Dex
+    # was restarted. The first browser task now starts or attaches to the
+    # user's selected personal browser session.
+    log.info("Browser startup deferred until the first browser task.")
     yield
     if manager:
         log.info("Shutting down BrowserManager...")
