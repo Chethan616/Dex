@@ -435,7 +435,10 @@ class SessionManager:
             return True
         browser = str(payload.get("Browser", "")).lower()
         if self.browser_family == "vivaldi":
-            return "vivaldi" in browser
+            # Vivaldi 8.x reports its CDP product as Chrome even though the
+            # executable/profile are Vivaldi. Do not reject the connection Dex
+            # started on its own private CDP port.
+            return "vivaldi" in browser or ("chrome" in browser and "edg" not in browser)
         if self.browser_family == "chrome":
             return "chrome" in browser and "vivaldi" not in browser
         if self.browser_family == "edge":
