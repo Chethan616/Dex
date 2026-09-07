@@ -281,6 +281,7 @@ class SessionManager:
         self._is_cdp_attached = False
         self._lock = ProfileLock(self.profile_dir / "session.lock")
         self._browser_process: subprocess.Popen[bytes] | None = None
+        self._personal_browser_startup_error: str | None = None
         self._shutting_down = False
 
     @property
@@ -393,7 +394,7 @@ class SessionManager:
         try:
             self._context = await self._playwright.chromium.launch_persistent_context(**kwargs)
             self._is_cdp_attached = False
-            await self._close_blank_pages()
+            await self._trim_startup_blank_pages()
             log.info("Persistent browser context started successfully.")
             return self._context
         except Exception as err:
@@ -452,14 +453,19 @@ class SessionManager:
             self._lock.release()
             raise RuntimeError("No supported personal browser installation was found.")
 
-        if _process_name_is_running(self.browser_path):
+        if self._personal_browser_startup_error:
             self._lock.release()
+            raise RuntimeError(self._personal_browser_startup_error)
+
+        if _process_name_is_running(self.browser_path):
             browser_name = self.browser_family or "personal browser"
-            raise RuntimeError(
+            self._personal_browser_startup_error = (
                 f"{browser_name.title()} is already open without a CDP connection. "
                 f"Close all {browser_name.title()} windows once, then restart Dex; "
                 f"Dex will reopen the same {browser_name.title()} profile with your saved logins."
             )
+            self._lock.release()
+            raise RuntimeError(self._personal_browser_startup_error)
 
         launch_args = [
             self.browser_path,
@@ -494,7 +500,7 @@ class SessionManager:
                 payload = await self._get_cdp_version()
                 if payload and self._cdp_matches_selected_browser(payload):
                     context = await self._attach_to_cdp()
-                    await self._close_blank_pages()
+                    await self._trim_startup_blank_pages()
                     log.info("Personal browser started and attached successfully.")
                     return context
                 await asyncio.sleep(0.25)
@@ -516,15 +522,15 @@ class SessionManager:
             "and restart Dex so it can launch the same profile with automation enabled."
         )
 
-    async def _close_blank_pages(self) -> None:
-        """Remove only startup blank/new-tab pages created by the browser launch."""
+    async def _trim_startup_blank_pages(self) -> None:
+        """Keep one initial blank page, but never accumulate startup tabs."""
         if not self._context:
             return
         blank_urls = {"about:blank", "chrome://newtab/", "vivaldi://newtab/", "edge://newtab/"}
-        for page in list(self._context.pages):
+        blank_pages = [page for page in self._context.pages if page.url.lower() in blank_urls]
+        for page in blank_pages[1:]:
             try:
-                if page.url.lower() in blank_urls:
-                    await page.close()
+                await page.close()
             except Exception:
                 pass
 
