@@ -1,21 +1,11 @@
 """
-Browser Agent Server -- the process that owns the web browser.
+Browser Agent Server -- hosts the persistent BrowserManager on 127.0.0.1:8766.
 
-Runs on 127.0.0.1:8766, mirroring the Desktop Agent's shape. The TypeScript
-BrowserAgent talks to it over HTTP. Two backends live behind it:
-
-  * browser_use  -- autonomous, reasons its own way through a task
-  * primitives   -- exact: navigate / click / type / extract by CSS selector
-
-The Brain picks per step; neither is a fallback in the "try again harder"
-sense. Verification always runs through the primitives path, against the live
-DOM, because a claim of success from the thing that acted is not evidence.
-
+The TypeScript BrowserAgent talks to it over HTTP.
 Start: python agents/browser/server.py
 """
 from __future__ import annotations
 
-import json
 import asyncio
 import logging
 import os
@@ -24,766 +14,458 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).parent.parent))   # agents/credentials.py
-
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).parent.parent.parent / '.env')
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT.parent))  # agents/credentials.py
+
+load_dotenv(ROOT.parent.parent / ".env")
 
 from dex_logging import configure as _configure_logging
 
-# No console under pythonw, so the default stderr handler would raise on
-# startup and the file is the only output. See agents/dex_logging.py.
-log = _configure_logging('browser')
+# Configure logging to %LOCALAPPDATA%\DEX\browser.log
+log = _configure_logging("browser")
 
 import uvicorn
-from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from browser_use_backend import DEFAULT_MAX_STEPS, BrowserBackend, env_flag
-from primitives import PrimitiveBrowser
-from route_recorder import RouteRecorder
+from browser_manager import BrowserManager
+from browser_state import BrowserArtifact
 
-from credentials import resolve as resolve_credential
+PORT = int(os.environ.get("BROWSER_AGENT_PORT", "8766"))
+HEADLESS = os.environ.get("DEX_BROWSER_HEADLESS", "").lower() in ("true", "1")
 
-# Groq first: it is the free tier most owners will have, and it is what the
-# model choice below was measured against. Anthropic is used when its key is the
-# one present, or when DEX_BROWSER_PROVIDER says so.
-#
-# Defaults are measured, not guessed. Against browser-use's real 17 KB output
-# schema, qwen3.8-27b chose the correct element 3/3 with zero reasoning tokens;
-# qwen3.6-27b failed Groq's own schema validation; gpt-oss-120b was correct but
-# spent ~158 of 203 output tokens thinking, which a 25-step loop cannot afford
-# inside an 8,000 token-per-minute budget.
-DEFAULT_MODELS = {
-    'groq': 'qwen/qwen3.8-27b',
-    'anthropic': 'claude-sonnet-4-6',
-}
-
-
-def _pick_provider() -> tuple:
-    """
-    Which model drives the browsing loop.
-
-    Claude Code is the default, and it is the reason the browser agent stopped
-    being a link-opener: the free-tier configuration it replaces ran a small
-    model with vision off and the element list truncated. It needs no API key,
-    it follows the composer's Fast/Smart/Deeper modes, and it can see the page.
-
-    An explicit DEX_BROWSER_PROVIDER still wins, and a machine with a Groq or
-    Anthropic key but no Claude Code CLI falls back to it, so nothing that
-    worked before stops working.
-    """
-    wanted = os.environ.get('DEX_BROWSER_PROVIDER', '').lower()
-
-    groq = resolve_credential('groq_api_key', 'GROQ_API_KEY')
-    anthropic = resolve_credential('anthropic_api_key', 'ANTHROPIC_API_KEY')
-
-    if wanted == 'claude-code':
-        return 'claude-code', ''
-    if wanted == 'anthropic':
-        return 'anthropic', anthropic or ''
-    if wanted == 'groq':
-        return 'groq', groq or ''
-
-    if _has_claude_code():
-        return 'claude-code', ''
-    if groq:
-        return 'groq', groq
-    if anthropic:
-        return 'anthropic', anthropic
-    return 'groq', ''
-
-
-def _has_claude_code() -> bool:
-    """Whether the CLI is installed. Signed-in-ness is discovered on first use."""
-    import shutil
-    return bool(
-        shutil.which('claude') or shutil.which('claude.cmd') or shutil.which('claude.exe')
-    )
-
-
-PROVIDER, API_KEY = _pick_provider()
-MODEL = os.environ.get('BROWSER_MODEL') or DEFAULT_MODELS.get(PROVIDER, 'smart')
-PORT = int(os.environ.get('BROWSER_AGENT_PORT', '8766'))
-
-# Headed by default and it matters: a Tier 1 hand-off asks the owner to solve a
-# CAPTCHA in "the open browser window". If there is no window, that instruction
-# is a lie and the task deadlocks until it times out.
-HEADLESS = env_flag('BROWSER_HEADLESS', False)
-
-_autonomous: BrowserBackend | None = None
-_primitives = PrimitiveBrowser(headless=HEADLESS)
-
-
-def autonomous() -> BrowserBackend:
-    global _autonomous
-    if _autonomous is None:
-        _autonomous = BrowserBackend(
-            provider=PROVIDER, api_key=API_KEY, model=MODEL, headless=HEADLESS,
-        )
-    return _autonomous
+# Singleton BrowserManager
+manager: BrowserManager | None = None
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    global manager
+    log.info(f"Starting Browser Agent server on port {PORT} (headless={HEADLESS})...")
+    manager = BrowserManager(headless=HEADLESS)
+    try:
+        # Pre-initialize or connect to persistent browser
+        await manager.initialize()
+    except Exception as err:
+        log.warning(f"Initial browser launch deferred or failed: {err}")
     yield
-    # Orphaned Chrome processes are the classic way this kind of server leaks a
-    # machine dry over a week of dev restarts.
-    if _autonomous is not None:
-        await _autonomous.close_all()
-    await _primitives.close()
+    if manager:
+        log.info("Shutting down BrowserManager...")
+        await manager.close()
 
 
-import browser_choice
-import bridge_agent
-import owner_primitives
-import owner_session
-
-# How long to wait for the extension after opening the owner's Chrome.
-#
-# Cold-starting Chrome plus an MV3 service worker connecting is a few seconds on
-# this machine; fifteen is generous without being a hang the owner has to watch.
-ATTACH_POLL_S = 0.75
-ATTACH_WAIT_TRIES = 20
-from bridge import bridge, routing
-
-app = FastAPI(title='DEX Browser Agent', version='0.1.0', lifespan=lifespan)
-
-
-# -- models -------------------------------------------------------------------
-
-
-class VerifySpec(BaseModel):
-    url_contains: str | None = None
-    text_on_page: str | None = None
-    selector: str | None = None
+app = FastAPI(title="DEX Browser Agent", lifespan=lifespan)
 
 
 class RunTaskRequest(BaseModel):
     task: str
     start_url: str | None = None
-    max_steps: int = DEFAULT_MAX_STEPS
-    verify: VerifySpec | None = None
-    # Which browser to drive: "vivaldi", "chrome", a full path, or nothing for
-    # Playwright's own Chromium. Resolved before anything launches, so an
-    # uninstalled browser fails by name rather than silently using another one.
-    browser: str | None = None
+    max_steps: int = 25
+    context: dict[str, Any] | None = None
     mode: str | None = None
-    # What a previous run found out about this site, looked up on the Dex side
-    # where SiteRouteStore lives. Passed in rather than fetched here so there is
-    # one route store, and so the same hint reaches both browser paths.
-    route: dict | None = None
-    # Each tool's confirmation tier, from core/brain/browser_tools.ts. Sent
-    # rather than duplicated here so there is one table, not two.
-    tool_tiers: dict[str, int] | None = None
-    request_id: str = ''
-    step_id: str = ''
+    browser: str | None = None
+    # Task isolation fields (Requirement: hard task/step scoping)
+    request_id: str | None = None      # Top-level unique request ID
+    step_id: str | None = None         # Sub-step ID within a plan
+    target_site: str | None = None     # Explicit target domain, e.g. 'youtube.com'
+    expected_url: str | None = None    # Expected final URL for hard verification
+    expected_entity: str | None = None # Expected entity name (channel, account)
 
 
 class ResumeRequest(BaseModel):
-    session_id: str
+    task: str | None = None
+    context: dict[str, Any] | None = None
+
+
+class ConfirmRequest(BaseModel):
+    confirmed: bool = True
+    task: str | None = None
+    context: dict[str, Any] | None = None
+
+
+class PlanTaskRequest(BaseModel):
+    """Request to decompose a complex multi-application task into ordered sub-tasks."""
+    task: str
+    context: dict[str, Any] | None = None
+
+
+class CheckpointResumeRequest(BaseModel):
+    """Resume a task from a saved checkpoint (after a failure or application switch)."""
+    checkpoint: dict[str, Any]
+    context: dict[str, Any] | None = None
 
 
 class PrimitiveRequest(BaseModel):
-    op: str      # navigate | read | click | type | extract | screenshot | verify
-                 #  | sign_in | session_status | download_current | map_page
-                 #  | page_model | fill_form | click_text | wait_for
-                 #  | extract_table | scroll | press_key | go_back | reload
-    url: str | None = None
-    selector: str | None = None
-    text: str | None = None
-    path: str | None = None
-    full_page: bool | None = None
-    verify: VerifySpec | None = None
-    browser: str | None = None
-    goal: str | None = None
-    # The verbs added with actions.py.
-    fields: dict | None = None
-    submit: bool | None = None
-    timeout: float | None = None
-    idle: bool | None = None
-    which: object | None = None
-
-
-# A recording in progress, if any.
-#
-# One at a time and process-global, because there is one owner and one pair of
-# hands: two simultaneous recordings would be two people driving one browser.
-_recording: RouteRecorder | None = None
-
-
-# -- routes -------------------------------------------------------------------
-
-
-@app.get('/health')
-def health() -> dict[str, Any]:
-    return {
-        'status': 'ok',
-        'headless': HEADLESS,
-        'provider': PROVIDER,
-        'model': MODEL,
-        'has_api_key': bool(API_KEY) or PROVIDER == 'claude-code',
-        'open_sessions': len(_autonomous.runs) if _autonomous else 0,
-    }
-
-
-@app.post('/run-task')
-async def run_task(req: RunTaskRequest) -> dict[str, Any]:
-    # Claude Code authenticates through the CLI's own session, so an absent API
-    # key is the normal state there rather than a misconfiguration.
-    if PROVIDER != 'claude-code' and not API_KEY:
-        return {
-            'success': False,
-            'error': (
-                f'No API key for the browser agent ({PROVIDER}). '
-                f'Set one with: npm run cred -- set {PROVIDER}_api_key'
-            ),
-            'retryable': False,
-        }
-    log.info('[%s] task: %s', req.step_id, req.task)
-
-    # A new task forgets what the last one learned about the browser, so
-    # loading the extension between tasks takes effect immediately.
-    owner_session.SESSION.note_task_start()
-
-    # Which browser should do this.
-    #
-    # The owner's, whenever one can be reached. Dex's own browser is signed in
-    # to nothing, so a task run there answers a different question and looks
-    # right doing it — which is how a GitHub request spent twenty-five steps
-    # hunting for a way past a login while their real Chrome sat open.
-    where = routing(req.task, background=(req.mode == 'background'))
-
-    if where == 'open':
-        # Nothing attached, so open it. Refusing here and telling the owner to
-        # open Chrome is what sent the planner improvising a window action, and
-        # it stopped on two windows with the same name.
-        # The start URL goes with the request, so the browser arrives on the
-        # page rather than on a blank tab that then needs navigating away from.
-        opened = await _attach_owner_browser(req.step_id, req.start_url or '')
-        where = 'owner' if opened else 'unavailable'
-
-    if where == 'owner':
-        log.info('[%s] using the owner browser (attached)', req.step_id)
-        # Show the panel, so the owner watches this happen beside the page
-        # rather than in a window they have to alt-tab to. Best effort: a panel
-        # that will not open is a worse view of a task that still runs.
-        try:
-            await bridge.call('panel_open', {})
-        except Exception as exc:  # noqa: BLE001
-            log.debug('[%s] could not open the panel: %s', req.step_id, exc)
-        result = await bridge_agent.run(
-            req.task,
-            _ask_model,
-            route=req.route,
-            profile=owner_session.SESSION.status().get('profile', ''),
-            tool_tiers=req.tool_tiers,
-        )
-        result.setdefault('browser', 'owner')
-        return result
-
-    if where == 'unavailable':
-        return {
-            'success': False,
-            'error': (
-                owner_session.SESSION.status().get('reason')
-                or 'Dex could not reach the browser you are signed in to.'
-            ),
-            'retryable': False,
-            'browser': 'unavailable',
-        }
-
-    return await autonomous().start_task(
-        task=req.task,
-        start_url=req.start_url,
-        max_steps=req.max_steps,
-        verify=req.verify.model_dump() if req.verify else None,
-        browser=req.browser, mode=req.mode,
-    )
-
-
-async def _ask_model(prompt: str) -> str:
-    """
-    One turn of the model, for the owner-browser loop.
-
-    Routed through the same backend the autonomous path uses, so the owner's
-    choice of provider and model applies to both browsers rather than one of
-    them quietly using something else.
-    """
-    return await autonomous().ask(prompt)
-
-
-async def _attach_owner_browser(step_id: str = '', url: str = '') -> bool:
-    """
-    Make sure there is a browser Dex can act in. See owner_session.
-
-    This used to launch Chrome itself, every time it was asked, with no URL and
-    no check for a Chrome already running — which is what opened a second window
-    on the second step of every web plan. The session owns that decision now.
-    """
-    answer = await owner_session.SESSION.ensure(url)
-    if not answer['attached']:
-        log.info('[%s] %s', step_id, answer['detail'])
-    return bool(answer['attached'])
-
-
-@app.post('/resume')
-async def resume(req: ResumeRequest) -> dict[str, Any]:
-    log.info('[%s] owner cleared the wall - resuming', req.session_id)
-    return await autonomous().resume(req.session_id)
-
-
-@app.post('/abandon')
-async def abandon(req: ResumeRequest) -> dict[str, Any]:
-    return {'closed': await autonomous().abandon(req.session_id)}
-
-
-# ── the owner's own browser ────────────────────────────────────────────────
-#
-# The extension dials in here. This replaces `opendia-mcp`, the Node bridge
-# that used to sit between the extension and an MCP client: this process is
-# already a server, and hosting the socket here is what makes the browser's
-# tools ordinary Dex actions rather than opaque MCP calls that would bypass
-# the confirmation ladder entirely. See bridge.py.
-#
-# Port 5555 is where the extension looks first, and it is kept so an
-# unmodified build of the upstream extension still finds Dex.
-
-
-@app.websocket('/extension')
-async def extension_socket(socket: WebSocket) -> None:
-    await socket.accept()
-    try:
-        await bridge.attach(socket)
-    except WebSocketDisconnect:
-        await bridge.detach('the browser closed the connection')
-    except Exception as exc:  # noqa: BLE001 - one bad browser is not a crash
-        log.warning('extension socket failed: %s', exc)
-        await bridge.detach(str(exc))
-
-
-@app.get('/profiles')
-async def profiles() -> dict[str, Any]:
-    """The owner's own Chrome profiles, so Settings can offer them by name."""
-    return {'success': True, 'data': {'profiles': browser_choice.owner_profiles()}}
-
-
-class OpenProfileRequest(BaseModel):
-    browser: str | None = None
-    url: str = ''
-
-
-class OpenOwnerBrowserRequest(BaseModel):
-    profile: str = ''
-    url: str = ''
-
-
-@app.post('/open-owner-browser')
-async def open_owner_browser(req: OpenOwnerBrowserRequest) -> dict[str, Any]:
-    """
-    Make sure the browser the owner is signed into is open and reachable.
-
-    Kept as an endpoint because the panel and the app both use it, but it no
-    longer launches anything itself — `owner_session` decides whether a browser
-    needs opening at all. That decision used to be made here, badly: it checked
-    only whether the extension was attached, and launched Chrome whenever it was
-    not. Against a Chrome that was already running, that is the command for a
-    new empty window, and that window is what the owner watched appear on every
-    step after the first.
-    """
-    answer = await owner_session.SESSION.ensure(req.url, profile_match=req.profile or '')
-
-    if not answer['ok']:
-        return _bad(answer['detail'])
-
-    return {
-        'success': True,
-        'data': {**answer, **bridge.status()},
-    }
-
-
-@app.post('/open-profile')
-async def open_profile(req: OpenProfileRequest) -> dict[str, Any]:
-    """
-    Open Dex's browser profile so the owner can sign in to their accounts.
-
-    Signing in once here saves the hand-off on every site afterwards: Dex
-    browses with this profile, so an account signed in here is an account Dex
-    can already act as. Nothing is automated and no password is ever seen — it
-    launches a browser and stops.
-    """
-    result = browser_choice.open_profile(req.browser, req.url)
-    if not result.get('ok'):
-        return _bad(result.get('error', 'could not open the profile'))
-    return {'success': True, 'data': result}
-
-
-# ── installing the extension without asking the owner to ───────────────────
-#
-# Chrome 152 removed --load-extension. The one route left is the enterprise
-# policy ExtensionInstallForcelist, which wants a packed CRX and an update
-# manifest over HTTP — it refuses a file:// URL. This process is already an
-# HTTP server on loopback, so it serves both.
-#
-# Nothing here is reachable off this machine: the server binds 127.0.0.1 only.
-
-EXTENSION_ID = 'joachahcdjdaeeiiocbooimlfbojagmm'
-
-
-def _dist(name: str) -> Path:
-    return Path(__file__).resolve().parents[2] / 'dist' / name
-
-
-@app.get('/extension/update.xml')
-async def extension_update_manifest() -> Response:
-    """The update manifest Chrome's policy fetches."""
-    crx = 'http://127.0.0.1:8766/extension/dex.crx'
-    xml = (
-        "<?xml version='1.0' encoding='UTF-8'?>"
-        "<gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>"
-        f"<app appid='{EXTENSION_ID}'>"
-        f"<updatecheck codebase='{crx}' version='1.0.0' />"
-        '</app></gupdate>'
-    )
-    return Response(content=xml, media_type='text/xml')
-
-
-@app.get('/extension/dex.crx')
-async def extension_crx() -> Response:
-    """The packed extension itself."""
-    crx = _dist('dex-extension.crx')
-    if not crx.exists():
-        return Response(content=b'', status_code=404)
-    return Response(
-        content=crx.read_bytes(),
-        media_type='application/x-chrome-extension',
-    )
-
-
-@app.get('/handshake')
-async def handshake() -> dict[str, Any]:
-    """
-    Where the core is, and the token to talk to it.
-
-    For the extension's chat panel, which cannot read
-    the core's handshake file on disk - an extension has no filesystem
-    access. It can reach 127.0.0.1, so the address is handed over here.
-
-    This is not a widening of anything. The token authenticates a *loopback*
-    socket, and anything able to call this endpoint can already reach that
-    socket; both are refused from anywhere but this machine. What it protects
-    against is a web page reaching the core, and a web page cannot call this
-    either — there is no CORS header, so the browser blocks the read before it
-    starts. The extension is exempt because it holds a host permission the
-    owner granted when they installed it.
-    """
-    base = os.environ.get('LOCALAPPDATA') or os.environ.get('USERPROFILE') or '.'
-    path = Path(base) / 'DEX' / 'ui.json'
-    if not path.exists():
-        return _bad('the core is not running')
-    try:
-        return json.loads(path.read_text(encoding='utf-8'))
-    except (OSError, ValueError) as exc:
-        return _bad(f'could not read the handshake: {exc}')
-
-
-@app.post('/panel/open')
-async def panel_open() -> dict[str, Any]:
-    """
-    Show the Dex panel in the owner's browser, opening the browser if needed.
-
-    The core calls this when a task is going to run in their browser, so the
-    steps appear beside the page rather than in a window they have to alt-tab
-    to. Opening the browser first because a panel needs somewhere to be.
-    """
-    if not bridge.ready and not await _attach_owner_browser('panel'):
-        return _bad(
-            'Dex could not reach your browser. Open Chrome and load the Dex '
-            'extension once from chrome://extensions -> Load unpacked.'
-        )
-
-    try:
-        return {'success': True, 'data': await bridge.call('panel_open', {})}
-    except Exception as exc:  # noqa: BLE001 - reported, not raised
-        return _bad(f'could not open the panel: {exc}')
-
-
-@app.post('/extension/reload')
-async def extension_reload() -> dict[str, Any]:
-    """
-    Ask the extension to reload itself, so it runs the code on disk.
-
-    Called by `npm run rebuild`. An unpacked extension keeps running whatever
-    Chrome registered until its worker is reloaded, so a rebuild used to end
-    with a trip to chrome://extensions and a click on the reload arrow — every
-    time, for the rest of the project's life. This is that click.
-    """
-    if not bridge.attached:
-        return _bad('No browser is attached, so there is nothing to reload.')
-    try:
-        await bridge.call('extension_reload', {})
-    except Exception as exc:  # noqa: BLE001 - reloading drops the socket mid-reply
-        log.info('extension reload: %s', exc)
-    return {'success': True, 'data': {'reloading': True}}
-
-
-@app.get('/extension/status')
-async def extension_status() -> dict[str, Any]:
-    """Whether a browser is really attached, and what it can do."""
-    return {'success': True, 'data': bridge.status()}
-
-
-class BrowserToolRequest(BaseModel):
-    method: str
+    action: str | None = None
+    op: str | None = None
     params: dict[str, Any] = {}
 
-
-@app.post('/extension/call')
-async def extension_call(req: BrowserToolRequest) -> dict[str, Any]:
-    """
-    Run one tool in the owner's browser.
-
-    Errors come back in the same `{success: false, error}` shape as every other
-    endpoint here, so the TypeScript side does not learn a second failure
-    convention for this one path.
-    """
-    try:
-        return {'success': True, 'data': await bridge.call(req.method, req.params)}
-    except Exception as exc:  # noqa: BLE001
-        return _bad(str(exc))
+    model_config = {"extra": "allow"}
 
 
-@app.post('/primitive')
-async def primitive(req: PrimitiveRequest) -> dict[str, Any]:
-    # The owner's browser first, whenever one is attached.
-    #
-    # This route used to go straight to Dex's own Playwright browser, every
-    # time, with no notion that another browser existed. `/run-task` consulted
-    # the routing rule and this did not — so a plan built from navigate, click
-    # and read_page ran entirely in a browser signed in to nothing, and read the
-    # logged-out version of every page with complete confidence. That is the
-    # whole of "it doesn't open my chrome profile every time": not intermittent,
-    # just invisible.
-    if bridge.ready and req.browser != 'dex':
-        try:
-            return {
-                'success': True,
-                'data': await owner_primitives.run(req.op, req),
-                'browser': 'owner',
-            }
-        except owner_primitives.Unsupported as gap:
-            # A verb with no equivalent in the attached browser.
-            #
-            # This used to fall through to Dex's own browser, and the one verb
-            # it ever fell through for was `sign_in` — the single worst choice,
-            # because Dex's browser is signed in to nothing. A task on a site
-            # the owner was already signed into opened a login page in a
-            # browser that was not theirs, and from the outside it looked like
-            # Dex had signed them out.
-            #
-            # Every verb has an equivalent now, so this is a guard rather than
-            # a route. If one is ever missing again, saying so beats answering
-            # the question in a browser that is nobody's.
-            return _bad(
-                f'{gap} cannot be done in your browser, and Dex will not answer '
-                "it in a different one — that browser is signed in to nothing, "
-                'so the answer would be about somebody else.'
-            )
-        except Exception as exc:  # noqa: BLE001 - reported, not swallowed
-            log.warning('[%s] failed in the owner browser: %s', req.op, exc)
-            return _bad(f'{req.op} failed in your browser: {exc}')
-
-    try:
-        if req.op == 'navigate':
-            if not req.url:
-                return _bad('navigate needs a url')
-            return {'success': True, 'data': await _primitives.navigate(req.url, req.browser)}
-
-        if req.op == 'read':
-            return {'success': True, 'data': await _primitives.read(req.browser)}
-
-        if req.op == 'click':
-            if not req.selector:
-                return _bad('click needs a selector')
-            return {
-                'success': True,
-                'data': await _primitives.click(req.selector, req.browser),
-            }
-
-        if req.op == 'type':
-            if not req.selector:
-                return _bad('type needs a selector')
-            return {
-                'success': True,
-                'data': await _primitives.type_text(
-                    req.selector, req.text or '', req.browser,
-                ),
-            }
-
-        if req.op == 'extract':
-            return {
-                'success': True,
-                'data': await _primitives.extract(req.selector, req.browser),
-            }
-
-        if req.op == 'screenshot':
-            return {
-                'success': True,
-                'data': await _primitives.screenshot(
-                    req.path, True if req.full_page is None else req.full_page,
-                ),
-            }
-
-        if req.op == 'page_model':
-            return {'success': True, 'data': await _primitives.page_model(req.browser)}
-
-        if req.op == 'fill_form':
-            return {'success': True, 'data': await _primitives.fill_form(
-                req.fields or {}, req.browser, bool(req.submit))}
-
-        if req.op == 'click_text':
-            return {'success': True, 'data': await _primitives.click_text(
-                req.text, req.selector, req.browser)}
-
-        if req.op == 'wait_for':
-            return {'success': True, 'data': await _primitives.wait_for(
-                req.browser, req.timeout or 20.0,
-                text=req.text, selector=req.selector, url=req.url,
-                idle=bool(req.idle))}
-
-        if req.op == 'extract_table':
-            return {'success': True, 'data': await _primitives.extract_table(
-                req.which if req.which is not None else 0, req.browser)}
-
-        if req.op == 'scroll':
-            return {'success': True, 'data': await _primitives.scroll(
-                req.text or 'down', req.browser)}
-
-        if req.op == 'press_key':
-            return {'success': True, 'data': await _primitives.press_key(
-                req.text or 'Enter', req.browser)}
-
-        if req.op == 'go_back':
-            return {'success': True, 'data': await _primitives.go_back(req.browser)}
-
-        if req.op == 'reload':
-            return {'success': True, 'data': await _primitives.reload(req.browser)}
-
-        if req.op == 'map_page':
-            return {
-                'success': True,
-                'data': await _primitives.map_page(
-                    req.text, req.browser,
-                    True if req.full_page is None else bool(req.full_page),
-                ),
-            }
-
-        if req.op == 'session_status':
-            if not req.url:
-                return _bad('session_status needs a url')
-            return {
-                'success': True,
-                'data': await _primitives.session_status(req.url, req.browser),
-            }
-
-        if req.op == 'sign_in':
-            if not req.url:
-                return _bad('sign_in needs a url')
-            # needs_owner is carried up so the Orchestrator raises the hand-off
-            # card rather than treating a half-finished login as a success.
-            data = await _primitives.sign_in(req.url, req.browser)
-            return {
-                'success': True,
-                'data': data,
-                'needs_owner': bool(data.get('needs_owner')),
-            }
-
-        if req.op == 'download_current':
-            return {
-                'success': True,
-                'data': await _primitives.download_current(req.text, req.browser),
-            }
-
-        if req.op == 'record_route':
-            global _recording
-            if not req.url or not req.goal:
-                return _bad('record_route needs a url and a goal')
-            session = await _primitives.session(req.browser)
-            await session.navigate_to(req.url)
-            _recording = RouteRecorder(session, req.url, req.goal)
-            await _recording.start()
-            return {
-                'success': True,
-                'data': {
-                    'recording': True,
-                    'goal': req.goal,
-                    'url': req.url,
-                    'instruction': (
-                        'Click your way to it in the open window. Dex is noting '
-                        'what each thing is called. Say when you are there.'
-                    ),
-                },
-                'needs_owner': True,
-            }
-
-        if req.op == 'stop_recording':
-            if _recording is None:
-                return _bad('nothing is being recorded')
-            recorder, _recording = _recording, None
-            steps = await recorder.stop()
-            snap = await _primitives.read(req.browser)
-            return {
-                'success': True,
-                'data': {
-                    'goal': recorder.goal,
-                    'origin': recorder.origin,
-                    'steps': steps,
-                    'landed_on': snap.get('url'),
-                    'title': snap.get('title'),
-                },
-            }
-
-        if req.op == 'verify':
-            spec = req.verify.model_dump() if req.verify else {}
-            return {'success': True, 'data': await _primitives.verify(spec)}
-
-        return _bad(f'unknown primitive op "{req.op}"')
-
-    except PermissionError as err:
-        # A refused password field is a hand-off, not a bug. Say so precisely.
-        return {'success': False, 'error': str(err), 'retryable': False, 'needs_owner': True}
-    except LookupError as err:
-        return {'success': False, 'error': str(err), 'retryable': True}
-    except Exception as err:  # noqa: BLE001
-        log.exception('primitive %s failed', req.op)
-        return {'success': False, 'error': f'{type(err).__name__}: {err}', 'retryable': True}
+@app.get("/health")
+@app.get("/status")
+async def health_check():
+    is_alive = manager.session.is_connected if manager else False
+    return {"status": "ok", "browser_connected": is_alive, "port": PORT}
 
 
-def _bad(message: str) -> dict[str, Any]:
-    return {'success': False, 'error': message, 'retryable': False}
+@app.get("/state")
+async def get_state():
+    if not manager:
+        raise HTTPException(status_code=503, detail="Browser manager not initialized")
+    state = await manager.get_state()
+    return state.to_dict()
 
 
-# -- entry --------------------------------------------------------------------
-
-if __name__ == '__main__':
+@app.post("/run-task")
+async def run_task(req: RunTaskRequest):
+    if not manager:
+        raise HTTPException(status_code=503, detail="Browser manager not initialized")
     log.info(
-        'Browser Agent Server on 127.0.0.1:%s (headless=%s, %s/%s)',
-        PORT, HEADLESS, PROVIDER, MODEL,
+        f"Received /run-task: '{req.task[:80]}' "
+        f"(request_id={req.request_id}, target_site={req.target_site}, browser={req.browser})"
     )
-    if PROVIDER != 'claude-code' and not API_KEY:
-        log.warning(
-            'No %s key - only the deterministic primitives backend will work', PROVIDER,
+    try:
+        # Check Mode B ("in my browser" / browser="owner") requirement:
+        # If user explicitly asked for their browser, verify CDP attachment is possible first.
+        # Do NOT silently fall back to Mode A.
+        want_owner_browser = req.browser == "owner" or "in my browser" in req.task.lower()
+        if want_owner_browser and not manager.session._is_cdp_attached:
+            try:
+                await manager.initialize(mode_hint="owner")
+            except RuntimeError as cdp_err:
+                log.warning(f"Mode B CDP attachment failed: {cdp_err}")
+                return {
+                    "success": False,
+                    "error": str(cdp_err),
+                    "retryable": False,
+                }
+
+        res = await manager.runner.run_task(
+            task=req.task,
+            start_url=req.start_url,
+            max_steps=req.max_steps,
+            context=req.context,
+            task_id=req.request_id,
+            step_id=req.step_id,
+            target_site=req.target_site,
+            expected_url=req.expected_url,
+            expected_entity=req.expected_entity,
         )
-    # log_config=None is load-bearing, not tidiness.
-    #
-    # uvicorn's default logging config attaches StreamHandlers to stdout and
-    # stderr. Under pythonw.exe -- which is how these servers run so they have
-    # no console window -- both are None, and uvicorn dies the moment it
-    # configures logging. The symptom is the worst kind: the line above is
-    # written to the log, then nothing, and the port never opens.
-    #
-    # None means "leave logging alone", so uvicorn inherits the file handler
-    # dex_logging already installed.
-    uvicorn.run(app, host='127.0.0.1', port=PORT, log_level='warning', log_config=None)
+        return res
+    except Exception as err:
+        log.error(f"Error executing run_task: {err}", exc_info=True)
+        return {"success": False, "error": str(err), "retryable": True}
+
+
+@app.post("/resume")
+async def resume_task(req: ResumeRequest):
+    if not manager:
+        raise HTTPException(status_code=503, detail="Browser manager not initialized")
+    log.info("Received /resume after user handoff.")
+    # Check if wall has been cleared
+    wall = await manager.recovery.detect_human_wall()
+    if wall:
+        return {
+            "success": False,
+            "needs_handoff": wall,
+            "error": "Authentication or CAPTCHA check is still present.",
+        }
+
+    # Resume task execution
+    task_desc = req.task or "Continue previous task"
+    return await manager.runner.run_task(task_desc, context=req.context)
+
+
+@app.post("/confirm")
+async def confirm_task(req: ConfirmRequest):
+    if not manager:
+        raise HTTPException(status_code=503, detail="Browser manager not initialized")
+    log.info(f"Received /confirm: confirmed={req.confirmed}")
+    if not req.confirmed:
+        return {"success": False, "error": "Action cancelled by user.", "retryable": False}
+
+    ctx = dict(req.context or {})
+    ctx["confirmed"] = True
+    task_desc = req.task
+    if not task_desc and manager.runner and manager.runner._active_checkpoint:
+        task_desc = manager.runner._active_checkpoint.task
+    if not task_desc:
+        task_desc = "Continue confirmed task"
+    return await manager.runner.run_task(task_desc, context=ctx)
+
+
+@app.post("/plan-task")
+async def plan_task(req: PlanTaskRequest):
+    """
+    Decomposes a complex cross-application task into an ordered list of sub-tasks
+    with dependency tracking. Each sub-task references artifacts from previous steps.
+
+    Example: "Find Sidemen's latest Instagram post, download it, email to Rahul,
+    open Blender and make a 3D scene from the image."
+    → [{app: instagram, task: find_post}, {app: browser, task: download}, ...]
+    """
+    if not manager:
+        raise HTTPException(status_code=503, detail="Browser manager not initialized")
+    log.info(f"Received /plan-task: '{req.task}'")
+    try:
+        llm = manager.runner._get_llm()
+        if llm is None:
+            # No LLM available: return task as a single-step plan
+            return {
+                "success": True,
+                "plan": [
+                    {"step": 1, "app": "browser", "task": req.task, "depends_on": [], "artifact_outputs": []}
+                ],
+                "llm_available": False,
+            }
+
+        prompt = f"""You are a DEX task planner. Decompose the following complex task into an ordered list of sub-tasks.
+
+Each sub-task must specify:
+- step: integer (1-based)
+- app: the application or system (e.g. "browser", "instagram", "gmail", "blender", "files", "email")
+- task: the specific sub-task description
+- depends_on: list of step numbers this step depends on
+- artifact_outputs: list of artifact types this step produces (e.g. ["post", "file", "email"])
+- start_url: optional URL to navigate to first
+
+COMPLEX TASK: {req.task}
+
+Rules:
+1. Break cross-application tasks into one sub-task per application.
+2. Reference artifacts from previous steps explicitly (e.g. "the file from step 2").
+3. Order steps by dependency (earlier steps must not depend on later steps).
+4. If the task is simple (single-app, single action), return just one step.
+
+Return ONLY a valid JSON object: {{"plan": [{{"step": 1, "app": "...", "task": "...", "depends_on": [], "artifact_outputs": []}}]}}"""
+
+        messages = [{"role": "user", "content": prompt}]
+        response = await llm.ainvoke(messages)
+        result_text = str(response.content if hasattr(response, "content") else response)
+
+        # Parse the plan
+        start = result_text.find("{")
+        end = result_text.rfind("}")
+        if start != -1 and end > start:
+            import json as _json
+            parsed = _json.loads(result_text[start:end + 1])
+            return {"success": True, "plan": parsed.get("plan", []), "llm_available": True}
+
+        return {"success": False, "error": "Could not parse plan from LLM response."}
+
+    except Exception as err:
+        log.error(f"Error in /plan-task: {err}", exc_info=True)
+        return {"success": False, "error": str(err)}
+
+
+@app.post("/checkpoint")
+async def resume_from_checkpoint(req: CheckpointResumeRequest):
+    """
+    Resumes a task from a serialized checkpoint (e.g. after a failure,
+    application switch, or multi-turn continuation).
+    """
+    if not manager:
+        raise HTTPException(status_code=503, detail="Browser manager not initialized")
+
+    ckpt = req.checkpoint
+    task = ckpt.get("task", "Continue previous task")
+    ctx = dict(req.context or {})
+    ctx["checkpoint"] = ckpt  # Pass checkpoint context to runner
+
+    log.info(f"Resuming from checkpoint: task='{task}' steps_taken={ckpt.get('steps_taken', 0)}")
+    return await manager.runner.run_task(task, context=ctx)
+
+
+@app.post("/primitive")
+async def execute_primitive(req: PrimitiveRequest):
+    if not manager:
+        raise HTTPException(status_code=503, detail="Browser manager not initialized")
+
+    act_raw = req.action or req.op or ""
+    action = act_raw.lower()
+
+    # Merge top-level extra fields into params (Pydantic v1 & v2 compatible)
+    dump_fn = getattr(req, "model_dump", None) or getattr(req, "dict")
+    extra = dump_fn(exclude={"action", "op", "params"})
+    p = {**extra, **req.params}
+    log.info(f"Executing primitive action: '{action}' with params: {p}")
+
+    try:
+        if action == "navigate":
+            url = str(p.get("url") or "about:blank")
+            res = await manager.navigation.goto(url)
+            return {"success": True, "data": res}
+
+        elif action in ("read", "read_page"):
+            text = await manager.inspector.get_visible_text()
+            page = await manager.get_active_page()
+            return {"success": True, "data": {"text": text, "url": page.url, "title": await page.title()}}
+
+        elif action in ("inspect", "map_page", "page_model"):
+            compact = await manager.inspector.get_compact_text()
+            elements = await manager.inspector.inspect()
+            page = await manager.get_active_page()
+            return {
+                "success": True,
+                "data": {
+                    "compact": compact,
+                    "elements": [e.__dict__ for e in elements],
+                    "url": page.url,
+                    "title": await page.title(),
+                },
+            }
+
+        elif action in ("click", "click_text"):
+            target = str(p.get("target") or p.get("text") or p.get("selector") or p.get("element_id") or "")
+            res = await manager.interaction.click(target)
+            return {"success": res.success, "data": res.to_dict(), "error": res.error}
+
+        elif action in ("type", "type_text", "fill_form"):
+            target = str(p.get("target") or p.get("selector") or p.get("element_id") or "")
+            text = str(p.get("text") or p.get("value") or "")
+            enter = bool(p.get("submit") or p.get("press_enter"))
+            clear = bool(p.get("clear", True))
+            res = await manager.interaction.type_text(target, text, press_enter=enter, clear=clear)
+            return {"success": res.success, "data": res.to_dict(), "error": res.error}
+
+        elif action == "select":
+            target = str(p.get("target") or p.get("selector") or "")
+            value = str(p.get("value") or "")
+            res = await manager.interaction.select_option(target, value)
+            return {"success": res.success, "data": res.to_dict(), "error": res.error}
+
+        elif action == "hover":
+            target = str(p.get("target") or p.get("selector") or "")
+            res = await manager.interaction.hover(target)
+            return {"success": res.success, "data": res.to_dict(), "error": res.error}
+
+        elif action == "scroll":
+            direction = str(p.get("direction") or p.get("to") or "down")
+            amount = int(p.get("amount") or 500)
+            res = await manager.interaction.scroll(direction, amount)
+            return {"success": res.success, "data": res.to_dict(), "error": res.error}
+
+        elif action == "press_key":
+            key = str(p.get("key") or p.get("text") or "Enter")
+            res = await manager.interaction.press_key(key)
+            return {"success": res.success, "data": res.to_dict(), "error": res.error}
+
+        elif action == "screenshot":
+            path = p.get("path")
+            full_page = bool(p.get("full_page", False))
+            res = await manager.visual.screenshot(save_path=path, full_page=full_page)
+            return {"success": True, "data": res}
+
+        elif action in ("download_current", "download_file"):
+            target = p.get("trigger_target") or p.get("element_id")
+            res = await manager.interaction.download_file(trigger_target=target)
+            return {"success": res.success, "data": res.to_dict(), "error": res.error}
+
+        elif action == "go_back":
+            res = await manager.navigation.back()
+            return {"success": True, "data": res}
+
+        elif action == "reload":
+            res = await manager.navigation.reload()
+            return {"success": True, "data": res}
+
+        elif action == "open_browser":
+            url = p.get("url")
+            page = await manager.tabs.new_tab(url)
+            return {"success": True, "data": {"url": page.url, "attached": True}}
+
+        elif action == "session_status":
+            state = await manager.get_state()
+            return {"success": True, "data": state.to_dict()}
+
+        elif action == "verify":
+            spec = p.get("spec") or p
+            res = await manager.verifier.verify_spec(spec)
+            return {"success": res["passed"], "data": res}
+
+        elif action == "tabs":
+            sub = p.get("sub_action", "list")
+            if sub == "list":
+                tabs = await manager.tabs.list_tabs()
+                return {"success": True, "data": [t.__dict__ for t in tabs]}
+            elif sub == "new":
+                page = await manager.tabs.new_tab(p.get("url"))
+                return {"success": True, "data": {"url": page.url}}
+            elif sub == "switch":
+                page = await manager.tabs.switch_tab(p.get("tab_id") or p.get("target"))
+                return {"success": True, "data": {"url": page.url}}
+            elif sub == "close":
+                ok = await manager.tabs.close_tab(p.get("tab_id"))
+                return {"success": ok}
+
+        return {"success": False, "error": f"Unknown primitive action: {action}"}
+
+    except Exception as err:
+        log.error(f"Primitive action '{action}' error: {err}", exc_info=True)
+        return {"success": False, "error": str(err)}
+
+
+
+@app.get("/browser/diagnostics")
+async def browser_diagnostics():
+    """
+    Returns detailed diagnostics about the current browser session and task state.
+    Implements Requirement 14 (visible browser-mode indicator in diagnostics).
+
+    Fields include:
+    - browser_mode: 'MODE_A_PERSISTENT' or 'MODE_B_USER_ATTACHED'
+    - attached_to_user_browser: bool
+    - current_task_id: the active task_id
+    - task_artifact_counts: per-task artifact counts
+    - all_tab_urls: all open tab URLs
+    """
+    if not manager:
+        raise HTTPException(status_code=503, detail="Browser manager not initialized")
+    try:
+        diagnostics = await manager.get_diagnostics()
+        return diagnostics
+    except Exception as err:
+        log.error(f"Error fetching diagnostics: {err}", exc_info=True)
+        return {"error": str(err), "browser_connected": False}
+
+
+try:
+    from fastapi import WebSocket
+
+    @app.websocket("/extension")
+    async def extension_websocket(ws: WebSocket):
+        """
+        WebSocket endpoint for browser extension connections (Mode B).
+        Accepts and echoes a handshake; real extension integration is handled
+        by the session_manager CDP attachment path.
+        """
+        await ws.accept()
+        log.info("Browser extension connected via WebSocket /extension")
+        try:
+            while True:
+                data = await ws.receive_text()
+                await ws.send_text(f"{{\"status\": \"ok\", \"echo\": {repr(data)}}}")
+        except Exception:
+            pass
+        log.info("Browser extension WebSocket disconnected")
+
+except ImportError:
+    pass
+
+
+if __name__ == "__main__":
+    # pythonw.exe has no stdout/stderr. Uvicorn's default logging setup tries
+    # to attach console handlers there and exits before the lifespan starts.
+    # Keep the file handlers installed by dex_logging instead.
+    uvicorn.run(
+        app,
+        host="127.0.0.1",
+        port=PORT,
+        log_level="info",
+        log_config=None,
+    )
