@@ -2,17 +2,17 @@
 .SYNOPSIS
 DEX V3 development startup.
 Launches: daemon (requires elevation) + Desktop Agent server + Browser Agent server
-+ TypeScript core + Dex Bar UI.
++ TypeScript core + Flutter app.
 
 .PARAMETER DaemonOnly      Start only the privileged daemon
 .PARAMETER CoreOnly        Start only TypeScript core (daemon + desktop already running)
 .PARAMETER NoDesktop       Skip the Desktop Agent server (Slice 1 only)
 .PARAMETER NoBrowser       Skip the Browser Agent server (no web tasks)
 .PARAMETER NoApp           Skip the App Agent server (no UI Automation tier)
-.PARAMETER NoUi            Skip the Flutter Dex Bar (CLI only)
+.PARAMETER NoUi            Skip the Flutter app (CLI only)
 .PARAMETER Console         Show every process in its own window and keep the
-                           dex> prompt. Default is windowless: the Dex Bar is
-                           the only thing on screen and everything logs to
+                           dex> prompt. Default is windowless: the Flutter app
+                           is the only thing on screen and everything logs to
                            %LOCALAPPDATA%\DEX\*.log.
 #>
 param(
@@ -42,7 +42,28 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 # built for the GUI subsystem and allocates no console at all. Their output goes
 # to %LOCALAPPDATA%\DEX\*.log, which is why that logging went in first — with
 # no window, the file is the only place left to look.
-$py = if ($Console) { 'python' } else { 'pythonw' }
+function Resolve-PythonExecutable {
+    param([switch]$Windowless)
+
+    $names = if ($Windowless) { @('pythonw.exe', 'python.exe') } else { @('python.exe') }
+    foreach ($name in $names) {
+        foreach ($dir in ($env:Path -split ';')) {
+            if (-not $dir) { continue }
+            $candidate = Join-Path $dir $name
+            if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) { continue }
+            # Python Manager and the App Execution Alias are launchers, not
+            # interpreters. They can exit before the server logs why.
+            if ($candidate -match '(?i)[\\/](PyManager|WindowsApps)[\\/]') { continue }
+            return $candidate
+        }
+    }
+    return $null
+}
+
+$py = Resolve-PythonExecutable -Windowless:(-not $Console)
+if (-not $py) {
+    throw 'No concrete Python interpreter was found on PATH. Install Python 3.11+ or add its installation directory to PATH.'
+}
 $style = if ($Console) { 'Minimized' } else { 'Hidden' }
 
 if (-not $Console) {
@@ -107,9 +128,7 @@ if (-not $CoreOnly -and -not $DaemonOnly -and -not $NoBrowser) {
 }
 
 if (-not $DaemonOnly -and -not $NoUi) {
-    # The Dex app, which lives in app/. This used to build ui/dex-bar, which
-    # was replaced and no longer exists, so this branch silently did nothing
-    # for anyone who ran it.
+    # The Flutter app lives in app/.
     $exe = 'app/build/windows/x64/runner/Release/dex.exe'
     if (-not (Test-Path $exe)) {
         Write-Host 'Dex not built yet - building (first run takes a few minutes)...' -ForegroundColor Cyan
@@ -133,8 +152,8 @@ if (-not $DaemonOnly) {
     } else {
         # Headless: no console, so no dex> prompt. main.ts skips startCli, which
         # would otherwise build a readline over a stdin that is already closed
-        # and end the moment it began. The Dex Bar is the interface.
-        Write-Host 'Starting DEX Core (headless — Alt+Space for the bar)...' -ForegroundColor Cyan
+        # and end the moment it began. The Flutter app is the interface.
+        Write-Host 'Starting DEX Core (headless — Alt+Space for Dex)...' -ForegroundColor Cyan
         $env:DEX_HEADLESS = 'true'
         # No -RedirectStandardOutput any more: under DEX_HEADLESS the core
         # writes its own %LOCALAPPDATA%\DEX\core.log (core/logging/file_log.ts).
@@ -144,7 +163,7 @@ if (-not $DaemonOnly) {
             -PassThru -WindowStyle Hidden
         Write-Host "Core PID: $($core.Id)" -ForegroundColor DarkGray
         Write-Host ''
-        Write-Host 'Dex is running. Alt+Space for the bar.' -ForegroundColor Green
+        Write-Host 'Dex is running. Alt+Space opens the app.' -ForegroundColor Green
         Write-Host 'Stop everything with: .\scripts\stop-dex.ps1' -ForegroundColor DarkGray
     }
 }

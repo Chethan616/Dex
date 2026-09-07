@@ -4,7 +4,7 @@ import 'dart:io';
 ///
 /// Two very different layouts have to work from one binary:
 ///
-///   development   …/DEXV3/ui/dex-bar/build/windows/x64/runner/Debug/Dex.exe
+///   development   …/DEXV3/app/build/windows/x64/runner/Debug/dex.exe
 ///                 with the repo six directories above it
 ///
 ///   installed     C:/Program Files/Dex/Dex.exe
@@ -84,24 +84,76 @@ class DexPaths {
   /// exists to avoid.
   static String? which(String command, {Map<String, String>? env}) {
     final environment = env ?? Platform.environment;
+    final candidates = _whichCandidates(command, environment);
+    return candidates.isEmpty ? null : candidates.first;
+  }
+
+  static List<String> _whichCandidates(
+    String command,
+    Map<String, String> environment,
+  ) {
     final pathValue = environment['PATH'] ?? environment['Path'] ?? '';
     final extensions = (environment['PATHEXT'] ?? '.COM;.EXE;.BAT;.CMD')
         .split(';')
         .where((e) => e.isNotEmpty)
         .toList();
+    final candidates = <String>[];
 
     final hasExtension = command.contains('.');
 
     for (final dir in pathValue.split(';')) {
       if (dir.isEmpty) continue;
       final base = '$dir${Platform.pathSeparator}$command';
-      if (hasExtension && File(base).existsSync()) return base;
+      if (hasExtension && File(base).existsSync()) candidates.add(base);
       for (final ext in extensions) {
         final candidate = '$base${ext.toLowerCase()}';
-        if (File(candidate).existsSync()) return candidate;
+        if (File(candidate).existsSync()) candidates.add(candidate);
       }
     }
-    return null;
+    return candidates;
+  }
+
+  /// Python Manager installs launcher shims as `python.exe` and `pythonw.exe`.
+  /// They are useful from an interactive shell, but CreateProcess cannot rely
+  /// on them when the manager cannot resolve a runtime. Prefer a concrete
+  /// Python installation instead.
+  static bool _isPythonLauncherShim(String path) {
+    final normalized = path.replaceAll('\\', '/').toLowerCase();
+    return normalized.contains('/pymanager/') ||
+        normalized.contains('/windowsapps/');
+  }
+
+  static Iterable<String> _installedPythonCandidates(
+    String command,
+    Map<String, String> environment,
+  ) sync* {
+    final localAppData = environment['LOCALAPPDATA'];
+    final roots = <String?>[
+      if (localAppData != null && localAppData.isNotEmpty)
+        '$localAppData${Platform.pathSeparator}Programs${Platform.pathSeparator}Python',
+      environment['ProgramW6432'],
+      environment['ProgramFiles'],
+      environment['ProgramFiles(x86)'],
+    ];
+
+    for (final root in roots) {
+      if (root == null || root.isEmpty) continue;
+      final directory = Directory(root);
+      if (!directory.existsSync()) continue;
+      try {
+        for (final entry in directory.listSync(followLinks: false)) {
+          if (entry is! Directory ||
+              !entry.path.toLowerCase().contains('python')) {
+            continue;
+          }
+          final candidate =
+              '${entry.path}${Platform.pathSeparator}$command.exe';
+          if (File(candidate).existsSync()) yield candidate;
+        }
+      } catch (_) {
+        // A protected install directory is not a reason to hide other options.
+      }
+    }
   }
 
   /// The windowless Python.
@@ -117,9 +169,20 @@ class DexPaths {
   /// that dies on `logging.StreamHandler(None)` with no console to print the
   /// traceback is a genuinely awful thing to diagnose.
   static String? pythonExecutable({Map<String, String>? env}) {
-    final windowless = which('pythonw', env: env);
-    if (windowless != null) return windowless;
-    return which('python', env: env);
+    final environment = env ?? Platform.environment;
+    final candidates = <String>[
+      ..._whichCandidates('pythonw', environment),
+      ..._whichCandidates('python', environment),
+      ..._installedPythonCandidates('pythonw', environment),
+      ..._installedPythonCandidates('python', environment),
+    ];
+
+    final seen = <String>{};
+    for (final candidate in candidates) {
+      if (!seen.add(candidate.toLowerCase())) continue;
+      if (!_isPythonLauncherShim(candidate)) return candidate;
+    }
+    return null;
   }
 
   static String? nodeExecutable({Map<String, String>? env}) =>
@@ -130,8 +193,8 @@ class DexPaths {
 
   /// Where the app and the core both keep configuration.
   ///
-  /// There is deliberately no .env accessor here. The Bar's copy of this file
-  /// had three, and the supervisor used them to create a .env on first run;
+  /// There is deliberately no .env accessor here. The previous UI copy of this
+  /// file had three, and the supervisor used them to create a .env on first run;
   /// this app's config is settings.json and its secrets are in the Windows
   /// credential store. See the note in supervisor.dart's preflight.
   static File get settingsFile =>
