@@ -104,6 +104,14 @@ def _browser_family(executable_path: str | Path | None) -> str | None:
     return None
 
 
+def _existing_data_dir(candidates: list[Path]) -> Path:
+    """Use the first real Chromium data root, with compatibility fallbacks."""
+    for candidate in candidates:
+        if (candidate / "Local State").is_file():
+            return candidate
+    return candidates[0]
+
+
 def find_browser_executable() -> str | None:
     """Find the user's preferred installed Chromium browser."""
     override = os.environ.get("DEX_BROWSER_EXECUTABLE", "").strip().strip('"')
@@ -148,12 +156,16 @@ def get_user_profile_dir(browser_path: str | Path | None = None) -> Path:
     family = _browser_family(selected_browser)
     local = _local_app_data()
     profile_dirs = {
-        "vivaldi": local / "Vivaldi" / "User Data",
-        "chrome": local / "Google" / "Chrome" / "User Data",
-        "edge": local / "Microsoft" / "Edge" / "User Data",
+        # Vivaldi's Windows installer uses `User` for the live profile on some
+        # versions and `User Data` on others. Prefer the existing root that
+        # contains Local State so saved sessions are never redirected to a new
+        # empty profile.
+        "vivaldi": [local / "Vivaldi" / "User", local / "Vivaldi" / "User Data"],
+        "chrome": [local / "Google" / "Chrome" / "User Data"],
+        "edge": [local / "Microsoft" / "Edge" / "User Data"],
     }
     if family in profile_dirs:
-        profile_dir = profile_dirs[family]
+        profile_dir = _existing_data_dir(profile_dirs[family])
         profile_dir.mkdir(parents=True, exist_ok=True)
         return profile_dir
 
