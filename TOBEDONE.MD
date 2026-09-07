@@ -2,8 +2,9 @@
 
 READ THIS FILE FULLY END TO END WORD TO WORD: \TOBEDONE.MD
 
-follow these UI UX DESIGN STRICTLY
-
+follow these UI UX DESIGN STRICTLY and also make sure u get the quotes all the quotes from the Flutter APP as well
+every part thats there in flutter app must be in the new rust app
+ 
 Alert Dialog
 
 
@@ -5426,3 +5427,5 @@ and also look at the charts in this landing page https://rust-ui.com/create they
 and also modle should use GEN UI ONLY WHEN ITS NEEDED LIKE Explaining concepts or stud like PLANNIBG A TRAVEL OR PLANNING TIME TABLE like that stuff
 
 no gen ui when i say it to do takss like change powerplan to recommended or change DNS stuff like that
+
+
