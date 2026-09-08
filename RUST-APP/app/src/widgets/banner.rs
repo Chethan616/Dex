@@ -110,10 +110,22 @@ pub fn Toast() -> impl IntoView {
         }
     });
 
+    // `left-1/2` alone centers on the whole window; the sidebar sits to the
+    // left of the content area, so that reads as off-center against
+    // everything the owner actually looks at. Offset by half the sidebar's
+    // current width — same 280/80px split as `Sidebar` — so the toast
+    // centers on the content area instead.
+    let expanded = app.sidebar_expanded;
+    let center_style = move || {
+        let sidenav = if expanded.get() { 280.0 } else { 80.0 };
+        format!("left: calc(50% + {}px)", sidenav / 2.0)
+    };
+
     view! {
         <Show when=move || toast.get().is_some()>
             <div
-                class="flex fixed bottom-6 left-1/2 z-50 gap-3 items-center py-2 px-4 rounded-lg border shadow-lg -translate-x-1/2 border-border bg-popover text-popover-foreground"
+                class="flex fixed bottom-6 z-50 gap-3 items-center py-2 px-4 rounded-lg border shadow-lg -translate-x-1/2 border-border bg-popover text-popover-foreground"
+                style=center_style
                 role="status"
             >
                 <span class="text-sm">{move || toast.get().unwrap_or_default()}</span>

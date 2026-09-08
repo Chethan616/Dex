@@ -42,6 +42,7 @@ pub struct AppState {
     pub modal: RwSignal<Modal>,
     pub sidebar_expanded: RwSignal<bool>,
     pub tagline: RwSignal<&'static str>,
+    pub heading: RwSignal<&'static str>,
     /// Transient in-app notice. The Flutter client uses a glass toast; this is
     /// the same idea with one slot, since two at once were never useful.
     pub toast: RwSignal<Option<String>>,
@@ -63,6 +64,7 @@ impl AppState {
             // Picked once per launch, like the CLI banner, so it does not
             // flicker on every re-render.
             tagline: RwSignal::new(pick_tagline()),
+            heading: RwSignal::new(pick_heading()),
             toast: RwSignal::new(None),
             boot: RwSignal::new(initial_boot_rows()),
         };
@@ -494,6 +496,12 @@ fn pick_tagline() -> &'static str {
     // randomness is needed and it is not security-relevant.
     let index = (js_sys::Math::random() * taglines.len() as f64) as usize;
     taglines.get(index).copied().unwrap_or(taglines[0])
+}
+
+fn pick_heading() -> &'static str {
+    let headings = crate::copy::HEADINGS;
+    let index = (js_sys::Math::random() * headings.len() as f64) as usize;
+    headings.get(index).copied().unwrap_or(headings[0])
 }
 
 /// Read the state put in context by the root component.

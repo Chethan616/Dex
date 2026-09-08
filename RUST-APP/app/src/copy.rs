@@ -63,7 +63,45 @@ pub const SUGGESTIONS: &[&str] = &[
 pub const DISCLAIMER: &str =
     "Dex is an agent and may make mistakes. Every action shows a preview first.";
 
-/// `app/lib/screens/home_desktop.dart:49` — rendered as "Hi there".
+/// `app/lib/screens/home_desktop.dart:49` was a fixed "Hi there". By explicit
+/// request the big home-screen heading now rotates too, one per launch like
+/// [`TAGLINES`] and cached the same way — short, dialogue-style, in the same
+/// self-aware voice as `dex_taglines.dart` rather than a generic greeting.
+/// Not a Flutter source string; a deliberate exception to the verbatim rule.
+pub const HEADINGS: &[&str] = &[
+    "Hi there",
+    "Hello there",
+    "Hey, welcome back",
+    "Look who's here",
+    "Good to see you",
+    "Ready when you are",
+    "Reporting for duty",
+    "Standing by",
+    "At your service",
+    "Online and caffeinated",
+    "Awake and ready",
+    "Booted and waiting",
+    "Locked and loaded",
+    "Present and accounted for",
+    "What's the mission?",
+    "What's first?",
+    "What are we building?",
+    "What's on the docket?",
+    "What's the plan?",
+    "Let's get to it",
+    "Let's build something",
+    "Let's make a mess",
+    "Let's ship something",
+    "Let's get weird",
+    "Fire away",
+    "All ears",
+    "Your move",
+    "Here to help",
+    "Systems are up",
+    "No fires, for now",
+];
+/// `app/lib/screens/home_desktop.dart:49` — the Flutter source's fixed
+/// greeting, unused now that [`HEADINGS`] rotates, kept for the record.
 pub const GREETING_NAME: &str = "there";
 /// `app/lib/screens/home_desktop.dart:256`.
 pub const SIDEBAR_USER: &str = "Dex user";

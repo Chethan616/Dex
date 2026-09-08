@@ -71,16 +71,6 @@ pub fn EmptyHome() -> impl IntoView {
 
     view! {
         <div class="overflow-hidden relative flex-col justify-center items-center px-6 mx-auto w-full max-w-3xl grow flex">
-            // A faint, slow-breathing glow behind the mark — atmosphere, not
-            // decoration for its own sake: it is the one place the app hints
-            // "something is alive here" before any task has run. Kept
-            // strictly monochrome; red stays reserved for danger.
-            <div
-                class="absolute top-1/2 left-1/2 w-[36rem] h-[36rem] rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none bg-foreground/[0.03] blur-3xl animate-pulse"
-                style="animation-duration: 4s"
-                aria-hidden="true"
-            ></div>
-
             <div class="flex relative flex-col items-center duration-500 animate-in fade-in-0 slide-in-from-bottom-2">
                 <span class="flex gap-1.5 items-center px-2.5 py-1 mb-5 text-[11px] font-medium tracking-wide uppercase rounded-full border border-border text-muted-foreground">
                     <span class="relative flex size-1.5">
@@ -91,7 +81,7 @@ pub fn EmptyHome() -> impl IntoView {
                 </span>
 
                 <h1 class="text-4xl font-semibold tracking-tight text-center sm:text-5xl">
-                    {format!("Hi {}", copy::GREETING_NAME)}
+                    {app.heading.get()}
                 </h1>
 
                 <p class="mt-4 min-h-6 max-w-md text-sm text-center text-muted-foreground">

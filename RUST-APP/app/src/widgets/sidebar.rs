@@ -214,7 +214,7 @@ fn NavItem(
     children: Children,
 ) -> impl IntoView {
     view! {
-        <Tooltip class="w-full">
+        <Tooltip class="block w-full">
             <button
                 class="flex gap-2 items-center px-2 py-1.5 w-full text-sm rounded-md hover:bg-sidenav-accent hover:text-sidenav-accent-foreground"
                 class:justify-center=move || !expanded.get()
