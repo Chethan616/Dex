@@ -167,11 +167,6 @@ def _find(name: str) -> str | None:
     return found.target
 
 
-def extension_dir() -> str:
-    """The forked OpenDia extension, in this checkout."""
-    return str(Path(__file__).resolve().parents[2] / 'extension')
-
-
 def owner_profiles() -> list[dict]:
     """
     The owner's real Chrome profiles, from Chrome's own index.
@@ -241,15 +236,12 @@ def _best(profiles: list[dict]) -> dict:
 
     This was `last_used`, and `last_used` turned out to be a phantom. Chrome had
     acquired a second profile — folder "Profile", named "Your Chrome", signed
-    into nothing, no extensions — and because something had touched it most
-    recently, Dex opened *that* and then reported that the Dex extension had not
-    attached. It had not: it was in the other profile, where the owner lives.
+    into nothing — and because something had touched it most recently, Dex
+    opened *that* rather than the one the owner actually lives in.
 
     So recency is the last thing considered rather than the first. Ranked by
     what actually makes a profile usable:
 
-      the extension is in it   decisive. It is the only profile Dex can act in
-                               at all, so if one has it, that is the answer.
       it is signed in          a profile with an account on it is the one the
                                owner works in. An empty one is scaffolding.
       Chrome used it last      the old rule, kept as a tie-breaker between
@@ -257,94 +249,11 @@ def _best(profiles: list[dict]) -> dict:
     """
     def rank(profile: dict) -> tuple:
         return (
-            0 if _extension_in(profile) else 1,
             0 if profile.get('email') else 1,
             0 if profile.get('last_used') else 1,
         )
 
     return sorted(profiles, key=rank)[0]
-
-
-def _extension_in(profile: dict) -> bool:
-    """Is the Dex extension installed in this profile? Asked of Chrome's record."""
-    return _extension_entry(profile) is not None
-
-
-def _extension_entry(profile: dict) -> tuple[str, dict] | None:
-    """
-    The Dex extension's id and Chrome's record of it in this profile, or None.
-
-    Matched on the path it was loaded from: an unpacked extension's id is
-    derived from that path rather than from a signing key, so the path is the
-    only stable thing to recognise it by.
-    """
-    prefs = Path(profile['user_data_dir']) / profile['directory'] / 'Secure Preferences'
-    if not prefs.exists():
-        return None
-    try:
-        data = json.loads(prefs.read_text(encoding='utf-8', errors='ignore'))
-    except (OSError, ValueError):
-        return None
-
-    here = str(extension_dir()).lower()
-    for ext_id, entry in (data.get('extensions', {}).get('settings', {}) or {}).items():
-        if str(entry.get('path', '')).lower() == here:
-            return ext_id, entry
-    return None
-
-
-def extension_state(profile_match: str = '') -> dict:
-    """
-    What Chrome itself says about the Dex extension in the owner's profile.
-
-    Asked rather than assumed, because the assumption was wrong in a way that
-    wasted the owner's time: when nothing attached, Dex said "load it once from
-    chrome://extensions" — and it was already loaded. The real trouble was one
-    step further in and invisible from outside.
-
-    Chrome keeps the answer in `Secure Preferences`, not `Preferences`, and it
-    is specific enough to act on:
-
-      disable_reasons      why it is switched off, if it is.
-      serviceworkerevents  which events Chrome will start the background worker
-                           for. **Empty means never.** A worker registered
-                           before its listeners existed is one Chrome has no
-                           reason to start again, and that is the state an
-                           update leaves behind until the extension is reloaded
-                           once.
-      registration.version the manifest version Chrome registered, which drifts
-                           from the one on disk after any repack.
-    """
-    profile = owner_profile(profile_match or '')
-    if profile is None:
-        return {'known': False}
-
-    found = _extension_entry(profile)
-    if found is None:
-        return {'known': True, 'installed': False, 'profile': profile['name']}
-
-    ext_id, entry = found
-    registered = (entry.get('service_worker_registration_info') or {}).get('version', '')
-    return {
-        'known': True,
-        'installed': True,
-        'id': ext_id,
-        'disabled': bool(entry.get('disable_reasons')),
-        'disable_reasons': entry.get('disable_reasons') or [],
-        'registered_version': registered,
-        'manifest_version': _manifest_version(),
-        'wake_events': list(entry.get('serviceworkerevents') or []),
-        'profile': profile['name'],
-    }
-
-
-def _manifest_version() -> str:
-    try:
-        return str(json.loads(
-            (Path(extension_dir()) / 'manifest.json').read_text(encoding='utf-8')
-        ).get('version', ''))
-    except (OSError, ValueError):
-        return ''
 
 
 def prepare_profile(browser: str | None = None) -> dict:
@@ -422,65 +331,6 @@ def enable_developer_mode(browser: str | None = None) -> bool:
         return False
 
 
-def open_owner_browser(profile_match: str | None = None, url: str = '') -> dict:
-    """
-    Open the owner's own Chrome, in their own profile.
-
-    Not Dex's profile: the extension is installed in theirs and the session is
-    theirs. Nothing is automated — this launches a window and returns, and the
-    extension inside it dials Dex on its own.
-
-    Chromium allows one process per profile directory, so if their Chrome is
-    already running this hands the request to that instance and it opens a tab
-    there. That is the behaviour wanted: a second window in the same profile is
-    fine, a second *process* is what fails.
-    """
-    import subprocess
-
-    executable = resolve('chrome')
-    if executable is None:
-        return {'ok': False, 'error': 'Chrome is not installed, or Dex cannot find it.'}
-
-    profile = owner_profile(profile_match or '')
-    if profile is None:
-        return {
-            'ok': False,
-            'error': (
-                'No Chrome profile could be found. Chrome keeps them under '
-                'AppData\\Local\\Google\\Chrome\\User Data.'
-            ),
-        }
-
-    args = [
-        executable,
-        f'--profile-directory={profile["directory"]}',
-        '--no-first-run',
-        '--no-default-browser-check',
-    ]
-    if url:
-        args.append(url)
-
-    try:
-        subprocess.Popen(
-            args,
-            creationflags=(
-                subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-                if os.name == 'nt' else 0
-            ),
-            close_fds=True,
-        )
-    except OSError as err:
-        return {'ok': False, 'error': str(err)}
-
-    return {
-        'ok': True,
-        'profile': profile['name'],
-        'email': profile['email'],
-        'directory': profile['directory'],
-        'detail': f'Opened Chrome as {profile["name"]}.',
-    }
-
-
 def open_profile(browser: str | None = None, url: str = '') -> dict:
     """
     Open Dex's own browser profile, for the owner to sign in with.
@@ -551,9 +401,6 @@ def open_profile(browser: str | None = None, url: str = '') -> dict:
         f'--user-data-dir={directory}',
         '--no-first-run',
         '--no-default-browser-check',
-        # Harmless where it is ignored, and it still works on Chromium builds
-        # that have not removed it.
-        f'--load-extension={extension_dir()}',
     ]
     if url:
         args.append(url)
@@ -576,22 +423,10 @@ def open_profile(browser: str | None = None, url: str = '') -> dict:
         'ok': True,
         'profile': directory,
         'browser': browser or 'chrome',
-        'extension': extension_dir(),
         'developer_mode': developer_mode,
         'detail': (
             'Signed in here, Dex is signed in too — this is the profile it '
             'browses with. Close the window when you are done.'
-        ),
-        # Said rather than left for the owner to discover. Chrome 152 removed
-        # command-line extension loading, so this is the one step Dex cannot
-        # do for them.
-        'extension_note': (
-            'Chrome no longer lets a program install an extension, so load it '
-            'once: chrome://extensions → Load unpacked → pick the folder '
-            'above. Developer mode is already on.'
-            if developer_mode else
-            'To let Dex act in this browser, load the extension once from '
-            'chrome://extensions → Developer mode → Load unpacked.'
         ),
     }
 
@@ -611,9 +446,7 @@ def session_kwargs(
     page every task starts on, and `--no-default-browser-check` suppresses the
     modal that sits on top of it.
     """
-    extension = extension_dir()
-
-    # The owner's own Chrome — and the reason this is not the way to be them.
+    # The owner's own Chrome — and a real limit worth stating plainly.
     #
     # It works, in the sense that Chrome starts. What it does not do is arrive
     # signed in. browser_use copies the profile to a temp directory rather than
@@ -627,15 +460,10 @@ def session_kwargs(
     # Measured: with this pointed at the owner's real profile,
     # github.com/settings/profile redirects to the login page.
     #
-    # So a browser that looks like theirs and is signed in to nothing is worse
-    # than one that admits it — the owner would reasonably expect their
-    # accounts. The way to act as them is the extension, driving the Chrome
-    # they already have open, where the session is real and never copied. See
-    # bridge.routing.
-    #
-    # Kept because it is still the right thing for a profile with nothing in
-    # it, and because `open_profile` uses the same lookup to open their real
-    # Chrome for them.
+    # So this profile starts signed out of everything, same as Dex's own. A
+    # task that needs the owner's identity is one `open_profile` should be used
+    # for instead — sign in once there, by hand, and Dex's own browser carries
+    # that session on every later run.
     if owner_profile_match is not None:
         profile = owner_profile(owner_profile_match)
         if profile is None:
@@ -673,25 +501,6 @@ def session_kwargs(
         'args': [
             '--no-first-run',
             '--no-default-browser-check',
-            # The Dex extension, loaded every time Dex drives a browser itself.
-            #
-            # Playwright's Chromium still honours this switch. Chrome 152 does
-            # not — Google removed `--load-extension` outright, and the
-            # documented escape hatch
-            # (--disable-features=DisableLoadExtensionCommandLineSwitch) is
-            # gone with it. Verified on this machine: the extension attaches in
-            # two seconds under Playwright's Chromium with all eighteen tools,
-            # and Chrome registers zero extensions from the same flag.
-            #
-            # So this covers Dex's own browser. The owner's Chrome has to be
-            # told once by hand, which is Chrome's decision rather than Dex's;
-            # `open_profile` makes that one click.
-            f'--load-extension={extension}',
-            # Both, together. Chromium ignores --load-extension on its own in
-            # an automated launch; the pair is what actually loads it, and was
-            # what the working test used. Disabling everything else costs
-            # nothing here because Dex's profile has nothing else.
-            f'--disable-extensions-except={extension}',
             # Sites that check for automation see an ordinary browser.
             #
             # Not about evading detection for its own sake: this is the

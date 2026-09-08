@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
-import { DexRequest, ExecutionPlan, TaskStatus } from './events/types';
+import { DexRequest, ExecutionPlan, TaskStatus, Attachment } from './events/types';
+import type { UiNode } from './genui/schema';
 import { OwnerGate } from './owner_gate';
 import { Brain } from './brain/planner';
 import { Orchestrator } from './orchestrator/orchestrator';
@@ -29,6 +30,12 @@ export interface GatewayResult {
    * was run; the owner has to say which they meant.
    */
   needsClarification?: string;
+  /**
+   * A Generative UI specification, when the planner judged that structure
+   * helps. Absent for the ordinary case, which is plain text — see
+   * core/genui/schema.ts for when it is and is not appropriate.
+   */
+  ui?: UiNode;
   /**
    * What Dex has to tell the owner: the reply to a question, or the phrased
    * result of a task that read something.
@@ -102,11 +109,12 @@ export class Gateway {
      * the owner is already at the machine the file is on.
      */
     deliverTo?: DeliveryTarget,
+    attachments?: Attachment[],
   ): Promise<GatewayResult> {
     const requestId = randomUUID();
     if (deliverTo) delivery.register(requestId, deliverTo);
     try {
-      return await this.dispatch(requestId, source, senderId, text);
+      return await this.dispatch(requestId, source, senderId, text, attachments);
     } finally {
       delivery.release(requestId);
     }
@@ -117,6 +125,7 @@ export class Gateway {
     source: DexRequest['source'],
     senderId: string,
     text: string,
+    attachments?: Attachment[],
   ): Promise<GatewayResult> {
     // Keyed by time rather than by sender: Dex has one owner, so a task begun
     // on a phone and followed up at the desk is the same conversation.
@@ -135,6 +144,7 @@ export class Gateway {
       senderId,
       text: text.trim(),
       timestamp: Date.now(),
+      ...(attachments && attachments.length > 0 ? { attachments } : {}),
     };
 
     if (!this.ownerGate.verify(request)) {
@@ -229,7 +239,15 @@ export class Gateway {
     if (plan.steps.length === 0 && plan.reply) {
       emit('done', plan.reply, requestId);
       this.telemetry.finishTask(requestId, 'ANSWERED');
-      return { status: 'ANSWERED', summary: plan.reply, requestId, answer: plan.reply };
+      return {
+        status: 'ANSWERED',
+        summary: plan.reply,
+        requestId,
+        answer: plan.reply,
+        // Rides alongside the text, never instead of it: a client that does
+        // not understand `ui` still shows the answer.
+        ...(plan.ui ? { ui: plan.ui } : {}),
+      };
     }
 
     // The Brain may have chosen a saved workflow rather than planning from

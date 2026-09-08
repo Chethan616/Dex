@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dex</title>
+    <link data-trunk rel="rust" href="app/Cargo.toml" data-bin="dex_app" data-wasm-opt="z" />
+    <link data-trunk rel="css" href="style/generated.css" />
+    <link data-trunk rel="copy-dir" href="public" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap"
+      rel="stylesheet"
+    />
+    <!--
+      The chart runtime. Bundled rather than pulled from a CDN: this app runs
+      offline against a local core, and a chart that needs the network to draw
+      would be a chart that usually does not.
+
+      chart_init.js finds every div with data-chart-values and hydrates it, so
+      generated charts need no per-chart wiring.
+    -->
+    <script src="/public/cdn/apexcharts.5.3.6.min.js" defer></script>
+    <script src="/public/app_components/chart_init.js" defer></script>
+    <script src="/public/app_components/shimmer_init.js" defer></script>
+  </head>
+  <body class="font-sans antialiased bg-background text-foreground"></body>
+</html>

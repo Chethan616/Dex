@@ -204,123 +204,7 @@ seconds because it really starts the server.
 
 ---
 
-## Phase 6 — Your real browser
-
-This one needs installing before it can be tested.
-
-**Load the extension.** `chrome://extensions` → Developer mode → **Load
-unpacked** → pick the `extension/` folder. Firefox: `about:debugging` → This
-Firefox → Load Temporary Add-on → `extension/manifest-firefox.json`.
-
-**Check it attached.** Settings → Connectors. It should say a browser is
-attached and how many tools it registered. If it says nothing is attached, the
-browser agent is not running — Settings → Connectors will say that too.
-
-**A read, which needs no card.**
-
-```
-what is on the page I have open right now
-```
-
-Should answer from the tab in front of you, with no confirmation card. Dex's
-own browser could not have answered this at all — it has different tabs.
-
-**Something only your browser can do.**
-
-```
-open my vtop and get my attendance
-```
-
-No separate sign-in, because it is the browser you are already signed into.
-This is the whole reason for the phase.
-
-**A click should ask first.**
-
-```
-open my twitter and post "testing dex"
-```
-
-Expect a confirmation card **before** anything is posted. On a site you are
-signed into, a click sends, posts or buys, and nothing in the page reliably
-says which — so it asks. Decline it and nothing should happen.
-
-**Your history is not a free read.**
-
-```
-what did I look at yesterday
-```
-
-Should ask once before reading your browsing history, then remember the
-answer.
-
-**Routing.** A public page should still use Dex's own browser:
-
-```
-get the top story from news.ycombinator.com
-```
-
-That runs in the separate profile, which cannot touch your session. Only tasks
-that need to *be you* go to your browser.
-
-**Close the browser mid-task.** Start something, then quit the browser. The
-step should fail at once saying the browser went away — not sit for a minute
-waiting for an answer that is not coming.
-
----
-
-## Phase 7 — The browser that is yours
-
-Everything here needs the Dex extension loaded in the Chrome profile you
-actually use. Check first:
-
-```powershell
-curl http://127.0.0.1:8766/extension/status
-```
-
-`attached: true` and 26 tools means it is working. If it says nothing is
-attached, load it once — `chrome://extensions` -> Developer mode -> Load
-unpacked -> `<repo>\extension` — or run
-`scripts\install-extension-policy.ps1` as administrator to force-install it
-permanently.
-
-**Rebuild everything.** `npm run rebuild`. It stops Dex, installs anything
-missing, typechecks the core, builds the app, repacks the extension when the
-extension changed, and starts it. `npm run rebuild:fast` skips the Flutter
-build. It never force-kills Chrome — that is what discarded an extension
-install before.
-
-**It uses your profile now.** Ask for anything on a site you are signed into —
-*"what are my pinned repos on github"*. It should answer from your account, not
-from a logged-out page, and it should not open a second unfamiliar Chrome. If
-no browser is attached, Dex opens yours rather than refusing.
-
-**The panel follows the task.** Type *"open my github profile"* in the app. The
-Dex panel should appear in Chrome and the steps should run there, beside the
-page. `/browser <something>` sends a turn straight to the panel.
-
-**The panel is a real client.** In the panel, type a task and press Stop
-mid-run — it should actually stop, not sit there. Then look in the app's
-history: the panel's turns should be in the same conversation.
-
-**Uploading a file.** *"find aadhar.pdf and compress it on a PDF site."* Watch
-for the upload: no file dialog should appear at all. Chrome may show a
-"Dex started debugging this browser" bar while it works — that is the
-capability being honest about itself, and the policy script silences it.
-
-**The whole chain.** *"Find aadhar.pdf, compress it on a PDF website, save the
-result to D:\Documents, and open it in Acrobat."* Four tiers in one plan, and
-the file path travels from the browser step into the file step into the app
-step. If the browser part works and the move does not, the reference is the
-thing to look at — `{{step_N.output.downloads[0].path}}`.
-
-**Failure that stops flailing.** Ask for something on a site that will not
-cooperate. It should try once, replan once, and stop — and it should tell you
-what the earlier steps *did* find rather than one red line. It should never
-answer a browser problem by opening Chrome as a window.
-
----
-
-## Phase 8 — One web step, one session
+## Phase 6 — One web step, one session
 
 **The task that used to fail.** *"open github and change my status."* Watch the
 plan card: it should be **one** step, not an `open_browser` followed by a
@@ -338,19 +222,6 @@ appearing on the second step is the exact bug this phase removes.
 **With Chrome already open.** Open Chrome yourself, then run the same task. Dex
 should use the window that is there and launch nothing.
 
-**The bridge stays up.** This was the real cause: Chrome kills an idle extension
-service worker after thirty seconds, and the extension had reconnect switched
-off. Leave Dex idle for two minutes, then run a web task. It should work with no
-delay and no new window. To watch it directly:
-
-```powershell
-Get-Content "$env:LOCALAPPDATA\DEX\browser.log" -Tail 20 -Wait
-```
-
-`the browser disconnected` about thirty seconds after attaching is the old
-behaviour. It should not happen now, and if the socket does drop it should
-reconnect on its own within a minute.
-
 **A long task.** Something needing fifteen-plus turns. It should still know what
 it was asked for at the end rather than drifting — the older turns are
 summarised into the prompt instead of being dropped.
@@ -365,7 +236,7 @@ unverified".
 
 ---
 
-## Phase 9 — One browser agent, and it knows whether it worked
+## Phase 7 — One browser agent, and it knows whether it worked
 
 **The task that kept failing.** *"Open github and remove the repo named Qwix
 from my repo pins."* Three things to watch:

@@ -1,0 +1,25 @@
+[build]
+target = "index.html"
+dist = "dist"
+
+[watch]
+# The vendored crates never change during development; watching 500+ files
+# would rebuild on every editor touch.
+ignore = ["dist", "crates/registry/src/demos"]
+
+[serve]
+port = 1420
+open = false
+
+# rust-ui is Tailwind v4. Trunk's own `tailwind-css` asset downloads a v3
+# binary, which cannot parse @theme or @custom-variant, so the CSS is built
+# here with the v4 CLI from node_modules instead — pinned by package.json and
+# needing no network at build time.
+[[hooks]]
+stage = "pre_build"
+command = "node"
+command_arguments = [
+    "node_modules/@tailwindcss/cli/dist/index.mjs",
+    "--input", "style/app.css",
+    "--output", "style/generated.css",
+]

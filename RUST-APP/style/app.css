@@ -1,0 +1,16 @@
+/*
+ * The RUST-APP Tailwind entry point.
+ *
+ * style/tailwind.css and everything it imports are vendored from rust-ui and
+ * kept byte-identical to upstream, so the palette and component styles stay
+ * exact. Anything we need to add for this app goes here instead.
+ */
+@import "./tailwind.css";
+
+/*
+ * Tailwind v4 discovers classes by scanning source files. Upstream leaves this
+ * to cargo-leptos; we build with Trunk, so the roots are declared explicitly.
+ * Missing one of these shows up as unstyled components, not as an error.
+ */
+@source "../app/src";
+@source "../crates/registry/src";

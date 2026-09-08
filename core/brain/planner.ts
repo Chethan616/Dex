@@ -1,4 +1,5 @@
 import { DexRequest, ExecutionPlan, ExecutionStep } from '../events/types';
+import { catalogueForPrompt, validate } from '../genui/schema';
 import { normalize } from './normalizer';
 import { emit } from '../events/bus';
 import { describeUnavailable, unavailable } from '../orchestrator/liveness';
@@ -57,6 +58,15 @@ WHEN THERE IS NOTHING TO DO
   owner will discover is false the first time they try it. If you are asked for
   something Dex cannot do, say so plainly and name the nearest thing it can.
 
+WHEN AN ANSWER READS BETTER WITH STRUCTURE
+
+  Alongside "reply", you may set "ui" to a structured description of how to
+  show it. This is for answers where shape carries meaning — a comparison, an
+  itinerary, a set of numbers over time. It is not for making a sentence look
+  considered.
+
+${catalogueForPrompt()}
+
 Call create_execution_plan with the structured plan.`;
 }
 
@@ -69,11 +79,34 @@ interface RawStep {
   dependsOn?: string[];
 }
 
+/**
+ * Name the attached files in the prompt.
+ *
+ * Only the names and paths, never the contents: a file the owner attached is
+ * data, and pasting it into the planning prompt would let a document steer the
+ * plan. A step that needs to read it is planned like any other read, and goes
+ * through the same confirmation and verification.
+ */
+const NEWLINE = '\n';
+
+function withAttachments(text: string, request: DexRequest): string {
+  const attachments = request.attachments ?? [];
+  if (attachments.length === 0) return text;
+
+  const described = attachments
+    .map((a) => (a.path ? `${a.kind}: ${a.name} (${a.path})` : `${a.kind}: ${a.name}`))
+    .join(NEWLINE);
+
+  return `${text}${NEWLINE}${NEWLINE}The owner attached:${NEWLINE}${described}`;
+}
+
 interface RawPlan {
   intent: string;
   tier: number;
   steps: RawStep[];
   reply?: string;
+  /** Unvalidated: whatever the model put there, checked before use. */
+  ui?: unknown;
 }
 
 const plannerTool: ToolSpec = {
@@ -96,6 +129,12 @@ const plannerTool: ToolSpec = {
         description:
           'The answer, when the request is a question or conversation rather ' +
           'than a task. Leave steps empty when this is set.',
+      },
+      ui: {
+        type: 'object',
+        description:
+          'Optional. A structured rendering of the reply, when shape carries ' +
+          'meaning. Omit for ordinary answers — plain text is the default.',
       },
       steps: {
         type: 'array',
@@ -224,7 +263,7 @@ export class Brain {
       raw = (await this.provider.callTool({
         signal,
         system: systemPrompt(this.workflows(), describeUnavailable(offline)),
-        user: normalize(request.text),
+        user: withAttachments(normalize(request.text), request),
         tool: plannerTool,
         // Keep the request under Groq's small-tier token-per-minute budget. The
         // provider still has a 2,048-token emergency fallback for unusually
@@ -249,12 +288,17 @@ export class Brain {
       if (!reply) {
         throw new Error('Brain returned neither steps nor a reply');
       }
+      // Model output, so it is checked rather than trusted: an unknown
+      // component or a runaway tree becomes no UI, never a broken render.
+      const ui = validate(raw.ui);
+
       return {
         requestId: request.requestId,
         intent: raw.intent ?? request.text,
         tier: 1,
         steps: [],
         reply,
+        ...(ui ? { ui } : {}),
       };
     }
 

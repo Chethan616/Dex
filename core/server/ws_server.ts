@@ -6,7 +6,7 @@ import * as path from 'path';
 import { WebSocket, WebSocketServer } from 'ws';
 import { Gateway } from '../gateway';
 import { bus } from '../events/bus';
-import { ConfirmationRequest, DexEvent } from '../events/types';
+import { ConfirmationRequest, DexEvent, Attachment } from '../events/types';
 import { ConfirmationManager } from '../confirmation/confirmation_manager';
 import { CancellationRegistry } from '../orchestrator/cancellation';
 import { writeHandshake, removeHandshake } from './handshake';
@@ -28,7 +28,14 @@ interface Client {
 
 type Inbound =
   | { type: 'auth'; token: string }
-  | { type: 'submit'; text: string; conversationId?: string; from?: string }
+  | {
+      type: 'submit';
+      text: string;
+      conversationId?: string;
+      from?: string;
+      /** Files the owner attached. Absent for a plain prompt. */
+      attachments?: Attachment[];
+    }
   | { type: 'to_panel'; text: string; conversationId?: string }
   | { type: 'get_conversations'; query?: string }
   | { type: 'open_conversation'; conversationId: string }
@@ -364,11 +371,29 @@ export class DexServer {
         // started a new one — the core cannot tell those apart from the text.
         const conversationId = String(msg.conversationId ?? '').trim();
 
+        // Only well-formed entries survive: this is client input, and a
+        // half-specified attachment reaching a plan is worse than none.
+        const attachments = Array.isArray(msg.attachments)
+          ? msg.attachments.filter(
+              (a): a is Attachment =>
+                !!a &&
+                typeof a === 'object' &&
+                typeof a.name === 'string' &&
+                (a.kind === 'image' || a.kind === 'file' || a.kind === 'text'),
+            )
+          : undefined;
+
         if (conversationId) {
           this.conversations.append({ conversationId, speaker: 'human', text });
         }
 
-        const result = await this.gateway.handle('flutter', 'local_owner', text);
+        const result = await this.gateway.handle(
+          'flutter',
+          'local_owner',
+          text,
+          undefined,
+          attachments,
+        );
 
         if (conversationId) {
           // Steps first, then the answer: that is the order they happened in,

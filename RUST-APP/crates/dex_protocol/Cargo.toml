@@ -1,0 +1,12 @@
+[package]
+name = "dex_protocol"
+version = "0.1.0"
+edition = "2024"
+description = "Serde types for the DEX core WebSocket protocol. Knows the wire, nothing about Leptos."
+
+[lints]
+workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true

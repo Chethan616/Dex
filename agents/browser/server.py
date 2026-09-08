@@ -434,28 +434,9 @@ async def browser_diagnostics():
         return {"error": str(err), "browser_connected": False}
 
 
-try:
-    from fastapi import WebSocket
-
-    @app.websocket("/extension")
-    async def extension_websocket(ws: WebSocket):
-        """
-        WebSocket endpoint for browser extension connections (Mode B).
-        Accepts and echoes a handshake; real extension integration is handled
-        by the session_manager CDP attachment path.
-        """
-        await ws.accept()
-        log.info("Browser extension connected via WebSocket /extension")
-        try:
-            while True:
-                data = await ws.receive_text()
-                await ws.send_text(f"{{\"status\": \"ok\", \"echo\": {repr(data)}}}")
-        except Exception:
-            pass
-        log.info("Browser extension WebSocket disconnected")
-
-except ImportError:
-    pass
+# The browser extension (Mode B: the owner's own signed-in Chrome, attached
+# over a WebSocket) has been removed. Dex drives its own Playwright browser
+# only now; see browser_choice.py for profile selection and persistence.
 
 
 if __name__ == "__main__":

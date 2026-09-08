@@ -1,0 +1,13 @@
+[package]
+name = "dex_store"
+version = "0.1.0"
+edition = "2024"
+description = "The conversation reducer: DexFrame in, drawable state out. Pure Rust, no UI framework."
+
+[lints]
+workspace = true
+
+[dependencies]
+dex_protocol.workspace = true
+serde.workspace = true
+serde_json.workspace = true

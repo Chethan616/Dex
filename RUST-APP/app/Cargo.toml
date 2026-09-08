@@ -1,0 +1,37 @@
+[package]
+name = "dex_app"
+version = "0.1.0"
+edition = "2024"
+description = "The DEX client UI. Leptos CSR, rendered inside the Tauri shell."
+
+[lints]
+workspace = true
+
+[dependencies]
+# vendored rust-ui
+registry.workspace = true
+icons.workspace = true
+leptos_ui.workspace = true
+tw_merge.workspace = true
+autoform.workspace = true
+# ours
+dex_protocol.workspace = true
+dex_store.workspace = true
+
+leptos = { workspace = true, features = ["csr"] }
+leptos_router.workspace = true
+
+serde.workspace = true
+serde_json.workspace = true
+strum.workspace = true
+time.workspace = true
+validator.workspace = true
+
+log.workspace = true
+console_log.workspace = true
+console_error_panic_hook.workspace = true
+
+js-sys.workspace = true
+wasm-bindgen.workspace = true
+wasm-bindgen-futures.workspace = true
+web-sys.workspace = true

@@ -4,7 +4,6 @@ import { AgentContext, AgentResult } from '../../core/events/types';
 import { emit } from '../../core/events/bus';
 import { readConfig } from '../../core/settings/config_store';
 import { SiteRouteStore, describeRoute } from '../../core/memory/site_routes';
-import { BROWSER_TOOLS } from '../../core/brain/browser_tools';
 
 const PORT = parseInt(process.env.BROWSER_AGENT_PORT ?? '8766', 10);
 
@@ -294,14 +293,10 @@ ${task}` : task;
     // card per click would be unusable. That makes it worth saying plainly what
     // the approval covers, rather than leaving "run_task" to stand for
     // everything the browser can do.
-    const consequential = Object.entries(BROWSER_TOOLS)
-      .filter(([, spec]) => spec.tier <= 2)
-      .map(([name]) => name);
     emit(
       'routing',
-      `In your browser it may: ${consequential.slice(0, 6).join(', ')}` +
-        (consequential.length > 6 ? `, and ${consequential.length - 6} more` : '') +
-        '. It will not type a password or sign you in.',
+      'In your browser it may navigate, click, type and read the page. ' +
+        'It will not type a password or sign you in.',
       requestId,
       stepId,
     );
@@ -324,21 +319,6 @@ ${task}` : task;
         route: route
           ? { origin: route.origin, goal: route.goal, steps: route.steps }
           : null,
-        // What each tool is allowed to do to the owner, from the one place it
-        // is declared.
-        //
-        // Until now `tierFor` and `browserToolCatalogue` were referenced only
-        // by tests — nothing in production read them, so the tiers on the
-        // extension's tools were decoration. Phase 6's stated reason for
-        // forking rather than consuming MCP was that native tools "go through
-        // the same path as every other action", and they did not.
-        //
-        // Sent as data rather than reimplemented on the Python side, because
-        // two hand-maintained copies of the same table in two languages is the
-        // exact defect this project has now fixed twice.
-        tool_tiers: Object.fromEntries(
-          Object.entries(BROWSER_TOOLS).map(([name, spec]) => [name, spec.tier]),
-        ),
         verify: Object.keys(verify).length ? verify : null,
         request_id: requestId,
         step_id: stepId,

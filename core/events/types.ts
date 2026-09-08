@@ -1,3 +1,5 @@
+import type { UiNode } from '../genui/schema';
+
 export type EventType =
   | 'thinking'
   | 'routing'
@@ -55,6 +57,26 @@ export interface ExecutionPlan {
    * the note in planner.ts for why that separation is load-bearing.
    */
   reply?: string;
+  /**
+   * How to render `reply`, when the planner judged that structure helps.
+   * Validated against core/genui/schema.ts before it reaches a client.
+   */
+  ui?: UiNode;
+}
+
+/**
+ * A file the owner attached to a request.
+ *
+ * Either `path` (already on disk: a screenshot, a picked file) or `bytes`
+ * (base64, for something pasted that has no path). Never both.
+ */
+export interface Attachment {
+  kind: 'image' | 'file' | 'text';
+  name: string;
+  path?: string;
+  mime?: string;
+  bytes?: string;
+  text?: string;
 }
 
 export interface DexRequest {
@@ -76,6 +98,14 @@ export interface DexRequest {
   chatType?: 'direct' | 'group';
   /** Where to reply. Distinct from senderId — a group has many senders. */
   chatId?: string;
+  /**
+   * Files the owner attached.
+   *
+   * The Flutter app collected these and dropped them — its `submit` carried
+   * only text — so an attached file never reached a plan. Channels that have
+   * no concept of an attachment simply omit this.
+   */
+  attachments?: Attachment[];
 }
 
 export interface AgentResult {

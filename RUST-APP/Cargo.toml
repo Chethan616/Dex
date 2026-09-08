@@ -1,0 +1,127 @@
+# RUST-APP — the Rust/Leptos client for DEX.
+#
+# crates/{registry,icons,leptos_ui,tw_merge,autoform} are VENDORED from
+# https://github.com/rust-ui/ui (MIT, (c) 2026 Max Wells). They are kept
+# byte-identical to upstream so components stay exact; see NOTICE at the repo root.
+
+[workspace]
+resolver = "2"
+members = [
+    "app",
+    "crates/dex_protocol",
+    "crates/dex_store",
+    "crates/registry",
+    "crates/tw_merge/tw_merge",
+    "crates/tw_merge/tw_merge_variants",
+]
+
+# icons, leptos_ui and autoform are path dependencies rather than members, which
+# is how upstream has them too. Making them members pulls their doc examples
+# into `cargo test --workspace`, and two of those examples do not compile
+# upstream either — they are documentation, not tests we own.
+exclude = ["crates/icons", "crates/leptos_ui", "crates/autoform", "src-tauri"]
+
+# icons and leptos_ui both declare `tw_merge = "0.1"` against crates.io.
+# Point them at the vendored copy so there is exactly one tw_merge in the graph.
+[patch.crates-io]
+tw_merge = { path = "crates/tw_merge/tw_merge" }
+tw_merge_variants = { path = "crates/tw_merge/tw_merge_variants" }
+
+[workspace.dependencies]
+# --- vendored rust-ui ---
+tw_merge = { path = "crates/tw_merge/tw_merge", features = ["variant", "debug"] }
+leptos_ui = { path = "crates/leptos_ui" }
+icons = { path = "crates/icons", features = ["leptos", "leptos_animated"] }
+autoform = { path = "crates/autoform" }
+registry = { path = "crates/registry" }
+# --- ours ---
+dex_protocol = { path = "crates/dex_protocol" }
+dex_store = { path = "crates/dex_store" }
+
+leptos = { version = "0.8", features = ["nightly"] }
+leptos_router = { version = "0.8", features = ["nightly"] }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+strum = { version = "0.27", features = ["derive"] }
+time = { version = "0.3", features = ["serde", "wasm-bindgen"] }
+validator = { version = "0.20", features = ["derive"] }
+heck = "0.5"
+
+log = "0.4"
+console_log = "1"
+console_error_panic_hook = "0.1"
+
+js-sys = "0.3"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+tokio = { version = "1", features = ["rt-multi-thread"] }
+web-sys = { version = "0.3", default-features = false, features = [
+    "BinaryType", "Blob", "Clipboard", "CloseEvent", "console",
+    "CssStyleDeclaration", "CustomEvent", "CustomEventInit",
+    "DataTransfer", "DataTransferItem", "DataTransferItemList",
+    "Document", "DomRect", "DomTokenList", "DragEvent", "Element",
+    "ErrorEvent", "Event", "EventTarget", "File", "FileList", "FileReader",
+    "FormData", "Headers", "HtmlAnchorElement", "HtmlElement",
+    "HtmlInputElement", "HtmlTextAreaElement", "InputEvent",
+    "KeyboardEvent", "Location", "MediaQueryList", "MessageEvent",
+    "MouseEvent", "MutationObserver", "MutationObserverInit",
+    "MutationRecord", "Navigator", "Node", "NodeList", "Request",
+    "RequestInit", "RequestMode", "Response", "Storage", "Url",
+    "WebSocket", "Window",
+] }
+
+# Lints mirror upstream rust-ui: the vendored crates declare `[lints] workspace = true`
+# and their source is written to satisfy these.
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+indexing_slicing = "deny"
+await_holding_lock = "deny"
+dbg_macro = "deny"
+undocumented_unsafe_blocks = "deny"
+enum_glob_use = "deny"
+missing_safety_doc = "deny"
+get_unwrap = "deny"
+infinite_loop = "deny"
+large_stack_arrays = "deny"
+
+lossy_float_literal = "warn"
+cast_precision_loss = "warn"
+redundant_clone = "warn"
+inefficient_to_string = "warn"
+cloned_instead_of_copied = "warn"
+manual_let_else = "warn"
+trivially_copy_pass_by_ref = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+explicit_iter_loop = "warn"
+from_over_into = "warn"
+fallible_impl_from = "warn"
+clone_on_ref_ptr = "warn"
+needless_borrow = "warn"
+
+[workspace.lints.rust]
+irrefutable_let_patterns = "deny"
+
+[profile.dev]
+debug = false
+incremental = true
+codegen-units = 256
+overflow-checks = false
+
+[profile.dev.build-override]
+opt-level = 3
+codegen-units = 1
+
+# Dependencies optimised even in dev: the vendored tree is large and this is
+# cached after the first build.
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 'z'

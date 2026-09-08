@@ -1,0 +1,6 @@
+# rust-ui requires nightly (leptos "nightly" feature).
+# Pinned to an exact date: a floating nightly breaks the build without warning.
+[toolchain]
+channel = "nightly-2026-09-07"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]

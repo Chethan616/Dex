@@ -84,15 +84,21 @@ if /i "%~1"=="-Console" (
   exit /b 0
 )
 
-set "DEX_APP=app\build\windows\x64\runner\Release\dex.exe"
+REM The Rust shell, which replaces the Flutter app. It hosts the Leptos UI and
+REM supervises the daemon, the agents and the core, exactly as the old app did.
+set "DEX_APP=RUST-APP\src-tauri\target\release\dex_shell.exe"
 
 if not exist "%DEX_APP%" (
-  echo   Building Dex - about a minute, once.
-  pushd app
-  call flutter build windows --release
+  echo   Building Dex - several minutes, once.
+  echo   (Needs the Rust toolchain: https://rustup.rs)
+  pushd RUST-APP
+  call npm install
+  call cargo tauri build
   popd
   if not exist "%DEX_APP%" (
-    echo   [X] The Flutter build failed.
+    echo   [X] The Rust build failed.
+    echo       Check that rustup, trunk and cargo-tauri are installed:
+    echo         cargo install trunk tauri-cli --locked
     goto :fail
   )
   echo.
