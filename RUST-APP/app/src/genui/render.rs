@@ -48,7 +48,6 @@ use registry::ui::select::{Select, SelectContent, SelectOption, SelectTrigger, S
 use registry::ui::separator::Separator;
 use registry::ui::skeleton::Skeleton;
 use registry::ui::spinner::Spinner;
-use registry::ui::status::{Status, StatusIndactorVariant};
 use registry::ui::switch::Switch;
 use registry::ui::tabs::{Tabs, TabsContent, TabsList, TabsTrigger};
 
@@ -279,6 +278,11 @@ fn render(node: UiNode, depth: usize) -> AnyView {
                 Some("destructive") => "border-destructive/50 bg-destructive/5",
                 _ => "border-info/50 bg-info/5",
             };
+            // `text` doubles as the body here (schema: `['title', 'text',
+            // 'variant']`), so read it directly rather than through
+            // `any_text()` — that helper falls back to `title`, which would
+            // print the heading twice when a planner sends only a title.
+            let body = node.props.text.clone().or_else(|| node.props.description.clone());
             view! {
                 <div class=format!("rounded-md border p-3 text-sm {tone}")>
                     {node
@@ -286,7 +290,7 @@ fn render(node: UiNode, depth: usize) -> AnyView {
                         .title
                         .clone()
                         .map(|t| view! { <p class="font-medium">{t}</p> })}
-                    <p class="text-muted-foreground">{node.any_text()}</p>
+                    {body.map(|b| view! { <p class="text-muted-foreground">{b}</p> })}
                 </div>
             }
             .into_any()
@@ -316,17 +320,27 @@ fn render(node: UiNode, depth: usize) -> AnyView {
         .into_any(),
 
         "status" => {
-            let variant = match node.props.variant.as_deref() {
-                Some("active") => StatusIndactorVariant::Active,
-                Some("inactive") => StatusIndactorVariant::Inactive,
-                Some("normal") => StatusIndactorVariant::Normal,
-                _ => StatusIndactorVariant::Default,
+            // Not `ui::Status`/`StatusIndactor`: that component hardcodes
+            // raw `bg-green-300`/`bg-orange-300`/`bg-sky-300`, which the
+            // black/white/red palette in style/app.css cannot reach (they
+            // are not the oklch tokens it overrides). A single dot in
+            // palette tokens keeps the "red only for danger" rule intact.
+            // Planners may send either `variant` (schema) or `status`
+            // (matching the `marker`/`step` convention) — accept both.
+            let word = node
+                .props
+                .variant
+                .clone()
+                .or_else(|| node.props.status.clone())
+                .unwrap_or_default();
+            let dot = match word.as_str() {
+                "failed" | "error" | "offline" | "destructive" => "bg-destructive",
+                "done" | "completed" | "active" | "success" | "online" => "bg-foreground",
+                _ => "bg-muted-foreground/50",
             };
             view! {
                 <span class="inline-flex gap-2 items-center text-sm">
-                    <Status variant=variant>
-                        <span class="rounded-full size-2 bg-muted-foreground/40"></span>
-                    </Status>
+                    <span class=format!("rounded-full size-2 {dot}")></span>
                     {node.any_text()}
                 </span>
             }
@@ -970,6 +984,12 @@ fn badge_variant(name: Option<&str>) -> BadgeVariant {
         Some("secondary") => BadgeVariant::Secondary,
         Some("destructive") => BadgeVariant::Destructive,
         Some("outline") => BadgeVariant::Outline,
+        // Warning shares the destructive token (see style/app.css): red is
+        // reserved for danger, and "about to do something risky" is that
+        // signal at a lower volume, not a second colour.
+        Some("warning") => BadgeVariant::Destructive,
+        Some("success") => BadgeVariant::Success,
+        Some("info") => BadgeVariant::Info,
         _ => BadgeVariant::Default,
     }
 }

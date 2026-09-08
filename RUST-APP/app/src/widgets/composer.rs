@@ -193,7 +193,13 @@ pub fn Composer() -> impl IntoView {
                 <textarea
                     node_ref=textarea
                     data-slot="input-group-control"
-                    class="flex-1 py-3 px-3 max-h-48 text-sm bg-transparent rounded-none border-0 shadow-none resize-none field-sizing-content min-h-[52px] focus-visible:ring-0 dark:bg-transparent placeholder:text-muted-foreground"
+                    // `field-sizing-content` (from the vendored reference
+                    // implementation) sizes the box to its *content* in both
+                    // dimensions in this WebView — the field shrank to hug the
+                    // placeholder text instead of filling the row. `w-full`
+                    // plus a fixed `min-h` gets the same auto-grow-on-type
+                    // behaviour without that.
+                    class="flex-1 py-3 px-3 w-full max-h-48 text-sm bg-transparent rounded-none border-0 shadow-none resize-none min-h-[52px] focus-visible:ring-0 dark:bg-transparent placeholder:text-muted-foreground"
                     placeholder=copy::COMPOSER_PLACEHOLDER
                     prop:value=move || text.get()
                     on:input=move |ev| {

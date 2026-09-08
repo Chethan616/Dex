@@ -163,7 +163,10 @@ pub fn Sidebar() -> impl IntoView {
 
             <SidenavFooter>
                 <DropdownMenu>
-                    <DropdownMenuTrigger class="flex gap-2 items-center p-2 w-full rounded-md hover:bg-sidenav-accent">
+                    <DropdownMenuTrigger
+                        class="flex gap-2 items-center p-2 w-full rounded-md hover:bg-sidenav-accent"
+                        class:justify-center=move || !expanded.get()
+                    >
                         <span class="flex justify-center items-center rounded-full size-7 bg-muted">
                             <User class="size-4" />
                         </span>
@@ -214,6 +217,7 @@ fn NavItem(
         <Tooltip class="w-full">
             <button
                 class="flex gap-2 items-center px-2 py-1.5 w-full text-sm rounded-md hover:bg-sidenav-accent hover:text-sidenav-accent-foreground"
+                class:justify-center=move || !expanded.get()
                 on:click=move |_| on_click.run(())
             >
                 {children()}

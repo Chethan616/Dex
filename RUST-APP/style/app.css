@@ -14,3 +14,137 @@
  */
 @source "../app/src";
 @source "../crates/registry/src";
+
+/*
+ * DEX's own palette: black, white, and red for danger — nothing else.
+ *
+ * Overrides the vendored oklch tokens rather than editing tailwind.css, so
+ * the vendored file stays byte-identical to upstream (see
+ * crates/registry/VENDORED.md) and this stays a diff someone can read on its
+ * own. Every component still reads the same CSS variable names — `bg-primary`,
+ * `text-destructive`, `border-warning` — so nothing downstream needed to
+ * change, only what those names resolve to.
+ *
+ * The rule: red is reserved for danger — destructive actions, warnings, Full
+ * Access. Everything else, including "success", stays monochrome; a
+ * checkmark icon already says "done" without needing a colour to say it
+ * again, and a second colour in the palette would dilute what red means.
+ */
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.09 0 0);
+  --card: oklch(0.99 0 0);
+  --card-foreground: oklch(0.09 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.09 0 0);
+  --primary: oklch(0.09 0 0);
+  --primary-foreground: oklch(1 0 0);
+  --primary-light: oklch(0.94 0 0);
+  --primary-dark: oklch(0.09 0 0);
+  --secondary: oklch(0.94 0 0);
+  --secondary-foreground: oklch(0.09 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.94 0 0);
+  --accent-foreground: oklch(0.09 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-light: oklch(0.95 0.06 27.325);
+  --destructive-dark: oklch(0.4 0.22 27.325);
+  --border: oklch(0.88 0 0);
+  --input: oklch(0.88 0 0);
+  --ring: oklch(0.6 0 0);
+  --chart-1: oklch(0.3 0 0);
+  --chart-2: oklch(0.45 0 0);
+  --chart-3: oklch(0.577 0.245 27.325);
+  --chart-4: oklch(0.65 0 0);
+  --chart-5: oklch(0.8 0 0);
+  --chart-primary: oklch(0.3 0 0);
+  --chart-muted: oklch(0.7 0 0);
+  --chart-grid: oklch(0.88 0 0);
+  --sidenav: oklch(0.98 0 0);
+  --sidenav-foreground: oklch(0.09 0 0);
+  --sidenav-primary: oklch(0.09 0 0);
+  --sidenav-primary-foreground: oklch(1 0 0);
+  --sidenav-accent: oklch(0.93 0 0);
+  --sidenav-accent-foreground: oklch(0.09 0 0);
+  --sidenav-border: oklch(0.88 0 0);
+  --sidenav-ring: oklch(0.6 0 0);
+  --selection: oklch(0.85 0 0);
+  --selection-foreground: oklch(0.09 0 0);
+  /* Danger only. Warning is not a second colour — it is the same red as
+     destructive, because "about to do something risky" and "about to do
+     something destructive" are the same signal at different volumes. */
+  --success: oklch(0.09 0 0);
+  --success-foreground: oklch(1 0 0);
+  --success-light: oklch(0.94 0 0);
+  --success-dark: oklch(0.09 0 0);
+  --warning: oklch(0.577 0.245 27.325);
+  --warning-foreground: oklch(1 0 0);
+  --warning-light: oklch(0.95 0.06 27.325);
+  --warning-dark: oklch(0.4 0.22 27.325);
+  --info: oklch(0.3 0 0);
+  --info-foreground: oklch(1 0 0);
+  --info-light: oklch(0.94 0 0);
+  --info-dark: oklch(0.09 0 0);
+  --slider-track: oklch(0.88 0 0);
+  --surface: oklch(0.98 0 0);
+  --surface-foreground: oklch(0.09 0 0);
+}
+
+.dark {
+  --background: oklch(0.07 0 0);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.12 0 0);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.13 0 0);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.98 0 0);
+  --primary-foreground: oklch(0.09 0 0);
+  --primary-light: oklch(0.25 0 0);
+  --primary-dark: oklch(0.98 0 0);
+  --secondary: oklch(0.18 0 0);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.16 0 0);
+  --muted-foreground: oklch(0.63 0 0);
+  --accent: oklch(0.2 0 0);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.65 0.24 27.325);
+  --destructive-light: oklch(0.22 0.09 27.325);
+  --destructive-dark: oklch(0.8 0.2 27.325);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.55 0 0);
+  --chart-1: oklch(0.9 0 0);
+  --chart-2: oklch(0.75 0 0);
+  --chart-3: oklch(0.65 0.24 27.325);
+  --chart-4: oklch(0.55 0 0);
+  --chart-5: oklch(0.4 0 0);
+  --chart-primary: oklch(0.9 0 0);
+  --chart-muted: oklch(0.5 0 0);
+  --chart-grid: oklch(0.22 0 0);
+  --sidenav: oklch(0.1 0 0);
+  --sidenav-foreground: oklch(0.98 0 0);
+  --sidenav-primary: oklch(0.98 0 0);
+  --sidenav-primary-foreground: oklch(0.09 0 0);
+  --sidenav-accent: oklch(0.18 0 0);
+  --sidenav-accent-foreground: oklch(0.98 0 0);
+  --sidenav-border: oklch(1 0 0 / 10%);
+  --sidenav-ring: oklch(0.5 0 0);
+  --selection: oklch(0.3 0 0);
+  --selection-foreground: oklch(0.98 0 0);
+  --success: oklch(0.98 0 0);
+  --success-foreground: oklch(0.09 0 0);
+  --success-light: oklch(0.22 0 0);
+  --success-dark: oklch(0.9 0 0);
+  --warning: oklch(0.65 0.24 27.325);
+  --warning-foreground: oklch(0.98 0 0);
+  --warning-light: oklch(0.22 0.09 27.325);
+  --warning-dark: oklch(0.8 0.2 27.325);
+  --info: oklch(0.75 0 0);
+  --info-foreground: oklch(0.09 0 0);
+  --info-light: oklch(0.2 0 0);
+  --info-dark: oklch(0.9 0 0);
+  --slider-track: oklch(0.22 0 0);
+  --surface: oklch(0.1 0 0);
+  --surface-foreground: oklch(0.98 0 0);
+}
