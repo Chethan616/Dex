@@ -57,12 +57,37 @@ return globalThis.tid;
 EOF
 ```
 
+**On Windows, use `--file` for anything multi-line or quote-heavy.** Heredocs
+do not exist in PowerShell, and neither of the obvious alternatives works: this
+script is reached through `browser-harness-js.cmd` via `cmd.exe`, which
+truncates an argument at a raw newline inside quotes (so only line 1 runs), and
+piping through PowerShell corrupts the encoding (`SyntaxError: Unexpected token
+'?'`). Write the snippet to a file and pass the path — a path has no newlines
+and no quoting, so it survives every shell. A UTF-8 BOM is stripped for you, so
+PowerShell's default file-writing helpers are fine.
+
+```powershell
+$snip = "$env:TEMP\bh-snip.js"
+Set-Content $snip @'
+const tabs = await listPageTargets();
+globalThis.tid = tabs[0].targetId;
+await session.use(globalThis.tid);
+return globalThis.tid;
+'@
+browser-harness-js --file $snip
+```
+
+Single-expression snippets are still fine as a direct argument on Windows —
+`browser-harness-js 'await connectToAssignedTarget()'` — because there is no
+newline to truncate.
+
 ## CLI commands
 
 | Command | Behavior |
 |---|---|
 | `browser-harness-js '<js>'`     | Auto-start server if needed, eval the JS, print result. |
 | `browser-harness-js <<EOF…EOF`  | Same, code from stdin. |
+| `browser-harness-js --file <p>` | Same, code read from a file. Use this on Windows for multi-line or quote-heavy snippets. Strips a UTF-8 BOM. |
 | `browser-harness-js --status`   | Print health JSON (uptime, connected, sessionId) or exit 1 if down. |
 | `browser-harness-js --start`    | Explicit start (no-op if already running). |
 | `browser-harness-js --stop`     | Graceful shutdown. Drops session state. |

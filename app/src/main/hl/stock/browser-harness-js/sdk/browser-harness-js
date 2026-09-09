@@ -11,6 +11,12 @@
 #     globalThis.tid
 #   EOF
 #
+#   browser-harness-js --file snippet.js
+#                                 # code from a file. On Windows use this for
+#                                 # anything multi-line: cmd.exe truncates a
+#                                 # newline inside a quoted argument, and
+#                                 # PowerShell has no heredoc.
+#
 #   browser-harness-js --status   # is the REPL running? prints health JSON
 #   browser-harness-js --stop     # gracefully shut it down
 #   browser-harness-js --logs     # tail the REPL log
@@ -121,6 +127,33 @@ case "${1:-}" in
     ;;
   --logs)
     exec tail -f "$LOG"
+    ;;
+  --file)
+    # Read the snippet from a file instead of argv or stdin.
+    #
+    # Exists for Windows. This script is reached through browser-harness-js.cmd
+    # via cmd.exe, and cmd.exe truncates an argument at a raw newline inside
+    # quotes — so a multi-line snippet passed as `browser-harness-js '<js>'`
+    # silently loses everything after line 1. The documented alternative is a
+    # bash heredoc, which does not exist in PowerShell (the agent's shell on
+    # Windows), and piping through PowerShell corrupts the encoding
+    # ("SyntaxError: Unexpected token '?'"). That left no working way to run a
+    # multi-line snippet on Windows, and agents were each improvising their own
+    # workaround at the cost of several minutes per task.
+    #
+    # A path carries no newlines and no quoting, so it survives every shell.
+    if [ -z "${2:-}" ]; then
+      echo 'browser-harness-js --file: missing path' >&2
+      exit 1
+    fi
+    if [ ! -f "$2" ]; then
+      echo "browser-harness-js --file: no such file: $2" >&2
+      exit 1
+    fi
+    start_repl
+    # Strip a UTF-8 BOM if present: PowerShell's redirection and several of its
+    # file-writing helpers emit one by default, and the JS parser rejects it.
+    post_eval "$(sed '1s/^\xEF\xBB\xBF//' "$2")"
     ;;
   --help|-h)
     sed -n '2,/^set -euo/p' "$0" | sed 's/^#//; s/^ //; /^set -euo/d'
