@@ -129,7 +129,7 @@ export function MemoryIndicator({ onOpenSettings, settingsShortcut }: MemoryIndi
         <span>Settings</span>
       </button>
       {appInfo?.version && (
-        <span className="mem-indicator__version" title={`Browser Use v${appInfo.version}`}>
+        <span className="mem-indicator__version" title={`DEX v${appInfo.version}`}>
           v{appInfo.version}
         </span>
       )}

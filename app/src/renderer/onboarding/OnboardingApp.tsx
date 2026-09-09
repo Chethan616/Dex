@@ -905,7 +905,7 @@ export function OnboardingApp() {
           <div className="step-panel intro-panel">
             <div className="intro-content">
               <div className="intro-text">
-                <h1 className="intro-title">Browser Use Desktop</h1>
+                <h1 className="intro-title">DEX</h1>
                 <p className="intro-subtitle">
                   Run AI agents that browse the web, complete tasks, and report back — all from your desktop.
                 </p>
@@ -917,7 +917,7 @@ export function OnboardingApp() {
                 </button>
               </div>
               <div className="intro-image-wrap">
-                <img className="intro-image" src={introImage} alt="Browser Use Desktop" />
+                <img className="intro-image" src={introImage} alt="DEX" />
               </div>
             </div>
           </div>

@@ -129,7 +129,7 @@ export class TelemetryEmitter extends EventEmitter {
           const { app } = require('electron');
           return app.getPath('userData');
         } catch {
-          return path.join(os.tmpdir(), 'Browser Use');
+          return path.join(os.tmpdir(), 'DEX');
         }
       })();
 

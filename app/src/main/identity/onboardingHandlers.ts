@@ -389,7 +389,7 @@ export function registerOnboardingHandlers(deps: OnboardingHandlerDeps): void {
       return { supported: false };
     }
     const notif = new Notification({
-      title: 'Browser Use Desktop',
+      title: 'DEX',
       body: 'Notifications are on — you\u2019ll hear from your agents here.',
       silent: false,
     });

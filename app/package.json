@@ -1,8 +1,8 @@
 {
-  "name": "browser-use-desktop",
-  "productName": "Browser Use",
+  "name": "dex-desktop",
+  "productName": "DEX",
   "version": "0.0.31",
-  "description": "Browser Use — a desktop agent hub for Claude Code and Codex",
+  "description": "DEX — a desktop agent that operates your browser and your computer",
   "homepage": "https://github.com/browser-use/desktop",
   "repository": {
     "type": "git",

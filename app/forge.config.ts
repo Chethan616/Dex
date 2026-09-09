@@ -65,8 +65,8 @@ const config: ForgeConfig = {
     // `productName` was removed from ForgePackagerOptions in newer
     // @electron/packager; the field is now `name`. The runtime semantics
     // are identical: the bundled .app/.exe will be named after this.
-    name: 'Browser Use',
-    executableName: 'browser-use-desktop',
+    name: 'DEX',
+    executableName: 'dex',
 
     // Exclude dev-only files from the packaged app.asar. Without this,
     // Forge ships src/, tests/, personal planning .md files, Vite
@@ -120,7 +120,7 @@ const config: ForgeConfig = {
     }),
 
     // App metadata
-    appBundleId: 'com.browser-use.desktop',
+    appBundleId: 'com.dex.desktop',
     appCategoryType: 'public.app-category.productivity',
     icon: 'assets/icon',   // Forge appends .icns on macOS automatically
     // electron-updater still reads process.resourcesPath/app-update.yml during
@@ -200,7 +200,7 @@ const config: ForgeConfig = {
     // native Windows autoUpdater. Authenticode signing is optional and injected
     // by CI via WINDOWS_SIGN_WITH_PARAMS when a certificate pipeline exists.
     new MakerSquirrel({
-      name: 'browser_use_desktop',
+      name: 'dex_desktop',
       title: 'Browser Use',
       setupExe: 'Browser-Use-Setup.exe',
       setupIcon: WINDOWS_ICON_PATH,
@@ -212,8 +212,8 @@ const config: ForgeConfig = {
     // toolchain drift does not decide whether dpkg/rpmbuild succeeds.
     new MakerDeb({
       options: {
-        name: 'browser-use-desktop',
-        productName: 'Browser Use',
+        name: 'dex-desktop',
+        productName: 'DEX',
         genericName: 'Agent Browser',
         description: 'Desktop agent hub for Claude Code and Codex',
         productDescription: 'Browser Use is a desktop agent hub for Claude Code and Codex.',
@@ -227,8 +227,8 @@ const config: ForgeConfig = {
     }),
     new MakerRpm({
       options: {
-        name: 'browser-use-desktop',
-        productName: 'Browser Use',
+        name: 'dex-desktop',
+        productName: 'DEX',
         genericName: 'Agent Browser',
         description: 'Desktop agent hub for Claude Code and Codex',
         productDescription: 'Browser Use is a desktop agent hub for Claude Code and Codex.',

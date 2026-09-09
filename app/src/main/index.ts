@@ -26,7 +26,7 @@ if (process.platform === 'linux') {
   );
 }
 
-app.setName('Browser Use');
+app.setName('DEX');
 
 // Native-crash minidumps → userData/Crashpad/. Captures GPU process,
 // renderer process, and main-process native crashes that our
@@ -34,8 +34,8 @@ app.setName('Browser Use');
 // endpoint wired yet; users can zip the Crashpad dir and attach to
 // bug reports.
 crashReporter.start({
-  productName: 'Browser Use',
-  companyName: 'Browser Use',
+  productName: 'DEX',
+  companyName: 'DEX',
   submitURL: '',
   uploadToServer: false,
   compress: true,
@@ -51,9 +51,9 @@ app.on('second-instance', handleSecondInstanceLaunch);
 // Populate the native About dialog (macOS + Linux) instead of showing the
 // default Electron panel with no branding.
 app.setAboutPanelOptions({
-  applicationName: 'Browser Use',
+  applicationName: 'DEX',
   applicationVersion: app.getVersion(),
-  copyright: '© 2026 Browser Use',
+  copyright: '© 2026 DEX',
   website: 'https://github.com/browser-use/desktop',
 });
 
@@ -379,7 +379,7 @@ function openShellAndWire(): BrowserWindow {
 // App ready
 // ---------------------------------------------------------------------------
 app.whenReady().then(async () => {
-  mainLogger.info('main.appReady', { msg: 'Electron app ready — initializing Browser Use' });
+  mainLogger.info('main.appReady', { msg: 'Electron app ready — initializing DEX' });
   startResourceMonitor(resourceMonitorContext);
 
   // Verify the CDP endpoint at our announced port is actually OUR Electron

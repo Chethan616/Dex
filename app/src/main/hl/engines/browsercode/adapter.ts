@@ -167,7 +167,7 @@ const browserCodeAdapter: EngineAdapter = {
         ]
       : [];
     return [
-      'You are running inside Browser Use Desktop through BrowserCode.',
+      'You are running inside DEX through BrowserCode.',
       'You are driving a specific Chromium browser view on this machine.',
       `Your target is CDP target_id=${ctx.targetId} on port ${ctx.cdpPort} (env BU_TARGET_ID / BU_CDP_PORT).`,
       'Do not use BrowserCode browser_execute. Read `./AGENTS.md` and use Browser Harness JS from this working directory for browser actions.',

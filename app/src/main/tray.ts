@@ -163,7 +163,7 @@ function buildTrayMenu(sessionManager: SessionManager): Menu {
   const pausedSessions = sessions.filter((session) => session.status === 'paused');
   const idleSessions = sessions.filter((session) => session.status === 'idle');
   const template: MenuItemConstructorOptions[] = [
-    { label: 'Browser Use', enabled: false },
+    { label: 'DEX', enabled: false },
     { type: 'separator' },
   ];
 
@@ -194,7 +194,7 @@ function buildTrayMenu(sessionManager: SessionManager): Menu {
     { label: 'Settings', accelerator: 'Command+,', click: openSettings },
     { type: 'separator' },
     { label: 'Open App', click: openHub },
-    { label: 'Quit Browser Use', accelerator: 'Command+Q', click: () => app.quit() },
+    { label: 'Quit DEX', accelerator: 'Command+Q', click: () => app.quit() },
   );
 
   return Menu.buildFromTemplate(template);
@@ -235,7 +235,7 @@ export function createTray(sessionManager: SessionManager): Tray | null {
     return null;
   }
   currentTray = tray;
-  tray.setToolTip('Browser Use');
+  tray.setToolTip('DEX');
 
   let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
   const rebuildMenu = (): void => {

@@ -541,7 +541,7 @@ export function HubApp(): React.ReactElement {
     <div className="hub-root">
       <header className="hub-toolbar">
         <div className="hub-toolbar__left">
-          <span className="hub-toolbar__title">Browser Use</span>
+          <span className="hub-toolbar__title">DEX</span>
           <MemoryIndicator
             onOpenSettings={() => openSettingsPage()}
             settingsShortcut={shortcutFor('goto.settings')}

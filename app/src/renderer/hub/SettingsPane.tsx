@@ -77,7 +77,7 @@ function AppearanceSection(): React.ReactElement {
         sublabel={
           mode === 'system'
             ? `Following your system (${resolved}).`
-            : 'Choose how Browser Use looks across windows.'
+            : 'Choose how DEX looks across windows.'
         }
       >
         <SegmentedControl
@@ -251,7 +251,7 @@ function AppSection(): React.ReactElement {
         <div>
           <div className="settings-pane__label">Version</div>
           <div className="settings-pane__sublabel">
-            {info ? `Browser Use ${info.version}` : 'Detecting version...'}
+            {info ? `DEX ${info.version}` : 'Detecting version...'}
           </div>
         </div>
         {info && <span className="settings-pane__value">v{info.version}</span>}
@@ -631,7 +631,7 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
         <div className="settings-page__content">
           <header className="settings-page__header">
             <div>
-              <span className="settings-page__eyebrow">Browser Use</span>
+              <span className="settings-page__eyebrow">DEX</span>
               <h1 className="settings-page__title">Settings</h1>
             </div>
           </header>
