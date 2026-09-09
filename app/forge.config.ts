@@ -128,7 +128,17 @@ const config: ForgeConfig = {
     extraResource: ['app-update.yml'],
   },
 
-  rebuildConfig: {},
+  // node-pty ships N-API prebuilds (node-addon-api) under
+  // prebuilds/<platform>-<arch>/, and N-API is ABI-stable across both Node and
+  // Electron — so the shipped binary already works and rebuilding it gains
+  // nothing. Rebuilding it does, however, require a full Visual Studio C++
+  // toolchain *including the Windows SDK*; without the SDK, node-gyp fails and
+  // takes `electron-forge start` down with it before the app ever launches.
+  // Skipping it keeps dev startup working on machines with only the VC++
+  // toolset installed.
+  rebuildConfig: {
+    ignoreModules: ['node-pty'],
+  },
 
   hooks: {
     // @electron-forge/plugin-vite excludes node_modules from the packaged app,
@@ -146,7 +156,9 @@ const config: ForgeConfig = {
       // Electron uses a different NODE_MODULE_VERSION, so rebuild them
       // against Electron's headers before asar packaging.
       const { rebuild } = await import('@electron/rebuild');
-      await rebuild({ buildPath, electronVersion, arch: process.arch });
+      // Same exclusion as rebuildConfig above — node-pty's N-API prebuilds are
+      // already Electron-compatible, and rebuilding it needs the Windows SDK.
+      await rebuild({ buildPath, electronVersion, arch: process.arch, ignoreModules: ['node-pty'] });
       // npm (like yarn) drops the executable bit off node-pty's spawn-helper.
       // Restore it on the packaged tree so `codex login` doesn't crash with
       // `posix_spawnp failed` the first time a user opens onboarding.
