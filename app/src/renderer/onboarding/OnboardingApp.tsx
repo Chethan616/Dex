@@ -179,7 +179,9 @@ function PreferencesStep({
   }, [telemetryOptIn, onContinue]);
 
   const handlePrivacyLink = useCallback(() => {
-    window.onboardingAPI.openExternal?.('https://browser-use.com/privacy');
+    // DEX's own repo, not browser-use's privacy policy — DEX sends nothing
+    // remotely, so pointing at their policy would describe the wrong product.
+    window.onboardingAPI.openExternal?.('https://github.com/Chethan616/Dex');
   }, []);
 
   return (
@@ -222,9 +224,11 @@ function PreferencesStep({
           onChange={(e) => setTelemetryOptIn(e.target.checked)}
         />
         <div className="pref-row-body">
-          <div className="pref-row-title">Allow telemetry to help us make this app better</div>
+          <div className="pref-row-title">Keep local diagnostics</div>
           <div className="pref-row-desc">
-            Anonymous usage only — no prompts, credentials, or file contents.{' '}
+            DEX does not send usage anywhere. Diagnostics are written to a file
+            on this machine so you can see what happened when something breaks —
+            no prompts, credentials, or file contents.{' '}
             <a
               href="#"
               onClick={(e) => { e.preventDefault(); handlePrivacyLink(); }}

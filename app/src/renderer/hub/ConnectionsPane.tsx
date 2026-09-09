@@ -1131,11 +1131,17 @@ export function ConnectionsPane({
 
       <div className="conn-card">
         <div className="conn-card__header">
-          <img
-            className="conn-card__icon"
-            src="https://static.whatsapp.net/rsrc.php/v3/yP/r/rYZqPCBaG70.png"
-            alt=""
-          />
+          {/* Inline, not a remote URL. The icon used to be fetched from
+              static.whatsapp.net, which leaves a broken image whenever the
+              renderer's CSP blocks the request or the machine is offline —
+              and quietly tells Meta the app was opened. */}
+          <svg className="conn-card__icon" viewBox="0 0 32 32" role="img" aria-label="WhatsApp">
+            <circle cx="16" cy="16" r="16" fill="#25D366" />
+            <path
+              fill="#FFF"
+              d="M22.2 9.8A8.7 8.7 0 0 0 8.3 20.3L7 25l4.8-1.3a8.7 8.7 0 0 0 4.2 1.1h.1a8.7 8.7 0 0 0 6.1-14.9Zm-6.1 13.4a7.2 7.2 0 0 1-3.7-1l-.3-.2-2.8.8.7-2.8-.2-.3a7.2 7.2 0 1 1 6.3 3.5Zm4-5.4c-.2-.1-1.3-.6-1.5-.7s-.3-.1-.5.1-.6.7-.7.9-.3.2-.5 0a5.9 5.9 0 0 1-1.7-1.1 6.4 6.4 0 0 1-1.2-1.5c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.3.4.4 0 0 0 0-.4l-.7-1.6c-.2-.4-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 1.9 4.5 4.5 0 0 0 .9 2.4 10.2 10.2 0 0 0 3.9 3.4 4.6 4.6 0 0 0 2.8.6 2.3 2.3 0 0 0 1.6-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"
+            />
+          </svg>
           <div className="conn-card__info">
             <div className="conn-card__title-row">
               <span className="conn-card__name">WhatsApp</span>
@@ -1143,9 +1149,9 @@ export function ConnectionsPane({
             </div>
             <span className="conn-card__subtitle">
               {waStatus === 'connected' && waIdentity
-                ? `Connected as +${waIdentity.replace(/(\d{1})(\d{3})(\d{3})(\d{4})/, '$1 ($2) $3-$4')} — text yourself with @BU to start a session (e.g. "@BU find me a flight to NYC"). Messages without @BU are ignored, so the chat still works as a notes app.`
+                ? `Connected as +${waIdentity.replace(/(\d{1})(\d{3})(\d{3})(\d{4})/, '$1 ($2) $3-$4')} — text yourself with @DEX to start a session (e.g. "@DEX find me a flight to NYC"). Messages without @DEX are ignored, so the chat still works as a notes app.`
                 : waStatus === 'disconnected'
-                ? 'Connect WhatsApp so you can text yourself @BU to launch sessions and get agent notifications back in the same chat.'
+                ? 'Connect WhatsApp so you can text yourself @DEX to launch sessions and get agent notifications back in the same chat.'
                 : statusText}
             </span>
           </div>
@@ -1185,7 +1191,7 @@ export function ConnectionsPane({
               <div className="conn-card__qr-loading">Generating QR...</div>
             )}
             <p className="conn-card__qr-hint">
-              Open WhatsApp on your phone, go to Linked Devices, and scan this code. After linking, text yourself with @BU followed by a task (e.g. "@BU summarize my Linear inbox") to start a session — plain notes without @BU are ignored.
+              Open WhatsApp on your phone, go to Linked Devices, and scan this code. After linking, text yourself with @DEX followed by a task (e.g. "@DEX summarize my Linear inbox") to start a session — plain notes without @DEX are ignored.
             </p>
           </div>
         )}
