@@ -30,12 +30,20 @@ const LOG_PREFIX = '[Telemetry]';
 const JSONL_FILENAME = 'telemetry.jsonl';
 const MAX_HISTOGRAM_SAMPLES = 10_000;
 
-// Public PostHog project key — safe to commit. It's a write-only token that
-// can only ingest events; it cannot read analytics. See PostHog docs:
-// https://posthog.com/questions/is-it-ok-to-expose-the-posthog-project-api-key-to-the-public
-// Forks can override by changing these constants and rebuilding.
-const POSTHOG_PUBLIC_KEY = 'phc_F8JMNjW1i2KbGUTaW1unnDdLSPCoyc52SGRU0JecaUh';
-const POSTHOG_HOST = 'https://eu.i.posthog.com';
+// Analytics destination.
+//
+// Upstream ships its own PostHog project key here and notes that "forks can
+// override by changing these constants". DEX is a fork, so shipping upstream's
+// key would send DEX users' usage to browser-use's analytics — under DEX's
+// name, without them being in any position to know. That is not ours to send.
+//
+// Default is therefore **empty: no remote analytics at all**. Telemetry still
+// gets written locally to telemetry.jsonl (unchanged, useful for debugging).
+// If DEX ever wants its own analytics, set DEX_POSTHOG_KEY (and optionally
+// DEX_POSTHOG_HOST) — no rebuild needed, and it stays opt-in behind the same
+// consent gate every send already checks.
+const POSTHOG_PUBLIC_KEY = process.env.DEX_POSTHOG_KEY ?? '';
+const POSTHOG_HOST = process.env.DEX_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
 
 // ---------------------------------------------------------------------------
 // Metric thresholds (plan §8.4)
@@ -338,6 +346,9 @@ export class TelemetryEmitter extends EventEmitter {
     tags?: Record<string, string>,
   ): void {
     if (this.mode !== 'remote') return;
+    // No analytics destination configured (the DEX default) — nothing to send
+    // anywhere, so skip before touching consent or building a payload.
+    if (!POSTHOG_PUBLIC_KEY) return;
     // Gate every send on current consent. Reading on each call (rather than
     // caching) means a user who toggles off in Settings stops emitting
     // immediately, no restart needed.
@@ -401,6 +412,9 @@ export function captureEvent(
   eventName: string,
   properties?: Record<string, string | number | boolean>,
 ): void {
+  // No analytics destination configured (the DEX default) — see the
+  // POSTHOG_PUBLIC_KEY note above. Nothing leaves the machine.
+  if (!POSTHOG_PUBLIC_KEY) return;
   if (!isTelemetryConsented()) {
     console.log(`${LOG_PREFIX} posthog.skip reason=no-consent event=${eventName}`);
     return;

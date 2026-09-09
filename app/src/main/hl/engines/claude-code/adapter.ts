@@ -119,6 +119,16 @@ const claudeCodeAdapter: EngineAdapter = {
     const lines: string[] = [
       'You are driving a specific Chromium browser view on this machine.',
       `Your target is CDP target_id=${ctx.targetId} on port ${ctx.cdpPort} (env BU_TARGET_ID / BU_CDP_PORT).`,
+      // Spelled out because the observed failure mode is the agent searching
+      // its tool list for a browser/navigate/click/screenshot *tool*, finding
+      // none, and reporting "no browser-control tools are available" without
+      // ever trying the CLI it was told to use. There is no browser tool by
+      // design — browser control is a command-line program you run with Bash.
+      'IMPORTANT: browser control here is NOT a tool. You will not find any',
+      'browser/navigate/click/screenshot tool in your tool list, and you do not',
+      'need one. Do not search for one, and never report that browser control is',
+      'unavailable. You drive the browser by running the `browser-harness-js`',
+      'command-line program with your Bash/shell tool. It is already on PATH.',
       'Read `./AGENTS.md` for how to drive the browser with Browser Harness JS.',
       "Use the `browser-harness-js` CLI for browser actions. Start with `browser-harness-js 'await connectToAssignedTarget()'`.",
       'Do not use old helpers.js convenience APIs for browser control.',
