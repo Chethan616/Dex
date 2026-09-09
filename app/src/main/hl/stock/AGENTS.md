@@ -84,7 +84,7 @@ rg -n "captureScreenshot|dispatchMouseEvent|setFileInputFiles" ./browser-harness
 The `browser-harness-js` REPL preloads:
 
 - `session` - persistent CDP `Session`.
-- `connectToAssignedTarget()` - Browser Use Desktop helper for `BU_TARGET_ID`
+- `connectToAssignedTarget()` - DEX helper for `BU_TARGET_ID` / `BU_CDP_PORT`
   and `BU_CDP_PORT`.
 - `listPageTargets()` - lists real page targets when connected to a browser
   endpoint.
@@ -156,7 +156,7 @@ EOF
 
 ## Local App Diagnostics
 
-If the user explicitly asks you to debug Browser Use Desktop, local app state is
+If the user explicitly asks you to debug DEX, local app state is
 one directory up from the harness:
 
 - Runtime root: `..`

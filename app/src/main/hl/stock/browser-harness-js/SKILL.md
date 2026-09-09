@@ -1,15 +1,15 @@
 ---
 name: cdp
-description: Drive Browser Use Desktop's assigned Chromium target via the DevTools Protocol from JavaScript. Run snippets through the bundled `browser-harness-js` CLI; it auto-spawns a long-lived Bun HTTP server holding a CDP `Session`, and every call executes against the same persistent connection.
+description: Drive DEX's assigned Chromium target via the DevTools Protocol from JavaScript. Run snippets through the bundled `browser-harness-js` CLI; it auto-spawns a long-lived Bun HTTP server holding a CDP `Session`, and every call executes against the same persistent connection.
 ---
 
 # CDP — `browser-harness-js` skill
 
 Custom codegen'd CDP SDK (every method from browser_protocol.json + js_protocol.json gets a typed wrapper) plus a tiny HTTP server that holds one persistent CDP `Session`. The `browser-harness-js` CLI auto-starts the server on first use and forwards JS snippets to it.
 
-Browser Use Desktop bundles the runtime under `./browser-harness-js/sdk/` and puts that directory on PATH for you. Do not run `npx skills add` or create global symlinks from inside the desktop harness.
+DEX bundles the runtime under `./browser-harness-js/sdk/` and puts that directory on PATH for you. Do not run `npx skills add` or create global symlinks from inside the desktop harness.
 
-## First use in Browser Use Desktop
+## First use in DEX
 
 Connect to the app-assigned target before page-level calls:
 
@@ -150,7 +150,7 @@ const found = await detectBrowsers()
 
 ```js
 await session.connect({ profileDir: '/Users/<you>/Library/Application Support/Google/Chrome' })
-await session.connect({ wsUrl: 'ws://127.0.0.1:9222/devtools/browser/<uuid>' })
+await session.connect({ wsUrl: `ws://127.0.0.1:${process.env.BU_CDP_PORT}/devtools/browser/<uuid>` })
 ```
 
 Profile paths by OS — use these with `{ profileDir }`:
@@ -249,7 +249,7 @@ grep -n "navigate" <skill-dir>/sdk/generated.ts | head
 
 ## Regenerating the SDK
 
-This is a maintenance-only workflow, not a normal task step. Browser Use
+This is a maintenance-only workflow, not a normal task step. DEX
 Desktop already bundles the generated SDK. Do not regenerate or patch it during
 ordinary browser tasks unless the user explicitly asks, or a confirmed bundled
 runtime defect blocks the task.
