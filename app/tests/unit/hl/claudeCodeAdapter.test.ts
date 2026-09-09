@@ -70,6 +70,9 @@ describe('claude-code adapter spawn args', () => {
     const ctx = spawnContext('claude-session-123');
     const wrappedPrompt = adapter.wrapPrompt(ctx);
 
+    // The prompt is deliberately absent from argv and delivered over stdin
+    // instead — cmd.exe truncates a multi-line argument, which silently cost
+    // the agent its `Task:` line on Windows. See claudeCodeStdinPrompt.test.ts.
     expect(adapter.buildSpawnArgs(ctx, wrappedPrompt)).toEqual([
       '-p',
       '--output-format',
@@ -79,7 +82,7 @@ describe('claude-code adapter spawn args', () => {
       '--dangerously-skip-permissions',
       '--resume',
       'claude-session-123',
-      wrappedPrompt,
     ]);
+    expect(adapter.getStdinPayload?.(ctx, wrappedPrompt)).toBe(wrappedPrompt);
   });
 });

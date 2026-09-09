@@ -137,7 +137,7 @@ const claudeCodeAdapter: EngineAdapter = {
     return lines.join('\n');
   },
 
-  buildSpawnArgs(_ctx: SpawnContext, wrappedPrompt: string): string[] {
+  buildSpawnArgs(_ctx: SpawnContext, _wrappedPrompt: string): string[] {
     const args: string[] = [
       '-p',
       '--output-format', 'stream-json',
@@ -146,8 +146,23 @@ const claudeCodeAdapter: EngineAdapter = {
       '--dangerously-skip-permissions',
     ];
     if (_ctx.resumeSessionId) args.push('--resume', _ctx.resumeSessionId);
-    args.push(wrappedPrompt);
+    // The prompt deliberately does NOT go in argv — see getStdinPayload.
     return args;
+  },
+
+  getStdinPayload(_ctx: SpawnContext, wrappedPrompt: string): string {
+    // Same Windows argv bug the codex adapter already dodges. On Windows
+    // `claude` is a `.cmd` npm shim routed through `cmd.exe /d /s /c`, and
+    // cmd.exe stops parsing an argument at a raw newline inside quotes. Our
+    // wrapPrompt is multi-line and ends with the actual `Task: ...` line, so
+    // passing it via argv truncated it: the agent received the leading browser
+    // instructions, connected to the target correctly, and then reported
+    // "there's no task in your message yet" — because the task really had been
+    // cut off. Observed live on Windows with a fully working harness.
+    //
+    // `claude -p` reads the prompt from stdin when none is given positionally,
+    // which sidesteps argv quoting on every platform.
+    return wrappedPrompt;
   },
 
   buildEnv(ctx: SpawnContext, baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
