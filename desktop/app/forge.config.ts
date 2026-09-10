@@ -175,7 +175,7 @@ const config: ForgeConfig = {
     postPackage: async (_config, packageResult) => {
       if (SHOULD_SIGN || process.platform !== 'darwin') return;
       for (const outputPath of packageResult.outputPaths ?? []) {
-        const appPath = path.join(outputPath, 'Browser Use.app');
+        const appPath = path.join(outputPath, 'DEX.app');
         if (!fs.existsSync(appPath)) continue;
         execFileSync('codesign', ['--deep', '--force', '--sign', '-', appPath], { stdio: 'inherit' });
         execFileSync('codesign', ['-dvv', appPath], { stdio: 'inherit' });
@@ -201,8 +201,8 @@ const config: ForgeConfig = {
     // by CI via WINDOWS_SIGN_WITH_PARAMS when a certificate pipeline exists.
     new MakerSquirrel({
       name: 'dex_desktop',
-      title: 'Browser Use',
-      setupExe: 'Browser-Use-Setup.exe',
+      title: 'DEX',
+      setupExe: 'dex-setup.exe',
       setupIcon: WINDOWS_ICON_PATH,
       noMsi: true,
       ...(WINDOWS_SIGN_WITH_PARAMS ? { signWithParams: WINDOWS_SIGN_WITH_PARAMS } : {}),
@@ -216,11 +216,11 @@ const config: ForgeConfig = {
         productName: 'DEX',
         genericName: 'Agent Browser',
         description: 'Desktop agent hub for Claude Code and Codex',
-        productDescription: 'Browser Use is a desktop agent hub for Claude Code and Codex.',
+        productDescription: 'DEX is a computer-use agent for the web, the desktop and the OS.',
         section: 'utils',
         priority: 'optional',
-        maintainer: 'Browser Use <support@browser-use.com>',
-        homepage: 'https://github.com/browser-use/desktop',
+        maintainer: 'Chethan616 <chethankrishna2022@gmail.com>',
+        homepage: 'https://github.com/Chethan616/Dex',
         icon: LINUX_ICON_PATH,
         categories: ['Utility', 'Network'],
       },
@@ -231,10 +231,10 @@ const config: ForgeConfig = {
         productName: 'DEX',
         genericName: 'Agent Browser',
         description: 'Desktop agent hub for Claude Code and Codex',
-        productDescription: 'Browser Use is a desktop agent hub for Claude Code and Codex.',
+        productDescription: 'DEX is a computer-use agent for the web, the desktop and the OS.',
         license: 'MIT',
         group: 'Applications/Internet',
-        homepage: 'https://github.com/browser-use/desktop',
+        homepage: 'https://github.com/Chethan616/Dex',
         icon: LINUX_ICON_PATH,
         categories: ['Utility', 'Network'],
       },

@@ -335,7 +335,30 @@ interface ElectronSettingsAppAPI {
   }) => void) => () => void;
 }
 
+/** Mirrors PreflightCheck in src/main/startup/preflight.ts. */
+interface PreflightCheckInfo {
+  id: 'git-bash' | 'bun' | 'cdp-port' | 'harness-dir';
+  label: string;
+  status: 'ok' | 'degraded' | 'missing';
+  detail: string;
+  resolvedPath?: string;
+  fix?: { summary: string; command?: string; url?: string };
+}
+
+interface PreflightReportInfo {
+  checks: PreflightCheckInfo[];
+  ok: boolean;
+  platform: string;
+  generatedAt: number;
+}
+
+interface ElectronSettingsPreflightAPI {
+  get: () => Promise<PreflightReportInfo>;
+  refresh: () => Promise<PreflightReportInfo>;
+}
+
 interface ElectronSettingsAPI {
+  preflight?: ElectronSettingsPreflightAPI;
   open?: (payload?: { focusBrowserCodeProvider?: string }) => Promise<void>;
   apiKey: ElectronSettingsApiKeyAPI;
   claudeCode?: ElectronSettingsClaudeCodeAPI;

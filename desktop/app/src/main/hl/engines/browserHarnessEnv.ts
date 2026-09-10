@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { findGitBash } from '../../startup/preflight';
 import type { SpawnContext } from './types';
 
 export function browserHarnessReplPort(sessionId: string, targetId = ''): string {
@@ -28,35 +28,13 @@ export function browserHarnessReplPort(sessionId: string, targetId = ''): string
  * and independent of when the variable was set or whether Electron sanitised
  * the environment it inherited.
  *
- * Order: an existing explicit override wins; then the standard install
- * locations; then derive it from wherever `git` actually lives on PATH, which
- * is what covers non-default drives.
+ * The search itself lives in startup/preflight.ts, which also reports what it
+ * found to the user. Keeping one implementation matters: a machine where the
+ * agent cannot start bash but Settings claims everything is fine would be a
+ * worse outcome than either failure alone.
  */
 export function resolveGitBash(env: NodeJS.ProcessEnv): string | undefined {
-  const override = env.BROWSER_HARNESS_JS_BASH;
-  if (override && existsSync(override)) return override;
-
-  const standard = [
-    env.ProgramFiles && path.join(env.ProgramFiles, 'Git', 'bin', 'bash.exe'),
-    env['ProgramFiles(x86)'] && path.join(env['ProgramFiles(x86)'], 'Git', 'bin', 'bash.exe'),
-    env.LocalAppData && path.join(env.LocalAppData, 'Programs', 'Git', 'bin', 'bash.exe'),
-  ].filter((p): p is string => typeof p === 'string');
-
-  for (const candidate of standard) {
-    if (existsSync(candidate)) return candidate;
-  }
-
-  // Derive from git on PATH. Git for Windows ships git.exe in <root>\cmd and
-  // <root>\bin, with bash.exe in <root>\bin — so walk up from whichever
-  // directory git was found in and look there.
-  for (const dir of (env.PATH ?? '').split(path.delimiter)) {
-    if (!dir) continue;
-    if (!existsSync(path.join(dir, 'git.exe'))) continue;
-    const candidate = path.join(path.dirname(dir), 'bin', 'bash.exe');
-    if (existsSync(candidate)) return candidate;
-  }
-
-  return undefined;
+  return findGitBash(env);
 }
 
 export function applyBrowserHarnessEnv(ctx: SpawnContext, env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {

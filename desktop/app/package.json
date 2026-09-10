@@ -3,16 +3,16 @@
   "productName": "DEX",
   "version": "3.0.23",
   "description": "DEX — a desktop agent that operates your browser and your computer",
-  "homepage": "https://github.com/browser-use/desktop",
+  "homepage": "https://github.com/Chethan616/Dex",
   "repository": {
     "type": "git",
-    "url": "https://github.com/browser-use/desktop.git"
+    "url": "https://github.com/Chethan616/Dex.git"
   },
   "engines": {
     "node": "20.x || 22.x"
   },
   "bugs": {
-    "url": "https://github.com/browser-use/desktop/issues"
+    "url": "https://github.com/Chethan616/Dex/issues"
   },
   "main": ".vite/build/main.js",
   "private": true,
@@ -56,8 +56,8 @@
   },
   "keywords": [],
   "author": {
-    "name": "Reagan Hsu",
-    "email": "reaganhsu123@gmail.com"
+    "name": "Chethan616",
+    "email": "chethankrishna2022@gmail.com"
   },
   "license": "MIT",
   "devDependencies": {

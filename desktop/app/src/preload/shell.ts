@@ -8,6 +8,7 @@ import {
 } from '../shared/session-schemas';
 import type { AgentSession, HlEvent, TabInfo, BrowserPoolStats } from '../shared/session-schemas';
 import { createPopupBridge } from './popupBridge';
+import type { PreflightReport } from '../main/startup/preflight';
 
 type SettingsOpenPayload = { focusBrowserCodeProvider?: string };
 
@@ -144,6 +145,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('theme:changed', handler);
         return () => ipcRenderer.removeListener('theme:changed', handler);
       },
+    },
+    preflight: {
+      get: (): Promise<PreflightReport> => ipcRenderer.invoke('settings:preflight:get'),
+      refresh: (): Promise<PreflightReport> => ipcRenderer.invoke('settings:preflight:refresh'),
     },
     app: {
       getInfo: (): Promise<{

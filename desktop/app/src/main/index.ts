@@ -91,6 +91,7 @@ import {
   verifyCdpOwnership,
 } from './startup/cli';
 import { assertString, assertAttachments, type ValidatedAttachment } from './ipc-validators';
+import { runPreflight, formatPreflightForLog, type PreflightReport } from './startup/preflight';
 import { TaskStateMutationSchema } from '../shared/session-schemas';
 // Agent loop: CLI subprocess driving the browser harness. Engine is
 // pluggable (claude-code, codex, …) — see src/main/hl/engines/.
@@ -182,6 +183,33 @@ const sessionManager = new SessionManager(path.join(app.getPath('userData'), 'se
 // Bootstrap the editable helpers harness — writes stock helpers.js + TOOLS.json
 // to <userData>/harness/ on first run, preserves user edits on subsequent runs.
 bootstrapHarness();
+/**
+ * The environment report, refreshed at startup and on demand from Settings.
+ *
+ * Held in main rather than recomputed per request so the renderer, the log and
+ * the engine spawn all agree on what was found — the whole point is that a
+ * missing dependency is stated once, clearly, instead of surfacing later as an
+ * agent that mysteriously does less than it should.
+ */
+let preflightReport: PreflightReport | null = null;
+
+function refreshPreflight(cdpVerified: boolean | null = null): PreflightReport {
+  preflightReport = runPreflight({
+    env: process.env,
+    harnessPath: harnessDir(),
+    cdpPort: resolvedCdp.port,
+    cdpVerified,
+  });
+  for (const line of formatPreflightForLog(preflightReport)) {
+    const missing = line.startsWith('[FAIL]');
+    if (missing) mainLogger.error('main.preflight', { line });
+    else mainLogger.info('main.preflight', { line });
+  }
+  return preflightReport;
+}
+
+refreshPreflight();
+
 const browserPool = new BrowserPool();
 let interruptBrowserSessionFromShortcut: ((sessionId: string) => boolean) | null = null;
 const resourceMonitorContext: ResourceMonitorContext = {
@@ -390,6 +418,9 @@ app.whenReady().then(async () => {
   // access to, and `/devtools/page/<id>` gives 404/403. Log loudly on
   // mismatch so users hit a clear error instead of mysterious CDP failures.
   verifyCdpOwnership(resolvedCdp.port).then((v) => {
+    // Fold the CDP result into the environment report as soon as we have it,
+    // so Settings shows one coherent picture rather than three half-answers.
+    refreshPreflight(v.ok);
     if (v.ok) {
       mainLogger.info('main.cdp.verified', { port: resolvedCdp.port, browser: v.browser, userAgent: v.userAgent });
     } else {
@@ -1760,6 +1791,12 @@ app.whenReady().then(async () => {
     mainLogger.info('main.settings:open', { focusBrowserCodeProvider: payload?.focusBrowserCodeProvider });
     openSettingsInShell(payload);
   });
+
+  // Environment report. `refresh` re-runs the checks rather than replaying the
+  // startup snapshot, so installing Git and clicking Re-check works without
+  // restarting the app.
+  ipcMain.handle('settings:preflight:get', () => preflightReport ?? refreshPreflight());
+  ipcMain.handle('settings:preflight:refresh', () => refreshPreflight());
 
   ipcMain.handle('settings:app:get-info', () => {
     mainLogger.debug('main.settings:app:get-info');
