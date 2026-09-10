@@ -1,7 +1,7 @@
 {
   "name": "dex-desktop",
   "productName": "DEX",
-  "version": "0.0.31",
+  "version": "3.0.23",
   "description": "DEX — a desktop agent that operates your browser and your computer",
   "homepage": "https://github.com/browser-use/desktop",
   "repository": {

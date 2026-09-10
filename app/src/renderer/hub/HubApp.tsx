@@ -542,10 +542,7 @@ export function HubApp(): React.ReactElement {
       <header className="hub-toolbar">
         <div className="hub-toolbar__left">
           <span className="hub-toolbar__title">DEX</span>
-          <MemoryIndicator
-            onOpenSettings={() => openSettingsPage()}
-            settingsShortcut={shortcutFor('goto.settings')}
-          />
+          <MemoryIndicator />
         </div>
         <div className="hub-toolbar__center">
           <HubViewToggle

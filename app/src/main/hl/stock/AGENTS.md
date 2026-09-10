@@ -148,6 +148,56 @@ return '/tmp/browser-use-shot.png'
 EOF
 ```
 
+## When A Site Needs The User To Log In
+
+The user can see and interact with the browser view you are driving. So a
+login wall is **not** a reason to stop and hand the task back.
+
+Never end your turn with "please log in and tell me when you're done". The
+user is right there watching; asking them to come back and re-prompt you
+wastes the session. Instead: tell them what to do, then **wait for it in a
+polling loop** and carry on by yourself once they are through.
+
+Never type the user's password yourself, and never ask them to paste it to
+you. They type it into the browser directly; you only watch for the result.
+
+The pattern — poll a cheap signal until it flips, with a bounded wait:
+
+```bash
+cat > /tmp/wait-login.js <<'EOF'
+await connectToAssignedTarget()
+const deadline = Date.now() + 5 * 60 * 1000   // give a human a real chance
+while (Date.now() < deadline) {
+  const { result } = await session.Runtime.evaluate({
+    expression: 'location.href',
+    returnByValue: true,
+  })
+  const url = String(result.value || '')
+  // Signal that the wall is gone. Prefer a URL check when the site uses a
+  // dedicated login path; otherwise probe for an element that only exists
+  // once signed in.
+  if (!/\/accounts\/login|\/login|\/signin/.test(url)) return url
+  await new Promise((r) => setTimeout(r, 3000))
+}
+return 'TIMEOUT'
+EOF
+browser-harness-js --file /tmp/wait-login.js
+```
+
+Then:
+
+- Returned a URL → they are in. Continue the original task immediately,
+  without asking for confirmation.
+- Returned `TIMEOUT` → say plainly that the login did not complete in five
+  minutes, and stop. Do not loop again.
+
+Say one short line before you start polling, so the user knows to act, e.g.
+"Instagram wants a login — sign in in the browser view and I'll pick it up
+from there." Then poll. Do not repeat the message on every iteration.
+
+Once you are past the wall, the session cookie persists in this browser
+profile, so later tasks on the same site will usually not ask again.
+
 ## Uploads And Outputs
 
 - Uploads from the user appear under `./uploads/<session_id>/`.
