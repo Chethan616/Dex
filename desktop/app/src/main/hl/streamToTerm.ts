@@ -230,6 +230,28 @@ export function hlEventToTermBytes(event: HlEvent, state: TermTranslatorState): 
     case 'turn_usage':
       // Cost telemetry — rolled up into the session header; no terminal row.
       return finish();
+
+    case 'task_state': {
+      // One line per ledger change, not a redraw of the whole plan: the
+      // terminal is a transcript, and the plan view in the pane is where the
+      // full state belongs.
+      const { steps, currentStep } = event.state;
+      const done = steps.filter((step) => step.status === 'done').length;
+      const active = steps.find((step) => step.id === currentStep);
+      const label = active ? active.title : done === steps.length && steps.length > 0 ? 'all steps complete' : 'plan updated';
+      out.push(`${FG.cyan}◆ [${done}/${steps.length}] ${truncate(label, 90)}${RESET}\r\n`);
+      return finish();
+    }
+
+    case 'artifact': {
+      const count = event.kind === 'files' ? ` ${FG.grey}(${event.items.length}${event.total && event.total > event.items.length ? ` of ${event.total}` : ''})${RESET}` : '';
+      out.push(`${FG.cyan}▣ ${truncate(event.title, 90)}${RESET}${count}\r\n`);
+      return finish();
+    }
+
+    case 'screenshot':
+      out.push(`${FG.grey}▢ screenshot${event.mode === 'uia' ? ' (annotated)' : ''}${event.caption ? ` — ${truncate(event.caption, 70)}` : ''}${RESET}\r\n`);
+      return finish();
   }
 
   return out.join('');

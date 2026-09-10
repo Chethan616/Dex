@@ -12,7 +12,52 @@ export type HlEvent =
   | { type: 'harness_edited'; target: 'helpers' | 'tools'; action: 'write' | 'patch'; path: string; added?: string[]; removed?: string[]; changed?: string[] }
   | { type: 'file_output'; name: string; path: string; size: number; mime: string }
   | { type: 'notify'; message: string; level: 'info' | 'blocking' }
-  | { type: 'turn_usage'; inputTokens: number; outputTokens: number; cachedInputTokens: number; costUsd: number; model?: string; source: 'exact' | 'estimated' };
+  | { type: 'turn_usage'; inputTokens: number; outputTokens: number; cachedInputTokens: number; costUsd: number; model?: string; source: 'exact' | 'estimated' }
+  | { type: 'task_state'; state: TaskState }
+  | { type: 'artifact'; kind: 'files' | 'reading'; title: string; note?: string; total?: number; body?: string; file?: string; items: ArtifactItem[] }
+  | { type: 'screenshot'; path: string; caption?: string; mode: 'raw' | 'uia'; at: number };
+
+export interface TaskStepFailure {
+  reason: string;
+  tool?: string;
+  fallback?: string;
+  at: number;
+}
+
+export interface TaskStep {
+  id: string;
+  title: string;
+  status: 'pending' | 'active' | 'done' | 'failed' | 'skipped';
+  tool?: string;
+  failures: TaskStepFailure[];
+  startedAt?: number;
+  endedAt?: number;
+}
+
+export interface TaskFile {
+  path: string;
+  name: string;
+  size?: number;
+  at: number;
+}
+
+export interface TaskState {
+  objective: string;
+  steps: TaskStep[];
+  currentStep: string | null;
+  files: TaskFile[];
+  notes: string[];
+  updatedAt: number;
+}
+
+export interface ArtifactItem {
+  label: string;
+  detail?: string;
+  reasons: string[];
+  excerpt?: string;
+  bytes?: number;
+  modified?: number;
+}
 
 export interface AgentSession {
   id: string;
@@ -126,10 +171,15 @@ export function adaptSession(session: AgentSession): {
   toolCallCount: number;
   elapsedMs: number;
 } {
-  // turn_usage events are persisted for audit + session-total roll-up in the
-  // main process; they have no row in the UI log so we drop them here.
+  // Events that carry no log row. turn_usage is telemetry, rolled up into the
+  // session total. The three DEX events render in the preview deck instead —
+  // a plan and a result card belong in a panel you can look at, not in a
+  // scrolling transcript, and the terminal already gets a one-line summary of
+  // each from streamToTerm.
+  const HIDDEN_FROM_LOG = new Set(['turn_usage', 'task_state', 'artifact', 'screenshot']);
   const visibleOutput = session.output.filter(
-    (e): e is Exclude<HlEvent, { type: 'turn_usage' }> => e.type !== 'turn_usage',
+    (e): e is Exclude<HlEvent, { type: 'turn_usage' | 'task_state' | 'artifact' | 'screenshot' }> =>
+      !HIDDEN_FROM_LOG.has(e.type),
   );
 
   // When the agent reads/writes a domain-skills/interaction-skills .md file,

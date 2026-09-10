@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { mainLogger } from '../logger';
-import type { HlEvent } from '../../shared/session-schemas';
+import type { HlEvent, TaskState, TaskStateMutation } from '../../shared/session-schemas';
 import type { AgentSession, SessionStatus, SessionEvents } from './types';
 import { SessionDb } from './SessionDb';
 import { extractRegistrableDomain } from './domain';
@@ -290,6 +290,110 @@ export class SessionManager extends EventEmitter {
     return { resumed: true };
   }
 
+  // -- Task state ledger ----------------------------------------------------
+
+  getTaskState(id: string): TaskState {
+    return this.db.getTaskState(id);
+  }
+
+  /**
+   * Apply one `dex-state` verb and publish the result.
+   *
+   * Publishing goes through appendOutput, which is the single funnel every
+   * other event already uses — so the ledger lands in session_events, reaches
+   * the renderer and the terminal, and resets the stuck timer, without any of
+   * that being restated here. A long UIA walk or index build that reports its
+   * progress through this method therefore also keeps the session out of the
+   * 30-second `stuck` state, which is a real side benefit rather than a
+   * coincidence.
+   */
+  applyTaskState(id: string, mutation: TaskStateMutation): TaskState {
+    const session = this.sessions.get(id);
+    if (!session) throw new Error(`unknown session ${id}`);
+
+    const state: TaskState = { ...this.db.getTaskState(id) };
+    if (mutation.op === 'get') return state;
+
+    const now = Date.now();
+    // Verbs that name no step act on whatever is currently active, so the
+    // agent can write `dex-state step-done` without tracking ids itself.
+    const targetId = 'stepId' in mutation && mutation.stepId ? mutation.stepId : state.currentStep;
+    const find = (stepId: string | null) => state.steps.find((step) => step.id === stepId);
+
+    switch (mutation.op) {
+      case 'plan': {
+        if (mutation.objective) state.objective = mutation.objective;
+        // Re-planning preserves the status and failure history of steps whose
+        // id survives, so a mid-task re-plan does not erase the record of what
+        // already succeeded. That is the whole point of the ledger.
+        const previous = new Map(state.steps.map((step) => [step.id, step]));
+        state.steps = mutation.steps.map((step, index) => {
+          const stepId = step.id ?? `step_${index + 1}`;
+          const before = previous.get(stepId);
+          return {
+            id: stepId,
+            title: step.title,
+            tool: step.tool ?? before?.tool,
+            status: before?.status ?? 'pending',
+            failures: before?.failures ?? [],
+            startedAt: before?.startedAt,
+            endedAt: before?.endedAt,
+          };
+        });
+        if (state.currentStep && !find(state.currentStep)) state.currentStep = null;
+        break;
+      }
+      case 'step-start': {
+        const step = find(mutation.stepId);
+        if (!step) throw new Error(`unknown step ${mutation.stepId}`);
+        // Leaving a step without finishing it is a real occurrence (the agent
+        // reorders, or abandons an approach). Mark it rather than silently
+        // leaving two steps looking active.
+        const previous = find(state.currentStep);
+        if (previous && previous.id !== step.id && previous.status === 'active') previous.status = 'skipped';
+        step.status = 'active';
+        step.startedAt = step.startedAt ?? now;
+        state.currentStep = step.id;
+        break;
+      }
+      case 'step-done': {
+        const step = find(targetId);
+        if (!step) throw new Error('no active step to complete');
+        step.status = 'done';
+        step.endedAt = now;
+        if (state.currentStep === step.id) state.currentStep = null;
+        break;
+      }
+      case 'step-fail': {
+        const step = find(targetId);
+        if (!step) throw new Error('no active step to fail');
+        step.failures = [...step.failures, { reason: mutation.reason, tool: mutation.tool, fallback: mutation.fallback, at: now }];
+        // A failure WITH a named fallback is a recovery in progress, not an
+        // ended step: the step stays active while the agent tries the other
+        // interface. Only a failure with nowhere left to go ends it.
+        step.status = mutation.fallback ? 'active' : 'failed';
+        if (!mutation.fallback && state.currentStep === step.id) state.currentStep = null;
+        break;
+      }
+      case 'file': {
+        // Both separators: agents hand us Windows paths and POSIX-style ones
+        // interchangeably, often in the same session.
+        const name = mutation.name ?? mutation.path.split(/[/\\]/).pop() ?? mutation.path;
+        state.files = [...state.files.filter((file) => file.path !== mutation.path), { path: mutation.path, name, size: mutation.size, at: now }];
+        break;
+      }
+      case 'note': {
+        state.notes = [...state.notes, mutation.text].slice(-50);
+        break;
+      }
+    }
+
+    state.updatedAt = now;
+    this.db.saveTaskState(id, state);
+    this.appendOutput(id, { type: 'task_state', state });
+    return state;
+  }
+
   appendOutput(id: string, event: HlEvent): void {
     const session = this.sessions.get(id);
     if (!session) {
@@ -509,6 +613,8 @@ export class SessionManager extends EventEmitter {
     this.db.updateSessionStatus(id, 'running');
     this.db.saveMessages(id, []);
     this.db.clearEvents(id);
+    // The ledger describes the run that is being discarded, so it goes with it.
+    this.db.clearTaskState(id);
     this.termStates.delete(id);
     this.emitEvent('session-output-term', id, '\x1bc');
     // Rerun starts a fresh conversation — clear any provider resume id so the
@@ -761,6 +867,19 @@ export class SessionManager extends EventEmitter {
         return { textLength: event.text.length };
       case 'thinking':
         return { textLength: event.text.length };
+      case 'task_state':
+        return {
+          objective: event.state.objective.slice(0, 200),
+          steps: event.state.steps.length,
+          done: event.state.steps.filter((step) => step.status === 'done').length,
+          currentStep: event.state.currentStep,
+          failures: event.state.steps.reduce((total, step) => total + step.failures.length, 0),
+          files: event.state.files.length,
+        };
+      case 'artifact':
+        return { kind: event.kind, title: event.title, items: event.items.length, total: event.total ?? null };
+      case 'screenshot':
+        return { path: event.path, mode: event.mode, caption: event.caption ?? null };
     }
   }
 

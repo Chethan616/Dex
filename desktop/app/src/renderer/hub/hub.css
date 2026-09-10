@@ -5462,3 +5462,335 @@ button:focus:not(:focus-visible) {
   color: var(--color-fg-primary);
   box-shadow: var(--shadow-xs);
 }
+
+/* ---------------------------------------------------------------------------
+   PREVIEW DECK
+
+   Fills the browser rect when no live page occupies it. The parent
+   .pane__browser-frame centres a single placeholder and disables pointer
+   events; the deck needs the opposite — a scrollable column of interactive
+   cards — so the modifier below overrides both rather than fighting them.
+
+   Cards use the house recipe (see .dashboard__stat-card): sunken ground, a
+   1px highlight hairline, and a top-down sheen. The shell theme sets every
+   --shadow-* to none in dark mode, so depth comes from the inset highlight
+   rather than from drop shadows.
+   --------------------------------------------------------------------------- */
+
+.pane__browser-frame--deck {
+  align-items: stretch;
+  justify-content: flex-start;
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.deck {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+  height: 100%;
+  padding: var(--space-8);
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.deck-card {
+  flex: 0 0 auto;
+  padding: var(--space-8);
+  background-color: var(--color-bg-sunken);
+  background-image: linear-gradient(180deg, rgba(var(--highlight-rgb), 0.05), rgba(var(--highlight-rgb), 0) 42%);
+  border: 1px solid rgba(var(--highlight-rgb), 0.05);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--highlight-rgb), 0.07),
+    0 1px 0 rgba(var(--highlight-rgb), 0.03);
+  animation: fade-in var(--duration-normal) var(--ease-out);
+}
+
+.deck-card__header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.deck-card__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-card__count {
+  flex: 0 0 auto;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.deck-card__note {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-tertiary);
+}
+
+.deck-card__body {
+  margin: var(--space-4) 0 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-fg-secondary);
+  white-space: pre-wrap;
+}
+
+.deck-card__file {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-default);
+  cursor: pointer;
+  text-align: left;
+  word-break: break-all;
+}
+
+/* -- result rows ----------------------------------------------------------- */
+
+.deck-card__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.deck-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.deck-item--hover {
+  background-color: var(--color-surface-hover);
+}
+
+.deck-item__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.deck-item__line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+}
+
+.deck-item__label {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-item__size {
+  flex: 0 0 auto;
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.deck-item__folder {
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The matched line. Two lines maximum: it is evidence that this hit is the
+   right one, not the document itself. */
+.deck-item__excerpt {
+  margin-top: 3px;
+  font-size: var(--font-size-2xs);
+  line-height: var(--line-height-snug);
+  color: var(--color-fg-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.deck-item__reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.deck-tag {
+  padding: 1px var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: rgba(var(--highlight-rgb), 0.06);
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-tertiary);
+}
+
+/* Only on hover, so twelve results read as results rather than as controls. */
+.deck-item__copy {
+  flex: 0 0 auto;
+  padding: var(--space-1) var(--space-3);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-tertiary);
+  cursor: pointer;
+}
+
+.deck-item__copy:hover {
+  color: var(--color-fg-primary);
+  background-color: var(--color-surface-active);
+}
+
+/* -- plan ------------------------------------------------------------------ */
+
+.deck-plan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deck-plan__step {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}
+
+.deck-plan__glyph {
+  flex: 0 0 auto;
+  width: 1em;
+  color: var(--color-fg-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.deck-plan__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-plan__step--done .deck-plan__glyph { color: var(--color-status-success); }
+.deck-plan__step--done .deck-plan__title { color: var(--color-fg-tertiary); }
+.deck-plan__step--failed .deck-plan__glyph { color: var(--color-status-error); }
+.deck-plan__step--skipped .deck-plan__title { color: var(--color-fg-disabled); }
+
+.deck-plan__step--active .deck-plan__glyph { color: var(--color-accent-default); }
+.deck-plan__step--active .deck-plan__title {
+  color: var(--color-fg-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* "uia to vision": the interface that failed, and the one that took over. */
+.deck-plan__recovery {
+  flex: 0 0 auto;
+  padding: 1px var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: rgba(var(--highlight-rgb), 0.05);
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-tertiary);
+  white-space: nowrap;
+}
+
+.deck-plan__files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid rgba(var(--highlight-rgb), 0.05);
+}
+
+.deck-plan__file {
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid rgba(var(--highlight-rgb), 0.06);
+  border-radius: var(--radius-sm);
+  background: none;
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-plan__file:hover {
+  color: var(--color-fg-primary);
+  background-color: var(--color-surface-hover);
+}
+
+/* -- screenshots ----------------------------------------------------------- */
+
+.deck-card--shots {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.deck-shot {
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  object-position: top left;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-base);
+}
+
+.deck-shot__strip {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
+}
+
+.deck-shot__thumb {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.deck-shot__thumb--active {
+  border-color: var(--color-accent-default);
+}
+
+.deck-shot__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

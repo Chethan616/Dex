@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { STATUS_LABEL } from './constants';
 import { ContentRenderer, getPreview } from './ContentRenderer';
 import { Markdown, linkifyOutputPaths } from './Markdown';
@@ -10,6 +10,7 @@ import opencodeLogoDark from './opencode-logo-dark.svg';
 import opencodeLogoLight from './opencode-logo-light.svg';
 import { useThemedAsset } from '../design/useThemedAsset';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
+import { PreviewDeck, deckHasContent } from './PreviewDeck';
 import type { AgentSession, OutputEntry } from './types';
 
 function formatElapsed(createdAt: number): string {
@@ -710,6 +711,20 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
   const [browserDead, setBrowserDead] = useState(false);
   const [browserMissing, setBrowserMissing] = useState(false);
   const [frameRect, setFrameRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  /**
+   * Whether the preview deck should take over the browser rect.
+   *
+   * The native WebContentsView composites *above* the renderer, so React can
+   * only be seen in this rect while that view is detached. Hand the rect to
+   * the deck when there is something to show and no page would be lost by it:
+   * the browser has never navigated (a desktop, file, or OS task), or the
+   * session is paused. Once primarySite is set the page wins — a live page is
+   * always more useful than a card describing one.
+   */
+  const deckActive = useMemo(
+    () => deckHasContent(session) && (!session.primarySite || session.status === 'paused'),
+    [session],
+  );
   // Logs overlay is a separate window (see logsPill.ts). The pane tracks
   // visibility only to reflect it in the Logs button's active state.
   const [logsOpen, setLogsOpen] = useState(false);
@@ -823,7 +838,18 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
       // warming up.
       const overlayMode: 'idle' | 'active' = session.primarySite ? 'active' : 'idle';
 
-      if (!hasAttached) {
+      if (deckActive) {
+        // Deck owns the rect: pull the native view out of the way and drop the
+        // takeover overlay, which would otherwise paint its scrim over the
+        // cards. Bounds measurement below still runs, so the deck is positioned
+        // exactly where the browser would have been.
+        if (hasAttached) {
+          hasAttached = false;
+          attachSucceeded = false;
+          api.sessions.viewDetach(session.id).catch(() => {});
+        }
+        api.takeover?.hide(session.id).catch(() => {});
+      } else if (!hasAttached) {
         hasAttached = true;
         api.sessions.viewAttach(session.id, bounds).then((ok) => {
           if (!ok) {
@@ -912,7 +938,7 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
       window.removeEventListener('pane:layout-change', onLayoutChange);
       if (rafScheduled) cancelAnimationFrame(rafScheduled);
     };
-  }, [session.id, computeBounds, browserDead, session.status, session.primarySite]);
+  }, [session.id, computeBounds, browserDead, session.status, session.primarySite, deckActive]);
 
   useEffect(() => {
     return () => {
@@ -1110,7 +1136,11 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
         {session.status === 'running' && <div className="pane__progress-bar" />}
       </div>
 
-      {frameRect && (showErrorUi || browserDead || browserMissing || session.status === 'draft' || session.status === 'stopped' || session.status === 'idle' || session.status === 'stuck') && (() => {
+      {/* The pane's non-browser surface. Shown when no live page occupies the
+          rect — the pre-existing idle/error states, plus the two new ones the
+          deck introduces: a running task that has never navigated (desktop,
+          file or OS work) and a paused session. */}
+      {frameRect && (deckActive || showErrorUi || browserDead || browserMissing || session.status === 'draft' || session.status === 'stopped' || session.status === 'idle' || session.status === 'stuck') && (() => {
         const isStarting = !showErrorUi && !browserDead && !browserMissing && session.status === 'draft';
         const browserLine = browserDead
           ? 'Browser ended'
@@ -1124,16 +1154,7 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
             : browserLine;
         const subLine = (showErrorUi || isCancellation) ? browserLine : null;
         const showActions = !isStarting && (onRerun || canResume || (showErrorUi && isApiKeyError(session.error) && onOpenSettings));
-        return (
-          <div
-            className="pane__browser-frame"
-            style={{
-              left: frameRect.left,
-              top: frameRect.top,
-              width: frameRect.width,
-              height: frameRect.height,
-            }}
-          >
+        const placeholder = (
             <div className="pane__browser-starting">
               {showErrorUi && (
                 <div className="pane__error-icon">
@@ -1181,6 +1202,18 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
                 </div>
               )}
             </div>
+        );
+        return (
+          <div
+            className={deckActive ? 'pane__browser-frame pane__browser-frame--deck' : 'pane__browser-frame'}
+            style={{
+              left: frameRect.left,
+              top: frameRect.top,
+              width: frameRect.width,
+              height: frameRect.height,
+            }}
+          >
+            <PreviewDeck session={session} placeholder={placeholder} />
           </div>
         );
       })()}

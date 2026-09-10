@@ -61,15 +61,25 @@ export function resolveGitBash(env: NodeJS.ProcessEnv): string | undefined {
 
 export function applyBrowserHarnessEnv(ctx: SpawnContext, env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const sdkDir = path.join(ctx.harnessDir, 'browser-harness-js', 'sdk');
-  env.PATH = env.PATH ? `${sdkDir}${path.delimiter}${env.PATH}` : sdkDir;
+  const dexToolsDir = path.join(ctx.harnessDir, 'dex-tools');
+  const toolDirs = [sdkDir, dexToolsDir].join(path.delimiter);
+  env.PATH = env.PATH ? `${toolDirs}${path.delimiter}${env.PATH}` : toolDirs;
   env.CDP_REPL_PORT = env.CDP_REPL_PORT ?? browserHarnessReplPort(ctx.sessionId, ctx.targetId);
   env.CDP_REPL_LOG = env.CDP_REPL_LOG ?? path.join(ctx.harnessDir, `browser-harness-js-${ctx.sessionId}.log`);
   env.BU_SESSION_ID = ctx.sessionId;
+  // The dex-* tools address the app over its loopback control server. Passing
+  // the control file explicitly beats letting each tool guess a path relative
+  // to its cwd, which only happens to work while cwd is the harness dir.
+  env.DEX_SESSION_ID = ctx.sessionId;
+  env.DEX_CONTROL_FILE = path.join(path.dirname(ctx.harnessDir), 'local-task-server.json');
 
   if (process.platform === 'win32') {
     const bash = resolveGitBash(env);
     if (bash) {
       env.BROWSER_HARNESS_JS_BASH = bash;
+      // Same interpreter, its own name: the dex-* shims should not have to
+      // know they are borrowing the browser harness's variable.
+      env.DEX_BASH = bash;
     } else {
       // Loud on purpose. Without bash the .cmd exits 1, the harness never
       // starts, and the agent quietly drives Chrome through raw CDP instead —

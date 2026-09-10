@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3';
 import { mainLogger } from '../logger';
 import { DB_SCHEMA_VERSION, RECOVERY_ERROR, VALID_STATUSES, MAX_ATTACHMENTS_PER_SESSION } from './db-constants';
-import type { HlEvent, SessionStatus } from '../../shared/session-schemas';
+import type { HlEvent, SessionStatus, TaskState } from '../../shared/session-schemas';
+import { EMPTY_TASK_STATE } from '../../shared/session-schemas';
 
 interface SessionRow {
   id: string;
@@ -375,6 +376,29 @@ export class SessionDb {
       mainLogger.info('SessionDb.migration.complete', { version: 12 });
     }
 
+    if (this.getVersion() < 13) {
+      mainLogger.info('SessionDb.migration.running', { from: this.getVersion(), to: 13 });
+      this.db.transaction(() => {
+        // One row per session, created lazily on first `dex-state` write.
+        // JSON columns rather than child tables: the ledger is always read and
+        // written whole (the renderer re-renders from the complete state), so
+        // normalising it would buy joins we would never use.
+        this.db.exec(`
+          CREATE TABLE IF NOT EXISTS task_state (
+            session_id    TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+            objective     TEXT NOT NULL DEFAULT '',
+            steps         TEXT NOT NULL DEFAULT '[]',
+            current_step  TEXT,
+            files         TEXT NOT NULL DEFAULT '[]',
+            notes         TEXT NOT NULL DEFAULT '[]',
+            updated_at    INTEGER NOT NULL
+          );
+        `);
+        this.setVersion(13);
+      })();
+      mainLogger.info('SessionDb.migration.complete', { version: 13 });
+    }
+
     const final = this.getVersion();
     if (final !== DB_SCHEMA_VERSION) {
       const msg = `SessionDb migration did not reach expected version. Got ${final}, expected ${DB_SCHEMA_VERSION}.`;
@@ -715,6 +739,68 @@ export class SessionDb {
   }
 
   // -- Lifecycle ------------------------------------------------------------
+
+  // -- Task state ledger ----------------------------------------------------
+
+  getTaskState(sessionId: string): TaskState {
+    const row = this.db
+      .prepare('SELECT objective, steps, current_step, files, notes, updated_at FROM task_state WHERE session_id = ?')
+      .get(sessionId) as
+      | { objective: string; steps: string; current_step: string | null; files: string; notes: string; updated_at: number }
+      | undefined;
+    if (!row) return { ...EMPTY_TASK_STATE };
+    // A hand-edited or truncated row must not take the session down with it —
+    // the ledger is a view onto the work, never the work itself.
+    const parse = <T>(raw: string, fallback: T): T => {
+      try { return JSON.parse(raw) as T; } catch { return fallback; }
+    };
+    return {
+      objective: row.objective,
+      steps: parse(row.steps, [] as TaskState['steps']),
+      currentStep: row.current_step,
+      files: parse(row.files, [] as TaskState['files']),
+      notes: parse(row.notes, [] as string[]),
+      updatedAt: row.updated_at,
+    };
+  }
+
+  saveTaskState(sessionId: string, state: TaskState): void {
+    if (this.closed) return;
+    try {
+      this.db
+        .prepare(`
+          INSERT INTO task_state (session_id, objective, steps, current_step, files, notes, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(session_id) DO UPDATE SET
+            objective    = excluded.objective,
+            steps        = excluded.steps,
+            current_step = excluded.current_step,
+            files        = excluded.files,
+            notes        = excluded.notes,
+            updated_at   = excluded.updated_at
+        `)
+        .run(
+          sessionId,
+          state.objective,
+          JSON.stringify(state.steps),
+          state.currentStep,
+          JSON.stringify(state.files),
+          JSON.stringify(state.notes),
+          state.updatedAt,
+        );
+    } catch (err) {
+      mainLogger.warn('SessionDb.saveTaskState.failed', { sessionId, error: (err as Error).message });
+    }
+  }
+
+  clearTaskState(sessionId: string): void {
+    if (this.closed) return;
+    try {
+      this.db.prepare('DELETE FROM task_state WHERE session_id = ?').run(sessionId);
+    } catch (err) {
+      mainLogger.warn('SessionDb.clearTaskState.failed', { sessionId, error: (err as Error).message });
+    }
+  }
 
   close(): void {
     this.closed = true;

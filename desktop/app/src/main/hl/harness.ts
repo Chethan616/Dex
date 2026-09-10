@@ -35,6 +35,12 @@ const STOCK_INTERACTION_SKILLS = import.meta.glob('./stock/interaction-skills/**
   import: 'default',
   eager: true,
 }) as Record<string, string>;
+const DEX_TOOLS_PREFIX = './stock/dex-tools/';
+const STOCK_DEX_TOOLS = import.meta.glob('./stock/dex-tools/**/*', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
 const BROWSER_HARNESS_JS_PREFIX = './stock/browser-harness-js/';
 const STOCK_BROWSER_HARNESS_JS = import.meta.glob('./stock/browser-harness-js/**/*', {
   query: '?raw',
@@ -52,6 +58,7 @@ export function skillPath(): string { return path.join(harnessDir(), 'AGENTS.md'
 export function domainSkillsDir(): string { return path.join(harnessDir(), 'domain-skills'); }
 export function interactionSkillsDir(): string { return path.join(harnessDir(), 'interaction-skills'); }
 export function browserHarnessJsDir(): string { return path.join(harnessDir(), 'browser-harness-js'); }
+export function dexToolsDir(): string { return path.join(harnessDir(), 'dex-tools'); }
 
 /**
  * Ensure `<userData>/harness/` exists and contains the stock files.
@@ -88,7 +95,7 @@ export function bootstrapHarness(): void {
   // existing users. AGENTS.md is the harness manual, not agent-editable
   // state — safe to overwrite so new sections (domain-skills, etc.) land
   // without the user deleting their userData.
-  const sentinel = 'Browser Harness JS';
+  const sentinel = 'Choosing An Interface';
   const needsSkill = !fs.existsSync(sp) || (() => {
     try { return !fs.readFileSync(sp, 'utf-8').includes(sentinel); }
     catch { return true; }
@@ -101,8 +108,31 @@ export function bootstrapHarness(): void {
   removeLegacyToolsJson();
 
   materializeBrowserHarnessJs();
+  materializeDexTools();
   materializeInteractionSkills();
   materializeDomainSkills();
+}
+
+/**
+ * Wipe and rewrite `<userData>/harness/dex-tools/`.
+ *
+ * These are DEX's own capabilities — the ones that reach past the browser to
+ * the desktop, the OS and the filesystem. They follow the same shape as
+ * browser-harness-js deliberately: an executable on PATH plus a SKILL.md, with
+ * no tool schema and no dispatcher, because that is the seam the engine
+ * already knows how to use.
+ *
+ * Full replace on every launch, like the skills trees — they ship with the app
+ * and must never drift from the routes in main that they call.
+ */
+function materializeDexTools(): void {
+  materializeRawTree({
+    target: dexToolsDir(),
+    prefix: DEX_TOOLS_PREFIX,
+    entries: Object.entries(STOCK_DEX_TOOLS),
+    logName: 'dexTools',
+    executableBasenames: new Set(['dex-state']),
+  });
 }
 
 /**

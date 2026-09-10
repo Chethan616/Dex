@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# dex-state — record what you are doing, so the work survives the turn.
+#
+# The engine already plans and recovers on its own; what it cannot do is leave
+# a trace anyone else can read. This writes that trace: the objective, the
+# steps, which one is active, what each produced, and — the part that matters —
+# every failure together with the interface that recovered it.
+#
+# See SKILL.md in this directory for when to call each verb.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+usage() {
+  cat >&2 <<'USAGE'
+usage:
+  dex-state plan <objective> <step title>...   record the objective and the step list
+  dex-state step-start <step-id>               mark a step active
+  dex-state step-done [step-id]                mark it finished (defaults to the active step)
+  dex-state step-fail [step-id] --reason <why> [--tool <what-failed>] [--fallback <what-next>]
+  dex-state file <path> [size]                 record a file this task produced
+  dex-state note <text>                        record something worth keeping
+  dex-state get                                print the current ledger as JSON
+
+  --fallback is the difference between "this step is dead" and "this step is
+  being retried on another interface". Pass it whenever you are about to try a
+  different tool, and the step stays open.
+USAGE
+  exit 2
+}
+
+[ $# -ge 1 ] || usage
+op="$1"; shift
+
+session="$(dex_session_id)"
+[ -n "$session" ] || { echo "dex-state: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
+
+case "$op" in
+  plan)
+    [ $# -ge 1 ] || usage
+    objective="$1"; shift
+    steps=""
+    index=0
+    for title in "$@"; do
+      index=$((index + 1))
+      [ -n "$steps" ] && steps="${steps},"
+      steps="${steps}{\"id\":\"step_${index}\",\"title\":\"$(dex_esc "$title")\"}"
+    done
+    body="{\"sessionId\":\"$(dex_esc "$session")\",\"op\":\"plan\",\"objective\":\"$(dex_esc "$objective")\",\"steps\":[${steps}]}"
+    ;;
+  step-start)
+    [ $# -ge 1 ] || usage
+    body="{\"sessionId\":\"$(dex_esc "$session")\",\"op\":\"step-start\",\"stepId\":\"$(dex_esc "$1")\"}"
+    ;;
+  step-done)
+    if [ $# -ge 1 ]; then
+      body="{\"sessionId\":\"$(dex_esc "$session")\",\"op\":\"step-done\",\"stepId\":\"$(dex_esc "$1")\"}"
+    else
+      body="{\"sessionId\":\"$(dex_esc "$session")\",\"op\":\"step-done\"}"
+    fi
+    ;;
+  step-fail)
+    step=""; reason=""; tool=""; fallback=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --reason)   reason="${2:-}"; shift 2 ;;
+        --tool)     tool="${2:-}"; shift 2 ;;
+        --fallback) fallback="${2:-}"; shift 2 ;;
+        *)          step="$1"; shift ;;
+      esac
+    done
+    [ -n "$reason" ] || { echo "dex-state step-fail: --reason is required" >&2; exit 2; }
+    body="{\"sessionId\":\"$(dex_esc "$session")\",\"op\":\"step-fail\",\"reason\":\"$(dex_esc "$reason")\""
+    [ -n "$step" ]     && body="${body},\"stepId\":\"$(dex_esc "$step")\""
+    [ -n "$tool" ]     && body="${body},\"tool\":\"$(dex_esc "$tool")\""
+    [ -n "$fallback" ] && body="${body},\"fallback\":\"$(dex_esc "$fallback")\""
+    body="${body}}"
+    ;;
+  file)
+    [ $# -ge 1 ] || usage
+    body="{\"sessionId\":\"$(dex_esc "$session")\",\"op\":\"file\",\"path\":\"$(dex_esc "$1")\""
+    [ $# -ge 2 ] && body="${body},\"size\":$2"
+    body="${body}}"
+    ;;
+  note)
+    [ $# -ge 1 ] || usage
+    body="{\"sessionId\":\"$(dex_esc "$session")\",\"op\":\"note\",\"text\":\"$(dex_esc "$1")\"}"
+    ;;
+  get)
+    body="{\"sessionId\":\"$(dex_esc "$session")\",\"op\":\"get\"}"
+    ;;
+  -h|--help|help) usage ;;
+  *) echo "dex-state: unknown verb '$op'" >&2; usage ;;
+esac
+
+dex_post /dex/state "$body"

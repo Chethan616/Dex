@@ -91,6 +91,7 @@ import {
   verifyCdpOwnership,
 } from './startup/cli';
 import { assertString, assertAttachments, type ValidatedAttachment } from './ipc-validators';
+import { TaskStateMutationSchema } from '../shared/session-schemas';
 // Agent loop: CLI subprocess driving the browser harness. Engine is
 // pluggable (claude-code, codex, …) — see src/main/hl/engines/.
 import { bootstrapHarness, harnessDir } from './hl/harness';
@@ -1170,6 +1171,23 @@ app.whenReady().then(async () => {
   const localTaskServer = await createLocalTaskServer({
     userDataPath: app.getPath('userData'),
     log: mainLogger,
+    routes: {
+      // The `dex-state` CLI's only endpoint. Everything it can do is one of
+      // the verbs in TaskStateMutationSchema, so validation is a single parse
+      // and the handler stays a pass-through to the session manager.
+      'POST /dex/state': async (raw) => {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new Error('request body must be JSON');
+        }
+        const { sessionId, ...rest } = (parsed ?? {}) as { sessionId?: unknown };
+        const id = assertString(sessionId, 'sessionId', 100);
+        const mutation = TaskStateMutationSchema.parse(rest);
+        return { state: sessionManager.applyTaskState(id, mutation) };
+      },
+    },
     submitTask: async (payload) => {
       const validatedPrompt = assertString(payload.prompt, 'prompt', 10000);
       const engineId = payload.engine == null ? DEFAULT_ENGINE_ID : assertString(payload.engine, 'engine', 50);

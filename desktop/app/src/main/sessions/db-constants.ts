@@ -1,4 +1,4 @@
-export const DB_SCHEMA_VERSION = 12;
+export const DB_SCHEMA_VERSION = 13;
 
 // Hard cap on attachments per session to prevent DB bloat from runaway
 // follow-up uploads. Enforced in SessionDb.saveAttachment.
@@ -9,6 +9,7 @@ export const RECOVERY_ERROR = 'App exited unexpectedly';
 export const TABLE_SESSIONS = 'sessions';
 export const TABLE_EVENTS = 'session_events';
 export const TABLE_ATTACHMENTS = 'session_attachments';
+export const TABLE_TASK_STATE = 'task_state';
 
 export const VALID_STATUSES = ['draft', 'running', 'stuck', 'paused', 'idle', 'stopped'] as const;
 

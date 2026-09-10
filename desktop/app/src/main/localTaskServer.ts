@@ -10,9 +10,24 @@ export interface LocalTaskPayload {
   engine?: string;
 }
 
+/**
+ * An additional loopback endpoint, keyed by `"<METHOD> <path>"`.
+ *
+ * This is how the `dex-*` CLIs reach the app. They run inside the agent's
+ * shell with no access to the session database, so anything stateful — the
+ * task ledger, the file index, MCP connections — lives in main and is reached
+ * over this already-authenticated local socket rather than by handing every
+ * CLI its own copy of the DB handle.
+ *
+ * Returning an object sends `200 {ok:true, ...result}`; throwing sends
+ * `400 {ok:false, error}`.
+ */
+export type LocalRoute = (body: string, url: URL) => Promise<Record<string, unknown>>;
+
 export interface LocalTaskServerOptions {
   userDataPath: string;
   submitTask: (payload: LocalTaskPayload) => Promise<Record<string, unknown>>;
+  routes?: Record<string, LocalRoute>;
   log?: {
     info(msg: string, extra?: Record<string, unknown>): void;
     warn(msg: string, extra?: Record<string, unknown>): void;
@@ -131,6 +146,23 @@ export async function createLocalTaskServer(opts: LocalTaskServerOptions): Promi
         return;
       }
       sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    const route = opts.routes?.[`${req.method ?? 'GET'} ${url.pathname}`];
+    if (route) {
+      if (!isAuthorized(req, token)) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      try {
+        const result = await route(await readBody(req), url);
+        sendJson(res, 200, { ok: true, ...result });
+      } catch (err) {
+        const message = (err as Error).message || 'request failed';
+        opts.log?.warn('localTaskServer.route.failed', { path: url.pathname, error: message });
+        sendJson(res, 400, { ok: false, error: message });
+      }
       return;
     }
 
