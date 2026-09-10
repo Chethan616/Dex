@@ -107,7 +107,31 @@ const HubViewToggle = React.memo(function HubViewToggle({
   );
 });
 
+const PINNED_STORAGE_KEY = 'hub.pinnedSessions';
+
+/**
+ * Pinned rows are a per-machine view preference rather than session state, so
+ * they live in localStorage instead of the session DB — no migration, and a
+ * pin never travels somewhere it would be meaningless.
+ */
+function loadPinnedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(PINNED_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? new Set(parsed.filter((x): x is string => typeof x === 'string')) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function savePinnedIds(ids: ReadonlySet<string>): void {
+  try { localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify([...ids])); } catch { /* ignore */ }
+}
+
 export function HubApp(): React.ReactElement {
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => loadPinnedIds());
+
   const isMock = import.meta.env.VITE_MOCK_MODE === '1';
   const [mockSessions, setMockSessions] = useState<AgentSession[]>(isMock ? MOCK_SESSIONS : []);
   const sessionsQuery = useSessionsQuery();
@@ -593,6 +617,7 @@ export function HubApp(): React.ReactElement {
           if (viewMode !== 'grid') setViewMode('grid');
         }}
         onNewAgent={() => openPill()}
+        pinnedIds={pinnedIds}
         onRowAction={(id, action) => {
           console.log('[HubApp] sidebar row action', { id, action });
           switch (action) {
@@ -607,6 +632,27 @@ export function HubApp(): React.ReactElement {
               break;
             case 'resume':
               handleResume(id);
+              break;
+            case 'pin':
+            case 'unpin':
+              setPinnedIds((prev) => {
+                const next = new Set(prev);
+                if (action === 'pin') next.add(id); else next.delete(id);
+                savePinnedIds(next);
+                return next;
+              });
+              break;
+            case 'delete':
+              // Drop the pin too, so a deleted id cannot linger in the
+              // persisted set and silently pin a future session that reuses it.
+              setPinnedIds((prev) => {
+                if (!prev.has(id)) return prev;
+                const next = new Set(prev);
+                next.delete(id);
+                savePinnedIds(next);
+                return next;
+              });
+              window.electronAPI?.sessions.delete(id).catch((err) => console.error('[HubApp] delete failed', err));
               break;
           }
         }}

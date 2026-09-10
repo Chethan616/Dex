@@ -8,7 +8,7 @@ interface SidebarSession extends AgentSession {
   lastActivityAt?: number;
 }
 
-export type SidebarRowAction = 'rerun' | 'stop' | 'pause' | 'resume';
+export type SidebarRowAction = 'rerun' | 'stop' | 'pause' | 'resume' | 'delete' | 'pin' | 'unpin';
 
 export type SidebarMode = 'side' | 'top';
 
@@ -18,6 +18,7 @@ interface SidebarProps {
   onSelect?: (id: string) => void;
   onNewAgent?: () => void;
   onRowAction?: (id: string, action: SidebarRowAction) => void;
+  pinnedIds?: ReadonlySet<string>;
   mode?: SidebarMode;
 }
 
@@ -142,11 +143,13 @@ function SessionRow({
   selected,
   onSelect,
   onAction,
+  pinned = false,
 }: {
   s: SidebarSession;
   selected: boolean;
   onSelect?: (id: string) => void;
   onAction?: (id: string, action: SidebarRowAction) => void;
+  pinned?: boolean;
 }): React.ReactElement {
   const dot = STATUS_DOT[s.status];
   const favicon = faviconUrl(s.primarySite);
@@ -174,9 +177,11 @@ function SessionRow({
         width: 148,
         items: [
           { id: 'rerun', label: 'Re-run' },
+          { id: pinned ? 'unpin' : 'pin', label: pinned ? 'Unpin' : 'Pin' },
           ...(isPaused ? [{ id: 'resume', label: 'Resume' }] : []),
           ...(isRunning ? [{ id: 'pause', label: 'Pause' }] : []),
           ...((isRunning || isPaused) ? [{ id: 'stop', label: 'Stop', tone: 'danger' as const }] : []),
+          { id: 'delete', label: 'Delete', tone: 'danger' as const },
         ],
       },
       {
@@ -212,6 +217,13 @@ function SessionRow({
           <span className="sidebar__row-dot" style={{ background: dot.color }} aria-label={dot.label} />
         </span>
         <span className="sidebar__row-title">{s.prompt}</span>
+        {pinned && (
+          <span className="sidebar__row-pin" aria-label="Pinned" title="Pinned">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+              <path d="M6.2.9 9.1 3.8 7.9 5 7.4 8 5.6 6.2 2.4 9.4l-.6-.6L5 5.6 3.2 3.8 6.2.9Z" fill="currentColor" />
+            </svg>
+          </span>
+        )}
         <span className="sidebar__row-time">{formatRelative(last)}</span>
       </button>
 
@@ -285,10 +297,11 @@ function TabChip({
   );
 }
 
-export function Sidebar({ sessions, selectedId, onSelect, onNewAgent, onRowAction, mode = 'side' }: SidebarProps): React.ReactElement {
+export function Sidebar({ sessions, selectedId, onSelect, onNewAgent, onRowAction, pinnedIds, mode = 'side' }: SidebarProps): React.ReactElement {
   const data = sessions ?? MOCK_SIDEBAR_SESSIONS;
 
-  const orderedSessions = useMemo(() => orderSessionsForSidebar(data), [data]);
+  const pinned = useMemo(() => pinnedIds ?? new Set<string>(), [pinnedIds]);
+  const orderedSessions = useMemo(() => orderSessionsForSidebar(data, pinned), [data, pinned]);
 
   if (mode === 'top') {
     return (
@@ -335,7 +348,7 @@ export function Sidebar({ sessions, selectedId, onSelect, onNewAgent, onRowActio
       <div className="sidebar__groups">
         <div className="sidebar__group-body">
           {orderedSessions.map((s) => (
-            <SessionRow key={s.id} s={s} selected={s.id === selectedId} onSelect={onSelect} onAction={onRowAction} />
+            <SessionRow key={s.id} s={s} selected={s.id === selectedId} onSelect={onSelect} onAction={onRowAction} pinned={pinned.has(s.id)} />
           ))}
         </div>
       </div>

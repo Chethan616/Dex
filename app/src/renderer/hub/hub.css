@@ -5113,6 +5113,17 @@ button:focus:not(:focus-visible) {
   font-variant-numeric: tabular-nums;
 }
 
+/* Pin marker. Same tertiary tone as the timestamp it sits beside, so a pinned
+   row reads as "kept" without shouting over the status dot. */
+.sidebar__row-pin {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  margin-right: 4px;
+  color: var(--color-fg-tertiary);
+  opacity: 0.85;
+}
+
 /* Row wrapper holds the row + menu button + popover */
 .sidebar__row-wrapper {
   position: relative;
