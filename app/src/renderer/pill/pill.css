@@ -664,6 +664,43 @@ html, body {
     border-color 140ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+/* Model picker — pill variant. Matches the engine pill's shape (full radius,
+   30px) so the pair reads as one control group, but stays transparent until
+   hovered: the engine is the primary choice, the model refines it. */
+.model-picker {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.model-picker__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-fg-tertiary);
+  border: 1px solid transparent;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition:
+    background-color 140ms cubic-bezier(0.32, 0.72, 0, 1),
+    color 140ms cubic-bezier(0.32, 0.72, 0, 1),
+    border-color 140ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.model-picker__toggle:hover,
+.model-picker__toggle[aria-expanded='true'] {
+  background: rgba(var(--highlight-rgb), 0.04);
+  border-color: rgba(var(--highlight-rgb), 0.08);
+  color: var(--color-fg-primary);
+}
+
+.model-picker__name {
+  white-space: nowrap;
+}
+
 .engine-picker__toggle:hover {
   background-color: rgba(var(--highlight-rgb), 0.08);
   border-color: rgba(var(--highlight-rgb), 0.14);

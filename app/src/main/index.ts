@@ -527,6 +527,14 @@ app.whenReady().then(async () => {
       ? pillEngineRaw
       : DEFAULT_ENGINE_ID;
     sessionManager.setSessionEngine(id, pillEngineId);
+    // Same contract as sessions:create — absent/empty means "engine default",
+    // and we then never pass a model flag at all.
+    const pillModelRaw = typeof payload === 'object' && payload !== null
+      ? (payload as { model?: unknown }).model
+      : undefined;
+    if (typeof pillModelRaw === 'string' && pillModelRaw.length > 0) {
+      sessionManager.setSessionModel(id, assertString(pillModelRaw, 'model', 100));
+    }
     if (attachments.length > 0) {
       const turnIndex = sessionManager.getNextAttachmentTurnIndex(id);
       for (const a of attachments) {

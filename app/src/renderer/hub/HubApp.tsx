@@ -6,6 +6,7 @@ import { CommandBar } from './CommandBar';
 import { SettingsPane } from './SettingsPane';
 import { useVimKeys } from './useVimKeys';
 import { useSessionsQuery, useUpdateSession } from './useSessionsQuery';
+import dexWordmark from '../assets/dex-wordmark.png';
 import { MemoryIndicator } from './MemoryIndicator';
 import { Sidebar } from './Sidebar';
 import { MOCK_SESSIONS } from './mock-data';
@@ -136,7 +137,15 @@ export function HubApp(): React.ReactElement {
   const [mockSessions, setMockSessions] = useState<AgentSession[]>(isMock ? MOCK_SESSIONS : []);
   const sessionsQuery = useSessionsQuery();
   const updateSession = useUpdateSession();
-  const sessions = isMock ? mockSessions : (sessionsQuery.data ?? []);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(() => new Set());
+  const allSessions = isMock ? mockSessions : (sessionsQuery.data ?? []);
+  // Hide rows the moment delete is clicked. Backend cleanup (browser view
+  // teardown, killing the agent's process tree) is not instant on Windows,
+  // and waiting for it left the row on screen looking unresponsive.
+  const sessions = useMemo(
+    () => (deletingIds.size === 0 ? allSessions : allSessions.filter((s) => !deletingIds.has(s.id))),
+    [allSessions, deletingIds],
+  );
   const setSessions = isMock ? setMockSessions : () => {};
 
   useEffect(() => {
@@ -230,6 +239,18 @@ export function HubApp(): React.ReactElement {
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('pane:layout-change'));
   }, [visibleSessionCount, gridColumns, gridPage, viewMode]);
+
+  // Once the backend confirms a session is gone, stop tracking it — otherwise
+  // the set grows for the life of the window and would suppress a future
+  // session that happened to reuse the id.
+  useEffect(() => {
+    setDeletingIds((prev) => {
+      if (prev.size === 0) return prev;
+      const live = new Set(allSessions.map((s) => s.id));
+      const next = new Set([...prev].filter((id) => live.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [allSessions]);
 
   const orderedSessions = useMemo(() => orderSessionsForSidebar(sessions), [sessions]);
 
@@ -566,7 +587,7 @@ export function HubApp(): React.ReactElement {
     <div className="hub-root">
       <header className="hub-toolbar">
         <div className="hub-toolbar__left">
-          <span className="hub-toolbar__title">DEX</span>
+          <img className="hub-toolbar__wordmark" src={dexWordmark} alt="DEX" draggable={false} />
           <MemoryIndicator />
         </div>
         <div className="hub-toolbar__center">
@@ -643,7 +664,7 @@ export function HubApp(): React.ReactElement {
                 return next;
               });
               break;
-            case 'delete':
+            case 'delete': {
               // Drop the pin too, so a deleted id cannot linger in the
               // persisted set and silently pin a future session that reuses it.
               setPinnedIds((prev) => {
@@ -653,8 +674,20 @@ export function HubApp(): React.ReactElement {
                 savePinnedIds(next);
                 return next;
               });
-              window.electronAPI?.sessions.delete(id).catch((err) => console.error('[HubApp] delete failed', err));
+              setDeletingIds((prev) => new Set(prev).add(id));
+              const restore = (): void => setDeletingIds((prev) => {
+                const next = new Set(prev);
+                next.delete(id);
+                return next;
+              });
+              window.electronAPI?.sessions.delete(id)
+                .catch((err) => {
+                  // Put the row back rather than silently pretending it went.
+                  console.error('[HubApp] delete failed', err);
+                  restore();
+                });
               break;
+            }
           }
         }}
       />

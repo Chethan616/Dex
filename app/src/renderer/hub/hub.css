@@ -113,6 +113,18 @@
   text-transform: uppercase;
 }
 
+/* In-app wordmark. Height-constrained with auto width so the logo keeps its
+   drawn proportions — the source art is 2:1, and forcing it square is what
+   made the old icons look squashed. */
+.hub-toolbar__wordmark {
+  height: 16px;
+  width: auto;
+  display: block;
+  opacity: 0.9;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .hub-toolbar__count {
   display: flex;
   align-items: center;

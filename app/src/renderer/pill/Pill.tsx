@@ -7,6 +7,7 @@ import {
 } from '../../shared/attachments';
 import { fallbackShortcutPlatform, formatShortcutForPlatform } from '../../shared/hotkeys';
 import { EnginePicker } from '../hub/EnginePicker';
+import { DEFAULT_MODEL_ID, ModelPicker } from '../hub/ModelPicker';
 import {
   RESULT_ROW_HEIGHT,
   MAX_RESULTS,
@@ -29,6 +30,7 @@ declare global {
         prompt: string,
         attachments?: Array<{ name: string; mime: string; bytes: Uint8Array }>,
         engine?: string,
+        model?: string,
       ) => Promise<{ task_id: string }>;
       hide: () => void;
       setExpanded: (expanded: boolean | number) => void;
@@ -83,6 +85,17 @@ const DOMAIN_RE = /\b((?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?/i;
 const DOMAIN_RE_GLOBAL = /\b((?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?/gi;
 const ENGINE_STORAGE_KEY = 'hub.selectedEngine';
 const DEFAULT_ENGINE = 'claude-code';
+// Shared with the hub's TaskInput so a model picked in either place is the one
+// the other offers next — same key, keyed per engine.
+const MODEL_STORAGE_PREFIX = 'hub.selectedModel.';
+
+function loadStoredModel(engineId: string): string {
+  try {
+    return localStorage.getItem(MODEL_STORAGE_PREFIX + engineId) ?? DEFAULT_MODEL_ID;
+  } catch {
+    return DEFAULT_MODEL_ID;
+  }
+}
 
 function loadStoredEngine(): string {
   try {
@@ -227,6 +240,7 @@ export function Pill(): React.ReactElement {
   const [sessions, setSessions] = useState<SessionLite[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const [engine, setEngine] = useState<string>(() => loadStoredEngine());
+  const [model, setModel] = useState<string>(() => loadStoredModel(loadStoredEngine()));
   const [attachments, setAttachments] = useState<Array<{ name: string; mime: string; bytes: Uint8Array }>>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [validFavicons, setValidFavicons] = useState<Set<string>>(new Set());
@@ -380,8 +394,15 @@ export function Pill(): React.ReactElement {
 
   const handleEngineChange = useCallback((id: string) => {
     setEngine(id);
+    // Restore that engine's own last model rather than carrying this one's.
+    setModel(loadStoredModel(id));
     try { localStorage.setItem(ENGINE_STORAGE_KEY, id); } catch { /* ignore */ }
   }, []);
+
+  const handleModelChange = useCallback((id: string) => {
+    setModel(id);
+    try { localStorage.setItem(MODEL_STORAGE_PREFIX + engine, id); } catch { /* ignore */ }
+  }, [engine]);
 
   const submit = useCallback(() => {
     const trimmed = value.trim();
@@ -393,11 +414,11 @@ export function Pill(): React.ReactElement {
     }
     if (!trimmed) return;
     const attachArg = attachments.length > 0 ? attachments : undefined;
-    window.pillAPI.submit(trimmed, attachArg, engine);
+    window.pillAPI.submit(trimmed, attachArg, engine, model);
     setValue('');
     setAttachments([]);
     setAttachError(null);
-  }, [value, selectedIdx, navList, showDashboard, attachments, engine]);
+  }, [value, selectedIdx, navList, showDashboard, attachments, engine, model]);
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -418,7 +439,7 @@ export function Pill(): React.ReactElement {
         const trimmed = value.trim();
         if (trimmed) {
           const attachArg = attachments.length > 0 ? attachments : undefined;
-          window.pillAPI.submit(trimmed, attachArg, engine);
+          window.pillAPI.submit(trimmed, attachArg, engine, model);
           setValue('');
           setAttachments([]);
           setAttachError(null);
@@ -428,7 +449,7 @@ export function Pill(): React.ReactElement {
         submit();
       }
     },
-    [submit, value, navList.length, attachments, engine],
+    [submit, value, navList.length, attachments, engine, model],
   );
 
   const highlightVisible = hasResults && selectedIdx >= 0;
@@ -503,6 +524,7 @@ export function Pill(): React.ReactElement {
             />
             <div className="cmdbar__engine-picker">
               <EnginePicker value={engine} onChange={handleEngineChange} />
+              <ModelPicker engineId={engine} value={model} onChange={handleModelChange} />
             </div>
             <button
               className="cmdbar__send"

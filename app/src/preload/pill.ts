@@ -60,14 +60,16 @@ contextBridge.exposeInMainWorld('pillAPI', {
     prompt: string,
     attachments?: Array<{ name: string; mime: string; bytes: Uint8Array }>,
     engine?: string,
+    model?: string,
   ): Promise<{ task_id: string }> => {
     log.info('preload.pill.submit', {
       message: 'Invoking pill:submit',
       promptLength: prompt.length,
       attachmentCount: attachments?.length ?? 0,
       engine: engine ?? '(default)',
+      model: model ?? '(default)',
     });
-    return ipcRenderer.invoke('pill:submit', { prompt, attachments, engine });
+    return ipcRenderer.invoke('pill:submit', { prompt, attachments, engine, model });
   },
 
   selectSession: (id: string): void => {
