@@ -9,6 +9,7 @@ import { STATUS_LABEL } from './constants';
 import { TaskInput } from './TaskInput';
 import type { TaskInputHandle } from './TaskInput';
 import { DashboardBackground } from './DashboardBackground';
+import { taglineFor } from './taglines';
 import type { AgentSession } from './types';
 
 const HOUR = 3600 * 1000;
@@ -176,9 +177,14 @@ export function Dashboard({ sessions, onSwitchToGrid, onSelectSession, onSubmitT
     };
   }, []);
 
+  // Picked once per mount. Re-rolling on every render would make the line
+  // flicker each time a session updates.
+  const tagline = useMemo(() => taglineFor(Date.now()), []);
+
   return (
     <div className={`dashboard${isDragging ? ' dashboard--dragging' : ''}`}>
       <DashboardBackground />
+      <p className="dashboard__tagline">{tagline}</p>
       <div className="dashboard__hero">
         <TaskInput ref={taskInputRef} onSubmit={onSubmitTask} />
       </div>

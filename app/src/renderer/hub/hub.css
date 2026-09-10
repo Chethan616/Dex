@@ -2918,12 +2918,20 @@ button:focus:not(:focus-visible) {
   position: relative;
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-8);
+  /* Generous symmetric top/bottom padding: the composer and cards sit as a
+     centred group with air around them rather than filling the pane edge to
+     edge. `justify-content: center` handles the vertical centring; the padding
+     is what stops it hugging the chrome when the window is short. */
+  padding: var(--space-24) var(--space-16);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-8);
+  /* `safe` matters here: with centring plus overflow, a window short enough to
+     overflow would otherwise push the first child above the scroll origin where
+     it can never be scrolled back into view. Safe centring falls back to
+     flex-start exactly in that case. */
+  justify-content: safe center;
+  gap: var(--space-12);
   min-height: 0;
 }
 
@@ -2974,7 +2982,34 @@ button:focus:not(:focus-visible) {
   z-index: 1;
 }
 
-.dashboard > .dashboard__hero.dashboard__hero {
+.dashboard > .dashboard__hero/* Tagline. The same hand-written lines the CLI banner and the previous app
+   used, so the product keeps one voice. Sits above the composer, sized down
+   and dimmed so it reads as an aside rather than a heading competing with the
+   input. */
+.dashboard__tagline {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  max-width: 620px;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--color-fg-tertiary);
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+  animation: dashboard-tagline-in 620ms var(--ease-out) both;
+}
+
+@keyframes dashboard-tagline-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard__tagline { animation: none; }
+}
+
+.dashboard__hero {
   z-index: 2;
 }
 
@@ -3009,15 +3044,44 @@ button:focus:not(:focus-visible) {
   gap: var(--space-3);
   padding: var(--space-5) var(--space-5) 0;
   background-color: var(--color-bg-sunken);
-  border: 1px solid rgba(var(--highlight-rgb), 0.04);
+  /* A faint top-down sheen in addition to the flat fill. Depth here comes from
+     the light appearing to fall on the card, not from a heavier drop shadow —
+     the same reason the background field leans toward one corner. */
+  background-image: linear-gradient(
+    180deg,
+    rgba(var(--highlight-rgb), 0.05),
+    rgba(var(--highlight-rgb), 0) 42%
+  );
+  border: 1px solid rgba(var(--highlight-rgb), 0.05);
   border-radius: var(--radius-lg);
   box-shadow:
-    inset 0 1px 0 rgba(var(--highlight-rgb), 0.06),
+    inset 0 1px 0 rgba(var(--highlight-rgb), 0.07),
     0 1px 0 rgba(var(--highlight-rgb), 0.03),
     0 4px 12px rgba(var(--shadow-rgb), 0.5),
     0 12px 32px rgba(var(--shadow-rgb), 0.4);
   overflow: hidden;
   min-height: 160px;
+  transition:
+    transform 220ms var(--ease-out),
+    border-color 220ms var(--ease-out),
+    box-shadow 220ms var(--ease-out);
+}
+
+/* Small lift only — these are readouts, not buttons, so the motion should
+   acknowledge the cursor without implying they can be clicked. */
+.dashboard__stat-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(var(--highlight-rgb), 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--highlight-rgb), 0.09),
+    0 1px 0 rgba(var(--highlight-rgb), 0.03),
+    0 8px 20px rgba(var(--shadow-rgb), 0.55),
+    0 20px 44px rgba(var(--shadow-rgb), 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard__stat-card { transition: none; }
+  .dashboard__stat-card:hover { transform: none; }
 }
 
 .dashboard__stat-card-head {
@@ -4744,15 +4808,30 @@ button:focus:not(:focus-visible) {
   min-height: 0;
 }
 
+/* Floating side nav.
+   Detached from the window edge so it reads as a panel resting above the
+   background field rather than a wall bolted to the frame — the background now
+   continues around it, which is what makes it feel layered. Only the `side`
+   layout is touched: in `top` (terminal) mode this element is display:none and
+   the tabstrip is used instead, so that layout is unchanged. */
 .sidebar {
   flex-shrink: 0;
   width: 200px;
   display: flex;
   flex-direction: column;
+  margin: var(--space-6) 0 var(--space-6) var(--space-6);
   background-color: var(--color-bg-sunken);
-  border-top: 1px solid var(--color-border-subtle);
-  border-right: 1px solid var(--color-border-subtle);
-  border-top-right-radius: var(--radius-lg);
+  background-image: linear-gradient(
+    180deg,
+    rgba(var(--highlight-rgb), 0.04),
+    rgba(var(--highlight-rgb), 0) 38%
+  );
+  border: 1px solid rgba(var(--highlight-rgb), 0.06);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--highlight-rgb), 0.06),
+    0 4px 14px rgba(var(--shadow-rgb), 0.42),
+    0 16px 40px rgba(var(--shadow-rgb), 0.34);
   overflow: hidden;
   font-size: var(--font-size-xs);
   position: relative;

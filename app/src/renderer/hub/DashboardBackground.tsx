@@ -33,39 +33,61 @@ uniform vec3 u_bg;
 uniform vec3 u_dot;
 uniform float u_mix;
 
-// Sine band: density 0..1 from perpendicular distance to a sine curve across the width.
-float sineBand(vec2 uv, float aspect, float t) {
-  float x = uv.x * aspect;
-  float width = aspect;
-  // One wavelength across width. Very slow drift so it feels alive but nearly static.
-  float phase = (x / width) * 6.2831853 + t * 0.12;
-  float curveY = 0.5 + sin(phase) * 0.14 + sin(t * 0.25) * 0.01;
-  float d = abs(uv.y - curveY);
-  float thickness = 0.20;
-  float band = 1.0 - smoothstep(0.0, thickness, d);
-  return clamp(band, 0.0, 1.0);
+// Signature field: three slow ridges at different angles, interfering.
+//
+// This replaces a single horizontal sine band. One band reads as decoration
+// that happens to move; overlapping ridges at different angles never repeat
+// the same shape twice, which gives the surface somewhere to go without ever
+// asking for attention. Frequencies are deliberately non-harmonic (1.9 / 2.7 /
+// 3.6) so the pattern does not visibly loop.
+float ridge(vec2 p, vec2 dir, float freq, float phase) {
+  return sin(dot(p, normalize(dir)) * freq + phase);
+}
+
+float field(vec2 uv, float aspect, float t) {
+  vec2 p = vec2(uv.x * aspect, uv.y);
+
+  // Slow, unequal drift rates — the beat between them is what keeps it alive.
+  float a = ridge(p, vec2( 1.0,  0.35), 1.9, t * 0.11);
+  float b = ridge(p, vec2(-0.45, 1.0),  2.7, t * 0.07 + 1.7);
+  float c = ridge(p, vec2( 0.8, -0.65), 3.6, t * 0.05 + 4.2);
+
+  // Weighted so no single ridge dominates; normalized back to 0..1.
+  float sum = (a * 0.5 + b * 0.32 + c * 0.24) / 1.06;
+  float density = sum * 0.5 + 0.5;
+
+  // Directional falloff: brighter toward the lower-left, fading up and right.
+  // Gives the composition an implied light source, so it reads as depth rather
+  // than as a flat texture, and keeps the top-right quiet where the toolbar and
+  // primary controls sit.
+  float lean = 1.0 - smoothstep(-0.15, 1.25, (uv.x * 0.72 + uv.y * 0.52));
+  density *= mix(0.22, 1.0, lean);
+
+  return clamp(density, 0.0, 1.0);
 }
 
 void main() {
   float aspect = u_resolution.x / u_resolution.y;
 
-  // Uniform dot lattice in pixel space.
+  // Uniform dot lattice in pixel space — the medium is kept deliberately:
+  // it is what makes the surface feel machined rather than painted.
   float DOT_SPACING = 12.0;
-  float MAX_RADIUS  = 3.2;
+  float MAX_RADIUS  = 3.0;
   vec2 cell = floor(gl_FragCoord.xy / DOT_SPACING);
   vec2 cellCenter = (cell + 0.5) * DOT_SPACING;
   float distPx = length(gl_FragCoord.xy - cellCenter);
 
-  // Sample density at each cell center so all pixels of one dot share the same size.
+  // Sample once per cell so every pixel of a dot shares one radius.
   vec2 cellUv = cellCenter / u_resolution;
-  float density = sineBand(cellUv, aspect, u_time);
+  float density = field(cellUv, aspect, u_time);
 
-  // Nonlinear radius curve: stays small across most of the band, ramps up sharply near the peak.
-  float sizeCurve = pow(density, 3.0);
+  // Nonlinear curve: most of the field stays near-invisible and only the
+  // ridge crests resolve into dots, so the pattern suggests itself instead of
+  // stating itself.
+  float sizeCurve = pow(density, 3.4);
   float radius = MAX_RADIUS * sizeCurve;
   float dotMask = 1.0 - smoothstep(radius - 0.6, radius + 0.4, distPx);
-  // Kill dots where density is basically zero so the edges fade cleanly.
-  dotMask *= smoothstep(0.02, 0.12, density);
+  dotMask *= smoothstep(0.02, 0.14, density);
 
   fragColor = vec4(mix(u_bg, u_dot, dotMask * u_mix), 1.0);
 }
