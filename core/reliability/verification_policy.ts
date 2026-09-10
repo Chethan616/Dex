@@ -13,6 +13,12 @@ export async function verifyStep(
   if (step.capability === 'can_control_files') return verifyFileStep(step, agentResult);
   if (step.capability === 'can_control_app') return verifyAppStep(step, agentResult);
   if (step.capability === 'can_control_gui') return verifyGuiStep(step);
+  // Same verifier as can_control_gui, deliberately: a vision loop's action
+  // has no independent verification channel either way — the optional
+  // verify_file/verify_text_in_file hint is real, external evidence
+  // (checked against actual disk state); anything else honestly reports
+  // UNVERIFIABLE rather than a re-ask of the same agent that just acted.
+  if (step.capability === 'can_operate_computer') return verifyGuiStep(step);
   if (step.capability === 'can_browse_web') return verifyBrowserStep(step, agentResult);
   if (step.capability.startsWith('can_access_')) return verifyWorkspaceStep(step, agentResult);
   if (step.capability === 'can_deliver') return verifyDelivery(agentResult);
@@ -214,18 +220,16 @@ function verifyBrowserStep(
   // Opening the owner's browser.
   //
   // No page changed, so there is no DOM to check. What there is to check is
-  // whether the extension attached, because that is the entire point of the
-  // step - a window that opened and did not attach has not made the next step
-  // possible, and calling it verified would hide that.
+  // whether the CDP attachment succeeded, because that is the entire point of
+  // the step - a window that opened without an attached debugger has not made
+  // the next step possible, and calling it verified would hide that.
   if (step.action === 'open_browser') {
     const data = (agentResult?.data ?? {}) as Record<string, unknown>;
     return data.attached === true
-      ? { status: 'VERIFIED', reason: 'The browser opened and the extension attached' }
+      ? { status: 'VERIFIED', reason: 'The browser opened and CDP attached' }
       : {
           status: 'UNVERIFIABLE',
-          reason:
-            'The browser opened, but the Dex extension has not attached to it. ' +
-            'Load it once from chrome://extensions and it stays.',
+          reason: 'The browser opened, but Dex could not attach to it over CDP.',
         };
   }
 
@@ -595,6 +599,8 @@ async function verifyOsStep(step: ExecutionStep, agentResult?: AgentResult): Pro
       );
     case 'set_power_plan':
       return verifyPowerPlan(step.params as { plan: string });
+    case 'create_power_plan':
+      return verifyCreatePowerPlan(step.params as { name: string; activate?: boolean });
     case 'set_volume':
       return verifyVolume(step, agentResult);
     case 'set_wifi':
@@ -611,6 +617,12 @@ async function verifyOsStep(step: ExecutionStep, agentResult?: AgentResult): Pro
     case 'find_program':
     case 'get_keyboard_backlight':
       return { status: 'VERIFIED', reason: 'Read-only action — no state to verify' };
+
+    // Dex asked Windows to open a URL in whatever the owner's default
+    // browser is and does not own or attach to the resulting process —
+    // there is no channel to check what actually happened in it.
+    case 'open_url':
+      return { status: 'UNVERIFIABLE', reason: 'Opened in the owner\'s own browser — Dex has no channel into it' };
 
     // The lighting interface is write-only: there is no way to read a colour
     // back off the keyboard. So the honest verdict is UNVERIFIABLE with the
@@ -652,6 +664,8 @@ async function verifyOsStep(step: ExecutionStep, agentResult?: AgentResult): Pro
       return verifyProcessGone(step.params as { name?: string; pid?: number });
     case 'launch_app':
       return verifyAppOpen(step, agentResult);
+    case 'open_file_in_app':
+      return verifyOpenFileInApp(step, agentResult);
     case 'close_app':
       return verifyAppClosed(step, agentResult);
     // A capture is verified by the file being on disk, not by the handler
@@ -1056,6 +1070,37 @@ function verifyPowerPlan(params: { plan: string }): VerificationResult {
   }
 }
 
+function verifyCreatePowerPlan(params: { name: string; activate?: boolean }): VerificationResult {
+  try {
+    const list = execSync('powercfg /list', { encoding: 'utf8', timeout: 10000 }).toLowerCase();
+    const wanted = params.name.trim().toLowerCase();
+    if (!list.includes(wanted)) {
+      return {
+        status: 'FAILED',
+        reason: `No power scheme named "${params.name}" exists`,
+        afterState: list.trim(),
+      };
+    }
+    if (params.activate === false) {
+      return { status: 'VERIFIED', reason: `Power plan "${params.name}" exists`, afterState: list.trim() };
+    }
+    const active = execSync('powercfg /getactivescheme', { encoding: 'utf8', timeout: 10000 }).toLowerCase();
+    if (!active.includes(wanted)) {
+      return {
+        status: 'FAILED',
+        reason: `Power plan "${params.name}" exists but is not the active scheme`,
+        afterState: active.trim(),
+      };
+    }
+    return { status: 'VERIFIED', reason: `Power plan "${params.name}" exists and is active`, afterState: active.trim() };
+  } catch (err) {
+    return {
+      status: 'UNVERIFIABLE',
+      reason: `Could not read power plan state: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+}
+
 function verifyGuiStep(step: ExecutionStep): VerificationResult {
   const params = step.params as {
     verify_file?: string;
@@ -1096,6 +1141,27 @@ function verifyGuiStep(step: ExecutionStep): VerificationResult {
  * exits immediately, so a process check finds nothing while the app is plainly
  * on screen. The window is the thing the owner asked for.
  */
+/**
+ * A window is only evidence when there was an app name to expect one from.
+ *
+ * open_file_in_app with no `app` hands the file to Windows' own default
+ * handler — verifyAppOpen would then be matching window titles against an
+ * empty needle list, which is not "verified", it is "checked nothing". So
+ * this delegates to the exact same window-polling logic for the named-app
+ * case, and is honest about the other one instead of inventing a pass.
+ */
+async function verifyOpenFileInApp(step: ExecutionStep, agentResult?: AgentResult): Promise<VerificationResult> {
+  const app = String((step.params as { app?: string }).app ?? '').trim();
+  if (!app) {
+    return {
+      status: 'UNVERIFIABLE',
+      reason: "Opened with the file's default handler — no app name to confirm a window against",
+    };
+  }
+  const stepForAppCheck: ExecutionStep = { ...step, params: { ...step.params, name: app } };
+  return verifyAppOpen(stepForAppCheck, agentResult);
+}
+
 async function verifyAppOpen(step: ExecutionStep, agentResult?: AgentResult): Promise<VerificationResult> {
   const requested = String((step.params as { name?: string }).name ?? '');
   const data = agentResult?.data as { launched?: string; image?: string } | undefined;

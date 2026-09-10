@@ -7,23 +7,30 @@ import { buildBrainProvider } from '../llm/providers';
 import {
   CAPABILITY_NAMES,
   ROUTING_RULES,
+  VISION_PRIMARY_ROUTING,
   WorkflowSummary,
   capabilityCatalogue,
   workflowCatalogue,
 } from './capabilities';
+import { readConfig } from '../settings/config_store';
 
 function systemPrompt(workflows: WorkflowSummary[], unavailable = ''): string {
+  const visionPrimary = readConfig().computerPrimaryMode === 'vision';
+  const routing = visionPrimary ? VISION_PRIMARY_ROUTING : ROUTING_RULES;
   return `You are the planning brain of DEX, a personal Windows AI automation system.
 
 Your ONLY job: analyze the owner's request and produce a structured execution plan.
 You plan. You never execute.
 
-DEX has three ways to act, in increasing order of cost and decreasing order of
-reliability. Always reach for the cheapest one that can do the job.
+${
+  visionPrimary
+    ? 'DEX operates the computer the way a person would: looking at the screen and acting with the mouse and keyboard.'
+    : 'DEX has three ways to act, in increasing order of cost and decreasing order of\nreliability. Always reach for the cheapest one that can do the job.'
+}
 
 ${capabilityCatalogue()}${workflowCatalogue(workflows)}${unavailable}
 
-${ROUTING_RULES}
+${routing}
 
 CONFIRMATION TIERS (assign per step, based on what happens if it goes wrong):
   4 = Silent. Reading anything; web browsing/search; file search; set_dns; power plan; volume;

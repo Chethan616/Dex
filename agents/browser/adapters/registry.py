@@ -4,6 +4,7 @@ Adapter Registry: Central registration and fast-path resolution for domain adapt
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 from urllib.parse import urlparse
 
@@ -15,6 +16,24 @@ from adapters.whatsapp_adapter import WhatsAppAdapter
 from adapters.youtube_adapter import YouTubeAdapter
 
 log = logging.getLogger("AdapterRegistry")
+
+
+def _disabled_domains() -> set[str]:
+    """
+    Sites whose fast-path adapter should be skipped, forcing the generic
+    WebAdapter loop + SiteKnowledge instead. Live-acceptance-test-only
+    escape hatch (Phase 8 of the WebAdapter migration): a site's adapter
+    file is only a candidate for removal once the generic loop is proven to
+    reach the same verified outcome without it.
+
+    DEX_DISABLE_ADAPTERS="instagram.com,youtube.com" or "all".
+    """
+    raw = os.environ.get("DEX_DISABLE_ADAPTERS", "").strip().lower()
+    if not raw:
+        return set()
+    if raw == "all":
+        return {"*"}
+    return {d.strip() for d in raw.split(",") if d.strip()}
 
 
 class AdapterRegistry:
@@ -56,8 +75,15 @@ class AdapterRegistry:
             except Exception:
                 pass
 
+        disabled = _disabled_domains()
         for adapter in self._adapters:
             try:
+                if disabled and (
+                    "*" in disabled or any(d in disabled for d in adapter.domains)
+                ):
+                    log.info(f"[ADAPTER DISABLED] {adapter.name} skipped via DEX_DISABLE_ADAPTERS")
+                    continue
+
                 # Hard guard: if target_site is set and adapter's domain doesn't match, skip.
                 if target_site and not adapter._domain_matches_target(target_site):
                     log.debug(

@@ -1,0 +1,360 @@
+import path from 'path';
+import { execFileSync } from 'child_process';
+import fs from 'fs';
+import type { ForgeConfig } from '@electron-forge/shared-types';
+import { MakerSquirrel } from '@electron-forge/maker-squirrel';
+import { MakerDMG } from '@electron-forge/maker-dmg';
+import { MakerDeb } from '@electron-forge/maker-deb';
+import { MakerRpm } from '@electron-forge/maker-rpm';
+import { VitePlugin } from '@electron-forge/plugin-vite';
+import { FusesPlugin } from '@electron-forge/plugin-fuses';
+import { FuseV1Options, FuseVersion } from '@electron/fuses';
+
+// ---------------------------------------------------------------------------
+// Signing configuration
+// ---------------------------------------------------------------------------
+// All signing/notarization config reads from environment variables so that:
+//   - Local dev builds (no credentials) get SKIP_SIGNING=1 and run unsigned
+//   - CI release builds set the real secrets via GitHub Actions secrets
+//
+// TODO (requires Apple Developer credentials):
+//   Set these env vars (see .track-F-handoff.md for full setup guide):
+//     SIGNING_IDENTITY  — "Developer ID Application: Your Name (TEAMID)"
+//     APPLE_ID          — reagan@browser-use.com
+//     APPLE_APP_SPECIFIC_PASSWORD — from appleid.apple.com > App-Specific Passwords
+//     APPLE_TEAM_ID     — 10-char Team ID from developer.apple.com/account
+
+const SKIP_SIGNING = process.env.SKIP_SIGNING === '1';
+const SIGNING_IDENTITY = process.env.SIGNING_IDENTITY ?? '';
+const APPLE_ID = process.env.APPLE_ID ?? '';
+const APPLE_APP_SPECIFIC_PASSWORD = process.env.APPLE_APP_SPECIFIC_PASSWORD ?? '';
+const APPLE_TEAM_ID = process.env.APPLE_TEAM_ID ?? '';
+const WINDOWS_SIGN_WITH_PARAMS = process.env.WINDOWS_SIGN_WITH_PARAMS ?? '';
+
+const IS_MAC = process.platform === 'darwin';
+const SHOULD_SIGN = IS_MAC && !SKIP_SIGNING && SIGNING_IDENTITY !== '';
+const WINDOWS_ICON_PATH = path.resolve(__dirname, 'assets/icon.ico');
+const LINUX_ICON_PATH = path.resolve(__dirname, 'assets/icon.png');
+
+const findNpmCli = (): string | null => {
+  const nodeDir = path.dirname(process.execPath);
+  const candidates = [
+    path.join(nodeDir, 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+    path.join(nodeDir, '..', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+    path.join(nodeDir, '..', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+};
+
+const runNpm = (args: string[], cwd: string): void => {
+  const npmCli = findNpmCli();
+  if (npmCli) {
+    execFileSync(process.execPath, [npmCli, ...args], { cwd, stdio: 'inherit' });
+    return;
+  }
+  execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', args, { cwd, stdio: 'inherit' });
+};
+
+// ---------------------------------------------------------------------------
+// Forge configuration
+// ---------------------------------------------------------------------------
+
+const config: ForgeConfig = {
+  packagerConfig: {
+    asar: true,
+    // `productName` was removed from ForgePackagerOptions in newer
+    // @electron/packager; the field is now `name`. The runtime semantics
+    // are identical: the bundled .app/.exe will be named after this.
+    name: 'DEX',
+    executableName: 'dex',
+
+    // Exclude dev-only files from the packaged app.asar. Without this,
+    // Forge ships src/, tests/, personal planning .md files, Vite
+    // source configs, CI configs, README, etc. — the DMG balloons and
+    // users get dev notes. Paths arrive with a leading slash.
+    ignore: [
+      /^\/src($|\/)/,                             // TS source; compiled output is in .vite/build
+      /^\/tests($|\/)/,
+      /^\/scripts($|\/)/,
+      /^\/python($|\/)/,                          // daemon removed; defensive
+      /^\/harnessless($|\/)/,
+      /^\/\.github($|\/)/,
+      /^\/\.claude($|\/)/,
+      /^\/\.vscode($|\/)/,
+      /^\/coverage($|\/)/,
+      /^\/reagan_.*$/,                            // personal planning docs
+      /^\/.*\.md$/,                               // all markdown (README, docs, etc.)
+      /^\/tsconfig.*\.json$/,
+      /^\/eslint\.config\.(ts|mts|js|mjs|cjs)$/,
+      /^\/vite\..*\.(ts|mts)$/,                   // dev-time vite configs
+      /^\/forge\.config\.(ts|js)$/,
+      /^\/playwright\.config\.(ts|js)$/,
+      /^\/knip\.json$/,
+      /^\/\.env(\..+)?$/,                         // never ship .env to users
+      /^\/Taskfile\.ya?ml$/,
+      /^\/.+\.map$/,                              // sourcemaps
+    ],
+
+    // macOS bundle identity — only set when credentials are available.
+    // Real Developer ID signing only runs via @electron/osx-sign when
+    // SHOULD_SIGN. For unsigned builds, an ad-hoc signature is applied
+    // below in the `postPackage` hook — @electron/osx-sign silently
+    // no-ops on `identity: '-'`, so we call `codesign` directly.
+    ...(SHOULD_SIGN && {
+      osxSign: {
+        identity: SIGNING_IDENTITY,
+        optionsForFile: () => ({
+          hardenedRuntime: true,
+          entitlements: path.resolve(__dirname, 'entitlements.plist'),
+        }),
+      },
+    }),
+
+    // osxNotarize: submits to Apple notarization service after signing.
+    ...(SHOULD_SIGN && APPLE_ID && {
+      osxNotarize: {
+        appleId: APPLE_ID,
+        appleIdPassword: APPLE_APP_SPECIFIC_PASSWORD,
+        teamId: APPLE_TEAM_ID,
+      },
+    }),
+
+    // App metadata
+    appBundleId: 'com.dex.desktop',
+    appCategoryType: 'public.app-category.productivity',
+    icon: 'assets/icon',   // Forge appends .icns on macOS automatically
+    // electron-updater still reads process.resourcesPath/app-update.yml during
+    // the download/install phase even when setFeedURL supplies the feed URL.
+    extraResource: ['app-update.yml'],
+  },
+
+  // node-pty ships N-API prebuilds (node-addon-api) under
+  // prebuilds/<platform>-<arch>/, and N-API is ABI-stable across both Node and
+  // Electron — so the shipped binary already works and rebuilding it gains
+  // nothing. Rebuilding it does, however, require a full Visual Studio C++
+  // toolchain *including the Windows SDK*; without the SDK, node-gyp fails and
+  // takes `electron-forge start` down with it before the app ever launches.
+  // Skipping it keeps dev startup working on machines with only the VC++
+  // toolset installed.
+  rebuildConfig: {
+    ignoreModules: ['node-pty'],
+  },
+
+  hooks: {
+    // @electron-forge/plugin-vite excludes node_modules from the packaged app,
+    // so externals listed in vite.main.config.ts (dotenv, electron-updater,
+    // better-sqlite3, keytar, etc.) are missing at runtime and main.js
+    // crashes on first require('dotenv'). Re-install production deps into
+    // the packaged dir so externals resolve.
+    packageAfterPrune: async (_config, buildPath, electronVersion) => {
+      const pkgPath = path.join(buildPath, 'package.json');
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      const prodDeps = Object.keys(pkg.dependencies ?? {});
+      if (prodDeps.length === 0) return;
+      runNpm(['install', '--omit=dev', '--no-package-lock', '--no-save', '--legacy-peer-deps', ...prodDeps], buildPath);
+      // npm install just built native modules against the host Node ABI.
+      // Electron uses a different NODE_MODULE_VERSION, so rebuild them
+      // against Electron's headers before asar packaging.
+      const { rebuild } = await import('@electron/rebuild');
+      // Same exclusion as rebuildConfig above — node-pty's N-API prebuilds are
+      // already Electron-compatible, and rebuilding it needs the Windows SDK.
+      await rebuild({ buildPath, electronVersion, arch: process.arch, ignoreModules: ['node-pty'] });
+      // npm (like yarn) drops the executable bit off node-pty's spawn-helper.
+      // Restore it on the packaged tree so `codex login` doesn't crash with
+      // `posix_spawnp failed` the first time a user opens onboarding.
+      execFileSync(process.execPath, [path.resolve(__dirname, 'scripts/chmod-node-pty-helpers.mjs'), buildPath], {
+        stdio: 'inherit',
+      });
+    },
+
+    // Ad-hoc sign the .app on macOS for unsigned builds. macOS 26 refuses
+    // to launch bundles without a bundle-level signature ("is damaged"),
+    // and @electron/osx-sign silently skips when identity is '-'. Calling
+    // `codesign --deep --force --sign -` directly is the reliable path.
+    // No-op on signed builds (osxSign already handled them) and on non-mac.
+    postPackage: async (_config, packageResult) => {
+      if (SHOULD_SIGN || process.platform !== 'darwin') return;
+      for (const outputPath of packageResult.outputPaths ?? []) {
+        const appPath = path.join(outputPath, 'Browser Use.app');
+        if (!fs.existsSync(appPath)) continue;
+        execFileSync('codesign', ['--deep', '--force', '--sign', '-', appPath], { stdio: 'inherit' });
+        execFileSync('codesign', ['-dvv', appPath], { stdio: 'inherit' });
+      }
+    },
+  },
+
+  makers: [
+    // macOS: DMG (replaces MakerZIP for darwin per Critic finding + ADR §12)
+    // @electron-forge/maker-dmg must be installed — see .track-F-deps.txt
+    new MakerDMG(
+      {
+        // background: 'assets/dmg-background.png',  // TODO: add DMG background art
+        icon: 'assets/icon.icns',                     // volume + title-bar icon
+        format: 'ULFO',   // ULFO = modern compressed format; smaller than UDZO
+        overwrite: true,
+      },
+      ['darwin'],
+    ),
+
+    // Windows: Squirrel installer + RELEASES/.nupkg update feed for Electron's
+    // native Windows autoUpdater. Authenticode signing is optional and injected
+    // by CI via WINDOWS_SIGN_WITH_PARAMS when a certificate pipeline exists.
+    new MakerSquirrel({
+      name: 'dex_desktop',
+      title: 'Browser Use',
+      setupExe: 'Browser-Use-Setup.exe',
+      setupIcon: WINDOWS_ICON_PATH,
+      noMsi: true,
+      ...(WINDOWS_SIGN_WITH_PARAMS ? { signWithParams: WINDOWS_SIGN_WITH_PARAMS } : {}),
+    }),
+
+    // Linux: distro packages. Built in docker/linux.Dockerfile so host
+    // toolchain drift does not decide whether dpkg/rpmbuild succeeds.
+    new MakerDeb({
+      options: {
+        name: 'dex-desktop',
+        productName: 'DEX',
+        genericName: 'Agent Browser',
+        description: 'Desktop agent hub for Claude Code and Codex',
+        productDescription: 'Browser Use is a desktop agent hub for Claude Code and Codex.',
+        section: 'utils',
+        priority: 'optional',
+        maintainer: 'Browser Use <support@browser-use.com>',
+        homepage: 'https://github.com/browser-use/desktop',
+        icon: LINUX_ICON_PATH,
+        categories: ['Utility', 'Network'],
+      },
+    }),
+    new MakerRpm({
+      options: {
+        name: 'dex-desktop',
+        productName: 'DEX',
+        genericName: 'Agent Browser',
+        description: 'Desktop agent hub for Claude Code and Codex',
+        productDescription: 'Browser Use is a desktop agent hub for Claude Code and Codex.',
+        license: 'MIT',
+        group: 'Applications/Internet',
+        homepage: 'https://github.com/browser-use/desktop',
+        icon: LINUX_ICON_PATH,
+        categories: ['Utility', 'Network'],
+      },
+    }),
+  ],
+
+  plugins: [
+    new VitePlugin({
+      build: [
+        {
+          // Main process entry point
+          entry: 'src/main/index.ts',
+          config: 'vite.main.config.ts',
+          target: 'main',
+        },
+        {
+          // Shell preload
+          entry: 'src/preload/shell.ts',
+          config: 'vite.preload.config.ts',
+          target: 'preload',
+        },
+        {
+          // Pill preload
+          entry: 'src/preload/pill.ts',
+          config: 'vite.preload.config.ts',
+          target: 'preload',
+        },
+        {
+          // Onboarding preload
+          entry: 'src/preload/onboarding.ts',
+          config: 'vite.preload.config.ts',
+          target: 'preload',
+        },
+        {
+          // Logs preload (small overlay window hosting xterm for focused session)
+          entry: 'src/preload/logs.ts',
+          config: 'vite.preload.config.ts',
+          target: 'preload',
+        },
+        {
+          // Shared top-level popup preload
+          entry: 'src/preload/popup.ts',
+          config: 'vite.preload.config.ts',
+          target: 'preload',
+        },
+      ],
+      renderer: [
+        {
+          // Shell renderer (src/renderer/shell/shell.html)
+          name: 'shell',
+          config: 'vite.renderer.config.mts',
+        },
+        {
+          // Pill renderer (src/renderer/pill/pill.html)
+          name: 'pill',
+          config: 'vite.pill.config.mts',
+        },
+        {
+          // Onboarding renderer
+          name: 'onboarding',
+          config: 'vite.onboarding.config.mts',
+        },
+        {
+          // Logs renderer (src/renderer/logs/logs.html)
+          name: 'logs',
+          config: 'vite.logs.config.mts',
+        },
+        {
+          // Shared top-level popup renderer
+          name: 'popup',
+          config: 'vite.popup.config.mts',
+        },
+      ],
+    }),
+
+    // ---------------------------------------------------------------------------
+    // Fuses — package-time binary patches that enable/disable Electron features.
+    // Documented in full at: /Users/reagan/Documents/GitHub/desktop-app/.track-F-fuse-audit.md
+    // ---------------------------------------------------------------------------
+    new FusesPlugin({
+      version: FuseVersion.V1,
+
+      // KEEP FALSE — security hardening. Prevents ELECTRON_RUN_AS_NODE env var
+      // from turning the Electron binary into a raw Node.js process. If true,
+      // any attacker who can set env vars gets arbitrary code execution as the
+      // app user.
+      [FuseV1Options.RunAsNode]: false,
+
+      // KEEP TRUE — encrypts cookies at rest using the OS keychain-backed key.
+      // The browser stores session cookies for authenticated sites; encryption
+      // protects them from other processes reading the profile directory.
+      [FuseV1Options.EnableCookieEncryption]: true,
+
+      // KEEP FALSE — prevents NODE_OPTIONS env var from injecting --require,
+      // --inspect, etc. into the Electron process. An attacker who can set
+      // NODE_OPTIONS could load arbitrary code or attach a debugger.
+      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+
+      // KEEP FALSE — prevents --inspect and --inspect-brk CLI args from
+      // enabling the Node.js inspector in production. Inspector opens a
+      // network port that any local process can attach to.
+      [FuseV1Options.EnableNodeCliInspectArguments]: false,
+
+      // KEEP TRUE — validates the SHA-256 integrity of asar contents at
+      // startup using hashes embedded at package time. Detects tampering
+      // with the app bundle after signing/notarization.
+      // macOS-only caveat: when the app is unsigned, enabling this fuse
+      // makes the launcher refuse to start with "is damaged and can't be
+      // opened" — the integrity check requires a valid code signature to
+      // bootstrap. See electron/fuses#7. Gate on SHOULD_SIGN so dev/unsigned
+      // builds still launch; signed production builds keep the hardening.
+      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: SHOULD_SIGN,
+
+      // KEEP TRUE — enforces that the Electron main process only loads JS
+      // from the asar archive (not loose files). Combined with
+      // EnableEmbeddedAsarIntegrityValidation, this prevents an attacker
+      // from replacing asar contents with a malicious file.
+      [FuseV1Options.OnlyLoadAppFromAsar]: true,
+    }),
+  ],
+};
+
+export default config;

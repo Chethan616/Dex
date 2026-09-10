@@ -29,6 +29,11 @@ const DEFAULT_REQUESTS: { text: string; answers: boolean }[] = [
   { text: 'what can u do', answers: true },
   { text: 'who are you', answers: true },
   { text: 'open any browser', answers: false },
+  // Cross-domain: both failed live before open_file_in_app / download_media
+  // existed. A pass here is what lets USECASES.md claim these as Verified
+  // rather than Tested — see USECASES.md's own honesty rule about that.
+  { text: 'download the Wikipedia homepage and open it in VS Code', answers: false },
+  { text: "find sidemen's latest instagram post and download the image", answers: false },
 ];
 
 const dim = (s: string): string => `\x1b[90m${s}\x1b[0m`;

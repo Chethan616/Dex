@@ -15,7 +15,13 @@ export class DesktopAgent implements Agent {
   /** An HTTP proxy: the work happens in a Python process on this port. */
   endpoint = PORT;
   name = 'DesktopAgent';
-  capabilities = ['can_control_gui'];
+  // can_control_gui: a narrow escalation for one control-less window inside
+  // an otherwise-deterministic plan. can_operate_computer: the same loop,
+  // used as the primary way to run a whole request (computerPrimaryMode
+  // 'vision' in core/settings/config_store.ts). Both route to the same
+  // /run-task call — the difference is which capability the PLAN chose,
+  // not anything this class does differently.
+  capabilities = ['can_control_gui', 'can_operate_computer'];
 
   async execute(
     action: string,
@@ -38,8 +44,8 @@ export class DesktopAgent implements Agent {
     stepId: string,
     ctx?: AgentContext,
   ): Promise<{ success: boolean; data?: unknown; error?: string }> {
-    emit('executing', `Desktop: "${task}"`, requestId, stepId);
-    ctx?.report?.('I am using the visual fallback because the app has no accessible controls.');
+    emit('executing', `Operating the computer: "${task}"`, requestId, stepId);
+    ctx?.report?.('Looking at the screen and using the mouse and keyboard directly.');
 
     let result: RunTaskResponse;
     try {

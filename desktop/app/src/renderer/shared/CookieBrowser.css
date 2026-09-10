@@ -1,0 +1,359 @@
+/*
+ * CookieBrowser — shared styles for the Settings Browser Sync cookie card and
+ * the onboarding profile-import step. Dark, terminal-flavored to match the
+ * rest of the hub.
+ */
+
+.cb-root {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-size: 13px;
+  color: var(--color-fg-primary);
+}
+
+.cb-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cb-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cb-subtitle {
+  margin: 0;
+  color: var(--color-fg-secondary);
+  line-height: 1.45;
+  font-size: 12.5px;
+}
+
+.cb-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 14px 12px;
+  background: rgba(var(--highlight-rgb), 0.02);
+  border: 1px solid rgba(var(--highlight-rgb), 0.06);
+  border-radius: 10px;
+}
+
+.cb-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cb-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-fg-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cb-counter {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-fg-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.cb-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-status-danger);
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.18);
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+/* ---------------------------------------------------------------------------
+   Profile list
+   ------------------------------------------------------------------------- */
+
+.cb-profile-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cb-profile {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(var(--highlight-rgb), 0.025);
+  border: 1px solid rgba(var(--highlight-rgb), 0.05);
+  border-radius: 8px;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.cb-profile:hover {
+  background: rgba(var(--highlight-rgb), 0.04);
+  border-color: rgba(var(--highlight-rgb), 0.09);
+}
+
+.cb-browser-logo {
+  width: 42px;
+  height: 42px;
+}
+
+.cb-profile-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.cb-profile-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-fg-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cb-profile-email {
+  font-size: 11.5px;
+  color: var(--color-fg-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cb-profile-result {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--color-status-success);
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* ---------------------------------------------------------------------------
+   Buttons
+   ------------------------------------------------------------------------- */
+
+.cb-btn {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  white-space: nowrap;
+}
+
+.cb-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.cb-btn--primary {
+  background: var(--color-fg-primary);
+  color: var(--color-fg-inverse);
+  border-color: var(--color-fg-primary);
+}
+
+.cb-btn--primary:hover:not(:disabled) {
+  background: var(--color-fg-secondary);
+  border-color: var(--color-fg-secondary);
+}
+
+.cb-btn--ghost {
+  background: transparent;
+  color: var(--color-fg-secondary);
+  border-color: rgba(var(--highlight-rgb), 0.08);
+}
+
+.cb-btn--ghost:hover:not(:disabled) {
+  color: var(--color-fg-primary);
+  border-color: rgba(var(--highlight-rgb), 0.18);
+}
+
+/* ---------------------------------------------------------------------------
+   Search input
+   ------------------------------------------------------------------------- */
+
+.cb-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cb-search__icon {
+  position: absolute;
+  left: 10px;
+  color: var(--color-fg-tertiary);
+  pointer-events: none;
+}
+
+.cb-search__input {
+  width: 100%;
+  background: var(--color-bg-sunken);
+  border: 1px solid rgba(var(--highlight-rgb), 0.08);
+  border-radius: 6px;
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 7px 28px 7px 30px;
+  outline: none;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.cb-search__input::placeholder {
+  color: var(--color-fg-tertiary);
+}
+
+.cb-search__input:focus {
+  border-color: rgba(var(--highlight-rgb), 0.22);
+  background: var(--color-bg-elevated);
+}
+
+.cb-search__clear {
+  position: absolute;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.cb-search__clear:hover {
+  background: rgba(var(--highlight-rgb), 0.06);
+  color: var(--color-fg-primary);
+}
+
+/* ---------------------------------------------------------------------------
+   Cookie list
+   ------------------------------------------------------------------------- */
+
+.cb-list {
+  background: var(--color-bg-sunken);
+  border: 1px solid rgba(var(--highlight-rgb), 0.05);
+  border-radius: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.cb-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cb-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cb-list::-webkit-scrollbar-thumb {
+  background: rgba(var(--highlight-rgb), 0.08);
+  border-radius: 4px;
+}
+
+.cb-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--highlight-rgb), 0.16);
+}
+
+.cb-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border-bottom: 1px solid rgba(var(--highlight-rgb), 0.03);
+  color: var(--color-fg-primary);
+}
+
+.cb-row:last-child {
+  border-bottom: 0;
+}
+
+.cb-row:hover {
+  background: rgba(var(--highlight-rgb), 0.03);
+}
+
+.cb-row__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(var(--highlight-rgb), 0.04);
+}
+
+.cb-row__icon img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.cb-row__icon-fallback {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-fg-secondary);
+  background: rgba(var(--highlight-rgb), 0.06);
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.cb-row__hostname {
+  font-size: 12px;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cb-row__count {
+  font-size: 11px;
+  color: var(--color-fg-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.cb-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--color-fg-tertiary);
+  font-size: 12px;
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+
+.cb-truncated {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--color-fg-tertiary);
+  text-align: center;
+}

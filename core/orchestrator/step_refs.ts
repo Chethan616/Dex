@@ -42,6 +42,23 @@
 /** `{{step_1.output.a.b[0]}}` — anchored on `step`, so ordinary braces survive. */
 const REFERENCE = /\{\{\s*(step_[A-Za-z0-9_]+)\.output((?:\.[A-Za-z0-9_$-]+|\[\d+\])*)\s*\}\}/g;
 
+/**
+ * A `{{...}}` span that mentions a step but is not the syntax REFERENCE
+ * understands — `{{JSON.parse(step_2.output.stdout).best}}`, for instance.
+ * REFERENCE requires `step_N.output` immediately inside the braces, so a
+ * model that wraps it in a function call (there is no function-call syntax
+ * here — this is a plain dot-path substitution, not an expression language)
+ * produces a reference REFERENCE does not match at all, which used to mean
+ * "not a reference" rather than "a broken one" and let it survive as those
+ * literal characters, reaching the real action as text — the exact bug this
+ * file's own header says an unresolvable reference must never do. Anything
+ * inside double braces that mentions `step_` and is not the strict shape
+ * gets caught here instead, so it fails the same clear way a missing field
+ * does, rather than reaching `set_dns` as `"Invalid IP:
+ * {{JSON.parse(step_2.output.stdout).best}}"`.
+ */
+const LOOSE_REFERENCE = /\{\{[^{}]*step_[A-Za-z0-9_]*[^{}]*\}\}/g;
+
 export interface Resolution {
   /** The params with every reference replaced. */
   params: Record<string, unknown>;
@@ -147,6 +164,26 @@ export function describeUnresolved(
 ): string {
   const wanted = unresolved.join(', ');
 
+  // A syntax mistake, not a missing value — say so distinctly. "Could not be
+  // resolved" beside a list of real fields reads as "you named the wrong
+  // field", which sends a repair toward inventing a different field name
+  // instead of the actual fix: drop the JSON.parse(...) wrapper. REFERENCE
+  // is a `/g` regex, so lastIndex is reset before each independent test —
+  // otherwise a leftover position from testing one string corrupts the
+  // search on the next.
+  const malformed = unresolved.filter((ref) => {
+    REFERENCE.lastIndex = 0;
+    return !REFERENCE.test(ref);
+  });
+  REFERENCE.lastIndex = 0;
+  if (malformed.length > 0) {
+    return `${malformed.join(', ')} uses unsupported syntax. Only ` +
+      '{{step_N.output.field}} (a plain dot-path, no function calls) is ' +
+      "supported — {{step_N.output.field}} already reads through to a " +
+      'command\'s printed JSON, so JSON.parse(...) is never needed and is ' +
+      'not evaluated: it reaches the action as those literal characters.';
+  }
+
   if (outputs.size === 0) {
     return `${wanted} refers to a step that has not produced anything. ` +
       'No earlier step in this plan returned data — check `dependsOn`.';
@@ -203,6 +240,7 @@ function resolveString(
 
   if (!REFERENCE.test(text)) {
     REFERENCE.lastIndex = 0;
+    for (const match of text.matchAll(LOOSE_REFERENCE)) unresolved.push(match[0]);
     return text;
   }
   REFERENCE.lastIndex = 0;

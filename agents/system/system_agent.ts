@@ -43,7 +43,7 @@ const NEEDS_ELEVATION = ['set_dns', 'set_wifi', 'set_power_plan', 'registry_writ
  * Actions bound to the interactive desktop. The audio endpoint and the window
  * list both belong to a session, not to the machine.
  */
-const NEEDS_DESKTOP_SESSION = ['set_volume', 'set_mute', 'launch_app', 'close_app'];
+const NEEDS_DESKTOP_SESSION = ['set_volume', 'set_mute', 'launch_app', 'close_app', 'open_file_in_app'];
 
 /** What `describe` returns. Mirrors `_describe` in daemon/DexDaemon.py. */
 export interface DaemonDescription {

@@ -559,6 +559,8 @@ contract for how DEX behaves when the fault is unclear.
 | Files and media | “Organize these downloads by type.” | DEX previews the planned moves, keeps protected/system/credential paths out of scope, moves to recoverable locations, and verifies the resulting directory state. |
 | Network/dev environment | “The local API is not responding.” | DEX checks the listening process/port, endpoint, firewall-relevant evidence, and logs before suggesting a repair; it never hides a failed command behind a green result. |
 | Accessibility and GUI-only apps | “Click the Save button in this legacy app.” | DEX prefers named controls and UI Automation, refuses an ambiguous window, and uses vision/mouse fallback only when the accessible tree cannot represent the control. |
+| Cross-app chaining | “Download the Wikipedia homepage and open it in VS Code.” | 🧪 Tested. `download_file → open_file_in_app` is a real two-step plan, not a chaining gap — the second step opens the downloaded path directly in the named app (or its OS default handler if none is named), verified by the resulting window. Live: the real planner (Groq `openai/gpt-oss-120b`) produced exactly this two-step shape unprompted, with `open_file_in_app`'s `path` referencing `{{step_1.output.path}}`; the daemon handler was separately confirmed live, opening a real file in Notepad (window title `dex_open_test.txt - Notepad`). Not yet run as one continuous pass through the full running app end to end — that promotion to ✅ Verified is the remaining step. |
+| Browser media download | “Find Sidemen's latest Instagram post and download the image.” | 🧪 Tested. Instagram exposes no download button, so `download_current` (which waits for a real download event) can't fire — `download_media` instead finds the post's own image/video element, resolves its real `src`, and fetches the bytes through the browser's *own authenticated request context* (`page.request`), reusing Instagram's `SiteKnowledge` media selectors already used to verify the post loaded. Live: the real planner correctly reduced this to a single `run_task` (browser capability), not a granular step list; `download_media` itself is proven against a mock post page (largest-media selection, real bytes on disk, wired into the artifact system). Not yet run against a real, authenticated Instagram session — that's the remaining step before ✅ Verified. |
 
 ### Best working model and routing
 
@@ -627,6 +629,11 @@ Stated plainly, because the gaps matter more than the list above:
   hard.
 - **PDF conversion is not built.** It is on the list; nothing implements it yet,
   so `pdf_to_text` is not advertised and Dex will not claim it can.
+- **`open_file_in_app` assumes a positional file argument.** It opens a file by
+  handing its path as the first argument (`code.exe <path>`), which is how VS
+  Code, Notepad, Paint, and most viewers actually work — not a general
+  `/open`-flag story for every installed app. An app that needs a different
+  invocation shape isn't supported yet.
 
 ---
 

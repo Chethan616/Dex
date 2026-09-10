@@ -30,8 +30,13 @@ decoration around it:
 from __future__ import annotations
 
 import logging
+import sys
 import time
+from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'desktop'))
+from geometry import clamp as _clamp, interpolate as _interpolate  # noqa: E402
 
 log = logging.getLogger('CanvasDriver')
 
@@ -194,19 +199,6 @@ def _draw_one(pyautogui, points: list) -> None:
         # Never leave the button down. A stuck mouse button is the worst
         # possible way for this to fail: every subsequent click becomes a drag.
         pyautogui.mouseUp()
-
-
-def _interpolate(a, b) -> list:
-    distance = max(abs(b[0] - a[0]), abs(b[1] - a[1]))
-    steps = max(1, int(distance // STEP_PIXELS))
-    return [
-        (a[0] + (b[0] - a[0]) * i / steps, a[1] + (b[1] - a[1]) * i / steps)
-        for i in range(1, steps + 1)
-    ]
-
-
-def _clamp(value: float, low: float, high: float) -> float:
-    return max(low, min(high, value))
 
 
 def _window(title: str):

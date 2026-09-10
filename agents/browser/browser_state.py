@@ -81,6 +81,43 @@ class BrowserArtifact:
 
 
 @dataclass
+class Target:
+    """
+    What a web task is actually after, as one typed object instead of loose
+    kwargs threaded individually through agent_runner.py/server.py
+    (target_site, expected_url, expected_entity, ...). Optional today —
+    AgentRunner builds one internally from its existing kwargs — so it can be
+    adopted without changing any external call signature.
+    """
+    site_id: str | None = None
+    expected_url: str | None = None
+    expected_entity: str | None = None
+    expected_id: str | None = None
+    page_type: str | None = None
+
+
+@dataclass
+class WebTask:
+    """
+    A normalized web request: what AgentRunner.run_task's kwargs describe,
+    carried as one object so every internal helper that needs task identity
+    or target info reads it from one place rather than re-threading
+    individual parameters. Constructed internally by `run_task` on every
+    call — see AgentRunner._run_task_impl — not yet the public call contract.
+    """
+    description: str
+    task_id: str
+    step_id: str = ""
+    request_id: str = ""
+    start_url: str | None = None
+    max_steps: int = 25
+    session_id: str = ""
+    confirmed: bool = False
+    target: Target = field(default_factory=Target)
+    context: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class ActionResult:
     success: bool
     action: str

@@ -61,6 +61,22 @@ class Recovery:
 
         return dismissed
 
+    async def is_about_blank(self) -> bool:
+        """
+        True when the active page has no content to act on at all — either
+        never navigated (about:blank) or a navigation that failed badly
+        enough to land Chromium on its own internal error page
+        (chrome-error://) instead of leaving the URL unchanged. Both are the
+        same situation for the caller: there is no overlay to dismiss and no
+        DOM to inspect, so the only useful response is navigation, never a
+        retry loop of scrolls or clicks against nothing.
+        """
+        page: Page = await self._get_page()
+        url = (page.url or "").lower()
+        if not url or url == "about:blank" or url.startswith("about:blank#"):
+            return True
+        return url.startswith("chrome-error://")
+
     async def detect_human_wall(self) -> dict[str, str] | None:
         """
         Detects if the current page requires human intervention (CAPTCHA, Login, MFA, blocking overlay).

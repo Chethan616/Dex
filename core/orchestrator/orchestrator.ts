@@ -18,6 +18,7 @@ import { worthRetrying } from '../reliability/exit_codes';
 import { describeArtifact } from '../events/artifacts';
 import { repeatsFailedStep } from './duplicate_steps';
 import { statusOf } from './liveness';
+import { logApprovedPlan } from '../logging/plan_log';
 import { emit } from '../events/bus';
 
 type StepOutcome = 'ok' | 'failed' | 'cancelled';
@@ -142,6 +143,7 @@ export class Orchestrator {
     const { requestId, steps, intent } = plan;
 
     emit('planning', `Plan: "${intent}" — ${steps.length} step(s)`, requestId, undefined, plan);
+    logApprovedPlan(plan);
 
     const completed = new Set<string>();
     const remaining = [...steps];
@@ -1213,6 +1215,8 @@ function describeStep(step: ExecutionStep): string {
   switch (step.action) {
     case 'launch_app':
       return `open ${quoted('name', 'the requested application')}`;
+    case 'open_file_in_app':
+      return `open ${quoted('path', 'the file')} in ${quoted('app', 'its default app')}`;
     case 'close_app':
       return `close ${quoted('name', 'the requested application')}`;
     case 'click_element':

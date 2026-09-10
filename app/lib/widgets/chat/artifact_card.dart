@@ -117,6 +117,45 @@ class _Reading extends StatelessWidget {
     }
   }
 
+  // The inline preview is capped at 260px so a tall screenshot doesn't push
+  // the rest of the card off screen — but that meant there was no way to
+  // actually see it at size. A full-screen, pinch/scroll-zoomable view on
+  // tap, dismissed by tapping again or the close button.
+  void _openFullscreen(BuildContext context, String file) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (dialogContext) => GestureDetector(
+        onTap: () => Navigator.of(dialogContext).pop(),
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(DexSpace.md),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              InteractiveViewer(
+                maxScale: 5,
+                child: Image.file(
+                  File(file),
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(LucideIcons.x, color: Colors.white),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final file = artifact.file;
@@ -164,15 +203,18 @@ class _Reading extends StatelessWidget {
             // silently absent if the file has moved.
             if (_isImage && file != null) ...[
               const SizedBox(height: DexSpace.sm),
-              ClipRRect(
-                borderRadius: DexRadius.rsm,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 260),
-                  child: Image.file(
-                    File(file),
-                    fit: BoxFit.contain,
-                    alignment: Alignment.centerLeft,
-                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              GestureDetector(
+                onTap: () => _openFullscreen(context, file),
+                child: ClipRRect(
+                  borderRadius: DexRadius.rsm,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 260),
+                    child: Image.file(
+                      File(file),
+                      fit: BoxFit.contain,
+                      alignment: Alignment.centerLeft,
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    ),
                   ),
                 ),
               ),

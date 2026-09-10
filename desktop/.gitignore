@@ -1,0 +1,70 @@
+# Personal planning docs (reagan_ prefix per CLAUDE.md) — never committed
+reagan_*
+app/reagan_*
+
+# Dependencies
+node_modules/
+app/node_modules/
+
+# Build artifacts
+app/dist/
+app/docker/agent/dist/
+app/src/renderer/hub/dist/
+app/out/
+app/.vite/
+app/test-results/
+app/src/renderer/**/.vite/
+app/python/dist/
+app/python/build/
+app/python/__pycache__/
+app/python/**/__pycache__/
+app/python/.pytest_cache/
+app/python/**/*.pyc
+app/python/.venv/
+app/python/venv/
+
+# Logs
+*.log
+app/logs/
+
+# Test results / debug captures (ephemeral)
+app/tests/results/
+app/tests/debug/
+
+# Harness runtime artifacts (session signals, ephemeral)
+.harness/
+
+# Claude Code local project settings (ephemeral)
+.claude/
+!.claude/settings.json
+
+# Visual capture outputs (ephemeral, manifest-driven)
+app/tests/visual/captures/
+app/tests/visual/diff/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+app/.env
+app/.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+
+# Tooling state
+.omc/
+.omx/
+.task/
+
+# Ephemeral track handoff docs (repo root)
+.track-*.md
+.track-*.txt
+
+# Temp
+/tmp/*

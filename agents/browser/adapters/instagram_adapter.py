@@ -13,7 +13,11 @@ import asyncio
 import logging
 import re
 import time
+from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin, urlparse
+
+import httpx
 from playwright.async_api import Page
 
 from browser_state import ActionResult, BrowserArtifact
@@ -55,6 +59,31 @@ def extract_instagram_account(task: str, expected_entity: str | None = None) -> 
     if candidate:
         return candidate
 
+    # Profile requests: "PewDiePie's Instagram profile" or
+    # "open PewDiePie Instagram account".
+    profile_name = re.search(
+        r"\b([a-zA-Z0-9._]+?)(?:['’]s|s)?\s+(?:instagram|insta)\s+"
+        r"(?:profile|account)\b",
+        task,
+        re.IGNORECASE,
+    )
+    candidate = clean(profile_name.group(1) if profile_name else None)
+    if candidate:
+        return candidate
+
+    # A bare possessive "profile", with no "instagram"/"insta" required —
+    # covers a planner rewrite like "navigate to KSI's profile, find the
+    # latest post, and send it..." where the account name and "latest post"
+    # end up separated by other words, so neither the pattern above (needs
+    # "instagram profile" together) nor the "X's latest post" pattern
+    # further below (needs them adjacent) matches at all.
+    bare_profile = re.search(
+        r"\b([a-zA-Z0-9._]+?)(?:['’]s|s)\s+profile\b", task, re.IGNORECASE,
+    )
+    candidate = clean(bare_profile.group(1) if bare_profile else None)
+    if candidate:
+        return candidate
+
     # Explicit relationships: "latest post from/of/on @mrbeast".
     explicit = re.search(
         r"(?:from|of|on)\s+@?([a-zA-Z0-9._]+)", task, re.IGNORECASE
@@ -67,7 +96,7 @@ def extract_instagram_account(task: str, expected_entity: str | None = None) -> 
     # bare trailing s supports the common keyboard-shortened form "mrbeasts".
     possessive = re.search(
         r"\b([a-zA-Z0-9._]+?)(?:['’]s|s)\s+(?:latest|newest|most\s+recent)\s+"
-        r"(?:instagram\s+)?(?:post|reel)\b",
+        r"(?:(?:instagram|insta)\s+)?(?:posts?|reels?)\b",
         task,
         re.IGNORECASE,
     )
@@ -78,12 +107,63 @@ def extract_instagram_account(task: str, expected_entity: str | None = None) -> 
     # "latest MrBeast post" / "latest MrBeast Instagram post".
     latest = re.search(
         r"\b(?:latest|newest|most\s+recent)\s+@?([a-zA-Z0-9._]+)\s+"
-        r"(?:instagram\s+)?(?:post|reel)\b",
+        r"(?:(?:instagram|insta)\s+)?(?:posts?|reels?)\b",
         task,
         re.IGNORECASE,
     )
     candidate = clean(latest.group(1) if latest else None)
-    return candidate
+    if candidate:
+        return candidate
+
+    named_latest = re.search(
+        r"\b([a-zA-Z0-9._]+)\s+(?:latest|newest|most\s+recent)\s+"
+        r"(?:(?:instagram|insta)\s+)?posts?\b",
+        task,
+        re.IGNORECASE,
+    )
+    candidate = clean(named_latest.group(1) if named_latest else None)
+    if candidate:
+        return candidate
+
+    # Short follow-ups such as "pewdipies post?" are intentionally accepted
+    # only when the surrounding request names Instagram and a post/profile.
+    # This keeps an arbitrary word from becoming an account while allowing a
+    # conversational follow-up to use the same adapter as a full request.
+    short = re.search(
+        r"\b(?:open|show|find|see|view|latest|about)?\s*@?([a-zA-Z0-9._]+)\s+"
+        r"(?:(?:instagram|insta)\s+)?posts?\b",
+        task,
+        re.IGNORECASE,
+    )
+    return clean(short.group(1) if short else None)
+
+
+def requested_post_count(task: str) -> int:
+    """Return the number of Instagram posts requested, capped for safety."""
+    t = task.lower()
+    number_words = {
+        "one": 1,
+        "two": 2,
+        "three": 3,
+        "four": 4,
+        "five": 5,
+    }
+    match = re.search(
+        r"\b(?:latest|newest|most\s+recent)\s+(\d+|one|two|three|four|five)\s+"
+        r"(?:(?:instagram|insta)\s+)?posts?\b",
+        t,
+        re.IGNORECASE,
+    )
+    if match:
+        raw = match.group(1).lower()
+        count = number_words.get(raw, int(raw) if raw.isdigit() else 1)
+        return max(1, min(count, 10))
+
+    # Plural requests without a number mean a small, useful review set. The
+    # planner previously chose three; keep that behavior deterministic.
+    if re.search(r"\b(?:latest|newest|most\s+recent)\s+(?:(?:instagram|insta)\s+)?posts\b", t):
+        return 3
+    return 1
 
 
 class InstagramAdapter(SiteAdapter):
@@ -371,7 +451,42 @@ class InstagramAdapter(SiteAdapter):
             post_artifact.metadata["screenshot_path"] = screenshot_path
             post_artifact.metadata["verified"] = True
 
-            # 6. If task only asked to find/open/show post (or explicitly forbade sharing), return now
+            # 6. If the task actually asked to download/save the media (not
+            # just view it), do that before returning — this used to be
+            # missing entirely: "download the media" and "show me the post"
+            # both fell into the view-only branch below, so a plan chaining
+            # send_file on {{step_1.output.downloads[0].path}} always found
+            # an empty downloads[] and failed instantly, even though the
+            # post itself had been found and verified correctly.
+            wants_download = not has_negative_constraint and bool(re.search(
+                r"\b(?:download|save)\b.*\b(?:media|image|photo|picture|video|reel|post)\b"
+                r"|\b(?:media|image|photo|picture|video|reel)\b.*\bdownload\b",
+                task, re.IGNORECASE,
+            ))
+            downloads: list[dict[str, Any]] = []
+            if wants_download:
+                dl_res = await manager.interaction.download_media()
+                if not dl_res.success:
+                    raise AdapterFallbackException(
+                        f"Could not download the media on @{account}'s post: {dl_res.error}",
+                        partial_data={"verification": verification, "post_url": post_url},
+                    )
+                file_artifact = BrowserArtifact(
+                    kind="file",
+                    name=dl_res.data.get("filename", "downloaded_media"),
+                    locator=dl_res.data.get("path", ""),
+                    task_id=context.get("task_id", ""),
+                    step_id=context.get("step_id", ""),
+                    source_site="instagram.com",
+                    source_url=post_url,
+                    verification_status="verified",
+                    metadata=dl_res.data,
+                )
+                manager.add_artifact(file_artifact)
+                downloads = [file_artifact.to_dict()]
+
+            # 7. If the task only asked to find/open/show/download the post
+            # (or explicitly forbade sharing), return now.
             wants_share = bool(recipient) or (
                 not has_negative_constraint and bool(re.search(r"\b(?:share|send)\s+(?:it|this|that|the post|the reel)\b", task, re.IGNORECASE))
             )
@@ -391,7 +506,8 @@ class InstagramAdapter(SiteAdapter):
                         "media_url": media_url,
                         "screenshot_path": screenshot_path,
                         "artifact": post_artifact.to_dict(),
-                        "artifacts": [post_artifact.to_dict()],
+                        "artifacts": [post_artifact.to_dict()] + downloads,
+                        "downloads": downloads,
                     },
                 )
 

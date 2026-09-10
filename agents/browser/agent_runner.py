@@ -28,13 +28,12 @@ import logging
 import os
 import re
 import time
-from pathlib import Path
 from typing import Any
 
 from adapters.base_adapter import AdapterFallbackException
-from adapters.instagram_adapter import extract_instagram_account
 from adapters.registry import AdapterRegistry
-from browser_state import ActionResult, BrowserArtifact
+from browser_state import ActionResult, BrowserArtifact, Target, WebTask
+from site_knowledge import detect_site
 from verification import RiskLevel, classify_action_risk, log_verification_step
 
 log = logging.getLogger("AgentRunner")
@@ -44,6 +43,15 @@ MAX_LLM_CALLS_PER_TASK = 20
 
 # Heuristic determinism confidence: if we are >=this certain, skip LLM entirely.
 HEURISTIC_CONFIDENCE_THRESHOLD = 0.75
+
+# Consecutive reasoning-provider failures (not bad decisions — failures to
+# decide at all) before the loop gives up rather than continuing to scroll
+# blindly for the rest of the step budget.
+MAX_CONSECUTIVE_LLM_FAILURES = 3
+
+# Same action, same target, same URL, no state change, this many times in a
+# row: the loop is stuck, not making progress toward the task.
+STUCK_REPEAT_THRESHOLD = 4
 
 
 class TaskCheckpoint:
@@ -61,6 +69,13 @@ class TaskCheckpoint:
         self.current_sub_task_idx: int = 0
         self.completed = False
         self.llm_calls = 0
+        # Consecutive LLM decision failures (parse/API errors, not "the model
+        # chose badly") and the most recent one's message — see
+        # AgentRunner._llm_decide. Distinct from a bad-but-real decision:
+        # this is the provider or the response itself failing, and the two
+        # must not be collapsed into the same silent "scroll and hope" path.
+        self.consecutive_llm_failures = 0
+        self.last_llm_error = ""
 
     def record_step(self, step: dict[str, Any]) -> None:
         self.steps.append(step)
@@ -121,6 +136,39 @@ class AgentRunner:
         expected_entity: str | None = None,
     ) -> dict[str, Any]:
         """
+        Public entry point. Delegates to `_run_task_impl` and stamps the
+        current session id onto whichever return dict comes back, so the
+        handoff-resume protocol (browser_agent.ts reads `response.session_id`
+        to drive /resume and /abandon) always has it — regardless of which of
+        the many internal early-return branches produced the result.
+        """
+        result = await self._run_task_impl(
+            task,
+            start_url=start_url,
+            max_steps=max_steps,
+            context=context,
+            task_id=task_id,
+            step_id=step_id,
+            target_site=target_site,
+            expected_url=expected_url,
+            expected_entity=expected_entity,
+        )
+        result["session_id"] = self.manager.session.session_id
+        return result
+
+    async def _run_task_impl(
+        self,
+        task: str,
+        start_url: str | None = None,
+        max_steps: int = 25,
+        context: dict[str, Any] | None = None,
+        task_id: str | None = None,
+        step_id: str | None = None,
+        target_site: str | None = None,
+        expected_url: str | None = None,
+        expected_entity: str | None = None,
+    ) -> dict[str, Any]:
+        """
         Executes an autonomous browsing task using the 5-tier architecture.
 
         Args:
@@ -166,6 +214,29 @@ class AgentRunner:
         ctx["expected_url"] = expected_url
         ctx["expected_entity"] = expected_entity
 
+        # One typed object carrying task identity/target, alongside (not
+        # replacing) the existing loose kwargs and ctx dict above — see
+        # browser_state.WebTask. Exposed on ctx so any helper down the call
+        # chain can read structured target info instead of re-deriving it.
+        web_task = WebTask(
+            description=task,
+            task_id=effective_task_id,
+            step_id=effective_step_id,
+            request_id=ctx["request_id"],
+            start_url=start_url,
+            max_steps=max_steps,
+            session_id=self.manager.session.session_id,
+            confirmed=bool(ctx.get("confirmed", False)),
+            target=Target(
+                site_id=target_site,
+                expected_url=expected_url,
+                expected_entity=expected_entity,
+            ),
+            context=dict(ctx),  # a snapshot, not the live dict — avoids a
+                                 # ctx -> web_task -> context -> ctx cycle.
+        )
+        ctx["web_task"] = web_task
+
         # Structured task log header (Requirement 14)
         log.info(
             f"\n{'='*60}\n"
@@ -175,6 +246,7 @@ class AgentRunner:
             f"TARGET_SITE:  {target_site or '(auto)'}\n"
             f"EXPECTED_URL: {expected_url or '(none)'}\n"
             f"START_URL:    {start_url or '(none)'}\n"
+            f"SESSION_ID:   {web_task.session_id}\n"
             f"{'='*60}"
         )
 
@@ -254,9 +326,14 @@ class AgentRunner:
                     for art in self.manager.artifacts:
                         checkpoint.record_artifact(art)
 
-                    # Extract screenshot path if available or if visual inspection was requested
+                    # A screenshot on any verified-successful web task, not
+                    # gated on the request happening to contain a specific
+                    # word — a phrasing heuristic here always misses some
+                    # future wording, and we're already inside the "this
+                    # genuinely succeeded" branch, so there's no cost to
+                    # just always capturing the evidence.
                     screenshot_path = adapter_result.screenshot_path or adapter_result.data.get("screenshot_path")
-                    if not screenshot_path and any(w in task.lower() for w in ["show", "screenshot", "view", "see", "picture", "image"]):
+                    if not screenshot_path:
                         try:
                             ss_res = await self.manager.visual.screenshot()
                             if isinstance(ss_res, dict) and ss_res.get("path"):
@@ -350,10 +427,54 @@ class AgentRunner:
         or after an adapter fallback.
         """
         page = await self.manager.get_active_page()
+        about_blank_retries = 0
+        MAX_ABOUT_BLANK_RETRIES = 2
 
         for step_idx in range(1, max_steps + 1):
             page = await self.manager.get_active_page()
             current_url = page.url
+
+            # ── ABOUT_BLANK recovery (bounded, explicit) ────────────────────
+            # about:blank is not a page to inspect or scroll — there is
+            # nothing there. The forbidden failure mode this replaces:
+            # adapter_fallback @ about:blank / scroll @ about:blank looping
+            # until max_steps. Try a deliberate navigation back to a known
+            # target a bounded number of times; only hand off once that's
+            # exhausted or there is no target to recover to.
+            if await self.manager.recovery.is_about_blank():
+                recovery_target = ctx.get("expected_url") or (visited_urls[0] if visited_urls else None)
+                if recovery_target and about_blank_retries < MAX_ABOUT_BLANK_RETRIES:
+                    about_blank_retries += 1
+                    log.info(
+                        f"[Step {step_idx}] ABOUT_BLANK recovery {about_blank_retries}/{MAX_ABOUT_BLANK_RETRIES}: "
+                        f"navigating to {recovery_target}"
+                    )
+                    try:
+                        await self.manager.navigation.goto(recovery_target)
+                    except Exception as nav_err:
+                        # A recovery attempt that can't even reach the target
+                        # counts against the retry budget like any other
+                        # failed attempt — it must not crash the task.
+                        log.warning(f"ABOUT_BLANK recovery navigation failed: {nav_err}")
+                    await asyncio.sleep(0.3)
+                    continue
+                return {
+                    "success": False,
+                    "needs_handoff": {
+                        "kind": "about_blank",
+                        "reason": (
+                            "Browser is stuck on a blank page with no reachable navigation target."
+                            if not recovery_target else
+                            f"Browser is still on about:blank after {about_blank_retries} recovery attempts."
+                        ),
+                        "instruction": "Please navigate to the site in the open browser window, then click 'Done, continue'.",
+                    },
+                    "visited": visited_urls,
+                    "steps": checkpoint.steps,
+                    "downloads": downloads,
+                    "checkpoint": checkpoint.to_context(),
+                }
+
             if current_url not in visited_urls:
                 visited_urls.append(current_url)
 
@@ -399,6 +520,28 @@ class AgentRunner:
                 )
                 log.info(f"[Step {step_idx}] Tier 3 LLM decision: {action_decision}")
 
+            # ── Bounded LLM-failure escape hatch ────────────────────────────
+            # A reasoning-provider failure (parse error, API error, no
+            # provider configured) is not "the model chose to scroll" — it is
+            # the model not answering at all. Silently defaulting to the same
+            # blind scroll every time is exactly the forbidden failure mode:
+            # a real production run hit this and burned its entire step
+            # budget scrolling with zero progress. Distinguish the failure
+            # instead of collapsing it into a generic timeout.
+            if checkpoint.consecutive_llm_failures >= MAX_CONSECUTIVE_LLM_FAILURES:
+                return {
+                    "success": False,
+                    "error": (
+                        f"The reasoning provider failed {checkpoint.consecutive_llm_failures} times in a row "
+                        f"and no deterministic action was available: {checkpoint.last_llm_error}"
+                    ),
+                    "url": page.url,
+                    "visited": visited_urls,
+                    "steps": checkpoint.steps,
+                    "downloads": downloads,
+                    "checkpoint": checkpoint.to_context(),
+                }
+
             # Task complete?
             if action_decision.get("is_complete"):
                 summary = action_decision.get("summary") or "Task completed successfully."
@@ -433,43 +576,57 @@ class AgentRunner:
                         "checkpoint": checkpoint.to_context(),
                     }
 
-                # Hard state verification check on the real page before completing
+                # Hard state verification check on the real page before completing.
+                # Driven by SiteKnowledge instead of per-site if/elif branches, so
+                # every site (not just the ones with a hand-written branch) gets
+                # exact-target verification instead of a missing-method crash.
                 t_lower = task.lower()
                 target_site_hint = str(ctx.get("target_site") or "").lower()
-                is_ig_task = "instagram" in t_lower or "instagram" in target_site_hint
-                is_post_task = any(w in t_lower for w in ["post", "reel", "video", "latest", "photo"])
-                is_yt_task = "youtube" in t_lower or "youtube" in target_site_hint
+                site = detect_site(task, target_site_hint)
+                is_post_task = any(
+                    w in t_lower for w in ["post", "reel", "video", "latest", "photo"]
+                )
+                matched_page_type = None
+                if site:
+                    for pt_name, pt_rule in site.page_types.items():
+                        if any(w in t_lower for w in pt_rule.keywords):
+                            matched_page_type = pt_name
+                            break
 
-                if is_ig_task and is_post_task:
-                    expected_acc = extract_instagram_account(task, ctx.get("expected_entity"))
-                    if not expected_acc:
+                if site and matched_page_type:
+                    expected_ent = (
+                        site.entity_extractor(task, ctx.get("expected_entity"))
+                        if site.entity_extractor else None
+                    )
+                    if not expected_ent:
                         v_res = {
                             "passed": False,
                             "target_reached": False,
-                            "reason": "Instagram post task has no identifiable account; refusing to guess.",
+                            "reason": f"{site.site_id.capitalize()} {matched_page_type} task has no identifiable account/channel; refusing to guess.",
                         }
                     else:
-                        v_res = await self.manager.verifier.verify_instagram_post(
-                            expected_account=expected_acc,
-                            expected_post_url=ctx.get("expected_url"),
-                            expected_post_id=ctx.get("expected_post_id"),
+                        v_res = await self.manager.verifier.verify_site(
+                            site_id=site.site_id,
+                            page_type=matched_page_type,
+                            expected_entity=expected_ent,
+                            expected_url=ctx.get("expected_url"),
+                            expected_id=ctx.get("expected_post_id") or ctx.get("expected_video_id"),
                         )
-                elif is_yt_task and any(w in t_lower for w in ["video", "latest", "watch", "play"]):
-                    channel_match = re.search(r"(?:from|of|on)\s+([a-zA-Z0-9._\s]+)", task, re.IGNORECASE)
-                    expected_chan = channel_match.group(1).strip() if channel_match else None
-                    v_res = await self.manager.verifier.verify_youtube_video(
-                        expected_channel=expected_chan,
-                        expected_video_url=ctx.get("expected_url"),
-                        expected_video_id=ctx.get("expected_video_id"),
-                    )
                 else:
                     v_res = await self.manager.verifier.verify_browser_state(
                         action=f"verify completion of '{task}'",
                         expected={"url_contains": ctx.get("expected_url") or ""},
                         artifact_status_on_pass="verified",
                     )
-                    # For tasks that asked to find or open specific content, generic liveliness is NOT sufficient
-                    if (is_ig_task or is_yt_task or is_post_task) and v_res.get("is_generic_check"):
+                    # For tasks that asked to find or open specific content, generic
+                    # liveliness is NOT sufficient. Note this is `is_post_task` alone,
+                    # not `site or is_post_task`: reaching this branch with `site`
+                    # truthy already means the task named a known site (e.g.
+                    # "instagram") but matched no page-type keyword (e.g. "post"),
+                    # so it isn't asking for specific content in the first place —
+                    # "open Instagram website" must not be held to the same bar as
+                    # "find Sidemen's latest post" just for mentioning the site name.
+                    if is_post_task and v_res.get("is_generic_check"):
                         v_res["passed"] = False
                         v_res["target_reached"] = False
                         v_res["reason"] = "Generic browser liveliness passed but task-specific state verification was not performed"
@@ -502,14 +659,16 @@ class AgentRunner:
                             "checkpoint": checkpoint.to_context(),
                         }
                 else:
+                    # Verification passed — capture the evidence unconditionally,
+                    # not gated on the request happening to contain a specific
+                    # word (see the adapter branch above for the same change).
                     screenshot_path = None
-                    if any(w in task.lower() for w in ["show", "screenshot", "view", "see", "picture", "image"]):
-                        try:
-                            ss_res = await self.manager.visual.screenshot()
-                            if isinstance(ss_res, dict) and ss_res.get("path"):
-                                screenshot_path = ss_res["path"]
-                        except Exception as e:
-                            log.warning(f"Screenshot capture failed: {e}")
+                    try:
+                        ss_res = await self.manager.visual.screenshot()
+                        if isinstance(ss_res, dict) and ss_res.get("path"):
+                            screenshot_path = ss_res["path"]
+                    except Exception as e:
+                        log.warning(f"Screenshot capture failed: {e}")
 
                     effective_task_id = ctx.get("task_id", "")
                     page_art = BrowserArtifact(
@@ -566,7 +725,7 @@ class AgentRunner:
                 }
 
             # ── Execute the action ─────────────────────────────────────────
-            exec_res = await self._execute_action(action_decision)
+            exec_res = await self._execute_action(action_decision, task=task)
             step_record = {
                 "step": step_idx,
                 "tier": action_decision.get("_tier", "generic"),
@@ -575,6 +734,7 @@ class AgentRunner:
                 "url": current_url,
                 "success": exec_res.success,
                 "details": exec_res.details,
+                "state_changed": exec_res.state_changed,
             }
 
             # ── Tier 5: Visual Coordinate Fallback ─────────────────────────
@@ -588,8 +748,37 @@ class AgentRunner:
 
             checkpoint.record_step(step_record)
 
+            # ── Stuck detector ───────────────────────────────────────────────
+            # The same action, on the same target, on the same URL, repeated
+            # back to back: nothing is progressing, whatever exec_res.success
+            # says. This is what a live run actually hit — repeated blind
+            # `scroll` (which always reports state_changed=True regardless of
+            # whether the page moved) burning the entire step budget with no
+            # forward progress. Give up cleanly instead of exhausting max_steps
+            # with a message that explains nothing.
+            recent = checkpoint.steps[-STUCK_REPEAT_THRESHOLD:]
+            if len(recent) == STUCK_REPEAT_THRESHOLD and all(
+                s.get("action") == step_record["action"]
+                and s.get("target") == step_record["target"]
+                and s.get("url") == step_record["url"]
+                for s in recent
+            ):
+                return {
+                    "success": False,
+                    "error": (
+                        f"Stuck: '{step_record['action']}' on "
+                        f"{step_record['target'] or step_record['url']} repeated "
+                        f"{STUCK_REPEAT_THRESHOLD}x with no progress."
+                    ),
+                    "url": page.url,
+                    "visited": visited_urls,
+                    "steps": checkpoint.steps,
+                    "downloads": downloads,
+                    "checkpoint": checkpoint.to_context(),
+                }
+
             # Register download artifacts
-            if exec_res.action == "download_file" and exec_res.success:
+            if exec_res.action in ("download_file", "download_media") and exec_res.success:
                 file_path = exec_res.data.get("path") if exec_res.data else None
                 if file_path:
                     artifact = BrowserArtifact(
@@ -623,6 +812,18 @@ class AgentRunner:
                     )
                     if verification.get("passed"):
                         checkpoint.completed = True
+                        # Same structural rule as the other two completion
+                        # branches: a verified-successful web task always
+                        # gets a screenshot, not gated on wording and not
+                        # hardcoded away just because this is the fast
+                        # navigation-only path.
+                        screenshot_path = None
+                        try:
+                            ss_res = await self.manager.visual.screenshot()
+                            if isinstance(ss_res, dict) and ss_res.get("path"):
+                                screenshot_path = ss_res["path"]
+                        except Exception as e:
+                            log.warning(f"Screenshot capture failed: {e}")
                         return {
                             "success": True,
                             "result": f"Opened {after_page.url}",
@@ -634,7 +835,7 @@ class AgentRunner:
                                 a.to_dict() for a in self.manager.get_task_artifacts(ctx.get("task_id", ""))
                             ],
                             "verification": verification,
-                            "screenshot_path": None,
+                            "screenshot_path": screenshot_path,
                             "checkpoint": checkpoint.to_context(),
                             "task_id": ctx.get("task_id", ""),
                         }
@@ -749,8 +950,14 @@ class AgentRunner:
         """
         llm = self._get_llm()
         if llm is None or checkpoint.llm_calls >= MAX_LLM_CALLS_PER_TASK:
-            if checkpoint.llm_calls >= MAX_LLM_CALLS_PER_TASK:
-                log.warning("Max LLM calls reached. Falling back to scroll.")
+            reason = (
+                "Max LLM calls reached for this task"
+                if checkpoint.llm_calls >= MAX_LLM_CALLS_PER_TASK
+                else "No browser reasoning provider is configured"
+            )
+            log.warning(f"{reason}. Falling back to scroll.")
+            checkpoint.consecutive_llm_failures += 1
+            checkpoint.last_llm_error = reason
             return {"type": "scroll", "direction": "down", "amount": 300, "_tier": "llm_unavailable"}
 
         checkpoint.llm_calls += 1
@@ -779,7 +986,8 @@ AVAILABLE ACTIONS:
 - navigate: Go to a URL
 - scroll: Scroll the page (direction: up/down, amount: pixels)
 - press_key: Press a keyboard key (e.g. Enter, Escape, Tab)
-- download_file: Trigger a file download
+- download_file: Trigger a file download (a page that offers an explicit download button/link)
+- download_media: Save the image/video that IS this page's content — use this instead of download_file when there is no download button/link (e.g. an Instagram post, a raw media page)
 - read_page: Extract visible text from the current page
 - done: Mark the task as complete with a summary
 
@@ -789,6 +997,7 @@ RULES:
 3. If the task is clearly complete based on the page state, return "done".
 4. If you need to navigate to a specific URL, return "navigate" with the full URL.
 5. Be concise. One action at a time.
+6. "Save/download this post/image/video" with no download button visible means download_media, not download_file.
 
 Return ONLY a valid JSON object with exactly one action:
 For click:       {{"type": "click", "target": "e3"}}
@@ -797,6 +1006,7 @@ For navigate:    {{"type": "navigate", "url": "https://example.com"}}
 For scroll:      {{"type": "scroll", "direction": "down", "amount": 500}}
 For press_key:   {{"type": "press_key", "key": "Enter"}}
 For download:    {{"type": "download_file", "target": "e5"}}
+For download_media: {{"type": "download_media"}}
 For done:        {{"type": "done", "summary": "Task completed: ..."}}
 """
 
@@ -808,6 +1018,9 @@ For done:        {{"type": "done", "summary": "Task completed: ..."}}
             decision["_tier"] = "llm"
             log.info(f"LLM action decision (call {checkpoint.llm_calls}): {decision}")
 
+            # A real decision came back — the failure streak, if any, is over.
+            checkpoint.consecutive_llm_failures = 0
+
             # Normalize "done" → is_complete
             if decision.get("type") == "done":
                 decision["is_complete"] = True
@@ -816,7 +1029,12 @@ For done:        {{"type": "done", "summary": "Task completed: ..."}}
             return decision
 
         except Exception as e:
-            log.warning(f"LLM Tier 3 decision failed: {e}. Falling back to scroll.")
+            checkpoint.consecutive_llm_failures += 1
+            checkpoint.last_llm_error = str(e)
+            log.warning(
+                f"LLM Tier 3 decision failed ({checkpoint.consecutive_llm_failures} in a row): {e}. "
+                "Falling back to scroll."
+            )
             return {"type": "scroll", "direction": "down", "amount": 300, "_tier": "llm_error"}
 
     async def _visual_fallback(self, action_decision: dict[str, Any]) -> bool:
@@ -834,7 +1052,7 @@ For done:        {{"type": "done", "summary": "Task completed: ..."}}
                 return await self.manager.visual.click_coordinate(center_x, center_y)
         return False
 
-    async def _execute_action(self, decision: dict[str, Any]) -> ActionResult:
+    async def _execute_action(self, decision: dict[str, Any], task: str = "") -> ActionResult:
         """Dispatches an action decision to the appropriate BrowserManager subsystem."""
         act = decision.get("type", "")
         target = decision.get("target", "")
@@ -857,6 +1075,9 @@ For done:        {{"type": "done", "summary": "Task completed: ..."}}
             return await self.manager.interaction.press_key(decision.get("key", "Enter"))
         elif act == "download_file":
             return await self.manager.interaction.download_file(target)
+        elif act == "download_media":
+            hint = _media_selector_hint(task)
+            return await self.manager.interaction.download_media(selector_hint=hint)
         elif act == "navigate":
             url = decision.get("url", "")
             nav = await self.manager.navigation.goto(url)
@@ -885,19 +1106,8 @@ def _url_host(value: str) -> str:
 
 def _configured_browser_provider() -> str:
     """Read the same non-secret provider selection used by the TypeScript core."""
-    configured = os.environ.get("DEX_BRAIN_PROVIDER", "").strip().lower()
-    if not configured:
-        settings_path = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "DEX" / "settings.json"
-        try:
-            settings = json.loads(settings_path.read_text(encoding="utf-8"))
-            configured = str(settings.get("brainProvider", "")).strip().lower()
-        except (OSError, ValueError, TypeError):
-            configured = ""
-    if configured in {"groq", "claude-code"}:
-        return configured
-    if os.environ.get("GROQ_API_KEY", "").strip():
-        return "groq"
-    return ""
+    from provider_select import configured_provider
+    return configured_provider()
 
 
 def _navigation_reached(actual: str, requested: str) -> bool:
@@ -922,6 +1132,22 @@ def _is_navigation_only_task(task: str) -> bool:
         "type", "login", "sign in", "open it", "show me", "verify",
     )
     return not any(marker in t for marker in follow_up_markers)
+
+
+def _media_selector_hint(task: str) -> str | None:
+    """
+    The detected site's known media selectors (e.g. Instagram's post-image
+    selectors, already used by verify_site to confirm a post loaded), joined
+    into one CSS selector for download_media — reusing SiteKnowledge rather
+    than a second, site-specific selector list.
+    """
+    site = detect_site(task)
+    if not site:
+        return None
+    for spec in site.verification_rules.values():
+        if spec.media_selectors:
+            return ", ".join(spec.media_selectors)
+    return None
 
 def _format_step_history(steps: list[dict[str, Any]]) -> str:
     if not steps:

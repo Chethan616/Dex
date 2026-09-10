@@ -1,0 +1,61 @@
+export type ActionId =
+  | 'nav.down' | 'nav.up' | 'nav.top' | 'nav.bottom' | 'nav.open'
+  | 'goto.dashboard' | 'goto.agents' | 'goto.settings'
+  | 'search.open'
+  | 'action.create' | 'action.createPane' | 'action.dismiss' | 'action.cancel' | 'action.followUp'
+  | 'scroll.halfDown' | 'scroll.halfUp'
+  | 'meta.help' | 'meta.commandPalette' | 'meta.escape';
+
+export interface KeyBinding {
+  id: ActionId;
+  label: string;
+  keys: string[];
+  category: string;
+}
+
+export const DEFAULT_KEYBINDINGS: KeyBinding[] = [
+  { id: 'nav.down', label: 'Next session', keys: ['j'], category: 'Navigation' },
+  { id: 'nav.up', label: 'Previous session', keys: ['k'], category: 'Navigation' },
+  { id: 'nav.top', label: 'First session', keys: ['g g'], category: 'Navigation' },
+  { id: 'nav.bottom', label: 'Last session', keys: ['G', 'Shift+G'], category: 'Navigation' },
+  { id: 'nav.open', label: 'Open session', keys: ['Enter'], category: 'Navigation' },
+  { id: 'goto.dashboard', label: 'Dashboard', keys: ['g d'], category: 'Views' },
+  { id: 'goto.agents', label: 'Grid view', keys: ['g a'], category: 'Views' },
+  { id: 'goto.settings', label: 'Settings', keys: ['CommandOrControl+,'], category: 'Views' },
+  { id: 'search.open', label: 'Search', keys: ['/'], category: 'Actions' },
+  { id: 'action.create', label: 'New agent', keys: [], category: 'Actions' },
+  { id: 'action.createPane', label: 'New pane', keys: [], category: 'Actions' },
+  { id: 'action.dismiss', label: 'Dismiss session', keys: ['x'], category: 'Actions' },
+  { id: 'action.cancel', label: 'Cancel session', keys: ['Ctrl+c'], category: 'Actions' },
+  { id: 'action.followUp', label: 'Follow up', keys: ['f'], category: 'Actions' },
+  { id: 'scroll.halfDown', label: 'Scroll down', keys: ['Ctrl+d'], category: 'Scroll' },
+  { id: 'scroll.halfUp', label: 'Scroll up', keys: ['Ctrl+u'], category: 'Scroll' },
+  { id: 'meta.help', label: 'Keybindings help', keys: [], category: 'Meta' },
+  { id: 'meta.commandPalette', label: 'Command bar', keys: [], category: 'Meta' },
+  { id: 'meta.escape', label: 'Close overlay', keys: ['Escape'], category: 'Meta' },
+];
+
+export type ScreenId = 'dashboard' | 'grid' | 'settings';
+
+export const SCREEN_COMMANDS: Record<ScreenId, ActionId[]> = {
+  dashboard: [
+    'action.createPane',
+    'goto.agents',
+    'goto.settings',
+  ],
+  grid: [
+    'nav.down',
+    'nav.up',
+    'action.createPane',
+    'action.followUp',
+    'action.dismiss',
+    'goto.dashboard',
+    'goto.settings',
+  ],
+  settings: [
+    'goto.dashboard',
+    'goto.agents',
+    'action.createPane',
+    'goto.settings',
+  ],
+};

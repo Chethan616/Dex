@@ -182,6 +182,7 @@ export class SettingsService {
   setConfig(changes: Record<string, unknown>): DexConfig {
     const allowed: (keyof DexConfig)[] = [
       'brainProvider', 'brainModel', 'browserAgent', 'desktopAgent',
+      'computerPrimaryMode',
       'telegramOwner', 'discordOwner', 'whatsappOwner', 'whatsappEnabled',
       'browserHeadless', 'browserProfile', 'theme',
     ];

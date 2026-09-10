@@ -1244,10 +1244,9 @@ export class DexServer {
   /**
    * Make the Dex panel visible in the owner's browser.
    *
-   * Asked of the browser agent, which asks the extension, because only code
-   * running inside Chrome can open a side panel. Best-effort on purpose: a
-   * panel that will not open is a worse view of a task that still runs, not a
-   * reason to refuse to run it.
+   * Asked of the browser agent. Best-effort on purpose: a panel that will not
+   * open is a worse view of a task that still runs, not a reason to refuse to
+   * run it.
    */
   private async openBrowserPanel(): Promise<void> {
     try {

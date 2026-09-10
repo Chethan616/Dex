@@ -75,6 +75,18 @@ const PROBES: Probe[] = [
     label: 'the vision tier',
     fix: 'python agents/desktop/server.py',
   },
+  {
+    // Same process, same port as can_control_gui above — desktop_agent.ts
+    // proxies both to the one Desktop Agent server. Listed separately so a
+    // computerPrimaryMode: 'vision' plan (which only ever emits
+    // can_operate_computer, never can_control_gui) gets its own down/disabled
+    // check instead of silently planning against a server nobody probed.
+    capability: 'can_operate_computer',
+    port: 8765,
+    setting: 'desktopAgent',
+    label: 'the vision tier',
+    fix: 'python agents/desktop/server.py',
+  },
 ];
 
 const CACHE_MS = 15_000;

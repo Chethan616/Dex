@@ -71,3 +71,6 @@ image*.png
 app/build/
 app/.dart_tool/
 .claude/settings.json
+desktop/app/node_modules/
+desktop/app/out/
+desktop/app/.vite/

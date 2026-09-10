@@ -1,0 +1,576 @@
+/*
+ * components.css — scoped styles for all base components
+ * Imported once alongside theme.global.css.
+ * All interactive states use CSS custom properties from the active theme.
+ * Rule: zero !important, zero Inter references, zero left-outline emphasis.
+ */
+
+/* ===========================================================================
+   Button (agb-btn)
+=========================================================================== */
+
+.agb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color     var(--duration-fast) var(--ease-out),
+    color            var(--duration-fast) var(--ease-out),
+    box-shadow       var(--duration-normal) var(--ease-out),
+    transform        var(--duration-fast) var(--ease-spring);
+}
+
+.agb-btn:active:not(.agb-btn--disabled) {
+  transform: scale(0.98);
+}
+
+/* Sizes */
+.agb-btn--sm {
+  height: 28px;
+  padding-inline: 10px;
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+  gap: 4px;
+}
+.agb-btn--md {
+  height: 34px;
+  padding-inline: 14px;
+  font-size: var(--font-size-md);
+}
+.agb-btn--lg {
+  height: 42px;
+  padding-inline: 20px;
+  font-size: var(--font-size-base);
+  border-radius: var(--radius-lg);
+}
+
+/* Variants */
+.agb-btn--primary {
+  background-color: var(--color-accent-default);
+  color: var(--color-fg-inverse);
+  border-color: transparent;
+}
+.agb-btn--primary:hover:not(.agb-btn--disabled) {
+  background-color: var(--color-accent-hover);
+  box-shadow: var(--glow-accent);
+}
+
+.agb-btn--secondary {
+  background-color: var(--color-bg-elevated);
+  color: var(--color-fg-primary);
+  border-color: var(--color-border-default);
+}
+.agb-btn--secondary:hover:not(.agb-btn--disabled) {
+  background-color: var(--color-bg-overlay);
+  border-color: var(--color-border-strong);
+}
+
+.agb-btn--ghost {
+  background-color: transparent;
+  color: var(--color-fg-secondary);
+  border-color: transparent;
+}
+.agb-btn--ghost:hover:not(.agb-btn--disabled) {
+  background-color: var(--color-bg-elevated);
+  color: var(--color-fg-primary);
+}
+
+.agb-btn--danger {
+  background-color: transparent;
+  color: var(--color-status-error);
+  border-color: var(--color-status-error);
+}
+.agb-btn--danger:hover:not(.agb-btn--disabled) {
+  /* why-not-a-token: danger at 10% alpha is the hover tint for the ghost-danger
+     button variant. A --color-status-danger-hover-bg token would be correct
+     but is not in the current token set. */
+  background-color: rgba(248, 113, 113, 0.10);
+}
+
+/* States */
+.agb-btn--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.agb-btn--full-width {
+  width: 100%;
+}
+
+.agb-btn--loading {
+  cursor: wait;
+  pointer-events: none;
+}
+
+/* Spinner inside button */
+.agb-btn__spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.agb-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.agb-btn__label {
+  display: inline-block;
+}
+
+/* ===========================================================================
+   Input (agb-input)
+=========================================================================== */
+
+.agb-input__root {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.agb-input__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-secondary);
+}
+
+.agb-input__wrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-elevated);
+  transition:
+    border-color var(--duration-normal) var(--ease-out),
+    box-shadow   var(--duration-normal) var(--ease-out);
+  overflow: hidden;
+}
+
+.agb-input__wrapper:focus-within {
+  /* Neutral focus: lift border to a readable fg-secondary — no neon glow.
+     Input is already visually distinct; a loud accent is unnecessary. */
+  border-color: var(--color-fg-secondary);
+  box-shadow: none;
+}
+
+.agb-input__wrapper.agb-input--error {
+  border-color: var(--color-status-error);
+  /* why-not-a-token: error glow at 18% alpha is the error input focus state.
+     A --glow-error-sm token would be correct but is not in the token set. */
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.18);
+}
+
+.agb-input__wrapper.agb-input--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Sizes */
+.agb-input__wrapper.agb-input--sm .agb-input {
+  height: 28px;
+  padding-inline: 8px;
+  font-size: var(--font-size-sm);
+}
+.agb-input__wrapper.agb-input--md .agb-input {
+  height: 34px;
+  padding-inline: 10px;
+  font-size: var(--font-size-md);
+}
+.agb-input__wrapper.agb-input--lg .agb-input {
+  height: 42px;
+  padding-inline: 14px;
+  font-size: var(--font-size-base);
+}
+
+.agb-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-fg-primary);
+  font-family: var(--font-ui);
+  line-height: var(--line-height-normal);
+}
+
+.agb-input.agb-input--mono {
+  font-family: var(--font-mono);
+}
+
+.agb-input__adornment {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--color-fg-tertiary);
+  padding-inline: 8px;
+  line-height: 0;
+}
+
+.agb-input__hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-tertiary);
+}
+
+.agb-input__error-msg {
+  font-size: var(--font-size-xs);
+  color: var(--color-status-error);
+}
+
+/* ===========================================================================
+   Modal (agb-modal)
+=========================================================================== */
+
+.agb-modal__scrim {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-modal-scrim);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade-in var(--duration-normal) var(--ease-decelerate) forwards;
+}
+
+.agb-modal__panel {
+  background-color: var(--color-bg-overlay);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 80px);
+  overflow: hidden;
+  animation: scale-in var(--duration-normal) var(--ease-spring) forwards;
+}
+
+.agb-modal--sm   { width: 360px; }
+.agb-modal--md   { width: 480px; }
+.agb-modal--lg   { width: 640px; }
+.agb-modal--full { width: calc(100vw - 48px); height: calc(100vh - 48px); }
+
+.agb-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 20px 0;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.agb-modal__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-primary);
+  line-height: var(--line-height-snug);
+  flex: 1;
+  margin: 0;
+}
+
+.agb-modal__description {
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+  line-height: var(--line-height-relaxed);
+  margin: 6px 0 0;
+}
+
+.agb-modal__close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--color-fg-tertiary);
+  flex-shrink: 0;
+  margin-top: -2px;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color            var(--duration-fast) var(--ease-out);
+}
+
+.agb-modal__close-btn:hover {
+  background-color: var(--color-bg-elevated);
+  color: var(--color-fg-primary);
+}
+
+.agb-modal__body {
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.agb-modal__footer {
+  padding: 12px 20px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
+}
+
+/* ===========================================================================
+   Toast (agb-toast)
+=========================================================================== */
+
+.agb-toast__stack {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.agb-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg-overlay);
+  border: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-lg);
+  min-width: 280px;
+  max-width: 380px;
+  pointer-events: auto;
+  animation: slide-up var(--duration-normal) var(--ease-spring) forwards;
+}
+
+.agb-toast__icon {
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  width: 16px;
+  text-align: center;
+}
+
+.agb-toast__content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.agb-toast__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-primary);
+  line-height: var(--line-height-snug);
+}
+
+.agb-toast__message {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+  line-height: var(--line-height-normal);
+}
+
+.agb-toast__dismiss {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-xs);
+  color: var(--color-fg-tertiary);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color            var(--duration-fast) var(--ease-out);
+  margin-top: 1px;
+}
+
+.agb-toast__dismiss:hover {
+  background-color: var(--color-surface-interactive-hover);
+  color: var(--color-fg-primary);
+}
+
+/* Variants — tinted borders for each status type.
+   why-not-a-token: these alpha variants (30%) of the status colors are
+   toast-specific border tints. A full --color-toast-border-{type} family
+   would be the clean solution; for now they are documented here. */
+.agb-toast--info    { border-color: rgba(96, 165, 250, 0.30); }
+.agb-toast--info    .agb-toast__icon { color: var(--color-status-info); }
+
+.agb-toast--success { border-color: rgba(74, 222, 128, 0.30); }
+.agb-toast--success .agb-toast__icon { color: var(--color-status-success); }
+
+.agb-toast--warning { border-color: rgba(245, 158, 11, 0.30); }
+.agb-toast--warning .agb-toast__icon { color: var(--color-status-warning); }
+
+.agb-toast--error   { border-color: rgba(248, 113, 113, 0.30); }
+.agb-toast--error   .agb-toast__icon { color: var(--color-status-error); }
+
+.agb-toast--agent {
+  border-color: var(--color-pill-border, #2e2e38);
+  box-shadow: var(--glow-accent);
+}
+.agb-toast--agent .agb-toast__icon { color: var(--color-accent-default); }
+
+/* ===========================================================================
+   Spinner (agb-spinner) — sizing (animation comes from theme.global.css)
+=========================================================================== */
+
+.agb-spinner--xs { width: 12px; height: 12px; }
+.agb-spinner--sm { width: 16px; height: 16px; }
+.agb-spinner--md { width: 20px; height: 20px; }
+.agb-spinner--lg { width: 28px; height: 28px; }
+
+/* ===========================================================================
+   Card (agb-card)
+=========================================================================== */
+
+.agb-card {
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg-elevated);
+  overflow: hidden;
+}
+
+/* Variants */
+.agb-card--default  { background-color: var(--color-bg-elevated); }
+.agb-card--elevated { background-color: var(--color-bg-overlay); box-shadow: var(--shadow-md); }
+.agb-card--outline  { background-color: transparent; border: 1px solid var(--color-border-default); }
+.agb-card--ghost    { background-color: transparent; }
+
+/* Padding */
+.agb-card--pad-none { padding: 0; }
+.agb-card--pad-sm   { padding: 12px; }
+.agb-card--pad-md   { padding: 16px; }
+.agb-card--pad-lg   { padding: 24px; }
+
+/* Interactive */
+.agb-card--interactive {
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-spring);
+}
+.agb-card--interactive:hover {
+  background-color: var(--color-bg-overlay);
+}
+.agb-card--interactive:focus-visible {
+  outline: 2px solid var(--color-accent-default);
+  outline-offset: 2px;
+}
+.agb-card--interactive:active {
+  transform: scale(0.99);
+}
+
+/* ===========================================================================
+   KeyHint (agb-keyhint)
+=========================================================================== */
+
+.agb-keyhint {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  user-select: none;
+}
+
+.agb-keyhint__key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-style: normal;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-xs);
+  color: var(--color-fg-secondary);
+  line-height: 1;
+}
+
+.agb-keyhint__sep {
+  display: inline-block;
+  width: 1px;
+  height: 10px;
+  background-color: var(--color-border-default);
+  border-radius: var(--radius-full);
+  margin-inline: 1px;
+  opacity: 0.5;
+}
+
+/* Sizes */
+.agb-keyhint--xs .agb-keyhint__key {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 1px 4px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: var(--radius-xs);
+}
+.agb-keyhint--sm .agb-keyhint__key {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 0 5px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border-width: 1.5px;
+}
+.agb-keyhint--md .agb-keyhint__key {
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  padding: 2px 7px;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border-width: 1.5px;
+}
+
+/* ===========================================================================
+   Skeleton (agb-skeleton)
+=========================================================================== */
+
+.agb-skeleton {
+  display: block;
+  background-color: var(--color-bg-elevated);
+  background-image: linear-gradient(
+    90deg,
+    var(--color-bg-elevated) 0%,
+    var(--color-bg-overlay)  40%,
+    var(--color-bg-elevated) 80%,
+    var(--color-bg-elevated) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s var(--ease-in-out) infinite;
+}
+
+.agb-skeleton--circle {
+  border-radius: var(--radius-full);
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agb-skeleton {
+    animation: none;
+    background-image: none;
+    opacity: 0.5;
+  }
+}

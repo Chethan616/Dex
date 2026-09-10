@@ -18,10 +18,7 @@ backends:
   desktop:
     grounding_endpoint: "http://127.0.0.1:8080"
   browser:
-    # Autonomous reasoning loop (browser-use) vs exact selector-driven
-    # primitives. The Brain chooses per step; this is only the default for
-    # run_task. Server: agents/browser/server.py on 127.0.0.1:8766
-    default_backend: "browser_use"
+    # Server: agents/browser/server.py on 127.0.0.1:8766
     port: 8766
     headless: false          # see BROWSER_HEADLESS in .env.example
     max_steps: 25

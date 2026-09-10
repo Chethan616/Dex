@@ -1,0 +1,364 @@
+@import '../design/theme.global.css';
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--color-fg-primary, #d6d8dc);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#logs-root {
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  overflow: hidden;
+}
+
+/* ============================================================= */
+/* Expanded state                                                  */
+/* ============================================================= */
+.logs-root {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-base);
+  /* Brighter border + outer glow so the pane stands out against dark
+     site backgrounds instead of blending into them. */
+  border: 1px solid rgba(var(--highlight-rgb), 0.14);
+  box-shadow: 0 6px 22px rgba(var(--shadow-rgb), 0.55), 0 0 0 1px rgba(125, 211, 252, 0.05);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.logs-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-fg-tertiary, #8b9199);
+  -webkit-app-region: drag;
+}
+
+.logs-header__title {
+  font-weight: 500;
+}
+
+.logs-header__actions {
+  display: flex;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+
+.logs-header__btn {
+  background: transparent;
+  border: none;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--color-fg-tertiary, #8b9199);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 80ms ease, color 80ms ease;
+}
+
+.logs-header__btn:hover {
+  background: rgba(var(--highlight-rgb), 0.06);
+  color: var(--color-fg-primary, #d6d8dc);
+}
+
+/* Completion summary — plain white text above the follow-up input.
+   No banner / chrome; just makes the final "done" message readable against
+   the dark background since the xterm's green 'done' text is easy to miss. */
+.logs-summary {
+  flex: 0 0 auto;
+  padding: 6px 10px 4px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--color-fg-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.logs-summary--error {
+  color: #f87171;
+}
+
+.logs-term {
+  flex: 1 1 auto;
+  min-height: 60px;
+  display: flex;
+  padding: 4px 6px;
+  overflow: hidden;
+}
+
+.logs-term .pane__terminal,
+.logs-term .xterm {
+  width: 100%;
+  height: 100%;
+}
+
+
+.logs-term .xterm-viewport {
+  background-color: transparent;
+}
+
+/* Hide the xterm cursor — the terminal is read-only, so the blinking /
+   static caret just adds visual noise. */
+.logs-term .xterm-cursor-layer,
+.logs-term .xterm-cursor {
+  display: none;
+}
+
+.logs-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-fg-disabled, #5c6370);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+/* File outputs row. Scrolls horizontally when files overflow the window
+   width. The per-row "Open in…" popover menu clips at the scroll edges;
+   if that becomes a real issue, switch the menu to position: fixed with
+   JS-computed coords so it can escape the scroll container. */
+.logs-files {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 4px;
+  padding: 4px 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  border-top: 1px solid var(--color-border-subtle);
+}
+.logs-files::-webkit-scrollbar {
+  height: 6px;
+}
+.logs-files::-webkit-scrollbar-thumb {
+  background: var(--color-border-subtle);
+  border-radius: 3px;
+}
+.logs-files::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-default);
+}
+
+.logs-file-row {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 160px;
+  padding: 3px 6px;
+  background: var(--color-bg-elevated, #141518);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--color-fg-secondary, #b0b5bd);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.logs-file-row:hover {
+  background: rgba(var(--highlight-rgb), 0.05);
+  color: var(--color-fg-primary, #d6d8dc);
+}
+
+.logs-file-row__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logs-file-row__size {
+  color: var(--color-fg-disabled, #5c6370);
+}
+
+.logs-file-row__caret {
+  color: var(--color-fg-disabled, #5c6370);
+  font-size: 9px;
+  margin-left: 2px;
+}
+
+.logs-file-row-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.logs-file-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 10;
+  min-width: 180px;
+  background: var(--color-bg-elevated, #15181c);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(var(--shadow-rgb), 0.4);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.logs-file-menu__item {
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 11px;
+  color: var(--color-fg-secondary, #b0b5bd);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logs-file-menu__icon {
+  width: 13px;
+  height: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logs-editor-logo--cursor svg {
+  width: 13px;
+  height: 13px;
+}
+
+.logs-file-menu__item:hover {
+  background: rgba(var(--highlight-rgb), 0.06);
+  color: var(--color-fg-primary, #d6d8dc);
+}
+
+.logs-file-menu__sep {
+  height: 1px;
+  background: var(--color-border-subtle);
+  margin: 3px 4px;
+}
+
+/* Follow-up text input at the bottom — visually distinct so it reads as the
+   primary affordance of the logs window rather than a hairline footer. */
+.logs-followup {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(125, 211, 252, 0.05);
+  border-top: 1px solid var(--color-accent-default);
+  transition: background 140ms ease;
+}
+
+.logs-followup:focus-within {
+  background: rgba(125, 211, 252, 0.10);
+}
+
+.logs-followup__chevron {
+  color: var(--color-accent-default);
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.logs-followup__input {
+  flex: 1;
+  resize: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-fg-primary, #d6d8dc);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  /* max-height is set inline by LogsApp based on window.innerHeight so the
+     textarea can grow upward for multi-line input without pushing the
+     output offscreen. Internal scroll kicks in past that cap. */
+  overflow-y: auto;
+  padding: 0;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.logs-followup__input::placeholder {
+  color: var(--color-fg-secondary, #9aa2ad);
+}
+
+.logs-followup__input:disabled {
+  opacity: 0.5;
+}
+
+/* Terminal state: session ended — replace the textarea with a label so the
+   user cannot type into a session that no longer accepts follow-ups. */
+.logs-followup--ended {
+  justify-content: center;
+  background: transparent;
+  border-top: 1px solid var(--color-border-subtle);
+}
+.logs-followup--ended:focus-within {
+  background: transparent;
+}
+.logs-followup__ended-label {
+  color: var(--color-fg-secondary, #9aa2ad);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ============================================================= */
+/* Collapsed state (dot)                                           */
+/* ============================================================= */
+.logs-dot {
+  width: 100%;
+  height: 100%;
+  border: none;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--color-bg-base);
+  box-shadow: 0 2px 10px rgba(var(--shadow-rgb), 0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  -webkit-app-region: no-drag;
+  transition: transform 120ms ease;
+}
+
+.logs-dot:hover {
+  transform: scale(1.08);
+}
+
+.logs-dot__pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-accent-default);
+  box-shadow: 0 0 0 0 rgba(125, 211, 252, 0.5);
+  animation: logs-pulse 1.6s ease-out infinite;
+}
+
+@keyframes logs-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(125, 211, 252, 0.5); }
+  70%  { box-shadow: 0 0 0 8px rgba(125, 211, 252, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(125, 211, 252, 0); }
+}

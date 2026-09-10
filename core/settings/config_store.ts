@@ -33,13 +33,33 @@ export interface DexConfig {
   browserAgent: boolean;
   desktopAgent: boolean;
 
+  /**
+   * How the planner routes a request: 'hybrid' (default) keeps today's
+   * ladder — deterministic OS/file/app/browser actions first, vision only
+   * as an escalation when nothing else can reach a control. 'vision' skips
+   * the ladder entirely and hands every request to can_operate_computer as
+   * one continuous screenshot-decide-act loop, the way a human would run
+   * it — including things the ladder used to do instantly and more
+   * reliably via a direct API call. Never defaults to 'vision' on its own;
+   * this is an explicit, informed opt-in (see USECASES.md), not something
+   * an upgrade silently switches on.
+   */
+  computerPrimaryMode: 'hybrid' | 'vision';
+
   /** Chat channels. Owner ids are usernames, not secrets. */
   telegramOwner: string;
   discordOwner: string;
   whatsappOwner: string;
   whatsappEnabled: boolean;
 
-  /** Whether the browser runs without a visible window. */
+  /**
+   * Whether the browser runs without a visible window. Defaults true: the
+   * DEX-owned profile (see computerPrimaryMode's sibling default in
+   * server.py's _resolve_mode_hint) is the normal path for web work now,
+   * and a fetch/action task has no reason to show a window at all. Only a
+   * genuine human-wall handoff (login/CAPTCHA) temporarily overrides this
+   * for that one profile relaunch, then returns to headless.
+   */
   browserHeadless: boolean;
 
   /**
@@ -47,10 +67,9 @@ export interface DexConfig {
    *
    * Empty means Dex's own — isolated, signed in to nothing, and safe for
    * anything public. A profile name or email means the owner's real one,
-   * which is what makes "change my GitHub pins" possible at all: Chrome will
-   * no longer let a program install an extension, so the profile where they
-   * loaded it by hand and are already signed in is worth more than an empty
-   * one Dex controls.
+   * which is what makes "change my GitHub pins" possible at all: a profile
+   * they are already signed in to is worth more than an empty one Dex
+   * controls.
    *
    * It is a real choice and not a convenience. In their own profile a mistake
    * lands on their account, which is why every consequential action still
@@ -101,11 +120,12 @@ const DEFAULTS: DexConfig = {
   brainModel: '',
   browserAgent: true,
   desktopAgent: false,
+  computerPrimaryMode: 'hybrid',
   telegramOwner: '',
   discordOwner: '',
   whatsappOwner: '',
   whatsappEnabled: false,
-  browserHeadless: false,
+  browserHeadless: true,
   browserProfile: '',
   theme: 'system',
   fullAccess: false,

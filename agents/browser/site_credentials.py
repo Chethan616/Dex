@@ -1,7 +1,7 @@
 """
 The one place a stored password is read, and the rules that make that safe.
 
-Dex's standing rule is that it never types a password, and `primitives.type_text`
+Dex's standing rule is that it never types a password, and `interaction.type_text`
 still enforces exactly that — point it at a password field and it refuses, no
 matter what the selector says. That rule is right, because a general-purpose
 typing primitive driven by a model reading untrusted pages is precisely how a

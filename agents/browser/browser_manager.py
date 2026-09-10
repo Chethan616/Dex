@@ -42,8 +42,14 @@ class BrowserManager:
         cdp_port: int = 9222,
         profile_dir: Path | None = None,
         headless: bool | None = None,
+        auto_launch_owner_browser: bool = False,
     ):
-        self.session = SessionManager(cdp_port=cdp_port, profile_dir=profile_dir, headless=headless)
+        self.session = SessionManager(
+            cdp_port=cdp_port,
+            profile_dir=profile_dir,
+            headless=headless,
+            auto_launch_owner_browser=auto_launch_owner_browser,
+        )
         self.tabs = TabManager(lambda: self.session.context)
         self.navigation = Navigation(self.get_active_page)
         self.inspector = Inspector(self.get_active_page)

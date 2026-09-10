@@ -10,6 +10,7 @@ Responsibilities:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import shutil
@@ -186,21 +187,136 @@ def find_system_chrome() -> str | None:
     return find_browser_executable()
 
 
-def _process_name_is_running(executable_path: str | None) -> bool:
-    """Check for an existing browser process without modifying it."""
-    if not executable_path or sys.platform != "win32":
-        return False
+def _suppress_crash_restore_prompt(user_data_dir: Path, profile_name: str) -> None:
+    """
+    Make the profile think its last exit was clean, before every launch.
+
+    The actual failure this exists for: DEX connects to the freshly launched
+    browser's CDP endpoint fine — the websocket even completes its handshake
+    — and then Playwright's connect_over_cdp hangs for the full 180s timeout
+    anyway. The browser process is up and the debug port is listening, but
+    its main thread is blocked showing a native "Vivaldi didn't shut down
+    correctly — restore pages?" dialog, which any prior non-graceful close
+    (a taskkill, a crash, DEX's own close_app step) leaves behind by writing
+    exit_type != "Normal" into the profile's Preferences file. That dialog
+    lives outside any page/renderer target, so no amount of retrying the CDP
+    connection gets past it — only closing the dialog (or never showing it)
+    does.
+
+    Patching this file to always claim a clean exit is the standard
+    workaround browser-automation tooling uses for exactly this. Best
+    effort: a missing/unreadable/malformed Preferences file (first run, a
+    profile from a browser this session's family-detection did not expect)
+    should not block the launch attempt that follows.
+    """
+    prefs_path = user_data_dir / profile_name / "Preferences"
+    if not prefs_path.is_file():
+        return
     try:
-        result = subprocess.run(
-            ["tasklist", "/FI", f"IMAGENAME eq {Path(executable_path).name}", "/NH"],
+        data = json.loads(prefs_path.read_text(encoding="utf-8"))
+        profile = data.setdefault("profile", {})
+        if profile.get("exit_type") != "Normal" or profile.get("exited_cleanly", True) is not True:
+            profile["exit_type"] = "Normal"
+            profile["exited_cleanly"] = True
+            prefs_path.write_text(json.dumps(data), encoding="utf-8")
+    except (OSError, ValueError, TypeError) as err:
+        log.warning(f"Could not normalize {prefs_path} before launch: {err}")
+
+    # Local State is the browser-wide (not per-profile) counterpart: a crash
+    # streak that never resets tells Chromium's "Variations Safe Mode" this
+    # install keeps crashing, which changes its own startup behavior. DEX's
+    # own non-graceful shutdowns during earlier failed attempts (a timed-out
+    # launch, a force-terminate on cleanup) are exactly what drives this
+    # counter up — it was observed at 125 while diagnosing this. Reset
+    # alongside the per-profile flag rather than left to keep climbing.
+    local_state_path = user_data_dir / "Local State"
+    if not local_state_path.is_file():
+        return
+    try:
+        state = json.loads(local_state_path.read_text(encoding="utf-8"))
+        stability = state.setdefault("user_experience_metrics", {}).setdefault("stability", {})
+        changed = state.get("variations_crash_streak", 0) != 0
+        state["variations_crash_streak"] = 0
+        if stability.get("exited_cleanly") is not True:
+            stability["exited_cleanly"] = True
+            changed = True
+        if changed:
+            local_state_path.write_text(json.dumps(state), encoding="utf-8")
+    except (OSError, ValueError, TypeError) as err:
+        log.warning(f"Could not normalize {local_state_path} before launch: {err}")
+
+
+def _kill_by_executable(executable_path: str | None) -> None:
+    """
+    Force-end every process running this exact executable — main window,
+    renderer, GPU, crashpad-handler, all of it.
+
+    Only called for a process that was already listening on our own CDP
+    debug port and failed to complete an attach: that flag is what makes
+    this safe. An ordinary browser window the owner is using is never
+    listening on this port at all, so reaching this path already means the
+    thing being killed is a DEX-launched debug instance from an earlier
+    attempt, not live, unsaved work. Best-effort — a launch that follows
+    this is what actually has to succeed, not this cleanup step.
+    """
+    if not executable_path or sys.platform != "win32":
+        return
+    try:
+        subprocess.run(
+            ["taskkill", "/IM", Path(executable_path).name, "/F", "/T"],
             capture_output=True,
-            text=True,
-            timeout=3,
+            timeout=5,
             check=False,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
-        return Path(executable_path).name.lower() in result.stdout.lower()
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError) as err:
+        log.warning(f"Could not terminate stuck {executable_path}: {err}")
+
+
+def _process_name_is_running(executable_path: str | None) -> bool:
+    """
+    Whether the browser genuinely has a visible window open right now.
+
+    This used to be a bare "is a process with this image name in tasklist"
+    check. That is wrong for any Chromium browser: renderer, GPU, utility,
+    and crashpad-handler subprocesses all run under the exact same
+    executable name and commonly linger for seconds — sometimes indefinitely,
+    if "continue running background apps" is on — after every window the
+    user can actually see is closed. The result was a false positive that
+    made this check report "still open" even seconds after the user closed
+    every window (or DEX itself closed and relaunched the app via
+    SystemAgent), permanently blocking the exact retry the error message
+    itself asked for. What actually determines whether a fresh launch will
+    win Chromium's singleton hand-off is a real, visible top-level window —
+    not a helper process sharing the binary's name — so that is what gets
+    checked now.
+    """
+    if not executable_path or sys.platform != "win32":
+        return False
+    try:
+        import psutil
+        import win32gui
+        import win32process
+
+        target_name = Path(executable_path).name.lower()
+        found = False
+
+        def _callback(hwnd: int, _: None) -> bool:
+            nonlocal found
+            if not win32gui.IsWindowVisible(hwnd) or not win32gui.GetWindowText(hwnd):
+                return True
+            try:
+                _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                if Path(psutil.Process(pid).exe()).name.lower() == target_name:
+                    found = True
+                    return False  # stop enumerating, one is enough
+            except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
+                pass
+            return True
+
+        win32gui.EnumWindows(_callback, None)
+        return found
+    except Exception:
         return False
 
 
@@ -262,7 +378,14 @@ class SessionManager:
         cdp_port: int = DEFAULT_CDP_PORT,
         profile_dir: Path | None = None,
         headless: bool | None = None,
+        auto_launch_owner_browser: bool = False,
     ):
+        # Spawning a real, visible browser process is a side effect real
+        # enough that it must be opt-in, not implied by "CDP wasn't
+        # reachable" alone — a test constructing a SessionManager directly
+        # against an arbitrary port must never end up launching Vivaldi.
+        # Only the actual server process (server.py) sets this True.
+        self._auto_launch_owner_browser = auto_launch_owner_browser
         self.cdp_port = cdp_port
         self.cdp_url = f"http://127.0.0.1:{cdp_port}"
         self._explicit_profile = profile_dir is not None
@@ -289,8 +412,10 @@ class SessionManager:
         self._is_cdp_attached = False
         self._lock = ProfileLock(self.profile_dir / "session.lock")
         self._browser_process: subprocess.Popen[bytes] | None = None
-        self._personal_browser_startup_error: str | None = None
         self._shutting_down = False
+        # Set only while a human-wall handoff has temporarily swapped Mode A
+        # to a visible window — remembers what to return to afterward.
+        self._headless_before_handoff: bool | None = None
 
     @property
     def context(self) -> BrowserContext:
@@ -327,10 +452,19 @@ class SessionManager:
         if not self._playwright:
             self._playwright = await async_playwright().start()
 
+        # mode_hint=None means Mode A here, unchanged — this primitive has no
+        # opinion on which mode a caller *should* default to; that product
+        # decision belongs at the request-handling layer (server.py), which
+        # is where DEX_BROWSER_DEFAULT_MODE is actually read. Every direct
+        # caller of this class (including the whole test suite) relies on
+        # unset meaning the isolated profile with no side effects.
         want_mode_b = mode_hint in ("owner", "user", "b", MODE_B_USER_ATTACHED)
 
-        # Mode B is explicit and attach-only. It must never silently fall back to
-        # the isolated DEX profile or launch a second personal-browser window.
+        # Mode B attaches to the user's real browser, launching it once with
+        # automation enabled if it is not already running that way. It must
+        # never silently fall back to the isolated DEX profile — a caller
+        # that asked for (or defaulted to) the owner's browser and can't get
+        # it needs to know that, not be quietly handed a different session.
         if want_mode_b:
             cdp_info = await self._get_cdp_version()
             if cdp_info and self._cdp_matches_selected_browser(cdp_info):
@@ -338,6 +472,25 @@ class SessionManager:
                     return await self._attach_to_cdp()
                 except Exception as err:
                     log.warning(f"Failed to connect to existing CDP endpoint: {err}")
+                    # It answered /json/version (its debug HTTP server is up)
+                    # but would not complete a real attach — a zombie left
+                    # over from an earlier DEX-launched attempt (the debug
+                    # flag itself is what tells us this is DEX's own child,
+                    # not the owner's ordinary browsing session; an ordinary
+                    # window is never listening on this port at all). Safe to
+                    # replace rather than report as unattachable: killing it
+                    # and launching fresh is exactly what the error message
+                    # below used to ask the OWNER to do by hand.
+                    if self._auto_launch_owner_browser:
+                        _kill_by_executable(self.browser_path)
+                        await asyncio.sleep(0.5)  # let window handles actually clear
+                        return await self._launch_personal_browser()
+            if not cdp_info and self._auto_launch_owner_browser:
+                # Nothing is listening on the CDP port at all — safe to start
+                # the browser ourselves. If it's already running without CDP,
+                # _launch_personal_browser refuses rather than killing a live
+                # session with unsaved tabs; the caller must close it first.
+                return await self._launch_personal_browser()
             raise RuntimeError(
                 f"[{MODE_B_USER_ATTACHED}] The user's browser is not attachable via CDP on port {self.cdp_port}. "
                 f"Start {self.browser_family or 'your browser'} with "
@@ -426,7 +579,13 @@ class SessionManager:
             f"[{MODE_B_USER_ATTACHED}] Connecting to the selected browser on "
             f"{self.cdp_url} via CDP..."
         )
-        self._browser = await self._playwright.chromium.connect_over_cdp(self.cdp_url)
+        # Playwright's own default here is 180_000ms. Left at that default, a
+        # browser whose main thread is stuck (the crash-restore dialog this
+        # file now suppresses before every launch, or anything else that can
+        # block it) leaves the owner watching "acting" for three minutes
+        # before anything is reported at all. 20s is already generous for a
+        # local loopback CDP handshake that is actually healthy.
+        self._browser = await self._playwright.chromium.connect_over_cdp(self.cdp_url, timeout=20_000)
         contexts = self._browser.contexts
         self._context = contexts[0] if contexts else await self._browser.new_context()
         self.profile_dir = get_personal_profile_dir(self.browser_path)
@@ -438,28 +597,37 @@ class SessionManager:
         return self._context
 
     async def _launch_personal_browser(self) -> BrowserContext:
-        """Start the user's browser once, then connect without owning its lifetime."""
+        """
+        Starts the user's REAL browser, pointed at their REAL profile
+        directory (not DEX's isolated one), with automation enabled, then
+        attaches over CDP. This is what makes "signed in on Instagram/YouTube
+        in Vivaldi" mean the same thing for DEX without a second login: the
+        profile directory holds those cookies already, so opening it here
+        opens with them.
+        """
         if not self._playwright or not self.browser_path:
-            self._lock.release()
             raise RuntimeError("No supported personal browser installation was found.")
 
-        if self._personal_browser_startup_error:
-            self._lock.release()
-            raise RuntimeError(self._personal_browser_startup_error)
-
+        # Checked fresh on every call, not cached: this used to be latched into
+        # self._personal_browser_startup_error the first time it happened and
+        # never re-checked, so once a user hit this once, EVERY task for the
+        # rest of the server process's life repeated the identical stale
+        # error — even long after the user had actually closed the browser
+        # like the message told them to. The live process-list check is cheap
+        # (a tasklist call), so there is no reason not to just ask again.
         if _process_name_is_running(self.browser_path):
             browser_name = self.browser_family or "personal browser"
-            self._personal_browser_startup_error = (
+            raise RuntimeError(
                 f"{browser_name.title()} is already open without a CDP connection. "
-                f"Close all {browser_name.title()} windows once, then restart Dex; "
-                f"Dex will reopen the same {browser_name.title()} profile with your saved logins."
+                f"Close all {browser_name.title()} windows once, then ask DEX to try again; "
+                f"DEX will reopen the same {browser_name.title()} profile with your saved logins."
             )
-            self._lock.release()
-            raise RuntimeError(self._personal_browser_startup_error)
 
+        personal_profile = get_personal_profile_dir(self.browser_path)
+        _suppress_crash_restore_prompt(personal_profile, self.profile_name)
         launch_args = [
             self.browser_path,
-            f"--user-data-dir={self.profile_dir}",
+            f"--user-data-dir={personal_profile}",
             f"--profile-directory={self.profile_name}",
             f"--remote-debugging-port={self.cdp_port}",
             "--no-first-run",
@@ -467,13 +635,15 @@ class SessionManager:
             "--disable-blink-features=AutomationControlled",
             "--disable-features=IsolateOrigins,site-per-process",
             "--disable-infobars",
+            "--disable-session-crashed-bubble",
+            "--hide-crash-restore-bubble",
         ]
         if self.headless:
             launch_args.append("--headless=new")
 
         log.info(
-            f"[{MODE_A_PERSISTENT}] Starting {self.browser_family or 'personal browser'} "
-            f"with the user's profile: {self.profile_dir}"
+            f"[{MODE_B_USER_ATTACHED}] Starting {self.browser_family or 'personal browser'} "
+            f"with the user's real profile: {personal_profile}"
         )
         try:
             self._browser_process = subprocess.Popen(
@@ -558,3 +728,39 @@ class SessionManager:
                 pass
             self._playwright = None
         log.info("Browser session closed and lock released.")
+
+    async def relaunch_for_human_handoff(self) -> BrowserContext:
+        """
+        Mode A only: close the current (normally headless) context and
+        reopen the exact same profile directory non-headlessly, so the
+        owner can actually see and clear a login/CAPTCHA/Cloudflare wall
+        detected by recovery.detect_human_wall(). Call
+        resume_after_handoff() once it reports clear.
+
+        Hard invariant: self.profile_dir is never touched here — close()
+        and initialize() both operate on the one persistent profile this
+        SessionManager already owns, so the owner's login carries straight
+        back to the headless session that resumes afterward. Never a
+        second profile.
+        """
+        if self._is_cdp_attached:
+            raise RuntimeError(
+                "relaunch_for_human_handoff is a Mode A operation — Mode B "
+                "already shows the owner's real, visible browser."
+            )
+        self._headless_before_handoff = self.headless
+        await self.close()
+        self.headless = False
+        log.info(f"[{MODE_A_PERSISTENT}] Relaunching {self.profile_dir} visibly for a human-wall handoff.")
+        return await self.initialize(mode_hint=None)
+
+    async def resume_after_handoff(self) -> BrowserContext:
+        """The other half of relaunch_for_human_handoff: close the visible
+        window and reopen the same profile in whatever headless state the
+        session was in before the handoff started."""
+        was_headless = self._headless_before_handoff
+        self._headless_before_handoff = None
+        await self.close()
+        self.headless = True if was_headless is None else was_headless
+        log.info(f"[{MODE_A_PERSISTENT}] Resuming {self.profile_dir} headlessly after handoff.")
+        return await self.initialize(mode_hint=None)

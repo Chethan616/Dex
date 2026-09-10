@@ -1,0 +1,157 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://browser-use.local/schemas/tab_state.schema.json",
+  "title": "TabState",
+  "description": "Tab state events emitted from Electron main to renderers via ipcMain/contextBridge",
+  "version": "1.0",
+  "definitions": {
+    "BaseTabEvent": {
+      "type": "object",
+      "required": ["version"],
+      "properties": {
+        "version": { "type": "string", "const": "1.0" }
+      }
+    },
+    "TabInfo": {
+      "type": "object",
+      "required": ["tab_id", "url", "title", "is_loading", "can_go_back", "can_go_forward"],
+      "properties": {
+        "tab_id": {
+          "type": "string",
+          "description": "Stable unique identifier for this tab"
+        },
+        "url": {
+          "type": "string",
+          "description": "Current URL"
+        },
+        "title": {
+          "type": "string",
+          "description": "Page title"
+        },
+        "favicon_url": {
+          "type": "string",
+          "description": "Favicon URL (may be undefined before page loads)"
+        },
+        "is_loading": {
+          "type": "boolean"
+        },
+        "can_go_back": {
+          "type": "boolean"
+        },
+        "can_go_forward": {
+          "type": "boolean"
+        },
+        "per_target_cdp_url": {
+          "type": "string",
+          "pattern": "^ws://",
+          "description": "Per-target CDP WebSocket URL for this tab's WebContentsView. Set once tab is navigated."
+        }
+      },
+      "additionalProperties": false
+    },
+    "TabActivatedEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseTabEvent" },
+        {
+          "type": "object",
+          "required": ["event", "tab_id", "per_target_cdp_url"],
+          "properties": {
+            "event": { "type": "string", "const": "tab-activated" },
+            "tab_id": { "type": "string" },
+            "per_target_cdp_url": {
+              "type": "string",
+              "pattern": "^ws://"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "TabOpenedEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseTabEvent" },
+        {
+          "type": "object",
+          "required": ["event", "tab"],
+          "properties": {
+            "event": { "type": "string", "const": "tab-opened" },
+            "tab": { "$ref": "#/definitions/TabInfo" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "TabClosedEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseTabEvent" },
+        {
+          "type": "object",
+          "required": ["event", "tab_id"],
+          "properties": {
+            "event": { "type": "string", "const": "tab-closed" },
+            "tab_id": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "TabUpdatedEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseTabEvent" },
+        {
+          "type": "object",
+          "required": ["event", "tab"],
+          "properties": {
+            "event": { "type": "string", "const": "tab-updated" },
+            "tab": { "$ref": "#/definitions/TabInfo" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "TabReorderedEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseTabEvent" },
+        {
+          "type": "object",
+          "required": ["event", "tab_ids"],
+          "properties": {
+            "event": { "type": "string", "const": "tab-reordered" },
+            "tab_ids": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Full ordered array of tab IDs after reorder"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "TabsRestoredEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseTabEvent" },
+        {
+          "type": "object",
+          "required": ["event", "tabs", "active_tab_id"],
+          "properties": {
+            "event": { "type": "string", "const": "tabs-restored" },
+            "tabs": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/TabInfo" }
+            },
+            "active_tab_id": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/TabActivatedEvent" },
+    { "$ref": "#/definitions/TabOpenedEvent" },
+    { "$ref": "#/definitions/TabClosedEvent" },
+    { "$ref": "#/definitions/TabUpdatedEvent" },
+    { "$ref": "#/definitions/TabReorderedEvent" },
+    { "$ref": "#/definitions/TabsRestoredEvent" }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://browser-use.local/schemas/agent_task.schema.json",
+  "title": "AgentTaskMessages",
+  "description": "Request messages sent from Electron main to Python daemon over Unix socket",
+  "version": "1.0",
+  "definitions": {
+    "BaseRequest": {
+      "type": "object",
+      "required": ["version"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Protocol version — must be 1.0"
+        }
+      }
+    },
+    "AgentTaskRequest": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseRequest" },
+        {
+          "type": "object",
+          "required": ["meta", "prompt", "per_target_cdp_url", "task_id"],
+          "properties": {
+            "meta": { "type": "string", "const": "agent_task" },
+            "prompt": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User prompt for the agent task"
+            },
+            "per_target_cdp_url": {
+              "type": "string",
+              "pattern": "^ws://",
+              "description": "Per-target CDP WebSocket URL: ws://host:port/devtools/page/{targetId}. Enforces active-tab-only at transport layer."
+            },
+            "task_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique task identifier (UUID recommended)"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "CancelTaskRequest": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseRequest" },
+        {
+          "type": "object",
+          "required": ["meta", "task_id"],
+          "properties": {
+            "meta": { "type": "string", "const": "cancel_task" },
+            "task_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ID of the task to cancel"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "SetActiveTargetRequest": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseRequest" },
+        {
+          "type": "object",
+          "required": ["meta", "per_target_cdp_url"],
+          "properties": {
+            "meta": { "type": "string", "const": "set_active_target" },
+            "per_target_cdp_url": {
+              "type": "string",
+              "pattern": "^ws://",
+              "description": "Per-target CDP WebSocket URL of the newly active tab"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "PingRequest": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseRequest" },
+        {
+          "type": "object",
+          "required": ["meta"],
+          "properties": {
+            "meta": { "type": "string", "const": "ping" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ShutdownRequest": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseRequest" },
+        {
+          "type": "object",
+          "required": ["meta"],
+          "properties": {
+            "meta": { "type": "string", "const": "shutdown" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "SuccessResponse": {
+      "type": "object",
+      "required": ["ok", "version"],
+      "properties": {
+        "ok": { "type": "boolean", "const": true },
+        "version": { "type": "string", "const": "1.0" },
+        "result": {
+          "description": "Optional result payload"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "required": ["ok", "version", "error"],
+      "properties": {
+        "ok": { "type": "boolean", "const": false },
+        "version": { "type": "string", "const": "1.0" },
+        "error": {
+          "type": "object",
+          "required": ["code", "message", "retryable"],
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "Machine-readable error code"
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable error description. Never exposes raw stacktraces."
+            },
+            "retryable": {
+              "type": "boolean",
+              "description": "Whether the caller may safely retry this request"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/AgentTaskRequest" },
+    { "$ref": "#/definitions/CancelTaskRequest" },
+    { "$ref": "#/definitions/SetActiveTargetRequest" },
+    { "$ref": "#/definitions/PingRequest" },
+    { "$ref": "#/definitions/ShutdownRequest" }
+  ]
+}

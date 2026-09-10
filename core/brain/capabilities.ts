@@ -28,6 +28,10 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
   get_wifi_status: { params: '{}' },
   set_power_plan: { params: '{ plan: "balanced" | "high_performance" | "power_saver" }' },
   get_power_plan: { params: '{}' },
+  create_power_plan: {
+    params: '{ name, base?: "balanced"|"high_performance"|"power_saver", settings?: {monitor_timeout_ac?, disk_timeout_ac?, standby_timeout_ac?, ..._dc}, activate?: boolean }',
+    note: 'A custom power plan in one step — never via run_command/powercfg parsing',
+  },
   get_volume: { params: '{}' },
   set_volume: { params: '{ level: number (0-100) }' },
   set_mute: { params: '{ muted: boolean }' },
@@ -35,9 +39,17 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
   kill_process: { params: '{ name?: string, pid?: number, all?: boolean }', note: 'Tier 2 — ending a process can lose unsaved work' },
   launch_app: { params: '{ name: string }', note: 'Use this to open ANY app. Never open apps through the GUI tiers' },
   close_app: { params: '{ name: string }', note: 'Asks the window to close; does not force-kill' },
+  open_file_in_app: {
+    params: '{ path: string, app?: string }',
+    note: 'Opens an EXISTING file — in the named app if given (code, notepad, paint, word…) or the file’s own default handler otherwise. Use this, never launch_app followed by File > Open, whenever a step needs to open a specific file rather than a blank app',
+  },
   find_program: {
     params: '{ name: string, version?: boolean }',
     note: 'Is it installed, and where? { found, path, version, source }. Ask before installing and again after — a version string is evidence, an exit code is not. Not-installed is an answer',
+  },
+  open_url: {
+    params: '{ url: string }',
+    note: 'A bare "open X" with nothing to do there — the owner\'s real default browser, like clicking a link. No automation. Anything to retrieve or do on the site is can_browse_web instead',
   },
   get_keyboard_backlight: {
     params: '{}',
@@ -76,7 +88,7 @@ export const OS_ACTIONS: Record<string, ActionSpec> = {
     params: '{ command: string[] }',
     note: 'Ask which band a command falls into before planning it — same idea as registry_classify',
   },
-  get_display: { params: '{}', note: 'Current resolution and refresh rate, plus every mode this display accepts' },
+  get_display: { params: '{}', note: 'Returns {width, height, refresh_hz, resolution, available}, sorted highest-first — max resolution is available[0]' },
   set_display: {
     params: '{ resolution?: string (e.g. "1920x1080"), width?: number, height?: number, refresh_hz?: number }',
     note: 'Sets resolution and refresh rate directly. NEVER click through Settings for this — call get_display first if you need to know what is available. Tier 2',
@@ -206,7 +218,7 @@ export const WEB_ACTIONS: Record<string, ActionSpec> = {
   // single page, because "what does this say" should not cost an agent loop.
   run_task: {
     params: '{ task: string, url?: string, browser?: string }',
-    note: 'A whole web job, in the browser the owner is signed into - it opens it, uploads files, and acts as them. Returns downloads[]: a later step points at {{step_N.output.downloads[0].path}}. Set start_url so a remembered route is found',
+    note: 'A whole web job in Dex\'s own headless browser profile — no window, already signed in. Never pass browser:"owner" (the owner\'s real, visible browser) unless asked. Returns downloads[]: a later step points at {{step_N.output.downloads[0].path}}. start_url helps find a remembered route',
   },
   read_page: { params: '{}', note: 'The current page as text — use before deciding what to click' },
   extract: { params: '{ selector: string }', note: 'Text of elements matching a CSS selector' },
@@ -261,6 +273,28 @@ export const GUI_ACTIONS: Record<string, ActionSpec> = {
     params:
       '{ task: string, verify_file?: string, verify_text_in_file?: { path: string, text: string } }',
     note: 'Only for UI that exposes no accessible controls',
+  },
+};
+
+/**
+ * The general way Dex operates the computer: one continuous screenshot ->
+ * decide -> click/type -> observe loop over the WHOLE request, the way a
+ * person would — not a last resort for one control-less window. Distinct
+ * from can_control_gui above, which is a narrow escalation for a single
+ * step inside an otherwise-deterministic plan.
+ *
+ * Selected as the ONLY capability for every request when
+ * computerPrimaryMode is 'vision' — see ROUTING_RULES and
+ * core/settings/config_store.ts. Present in the catalogue unconditionally
+ * so a 'hybrid'-mode plan can still reach for it deliberately (a task that
+ * genuinely needs to just look at the screen and act), not only when the
+ * mode forces it.
+ */
+export const COMPUTER_ACTIONS: Record<string, ActionSpec> = {
+  run_task: {
+    params:
+      '{ task: string, verify_file?: string, verify_text_in_file?: { path: string, text: string } }',
+    note: 'The whole request, as one vision loop. No independent verification beyond verify_file — the loop’s own next screenshot is the only other check',
   },
 };
 
@@ -385,7 +419,13 @@ ${render(DELIVERY_ACTIONS)}
 CAPABILITY: can_control_gui   [TIER 3 — last resort, slow and fallible]
   Takes a screenshot, asks a vision model where things are, moves the mouse.
   Costs tokens, needs a GPU, and can click the wrong thing.
-${render(GUI_ACTIONS)}`;
+${render(GUI_ACTIONS)}
+
+CAPABILITY: can_operate_computer   [operates the WHOLE computer, one task at a time]
+  A continuous screenshot -> decide -> act -> observe loop over the entire
+  request, not a narrow escalation like can_control_gui. Hand it the whole
+  task in one step; it opens apps, types and clicks like a person would.
+${render(COMPUTER_ACTIONS)}`;
 }
 
 /**
@@ -409,6 +449,7 @@ export const CAPABILITY_NAMES = [
   'can_deliver',
   'can_run_workflow',
   'can_control_gui',
+  'can_operate_computer',
 ] as const;
 
 /** Every action name, by capability — for the drift check and the tests. */
@@ -422,6 +463,7 @@ export const ACTIONS_BY_CAPABILITY: Record<string, string[]> = {
   can_access_drive: ['search_drive', 'read_drive_file'],
   can_deliver: Object.keys(DELIVERY_ACTIONS),
   can_control_gui: Object.keys(GUI_ACTIONS),
+  can_operate_computer: Object.keys(COMPUTER_ACTIONS),
 };
 
 /**
@@ -447,8 +489,7 @@ export const ROUTING_RULES = `HOW TO CHOOSE A CAPABILITY — work down this ladd
        "what does this page say"      -> can_browse_web read_page
        "screenshot that site"         -> can_browse_web screenshot
      Dex is already signed in to their sites, so never plan a sign-in step.
-     The only reason to launch_app a browser is if the owner asked for the
-     browser itself to be open, with nothing to do in it.
+     "Open X" alone is open_url; "open instagram, show post" is here.
 
   3. Before reaching for TIER 2, ask: could a command do this instead?
      If yes, use run_command. This is the single most common planning mistake,
@@ -458,15 +499,13 @@ export const ROUTING_RULES = `HOW TO CHOOSE A CAPABILITY — work down this ladd
               click "1920 x 1080" -> click Keep changes           (8 steps)
        RIGHT  set_display({resolution: "1920x1080"})               (1 step)
 
-     Eight steps is eight chances to fail on a label Microsoft renamed, and
-     that plan really did fail — on "1920 x 1080" versus the "1920 × 1080"
-     Settings actually shows. The API does not care what the dropdown is
-     called this year.
+     Eight steps is eight chances to fail on a label Microsoft renamed (it
+     really did, on "1920 x 1080" vs the "×" Settings actually shows). The
+     API does not care what the dropdown is called this year.
 
-     **The Settings app is a front end for APIs Dex can already call.** Almost
-     nothing in it is a job for TIER 2. Before planning a click into Settings,
-     look for a can_control_os action; if there is one, that is the answer.
-     If there is no action and no command, only then use TIER 2.
+     **The Settings app is a front end for APIs Dex can already call.**
+     Look for a can_control_os action before planning a click into it; only
+     use TIER 2 if none exists.
 
   4. Does it mean operating a normal Windows application?  -> use TIER 2.
      Notepad, File Explorer, Word, Excel, any standard desktop app — software
@@ -517,15 +556,14 @@ USING WHAT AN EARLIER STEP FOUND
   it is substituted as text.
 
     "test several DNS servers and switch to the fastest"
-      step_1  run_command   measure them, print the winner as JSON
-      step_2  set_dns       primary: "{{step_1.output.best_primary}}"
-                            dependsOn: ["step_1"]
+      step_1  run_command   measure, print best+second-best as JSON
+      step_2  set_dns       primary: "{{step_1.output.best_primary}}",
+                            secondary: "{{step_1.output.second_primary}}"
 
-  Only refer to a step in dependsOn, and only to a field it will really return.
-  A reference to something that does not exist stops the task rather than being
-  passed through as text. If a command must produce a value for a later step,
-  have it print JSON — a field of a JSON object can be pointed at; a line of
-  prose cannot.
+  Only refer to a step in dependsOn and a field it really returns — an
+  unresolvable reference stops the task rather than passing through as
+  text. A command should print JSON so a field can be pointed at
+  directly; never wrap in JSON.parse(...) — that is not evaluated.
 
 
 INSTALLING AND SETTING UP A TOOL
@@ -560,6 +598,19 @@ INSTALLING AND SETTING UP A TOOL
   Say the version. "Installed gcc" is not an answer; "gcc 14.2.0 is on PATH and
   compiled and ran a test program" is.
 
+OPENING A DOWNLOADED FILE IN A SPECIFIC APP
+
+  "download X and open it in VS Code" is two things, not one — download it,
+  then open THAT file, not a blank editor:
+
+    download_file(url)  ->  open_file_in_app(path: "{{step_1.output.path}}",
+                                              app: "code")
+                             dependsOn: ["step_1"]
+
+  Never launch_app followed by clicking through File > Open for this —
+  open_file_in_app takes the path directly, on the one step. Omit "app" to
+  hand the file to whatever Windows itself would open it with.
+
 EDITING AN IMAGE
 
   Resize, crop, rotate, convert, compress, thumbnail?
@@ -581,3 +632,32 @@ DRAWING A PICTURE
     3. draw_strokes(window, strokes: {{step_1.output.strokes}})
   It draws a line sketch, stroke by stroke, with the real mouse. Say that is
   what it will be — a traced outline, not a reproduction of the photo.`;
+
+/**
+ * The routing instruction used instead of ROUTING_RULES when
+ * computerPrimaryMode is 'vision' (core/settings/config_store.ts). A
+ * separate constant, not a rewrite of ROUTING_RULES in place: the ladder
+ * above stays exactly as it was — and exactly as tests/smoke_capabilities.ts
+ * asserts it reads — for 'hybrid' mode, so this file has one clearly-named
+ * routing text per mode rather than one conditionally-mutated one.
+ *
+ * Deliberately short: unlike the ladder, there is only one rule.
+ */
+export const VISION_PRIMARY_ROUTING = `HOW TO CHOOSE A CAPABILITY — vision-primary mode is on:
+
+  Every request becomes exactly ONE step:
+    capability: "can_operate_computer"
+    action: "run_task"
+    params: { task: "<the owner's request, as they said it>" }
+    dependsOn: []
+
+  Do not decompose the request into can_control_os / can_control_files /
+  can_control_app / can_browse_web steps — those still exist for reference
+  and for saved workflows, but a fresh plan in this mode never reaches for
+  them directly. The loop that runs can_operate_computer figures out how to
+  do the task itself: opening apps, typing, clicking, using a terminal or
+  Settings if that's the fastest way — the same as a person sitting at the
+  keyboard would.
+
+  The only exception: a request that is not a task at all ("what can you
+  do", "who are you") still gets a reply with no steps, exactly as before.`;

@@ -227,6 +227,52 @@ class Inspector:
             log.warning(f"CDP Accessibility extraction failed: {err}")
             return {"nodes": []}
 
+    async def extract(self, selector: str | None) -> dict[str, Any]:
+        """
+        Text (and href, if present) for one element resolved from `selector`
+        (an ephemeral e1/e2 id, a CSS selector, or visible text), or the whole
+        page's visible text when no selector is given.
+        """
+        if not selector:
+            return {"text": await self.get_visible_text(), "selector": None}
+
+        page: Page = await self._get_page()
+        resolved = await self.resolve_target(selector)
+        try:
+            locator = page.locator(resolved).first
+            text = (await locator.inner_text()).strip()
+            href = await locator.get_attribute("href")
+            return {"text": text, "href": href, "selector": resolved}
+        except Exception as err:
+            log.warning(f"extract failed for selector '{selector}' ({resolved}): {err}")
+            return {"text": "", "href": None, "selector": resolved, "error": str(err)}
+
+    async def extract_table(self, which: int = 0) -> dict[str, Any]:
+        """The `which`-th <table> on the page, as {headers, rows}."""
+        page: Page = await self._get_page()
+        js = """(idx) => {
+            const tables = document.querySelectorAll('table');
+            const table = tables[idx];
+            if (!table) return null;
+            const headerCells = table.querySelectorAll('thead th, tr:first-child th');
+            const headers = Array.from(headerCells).map(c => c.innerText.trim());
+            const bodyRows = table.querySelectorAll('tbody tr, tr');
+            const rows = [];
+            for (const row of bodyRows) {
+                const cells = Array.from(row.querySelectorAll('td')).map(c => c.innerText.trim());
+                if (cells.length) rows.push(cells);
+            }
+            return { headers, rows };
+        }"""
+        try:
+            result = await page.evaluate(js, which)
+        except Exception as err:
+            log.warning(f"extract_table failed for table {which}: {err}")
+            return {"headers": [], "rows": [], "error": str(err)}
+        if result is None:
+            return {"headers": [], "rows": [], "error": f"No table at index {which}"}
+        return result
+
     async def get_visible_text(self) -> str:
         """Extracts readable text content from the page body."""
         page: Page = await self._get_page()

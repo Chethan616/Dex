@@ -122,6 +122,82 @@ class AppHandler:
         }
 
     @staticmethod
+    def open_file_in_app(params: dict) -> dict:
+        """
+        Opens an existing file, in a named app if given or the file's own
+        default handler otherwise. Exists because `launch_app` cannot: its
+        schema is a bare app name with nowhere to put a path, so a plan that
+        downloaded a file and then wanted to open it had no action that took
+        both. This assumes the target app accepts a file path as its first
+        positional argument — true for VS Code, Notepad, Paint, and most
+        viewers, not a general `/open`-flag story for every installed app.
+        """
+        path = (params.get('path') or '').strip().strip('"')
+        if not path:
+            raise ValueError('open_file_in_app needs a path')
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f'No file at {path}')
+
+        raw = (params.get('app') or '').strip()
+        if not raw:
+            # No app named: hand it to whatever Windows itself would use,
+            # exactly what double-clicking the file in Explorer does.
+            os.startfile(path)  # noqa: S606
+            time.sleep(float(params.get('settle', 1.2)))
+            return {
+                'launched': 'default handler', 'path': None, 'file': path,
+                'image': None, 'found_via': 'shell_default', 'requested': None,
+            }
+
+        key = raw.lower()
+        base = os.path.basename(key)
+        if key in REFUSED or base in REFUSED:
+            raise PermissionError(f'Dex does not open files in a terminal ("{raw}").')
+
+        resolution = resolve(raw, KNOWN)
+
+        if resolution.is_shell or resolution.method == 'start_menu':
+            # A shell verb or a Start Menu shortcut can still carry an
+            # argument string the same way a real exe does.
+            os.startfile(resolution.target, arguments=f'"{path}"')  # noqa: S606
+        else:
+            subprocess.Popen(
+                [resolution.target, path], shell=False,
+                creationflags=getattr(subprocess, 'DETACHED_PROCESS', 0),
+            )
+
+        time.sleep(float(params.get('settle', 1.2)))
+        log.info('Opened %s in %s via %s (from %r)',
+                 path, resolution.target, resolution.method, raw)
+        return {
+            'launched': resolution.display or resolution.target,
+            'path': resolution.target,
+            'file': path,
+            'image': os.path.splitext(os.path.basename(resolution.target))[0],
+            'found_via': resolution.method,
+            'requested': raw,
+        }
+
+    @staticmethod
+    def open_url(params: dict) -> dict:
+        """
+        Opens a URL in whatever the owner's actual default browser is —
+        exactly what double-clicking a link does. Deliberately just this:
+        no Playwright, no CDP, no DEX browser profile, nothing to verify.
+        This exists specifically so "open Instagram" never has to mean
+        "automate a browser" — that's can_browse_web's job, for when
+        something needs to be retrieved or done there, not this one.
+        """
+        url = (params.get('url') or '').strip()
+        if not url:
+            raise ValueError('open_url needs a url')
+        if not url.lower().startswith(('http://', 'https://')):
+            url = f'https://{url}'
+        os.startfile(url)  # noqa: S606
+        log.info('Opened %s in the default browser', url)
+        return {'url': url}
+
+    @staticmethod
     def close_app(params: dict) -> dict:
         """
         Asks the application to close. Never a force-kill — unsaved work stays

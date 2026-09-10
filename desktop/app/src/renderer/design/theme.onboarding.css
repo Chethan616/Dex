@@ -1,0 +1,590 @@
+/*
+ * theme.onboarding.css — Linear-inspired dark onboarding theme
+ * Activate by setting <html data-theme="onboarding"> on the document element.
+ * Minimal, monochromatic, sophisticated. ONE accent color.
+ *
+ * This file ONLY overrides semantic color tokens and onboarding-specific tokens.
+ * Primitive tokens (--slate-*, --accent-*, --danger, etc.) come from
+ * theme.global.css :root and are NOT repeated here.
+ *
+ * Rule: zero !important, zero Inter references, zero left-outline emphasis.
+ */
+
+[data-theme="onboarding"] {
+  /* -- Font families -- */
+  --font-ui:      'Geist', 'Söhne', system-ui, sans-serif;
+  --font-mono:    'Berkeley Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Geist', 'Söhne', system-ui, sans-serif;
+
+  /* -- Semantic background (deep, cool, Linear-esque) -- */
+  --color-bg-base:     #101012;
+  --color-bg-elevated: #18181b;
+  --color-bg-overlay:  #1f1f23;
+  --color-bg-sunken:   #0a0a0c;
+  --color-bg-card:     #141416;
+
+  /* -- Semantic foreground -- */
+  --color-fg-primary:   #ededef;
+  --color-fg-secondary: #8a8a8e;
+  --color-fg-tertiary:  #5c5c63;
+  --color-fg-disabled:  #3a3a3f;
+  --color-fg-inverse:   #101012;
+
+  /* -- Semantic border -- */
+  --color-border-subtle:  #1f1f23;
+  --color-border-default: #27272b;
+  --color-border-strong:  #35353a;
+
+  /* -- Accent (same base — the app's signature green/yellow) -- */
+  --color-accent-default: var(--accent-base);
+  --color-accent-hover:   var(--accent-hover);
+  --color-accent-dim:     var(--accent-dim);
+  --color-accent-muted:   rgba(109, 129, 150, 0.10);
+  --color-accent-glow:    rgba(109, 129, 150, 0.15);
+  --color-accent-subtle:  rgba(109, 129, 150, 0.08);
+
+  /* -- Status -- */
+  --color-status-success: var(--success);
+  --color-status-warning: var(--warning);
+  --color-status-error:   var(--danger);
+  --color-status-danger:  var(--danger);
+  --color-status-info:    var(--info);
+
+  /* -- Capability list (monochromatic — no rainbow) -- */
+  --color-capability-fg:  var(--color-fg-secondary);
+  --color-capability-icon: var(--color-fg-tertiary);
+
+  /* -- Modal surface -- */
+  --color-modal-bg:     #18181b;
+  --color-modal-border: #27272b;
+  --color-modal-scrim:  rgba(0, 0, 0, 0.80);
+
+  /* -- Google service brand colors (third-party) -- */
+  --color-google-gmail:    #ea4335;
+  --color-google-calendar: #4285f4;
+  --color-google-sheets:   #34a853;
+  --color-google-drive:    #fbbc05;
+  --color-google-docs:     #1967d2;
+
+  /* -- Border radii -- */
+  --radius-xs:   3px;
+  --radius-sm:   5px;
+  --radius-md:   8px;
+  --radius-lg:   10px;
+  --radius-xl:   14px;
+  --radius-2xl:  20px;
+  --radius-full: 9999px;
+
+  /* -- Motion (smooth, professional — no springs) -- */
+  --duration-fast:     80ms;
+  --duration-normal:   150ms;
+  --duration-moderate: 300ms;
+  --duration-slow:     450ms;
+  --duration-crawl:    600ms;
+
+  --ease-out:        cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:     cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-standard:   cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+
+  /* -- Shadows (deep, minimal) -- */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.40);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.40);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.50);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.60);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.70);
+
+  --glow-accent-sm: 0 0 12px rgba(109, 129, 150, 0.08);
+  --glow-accent-md: 0 0 24px rgba(109, 129, 150, 0.12);
+  --glow-accent-lg: 0 0 40px rgba(109, 129, 150, 0.18);
+  --glow-accent:    var(--glow-accent-sm);
+
+  /* -- Z-index layers -- */
+  --z-base:     0;
+  --z-raised:   10;
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-overlay:  300;
+  --z-modal:    400;
+  --z-toast:    500;
+  --z-pill:     600;
+  --z-tooltip:  700;
+  --z-max:      9999;
+}
+
+/* ---------------------------------------------------------------------------
+   Onboarding layout containers
+--------------------------------------------------------------------------- */
+
+[data-theme="onboarding"] .onboarding-root {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-bg-base);
+  overflow: hidden;
+}
+
+[data-theme="onboarding"] .onboarding-panel-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-32) 56px;
+  width: 55%;
+  gap: var(--space-16);
+}
+
+[data-theme="onboarding"] .onboarding-panel-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 45%;
+  background-color: var(--color-bg-card);
+  border-left: 1px solid var(--color-border-subtle);
+  position: relative;
+}
+
+/* ---------------------------------------------------------------------------
+   Step indicator — thin, minimal segments
+--------------------------------------------------------------------------- */
+
+[data-theme="onboarding"] .step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+[data-theme="onboarding"] .step-dot {
+  width: 20px;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-border-strong);
+  transition:
+    background-color var(--duration-moderate) var(--ease-out),
+    width var(--duration-moderate) var(--ease-out);
+}
+
+[data-theme="onboarding"] .step-dot[data-active="true"] {
+  background-color: var(--color-accent-default);
+  width: 28px;
+  box-shadow: none;
+}
+
+[data-theme="onboarding"] .step-dot[data-completed="true"] {
+  background-color: var(--color-fg-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="onboarding"] .step-dot {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Typography
+--------------------------------------------------------------------------- */
+
+[data-theme="onboarding"] .onboarding-headline {
+  font-size: 28px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-primary);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+[data-theme="onboarding"] .onboarding-subhead {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-fg-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+[data-theme="onboarding"] .onboarding-eyebrow {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ---------------------------------------------------------------------------
+   Capabilities list — clean, monochromatic, no rainbow pills
+--------------------------------------------------------------------------- */
+
+[data-theme="onboarding"] .capability-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+[data-theme="onboarding"] .capability-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+[data-theme="onboarding"] .capability-item:last-child {
+  border-bottom: none;
+}
+
+[data-theme="onboarding"] .capability-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-overlay);
+  border: 1px solid var(--color-border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-fg-tertiary);
+}
+
+[data-theme="onboarding"] .capability-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-secondary);
+}
+
+/* ---------------------------------------------------------------------------
+   CTA button — accent pill, not full-width white block
+--------------------------------------------------------------------------- */
+
+[data-theme="onboarding"] .cta-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 10px 28px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-default);
+  color: var(--color-fg-inverse);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  user-select: none;
+  border: none;
+  letter-spacing: -0.01em;
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-moderate) var(--ease-out);
+}
+
+[data-theme="onboarding"] .cta-button:hover {
+  background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--glow-accent-md);
+}
+
+[data-theme="onboarding"] .cta-button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Account creation form
+--------------------------------------------------------------------------- */
+
+[data-theme="onboarding"] .auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+[data-theme="onboarding"] .auth-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+[data-theme="onboarding"] .auth-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+[data-theme="onboarding"] .auth-input {
+  height: 40px;
+  padding-inline: var(--space-6);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+  transition:
+    border-color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+  width: 100%;
+}
+
+[data-theme="onboarding"] .auth-input::placeholder {
+  color: var(--color-fg-disabled);
+}
+
+[data-theme="onboarding"] .auth-input:focus {
+  border-color: var(--color-border-strong);
+  box-shadow: none;
+}
+
+[data-theme="onboarding"] .auth-submit {
+  height: 40px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-default);
+  color: var(--color-fg-inverse);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  border: none;
+  letter-spacing: -0.01em;
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-moderate) var(--ease-out);
+}
+
+[data-theme="onboarding"] .auth-submit:hover {
+  background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--glow-accent-md);
+}
+
+[data-theme="onboarding"] .auth-submit:active {
+  transform: translateY(0);
+}
+
+[data-theme="onboarding"] .auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  color: var(--color-fg-tertiary);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+[data-theme="onboarding"] .auth-divider::before,
+[data-theme="onboarding"] .auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--color-border-default);
+}
+
+[data-theme="onboarding"] .google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  height: 40px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
+}
+
+[data-theme="onboarding"] .google-btn:hover {
+  background-color: var(--color-bg-overlay);
+  border-color: var(--color-border-strong);
+}
+
+/* ---------------------------------------------------------------------------
+   Google services modal
+--------------------------------------------------------------------------- */
+
+[data-theme="onboarding"] .modal-scrim {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-modal-scrim);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade-in var(--duration-moderate) var(--ease-decelerate) forwards;
+}
+
+[data-theme="onboarding"] .modal-panel {
+  background-color: var(--color-modal-bg);
+  border: 1px solid var(--color-modal-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-12);
+  width: 420px;
+  max-width: calc(100vw - 48px);
+  box-shadow: var(--shadow-xl);
+  animation: scale-in var(--duration-moderate) var(--ease-out) forwards;
+}
+
+[data-theme="onboarding"] .modal-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-primary);
+  margin-bottom: var(--space-2);
+  letter-spacing: -0.02em;
+}
+
+[data-theme="onboarding"] .modal-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--space-10);
+}
+
+[data-theme="onboarding"] .google-service-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding-block: var(--space-5);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+  border-radius: var(--radius-md);
+  padding-inline: var(--space-3);
+}
+
+[data-theme="onboarding"] .google-service-row:hover {
+  background-color: var(--color-surface-interactive);
+}
+
+[data-theme="onboarding"] .google-service-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+[data-theme="onboarding"] .google-service-info {
+  flex: 1;
+  min-width: 0;
+}
+
+[data-theme="onboarding"] .google-service-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-primary);
+}
+
+[data-theme="onboarding"] .google-service-desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-tertiary);
+}
+
+[data-theme="onboarding"] .google-service-check {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border-strong);
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
+}
+
+[data-theme="onboarding"] .google-service-check[data-checked="true"] {
+  background-color: var(--color-accent-default);
+  border-color: var(--color-accent-default);
+}
+
+[data-theme="onboarding"] .google-service-check[data-checked="false"] {
+  transform: none;
+}
+
+[data-theme="onboarding"] .google-service-check svg path {
+  stroke: var(--color-fg-inverse);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="onboarding"] .google-service-check {
+    transition: none;
+  }
+}
+
+[data-theme="onboarding"] .modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  margin-top: var(--space-10);
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+[data-theme="onboarding"] .modal-service-divider {
+  height: 1px;
+  background-color: var(--color-border-subtle);
+}
+
+/* ---------------------------------------------------------------------------
+   Terms / legal fine print
+--------------------------------------------------------------------------- */
+
+[data-theme="onboarding"] .legal-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-tertiary);
+  line-height: var(--line-height-relaxed);
+  text-align: center;
+}
+
+[data-theme="onboarding"] .legal-text a {
+  color: var(--color-fg-secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+[data-theme="onboarding"] .legal-text a:hover {
+  color: var(--color-fg-primary);
+}
+
+/* ---------------------------------------------------------------------------
+   Already have account link
+--------------------------------------------------------------------------- */
+
+[data-theme="onboarding"] .auth-switch {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-tertiary);
+  text-align: center;
+}
+
+[data-theme="onboarding"] .auth-switch button {
+  color: var(--color-fg-secondary);
+  font-weight: var(--font-weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+[data-theme="onboarding"] .auth-switch button:hover {
+  color: var(--color-fg-primary);
+}
+
+/* ---------------------------------------------------------------------------
+   Fade-in animation for screen transitions
+--------------------------------------------------------------------------- */
+
+[data-theme="onboarding"] .onboarding-fade-in {
+  animation: fade-in var(--duration-moderate) var(--ease-decelerate) forwards;
+}
+
+[data-theme="onboarding"] .onboarding-slide-up {
+  animation: slide-up var(--duration-slow) var(--ease-out) forwards;
+}

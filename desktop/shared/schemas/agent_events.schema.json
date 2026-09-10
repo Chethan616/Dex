@@ -1,0 +1,208 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://browser-use.local/schemas/agent_events.schema.json",
+  "title": "AgentEvents",
+  "description": "Push events emitted by Python daemon to Electron main over Unix socket (one JSON per newline)",
+  "version": "1.0",
+  "definitions": {
+    "BaseEvent": {
+      "type": "object",
+      "required": ["version"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Protocol version — must be 1.0"
+        }
+      }
+    },
+    "ErrorDetail": {
+      "type": "object",
+      "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "TaskStartedEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "type": "object",
+          "required": ["event", "task_id", "started_at"],
+          "properties": {
+            "event": { "type": "string", "const": "task_started" },
+            "task_id": { "type": "string", "minLength": 1 },
+            "started_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 timestamp"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "StepStartEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "type": "object",
+          "required": ["event", "task_id", "step", "plan"],
+          "properties": {
+            "event": { "type": "string", "const": "step_start" },
+            "task_id": { "type": "string", "minLength": 1 },
+            "step": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based step number"
+            },
+            "plan": {
+              "type": "string",
+              "description": "Agent's plan description for this step"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "StepResultEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "type": "object",
+          "required": ["event", "task_id", "step", "result", "duration_ms"],
+          "properties": {
+            "event": { "type": "string", "const": "step_result" },
+            "task_id": { "type": "string", "minLength": 1 },
+            "step": { "type": "integer", "minimum": 1 },
+            "result": {
+              "description": "Observation returned by the step (any JSON value)"
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Step execution time in milliseconds"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "StepErrorEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "type": "object",
+          "required": ["event", "task_id", "step", "error"],
+          "properties": {
+            "event": { "type": "string", "const": "step_error" },
+            "task_id": { "type": "string", "minLength": 1 },
+            "step": { "type": "integer", "minimum": 1 },
+            "error": { "$ref": "#/definitions/ErrorDetail" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "TaskDoneEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "type": "object",
+          "required": ["event", "task_id", "result", "steps_used", "tokens_used"],
+          "properties": {
+            "event": { "type": "string", "const": "task_done" },
+            "task_id": { "type": "string", "minLength": 1 },
+            "result": {
+              "description": "Final task result (any JSON value)"
+            },
+            "steps_used": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "tokens_used": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Total input tokens consumed across all LLM calls"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "TaskFailedEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "type": "object",
+          "required": ["event", "task_id", "reason"],
+          "properties": {
+            "event": { "type": "string", "const": "task_failed" },
+            "task_id": { "type": "string", "minLength": 1 },
+            "reason": {
+              "type": "string",
+              "enum": [
+                "step_budget_exhausted",
+                "token_budget_exhausted",
+                "sandbox_violation",
+                "llm_error",
+                "cdp_error",
+                "internal_error"
+              ],
+              "description": "Machine-readable failure reason"
+            },
+            "partial_result": {
+              "description": "Optional partial result accumulated before failure"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "TaskCancelledEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "type": "object",
+          "required": ["event", "task_id"],
+          "properties": {
+            "event": { "type": "string", "const": "task_cancelled" },
+            "task_id": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "TargetLostEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "type": "object",
+          "required": ["event", "task_id", "target_id"],
+          "properties": {
+            "event": { "type": "string", "const": "target_lost" },
+            "task_id": { "type": "string", "minLength": 1 },
+            "target_id": {
+              "type": "string",
+              "description": "CDP target ID that was detached"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/TaskStartedEvent" },
+    { "$ref": "#/definitions/StepStartEvent" },
+    { "$ref": "#/definitions/StepResultEvent" },
+    { "$ref": "#/definitions/StepErrorEvent" },
+    { "$ref": "#/definitions/TaskDoneEvent" },
+    { "$ref": "#/definitions/TaskFailedEvent" },
+    { "$ref": "#/definitions/TaskCancelledEvent" },
+    { "$ref": "#/definitions/TargetLostEvent" }
+  ]
+}

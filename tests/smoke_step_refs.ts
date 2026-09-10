@@ -228,6 +228,41 @@ check('a field in neither place still fails', () => {
   assert.strictEqual(unresolved.length, 1);
 });
 
+console.log('\n— a reference wrapped in JSON.parse(...) fails, not passes through —');
+
+// The live failure: told to test DNS latency and set the fastest, the model
+// wrote {{JSON.parse(step_2.output.stdout).best}} instead of
+// {{step_2.output.best}} — REFERENCE requires step_N.output immediately
+// inside the braces, so this does not match it at all, and used to survive
+// as those literal characters, reaching set_dns as
+// "Invalid IP: {{JSON.parse(step_2.output.stdout).best}}".
+check('a JSON.parse(...)-wrapped reference is reported, not substituted', () => {
+  const { unresolved } = resolveStepRefs(
+    { primary: '{{JSON.parse(step_2.output.stdout).best}}' },
+    shellOutputs,
+  );
+  assert.strictEqual(unresolved.length, 1, 'should be flagged as unresolved');
+  assert.ok(unresolved[0].includes('JSON.parse'), unresolved[0]);
+});
+
+check('the message calls out the syntax mistake, not "field not found"', () => {
+  const { unresolved } = resolveStepRefs(
+    { primary: '{{JSON.parse(step_2.output.stdout).best}}' },
+    shellOutputs,
+  );
+  const message = describeUnresolved(unresolved, shellOutputs);
+  assert.ok(/unsupported syntax/i.test(message), message);
+  assert.ok(/JSON\.parse/.test(message), message);
+});
+
+check('embedded in a longer string, it is still caught', () => {
+  const { unresolved } = resolveStepRefs(
+    { command: 'set-dns {{JSON.parse(step_2.output.stdout).best}} now' },
+    shellOutputs,
+  );
+  assert.strictEqual(unresolved.length, 1);
+});
+
 console.log('\n— ordinary values are left alone —');
 
 check('a plain string is untouched', () => {

@@ -1,0 +1,785 @@
+version: "3"
+
+vars:
+  APP_DIR: app
+
+tasks:
+  default:
+    desc: List all available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  up:
+    desc: Install deps and start the app
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - yarn install
+      - test -d node_modules/electron/dist/Electron.app || test -d node_modules/electron/dist/BrowserUse.app || node node_modules/electron/install.js
+      - bash scripts/patch-electron-plist.sh
+      - npm start
+
+  up:clean:
+    desc: Wipe Vite cache then start the app (use if HMR is acting up)
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - yarn install
+      - test -d node_modules/electron/dist/Electron.app || test -d node_modules/electron/dist/BrowserUse.app || node node_modules/electron/install.js
+      - bash scripts/patch-electron-plist.sh
+      - npm run start:clean
+
+  reset:onboarding:
+    desc: Delete onboarding state, sessions, imported cookies, and WhatsApp auth
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - npm run start:reset-onboarding
+
+  reset:sessions:
+    desc: Delete sessions.db so the next launch shows no sessions
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - npm run start:reset-sessions
+
+  windows:node:check:
+    desc: "Windows: verify local development is using Node 20.x or 22.x"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - >-
+        node -e "const version=process.versions.node;
+        const major=Number(version.split('.')[0]);
+        if (major === 20 || major === 22) process.exit(0);
+        console.error('Browser Use Desktop local development requires Node 20.x or 22.x. Current Node is ' + version + '.');
+        console.error('Use Node 22 before running this task, for example: fnm install 22; fnm use 22; task windows:up');
+        console.error('Volta users can run: volta install node@22 yarn');
+        process.exit(1);"
+
+  windows:up:
+    desc: "Windows: install deps and start the app"
+    platforms: [windows]
+    dir: "{{.APP_DIR}}"
+    deps: [windows:node:check]
+    cmds:
+      - yarn install
+      - >-
+        node -e "const {existsSync}=require('node:fs');
+        const {execFileSync}=require('node:child_process');
+        if (existsSync('node_modules/electron/dist/electron.exe') === false) {
+        execFileSync(process.execPath, ['node_modules/electron/install.js'], {stdio: 'inherit'});
+        }"
+      - npm start
+
+  windows:up:clean:
+    desc: "Windows: wipe Vite cache then start the app"
+    platforms: [windows]
+    dir: "{{.APP_DIR}}"
+    deps: [windows:node:check]
+    cmds:
+      - yarn install
+      - >-
+        node -e "const {existsSync,rmSync}=require('node:fs');
+        const {execFileSync}=require('node:child_process');
+        rmSync('node_modules/.vite', {recursive: true, force: true});
+        if (existsSync('node_modules/electron/dist/electron.exe') === false) {
+        execFileSync(process.execPath, ['node_modules/electron/install.js'], {stdio: 'inherit'});
+        }"
+      - npm start
+
+  windows:start:
+    desc: "Windows: start the app without installing dependencies"
+    platforms: [windows]
+    dir: "{{.APP_DIR}}"
+    deps: [windows:node:check]
+    cmds:
+      - npm start
+
+  windows:reset:onboarding:
+    desc: "Windows: delete onboarding state, sessions, imported cookies, and WhatsApp auth"
+    platforms: [windows]
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - npm run start:reset-onboarding
+
+  windows:reset:sessions:
+    desc: "Windows: delete sessions.db so the next launch shows no sessions"
+    platforms: [windows]
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - npm run start:reset-sessions
+
+  windows:agent:run:
+    desc: "Windows: submit a task to a running local app, e.g. task windows:agent:run PROMPT='open example.com' ENGINE=codex"
+    platforms: [windows]
+    silent: true
+    env:
+      TASK_PROMPT: '{{default "" .PROMPT}}'
+      TASK_ENGINE: '{{default "" .ENGINE}}'
+      TASK_JSON: '{{default "" .JSON}}'
+    cmds:
+      - >-
+        node -e "const {spawnSync}=require('node:child_process');
+        const prompt=(process.env.TASK_PROMPT||'').trim();
+        const engine=(process.env.TASK_ENGINE||'').trim();
+        const json=process.env.TASK_JSON==='1';
+        if (prompt.length === 0) {
+        console.error('Set PROMPT, e.g. task windows:agent:run PROMPT=open-example ENGINE=codex');
+        process.exit(1);
+        }
+        const args=['app/scripts/run-task.mjs'];
+        if (json) args.push('--json');
+        if (engine) args.push('--engine', engine);
+        args.push(prompt);
+        const result=spawnSync(process.execPath, args, {stdio: 'inherit'});
+        process.exit(result.status ?? (result.error ? 1 : 0));"
+
+  windows:logs:all:
+    desc: "Windows: export all local app logs to a single file, e.g. task windows:logs:all OUT=%USERPROFILE%\\Desktop\\browser-use-logs.txt"
+    platforms: [windows]
+    silent: true
+    env:
+      WINDOWS_LOG_EXPORT_OUT: '{{default "" .OUT}}'
+    cmds:
+      - >-
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop';
+        $AppData = if ($env:APPDATA) { $env:APPDATA } elseif ($env:USERPROFILE) { Join-Path $env:USERPROFILE 'AppData\Roaming' } else { throw 'APPDATA and USERPROFILE are not set' };
+        $LogDir = if ($env:AGB_LOG_DIR) { $env:AGB_LOG_DIR } elseif ($env:AGB_USER_DATA_DIR) { Join-Path $env:AGB_USER_DATA_DIR 'logs' } else { Join-Path (Join-Path $AppData 'Browser Use') 'logs' };
+        $Files = Get-ChildItem -LiteralPath $LogDir -Filter '*.log' -File -ErrorAction SilentlyContinue | Sort-Object Name;
+        if (-not $Files) { Write-Host ('No logs found in ' + $LogDir); exit 1 };
+        $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss';
+        $Desktop = [Environment]::GetFolderPath('Desktop');
+        if ([string]::IsNullOrWhiteSpace($Desktop)) { $Desktop = if ($env:USERPROFILE) { Join-Path $env:USERPROFILE 'Desktop' } else { (Get-Location).Path } };
+        $OutFile = if ($env:WINDOWS_LOG_EXPORT_OUT) { [Environment]::ExpandEnvironmentVariables($env:WINDOWS_LOG_EXPORT_OUT) } else { Join-Path $Desktop ('browser-use-logs-' + $Stamp + '.txt') };
+        if ($OutFile.StartsWith('~')) { $OutFile = Join-Path $env:USERPROFILE $OutFile.Substring(1).TrimStart('\', '/') };
+        if ((Test-Path -LiteralPath $OutFile -PathType Container)) { $OutFile = Join-Path $OutFile ('browser-use-logs-' + $Stamp + '.txt') };
+        $OutDir = Split-Path -Parent $OutFile;
+        if ($OutDir) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null };
+        Set-Content -LiteralPath $OutFile -Encoding UTF8 -Value @('Browser Use Desktop log export', ('created=' + (Get-Date).ToString('o')), ('source=' + $LogDir), '');
+        foreach ($File in $Files) { Add-Content -LiteralPath $OutFile -Encoding UTF8 -Value ('===== ' + $File.Name + ' ====='); Get-Content -LiteralPath $File.FullName -Encoding UTF8 -ErrorAction Stop | Add-Content -LiteralPath $OutFile -Encoding UTF8; Add-Content -LiteralPath $OutFile -Encoding UTF8 -Value '' };
+        Write-Host ('Exported ' + $Files.Count + ' log file(s) from ' + $LogDir);
+        Write-Host ('Output: ' + $OutFile)"
+
+  windows:logs:tail:all:
+    desc: "Windows: tail all local app logs with colored human-readable formatting"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - >-
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop';
+        $AppData = if ($env:APPDATA) { $env:APPDATA } elseif ($env:USERPROFILE) { Join-Path $env:USERPROFILE 'AppData\Roaming' } else { throw 'APPDATA and USERPROFILE are not set' };
+        $LogDir = if ($env:AGB_LOG_DIR) { $env:AGB_LOG_DIR } elseif ($env:AGB_USER_DATA_DIR) { Join-Path $env:AGB_USER_DATA_DIR 'logs' } else { Join-Path (Join-Path $AppData 'Browser Use') 'logs' };
+        $Files = Get-ChildItem -LiteralPath $LogDir -Filter '*.log' -File -ErrorAction SilentlyContinue;
+        if (-not $Files) { Write-Host ('No logs found in ' + $LogDir); exit 1 };
+        $Lines = if ($env:LINES) { [int]$env:LINES } else { 200 };
+        if (-not $env:LOG_COLOR) { $env:LOG_COLOR = '1' };
+        Get-Content -LiteralPath $Files.FullName -Tail $Lines -Wait | node app/scripts/pretty-logs.mjs --mode=all"
+
+  windows:logs:service:
+    desc: "Windows: tail one local app log channel with colored formatting, e.g. task windows:logs:service SERVICE=browser"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - >-
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop';
+        $Service='{{default "" .SERVICE}}';
+        $SessionId='{{default "" .SESSION_ID}}';
+        $Level='{{default "" .LEVEL}}';
+        if ([string]::IsNullOrWhiteSpace($Service)) { Write-Host 'Set SERVICE, e.g. task windows:logs:service SERVICE=browser'; exit 1 };
+        $AppData = if ($env:APPDATA) { $env:APPDATA } elseif ($env:USERPROFILE) { Join-Path $env:USERPROFILE 'AppData\Roaming' } else { throw 'APPDATA and USERPROFILE are not set' };
+        $LogDir = if ($env:AGB_LOG_DIR) { $env:AGB_LOG_DIR } elseif ($env:AGB_USER_DATA_DIR) { Join-Path $env:AGB_USER_DATA_DIR 'logs' } else { Join-Path (Join-Path $AppData 'Browser Use') 'logs' };
+        $File = Join-Path $LogDir ($Service + '.log');
+        if (($Service -eq 'app') -and (-not (Test-Path -LiteralPath $File)) -and (Test-Path -LiteralPath (Join-Path $LogDir 'main.log'))) { $File = Join-Path $LogDir 'main.log' };
+        if (($Service -eq 'main') -and (-not (Test-Path -LiteralPath $File)) -and (Test-Path -LiteralPath (Join-Path $LogDir 'app.log'))) { $File = Join-Path $LogDir 'app.log' };
+        if (-not (Test-Path -LiteralPath $File)) { Write-Host ('No log file found: ' + $File); exit 1 };
+        $Lines = if ($env:LINES) { [int]$env:LINES } else { 200 };
+        if (-not $env:LOG_COLOR) { $env:LOG_COLOR = '1' };
+        $PrettyArgs = @('--mode=all');
+        if ($SessionId) { $PrettyArgs += ('--session=' + $SessionId) };
+        if ($Level) { $PrettyArgs += ('--level=' + $Level) };
+        Get-Content -LiteralPath $File -Tail $Lines -Wait | node app/scripts/pretty-logs.mjs @PrettyArgs"
+
+  windows:logs:app:
+    desc: "Windows: tail desktop app lifecycle logs"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - task: windows:logs:service
+        vars: { SERVICE: app }
+
+  windows:logs:main:
+    desc: "Windows: tail desktop app lifecycle logs (legacy alias for windows:logs:app)"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - task: windows:logs:app
+
+  windows:logs:browser:
+    desc: "Windows: tail browser/WebContents logs"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - task: windows:logs:service
+        vars: { SERVICE: browser }
+
+  windows:logs:renderer:
+    desc: "Windows: tail verbose frontend renderer console logs"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - task: windows:logs:service
+        vars: { SERVICE: renderer }
+
+  windows:logs:engine:
+    desc: "Windows: tail engine subprocess lifecycle logs"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - task: windows:logs:service
+        vars:
+          SERVICE: engine
+          SESSION_ID: "{{default \"\" .SESSION_ID}}"
+
+  windows:logs:resource:
+    desc: "Windows: tail resource usage snapshots, e.g. task windows:logs:resource SESSION_ID=abc123"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - task: windows:logs:service
+        vars:
+          SERVICE: resource
+          SESSION_ID: "{{default \"\" .SESSION_ID}}"
+
+  windows:logs:agent:
+    desc: "Windows: tail agent transcript events, e.g. task windows:logs:agent SESSION_ID=abc123"
+    platforms: [windows]
+    silent: true
+    env:
+      TASK_SESSION_ID: '{{default "" .SESSION_ID}}'
+      TASK_FOLLOW: '{{default "1" .FOLLOW}}'
+      TASK_JSON: '{{default "" .JSON}}'
+      TASK_LINES: '{{default "" .LINES}}'
+    cmds:
+      - >-
+        node -e "const {spawnSync}=require('node:child_process');
+        const args=['app/scripts/agent-logs.mjs'];
+        const session=(process.env.TASK_SESSION_ID||'').trim();
+        const follow=(process.env.TASK_FOLLOW||'1').trim();
+        const json=(process.env.TASK_JSON||'').trim();
+        const lines=(process.env.TASK_LINES||process.env.LINES||'').trim();
+        if (session) args.push('--session', session);
+        if (follow==='0') args.push('--no-follow');
+        if (lines) args.push('--lines', lines);
+        if (json==='1') args.push('--json');
+        const result=spawnSync(process.execPath, args, {stdio: 'inherit'});
+        process.exit(result.status ?? (result.error ? 1 : 0));"
+
+  windows:logs:errors:
+    desc: "Windows: tail warnings and errors across all log files"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - >-
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop';
+        $AppData = if ($env:APPDATA) { $env:APPDATA } elseif ($env:USERPROFILE) { Join-Path $env:USERPROFILE 'AppData\Roaming' } else { throw 'APPDATA and USERPROFILE are not set' };
+        $LogDir = if ($env:AGB_LOG_DIR) { $env:AGB_LOG_DIR } elseif ($env:AGB_USER_DATA_DIR) { Join-Path $env:AGB_USER_DATA_DIR 'logs' } else { Join-Path (Join-Path $AppData 'Browser Use') 'logs' };
+        $Files = Get-ChildItem -LiteralPath $LogDir -Filter '*.log' -File -ErrorAction SilentlyContinue;
+        if (-not $Files) { Write-Host ('No logs found in ' + $LogDir); exit 1 };
+        $Lines = if ($env:LINES) { [int]$env:LINES } else { 200 };
+        if (-not $env:LOG_COLOR) { $env:LOG_COLOR = '1' };
+        Get-Content -LiteralPath $Files.FullName -Tail $Lines -Wait | node app/scripts/pretty-logs.mjs --mode=all --level=warn"
+
+  windows:logs:startup:
+    desc: "Windows: tail browser startup timing logs with colored human-readable timing"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - >-
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop';
+        $AppData = if ($env:APPDATA) { $env:APPDATA } elseif ($env:USERPROFILE) { Join-Path $env:USERPROFILE 'AppData\Roaming' } else { throw 'APPDATA and USERPROFILE are not set' };
+        $LogDir = if ($env:AGB_LOG_DIR) { $env:AGB_LOG_DIR } elseif ($env:AGB_USER_DATA_DIR) { Join-Path $env:AGB_USER_DATA_DIR 'logs' } else { Join-Path (Join-Path $AppData 'Browser Use') 'logs' };
+        $File = Join-Path $LogDir 'browser.log';
+        if (-not (Test-Path -LiteralPath $File)) { Write-Host ('No log file found: ' + $File); exit 1 };
+        $Lines = if ($env:LINES) { [int]$env:LINES } else { 200 };
+        if (-not $env:LOG_COLOR) { $env:LOG_COLOR = '1' };
+        Get-Content -LiteralPath $File -Tail $Lines -Wait | node app/scripts/pretty-logs.mjs --mode=startup"
+
+  windows:logs:navigation:
+    desc: "Windows: tail browser URL navigation timing logs with colored human-readable timing"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - >-
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop';
+        $AppData = if ($env:APPDATA) { $env:APPDATA } elseif ($env:USERPROFILE) { Join-Path $env:USERPROFILE 'AppData\Roaming' } else { throw 'APPDATA and USERPROFILE are not set' };
+        $LogDir = if ($env:AGB_LOG_DIR) { $env:AGB_LOG_DIR } elseif ($env:AGB_USER_DATA_DIR) { Join-Path $env:AGB_USER_DATA_DIR 'logs' } else { Join-Path (Join-Path $AppData 'Browser Use') 'logs' };
+        $File = Join-Path $LogDir 'browser.log';
+        if (-not (Test-Path -LiteralPath $File)) { Write-Host ('No log file found: ' + $File); exit 1 };
+        $Lines = if ($env:LINES) { [int]$env:LINES } else { 200 };
+        if (-not $env:LOG_COLOR) { $env:LOG_COLOR = '1' };
+        Get-Content -LiteralPath $File -Tail $Lines -Wait | node app/scripts/pretty-logs.mjs --mode=navigation"
+
+  windows:logs:session:
+    desc: "Windows: tail app/browser/engine log lines for one session, e.g. task windows:logs:session SESSION_ID=abc123"
+    platforms: [windows]
+    silent: true
+    cmds:
+      - >-
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop';
+        $SessionId='{{default "" .SESSION_ID}}';
+        if ([string]::IsNullOrWhiteSpace($SessionId)) { Write-Host 'Set SESSION_ID, e.g. task windows:logs:session SESSION_ID=abc123'; exit 1 };
+        $AppData = if ($env:APPDATA) { $env:APPDATA } elseif ($env:USERPROFILE) { Join-Path $env:USERPROFILE 'AppData\Roaming' } else { throw 'APPDATA and USERPROFILE are not set' };
+        $LogDir = if ($env:AGB_LOG_DIR) { $env:AGB_LOG_DIR } elseif ($env:AGB_USER_DATA_DIR) { Join-Path $env:AGB_USER_DATA_DIR 'logs' } else { Join-Path (Join-Path $AppData 'Browser Use') 'logs' };
+        $Files = Get-ChildItem -LiteralPath $LogDir -Filter '*.log' -File -ErrorAction SilentlyContinue;
+        if (-not $Files) { Write-Host ('No logs found in ' + $LogDir); exit 1 };
+        $Lines = if ($env:LINES) { [int]$env:LINES } else { 200 };
+        if (-not $env:LOG_COLOR) { $env:LOG_COLOR = '1' };
+        $PrettyArgs = @('--mode=all', ('--session=' + $SessionId));
+        Get-Content -LiteralPath $Files.FullName -Tail $Lines -Wait | node app/scripts/pretty-logs.mjs @PrettyArgs"
+
+  agent:run:
+    desc: Submit a task to a running local app, e.g. task agent:run PROMPT='open example.com' ENGINE=codex
+    silent: true
+    cmds:
+      - |
+        PROMPT="{{default "" .PROMPT}}"
+        ENGINE="{{default "" .ENGINE}}"
+        JSON="{{default "" .JSON}}"
+        if [ -z "$PROMPT" ]; then
+          echo "Set PROMPT, e.g. task agent:run PROMPT='open example.com and report the title' ENGINE=codex"
+          exit 1
+        fi
+        if [ -n "$ENGINE" ] && [ "$JSON" = "1" ]; then
+          node app/scripts/run-task.mjs --json --engine "$ENGINE" "$PROMPT"
+        elif [ -n "$ENGINE" ]; then
+          node app/scripts/run-task.mjs --engine "$ENGINE" "$PROMPT"
+        elif [ "$JSON" = "1" ]; then
+          node app/scripts/run-task.mjs --json "$PROMPT"
+        else
+          node app/scripts/run-task.mjs "$PROMPT"
+        fi
+
+  lint:
+    desc: Run eslint
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - npm run lint
+
+  typecheck:
+    desc: tsc --noEmit
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - npm run typecheck
+
+  logs:all:
+    desc: Tail all local app logs with colored human-readable formatting
+    silent: true
+    cmds:
+      - |
+        LOG_DIR="${AGB_LOG_DIR:-$HOME/Library/Application Support/Browser Use/logs}"
+        if ! ls "$LOG_DIR"/*.log >/dev/null 2>&1; then
+          echo "No logs found in $LOG_DIR"
+          exit 1
+        fi
+        tail -n "${LINES:-200}" -F "$LOG_DIR"/*.log | LOG_COLOR="${LOG_COLOR:-1}" node app/scripts/pretty-logs.mjs --mode=all
+
+  logs:service:
+    desc: Tail one local app log channel with colored formatting, e.g. task logs:service SERVICE=browser
+    silent: true
+    cmds:
+      - |
+        SERVICE="{{default "" .SERVICE}}"
+        SESSION_ID="{{default "" .SESSION_ID}}"
+        LEVEL="{{default "" .LEVEL}}"
+        if [ -z "$SERVICE" ]; then
+          echo "Set SERVICE, e.g. task logs:service SERVICE=browser"
+          exit 1
+        fi
+        LOG_DIR="${AGB_LOG_DIR:-$HOME/Library/Application Support/Browser Use/logs}"
+        FILE="$LOG_DIR/$SERVICE.log"
+        if [ "$SERVICE" = "app" ] && [ ! -f "$FILE" ] && [ -f "$LOG_DIR/main.log" ]; then
+          FILE="$LOG_DIR/main.log"
+        fi
+        if [ "$SERVICE" = "main" ] && [ ! -f "$FILE" ] && [ -f "$LOG_DIR/app.log" ]; then
+          FILE="$LOG_DIR/app.log"
+        fi
+        if [ ! -f "$FILE" ]; then
+          echo "No log file found: $FILE"
+          exit 1
+        fi
+        set --
+        if [ -n "$SESSION_ID" ]; then set -- "$@" --session="$SESSION_ID"; fi
+        if [ -n "$LEVEL" ]; then set -- "$@" --level="$LEVEL"; fi
+        tail -n "${LINES:-200}" -F "$FILE" | LOG_COLOR="${LOG_COLOR:-1}" node app/scripts/pretty-logs.mjs --mode=all "$@"
+
+  logs:app:
+    desc: Tail desktop app lifecycle logs
+    silent: true
+    cmds:
+      - task: logs:service
+        vars: { SERVICE: app }
+
+  logs:main:
+    desc: Tail desktop app lifecycle logs (legacy alias for logs:app)
+    silent: true
+    cmds:
+      - task: logs:app
+
+  logs:browser:
+    desc: Tail browser/WebContents logs
+    silent: true
+    cmds:
+      - task: logs:service
+        vars: { SERVICE: browser }
+
+  logs:renderer:
+    desc: Tail verbose frontend renderer console logs
+    silent: true
+    cmds:
+      - task: logs:service
+        vars: { SERVICE: renderer }
+
+  logs:engine:
+    desc: Tail engine subprocess lifecycle logs
+    silent: true
+    cmds:
+      - task: logs:service
+        vars:
+          SERVICE: engine
+          SESSION_ID: "{{default \"\" .SESSION_ID}}"
+
+  logs:resource:
+    desc: Tail resource usage snapshots, e.g. task logs:resource SESSION_ID=abc123
+    silent: true
+    cmds:
+      - task: logs:service
+        vars:
+          SERVICE: resource
+          SESSION_ID: "{{default \"\" .SESSION_ID}}"
+
+  logs:agent:
+    desc: Tail agent transcript events, e.g. task logs:agent SESSION_ID=abc123
+    silent: true
+    cmds:
+      - |
+        SESSION_ID="{{default "" .SESSION_ID}}"
+        FOLLOW="{{default "1" .FOLLOW}}"
+        JSON="{{default "" .JSON}}"
+        LINES_ARG="{{default "" .LINES}}"
+        set --
+        if [ -n "$SESSION_ID" ]; then set -- "$@" --session "$SESSION_ID"; fi
+        if [ "$FOLLOW" = "0" ]; then set -- "$@" --no-follow; fi
+        if [ -n "$LINES_ARG" ]; then
+          set -- "$@" --lines "$LINES_ARG"
+        elif [ -n "$LINES" ]; then
+          set -- "$@" --lines "$LINES"
+        fi
+        if [ "$JSON" = "1" ]; then set -- "$@" --json; fi
+        node app/scripts/agent-logs.mjs "$@"
+
+  logs:errors:
+    desc: Tail warnings and errors across all log files
+    silent: true
+    cmds:
+      - |
+        LOG_DIR="${AGB_LOG_DIR:-$HOME/Library/Application Support/Browser Use/logs}"
+        if ! ls "$LOG_DIR"/*.log >/dev/null 2>&1; then
+          echo "No logs found in $LOG_DIR"
+          exit 1
+        fi
+        tail -n "${LINES:-200}" -F "$LOG_DIR"/*.log | LOG_COLOR="${LOG_COLOR:-1}" node app/scripts/pretty-logs.mjs --mode=all --level=warn
+
+  logs:startup:
+    desc: Tail browser startup timing logs with colored human-readable timing
+    silent: true
+    cmds:
+      - |
+        LOG_DIR="${AGB_LOG_DIR:-$HOME/Library/Application Support/Browser Use/logs}"
+        FILE="$LOG_DIR/browser.log"
+        if [ ! -f "$FILE" ]; then
+          echo "No log file found: $FILE"
+          exit 1
+        fi
+        tail -n "${LINES:-200}" -F "$FILE" | LOG_COLOR="${LOG_COLOR:-1}" node app/scripts/pretty-logs.mjs --mode=startup
+
+  logs:navigation:
+    desc: Tail browser URL navigation timing logs with colored human-readable timing
+    silent: true
+    cmds:
+      - |
+        LOG_DIR="${AGB_LOG_DIR:-$HOME/Library/Application Support/Browser Use/logs}"
+        FILE="$LOG_DIR/browser.log"
+        if [ ! -f "$FILE" ]; then
+          echo "No log file found: $FILE"
+          exit 1
+        fi
+        tail -n "${LINES:-200}" -F "$FILE" | LOG_COLOR="${LOG_COLOR:-1}" node app/scripts/pretty-logs.mjs --mode=navigation
+
+  logs:session:
+    desc: Tail app/browser/engine log lines for one session, e.g. task logs:session SESSION_ID=abc123
+    silent: true
+    cmds:
+      - |
+        SESSION_ID="{{default "" .SESSION_ID}}"
+        if [ -z "$SESSION_ID" ]; then
+          echo "Set SESSION_ID, e.g. task logs:session SESSION_ID=abc123"
+          exit 1
+        fi
+        LOG_DIR="${AGB_LOG_DIR:-$HOME/Library/Application Support/Browser Use/logs}"
+        if ! ls "$LOG_DIR"/*.log >/dev/null 2>&1; then
+          echo "No logs found in $LOG_DIR"
+          exit 1
+        fi
+        tail -n "${LINES:-200}" -F "$LOG_DIR"/*.log | LOG_COLOR="${LOG_COLOR:-1}" node app/scripts/pretty-logs.mjs --mode=all --session="$SESSION_ID"
+
+  package:
+    desc: Build an unpackaged app (electron-forge package)
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - npm run package
+
+  make:
+    desc: Build platform installers (electron-forge make)
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - npm run make
+
+  linux:make:docker:
+    desc: Build Linux .deb, .rpm, and AppImage packages inside Docker
+    cmds:
+      - bash scripts/build-linux-docker.sh
+
+  linux:verify-artifacts:
+    desc: Verify Linux .deb, .rpm, AppImage, and update feed artifacts exist under app/out/make
+    cmds:
+      - node scripts/verify-linux-artifacts.mjs
+
+  release:dev:
+    desc: Unsigned ad-hoc build for local testing (fast, no Apple credentials)
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - SKIP_SIGNING=1 npm run make
+
+  release:signed:
+    desc: Signed but NOT notarized — runs on your Mac with right-click bypass, not for public distribution
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - |
+        if [ ! -f .env.signing ]; then
+          echo "Missing .env.signing — see notary:setup"
+          exit 1
+        fi
+        set -a; . ./.env.signing; set +a
+        unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+        npm run make
+
+  release:full:
+    desc: Signed + notarized DMG for public distribution (slow — Apple notarization adds 5-30+ min)
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - |
+        if [ ! -f .env.signing ]; then
+          echo "Missing .env.signing — see notary:setup"
+          exit 1
+        fi
+        set -a; . ./.env.signing; set +a
+        npm run make
+
+  release:publish:
+    desc: Cut a full GitHub release for all platforms. Auto-bumps patch from latest tag, or pass VERSION=X.Y.Z. Pushes a tag to trigger release.yml.
+    silent: true
+    cmds:
+      - |
+        set -euo pipefail
+        if ! git diff --quiet || ! git diff --cached --quiet; then
+          echo "✗ Working tree dirty — commit or stash first."
+          exit 1
+        fi
+        branch=$(git rev-parse --abbrev-ref HEAD)
+        if [ "$branch" != "main" ]; then
+          echo "✗ Not on main (currently on $branch)."
+          exit 1
+        fi
+        git fetch origin main --tags --quiet
+        if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+          echo "✗ Local main is out of sync with origin/main — push or pull first."
+          exit 1
+        fi
+
+        VERSION="{{default "" .VERSION}}"
+        if [ -z "$VERSION" ]; then
+          latest=$(git tag --list 'v*.*.*' --sort=-version:refname | head -1)
+          if [ -z "$latest" ]; then
+            VERSION="0.0.1"
+          else
+            IFS=. read -r major minor patch <<< "${latest#v}"
+            VERSION="${major}.${minor}.$((patch + 1))"
+          fi
+          echo "→ auto-bumped from ${latest:-<none>} to v$VERSION"
+        fi
+        if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          echo "✗ Invalid VERSION '$VERSION' (expected X.Y.Z)"
+          exit 1
+        fi
+        tag="v$VERSION"
+        if git rev-parse "refs/tags/$tag" >/dev/null 2>&1; then
+          echo "✗ Tag $tag already exists."
+          exit 1
+        fi
+
+        package_version=$(node -p "require('./app/package.json').version")
+        if [ "$package_version" != "$VERSION" ]; then
+          echo "→ bumping app/package.json from $package_version to $VERSION"
+          node -e "const fs=require('fs'); const p='app/package.json'; const pkg=JSON.parse(fs.readFileSync(p,'utf8')); pkg.version=process.argv[1]; fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + '\n');" "$VERSION"
+          git add app/package.json
+          git commit -m "Prepare release $tag" -m "Align the packaged Electron app version with the release tag so auto-update metadata advertises the same version that the app reports at runtime." -m "Constraint: electron-updater compares the published manifest version against app.getVersion()" -m "Confidence: high" -m "Scope-risk: narrow" -m "Tested: release.yml validates tag/package version before publishing" -m "Not-tested: signed CI build before tag push"
+          git push origin HEAD:main
+        else
+          echo "→ package version already at $VERSION"
+        fi
+
+        echo "→ tagging $tag → release.yml will build and publish all platform assets"
+        git tag -a "$tag" -m "Release $tag"
+        git push origin "$tag"
+        echo
+        echo "✓ pushed. Watch the run:"
+        sleep 3
+        run_id=$(gh run list --repo "$(gh repo view --json nameWithOwner --jq .nameWithOwner)" --workflow=release.yml --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || echo "")
+        if [ -n "$run_id" ]; then
+          echo "  gh run watch $run_id"
+          echo "  https://github.com/$(gh repo view --json nameWithOwner --jq .nameWithOwner)/actions/runs/$run_id"
+        fi
+        echo "Once green:"
+        echo "  https://github.com/$(gh repo view --json nameWithOwner --jq .nameWithOwner)/releases/tag/$tag"
+
+  release:preview:
+    desc: Throwaway preview build from the CURRENT branch — defaults to windows/unsigned for tester handoff. Override with PLATFORM=mac|linux|all SIGNING_MODE=signed|notarized.
+    silent: true
+    cmds:
+      - |
+        set -euo pipefail
+        platform="{{default "windows" .PLATFORM}}"
+        signing_mode="{{default "unsigned" .SIGNING_MODE}}"
+
+        case "$platform" in
+          all|mac|windows|linux) ;;
+          *)
+            echo "✗ Invalid PLATFORM '$platform' (expected all, mac, windows, or linux)"
+            exit 1
+            ;;
+        esac
+        case "$signing_mode" in
+          unsigned|signed|notarized) ;;
+          *)
+            echo "✗ Invalid SIGNING_MODE '$signing_mode' (expected unsigned, signed, or notarized)"
+            exit 1
+            ;;
+        esac
+
+        branch=$(git rev-parse --abbrev-ref HEAD)
+        if [ "$branch" = "HEAD" ]; then
+          echo "✗ Detached HEAD — checkout a branch first."
+          exit 1
+        fi
+
+        echo "→ dispatching release.yml: ref=$branch platform=$platform signing-mode=$signing_mode (auto tag v0.0.0-dev-<timestamp>)"
+        gh workflow run release.yml --ref "$branch" -f platform="$platform" -f signing-mode="$signing_mode"
+
+        sleep 3
+        run_id=$(gh run list --repo "$(gh repo view --json nameWithOwner --jq .nameWithOwner)" --workflow=release.yml --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || echo "")
+        if [ -n "$run_id" ]; then
+          echo "  gh run watch $run_id"
+          echo "  https://github.com/$(gh repo view --json nameWithOwner --jq .nameWithOwner)/actions/runs/$run_id"
+        fi
+
+  release:dispatch:
+    desc: Manually run release.yml on MAIN for PLATFORM=all|mac|windows|linux. For previews from a feature branch use release:preview instead. Optional TAG=... SIGNING_MODE=unsigned|signed|notarized.
+    silent: true
+    cmds:
+      - |
+        set -euo pipefail
+        platform="{{default "all" .PLATFORM}}"
+        signing_mode="{{default "signed" .SIGNING_MODE}}"
+        tag="{{default "" .TAG}}"
+
+        case "$platform" in
+          all|mac|windows|linux) ;;
+          *)
+            echo "✗ Invalid PLATFORM '$platform' (expected all, mac, windows, or linux)"
+            exit 1
+            ;;
+        esac
+        case "$signing_mode" in
+          unsigned|signed|notarized) ;;
+          *)
+            echo "✗ Invalid SIGNING_MODE '$signing_mode' (expected unsigned, signed, or notarized)"
+            exit 1
+            ;;
+        esac
+
+        if [ -n "$tag" ]; then
+          gh workflow run release.yml --ref main -f platform="$platform" -f signing-mode="$signing_mode" -f tag="$tag"
+        else
+          gh workflow run release.yml --ref main -f platform="$platform" -f signing-mode="$signing_mode"
+        fi
+
+        echo "✓ queued release.yml for platform=$platform signing-mode=$signing_mode"
+        sleep 3
+        run_id=$(gh run list --repo "$(gh repo view --json nameWithOwner --jq .nameWithOwner)" --workflow=release.yml --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || echo "")
+        if [ -n "$run_id" ]; then
+          echo "  gh run watch $run_id"
+          echo "  https://github.com/$(gh repo view --json nameWithOwner --jq .nameWithOwner)/actions/runs/$run_id"
+        fi
+
+  notary:setup:
+    desc: One-time — store Apple notary credentials in macOS keychain so notary:* tasks work without env vars
+    dir: "{{.APP_DIR}}"
+    cmds:
+      - |
+        if [ ! -f .env.signing ]; then
+          echo "Create app/.env.signing with APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID first"
+          exit 1
+        fi
+        set -a; . ./.env.signing; set +a
+        xcrun notarytool store-credentials "browseruse-notary" --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID"
+
+  notary:status:
+    desc: List recent Apple notarization submissions and their status
+    silent: true
+    cmds:
+      - xcrun notarytool history --keychain-profile "browseruse-notary"
+
+  notary:log:
+    desc: Show detailed Apple log for a submission, e.g. task notary:log ID=abc123-...
+    silent: true
+    cmds:
+      - |
+        ID="{{default "" .ID}}"
+        if [ -z "$ID" ]; then
+          echo "Set ID, e.g. task notary:log ID=abc123-..."
+          exit 1
+        fi
+        xcrun notarytool log "$ID" --keychain-profile "browseruse-notary"
+
+  notary:wait:
+    desc: Block until a notarization submission finishes, e.g. task notary:wait ID=abc123-...
+    silent: true
+    cmds:
+      - |
+        ID="{{default "" .ID}}"
+        if [ -z "$ID" ]; then
+          echo "Set ID, e.g. task notary:wait ID=abc123-..."
+          exit 1
+        fi
+        xcrun notarytool wait "$ID" --keychain-profile "browseruse-notary"
+
+  notary:staple:
+    desc: Manually attach a notarization ticket to a .app or .dmg, e.g. task notary:staple PATH=out/make/.../Browser-Use.dmg
+    silent: true
+    cmds:
+      - |
+        TARGET="{{default "" .PATH}}"
+        if [ -z "$TARGET" ]; then
+          echo "Set PATH, e.g. task notary:staple PATH=app/out/make/.../Browser-Use.dmg"
+          exit 1
+        fi
+        xcrun stapler staple "$TARGET"
+        xcrun stapler validate "$TARGET"

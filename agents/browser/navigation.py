@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import Any
 from urllib.parse import urlparse
 from playwright.async_api import Page, TimeoutError as PlaywrightTimeoutError
 
@@ -103,3 +104,32 @@ class Navigation:
             await page.wait_for_load_state(state, timeout=timeout_ms)
         except Exception:
             pass
+
+    async def wait_for(
+        self,
+        text: str | None = None,
+        selector: str | None = None,
+        url: str | None = None,
+        idle: bool = False,
+        timeout_ms: int = 20000,
+    ) -> dict[str, Any]:
+        """
+        Waits for whichever condition was given, in priority order
+        url > selector > text > idle, falling back to a short settle sleep
+        when nothing was specified.
+        """
+        page: Page = await self._get_page()
+        try:
+            if url:
+                await self.wait_for_url(url, timeout_ms=timeout_ms)
+            elif selector:
+                await page.locator(selector).first.wait_for(state="visible", timeout=timeout_ms)
+            elif text:
+                await page.locator(f'text="{text}"').first.wait_for(state="visible", timeout=timeout_ms)
+            elif idle:
+                await self.wait_for_load("networkidle", timeout_ms=timeout_ms)
+            else:
+                await page.wait_for_timeout(min(timeout_ms, 1000))
+        except Exception as err:
+            log.debug(f"wait_for did not settle within {timeout_ms}ms: {err}")
+        return {"url": page.url, "title": await page.title()}

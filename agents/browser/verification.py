@@ -249,9 +249,17 @@ class ActionVerifier:
             },
         }
 
-    async def detect_auth_or_signup_modal(self, page: Page | None = None) -> dict[str, Any]:
+    async def detect_auth_or_signup_modal(
+        self,
+        page: Page | None = None,
+        auth_phrases: list[str] | None = None,
+        close_selectors: list[str] | None = None,
+    ) -> dict[str, Any]:
         """
-        Inspects live DOM for Instagram/social auth or signup modal overlays.
+        Inspects live DOM for an auth or signup modal overlay, using the given
+        site's phrase/close-selector knowledge (defaults to Instagram's, the
+        only site this originally covered, for backward compatibility with
+        direct callers that don't pass one).
         Checks both dialog roles, overlay containers, and page-level auth text.
         Returns:
             {
@@ -273,36 +281,12 @@ class ActionVerifier:
         if not p or p.is_closed():
             return result
 
+        from site_knowledge import SITE_KNOWLEDGE
+        _ig_login = SITE_KNOWLEDGE["instagram"].login_check
+        auth_phrases = auth_phrases if auth_phrases is not None else _ig_login.auth_phrases
+        close_selectors = close_selectors if close_selectors is not None else _ig_login.close_selectors
+
         try:
-            auth_phrases = [
-                "see photos, videos and more",
-                "see photos and videos from",
-                "log in to see photos",
-                "log in to instagram",
-                "sign up to see photos",
-                "don't have an account? sign up",
-                "create an account",
-                "join instagram",
-                "log in or sign up",
-                "log in to continue",
-                "sign up to continue",
-                "never miss a post",
-                "stay in the loop",
-                "sign up for instagram to stay in the loop",
-                "sign up to see photos and videos",
-            ]
-
-            close_selectors = [
-                '[aria-label="Close"]',
-                'svg[aria-label="Close"]',
-                'button [aria-label="Close"]',
-                'button[aria-label="Close"]',
-                '[title="Close"]',
-                'button:has-text("✕")',
-                'button:has-text("Close")',
-                'button svg[aria-label="Close"]',
-            ]
-
             # Find if any close selector exists and is visible on page
             close_sel_found = None
             for c_sel in close_selectors:
@@ -358,9 +342,14 @@ class ActionVerifier:
 
         return result
 
-    async def dismiss_auth_or_signup_modal(self, page: Page | None = None) -> bool:
+    async def dismiss_auth_or_signup_modal(
+        self,
+        page: Page | None = None,
+        auth_phrases: list[str] | None = None,
+        close_selectors: list[str] | None = None,
+    ) -> bool:
         """
-        Safely dismisses an Instagram auth/signup modal:
+        Safely dismisses an auth/signup modal for the given site's knowledge:
         modal detected
         → try safe X / Escape
         → verify modal disappeared
@@ -370,7 +359,7 @@ class ActionVerifier:
         if not p or p.is_closed():
             return False
 
-        modal_info = await self.detect_auth_or_signup_modal(p)
+        modal_info = await self.detect_auth_or_signup_modal(p, auth_phrases, close_selectors)
         if not modal_info["detected"]:
             return True
 
@@ -387,7 +376,7 @@ class ActionVerifier:
             log.warning(f"Error clicking modal close button: {err}")
 
         # 2. Check if disappeared
-        recheck = await self.detect_auth_or_signup_modal(p)
+        recheck = await self.detect_auth_or_signup_modal(p, auth_phrases, close_selectors)
         if not recheck["detected"]:
             log.info("Modal successfully dismissed via close button.")
             return True
@@ -400,7 +389,7 @@ class ActionVerifier:
             log.warning(f"Error pressing Escape to dismiss modal: {err}")
 
         # 4. Verify modal disappeared
-        final_check = await self.detect_auth_or_signup_modal(p)
+        final_check = await self.detect_auth_or_signup_modal(p, auth_phrases, close_selectors)
         if not final_check["detected"]:
             log.info("Modal successfully dismissed via Escape key.")
             return True
@@ -408,28 +397,39 @@ class ActionVerifier:
         log.warning(f"Modal is still present and blocking: '{final_check['title']}'")
         return False
 
-    async def verify_instagram_post(
+    async def verify_site(
         self,
-        expected_account: str,
-        expected_post_url: str | None = None,
-        expected_post_id: str | None = None,
+        site_id: str,
+        page_type: str,
+        expected_entity: str | None = None,
+        expected_url: str | None = None,
+        expected_id: str | None = None,
     ) -> dict[str, Any]:
         """
-        Rigorous real browser DOM verification for an open Instagram post.
-        Task-specific requirements:
-        1. Exact target post URL/ID loaded OR dialog corresponding to that exact post open.
-        2. Must NOT be merely on the profile grid.
-        3. No blocking login/signup modal obscuring the content (with safe X / Escape attempt).
-        4. Official expected account identified as post author in the post container.
-        5. Post media (image/video) is actually rendered with real dimensions (>100x100px).
-        6. Page is not blank, loading, error, or login interstitial.
+        Generic replacement for the old per-site `verify_instagram_post` /
+        (missing) `verify_youtube_video`: one implementation driven by
+        SiteKnowledge instead of a hardcoded method per site.
+
+        Task-specific requirements, generic across sites:
+        1. Exact target id/URL loaded OR a dialog corresponding to that exact
+           item open (some sites, like Instagram, can also open a post in a
+           modal without navigating).
+        2. Must NOT be merely on a listing/profile/channel page.
+        3. No blocking login/signup modal obscuring the content, if the site
+           has one (with safe X / Escape attempt).
+        4. Expected entity (account/channel) identified near the content.
+        5. Content itself (media, or a player) is actually present.
+        6. Page is not blank, loading, error, or a login interstitial.
         """
+        from site_knowledge import SITE_KNOWLEDGE, VerificationSpec
+
+        site = SITE_KNOWLEDGE.get(site_id)
         page: Page = await self._get_page()
-        account_clean = expected_account.lower().strip("@")
-        action = f"verify Instagram post from @{account_clean}"
-        expected_desc = f"Instagram post page open for @{account_clean}"
-        if expected_post_url:
-            expected_desc += f" matching {expected_post_url}"
+        entity_clean = (expected_entity or "").lower().strip("@")
+        action = f"verify {site_id} {page_type}" + (f" from {entity_clean}" if entity_clean else "")
+        expected_desc = f"{site_id} {page_type} page open" + (f" for {entity_clean}" if entity_clean else "")
+        if expected_url:
+            expected_desc += f" matching {expected_url}"
 
         if not page or page.is_closed():
             log_verification_step(action, expected_desc, "Browser closed", "FAIL", "unverified")
@@ -441,6 +441,19 @@ class ActionVerifier:
                 "error": "Browser is not open",
                 "checks": [],
             }
+
+        if site is None or page_type not in site.page_types:
+            # No declarative rule for this site/page_type — fall back to
+            # generic liveliness rather than crashing or silently passing.
+            return await self.verify_browser_state(
+                action=action,
+                expected={"url_contains": expected_url or ""},
+                artifact_status_on_pass="verified",
+            )
+
+        rule = site.page_types[page_type]
+        v_spec = site.verification_rules.get(page_type, VerificationSpec())
+        login = site.login_check
 
         current_url = page.url
         page_title = ""
@@ -456,36 +469,37 @@ class ActionVerifier:
         target_reached = True
         failure_reasons: list[str] = []
 
-        # ── 1. Check for blocking login/signup modal and attempt safe dismissal ──
-        modal_info = await self.detect_auth_or_signup_modal(page)
-        modal_detected = modal_info["detected"]
+        # ── 1. Blocking login/signup modal, if this site has one ──
+        modal_detected = False
         modal_dismissed = False
+        if login is not None:
+            modal_info = await self.detect_auth_or_signup_modal(page, login.auth_phrases, login.close_selectors)
+            modal_detected = modal_info["detected"]
+            if modal_detected:
+                log.info(f"Auth/signup modal detected: '{modal_info['title']}'. Attempting safe dismissal (X / Escape)...")
+                dismissed = await self.dismiss_auth_or_signup_modal(page, login.auth_phrases, login.close_selectors)
+                if dismissed:
+                    modal_dismissed = True
+                    modal_detected = False
+                    log.info("Auth/signup modal successfully dismissed and confirmed gone.")
+                else:
+                    log.warning(f"Auth/signup modal remains blocking: '{modal_info['title']}'")
 
-        if modal_detected:
-            log.info(f"Auth/signup modal detected: '{modal_info['title']}'. Attempting safe dismissal (X / Escape)...")
-            dismissed = await self.dismiss_auth_or_signup_modal(page)
-            if dismissed:
-                modal_dismissed = True
-                modal_detected = False
-                log.info("Auth/signup modal successfully dismissed and confirmed gone.")
-            else:
-                log.warning(f"Auth/signup modal remains blocking: '{modal_info['title']}'")
-
-        checks.append({
-            "check": "Not blocked by login/signup modal",
-            "passed": not modal_detected,
-            "details": f"modal_detected={modal_detected}, modal_dismissed={modal_dismissed}",
-        })
-        if modal_detected:
-            overall_passed = False
-            target_reached = False
-            failure_reasons.append(f"Blocking login/signup modal obscures post: '{modal_info['title']}'")
+            checks.append({
+                "check": "Not blocked by login/signup modal",
+                "passed": not modal_detected,
+                "details": f"modal_detected={modal_detected}, modal_dismissed={modal_dismissed}",
+            })
+            if modal_detected:
+                overall_passed = False
+                target_reached = False
+                failure_reasons.append(f"Blocking login/signup modal obscures {page_type}: '{modal_info['title']}'")
 
         # ── 2. Error page or blank page check ──
         is_blank = len(body_text.strip()) == 0
         error_indicators = ["sorry, this page isn't available", "page not found", "something went wrong", "site cannot be reached"]
         is_error = any(e in body_text.lower() or e in page_title.lower() for e in error_indicators)
-        is_login_wall = "accounts/login" in current_url
+        is_login_wall = any(s in current_url for s in v_spec.login_wall_url_contains)
 
         not_broken = not is_blank and not is_error and not is_login_wall
         checks.append({
@@ -498,149 +512,136 @@ class ActionVerifier:
             target_reached = False
             failure_reasons.append("Page is blank, error page, or login redirect")
 
-        # ── 3. Exact target post URL / permalink matching ──
-        expected_id = expected_post_id
-        if not expected_id and expected_post_url:
-            m = re.search(r"/(?:p|reel)/([a-zA-Z0-9_-]+)", expected_post_url)
+        # ── 3. Exact target URL/id matching ──
+        resolved_expected_id = expected_id
+        if not resolved_expected_id and expected_url and rule.id_regex:
+            m = re.search(rule.id_regex, expected_url)
             if m:
-                expected_id = m.group(1)
+                resolved_expected_id = m.group(1)
 
-        # Detect whether we are on a post URL vs profile page
-        url_has_post = "/p/" in current_url or "/reel/" in current_url
-        actual_post_id = None
-        if url_has_post:
-            m_act = re.search(r"/(?:p|reel)/([a-zA-Z0-9_-]+)", current_url)
+        url_has_type = any(s in current_url for s in rule.url_contains)
+        actual_id = None
+        if url_has_type and rule.id_regex:
+            m_act = re.search(rule.id_regex, current_url)
             if m_act:
-                actual_post_id = m_act.group(1)
+                actual_id = m_act.group(1)
 
-        # Detect whether a post modal dialog is open (distinct from login modal)
-        dialog_has_post = False
-        dialog_post_id = None
+        # Detect whether the item is open in a modal dialog (distinct from a login modal)
+        dialog_has_type = False
         try:
-            # An authentic post dialog contains article and post author/media, not an auth wall
-            post_dialog = page.locator('div[role="dialog"]:has(article), div[aria-modal="true"]:has(article)').first
-            if await post_dialog.count() > 0 and await post_dialog.is_visible():
-                dialog_has_post = True
-                # Extract post link inside dialog if available
-                post_links = post_dialog.locator('a[href*="/p/"], a[href*="/reel/"]')
-                if await post_links.count() > 0:
-                    href = (await post_links.first.get_attribute("href")) or ""
-                    m_d = re.search(r"/(?:p|reel)/([a-zA-Z0-9_-]+)", href)
-                    if m_d:
-                        dialog_post_id = m_d.group(1)
+            if rule.dialog_container_selector:
+                dialog = page.locator(rule.dialog_container_selector).first
+                if await dialog.count() > 0 and await dialog.is_visible():
+                    dialog_has_type = True
+                    if rule.dialog_link_selector and rule.id_regex:
+                        links = dialog.locator(rule.dialog_link_selector)
+                        if await links.count() > 0:
+                            href = (await links.first.get_attribute("href")) or ""
+                            m_d = re.search(rule.id_regex, href)
+                            if m_d and not actual_id:
+                                actual_id = m_d.group(1)
         except Exception:
             pass
 
-        is_post_open = url_has_post or dialog_has_post
+        is_type_open = url_has_type or dialog_has_type
         checks.append({
-            "check": "Post page or dialog is open (not profile grid)",
-            "passed": is_post_open,
+            "check": f"{page_type.capitalize()} page or dialog is open (not a listing page)",
+            "passed": is_type_open,
             "actual_url": current_url,
-            "dialog_open": dialog_has_post,
+            "dialog_open": dialog_has_type,
         })
-        if not is_post_open:
+        if not is_type_open:
             overall_passed = False
             target_reached = False
-            failure_reasons.append(f"Post is not open (browser is still on profile grid '{current_url}')")
+            failure_reasons.append(f"{page_type.capitalize()} is not open (browser is still on '{current_url}')")
 
-        # Verify exact target post ID if expected
-        if expected_id:
-            current_id = actual_post_id or dialog_post_id
-            id_matched = (current_id == expected_id) or (expected_post_url and expected_post_url.rstrip("/") in current_url.rstrip("/"))
+        if resolved_expected_id:
+            id_matched = (actual_id == resolved_expected_id) or (
+                expected_url and expected_url.rstrip("/") in current_url.rstrip("/")
+            )
             checks.append({
-                "check": f"Target post ID matches expected '{expected_id}'",
+                "check": f"Target id matches expected '{resolved_expected_id}'",
                 "passed": id_matched,
-                "expected_id": expected_id,
-                "actual_id": current_id,
+                "expected_id": resolved_expected_id,
+                "actual_id": actual_id,
             })
             if not id_matched:
                 overall_passed = False
                 target_reached = False
-                failure_reasons.append(f"Opened post '{current_id}' does not match expected target '{expected_id}'")
+                failure_reasons.append(f"Opened {page_type} '{actual_id}' does not match expected target '{resolved_expected_id}'")
 
-        # ── 4. Account verification inside the open post container ──
-        # Find the specific post container (article), not the profile grid
-        account_verified = False
-        try:
-            # Single post container
-            post_container = page.locator('div[role="dialog"] article, main article, article').first
-            if await post_container.count() > 0 and await post_container.is_visible():
-                author_loc = post_container.locator(
-                    f'header a[href*="/{account_clean}/"], a[href*="/{account_clean}/"], '
-                    f'header :has-text("{account_clean}"), span:has-text("{account_clean}")'
-                ).first
-                if await author_loc.count() > 0 and await author_loc.is_visible():
-                    account_verified = True
-            elif is_post_open:
-                # Fallback to page title / text if in single post view
-                account_verified = (
-                    account_clean in page_title.lower() or
-                    account_clean in body_text.lower()
-                )
-        except Exception:
-            pass
+        # ── 4. Entity verification near the open content ──
+        entity_verified = True
+        if entity_clean and v_spec.author_selector_template:
+            entity_verified = False
+            try:
+                container = page.locator(v_spec.container_selector).first
+                if await container.count() > 0 and await container.is_visible():
+                    author_loc = container.locator(v_spec.author_selector_template.format(entity=entity_clean)).first
+                    if await author_loc.count() > 0 and await author_loc.is_visible():
+                        entity_verified = True
+                elif is_type_open:
+                    entity_verified = entity_clean in page_title.lower() or entity_clean in body_text.lower()
+            except Exception:
+                pass
 
-        checks.append({
-            "check": f"Author @{account_clean} verified in post",
-            "passed": account_verified,
-        })
-        if not account_verified:
-            overall_passed = False
-            failure_reasons.append(f"Author @{account_clean} was not identified in the post container")
+            checks.append({
+                "check": f"Entity {entity_clean} verified near {page_type}",
+                "passed": entity_verified,
+            })
+            if not entity_verified:
+                overall_passed = False
+                failure_reasons.append(f"Entity {entity_clean} was not identified near the {page_type}")
 
-        # ── 5. Post media (image/video) visibility check ──
+        # ── 5. Content (media or player) visibility check ──
         media_visible = False
         media_src = ""
-        try:
-            # Look for post media specifically inside post container, reels player, or main post view
-            media_selectors = [
-                'div[role="dialog"] article img',
-                'main article img',
-                'article img[style*="object-fit"]',
-                'article img',
-                'main img',
-                'div[role="dialog"] video',
-                'main video',
-                'article video',
-                'video',
-                'img[srcset*="cdninstagram"]',
-                'img[src*="cdninstagram"]',
-            ]
-            media_locators = page.locator(", ".join(media_selectors))
-            if await media_locators.count() == 0:
-                try:
-                    await page.wait_for_selector("img, video", timeout=1500)
-                except Exception:
-                    pass
-            media_count = await media_locators.count()
-            for m_i in range(min(media_count, 15)):
-                m_candidate = media_locators.nth(m_i)
-                if await m_candidate.is_visible():
-                    bbox = await m_candidate.bounding_box()
-                    # Real post media has rendered dimensions > 100x100px (reject 32x32 avatars)
-                    if bbox and bbox.get("width", 0) > 100 and bbox.get("height", 0) > 100:
-                        media_visible = True
-                        media_src = (await m_candidate.get_attribute("src")) or ""
-                        break
-        except Exception:
-            pass
+        if v_spec.media_selectors:
+            try:
+                media_locators = page.locator(", ".join(v_spec.media_selectors))
+                if await media_locators.count() == 0:
+                    try:
+                        await page.wait_for_selector("img, video", timeout=1500)
+                    except Exception:
+                        pass
+                media_count = await media_locators.count()
+                for m_i in range(min(media_count, 15)):
+                    m_candidate = media_locators.nth(m_i)
+                    if await m_candidate.is_visible():
+                        bbox = await m_candidate.bounding_box()
+                        if bbox and bbox.get("width", 0) > v_spec.min_media_w and bbox.get("height", 0) > v_spec.min_media_h:
+                            media_visible = True
+                            media_src = (await m_candidate.get_attribute("src")) or ""
+                            break
+            except Exception:
+                pass
 
-        checks.append({
-            "check": "Post media (image/video >100x100px) is visible",
-            "passed": media_visible,
-            "src": media_src[:80] if media_src else None,
-        })
-        if not media_visible:
-            overall_passed = False
-            failure_reasons.append("Post media (image/video) is not visible in post container")
+            checks.append({
+                "check": f"Content media (>{v_spec.min_media_w}x{v_spec.min_media_h}px) is visible",
+                "passed": media_visible,
+                "src": media_src[:80] if media_src else None,
+            })
+            if not media_visible:
+                overall_passed = False
+                failure_reasons.append("Content media is not visible")
+        elif v_spec.player_selector:
+            try:
+                player = page.locator(v_spec.player_selector).first
+                media_visible = await player.is_visible()
+            except Exception:
+                pass
+            checks.append({"check": "Player is present", "passed": media_visible})
+            if not media_visible:
+                overall_passed = False
+                failure_reasons.append("Player was not found on the page")
 
         # ── Final Verdict & Structured Logging ──
-        reason_str = "Instagram post verified successfully" if overall_passed else "; ".join(failure_reasons)
+        reason_str = f"{site_id} {page_type} verified successfully" if overall_passed else "; ".join(failure_reasons)
         verdict = "PASS" if overall_passed else "FAIL"
         art_status = "verified" if overall_passed else "opened"
         observed_desc = (
             f"URL={current_url}, title='{page_title[:40]}', target_reached={target_reached}, "
-            f"account_verified={account_verified}, media_visible={media_visible}, "
+            f"entity_verified={entity_verified}, media_visible={media_visible}, "
             f"modal_detected={modal_detected}"
         )
 
@@ -662,22 +663,42 @@ class ActionVerifier:
             "action": action,
             "url": current_url,
             "title": page_title,
-            "account": account_clean,
+            "account": entity_clean,
             "media_url": media_src,
-            "expected_url": expected_post_url,
+            "expected_url": expected_url,
             "actual_url": current_url,
             "checks": checks,
             "observed": {
                 "url": current_url,
                 "title": page_title,
                 "target_reached": target_reached,
-                "account_verified": account_verified,
+                "account_verified": entity_verified,
                 "media_visible": media_visible,
                 "not_broken": not_broken,
                 "modal_detected": modal_detected,
                 "modal_dismissed": modal_dismissed,
             },
         }
+
+    async def verify_instagram_post(
+        self,
+        expected_account: str,
+        expected_post_url: str | None = None,
+        expected_post_id: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Thin backward-compatible wrapper over `verify_site`. Kept (rather
+        than migrating every caller in the same change) so existing direct
+        callers keep working while `verify_site` is proven equivalent; slated
+        for removal once that's confirmed.
+        """
+        return await self.verify_site(
+            site_id="instagram",
+            page_type="post",
+            expected_entity=expected_account,
+            expected_url=expected_post_url,
+            expected_id=expected_post_id,
+        )
 
     async def verify_spec(self, spec: dict[str, Any]) -> dict[str, Any]:
         """

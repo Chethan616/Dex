@@ -4,7 +4,6 @@ import { AgentContext, AgentResult } from '../../core/events/types';
 import { emit } from '../../core/events/bus';
 import { readConfig } from '../../core/settings/config_store';
 import { SiteRouteStore, describeRoute } from '../../core/memory/site_routes';
-import { BROWSER_TOOLS } from '../../core/brain/browser_tools';
 import { ArtifactStore } from '../../core/memory/artifacts';
 
 const PORT = parseInt(process.env.BROWSER_AGENT_PORT ?? '8766', 10);
@@ -301,24 +300,6 @@ ${task}` : task;
 
     emit('executing', `Browsing: "${task}"`, requestId, stepId);
 
-    // What this run is allowed to do, said before it does it.
-    //
-    // One card approves the whole task, which is the only workable trade — a
-    // card per click would be unusable. That makes it worth saying plainly what
-    // the approval covers, rather than leaving "run_task" to stand for
-    // everything the browser can do.
-    const consequential = Object.entries(BROWSER_TOOLS)
-      .filter(([, spec]) => spec.tier <= 2)
-      .map(([name]) => name);
-    emit(
-      'routing',
-      `In your browser it may: ${consequential.slice(0, 6).join(', ')}` +
-        (consequential.length > 6 ? `, and ${consequential.length - 6} more` : '') +
-        '. It will not type a password or sign you in.',
-      requestId,
-      stepId,
-    );
-
     // Derive target_site from instruction / start_url to prevent cross-site contamination
     const tLower = instruction.toLowerCase();
     let targetSite: string | null = null;
@@ -349,16 +330,13 @@ ${task}` : task;
         route: route
           ? { origin: route.origin, goal: route.goal, steps: route.steps }
           : null,
-        tool_tiers: Object.fromEntries(
-          Object.entries(BROWSER_TOOLS).map(([name, spec]) => [name, spec.tier]),
-        ),
         verify: Object.keys(verify).length ? verify : null,
         request_id: requestId,
         step_id: stepId,
         target_site: targetSite,
         expected_url: typeof params.expected_url === 'string' ? params.expected_url : null,
         expected_entity: typeof params.expected_entity === 'string' ? params.expected_entity : null,
-      });
+      }, ctx);
     } catch (err) {
       const errStr = String(err);
       if (errStr.includes("MODE_B_USER_ATTACHED")) {
@@ -808,9 +786,8 @@ ${task}` : task;
    * planner then improvised, opened Chrome through the app tier, found two
    * windows both called "New Tab - Google Chrome", and stopped.
    *
-   * Their profile, not Dex's, because the extension lives there and the
-   * session is theirs. Nothing is driven: a window opens and the extension in
-   * it attaches on its own.
+   * Their profile, not Dex's, because the session is theirs. Nothing is
+   * driven: a window opens and Dex attaches to it over CDP.
    */
   private async openOwnerBrowser(
     params: Record<string, unknown>,
@@ -837,9 +814,8 @@ ${task}` : task;
       emit(
         'routing',
         data.attached === true
-          ? `Opened ${String(data.profile ?? 'Chrome')} — the extension is attached.`
-          : `Opened ${String(data.profile ?? 'Chrome')}. The extension has not ` +
-            'attached; load it once from chrome://extensions.',
+          ? `Opened ${String(data.profile ?? 'Chrome')} — attached.`
+          : `Opened ${String(data.profile ?? 'Chrome')}, but could not attach to it.`,
         requestId,
         stepId,
       );
@@ -1019,7 +995,7 @@ ${task}` : task;
     return { success: false, error: msg, retryable: true };
   }
 
-  private post<T>(path: string, body: unknown): Promise<T> {
+  private post<T>(path: string, body: unknown, ctx?: AgentContext): Promise<T> {
     return new Promise((resolve, reject) => {
       const payload = JSON.stringify(body);
       const req = http.request(
@@ -1052,6 +1028,26 @@ ${task}` : task;
       // Generous: a hand-off means a human is reading a CAPTCHA on the other
       // side of this socket, and the Python side is holding the session open.
       req.setTimeout(600_000, () => req.destroy(new Error('Browser Agent timed out')));
+
+      // Stop only reached the orchestrator's own between-step check, never
+      // this in-flight request — a run_task stuck inside the Python side
+      // (a browser hang, a CDP attach that never resolves) sat there for the
+      // full 600s no matter how many times the owner clicked Stop. Polling
+      // ctx.isCancelled() while the request is outstanding and destroying it
+      // the moment the owner cancels closes that gap.
+      let cancelPoll: ReturnType<typeof setInterval> | undefined;
+      if (ctx?.isCancelled) {
+        cancelPoll = setInterval(() => {
+          if (ctx.isCancelled()) {
+            if (cancelPoll) clearInterval(cancelPoll);
+            req.destroy(new Error('Cancelled by owner'));
+          }
+        }, 500);
+        req.on('close', () => {
+          if (cancelPoll) clearInterval(cancelPoll);
+        });
+      }
+
       req.write(payload);
       req.end();
     });

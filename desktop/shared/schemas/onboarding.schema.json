@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://browser-use.local/schemas/onboarding.schema.json",
+  "title": "OnboardingMessages",
+  "description": "IPC messages for onboarding flow between onboarding renderer and Electron main",
+  "version": "1.0",
+  "definitions": {
+    "BaseMsg": {
+      "type": "object",
+      "required": ["version"],
+      "properties": {
+        "version": { "type": "string", "const": "1.0" }
+      }
+    },
+    "GoogleOAuthScope": {
+      "type": "string",
+      "enum": [
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/calendar",
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/documents"
+      ],
+      "description": "Supported Google OAuth scopes for v0.1"
+    },
+    "AccountInfo": {
+      "type": "object",
+      "required": ["email"],
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "avatar_url": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "OnboardingCompleteEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseMsg" },
+        {
+          "type": "object",
+          "required": ["event", "agent_name", "account", "oauth_scopes"],
+          "properties": {
+            "event": { "type": "string", "const": "onboarding-complete" },
+            "agent_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name the user gave to the agent"
+            },
+            "account": { "$ref": "#/definitions/AccountInfo" },
+            "oauth_scopes": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/GoogleOAuthScope" },
+              "minItems": 0,
+              "description": "Google OAuth scopes the user approved"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "SetAgentNameRequest": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseMsg" },
+        {
+          "type": "object",
+          "required": ["meta", "agent_name"],
+          "properties": {
+            "meta": { "type": "string", "const": "set_agent_name" },
+            "agent_name": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "GetAgentNameResponse": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseMsg" },
+        {
+          "type": "object",
+          "required": ["meta", "agent_name"],
+          "properties": {
+            "meta": { "type": "string", "const": "get_agent_name_response" },
+            "agent_name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "OAuthStartRequest": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseMsg" },
+        {
+          "type": "object",
+          "required": ["meta", "scopes"],
+          "properties": {
+            "meta": { "type": "string", "const": "oauth_start" },
+            "scopes": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/GoogleOAuthScope" },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "OAuthCallbackEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseMsg" },
+        {
+          "type": "object",
+          "required": ["event", "success"],
+          "properties": {
+            "event": { "type": "string", "const": "oauth-callback" },
+            "success": { "type": "boolean" },
+            "account": { "$ref": "#/definitions/AccountInfo" },
+            "error": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/OnboardingCompleteEvent" },
+    { "$ref": "#/definitions/SetAgentNameRequest" },
+    { "$ref": "#/definitions/GetAgentNameResponse" },
+    { "$ref": "#/definitions/OAuthStartRequest" },
+    { "$ref": "#/definitions/OAuthCallbackEvent" }
+  ]
+}
