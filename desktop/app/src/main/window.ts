@@ -12,6 +12,32 @@ import { getWindowBackgroundColor, getWcoSymbolColor } from './themeMode';
 
 declare const SHELL_VITE_DEV_SERVER_URL: string | undefined;
 
+/**
+ * The window icon, needed only when running unpackaged.
+ *
+ * A packaged build gets its icon from the executable's own resources, so
+ * Windows shows DEX in the taskbar automatically. Running from source there is
+ * no DEX executable — it is electron.exe — so without this the taskbar shows
+ * the stock Electron atom, which makes a dev build look like somebody else's
+ * app. Resolved from the repo rather than __dirname because in dev the main
+ * bundle lives in .vite/build, two levels below the assets folder.
+ */
+function devWindowIcon(): string | undefined {
+  if (app.isPackaged) return undefined;
+  for (const candidate of [
+    path.join(__dirname, '..', '..', 'assets', 'icon.ico'),
+    path.join(app.getAppPath(), 'assets', 'icon.ico'),
+    path.join(process.cwd(), 'assets', 'icon.ico'),
+  ]) {
+    try {
+      if (fs.existsSync(candidate)) return candidate;
+    } catch {
+      // Try the next one.
+    }
+  }
+  return undefined;
+}
+
 const BOUNDS_FILE_NAME = 'window-bounds.json';
 const DEFAULT_WIDTH = 1280;
 const DEFAULT_HEIGHT = 800;
@@ -79,7 +105,9 @@ export function createShellWindow(opts?: ShellWindowOptions): BrowserWindow {
   const incognito = opts?.incognito ?? false;
   mainLogger.info('window.createShellWindow', { bounds, titleSuffix, incognito });
 
+  const icon = devWindowIcon();
   const win = new BrowserWindow({
+    ...(icon ? { icon } : {}),
     x: bounds.x,
     y: bounds.y,
     width: bounds.width,

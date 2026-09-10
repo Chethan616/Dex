@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { subscribeThemeMode, resolveThemeMode, getThemeMode } from '../design/themeMode';
+import dexMark from '../assets/dex-mark.png';
 
 const FRAME_INTERVAL_MS = 1000 / 12;
 
@@ -10,11 +11,15 @@ const PALETTE = {
   dark: {
     bg:  [0.055, 0.055, 0.067] as const,
     dot: [0.32,  0.38,  0.52]  as const,
+    // The blue the mark is actually drawn in, so the lit dots read as the
+    // logo rather than as "some blue dots arranged like the logo".
+    accent: [0.24, 0.55, 0.98] as const,
     mix: 0.55,
   },
   light: {
     bg:  [0.957, 0.957, 0.965] as const, /* matches --color-bg-base #f4f4f6 */
     dot: [0.30,  0.40,  0.58]  as const, /* slate-blue, deeper for light bg */
+    accent: [0.13, 0.42, 0.90] as const,
     mix: 0.55,
   },
 };
@@ -32,6 +37,14 @@ uniform float u_time;
 uniform vec3 u_bg;
 uniform vec3 u_dot;
 uniform float u_mix;
+
+// The DEX mark itself, sampled as a texture rather than approximated in code.
+// Drawing the curve by hand would be a resemblance; sampling the real artwork
+// is the mark, in dots.
+uniform sampler2D u_logo;
+uniform float u_hasLogo;
+uniform float u_logoAspect;
+uniform vec3 u_accent;
 
 // Signature field: three slow ridges at different angles, interfering.
 //
@@ -85,11 +98,46 @@ void main() {
   // ridge crests resolve into dots, so the pattern suggests itself instead of
   // stating itself.
   float sizeCurve = pow(density, 3.4);
-  float radius = MAX_RADIUS * sizeCurve;
-  float dotMask = 1.0 - smoothstep(radius - 0.6, radius + 0.4, distPx);
-  dotMask *= smoothstep(0.02, 0.14, density);
 
-  fragColor = vec4(mix(u_bg, u_dot, dotMask * u_mix), 1.0);
+  // -- the mark ------------------------------------------------------------
+  //
+  // Fit the artwork into a centred box, preserving its own proportions, and
+  // read its alpha at this cell. Everything below is driven by that one
+  // sample, so the shape is exact by construction.
+  float markAlpha = 0.0;
+  vec2 markUv = vec2(0.0);
+  if (u_hasLogo > 0.5) {
+    float boxH = u_resolution.y * 0.62;
+    float boxW = boxH * u_logoAspect;
+    // Never let it outgrow the viewport on a narrow window.
+    float overflow = boxW / max(u_resolution.x * 0.82, 1.0);
+    if (overflow > 1.0) { boxW /= overflow; boxH /= overflow; }
+
+    vec2 boxOrigin = (u_resolution - vec2(boxW, boxH)) * 0.5;
+    markUv = (cellCenter - boxOrigin) / vec2(boxW, boxH);
+    if (markUv.x > 0.0 && markUv.x < 1.0 && markUv.y > 0.0 && markUv.y < 1.0) {
+      // Flip Y: texture space is top-down, gl_FragCoord is bottom-up.
+      markAlpha = texture(u_logo, vec2(markUv.x, 1.0 - markUv.y)).a;
+    }
+  }
+
+  // A wave travelling along the curve rather than a global fade, so the mark
+  // reads as being drawn continuously instead of switching on and off.
+  float sweep = sin((markUv.x * 1.1 + markUv.y * 0.7) * 3.4 - u_time * 1.15);
+  float blink = 0.42 + 0.58 * (sweep * 0.5 + 0.5);
+
+  // Hard threshold on alpha: the artwork's antialiased edge would otherwise
+  // scatter half-lit dots around the curve and blur it.
+  float markMask = smoothstep(0.35, 0.75, markAlpha) * blink;
+
+  // The mark sets a floor under the dot size, so it emerges from the existing
+  // field rather than replacing it — the ridges still move underneath.
+  float radius = MAX_RADIUS * max(sizeCurve, markMask * 0.92);
+  float dotMask = 1.0 - smoothstep(radius - 0.6, radius + 0.4, distPx);
+  dotMask *= max(smoothstep(0.02, 0.14, density), markMask);
+
+  vec3 tint = mix(u_dot, u_accent, clamp(markMask * 1.35, 0.0, 1.0));
+  fragColor = vec4(mix(u_bg, tint, dotMask * u_mix), 1.0);
 }
 `;
 
@@ -158,13 +206,54 @@ export function DashboardBackground(): React.ReactElement {
     const bgLoc  = gl.getUniformLocation(program, 'u_bg');
     const dotLoc = gl.getUniformLocation(program, 'u_dot');
     const mixLoc = gl.getUniformLocation(program, 'u_mix');
+    const logoLoc = gl.getUniformLocation(program, 'u_logo');
+    const hasLogoLoc = gl.getUniformLocation(program, 'u_hasLogo');
+    const logoAspectLoc = gl.getUniformLocation(program, 'u_logoAspect');
+    const accentLoc = gl.getUniformLocation(program, 'u_accent');
 
     gl.useProgram(program);
+
+    // The mark is loaded asynchronously and the field renders fine without it,
+    // so start with it off and switch it on when the image arrives. A failed
+    // decode simply leaves the original background — a missing texture should
+    // never cost the user their wallpaper.
+    const logoTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, logoTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.uniform1i(logoLoc, 0);
+    gl.uniform1f(hasLogoLoc, 0);
+    gl.uniform1f(logoAspectLoc, 1);
+
+    let logoImage: HTMLImageElement | null = new Image();
+    logoImage.onload = () => {
+      if (!logoImage) return;
+      try {
+        gl.useProgram(program);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, logoTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, logoImage);
+        gl.uniform1f(logoAspectLoc, logoImage.naturalWidth / logoImage.naturalHeight);
+        gl.uniform1f(hasLogoLoc, 1);
+        schedule();
+      } catch (err) {
+        console.warn('[DashboardBackground] mark texture upload failed', err);
+      }
+    };
+    logoImage.onerror = () => {
+      console.warn('[DashboardBackground] mark image failed to load');
+    };
+    logoImage.src = dexMark;
 
     let palette = PALETTE[resolveThemeMode(getThemeMode())];
     const applyPalette = () => {
       gl.uniform3f(bgLoc,  palette.bg[0],  palette.bg[1],  palette.bg[2]);
       gl.uniform3f(dotLoc, palette.dot[0], palette.dot[1], palette.dot[2]);
+      gl.uniform3f(accentLoc, palette.accent[0], palette.accent[1], palette.accent[2]);
       gl.uniform1f(mixLoc, palette.mix);
       // Pre-fill the framebuffer with the bg color so the first composited
       // frame already matches the theme — no black flash before render().
@@ -259,6 +348,12 @@ export function DashboardBackground(): React.ReactElement {
       document.removeEventListener('visibilitychange', onVisibility);
       io.disconnect();
       ro.disconnect();
+      if (logoImage) {
+        logoImage.onload = null;
+        logoImage.onerror = null;
+        logoImage = null;
+      }
+      gl.deleteTexture(logoTexture);
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
     };

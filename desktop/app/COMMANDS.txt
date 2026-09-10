@@ -1,0 +1,111 @@
+DEX — commands
+==============
+
+All paths are relative to desktop/app. PowerShell syntax, since that is what
+the terminal here uses. Note PowerShell 5.1 does NOT support && between
+commands — run them on separate lines.
+
+
+BUILD (use these)
+-----------------
+
+  .\scripts\build-app.ps1              Build the app -> out\DEX-win32-x64\dex.exe
+  .\scripts\build-installer.ps1        Build dex-setup.exe for other people
+
+  Add -SkipChecks to either to skip lint/typecheck/tests when iterating:
+
+  .\scripts\build-app.ps1 -SkipChecks
+
+  Copy the finished installer somewhere:
+
+  .\scripts\build-installer.ps1 -OutDir D:\releases
+
+Both scripts handle two traps automatically, so prefer them over raw yarn:
+
+  * Node version. This app needs Node 20.x or 22.x. Node 24 makes yarn refuse
+    outright with "The engine node is incompatible with this module". The
+    scripts find a supported Node through fnm themselves.
+
+  * The OneDrive lock. The repo sits inside OneDrive, and Windows keeps a
+    handle on the 170 MB app.asar from the previous build, so packaging fails
+    with "EBUSY: resource busy or locked" and no process visibly owns it. The
+    scripts build in %LOCALAPPDATA%\dex-build instead, with node_modules
+    junctioned across so nothing is copied twice.
+
+If a build ever fails with EBUSY anyway, reboot. That releases the handle.
+
+
+DEVELOPMENT
+-----------
+
+  yarn install                         First time only, and after a pull that
+                                       changed package.json
+
+  yarn dev                             Run from source with hot reload
+  yarn start                           Same thing
+
+  yarn qa                              lint + typecheck + tests (run before
+                                       every build)
+  yarn test                            Tests only
+  yarn test:watch                      Tests, re-running on change
+  yarn typecheck                       tsc --noEmit only
+  yarn lint                            eslint only
+
+If yarn refuses with an engine error, switch Node first:
+
+  fnm use 22
+  yarn dev
+
+
+RAW BUILD COMMANDS
+------------------
+
+Only needed if you are not using the scripts above. Switch Node first, and
+expect the OneDrive lock.
+
+  fnm use 22
+  yarn package                         -> out\DEX-win32-x64\dex.exe
+  yarn make                            -> out\make\squirrel.windows\x64\dex-setup.exe
+
+
+WHERE THINGS END UP
+-------------------
+
+  out\DEX-win32-x64\dex.exe                          the app
+  out\make\squirrel.windows\x64\dex-setup.exe        the installer
+  out\make\squirrel.windows\x64\RELEASES             update manifest
+  out\make\squirrel.windows\x64\*.nupkg              update payload
+
+When the build is staged (repo inside OneDrive) these live under
+%LOCALAPPDATA%\dex-build\ instead. The scripts print the full path when they
+finish.
+
+Keep RELEASES and the .nupkg next to the setup exe if you publish updates.
+Copying only the exe breaks auto-update in a way you find out about later.
+
+
+RUNTIME DATA
+------------
+
+  %APPDATA%\DEX\                       everything the app stores
+  %APPDATA%\DEX\logs\app.log           main process log
+  %APPDATA%\DEX\sessions.db            sessions, events, task ledger
+  %APPDATA%\DEX\harness\               AGENTS.md, skills and the dex-* tools
+  %APPDATA%\DEX\harness\dex-tools\     the CLIs the agent calls
+
+Reset onboarding or sessions without deleting everything:
+
+  node scripts\reset-onboarding.mjs
+  node scripts\reset-sessions.mjs
+
+
+CHECKING THE ENVIRONMENT
+------------------------
+
+In the app: Settings -> Diagnostics. It reports Git Bash, Bun, the browser
+debugging port and the harness directory, and gives a copyable fix for
+anything missing.
+
+From a terminal, the same information is in the log at startup:
+
+  Select-String -Path "$env:APPDATA\DEX\logs\app.log" -Pattern "main.preflight" | Select-Object -Last 4

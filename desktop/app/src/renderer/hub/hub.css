@@ -4816,10 +4816,10 @@ button:focus:not(:focus-visible) {
    the tabstrip is used instead, so that layout is unchanged. */
 .sidebar {
   flex-shrink: 0;
-  width: 200px;
+  width: var(--sidebar-width);
   display: flex;
   flex-direction: column;
-  margin: var(--space-6) 0 var(--space-6) var(--space-6);
+  margin: var(--space-6) 0 var(--space-6) var(--sidebar-gutter);
   background-color: var(--color-bg-sunken);
   background-image: linear-gradient(
     180deg,
@@ -5959,6 +5959,157 @@ button:focus:not(:focus-visible) {
 
 .diag__fix-copy {
   flex: 0 0 auto;
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---------------------------------------------------------------------------
+   SIDEBAR-AWARE CENTRING
+
+   The toolbar spans the whole window, but the sidebar takes a fixed strip off
+   the left of everything below it. Centring the toolbar's control in the
+   window therefore leaves it visibly left of the content it belongs to — the
+   eye centres on the content area, not on the glass.
+
+   So shift it by half the sidebar's footprint, which puts it on the same
+   vertical axis as the task input and the stat cards below.
+
+   Only in the side layout. In the Top (terminal) layout there is no sidebar
+   and the window centre is the content centre, which must stay untouched.
+   --------------------------------------------------------------------------- */
+
+:root {
+  /* 200px sidebar + its 12px left margin. Both are set from this. */
+  --sidebar-width: 200px;
+  --sidebar-gutter: var(--space-6);
+  --sidebar-footprint: calc(var(--sidebar-width) + var(--sidebar-gutter));
+}
+
+.hub-root[data-tabs-position='side'] .hub-toolbar__center {
+  transform: translateX(calc(var(--sidebar-footprint) / 2));
+}
+
+/* Breathing room above the sidebar so it reads as a floating panel rather
+   than something jammed under the title bar. */
+.hub-body[data-tabs-position='side'] .sidebar {
+  margin-top: var(--space-10);
+}
+
+/* ---------------------------------------------------------------------------
+   DASHBOARD WORDMARK
+
+   Sits above the tagline, which is the first thing on an empty dashboard.
+   The source art is roughly 2:1, so height is constrained and width left auto
+   — forcing a box is what made the earlier icons look squashed.
+   --------------------------------------------------------------------------- */
+
+.dashboard__wordmark {
+  height: 44px;
+  width: auto;
+  display: block;
+  margin: 0 auto var(--space-6);
+  opacity: 0.95;
+  -webkit-user-select: none;
+  user-select: none;
+  position: relative;
+  z-index: 1;
+  animation: fade-in var(--duration-slow) var(--ease-out);
+}
+
+/* ---------------------------------------------------------------------------
+   DECK BACKDROP AND ACTIVITY
+
+   The dot-field mark sits behind the cards, so an idle panel belongs to the
+   app rather than reading as a gap in it. It is a GPU shader over data the
+   app already has: no model calls, no agent cooperation, nothing to pay for.
+   --------------------------------------------------------------------------- */
+
+.deck {
+  position: relative;
+}
+
+.deck__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.55;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.deck__backdrop canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.deck__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* The original "No browser started yet" copy, demoted to a footnote once
+   there is something more useful above it. */
+.deck__note {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-tertiary);
+  opacity: 0.75;
+}
+
+.deck-card--activity {
+  background-color: color-mix(in srgb, var(--color-bg-sunken) 88%, transparent);
+}
+
+/* Slow, quiet — a heartbeat, not a spinner demanding attention. */
+.deck-pulse {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-default);
+  animation: pulse-glow 1.8s var(--ease-in-out) infinite;
+}
+
+.deck-activity__thought {
+  margin: 0 0 var(--space-6);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--color-fg-tertiary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.deck-activity__stats {
+  display: flex;
+  gap: var(--space-16);
+}
+
+.deck-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.deck-stat__value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.deck-stat__label {
   font-size: var(--font-size-2xs);
   color: var(--color-fg-tertiary);
   text-transform: uppercase;

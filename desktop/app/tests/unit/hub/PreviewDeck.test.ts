@@ -14,8 +14,8 @@ import { describe, expect, it } from 'vitest';
 import { deckHasContent } from '../../../src/renderer/hub/PreviewDeck';
 import type { AgentSession, HlEvent, TaskState } from '../../../src/renderer/hub/types';
 
-function session(output: HlEvent[]): AgentSession {
-  return { id: 's1', prompt: 'do the thing', status: 'running', createdAt: 0, output };
+function session(output: HlEvent[], status: AgentSession['status'] = 'running'): AgentSession {
+  return { id: 's1', prompt: 'do the thing', status, createdAt: 0, output };
 }
 
 const EMPTY_STATE: TaskState = { objective: '', steps: [], currentStep: null, files: [], notes: [], updatedAt: 1 };
@@ -25,12 +25,25 @@ describe('deckHasContent', () => {
     expect(deckHasContent(session([]))).toBe(false);
   });
 
-  it('is false for ordinary agent chatter', () => {
+  it('is false while the agent is only thinking', () => {
+    expect(deckHasContent(session([{ type: 'thinking', text: 'considering' }]))).toBe(false);
+  });
+
+  // Until the browser navigates this rect reads "No browser started yet",
+  // which is indistinguishable from nothing happening — through an entire
+  // filesystem or desktop task.
+  it('is true once the agent actually does something', () => {
     expect(deckHasContent(session([
-      { type: 'thinking', text: 'considering' },
       { type: 'tool_call', name: 'Bash', args: {}, iteration: 1 },
-      { type: 'tool_result', name: 'Bash', ok: true, preview: 'done', ms: 12 },
-    ]))).toBe(false);
+    ]))).toBe(true);
+  });
+
+  // A draft is one navigation away from a real page; taking the rect would
+  // mean detaching a browser view that is about to be needed.
+  it('is false for a draft session whatever it has emitted', () => {
+    expect(deckHasContent(session([
+      { type: 'tool_call', name: 'Bash', args: {}, iteration: 1 },
+    ], 'draft'))).toBe(false);
   });
 
   it('is true once an artifact card exists', () => {

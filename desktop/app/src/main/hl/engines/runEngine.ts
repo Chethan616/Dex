@@ -15,6 +15,7 @@ import { engineLogger } from '../../logger';
 import { resolveAuth, loadOpenAIKey, loadClaudeSubscriptionType, loadBrowserCodeConfig } from '../../identity/authStore';
 import { helpersPath, skillPath } from '../harness';
 import { get as getAdapter } from './registry';
+import { applyKnownFolderEnv } from '../../startup/knownFolders';
 import { spawnCli } from './cliSpawn';
 import { registerResourceOwner, unregisterResourceOwner } from '../../resourceMonitor';
 import type {
@@ -235,7 +236,9 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
   };
   const wrappedPrompt = adapter.wrapPrompt(spawnCtx);
   const args = adapter.buildSpawnArgs(spawnCtx, wrappedPrompt);
-  const env = adapter.buildEnv(spawnCtx, { ...process.env });
+  // Where the user's Desktop/Documents/Downloads actually are. Redirection
+  // makes ~/Desktop a real but wrong directory, so the agent needs told.
+  const env = applyKnownFolderEnv(adapter.buildEnv(spawnCtx, { ...process.env }));
 
   engineLogger.info('engines.run.spawn', {
     engineId: adapter.id,

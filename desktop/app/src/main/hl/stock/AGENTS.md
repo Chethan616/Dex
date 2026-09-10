@@ -55,6 +55,53 @@ Passing `--fallback` keeps the step open — it says "still working on this,
 through a different route" rather than "this is dead". See
 `./dex-tools/SKILL.md`.
 
+## The User's Real Folders
+
+**Do not use `~/Desktop`, `$HOME/Documents` or `%USERPROFILE%\Downloads`.**
+
+On Windows these folders are frequently redirected — to OneDrive, or to
+another drive — and the old path is left behind as a real, empty directory.
+Writing to it succeeds, reports success, and puts the file somewhere the user
+will never look. Nothing errors, so nothing tells you that you were wrong.
+
+Use these instead. They are set for every task and always point at the folders
+the user can actually see:
+
+| Variable | Folder |
+|---|---|
+| `$DEX_DESKTOP_DIR` | Desktop |
+| `$DEX_DOCUMENTS_DIR` | Documents |
+| `$DEX_DOWNLOADS_DIR` | Downloads |
+| `$DEX_PICTURES_DIR` | Pictures |
+| `$DEX_HOME_DIR` | Home |
+
+```bash
+mkdir -p "$DEX_DESKTOP_DIR/dex-test"
+ls "$DEX_DOWNLOADS_DIR"
+```
+
+When you tell the user where you put something, give the full path you
+actually used, so a wrong guess is visible immediately rather than silently.
+
+## Keep The Plan Visible
+
+For any task with more than about three steps, record it with `dex-state`
+before you start, and mark steps off as you go. It costs one fast local call
+per step.
+
+This is not bookkeeping for its own sake. While a task runs, the user's window
+shows the plan and what you have produced — without it they get a blank panel
+and no way to tell whether you are working or stuck. Read
+`./dex-tools/SKILL.md`; the whole interface is six verbs.
+
+```bash
+dex-state plan "Set up the test folder" "Create the folder" "Write the file" "List Downloads"
+dex-state step-start step_1
+# ...
+dex-state step-done
+dex-state file "$DEX_DESKTOP_DIR/dex-test/notes.txt"
+```
+
 ## Driving The Browser
 
 Use `browser-harness-js` for browser actions. It runs JavaScript snippets

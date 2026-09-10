@@ -6,7 +6,6 @@ import { CommandBar } from './CommandBar';
 import { SettingsPane } from './SettingsPane';
 import { useVimKeys } from './useVimKeys';
 import { useSessionsQuery, useUpdateSession } from './useSessionsQuery';
-import dexWordmark from '../assets/dex-wordmark.png';
 import { MemoryIndicator } from './MemoryIndicator';
 import { Sidebar } from './Sidebar';
 import { MOCK_SESSIONS } from './mock-data';
@@ -584,10 +583,9 @@ export function HubApp(): React.ReactElement {
   const selectedSessionId = sessions[focusIndex]?.id ?? null;
 
   return (
-    <div className="hub-root">
+    <div className="hub-root" data-tabs-position={tabsPosition}>
       <header className="hub-toolbar">
         <div className="hub-toolbar__left">
-          <img className="hub-toolbar__wordmark" src={dexWordmark} alt="DEX" draggable={false} />
           <MemoryIndicator />
         </div>
         <div className="hub-toolbar__center">

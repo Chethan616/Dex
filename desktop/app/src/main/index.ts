@@ -155,6 +155,14 @@ if (resolvedUserData.value) {
 // ---------------------------------------------------------------------------
 // Remote debugging port — MUST be called before app.whenReady()
 // ---------------------------------------------------------------------------
+// Windows groups taskbar buttons and picks the jump-list identity by
+// AppUserModelID. Without one set explicitly, an unpackaged run inherits
+// Electron's, so the taskbar says "Electron" with the Electron icon even
+// after the window icon is correct.
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.chethan616.dex');
+}
+
 const resolvedCdp = resolveCdpPort(process.argv);
 app.commandLine.appendSwitch('remote-debugging-port', String(resolvedCdp.port));
 setAnnouncedCdpPort(resolvedCdp.port);

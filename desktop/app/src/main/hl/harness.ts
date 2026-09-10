@@ -95,7 +95,7 @@ export function bootstrapHarness(): void {
   // existing users. AGENTS.md is the harness manual, not agent-editable
   // state — safe to overwrite so new sections (domain-skills, etc.) land
   // without the user deleting their userData.
-  const sentinel = 'Choosing An Interface';
+  const sentinel = "The User's Real Folders";
   const needsSkill = !fs.existsSync(sp) || (() => {
     try { return !fs.readFileSync(sp, 'utf-8').includes(sentinel); }
     catch { return true; }

@@ -13,7 +13,8 @@
  * it has got, the files that were found, the screenshots being taken. The
  * moment a page loads, the native view goes back on top and this disappears.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { DashboardBackground } from './DashboardBackground';
 import type { AgentSession, ArtifactItem, HlEvent, TaskState, TaskStep } from './types';
 
 type ArtifactEvent = Extract<HlEvent, { type: 'artifact' }>;
@@ -221,11 +222,111 @@ function ScreenshotCard({ shots }: { shots: ScreenshotEvent[] }): React.ReactEle
  * — and detaching it for an empty deck would replace a live page with nothing.
  */
 export function deckHasContent(session: AgentSession): boolean {
+  // A draft has produced nothing and is usually one navigation away from
+  // showing a real page. Claiming the rect there would mean detaching a
+  // browser view that is about to be needed.
+  if (session.status === 'draft') return false;
+
   for (const event of session.output) {
     if (event.type === 'artifact' || event.type === 'screenshot') return true;
     if (event.type === 'task_state' && event.state.steps.length > 0) return true;
+    // Any real activity is enough. Until the browser navigates, this rect
+    // would otherwise read "No browser started yet" through an entire
+    // filesystem or desktop task — indistinguishable from nothing happening.
+    if (event.type === 'tool_call' || event.type === 'file_output') return true;
   }
   return false;
+}
+
+/**
+ * What the agent is doing right now, read off the event stream it already
+ * produces.
+ *
+ * Every number here is derived from events that were being emitted anyway, so
+ * this costs nothing: no extra model calls, no extra tool calls, no work asked
+ * of the agent. It exists because a long non-browser task otherwise shows an
+ * empty rectangle, and "nothing on screen" and "nothing happening" look
+ * identical from the outside.
+ */
+function ActivityCard({ session }: { session: AgentSession }): React.ReactElement {
+  const [now, setNow] = useState(() => Date.now());
+
+  const running = session.status === 'running';
+  useEffect(() => {
+    if (!running) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [running]);
+
+  const stats = useMemo(() => {
+    let tools = 0;
+    let lastTool: string | null = null;
+    let lastThought: string | null = null;
+    const files: Array<{ name: string; path: string; size?: number }> = [];
+
+    for (const event of session.output) {
+      if (event.type === 'tool_call') {
+        tools += 1;
+        lastTool = event.name;
+      } else if (event.type === 'file_output') {
+        files.push({ name: event.name, path: event.path, size: event.size });
+      } else if (event.type === 'thinking') {
+        const text = event.text.trim();
+        if (text) lastThought = text;
+      }
+    }
+    return { tools, lastTool, lastThought, files: files.slice(-6) };
+  }, [session.output]);
+
+  const elapsed = Math.max(0, Math.floor((now - session.createdAt) / 1000));
+  const elapsedLabel = elapsed < 60
+    ? `${elapsed}s`
+    : `${Math.floor(elapsed / 60)}m ${String(elapsed % 60).padStart(2, '0')}s`;
+
+  return (
+    <section className="deck-card deck-card--activity">
+      <header className="deck-card__header">
+        <span className="deck-card__title">
+          {running ? (stats.lastTool ?? 'Working') : 'Nothing running'}
+        </span>
+        {running ? <span className="deck-pulse" aria-hidden="true" /> : null}
+      </header>
+
+      {stats.lastThought ? (
+        <p className="deck-activity__thought">{stats.lastThought.slice(0, 240)}</p>
+      ) : null}
+
+      <div className="deck-activity__stats">
+        <div className="deck-stat">
+          <span className="deck-stat__value">{elapsedLabel}</span>
+          <span className="deck-stat__label">elapsed</span>
+        </div>
+        <div className="deck-stat">
+          <span className="deck-stat__value">{stats.tools}</span>
+          <span className="deck-stat__label">{stats.tools === 1 ? 'action' : 'actions'}</span>
+        </div>
+        <div className="deck-stat">
+          <span className="deck-stat__value">{stats.files.length}</span>
+          <span className="deck-stat__label">{stats.files.length === 1 ? 'file' : 'files'}</span>
+        </div>
+      </div>
+
+      {stats.files.length > 0 ? (
+        <div className="deck-plan__files">
+          {stats.files.map((file) => (
+            <button
+              className="deck-plan__file"
+              key={file.path}
+              onClick={() => reveal(file.path)}
+              title={file.path}
+            >
+              {file.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 export function PreviewDeck({
@@ -262,15 +363,31 @@ export function PreviewDeck({
   }, [session.output]);
 
   const hasPlan = taskState != null && taskState.steps.length > 0;
-  if (!hasPlan && artifacts.length === 0 && shots.length === 0) return <>{placeholder}</>;
+  const hasResults = hasPlan || artifacts.length > 0 || shots.length > 0;
+
+  // A draft session has produced nothing yet and is about to open a browser;
+  // showing an activity panel there would flash for a second and vanish. The
+  // original placeholder is the honest thing to show.
+  if (session.status === 'draft') return <>{placeholder}</>;
 
   return (
     <div className="deck">
-      {shots.length > 0 ? <ScreenshotCard shots={shots} /> : null}
-      {artifacts.map((artifact, index) => (
-        <ArtifactCard event={artifact} key={`artifact-${index}`} />
-      ))}
-      {hasPlan && taskState ? <PlanCard state={taskState} /> : null}
+      {/* The mark, in the same dot field as the dashboard. Costs one GPU
+          shader and nothing else — it is what makes an idle panel feel like
+          part of the app rather than a gap in it. */}
+      <div className="deck__backdrop" aria-hidden="true">
+        <DashboardBackground />
+      </div>
+
+      <div className="deck__content">
+        {shots.length > 0 ? <ScreenshotCard shots={shots} /> : null}
+        {artifacts.map((artifact, index) => (
+          <ArtifactCard event={artifact} key={`artifact-${index}`} />
+        ))}
+        {hasPlan && taskState ? <PlanCard state={taskState} /> : null}
+        <ActivityCard session={session} />
+        {!hasResults ? <div className="deck__note">{placeholder}</div> : null}
+      </div>
     </div>
   );
 }

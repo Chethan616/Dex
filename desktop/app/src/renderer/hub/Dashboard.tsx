@@ -9,6 +9,7 @@ import { STATUS_LABEL } from './constants';
 import { TaskInput } from './TaskInput';
 import type { TaskInputHandle } from './TaskInput';
 import { DashboardBackground } from './DashboardBackground';
+import dexWordmark from '../assets/dex-wordmark.png';
 import { taglineFor } from './taglines';
 import type { AgentSession } from './types';
 
@@ -184,6 +185,7 @@ export function Dashboard({ sessions, onSwitchToGrid, onSelectSession, onSubmitT
   return (
     <div className={`dashboard${isDragging ? ' dashboard--dragging' : ''}`}>
       <DashboardBackground />
+      <img className="dashboard__wordmark" src={dexWordmark} alt="DEX" draggable={false} />
       <p className="dashboard__tagline">{tagline}</p>
       <div className="dashboard__hero">
         <TaskInput ref={taskInputRef} onSubmit={onSubmitTask} />
