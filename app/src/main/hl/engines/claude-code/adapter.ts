@@ -60,6 +60,15 @@ function stringifyToolResult(content: unknown): { text: string; isError: boolean
 // ── adapter ─────────────────────────────────────────────────────────────────
 
 const claudeCodeAdapter: EngineAdapter = {
+  // Aliases rather than dated ids: `claude --model` resolves these to whatever
+  // the current release points at, so the list does not silently rot when a
+  // new snapshot ships. Omitting --model entirely keeps the CLI's own default,
+  // which is what "Default" below means.
+  selectableModels: [
+    { id: 'opus', label: 'Opus', hint: 'Most capable' },
+    { id: 'sonnet', label: 'Sonnet', hint: 'Balanced' },
+    { id: 'haiku', label: 'Haiku', hint: 'Fastest' },
+  ],
   id: ID,
   displayName: DISPLAY,
   binaryName: BIN,
@@ -146,6 +155,7 @@ const claudeCodeAdapter: EngineAdapter = {
       '--dangerously-skip-permissions',
     ];
     if (_ctx.resumeSessionId) args.push('--resume', _ctx.resumeSessionId);
+    if (_ctx.model) args.push('--model', _ctx.model);
     // The prompt deliberately does NOT go in argv — see getStdinPayload.
     return args;
   },

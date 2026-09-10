@@ -249,7 +249,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getPlatform: (): Promise<string> => ipcRenderer.invoke('shell:get-platform'),
   },
   sessions: {
-    listEngines: (): Promise<Array<{ id: string; displayName: string; binaryName: string }>> =>
+    listEngines: (): Promise<Array<{ id: string; displayName: string; binaryName: string; selectableModels?: Array<{ id: string; label: string; hint?: string }> }>> =>
       ipcRenderer.invoke('sessions:list-engines'),
     engineStatus: (engineId: string): Promise<{
       id: string;

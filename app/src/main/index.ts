@@ -1021,6 +1021,7 @@ app.whenReady().then(async () => {
       cdpPort: resolvedCdp.port,
       signal: abortController.signal,
       resumeSessionId: sessionManager.getEngineSessionId(validatedId),
+      model: sessionManager.getSessionModel(validatedId) ?? undefined,
       onRunControl: bindRunControl(validatedId, runId),
       onSessionId: (sid) => sessionManager.setEngineSessionId(validatedId, sid),
       onModelResolved: ({ model }) => sessionManager.setSessionModel(validatedId, model),
@@ -1130,6 +1131,7 @@ app.whenReady().then(async () => {
         webContents: view.webContents,
         cdpPort: resolvedCdp.port,
         signal: abortController.signal,
+        model: sessionManager.getSessionModel(id) ?? undefined,
         onRunControl: bindRunControl(id, runId),
         onSessionId: (sid) => sessionManager.setEngineSessionId(id, sid),
         onModelResolved: ({ model }) => sessionManager.setSessionModel(id, model),
@@ -1197,26 +1199,33 @@ app.whenReady().then(async () => {
     let promptRaw: unknown;
     let attachmentsRaw: unknown;
     let engineRaw: unknown;
+    let modelRaw: unknown;
     if (typeof payload === 'string') {
       promptRaw = payload;
     } else if (payload && typeof payload === 'object') {
       promptRaw = (payload as { prompt?: unknown }).prompt;
       attachmentsRaw = (payload as { attachments?: unknown }).attachments;
       engineRaw = (payload as { engine?: unknown }).engine;
+      modelRaw = (payload as { model?: unknown }).model;
     } else {
-      throw new Error('sessions:create payload must be a string or { prompt, attachments?, engine? }');
+      throw new Error('sessions:create payload must be a string or { prompt, attachments?, engine?, model? }');
     }
     const validatedPrompt = assertString(promptRaw, 'prompt', 10000);
     const attachments = assertAttachments(attachmentsRaw);
     const engineId = engineRaw == null ? DEFAULT_ENGINE_ID : assertString(engineRaw, 'engine', 50);
+    // Empty/absent means "engine default" — we then omit the CLI's model flag
+    // entirely rather than pinning whatever we last guessed it supports.
+    const modelId = modelRaw == null || modelRaw === '' ? null : assertString(modelRaw, 'model', 100);
     mainLogger.info('main.sessions:create', {
       promptLength: validatedPrompt.length,
       attachmentCount: attachments.length,
       engineId,
+      modelId,
       attachmentMeta: attachments.map((a) => ({ name: a.name, mime: a.mime, size: a.bytes.byteLength })),
     });
     const id = sessionManager.createSession(validatedPrompt);
     sessionManager.setSessionEngine(id, engineId);
+    if (modelId) sessionManager.setSessionModel(id, modelId);
     if (attachments.length > 0) {
       const turnIndex = sessionManager.getNextAttachmentTurnIndex(id);
       for (const a of attachments) {
@@ -1323,7 +1332,9 @@ app.whenReady().then(async () => {
       cdpPort: resolvedCdp.port,
       signal: abortController.signal,
       // Rerun intentionally starts a fresh conversation; SessionManager.rerunSession
-      // already cleared any stored resume id.
+      // already cleared any stored resume id. The model choice is a property of
+      // the session, not the conversation, so it carries over.
+      model: sessionManager.getSessionModel(validatedId) ?? undefined,
       onRunControl: bindRunControl(validatedId, runId),
       onSessionId: (sid) => sessionManager.setEngineSessionId(validatedId, sid),
       onModelResolved: ({ model }) => sessionManager.setSessionModel(validatedId, model),
@@ -1426,7 +1437,12 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('sessions:list-engines', async () => {
     const { listAdapters } = await import('./hl/engines');
-    return listAdapters().map((a) => ({ id: a.id, displayName: a.displayName, binaryName: a.binaryName }));
+    return listAdapters().map((a) => ({
+      id: a.id,
+      displayName: a.displayName,
+      binaryName: a.binaryName,
+      selectableModels: a.selectableModels ? [...a.selectableModels] : undefined,
+    }));
   });
 
   ipcMain.handle('sessions:engine-status', async (_event, engineId: string) => {

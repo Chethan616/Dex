@@ -132,7 +132,9 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
   //    Anthropic key to OpenAI (or vice versa).
   let savedApiKey: string | undefined;
   let providerId: string | undefined;
-  let model: string | undefined;
+  // A model picked for this session takes precedence over any engine-level
+  // config default (browsercode reads one from its own config below).
+  let model: string | undefined = opts.model;
   let cliAuthed = false;
   try {
     if (adapter.id === 'codex') {
@@ -143,7 +145,7 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
       const cfg = await loadBrowserCodeConfig();
       if (cfg?.apiKey) savedApiKey = cfg.apiKey;
       if (cfg?.providerId) providerId = cfg.providerId;
-      if (cfg?.model) model = cfg.model;
+      if (!model && cfg?.model) model = cfg.model;
       // BrowserCode is configured exclusively through provider API keys in
       // Settings. Do not classify a saved provider key as CLI-managed OAuth.
       cliAuthed = false;

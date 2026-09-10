@@ -34,7 +34,7 @@ declare module '*.webp' {
 
 interface ElectronSessionAPI {
   create: (
-    promptOrPayload: string | { prompt: string; attachments?: Array<{ name: string; mime: string; bytes: Uint8Array }>; engine?: string },
+    promptOrPayload: string | { prompt: string; attachments?: Array<{ name: string; mime: string; bytes: Uint8Array }>; engine?: string; model?: string },
   ) => Promise<string>;
   start: (id: string) => Promise<void>;
   cancel: (id: string) => Promise<void>;
@@ -47,7 +47,7 @@ interface ElectronSessionAPI {
   revealOutput: (filePath: string) => Promise<{ revealed: boolean }>;
   listEditors: () => Promise<Array<{ id: string; name: string }>>;
   openInEditor: (editorId: string, filePath: string) => Promise<{ opened: boolean }>;
-  listEngines: () => Promise<Array<{ id: string; displayName: string; binaryName: string }>>;
+  listEngines: () => Promise<Array<{ id: string; displayName: string; binaryName: string; selectableModels?: Array<{ id: string; label: string; hint?: string }> }>>;
   engineStatus: (engineId: string) => Promise<{
     id: string;
     displayName: string;

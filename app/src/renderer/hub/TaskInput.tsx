@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { INPUT_PLACEHOLDER } from './constants';
 import { EnginePicker } from './EnginePicker';
+import { DEFAULT_MODEL_ID, ModelPicker } from './ModelPicker';
 import {
   classifyAttachmentMime,
   maxBytesForAttachmentMime,
@@ -27,6 +28,8 @@ export interface TaskInputSubmission {
   prompt: string;
   attachments: TaskInputAttachment[];
   engine: string;
+  /** '' means "use the engine's own default" — no model flag is sent. */
+  model: string;
 }
 
 interface TaskInputProps {
@@ -35,6 +38,9 @@ interface TaskInputProps {
 
 const ENGINE_STORAGE_KEY = 'hub.selectedEngine';
 const DEFAULT_ENGINE = 'claude-code';
+// Keyed per engine: "Opus" means nothing to Codex, so switching engines must
+// not carry a model id across to one that cannot honour it.
+const MODEL_STORAGE_PREFIX = 'hub.selectedModel.';
 
 function loadStoredEngine(): string {
   try {
@@ -42,6 +48,14 @@ function loadStoredEngine(): string {
     return v && v.length > 0 ? v : DEFAULT_ENGINE;
   } catch {
     return DEFAULT_ENGINE;
+  }
+}
+
+function loadStoredModel(engineId: string): string {
+  try {
+    return localStorage.getItem(MODEL_STORAGE_PREFIX + engineId) ?? DEFAULT_MODEL_ID;
+  } catch {
+    return DEFAULT_MODEL_ID;
   }
 }
 
@@ -86,6 +100,7 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [engine, setEngine] = useState<string>(() => loadStoredEngine());
+  const [model, setModel] = useState<string>(() => loadStoredModel(loadStoredEngine()));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -153,17 +168,25 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
     const trimmed = value.trim();
     if (!trimmed && attachments.length === 0) return;
     console.log('[TaskInput] submit', { promptLength: trimmed.length, attachmentCount: attachments.length });
-    onSubmit({ prompt: trimmed, attachments, engine });
+    onSubmit({ prompt: trimmed, attachments, engine, model });
     setValue('');
     setAttachments([]);
     setErrorMsg(null);
     textareaRef.current?.focus();
-  }, [value, attachments, engine, onSubmit]);
+  }, [value, attachments, engine, model, onSubmit]);
 
   const onEngineChange = useCallback((id: string) => {
     setEngine(id);
+    // Restore whatever model was last chosen *for that engine*, rather than
+    // keeping the outgoing engine's pick.
+    setModel(loadStoredModel(id));
     try { localStorage.setItem(ENGINE_STORAGE_KEY, id); } catch { /* ignore */ }
   }, []);
+
+  const onModelChange = useCallback((id: string) => {
+    setModel(id);
+    try { localStorage.setItem(MODEL_STORAGE_PREFIX + engine, id); } catch { /* ignore */ }
+  }, [engine]);
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -260,6 +283,7 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
             <PaperclipIcon />
           </button>
           <EnginePicker value={engine} onChange={onEngineChange} />
+          <ModelPicker engineId={engine} value={model} onChange={onModelChange} />
           <input
             ref={fileInputRef}
             type="file"

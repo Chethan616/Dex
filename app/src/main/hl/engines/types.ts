@@ -85,6 +85,11 @@ export interface EngineAdapter {
   readonly displayName: string;
   /** CLI binary on PATH. */
   readonly binaryName: string;
+  /** Models the user may pick for this engine, most capable first.
+   *  An empty list means "this engine has no model choice". The list lives on
+   *  the adapter rather than in the UI so the set of options and the flag that
+   *  carries them stay in one place. */
+  readonly selectableModels?: readonly { id: string; label: string; hint?: string }[];
 
   // Onboarding probes
   probeInstalled(): Promise<InstallProbe>;
@@ -136,6 +141,9 @@ export interface RunEngineOptions {
   harnessDir: string;
   attachments?: Array<{ name: string; mime: string; bytes: Buffer | Uint8Array }>;
   resumeSessionId?: string;
+  /** Model the user picked for this session. Undefined means "engine default",
+   *  in which case the adapter omits its model flag entirely. */
+  model?: string;
   signal?: AbortSignal;
   onRunControl?: (control: EngineRunControl) => void;
   onEvent: (e: HlEvent) => void;

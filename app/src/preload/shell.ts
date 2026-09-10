@@ -214,7 +214,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   sessions: {
     create: (
-      promptOrPayload: string | { prompt: string; attachments?: Array<{ name: string; mime: string; bytes: Uint8Array }>; engine?: string },
+      promptOrPayload: string | { prompt: string; attachments?: Array<{ name: string; mime: string; bytes: Uint8Array }>; engine?: string; model?: string },
     ): Promise<string> => ipcRenderer.invoke('sessions:create', promptOrPayload),
     start: (id: string): Promise<void> => ipcRenderer.invoke('sessions:start', id),
     cancel: (id: string): Promise<void> => ipcRenderer.invoke('sessions:cancel', id),
@@ -232,7 +232,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('sessions:list-editors'),
     openInEditor: (editorId: string, filePath: string): Promise<{ opened: boolean }> =>
       ipcRenderer.invoke('sessions:open-in-editor', { editorId, filePath }),
-    listEngines: (): Promise<Array<{ id: string; displayName: string; binaryName: string }>> =>
+    listEngines: (): Promise<Array<{ id: string; displayName: string; binaryName: string; selectableModels?: Array<{ id: string; label: string; hint?: string }> }>> =>
       ipcRenderer.invoke('sessions:list-engines'),
     engineStatus: (engineId: string): Promise<{
       id: string;

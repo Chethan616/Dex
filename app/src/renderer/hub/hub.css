@@ -1698,6 +1698,44 @@ button:focus:not(:focus-visible) {
   background-color: var(--color-status-warning, #e5a23b);
 }
 
+/* Model picker — same shape and tokens as the engine picker beside it, but
+   deliberately quieter: the engine is the primary choice and carries a logo,
+   the model is a refinement of it. Transparent until hovered so the pair does
+   not read as two equally-weighted controls. */
+.model-picker {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.model-picker__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-fg-tertiary);
+  border: 1px solid transparent;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.model-picker__toggle:hover,
+.model-picker__toggle[aria-expanded='true'] {
+  background-color: var(--color-surface-interactive);
+  border-color: var(--color-border-subtle);
+  color: var(--color-fg-primary);
+}
+
+.model-picker__name {
+  white-space: nowrap;
+}
+
 .engine-picker__menu {
   position: absolute;
   bottom: calc(100% + 4px);

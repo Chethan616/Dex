@@ -75,6 +75,12 @@ function isNarrativeItem(t: string | undefined): boolean {
 }
 
 const codexAdapter: EngineAdapter = {
+  // Codex takes `-m/--model`. Kept to aliases the CLI resolves itself so the
+  // list does not rot; omitting the flag keeps codex's own default.
+  selectableModels: [
+    { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna', hint: 'Balanced' },
+    { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', hint: 'Harder reasoning' },
+  ],
   id: ID,
   displayName: DISPLAY,
   binaryName: BIN,
@@ -134,10 +140,13 @@ const codexAdapter: EngineAdapter = {
     // getStdinPayload below for why we never pass the prompt via argv.
     // The bypass flag skips sandbox + approvals, mirroring Claude Code's
     // --dangerously-skip-permissions for this app-managed harness.
+    // `-m/--model` is omitted entirely when unset so codex keeps its own
+    // default rather than us pinning a model it may have moved on from.
+    const model = ctx.model ? ['--model', ctx.model] : [];
     if (ctx.resumeSessionId) {
-      return ['exec', 'resume', '--json', BYPASS_APPROVALS_FLAG, ctx.resumeSessionId, '-'];
+      return ['exec', 'resume', '--json', BYPASS_APPROVALS_FLAG, ...model, ctx.resumeSessionId, '-'];
     }
-    return ['exec', '--json', BYPASS_APPROVALS_FLAG, '-'];
+    return ['exec', '--json', BYPASS_APPROVALS_FLAG, ...model, '-'];
   },
 
   getStdinPayload(_ctx: SpawnContext, wrappedPrompt: string): string {

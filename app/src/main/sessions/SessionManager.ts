@@ -652,6 +652,11 @@ export class SessionManager extends EventEmitter {
     return this.sessionEngines.get(id) ?? null;
   }
 
+  /** The model chosen for this session, or null to use the engine's default. */
+  getSessionModel(id: string): string | null {
+    return this.sessions.get(id)?.model ?? null;
+  }
+
   setSessionModel(id: string, model: string | null): void {
     const session = this.sessions.get(id);
     if (!session) {
