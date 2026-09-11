@@ -76,8 +76,10 @@ export function bootstrapHarness(): void {
   try {
     fs.mkdirSync(dir, { recursive: true });
   } catch (err) {
+    // Without the harness directory the agent has no tools, but the app can
+    // still start, report it in Diagnostics and let the user fix permissions.
     mainLogger.error('harness.bootstrap.mkdir.failed', { dir, error: (err as Error).message });
-    throw err;
+    return;
   }
 
   const hp = helpersPath();
@@ -195,22 +197,54 @@ function materializeRawTree(opts: {
     return;
   }
 
+  // Wiping first keeps users in lockstep with the shipped tree and lets us
+  // delete retired files. But it is not worth the app failing to start over:
+  // a leftover Bun REPL holding a file open, an antivirus scanner, or a second
+  // instance mid-launch all produce EPERM here, and this runs at module load,
+  // so throwing took the whole app down with "App threw an error during load".
+  // Overwriting in place is a slightly worse outcome than a clean tree; not
+  // starting is a much worse one.
   try {
     fs.rmSync(target, { recursive: true, force: true });
   } catch (err) {
-    mainLogger.error(`harness.bootstrap.${logName}.clear.failed`, { target, error: (err as Error).message });
-    throw err;
+    mainLogger.warn(`harness.bootstrap.${logName}.clear.failed`, {
+      target,
+      error: (err as Error).message,
+      recovery: 'overwriting in place',
+    });
   }
 
   let bytes = 0;
+  let written = 0;
+  const locked: string[] = [];
   for (const [modulePath, content] of entries) {
     const rel = modulePath.slice(prefix.length);
     const outPath = path.join(target, rel);
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    fs.writeFileSync(outPath, content, 'utf-8');
-    if (executableBasenames?.has(path.basename(outPath))) fs.chmodSync(outPath, 0o755);
-    bytes += content.length;
+    try {
+      fs.mkdirSync(path.dirname(outPath), { recursive: true });
+      fs.writeFileSync(outPath, content, 'utf-8');
+      if (executableBasenames?.has(path.basename(outPath))) fs.chmodSync(outPath, 0o755);
+      bytes += content.length;
+      written += 1;
+    } catch (err) {
+      // One locked file must not cost the user the other eighty.
+      locked.push(rel);
+      mainLogger.warn(`harness.bootstrap.${logName}.write.failed`, {
+        path: outPath,
+        error: (err as Error).message,
+      });
+    }
   }
 
-  mainLogger.info(`harness.bootstrap.${logName}.wrote`, { target, files: entries.length, bytes });
+  if (locked.length > 0) {
+    mainLogger.error(`harness.bootstrap.${logName}.partial`, {
+      target,
+      written,
+      skipped: locked.length,
+      files: locked.slice(0, 10),
+      hint: 'A file is locked — usually a previous DEX instance is still running. Close it and restart.',
+    });
+  }
+
+  mainLogger.info(`harness.bootstrap.${logName}.wrote`, { target, files: written, bytes });
 }

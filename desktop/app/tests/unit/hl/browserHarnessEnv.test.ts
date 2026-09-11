@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import nodePath from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   applyBrowserHarnessEnv,
@@ -75,38 +76,47 @@ describe('browser harness environment', () => {
  */
 describe('applyBrowserHarnessEnv PATH handling', () => {
   const ctx = spawnContext('target-1');
+  // Built rather than written literally: a backslash-laden string is easy to
+  // get wrong in a way that still passes, because both the fixture and the
+  // assertion degrade together.
+  const SYSTEM32 = nodePath.join('C:', 'Windows', 'system32');
+  const NODEJS = nodePath.join('C:', 'Program Files', 'nodejs');
 
-  it('extends an existing Path (Windows casing) rather than adding PATH', () => {
-    const env = applyBrowserHarnessEnv(ctx, { Path: 'C:\Windows\system32;C:\Program Files\nodejs' });
+  const pathKeys = (env: NodeJS.ProcessEnv): string[] =>
+    Object.keys(env).filter((key) => key.toLowerCase() === 'path');
 
-    const pathKeys = Object.keys(env).filter((key) => key.toLowerCase() === 'path');
-    expect(pathKeys).toEqual(['Path']);
-    // The system entries must survive: npx lives there.
-    expect(env.Path).toContain('C:\Program Files\nodejs');
+  it('extends an existing Path (Windows casing) rather than adding a second PATH', () => {
+    const env = applyBrowserHarnessEnv(ctx, { Path: [SYSTEM32, NODEJS].join(nodePath.delimiter) });
+
+    expect(pathKeys(env)).toEqual(['Path']);
+    // The system entries must survive: npx lives there, and every MCP server
+    // is launched through it.
+    expect(env.Path).toContain(NODEJS);
     expect(env.Path).toContain('dex-tools');
   });
 
   it('extends an existing PATH when that is the casing in use', () => {
-    const env = applyBrowserHarnessEnv(ctx, { PATH: '/usr/bin:/bin' });
+    const env = applyBrowserHarnessEnv(ctx, { PATH: ['/usr/bin', '/bin'].join(nodePath.delimiter) });
 
-    const pathKeys = Object.keys(env).filter((key) => key.toLowerCase() === 'path');
-    expect(pathKeys).toEqual(['PATH']);
+    expect(pathKeys(env)).toEqual(['PATH']);
     expect(env.PATH).toContain('/usr/bin');
     expect(env.PATH).toContain('dex-tools');
   });
 
   it('puts the harness directories first so its own tools win', () => {
-    const env = applyBrowserHarnessEnv(ctx, { Path: 'C:\Windows\system32' });
-    expect(env.Path?.indexOf('browser-harness-js')).toBeLessThan(
-      env.Path?.indexOf('C:\Windows\system32') ?? -1,
-    );
+    const env = applyBrowserHarnessEnv(ctx, { Path: SYSTEM32 });
+    const value = env.Path ?? '';
+
+    expect(value.indexOf('browser-harness-js')).toBeGreaterThanOrEqual(0);
+    expect(value.indexOf('browser-harness-js')).toBeLessThan(value.indexOf(SYSTEM32));
   });
 
   it('still works when the environment has no path at all', () => {
     const env = applyBrowserHarnessEnv(ctx, {});
-    const pathKeys = Object.keys(env).filter((key) => key.toLowerCase() === 'path');
-    expect(pathKeys).toHaveLength(1);
-    expect(env[pathKeys[0]]).toContain('dex-tools');
+    const keys = pathKeys(env);
+
+    expect(keys).toHaveLength(1);
+    expect(env[keys[0]]).toContain('dex-tools');
   });
 });
 

@@ -546,7 +546,18 @@ function McpSection(): React.ReactElement {
 
   const reload = useCallback(async () => {
     const next = await window.electronAPI?.settings?.mcp?.list?.();
-    if (next) setRows(next);
+    if (!next) return;
+    setRows(next);
+    // DEX shakes hands with every enabled connection at launch, so adopt those
+    // results rather than spawning the servers again just because the user
+    // opened Settings.
+    setChecks((current) => {
+      const seeded = { ...current };
+      for (const row of next) {
+        if (row.verified && !seeded[row.id]) seeded[row.id] = row.verified;
+      }
+      return seeded;
+    });
   }, []);
 
   useEffect(() => { void reload(); }, [reload]);

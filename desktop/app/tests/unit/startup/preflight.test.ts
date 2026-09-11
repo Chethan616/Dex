@@ -11,6 +11,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, accessSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import path from 'node:path';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs')>();
@@ -180,10 +181,32 @@ describe('runPreflight', () => {
     expect(report.ok).toBe(false);
   });
 
+  // npx absence is invisible otherwise: connections verify, then fail to start
+  // inside the agent, and DEX quietly drives a website instead.
+  it('reports missing npx as degraded and names what it costs', () => {
+    onlyTheseExist([]);
+    const { check } = checkById({}, 'node');
+    expect(check.status).toBe('degraded');
+    expect(check.detail).toMatch(/browser/i);
+    expect(check.fix?.command).toContain('NodeJS');
+  });
+
+  it('finds npx on PATH', () => {
+    const isWin = process.platform === 'win32';
+    const dir = isWin ? path.join('C:', 'Program Files', 'nodejs') : '/usr/bin';
+    const npx = path.join(dir, isWin ? 'npx.cmd' : 'npx');
+    onlyTheseExist([npx]);
+
+    const { check } = checkById({ PATH: dir }, 'node');
+
+    expect(check.status).toBe('ok');
+    expect(check.resolvedPath).toBe(npx);
+  });
+
   it('formats one loud line per check for the log', () => {
     onlyTheseExist([]);
     const lines = formatPreflightForLog(runPreflight({ ...base, env: {} }));
-    expect(lines).toHaveLength(4);
+    expect(lines).toHaveLength(5);
     expect(lines.some((line) => line.startsWith('[warn]'))).toBe(true);
     if (process.platform === 'win32') {
       expect(lines.some((line) => line.startsWith('[FAIL]'))).toBe(true);

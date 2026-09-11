@@ -196,7 +196,19 @@ let isQuitting = false;
 const sessionManager = new SessionManager(path.join(app.getPath('userData'), 'sessions.db'));
 // Bootstrap the editable helpers harness — writes stock helpers.js + TOOLS.json
 // to <userData>/harness/ on first run, preserves user edits on subsequent runs.
-bootstrapHarness();
+//
+// This runs at module load, so anything thrown here stops the app before a
+// window exists: the user sees "App threw an error during load" and nothing
+// else. A harness that failed to refresh is a degraded app; a harness that
+// throws is no app at all. Diagnostics reports the state either way.
+try {
+  bootstrapHarness();
+} catch (err) {
+  mainLogger.error('main.bootstrapHarness.failed', {
+    error: (err as Error).message,
+    hint: 'The agent may be missing tools. Usually another DEX instance is holding files open.',
+  });
+}
 /**
  * The environment report, refreshed at startup and on demand from Settings.
  *
@@ -206,6 +218,13 @@ bootstrapHarness();
  * agent that mysteriously does less than it should.
  */
 let preflightReport: PreflightReport | null = null;
+
+/**
+ * Last handshake result per connection, from the startup check or an explicit
+ * re-check. Settings reads it so the dots are already meaningful when the pane
+ * opens, instead of every visit paying for a fresh round of npx spawns.
+ */
+const mcpVerifyCache = new Map<string, { ok: boolean; serverName?: string; toolCount?: number; error?: string }>();
 
 function refreshPreflight(cdpVerified: boolean | null = null): PreflightReport {
   preflightReport = runPreflight({
@@ -1539,13 +1558,18 @@ app.whenReady().then(async () => {
     prewarmEngineStatus(listAdapters().map((adapter) => adapter.id), probeEngineStatus);
   });
 
-  // Learn each connected server's tool names once per launch.
+  // Shake hands with every enabled connection at launch.
   //
-  // The prompt names the tools so the agent does not have to search for them,
-  // and the names come from a tools/list call. Waiting for someone to open
-  // Settings to trigger that meant the first task of a session had no names,
-  // and an agent with a prefix but no names guesses — which is exactly how a
-  // GitHub task ended up driving github.com.
+  // Two reasons, and both were real complaints. The prompt names each server's
+  // tools so the agent never has to search for them, and those names come from
+  // a tools/list call — waiting for someone to open Settings meant the first
+  // task of a session had no names, and an agent with only a prefix guesses.
+  // And a connection that is on should show as connected the moment the app
+  // opens, rather than the first time the user happens to visit Settings.
+  //
+  // Always verify, not only when names are missing: the token may have been
+  // revoked since, and a stale "connected" is exactly the lie this check
+  // exists to prevent.
   void (async () => {
     try {
       const { findServerDefinition } = await import('./mcp/catalog');
@@ -1553,21 +1577,25 @@ app.whenReady().then(async () => {
       const { verifyServer } = await import('./mcp/client');
 
       for (const connection of await listConnections()) {
-        if (!connection.enabled || connection.toolNames?.length) continue;
+        if (!connection.enabled) continue;
         const definition = findServerDefinition(connection.id);
         if (!definition) continue;
+
         const result = await verifyServer(definition, connection.values);
+        mcpVerifyCache.set(connection.id, result);
         if (result.ok && result.toolNames?.length) {
           await setConnection(connection.id, { toolNames: result.toolNames });
-          mainLogger.info('mcp.prewarm.learnedTools', {
-            id: connection.id,
-            toolCount: result.toolNames.length,
-          });
         }
+        mainLogger.info('mcp.startupHandshake', {
+          id: connection.id,
+          ok: result.ok,
+          toolCount: result.toolCount ?? 0,
+          error: result.error?.slice(0, 120),
+        });
       }
     } catch (err) {
-      // Best effort. A task still runs; the agent just has to enumerate.
-      mainLogger.warn('mcp.prewarm.failed', { error: (err as Error).message });
+      // Best effort. Tasks still run; the agent just has to enumerate.
+      mainLogger.warn('mcp.startupHandshake.failed', { error: (err as Error).message });
     }
   })();
 
@@ -1886,6 +1914,9 @@ app.whenReady().then(async () => {
           present: Boolean(values[field.key] && values[field.key].trim().length > 0),
         })),
         missing: missingCredentials(definition, values).map((field) => field.key),
+        // undefined means "not checked yet", which the UI shows as pending
+        // rather than as failure.
+        verified: mcpVerifyCache.get(definition.id),
       };
     });
   });
@@ -1906,6 +1937,7 @@ app.whenReady().then(async () => {
     if (!connection) return { ok: false, error: 'Not configured yet.' };
 
     const result = await verifyServer(definition, connection.values);
+    mcpVerifyCache.set(validated, result);
     // Keep the tool names: the next task's prompt names them outright, which
     // is what stops the agent hunting for tools and giving up.
     if (result.ok && result.toolNames && result.toolNames.length > 0) {

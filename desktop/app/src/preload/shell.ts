@@ -18,6 +18,7 @@ interface McpConnectionInfo {
   enabled: boolean;
   credentials: Array<{ key: string; label: string; secret: boolean; help?: string; present: boolean }>;
   missing: string[];
+  verified?: { ok: boolean; serverName?: string; toolCount?: number; error?: string };
 }
 
 type SettingsOpenPayload = { focusBrowserCodeProvider?: string };

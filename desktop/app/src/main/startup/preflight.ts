@@ -40,7 +40,7 @@ export interface PreflightFix {
 }
 
 export interface PreflightCheck {
-  id: 'git-bash' | 'bun' | 'cdp-port' | 'harness-dir';
+  id: 'git-bash' | 'bun' | 'node' | 'cdp-port' | 'harness-dir';
   label: string;
   status: CheckStatus;
   /** What was actually found — a path, a port, a reason. */
@@ -226,6 +226,48 @@ export function findBun(env: NodeJS.ProcessEnv): string | undefined {
   return bunCandidates(env).find(fileExists);
 }
 
+/**
+ * Find npx, which every MCP server is launched through.
+ *
+ * Worth its own check because its absence is invisible: connections verify and
+ * then fail to start inside the agent, and the only symptom is DEX quietly
+ * driving a website instead of calling an API.
+ */
+export function findNpx(env: NodeJS.ProcessEnv): string | undefined {
+  const names = process.platform === 'win32' ? ['npx.cmd', 'npx.exe', 'npx'] : ['npx'];
+  const dirs = (env.PATH ?? env.Path ?? '').split(path.delimiter).filter(Boolean);
+
+  if (process.platform === 'win32') {
+    if (env.ProgramFiles) dirs.push(path.join(env.ProgramFiles, 'nodejs'));
+    if (env.APPDATA) dirs.push(path.join(env.APPDATA, 'npm'));
+  }
+
+  for (const dir of dirs) {
+    for (const name of names) {
+      const candidate = path.join(dir, name);
+      if (fileExists(candidate)) return candidate;
+    }
+  }
+  return undefined;
+}
+
+function checkNode(env: NodeJS.ProcessEnv): PreflightCheck {
+  const base = { id: 'node' as const, label: 'Node.js (npx)' };
+  const found = findNpx(env);
+  if (found) return { ...base, status: 'ok', detail: found, resolvedPath: found };
+
+  return {
+    ...base,
+    status: 'degraded',
+    detail: 'npx not found. Connected services (GitHub, Slack, Drive) cannot start without it, so DEX will use the browser for them instead.',
+    fix: {
+      summary: 'Install Node.js, then restart DEX.',
+      command: 'winget install --id OpenJS.NodeJS.LTS -e --source winget',
+      url: 'https://nodejs.org/',
+    },
+  };
+}
+
 function checkGitBash(env: NodeJS.ProcessEnv): PreflightCheck {
   const base = { id: 'git-bash' as const, label: 'Git for Windows (bash)' };
 
@@ -320,6 +362,7 @@ export function runPreflight(opts: {
   const checks = [
     checkGitBash(opts.env),
     checkBun(opts.env),
+    checkNode(opts.env),
     checkCdpPort(opts.cdpPort, opts.cdpVerified),
     checkHarnessDir(opts.harnessPath),
   ];

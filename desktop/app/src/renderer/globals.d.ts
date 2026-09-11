@@ -355,6 +355,8 @@ interface McpConnectionInfo {
   credentials: McpCredentialInfo[];
   /** Credential keys still needed before this server can start. */
   missing: string[];
+  /** Last handshake result, or undefined if not checked yet this launch. */
+  verified?: McpVerifyInfo;
 }
 
 interface McpVerifyInfo {
