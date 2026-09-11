@@ -143,7 +143,8 @@ const claudeCodeAdapter: EngineAdapter = {
     if (ctx.mcpBriefing && ctx.mcpBriefing.length > 0) {
       lines.push(
         ...ctx.mcpBriefing,
-        'Use those tools for anything involving these services. Do not open their websites and do not go looking for the tools first: the API is faster, costs a fraction of the tokens, and does not break when a page changes. Fall back to the browser only if a tool actually fails.',
+        'These mcp__ tools are already loaded and callable right now. Call them directly by name. Do NOT look them up with ToolSearch first — it only searches deferred tools and will report them as missing even though they work.',
+        'Use them for anything involving these services. Do not open their websites: the API is faster, costs a fraction of the tokens, and does not break when a page changes. Fall back to the browser only if a tool call actually returns an error.',
       );
     }
     if (ctx.attachmentRefs.length > 0) {

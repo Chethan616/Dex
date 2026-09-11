@@ -1539,6 +1539,38 @@ app.whenReady().then(async () => {
     prewarmEngineStatus(listAdapters().map((adapter) => adapter.id), probeEngineStatus);
   });
 
+  // Learn each connected server's tool names once per launch.
+  //
+  // The prompt names the tools so the agent does not have to search for them,
+  // and the names come from a tools/list call. Waiting for someone to open
+  // Settings to trigger that meant the first task of a session had no names,
+  // and an agent with a prefix but no names guesses — which is exactly how a
+  // GitHub task ended up driving github.com.
+  void (async () => {
+    try {
+      const { findServerDefinition } = await import('./mcp/catalog');
+      const { listConnections, setConnection } = await import('./mcp/store');
+      const { verifyServer } = await import('./mcp/client');
+
+      for (const connection of await listConnections()) {
+        if (!connection.enabled || connection.toolNames?.length) continue;
+        const definition = findServerDefinition(connection.id);
+        if (!definition) continue;
+        const result = await verifyServer(definition, connection.values);
+        if (result.ok && result.toolNames?.length) {
+          await setConnection(connection.id, { toolNames: result.toolNames });
+          mainLogger.info('mcp.prewarm.learnedTools', {
+            id: connection.id,
+            toolCount: result.toolNames.length,
+          });
+        }
+      }
+    } catch (err) {
+      // Best effort. A task still runs; the agent just has to enumerate.
+      mainLogger.warn('mcp.prewarm.failed', { error: (err as Error).message });
+    }
+  })();
+
   ipcMain.handle('sessions:engine-status', async (_event, engineId: string) => {
     const validated = assertString(engineId, 'engineId', 50);
     // Cached: probing spawns two processes per engine, so an uncached picker

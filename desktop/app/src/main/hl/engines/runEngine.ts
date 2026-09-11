@@ -241,6 +241,11 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
         // issues actually needs, was not among them. A few hundred characters
         // of prompt is nothing against a browser session.
         const names = (server.toolNames ?? []).slice(0, 40).map((name) => `${prefix}${name}`);
+        // MCP tools are loaded up front, not deferred, so ToolSearch does not
+        // find them — it only searches deferred tools. An agent that reached
+        // for ToolSearch first got "No matching deferred tools found" for a
+        // tool that existed and was callable, concluded there were none, and
+        // drove the website instead. Hence the explicit "call them directly".
         const detail = names.length > 0
           ? ` Its tools: ${names.join(', ')}.`
           : ` Its tools are named ${prefix}*.`;
