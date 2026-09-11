@@ -302,6 +302,10 @@ export function Sidebar({ sessions, selectedId, onSelect, onNewAgent, onRowActio
 
   const pinned = useMemo(() => pinnedIds ?? new Set<string>(), [pinnedIds]);
   const orderedSessions = useMemo(() => orderSessionsForSidebar(data, pinned), [data, pinned]);
+  const runningCount = useMemo(
+    () => orderedSessions.filter((s) => s.status === 'running').length,
+    [orderedSessions],
+  );
 
   if (mode === 'top') {
     return (
@@ -330,6 +334,15 @@ export function Sidebar({ sessions, selectedId, onSelect, onNewAgent, onRowActio
     <aside className="sidebar" aria-label="Agent sessions">
       <div className="sidebar__header">
         <span className="sidebar__header-title">Agents</span>
+        {/* Two numbers, and only when they say something: the total, and how
+            many are actually working. A count of zero is already obvious from
+            the empty list below. */}
+        {orderedSessions.length > 0 && (
+          <span className="sidebar__header-count">
+            {runningCount > 0 && <span className="sidebar__header-running" />}
+            {orderedSessions.length}
+          </span>
+        )}
         <div className="sidebar__header-actions">
           <button
             type="button"
@@ -346,11 +359,26 @@ export function Sidebar({ sessions, selectedId, onSelect, onNewAgent, onRowActio
       </div>
 
       <div className="sidebar__groups">
-        <div className="sidebar__group-body">
-          {orderedSessions.map((s) => (
-            <SessionRow key={s.id} s={s} selected={s.id === selectedId} onSelect={onSelect} onAction={onRowAction} pinned={pinned.has(s.id)} />
-          ))}
-        </div>
+        {orderedSessions.length === 0 ? (
+          // An empty panel with a + in the corner leaves the user to work out
+          // that the + is the way in. Say it.
+          <div className="sidebar__empty">
+            <span className="sidebar__empty-title">No agents yet</span>
+            <span className="sidebar__empty-hint">
+              Describe a task on the right, or press
+              {' '}
+              <kbd className="sidebar__kbd">+</kbd>
+              {' '}
+              to start one.
+            </span>
+          </div>
+        ) : (
+          <div className="sidebar__group-body">
+            {orderedSessions.map((s) => (
+              <SessionRow key={s.id} s={s} selected={s.id === selectedId} onSelect={onSelect} onAction={onRowAction} pinned={pinned.has(s.id)} />
+            ))}
+          </div>
+        )}
       </div>
 
     </aside>

@@ -92,6 +92,12 @@ import {
 } from './startup/cli';
 import { assertString, assertAttachments, type ValidatedAttachment } from './ipc-validators';
 import { runPreflight, formatPreflightForLog, type PreflightReport } from './startup/preflight';
+import {
+  getEngineStatus,
+  invalidateEngineStatus,
+  prewarmEngineStatus,
+  type EngineStatus,
+} from './hl/engines/statusCache';
 import { TaskStateMutationSchema } from '../shared/session-schemas';
 // Agent loop: CLI subprocess driving the browser harness. Engine is
 // pluggable (claude-code, codex, …) — see src/main/hl/engines/.
@@ -1510,12 +1516,12 @@ app.whenReady().then(async () => {
     }));
   });
 
-  ipcMain.handle('sessions:engine-status', async (_event, engineId: string) => {
-    const validated = assertString(engineId, 'engineId', 50);
-    mainLogger.info('sessions.engine-status.request', { engineId: validated });
+  /** The real probe: two process spawns. Only ever called through the cache. */
+  const probeEngineStatus = async (engineId: string): Promise<EngineStatus> => {
+    mainLogger.info('sessions.engine-status.probe', { engineId });
     const { getAdapter } = await import('./hl/engines');
-    const adapter = getAdapter(validated);
-    if (!adapter) throw new Error(`unknown engine: ${validated}`);
+    const adapter = getAdapter(engineId);
+    if (!adapter) throw new Error(`unknown engine: ${engineId}`);
     const [installed, authed] = await Promise.all([adapter.probeInstalled(), adapter.probeAuthed()]);
     mainLogger.info('sessions.engine-status.result', {
       engineId: adapter.id,
@@ -1525,6 +1531,19 @@ app.whenReady().then(async () => {
       authError: authed.error,
     });
     return { id: adapter.id, displayName: adapter.displayName, installed, authed };
+  };
+
+  // Fill the cache before the user can reach a picker, so even the first open
+  // is instant rather than paying full price for six spawns.
+  void import('./hl/engines').then(({ listAdapters }) => {
+    prewarmEngineStatus(listAdapters().map((adapter) => adapter.id), probeEngineStatus);
+  });
+
+  ipcMain.handle('sessions:engine-status', async (_event, engineId: string) => {
+    const validated = assertString(engineId, 'engineId', 50);
+    // Cached: probing spawns two processes per engine, so an uncached picker
+    // open costs six. See statusCache.ts.
+    return getEngineStatus(validated, () => probeEngineStatus(validated));
   });
 
   ipcMain.handle('sessions:engine-login', async (_event, engineId: string, opts?: { deviceAuth?: boolean }) => {
@@ -1534,6 +1553,9 @@ app.whenReady().then(async () => {
     const adapter = getAdapter(validated);
     if (!adapter) throw new Error(`unknown engine: ${validated}`);
     const result = await adapter.openLoginInTerminal(opts);
+    // Logging in exists to change this answer; serving the pre-login state
+    // would make a successful login look like it failed.
+    invalidateEngineStatus(adapter.id);
     mainLogger.info('sessions.engine-login.result', {
       engineId: adapter.id,
       opened: result.opened,
@@ -1552,6 +1574,7 @@ app.whenReady().then(async () => {
     if (!adapter) throw new Error(`unknown engine: ${validated}`);
     const { runEngineInstall } = await import('./hl/engines/installer');
     const result = await runEngineInstall(adapter.id);
+    invalidateEngineStatus(adapter.id);
     const installed = await adapter.probeInstalled().catch((err) => ({
       installed: false,
       error: (err as Error).message,

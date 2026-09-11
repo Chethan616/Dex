@@ -14,7 +14,6 @@
  * moment a page loads, the native view goes back on top and this disappears.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { DashboardBackground } from './DashboardBackground';
 import type { AgentSession, ArtifactItem, HlEvent, TaskState, TaskStep } from './types';
 
 type ArtifactEvent = Extract<HlEvent, { type: 'artifact' }>;
@@ -372,13 +371,6 @@ export function PreviewDeck({
 
   return (
     <div className="deck">
-      {/* The mark, in the same dot field as the dashboard. Costs one GPU
-          shader and nothing else — it is what makes an idle panel feel like
-          part of the app rather than a gap in it. */}
-      <div className="deck__backdrop" aria-hidden="true">
-        <DashboardBackground />
-      </div>
-
       <div className="deck__content">
         {shots.length > 0 ? <ScreenshotCard shots={shots} /> : null}
         {artifacts.map((artifact, index) => (

@@ -1,9 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { subscribeThemeMode, resolveThemeMode, getThemeMode } from '../design/themeMode';
-// The full wordmark, at source resolution. The 192x96 copy used for the
-// on-screen <img> is too coarse to sample: the dot grid reads roughly one
-// cell per two texels, and the letterforms come out mushy at the joins.
-import dexMark from '../assets/dex-wordmark-hi.png';
 
 const FRAME_INTERVAL_MS = 1000 / 12;
 
@@ -41,12 +37,6 @@ uniform vec3 u_bg;
 uniform vec3 u_dot;
 uniform float u_mix;
 
-// The DEX wordmark itself, sampled as a texture rather than approximated in
-// code. Drawing the letterforms by hand would be a resemblance; sampling the
-// real artwork is the wordmark, in dots.
-uniform sampler2D u_logo;
-uniform float u_hasLogo;
-uniform float u_logoAspect;
 uniform vec3 u_accent;
 
 // Signature field: three slow ridges at different angles, interfering.
@@ -87,12 +77,8 @@ void main() {
 
   // Uniform dot lattice in pixel space — the medium is kept deliberately:
   // it is what makes the surface feel machined rather than painted.
-  // Grid pitch decides how much of the artwork survives. At 12px a pane-sized
-  // box gives roughly 68x34 cells, which is too coarse for the thin strokes in
-  // the letterforms — the joins fill in and the x stops reading as an x. 6px
-  // roughly quadruples the sample count and the wordmark resolves properly.
-  float DOT_SPACING = 6.0;
-  float MAX_RADIUS  = 1.9;
+  float DOT_SPACING = 12.0;
+  float MAX_RADIUS  = 3.0;
   vec2 cell = floor(gl_FragCoord.xy / DOT_SPACING);
   vec2 cellCenter = (cell + 0.5) * DOT_SPACING;
   float distPx = length(gl_FragCoord.xy - cellCenter);
@@ -106,51 +92,16 @@ void main() {
   // stating itself.
   float sizeCurve = pow(density, 3.4);
 
-  // -- the mark ------------------------------------------------------------
-  //
-  // Fit the artwork into a centred box, preserving its own proportions, and
-  // read its alpha at this cell. Everything below is driven by that one
-  // sample, so the shape is exact by construction.
-  float markAlpha = 0.0;
-  vec2 markUv = vec2(0.0);
-  if (u_hasLogo > 0.5) {
-    // Sized from the width, because the wordmark is wide (2:1) and driving it
-    // from height would push the letters off both edges.
-    float boxW = u_resolution.x * 0.66;
-    float boxH = boxW / max(u_logoAspect, 0.001);
-    // Never let it outgrow the viewport on a short window either.
-    float overflow = boxH / max(u_resolution.y * 0.55, 1.0);
-    if (overflow > 1.0) { boxW /= overflow; boxH /= overflow; }
+  // Accent rides the crests of the wave rather than sitting flat across the
+  // field, so the colour reads as the light in the surface instead of as a
+  // tint laid over it. Squared to keep it to the tops only.
+  float crest = pow(smoothstep(0.45, 1.0, density), 2.0);
 
-    vec2 boxOrigin = (u_resolution - vec2(boxW, boxH)) * 0.5;
-    markUv = (cellCenter - boxOrigin) / vec2(boxW, boxH);
-    if (markUv.x > 0.0 && markUv.x < 1.0 && markUv.y > 0.0 && markUv.y < 1.0) {
-      // Flip Y: texture space is top-down, gl_FragCoord is bottom-up.
-      markAlpha = texture(u_logo, vec2(markUv.x, 1.0 - markUv.y)).a;
-    }
-  }
+  float radius = MAX_RADIUS * sizeCurve;
+  float dotMask = 1.0 - smoothstep(radius - 0.6, radius + 0.4, distPx);
+  dotMask *= smoothstep(0.02, 0.14, density);
 
-  // A wave travelling along the letterforms rather than a global fade, so the
-  // wordmark reads as being drawn continuously instead of switching on and
-  // off. Shallow on purpose: at the old depth the trough dimmed whole letters
-  // out of legibility, which is the opposite of what a logo should do.
-  float sweep = sin((markUv.x * 1.6 + markUv.y * 0.5) * 3.0 - u_time * 1.1);
-  float blink = 0.78 + 0.22 * (sweep * 0.5 + 0.5);
-
-  // Tight threshold on alpha. The artwork's antialiased edge would otherwise
-  // scatter half-lit dots around every stroke and soften the shape; snapping
-  // it is what keeps the outline crisp at this grid pitch.
-  float markMask = smoothstep(0.42, 0.58, markAlpha) * blink;
-
-  // The mark sets a floor under the dot size, so it emerges from the existing
-  // field rather than replacing it — the ridges still move underneath.
-  // Mark dots run at full radius so the letterforms read as solid strokes
-  // against the sparser ambient field.
-  float radius = MAX_RADIUS * max(sizeCurve * 0.85, markMask);
-  float dotMask = 1.0 - smoothstep(radius - 0.5, radius + 0.35, distPx);
-  dotMask *= max(smoothstep(0.02, 0.14, density), markMask);
-
-  vec3 tint = mix(u_dot, u_accent, clamp(markMask * 1.35, 0.0, 1.0));
+  vec3 tint = mix(u_dot, u_accent, crest * 0.85);
   fragColor = vec4(mix(u_bg, tint, dotMask * u_mix), 1.0);
 }
 `;
@@ -220,48 +171,10 @@ export function DashboardBackground(): React.ReactElement {
     const bgLoc  = gl.getUniformLocation(program, 'u_bg');
     const dotLoc = gl.getUniformLocation(program, 'u_dot');
     const mixLoc = gl.getUniformLocation(program, 'u_mix');
-    const logoLoc = gl.getUniformLocation(program, 'u_logo');
-    const hasLogoLoc = gl.getUniformLocation(program, 'u_hasLogo');
-    const logoAspectLoc = gl.getUniformLocation(program, 'u_logoAspect');
     const accentLoc = gl.getUniformLocation(program, 'u_accent');
 
     gl.useProgram(program);
 
-    // The mark is loaded asynchronously and the field renders fine without it,
-    // so start with it off and switch it on when the image arrives. A failed
-    // decode simply leaves the original background — a missing texture should
-    // never cost the user their wallpaper.
-    const logoTexture = gl.createTexture();
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, logoTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.uniform1i(logoLoc, 0);
-    gl.uniform1f(hasLogoLoc, 0);
-    gl.uniform1f(logoAspectLoc, 1);
-
-    let logoImage: HTMLImageElement | null = new Image();
-    logoImage.onload = () => {
-      if (!logoImage) return;
-      try {
-        gl.useProgram(program);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, logoTexture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, logoImage);
-        gl.uniform1f(logoAspectLoc, logoImage.naturalWidth / logoImage.naturalHeight);
-        gl.uniform1f(hasLogoLoc, 1);
-        schedule();
-      } catch (err) {
-        console.warn('[DashboardBackground] mark texture upload failed', err);
-      }
-    };
-    logoImage.onerror = () => {
-      console.warn('[DashboardBackground] mark image failed to load');
-    };
-    logoImage.src = dexMark;
 
     let palette = PALETTE[resolveThemeMode(getThemeMode())];
     const applyPalette = () => {
@@ -362,12 +275,6 @@ export function DashboardBackground(): React.ReactElement {
       document.removeEventListener('visibilitychange', onVisibility);
       io.disconnect();
       ro.disconnect();
-      if (logoImage) {
-        logoImage.onload = null;
-        logoImage.onerror = null;
-        logoImage = null;
-      }
-      gl.deleteTexture(logoTexture);
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
     };
