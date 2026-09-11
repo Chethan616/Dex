@@ -61,6 +61,55 @@ describe('browser harness environment', () => {
  * app never sees it and the harness silently degrades to raw CDP. These cover
  * resolving it explicitly instead.
  */
+/**
+ * Windows stores PATH as `Path` when the app is launched from Explorer, and as
+ * `PATH` from a POSIX-style shell. A plain object copy of process.env keeps
+ * whichever casing it was given, so writing to the other one silently adds a
+ * second variable instead of extending the first.
+ *
+ * That is not theoretical: it shipped. The child received `Path` (the full
+ * system path) alongside `PATH` (only the harness directories), the
+ * harness-only one won, and every npx-launched MCP server failed to start
+ * while browser-harness-js kept working because it lives in that directory.
+ * The agent then quietly drove websites instead of calling APIs.
+ */
+describe('applyBrowserHarnessEnv PATH handling', () => {
+  const ctx = spawnContext('target-1');
+
+  it('extends an existing Path (Windows casing) rather than adding PATH', () => {
+    const env = applyBrowserHarnessEnv(ctx, { Path: 'C:\Windows\system32;C:\Program Files\nodejs' });
+
+    const pathKeys = Object.keys(env).filter((key) => key.toLowerCase() === 'path');
+    expect(pathKeys).toEqual(['Path']);
+    // The system entries must survive: npx lives there.
+    expect(env.Path).toContain('C:\Program Files\nodejs');
+    expect(env.Path).toContain('dex-tools');
+  });
+
+  it('extends an existing PATH when that is the casing in use', () => {
+    const env = applyBrowserHarnessEnv(ctx, { PATH: '/usr/bin:/bin' });
+
+    const pathKeys = Object.keys(env).filter((key) => key.toLowerCase() === 'path');
+    expect(pathKeys).toEqual(['PATH']);
+    expect(env.PATH).toContain('/usr/bin');
+    expect(env.PATH).toContain('dex-tools');
+  });
+
+  it('puts the harness directories first so its own tools win', () => {
+    const env = applyBrowserHarnessEnv(ctx, { Path: 'C:\Windows\system32' });
+    expect(env.Path?.indexOf('browser-harness-js')).toBeLessThan(
+      env.Path?.indexOf('C:\Windows\system32') ?? -1,
+    );
+  });
+
+  it('still works when the environment has no path at all', () => {
+    const env = applyBrowserHarnessEnv(ctx, {});
+    const pathKeys = Object.keys(env).filter((key) => key.toLowerCase() === 'path');
+    expect(pathKeys).toHaveLength(1);
+    expect(env[pathKeys[0]]).toContain('dex-tools');
+  });
+});
+
 describe('resolveGitBash', () => {
   const D_DRIVE_GIT = 'D:\\Git\\bin\\bash.exe';
   const PROGRAM_FILES_GIT = 'C:\\Program Files\\Git\\bin\\bash.exe';

@@ -164,6 +164,20 @@ function pathValueFromEnv(env: NodeJS.ProcessEnv, platform: Platform): string {
   return env.PATH ?? '';
 }
 
+/**
+ * Which key this environment stores PATH under.
+ *
+ * Windows is case-insensitive about environment variables, but a plain object
+ * copied from process.env is not. Launched from Explorer, Electron inherits
+ * `Path`; launched from a POSIX-style shell it inherits `PATH`. Writing to the
+ * wrong one does not overwrite the right one — it adds a second entry, and the
+ * child then receives two variables differing only in case, with no guarantee
+ * about which wins.
+ */
+export function pathKeyFor(env: NodeJS.ProcessEnv): 'PATH' | 'Path' {
+  return pathKeyForEnv(env, process.platform);
+}
+
 function pathKeyForEnv(env: NodeJS.ProcessEnv, platform: Platform): 'PATH' | 'Path' {
   if (platform === 'win32' && Object.prototype.hasOwnProperty.call(env, 'Path')) return 'Path';
   return 'PATH';

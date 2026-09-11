@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { findGitBash } from '../../startup/preflight';
+import { pathKeyFor } from './pathEnrich';
 import type { SpawnContext } from './types';
 
 export function browserHarnessReplPort(sessionId: string, targetId = ''): string {
@@ -41,7 +42,17 @@ export function applyBrowserHarnessEnv(ctx: SpawnContext, env: NodeJS.ProcessEnv
   const sdkDir = path.join(ctx.harnessDir, 'browser-harness-js', 'sdk');
   const dexToolsDir = path.join(ctx.harnessDir, 'dex-tools');
   const toolDirs = [sdkDir, dexToolsDir].join(path.delimiter);
-  env.PATH = env.PATH ? `${toolDirs}${path.delimiter}${env.PATH}` : toolDirs;
+
+  // Write to whichever key this environment already uses. Hardcoding `PATH`
+  // meant that on a Windows-launched app — where the inherited key is `Path` —
+  // this created a SECOND variable holding only the harness directories. The
+  // child then had both, and the harness-only one won: browser-harness-js
+  // resolved because it lives in that directory, while npx did not, so every
+  // npx-launched MCP server failed to start and the agent silently fell back
+  // to driving websites.
+  const key = pathKeyFor(env);
+  const existing = env[key];
+  env[key] = existing ? `${toolDirs}${path.delimiter}${existing}` : toolDirs;
   env.CDP_REPL_PORT = env.CDP_REPL_PORT ?? browserHarnessReplPort(ctx.sessionId, ctx.targetId);
   env.CDP_REPL_LOG = env.CDP_REPL_LOG ?? path.join(ctx.harnessDir, `browser-harness-js-${ctx.sessionId}.log`);
   env.BU_SESSION_ID = ctx.sessionId;
