@@ -6253,3 +6253,23 @@ button:focus:not(:focus-visible) {
 
 .mcp__docs:hover { text-decoration: underline; }
 
+
+/* Connection status. Green means a real handshake succeeded, not that a value
+   was typed — red is what a mistyped token looks like, which is the whole
+   reason this is verified rather than assumed. */
+
+.mcp__card .mcp__dot--failed { background-color: var(--color-status-error); }
+
+.mcp__card .mcp__dot--checking {
+  background-color: var(--color-fg-tertiary);
+  animation: pulse-glow 1.4s var(--ease-in-out) infinite;
+}
+
+.mcp__subtitle--failed { color: var(--color-status-error); }
+
+.mcp__card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}

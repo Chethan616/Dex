@@ -1858,6 +1858,24 @@ app.whenReady().then(async () => {
     });
   });
 
+  // Prove the connection rather than assume it. A mistyped token is
+  // indistinguishable from a correct one until something fails mid-task, so
+  // the dot in Settings reports a real handshake, not merely a saved value.
+  ipcMain.handle('settings:mcp:test', async (_event, id: string) => {
+    const validated = assertString(id, 'id', 60);
+    const { findServerDefinition } = await import('./mcp/catalog');
+    const { listConnections } = await import('./mcp/store');
+    const { verifyServer } = await import('./mcp/client');
+
+    const definition = findServerDefinition(validated);
+    if (!definition) return { ok: false, error: 'Unknown connection.' };
+
+    const connection = (await listConnections()).find((c) => c.id === validated);
+    if (!connection) return { ok: false, error: 'Not configured yet.' };
+
+    return verifyServer(definition, connection.values);
+  });
+
   ipcMain.handle('settings:mcp:set', async (_event, id: string, patch: { enabled?: boolean; values?: Record<string, string> }) => {
     const validated = assertString(id, 'id', 60);
     const { setConnection } = await import('./mcp/store');

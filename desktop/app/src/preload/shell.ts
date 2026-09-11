@@ -160,6 +160,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       list: (): Promise<McpConnectionInfo[]> => ipcRenderer.invoke('settings:mcp:list'),
       set: (id: string, patch: { enabled?: boolean; values?: Record<string, string> }): Promise<{ ok: boolean }> =>
         ipcRenderer.invoke('settings:mcp:set', id, patch),
+      test: (id: string): Promise<{ ok: boolean; serverName?: string; toolCount?: number; error?: string }> =>
+        ipcRenderer.invoke('settings:mcp:test', id),
     },
     preflight: {
       get: (): Promise<PreflightReport> => ipcRenderer.invoke('settings:preflight:get'),

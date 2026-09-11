@@ -356,9 +356,18 @@ interface McpConnectionInfo {
   missing: string[];
 }
 
+interface McpVerifyInfo {
+  ok: boolean;
+  serverName?: string;
+  toolCount?: number;
+  error?: string;
+}
+
 interface ElectronSettingsMcpAPI {
   list: () => Promise<McpConnectionInfo[]>;
   set: (id: string, patch: { enabled?: boolean; values?: Record<string, string> }) => Promise<{ ok: boolean }>;
+  /** Runs a real MCP handshake. Slow on first use: npx may fetch the server. */
+  test: (id: string) => Promise<McpVerifyInfo>;
 }
 
 /** Mirrors PreflightCheck in src/main/startup/preflight.ts. */

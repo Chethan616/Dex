@@ -123,6 +123,17 @@ const codexAdapter: EngineAdapter = {
       'Do not use old helpers.js convenience APIs for browser control.',
       'Do not edit harness files unless the user asks or a confirmed Browser Harness JS defect blocks the task.',
     ];
+    // Loading the tools is not enough on its own. The lines above hand the
+    // agent a browser and tell it how to drive one, so an agent asked about
+    // GitHub did the familiar thing and drove github.com with the API sitting
+    // right there. Naming the connections makes the cheaper route the obvious
+    // one.
+    if (ctx.mcpServiceNames && ctx.mcpServiceNames.length > 0) {
+      lines.push(
+        `Connected services: ${ctx.mcpServiceNames.join(', ')}. Their MCP tools are loaded and already authenticated.`,
+        'Use those tools for anything involving these services. Do not open their websites: the API is faster, costs a fraction of the tokens, and does not break when a page changes. Fall back to the browser only if a tool actually fails.',
+      );
+    }
     if (ctx.attachmentRefs.length > 0) {
       lines.push('', 'The user attached these files for this task. Read each one before acting:');
       for (const a of ctx.attachmentRefs) lines.push(`  - ${a.relPath} (${a.mime}, ${a.size} bytes)`);

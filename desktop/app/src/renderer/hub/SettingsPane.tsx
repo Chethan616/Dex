@@ -535,6 +535,14 @@ function McpSection(): React.ReactElement {
   const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  /**
+   * Result of a real handshake per connection.
+   *
+   * Separate from `enabled` on purpose: enabled means the user asked for it,
+   * verified means it actually works. Conflating them is what let a mistyped
+   * token look connected.
+   */
+  const [checks, setChecks] = useState<Record<string, McpVerifyInfo | 'checking'>>({});
 
   const reload = useCallback(async () => {
     const next = await window.electronAPI?.settings?.mcp?.list?.();
@@ -542,6 +550,25 @@ function McpSection(): React.ReactElement {
   }, []);
 
   useEffect(() => { void reload(); }, [reload]);
+
+  const test = useCallback(async (id: string) => {
+    setChecks((current) => ({ ...current, [id]: 'checking' }));
+    const result = await window.electronAPI?.settings?.mcp?.test?.(id);
+    setChecks((current) => ({
+      ...current,
+      [id]: result ?? { ok: false, error: 'The check could not be run.' },
+    }));
+  }, []);
+
+  // Verify whatever is already switched on when the pane opens, so the dots
+  // mean something before the user touches anything.
+  useEffect(() => {
+    for (const row of rows ?? []) {
+      if (row.enabled && row.missing.length === 0 && !checks[row.id]) void test(row.id);
+    }
+    // Only when the row set changes; `checks` is written by this effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, test]);
 
   const connect = useCallback(async (row: McpConnectionInfo) => {
     const draft = drafts[row.id] ?? {};
@@ -553,6 +580,9 @@ function McpSection(): React.ReactElement {
       setDrafts((current) => ({ ...current, [row.id]: {} }));
       setEditing(null);
       await reload();
+      // Saving is not connecting. Find out now, while the user is looking at
+      // it, rather than during a task three days later.
+      await test(row.id);
     } finally {
       setBusy(null);
     }
@@ -567,6 +597,11 @@ function McpSection(): React.ReactElement {
       for (const field of row.credentials) cleared[field.key] = '';
       await window.electronAPI?.settings?.mcp?.set?.(row.id, { values: cleared, enabled: false });
       setEditing(null);
+      setChecks((current) => {
+        const next = { ...current };
+        delete next[row.id];
+        return next;
+      });
       await reload();
     } finally {
       setBusy(null);
@@ -588,8 +623,37 @@ function McpSection(): React.ReactElement {
       <div className="mcp__list">
         {rows.map((row) => {
           const draft = drafts[row.id] ?? {};
-          const connected = row.enabled && row.missing.length === 0;
+          const configured = row.enabled && row.missing.length === 0;
+          const check = checks[row.id];
+          const checking = check === 'checking';
+          const result = check && check !== 'checking' ? check : null;
+          const verified = configured && result?.ok === true;
+          const failed = configured && result != null && !result.ok;
+          // Still treated as "connected" for layout purposes while the check
+          // runs, so the card does not flip back to a Connect button and lose
+          // what the user just typed.
+          const connected = configured;
           const needsAttention = row.enabled && row.missing.length > 0;
+
+          const dotClass = verified
+            ? ' mcp__dot--on'
+            : failed
+              ? ' mcp__dot--failed'
+              : needsAttention
+                ? ' mcp__dot--blocked'
+                : checking
+                  ? ' mcp__dot--checking'
+                  : '';
+
+          const statusText = checking
+            ? 'Checking the connection…'
+            : verified
+                ? `Connected${result?.toolCount ? ` — ${result.toolCount} tools available` : ''}`
+              : failed
+                  ? result?.error ?? 'Connection failed'
+                : needsAttention
+                  ? `Needs ${row.missing.join(', ')}`
+                  : row.summary;
           const isEditing = editing === row.id || needsAttention;
           const canSubmit = row.credentials.every(
             (field) => field.present || (draft[field.key] ?? '').trim().length > 0,
@@ -600,25 +664,32 @@ function McpSection(): React.ReactElement {
               <div className="conn-card__header">
                 <div className="conn-card__info">
                   <div className="conn-card__title-row">
-                    <span
-                      className={`conn-card__dot${connected ? ' mcp__dot--on' : needsAttention ? ' mcp__dot--blocked' : ''}`}
-                      aria-hidden="true"
-                    />
+                    <span className={`conn-card__dot${dotClass}`} aria-hidden="true" />
                     <span className="conn-card__title">{row.displayName}</span>
                   </div>
-                  <span className="conn-card__subtitle">
-                    {connected ? 'Connected' : needsAttention ? `Needs ${row.missing.join(', ')}` : row.summary}
+                  <span className={`conn-card__subtitle${failed ? ' mcp__subtitle--failed' : ''}`}>
+                    {statusText}
                   </span>
                 </div>
 
                 {connected ? (
-                  <button
-                    className="conn-card__btn conn-card__btn--secondary"
-                    disabled={busy === row.id}
-                    onClick={() => void signOut(row)}
-                  >
-                    {busy === row.id ? 'Signing out…' : 'Sign out'}
-                  </button>
+                  <div className="mcp__card-actions">
+                    {!checking && (
+                      <button
+                        className="conn-card__btn conn-card__btn--secondary"
+                        onClick={() => void test(row.id)}
+                      >
+                        {failed ? 'Retry' : 'Re-check'}
+                      </button>
+                    )}
+                    <button
+                      className="conn-card__btn conn-card__btn--secondary"
+                      disabled={busy === row.id}
+                      onClick={() => void signOut(row)}
+                    >
+                      {busy === row.id ? 'Signing out…' : 'Sign out'}
+                    </button>
+                  </div>
                 ) : isEditing ? (
                   <button
                     className="conn-card__btn conn-card__btn--secondary"

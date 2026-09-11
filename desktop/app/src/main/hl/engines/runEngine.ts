@@ -227,10 +227,12 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
   // be switched on between two tasks, and a config written once at startup
   // would leave the agent without a tool the user just enabled.
   let mcpConfigPath: string | undefined;
+  let mcpServiceNames: string[] = [];
   try {
     const servers = usableServers(await enabledConnections());
     if (servers.length > 0) {
       mcpConfigPath = writeClaudeMcpConfig(opts.harnessDir, servers) ?? undefined;
+      mcpServiceNames = servers.map((server) => server.definition.displayName);
     } else {
       clearMcpConfig(opts.harnessDir);
     }
@@ -243,6 +245,7 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
   // 4. Build spawn context + let adapter compose args/env/prompt.
   const spawnCtx: SpawnContext = {
     mcpConfigPath,
+    mcpServiceNames,
     prompt: opts.prompt,
     harnessDir: opts.harnessDir,
     sessionId: opts.sessionId,

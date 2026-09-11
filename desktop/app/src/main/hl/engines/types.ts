@@ -15,6 +15,15 @@ export interface SpawnContext {
    * enabled and complete. Adapters pass it to whatever flag their engine uses.
    */
   mcpConfigPath?: string;
+  /**
+   * Display names of the connected services, for the prompt.
+   *
+   * Loading the tools is not enough on its own: the wrapper spends its first
+   * lines saying a browser view is assigned, so an agent asked about GitHub
+   * did the familiar thing and drove github.com even with the API right there.
+   * Naming the connections makes the cheaper route the obvious one.
+   */
+  mcpServiceNames?: string[];
   /** User prompt to feed to the CLI. Adapters may wrap with seed/system text. */
   prompt: string;
   /** Absolute path to <userData>/harness/ (AGENTS.md + browser-harness-js live here). */

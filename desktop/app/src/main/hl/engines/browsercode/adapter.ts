@@ -159,6 +159,15 @@ const browserCodeAdapter: EngineAdapter = {
   },
 
   wrapPrompt(ctx: SpawnContext): string {
+    // Loading the tools is not enough on its own: the lines above hand the
+    // agent a browser and explain how to drive one, so an agent asked about
+    // GitHub did the familiar thing with the API sitting right there.
+    const connectedServiceLines = ctx.mcpServiceNames && ctx.mcpServiceNames.length > 0
+      ? [
+          `Connected services: ${ctx.mcpServiceNames.join(', ')}. Their MCP tools are loaded and already authenticated.`,
+          'Use those tools for anything involving these services. Do not open their websites: the API is faster, costs a fraction of the tokens, and does not break when a page changes. Fall back to the browser only if a tool actually fails.',
+        ]
+      : [];
     const attachmentLines = ctx.attachmentRefs.length
       ? [
           '',
@@ -178,6 +187,7 @@ const browserCodeAdapter: EngineAdapter = {
       'Do not edit harness files unless the user asks or a confirmed Browser Harness JS defect blocks the task.',
       'For terminal commands, use BrowserCode/OpenCode\'s Bash tool and write commands for the current OS/shell it reports.',
       'When producing files, save them to `./outputs/' + ctx.sessionId + '/` and mention the filename in the final answer.',
+      ...connectedServiceLines,
       ...attachmentLines,
       '',
       'User task:',
