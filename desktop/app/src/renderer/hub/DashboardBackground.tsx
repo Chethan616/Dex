@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { subscribeThemeMode, resolveThemeMode, getThemeMode } from '../design/themeMode';
-import dexMark from '../assets/dex-mark.png';
+// The full wordmark, at source resolution. The 192x96 copy used for the
+// on-screen <img> is too coarse to sample: the dot grid reads roughly one
+// cell per two texels, and the letterforms come out mushy at the joins.
+import dexMark from '../assets/dex-wordmark-hi.png';
 
 const FRAME_INTERVAL_MS = 1000 / 12;
 
@@ -38,9 +41,9 @@ uniform vec3 u_bg;
 uniform vec3 u_dot;
 uniform float u_mix;
 
-// The DEX mark itself, sampled as a texture rather than approximated in code.
-// Drawing the curve by hand would be a resemblance; sampling the real artwork
-// is the mark, in dots.
+// The DEX wordmark itself, sampled as a texture rather than approximated in
+// code. Drawing the letterforms by hand would be a resemblance; sampling the
+// real artwork is the wordmark, in dots.
 uniform sampler2D u_logo;
 uniform float u_hasLogo;
 uniform float u_logoAspect;
@@ -84,8 +87,12 @@ void main() {
 
   // Uniform dot lattice in pixel space — the medium is kept deliberately:
   // it is what makes the surface feel machined rather than painted.
-  float DOT_SPACING = 12.0;
-  float MAX_RADIUS  = 3.0;
+  // Grid pitch decides how much of the artwork survives. At 12px a pane-sized
+  // box gives roughly 68x34 cells, which is too coarse for the thin strokes in
+  // the letterforms — the joins fill in and the x stops reading as an x. 6px
+  // roughly quadruples the sample count and the wordmark resolves properly.
+  float DOT_SPACING = 6.0;
+  float MAX_RADIUS  = 1.9;
   vec2 cell = floor(gl_FragCoord.xy / DOT_SPACING);
   vec2 cellCenter = (cell + 0.5) * DOT_SPACING;
   float distPx = length(gl_FragCoord.xy - cellCenter);
@@ -107,10 +114,12 @@ void main() {
   float markAlpha = 0.0;
   vec2 markUv = vec2(0.0);
   if (u_hasLogo > 0.5) {
-    float boxH = u_resolution.y * 0.62;
-    float boxW = boxH * u_logoAspect;
-    // Never let it outgrow the viewport on a narrow window.
-    float overflow = boxW / max(u_resolution.x * 0.82, 1.0);
+    // Sized from the width, because the wordmark is wide (2:1) and driving it
+    // from height would push the letters off both edges.
+    float boxW = u_resolution.x * 0.66;
+    float boxH = boxW / max(u_logoAspect, 0.001);
+    // Never let it outgrow the viewport on a short window either.
+    float overflow = boxH / max(u_resolution.y * 0.55, 1.0);
     if (overflow > 1.0) { boxW /= overflow; boxH /= overflow; }
 
     vec2 boxOrigin = (u_resolution - vec2(boxW, boxH)) * 0.5;
@@ -121,19 +130,24 @@ void main() {
     }
   }
 
-  // A wave travelling along the curve rather than a global fade, so the mark
-  // reads as being drawn continuously instead of switching on and off.
-  float sweep = sin((markUv.x * 1.1 + markUv.y * 0.7) * 3.4 - u_time * 1.15);
-  float blink = 0.42 + 0.58 * (sweep * 0.5 + 0.5);
+  // A wave travelling along the letterforms rather than a global fade, so the
+  // wordmark reads as being drawn continuously instead of switching on and
+  // off. Shallow on purpose: at the old depth the trough dimmed whole letters
+  // out of legibility, which is the opposite of what a logo should do.
+  float sweep = sin((markUv.x * 1.6 + markUv.y * 0.5) * 3.0 - u_time * 1.1);
+  float blink = 0.78 + 0.22 * (sweep * 0.5 + 0.5);
 
-  // Hard threshold on alpha: the artwork's antialiased edge would otherwise
-  // scatter half-lit dots around the curve and blur it.
-  float markMask = smoothstep(0.35, 0.75, markAlpha) * blink;
+  // Tight threshold on alpha. The artwork's antialiased edge would otherwise
+  // scatter half-lit dots around every stroke and soften the shape; snapping
+  // it is what keeps the outline crisp at this grid pitch.
+  float markMask = smoothstep(0.42, 0.58, markAlpha) * blink;
 
   // The mark sets a floor under the dot size, so it emerges from the existing
   // field rather than replacing it — the ridges still move underneath.
-  float radius = MAX_RADIUS * max(sizeCurve, markMask * 0.92);
-  float dotMask = 1.0 - smoothstep(radius - 0.6, radius + 0.4, distPx);
+  // Mark dots run at full radius so the letterforms read as solid strokes
+  // against the sparser ambient field.
+  float radius = MAX_RADIUS * max(sizeCurve * 0.85, markMask);
+  float dotMask = 1.0 - smoothstep(radius - 0.5, radius + 0.35, distPx);
   dotMask *= max(smoothstep(0.02, 0.14, density), markMask);
 
   vec3 tint = mix(u_dot, u_accent, clamp(markMask * 1.35, 0.0, 1.0));

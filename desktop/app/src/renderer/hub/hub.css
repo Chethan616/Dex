@@ -6115,3 +6115,40 @@ button:focus:not(:focus-visible) {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* Deck footer: the choice between handing the task back to the agent and
+   simply carrying on browsing yourself. Resume already covers the first; this
+   covers the second, which otherwise had no way in at all. */
+
+.deck__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  padding-top: var(--space-2);
+}
+
+.deck__browse-btn {
+  flex: 0 0 auto;
+  padding: var(--space-3) var(--space-8);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+.deck__browse-btn:hover {
+  color: var(--color-fg-primary);
+  border-color: var(--color-accent-default);
+}
+
+.deck__footer-hint {
+  flex: 1 1 200px;
+  min-width: 0;
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-tertiary);
+}

@@ -712,6 +712,16 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
   const [browserMissing, setBrowserMissing] = useState(false);
   const [frameRect, setFrameRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   /**
+   * The user asked for the browser back.
+   *
+   * Resuming hands the task to the agent, which is not the same thing as
+   * wanting to carry on browsing yourself — after a task ends you often want
+   * to keep clicking around the page it left open. The deck would otherwise
+   * hold the rect for as long as the session has anything to show, with no way
+   * to reach the page underneath.
+   */
+  const [browseHere, setBrowseHere] = useState(false);
+  /**
    * Whether the preview deck should take over the browser rect.
    *
    * The native WebContentsView composites *above* the renderer, so React can
@@ -722,9 +732,19 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
    * always more useful than a card describing one.
    */
   const deckActive = useMemo(
-    () => deckHasContent(session) && (!session.primarySite || session.status === 'paused'),
-    [session],
+    () => deckHasContent(session) && !browseHere && (!session.primarySite || session.status === 'paused'),
+    [session, browseHere],
   );
+
+  // A new run is the agent taking the pane back, so the deck should return
+  // with it — otherwise starting a task after browsing looks like nothing
+  // happened.
+  useEffect(() => {
+    if (session.status === 'running') setBrowseHere(false);
+  }, [session.status]);
+  useEffect(() => {
+    setBrowseHere(false);
+  }, [session.id]);
   // Logs overlay is a separate window (see logsPill.ts). The pane tracks
   // visibility only to reflect it in the Logs button's active state.
   const [logsOpen, setLogsOpen] = useState(false);
@@ -1068,6 +1088,17 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
             <SplitIcon />
             <span>Logs</span>
           </button>
+          {session.hasBrowser !== false && deckHasContent(session) && (
+            <button
+              className={`pane__action-btn${browseHere ? ' pane__action-btn--active' : ''}`}
+              onClick={(e) => { e.stopPropagation(); setBrowseHere((on) => !on); }}
+              aria-label={browseHere ? 'Show activity' : 'Continue browsing'}
+              data-tip={browseHere ? 'Show what the agent did' : 'Take the browser back and keep browsing'}
+            >
+              <BrowserIcon />
+              <span>{browseHere ? 'Activity' : 'Browse'}</span>
+            </button>
+          )}
           {onRerun && (
             <button
               className="pane__action-btn pane__action-btn--icon"
@@ -1213,7 +1244,11 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
               height: frameRect.height,
             }}
           >
-            <PreviewDeck session={session} placeholder={placeholder} />
+            <PreviewDeck
+              session={session}
+              placeholder={placeholder}
+              onBrowseHere={() => setBrowseHere(true)}
+            />
           </div>
         );
       })()}

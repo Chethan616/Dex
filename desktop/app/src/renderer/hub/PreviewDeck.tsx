@@ -332,8 +332,15 @@ function ActivityCard({ session }: { session: AgentSession }): React.ReactElemen
 export function PreviewDeck({
   session,
   placeholder,
+  onBrowseHere,
 }: {
   session: AgentSession;
+  /**
+   * Hand the rect back to the live browser. Resuming restarts the agent;
+   * this is the other thing a user wants after a task ends — the page is
+   * still open and they want to keep going themselves.
+   */
+  onBrowseHere?: () => void;
   /**
    * The pane's own "No browser started yet" / error block. Shown unchanged
    * when there is nothing else to say, so an ordinary idle session looks
@@ -387,6 +394,16 @@ export function PreviewDeck({
         {hasPlan && taskState ? <PlanCard state={taskState} /> : null}
         <ActivityCard session={session} />
         {!hasResults ? <div className="deck__note">{placeholder}</div> : null}
+        {onBrowseHere && session.status !== 'running' ? (
+          <div className="deck__footer">
+            <button className="deck__browse-btn" onClick={onBrowseHere}>
+              Continue browsing
+            </button>
+            <span className="deck__footer-hint">
+              Picks up the page as it was left, without starting the agent.
+            </span>
+          </div>
+        ) : null}
       </div>
     </div>
   );
