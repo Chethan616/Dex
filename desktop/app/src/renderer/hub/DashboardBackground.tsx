@@ -62,12 +62,16 @@ float field(vec2 uv, float aspect, float t) {
   float sum = (a * 0.5 + b * 0.32 + c * 0.24) / 1.06;
   float density = sum * 0.5 + 0.5;
 
-  // Directional falloff: brighter toward the lower-left, fading up and right.
-  // Gives the composition an implied light source, so it reads as depth rather
-  // than as a flat texture, and keeps the top-right quiet where the toolbar and
-  // primary controls sit.
-  float lean = 1.0 - smoothstep(-0.15, 1.25, (uv.x * 0.72 + uv.y * 0.52));
-  density *= mix(0.22, 1.0, lean);
+  // Vertical falloff: full strength along the bottom, easing off through the
+  // upper half so the toolbar and the primary controls stay quiet.
+  //
+  // Weighted toward y rather than split evenly with x, because the diagonal
+  // version bunched everything into the bottom-left corner and left most of
+  // the surface empty. The floor is raised too, so the middle of the screen
+  // still carries the field instead of falling off a cliff above the fold.
+  // Per-dot brightness is untouched — this only changes where they appear.
+  float lean = 1.0 - smoothstep(0.25, 1.15, (uv.x * 0.30 + uv.y * 0.90));
+  density *= mix(0.30, 1.0, lean);
 
   return clamp(density, 0.0, 1.0);
 }

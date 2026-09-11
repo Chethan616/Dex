@@ -153,9 +153,9 @@ describe('pill window sizing', () => {
     pill.showPill();
 
     expect(win.getBounds()).toEqual({
-      x: 320,
+      x: 20 + (1200 - pill.PILL_WIDTH) / 2,
       y: 190,
-      width: 600,
+      width: pill.PILL_WIDTH,
       height: 141,
     });
   });
@@ -168,13 +168,13 @@ describe('pill window sizing', () => {
     pill.showPill();
     vi.advanceTimersByTime(250);
 
-    win.setBounds({ x: 500, y: 260, width: 600, height: 110 });
+    win.setBounds({ x: 500, y: 260, width: pill.PILL_WIDTH, height: 110 });
     win.emit('move');
 
     expect(readSavedPillBounds()).toEqual({
       x: 500,
       y: 260,
-      width: 600,
+      width: pill.PILL_WIDTH,
       height: 110,
     });
 
@@ -184,7 +184,7 @@ describe('pill window sizing', () => {
     expect(win.getBounds()).toEqual({
       x: 500,
       y: 260,
-      width: 600,
+      width: pill.PILL_WIDTH,
       height: 110,
     });
   });
@@ -203,7 +203,7 @@ describe('pill window sizing', () => {
     expect(win.getBounds()).toEqual({
       x: 480,
       y: 250,
-      width: 600,
+      width: pill.PILL_WIDTH,
       height: 110,
     });
   });
@@ -220,15 +220,15 @@ describe('pill window sizing', () => {
     pill.showPill();
 
     expect(win.getBounds()).toEqual({
-      x: 620,
+      x: 20 + 1200 - pill.PILL_WIDTH,
       y: 820,
-      width: 600,
+      width: pill.PILL_WIDTH,
       height: 110,
     });
     expect(readSavedPillBounds()).toEqual({
-      x: 620,
+      x: 20 + 1200 - pill.PILL_WIDTH,
       y: 820,
-      width: 600,
+      width: pill.PILL_WIDTH,
       height: 110,
     });
   });
@@ -245,9 +245,9 @@ describe('pill window sizing', () => {
     pill.showPill();
 
     expect(win.getBounds()).toEqual({
-      x: 320,
+      x: 20 + (1200 - pill.PILL_WIDTH) / 2,
       y: 190,
-      width: 600,
+      width: pill.PILL_WIDTH,
       height: 110,
     });
   });

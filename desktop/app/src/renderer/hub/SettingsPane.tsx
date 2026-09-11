@@ -519,15 +519,21 @@ function DiagnosticsSection(): React.ReactElement {
  * Enabling one changes what DEX does, not just what it can do: with a GitHub
  * connection it calls the API instead of driving github.com, which is faster,
  * far cheaper in tokens, and does not break when a page layout changes. That
- * is worth saying on the row itself, because "connect GitHub" otherwise reads
- * as optional plumbing.
+ * is worth saying on the row, because "connect GitHub" otherwise reads as
+ * optional plumbing.
  *
- * Credentials go straight to the OS credential store. Their values never come
- * back across the bridge — a saved field reports only that it is present.
+ * Modelled on the WhatsApp and provider cards rather than a checkbox list.
+ * A checkbox says "on/off"; these are accounts, and the honest verbs for an
+ * account are Connect and Sign out. It also removes a state a checkbox invites
+ * and cannot express — ticked but unusable because no token was ever entered.
+ *
+ * Credential values never come back across the bridge. A saved field reports
+ * only that it is present.
  */
 function McpSection(): React.ReactElement {
   const [rows, setRows] = useState<McpConnectionInfo[] | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
+  const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -537,11 +543,30 @@ function McpSection(): React.ReactElement {
 
   useEffect(() => { void reload(); }, [reload]);
 
-  const save = useCallback(async (id: string, patch: { enabled?: boolean; values?: Record<string, string> }) => {
-    setBusy(id);
+  const connect = useCallback(async (row: McpConnectionInfo) => {
+    const draft = drafts[row.id] ?? {};
+    setBusy(row.id);
     try {
-      await window.electronAPI?.settings?.mcp?.set?.(id, patch);
-      setDrafts((current) => ({ ...current, [id]: {} }));
+      // Save credentials and switch on together: a connection that is enabled
+      // but incomplete is exactly the state this UI exists to prevent.
+      await window.electronAPI?.settings?.mcp?.set?.(row.id, { values: draft, enabled: true });
+      setDrafts((current) => ({ ...current, [row.id]: {} }));
+      setEditing(null);
+      await reload();
+    } finally {
+      setBusy(null);
+    }
+  }, [drafts, reload]);
+
+  const signOut = useCallback(async (row: McpConnectionInfo) => {
+    setBusy(row.id);
+    try {
+      // Blank every credential as well as switching off, so signing out
+      // actually removes the token rather than leaving it dormant on disk.
+      const cleared: Record<string, string> = {};
+      for (const field of row.credentials) cleared[field.key] = '';
+      await window.electronAPI?.settings?.mcp?.set?.(row.id, { values: cleared, enabled: false });
+      setEditing(null);
       await reload();
     } finally {
       setBusy(null);
@@ -560,79 +585,97 @@ function McpSection(): React.ReactElement {
         works through the browser.
       </p>
 
-      <div className="diag__list">
+      <div className="mcp__list">
         {rows.map((row) => {
           const draft = drafts[row.id] ?? {};
-          const blocked = row.missing.length > 0;
+          const connected = row.enabled && row.missing.length === 0;
+          const needsAttention = row.enabled && row.missing.length > 0;
+          const isEditing = editing === row.id || needsAttention;
+          const canSubmit = row.credentials.every(
+            (field) => field.present || (draft[field.key] ?? '').trim().length > 0,
+          );
+
           return (
-            <div className="diag__row mcp__row" key={row.id}>
-              <span
-                className={`diag__dot${row.enabled && !blocked ? ' mcp__dot--on' : blocked && row.enabled ? ' mcp__dot--blocked' : ''}`}
-                aria-hidden="true"
-              />
-              <div className="diag__body">
-                <div className="diag__line">
-                  <span className="diag__label">{row.displayName}</span>
-                  <label className="mcp__toggle">
-                    <input
-                      type="checkbox"
-                      checked={row.enabled}
-                      disabled={busy === row.id}
-                      onChange={(e) => void save(row.id, { enabled: e.target.checked })}
+            <div className="conn-card mcp__card" key={row.id}>
+              <div className="conn-card__header">
+                <div className="conn-card__info">
+                  <div className="conn-card__title-row">
+                    <span
+                      className={`conn-card__dot${connected ? ' mcp__dot--on' : needsAttention ? ' mcp__dot--blocked' : ''}`}
+                      aria-hidden="true"
                     />
-                    <span>{row.enabled ? 'On' : 'Off'}</span>
-                  </label>
-                </div>
-                <div className="diag__detail">{row.summary}</div>
-
-                {/* Shown once enabled: an unconfigured row that is switched off
-                    is not a problem, it is just off. */}
-                {row.enabled && (
-                  <div className="mcp__fields">
-                    {row.credentials.map((field) => (
-                      <label className="mcp__field" key={field.key}>
-                        <span className="mcp__field-label">
-                          {field.label}
-                          {field.present && <span className="mcp__saved">saved</span>}
-                        </span>
-                        <input
-                          className="mcp__input"
-                          type={field.secret ? 'password' : 'text'}
-                          placeholder={field.present ? '••••••••' : field.help ?? field.key}
-                          value={draft[field.key] ?? ''}
-                          onChange={(e) => setDrafts((current) => ({
-                            ...current,
-                            [row.id]: { ...(current[row.id] ?? {}), [field.key]: e.target.value },
-                          }))}
-                        />
-                        {field.help && <span className="mcp__field-help">{field.help}</span>}
-                      </label>
-                    ))}
-
-                    <div className="mcp__actions">
-                      <button
-                        className="diag__recheck"
-                        disabled={busy === row.id || Object.values(draft).every((v) => !v)}
-                        onClick={() => void save(row.id, { values: draft })}
-                      >
-                        {busy === row.id ? 'Saving…' : 'Save'}
-                      </button>
-                      {row.docsUrl && (
-                        <a className="mcp__docs" href={row.docsUrl} target="_blank" rel="noreferrer">
-                          Where to get this
-                        </a>
-                      )}
-                    </div>
-
-                    {blocked && (
-                      <div className="mcp__blocked">
-                        Not active yet — still needs {row.missing.join(', ')}. DEX will keep using the
-                        browser for this service until it is filled in.
-                      </div>
-                    )}
+                    <span className="conn-card__title">{row.displayName}</span>
                   </div>
+                  <span className="conn-card__subtitle">
+                    {connected ? 'Connected' : needsAttention ? `Needs ${row.missing.join(', ')}` : row.summary}
+                  </span>
+                </div>
+
+                {connected ? (
+                  <button
+                    className="conn-card__btn conn-card__btn--secondary"
+                    disabled={busy === row.id}
+                    onClick={() => void signOut(row)}
+                  >
+                    {busy === row.id ? 'Signing out…' : 'Sign out'}
+                  </button>
+                ) : isEditing ? (
+                  <button
+                    className="conn-card__btn conn-card__btn--secondary"
+                    disabled={busy === row.id}
+                    onClick={() => { setEditing(null); void signOut(row); }}
+                  >
+                    Cancel
+                  </button>
+                ) : (
+                  <button
+                    className="conn-card__btn conn-card__btn--primary"
+                    onClick={() => setEditing(row.id)}
+                  >
+                    Connect
+                  </button>
                 )}
               </div>
+
+              {isEditing && !connected && (
+                <div className="mcp__fields">
+                  <span className="mcp__fields-summary">{row.summary}</span>
+                  {row.credentials.map((field) => (
+                    <label className="mcp__field" key={field.key}>
+                      <span className="mcp__field-label">
+                        {field.label}
+                        {field.present && <span className="mcp__saved">saved</span>}
+                      </span>
+                      <input
+                        className="mcp__input"
+                        type={field.secret ? 'password' : 'text'}
+                        placeholder={field.present ? '••••••••' : field.key}
+                        value={draft[field.key] ?? ''}
+                        onChange={(e) => setDrafts((current) => ({
+                          ...current,
+                          [row.id]: { ...(current[row.id] ?? {}), [field.key]: e.target.value },
+                        }))}
+                      />
+                      {field.help && <span className="mcp__field-help">{field.help}</span>}
+                    </label>
+                  ))}
+
+                  <div className="mcp__actions">
+                    <button
+                      className="conn-card__btn conn-card__btn--primary"
+                      disabled={busy === row.id || !canSubmit}
+                      onClick={() => void connect(row)}
+                    >
+                      {busy === row.id ? 'Connecting…' : 'Connect'}
+                    </button>
+                    {row.docsUrl && (
+                      <a className="mcp__docs" href={row.docsUrl} target="_blank" rel="noreferrer">
+                        Where to get this
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

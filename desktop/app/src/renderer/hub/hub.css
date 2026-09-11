@@ -6167,20 +6167,22 @@ button:focus:not(:focus-visible) {
   color: var(--color-fg-tertiary);
 }
 
-.mcp__row .diag__dot { background-color: var(--color-fg-disabled); }
-.mcp__row .mcp__dot--on { background-color: var(--color-status-success); }
-.mcp__row .mcp__dot--blocked { background-color: var(--color-status-warning); }
+.mcp__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
 
-.mcp__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
+/* Status reads from the dot beside the name and from the subtitle, never from
+   colour alone. */
+.mcp__card .conn-card__dot { background-color: var(--color-fg-disabled); }
+.mcp__card .mcp__dot--on { background-color: var(--color-status-success); }
+.mcp__card .mcp__dot--blocked { background-color: var(--color-status-warning); }
+
+.mcp__fields-summary {
   font-size: var(--font-size-2xs);
+  line-height: var(--line-height-normal);
   color: var(--color-fg-tertiary);
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .mcp__fields {
@@ -6251,8 +6253,3 @@ button:focus:not(:focus-visible) {
 
 .mcp__docs:hover { text-decoration: underline; }
 
-.mcp__blocked {
-  font-size: var(--font-size-2xs);
-  line-height: var(--line-height-normal);
-  color: var(--color-status-warning);
-}

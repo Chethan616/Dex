@@ -35,7 +35,10 @@ const log = {
 // Constants
 // ---------------------------------------------------------------------------
 
-const PILL_WIDTH = 600;
+// Wide enough for the placeholder to sit on one line. At 600 "Search sessions
+// or create new agent..." ran past the input and scrolled, which makes the
+// one control the user reaches for by keyboard look broken before they type.
+export const PILL_WIDTH = 680;
 const PILL_HEIGHT_COLLAPSED = 110;
 const PILL_HEIGHT_EXPANDED = 520;
 const PILL_TOP_OFFSET = 160;
