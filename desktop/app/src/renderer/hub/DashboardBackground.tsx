@@ -62,16 +62,23 @@ float field(vec2 uv, float aspect, float t) {
   float sum = (a * 0.5 + b * 0.32 + c * 0.24) / 1.06;
   float density = sum * 0.5 + 0.5;
 
-  // Vertical falloff: full strength along the bottom, easing off through the
-  // upper half so the toolbar and the primary controls stay quiet.
+  // Mirrored vertical profile: strongest along the top and bottom edges,
+  // quietening through the middle.
   //
-  // Weighted toward y rather than split evenly with x, because the diagonal
-  // version bunched everything into the bottom-left corner and left most of
-  // the surface empty. The floor is raised too, so the middle of the screen
-  // still carries the field instead of falling off a cliff above the fold.
-  // Per-dot brightness is untouched — this only changes where they appear.
-  float lean = 1.0 - smoothstep(0.25, 1.15, (uv.x * 0.30 + uv.y * 0.90));
-  density *= mix(0.30, 1.0, lean);
+  // The content column — wordmark, tagline, input, cards — sits across the
+  // centre of the screen, so a field that is loudest there competes with the
+  // thing it is meant to sit behind. A single bottom-up falloff avoided that
+  // but left the entire upper half empty, which reads as an unfinished page
+  // rather than a composition. Framing the content top and bottom gives the
+  // surface presence everywhere without ever arguing with the text.
+  //
+  // Same colour and same per-dot brightness as before; only the distribution
+  // changes.
+  float fromCentre = abs(uv.y - 0.5) * 2.0;
+  float band = smoothstep(0.10, 0.75, fromCentre);
+  // Never fully off through the middle: a hard empty gap looks like a
+  // rendering fault, where a faint one looks intentional.
+  density *= mix(0.16, 1.0, band);
 
   return clamp(density, 0.0, 1.0);
 }
