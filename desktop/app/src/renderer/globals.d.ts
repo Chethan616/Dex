@@ -335,6 +335,32 @@ interface ElectronSettingsAppAPI {
   }) => void) => () => void;
 }
 
+/** One row in Settings -> Connections. Credential values never cross the
+ *  bridge: only whether each one is present. */
+interface McpCredentialInfo {
+  key: string;
+  label: string;
+  secret: boolean;
+  help?: string;
+  present: boolean;
+}
+
+interface McpConnectionInfo {
+  id: string;
+  displayName: string;
+  summary: string;
+  docsUrl?: string;
+  enabled: boolean;
+  credentials: McpCredentialInfo[];
+  /** Credential keys still needed before this server can start. */
+  missing: string[];
+}
+
+interface ElectronSettingsMcpAPI {
+  list: () => Promise<McpConnectionInfo[]>;
+  set: (id: string, patch: { enabled?: boolean; values?: Record<string, string> }) => Promise<{ ok: boolean }>;
+}
+
 /** Mirrors PreflightCheck in src/main/startup/preflight.ts. */
 interface PreflightCheckInfo {
   id: 'git-bash' | 'bun' | 'cdp-port' | 'harness-dir';
@@ -358,6 +384,7 @@ interface ElectronSettingsPreflightAPI {
 }
 
 interface ElectronSettingsAPI {
+  mcp?: ElectronSettingsMcpAPI;
   preflight?: ElectronSettingsPreflightAPI;
   open?: (payload?: { focusBrowserCodeProvider?: string }) => Promise<void>;
   apiKey: ElectronSettingsApiKeyAPI;

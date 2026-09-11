@@ -1826,6 +1826,48 @@ app.whenReady().then(async () => {
   // Environment report. `refresh` re-runs the checks rather than replaying the
   // startup snapshot, so installing Git and clicking Re-check works without
   // restarting the app.
+  // MCP connections. The catalogue is static; what varies is which are on and
+  // whether their credentials are complete, so both are returned together —
+  // a row that cannot say "missing token" is a row the user cannot fix.
+  ipcMain.handle('settings:mcp:list', async () => {
+    const { MCP_CATALOG, missingCredentials } = await import('./mcp/catalog');
+    const { listConnections } = await import('./mcp/store');
+    const connections = await listConnections();
+    const byId = new Map(connections.map((connection) => [connection.id, connection]));
+
+    return MCP_CATALOG.map((definition) => {
+      const connection = byId.get(definition.id);
+      const values = connection?.values ?? {};
+      return {
+        id: definition.id,
+        displayName: definition.displayName,
+        summary: definition.summary,
+        docsUrl: definition.docsUrl,
+        enabled: connection?.enabled ?? false,
+        // Never the values themselves: these are live API tokens, and the
+        // renderer only needs to know which are present.
+        credentials: definition.credentials.map((field) => ({
+          key: field.key,
+          label: field.label,
+          secret: field.secret,
+          help: field.help,
+          present: Boolean(values[field.key] && values[field.key].trim().length > 0),
+        })),
+        missing: missingCredentials(definition, values).map((field) => field.key),
+      };
+    });
+  });
+
+  ipcMain.handle('settings:mcp:set', async (_event, id: string, patch: { enabled?: boolean; values?: Record<string, string> }) => {
+    const validated = assertString(id, 'id', 60);
+    const { setConnection } = await import('./mcp/store');
+    await setConnection(validated, {
+      enabled: typeof patch?.enabled === 'boolean' ? patch.enabled : undefined,
+      values: patch?.values && typeof patch.values === 'object' ? patch.values : undefined,
+    });
+    return { ok: true };
+  });
+
   ipcMain.handle('settings:preflight:get', () => preflightReport ?? refreshPreflight());
   ipcMain.handle('settings:preflight:refresh', () => refreshPreflight());
 

@@ -10,6 +10,16 @@ import type { AgentSession, HlEvent, TabInfo, BrowserPoolStats } from '../shared
 import { createPopupBridge } from './popupBridge';
 import type { PreflightReport } from '../main/startup/preflight';
 
+interface McpConnectionInfo {
+  id: string;
+  displayName: string;
+  summary: string;
+  docsUrl?: string;
+  enabled: boolean;
+  credentials: Array<{ key: string; label: string; secret: boolean; help?: string; present: boolean }>;
+  missing: string[];
+}
+
 type SettingsOpenPayload = { focusBrowserCodeProvider?: string };
 
 function normalizeSettingsOpenPayload(raw: unknown): SettingsOpenPayload | undefined {
@@ -145,6 +155,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('theme:changed', handler);
         return () => ipcRenderer.removeListener('theme:changed', handler);
       },
+    },
+    mcp: {
+      list: (): Promise<McpConnectionInfo[]> => ipcRenderer.invoke('settings:mcp:list'),
+      set: (id: string, patch: { enabled?: boolean; values?: Record<string, string> }): Promise<{ ok: boolean }> =>
+        ipcRenderer.invoke('settings:mcp:set', id, patch),
     },
     preflight: {
       get: (): Promise<PreflightReport> => ipcRenderer.invoke('settings:preflight:get'),

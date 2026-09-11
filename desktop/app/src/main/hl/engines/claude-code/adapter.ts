@@ -158,6 +158,10 @@ const claudeCodeAdapter: EngineAdapter = {
     ];
     if (_ctx.resumeSessionId) args.push('--resume', _ctx.resumeSessionId);
     if (_ctx.model) args.push('--model', _ctx.model);
+    // --strict-mcp-config alongside it: without it Claude Code also loads the
+    // user's own global MCP servers, so DEX would be handing the agent tools
+    // that Settings never listed and the user never enabled here.
+    if (_ctx.mcpConfigPath) args.push('--mcp-config', _ctx.mcpConfigPath, '--strict-mcp-config');
     // The prompt deliberately does NOT go in argv — see getStdinPayload.
     return args;
   },

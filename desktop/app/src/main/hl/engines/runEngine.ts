@@ -16,6 +16,8 @@ import { resolveAuth, loadOpenAIKey, loadClaudeSubscriptionType, loadBrowserCode
 import { helpersPath, skillPath } from '../harness';
 import { get as getAdapter } from './registry';
 import { applyKnownFolderEnv } from '../../startup/knownFolders';
+import { enabledConnections } from '../../mcp/store';
+import { usableServers, writeClaudeMcpConfig, clearMcpConfig } from '../../mcp/config';
 import { spawnCli } from './cliSpawn';
 import { registerResourceOwner, unregisterResourceOwner } from '../../resourceMonitor';
 import type {
@@ -221,8 +223,26 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
     catch (err) { engineLogger.warn('engines.run.onModelResolved.threw', { source: 'config', error: (err as Error).message }); }
   }
 
+  // Regenerate the MCP config per run rather than caching it: connections can
+  // be switched on between two tasks, and a config written once at startup
+  // would leave the agent without a tool the user just enabled.
+  let mcpConfigPath: string | undefined;
+  try {
+    const servers = usableServers(await enabledConnections());
+    if (servers.length > 0) {
+      mcpConfigPath = writeClaudeMcpConfig(opts.harnessDir, servers) ?? undefined;
+    } else {
+      clearMcpConfig(opts.harnessDir);
+    }
+  } catch (err) {
+    // A broken connection must not stop the task. The agent falls back to the
+    // browser, which is the whole point of having a ladder of interfaces.
+    engineLogger.warn('engines.run.mcpConfig.failed', { error: (err as Error).message });
+  }
+
   // 4. Build spawn context + let adapter compose args/env/prompt.
   const spawnCtx: SpawnContext = {
+    mcpConfigPath,
     prompt: opts.prompt,
     harnessDir: opts.harnessDir,
     sessionId: opts.sessionId,

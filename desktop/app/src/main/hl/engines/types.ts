@@ -10,6 +10,11 @@ import type { HlEvent } from '../../../shared/session-schemas';
 // ── run-time context passed to adapters ─────────────────────────────────────
 
 export interface SpawnContext {
+  /**
+   * Path to a generated MCP server config, or undefined when no connection is
+   * enabled and complete. Adapters pass it to whatever flag their engine uses.
+   */
+  mcpConfigPath?: string;
   /** User prompt to feed to the CLI. Adapters may wrap with seed/system text. */
   prompt: string;
   /** Absolute path to <userData>/harness/ (AGENTS.md + browser-harness-js live here). */

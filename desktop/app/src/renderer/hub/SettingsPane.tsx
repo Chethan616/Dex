@@ -513,7 +513,136 @@ function DiagnosticsSection(): React.ReactElement {
   );
 }
 
+/**
+ * Connections to services that expose a real API.
+ *
+ * Enabling one changes what DEX does, not just what it can do: with a GitHub
+ * connection it calls the API instead of driving github.com, which is faster,
+ * far cheaper in tokens, and does not break when a page layout changes. That
+ * is worth saying on the row itself, because "connect GitHub" otherwise reads
+ * as optional plumbing.
+ *
+ * Credentials go straight to the OS credential store. Their values never come
+ * back across the bridge — a saved field reports only that it is present.
+ */
+function McpSection(): React.ReactElement {
+  const [rows, setRows] = useState<McpConnectionInfo[] | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    const next = await window.electronAPI?.settings?.mcp?.list?.();
+    if (next) setRows(next);
+  }, []);
+
+  useEffect(() => { void reload(); }, [reload]);
+
+  const save = useCallback(async (id: string, patch: { enabled?: boolean; values?: Record<string, string> }) => {
+    setBusy(id);
+    try {
+      await window.electronAPI?.settings?.mcp?.set?.(id, patch);
+      setDrafts((current) => ({ ...current, [id]: {} }));
+      await reload();
+    } finally {
+      setBusy(null);
+    }
+  }, [reload]);
+
+  if (!rows) {
+    return <div className="settings-card"><p className="diag__empty">Loading connections…</p></div>;
+  }
+
+  return (
+    <div className="settings-card">
+      <p className="mcp__intro">
+        When a service is connected, DEX uses its API instead of driving the website — quicker,
+        cheaper, and it does not break when a page changes. Anything without a connection still
+        works through the browser.
+      </p>
+
+      <div className="diag__list">
+        {rows.map((row) => {
+          const draft = drafts[row.id] ?? {};
+          const blocked = row.missing.length > 0;
+          return (
+            <div className="diag__row mcp__row" key={row.id}>
+              <span
+                className={`diag__dot${row.enabled && !blocked ? ' mcp__dot--on' : blocked && row.enabled ? ' mcp__dot--blocked' : ''}`}
+                aria-hidden="true"
+              />
+              <div className="diag__body">
+                <div className="diag__line">
+                  <span className="diag__label">{row.displayName}</span>
+                  <label className="mcp__toggle">
+                    <input
+                      type="checkbox"
+                      checked={row.enabled}
+                      disabled={busy === row.id}
+                      onChange={(e) => void save(row.id, { enabled: e.target.checked })}
+                    />
+                    <span>{row.enabled ? 'On' : 'Off'}</span>
+                  </label>
+                </div>
+                <div className="diag__detail">{row.summary}</div>
+
+                {/* Shown once enabled: an unconfigured row that is switched off
+                    is not a problem, it is just off. */}
+                {row.enabled && (
+                  <div className="mcp__fields">
+                    {row.credentials.map((field) => (
+                      <label className="mcp__field" key={field.key}>
+                        <span className="mcp__field-label">
+                          {field.label}
+                          {field.present && <span className="mcp__saved">saved</span>}
+                        </span>
+                        <input
+                          className="mcp__input"
+                          type={field.secret ? 'password' : 'text'}
+                          placeholder={field.present ? '••••••••' : field.help ?? field.key}
+                          value={draft[field.key] ?? ''}
+                          onChange={(e) => setDrafts((current) => ({
+                            ...current,
+                            [row.id]: { ...(current[row.id] ?? {}), [field.key]: e.target.value },
+                          }))}
+                        />
+                        {field.help && <span className="mcp__field-help">{field.help}</span>}
+                      </label>
+                    ))}
+
+                    <div className="mcp__actions">
+                      <button
+                        className="diag__recheck"
+                        disabled={busy === row.id || Object.values(draft).every((v) => !v)}
+                        onClick={() => void save(row.id, { values: draft })}
+                      >
+                        {busy === row.id ? 'Saving…' : 'Save'}
+                      </button>
+                      {row.docsUrl && (
+                        <a className="mcp__docs" href={row.docsUrl} target="_blank" rel="noreferrer">
+                          Where to get this
+                        </a>
+                      )}
+                    </div>
+
+                    {blocked && (
+                      <div className="mcp__blocked">
+                        Not active yet — still needs {row.missing.join(', ')}. DEX will keep using the
+                        browser for this service until it is filled in.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export type SettingsSectionId =
+  | 'settings-integrations'
   | 'settings-diagnostics'
   | 'settings-model-providers'
   | 'settings-connections'
@@ -536,6 +665,7 @@ const SETTINGS_TABS: Array<{ id: SettingsSectionId; label: string }> = [
   { id: 'settings-connections', label: 'Connections' },
   { id: 'settings-browser-sync', label: 'Browser Sync' },
   { id: 'settings-shortcuts', label: 'Shortcuts' },
+  { id: 'settings-integrations', label: 'Integrations' },
   { id: 'settings-diagnostics', label: 'Diagnostics' },
   { id: 'settings-privacy', label: 'Privacy' },
 ];
@@ -766,6 +896,13 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
             browserSyncSectionId="settings-browser-sync"
             focusBrowserCodeProvider={providerFocus}
           />
+
+          <section id="settings-integrations" className="settings-page__section">
+            <div className="settings-section-header">
+              <h2 className="settings-section-header__title">Integrations</h2>
+            </div>
+            <McpSection />
+          </section>
 
           <section id="settings-diagnostics" className="settings-page__section">
             <div className="settings-section-header">

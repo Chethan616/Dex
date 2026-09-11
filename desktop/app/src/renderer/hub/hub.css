@@ -6156,3 +6156,103 @@ button:focus:not(:focus-visible) {
   font-size: var(--font-size-2xs);
   color: var(--color-fg-secondary);
 }
+
+/* Integrations. Built on the diagnostics row so the two read as the same kind
+   of list: a thing, its state, and what to do about it. */
+
+.mcp__intro {
+  margin: 0 0 var(--space-6);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--color-fg-tertiary);
+}
+
+.mcp__row .diag__dot { background-color: var(--color-fg-disabled); }
+.mcp__row .mcp__dot--on { background-color: var(--color-status-success); }
+.mcp__row .mcp__dot--blocked { background-color: var(--color-status-warning); }
+
+.mcp__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-tertiary);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mcp__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  background-color: rgba(var(--highlight-rgb), 0.04);
+}
+
+.mcp__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mcp__field-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-secondary);
+}
+
+/* Present, not shown. The value never leaves the credential store. */
+.mcp__saved {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-xs);
+  background-color: rgba(var(--highlight-rgb), 0.06);
+  font-size: var(--font-size-2xs);
+  color: var(--color-status-success);
+}
+
+.mcp__input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-base);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-primary);
+}
+
+.mcp__input:focus {
+  outline: none;
+  border-color: var(--color-accent-default);
+}
+
+.mcp__field-help {
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-tertiary);
+}
+
+.mcp__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.mcp__docs {
+  font-size: var(--font-size-2xs);
+  color: var(--color-accent-default);
+  text-decoration: none;
+}
+
+.mcp__docs:hover { text-decoration: underline; }
+
+.mcp__blocked {
+  font-size: var(--font-size-2xs);
+  line-height: var(--line-height-normal);
+  color: var(--color-status-warning);
+}
