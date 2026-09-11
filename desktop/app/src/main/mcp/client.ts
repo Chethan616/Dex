@@ -21,6 +21,15 @@ export interface McpVerifyResult {
   /** Server's self-reported name, when it got far enough to say. */
   serverName?: string;
   toolCount?: number;
+  /**
+   * Bare tool names as the server reports them, e.g. `list_issues`.
+   *
+   * Kept because the engine defers tools it has not used yet, and the agent
+   * has to go looking. Searching "github" returned an unrelated tool and it
+   * gave up and drove the website instead — so the prompt names the tools
+   * outright rather than trusting discovery.
+   */
+  toolNames?: string[];
   error?: string;
 }
 
@@ -126,9 +135,17 @@ export function verifyServer(
             finish({ ok: false, error: message.error.message ?? 'the server exposed no tools' });
             return;
           }
-          const tools = (message.result?.tools as unknown[] | undefined) ?? [];
-          finish({ ok: tools.length > 0, serverName, toolCount: tools.length,
-            error: tools.length > 0 ? undefined : 'The server started but exposed no tools.' });
+          const tools = (message.result?.tools as Array<{ name?: string }> | undefined) ?? [];
+          const toolNames = tools
+            .map((tool) => tool?.name)
+            .filter((name): name is string => typeof name === 'string');
+          finish({
+            ok: tools.length > 0,
+            serverName,
+            toolCount: tools.length,
+            toolNames,
+            error: tools.length > 0 ? undefined : 'The server started but exposed no tools.',
+          });
           return;
         }
       }

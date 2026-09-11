@@ -16,14 +16,15 @@ export interface SpawnContext {
    */
   mcpConfigPath?: string;
   /**
-   * Display names of the connected services, for the prompt.
+   * One line per connected service, naming its tools.
    *
-   * Loading the tools is not enough on its own: the wrapper spends its first
-   * lines saying a browser view is assigned, so an agent asked about GitHub
-   * did the familiar thing and drove github.com even with the API right there.
-   * Naming the connections makes the cheaper route the obvious one.
+   * Naming the service alone was not enough. The engine defers tools it has
+   * not used, so the agent went looking with ToolSearch("github"), got an
+   * unrelated tool back, concluded there were none, and drove github.com —
+   * with 27 MCP tools loaded and connected the whole time. Telling it the
+   * exact tool names removes the discovery step that failed.
    */
-  mcpServiceNames?: string[];
+  mcpBriefing?: string[];
   /** User prompt to feed to the CLI. Adapters may wrap with seed/system text. */
   prompt: string;
   /** Absolute path to <userData>/harness/ (AGENTS.md + browser-harness-js live here). */

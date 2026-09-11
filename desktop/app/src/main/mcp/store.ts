@@ -34,6 +34,8 @@ export interface McpConnection {
   id: string;
   enabled: boolean;
   values: Record<string, string>;
+  /** Tool names from the last successful verification, for the prompt. */
+  toolNames?: string[];
 }
 
 type Store = Record<string, McpConnection>;
@@ -85,16 +87,18 @@ export async function listConnections(): Promise<McpConnection[]> {
 }
 
 /** Enabled connections, in the shape config.ts wants. */
-export async function enabledConnections(): Promise<Array<{ id: string; values: Record<string, string> }>> {
+export async function enabledConnections(): Promise<
+  Array<{ id: string; values: Record<string, string>; toolNames?: string[] }>
+> {
   const store = await load();
   return Object.values(store)
     .filter((connection) => connection.enabled)
-    .map(({ id, values }) => ({ id, values }));
+    .map(({ id, values, toolNames }) => ({ id, values, toolNames }));
 }
 
 export async function setConnection(
   id: string,
-  patch: { enabled?: boolean; values?: Record<string, string> },
+  patch: { enabled?: boolean; values?: Record<string, string>; toolNames?: string[] },
 ): Promise<McpConnection> {
   const store = { ...(await load()) };
   const existing = store[id] ?? { id, enabled: false, values: {} };
@@ -104,6 +108,7 @@ export async function setConnection(
     // Merge rather than replace, so saving one field does not wipe the others
     // — and so an empty string can still clear a single credential explicitly.
     values: patch.values ? { ...existing.values, ...patch.values } : existing.values,
+    toolNames: patch.toolNames ?? existing.toolNames,
   };
   store[id] = next;
   await persist(store);

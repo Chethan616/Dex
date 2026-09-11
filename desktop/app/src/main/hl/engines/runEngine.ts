@@ -227,12 +227,25 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
   // be switched on between two tasks, and a config written once at startup
   // would leave the agent without a tool the user just enabled.
   let mcpConfigPath: string | undefined;
-  let mcpServiceNames: string[] = [];
+  let mcpBriefing: string[] = [];
   try {
     const servers = usableServers(await enabledConnections());
     if (servers.length > 0) {
       mcpConfigPath = writeClaudeMcpConfig(opts.harnessDir, servers) ?? undefined;
-      mcpServiceNames = servers.map((server) => server.definition.displayName);
+      mcpBriefing = servers.map((server) => {
+        // Engines namespace MCP tools as mcp__<server-id>__<tool>.
+        const prefix = `mcp__${server.definition.id.replace(/-/g, '_')}__`;
+        // Every tool, not a sample. The names come back alphabetically, so the
+        // first eight of GitHub's twenty-six were add_issue_comment through
+        // fork_repository — and list_issues, the one an agent asked to list
+        // issues actually needs, was not among them. A few hundred characters
+        // of prompt is nothing against a browser session.
+        const names = (server.toolNames ?? []).slice(0, 40).map((name) => `${prefix}${name}`);
+        const detail = names.length > 0
+          ? ` Its tools: ${names.join(', ')}.`
+          : ` Its tools are named ${prefix}*.`;
+        return `${server.definition.displayName} is connected and authenticated.${detail}`;
+      });
     } else {
       clearMcpConfig(opts.harnessDir);
     }
@@ -245,7 +258,7 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
   // 4. Build spawn context + let adapter compose args/env/prompt.
   const spawnCtx: SpawnContext = {
     mcpConfigPath,
-    mcpServiceNames,
+    mcpBriefing,
     prompt: opts.prompt,
     harnessDir: opts.harnessDir,
     sessionId: opts.sessionId,

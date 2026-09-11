@@ -1873,7 +1873,14 @@ app.whenReady().then(async () => {
     const connection = (await listConnections()).find((c) => c.id === validated);
     if (!connection) return { ok: false, error: 'Not configured yet.' };
 
-    return verifyServer(definition, connection.values);
+    const result = await verifyServer(definition, connection.values);
+    // Keep the tool names: the next task's prompt names them outright, which
+    // is what stops the agent hunting for tools and giving up.
+    if (result.ok && result.toolNames && result.toolNames.length > 0) {
+      const { setConnection } = await import('./mcp/store');
+      await setConnection(validated, { toolNames: result.toolNames });
+    }
+    return result;
   });
 
   ipcMain.handle('settings:mcp:set', async (_event, id: string, patch: { enabled?: boolean; values?: Record<string, string> }) => {

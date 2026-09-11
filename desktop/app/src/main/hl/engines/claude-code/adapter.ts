@@ -140,10 +140,10 @@ const claudeCodeAdapter: EngineAdapter = {
     // GitHub did the familiar thing and drove github.com with the API sitting
     // right there. Naming the connections makes the cheaper route the obvious
     // one.
-    if (ctx.mcpServiceNames && ctx.mcpServiceNames.length > 0) {
+    if (ctx.mcpBriefing && ctx.mcpBriefing.length > 0) {
       lines.push(
-        `Connected services: ${ctx.mcpServiceNames.join(', ')}. Their MCP tools are loaded and already authenticated.`,
-        'Use those tools for anything involving these services. Do not open their websites: the API is faster, costs a fraction of the tokens, and does not break when a page changes. Fall back to the browser only if a tool actually fails.',
+        ...ctx.mcpBriefing,
+        'Use those tools for anything involving these services. Do not open their websites and do not go looking for the tools first: the API is faster, costs a fraction of the tokens, and does not break when a page changes. Fall back to the browser only if a tool actually fails.',
       );
     }
     if (ctx.attachmentRefs.length > 0) {
