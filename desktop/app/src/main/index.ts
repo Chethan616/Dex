@@ -1583,8 +1583,12 @@ app.whenReady().then(async () => {
 
         const result = await verifyServer(definition, connection.values);
         mcpVerifyCache.set(connection.id, result);
-        if (result.ok && result.toolNames?.length) {
-          await setConnection(connection.id, { toolNames: result.toolNames });
+        if (result.ok) {
+          const identity = connection.identity ?? (await definition.resolveIdentity?.(connection.values));
+          await setConnection(connection.id, {
+            toolNames: result.toolNames?.length ? result.toolNames : undefined,
+            identity,
+          });
         }
         mainLogger.info('mcp.startupHandshake', {
           id: connection.id,
@@ -1938,11 +1942,14 @@ app.whenReady().then(async () => {
 
     const result = await verifyServer(definition, connection.values);
     mcpVerifyCache.set(validated, result);
-    // Keep the tool names: the next task's prompt names them outright, which
-    // is what stops the agent hunting for tools and giving up.
-    if (result.ok && result.toolNames && result.toolNames.length > 0) {
+    // Keep the tool names and the account. The next task's prompt states both,
+    // which is what stops the agent hunting for tools or guessing a username.
+    if (result.ok) {
       const { setConnection } = await import('./mcp/store');
-      await setConnection(validated, { toolNames: result.toolNames });
+      await setConnection(validated, {
+        toolNames: result.toolNames?.length ? result.toolNames : undefined,
+        identity: await definition.resolveIdentity?.(connection.values),
+      });
     }
     return result;
   });

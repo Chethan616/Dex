@@ -999,6 +999,43 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
     ),
   );
 
+  /**
+   * The same three choices the idle placeholder offers, for the deck: give the
+   * task back to the agent, keep the page and browse it yourself, or start
+   * over. Built here rather than inside the placeholder block because the deck
+   * and that block are now separate surfaces.
+   */
+  const deckActions = (
+    <>
+      {canResume && (
+        <button
+          className="pane__rerun-btn pane__rerun-btn--primary"
+          onClick={() => onResume?.(session.id)}
+        >
+          <ResumeIcon />
+          <span>Resume</span>
+        </button>
+      )}
+      {!browserDead && !browserMissing && (
+        <button
+          className="pane__rerun-btn"
+          onClick={() => setBrowseHere(true)}
+          title="Keep the page as the agent left it and carry on yourself"
+        >
+          <BrowserIcon />
+          <span>Continue browsing</span>
+        </button>
+      )}
+      {onRerun && (
+        <button className="pane__rerun-btn" onClick={() => onRerun(session.id)}>
+          <RerunIcon />
+          <span>Rerun task</span>
+        </button>
+      )}
+    </>
+  );
+
+
   useEffect(() => {
     if (!focused || (!isRunningLike && !isPaused) || (!onPause && !onCancel)) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -1171,7 +1208,7 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
           rect — the pre-existing idle/error states, plus the two new ones the
           deck introduces: a running task that has never navigated (desktop,
           file or OS work) and a paused session. */}
-      {frameRect && (deckActive || showErrorUi || browserDead || browserMissing || session.status === 'draft' || session.status === 'stopped' || session.status === 'idle' || session.status === 'stuck') && (() => {
+      {frameRect && !deckActive && (showErrorUi || browserDead || browserMissing || session.status === 'draft' || session.status === 'stopped' || session.status === 'idle' || session.status === 'stuck') && (() => {
         const isStarting = !showErrorUi && !browserDead && !browserMissing && session.status === 'draft';
         const browserLine = browserDead
           ? 'Browser ended'
@@ -1253,7 +1290,7 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
         );
         return (
           <div
-            className={deckActive ? 'pane__browser-frame pane__browser-frame--deck' : 'pane__browser-frame'}
+            className="pane__browser-frame"
             style={{
               left: frameRect.left,
               top: frameRect.top,
@@ -1261,13 +1298,18 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
               height: frameRect.height,
             }}
           >
-            <PreviewDeck session={session} placeholder={placeholder} />
+            {placeholder}
           </div>
         );
       })()}
-      <div
-        className="pane__output"
-      />
+      {/* The deck is flow content inside the slot, not an absolutely
+          positioned overlay. The native browser view is detached whenever the
+          deck is showing, so there is nothing to sit on top of — and a rect
+          measured at the wrong moment was drawing the cards into a narrow
+          strip with the rest of the pane left black. */}
+      <div className="pane__output">
+        {deckActive && <PreviewDeck session={session} actions={deckActions} />}
+      </div>
 
     </div>
   );

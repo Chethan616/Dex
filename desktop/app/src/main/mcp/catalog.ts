@@ -27,6 +27,16 @@ export interface McpCredentialField {
 
 export interface McpServerDefinition {
   id: string;
+  /**
+   * Who the credential belongs to, when the service can say.
+   *
+   * Without this the agent has a token but no idea whose account it opens.
+   * Asked for "my repositories" it guessed a username from the email address
+   * — chethankrishna2022 rather than Chethan616 — the API rejected it, and it
+   * gave up and asked. A token that works but cannot say who it is for is
+   * only half a connection.
+   */
+  resolveIdentity?: (values: Record<string, string>) => Promise<string | undefined>;
   displayName: string;
   /** One line, shown in Settings. What the agent gains by enabling it. */
   summary: string;
@@ -65,6 +75,21 @@ export const MCP_CATALOG: McpServerDefinition[] = [
       },
     ],
     docsUrl: 'https://github.com/settings/tokens',
+    resolveIdentity: async (values) => {
+      const token = values.GITHUB_PERSONAL_ACCESS_TOKEN;
+      if (!token) return undefined;
+      try {
+        const response = await fetch('https://api.github.com/user', {
+          headers: { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json' },
+        });
+        if (!response.ok) return undefined;
+        const body = (await response.json()) as { login?: string };
+        return typeof body.login === 'string' ? body.login : undefined;
+      } catch {
+        // Identity is a nicety; a failure here must not fail the connection.
+        return undefined;
+      }
+    },
   },
   {
     id: 'slack',

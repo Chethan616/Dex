@@ -249,7 +249,8 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
         const detail = names.length > 0
           ? ` Its tools: ${names.join(', ')}.`
           : ` Its tools are named ${prefix}*.`;
-        return `${server.definition.displayName} is connected and authenticated.${detail}`;
+        const who = server.identity ? ` You are signed in as ${server.identity} — use that account, never guess it from an email address.` : '';
+        return `${server.definition.displayName} is connected and authenticated.${who}${detail}`;
       });
     } else {
       clearMcpConfig(opts.harnessDir);

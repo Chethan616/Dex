@@ -5477,11 +5477,11 @@ button:focus:not(:focus-visible) {
    rather than from drop shadows.
    --------------------------------------------------------------------------- */
 
-.pane__browser-frame--deck {
-  align-items: stretch;
-  justify-content: flex-start;
-  pointer-events: auto;
-  overflow: hidden;
+.deck__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
 }
 
 .deck {

@@ -23,6 +23,8 @@ export interface ResolvedMcpServer {
   values: Record<string, string>;
   /** Tool names from the last verification, used to brief the agent. */
   toolNames?: string[];
+  /** Account the credential belongs to, so the agent need not guess. */
+  identity?: string;
 }
 
 /** The `mcpServers` shape Claude Code reads from --mcp-config. */
@@ -50,7 +52,7 @@ export function buildClaudeMcpConfig(servers: ResolvedMcpServer[]): ClaudeMcpCon
  * codebase has spent the most time on.
  */
 export function usableServers(
-  enabled: Array<{ id: string; values: Record<string, string>; toolNames?: string[] }>,
+  enabled: Array<{ id: string; values: Record<string, string>; toolNames?: string[]; identity?: string }>,
 ): ResolvedMcpServer[] {
   const usable: ResolvedMcpServer[] = [];
 
@@ -68,7 +70,7 @@ export function usableServers(
       });
       continue;
     }
-    usable.push({ definition, values: entry.values, toolNames: entry.toolNames });
+    usable.push({ definition, values: entry.values, toolNames: entry.toolNames, identity: entry.identity });
   }
 
   return usable;

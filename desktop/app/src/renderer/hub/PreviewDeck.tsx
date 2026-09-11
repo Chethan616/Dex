@@ -330,15 +330,11 @@ function ActivityCard({ session }: { session: AgentSession }): React.ReactElemen
 
 export function PreviewDeck({
   session,
-  placeholder,
+  actions,
 }: {
   session: AgentSession;
-  /**
-   * The pane's own "No browser started yet" / error block. Shown unchanged
-   * when there is nothing else to say, so an ordinary idle session looks
-   * exactly as it did before.
-   */
-  placeholder: React.ReactNode;
+  /** Resume / Continue browsing / Rerun, rendered under the cards. */
+  actions?: React.ReactNode;
 }): React.ReactElement {
   const { taskState, artifacts, shots } = useMemo(() => {
     let latestState: TaskState | null = null;
@@ -364,11 +360,6 @@ export function PreviewDeck({
   const hasPlan = taskState != null && taskState.steps.length > 0;
   const hasResults = hasPlan || artifacts.length > 0 || shots.length > 0;
 
-  // A draft session has produced nothing yet and is about to open a browser;
-  // showing an activity panel there would flash for a second and vanish. The
-  // original placeholder is the honest thing to show.
-  if (session.status === 'draft') return <>{placeholder}</>;
-
   return (
     <div className="deck">
       <div className="deck__content">
@@ -378,7 +369,7 @@ export function PreviewDeck({
         ))}
         {hasPlan && taskState ? <PlanCard state={taskState} /> : null}
         <ActivityCard session={session} />
-        {!hasResults ? <div className="deck__note">{placeholder}</div> : null}
+        {actions ? <div className="deck__actions">{actions}</div> : null}
       </div>
     </div>
   );
