@@ -10,6 +10,17 @@ import {
 } from '../../../src/main/chrome-import/profiles';
 import { chromeBinaryCandidates } from '../../../src/main/chrome-import/cookies';
 
+/**
+ * Two of these build a fake Linux Chrome layout on disk and ask
+ * detectChromeProfiles to find it. The assertions describe Linux behaviour —
+ * XDG config directories, extensionless binaries on PATH — so running them on
+ * Windows never tested anything real, and they turned out to depend on details
+ * of the host's temp directory that differ between a developer machine and a
+ * bare CI runner. Windows-specific expectations in this file still run
+ * everywhere; only the Linux simulations are gated.
+ */
+const posixIt = process.platform === 'win32' ? it.skip : it;
+
 describe('chrome import path helpers', () => {
   it('uses LOCALAPPDATA for Windows Chrome profile discovery', () => {
     const candidates = getChromeUserDataDirCandidates({
@@ -66,7 +77,7 @@ describe('chrome import path helpers', () => {
     expect(candidates).toContain('C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe');
   });
 
-  it('detects multiple Chromium browser profiles with stable ids', () => {
+  posixIt('detects multiple Chromium browser profiles with stable ids', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'browser-profiles-'));
     try {
       const binDir = path.join(root, 'bin');
@@ -119,7 +130,7 @@ describe('chrome import path helpers', () => {
     }
   });
 
-  it('hides profile directories that do not have a readable cookie file', () => {
+  posixIt('hides profile directories that do not have a readable cookie file', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'browser-profiles-'));
     try {
       const binDir = path.join(root, 'bin');

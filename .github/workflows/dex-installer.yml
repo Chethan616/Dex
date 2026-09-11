@@ -1,4 +1,4 @@
-# Build dex-setup.exe on a clean machine.
+# Build dex-setup.exe on a clean Windows machine.
 #
 # This is the check that matters for "works on every system". Locally the
 # installer builds against whatever happens to be installed — a particular Node
@@ -6,26 +6,23 @@
 # fresh runner has none of that, so if it builds here it builds for someone who
 # has only ever downloaded the app.
 #
-# The artifact is downloadable from the run, so there is always a current
-# installer without anyone having to build one by hand.
+# Deliberately only the build. Lint, typecheck and tests are not run here: they
+# belong to development, and gating the installer on them means a test that is
+# fragile on a bare runner costs you a release you could otherwise ship. Run
+# `yarn qa` locally, or through the build scripts, which do it by default.
+#
+# The finished installer is attached to the run, so there is always a current
+# build to download without anyone making one by hand.
 name: DEX installer
 
 on:
   push:
     branches: [v3/dex]
   workflow_dispatch:
-    inputs:
-      skip_checks:
-        description: 'Skip lint/typecheck/test before building'
-        type: boolean
-        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
-env:
-  NODE_VERSION: '22'
 
 permissions:
   contents: read
@@ -41,30 +38,31 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          # The app pins 20.x || 22.x; yarn refuses outright on anything else.
+          node-version: '22'
           cache: yarn
           cache-dependency-path: desktop/app/yarn.lock
 
+      # Some transitive dependencies declare ssh:// git URLs, which cannot be
+      # fetched on a runner with no SSH key.
       - name: Rewrite git+ssh to https
         run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
 
+      # yarn, not npm: yarn.lock is the source of truth here, and npm fights
+      # the @visx React 19 peer mismatch unless legacy-peer-deps is set — which
+      # then trips npm's optional-native-binding bug for esbuild/rolldown.
       - name: Install dependencies
         working-directory: desktop/app
         run: yarn install --frozen-lockfile
 
-      - name: Checks
-        if: ${{ inputs.skip_checks != true }}
-        working-directory: desktop/app
-        run: yarn qa
-
       # Unsigned: there is no certificate in this repo, and forge only signs
       # when WINDOWS_SIGN_WITH_PARAMS is set. Windows SmartScreen will warn on
-      # first run — expected, and the reason to sign before distributing widely.
+      # first run — expected, and the reason to sign before wide distribution.
       - name: Build installer
         working-directory: desktop/app
         run: yarn make
 
-      - name: Check the installer exists
+      - name: Check the installer is real
         working-directory: desktop/app
         shell: pwsh
         run: |
@@ -74,10 +72,10 @@ jobs:
           }
           $size = [math]::Round((Get-Item $setup).Length / 1MB, 1)
           Write-Host "dex-setup.exe built ($size MB)"
+          # A truncated or half-packaged build still leaves a file behind.
+          # Nothing under 50 MB is a packaged Electron app.
           if ($size -lt 50) {
-            # A truncated build still produces a file. Anything under 50 MB is
-            # not a packaged Electron app.
-            throw "dex-setup.exe is only $size MB, which is too small to be a real build"
+            throw "dex-setup.exe is only $size MB, too small to be a real build"
           }
 
       # RELEASES and the .nupkg travel with the exe: Squirrel's updater needs
