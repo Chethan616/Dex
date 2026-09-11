@@ -223,7 +223,27 @@ const claudeCodeAdapter: EngineAdapter = {
     if (type === 'system') {
       const subtype = e.subtype as string | undefined;
       if (subtype === 'init') {
-        mainLogger.info('claude-code.init', { model: e.model, session_id: e.session_id, tools: Array.isArray(e.tools) ? (e.tools as unknown[]).length : 0 });
+        // Report what the engine actually loaded, not what we asked for.
+        // A config can be written correctly, passed correctly, and still end
+        // with zero MCP tools in the process — and the only symptom is an
+        // agent quietly using the browser instead. This makes that visible in
+        // our own log rather than only in the agent's transcript.
+        const allTools = Array.isArray(e.tools) ? (e.tools as unknown[]).map(String) : [];
+        const mcpTools = allTools.filter((name) => name.startsWith('mcp__'));
+        const servers = Array.isArray(e.mcp_servers) ? (e.mcp_servers as Array<{ name?: string; status?: string }>) : [];
+        mainLogger.info('claude-code.init', {
+          model: e.model,
+          session_id: e.session_id,
+          tools: allTools.length,
+          mcpTools: mcpTools.length,
+          mcpServers: servers.map((s) => `${s.name}:${s.status}`),
+        });
+        const failed = servers.filter((s) => s.status && s.status !== 'connected');
+        if (failed.length > 0) {
+          mainLogger.error('claude-code.init.mcpServerFailed', {
+            servers: failed.map((s) => `${s.name}:${s.status}`),
+          });
+        }
         if (typeof e.session_id === 'string') capturedSessionId = e.session_id;
         if (typeof e.model === 'string') ctx.currentModel = e.model;
       } else if (subtype === 'api_retry') {

@@ -438,6 +438,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on('open-settings', handler);
       return () => ipcRenderer.removeListener('open-settings', handler);
     },
+    hubRelayout: (cb: (reason: string) => void): (() => void) => {
+      const handler = (_event: unknown, reason: string) => cb(reason);
+      ipcRenderer.on('hub:relayout', handler);
+      return () => ipcRenderer.removeListener('hub:relayout', handler);
+    },
     zoomChanged: (cb: (factor: number) => void): (() => void) => {
       const handler = (_event: unknown, factor: number) => cb(factor);
       ipcRenderer.on('zoom-changed', handler);

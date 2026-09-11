@@ -364,6 +364,11 @@ export function attachToHub(hub: BrowserWindow): void {
   hub.on('move', reposition);
   hub.on('enter-full-screen', reposition);
   hub.on('leave-full-screen', reposition);
+  // Maximize and restore do not reliably emit 'resize' on Windows, so the
+  // overlay was left anchored to where the window used to be.
+  hub.on('maximize', reposition);
+  hub.on('unmaximize', reposition);
+  hub.on('restore', reposition);
   hub.on('minimize', () => {
     log.info('logs.hub.minimize', {});
     if (logsWindow && !logsWindow.isDestroyed()) logsWindow.hide();

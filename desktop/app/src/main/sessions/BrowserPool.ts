@@ -642,6 +642,44 @@ export class BrowserPool {
   setViewBoundsFitted(sessionId: string, bounds: { x: number; y: number; width: number; height: number }): { x: number; y: number; width: number; height: number } | null {
     const entry = this.entries.get(sessionId);
     if (!entry) return null;
+
+    // A resize normally keeps the emulated viewport as-is, so a manual zoom
+    // survives the user dragging a window edge. But going fullscreen changes
+    // the aspect enough that the old viewport no longer matches the rect, and
+    // the page renders into half of it — with no way back, because every
+    // subsequent resize takes this same path and preserves the wrong value.
+    //
+    // So re-emulate when the shape really has changed. 10% is well past any
+    // ordinary drag and comfortably under a windowed-to-fullscreen jump.
+    if (bounds.width > 0 && bounds.height > 0) {
+      const aspectWidth = Math.round(EMULATED_VIEWPORT_HEIGHT * bounds.width / bounds.height);
+      const nextEmulatedWidth = Math.max(MIN_EMULATED_VIEWPORT_WIDTH, Math.min(MAX_EMULATED_VIEWPORT_WIDTH, aspectWidth));
+      const drift = Math.abs(nextEmulatedWidth - entry.emulatedWidth) / Math.max(entry.emulatedWidth, 1);
+      if (drift > 0.1) {
+        browserLogger.info('BrowserPool.resize.reEmulate', {
+          sessionId,
+          from: entry.emulatedWidth,
+          to: nextEmulatedWidth,
+        });
+        entry.emulatedWidth = nextEmulatedWidth;
+        try {
+          entry.view.webContents.enableDeviceEmulation({
+            screenSize: { width: nextEmulatedWidth, height: EMULATED_VIEWPORT_HEIGHT },
+            viewSize:   { width: nextEmulatedWidth, height: EMULATED_VIEWPORT_HEIGHT },
+            deviceScaleFactor: 1,
+            viewPosition: { x: 0, y: 0 },
+            screenPosition: 'desktop',
+            fitToView: false,
+            offset: { x: 0, y: 0 },
+            scale: 1,
+          } as Parameters<typeof entry.view.webContents.enableDeviceEmulation>[0]);
+          entry.view.webContents.setZoomFactor(this.zoomForBounds(bounds));
+        } catch (err) {
+          browserLogger.warn('BrowserPool.resize.reEmulate.error', { sessionId, error: (err as Error).message });
+        }
+      }
+    }
+
     const currentZoom = this.currentZoomForBounds(entry, bounds);
     const fitted = this.fitBoundsToView(entry.emulatedWidth, bounds, currentZoom);
     entry.view.setBounds(fitted);

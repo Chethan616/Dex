@@ -214,6 +214,32 @@ export function HubApp(): React.ReactElement {
     });
     return () => cancelAnimationFrame(id);
   }, [tabsPosition]);
+  /**
+   * Re-measure after the window is maximized, restored or made fullscreen.
+   *
+   * These land a new window size without necessarily producing a layout pass
+   * the pane's ResizeObserver can see, so the native browser view keeps its
+   * old rectangle — the half-cut browser, and the black pane left behind when
+   * the logs overlay is maximized and restored.
+   *
+   * Fired across several frames because the window animates into its new size
+   * on Windows: a single measurement taken at the start of that animation is
+   * just as stale as no measurement at all.
+   */
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api?.on?.hubRelayout) return;
+    return api.on.hubRelayout(() => {
+      const relayout = () => window.dispatchEvent(new CustomEvent('pane:layout-change'));
+      relayout();
+      requestAnimationFrame(() => requestAnimationFrame(relayout));
+      const timers = [120, 320, 600].map((delay) => window.setTimeout(relayout, delay));
+      // Not cleaned up on purpose: these are one-shot and harmless, and the
+      // subscription's own teardown is what matters here.
+      void timers;
+    });
+  }, []);
+
   const hideCmdBar = useCallback(() => {
     setCmdBarVisible(false);
     try { window.localStorage.setItem('hub-cmdbar-visible', '0'); } catch { /* ignore */ }

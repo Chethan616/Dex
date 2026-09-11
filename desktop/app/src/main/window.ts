@@ -213,6 +213,32 @@ export function createShellWindow(opts?: ShellWindowOptions): BrowserWindow {
 
   win.on('resize', debouncedSave);
   win.on('move', debouncedSave);
+
+  /**
+   * Tell the renderer to re-measure after any window state change.
+   *
+   * The browser pane is a native WebContentsView positioned over a React div,
+   * so its bounds only stay correct while somebody keeps recomputing them. A
+   * ResizeObserver covers ordinary resizing, but maximize, restore and
+   * fullscreen can land the new size without an observable layout pass on
+   * that div — leaving the view at its old rect. That is the half-cut browser
+   * and the black pane after the logs window is maximized: the page is fine,
+   * the rectangle it is drawn into is stale.
+   *
+   * `pane:layout-change` already forces a full re-attach rather than a resize,
+   * which is what recovers a view that was detached while hidden.
+   */
+  const requestRelayout = (reason: string) => {
+    if (win.isDestroyed()) return;
+    mainLogger.info('window.relayout', { reason });
+    win.webContents.send('hub:relayout', reason);
+  };
+
+  win.on('maximize', () => requestRelayout('maximize'));
+  win.on('unmaximize', () => requestRelayout('unmaximize'));
+  win.on('restore', () => requestRelayout('restore'));
+  win.on('enter-full-screen', () => requestRelayout('enter-full-screen'));
+  win.on('leave-full-screen', () => requestRelayout('leave-full-screen'));
   win.on('close', () => {
     if (boundsTimer) clearTimeout(boundsTimer);
     if (!incognito) saveBounds(win);
