@@ -1184,7 +1184,10 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
             ? 'Task was cancelled.'
             : browserLine;
         const subLine = (showErrorUi || isCancellation) ? browserLine : null;
-        const showActions = !isStarting && (onRerun || canResume || (showErrorUi && isApiKeyError(session.error) && onOpenSettings));
+        // Offering to hand the rect back only makes sense while the deck is
+        // holding it and there is still a live browser underneath to hand back.
+        const canBrowseHere = deckActive && !browserDead && !browserMissing;
+        const showActions = !isStarting && (onRerun || canResume || canBrowseHere || (showErrorUi && isApiKeyError(session.error) && onOpenSettings));
         const placeholder = (
             <div className="pane__browser-starting">
               {showErrorUi && (
@@ -1216,6 +1219,20 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
                       <span>Resume</span>
                     </button>
                   )}
+                  {/* Sits between Resume and Rerun because it is the third
+                      answer to the same question: Resume gives the task back
+                      to the agent, Rerun starts it over, this keeps the page
+                      and gives it to you. */}
+                  {canBrowseHere && (
+                    <button
+                      className="pane__rerun-btn"
+                      onClick={() => setBrowseHere(true)}
+                      title="Keep the page as the agent left it and carry on yourself"
+                    >
+                      <BrowserIcon />
+                      <span>Continue browsing</span>
+                    </button>
+                  )}
                   {showErrorUi && isApiKeyError(session.error) && onOpenSettings && (
                     <button className="pane__rerun-btn" onClick={onOpenSettings}>
                       <span>Open Settings</span>
@@ -1244,11 +1261,7 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
               height: frameRect.height,
             }}
           >
-            <PreviewDeck
-              session={session}
-              placeholder={placeholder}
-              onBrowseHere={() => setBrowseHere(true)}
-            />
+            <PreviewDeck session={session} placeholder={placeholder} />
           </div>
         );
       })()}
