@@ -31,10 +31,14 @@ describe('chrome import path helpers', () => {
       env: { XDG_CONFIG_HOME: '/home/ada/.config' },
     });
 
-    expect(candidates[0]).toBe(path.join('/home/ada/.config', 'google-chrome'));
-    expect(candidates).toContain(path.join('/home/ada/.config', 'chromium'));
-    expect(candidates).toContain(path.join('/home/ada/.config', 'BraveSoftware', 'Brave-Browser'));
-    expect(candidates).toContain(path.join('/home/ada/.config', 'microsoft-edge'));
+    // path.posix, not path.join: this asserts what a Linux machine produces,
+    // and path.join follows the platform running the test — so on Windows it
+    // built \homeda\.config\google-chrome and failed a function that was
+    // behaving correctly.
+    expect(candidates[0]).toBe(path.posix.join('/home/ada/.config', 'google-chrome'));
+    expect(candidates).toContain(path.posix.join('/home/ada/.config', 'chromium'));
+    expect(candidates).toContain(path.posix.join('/home/ada/.config', 'BraveSoftware', 'Brave-Browser'));
+    expect(candidates).toContain(path.posix.join('/home/ada/.config', 'microsoft-edge'));
   });
 
   it('rejects profile traversal before importing cookies', () => {

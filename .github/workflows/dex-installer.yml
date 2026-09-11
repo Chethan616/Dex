@@ -1,0 +1,95 @@
+# Build dex-setup.exe on a clean machine.
+#
+# This is the check that matters for "works on every system". Locally the
+# installer builds against whatever happens to be installed — a particular Node
+# from fnm, Git for Windows on D:, an npm cache warmed by months of use. A
+# fresh runner has none of that, so if it builds here it builds for someone who
+# has only ever downloaded the app.
+#
+# The artifact is downloadable from the run, so there is always a current
+# installer without anyone having to build one by hand.
+name: DEX installer
+
+on:
+  push:
+    branches: [v3/dex]
+  workflow_dispatch:
+    inputs:
+      skip_checks:
+        description: 'Skip lint/typecheck/test before building'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows installer
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+          cache-dependency-path: desktop/app/yarn.lock
+
+      - name: Rewrite git+ssh to https
+        run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+
+      - name: Install dependencies
+        working-directory: desktop/app
+        run: yarn install --frozen-lockfile
+
+      - name: Checks
+        if: ${{ inputs.skip_checks != true }}
+        working-directory: desktop/app
+        run: yarn qa
+
+      # Unsigned: there is no certificate in this repo, and forge only signs
+      # when WINDOWS_SIGN_WITH_PARAMS is set. Windows SmartScreen will warn on
+      # first run — expected, and the reason to sign before distributing widely.
+      - name: Build installer
+        working-directory: desktop/app
+        run: yarn make
+
+      - name: Check the installer exists
+        working-directory: desktop/app
+        shell: pwsh
+        run: |
+          $setup = 'out/make/squirrel.windows/x64/dex-setup.exe'
+          if (-not (Test-Path $setup)) {
+            throw "make reported success but $setup is missing"
+          }
+          $size = [math]::Round((Get-Item $setup).Length / 1MB, 1)
+          Write-Host "dex-setup.exe built ($size MB)"
+          if ($size -lt 50) {
+            # A truncated build still produces a file. Anything under 50 MB is
+            # not a packaged Electron app.
+            throw "dex-setup.exe is only $size MB, which is too small to be a real build"
+          }
+
+      # RELEASES and the .nupkg travel with the exe: Squirrel's updater needs
+      # all three, and shipping only the exe breaks auto-update in a way that
+      # surfaces much later.
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: dex-setup-windows
+          path: |
+            desktop/app/out/make/squirrel.windows/x64/dex-setup.exe
+            desktop/app/out/make/squirrel.windows/x64/RELEASES
+            desktop/app/out/make/squirrel.windows/x64/*.nupkg
+          if-no-files-found: error
+          retention-days: 30

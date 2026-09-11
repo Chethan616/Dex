@@ -98,12 +98,22 @@ describe('pathEnrich', () => {
         },
       });
 
-      const parts = result.split(':');
-      expect(parts).toContain(nvmBin);
-      expect(parts).toContain(fnmBin);
-      expect(parts).toContain(path.join(home, '.npm-prefix', 'bin'));
-      expect(parts).toContain(path.join(home, 'Library', 'pnpm'));
-      expect(parts).toContain(path.join(home, '.volta', 'bin'));
+      // Both sides normalised to forward slashes before comparing.
+      //
+      // The directories have to exist on disk for the check under test, so
+      // they are created with path.join and carry the host's separators. The
+      // darwin code path then appends its own segments with POSIX ones, so a
+      // real result on Windows reads C:\...\home/.nvm/versions/... -- correct,
+      // and not equal to either pure form. Splitting on ':' is no help either,
+      // since that chops the drive letter off.
+      const norm = (value: string): string => value.split(path.win32.sep).join('/');
+      const enriched = norm(result);
+
+      expect(enriched).toContain(norm(nvmBin));
+      expect(enriched).toContain(norm(fnmBin));
+      expect(enriched).toContain(norm(path.join(home, '.npm-prefix', 'bin')));
+      expect(enriched).toContain(norm(path.join(home, 'Library', 'pnpm')));
+      expect(enriched).toContain(norm(path.join(home, '.volta', 'bin')));
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
