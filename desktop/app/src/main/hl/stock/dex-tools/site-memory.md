@@ -54,19 +54,46 @@ field on the page and let DEX enter the value:
 1. Recall the site and check `hasPassword` is true.
 2. Inspect the login form and find the CSS selectors of the username and
    password inputs (e.g. `#username`, `input[type=password]`).
-3. Fill each by selector — this is the reliable way, it does not depend on
-   focus: `dex-fill vtop.vit.ac.in user "#username"` then
-   `dex-fill vtop.vit.ac.in pass "input[type=password]"`.
-4. Verify both fields now show a value (screenshot, or read them back with the
-   harness) before submitting. If a field is still empty, the selector was
-   wrong — find the right one and fill again.
-5. Submit the form.
+3. Fill each by selector: `dex-fill vtop.vit.ac.in user "#username"` then
+   `dex-fill vtop.vit.ac.in pass "input[type=password]"`. Verify both fields
+   show a value; if one is empty the selector was wrong — find the right one
+   and fill again.
+4. Handle the CAPTCHA **only if one is actually on the page** (see below).
+5. Click the submit / login button.
+6. Confirm you are signed in — the URL changed, or a dashboard is showing. If
+   the page reports a bad CAPTCHA or wrong credentials, read the message and
+   retry from the relevant step.
 
-`dex-fill` types the stored value straight into whatever field is focused and
-tells you only whether it worked. The secret goes from the keychain to the
-page and is seen by nothing in between — not by you, not by the transcript.
+`dex-fill` types the stored value straight into the field and tells you only
+whether it worked. The secret goes from the keychain to the page and is seen by
+nothing in between — not by you, not by the transcript.
 
-**Never ask the user to paste a password to you in chat.** If there is a login
-field, fill it. If nothing is stored and a login is genuinely needed, ask them
-to sign in inside the browser view themselves (see the login-wall section of
-`./AGENTS.md`) rather than requesting the password.
+**Never ask the user to paste a password to you in chat.** Fill the field. If
+nothing is stored and a login is genuinely needed, ask them to sign in inside
+the browser view themselves.
+
+## CAPTCHAs — look before you wait
+
+**This tool is meant to run without the user. Do not stop and wait for a human
+unless there is genuinely no other way.**
+
+First, look at the actual page. Do not assume a CAPTCHA exists — many logins
+have none. Only act on a CAPTCHA you can actually see in the DOM or a
+screenshot.
+
+- **No CAPTCHA on the page** → just submit. Never wait for a CAPTCHA that is
+  not there. Inventing one and waiting is the failure this section exists to
+  stop.
+- **A text / image CAPTCHA** (a distorted-letters image with a text box next to
+  it — this is what VTOP uses) → solve it yourself. Screenshot the CAPTCHA
+  image, read the characters, type them into the CAPTCHA input, and submit.
+  This is the user's own login on their own account; reading their portal's
+  text CAPTCHA for them is part of doing the task. If it is rejected, click the
+  refresh icon to get a new image, read it again, and retry — a few times
+  before giving up.
+- **An interactive widget you cannot read** (a reCAPTCHA / hCaptcha checkbox or
+  an image-grid challenge) → these genuinely cannot be solved from the DOM.
+  Only here do you involve the user: tell them exactly what to click in the
+  browser view and wait, then continue automatically once it clears. Confirm
+  such a widget is really present before claiming it — do not mistake a plain
+  submit button for one.

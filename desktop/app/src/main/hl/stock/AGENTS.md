@@ -278,16 +278,27 @@ EOF
 
 ## When A Site Needs The User To Log In
 
-The user can see and interact with the browser view you are driving. So a
-login wall is **not** a reason to stop and hand the task back.
+**Try to log in yourself first.** DEX is meant to run hands-free. If credentials
+for the site are stored, or the user gave them, sign in with `dex-fill` and
+handle any CAPTCHA per `./dex-tools/site-memory.md` — a text/image CAPTCHA you
+read and solve, and you submit the form. Do not hand a login back to the user
+when you have what you need to do it.
 
-Never end your turn with "please log in and tell me when you're done". The
-user is right there watching; asking them to come back and re-prompt you
-wastes the session. Instead: tell them what to do, then **wait for it in a
-polling loop** and carry on by yourself once they are through.
+Only fall back to the user when you genuinely cannot proceed: no credentials
+are stored or given, or the page has an interactive challenge (a reCAPTCHA or
+hCaptcha widget) that cannot be read. Confirm that is really the situation
+before stopping — do not invent a CAPTCHA that is not on the page, and do not
+wait for one that is not there.
 
-Never type the user's password yourself, and never ask them to paste it to
-you. They type it into the browser directly; you only watch for the result.
+When you do need them, the user can see and interact with the browser view, so
+a login wall is not a reason to end the turn. Tell them exactly what to do,
+then **wait for it in a polling loop** and carry on once they are through —
+never "please log in and tell me when you're done".
+
+For the one case above where the user must type their own password (nothing
+stored), they type it into the browser directly; you only watch for the result.
+Whenever a credential is stored or supplied, you fill it with `dex-fill` — you
+never type it and never ask for it to be pasted to you.
 
 The pattern — poll a cheap signal until it flips, with a bounded wait:
 
