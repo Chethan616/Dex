@@ -1,0 +1,15 @@
+# Dex OmniParser MCP server deps.
+#
+# Heavy: onnxruntime is ~50 MB, mss is small, opencv-python is ~30 MB.
+# Optional: onnxruntime-gpu (~400 MB, requires CUDA) for GPU inference.
+#
+# The model weights themselves are NOT in this file; they download to
+# ~/.dex/models/omniparser/model.onnx on first parse_screen() call
+# (~2 GB). Set DEX_OMNIPARSER_WEIGHTS_URL to point at a mirror.
+
+mcp>=1.0
+onnxruntime>=1.18
+mss>=9.0
+Pillow>=10.0
+numpy>=1.26
+opencv-python>=4.10
