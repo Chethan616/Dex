@@ -273,17 +273,38 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
     try { localStorage.setItem(MODEL_STORAGE_PREFIX + engine, id); } catch { /* ignore */ }
   }, [engine]);
 
+  // Promote a command to its chip and empty the field for the argument. The
+  // one path every selection goes through — click, Enter, Tab — so they can
+  // never disagree.
+  const commitCommand = useCallback((next: SlashCommand) => {
+    setCommand(next);
+    setValue('');
+    setErrorMsg(null);
+    textareaRef.current?.focus();
+  }, []);
+
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       const caretAtStart = e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0;
+
+      // Backspace at the very start with a chip present removes the chip
+      // outright. It does not put "/scrape" back — the point of pressing
+      // backspace on it is to be rid of it. Any argument already typed stays.
       if (e.key === 'Backspace' && command && caretAtStart) {
-        // Restore the raw command text so it can be edited or removed, rather
-        // than deleting into the argument from nowhere.
         e.preventDefault();
-        setValue(`/${command.name} ${value}`);
         setCommand(null);
         return;
       }
+
+      // While the suggestion list is open, Enter and Tab pick the first match
+      // rather than submitting a half-typed "/s". This is the fix for Enter
+      // sending the raw slash to the model.
+      if (!command && slashHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+        e.preventDefault();
+        commitCommand(slashHints[0]);
+        return;
+      }
+
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         submit();
@@ -292,7 +313,7 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
         textareaRef.current?.blur();
       }
     },
-    [submit],
+    [submit, command, slashHints, commitCommand],
   );
 
   const onDrop = useCallback(
@@ -364,9 +385,9 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
                 className="task-input__command-remove"
                 aria-label={`Remove ${commandLabel(command)} command`}
                 onMouseDown={(e) => {
-                  // mousedown, not click: keep focus in the textarea.
+                  // mousedown, not click: keep focus in the textarea. Removes
+                  // the chip cleanly — it never turns back into "/scrape" text.
                   e.preventDefault();
-                  setValue(`/${command.name} ${value}`.trimEnd() + (value ? '' : ' '));
                   setCommand(null);
                   textareaRef.current?.focus();
                 }}
@@ -383,7 +404,7 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
                 type="button"
                 key={command.name}
                 className="task-input__slash-item"
-                onMouseDown={(e) => { e.preventDefault(); setValue(`/${command.name} `); textareaRef.current?.focus(); }}
+                onMouseDown={(e) => { e.preventDefault(); commitCommand(command); }}
               >
                 <span className="task-input__slash-usage">{command.usage}</span>
                 <span className="task-input__slash-summary">{command.summary}</span>
