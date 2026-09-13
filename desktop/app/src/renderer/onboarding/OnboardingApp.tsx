@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { OnboardingCookieList } from './OnboardingCookieList';
 import introImage from './intro.png';
+import dexWordmark from '../assets/dex-wordmark.png';
 import claudeCodeLogo from './claude-code-logo.svg';
 import codexLogo from './codex-logo.svg';
 import { BrowserLogoAvatar } from '../shared/BrowserLogoAvatar';
@@ -909,7 +910,9 @@ export function OnboardingApp() {
           <div className="step-panel intro-panel">
             <div className="intro-content">
               <div className="intro-text">
-                <h1 className="intro-title">DEX</h1>
+                <h1 className="intro-title">
+                  <img className="intro-wordmark" src={dexWordmark} alt="DEX" draggable={false} />
+                </h1>
                 <p className="intro-subtitle">
                   Run AI agents that browse the web, complete tasks, and report back — all from your desktop.
                 </p>

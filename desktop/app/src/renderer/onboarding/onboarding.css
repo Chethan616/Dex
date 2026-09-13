@@ -71,6 +71,17 @@ html, body {
   line-height: 1.1;
 }
 
+/* The wordmark replaces the word. Height-constrained with auto width so the
+   2:1 source art keeps its proportions — matching the homescreen wordmark,
+   one notch larger because this is the intro hero. */
+.intro-wordmark {
+  height: 48px;
+  width: auto;
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .intro-subtitle {
   font-size: 15px;
   color: var(--color-fg-secondary);
