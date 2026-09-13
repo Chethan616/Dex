@@ -260,12 +260,27 @@ html, body {
 .logs-followup {
   flex: 0 0 auto;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   padding: 10px 12px;
   background: rgba(125, 211, 252, 0.05);
   border-top: 1px solid var(--color-accent-default);
   transition: background 140ms ease;
+}
+
+/* The chevron + textarea keep their original horizontal layout inside a row,
+   now that a command chip and suggestions can sit above them. */
+.logs-followup__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The ended state has a single centred label, no rows. */
+.logs-followup--ended {
+  flex-direction: row;
+  align-items: center;
 }
 
 .logs-followup:focus-within {
@@ -362,3 +377,32 @@ html, body {
   70%  { box-shadow: 0 0 0 8px rgba(125, 211, 252, 0); }
   100% { box-shadow: 0 0 0 0 rgba(125, 211, 252, 0); }
 }
+
+/* Slash-command chip and suggestions in the follow-up (shared vocabulary with
+   the dashboard input; the logs window loads only logs.css). */
+.logs-followup .task-input__command { display: flex; padding: 0 0 2px; }
+.logs-followup .task-input__command-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 4px 2px 8px; border-radius: 6px;
+  background-color: color-mix(in srgb, var(--color-accent-default) 16%, transparent);
+  color: var(--color-accent-default);
+}
+.logs-followup .task-input__command-name { font-size: 11px; font-weight: 700; }
+.logs-followup .task-input__command-remove {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; padding: 0; border: 0; border-radius: 4px;
+  background: none; color: var(--color-accent-default); opacity: 0.65; cursor: pointer;
+}
+.logs-followup .task-input__command-remove:hover { opacity: 1; }
+.logs-followup .task-input__slash {
+  display: flex; flex-direction: column; gap: 1px; padding: 4px;
+  border: 1px solid rgba(var(--highlight-rgb), 0.08); border-radius: 6px;
+  background-color: var(--color-bg-sunken);
+}
+.logs-followup .task-input__slash-item {
+  display: flex; flex-direction: column; gap: 1px; padding: 6px 8px;
+  border: 0; border-radius: 4px; background: none; text-align: left; cursor: pointer;
+}
+.logs-followup .task-input__slash-item:hover { background-color: var(--color-surface-hover); }
+.logs-followup .task-input__slash-usage { font-family: var(--font-mono); font-size: 11px; color: var(--color-accent-default); }
+.logs-followup .task-input__slash-summary { font-size: 10px; color: var(--color-fg-tertiary); }

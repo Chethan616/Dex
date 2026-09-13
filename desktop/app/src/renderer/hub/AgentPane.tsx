@@ -11,6 +11,8 @@ import opencodeLogoLight from './opencode-logo-light.svg';
 import { useThemedAsset } from '../design/useThemedAsset';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
 import { PreviewDeck, deckHasContent } from './PreviewDeck';
+import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from './slashCommands';
+import { CommandChip, CommandHints } from './CommandChip';
 import type { AgentSession, OutputEntry } from './types';
 
 function formatElapsed(createdAt: number): string {
@@ -546,6 +548,7 @@ function insertAtCaret(el: HTMLTextAreaElement, text: string): string {
 
 function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: string; onUserInput: (text: string, attachments?: FollowUpAttachment[]) => void; autoFocus?: boolean }): React.ReactElement {
   const [value, setValue] = useState('');
+  const [command, setCommand] = useState<SlashCommand | null>(null);
   const [attachments, setAttachments] = useState<FollowUpAttachment[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const idxCounter = useRef(0);
@@ -567,15 +570,49 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
     let m: RegExpExecArray | null;
     while ((m = tokenRe.exec(trimmed)) !== null) presentIdx.add(Number(m[1]));
     const filtered = attachments.filter((a) => presentIdx.has(a.idx));
-    if (!trimmed && filtered.length === 0) return;
-    console.log('[FollowUpInput] sending follow-up', { id: sessionId, prompt: trimmed, attachmentCount: filtered.length });
-    onUserInput(trimmed, filtered.length > 0 ? filtered : undefined);
+    if (!trimmed && filtered.length === 0 && !(command && !command.requiresArg)) return;
+    // A committed chip expands through its command; otherwise a leading slash
+    // is expanded here — the same rule as the dashboard and the overlay.
+    const prompt = command ? command.expand(trimmed) : expandSlashCommand(trimmed).prompt;
+    console.log('[FollowUpInput] sending follow-up', { id: sessionId, command: command?.name, attachmentCount: filtered.length });
+    onUserInput(prompt, filtered.length > 0 ? filtered : undefined);
     setValue('');
+    setCommand(null);
     setAttachments([]);
     idxCounter.current = 0;
-  }, [value, sessionId, onUserInput, attachments]);
+  }, [value, command, sessionId, onUserInput, attachments]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const slashHints = command ? [] : matchingCommands(value);
+
+  const commitCommand = useCallback((next: SlashCommand) => {
+    setCommand(next);
+    setValue('');
+    textareaRef.current?.focus();
+  }, []);
+
+  const handleChange = useCallback((next: string) => {
+    if (!command) {
+      const m = /^\/([a-zA-Z][\w-]*)[ \n]([\s\S]*)$/.exec(next);
+      if (m) {
+        const found = SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase());
+        if (found) { setCommand(found); setValue(m[2]); return; }
+      }
+    }
+    setValue(next);
+  }, [command]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const caretAtStart = e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0;
+    if (e.key === 'Backspace' && command && caretAtStart) {
+      e.preventDefault();
+      setCommand(null);
+      return;
+    }
+    if (!command && slashHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+      e.preventDefault();
+      commitCommand(slashHints[0]);
+      return;
+    }
     if (e.key === 'Escape') {
       e.preventDefault();
       textareaRef.current?.blur();
@@ -583,7 +620,7 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
       e.preventDefault();
       handleSubmit();
     }
-  }, [handleSubmit]);
+  }, [handleSubmit, command, slashHints, commitCommand]);
 
   const addFiles = useCallback(async (files: FileList | File[] | null) => {
     if (!files) return;
@@ -649,16 +686,18 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
     >
+      {command && <CommandChip command={command} onRemove={() => setCommand(null)} />}
+      <CommandHints hints={slashHints} onPick={commitCommand} />
       <div className="followup__row">
         <span className="followup__chevron">&rsaquo;</span>
         <textarea
           ref={textareaRef}
           className="followup__input"
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => handleChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          placeholder="Follow up..."
+          placeholder={command ? command.summary : 'Follow up...'}
           rows={1}
         />
         <button

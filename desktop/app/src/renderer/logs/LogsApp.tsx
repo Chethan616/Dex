@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TerminalPane } from '../hub/TerminalPane';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
+import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from '../hub/slashCommands';
+import { CommandChip, CommandHints } from '../hub/CommandChip';
 
 declare global {
   interface Window {
@@ -171,6 +173,7 @@ export function LogsApp(): React.ReactElement {
   const [sessionEngine, setSessionEngine] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [input, setInput] = useState('');
+  const [command, setCommand] = useState<SlashCommand | null>(null);
   const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -328,26 +331,60 @@ export function LogsApp(): React.ReactElement {
   const sendFollowUp = useCallback(async () => {
     if (!sessionId) return;
     const trimmed = input.trim();
-    if (!trimmed || sending) return;
+    if ((!trimmed && !(command && !command.requiresArg)) || sending) return;
+    // Same command rule as everywhere else: a committed chip expands through
+    // its command, otherwise a leading slash is expanded here.
+    const prompt = command ? command.expand(trimmed) : expandSlashCommand(trimmed).prompt;
     setSending(true);
     try {
-      await window.logsAPI.followUp(sessionId, trimmed);
+      await window.logsAPI.followUp(sessionId, prompt);
       setInput('');
+      setCommand(null);
     } catch (err) {
       console.error('[LogsApp] follow-up failed', err);
     } finally {
       setSending(false);
     }
-  }, [sessionId, input, sending]);
+  }, [sessionId, input, command, sending]);
+
+  const slashHints = command ? [] : matchingCommands(input);
+
+  const commitCommand = useCallback((next: SlashCommand) => {
+    setCommand(next);
+    setInput('');
+    inputRef.current?.focus();
+  }, []);
+
+  const handleInputChange = useCallback((next: string) => {
+    if (!command) {
+      const m = /^\/([a-zA-Z][\w-]*)[ \n]([\s\S]*)$/.exec(next);
+      if (m) {
+        const found = SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase());
+        if (found) { setCommand(found); setInput(m[2]); return; }
+      }
+    }
+    setInput(next);
+  }, [command]);
 
   const onInputKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const caretAtStart = e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0;
+      if (e.key === 'Backspace' && command && caretAtStart) {
+        e.preventDefault();
+        setCommand(null);
+        return;
+      }
+      if (!command && slashHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+        e.preventDefault();
+        commitCommand(slashHints[0]);
+        return;
+      }
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         void sendFollowUp();
       }
     },
-    [sendFollowUp],
+    [sendFollowUp, command, slashHints, commitCommand],
   );
 
   const hasFiles = files.length > 0;
@@ -447,17 +484,21 @@ export function LogsApp(): React.ReactElement {
           className="logs-followup"
           onSubmit={(e) => { e.preventDefault(); void sendFollowUp(); }}
         >
-          <span className="logs-followup__chevron">&rsaquo;</span>
-          <textarea
-            ref={inputRef}
-            className="logs-followup__input"
-            value={input}
-            placeholder={sessionId && (sessionStatus === 'running' || sessionStatus === 'stuck') ? 'Queue follow-up…' : sessionId ? 'Follow up…' : 'No session'}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onInputKeyDown}
-            rows={1}
-            disabled={!sessionId || sending}
-          />
+          {command && <CommandChip command={command} onRemove={() => setCommand(null)} />}
+          <CommandHints hints={slashHints} onPick={commitCommand} />
+          <div className="logs-followup__row">
+            <span className="logs-followup__chevron">&rsaquo;</span>
+            <textarea
+              ref={inputRef}
+              className="logs-followup__input"
+              value={input}
+              placeholder={command ? command.summary : (sessionId && (sessionStatus === 'running' || sessionStatus === 'stuck') ? 'Queue follow-up…' : sessionId ? 'Follow up…' : 'No session')}
+              onChange={(e) => handleInputChange(e.target.value)}
+              onKeyDown={onInputKeyDown}
+              rows={1}
+              disabled={!sessionId || sending}
+            />
+          </div>
         </form>
       )}
     </div>
