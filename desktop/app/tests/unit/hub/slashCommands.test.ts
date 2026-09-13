@@ -31,6 +31,23 @@ describe('expandSlashCommand', () => {
     expect(result.prompt).toContain('vit.ac.in.md');
   });
 
+  // The bug from the field: "/scrape <site> and log me in with these
+  // credentials" expanded to the site alone, silently dropping the login.
+  it('keeps instructions the user added after the target', () => {
+    const result = expandSlashCommand('/scrape vtop.vit.ac.in and log in with user X pass Y');
+    expect(result.prompt).toContain('vtop.vit.ac.in');
+    expect(result.prompt).toContain('log in with user X pass Y');
+    // The target is just the first token, so the memory file is still the host.
+    expect(result.prompt).toContain('vtop.vit.ac.in.md');
+    expect(result.prompt).not.toContain('and log in with user X pass Y.md');
+  });
+
+  it('works with no extra instructions', () => {
+    const result = expandSlashCommand('/scrape vtop.vit.ac.in');
+    expect(result.prompt).toContain('vtop.vit.ac.in');
+    expect(result.prompt).not.toContain('The user also said');
+  });
+
   it('names the memory file by host even when given a full URL with www', () => {
     const result = expandSlashCommand('/scrape https://www.vit.ac.in/academics');
     expect(result.prompt).toContain('vit.ac.in.md');

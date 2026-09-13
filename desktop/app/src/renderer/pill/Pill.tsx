@@ -8,6 +8,8 @@ import {
 import { fallbackShortcutPlatform, formatShortcutForPlatform } from '../../shared/hotkeys';
 import { EnginePicker } from '../hub/EnginePicker';
 import { DEFAULT_MODEL_ID, ModelPicker } from '../hub/ModelPicker';
+import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from '../hub/slashCommands';
+import { CommandChip, CommandHints } from '../hub/CommandChip';
 import {
   RESULT_ROW_HEIGHT,
   MAX_RESULTS,
@@ -237,6 +239,10 @@ function statusLabel(status: string): string {
 
 export function Pill(): React.ReactElement {
   const [value, setValue] = useState('');
+  // A committed slash command, shown as a chip; the field then holds only its
+  // argument. Same model as the dashboard input, so the overlay behaves the
+  // same way.
+  const [command, setCommand] = useState<SlashCommand | null>(null);
   const [sessions, setSessions] = useState<SessionLite[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const [engine, setEngine] = useState<string>(() => loadStoredEngine());
@@ -404,27 +410,83 @@ export function Pill(): React.ReactElement {
     try { localStorage.setItem(MODEL_STORAGE_PREFIX + engine, id); } catch { /* ignore */ }
   }, [engine]);
 
+  // Suggestions while typing the command word — and never once a chip exists.
+  const slashHints = command ? [] : matchingCommands(value);
+
+  const commitCommand = useCallback((next: SlashCommand) => {
+    setCommand(next);
+    setValue('');
+    if (ref && typeof ref !== 'function') ref.current?.focus();
+  }, [ref]);
+
+  const handleChange = useCallback((next: string) => {
+    if (!command) {
+      const m = /^\/([a-zA-Z][\w-]*)[ \n]([\s\S]*)$/.exec(next);
+      if (m) {
+        const found = SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase());
+        if (found) { setCommand(found); setValue(m[2]); return; }
+      }
+    }
+    setValue(next);
+  }, [command]);
+
+  // Build the prompt actually sent: through a committed chip, or by expanding a
+  // leading slash. This is the fix for /commands doing nothing in the overlay.
+  const buildPrompt = useCallback((trimmed: string): { prompt: string; error?: string } => {
+    if (command) {
+      if (command.requiresArg && trimmed.length === 0) return { prompt: trimmed, error: `${command.usage} — needs a target.` };
+      return { prompt: command.expand(trimmed) };
+    }
+    const expanded = expandSlashCommand(trimmed);
+    return { prompt: expanded.prompt, error: expanded.error };
+  }, [command]);
+
+  const sendPrompt = useCallback((trimmed: string): boolean => {
+    const built = buildPrompt(trimmed);
+    if (built.error) { setAttachError(built.error); return false; }
+    const attachArg = attachments.length > 0 ? attachments : undefined;
+    window.pillAPI.submit(built.prompt, attachArg, engine, model);
+    setValue('');
+    setCommand(null);
+    setAttachments([]);
+    setAttachError(null);
+    return true;
+  }, [buildPrompt, attachments, engine, model]);
+
   const submit = useCallback(() => {
     const trimmed = value.trim();
-    if (!trimmed && attachments.length === 0 && !(showDashboard && selectedIdx >= 0)) return;
-    if (selectedIdx >= 0 && selectedIdx < navList.length) {
+    // Selecting a session from the list only applies when no command is armed.
+    if (!command && selectedIdx >= 0 && selectedIdx < navList.length) {
       window.pillAPI.selectSession(navList[selectedIdx].id);
       setValue('');
       return;
     }
-    if (!trimmed) return;
-    const attachArg = attachments.length > 0 ? attachments : undefined;
-    window.pillAPI.submit(trimmed, attachArg, engine, model);
-    setValue('');
-    setAttachments([]);
-    setAttachError(null);
-  }, [value, selectedIdx, navList, showDashboard, attachments, engine, model]);
+    if (!trimmed && attachments.length === 0 && !(command && !command.requiresArg)) return;
+    sendPrompt(trimmed);
+  }, [value, command, selectedIdx, navList, attachments, sendPrompt]);
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const caretAtStart = e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0;
+
+      // Backspace at the very start with a chip present removes it outright.
+      if (e.key === 'Backspace' && command && caretAtStart) {
+        e.preventDefault();
+        setCommand(null);
+        return;
+      }
+      // While the suggestion list is open, Enter and Tab pick the first match
+      // rather than submitting or selecting a session.
+      if (!command && slashHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+        e.preventDefault();
+        commitCommand(slashHints[0]);
+        return;
+      }
+
       if (e.key === 'Escape') {
         e.preventDefault();
         setValue('');
+        setCommand(null);
         setAttachments([]);
         setAttachError(null);
         window.pillAPI.hide();
@@ -436,20 +498,13 @@ export function Pill(): React.ReactElement {
         setSelectedIdx((i) => Math.max(i - 1, -1));
       } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        const trimmed = value.trim();
-        if (trimmed) {
-          const attachArg = attachments.length > 0 ? attachments : undefined;
-          window.pillAPI.submit(trimmed, attachArg, engine, model);
-          setValue('');
-          setAttachments([]);
-          setAttachError(null);
-        }
+        sendPrompt(value.trim());
       } else if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         submit();
       }
     },
-    [submit, value, navList.length, attachments, engine, model],
+    [submit, sendPrompt, command, slashHints, commitCommand, value, navList.length],
   );
 
   const highlightVisible = hasResults && selectedIdx >= 0;
@@ -459,6 +514,8 @@ export function Pill(): React.ReactElement {
     <div className="cmdbar__scrim" onClick={() => window.pillAPI.hide()}>
       <div className="cmdbar" onClick={(e) => e.stopPropagation()}>
         <div className="cmdbar__drag-handle" />
+
+        {command && <CommandChip command={command} onRemove={() => setCommand(null)} />}
 
         <div className="cmdbar__search">
           {(() => {
@@ -496,9 +553,9 @@ export function Pill(): React.ReactElement {
             ref={ref}
             className="cmdbar__input"
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Search sessions or create new agent..."
+            placeholder={command ? command.summary : 'Search sessions or create new agent...'}
             rows={1}
             aria-label="Search or create"
           />
@@ -554,6 +611,8 @@ export function Pill(): React.ReactElement {
             ))}
           </div>
         )}
+
+        <CommandHints hints={slashHints} onPick={commitCommand} />
 
         {attachError && <div className="cmdbar__error">{attachError}</div>}
 

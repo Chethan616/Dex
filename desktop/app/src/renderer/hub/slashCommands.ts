@@ -23,6 +23,29 @@ export interface SlashCommand {
   expand: (arg: string) => string;
 }
 
+/**
+ * Split a command argument into its target and anything the user added after.
+ *
+ * `/scrape vtop.vit.ac.in and log me in first` → target "vtop.vit.ac.in",
+ * extra "and log me in first". Without this the expansion kept only the target
+ * and silently dropped the rest — which is how a "/scrape <site> and log in
+ * with these credentials" lost the login half entirely.
+ */
+function splitTarget(arg: string): { target: string; extra: string } {
+  const trimmed = arg.trim();
+  const space = trimmed.search(/\s/);
+  if (space === -1) return { target: trimmed, extra: '' };
+  return { target: trimmed.slice(0, space), extra: trimmed.slice(space + 1).trim() };
+}
+
+/** Append the user's extra words to an expanded prompt, if there were any. */
+function withExtra(prompt: string, extra: string): string {
+  if (!extra) return prompt;
+  return `${prompt}
+
+The user also said, and it takes priority over the defaults above: ${extra}`;
+}
+
 /** Normalise a user-typed target into a bare hostname for naming the memory file. */
 function hostOf(raw: string): string {
   const trimmed = raw.trim().replace(/^@/, '');
@@ -43,9 +66,10 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     summary: 'Map a site into memory — its pages, navigation, and where each control lives.',
     requiresArg: true,
     expand: (arg) => {
-      const host = hostOf(arg);
-      return [
-        `Build a site map of ${arg} and save it to DEX's site memory.`,
+      const { target, extra } = splitTarget(arg);
+      const host = hostOf(target);
+      return withExtra([
+        `Build a site map of ${target} and save it to DEX's site memory.`,
         '',
         'Read `./dex-tools/scrape.md` and follow it exactly. In short: visit the',
         'main sections, and for each page record its URL, its purpose, the',
@@ -53,10 +77,14 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         'search boxes) with where on the page they sit. The point is that a later',
         'task can read this instead of re-exploring the site every time.',
         '',
+        'If the user has asked you to sign in — here or in the note below — follow',
+        'the login section of the skill: remember the credentials, fill them, and',
+        'map the pages behind the login too.',
+        '',
         `Save the map as \`$DEX_SITE_MEMORY_DIR/${host}.md\` (create the folder if`,
         'it does not exist), and record it with `dex-state file` so it shows in',
         'the results.',
-      ].join('\n');
+      ].join('\n'), extra);
     },
   },
   {
@@ -65,8 +93,9 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     summary: 'Authorized security-posture review of a site you own or may test.',
     requiresArg: true,
     expand: (arg) => {
-      return [
-        `Run an authorized security-posture review of ${arg}.`,
+      const { target, extra } = splitTarget(arg);
+      return withExtra([
+        `Run an authorized security-posture review of ${target}.`,
         '',
         'Read `./dex-tools/bugbounty.md` and follow it exactly, starting with the',
         'authorization check at the top — do not skip it. This review is limited',
@@ -78,8 +107,8 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         '',
         'Produce a findings report — each item with a severity, what was',
         'observed, why it matters, and how to fix it — and save it to',
-        `\`$DEX_SITE_MEMORY_DIR/${hostOf(arg)}.security.md\`.`,
-      ].join('\n');
+        `\`$DEX_SITE_MEMORY_DIR/${hostOf(target)}.security.md\`.`,
+      ].join('\n'), extra);
     },
   },
 ];

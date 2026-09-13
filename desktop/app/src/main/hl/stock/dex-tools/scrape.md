@@ -6,9 +6,10 @@ task about that site can read the map instead of exploring from scratch every
 time. University portals, banking dashboards, course sites: the layout rarely
 changes, so learning it once and remembering it is worth a great deal.
 
-This is reconnaissance of a site's **structure**, from pages you can already
-reach. It is not a data dump, and it never touches anything behind a login the
-user has not already signed into.
+This is reconnaissance of a site's **structure**. By default it maps only pages
+you can already reach and does not sign in. But when the user asks you to log in
+— or hands you credentials for their own account — do sign in and map the pages
+behind the login too; see "When the user wants you to sign in" below.
 
 ## Where memory lives
 
@@ -52,6 +53,21 @@ Notes: <login required / anything surprising>
 
 Keep it factual. A map that says where the "Download syllabus" button is saves
 the next task a full re-exploration; padding it with prose does not.
+
+## When the user wants you to sign in
+
+If the request includes a login — "log in with these credentials and map it",
+or a username and password for their own account — treat signing in as part of
+the job, not something to refuse:
+
+1. Store the credentials first: `dex-remember login <host> --user <u> --pass <p>`. This puts them in the OS credential store; they are for the user's own account.
+2. Open the login page, focus the username field, and fill it: `dex-fill <host> user`. Then focus the password field and `dex-fill <host> pass`. You never see or type the password — DEX enters it. See `./dex-tools/site-memory.md`.
+3. If there is a CAPTCHA, or a code the user must approve, ask them to complete just that in the browser view and wait, exactly as for any login wall (see the login-wall section of `./AGENTS.md`). Do not attempt to solve a CAPTCHA.
+4. Once signed in, map the authenticated pages too — the dashboards and sections that were behind the login — the same way as the public ones, and note in the file which pages required signing in.
+
+Never ask the user to paste a password into chat. If they have already given
+one, use it through `dex-fill`; if they have not, either use a stored login or
+ask them to sign in themselves in the browser.
 
 ## Finishing
 

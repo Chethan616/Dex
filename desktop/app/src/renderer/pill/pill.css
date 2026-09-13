@@ -1065,3 +1065,86 @@ html, body {
     opacity: 0.55;
   }
 }
+
+/* Slash-command chip and suggestions, shared visual vocabulary with the
+   dashboard input (see hub.css). Duplicated here because the pill window loads
+   only pill.css. */
+
+.cmdbar .task-input__command {
+  display: flex;
+  padding: var(--space-1) var(--space-3) 0;
+}
+
+.cmdbar .task-input__command-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in srgb, var(--color-accent-default) 16%, transparent);
+  color: var(--color-accent-default);
+}
+
+.cmdbar .task-input__command-name {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.01em;
+}
+
+.cmdbar .task-input__command-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-accent-default);
+  opacity: 0.65;
+  cursor: pointer;
+}
+
+.cmdbar .task-input__command-remove:hover {
+  opacity: 1;
+  background-color: color-mix(in srgb, var(--color-accent-default) 22%, transparent);
+}
+
+.cmdbar .task-input__slash {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0 var(--space-3) var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid rgba(var(--highlight-rgb), 0.06);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+}
+
+.cmdbar .task-input__slash-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cmdbar .task-input__slash-item:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.cmdbar .task-input__slash-usage {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-default);
+}
+
+.cmdbar .task-input__slash-summary {
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-tertiary);
+}
