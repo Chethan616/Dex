@@ -7,6 +7,14 @@ them with Bash like any other command.
 |---|---|
 | `dex-state` | Recording the plan and its progress. Always available. |
 
+There are also skill files here for two user commands, read when the command is
+used rather than run as tools:
+
+| Skill | Command | What it does |
+|---|---|---|
+| `scrape.md` | `/scrape <url>` | Map a site into `$DEX_SITE_MEMORY_DIR` — pages, navigation, controls. |
+| `bugbounty.md` | `/bugbounty <url>` | Authorized, observation-only security review of a site. |
+
 More tools appear here as they ship. Run any of them with `--help`.
 
 ---

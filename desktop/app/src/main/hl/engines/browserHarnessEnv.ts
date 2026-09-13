@@ -61,6 +61,10 @@ export function applyBrowserHarnessEnv(ctx: SpawnContext, env: NodeJS.ProcessEnv
   // to its cwd, which only happens to work while cwd is the harness dir.
   env.DEX_SESSION_ID = ctx.sessionId;
   env.DEX_CONTROL_FILE = path.join(path.dirname(ctx.harnessDir), 'local-task-server.json');
+  // Persistent, cross-session knowledge of sites the agent has mapped or
+  // reviewed. Lives beside the harness in userData so it survives every
+  // harness rewrite, unlike the harness tree itself.
+  env.DEX_SITE_MEMORY_DIR = path.join(path.dirname(ctx.harnessDir), 'site-memory');
 
   if (process.platform === 'win32') {
     const bash = resolveGitBash(env);

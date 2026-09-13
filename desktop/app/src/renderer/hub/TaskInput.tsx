@@ -10,6 +10,7 @@ import React, {
 import { INPUT_PLACEHOLDER } from './constants';
 import { EnginePicker } from './EnginePicker';
 import { DEFAULT_MODEL_ID, ModelPicker } from './ModelPicker';
+import { expandSlashCommand, matchingCommands } from './slashCommands';
 import {
   classifyAttachmentMime,
   maxBytesForAttachmentMime,
@@ -164,11 +165,28 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  // Command suggestions while the user is still typing the command word.
+  const slashHints = matchingCommands(value);
+
   const submit = useCallback(() => {
     const trimmed = value.trim();
     if (!trimmed && attachments.length === 0) return;
-    console.log('[TaskInput] submit', { promptLength: trimmed.length, attachmentCount: attachments.length });
-    onSubmit({ prompt: trimmed, attachments, engine, model });
+
+    // A slash command is expanded into its full prompt here, before it leaves
+    // the renderer. A known command missing its argument stops rather than
+    // sending a half-formed instruction.
+    const expanded = expandSlashCommand(trimmed);
+    if (expanded.error) {
+      setErrorMsg(expanded.error);
+      return;
+    }
+    const prompt = expanded.prompt;
+    console.log('[TaskInput] submit', {
+      promptLength: prompt.length,
+      command: expanded.command?.name,
+      attachmentCount: attachments.length,
+    });
+    onSubmit({ prompt, attachments, engine, model });
     setValue('');
     setAttachments([]);
     setErrorMsg(null);
@@ -260,6 +278,21 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
           </div>
         )}
         {errorMsg && <div className="task-input__error">{errorMsg}</div>}
+        {slashHints.length > 0 && (
+          <div className="task-input__slash">
+            {slashHints.map((command) => (
+              <button
+                type="button"
+                key={command.name}
+                className="task-input__slash-item"
+                onMouseDown={(e) => { e.preventDefault(); setValue(`/${command.name} `); textareaRef.current?.focus(); }}
+              >
+                <span className="task-input__slash-usage">{command.usage}</span>
+                <span className="task-input__slash-summary">{command.summary}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <textarea
           ref={textareaRef}
           className="task-input__textarea"

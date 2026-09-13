@@ -102,6 +102,17 @@ dex-state step-done
 dex-state file "$DEX_DESKTOP_DIR/dex-test/notes.txt"
 ```
 
+## Remembered Sites
+
+DEX keeps notes on sites it has mapped or reviewed, in `$DEX_SITE_MEMORY_DIR`,
+one Markdown file per host (e.g. `vit.ac.in.md`).
+
+**Before browsing a site, check whether a note for its host exists there.** If
+it does, read it first: it tells you the pages, the navigation, and where the
+controls are, so you can go straight to the right place instead of re-exploring
+a portal the user has already had you map. The `/scrape` command is what
+creates these notes; see `./dex-tools/scrape.md`.
+
 ## Driving The Browser
 
 Use `browser-harness-js` for browser actions. It runs JavaScript snippets

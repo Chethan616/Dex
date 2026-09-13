@@ -6273,3 +6273,45 @@ button:focus:not(:focus-visible) {
   gap: var(--space-3);
   flex-shrink: 0;
 }
+
+/* Slash-command suggestions, shown inside the task box while the command word
+   is being typed. Modelled on a small menu rather than the result cards: it is
+   a picker, and it disappears the moment a space is typed. */
+
+.task-input__slash {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0 var(--space-2) var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid rgba(var(--highlight-rgb), 0.06);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+}
+
+.task-input__slash-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.task-input__slash-item:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.task-input__slash-usage {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-default);
+}
+
+.task-input__slash-summary {
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-tertiary);
+}
