@@ -1236,6 +1236,75 @@ app.whenReady().then(async () => {
     userDataPath: app.getPath('userData'),
     log: mainLogger,
     routes: {
+      // Remember a nickname for a site: `dex-remember site "uni portal" <url>`.
+      'POST /dex/remember-site': async (raw) => {
+        const { target, aliases } = JSON.parse(raw || '{}') as { target?: unknown; aliases?: unknown };
+        const t = assertString(target, 'target', 300);
+        const list = Array.isArray(aliases) ? aliases.filter((a): a is string => typeof a === 'string') : [];
+        const { rememberSite } = await import('./memory/siteStore');
+        return { site: await rememberSite(t, list) };
+      },
+
+      // Remember a username and/or password for a site. The password is stored
+      // in the OS credential store and never returned by any route.
+      'POST /dex/remember-login': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { target?: unknown; username?: unknown; password?: unknown };
+        const t = assertString(body.target, 'target', 300);
+        const { rememberLogin } = await import('./memory/siteStore');
+        const site = await rememberLogin(t, {
+          username: typeof body.username === 'string' ? body.username : undefined,
+          password: typeof body.password === 'string' ? body.password : undefined,
+        });
+        return { site };
+      },
+
+      // Forget a site entirely — its aliases and any stored login.
+      'POST /dex/forget-site': async (raw) => {
+        const { target } = JSON.parse(raw || '{}') as { target?: unknown };
+        const t = assertString(target, 'target', 300);
+        const { forgetSite } = await import('./memory/siteStore');
+        await forgetSite(t);
+        return { forgotten: t };
+      },
+
+      // Resolve a nickname to a site. Returns the URL and whether credentials
+      // exist — never the password.
+      'POST /dex/recall-site': async (raw) => {
+        const { query } = JSON.parse(raw || '{}') as { query?: unknown };
+        const q = assertString(query, 'query', 300);
+        const { recallSite } = await import('./memory/siteStore');
+        return { site: await recallSite(q) };
+      },
+
+      // Type a stored credential into the session's focused browser field.
+      //
+      // This is the whole reason the password can stay secret: the value goes
+      // from the credential store straight into the page via the WebContentsView,
+      // and the response says only whether it worked. The agent focuses the
+      // field first (with the harness) and never sees the value.
+      'POST /dex/fill': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { sessionId?: unknown; target?: unknown; field?: unknown };
+        const sessionId = assertString(body.sessionId, 'sessionId', 100);
+        const target = assertString(body.target, 'target', 300);
+        const field = body.field === 'username' ? 'username' : 'password';
+
+        const view = browserPool.getView(sessionId);
+        if (!view || view.webContents.isDestroyed()) {
+          return { filled: false, error: 'No live browser view for this session. Open the page first.' };
+        }
+        const { getSecret } = await import('./memory/siteStore');
+        const secret = await getSecret(target, field);
+        if (!secret) {
+          return { filled: false, error: `No stored ${field} for ${target}.` };
+        }
+        // Inserts into whatever editable element currently has focus. The agent
+        // clicks the field first; we type into it and report nothing else.
+        view.webContents.focus();
+        view.webContents.insertText(secret);
+        mainLogger.info('dex.fill', { sessionId, field });
+        return { filled: true };
+      },
+
       // The `dex-state` CLI's only endpoint. Everything it can do is one of
       // the verbs in TaskStateMutationSchema, so validation is a single parse
       // and the handler stays a pass-through to the session manager.

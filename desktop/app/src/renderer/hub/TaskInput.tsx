@@ -10,7 +10,39 @@ import React, {
 import { INPUT_PLACEHOLDER } from './constants';
 import { EnginePicker } from './EnginePicker';
 import { DEFAULT_MODEL_ID, ModelPicker } from './ModelPicker';
-import { expandSlashCommand, matchingCommands } from './slashCommands';
+import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from './slashCommands';
+
+// A small glyph per command, shown in the committed chip. Lives here rather
+// than in slashCommands.ts so that module stays plain, testable logic with no
+// JSX.
+function CommandIcon({ name }: { name: string }): React.ReactElement {
+  if (name === 'scrape') {
+    return (
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.4" />
+        <path d="M2 8h12M8 2c1.8 1.6 2.8 3.8 2.8 6S9.8 12.4 8 14C6.2 12.4 5.2 10.2 5.2 8S6.2 3.6 8 2z" stroke="currentColor" strokeWidth="1.2" />
+      </svg>
+    );
+  }
+  if (name === 'bugbounty') {
+    return (
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M8 1.5l5 2v4c0 3-2.1 5.3-5 7-2.9-1.7-5-4-5-7v-4l5-2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+        <path d="M5.6 8.2l1.7 1.7 3.1-3.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M4 4l4 4-4 4M9 12h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** "scrape" -> "Scrape". */
+function commandLabel(command: SlashCommand): string {
+  return command.name.charAt(0).toUpperCase() + command.name.slice(1);
+}
 import {
   classifyAttachmentMime,
   maxBytesForAttachmentMime,
@@ -96,6 +128,9 @@ async function readFileBytes(file: File): Promise<Uint8Array> {
 
 export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function TaskInput({ onSubmit }, ref) {
   const [value, setValue] = useState('');
+  // The command committed into a chip. When set, the textarea holds only its
+  // argument, and the chip renders the command's icon and name.
+  const [command, setCommand] = useState<SlashCommand | null>(null);
   const [focused, setFocused] = useState(false);
   const [attachments, setAttachments] = useState<TaskInputAttachment[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -165,33 +200,65 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  // Command suggestions while the user is still typing the command word.
-  const slashHints = matchingCommands(value);
+  // Command suggestions while the user is still typing the command word — and
+  // only before one has been committed to a chip.
+  const slashHints = command ? [] : matchingCommands(value);
+
+  const handleChange = useCallback((next: string) => {
+    // Promote a completed command word into a chip: `/scrape ` (or a newline
+    // after it) becomes the Scrape chip, and the field keeps only what follows.
+    if (!command) {
+      const m = /^\/([a-zA-Z][\w-]*)[ \n]([\s\S]*)$/.exec(next);
+      if (m) {
+        const found = SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase());
+        if (found) {
+          setCommand(found);
+          setValue(m[2]);
+          return;
+        }
+      }
+    }
+    setValue(next);
+  }, [command]);
 
   const submit = useCallback(() => {
     const trimmed = value.trim();
     if (!trimmed && attachments.length === 0) return;
 
-    // A slash command is expanded into its full prompt here, before it leaves
-    // the renderer. A known command missing its argument stops rather than
-    // sending a half-formed instruction.
-    const expanded = expandSlashCommand(trimmed);
-    if (expanded.error) {
-      setErrorMsg(expanded.error);
-      return;
+    // A committed chip expands through its own command; otherwise a leading
+    // slash is expanded here, before anything leaves the renderer. Either way
+    // a command missing its required argument stops rather than sending a
+    // half-formed instruction.
+    let prompt: string;
+    let commandName: string | undefined;
+    if (command) {
+      if (command.requiresArg && trimmed.length === 0) {
+        setErrorMsg(command.usage + ' — needs a target.');
+        return;
+      }
+      prompt = command.expand(trimmed);
+      commandName = command.name;
+    } else {
+      const expanded = expandSlashCommand(trimmed);
+      if (expanded.error) {
+        setErrorMsg(expanded.error);
+        return;
+      }
+      prompt = expanded.prompt;
+      commandName = expanded.command?.name;
     }
-    const prompt = expanded.prompt;
     console.log('[TaskInput] submit', {
       promptLength: prompt.length,
-      command: expanded.command?.name,
+      command: commandName,
       attachmentCount: attachments.length,
     });
     onSubmit({ prompt, attachments, engine, model });
     setValue('');
+    setCommand(null);
     setAttachments([]);
     setErrorMsg(null);
     textareaRef.current?.focus();
-  }, [value, attachments, engine, model, onSubmit]);
+  }, [value, command, attachments, engine, model, onSubmit]);
 
   const onEngineChange = useCallback((id: string) => {
     setEngine(id);
@@ -208,6 +275,15 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const caretAtStart = e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0;
+      if (e.key === 'Backspace' && command && caretAtStart) {
+        // Restore the raw command text so it can be edited or removed, rather
+        // than deleting into the argument from nowhere.
+        e.preventDefault();
+        setValue(`/${command.name} ${value}`);
+        setCommand(null);
+        return;
+      }
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         submit();
@@ -237,7 +313,7 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
 
   const onDragLeave = useCallback(() => setDragActive(false), []);
 
-  const canSubmit = value.trim().length > 0 || attachments.length > 0;
+  const canSubmit = value.trim().length > 0 || attachments.length > 0 || (command != null && !command.requiresArg);
 
   useImperativeHandle(ref, () => ({
     addFiles: (files) => addFiles(files),
@@ -278,6 +354,28 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
           </div>
         )}
         {errorMsg && <div className="task-input__error">{errorMsg}</div>}
+        {command && (
+          <div className="task-input__command">
+            <span className="task-input__command-chip">
+              <CommandIcon name={command.name} />
+              <span className="task-input__command-name">{commandLabel(command)}</span>
+              <button
+                type="button"
+                className="task-input__command-remove"
+                aria-label={`Remove ${commandLabel(command)} command`}
+                onMouseDown={(e) => {
+                  // mousedown, not click: keep focus in the textarea.
+                  e.preventDefault();
+                  setValue(`/${command.name} ${value}`.trimEnd() + (value ? '' : ' '));
+                  setCommand(null);
+                  textareaRef.current?.focus();
+                }}
+              >
+                <CloseIcon />
+              </button>
+            </span>
+          </div>
+        )}
         {slashHints.length > 0 && (
           <div className="task-input__slash">
             {slashHints.map((command) => (
@@ -297,11 +395,11 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
           ref={textareaRef}
           className="task-input__textarea"
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => handleChange(e.target.value)}
           onKeyDown={onKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder={INPUT_PLACEHOLDER}
+          placeholder={command ? `${command.summary}` : INPUT_PLACEHOLDER}
           rows={1}
           aria-label="New agent task"
         />

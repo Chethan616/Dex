@@ -6315,3 +6315,49 @@ button:focus:not(:focus-visible) {
   font-size: var(--font-size-2xs);
   color: var(--color-fg-tertiary);
 }
+
+/* Committed slash-command chip. A recognised command, once its word is
+   finished, becomes a token — blue and bold with its glyph — and the field
+   below holds only the argument. Modelled on how Codex and Claude Code show a
+   chosen command rather than leaving raw "/scrape" text in the box. */
+
+.task-input__command {
+  display: flex;
+  padding: 0 var(--space-2) var(--space-1);
+}
+
+.task-input__command-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in srgb, var(--color-accent-default) 16%, transparent);
+  color: var(--color-accent-default);
+}
+
+.task-input__command-name {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.01em;
+}
+
+.task-input__command-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-accent-default);
+  opacity: 0.65;
+  cursor: pointer;
+}
+
+.task-input__command-remove:hover {
+  opacity: 1;
+  background-color: color-mix(in srgb, var(--color-accent-default) 22%, transparent);
+}

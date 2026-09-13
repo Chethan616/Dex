@@ -6,6 +6,9 @@ them with Bash like any other command.
 | Tool | Use it for |
 |---|---|
 | `dex-state` | Recording the plan and its progress. Always available. |
+| `dex-remember` | Recording a site the user named, or a login they gave. See `site-memory.md`. |
+| `dex-recall` | Resolving a nickname ("my uni portal") to a real URL. |
+| `dex-fill` | Typing a stored credential into a focused login field without seeing it. |
 
 There are also skill files here for two user commands, read when the command is
 used rather than run as tools:

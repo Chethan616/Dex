@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# dex-recall — look up a site the user named earlier.
+#
+#   dex-recall "university portal"   ->  { host, url, aliases, hasUsername, hasPassword }
+#
+# Use this the moment the user refers to a site by a nickname ("open my uni
+# portal") to get the real URL. The result tells you whether a login is stored;
+# if it is, sign in with dex-fill rather than asking for the password.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+[ $# -ge 1 ] || { echo "usage: dex-recall <nickname-or-host>" >&2; exit 2; }
+dex_post /dex/recall-site "{\"query\":\"$(dex_esc "$*")\"}"

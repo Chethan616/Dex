@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# dex-fill — type a stored credential into the focused browser field.
+#
+#   (click/focus the username field first, then)  dex-fill <host> user
+#   (click/focus the password field first, then)  dex-fill <host> pass
+#
+# The value is typed straight into the page from the credential store. It is
+# never returned to you and never appears in the transcript — you are placing
+# the cursor, DEX is entering the secret. If nothing is stored, it says so.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+[ $# -ge 2 ] || { echo "usage: dex-fill <host> user|pass" >&2; exit 2; }
+target="$1"; kind="$2"
+case "$kind" in
+  user|username) field="username" ;;
+  pass|password) field="password" ;;
+  *) echo "dex-fill: second argument must be 'user' or 'pass'" >&2; exit 2 ;;
+esac
+
+session="$(dex_session_id)"
+[ -n "$session" ] || { echo "dex-fill: no session id in the environment" >&2; exit 3; }
+
+dex_post /dex/fill "{\"sessionId\":\"$(dex_esc "$session")\",\"target\":\"$(dex_esc "$target")\",\"field\":\"${field}\"}"

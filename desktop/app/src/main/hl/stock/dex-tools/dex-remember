@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# dex-remember — teach DEX a site the user has named, or a login they gave.
+#
+# The user says it once ("my university portal is vtop.vit.ac.in", or hands you
+# a username and password); you record it here so later sessions can act on
+# "open my uni portal" without asking again. Passwords are stored in the OS
+# credential store and are never printed back by any tool.
+#
+# See site-memory.md for when to call this.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+usage() {
+  cat >&2 <<'USAGE'
+usage:
+  dex-remember site <url-or-host> <nickname>...     e.g. dex-remember site vtop.vit.ac.in "university portal" "vtop"
+  dex-remember login <url-or-host> [--user <u>] [--pass <p>]
+  dex-remember forget <url-or-host>                  drop a site and its stored login
+
+  Record a login only when the user has given you the details for their own
+  account. Never invent them, and never ask them to paste a password to you if
+  a browser login field is available — fill it with dex-fill instead.
+USAGE
+  exit 2
+}
+
+[ $# -ge 2 ] || usage
+op="$1"; shift
+
+case "$op" in
+  site)
+    target="$1"; shift
+    [ $# -ge 1 ] || { echo "dex-remember site: give at least one nickname" >&2; exit 2; }
+    aliases=""
+    for a in "$@"; do
+      [ -n "$aliases" ] && aliases="${aliases},"
+      aliases="${aliases}\"$(dex_esc "$a")\""
+    done
+    dex_post /dex/remember-site "{\"target\":\"$(dex_esc "$target")\",\"aliases\":[${aliases}]}"
+    ;;
+  login)
+    target="$1"; shift
+    user=""; pass=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --user) user="${2:-}"; shift 2 ;;
+        --pass) pass="${2:-}"; shift 2 ;;
+        *) shift ;;
+      esac
+    done
+    body="{\"target\":\"$(dex_esc "$target")\""
+    [ -n "$user" ] && body="${body},\"username\":\"$(dex_esc "$user")\""
+    [ -n "$pass" ] && body="${body},\"password\":\"$(dex_esc "$pass")\""
+    body="${body}}"
+    dex_post /dex/remember-login "$body"
+    ;;
+  forget)
+    target="$1"
+    dex_post /dex/forget-site "{\"target\":\"$(dex_esc "$target")\"}"
+    ;;
+  -h|--help|help) usage ;;
+  *) echo "dex-remember: unknown verb '$op'" >&2; usage ;;
+esac

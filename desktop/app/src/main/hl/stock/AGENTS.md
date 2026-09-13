@@ -113,6 +113,20 @@ controls are, so you can go straight to the right place instead of re-exploring
 a portal the user has already had you map. The `/scrape` command is what
 creates these notes; see `./dex-tools/scrape.md`.
 
+DEX also remembers sites the user has **named**, and their **logins**:
+
+- When the user refers to a site by a nickname — "open my uni portal", "my
+  college site" — run `dex-recall "<what they said>"` to get the real URL
+  before asking or guessing.
+- When the user tells you a site's address and clearly expects you to remember
+  it, record it with `dex-remember site <url> "<nickname>"...`.
+- When a login is needed and one is stored, sign in with `dex-fill` — focus the
+  field, then fill it — rather than reading or asking for the password. When
+  the user gives you their own login details, store them with
+  `dex-remember login`. Never ask for a password to be pasted into chat.
+
+See `./dex-tools/site-memory.md` for the details.
+
 ## Driving The Browser
 
 Use `browser-harness-js` for browser actions. It runs JavaScript snippets
