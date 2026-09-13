@@ -285,10 +285,13 @@ read and solve, and you submit the form. Do not hand a login back to the user
 when you have what you need to do it.
 
 Only fall back to the user when you genuinely cannot proceed: no credentials
-are stored or given, or the page has an interactive challenge (a reCAPTCHA or
-hCaptcha widget) that cannot be read. Confirm that is really the situation
-before stopping — do not invent a CAPTCHA that is not on the page, and do not
-wait for one that is not there.
+are stored or given, or the page has a *visible, interactive* challenge — a
+clickable "I'm not a robot" checkbox or an image-grid pop-up — that has
+actually blocked a submit. A small "protected by reCAPTCHA" badge in a corner
+is NOT that: it is invisible reCAPTCHA that needs no interaction, so just
+submit. Confirm a real checkbox is on the page before stopping — do not invent
+a CAPTCHA, and never wait for one that is not there. See the CAPTCHA section of
+`./dex-tools/site-memory.md`.
 
 When you do need them, the user can see and interact with the browser view, so
 a login wall is not a reason to end the turn. Tell them exactly what to do,

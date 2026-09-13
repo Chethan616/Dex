@@ -97,7 +97,7 @@ export function bootstrapHarness(): void {
   // existing users. AGENTS.md is the harness manual, not agent-editable
   // state — safe to overwrite so new sections (domain-skills, etc.) land
   // without the user deleting their userData.
-  const sentinel = 'Try to log in yourself first';  // AGENTS.md marker; bump when its content changes
+  const sentinel = 'protected by reCAPTCHA';  // AGENTS.md marker; bump when its content changes
   const needsSkill = !fs.existsSync(sp) || (() => {
     try { return !fs.readFileSync(sp, 'utf-8').includes(sentinel); }
     catch { return true; }

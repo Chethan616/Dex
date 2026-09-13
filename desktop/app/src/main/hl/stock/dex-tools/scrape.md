@@ -62,7 +62,7 @@ the job, not something to refuse:
 
 1. Store the credentials first: `dex-remember login <host> --user <u> --pass <p>`. This puts them in the OS credential store; they are for the user's own account.
 2. Open the login page, find the username and password field selectors, and fill each by selector: `dex-fill <host> user "<username-selector>"` then `dex-fill <host> pass "<password-selector>"`. Verify both show a value before submitting. You never see or type the password — DEX enters it. See `./dex-tools/site-memory.md`.
-3. Handle a CAPTCHA only if one is actually on the page, per the "CAPTCHAs — look before you wait" section of `./dex-tools/site-memory.md`: no CAPTCHA means just submit; a text/image CAPTCHA you read and fill yourself; only an unreadable interactive widget involves the user. Do not wait for a CAPTCHA that is not there.
+3. Handle a CAPTCHA per the CAPTCHA section of `./dex-tools/site-memory.md`: submit first. A "protected by reCAPTCHA" badge needs no interaction — just submit. A text/image CAPTCHA you read and fill yourself. Only a visible checkbox or image-grid that has actually blocked the submit involves the user. Never wait for a CAPTCHA that is not there.
 4. Once signed in, map the authenticated pages too — the dashboards and sections that were behind the login — the same way as the public ones, and note in the file which pages required signing in.
 
 Never ask the user to paste a password into chat. If they have already given
