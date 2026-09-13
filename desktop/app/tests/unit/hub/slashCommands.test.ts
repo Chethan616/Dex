@@ -33,6 +33,18 @@ describe('expandSlashCommand', () => {
 
   // The bug from the field: "/scrape <site> and log me in with these
   // credentials" expanded to the site alone, silently dropping the login.
+  // The regression from the field: "/scrape go to vtop.vit.ac.in and log in"
+  // mapped a site called "go" because the target was the first word.
+  it('picks the URL as the target, not the first word', () => {
+    const result = expandSlashCommand('/scrape go to vtop.vit.ac.in and login as student');
+    expect(result.prompt).toContain('vtop.vit.ac.in.md');
+    expect(result.prompt).not.toContain('site map of go');
+    expect(result.prompt).not.toContain('site map of GO');
+    // The words around the URL survive as instructions.
+    expect(result.prompt).toContain('go to');
+    expect(result.prompt).toContain('login as student');
+  });
+
   it('keeps instructions the user added after the target', () => {
     const result = expandSlashCommand('/scrape vtop.vit.ac.in and log in with user X pass Y');
     expect(result.prompt).toContain('vtop.vit.ac.in');

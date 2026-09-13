@@ -1283,10 +1283,11 @@ app.whenReady().then(async () => {
       // and the response says only whether it worked. The agent focuses the
       // field first (with the harness) and never sees the value.
       'POST /dex/fill': async (raw) => {
-        const body = JSON.parse(raw || '{}') as { sessionId?: unknown; target?: unknown; field?: unknown };
+        const body = JSON.parse(raw || '{}') as { sessionId?: unknown; target?: unknown; field?: unknown; selector?: unknown };
         const sessionId = assertString(body.sessionId, 'sessionId', 100);
         const target = assertString(body.target, 'target', 300);
         const field = body.field === 'username' ? 'username' : 'password';
+        const selector = typeof body.selector === 'string' && body.selector.trim() ? body.selector.trim() : null;
 
         const view = browserPool.getView(sessionId);
         if (!view || view.webContents.isDestroyed()) {
@@ -1297,12 +1298,57 @@ app.whenReady().then(async () => {
         if (!secret) {
           return { filled: false, error: `No stored ${field} for ${target}.` };
         }
-        // Inserts into whatever editable element currently has focus. The agent
-        // clicks the field first; we type into it and report nothing else.
-        view.webContents.focus();
-        view.webContents.insertText(secret);
-        mainLogger.info('dex.fill', { sessionId, field });
-        return { filled: true };
+
+        // Set the value through the page's own DOM via the debugger, rather than
+        // webContents.insertText. insertText needs the WebContents to hold OS
+        // focus and to land on whatever the DOM thinks is focused — which did
+        // not survive the harness driving focus over its own CDP connection, so
+        // the fields came back empty. Setting the value directly, through the
+        // native value setter and with input/change events dispatched, lands
+        // reliably and looks to the site like real entry. The secret is built
+        // into the expression here in main and is never logged or returned.
+        const dbg = view.webContents.debugger;
+        const attachedHere = !dbg.isAttached();
+        try {
+          if (attachedHere) dbg.attach('1.3');
+          const literal = JSON.stringify(secret);
+          const sel = selector ? JSON.stringify(selector) : 'null';
+          const expression = `(() => {
+            const el = ${sel} ? document.querySelector(${sel}) : document.activeElement;
+            if (!el || !('value' in el)) return 'nofield';
+            const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+            const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
+            el.focus();
+            setter.call(el, ${literal});
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            return 'ok';
+          })()`;
+          const result = await dbg.sendCommand('Runtime.evaluate', {
+            expression,
+            returnByValue: true,
+          }) as { result?: { value?: string }; exceptionDetails?: unknown };
+
+          if (result.exceptionDetails) {
+            return { filled: false, error: 'Could not reach the field on the page.' };
+          }
+          if (result.result?.value === 'nofield') {
+            return {
+              filled: false,
+              error: selector
+                ? `No field matched "${selector}".`
+                : 'No input is focused. Click the field first, or pass its selector.',
+            };
+          }
+          mainLogger.info('dex.fill', { sessionId, field, bySelector: Boolean(selector) });
+          return { filled: true };
+        } catch (err) {
+          return { filled: false, error: (err as Error).message };
+        } finally {
+          if (attachedHere && dbg.isAttached()) {
+            try { dbg.detach(); } catch { /* already gone */ }
+          }
+        }
       },
 
       // The `dex-state` CLI's only endpoint. Everything it can do is one of

@@ -52,9 +52,15 @@ You do not read the password and type it — you never see it. Instead, focus th
 field on the page and let DEX enter the value:
 
 1. Recall the site and check `hasPassword` is true.
-2. Click / focus the **username** field in the browser, then: `dex-fill vtop.vit.ac.in user`
-3. Click / focus the **password** field, then: `dex-fill vtop.vit.ac.in pass`
-4. Submit the form.
+2. Inspect the login form and find the CSS selectors of the username and
+   password inputs (e.g. `#username`, `input[type=password]`).
+3. Fill each by selector — this is the reliable way, it does not depend on
+   focus: `dex-fill vtop.vit.ac.in user "#username"` then
+   `dex-fill vtop.vit.ac.in pass "input[type=password]"`.
+4. Verify both fields now show a value (screenshot, or read them back with the
+   harness) before submitting. If a field is still empty, the selector was
+   wrong — find the right one and fill again.
+5. Submit the form.
 
 `dex-fill` types the stored value straight into whatever field is focused and
 tells you only whether it worked. The secret goes from the keychain to the

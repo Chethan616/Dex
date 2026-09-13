@@ -33,9 +33,25 @@ export interface SlashCommand {
  */
 function splitTarget(arg: string): { target: string; extra: string } {
   const trimmed = arg.trim();
-  const space = trimmed.search(/\s/);
-  if (space === -1) return { target: trimmed, extra: '' };
-  return { target: trimmed.slice(0, space), extra: trimmed.slice(space + 1).trim() };
+  if (!trimmed) return { target: '', extra: '' };
+
+  const tokens = trimmed.split(/\s+/);
+  // The target is the first URL-like token — a scheme, or a bare host with a
+  // dot — not simply the first word. "/scrape go to vtop.vit.ac.in and log in"
+  // must map vtop.vit.ac.in, not a site called "go". Everything else, in
+  // order, becomes the extra instruction.
+  const isTargetLike = (t: string): boolean =>
+    /:\/\//.test(t) || /^[a-z0-9-]+(\.[a-z0-9-]+)+/i.test(t.replace(/^@/, ''));
+
+  const idx = tokens.findIndex(isTargetLike);
+  if (idx === -1) {
+    // No URL in sight — hand the whole thing over as the target and let the
+    // agent (and its nickname lookup) work out what site is meant.
+    return { target: trimmed, extra: '' };
+  }
+  const target = tokens[idx];
+  const extra = tokens.slice(0, idx).concat(tokens.slice(idx + 1)).join(' ').trim();
+  return { target, extra };
 }
 
 /** Append the user's extra words to an expanded prompt, if there were any. */

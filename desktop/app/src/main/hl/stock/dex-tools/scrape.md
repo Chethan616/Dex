@@ -61,7 +61,7 @@ or a username and password for their own account — treat signing in as part of
 the job, not something to refuse:
 
 1. Store the credentials first: `dex-remember login <host> --user <u> --pass <p>`. This puts them in the OS credential store; they are for the user's own account.
-2. Open the login page, focus the username field, and fill it: `dex-fill <host> user`. Then focus the password field and `dex-fill <host> pass`. You never see or type the password — DEX enters it. See `./dex-tools/site-memory.md`.
+2. Open the login page, find the username and password field selectors, and fill each by selector: `dex-fill <host> user "<username-selector>"` then `dex-fill <host> pass "<password-selector>"`. Verify both show a value before submitting. You never see or type the password — DEX enters it. See `./dex-tools/site-memory.md`.
 3. If there is a CAPTCHA, or a code the user must approve, ask them to complete just that in the browser view and wait, exactly as for any login wall (see the login-wall section of `./AGENTS.md`). Do not attempt to solve a CAPTCHA.
 4. Once signed in, map the authenticated pages too — the dashboards and sections that were behind the login — the same way as the public ones, and note in the file which pages required signing in.
 

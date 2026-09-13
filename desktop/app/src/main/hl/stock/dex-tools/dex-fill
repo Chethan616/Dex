@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
-# dex-fill — type a stored credential into the focused browser field.
+# dex-fill — put a stored credential into a browser login field.
 #
-#   (click/focus the username field first, then)  dex-fill <host> user
-#   (click/focus the password field first, then)  dex-fill <host> pass
+#   dex-fill <host> user "#username"      (best: pass the field's CSS selector)
+#   dex-fill <host> pass "#password"
 #
-# The value is typed straight into the page from the credential store. It is
-# never returned to you and never appears in the transcript — you are placing
-# the cursor, DEX is entering the secret. If nothing is stored, it says so.
+# The selector is optional but recommended: with it, DEX finds and fills that
+# exact field. Without it, DEX fills whatever input is currently focused, so
+# click the field first.
+#
+# The value goes straight from the credential store into the page. It is never
+# returned to you and never appears in the transcript — you place the field,
+# DEX enters the secret. If nothing is stored, it says so.
 
 set -uo pipefail
 . "$(dirname "$0")/dex-lib.sh"
 
-[ $# -ge 2 ] || { echo "usage: dex-fill <host> user|pass" >&2; exit 2; }
-target="$1"; kind="$2"
+[ $# -ge 2 ] || { echo "usage: dex-fill <host> user|pass [css-selector]" >&2; exit 2; }
+target="$1"; kind="$2"; selector="${3:-}"
 case "$kind" in
   user|username) field="username" ;;
   pass|password) field="password" ;;
@@ -22,4 +26,8 @@ esac
 session="$(dex_session_id)"
 [ -n "$session" ] || { echo "dex-fill: no session id in the environment" >&2; exit 3; }
 
-dex_post /dex/fill "{\"sessionId\":\"$(dex_esc "$session")\",\"target\":\"$(dex_esc "$target")\",\"field\":\"${field}\"}"
+body="{\"sessionId\":\"$(dex_esc "$session")\",\"target\":\"$(dex_esc "$target")\",\"field\":\"${field}\""
+[ -n "$selector" ] && body="${body},\"selector\":\"$(dex_esc "$selector")\""
+body="${body}}"
+
+dex_post /dex/fill "$body"
