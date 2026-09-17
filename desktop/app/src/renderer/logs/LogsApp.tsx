@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TerminalPane } from '../hub/TerminalPane';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from '../hub/slashCommands';
-import { insertMention, matchingMentions, type MentionDef } from '../hub/mentions';
+import { matchingMentions, type MentionDef } from '../hub/mentions';
 import { CommandChip, CommandHints, MentionHints } from '../hub/CommandChip';
+import { MentionTextField, type MentionTextFieldHandle } from '../hub/MentionTextField';
 
 declare global {
   interface Window {
@@ -176,20 +177,10 @@ export function LogsApp(): React.ReactElement {
   const [input, setInput] = useState('');
   const [command, setCommand] = useState<SlashCommand | null>(null);
   const [sending, setSending] = useState(false);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<MentionTextFieldHandle>(null);
   // Caret position, tracked separately from `input` — an @mention can start
   // anywhere in the text, unlike a slash command which only ever opens it.
   const [caret, setCaret] = useState(0);
-  const pendingCaretRef = useRef<number | null>(null);
-
-  useLayoutEffect(() => {
-    if (pendingCaretRef.current != null) {
-      const pos = pendingCaretRef.current;
-      pendingCaretRef.current = null;
-      inputRef.current?.setSelectionRange(pos, pos);
-      setCaret(pos);
-    }
-  }, [input]);
 
   useEffect(() => {
     const unsub = window.logsAPI.onActiveSessionChanged((id) => {
@@ -206,17 +197,6 @@ export function LogsApp(): React.ReactElement {
       requestAnimationFrame(() => inputRef.current?.focus());
     });
   }, []);
-
-  // Auto-grow the follow-up textarea upward as the user types multi-line
-  // input. Cap at window-height minus the header so the textarea never
-  // pushes the output area offscreen; beyond that it scrolls internally.
-  useEffect(() => {
-    const ta = inputRef.current;
-    if (!ta) return;
-    ta.style.height = 'auto';
-    const max = Math.max(72, window.innerHeight - 80);
-    ta.style.height = `${Math.min(ta.scrollHeight, max)}px`;
-  }, [input]);
 
   useEffect(() => {
     const unsub = window.logsAPI.onModeChanged((m) => {
@@ -355,6 +335,7 @@ export function LogsApp(): React.ReactElement {
       setInput('');
       setCommand(null);
       setCaret(0);
+      inputRef.current?.clear();
     } catch (err) {
       console.error('[LogsApp] follow-up failed', err);
     } finally {
@@ -368,30 +349,28 @@ export function LogsApp(): React.ReactElement {
   const commitCommand = useCallback((next: SlashCommand) => {
     setCommand(next);
     setInput('');
+    inputRef.current?.clear();
     inputRef.current?.focus();
   }, []);
 
   const pickMention = useCallback((mention: MentionDef) => {
-    const result = insertMention(input, caret, mention);
-    pendingCaretRef.current = result.cursor;
-    setInput(result.text);
-    inputRef.current?.focus();
-  }, [input, caret]);
+    inputRef.current?.insertMentionChip(mention);
+  }, []);
 
   const handleInputChange = useCallback((next: string) => {
     if (!command) {
       const m = /^\/([a-zA-Z][\w-]*)[ \n]([\s\S]*)$/.exec(next);
       if (m) {
         const found = SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase());
-        if (found) { setCommand(found); setInput(m[2]); return; }
+        if (found) { setCommand(found); setInput(m[2]); inputRef.current?.setPlainText(m[2]); return; }
       }
     }
     setInput(next);
   }, [command]);
 
   const onInputKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      const caretAtStart = e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0;
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const caretAtStart = caret === 0;
       if (e.key === 'Backspace' && command && caretAtStart) {
         e.preventDefault();
         setCommand(null);
@@ -412,7 +391,7 @@ export function LogsApp(): React.ReactElement {
         void sendFollowUp();
       }
     },
-    [sendFollowUp, command, slashHints, commitCommand, mentionHints, pickMention],
+    [sendFollowUp, command, caret, slashHints, commitCommand, mentionHints, pickMention],
   );
 
   const hasFiles = files.length > 0;
@@ -517,17 +496,20 @@ export function LogsApp(): React.ReactElement {
           <MentionHints hints={mentionHints} onPick={pickMention} />
           <div className="logs-followup__row">
             <span className="logs-followup__chevron">&rsaquo;</span>
-            <textarea
+            <MentionTextField
               ref={inputRef}
               className="logs-followup__input"
-              value={input}
+              // Cap at window-height minus the header so the field never
+              // pushes the output area offscreen; beyond that it scrolls
+              // internally. Recomputed on every render, which — since a
+              // render already follows every keystroke — is at least as
+              // responsive as the effect this replaced.
+              maxHeightPx={Math.max(72, window.innerHeight - 80)}
               placeholder={command ? command.summary : (sessionId && (sessionStatus === 'running' || sessionStatus === 'stuck') ? 'Queue follow-up…' : sessionId ? 'Follow up…' : 'No session')}
-              onChange={(e) => { handleInputChange(e.target.value); setCaret(e.target.selectionStart ?? e.target.value.length); }}
-              onKeyUp={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
-              onClick={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
+              onChange={(next, nextCaret) => { handleInputChange(next); setCaret(nextCaret); }}
               onKeyDown={onInputKeyDown}
-              rows={1}
               disabled={!sessionId || sending}
+              ariaLabel="Follow up"
             />
           </div>
         </form>

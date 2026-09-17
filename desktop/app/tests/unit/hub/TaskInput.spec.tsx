@@ -25,17 +25,30 @@ function renderTaskInput(): { container: HTMLDivElement; root: Root } {
   return { container, root };
 }
 
-function getTextarea(container: HTMLElement): HTMLTextAreaElement {
-  const textarea = container.querySelector('.task-input__textarea');
-  if (!(textarea instanceof HTMLTextAreaElement)) throw new Error('Missing task textarea');
-  return textarea;
+function getField(container: HTMLElement): HTMLDivElement {
+  const field = container.querySelector('.mention-field');
+  if (!(field instanceof HTMLDivElement)) throw new Error('Missing mention field');
+  return field;
 }
 
-function setTextareaValue(textarea: HTMLTextAreaElement, value: string): void {
-  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
-  if (!setter) throw new Error('Missing textarea value setter');
-  setter.call(textarea, value);
-  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+/** Simulates typing plain text — sets the DOM content directly and fires the
+ *  same 'input' event a real keystroke would, same technique as the old
+ *  textarea helper this replaces. */
+function typeInto(field: HTMLDivElement, text: string): void {
+  field.textContent = text;
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/** Places a collapsed caret at the end of the field's (single) text node. */
+function placeCaretAtEnd(field: HTMLDivElement): void {
+  const textNode = field.firstChild;
+  if (!textNode) return;
+  const range = document.createRange();
+  range.setStart(textNode, (textNode as Text).data?.length ?? 0);
+  range.collapse(true);
+  const sel = window.getSelection()!;
+  sel.removeAllRanges();
+  sel.addRange(range);
 }
 
 describe('TaskInput', () => {
@@ -44,51 +57,51 @@ describe('TaskInput', () => {
     vi.restoreAllMocks();
   });
 
-  it('expands the textarea to fit newline content', () => {
+  it('expands the field to fit newline content', () => {
     const { container, root } = renderTaskInput();
-    const textarea = getTextarea(container);
+    const field = getField(container);
     let scrollHeight = 24;
-    Object.defineProperty(textarea, 'scrollHeight', {
+    Object.defineProperty(field, 'scrollHeight', {
       configurable: true,
       get: () => scrollHeight,
     });
 
     act(() => {
       scrollHeight = 96;
-      setTextareaValue(textarea, 'line one\nline two\nline three\nline four');
+      typeInto(field, 'line one\nline two\nline three\nline four');
     });
 
-    expect(textarea.style.height).toBe('96px');
-    expect(textarea.style.overflowY).toBe('hidden');
+    expect(field.style.height).toBe('96px');
 
     act(() => root.unmount());
   });
 
-  it('caps textarea growth and enables internal scroll at max height', () => {
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({ maxHeight: '64px' } as CSSStyleDeclaration);
+  it('caps field growth at the configured max height', () => {
     const { container, root } = renderTaskInput();
-    const textarea = getTextarea(container);
-    Object.defineProperty(textarea, 'scrollHeight', {
+    const field = getField(container);
+    Object.defineProperty(field, 'scrollHeight', {
       configurable: true,
-      get: () => 128,
+      get: () => 400,
     });
 
     act(() => {
-      setTextareaValue(textarea, 'one\ntwo\nthree\nfour\nfive\nsix');
+      typeInto(field, 'one\ntwo\nthree\nfour\nfive\nsix');
     });
 
-    expect(textarea.style.height).toBe('64px');
-    expect(textarea.style.overflowY).toBe('auto');
+    // TASK_INPUT_MAX_HEIGHT_PX in TaskInput.tsx.
+    expect(field.style.height).toBe('160px');
 
     act(() => root.unmount());
   });
 
   it('offers @drive and splices it in as plain text, not a chip', () => {
     const { container, root } = renderTaskInput();
-    const textarea = getTextarea(container);
+    const field = getField(container);
 
     act(() => {
-      setTextareaValue(textarea, 'find my slp da @dri');
+      typeInto(field, 'find my slp da @dri');
+      placeCaretAtEnd(field);
+      field.dispatchEvent(new Event('input', { bubbles: true }));
     });
 
     const hint = container.querySelector('.task-input__slash-item');
@@ -98,8 +111,12 @@ describe('TaskInput', () => {
       hint!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     });
 
-    // Plain text, mid-sentence — never a removable chip like a slash command.
-    expect(textarea.value).toBe('find my slp da @drive ');
+    // Rendered as a real inline chip (see conversation: user asked for a
+    // colored pill rather than plain highlighted text) — but still never a
+    // removable command-style chip; it lives inline in the sentence.
+    const chip = field.querySelector('.mention-chip');
+    expect(chip?.getAttribute('data-mention')).toBe('drive');
+    expect(field.textContent).toBe('find my slp da @drive ');
     expect(container.querySelector('.task-input__command')).toBeNull();
 
     act(() => root.unmount());
@@ -107,18 +124,21 @@ describe('TaskInput', () => {
 
   it('Tab picks the first mention hint instead of inserting a literal tab', () => {
     const { container, root } = renderTaskInput();
-    const textarea = getTextarea(container);
+    const field = getField(container);
 
     act(() => {
-      setTextareaValue(textarea, '@');
+      typeInto(field, '@');
+      placeCaretAtEnd(field);
+      field.dispatchEvent(new Event('input', { bubbles: true }));
     });
     expect(container.querySelector('.task-input__slash-item')).not.toBeNull();
 
     act(() => {
-      textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+      field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
     });
 
-    expect(textarea.value).toBe('@drive ');
+    expect(field.querySelector('.mention-chip')?.getAttribute('data-mention')).toBe('drive');
+    expect(field.textContent).toBe('@drive ');
 
     act(() => root.unmount());
   });

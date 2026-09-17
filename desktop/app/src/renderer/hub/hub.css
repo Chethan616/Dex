@@ -2394,9 +2394,12 @@ button:focus:not(:focus-visible) {
   user-select: none;
 }
 
-.followup__input {
+/* Compound selector, not just `.followup__input`: see the identical note on
+   `.mention-field.cmdbar__input` in pill.css — this and `.mention-field`
+   share specificity otherwise, and whichever stylesheet loaded last would
+   silently decide properties like `flex`. */
+.mention-field.followup__input {
   flex: 1;
-  resize: none;
   background: none;
   border: none;
   outline: none;
@@ -2404,11 +2407,9 @@ button:focus:not(:focus-visible) {
   font-size: var(--font-size-base);
   color: var(--color-fg-primary);
   line-height: var(--line-height-normal);
-  max-height: 80px;
-  overflow-y: auto;
 }
 
-.followup__input::placeholder {
+.followup .mention-field--empty::before {
   color: var(--color-fg-disabled);
 }
 
@@ -2506,7 +2507,7 @@ button:focus:not(:focus-visible) {
   padding: 0;
 }
 
-.pane__output > .followup .followup__input::placeholder {
+.pane__output > .followup .mention-field--empty::before {
   color: #b8c0cc;
   opacity: 1;
 }
@@ -2625,25 +2626,48 @@ button:focus:not(:focus-visible) {
   background-color: var(--color-bg-elevated);
 }
 
-.task-input__textarea {
+/* The contentEditable field used wherever an @mention can render as a real
+   inline chip — see MentionTextField.tsx. Same box model as
+   .task-input__textarea; contentEditable has no ::placeholder, so the empty
+   state is a class (toggled in JS, not relying on the fragile :empty
+   selector — Chromium can leave a stray <br> behind) paired with ::before. */
+
+.mention-field {
   flex: 0 0 auto;
   width: 100%;
-  height: auto;
   min-height: 20px;
-  resize: none;
-  background: none;
-  border: none;
   outline: none;
   font-family: var(--font-ui);
   font-size: var(--font-size-base);
   color: var(--color-fg-primary);
   line-height: var(--line-height-normal);
-  max-height: 160px;
+  white-space: pre-wrap;
+  word-break: break-word;
   overflow-y: hidden;
 }
 
-.task-input__textarea::placeholder {
+.mention-field--empty::before {
+  content: attr(data-placeholder);
   color: var(--color-fg-tertiary);
+  pointer-events: none;
+}
+
+/* An @mention pick, inline in the sentence. Same blue-and-bold language as
+   the committed slash-command chip (.task-input__command-chip) — the two
+   are visually one family even though a mention never takes over the whole
+   field the way a command does. contenteditable="false" is what makes
+   Chromium treat it as one atomic unit for the caret and for Backspace. */
+.mention-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: color-mix(in srgb, var(--color-accent-default) 16%, transparent);
+  color: var(--color-accent-default);
+  font-weight: var(--font-weight-bold);
+  font-size: 0.95em;
+  user-select: none;
+  cursor: default;
 }
 
 .task-input__send {

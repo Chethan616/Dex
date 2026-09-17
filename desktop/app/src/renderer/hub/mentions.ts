@@ -1,15 +1,19 @@
 /**
  * `@` mentions.
  *
- * Unlike a slash command, a mention never rewrites the prompt — `@drive` is
- * meant to end up as plain text inside an ordinary sentence ("find my slp da
- * @drive as well as pc"), because that is exactly the literal string
- * `dex-find`'s skill doc looks for in the user's own words. So all this module
- * does is the typing experience: notice an in-progress `@partial` ending at
- * the caret, offer completions, and splice the chosen one in as text. There
- * is no expansion step and no chip rendered inside the text itself — see the
- * decision in conversation to keep this to a plain `<textarea>` rather than
- * rewriting the inputs onto a contentEditable rich-text editor.
+ * Unlike a slash command, a mention never rewrites the prompt — `@drive`
+ * canonicalises to the literal text "@drive" inside an ordinary sentence
+ * ("find my slp da @drive as well as pc"), because that is exactly the
+ * string `dex-find`'s skill doc looks for in the user's own words. There is
+ * no expansion step, ever, even though it renders as a real inline chip (see
+ * MentionTextField.tsx) — the chip is a display detail; the value dex-find's
+ * skill doc reads is always the plain "@drive" text.
+ *
+ * This module only defines the mention list and the pure typing-detection
+ * logic — is the caret inside an in-progress "@partial", and which known
+ * mentions match it. The actual chip insertion is DOM surgery and lives in
+ * MentionTextField, which needs a live Selection/Range to do it and so isn't
+ * unit-testable as a pure function the way this is.
  */
 
 export interface MentionDef {
@@ -45,27 +49,4 @@ export function matchingMentions(text: string, cursor: number): MentionDef[] {
   if (partial === null) return [];
   const lower = partial.toLowerCase();
   return MENTIONS.filter((mention) => mention.name.startsWith(lower));
-}
-
-export interface MentionInsertion {
-  text: string;
-  /** Where the caret should land — right after the trailing space. */
-  cursor: number;
-}
-
-/**
- * Replace the in-progress `@partial` ending at `cursor` with `@name `, a
- * literal string substitution — nothing about the rest of the sentence
- * changes. Returns the input unchanged if the caret is not actually inside a
- * mention (defensive; callers only reach this from a matched hint).
- */
-export function insertMention(text: string, cursor: number, mention: MentionDef): MentionInsertion {
-  const uptoCursor = text.slice(0, cursor);
-  if (!/(?:^|\s)@[a-zA-Z]*$/.test(uptoCursor)) return { text, cursor };
-
-  const atIndex = uptoCursor.lastIndexOf('@');
-  const before = text.slice(0, atIndex);
-  const after = text.slice(cursor);
-  const inserted = `@${mention.name} `;
-  return { text: `${before}${inserted}${after}`, cursor: before.length + inserted.length };
 }

@@ -1,11 +1,13 @@
 /**
- * @-mentions are pure text splicing, deliberately: see mentions.ts's header
- * for why this never renders a chip inside the sentence. The risk worth
+ * The pure typing-detection half of @-mentions — is the caret inside an
+ * in-progress "@partial", and which known mentions match it. The risk worth
  * testing is the false positive — an email address must never trigger the
- * dropdown or get its "user" half rewritten.
+ * dropdown. The actual chip insertion is DOM surgery tested separately in
+ * MentionTextField.spec.tsx, which needs a real (jsdom) Selection/Range to
+ * exercise at all.
  */
 import { describe, expect, it } from 'vitest';
-import { activeMentionQuery, insertMention, matchingMentions, MENTIONS } from '../../../src/renderer/hub/mentions';
+import { activeMentionQuery, matchingMentions, MENTIONS } from '../../../src/renderer/hub/mentions';
 
 describe('activeMentionQuery', () => {
   it('finds a bare @ at the start of the text', () => {
@@ -48,27 +50,5 @@ describe('matchingMentions', () => {
 
   it('is empty outside a mention context', () => {
     expect(matchingMentions('just a normal sentence', 10)).toEqual([]);
-  });
-});
-
-describe('insertMention', () => {
-  const drive = MENTIONS[0];
-
-  it('replaces a bare @ at the start with "@drive "', () => {
-    const result = insertMention('@', 1, drive);
-    expect(result).toEqual({ text: '@drive ', cursor: 7 });
-  });
-
-  it('replaces a partial mention mid-sentence, keeping the rest of the text intact', () => {
-    const text = 'find my slp da @dri as well as pc';
-    const cursor = text.indexOf('@dri') + '@dri'.length;
-    const result = insertMention(text, cursor, drive);
-    expect(result.text).toBe('find my slp da @drive  as well as pc');
-    expect(result.text.slice(result.cursor)).toBe(' as well as pc');
-  });
-
-  it('is a no-op when the caret is not actually inside a mention', () => {
-    const text = 'no mention here';
-    expect(insertMention(text, text.length, drive)).toEqual({ text, cursor: text.length });
   });
 });
