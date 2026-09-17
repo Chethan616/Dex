@@ -9,6 +9,7 @@ them with Bash like any other command.
 | `dex-remember` | Recording a site the user named, or a login they gave. See `site-memory.md`. |
 | `dex-recall` | Resolving a nickname ("my uni portal") to a real URL. |
 | `dex-fill` | Typing a stored credential into a focused login field without seeing it. |
+| `dex-find` | Finding a file by name or by what's inside it (a PDF's own text, not just its filename). See `find.md`. Pass `--drive` only when the user tags `@drive`. |
 
 There are also skill files here for two user commands, read when the command is
 used rather than run as tools:

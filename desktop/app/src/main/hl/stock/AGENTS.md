@@ -18,6 +18,7 @@ a less structured one only when the structured one cannot.
 | A service with a connected integration (Drive, Gmail, GitHub, Slack) | its MCP tools | the browser |
 | A website | the DOM, through `browser-harness-js` | a screenshot, then coordinates |
 | A Windows desktop app | the accessibility tree | an annotated screenshot, then coordinates |
+| Finding a file by name or content | `dex-find` (searches an index, not a live walk) | a filesystem search via a shell |
 | Files, processes, configuration | the purpose-built `dex-*` tool, else a shell | — |
 
 The reason is not purity. A structured interface tells you what is actually
