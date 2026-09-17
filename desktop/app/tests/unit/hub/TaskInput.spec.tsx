@@ -82,4 +82,44 @@ describe('TaskInput', () => {
 
     act(() => root.unmount());
   });
+
+  it('offers @drive and splices it in as plain text, not a chip', () => {
+    const { container, root } = renderTaskInput();
+    const textarea = getTextarea(container);
+
+    act(() => {
+      setTextareaValue(textarea, 'find my slp da @dri');
+    });
+
+    const hint = container.querySelector('.task-input__slash-item');
+    expect(hint?.textContent).toContain('@drive');
+
+    act(() => {
+      hint!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
+
+    // Plain text, mid-sentence — never a removable chip like a slash command.
+    expect(textarea.value).toBe('find my slp da @drive ');
+    expect(container.querySelector('.task-input__command')).toBeNull();
+
+    act(() => root.unmount());
+  });
+
+  it('Tab picks the first mention hint instead of inserting a literal tab', () => {
+    const { container, root } = renderTaskInput();
+    const textarea = getTextarea(container);
+
+    act(() => {
+      setTextareaValue(textarea, '@');
+    });
+    expect(container.querySelector('.task-input__slash-item')).not.toBeNull();
+
+    act(() => {
+      textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    });
+
+    expect(textarea.value).toBe('@drive ');
+
+    act(() => root.unmount());
+  });
 });

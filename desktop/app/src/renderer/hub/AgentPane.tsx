@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { STATUS_LABEL } from './constants';
 import { ContentRenderer, getPreview } from './ContentRenderer';
 import { Markdown, linkifyOutputPaths } from './Markdown';
@@ -12,7 +12,8 @@ import { useThemedAsset } from '../design/useThemedAsset';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
 import { PreviewDeck, deckHasContent } from './PreviewDeck';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from './slashCommands';
-import { CommandChip, CommandHints } from './CommandChip';
+import { insertMention, matchingMentions, type MentionDef } from './mentions';
+import { CommandChip, CommandHints, MentionHints } from './CommandChip';
 import type { AgentSession, OutputEntry } from './types';
 
 function formatElapsed(createdAt: number): string {
@@ -554,12 +555,25 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
   const idxCounter = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Caret position, tracked separately from `value` — an @mention can start
+  // anywhere in the text, unlike a slash command which only ever opens it.
+  const [caret, setCaret] = useState(0);
+  const pendingCaretRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (autoFocus && textareaRef.current) {
       textareaRef.current.focus();
     }
   }, [autoFocus]);
+
+  useLayoutEffect(() => {
+    if (pendingCaretRef.current != null) {
+      const pos = pendingCaretRef.current;
+      pendingCaretRef.current = null;
+      textareaRef.current?.setSelectionRange(pos, pos);
+      setCaret(pos);
+    }
+  }, [value]);
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();
@@ -579,16 +593,25 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
     setValue('');
     setCommand(null);
     setAttachments([]);
+    setCaret(0);
     idxCounter.current = 0;
   }, [value, command, sessionId, onUserInput, attachments]);
 
   const slashHints = command ? [] : matchingCommands(value);
+  const mentionHints = matchingMentions(value, caret);
 
   const commitCommand = useCallback((next: SlashCommand) => {
     setCommand(next);
     setValue('');
     textareaRef.current?.focus();
   }, []);
+
+  const pickMention = useCallback((mention: MentionDef) => {
+    const result = insertMention(value, caret, mention);
+    pendingCaretRef.current = result.cursor;
+    setValue(result.text);
+    textareaRef.current?.focus();
+  }, [value, caret]);
 
   const handleChange = useCallback((next: string) => {
     if (!command) {
@@ -613,6 +636,11 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
       commitCommand(slashHints[0]);
       return;
     }
+    if (mentionHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+      e.preventDefault();
+      pickMention(mentionHints[0]);
+      return;
+    }
     if (e.key === 'Escape') {
       e.preventDefault();
       textareaRef.current?.blur();
@@ -620,7 +648,7 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
       e.preventDefault();
       handleSubmit();
     }
-  }, [handleSubmit, command, slashHints, commitCommand]);
+  }, [handleSubmit, command, slashHints, commitCommand, mentionHints, pickMention]);
 
   const addFiles = useCallback(async (files: FileList | File[] | null) => {
     if (!files) return;
@@ -688,13 +716,16 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
     >
       {command && <CommandChip command={command} onRemove={() => setCommand(null)} />}
       <CommandHints hints={slashHints} onPick={commitCommand} />
+      <MentionHints hints={mentionHints} onPick={pickMention} />
       <div className="followup__row">
         <span className="followup__chevron">&rsaquo;</span>
         <textarea
           ref={textareaRef}
           className="followup__input"
           value={value}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={(e) => { handleChange(e.target.value); setCaret(e.target.selectionStart ?? e.target.value.length); }}
+          onKeyUp={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
+          onClick={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           placeholder={command ? command.summary : 'Follow up...'}

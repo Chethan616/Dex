@@ -11,6 +11,8 @@ import { INPUT_PLACEHOLDER } from './constants';
 import { EnginePicker } from './EnginePicker';
 import { DEFAULT_MODEL_ID, ModelPicker } from './ModelPicker';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from './slashCommands';
+import { insertMention, matchingMentions, type MentionDef } from './mentions';
+import { MentionHints } from './CommandChip';
 
 // A small glyph per command, shown in the committed chip. Lives here rather
 // than in slashCommands.ts so that module stays plain, testable logic with no
@@ -139,6 +141,11 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
   const [model, setModel] = useState<string>(() => loadStoredModel(loadStoredEngine()));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Caret position, tracked separately from `value` — an `@mention` can start
+  // anywhere in the sentence, not just at the front like a slash command, so
+  // knowing where the cursor sits is what tells us whether one is in progress.
+  const [caret, setCaret] = useState(0);
+  const pendingCaretRef = useRef<number | null>(null);
 
   const resizeTextarea = useCallback(() => {
     const textarea = textareaRef.current;
@@ -156,6 +163,14 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
 
   useLayoutEffect(() => {
     resizeTextarea();
+    // A mention pick set the caret to land right after the inserted text; the
+    // textarea only exists to move it once `value` has actually re-rendered.
+    if (pendingCaretRef.current != null) {
+      const pos = pendingCaretRef.current;
+      pendingCaretRef.current = null;
+      textareaRef.current?.setSelectionRange(pos, pos);
+      setCaret(pos);
+    }
   }, [resizeTextarea, value]);
 
   useEffect(() => {
@@ -203,6 +218,16 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
   // Command suggestions while the user is still typing the command word — and
   // only before one has been committed to a chip.
   const slashHints = command ? [] : matchingCommands(value);
+  // Mention suggestions track the caret, since @drive can start anywhere in
+  // the sentence rather than only at the front.
+  const mentionHints = matchingMentions(value, caret);
+
+  const pickMention = useCallback((mention: MentionDef) => {
+    const result = insertMention(value, caret, mention);
+    pendingCaretRef.current = result.cursor;
+    setValue(result.text);
+    textareaRef.current?.focus();
+  }, [value, caret]);
 
   const handleChange = useCallback((next: string) => {
     // Promote a completed command word into a chip: `/scrape ` (or a newline
@@ -257,6 +282,7 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
     setCommand(null);
     setAttachments([]);
     setErrorMsg(null);
+    setCaret(0);
     textareaRef.current?.focus();
   }, [value, command, attachments, engine, model, onSubmit]);
 
@@ -305,6 +331,12 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
         return;
       }
 
+      if (mentionHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+        e.preventDefault();
+        pickMention(mentionHints[0]);
+        return;
+      }
+
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         submit();
@@ -313,7 +345,7 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
         textareaRef.current?.blur();
       }
     },
-    [submit, command, slashHints, commitCommand],
+    [submit, command, slashHints, commitCommand, mentionHints, pickMention],
   );
 
   const onDrop = useCallback(
@@ -412,11 +444,14 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
             ))}
           </div>
         )}
+        <MentionHints hints={mentionHints} onPick={pickMention} />
         <textarea
           ref={textareaRef}
           className="task-input__textarea"
           value={value}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={(e) => { handleChange(e.target.value); setCaret(e.target.selectionStart ?? e.target.value.length); }}
+          onKeyUp={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
+          onClick={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
           onKeyDown={onKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}

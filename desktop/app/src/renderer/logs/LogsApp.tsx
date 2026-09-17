@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TerminalPane } from '../hub/TerminalPane';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from '../hub/slashCommands';
-import { CommandChip, CommandHints } from '../hub/CommandChip';
+import { insertMention, matchingMentions, type MentionDef } from '../hub/mentions';
+import { CommandChip, CommandHints, MentionHints } from '../hub/CommandChip';
 
 declare global {
   interface Window {
@@ -176,6 +177,19 @@ export function LogsApp(): React.ReactElement {
   const [command, setCommand] = useState<SlashCommand | null>(null);
   const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Caret position, tracked separately from `input` — an @mention can start
+  // anywhere in the text, unlike a slash command which only ever opens it.
+  const [caret, setCaret] = useState(0);
+  const pendingCaretRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (pendingCaretRef.current != null) {
+      const pos = pendingCaretRef.current;
+      pendingCaretRef.current = null;
+      inputRef.current?.setSelectionRange(pos, pos);
+      setCaret(pos);
+    }
+  }, [input]);
 
   useEffect(() => {
     const unsub = window.logsAPI.onActiveSessionChanged((id) => {
@@ -340,6 +354,7 @@ export function LogsApp(): React.ReactElement {
       await window.logsAPI.followUp(sessionId, prompt);
       setInput('');
       setCommand(null);
+      setCaret(0);
     } catch (err) {
       console.error('[LogsApp] follow-up failed', err);
     } finally {
@@ -348,12 +363,20 @@ export function LogsApp(): React.ReactElement {
   }, [sessionId, input, command, sending]);
 
   const slashHints = command ? [] : matchingCommands(input);
+  const mentionHints = matchingMentions(input, caret);
 
   const commitCommand = useCallback((next: SlashCommand) => {
     setCommand(next);
     setInput('');
     inputRef.current?.focus();
   }, []);
+
+  const pickMention = useCallback((mention: MentionDef) => {
+    const result = insertMention(input, caret, mention);
+    pendingCaretRef.current = result.cursor;
+    setInput(result.text);
+    inputRef.current?.focus();
+  }, [input, caret]);
 
   const handleInputChange = useCallback((next: string) => {
     if (!command) {
@@ -379,12 +402,17 @@ export function LogsApp(): React.ReactElement {
         commitCommand(slashHints[0]);
         return;
       }
+      if (mentionHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+        e.preventDefault();
+        pickMention(mentionHints[0]);
+        return;
+      }
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         void sendFollowUp();
       }
     },
-    [sendFollowUp, command, slashHints, commitCommand],
+    [sendFollowUp, command, slashHints, commitCommand, mentionHints, pickMention],
   );
 
   const hasFiles = files.length > 0;
@@ -486,6 +514,7 @@ export function LogsApp(): React.ReactElement {
         >
           {command && <CommandChip command={command} onRemove={() => setCommand(null)} />}
           <CommandHints hints={slashHints} onPick={commitCommand} />
+          <MentionHints hints={mentionHints} onPick={pickMention} />
           <div className="logs-followup__row">
             <span className="logs-followup__chevron">&rsaquo;</span>
             <textarea
@@ -493,7 +522,9 @@ export function LogsApp(): React.ReactElement {
               className="logs-followup__input"
               value={input}
               placeholder={command ? command.summary : (sessionId && (sessionStatus === 'running' || sessionStatus === 'stuck') ? 'Queue follow-up…' : sessionId ? 'Follow up…' : 'No session')}
-              onChange={(e) => handleInputChange(e.target.value)}
+              onChange={(e) => { handleInputChange(e.target.value); setCaret(e.target.selectionStart ?? e.target.value.length); }}
+              onKeyUp={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
+              onClick={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
               onKeyDown={onInputKeyDown}
               rows={1}
               disabled={!sessionId || sending}

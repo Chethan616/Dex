@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import {
   maxBytesForAttachmentMime,
   MAX_ATTACHMENTS_PER_MESSAGE,
@@ -9,7 +9,8 @@ import { fallbackShortcutPlatform, formatShortcutForPlatform } from '../../share
 import { EnginePicker } from '../hub/EnginePicker';
 import { DEFAULT_MODEL_ID, ModelPicker } from '../hub/ModelPicker';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from '../hub/slashCommands';
-import { CommandChip, CommandHints } from '../hub/CommandChip';
+import { insertMention, matchingMentions, type MentionDef } from '../hub/mentions';
+import { CommandChip, CommandHints, MentionHints } from '../hub/CommandChip';
 import {
   RESULT_ROW_HEIGHT,
   MAX_RESULTS,
@@ -253,6 +254,19 @@ export function Pill(): React.ReactElement {
   const checkedDomainsRef = useRef<Set<string>>(new Set());
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Caret position, tracked separately from `value` — an @mention can start
+  // anywhere in the text, unlike a slash command which only ever opens it.
+  const [caret, setCaret] = useState(0);
+  const pendingCaretRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (pendingCaretRef.current != null) {
+      const pos = pendingCaretRef.current;
+      pendingCaretRef.current = null;
+      ref.current?.setSelectionRange(pos, pos);
+      setCaret(pos);
+    }
+  }, [value]);
   const platform = window.electronAPI?.shell?.platform ?? fallbackShortcutPlatform();
   const formatShortcut = useCallback((shortcut: string) => formatShortcutForPlatform(shortcut, platform), [platform]);
 
@@ -412,6 +426,14 @@ export function Pill(): React.ReactElement {
 
   // Suggestions while typing the command word — and never once a chip exists.
   const slashHints = command ? [] : matchingCommands(value);
+  const mentionHints = matchingMentions(value, caret);
+
+  const pickMention = useCallback((mention: MentionDef) => {
+    const result = insertMention(value, caret, mention);
+    pendingCaretRef.current = result.cursor;
+    setValue(result.text);
+    ref.current?.focus();
+  }, [value, caret]);
 
   const commitCommand = useCallback((next: SlashCommand) => {
     setCommand(next);
@@ -450,6 +472,7 @@ export function Pill(): React.ReactElement {
     setCommand(null);
     setAttachments([]);
     setAttachError(null);
+    setCaret(0);
     return true;
   }, [buildPrompt, attachments, engine, model]);
 
@@ -483,6 +506,12 @@ export function Pill(): React.ReactElement {
         return;
       }
 
+      if (mentionHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+        e.preventDefault();
+        pickMention(mentionHints[0]);
+        return;
+      }
+
       if (e.key === 'Escape') {
         e.preventDefault();
         setValue('');
@@ -504,7 +533,7 @@ export function Pill(): React.ReactElement {
         submit();
       }
     },
-    [submit, sendPrompt, command, slashHints, commitCommand, value, navList.length],
+    [submit, sendPrompt, command, slashHints, commitCommand, mentionHints, pickMention, value, navList.length],
   );
 
   const highlightVisible = hasResults && selectedIdx >= 0;
@@ -553,7 +582,9 @@ export function Pill(): React.ReactElement {
             ref={ref}
             className="cmdbar__input"
             value={value}
-            onChange={(e) => handleChange(e.target.value)}
+            onChange={(e) => { handleChange(e.target.value); setCaret(e.target.selectionStart ?? e.target.value.length); }}
+            onKeyUp={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
+            onClick={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
             onKeyDown={onKeyDown}
             placeholder={command ? command.summary : 'Search sessions or create new agent...'}
             rows={1}
@@ -613,6 +644,7 @@ export function Pill(): React.ReactElement {
         )}
 
         <CommandHints hints={slashHints} onPick={commitCommand} />
+        <MentionHints hints={mentionHints} onPick={pickMention} />
 
         {attachError && <div className="cmdbar__error">{attachError}</div>}
 
