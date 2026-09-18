@@ -5573,10 +5573,12 @@ button:focus:not(:focus-visible) {
 }
 
 .deck-card__file {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
   padding: 0;
   background: none;
   border: 0;
-  font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   color: var(--color-accent-default);
   cursor: pointer;
@@ -5584,47 +5586,83 @@ button:focus:not(:focus-visible) {
   word-break: break-all;
 }
 
-/* -- result rows ----------------------------------------------------------- */
+/* -- result cards -----------------------------------------------------------
+   A wrapping grid of compact file cards — the same shape as Claude's or
+   ChatGPT's "referenced files" row — rather than a vertical list of rows.
+   Fixed-ish tile width so a dozen results read as a tidy grid at any pane
+   width instead of one column stretching edge to edge. */
 
 .deck-card__items {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  flex-wrap: wrap;
+  gap: var(--space-3);
 }
 
 .deck-item {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
+  flex-direction: column;
+  flex: 1 1 220px;
+  max-width: 280px;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid rgba(var(--highlight-rgb), 0.06);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg-base);
   cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out);
+  transition: border-color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
 }
 
 .deck-item--hover {
   background-color: var(--color-surface-hover);
+  border-color: rgba(var(--highlight-rgb), 0.14);
+}
+
+.deck-item__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 20px;
+}
+
+/* The type tag every card leads with — text, not per-format artwork, so a
+   new extension needs a map entry rather than new assets. Fixed min-width
+   keeps three-letter and four-letter tags (PDF, DOCX) the same visual size. */
+.deck-item__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 20px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 .deck-item__body {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.deck-item__line {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-4);
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 
 .deck-item__label {
-  flex: 0 1 auto;
-  min-width: 0;
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   color: var(--color-fg-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.deck-item__meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
 .deck-item__size {
@@ -5635,6 +5673,7 @@ button:focus:not(:focus-visible) {
 }
 
 .deck-item__folder {
+  min-width: 0;
   font-size: var(--font-size-2xs);
   color: var(--color-fg-tertiary);
   overflow: hidden;
@@ -5645,7 +5684,6 @@ button:focus:not(:focus-visible) {
 /* The matched line. Two lines maximum: it is evidence that this hit is the
    right one, not the document itself. */
 .deck-item__excerpt {
-  margin-top: 3px;
   font-size: var(--font-size-2xs);
   line-height: var(--line-height-snug);
   color: var(--color-fg-secondary);
@@ -5659,7 +5697,6 @@ button:focus:not(:focus-visible) {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  margin-top: var(--space-2);
 }
 
 .deck-tag {
@@ -5670,10 +5707,12 @@ button:focus:not(:focus-visible) {
   color: var(--color-fg-tertiary);
 }
 
-/* Only on hover, so twelve results read as results rather than as controls. */
+/* Only on hover, so a grid of results reads as results rather than as
+   controls — sits in the top-right corner rather than at the row's end,
+   since the card is a tile now, not a row. */
 .deck-item__copy {
   flex: 0 0 auto;
-  padding: var(--space-1) var(--space-3);
+  padding: 1px var(--space-3);
   background: none;
   border: 0;
   border-radius: var(--radius-sm);
@@ -5753,14 +5792,20 @@ button:focus:not(:focus-visible) {
 }
 
 .deck-plan__file {
-  padding: var(--space-1) var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
   border: 1px solid rgba(var(--highlight-rgb), 0.06);
   border-radius: var(--radius-sm);
   background: none;
   font-size: var(--font-size-2xs);
   color: var(--color-fg-secondary);
   cursor: pointer;
-  max-width: 220px;
+  max-width: 240px;
+}
+
+.deck-plan__file > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

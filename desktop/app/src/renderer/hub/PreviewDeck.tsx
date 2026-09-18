@@ -41,9 +41,63 @@ function reveal(path?: string): void {
   window.electronAPI?.sessions?.revealOutput?.(path);
 }
 
+function extOf(label: string): string {
+  const dot = label.lastIndexOf('.');
+  return dot >= 0 ? label.slice(dot + 1).toLowerCase() : '';
+}
+
 /**
- * One search hit. Quiet until hovered — a list of twelve results should read
- * as a list of results, not a list of buttons.
+ * A short type tag plus which of the theme's few semantic colors it takes —
+ * deliberately not a bespoke palette. This shell is monochrome by design
+ * (every --shadow-* is none in dark mode; depth comes from the inset
+ * highlight, not color), so file-type color reuses the same handful of
+ * status tokens everywhere else uses, rather than inventing new hex values
+ * that would only ever appear here.
+ */
+const FILE_TYPE_META: Record<string, { tag: string; colorVar: string }> = {
+  pdf: { tag: 'PDF', colorVar: '--color-status-error' },
+  doc: { tag: 'DOC', colorVar: '--color-status-info' },
+  docx: { tag: 'DOC', colorVar: '--color-status-info' },
+  xls: { tag: 'XLS', colorVar: '--color-status-success' },
+  xlsx: { tag: 'XLS', colorVar: '--color-status-success' },
+  csv: { tag: 'CSV', colorVar: '--color-status-success' },
+  ppt: { tag: 'PPT', colorVar: '--color-status-warning' },
+  pptx: { tag: 'PPT', colorVar: '--color-status-warning' },
+  txt: { tag: 'TXT', colorVar: '--color-fg-tertiary' },
+  md: { tag: 'MD', colorVar: '--color-fg-tertiary' },
+  png: { tag: 'IMG', colorVar: '--color-accent-default' },
+  jpg: { tag: 'IMG', colorVar: '--color-accent-default' },
+  jpeg: { tag: 'IMG', colorVar: '--color-accent-default' },
+  gif: { tag: 'IMG', colorVar: '--color-accent-default' },
+  webp: { tag: 'IMG', colorVar: '--color-accent-default' },
+  svg: { tag: 'IMG', colorVar: '--color-accent-default' },
+  zip: { tag: 'ZIP', colorVar: '--color-fg-tertiary' },
+};
+
+function fileTypeMeta(label: string): { tag: string; colorVar: string } {
+  return FILE_TYPE_META[extOf(label)] ?? { tag: extOf(label).slice(0, 4).toUpperCase() || 'FILE', colorVar: '--color-fg-tertiary' };
+}
+
+/** The colored type badge every file card leads with — icon-as-text, since a
+ *  short, legible tag ("PDF", "XLS") reads faster than a glyph at this size
+ *  and needs no per-format artwork to add a new type. */
+function FileTypeBadge({ label }: { label: string }): React.ReactElement {
+  const { tag, colorVar } = fileTypeMeta(label);
+  return (
+    <span
+      className="deck-item__badge"
+      style={{ color: `var(${colorVar})`, backgroundColor: `color-mix(in srgb, var(${colorVar}) 16%, transparent)` }}
+    >
+      {tag}
+    </span>
+  );
+}
+
+/**
+ * One file reference, rendered as a compact card — the same shape as
+ * Claude's or ChatGPT's "referenced files" cards: a type badge, the name,
+ * and just enough metadata to tell hits apart, arranged in a wrapping grid
+ * rather than a list of rows.
  */
 function ArtifactRow({ item }: { item: ArtifactItem }): React.ReactElement {
   const [hovered, setHovered] = useState(false);
@@ -66,12 +120,27 @@ function ArtifactRow({ item }: { item: ArtifactItem }): React.ReactElement {
       role="button"
       tabIndex={0}
     >
+      <div className="deck-item__top">
+        <FileTypeBadge label={item.label} />
+        {hovered && item.detail ? (
+          <button
+            className="deck-item__copy"
+            title="Copy path"
+            onClick={(event) => {
+              event.stopPropagation();
+              void navigator.clipboard?.writeText(item.detail as string);
+            }}
+          >
+            Copy
+          </button>
+        ) : null}
+      </div>
       <div className="deck-item__body">
-        <div className="deck-item__line">
-          <span className="deck-item__label">{item.label}</span>
+        <span className="deck-item__label">{item.label}</span>
+        <div className="deck-item__meta">
           {size ? <span className="deck-item__size">{size}</span> : null}
+          {folder ? <span className="deck-item__folder">{folder}</span> : null}
         </div>
-        {folder ? <div className="deck-item__folder">{folder}</div> : null}
         {item.excerpt ? <div className="deck-item__excerpt">{item.excerpt}</div> : null}
         {item.reasons.length > 0 ? (
           <div className="deck-item__reasons">
@@ -81,18 +150,6 @@ function ArtifactRow({ item }: { item: ArtifactItem }): React.ReactElement {
           </div>
         ) : null}
       </div>
-      {hovered && item.detail ? (
-        <button
-          className="deck-item__copy"
-          title="Copy path"
-          onClick={(event) => {
-            event.stopPropagation();
-            void navigator.clipboard?.writeText(item.detail as string);
-          }}
-        >
-          Copy
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -112,7 +169,10 @@ function ArtifactCard({ event }: { event: ArtifactEvent }): React.ReactElement {
       {event.kind === 'reading' ? (
         <div className="deck-card__reading">
           {event.file ? (
-            <button className="deck-card__file" onClick={() => reveal(event.file)}>{event.file}</button>
+            <button className="deck-card__file" onClick={() => reveal(event.file)}>
+              <FileTypeBadge label={event.file} />
+              <span>{event.file}</span>
+            </button>
           ) : null}
           {event.body ? <p className="deck-card__body">{event.body}</p> : null}
         </div>
@@ -177,7 +237,8 @@ function PlanCard({ state }: { state: TaskState }): React.ReactElement {
               onClick={() => reveal(file.path)}
               title={file.path}
             >
-              {file.name}
+              <FileTypeBadge label={file.name} />
+              <span>{file.name}</span>
             </button>
           ))}
         </div>
@@ -319,7 +380,8 @@ function ActivityCard({ session }: { session: AgentSession }): React.ReactElemen
               onClick={() => reveal(file.path)}
               title={file.path}
             >
-              {file.name}
+              <FileTypeBadge label={file.name} />
+              <span>{file.name}</span>
             </button>
           ))}
         </div>
