@@ -249,6 +249,13 @@ export function hlEventToTermBytes(event: HlEvent, state: TermTranslatorState): 
       return finish();
     }
 
+    case 'confirmation': {
+      const glyph = event.status === 'approved' ? `${FG.green}✓` : event.status === 'denied' ? `${FG.red}✕` : `${FG.yellow}?`;
+      const verb = event.status === 'pending' ? 'waiting for confirmation' : event.status;
+      out.push(`${glyph} ${truncate(event.title, 90)} ${FG.grey}(${verb})${RESET}\r\n`);
+      return finish();
+    }
+
     case 'screenshot':
       out.push(`${FG.grey}▢ screenshot${event.mode === 'uia' ? ' (annotated)' : ''}${event.caption ? ` — ${truncate(event.caption, 70)}` : ''}${RESET}\r\n`);
       return finish();

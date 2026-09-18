@@ -5548,6 +5548,63 @@ button:focus:not(:focus-visible) {
   white-space: pre-wrap;
 }
 
+/* -- confirmation ------------------------------------------------------------
+   A blocking human decision (dex-registry set/delete/import). Rendered
+   first in the deck and given a warning-colored edge — the one card here
+   that isn't just informational, so it needs to read as different from the
+   rest at a glance, not just by its text. */
+
+.deck-card--confirm {
+  border-left: 3px solid var(--color-status-warning);
+}
+
+.deck-confirm__detail {
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.deck-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.deck-confirm__btn {
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--highlight-rgb), 0.08);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.deck-confirm__btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.deck-confirm__btn--deny {
+  background: none;
+  color: var(--color-fg-secondary);
+}
+
+.deck-confirm__btn--deny:hover:not(:disabled) {
+  background-color: var(--color-surface-hover);
+  color: var(--color-fg-primary);
+}
+
+.deck-confirm__btn--approve {
+  background-color: color-mix(in srgb, var(--color-status-warning) 20%, transparent);
+  border-color: color-mix(in srgb, var(--color-status-warning) 40%, transparent);
+  color: var(--color-status-warning);
+}
+
+.deck-confirm__btn--approve:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-status-warning) 30%, transparent);
+}
+
 .deck-card__file {
   padding: 0;
   background: none;

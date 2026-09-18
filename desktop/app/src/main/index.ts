@@ -8,6 +8,7 @@
  */
 
 import { config as loadDotEnv } from 'dotenv';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -194,6 +195,42 @@ let onboardingWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
 const sessionManager = new SessionManager(path.join(app.getPath('userData'), 'sessions.db'));
+
+/**
+ * Outstanding dex-registry confirmations, keyed by id.
+ *
+ * The /dex/confirm route's returned Promise is what keeps that HTTP request
+ * open — the CLI is genuinely blocked on it, not polling — until this
+ * resolver is called from the renderer's Approve/Deny click. A generous
+ * timeout guards against a card nobody ever answers (the app closed, the
+ * user walked away) leaving the agent's process hung forever.
+ */
+const pendingConfirmations = new Map<string, { resolve: (approved: boolean) => void; sessionId: string; title: string; detail: string }>();
+const CONFIRMATION_TIMEOUT_MS = 10 * 60 * 1000;
+
+/**
+ * Answers a pending confirmation exactly once — called from the renderer's
+ * Approve/Deny click, or from the /dex/confirm route's own timeout if
+ * nobody answers. Idempotent: a second call for the same id (a timeout
+ * racing a late click) is a no-op rather than a double-resolve.
+ */
+function resolveConfirmation(id: string, approved: boolean): void {
+  const pending = pendingConfirmations.get(id);
+  if (!pending) return;
+  pendingConfirmations.delete(id);
+  const session = sessionManager.getSession(pending.sessionId);
+  if (session) {
+    sessionManager.appendOutput(pending.sessionId, {
+      type: 'confirmation',
+      id,
+      title: pending.title,
+      detail: pending.detail,
+      status: approved ? 'approved' : 'denied',
+      at: Date.now(),
+    });
+  }
+  pending.resolve(approved);
+}
 // Bootstrap the editable helpers harness — writes stock helpers.js + TOOLS.json
 // to <userData>/harness/ on first run, preserves user edits on subsequent runs.
 //
@@ -1366,6 +1403,48 @@ app.whenReady().then(async () => {
         const mutation = TaskStateMutationSchema.parse(rest);
         return { state: sessionManager.applyTaskState(id, mutation) };
       },
+
+      // dex-registry's blocking confirmation. The returned Promise is what
+      // holds the HTTP response (and so the CLI, and so the agent) open
+      // until resolveConfirmation is called — by the renderer's Approve/
+      // Deny click, or by the timeout below. No polling on either side.
+      'POST /dex/confirm': async (raw) => {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new Error('request body must be JSON');
+        }
+        const body = (parsed ?? {}) as { sessionId?: unknown; title?: unknown; detail?: unknown };
+        const sessionId = assertString(body.sessionId, 'sessionId', 100);
+        const title = assertString(body.title, 'title', 200);
+        const detail = assertString(body.detail, 'detail', 4000);
+
+        const id = randomUUID();
+        const session = sessionManager.getSession(sessionId);
+        if (session) {
+          sessionManager.appendOutput(sessionId, { type: 'confirmation', id, title, detail, status: 'pending', at: Date.now() });
+          // Suspend AFTER appendOutput, which just reset it — otherwise the
+          // very next line's clear would have nothing to undo and the timer
+          // stays armed for a wait that can run minutes.
+          sessionManager.suspendStuckTimer(sessionId);
+        }
+
+        return new Promise<Record<string, unknown>>((resolve) => {
+          const timeout = setTimeout(() => {
+            resolveConfirmation(id, false);
+          }, CONFIRMATION_TIMEOUT_MS);
+          pendingConfirmations.set(id, {
+            sessionId,
+            title,
+            detail,
+            resolve: (approved) => {
+              clearTimeout(timeout);
+              resolve({ approved });
+            },
+          });
+        });
+      },
     },
     submitTask: async (payload) => {
       const validatedPrompt = assertString(payload.prompt, 'prompt', 10000);
@@ -1829,6 +1908,21 @@ app.whenReady().then(async () => {
       ...s,
       hasBrowser: !!browserPool.getWebContents(s.id),
     }));
+  });
+
+  // Answers a dex-registry confirmation card. Validated against
+  // pendingConfirmations' own sessionId rather than trusted blindly, so a
+  // stale/forged id from a closed card can't resolve a different session's
+  // wait.
+  ipcMain.handle('dex:confirm-answer', (_event, sessionId: string, id: string, approved: boolean) => {
+    const validatedSessionId = assertString(sessionId, 'sessionId', 100);
+    const validatedId = assertString(id, 'id', 100);
+    const pending = pendingConfirmations.get(validatedId);
+    if (!pending || pending.sessionId !== validatedSessionId) {
+      return { ok: false, error: 'no matching pending confirmation' };
+    }
+    resolveConfirmation(validatedId, approved === true);
+    return { ok: true };
   });
 
   ipcMain.handle('sessions:get', (_event, id: string) => {

@@ -235,6 +235,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('telemetry:capture', name, props);
     },
   },
+  dex: {
+    // Answers a dex-registry confirmation card (PreviewDeck's ConfirmationCard).
+    confirmAnswer: (sessionId: string, id: string, approved: boolean): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('dex:confirm-answer', sessionId, id, approved),
+  },
   sessions: {
     create: (
       promptOrPayload: string | { prompt: string; attachments?: Array<{ name: string; mime: string; bytes: Uint8Array }>; engine?: string; model?: string },

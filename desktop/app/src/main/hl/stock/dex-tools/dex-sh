@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# dex-sh — run a command through a specific shell, with a timeout, and get
+# back consistent JSON: exit code, stdout, stderr — the same shape regardless
+# of which shell ran it. Useful when one shell fails for an
+# environment-specific reason (PATH, quoting, a missing tool) and you want to
+# retry through another without losing the exact exit code and stderr you'd
+# need to tell the two failures apart.
+#
+#   dex-sh <bash|cmd|powershell|wsl> "<command>" [timeout-seconds]
+#
+# Ungated — filesystem, process, and general shell work stay on your own
+# Bash/Read/Write tools; reach for this specifically when you want a
+# non-bash shell (cmd's own builtins, a PowerShell cmdlet, WSL) or when you
+# want the timeout and structured result this gives you for free.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+usage() {
+  echo 'usage: dex-sh <bash|cmd|powershell|wsl> "<command>" [timeout-seconds]' >&2
+  exit 2
+}
+
+[ $# -ge 2 ] || usage
+shell="$1"
+cmd="$2"
+timeout_s="${3:-30}"
+
+err_file="$(mktemp)"
+trap 'rm -f "$err_file"' EXIT
+
+case "$shell" in
+  bash)
+    out="$(timeout "$timeout_s" bash -c "$cmd" 2>"$err_file")"
+    code=$?
+    ;;
+  cmd)
+    # Double-slash flags: Git Bash's MSYS layer auto-converts a leading
+    # "/c" into a Windows path (it looks like a one-letter POSIX path) when
+    # handing arguments to a native .exe, which silently turned this into
+    # plain `cmd.exe` with no command at all — confirmed live, it printed
+    # cmd's own startup banner instead of running anything. "//c" survives
+    # MSYS's conversion untouched and cmd.exe still accepts it.
+    out="$(timeout "$timeout_s" cmd.exe //d //c "$cmd" 2>"$err_file")"
+    code=$?
+    ;;
+  powershell)
+    out="$(timeout "$timeout_s" powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$cmd" 2>"$err_file")"
+    code=$?
+    ;;
+  wsl)
+    out="$(timeout "$timeout_s" wsl.exe bash -c "$cmd" 2>"$err_file")"
+    code=$?
+    ;;
+  *)
+    echo "dex-sh: unknown shell '$shell' — use bash, cmd, powershell or wsl" >&2
+    usage
+    ;;
+esac
+
+# 124 is coreutils timeout's own "the command was killed for running too
+# long" code — distinct from anything the command itself could return, so a
+# caller can tell "timed out" apart from "ran and failed" without parsing text.
+timed_out="false"
+[ "$code" -eq 124 ] && timed_out="true"
+
+err="$(cat "$err_file" 2>/dev/null)"
+
+printf '{"exitCode":%d,"timedOut":%s,"stdout":"%s","stderr":"%s"}\n' \
+  "$code" "$timed_out" "$(dex_esc "$out")" "$(dex_esc "$err")"

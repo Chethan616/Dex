@@ -9,6 +9,8 @@ them with Bash like any other command.
 | `dex-remember` | Recording a site the user named, or a login they gave. See `site-memory.md`. |
 | `dex-recall` | Resolving a nickname ("my uni portal") to a real URL. |
 | `dex-fill` | Typing a stored credential into a focused login field without seeing it. |
+| `dex-sh` | A different shell (cmd/PowerShell/WSL) with a structured, timed result. See `registry.md`. |
+| `dex-registry` | Reading the Windows registry freely; writing always waits for the user to approve in the app. See `registry.md`. |
 
 There are also skill files here for two user commands, read when the command is
 used rather than run as tools:

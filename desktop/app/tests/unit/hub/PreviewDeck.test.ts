@@ -11,7 +11,7 @@
  * that can be tested in isolation.
  */
 import { describe, expect, it } from 'vitest';
-import { deckHasContent } from '../../../src/renderer/hub/PreviewDeck';
+import { deckHasContent, hasPendingConfirmation } from '../../../src/renderer/hub/PreviewDeck';
 import type { AgentSession, HlEvent, TaskState } from '../../../src/renderer/hub/types';
 
 function session(output: HlEvent[], status: AgentSession['status'] = 'running'): AgentSession {
@@ -69,5 +69,35 @@ describe('deckHasContent', () => {
   // blank a live page to show an empty box.
   it('is false for a ledger with no steps', () => {
     expect(deckHasContent(session([{ type: 'task_state', state: EMPTY_STATE }]))).toBe(false);
+  });
+});
+
+// hasPendingConfirmation is what forces the deck up even mid-browser-task —
+// AgentPane's normal rule is "prefer the live page once primarySite is set",
+// but a dex-registry confirmation card is unreachable if the browser view
+// stays composited over it, so this overrides that rule specifically.
+describe('hasPendingConfirmation', () => {
+  it('is false when nothing has ever asked for a confirmation', () => {
+    expect(hasPendingConfirmation(session([{ type: 'tool_call', name: 'Bash', args: {}, iteration: 1 }]))).toBe(false);
+  });
+
+  it('is true while a confirmation is still pending', () => {
+    expect(hasPendingConfirmation(session([
+      { type: 'confirmation', id: 'c1', title: 'Set registry value', detail: '...', status: 'pending', at: 1 },
+    ]))).toBe(true);
+  });
+
+  it('is false once the same confirmation has been answered — the latest event for that id wins', () => {
+    expect(hasPendingConfirmation(session([
+      { type: 'confirmation', id: 'c1', title: 'Set registry value', detail: '...', status: 'pending', at: 1 },
+      { type: 'confirmation', id: 'c1', title: 'Set registry value', detail: '...', status: 'approved', at: 2 },
+    ]))).toBe(false);
+  });
+
+  it('is true if a second confirmation is pending even while an earlier one was already resolved', () => {
+    expect(hasPendingConfirmation(session([
+      { type: 'confirmation', id: 'c1', title: 'Set registry value', detail: '...', status: 'approved', at: 1 },
+      { type: 'confirmation', id: 'c2', title: 'Delete registry key', detail: '...', status: 'pending', at: 2 },
+    ]))).toBe(true);
   });
 });

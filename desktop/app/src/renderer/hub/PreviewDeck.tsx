@@ -18,6 +18,7 @@ import type { AgentSession, ArtifactItem, HlEvent, TaskState, TaskStep } from '.
 
 type ArtifactEvent = Extract<HlEvent, { type: 'artifact' }>;
 type ScreenshotEvent = Extract<HlEvent, { type: 'screenshot' }>;
+type ConfirmationEvent = Extract<HlEvent, { type: 'confirmation' }>;
 
 const MAX_SCREENSHOTS = 12;
 const MAX_ARTIFACT_CARDS = 4;
@@ -238,6 +239,27 @@ export function deckHasContent(session: AgentSession): boolean {
 }
 
 /**
+ * Whether the session has a confirmation still waiting on a human answer.
+ *
+ * AgentPane's deck-vs-browser choice normally prefers a live page once the
+ * session has navigated (session.primarySite) — but a blocking human
+ * decision outranks that: the browser view is composited over the deck, so
+ * if a dex-registry confirmation lands mid-browser-task and the deck stays
+ * hidden, the card is unreachable through anything but the raw log window.
+ * A pending confirmation forces the deck up regardless of primarySite.
+ */
+export function hasPendingConfirmation(session: AgentSession): boolean {
+  const latestStatusById = new Map<string, string>();
+  for (const event of session.output) {
+    if (event.type === 'confirmation') latestStatusById.set(event.id, event.status);
+  }
+  for (const status of latestStatusById.values()) {
+    if (status === 'pending') return true;
+  }
+  return false;
+}
+
+/**
  * What the agent is doing right now, read off the event stream it already
  * produces.
  *
@@ -328,6 +350,50 @@ function ActivityCard({ session }: { session: AgentSession }): React.ReactElemen
   );
 }
 
+/**
+ * A blocking human decision — dex-registry's set/delete/import, backed up
+ * first and waiting here rather than trusting the engine's own judgment on
+ * a real registry write. Answering calls straight back into main over IPC;
+ * there is no polling on either side, so the click resolves the agent's
+ * still-open HTTP request immediately.
+ */
+function ConfirmationCard({ sessionId, event }: { sessionId: string; event: ConfirmationEvent }): React.ReactElement {
+  const [answering, setAnswering] = useState<'approve' | 'deny' | null>(null);
+
+  const answer = (approved: boolean) => {
+    if (answering) return; // one click; a slow IPC round trip shouldn't double-fire
+    setAnswering(approved ? 'approve' : 'deny');
+    window.electronAPI?.dex?.confirmAnswer(sessionId, event.id, approved).catch(() => {
+      setAnswering(null);
+    });
+  };
+
+  return (
+    <section className="deck-card deck-card--confirm">
+      <header className="deck-card__header">
+        <span className="deck-card__title">{event.title}</span>
+      </header>
+      <p className="deck-card__body deck-confirm__detail">{event.detail}</p>
+      <div className="deck-confirm__actions">
+        <button
+          className="deck-confirm__btn deck-confirm__btn--deny"
+          onClick={() => answer(false)}
+          disabled={answering != null}
+        >
+          {answering === 'deny' ? 'Denying…' : 'Deny'}
+        </button>
+        <button
+          className="deck-confirm__btn deck-confirm__btn--approve"
+          onClick={() => answer(true)}
+          disabled={answering != null}
+        >
+          {answering === 'approve' ? 'Approving…' : 'Approve'}
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export function PreviewDeck({
   session,
   actions,
@@ -336,24 +402,28 @@ export function PreviewDeck({
   /** Resume / Continue browsing / Rerun, rendered under the cards. */
   actions?: React.ReactNode;
 }): React.ReactElement {
-  const { taskState, artifacts, shots } = useMemo(() => {
+  const { taskState, artifacts, shots, pendingConfirmations } = useMemo(() => {
     let latestState: TaskState | null = null;
     const cards: ArtifactEvent[] = [];
     const captures: ScreenshotEvent[] = [];
+    const latestConfirmationById = new Map<string, ConfirmationEvent>();
 
     for (const event of session.output) {
       // task_state carries the entire ledger every time, so the last one wins
       // outright — nothing to replay, and a dropped frame cannot desynchronise
-      // the plan view.
+      // the plan view. confirmation events follow the same rule, keyed by id
+      // instead: the last status seen for a given id is the current one.
       if (event.type === 'task_state') latestState = event.state;
       else if (event.type === 'artifact') cards.push(event);
       else if (event.type === 'screenshot') captures.push(event);
+      else if (event.type === 'confirmation') latestConfirmationById.set(event.id, event);
     }
 
     return {
       taskState: latestState,
       artifacts: cards.slice(-MAX_ARTIFACT_CARDS),
       shots: captures.slice(-MAX_SCREENSHOTS),
+      pendingConfirmations: [...latestConfirmationById.values()].filter((e) => e.status === 'pending'),
     };
   }, [session.output]);
 
@@ -363,6 +433,11 @@ export function PreviewDeck({
   return (
     <div className="deck">
       <div className="deck__content">
+        {/* First and unmissable: this is the one card the agent is actually
+            blocked on, not just informational. */}
+        {pendingConfirmations.map((event) => (
+          <ConfirmationCard sessionId={session.id} event={event} key={event.id} />
+        ))}
         {shots.length > 0 ? <ScreenshotCard shots={shots} /> : null}
         {artifacts.map((artifact, index) => (
           <ArtifactCard event={artifact} key={`artifact-${index}`} />

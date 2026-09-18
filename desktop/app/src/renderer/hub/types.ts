@@ -15,7 +15,8 @@ export type HlEvent =
   | { type: 'turn_usage'; inputTokens: number; outputTokens: number; cachedInputTokens: number; costUsd: number; model?: string; source: 'exact' | 'estimated' }
   | { type: 'task_state'; state: TaskState }
   | { type: 'artifact'; kind: 'files' | 'reading'; title: string; note?: string; total?: number; body?: string; file?: string; items: ArtifactItem[] }
-  | { type: 'screenshot'; path: string; caption?: string; mode: 'raw' | 'uia'; at: number };
+  | { type: 'screenshot'; path: string; caption?: string; mode: 'raw' | 'uia'; at: number }
+  | { type: 'confirmation'; id: string; title: string; detail: string; status: 'pending' | 'approved' | 'denied'; at: number };
 
 export interface TaskStepFailure {
   reason: string;
@@ -176,9 +177,9 @@ export function adaptSession(session: AgentSession): {
   // a plan and a result card belong in a panel you can look at, not in a
   // scrolling transcript, and the terminal already gets a one-line summary of
   // each from streamToTerm.
-  const HIDDEN_FROM_LOG = new Set(['turn_usage', 'task_state', 'artifact', 'screenshot']);
+  const HIDDEN_FROM_LOG = new Set(['turn_usage', 'task_state', 'artifact', 'screenshot', 'confirmation']);
   const visibleOutput = session.output.filter(
-    (e): e is Exclude<HlEvent, { type: 'turn_usage' | 'task_state' | 'artifact' | 'screenshot' }> =>
+    (e): e is Exclude<HlEvent, { type: 'turn_usage' | 'task_state' | 'artifact' | 'screenshot' | 'confirmation' }> =>
       !HIDDEN_FROM_LOG.has(e.type),
   );
 

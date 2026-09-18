@@ -244,6 +244,21 @@ export const HlEventScreenshotSchema = z.object({
   at: z.number(),
 });
 
+// A blocking human decision — today only dex-registry's set/delete/import,
+// which back up first and then wait for this rather than trusting the
+// engine's own judgment on a change to the real registry. `status` moves
+// pending -> approved|denied; PreviewDeck reads the LATEST event for a given
+// `id` to know which state a card is in, the same "last write wins" pattern
+// task_state already uses for the plan.
+export const HlEventConfirmationSchema = z.object({
+  type: z.literal('confirmation'),
+  id: z.string(),
+  title: z.string(),
+  detail: z.string(),
+  status: z.enum(['pending', 'approved', 'denied']),
+  at: z.number(),
+});
+
 export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventThinkingSchema,
   HlEventToolCallSchema,
@@ -260,6 +275,7 @@ export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventTaskStateSchema,
   HlEventArtifactSchema,
   HlEventScreenshotSchema,
+  HlEventConfirmationSchema,
 ]);
 
 export type HlEvent = z.infer<typeof HlEventSchema>;

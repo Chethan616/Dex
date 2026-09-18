@@ -10,7 +10,7 @@ import opencodeLogoDark from './opencode-logo-dark.svg';
 import opencodeLogoLight from './opencode-logo-light.svg';
 import { useThemedAsset } from '../design/useThemedAsset';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
-import { PreviewDeck, deckHasContent } from './PreviewDeck';
+import { PreviewDeck, deckHasContent, hasPendingConfirmation } from './PreviewDeck';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from './slashCommands';
 import { CommandChip, CommandHints } from './CommandChip';
 import type { AgentSession, OutputEntry } from './types';
@@ -771,7 +771,8 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
    * always more useful than a card describing one.
    */
   const deckActive = useMemo(
-    () => deckHasContent(session) && !browseHere && (!session.primarySite || session.status === 'paused'),
+    () => deckHasContent(session) && !browseHere &&
+      (!session.primarySite || session.status === 'paused' || hasPendingConfirmation(session)),
     [session, browseHere],
   );
 

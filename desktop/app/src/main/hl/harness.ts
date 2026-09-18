@@ -97,7 +97,7 @@ export function bootstrapHarness(): void {
   // existing users. AGENTS.md is the harness manual, not agent-editable
   // state — safe to overwrite so new sections (domain-skills, etc.) land
   // without the user deleting their userData.
-  const sentinel = 'protected by reCAPTCHA';  // AGENTS.md marker; bump when its content changes
+  const sentinel = 'dex-registry';  // AGENTS.md marker; bump when its content changes
   const needsSkill = !fs.existsSync(sp) || (() => {
     try { return !fs.readFileSync(sp, 'utf-8').includes(sentinel); }
     catch { return true; }
@@ -133,7 +133,7 @@ function materializeDexTools(): void {
     prefix: DEX_TOOLS_PREFIX,
     entries: Object.entries(STOCK_DEX_TOOLS),
     logName: 'dexTools',
-    executableBasenames: new Set(['dex-state', 'dex-remember', 'dex-recall', 'dex-fill']),
+    executableBasenames: new Set(['dex-state', 'dex-remember', 'dex-recall', 'dex-fill', 'dex-sh', 'dex-registry']),
   });
 }
 

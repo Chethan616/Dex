@@ -194,6 +194,11 @@ interface ElectronShellAPI {
   setOverlay: (active: boolean) => void;
 }
 
+interface ElectronDexAPI {
+  /** Answers a dex-registry confirmation card. */
+  confirmAnswer: (sessionId: string, id: string, approved: boolean) => Promise<{ ok: boolean; error?: string }>;
+}
+
 interface ElectronPillAPI {
   toggle: () => Promise<void>;
   hide: () => Promise<void>;
@@ -418,6 +423,7 @@ interface ElectronAPI {
   hotkeys?: ElectronHotkeysAPI;
   shell?: ElectronShellAPI;
   settings?: ElectronSettingsAPI;
+  dex?: ElectronDexAPI;
   on: ElectronOnAPI;
 }
 
