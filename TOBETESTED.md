@@ -74,7 +74,28 @@ filename search should work almost immediately.
       textarea's `scrollHeight` directly; now it's reported through a
       callback).
 
-## 3. Blank preview deck / wrong browser button — branch `fix/browser-toggle-blank-screen`
+## 3. File cards with colored type badges — branch `feat/file-search`
+
+`dex-find` results, the "reading a file" card, the plan's produced-files
+row, and the activity fallback's file row all now render as a grid of
+compact cards (badge + name) instead of plain-text rows/buttons.
+
+- [ ] Run a file search and confirm results show as a **wrapping grid of
+      cards**, each with a small colored tag (PDF red, DOC blue, XLS green,
+      PPT orange, IMG accent-blue, generic gray) and the filename.
+- [ ] Confirm click-to-reveal-in-Explorer still works on each card.
+- [ ] Confirm the hover-to-copy-path button still appears (top-right corner
+      of the card now, not the row's trailing edge).
+- [ ] Check readability at both a narrow and a wide pane width — the grid
+      should reflow, not overflow or leave one giant stretched card.
+- [ ] Confirm light theme still reads fine (the color tokens are shared with
+      the rest of the app's status colors, but worth a look).
+- [ ] This is a first pass at "Claude/ChatGPT-style" — if it still doesn't
+      feel right once you see it live, say specifically what's off (spacing,
+      colors, information density, card size) rather than "make it neater"
+      — that's the fastest way to the next iteration.
+
+## 4. Blank preview deck / wrong browser button — branch `fix/browser-toggle-blank-screen`
 
 This is the fix for what you saw in `tested/21.png` and `tested/22.png`.
 
