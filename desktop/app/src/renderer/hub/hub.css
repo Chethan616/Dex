@@ -4875,6 +4875,29 @@ button:focus:not(:focus-visible) {
   min-height: 0;
 }
 
+/* Dashboard/Grid/Settings switches used to snap instantly — one tree
+   unmounts and the next mounts in the same tick, with nothing animating
+   the change. HubApp keys this wrapper by viewMode, so React remounts it
+   (and replays this animation) on every switch rather than patching in
+   place. */
+.hub-main__view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  animation: hub-view-fade-in 220ms var(--ease-out) both;
+}
+
+@keyframes hub-view-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-main__view { animation: none; }
+}
+
 /* Floating side nav.
    Detached from the window edge so it reads as a panel resting above the
    background field rather than a wall bolted to the frame — the background now

@@ -716,6 +716,7 @@ export function HubApp(): React.ReactElement {
         }}
       />
       <div className="hub-main">
+      <div className="hub-main__view" key={viewMode}>
       {viewMode === 'settings' ? (
         <SettingsPane
           intent={settingsIntent}
@@ -804,6 +805,7 @@ export function HubApp(): React.ReactElement {
         })()
       )}
 
+      </div>
       </div>
       </div>
 

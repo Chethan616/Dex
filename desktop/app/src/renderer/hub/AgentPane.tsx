@@ -718,7 +718,7 @@ function CloseIcon(): React.ReactElement {
   );
 }
 
-interface AgentPaneProps {
+export interface AgentPaneProps {
   session: AgentSession;
   focused?: boolean;
   onRerun?: (sessionId: string) => void;
@@ -734,7 +734,7 @@ interface AgentPaneProps {
   cycleShortcut?: string;
 }
 
-export function AgentPane({ session, focused, onRerun, onResume, onPause, onFollowUp, onDismiss, onCancel, onSelect, onOpenFollowUp, onOpenSettings, followUpShortcut, cycleShortcut }: AgentPaneProps): React.ReactElement {
+function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowUp, onDismiss, onCancel, onSelect, onOpenFollowUp, onOpenSettings, followUpShortcut, cycleShortcut }: AgentPaneProps): React.ReactElement {
   const openaiLogo = useThemedAsset(openaiLogoDark, openaiLogoLight);
   const opencodeLogo = useThemedAsset(opencodeLogoDark, opencodeLogoLight);
   const paneRef = useRef<HTMLDivElement>(null);
@@ -1444,5 +1444,65 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
     </div>
   );
 }
+
+/**
+ * Every AgentPane in Grid view used to re-render on every sessions refetch
+ * (React Query's staleTime/refetchOnWindowFocus, or any other session's
+ * sessionOutput event) because HubApp recreates the whole `sessions` array
+ * — and the callback props passed alongside it — by reference on every one
+ * of those, and a plain component re-renders whenever its parent does
+ * regardless of whether ITS OWN data changed. With several running
+ * sessions this compounded into visible jank: an unrelated session
+ * finishing a tool call would restart every other pane's bounds/
+ * ResizeObserver effect too.
+ *
+ * Compares `session` by the fields this component actually reads rather
+ * than by reference, so a session that's genuinely unchanged skips the
+ * re-render even though HubApp handed it a new object. Every callback prop
+ * (onRerun, onResume, onPause, onFollowUp, onDismiss, onCancel, onSelect,
+ * onOpenFollowUp, onOpenSettings) is deliberately excluded from the
+ * comparison: each one takes the session id as its own call-time argument
+ * rather than closing over per-session state (see AgentPaneProps above), so
+ * a new function identity every render never changes what clicking a
+ * button actually does — bailing out on a stale-but-equivalent callback
+ * reference is safe.
+ */
+export function areAgentPanePropsEqual(prev: AgentPaneProps, next: AgentPaneProps): boolean {
+  if (prev.focused !== next.focused) return false;
+  if (prev.followUpShortcut !== next.followUpShortcut) return false;
+  if (prev.cycleShortcut !== next.cycleShortcut) return false;
+
+  const a = prev.session;
+  const b = next.session;
+  if (a === b) return true;
+  return (
+    a.id === b.id &&
+    a.status === b.status &&
+    // Reference equality is the fast, correct check once a session has real
+    // output — useSessionsQuery only ever grows that array in place (append
+    // or reuse the cached reference), never rebuilds an equal-but-new one.
+    // A session with none yet is the one case that breaks that assumption:
+    // every refetch hands back a brand new `[]` literal from IPC, so two
+    // merely-empty arrays need to count as equal too.
+    (a.output === b.output || (a.output.length === 0 && b.output.length === 0)) &&
+    a.error === b.error &&
+    a.hasBrowser === b.hasBrowser &&
+    a.primarySite === b.primarySite &&
+    a.lastUrl === b.lastUrl &&
+    a.canResume === b.canResume &&
+    a.lastActivityAt === b.lastActivityAt &&
+    a.engine === b.engine &&
+    a.model === b.model &&
+    a.costUsd === b.costUsd &&
+    a.inputTokens === b.inputTokens &&
+    a.outputTokens === b.outputTokens &&
+    a.cachedInputTokens === b.cachedInputTokens &&
+    a.costSource === b.costSource &&
+    a.authMode === b.authMode &&
+    a.subscriptionType === b.subscriptionType
+  );
+}
+
+export const AgentPane = React.memo(AgentPaneImpl, areAgentPanePropsEqual);
 
 export default AgentPane;
