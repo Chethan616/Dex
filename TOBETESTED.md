@@ -283,26 +283,28 @@ filename search should work almost immediately.
       textarea's `scrollHeight` directly; now it's reported through a
       callback).
 
-## 3. File cards with colored type badges — branch `feat/file-search`
+## 3. File results, redesigned to match the Flutter app — 2026-09-19
 
-`dex-find` results, the "reading a file" card, the plan's produced-files
-row, and the activity fallback's file row all now render as a grid of
-compact cards (badge + name) instead of plain-text rows/buttons.
+The first pass after merging `feat/file-search` rendered results as a
+wrapping grid of colored-badge cards ("Claude/ChatGPT-style"). You flagged
+that this wasn't what you wanted and pointed at the Flutter app's own
+`artifact_card.dart` as the reference — which is deliberately quiet: one row
+per result, an icon (not a color) identifying the file's kind, the folder
+underneath in a dimmer tone, the matched excerpt as evidence when the hit
+came from content rather than the filename, and reason tags as small quiet
+pills. Rewrote `dex-find` results, the "reading a file" card, the plan's
+produced-files row, and the activity fallback's file row all to match.
 
-- [ ] Run a file search and confirm results show as a **wrapping grid of
-      cards**, each with a small colored tag (PDF red, DOC blue, XLS green,
-      PPT orange, IMG accent-blue, generic gray) and the filename.
-- [ ] Confirm click-to-reveal-in-Explorer still works on each card.
-- [ ] Confirm the hover-to-copy-path button still appears (top-right corner
-      of the card now, not the row's trailing edge).
-- [ ] Check readability at both a narrow and a wide pane width — the grid
-      should reflow, not overflow or leave one giant stretched card.
-- [ ] Confirm light theme still reads fine (the color tokens are shared with
-      the rest of the app's status colors, but worth a look).
-- [ ] This is a first pass at "Claude/ChatGPT-style" — if it still doesn't
-      feel right once you see it live, say specifically what's off (spacing,
-      colors, information density, card size) rather than "make it neater"
-      — that's the fastest way to the next iteration.
+- [ ] Run a file search and confirm results show as a **vertical list of
+      rows** (not a grid of cards), each with a small monochrome icon (no
+      color per file type) and the filename.
+- [ ] Confirm a content-match result shows the matched excerpt line, and a
+      name-match result shows its reason tag (e.g. `"syllabus" in filename`).
+- [ ] Confirm click-to-reveal-in-Explorer still works on each row.
+- [ ] Confirm the hover-to-copy-path button still appears, at the row's
+      trailing edge.
+- [ ] Check readability at both a narrow and a wide pane width.
+- [ ] Confirm light theme still reads fine.
 
 ## 4. Blank preview deck / wrong browser button — branch `fix/browser-toggle-blank-screen`
 
@@ -333,5 +335,3 @@ This is the fix for what you saw in `tested/21.png` and `tested/22.png`.
 - `hasBrowser` isn't persisted to the DB yet — a resumed session after an app
   restart reverts to "unknown" until its next real navigation. Smaller gap
   than the one just fixed.
-- The artifact/file-reference cards work but don't yet look like
-  Claude/ChatGPT's file cards — that's the next thing being built.

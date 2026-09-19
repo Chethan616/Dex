@@ -3,9 +3,10 @@
 /**
  * The visual half of the deck — deckHasContent (PreviewDeck.test.ts) decides
  * *whether* it shows; this covers what it actually renders once it does,
- * specifically the file-card redesign: a colored type badge per extension,
- * a wrapping grid of cards rather than a list of rows, and click-to-reveal
- * still wired through after the restructure.
+ * specifically the file-result design: one row per result (matching the
+ * Flutter app's file cards — name, folder, excerpt, quiet reason tags), an
+ * icon identifying the file's kind with no per-type color coding, and
+ * click-to-reveal still wired through.
  */
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -31,7 +32,7 @@ function render(output: HlEvent[]): { container: HTMLDivElement; root: Root } {
 
 const revealOutput = vi.fn();
 
-describe('PreviewDeck file cards', () => {
+describe('PreviewDeck file results', () => {
   beforeEach(() => {
     (window as unknown as { electronAPI: { sessions: { revealOutput: typeof revealOutput } } }).electronAPI = {
       sessions: { revealOutput },
@@ -43,7 +44,7 @@ describe('PreviewDeck file cards', () => {
     revealOutput.mockClear();
   });
 
-  it('renders search results as a grid of cards, not a list of rows', () => {
+  it('renders search results as a list of rows, not a grid of cards', () => {
     const { container, root } = render([
       {
         type: 'artifact',
@@ -59,14 +60,20 @@ describe('PreviewDeck file cards', () => {
     const items = container.querySelectorAll('.deck-card__items .deck-item');
     expect(items.length).toBe(2);
 
-    // The type badge is a text tag colored per extension, not per-format art.
-    const badges = Array.from(container.querySelectorAll('.deck-item__badge')).map((el) => el.textContent);
-    expect(badges).toEqual(['PDF', 'XLS']);
+    // No per-type colored badge — an icon only, same color for every type.
+    expect(container.querySelectorAll('.deck-item__badge').length).toBe(0);
+    const icons = container.querySelectorAll('.deck-item__icon svg');
+    expect(icons.length).toBe(2);
+
+    // Name, folder and the match reason are all present per row.
+    expect(items[0].querySelector('.deck-item__label')?.textContent).toBe('BCSE_CNS_syllabus.pdf');
+    expect(items[0].querySelector('.deck-item__folder')?.textContent).toBe('C:/Users/x');
+    expect(items[0].textContent).toContain('"cryptography" in contents');
 
     act(() => root.unmount());
   });
 
-  it('reveals the file on click, after the badge/body restructure', () => {
+  it('reveals the file on click', () => {
     const { container, root } = render([
       {
         type: 'artifact',
@@ -76,14 +83,14 @@ describe('PreviewDeck file cards', () => {
       },
     ]);
 
-    const card = container.querySelector('.deck-item') as HTMLElement;
-    act(() => { card.click(); });
+    const row = container.querySelector('.deck-item') as HTMLElement;
+    act(() => { row.click(); });
 
     expect(revealOutput).toHaveBeenCalledWith('C:/Users/x/report.pdf');
     act(() => root.unmount());
   });
 
-  it('falls back to an uppercase extension tag for an unknown file type', () => {
+  it('renders an icon for an unrecognized extension without erroring', () => {
     const { container, root } = render([
       {
         type: 'artifact',
@@ -93,17 +100,20 @@ describe('PreviewDeck file cards', () => {
       },
     ]);
 
-    expect(container.querySelector('.deck-item__badge')?.textContent).toBe('XYZ1');
+    // Falls through to the generic file icon — still one icon, no text tag.
+    expect(container.querySelectorAll('.deck-item__icon svg').length).toBe(1);
+    expect(container.querySelectorAll('.deck-item__badge').length).toBe(0);
     act(() => root.unmount());
   });
 
-  it('shows a colored badge on a single-file "reading" card too', () => {
+  it('shows the file name and an icon on a single-file "reading" card too, with no colored badge', () => {
     const { container, root } = render([
       { type: 'artifact', kind: 'reading', title: 'Reading', file: 'C:/Users/x/notes.docx', items: [] },
     ]);
 
     const fileButton = container.querySelector('.deck-card__file');
-    expect(fileButton?.querySelector('.deck-item__badge')?.textContent).toBe('DOC');
+    expect(fileButton?.querySelector('svg')).toBeTruthy();
+    expect(fileButton?.querySelector('.deck-item__badge')).toBeNull();
     expect(fileButton?.textContent).toContain('notes.docx');
 
     act(() => root.unmount());

@@ -48,57 +48,102 @@ function extOf(label: string): string {
 }
 
 /**
- * A short type tag plus which of the theme's few semantic colors it takes —
- * deliberately not a bespoke palette. This shell is monochrome by design
- * (every --shadow-* is none in dark mode; depth comes from the inset
- * highlight, not color), so file-type color reuses the same handful of
- * status tokens everywhere else uses, rather than inventing new hex values
- * that would only ever appear here.
+ * The file's kind, from its extension — icon only, no color coding. This
+ * shell already has a second visual language for "why this matched"
+ * (the reason tags below); giving every file type its own color on top of
+ * that would be a third one competing for attention in a list whose whole
+ * point is to be scanned quickly. Mirrors the Flutter app's `_iconFor`.
  */
-const FILE_TYPE_META: Record<string, { tag: string; colorVar: string }> = {
-  pdf: { tag: 'PDF', colorVar: '--color-status-error' },
-  doc: { tag: 'DOC', colorVar: '--color-status-info' },
-  docx: { tag: 'DOC', colorVar: '--color-status-info' },
-  xls: { tag: 'XLS', colorVar: '--color-status-success' },
-  xlsx: { tag: 'XLS', colorVar: '--color-status-success' },
-  csv: { tag: 'CSV', colorVar: '--color-status-success' },
-  ppt: { tag: 'PPT', colorVar: '--color-status-warning' },
-  pptx: { tag: 'PPT', colorVar: '--color-status-warning' },
-  txt: { tag: 'TXT', colorVar: '--color-fg-tertiary' },
-  md: { tag: 'MD', colorVar: '--color-fg-tertiary' },
-  png: { tag: 'IMG', colorVar: '--color-accent-default' },
-  jpg: { tag: 'IMG', colorVar: '--color-accent-default' },
-  jpeg: { tag: 'IMG', colorVar: '--color-accent-default' },
-  gif: { tag: 'IMG', colorVar: '--color-accent-default' },
-  webp: { tag: 'IMG', colorVar: '--color-accent-default' },
-  svg: { tag: 'IMG', colorVar: '--color-accent-default' },
-  zip: { tag: 'ZIP', colorVar: '--color-fg-tertiary' },
-};
+function FileTypeIcon({ label }: { label: string }): React.ReactElement {
+  const ext = extOf(label);
+  const common = { width: 14, height: 14, viewBox: '0 0 14 14', fill: 'none' as const };
+  const stroke = { stroke: 'currentColor', strokeWidth: 1.2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 
-function fileTypeMeta(label: string): { tag: string; colorVar: string } {
-  return FILE_TYPE_META[extOf(label)] ?? { tag: extOf(label).slice(0, 4).toUpperCase() || 'FILE', colorVar: '--color-fg-tertiary' };
-}
-
-/** The colored type badge every file card leads with — icon-as-text, since a
- *  short, legible tag ("PDF", "XLS") reads faster than a glyph at this size
- *  and needs no per-format artwork to add a new type. */
-function FileTypeBadge({ label }: { label: string }): React.ReactElement {
-  const { tag, colorVar } = fileTypeMeta(label);
+  if (['xls', 'xlsx', 'csv'].includes(ext)) {
+    return (
+      <svg {...common} aria-hidden="true">
+        <rect x="1.5" y="2" width="11" height="10" rx="1" {...stroke} />
+        <path d="M1.5 5.3h11M5.3 2v10M8.7 2v10" {...stroke} />
+      </svg>
+    );
+  }
+  if (['ppt', 'pptx'].includes(ext)) {
+    return (
+      <svg {...common} aria-hidden="true">
+        <rect x="1.5" y="2.5" width="11" height="7.5" rx="1" {...stroke} />
+        <path d="M5 12.5h4" {...stroke} />
+        <path d="M4 8.2l2-2.2 1.5 1.5L10 5" {...stroke} />
+      </svg>
+    );
+  }
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'tif', 'tiff'].includes(ext)) {
+    return (
+      <svg {...common} aria-hidden="true">
+        <rect x="1.5" y="2" width="11" height="10" rx="1" {...stroke} />
+        <circle cx="4.6" cy="5" r="1" fill="currentColor" stroke="none" />
+        <path d="M2 10.5l3-3 2.2 2.2L10.5 6l1.5 1.8" {...stroke} />
+      </svg>
+    );
+  }
+  if (['mp4', 'mkv', 'mov', 'avi', 'webm'].includes(ext)) {
+    return (
+      <svg {...common} aria-hidden="true">
+        <rect x="1.5" y="2.5" width="11" height="9" rx="1" {...stroke} />
+        <path d="M5.7 5.2v3.6l3-1.8-3-1.8z" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+  if (['mp3', 'wav', 'flac', 'm4a', 'aac'].includes(ext)) {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M5.2 9.8V2.8L11 1.7v7" {...stroke} />
+        <circle cx="4" cy="9.8" r="1.7" {...stroke} />
+        <circle cx="9.8" cy="8.7" r="1.7" {...stroke} />
+      </svg>
+    );
+  }
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M3 1.8h8l1.6 2.4v7a1 1 0 01-1 1H2.4a1 1 0 01-1-1v-7L3 1.8z" {...stroke} />
+        <path d="M6 1.8v1.4M8 3.2v1.4M6 4.6v1.4M8 6v1.4" {...stroke} />
+      </svg>
+    );
+  }
+  if (['exe', 'msi'].includes(ext)) {
+    return (
+      <svg {...common} aria-hidden="true">
+        <rect x="1.5" y="2.5" width="11" height="9" rx="1" {...stroke} />
+        <path d="M1.5 5h11" {...stroke} />
+        <circle cx="3.3" cy="3.7" r="0.4" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+  if (['pdf', 'doc', 'docx', 'odt', 'rtf', 'txt', 'md'].includes(ext)) {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M3.2 1.5h5l2.6 2.6v8.4a1 1 0 01-1 1H3.2a1 1 0 01-1-1v-10a1 1 0 011-1z" {...stroke} />
+        <path d="M8.2 1.5v2.6h2.6" {...stroke} />
+        <path d="M4.3 7.2h5.4M4.3 9.3h5.4M4.3 11h3.2" {...stroke} />
+      </svg>
+    );
+  }
+  // Generic file — same page-with-folded-corner shape, no interior lines.
   return (
-    <span
-      className="deck-item__badge"
-      style={{ color: `var(${colorVar})`, backgroundColor: `color-mix(in srgb, var(${colorVar}) 16%, transparent)` }}
-    >
-      {tag}
-    </span>
+    <svg {...common} aria-hidden="true">
+      <path d="M3.2 1.5h5l2.6 2.6v8.4a1 1 0 01-1 1H3.2a1 1 0 01-1-1v-10a1 1 0 011-1z" {...stroke} />
+      <path d="M8.2 1.5v2.6h2.6" {...stroke} />
+    </svg>
   );
 }
 
 /**
- * One file reference, rendered as a compact card — the same shape as
- * Claude's or ChatGPT's "referenced files" cards: a type badge, the name,
- * and just enough metadata to tell hits apart, arranged in a wrapping grid
- * rather than a list of rows.
+ * One search hit, one row. Matches the Flutter app's file-result rows
+ * deliberately: name and size on the first line, the folder underneath in a
+ * quieter tone, the matched excerpt below that when the hit came from a
+ * file's content rather than its name, and the reasons as small quiet tags
+ * — never a colored badge grid. A list of twelve results should read as a
+ * list of results, not a grid of tiles competing for attention.
  */
 function ArtifactRow({ item }: { item: ArtifactItem }): React.ReactElement {
   const [hovered, setHovered] = useState(false);
@@ -121,27 +166,13 @@ function ArtifactRow({ item }: { item: ArtifactItem }): React.ReactElement {
       role="button"
       tabIndex={0}
     >
-      <div className="deck-item__top">
-        <FileTypeBadge label={item.label} />
-        {hovered && item.detail ? (
-          <button
-            className="deck-item__copy"
-            title="Copy path"
-            onClick={(event) => {
-              event.stopPropagation();
-              void navigator.clipboard?.writeText(item.detail as string);
-            }}
-          >
-            Copy
-          </button>
-        ) : null}
-      </div>
+      <span className="deck-item__icon"><FileTypeIcon label={item.label} /></span>
       <div className="deck-item__body">
-        <span className="deck-item__label">{item.label}</span>
-        <div className="deck-item__meta">
+        <div className="deck-item__line">
+          <span className="deck-item__label">{item.label}</span>
           {size ? <span className="deck-item__size">{size}</span> : null}
-          {folder ? <span className="deck-item__folder">{folder}</span> : null}
         </div>
+        {folder ? <div className="deck-item__folder">{folder}</div> : null}
         {item.excerpt ? <div className="deck-item__excerpt">{item.excerpt}</div> : null}
         {item.reasons.length > 0 ? (
           <div className="deck-item__reasons">
@@ -151,6 +182,19 @@ function ArtifactRow({ item }: { item: ArtifactItem }): React.ReactElement {
           </div>
         ) : null}
       </div>
+      {/* Only on hover, so a list of results reads as results, not buttons. */}
+      {hovered && item.detail ? (
+        <button
+          className="deck-item__copy"
+          title="Copy path"
+          onClick={(event) => {
+            event.stopPropagation();
+            void navigator.clipboard?.writeText(item.detail as string);
+          }}
+        >
+          Copy
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -171,7 +215,7 @@ function ArtifactCard({ event }: { event: ArtifactEvent }): React.ReactElement {
         <div className="deck-card__reading">
           {event.file ? (
             <button className="deck-card__file" onClick={() => reveal(event.file)}>
-              <FileTypeBadge label={event.file} />
+              <FileTypeIcon label={event.file} />
               <span>{event.file}</span>
             </button>
           ) : null}
@@ -238,7 +282,7 @@ function PlanCard({ state }: { state: TaskState }): React.ReactElement {
               onClick={() => reveal(file.path)}
               title={file.path}
             >
-              <FileTypeBadge label={file.name} />
+              <FileTypeIcon label={file.name} />
               <span>{file.name}</span>
             </button>
           ))}
@@ -403,7 +447,7 @@ function ActivityCard({ session }: { session: AgentSession }): React.ReactElemen
               onClick={() => reveal(file.path)}
               title={file.path}
             >
-              <FileTypeBadge label={file.name} />
+              <FileTypeIcon label={file.name} />
               <span>{file.name}</span>
             </button>
           ))}

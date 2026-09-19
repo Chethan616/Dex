@@ -5694,83 +5694,66 @@ button:focus:not(:focus-visible) {
   word-break: break-all;
 }
 
-/* -- result cards -----------------------------------------------------------
-   A wrapping grid of compact file cards — the same shape as Claude's or
-   ChatGPT's "referenced files" row — rather than a vertical list of rows.
-   Fixed-ish tile width so a dozen results read as a tidy grid at any pane
-   width instead of one column stretching edge to edge. */
+/* -- result rows -------------------------------------------------------------
+   One row per result, matching the Flutter app's file-result design: name
+   first, folder underneath in a quieter tone, the matched line as evidence
+   when it came from content rather than the filename, reasons as small
+   quiet tags. No colored per-type badges — the icon alone identifies the
+   kind, and a list of twelve results should read as a list, not a grid of
+   competing tiles. */
 
 .deck-card__items {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
+  flex-direction: column;
 }
 
 .deck-item {
   display: flex;
-  flex-direction: column;
-  flex: 1 1 220px;
-  max-width: 280px;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px solid rgba(var(--highlight-rgb), 0.06);
-  border-radius: var(--radius-lg);
-  background-color: var(--color-bg-base);
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: border-color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 .deck-item--hover {
   background-color: var(--color-surface-hover);
-  border-color: rgba(var(--highlight-rgb), 0.14);
 }
 
-.deck-item__top {
+.deck-item__icon {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-height: 20px;
-}
-
-/* The type tag every card leads with — text, not per-format artwork, so a
-   new extension needs a map entry rather than new assets. Fixed min-width
-   keeps three-letter and four-letter tags (PDF, DOCX) the same visual size. */
-.deck-item__badge {
-  display: inline-flex;
-  align-items: center;
   justify-content: center;
-  min-width: 34px;
-  height: 20px;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
-  font-size: 10px;
-  font-weight: var(--font-weight-bold);
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  color: var(--color-fg-tertiary);
 }
 
 .deck-item__body {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
 
-.deck-item__label {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-fg-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.deck-item__meta {
+.deck-item__line {
   display: flex;
   align-items: baseline;
   gap: var(--space-3);
   min-width: 0;
+}
+
+.deck-item__label {
+  flex: 1 1 auto;
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .deck-item__size {
@@ -5792,6 +5775,7 @@ button:focus:not(:focus-visible) {
 /* The matched line. Two lines maximum: it is evidence that this hit is the
    right one, not the document itself. */
 .deck-item__excerpt {
+  margin-top: 1px;
   font-size: var(--font-size-2xs);
   line-height: var(--line-height-snug);
   color: var(--color-fg-secondary);
@@ -5805,6 +5789,7 @@ button:focus:not(:focus-visible) {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
+  margin-top: 2px;
 }
 
 .deck-tag {
@@ -5815,11 +5800,12 @@ button:focus:not(:focus-visible) {
   color: var(--color-fg-tertiary);
 }
 
-/* Only on hover, so a grid of results reads as results rather than as
-   controls — sits in the top-right corner rather than at the row's end,
-   since the card is a tile now, not a row. */
+/* Only on hover, so a list of results reads as results rather than as
+   controls — trailing edge of the row, the same place a file manager or
+   Claude/ChatGPT's own file rows put a quiet secondary action. */
 .deck-item__copy {
   flex: 0 0 auto;
+  align-self: center;
   padding: 1px var(--space-3);
   background: none;
   border: 0;
