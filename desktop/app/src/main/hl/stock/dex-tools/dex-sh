@@ -14,9 +14,62 @@
 # no visible ceremony there. A LiveBrowser session set to "Ask for
 # approval" (or "Approve for me" on a command the risk heuristic flags)
 # gets a real confirmation card first, the same plumbing dex-registry uses.
+#
+# Session mode — a real, long-lived shell that keeps cwd/env state across
+# calls, for a task that needs several commands to build on each other
+# ("cd into a repo once, then run a few things against it") rather than
+# re-establishing that context every call the way the one-shot form above
+# does:
+#
+#   dex-sh session start <bash|cmd|powershell|wsl>   -> {"shellSessionId":"..."}
+#   dex-sh session run <id> "<command>" [timeout-ms]  -> {"exitCode":N,"timedOut":bool,"output":"..."}
+#   dex-sh session end <id>                           -> {"ended":true}
+#
+# `output` merges what would be stdout and stderr on a one-shot call — a
+# PTY has no separate stderr stream, the same trade-off any real terminal
+# session has. `session run` goes through the same approval policy the
+# one-shot form does, checked fresh on every command.
 
 set -uo pipefail
 . "$(dirname "$0")/dex-lib.sh"
+
+if [ "${1:-}" = "session" ]; then
+  shift
+  sub="${1:-}"
+  session_usage() {
+    echo 'usage: dex-sh session start <bash|cmd|powershell|wsl>' >&2
+    echo '       dex-sh session run <id> "<command>" [timeout-ms]' >&2
+    echo '       dex-sh session end <id>' >&2
+    exit 2
+  }
+  case "$sub" in
+    start)
+      kind="${2:-}"
+      [ -n "$kind" ] || session_usage
+      dex_post /dex/sh-session-start "{\"kind\":\"$(dex_esc "$kind")\"}"
+      exit $?
+      ;;
+    run)
+      shell_session_id="${2:-}"
+      cmd="${3:-}"
+      timeout_ms="${4:-30000}"
+      { [ -n "$shell_session_id" ] && [ -n "$cmd" ]; } || session_usage
+      session="$(dex_session_id)"
+      [ -n "$session" ] || { echo "dex-sh: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
+      dex_post /dex/sh-session-run "{\"sessionId\":\"$(dex_esc "$session")\",\"shellSessionId\":\"$(dex_esc "$shell_session_id")\",\"command\":\"$(dex_esc "$cmd")\",\"timeoutMs\":${timeout_ms}}"
+      exit $?
+      ;;
+    end)
+      shell_session_id="${2:-}"
+      [ -n "$shell_session_id" ] || session_usage
+      dex_post /dex/sh-session-end "{\"shellSessionId\":\"$(dex_esc "$shell_session_id")\"}"
+      exit $?
+      ;;
+    *)
+      session_usage
+      ;;
+  esac
+fi
 
 usage() {
   echo 'usage: dex-sh <bash|cmd|powershell|wsl> "<command>" [timeout-seconds]' >&2

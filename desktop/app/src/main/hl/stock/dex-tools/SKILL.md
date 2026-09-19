@@ -9,7 +9,7 @@ them with Bash like any other command.
 | `dex-remember` | Recording a site the user named, or a login they gave. See `site-memory.md`. |
 | `dex-recall` | Resolving a nickname ("my uni portal") to a real URL. |
 | `dex-fill` | Typing a stored credential into a focused login field without seeing it. |
-| `dex-sh` | A different shell (cmd/PowerShell/WSL) with a structured, timed result. See `registry.md`. |
+| `dex-sh` | A different shell (cmd/PowerShell/WSL) with a structured, timed result, one-shot or as a persistent `session start`/`run`/`end` that keeps cwd/env between calls. See `registry.md`. |
 | `dex-registry` | Reading the Windows registry freely; writing always waits for the user to approve in the app. See `registry.md`. |
 | `dex-find` | Finding a file by name or by what's inside it (a PDF's own text, not just its filename). See `find.md`. Pass `--drive` only when the user tags `@drive`. |
 | `dex-canvas` | Rendering a markdown document (report, table, summary) in the pane itself instead of as terminal text. See `canvas.md`. |

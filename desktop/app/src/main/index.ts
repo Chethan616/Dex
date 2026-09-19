@@ -242,6 +242,50 @@ function resolveConfirmation(id: string, approved: boolean, lifetime: ApprovalLi
   }
   pending.resolve(approved);
 }
+
+/**
+ * Shared by /dex/confirm (dex-registry) and /dex/sh-session-run (dex-sh's
+ * session mode) — both need "check the policy, and if it says ask, put up
+ * a real blocking card and wait." Resolves `{approved: true}` immediately,
+ * with no card shown at all, when the policy already covers this action.
+ */
+function requestConfirmation(
+  sessionId: string,
+  title: string,
+  detail: string,
+  category: ApprovalCategory,
+  subject?: string,
+): Promise<{ approved: boolean }> {
+  if (!approvalPolicy.needsPrompt({ sessionId, category, subject })) {
+    return Promise.resolve({ approved: true });
+  }
+
+  const id = randomUUID();
+  const session = sessionManager.getSession(sessionId);
+  if (session) {
+    sessionManager.appendOutput(sessionId, { type: 'confirmation', id, title, detail, status: 'pending', at: Date.now() });
+    // Suspend AFTER appendOutput, which just reset it — otherwise the very
+    // next line's clear would have nothing to undo and the timer stays
+    // armed for a wait that can run minutes.
+    sessionManager.suspendStuckTimer(sessionId);
+  }
+
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      resolveConfirmation(id, false);
+    }, CONFIRMATION_TIMEOUT_MS);
+    pendingConfirmations.set(id, {
+      sessionId,
+      title,
+      detail,
+      category,
+      resolve: (approved) => {
+        clearTimeout(timeout);
+        resolve({ approved });
+      },
+    });
+  });
+}
 // Bootstrap the editable helpers harness — writes stock helpers.js + TOOLS.json
 // to <userData>/harness/ on first run, preserves user edits on subsequent runs.
 //
@@ -1552,35 +1596,50 @@ app.whenReady().then(async () => {
         const category = normalizeApprovalCategory(body.category);
         const subject = typeof body.subject === 'string' ? body.subject.slice(0, 4000) : undefined;
 
-        if (!approvalPolicy.needsPrompt({ sessionId, category, subject })) {
-          return { approved: true };
+        return requestConfirmation(sessionId, title, detail, category, subject);
+      },
+
+      // dex-sh's session subcommands — a long-lived PTY (src/main/hl/
+      // persistentShell.ts) that keeps cwd/env state across calls, unlike
+      // the one-shot form which spawns fresh every time. Command execution
+      // (not session start/end) goes through the same approval policy the
+      // one-shot form uses, keyed the same way (process-launch).
+      'POST /dex/sh-session-start': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { kind?: unknown };
+        const kind = body.kind;
+        if (kind !== 'bash' && kind !== 'cmd' && kind !== 'powershell' && kind !== 'wsl') {
+          throw new Error('kind must be one of bash, cmd, powershell, wsl');
+        }
+        const { startSession } = await import('./hl/persistentShell');
+        return { shellSessionId: startSession(kind) };
+      },
+
+      'POST /dex/sh-session-run': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { sessionId?: unknown; shellSessionId?: unknown; command?: unknown; timeoutMs?: unknown };
+        const sessionId = assertString(body.sessionId, 'sessionId', 100);
+        const shellSessionId = assertString(body.shellSessionId, 'shellSessionId', 100);
+        const command = assertString(body.command, 'command', 20_000);
+        const timeoutMs = typeof body.timeoutMs === 'number' && body.timeoutMs > 0 ? Math.min(body.timeoutMs, 10 * 60_000) : 30_000;
+
+        const { approved } = await requestConfirmation(sessionId, 'Run a shell command', command, 'process-launch', command);
+        if (!approved) {
+          return { approved: false, error: 'command not approved' };
         }
 
-        const id = randomUUID();
-        const session = sessionManager.getSession(sessionId);
-        if (session) {
-          sessionManager.appendOutput(sessionId, { type: 'confirmation', id, title, detail, status: 'pending', at: Date.now() });
-          // Suspend AFTER appendOutput, which just reset it — otherwise the
-          // very next line's clear would have nothing to undo and the timer
-          // stays armed for a wait that can run minutes.
-          sessionManager.suspendStuckTimer(sessionId);
+        const { runCommand } = await import('./hl/persistentShell');
+        try {
+          const result = await runCommand(shellSessionId, command, timeoutMs);
+          return { approved: true, ...result };
+        } catch (err) {
+          throw new Error((err as Error).message);
         }
+      },
 
-        return new Promise<Record<string, unknown>>((resolve) => {
-          const timeout = setTimeout(() => {
-            resolveConfirmation(id, false);
-          }, CONFIRMATION_TIMEOUT_MS);
-          pendingConfirmations.set(id, {
-            sessionId,
-            title,
-            detail,
-            category,
-            resolve: (approved) => {
-              clearTimeout(timeout);
-              resolve({ approved });
-            },
-          });
-        });
+      'POST /dex/sh-session-end': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { shellSessionId?: unknown };
+        const shellSessionId = assertString(body.shellSessionId, 'shellSessionId', 100);
+        const { endSession } = await import('./hl/persistentShell');
+        return { ended: endSession(shellSessionId) };
       },
     },
     submitTask: async (payload) => {
