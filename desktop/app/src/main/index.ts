@@ -27,6 +27,24 @@ if (process.platform === 'linux') {
   );
 }
 
+// This machine's AMD GPU has a separately-documented driver problem
+// (ROCm/Vulkan compute both misbehave on it) — the same GPU+driver
+// combination is plausibly on Chromium's own GPU blocklist for
+// compositing/rasterization too, which silently drops the entire app to
+// software rendering (SwiftShader) with no visible error. That would
+// explain symptoms no app-level fix could touch: a hover-state cursor
+// change is pure compositor work that normally costs nothing, and "the
+// cursor is slow to turn into a pointer" is a classic software-rendering
+// tell, not something CSS or React controls. These two switches make
+// Chromium attempt hardware acceleration anyway rather than deferring to
+// the blocklist — safe even if the blocklist entry is accurate, since an
+// actually-broken GPU path crashes the sandboxed GPU process, which
+// Chromium already recovers from by falling back to software on its own.
+if (process.platform === 'win32') {
+  app.commandLine.appendSwitch('ignore-gpu-blocklist');
+  app.commandLine.appendSwitch('disable-gpu-driver-bug-workarounds');
+}
+
 app.setName('DEX');
 
 // Native-crash minidumps → userData/Crashpad/. Captures GPU process,
@@ -557,6 +575,16 @@ function openShellAndWire(): BrowserWindow {
 // ---------------------------------------------------------------------------
 app.whenReady().then(async () => {
   mainLogger.info('main.appReady', { msg: 'Electron app ready — initializing DEX' });
+  // Confirms whether the ignore-gpu-blocklist switch above actually landed
+  // hardware compositing, or whether this GPU/driver still falls back to
+  // software (SwiftShader) regardless — status2D/gpuCompositing/rasterization
+  // reading anything other than "enabled" here means the whole UI is being
+  // pushed through the CPU, not the GPU, no matter what app code does.
+  try {
+    mainLogger.info('main.gpuFeatureStatus', app.getGPUFeatureStatus() as unknown as Record<string, unknown>);
+  } catch (err) {
+    mainLogger.warn('main.gpuFeatureStatus.failed', { error: (err as Error).message });
+  }
   startResourceMonitor(resourceMonitorContext);
 
   // Verify the CDP endpoint at our announced port is actually OUR Electron
