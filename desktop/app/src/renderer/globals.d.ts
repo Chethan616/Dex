@@ -195,8 +195,8 @@ interface ElectronShellAPI {
 }
 
 interface ElectronDexAPI {
-  /** Answers a dex-registry confirmation card. */
-  confirmAnswer: (sessionId: string, id: string, approved: boolean) => Promise<{ ok: boolean; error?: string }>;
+  /** Answers a dex-registry (or dex-sh) confirmation card. `lifetime` remembers the answer for this category — 'once' (default), 'turn', or 'session'. */
+  confirmAnswer: (sessionId: string, id: string, approved: boolean, lifetime?: 'once' | 'turn' | 'session') => Promise<{ ok: boolean; error?: string }>;
 }
 
 interface ElectronPillAPI {

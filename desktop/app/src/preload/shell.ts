@@ -236,9 +236,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
   },
   dex: {
-    // Answers a dex-registry confirmation card (PreviewDeck's ConfirmationCard).
-    confirmAnswer: (sessionId: string, id: string, approved: boolean): Promise<{ ok: boolean; error?: string }> =>
-      ipcRenderer.invoke('dex:confirm-answer', sessionId, id, approved),
+    // Answers a dex-registry (or dex-sh) confirmation card
+    // (PreviewDeck's ConfirmationCard). `lifetime` — 'once' (default),
+    // 'turn', or 'session' — controls whether this answer is remembered so
+    // later calls in the same category skip the prompt.
+    confirmAnswer: (sessionId: string, id: string, approved: boolean, lifetime?: 'once' | 'turn' | 'session'): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('dex:confirm-answer', sessionId, id, approved, lifetime),
   },
   sessions: {
     create: (

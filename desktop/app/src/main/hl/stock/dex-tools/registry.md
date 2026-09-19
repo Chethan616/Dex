@@ -32,6 +32,13 @@ retry through another and compare the exact exit code and stderr rather
 than just "it didn't work." `timedOut:true` (exit code 124) means the
 timeout you gave it ran out — distinct from the command's own failure.
 
+**A call can come back `{"exitCode":126,"stderr":"command not approved"}`
+without ever running.** This is not `dex-sh` itself gating anything — it's
+the session's own approval policy (set by the LiveBrowser mode selector;
+Grid-view sessions default to full access and never see this). If it
+happens, say so plainly rather than retrying the same command — a retry
+waits on the same confirmation card the first call already put up.
+
 ## `dex-registry` — reading is free; writing needs the user
 
 Reading the registry is exactly as available as any other `dex-*` tool:

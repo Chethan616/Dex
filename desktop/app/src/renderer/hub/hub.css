@@ -5742,6 +5742,20 @@ button:focus:not(:focus-visible) {
   background-color: color-mix(in srgb, var(--color-status-warning) 30%, transparent);
 }
 
+.deck-confirm__lifetime {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--highlight-rgb), 0.08);
+  background-color: var(--color-bg-sunken);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.deck-confirm__lifetime:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .deck-card__file {
   display: inline-flex;
   align-items: center;

@@ -491,13 +491,16 @@ function ActivityCard({ session }: { session: AgentSession }): React.ReactElemen
  * instead, which neither of those surfaces ever touches, so it's reachable
  * no matter what's currently showing underneath.
  */
+type ApprovalLifetimeChoice = 'once' | 'turn' | 'session';
+
 export function ConfirmationCard({ sessionId, event }: { sessionId: string; event: ConfirmationEvent }): React.ReactElement {
   const [answering, setAnswering] = useState<'approve' | 'deny' | null>(null);
+  const [lifetime, setLifetime] = useState<ApprovalLifetimeChoice>('once');
 
   const answer = (approved: boolean) => {
     if (answering) return; // one click; a slow IPC round trip shouldn't double-fire
     setAnswering(approved ? 'approve' : 'deny');
-    window.electronAPI?.dex?.confirmAnswer(sessionId, event.id, approved).catch(() => {
+    window.electronAPI?.dex?.confirmAnswer(sessionId, event.id, approved, approved ? lifetime : 'once').catch(() => {
       setAnswering(null);
     });
   };
@@ -520,6 +523,18 @@ export function ConfirmationCard({ sessionId, event }: { sessionId: string; even
         >
           {answering === 'deny' ? 'Denying…' : 'Deny'}
         </button>
+        <select
+          className="deck-confirm__lifetime"
+          value={lifetime}
+          onChange={(e) => setLifetime(e.target.value as ApprovalLifetimeChoice)}
+          disabled={answering != null}
+          aria-label="Remember this approval for"
+          title="Remember this approval for"
+        >
+          <option value="once">Just this once</option>
+          <option value="turn">For this turn</option>
+          <option value="session">For this session</option>
+        </select>
         <button
           className="deck-confirm__btn deck-confirm__btn--approve"
           onClick={() => answer(true)}

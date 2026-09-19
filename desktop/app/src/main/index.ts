@@ -111,6 +111,9 @@ import { forwardAgentEvent } from './pill';
 // Session management
 import { SessionManager } from './sessions/SessionManager';
 import { BrowserPool } from './sessions/BrowserPool';
+import * as approvalPolicy from './approvals/policy';
+import { normalizeApprovalCategory, normalizeApprovalLifetime } from './approvals/policy';
+import type { ApprovalCategory, ApprovalLifetime } from './approvals/policy';
 import {
   snapshotResourceUsage,
   startResourceMonitor,
@@ -206,7 +209,13 @@ const sessionManager = new SessionManager(path.join(app.getPath('userData'), 'se
  * timeout guards against a card nobody ever answers (the app closed, the
  * user walked away) leaving the agent's process hung forever.
  */
-const pendingConfirmations = new Map<string, { resolve: (approved: boolean) => void; sessionId: string; title: string; detail: string }>();
+const pendingConfirmations = new Map<string, {
+  resolve: (approved: boolean) => void;
+  sessionId: string;
+  title: string;
+  detail: string;
+  category: ApprovalCategory;
+}>();
 const CONFIRMATION_TIMEOUT_MS = 10 * 60 * 1000;
 
 /**
@@ -215,10 +224,11 @@ const CONFIRMATION_TIMEOUT_MS = 10 * 60 * 1000;
  * nobody answers. Idempotent: a second call for the same id (a timeout
  * racing a late click) is a no-op rather than a double-resolve.
  */
-function resolveConfirmation(id: string, approved: boolean): void {
+function resolveConfirmation(id: string, approved: boolean, lifetime: ApprovalLifetime = 'once'): void {
   const pending = pendingConfirmations.get(id);
   if (!pending) return;
   pendingConfirmations.delete(id);
+  approvalPolicy.recordDecision(pending.sessionId, pending.category, approved, lifetime);
   const session = sessionManager.getSession(pending.sessionId);
   if (session) {
     sessionManager.appendOutput(pending.sessionId, {
@@ -1075,6 +1085,9 @@ app.whenReady().then(async () => {
     if (currentSession.status !== 'idle' && currentSession.status !== 'paused' && currentSession.status !== 'stopped') {
       return { error: `Session ${validatedId} is ${currentSession.status}, expected idle, paused, or stopped` };
     }
+    // A fresh prompt reaching the engine is a new conversational turn —
+    // 'turn'-lifetime approvals from the previous one do not carry forward.
+    approvalPolicy.startTurn(validatedId);
     await browserPool.markSessionActive(validatedId);
 
     if (resumeAttachments.length > 0) {
@@ -1511,10 +1524,20 @@ app.whenReady().then(async () => {
         return { state: sessionManager.applyTaskState(id, mutation) };
       },
 
-      // dex-registry's blocking confirmation. The returned Promise is what
-      // holds the HTTP response (and so the CLI, and so the agent) open
-      // until resolveConfirmation is called — by the renderer's Approve/
-      // Deny click, or by the timeout below. No polling on either side.
+      // dex-registry's (and now dex-sh's) blocking confirmation. The
+      // returned Promise is what holds the HTTP response (and so the CLI,
+      // and so the agent) open until resolveConfirmation is called — by the
+      // renderer's Approve/Deny click, or by the timeout below. No polling
+      // on either side.
+      //
+      // Before showing anything, this checks the per-category approval
+      // policy (src/main/approvals/policy.ts): registry-write always asks;
+      // the newer categories (process-launch, filesystem-write-unsafe-path,
+      // service-control) only ask when the session's mode calls for it, and
+      // any of them skip the prompt entirely once a 'turn' or 'session'
+      // lifetime answer already covers this category — the whole point of
+      // "approve for this session" being to go quiet, not just to speed up
+      // clicking the same button again.
       'POST /dex/confirm': async (raw) => {
         let parsed: unknown;
         try {
@@ -1522,10 +1545,16 @@ app.whenReady().then(async () => {
         } catch {
           throw new Error('request body must be JSON');
         }
-        const body = (parsed ?? {}) as { sessionId?: unknown; title?: unknown; detail?: unknown };
+        const body = (parsed ?? {}) as { sessionId?: unknown; title?: unknown; detail?: unknown; category?: unknown; subject?: unknown };
         const sessionId = assertString(body.sessionId, 'sessionId', 100);
         const title = assertString(body.title, 'title', 200);
         const detail = assertString(body.detail, 'detail', 4000);
+        const category = normalizeApprovalCategory(body.category);
+        const subject = typeof body.subject === 'string' ? body.subject.slice(0, 4000) : undefined;
+
+        if (!approvalPolicy.needsPrompt({ sessionId, category, subject })) {
+          return { approved: true };
+        }
 
         const id = randomUUID();
         const session = sessionManager.getSession(sessionId);
@@ -1545,6 +1574,7 @@ app.whenReady().then(async () => {
             sessionId,
             title,
             detail,
+            category,
             resolve: (approved) => {
               clearTimeout(timeout);
               resolve({ approved });
@@ -1793,6 +1823,7 @@ app.whenReady().then(async () => {
     terminateActiveRunControl(validatedId);
     browserPool.destroy(validatedId, shellWindow ?? undefined);
     sessionManager.deleteSession(validatedId);
+    approvalPolicy.clearSession(validatedId);
   });
 
   /**
@@ -2021,15 +2052,22 @@ app.whenReady().then(async () => {
   // pendingConfirmations' own sessionId rather than trusted blindly, so a
   // stale/forged id from a closed card can't resolve a different session's
   // wait.
-  ipcMain.handle('dex:confirm-answer', (_event, sessionId: string, id: string, approved: boolean) => {
+  ipcMain.handle('dex:confirm-answer', (_event, sessionId: string, id: string, approved: boolean, lifetime?: unknown) => {
     const validatedSessionId = assertString(sessionId, 'sessionId', 100);
     const validatedId = assertString(id, 'id', 100);
     const pending = pendingConfirmations.get(validatedId);
     if (!pending || pending.sessionId !== validatedSessionId) {
       return { ok: false, error: 'no matching pending confirmation' };
     }
-    resolveConfirmation(validatedId, approved === true);
+    resolveConfirmation(validatedId, approved === true, normalizeApprovalLifetime(lifetime));
     return { ok: true };
+  });
+
+  // Sets a LiveBrowser session's approval mode (ask/auto/full) — the
+  // three-way selector in the LiveBrowser UI. Grid-view sessions never call
+  // this, so they stay on the 'full' default this policy module ships with.
+  ipcMain.handle('livebrowser:set-approval-mode', (_e, sessionId: unknown, mode: unknown) => {
+    approvalPolicy.setSessionMode(assertString(sessionId, 'sessionId', 100), normalizeApprovalMode(mode));
   });
 
   ipcMain.handle('sessions:get', (_event, id: string) => {

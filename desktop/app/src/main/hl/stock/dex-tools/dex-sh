@@ -8,10 +8,12 @@
 #
 #   dex-sh <bash|cmd|powershell|wsl> "<command>" [timeout-seconds]
 #
-# Ungated — filesystem, process, and general shell work stay on your own
-# Bash/Read/Write tools; reach for this specifically when you want a
-# non-bash shell (cmd's own builtins, a PowerShell cmdlet, WSL) or when you
-# want the timeout and structured result this gives you for free.
+# Gated by the session's approval policy (src/main/approvals/policy.ts),
+# not by dex-sh itself — Grid view's autonomous agents default to 'full'
+# access, the same ungated behavior this tool has always had, so this adds
+# no visible ceremony there. A LiveBrowser session set to "Ask for
+# approval" (or "Approve for me" on a command the risk heuristic flags)
+# gets a real confirmation card first, the same plumbing dex-registry uses.
 
 set -uo pipefail
 . "$(dirname "$0")/dex-lib.sh"
@@ -25,6 +27,22 @@ usage() {
 shell="$1"
 cmd="$2"
 timeout_s="${3:-30}"
+
+session="$(dex_session_id)"
+if [ -n "$session" ]; then
+  confirm_body="{\"sessionId\":\"$(dex_esc "$session")\",\"title\":\"Run a shell command\",\"detail\":\"$(dex_esc "$shell: $cmd")\",\"category\":\"process-launch\",\"subject\":\"$(dex_esc "$cmd")\"}"
+  confirm_response="$(dex_post /dex/confirm "$confirm_body")"
+  confirm_status=$?
+  approved="$(printf '%s' "$confirm_response" | sed -n 's/.*"approved"[[:space:]]*:[[:space:]]*\(true\|false\).*/\1/p')"
+  # A non-2xx from dex_post (server unreachable, control file missing) is
+  # treated the same as an explicit denial — silently running an unapproved
+  # command because the approval channel itself broke would defeat the
+  # point of gating it at all.
+  if [ "$confirm_status" -ne 0 ] || [ "$approved" != "true" ]; then
+    printf '{"exitCode":126,"timedOut":false,"stdout":"","stderr":"command not approved"}\n'
+    exit 126
+  fi
+fi
 
 err_file="$(mktemp)"
 trap 'rm -f "$err_file"' EXIT
