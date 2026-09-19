@@ -1036,6 +1036,16 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
 
     const observer = new ResizeObserver(updateBounds);
     observer.observe(paneEl, { box: 'border-box' });
+    // .pane__output's OWN size can change without paneEl's outer size
+    // changing at all — e.g. the confirmation bar appearing in the header
+    // pushes .pane__output down and shrinks it, but the pane's overall
+    // footprint in the grid is unaffected, so a ResizeObserver watching only
+    // paneEl never fires. The native view then keeps whatever bounds were
+    // last correct, which is exactly the "browser view rendered in a narrow
+    // misaligned strip" bug once a confirmation card started appearing in
+    // the header instead of inside .pane__output.
+    const outElForObserver = paneEl.querySelector('.pane__output') as HTMLElement | null;
+    if (outElForObserver) observer.observe(outElForObserver, { box: 'border-box' });
 
     // ResizeObserver misses position-only changes (e.g. sibling pane dismissed
     // causes a grid reflow without this pane resizing). HubApp dispatches

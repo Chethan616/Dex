@@ -9,6 +9,71 @@ together — separate from `fix/browser-toggle-blank-screen` and
 `feat/desktop-uia-cua`, which are not merged in yet and still have their own
 `TOBETESTED.md`. None of this is pushed anywhere yet.
 
+## 2026-09-19, later — root causes found from your screenshots 43-47
+
+Four real, distinct bugs — not one "the system is broken" problem:
+
+**1. dex-canvas/dex-find were never actually competing on equal footing.**
+Every engine's `wrapPrompt` (the actual per-task instructions the agent
+gets, separate from AGENTS.md, which it only reads if it chooses to) had a
+direct, unconditional line: *"When the user asks you to produce a file (a
+report, CSV, screenshot, transcript, etc.), save it to `./outputs/...`"*.
+That's not a doctrine-following failure — the agent did exactly what it was
+told. dex-canvas never stood a chance against an instruction sitting right
+in its own prompt. Same root cause explains the aadhaar/resume searches
+falling back to a manual PowerShell scan: dex-find was never named directly
+anywhere the agent reliably saw it, only in AGENTS.md/find.md, which it has
+to proactively go read.
+
+Fixed by rewriting that line in all three engine adapters to name
+`dex-find`, `dex-canvas`, and `dex-registry` directly — the same technique
+already proven for MCP servers ("naming the connections makes the cheaper
+route the obvious one" — that comment was already in the code, just never
+applied to DEX's own tools). This should mean the agent reaches for these
+without being told to for a specific task — which is the actual design;
+telling it "use dex-registry explicitly" in a test prompt was a debugging
+aid to isolate the rendering bug from the discovery bug, not the intended
+product behavior. Worth re-testing **without** naming the tool now.
+
+**2. The confirmation-bar-in-header change (added earlier today) broke the
+browser view's own bounds tracking.** The effect that keeps the native
+browser view positioned only watched the *outer* pane element for size
+changes. Adding the confirmation bar changes `.pane__output`'s own size
+(it gets pushed down and shrinks) without changing the outer pane's size at
+all — so the observer never fired, and the browser view kept stale
+bounds. That's the "glow behind, browser UI out of symmetry" in
+`tested/47.png`. Fixed by observing `.pane__output` itself, not just its
+parent.
+
+**3. Alt-tabbing away and back never triggered a re-layout.** There was
+already a proven mechanism for this exact class of bug — window maximize/
+restore/fullscreen already force every pane to re-measure and re-attach,
+specifically because Windows can hand a window its new size without an
+observable layout pass. Alt-tab (window focus) does the identical thing but
+was never wired to it. Fixed by adding it alongside the others.
+
+**4. Sidebar session-switching making cards vanish permanently** — I could
+not pin down a distinct root cause for this beyond #2/#3 above (both of
+which plausibly explain it, since switching sessions un/re-mounts the pane
+same as any other layout change). If it still happens after this fix,
+that's new information, not something already covered — worth a fresh
+report specifically on that sequence (which session, what was showing,
+exactly when it disappeared) if so.
+
+- [ ] Re-run the SQLite vs. PostgreSQL report prompt and confirm it renders
+      as an actual document now, not a written file.
+- [ ] Re-run "find my resume" and "find my aadhaar card, voter id, and
+      passport photo" **without** naming dex-find, and confirm it's used
+      (check the Logs for `dex-find` calls) with row-list results, not a
+      PowerShell scan or a text dump.
+- [ ] Re-run the dex-registry browser + confirmation test and confirm the
+      live page fills the whole rect correctly, with the card in the header
+      above it — not a narrow strip.
+- [ ] Alt-tab away and back mid-task a few times and confirm the pane stays
+      populated instead of going blank.
+- [ ] Switch sessions in the sidebar and back a few times and check whether
+      cards still disappear — this is the one fix I'm least certain of.
+
 ## 2026-09-19 — dex-canvas: generative UI (a rendered document)
 
 New capability, not a bug fix: you clarified "artifact" meant generative
