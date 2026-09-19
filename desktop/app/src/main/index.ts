@@ -103,6 +103,7 @@ import { TaskStateMutationSchema } from '../shared/session-schemas';
 // Agent loop: CLI subprocess driving the browser harness. Engine is
 // pluggable (claude-code, codex, …) — see src/main/hl/engines/.
 import { bootstrapHarness, harnessDir } from './hl/harness';
+import { startIndexing } from './search/indexer';
 import { runEngine, DEFAULT_ENGINE_ID } from './hl/engines';
 import type { EngineRunControl } from './hl/engines/types';
 import { getEngine, setEngine, type EngineId } from './hl/engine';
@@ -245,6 +246,15 @@ try {
     error: (err as Error).message,
     hint: 'The agent may be missing tools. Usually another DEX instance is holding files open.',
   });
+}
+// Background file index for `dex-find` — a slow metadata scan followed by an
+// even slower, throttled content backfill, both non-blocking. See
+// src/main/search/indexer.ts for the two-phase design and why it never holds
+// up app startup even on a cold index.
+try {
+  startIndexing(app.getPath('userData'));
+} catch (err) {
+  mainLogger.error('main.startIndexing.failed', { error: (err as Error).message });
 }
 /**
  * The environment report, refreshed at startup and on demand from Settings.
@@ -1386,6 +1396,53 @@ app.whenReady().then(async () => {
             try { dbg.detach(); } catch { /* already gone */ }
           }
         }
+      },
+
+      // The `dex-find` CLI. Local search always runs; `--drive` additionally
+      // fires Google Drive through its MCP tool, concurrently — see
+      // search/query.ts's searchCombined for why that is a `Promise.all` and
+      // not two sequential calls. Also publishes an `artifact` event so the
+      // result shows as a card in the preview deck, not just in the agent's
+      // own terminal output.
+      'POST /dex/search': async (raw) => {
+        const body = JSON.parse(raw || '{}') as {
+          sessionId?: unknown; query?: unknown; drive?: unknown; limit?: unknown;
+        };
+        const id = assertString(body.sessionId, 'sessionId', 100);
+        const query = assertString(body.query, 'query', 500);
+        const limit = typeof body.limit === 'number' && body.limit > 0 ? Math.min(Math.floor(body.limit), 50) : 20;
+        const wantDrive = body.drive === true;
+
+        const { searchCombined } = await import('./search/query');
+        const { searchDrive } = await import('./search/drive');
+        const { getIndexStatus } = await import('./search/indexer');
+
+        const combined = await searchCombined(query, limit, wantDrive, searchDrive);
+
+        const items = [
+          ...combined.local.map((r) => ({
+            label: r.label, detail: r.detail, reasons: r.reasons, excerpt: r.excerpt, bytes: r.bytes, modified: r.modified,
+          })),
+          ...(combined.drive?.items ?? []).map((item) => ({ label: item.label, reasons: item.reasons })),
+        ];
+
+        const status = getIndexStatus();
+        const noteParts: string[] = [];
+        if (status.pending > 0) noteParts.push(`index still building (${status.indexed}/${status.total} files have their contents indexed)`);
+        if (wantDrive && combined.drive && !combined.drive.ok) noteParts.push(`Drive: ${combined.drive.error}`);
+
+        const session = sessionManager.getSession(id);
+        if (session) {
+          sessionManager.appendOutput(id, {
+            type: 'artifact',
+            kind: 'files',
+            title: `Search results for "${query}"`,
+            note: noteParts.length > 0 ? noteParts.join('; ') : undefined,
+            items,
+          });
+        }
+
+        return { items, driveError: combined.drive && !combined.drive.ok ? combined.drive.error : undefined, indexStatus: status };
       },
 
       // The `dex-state` CLI's only endpoint. Everything it can do is one of

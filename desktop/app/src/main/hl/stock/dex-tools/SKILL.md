@@ -11,6 +11,7 @@ them with Bash like any other command.
 | `dex-fill` | Typing a stored credential into a focused login field without seeing it. |
 | `dex-sh` | A different shell (cmd/PowerShell/WSL) with a structured, timed result. See `registry.md`. |
 | `dex-registry` | Reading the Windows registry freely; writing always waits for the user to approve in the app. See `registry.md`. |
+| `dex-find` | Finding a file by name or by what's inside it (a PDF's own text, not just its filename). See `find.md`. Pass `--drive` only when the user tags `@drive`. |
 
 There are also skill files here for two user commands, read when the command is
 used rather than run as tools:

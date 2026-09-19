@@ -1,9 +1,7 @@
 import React, {
   forwardRef,
   useCallback,
-  useEffect,
   useImperativeHandle,
-  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
@@ -11,6 +9,11 @@ import { INPUT_PLACEHOLDER } from './constants';
 import { EnginePicker } from './EnginePicker';
 import { DEFAULT_MODEL_ID, ModelPicker } from './ModelPicker';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from './slashCommands';
+import { matchingMentions, type MentionDef } from './mentions';
+import { MentionHints } from './CommandChip';
+import { MentionTextField, type MentionTextFieldHandle } from './MentionTextField';
+
+const TASK_INPUT_MAX_HEIGHT_PX = 160;
 
 // A small glyph per command, shown in the committed chip. Lives here rather
 // than in slashCommands.ts so that module stays plain, testable logic with no
@@ -137,31 +140,12 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
   const [dragActive, setDragActive] = useState(false);
   const [engine, setEngine] = useState<string>(() => loadStoredEngine());
   const [model, setModel] = useState<string>(() => loadStoredModel(loadStoredEngine()));
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fieldRef = useRef<MentionTextFieldHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const resizeTextarea = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    textarea.style.height = 'auto';
-    const maxHeight = Number.parseFloat(window.getComputedStyle(textarea).maxHeight);
-    const nextHeight = Number.isFinite(maxHeight) && maxHeight > 0
-      ? Math.min(textarea.scrollHeight, maxHeight)
-      : textarea.scrollHeight;
-
-    textarea.style.height = `${nextHeight}px`;
-    textarea.style.overflowY = textarea.scrollHeight > nextHeight + 1 ? 'auto' : 'hidden';
-  }, []);
-
-  useLayoutEffect(() => {
-    resizeTextarea();
-  }, [resizeTextarea, value]);
-
-  useEffect(() => {
-    window.addEventListener('resize', resizeTextarea);
-    return () => window.removeEventListener('resize', resizeTextarea);
-  }, [resizeTextarea]);
+  // Caret position, tracked separately from `value` — an `@mention` can start
+  // anywhere in the sentence, not just at the front like a slash command, so
+  // knowing where the cursor sits is what tells us whether one is in progress.
+  const [caret, setCaret] = useState(0);
 
   const addFiles = useCallback(async (files: FileList | File[]) => {
     setErrorMsg(null);
@@ -203,6 +187,15 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
   // Command suggestions while the user is still typing the command word — and
   // only before one has been committed to a chip.
   const slashHints = command ? [] : matchingCommands(value);
+  // Mention suggestions track the caret, since @drive can start anywhere in
+  // the sentence rather than only at the front.
+  const mentionHints = matchingMentions(value, caret);
+
+  const pickMention = useCallback((mention: MentionDef) => {
+    // The field owns the DOM surgery and reports the resulting value/caret
+    // back through its own onChange — no pending-caret dance needed here.
+    fieldRef.current?.insertMentionChip(mention);
+  }, []);
 
   const handleChange = useCallback((next: string) => {
     // Promote a completed command word into a chip: `/scrape ` (or a newline
@@ -214,6 +207,7 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
         if (found) {
           setCommand(found);
           setValue(m[2]);
+          fieldRef.current?.setPlainText(m[2]);
           return;
         }
       }
@@ -257,7 +251,9 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
     setCommand(null);
     setAttachments([]);
     setErrorMsg(null);
-    textareaRef.current?.focus();
+    setCaret(0);
+    fieldRef.current?.clear();
+    fieldRef.current?.focus();
   }, [value, command, attachments, engine, model, onSubmit]);
 
   const onEngineChange = useCallback((id: string) => {
@@ -280,12 +276,13 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
     setCommand(next);
     setValue('');
     setErrorMsg(null);
-    textareaRef.current?.focus();
+    fieldRef.current?.clear();
+    fieldRef.current?.focus();
   }, []);
 
   const onKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      const caretAtStart = e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0;
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const caretAtStart = caret === 0;
 
       // Backspace at the very start with a chip present removes the chip
       // outright. It does not put "/scrape" back — the point of pressing
@@ -305,15 +302,21 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
         return;
       }
 
+      if (mentionHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+        e.preventDefault();
+        pickMention(mentionHints[0]);
+        return;
+      }
+
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         submit();
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        textareaRef.current?.blur();
+        (e.currentTarget as HTMLElement).blur();
       }
     },
-    [submit, command, slashHints, commitCommand],
+    [submit, command, caret, slashHints, commitCommand, mentionHints, pickMention],
   );
 
   const onDrop = useCallback(
@@ -338,12 +341,12 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
 
   useImperativeHandle(ref, () => ({
     addFiles: (files) => addFiles(files),
-    focus: () => textareaRef.current?.focus(),
+    focus: () => fieldRef.current?.focus(),
   }), [addFiles]);
 
   const focusTextareaOnBoxClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
-      textareaRef.current?.focus();
+      fieldRef.current?.focus();
     }
   }, []);
 
@@ -385,11 +388,11 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
                 className="task-input__command-remove"
                 aria-label={`Remove ${commandLabel(command)} command`}
                 onMouseDown={(e) => {
-                  // mousedown, not click: keep focus in the textarea. Removes
+                  // mousedown, not click: keep focus in the field. Removes
                   // the chip cleanly — it never turns back into "/scrape" text.
                   e.preventDefault();
                   setCommand(null);
-                  textareaRef.current?.focus();
+                  fieldRef.current?.focus();
                 }}
               >
                 <CloseIcon />
@@ -412,17 +415,16 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
             ))}
           </div>
         )}
-        <textarea
-          ref={textareaRef}
-          className="task-input__textarea"
-          value={value}
-          onChange={(e) => handleChange(e.target.value)}
+        <MentionHints hints={mentionHints} onPick={pickMention} />
+        <MentionTextField
+          ref={fieldRef}
+          maxHeightPx={TASK_INPUT_MAX_HEIGHT_PX}
+          onChange={(next, nextCaret) => { handleChange(next); setCaret(nextCaret); }}
           onKeyDown={onKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder={command ? `${command.summary}` : INPUT_PLACEHOLDER}
-          rows={1}
-          aria-label="New agent task"
+          ariaLabel="New agent task"
         />
         <div className="task-input__actions" onClick={focusTextareaOnBoxClick}>
           <button

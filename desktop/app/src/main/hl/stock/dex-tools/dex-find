@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# dex-find — search the file index by name and content.
+#
+#   dex-find "cryptography syllabus"
+#   dex-find "slp da - 1" --limit 5
+#   dex-find "quarterly report" --drive
+#
+# Searches file names AND extracted text (PDF, docx, pptx, xlsx, plain text)
+# across the machine's own index, not a live filesystem walk — instant, even
+# for content a filename gives no hint of. Pass --drive only when the user
+# tagged @drive in their request; it runs Google Drive alongside the local
+# search in the same call. See SKILL.md in this directory for when to use
+# this instead of `Bash`'s own `find`/`grep`, and for what the JSON means.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+[ $# -ge 1 ] || { echo "usage: dex-find <query> [--drive] [--limit N]" >&2; exit 2; }
+
+drive=false
+limit=""
+query=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --drive)  drive=true; shift ;;
+    --limit)  limit="${2:-}"; shift 2 ;;
+    *)        query="${query:+$query }$1"; shift ;;
+  esac
+done
+
+[ -n "$query" ] || { echo "dex-find: a query is required" >&2; exit 2; }
+
+session="$(dex_session_id)"
+[ -n "$session" ] || { echo "dex-find: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
+
+body="{\"sessionId\":\"$(dex_esc "$session")\",\"query\":\"$(dex_esc "$query")\",\"drive\":${drive}"
+[ -n "$limit" ] && body="${body},\"limit\":${limit}"
+body="${body}}"
+
+dex_post /dex/search "$body"

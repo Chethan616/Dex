@@ -295,9 +295,12 @@ html, body {
   flex-shrink: 0;
 }
 
-.logs-followup__input {
+/* Compound selector, not just `.logs-followup__input`: see the identical
+   note on `.mention-field.cmdbar__input` in pill.css — this and
+   `.mention-field` share specificity otherwise, and whichever stylesheet
+   loaded last would silently decide properties like `flex`. */
+.mention-field.logs-followup__input {
   flex: 1;
-  resize: none;
   background: transparent;
   border: none;
   outline: none;
@@ -305,20 +308,18 @@ html, body {
   font-family: inherit;
   font-size: 13px;
   line-height: 18px;
-  /* max-height is set inline by LogsApp based on window.innerHeight so the
-     textarea can grow upward for multi-line input without pushing the
-     output offscreen. Internal scroll kicks in past that cap. */
-  overflow-y: auto;
   padding: 0;
   -webkit-user-select: text;
   user-select: text;
 }
 
-.logs-followup__input::placeholder {
+.logs-followup__input.mention-field--empty::before {
   color: var(--color-fg-secondary, #9aa2ad);
 }
 
-.logs-followup__input:disabled {
+/* contentEditable has no :disabled — MentionTextField reflects `disabled`
+   as contenteditable="false" instead. */
+.logs-followup__input[contenteditable='false'] {
   opacity: 0.5;
 }
 

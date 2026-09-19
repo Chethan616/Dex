@@ -12,7 +12,11 @@ import { useThemedAsset } from '../design/useThemedAsset';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
 import { PreviewDeck, deckHasContent, getPendingConfirmations, ConfirmationCard } from './PreviewDeck';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from './slashCommands';
-import { CommandChip, CommandHints } from './CommandChip';
+import { matchingMentions, type MentionDef } from './mentions';
+import { CommandChip, CommandHints, MentionHints } from './CommandChip';
+import { MentionTextField, type MentionTextFieldHandle } from './MentionTextField';
+
+const FOLLOWUP_MAX_HEIGHT_PX = 80;
 import type { AgentSession, OutputEntry } from './types';
 
 function formatElapsed(createdAt: number): string {
@@ -533,31 +537,21 @@ async function fileToAttachment(file: File, idx: number): Promise<FollowUpAttach
   };
 }
 
-function insertAtCaret(el: HTMLTextAreaElement, text: string): string {
-  const start = el.selectionStart ?? el.value.length;
-  const end = el.selectionEnd ?? el.value.length;
-  const before = el.value.slice(0, start);
-  const after = el.value.slice(end);
-  const next = before + text + after;
-  // Defer caret move to next tick once React re-renders with the new value.
-  queueMicrotask(() => {
-    el.selectionStart = el.selectionEnd = start + text.length;
-  });
-  return next;
-}
-
 function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: string; onUserInput: (text: string, attachments?: FollowUpAttachment[]) => void; autoFocus?: boolean }): React.ReactElement {
   const [value, setValue] = useState('');
   const [command, setCommand] = useState<SlashCommand | null>(null);
   const [attachments, setAttachments] = useState<FollowUpAttachment[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const idxCounter = useRef(0);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fieldRef = useRef<MentionTextFieldHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Caret position, tracked separately from `value` — an @mention can start
+  // anywhere in the text, unlike a slash command which only ever opens it.
+  const [caret, setCaret] = useState(0);
 
   useEffect(() => {
-    if (autoFocus && textareaRef.current) {
-      textareaRef.current.focus();
+    if (autoFocus) {
+      fieldRef.current?.focus();
     }
   }, [autoFocus]);
 
@@ -579,15 +573,23 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
     setValue('');
     setCommand(null);
     setAttachments([]);
+    setCaret(0);
+    fieldRef.current?.clear();
     idxCounter.current = 0;
   }, [value, command, sessionId, onUserInput, attachments]);
 
   const slashHints = command ? [] : matchingCommands(value);
+  const mentionHints = matchingMentions(value, caret);
 
   const commitCommand = useCallback((next: SlashCommand) => {
     setCommand(next);
     setValue('');
-    textareaRef.current?.focus();
+    fieldRef.current?.clear();
+    fieldRef.current?.focus();
+  }, []);
+
+  const pickMention = useCallback((mention: MentionDef) => {
+    fieldRef.current?.insertMentionChip(mention);
   }, []);
 
   const handleChange = useCallback((next: string) => {
@@ -595,14 +597,14 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
       const m = /^\/([a-zA-Z][\w-]*)[ \n]([\s\S]*)$/.exec(next);
       if (m) {
         const found = SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase());
-        if (found) { setCommand(found); setValue(m[2]); return; }
+        if (found) { setCommand(found); setValue(m[2]); fieldRef.current?.setPlainText(m[2]); return; }
       }
     }
     setValue(next);
   }, [command]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const caretAtStart = e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0;
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const caretAtStart = caret === 0;
     if (e.key === 'Backspace' && command && caretAtStart) {
       e.preventDefault();
       setCommand(null);
@@ -613,47 +615,45 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
       commitCommand(slashHints[0]);
       return;
     }
+    if (mentionHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+      e.preventDefault();
+      pickMention(mentionHints[0]);
+      return;
+    }
     if (e.key === 'Escape') {
       e.preventDefault();
-      textareaRef.current?.blur();
+      (e.currentTarget as HTMLElement).blur();
     } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
-  }, [handleSubmit, command, slashHints, commitCommand]);
+  }, [handleSubmit, command, caret, slashHints, commitCommand, mentionHints, pickMention]);
 
   const addFiles = useCallback(async (files: FileList | File[] | null) => {
     if (!files) return;
     const list = Array.from(files);
     if (list.length === 0) return;
-    const el = textareaRef.current;
     const startIdx = idxCounter.current + 1;
     idxCounter.current += list.length;
     try {
       const next = await Promise.all(list.map((f, i) => fileToAttachment(f, startIdx + i)));
       setAttachments((prev) => [...prev, ...next]);
       const tokens = next.map((a) => `[Image #${a.idx}]`).join(' ');
-      if (el) {
-        setValue((prev) => {
-          const pos = el.selectionStart ?? prev.length;
-          const before = prev.slice(0, pos);
-          const after = prev.slice(el.selectionEnd ?? prev.length);
-          const sep = before && !before.endsWith(' ') ? ' ' : '';
-          const inserted = sep + tokens + (after && !after.startsWith(' ') ? ' ' : '');
-          queueMicrotask(() => {
-            const newPos = before.length + inserted.length;
-            el.selectionStart = el.selectionEnd = newPos;
-            el.focus();
-          });
-          return before + inserted + after;
-        });
+      if (fieldRef.current) {
+        // Smart spacing, same as before: a separating space is added only
+        // where the surrounding text doesn't already supply one.
+        const before = value.slice(0, caret);
+        const after = value.slice(caret);
+        const sep = before && !before.endsWith(' ') ? ' ' : '';
+        const inserted = sep + tokens + (after && !after.startsWith(' ') ? ' ' : '');
+        fieldRef.current.insertPlainTextAtCaret(inserted);
       } else {
         setValue((prev) => (prev ? prev + ' ' : '') + tokens);
       }
     } catch (err) {
       console.error('[FollowUpInput] attach failed', err);
     }
-  }, []);
+  }, [value, caret]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const files = e.clipboardData?.files;
@@ -669,16 +669,6 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
     void addFiles(e.dataTransfer?.files ?? null);
   }, [addFiles]);
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, [value]);
-
-  // Suppress unused warning for insertAtCaret if lint is strict; referenced for future direct-caret paths.
-  void insertAtCaret;
-
   return (
     <div
       className={`followup${dragOver ? ' followup--dragover' : ''}`}
@@ -688,17 +678,18 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
     >
       {command && <CommandChip command={command} onRemove={() => setCommand(null)} />}
       <CommandHints hints={slashHints} onPick={commitCommand} />
+      <MentionHints hints={mentionHints} onPick={pickMention} />
       <div className="followup__row">
         <span className="followup__chevron">&rsaquo;</span>
-        <textarea
-          ref={textareaRef}
+        <MentionTextField
+          ref={fieldRef}
           className="followup__input"
-          value={value}
-          onChange={(e) => handleChange(e.target.value)}
+          maxHeightPx={FOLLOWUP_MAX_HEIGHT_PX}
+          onChange={(next, nextCaret) => { handleChange(next); setCaret(nextCaret); }}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           placeholder={command ? command.summary : 'Follow up...'}
-          rows={1}
+          ariaLabel="Follow up"
         />
         <button
           type="button"

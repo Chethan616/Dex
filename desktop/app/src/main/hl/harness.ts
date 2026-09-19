@@ -97,9 +97,14 @@ export function bootstrapHarness(): void {
   // existing users. AGENTS.md is the harness manual, not agent-editable
   // state — safe to overwrite so new sections (domain-skills, etc.) land
   // without the user deleting their userData.
-  const sentinel = 'dex-registry';  // AGENTS.md marker; bump when its content changes
+  // Both markers, since neither branch's existing users have both yet — a
+  // reader with only one of these two AGENTS.md sections is still stale.
+  const sentinels = ['dex-registry', 'dex-find'];  // AGENTS.md markers; bump when content changes
   const needsSkill = !fs.existsSync(sp) || (() => {
-    try { return !fs.readFileSync(sp, 'utf-8').includes(sentinel); }
+    try {
+      const content = fs.readFileSync(sp, 'utf-8');
+      return !sentinels.every((s) => content.includes(s));
+    }
     catch { return true; }
   })();
   if (needsSkill) {
@@ -133,7 +138,7 @@ function materializeDexTools(): void {
     prefix: DEX_TOOLS_PREFIX,
     entries: Object.entries(STOCK_DEX_TOOLS),
     logName: 'dexTools',
-    executableBasenames: new Set(['dex-state', 'dex-remember', 'dex-recall', 'dex-fill', 'dex-sh', 'dex-registry']),
+    executableBasenames: new Set(['dex-state', 'dex-remember', 'dex-recall', 'dex-fill', 'dex-sh', 'dex-registry', 'dex-find']),
   });
 }
 

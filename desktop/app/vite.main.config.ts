@@ -20,7 +20,13 @@ export default defineConfig({
       // node_modules rather than bundled into main.js — Forge copies the
       // dependency tree into the asar, and bundling it would also drop the
       // lazy macOS auto-update HTTP server.
-      external: ['@anthropic-ai/sdk', 'dotenv', 'electron-updater', 'bufferutil', 'utf-8-validate', 'better-sqlite3', 'sharp', 'node-pty'],
+      // pdfjs-dist and fflate join this list not for native-module reasons but
+      // because pdfjs-dist's own worker fallback resolves its worker script by
+      // a real file path at runtime (see search/extract.ts) — bundling it would
+      // still leave that resolution needing node_modules on disk, so there is
+      // nothing to gain and a real risk in letting Rollup rewrite its dynamic
+      // `import()` of that path.
+      external: ['@anthropic-ai/sdk', 'dotenv', 'electron-updater', 'bufferutil', 'utf-8-validate', 'better-sqlite3', 'sharp', 'node-pty', 'pdfjs-dist', 'fflate'],
       output: {
         entryFileNames: 'main.js',
       },

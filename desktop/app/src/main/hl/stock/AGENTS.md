@@ -19,6 +19,7 @@ a less structured one only when the structured one cannot.
 | A website | the DOM, through `browser-harness-js` | a screenshot, then coordinates |
 | A Windows desktop app | the accessibility tree | an annotated screenshot, then coordinates |
 | The Windows registry — reading OR writing, any hive | `dex-registry` | — never `reg.exe` or a shell's own registry cmdlets (`Set-ItemProperty`, etc.), in any shell tool |
+| Finding a file by name or content | `dex-find` (searches an index, not a live walk) | a filesystem search via a shell |
 | Files, processes, configuration | the purpose-built `dex-*` tool, else your own Bash/`dex-sh` | — |
 
 The reason is not purity. A structured interface tells you what is actually
