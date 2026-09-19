@@ -305,11 +305,21 @@ try {
 // even slower, throttled content backfill, both non-blocking. See
 // src/main/search/indexer.ts for the two-phase design and why it never holds
 // up app startup even on a cold index.
-try {
-  startIndexing(app.getPath('userData'));
-} catch (err) {
-  mainLogger.error('main.startIndexing.failed', { error: (err as Error).message });
-}
+//
+// Delayed rather than started immediately at module load: even a throttled,
+// yielding scan still competes for the same I/O and event-loop attention the
+// very first window paint/interaction needs, and "start scanning two
+// directory trees" at the exact moment the shell/onboarding window is also
+// trying to boot is the worst possible time for it to begin. Nothing here
+// is time-critical — filename search being usable a few seconds later than
+// technically possible is a fair trade for not fighting first paint for it.
+setTimeout(() => {
+  try {
+    startIndexing(app.getPath('userData'));
+  } catch (err) {
+    mainLogger.error('main.startIndexing.failed', { error: (err as Error).message });
+  }
+}, 5000);
 /**
  * The environment report, refreshed at startup and on demand from Settings.
  *

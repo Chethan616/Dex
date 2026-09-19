@@ -1019,17 +1019,37 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
     setActiveSection(id);
   }, []);
 
+  // The browser fires 'scroll' as fast as it can paint frames — a trackpad
+  // fling can produce dozens of events per second. Each pass here was
+  // running a querySelector per tab (9 of them) plus a state update
+  // (re-rendering the whole pane and its tab list) on every single one of
+  // those events with no throttling at all, which is exactly what made
+  // scrolling the Settings page itself feel laggy. Coalescing to one pass
+  // per animation frame — the standard fix for a scroll handler — cuts
+  // that to at most 60 passes/sec regardless of how many raw events fire,
+  // and skipping the setState when the active tab hasn't actually changed
+  // avoids re-rendering on frames where scrolling didn't cross a section
+  // boundary at all.
+  const scrollRafRef = useRef<number | null>(null);
   const updateActiveFromScroll = useCallback(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-    let next = tabs[0].id;
-    const threshold = scroller.scrollTop + 112;
-    for (const tab of tabs) {
-      const section = scroller.querySelector<HTMLElement>(`#${tab.id}`);
-      if (section && section.offsetTop <= threshold) next = tab.id;
-    }
-    setActiveSection(next);
+    if (scrollRafRef.current !== null) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      const scroller = scrollerRef.current;
+      if (!scroller) return;
+      let next = tabs[0].id;
+      const threshold = scroller.scrollTop + 112;
+      for (const tab of tabs) {
+        const section = scroller.querySelector<HTMLElement>(`#${tab.id}`);
+        if (section && section.offsetTop <= threshold) next = tab.id;
+      }
+      setActiveSection((prev) => (prev === next ? prev : next));
+    });
   }, [tabs]);
+
+  useEffect(() => () => {
+    if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
+  }, []);
 
   useEffect(() => {
     const sectionId = intent?.sectionId ?? (
