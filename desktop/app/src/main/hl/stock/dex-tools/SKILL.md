@@ -18,7 +18,7 @@ used rather than run as tools:
 | Skill | Command | What it does |
 |---|---|---|
 | `scrape.md` | `/scrape <url>` | Map a site into `$DEX_SITE_MEMORY_DIR` — pages, navigation, controls. |
-| `bugbounty.md` | `/bugbounty <url>` | Authorized, observation-only security review of a site. |
+| `bugbounty.md` | `/bugbounty <url>` | Authorized vulnerability assessment — exploitable bugs with evidence, not a header checklist. |
 
 More tools appear here as they ship. Run any of them with `--help`.
 

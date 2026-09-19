@@ -77,15 +77,24 @@ describe('expandSlashCommand', () => {
     expect(expandSlashCommand('/Scrape example.com').command?.name).toBe('scrape');
   });
 
-  // The safety-critical one: the review must carry its own authorization gate,
-  // and must not describe itself as doing anything active.
-  it('expands /bugbounty into an observation-only, authorization-gated prompt', () => {
+  // The safety-critical one: the assessment is exploit-focused (it validates
+  // real vulnerability classes, not just headers), but it must still carry
+  // its own authorization gate and its absolute safety boundaries — those
+  // don't get relaxed just because the investigation itself got more active.
+  it('expands /bugbounty into an authorization-gated, exploit-focused prompt with safety boundaries intact', () => {
     const result = expandSlashCommand('/bugbounty example.com');
     expect(result.command?.name).toBe('bugbounty');
     expect(result.prompt).toContain('bugbounty.md');
     expect(result.prompt).toContain('authorization check');
-    expect(result.prompt).toMatch(/observable/i);
-    expect(result.prompt).toMatch(/No exploitation/i);
+    // Exploit-focused: it should name concrete vulnerability classes, not
+    // just describe itself as a passive header/hardening scan.
+    expect(result.prompt).toMatch(/IDOR/i);
+    expect(result.prompt).toMatch(/CSRF|XSS|injection/i);
+    // A missing header must not be treated as a vulnerability on its own.
+    expect(result.prompt).toMatch(/never itself a vulnerability|Informational/i);
+    // The non-negotiable safety boundaries must still be stated explicitly.
+    expect(result.prompt).toMatch(/non-destructive/i);
+    expect(result.prompt).toMatch(/another real user/i);
   });
 
   it('every command points at a skill file the harness ships', () => {
