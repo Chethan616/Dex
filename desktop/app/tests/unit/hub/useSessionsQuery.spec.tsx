@@ -173,4 +173,40 @@ describe('useSessionsQuery live output wiring', () => {
     expect(after?.length).toBe(1);
     expect(after?.[0].output).toEqual([]);
   });
+
+  // The actual bug behind a dex-canvas document, a dex-find result, or a
+  // confirmation card rendering fine once and then vanishing after
+  // alt-tabbing away and back: SessionManager.listSessions() hard-codes
+  // output: [] on every session (it's a lightweight summary, not meant to
+  // ship every session's full event history on every list call) — and this
+  // query refetches on every window focus by default. Without preserving
+  // what was already accumulated, that refetch was silently overwriting a
+  // real canvas/artifact/confirmation event with nothing, for a session
+  // that had already finished and would never emit another live event to
+  // rebuild it from.
+  it('preserves an already-accumulated output array across a refetch that comes back with output: [] (SessionManager.listSessions\' real shape)', async () => {
+    const canvasEvent: HlEvent = { type: 'canvas', title: 'Q3 Summary', markdown: '# Q3 Summary', at: 1 };
+    const { fireSessionOutput } = installElectronApi([baseSession({ status: 'idle' })]);
+    const { qc } = renderProbe();
+    await waitForData(qc);
+
+    await fire(() => {
+      fireSessionOutput('s1', canvasEvent);
+    });
+    expect(qc.getQueryData<AgentSession[]>(SESSIONS_KEY)?.[0].output).toEqual([canvasEvent]);
+
+    // Simulate the listAll() mock now being called again (a refetch), same
+    // as react-query's refetchOnWindowFocus firing on alt-tab-back — real
+    // listAll() always returns output: [] regardless of what actually
+    // happened, since it's sourced from listSessions().
+    (window.electronAPI!.sessions.listAll as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      baseSession({ status: 'idle' }),
+    ]);
+    await act(async () => {
+      await latest?.refetch();
+    });
+
+    const afterRefetch = qc.getQueryData<AgentSession[]>(SESSIONS_KEY);
+    expect(afterRefetch?.[0].output).toEqual([canvasEvent]);
+  });
 });

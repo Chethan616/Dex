@@ -22,7 +22,28 @@ export function useSessionsQuery() {
     queryFn: async () => {
       const api = window.electronAPI;
       if (!api) return [];
-      return api.sessions.listAll();
+      const fresh = await api.sessions.listAll();
+      // sessions:list-all is deliberately a lightweight summary —
+      // SessionManager.listSessions() hard-codes `output: []` on every
+      // session so listing a hundred sessions doesn't ship a hundred full
+      // event histories. That's fine for the initial load, but this query
+      // *also* refetches on every window focus (react-query's default) and
+      // from a few explicit .refetch() calls elsewhere — each of which was
+      // silently wiping every session's live-accumulated `output` back to
+      // empty, which is why a canvas document, a confirmation card, or a
+      // file-search result would render once and then vanish the moment
+      // you alt-tabbed away and back: the data backing it was gone, not
+      // just hidden. Preserve whatever richer `output` the cache already
+      // has for a session — the same "don't trust a coarse snapshot over
+      // what's already been accumulated" rule the sessionUpdated and
+      // sessionOutput handlers below already follow.
+      const cached = qc.getQueryData<AgentSession[]>(SESSIONS_KEY);
+      if (!cached || cached.length === 0) return fresh;
+      const cachedById = new Map(cached.map((s) => [s.id, s]));
+      return fresh.map((s) => {
+        const prior = cachedById.get(s.id);
+        return prior && prior.output.length > 0 ? { ...s, output: prior.output } : s;
+      });
     },
   });
 

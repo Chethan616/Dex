@@ -9,6 +9,58 @@ together — separate from `fix/browser-toggle-blank-screen` and
 `feat/desktop-uia-cua`, which are not merged in yet and still have their own
 `TOBETESTED.md`. None of this is pushed anywhere yet.
 
+## 2026-09-19, later still — the actual master bug behind "vanishes on alt-tab" (screenshots 48-55)
+
+dex-canvas rendered correctly (`tested/48.png`) and so did a `dex-find`
+result (`tested/50.png`) — both real wins, both confirming yesterday's
+fixes. But alt-tabbing away and back emptied both (`49.png`, `51.png`),
+along with the Browse/Activity button itself and the registry confirmation
+flow (`54.png`/`55.png`).
+
+Root cause, found this time with much higher confidence:
+`SessionManager.listSessions()` — the data source for `sessions:list-all`,
+which is what populates the session list every single time it's fetched —
+hard-codes `output: []` on every session. That's deliberate: it's a
+lightweight summary so listing a hundred sessions doesn't ship a hundred
+full event histories. The problem is that `useSessionsQuery`'s React Query
+client refetches this list automatically on every window focus (a library
+default, not something added this session) — and every one of those
+refetches was silently replacing each session's real, already-accumulated
+`output` with that hard-coded empty array. Not hidden — actually gone from
+the query cache. For a session that had already finished, nothing would
+ever repopulate it, since there were no more live events left to rebuild it
+from.
+
+This explains, in one bug, everything that "worked once then vanished":
+the canvas document, the file-search cards, the confirmation card, and the
+Browse/Activity button itself (its visibility also reads `session.output`
+via `deckHasContent`). Fixed by having the query merge a fresh fetch
+against whatever the cache already has, preserving any session's non-empty
+`output` rather than trusting the fresh (always-empty) snapshot — same
+"don't let a coarse fetch overwrite what's already been accumulated" rule
+already applied to the live-event handlers earlier this session, just
+missing from the main fetch path itself. Added a regression test that
+reproduces the exact shape (`listAll()` returning `output: []`) and asserts
+the accumulated array survives a refetch.
+
+Not conclusively resolved by this: the sidebar visibly jumping to a
+different agent on alt-tab. I could not find code that moves session
+selection on window focus — my best guess is that what looked like "it
+switched agents" was actually the *same* agent's pane going blank from this
+exact bug, which reads as "wrong session" even though the sidebar highlight
+never moved. Worth specifically checking whether the sidebar's highlighted
+row actually changes on alt-tab, or only the content does — that tells us
+whether there's a second bug here or not.
+
+- [ ] Re-run the SQLite/PostgreSQL canvas prompt, alt-tab away and back
+      several times, and confirm the document stays rendered.
+- [ ] Re-run "find my resume", alt-tab away and back, confirm the result
+      list stays rendered.
+- [ ] Re-run the registry confirmation flow, alt-tab mid-approval, confirm
+      the card and the live page both survive.
+- [ ] Specifically watch the sidebar's highlighted row while alt-tabbing —
+      does it move, or does only the pane content change?
+
 ## 2026-09-19, later — root causes found from your screenshots 43-47
 
 Four real, distinct bugs — not one "the system is broken" problem:
