@@ -239,6 +239,14 @@ export function createShellWindow(opts?: ShellWindowOptions): BrowserWindow {
   win.on('restore', () => requestRelayout('restore'));
   win.on('enter-full-screen', () => requestRelayout('enter-full-screen'));
   win.on('leave-full-screen', () => requestRelayout('leave-full-screen'));
+  // Alt-tabbing away and back is the same class of bug as maximize/restore:
+  // Windows can hand the window back its focus without an observable layout
+  // pass on the browser-rect div, so the native view (and anything measured
+  // against the same rect) is left at a stale position — reported as the
+  // pane going blank, or a card list disappearing, after switching away and
+  // back. 'focus' fires on every alt-tab-back, not just the ones that
+  // happened to also resize the window.
+  win.on('focus', () => requestRelayout('focus'));
   win.on('close', () => {
     if (boundsTimer) clearTimeout(boundsTimer);
     if (!incognito) saveBounds(win);

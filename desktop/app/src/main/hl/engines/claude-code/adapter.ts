@@ -151,9 +151,18 @@ const claudeCodeAdapter: EngineAdapter = {
       lines.push('', 'The user attached these files for this task. Read each with your Read tool before acting:');
       for (const a of ctx.attachmentRefs) lines.push(`  - ${a.relPath} (${a.mime}, ${a.size} bytes)`);
     }
+    // Named directly, the same way the MCP servers above are — a routing
+    // table in a file the agent may or may not open loses every time to an
+    // instruction sitting right here. This line used to say "save a report
+    // to ./outputs/", which is exactly why dex-canvas never got used: a
+    // direct, unconditional instruction to write a file beats a skill doc
+    // the agent has to go read on its own initiative.
     lines.push(
       '',
-      `When the user asks you to produce a file (a report, CSV, screenshot, transcript, etc.), save it to \`./outputs/${ctx.sessionId}/\`. Mention the filename in your final answer.`,
+      `The Windows registry — reading OR writing, any hive — is \`dex-registry\`, never \`reg.exe\` or a shell's own registry cmdlets (\`Set-ItemProperty\`, etc.) in Bash/PowerShell directly. Writes block on a confirmation card in the app; that gate is the only thing standing between you and the user's real registry, so it's not optional.`,
+      `Finding a file on this machine — by name or by what it's about ("my aadhaar card", "the cryptography syllabus") — is \`dex-find\`, not a Bash/PowerShell scan. It also searches file *content*, not just names, and answers immediately: don't ask where the file might be first, just run it.`,
+      `A result whose *shape* is part of the answer — a report, a comparison table, a structured summary, anything with real headings and sections — is \`dex-canvas show "<title>"\` (markdown piped via stdin), rendered as a document in the app itself. That is different from "produce a file": only use \`./outputs/${ctx.sessionId}/\` for something the user will download, attach, or open outside the app (a CSV export, a screenshot, a transcript) — not for a report meant to be read right here.`,
+      `Mention the filename in your final answer for anything actually saved to ./outputs/.`,
       '',
       `Task: ${ctx.prompt}`,
     );

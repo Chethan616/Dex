@@ -681,6 +681,15 @@ function McpSection(): React.ReactElement {
                   <span className={`conn-card__subtitle${failed ? ' mcp__subtitle--failed' : ''}`}>
                     {statusText}
                   </span>
+                  {/* A green dot plus a tool count ("Connected — 1 tools
+                      available") reads as "fully working" even when the
+                      integration only covers one narrow capability (Drive's
+                      MCP tool is search-only, for instance) — keep the actual
+                      scope visible instead of letting the dot imply more than
+                      the connection actually does. */}
+                  {connected && row.summary && (
+                    <span className="conn-card__scope">{row.summary}</span>
+                  )}
                 </div>
 
                 {connected ? (

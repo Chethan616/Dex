@@ -9,6 +9,10 @@ them with Bash like any other command.
 | `dex-remember` | Recording a site the user named, or a login they gave. See `site-memory.md`. |
 | `dex-recall` | Resolving a nickname ("my uni portal") to a real URL. |
 | `dex-fill` | Typing a stored credential into a focused login field without seeing it. |
+| `dex-sh` | A different shell (cmd/PowerShell/WSL) with a structured, timed result. See `registry.md`. |
+| `dex-registry` | Reading the Windows registry freely; writing always waits for the user to approve in the app. See `registry.md`. |
+| `dex-find` | Finding a file by name or by what's inside it (a PDF's own text, not just its filename). See `find.md`. Pass `--drive` only when the user tags `@drive`. |
+| `dex-canvas` | Rendering a markdown document (report, table, summary) in the pane itself instead of as terminal text. See `canvas.md`. |
 
 There are also skill files here for two user commands, read when the command is
 used rather than run as tools:
@@ -16,7 +20,7 @@ used rather than run as tools:
 | Skill | Command | What it does |
 |---|---|---|
 | `scrape.md` | `/scrape <url>` | Map a site into `$DEX_SITE_MEMORY_DIR` — pages, navigation, controls. |
-| `bugbounty.md` | `/bugbounty <url>` | Authorized, observation-only security review of a site. |
+| `bugbounty.md` | `/bugbounty <url>` | Authorized vulnerability assessment — exploitable bugs with evidence, not a header checklist. |
 
 More tools appear here as they ship. Run any of them with `--help`.
 

@@ -107,7 +107,14 @@ export const MCP_CATALOG: McpServerDefinition[] = [
   {
     id: 'google-drive',
     displayName: 'Google Drive',
-    summary: 'Search and read Drive files. Also what @drive searches alongside your PC.',
+    // The upstream @modelcontextprotocol/server-gdrive package exposes
+    // exactly one tool: filename/content search. There is no MCP tool to
+    // fetch a file's actual content — opening or downloading one still goes
+    // through the browser. Overstating this as "search and read" here is
+    // what made a correctly-working search ("Connected — 1 tools
+    // available", genuinely healthy) read as "MCP failing" once the agent
+    // had to fall back to the browser for the part MCP can't do.
+    summary: 'Search Drive by filename and content — the same search @drive runs alongside your PC. Opening or downloading a file still goes through the browser; this integration only finds it.',
     transport: 'stdio',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-gdrive'],

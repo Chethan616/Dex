@@ -60,6 +60,20 @@ describe('browsercode adapter stdin payload mode', () => {
     expect(args).not.toContain(wrappedPrompt);
     expect(adapter.getStdinPayload?.(ctx, wrappedPrompt)).toBe(wrappedPrompt);
   });
+
+  // Regression: wrapPrompt used to say "save files to ./outputs/" with no
+  // qualification — a direct, unconditional instruction that always beat
+  // dex-canvas, since the agent never had a reason to open its skill doc
+  // when this line already told it exactly what to do.
+  it('names dex-canvas/dex-find/dex-registry directly rather than only pointing at AGENTS.md, and no longer tells the agent to always save a report as a file', () => {
+    const adapter = browserCodeAdapter();
+    const wrappedPrompt = adapter.wrapPrompt(spawnContext());
+
+    expect(wrappedPrompt).toMatch(/dex-canvas show/);
+    expect(wrappedPrompt).toMatch(/dex-find/);
+    expect(wrappedPrompt).toMatch(/dex-registry/);
+    expect(wrappedPrompt).not.toMatch(/When producing files, save them to/);
+  });
 });
 
 describe('browsercode adapter tool parsing', () => {

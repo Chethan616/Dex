@@ -18,12 +18,17 @@ a less structured one only when the structured one cannot.
 | A service with a connected integration (Drive, Gmail, GitHub, Slack) | its MCP tools | the browser |
 | A website | the DOM, through `browser-harness-js` | a screenshot, then coordinates |
 | A Windows desktop app | the accessibility tree | an annotated screenshot, then coordinates |
-| Files, processes, configuration | the purpose-built `dex-*` tool, else a shell | — |
+| The Windows registry — reading OR writing, any hive | `dex-registry` | — never `reg.exe` or a shell's own registry cmdlets (`Set-ItemProperty`, etc.), in any shell tool |
+| Finding a file — call it immediately, never ask where first | `dex-find` (searches an index, not a live walk) | — never a hand-rolled `Get-ChildItem`/`find`/shell scan instead |
+| A report, summary, comparison, or anything whose *shape* (headings, a table) is part of the answer | `dex-canvas` — a rendered document, not terminal text | your normal reply, for anything that's genuinely just a short answer |
+| Files, processes, configuration | the purpose-built `dex-*` tool, else your own Bash/`dex-sh` | — |
 
 The reason is not purity. A structured interface tells you what is actually
 there; a screenshot makes you guess. Guessing is slower, costs more, and fails
 in ways that are hard to notice. So do not drive a web UI for something an API
 covers, and do not reach for vision while the accessibility tree still answers.
+See `./dex-tools/registry.md` for `dex-sh` and `dex-registry`, including why
+the registry tool's confirmation step is not optional.
 
 ## When Something Fails
 

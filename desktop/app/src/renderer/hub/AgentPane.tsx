@@ -10,9 +10,13 @@ import opencodeLogoDark from './opencode-logo-dark.svg';
 import opencodeLogoLight from './opencode-logo-light.svg';
 import { useThemedAsset } from '../design/useThemedAsset';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
-import { PreviewDeck, deckHasContent } from './PreviewDeck';
+import { PreviewDeck, deckHasContent, getPendingConfirmations, ConfirmationCard } from './PreviewDeck';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from './slashCommands';
-import { CommandChip, CommandHints } from './CommandChip';
+import { matchingMentions, type MentionDef } from './mentions';
+import { CommandChip, CommandHints, MentionHints } from './CommandChip';
+import { MentionTextField, type MentionTextFieldHandle } from './MentionTextField';
+
+const FOLLOWUP_MAX_HEIGHT_PX = 80;
 import type { AgentSession, OutputEntry } from './types';
 
 function formatElapsed(createdAt: number): string {
@@ -533,31 +537,21 @@ async function fileToAttachment(file: File, idx: number): Promise<FollowUpAttach
   };
 }
 
-function insertAtCaret(el: HTMLTextAreaElement, text: string): string {
-  const start = el.selectionStart ?? el.value.length;
-  const end = el.selectionEnd ?? el.value.length;
-  const before = el.value.slice(0, start);
-  const after = el.value.slice(end);
-  const next = before + text + after;
-  // Defer caret move to next tick once React re-renders with the new value.
-  queueMicrotask(() => {
-    el.selectionStart = el.selectionEnd = start + text.length;
-  });
-  return next;
-}
-
 function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: string; onUserInput: (text: string, attachments?: FollowUpAttachment[]) => void; autoFocus?: boolean }): React.ReactElement {
   const [value, setValue] = useState('');
   const [command, setCommand] = useState<SlashCommand | null>(null);
   const [attachments, setAttachments] = useState<FollowUpAttachment[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const idxCounter = useRef(0);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fieldRef = useRef<MentionTextFieldHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Caret position, tracked separately from `value` — an @mention can start
+  // anywhere in the text, unlike a slash command which only ever opens it.
+  const [caret, setCaret] = useState(0);
 
   useEffect(() => {
-    if (autoFocus && textareaRef.current) {
-      textareaRef.current.focus();
+    if (autoFocus) {
+      fieldRef.current?.focus();
     }
   }, [autoFocus]);
 
@@ -579,15 +573,23 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
     setValue('');
     setCommand(null);
     setAttachments([]);
+    setCaret(0);
+    fieldRef.current?.clear();
     idxCounter.current = 0;
   }, [value, command, sessionId, onUserInput, attachments]);
 
   const slashHints = command ? [] : matchingCommands(value);
+  const mentionHints = matchingMentions(value, caret);
 
   const commitCommand = useCallback((next: SlashCommand) => {
     setCommand(next);
     setValue('');
-    textareaRef.current?.focus();
+    fieldRef.current?.clear();
+    fieldRef.current?.focus();
+  }, []);
+
+  const pickMention = useCallback((mention: MentionDef) => {
+    fieldRef.current?.insertMentionChip(mention);
   }, []);
 
   const handleChange = useCallback((next: string) => {
@@ -595,14 +597,14 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
       const m = /^\/([a-zA-Z][\w-]*)[ \n]([\s\S]*)$/.exec(next);
       if (m) {
         const found = SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase());
-        if (found) { setCommand(found); setValue(m[2]); return; }
+        if (found) { setCommand(found); setValue(m[2]); fieldRef.current?.setPlainText(m[2]); return; }
       }
     }
     setValue(next);
   }, [command]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const caretAtStart = e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0;
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const caretAtStart = caret === 0;
     if (e.key === 'Backspace' && command && caretAtStart) {
       e.preventDefault();
       setCommand(null);
@@ -613,47 +615,45 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
       commitCommand(slashHints[0]);
       return;
     }
+    if (mentionHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+      e.preventDefault();
+      pickMention(mentionHints[0]);
+      return;
+    }
     if (e.key === 'Escape') {
       e.preventDefault();
-      textareaRef.current?.blur();
+      (e.currentTarget as HTMLElement).blur();
     } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
-  }, [handleSubmit, command, slashHints, commitCommand]);
+  }, [handleSubmit, command, caret, slashHints, commitCommand, mentionHints, pickMention]);
 
   const addFiles = useCallback(async (files: FileList | File[] | null) => {
     if (!files) return;
     const list = Array.from(files);
     if (list.length === 0) return;
-    const el = textareaRef.current;
     const startIdx = idxCounter.current + 1;
     idxCounter.current += list.length;
     try {
       const next = await Promise.all(list.map((f, i) => fileToAttachment(f, startIdx + i)));
       setAttachments((prev) => [...prev, ...next]);
       const tokens = next.map((a) => `[Image #${a.idx}]`).join(' ');
-      if (el) {
-        setValue((prev) => {
-          const pos = el.selectionStart ?? prev.length;
-          const before = prev.slice(0, pos);
-          const after = prev.slice(el.selectionEnd ?? prev.length);
-          const sep = before && !before.endsWith(' ') ? ' ' : '';
-          const inserted = sep + tokens + (after && !after.startsWith(' ') ? ' ' : '');
-          queueMicrotask(() => {
-            const newPos = before.length + inserted.length;
-            el.selectionStart = el.selectionEnd = newPos;
-            el.focus();
-          });
-          return before + inserted + after;
-        });
+      if (fieldRef.current) {
+        // Smart spacing, same as before: a separating space is added only
+        // where the surrounding text doesn't already supply one.
+        const before = value.slice(0, caret);
+        const after = value.slice(caret);
+        const sep = before && !before.endsWith(' ') ? ' ' : '';
+        const inserted = sep + tokens + (after && !after.startsWith(' ') ? ' ' : '');
+        fieldRef.current.insertPlainTextAtCaret(inserted);
       } else {
         setValue((prev) => (prev ? prev + ' ' : '') + tokens);
       }
     } catch (err) {
       console.error('[FollowUpInput] attach failed', err);
     }
-  }, []);
+  }, [value, caret]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const files = e.clipboardData?.files;
@@ -669,16 +669,6 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
     void addFiles(e.dataTransfer?.files ?? null);
   }, [addFiles]);
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, [value]);
-
-  // Suppress unused warning for insertAtCaret if lint is strict; referenced for future direct-caret paths.
-  void insertAtCaret;
-
   return (
     <div
       className={`followup${dragOver ? ' followup--dragover' : ''}`}
@@ -688,17 +678,18 @@ function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: strin
     >
       {command && <CommandChip command={command} onRemove={() => setCommand(null)} />}
       <CommandHints hints={slashHints} onPick={commitCommand} />
+      <MentionHints hints={mentionHints} onPick={pickMention} />
       <div className="followup__row">
         <span className="followup__chevron">&rsaquo;</span>
-        <textarea
-          ref={textareaRef}
+        <MentionTextField
+          ref={fieldRef}
           className="followup__input"
-          value={value}
-          onChange={(e) => handleChange(e.target.value)}
+          maxHeightPx={FOLLOWUP_MAX_HEIGHT_PX}
+          onChange={(next, nextCaret) => { handleChange(next); setCaret(nextCaret); }}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           placeholder={command ? command.summary : 'Follow up...'}
-          rows={1}
+          ariaLabel="Follow up"
         />
         <button
           type="button"
@@ -747,6 +738,21 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
   const openaiLogo = useThemedAsset(openaiLogoDark, openaiLogoLight);
   const opencodeLogo = useThemedAsset(opencodeLogoDark, opencodeLogoLight);
   const paneRef = useRef<HTMLDivElement>(null);
+  /**
+   * Whether a WebContentsView is currently attached to this pane, and
+   * whether that attach actually succeeded. These have to survive the
+   * bounds effect below being torn down and recreated — which happens on
+   * every deckActive change, including "a confirmation just became
+   * pending" — because the native view itself is main-process state that
+   * doesn't reset just because the effect closure did. A plain `let` inside
+   * the effect forgot "yes, a view is attached" the moment deckActive
+   * flipped true, so the code never issued the viewDetach call the deck
+   * needed to actually become visible: the confirmation card rendered, but
+   * underneath the still-attached live page, which composites above React
+   * regardless of what React thinks should be showing.
+   */
+  const hasAttachedRef = useRef(false);
+  const attachSucceededRef = useRef(false);
   const [browserDead, setBrowserDead] = useState(false);
   const [browserMissing, setBrowserMissing] = useState(false);
   const [frameRect, setFrameRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
@@ -759,30 +765,82 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
    * hold the rect for as long as the session has anything to show, with no way
    * to reach the page underneath.
    */
-  const [browseHere, setBrowseHere] = useState(false);
+  /**
+   * The user's explicit choice, when they've made one, between the deck and
+   * the live page — set by the Browse/Activity toggle button. 'auto' defers
+   * to the default rule below. This has to be tri-state rather than a single
+   * "browseHere" boolean: a plain boolean can only ever *take the deck away*
+   * (once primarySite is set, the default rule already prefers the browser,
+   * so a "not browsing" state and "the default already shows the browser"
+   * state were indistinguishable — clicking "Activity" set the flag to a
+   * value that had no effect, which is exactly why the button did nothing
+   * after the agent had ever navigated a page).
+   */
+  const [paneOverride, setPaneOverride] = useState<'auto' | 'browser' | 'activity'>('auto');
   /**
    * Whether the preview deck should take over the browser rect.
    *
    * The native WebContentsView composites *above* the renderer, so React can
-   * only be seen in this rect while that view is detached. Hand the rect to
-   * the deck when there is something to show and no page would be lost by it:
-   * the browser has never navigated (a desktop, file, or OS task), or the
-   * session is paused. Once primarySite is set the page wins — a live page is
-   * always more useful than a card describing one.
+   * only be seen in this rect while that view is detached. By default, hand
+   * the rect to the deck when there is something to show and no page would be
+   * lost by it: the browser has never navigated (a desktop, file, or OS
+   * task), or the session is paused. Once primarySite is set the page wins —
+   * a live page is normally more useful than a card describing one.
+   *
+   * The one thing that overrides that default is the user's own explicit
+   * Browse/Activity choice, which always wins over the navigated-page
+   * default — that is the entire point of offering the toggle. A pending
+   * dex-registry confirmation does NOT force the deck up: it is rendered in
+   * the pane's header/chrome instead (see pendingConfirmations below), which
+   * is reachable regardless of whether the deck or the live page currently
+   * has the rect — so answering it no longer requires losing whatever page
+   * was showing.
    */
-  const deckActive = useMemo(
-    () => deckHasContent(session) && !browseHere && (!session.primarySite || session.status === 'paused'),
-    [session, browseHere],
+  const deckActive = useMemo(() => {
+    if (!deckHasContent(session)) return false;
+    if (paneOverride === 'browser') return false;
+    if (paneOverride === 'activity') return true;
+    return !session.primarySite || session.status === 'paused';
+  }, [session, paneOverride]);
+
+  /**
+   * A dex-find result, a dex-canvas document, or a screenshot can land at
+   * any point in a task that has already navigated a page — e.g. "search my
+   * drive" opens Google Drive itself, so `primarySite` is set and the deck
+   * stays hidden behind it for the rest of the run. The card is real (each
+   * of these tools always emits its event — see main/index.ts's /dex/search
+   * and /dex/canvas routes) and reachable via the Browse/Activity toggle,
+   * but a plain unlabeled button gives no hint that clicking it would
+   * reveal something new — which is exactly how a genuine result can look,
+   * from the outside, like it was never produced at all. This tracks
+   * whether a new one has arrived since the deck was last actually visible,
+   * so the toggle can say so.
+   */
+  const artifactCount = useMemo(
+    () => session.output.filter((e) => e.type === 'artifact' || e.type === 'screenshot' || e.type === 'canvas').length,
+    [session.output],
   );
+  const seenArtifactCountRef = useRef(0);
+  useEffect(() => {
+    if (deckActive) seenArtifactCountRef.current = artifactCount;
+  }, [deckActive, artifactCount]);
+  useEffect(() => {
+    seenArtifactCountRef.current = 0;
+  }, [session.id]);
+  const hasUnseenArtifact = !deckActive && artifactCount > seenArtifactCountRef.current;
+
+  // Rendered in the header/chrome below, not inside the deck — see the doc
+  // comment on ConfirmationCard in PreviewDeck.tsx for why.
+  const pendingConfirmations = useMemo(() => getPendingConfirmations(session), [session]);
 
   // A new run is the agent taking the pane back, so the deck should return
   // with it — otherwise starting a task after browsing looks like nothing
   // happened.
   useEffect(() => {
-    if (session.status === 'running') setBrowseHere(false);
+    if (session.status === 'running') setPaneOverride('auto');
   }, [session.status]);
   useEffect(() => {
-    setBrowseHere(false);
+    setPaneOverride('auto');
   }, [session.id]);
   // Logs overlay is a separate window (see logsPill.ts). The pane tracks
   // visibility only to reflect it in the Logs button's active state.
@@ -870,14 +928,19 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
       // Keep frameRect so the "Browser ended" overlay can paint over the
       // pane__output slot; nulling it leaves the pane black with no label.
       api.sessions.viewDetach(session.id).catch(() => {});
+      hasAttachedRef.current = false;
+      attachSucceededRef.current = false;
       return;
     }
 
+    // Reset every time this effect (re)starts so the first bounds
+    // computation below always runs its body at least once, even if the
+    // geometry hasn't actually changed since the last instance — that first
+    // run is what re-evaluates the attach/detach decision against the
+    // current deckActive, using hasAttachedRef/attachSucceededRef (declared
+    // outside this effect) rather than a value that would otherwise forget
+    // whatever the previous instance left attached.
     let lastKey = '';
-    let hasAttached = false;
-    // Tracks whether the last viewAttach actually got a browser view. If
-    // false, we skip the takeover overlay — the session is broken/deleted.
-    let attachSucceeded = false;
     let rafScheduled = 0;
     const applyBounds = () => {
       rafScheduled = 0;
@@ -902,33 +965,33 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
         // takeover overlay, which would otherwise paint its scrim over the
         // cards. Bounds measurement below still runs, so the deck is positioned
         // exactly where the browser would have been.
-        if (hasAttached) {
-          hasAttached = false;
-          attachSucceeded = false;
+        if (hasAttachedRef.current) {
+          hasAttachedRef.current = false;
+          attachSucceededRef.current = false;
           api.sessions.viewDetach(session.id).catch(() => {});
         }
         api.takeover?.hide(session.id).catch(() => {});
-      } else if (!hasAttached) {
-        hasAttached = true;
+      } else if (!hasAttachedRef.current) {
+        hasAttachedRef.current = true;
         api.sessions.viewAttach(session.id, bounds).then((ok) => {
           if (!ok) {
-            attachSucceeded = false;
+            attachSucceededRef.current = false;
             setBrowserMissing(true);
             api.takeover?.hide(session.id).catch(() => {});
           } else {
-            attachSucceeded = true;
+            attachSucceededRef.current = true;
             setBrowserMissing(false);
             if (session.status === 'running') {
               void api.takeover?.show(session.id, bounds, overlayMode);
             }
           }
         }).catch(() => {
-          hasAttached = false;
-          attachSucceeded = false;
+          hasAttachedRef.current = false;
+          attachSucceededRef.current = false;
         });
       } else {
         api.sessions.viewResize(session.id, bounds);
-        if (attachSucceeded && session.status === 'running') {
+        if (attachSucceededRef.current && session.status === 'running') {
           void api.takeover?.show(session.id, bounds, overlayMode);
         } else {
           api.takeover?.hide(session.id).catch(() => {});
@@ -973,6 +1036,16 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
 
     const observer = new ResizeObserver(updateBounds);
     observer.observe(paneEl, { box: 'border-box' });
+    // .pane__output's OWN size can change without paneEl's outer size
+    // changing at all — e.g. the confirmation bar appearing in the header
+    // pushes .pane__output down and shrinks it, but the pane's overall
+    // footprint in the grid is unaffected, so a ResizeObserver watching only
+    // paneEl never fires. The native view then keeps whatever bounds were
+    // last correct, which is exactly the "browser view rendered in a narrow
+    // misaligned strip" bug once a confirmation card started appearing in
+    // the header instead of inside .pane__output.
+    const outElForObserver = paneEl.querySelector('.pane__output') as HTMLElement | null;
+    if (outElForObserver) observer.observe(outElForObserver, { box: 'border-box' });
 
     // ResizeObserver misses position-only changes (e.g. sibling pane dismissed
     // causes a grid reflow without this pane resizing). HubApp dispatches
@@ -984,7 +1057,7 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
       // silently detached (e.g. by temporarilyDetachAll for pill/settings), it
       // gets re-added. Bounds are always set BEFORE addChildView so there's no
       // stale-position flash.
-      hasAttached = false;
+      hasAttachedRef.current = false;
       lastKey = '';
       updateBounds();
       requestAnimationFrame(updateBounds);
@@ -1058,7 +1131,7 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
       {!browserDead && !browserMissing && (
         <button
           className="pane__rerun-btn"
-          onClick={() => setBrowseHere(true)}
+          onClick={() => setPaneOverride('browser')}
           title="Keep the page as the agent left it and carry on yourself"
         >
           <BrowserIcon />
@@ -1166,13 +1239,17 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
           </button>
           {session.hasBrowser !== false && deckHasContent(session) && (
             <button
-              className={`pane__action-btn${browseHere ? ' pane__action-btn--active' : ''}`}
-              onClick={(e) => { e.stopPropagation(); setBrowseHere((on) => !on); }}
-              aria-label={browseHere ? 'Show activity' : 'Continue browsing'}
-              data-tip={browseHere ? 'Show what the agent did' : 'Take the browser back and keep browsing'}
+              className={`pane__action-btn${!deckActive ? ' pane__action-btn--active' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPaneOverride(deckActive ? 'browser' : 'activity');
+              }}
+              aria-label={deckActive ? 'Continue browsing' : (hasUnseenArtifact ? 'Show activity — new result' : 'Show activity')}
+              data-tip={deckActive ? 'Take the browser back and keep browsing' : (hasUnseenArtifact ? 'A new result is waiting behind the live page' : 'Show what the agent did')}
             >
               <BrowserIcon />
-              <span>{browseHere ? 'Activity' : 'Browse'}</span>
+              <span>{deckActive ? 'Browse' : 'Activity'}</span>
+              {hasUnseenArtifact ? <span className="pane__action-badge" aria-hidden="true" /> : null}
             </button>
           )}
           {onRerun && (
@@ -1243,6 +1320,20 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
         {session.status === 'running' && <div className="pane__progress-bar" />}
       </div>
 
+      {/* Always here, regardless of deckActive/browseHere/logsOpen — this is
+          plain pane chrome, not part of .pane__output, so neither the native
+          WebContentsView nor the floating Logs window (both of which anchor
+          to .pane__output and composite above it) can ever sit on top of it.
+          A blocking human decision has to be reachable no matter what else
+          is currently occupying the pane. */}
+      {pendingConfirmations.length > 0 && (
+        <div className="pane__confirm-bar">
+          {pendingConfirmations.map((event) => (
+            <ConfirmationCard sessionId={session.id} event={event} key={event.id} />
+          ))}
+        </div>
+      )}
+
       {/* The pane's non-browser surface. Shown when no live page occupies the
           rect — the pre-existing idle/error states, plus the two new ones the
           deck introduces: a running task that has never navigated (desktop,
@@ -1302,7 +1393,7 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
                   {canBrowseHere && (
                     <button
                       className="pane__rerun-btn"
-                      onClick={() => setBrowseHere(true)}
+                      onClick={() => setPaneOverride('browser')}
                       title="Keep the page as the agent left it and carry on yourself"
                     >
                       <BrowserIcon />

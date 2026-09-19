@@ -106,9 +106,15 @@ html, body {
   justify-content: flex-start;
 }
 
-.cmdbar__input {
+/* Compound selector, not just `.cmdbar__input`: MentionTextField (hub.css's
+   `.mention-field`) and this class both apply to the same element, and a
+   plain single-class rule here would have equal specificity to
+   `.mention-field` — whichever stylesheet happened to load second would
+   silently win on the overlapping properties (font-size, flex, min-height).
+   The compound selector's higher specificity makes this file's numbers win
+   unconditionally, regardless of load order. */
+.mention-field.cmdbar__input {
   flex: 1;
-  resize: none;
   background: none;
   border: none;
   outline: none;
@@ -119,14 +125,7 @@ html, body {
   color: var(--color-fg-primary);
   line-height: 1.5;
   min-height: 28px;
-  max-height: 160px;
   padding: 2px 0;
-  overflow-y: auto;
-}
-
-.cmdbar__input::placeholder {
-  color: var(--color-fg-tertiary);
-  opacity: 0.85;
 }
 
 .cmdbar__search-actions {

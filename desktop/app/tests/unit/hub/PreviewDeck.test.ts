@@ -11,7 +11,7 @@
  * that can be tested in isolation.
  */
 import { describe, expect, it } from 'vitest';
-import { deckHasContent } from '../../../src/renderer/hub/PreviewDeck';
+import { deckHasContent, hasPendingConfirmation, getPendingConfirmations, getLatestCanvas } from '../../../src/renderer/hub/PreviewDeck';
 import type { AgentSession, HlEvent, TaskState } from '../../../src/renderer/hub/types';
 
 function session(output: HlEvent[], status: AgentSession['status'] = 'running'): AgentSession {
@@ -52,6 +52,12 @@ describe('deckHasContent', () => {
     ]))).toBe(true);
   });
 
+  it('is true once a canvas document exists', () => {
+    expect(deckHasContent(session([
+      { type: 'canvas', title: 'Report', markdown: '# Report', at: 1 },
+    ]))).toBe(true);
+  });
+
   it('is true once a screenshot exists', () => {
     expect(deckHasContent(session([
       { type: 'screenshot', path: 'C:/tmp/shot.png', mode: 'uia', at: 1 },
@@ -69,5 +75,76 @@ describe('deckHasContent', () => {
   // blank a live page to show an empty box.
   it('is false for a ledger with no steps', () => {
     expect(deckHasContent(session([{ type: 'task_state', state: EMPTY_STATE }]))).toBe(false);
+  });
+});
+
+// hasPendingConfirmation/getPendingConfirmations back the confirmation bar
+// AgentPane renders in the pane header/chrome — deliberately outside
+// .pane__output, which the native browser view and the floating Logs window
+// both composite above. Answering a confirmation must not depend on which
+// of those two happens to be on top at the moment.
+describe('hasPendingConfirmation', () => {
+  it('is false when nothing has ever asked for a confirmation', () => {
+    expect(hasPendingConfirmation(session([{ type: 'tool_call', name: 'Bash', args: {}, iteration: 1 }]))).toBe(false);
+  });
+
+  it('is true while a confirmation is still pending', () => {
+    expect(hasPendingConfirmation(session([
+      { type: 'confirmation', id: 'c1', title: 'Set registry value', detail: '...', status: 'pending', at: 1 },
+    ]))).toBe(true);
+  });
+
+  it('is false once the same confirmation has been answered — the latest event for that id wins', () => {
+    expect(hasPendingConfirmation(session([
+      { type: 'confirmation', id: 'c1', title: 'Set registry value', detail: '...', status: 'pending', at: 1 },
+      { type: 'confirmation', id: 'c1', title: 'Set registry value', detail: '...', status: 'approved', at: 2 },
+    ]))).toBe(false);
+  });
+
+  it('is true if a second confirmation is pending even while an earlier one was already resolved', () => {
+    expect(hasPendingConfirmation(session([
+      { type: 'confirmation', id: 'c1', title: 'Set registry value', detail: '...', status: 'approved', at: 1 },
+      { type: 'confirmation', id: 'c2', title: 'Delete registry key', detail: '...', status: 'pending', at: 2 },
+    ]))).toBe(true);
+  });
+});
+
+describe('getPendingConfirmations', () => {
+  it('returns an empty list when nothing is pending', () => {
+    expect(getPendingConfirmations(session([{ type: 'tool_call', name: 'Bash', args: {}, iteration: 1 }]))).toEqual([]);
+  });
+
+  it('returns only the latest event for an id, and only if still pending', () => {
+    const denied = { type: 'confirmation' as const, id: 'c1', title: 'Set registry value', detail: '...', status: 'denied' as const, at: 2 };
+    expect(getPendingConfirmations(session([
+      { type: 'confirmation', id: 'c1', title: 'Set registry value', detail: '...', status: 'pending', at: 1 },
+      denied,
+    ]))).toEqual([]);
+  });
+
+  it('returns every id that is currently pending, each exactly once', () => {
+    const c1 = { type: 'confirmation' as const, id: 'c1', title: 'Set registry value', detail: 'a', status: 'pending' as const, at: 1 };
+    const c2 = { type: 'confirmation' as const, id: 'c2', title: 'Delete registry key', detail: 'b', status: 'pending' as const, at: 2 };
+    expect(getPendingConfirmations(session([c1, c2]))).toEqual([c1, c2]);
+  });
+});
+
+// A canvas document is a singleton, not a list — the latest dex-canvas
+// call is the whole story, matching task_state's "carries the whole ledger
+// every time" rule rather than artifact/screenshot's accumulate-and-cap one.
+describe('getLatestCanvas', () => {
+  it('is null when no canvas has ever been shown', () => {
+    expect(getLatestCanvas(session([{ type: 'tool_call', name: 'Bash', args: {}, iteration: 1 }]))).toBeNull();
+  });
+
+  it('returns the one canvas event', () => {
+    const doc = { type: 'canvas' as const, title: 'Q3 Summary', markdown: '# Q3 Summary', at: 1 };
+    expect(getLatestCanvas(session([doc]))).toEqual(doc);
+  });
+
+  it('returns the latest call when dex-canvas show was called more than once', () => {
+    const first = { type: 'canvas' as const, title: 'Draft', markdown: '# Draft', at: 1 };
+    const second = { type: 'canvas' as const, title: 'Final', markdown: '# Final', at: 2 };
+    expect(getLatestCanvas(session([first, second]))).toEqual(second);
   });
 });

@@ -9,7 +9,9 @@ import { fallbackShortcutPlatform, formatShortcutForPlatform } from '../../share
 import { EnginePicker } from '../hub/EnginePicker';
 import { DEFAULT_MODEL_ID, ModelPicker } from '../hub/ModelPicker';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from '../hub/slashCommands';
-import { CommandChip, CommandHints } from '../hub/CommandChip';
+import { matchingMentions, type MentionDef } from '../hub/mentions';
+import { CommandChip, CommandHints, MentionHints } from '../hub/CommandChip';
+import { MentionTextField, type MentionTextFieldHandle } from '../hub/MentionTextField';
 import {
   RESULT_ROW_HEIGHT,
   MAX_RESULTS,
@@ -251,8 +253,16 @@ export function Pill(): React.ReactElement {
   const [attachError, setAttachError] = useState<string | null>(null);
   const [validFavicons, setValidFavicons] = useState<Set<string>>(new Set());
   const checkedDomainsRef = useRef<Set<string>>(new Set());
-  const ref = useRef<HTMLTextAreaElement>(null);
+  const ref = useRef<MentionTextFieldHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Caret position, tracked separately from `value` — an @mention can start
+  // anywhere in the text, unlike a slash command which only ever opens it.
+  const [caret, setCaret] = useState(0);
+  // The field's own auto-grown height — this overlay is a real OS window
+  // that must resize with it, which is why Pill needs this reported back
+  // rather than just letting the field manage its own height in isolation.
+  const [fieldHeight, setFieldHeight] = useState(TEXTAREA_MIN_HEIGHT);
+
   const platform = window.electronAPI?.shell?.platform ?? fallbackShortcutPlatform();
   const formatShortcut = useCallback((shortcut: string) => formatShortcutForPlatform(shortcut, platform), [platform]);
 
@@ -342,14 +352,10 @@ export function Pill(): React.ReactElement {
   }, [detectedDomains, sessions]);
 
   useEffect(() => {
-    const ta = ref.current;
-    if (ta) {
-      ta.style.height = 'auto';
-      ta.style.height = `${Math.min(ta.scrollHeight, TEXTAREA_MAX_HEIGHT)}px`;
-    }
-    const taHeight = ta
-      ? Math.max(TEXTAREA_MIN_HEIGHT, Math.min(ta.scrollHeight, TEXTAREA_MAX_HEIGHT))
-      : TEXTAREA_MIN_HEIGHT;
+    // The field reports its own auto-grown height via onHeightChange as
+    // fieldHeight — this effect just turns that into the overlay window's
+    // total size, same arithmetic as before.
+    const taHeight = Math.max(TEXTAREA_MIN_HEIGHT, Math.min(fieldHeight, TEXTAREA_MAX_HEIGHT));
     const searchHeight = Math.max(SEARCH_ROW_HEIGHT, taHeight + 36);
     const resultHeight = hasResults ? Math.min(results.length, MAX_RESULTS) * RESULT_ROW_HEIGHT + 12 : 0;
     const dashboardHeight = showDashboard
@@ -361,7 +367,7 @@ export function Pill(): React.ReactElement {
     const total = searchHeight + resultHeight + dashboardHeight + chipsHeight + errorHeight + FOOTER_HEIGHT;
     console.log('[Pill.resize]', { taHeight, searchHeight, resultHeight, dashboardHeight, chipsHeight, errorHeight, total });
     window.pillAPI.setExpanded(total);
-  }, [hasResults, results.length, value, attachments.length, attachError, showDashboard, hasRecents, recents.length]);
+  }, [fieldHeight, hasResults, results.length, value, attachments.length, attachError, showDashboard, hasRecents, recents.length]);
 
   const addFiles = useCallback(async (files: FileList | File[]) => {
     setAttachError(null);
@@ -412,19 +418,27 @@ export function Pill(): React.ReactElement {
 
   // Suggestions while typing the command word — and never once a chip exists.
   const slashHints = command ? [] : matchingCommands(value);
+  const mentionHints = matchingMentions(value, caret);
+
+  const pickMention = useCallback((mention: MentionDef) => {
+    // The field owns the DOM surgery and reports the resulting value/caret
+    // back through its own onChange.
+    ref.current?.insertMentionChip(mention);
+  }, []);
 
   const commitCommand = useCallback((next: SlashCommand) => {
     setCommand(next);
     setValue('');
-    if (ref && typeof ref !== 'function') ref.current?.focus();
-  }, [ref]);
+    ref.current?.clear();
+    ref.current?.focus();
+  }, []);
 
   const handleChange = useCallback((next: string) => {
     if (!command) {
       const m = /^\/([a-zA-Z][\w-]*)[ \n]([\s\S]*)$/.exec(next);
       if (m) {
         const found = SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase());
-        if (found) { setCommand(found); setValue(m[2]); return; }
+        if (found) { setCommand(found); setValue(m[2]); ref.current?.setPlainText(m[2]); return; }
       }
     }
     setValue(next);
@@ -450,6 +464,8 @@ export function Pill(): React.ReactElement {
     setCommand(null);
     setAttachments([]);
     setAttachError(null);
+    setCaret(0);
+    ref.current?.clear();
     return true;
   }, [buildPrompt, attachments, engine, model]);
 
@@ -459,6 +475,7 @@ export function Pill(): React.ReactElement {
     if (!command && selectedIdx >= 0 && selectedIdx < navList.length) {
       window.pillAPI.selectSession(navList[selectedIdx].id);
       setValue('');
+      ref.current?.clear();
       return;
     }
     if (!trimmed && attachments.length === 0 && !(command && !command.requiresArg)) return;
@@ -466,8 +483,8 @@ export function Pill(): React.ReactElement {
   }, [value, command, selectedIdx, navList, attachments, sendPrompt]);
 
   const onKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      const caretAtStart = e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0;
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const caretAtStart = caret === 0;
 
       // Backspace at the very start with a chip present removes it outright.
       if (e.key === 'Backspace' && command && caretAtStart) {
@@ -483,12 +500,19 @@ export function Pill(): React.ReactElement {
         return;
       }
 
+      if (mentionHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+        e.preventDefault();
+        pickMention(mentionHints[0]);
+        return;
+      }
+
       if (e.key === 'Escape') {
         e.preventDefault();
         setValue('');
         setCommand(null);
         setAttachments([]);
         setAttachError(null);
+        ref.current?.clear();
         window.pillAPI.hide();
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -504,7 +528,7 @@ export function Pill(): React.ReactElement {
         submit();
       }
     },
-    [submit, sendPrompt, command, slashHints, commitCommand, value, navList.length],
+    [submit, sendPrompt, command, caret, slashHints, commitCommand, mentionHints, pickMention, value, navList.length],
   );
 
   const highlightVisible = hasResults && selectedIdx >= 0;
@@ -549,15 +573,15 @@ export function Pill(): React.ReactElement {
               </span>
             );
           })()}
-          <textarea
+          <MentionTextField
             ref={ref}
             className="cmdbar__input"
-            value={value}
-            onChange={(e) => handleChange(e.target.value)}
+            maxHeightPx={TEXTAREA_MAX_HEIGHT}
+            onChange={(next, nextCaret) => { handleChange(next); setCaret(nextCaret); }}
+            onHeightChange={setFieldHeight}
             onKeyDown={onKeyDown}
             placeholder={command ? command.summary : 'Search sessions or create new agent...'}
-            rows={1}
-            aria-label="Search or create"
+            ariaLabel="Search or create"
           />
           <div className="cmdbar__search-actions">
             <button
@@ -613,6 +637,7 @@ export function Pill(): React.ReactElement {
         )}
 
         <CommandHints hints={slashHints} onPick={commitCommand} />
+        <MentionHints hints={mentionHints} onPick={pickMention} />
 
         {attachError && <div className="cmdbar__error">{attachError}</div>}
 

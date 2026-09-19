@@ -921,6 +921,18 @@
   border: 1px solid var(--color-accent-default);
 }
 
+/* A result landed (dex-find, a screenshot) while the live page had the
+   pane — the button alone gives no hint that clicking it reveals something
+   new, so a quiet pulse says so instead of the result going unnoticed. */
+.pane__action-badge {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-default);
+  animation: pulse-glow 1.8s var(--ease-in-out) infinite;
+}
+
 .pane__action-btn--danger {
   color: var(--color-fg-tertiary);
 }
@@ -1231,6 +1243,29 @@ button:focus:not(:focus-visible) {
 @keyframes progress-slide {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(500%); }
+}
+
+/* -- pending confirmation, in the pane chrome --------------------------------
+   Lives between .pane__progress and .pane__output, i.e. plain pane chrome —
+   deliberately NOT inside .pane__output, which is contested by both the
+   native browser view and the floating Logs window (both composite above
+   plain React there). This is the one place in the pane neither of those
+   surfaces ever occupies, so the card stays reachable no matter which of
+   them currently has the rect. The .deck-card--confirm styling underneath
+   is reused as-is; only the outer spacing is trimmed for a chrome strip
+   instead of a full deck slot. */
+
+.pane__confirm-bar {
+  padding: 0 var(--space-8) var(--space-4);
+  flex-shrink: 0;
+}
+
+.pane__confirm-bar .deck-card--confirm {
+  padding: var(--space-5) var(--space-6);
+}
+
+.pane__confirm-bar .deck-card--confirm + .deck-card--confirm {
+  margin-top: var(--space-3);
 }
 
 /* ---------------------------------------------------------------------------
@@ -2394,9 +2429,12 @@ button:focus:not(:focus-visible) {
   user-select: none;
 }
 
-.followup__input {
+/* Compound selector, not just `.followup__input`: see the identical note on
+   `.mention-field.cmdbar__input` in pill.css — this and `.mention-field`
+   share specificity otherwise, and whichever stylesheet loaded last would
+   silently decide properties like `flex`. */
+.mention-field.followup__input {
   flex: 1;
-  resize: none;
   background: none;
   border: none;
   outline: none;
@@ -2404,11 +2442,9 @@ button:focus:not(:focus-visible) {
   font-size: var(--font-size-base);
   color: var(--color-fg-primary);
   line-height: var(--line-height-normal);
-  max-height: 80px;
-  overflow-y: auto;
 }
 
-.followup__input::placeholder {
+.followup .mention-field--empty::before {
   color: var(--color-fg-disabled);
 }
 
@@ -2506,7 +2542,7 @@ button:focus:not(:focus-visible) {
   padding: 0;
 }
 
-.pane__output > .followup .followup__input::placeholder {
+.pane__output > .followup .mention-field--empty::before {
   color: #b8c0cc;
   opacity: 1;
 }
@@ -2625,25 +2661,48 @@ button:focus:not(:focus-visible) {
   background-color: var(--color-bg-elevated);
 }
 
-.task-input__textarea {
+/* The contentEditable field used wherever an @mention can render as a real
+   inline chip — see MentionTextField.tsx. Same box model as
+   .task-input__textarea; contentEditable has no ::placeholder, so the empty
+   state is a class (toggled in JS, not relying on the fragile :empty
+   selector — Chromium can leave a stray <br> behind) paired with ::before. */
+
+.mention-field {
   flex: 0 0 auto;
   width: 100%;
-  height: auto;
   min-height: 20px;
-  resize: none;
-  background: none;
-  border: none;
   outline: none;
   font-family: var(--font-ui);
   font-size: var(--font-size-base);
   color: var(--color-fg-primary);
   line-height: var(--line-height-normal);
-  max-height: 160px;
+  white-space: pre-wrap;
+  word-break: break-word;
   overflow-y: hidden;
 }
 
-.task-input__textarea::placeholder {
+.mention-field--empty::before {
+  content: attr(data-placeholder);
   color: var(--color-fg-tertiary);
+  pointer-events: none;
+}
+
+/* An @mention pick, inline in the sentence. Same blue-and-bold language as
+   the committed slash-command chip (.task-input__command-chip) — the two
+   are visually one family even though a mention never takes over the whole
+   field the way a command does. contenteditable="false" is what makes
+   Chromium treat it as one atomic unit for the caret and for Backspace. */
+.mention-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: color-mix(in srgb, var(--color-accent-default) 16%, transparent);
+  color: var(--color-accent-default);
+  font-weight: var(--font-weight-bold);
+  font-size: 0.95em;
+  user-select: none;
+  cursor: default;
 }
 
 .task-input__send {
@@ -3854,6 +3913,14 @@ button:focus:not(:focus-visible) {
 .conn-card__subtitle {
   font-size: var(--font-size-xs);
   color: var(--color-fg-tertiary);
+}
+
+/* What a connected integration actually covers, kept visible alongside the
+   green dot so "Connected" never has to be taken on faith. */
+.conn-card__scope {
+  font-size: var(--font-size-2xs);
+  line-height: var(--line-height-snug);
+  color: var(--color-fg-disabled);
 }
 
 .conn-card__skeleton {
@@ -5496,6 +5563,48 @@ button:focus:not(:focus-visible) {
   box-sizing: border-box;
 }
 
+/* -- generative UI: a full document, not a card ------------------------------
+   dex-canvas takes the whole rect the way a live page would, so the outer
+   .deck padding/scroll (sized for a stack of cards) gets out of the way and
+   CanvasDocument manages its own header + scrolling body instead. */
+
+.deck--canvas {
+  padding: 0;
+  overflow: hidden;
+}
+
+.deck-canvas {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.deck-canvas__header {
+  flex: 0 0 auto;
+  padding: var(--space-6) var(--space-8);
+  border-bottom: 1px solid rgba(var(--highlight-rgb), 0.06);
+}
+
+.deck-canvas__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-primary);
+}
+
+.deck-canvas__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--space-8);
+}
+
+/* A generous reading width — a document stretched edge-to-edge on a wide
+   pane is exactly the line-length that makes prose hard to track. */
+.deck-canvas__body .md {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
 .deck-card {
   flex: 0 0 auto;
   padding: var(--space-8);
@@ -5548,11 +5657,98 @@ button:focus:not(:focus-visible) {
   white-space: pre-wrap;
 }
 
+/* -- confirmation ------------------------------------------------------------
+   A blocking human decision (dex-registry set/delete/import) — the one card
+   here that isn't just informational, and the one place in the whole app
+   where the agent is sitting idle waiting on a click. It has to read as
+   unmistakable at a glance even as a single card in an otherwise-quiet deck:
+   a full warning-toned border and wash, not just an accent stripe, plus an
+   eyebrow label so "why is there a card here" is answered before the title
+   is even read. */
+
+.deck-card--confirm {
+  border: 1px solid color-mix(in srgb, var(--color-status-warning) 35%, transparent);
+  background-color: color-mix(in srgb, var(--color-status-warning) 6%, var(--color-bg-sunken));
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-status-warning) 8%, transparent), transparent 55%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-status-warning) 12%, transparent),
+    0 8px 24px -12px color-mix(in srgb, var(--color-status-warning) 45%, transparent);
+}
+
+.deck-confirm__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-status-warning);
+}
+
+.deck-confirm__eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-status-warning);
+  animation: pulse-glow 1.8s var(--ease-in-out) infinite;
+}
+
+.deck-confirm__detail {
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.deck-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.deck-confirm__btn {
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--highlight-rgb), 0.08);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.deck-confirm__btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.deck-confirm__btn--deny {
+  background: none;
+  color: var(--color-fg-secondary);
+}
+
+.deck-confirm__btn--deny:hover:not(:disabled) {
+  background-color: var(--color-surface-hover);
+  color: var(--color-fg-primary);
+}
+
+.deck-confirm__btn--approve {
+  background-color: color-mix(in srgb, var(--color-status-warning) 20%, transparent);
+  border-color: color-mix(in srgb, var(--color-status-warning) 40%, transparent);
+  color: var(--color-status-warning);
+}
+
+.deck-confirm__btn--approve:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-status-warning) 30%, transparent);
+}
+
 .deck-card__file {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
   padding: 0;
   background: none;
   border: 0;
-  font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   color: var(--color-accent-default);
   cursor: pointer;
@@ -5560,20 +5756,25 @@ button:focus:not(:focus-visible) {
   word-break: break-all;
 }
 
-/* -- result rows ----------------------------------------------------------- */
+/* -- result rows -------------------------------------------------------------
+   One row per result, matching the Flutter app's file-result design: name
+   first, folder underneath in a quieter tone, the matched line as evidence
+   when it came from content rather than the filename, reasons as small
+   quiet tags. No colored per-type badges — the icon alone identifies the
+   kind, and a list of twelve results should read as a list, not a grid of
+   competing tiles. */
 
 .deck-card__items {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
 }
 
 .deck-item {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
+  gap: var(--space-3);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-out);
 }
@@ -5582,20 +5783,34 @@ button:focus:not(:focus-visible) {
   background-color: var(--color-surface-hover);
 }
 
+.deck-item__icon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  color: var(--color-fg-tertiary);
+}
+
 .deck-item__body {
   flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 
 .deck-item__line {
   display: flex;
   align-items: baseline;
-  gap: var(--space-4);
+  gap: var(--space-3);
+  min-width: 0;
 }
 
 .deck-item__label {
-  flex: 0 1 auto;
-  min-width: 0;
+  flex: 1 1 auto;
   font-size: var(--font-size-sm);
   color: var(--color-fg-primary);
   overflow: hidden;
@@ -5611,6 +5826,7 @@ button:focus:not(:focus-visible) {
 }
 
 .deck-item__folder {
+  min-width: 0;
   font-size: var(--font-size-2xs);
   color: var(--color-fg-tertiary);
   overflow: hidden;
@@ -5621,7 +5837,7 @@ button:focus:not(:focus-visible) {
 /* The matched line. Two lines maximum: it is evidence that this hit is the
    right one, not the document itself. */
 .deck-item__excerpt {
-  margin-top: 3px;
+  margin-top: 1px;
   font-size: var(--font-size-2xs);
   line-height: var(--line-height-snug);
   color: var(--color-fg-secondary);
@@ -5635,7 +5851,7 @@ button:focus:not(:focus-visible) {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  margin-top: var(--space-2);
+  margin-top: 2px;
 }
 
 .deck-tag {
@@ -5646,10 +5862,13 @@ button:focus:not(:focus-visible) {
   color: var(--color-fg-tertiary);
 }
 
-/* Only on hover, so twelve results read as results rather than as controls. */
+/* Only on hover, so a list of results reads as results rather than as
+   controls — trailing edge of the row, the same place a file manager or
+   Claude/ChatGPT's own file rows put a quiet secondary action. */
 .deck-item__copy {
   flex: 0 0 auto;
-  padding: var(--space-1) var(--space-3);
+  align-self: center;
+  padding: 1px var(--space-3);
   background: none;
   border: 0;
   border-radius: var(--radius-sm);
@@ -5729,14 +5948,20 @@ button:focus:not(:focus-visible) {
 }
 
 .deck-plan__file {
-  padding: var(--space-1) var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
   border: 1px solid rgba(var(--highlight-rgb), 0.06);
   border-radius: var(--radius-sm);
   background: none;
   font-size: var(--font-size-2xs);
   color: var(--color-fg-secondary);
   cursor: pointer;
-  max-width: 220px;
+  max-width: 240px;
+}
+
+.deck-plan__file > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -7,6 +7,7 @@
  * suggestion row.
  */
 import React from 'react';
+import type { MentionDef } from './mentions';
 import type { SlashCommand } from './slashCommands';
 
 export function CommandIcon({ name }: { name: string }): React.ReactElement {
@@ -85,6 +86,38 @@ export function CommandHints({
         >
           <span className="task-input__slash-usage">{command.usage}</span>
           <span className="task-input__slash-summary">{command.summary}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The suggestion row shown while an `@mention` is being typed. Deliberately
+ * the same markup as `CommandHints` — same list-of-options interaction, just
+ * over a different word list — but a distinct component because picking one
+ * splices plain text into the field instead of committing a chip; see
+ * mentions.ts for why `@drive` never becomes a chip itself.
+ */
+export function MentionHints({
+  hints,
+  onPick,
+}: {
+  hints: MentionDef[];
+  onPick: (mention: MentionDef) => void;
+}): React.ReactElement | null {
+  if (hints.length === 0) return null;
+  return (
+    <div className="task-input__slash">
+      {hints.map((mention) => (
+        <button
+          type="button"
+          key={mention.name}
+          className="task-input__slash-item"
+          onMouseDown={(e) => { e.preventDefault(); onPick(mention); }}
+        >
+          <span className="task-input__slash-usage">{mention.label}</span>
+          <span className="task-input__slash-summary">{mention.summary}</span>
         </button>
       ))}
     </div>

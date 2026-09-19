@@ -802,6 +802,18 @@ export class SessionManager extends EventEmitter {
 
   // -- stuck detection ------------------------------------------------------
 
+  /**
+   * Called while a dex-registry confirmation is outstanding. appendOutput's
+   * own reset (every event resets the 30s stuck timer) would otherwise just
+   * give the wait another 30 seconds instead of actually suspending it —
+   * this clears it with nothing scheduled to replace it, so the session
+   * stays running-but-quiet for as long as the human takes to answer. The
+   * next real tool event after the answer resets it normally.
+   */
+  suspendStuckTimer(id: string): void {
+    this.clearStuckTimer(id);
+  }
+
   private resetStuckTimer(id: string): void {
     this.clearStuckTimer(id);
     const timer = setTimeout(() => {
@@ -880,6 +892,10 @@ export class SessionManager extends EventEmitter {
         return { kind: event.kind, title: event.title, items: event.items.length, total: event.total ?? null };
       case 'screenshot':
         return { path: event.path, mode: event.mode, caption: event.caption ?? null };
+      case 'confirmation':
+        return { id: event.id, title: event.title, status: event.status };
+      case 'canvas':
+        return { title: event.title, markdownLength: event.markdown.length };
     }
   }
 
