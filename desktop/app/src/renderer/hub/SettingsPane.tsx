@@ -97,6 +97,64 @@ type ElectronPrivacyAPI = {
   openSystemNotifications: () => Promise<{ ok: boolean; error?: string }>;
 };
 
+type ApprovalMode = 'ask' | 'auto' | 'full';
+
+type ElectronApprovalsAPI = {
+  get: () => Promise<{ mode: ApprovalMode }>;
+  set: (mode: ApprovalMode) => Promise<{ mode: ApprovalMode }>;
+};
+
+const APPROVAL_MODE_OPTIONS: ReadonlyArray<SegmentedOption<ApprovalMode>> = [
+  { value: 'ask', label: 'Ask for approval', hint: 'A registry write, shell command, or other sensitive action always waits for you' },
+  { value: 'auto', label: 'Approve for me', hint: 'Only asks when a command or path looks sensitive' },
+  { value: 'full', label: 'Full access', hint: 'Default — nothing gated but Windows registry writes' },
+];
+
+function AgentApprovalSection(): React.ReactElement {
+  const [mode, setMode] = useState<ApprovalMode | null>(null);
+  const [saving, setSaving] = useState(false);
+  const api = (window as unknown as { electronAPI: { settings: { approvals: ElectronApprovalsAPI } } }).electronAPI.settings.approvals;
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get().then((state) => { if (!cancelled) setMode(state.mode); }).catch(() => { if (!cancelled) setMode('full'); });
+    return () => { cancelled = true; };
+  }, [api]);
+
+  const handleChange = useCallback(async (next: ApprovalMode) => {
+    if (saving) return;
+    const prev = mode;
+    setSaving(true);
+    setMode(next); // optimistic
+    try {
+      const res = await api.set(next);
+      setMode(res.mode);
+    } catch {
+      setMode(prev); // revert
+    } finally {
+      setSaving(false);
+    }
+  }, [mode, saving, api]);
+
+  return (
+    <div className="settings-card">
+      <SettingsRow
+        label="Agent approval"
+        sublabel="How much an agent task can do before it needs you to say yes. A Windows registry write always waits for you regardless of this setting."
+      >
+        {mode && (
+          <SegmentedControl
+            value={mode}
+            options={APPROVAL_MODE_OPTIONS}
+            onChange={(next) => { void handleChange(next); }}
+            ariaLabel="Agent approval mode"
+          />
+        )}
+      </SettingsRow>
+    </div>
+  );
+}
+
 type ElectronAppAPI = {
   getUpdateStatus: () => Promise<UpdateStatusEvent>;
   getInfo: () => Promise<{
@@ -782,6 +840,7 @@ export type SettingsSectionId =
   | 'settings-connections'
   | 'settings-browser-sync'
   | 'settings-shortcuts'
+  | 'settings-agent-approval'
   | 'settings-privacy'
   | 'settings-appearance'
   | 'settings-application';
@@ -801,6 +860,7 @@ const SETTINGS_TABS: Array<{ id: SettingsSectionId; label: string }> = [
   { id: 'settings-shortcuts', label: 'Shortcuts' },
   { id: 'settings-integrations', label: 'Integrations' },
   { id: 'settings-diagnostics', label: 'Diagnostics' },
+  { id: 'settings-agent-approval', label: 'Agent approval' },
   { id: 'settings-privacy', label: 'Privacy' },
 ];
 
@@ -1065,6 +1125,13 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
                 />
               ))}
             </div>
+          </section>
+
+          <section id="settings-agent-approval" className="settings-page__section">
+            <div className="settings-section-header">
+              <h2 className="settings-section-header__title">Agent approval</h2>
+            </div>
+            <AgentApprovalSection />
           </section>
 
           <section id="settings-privacy" className="settings-page__section settings-page__section--last">

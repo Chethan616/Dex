@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   setSessionMode,
   getSessionMode,
+  setGlobalDefaultMode,
+  getGlobalDefaultMode,
   startTurn,
   recordDecision,
   needsPrompt,
@@ -22,6 +24,29 @@ describe('approvals/policy — session mode defaults', () => {
   it('remembers a mode once set', () => {
     setSessionMode(SID, 'ask');
     expect(getSessionMode(SID)).toBe('ask');
+  });
+});
+
+describe('approvals/policy — global default mode (Settings pane)', () => {
+  afterEach(() => {
+    setGlobalDefaultMode('full'); // don't leak into other test files
+    clearSession(SID);
+  });
+
+  it('starts at full access', () => {
+    expect(getGlobalDefaultMode()).toBe('full');
+  });
+
+  it('changing the global default changes what an unset session resolves to', () => {
+    setGlobalDefaultMode('ask');
+    expect(getGlobalDefaultMode()).toBe('ask');
+    expect(getSessionMode(SID)).toBe('ask');
+  });
+
+  it('an explicit per-session override still wins over the global default', () => {
+    setGlobalDefaultMode('ask');
+    setSessionMode(SID, 'full');
+    expect(getSessionMode(SID)).toBe('full');
   });
 });
 

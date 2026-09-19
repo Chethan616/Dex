@@ -146,6 +146,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       openSystemNotifications: (): Promise<{ ok: boolean; error?: string }> =>
         ipcRenderer.invoke('settings:open-system-notifications'),
     },
+    approvals: {
+      get: (): Promise<{ mode: 'ask' | 'auto' | 'full' }> => ipcRenderer.invoke('settings:approvals:get'),
+      set: (mode: 'ask' | 'auto' | 'full'): Promise<{ mode: 'ask' | 'auto' | 'full' }> =>
+        ipcRenderer.invoke('settings:approvals:set', mode),
+    },
     theme: {
       get: (): Promise<{ mode: 'light' | 'dark' | 'system'; resolved: 'light' | 'dark' }> =>
         ipcRenderer.invoke('theme:get'),

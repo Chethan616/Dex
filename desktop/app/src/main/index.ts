@@ -112,7 +112,7 @@ import { forwardAgentEvent } from './pill';
 import { SessionManager } from './sessions/SessionManager';
 import { BrowserPool } from './sessions/BrowserPool';
 import * as approvalPolicy from './approvals/policy';
-import { normalizeApprovalCategory, normalizeApprovalLifetime } from './approvals/policy';
+import { normalizeApprovalCategory, normalizeApprovalLifetime, normalizeApprovalMode } from './approvals/policy';
 import type { ApprovalCategory, ApprovalLifetime } from './approvals/policy';
 import {
   snapshotResourceUsage,
@@ -2063,11 +2063,17 @@ app.whenReady().then(async () => {
     return { ok: true };
   });
 
-  // Sets a LiveBrowser session's approval mode (ask/auto/full) — the
-  // three-way selector in the LiveBrowser UI. Grid-view sessions never call
-  // this, so they stay on the 'full' default this policy module ships with.
-  ipcMain.handle('livebrowser:set-approval-mode', (_e, sessionId: unknown, mode: unknown) => {
-    approvalPolicy.setSessionMode(assertString(sessionId, 'sessionId', 100), normalizeApprovalMode(mode));
+  // Settings pane's global default for the approval policy (Ask for
+  // approval / Approve for me / Full access) — see src/main/approvals/
+  // policy.ts. Applies to every session that hasn't been given its own
+  // explicit override; there is no such override surface today; Grid-view
+  // sessions all read this one global value.
+  ipcMain.handle('settings:approvals:get', () => ({ mode: approvalPolicy.getGlobalDefaultMode() }));
+
+  ipcMain.handle('settings:approvals:set', (_e, mode: unknown) => {
+    const normalized = normalizeApprovalMode(mode);
+    approvalPolicy.setGlobalDefaultMode(normalized);
+    return { mode: normalized };
   });
 
   ipcMain.handle('sessions:get', (_event, id: string) => {
