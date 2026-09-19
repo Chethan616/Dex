@@ -7,16 +7,29 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FileRecord } from './db';
 
+// 'appdata' is the big one: browser caches, npm/pip/nuget caches, every
+// Electron/Chromium app's own userData, IDE indexes — millions of files that
+// are never a document a person is looking for, and the entire reason a
+// home-directory-scoped scan still needed a skip-list at all.
 const SKIP_DIR_NAMES = new Set([
   'node_modules', '.git', '$recycle.bin', 'system volume information', 'winsxs',
+  'appdata', '.cache', '__pycache__', '.venv', 'venv',
 ]);
 
-/** Path suffixes (lowercase, sep-joined) that mean "skip this whole subtree". */
-const SKIP_PATH_SUFFIXES = [['appdata', 'local', 'temp']];
+function shouldSkipDir(name: string): boolean {
+  return SKIP_DIR_NAMES.has(name.toLowerCase());
+}
 
-function shouldSkipDir(name: string, fullPathLower: string): boolean {
-  if (SKIP_DIR_NAMES.has(name.toLowerCase())) return true;
-  return SKIP_PATH_SUFFIXES.some((segments) => fullPathLower.endsWith(path.sep + segments.join(path.sep)));
+/**
+ * Whether a path falls under a skipped directory name at any depth — used by
+ * the watcher (indexer.ts), which gets raw OS change events for a whole
+ * watched subtree regardless of what the scan phase chose to walk into, so a
+ * skipped directory needs its own check there too or watched-but-unwanted
+ * churn (a browser writing its cache) would still get individually stat'd
+ * and inserted.
+ */
+export function isPathSkipped(fullPath: string): boolean {
+  return fullPath.toLowerCase().split(path.sep).some((segment) => SKIP_DIR_NAMES.has(segment));
 }
 
 export interface ScanOptions {
@@ -65,7 +78,7 @@ export async function scanRoots(opts: ScanOptions): Promise<{ scanned: number; s
       const full = path.join(dir, entry.name);
 
       if (entry.isDirectory()) {
-        if (shouldSkipDir(entry.name, full.toLowerCase())) continue;
+        if (shouldSkipDir(entry.name)) continue;
         await visit(full);
         continue;
       }

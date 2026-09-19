@@ -12,10 +12,11 @@
  * nothing here would need to change shape to support it.
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { extractContent } from './extract';
 import { nextPendingBatch, openIndexDb, removeFileByPath, setContent, upsertFileMeta, indexStats } from './db';
-import { scanRoots } from './scan';
+import { scanRoots, isPathSkipped } from './scan';
 import { mainLogger } from '../logger';
 
 const BACKFILL_BATCH_SIZE = 8;
@@ -39,20 +40,34 @@ let stopRequested = false;
 let watchers: fs.FSWatcher[] = [];
 
 /**
- * Drive roots that actually exist on this machine, or an explicit override.
+ * Document-bearing roots that actually exist on this machine, or an explicit
+ * override.
  *
- * `DEX_INDEX_ROOTS` (comma-separated) exists for two reasons: it is how this
- * was verified end to end without pointing a real crawl at C:\ and D:\, and
- * it is the config change the plan names as the fix if a full-drive index
- * ever proves too slow or broad in practice — no code change needed to scope
- * it down to, say, just the user's Documents and Desktop.
+ * This used to default to the whole of `C:\` and `D:\` — the plan's original
+ * "index everywhere" scope. In practice that meant a full recursive
+ * `fs.watch` sitting on both entire drives for the app's whole lifetime, plus
+ * an initial walk touching every file under Windows, Program Files, and
+ * every project's `node_modules` on the machine — real, sustained CPU and
+ * disk I/O contention severe enough to make the whole app (including
+ * completely unrelated UI, like a button's hover state) feel unresponsive
+ * for as long as it ran. The user's own documents were always going to be
+ * under their home directory anyway, so scanning and watching the *whole*
+ * of C:\ bought nothing search-relevant for a very large, ongoing cost.
+ *
+ * `DEX_INDEX_ROOTS` (comma-separated) still exists to go back to a full
+ * drive, or to scope even narrower (just Desktop and Documents) — no code
+ * change needed either way.
  */
 function detectRoots(): string[] {
   const override = process.env.DEX_INDEX_ROOTS;
   if (override) return override.split(',').map((root) => root.trim()).filter(Boolean);
 
-  const candidates = ['C:\\', 'D:\\'];
+  const candidates = [os.homedir(), 'D:\\'];
+  const seen = new Set<string>();
   return candidates.filter((root) => {
+    const key = root.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
     try {
       return fs.existsSync(root);
     } catch {
@@ -127,6 +142,12 @@ function startWatchers(roots: string[]): void {
       const onChange = debounce((eventType: string, filename: string | Buffer | null) => {
         if (!filename) return;
         const full = path.join(root, filename.toString());
+        // The native OS watch still fires for a skipped subtree (AppData,
+        // node_modules, ...) even though the scan phase never walked into
+        // it — Windows has no concept of our skip-list. Bail before the
+        // stat call rather than after, so a chatty excluded directory (a
+        // browser cache, an active npm install) costs nothing per event.
+        if (isPathSkipped(full)) return;
         fs.promises.stat(full).then(
           (stat) => {
             if (!stat.isFile()) return;

@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { scanRoots } from '../../../src/main/search/scan';
+import { scanRoots, isPathSkipped } from '../../../src/main/search/scan';
 import type { FileRecord } from '../../../src/main/search/db';
 
 const dirs: string[] = [];
@@ -69,6 +69,18 @@ describe('scanRoots', () => {
     expect(found.length).toBe(1);
   });
 
+  it('skips appdata entirely — the reason a home-directory-scoped scan is fast', async () => {
+    const root = tempDir();
+    fs.mkdirSync(path.join(root, 'AppData', 'Local', 'SomeApp'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'AppData', 'Local', 'SomeApp', 'cache.bin'), '');
+    fs.writeFileSync(path.join(root, 'keep.txt'), '');
+
+    const found: FileRecord[] = [];
+    await scanRoots({ roots: [root], onFile: (r) => { found.push(r); } });
+
+    expect(found.map((f) => f.name)).toEqual(['keep.txt']);
+  });
+
   it('does not hang on a directory junction that points back at an ancestor', async () => {
     const root = tempDir();
     const child = path.join(root, 'child');
@@ -93,5 +105,21 @@ describe('scanRoots', () => {
 
     expect(result.stopped).toBe(false);
     expect(found.filter((f) => f.name === 'real.txt').length).toBe(1);
+  });
+});
+
+describe('isPathSkipped', () => {
+  it('flags a path with a skipped directory name anywhere in it', () => {
+    expect(isPathSkipped(path.join('C:', 'Users', 'me', 'AppData', 'Local', 'SomeApp', 'cache.bin'))).toBe(true);
+    expect(isPathSkipped(path.join('D:', 'projects', 'thing', 'node_modules', 'pkg', 'index.js'))).toBe(true);
+    expect(isPathSkipped(path.join('C:', 'Users', 'me', 'repo', '.git', 'HEAD'))).toBe(true);
+  });
+
+  it('is case-insensitive', () => {
+    expect(isPathSkipped(path.join('C:', 'Users', 'me', 'APPDATA', 'Local', 'x.bin'))).toBe(true);
+  });
+
+  it('does not flag an ordinary document path', () => {
+    expect(isPathSkipped(path.join('C:', 'Users', 'me', 'Documents', 'report.docx'))).toBe(false);
   });
 });
