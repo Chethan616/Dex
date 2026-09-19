@@ -9,11 +9,12 @@
 #   dex-sh <bash|cmd|powershell|wsl> "<command>" [timeout-seconds]
 #
 # Gated by the session's approval policy (src/main/approvals/policy.ts),
-# not by dex-sh itself — Grid view's autonomous agents default to 'full'
-# access, the same ungated behavior this tool has always had, so this adds
-# no visible ceremony there. A LiveBrowser session set to "Ask for
-# approval" (or "Approve for me" on a command the risk heuristic flags)
-# gets a real confirmation card first, the same plumbing dex-registry uses.
+# not by dex-sh itself — the default is 'full' access, the same ungated
+# behavior this tool has always had, so this adds no visible ceremony
+# unless the Settings pane's "Agent approval" mode has been changed away
+# from Full access. Under "Ask for approval" (or "Approve for me" on a
+# command the risk heuristic flags), this gets a real confirmation card
+# first, the same plumbing dex-registry uses.
 #
 # Session mode — a real, long-lived shell that keeps cwd/env state across
 # calls, for a task that needs several commands to build on each other

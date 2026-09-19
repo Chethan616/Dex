@@ -2,8 +2,9 @@
 // policy with a rememberable answer, the shape Codex's own
 // AppToolApproval::{Auto,Prompt,Writes,Approve} ships. Grid-view's
 // autonomous agents keep today's exact behavior unchanged — nothing gated
-// but registry-write — because every session defaults to 'full' unless a
-// LiveBrowser session's approval selector explicitly sets it otherwise.
+// but registry-write — because every session defaults to 'full' unless the
+// Settings pane's global default (see main/index.ts's settings:approvals:*
+// handlers) has been changed away from it.
 
 export type ApprovalCategory =
   | 'registry-write'

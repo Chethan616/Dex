@@ -34,8 +34,8 @@ timeout you gave it ran out — distinct from the command's own failure.
 
 **A call can come back `{"exitCode":126,"stderr":"command not approved"}`
 without ever running.** This is not `dex-sh` itself gating anything — it's
-the session's own approval policy (set by the LiveBrowser mode selector;
-Grid-view sessions default to full access and never see this). If it
+the session's own approval policy (the Settings pane's "Agent approval"
+mode; the default, Full access, never sees this). If it
 happens, say so plainly rather than retrying the same command — a retry
 waits on the same confirmation card the first call already put up.
 
