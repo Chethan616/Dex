@@ -240,23 +240,24 @@ export function deckHasContent(session: AgentSession): boolean {
 
 /**
  * Whether the session has a confirmation still waiting on a human answer.
- *
- * AgentPane's deck-vs-browser choice normally prefers a live page once the
- * session has navigated (session.primarySite) — but a blocking human
- * decision outranks that: the browser view is composited over the deck, so
- * if a dex-registry confirmation lands mid-browser-task and the deck stays
- * hidden, the card is unreachable through anything but the raw log window.
- * A pending confirmation forces the deck up regardless of primarySite.
  */
 export function hasPendingConfirmation(session: AgentSession): boolean {
-  const latestStatusById = new Map<string, string>();
+  return getPendingConfirmations(session).length > 0;
+}
+
+/**
+ * The actual pending confirmation events (usually zero or one), for
+ * rendering. Split out from hasPendingConfirmation because the card needs
+ * to be rendered somewhere the human can always reach it, not just gated
+ * behind a boolean — see the comment on ConfirmationCard below for why that
+ * turned out to matter.
+ */
+export function getPendingConfirmations(session: AgentSession): ConfirmationEvent[] {
+  const latestById = new Map<string, ConfirmationEvent>();
   for (const event of session.output) {
-    if (event.type === 'confirmation') latestStatusById.set(event.id, event.status);
+    if (event.type === 'confirmation') latestById.set(event.id, event);
   }
-  for (const status of latestStatusById.values()) {
-    if (status === 'pending') return true;
-  }
-  return false;
+  return [...latestById.values()].filter((e) => e.status === 'pending');
 }
 
 /**
@@ -356,8 +357,19 @@ function ActivityCard({ session }: { session: AgentSession }): React.ReactElemen
  * a real registry write. Answering calls straight back into main over IPC;
  * there is no polling on either side, so the click resolves the agent's
  * still-open HTTP request immediately.
+ *
+ * Deliberately NOT rendered inside PreviewDeck/.pane__output. That rect is
+ * contested by two other surfaces that both composite above plain React: the
+ * native WebContentsView when a page has loaded, and the floating Logs
+ * window when it's open (it anchors to the exact same rect). A card placed
+ * there is invisible whenever either happens to be on top — which is
+ * genuinely most of the time, since a browser task usually has navigated by
+ * the time a registry confirmation fires, and Logs is the panel people
+ * actually watch. AgentPane renders this in the pane's header/chrome
+ * instead, which neither of those surfaces ever touches, so it's reachable
+ * no matter what's currently showing underneath.
  */
-function ConfirmationCard({ sessionId, event }: { sessionId: string; event: ConfirmationEvent }): React.ReactElement {
+export function ConfirmationCard({ sessionId, event }: { sessionId: string; event: ConfirmationEvent }): React.ReactElement {
   const [answering, setAnswering] = useState<'approve' | 'deny' | null>(null);
 
   const answer = (approved: boolean) => {
@@ -370,6 +382,10 @@ function ConfirmationCard({ sessionId, event }: { sessionId: string; event: Conf
 
   return (
     <section className="deck-card deck-card--confirm">
+      <span className="deck-confirm__eyebrow">
+        <span className="deck-confirm__eyebrow-dot" aria-hidden="true" />
+        Needs your approval
+      </span>
       <header className="deck-card__header">
         <span className="deck-card__title">{event.title}</span>
       </header>
@@ -402,28 +418,24 @@ export function PreviewDeck({
   /** Resume / Continue browsing / Rerun, rendered under the cards. */
   actions?: React.ReactNode;
 }): React.ReactElement {
-  const { taskState, artifacts, shots, pendingConfirmations } = useMemo(() => {
+  const { taskState, artifacts, shots } = useMemo(() => {
     let latestState: TaskState | null = null;
     const cards: ArtifactEvent[] = [];
     const captures: ScreenshotEvent[] = [];
-    const latestConfirmationById = new Map<string, ConfirmationEvent>();
 
     for (const event of session.output) {
       // task_state carries the entire ledger every time, so the last one wins
       // outright — nothing to replay, and a dropped frame cannot desynchronise
-      // the plan view. confirmation events follow the same rule, keyed by id
-      // instead: the last status seen for a given id is the current one.
+      // the plan view.
       if (event.type === 'task_state') latestState = event.state;
       else if (event.type === 'artifact') cards.push(event);
       else if (event.type === 'screenshot') captures.push(event);
-      else if (event.type === 'confirmation') latestConfirmationById.set(event.id, event);
     }
 
     return {
       taskState: latestState,
       artifacts: cards.slice(-MAX_ARTIFACT_CARDS),
       shots: captures.slice(-MAX_SCREENSHOTS),
-      pendingConfirmations: [...latestConfirmationById.values()].filter((e) => e.status === 'pending'),
     };
   }, [session.output]);
 
@@ -433,11 +445,6 @@ export function PreviewDeck({
   return (
     <div className="deck">
       <div className="deck__content">
-        {/* First and unmissable: this is the one card the agent is actually
-            blocked on, not just informational. */}
-        {pendingConfirmations.map((event) => (
-          <ConfirmationCard sessionId={session.id} event={event} key={event.id} />
-        ))}
         {shots.length > 0 ? <ScreenshotCard shots={shots} /> : null}
         {artifacts.map((artifact, index) => (
           <ArtifactCard event={artifact} key={`artifact-${index}`} />

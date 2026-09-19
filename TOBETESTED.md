@@ -1,9 +1,117 @@
 # To be tested
 
-Written 2026-09-18. This is on **branch `feat/os-registry-tools`** (off
-`v3/dex`) — separate from `feat/file-search`, `fix/browser-toggle-blank-screen`,
-and `feat/desktop-uia-cua`, which each have their own `TOBETESTED.md`. None of
+Written 2026-09-18, updated 2026-09-19 after your real-app test pass. This is
+on **branch `feat/os-registry-tools`** (off `v3/dex`) — separate from
+`feat/file-search`, `fix/browser-toggle-blank-screen`, and
+`feat/desktop-uia-cua`, which each have their own `TOBETESTED.md`. None of
 this is merged or pushed yet.
+
+## 2026-09-19 — what your test run actually found, and what I fixed
+
+Your 7-test pass on the real app (screenshots 23-30) found the confirmation
+card never appeared under any scenario, and the Activity/Browse toggle did
+nothing after a page had loaded. Two separate root causes, both now fixed:
+
+**1. The deck was starving, not broken.** `SessionManager.appendOutput` (main
+process) pushes every event — `tool_call`, `artifact`, `screenshot`,
+`confirmation`, `task_state` — onto `session.output` and streams it to the
+floating Logs window over a per-event channel (`session-output`). But it only
+broadcasts the *full* session object to the main app window
+(`session-updated`) for a handful of coarse cases: cost rollups, stuck-timer
+recovery, pause, navigation. Ordinary tool calls and — critically —
+confirmation events never triggered that broadcast. The main window's session
+cache (`useSessionsQuery.ts`) only listened to the coarse channel, so
+`AgentSession.output` — what the deck, `hasPendingConfirmation`, and the
+Activity card all read — was frozen at whatever it was on the last full
+fetch. This is why the Logs popup (screenshots 23-25, which you said you
+usually run fullscreen) showed everything correctly while the main pane next
+to it stayed black: two different code paths, only one of them wired up.
+Fixed by having the main window's query cache also subscribe to the
+per-event channel and append into the matching session's `output` live.
+
+**2. The Activity/Browse toggle was a dead button once a page had loaded.**
+The old logic was `deckActive = ... && !browseHere && (!primarySite || ...)`
+— a plain boolean that could only ever *take the deck away*, never force it
+back once `primarySite` was set. Clicking "Activity" mid-browser-task (your
+test 6) flipped a flag that the formula didn't check in that branch, so
+nothing happened. Replaced with a tri-state override (`auto` / `browser` /
+`activity`) that genuinely wins either way, with a pending confirmation still
+overriding it in both directions (you can't accidentally hide a card behind
+"Browse").
+
+**3. The agent likely never called `dex-registry` at all** — your own
+screenshots show tool calls labeled `PowerShell` running
+`Get-ItemProperty`/`Set-ItemProperty` directly, for both the read and the
+"THIS SHOULD NOT HAPPEN" write, with no exit code or behavior suggesting
+`dex-registry` was in the loop. Doctrine already said not to do this, but
+only called out `reg.exe`/Bash specifically, not PowerShell's own registry
+cmdlets or its own native `PowerShell` tool. Strengthened `registry.md` and
+`AGENTS.md`'s routing table to name the exact cmdlets and say explicitly that
+this applies to *any* shell tool, including reads.
+
+None of this is enforcement — an agent can still ignore the skill doc, same
+as before. What's fixed is that *if* it does call `dex-registry`, the card
+will now actually render, live, in the main window, not just the Logs popup.
+
+(Superseded by the 2nd pass below — the card doesn't live in the deck
+anymore, so the "does Activity show it" checklist item no longer applies the
+way it's phrased here.)
+
+## 2026-09-19, second pass — after your explicit-tool-name test (screenshots 31-34)
+
+Naming `dex-registry` explicitly worked — your log shows it reading
+`registry.md`/`SKILL.md` and actually calling `dex-registry set`. That
+confirmed fix #3 above is enough *when the tool is named*, and surfaced two
+more real bugs underneath it:
+
+**4. The card was still invisible — but this time because of what's ON TOP,
+not because the data never arrived.** `.pane__output` (where the deck
+renders) is contested by two things that both composite above plain React:
+the native browser view once a page has loaded, and the floating Logs window
+whenever it's open (it anchors to that exact same rect). Your registry-only
+test (31-no-card.png) had the Logs window open, which sits on the identical
+screen region the deck would use — so even though the confirmation event had
+arrived correctly (fix #1), there was nothing wrong to see: the card was
+rendering right where the Logs window was drawn on top of it. This is
+exactly the same class of problem as your browser screenshot (31.png/34.png)
+— the live Google page sitting on top of it — just with a second surface
+doing the same thing. **Fixed by moving the confirmation card out of the
+deck entirely**, into the pane's header/chrome area, which neither the
+browser view nor the Logs window ever touches. It now renders as a strip
+right under the status line, always, regardless of what's showing in
+`.pane__output` — Browse, Activity, or Logs open. As a consequence, a
+pending confirmation no longer forces the deck over the live page either
+(test 6's original complaint) — there's no need to hide the browser to
+answer a card that's no longer inside the area the browser covers.
+
+**5. A real bug behind "switch sidebar away and back, then the
+Activity/Browse button and everything behind it just vanishes."** The effect
+that attaches/detaches the native browser view tracked "is a view currently
+attached" in a plain local variable that got reset to its default every time
+the effect re-ran — which happens on any `deckActive` change, *and* on the
+`pane:layout-change` event the app fires when you switch sessions in the
+sidebar. So the code would forget a view was already attached, skip the
+`viewDetach` call it needed to make, and the pane would end up in a state
+neither "browser" nor "deck" correctly claimed — consistent with everything
+past the Logs window going blank. Fixed by moving that bookkeeping into a
+ref that survives the effect being torn down and rebuilt, so it correctly
+remembers attach state across any of these transitions instead of just the
+first one.
+
+I could not fully confirm #5 explains 100% of what you saw in 34.png without
+reproducing it live — it's the strongest lead from reading the code, not a
+verified root cause the way #1-#4 are. Worth specifically re-testing.
+
+- [ ] Re-run a registry `set` **with the Logs window open** and confirm the
+      approval strip now shows above/around it instead of being covered.
+- [ ] Re-run test 6 (registry prompt mid-browser-task) — the live page
+      should now stay visible, with the approve/deny strip appearing above
+      it in the header, not replacing it.
+- [ ] Specifically re-test the "switch to another agent in the sidebar, then
+      switch back mid-task" scenario from 34.png and confirm the
+      Activity/Browse button and the pane's behavior come back correctly. If
+      it still breaks, that's a new lead, not something fix #5 above already
+      covers, and I'll need fresh screenshots of that exact sequence.
 
 ```
 git checkout feat/os-registry-tools
@@ -90,11 +198,13 @@ in the real window does what the code says it does.
   the walk, but a query with *no match* under a very broad root can still be
   slow in the worst case — it just won't be catastrophically slow the way
   the pre-fix version was.
-- Nothing technically stops the agent from calling `reg.exe` directly
-  through its own Bash tool instead of `dex-registry`, bypassing the
-  confirmation entirely. This is doctrine (`registry.md` says not to),
-  not a sandboxed enforcement — the same category of gap as MCP-first and
-  the desktop-control fallback ladder elsewhere in AGENTS.md.
+- Nothing technically stops the agent from touching the registry directly —
+  `reg.exe`, or PowerShell's own `Set-ItemProperty`/etc. — through its own
+  Bash *or* PowerShell tool instead of `dex-registry`, bypassing the
+  confirmation entirely. This is doctrine (`registry.md`/`AGENTS.md` now name
+  the exact cmdlets and tools), not sandboxed enforcement — the same category
+  of gap as MCP-first and the desktop-control fallback ladder elsewhere in
+  AGENTS.md. Your 2026-09-19 test run is the concrete case of this happening.
 - `hasBrowser` (from the separate `fix/browser-toggle-blank-screen` branch)
   may have a second gap: `sessions:list`/`sessions:get` in `main/index.ts`
   compute it fresh via `!!browserPool.getWebContents(id)`, which is true for

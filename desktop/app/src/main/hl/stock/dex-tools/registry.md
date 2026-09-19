@@ -1,5 +1,17 @@
 # Skill: shell access and the Windows registry
 
+**If a task touches the Windows registry — reading or writing, any hive —
+use `dex-registry` below, never a shell's own registry cmdlets.** That means
+none of `Get-ItemProperty`, `Set-ItemProperty`, `New-ItemProperty`,
+`Remove-ItemProperty`, `Get-Item`/`Remove-Item` on a `HKLM:`/`HKCU:`/etc.
+path, or `reg.exe` — whether you run them through a `Bash` tool call, a
+`PowerShell` tool call, or anything else you have natively. It does not
+matter that a plain read looks harmless: `dex-registry` is the only path
+that puts a write through the confirmation card at all, and reaching for a
+native shell tool "just to read" is exactly the habit that leads to also
+using it for the write a moment later. If your task involves the registry
+in any way, this file is not optional background reading.
+
 ## `dex-sh` — a shell you might not already have
 
 Your own Bash tool already covers most filesystem, process, and general
@@ -69,7 +81,10 @@ coordinates: because it is the structured way to do something you already
 know needs doing, not a shortcut past confirming the plan with the user
 first when the task itself is ambiguous.
 
-**Nothing technically stops you from calling `reg.exe` yourself through
-Bash instead of `dex-registry`.** Permissions are not gated at that level.
+**Nothing technically stops you from touching the registry yourself** —
+`reg.exe`, or PowerShell's `Set-ItemProperty`/`New-ItemProperty`/
+`Remove-ItemProperty`/`Remove-Item`, through a `Bash` or `PowerShell` tool
+call instead of `dex-registry`. Permissions are not gated at that level.
 Don't — the whole safety of this tool is the confirmation card, and driving
-the registry directly bypasses it entirely.
+the registry directly bypasses it entirely, silently, with no card, no
+backup, and no record of what changed or why.

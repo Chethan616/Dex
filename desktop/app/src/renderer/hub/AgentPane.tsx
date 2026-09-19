@@ -10,7 +10,7 @@ import opencodeLogoDark from './opencode-logo-dark.svg';
 import opencodeLogoLight from './opencode-logo-light.svg';
 import { useThemedAsset } from '../design/useThemedAsset';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
-import { PreviewDeck, deckHasContent, hasPendingConfirmation } from './PreviewDeck';
+import { PreviewDeck, deckHasContent, getPendingConfirmations, ConfirmationCard } from './PreviewDeck';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from './slashCommands';
 import { CommandChip, CommandHints } from './CommandChip';
 import type { AgentSession, OutputEntry } from './types';
@@ -747,6 +747,21 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
   const openaiLogo = useThemedAsset(openaiLogoDark, openaiLogoLight);
   const opencodeLogo = useThemedAsset(opencodeLogoDark, opencodeLogoLight);
   const paneRef = useRef<HTMLDivElement>(null);
+  /**
+   * Whether a WebContentsView is currently attached to this pane, and
+   * whether that attach actually succeeded. These have to survive the
+   * bounds effect below being torn down and recreated — which happens on
+   * every deckActive change, including "a confirmation just became
+   * pending" — because the native view itself is main-process state that
+   * doesn't reset just because the effect closure did. A plain `let` inside
+   * the effect forgot "yes, a view is attached" the moment deckActive
+   * flipped true, so the code never issued the viewDetach call the deck
+   * needed to actually become visible: the confirmation card rendered, but
+   * underneath the still-attached live page, which composites above React
+   * regardless of what React thinks should be showing.
+   */
+  const hasAttachedRef = useRef(false);
+  const attachSucceededRef = useRef(false);
   const [browserDead, setBrowserDead] = useState(false);
   const [browserMissing, setBrowserMissing] = useState(false);
   const [frameRect, setFrameRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
@@ -759,31 +774,56 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
    * hold the rect for as long as the session has anything to show, with no way
    * to reach the page underneath.
    */
-  const [browseHere, setBrowseHere] = useState(false);
+  /**
+   * The user's explicit choice, when they've made one, between the deck and
+   * the live page — set by the Browse/Activity toggle button. 'auto' defers
+   * to the default rule below. This has to be tri-state rather than a single
+   * "browseHere" boolean: a plain boolean can only ever *take the deck away*
+   * (once primarySite is set, the default rule already prefers the browser,
+   * so a "not browsing" state and "the default already shows the browser"
+   * state were indistinguishable — clicking "Activity" set the flag to a
+   * value that had no effect, which is exactly why the button did nothing
+   * after the agent had ever navigated a page).
+   */
+  const [paneOverride, setPaneOverride] = useState<'auto' | 'browser' | 'activity'>('auto');
   /**
    * Whether the preview deck should take over the browser rect.
    *
    * The native WebContentsView composites *above* the renderer, so React can
-   * only be seen in this rect while that view is detached. Hand the rect to
-   * the deck when there is something to show and no page would be lost by it:
-   * the browser has never navigated (a desktop, file, or OS task), or the
-   * session is paused. Once primarySite is set the page wins — a live page is
-   * always more useful than a card describing one.
+   * only be seen in this rect while that view is detached. By default, hand
+   * the rect to the deck when there is something to show and no page would be
+   * lost by it: the browser has never navigated (a desktop, file, or OS
+   * task), or the session is paused. Once primarySite is set the page wins —
+   * a live page is normally more useful than a card describing one.
+   *
+   * The one thing that overrides that default is the user's own explicit
+   * Browse/Activity choice, which always wins over the navigated-page
+   * default — that is the entire point of offering the toggle. A pending
+   * dex-registry confirmation does NOT force the deck up: it is rendered in
+   * the pane's header/chrome instead (see pendingConfirmations below), which
+   * is reachable regardless of whether the deck or the live page currently
+   * has the rect — so answering it no longer requires losing whatever page
+   * was showing.
    */
-  const deckActive = useMemo(
-    () => deckHasContent(session) && !browseHere &&
-      (!session.primarySite || session.status === 'paused' || hasPendingConfirmation(session)),
-    [session, browseHere],
-  );
+  const deckActive = useMemo(() => {
+    if (!deckHasContent(session)) return false;
+    if (paneOverride === 'browser') return false;
+    if (paneOverride === 'activity') return true;
+    return !session.primarySite || session.status === 'paused';
+  }, [session, paneOverride]);
+
+  // Rendered in the header/chrome below, not inside the deck — see the doc
+  // comment on ConfirmationCard in PreviewDeck.tsx for why.
+  const pendingConfirmations = useMemo(() => getPendingConfirmations(session), [session]);
 
   // A new run is the agent taking the pane back, so the deck should return
   // with it — otherwise starting a task after browsing looks like nothing
   // happened.
   useEffect(() => {
-    if (session.status === 'running') setBrowseHere(false);
+    if (session.status === 'running') setPaneOverride('auto');
   }, [session.status]);
   useEffect(() => {
-    setBrowseHere(false);
+    setPaneOverride('auto');
   }, [session.id]);
   // Logs overlay is a separate window (see logsPill.ts). The pane tracks
   // visibility only to reflect it in the Logs button's active state.
@@ -871,14 +911,19 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
       // Keep frameRect so the "Browser ended" overlay can paint over the
       // pane__output slot; nulling it leaves the pane black with no label.
       api.sessions.viewDetach(session.id).catch(() => {});
+      hasAttachedRef.current = false;
+      attachSucceededRef.current = false;
       return;
     }
 
+    // Reset every time this effect (re)starts so the first bounds
+    // computation below always runs its body at least once, even if the
+    // geometry hasn't actually changed since the last instance — that first
+    // run is what re-evaluates the attach/detach decision against the
+    // current deckActive, using hasAttachedRef/attachSucceededRef (declared
+    // outside this effect) rather than a value that would otherwise forget
+    // whatever the previous instance left attached.
     let lastKey = '';
-    let hasAttached = false;
-    // Tracks whether the last viewAttach actually got a browser view. If
-    // false, we skip the takeover overlay — the session is broken/deleted.
-    let attachSucceeded = false;
     let rafScheduled = 0;
     const applyBounds = () => {
       rafScheduled = 0;
@@ -903,33 +948,33 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
         // takeover overlay, which would otherwise paint its scrim over the
         // cards. Bounds measurement below still runs, so the deck is positioned
         // exactly where the browser would have been.
-        if (hasAttached) {
-          hasAttached = false;
-          attachSucceeded = false;
+        if (hasAttachedRef.current) {
+          hasAttachedRef.current = false;
+          attachSucceededRef.current = false;
           api.sessions.viewDetach(session.id).catch(() => {});
         }
         api.takeover?.hide(session.id).catch(() => {});
-      } else if (!hasAttached) {
-        hasAttached = true;
+      } else if (!hasAttachedRef.current) {
+        hasAttachedRef.current = true;
         api.sessions.viewAttach(session.id, bounds).then((ok) => {
           if (!ok) {
-            attachSucceeded = false;
+            attachSucceededRef.current = false;
             setBrowserMissing(true);
             api.takeover?.hide(session.id).catch(() => {});
           } else {
-            attachSucceeded = true;
+            attachSucceededRef.current = true;
             setBrowserMissing(false);
             if (session.status === 'running') {
               void api.takeover?.show(session.id, bounds, overlayMode);
             }
           }
         }).catch(() => {
-          hasAttached = false;
-          attachSucceeded = false;
+          hasAttachedRef.current = false;
+          attachSucceededRef.current = false;
         });
       } else {
         api.sessions.viewResize(session.id, bounds);
-        if (attachSucceeded && session.status === 'running') {
+        if (attachSucceededRef.current && session.status === 'running') {
           void api.takeover?.show(session.id, bounds, overlayMode);
         } else {
           api.takeover?.hide(session.id).catch(() => {});
@@ -985,7 +1030,7 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
       // silently detached (e.g. by temporarilyDetachAll for pill/settings), it
       // gets re-added. Bounds are always set BEFORE addChildView so there's no
       // stale-position flash.
-      hasAttached = false;
+      hasAttachedRef.current = false;
       lastKey = '';
       updateBounds();
       requestAnimationFrame(updateBounds);
@@ -1059,7 +1104,7 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
       {!browserDead && !browserMissing && (
         <button
           className="pane__rerun-btn"
-          onClick={() => setBrowseHere(true)}
+          onClick={() => setPaneOverride('browser')}
           title="Keep the page as the agent left it and carry on yourself"
         >
           <BrowserIcon />
@@ -1167,13 +1212,16 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
           </button>
           {session.hasBrowser !== false && deckHasContent(session) && (
             <button
-              className={`pane__action-btn${browseHere ? ' pane__action-btn--active' : ''}`}
-              onClick={(e) => { e.stopPropagation(); setBrowseHere((on) => !on); }}
-              aria-label={browseHere ? 'Show activity' : 'Continue browsing'}
-              data-tip={browseHere ? 'Show what the agent did' : 'Take the browser back and keep browsing'}
+              className={`pane__action-btn${!deckActive ? ' pane__action-btn--active' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPaneOverride(deckActive ? 'browser' : 'activity');
+              }}
+              aria-label={deckActive ? 'Continue browsing' : 'Show activity'}
+              data-tip={deckActive ? 'Take the browser back and keep browsing' : 'Show what the agent did'}
             >
               <BrowserIcon />
-              <span>{browseHere ? 'Activity' : 'Browse'}</span>
+              <span>{deckActive ? 'Browse' : 'Activity'}</span>
             </button>
           )}
           {onRerun && (
@@ -1244,6 +1292,20 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
         {session.status === 'running' && <div className="pane__progress-bar" />}
       </div>
 
+      {/* Always here, regardless of deckActive/browseHere/logsOpen — this is
+          plain pane chrome, not part of .pane__output, so neither the native
+          WebContentsView nor the floating Logs window (both of which anchor
+          to .pane__output and composite above it) can ever sit on top of it.
+          A blocking human decision has to be reachable no matter what else
+          is currently occupying the pane. */}
+      {pendingConfirmations.length > 0 && (
+        <div className="pane__confirm-bar">
+          {pendingConfirmations.map((event) => (
+            <ConfirmationCard sessionId={session.id} event={event} key={event.id} />
+          ))}
+        </div>
+      )}
+
       {/* The pane's non-browser surface. Shown when no live page occupies the
           rect — the pre-existing idle/error states, plus the two new ones the
           deck introduces: a running task that has never navigated (desktop,
@@ -1303,7 +1365,7 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
                   {canBrowseHere && (
                     <button
                       className="pane__rerun-btn"
-                      onClick={() => setBrowseHere(true)}
+                      onClick={() => setPaneOverride('browser')}
                       title="Keep the page as the agent left it and carry on yourself"
                     >
                       <BrowserIcon />

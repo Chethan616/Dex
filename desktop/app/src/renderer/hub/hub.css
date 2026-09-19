@@ -1233,6 +1233,29 @@ button:focus:not(:focus-visible) {
   100% { transform: translateX(500%); }
 }
 
+/* -- pending confirmation, in the pane chrome --------------------------------
+   Lives between .pane__progress and .pane__output, i.e. plain pane chrome —
+   deliberately NOT inside .pane__output, which is contested by both the
+   native browser view and the floating Logs window (both composite above
+   plain React there). This is the one place in the pane neither of those
+   surfaces ever occupies, so the card stays reachable no matter which of
+   them currently has the rect. The .deck-card--confirm styling underneath
+   is reused as-is; only the outer spacing is trimmed for a chrome strip
+   instead of a full deck slot. */
+
+.pane__confirm-bar {
+  padding: 0 var(--space-8) var(--space-4);
+  flex-shrink: 0;
+}
+
+.pane__confirm-bar .deck-card--confirm {
+  padding: var(--space-5) var(--space-6);
+}
+
+.pane__confirm-bar .deck-card--confirm + .deck-card--confirm {
+  margin-top: var(--space-3);
+}
+
 /* ---------------------------------------------------------------------------
    PANE OUTPUT
 --------------------------------------------------------------------------- */
@@ -5549,13 +5572,41 @@ button:focus:not(:focus-visible) {
 }
 
 /* -- confirmation ------------------------------------------------------------
-   A blocking human decision (dex-registry set/delete/import). Rendered
-   first in the deck and given a warning-colored edge — the one card here
-   that isn't just informational, so it needs to read as different from the
-   rest at a glance, not just by its text. */
+   A blocking human decision (dex-registry set/delete/import) — the one card
+   here that isn't just informational, and the one place in the whole app
+   where the agent is sitting idle waiting on a click. It has to read as
+   unmistakable at a glance even as a single card in an otherwise-quiet deck:
+   a full warning-toned border and wash, not just an accent stripe, plus an
+   eyebrow label so "why is there a card here" is answered before the title
+   is even read. */
 
 .deck-card--confirm {
-  border-left: 3px solid var(--color-status-warning);
+  border: 1px solid color-mix(in srgb, var(--color-status-warning) 35%, transparent);
+  background-color: color-mix(in srgb, var(--color-status-warning) 6%, var(--color-bg-sunken));
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-status-warning) 8%, transparent), transparent 55%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-status-warning) 12%, transparent),
+    0 8px 24px -12px color-mix(in srgb, var(--color-status-warning) 45%, transparent);
+}
+
+.deck-confirm__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-status-warning);
+}
+
+.deck-confirm__eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-status-warning);
+  animation: pulse-glow 1.8s var(--ease-in-out) infinite;
 }
 
 .deck-confirm__detail {
@@ -5572,7 +5623,7 @@ button:focus:not(:focus-visible) {
 }
 
 .deck-confirm__btn {
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-3) var(--space-6);
   border-radius: var(--radius-md);
   border: 1px solid rgba(var(--highlight-rgb), 0.08);
   font-size: var(--font-size-sm);

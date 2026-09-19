@@ -11,7 +11,7 @@
  * that can be tested in isolation.
  */
 import { describe, expect, it } from 'vitest';
-import { deckHasContent, hasPendingConfirmation } from '../../../src/renderer/hub/PreviewDeck';
+import { deckHasContent, hasPendingConfirmation, getPendingConfirmations } from '../../../src/renderer/hub/PreviewDeck';
 import type { AgentSession, HlEvent, TaskState } from '../../../src/renderer/hub/types';
 
 function session(output: HlEvent[], status: AgentSession['status'] = 'running'): AgentSession {
@@ -72,10 +72,11 @@ describe('deckHasContent', () => {
   });
 });
 
-// hasPendingConfirmation is what forces the deck up even mid-browser-task —
-// AgentPane's normal rule is "prefer the live page once primarySite is set",
-// but a dex-registry confirmation card is unreachable if the browser view
-// stays composited over it, so this overrides that rule specifically.
+// hasPendingConfirmation/getPendingConfirmations back the confirmation bar
+// AgentPane renders in the pane header/chrome — deliberately outside
+// .pane__output, which the native browser view and the floating Logs window
+// both composite above. Answering a confirmation must not depend on which
+// of those two happens to be on top at the moment.
 describe('hasPendingConfirmation', () => {
   it('is false when nothing has ever asked for a confirmation', () => {
     expect(hasPendingConfirmation(session([{ type: 'tool_call', name: 'Bash', args: {}, iteration: 1 }]))).toBe(false);
@@ -99,5 +100,25 @@ describe('hasPendingConfirmation', () => {
       { type: 'confirmation', id: 'c1', title: 'Set registry value', detail: '...', status: 'approved', at: 1 },
       { type: 'confirmation', id: 'c2', title: 'Delete registry key', detail: '...', status: 'pending', at: 2 },
     ]))).toBe(true);
+  });
+});
+
+describe('getPendingConfirmations', () => {
+  it('returns an empty list when nothing is pending', () => {
+    expect(getPendingConfirmations(session([{ type: 'tool_call', name: 'Bash', args: {}, iteration: 1 }]))).toEqual([]);
+  });
+
+  it('returns only the latest event for an id, and only if still pending', () => {
+    const denied = { type: 'confirmation' as const, id: 'c1', title: 'Set registry value', detail: '...', status: 'denied' as const, at: 2 };
+    expect(getPendingConfirmations(session([
+      { type: 'confirmation', id: 'c1', title: 'Set registry value', detail: '...', status: 'pending', at: 1 },
+      denied,
+    ]))).toEqual([]);
+  });
+
+  it('returns every id that is currently pending, each exactly once', () => {
+    const c1 = { type: 'confirmation' as const, id: 'c1', title: 'Set registry value', detail: 'a', status: 'pending' as const, at: 1 };
+    const c2 = { type: 'confirmation' as const, id: 'c2', title: 'Delete registry key', detail: 'b', status: 'pending' as const, at: 2 };
+    expect(getPendingConfirmations(session([c1, c2]))).toEqual([c1, c2]);
   });
 });
