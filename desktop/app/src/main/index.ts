@@ -62,8 +62,8 @@ import started from 'electron-squirrel-startup';
 import { createShellWindow } from './window';
 import { createTray, refreshTrayMenu } from './tray';
 // Track B — Pill + hotkeys
-import { createPillWindow, togglePill, showPill, hidePill, sendToPill, setPillHeight, PILL_HEIGHT_COLLAPSED, PILL_HEIGHT_EXPANDED } from './pill';
-import { createLogsWindow, attachToHub as attachLogsToHub, toggleLogs, hideLogs, getLogsWindow, showLogs, setLogsMode, updateLogsAnchor, focusLogsFollowUp } from './logsPill';
+import { togglePill, showPill, hidePill, sendToPill, setPillHeight, PILL_HEIGHT_COLLAPSED, PILL_HEIGHT_EXPANDED } from './pill';
+import { attachToHub as attachLogsToHub, toggleLogs, hideLogs, getLogsWindow, showLogs, setLogsMode, updateLogsAnchor, focusLogsFollowUp } from './logsPill';
 import * as takeoverOverlay from './takeoverOverlay';
 import { sendSessionNotification } from './notifications';
 import { registerHotkeys, unregisterHotkeys, getGlobalCmdbarAccelerator, setGlobalCmdbarAccelerator } from './hotkeys';
@@ -80,7 +80,7 @@ import { registerConsentHandlers } from './consentIpc';
 import { registerTelemetryHandlers } from './telemetryIpc';
 import { registerThemeHandlers } from './themeIpc';
 import { startSystemThemeWatcher } from './themeMode';
-import { registerAppPopupHandlers, warmAppPopup } from './appPopup';
+import { registerAppPopupHandlers } from './appPopup';
 import { captureEvent } from './telemetry';
 import { registerChromeImportHandlers } from './chrome-import/ipc';
 import { mainLogger } from './logger';
@@ -451,11 +451,15 @@ function openShellAndWire(): BrowserWindow {
 
   shellWindow = createShellWindow();
 
-  // Create pill window (hidden) and register global hotkey
-  createPillWindow();
-  // Create logs overlay window (hidden) and anchor it to the hub
-  createLogsWindow();
-  warmAppPopup();
+  // Pill, Logs, and the app-popup window are all created lazily now, on
+  // first actual use (togglePill/showLogs/toggleLogs/focusLogsFollowUp/
+  // openAppPopup each self-create) rather than eagerly here — three
+  // full extra Electron renderer processes sitting hidden from launch,
+  // for surfaces a given session might never open, was real idle RAM cost
+  // for no benefit. attachToHub still runs unconditionally: it wires
+  // hub-level listeners (resize/focus/blur/minimize) that check whether
+  // the logs window exists each time they fire, so it works whether or
+  // not that window has been created yet.
   attachLogsToHub(shellWindow);
   mainLogger.info('main.tray.beforeCreate', { typeofCreateTray: typeof createTray });
   try {

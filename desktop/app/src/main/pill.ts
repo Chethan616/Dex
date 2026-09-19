@@ -430,9 +430,17 @@ export function hidePill(): void {
  * This is the function called by the Cmd+K hotkey handler.
  */
 export function togglePill(): void {
+  // Lazy creation: the pill used to be created hidden at app.whenReady()
+  // and sit resident for the rest of the app's life, an idle Electron
+  // renderer process the user might never actually open. Every other
+  // caller (hotkey, tray, onboarding, IPC) goes through this one function,
+  // so creating on first toggle here covers all of them.
+  if (!pillWindow || pillWindow.isDestroyed()) {
+    createPillWindow();
+  }
   if (!pillWindow || pillWindow.isDestroyed()) {
     log.error('pill.togglePill', {
-      message: 'Cannot toggle pill — window not created or destroyed',
+      message: 'Cannot toggle pill — window creation failed',
     });
     return;
   }

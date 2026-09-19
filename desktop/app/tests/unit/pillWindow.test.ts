@@ -252,3 +252,38 @@ describe('pill window sizing', () => {
     });
   });
 });
+
+describe('pill window lazy creation', () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+    windows.length = 0;
+    fs.rmSync(userDataPath, { recursive: true, force: true });
+    fs.mkdirSync(userDataPath, { recursive: true });
+  });
+
+  // The pill used to be created hidden at app startup and stay resident for
+  // the app's whole life — one extra idle Electron renderer process even for
+  // someone who never opens it. togglePill() is the one entry point every
+  // caller (hotkey, tray, onboarding, IPC) goes through, so creating on
+  // first toggle there is what makes lazy creation actually lazy everywhere.
+  test('togglePill creates the window on first call, with no prior createPillWindow()', async () => {
+    const pill = await loadPillModule();
+
+    expect(windows.length).toBe(0);
+    pill.togglePill();
+
+    expect(windows.length).toBe(1);
+    expect(windows[0].isVisible()).toBe(true);
+  });
+
+  test('a second togglePill() reuses the same window instance rather than creating another', async () => {
+    const pill = await loadPillModule();
+
+    pill.togglePill(); // creates + shows
+    pill.togglePill(); // hides
+
+    expect(windows.length).toBe(1);
+    expect(windows[0].isVisible()).toBe(false);
+  });
+});

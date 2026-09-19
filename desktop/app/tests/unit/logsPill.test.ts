@@ -27,6 +27,7 @@ const { appHandlers, appOn, loggerSpy, MockBrowserWindow } = vi.hoisted(() => {
     setMinimumSize = vi.fn();
     setVisibleOnAllWorkspaces = vi.fn();
     setAlwaysOnTop = vi.fn();
+    setParentWindow = vi.fn();
     setBounds = vi.fn();
     getBounds = vi.fn(() => ({ x: 0, y: 0, width: 380, height: 220 }));
     getContentBounds = vi.fn(() => ({ x: 0, y: 0, width: 900, height: 700 }));
@@ -146,5 +147,50 @@ describe('logsPill', () => {
 
     expect(win.hide).toHaveBeenCalled();
     vi.useRealTimers();
+  });
+
+  // The logs window used to be created hidden at shell startup and sit
+  // resident for the app's whole life — a full extra Electron renderer
+  // process even for a session that never opens Logs. showLogs/toggleLogs/
+  // focusLogsFollowUp now each create the window on first use instead.
+  describe('lazy creation', () => {
+    it('toggleLogs creates the window on first call, with no prior createLogsWindow()', async () => {
+      const { toggleLogs } = await import('../../src/main/logsPill');
+
+      expect(MockBrowserWindow.last).toBeNull();
+      toggleLogs('s1');
+
+      expect(MockBrowserWindow.last).not.toBeNull();
+    });
+
+    it('showLogs creates the window on first call', async () => {
+      const { showLogs } = await import('../../src/main/logsPill');
+
+      expect(MockBrowserWindow.last).toBeNull();
+      showLogs('s1');
+
+      expect(MockBrowserWindow.last).not.toBeNull();
+    });
+
+    it('focusLogsFollowUp creates the window on first call', async () => {
+      const { focusLogsFollowUp } = await import('../../src/main/logsPill');
+
+      expect(MockBrowserWindow.last).toBeNull();
+      focusLogsFollowUp('s1');
+
+      expect(MockBrowserWindow.last).not.toBeNull();
+    });
+
+    it('a window created after attachToHub() still gets parented to the hub', async () => {
+      const { attachToHub, showLogs } = await import('../../src/main/logsPill');
+      const hub = new MockBrowserWindow({});
+
+      attachToHub(hub as unknown as Electron.BrowserWindow); // runs before the logs window exists
+      showLogs('s1'); // lazily creates it now
+
+      const win = MockBrowserWindow.last!;
+      expect(win).not.toBeNull();
+      expect(win.setParentWindow).toHaveBeenCalledWith(hub);
+    });
   });
 });

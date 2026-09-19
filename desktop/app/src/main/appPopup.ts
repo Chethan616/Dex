@@ -414,10 +414,3 @@ export function registerAppPopupHandlers(): void {
   });
 }
 
-export function warmAppPopup(): void {
-  // Ensure handlers are bound before the popup window's preload can fire
-  // 'app-popup:renderer-ready'; otherwise an early launch would drop the
-  // handshake and leave the popup permanently un-rendered.
-  registerAppPopupHandlers();
-  createPopupWindow();
-}
