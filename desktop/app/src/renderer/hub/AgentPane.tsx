@@ -803,6 +803,31 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
     return !session.primarySite || session.status === 'paused';
   }, [session, paneOverride]);
 
+  /**
+   * A dex-find result (or a screenshot) can land at any point in a task that
+   * has already navigated a page — e.g. "search my drive" opens Google
+   * Drive itself, so `primarySite` is set and the deck stays hidden behind
+   * it for the rest of the run. The card is real (dex-find always emits an
+   * `artifact` event — see main/index.ts's /dex/search route) and reachable
+   * via the Browse/Activity toggle, but a plain unlabeled button gives no
+   * hint that clicking it would reveal something new — which is exactly how
+   * a genuine result can look, from the outside, like it was never produced
+   * at all. This tracks whether a new one has arrived since the deck was
+   * last actually visible, so the toggle can say so.
+   */
+  const artifactCount = useMemo(
+    () => session.output.filter((e) => e.type === 'artifact' || e.type === 'screenshot').length,
+    [session.output],
+  );
+  const seenArtifactCountRef = useRef(0);
+  useEffect(() => {
+    if (deckActive) seenArtifactCountRef.current = artifactCount;
+  }, [deckActive, artifactCount]);
+  useEffect(() => {
+    seenArtifactCountRef.current = 0;
+  }, [session.id]);
+  const hasUnseenArtifact = !deckActive && artifactCount > seenArtifactCountRef.current;
+
   // Rendered in the header/chrome below, not inside the deck — see the doc
   // comment on ConfirmationCard in PreviewDeck.tsx for why.
   const pendingConfirmations = useMemo(() => getPendingConfirmations(session), [session]);
@@ -1208,11 +1233,12 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
                 e.stopPropagation();
                 setPaneOverride(deckActive ? 'browser' : 'activity');
               }}
-              aria-label={deckActive ? 'Continue browsing' : 'Show activity'}
-              data-tip={deckActive ? 'Take the browser back and keep browsing' : 'Show what the agent did'}
+              aria-label={deckActive ? 'Continue browsing' : (hasUnseenArtifact ? 'Show activity — new result' : 'Show activity')}
+              data-tip={deckActive ? 'Take the browser back and keep browsing' : (hasUnseenArtifact ? 'A new result is waiting behind the live page' : 'Show what the agent did')}
             >
               <BrowserIcon />
               <span>{deckActive ? 'Browse' : 'Activity'}</span>
+              {hasUnseenArtifact ? <span className="pane__action-badge" aria-hidden="true" /> : null}
             </button>
           )}
           {onRerun && (

@@ -921,6 +921,18 @@
   border: 1px solid var(--color-accent-default);
 }
 
+/* A result landed (dex-find, a screenshot) while the live page had the
+   pane — the button alone gives no hint that clicking it reveals something
+   new, so a quiet pulse says so instead of the result going unnoticed. */
+.pane__action-badge {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-default);
+  animation: pulse-glow 1.8s var(--ease-in-out) infinite;
+}
+
 .pane__action-btn--danger {
   color: var(--color-fg-tertiary);
 }
@@ -3901,6 +3913,14 @@ button:focus:not(:focus-visible) {
 .conn-card__subtitle {
   font-size: var(--font-size-xs);
   color: var(--color-fg-tertiary);
+}
+
+/* What a connected integration actually covers, kept visible alongside the
+   green dot so "Connected" never has to be taken on faith. */
+.conn-card__scope {
+  font-size: var(--font-size-2xs);
+  line-height: var(--line-height-snug);
+  color: var(--color-fg-disabled);
 }
 
 .conn-card__skeleton {

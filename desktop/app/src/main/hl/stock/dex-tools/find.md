@@ -65,3 +65,13 @@ call**, concurrently — one round trip, not two turns. If Drive is not
 connected, the result still comes back with the local results and a
 `driveError` field explaining why; report that rather than treating it as a
 failure of the whole search.
+
+**Drive's MCP connection only searches — it cannot open, read, or download a
+file.** A `driveResults` hit tells you the file exists and its name; it does
+not give you the file's content or a way to fetch it. To actually open,
+read, or copy a Drive file after finding it, drive the Drive web app through
+`browser-harness-js` (see `AGENTS.md`) for that step. This is the expected
+two-step sequence, not a fallback from something broken: search via MCP
+(fast, no browser needed), then use the browser only for the one thing MCP
+genuinely cannot do. Say so plainly if asked why the browser was needed for
+a "connected" service, rather than treating it as an MCP failure.
