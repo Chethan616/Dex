@@ -1445,6 +1445,34 @@ app.whenReady().then(async () => {
         return { items, driveError: combined.drive && !combined.drive.ok ? combined.drive.error : undefined, indexStatus: status };
       },
 
+      // dex-websearch's only endpoint. A plain factual lookup ("current
+      // Node LTS version") doesn't need a browser tab — this renders as the
+      // same row-list artifact card dex-find uses, no new UI needed.
+      'POST /dex/websearch': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { sessionId?: unknown; query?: unknown; limit?: unknown };
+        const id = assertString(body.sessionId, 'sessionId', 100);
+        const query = assertString(body.query, 'query', 500);
+        const limit = typeof body.limit === 'number' && body.limit > 0 ? Math.min(Math.floor(body.limit), 20) : 10;
+
+        const { searchWeb } = await import('./search/websearch');
+        const result = await searchWeb(query, limit);
+
+        const items = result.items.map((r) => ({ label: r.title, detail: r.url, reasons: ['web search'], excerpt: r.snippet }));
+
+        const session = sessionManager.getSession(id);
+        if (session) {
+          sessionManager.appendOutput(id, {
+            type: 'artifact',
+            kind: 'reading',
+            title: `Web search: "${query}"`,
+            note: !result.ok ? result.error : undefined,
+            items,
+          });
+        }
+
+        return { items, error: result.ok ? undefined : result.error };
+      },
+
       // The `dex-canvas` CLI's only endpoint. One markdown document per
       // session — the latest call replaces whatever was showing, the same
       // "last write wins" rule task_state uses for the plan.
