@@ -119,3 +119,42 @@ describe('PreviewDeck file results', () => {
     act(() => root.unmount());
   });
 });
+
+// dex-canvas's whole point is to take over the rect like a live page would —
+// not sit as one card among the plan/activity stack. These confirm that
+// exclusivity actually holds in the render, not just in the description.
+describe('PreviewDeck canvas documents', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('renders the document full-bleed, with the plan/activity stack suppressed', () => {
+    const { container, root } = render([
+      { type: 'task_state', state: { objective: 'Report', steps: [{ id: 'step_1', title: 'One', status: 'active', failures: [] }], currentStep: 'step_1', files: [], notes: [], updatedAt: 1 } },
+      { type: 'canvas', title: 'Q3 Expense Summary', markdown: '# Q3 Expense Summary\n\nTravel is up 18%.', at: 1 },
+    ]);
+
+    expect(container.querySelector('.deck-canvas')).not.toBeNull();
+    expect(container.querySelector('.deck-canvas__title')?.textContent).toBe('Q3 Expense Summary');
+    expect(container.textContent).toContain('Travel is up 18%');
+
+    // Exclusive: no plan card, no activity card, alongside the document.
+    expect(container.querySelector('.deck-plan')).toBeNull();
+    expect(container.querySelector('.deck-card--activity')).toBeNull();
+
+    act(() => root.unmount());
+  });
+
+  it('shows only the latest document when dex-canvas show was called more than once', () => {
+    const { container, root } = render([
+      { type: 'canvas', title: 'Draft', markdown: 'draft content', at: 1 },
+      { type: 'canvas', title: 'Final', markdown: 'final content', at: 2 },
+    ]);
+
+    expect(container.querySelector('.deck-canvas__title')?.textContent).toBe('Final');
+    expect(container.textContent).toContain('final content');
+    expect(container.textContent).not.toContain('draft content');
+
+    act(() => root.unmount());
+  });
+});

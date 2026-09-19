@@ -12,6 +12,7 @@ them with Bash like any other command.
 | `dex-sh` | A different shell (cmd/PowerShell/WSL) with a structured, timed result. See `registry.md`. |
 | `dex-registry` | Reading the Windows registry freely; writing always waits for the user to approve in the app. See `registry.md`. |
 | `dex-find` | Finding a file by name or by what's inside it (a PDF's own text, not just its filename). See `find.md`. Pass `--drive` only when the user tags `@drive`. |
+| `dex-canvas` | Rendering a markdown document (report, table, summary) in the pane itself instead of as terminal text. See `canvas.md`. |
 
 There are also skill files here for two user commands, read when the command is
 used rather than run as tools:

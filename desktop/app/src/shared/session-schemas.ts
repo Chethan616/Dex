@@ -259,6 +259,20 @@ export const HlEventConfirmationSchema = z.object({
   at: z.number(),
 });
 
+// A rendered document — the agent's own generative UI ("build me a canvas"),
+// not a card describing something else. Rendered markdown, full-bleed, in
+// place of the deck's usual card stack: a report, a summary table, a
+// comparison, anything better read as a formatted document than scrolled
+// past as terminal text. One per session; the latest `dex-canvas` call
+// replaces whatever was there, the same "last write wins" rule task_state
+// uses for the plan.
+export const HlEventCanvasSchema = z.object({
+  type: z.literal('canvas'),
+  title: z.string(),
+  markdown: z.string(),
+  at: z.number(),
+});
+
 export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventThinkingSchema,
   HlEventToolCallSchema,
@@ -276,6 +290,7 @@ export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventArtifactSchema,
   HlEventScreenshotSchema,
   HlEventConfirmationSchema,
+  HlEventCanvasSchema,
 ]);
 
 export type HlEvent = z.infer<typeof HlEventSchema>;

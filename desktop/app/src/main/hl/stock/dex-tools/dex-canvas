@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# dex-canvas — render a markdown document as the pane's main view, in place
+# of the deck's usual card stack. For a report, summary, comparison, or
+# anything better read as a formatted document than scrolled past as
+# terminal text. See canvas.md for when to reach for this.
+#
+# Markdown comes from stdin, not an argument — a report is multi-line and
+# full of characters (quotes, backticks, asterisks) that would be painful
+# and error-prone to hand-escape into a single shell argument. A heredoc
+# sidesteps all of that, the same way browser-harness-js takes its JS
+# snippets from stdin rather than argv.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+usage() {
+  cat >&2 <<'USAGE'
+usage:
+  dex-canvas show "<title>" <<'EOF'
+  # markdown content, piped via stdin
+  EOF
+
+  One canvas per session — each call replaces whatever was showing, the
+  same "last write wins" rule dex-state uses for the plan.
+USAGE
+  exit 2
+}
+
+[ $# -ge 1 ] || usage
+op="$1"; shift
+
+session="$(dex_session_id)"
+[ -n "$session" ] || { echo "dex-canvas: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
+
+case "$op" in
+  show)
+    [ $# -ge 1 ] || usage
+    title="$1"
+    markdown="$(cat)"
+    [ -n "$markdown" ] || { echo "dex-canvas show: no markdown content on stdin" >&2; exit 2; }
+    body="{\"sessionId\":\"$(dex_esc "$session")\",\"title\":\"$(dex_esc "$title")\",\"markdown\":\"$(dex_esc "$markdown")\"}"
+    ;;
+  -h|--help|help) usage ;;
+  *) echo "dex-canvas: unknown verb '$op'" >&2; usage ;;
+esac
+
+dex_post /dex/canvas "$body"

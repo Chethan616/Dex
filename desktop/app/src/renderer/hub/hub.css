@@ -5563,6 +5563,48 @@ button:focus:not(:focus-visible) {
   box-sizing: border-box;
 }
 
+/* -- generative UI: a full document, not a card ------------------------------
+   dex-canvas takes the whole rect the way a live page would, so the outer
+   .deck padding/scroll (sized for a stack of cards) gets out of the way and
+   CanvasDocument manages its own header + scrolling body instead. */
+
+.deck--canvas {
+  padding: 0;
+  overflow: hidden;
+}
+
+.deck-canvas {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.deck-canvas__header {
+  flex: 0 0 auto;
+  padding: var(--space-6) var(--space-8);
+  border-bottom: 1px solid rgba(var(--highlight-rgb), 0.06);
+}
+
+.deck-canvas__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-primary);
+}
+
+.deck-canvas__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--space-8);
+}
+
+/* A generous reading width — a document stretched edge-to-edge on a wide
+   pane is exactly the line-length that makes prose hard to track. */
+.deck-canvas__body .md {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
 .deck-card {
   flex: 0 0 auto;
   padding: var(--space-8);

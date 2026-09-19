@@ -9,6 +9,40 @@ together — separate from `fix/browser-toggle-blank-screen` and
 `feat/desktop-uia-cua`, which are not merged in yet and still have their own
 `TOBETESTED.md`. None of this is pushed anywhere yet.
 
+## 2026-09-19 — dex-canvas: generative UI (a rendered document)
+
+New capability, not a bug fix: you clarified "artifact" meant generative
+UI — a rendered document/canvas taking over the pane, the way Claude.ai's
+own Artifacts do — not the file-search result rows built earlier today.
+Scope agreed: **markdown documents only** (no arbitrary HTML/JS — simpler
+and safer, and covers reports/summaries/tables, which was the actual want),
+and it **takes over the whole pane rect**, like a live page would, rather
+than sitting as one card among plans and file results.
+
+- New tool: `dex-canvas show "<title>"`, markdown piped via stdin (a
+  heredoc, like `browser-harness-js`). One per session — each call replaces
+  whatever was showing.
+- New `canvas` event type end-to-end: `POST /dex/canvas` → `session.output`
+  → `PreviewDeck` renders it exclusively (full-bleed, its own header, a
+  reading-width column) via the existing `Markdown` component — no new
+  renderer needed, it already handles tables/headings/lists/code/GFM.
+- `AGENTS.md`/`canvas.md` tell the agent when this is the right call (the
+  *shape* of the answer matters — a report, a table, a comparison) versus
+  when it's not (a short conversational reply doesn't need a document
+  wrapped around it).
+
+- [ ] Ask for something whose natural output is a report/summary/comparison
+      and confirm it renders as an actual formatted document (headings,
+      tables) filling the pane, not a wall of terminal text.
+- [ ] Confirm asking a second time (or a follow-up "update it") replaces the
+      document rather than stacking a second one.
+- [ ] Confirm a short, genuinely conversational reply does NOT get wrapped
+      in a canvas — this is a judgment call by the agent, worth checking it
+      lands the right way more often than not.
+- [ ] Confirm the Browse/Activity toggle badge (added earlier today) also
+      lights up for a canvas document arriving mid-browser-task, same as it
+      does for a file-search result.
+
 ## 2026-09-19 — what your test run actually found, and what I fixed
 
 Your 7-test pass on the real app (screenshots 23-30) found the confirmation

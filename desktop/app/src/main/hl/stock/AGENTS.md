@@ -20,6 +20,7 @@ a less structured one only when the structured one cannot.
 | A Windows desktop app | the accessibility tree | an annotated screenshot, then coordinates |
 | The Windows registry — reading OR writing, any hive | `dex-registry` | — never `reg.exe` or a shell's own registry cmdlets (`Set-ItemProperty`, etc.), in any shell tool |
 | Finding a file — call it immediately, never ask where first | `dex-find` (searches an index, not a live walk) | — never a hand-rolled `Get-ChildItem`/`find`/shell scan instead |
+| A report, summary, comparison, or anything whose *shape* (headings, a table) is part of the answer | `dex-canvas` — a rendered document, not terminal text | your normal reply, for anything that's genuinely just a short answer |
 | Files, processes, configuration | the purpose-built `dex-*` tool, else your own Bash/`dex-sh` | — |
 
 The reason is not purity. A structured interface tells you what is actually

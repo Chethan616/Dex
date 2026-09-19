@@ -14,11 +14,13 @@
  * moment a page loads, the native view goes back on top and this disappears.
  */
 import React, { useEffect, useMemo, useState } from 'react';
+import { Markdown } from './Markdown';
 import type { AgentSession, ArtifactItem, HlEvent, TaskState, TaskStep } from './types';
 
 type ArtifactEvent = Extract<HlEvent, { type: 'artifact' }>;
 type ScreenshotEvent = Extract<HlEvent, { type: 'screenshot' }>;
 type ConfirmationEvent = Extract<HlEvent, { type: 'confirmation' }>;
+type CanvasEvent = Extract<HlEvent, { type: 'canvas' }>;
 
 const MAX_SCREENSHOTS = 12;
 const MAX_ARTIFACT_CARDS = 4;
@@ -333,7 +335,7 @@ export function deckHasContent(session: AgentSession): boolean {
   if (session.status === 'draft') return false;
 
   for (const event of session.output) {
-    if (event.type === 'artifact' || event.type === 'screenshot') return true;
+    if (event.type === 'artifact' || event.type === 'screenshot' || event.type === 'canvas') return true;
     if (event.type === 'task_state' && event.state.steps.length > 0) return true;
     // Any real activity is enough. Until the browser navigates, this rect
     // would otherwise read "No browser started yet" through an entire
@@ -341,6 +343,20 @@ export function deckHasContent(session: AgentSession): boolean {
     if (event.type === 'tool_call' || event.type === 'file_output') return true;
   }
   return false;
+}
+
+/**
+ * The most recent canvas document, if any. Unlike artifacts/screenshots
+ * (which accumulate — the deck shows the last few), a canvas is a
+ * singleton: the latest `dex-canvas show` call is the whole story, so this
+ * returns one event or none, not a list.
+ */
+export function getLatestCanvas(session: AgentSession): CanvasEvent | null {
+  let latest: CanvasEvent | null = null;
+  for (const event of session.output) {
+    if (event.type === 'canvas') latest = event;
+  }
+  return latest;
 }
 
 /**
@@ -516,6 +532,27 @@ export function ConfirmationCard({ sessionId, event }: { sessionId: string; even
   );
 }
 
+/**
+ * The agent's own generative UI: a rendered markdown document filling the
+ * whole rect, the way a live page would — not one card competing for space
+ * among plans and file results. dex-canvas is for exactly the cases where
+ * the *shape* of the answer (a table, real headings, sections) is part of
+ * what makes it useful, so it gets the same visual weight a browser page
+ * would, not a footnote in a card stack.
+ */
+function CanvasDocument({ event }: { event: CanvasEvent }): React.ReactElement {
+  return (
+    <div className="deck-canvas">
+      <header className="deck-canvas__header">
+        <span className="deck-canvas__title">{event.title}</span>
+      </header>
+      <div className="deck-canvas__body">
+        <Markdown source={event.markdown} />
+      </div>
+    </div>
+  );
+}
+
 export function PreviewDeck({
   session,
   actions,
@@ -524,26 +561,41 @@ export function PreviewDeck({
   /** Resume / Continue browsing / Rerun, rendered under the cards. */
   actions?: React.ReactNode;
 }): React.ReactElement {
-  const { taskState, artifacts, shots } = useMemo(() => {
+  const { taskState, artifacts, shots, canvas } = useMemo(() => {
     let latestState: TaskState | null = null;
+    let latestCanvas: CanvasEvent | null = null;
     const cards: ArtifactEvent[] = [];
     const captures: ScreenshotEvent[] = [];
 
     for (const event of session.output) {
-      // task_state carries the entire ledger every time, so the last one wins
-      // outright — nothing to replay, and a dropped frame cannot desynchronise
-      // the plan view.
+      // task_state and canvas both carry their whole state every time, so
+      // the last one wins outright — nothing to replay, and a dropped frame
+      // cannot desynchronise the plan view or leave a stale document showing.
       if (event.type === 'task_state') latestState = event.state;
+      else if (event.type === 'canvas') latestCanvas = event;
       else if (event.type === 'artifact') cards.push(event);
       else if (event.type === 'screenshot') captures.push(event);
     }
 
     return {
       taskState: latestState,
+      canvas: latestCanvas,
       artifacts: cards.slice(-MAX_ARTIFACT_CARDS),
       shots: captures.slice(-MAX_SCREENSHOTS),
     };
   }, [session.output]);
+
+  // A canvas document takes the whole rect exclusively, the way a live page
+  // would — it does not compete for space with the plan/artifact/activity
+  // cards below it. If the agent wants those visible too, that information
+  // belongs in the document itself.
+  if (canvas) {
+    return (
+      <div className="deck deck--canvas">
+        <CanvasDocument event={canvas} />
+      </div>
+    );
+  }
 
   const hasPlan = taskState != null && taskState.steps.length > 0;
   const hasResults = hasPlan || artifacts.length > 0 || shots.length > 0;

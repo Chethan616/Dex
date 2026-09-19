@@ -1445,6 +1445,28 @@ app.whenReady().then(async () => {
         return { items, driveError: combined.drive && !combined.drive.ok ? combined.drive.error : undefined, indexStatus: status };
       },
 
+      // The `dex-canvas` CLI's only endpoint. One markdown document per
+      // session — the latest call replaces whatever was showing, the same
+      // "last write wins" rule task_state uses for the plan.
+      'POST /dex/canvas': async (raw) => {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new Error('request body must be JSON');
+        }
+        const body = (parsed ?? {}) as { sessionId?: unknown; title?: unknown; markdown?: unknown };
+        const id = assertString(body.sessionId, 'sessionId', 100);
+        const title = assertString(body.title, 'title', 200);
+        const markdown = assertString(body.markdown, 'markdown', 200_000);
+
+        const session = sessionManager.getSession(id);
+        if (session) {
+          sessionManager.appendOutput(id, { type: 'canvas', title, markdown, at: Date.now() });
+        }
+        return { ok: true };
+      },
+
       // The `dex-state` CLI's only endpoint. Everything it can do is one of
       // the verbs in TaskStateMutationSchema, so validation is a single parse
       // and the handler stays a pass-through to the session manager.

@@ -804,19 +804,20 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
   }, [session, paneOverride]);
 
   /**
-   * A dex-find result (or a screenshot) can land at any point in a task that
-   * has already navigated a page — e.g. "search my drive" opens Google
-   * Drive itself, so `primarySite` is set and the deck stays hidden behind
-   * it for the rest of the run. The card is real (dex-find always emits an
-   * `artifact` event — see main/index.ts's /dex/search route) and reachable
-   * via the Browse/Activity toggle, but a plain unlabeled button gives no
-   * hint that clicking it would reveal something new — which is exactly how
-   * a genuine result can look, from the outside, like it was never produced
-   * at all. This tracks whether a new one has arrived since the deck was
-   * last actually visible, so the toggle can say so.
+   * A dex-find result, a dex-canvas document, or a screenshot can land at
+   * any point in a task that has already navigated a page — e.g. "search my
+   * drive" opens Google Drive itself, so `primarySite` is set and the deck
+   * stays hidden behind it for the rest of the run. The card is real (each
+   * of these tools always emits its event — see main/index.ts's /dex/search
+   * and /dex/canvas routes) and reachable via the Browse/Activity toggle,
+   * but a plain unlabeled button gives no hint that clicking it would
+   * reveal something new — which is exactly how a genuine result can look,
+   * from the outside, like it was never produced at all. This tracks
+   * whether a new one has arrived since the deck was last actually visible,
+   * so the toggle can say so.
    */
   const artifactCount = useMemo(
-    () => session.output.filter((e) => e.type === 'artifact' || e.type === 'screenshot').length,
+    () => session.output.filter((e) => e.type === 'artifact' || e.type === 'screenshot' || e.type === 'canvas').length,
     [session.output],
   );
   const seenArtifactCountRef = useRef(0);

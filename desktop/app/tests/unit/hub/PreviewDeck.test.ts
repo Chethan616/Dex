@@ -11,7 +11,7 @@
  * that can be tested in isolation.
  */
 import { describe, expect, it } from 'vitest';
-import { deckHasContent, hasPendingConfirmation, getPendingConfirmations } from '../../../src/renderer/hub/PreviewDeck';
+import { deckHasContent, hasPendingConfirmation, getPendingConfirmations, getLatestCanvas } from '../../../src/renderer/hub/PreviewDeck';
 import type { AgentSession, HlEvent, TaskState } from '../../../src/renderer/hub/types';
 
 function session(output: HlEvent[], status: AgentSession['status'] = 'running'): AgentSession {
@@ -49,6 +49,12 @@ describe('deckHasContent', () => {
   it('is true once an artifact card exists', () => {
     expect(deckHasContent(session([
       { type: 'artifact', kind: 'files', title: 'Search results', items: [] },
+    ]))).toBe(true);
+  });
+
+  it('is true once a canvas document exists', () => {
+    expect(deckHasContent(session([
+      { type: 'canvas', title: 'Report', markdown: '# Report', at: 1 },
     ]))).toBe(true);
   });
 
@@ -120,5 +126,25 @@ describe('getPendingConfirmations', () => {
     const c1 = { type: 'confirmation' as const, id: 'c1', title: 'Set registry value', detail: 'a', status: 'pending' as const, at: 1 };
     const c2 = { type: 'confirmation' as const, id: 'c2', title: 'Delete registry key', detail: 'b', status: 'pending' as const, at: 2 };
     expect(getPendingConfirmations(session([c1, c2]))).toEqual([c1, c2]);
+  });
+});
+
+// A canvas document is a singleton, not a list — the latest dex-canvas
+// call is the whole story, matching task_state's "carries the whole ledger
+// every time" rule rather than artifact/screenshot's accumulate-and-cap one.
+describe('getLatestCanvas', () => {
+  it('is null when no canvas has ever been shown', () => {
+    expect(getLatestCanvas(session([{ type: 'tool_call', name: 'Bash', args: {}, iteration: 1 }]))).toBeNull();
+  });
+
+  it('returns the one canvas event', () => {
+    const doc = { type: 'canvas' as const, title: 'Q3 Summary', markdown: '# Q3 Summary', at: 1 };
+    expect(getLatestCanvas(session([doc]))).toEqual(doc);
+  });
+
+  it('returns the latest call when dex-canvas show was called more than once', () => {
+    const first = { type: 'canvas' as const, title: 'Draft', markdown: '# Draft', at: 1 };
+    const second = { type: 'canvas' as const, title: 'Final', markdown: '# Final', at: 2 };
+    expect(getLatestCanvas(session([first, second]))).toEqual(second);
   });
 });

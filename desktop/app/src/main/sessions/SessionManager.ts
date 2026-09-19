@@ -894,6 +894,8 @@ export class SessionManager extends EventEmitter {
         return { path: event.path, mode: event.mode, caption: event.caption ?? null };
       case 'confirmation':
         return { id: event.id, title: event.title, status: event.status };
+      case 'canvas':
+        return { title: event.title, markdownLength: event.markdown.length };
     }
   }
 

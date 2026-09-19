@@ -256,6 +256,11 @@ export function hlEventToTermBytes(event: HlEvent, state: TermTranslatorState): 
       return finish();
     }
 
+    case 'canvas': {
+      out.push(`${FG.cyan}▤ ${truncate(event.title, 90)}${RESET}\r\n`);
+      return finish();
+    }
+
     case 'screenshot':
       out.push(`${FG.grey}▢ screenshot${event.mode === 'uia' ? ' (annotated)' : ''}${event.caption ? ` — ${truncate(event.caption, 70)}` : ''}${RESET}\r\n`);
       return finish();
