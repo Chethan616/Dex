@@ -1,5 +1,41 @@
 # To be tested
 
+## 2026-09-19, latest — websearch, granular approval, persistent dex-sh (LiveBrowser scrapped)
+
+This is now **branch `feat/websearch-approval-shell`**, built fresh off
+`origin/main` at commit `e5e86018` (the pushed PR #5) — **not** a
+continuation of `feat/os-registry-tools`. That branch's LiveBrowser mode
+and Chrome-extension work is intentionally not here: you asked to scrap it
+entirely (it came out laggy and "AI slop" after a separate Codex session
+built it) and rebuild everything else on the clean pushed commit instead.
+`yarn qa` is green (lint, typecheck, 631 vitest tests).
+
+**Kept and reapplied from that branch, LiveBrowser/extensions excluded:**
+- **Legacy cleanup** — same as before: the old Flutter app and pre-rewrite
+  Node/Python backend are gone.
+- **dex-websearch** — a factual lookup with no browser tab. Still needs
+  `BRAVE_SEARCH_API_KEY` in the environment; no Settings UI for the key yet.
+- **Granular tool approval** — the policy engine (registry-write always
+  gated; process-launch/filesystem-write-unsafe-path/service-control gated
+  by mode) is unchanged, but its control surface is different now that
+  LiveBrowser is gone: a new **Settings → Agent approval** section with the
+  same three-way picker (Ask for approval / Approve for me / Full access)
+  as a *global default* for every session, instead of a per-session
+  LiveBrowser selector. Worth testing: change it in Settings, then confirm
+  a `dex-sh` command actually prompts under "Ask for approval" and stays
+  silent under "Full access" (today's unchanged default).
+- **dex-sh session mode** — `dex-sh session start/run/end`, a real
+  persistent shell that keeps `cd`/env state across calls. Same as before,
+  nothing LiveBrowser-specific about it.
+
+**Not here at all, by request:** LiveBrowser mode (the 4th toolbar icon),
+the AI assist sidebar, Annotate mode, and Chrome extension installation.
+If you want any part of that revisited later, it's still fully intact in
+git history on `feat/os-registry-tools` (never pushed) — nothing was lost,
+just set aside.
+
+---
+
 Written 2026-09-18, updated 2026-09-19 after your real-app test pass, and
 updated again 2026-09-19 when `feat/file-search` was merged into this
 branch. This is **branch `feat/os-registry-tools`** (off `v3/dex`), now
