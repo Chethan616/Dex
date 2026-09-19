@@ -5,19 +5,45 @@ text inside PDFs, Word/PowerPoint/Excel documents, and plain text/code — acros
 the user's own files. It answers in milliseconds because it is reading an
 index, not walking the disk live.
 
+**If the task is "find my X" — any X — call `dex-find` immediately. Do not
+ask the user where it might be, what format it's in, or when it was saved
+first.** Those questions are exactly what the index exists to make
+unnecessary — a manual folder walk needs that information to know where to
+look; an index that already covers the whole machine does not. Asking first
+turns a sub-second lookup into a multi-turn conversation and makes DEX slower
+than the user just looking themselves. Only ask a follow-up question after
+`dex-find` has actually run and its results are genuinely ambiguous (several
+plausible hits, or none at all) — never before.
+
+**Never hand-roll the search with `Get-ChildItem -Recurse`, `PowerShell`,
+`find`, or any other shell command instead.** That duplicates, badly, what
+the index already does — it only matches filenames, never a PDF's or
+document's own text, so it misses exactly the files `dex-find` is built to
+catch (an ID card saved as `clg_id.pdf`, a syllabus that never mentions
+"syllabus" in its filename). A shell-driven scan finding fewer files than
+`dex-find` would have is not a sign the files don't exist; it's a sign the
+wrong tool was used.
+
 ## When to reach for it
 
-Prefer `dex-find` over `Bash`'s own `find`/`grep`, or over guessing a path,
-whenever the user describes a file by what it is rather than exactly where it
-lives — "my slp assignment", "the cryptography syllabus", "that report from
-last week". A filename search alone would miss all of these; `dex-find` also
-searches inside the documents themselves.
+Reach for `dex-find` whenever the user describes a file by what it is rather
+than exactly where it lives — "my slp assignment", "the cryptography
+syllabus", "that report from last week", "my aadhaar card". A filename search
+alone would miss all of these; `dex-find` also searches inside the documents
+themselves.
 
 ```bash
 dex-find "cryptography syllabus"
 dex-find "slp da - 1"
 dex-find "quarterly report" --limit 5
 ```
+
+**A request naming several different documents is several calls, not one.**
+"Find my aadhaar card, voter ID, and passport photo" is three searches —
+`dex-find "aadhaar card"`, `dex-find "voter id"`, `dex-find "passport
+photo"` — not one call with all three terms mashed together. Ranking is
+built around finding the single best match for one topic; combining three
+unrelated topics into one query only dilutes that.
 
 Use plain `find`/`Bash` instead when you already know the exact path, or need
 something the index does not cover (a file created in the last few seconds
