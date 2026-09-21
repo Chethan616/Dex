@@ -53,10 +53,9 @@ interface Decision {
 const DEFAULT_MODE: SessionApprovalMode = 'full';
 
 // The Settings pane's global default — Grid view's own unchanged behavior
-// out of the box, and the only surface for this control now that the
-// per-session LiveBrowser selector this was originally paired with has
-// been scrapped. A session-specific override (setSessionMode) still wins
-// over it when one exists.
+// out of the box, and currently the only surface for this control. A
+// session-specific override (setSessionMode) still wins over it when one
+// exists, though nothing sets one today.
 let globalDefaultMode: SessionApprovalMode = DEFAULT_MODE;
 
 const sessionModes = new Map<string, SessionApprovalMode>();

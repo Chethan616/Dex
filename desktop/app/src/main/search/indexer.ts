@@ -15,8 +15,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { extractContent } from './extract';
-import { nextPendingBatch, openIndexDb, removeFileByPath, setContent, upsertFileMeta, indexStats } from './db';
+import { nextPendingBatch, openIndexDb, removeFileByPath, setContent, upsertFileMeta, indexStats, runInTransaction } from './db';
 import { scanRoots, isPathSkipped } from './scan';
+import type { FileRecord } from './db';
 import { mainLogger } from '../logger';
 
 const BACKFILL_BATCH_SIZE = 8;
@@ -76,14 +77,34 @@ function detectRoots(): string[] {
   });
 }
 
+const SCAN_FLUSH_BATCH = 400;
+
 async function runScanPhase(roots: string[]): Promise<void> {
   scanning = true;
   scannedFiles = 0;
+  // better-sqlite3 is synchronous and runs on the main process thread — the
+  // same thread serving every IPC call the UI makes. Writing each scanned
+  // file individually meant one implicit transaction (and commit) per file,
+  // hundreds of thousands of times, which is what made unrelated UI actions
+  // stall for seconds while an index build was running. Buffering and
+  // flushing in one transaction per batch turns that into a few hundred
+  // commits instead of a few hundred thousand.
+  let buffer: FileRecord[] = [];
+  const flush = (): void => {
+    if (buffer.length === 0) return;
+    const batch = buffer;
+    buffer = [];
+    runInTransaction(() => {
+      for (const record of batch) upsertFileMeta(record);
+    });
+  };
+
   try {
     const { scanned, stopped } = await scanRoots({
       roots,
       onFile: (record) => {
-        upsertFileMeta(record);
+        buffer.push(record);
+        if (buffer.length >= SCAN_FLUSH_BATCH) flush();
         scannedFiles += 1;
         if (stopRequested) return false;
       },
@@ -93,8 +114,10 @@ async function runScanPhase(roots: string[]): Promise<void> {
         }
       },
     });
+    flush();
     mainLogger.info('search.index.scanDone', { scanned, stopped, roots });
   } catch (err) {
+    flush();
     mainLogger.warn('search.index.scanFailed', { error: (err as Error).message });
   } finally {
     scanning = false;

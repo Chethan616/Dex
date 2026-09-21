@@ -101,9 +101,13 @@ export async function scanRoots(opts: ScanOptions): Promise<{ scanned: number; s
         mtime: Math.floor(stat.mtimeMs),
       };
       scanned += 1;
-      // Yield periodically so a huge directory (System32) never starves the
-      // event loop the process also needs for the loopback control server.
-      if (scanned % 500 === 0) await new Promise((resolve) => setImmediate(resolve));
+      // Yield often so a huge directory never starves the event loop this
+      // process also needs for IPC (the UI) and the loopback control server.
+      // setImmediate only yields to the *macrotask* queue — it does not let
+      // pending I/O or IPC callbacks that arrived mid-tick run promptly at a
+      // coarse interval, so this is deliberately frequent: a stall the user
+      // can feel is far worse than a slightly longer index build.
+      if (scanned % 64 === 0) await new Promise((resolve) => setImmediate(resolve));
       if (onFile(record) === false) {
         stopped = true;
         return;

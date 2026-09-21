@@ -40,6 +40,7 @@ let db: Database.Database | null = null;
 
 export function openIndexDb(userDataPath: string): Database.Database {
   if (db) return db;
+  stmtCache.clear();
   fs.mkdirSync(userDataPath, { recursive: true });
   const dbPath = path.join(userDataPath, 'dex-index.sqlite3');
   db = new Database(dbPath);
@@ -68,6 +69,7 @@ export function openIndexDb(userDataPath: string): Database.Database {
 }
 
 export function closeIndexDb(): void {
+  stmtCache.clear();
   db?.close();
   db = null;
 }
@@ -75,6 +77,43 @@ export function closeIndexDb(): void {
 function requireDb(): Database.Database {
   if (!db) throw new Error('search index database not opened yet');
   return db;
+}
+
+/**
+ * Prepared-statement cache.
+ *
+ * better-sqlite3 is fully synchronous and runs on whichever thread calls it —
+ * here, the main process thread that also serves every IPC call the UI makes.
+ * Every function below used to call `stmt(sql)` inline, which
+ * re-parses and re-compiles the SQL *on every invocation*. During a scan
+ * that is 2-4 compilations per file across hundreds of thousands of files,
+ * all of it blocking the event loop, which is what made unrelated UI actions
+ * queue up behind indexing. Compiling each distinct statement once and
+ * reusing it is what prepared statements are for.
+ *
+ * Keyed by the SQL text itself so callers stay readable; cleared whenever the
+ * database handle goes away, since a Statement is bound to its Database.
+ */
+const stmtCache = new Map<string, Database.Statement>();
+
+function stmt(sql: string): Database.Statement {
+  const cached = stmtCache.get(sql);
+  if (cached) return cached;
+  const prepared = requireDb().prepare(sql);
+  stmtCache.set(sql, prepared);
+  return prepared;
+}
+
+/**
+ * Run `fn` inside a single SQLite transaction.
+ *
+ * Without this every insert commits on its own, so a bulk scan pays full
+ * per-row commit overhead hundreds of thousands of times. Batching is the
+ * difference between an index build that saturates the main thread and one
+ * that stays out of the way.
+ */
+export function runInTransaction<T>(fn: () => T): T {
+  return requireDb().transaction(fn)();
 }
 
 /**
@@ -86,52 +125,47 @@ function requireDb(): Database.Database {
  * routine rescan does not throw away completed content indexing.
  */
 export function upsertFileMeta(record: FileRecord): number {
-  const database = requireDb();
-  const existing = database.prepare('SELECT id, mtime, content_state FROM files WHERE path = ?').get(record.path) as
+  requireDb();
+  const existing = stmt('SELECT id, mtime, content_state FROM files WHERE path = ?').get(record.path) as
     | Pick<FileRow, 'id' | 'mtime' | 'content_state'>
     | undefined;
 
   if (existing) {
     const changed = existing.mtime !== record.mtime;
     const nextState: ContentState = changed ? 'pending' : existing.content_state;
-    database
-      .prepare('UPDATE files SET name = ?, ext = ?, dir = ?, size = ?, mtime = ?, content_state = ? WHERE id = ?')
+    stmt('UPDATE files SET name = ?, ext = ?, dir = ?, size = ?, mtime = ?, content_state = ? WHERE id = ?')
       .run(record.name, record.ext, record.dir, record.size, record.mtime, nextState, existing.id);
-    database.prepare('UPDATE files_fts SET name = ? WHERE rowid = ?').run(record.name, existing.id);
-    if (changed) database.prepare("UPDATE files_fts SET content = '' WHERE rowid = ?").run(existing.id);
+    stmt('UPDATE files_fts SET name = ? WHERE rowid = ?').run(record.name, existing.id);
+    if (changed) stmt("UPDATE files_fts SET content = '' WHERE rowid = ?").run(existing.id);
     return existing.id;
   }
 
-  const info = database
-    .prepare('INSERT INTO files (path, name, ext, dir, size, mtime) VALUES (?, ?, ?, ?, ?, ?)')
+  const info = stmt('INSERT INTO files (path, name, ext, dir, size, mtime) VALUES (?, ?, ?, ?, ?, ?)')
     .run(record.path, record.name, record.ext, record.dir, record.size, record.mtime);
   const id = Number(info.lastInsertRowid);
-  database
-    .prepare("INSERT INTO files_fts (rowid, name, path, content) VALUES (?, ?, ?, '')")
+  stmt("INSERT INTO files_fts (rowid, name, path, content) VALUES (?, ?, ?, '')")
     .run(id, record.name, record.path);
   return id;
 }
 
 /** Drop a file that no longer exists (seen by the watcher, or a rescan that finds it gone). */
 export function removeFileByPath(filePath: string): void {
-  const database = requireDb();
-  const row = database.prepare('SELECT id FROM files WHERE path = ?').get(filePath) as { id: number } | undefined;
+  requireDb();
+  const row = stmt('SELECT id FROM files WHERE path = ?').get(filePath) as { id: number } | undefined;
   if (!row) return;
-  database.prepare('DELETE FROM files WHERE id = ?').run(row.id);
-  database.prepare('DELETE FROM files_fts WHERE rowid = ?').run(row.id);
+  stmt('DELETE FROM files WHERE id = ?').run(row.id);
+  stmt('DELETE FROM files_fts WHERE rowid = ?').run(row.id);
 }
 
 /** The next batch of files whose content has not been extracted yet, most recently modified first. */
 export function nextPendingBatch(limit: number): Array<Pick<FileRow, 'id' | 'path' | 'ext' | 'size'>> {
-  return requireDb()
-    .prepare("SELECT id, path, ext, size FROM files WHERE content_state = 'pending' ORDER BY mtime DESC LIMIT ?")
+  return stmt("SELECT id, path, ext, size FROM files WHERE content_state = 'pending' ORDER BY mtime DESC LIMIT ?")
     .all(limit) as Array<Pick<FileRow, 'id' | 'path' | 'ext' | 'size'>>;
 }
 
 export function setContent(id: number, content: string, state: ContentState): void {
-  const database = requireDb();
-  database.prepare('UPDATE files SET content_state = ? WHERE id = ?').run(state, id);
-  if (content) database.prepare('UPDATE files_fts SET content = ? WHERE rowid = ?').run(content, id);
+  stmt('UPDATE files SET content_state = ? WHERE id = ?').run(state, id);
+  if (content) stmt('UPDATE files_fts SET content = ? WHERE rowid = ?').run(content, id);
 }
 
 export interface CandidateRow {
@@ -149,12 +183,11 @@ export interface CandidateRow {
  */
 export function ftsCandidates(matchTerms: string[], cap: number): CandidateRow[] {
   if (matchTerms.length === 0) return [];
-  const database = requireDb();
+  requireDb();
   // FTS5 query syntax: quote each term so punctuation (the "-1" in "slp da - 1")
   // can never be parsed as a MATCH operator.
   const expr = matchTerms.map((term) => `"${term.replace(/"/g, '""')}"`).join(' OR ');
-  return database
-    .prepare(
+  return stmt(
       `SELECT f.path AS path, f.name AS name, fts.content AS content, f.size AS size, f.mtime AS mtime
        FROM files_fts fts JOIN files f ON f.id = fts.rowid
        WHERE files_fts MATCH ?
@@ -164,9 +197,9 @@ export function ftsCandidates(matchTerms: string[], cap: number): CandidateRow[]
 }
 
 export function indexStats(): { total: number; indexed: number; pending: number } {
-  const database = requireDb();
-  const total = (database.prepare('SELECT COUNT(*) c FROM files').get() as { c: number }).c;
-  const indexed = (database.prepare("SELECT COUNT(*) c FROM files WHERE content_state = 'indexed'").get() as { c: number }).c;
-  const pending = (database.prepare("SELECT COUNT(*) c FROM files WHERE content_state = 'pending'").get() as { c: number }).c;
+  requireDb();
+  const total = (stmt('SELECT COUNT(*) c FROM files').get() as { c: number }).c;
+  const indexed = (stmt("SELECT COUNT(*) c FROM files WHERE content_state = 'indexed'").get() as { c: number }).c;
+  const pending = (stmt("SELECT COUNT(*) c FROM files WHERE content_state = 'pending'").get() as { c: number }).c;
   return { total, indexed, pending };
 }
