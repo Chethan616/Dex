@@ -76,7 +76,10 @@ describe('extractContent', () => {
     const result = await extractContent(file, 'pdf', fs.statSync(file).size);
     expect(result.state).toBe('indexed');
     expect(result.content).toContain('Cryptography basics');
-  });
+    // pdfjs takes ~900ms to initialise on its own and can exceed the 5s
+    // default when the suite runs files in parallel — a real flake, not a
+    // slow assertion.
+  }, 20_000);
 
   it('marks a corrupt PDF as errored, not throwing', async () => {
     const file = tempFile('broken.pdf', '%PDF-1.4\nnot actually a pdf');

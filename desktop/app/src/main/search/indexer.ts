@@ -17,7 +17,7 @@ import path from 'node:path';
 import { extractContent } from './extract';
 import { nextPendingBatch, openIndexDb, removeFileByPath, setContent, upsertFileMeta, indexStats, runInTransaction } from './db';
 import { scanRoots, isPathSkipped } from './scan';
-import type { FileRecord } from './db';
+import type { FileRecord, ContentState } from './db';
 import { mainLogger } from '../logger';
 
 const BACKFILL_BATCH_SIZE = 8;
@@ -44,26 +44,42 @@ let watchers: fs.FSWatcher[] = [];
  * Document-bearing roots that actually exist on this machine, or an explicit
  * override.
  *
- * This used to default to the whole of `C:\` and `D:\` — the plan's original
- * "index everywhere" scope. In practice that meant a full recursive
- * `fs.watch` sitting on both entire drives for the app's whole lifetime, plus
- * an initial walk touching every file under Windows, Program Files, and
- * every project's `node_modules` on the machine — real, sustained CPU and
- * disk I/O contention severe enough to make the whole app (including
- * completely unrelated UI, like a button's hover state) feel unresponsive
- * for as long as it ran. The user's own documents were always going to be
- * under their home directory anyway, so scanning and watching the *whole*
- * of C:\ bought nothing search-relevant for a very large, ongoing cost.
+ * Scope has been narrowed twice, each time for a measured reason. It started
+ * as all of `C:\` and `D:\`, which meant walking Windows/Program Files and
+ * every node_modules on the box. Narrowing that to the home directory helped
+ * but was still far too broad: a real run produced a **3.4 GB** FTS5 index
+ * and a content backfill that never finished, so the main process — the one
+ * thread serving every IPC call the UI makes — was permanently busy writing
+ * into a multi-gigabyte database. That is what made the app feel unusable,
+ * and no amount of renderer-side optimisation could have fixed it.
  *
- * `DEX_INDEX_ROOTS` (comma-separated) still exists to go back to a full
- * drive, or to scope even narrower (just Desktop and Documents) — no code
- * change needed either way.
+ * A home directory is mostly not documents: caches, toolchains, game data,
+ * SDKs, repo checkouts. The files `dex-find` actually exists to find — a
+ * resume, an ID scan, a syllabus, an assignment PDF — live in the handful of
+ * well-known document folders below. Indexing those keeps the feature fully
+ * working at a tiny fraction of the cost.
+ *
+ * `DEX_INDEX_ROOTS` (comma-separated) still overrides this completely — set
+ * it to `C:\,D:\` to go back to indexing whole drives, or to a single
+ * folder to go narrower.
  */
-function detectRoots(): string[] {
+export function detectRoots(): string[] {
   const override = process.env.DEX_INDEX_ROOTS;
   if (override) return override.split(',').map((root) => root.trim()).filter(Boolean);
 
-  const candidates = [os.homedir(), 'D:\\'];
+  const home = os.homedir();
+  // Both the plain and OneDrive-redirected variants: on a machine with
+  // Known Folder Move enabled the real Desktop/Documents live under
+  // OneDrive, and the plain paths are empty stubs (or absent).
+  const candidates = [
+    path.join(home, 'Desktop'),
+    path.join(home, 'Documents'),
+    path.join(home, 'Downloads'),
+    path.join(home, 'OneDrive', 'Desktop'),
+    path.join(home, 'OneDrive', 'Documents'),
+    path.join(home, 'OneDrive', 'Downloads'),
+  ];
+
   const seen = new Set<string>();
   return candidates.filter((root) => {
     const key = root.toLowerCase();
@@ -134,10 +150,19 @@ async function runBackfillLoop(): Promise<void> {
       continue;
     }
 
+    // Extract outside the transaction (it does file I/O and can be slow),
+    // then commit the whole batch at once — the backfill had the same
+    // one-commit-per-row cost the scan phase did.
+    const extracted: Array<{ id: number; content: string; state: ContentState }> = [];
     for (const file of batch) {
       if (stopRequested) break;
       const { content, state } = await extractContent(file.path, file.ext, file.size);
-      setContent(file.id, content, state);
+      extracted.push({ id: file.id, content, state });
+    }
+    if (extracted.length > 0) {
+      runInTransaction(() => {
+        for (const e of extracted) setContent(e.id, e.content, e.state);
+      });
     }
 
     await new Promise((resolve) => setTimeout(resolve, BACKFILL_BATCH_DELAY_MS));

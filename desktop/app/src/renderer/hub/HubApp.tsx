@@ -158,17 +158,17 @@ export function HubApp(): React.ReactElement {
     });
   }, []);
 
-  const [viewMode, setViewModeRaw] = useState<ViewMode>(() => {
-    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('hub-view-mode') : null;
-    if (saved === 'dashboard' || saved === 'grid') return saved;
-    return 'dashboard';
-  });
+  // Always open on the Dashboard (Home), regardless of which view was left
+  // showing last session. Restoring the previous view meant launching
+  // straight into Grid — a screen that immediately mounts every session's
+  // pane and its browser-view plumbing — when what someone opening the app
+  // actually wants first is the home screen. Switching to Grid is one
+  // click; being dropped into it on every launch is not recoverable the
+  // same way.
+  const [viewMode, setViewModeRaw] = useState<ViewMode>('dashboard');
   const setViewMode = useCallback((mode: ViewMode) => {
     setViewModeRaw(mode);
     window.electronAPI?.sessions?.viewsSetVisible?.(mode !== 'settings')?.catch(() => {});
-    if (mode === 'dashboard' || mode === 'grid') {
-      try { window.localStorage.setItem('hub-view-mode', mode); } catch { /* ignore */ }
-    }
   }, []);
   const openPill = useCallback(() => { window.electronAPI?.pill.toggle(); }, []);
   const [helpOpen, setHelpOpen] = useState(false);

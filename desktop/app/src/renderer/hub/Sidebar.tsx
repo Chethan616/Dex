@@ -138,7 +138,7 @@ function MoreIcon(): React.ReactElement {
   );
 }
 
-function SessionRow({
+function SessionRowImpl({
   s,
   selected,
   onSelect,
@@ -251,13 +251,46 @@ function SessionRow({
 
 type TabBucket = 'active' | 'waiting' | 'done';
 
+/**
+ * Sidebar rows re-rendered on every session event because HubApp rebuilds
+ * the `sessions` array (and these callback props) by reference each time —
+ * so a single unrelated session emitting output re-rendered every row.
+ * Five rows is cheap, but this list is meant to scale, and the fix is the
+ * same one AgentPane uses: compare the session by the fields the row
+ * actually shows, and ignore callback identity, since each callback takes
+ * the session id as a call-time argument rather than closing over per-row
+ * state.
+ */
+function sameRowSession(a: SidebarSession, b: SidebarSession): boolean {
+  if (a === b) return true;
+  return (
+    a.id === b.id &&
+    a.status === b.status &&
+    a.prompt === b.prompt &&
+    a.primarySite === b.primarySite &&
+    a.lastActivityAt === b.lastActivityAt &&
+    a.engine === b.engine &&
+    a.error === b.error
+  );
+}
+
+const SessionRow = React.memo(SessionRowImpl, (prev, next) =>
+  prev.selected === next.selected
+  && prev.pinned === next.pinned
+  && sameRowSession(prev.s, next.s),
+);
+
+const TabChip = React.memo(TabChipImpl, (prev, next) =>
+  prev.selected === next.selected && sameRowSession(prev.s, next.s),
+);
+
 function bucketFor(status: SessionStatus): TabBucket {
   if (status === 'running' || status === 'stuck') return 'active';
   if (status === 'idle' || status === 'draft') return 'waiting';
   return 'done';
 }
 
-function TabChip({
+function TabChipImpl({
   s,
   selected,
   onSelect,

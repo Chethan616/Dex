@@ -17,7 +17,13 @@ const require = createRequire(import.meta.url);
 
 const MAX_TEXT_BYTES = 5 * 1024 * 1024; // direct-read text/code files
 const MAX_DOC_BYTES = 30 * 1024 * 1024; // pdf / office documents
-const MAX_EXTRACTED_CHARS = 200_000; // per-file cap on what actually gets indexed
+// Per-file cap on what actually gets indexed. 200k chars/file was the
+// original value and is far more than search relevance needs — it mostly
+// bloats the FTS5 index (a real run reached 3.4 GB, which is what made the
+// main thread's synchronous writes into it a UI problem). 40k is still
+// several thousand words per document: plenty to match on, a fraction of
+// the storage and write cost.
+const MAX_EXTRACTED_CHARS = 40_000;
 
 const TEXT_EXTENSIONS = new Set([
   'txt', 'md', 'markdown', 'json', 'csv', 'log', 'ts', 'tsx', 'js', 'jsx',
