@@ -122,7 +122,6 @@
     "keytar": "^7.9.0",
     "node-cache": "^5.1.2",
     "node-pty": "^1.1.0",
-    "pdfjs-dist": "^4.9.155",
     "qrcode": "^1.5.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

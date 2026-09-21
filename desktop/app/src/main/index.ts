@@ -103,7 +103,6 @@ import { TaskStateMutationSchema } from '../shared/session-schemas';
 // Agent loop: CLI subprocess driving the browser harness. Engine is
 // pluggable (claude-code, codex, …) — see src/main/hl/engines/.
 import { bootstrapHarness, harnessDir } from './hl/harness';
-import { startIndexing } from './search/indexer';
 import { runEngine, DEFAULT_ENGINE_ID } from './hl/engines';
 import type { EngineRunControl } from './hl/engines/types';
 import { getEngine, setEngine, type EngineId } from './hl/engine';
@@ -301,25 +300,11 @@ try {
     hint: 'The agent may be missing tools. Usually another DEX instance is holding files open.',
   });
 }
-// Background file index for `dex-find` — a slow metadata scan followed by an
-// even slower, throttled content backfill, both non-blocking. See
-// src/main/search/indexer.ts for the two-phase design and why it never holds
-// up app startup even on a cold index.
-//
-// Delayed rather than started immediately at module load: even a throttled,
-// yielding scan still competes for the same I/O and event-loop attention the
-// very first window paint/interaction needs, and "start scanning two
-// directory trees" at the exact moment the shell/onboarding window is also
-// trying to boot is the worst possible time for it to begin. Nothing here
-// is time-critical — filename search being usable a few seconds later than
-// technically possible is a fair trade for not fighting first paint for it.
-setTimeout(() => {
-  try {
-    startIndexing(app.getPath('userData'));
-  } catch (err) {
-    mainLogger.error('main.startIndexing.failed', { error: (err as Error).message });
-  }
-}, 5000);
+// There is no background file index any more. `dex-find` queries the
+// Windows Search index on demand instead (see src/main/search/winSearch.ts):
+// DEX's own SQLite FTS5 index reached 3.4 GB in real use and, being
+// synchronous and main-process-bound, its writes competed with every IPC
+// call the UI makes. Nothing indexing-related runs at startup now.
 /**
  * The environment report, refreshed at startup and on demand from Settings.
  *
@@ -329,6 +314,25 @@ setTimeout(() => {
  * agent that mysteriously does less than it should.
  */
 let preflightReport: PreflightReport | null = null;
+
+// One-time reclaim: existing installs still have the old index on disk
+// (3.4 GB on the machine this was found on). Nothing reads it any more, so
+// remove it rather than leaving it orphaned. Best-effort and never fatal —
+// a locked file just means it gets cleared on some later launch.
+setTimeout(() => {
+  const userData = app.getPath('userData');
+  for (const name of ['dex-index.sqlite3', 'dex-index.sqlite3-wal', 'dex-index.sqlite3-shm']) {
+    const target = path.join(userData, name);
+    try {
+      if (fs.existsSync(target)) {
+        fs.rmSync(target, { force: true });
+        mainLogger.info('search.legacyIndex.removed', { target });
+      }
+    } catch (err) {
+      mainLogger.warn('search.legacyIndex.removeFailed', { target, error: (err as Error).message });
+    }
+  }
+}, 10_000);
 
 /**
  * Last handshake result per connection, from the startup check or an explicit
@@ -1501,7 +1505,6 @@ app.whenReady().then(async () => {
 
         const { searchCombined } = await import('./search/query');
         const { searchDrive } = await import('./search/drive');
-        const { getIndexStatus } = await import('./search/indexer');
 
         const combined = await searchCombined(query, limit, wantDrive, searchDrive);
 
@@ -1512,9 +1515,8 @@ app.whenReady().then(async () => {
           ...(combined.drive?.items ?? []).map((item) => ({ label: item.label, reasons: item.reasons })),
         ];
 
-        const status = getIndexStatus();
         const noteParts: string[] = [];
-        if (status.pending > 0) noteParts.push(`index still building (${status.indexed}/${status.total} files have their contents indexed)`);
+        if (combined.localNote) noteParts.push(combined.localNote);
         if (wantDrive && combined.drive && !combined.drive.ok) noteParts.push(`Drive: ${combined.drive.error}`);
 
         const session = sessionManager.getSession(id);
@@ -1528,7 +1530,7 @@ app.whenReady().then(async () => {
           });
         }
 
-        return { items, driveError: combined.drive && !combined.drive.ok ? combined.drive.error : undefined, indexStatus: status };
+        return { items, driveError: combined.drive && !combined.drive.ok ? combined.drive.error : undefined, note: combined.localNote };
       },
 
       // dex-websearch's only endpoint. A plain factual lookup ("current

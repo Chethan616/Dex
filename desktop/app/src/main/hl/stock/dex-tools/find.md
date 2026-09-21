@@ -1,6 +1,7 @@
 # Skill: finding a file by name or by what it's about
 
-`dex-find` searches an index this machine already built — file names AND the
+`dex-find` searches the index Windows itself already maintains — file names
+AND the
 text inside PDFs, Word/PowerPoint/Excel documents, and plain text/code — across
 the user's own files. It answers in milliseconds because it is reading an
 index, not walking the disk live.
@@ -60,7 +61,7 @@ JSON on stdout:
       "reasons": ["\"cryptography\" in contents", "\"syllabus\" in filename"],
       "excerpt": "...Course: Cryptography and Network Security...", "bytes": 219044, "modified": 1732000000000 }
   ],
-  "indexStatus": { "running": true, "scanning": false, "total": 84213, "indexed": 61042, "pending": 0 }
+  "note": "optional — present only when the search fell back or was degraded"
 }
 ```
 
@@ -68,10 +69,13 @@ JSON on stdout:
 - `reasons` says *why* each result matched; when the user's own wording (an
   acronym, a course name) doesn't literally appear anywhere, this is how you
   can tell the match is still a good one rather than a coincidence.
-- `indexStatus.pending > 0` means the content backfill is still running in the
-  background — filenames are always current, but a very recently added file's
-  contents might not be searchable yet. If a result you expected is missing
-  and `pending` is high, say so rather than concluding the file doesn't exist.
+- `note`, when present, says the search was degraded — most often that
+  Windows Search returned nothing and DEX fell back to matching **filenames
+  only**, because the user's document folders aren't in Windows' indexed
+  scope. In that state a file whose *contents* match but whose name doesn't
+  genuinely cannot be found, so relay the note rather than reporting a
+  confident "no such file" — the fix is one visit to Windows' "Searching
+  Windows" settings, and saying so is more useful than a bare empty result.
 
 An empty `items` array with no error means nothing in the index matches — say
 that plainly rather than guessing a path instead.
