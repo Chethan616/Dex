@@ -1326,17 +1326,10 @@ button:focus:not(:focus-visible) {
   color: var(--color-fg-tertiary);
 }
 
+/* ThinkingOrb renders its own canvas animation — this class is layout only. */
 .pane__spinner {
-  width: 14px;
-  height: 14px;
-  border: 1.5px solid var(--color-border-subtle);
-  border-top-color: var(--color-fg-tertiary);
-  border-radius: var(--radius-full);
-  animation: spin 0.9s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
+  flex-shrink: 0;
+  display: inline-flex;
 }
 
 .pane__cursor-row {
@@ -1369,6 +1362,18 @@ button:focus:not(:focus-visible) {
 
 .step--thinking {
   padding: 0 var(--space-3);
+}
+
+.step__thinking-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.step__thinking-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-tertiary);
 }
 
 .step--thinking .step__text {
@@ -1476,14 +1481,10 @@ button:focus:not(:focus-visible) {
   flex-shrink: 0;
 }
 
+/* ThinkingOrb renders its own canvas animation — this class is layout only. */
 .step__spinner {
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid var(--color-border-subtle);
-  border-top-color: var(--color-fg-secondary);
-  border-radius: var(--radius-full);
-  animation: spin 0.9s linear infinite;
   flex-shrink: 0;
+  display: inline-flex;
 }
 
 .step__detail {
@@ -2661,6 +2662,28 @@ button:focus:not(:focus-visible) {
   background-color: var(--color-bg-elevated);
 }
 
+.task-input__mic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  color: var(--color-fg-secondary);
+  background: transparent;
+  transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+
+.task-input__mic:hover {
+  color: var(--color-fg-primary);
+  background-color: var(--color-bg-elevated);
+}
+
+.task-input__mic--active {
+  color: var(--color-status-error, #e5484d);
+  background-color: color-mix(in srgb, var(--color-status-error, #e5484d) 14%, transparent);
+}
+
 /* The contentEditable field used wherever an @mention can render as a real
    inline chip — see MentionTextField.tsx. Same box model as
    .task-input__textarea; contentEditable has no ::placeholder, so the empty
@@ -2712,7 +2735,7 @@ button:focus:not(:focus-visible) {
   justify-content: center;
   width: 30px;
   height: 30px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   background-color: var(--color-fg-primary);
   color: var(--color-bg-sunken);
   box-shadow:

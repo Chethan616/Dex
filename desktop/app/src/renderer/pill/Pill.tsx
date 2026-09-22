@@ -1,4 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { BorderBeam } from 'border-beam';
+import { MetalFx, useMetalBend } from 'metal-fx';
+import { VoiceBeam, useMicrophone } from 'voice-glow';
+import { Liquid } from 'liquid-gooey';
 import {
   maxBytesForAttachmentMime,
   MAX_ATTACHMENTS_PER_MESSAGE,
@@ -182,6 +186,15 @@ function ArrowUpIcon(): React.ReactElement {
   );
 }
 
+function MicIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="5" y="1.5" width="4" height="7" rx="2" stroke="currentColor" strokeWidth="1.25" />
+      <path d="M3 7a4 4 0 0 0 8 0M7 11v2" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function GearIcon(): React.ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
@@ -255,6 +268,12 @@ export function Pill(): React.ReactElement {
   const checkedDomainsRef = useRef<Set<string>>(new Set());
   const ref = useRef<MentionTextFieldHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Cursor-driven liquid dent on the send button, and a neighbour surface
+  // for it to cast a faint reflection onto — same pairing as the library's
+  // own composer demo (sites/home/src/examples/metal-examples-v2.tsx).
+  const sendMetalRef = useRef<HTMLDivElement>(null);
+  const searchActionsRef = useRef<HTMLDivElement>(null);
+  useMetalBend(sendMetalRef);
   // Caret position, tracked separately from `value` — an @mention can start
   // anywhere in the text, unlike a slash command which only ever opens it.
   const [caret, setCaret] = useState(0);
@@ -262,6 +281,18 @@ export function Pill(): React.ReactElement {
   // that must resize with it, which is why Pill needs this reported back
   // rather than just letting the field manage its own height in isolation.
   const [fieldHeight, setFieldHeight] = useState(TEXTAREA_MIN_HEIGHT);
+  // Visual + capture only for now — see TaskInput's identical mic wiring;
+  // the captured stream is not sent anywhere for transcription yet.
+  const mic = useMicrophone();
+  const recording = mic.state === 'live';
+
+  const toggleMic = useCallback(() => {
+    if (recording) {
+      mic.stop();
+    } else {
+      void mic.start();
+    }
+  }, [recording, mic]);
 
   const platform = window.electronAPI?.shell?.platform ?? fallbackShortcutPlatform();
   const formatShortcut = useCallback((shortcut: string) => formatShortcutForPlatform(shortcut, platform), [platform]);
@@ -536,6 +567,8 @@ export function Pill(): React.ReactElement {
 
   return (
     <div className="cmdbar__scrim" onClick={() => window.pillAPI.hide()}>
+      <VoiceBeam type="default" theme="dark" borderRadius={16} active={recording} stream={mic.stream}>
+      <BorderBeam size="md" colorVariant="colorful" theme="dark" borderRadius={16} duration={7.84} active={!recording}>
       <div className="cmdbar" onClick={(e) => e.stopPropagation()}>
         <div className="cmdbar__drag-handle" />
 
@@ -583,7 +616,7 @@ export function Pill(): React.ReactElement {
             placeholder={command ? command.summary : 'Search sessions or create new agent...'}
             ariaLabel="Search or create"
           />
-          <div className="cmdbar__search-actions">
+          <div className="cmdbar__search-actions" ref={searchActionsRef}>
             <button
               type="button"
               className="cmdbar__attach has-tooltip"
@@ -592,6 +625,16 @@ export function Pill(): React.ReactElement {
               data-tooltip="Attach files"
             >
               <PaperclipIcon />
+            </button>
+            <button
+              type="button"
+              className={`cmdbar__mic has-tooltip${recording ? ' cmdbar__mic--active' : ''}`}
+              onClick={toggleMic}
+              aria-label={recording ? 'Stop voice input' : 'Start voice input'}
+              aria-pressed={recording}
+              data-tooltip={recording ? 'Stop voice input' : 'Voice input'}
+            >
+              <MicIcon />
             </button>
             <input
               ref={fileInputRef}
@@ -607,33 +650,49 @@ export function Pill(): React.ReactElement {
               <EnginePicker value={engine} onChange={handleEngineChange} />
               <ModelPicker engineId={engine} value={model} onChange={handleModelChange} />
             </div>
-            <button
-              className="cmdbar__send"
-              onClick={submit}
-              disabled={!value.trim() && attachments.length === 0}
-              aria-label="Submit"
-            >
-              <ArrowUpIcon />
-            </button>
+            <BorderBeam size="sm" colorVariant="colorful" theme="dark" borderRadius={15}>
+              <MetalFx
+                ref={sendMetalRef}
+                variant="circle"
+                preset="chromatic"
+                theme="dark"
+                innerShadow
+                strength={0.9}
+                reflectionTargets={[{ ref: searchActionsRef, strength: 0.4 }]}
+              >
+                <button
+                  className="cmdbar__send"
+                  onClick={submit}
+                  disabled={!value.trim() && attachments.length === 0}
+                  aria-label="Submit"
+                >
+                  <ArrowUpIcon />
+                </button>
+              </MetalFx>
+            </BorderBeam>
           </div>
         </div>
 
         {attachments.length > 0 && (
-          <div className="cmdbar__chips">
-            {attachments.map((a, i) => (
-              <span key={`${a.name}-${i}`} className="cmdbar__chip" title={`${a.mime} · ${formatBytes(a.bytes.byteLength)}`}>
-                <span className="cmdbar__chip-name">{a.name}</span>
-                <button
-                  type="button"
-                  className="cmdbar__chip-remove"
-                  onClick={() => removeAttachment(i)}
-                  aria-label={`Remove ${a.name}`}
-                >
-                  <PillCloseIcon />
-                </button>
-              </span>
-            ))}
-          </div>
+          <Liquid>
+            <div className="cmdbar__chips">
+              {attachments.map((a, i) => (
+                <Liquid.Item key={`${a.name}-${i}`} effect="morph" morph={{ shape: true }}>
+                  <span className="cmdbar__chip" title={`${a.mime} · ${formatBytes(a.bytes.byteLength)}`}>
+                    <span className="cmdbar__chip-name">{a.name}</span>
+                    <button
+                      type="button"
+                      className="cmdbar__chip-remove"
+                      onClick={() => removeAttachment(i)}
+                      aria-label={`Remove ${a.name}`}
+                    >
+                      <PillCloseIcon />
+                    </button>
+                  </span>
+                </Liquid.Item>
+              ))}
+            </div>
+          </Liquid>
         )}
 
         <CommandHints hints={slashHints} onPick={commitCommand} />
@@ -756,6 +815,8 @@ export function Pill(): React.ReactElement {
           </span>
         </div>
       </div>
+      </BorderBeam>
+      </VoiceBeam>
     </div>
   );
 }

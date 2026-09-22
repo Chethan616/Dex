@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
+import { ThinkingOrb, type OrbState } from 'thinking-orbs';
 import { STATUS_LABEL } from './constants';
 import { ContentRenderer, getPreview } from './ContentRenderer';
 import { Markdown, linkifyOutputPaths } from './Markdown';
@@ -146,6 +147,19 @@ function toolIcon(name?: string): React.ReactElement {
   return <ToolGenericIcon />;
 }
 
+// Same keyword classification as toolIcon(), same precedence — one tool
+// category, two renderings (a static glyph once it's done, a live orb while
+// it's running), so they must never disagree about what a tool "is".
+function toolOrbState(name?: string): OrbState {
+  if (!name) return 'working';
+  if (CODE_KEYWORDS.test(name)) return 'solving';
+  if (SCREENSHOT_KEYWORDS.test(name)) return 'searching';
+  if (NETWORK_KEYWORDS.test(name)) return 'connecting';
+  if (BROWSER_KEYWORDS.test(name)) return 'connecting';
+  if (FILE_KEYWORDS.test(name)) return 'shaping';
+  return 'working';
+}
+
 function ToolStep({ entry }: { entry: OutputEntry }): React.ReactElement {
   const [open, setOpen] = useState(false);
   const toggle = () => setOpen((o) => !o);
@@ -158,7 +172,9 @@ function ToolStep({ entry }: { entry: OutputEntry }): React.ReactElement {
       <div className="step__row" onClick={toggle} role="button" tabIndex={0} aria-expanded={open}>
         <span className="step__icon">{toolIcon(entry.tool)}</span>
         <span className="step__name">{entry.tool}</span>
-        {!hasResult && <span className="step__spinner" />}
+        {!hasResult && (
+          <ThinkingOrb size={20} theme="dark" state={toolOrbState(entry.tool)} className="step__spinner" />
+        )}
         <span className="step__fill" />
         {dur != null && <span className="step__dur">{formatDuration(dur)}</span>}
       </div>
@@ -330,6 +346,10 @@ function OutputRow({ entry }: { entry: OutputEntry }): React.ReactElement {
   if (entry.type === 'thinking') {
     return (
       <div className="step step--thinking">
+        <div className="step__thinking-header">
+          <ThinkingOrb size={20} theme="dark" state="composing" />
+          <span className="step__thinking-label">Thinking</span>
+        </div>
         <div className="step__text">
           <Markdown source={linkifyOutputPaths(entry.content)} />
         </div>
@@ -1365,7 +1385,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
               <span className="pane__browser-starting-row">
                 {isStarting ? (
                   <>
-                    <span className="pane__spinner" />
+                    <ThinkingOrb size={64} theme="dark" state="connecting" className="pane__spinner" />
                     <span>Browser starting…</span>
                   </>
                 ) : (

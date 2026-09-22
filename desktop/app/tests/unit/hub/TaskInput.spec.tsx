@@ -7,6 +7,23 @@ import { TaskInput } from '../../../src/renderer/hub/TaskInput';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// jsdom doesn't implement matchMedia. border-beam/voice-glow/metal-fx each
+// call it unconditionally on mount (to track the OS theme for `theme="auto"`,
+// even when a pinned theme is passed) — without this every render throws
+// "window.matchMedia is not a function".
+if (typeof window.matchMedia !== 'function') {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+}
+
 vi.mock('../../../src/renderer/hub/EnginePicker', () => ({
   EnginePicker: ({ value }: { value: string }): React.ReactElement => (
     <div data-testid="engine-picker">{value}</div>

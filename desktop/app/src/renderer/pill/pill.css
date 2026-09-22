@@ -178,6 +178,43 @@ html, body {
   transform: scale(0.94);
 }
 
+.cmdbar__mic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  line-height: 0;
+  color: var(--color-fg-secondary);
+  background: rgba(var(--highlight-rgb), 0.04);
+  border: 1px solid rgba(var(--highlight-rgb), 0.08);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    color 140ms cubic-bezier(0.32, 0.72, 0, 1),
+    background-color 140ms cubic-bezier(0.32, 0.72, 0, 1),
+    border-color 140ms cubic-bezier(0.32, 0.72, 0, 1),
+    transform 140ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.cmdbar__mic:hover {
+  color: var(--color-fg-primary);
+  background-color: rgba(var(--highlight-rgb), 0.08);
+  border-color: rgba(var(--highlight-rgb), 0.14);
+}
+
+.cmdbar__mic:active {
+  transform: scale(0.94);
+}
+
+.cmdbar__mic--active {
+  color: var(--color-status-error, #e5484d);
+  background-color: color-mix(in srgb, var(--color-status-error, #e5484d) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-status-error, #e5484d) 30%, transparent);
+}
+
 .cmdbar__send {
   display: inline-flex;
   align-items: center;

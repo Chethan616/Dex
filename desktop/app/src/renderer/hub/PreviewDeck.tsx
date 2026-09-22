@@ -13,7 +13,8 @@
  * it has got, the files that were found, the screenshots being taken. The
  * moment a page loads, the native view goes back on top and this disappears.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ImageGeneration, type ImageGenerationHandle } from 'img-fx';
 import { Markdown } from './Markdown';
 import type { AgentSession, ArtifactItem, HlEvent, TaskState, TaskStep } from './types';
 
@@ -298,6 +299,18 @@ function ScreenshotCard({ shots }: { shots: ScreenshotEvent[] }): React.ReactEle
   const [selected, setSelected] = useState<number | null>(null);
   const activeIndex = selected ?? shots.length - 1;
   const active = shots[activeIndex];
+  const imgFxRef = useRef<ImageGenerationHandle>(null);
+  const revealedPathRef = useRef<string | null>(null);
+  const activeUrl = `file://${active.path}`;
+
+  // Only the single large capture gets the img-fx shader — the thumbnail
+  // strip stays plain <img>s so a busy session never opens more than one
+  // WebGL context here at a time.
+  useEffect(() => {
+    if (revealedPathRef.current === active.path) return;
+    revealedPathRef.current = active.path;
+    imgFxRef.current?.triggerReveal({ hold: 'manual' });
+  }, [active.path]);
 
   return (
     <section className="deck-card deck-card--shots">
@@ -305,7 +318,14 @@ function ScreenshotCard({ shots }: { shots: ScreenshotEvent[] }): React.ReactEle
         <span className="deck-card__title">{active.mode === 'uia' ? 'Screen (annotated)' : 'Screen'}</span>
         {active.caption ? <span className="deck-card__count">{active.caption}</span> : null}
       </header>
-      <img className="deck-shot" src={`file://${active.path}`} alt={active.caption ?? 'screen capture'} />
+      <ImageGeneration
+        ref={imgFxRef}
+        preset="pixels-organic"
+        theme="dark"
+        images={activeUrl}
+      >
+        <img className="deck-shot" src={activeUrl} alt={active.caption ?? 'screen capture'} />
+      </ImageGeneration>
       {shots.length > 1 ? (
         <div className="deck-shot__strip">
           {shots.map((shot, index) => (

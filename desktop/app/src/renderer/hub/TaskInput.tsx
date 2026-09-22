@@ -5,6 +5,10 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { BorderBeam } from 'border-beam';
+import { MetalFx, useMetalBend } from 'metal-fx';
+import { VoiceBeam, useMicrophone } from 'voice-glow';
+import { Liquid } from 'liquid-gooey';
 import { INPUT_PLACEHOLDER } from './constants';
 import { EnginePicker } from './EnginePicker';
 import { DEFAULT_MODEL_ID, ModelPicker } from './ModelPicker';
@@ -116,6 +120,15 @@ function PaperclipIcon(): React.ReactElement {
   );
 }
 
+function MicIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="5" y="1.5" width="4" height="7" rx="2" stroke="currentColor" strokeWidth="1.25" />
+      <path d="M3 7a4 4 0 0 0 8 0M7 11v2" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function CloseIcon(): React.ReactElement {
   return (
     <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -142,10 +155,28 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
   const [model, setModel] = useState<string>(() => loadStoredModel(loadStoredEngine()));
   const fieldRef = useRef<MentionTextFieldHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Cursor-driven liquid dent on the send button, and a neighbour surface
+  // for it to cast a faint reflection onto — same pairing as the library's
+  // own composer demo (sites/home/src/examples/metal-examples-v2.tsx).
+  const sendMetalRef = useRef<HTMLDivElement>(null);
+  const actionsRowRef = useRef<HTMLDivElement>(null);
+  useMetalBend(sendMetalRef);
   // Caret position, tracked separately from `value` — an `@mention` can start
   // anywhere in the sentence, not just at the front like a slash command, so
   // knowing where the cursor sits is what tells us whether one is in progress.
   const [caret, setCaret] = useState(0);
+  // Visual + capture only for now — the captured stream is not sent anywhere
+  // for transcription yet, so recording never touches `value`.
+  const mic = useMicrophone();
+  const recording = mic.state === 'live';
+
+  const toggleMic = useCallback(() => {
+    if (recording) {
+      mic.stop();
+    } else {
+      void mic.start();
+    }
+  }, [recording, mic]);
 
   const addFiles = useCallback(async (files: FileList | File[]) => {
     setErrorMsg(null);
@@ -352,113 +383,143 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
 
   return (
     <div className="task-input">
-      <div
-        className={`task-input__box${focused ? ' task-input__box--focused' : ''}${dragActive ? ' task-input__box--drag' : ''}`}
-        onClick={focusTextareaOnBoxClick}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-      >
-        {attachments.length > 0 && (
-          <div className="task-input__chips">
-            {attachments.map((a, i) => (
-              <span key={`${a.name}-${i}`} className="task-input__chip" title={`${a.mime} · ${formatBytes(a.bytes.byteLength)}`}>
-                <span className="task-input__chip-name">{a.name}</span>
-                <span className="task-input__chip-size">{formatBytes(a.bytes.byteLength)}</span>
-                <button
-                  type="button"
-                  className="task-input__chip-remove"
-                  onClick={() => removeAttachment(i)}
-                  aria-label={`Remove ${a.name}`}
-                >
-                  <CloseIcon />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-        {errorMsg && <div className="task-input__error">{errorMsg}</div>}
-        {command && (
-          <div className="task-input__command">
-            <span className="task-input__command-chip">
-              <CommandIcon name={command.name} />
-              <span className="task-input__command-name">{commandLabel(command)}</span>
+      <VoiceBeam type="default" theme="dark" borderRadius={8} active={recording} stream={mic.stream}>
+        <BorderBeam size="md" colorVariant="colorful" theme="dark" borderRadius={8} duration={7.84} active={!recording}>
+          <div
+            className={`task-input__box${focused ? ' task-input__box--focused' : ''}${dragActive ? ' task-input__box--drag' : ''}`}
+            onClick={focusTextareaOnBoxClick}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+          >
+            {attachments.length > 0 && (
+              <Liquid>
+                <div className="task-input__chips">
+                  {attachments.map((a, i) => (
+                    <Liquid.Item key={`${a.name}-${i}`} effect="morph" morph={{ shape: true }}>
+                      <span className="task-input__chip" title={`${a.mime} · ${formatBytes(a.bytes.byteLength)}`}>
+                        <span className="task-input__chip-name">{a.name}</span>
+                        <span className="task-input__chip-size">{formatBytes(a.bytes.byteLength)}</span>
+                        <button
+                          type="button"
+                          className="task-input__chip-remove"
+                          onClick={() => removeAttachment(i)}
+                          aria-label={`Remove ${a.name}`}
+                        >
+                          <CloseIcon />
+                        </button>
+                      </span>
+                    </Liquid.Item>
+                  ))}
+                </div>
+              </Liquid>
+            )}
+            {errorMsg && <div className="task-input__error">{errorMsg}</div>}
+            {command && (
+              <div className="task-input__command">
+                <span className="task-input__command-chip">
+                  <CommandIcon name={command.name} />
+                  <span className="task-input__command-name">{commandLabel(command)}</span>
+                  <button
+                    type="button"
+                    className="task-input__command-remove"
+                    aria-label={`Remove ${commandLabel(command)} command`}
+                    onMouseDown={(e) => {
+                      // mousedown, not click: keep focus in the field. Removes
+                      // the chip cleanly — it never turns back into "/scrape" text.
+                      e.preventDefault();
+                      setCommand(null);
+                      fieldRef.current?.focus();
+                    }}
+                  >
+                    <CloseIcon />
+                  </button>
+                </span>
+              </div>
+            )}
+            {slashHints.length > 0 && (
+              <div className="task-input__slash">
+                {slashHints.map((command) => (
+                  <button
+                    type="button"
+                    key={command.name}
+                    className="task-input__slash-item"
+                    onMouseDown={(e) => { e.preventDefault(); commitCommand(command); }}
+                  >
+                    <span className="task-input__slash-usage">{command.usage}</span>
+                    <span className="task-input__slash-summary">{command.summary}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <MentionHints hints={mentionHints} onPick={pickMention} />
+            <MentionTextField
+              ref={fieldRef}
+              maxHeightPx={TASK_INPUT_MAX_HEIGHT_PX}
+              onChange={(next, nextCaret) => { handleChange(next); setCaret(nextCaret); }}
+              onKeyDown={onKeyDown}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              placeholder={command ? `${command.summary}` : INPUT_PLACEHOLDER}
+              ariaLabel="New agent task"
+            />
+            <div className="task-input__actions" ref={actionsRowRef} onClick={focusTextareaOnBoxClick}>
               <button
                 type="button"
-                className="task-input__command-remove"
-                aria-label={`Remove ${commandLabel(command)} command`}
-                onMouseDown={(e) => {
-                  // mousedown, not click: keep focus in the field. Removes
-                  // the chip cleanly — it never turns back into "/scrape" text.
-                  e.preventDefault();
-                  setCommand(null);
-                  fieldRef.current?.focus();
+                className="task-input__attach has-tooltip"
+                onClick={() => fileInputRef.current?.click()}
+                aria-label="Attach files"
+                data-tooltip="Attach files"
+              >
+                <PaperclipIcon />
+              </button>
+              <button
+                type="button"
+                className={`task-input__mic has-tooltip${recording ? ' task-input__mic--active' : ''}`}
+                onClick={toggleMic}
+                aria-label={recording ? 'Stop voice input' : 'Start voice input'}
+                aria-pressed={recording}
+                data-tooltip={recording ? 'Stop voice input' : 'Voice input'}
+              >
+                <MicIcon />
+              </button>
+              <EnginePicker value={engine} onChange={onEngineChange} />
+              <ModelPicker engineId={engine} value={model} onChange={onModelChange} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) void addFiles(e.target.files);
+                  e.target.value = '';
                 }}
-              >
-                <CloseIcon />
-              </button>
-            </span>
+              />
+              <BorderBeam size="sm" colorVariant="colorful" theme="dark" borderRadius={15}>
+                <MetalFx
+                  ref={sendMetalRef}
+                  variant="circle"
+                  preset="chromatic"
+                  theme="dark"
+                  innerShadow
+                  strength={0.9}
+                  reflectionTargets={[{ ref: actionsRowRef, strength: 0.4 }]}
+                >
+                  <button
+                    className="task-input__send"
+                    onClick={submit}
+                    disabled={!canSubmit}
+                    aria-label="Start agent"
+                    title="Start agent (Enter)"
+                  >
+                    <ArrowUpIcon />
+                  </button>
+                </MetalFx>
+              </BorderBeam>
+            </div>
           </div>
-        )}
-        {slashHints.length > 0 && (
-          <div className="task-input__slash">
-            {slashHints.map((command) => (
-              <button
-                type="button"
-                key={command.name}
-                className="task-input__slash-item"
-                onMouseDown={(e) => { e.preventDefault(); commitCommand(command); }}
-              >
-                <span className="task-input__slash-usage">{command.usage}</span>
-                <span className="task-input__slash-summary">{command.summary}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        <MentionHints hints={mentionHints} onPick={pickMention} />
-        <MentionTextField
-          ref={fieldRef}
-          maxHeightPx={TASK_INPUT_MAX_HEIGHT_PX}
-          onChange={(next, nextCaret) => { handleChange(next); setCaret(nextCaret); }}
-          onKeyDown={onKeyDown}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          placeholder={command ? `${command.summary}` : INPUT_PLACEHOLDER}
-          ariaLabel="New agent task"
-        />
-        <div className="task-input__actions" onClick={focusTextareaOnBoxClick}>
-          <button
-            type="button"
-            className="task-input__attach has-tooltip"
-            onClick={() => fileInputRef.current?.click()}
-            aria-label="Attach files"
-            data-tooltip="Attach files"
-          >
-            <PaperclipIcon />
-          </button>
-          <EnginePicker value={engine} onChange={onEngineChange} />
-          <ModelPicker engineId={engine} value={model} onChange={onModelChange} />
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              if (e.target.files && e.target.files.length > 0) void addFiles(e.target.files);
-              e.target.value = '';
-            }}
-          />
-          <button
-            className="task-input__send"
-            onClick={submit}
-            disabled={!canSubmit}
-            aria-label="Start agent"
-            title="Start agent (Enter)"
-          >
-            <ArrowUpIcon />
-          </button>
-        </div>
-      </div>
+        </BorderBeam>
+      </VoiceBeam>
     </div>
   );
 });
