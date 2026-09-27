@@ -14,7 +14,14 @@
  * secrets themselves, live in store.ts.
  */
 
+import path from 'node:path';
+import { oauthClient } from '../accounts/oauthClients';
+import { knownFolders } from '../startup/knownFolders';
+
 export type McpTransport = 'stdio';
+
+/** Which one-click sign-in Settings offers instead of credential fields. */
+export type AccountProvider = 'google' | 'github' | 'slack';
 
 export interface McpCredentialField {
   /** Key used in the env passed to the server process. */
@@ -48,6 +55,55 @@ export interface McpServerDefinition {
   credentials: McpCredentialField[];
   /** Where to get the credential, linked from Settings. */
   docsUrl?: string;
+  /**
+   * Connected by signing in (OAuth), not by pasting a token. The credential
+   * fields are still what the server receives — the sign-in fills them.
+   */
+  connect?: AccountProvider;
+  /**
+   * A server shipped inside DEX (mcp-servers/<name>/server.mjs), run with
+   * Electron's own Node so it needs nothing installed.
+   */
+  builtIn?: string;
+  /** Env resolved at launch time rather than stored (e.g. OAuth client ids). */
+  launchEnv?: () => Record<string, string>;
+}
+
+export interface LaunchSpec {
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  /** npx is a .cmd shim on Windows and needs a shell; an .exe path must not get one. */
+  shell: boolean;
+}
+
+function appRoot(): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { app } = require('electron') as typeof import('electron');
+    return app.getAppPath();
+  } catch {
+    return process.cwd();
+  }
+}
+
+/** mcp-servers/launch.mjs — how engines that can't read mcp.json start a connected server. */
+export function mcpLauncherScript(): string {
+  return path.join(appRoot(), 'mcp-servers', 'launch.mjs');
+}
+
+/** How to start a server: the one place every spawner (verify, tool calls, engine config) asks. */
+export function launchSpec(definition: McpServerDefinition, values: Record<string, string>): LaunchSpec {
+  const env = { ...(definition.env ?? {}), ...(definition.launchEnv?.() ?? {}), ...values };
+  if (definition.builtIn) {
+    return {
+      command: process.execPath,
+      args: [path.join(appRoot(), 'mcp-servers', definition.builtIn, 'server.mjs')],
+      env: { ...env, ELECTRON_RUN_AS_NODE: '1' },
+      shell: false,
+    };
+  }
+  return { command: definition.command, args: definition.args, env, shell: process.platform === 'win32' };
 }
 
 /**
@@ -75,6 +131,7 @@ export const MCP_CATALOG: McpServerDefinition[] = [
       },
     ],
     docsUrl: 'https://github.com/settings/tokens',
+    connect: 'github',
     resolveIdentity: async (values) => {
       const token = values.GITHUB_PERSONAL_ACCESS_TOKEN;
       if (!token) return undefined;
@@ -103,30 +160,37 @@ export const MCP_CATALOG: McpServerDefinition[] = [
       { key: 'SLACK_TEAM_ID', label: 'Team ID', secret: false },
     ],
     docsUrl: 'https://api.slack.com/apps',
+    connect: 'slack',
   },
   {
-    id: 'google-drive',
-    displayName: 'Google Drive',
-    // The upstream @modelcontextprotocol/server-gdrive package exposes
-    // exactly one tool: filename/content search. There is no MCP tool to
-    // fetch a file's actual content — opening or downloading one still goes
-    // through the browser. Overstating this as "search and read" here is
-    // what made a correctly-working search ("Connected — 1 tools
-    // available", genuinely healthy) read as "MCP failing" once the agent
-    // had to fall back to the browser for the part MCP can't do.
-    summary: 'Search Drive by filename and content — the same search @drive runs alongside your PC. Opening or downloading a file still goes through the browser; this integration only finds it.',
+    id: 'google',
+    displayName: 'Google',
+    summary: 'Gmail, Calendar, Meet, Drive, Docs, Sheets, Contacts and Tasks for your Google account — read and send mail, schedule meetings with Meet links, find and write documents.',
     transport: 'stdio',
-    command: 'npx',
-    args: ['-y', '@modelcontextprotocol/server-gdrive'],
+    command: 'node',
+    args: [],
+    builtIn: 'google',
+    connect: 'google',
     credentials: [
       {
-        key: 'GDRIVE_CREDENTIALS_PATH',
-        label: 'Credentials file path',
-        secret: false,
-        help: 'Path to the OAuth client credentials JSON downloaded from Google Cloud Console.',
+        key: 'GOOGLE_REFRESH_TOKEN',
+        label: 'Google account',
+        secret: true,
+        help: 'Filled in by "Continue with Google" — you never paste this.',
       },
     ],
-    docsUrl: 'https://console.cloud.google.com/apis/credentials',
+    launchEnv: () => {
+      const client = oauthClient('google');
+      const folders = knownFolders();
+      return {
+        GOOGLE_CLIENT_ID: client?.clientId ?? '',
+        GOOGLE_CLIENT_SECRET: client?.clientSecret ?? '',
+        // Where drive_download saves: the real Downloads folder, which on a
+        // OneDrive-redirected PC is not ~/Downloads.
+        DEX_DOWNLOADS_DIR: folders.downloads ?? '',
+        DEX_HOME_DIR: folders.home ?? '',
+      };
+    },
   },
 ];
 

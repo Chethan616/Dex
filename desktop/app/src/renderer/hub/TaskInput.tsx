@@ -2,22 +2,22 @@ import React, {
   forwardRef,
   useCallback,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from 'react';
-import { BorderBeam } from 'border-beam';
 import { MetalFx, useMetalBend } from 'metal-fx';
 import { VoiceBeam, useMicrophone } from 'voice-glow';
 import { Liquid } from 'liquid-gooey';
-import { INPUT_PLACEHOLDER } from './constants';
 import { EnginePicker } from './EnginePicker';
 import { DEFAULT_MODEL_ID, ModelPicker } from './ModelPicker';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from './slashCommands';
 import { matchingMentions, type MentionDef } from './mentions';
 import { MentionHints } from './CommandChip';
 import { MentionTextField, type MentionTextFieldHandle } from './MentionTextField';
+import { useLibTheme } from '../design/useLibTheme';
 
-const TASK_INPUT_MAX_HEIGHT_PX = 160;
+const TASK_INPUT_MAX_HEIGHT_PX = 44;
 
 // A small glyph per command, shown in the committed chip. Lives here rather
 // than in slashCommands.ts so that module stays plain, testable logic with no
@@ -74,6 +74,7 @@ export interface TaskInputSubmission {
 
 interface TaskInputProps {
   onSubmit: (input: TaskInputSubmission) => void;
+  onEscape?: () => void;
 }
 
 const ENGINE_STORAGE_KEY = 'hub.selectedEngine';
@@ -104,27 +105,27 @@ export interface TaskInputHandle {
   focus: () => void;
 }
 
-function ArrowUpIcon(): React.ReactElement {
+function PlusIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path d="M7 12V3M3 6.5L7 2.5L11 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function PaperclipIcon(): React.ReactElement {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path d="M9.5 3.5L4.5 8.5a2 2 0 1 0 2.83 2.83L11.5 7.5a3 3 0 0 0-4.24-4.24L2.5 8.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
 
 function MicIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <svg width="18" height="18" viewBox="0 0 14 14" fill="none" aria-hidden="true">
       <rect x="5" y="1.5" width="4" height="7" rx="2" stroke="currentColor" strokeWidth="1.25" />
       <path d="M3 7a4 4 0 0 0 8 0M7 11v2" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function StopIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <rect x="2.5" y="2.5" width="9" height="9" rx="1" fill="currentColor" />
     </svg>
   );
 }
@@ -142,7 +143,7 @@ async function readFileBytes(file: File): Promise<Uint8Array> {
   return new Uint8Array(buf);
 }
 
-export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function TaskInput({ onSubmit }, ref) {
+export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function TaskInput({ onSubmit, onEscape }, ref) {
   const [value, setValue] = useState('');
   // The command committed into a chip. When set, the textarea holds only its
   // argument, and the chip renders the command's icon and name.
@@ -159,25 +160,23 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
   // for it to cast a faint reflection onto — same pairing as the library's
   // own composer demo (sites/home/src/examples/metal-examples-v2.tsx).
   const sendMetalRef = useRef<HTMLDivElement>(null);
-  const actionsRowRef = useRef<HTMLDivElement>(null);
+  const autoChipRef = useRef<HTMLButtonElement>(null);
+  const autoReflectionTargets = useMemo(() => [autoChipRef], []);
   useMetalBend(sendMetalRef);
+  const mic = useMicrophone();
+  const recording = mic.state === 'live';
+  // The metal and the voice beam each have separate light/dark tunings;
+  // their own `auto` ignores DEX's appearance setting, so pass it through.
+  const libTheme = useLibTheme();
   // Caret position, tracked separately from `value` — an `@mention` can start
   // anywhere in the sentence, not just at the front like a slash command, so
   // knowing where the cursor sits is what tells us whether one is in progress.
   const [caret, setCaret] = useState(0);
-  // Visual + capture only for now — the captured stream is not sent anywhere
-  // for transcription yet, so recording never touches `value`.
-  const mic = useMicrophone();
-  const recording = mic.state === 'live';
 
   const toggleMic = useCallback(() => {
-    if (recording) {
-      mic.stop();
-    } else {
-      void mic.start();
-    }
-  }, [recording, mic]);
-
+    if (recording) mic.stop();
+    else void mic.start();
+  }, [mic, recording]);
   const addFiles = useCallback(async (files: FileList | File[]) => {
     setErrorMsg(null);
     const list = Array.from(files);
@@ -344,10 +343,11 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
         submit();
       } else if (e.key === 'Escape') {
         e.preventDefault();
+        onEscape?.();
         (e.currentTarget as HTMLElement).blur();
       }
     },
-    [submit, command, caret, slashHints, commitCommand, mentionHints, pickMention],
+    [submit, command, caret, slashHints, commitCommand, mentionHints, pickMention, onEscape],
   );
 
   const onDrop = useCallback(
@@ -383,15 +383,14 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
 
   return (
     <div className="task-input">
-      <VoiceBeam type="default" theme="dark" borderRadius={8} active={recording} stream={mic.stream}>
-        <BorderBeam size="md" colorVariant="colorful" theme="dark" borderRadius={8} duration={7.84} active={!recording}>
-          <div
-            className={`task-input__box${focused ? ' task-input__box--focused' : ''}${dragActive ? ' task-input__box--drag' : ''}`}
-            onClick={focusTextareaOnBoxClick}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-            onDragLeave={onDragLeave}
-          >
+      <VoiceBeam type="default" theme={libTheme} borderRadius={20} active={recording} stream={mic.stream}>
+        <div
+          className={`task-input__box${focused ? ' task-input__box--focused' : ''}${dragActive ? ' task-input__box--drag' : ''}`}
+          onClick={focusTextareaOnBoxClick}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+        >
             {attachments.length > 0 && (
               <Liquid>
                 <div className="task-input__chips">
@@ -460,18 +459,18 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
               onKeyDown={onKeyDown}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
-              placeholder={command ? `${command.summary}` : INPUT_PLACEHOLDER}
+              placeholder={command ? `${command.summary}` : 'Whats on your mind today?'}
               ariaLabel="New agent task"
             />
-            <div className="task-input__actions" ref={actionsRowRef} onClick={focusTextareaOnBoxClick}>
+            <div className="task-input__actions" onClick={focusTextareaOnBoxClick}>
               <button
                 type="button"
-                className="task-input__attach has-tooltip"
+                className="task-input__plus"
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="Attach files"
-                data-tooltip="Attach files"
+                title="Attach files"
               >
-                <PaperclipIcon />
+                <PlusIcon />
               </button>
               <button
                 type="button"
@@ -481,10 +480,16 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
                 aria-pressed={recording}
                 data-tooltip={recording ? 'Stop voice input' : 'Voice input'}
               >
-                <MicIcon />
+                  {recording ? <StopIcon /> : <MicIcon />}
               </button>
+              <div className="task-input__spacer" />
               <EnginePicker value={engine} onChange={onEngineChange} />
-              <ModelPicker engineId={engine} value={model} onChange={onModelChange} />
+              <ModelPicker
+                engineId={engine}
+                value={model}
+                onChange={onModelChange}
+                reflectionRef={autoChipRef}
+              />
               <input
                 ref={fileInputRef}
                 type="file"
@@ -495,30 +500,44 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
                   e.target.value = '';
                 }}
               />
-              <BorderBeam size="sm" colorVariant="colorful" theme="dark" borderRadius={15}>
-                <MetalFx
-                  ref={sendMetalRef}
-                  variant="circle"
-                  preset="chromatic"
-                  theme="dark"
-                  innerShadow
-                  strength={0.9}
-                  reflectionTargets={[{ ref: actionsRowRef, strength: 0.4 }]}
+              {/* Same as D:\SLP\web Composer.jsx: the shader paints over its
+                  host, so the button keeps its own markup and MetalFx wraps it. */}
+              {/* Keyed by theme: MetalFx bakes the theme into its canvas when it
+                  mounts and ignores later prop changes. The overlay window is
+                  long-lived, so without the remount its button stayed in
+                  whatever theme the app started in. */}
+              <MetalFx
+                key={libTheme}
+                ref={sendMetalRef}
+                preset="chromatic"
+                variant="circle"
+                theme={libTheme}
+                innerShadow
+                reflectionTargets={autoReflectionTargets}
+                strength={canSubmit ? 1 : 0.72}
+              >
+                <button
+                  type="button"
+                  className="metal-circle"
+                  onClick={submit}
+                  disabled={!canSubmit}
+                  aria-label="Start agent"
+                  title="Start agent (Enter)"
                 >
-                  <button
-                    className="task-input__send"
-                    onClick={submit}
-                    disabled={!canSubmit}
-                    aria-label="Start agent"
-                    title="Start agent (Enter)"
-                  >
-                    <ArrowUpIcon />
-                  </button>
-                </MetalFx>
-              </BorderBeam>
+                  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+                    <path
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 19V5m0 0-6 6m6-6 6 6"
+                    />
+                  </svg>
+                </button>
+              </MetalFx>
             </div>
-          </div>
-        </BorderBeam>
+        </div>
       </VoiceBeam>
     </div>
   );

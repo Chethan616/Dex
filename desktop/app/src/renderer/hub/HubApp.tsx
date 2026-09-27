@@ -609,7 +609,7 @@ export function HubApp(): React.ReactElement {
   const selectedSessionId = sessions[focusIndex]?.id ?? null;
 
   return (
-    <div className="hub-root" data-tabs-position={tabsPosition}>
+    <div className="hub-root" data-tabs-position={tabsPosition} data-view={viewMode}>
       <header className="hub-toolbar">
         <div className="hub-toolbar__left">
           <MemoryIndicator />
@@ -653,7 +653,10 @@ export function HubApp(): React.ReactElement {
         </div>
       </header>
 
-      <div className="hub-body" data-tabs-position={tabsPosition}>
+      <div className="hub-body" data-tabs-position={tabsPosition} data-view={viewMode}>
+      {/* Settings owns the whole width: its own rail sits at the far left, so
+          the Agents sidebar would just be a second, unrelated left column. */}
+      {viewMode !== 'settings' && (
       <Sidebar
         mode={tabsPosition}
         sessions={sessions}
@@ -715,6 +718,7 @@ export function HubApp(): React.ReactElement {
           }
         }}
       />
+      )}
       <div className="hub-main">
       <div className="hub-main__view" key={viewMode}>
       {viewMode === 'settings' ? (

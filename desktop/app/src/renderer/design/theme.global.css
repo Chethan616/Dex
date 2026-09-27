@@ -4,7 +4,7 @@
  *
  * ARCHITECTURE:
  *   :root defines ALL token categories as CSS custom properties.
- *   theme.shell.css and theme.onboarding.css override ONLY semantic tokens.
+ *   [data-mode="light"] below overrides ONLY semantic tokens.
  *   Component CSS files use CSS vars exclusively — zero hex literals.
  *
  * Rule: zero !important, zero Inter references, zero left-outline emphasis.
@@ -57,6 +57,16 @@
 
   /* Menu / floating-surface tokens — used by dropdowns, popovers, sheets. */
   --color-menu-bg:    rgba(28, 28, 32, 0.97);
+  /* Menus: Libraries.dev .tl-menu (site.css) */
+  --menu-surface:     #202020;
+  --menu-fg:          #fbfbfb;
+  --menu-fg-muted:    #8b8b8b;
+  --menu-item-hover:  rgba(255, 255, 255, 0.04);
+  --menu-item-active: rgba(255, 255, 255, 0.06);
+  --menu-line:        #262626;
+  --menu-ring:        inset 0 0 0 1px rgba(255, 255, 255, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
+  --menu-danger-hover: rgba(248, 113, 113, 0.10);
+  --menu-ease:        cubic-bezier(0.22, 1, 0.36, 1);
   --color-overlay-bg: rgba(10, 10, 13, 0.85);
 
   /* Glass surfaces (pill, command bars). Two-stop gradient handled at use
@@ -108,6 +118,45 @@
 
   /* Modal scrim */
   --color-modal-scrim: rgba(0, 0, 0, 0.60);
+
+  /* Composer family — the prompt bar, its chips and the metal send button.
+     Dark values are the Libraries.dev composer (examples.css --c-mock-*,
+     .mx-chat / .mx-chip / .mx-circle); light values are its Studio light
+     frame. */
+  --surface-card:        rgba(29, 29, 29, 0.7);
+  --surface-card-solid:  rgb(24, 24, 26);
+  --surface-card-glow:   inset 0 0 50px 0 rgba(255, 255, 255, 0.02);
+  /* Not `none`: it's composed into a box-shadow list with the glow. */
+  --surface-card-ring:   0 0 0 0 transparent;
+  --surface-chip:        rgba(255, 255, 255, 0.04);
+  --surface-chip-hover:  rgba(255, 255, 255, 0.06);
+  --line-chip:           inset 0 0 0 1px rgba(255, 255, 255, 0.02), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+  --fg-chip:             #caccd2;
+  --fg-chip-strong:      #f8f8f8;
+  --fg-chip-icon:        #8e8e8e;
+  --surface-metal-btn:   rgba(29, 29, 29, 0.76);
+  --line-metal-btn:      rgba(44, 47, 54, 0.52);
+  --fg-metal-btn:        #f8f8f8;
+  --caret:               #1683ff;
+  --record:              #ff5c68;
+  --record-soft:         rgba(255, 92, 104, 0.14);
+
+  /* Status — one set, used by dots, avatars' fallbacks and badges. */
+  --status-running: #3fb950;
+  --status-idle:    #d29922;
+  --status-stuck:   #f85149;
+  --status-paused:  #58a6ff;
+  --status-stopped: #6e7681;
+  --status-danger-strong: #ff7a72;
+
+  /* Names used across hub.css / onboarding.css that were never defined and
+     only worked through their fallbacks. */
+  --color-accent:          #7dd3fc;
+  --color-accent-primary:  #7aa2ff;
+  --color-accent-subtle:   rgba(125, 211, 252, 0.12);
+  --color-text-primary:    var(--color-fg-primary);
+  --color-pill-border:     var(--color-border-default);
+  --color-tab-bg:          var(--color-surface-interactive);
 
   /* ===========================================================================
      TYPOGRAPHY
@@ -307,9 +356,47 @@
 
   /* Floating surfaces — neutral grey glass. */
   --color-menu-bg:    rgba(244, 244, 246, 0.97);
+  --menu-surface:     #ffffff;
+  --menu-fg:          #1b1b1b;
+  --menu-fg-muted:    #696969;
+  --menu-item-hover:  #f4f4f5;
+  --menu-item-active: #ededee;
+  --menu-line:        #f0f0f0;
+  --menu-ring:        inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --menu-danger-hover: rgba(220, 38, 38, 0.08);
   --color-overlay-bg: rgba(234, 234, 236, 0.92);
   --color-glass-top:    rgba(225, 225, 230, 0.97);
   --color-glass-bottom: rgba(216, 216, 220, 0.98);
+
+  /* Composer family — Libraries.dev Studio light frame: a white card with a
+     1px near-black ring and a soft two-layer drop, raised white pills. */
+  --surface-card:        #ffffff;
+  --surface-card-solid:  #ffffff;
+  --surface-card-glow:   inset 0 -1px 0 0 rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  --surface-card-ring:   0 2px 6px 0 rgba(0, 0, 0, 0.02), 0 4px 42px 0 rgba(0, 0, 0, 0.04);
+  --surface-chip:        rgba(0, 0, 0, 0.04);
+  --surface-chip-hover:  rgba(0, 0, 0, 0.07);
+  --line-chip:           0 1px 3px 0 rgba(0, 0, 0, 0.04), inset 0 -1px 0 0 rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  --fg-chip:             #3f434a;
+  --fg-chip-strong:      #111111;
+  --fg-chip-icon:        rgba(17, 17, 17, 0.45);
+  --surface-metal-btn:   #ffffff;
+  --line-metal-btn:      rgba(0, 0, 0, 0.1);
+  --fg-metal-btn:        #111111;
+  --caret:               #1a6fe0;
+  --record:              #e5484d;
+  --record-soft:         rgba(229, 72, 77, 0.1);
+
+  --status-running: #1a7f37;
+  --status-idle:    #9a6700;
+  --status-stuck:   #cf222e;
+  --status-paused:  #0969da;
+  --status-stopped: #8c959f;
+  --status-danger-strong: #a40e26;
+
+  --color-accent:          #0a7bb8;
+  --color-accent-primary:  #3b63d6;
+  --color-accent-subtle:   rgba(10, 123, 184, 0.10);
 }
 
 /* ===========================================================================

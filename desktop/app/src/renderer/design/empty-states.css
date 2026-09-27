@@ -161,7 +161,7 @@
      Using --color-surface-interactive-hover (rgba 7%) would be semantically
      correct; kept as inline alpha-white to match the pill glass pattern
      where the banner itself is already a colored surface. */
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(var(--highlight-rgb), 0.08);
   color: var(--color-fg-primary);
 }
 

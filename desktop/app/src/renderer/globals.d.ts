@@ -402,6 +402,8 @@ interface ElectronSettingsPreflightAPI {
 
 interface ElectronSettingsAPI {
   mcp?: ElectronSettingsMcpAPI;
+  accounts?: ElectronSettingsAccountsAPI;
+  bridge?: ElectronSettingsBridgeAPI;
   preflight?: ElectronSettingsPreflightAPI;
   open?: (payload?: { focusBrowserCodeProvider?: string }) => Promise<void>;
   apiKey: ElectronSettingsApiKeyAPI;
@@ -412,7 +414,70 @@ interface ElectronSettingsAPI {
   app?: ElectronSettingsAppAPI;
 }
 
+type AccountProviderId = 'google' | 'github' | 'slack';
+
+interface AccountProfileInfo {
+  identity: string;
+  name?: string;
+  picture?: string;
+  connectedAt: number;
+}
+
+interface AccountInfo {
+  provider: AccountProviderId;
+  available: boolean;
+  via: 'oauth' | 'cli' | 'none';
+  connected: boolean;
+  profile?: AccountProfileInfo;
+  devBuild: boolean;
+}
+
+type AccountProgressEvent =
+  | { provider: AccountProviderId; phase: 'browser' }
+  | { provider: AccountProviderId; phase: 'code'; userCode: string; verificationUri: string }
+  | { provider: AccountProviderId; phase: 'done'; profile: AccountProfileInfo }
+  | { provider: AccountProviderId; phase: 'error'; error: string };
+
+type PhoneBridgeState =
+  | { state: 'off'; reason: 'no-firebase' | 'signed-out' }
+  | { state: 'connecting' }
+  | { state: 'online'; email?: string; uid: string }
+  | { state: 'error'; error: string };
+
+interface ElectronSettingsBridgeAPI {
+  status: () => Promise<PhoneBridgeState>;
+  restart: () => Promise<void>;
+  signIn: (email: string, password: string, create: boolean) => Promise<{ ok: boolean; error?: string }>;
+  resetPassword: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  signOut: () => Promise<void>;
+  onState: (cb: (state: PhoneBridgeState) => void) => () => void;
+}
+
+interface ElectronSettingsAccountsAPI {
+  list: () => Promise<AccountInfo[]>;
+  connect: (provider: AccountProviderId) => Promise<{ ok: boolean; profile?: AccountProfileInfo; error?: string }>;
+  cancel: (provider: AccountProviderId) => Promise<void>;
+  disconnect: (provider: AccountProviderId) => Promise<void>;
+  onProgress: (cb: (event: AccountProgressEvent) => void) => () => void;
+}
+
+/** "Your DEX" — main/profile.ts. */
+interface DexProfile {
+  bot: string;
+  color: string | null;
+  name: string | null;
+  chosen: boolean;
+  updatedAt: number;
+}
+
+interface ElectronProfileAPI {
+  get: () => Promise<DexProfile>;
+  set: (next: { bot?: string; color?: string | null; name?: string | null }) => Promise<DexProfile>;
+  onChange: (cb: (profile: DexProfile) => void) => () => void;
+}
+
 interface ElectronAPI {
+  profile?: ElectronProfileAPI;
   pill: ElectronPillAPI;
   logs?: ElectronLogsAPI;
   popup?: ElectronPopupAPI;

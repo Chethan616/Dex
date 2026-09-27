@@ -45,6 +45,7 @@ class MockBrowserWindow {
 
   setVisibleOnAllWorkspaces = vi.fn();
   setAlwaysOnTop = vi.fn();
+  setBackgroundColor = vi.fn();
   loadURL = vi.fn();
   loadFile = vi.fn();
   on = vi.fn((event: string, handler: (...args: unknown[]) => void) => {
@@ -168,31 +169,31 @@ describe('pill window sizing', () => {
     pill.showPill();
     vi.advanceTimersByTime(250);
 
-    win.setBounds({ x: 500, y: 260, width: pill.PILL_WIDTH, height: 110 });
+    win.setBounds({ x: 400, y: 260, width: pill.PILL_WIDTH, height: pill.PILL_HEIGHT_COLLAPSED });
     win.emit('move');
 
     expect(readSavedPillBounds()).toEqual({
-      x: 500,
+      x: 400,
       y: 260,
       width: pill.PILL_WIDTH,
-      height: 110,
+      height: pill.PILL_HEIGHT_COLLAPSED,
     });
 
     pill.hidePill();
     pill.showPill();
 
     expect(win.getBounds()).toEqual({
-      x: 500,
+      x: 400,
       y: 260,
       width: pill.PILL_WIDTH,
-      height: 110,
+      height: pill.PILL_HEIGHT_COLLAPSED,
     });
   });
 
   test('showPill restores the persisted position after module reload', async () => {
     fs.writeFileSync(
       pillBoundsStorePath(),
-      JSON.stringify({ x: 480, y: 250, width: 600, height: 110 }),
+      JSON.stringify({ x: 380, y: 250, width: 600, height: 110 }),
       'utf-8',
     );
     const pill = await loadPillModule();
@@ -201,10 +202,10 @@ describe('pill window sizing', () => {
     pill.showPill();
 
     expect(win.getBounds()).toEqual({
-      x: 480,
+      x: 380,
       y: 250,
       width: pill.PILL_WIDTH,
-      height: 110,
+      height: pill.PILL_HEIGHT_COLLAPSED,
     });
   });
 
@@ -221,15 +222,15 @@ describe('pill window sizing', () => {
 
     expect(win.getBounds()).toEqual({
       x: 20 + 1200 - pill.PILL_WIDTH,
-      y: 820,
+      y: 30 + 900 - pill.PILL_HEIGHT_COLLAPSED,
       width: pill.PILL_WIDTH,
-      height: 110,
+      height: pill.PILL_HEIGHT_COLLAPSED,
     });
     expect(readSavedPillBounds()).toEqual({
       x: 20 + 1200 - pill.PILL_WIDTH,
-      y: 820,
+      y: 30 + 900 - pill.PILL_HEIGHT_COLLAPSED,
       width: pill.PILL_WIDTH,
-      height: 110,
+      height: pill.PILL_HEIGHT_COLLAPSED,
     });
   });
 
@@ -248,7 +249,7 @@ describe('pill window sizing', () => {
       x: 20 + (1200 - pill.PILL_WIDTH) / 2,
       y: 190,
       width: pill.PILL_WIDTH,
-      height: 110,
+      height: pill.PILL_HEIGHT_COLLAPSED,
     });
   });
 });
@@ -285,5 +286,28 @@ describe('pill window lazy creation', () => {
 
     expect(windows.length).toBe(1);
     expect(windows[0].isVisible()).toBe(false);
+  });
+});
+
+describe('roundedRectShape', () => {
+  test('covers the full card height with no gaps and stays inside its bounds', async () => {
+    const pill = await loadPillModule();
+    const rects = pill.roundedRectShape(720, 120, 20);
+    const rows = new Set<number>();
+    for (const r of rects) {
+      expect(r.x).toBeGreaterThanOrEqual(0);
+      expect(r.x + r.width).toBeLessThanOrEqual(720);
+      for (let y = r.y; y < r.y + r.height; y++) rows.add(y);
+    }
+    expect(rows.size).toBe(120);
+    // Corners are cut, the middle is full width.
+    const top = rects.find((r) => r.y === 0)!;
+    expect(top.x).toBeGreaterThan(0);
+    expect(rects.find((r) => r.y === 20 && r.height > 1)).toMatchObject({ x: 0, width: 720 });
+  });
+
+  test('a zero radius is one plain rectangle', async () => {
+    const pill = await loadPillModule();
+    expect(pill.roundedRectShape(100, 40, 0)).toEqual([{ x: 0, y: 0, width: 100, height: 40 }]);
   });
 });

@@ -55,7 +55,7 @@ app.setAboutPanelOptions({
   applicationName: 'DEX',
   applicationVersion: app.getVersion(),
   copyright: '© 2026 DEX',
-  website: 'https://github.com/browser-use/desktop',
+  website: 'https://github.com/Chethan616/Dex',
 });
 
 import started from 'electron-squirrel-startup';
@@ -85,6 +85,8 @@ import { captureEvent } from './telemetry';
 import { registerChromeImportHandlers } from './chrome-import/ipc';
 import { mainLogger } from './logger';
 import { createLocalTaskServer } from './localTaskServer';
+import { registerAccountsIpc } from './accounts';
+import { registerProfileIpc } from './profile';
 import {
   resolveUserDataDir,
   resolveCdpPort,
@@ -628,6 +630,8 @@ app.whenReady().then(async () => {
   registerConsentHandlers();
   registerTelemetryHandlers();
   registerAppPopupHandlers();
+  registerAccountsIpc();
+  registerProfileIpc();
   startSystemThemeWatcher();
   registerChannelHandlers(channelRouter, whatsAppAdapter);
   whatsAppAdapter.onStatusChange((status, detail) => {
@@ -1225,6 +1229,7 @@ app.whenReady().then(async () => {
       engineId,
       harnessDir: harnessDir(),
       sessionId: validatedId,
+      originChannel: sessionManager.getSessionOrigin(validatedId).originChannel ?? undefined,
       prompt: validatedPrompt,
       attachments: resumeAttachments.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
       webContents,
@@ -1336,6 +1341,7 @@ app.whenReady().then(async () => {
         engineId,
         harnessDir: harnessDir(),
         sessionId: id,
+        originChannel: sessionManager.getSessionOrigin(id).originChannel ?? undefined,
         prompt: sessionManager.getSession(id)!.prompt,
         attachments: attachmentsForRun.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
         webContents: view.webContents,
@@ -1368,6 +1374,9 @@ app.whenReady().then(async () => {
   }
 
   channelRouter.setStartSession(startSessionWithAgent);
+  // A WhatsApp reply to a task's message continues that task, exactly like
+  // the hub's follow-up box.
+  channelRouter.setFollowUp((id, text) => handleResumeRequest(id, text, []));
 
   const localTaskServer = await createLocalTaskServer({
     userDataPath: app.getPath('userData'),
@@ -1583,6 +1592,70 @@ app.whenReady().then(async () => {
         return { ok: true };
       },
 
+      // `dex-send`: files, a screenshot of the session's browser view or the
+      // screen, or the canvas as a PDF — to the user's own WhatsApp chat only
+      // (the task's thread if it came from WhatsApp). The recipient is never
+      // taken from the request.
+      'POST /dex/send': async (raw) => {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new Error('request body must be JSON');
+        }
+        const body = (parsed ?? {}) as { sessionId?: unknown; files?: unknown; page?: unknown; screen?: unknown; canvas?: unknown; caption?: unknown };
+        const id = assertString(body.sessionId, 'sessionId', 100);
+        const session = sessionManager.getSession(id);
+        if (!session) throw new Error('Session not found');
+        const caption = typeof body.caption === 'string' ? body.caption.slice(0, 1000) : '';
+        const requested = Array.isArray(body.files) ? body.files.filter((f): f is string => typeof f === 'string') : [];
+
+        const outbox = await import('./channels/outbox');
+        if (requested.length > outbox.MAX_FILES) throw new Error(`at most ${outbox.MAX_FILES} files per call`);
+        const files: Array<{ path: string; fileName?: string }> = [];
+        const problems: string[] = [];
+        if (body.page === true) {
+          const view = browserPool.getView(id);
+          if (!view || view.webContents.isDestroyed()) problems.push('--page: no browser view for this session — open the page first');
+          else {
+            try { files.push(await outbox.capturePage(view.webContents)); }
+            catch (err) { problems.push(`--page: ${outbox.logOutboxError('page', err)}`); }
+          }
+        }
+        if (body.screen === true) {
+          try { files.push(await outbox.captureScreen()); }
+          catch (err) { problems.push(`--screen: ${outbox.logOutboxError('screen', err)}`); }
+        }
+        if (body.canvas === true) {
+          const canvas = [...session.output].reverse().find((e) => e.type === 'canvas') as { title?: string; markdown?: string } | undefined;
+          if (!canvas?.markdown) problems.push('--canvas: nothing shown with dex-canvas in this task yet');
+          else {
+            try { files.push(await outbox.renderCanvasPdf(canvas.title ?? 'Document', canvas.markdown)); }
+            catch (err) { problems.push(`--canvas: ${outbox.logOutboxError('canvas', err)}`); }
+          }
+        }
+        for (const f of requested) {
+          const checked = await outbox.checkFile(f);
+          if (!('error' in checked)) files.push({ path: checked.path });
+          else problems.push(checked.error);
+        }
+        if (files.length === 0) throw new Error(problems.join('\n') || 'nothing to send');
+
+        const result = await channelRouter.sendFiles(id, files, caption);
+        // What was sent also shows in the task itself, as file cards — on
+        // the desktop and in the phone app's Files.
+        const { statSync } = await import('node:fs');
+        for (const f of files) {
+          const name = f.fileName ?? f.path.split(/[\\/]/).pop() ?? f.path;
+          let size = 0;
+          try { size = statSync(f.path).size; } catch { /* gone already */ }
+          const ext = name.split('.').pop()?.toLowerCase() ?? '';
+          const mime = ({ png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', pdf: 'application/pdf' } as Record<string, string>)[ext] ?? 'application/octet-stream';
+          sessionManager.appendOutput(id, { type: 'file_output', name, path: f.path, size, mime });
+        }
+        return { ...result, files: files.map((f) => f.path), problems };
+      },
+
       // The `dex-state` CLI's only endpoint. Everything it can do is one of
       // the verbs in TaskStateMutationSchema, so validation is a single parse
       // and the handler stays a pass-through to the session manager.
@@ -1757,17 +1830,14 @@ app.whenReady().then(async () => {
     await startSessionWithAgent(validatedId);
   });
 
-  ipcMain.handle('sessions:resume', async (_event, payload: { id: string; prompt: string; attachments?: unknown }) => {
-    const validatedId = assertString(payload?.id, 'id', 100);
-    const validatedPrompt = assertString(payload?.prompt, 'prompt', 10000);
-    const resumeAttachments = assertAttachments(payload?.attachments);
-    mainLogger.info('main.sessions:resume', {
-      id: validatedId,
-      promptLength: validatedPrompt.length,
-      attachmentCount: resumeAttachments.length,
-      attachmentMeta: resumeAttachments.map((a) => ({ name: a.name, mime: a.mime, size: a.bytes.byteLength })),
-    });
-
+  // Shared by the hub's follow-up box and the phone bridge: a running
+  // session queues the message after its next tool, a paused one resumes,
+  // a finished one continues its conversation.
+  async function handleResumeRequest(
+    validatedId: string,
+    validatedPrompt: string,
+    resumeAttachments: ReturnType<typeof assertAttachments>,
+  ): Promise<Record<string, unknown>> {
     const currentSession = sessionManager.getSession(validatedId);
     if (!currentSession) return { error: 'Session not found' };
     if (currentSession.status === 'running' || currentSession.status === 'stuck') {
@@ -1788,6 +1858,19 @@ app.whenReady().then(async () => {
       return { error: 'Paused agent process is no longer available.' };
     }
     return resumeSessionWithAgent(validatedId, validatedPrompt, resumeAttachments, 'resume');
+  }
+
+  ipcMain.handle('sessions:resume', async (_event, payload: { id: string; prompt: string; attachments?: unknown }) => {
+    const validatedId = assertString(payload?.id, 'id', 100);
+    const validatedPrompt = assertString(payload?.prompt, 'prompt', 10000);
+    const resumeAttachments = assertAttachments(payload?.attachments);
+    mainLogger.info('main.sessions:resume', {
+      id: validatedId,
+      promptLength: validatedPrompt.length,
+      attachmentCount: resumeAttachments.length,
+      attachmentMeta: resumeAttachments.map((a) => ({ name: a.name, mime: a.mime, size: a.bytes.byteLength })),
+    });
+    return handleResumeRequest(validatedId, validatedPrompt, resumeAttachments);
   });
 
   ipcMain.handle('sessions:rerun', async (_event, id: string) => {
@@ -1837,6 +1920,7 @@ app.whenReady().then(async () => {
       engineId,
       harnessDir: harnessDir(),
       sessionId: validatedId,
+      originChannel: sessionManager.getSessionOrigin(validatedId).originChannel ?? undefined,
       prompt: session.prompt,
       attachments: rerunAttachments.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
       webContents: view.webContents,
@@ -2142,6 +2226,9 @@ app.whenReady().then(async () => {
   // pendingConfirmations' own sessionId rather than trusted blindly, so a
   // stale/forged id from a closed card can't resolve a different session's
   // wait.
+  // Set once the phone bridge is created below; lets other handlers poke it.
+  let phoneBridge: { refreshDevice(): void } | null = null;
+
   ipcMain.handle('dex:confirm-answer', (_event, sessionId: string, id: string, approved: boolean, lifetime?: unknown) => {
     const validatedSessionId = assertString(sessionId, 'sessionId', 100);
     const validatedId = assertString(id, 'id', 100);
@@ -2153,6 +2240,80 @@ app.whenReady().then(async () => {
     return { ok: true };
   });
 
+  // ---------------------------------------------------------------------------
+  // Phone bridge (Firebase). Off until a Firebase project is configured and
+  // the user signs in with email/password (Settings → Accounts → phone).
+  // ---------------------------------------------------------------------------
+  void (async () => {
+    const { FirebaseBridge } = await import('./firebase/bridge');
+    const bridge = new FirebaseBridge({
+      listSessions: () => sessionManager.listSessions(),
+      getSession: (id) => sessionManager.getSession(id),
+      onSessionChanged: (cb) => {
+        sessionManager.onEvent('session-created', cb);
+        sessionManager.onEvent('session-updated', cb);
+        sessionManager.onEvent('session-completed', cb);
+        sessionManager.onEvent('session-error', cb);
+      },
+      onSessionOutput: (cb) => { sessionManager.onEvent('session-output', cb); },
+      onSessionDeleted: (cb) => { sessionManager.onEvent('session-deleted', cb); },
+      getTaskFiles: (id) => sessionManager.getTaskState(id).files,
+      listEngines: async () => {
+        const { listAdapters } = await import('./hl/engines');
+        return listAdapters().map((a) => ({
+          id: a.id,
+          name: a.displayName,
+          models: (a.selectableModels ?? []).map((m) => ({ id: m.id, label: m.label })),
+        }));
+      },
+      newTask: async ({ prompt, engine, model }) => {
+        const validatedPrompt = assertString(prompt, 'prompt', 10000);
+        const engineId = engine ? assertString(engine, 'engine', 50) : DEFAULT_ENGINE_ID;
+        const id = sessionManager.createSession(validatedPrompt, { originChannel: 'android' });
+        sessionManager.setSessionEngine(id, engineId);
+        if (model) sessionManager.setSessionModel(id, assertString(model, 'model', 100));
+        captureEvent('session_created', { source: 'android', engine: engineId, prompt_length: validatedPrompt.length, attachments_count: 0 });
+        try {
+          await startSessionWithAgent(id);
+          return { id };
+        } catch (err) {
+          return { id, error: (err as Error).message };
+        }
+      },
+      followUp: (id, prompt) => handleResumeRequest(assertString(id, 'id', 100), assertString(prompt, 'prompt', 10000), []),
+      pause: (id) => pauseSessionFromMain(assertString(id, 'id', 100), 'button'),
+      resume: (id) => handleResumeRequest(assertString(id, 'id', 100), 'Continue from where you left off.', []),
+      stop: (id) => cancelSessionFromMain(assertString(id, 'id', 100), 'button'),
+      getApprovalMode: () => approvalPolicy.getGlobalDefaultMode(),
+      setApprovalMode: (mode) => {
+        const normalized = normalizeApprovalMode(mode);
+        approvalPolicy.setGlobalDefaultMode(normalized);
+        return normalized;
+      },
+      answerConfirmation: (sessionId, confirmationId, approved, lifetime) => {
+        const pending = pendingConfirmations.get(confirmationId);
+        if (!pending || pending.sessionId !== sessionId) return { ok: false, error: 'no matching pending confirmation' };
+        resolveConfirmation(confirmationId, approved, normalizeApprovalLifetime(lifetime));
+        return { ok: true };
+      },
+    });
+    phoneBridge = bridge;
+    const pushState = (state: unknown) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) win.webContents.send('bridge:state', state);
+      }
+    };
+    bridge.onState(pushState);
+    ipcMain.handle('bridge:status', () => bridge.state);
+    ipcMain.handle('bridge:restart', () => bridge.start());
+    ipcMain.handle('bridge:sign-in', (_e, email: unknown, password: unknown, create: unknown) =>
+      bridge.signIn(assertString(email, 'email', 320), assertString(password, 'password', 256), create === true));
+    ipcMain.handle('bridge:reset-password', (_e, email: unknown) => bridge.resetPassword(assertString(email, 'email', 320)));
+    ipcMain.handle('bridge:sign-out', () => bridge.signOut());
+    app.once('before-quit', () => { void bridge.stop(); });
+    await bridge.start();
+  })().catch((err: Error) => mainLogger.error('firebase.bridge.init.failed', { error: err.message }));
+
   // Settings pane's global default for the approval policy (Ask for
   // approval / Approve for me / Full access) — see src/main/approvals/
   // policy.ts. Applies to every session that hasn't been given its own
@@ -2163,6 +2324,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('settings:approvals:set', (_e, mode: unknown) => {
     const normalized = normalizeApprovalMode(mode);
     approvalPolicy.setGlobalDefaultMode(normalized);
+    phoneBridge?.refreshDevice(); // the phone's Settings shows this mode
     return { mode: normalized };
   });
 
@@ -2651,7 +2813,7 @@ function buildApplicationMenu(): void {
           label: 'Report an Issue…',
           click: () => {
             mainLogger.debug('menu.reportIssue');
-            shell.openExternal('https://github.com/browser-use/desktop/issues');
+            shell.openExternal('https://github.com/Chethan616/Dex/issues');
           },
         },
       ],

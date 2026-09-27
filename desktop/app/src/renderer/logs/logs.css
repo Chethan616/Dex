@@ -7,7 +7,7 @@ html, body {
   background: transparent;
   overflow: hidden;
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color: var(--color-fg-primary, #d6d8dc);
+  color: var(--color-fg-primary);
   -webkit-user-select: none;
   user-select: none;
 }
@@ -47,7 +47,7 @@ html, body {
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-fg-tertiary, #8b9199);
+  color: var(--color-fg-tertiary);
   -webkit-app-region: drag;
 }
 
@@ -67,7 +67,7 @@ html, body {
   padding: 3px 6px;
   border-radius: 4px;
   cursor: pointer;
-  color: var(--color-fg-tertiary, #8b9199);
+  color: var(--color-fg-tertiary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -76,7 +76,7 @@ html, body {
 
 .logs-header__btn:hover {
   background: rgba(var(--highlight-rgb), 0.06);
-  color: var(--color-fg-primary, #d6d8dc);
+  color: var(--color-fg-primary);
 }
 
 /* Completion summary — plain white text above the follow-up input.
@@ -95,7 +95,7 @@ html, body {
 }
 
 .logs-summary--error {
-  color: #f87171;
+  color: var(--color-status-error);
 }
 
 .logs-term {
@@ -129,7 +129,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-fg-disabled, #5c6370);
+  color: var(--color-fg-disabled);
   font-size: 11px;
   letter-spacing: 0.04em;
 }
@@ -166,18 +166,18 @@ html, body {
   gap: 4px;
   max-width: 160px;
   padding: 3px 6px;
-  background: var(--color-bg-elevated, #141518);
+  background: var(--color-bg-elevated);
   border: 1px solid var(--color-border-subtle);
   border-radius: 4px;
   font-size: 10px;
-  color: var(--color-fg-secondary, #b0b5bd);
+  color: var(--color-fg-secondary);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .logs-file-row:hover {
   background: rgba(var(--highlight-rgb), 0.05);
-  color: var(--color-fg-primary, #d6d8dc);
+  color: var(--color-fg-primary);
 }
 
 .logs-file-row__name {
@@ -186,11 +186,11 @@ html, body {
 }
 
 .logs-file-row__size {
-  color: var(--color-fg-disabled, #5c6370);
+  color: var(--color-fg-disabled);
 }
 
 .logs-file-row__caret {
-  color: var(--color-fg-disabled, #5c6370);
+  color: var(--color-fg-disabled);
   font-size: 9px;
   margin-left: 2px;
 }
@@ -206,7 +206,7 @@ html, body {
   left: 0;
   z-index: 10;
   min-width: 180px;
-  background: var(--color-bg-elevated, #15181c);
+  background: var(--color-bg-elevated);
   border: 1px solid var(--color-border-subtle);
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(var(--shadow-rgb), 0.4);
@@ -222,7 +222,7 @@ html, body {
   padding: 6px 8px;
   text-align: left;
   font-size: 11px;
-  color: var(--color-fg-secondary, #b0b5bd);
+  color: var(--color-fg-secondary);
   border-radius: 4px;
   cursor: pointer;
   display: flex;
@@ -246,7 +246,7 @@ html, body {
 
 .logs-file-menu__item:hover {
   background: rgba(var(--highlight-rgb), 0.06);
-  color: var(--color-fg-primary, #d6d8dc);
+  color: var(--color-fg-primary);
 }
 
 .logs-file-menu__sep {
@@ -304,7 +304,7 @@ html, body {
   background: transparent;
   border: none;
   outline: none;
-  color: var(--color-fg-primary, #d6d8dc);
+  color: var(--color-fg-primary);
   font-family: inherit;
   font-size: 13px;
   line-height: 18px;
@@ -314,7 +314,7 @@ html, body {
 }
 
 .logs-followup__input.mention-field--empty::before {
-  color: var(--color-fg-secondary, #9aa2ad);
+  color: var(--color-fg-secondary);
 }
 
 /* contentEditable has no :disabled — MentionTextField reflects `disabled`
@@ -334,7 +334,7 @@ html, body {
   background: transparent;
 }
 .logs-followup__ended-label {
-  color: var(--color-fg-secondary, #9aa2ad);
+  color: var(--color-fg-secondary);
   font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;

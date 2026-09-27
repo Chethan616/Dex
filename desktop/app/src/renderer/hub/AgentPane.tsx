@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
-import { ThinkingOrb, type OrbState } from 'thinking-orbs';
+import { Orb, type OrbState, AgentAvatar } from '../components/lib';
 import { STATUS_LABEL } from './constants';
 import { ContentRenderer, getPreview } from './ContentRenderer';
 import { Markdown, linkifyOutputPaths } from './Markdown';
@@ -173,7 +173,7 @@ function ToolStep({ entry }: { entry: OutputEntry }): React.ReactElement {
         <span className="step__icon">{toolIcon(entry.tool)}</span>
         <span className="step__name">{entry.tool}</span>
         {!hasResult && (
-          <ThinkingOrb size={20} theme="dark" state={toolOrbState(entry.tool)} className="step__spinner" />
+          <Orb size={20} state={toolOrbState(entry.tool)} className="step__spinner" />
         )}
         <span className="step__fill" />
         {dur != null && <span className="step__dur">{formatDuration(dur)}</span>}
@@ -347,7 +347,7 @@ function OutputRow({ entry }: { entry: OutputEntry }): React.ReactElement {
     return (
       <div className="step step--thinking">
         <div className="step__thinking-header">
-          <ThinkingOrb size={20} theme="dark" state="composing" />
+          <Orb size={20} state="composing" />
           <span className="step__thinking-label">Thinking</span>
         </div>
         <div className="step__text">
@@ -1194,7 +1194,19 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
       }}
     >
       <div className="pane__header">
-        <span className={`pane__dot pane__dot--${session.status}`} />
+        {/* The agent's face: shape from the engine, hopping while it works,
+            asleep while paused. The status dot rides its corner. */}
+        <span className="pane__avatar">
+          <AgentAvatar
+            engineId={session.engine}
+            sessionId={session.id}
+            status={session.status}
+            size={30}
+            interactive={focused}
+            label={`Agent (${session.status})`}
+          />
+          <span className={`pane__dot pane__dot--${session.status}`} />
+        </span>
         <div className="pane__title-group">
           <span className="pane__prompt">{session.prompt}</span>
           {session.engine === 'codex' && (
@@ -1385,7 +1397,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
               <span className="pane__browser-starting-row">
                 {isStarting ? (
                   <>
-                    <ThinkingOrb size={64} theme="dark" state="connecting" className="pane__spinner" />
+                    <Orb size={64} state="connecting" className="pane__spinner" />
                     <span>Browser starting…</span>
                   </>
                 ) : (

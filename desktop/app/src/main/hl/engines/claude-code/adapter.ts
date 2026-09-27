@@ -13,6 +13,7 @@
 import { mainLogger } from '../../../logger';
 import { register } from '../registry';
 import { applyBrowserHarnessEnv } from '../browserHarnessEnv';
+import { deliveryBriefing } from '../delivery';
 import { enrichedEnv } from '../pathEnrich';
 import { runCliCapture, spawnCli } from '../cliSpawn';
 import type {
@@ -81,8 +82,18 @@ const claudeCodeAdapter: EngineAdapter = {
   },
 
   async probeAuthed(): Promise<AuthProbe> {
-    const r = await runCliCapture(BIN, ['auth', 'status']);
-    return r.ok ? { authed: true } : { authed: false, error: r.stderr || r.error || r.stdout || 'not logged in' };
+    const r = await runCliCapture(BIN, ['auth', 'status'], 15_000);
+    if (r.ok) return { authed: true };
+    // A slow answer isn't a "no". A cold `claude` start (first run after
+    // boot, antivirus scanning the shim) blew past the old 5s limit, and the
+    // task — started from the phone — was failed as "not authenticated"
+    // before it ran. Only a real reply counts as signed out; if it truly
+    // is, the run itself says so moments later.
+    if (/^Timed out after/.test(r.error ?? '')) {
+      mainLogger.warn('claude-code.authProbe.timeout', { error: r.error });
+      return { authed: true };
+    }
+    return { authed: false, error: r.stderr || r.error || r.stdout || 'not logged in' };
   },
 
   async openLoginInTerminal(): Promise<{ opened: boolean; error?: string }> {
@@ -163,6 +174,7 @@ const claudeCodeAdapter: EngineAdapter = {
       `Finding a file on this machine — by name or by what it's about ("my aadhaar card", "the cryptography syllabus") — is \`dex-find\`, not a Bash/PowerShell scan. It also searches file *content*, not just names, and answers immediately: don't ask where the file might be first, just run it.`,
       `A result whose *shape* is part of the answer — a report, a comparison table, a structured summary, anything with real headings and sections — is \`dex-canvas show "<title>"\` (markdown piped via stdin), rendered as a document in the app itself. That is different from "produce a file": only use \`./outputs/${ctx.sessionId}/\` for something the user will download, attach, or open outside the app (a CSV export, a screenshot, a transcript) — not for a report meant to be read right here.`,
       `Mention the filename in your final answer for anything actually saved to ./outputs/.`,
+      ...deliveryBriefing(ctx),
       '',
       `Task: ${ctx.prompt}`,
     );

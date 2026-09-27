@@ -28,4 +28,6 @@ export interface SessionEvents {
   'session-error': (session: AgentSession) => void;
   'session-output': (id: string, event: HlEvent) => void;
   'session-output-term': (id: string, bytes: string) => void;
+  /** Deleted for good — mirrors (the phone) must drop it too. */
+  'session-deleted': (id: string) => void;
 }

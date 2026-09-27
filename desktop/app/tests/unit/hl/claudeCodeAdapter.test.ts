@@ -46,7 +46,7 @@ describe('claude-code adapter auth probing', () => {
       ok: false,
       stdout: '',
       stderr: '',
-      error: 'Timed out after 50ms',
+      error: 'spawn claude ENOENT',
       code: null,
     });
 
@@ -54,8 +54,24 @@ describe('claude-code adapter auth probing', () => {
 
     await expect(adapter.probeAuthed()).resolves.toEqual({
       authed: false,
-      error: 'Timed out after 50ms',
+      error: 'spawn claude ENOENT',
     });
+  });
+
+  it('does not fail a task because the auth check was slow', async () => {
+    // A cold `claude auth status` took >5s and a phone task was failed as
+    // "not authenticated" before it ran. A timeout is "unknown", not "no".
+    cliSpawnMocks.runCliCapture.mockResolvedValue({
+      ok: false,
+      stdout: '',
+      stderr: '',
+      error: 'Timed out after 15000ms',
+      code: null,
+    });
+
+    const adapter = await claudeCodeAdapter();
+
+    await expect(adapter.probeAuthed()).resolves.toEqual({ authed: true });
   });
 });
 

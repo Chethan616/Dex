@@ -1,0 +1,58 @@
+rules_version = '2';
+
+// DEX: desktop and phone sign in with the same Google account and so share
+// one uid. Everything lives under users/{uid}; nobody can read or write
+// another user's tree, and nothing lives outside it.
+//
+// Rules OR together, so there is deliberately no catch-all match under
+// users/{uid} — each collection states its own terms.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // The account's own document: only the "Your DEX" profile lives here.
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['profile'])
+        && request.resource.data.profile.bot is string
+        && request.resource.data.profile.bot.size() <= 16;
+    }
+
+    // Desktops and phones: presence, engines, FCM tokens.
+    match /users/{uid}/devices/{deviceId} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // Tasks and their chat blocks — written by the desktop.
+    match /users/{uid}/sessions/{sessionId} {
+      allow read, write: if isOwner(uid);
+      match /blocks/{blockId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // Commands the phone sends: created only as `pending`, with a known type
+    // and a bounded prompt; the desktop (same uid) claims and completes them.
+    match /users/{uid}/commands/{commandId} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.type in ['new_task', 'follow_up', 'pause', 'resume', 'stop', 'answer_confirmation', 'sync_session', 'set_approval_mode', 'fetch_file']
+        && (!('prompt' in request.resource.data) || request.resource.data.prompt.size() <= 10000);
+      allow update: if isOwner(uid)
+        && request.resource.data.status in ['running', 'done', 'error'];
+    }
+
+    // Files the phone asked for (fetch_file): written by the desktop in
+    // chunks, read then deleted by the phone. Transient — swept after an hour.
+    match /users/{uid}/transfers/{transferId} {
+      allow read, write: if isOwner(uid);
+      match /chunks/{chunkId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+  }
+}

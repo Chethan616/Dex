@@ -43,9 +43,24 @@ export function getThemeMode(): ThemeMode {
   return readStoredMode();
 }
 
+/**
+ * Reflect the resolved mode on <html> three ways: `data-mode` drives DEX's own
+ * tokens; a `.light` / `.dark` class and `color-scheme` are what the
+ * Libraries.dev canvas components (thinking-orbs, bot-avatars, img-fx) look
+ * for when their theme is `auto` — DEX's `data-theme="shell"` means nothing to
+ * them, so without this they fell back to the OS preference.
+ */
+function reflectOnDocument(resolved: ResolvedThemeMode): void {
+  const root = document.documentElement;
+  root.dataset.mode = resolved;
+  root.classList.toggle('light', resolved === 'light');
+  root.classList.toggle('dark', resolved === 'dark');
+  root.style.colorScheme = resolved;
+}
+
 export function applyThemeMode(mode: ThemeMode = readStoredMode()): ResolvedThemeMode {
   const resolved = resolveThemeMode(mode);
-  document.documentElement.dataset.mode = resolved;
+  reflectOnDocument(resolved);
   return resolved;
 }
 
@@ -104,7 +119,7 @@ export function initThemeMode(): void {
   // broadcasts to every window so pill / logs / hub all repaint together.
   api?.onChange?.((payload) => {
     try { window.localStorage.setItem(STORAGE_KEY, payload.mode); } catch { /* noop */ }
-    document.documentElement.dataset.mode = payload.resolved;
+    reflectOnDocument(payload.resolved);
     for (const fn of listeners) fn(payload.mode, payload.resolved);
   });
 

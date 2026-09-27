@@ -20,13 +20,22 @@ export interface DriveSearchResult {
 }
 
 /**
- * The reference `@modelcontextprotocol/server-gdrive` package returns search
- * hits as freeform text, one file per line, rather than structured JSON —
- * so parsing here is intentionally undemanding: a non-empty line is a result.
- * Good enough to merge into the artifact card; the agent can always ask Drive
- * directly through its own MCP tools for anything more detailed.
+ * DEX's built-in Google server returns `drive_search` hits as a JSON array
+ * ({ name, mimeType, modified, link, owner }). Anything that doesn't parse is
+ * treated as one result per non-empty line, so a text reply still shows up.
  */
-function parseDriveText(text: string): DriveItem[] {
+function parseDriveResults(text: string): DriveItem[] {
+  try {
+    const rows = JSON.parse(text) as Array<{ name?: string; mimeType?: string; modified?: string; owner?: string }>;
+    if (Array.isArray(rows)) {
+      return rows.map((row) => ({
+        label: row.name ?? 'Untitled',
+        reasons: ['from Google Drive', ...(row.owner ? [`owner ${row.owner}`] : [])],
+      }));
+    }
+  } catch {
+    // fall through to line parsing
+  }
   return text
     .split('\n')
     .map((line) => line.trim())
@@ -36,20 +45,14 @@ function parseDriveText(text: string): DriveItem[] {
 
 export async function searchDrive(query: string, limit: number): Promise<DriveSearchResult> {
   const connections = await enabledConnections();
-  const drive = connections.find((c) => c.id === 'google-drive');
-  if (!drive) return { ok: false, items: [], error: 'Google Drive is not connected.' };
+  const google = connections.find((c) => c.id === 'google');
+  if (!google) return { ok: false, items: [], error: 'Google isn’t connected — Settings → Accounts → Continue with Google.' };
 
-  const definition = findServerDefinition('google-drive');
-  if (!definition) return { ok: false, items: [], error: 'Google Drive is not in the server catalogue.' };
+  const definition = findServerDefinition('google');
+  if (!definition) return { ok: false, items: [], error: 'Google is not in the server catalogue.' };
 
-  // Verification (mcp/client.ts) already recorded the server's real tool
-  // names; prefer whichever one looks like a search rather than hard-coding a
-  // name that could drift with the upstream package.
-  const toolName = drive.toolNames?.find((name) => /search/i.test(name)) ?? drive.toolNames?.[0];
-  if (!toolName) return { ok: false, items: [], error: 'Google Drive has not been verified yet — no known tools.' };
-
-  const result = await callServerTool(definition, drive.values, toolName, { query });
+  const result = await callServerTool(definition, google.values, 'drive_search', { query, max_results: limit });
   if (!result.ok) return { ok: false, items: [], error: result.error };
 
-  return { ok: true, items: parseDriveText(result.text ?? '').slice(0, limit) };
+  return { ok: true, items: parseDriveResults(result.text ?? '').slice(0, limit) };
 }

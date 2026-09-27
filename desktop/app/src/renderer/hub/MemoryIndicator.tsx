@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
+import { OrbLabel } from '../components/lib';
 
 interface ProcessInfo {
   pid?: number;
@@ -123,7 +124,7 @@ export function MemoryIndicatorContent(): React.ReactElement {
   }, []);
 
   if (!data) {
-    return <div className="mem-popup mem-popup--loading">Loading…</div>;
+    return <div className="mem-popup mem-popup--loading"><OrbLabel state="searching">Measuring memory</OrbLabel></div>;
   }
 
   return (

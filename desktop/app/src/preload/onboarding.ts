@@ -203,4 +203,33 @@ const onboardingAPI = {
 
 contextBridge.exposeInMainWorld('onboardingAPI', onboardingAPI);
 
+type ThemeModeValue = 'light' | 'dark' | 'system';
+type ThemeState = { mode: ThemeModeValue; resolved: 'light' | 'dark' };
+
+// Only the theme bridge — the same shape preload/shell.ts exposes — so
+// renderer/design/themeMode.ts can hydrate and follow Light/Dark/System here
+// too. Without it onboarding was always dark.
+contextBridge.exposeInMainWorld('electronAPI', {
+  profile: {
+    get: (): Promise<unknown> => ipcRenderer.invoke('profile:get'),
+    set: (next: { bot?: string; color?: string | null; name?: string | null }): Promise<unknown> => ipcRenderer.invoke('profile:set', next),
+    onChange: (cb: (profile: unknown) => void): (() => void) => {
+      const handler = (_evt: unknown, payload: unknown) => cb(payload);
+      ipcRenderer.on('profile:changed', handler);
+      return () => ipcRenderer.removeListener('profile:changed', handler);
+    },
+  },
+  settings: {
+    theme: {
+      get: (): Promise<ThemeState> => ipcRenderer.invoke('theme:get'),
+      set: (mode: ThemeModeValue): Promise<ThemeState> => ipcRenderer.invoke('theme:set', mode),
+      onChange: (cb: (event: ThemeState) => void): (() => void) => {
+        const handler = (_evt: unknown, payload: ThemeState) => cb(payload);
+        ipcRenderer.on('theme:changed', handler);
+        return () => ipcRenderer.removeListener('theme:changed', handler);
+      },
+    },
+  },
+});
+
 export type OnboardingAPI = typeof onboardingAPI;

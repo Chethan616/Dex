@@ -53,11 +53,9 @@ describe('ConfirmationCard approval lifetime', () => {
 
   it('sends the selected lifetime when Approve is clicked after changing it', async () => {
     const { container } = render();
-    const select = container.querySelector('select.deck-confirm__lifetime') as HTMLSelectElement;
-    act(() => {
-      select.value = 'session';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    const sessionOption = Array.from(container.querySelectorAll('.deck-confirm__lifetime [role="radio"]'))
+      .find((b) => b.textContent === 'Session') as HTMLButtonElement;
+    act(() => { sessionOption.click(); });
     const approveBtn = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Approve')!;
     await act(async () => { approveBtn.click(); });
     expect(confirmAnswer).toHaveBeenCalledWith('s1', 'c1', true, 'session');
@@ -65,11 +63,9 @@ describe('ConfirmationCard approval lifetime', () => {
 
   it('Deny always answers with lifetime "once", ignoring whatever the selector shows', async () => {
     const { container } = render();
-    const select = container.querySelector('select.deck-confirm__lifetime') as HTMLSelectElement;
-    act(() => {
-      select.value = 'session';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    const sessionOption = Array.from(container.querySelectorAll('.deck-confirm__lifetime [role="radio"]'))
+      .find((b) => b.textContent === 'Session') as HTMLButtonElement;
+    act(() => { sessionOption.click(); });
     const denyBtn = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Deny')!;
     await act(async () => { denyBtn.click(); });
     expect(confirmAnswer).toHaveBeenCalledWith('s1', 'c1', false, 'once');

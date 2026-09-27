@@ -33,6 +33,15 @@ function normalizeSettingsOpenPayload(raw: unknown): SettingsOpenPayload | undef
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  profile: {
+    get: (): Promise<unknown> => ipcRenderer.invoke('profile:get'),
+    set: (next: { bot?: string; color?: string | null; name?: string | null }): Promise<unknown> => ipcRenderer.invoke('profile:set', next),
+    onChange: (cb: (profile: unknown) => void): (() => void) => {
+      const handler = (_evt: unknown, payload: unknown) => cb(payload);
+      ipcRenderer.on('profile:changed', handler);
+      return () => ipcRenderer.removeListener('profile:changed', handler);
+    },
+  },
   shell: {
     platform: process.platform,
     getPlatform: (): Promise<string> => ipcRenderer.invoke('shell:get-platform'),
@@ -168,6 +177,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('settings:mcp:set', id, patch),
       test: (id: string): Promise<{ ok: boolean; serverName?: string; toolCount?: number; error?: string }> =>
         ipcRenderer.invoke('settings:mcp:test', id),
+    },
+    bridge: {
+      status: (): Promise<unknown> => ipcRenderer.invoke('bridge:status'),
+      restart: (): Promise<void> => ipcRenderer.invoke('bridge:restart'),
+      signIn: (email: string, password: string, create: boolean): Promise<unknown> => ipcRenderer.invoke('bridge:sign-in', email, password, create),
+      resetPassword: (email: string): Promise<unknown> => ipcRenderer.invoke('bridge:reset-password', email),
+      signOut: (): Promise<void> => ipcRenderer.invoke('bridge:sign-out'),
+      onState: (cb: (state: unknown) => void): (() => void) => {
+        const handler = (_evt: unknown, payload: unknown) => cb(payload);
+        ipcRenderer.on('bridge:state', handler);
+        return () => ipcRenderer.removeListener('bridge:state', handler);
+      },
+    },
+    accounts: {
+      list: (): Promise<unknown> => ipcRenderer.invoke('accounts:list'),
+      connect: (provider: 'google' | 'github' | 'slack'): Promise<unknown> => ipcRenderer.invoke('accounts:connect', provider),
+      cancel: (provider: 'google' | 'github' | 'slack'): Promise<void> => ipcRenderer.invoke('accounts:cancel', provider),
+      disconnect: (provider: 'google' | 'github' | 'slack'): Promise<void> => ipcRenderer.invoke('accounts:disconnect', provider),
+      onProgress: (cb: (event: unknown) => void): (() => void) => {
+        const handler = (_evt: unknown, payload: unknown) => cb(payload);
+        ipcRenderer.on('accounts:progress', handler);
+        return () => ipcRenderer.removeListener('accounts:progress', handler);
+      },
     },
     preflight: {
       get: (): Promise<PreflightReport> => ipcRenderer.invoke('settings:preflight:get'),

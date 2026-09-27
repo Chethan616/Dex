@@ -5,6 +5,7 @@ import minimaxLogo from './minimax-color.svg';
 import qwenLogo from './qwen-color.svg';
 import { useThemedAsset } from '../design/useThemedAsset';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
+import { OrbLabel } from '../components/lib';
 
 export interface BrowserCodeProvider {
   id: string;
@@ -266,6 +267,7 @@ export function BrowserCodeModelMenuContent({
     <div className="browsercode-model-picker__menu" role="menu">
       {loadingStatus ? (
         <div className="browsercode-submenu browsercode-submenu--loading" aria-label="Loading BrowserCode providers">
+          <OrbLabel state="connecting" className="browsercode-submenu__loading-label">Loading providers</OrbLabel>
           <BrowserCodeSkeletonRows />
         </div>
       ) : !canSwitchModels && (
@@ -304,7 +306,7 @@ export function BrowserCodeModelMenuContent({
               >
                 <ProviderMark providerId={provider.id} />
                 <span className="browsercode-model-picker__item-name">{provider.name}</span>
-                {isActiveProvider && <span className="browsercode-model-picker__check">✓</span>}
+                {isActiveProvider && <span className="browsercode-model-picker__check" aria-label="Selected"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}
                 {!isConfigured && <span className="browsercode-model-picker__locked">Settings</span>}
                 <span className="browsercode-model-picker__chevron-right" aria-hidden="true">
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -347,7 +349,7 @@ export function BrowserCodeModelMenuContent({
                       title={isConfiguredProvider ? `Use ${model.label}` : `Add a ${provider.name} key in Settings`}
                     >
                       <span className="browsercode-model-picker__item-name">{model.label}</span>
-                      {isActive && <span className="browsercode-model-picker__check">✓</span>}
+                      {isActive && <span className="browsercode-model-picker__check" aria-label="Selected"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}
                       {!isConfiguredProvider && <span className="browsercode-model-picker__locked">Settings</span>}
                     </button>
                   );
@@ -436,7 +438,7 @@ export function BrowserCodeProviderSubmenu({ onSelected }: BrowserCodeProviderSu
             >
               <ProviderMark providerId={provider.id} />
               <span className="browsercode-model-picker__item-name">{provider.name}</span>
-              {isActive && <span className="browsercode-model-picker__check">✓</span>}
+              {isActive && <span className="browsercode-model-picker__check" aria-label="Selected"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}
               {!isConfigured && <span className="browsercode-model-picker__locked">Settings</span>}
               <span className="browsercode-model-picker__chevron-right" aria-hidden="true">
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -482,7 +484,7 @@ export function BrowserCodeProviderSubmenu({ onSelected }: BrowserCodeProviderSu
             role="menuitem"
           >
             <span className="browsercode-model-picker__item-name">{model.label}</span>
-            {isActive && <span className="browsercode-model-picker__check">✓</span>}
+            {isActive && <span className="browsercode-model-picker__check" aria-label="Selected"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}
           </button>
         );
       })}

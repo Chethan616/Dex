@@ -1,0 +1,124 @@
+package com.chethan616.dex.data
+
+/**
+ * What the desktop mirrors into Firestore (desktop/app/src/main/firebase/
+ * bridge.ts is the writer; keep the two in step). Parsed by hand from
+ * DocumentSnapshot maps — no reflection, so nothing breaks under R8.
+ */
+
+enum class SessionStatus(val id: String) {
+  Draft("draft"), Running("running"), Stuck("stuck"), Idle("idle"), Paused("paused"), Stopped("stopped");
+
+  val isLive: Boolean get() = this == Running || this == Stuck
+
+  companion object {
+    fun from(id: String?): SessionStatus = entries.firstOrNull { it.id == id } ?: Stopped
+  }
+}
+
+data class PendingConfirmation(val id: String, val title: String, val detail: String)
+
+data class Session(
+  val id: String,
+  val prompt: String,
+  val status: SessionStatus,
+  val engine: String?,
+  val model: String?,
+  val createdAt: Long,
+  val lastActivityAt: Long,
+  val lastLine: String,
+  val summary: String?,
+  val error: String?,
+  val costUsd: Double,
+  val tokens: Long,
+  val blockCount: Int,
+  val pendingConfirmation: PendingConfirmation?,
+  val deviceName: String?,
+  /** Files the task recorded (dex-state file), for the Files sheet. */
+  val files: List<TaskFile> = emptyList(),
+)
+
+data class TaskFile(val name: String, val path: String, val size: Long)
+
+data class ToolResult(val ok: Boolean, val preview: String, val ms: Long)
+
+/** One chat block — same kinds as renderer/logs/transcript.ts. */
+data class Block(
+  val seq: Long,
+  val kind: String,
+  val text: String? = null,
+  val name: String? = null,
+  val toolKind: String? = null,
+  val verb: String? = null,
+  val activeVerb: String? = null,
+  val orb: String? = null,
+  val display: String? = null,
+  val summary: String? = null,
+  val argsJson: String? = null,
+  val iteration: Long = 0,
+  val result: ToolResult? = null,
+  val level: String? = null,
+  val detail: String? = null,
+  val size: Long = 0,
+  val mime: String? = null,
+  val count: Long = 0,
+  val items: List<Pair<String, String?>> = emptyList(),
+  /** Done only: the summary repeats the reply above it — show a compact footer, not the answer twice. */
+  val echo: Boolean = false,
+  /** file / image: where it lives on the PC (fetch it with fetch_file). */
+  val path: String? = null,
+  /** file / image: a small JPEG preview, base64 — shown inline straight away. */
+  val thumb: String? = null,
+)
+
+data class EngineModel(val id: String, val label: String)
+
+data class Engine(val id: String, val name: String, val models: List<EngineModel>)
+
+data class Device(
+  val id: String,
+  val kind: String,
+  val name: String,
+  val platform: String?,
+  val online: Boolean,
+  val lastSeenMs: Long,
+  val engines: List<Engine>,
+  /** The desktop's agent-approval policy: ask | auto | full. */
+  val approvalMode: String? = null,
+) {
+  /** The desktop heartbeats every minute; three missed beats means gone. */
+  val isReachable: Boolean
+    get() = online && System.currentTimeMillis() - lastSeenMs < 3 * 60_000
+}
+
+enum class CommandType(val id: String) {
+  NewTask("new_task"),
+  FollowUp("follow_up"),
+  Pause("pause"),
+  Resume("resume"),
+  Stop("stop"),
+  AnswerConfirmation("answer_confirmation"),
+  SyncSession("sync_session"),
+  SetApprovalMode("set_approval_mode"),
+  FetchFile("fetch_file"),
+}
+
+/**
+ * "Your DEX" — the bot that represents you on the phone and the PC
+ * (desktop/app/src/main/profile.ts is the desktop side). Lives at
+ * users/{uid}.profile; the newer updatedAt wins.
+ */
+data class DexProfile(
+  val bot: String,
+  /** #RRGGBB, or null for the bot's own colour. */
+  val color: String?,
+  val name: String?,
+  val updatedAt: Long,
+)
+
+sealed interface CommandState {
+  data object Pending : CommandState
+  data object Running : CommandState
+  data class Done(val result: Map<String, Any?>) : CommandState
+  data class Failed(val error: String) : CommandState
+}

@@ -16,6 +16,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ImageGeneration, type ImageGenerationHandle } from 'img-fx';
 import { Markdown } from './Markdown';
+import { useLibTheme } from '../design/useLibTheme';
+import { Orb, Segmented } from '../components/lib';
 import type { AgentSession, ArtifactItem, HlEvent, TaskState, TaskStep } from './types';
 
 type ArtifactEvent = Extract<HlEvent, { type: 'artifact' }>;
@@ -302,6 +304,7 @@ function ScreenshotCard({ shots }: { shots: ScreenshotEvent[] }): React.ReactEle
   const imgFxRef = useRef<ImageGenerationHandle>(null);
   const revealedPathRef = useRef<string | null>(null);
   const activeUrl = `file://${active.path}`;
+  const libTheme = useLibTheme();
 
   // Only the single large capture gets the img-fx shader — the thumbnail
   // strip stays plain <img>s so a busy session never opens more than one
@@ -321,7 +324,7 @@ function ScreenshotCard({ shots }: { shots: ScreenshotEvent[] }): React.ReactEle
       <ImageGeneration
         ref={imgFxRef}
         preset="pixels-organic"
-        theme="dark"
+        theme={libTheme}
         images={activeUrl}
       >
         <img className="deck-shot" src={activeUrl} alt={active.caption ?? 'screen capture'} />
@@ -449,10 +452,10 @@ function ActivityCard({ session }: { session: AgentSession }): React.ReactElemen
   return (
     <section className="deck-card deck-card--activity">
       <header className="deck-card__header">
+        {running ? <Orb size={20} state={stats.lastTool ? 'working' : 'composing'} /> : null}
         <span className="deck-card__title">
           {running ? (stats.lastTool ?? 'Working') : 'Nothing running'}
         </span>
-        {running ? <span className="deck-pulse" aria-hidden="true" /> : null}
       </header>
 
       {stats.lastThought ? (
@@ -543,18 +546,18 @@ export function ConfirmationCard({ sessionId, event }: { sessionId: string; even
         >
           {answering === 'deny' ? 'Denying…' : 'Deny'}
         </button>
-        <select
+        <Segmented<ApprovalLifetimeChoice>
           className="deck-confirm__lifetime"
+          size="sm"
+          label="Remember this approval for"
           value={lifetime}
-          onChange={(e) => setLifetime(e.target.value as ApprovalLifetimeChoice)}
-          disabled={answering != null}
-          aria-label="Remember this approval for"
-          title="Remember this approval for"
-        >
-          <option value="once">Just this once</option>
-          <option value="turn">For this turn</option>
-          <option value="session">For this session</option>
-        </select>
+          onChange={setLifetime}
+          options={[
+            { value: 'once', label: 'Once', disabled: answering != null },
+            { value: 'turn', label: 'This turn', disabled: answering != null },
+            { value: 'session', label: 'Session', disabled: answering != null },
+          ]}
+        />
         <button
           className="deck-confirm__btn deck-confirm__btn--approve"
           onClick={() => answer(true)}

@@ -14,6 +14,7 @@ import minimaxLogo from './minimax-color.svg';
 import { useThemedAsset } from '../design/useThemedAsset';
 import { CookieBrowser, type CookieBrowserApi } from '../shared/CookieBrowser';
 import { pollInstalledStatus } from '../shared/installStatus';
+import { Orb } from '../components/lib';
 
 type WaStatus = 'disconnected' | 'connecting' | 'qr_ready' | 'connected' | 'error';
 type AuthType = 'oauth' | 'apiKey' | 'none';
@@ -58,7 +59,7 @@ function useBrowserCodeProviderLogos(): Record<string, string> {
 function ConnectionActionSkeleton(): React.ReactElement {
   return (
     <>
-      <span className="conn-card__skeleton conn-card__skeleton--button-wide" aria-hidden="true" />
+      <span className="conn-card__checking"><Orb size={20} state="connecting" label="Checking connection" /></span>
       <span className="conn-card__skeleton conn-card__skeleton--button" aria-hidden="true" />
     </>
   );

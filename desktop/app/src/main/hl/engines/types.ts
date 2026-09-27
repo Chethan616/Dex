@@ -25,6 +25,13 @@ export interface SpawnContext {
    * exact tool names removes the discovery step that failed.
    */
   mcpBriefing?: string[];
+  /**
+   * The same connections as data, for engines that can't read mcp.json
+   * (Codex, BrowserCode): they start each through the launcher script.
+   */
+  mcpServers?: Array<{ id: string; displayName: string; identity?: string; toolNames: string[] }>;
+  /** Absolute path to mcp-servers/launch.mjs. */
+  mcpLauncherPath?: string;
   /** User prompt to feed to the CLI. Adapters may wrap with seed/system text. */
   prompt: string;
   /** Absolute path to <userData>/harness/ (AGENTS.md + browser-harness-js live here). */
@@ -43,6 +50,12 @@ export interface SpawnContext {
   providerId?: string;
   /** Optional model id selected for this run. */
   model?: string;
+  /**
+   * Where the task came from ('whatsapp', 'android', …); undefined for the
+   * hub. A task from the phone means the user can't see this PC, so what they
+   * asked to get must be sent to them (dex-send), not just left on disk.
+   */
+  originChannel?: string;
   /** List of attachment paths (relative to harnessDir) the adapter may mention in wrappedPrompt. */
   attachmentRefs: Array<{ relPath: string; mime: string; size: number }>;
 }
@@ -151,6 +164,8 @@ export interface RunEngineOptions {
   engineId: string;
   prompt: string;
   sessionId: string;
+  /** Where the task came from ('whatsapp', 'android', …); undefined for the hub. */
+  originChannel?: string;
   webContents: WebContents;
   cdpPort: number;
   harnessDir: string;

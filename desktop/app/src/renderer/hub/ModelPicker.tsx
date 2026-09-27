@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
 
 export interface SelectableModel {
@@ -14,6 +14,7 @@ interface ModelPickerProps {
   value: string;
   onChange: (modelId: string) => void;
   onOpenChange?: (open: boolean) => void;
+  reflectionRef?: RefObject<HTMLButtonElement | null>;
 }
 
 /** Sentinel for "don't pass a model flag at all". */
@@ -37,10 +38,14 @@ function ChevronIcon(): React.ReactElement {
  * all — BrowserCode picks its model in Settings, so a second control here
  * would be a lie.
  */
-export function ModelPicker({ engineId, value, onChange, onOpenChange }: ModelPickerProps): React.ReactElement | null {
+export function ModelPicker({ engineId, value, onChange, onOpenChange, reflectionRef }: ModelPickerProps): React.ReactElement | null {
   const [models, setModels] = useState<SelectableModel[]>([]);
   const [popupId, setPopupId] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const setButtonRefs = useCallback((element: HTMLButtonElement | null) => {
+    buttonRef.current = element;
+    if (reflectionRef) reflectionRef.current = element;
+  }, [reflectionRef]);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,16 +102,13 @@ export function ModelPicker({ engineId, value, onChange, onOpenChange }: ModelPi
     else onOpenChange?.(false);
   }, [models, onChange, onOpenChange, popupId, value]);
 
-  // Nothing to choose between — don't show a control that cannot do anything.
-  if (models.length === 0) return null;
-
   const current = models.find((m) => m.id === value);
-  const label = current?.label ?? 'Default';
+  const label = current?.label ?? 'Auto';
 
   return (
     <div className="model-picker">
       <button
-        ref={buttonRef}
+        ref={setButtonRefs}
         type="button"
         className="model-picker__toggle"
         onClick={(e) => { e.stopPropagation(); void openMenu(); }}

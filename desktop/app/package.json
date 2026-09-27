@@ -52,7 +52,8 @@
     "start:reset-onboarding": "node scripts/reset-onboarding.mjs",
     "start:reset-sessions": "node scripts/reset-sessions.mjs",
     "sync-domain-skills": "node scripts/sync-domain-skills.mjs",
-    "postinstall": "node scripts/chmod-node-pty-helpers.mjs"
+    "postinstall": "node scripts/chmod-node-pty-helpers.mjs",
+    "oauth:setup": "node scripts/oauth-setup.mjs"
   },
   "keywords": [],
   "author": {
@@ -116,15 +117,17 @@
     "@xterm/xterm": "^6.0.0",
     "ajv": "^8.18.0",
     "better-sqlite3": "^12.9.0",
-    "border-beam": "1.4.0",
+    "border-beam": "1.4.1",
+    "bot-avatars": "0.1.1",
     "dotenv": "^17.4.2",
     "electron-squirrel-startup": "^1.0.1",
     "electron-updater": "^6.8.3",
     "fflate": "^0.8.2",
+    "firebase": "^12.19.0",
     "img-fx": "0.5.1",
     "keytar": "^7.9.0",
     "liquid-gooey": "0.2.2",
-    "metal-fx": "2.0.10",
+    "metal-fx": "^2.0.11",
     "node-cache": "^5.1.2",
     "node-pty": "^1.1.0",
     "qrcode": "^1.5.4",
@@ -135,7 +138,7 @@
     "remark-gfm": "^4.0.1",
     "thinking-orbs": "0.3.2",
     "three": "^0.149.0",
-    "voice-glow": "0.2.0",
+    "voice-glow": "0.2.1",
     "ws": "^8.20.0",
     "zod": "^4.3.6"
   }
