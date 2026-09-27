@@ -15,6 +15,8 @@ them with Bash like any other command.
 | `dex-canvas` | Rendering a markdown document (report, table, summary) in the pane itself instead of as terminal text. See `canvas.md`. |
 | `dex-websearch` | A plain factual lookup that doesn't need a browser tab. See `websearch.md`. |
 | `dex-send` | Sending the user a file, a screenshot (`--page`, `--screen`) or your canvas as a PDF (`--canvas`) on WhatsApp. See `send.md`. |
+| `dex-3d` | An AI-generated, textured 3D model (GLB) of one object from a description or a picture — free on the user's Hugging Face account. See `blender.md`. |
+| `dex-blender` | Opening Blender so the Blender tools can reach it, and headless Blender scripts and renders. See `blender.md` for how to build scenes and models that look good. |
 
 There are also skill files here for two user commands, read when the command is
 used rather than run as tools:

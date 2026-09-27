@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# dex-blender — start and use Blender for 3D work.
+#
+#   dex-blender status                      is Blender open and reachable by the Blender tools?
+#   dex-blender open [file.blend]           open Blender (MCP add-on starts with it) and wait until ready
+#   dex-blender run script.py [file.blend]  run a Python script in Blender without a window
+#   dex-blender render file.blend out.png [--engine eevee|cycles] [--samples N] [--size WxH]
+#                                           render a still without a window (Cycles uses the GPU)
+#
+# The Blender tools (mcp__blender__* / dex_blender) drive an OPEN Blender over
+# localhost:9876 — call `dex-blender open` first if they say they can't connect.
+# `run` and `render` are for batch work and final renders; they don't need it open.
+
+set -uo pipefail
+PORT="${BLENDER_PORT:-9876}"
+
+usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+[ $# -ge 1 ] || usage
+case "$1" in -h|--help|help) usage ;; esac
+
+exe="${DEX_BLENDER:-}"
+if [ -z "$exe" ] || [ ! -f "$exe" ]; then
+  exe="$(ls -d "/c/Program Files/Blender Foundation"/Blender*/blender.exe 2>/dev/null | sort -V | tail -1)"
+fi
+[ -n "$exe" ] && [ -f "$exe" ] || { echo "dex-blender: Blender isn't installed (winget install BlenderFoundation.Blender)." >&2; exit 3; }
+
+winpath() { command -v cygpath >/dev/null 2>&1 && cygpath -w "$1" || printf '%s' "$1"; }
+# Relative paths mean relative to *this* shell — Blender resolves them against its own cwd.
+abspath() { case "$1" in /*|[A-Za-z]:[\/]*|"") printf '%s' "$1" ;; *) printf '%s/%s' "$PWD" "$1" ;; esac; }
+listening() { (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; }
+
+op="$1"; shift
+case "$op" in
+  status)
+    if listening; then echo "Blender is open and its MCP add-on is listening on :$PORT — the Blender tools will work."
+    else echo "Blender isn't open (nothing on :$PORT). Run: dex-blender open"; exit 1; fi ;;
+
+  open)
+    if listening; then echo "Blender is already open and ready on :$PORT."; exit 0; fi
+    file="$(abspath "${1:-}")"
+    if command -v cmd.exe >/dev/null 2>&1; then
+      if [ -n "$file" ]; then cmd.exe //c start "" "$(winpath "$exe")" "$(winpath "$file")" >/dev/null 2>&1
+      else cmd.exe //c start "" "$(winpath "$exe")" >/dev/null 2>&1; fi
+    else
+      ( "$exe" ${file:+"$file"} >/dev/null 2>&1 & )
+    fi
+    for i in $(seq 1 60); do
+      sleep 1
+      if listening; then echo "Blender is open and ready on :$PORT (after ${i}s)."; exit 0; fi
+    done
+    echo "dex-blender: Blender started but its MCP add-on isn't listening on :$PORT after 60s. In Blender: Edit → Preferences → Add-ons → enable 'MCP for Blender', then the sidebar (N) → BlenderMCP → Start." >&2
+    exit 1 ;;
+
+  run)
+    [ $# -ge 1 ] || usage
+    script="$(abspath "$1")"; blend="$(abspath "${2:-}")"
+    [ -f "$script" ] || { echo "dex-blender: no such script: $script" >&2; exit 2; }
+    "$exe" -b ${blend:+"$(winpath "$blend")"} --python-exit-code 1 -P "$(winpath "$script")" 2>&1 | grep -v "^Blender quit$\|CUEW initialization failed"
+    exit "${PIPESTATUS[0]}" ;;
+
+  render)
+    [ $# -ge 2 ] || usage
+    blend="$(abspath "$1")"; out="$(abspath "$2")"; shift 2
+    engine=eevee; samples=""; size=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --engine) engine="$2"; shift ;;
+        --samples) samples="$2"; shift ;;
+        --size) size="$2"; shift ;;
+        *) echo "dex-blender render: unknown option $1" >&2; exit 2 ;;
+      esac
+      shift
+    done
+    [ -f "$blend" ] || { echo "dex-blender: no such file: $blend" >&2; exit 2; }
+    py=$(cat <<PY
+import bpy, os
+s = bpy.context.scene
+eng = "$engine".lower()
+if eng == "cycles":
+    s.render.engine = "CYCLES"
+    try:
+        p = bpy.context.preferences.addons["cycles"].preferences
+        for kind in ("OPTIX", "CUDA", "HIP", "ONEAPI", "METAL"):
+            try:
+                p.compute_device_type = kind
+            except TypeError:
+                continue
+            p.refresh_devices()
+            gpus = [d for d in p.devices if d.type == kind]
+            if gpus:
+                for d in p.devices: d.use = d.type == kind
+                s.cycles.device = "GPU"
+                print("DEX: Cycles on", kind, [d.name for d in gpus])
+                break
+    except Exception as e:
+        print("DEX: GPU unavailable, using CPU:", e)
+    if "$samples": s.cycles.samples = int("$samples")
+else:
+    for ident in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE"):
+        try:
+            s.render.engine = ident; break
+        except TypeError:
+            continue
+    if "$samples":
+        try: s.eevee.taa_render_samples = int("$samples")
+        except Exception: pass
+if "$size":
+    w, h = "$size".lower().split("x"); s.render.resolution_x, s.render.resolution_y = int(w), int(h)
+    s.render.resolution_percentage = 100
+if s.camera is None:
+    raise SystemExit("DEX: the scene has no camera — add one and aim it first")
+s.render.filepath = r"$(winpath "$out")"
+bpy.ops.render.render(write_still=True)
+print("DEX: rendered", s.render.filepath, s.render.engine, f"{s.render.resolution_x}x{s.render.resolution_y}")
+PY
+)
+    "$exe" -b "$(winpath "$blend")" --python-exit-code 1 --python-expr "$py" 2>&1 | grep -E "^DEX:|Error|error|Traceback|Saved:" | grep -v CUEW
+    rc="${PIPESTATUS[0]}"
+    # Record the render so it shows in the task — and on the phone — with a preview.
+    if [ "$rc" = 0 ] && [ -f "$out" ] && [ -n "${DEX_SESSION_ID:-}" ] && command -v dex-state >/dev/null 2>&1; then
+      dex-state file "$out" >/dev/null 2>&1 || true
+    fi
+    exit "$rc" ;;
+
+  *) echo "dex-blender: unknown command '$op'" >&2; usage ;;
+esac

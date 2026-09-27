@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# dex-3d — an AI-generated 3D model (GLB, textured) for Blender, free.
+#
+#   dex-3d "a carved wooden treasure chest with gold trim"      describe it (a reference picture is made first)
+#   dex-3d --image photo.png                                    or give a picture of the object
+#   … --model trellis        use TRELLIS instead of Hunyuan3D-2.1 (the default, best textures)
+#   … --shape-only           mesh without texture: faster, uses less of today's quota
+#   … --name chest           base name for the files
+#
+# Writes <name>.glb (and the reference picture) under ./outputs/<session>/3d/ and
+# prints the path. Import it in Blender with bpy.ops.import_scene.gltf(filepath=…).
+# Takes 1–3 minutes. Uses the user's free Hugging Face GPU time — about 1–2 models
+# a day on a free account — so generate ONE hero object at a time, never a scene.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+[ $# -ge 1 ] || usage
+case "$1" in -h|--help|help) usage ;; esac
+
+session="$(dex_session_id)"
+[ -n "$session" ] || { echo "dex-3d: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
+
+prompt=""; image=""; model="hunyuan"; shape=false; name=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --image) image="$2"; shift ;;
+    --model) model="$2"; shift ;;
+    --shape-only) shape=true ;;
+    --name) name="$2"; shift ;;
+    -*) echo "dex-3d: unknown option $1" >&2; usage ;;
+    *) prompt="${prompt:+$prompt }$1" ;;
+  esac
+  shift
+done
+if [ -n "$image" ]; then case "$image" in /*|[A-Za-z]:[\/]*) ;; *) image="$PWD/$image" ;; esac; fi
+[ -n "$prompt" ] || [ -n "$image" ] || { echo "dex-3d: describe the object, or pass --image" >&2; exit 2; }
+
+echo "dex-3d: generating on Hugging Face (1–3 min)…" >&2
+body="{\"sessionId\":\"$(dex_esc "$session")\",\"prompt\":\"$(dex_esc "$prompt")\",\"image\":\"$(dex_esc "$image")\",\"model\":\"$(dex_esc "$model")\",\"shapeOnly\":${shape},\"name\":\"$(dex_esc "$name")\"}"
+dex_post /dex/3d "$body"

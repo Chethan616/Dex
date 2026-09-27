@@ -1,0 +1,9 @@
+{
+  "client_id": "https://dexv3-chethan616.web.app/.well-known/oauth-cimd",
+  "client_name": "DEX",
+  "client_uri": "https://github.com/Chethan616/Dex",
+  "redirect_uris": ["http://127.0.0.1/callback", "http://localhost/callback"],
+  "token_endpoint_auth_method": "none",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"]
+}

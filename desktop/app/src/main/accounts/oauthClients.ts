@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { mainLogger } from '../logger';
 
-export type OAuthProvider = 'google' | 'github' | 'slack';
+export type OAuthProvider = 'google' | 'github' | 'slack' | 'huggingface';
 
 export interface OAuthClient {
   clientId: string;

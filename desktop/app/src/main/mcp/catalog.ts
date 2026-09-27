@@ -17,6 +17,7 @@
 import path from 'node:path';
 import { oauthClient } from '../accounts/oauthClients';
 import { knownFolders } from '../startup/knownFolders';
+import { findBlender } from '../startup/blender';
 
 export type McpTransport = 'stdio';
 
@@ -30,6 +31,8 @@ export interface McpCredentialField {
   /** Rendered as a password field and never logged or echoed back. */
   secret: boolean;
   help?: string;
+  /** Unlocks extras; the server works without it (e.g. Blender's Sketchfab key). */
+  optional?: boolean;
 }
 
 export interface McpServerDefinition {
@@ -192,6 +195,46 @@ export const MCP_CATALOG: McpServerDefinition[] = [
       };
     },
   },
+  {
+    // github.com/ahujasid/mcp-for-blender (MIT) — the maintainer's package,
+    // run with uvx like the npx servers above; not vendored. It drives a
+    // running Blender over localhost:9876 through its add-on, and returns
+    // viewport screenshots as images, so the agent can see what it built.
+    id: 'blender',
+    displayName: 'Blender',
+    summary: 'Build 3D scenes and models in a live Blender: run Python in the scene, see the viewport, pull free Poly Haven HDRIs, textures and models, export GLB/FBX.',
+    transport: 'stdio',
+    command: 'uvx',
+    args: ['mcp-for-blender'],
+    env: {
+      // Anonymous usage pings off; content collection is off by default anyway.
+      DISABLE_TELEMETRY: 'true',
+      // Its installer prints "→", which Windows' cp1252 console can't encode.
+      PYTHONIOENCODING: 'utf-8',
+    },
+    credentials: [
+      {
+        key: 'BLENDERMCP_SKETCHFAB_API_KEY',
+        label: 'Sketchfab API key (optional)',
+        secret: true,
+        optional: true,
+        help: 'Free: sketchfab.com → Settings → Password & API. Adds real-world models.',
+      },
+      {
+        key: 'BLENDERMCP_POLYPIZZA_API_KEY',
+        label: 'Poly Pizza API key (optional)',
+        secret: true,
+        optional: true,
+        help: 'Free: poly.pizza/settings/api. Adds low-poly models.',
+      },
+    ],
+    docsUrl: 'https://github.com/ahujasid/mcp-for-blender',
+    resolveIdentity: async () => {
+      const exe = findBlender();
+      const version = exe?.match(/Blender (\d+(?:\.\d+)*)/)?.[1];
+      return version ? `Blender ${version}` : undefined;
+    },
+  },
 ];
 
 export function findServerDefinition(id: string): McpServerDefinition | undefined {
@@ -209,6 +252,7 @@ export function missingCredentials(
   values: Record<string, string>,
 ): McpCredentialField[] {
   return definition.credentials.filter((field) => {
+    if (field.optional) return false;
     const value = values[field.key];
     return !value || value.trim().length === 0;
   });

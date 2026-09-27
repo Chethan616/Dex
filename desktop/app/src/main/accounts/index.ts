@@ -18,6 +18,7 @@ import { listConnections, removeConnection, setConnection } from '../mcp/store';
 import { oauthClient, type OAuthProvider } from './oauthClients';
 import { cancelGoogle, connectGoogle, refreshGoogleIdToken, revokeGoogle } from './google';
 import { cancelGitHub, connectGitHub, connectGitHubViaCli, githubCliAvailable } from './github';
+import { cancelHuggingFace, connectHuggingFace, connectHuggingFaceToken, forgetHuggingFace, loadHuggingFace } from './huggingface';
 import { cancelSlack, connectSlack, revokeSlack } from './slack';
 
 export interface AccountProfile {
@@ -49,7 +50,7 @@ export type AccountProgress =
   | { provider: OAuthProvider; phase: 'done'; profile: AccountProfile }
   | { provider: OAuthProvider; phase: 'error'; error: string };
 
-const PROVIDERS: OAuthProvider[] = ['google', 'github', 'slack'];
+const PROVIDERS: OAuthProvider[] = ['google', 'github', 'slack', 'huggingface'];
 
 /** Fires with the provider whenever an account connects or disconnects. */
 export const accountEvents = new EventEmitter();
@@ -87,7 +88,21 @@ export async function listAccounts(): Promise<AccountInfo[]> {
   const connections = new Map((await listConnections()).map((c) => [c.id, c]));
   const profiles = readProfiles();
   const cli = await githubCliAvailable();
+  const hf = await loadHuggingFace();
   return PROVIDERS.map((provider) => {
+    // Hugging Face has no MCP server behind it and needs no registered app
+    // (its client ID is DEX's public metadata document), so it's always
+    // available and "connected" means a stored sign-in.
+    if (provider === 'huggingface') {
+      return {
+        provider,
+        available: true,
+        via: 'oauth' as const,
+        connected: Boolean(hf),
+        devBuild: !app.isPackaged,
+        profile: hf ? { identity: hf.username, name: hf.name, picture: hf.picture, connectedAt: 0 } : undefined,
+      };
+    }
     const connection = connections.get(provider);
     const connected = Boolean(connection?.enabled && Object.values(connection.values).some((v) => v));
     const hasClient = provider === 'slack' ? Boolean(oauthClient('slack')?.clientSecret) : Boolean(oauthClient(provider));
@@ -133,6 +148,13 @@ export async function connectAccount(provider: OAuthProvider): Promise<{ ok: boo
         : await connectGitHub((code) => broadcast({ provider, phase: 'code', ...code }));
       await setConnection('github', { enabled: true, values: { GITHUB_PERSONAL_ACCESS_TOKEN: account.token }, identity: account.login });
       profile = { identity: account.login, name: account.name, picture: account.avatar, connectedAt: Date.now() };
+    } else if (provider === 'huggingface') {
+      const account = await connectHuggingFace();
+      profile = { identity: account.username, name: account.name, picture: account.picture, connectedAt: Date.now() };
+      writeProfile(provider, profile);
+      broadcast({ provider, phase: 'done', profile });
+      accountEvents.emit('changed', provider);
+      return { ok: true, profile };
     } else {
       const account = await connectSlack();
       await setConnection('slack', { enabled: true, values: { SLACK_BOT_TOKEN: account.botToken, SLACK_TEAM_ID: account.teamId }, identity: account.teamName ?? account.teamId });
@@ -173,6 +195,7 @@ async function verifyAndRecord(provider: OAuthProvider): Promise<void> {
 export function cancelAccount(provider: OAuthProvider): void {
   if (provider === 'google') cancelGoogle();
   else if (provider === 'github') cancelGitHub();
+  else if (provider === 'huggingface') cancelHuggingFace();
   else cancelSlack();
 }
 
@@ -181,14 +204,15 @@ export async function disconnectAccount(provider: OAuthProvider): Promise<void> 
   // Revoke on the provider's side too, so "disconnect" really means it.
   if (provider === 'google' && connection?.values.GOOGLE_REFRESH_TOKEN) await revokeGoogle(connection.values.GOOGLE_REFRESH_TOKEN);
   if (provider === 'slack' && connection?.values.SLACK_BOT_TOKEN) await revokeSlack(connection.values.SLACK_BOT_TOKEN);
-  await removeConnection(provider);
+  if (provider === 'huggingface') await forgetHuggingFace();
+  else await removeConnection(provider);
   writeProfile(provider, null);
   accountEvents.emit('changed', provider);
   mainLogger.info('accounts.disconnected', { provider });
 }
 
 function asProvider(value: unknown): OAuthProvider {
-  if (value === 'google' || value === 'github' || value === 'slack') return value;
+  if (value === 'google' || value === 'github' || value === 'slack' || value === 'huggingface') return value;
   throw new TypeError('unknown account provider');
 }
 
@@ -197,4 +221,18 @@ export function registerAccountsIpc(): void {
   ipcMain.handle('accounts:connect', (_e, provider: unknown) => connectAccount(asProvider(provider)));
   ipcMain.handle('accounts:cancel', (_e, provider: unknown) => { cancelAccount(asProvider(provider)); });
   ipcMain.handle('accounts:disconnect', (_e, provider: unknown) => disconnectAccount(asProvider(provider)));
+  // Hugging Face also takes a pasted access token (hf_…), for people who'd rather.
+  ipcMain.handle('accounts:huggingface-token', async (_e, token: unknown) => {
+    try {
+      if (typeof token !== 'string') throw new TypeError('token must be a string');
+      const account = await connectHuggingFaceToken(token);
+      const profile = { identity: account.username, name: account.name, picture: account.picture, connectedAt: Date.now() };
+      writeProfile('huggingface', profile);
+      broadcast({ provider: 'huggingface', phase: 'done', profile });
+      accountEvents.emit('changed', 'huggingface');
+      return { ok: true, profile };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
 }

@@ -35,6 +35,12 @@ const META: Record<Provider, ProviderMeta> = {
     services: ['Channels', 'Messages', 'Reactions', 'People'],
     action: 'Add to Slack',
   },
+  huggingface: {
+    name: 'Hugging Face',
+    tagline: 'Free AI 3D models for Blender, from a photo or a sentence — your account’s free daily GPU time, no card needed.',
+    services: ['Hunyuan3D', 'TRELLIS', 'Text-to-image', '3D for Blender'],
+    action: 'Continue with Hugging Face',
+  },
 };
 
 function GoogleMark(): React.ReactElement {
@@ -67,7 +73,20 @@ function SlackMark(): React.ReactElement {
   );
 }
 
-const MARK: Record<Provider, () => React.ReactElement> = { google: GoogleMark, github: GitHubMark, slack: SlackMark };
+function HuggingFaceMark(): React.ReactElement {
+  return (
+    <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
+      <circle cx="24" cy="24" r="19" fill="#FFD21E" />
+      <circle cx="17.5" cy="20" r="2.6" fill="#32343D" />
+      <circle cx="30.5" cy="20" r="2.6" fill="#32343D" />
+      <path d="M16 28c2 4 5 6 8 6s6-2 8-6" stroke="#32343D" strokeWidth="2.6" fill="none" strokeLinecap="round" />
+      <ellipse cx="11" cy="31" rx="4" ry="5.5" fill="#FF9D0B" transform="rotate(-25 11 31)" />
+      <ellipse cx="37" cy="31" rx="4" ry="5.5" fill="#FF9D0B" transform="rotate(25 37 31)" />
+    </svg>
+  );
+}
+
+const MARK: Record<Provider, () => React.ReactElement> = { google: GoogleMark, github: GitHubMark, slack: SlackMark, huggingface: HuggingFaceMark };
 
 type FlowState =
   | { phase: 'idle' }

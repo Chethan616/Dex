@@ -101,6 +101,7 @@
     "vitest": "^4.1.4"
   },
   "dependencies": {
+    "@gradio/client": "^2.7.0",
     "@hapi/boom": "^10.0.1",
     "@tanstack/react-query": "^5.100.8",
     "@types/ws": "^8.18.1",

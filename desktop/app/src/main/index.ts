@@ -1378,6 +1378,27 @@ app.whenReady().then(async () => {
   // the hub's follow-up box.
   channelRouter.setFollowUp((id, text) => handleResumeRequest(id, text, []));
 
+  /** Show a file in the task as a file card (desktop chat + phone). Deduped by path. */
+  function appendFileCard(sessionId: string, rawPath: string, name?: string): void {
+    // Agents run in Git Bash and often pass /c/Users/… paths.
+    const msys = process.platform === 'win32' ? /^\/([a-zA-Z])(?:\/(.*))?$/.exec(rawPath.trim()) : null;
+    const filePath = msys ? path.win32.normalize(`${msys[1].toUpperCase()}:/${msys[2] ?? ''}`) : path.resolve(rawPath.trim());
+    const session = sessionManager.getSession(sessionId);
+    if (!session) return;
+    const already = session.output.some((e) => e.type === 'file_output' && (e as { path?: string }).path === filePath);
+    if (already) return;
+    let size = 0;
+    try { size = fs.statSync(filePath).size; } catch { return; }
+    const fileName = name || path.basename(filePath);
+    const ext = path.extname(fileName).slice(1).toLowerCase();
+    const mime = ({
+      png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif',
+      pdf: 'application/pdf', glb: 'model/gltf-binary', gltf: 'model/gltf+json', fbx: 'application/octet-stream',
+      blend: 'application/x-blender', mp4: 'video/mp4',
+    } as Record<string, string>)[ext] ?? 'application/octet-stream';
+    sessionManager.appendOutput(sessionId, { type: 'file_output', name: fileName, path: filePath, size, mime });
+  }
+
   const localTaskServer = await createLocalTaskServer({
     userDataPath: app.getPath('userData'),
     log: mainLogger,
@@ -1669,7 +1690,45 @@ app.whenReady().then(async () => {
         const { sessionId, ...rest } = (parsed ?? {}) as { sessionId?: unknown };
         const id = assertString(sessionId, 'sessionId', 100);
         const mutation = TaskStateMutationSchema.parse(rest);
-        return { state: sessionManager.applyTaskState(id, mutation) };
+        const state = sessionManager.applyTaskState(id, mutation);
+        // A recorded file (a render, a model, an export) also shows in the
+        // task itself as a file card — with a preview for pictures — on the
+        // desktop and in the phone app.
+        if (mutation.op === 'file') appendFileCard(id, mutation.path, mutation.name);
+        return { state };
+      },
+
+      // dex-3d: an AI 3D model (GLB) from a picture or a description, on the
+      // user's free Hugging Face GPU time. See src/main/threed/generate.ts.
+      'POST /dex/3d': async (raw) => {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new Error('request body must be JSON');
+        }
+        const body = (parsed ?? {}) as { sessionId?: unknown; prompt?: unknown; image?: unknown; model?: unknown; shapeOnly?: unknown; name?: unknown };
+        const id = assertString(body.sessionId, 'sessionId', 100);
+        const prompt = typeof body.prompt === 'string' && body.prompt.trim() ? body.prompt.trim().slice(0, 1000) : undefined;
+        let image: string | undefined;
+        if (typeof body.image === 'string' && body.image.trim()) {
+          const { checkFile } = await import('./channels/outbox');
+          const checked = await checkFile(body.image);
+          if ('error' in checked) throw new Error(checked.error);
+          image = checked.path;
+        }
+        const { generate3D } = await import('./threed/generate');
+        const result = await generate3D({
+          prompt,
+          image,
+          model: body.model === 'trellis' ? 'trellis' : 'hunyuan',
+          shapeOnly: body.shapeOnly === true,
+          name: typeof body.name === 'string' ? body.name.slice(0, 60) : undefined,
+          outDir: path.join(harnessDir(), 'outputs', id, '3d'),
+        });
+        if (result.referenceImage) appendFileCard(id, result.referenceImage);
+        appendFileCard(id, result.glb);
+        return { ...result };
       },
 
       // dex-registry's (and now dex-sh's) blocking confirmation. The
