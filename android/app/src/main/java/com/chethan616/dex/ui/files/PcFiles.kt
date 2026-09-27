@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -288,13 +290,16 @@ fun FilesSheet(blocks: List<Block>, session: Session?, onDismiss: () -> Unit) {
   val scope = rememberCoroutineScope()
   val haptics = LocalHaptics.current
 
+  val sheetMax = com.chethan616.dex.ui.components.rememberSheetMaxHeight()
+  val navBottom = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
   ModalBottomSheet(
     onDismissRequest = onDismiss,
     shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
+    contentWindowInsets = { com.chethan616.dex.ui.components.NoSheetInsets },
   ) {
     LazyColumn(
-      Modifier.fillMaxWidth(),
-      contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 20.dp, end = 20.dp, bottom = 32.dp),
+      Modifier.fillMaxWidth().heightIn(max = sheetMax),
+      contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 20.dp, end = 20.dp, bottom = 32.dp + navBottom),
       verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
       item { Text("Files from this task", style = MaterialTheme.typography.headlineSmall) }
@@ -379,8 +384,9 @@ fun FilesSheet(blocks: List<Block>, session: Session?, onDismiss: () -> Unit) {
     ModalBottomSheet(
       onDismissRequest = { reading = null },
       shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
+      contentWindowInsets = { com.chethan616.dex.ui.components.NoSheetInsets },
     ) {
-      Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
+      Column(Modifier.heightIn(max = sheetMax).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 32.dp + navBottom)) {
         Text(doc.name ?: "Document", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.size(12.dp))
         Markdown(doc.text.orEmpty())

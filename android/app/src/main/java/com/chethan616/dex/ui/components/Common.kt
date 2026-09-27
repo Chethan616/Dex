@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -91,4 +93,32 @@ fun StatusPill(status: SessionStatus, modifier: Modifier = Modifier) {
     StatusDot(status)
     Text(statusLabel(status), style = MaterialTheme.typography.labelMedium, color = color)
   }
+}
+
+/**
+ * For a ModalBottomSheet whose content can be as tall as the screen.
+ *
+ * Material 3 pads sheet content by the status bar *minus how far the sheet
+ * has already moved past it* (BottomSheetDefaults.modalWindowInsets +
+ * SheetWindowInsets). A tall sheet dragged fully open reaches the status
+ * bar, so its padding — and so its height, and so its Expanded anchor —
+ * changes with its own position: the settle animation chases itself and
+ * never ends. And while the sheet is animating, anchoredDraggable starts a
+ * drag on every touch (startDragImmediately = isAnimationRunning), so no
+ * button inside gets a tap. That was "can't change the avatar after
+ * swiping it open", and the flicker.
+ *
+ * Fix: no position-dependent insets ([NoSheetInsets]) and a fixed maximum
+ * height that stops just short of the status bar ([rememberSheetMaxHeight]).
+ * The sheet's height no longer depends on where it is, so it settles.
+ */
+val NoSheetInsets = WindowInsets(0, 0, 0, 0)
+
+/** Tallest a sheet's content may be: the window, less the status bar and the drag handle. */
+@Composable
+fun rememberSheetMaxHeight(): androidx.compose.ui.unit.Dp {
+  val density = androidx.compose.ui.platform.LocalDensity.current
+  val windowHeight = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height
+  val statusBar = WindowInsets.statusBars.getTop(density)
+  return with(density) { (windowHeight - statusBar).coerceAtLeast(0).toDp() } - 64.dp
 }

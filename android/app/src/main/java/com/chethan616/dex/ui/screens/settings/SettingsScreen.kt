@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -265,13 +266,16 @@ fun SettingsScreen(container: AppContainer, account: Account, onBack: () -> Unit
     }
 
     if (pickerOpen && profile != null) {
+      val sheetMax = com.chethan616.dex.ui.components.rememberSheetMaxHeight()
       androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = { pickerOpen = false },
         shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
+        // See rememberSheetMaxHeight: a fixed-height sheet settles, so taps work after a swipe.
+        contentWindowInsets = { com.chethan616.dex.ui.components.NoSheetInsets },
       ) {
         // No scroll here: the picker scrolls its own avatars and keeps the
-        // buttons pinned (pinActions).
-        Column(Modifier.padding(horizontal = 20.dp)) {
+        // buttons pinned (pinActions) above the navigation bar.
+        Column(Modifier.heightIn(max = sheetMax).padding(horizontal = 20.dp)) {
           Text("Your DEX", style = MaterialTheme.typography.headlineSmall)
           Spacer(Modifier.size(16.dp))
           com.chethan616.dex.ui.profile.ProfilePicker(
