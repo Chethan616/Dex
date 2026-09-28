@@ -1,0 +1,14 @@
+{
+  "google": {
+    "clientId": "1234567890-xxxxxxxx.apps.googleusercontent.com",
+    "clientSecret": "GOCSPX-xxxxxxxxxxxxxxxx"
+  },
+  "github": {
+    "clientId": "Ov23lixxxxxxxxxxxxxx"
+  },
+  "slack": {
+    "clientId": "1234567890.1234567890",
+    "clientSecret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "redirectUri": "http://127.0.0.1:53682/slack/callback"
+  }
+}

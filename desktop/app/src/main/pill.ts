@@ -38,8 +38,14 @@ const log = {
 // Wide enough for the placeholder to sit on one line. At 600 "Search sessions
 // or create new agent..." ran past the input and scrolled, which makes the
 // one control the user reaches for by keyboard look broken before they type.
-export const PILL_WIDTH = 680;
-const PILL_HEIGHT_COLLAPSED = 110;
+// Exactly the 720px prompt bar — no transparent margin. The window IS the
+// card: its region is clipped to the card's rounded rectangle (applyPillShape),
+// so nothing outside the curve can ever be drawn, black or otherwise.
+export const PILL_WIDTH = 720;
+// Below the card's own height, so the window never has spare rows under it.
+const PILL_HEIGHT_COLLAPSED = 96;
+/** `.task-input__box` border-radius in hub.css. */
+const PILL_CORNER_RADIUS = 20;
 const PILL_HEIGHT_EXPANDED = 520;
 const PILL_TOP_OFFSET = 160;
 const PILL_BOUNDS_FILE_NAME = 'pill-bounds.json';
@@ -66,6 +72,38 @@ interface PillBounds {
   y: number;
   width: number;
   height: number;
+}
+
+/**
+ * Clip the window to a rounded rectangle. A transparent window's empty area
+ * is only transparent while the compositor blends it — during a resize, on
+ * first show, or with some GPU drivers it paints black. A window region isn't
+ * painted at all outside its shape, so the overlay is only ever the card.
+ * `setShape` takes rectangles, so each corner row is its own 1px strip.
+ */
+export function roundedRectShape(width: number, height: number, radius: number): Rectangle[] {
+  const r = Math.max(0, Math.min(radius, Math.floor(width / 2), Math.floor(height / 2)));
+  if (r === 0) return [{ x: 0, y: 0, width, height }];
+  const rects: Rectangle[] = [];
+  for (let row = 0; row < r; row += 1) {
+    const dy = r - row - 0.5;
+    const inset = Math.ceil(r - Math.sqrt(r * r - dy * dy));
+    rects.push({ x: inset, y: row, width: width - inset * 2, height: 1 });
+    rects.push({ x: inset, y: height - 1 - row, width: width - inset * 2, height: 1 });
+  }
+  rects.push({ x: 0, y: r, width, height: height - r * 2 });
+  return rects;
+}
+
+function applyPillShape(win: BrowserWindow): void {
+  if (win.isDestroyed() || typeof win.setShape !== 'function') return;
+  if (process.platform !== 'win32' && process.platform !== 'linux') return;
+  const { width, height } = win.getContentBounds();
+  try {
+    win.setShape(roundedRectShape(width, height, PILL_CORNER_RADIUS));
+  } catch (err) {
+    log.warn('pill.setShape.failed', { error: (err as Error).message });
+  }
 }
 
 function clampPillHeight(height: number): number {
@@ -283,23 +321,17 @@ export function createPillWindow(): BrowserWindow {
   requestedPillHeight = PILL_HEIGHT_COLLAPSED;
   savedPillBounds = loadSavedPillBounds();
 
-  // macOS uses `vibrancy: 'hud'` to render the pill body as frosted glass —
-  // it requires `transparent: true` + a fully clear backgroundColor. Windows
-  // has no equivalent that works with `transparent: true` (vibrancy is a
-  // no-op there), so the same options produce a fully see-through window
-  // with no surface. Branch the platform-specific options so Windows gets a
-  // real opaque surface that matches the rest of the dark UI.
   const isMac = process.platform === 'darwin';
   pillWindow = new BrowserWindow({
     width: PILL_WIDTH,
     height: PILL_HEIGHT_COLLAPSED,
-    transparent: isMac,
+    transparent: true,
     frame: false,
     alwaysOnTop: true,
-    hasShadow: true,
+    hasShadow: false,
     resizable: false,
-    backgroundColor: isMac ? '#00000000' : '#0b0d10',
-    roundedCorners: true,
+    backgroundColor: '#00000000',
+    roundedCorners: false,
     skipTaskbar: true,
     show: false,
     ...(isMac ? { vibrancy: 'hud' as const, visualEffectState: 'active' as const, type: 'panel' as const } : {}),
@@ -310,6 +342,8 @@ export function createPillWindow(): BrowserWindow {
       sandbox: true,
     },
   });
+
+  pillWindow.setBackgroundColor('#00000000');
 
   pillWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   pillWindow.setAlwaysOnTop(true, 'screen-saver');
@@ -354,6 +388,9 @@ export function createPillWindow(): BrowserWindow {
     pillWindow = null;
   });
   pillWindow.on('move', trackUserMovedPill);
+  const shaped = pillWindow;
+  shaped.on('resize', () => applyPillShape(shaped));
+  applyPillShape(shaped);
 
   log.info('pill.createPillWindow.complete', {
     message: 'Pill window created (hidden)',
@@ -430,9 +467,17 @@ export function hidePill(): void {
  * This is the function called by the Cmd+K hotkey handler.
  */
 export function togglePill(): void {
+  // Lazy creation: the pill used to be created hidden at app.whenReady()
+  // and sit resident for the rest of the app's life, an idle Electron
+  // renderer process the user might never actually open. Every other
+  // caller (hotkey, tray, onboarding, IPC) goes through this one function,
+  // so creating on first toggle here covers all of them.
+  if (!pillWindow || pillWindow.isDestroyed()) {
+    createPillWindow();
+  }
   if (!pillWindow || pillWindow.isDestroyed()) {
     log.error('pill.togglePill', {
-      message: 'Cannot toggle pill — window not created or destroyed',
+      message: 'Cannot toggle pill — window creation failed',
     });
     return;
   }
@@ -512,7 +557,9 @@ export function setPillHeight(height: number): void {
 
   const current = pillWindow.getBounds();
   beginProgrammaticBoundsChange();
-  pillWindow.setBounds({ ...current, height: nextHeight }, true);
+  // No animation: an animated grow exposes rows the page hasn't painted yet.
+  pillWindow.setBounds({ ...current, height: nextHeight }, false);
+  applyPillShape(pillWindow);
 
   log.debug('pill.setPillHeight', {
     message: 'Pill height updated',

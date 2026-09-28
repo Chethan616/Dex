@@ -184,7 +184,7 @@ export const MentionTextField = forwardRef<MentionTextFieldHandle, MentionTextFi
     const root = rootRef.current;
     if (!root || maxHeightPx == null) return;
     root.style.height = 'auto';
-    const next = Math.min(root.scrollHeight, maxHeightPx);
+    const next = Math.max(20, Math.min(root.scrollHeight, maxHeightPx));
     root.style.height = `${next}px`;
     onHeightChange?.(next);
   });
@@ -195,6 +195,7 @@ export const MentionTextField = forwardRef<MentionTextFieldHandle, MentionTextFi
       const root = rootRef.current;
       if (!root) return;
       while (root.firstChild) root.removeChild(root.firstChild);
+      root.style.height = '20px';
       report();
     },
     setPlainText: (text: string) => {

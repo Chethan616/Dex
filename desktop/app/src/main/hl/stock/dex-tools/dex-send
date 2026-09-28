@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# dex-send — send the user a file, a screenshot or your canvas document on
+# WhatsApp (their own "Message yourself" chat — never anyone else).
+#
+#   dex-send <file> [<file>…]          files on this PC (up to 10, 64 MB each)
+#   dex-send --page                    a screenshot of your browser view
+#   dex-send --screen                  a screenshot of the whole screen
+#   dex-send --canvas                  the document you showed with dex-canvas, as a PDF
+#   … --caption "Your timetable"       a line of text to go with it
+#
+# Modes combine: `dex-send --page report.csv --caption "Here you go"`.
+# Images arrive as photos, everything else as documents with their filename.
+# If the task came from WhatsApp, they arrive in that thread, as replies.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+usage() {
+  sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' >&2
+  exit 2
+}
+
+[ $# -ge 1 ] || usage
+case "$1" in -h|--help|help) usage ;; esac
+
+session="$(dex_session_id)"
+[ -n "$session" ] || { echo "dex-send: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
+
+files=""
+caption=""
+page=false; screen=false; canvas=false
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help|help) usage ;;
+    --page) page=true ;;
+    --screen) screen=true ;;
+    --canvas) canvas=true ;;
+    --caption)
+      [ $# -ge 2 ] || { echo "dex-send: --caption needs a value" >&2; exit 2; }
+      caption="$2"; shift ;;
+    --caption=*) caption="${1#--caption=}" ;;
+    -*) echo "dex-send: unknown option '$1'" >&2; usage ;;
+    *)
+      p="$1"
+      # Relative paths are relative to *this* shell, not the app.
+      case "$p" in
+        /*|[A-Za-z]:[\/]*|\\*) ;;
+        *) p="$PWD/$p" ;;
+      esac
+      [ -n "$files" ] && files="${files},"
+      files="${files}\"$(dex_esc "$p")\"" ;;
+  esac
+  shift
+done
+
+if [ -z "$files" ] && ! $page && ! $screen && ! $canvas; then
+  echo "dex-send: nothing to send — give a file, --page, --screen or --canvas" >&2
+  exit 2
+fi
+
+body="{\"sessionId\":\"$(dex_esc "$session")\",\"files\":[${files}],\"page\":${page},\"screen\":${screen},\"canvas\":${canvas},\"caption\":\"$(dex_esc "$caption")\"}"
+dex_post /dex/send "$body"

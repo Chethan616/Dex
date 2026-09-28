@@ -1,20 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { ConnectionsPane, type SettingsProviderFocusRequest } from './ConnectionsPane';
+import { AccountsSection } from './AccountsSection';
 import type { ActionId, KeyBinding } from './keybindings';
 import { fallbackShortcutPlatform, keyboardEventToShortcut } from '../../shared/hotkeys';
 import { useThemeMode } from '../design/useThemeMode';
 import type { ThemeMode } from '../design/themeMode';
+import { DexAvatar, MetalButton, NewBadge, Orb, ProfilePicker, Segmented, Switch, useDexProfile, type SegmentedOption } from '../components/lib';
 
 /**
  * Generic settings primitives. Add a new option type and every section that
  * uses it (Appearance, future Density / Accent / etc.) gets the same UI.
  */
-interface SegmentedOption<T extends string> {
-  value: T;
-  label: string;
-  hint?: string;
-}
-
 interface SettingsRowProps {
   label: string;
   sublabel?: string;
@@ -33,61 +29,109 @@ function SettingsRow({ label, sublabel, children }: SettingsRowProps): React.Rea
   );
 }
 
-interface SegmentedControlProps<T extends string> {
-  value: T;
-  options: ReadonlyArray<SegmentedOption<T>>;
-  onChange: (value: T) => void;
-  ariaLabel: string;
-}
-
-function SegmentedControl<T extends string>({ value, options, onChange, ariaLabel }: SegmentedControlProps<T>): React.ReactElement {
-  // Plain toggle-button group with aria-pressed, not role="radio". The radio
-  // pattern requires roving tabindex + arrow-key nav; for a 3-option theme
-  // picker that's overkill and a partial implementation is worse than none.
-  return (
-    <div className="settings-pane__segmented" role="group" aria-label={ariaLabel}>
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          aria-pressed={value === opt.value}
-          className={`settings-pane__segment${value === opt.value ? ' settings-pane__segment--active' : ''}`}
-          title={opt.hint}
-          onClick={() => onChange(opt.value)}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-const APPEARANCE_OPTIONS: ReadonlyArray<SegmentedOption<ThemeMode>> = [
+const APPEARANCE_OPTIONS: ReadonlyArray<{ value: ThemeMode; label: string; hint?: string }> = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
   { value: 'system', label: 'System', hint: 'Follow your operating system' },
 ];
 
+/** A miniature of the hub in one theme — sidebar, prompt card, send button. */
+function ThemeMockup({ tone }: { tone: 'light' | 'dark' }): React.ReactElement {
+  return (
+    <span className={`theme-tile__mock theme-tile__mock--${tone}`} aria-hidden="true">
+      <span className="theme-tile__mock-side">
+        <i /><i /><i />
+      </span>
+      <span className="theme-tile__mock-main">
+        <span className="theme-tile__mock-card">
+          <i className="theme-tile__mock-line" />
+          <i className="theme-tile__mock-send" />
+        </span>
+      </span>
+    </span>
+  );
+}
+
+/** Settings → Appearance → Your DEX: the bot that represents you, on every device. */
+function YourDexCard(): React.ReactElement {
+  const [profile, save] = useDexProfile();
+  const [editing, setEditing] = useState(false);
+  return (
+    <div className="settings-card">
+      <div className="settings-pane__row">
+        <div className="your-dex">
+          <DexAvatar size={56} interactive />
+          <div>
+            <div className="settings-pane__label">{profile.name ?? 'Your DEX'}</div>
+            <div className="settings-pane__sublabel">
+              The bot that represents you — here and in DEX on your phone.
+            </div>
+          </div>
+        </div>
+        {!editing && (
+          <button type="button" className="conn-card__btn conn-card__btn--secondary" onClick={() => setEditing(true)}>
+            Change
+          </button>
+        )}
+      </div>
+      {editing && (
+        <div className="your-dex__picker">
+          <ProfilePicker
+            initial={profile}
+            onCancel={() => setEditing(false)}
+            onSave={async (next) => { await save(next); setEditing(false); }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AppearanceSection(): React.ReactElement {
   const { mode, setMode, resolved } = useThemeMode();
   return (
+    <>
+    <YourDexCard />
     <div className="settings-card">
-      <SettingsRow
-        label="Theme"
-        sublabel={
-          mode === 'system'
-            ? `Following your system (${resolved}).`
-            : 'Choose how DEX looks across windows.'
-        }
-      >
-        <SegmentedControl
-          value={mode}
-          options={APPEARANCE_OPTIONS}
-          onChange={setMode}
-          ariaLabel="Theme"
-        />
-      </SettingsRow>
+      <div className="settings-pane__row settings-pane__row--stack">
+        <div>
+          <div className="settings-pane__label">Theme</div>
+          <div className="settings-pane__sublabel">
+            {mode === 'system'
+              ? `Following your system (${resolved}).`
+              : 'Choose how DEX looks across every window.'}
+          </div>
+        </div>
+        <div className="theme-picker" role="radiogroup" aria-label="Theme">
+          {APPEARANCE_OPTIONS.map((opt) => {
+            const active = mode === opt.value;
+            return (
+              <div key={opt.value} className={`theme-tile${active ? ' theme-tile--active' : ''}`}>
+                {opt.value === 'system' ? (
+                  <span className="theme-tile__split" aria-hidden="true">
+                    <ThemeMockup tone="light" />
+                    <ThemeMockup tone="dark" />
+                  </span>
+                ) : (
+                  <ThemeMockup tone={opt.value} />
+                )}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  title={opt.hint}
+                  className={`theme-tile__btn settings-pane__segment${active ? ' settings-pane__segment--active' : ''}`}
+                  onClick={() => setMode(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
+    </>
   );
 }
 
@@ -96,6 +140,67 @@ type ElectronPrivacyAPI = {
   setTelemetry: (optedIn: boolean) => Promise<{ telemetry: boolean; telemetryUpdatedAt: string | null; version: number }>;
   openSystemNotifications: () => Promise<{ ok: boolean; error?: string }>;
 };
+
+type ApprovalMode = 'ask' | 'auto' | 'full';
+
+type ElectronApprovalsAPI = {
+  get: () => Promise<{ mode: ApprovalMode }>;
+  set: (mode: ApprovalMode) => Promise<{ mode: ApprovalMode }>;
+};
+
+const APPROVAL_MODE_OPTIONS: ReadonlyArray<SegmentedOption<ApprovalMode>> = [
+  { value: 'ask', label: 'Ask for approval', hint: 'A registry write, shell command, or other sensitive action always waits for you' },
+  { value: 'auto', label: 'Approve for me', hint: 'Only asks when a command or path looks sensitive' },
+  { value: 'full', label: 'Full access', hint: 'Default — nothing gated but Windows registry writes' },
+];
+
+function AgentApprovalSection(): React.ReactElement {
+  const [mode, setMode] = useState<ApprovalMode | null>(null);
+  const [saving, setSaving] = useState(false);
+  const api = (window as unknown as { electronAPI: { settings: { approvals: ElectronApprovalsAPI } } }).electronAPI.settings.approvals;
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get().then((state) => { if (!cancelled) setMode(state.mode); }).catch(() => { if (!cancelled) setMode('full'); });
+    return () => { cancelled = true; };
+  }, [api]);
+
+  const handleChange = useCallback(async (next: ApprovalMode) => {
+    if (saving) return;
+    const prev = mode;
+    setSaving(true);
+    setMode(next); // optimistic
+    try {
+      const res = await api.set(next);
+      setMode(res.mode);
+    } catch {
+      setMode(prev); // revert
+    } finally {
+      setSaving(false);
+    }
+  }, [mode, saving, api]);
+
+  return (
+    <div className="settings-card">
+      <SettingsRow
+        label="Agent approval"
+        sublabel="How much an agent task can do before it needs you to say yes. A Windows registry write always waits for you regardless of this setting."
+      >
+        {mode ? (
+          <Segmented
+            value={mode}
+            options={APPROVAL_MODE_OPTIONS}
+            onChange={(next) => { void handleChange(next); }}
+            label="Agent approval mode"
+            optionClassName="settings-pane__segment"
+          />
+        ) : (
+          <Orb size={20} state="connecting" />
+        )}
+      </SettingsRow>
+    </div>
+  );
+}
 
 type ElectronAppAPI = {
   getUpdateStatus: () => Promise<UpdateStatusEvent>;
@@ -271,13 +376,22 @@ function AppSection(): React.ReactElement {
             </div>
           )}
         </div>
-        <button
-          className="conn-card__btn conn-card__btn--secondary"
-          onClick={handleUpdateClick}
-          disabled={updateActionDisabled}
-        >
-          {buttonLabel}
-        </button>
+        {updateReady ? (
+          <MetalButton onClick={handleUpdateClick} disabled={updateActionDisabled}>
+            {buttonLabel}
+          </MetalButton>
+        ) : (
+          <span className="settings-pane__row-right">
+            {(checking || updateBusy || !info) && <Orb size={20} state="searching" />}
+            <button
+              className="conn-card__btn conn-card__btn--secondary"
+              onClick={handleUpdateClick}
+              disabled={updateActionDisabled}
+            >
+              {buttonLabel}
+            </button>
+          </span>
+        )}
       </div>
     </div>
   );
@@ -393,16 +507,12 @@ function PrivacySection(): React.ReactElement {
           <div className="settings-pane__label">Allow telemetry to help us make this app better</div>
           <div className="settings-pane__sublabel">Anonymous only — app version, OS, feature usage, and crash reports.</div>
         </div>
-        <button
-          className="settings-pane__toggle"
-          role="switch"
-          aria-checked={telemetry === true}
-          data-on={telemetry === true}
-          onClick={handleToggle}
+        <Switch
+          checked={telemetry === true}
+          onChange={() => { void handleToggle(); }}
+          label="Allow telemetry"
           disabled={telemetry === null || saving}
-        >
-          <span className="settings-pane__toggle-thumb" />
-        </button>
+        />
       </div>
 
       <div className="settings-pane__row">
@@ -624,7 +734,7 @@ function McpSection(): React.ReactElement {
   }
 
   return (
-    <div className="settings-card">
+    <div className="settings-card settings-card--bare">
       <p className="mcp__intro">
         When a service is connected, DEX uses its API instead of driving the website — quicker,
         cheaper, and it does not break when a page changes. Anything without a connection still
@@ -632,7 +742,7 @@ function McpSection(): React.ReactElement {
       </p>
 
       <div className="mcp__list">
-        {rows.map((row) => {
+        {rows.filter((row) => row.id !== 'google').map((row) => {
           const draft = drafts[row.id] ?? {};
           const configured = row.enabled && row.missing.length === 0;
           const check = checks[row.id];
@@ -782,6 +892,7 @@ export type SettingsSectionId =
   | 'settings-connections'
   | 'settings-browser-sync'
   | 'settings-shortcuts'
+  | 'settings-agent-approval'
   | 'settings-privacy'
   | 'settings-appearance'
   | 'settings-application';
@@ -792,16 +903,34 @@ export interface SettingsOpenIntent {
   focusBrowserCodeProvider?: string;
 }
 
-const SETTINGS_TABS: Array<{ id: SettingsSectionId; label: string }> = [
-  { id: 'settings-application', label: 'Application' },
-  { id: 'settings-appearance', label: 'Appearance' },
-  { id: 'settings-model-providers', label: 'Model providers' },
-  { id: 'settings-connections', label: 'Connections' },
-  { id: 'settings-browser-sync', label: 'Browser Sync' },
-  { id: 'settings-shortcuts', label: 'Shortcuts' },
-  { id: 'settings-integrations', label: 'Integrations' },
-  { id: 'settings-diagnostics', label: 'Diagnostics' },
-  { id: 'settings-privacy', label: 'Privacy' },
+function RailIcon({ d }: { d: string }): React.ReactElement {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d={d} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+interface SettingsTab {
+  id: SettingsSectionId;
+  label: string;
+  icon: string;
+  /** Words the search box matches besides the label. */
+  keywords: string;
+  isNew?: boolean;
+}
+
+const SETTINGS_TABS: SettingsTab[] = [
+  { id: 'settings-application', label: 'Application', icon: 'M2.5 3.5h11v9h-11zM2.5 6h11', keywords: 'version update download restart tab layout side top sidebar' },
+  { id: 'settings-appearance', label: 'Appearance', icon: 'M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8 2.5v11', keywords: 'theme light dark system mode colour color', isNew: true },
+  { id: 'settings-model-providers', label: 'Model providers', icon: 'M8 2l5 3v6l-5 3-5-3V5zM8 8l5-3M8 8v6M8 8L3 5', keywords: 'api key openai anthropic claude gemini groq ollama browsercode model provider' },
+  { id: 'settings-connections', label: 'Connections', icon: 'M6.5 9.5l3-3M5 7.5L3.8 8.7a2.5 2.5 0 003.5 3.5L8.5 11M11 8.5l1.2-1.2a2.5 2.5 0 00-3.5-3.5L7.5 5', keywords: 'accounts gmail google slack github oauth connect' },
+  { id: 'settings-browser-sync', label: 'Browser Sync', icon: 'M13 8a5 5 0 01-8.6 3.5M3 8a5 5 0 018.6-3.5M11.5 2.5v2h-2M4.5 13.5v-2h2', keywords: 'cookies chrome sync login' },
+  { id: 'settings-shortcuts', label: 'Shortcuts', icon: 'M2.5 4.5h11v7h-11zM5 7h.01M8 7h.01M11 7h.01M5.5 9.5h5', keywords: 'keyboard keybindings hotkey shortcut' },
+  { id: 'settings-integrations', label: 'Accounts', icon: 'M8 7.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM3 14c.6-2.6 2.6-4 5-4s4.4 1.4 5 4', keywords: 'google gmail calendar meet drive docs sheets contacts tasks github slack sign in connect account mcp integrations', isNew: true },
+  { id: 'settings-diagnostics', label: 'Diagnostics', icon: 'M2 8h2.5l1.5-4 3 8 1.5-4H14', keywords: 'preflight git bash node python health check missing' },
+  { id: 'settings-agent-approval', label: 'Agent approval', icon: 'M8 2l5 2v4c0 3-2.2 5-5 6-2.8-1-5-3-5-6V4zM5.8 8l1.6 1.6L10.5 6.5', keywords: 'permission approve ask auto full access registry safety' },
+  { id: 'settings-privacy', label: 'Privacy', icon: 'M4.5 7V5.5a3.5 3.5 0 017 0V7M3.5 7h9v6.5h-9z', keywords: 'telemetry notifications data crash' },
 ];
 
 interface SettingsPaneProps {
@@ -943,15 +1072,69 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
   const platform = window.electronAPI?.shell?.platform ?? fallbackShortcutPlatform();
   // Cookie sync is unsupported on Windows (Chromium ABE + DevTools hardening),
   // so the Browser Sync tab + section are hidden on win32.
-  const tabs = platform === 'win32'
+  const tabs = useMemo(() => (platform === 'win32'
     ? SETTINGS_TABS.filter((tab) => tab.id !== 'settings-browser-sync')
-    : SETTINGS_TABS;
+    : SETTINGS_TABS), [platform]);
+
+  const [query, setQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
+  const visibleTabs = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return tabs;
+    return tabs.filter((tab) => `${tab.label} ${tab.keywords}`.toLowerCase().includes(q));
+  }, [query, tabs]);
+
+  // Filtering hides whole sections. ConnectionsPane renders three of them
+  // itself, so they're toggled by id rather than through props.
+  useLayoutEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const shown = new Set(visibleTabs.map((tab) => tab.id));
+    for (const tab of tabs) {
+      const section = scroller.querySelector<HTMLElement>(`#${tab.id}`);
+      if (section) section.hidden = !shown.has(tab.id);
+    }
+    if (visibleTabs.length > 0 && !shown.has(activeSection)) setActiveSection(visibleTabs[0].id);
+  }, [visibleTabs, tabs, activeSection]);
+
+  // "/" jumps to search, as on libraries.dev; Esc clears it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      const target = e.target as HTMLElement | null;
+      const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+      if (e.key === '/' && !typing) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // The rail's sliding pill follows the active tab.
+  const navRef = useRef<HTMLElement>(null);
+  const [pill, setPill] = useState<{ top: number; height: number } | null>(null);
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const measure = (): void => {
+      const btn = nav.querySelector<HTMLElement>('.settings-page__tab--active');
+      if (!btn) { setPill(null); return; }
+      const next = { top: btn.offsetTop, height: btn.offsetHeight };
+      setPill((prev) => (prev && prev.top === next.top && prev.height === next.height ? prev : next));
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, [activeSection, visibleTabs]);
 
   const scrollToSection = useCallback((id: SettingsSectionId, behavior: ScrollBehavior = 'smooth') => {
     const scroller = scrollerRef.current;
     const target = scroller?.querySelector<HTMLElement>(`#${id}`);
     if (!scroller || !target) return;
-    const tabOffset = 96;
+    const tabOffset = 24;
     scroller.scrollTo({
       top: Math.max(0, target.offsetTop - tabOffset),
       behavior,
@@ -959,17 +1142,37 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
     setActiveSection(id);
   }, []);
 
+  // The browser fires 'scroll' as fast as it can paint frames — a trackpad
+  // fling can produce dozens of events per second. Each pass here was
+  // running a querySelector per tab (9 of them) plus a state update
+  // (re-rendering the whole pane and its tab list) on every single one of
+  // those events with no throttling at all, which is exactly what made
+  // scrolling the Settings page itself feel laggy. Coalescing to one pass
+  // per animation frame — the standard fix for a scroll handler — cuts
+  // that to at most 60 passes/sec regardless of how many raw events fire,
+  // and skipping the setState when the active tab hasn't actually changed
+  // avoids re-rendering on frames where scrolling didn't cross a section
+  // boundary at all.
+  const scrollRafRef = useRef<number | null>(null);
   const updateActiveFromScroll = useCallback(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-    let next = tabs[0].id;
-    const threshold = scroller.scrollTop + 112;
-    for (const tab of tabs) {
-      const section = scroller.querySelector<HTMLElement>(`#${tab.id}`);
-      if (section && section.offsetTop <= threshold) next = tab.id;
-    }
-    setActiveSection(next);
-  }, [tabs]);
+    if (scrollRafRef.current !== null) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      const scroller = scrollerRef.current;
+      if (!scroller) return;
+      let next = visibleTabs[0]?.id ?? tabs[0].id;
+      const threshold = scroller.scrollTop + 48;
+      for (const tab of visibleTabs) {
+        const section = scroller.querySelector<HTMLElement>(`#${tab.id}`);
+        if (section && section.offsetTop <= threshold) next = tab.id;
+      }
+      setActiveSection((prev) => (prev === next ? prev : next));
+    });
+  }, [tabs, visibleTabs]);
+
+  useEffect(() => () => {
+    if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
+  }, []);
 
   useEffect(() => {
     const sectionId = intent?.sectionId ?? (
@@ -985,28 +1188,74 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
 
   return (
     <div className="settings-page">
-      <div className="settings-page__scroller" ref={scrollerRef} onScroll={updateActiveFromScroll}>
-        <div className="settings-page__content">
-          <header className="settings-page__header">
-            <div>
-              <span className="settings-page__eyebrow">DEX</span>
-              <h1 className="settings-page__title">Settings</h1>
-            </div>
-          </header>
+      <aside className="settings-rail">
+        <header className="settings-rail__head">
+          <span className="settings-rail__mascot">
+            <DexAvatar size={40} interactive />
+          </span>
+          <div>
+            <span className="settings-page__eyebrow">DEX</span>
+            <h1 className="settings-page__title">Settings</h1>
+          </div>
+        </header>
 
-          <nav className="settings-page__tabs" aria-label="Settings sections">
-            {tabs.map((tab) => (
+        <label className="settings-rail__search">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M10.5 10.5L13.5 13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          </svg>
+          <input
+            ref={searchRef}
+            type="search"
+            value={query}
+            placeholder="Search settings"
+            aria-label="Search settings"
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') { setQuery(''); e.currentTarget.blur(); }
+              if (e.key === 'Enter' && visibleTabs[0]) scrollToSection(visibleTabs[0].id);
+            }}
+          />
+          {!query && <kbd>/</kbd>}
+        </label>
+
+        <nav className="settings-page__tabs" aria-label="Settings sections" ref={navRef}>
+          {pill && (
+            <span
+              className="settings-rail__pill"
+              aria-hidden="true"
+              style={{ transform: `translateY(${pill.top}px)`, height: pill.height }}
+            />
+          )}
+          {tabs.map((tab) => (
+            <div key={tab.id} className="settings-rail__item" hidden={!visibleTabs.includes(tab)}>
               <button
-                key={tab.id}
                 type="button"
                 className={`settings-page__tab${activeSection === tab.id ? ' settings-page__tab--active' : ''}`}
                 onClick={() => scrollToSection(tab.id)}
                 data-settings-tab={tab.id}
+                aria-current={activeSection === tab.id ? 'true' : undefined}
+                title={tab.label}
               >
-                {tab.label}
+                <RailIcon d={tab.icon} />
+                <span>{tab.label}</span>
               </button>
-            ))}
-          </nav>
+              {tab.isNew && <NewBadge scale={0.72} />}
+            </div>
+          ))}
+        </nav>
+
+        <div className="settings-rail__foot">Press / to search</div>
+      </aside>
+
+      <div className="settings-page__scroller" ref={scrollerRef} onScroll={updateActiveFromScroll}>
+        <div className="settings-page__content">
+          {visibleTabs.length === 0 && (
+            <div className="settings-page__empty" role="status">
+              <Orb size={32} state="searching" />
+              No settings match “{query}”.
+            </div>
+          )}
 
           <section id="settings-application" className="settings-page__section">
             <div className="settings-section-header">
@@ -1033,9 +1282,9 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
 
           <section id="settings-integrations" className="settings-page__section">
             <div className="settings-section-header">
-              <h2 className="settings-section-header__title">Integrations</h2>
+              <h2 className="settings-section-header__title">Accounts</h2>
             </div>
-            <McpSection />
+            <AccountsSection advanced={<McpSection />} />
           </section>
 
           <section id="settings-diagnostics" className="settings-page__section">
@@ -1065,6 +1314,13 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
                 />
               ))}
             </div>
+          </section>
+
+          <section id="settings-agent-approval" className="settings-page__section">
+            <div className="settings-section-header">
+              <h2 className="settings-section-header__title">Agent approval</h2>
+            </div>
+            <AgentApprovalSection />
           </section>
 
           <section id="settings-privacy" className="settings-page__section settings-page__section--last">

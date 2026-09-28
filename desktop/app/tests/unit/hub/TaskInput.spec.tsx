@@ -7,6 +7,23 @@ import { TaskInput } from '../../../src/renderer/hub/TaskInput';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// jsdom doesn't implement matchMedia. border-beam/voice-glow/metal-fx each
+// call it unconditionally on mount (to track the OS theme for `theme="auto"`,
+// even when a pinned theme is passed) — without this every render throws
+// "window.matchMedia is not a function".
+if (typeof window.matchMedia !== 'function') {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+}
+
 vi.mock('../../../src/renderer/hub/EnginePicker', () => ({
   EnginePicker: ({ value }: { value: string }): React.ReactElement => (
     <div data-testid="engine-picker">{value}</div>
@@ -57,7 +74,7 @@ describe('TaskInput', () => {
     vi.restoreAllMocks();
   });
 
-  it('expands the field to fit newline content', () => {
+  it('grows the field up to the configured max height, not past it', () => {
     const { container, root } = renderTaskInput();
     const field = getField(container);
     let scrollHeight = 24;
@@ -67,11 +84,14 @@ describe('TaskInput', () => {
     });
 
     act(() => {
+      // TASK_INPUT_MAX_HEIGHT_PX in TaskInput.tsx is 44 — the field is a
+      // fixed single-line composer now, not a growable multi-line textarea,
+      // so even multi-line content caps at that height.
       scrollHeight = 96;
       typeInto(field, 'line one\nline two\nline three\nline four');
     });
 
-    expect(field.style.height).toBe('96px');
+    expect(field.style.height).toBe('44px');
 
     act(() => root.unmount());
   });
@@ -89,7 +109,7 @@ describe('TaskInput', () => {
     });
 
     // TASK_INPUT_MAX_HEIGHT_PX in TaskInput.tsx.
-    expect(field.style.height).toBe('160px');
+    expect(field.style.height).toBe('44px');
 
     act(() => root.unmount());
   });

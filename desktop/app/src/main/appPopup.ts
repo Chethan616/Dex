@@ -21,7 +21,8 @@ const log = {
 
 const DEFAULT_WIDTH = 260;
 const DEFAULT_HEIGHT = 240;
-const MAX_DEFAULT_HEIGHT = 380;
+// Menus size to their content and never scroll; this is only the ceiling.
+const MAX_DEFAULT_HEIGHT = 640;
 const SCREEN_MARGIN = 6;
 const ANCHOR_GAP = 6;
 
@@ -407,6 +408,15 @@ export function registerAppPopupHandlers(): void {
       closeAppPopup(payload.reason === 'escape' ? 'escape' : 'request');
     }
   });
+  // Prewarm: the popup is its own renderer, and loading it on the first
+  // click was most of the "laggy dropdown" — a cold page load before the
+  // menu could paint. Load it hidden shortly after startup instead.
+  setTimeout(() => {
+    try { createPopupWindow(); } catch (err) {
+      log.warn('appPopup.prewarm.error', { error: (err as Error).message });
+    }
+  }, 1500);
+
   app.on('did-resign-active', () => {
     if (popupWindow && !popupWindow.isDestroyed() && popupWindow.isVisible()) {
       closeAppPopup('app-deactivated');
@@ -414,10 +424,3 @@ export function registerAppPopupHandlers(): void {
   });
 }
 
-export function warmAppPopup(): void {
-  // Ensure handlers are bound before the popup window's preload can fire
-  // 'app-popup:renderer-ready'; otherwise an early launch would drop the
-  // handshake and leave the popup permanently un-rendered.
-  registerAppPopupHandlers();
-  createPopupWindow();
-}

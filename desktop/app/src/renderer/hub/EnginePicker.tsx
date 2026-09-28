@@ -8,6 +8,7 @@ import { BrowserCodeProviderSubmenu } from './BrowserCodeModelPicker';
 import { useThemedAsset } from '../design/useThemedAsset';
 import { pollInstalledStatus } from '../shared/installStatus';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
+import { AgentAvatar, Orb } from '../components/lib';
 
 export interface EngineInfo {
   id: string;
@@ -136,8 +137,6 @@ export function EnginePicker({ value, onChange, onOpenChange }: EnginePickerProp
     else onOpenChange?.(false);
   }, [onChange, onOpenChange, popupId, refreshEngines, value]);
 
-  if (engines.length === 0) return <span className="engine-picker engine-picker--empty" />;
-
   return (
     <div className="engine-picker">
       <button
@@ -150,13 +149,41 @@ export function EnginePicker({ value, onChange, onOpenChange }: EnginePickerProp
         title={currentEngine ? `Engine: ${currentEngine.displayName}${!currentAuthed ? ' — not logged in' : ''}` : 'Pick engine'}
       >
         {currentEngine && <EngineLogo id={currentEngine.id} />}
-        <span className="engine-picker__name">{currentEngine?.displayName ?? '…'}</span>
+        <span className="engine-picker__name">{currentEngine?.displayName ?? 'Agent'}</span>
         {(!currentInstalled || !currentAuthed) && <span className="engine-picker__dot" aria-label="Needs setup" />}
         <ChevronIcon />
       </button>
     </div>
   );
 }
+
+/**
+ * The menu lives in the long-lived popup renderer, so the last engine list and
+ * statuses survive between opens. Rendering from them first means the menu
+ * paints at its final size immediately instead of opening empty and growing
+ * (a window resize after show — the main reason it felt laggy); the IPC
+ * refresh then corrects anything that changed.
+ */
+let engineCache: EngineInfo[] = [];
+let statusCache: Record<string, EngineStatus> = {};
+
+/** Warm the cache before the first open (called when the popup renderer boots). */
+export function prefetchEngineMenu(): void {
+  void fetchEngines().then(async (list) => {
+    engineCache = list;
+    const updates = await Promise.all(list.map((e) => (
+      window.electronAPI?.sessions?.engineStatus?.(e.id)?.catch(() => null) ?? Promise.resolve(null)
+    )));
+    for (const u of updates) if (u) statusCache = { ...statusCache, [u.id]: u };
+  }).catch(() => { /* the menu fetches again on open */ });
+}
+
+const ENGINE_BLURB: Record<string, string> = {
+  'claude-code': 'Anthropic’s coding agent',
+  codex: 'OpenAI’s coding agent',
+  browsercode: 'DEX’s browser agent · any model',
+  opencode: 'Open-source coding agent',
+};
 
 interface EnginePickerMenuContentProps {
   value: string;
@@ -169,8 +196,10 @@ export function EnginePickerMenuContent({
   onChange,
   onClose,
 }: EnginePickerMenuContentProps): React.ReactElement {
-  const [engines, setEngines] = useState<EngineInfo[]>([]);
-  const [statuses, setStatuses] = useState<Record<string, EngineStatus>>({});
+  const [engines, setEngines] = useState<EngineInfo[]>(engineCache);
+  const [statuses, setStatuses] = useState<Record<string, EngineStatus>>(statusCache);
+  useEffect(() => { engineCache = engines; }, [engines]);
+  useEffect(() => { statusCache = statuses; }, [statuses]);
   const [loggingIn, setLoggingIn] = useState<string | null>(null);
   const [installing, setInstalling] = useState<string | null>(null);
   const [drilledIntoBrowserCode, setDrilledIntoBrowserCode] = useState(false);
@@ -212,8 +241,13 @@ export function EnginePickerMenuContent({
       try {
         const list = await fetchEngines();
         if (cancelled) return;
-        setEngines(list);
-        if (list.length > 0) void refreshStatus(list.map((e) => e.id));
+        // Same list as the cache → keep the array identity, so the status
+        // effect below doesn't fire a second refresh.
+        setEngines((prev) => (
+          prev.length === list.length && prev.every((e, i) => e.id === list[i]?.id && e.displayName === list[i]?.displayName)
+            ? prev
+            : list
+        ));
       } catch (err) { console.error('[EnginePicker] listEngines failed', err); }
     })();
     return () => { cancelled = true; };
@@ -367,6 +401,10 @@ export function EnginePickerMenuContent({
 
   return (
     <div className="engine-picker__menu" role="menu">
+      <div className="menu-section-label">Agent</div>
+      {engines.length === 0 && (
+        <div className="menu-loading"><Orb size={20} state="connecting" /> Finding agents…</div>
+      )}
       {engines.map((e) => {
         const st = statuses[e.id];
         const installed = st?.installed?.installed ?? true;
@@ -386,9 +424,27 @@ export function EnginePickerMenuContent({
             title={!installed ? st?.installed?.error ?? `Install ${e.displayName}` : !authed ? st?.authed?.error ?? 'Start setup' : `Use ${e.displayName}`}
             role="menuitem"
           >
-            <EngineLogo id={e.id} />
-            <span className="engine-picker__item-name">{e.displayName}</span>
-            {e.id === value && !isBrowserCode && <span className="engine-picker__check">✓</span>}
+            <span className="engine-picker__avatar">
+              <AgentAvatar engineId={e.id} size={20} status={e.id === value ? 'running' : undefined} />
+              <span className="engine-picker__avatar-logo"><EngineLogo id={e.id} /></span>
+            </span>
+            <span className="engine-picker__item-text">
+              <span className="engine-picker__item-name">
+                {e.displayName}
+                {isBrowserCode && <span className="menu-new-pill">New</span>}
+              </span>
+              <span className="engine-picker__item-desc">
+                {!installed ? 'Not installed' : !authed ? (isBrowserCode ? 'Needs a model key' : 'Signed out') : ENGINE_BLURB[e.id] ?? e.binaryName}
+              </span>
+            </span>
+            {actionPending && <Orb size={20} state={installing === e.id ? 'working' : 'connecting'} />}
+            {e.id === value && !isBrowserCode && (
+              <span className="engine-picker__check" aria-label="Selected">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            )}
             {needsSetup && installed && (
               <span className="engine-picker__item-login">
                 {loggingIn === e.id ? 'Waiting…' : setupLabel}

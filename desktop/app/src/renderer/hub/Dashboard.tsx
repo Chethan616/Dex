@@ -11,6 +11,7 @@ import type { TaskInputHandle } from './TaskInput';
 import { DashboardBackground } from './DashboardBackground';
 import dexWordmark from '../assets/dex-wordmark.png';
 import { taglineFor } from './taglines';
+import { AgentAvatar, Orb } from '../components/lib';
 import type { AgentSession } from './types';
 
 const HOUR = 3600 * 1000;
@@ -196,6 +197,7 @@ export function Dashboard({ sessions, onSwitchToGrid, onSelectSession, onSubmitT
         <div className="dashboard__stat-card">
           <div className="dashboard__stat-card-head">
             <span className="dashboard__stat-card-label">Running now</span>
+            {runningCount > 0 ? <Orb size={20} state="working" className="dashboard__stat-card-orb" /> : null}
           </div>
           <span className="dashboard__stat-card-value">{runningCount}</span>
           <div className="dashboard__stat-card-spark">
@@ -245,7 +247,10 @@ export function Dashboard({ sessions, onSwitchToGrid, onSelectSession, onSubmitT
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === 'Enter') onSelectSession?.(session.id); }}
               >
-                <span className={`dashboard__recent-dot dashboard__recent-dot--${session.status}`} />
+                <span className="dashboard__recent-avatar">
+                  <AgentAvatar engineId={session.engine} sessionId={session.id} status={session.status} size={22} />
+                  <span className={`dashboard__recent-dot dashboard__recent-dot--${session.status}`} />
+                </span>
                 <span className="dashboard__recent-status">{STATUS_LABEL[session.status]}</span>
                 {session.group && <span className="dashboard__recent-group">{session.group}</span>}
                 <span className="dashboard__recent-prompt">{session.prompt}</span>

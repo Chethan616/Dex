@@ -37,6 +37,10 @@ function installElectronApi(): void {
           setTelemetry: vi.fn(async (telemetry: boolean) => ({ telemetry, telemetryUpdatedAt: null, version: 1 })),
           openSystemNotifications: vi.fn(async () => ({ ok: true })),
         },
+        approvals: {
+          get: vi.fn(async () => ({ mode: 'full' })),
+          set: vi.fn(async (mode: string) => ({ mode })),
+        },
       },
       on: {},
     },
@@ -115,6 +119,20 @@ describe('SettingsPane shortcut recorder', () => {
     const browserSyncTab = container.querySelector<HTMLButtonElement>('[data-settings-tab="settings-browser-sync"]');
 
     expect(browserSyncTab?.textContent).toBe('Browser Sync');
+
+    act(() => root.unmount());
+  });
+
+  it('includes Agent approval as its own anchored settings tab, rendering the three-way mode picker', async () => {
+    const { container, root } = renderSettingsPane(vi.fn(async () => true));
+    const tab = container.querySelector<HTMLButtonElement>('[data-settings-tab="settings-agent-approval"]');
+    expect(tab?.textContent).toBe('Agent approval');
+
+    await act(async () => { await Promise.resolve(); });
+
+    const section = container.querySelector('#settings-agent-approval');
+    const optionLabels = Array.from(section?.querySelectorAll('.settings-pane__segment') ?? []).map((el) => el.textContent);
+    expect(optionLabels).toEqual(['Ask for approval', 'Approve for me', 'Full access']);
 
     act(() => root.unmount());
   });

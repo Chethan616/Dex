@@ -32,6 +32,38 @@ retry through another and compare the exact exit code and stderr rather
 than just "it didn't work." `timedOut:true` (exit code 124) means the
 timeout you gave it ran out — distinct from the command's own failure.
 
+**A call can come back `{"exitCode":126,"stderr":"command not approved"}`
+without ever running.** This is not `dex-sh` itself gating anything — it's
+the session's own approval policy (the Settings pane's "Agent approval"
+mode; the default, Full access, never sees this). If it
+happens, say so plainly rather than retrying the same command — a retry
+waits on the same confirmation card the first call already put up.
+
+### `dex-sh session` — when one command isn't the point, a shell you keep is
+
+The one-shot form above spawns a fresh process every call — nothing about
+its working directory, environment, or a virtualenv you activated survives
+to the next call. For a task that's genuinely several commands building on
+each other in the same place (`cd` into a repo once, then run a few things
+against it), start a session instead of re-establishing that context every
+time:
+
+```bash
+dex-sh session start bash            # -> {"shellSessionId":"..."}
+dex-sh session run <id> "cd myrepo"
+dex-sh session run <id> "npm install"
+dex-sh session run <id> "npm test"   # still inside myrepo — same live shell
+dex-sh session end <id>              # always clean up when the task is done
+```
+
+`run` returns `{"exitCode":N,"timedOut":bool,"output":"..."}` — `output`
+carries both what a one-shot call would split into stdout and stderr,
+since a real terminal session doesn't keep those separate either. Each
+`run` goes through the same approval policy the one-shot form does, so the
+same `{"approved":false}`/`"command not approved"` case can happen here
+too. Use the plain one-shot form for anything that's genuinely a single
+command — a session is for when the *sequence* matters.
+
 ## `dex-registry` — reading is free; writing needs the user
 
 Reading the registry is exactly as available as any other `dex-*` tool:

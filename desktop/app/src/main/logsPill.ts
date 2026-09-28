@@ -234,6 +234,17 @@ export function createLogsWindow(): BrowserWindow {
   });
   applyLogsWindowStatePolicy(logsWindow);
 
+  // Mirrors what attachToHub() does when the window already exists — needed
+  // here too now that creation is lazy: attachToHub() runs once at shell
+  // startup, before this window necessarily exists, so a window created
+  // later (on first actual logs.show()) still needs its parent set here
+  // rather than never getting it at all.
+  if (anchorWindow && !anchorWindow.isDestroyed()) {
+    try { logsWindow.setParentWindow(anchorWindow); } catch (err) {
+      log.warn('logs.setParentWindow.error', { error: (err as Error).message });
+    }
+  }
+
   // User-drag resize/move detection — once the user manually changes bounds,
   // stop auto-repositioning. A mode-switch or explicit show resets the flag.
   // We ignore events that fire within ~200ms of our own setBounds call so
@@ -401,6 +412,13 @@ export function attachToHub(hub: BrowserWindow): void {
 }
 
 export function showLogs(sessionId: string, anchor: PaneAnchor | null = null): void {
+  // Lazy creation: this used to be created hidden at shell startup and sit
+  // resident (a full extra Electron renderer process) for the app's whole
+  // life even for a session that never opens Logs. Every real entry point
+  // (showLogs, toggleLogs, focusLogsFollowUp) creates on first use instead.
+  if (!logsWindow || logsWindow.isDestroyed()) {
+    createLogsWindow();
+  }
   if (!logsWindow || logsWindow.isDestroyed()) {
     log.warn('logs.show.no-window', {});
     return;
@@ -449,6 +467,9 @@ export function showLogs(sessionId: string, anchor: PaneAnchor | null = null): v
  */
 export function focusLogsFollowUp(sessionId: string, anchor: PaneAnchor | null = null): void {
   if (!logsWindow || logsWindow.isDestroyed()) {
+    createLogsWindow();
+  }
+  if (!logsWindow || logsWindow.isDestroyed()) {
     log.warn('logs.focusFollowUp.no-window', {});
     return;
   }
@@ -476,6 +497,9 @@ export function hideLogs(): void {
 }
 
 export function toggleLogs(sessionId: string, anchor: PaneAnchor | null = null): boolean {
+  if (!logsWindow || logsWindow.isDestroyed()) {
+    createLogsWindow();
+  }
   if (!logsWindow || logsWindow.isDestroyed()) {
     log.warn('logs.toggle.no-window', {});
     return false;

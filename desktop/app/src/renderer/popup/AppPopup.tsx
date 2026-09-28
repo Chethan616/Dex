@@ -34,7 +34,7 @@ function useMeasuredPopup(request: AppPopupOpenRequest | null, ref: React.RefObj
       window.popupHostAPI.resize({
         popupId: request.id ?? '',
         width,
-        height: Math.min(height, request.maxHeight ?? 380),
+        height: Math.min(height, request.maxHeight ?? 640),
       });
     };
     measure();
@@ -67,6 +67,14 @@ function MenuIcon({ item }: { item: AppPopupMenuItem }): React.ReactElement | nu
   return null;
 }
 
+function CheckIcon(): React.ReactElement {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function GenericMenu({
   request,
 }: {
@@ -82,22 +90,46 @@ function GenericMenu({
     });
   };
 
+  // Arrow keys walk the enabled rows, wrapping, like a native menu.
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+    if (!keys.includes(event.key)) return;
+    event.preventDefault();
+    const rows = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('.app-popup-menu__item:not(:disabled)'),
+    );
+    if (rows.length === 0) return;
+    const at = rows.indexOf(document.activeElement as HTMLButtonElement);
+    const next = event.key === 'Home' ? 0
+      : event.key === 'End' ? rows.length - 1
+      : event.key === 'ArrowDown' ? (at + 1) % rows.length
+      : (at <= 0 ? rows.length - 1 : at - 1);
+    rows[next]?.focus();
+  };
+
   return (
-    <div className="app-popup-menu" role="menu">
+    <div className="app-popup-menu" role="menu" onKeyDown={onKeyDown}>
       {request.items.map((item) => (
         <React.Fragment key={item.id}>
           {item.separatorBefore && <div className="app-popup-menu__sep" />}
           <button
             type="button"
-            className={`app-popup-menu__item${item.tone === 'danger' ? ' app-popup-menu__item--danger' : ''}`}
-            role="menuitem"
+            className={`app-popup-menu__item${item.tone === 'danger' ? ' app-popup-menu__item--danger' : ''}${item.hint ? ' app-popup-menu__item--two-line' : ''}`}
+            role={item.checked !== undefined ? 'menuitemradio' : 'menuitem'}
+            aria-checked={item.checked ?? undefined}
             disabled={item.disabled}
             onClick={() => select(item)}
           >
-            <span className="app-popup-menu__icon"><MenuIcon item={item} /></span>
-            <span className="app-popup-menu__label">{item.label}</span>
-            {item.checked && <span className="app-popup-menu__check">✓</span>}
-            {item.hint && <span className="app-popup-menu__hint">{item.hint}</span>}
+            {item.icon && <span className="app-popup-menu__icon"><MenuIcon item={item} /></span>}
+            {item.hint ? (
+              <span className="app-popup-menu__text">
+                <span className="app-popup-menu__label">{item.label}</span>
+                <span className="app-popup-menu__desc">{item.hint}</span>
+              </span>
+            ) : (
+              <span className="app-popup-menu__label">{item.label}</span>
+            )}
+            {item.checked && <span className="app-popup-menu__check"><CheckIcon /></span>}
           </button>
         </React.Fragment>
       ))}

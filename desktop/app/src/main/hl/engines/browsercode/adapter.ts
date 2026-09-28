@@ -8,6 +8,8 @@
 
 import { register } from '../registry';
 import { applyBrowserHarnessEnv } from '../browserHarnessEnv';
+import { deliveryBriefing } from '../delivery';
+import { openCodeMcpConfig, servicesBriefing } from '../services';
 import { enrichedEnv } from '../pathEnrich';
 import { runCliCapture } from '../cliSpawn';
 import type {
@@ -137,9 +139,11 @@ const browserCodeAdapter: EngineAdapter = {
       });
     }
     const providerConfig = CUSTOM_PROVIDER_CONFIG[providerId];
+    const mcp = openCodeMcpConfig(ctx);
     env.OPENCODE_CONFIG_CONTENT = JSON.stringify({
       model,
       tools: { browser_execute: false },
+      ...(mcp ? { mcp } : {}),
       ...(providerConfig ? {
         provider: {
           [providerId]: {
@@ -162,13 +166,7 @@ const browserCodeAdapter: EngineAdapter = {
     // Loading the tools is not enough on its own: the lines above hand the
     // agent a browser and explain how to drive one, so an agent asked about
     // GitHub did the familiar thing with the API sitting right there.
-    const connectedServiceLines = ctx.mcpBriefing && ctx.mcpBriefing.length > 0
-      ? [
-          ...ctx.mcpBriefing,
-          'These mcp__ tools are already loaded and callable right now. Call them directly by name. Do NOT look them up with ToolSearch first — it only searches deferred tools and will report them as missing even though they work.',
-          'Use them for anything involving these services. Do not open their websites: the API is faster, costs a fraction of the tokens, and does not break when a page changes. Fall back to the browser only if a tool call actually returns an error.',
-        ]
-      : [];
+    const connectedServiceLines = servicesBriefing(ctx);
     const attachmentLines = ctx.attachmentRefs.length
       ? [
           '',
@@ -196,6 +194,7 @@ const browserCodeAdapter: EngineAdapter = {
       'The Windows registry — reading OR writing, any hive — is `dex-registry`, never `reg.exe` or a shell\'s own registry cmdlets (`Set-ItemProperty`, etc.) in Bash/PowerShell directly. Writes block on a confirmation card in the app; that gate is the only thing standing between you and the user\'s real registry, so it\'s not optional.',
       'Finding a file on this machine — by name or by what it\'s about ("my aadhaar card", "the cryptography syllabus") — is `dex-find`, not a Bash/PowerShell scan. It also searches file content, not just names, and answers immediately: don\'t ask where the file might be first, just run it.',
       'A result whose shape is part of the answer — a report, a comparison table, a structured summary, anything with real headings and sections — is `dex-canvas show "<title>"` (markdown piped via stdin), rendered as a document in the app itself. That is different from producing a file: only save to `./outputs/' + ctx.sessionId + '/` for something the user will download, attach, or open outside the app (a CSV export, a screenshot, a transcript) — not for a report meant to be read right here. Mention the filename in the final answer for anything actually saved there.',
+      ...deliveryBriefing(ctx),
       ...connectedServiceLines,
       ...attachmentLines,
       '',

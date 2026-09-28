@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
+import { Orb, type OrbState, AgentAvatar } from '../components/lib';
 import { STATUS_LABEL } from './constants';
 import { ContentRenderer, getPreview } from './ContentRenderer';
 import { Markdown, linkifyOutputPaths } from './Markdown';
@@ -146,6 +147,19 @@ function toolIcon(name?: string): React.ReactElement {
   return <ToolGenericIcon />;
 }
 
+// Same keyword classification as toolIcon(), same precedence — one tool
+// category, two renderings (a static glyph once it's done, a live orb while
+// it's running), so they must never disagree about what a tool "is".
+function toolOrbState(name?: string): OrbState {
+  if (!name) return 'working';
+  if (CODE_KEYWORDS.test(name)) return 'solving';
+  if (SCREENSHOT_KEYWORDS.test(name)) return 'searching';
+  if (NETWORK_KEYWORDS.test(name)) return 'connecting';
+  if (BROWSER_KEYWORDS.test(name)) return 'connecting';
+  if (FILE_KEYWORDS.test(name)) return 'shaping';
+  return 'working';
+}
+
 function ToolStep({ entry }: { entry: OutputEntry }): React.ReactElement {
   const [open, setOpen] = useState(false);
   const toggle = () => setOpen((o) => !o);
@@ -158,7 +172,9 @@ function ToolStep({ entry }: { entry: OutputEntry }): React.ReactElement {
       <div className="step__row" onClick={toggle} role="button" tabIndex={0} aria-expanded={open}>
         <span className="step__icon">{toolIcon(entry.tool)}</span>
         <span className="step__name">{entry.tool}</span>
-        {!hasResult && <span className="step__spinner" />}
+        {!hasResult && (
+          <Orb size={20} state={toolOrbState(entry.tool)} className="step__spinner" />
+        )}
         <span className="step__fill" />
         {dur != null && <span className="step__dur">{formatDuration(dur)}</span>}
       </div>
@@ -330,6 +346,10 @@ function OutputRow({ entry }: { entry: OutputEntry }): React.ReactElement {
   if (entry.type === 'thinking') {
     return (
       <div className="step step--thinking">
+        <div className="step__thinking-header">
+          <Orb size={20} state="composing" />
+          <span className="step__thinking-label">Thinking</span>
+        </div>
         <div className="step__text">
           <Markdown source={linkifyOutputPaths(entry.content)} />
         </div>
@@ -718,7 +738,7 @@ function CloseIcon(): React.ReactElement {
   );
 }
 
-interface AgentPaneProps {
+export interface AgentPaneProps {
   session: AgentSession;
   focused?: boolean;
   onRerun?: (sessionId: string) => void;
@@ -734,7 +754,7 @@ interface AgentPaneProps {
   cycleShortcut?: string;
 }
 
-export function AgentPane({ session, focused, onRerun, onResume, onPause, onFollowUp, onDismiss, onCancel, onSelect, onOpenFollowUp, onOpenSettings, followUpShortcut, cycleShortcut }: AgentPaneProps): React.ReactElement {
+function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowUp, onDismiss, onCancel, onSelect, onOpenFollowUp, onOpenSettings, followUpShortcut, cycleShortcut }: AgentPaneProps): React.ReactElement {
   const openaiLogo = useThemedAsset(openaiLogoDark, openaiLogoLight);
   const opencodeLogo = useThemedAsset(opencodeLogoDark, opencodeLogoLight);
   const paneRef = useRef<HTMLDivElement>(null);
@@ -1174,7 +1194,19 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
       }}
     >
       <div className="pane__header">
-        <span className={`pane__dot pane__dot--${session.status}`} />
+        {/* The agent's face: shape from the engine, hopping while it works,
+            asleep while paused. The status dot rides its corner. */}
+        <span className="pane__avatar">
+          <AgentAvatar
+            engineId={session.engine}
+            sessionId={session.id}
+            status={session.status}
+            size={30}
+            interactive={focused}
+            label={`Agent (${session.status})`}
+          />
+          <span className={`pane__dot pane__dot--${session.status}`} />
+        </span>
         <div className="pane__title-group">
           <span className="pane__prompt">{session.prompt}</span>
           {session.engine === 'codex' && (
@@ -1365,7 +1397,7 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
               <span className="pane__browser-starting-row">
                 {isStarting ? (
                   <>
-                    <span className="pane__spinner" />
+                    <Orb size={64} state="connecting" className="pane__spinner" />
                     <span>Browser starting…</span>
                   </>
                 ) : (
@@ -1444,5 +1476,65 @@ export function AgentPane({ session, focused, onRerun, onResume, onPause, onFoll
     </div>
   );
 }
+
+/**
+ * Every AgentPane in Grid view used to re-render on every sessions refetch
+ * (React Query's staleTime/refetchOnWindowFocus, or any other session's
+ * sessionOutput event) because HubApp recreates the whole `sessions` array
+ * — and the callback props passed alongside it — by reference on every one
+ * of those, and a plain component re-renders whenever its parent does
+ * regardless of whether ITS OWN data changed. With several running
+ * sessions this compounded into visible jank: an unrelated session
+ * finishing a tool call would restart every other pane's bounds/
+ * ResizeObserver effect too.
+ *
+ * Compares `session` by the fields this component actually reads rather
+ * than by reference, so a session that's genuinely unchanged skips the
+ * re-render even though HubApp handed it a new object. Every callback prop
+ * (onRerun, onResume, onPause, onFollowUp, onDismiss, onCancel, onSelect,
+ * onOpenFollowUp, onOpenSettings) is deliberately excluded from the
+ * comparison: each one takes the session id as its own call-time argument
+ * rather than closing over per-session state (see AgentPaneProps above), so
+ * a new function identity every render never changes what clicking a
+ * button actually does — bailing out on a stale-but-equivalent callback
+ * reference is safe.
+ */
+export function areAgentPanePropsEqual(prev: AgentPaneProps, next: AgentPaneProps): boolean {
+  if (prev.focused !== next.focused) return false;
+  if (prev.followUpShortcut !== next.followUpShortcut) return false;
+  if (prev.cycleShortcut !== next.cycleShortcut) return false;
+
+  const a = prev.session;
+  const b = next.session;
+  if (a === b) return true;
+  return (
+    a.id === b.id &&
+    a.status === b.status &&
+    // Reference equality is the fast, correct check once a session has real
+    // output — useSessionsQuery only ever grows that array in place (append
+    // or reuse the cached reference), never rebuilds an equal-but-new one.
+    // A session with none yet is the one case that breaks that assumption:
+    // every refetch hands back a brand new `[]` literal from IPC, so two
+    // merely-empty arrays need to count as equal too.
+    (a.output === b.output || (a.output.length === 0 && b.output.length === 0)) &&
+    a.error === b.error &&
+    a.hasBrowser === b.hasBrowser &&
+    a.primarySite === b.primarySite &&
+    a.lastUrl === b.lastUrl &&
+    a.canResume === b.canResume &&
+    a.lastActivityAt === b.lastActivityAt &&
+    a.engine === b.engine &&
+    a.model === b.model &&
+    a.costUsd === b.costUsd &&
+    a.inputTokens === b.inputTokens &&
+    a.outputTokens === b.outputTokens &&
+    a.cachedInputTokens === b.cachedInputTokens &&
+    a.costSource === b.costSource &&
+    a.authMode === b.authMode &&
+    a.subscriptionType === b.subscriptionType
+  );
+}
+
+export const AgentPane = React.memo(AgentPaneImpl, areAgentPanePropsEqual);
 
 export default AgentPane;

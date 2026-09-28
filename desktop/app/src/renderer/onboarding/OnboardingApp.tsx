@@ -14,6 +14,7 @@ import {
   rendererToAccelerator,
 } from '../../shared/hotkeys';
 import { pollInstalledStatus } from '../shared/installStatus';
+import { AgentAvatar, DexAvatar, ProfilePicker, useDexProfile, MetalButton, NewBadge, Orb, OrbLabel, Switch } from '../components/lib';
 
 interface ChromeProfile {
   id: string;
@@ -128,7 +129,7 @@ declare global {
   }
 }
 
-type Step = 'intro' | 'profile' | 'apikey' | 'notifications' | 'shortcut';
+type Step = 'intro' | 'avatar' | 'profile' | 'apikey' | 'notifications' | 'shortcut';
 type InstallableOnboardingEngine = 'claude-code' | 'codex';
 type InstallingEngines = Record<InstallableOnboardingEngine, boolean>;
 
@@ -218,12 +219,7 @@ function PreferencesStep({
         </button>
       </div>
 
-      <label className="pref-row pref-row-toggle">
-        <input
-          type="checkbox"
-          checked={telemetryOptIn}
-          onChange={(e) => setTelemetryOptIn(e.target.checked)}
-        />
+      <div className="pref-row pref-row-toggle">
         <div className="pref-row-body">
           <div className="pref-row-title">Keep local diagnostics</div>
           <div className="pref-row-desc">
@@ -238,12 +234,18 @@ function PreferencesStep({
             </a>
           </div>
         </div>
-      </label>
+        <Switch
+          checked={telemetryOptIn}
+          onChange={setTelemetryOptIn}
+          label="Keep local diagnostics"
+          className="pref-row-action"
+        />
+      </div>
 
       <div className="apikey-actions">
-        <button className="btn btn-primary" onClick={handleContinue} disabled={saving}>
+        <MetalButton size="lg" onClick={handleContinue} disabled={saving}>
           {saving ? 'Saving…' : 'Continue'}
-        </button>
+        </MetalButton>
       </div>
 
       <div className="step-subactions">
@@ -255,7 +257,32 @@ function PreferencesStep({
   );
 }
 
-const VALID_STEPS: readonly Step[] = ['intro', 'profile', 'apikey', 'notifications', 'shortcut'];
+/**
+ * "Pick your DEX" — Netflix-profile style. It starts on a random bot (stable
+ * per install), and whatever is chosen here follows the account to the phone.
+ */
+function AvatarStep({ onContinue, onBack }: { onContinue: () => void; onBack: () => void }) {
+  const [profile, save] = useDexProfile();
+  return (
+    <div className="step-panel avatar-step">
+      <h1 className="step-title">Pick your DEX</h1>
+      <p className="step-subtitle">
+        This bot is you — on this PC and in DEX on your phone. Tap one, give it a colour and a name. You can change it any time in Settings → Appearance.
+      </p>
+      <ProfilePicker
+        key={profile.updatedAt === 0 ? profile.bot : 'loaded'}
+        initial={profile}
+        saveLabel="Continue"
+        onSave={async (next) => { await save(next); onContinue(); }}
+      />
+      <div className="step-subactions">
+        <button className="back-btn" onClick={onBack}>Back</button>
+      </div>
+    </div>
+  );
+}
+
+const VALID_STEPS: readonly Step[] = ['intro', 'avatar', 'profile', 'apikey', 'notifications', 'shortcut'];
 
 // Cookie sync is unsupported on Windows: Chromium 127+ uses App-Bound
 // Encryption (v20) keyed to the original user-data-dir, so a temp-copy
@@ -892,15 +919,15 @@ export function OnboardingApp() {
       <div className={`onboarding-content ${step === 'intro' ? 'onboarding-content-wide' : ''}`}>
         <div className="step-indicator">
           {((COOKIE_SYNC_SUPPORTED
-            ? ['intro', 'profile', 'apikey', 'notifications', 'shortcut']
-            : ['intro', 'apikey', 'notifications', 'shortcut']) as Step[]).map((s, i, all) => {
+            ? ['intro', 'avatar', 'profile', 'apikey', 'notifications', 'shortcut']
+            : ['intro', 'avatar', 'apikey', 'notifications', 'shortcut']) as Step[]).map((s, i, all) => {
             const currentIdx = all.indexOf(step);
             const thisIdx = i;
             const cls = thisIdx < currentIdx ? 'done' : thisIdx === currentIdx ? 'active' : '';
             return (
               <React.Fragment key={s}>
-                <div className={`step-dot ${cls}`} />
-                {i < all.length - 1 && <div className="step-line" />}
+                <div className={`step-dot ${cls}`} aria-current={cls === 'active' ? 'step' : undefined} />
+                {i < all.length - 1 && <div className={`step-line ${thisIdx < currentIdx ? 'done' : ''}`} />}
               </React.Fragment>
             );
           })}
@@ -910,24 +937,39 @@ export function OnboardingApp() {
           <div className="step-panel intro-panel">
             <div className="intro-content">
               <div className="intro-text">
+                <div className="intro-mascot">
+                  <DexAvatar size={64} interactive />
+                  <NewBadge label="Agents" />
+                </div>
                 <h1 className="intro-title">
                   <img className="intro-wordmark" src={dexWordmark} alt="DEX" draggable={false} />
                 </h1>
                 <p className="intro-subtitle">
                   Run AI agents that browse the web, complete tasks, and report back — all from your desktop.
                 </p>
-                <button
-                  className="btn btn-primary intro-cta"
-                  onClick={() => setStep(COOKIE_SYNC_SUPPORTED ? 'profile' : 'apikey')}
+                <MetalButton
+                  size="lg"
+                  className="intro-cta"
+                  onClick={() => setStep('avatar')}
                 >
                   Get started
-                </button>
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M3.5 8h9m0 0L8.5 4m4 4l-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </MetalButton>
               </div>
               <div className="intro-image-wrap">
                 <img className="intro-image" src={introImage} alt="DEX" />
               </div>
             </div>
           </div>
+        )}
+
+        {step === 'avatar' && (
+          <AvatarStep
+            onContinue={() => setStep(COOKIE_SYNC_SUPPORTED ? 'profile' : 'apikey')}
+            onBack={() => setStep('intro')}
+          />
         )}
 
         {step === 'profile' && (
@@ -940,7 +982,7 @@ export function OnboardingApp() {
             </p>
 
             {loadingProfiles && (
-              <div className="profile-loading">Detecting browser profiles...</div>
+              <div className="profile-loading"><OrbLabel state="searching">Detecting browser profiles</OrbLabel></div>
             )}
 
             {!loadingProfiles && profiles.length === 0 && (
@@ -977,7 +1019,7 @@ export function OnboardingApp() {
                         <div className="profile-dir">{p.directory}</div>
                       </div>
                       {importing === profileId && (
-                        <div className="profile-spinner" />
+                        <Orb size={20} state="working" label="Importing" />
                       )}
                     </button>
                   );
@@ -1036,12 +1078,9 @@ export function OnboardingApp() {
                 />
 
                 <div className="apikey-actions">
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => setStep('apikey')}
-                  >
+                  <MetalButton size="lg" onClick={() => setStep('apikey')}>
                     Continue
-                  </button>
+                  </MetalButton>
                 </div>
 
                 <button
@@ -1065,7 +1104,7 @@ export function OnboardingApp() {
             )}
 
             {!importResult && (
-              <button className="back-btn" onClick={() => setStep('intro')}>
+              <button className="back-btn" onClick={() => setStep('avatar')}>
                 Back
               </button>
             )}
@@ -1350,19 +1389,19 @@ export function OnboardingApp() {
             )}
 
             <div className="apikey-actions apikey-actions--footer">
-              <button
-                type="button"
-                className="btn btn-primary apikey-continue-btn"
+              <MetalButton
+                size="lg"
+                className="apikey-continue-btn"
                 onClick={handleStepSaveAndContinue}
                 disabled={!canContinueProviderSetup || stepSaving}
               >
                 {stepSaving ? 'Saving...' : 'Save & Continue'}
-              </button>
+              </MetalButton>
             </div>
 
             <button
               className="back-btn"
-              onClick={() => setStep(COOKIE_SYNC_SUPPORTED ? 'profile' : 'intro')}
+              onClick={() => setStep(COOKIE_SYNC_SUPPORTED ? 'profile' : 'avatar')}
             >
               Back
             </button>
@@ -1372,7 +1411,7 @@ export function OnboardingApp() {
 
         {step === 'shortcut' && pillOpen && (
           <div className="step-panel pill-takeover">
-            <div className="pill-takeover-dot" />
+            <Orb size={64} state="listening" />
             <h1 className="pill-takeover-title">Pill is open</h1>
             <p className="pill-takeover-subtitle">
               Type a task and press Enter to finish setup.<br/>

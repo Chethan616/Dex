@@ -93,3 +93,9 @@ typings/
 # Electron-Forge
 out/
 .env.signing
+
+# OAuth client ids/secrets for one-click sign-in (see docs/ACCOUNTS_SETUP.md)
+config/oauth-clients.json
+
+# Firebase web config for the phone bridge (firebase/setup.ps1 writes it)
+config/firebase.json

@@ -13,8 +13,11 @@
  * it has got, the files that were found, the screenshots being taken. The
  * moment a page loads, the native view goes back on top and this disappears.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ImageGeneration, type ImageGenerationHandle } from 'img-fx';
 import { Markdown } from './Markdown';
+import { useLibTheme } from '../design/useLibTheme';
+import { Orb, Segmented } from '../components/lib';
 import type { AgentSession, ArtifactItem, HlEvent, TaskState, TaskStep } from './types';
 
 type ArtifactEvent = Extract<HlEvent, { type: 'artifact' }>;
@@ -298,6 +301,19 @@ function ScreenshotCard({ shots }: { shots: ScreenshotEvent[] }): React.ReactEle
   const [selected, setSelected] = useState<number | null>(null);
   const activeIndex = selected ?? shots.length - 1;
   const active = shots[activeIndex];
+  const imgFxRef = useRef<ImageGenerationHandle>(null);
+  const revealedPathRef = useRef<string | null>(null);
+  const activeUrl = `file://${active.path}`;
+  const libTheme = useLibTheme();
+
+  // Only the single large capture gets the img-fx shader — the thumbnail
+  // strip stays plain <img>s so a busy session never opens more than one
+  // WebGL context here at a time.
+  useEffect(() => {
+    if (revealedPathRef.current === active.path) return;
+    revealedPathRef.current = active.path;
+    imgFxRef.current?.triggerReveal({ hold: 'manual' });
+  }, [active.path]);
 
   return (
     <section className="deck-card deck-card--shots">
@@ -305,7 +321,14 @@ function ScreenshotCard({ shots }: { shots: ScreenshotEvent[] }): React.ReactEle
         <span className="deck-card__title">{active.mode === 'uia' ? 'Screen (annotated)' : 'Screen'}</span>
         {active.caption ? <span className="deck-card__count">{active.caption}</span> : null}
       </header>
-      <img className="deck-shot" src={`file://${active.path}`} alt={active.caption ?? 'screen capture'} />
+      <ImageGeneration
+        ref={imgFxRef}
+        preset="pixels-organic"
+        theme={libTheme}
+        images={activeUrl}
+      >
+        <img className="deck-shot" src={activeUrl} alt={active.caption ?? 'screen capture'} />
+      </ImageGeneration>
       {shots.length > 1 ? (
         <div className="deck-shot__strip">
           {shots.map((shot, index) => (
@@ -429,10 +452,10 @@ function ActivityCard({ session }: { session: AgentSession }): React.ReactElemen
   return (
     <section className="deck-card deck-card--activity">
       <header className="deck-card__header">
+        {running ? <Orb size={20} state={stats.lastTool ? 'working' : 'composing'} /> : null}
         <span className="deck-card__title">
           {running ? (stats.lastTool ?? 'Working') : 'Nothing running'}
         </span>
-        {running ? <span className="deck-pulse" aria-hidden="true" /> : null}
       </header>
 
       {stats.lastThought ? (
@@ -491,13 +514,16 @@ function ActivityCard({ session }: { session: AgentSession }): React.ReactElemen
  * instead, which neither of those surfaces ever touches, so it's reachable
  * no matter what's currently showing underneath.
  */
+type ApprovalLifetimeChoice = 'once' | 'turn' | 'session';
+
 export function ConfirmationCard({ sessionId, event }: { sessionId: string; event: ConfirmationEvent }): React.ReactElement {
   const [answering, setAnswering] = useState<'approve' | 'deny' | null>(null);
+  const [lifetime, setLifetime] = useState<ApprovalLifetimeChoice>('once');
 
   const answer = (approved: boolean) => {
     if (answering) return; // one click; a slow IPC round trip shouldn't double-fire
     setAnswering(approved ? 'approve' : 'deny');
-    window.electronAPI?.dex?.confirmAnswer(sessionId, event.id, approved).catch(() => {
+    window.electronAPI?.dex?.confirmAnswer(sessionId, event.id, approved, approved ? lifetime : 'once').catch(() => {
       setAnswering(null);
     });
   };
@@ -520,6 +546,18 @@ export function ConfirmationCard({ sessionId, event }: { sessionId: string; even
         >
           {answering === 'deny' ? 'Denying…' : 'Deny'}
         </button>
+        <Segmented<ApprovalLifetimeChoice>
+          className="deck-confirm__lifetime"
+          size="sm"
+          label="Remember this approval for"
+          value={lifetime}
+          onChange={setLifetime}
+          options={[
+            { value: 'once', label: 'Once', disabled: answering != null },
+            { value: 'turn', label: 'This turn', disabled: answering != null },
+            { value: 'session', label: 'Session', disabled: answering != null },
+          ]}
+        />
         <button
           className="deck-confirm__btn deck-confirm__btn--approve"
           onClick={() => answer(true)}

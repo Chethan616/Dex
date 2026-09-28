@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import type { AgentSession, SessionStatus } from './types';
 import { orderSessionsForSidebar } from './sessionOrdering';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
+import { AgentAvatar } from '../components/lib';
 
 interface SidebarSession extends AgentSession {
   primarySite?: string | null;
@@ -81,12 +82,12 @@ const MOCK_SIDEBAR_SESSIONS: SidebarSession[] = [
 ];
 
 const STATUS_DOT: Record<SessionStatus, { color: string; label: string }> = {
-  running: { color: '#3fb950', label: 'Running' },
-  idle:    { color: '#d29922', label: 'Waiting for input' },
-  stuck:   { color: '#f85149', label: 'Stuck' },
-  paused:  { color: '#58a6ff', label: 'Paused' },
-  stopped: { color: '#6e7681', label: 'Stopped' },
-  draft:   { color: '#6e7681', label: 'Draft' },
+  running: { color: 'var(--status-running)', label: 'Running' },
+  idle:    { color: 'var(--status-idle)', label: 'Waiting for input' },
+  stuck:   { color: 'var(--status-stuck)', label: 'Stuck' },
+  paused:  { color: 'var(--status-paused)', label: 'Paused' },
+  stopped: { color: 'var(--status-stopped)', label: 'Stopped' },
+  draft:   { color: 'var(--status-stopped)', label: 'Draft' },
 };
 
 function preventMouseFocus(e: React.MouseEvent<HTMLElement>): void {
@@ -118,16 +119,6 @@ function PlusIcon(): React.ReactElement {
   );
 }
 
-function TerminalFallbackIcon(): React.ReactElement {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <rect x="1.5" y="2.5" width="11" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M4 6l2 1.5L4 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M7.5 9h2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function MoreIcon(): React.ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -138,7 +129,7 @@ function MoreIcon(): React.ReactElement {
   );
 }
 
-function SessionRow({
+function SessionRowImpl({
   s,
   selected,
   onSelect,
@@ -210,8 +201,8 @@ function SessionRow({
           {favicon ? (
             <img src={favicon} alt="" width={18} height={18} />
           ) : (
-            <span className="sidebar__row-icon-fallback" aria-label="No site">
-              <TerminalFallbackIcon />
+            <span className="sidebar__row-icon-fallback">
+              <AgentAvatar engineId={s.engine} sessionId={s.id} status={s.status} size={18} />
             </span>
           )}
           <span className="sidebar__row-dot" style={{ background: dot.color }} aria-label={dot.label} />
@@ -251,13 +242,46 @@ function SessionRow({
 
 type TabBucket = 'active' | 'waiting' | 'done';
 
+/**
+ * Sidebar rows re-rendered on every session event because HubApp rebuilds
+ * the `sessions` array (and these callback props) by reference each time —
+ * so a single unrelated session emitting output re-rendered every row.
+ * Five rows is cheap, but this list is meant to scale, and the fix is the
+ * same one AgentPane uses: compare the session by the fields the row
+ * actually shows, and ignore callback identity, since each callback takes
+ * the session id as a call-time argument rather than closing over per-row
+ * state.
+ */
+function sameRowSession(a: SidebarSession, b: SidebarSession): boolean {
+  if (a === b) return true;
+  return (
+    a.id === b.id &&
+    a.status === b.status &&
+    a.prompt === b.prompt &&
+    a.primarySite === b.primarySite &&
+    a.lastActivityAt === b.lastActivityAt &&
+    a.engine === b.engine &&
+    a.error === b.error
+  );
+}
+
+const SessionRow = React.memo(SessionRowImpl, (prev, next) =>
+  prev.selected === next.selected
+  && prev.pinned === next.pinned
+  && sameRowSession(prev.s, next.s),
+);
+
+const TabChip = React.memo(TabChipImpl, (prev, next) =>
+  prev.selected === next.selected && sameRowSession(prev.s, next.s),
+);
+
 function bucketFor(status: SessionStatus): TabBucket {
   if (status === 'running' || status === 'stuck') return 'active';
   if (status === 'idle' || status === 'draft') return 'waiting';
   return 'done';
 }
 
-function TabChip({
+function TabChipImpl({
   s,
   selected,
   onSelect,
@@ -287,7 +311,7 @@ function TabChip({
           <img src={favicon} alt="" width={14} height={14} />
         ) : (
           <span className="tabstrip__chip-icon-fallback" aria-hidden="true">
-            <TerminalFallbackIcon />
+            <AgentAvatar engineId={s.engine} sessionId={s.id} status={s.status} size={14} />
           </span>
         )}
         <span className="tabstrip__chip-dot" style={{ background: dot.color }} aria-label={dot.label} />
@@ -332,6 +356,17 @@ export function Sidebar({ sessions, selectedId, onSelect, onNewAgent, onRowActio
 
   return (
     <aside className="sidebar" aria-label="Agent sessions">
+      <button
+        type="button"
+        className="sidebar__new-agent"
+        onClick={onNewAgent}
+        onMouseDown={preventMouseFocus}
+        tabIndex={-1}
+      >
+        <span className="sidebar__new-agent-icon" aria-hidden="true"><PlusIcon /></span>
+        New agent
+      </button>
+
       <div className="sidebar__header">
         <span className="sidebar__header-title">Agents</span>
         {/* Two numbers, and only when they say something: the total, and how
@@ -343,19 +378,6 @@ export function Sidebar({ sessions, selectedId, onSelect, onNewAgent, onRowActio
             {orderedSessions.length}
           </span>
         )}
-        <div className="sidebar__header-actions">
-          <button
-            type="button"
-            className="sidebar__icon-btn sidebar__icon-btn--new has-tooltip"
-            onClick={onNewAgent}
-            onMouseDown={preventMouseFocus}
-            tabIndex={-1}
-            aria-label="New agent"
-            data-tooltip="New agent"
-          >
-            <PlusIcon />
-          </button>
-        </div>
       </div>
 
       <div className="sidebar__groups">

@@ -234,3 +234,41 @@ describe('LogsApp focus behavior', () => {
     act(() => root.unmount());
   });
 });
+
+describe('LogsApp session switch', () => {
+  beforeEach(() => {
+    installApis();
+    vi.mocked(window.electronAPI.sessions.get).mockImplementation(async (id: string) => ({
+      id,
+      prompt: id === 'flight' ? 'find me a flight to NYC' : 'check my latest mail',
+      status: 'stopped',
+      engine: 'codex',
+      output: [],
+      createdAt: Date.now(),
+    }));
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('Chat shows the session it was switched to, not the previous one', async () => {
+    const { container, root } = renderLogsApp();
+    await act(async () => {
+      activeSessionChangedHandler?.('flight');
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(container.querySelector('.logs-view')?.textContent).toContain('find me a flight to NYC');
+
+    await act(async () => {
+      activeSessionChangedHandler?.('mail');
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    const chat = container.querySelector('.logs-view')?.textContent ?? '';
+    expect(chat).toContain('check my latest mail');
+    expect(chat).not.toContain('find me a flight to NYC');
+
+    act(() => root.unmount());
+  });
+});

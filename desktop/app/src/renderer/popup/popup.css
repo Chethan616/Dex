@@ -1,3 +1,15 @@
+/*
+ * popup.css — every dropdown in DEX (row menus, engine/model pickers, memory).
+ *
+ * Menus live in their own frameless, opaque BrowserWindow (main/appPopup.ts)
+ * so they can escape the hub's edge; the OS draws the rounded corners and the
+ * drop shadow. So the menu *is* the window: the page background is the menu
+ * surface, and the look is Libraries.dev's `.tl-menu.t-dropdown` (site.css) —
+ * #202020 / white card, 32px rows with 8px radius, the 250ms
+ * cubic-bezier(.22,1,.36,1) open. The window can't scale itself, so the open
+ * animation plays on the content instead: rows rise and un-blur into place.
+ */
+
 html,
 body {
   margin: 0;
@@ -5,10 +17,10 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--color-bg-elevated);
-  color: var(--color-fg-primary);
+  background: var(--menu-surface);
+  color: var(--menu-fg);
   font-family: var(--font-ui);
-  font-size: var(--font-size-sm);
+  font-size: 13px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -22,7 +34,6 @@ body {
   box-sizing: border-box;
   width: max-content;
   max-width: 900px;
-  max-height: 380px;
   overflow: visible;
 }
 
@@ -31,28 +42,61 @@ body {
   width: 100%;
 }
 
+/* ── Surface ──────────────────────────────────────────────────────────── */
+
 .app-popup-menu,
-.browsercode-model-picker__menu {
+.browsercode-model-picker__menu,
+.engine-picker__menu,
+.mem-popup {
   box-sizing: border-box;
-  width: 100%;
-  max-height: 380px;
-  overflow: auto;
-  background-color: var(--color-menu-bg);
-  background-image: linear-gradient(180deg, rgba(var(--highlight-rgb), 0.06), rgba(var(--highlight-rgb), 0));
-  border: 1px solid rgba(var(--highlight-rgb), 0.10);
+  background: var(--menu-surface);
   border-radius: 12px;
-  box-shadow:
-    0 1px 0 rgba(var(--highlight-rgb), 0.06) inset,
-    0 12px 32px rgba(var(--shadow-rgb), 0.5),
-    0 4px 12px rgba(var(--shadow-rgb), 0.3);
+  box-shadow: var(--menu-ring);
+  animation: menu-open 140ms var(--menu-ease) both;
+}
+
+.app-popup-menu,
+.browsercode-model-picker__menu,
+.engine-picker__menu {
+  /* Sized to content by the popup window; never a scroll container. */
+  overflow: visible;
   padding: 6px;
 }
 
-.app-popup-menu {
+.mem__processes {
+  scrollbar-width: none;
+}
+
+.mem__processes::-webkit-scrollbar {
+  display: none;
+}
+
+.app-popup-menu,
+.browsercode-model-picker__menu {
+  width: 100%;
+}
+
+.app-popup-menu,
+.engine-picker__menu {
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
+
+/* Opacity + a 2px settle only: no blur filter, no per-row stagger. Both
+   looked nice in isolation and made every open feel slower than a click. */
+@keyframes menu-open {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-popup-menu, .browsercode-model-picker__menu, .engine-picker__menu, .mem-popup {
+    animation: none;
+  }
+}
+
+/* ── Rows (.tl-menu-item) ─────────────────────────────────────────────── */
 
 .app-popup-menu__item,
 .browsercode-model-picker__item,
@@ -60,27 +104,43 @@ body {
 .browsercode-model-picker__back,
 .engine-picker__item {
   appearance: none;
+  box-sizing: border-box;
   width: 100%;
+  min-height: 32px;
   border: 0;
   background: transparent;
-  color: var(--color-fg-primary);
+  color: var(--menu-fg);
   display: flex;
   align-items: center;
   gap: 8px;
   text-align: left;
-  padding: 7px 8px;
+  padding: 0 8px;
   border-radius: 8px;
-  font-size: var(--font-size-sm);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 16px;
   cursor: pointer;
+  outline: none;
+  transition: background-color 100ms ease, color 100ms ease;
 }
 
 .app-popup-menu__item:hover,
+.app-popup-menu__item:focus-visible,
 .browsercode-model-picker__item:hover,
+.browsercode-model-picker__item:focus-visible,
 .browsercode-model-picker__setup:hover,
 .browsercode-model-picker__item--active,
 .engine-picker__item:hover,
+.engine-picker__item:focus-visible,
 .engine-picker__item--active {
-  background-color: rgba(var(--highlight-rgb), 0.06);
+  background-color: var(--menu-item-hover);
+}
+
+.app-popup-menu__item:active,
+.browsercode-model-picker__item:active,
+.engine-picker__item:active {
+  background-color: var(--menu-item-active);
 }
 
 .app-popup-menu__item:disabled,
@@ -98,8 +158,9 @@ body {
   color: var(--color-status-error);
 }
 
-.app-popup-menu__item--danger:hover {
-  background: rgba(248, 113, 113, 0.12);
+.app-popup-menu__item--danger:hover,
+.app-popup-menu__item--danger:focus-visible {
+  background: var(--menu-danger-hover);
   color: var(--color-status-error);
 }
 
@@ -110,6 +171,11 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: var(--menu-fg-muted);
+}
+
+.app-popup-menu__item--danger .app-popup-menu__icon {
+  color: currentColor;
 }
 
 .app-popup-menu__label,
@@ -123,19 +189,32 @@ body {
 }
 
 .app-popup-menu__hint,
-.app-popup-menu__check,
-.browsercode-model-picker__check,
 .browsercode-model-picker__locked,
 .engine-picker__check {
-  color: var(--color-fg-tertiary);
-  font-size: var(--font-size-xs);
+  color: var(--menu-fg-muted);
+  font-size: 11px;
+  line-height: 14px;
   flex-shrink: 0;
+}
+
+.app-popup-menu__check,
+.browsercode-model-picker__check {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--menu-fg);
+}
+
+.app-popup-menu__check svg,
+.browsercode-model-picker__check svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .app-popup-menu__sep {
   height: 1px;
-  margin: 4px;
-  background-color: var(--color-border-subtle);
+  margin: 6px -6px;
+  background-color: var(--menu-line);
 }
 
 .editor-logo,
@@ -145,7 +224,7 @@ body {
   height: 14px;
   align-items: center;
   justify-content: center;
-  color: var(--color-fg-primary);
+  color: var(--menu-fg);
   flex-shrink: 0;
 }
 
@@ -156,25 +235,19 @@ body {
 }
 
 .app-popup--engine-picker {
-  width: 266px;
+  width: 280px;
 }
 
 .engine-picker__menu {
-  box-sizing: border-box;
-  width: 266px;
-  max-height: 380px;
-  overflow: auto;
-  background-color: var(--color-menu-bg);
-  background-image: linear-gradient(180deg, rgba(var(--highlight-rgb), 0.06), rgba(var(--highlight-rgb), 0));
-  border: 1px solid rgba(var(--highlight-rgb), 0.10);
-  border-radius: 12px;
-  box-shadow:
-    0 1px 0 rgba(var(--highlight-rgb), 0.06) inset,
-    0 12px 32px rgba(var(--shadow-rgb), 0.5);
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  width: 280px;
+}
+
+/* Engine rows carry the agent's bot avatar as their identity. */
+.engine-picker__avatar {
+  display: inline-flex;
+  flex: none;
+  width: 20px;
+  height: 20px;
 }
 
 .engine-picker__back {
@@ -182,20 +255,22 @@ body {
   width: 100%;
   border: 0;
   background: transparent;
-  color: var(--color-fg-secondary);
+  color: var(--menu-fg-muted);
   display: flex;
   align-items: center;
   gap: 8px;
   text-align: left;
-  padding: 7px 8px 9px;
+  min-height: 32px;
+  padding: 0 8px 4px;
+  font-family: inherit;
   margin-bottom: 4px;
-  border-bottom: 1px solid rgba(var(--highlight-rgb), 0.07);
+  border-bottom: 1px solid var(--menu-line);
   font-size: var(--font-size-sm);
   cursor: pointer;
 }
 
 .engine-picker__back:hover {
-  color: var(--color-fg-primary);
+  color: var(--menu-fg);
 }
 
 .engine-picker__chevron-left {
@@ -206,11 +281,47 @@ body {
 }
 
 .engine-picker__item-login {
-  border: 1px solid rgba(var(--highlight-rgb), 0.10);
-  color: var(--color-fg-secondary);
-  font-size: var(--font-size-xs);
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
+  flex: none;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--menu-item-active);
+  box-shadow: inset 0 0 0 1px var(--menu-line);
+  color: var(--menu-fg);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.engine-picker__item:hover .engine-picker__item-login {
+  background: var(--menu-surface);
+}
+
+.engine-picker__avatar {
+  position: relative;
+}
+
+/* The vendor's logo rides the avatar's corner as a small badge. */
+.engine-picker__avatar-logo {
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+  display: inline-flex;
+  padding: 1px;
+  border-radius: 999px;
+  background: var(--menu-surface);
+}
+
+.engine-picker__avatar-logo .engine-logo,
+.engine-picker__avatar-logo .engine-logo svg {
+  width: 10px;
+  height: 10px;
+}
+
+.engine-picker__check {
+  display: inline-flex;
+  color: var(--menu-fg);
 }
 
 .engine-picker__dot {
@@ -275,15 +386,15 @@ body {
 }
 
 .browsercode-model-picker__back {
-  color: var(--color-fg-secondary);
+  color: var(--menu-fg-muted);
   margin-bottom: 4px;
-  border-bottom: 1px solid rgba(var(--highlight-rgb), 0.07);
+  border-bottom: 1px solid var(--menu-line);
   border-radius: 0;
-  padding-bottom: 9px;
+  padding-bottom: 4px;
 }
 
 .browsercode-model-picker__back:hover {
-  color: var(--color-fg-primary);
+  color: var(--menu-fg);
 }
 
 .browsercode-model-picker__skeleton {
@@ -339,16 +450,7 @@ body {
 }
 
 .mem-popup {
-  box-sizing: border-box;
   width: 360px;
-  background-color: var(--color-menu-bg);
-  background-image: linear-gradient(180deg, rgba(var(--highlight-rgb), 0.06), rgba(var(--highlight-rgb), 0));
-  border: 1px solid rgba(var(--highlight-rgb), 0.10);
-  border-radius: 12px;
-  box-shadow:
-    0 1px 0 rgba(var(--highlight-rgb), 0.06) inset,
-    0 12px 32px rgba(var(--shadow-rgb), 0.5),
-    0 4px 12px rgba(var(--shadow-rgb), 0.3);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -365,7 +467,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--menu-line);
   flex-shrink: 0;
 }
 
@@ -384,7 +486,7 @@ body {
 
 .mem__processes {
   padding: 6px 0;
-  max-height: 320px;
+  max-height: 560px;
   overflow-y: auto;
 }
 
@@ -448,4 +550,105 @@ body {
 .mem__kill-btn:hover {
   color: var(--color-status-error);
   background-color: rgba(var(--highlight-rgb), 0.08);
+}
+
+.browsercode-submenu__loading-label {
+  min-height: 32px;
+  padding: 0 8px;
+  color: var(--menu-fg-muted);
+  font-size: 12px;
+}
+
+/* ── Richer rows: section label, two-line items, a light "New" pill ────── */
+
+.menu-section-label {
+  padding: 6px 8px 4px;
+  color: var(--menu-fg-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.menu-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 8px;
+  color: var(--menu-fg-muted);
+  font-size: 12px;
+}
+
+.engine-picker__item {
+  min-height: 44px;
+  gap: 10px;
+}
+
+.engine-picker__item-text,
+.app-popup-menu__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.engine-picker__item-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.engine-picker__item-desc,
+.app-popup-menu__desc {
+  overflow: hidden;
+  color: var(--menu-fg-muted);
+  font-size: 11.5px;
+  line-height: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-popup-menu__item--two-line {
+  min-height: 40px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* The metal badge's look in plain CSS: a brushed-silver pill with a moving
+   sheen. The real MetalBadge compiles a WebGL shader per mount — too heavy
+   for something that opens on every click. */
+.menu-new-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fdfdfd 0%, #d9dade 48%, #b9bbc1 52%, #eceef1 100%);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.18);
+  color: #2a2b2f;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.menu-new-pill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.85) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: menu-pill-sheen 2.8s ease-in-out infinite;
+}
+
+@keyframes menu-pill-sheen {
+  0%, 55% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-new-pill::after { animation: none; }
 }

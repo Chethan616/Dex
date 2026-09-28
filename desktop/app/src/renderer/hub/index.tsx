@@ -13,6 +13,7 @@ import { ErrorBoundary } from '../components/empty/ErrorBoundary';
 import { OfflineBanner } from '../components/empty/OfflineBanner';
 import '@/renderer/design/theme.global.css';
 import '../design/empty-states.css';
+import '../components/lib/lib.css';
 import '@/renderer/components/base/components.css';
 import './hub.css';
 import { initThemeMode } from '@/renderer/design/themeMode';
@@ -32,15 +33,17 @@ window.addEventListener('unhandledrejection', (e) => {
 const rootEl = document.getElementById('hub-root');
 if (!rootEl) throw new Error('[hub] #hub-root element not found');
 
+/* No StrictMode. It mounts, unmounts and remounts every component once in
+ * development; metal-fx, voice-glow and thinking-orbs attach to a shared
+ * render loop on mount and tear it down on unmount, and the remount does not
+ * restart it — so the metal paints one frame and freezes (dev only). */
 createRoot(rootEl).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <OfflineBanner />
-          <HubApp />
-        </ToastProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
-  </React.StrictMode>,
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <OfflineBanner />
+        <HubApp />
+      </ToastProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>,
 );

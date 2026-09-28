@@ -101,7 +101,7 @@ describe('BrowserCodeProviderSubmenu', () => {
 
     const defaultModelButton = findButtonByText(container, 'Kimi K2.6');
     expect(defaultModelButton.className).toContain('browsercode-model-picker__item--active');
-    expect(defaultModelButton.textContent).toContain('✓');
+    expect(defaultModelButton.querySelector('.browsercode-model-picker__check')).not.toBeNull();
 
     act(() => root.unmount());
   });

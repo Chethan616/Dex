@@ -55,15 +55,15 @@ app.setAboutPanelOptions({
   applicationName: 'DEX',
   applicationVersion: app.getVersion(),
   copyright: '© 2026 DEX',
-  website: 'https://github.com/browser-use/desktop',
+  website: 'https://github.com/Chethan616/Dex',
 });
 
 import started from 'electron-squirrel-startup';
 import { createShellWindow } from './window';
 import { createTray, refreshTrayMenu } from './tray';
 // Track B — Pill + hotkeys
-import { createPillWindow, togglePill, showPill, hidePill, sendToPill, setPillHeight, PILL_HEIGHT_COLLAPSED, PILL_HEIGHT_EXPANDED } from './pill';
-import { createLogsWindow, attachToHub as attachLogsToHub, toggleLogs, hideLogs, getLogsWindow, showLogs, setLogsMode, updateLogsAnchor, focusLogsFollowUp } from './logsPill';
+import { togglePill, showPill, hidePill, sendToPill, setPillHeight, PILL_HEIGHT_COLLAPSED, PILL_HEIGHT_EXPANDED } from './pill';
+import { attachToHub as attachLogsToHub, toggleLogs, hideLogs, getLogsWindow, showLogs, setLogsMode, updateLogsAnchor, focusLogsFollowUp } from './logsPill';
 import * as takeoverOverlay from './takeoverOverlay';
 import { sendSessionNotification } from './notifications';
 import { registerHotkeys, unregisterHotkeys, getGlobalCmdbarAccelerator, setGlobalCmdbarAccelerator } from './hotkeys';
@@ -80,11 +80,13 @@ import { registerConsentHandlers } from './consentIpc';
 import { registerTelemetryHandlers } from './telemetryIpc';
 import { registerThemeHandlers } from './themeIpc';
 import { startSystemThemeWatcher } from './themeMode';
-import { registerAppPopupHandlers, warmAppPopup } from './appPopup';
+import { registerAppPopupHandlers } from './appPopup';
 import { captureEvent } from './telemetry';
 import { registerChromeImportHandlers } from './chrome-import/ipc';
 import { mainLogger } from './logger';
 import { createLocalTaskServer } from './localTaskServer';
+import { registerAccountsIpc } from './accounts';
+import { registerProfileIpc } from './profile';
 import {
   resolveUserDataDir,
   resolveCdpPort,
@@ -103,7 +105,6 @@ import { TaskStateMutationSchema } from '../shared/session-schemas';
 // Agent loop: CLI subprocess driving the browser harness. Engine is
 // pluggable (claude-code, codex, …) — see src/main/hl/engines/.
 import { bootstrapHarness, harnessDir } from './hl/harness';
-import { startIndexing } from './search/indexer';
 import { runEngine, DEFAULT_ENGINE_ID } from './hl/engines';
 import type { EngineRunControl } from './hl/engines/types';
 import { getEngine, setEngine, type EngineId } from './hl/engine';
@@ -111,6 +112,9 @@ import { forwardAgentEvent } from './pill';
 // Session management
 import { SessionManager } from './sessions/SessionManager';
 import { BrowserPool } from './sessions/BrowserPool';
+import * as approvalPolicy from './approvals/policy';
+import { normalizeApprovalCategory, normalizeApprovalLifetime, normalizeApprovalMode } from './approvals/policy';
+import type { ApprovalCategory, ApprovalLifetime } from './approvals/policy';
 import {
   snapshotResourceUsage,
   startResourceMonitor,
@@ -206,7 +210,13 @@ const sessionManager = new SessionManager(path.join(app.getPath('userData'), 'se
  * timeout guards against a card nobody ever answers (the app closed, the
  * user walked away) leaving the agent's process hung forever.
  */
-const pendingConfirmations = new Map<string, { resolve: (approved: boolean) => void; sessionId: string; title: string; detail: string }>();
+const pendingConfirmations = new Map<string, {
+  resolve: (approved: boolean) => void;
+  sessionId: string;
+  title: string;
+  detail: string;
+  category: ApprovalCategory;
+}>();
 const CONFIRMATION_TIMEOUT_MS = 10 * 60 * 1000;
 
 /**
@@ -215,10 +225,11 @@ const CONFIRMATION_TIMEOUT_MS = 10 * 60 * 1000;
  * nobody answers. Idempotent: a second call for the same id (a timeout
  * racing a late click) is a no-op rather than a double-resolve.
  */
-function resolveConfirmation(id: string, approved: boolean): void {
+function resolveConfirmation(id: string, approved: boolean, lifetime: ApprovalLifetime = 'once'): void {
   const pending = pendingConfirmations.get(id);
   if (!pending) return;
   pendingConfirmations.delete(id);
+  approvalPolicy.recordDecision(pending.sessionId, pending.category, approved, lifetime);
   const session = sessionManager.getSession(pending.sessionId);
   if (session) {
     sessionManager.appendOutput(pending.sessionId, {
@@ -231,6 +242,50 @@ function resolveConfirmation(id: string, approved: boolean): void {
     });
   }
   pending.resolve(approved);
+}
+
+/**
+ * Shared by /dex/confirm (dex-registry) and /dex/sh-session-run (dex-sh's
+ * session mode) — both need "check the policy, and if it says ask, put up
+ * a real blocking card and wait." Resolves `{approved: true}` immediately,
+ * with no card shown at all, when the policy already covers this action.
+ */
+function requestConfirmation(
+  sessionId: string,
+  title: string,
+  detail: string,
+  category: ApprovalCategory,
+  subject?: string,
+): Promise<{ approved: boolean }> {
+  if (!approvalPolicy.needsPrompt({ sessionId, category, subject })) {
+    return Promise.resolve({ approved: true });
+  }
+
+  const id = randomUUID();
+  const session = sessionManager.getSession(sessionId);
+  if (session) {
+    sessionManager.appendOutput(sessionId, { type: 'confirmation', id, title, detail, status: 'pending', at: Date.now() });
+    // Suspend AFTER appendOutput, which just reset it — otherwise the very
+    // next line's clear would have nothing to undo and the timer stays
+    // armed for a wait that can run minutes.
+    sessionManager.suspendStuckTimer(sessionId);
+  }
+
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      resolveConfirmation(id, false);
+    }, CONFIRMATION_TIMEOUT_MS);
+    pendingConfirmations.set(id, {
+      sessionId,
+      title,
+      detail,
+      category,
+      resolve: (approved) => {
+        clearTimeout(timeout);
+        resolve({ approved });
+      },
+    });
+  });
 }
 // Bootstrap the editable helpers harness — writes stock helpers.js + TOOLS.json
 // to <userData>/harness/ on first run, preserves user edits on subsequent runs.
@@ -247,15 +302,11 @@ try {
     hint: 'The agent may be missing tools. Usually another DEX instance is holding files open.',
   });
 }
-// Background file index for `dex-find` — a slow metadata scan followed by an
-// even slower, throttled content backfill, both non-blocking. See
-// src/main/search/indexer.ts for the two-phase design and why it never holds
-// up app startup even on a cold index.
-try {
-  startIndexing(app.getPath('userData'));
-} catch (err) {
-  mainLogger.error('main.startIndexing.failed', { error: (err as Error).message });
-}
+// There is no background file index any more. `dex-find` queries the
+// Windows Search index on demand instead (see src/main/search/winSearch.ts):
+// DEX's own SQLite FTS5 index reached 3.4 GB in real use and, being
+// synchronous and main-process-bound, its writes competed with every IPC
+// call the UI makes. Nothing indexing-related runs at startup now.
 /**
  * The environment report, refreshed at startup and on demand from Settings.
  *
@@ -265,6 +316,25 @@ try {
  * agent that mysteriously does less than it should.
  */
 let preflightReport: PreflightReport | null = null;
+
+// One-time reclaim: existing installs still have the old index on disk
+// (3.4 GB on the machine this was found on). Nothing reads it any more, so
+// remove it rather than leaving it orphaned. Best-effort and never fatal —
+// a locked file just means it gets cleared on some later launch.
+setTimeout(() => {
+  const userData = app.getPath('userData');
+  for (const name of ['dex-index.sqlite3', 'dex-index.sqlite3-wal', 'dex-index.sqlite3-shm']) {
+    const target = path.join(userData, name);
+    try {
+      if (fs.existsSync(target)) {
+        fs.rmSync(target, { force: true });
+        mainLogger.info('search.legacyIndex.removed', { target });
+      }
+    } catch (err) {
+      mainLogger.warn('search.legacyIndex.removeFailed', { target, error: (err as Error).message });
+    }
+  }
+}, 10_000);
 
 /**
  * Last handshake result per connection, from the startup check or an explicit
@@ -397,11 +467,15 @@ function openShellAndWire(): BrowserWindow {
 
   shellWindow = createShellWindow();
 
-  // Create pill window (hidden) and register global hotkey
-  createPillWindow();
-  // Create logs overlay window (hidden) and anchor it to the hub
-  createLogsWindow();
-  warmAppPopup();
+  // Pill, Logs, and the app-popup window are all created lazily now, on
+  // first actual use (togglePill/showLogs/toggleLogs/focusLogsFollowUp/
+  // openAppPopup each self-create) rather than eagerly here — three
+  // full extra Electron renderer processes sitting hidden from launch,
+  // for surfaces a given session might never open, was real idle RAM cost
+  // for no benefit. attachToHub still runs unconditionally: it wires
+  // hub-level listeners (resize/focus/blur/minimize) that check whether
+  // the logs window exists each time they fire, so it works whether or
+  // not that window has been created yet.
   attachLogsToHub(shellWindow);
   mainLogger.info('main.tray.beforeCreate', { typeofCreateTray: typeof createTray });
   try {
@@ -489,6 +563,21 @@ function openShellAndWire(): BrowserWindow {
 // ---------------------------------------------------------------------------
 app.whenReady().then(async () => {
   mainLogger.info('main.appReady', { msg: 'Electron app ready — initializing DEX' });
+  // GPU status is only meaningful once a window has actually composited a
+  // frame: queried at whenReady() — before any window exists — Chromium
+  // always reports "disabled_software", which is a pending state, not a
+  // verdict. Reading it too early is exactly how an earlier pass here
+  // misdiagnosed this machine as stuck in software rendering and added
+  // ignore-gpu-blocklist/disable-gpu-driver-bug-workarounds switches that
+  // fixed nothing (a bare Electron app with no flags reports "enabled"
+  // here once its window paints). Deferred so the number logged is real.
+  setTimeout(() => {
+    try {
+      mainLogger.info('main.gpuFeatureStatus', app.getGPUFeatureStatus() as unknown as Record<string, unknown>);
+    } catch (err) {
+      mainLogger.warn('main.gpuFeatureStatus.failed', { error: (err as Error).message });
+    }
+  }, 8000);
   startResourceMonitor(resourceMonitorContext);
 
   // Verify the CDP endpoint at our announced port is actually OUR Electron
@@ -541,6 +630,8 @@ app.whenReady().then(async () => {
   registerConsentHandlers();
   registerTelemetryHandlers();
   registerAppPopupHandlers();
+  registerAccountsIpc();
+  registerProfileIpc();
   startSystemThemeWatcher();
   registerChannelHandlers(channelRouter, whatsAppAdapter);
   whatsAppAdapter.onStatusChange((status, detail) => {
@@ -1075,6 +1166,9 @@ app.whenReady().then(async () => {
     if (currentSession.status !== 'idle' && currentSession.status !== 'paused' && currentSession.status !== 'stopped') {
       return { error: `Session ${validatedId} is ${currentSession.status}, expected idle, paused, or stopped` };
     }
+    // A fresh prompt reaching the engine is a new conversational turn —
+    // 'turn'-lifetime approvals from the previous one do not carry forward.
+    approvalPolicy.startTurn(validatedId);
     await browserPool.markSessionActive(validatedId);
 
     if (resumeAttachments.length > 0) {
@@ -1135,6 +1229,7 @@ app.whenReady().then(async () => {
       engineId,
       harnessDir: harnessDir(),
       sessionId: validatedId,
+      originChannel: sessionManager.getSessionOrigin(validatedId).originChannel ?? undefined,
       prompt: validatedPrompt,
       attachments: resumeAttachments.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
       webContents,
@@ -1246,6 +1341,7 @@ app.whenReady().then(async () => {
         engineId,
         harnessDir: harnessDir(),
         sessionId: id,
+        originChannel: sessionManager.getSessionOrigin(id).originChannel ?? undefined,
         prompt: sessionManager.getSession(id)!.prompt,
         attachments: attachmentsForRun.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
         webContents: view.webContents,
@@ -1278,6 +1374,30 @@ app.whenReady().then(async () => {
   }
 
   channelRouter.setStartSession(startSessionWithAgent);
+  // A WhatsApp reply to a task's message continues that task, exactly like
+  // the hub's follow-up box.
+  channelRouter.setFollowUp((id, text) => handleResumeRequest(id, text, []));
+
+  /** Show a file in the task as a file card (desktop chat + phone). Deduped by path. */
+  function appendFileCard(sessionId: string, rawPath: string, name?: string): void {
+    // Agents run in Git Bash and often pass /c/Users/… paths.
+    const msys = process.platform === 'win32' ? /^\/([a-zA-Z])(?:\/(.*))?$/.exec(rawPath.trim()) : null;
+    const filePath = msys ? path.win32.normalize(`${msys[1].toUpperCase()}:/${msys[2] ?? ''}`) : path.resolve(rawPath.trim());
+    const session = sessionManager.getSession(sessionId);
+    if (!session) return;
+    const already = session.output.some((e) => e.type === 'file_output' && (e as { path?: string }).path === filePath);
+    if (already) return;
+    let size = 0;
+    try { size = fs.statSync(filePath).size; } catch { return; }
+    const fileName = name || path.basename(filePath);
+    const ext = path.extname(fileName).slice(1).toLowerCase();
+    const mime = ({
+      png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif',
+      pdf: 'application/pdf', glb: 'model/gltf-binary', gltf: 'model/gltf+json', fbx: 'application/octet-stream',
+      blend: 'application/x-blender', mp4: 'video/mp4',
+    } as Record<string, string>)[ext] ?? 'application/octet-stream';
+    sessionManager.appendOutput(sessionId, { type: 'file_output', name: fileName, path: filePath, size, mime });
+  }
 
   const localTaskServer = await createLocalTaskServer({
     userDataPath: app.getPath('userData'),
@@ -1415,7 +1535,6 @@ app.whenReady().then(async () => {
 
         const { searchCombined } = await import('./search/query');
         const { searchDrive } = await import('./search/drive');
-        const { getIndexStatus } = await import('./search/indexer');
 
         const combined = await searchCombined(query, limit, wantDrive, searchDrive);
 
@@ -1426,9 +1545,8 @@ app.whenReady().then(async () => {
           ...(combined.drive?.items ?? []).map((item) => ({ label: item.label, reasons: item.reasons })),
         ];
 
-        const status = getIndexStatus();
         const noteParts: string[] = [];
-        if (status.pending > 0) noteParts.push(`index still building (${status.indexed}/${status.total} files have their contents indexed)`);
+        if (combined.localNote) noteParts.push(combined.localNote);
         if (wantDrive && combined.drive && !combined.drive.ok) noteParts.push(`Drive: ${combined.drive.error}`);
 
         const session = sessionManager.getSession(id);
@@ -1442,7 +1560,35 @@ app.whenReady().then(async () => {
           });
         }
 
-        return { items, driveError: combined.drive && !combined.drive.ok ? combined.drive.error : undefined, indexStatus: status };
+        return { items, driveError: combined.drive && !combined.drive.ok ? combined.drive.error : undefined, note: combined.localNote };
+      },
+
+      // dex-websearch's only endpoint. A plain factual lookup ("current
+      // Node LTS version") doesn't need a browser tab — this renders as the
+      // same row-list artifact card dex-find uses, no new UI needed.
+      'POST /dex/websearch': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { sessionId?: unknown; query?: unknown; limit?: unknown };
+        const id = assertString(body.sessionId, 'sessionId', 100);
+        const query = assertString(body.query, 'query', 500);
+        const limit = typeof body.limit === 'number' && body.limit > 0 ? Math.min(Math.floor(body.limit), 20) : 10;
+
+        const { searchWeb } = await import('./search/websearch');
+        const result = await searchWeb(query, limit);
+
+        const items = result.items.map((r) => ({ label: r.title, detail: r.url, reasons: ['web search'], excerpt: r.snippet }));
+
+        const session = sessionManager.getSession(id);
+        if (session) {
+          sessionManager.appendOutput(id, {
+            type: 'artifact',
+            kind: 'reading',
+            title: `Web search: "${query}"`,
+            note: !result.ok ? result.error : undefined,
+            items,
+          });
+        }
+
+        return { items, error: result.ok ? undefined : result.error };
       },
 
       // The `dex-canvas` CLI's only endpoint. One markdown document per
@@ -1467,6 +1613,70 @@ app.whenReady().then(async () => {
         return { ok: true };
       },
 
+      // `dex-send`: files, a screenshot of the session's browser view or the
+      // screen, or the canvas as a PDF — to the user's own WhatsApp chat only
+      // (the task's thread if it came from WhatsApp). The recipient is never
+      // taken from the request.
+      'POST /dex/send': async (raw) => {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new Error('request body must be JSON');
+        }
+        const body = (parsed ?? {}) as { sessionId?: unknown; files?: unknown; page?: unknown; screen?: unknown; canvas?: unknown; caption?: unknown };
+        const id = assertString(body.sessionId, 'sessionId', 100);
+        const session = sessionManager.getSession(id);
+        if (!session) throw new Error('Session not found');
+        const caption = typeof body.caption === 'string' ? body.caption.slice(0, 1000) : '';
+        const requested = Array.isArray(body.files) ? body.files.filter((f): f is string => typeof f === 'string') : [];
+
+        const outbox = await import('./channels/outbox');
+        if (requested.length > outbox.MAX_FILES) throw new Error(`at most ${outbox.MAX_FILES} files per call`);
+        const files: Array<{ path: string; fileName?: string }> = [];
+        const problems: string[] = [];
+        if (body.page === true) {
+          const view = browserPool.getView(id);
+          if (!view || view.webContents.isDestroyed()) problems.push('--page: no browser view for this session — open the page first');
+          else {
+            try { files.push(await outbox.capturePage(view.webContents)); }
+            catch (err) { problems.push(`--page: ${outbox.logOutboxError('page', err)}`); }
+          }
+        }
+        if (body.screen === true) {
+          try { files.push(await outbox.captureScreen()); }
+          catch (err) { problems.push(`--screen: ${outbox.logOutboxError('screen', err)}`); }
+        }
+        if (body.canvas === true) {
+          const canvas = [...session.output].reverse().find((e) => e.type === 'canvas') as { title?: string; markdown?: string } | undefined;
+          if (!canvas?.markdown) problems.push('--canvas: nothing shown with dex-canvas in this task yet');
+          else {
+            try { files.push(await outbox.renderCanvasPdf(canvas.title ?? 'Document', canvas.markdown)); }
+            catch (err) { problems.push(`--canvas: ${outbox.logOutboxError('canvas', err)}`); }
+          }
+        }
+        for (const f of requested) {
+          const checked = await outbox.checkFile(f);
+          if (!('error' in checked)) files.push({ path: checked.path });
+          else problems.push(checked.error);
+        }
+        if (files.length === 0) throw new Error(problems.join('\n') || 'nothing to send');
+
+        const result = await channelRouter.sendFiles(id, files, caption);
+        // What was sent also shows in the task itself, as file cards — on
+        // the desktop and in the phone app's Files.
+        const { statSync } = await import('node:fs');
+        for (const f of files) {
+          const name = f.fileName ?? f.path.split(/[\\/]/).pop() ?? f.path;
+          let size = 0;
+          try { size = statSync(f.path).size; } catch { /* gone already */ }
+          const ext = name.split('.').pop()?.toLowerCase() ?? '';
+          const mime = ({ png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', pdf: 'application/pdf' } as Record<string, string>)[ext] ?? 'application/octet-stream';
+          sessionManager.appendOutput(id, { type: 'file_output', name, path: f.path, size, mime });
+        }
+        return { ...result, files: files.map((f) => f.path), problems };
+      },
+
       // The `dex-state` CLI's only endpoint. Everything it can do is one of
       // the verbs in TaskStateMutationSchema, so validation is a single parse
       // and the handler stays a pass-through to the session manager.
@@ -1480,13 +1690,61 @@ app.whenReady().then(async () => {
         const { sessionId, ...rest } = (parsed ?? {}) as { sessionId?: unknown };
         const id = assertString(sessionId, 'sessionId', 100);
         const mutation = TaskStateMutationSchema.parse(rest);
-        return { state: sessionManager.applyTaskState(id, mutation) };
+        const state = sessionManager.applyTaskState(id, mutation);
+        // A recorded file (a render, a model, an export) also shows in the
+        // task itself as a file card — with a preview for pictures — on the
+        // desktop and in the phone app.
+        if (mutation.op === 'file') appendFileCard(id, mutation.path, mutation.name);
+        return { state };
       },
 
-      // dex-registry's blocking confirmation. The returned Promise is what
-      // holds the HTTP response (and so the CLI, and so the agent) open
-      // until resolveConfirmation is called — by the renderer's Approve/
-      // Deny click, or by the timeout below. No polling on either side.
+      // dex-3d: an AI 3D model (GLB) from a picture or a description, on the
+      // user's free Hugging Face GPU time. See src/main/threed/generate.ts.
+      'POST /dex/3d': async (raw) => {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new Error('request body must be JSON');
+        }
+        const body = (parsed ?? {}) as { sessionId?: unknown; prompt?: unknown; image?: unknown; model?: unknown; shapeOnly?: unknown; name?: unknown };
+        const id = assertString(body.sessionId, 'sessionId', 100);
+        const prompt = typeof body.prompt === 'string' && body.prompt.trim() ? body.prompt.trim().slice(0, 1000) : undefined;
+        let image: string | undefined;
+        if (typeof body.image === 'string' && body.image.trim()) {
+          const { checkFile } = await import('./channels/outbox');
+          const checked = await checkFile(body.image);
+          if ('error' in checked) throw new Error(checked.error);
+          image = checked.path;
+        }
+        const { generate3D } = await import('./threed/generate');
+        const result = await generate3D({
+          prompt,
+          image,
+          model: body.model === 'trellis' ? 'trellis' : 'hunyuan',
+          shapeOnly: body.shapeOnly === true,
+          name: typeof body.name === 'string' ? body.name.slice(0, 60) : undefined,
+          outDir: path.join(harnessDir(), 'outputs', id, '3d'),
+        });
+        if (result.referenceImage) appendFileCard(id, result.referenceImage);
+        appendFileCard(id, result.glb);
+        return { ...result };
+      },
+
+      // dex-registry's (and now dex-sh's) blocking confirmation. The
+      // returned Promise is what holds the HTTP response (and so the CLI,
+      // and so the agent) open until resolveConfirmation is called — by the
+      // renderer's Approve/Deny click, or by the timeout below. No polling
+      // on either side.
+      //
+      // Before showing anything, this checks the per-category approval
+      // policy (src/main/approvals/policy.ts): registry-write always asks;
+      // the newer categories (process-launch, filesystem-write-unsafe-path,
+      // service-control) only ask when the session's mode calls for it, and
+      // any of them skip the prompt entirely once a 'turn' or 'session'
+      // lifetime answer already covers this category — the whole point of
+      // "approve for this session" being to go quiet, not just to speed up
+      // clicking the same button again.
       'POST /dex/confirm': async (raw) => {
         let parsed: unknown;
         try {
@@ -1494,35 +1752,57 @@ app.whenReady().then(async () => {
         } catch {
           throw new Error('request body must be JSON');
         }
-        const body = (parsed ?? {}) as { sessionId?: unknown; title?: unknown; detail?: unknown };
+        const body = (parsed ?? {}) as { sessionId?: unknown; title?: unknown; detail?: unknown; category?: unknown; subject?: unknown };
         const sessionId = assertString(body.sessionId, 'sessionId', 100);
         const title = assertString(body.title, 'title', 200);
         const detail = assertString(body.detail, 'detail', 4000);
+        const category = normalizeApprovalCategory(body.category);
+        const subject = typeof body.subject === 'string' ? body.subject.slice(0, 4000) : undefined;
 
-        const id = randomUUID();
-        const session = sessionManager.getSession(sessionId);
-        if (session) {
-          sessionManager.appendOutput(sessionId, { type: 'confirmation', id, title, detail, status: 'pending', at: Date.now() });
-          // Suspend AFTER appendOutput, which just reset it — otherwise the
-          // very next line's clear would have nothing to undo and the timer
-          // stays armed for a wait that can run minutes.
-          sessionManager.suspendStuckTimer(sessionId);
+        return requestConfirmation(sessionId, title, detail, category, subject);
+      },
+
+      // dex-sh's session subcommands — a long-lived PTY (src/main/hl/
+      // persistentShell.ts) that keeps cwd/env state across calls, unlike
+      // the one-shot form which spawns fresh every time. Command execution
+      // (not session start/end) goes through the same approval policy the
+      // one-shot form uses, keyed the same way (process-launch).
+      'POST /dex/sh-session-start': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { kind?: unknown };
+        const kind = body.kind;
+        if (kind !== 'bash' && kind !== 'cmd' && kind !== 'powershell' && kind !== 'wsl') {
+          throw new Error('kind must be one of bash, cmd, powershell, wsl');
+        }
+        const { startSession } = await import('./hl/persistentShell');
+        return { shellSessionId: startSession(kind) };
+      },
+
+      'POST /dex/sh-session-run': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { sessionId?: unknown; shellSessionId?: unknown; command?: unknown; timeoutMs?: unknown };
+        const sessionId = assertString(body.sessionId, 'sessionId', 100);
+        const shellSessionId = assertString(body.shellSessionId, 'shellSessionId', 100);
+        const command = assertString(body.command, 'command', 20_000);
+        const timeoutMs = typeof body.timeoutMs === 'number' && body.timeoutMs > 0 ? Math.min(body.timeoutMs, 10 * 60_000) : 30_000;
+
+        const { approved } = await requestConfirmation(sessionId, 'Run a shell command', command, 'process-launch', command);
+        if (!approved) {
+          return { approved: false, error: 'command not approved' };
         }
 
-        return new Promise<Record<string, unknown>>((resolve) => {
-          const timeout = setTimeout(() => {
-            resolveConfirmation(id, false);
-          }, CONFIRMATION_TIMEOUT_MS);
-          pendingConfirmations.set(id, {
-            sessionId,
-            title,
-            detail,
-            resolve: (approved) => {
-              clearTimeout(timeout);
-              resolve({ approved });
-            },
-          });
-        });
+        const { runCommand } = await import('./hl/persistentShell');
+        try {
+          const result = await runCommand(shellSessionId, command, timeoutMs);
+          return { approved: true, ...result };
+        } catch (err) {
+          throw new Error((err as Error).message);
+        }
+      },
+
+      'POST /dex/sh-session-end': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { shellSessionId?: unknown };
+        const shellSessionId = assertString(body.shellSessionId, 'shellSessionId', 100);
+        const { endSession } = await import('./hl/persistentShell');
+        return { ended: endSession(shellSessionId) };
       },
     },
     submitTask: async (payload) => {
@@ -1609,17 +1889,14 @@ app.whenReady().then(async () => {
     await startSessionWithAgent(validatedId);
   });
 
-  ipcMain.handle('sessions:resume', async (_event, payload: { id: string; prompt: string; attachments?: unknown }) => {
-    const validatedId = assertString(payload?.id, 'id', 100);
-    const validatedPrompt = assertString(payload?.prompt, 'prompt', 10000);
-    const resumeAttachments = assertAttachments(payload?.attachments);
-    mainLogger.info('main.sessions:resume', {
-      id: validatedId,
-      promptLength: validatedPrompt.length,
-      attachmentCount: resumeAttachments.length,
-      attachmentMeta: resumeAttachments.map((a) => ({ name: a.name, mime: a.mime, size: a.bytes.byteLength })),
-    });
-
+  // Shared by the hub's follow-up box and the phone bridge: a running
+  // session queues the message after its next tool, a paused one resumes,
+  // a finished one continues its conversation.
+  async function handleResumeRequest(
+    validatedId: string,
+    validatedPrompt: string,
+    resumeAttachments: ReturnType<typeof assertAttachments>,
+  ): Promise<Record<string, unknown>> {
     const currentSession = sessionManager.getSession(validatedId);
     if (!currentSession) return { error: 'Session not found' };
     if (currentSession.status === 'running' || currentSession.status === 'stuck') {
@@ -1640,6 +1917,19 @@ app.whenReady().then(async () => {
       return { error: 'Paused agent process is no longer available.' };
     }
     return resumeSessionWithAgent(validatedId, validatedPrompt, resumeAttachments, 'resume');
+  }
+
+  ipcMain.handle('sessions:resume', async (_event, payload: { id: string; prompt: string; attachments?: unknown }) => {
+    const validatedId = assertString(payload?.id, 'id', 100);
+    const validatedPrompt = assertString(payload?.prompt, 'prompt', 10000);
+    const resumeAttachments = assertAttachments(payload?.attachments);
+    mainLogger.info('main.sessions:resume', {
+      id: validatedId,
+      promptLength: validatedPrompt.length,
+      attachmentCount: resumeAttachments.length,
+      attachmentMeta: resumeAttachments.map((a) => ({ name: a.name, mime: a.mime, size: a.bytes.byteLength })),
+    });
+    return handleResumeRequest(validatedId, validatedPrompt, resumeAttachments);
   });
 
   ipcMain.handle('sessions:rerun', async (_event, id: string) => {
@@ -1689,6 +1979,7 @@ app.whenReady().then(async () => {
       engineId,
       harnessDir: harnessDir(),
       sessionId: validatedId,
+      originChannel: sessionManager.getSessionOrigin(validatedId).originChannel ?? undefined,
       prompt: session.prompt,
       attachments: rerunAttachments.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
       webContents: view.webContents,
@@ -1765,6 +2056,7 @@ app.whenReady().then(async () => {
     terminateActiveRunControl(validatedId);
     browserPool.destroy(validatedId, shellWindow ?? undefined);
     sessionManager.deleteSession(validatedId);
+    approvalPolicy.clearSession(validatedId);
   });
 
   /**
@@ -1993,15 +2285,106 @@ app.whenReady().then(async () => {
   // pendingConfirmations' own sessionId rather than trusted blindly, so a
   // stale/forged id from a closed card can't resolve a different session's
   // wait.
-  ipcMain.handle('dex:confirm-answer', (_event, sessionId: string, id: string, approved: boolean) => {
+  // Set once the phone bridge is created below; lets other handlers poke it.
+  let phoneBridge: { refreshDevice(): void } | null = null;
+
+  ipcMain.handle('dex:confirm-answer', (_event, sessionId: string, id: string, approved: boolean, lifetime?: unknown) => {
     const validatedSessionId = assertString(sessionId, 'sessionId', 100);
     const validatedId = assertString(id, 'id', 100);
     const pending = pendingConfirmations.get(validatedId);
     if (!pending || pending.sessionId !== validatedSessionId) {
       return { ok: false, error: 'no matching pending confirmation' };
     }
-    resolveConfirmation(validatedId, approved === true);
+    resolveConfirmation(validatedId, approved === true, normalizeApprovalLifetime(lifetime));
     return { ok: true };
+  });
+
+  // ---------------------------------------------------------------------------
+  // Phone bridge (Firebase). Off until a Firebase project is configured and
+  // the user signs in with email/password (Settings → Accounts → phone).
+  // ---------------------------------------------------------------------------
+  void (async () => {
+    const { FirebaseBridge } = await import('./firebase/bridge');
+    const bridge = new FirebaseBridge({
+      listSessions: () => sessionManager.listSessions(),
+      getSession: (id) => sessionManager.getSession(id),
+      onSessionChanged: (cb) => {
+        sessionManager.onEvent('session-created', cb);
+        sessionManager.onEvent('session-updated', cb);
+        sessionManager.onEvent('session-completed', cb);
+        sessionManager.onEvent('session-error', cb);
+      },
+      onSessionOutput: (cb) => { sessionManager.onEvent('session-output', cb); },
+      onSessionDeleted: (cb) => { sessionManager.onEvent('session-deleted', cb); },
+      getTaskFiles: (id) => sessionManager.getTaskState(id).files,
+      listEngines: async () => {
+        const { listAdapters } = await import('./hl/engines');
+        return listAdapters().map((a) => ({
+          id: a.id,
+          name: a.displayName,
+          models: (a.selectableModels ?? []).map((m) => ({ id: m.id, label: m.label })),
+        }));
+      },
+      newTask: async ({ prompt, engine, model }) => {
+        const validatedPrompt = assertString(prompt, 'prompt', 10000);
+        const engineId = engine ? assertString(engine, 'engine', 50) : DEFAULT_ENGINE_ID;
+        const id = sessionManager.createSession(validatedPrompt, { originChannel: 'android' });
+        sessionManager.setSessionEngine(id, engineId);
+        if (model) sessionManager.setSessionModel(id, assertString(model, 'model', 100));
+        captureEvent('session_created', { source: 'android', engine: engineId, prompt_length: validatedPrompt.length, attachments_count: 0 });
+        try {
+          await startSessionWithAgent(id);
+          return { id };
+        } catch (err) {
+          return { id, error: (err as Error).message };
+        }
+      },
+      followUp: (id, prompt) => handleResumeRequest(assertString(id, 'id', 100), assertString(prompt, 'prompt', 10000), []),
+      pause: (id) => pauseSessionFromMain(assertString(id, 'id', 100), 'button'),
+      resume: (id) => handleResumeRequest(assertString(id, 'id', 100), 'Continue from where you left off.', []),
+      stop: (id) => cancelSessionFromMain(assertString(id, 'id', 100), 'button'),
+      getApprovalMode: () => approvalPolicy.getGlobalDefaultMode(),
+      setApprovalMode: (mode) => {
+        const normalized = normalizeApprovalMode(mode);
+        approvalPolicy.setGlobalDefaultMode(normalized);
+        return normalized;
+      },
+      answerConfirmation: (sessionId, confirmationId, approved, lifetime) => {
+        const pending = pendingConfirmations.get(confirmationId);
+        if (!pending || pending.sessionId !== sessionId) return { ok: false, error: 'no matching pending confirmation' };
+        resolveConfirmation(confirmationId, approved, normalizeApprovalLifetime(lifetime));
+        return { ok: true };
+      },
+    });
+    phoneBridge = bridge;
+    const pushState = (state: unknown) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) win.webContents.send('bridge:state', state);
+      }
+    };
+    bridge.onState(pushState);
+    ipcMain.handle('bridge:status', () => bridge.state);
+    ipcMain.handle('bridge:restart', () => bridge.start());
+    ipcMain.handle('bridge:sign-in', (_e, email: unknown, password: unknown, create: unknown) =>
+      bridge.signIn(assertString(email, 'email', 320), assertString(password, 'password', 256), create === true));
+    ipcMain.handle('bridge:reset-password', (_e, email: unknown) => bridge.resetPassword(assertString(email, 'email', 320)));
+    ipcMain.handle('bridge:sign-out', () => bridge.signOut());
+    app.once('before-quit', () => { void bridge.stop(); });
+    await bridge.start();
+  })().catch((err: Error) => mainLogger.error('firebase.bridge.init.failed', { error: err.message }));
+
+  // Settings pane's global default for the approval policy (Ask for
+  // approval / Approve for me / Full access) — see src/main/approvals/
+  // policy.ts. Applies to every session that hasn't been given its own
+  // explicit override; there is no such override surface today; Grid-view
+  // sessions all read this one global value.
+  ipcMain.handle('settings:approvals:get', () => ({ mode: approvalPolicy.getGlobalDefaultMode() }));
+
+  ipcMain.handle('settings:approvals:set', (_e, mode: unknown) => {
+    const normalized = normalizeApprovalMode(mode);
+    approvalPolicy.setGlobalDefaultMode(normalized);
+    phoneBridge?.refreshDevice(); // the phone's Settings shows this mode
+    return { mode: normalized };
   });
 
   ipcMain.handle('sessions:get', (_event, id: string) => {
@@ -2489,7 +2872,7 @@ function buildApplicationMenu(): void {
           label: 'Report an Issue…',
           click: () => {
             mainLogger.debug('menu.reportIssue');
-            shell.openExternal('https://github.com/browser-use/desktop/issues');
+            shell.openExternal('https://github.com/Chethan616/Dex/issues');
           },
         },
       ],

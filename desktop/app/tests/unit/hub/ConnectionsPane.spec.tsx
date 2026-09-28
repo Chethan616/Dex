@@ -154,8 +154,8 @@ describe('ConnectionsPane provider loading', () => {
     expect(openaiCard.getAttribute('aria-busy')).toBe('true');
     expect(anthropicCard.querySelector('.conn-card__skeleton--subtitle')).not.toBeNull();
     expect(openaiCard.querySelector('.conn-card__skeleton--subtitle')).not.toBeNull();
-    expect(anthropicCard.querySelector('.conn-card__skeleton--button-wide')).not.toBeNull();
-    expect(openaiCard.querySelector('.conn-card__skeleton--button-wide')).not.toBeNull();
+    expect(anthropicCard.querySelector('.conn-card__checking')).not.toBeNull();
+    expect(openaiCard.querySelector('.conn-card__checking')).not.toBeNull();
 
     await act(async () => {
       status.anthropic.resolve({ type: 'none' });

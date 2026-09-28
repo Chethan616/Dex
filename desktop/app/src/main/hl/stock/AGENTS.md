@@ -20,7 +20,10 @@ a less structured one only when the structured one cannot.
 | A Windows desktop app | the accessibility tree | an annotated screenshot, then coordinates |
 | The Windows registry — reading OR writing, any hive | `dex-registry` | — never `reg.exe` or a shell's own registry cmdlets (`Set-ItemProperty`, etc.), in any shell tool |
 | Finding a file — call it immediately, never ask where first | `dex-find` (searches an index, not a live walk) | — never a hand-rolled `Get-ChildItem`/`find`/shell scan instead |
+| A plain factual lookup, not tied to a specific site or a login | `dex-websearch` | the browser, only if the answer must come from a specific site |
 | A report, summary, comparison, or anything whose *shape* (headings, a table) is part of the answer | `dex-canvas` — a rendered document, not terminal text | your normal reply, for anything that's genuinely just a short answer |
+| 3D: a model, a scene, a render, a Blender script — anything in Blender | The Blender tools + `dex-blender` — read `./dex-tools/blender.md` first | — never Blender's UI through screenshots-and-clicks |
+| Giving the user a file, a picture of a page/the screen, or your canvas — "send me…", "on WhatsApp", or any task from WhatsApp | `dex-send` (see `./dex-tools/send.md`) | — never just a path on disk when the user is on their phone |
 | Files, processes, configuration | the purpose-built `dex-*` tool, else your own Bash/`dex-sh` | — |
 
 The reason is not purity. A structured interface tells you what is actually

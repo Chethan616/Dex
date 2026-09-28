@@ -10,7 +10,7 @@
  */
 import { spawn } from 'node:child_process';
 import { mainLogger } from '../logger';
-import type { McpServerDefinition } from './catalog';
+import { launchSpec, type McpServerDefinition } from './catalog';
 
 export interface McpToolCallResult {
   ok: boolean;
@@ -46,12 +46,15 @@ export function callServerTool(
       resolve(result);
     };
 
+    const launch = launchSpec(definition, values);
     let child: ReturnType<typeof spawn>;
     try {
-      child = spawn(definition.command, definition.args, {
+      child = spawn(launch.command, launch.args, {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, ...definition.env, ...values },
-        shell: process.platform === 'win32',
+        env: { ...process.env, ...launch.env },
+        // npx is a shell script on Windows; without a shell the spawn fails
+        // with ENOENT. Built-in servers are a plain .exe and must not get one.
+        shell: launch.shell,
         windowsHide: true,
       });
     } catch (err) {

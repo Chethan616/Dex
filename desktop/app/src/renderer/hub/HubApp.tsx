@@ -158,17 +158,17 @@ export function HubApp(): React.ReactElement {
     });
   }, []);
 
-  const [viewMode, setViewModeRaw] = useState<ViewMode>(() => {
-    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('hub-view-mode') : null;
-    if (saved === 'dashboard' || saved === 'grid') return saved;
-    return 'dashboard';
-  });
+  // Always open on the Dashboard (Home), regardless of which view was left
+  // showing last session. Restoring the previous view meant launching
+  // straight into Grid — a screen that immediately mounts every session's
+  // pane and its browser-view plumbing — when what someone opening the app
+  // actually wants first is the home screen. Switching to Grid is one
+  // click; being dropped into it on every launch is not recoverable the
+  // same way.
+  const [viewMode, setViewModeRaw] = useState<ViewMode>('dashboard');
   const setViewMode = useCallback((mode: ViewMode) => {
     setViewModeRaw(mode);
     window.electronAPI?.sessions?.viewsSetVisible?.(mode !== 'settings')?.catch(() => {});
-    if (mode === 'dashboard' || mode === 'grid') {
-      try { window.localStorage.setItem('hub-view-mode', mode); } catch { /* ignore */ }
-    }
   }, []);
   const openPill = useCallback(() => { window.electronAPI?.pill.toggle(); }, []);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -609,7 +609,7 @@ export function HubApp(): React.ReactElement {
   const selectedSessionId = sessions[focusIndex]?.id ?? null;
 
   return (
-    <div className="hub-root" data-tabs-position={tabsPosition}>
+    <div className="hub-root" data-tabs-position={tabsPosition} data-view={viewMode}>
       <header className="hub-toolbar">
         <div className="hub-toolbar__left">
           <MemoryIndicator />
@@ -653,7 +653,10 @@ export function HubApp(): React.ReactElement {
         </div>
       </header>
 
-      <div className="hub-body" data-tabs-position={tabsPosition}>
+      <div className="hub-body" data-tabs-position={tabsPosition} data-view={viewMode}>
+      {/* Settings owns the whole width: its own rail sits at the far left, so
+          the Agents sidebar would just be a second, unrelated left column. */}
+      {viewMode !== 'settings' && (
       <Sidebar
         mode={tabsPosition}
         sessions={sessions}
@@ -715,7 +718,9 @@ export function HubApp(): React.ReactElement {
           }
         }}
       />
+      )}
       <div className="hub-main">
+      <div className="hub-main__view" key={viewMode}>
       {viewMode === 'settings' ? (
         <SettingsPane
           intent={settingsIntent}
@@ -804,6 +809,7 @@ export function HubApp(): React.ReactElement {
         })()
       )}
 
+      </div>
       </div>
       </div>
 

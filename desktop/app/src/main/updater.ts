@@ -39,12 +39,12 @@ import { mainLogger } from './logger';
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
-// Generic GitHub release-asset feed — see release.yml. The explicit
+// Generic GitHub release-asset feed — see .github/workflows/dex-release.yml. The explicit
 // /releases/latest/download URL makes electron-updater fetch latest-mac.yml or
 // latest-linux.yml directly from the published release assets and avoids
 // depending on electron-builder's GitHub provider metadata generation.
-const UPDATE_FEED_URL = 'https://github.com/browser-use/desktop/releases/latest/download';
-const LATEST_RELEASE_API_URL = 'https://api.github.com/repos/browser-use/desktop/releases/latest';
+const UPDATE_FEED_URL = 'https://github.com/Chethan616/Dex/releases/latest/download';
+const LATEST_RELEASE_API_URL = 'https://api.github.com/repos/Chethan616/Dex/releases/latest';
 
 let updateCheckTimer: ReturnType<typeof setInterval> | null = null;
 let initialized = false;
@@ -449,7 +449,7 @@ async function fetchLatestReleaseVersion(): Promise<string | null> {
     const res = await fetch(LATEST_RELEASE_API_URL, {
       headers: {
         accept: 'application/vnd.github+json',
-        'user-agent': 'Browser-Use-Desktop-Updater',
+        'user-agent': 'DEX-Updater',
       },
     });
     if (!res.ok) return null;

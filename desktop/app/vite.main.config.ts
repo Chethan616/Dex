@@ -26,7 +26,10 @@ export default defineConfig({
       // still leave that resolution needing node_modules on disk, so there is
       // nothing to gain and a real risk in letting Rollup rewrite its dynamic
       // `import()` of that path.
-      external: ['@anthropic-ai/sdk', 'dotenv', 'electron-updater', 'bufferutil', 'utf-8-validate', 'better-sqlite3', 'sharp', 'node-pty', 'pdfjs-dist', 'fflate'],
+      // firebase: Firestore's Node build drives gRPC (@grpc/grpc-js loads its
+      // protos at runtime); bundled, Rollup rewrites those loads. The phone
+      // bridge imports it lazily, so it costs nothing until it's configured.
+      external: ['@anthropic-ai/sdk', 'dotenv', 'electron-updater', 'bufferutil', 'utf-8-validate', 'better-sqlite3', 'sharp', 'node-pty', 'pdfjs-dist', 'fflate', /^firebase(\/.*)?$/, /^@firebase\//],
       output: {
         entryFileNames: 'main.js',
       },

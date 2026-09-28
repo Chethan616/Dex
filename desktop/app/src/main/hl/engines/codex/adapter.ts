@@ -21,6 +21,8 @@ import path from 'node:path';
 import { mainLogger } from '../../../logger';
 import { register } from '../registry';
 import { applyBrowserHarnessEnv } from '../browserHarnessEnv';
+import { deliveryBriefing } from '../delivery';
+import { codexMcpOverrides, servicesBriefing } from '../services';
 import { enrichedEnv } from '../pathEnrich';
 import { runCliCapture } from '../cliSpawn';
 import { runCodexDeviceLogin } from '../../../identity/codexLogin';
@@ -128,13 +130,7 @@ const codexAdapter: EngineAdapter = {
     // GitHub did the familiar thing and drove github.com with the API sitting
     // right there. Naming the connections makes the cheaper route the obvious
     // one.
-    if (ctx.mcpBriefing && ctx.mcpBriefing.length > 0) {
-      lines.push(
-        ...ctx.mcpBriefing,
-        'These mcp__ tools are already loaded and callable right now. Call them directly by name. Do NOT look them up with ToolSearch first — it only searches deferred tools and will report them as missing even though they work.',
-        'Use them for anything involving these services. Do not open their websites: the API is faster, costs a fraction of the tokens, and does not break when a page changes. Fall back to the browser only if a tool call actually returns an error.',
-      );
-    }
+    lines.push(...servicesBriefing(ctx));
     if (ctx.attachmentRefs.length > 0) {
       lines.push('', 'The user attached these files for this task. Read each one before acting:');
       for (const a of ctx.attachmentRefs) lines.push(`  - ${a.relPath} (${a.mime}, ${a.size} bytes)`);
@@ -151,6 +147,7 @@ const codexAdapter: EngineAdapter = {
       `Finding a file on this machine — by name or by what it's about ("my aadhaar card", "the cryptography syllabus") — is \`dex-find\`, not a Bash/PowerShell scan. It also searches file *content*, not just names, and answers immediately: don't ask where the file might be first, just run it.`,
       `A result whose *shape* is part of the answer — a report, a comparison table, a structured summary, anything with real headings and sections — is \`dex-canvas show "<title>"\` (markdown piped via stdin), rendered as a document in the app itself. That is different from "produce a file": only use \`./outputs/${ctx.sessionId}/\` for something the user will download, attach, or open outside the app (a CSV export, a screenshot, a transcript) — not for a report meant to be read right here.`,
       `Mention the filename in your final answer for anything actually saved to ./outputs/.`,
+      ...deliveryBriefing(ctx),
       '',
       `Task: ${ctx.prompt}`,
     );
@@ -166,10 +163,13 @@ const codexAdapter: EngineAdapter = {
     // `-m/--model` is omitted entirely when unset so codex keeps its own
     // default rather than us pinning a model it may have moved on from.
     const model = ctx.model ? ['--model', ctx.model] : [];
+    // Connected services (Gmail, GitHub, …). Without these Codex had no such
+    // tools at all and did every "check my mail" in the browser.
+    const mcp = codexMcpOverrides(ctx);
     if (ctx.resumeSessionId) {
-      return ['exec', 'resume', '--json', BYPASS_APPROVALS_FLAG, ...model, ctx.resumeSessionId, '-'];
+      return [...mcp, 'exec', 'resume', '--json', BYPASS_APPROVALS_FLAG, ...model, ctx.resumeSessionId, '-'];
     }
-    return ['exec', '--json', BYPASS_APPROVALS_FLAG, ...model, '-'];
+    return [...mcp, 'exec', '--json', BYPASS_APPROVALS_FLAG, ...model, '-'];
   },
 
   getStdinPayload(_ctx: SpawnContext, wrappedPrompt: string): string {

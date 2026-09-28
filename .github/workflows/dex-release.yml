@@ -1,0 +1,174 @@
+# Ship a DEX release: tag it, and GitHub Releases becomes the update feed.
+#
+#   git tag v3.0.24 && git push origin v3.0.24
+#
+# Desktop: the installed app checks
+#   https://github.com/Chethan616/Dex/releases/latest/download/RELEASES
+# (Squirrel.Windows, src/main/updater.ts) and updates itself from the .nupkg
+# attached here — so RELEASES + the .nupkg must always travel with the exe.
+#
+# Android: the phone app checks the latest release for DEX-android-<ver>.apk
+# (update/ReleaseChecker.kt) and offers it. The APK is only built when the
+# signing secrets exist, because an update must be signed with the same key
+# as the installed app:
+#   ANDROID_KEYSTORE_BASE64       base64 of ~/.android/dex-release.jks
+#   ANDROID_KEYSTORE_PASSWORD     DEX_RELEASE_STORE_PASSWORD from ~/.gradle/gradle.properties
+#   ANDROID_KEY_PASSWORD          DEX_RELEASE_KEY_PASSWORD
+#   GOOGLE_SERVICES_JSON_BASE64   base64 of android/app/google-services.json
+# No key or config is ever committed; they exist only as encrypted secrets.
+name: DEX release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to (re)publish, e.g. v3.0.24'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows installer
+    runs-on: windows-latest
+    timeout-minutes: 45
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Tag must match package.json
+        id: version
+        shell: pwsh
+        run: |
+          $tag = '${{ github.event.inputs.tag || github.ref_name }}'.TrimStart('v')
+          $pkg = (Get-Content desktop/app/package.json -Raw | ConvertFrom-Json).version
+          if ($tag -ne $pkg) { throw "Tag v$tag does not match desktop/app/package.json version $pkg" }
+          "version=$pkg" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: yarn
+          cache-dependency-path: desktop/app/yarn.lock
+
+      - name: Rewrite git+ssh to https
+        run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+
+      - name: Install dependencies
+        working-directory: desktop/app
+        run: yarn install --frozen-lockfile
+
+      # The installed app must work with zero setup, so the service config is
+      # baked in here — users never see a client id or a setup command.
+      #   DEX_FIREBASE_CONFIG_JSON   contents of desktop/app/config/firebase.json
+      #   DEX_OAUTH_CLIENTS_JSON     contents of desktop/app/config/oauth-clients.json
+      # Both are uploaded by `yarn oauth:setup` / firebase/setup.ps1. A provider
+      # missing here is simply not offered in that release (no broken buttons).
+      - name: Bundle service config
+        working-directory: desktop/app
+        shell: pwsh
+        env:
+          FIREBASE_CONFIG: ${{ secrets.DEX_FIREBASE_CONFIG_JSON }}
+          OAUTH_CLIENTS: ${{ secrets.DEX_OAUTH_CLIENTS_JSON }}
+        run: |
+          New-Item -ItemType Directory -Force config | Out-Null
+          if ($env:FIREBASE_CONFIG) {
+            [IO.File]::WriteAllText("$PWD/config/firebase.json", $env:FIREBASE_CONFIG)
+            $null = Get-Content config/firebase.json -Raw | ConvertFrom-Json
+          } else { echo "::warning::DEX_FIREBASE_CONFIG_JSON not set: this release won't offer the phone app." }
+          if ($env:OAUTH_CLIENTS) {
+            [IO.File]::WriteAllText("$PWD/config/oauth-clients.json", $env:OAUTH_CLIENTS)
+            $clients = Get-Content config/oauth-clients.json -Raw | ConvertFrom-Json
+            echo "Sign-in apps bundled: $(($clients.PSObject.Properties.Name) -join ', ')"
+          } else { echo "::warning::DEX_OAUTH_CLIENTS_JSON not set: this release won't offer Google/GitHub/Slack connect." }
+
+      - name: Build installer
+        working-directory: desktop/app
+        run: yarn make
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: windows
+          path: |
+            desktop/app/out/make/squirrel.windows/x64/dex-setup.exe
+            desktop/app/out/make/squirrel.windows/x64/RELEASES
+            desktop/app/out/make/squirrel.windows/x64/*.nupkg
+          if-no-files-found: error
+
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      HAS_SIGNING: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.GOOGLE_SERVICES_JSON_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v5
+        if: env.HAS_SIGNING == 'true'
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-java@v4
+        if: env.HAS_SIGNING == 'true'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK platform 37
+        if: env.HAS_SIGNING == 'true'
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" > /dev/null
+
+      - name: Restore signing key and Firebase config (from secrets only)
+        if: env.HAS_SIGNING == 'true'
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/dex-release.jks"
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 -d > android/app/google-services.json
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+
+      - name: Build release APK
+        if: env.HAS_SIGNING == 'true'
+        working-directory: android
+        env:
+          ORG_GRADLE_PROJECT_DEX_RELEASE_STORE_FILE: ${{ runner.temp }}/dex-release.jks
+          ORG_GRADLE_PROJECT_DEX_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_DEX_RELEASE_KEY_ALIAS: dex
+          ORG_GRADLE_PROJECT_DEX_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-configuration-cache
+          ver=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          mkdir -p dist && cp app/build/outputs/apk/release/app-release.apk "dist/DEX-android-$ver.apk"
+
+      - uses: actions/upload-artifact@v5
+        if: env.HAS_SIGNING == 'true'
+        with:
+          name: android
+          path: android/dist/*.apk
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: assets
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          ls -la assets
+          gh release create "$TAG" assets/* \
+            --repo "${{ github.repository }}" \
+            --title "DEX $TAG" \
+            --generate-notes \
+          || gh release upload "$TAG" assets/* --repo "${{ github.repository }}" --clobber

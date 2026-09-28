@@ -7,14 +7,15 @@ import makeWASocket, {
   makeCacheableSignalKeyStore,
   useMultiFileAuthState,
   Browsers,
+  generateMessageIDV2,
 } from '@whiskeysockets/baileys';
-import type { WASocket, ConnectionState, BaileysEventMap } from '@whiskeysockets/baileys';
+import type { WASocket, ConnectionState, BaileysEventMap, WAMessage, proto } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import NodeCache from 'node-cache';
 import QRCode from 'qrcode';
 import { app } from 'electron';
 import { mainLogger } from '../logger';
-import type { ChannelAdapter, ChannelStatus, InboundMessage } from './types';
+import type { ChannelAdapter, ChannelStatus, InboundMessage, SendOptions } from './types';
 
 const AUTH_DIR = path.join(app.getPath('userData'), 'whatsapp-auth');
 
@@ -26,6 +27,57 @@ const BACKOFF = {
 };
 
 const MAX_SEEN_MESSAGES = 1000;
+/** Recent self-chat messages kept so DEX can quote them in its replies. */
+const MAX_RECENT_MESSAGES = 300;
+/**
+ * Messages older than this are history, not requests: after a long offline
+ * stretch WhatsApp replays what it missed, and an "@DEX book it" from
+ * yesterday must not suddenly run.
+ */
+const MAX_MESSAGE_AGE_MS = 10 * 60_000;
+
+/** "@DEX" is the trigger; "@BU" still works for phones linked before the rebrand. */
+const TRIGGER_RE = /(^|\s)@(?:DEX|BU)\b/i;
+const TRIGGER_STRIP_RE = /(^|\s)@(?:DEX|BU)\b\s*/gi;
+
+/** The text of a message, whatever kind carries it (plain, reply, caption). */
+function messageText(m: proto.IMessage | null | undefined): string | undefined {
+  if (!m) return undefined;
+  return (
+    m.conversation ??
+    m.extendedTextMessage?.text ??
+    m.imageMessage?.caption ??
+    m.videoMessage?.caption ??
+    m.documentMessage?.caption ??
+    undefined
+  ) || undefined;
+}
+
+const MIME: Record<string, string> = {
+  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif',
+  svg: 'image/svg+xml', mp4: 'video/mp4', mp3: 'audio/mpeg', pdf: 'application/pdf',
+  txt: 'text/plain', md: 'text/markdown', csv: 'text/csv', json: 'application/json', html: 'text/html',
+  zip: 'application/zip',
+  doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+};
+
+function mimeFor(fileName: string): string {
+  return MIME[path.extname(fileName).slice(1).toLowerCase()] ?? 'application/octet-stream';
+}
+
+/** WhatsApp's reply metadata lives on whichever sub-message was sent. */
+function contextOf(m: proto.IMessage | null | undefined): proto.IContextInfo | undefined {
+  if (!m) return undefined;
+  return (
+    m.extendedTextMessage?.contextInfo ??
+    m.imageMessage?.contextInfo ??
+    m.videoMessage?.contextInfo ??
+    m.documentMessage?.contextInfo ??
+    undefined
+  ) || undefined;
+}
 
 export class WhatsAppAdapter implements ChannelAdapter {
   readonly id = 'whatsapp' as const;
@@ -38,6 +90,9 @@ export class WhatsAppAdapter implements ChannelAdapter {
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private seenMessages = new Set<string>();
+  /** Ids of messages DEX itself sent — never read back as your requests. */
+  private ownSent = new Set<string>();
+  private recent = new Map<string, WAMessage>();
   private identity: string | null = null;
   private selfLid: string | null = null;
   private msgRetryCounterCache = new NodeCache();
@@ -89,15 +144,90 @@ export class WhatsAppAdapter implements ChannelAdapter {
     } catch { /* ignore */ }
   }
 
-  async send(conversationId: string, text: string): Promise<string | null> {
+  async send(conversationId: string, text: string, options: SendOptions = {}): Promise<string | null> {
     if (!this.sock || !this.sock.user) {
       mainLogger.warn('whatsapp.send.notConnected', { conversationId });
       return null;
     }
-    const sent = await this.sock.sendMessage(conversationId, { text });
-    const sentId = sent?.key?.id ?? null;
-    mainLogger.info('whatsapp.send', { conversationId, textLength: text.length, sentId });
+    // Pick the id up front and mark it as ours *before* sending: in self-chat
+    // WhatsApp echoes the message back, sometimes before sendMessage resolves,
+    // and DEX's own "@DEX for a new task" hint must not start a task.
+    const messageId = generateMessageIDV2(this.sock.user.id);
+    this.remember(this.ownSent, messageId);
+    const quoted = options.quoteMessageId ? this.recent.get(options.quoteMessageId) : undefined;
+    const sent = await this.sock.sendMessage(conversationId, { text }, { messageId, quoted });
+    const sentId = sent?.key?.id ?? messageId;
+    if (sent) this.cacheRecent(sent);
+    mainLogger.info('whatsapp.send', { conversationId, textLength: text.length, sentId, quoted: !!quoted });
     return sentId;
+  }
+
+  /**
+   * Send a file from this PC. Images go as photos, videos as videos,
+   * everything else as a document carrying its filename.
+   */
+  async sendFile(
+    conversationId: string,
+    filePath: string,
+    options: SendOptions & { caption?: string; fileName?: string } = {},
+  ): Promise<string | null> {
+    if (!this.sock || !this.sock.user) {
+      mainLogger.warn('whatsapp.sendFile.notConnected', { conversationId });
+      return null;
+    }
+    const data = await fsPromises.readFile(filePath);
+    const fileName = options.fileName ?? path.basename(filePath);
+    const caption = options.caption || undefined;
+    const mimetype = mimeFor(fileName);
+    const content = mimetype.startsWith('image/') && mimetype !== 'image/svg+xml'
+      ? { image: data, caption, mimetype }
+      : mimetype === 'video/mp4'
+        ? { video: data, caption, mimetype }
+        : { document: data, mimetype, fileName, caption };
+
+    const messageId = generateMessageIDV2(this.sock.user.id);
+    this.remember(this.ownSent, messageId);
+    const quoted = options.quoteMessageId ? this.recent.get(options.quoteMessageId) : undefined;
+    const sent = await this.sock.sendMessage(conversationId, content, { messageId, quoted });
+    if (sent) this.cacheRecent(sent);
+    mainLogger.info('whatsapp.sendFile', { conversationId, bytes: data.byteLength, mimetype, quoted: !!quoted });
+    return sent?.key?.id ?? messageId;
+  }
+
+  /** Your own "Message yourself" chat — the only place DEX sends to on its own. */
+  selfChatJid(): string | null {
+    const id = this.sock?.user?.id;
+    return id ? id.replace(/:.*@/, '@') : null;
+  }
+
+  /** React to one of your messages — a quiet status light (👀 ⏳ ✅ ❌). */
+  async react(conversationId: string, messageId: string, emoji: string): Promise<void> {
+    if (!this.sock?.user) return;
+    const key = this.recent.get(messageId)?.key ?? { remoteJid: conversationId, fromMe: true, id: messageId };
+    try {
+      await this.sock.sendMessage(conversationId, { react: { text: emoji, key } });
+    } catch (err) {
+      mainLogger.warn('whatsapp.react.failed', { error: (err as Error).message });
+    }
+  }
+
+  private remember(set: Set<string>, id: string): void {
+    if (set.size >= MAX_SEEN_MESSAGES) {
+      const first = set.values().next().value;
+      if (first) set.delete(first);
+    }
+    set.add(id);
+  }
+
+  private cacheRecent(msg: WAMessage): void {
+    const id = msg.key.id;
+    if (!id) return;
+    this.recent.delete(id);
+    this.recent.set(id, msg);
+    if (this.recent.size > MAX_RECENT_MESSAGES) {
+      const first = this.recent.keys().next().value;
+      if (first) this.recent.delete(first);
+    }
   }
 
   private async startSocket(): Promise<void> {
@@ -234,101 +364,88 @@ export class WhatsAppAdapter implements ChannelAdapter {
     }
   }
 
+  /**
+   * Only *you* can drive DEX from WhatsApp. A message is considered only when
+   * all of these hold — anything else (other people, groups, broadcasts,
+   * channels, other devices' chats, DEX's own messages, old history) is
+   * dropped before its text is even read:
+   *   - it was sent by your account (fromMe) — not by a contact;
+   *   - it's in your own "Message yourself" chat — not a group or a DM;
+   *   - DEX didn't send it;
+   *   - it's fresh (not a replay of history after being offline).
+   *
+   * What happens next is the router's call: a WhatsApp *reply* to one of a
+   * task's messages continues that task; "@DEX" starts a new one; anything
+   * else is just a note to yourself.
+   */
   private handleMessagesUpsert(upsert: BaileysEventMap['messages.upsert']): void {
     const { messages, type } = upsert;
 
-    if (type === 'append') return;
+    if (type !== 'notify') return;
 
     for (const msg of messages) {
-      mainLogger.info('whatsapp.msg.received', {
-        remoteJid: msg.key.remoteJid,
-        fromMe: msg.key.fromMe,
-        participant: msg.key.participant,
-        selfLid: this.selfLid,
-        ownJid: this.sock?.user?.id,
-      });
-
-      if (msg.key.remoteJid === 'status@broadcast') continue;
-      if (!msg.key.remoteJid || !msg.key.id) continue;
-      if (!msg.key.fromMe) {
-        mainLogger.info('whatsapp.msg.skipNotFromMe', { remoteJid: msg.key.remoteJid });
-        continue;
-      }
+      const remoteJid = msg.key.remoteJid;
+      const id = msg.key.id;
+      if (!remoteJid || !id) continue;
+      if (
+        remoteJid === 'status@broadcast' ||
+        remoteJid.endsWith('@g.us') ||
+        remoteJid.endsWith('@broadcast') ||
+        remoteJid.endsWith('@newsletter') ||
+        msg.broadcast
+      ) continue;
+      if (!msg.key.fromMe) continue;
+      if (this.ownSent.has(id)) continue;
 
       const stripDevice = (jid: string | null | undefined): string | null => jid ? jid.replace(/:.*@/, '@') : null;
       const ownJid = stripDevice(this.sock?.user?.id);
       const ownLid = stripDevice(this.selfLid);
-      const isSelfChat =
-        msg.key.remoteJid === ownLid ||
-        msg.key.remoteJid === ownJid;
-      if (!isSelfChat) {
-        mainLogger.info('whatsapp.msg.skipNotSelfChat', {
-          remoteJid: msg.key.remoteJid,
-          selfLid: this.selfLid,
-          ownJid,
-        });
-        continue;
-      }
+      const isSelfChat = remoteJid === ownLid || remoteJid === ownJid;
+      if (!isSelfChat) continue;
 
-      const dedupKey = `${msg.key.remoteJid}:${msg.key.id}`;
+      const dedupKey = `${remoteJid}:${id}`;
       if (this.seenMessages.has(dedupKey)) continue;
+      this.remember(this.seenMessages, dedupKey);
 
-      if (this.seenMessages.size >= MAX_SEEN_MESSAGES) {
-        const first = this.seenMessages.values().next().value;
-        if (first) this.seenMessages.delete(first);
-      }
-      this.seenMessages.add(dedupKey);
-
-      const text =
-        msg.message?.conversation ??
-        msg.message?.extendedTextMessage?.text;
-
-      if (!text) {
-        this.sock?.sendMessage(msg.key.remoteJid, { text: 'Text messages only for now' })
-          .catch(() => {});
+      const sentAtMs = Number(msg.messageTimestamp ?? 0) * 1000;
+      if (sentAtMs && Date.now() - sentAtMs > MAX_MESSAGE_AGE_MS) {
+        mainLogger.info('whatsapp.msg.skipStale', { ageMs: Date.now() - sentAtMs });
         continue;
       }
 
-      // Self-chat doubles as a notes app — only spawn a session when the user
-      // explicitly mentions the trigger. Strip the token from the prompt so the
-      // agent sees a clean instruction.
-      //
-      // @DEX is the trigger; @BU is still accepted because a phone linked
-      // before the rebrand has that habit (and possibly saved drafts), and
-      // silently ignoring those messages would look like WhatsApp had simply
-      // stopped working.
-      const triggerMatch = text.match(/(^|\s)@(?:DEX|BU)\b/i);
-      if (!triggerMatch) {
-        mainLogger.info('whatsapp.msg.skipNoTrigger', { remoteJid: msg.key.remoteJid });
-        continue;
-      }
-      const cleanedText = text.replace(/(^|\s)@(?:DEX|BU)\b\s*/i, '$1').trim();
-      if (!cleanedText) {
-        mainLogger.info('whatsapp.msg.skipEmptyAfterTrigger', { remoteJid: msg.key.remoteJid });
-        continue;
-      }
+      // Reactions, edits, deletes, stickers… carry no text: nothing to do.
+      const text = messageText(msg.message);
+      if (!text) continue;
+      this.cacheRecent(msg);
 
-      const replyToMessageId =
-        msg.message?.extendedTextMessage?.contextInfo?.stanzaId ?? undefined;
+      const mentioned = TRIGGER_RE.test(text);
+      const cleanedText = text.replace(TRIGGER_STRIP_RE, '$1').trim();
+      const context = contextOf(msg.message);
+      const replyToMessageId = context?.stanzaId ?? undefined;
+      const quotedText = messageText(context?.quotedMessage);
 
-      const inboundTs = Date.now();
+      // A plain note to yourself — not addressed to DEX, not a reply.
+      if (!mentioned && !replyToMessageId) continue;
+      if (!cleanedText) continue;
+
       mainLogger.info('whatsapp.inbound', {
-        from: msg.key.remoteJid,
-        fromName: msg.pushName,
         textLength: cleanedText.length,
+        mentioned,
         replyToMessageId: replyToMessageId ?? null,
-        inboundTs,
       });
 
       this.messageHandler?.({
         channelId: 'whatsapp',
-        from: msg.key.remoteJid,
-        fromName: msg.pushName ?? msg.key.remoteJid,
+        from: remoteJid,
+        fromName: msg.pushName ?? 'You',
         text: cleanedText,
-        timestamp: (msg.messageTimestamp as number) * 1000,
-        conversationId: msg.key.remoteJid,
-        messageId: msg.key.id,
+        timestamp: sentAtMs || Date.now(),
+        conversationId: remoteJid,
+        messageId: id,
         replyToMessageId,
+        quotedText,
+        mentioned,
+        ack: (emoji) => { void this.react(remoteJid, id, emoji); },
       });
     }
   }

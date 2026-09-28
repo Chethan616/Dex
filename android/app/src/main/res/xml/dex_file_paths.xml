@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the cache folder files from the PC are saved in (DexRepository.fetchFile). -->
+<paths>
+    <cache-path name="dex" path="dex-files/" />
+</paths>

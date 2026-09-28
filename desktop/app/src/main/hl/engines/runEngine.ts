@@ -18,6 +18,7 @@ import { get as getAdapter } from './registry';
 import { applyKnownFolderEnv } from '../../startup/knownFolders';
 import { enabledConnections } from '../../mcp/store';
 import { usableServers, writeClaudeMcpConfig, clearMcpConfig } from '../../mcp/config';
+import { mcpLauncherScript } from '../../mcp/catalog';
 import { spawnCli } from './cliSpawn';
 import { registerResourceOwner, unregisterResourceOwner } from '../../resourceMonitor';
 import type {
@@ -228,10 +229,17 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
   // would leave the agent without a tool the user just enabled.
   let mcpConfigPath: string | undefined;
   let mcpBriefing: string[] = [];
+  let mcpServers: SpawnContext['mcpServers'];
   try {
     const servers = usableServers(await enabledConnections());
     if (servers.length > 0) {
       mcpConfigPath = writeClaudeMcpConfig(opts.harnessDir, servers) ?? undefined;
+      mcpServers = servers.map((server) => ({
+        id: server.definition.id,
+        displayName: server.definition.displayName,
+        identity: server.identity,
+        toolNames: server.toolNames ?? [],
+      }));
       mcpBriefing = servers.map((server) => {
         // Engines namespace MCP tools as mcp__<server-id>__<tool>.
         const prefix = `mcp__${server.definition.id.replace(/-/g, '_')}__`;
@@ -265,9 +273,12 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
   const spawnCtx: SpawnContext = {
     mcpConfigPath,
     mcpBriefing,
+    mcpServers,
+    mcpLauncherPath: mcpServers ? mcpLauncherScript() : undefined,
     prompt: opts.prompt,
     harnessDir: opts.harnessDir,
     sessionId: opts.sessionId,
+    originChannel: opts.originChannel,
     targetId,
     cdpPort: opts.cdpPort,
     resumeSessionId: opts.resumeSessionId,

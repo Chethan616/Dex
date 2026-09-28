@@ -595,6 +595,7 @@ export class SessionManager extends EventEmitter {
     this.termStates.delete(id);
     this.db.deleteSession(id);
     mainLogger.info('SessionManager.deleteSession', { id });
+    this.emitEvent('session-deleted', id);
   }
 
   rerunSession(id: string): AbortController {
@@ -682,6 +683,16 @@ export class SessionManager extends EventEmitter {
       engine: session.engine ?? this.getSessionEngine(id),
       model: session.model ?? null,
     });
+    // Put the reason in the conversation itself. It used to live only on the
+    // session row, which neither the chat nor the phone showed — so a task
+    // killed by, say, Codex's usage limit just "suddenly stopped". The
+    // engine's own error event is dropped once the session is stopped, so
+    // this is the one that reaches the transcript.
+    const message = error.replace(/^[a-z_]+_error:\s*/i, '');
+    const last = session.output.at(-1);
+    if (!(last?.type === 'error' && last.message === message)) {
+      this.appendOutput(id, { type: 'error', message });
+    }
     this.emitEvent('session-error', { ...session });
   }
 

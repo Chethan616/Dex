@@ -15,7 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { mainLogger } from '../logger';
-import { findServerDefinition, missingCredentials, type McpServerDefinition } from './catalog';
+import { findServerDefinition, launchSpec, missingCredentials, type McpServerDefinition } from './catalog';
 
 export interface ResolvedMcpServer {
   definition: McpServerDefinition;
@@ -35,11 +35,8 @@ interface ClaudeMcpConfig {
 export function buildClaudeMcpConfig(servers: ResolvedMcpServer[]): ClaudeMcpConfig {
   const mcpServers: ClaudeMcpConfig['mcpServers'] = {};
   for (const { definition, values } of servers) {
-    mcpServers[definition.id] = {
-      command: definition.command,
-      args: definition.args,
-      env: { ...definition.env, ...values },
-    };
+    const launch = launchSpec(definition, values);
+    mcpServers[definition.id] = { command: launch.command, args: launch.args, env: launch.env };
   }
   return { mcpServers };
 }

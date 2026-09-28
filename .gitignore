@@ -74,3 +74,6 @@ app/.dart_tool/
 desktop/app/node_modules/
 desktop/app/out/
 desktop/app/.vite/
+
+# Firebase client configs belong in android/app/ (ignored there); never at the root
+/google-services.json
