@@ -5,7 +5,7 @@ import type { ActionId, KeyBinding } from './keybindings';
 import { fallbackShortcutPlatform, keyboardEventToShortcut } from '../../shared/hotkeys';
 import { useThemeMode } from '../design/useThemeMode';
 import type { ThemeMode } from '../design/themeMode';
-import { DexAvatar, MetalButton, NewBadge, Orb, ProfilePicker, Segmented, Switch, useDexProfile, type SegmentedOption } from '../components/lib';
+import { DexAvatar, NewBadge, Orb, ProfilePicker, Segmented, Switch, useDexProfile, type SegmentedOption } from '../components/lib';
 
 /**
  * Generic settings primitives. Add a new option type and every section that
@@ -377,9 +377,13 @@ function AppSection(): React.ReactElement {
           )}
         </div>
         {updateReady ? (
-          <MetalButton onClick={handleUpdateClick} disabled={updateActionDisabled}>
+          <button
+            className="conn-card__btn conn-card__btn--primary"
+            onClick={handleUpdateClick}
+            disabled={updateActionDisabled}
+          >
             {buttonLabel}
-          </MetalButton>
+          </button>
         ) : (
           <span className="settings-pane__row-right">
             {(checking || updateBusy || !info) && <Orb size={20} state="searching" />}

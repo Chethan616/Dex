@@ -1,5 +1,13 @@
 # DEX for Android — roadmap
 
+## 1.0.15
+
+- **Welcome tour** on first run, before sign-in (`ui/screens/onboarding`), and again from Settings → About → Welcome tour. Four pages, Material 3 Expressive:
+  - One big shape behind the pages morphs from page to page as you swipe (`MaterialShapes` + `Morph`), turning slowly and changing colour. Confetti shapes drift at their own speeds.
+  - A wavy progress line, and a Next button that squishes when pressed and grows into "Get started" on the last page.
+  - Every page has something alive to poke. Meet DEX: three bots orbit it in 3D. Just ask: requests pop out one by one. You're in charge: the approval card's Approve and Stop work. It all comes back: files drop in with a bounce.
+- Signing in marks the tour as seen, so a later sign-out goes straight to sign-in.
+
 ## 1.0.14
 
 - **Blender scenes (.blend) open on the phone.** The PC prepares them in a windowless Blender (`mcp-servers/blender/scene_preview.py`, ~20 s, then cached per file version). The viewer has two tabs:

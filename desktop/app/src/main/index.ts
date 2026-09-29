@@ -86,6 +86,7 @@ import { registerChromeImportHandlers } from './chrome-import/ipc';
 import { mainLogger } from './logger';
 import { createLocalTaskServer } from './localTaskServer';
 import { registerAccountsIpc } from './accounts';
+import { registerSetupIpc } from './setup/essentials';
 import { registerProfileIpc } from './profile';
 import {
   resolveUserDataDir,
@@ -632,6 +633,7 @@ app.whenReady().then(async () => {
   registerTelemetryHandlers();
   registerAppPopupHandlers();
   registerAccountsIpc();
+  registerSetupIpc();
   registerProfileIpc();
   startSystemThemeWatcher();
   registerChannelHandlers(channelRouter, whatsAppAdapter);

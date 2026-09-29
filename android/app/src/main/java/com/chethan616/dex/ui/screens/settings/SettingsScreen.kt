@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
@@ -66,7 +67,7 @@ import com.chethan616.dex.ui.theme.LocalStatusColors
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen(container: AppContainer, account: Account, onBack: () -> Unit) {
+fun SettingsScreen(container: AppContainer, account: Account, onBack: () -> Unit, onOpenTour: () -> Unit = {}) {
   val haptics = LocalHaptics.current
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
@@ -255,6 +256,10 @@ fun SettingsScreen(container: AppContainer, account: Account, onBack: () -> Unit
     }
 
     Group("About") {
+      SettingRow(Icons.Rounded.AutoAwesome, "Welcome tour", "What DEX on your phone can do") {
+        haptics.click()
+        onOpenTour()
+      }
       Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("DEX for Android ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleSmall)
         Text(

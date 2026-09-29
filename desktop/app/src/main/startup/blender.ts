@@ -23,6 +23,11 @@ export function blenderHome(): string {
 
 let cached: string | null | undefined;
 
+/** Look again next time — Blender may have just been installed. */
+export function resetBlenderCache(): void {
+  cached = undefined;
+}
+
 /** Newest blender.exe under the usual install roots, or null. */
 export function findBlender(): string | null {
   if (cached !== undefined) return cached;

@@ -33,6 +33,11 @@ export function pkcePair(): { verifier: string; challenge: string } {
   return { verifier, challenge };
 }
 
+/** The callback's query is attacker-controllable: never into HTML raw. */
+export function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+}
+
 function page(title: string, detail: string, ok: boolean): string {
   const accent = ok ? '#22a45d' : '#d14343';
   const mark = ok
@@ -53,7 +58,7 @@ h1{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:-.01em}p{margin:
 @keyframes in{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
 </style></head><body><div class="card"><div class="badge"><svg width="24" height="24" viewBox="0 0 24 24">${mark}</svg></div>
-<h1>${title}</h1><p>${detail}</p></div>
+<h1>${escapeHtml(title)}</h1><p>${escapeHtml(detail)}</p></div>
 <script>setTimeout(function(){try{window.close()}catch(e){}},2500)</script></body></html>`;
 }
 
@@ -85,7 +90,11 @@ export async function startLoopback(opts: { port?: number; path?: string; provid
   });
 
   await new Promise<void>((resolve, rejectListen) => {
-    server.once('error', rejectListen);
+    server.once('error', (err: NodeJS.ErrnoException) => {
+      rejectListen(err.code === 'EADDRINUSE'
+        ? new Error(`${opts.providerName} sign-in needs port ${opts.port} on this PC, and another program is using it. Close it (or restart the PC) and try again.`)
+        : err);
+    });
     server.listen(opts.port ?? 0, '127.0.0.1', () => resolve());
   });
   const { port } = server.address() as AddressInfo;

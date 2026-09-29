@@ -67,6 +67,17 @@ function installOnboardingApi(overrides: Partial<OnboardingApi> = {}): Onboardin
     },
     onWhatsappQr: vi.fn(() => () => undefined),
     onChannelStatus: vi.fn(() => () => undefined),
+    setup: {
+      detect: vi.fn(async () => []),
+      install: vi.fn(async () => []),
+      onProgress: vi.fn(() => () => undefined),
+    },
+    accounts: {
+      list: vi.fn(async () => []),
+      connect: vi.fn(async () => ({ ok: true })),
+      cancel: vi.fn(async () => undefined),
+      onProgress: vi.fn(() => () => undefined),
+    },
     ...overrides,
   } satisfies OnboardingApi;
 
@@ -127,7 +138,7 @@ describe('OnboardingApp provider installs', () => {
     const { container, root } = renderOnboarding();
 
     await flush();
-    expect(container.textContent).toContain('Vendor setup');
+    expect(container.textContent).toContain('Choose your AI engine');
 
     act(() => {
       buttonByText(container, 'Install Claude Code').click();
@@ -135,10 +146,10 @@ describe('OnboardingApp provider installs', () => {
     await flush();
 
     expect(buttonByText(container, 'Installing Claude Code').disabled).toBe(true);
-    expect(buttonByText(container, 'Install Codex CLI').disabled).toBe(false);
+    expect(buttonByText(container, 'Install Codex').disabled).toBe(false);
 
     act(() => {
-      buttonByText(container, 'Install Codex CLI').click();
+      buttonByText(container, 'Install Codex').click();
     });
     await flush();
 
@@ -151,14 +162,49 @@ describe('OnboardingApp provider installs', () => {
     act(() => root.unmount());
   });
 
+  it('always shows Continue on the engine step, and says what it is waiting for', async () => {
+    installOnboardingApi();
+    const { container, root } = renderOnboarding();
+
+    await flush();
+    const next = buttonByText(container, 'Continue');
+
+    expect(next.disabled).toBe(true);
+    expect(container.textContent).toContain('Set up Claude Code or Codex above to continue.');
+    expect(buttonByText(container, 'Back')).toBeTruthy();
+
+    act(() => root.unmount());
+  });
+
+  it('enables Continue on the engine step once an engine is signed in', async () => {
+    installOnboardingApi({
+      detectClaudeCode: vi.fn(async () => ({
+        available: true,
+        installed: true,
+        authed: true,
+        version: '2.1.0',
+        subscriptionType: 'pro',
+      })),
+    });
+    const { container, root } = renderOnboarding();
+
+    await flush();
+
+    expect(container.textContent).toContain('Claude successfully configured');
+    expect(buttonByText(container, 'Continue').disabled).toBe(false);
+    expect(container.textContent).not.toContain('Set up Claude Code or Codex above to continue.');
+
+    act(() => root.unmount());
+  });
+
   it('describes the Codex install button as an automatic background installer', async () => {
     installOnboardingApi();
     const { container, root } = renderOnboarding();
 
     await flush();
-    const codexButton = buttonByText(container, 'Install Codex CLI');
+    const codexButton = buttonByText(container, 'Install Codex');
 
-    expect(codexButton.textContent).toContain('Runs the installer in the background. We\u2019ll detect it when it finishes.');
+    expect(codexButton.textContent).toContain('One click — DEX installs it for you.');
     expect(codexButton.textContent).not.toContain('npm i -g @openai/codex');
 
     act(() => root.unmount());

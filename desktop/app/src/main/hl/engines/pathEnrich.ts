@@ -40,7 +40,36 @@ type ExtraDirResult = string | string[] | null;
 let cachedShellPath: string | null = null;
 let cachedShellPathTried = false;
 
+let cachedRegistryPath: string[] | null = null;
+
+/**
+ * The user's and the machine's PATH as saved in the registry. A tool
+ * installed while DEX runs (setup installs Git, Node, uv…) lands there, not
+ * in this process's inherited environment — reading it makes the new tool
+ * usable at once, without restarting DEX.
+ */
+function windowsRegistryPath(env: NodeJS.ProcessEnv): string[] {
+  if (process.platform !== 'win32') return [];
+  if (cachedRegistryPath) return cachedRegistryPath;
+  const out: string[] = [];
+  for (const key of ['HKCU\\Environment', 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment']) {
+    try {
+      const r = spawnSync('reg', ['query', key, '/v', 'Path'], { encoding: 'utf-8', timeout: 3000, windowsHide: true });
+      const m = typeof r.stdout === 'string' ? r.stdout.match(/Path\s+REG_(?:EXPAND_)?SZ\s+(.+)/i) : null;
+      if (!m) continue;
+      for (const dir of m[1].trim().split(';')) {
+        if (dir) out.push(dir.replace(/%([^%]+)%/g, (whole, name: string) => env[name] ?? process.env[name] ?? whole));
+      }
+    } catch {
+      // No registry access: the other candidates still apply.
+    }
+  }
+  cachedRegistryPath = out;
+  return out;
+}
+
 export function resetPathEnrichmentCache(): void {
+  cachedRegistryPath = null;
   cachedShellPath = null;
   cachedShellPathTried = false;
 }
@@ -152,6 +181,14 @@ const WINDOWS_EXTRA_DIRS_FNS: Array<(home: string, env: NodeJS.ProcessEnv, pathM
   (home, _env, pathMod) => pathMod.join(home, '.deno', 'bin'),
   (home, _env, pathMod) => pathMod.join(home, '.cargo', 'bin'),
   (home, _env, pathMod) => pathMod.join(home, 'scoop', 'shims'),
+  // Where Claude Code's and uv's own Windows installers put their programs.
+  (home, _env, pathMod) => pathMod.join(home, '.local', 'bin'),
+  // Node.js and Git for Windows, in their standard places.
+  (_home, env, pathMod) => env.ProgramFiles ? pathMod.join(env.ProgramFiles, 'nodejs') : null,
+  (_home, env, pathMod) => env.ProgramFiles ? pathMod.join(env.ProgramFiles, 'Git', 'cmd') : null,
+  (_home, env, pathMod) => env.LOCALAPPDATA ? pathMod.join(env.LOCALAPPDATA, 'Programs', 'Git', 'cmd') : null,
+  // Last: whatever the registry PATH has gained since DEX started.
+  (_home, env) => windowsRegistryPath(env),
   (_home, env, pathMod) => env.ProgramData ? pathMod.join(env.ProgramData, 'scoop', 'shims') : pathMod.join('C:\\', 'ProgramData', 'scoop', 'shims'),
   (_home, env, pathMod) => env.ChocolateyInstall ? pathMod.join(env.ChocolateyInstall, 'bin') : pathMod.join('C:\\', 'ProgramData', 'chocolatey', 'bin'),
 ];

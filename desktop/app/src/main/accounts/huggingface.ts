@@ -8,9 +8,10 @@
  * Hosting), used with PKCE and a loopback redirect on any port. So every
  * install signs in with nothing to set up — unlike Google.
  *
- * Scopes: openid + profile (who you are) and inference-api (text-to-image
- * through Inference Providers). ZeroGPU Spaces only need to know who you
- * are: your free daily GPU quota is what they spend.
+ * Scopes: openid + profile (who you are) and inference-api (Inference
+ * Providers, kept for models served there). The ZeroGPU Spaces dex-3d uses —
+ * FLUX for the picture, Hunyuan3D / TRELLIS for the model — only need to know
+ * who you are: your free daily GPU quota is what they spend.
  *
  * The token lives in the OS credential store (keytar), not with the MCP
  * connections — there is no Hugging Face MCP server behind it.
@@ -167,10 +168,6 @@ async function tokenRequest(fields: Record<string, string>): Promise<{ access_to
   return { access_token: json.access_token, refresh_token: json.refresh_token, expires_in: json.expires_in };
 }
 
-/**
- * A usable token right now, refreshing an expiring OAuth token first.
- * Null when not connected (or the sign-in has lapsed and can't be renewed).
- */
 let planCache: { at: number; plan: 'pro' | 'free' } | null = null;
 
 /**
@@ -193,6 +190,10 @@ export async function huggingFacePlan(): Promise<'pro' | 'free' | null> {
   }
 }
 
+/**
+ * A usable token right now, refreshing an expiring OAuth token first.
+ * Null when not connected (or the sign-in has lapsed and can't be renewed).
+ */
 export async function huggingFaceToken(): Promise<string | null> {
   const account = await loadHuggingFace();
   if (!account) return null;

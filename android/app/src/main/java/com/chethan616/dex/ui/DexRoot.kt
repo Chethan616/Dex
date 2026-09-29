@@ -21,6 +21,7 @@ import androidx.navigation.toRoute
 import com.chethan616.dex.AppContainer
 import com.chethan616.dex.data.Account
 import com.chethan616.dex.ui.screens.home.HomeScreen
+import com.chethan616.dex.ui.screens.onboarding.OnboardingScreen
 import com.chethan616.dex.ui.screens.session.SessionScreen
 import com.chethan616.dex.ui.screens.settings.SettingsScreen
 import com.chethan616.dex.ui.screens.setup.FirebaseSetupScreen
@@ -35,6 +36,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object HomeRoute
 @Serializable data class SessionRoute(val id: String)
 @Serializable data object SettingsRoute
+@Serializable data object TourRoute
 
 private sealed interface Gate {
   data object Loading : Gate
@@ -65,9 +67,25 @@ fun DexRoot(
   ) { state ->
     when (state) {
       Gate.Loading -> Unit
-      Gate.SignedOut -> SignInScreen(container)
+      Gate.SignedOut -> SignedOut(container)
       is Gate.SignedIn -> SignedInApp(container, state.account, openSession, shared)
     }
+  }
+}
+
+/** First run: the welcome tour, then sign-in. Afterwards sign-in comes straight up. */
+@Composable
+private fun SignedOut(container: AppContainer) {
+  val onboarded by container.prefs.onboarded.collectAsStateWithLifecycle()
+  AnimatedContent(
+    targetState = onboarded,
+    transitionSpec = {
+      (slideInHorizontally(tween(480)) { it / 4 } + fadeIn(tween(360))) togetherWith
+        (slideOutHorizontally(tween(420)) { -it / 6 } + fadeOut(tween(240)))
+    },
+    label = "tour",
+  ) { done ->
+    if (done) SignInScreen(container) else OnboardingScreen(onDone = { container.prefs.setOnboarded() })
   }
 }
 
@@ -83,6 +101,8 @@ private fun SignedInApp(
   openSession: MutableStateFlow<String?>,
   shared: MutableStateFlow<com.chethan616.dex.share.SharedContent?>,
 ) {
+  // Signed in means past the tour — a later sign-out goes straight to sign-in.
+  LaunchedEffect(Unit) { container.prefs.setOnboarded() }
   // "Your DEX": null until chosen — then the Netflix-style picker comes first.
   val profileState by produceState<ProfileState>(ProfileState.Loading, account.uid) {
     runCatching { container.repo.profile().collect { value = ProfileState.Loaded(it) } }
@@ -156,7 +176,15 @@ private fun SignedInNav(
         )
       }
       composable<SettingsRoute> {
-        SettingsScreen(container = container, account = account, onBack = { nav.popBackStack() })
+        SettingsScreen(
+          container = container,
+          account = account,
+          onBack = { nav.popBackStack() },
+          onOpenTour = { nav.navigate(TourRoute) { launchSingleTop = true } },
+        )
+      }
+      composable<TourRoute> {
+        OnboardingScreen(onDone = { nav.popBackStack() }, doneLabel = "Done")
       }
     }
   }

@@ -199,6 +199,29 @@ const onboardingAPI = {
     ipcRenderer.on('channel-status', handler);
     return () => ipcRenderer.removeListener('channel-status', handler);
   },
+
+  /** What DEX needs on this PC, and one-click installs (main/setup/essentials.ts). */
+  setup: {
+    detect: (): Promise<unknown> => ipcRenderer.invoke('setup:essentials'),
+    install: (ids: string[]): Promise<unknown> => ipcRenderer.invoke('setup:install', ids),
+    onProgress: (cb: (event: unknown) => void): (() => void) => {
+      const handler = (_evt: unknown, payload: unknown) => cb(payload);
+      ipcRenderer.on('setup:progress', handler);
+      return () => ipcRenderer.removeListener('setup:progress', handler);
+    },
+  },
+
+  /** The same one-click sign-ins as Settings → Accounts (main/accounts). */
+  accounts: {
+    list: (): Promise<unknown> => ipcRenderer.invoke('accounts:list'),
+    connect: (provider: string): Promise<unknown> => ipcRenderer.invoke('accounts:connect', provider),
+    cancel: (provider: string): Promise<void> => ipcRenderer.invoke('accounts:cancel', provider),
+    onProgress: (cb: (event: unknown) => void): (() => void) => {
+      const handler = (_evt: unknown, payload: unknown) => cb(payload);
+      ipcRenderer.on('accounts:progress', handler);
+      return () => ipcRenderer.removeListener('accounts:progress', handler);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('onboardingAPI', onboardingAPI);

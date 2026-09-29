@@ -92,6 +92,12 @@ function HuggingFaceMark(): React.ReactElement {
 
 const MARK: Record<Provider, () => React.ReactElement> = { google: GoogleMark, github: GitHubMark, slack: SlackMark, huggingface: HuggingFaceMark };
 
+/** A provider's logo, for anywhere else that offers these sign-ins (onboarding). */
+export function ProviderMark({ provider }: { provider: Provider }): React.ReactElement {
+  const Mark = MARK[provider];
+  return <Mark />;
+}
+
 function refillText(at: number): string {
   const mins = Math.max(1, Math.round((at - Date.now()) / 60_000));
   return mins >= 60 ? `${Math.floor(mins / 60)} h ${mins % 60} min` : `${mins} min`;
