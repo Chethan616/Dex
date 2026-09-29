@@ -171,6 +171,28 @@ async function tokenRequest(fields: Record<string, string>): Promise<{ access_to
  * A usable token right now, refreshing an expiring OAuth token first.
  * Null when not connected (or the sign-in has lapsed and can't be renewed).
  */
+let planCache: { at: number; plan: 'pro' | 'free' } | null = null;
+
+/**
+ * Free or PRO. PRO buys much more daily ZeroGPU time and first place in
+ * the queue — the same sign-in simply goes further, nothing to configure.
+ * Asked of Hugging Face at most every 10 minutes; null when it can't say.
+ */
+export async function huggingFacePlan(): Promise<'pro' | 'free' | null> {
+  if (planCache && Date.now() - planCache.at < 10 * 60_000) return planCache.plan;
+  const token = await huggingFaceToken();
+  if (!token) return null;
+  try {
+    const res = await fetch('https://huggingface.co/api/whoami-v2', { headers: { authorization: `Bearer ${token}` } });
+    if (!res.ok) return planCache?.plan ?? null;
+    const who = (await res.json()) as { isPro?: boolean };
+    planCache = { at: Date.now(), plan: who.isPro ? 'pro' : 'free' };
+    return planCache.plan;
+  } catch {
+    return planCache?.plan ?? null;
+  }
+}
+
 export async function huggingFaceToken(): Promise<string | null> {
   const account = await loadHuggingFace();
   if (!account) return null;

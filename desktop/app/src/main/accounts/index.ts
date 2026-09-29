@@ -9,7 +9,7 @@
  * name, avatar) in userData so Settings can show who is connected without
  * touching the keychain.
  */
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,7 +18,8 @@ import { listConnections, removeConnection, setConnection } from '../mcp/store';
 import { oauthClient, type OAuthProvider } from './oauthClients';
 import { cancelGoogle, connectGoogle, refreshGoogleIdToken, revokeGoogle } from './google';
 import { cancelGitHub, connectGitHub, connectGitHubViaCli, githubCliAvailable } from './github';
-import { cancelHuggingFace, connectHuggingFace, connectHuggingFaceToken, forgetHuggingFace, loadHuggingFace } from './huggingface';
+import { cancelHuggingFace, connectHuggingFace, connectHuggingFaceToken, forgetHuggingFace, huggingFacePlan, loadHuggingFace } from './huggingface';
+import { huggingFaceUsage } from '../threed/usage';
 import { cancelSlack, connectSlack, revokeSlack } from './slack';
 
 export interface AccountProfile {
@@ -42,6 +43,8 @@ export interface AccountInfo {
    * command — a provider this build can't sign in to is simply not shown.
    */
   devBuild: boolean;
+  /** Hugging Face only: the plan (sets the daily GPU time) and today's use. */
+  huggingface?: { plan: 'pro' | 'free' | null; modelsToday: number; refillsAt?: number };
 }
 
 export type AccountProgress =
@@ -89,6 +92,7 @@ export async function listAccounts(): Promise<AccountInfo[]> {
   const profiles = readProfiles();
   const cli = await githubCliAvailable();
   const hf = await loadHuggingFace();
+  const hfPlan = hf ? await huggingFacePlan().catch(() => null) : null;
   return PROVIDERS.map((provider) => {
     // Hugging Face has no MCP server behind it and needs no registered app
     // (its client ID is DEX's public metadata document), so it's always
@@ -101,6 +105,7 @@ export async function listAccounts(): Promise<AccountInfo[]> {
         connected: Boolean(hf),
         devBuild: !app.isPackaged,
         profile: hf ? { identity: hf.username, name: hf.name, picture: hf.picture, connectedAt: 0 } : undefined,
+        huggingface: hf ? { plan: hfPlan, ...huggingFaceUsage() } : undefined,
       };
     }
     const connection = connections.get(provider);
@@ -221,6 +226,16 @@ export function registerAccountsIpc(): void {
   ipcMain.handle('accounts:connect', (_e, provider: unknown) => connectAccount(asProvider(provider)));
   ipcMain.handle('accounts:cancel', (_e, provider: unknown) => { cancelAccount(asProvider(provider)); });
   ipcMain.handle('accounts:disconnect', (_e, provider: unknown) => disconnectAccount(asProvider(provider)));
+  // Links the account cards may open — a fixed list, never a URL from the page.
+  const LINKS: Record<string, string> = {
+    'huggingface-pro': 'https://huggingface.co/subscribe/pro',
+    'huggingface-billing': 'https://huggingface.co/settings/billing',
+    'huggingface-zerogpu': 'https://huggingface.co/docs/hub/spaces-zerogpu',
+  };
+  ipcMain.handle('accounts:open-link', async (_e, key: unknown) => {
+    const url = typeof key === 'string' ? LINKS[key] : undefined;
+    if (url) await shell.openExternal(url);
+  });
   // Hugging Face also takes a pasted access token (hf_…), for people who'd rather.
   ipcMain.handle('accounts:huggingface-token', async (_e, token: unknown) => {
     try {

@@ -19,6 +19,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { mainLogger } from '../logger';
 import { huggingFaceToken } from '../accounts/huggingface';
+import { recordModel, recordQuotaExhausted } from './usage';
 
 export type ThreeDModel = 'hunyuan' | 'trellis';
 
@@ -56,8 +57,9 @@ function slug(text: string): string {
 /** Turn a Space's quota/permission failure into something a person can act on. */
 function explain(err: unknown): Error {
   const raw = (err as { message?: string })?.message ?? (typeof err === 'string' ? err : JSON.stringify(err));
-  if (/ZeroGPU quota/i.test(raw)) {
+  if (/ZeroGPU quota|GPU quota/i.test(raw)) {
     const wait = raw.match(/Try again in ([0-9:]+)/)?.[1];
+    recordQuotaExhausted(wait);
     return new Error(`Today's free Hugging Face GPU time is used up${wait ? ` — it refills in ${wait}` : ''}. Hugging Face PRO gives ~25 min/day. Meanwhile, build the object in Blender or use Poly Haven / Sketchfab assets.`);
   }
   if (/sufficient permissions to call Inference Providers/i.test(raw)) {
@@ -154,5 +156,6 @@ export async function generate3D(req: Generate3DRequest): Promise<Generate3DResu
 
   const seconds = Math.round((Date.now() - started) / 1000);
   mainLogger.info('threed.generated', { model: SPACES[model], textured, seconds });
+  recordModel(seconds);
   return { glb, referenceImage: referencePath, model: SPACES[model], textured, seconds };
 }

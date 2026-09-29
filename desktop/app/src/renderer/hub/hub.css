@@ -7633,3 +7633,230 @@ button:focus:not(:focus-visible) {
   border-top: 1px solid var(--color-border-subtle);
   padding-top: 18px;
 }
+
+/* ── Hugging Face: how 3D models are made, and the daily limit ─────────── */
+.hf-guide {
+  border-radius: 12px;
+  border: 1px solid var(--line-chip);
+  background: rgba(var(--highlight-rgb), 0.02);
+  transition: background 160ms var(--ease-out);
+}
+
+.hf-guide--open {
+  background: rgba(var(--highlight-rgb), 0.035);
+}
+
+.hf-guide__toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-fg-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hf-guide__toggle:hover {
+  color: var(--color-fg-primary);
+}
+
+.hf-guide__toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--status-running) 60%, transparent);
+  outline-offset: -2px;
+}
+
+.hf-guide__toggle-text {
+  flex: 1;
+}
+
+.hf-guide__pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: rgba(var(--highlight-rgb), 0.07);
+  color: var(--color-fg-secondary);
+}
+
+.hf-guide__pill--pro {
+  background: color-mix(in srgb, #ffd21e 18%, transparent);
+  color: var(--color-fg-primary);
+}
+
+.hf-guide__pill--out {
+  background: color-mix(in srgb, #d97706 16%, transparent);
+  color: #d97706;
+}
+
+.hf-guide__chevron {
+  flex: none;
+  color: var(--color-fg-tertiary);
+  transition: transform 200ms var(--ease-out);
+}
+
+.hf-guide--open .hf-guide__chevron {
+  transform: rotate(180deg);
+}
+
+/* 0fr → 1fr: the body opens to its own height, no measuring. */
+.hf-guide__collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms var(--ease-out);
+}
+
+.hf-guide--open .hf-guide__collapse {
+  grid-template-rows: 1fr;
+}
+
+.hf-guide__body {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 14px;
+  transition: padding 220ms var(--ease-out);
+}
+
+.hf-guide--open .hf-guide__body {
+  padding: 4px 14px 14px;
+}
+
+.hf-guide__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hf-guide__label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-fg-tertiary);
+}
+
+.hf-steps {
+  margin: 0;
+  padding-left: 22px;
+  list-style: decimal outside;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--color-fg-secondary);
+}
+
+.hf-steps li::marker {
+  color: var(--color-fg-tertiary);
+  font-weight: 600;
+}
+
+.hf-steps strong {
+  color: var(--color-fg-primary);
+  font-weight: 600;
+}
+
+.hf-steps__time {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(var(--highlight-rgb), 0.06);
+  font-size: 11px;
+  color: var(--color-fg-tertiary);
+  white-space: nowrap;
+}
+
+.hf-guide__note,
+.hf-guide__privacy,
+.hf-guide__status {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-fg-secondary);
+}
+
+.hf-guide__privacy {
+  color: var(--color-fg-tertiary);
+  font-size: 11.5px;
+}
+
+.hf-guide__status {
+  color: var(--color-fg-primary);
+  font-weight: 500;
+}
+
+.hf-guide__status--out {
+  color: #d97706;
+}
+
+.hf-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.hf-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line-chip);
+  background: rgba(var(--highlight-rgb), 0.03);
+}
+
+.hf-plan--pro {
+  background: color-mix(in srgb, #ffd21e 7%, transparent);
+}
+
+.hf-plan--yours {
+  border-color: color-mix(in srgb, var(--status-running) 60%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--status-running) 25%, transparent);
+}
+
+.hf-plan__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-fg-primary);
+}
+
+.hf-plan__badge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--status-running) 16%, transparent);
+  color: var(--status-running);
+}
+
+.hf-plan__amount {
+  font-size: 12.5px;
+  color: var(--color-fg-primary);
+}
+
+.hf-plan__detail {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--color-fg-tertiary);
+}
+
+.hf-guide__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

@@ -430,6 +430,8 @@ interface AccountInfo {
   connected: boolean;
   profile?: AccountProfileInfo;
   devBuild: boolean;
+  /** Hugging Face only: the plan (sets the daily GPU time) and today's use. */
+  huggingface?: { plan: 'pro' | 'free' | null; modelsToday: number; refillsAt?: number };
 }
 
 type AccountProgressEvent =
@@ -458,6 +460,7 @@ interface ElectronSettingsAccountsAPI {
   connect: (provider: AccountProviderId) => Promise<{ ok: boolean; profile?: AccountProfileInfo; error?: string }>;
   cancel: (provider: AccountProviderId) => Promise<void>;
   disconnect: (provider: AccountProviderId) => Promise<void>;
+  openLink: (key: 'huggingface-pro' | 'huggingface-billing' | 'huggingface-zerogpu') => Promise<void>;
   onProgress: (cb: (event: AccountProgressEvent) => void) => () => void;
 }
 

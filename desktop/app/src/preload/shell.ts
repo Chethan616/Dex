@@ -195,6 +195,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       connect: (provider: 'google' | 'github' | 'slack'): Promise<unknown> => ipcRenderer.invoke('accounts:connect', provider),
       cancel: (provider: 'google' | 'github' | 'slack'): Promise<void> => ipcRenderer.invoke('accounts:cancel', provider),
       disconnect: (provider: 'google' | 'github' | 'slack'): Promise<void> => ipcRenderer.invoke('accounts:disconnect', provider),
+      openLink: (key: 'huggingface-pro' | 'huggingface-billing' | 'huggingface-zerogpu'): Promise<void> => ipcRenderer.invoke('accounts:open-link', key),
       onProgress: (cb: (event: unknown) => void): (() => void) => {
         const handler = (_evt: unknown, payload: unknown) => cb(payload);
         ipcRenderer.on('accounts:progress', handler);
