@@ -36,8 +36,8 @@ android {
     applicationId = "com.chethan616.dex"
     minSdk = 26
     targetSdk = 36
-    versionCode = 7
-    versionName = "1.0.6"
+    versionCode = 15
+    versionName = "1.0.14"
     buildConfigField("boolean", "HAS_FIREBASE", hasFirebaseConfig.toString())
   }
 
@@ -103,6 +103,8 @@ dependencies {
 
 
   implementation(libs.coil.compose)
+  // The in-app 3D viewer: <model-viewer> in a WebView, served from assets.
+  implementation(libs.androidx.webkit)
   implementation(libs.coil.network)
 
   testImplementation(libs.junit)

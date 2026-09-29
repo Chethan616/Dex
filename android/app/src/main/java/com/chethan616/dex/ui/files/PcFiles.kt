@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.PermMedia
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.ViewInAr
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -45,6 +46,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -73,7 +75,8 @@ import java.io.File
 /** Where one file stands on the phone. */
 sealed interface FetchState {
   data object Idle : FetchState
-  data class Loading(val progress: Float) : FetchState
+  /** [label]: what's happening, when it isn't a plain download ("Preparing the scene on your PC…"). */
+  data class Loading(val progress: Float, val label: String? = null) : FetchState
   data class Ready(val file: File) : FetchState
   data class Failed(val message: String) : FetchState
 }
@@ -97,6 +100,13 @@ data class TaskItem(
 class PcFiles(private val context: Context, private val repo: DexRepository, private val sessionId: String) {
   private val states = mutableStateMapOf<String, FetchState>()
 
+  /** A 3D model open in the built-in viewer (see ModelViewerHost). */
+  var viewing by mutableStateOf<Pair<File, TaskItem>?>(null)
+
+  /** A Blender scene open in the scene viewer: render + 3D (see ModelViewerHost). */
+  var viewingScene by mutableStateOf<Pair<com.chethan616.dex.data.SceneFiles, TaskItem>?>(null)
+  private val scenes = mutableStateMapOf<String, com.chethan616.dex.data.SceneFiles>()
+
   init {
     // Yesterday's downloads: the PC still has them, the phone needn't.
     runCatching {
@@ -108,24 +118,91 @@ class PcFiles(private val context: Context, private val repo: DexRepository, pri
   fun state(path: String?): FetchState = path?.let { states[it] } ?: FetchState.Idle
 
   fun open(scope: CoroutineScope, item: TaskItem, share: Boolean = false) {
+    // A .blend opens as a scene (render + 3D) — sharing sends the file itself.
+    if (!share && item.isScene()) {
+      openScene(scope, item)
+      return
+    }
     val current = states[item.path]
-    if (current is FetchState.Loading) return
     if (current is FetchState.Ready && current.file.exists()) {
       launch(current.file, item, share)
       return
     }
+    if (current is FetchState.Loading) {
+      openWhenReady = item.path to share // a tap during a prefetch opens it when it lands
+      return
+    }
+    fetch(scope, item, quiet = false) { file -> launch(file, item, share) }
+  }
+
+  /**
+   * Bring a file over without opening it: 3D models come to the phone as soon
+   * as the task makes them, so the tap opens them at once. Quiet on failure —
+   * a tap tries again and says why.
+   */
+  fun prefetch(scope: CoroutineScope, item: TaskItem) {
+    if (states[item.path] != null) return
+    fetch(scope, item, quiet = true) { }
+  }
+
+  private var openWhenReady: Pair<String, Boolean>? = null
+
+  /**
+   * A .blend: the PC prepares it in a windowless Blender (a render through
+   * the scene camera, the scene as a GLB, its sky), then it comes over and
+   * opens in the scene viewer. Cached, so the second time is instant.
+   */
+  private fun openScene(scope: CoroutineScope, item: TaskItem) {
+    scenes[item.path]?.let { viewingScene = it to item; return }
+    if (states[item.path] is FetchState.Loading) return
+    states[item.path] = FetchState.Loading(0f, "Preparing the scene on your PC…")
+    scope.launch {
+      runCatching {
+        repo.fetchScene(sessionId, item.path, item.size) { label, p ->
+          states[item.path] = FetchState.Loading(p, label.ifBlank { null })
+        }
+      }
+        .onSuccess { scene ->
+          scenes[item.path] = scene
+          states[item.path] = FetchState.Ready(scene.render ?: scene.glb ?: scene.dir)
+          viewingScene = scene to item
+        }
+        .onFailure { states[item.path] = FetchState.Failed(it.message ?: "Couldn’t prepare the scene on your PC.") }
+    }
+  }
+
+  private fun fetch(scope: CoroutineScope, item: TaskItem, quiet: Boolean, then: (File) -> Unit) {
     states[item.path] = FetchState.Loading(0f)
     scope.launch {
-      runCatching { repo.fetchFile(sessionId, item.path) { p -> states[item.path] = FetchState.Loading(p) } }
+      runCatching { repo.fetchFile(sessionId, item.path, item.size) { p -> states[item.path] = FetchState.Loading(p) } }
         .onSuccess { file ->
           states[item.path] = FetchState.Ready(file)
-          launch(file, item, share)
+          val waiting = openWhenReady
+          if (waiting?.first == item.path) {
+            openWhenReady = null
+            launch(file, item, waiting.second)
+          } else {
+            then(file)
+          }
         }
-        .onFailure { states[item.path] = FetchState.Failed(it.message ?: "Couldn’t get it from your PC.") }
+        .onFailure {
+          if (quiet && openWhenReady?.first != item.path) states.remove(item.path)
+          else states[item.path] = FetchState.Failed(it.message ?: "Couldn’t get it from your PC.")
+        }
     }
   }
 
   private fun launch(file: File, item: TaskItem, share: Boolean) {
+    // 3D models open right here, in the built-in viewer.
+    if (!share && file.extension.lowercase() in MODEL_EXTENSIONS) {
+      viewing = file to item
+      return
+    }
+    launchExternal(file, item, share)
+  }
+
+  /** Hand the file to another app: Android's Open with… or Share sheet. */
+  fun launchExternal(file: File, item: TaskItem, share: Boolean) {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
     val type = item.mime?.takeIf { it.isNotBlank() && it != "application/octet-stream" }
       ?: MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase())
@@ -146,11 +223,86 @@ class PcFiles(private val context: Context, private val repo: DexRepository, pri
   }
 }
 
+internal val MODEL_EXTENSIONS = setOf("glb", "gltf")
+
+/** Blender scenes: opened as render + 3D, prepared on the PC. */
+internal val SCENE_EXTENSIONS = setOf("blend")
+
+internal fun TaskItem.isScene(): Boolean = name.substringAfterLast('.').lowercase() in SCENE_EXTENSIONS
+
+/**
+ * Not a result: Blender's save-in-progress (`x.blend@`) and backups
+ * (`.blend1`), lock/temp files — older tasks recorded these (the PC no longer
+ * does, see desktop hl/engines/outputs.ts).
+ */
+internal fun TaskItem.isScratch(): Boolean =
+  name.endsWith("@") || Regex("""\.blend\d+$""", RegexOption.IGNORE_CASE).containsMatchIn(name) ||
+    name.startsWith("~$") || Regex("""\.(tmp|part|crdownload)$""", RegexOption.IGNORE_CASE).containsMatchIn(name)
+
+private fun TaskItem.tapHint(): String = when {
+  isScene() -> "tap to view the scene"
+  name.substringAfterLast('.').lowercase() in MODEL_EXTENSIONS -> "tap to view in 3D"
+  else -> "tap to open"
+}
+
+/** Models small enough to bring over unasked (Firestore chunks, ~9 per 6 MB). */
+internal fun TaskItem.worthPrefetching(): Boolean =
+  name.substringAfterLast('.').lowercase() in MODEL_EXTENSIONS && size in 1..40L * 1024 * 1024
+
 val LocalPcFiles = staticCompositionLocalOf<PcFiles?> { null }
+
+/** Shows the built-in 3D / scene viewer when a model or .blend is opened from this session. */
+@Composable
+fun ModelViewerHost() {
+  val files = LocalPcFiles.current ?: return
+  files.viewingScene?.let { (scene, item) ->
+    com.chethan616.dex.ui.viewer.SceneViewerDialog(
+      scene = scene,
+      name = item.name,
+      onShare = {
+        val render = scene.render
+        if (render != null) files.launchExternal(render, TaskItem(render.path, "${item.name.substringBeforeLast('.')} render.jpg", render.length(), "image/jpeg", null, null), share = true)
+      },
+      onDismiss = { files.viewingScene = null },
+    )
+    return
+  }
+  val (file, item) = files.viewing ?: return
+  com.chethan616.dex.ui.viewer.ModelViewerDialog(
+    file = file,
+    name = item.name,
+    onShare = { files.launchExternal(file, item, share = true) },
+    onOpenWith = { files.launchExternal(file, item, share = false) },
+    onDismiss = { files.viewing = null },
+  )
+}
 
 @Composable
 fun rememberPcFiles(context: Context, repo: DexRepository, sessionId: String): PcFiles =
   remember(sessionId) { PcFiles(context.applicationContext, repo, sessionId) }
+
+/** Pictures by what they are, not by whether a preview came along. */
+private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "gif", "bmp")
+
+internal fun TaskItem.isPicture(): Boolean =
+  thumb != null || mime?.startsWith("image/") == true || name.substringAfterLast('.').lowercase() in IMAGE_EXTENSIONS
+
+/** Pictures without an inline preview are fetched for the grid up to this size. */
+private const val MAX_PREVIEW_FETCH = 12L * 1024 * 1024
+
+/** A small bitmap of a picture already on the phone — decoded at ~1/4 size or less. */
+@Composable
+fun rememberLocalPreview(file: File?): ImageBitmap? = remember(file?.path, file?.length()) {
+  file?.takeIf { it.isFile }?.let { f ->
+    runCatching {
+      val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+      BitmapFactory.decodeFile(f.path, bounds)
+      var sample = 1
+      while (bounds.outWidth / (sample * 2) >= 360) sample *= 2
+      BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inSampleSize = sample })?.asImageBitmap()
+    }.getOrNull()
+  }
+}
 
 /** The inline preview's pixels (a ~50 KB JPEG the PC attached to the block). */
 @Composable
@@ -183,6 +335,7 @@ fun readableSize(n: Long): String = when {
 }
 
 private fun iconFor(item: TaskItem) = when {
+  item.name.substringAfterLast('.').lowercase() in MODEL_EXTENSIONS || item.isScene() -> Icons.Rounded.ViewInAr
   item.thumb != null || item.mime?.startsWith("image/") == true -> Icons.Rounded.Image
   item.mime == "application/pdf" || item.name.endsWith(".pdf", true) -> Icons.Rounded.PictureAsPdf
   else -> Icons.AutoMirrored.Rounded.InsertDriveFile
@@ -231,9 +384,14 @@ fun PcFileCard(item: TaskItem) {
           Text(item.caption?.takeIf { it.isNotBlank() && it != "Screenshot" } ?: item.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
           Text(
             when (state) {
-              is FetchState.Loading -> "Getting it from your PC… ${(state.progress * 100).toInt()}%"
+              is FetchState.Loading -> when {
+                state.label != null && state.progress <= 0f -> state.label
+                state.label != null -> "${state.label} ${(state.progress * 100).toInt()}%"
+                else -> "Downloading from your PC… ${(state.progress * 100).toInt()}%"
+              }
+              is FetchState.Ready -> listOfNotNull(readableSize(item.size).ifEmpty { null }, "on your phone · ${item.tapHint()}").joinToString(" · ")
               is FetchState.Failed -> state.message
-              else -> listOfNotNull(readableSize(item.size).ifEmpty { null }, "tap to open").joinToString(" · ")
+              else -> listOfNotNull(readableSize(item.size).ifEmpty { null }, item.tapHint()).joinToString(" · ")
             },
             style = MaterialTheme.typography.bodySmall,
             color = if (state is FetchState.Failed) scheme.error else scheme.onSurfaceVariant,
@@ -246,10 +404,10 @@ fun PcFileCard(item: TaskItem) {
         }
       }
       if (state is FetchState.Loading) {
-        LinearProgressIndicator(
-          progress = { state.progress.coerceAtLeast(0.03f) },
-          modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 10.dp),
-        )
+        val bar = Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 10.dp)
+        // Preparing on the PC has no percentage yet: an indeterminate bar.
+        if (state.label != null && state.progress <= 0f) LinearProgressIndicator(modifier = bar)
+        else LinearProgressIndicator(progress = { state.progress.coerceAtLeast(0.03f) }, modifier = bar)
       }
     }
   }
@@ -257,18 +415,21 @@ fun PcFileCard(item: TaskItem) {
 
 /** Everything a task produced: pictures, files, documents — deduped by path. */
 fun collectTaskItems(blocks: List<Block>, session: Session?): Triple<List<TaskItem>, List<TaskItem>, List<Block>> {
+  // Windows paths: the same file can come with backslashes or forward slashes.
+  fun key(path: String) = path.replace('\\', '/').lowercase()
   val seen = HashSet<String>()
   val all = mutableListOf<TaskItem>()
   for (b in blocks) {
     if (b.kind != "file" && b.kind != "image") continue
     val item = b.asTaskItem() ?: continue
-    if (seen.add(item.path.lowercase())) all += item
+    if (!item.isScratch() && seen.add(key(item.path))) all += item
   }
   for (f in session?.files.orEmpty()) {
-    if (seen.add(f.path.lowercase())) all += TaskItem(f.path, f.name, f.size, null, null, null)
+    val item = TaskItem(f.path, f.name, f.size, null, null, null)
+    if (!item.isScratch() && seen.add(key(f.path))) all += item
   }
-  val pictures = all.filter { it.thumb != null }
-  val files = all.filter { it.thumb == null }
+  val pictures = all.filter { it.isPicture() }
+  val files = all.filter { !it.isPicture() }
   val documents = blocks.filter { it.kind == "canvas" && !it.text.isNullOrBlank() }
   return Triple(pictures, files, documents)
 }
@@ -315,8 +476,13 @@ fun FilesSheet(blocks: List<Block>, session: Session?, onDismiss: () -> Unit) {
         items(pictures.chunked(3)) { row ->
           Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             row.forEach { pic ->
-              val bmp = rememberThumb(pic.thumb)
               val st = files0?.state(pic.path)
+              // No inline preview (a picture recorded before the PC made
+              // them): bring the picture over and show that instead.
+              if (pic.thumb == null && pic.size <= MAX_PREVIEW_FETCH) {
+                LaunchedEffect(pic.path) { files0?.prefetch(scope, pic) }
+              }
+              val bmp = rememberThumb(pic.thumb) ?: rememberLocalPreview((st as? FetchState.Ready)?.file)
               Box(
                 Modifier
                   .weight(1f)
@@ -326,6 +492,9 @@ fun FilesSheet(blocks: List<Block>, session: Session?, onDismiss: () -> Unit) {
                   .clickable { haptics.tick(); files0?.open(scope, pic) },
               ) {
                 bmp?.let { Image(it, pic.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                if (bmp == null) {
+                  Icon(Icons.Rounded.Image, null, Modifier.align(Alignment.Center).size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 if (st is FetchState.Loading) {
                   LinearProgressIndicator(progress = { st.progress.coerceAtLeast(0.03f) }, modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter))
                 }

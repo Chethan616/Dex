@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.AttachFile
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MoreVert
@@ -96,6 +97,7 @@ import com.chethan616.dex.ui.files.FilesSheet
 import com.chethan616.dex.ui.files.LocalPcFiles
 import com.chethan616.dex.ui.files.collectTaskItems
 import com.chethan616.dex.ui.files.rememberPcFiles
+import com.chethan616.dex.ui.files.worthPrefetching
 import com.chethan616.dex.notify.TaskWatcher
 import com.chethan616.dex.ui.components.ENGINE_NAMES
 import com.chethan616.dex.ui.components.MetalSendButton
@@ -122,8 +124,13 @@ fun SessionScreen(
   val scope = rememberCoroutineScope()
   var confirmStop by remember { mutableStateOf(false) }
   var filesOpen by remember { mutableStateOf(false) }
+  val attach = com.chethan616.dex.ui.attach.rememberAttachmentState()
   val pcFiles = rememberPcFiles(androidx.compose.ui.platform.LocalContext.current, container.repo, sessionId)
   val fileCount = remember(state.blocks, session) { collectTaskItems(state.blocks, session).let { (p, f, d) -> p.size + f.size + d.size } }
+  // A 3D model the task made comes over to the phone right away, so the tap
+  // opens the viewer at once instead of waiting on a download.
+  val models = remember(state.blocks, session) { collectTaskItems(state.blocks, session).second.filter { it.worthPrefetching() } }
+  LaunchedEffect(models) { models.forEach { pcFiles.prefetch(scope, it) } }
 
   // Follow the stream while the reader is at the bottom; leave them be otherwise.
   val atBottom by remember { derivedStateOf { !list.canScrollForward } }
@@ -153,6 +160,7 @@ fun SessionScreen(
 
   androidx.compose.runtime.CompositionLocalProvider(LocalPcFiles provides pcFiles) {
   if (filesOpen) FilesSheet(state.blocks, session, onDismiss = { filesOpen = false })
+  com.chethan616.dex.ui.files.ModelViewerHost()
   Scaffold(
     topBar = {
       SessionTopBar(
@@ -179,7 +187,15 @@ fun SessionScreen(
         Composer(
           session = session,
           sending = sending,
-          onSend = { text -> haptics.send(); vm.followUp(text) },
+          attach = attach,
+          onSend = { text ->
+            haptics.send()
+            val files = attach.items.toList()
+            scope.launch {
+              val ok = vm.followUp(text, files) { attach.uploadProgress = it }
+              if (ok) attach.items.clear() else attach.error = "Couldn’t send that — check your connection and try again."
+            }
+          },
           onPause = { haptics.click(); vm.pause() },
           onResume = { haptics.click(); vm.resume() },
           onStop = { haptics.longPress(); confirmStop = true },
@@ -210,7 +226,10 @@ fun SessionScreen(
           // Why it stopped, when the conversation itself doesn't say (older tasks).
           val failure = session?.error?.takeIf { !live && it.isNotBlank() && state.blocks.none { b -> b.kind == "error" } }
           if (failure != null) {
-            item(key = "failure") { ErrorCard(failure.replace(Regex("""^[a-z_]+_error:\s*""", RegexOption.IGNORE_CASE), "")) }
+            item(key = "failure") {
+              if (failure.equals(com.chethan616.dex.ui.components.USER_STOPPED, ignoreCase = true)) com.chethan616.dex.ui.components.StoppedCard()
+              else ErrorCard(failure.replace(Regex("""^[a-z_]+_error:\s*""", RegexOption.IGNORE_CASE), ""))
+            }
           }
           if (session?.status?.isLive == true && state.blocks.lastOrNull().isQuiet()) {
             item(key = "live") { LiveLine(state.blocks.lastOrNull()) }
@@ -328,7 +347,7 @@ private fun SessionTopBar(
       Column(Modifier.weight(1f)) {
         Text(session?.prompt.orEmpty(), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(verticalAlignment = Alignment.CenterVertically) {
-          session?.let { StatusPill(it.status) }
+          session?.let { StatusPill(it.status, label = com.chethan616.dex.ui.components.sessionStatusLabel(it.status, it.error)) }
           Spacer(Modifier.size(8.dp))
           Text(
             listOfNotNull(ENGINE_NAMES[session?.engine] ?: session?.engine, session?.deviceName).joinToString(" · "),
@@ -386,6 +405,7 @@ private fun ApprovalBanner(title: String, detail: String, onAnswer: (Boolean) ->
 private fun Composer(
   session: Session?,
   sending: Boolean,
+  attach: com.chethan616.dex.ui.attach.AttachmentState,
   onSend: (String) -> Unit,
   onPause: () -> Unit,
   onResume: () -> Unit,
@@ -406,19 +426,16 @@ private fun Composer(
     }
   }
   val paused = session?.status == SessionStatus.Paused
+  val pickers = com.chethan616.dex.ui.attach.rememberAttachPickers(attach)
+  var attachMenu by remember { mutableStateOf(false) }
+  val hasFiles = attach.items.isNotEmpty()
   Surface(
     shape = RoundedCornerShape(32.dp),
     color = scheme.surfaceContainerHigh,
     shadowElevation = 6.dp,
     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
   ) {
-    Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
-      if (live || paused) {
-        FilledTonalIconButton(onClick = if (paused) onResume else onPause, shapes = IconButtonDefaults.shapes()) {
-          Icon(if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, if (paused) "Resume" else "Pause")
-        }
-        FilledTonalIconButton(onClick = onStop, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Stop, "Stop") }
-      }
+    val field: @Composable (Modifier) -> Unit = { m ->
       TextField(
         value = text,
         onValueChange = { text = it },
@@ -430,8 +447,18 @@ private fun Composer(
           focusedIndicatorColor = Color.Transparent,
           unfocusedIndicatorColor = Color.Transparent,
         ),
-        modifier = Modifier.weight(1f),
+        modifier = m,
       )
+    }
+    val attachButton: @Composable () -> Unit = {
+      Box {
+        IconButton(onClick = { haptics.tick(); attachMenu = true }, enabled = session != null) {
+          Icon(Icons.Rounded.AttachFile, "Attach")
+        }
+        com.chethan616.dex.ui.attach.AttachMenu(expanded = attachMenu, onDismiss = { attachMenu = false }, pickers = pickers)
+      }
+    }
+    val micAndSend: @Composable () -> Unit = {
       IconButton(
         onClick = {
           haptics.click()
@@ -446,11 +473,34 @@ private fun Composer(
       ) { Icon(Icons.Rounded.Mic, "Speak") }
       // The desktop's liquid-metal send button.
       MetalSendButton(
-        onClick = { val t = text.trim(); if (t.isNotEmpty()) { onSend(t); text = "" } },
-        enabled = text.isNotBlank() && session != null,
+        onClick = { val t = text.trim(); if (t.isNotEmpty() || hasFiles) { onSend(t); text = "" } },
+        enabled = (text.isNotBlank() || hasFiles) && !attach.preparing && session != null,
         busy = sending,
         size = 48.dp,
       )
+    }
+    Column {
+      com.chethan616.dex.ui.attach.AttachmentStrip(attach, Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp))
+      // While it runs there are five buttons: the text keeps the whole top row
+      // and the controls move underneath, as on the desktop. The field stays at
+      // one call site, so the keyboard survives the switch when a task ends.
+      val running = live || paused
+      Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (!running) attachButton()
+        field(Modifier.weight(1f))
+        if (!running) micAndSend()
+      }
+      if (running) {
+        Row(Modifier.padding(start = 6.dp, end = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+          attachButton()
+          FilledTonalIconButton(onClick = if (paused) onResume else onPause, shapes = IconButtonDefaults.shapes()) {
+            Icon(if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, if (paused) "Resume" else "Pause")
+          }
+          FilledTonalIconButton(onClick = onStop, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Stop, "Stop") }
+          Spacer(Modifier.weight(1f))
+          micAndSend()
+        }
+      }
     }
   }
 }

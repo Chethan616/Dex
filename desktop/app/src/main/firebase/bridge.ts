@@ -23,6 +23,10 @@
  *   transfers/{id}/chunks/{n}   a file the phone asked for (fetch_file), in
  *                               ~700 KB pieces. The phone deletes it once
  *                               saved; anything left is swept after an hour.
+ *   uploads/{id}/chunks/{n}     the other way: a photo or file the phone
+ *                               attached to new_task / follow_up (`uploads`:
+ *                               [ids]). Reassembled here, handed to the run
+ *                               as ordinary attachments, then deleted.
  *
  * Pictures travel as a small inline JPEG preview on their block (`thumb`),
  * so they show at once; the full file only on request. All of it fits the
@@ -36,6 +40,7 @@
  */
 import os from 'node:os';
 import fs from 'node:fs/promises';
+import { statSync } from 'node:fs';
 import path from 'node:path';
 import { nativeImage } from 'electron';
 import { mainLogger } from '../logger';
@@ -45,11 +50,19 @@ import { appendEvent, buildTranscript, type Block, type Transcript } from '../..
 import { firebaseConfig } from './config';
 import { clearCredentials, loadCredentials, saveCredentials } from './credentials';
 import { redactSecrets } from './redact';
+import { resolveAgentPath } from '../hl/agentPaths';
 import { getProfile, profileEvents, setProfile, type DexProfile } from '../profile';
 
 type FirebaseApp = import('firebase/app').FirebaseApp;
 type Firestore = import('firebase/firestore').Firestore;
 type Auth = import('firebase/auth').Auth;
+
+/** A file the phone attached, reassembled from uploads/{id}. */
+export interface PhoneAttachment {
+  name: string;
+  mime: string;
+  bytes: Uint8Array;
+}
 
 export interface BridgeHost {
   listSessions(): AgentSession[];
@@ -60,8 +73,8 @@ export interface BridgeHost {
   /** Files the task recorded (dex-state file) — shown in the phone's Files sheet. */
   getTaskFiles(id: string): Array<{ path: string; name: string; size?: number }>;
   listEngines(): Promise<Array<{ id: string; name: string; models: Array<{ id: string; label: string }> }>>;
-  newTask(input: { prompt: string; engine?: string; model?: string }): Promise<{ id: string; error?: string }>;
-  followUp(id: string, prompt: string): Promise<Record<string, unknown>>;
+  newTask(input: { prompt: string; engine?: string; model?: string; attachments?: PhoneAttachment[] }): Promise<{ id: string; error?: string }>;
+  followUp(id: string, prompt: string, attachments?: PhoneAttachment[]): Promise<Record<string, unknown>>;
   pause(id: string): unknown;
   resume(id: string): Promise<Record<string, unknown>>;
   stop(id: string): unknown;
@@ -117,7 +130,12 @@ const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp)$/i;
  */
 function thumbFor(filePath: string | undefined, mime?: string): string | null {
   if (!filePath || !(IMAGE_EXT.test(filePath) || (mime ?? '').startsWith('image/'))) return null;
-  if (thumbCache.has(filePath)) return thumbCache.get(filePath) ?? null;
+  // Keyed by the file's version too: a render seen while still 0 bytes (or
+  // half-written) must get its preview once it's finished.
+  let version = '';
+  try { const st = statSync(filePath); version = `${st.size}:${st.mtimeMs}`; } catch { return null; }
+  const cacheKey = `${filePath}|${version}`;
+  if (thumbCache.has(cacheKey)) return thumbCache.get(cacheKey) ?? null;
   let out: string | null = null;
   try {
     const img = nativeImage.createFromPath(filePath);
@@ -135,7 +153,7 @@ function thumbFor(filePath: string | undefined, mime?: string): string | null {
     out = null;
   }
   if (thumbCache.size > 300) thumbCache.delete(thumbCache.keys().next().value!);
-  thumbCache.set(filePath, out);
+  thumbCache.set(cacheKey, out);
   return out;
 }
 
@@ -143,6 +161,11 @@ function serializeBlock(block: Block): Record<string, unknown> {
   const base = { seq: block.id, kind: block.kind };
   switch (block.kind) {
     case 'user':
+      return {
+        ...base,
+        text: clip(block.text, MAX_TEXT),
+        attachments: (block.attachments ?? []).slice(0, 10).map((a) => ({ name: clip(a.name, 200), mime: a.mime, size: a.size })),
+      };
     case 'text':
       return { ...base, text: clip(block.text, MAX_TEXT) };
     case 'tool': {
@@ -550,22 +573,54 @@ export class FirebaseBridge {
   }
 
   /**
-   * fetch_file: the phone tapped a picture or file from a task. Only files
-   * that task actually produced or showed can be fetched — never an
-   * arbitrary path — and they travel as base64 chunks under transfers/.
+   * Only files the task actually produced or showed — never an arbitrary
+   * path. Returns the file's real path: older phone copies of a task may
+   * still carry the Git Bash spelling an agent recorded (/tmp/…, /c/…).
    */
-  private async sendFileToPhone(transferId: string, sessionId: string, filePath: string): Promise<Record<string, unknown>> {
-    if (!this.db || !this.uid) throw new Error('Not connected');
+  private assertTaskFile(sessionId: string, filePath: string): string {
     const session = this.host.getSession(sessionId);
     if (!session) throw new Error('That task is no longer on your PC.');
-    const norm = (p: string) => path.resolve(p).toLowerCase();
+    const norm = (p: string) => resolveAgentPath(p, process.cwd()).toLowerCase();
     const allowed = new Set<string>();
     for (const b of this.transcriptFor(session).blocks) {
       if (b.kind === 'file' || b.kind === 'image') allowed.add(norm(b.path));
     }
     for (const f of this.host.getTaskFiles(sessionId)) allowed.add(norm(f.path));
     if (!filePath || !allowed.has(norm(filePath))) throw new Error('That file isn’t part of this task.');
+    return resolveAgentPath(filePath, process.cwd());
+  }
 
+  /**
+   * fetch_file: the phone tapped a picture or file from a task. It travels
+   * as base64 chunks under transfers/.
+   */
+  private async sendFileToPhone(transferId: string, sessionId: string, filePath: string): Promise<Record<string, unknown>> {
+    if (!this.db || !this.uid) throw new Error('Not connected');
+    return this.uploadTransfer(transferId, sessionId, this.assertTaskFile(sessionId, filePath));
+  }
+
+  /**
+   * fetch_file with mode "scene": a .blend, which the phone can't open. The
+   * PC prepares it in a windowless Blender (threed/scenePreview) — a render
+   * through the scene camera, the whole scene as a GLB, the HDRI sky and the
+   * camera view — and sends each part as its own transfer.
+   */
+  private async sendSceneToPhone(commandId: string, sessionId: string, filePath: string): Promise<Record<string, unknown>> {
+    if (!this.db || !this.uid) throw new Error('Not connected');
+    const real = this.assertTaskFile(sessionId, filePath);
+    if (!/\.blend$/i.test(real)) throw new Error('Only .blend files can be opened as a scene.');
+    const { prepareScenePreview } = await import('../threed/scenePreview');
+    const preview = await prepareScenePreview(real);
+    const parts: Record<string, unknown> = {};
+    for (const [name, file] of [['render', preview.render], ['sky', preview.sky], ['glb', preview.glb]] as const) {
+      if (file) parts[name] = await this.uploadTransfer(`${commandId}-${name}`, sessionId, file);
+    }
+    if (!parts.render && !parts.glb) throw new Error('Blender couldn’t make anything viewable from that scene.');
+    return { mode: 'scene', name: path.basename(filePath), view: preview.view, parts };
+  }
+
+  private async uploadTransfer(transferId: string, sessionId: string, filePath: string): Promise<Record<string, unknown>> {
+    if (!this.db || !this.uid) throw new Error('Not connected');
     let data: Buffer;
     try {
       const st = await fs.stat(filePath);
@@ -601,19 +656,54 @@ export class FirebaseBridge {
     return { transferId, name, size: data.length, chunks };
   }
 
+  /**
+   * The phone's attachments for a command: each uploads/{id} (meta written
+   * last, so its presence means every chunk is there) reassembled into
+   * bytes, then deleted. A missing or partial upload fails the command
+   * rather than sending the task without the file.
+   */
+  private async collectUploads(ids: unknown): Promise<PhoneAttachment[]> {
+    if (!Array.isArray(ids) || ids.length === 0 || !this.db || !this.uid) return [];
+    const { collection, doc, getDoc, getDocs, writeBatch } = await import('firebase/firestore');
+    const out: PhoneAttachment[] = [];
+    for (const id of ids.filter((v): v is string => typeof v === 'string').slice(0, 10)) {
+      const ref = doc(this.db, this.userDoc('uploads', id));
+      const meta = await getDoc(ref);
+      if (!meta.exists()) throw new Error('An attachment from the phone didn’t arrive — send it again.');
+      const m = meta.data() as { name?: string; mime?: string; chunks?: number; size?: number };
+      const parts = (await getDocs(collection(ref, 'chunks'))).docs;
+      const ordered = parts.map((d) => d.data() as { i: number; data: string }).sort((a, b) => a.i - b.i);
+      if (ordered.length !== m.chunks) throw new Error(`${m.name ?? 'An attachment'} arrived incomplete (${ordered.length}/${m.chunks} parts) — send it again.`);
+      const bytes = Buffer.concat(ordered.map((p) => Buffer.from(p.data, 'base64')));
+      out.push({ name: String(m.name ?? 'attachment').slice(0, 200), mime: String(m.mime || 'application/octet-stream'), bytes });
+      const batch = writeBatch(this.db);
+      parts.forEach((p) => batch.delete(p.ref));
+      batch.delete(ref);
+      await batch.commit().catch(() => undefined);
+    }
+    if (out.length) mainLogger.info('firebase.bridge.uploadsReceived', { count: out.length, bytes: out.reduce((n, a) => n + a.bytes.byteLength, 0) });
+    return out;
+  }
+
   /** Transfers the phone never picked up (app closed mid-download). */
   private async sweepTransfers(): Promise<void> {
     if (!this.db || !this.uid) return;
     const { collection, getDocs, query, where, writeBatch } = await import('firebase/firestore');
-    const old = await getDocs(query(collection(this.db, this.userDoc('transfers')), where('createdAt', '<', Date.now() - 60 * 60_000)));
-    for (const t of old.docs) {
-      const chunks = await getDocs(collection(t.ref, 'chunks'));
-      const batch = writeBatch(this.db);
-      chunks.docs.forEach((c) => batch.delete(c.ref));
-      batch.delete(t.ref);
-      await batch.commit();
+    let swept = 0;
+    // Both directions: files the phone never picked up, and uploads a
+    // command never claimed (app killed between upload and send).
+    for (const name of ['transfers', 'uploads']) {
+      const old = await getDocs(query(collection(this.db, this.userDoc(name)), where('createdAt', '<', Date.now() - 60 * 60_000)));
+      for (const t of old.docs) {
+        const chunks = await getDocs(collection(t.ref, 'chunks'));
+        const batch = writeBatch(this.db);
+        chunks.docs.forEach((c) => batch.delete(c.ref));
+        batch.delete(t.ref);
+        await batch.commit();
+      }
+      swept += old.size;
     }
-    if (old.size > 0) mainLogger.info('firebase.bridge.transfersSwept', { count: old.size });
+    if (swept > 0) mainLogger.info('firebase.bridge.transfersSwept', { count: swept });
   }
 
   private async runCommand(commandId: string, data: Record<string, unknown>): Promise<void> {
@@ -637,13 +727,14 @@ export class FirebaseBridge {
       let result: Record<string, unknown> = {};
       switch (data.type) {
         case 'new_task': {
-          const r = await this.host.newTask({ prompt: str(data.prompt), engine: str(data.engine) || undefined, model: str(data.model) || undefined });
+          const attachments = await this.collectUploads(data.uploads);
+          const r = await this.host.newTask({ prompt: str(data.prompt), engine: str(data.engine) || undefined, model: str(data.model) || undefined, attachments });
           result = { sessionId: r.id, error: r.error ?? null };
           if (r.id) await this.writeSession(r.id, { withBlocks: true });
           break;
         }
         case 'follow_up':
-          result = await this.host.followUp(str(data.sessionId), str(data.prompt));
+          result = await this.host.followUp(str(data.sessionId), str(data.prompt), await this.collectUploads(data.uploads));
           break;
         case 'pause':
           result = { value: JSON.parse(JSON.stringify(this.host.pause(str(data.sessionId)) ?? null)) };
@@ -667,7 +758,9 @@ export class FirebaseBridge {
           result = { synced: true };
           break;
         case 'fetch_file':
-          result = await this.sendFileToPhone(commandId, str(data.sessionId), str(data.path));
+          result = data.mode === 'scene'
+            ? await this.sendSceneToPhone(commandId, str(data.sessionId), str(data.path))
+            : await this.sendFileToPhone(commandId, str(data.sessionId), str(data.path));
           break;
         default:
           throw new Error(`Unknown command: ${String(data.type)}`);

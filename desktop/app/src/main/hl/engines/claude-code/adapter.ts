@@ -278,8 +278,10 @@ const claudeCodeAdapter: EngineAdapter = {
       if (inner?.type === 'content_block_delta') {
         const delta = inner.delta as Record<string, unknown> | undefined;
         if (delta?.type === 'text_delta' && typeof delta.text === 'string') {
+          // Whitespace-only deltas matter: " " between "114" and "users",
+          // "\n\n" between paragraphs and table rows. Consumers merge them.
           const txt = delta.text as string;
-          if (txt.trim()) events.push({ type: 'thinking', text: txt });
+          if (txt) events.push({ type: 'thinking', text: txt });
         }
       }
       return { events };

@@ -1,0 +1,122 @@
+<!doctype html>
+<!--
+  DEX's 3D viewer: Google's <model-viewer> (Apache-2.0, bundled next to this
+  file — no network). Served through WebViewAssetLoader, so the model comes
+  from the app's cache at /files/… and nothing leaves the phone.
+  ?src=<path>&bg=<#rrggbb>&fg=<#rrggbb>
+-->
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <script type="module" src="model-viewer.min.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg, #111318); }
+    /* Pinned to the viewport rather than height:100%, which a WebView can
+       lay out against a zero-height page. */
+    model-viewer {
+      position: fixed; inset: 0; width: auto; height: auto;
+      background: radial-gradient(120% 90% at 50% 35%, color-mix(in srgb, var(--fg, #fff) 7%, var(--bg, #111318)) 0%, var(--bg, #111318) 70%);
+      --progress-bar-color: #1683FF;
+      --progress-bar-height: 3px;
+      --poster-color: transparent;
+    }
+    .error { position: fixed; inset: 0; display: none; place-items: center; color: var(--fg, #fff); font: 15px system-ui, sans-serif; opacity: .8; padding: 24px; text-align: center; }
+  </style>
+</head>
+<body>
+  <model-viewer id="mv"
+    camera-controls
+    touch-action="none"
+    auto-rotate
+    auto-rotate-delay="1200"
+    rotation-per-second="18deg"
+    interaction-prompt="none"
+    shadow-intensity="1"
+    shadow-softness="0.9"
+    exposure="1.05"
+    environment-image="neutral"
+    tone-mapping="aces"
+    interpolation-decay="120">
+  </model-viewer>
+  <div class="error" id="err">This model couldn’t be shown.</div>
+  <script>
+    const q = new URLSearchParams(location.search);
+    const root = document.documentElement.style;
+    if (q.get('bg')) root.setProperty('--bg', q.get('bg'));
+    if (q.get('fg')) root.setProperty('--fg', q.get('fg'));
+    const mv = document.getElementById('mv');
+    // A Blender scene: its HDRI as the sky (and the light), and the camera
+    // where the PC's render was taken. ?sky=&orbit=&target=&fov=&radius=
+    let scene = q.get('orbit');
+    // The render is landscape; a phone held upright shows far less width at
+    // the same field of view. Step the camera back (not a wider lens — that
+    // distorts) so the subject is framed about as in the render.
+    const renderAspect = parseFloat(q.get('aspect') || '') || 16 / 9;
+    const screenAspect = innerWidth / Math.max(innerHeight, 1);
+    const pulled = scene && scene.match(/^(\S+)\s+(\S+)\s+([\d.]+)m$/);
+    if (pulled && screenAspect < renderAspect) {
+      scene = `${pulled[1]} ${pulled[2]} ${(parseFloat(pulled[3]) * Math.sqrt(renderAspect / screenAspect)).toFixed(4)}m`;
+    }
+    if (q.get('sky')) {
+      mv.setAttribute('skybox-image', q.get('sky'));
+      mv.setAttribute('environment-image', q.get('sky'));
+      mv.setAttribute('shadow-intensity', '0');
+    }
+    if (scene) {
+      mv.removeAttribute('auto-rotate');
+      mv.setAttribute('camera-orbit', scene);
+      if (q.get('target')) mv.setAttribute('camera-target', q.get('target'));
+      if (q.get('fov')) mv.setAttribute('field-of-view', q.get('fov'));
+      // Room to walk up close and back out past the whole scene.
+      const r = parseFloat(q.get('radius') || '0') || 10;
+      mv.setAttribute('min-camera-orbit', `auto 0deg ${Math.max(r * 0.002, 0.01)}m`);
+      // Stay a little above the target: a scene camera at eye level, swung
+      // round the subject, otherwise ends up inside the terrain behind it.
+      mv.setAttribute('max-camera-orbit', `auto 84deg ${r * 8}m`);
+      mv.setAttribute('min-field-of-view', '5deg');
+      mv.setAttribute('max-field-of-view', '100deg');
+    }
+    const home = { orbit: scene || 'auto auto auto', target: q.get('target') || 'auto auto auto', fov: q.get('fov') || 'auto' };
+    mv.addEventListener('error', (e) => {
+      const d = e.detail || {};
+      console.error('model error', d.type);
+      // A lost GPU context comes back by itself; only a failed load is final.
+      if (d.type === 'loadfailure') document.getElementById('err').style.display = 'grid';
+    });
+    mv.addEventListener('load', () => {
+      console.log('model loaded', mv.clientWidth + 'x' + mv.clientHeight);
+      window.DexViewer && window.DexViewer.loaded();
+    });
+    mv.src = q.get('src');
+    // Double-tap: back to the starting view. Only real taps count — one
+    // finger, short, not moved. A pinch ends with two pointer-ups in quick
+    // succession, which used to read as a double-tap and undo the zoom.
+    const down = new Map();          // pointerId → { x, y, t }
+    let gestureFingers = 0;          // most fingers down during this gesture
+    let lastTap = null;              // { x, y, t } of the previous tap
+    mv.addEventListener('pointerdown', (e) => {
+      down.set(e.pointerId, { x: e.clientX, y: e.clientY, t: Date.now() });
+      gestureFingers = Math.max(gestureFingers, down.size);
+    });
+    const release = (e) => {
+      const start = down.get(e.pointerId);
+      down.delete(e.pointerId);
+      const fingers = gestureFingers;
+      if (down.size === 0) gestureFingers = 0;
+      if (!start || e.type === 'pointercancel' || fingers > 1) { lastTap = null; return; }
+      const now = Date.now();
+      const tap = now - start.t < 250 && Math.hypot(e.clientX - start.x, e.clientY - start.y) < 12;
+      if (!tap) { lastTap = null; return; }
+      if (lastTap && now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40) {
+        mv.cameraOrbit = home.orbit; mv.cameraTarget = home.target; mv.fieldOfView = home.fov; mv.jumpCameraToGoal();
+        lastTap = null;
+      } else {
+        lastTap = { x: e.clientX, y: e.clientY, t: now };
+      }
+    };
+    mv.addEventListener('pointerup', release);
+    mv.addEventListener('pointercancel', release);
+  </script>
+</body>
+</html>

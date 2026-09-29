@@ -62,6 +62,13 @@ fun statusLabel(status: SessionStatus): String = when (status) {
   SessionStatus.Stopped -> "Done"
 }
 
+/** The PC's word for a task you stopped (its status is plain "stopped", like a finished one). */
+const val USER_STOPPED = "Cancelled by user"
+
+/** "Stopped" for a task you stopped, otherwise the status's own label. */
+fun sessionStatusLabel(status: SessionStatus, error: String?): String =
+  if (status == SessionStatus.Stopped && error.equals(USER_STOPPED, ignoreCase = true)) "Stopped" else statusLabel(status)
+
 /** Status dot that pulses while the task is live. */
 @Composable
 fun StatusDot(status: SessionStatus, modifier: Modifier = Modifier) {
@@ -81,7 +88,7 @@ fun StatusDot(status: SessionStatus, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun StatusPill(status: SessionStatus, modifier: Modifier = Modifier) {
+fun StatusPill(status: SessionStatus, modifier: Modifier = Modifier, label: String = statusLabel(status)) {
   val color = statusColor(status)
   Row(
     modifier
@@ -91,7 +98,7 @@ fun StatusPill(status: SessionStatus, modifier: Modifier = Modifier) {
     horizontalArrangement = Arrangement.spacedBy(6.dp),
   ) {
     StatusDot(status)
-    Text(statusLabel(status), style = MaterialTheme.typography.labelMedium, color = color)
+    Text(label, style = MaterialTheme.typography.labelMedium, color = color)
   }
 }
 

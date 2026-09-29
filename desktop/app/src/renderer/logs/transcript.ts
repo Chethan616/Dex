@@ -70,7 +70,7 @@ export interface ToolResult {
 }
 
 export type Block =
-  | { kind: 'user'; id: number; text: string }
+  | { kind: 'user'; id: number; text: string; attachments?: Array<{ name: string; mime: string; size: number }> }
   | { kind: 'text'; id: number; text: string }
   | { kind: 'tool'; id: number; name: string; meta: ToolMeta; summary: string; args: unknown; iteration: number; result?: ToolResult }
   /**
@@ -125,7 +125,9 @@ function summarizeArgs(args: unknown): string {
   return str(args).split('\n')[0];
 }
 
-const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+// Whitespace and Markdown markers dropped: streamed deltas sometimes lose a
+// space ("114users"), and the summary may be the plain-text version.
+const norm = (s: string) => s.replace(/[\s*_`#>|~]+/g, '').toLowerCase();
 
 /** Does `summary` just repeat the agent's last reply in this turn? */
 function echoesLastReply(t: Transcript, summary: string): boolean {
@@ -193,6 +195,19 @@ export function appendEvent(t: Transcript, raw: RawEvent): Transcript {
         }
       }
       return t;
+    }
+    case 'user_attachments': {
+      const items = Array.isArray(raw.items) ? (raw.items as Array<{ name: string; mime: string; size: number }>) : [];
+      if (items.length === 0) return t;
+      for (let i = t.blocks.length - 1; i >= 0; i -= 1) {
+        const b = t.blocks[i];
+        if (b.kind === 'user') {
+          const blocks = t.blocks.slice();
+          blocks[i] = { ...b, attachments: [...(b.attachments ?? []), ...items] };
+          return { ...t, blocks };
+        }
+      }
+      return push(t, { kind: 'user', id, text: '', attachments: items });
     }
     case 'done': {
       const summary = str(raw.summary) || 'Task completed';

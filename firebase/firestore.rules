@@ -54,5 +54,15 @@ service cloud.firestore {
         allow read, write: if isOwner(uid);
       }
     }
+
+    // The other direction: photos/files the phone attaches to a task. The
+    // phone writes chunks then the meta doc; the desktop reads and deletes
+    // them. Transient — swept after an hour.
+    match /users/{uid}/uploads/{uploadId} {
+      allow read, write: if isOwner(uid);
+      match /chunks/{chunkId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
   }
 }

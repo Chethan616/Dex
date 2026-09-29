@@ -66,9 +66,10 @@ export function applyBrowserHarnessEnv(ctx: SpawnContext, env: NodeJS.ProcessEnv
   // reviewed. Lives beside the harness in userData so it survives every
   // harness rewrite, unlike the harness tree itself.
   env.DEX_SITE_MEMORY_DIR = path.join(path.dirname(ctx.harnessDir), 'site-memory');
-  // Blender, for `dex-blender open` and headless scripts/renders.
+  // Blender, for `dex-blender` (headless scripts/renders, the task's scene).
   const blender = findBlender();
   if (blender) env.DEX_BLENDER = blender;
+  env.DEX_BLENDER_HOME = path.join(path.dirname(ctx.harnessDir), 'blender');
 
   if (process.platform === 'win32') {
     const bash = resolveGitBash(env);

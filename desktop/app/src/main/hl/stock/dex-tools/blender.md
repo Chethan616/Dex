@@ -1,11 +1,14 @@
 # Blender — scenes, models, renders
 
-Two ways in, use both:
+**Blender runs in the background — no window.** The user keeps their desktop
+(browsing, typing, gaming) while you model, and nothing needs focus. Never
+open the Blender app on their screen unless they ask to see it
+(`dex-blender show`).
 
 | | What | When |
 |---|---|---|
-| **Blender tools** (`mcp__blender__*`, MCP server `blender` / `dex_blender`) | Drive the **open** Blender: run Python in the live scene, **see the viewport** (`get_viewport_screenshot`), inspect objects, pull Poly Haven / Sketchfab / Poly Pizza assets, export GLB/FBX | Building and iterating — anything you need to look at |
-| **`dex-blender`** | `open` Blender and wait until the tools can reach it · `run` a script headless · `render` a still headless | Starting Blender; batch scripts; the final render |
+| **Blender tools** (`mcp__blender__*`, MCP server `blender` / `dex_blender`) | This task's background Blender — started by the first call, a few seconds: run Python in the scene, **see it** (`get_viewport_screenshot` = a real render), inspect objects, pull Poly Haven / Sketchfab / Poly Pizza assets, export GLB/FBX | Building and iterating — anything you need to look at |
+| **`dex-blender`** | `status` · `scene` (the scene's .blend, autosaved after every change) · `run` a script / `render` a still in a separate headless Blender · `show` it to the user when asked | Final renders; batch scripts |
 | **`dex-3d`** | An AI-generated, **textured** model (GLB) of one object, from a description or a picture (Hunyuan3D-2.1 on Hugging Face) | Hero objects that are hard to build by hand: characters, creatures, plants, detailed props |
 
 ## The quality bar
@@ -19,7 +22,8 @@ The user judges the render, not the effort. Blocky primitive stacks read as a 2/
 - **Materials have texture**: image textures (Poly Haven) or procedural noise/voronoi driving colour and roughness. A flat colour is a placeholder, not a finish.
 - **Self-review before you finish**: rate the render 1–5 on silhouette & detail, materials, lighting, composition. Anything under 4 — fix the weakest one and render again. Say the scores in your answer.
 
-If a Blender tool says it can't connect: `dex-blender open` (or `dex-blender open path\to\scene.blend`), then retry.
+There is nothing to open first: the tools start the background Blender. If one reports a problem, `dex-blender status` says what's running.
+The scene carries over between turns of this task (autosave) — a follow-up like "make the roof blue" continues where you left off.
 `"$DEX_BLENDER"` is the Blender exe if you need it directly.
 
 ## The loop — this is what makes it good
@@ -27,15 +31,20 @@ If a Blender tool says it can't connect: `dex-blender open` (or `dex-blender ope
 1. **Plan before geometry.** Write the shot down: subject, style (realistic / stylised / low-poly), mood, time of day, camera angle, what's in foreground / midground / background. `dex-state plan` it.
 2. **Look first.** `get_addon_status` (Blender version) and `get_scene_info`. Start from an empty scene unless asked to edit one (delete the default cube, keep nothing you didn't mean to).
 3. **Block out** with simple shapes at real-world scale (1 unit = 1 m: a door is 2 m, a chair seat 0.45 m). Get proportions and composition right before any detail. Ground, floors and water must reach past the edges of the camera's view (a 200–500 m plane, or a big disc) — a visible edge where the world ends ruins the shot. Small props must be big enough to read at the camera's distance.
-4. **Screenshot after every meaningful change** — `get_viewport_screenshot` — and actually judge it: proportions, overlaps, floating or sunken objects, empty frame. Fix, then look again. Never report something you haven't looked at.
-   - **The screenshot shows the editor viewport, not the camera.** To judge the *shot*, look through the camera first — in `execute_blender_code`: for every `VIEW_3D` area, `area.spaces[0].region_3d.view_perspective = "CAMERA"` and `area.spaces[0].shading.type = "MATERIAL"` — then screenshot. Everything important must be inside the frame with breathing room: nothing cut off at the edges (tree tops, heads), subject filling roughly a third to two-thirds of the frame.
-   - **The final check is a real render**: `dex-blender render scene.blend preview.png --samples 16 --size 960x540`, then Read the PNG. Lighting, materials and edges only show up for real there.
+4. **Look after every meaningful change** — `get_viewport_screenshot` — and actually judge it: proportions, overlaps, floating or sunken objects, empty frame. Fix, then look again. Never report something you haven't looked at.
+   - There's no viewport in the background: the "screenshot" is a **quick EEVEE render through the scene camera** — exactly the shot. With no camera yet it shows an automatic 3/4 view of everything; with no lights yet, a neutral studio light (its result says so). So set up the camera early and the screenshots become the composition check: everything important inside the frame with breathing room, nothing cut off at the edges (tree tops, heads), subject filling roughly a third to two-thirds of the frame.
+   - **The final check is a full render**: `dex-blender render "$(dex-blender scene)" preview.png --samples 16 --size 960x540`, then Read the PNG.
 5. **Detail**: bevels (Bevel modifier, 2–3 segments) so edges catch light; Subdivision + shade smooth for organic forms; Array/Mirror/Solidify instead of duplicated hand-work; Geometry Nodes for scattering (rocks, grass, crowds).
 6. **Materials — PBR**: Principled BSDF. Real values: metals Metallic 1, roughness 0.2–0.5; plastics roughness 0.3–0.6; wood/stone with textures. Poly Haven textures (`search_polyhaven_assets` type textures → `download_polyhaven_asset` → `set_texture`) beat flat colours every time. Add subtle roughness variation (Noise texture → ColorRamp → Roughness) so nothing looks like CG plastic.
 7. **Light like a photographer**: a Poly Haven **HDRI** for the world (instant realism), plus a key light (Area, large = soft) and optionally a rim light behind the subject. Avoid a single point light and flat grey world.
 8. **Camera**: 35–50 mm for natural, 85 mm+ for product shots, 18–24 mm for interiors/landscapes. Rule of thirds, a clear subject, something in the foreground for depth. Depth of field (f/2.8–5.6) focused on the subject for product/hero shots. `bpy.context.scene.camera` must be set.
-9. **Render**: `dex-blender render scene.blend out.png` — EEVEE (fast, default) for previews, `--engine cycles --samples 128–512` for finals (Cycles runs on this PC's GPU). Look at the render (Read the PNG) before calling it done.
-10. **Deliver**: save the `.blend` (`bpy.ops.wm.save_as_mainfile`) in `./outputs/<session>/`, render, `dex-state file` both, and if the user is on their phone or asked, `dex-send` the render. Mention both paths in the answer.
+9. **Render**: `dex-blender render "$(dex-blender scene)" out.png` — EEVEE (fast, default) for previews, `--engine cycles --samples 128–512` for finals (Cycles runs on this PC's GPU). It's a separate process, so the tools stay free. Look at the render (Read the PNG) before calling it done.
+10. **Deliver** into `./outputs/<session>/`:
+    - the `.blend` — `bpy.ops.wm.save_as_mainfile(filepath=..., copy=True)`;
+    - **a `.glb` of the model** — `bpy.ops.export_scene.gltf(filepath=".../name.glb", export_format="GLB", use_selection=True)` with the model's objects selected (not the ground, lights or camera), or the `dex-3d` GLB itself if that is the whole model;
+    - the final render.
+
+    `dex-state file` each one. They show up in the task — and **on the user's phone**: a .glb opens in the built-in 3D viewer (turn, zoom), and a **.blend opens as the full scene** — the phone asks this PC to render it through the scene camera and to export everything, then shows Render and an interactive 3D of the whole scene inside its HDRI. So give the scene a real camera and world before you save it. A task from the phone isn't finished until its .glb and .blend are recorded. Mention the paths in the answer.
 
 ## Models — pick the right source
 
@@ -54,8 +63,9 @@ After importing anything: read its `world_bounding_box`, then fix scale and loca
 - `Material.use_nodes` is deprecated in 5.x (removed in 6.0) — new materials have nodes already; set colours on the BSDF inputs, not `material.diffuse_color`.
 - Prefer data API (`bpy.data`, `obj.modifiers.new`, `bmesh`) over `bpy.ops` where possible — ops depend on context and selection.
 - Keep each `execute_blender_code` call to one logical step, and `print()` what you changed so you can see it.
-- Long jobs (heavy renders, bakes, big scatters) go headless: write the script, `dex-blender run script.py scene.blend`.
+- **No UI in the background**: `bpy.context.screen`, areas, spaces and region_3d don't exist, and editor operators (`bpy.ops.view3d.*`, `screen.*`) fail. Use the data API, object/mesh operators and bmesh.
+- Long jobs (Cycles finals, bakes, big scatters) don't belong in a tool call — they'd hit its time limit: `dex-blender render "$(dex-blender scene)" …`, or write a script and `dex-blender run script.py "$(dex-blender scene)"`.
 
 ## Safety
 
-`execute_blender_code` runs arbitrary Python inside the user's Blender. Never delete or overwrite the user's own `.blend` files — work in a new file under `./outputs/<session>/` unless they asked you to edit theirs, and save their file under a new name first if you must. Don't read or send files outside the task.
+`execute_blender_code` runs arbitrary Python in Blender on the user's PC. Never delete or overwrite the user's own `.blend` files — work in a new file under `./outputs/<session>/` unless they asked you to edit theirs, and save their file under a new name first if you must. Don't read or send files outside the task.

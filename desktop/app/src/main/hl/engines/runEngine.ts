@@ -30,6 +30,7 @@ import type {
 } from './types';
 import type { HlEvent } from '../../../shared/session-schemas';
 import type { WebContents } from 'electron';
+import { isScratchFile } from './outputs';
 
 async function resolveTargetIdForWebContents(wc: WebContents): Promise<string> {
   const dbg = wc.debugger;
@@ -58,6 +59,8 @@ function mimeFromExt(filename: string): string {
     yaml: 'application/x-yaml', yml: 'application/x-yaml',
     js: 'text/javascript', ts: 'application/typescript', py: 'text/x-python',
     zip: 'application/zip', tar: 'application/x-tar', gz: 'application/gzip',
+    glb: 'model/gltf-binary', gltf: 'model/gltf+json', obj: 'model/obj', stl: 'model/stl',
+    fbx: 'application/octet-stream', blend: 'application/x-blender',
   };
   return map[ext] ?? 'application/octet-stream';
 }
@@ -509,7 +512,7 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
       const filePath = path.join(outputsDir, filename);
       let stat;
       try { stat = fs.statSync(filePath); } catch { return; }
-      if (!stat.isFile()) return;
+      if (!stat.isFile() || stat.size === 0 || isScratchFile(filename)) return;
       if (seenOutputs.get(filename) === stat.size) return;
       seenOutputs.set(filename, stat.size);
       opts.onEvent({

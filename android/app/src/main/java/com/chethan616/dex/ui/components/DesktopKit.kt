@@ -226,10 +226,15 @@ fun PromptBar(
   onMore: () -> Unit,
   modifier: Modifier = Modifier,
   placeholder: String = "Whats on your mind today?",
+  /** Photos/files for the task; "+" opens Photos · Camera · Files · More options. */
+  attachments: com.chethan616.dex.ui.attach.AttachmentState? = null,
+  pickers: com.chethan616.dex.ui.attach.AttachPickers? = null,
 ) {
   val haptics = LocalHaptics.current
   val scheme = MaterialTheme.colorScheme
   var text by rememberSaveable { mutableStateOf("") }
+  var attachMenu by remember { mutableStateOf(false) }
+  val hasFiles = (attachments?.items?.size ?: 0) > 0
   var engineId by rememberSaveable { mutableStateOf(initialEngine ?: engines.firstOrNull()?.id) }
   var model by rememberSaveable { mutableStateOf<String?>(null) }
   var engineMenu by remember { mutableStateOf(false) }
@@ -237,7 +242,7 @@ fun PromptBar(
 
   fun send() {
     val prompt = text.trim()
-    if (prompt.isEmpty() || busy) return
+    if ((prompt.isEmpty() && !hasFiles) || busy || attachments?.preparing == true) return
     haptics.send()
     onSend(prompt, engine?.id, model)
     text = ""
@@ -251,6 +256,9 @@ fun PromptBar(
     modifier = modifier.fillMaxWidth(),
   ) {
     Column(Modifier.padding(start = 18.dp, end = 12.dp, top = 16.dp, bottom = 12.dp)) {
+      if (attachments != null) {
+        com.chethan616.dex.ui.attach.AttachmentStrip(attachments, Modifier.padding(bottom = 10.dp))
+      }
       BasicTextField(
         value = text,
         onValueChange = { text = it },
@@ -269,14 +277,30 @@ fun PromptBar(
       // Phone layout: [+] [agent ▾] ··· [mic] [send]. The model lives inside the
       // agent menu, so the row never outgrows a narrow screen.
       Row(verticalAlignment = Alignment.CenterVertically) {
-        BarChip(onClick = { haptics.tick(); onMore() }, modifier = Modifier.size(38.dp)) {
-          Icon(Icons.Rounded.Add, "More", Modifier.size(18.dp))
+        Box {
+          BarChip(
+            onClick = { haptics.tick(); if (pickers != null) attachMenu = true else onMore() },
+            modifier = Modifier.size(38.dp),
+          ) {
+            Icon(Icons.Rounded.Add, if (pickers != null) "Attach" else "More", Modifier.size(18.dp))
+          }
+          if (pickers != null) {
+            com.chethan616.dex.ui.attach.AttachMenu(
+              expanded = attachMenu,
+              onDismiss = { attachMenu = false },
+              pickers = pickers,
+              extraLabel = "More options",
+              onExtra = onMore,
+            )
+          }
         }
         Spacer(Modifier.size(8.dp))
         if (engine != null) {
-          Box(Modifier.weight(1f, fill = false)) {
+          // The agent chip's box takes all the free space (so its name isn't
+          // squeezed to "…"); the chip itself hugs its content on the left.
+          Box(Modifier.weight(1f)) {
             BarChip(onClick = { haptics.tick(); engineMenu = true }) {
-              BotAvatar(type = botTypeFor(engine.id, engine.id), mood = BotMood.Idle, size = 20.dp, interactive = false)
+              BotAvatar(type = botTypeFor(engine.id), mood = BotMood.Idle, size = 20.dp, interactive = false)
               Spacer(Modifier.size(6.dp))
               Text(
                 engine.name + (engine.models.firstOrNull { it.id == model }?.let { " · ${it.label}" } ?: ""),
@@ -291,7 +315,7 @@ fun PromptBar(
               Text("Agent", style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
               engines.forEach { e ->
                 DropdownMenuItem(
-                  leadingIcon = { BotAvatar(type = botTypeFor(e.id, e.id), mood = if (e.id == engine.id) BotMood.Working else BotMood.Idle, size = 28.dp, interactive = false) },
+                  leadingIcon = { BotAvatar(type = botTypeFor(e.id), mood = if (e.id == engine.id) BotMood.Working else BotMood.Idle, size = 28.dp, interactive = false) },
                   text = {
                     Column(Modifier.widthIn(min = 180.dp)) {
                       Row(verticalAlignment = Alignment.CenterVertically) {
@@ -324,12 +348,12 @@ fun PromptBar(
             }
           }
         }
-        Spacer(Modifier.weight(1f).widthIn(min = 8.dp))
+        if (engine == null) Spacer(Modifier.weight(1f)) else Spacer(Modifier.size(8.dp))
         androidx.compose.material3.IconButton(onClick = onVoice, modifier = Modifier.size(40.dp)) {
           Icon(Icons.Rounded.Mic, "Speak", tint = scheme.onSurfaceVariant)
         }
         Spacer(Modifier.size(4.dp))
-        MetalSendButton(onClick = ::send, enabled = text.isNotBlank(), busy = busy)
+        MetalSendButton(onClick = ::send, enabled = (text.isNotBlank() || hasFiles) && attachments?.preparing != true, busy = busy)
       }
       if (status != null) {
         Spacer(Modifier.height(8.dp))

@@ -47,14 +47,22 @@ import kotlin.random.Random
 
 enum class BotMood { Idle, Working, Sleeping }
 
-/** Same mapping as the desktop's AgentAvatar: engine → body shape, else a stable hash. */
-fun botTypeFor(engineId: String?, key: String?): String {
-  when (engineId) {
-    "claude-code" -> return "flower"
-    "codex" -> return "circle"
-    "browsercode", "opencode" -> return "droid"
+/**
+ * Same mapping as the desktop's AgentAvatar: every task gets its own bot, a
+ * stable hash of its session id — so a list of tasks isn't a row of identical
+ * faces, and a task looks the same on the phone and the PC. Without a task
+ * (the agent pickers) the engine picks: Claude Code a flower, Codex a circle,
+ * BrowserCode a droid.
+ */
+fun botTypeFor(engineId: String?, sessionId: String? = null): String {
+  if (sessionId == null) {
+    when (engineId) {
+      "claude-code" -> return "flower"
+      "codex" -> return "circle"
+      "browsercode", "opencode" -> return "droid"
+    }
   }
-  val k = key ?: engineId ?: "dex"
+  val k = sessionId ?: engineId ?: "dex"
   var h = 2166136261L
   for (c in k) {
     h = h xor c.code.toLong()

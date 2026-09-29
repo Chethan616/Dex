@@ -54,10 +54,25 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Strin
     viewModelScope.launch { runCatching { c.repo.send(type, mapOf("sessionId" to sessionId) + extra) } }
   }
 
-  fun followUp(text: String) {
-    viewModelScope.launch {
-      _sending.value = true
-      runCatching { c.repo.send(CommandType.FollowUp, mapOf("sessionId" to sessionId, "prompt" to text)) }
+  /** Follow up (with attachments uploaded first). Returns whether it went. */
+  suspend fun followUp(
+    text: String,
+    attachments: List<com.chethan616.dex.data.PendingAttachment> = emptyList(),
+    onUpload: (Float?) -> Unit = {},
+  ): Boolean {
+    _sending.value = true
+    return try {
+      val uploads = if (attachments.isEmpty()) emptyList() else try {
+        c.repo.uploadAll(attachments) { onUpload(it) }
+      } finally {
+        onUpload(null)
+      }
+      val prompt = text.ifBlank { if (attachments.size == 1) "Here’s a file for this." else "Here are some files for this." }
+      c.repo.send(CommandType.FollowUp, mapOf("sessionId" to sessionId, "prompt" to prompt, "uploads" to uploads.ifEmpty { null }))
+      true
+    } catch (_: Throwable) {
+      false
+    } finally {
       _sending.value = false
     }
   }

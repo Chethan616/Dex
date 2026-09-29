@@ -105,6 +105,7 @@ import { TaskStateMutationSchema } from '../shared/session-schemas';
 // Agent loop: CLI subprocess driving the browser harness. Engine is
 // pluggable (claude-code, codex, …) — see src/main/hl/engines/.
 import { bootstrapHarness, harnessDir } from './hl/harness';
+import { resolveAgentPath } from './hl/agentPaths';
 import { runEngine, DEFAULT_ENGINE_ID } from './hl/engines';
 import type { EngineRunControl } from './hl/engines/types';
 import { getEngine, setEngine, type EngineId } from './hl/engine';
@@ -1155,6 +1156,12 @@ app.whenReady().then(async () => {
     queuedFollowUps.delete(id);
   }
 
+  /** Show what the user attached, on their message in the chat (desktop + phone). */
+  function noteUserAttachments(sessionId: string, items: Array<{ name: string; mime: string; size: number }>): void {
+    if (items.length === 0) return;
+    sessionManager.appendOutput(sessionId, { type: 'user_attachments', items });
+  }
+
   async function resumeSessionWithAgent(
     validatedId: string,
     validatedPrompt: string,
@@ -1215,6 +1222,7 @@ app.whenReady().then(async () => {
     const engineId = sessionManager.getSessionEngine(validatedId) ?? DEFAULT_ENGINE_ID;
     await stampConfiguredSessionModel(validatedId, engineId, source);
     const abortController = sessionManager.resumeSession(validatedId, validatedPrompt);
+    noteUserAttachments(validatedId, resumeAttachments.map((a) => ({ name: a.name, mime: a.mime, size: a.bytes.byteLength })));
     if (resumeAttachments.length > 0) {
       mainLogger.info('main.sessions:resume.attachments', { id: validatedId, count: resumeAttachments.length, source });
     }
@@ -1332,6 +1340,7 @@ app.whenReady().then(async () => {
       mainLogger.info('main.startSessionWithAgent.timing', { id, step: 'loadBlank', ms: Date.now() - t0 });
 
       const attachmentsForRun = sessionManager.loadAttachmentsForRun(id);
+      noteUserAttachments(id, attachmentsForRun.map((a) => ({ name: a.name, mime: a.mime, size: a.size })));
       if (attachmentsForRun.length > 0) {
         mainLogger.info('main.startSessionWithAgent.attachments', { id, count: attachmentsForRun.length, totalBytes: attachmentsForRun.reduce((s, a) => s + a.size, 0) });
       }
@@ -1380,9 +1389,8 @@ app.whenReady().then(async () => {
 
   /** Show a file in the task as a file card (desktop chat + phone). Deduped by path. */
   function appendFileCard(sessionId: string, rawPath: string, name?: string): void {
-    // Agents run in Git Bash and often pass /c/Users/… paths.
-    const msys = process.platform === 'win32' ? /^\/([a-zA-Z])(?:\/(.*))?$/.exec(rawPath.trim()) : null;
-    const filePath = msys ? path.win32.normalize(`${msys[1].toUpperCase()}:/${msys[2] ?? ''}`) : path.resolve(rawPath.trim());
+    // Agents run in Git Bash: /c/Users/…, /tmp/…, paths relative to the harness.
+    const filePath = resolveAgentPath(rawPath, harnessDir());
     const session = sessionManager.getSession(sessionId);
     if (!session) return;
     const already = session.output.some((e) => e.type === 'file_output' && (e as { path?: string }).path === filePath);
@@ -1690,6 +1698,8 @@ app.whenReady().then(async () => {
         const { sessionId, ...rest } = (parsed ?? {}) as { sessionId?: unknown };
         const id = assertString(sessionId, 'sessionId', 100);
         const mutation = TaskStateMutationSchema.parse(rest);
+        // Store the file where it really is, not as Git Bash spelled it.
+        if (mutation.op === 'file') mutation.path = resolveAgentPath(mutation.path, harnessDir());
         const state = sessionManager.applyTaskState(id, mutation);
         // A recorded file (a render, a model, an export) also shows in the
         // task itself as a file card — with a preview for pictures — on the
@@ -2141,6 +2151,14 @@ app.whenReady().then(async () => {
       const { listConnections, setConnection } = await import('./mcp/store');
       const { verifyServer } = await import('./mcp/client');
 
+      // Blender needs no keys: installed means connected — unless the user
+      // switched it off, which leaves an entry saying so.
+      const { findBlender } = await import('./startup/blender');
+      if (findBlender() && !(await listConnections()).some((c) => c.id === 'blender')) {
+        await setConnection('blender', { enabled: true, values: {} });
+        mainLogger.info('mcp.autoConnect', { id: 'blender' });
+      }
+
       for (const connection of await listConnections()) {
         if (!connection.enabled) continue;
         const definition = findServerDefinition(connection.id);
@@ -2316,7 +2334,21 @@ app.whenReady().then(async () => {
       },
       onSessionOutput: (cb) => { sessionManager.onEvent('session-output', cb); },
       onSessionDeleted: (cb) => { sessionManager.onEvent('session-deleted', cb); },
-      getTaskFiles: (id) => sessionManager.getTaskState(id).files,
+      // Older tasks recorded Git Bash paths (/tmp/…, /c/…, outputs\…): the
+      // phone gets real paths — with sizes — and each file once.
+      getTaskFiles: (id) => {
+        const seen = new Set<string>();
+        const out: Array<{ name: string; path: string; size?: number }> = [];
+        for (const f of sessionManager.getTaskState(id).files) {
+          const real = resolveAgentPath(f.path, harnessDir());
+          if (seen.has(real.toLowerCase())) continue;
+          seen.add(real.toLowerCase());
+          let size: number | undefined;
+          try { size = fs.statSync(real).size; } catch { /* gone since */ }
+          out.push({ ...f, path: real, size });
+        }
+        return out;
+      },
       listEngines: async () => {
         const { listAdapters } = await import('./hl/engines');
         return listAdapters().map((a) => ({
@@ -2325,13 +2357,19 @@ app.whenReady().then(async () => {
           models: (a.selectableModels ?? []).map((m) => ({ id: m.id, label: m.label })),
         }));
       },
-      newTask: async ({ prompt, engine, model }) => {
+      newTask: async ({ prompt, engine, model, attachments: phoneFiles }) => {
         const validatedPrompt = assertString(prompt, 'prompt', 10000);
+        // Same limits as the desktop's own task box (shared/attachments.ts).
+        const attachments = assertAttachments(phoneFiles ?? []);
         const engineId = engine ? assertString(engine, 'engine', 50) : DEFAULT_ENGINE_ID;
         const id = sessionManager.createSession(validatedPrompt, { originChannel: 'android' });
         sessionManager.setSessionEngine(id, engineId);
         if (model) sessionManager.setSessionModel(id, assertString(model, 'model', 100));
-        captureEvent('session_created', { source: 'android', engine: engineId, prompt_length: validatedPrompt.length, attachments_count: 0 });
+        if (attachments.length > 0) {
+          const turnIndex = sessionManager.getNextAttachmentTurnIndex(id);
+          for (const a of attachments) sessionManager.saveAttachment(id, a, turnIndex);
+        }
+        captureEvent('session_created', { source: 'android', engine: engineId, prompt_length: validatedPrompt.length, attachments_count: attachments.length });
         try {
           await startSessionWithAgent(id);
           return { id };
@@ -2339,7 +2377,7 @@ app.whenReady().then(async () => {
           return { id, error: (err as Error).message };
         }
       },
-      followUp: (id, prompt) => handleResumeRequest(assertString(id, 'id', 100), assertString(prompt, 'prompt', 10000), []),
+      followUp: (id, prompt, phoneFiles) => handleResumeRequest(assertString(id, 'id', 100), assertString(prompt, 'prompt', 10000), assertAttachments(phoneFiles ?? [])),
       pause: (id) => pauseSessionFromMain(assertString(id, 'id', 100), 'button'),
       resume: (id) => handleResumeRequest(assertString(id, 'id', 100), 'Continue from where you left off.', []),
       stop: (id) => cancelSessionFromMain(assertString(id, 'id', 100), 'button'),

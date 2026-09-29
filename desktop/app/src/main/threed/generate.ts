@@ -3,9 +3,10 @@
  *
  *   image → 3D   Hunyuan3D-2.1 (tencent/Hunyuan3D-2.1): mesh + PBR texture.
  *                TRELLIS (trellis-community/TRELLIS) as the alternative.
- *   text  → 3D   FLUX.1-schnell makes a clean reference picture of the object
- *                (Inference Providers, needs the Hugging Face sign-in's
- *                inference-api scope), then image → 3D as above.
+ *   text  → 3D   FLUX.1-schnell (black-forest-labs/FLUX.1-schnell, its own
+ *                ZeroGPU Space — a few GPU seconds) makes a clean reference
+ *                picture of the object, then image → 3D as above. (The old
+ *                Inference API route for FLUX was retired by Hugging Face.)
  *
  * It spends the user's own free ZeroGPU quota — a few minutes a day, so
  * roughly one or two models on a free account (PRO: ~25 min/day). When it's
@@ -46,6 +47,7 @@ const SPACES: Record<ThreeDModel, string> = {
   hunyuan: 'tencent/Hunyuan3D-2.1',
   trellis: 'trellis-community/TRELLIS',
 };
+const TEXT_TO_IMAGE_SPACE = 'black-forest-labs/FLUX.1-schnell';
 
 function slug(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'model';
@@ -65,17 +67,22 @@ function explain(err: unknown): Error {
 }
 
 async function referenceImage(prompt: string, token: string, file: string): Promise<void> {
-  const res = await fetch('https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
+  const { Client } = await import('@gradio/client');
+  const app = await Client.connect(TEXT_TO_IMAGE_SPACE, { token: token as `hf_${string}` }).catch((e) => { throw explain(e); });
+  let result: { data: unknown };
+  try {
+    result = await app.predict('/infer', {
       // Image-to-3D wants one object, whole, centred, on a clean background.
-      inputs: `${prompt}. A single object, whole and centred, three-quarter view, plain white background, soft studio lighting, high detail, product render.`,
-    }),
-  });
-  if (!res.ok) throw explain(await res.text());
-  const type = res.headers.get('content-type') ?? '';
-  if (!type.startsWith('image/')) throw explain(await res.text());
+      prompt: `${prompt}. A single object, whole and centred, three-quarter view, plain light grey background, soft studio lighting, high detail, 3D render.`,
+      seed: 0, randomize_seed: true, width: 1024, height: 1024, num_inference_steps: 4,
+    });
+  } catch (err) {
+    throw explain(err);
+  }
+  const url = fileUrl(Array.isArray(result.data) ? result.data[0] : result.data);
+  if (!url) throw new Error('The picture generator came back without a picture.');
+  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`Couldn't download the reference picture (HTTP ${res.status}).`);
   await fs.writeFile(file, Buffer.from(await res.arrayBuffer()));
 }
 
@@ -97,7 +104,7 @@ export async function generate3D(req: Generate3DRequest): Promise<Generate3DResu
   let imagePath = req.image;
   let referencePath: string | undefined;
   if (!imagePath) {
-    referencePath = path.join(req.outDir, `${base}-reference.png`);
+    referencePath = path.join(req.outDir, `${base}-reference.webp`);
     await referenceImage(req.prompt!, token, referencePath);
     imagePath = referencePath;
   }

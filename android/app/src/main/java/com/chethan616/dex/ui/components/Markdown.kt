@@ -105,34 +105,36 @@ private fun parse(source: String): List<MdBlock> {
   return out
 }
 
-private val INLINE = Regex("""(\*\*[^*]+\*\*|~~[^~]+~~|`[^`]+`|\*[^*\s][^*]*\*|_[^_\s][^_]*_|\[[^\]]+\]\([^)\s]+\))""")
+// Bold may hold single-star italics ("**the *real* one**"); spans nest, so
+// the inside of bold, strike, italic and link labels is parsed again.
+private val INLINE = Regex("""(\*\*(?:[^*]|\*(?!\*))+?\*\*|~~[^~]+~~|`[^`]+`|\*[^*\s][^*]*\*|_[^_\s][^_]*_|\[[^\]]+\]\([^)\s]+\))""")
 
 @Composable
 private fun inline(text: String): AnnotatedString {
   val code = MaterialTheme.colorScheme.surfaceContainerHighest
   val link = MaterialTheme.colorScheme.primary
-  return remember(text, code, link) {
-    buildAnnotatedString {
-      var last = 0
-      for (m in INLINE.findAll(text)) {
-        append(text.substring(last, m.range.first))
-        val t = m.value
-        when {
-          t.startsWith("**") -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(t.removeSurrounding("**")) }
-          t.startsWith("~~") -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(t.removeSurrounding("~~")) }
-          t.startsWith("`") -> withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = code)) { append(" ${t.removeSurrounding("`")} ") }
-          t.startsWith("[") -> {
-            val label = t.substringAfter('[').substringBefore(']')
-            val url = t.substringAfter("](").removeSuffix(")")
-            withLink(LinkAnnotation.Url(url, TextLinkStyles(SpanStyle(color = link, textDecoration = TextDecoration.Underline)))) { append(label) }
-          }
-          else -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(t.substring(1, t.length - 1)) }
-        }
-        last = m.range.last + 1
+  return remember(text, code, link) { buildAnnotatedString { appendInline(text, code, link) } }
+}
+
+private fun AnnotatedString.Builder.appendInline(text: String, code: Color, link: Color) {
+  var last = 0
+  for (m in INLINE.findAll(text)) {
+    append(text.substring(last, m.range.first))
+    val t = m.value
+    when {
+      t.startsWith("**") -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { appendInline(t.removeSurrounding("**"), code, link) }
+      t.startsWith("~~") -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { appendInline(t.removeSurrounding("~~"), code, link) }
+      t.startsWith("`") -> withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = code)) { append(" ${t.removeSurrounding("`")} ") }
+      t.startsWith("[") -> {
+        val label = t.substringAfter('[').substringBefore(']')
+        val url = t.substringAfter("](").removeSuffix(")")
+        withLink(LinkAnnotation.Url(url, TextLinkStyles(SpanStyle(color = link, textDecoration = TextDecoration.Underline)))) { appendInline(label, code, link) }
       }
-      append(text.substring(last))
+      else -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { appendInline(t.substring(1, t.length - 1), code, link) }
     }
+    last = m.range.last + 1
   }
+  append(text.substring(last))
 }
 
 @Composable

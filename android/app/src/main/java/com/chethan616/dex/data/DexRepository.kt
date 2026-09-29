@@ -129,7 +129,15 @@ class DexRepository(private val appContext: Context) {
    * transfers/{id}, save it in the cache, and delete the transfer.
    * Free-tier Firestore only — no Cloud Storage.
    */
-  suspend fun fetchFile(sessionId: String, path: String, onProgress: (Float) -> Unit = {}): File {
+  suspend fun fetchFile(sessionId: String, path: String, expectedSize: Long = 0, onProgress: (Float) -> Unit = {}): File {
+    // One folder per task + path: a second tap (or a later visit) reuses the
+    // copy already on the phone instead of pulling megabytes again.
+    val key = java.security.MessageDigest.getInstance("SHA-1").digest("$sessionId|$path".toByteArray())
+      .joinToString("") { "%02x".format(it) }.take(20)
+    val dir = File(appContext.cacheDir, "dex-files/$key")
+    dir.listFiles()?.firstOrNull { it.isFile && it.length() > 0 && (expectedSize <= 0 || it.length() == expectedSize) }
+      ?.let { onProgress(1f); return it }
+
     val commandId = send(CommandType.FetchFile, mapOf("sessionId" to sessionId, "path" to path))
     val state = withTimeoutOrNull(90_000) {
       command(commandId).first { it is CommandState.Done || it is CommandState.Failed }
@@ -138,11 +146,21 @@ class DexRepository(private val appContext: Context) {
     val transferId = (state as CommandState.Done).result["transferId"]?.toString()
       ?: throw IllegalStateException("Your PC didn’t send the file.")
 
+    dir.deleteRecursively()
+    dir.mkdirs()
+    return downloadTransfer(transferId, dir, path.substringAfterLast('\\').substringAfterLast('/'), onProgress)
+  }
+
+  /**
+   * One transfer the PC wrote under transfers/{id}: read its chunks into
+   * [dir], then delete it from Firestore — the copy on the phone is what
+   * matters now.
+   */
+  private suspend fun downloadTransfer(transferId: String, dir: File, fallbackName: String, onProgress: (Float) -> Unit): File {
     val transfer = user().collection("transfers").document(transferId)
     val meta = transfer.get().await()
     val chunks = (meta.get("chunks") as? Number)?.toInt() ?: 0
-    val name = (meta.getString("name") ?: path.substringAfterLast('\\').substringAfterLast('/')).replace(Regex("""[\\/:*?"<>|]"""), "_")
-    val dir = File(appContext.cacheDir, "dex-files/$transferId").apply { mkdirs() }
+    val name = (meta.getString("name") ?: fallbackName).replace(Regex("""[\\/:*?"<>|]"""), "_")
     val out = File(dir, name.ifBlank { "file" })
     try {
       out.outputStream().buffered().use { os ->
@@ -157,7 +175,6 @@ class DexRepository(private val appContext: Context) {
       out.delete()
       throw e
     } finally {
-      // The copy on the phone is what matters now; don't leave it in Firestore.
       runCatching {
         val batch = db.batch()
         for (i in 0 until chunks) batch.delete(transfer.collection("chunks").document(i.toString().padStart(4, '0')))
@@ -166,6 +183,86 @@ class DexRepository(private val appContext: Context) {
       }
     }
     return out
+  }
+
+  /**
+   * A .blend from a task, made viewable (the phone can't run Blender): the
+   * PC opens it in a windowless Blender and sends a render through the
+   * scene's camera, the whole scene as a GLB, its HDRI sky, and that camera
+   * in 3D-viewer terms. Cached per task + path + size, like fetchFile.
+   */
+  suspend fun fetchScene(
+    sessionId: String,
+    path: String,
+    expectedSize: Long = 0,
+    onProgress: (label: String, progress: Float) -> Unit = { _, _ -> },
+  ): SceneFiles {
+    val key = java.security.MessageDigest.getInstance("SHA-1").digest("scene-v2|$sessionId|$path|$expectedSize".toByteArray())
+      .joinToString("") { "%02x".format(it) }.take(20)
+    val dir = File(appContext.cacheDir, "dex-files/$key")
+    SceneFiles.from(dir)?.let { onProgress("", 1f); return it }
+
+    onProgress("Preparing the scene on your PC…", 0f)
+    val commandId = send(CommandType.FetchFile, mapOf("sessionId" to sessionId, "path" to path, "mode" to "scene"))
+    // Opening the .blend, rendering and exporting takes a while on the PC.
+    val state = withTimeoutOrNull(8 * 60_000) {
+      command(commandId).first { it is CommandState.Done || it is CommandState.Failed }
+    } ?: throw IllegalStateException("Your PC didn’t finish preparing the scene — is DEX running and online?")
+    if (state is CommandState.Failed) throw IllegalStateException(state.error)
+    val result = (state as CommandState.Done).result
+    @Suppress("UNCHECKED_CAST")
+    val parts = result["parts"] as? Map<String, Map<String, Any?>> ?: throw IllegalStateException("Your PC didn’t send the scene.")
+    @Suppress("UNCHECKED_CAST")
+    val view = (result["view"] as? Map<String, Any?>).orEmpty()
+
+    dir.deleteRecursively()
+    dir.mkdirs()
+    val order = listOf("render", "sky", "glb").filter { parts[it] != null }
+    val totalBytes = order.sumOf { (parts[it]?.get("size") as? Number)?.toLong() ?: 1L }.coerceAtLeast(1L)
+    var doneBytes = 0L
+    for (part in order) {
+      val transferId = parts[part]?.get("transferId")?.toString() ?: continue
+      val size = (parts[part]?.get("size") as? Number)?.toLong() ?: 1L
+      val file = downloadTransfer(transferId, dir, part) { p -> onProgress("Downloading the scene…", (doneBytes + p * size) / totalBytes) }
+      file.renameTo(File(dir, SceneFiles.fileFor(part)))
+      doneBytes += size
+    }
+    File(dir, "view.json").writeText(org.json.JSONObject(view.mapValues { it.value?.toString() }).toString())
+    return SceneFiles.from(dir) ?: throw IllegalStateException("The scene came over incomplete.")
+  }
+
+  /**
+   * Send a file to the PC for a task: chunks under uploads/{id}, then the
+   * meta doc (its presence tells the PC every chunk is there). The PC
+   * reassembles it into an ordinary attachment and deletes the upload.
+   */
+  suspend fun upload(att: PendingAttachment, onProgress: (Float) -> Unit = {}): String {
+    val ref = user().collection("uploads").document()
+    val bytes = att.file.readBytes()
+    val chunk = 700 * 1024
+    val parts = maxOf(1, (bytes.size + chunk - 1) / chunk)
+    for (i in 0 until parts) {
+      val slice = bytes.copyOfRange(i * chunk, minOf(bytes.size, (i + 1) * chunk))
+      ref.collection("chunks").document(i.toString().padStart(4, '0'))
+        .set(mapOf("i" to i, "data" to Base64.encodeToString(slice, Base64.NO_WRAP))).await()
+      onProgress((i + 1f) / (parts + 1))
+    }
+    ref.set(
+      mapOf("name" to att.name, "mime" to att.mime, "size" to bytes.size, "chunks" to parts, "createdAt" to System.currentTimeMillis()),
+    ).await()
+    onProgress(1f)
+    return ref.id
+  }
+
+  /** Upload every attachment (progress across all of them), returning the upload ids. */
+  suspend fun uploadAll(atts: List<PendingAttachment>, onProgress: (Float) -> Unit = {}): List<String> {
+    val total = atts.sumOf { it.size }.coerceAtLeast(1)
+    var done = 0L
+    return atts.map { a ->
+      val id = upload(a) { p -> onProgress((done + a.size * p) / total) }
+      done += a.size
+      id
+    }
   }
 
   /** This phone's row: its name and presence, shown on the desktop. */
@@ -257,6 +354,11 @@ private fun DocumentSnapshot.toBlock(): Block {
     echo = getBoolean("echo") == true,
     path = getString("path"),
     thumb = getString("thumb"),
+    attachments = (get("attachments") as? List<*>)?.mapNotNull { a ->
+      (a as? Map<*, *>)?.let { m ->
+        AttachmentMeta(m["name"]?.toString() ?: return@let null, m["mime"]?.toString() ?: "", (m["size"] as? Number)?.toLong() ?: 0)
+      }
+    } ?: emptyList(),
   )
 }
 

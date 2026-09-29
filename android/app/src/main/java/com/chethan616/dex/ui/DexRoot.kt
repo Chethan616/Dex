@@ -43,7 +43,11 @@ private sealed interface Gate {
 }
 
 @Composable
-fun DexRoot(container: AppContainer, openSession: MutableStateFlow<String?>) {
+fun DexRoot(
+  container: AppContainer,
+  openSession: MutableStateFlow<String?>,
+  shared: MutableStateFlow<com.chethan616.dex.share.SharedContent?> = MutableStateFlow(null),
+) {
   if (!container.firebaseReady) {
     FirebaseSetupScreen()
     return
@@ -62,7 +66,7 @@ fun DexRoot(container: AppContainer, openSession: MutableStateFlow<String?>) {
     when (state) {
       Gate.Loading -> Unit
       Gate.SignedOut -> SignInScreen(container)
-      is Gate.SignedIn -> SignedInApp(container, state.account, openSession)
+      is Gate.SignedIn -> SignedInApp(container, state.account, openSession, shared)
     }
   }
 }
@@ -73,7 +77,12 @@ private sealed interface ProfileState {
 }
 
 @Composable
-private fun SignedInApp(container: AppContainer, account: Account, openSession: MutableStateFlow<String?>) {
+private fun SignedInApp(
+  container: AppContainer,
+  account: Account,
+  openSession: MutableStateFlow<String?>,
+  shared: MutableStateFlow<com.chethan616.dex.share.SharedContent?>,
+) {
   // "Your DEX": null until chosen — then the Netflix-style picker comes first.
   val profileState by produceState<ProfileState>(ProfileState.Loading, account.uid) {
     runCatching { container.repo.profile().collect { value = ProfileState.Loaded(it) } }
@@ -90,14 +99,24 @@ private fun SignedInApp(container: AppContainer, account: Account, openSession: 
   }
   val profile = (profileState as ProfileState.Loaded).profile ?: defaultProfileFor(account.uid)
   androidx.compose.runtime.CompositionLocalProvider(LocalDexProfile provides profile) {
-    SignedInNav(container, account, openSession)
+    SignedInNav(container, account, openSession, shared)
   }
 }
 
 @Composable
-private fun SignedInNav(container: AppContainer, account: Account, openSession: MutableStateFlow<String?>) {
+private fun SignedInNav(
+  container: AppContainer,
+  account: Account,
+  openSession: MutableStateFlow<String?>,
+  shared: MutableStateFlow<com.chethan616.dex.share.SharedContent?>,
+) {
   val nav = rememberNavController()
   val pending by openSession.collectAsStateWithLifecycle()
+  val incoming by shared.collectAsStateWithLifecycle()
+  // Shared from another app: back to Home, where the new-task sheet opens with it.
+  LaunchedEffect(incoming) {
+    if (incoming != null) nav.popBackStack(HomeRoute, inclusive = false)
+  }
 
   LaunchedEffect(Unit) { runCatching { container.repo.registerDevice() } }
   LaunchedEffect(pending) {
@@ -124,6 +143,7 @@ private fun SignedInNav(container: AppContainer, account: Account, openSession: 
           animatedScope = this,
           onOpenSession = { nav.navigate(SessionRoute(it)) },
           onOpenSettings = { nav.navigate(SettingsRoute) },
+          shared = shared,
         )
       }
       composable<SessionRoute> { entry ->

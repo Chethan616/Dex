@@ -211,6 +211,8 @@ describe('SessionManager persistence', () => {
     expect(session?.status).toBe('running');
     expect(session?.error).toBeUndefined();
     expect(session?.output.at(-1)).toEqual({ type: 'user_input', text: 'Continue from here' });
+    // The opening request stays the task's prompt (title + first message).
+    expect(session?.prompt).toBe('Open example.com');
 
     manager.destroy();
   });

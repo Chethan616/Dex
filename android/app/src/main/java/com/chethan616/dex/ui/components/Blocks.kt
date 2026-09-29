@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DesktopWindows
 import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
@@ -105,7 +106,15 @@ private fun formatMs(ms: Long): String = when {
 }
 
 @Composable
-fun UserBubble(text: String) {
+fun UserBubble(text: String, attachments: List<com.chethan616.dex.data.AttachmentMeta> = emptyList()) {
+  Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    com.chethan616.dex.ui.attach.SentAttachmentChips(attachments)
+    if (text.isNotBlank()) UserBubbleText(text)
+  }
+}
+
+@Composable
+private fun UserBubbleText(text: String) {
   Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
     Surface(
       shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = 22.dp, bottomEnd = 6.dp),
@@ -363,6 +372,22 @@ fun ErrorCard(text: String) {
   }
 }
 
+/** A task you stopped: said plainly, not in error red. */
+@Composable
+fun StoppedCard() {
+  Row(
+    Modifier
+      .fillMaxWidth()
+      .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(18.dp))
+      .padding(14.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Icon(Icons.Rounded.StopCircle, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    Spacer(Modifier.size(10.dp))
+    Text("You stopped this task", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+  }
+}
+
 @Composable
 fun NoticeRow(block: Block) {
   val icon = when (block.level) {
@@ -431,11 +456,11 @@ fun CanvasCard(block: Block) {
 @Composable
 fun BlockView(block: Block, running: Boolean) {
   when (block.kind) {
-    "user" -> UserBubble(block.text.orEmpty())
+    "user" -> UserBubble(block.text.orEmpty(), block.attachments)
     "text" -> AssistantText(block.text.orEmpty())
     "tool" -> ToolCard(block, running)
     "done" -> DoneCard(block)
-    "error" -> ErrorCard(block.text.orEmpty())
+    "error" -> if (block.text.equals(USER_STOPPED, ignoreCase = true)) StoppedCard() else ErrorCard(block.text.orEmpty())
     "notice" -> NoticeRow(block)
     "file", "image" -> FileCard(block)
     "canvas", "artifact" -> CanvasCard(block)

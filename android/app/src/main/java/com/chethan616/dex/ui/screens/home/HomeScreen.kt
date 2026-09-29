@@ -116,8 +116,13 @@ fun HomeScreen(
   animatedScope: AnimatedVisibilityScope,
   onOpenSession: (String) -> Unit,
   onOpenSettings: () -> Unit,
+  shared: kotlinx.coroutines.flow.MutableStateFlow<com.chethan616.dex.share.SharedContent?> = kotlinx.coroutines.flow.MutableStateFlow(null),
 ) {
   val vm: HomeViewModel = viewModel(factory = HomeViewModel.factory(container))
+  // One set of attachments for the prompt bar and the full sheet alike.
+  val attach = com.chethan616.dex.ui.attach.rememberAttachmentState()
+  val pickers = com.chethan616.dex.ui.attach.rememberAttachPickers(attach)
+  var sharedNow by remember { mutableStateOf<com.chethan616.dex.share.SharedContent?>(null)}
   val state by vm.state.collectAsStateWithLifecycle()
   val refreshing by vm.refreshing.collectAsStateWithLifecycle()
   val haptics = LocalHaptics.current
@@ -134,17 +139,22 @@ fun HomeScreen(
   var sendStatus by remember { mutableStateOf<String?>(null) }
   fun startTask(prompt: String, engine: String?, model: String?) {
     val pc = state.desktop
+    val files = attach.items.toList()
     sending = true
-    sendStatus = if (pc?.isReachable == true) "Sending to ${pc.name}…" else "Queued — ${pc?.name ?: "your PC"} is offline; it starts when it’s back"
+    sendStatus = when {
+      files.isNotEmpty() -> "Sending ${files.size} file${if (files.size > 1) "s" else ""} to ${pc?.name ?: "your PC"}…"
+      pc?.isReachable == true -> "Sending to ${pc.name}…"
+      else -> "Queued — ${pc?.name ?: "your PC"} is offline; it starts when it’s back"
+    }
     scope.launch {
-      vm.newTask(prompt, engine, model).collect { cmd ->
+      vm.newTask(prompt, engine, model, files) { attach.uploadProgress = it }.collect { cmd ->
         when (cmd) {
           CommandState.Pending -> Unit
           CommandState.Running -> sendStatus = "Starting on ${pc?.name ?: "your PC"}…"
           is CommandState.Done -> {
             sending = false
             val id = cmd.result["sessionId"] as? String
-            if (id != null) { sendStatus = null; haptics.success(); onOpenSession(id) }
+            if (id != null) { sendStatus = null; attach.items.clear(); haptics.success(); onOpenSession(id) }
             else { haptics.reject(); sendStatus = cmd.result["error"] as? String ?: "Your PC couldn’t start that." }
           }
           is CommandState.Failed -> { sending = false; haptics.reject(); sendStatus = cmd.error }
@@ -155,7 +165,20 @@ fun HomeScreen(
 
   fun openComposer(text: String = "") {
     prefill = text
+    sharedNow = null
     sheetOpen = true
+  }
+
+  // Share → DEX from another app: copy what came in, open the sheet with it.
+  val incoming by shared.collectAsStateWithLifecycle()
+  LaunchedEffect(incoming) {
+    val s = incoming ?: return@LaunchedEffect
+    shared.value = null
+    attach.items.clear()
+    prefill = listOfNotNull(s.subject?.takeIf { it != s.text }, s.text).joinToString("\n")
+    sharedNow = s
+    sheetOpen = true
+    attach.add(s.uris)
   }
 
   // Newer APK on GitHub Releases? (checked once per launch)
@@ -255,6 +278,8 @@ fun HomeScreen(
             onSend = ::startTask,
             onVoice = ::startVoice,
             onMore = { openComposer() },
+            attachments = attach,
+            pickers = pickers,
           )
         }
         item(key = "suggestions") {
@@ -316,10 +341,13 @@ fun HomeScreen(
       prefill = prefill,
       desktop = state.desktop,
       lastEngine = container.prefs.lastEngine.value,
-      send = vm::newTask,
-      onDismiss = { sheetOpen = false },
-      onStarted = { id -> sheetOpen = false; onOpenSession(id) },
+      send = { p, e, m -> vm.newTask(p, e, m, attach.items.toList()) { attach.uploadProgress = it } },
+      onDismiss = { sheetOpen = false; sharedNow = null },
+      onStarted = { id -> sheetOpen = false; sharedNow = null; attach.items.clear(); onOpenSession(id) },
       onVoice = ::startVoice,
+      attachments = attach,
+      pickers = pickers,
+      shared = sharedNow,
     )
   }
 }
@@ -463,7 +491,7 @@ private fun RunningCard(session: Session, sharedScope: SharedTransitionScope, an
           Text(session.prompt, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
           Text(ENGINE_NAMES[session.engine] ?: session.engine.orEmpty(), style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
         }
-        StatusPill(session.status)
+        StatusPill(session.status, label = com.chethan616.dex.ui.components.sessionStatusLabel(session.status, session.error))
       }
       Row(verticalAlignment = Alignment.CenterVertically) {
         DexOrb(OrbState.Working, size = 22.dp)

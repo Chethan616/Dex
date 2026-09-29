@@ -47,6 +47,16 @@ export const HlEventUserInputSchema = z.object({
   text: z.string(),
 });
 
+/**
+ * Files the user sent with their message (from the desktop chat, the hub or
+ * the phone). Metadata only — the bytes go to the engine, not the log — so
+ * the chat can show what was attached on the message it belongs to.
+ */
+export const HlEventUserAttachmentsSchema = z.object({
+  type: z.literal('user_attachments'),
+  items: z.array(z.object({ name: z.string(), mime: z.string(), size: z.number() })),
+});
+
 export const HlEventSkillWrittenSchema = z.object({
   type: z.literal('skill_written'),
   path: z.string(),
@@ -280,6 +290,7 @@ export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventDoneSchema,
   HlEventErrorSchema,
   HlEventUserInputSchema,
+  HlEventUserAttachmentsSchema,
   HlEventSkillWrittenSchema,
   HlEventNotifySchema,
   HlEventHarnessEditedSchema,

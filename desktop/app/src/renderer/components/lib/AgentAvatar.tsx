@@ -1,8 +1,10 @@
 /*
  * AgentAvatar — every agent's face, from bot-avatars.
  *
- * Identity is stable: the engine picks the body shape (so a glance tells you
- * Claude Code from Codex), and a session id picks one when there is no engine.
+ * Identity is stable and per task: a session id picks the body shape (a hash,
+ * the same on the phone), so a list of tasks isn't a row of identical faces.
+ * Without a session — the engine pickers — the engine picks: Claude Code a
+ * flower, Codex a circle, BrowserCode a droid.
  * The status drives the animation: running hops, paused sleeps, the rest are
  * awake — blinking, glancing round, following the pointer, the odd flip.
  *
@@ -33,7 +35,7 @@ function hash(text: string): number {
 }
 
 export function avatarTypeFor(engineId?: string | null, sessionId?: string | null): BotAvatarType {
-  if (engineId && ENGINE_TYPE[engineId]) return ENGINE_TYPE[engineId];
+  if (!sessionId && engineId && ENGINE_TYPE[engineId]) return ENGINE_TYPE[engineId];
   const key = sessionId ?? engineId ?? 'dex';
   return botAvatarTypes[hash(key) % botAvatarTypes.length];
 }

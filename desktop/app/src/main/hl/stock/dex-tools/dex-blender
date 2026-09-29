@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
-# dex-blender — start and use Blender for 3D work.
+# dex-blender — Blender for 3D work. It runs in the BACKGROUND: no window, the
+# user keeps their desktop. Never open the Blender app unless they ask.
 #
-#   dex-blender status                      is Blender open and reachable by the Blender tools?
-#   dex-blender open [file.blend]           open Blender (MCP add-on starts with it) and wait until ready
-#   dex-blender run script.py [file.blend]  run a Python script in Blender without a window
+#   dex-blender status                      this task's background Blender (the Blender tools' scene)
+#   dex-blender scene                       path of that scene — autosaved after every change
+#   dex-blender run script.py [file.blend]  run a Python script in a separate headless Blender
 #   dex-blender render file.blend out.png [--engine eevee|cycles] [--samples N] [--size WxH]
-#                                           render a still without a window (Cycles uses the GPU)
+#                                           render a still headless (Cycles uses the GPU)
+#   dex-blender show [file.blend]           ONLY when the user asks to see it: open a copy of the
+#                                           scene (or the file) in the Blender app on their screen
 #
-# The Blender tools (mcp__blender__* / dex_blender) drive an OPEN Blender over
-# localhost:9876 — call `dex-blender open` first if they say they can't connect.
-# `run` and `render` are for batch work and final renders; they don't need it open.
+# The Blender tools (mcp__blender__* / dex_blender) start this task's background
+# Blender by themselves on first use — there is nothing to open first.
 
 set -uo pipefail
-PORT="${BLENDER_PORT:-9876}"
 
-usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 [ $# -ge 1 ] || usage
 case "$1" in -h|--help|help) usage ;; esac
 
@@ -25,31 +26,49 @@ fi
 [ -n "$exe" ] && [ -f "$exe" ] || { echo "dex-blender: Blender isn't installed (winget install BlenderFoundation.Blender)." >&2; exit 3; }
 
 winpath() { command -v cygpath >/dev/null 2>&1 && cygpath -w "$1" || printf '%s' "$1"; }
+unixpath() { command -v cygpath >/dev/null 2>&1 && cygpath -u "$1" || printf '%s' "$1"; }
 # Relative paths mean relative to *this* shell — Blender resolves them against its own cwd.
 abspath() { case "$1" in /*|[A-Za-z]:[\/]*|"") printf '%s' "$1" ;; *) printf '%s/%s' "$PWD" "$1" ;; esac; }
-listening() { (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; }
+
+# This task's background Blender keeps its scene here (same rule as mcp-servers/blender).
+home="${DEX_BLENDER_HOME:-}"
+[ -n "$home" ] || home="$(dirname "$(unixpath "${DEX_CONTROL_FILE:-${APPDATA:-$HOME}/DEX/x}")")/blender"
+home="$(unixpath "$home")"
+task="$(printf '%s' "${DEX_SESSION_ID:-shared}" | tr -c 'A-Za-z0-9_-' '_')"
+taskdir="$home/$task"
+scene="$taskdir/scene.blend"
+listening() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+hostport() { sed -n 's/.*"port":[[:space:]]*\([0-9]*\).*//p' "$taskdir/host.json" 2>/dev/null; }
 
 op="$1"; shift
 case "$op" in
   status)
-    if listening; then echo "Blender is open and its MCP add-on is listening on :$PORT — the Blender tools will work."
-    else echo "Blender isn't open (nothing on :$PORT). Run: dex-blender open"; exit 1; fi ;;
-
-  open)
-    if listening; then echo "Blender is already open and ready on :$PORT."; exit 0; fi
-    file="$(abspath "${1:-}")"
-    if command -v cmd.exe >/dev/null 2>&1; then
-      if [ -n "$file" ]; then cmd.exe //c start "" "$(winpath "$exe")" "$(winpath "$file")" >/dev/null 2>&1
-      else cmd.exe //c start "" "$(winpath "$exe")" >/dev/null 2>&1; fi
+    port="$(hostport)"
+    if [ -n "$port" ] && listening "$port"; then
+      echo "This task's Blender is running in the background (no window, port $port) — the Blender tools work on it."
     else
-      ( "$exe" ${file:+"$file"} >/dev/null 2>&1 & )
+      echo "This task's Blender isn't running right now — the first Blender tool call starts it in the background (a few seconds)."
     fi
-    for i in $(seq 1 60); do
-      sleep 1
-      if listening; then echo "Blender is open and ready on :$PORT (after ${i}s)."; exit 0; fi
-    done
-    echo "dex-blender: Blender started but its MCP add-on isn't listening on :$PORT after 60s. In Blender: Edit → Preferences → Add-ons → enable 'MCP for Blender', then the sidebar (N) → BlenderMCP → Start." >&2
-    exit 1 ;;
+    if [ -f "$scene" ]; then echo "Scene (autosaved after every change): $(winpath "$scene")"
+    else echo "No scene saved yet for this task."; fi ;;
+
+  scene)
+    winpath "$scene"
+    [ -f "$scene" ] || { echo "dex-blender: nothing saved yet — build something with the Blender tools first." >&2; exit 1; } ;;
+
+  show|open)
+    # For the user's eyes only. A copy, so their clicking around can't fight the
+    # background Blender's autosave.
+    file="$(abspath "${1:-}")"
+    if [ -z "$file" ]; then
+      [ -f "$scene" ] || { echo "dex-blender: nothing to show yet — this task has no scene." >&2; exit 1; }
+      file="$taskdir/scene-view.blend"
+      cp -f "$scene" "$file"
+    fi
+    [ -f "$file" ] || { echo "dex-blender: no such file: $file" >&2; exit 2; }
+    if command -v cmd.exe >/dev/null 2>&1; then cmd.exe //c start "" "$(winpath "$exe")" "$(winpath "$file")" >/dev/null 2>&1
+    else ( "$exe" "$file" >/dev/null 2>&1 & ); fi
+    echo "Opened $(winpath "$file") in Blender on the user's screen. Keep working through the Blender tools — they use the background scene, not this window." ;;
 
   run)
     [ $# -ge 1 ] || usage

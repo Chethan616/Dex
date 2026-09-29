@@ -552,10 +552,11 @@ export class SessionManager extends EventEmitter {
     this.emitEvent('session-output', id, userEvent);
     this.emitTermBytes(id, userEvent);
 
-    session.prompt = prompt;
+    // session.prompt stays the task's opening request: it's the title, and
+    // transcripts rebuild the first message from it. The follow-up itself is
+    // the user_input event above (and reaches the engine directly).
     session.status = 'running';
     session.error = undefined;
-    this.db.updateSessionPrompt(id, prompt);
     this.db.updateSessionStatus(id, 'running');
     const abortController = new AbortController();
     this.abortControllers.set(id, abortController);
