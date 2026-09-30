@@ -179,7 +179,7 @@ const browserCodeAdapter: EngineAdapter = {
       'You are DEX, a general computer-use agent on this machine. Read `./AGENTS.md` first: it tells you how to pick an interface for each step, and what to do when one of them fails.',
       'A tool failure is not a task failure. Recover the step you are on; never restart the task.',
       'For work outside the browser — the desktop, the filesystem, the OS — read `./dex-tools/SKILL.md`.',
-      `A Chromium browser view is assigned to you for web work: CDP target_id=${ctx.targetId} on port ${ctx.cdpPort} (env BU_TARGET_ID / BU_CDP_PORT).`,
+      `A Chromium browser view is assigned to you for web work: CDP target_id=${ctx.targetId} (env BU_TARGET_ID), reached through its private link in env BU_CDP_WS. There is no open debugging port.`,
       'Do not use BrowserCode browser_execute. Read `./AGENTS.md` and use Browser Harness JS from this working directory for browser actions.',
       "Use the `browser-harness-js` CLI for browser actions. Start with `browser-harness-js 'await connectToAssignedTarget()'`.",
       'Do not use old helpers.js convenience APIs for browser control.',

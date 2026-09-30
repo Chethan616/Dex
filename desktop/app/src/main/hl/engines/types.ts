@@ -40,8 +40,10 @@ export interface SpawnContext {
   sessionId: string;
   /** CDP target id for the browser view the agent must drive. */
   targetId: string;
-  /** Port Electron exposes CDP on. */
+  /** The CDP broker's port (display only: useless without the task's link). */
   cdpPort: number;
+  /** The task's private browser link (cdpBroker.ts), handed over as BU_CDP_WS. */
+  cdpWsUrl?: string;
   /** If set, ask the CLI to continue a prior conversation with this id. */
   resumeSessionId?: string;
   /** Optional user-supplied API key; adapter decides how to inject. */
@@ -168,6 +170,8 @@ export interface RunEngineOptions {
   originChannel?: string;
   webContents: WebContents;
   cdpPort: number;
+  /** The task's private browser link from the CDP broker. */
+  cdpWsUrl?: string;
   harnessDir: string;
   attachments?: Array<{ name: string; mime: string; bytes: Buffer | Uint8Array }>;
   resumeSessionId?: string;

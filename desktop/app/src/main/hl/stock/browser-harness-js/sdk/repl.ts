@@ -25,22 +25,34 @@ const session = new Session();
 (globalThis as any).detectBrowsers = detectBrowsers;
 (globalThis as any).CDP = Generated;
 
+// The link the socket was opened with, to notice when DEX hands out a new one
+// (DEX restarted; this REPL server outlived it).
+let connectedVia: string | null = null;
+
 async function connectToAssignedTarget(): Promise<{ targetId: string; port: number; sessionId: string | null }> {
   const targetId = process.env.BU_TARGET_ID;
+  // DEX (desktop) hands each task a private link to its own tab: BU_CDP_WS.
+  // It has no open debugging port any more, so BU_CDP_PORT alone is only for
+  // a browser you started yourself with --remote-debugging-port.
+  const wsUrl = process.env.BU_CDP_WS || undefined;
   const port = Number(process.env.BU_CDP_PORT ?? 9222);
   if (!targetId) throw new Error('BU_TARGET_ID is required');
-  if (!Number.isFinite(port)) throw new Error(`invalid BU_CDP_PORT: ${process.env.BU_CDP_PORT}`);
+  if (!wsUrl && !Number.isFinite(port)) throw new Error(`invalid BU_CDP_PORT: ${process.env.BU_CDP_PORT}`);
+  const via = wsUrl ?? `port:${port}`;
+  const open = () => session.connect(wsUrl ? { wsUrl, targetId } : { port, targetId });
 
-  if (!session.isConnected()) {
-    await session.connect({ port, targetId });
+  if (!session.isConnected() || connectedVia !== via) {
+    session.close();
+    await open();
   } else {
     try {
       await session.use(targetId);
     } catch {
       session.close();
-      await session.connect({ port, targetId });
+      await open();
     }
   }
+  connectedVia = via;
 
   await Promise.all([
     session.Page.enable().catch(() => {}),
@@ -113,6 +125,12 @@ const server = Bun.serve({
     }
 
     if (req.method === 'POST' && url.pathname === '/eval') {
+      // The CLI sends the caller's current assignment with every snippet, so a
+      // REPL started before DEX restarted follows the new link and target.
+      const assignedWs = req.headers.get('x-bu-cdp-ws');
+      const assignedTarget = req.headers.get('x-bu-target-id');
+      if (assignedWs) process.env.BU_CDP_WS = assignedWs;
+      if (assignedTarget) process.env.BU_TARGET_ID = assignedTarget;
       const code = await req.text();
       if (!code.trim()) {
         return new Response('empty body\n', { status: 400, headers: TEXT });

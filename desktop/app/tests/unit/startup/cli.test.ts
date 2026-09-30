@@ -12,6 +12,7 @@ import {
   extractFlagValue,
   resolveUserDataDir,
   resolveCdpPort,
+  resolveDevtoolsPortOptIn,
   setAnnouncedCdpPort,
   getAnnouncedCdpPort,
 } from '../../../src/main/startup/cli';
@@ -223,5 +224,30 @@ describe('announced CDP port', () => {
   it('preserves 0 so consumers know to fall back to discovery', () => {
     setAnnouncedCdpPort(0);
     expect(getAnnouncedCdpPort()).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveDevtoolsPortOptIn — the raw port is closed unless asked for, because
+// it exposes every DEX window (approval cards included) to any local process.
+// ---------------------------------------------------------------------------
+
+describe('resolveDevtoolsPortOptIn', () => {
+  it('stays closed by default', () => {
+    expect(resolveDevtoolsPortOptIn(['electron', '.'], {})).toBeNull();
+  });
+
+  it('opens on an explicit --remote-debugging-port, 0 included (the e2e launcher)', () => {
+    expect(resolveDevtoolsPortOptIn(['electron', '--remote-debugging-port=9333'], {})).toEqual({ port: 9333, source: 'cli' });
+    expect(resolveDevtoolsPortOptIn(['electron', '--remote-debugging-port=0'], {})).toEqual({ port: 0, source: 'cli' });
+  });
+
+  it('opens on AGB_CDP_PORT, with the command line winning', () => {
+    expect(resolveDevtoolsPortOptIn([], { AGB_CDP_PORT: '9222' })).toEqual({ port: 9222, source: 'env' });
+    expect(resolveDevtoolsPortOptIn(['--remote-debugging-port=9444'], { AGB_CDP_PORT: '9222' })).toEqual({ port: 9444, source: 'cli' });
+  });
+
+  it('ignores garbage instead of opening something unexpected', () => {
+    expect(resolveDevtoolsPortOptIn(['--remote-debugging-port=abc'], { AGB_CDP_PORT: '99999' })).toBeNull();
   });
 });

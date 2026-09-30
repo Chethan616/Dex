@@ -57,6 +57,9 @@ export function applyBrowserHarnessEnv(ctx: SpawnContext, env: NodeJS.ProcessEnv
   env.CDP_REPL_PORT = env.CDP_REPL_PORT ?? browserHarnessReplPort(ctx.sessionId, ctx.targetId);
   env.CDP_REPL_LOG = env.CDP_REPL_LOG ?? path.join(ctx.harnessDir, `browser-harness-js-${ctx.sessionId}.log`);
   env.BU_SESSION_ID = ctx.sessionId;
+  // The task's private link to its own tab (main/cdpBroker.ts). There is no
+  // open debugging port any more; connectToAssignedTarget() uses this.
+  if (ctx.cdpWsUrl) env.BU_CDP_WS = ctx.cdpWsUrl;
   // The dex-* tools address the app over its loopback control server. Passing
   // the control file explicitly beats letting each tool guess a path relative
   // to its cwd, which only happens to work while cwd is the harness dir.

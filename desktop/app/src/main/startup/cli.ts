@@ -142,6 +142,32 @@ export function resolveCdpPort(argv: readonly string[]): ResolvedCdpPort {
 }
 
 /**
+ * The raw remote-debugging port, only when someone explicitly asked for it.
+ *
+ * DEX no longer opens it by default: it exposes every window in the app,
+ * DEX's own approval cards included, to any process on the machine. Agents
+ * reach their tab through the CDP broker instead (main/cdpBroker.ts).
+ * Development tooling and the e2e launcher still get it by asking:
+ *   --remote-debugging-port=<N>   on the command line (0 = OS-assigned), or
+ *   AGB_CDP_PORT=<N>              in the environment.
+ */
+export function resolveDevtoolsPortOptIn(
+  argv: readonly string[],
+  env: NodeJS.ProcessEnv = process.env,
+): { port: number; source: 'cli' | 'env' } | null {
+  const valid = (raw: string | null | undefined): number | null => {
+    if (raw == null || raw === '') return null;
+    const n = Number.parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 && n <= 65535 && String(n) === raw ? n : null;
+  };
+  const fromArgv = valid(extractFlagValue(argv, 'remote-debugging-port'));
+  if (fromArgv !== null) return { port: fromArgv, source: 'cli' };
+  const fromEnv = valid(env.AGB_CDP_PORT);
+  if (fromEnv !== null) return { port: fromEnv, source: 'env' };
+  return null;
+}
+
+/**
  * Synchronously check whether a TCP port is already bound on localhost.
  *
  * Uses the OS's native listing command because Node's `net.createServer`

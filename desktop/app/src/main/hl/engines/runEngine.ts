@@ -31,23 +31,17 @@ import type {
 import type { HlEvent } from '../../../shared/session-schemas';
 import type { WebContents } from 'electron';
 import { isScratchFile } from './outputs';
+import { withDebugger } from '../../cdpLease';
 
 async function resolveTargetIdForWebContents(wc: WebContents): Promise<string> {
-  const dbg = wc.debugger;
-  const attachedByUs = !dbg.isAttached();
-  if (attachedByUs) dbg.attach('1.3');
-  try {
-    const info = (await dbg.sendCommand('Target.getTargetInfo')) as {
+  return withDebugger(wc, async () => {
+    const info = (await wc.debugger.sendCommand('Target.getTargetInfo')) as {
       targetInfo?: { targetId?: string };
     };
     const id = info?.targetInfo?.targetId;
     if (!id) throw new Error('Target.getTargetInfo returned no targetId');
     return id;
-  } finally {
-    if (attachedByUs) {
-      try { dbg.detach(); } catch { /* already detached */ }
-    }
-  }
+  });
 }
 
 function mimeFromExt(filename: string): string {
@@ -284,6 +278,7 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
     originChannel: opts.originChannel,
     targetId,
     cdpPort: opts.cdpPort,
+    cdpWsUrl: opts.cdpWsUrl,
     resumeSessionId: opts.resumeSessionId,
     savedApiKey,
     providerId,
