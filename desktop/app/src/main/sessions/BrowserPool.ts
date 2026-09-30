@@ -1,6 +1,7 @@
 import { WebContentsView, nativeTheme, type BrowserWindow, type WebContents } from 'electron';
 import { browserLogger } from '../logger';
 import { getWindowBackgroundColor } from '../themeMode';
+import { leaseDebugger } from '../cdpLease';
 import type { TabInfo } from './types';
 
 const DEFAULT_BROWSER_WIDTH = 1280;
@@ -10,7 +11,6 @@ const THROTTLED_FRAME_RATE = 4;
 const IDLE_FRAME_RATE = 1;
 const ACTIVE_FRAME_RATE = 60;
 const DEFAULT_IDLE_FREEZE_DELAY_MS = 15_000;
-const CDP_PROTOCOL_VERSION = '1.3';
 // Emulated viewport pins height; width is computed per-attach from the
 // physical rect's aspect ratio so the rendered page fills the box exactly
 // (no letterboxing). A floor on width keeps sites in their desktop
@@ -579,11 +579,12 @@ export class BrowserPool {
     if (state === 'active' && !entry.frozen) return;
     if (state === 'frozen' && entry.frozen) return;
 
-    const dbg = wc.debugger;
-    const wasAttached = dbg.isAttached();
+    // A lease, not attach/detach: the agent's broker may hold this debugger
+    // for the whole task, and a detach here would cut it off (cdpLease.ts).
+    let release: (() => void) | null = null;
     try {
-      if (!wasAttached) dbg.attach(CDP_PROTOCOL_VERSION);
-      await dbg.sendCommand('Page.setWebLifecycleState', { state });
+      release = leaseDebugger(wc);
+      await wc.debugger.sendCommand('Page.setWebLifecycleState', { state });
       entry.frozen = state === 'frozen';
       browserLogger.info('BrowserPool.lifecycleState', {
         sessionId: entry.sessionId,
@@ -598,9 +599,7 @@ export class BrowserPool {
         error: (err as Error).message,
       });
     } finally {
-      if (!wasAttached) {
-        try { dbg.detach(); } catch { /* debugger may have detached during navigation */ }
-      }
+      release?.();
     }
   }
 

@@ -37,6 +37,7 @@ const { runEngine } = await import('../../../src/main/hl/engines/runEngine');
 
 function createWebContents() {
   return {
+    isDestroyed: vi.fn(() => false),
     debugger: {
       isAttached: vi.fn(() => false),
       attach: vi.fn(),

@@ -90,10 +90,12 @@ import { registerSetupIpc } from './setup/essentials';
 import { registerProfileIpc } from './profile';
 import {
   resolveUserDataDir,
-  resolveCdpPort,
+  resolveDevtoolsPortOptIn,
   setAnnouncedCdpPort,
   verifyCdpOwnership,
 } from './startup/cli';
+import { CdpBroker, type BrokerContents } from './cdpBroker';
+import { leaseDebugger } from './cdpLease';
 import { assertString, assertAttachments, type ValidatedAttachment } from './ipc-validators';
 import { runPreflight, formatPreflightForLog, type PreflightReport } from './startup/preflight';
 import {
@@ -177,13 +179,20 @@ if (process.platform === 'win32') {
   app.setAppUserModelId('com.chethan616.dex');
 }
 
-const resolvedCdp = resolveCdpPort(process.argv);
-app.commandLine.appendSwitch('remote-debugging-port', String(resolvedCdp.port));
-setAnnouncedCdpPort(resolvedCdp.port);
+// No remote-debugging port unless explicitly asked for: it would expose every
+// window, DEX's own approval cards included, to any process on the PC. Agents
+// reach their tab through the CDP broker (cdpBroker.ts), started when ready.
+const devtoolsPort = resolveDevtoolsPortOptIn(process.argv, process.env);
+if (devtoolsPort) {
+  app.commandLine.appendSwitch('remote-debugging-port', String(devtoolsPort.port));
+  setAnnouncedCdpPort(devtoolsPort.port);
+}
 mainLogger.info('main.startup', {
-  msg: `Remote debugging port set to ${resolvedCdp.port}`,
-  cdpPort: resolvedCdp.port,
-  cdpPortSource: resolvedCdp.source,
+  msg: devtoolsPort
+    ? `Remote debugging port ${devtoolsPort.port} opened on request (${devtoolsPort.source}) — every DEX window is reachable on it`
+    : 'Remote debugging port off; agents use the CDP broker',
+  devtoolsPort: devtoolsPort?.port ?? null,
+  devtoolsPortSource: devtoolsPort?.source ?? null,
   userDataOverride: resolvedUserData.value,
   userDataSource: resolvedUserData.source,
   forceOnboarding: process.env.AGB_FORCE_ONBOARDING === '1',
@@ -338,6 +347,20 @@ setTimeout(() => {
   }
 }, 10_000);
 
+// How an agent reaches its own browser tab, and nothing else (cdpBroker.ts):
+// a private loopback endpoint with one secret link per task. Started when the
+// app is ready; engines get their link through cdpFor().
+const cdpBroker = new CdpBroker((sessionId) => {
+  const wc = browserPool.getWebContents(sessionId);
+  return wc && !wc.isDestroyed() ? [wc as unknown as BrokerContents] : [];
+});
+let cdpBrokerReady: boolean | null = null;
+
+function cdpFor(sessionId: string): { cdpPort: number; cdpWsUrl: string } {
+  const endpoint = cdpBroker.endpointFor(sessionId);
+  return { cdpPort: endpoint.port, cdpWsUrl: endpoint.wsUrl };
+}
+
 /**
  * Last handshake result per connection, from the startup check or an explicit
  * re-check. Settings reads it so the dots are already meaningful when the pane
@@ -349,8 +372,9 @@ function refreshPreflight(cdpVerified: boolean | null = null): PreflightReport {
   preflightReport = runPreflight({
     env: process.env,
     harnessPath: harnessDir(),
-    cdpPort: resolvedCdp.port,
-    cdpVerified,
+    cdpPort: cdpBroker.listeningPort || null,
+    cdpVerified: cdpVerified ?? cdpBrokerReady,
+    devtoolsPort: devtoolsPort?.port ?? null,
   });
   for (const line of formatPreflightForLog(preflightReport)) {
     const missing = line.startsWith('[FAIL]');
@@ -582,31 +606,35 @@ app.whenReady().then(async () => {
   }, 8000);
   startResourceMonitor(resourceMonitorContext);
 
-  // Verify the CDP endpoint at our announced port is actually OUR Electron
-  // instance and not, e.g., the user's own Chrome that happened to already
-  // bind 9222. Without this, BU_CDP_PORT handed to the agent would point at
-  // a stranger's browser — `/json/list` returns targets the agent has no
-  // access to, and `/devtools/page/<id>` gives 404/403. Log loudly on
-  // mismatch so users hit a clear error instead of mysterious CDP failures.
-  verifyCdpOwnership(resolvedCdp.port).then((v) => {
-    // Fold the CDP result into the environment report as soon as we have it,
-    // so Settings shows one coherent picture rather than three half-answers.
-    refreshPreflight(v.ok);
-    if (v.ok) {
-      mainLogger.info('main.cdp.verified', { port: resolvedCdp.port, browser: v.browser, userAgent: v.userAgent });
-    } else {
-      mainLogger.error('main.cdp.verifyFailed', {
-        port: resolvedCdp.port,
-        portSource: resolvedCdp.source,
-        browser: v.browser ?? null,
-        userAgent: v.userAgent ?? null,
-        error: v.error ?? null,
-        hint: v.userAgent
-          ? `CDP on :${resolvedCdp.port} responded but User-Agent does not contain Electron/ or BrowserUse/ — another Chromium-based process likely owns this port. Close it (or pass --remote-debugging-port=<free port>) and restart.`
-          : `Could not reach CDP on :${resolvedCdp.port}; Electron may not have bound it (another process likely holds it).`,
-      });
-    }
+  // The agents' private way into their tabs. Fold the result into the
+  // environment report as soon as it's known.
+  cdpBroker.start().then((port) => {
+    cdpBrokerReady = true;
+    mainLogger.info('main.cdpBroker.ready', { port });
+    refreshPreflight(true);
+  }).catch((err) => {
+    cdpBrokerReady = false;
+    mainLogger.error('main.cdpBroker.failed', { error: (err as Error).message });
+    refreshPreflight(false);
   });
+
+  // Only when the raw port was asked for: check it's really ours, not a
+  // browser that already held that port.
+  if (devtoolsPort && devtoolsPort.port !== 0) {
+    verifyCdpOwnership(devtoolsPort.port).then((v) => {
+      if (v.ok) {
+        mainLogger.info('main.cdp.verified', { port: devtoolsPort.port, browser: v.browser, userAgent: v.userAgent });
+      } else {
+        mainLogger.error('main.cdp.verifyFailed', {
+          port: devtoolsPort.port,
+          portSource: devtoolsPort.source,
+          browser: v.browser ?? null,
+          userAgent: v.userAgent ?? null,
+          error: v.error ?? null,
+        });
+      }
+    });
+  }
 
   if (process.platform === 'darwin' && app.dock) {
     try {
@@ -1243,7 +1271,7 @@ app.whenReady().then(async () => {
       prompt: validatedPrompt,
       attachments: resumeAttachments.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
       webContents,
-      cdpPort: resolvedCdp.port,
+      ...cdpFor(validatedId),
       signal: abortController.signal,
       resumeSessionId: sessionManager.getEngineSessionId(validatedId),
       model: sessionManager.getSessionModel(validatedId) ?? undefined,
@@ -1356,7 +1384,7 @@ app.whenReady().then(async () => {
         prompt: sessionManager.getSession(id)!.prompt,
         attachments: attachmentsForRun.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
         webContents: view.webContents,
-        cdpPort: resolvedCdp.port,
+        ...cdpFor(id),
         signal: abortController.signal,
         model: sessionManager.getSessionModel(id) ?? undefined,
         onRunControl: bindRunControl(id, runId),
@@ -1485,9 +1513,9 @@ app.whenReady().then(async () => {
         // reliably and looks to the site like real entry. The secret is built
         // into the expression here in main and is never logged or returned.
         const dbg = view.webContents.debugger;
-        const attachedHere = !dbg.isAttached();
+        let release: (() => void) | null = null;
         try {
-          if (attachedHere) dbg.attach('1.3');
+          release = leaseDebugger(view.webContents);
           const literal = JSON.stringify(secret);
           const sel = selector ? JSON.stringify(selector) : 'null';
           const expression = `(() => {
@@ -1522,9 +1550,7 @@ app.whenReady().then(async () => {
         } catch (err) {
           return { filled: false, error: (err as Error).message };
         } finally {
-          if (attachedHere && dbg.isAttached()) {
-            try { dbg.detach(); } catch { /* already gone */ }
-          }
+          release?.();
         }
       },
 
@@ -1995,7 +2021,7 @@ app.whenReady().then(async () => {
       prompt: session.prompt,
       attachments: rerunAttachments.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
       webContents: view.webContents,
-      cdpPort: resolvedCdp.port,
+      ...cdpFor(validatedId),
       signal: abortController.signal,
       // Rerun intentionally starts a fresh conversation; SessionManager.rerunSession
       // already cleared any stored resume id. The model choice is a property of

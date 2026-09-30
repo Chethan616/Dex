@@ -157,19 +157,27 @@ describe('runPreflight', () => {
     expect(report.ok).toBe(true);
   });
 
-  // A walked port is normal, not a fault — saying so stops it looking like one.
-  it('explains a non-default CDP port instead of flagging it', () => {
-    const report = runPreflight({ ...base, env: {}, cdpPort: 9224 });
+  it('reports the private agent connection as ok', () => {
+    const report = runPreflight({ ...base, env: {}, cdpPort: 51234 });
     const check = report.checks.find((c) => c.id === 'cdp-port');
     expect(check?.status).toBe('ok');
-    expect(check?.detail).toContain('9224');
-    expect(check?.detail).toMatch(/automatically/);
+    expect(check?.detail).toContain('51234');
+    expect(check?.detail).toMatch(/only that task/);
   });
 
-  it('flags a CDP port owned by a foreign browser', () => {
+  it('flags a broker that failed to start', () => {
     const report = runPreflight({ ...base, env: {}, cdpVerified: false });
     const check = report.checks.find((c) => c.id === 'cdp-port');
     expect(check?.status).toBe('degraded');
+    expect(check?.fix?.summary).toMatch(/Restart DEX/);
+  });
+
+  // The raw port exposes DEX's own windows to every local process.
+  it('warns while the raw remote-debugging port is open', () => {
+    const report = runPreflight({ ...base, env: {}, devtoolsPort: 9222 });
+    const check = report.checks.find((c) => c.id === 'cdp-port');
+    expect(check?.status).toBe('degraded');
+    expect(check?.detail).toMatch(/any program on this PC/);
     expect(check?.fix?.summary).toMatch(/remote-debugging-port/);
   });
 

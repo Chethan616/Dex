@@ -91,7 +91,11 @@ post_eval() {
   # Capture body + status separately. Body goes to stdout (only if non-empty)
   # on 200; otherwise to stderr with non-zero exit.
   local out status body
-  out=$(curl -sS -w '\n___STATUS___%{http_code}' --data-binary "$1" "$URL/eval")
+  # The current assignment rides along with every snippet, so a REPL started
+  # before DEX restarted follows the task's new private link (BU_CDP_WS).
+  out=$(curl -sS -w '\n___STATUS___%{http_code}' \
+    -H "X-BU-CDP-WS: ${BU_CDP_WS:-}" -H "X-BU-Target-Id: ${BU_TARGET_ID:-}" \
+    --data-binary "$1" "$URL/eval")
   status="${out##*___STATUS___}"
   body="${out%$'\n'___STATUS___*}"
   if [ "$status" = "200" ]; then

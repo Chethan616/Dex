@@ -151,7 +151,9 @@ is only a small compatibility bridge that points at the vendored
 Two environment variables identify the assigned browser view:
 
 - `BU_TARGET_ID` - the CDP target id of the view you must drive.
-- `BU_CDP_PORT` - the local CDP HTTP port.
+- `BU_CDP_WS` - your private link to it. DEX has no open debugging port: this
+  link reaches only your own tab, and browser-level control (closing the
+  browser, opening other targets) is refused. `BU_CDP_PORT` is informational.
 
 Use only this assigned target. Do not create unrelated browser targets, switch
 to other user tabs, or navigate internal Chrome pages unless the user explicitly
@@ -165,8 +167,7 @@ Run this once before page-level CDP calls:
 browser-harness-js 'await connectToAssignedTarget()'
 ```
 
-That connects to `BU_CDP_PORT`, attaches `BU_TARGET_ID` when the browser-level
-endpoint is available, enables common Page/DOM/Runtime/Network domains, and
+That connects through `BU_CDP_WS`, attaches `BU_TARGET_ID`, enables common Page/DOM/Runtime/Network domains, and
 keeps the session alive for later `browser-harness-js` calls.
 
 ## Basic Pattern
@@ -220,8 +221,8 @@ rg -n "captureScreenshot|dispatchMouseEvent|setFileInputFiles" ./browser-harness
 The `browser-harness-js` REPL preloads:
 
 - `session` - persistent CDP `Session`.
-- `connectToAssignedTarget()` - DEX helper for `BU_TARGET_ID` / `BU_CDP_PORT`
-  and `BU_CDP_PORT`.
+- `connectToAssignedTarget()` - DEX helper: connects through `BU_CDP_WS` and
+  attaches `BU_TARGET_ID`.
 - `listPageTargets()` - lists real page targets when connected to a browser
   endpoint.
 - `detectBrowsers()` and `resolveWsUrl(opts)` - upstream browser discovery.
