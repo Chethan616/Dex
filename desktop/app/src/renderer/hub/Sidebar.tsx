@@ -2,7 +2,23 @@ import React, { useMemo, useRef, useState } from 'react';
 import type { AgentSession, SessionStatus } from './types';
 import { orderSessionsForSidebar } from './sessionOrdering';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
-import { AgentAvatar } from '../components/lib';
+import { AgentAvatar, useBotMood } from '../components/lib';
+
+/**
+ * A row's icon: the site's favicon while the task rests, its bot while it's
+ * doing something or just finished — so a glance down the list shows who's
+ * thinking, working, waiting on you, or done.
+ */
+function RowIcon({ session, favicon, size, fallbackClass }: { session: AgentSession; favicon: string | null; size: number; fallbackClass: string }): React.ReactElement {
+  const mood = useBotMood(session);
+  const resting = mood === 'sleeping' || mood === 'awake';
+  if (favicon && resting) return <img src={favicon} alt="" width={size} height={size} />;
+  return (
+    <span className={fallbackClass} aria-hidden={size < 16 ? true : undefined}>
+      <AgentAvatar engineId={session.engine} sessionId={session.id} status={session.status} mood={mood} size={size} />
+    </span>
+  );
+}
 
 interface SidebarSession extends AgentSession {
   primarySite?: string | null;
@@ -198,13 +214,7 @@ function SessionRowImpl({
         data-tooltip={s.prompt}
       >
         <span className="sidebar__row-icon">
-          {favicon ? (
-            <img src={favicon} alt="" width={18} height={18} />
-          ) : (
-            <span className="sidebar__row-icon-fallback">
-              <AgentAvatar engineId={s.engine} sessionId={s.id} status={s.status} size={18} />
-            </span>
-          )}
+          <RowIcon session={s} favicon={favicon} size={18} fallbackClass="sidebar__row-icon-fallback" />
           <span className="sidebar__row-dot" style={{ background: dot.color }} aria-label={dot.label} />
         </span>
         <span className="sidebar__row-title">{s.prompt}</span>
@@ -307,13 +317,7 @@ function TabChipImpl({
     >
       {isRunning && <span className="tabstrip__chip-fill" aria-hidden="true" />}
       <span className="tabstrip__chip-icon">
-        {favicon ? (
-          <img src={favicon} alt="" width={14} height={14} />
-        ) : (
-          <span className="tabstrip__chip-icon-fallback" aria-hidden="true">
-            <AgentAvatar engineId={s.engine} sessionId={s.id} status={s.status} size={14} />
-          </span>
-        )}
+        <RowIcon session={s} favicon={favicon} size={14} fallbackClass="tabstrip__chip-icon-fallback" />
         <span className="tabstrip__chip-dot" style={{ background: dot.color }} aria-label={dot.label} />
       </span>
       <span className="tabstrip__chip-title">{s.prompt}</span>

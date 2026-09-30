@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
-import { Orb, type OrbState, AgentAvatar } from '../components/lib';
+import { Orb, type OrbState, TaskAvatar } from '../components/lib';
 import { STATUS_LABEL } from './constants';
 import { ContentRenderer, getPreview } from './ContentRenderer';
 import { Markdown, linkifyOutputPaths } from './Markdown';
@@ -933,14 +933,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
         {/* The agent's face: shape from the engine, hopping while it works,
             asleep while paused. The status dot rides its corner. */}
         <span className="pane__avatar">
-          <AgentAvatar
-            engineId={session.engine}
-            sessionId={session.id}
-            status={session.status}
-            size={30}
-            interactive={focused}
-            label={`Agent (${session.status})`}
-          />
+          <TaskAvatar session={session} size={30} interactive={focused} />
           <span className={`pane__dot pane__dot--${session.status}`} />
         </span>
         <div className="pane__title-group">
@@ -1102,7 +1095,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
             unread: chatUnread,
             working: isRunningLike,
             onSelect: () => setPaneOverride('chat'),
-            icon: <AgentAvatar engineId={session.engine} sessionId={session.id} status={session.status} size={18} interactive={false} />,
+            icon: <TaskAvatar session={session} size={18} interactive={false} />,
           }}
           onSelectPage={() => setPaneOverride('page')}
         />

@@ -11,7 +11,7 @@ import type { TaskInputHandle } from './TaskInput';
 import { DashboardBackground } from './DashboardBackground';
 import dexWordmark from '../assets/dex-wordmark.png';
 import { taglineFor } from './taglines';
-import { AgentAvatar, Orb } from '../components/lib';
+import { Orb, TaskAvatar } from '../components/lib';
 import type { AgentSession } from './types';
 
 const HOUR = 3600 * 1000;
@@ -248,7 +248,7 @@ export function Dashboard({ sessions, onSwitchToGrid, onSelectSession, onSubmitT
                 onKeyDown={(e) => { if (e.key === 'Enter') onSelectSession?.(session.id); }}
               >
                 <span className="dashboard__recent-avatar">
-                  <AgentAvatar engineId={session.engine} sessionId={session.id} status={session.status} size={22} />
+                  <TaskAvatar session={session} size={22} />
                   <span className={`dashboard__recent-dot dashboard__recent-dot--${session.status}`} />
                 </span>
                 <span className="dashboard__recent-status">{STATUS_LABEL[session.status]}</span>

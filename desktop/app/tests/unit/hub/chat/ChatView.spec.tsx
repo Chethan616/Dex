@@ -50,6 +50,7 @@ function session(overrides: Partial<AgentSession> = {}): AgentSession {
 
 let root: Root | null = null;
 let container: HTMLDivElement;
+const el = () => container;
 const openFile = vi.fn(() => Promise.resolve({ opened: true }));
 
 function render(props: Partial<React.ComponentProps<typeof ChatView>> = {}): HTMLDivElement {
@@ -164,6 +165,7 @@ describe('ChatView', () => {
     el = render({ session: session({ output: [...OUTPUT, { type: 'notify', message: 'Log in to Vercel to continue', level: 'blocking', at: 403_000 } as unknown as HlEvent] }) });
     const faces = [...el.querySelectorAll('.cx-head canvas')];
     expect(faces.at(-1)?.getAttribute('data-state')).toBe('default');
+    expect(el.querySelector('.cx-head [data-mood]')?.getAttribute('data-mood')).toBe('needs-you');
   });
 
   it('hops when a reply lands, but not when the turn failed', () => {
@@ -174,16 +176,24 @@ describe('ChatView', () => {
     const finish = [{ type: 'tool_result', name: 'WebSearch', ok: true, preview: '', ms: 1, at: 404_000 }, { type: 'thinking', text: 'Added them.', at: 405_000 }, { type: 'done', summary: 'Added them.', iterations: 3, at: 406_000 }] as unknown as HlEvent[];
     act(() => root!.render(<ChatView session={session({ status: 'idle', output: [...working, ...finish] })} engineName="Claude Code" />));
     act(() => { vi.advanceTimersByTime(300); });
-    expect(hop).toHaveBeenCalledTimes(1);
+    // The turn's bot and the minibar's both jump for joy…
+    expect(hop).toHaveBeenCalled();
+    expect(el().querySelector('.cx-head [data-mood]')?.getAttribute('data-mood')).toBe('happy');
+    // …then doze off.
+    act(() => { vi.advanceTimersByTime(8_000); });
+    expect(el().querySelector('.cx-head [data-mood]')?.getAttribute('data-mood')).toBe('sleeping');
 
-    // The same, with an error in the turn: no celebration.
+    // A run that ends on an error: no celebration, a sad bot. (An error it
+    // recovered from and then finished is still a happy ending.)
     act(() => root?.unmount());
     root = null;
     render();
     hop.mockClear();
-    act(() => root!.render(<ChatView session={session({ status: 'idle', output: [...OUTPUT, ...finish] })} engineName="Claude Code" />));
+    const failed = [...OUTPUT, { type: 'tool_result', name: 'WebSearch', ok: false, preview: '', ms: 1, at: 404_000 }, { type: 'error', message: 'Vercel login failed', at: 405_000 }] as unknown as HlEvent[];
+    act(() => root!.render(<ChatView session={session({ status: 'idle', output: failed })} engineName="Claude Code" />));
     act(() => { vi.advanceTimersByTime(300); });
     expect(hop).not.toHaveBeenCalled();
+    expect(el().querySelector('.cx-head [data-mood]')?.getAttribute('data-mood')).toBe('sad');
     hop.mockRestore();
   });
 

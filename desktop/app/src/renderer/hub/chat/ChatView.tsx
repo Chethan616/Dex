@@ -14,7 +14,7 @@
  * so only the turn being written re-renders while a reply streams.
  */
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AgentAvatar, CopyButton, Orb } from '../../components/lib';
+import { AgentAvatar, CopyButton, Orb, useBotMood, type BotMood } from '../../components/lib';
 import { Markdown } from '../Markdown';
 import { KindGlyph, prettyArgs } from '../../logs/ChatTranscript';
 import { appendEvent, buildTranscript, EMPTY_TRANSCRIPT, type Block, type Transcript } from '../../logs/transcript';
@@ -211,10 +211,8 @@ interface TurnViewProps {
   turn: Turn;
   sessionId: string;
   engineId?: string;
-  /** What the turn's avatar shows: the session's status on the newest turn. */
-  avatarStatus: string;
-  /** Only the newest turn's avatar moves; older ones hold still. */
-  avatarLive: boolean;
+  /** The newest turn's bot wears the task's mood; older ones hold still. */
+  avatarMood?: BotMood;
   open: boolean;
   onToggle: (key: number) => void;
   now: number;
@@ -237,44 +235,26 @@ function activityOf(turn: Turn): { label: string; orb: React.ComponentProps<type
 }
 
 /**
- * The task's own face at the head of each of DEX's turns — hopping while it
- * works, awake while it waits for you, asleep when paused — and a hop and a
- * spin when a reply lands.
+ * The task's own face at the head of each of DEX's turns. The newest wears
+ * the task's mood (thinking, working, needs you, happy, sad, asleep — see
+ * components/lib/botMood.ts); older turns hold a still, awake pose.
  */
-function TurnAvatar({ sessionId, engineId, status, live, turnLive, failed }: {
-  sessionId: string;
-  engineId?: string;
-  status: string;
-  live: boolean;
-  turnLive: boolean;
-  failed: boolean;
-}): React.ReactElement {
-  const ref = useRef<HTMLCanvasElement>(null);
-  const wasLive = useRef(turnLive);
-  useEffect(() => {
-    const landed = wasLive.current && !turnLive && !failed;
-    wasLive.current = turnLive;
-    if (!landed) return;
-    const t = setTimeout(() => ref.current?.click(), 180);
-    return () => clearTimeout(t);
-  }, [turnLive, failed]);
+function TurnAvatar({ sessionId, engineId, mood }: { sessionId: string; engineId?: string; mood?: BotMood }): React.ReactElement {
   return (
     <AgentAvatar
-      ref={ref}
       sessionId={sessionId}
       engineId={engineId}
-      status={status}
+      status="idle"
+      mood={mood}
       size={24}
-      animate={live}
-      whirl={turnLive ? 1 : 0}
+      animate={Boolean(mood)}
       className="cx-head__avatar"
     />
   );
 }
 
-const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarStatus, avatarLive, open, onToggle, now, docSignals, renderLink, renderInlineCode }: TurnViewProps) {
+const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood, open, onToggle, now, docSignals, renderLink, renderInlineCode }: TurnViewProps) {
   const hasWork = turn.work.length > 0 || turn.live;
-  const failed = turn.alerts.some((a) => a.kind === 'error');
   // Sessions recorded before events carried times just say "Worked".
   const end = turn.live ? now : turn.endAt;
   const duration = turn.startAt !== undefined && end !== undefined ? formatDuration(end - turn.startAt) : null;
@@ -300,7 +280,7 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarStatu
       ) : null}
 
       <div className={`cx-head${hasWork ? '' : ' cx-head--bare'}`}>
-        <TurnAvatar sessionId={sessionId} engineId={engineId} status={avatarStatus} live={avatarLive} turnLive={turn.live} failed={failed} />
+        <TurnAvatar sessionId={sessionId} engineId={engineId} mood={avatarMood} />
         {hasWork && (
           <button type="button" className="cx-worked" onClick={() => onToggle(turn.key)} aria-expanded={open}>
             <span className="cx-worked__label">
@@ -358,6 +338,7 @@ function readMinibarPref(): 'open' | 'closed' | null {
 
 export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFollowUp, onPause, onOpenUrl, focused, focusSignal }: ChatViewProps): React.ReactElement {
   const running = session.status === 'running' || session.status === 'stuck';
+  const mood = useBotMood(session);
   const transcript = useTranscript(session);
   const blocks = transcript.blocks;
 
@@ -490,8 +471,7 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
               turn={turn}
               sessionId={sessionId}
               engineId={session.engine}
-              avatarStatus={i < turns.length - 1 ? 'idle' : turn.live && turn.alerts.some((a) => a.kind === 'notice') ? 'waiting' : session.status}
-              avatarLive={i === turns.length - 1}
+              avatarMood={i === turns.length - 1 ? mood : undefined}
               open={choices.get(turn.key) ?? turn.live}
               onToggle={onToggle}
               now={turn.live ? now : 0}
@@ -502,7 +482,7 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
           ))}
           {turns.length === 0 && (
             <div className="cx__empty">
-              <AgentAvatar sessionId={sessionId} engineId={session.engine} status={session.status} size={64} whirl={running ? 1 : 0} />
+              <AgentAvatar sessionId={sessionId} engineId={session.engine} status={session.status} mood={mood} size={64} />
             </div>
           )}
         </div>
@@ -510,7 +490,7 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
 
       {miniOpen ? (
         <Minibar
-          avatar={<AgentAvatar sessionId={sessionId} engineId={session.engine} status={session.status} size={28} whirl={running ? 1 : 0} />}
+          avatar={<AgentAvatar sessionId={sessionId} engineId={session.engine} status={session.status} mood={mood} size={28} />}
           sessionId={sessionId}
           title={session.prompt}
           engineName={engineName}
