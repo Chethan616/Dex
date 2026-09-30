@@ -12,6 +12,9 @@ import opencodeLogoLight from './opencode-logo-light.svg';
 import { useThemedAsset } from '../design/useThemedAsset';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
 import { PreviewDeck, deckHasContent, getPendingConfirmations, ConfirmationCard } from './PreviewDeck';
+import { WorkspaceBar } from './workspace/WorkspaceBar';
+import { NewTabPage } from './workspace/NewTabPage';
+import { useWorkspaceTabs } from './workspace/useWorkspaceTabs';
 import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from './slashCommands';
 import { matchingMentions, type MentionDef } from './mentions';
 import { CommandChip, CommandHints, MentionHints } from './CommandChip';
@@ -824,6 +827,18 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
   }, [session, paneOverride]);
 
   /**
+   * The task's tabs (docs/unify/PLAN.md §3.2). A blank tab *you* opened shows
+   * DEX's New-tab page in the rect, like the deck does: the native view steps
+   * aside for React. The task's own first tab stays on the old rules above.
+   */
+  const workspaceOn = session.hasBrowser !== false && !browserDead;
+  const tabs = useWorkspaceTabs(session.id, workspaceOn);
+  const activeTab = tabs.find((t) => t.active);
+  const newTabActive = Boolean(activeTab?.isNewTab && activeTab.openedBy !== 'task');
+  /** Something React draws owns the rect (the deck, or the New-tab page). */
+  const surfaceActive = deckActive || newTabActive;
+
+  /**
    * A dex-find result, a dex-canvas document, or a screenshot can land at
    * any point in a task that has already navigated a page — e.g. "search my
    * drive" opens Google Drive itself, so `primarySite` is set and the deck
@@ -972,50 +987,29 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
       const key = `${bounds.x}|${bounds.y}|${bounds.width}|${bounds.height}`;
       if (key === lastKey) return;
       lastKey = key;
-      // Overlay is always visible while the session is running. Mode switches
-      // from 'idle' (plain "Browser not started yet" label) to 'active'
-      // (pulsing glow + hover-to-stop button) the moment SessionManager
-      // records a real navigation via session.primarySite. The ambiguous
-      // idle label covers both chat-only tasks and browser tasks still
-      // warming up.
-      const overlayMode: 'idle' | 'active' = session.primarySite ? 'active' : 'idle';
-
-      if (deckActive) {
-        // Deck owns the rect: pull the native view out of the way and drop the
-        // takeover overlay, which would otherwise paint its scrim over the
-        // cards. Bounds measurement below still runs, so the deck is positioned
-        // exactly where the browser would have been.
+      // No overlay over the page any more: you and DEX share it (docs/unify
+      // PLAN §3.4). While DEX drives, .pane__output--agent draws a glow
+      // around the rect, and the workspace bar says so, with Pause.
+      if (surfaceActive) {
+        // The deck or the New-tab page owns the rect: pull the native view
+        // out of the way. Bounds measurement below still runs, so it's
+        // positioned exactly where the browser would have been.
         if (hasAttachedRef.current) {
           hasAttachedRef.current = false;
           attachSucceededRef.current = false;
           api.sessions.viewDetach(session.id).catch(() => {});
         }
-        api.takeover?.hide(session.id).catch(() => {});
       } else if (!hasAttachedRef.current) {
         hasAttachedRef.current = true;
         api.sessions.viewAttach(session.id, bounds).then((ok) => {
-          if (!ok) {
-            attachSucceededRef.current = false;
-            setBrowserMissing(true);
-            api.takeover?.hide(session.id).catch(() => {});
-          } else {
-            attachSucceededRef.current = true;
-            setBrowserMissing(false);
-            if (session.status === 'running') {
-              void api.takeover?.show(session.id, bounds, overlayMode);
-            }
-          }
+          attachSucceededRef.current = ok;
+          setBrowserMissing(!ok);
         }).catch(() => {
           hasAttachedRef.current = false;
           attachSucceededRef.current = false;
         });
       } else {
         api.sessions.viewResize(session.id, bounds);
-        if (attachSucceededRef.current && session.status === 'running') {
-          void api.takeover?.show(session.id, bounds, overlayMode);
-        } else {
-          api.takeover?.hide(session.id).catch(() => {});
-        }
       }
       const p = paneEl.getBoundingClientRect();
       const o = outEl.getBoundingClientRect();
@@ -1090,7 +1084,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
       window.removeEventListener('pane:layout-change', onLayoutChange);
       if (rafScheduled) cancelAnimationFrame(rafScheduled);
     };
-  }, [session.id, computeBounds, browserDead, session.status, session.primarySite, deckActive]);
+  }, [session.id, computeBounds, browserDead, session.status, session.primarySite, surfaceActive]);
 
   useEffect(() => {
     return () => {
@@ -1098,20 +1092,35 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
       if (!api) return;
       console.log('[AgentPane] unmount -> detach', { id: session.id });
       api.sessions.viewDetach(session.id).catch(() => {});
-      api.takeover?.hide(session.id).catch(() => {});
     };
   }, [session.id]);
 
-  // Hide the takeover overlay whenever the session leaves 'running' state.
-  // Show is driven by the bounds-update effect above so it tracks the same
-  // rect as the browser view without a separate measurement path.
+  // Browser shortcuts while the hub itself has focus (the page handles the
+  // same keys in main when it has focus): Ctrl+T/W/L/R, Ctrl+Tab.
   useEffect(() => {
-    const api = window.electronAPI;
-    if (!api?.takeover) return;
-    if (session.status !== 'running') {
-      void api.takeover.hide(session.id);
-    }
-  }, [session.id, session.status]);
+    if (!focused || !workspaceOn) return;
+    const api = window.electronAPI?.workspace;
+    if (!api) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || !e.ctrlKey || e.altKey || e.metaKey) return;
+      const target = e.target as HTMLElement | null;
+      const typing = !!target?.closest('input, textarea, [contenteditable="true"]');
+      const key = e.key.toLowerCase();
+      const shortcut: WorkspaceShortcut | null =
+        key === 't' ? 'new-tab'
+          : key === 'w' ? 'close-tab'
+            : key === 'l' ? 'focus-address'
+              : key === 'tab' ? (e.shiftKey ? 'prev-tab' : 'next-tab')
+                : key === 'r' && !typing ? 'reload'
+                  : null;
+      if (!shortcut) return;
+      e.preventDefault();
+      e.stopPropagation();
+      void api.shortcut(session.id, shortcut);
+    };
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [focused, workspaceOn, session.id]);
 
   const elapsed = formatElapsed(session.createdAt);
   const statusText = STATUS_LABEL[session.status] ?? session.status;
@@ -1370,7 +1379,16 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           rect — the pre-existing idle/error states, plus the two new ones the
           deck introduces: a running task that has never navigated (desktop,
           file or OS work) and a paused session. */}
-      {frameRect && !deckActive && (showErrorUi || browserDead || browserMissing || session.status === 'draft' || session.status === 'stopped' || session.status === 'idle' || session.status === 'stuck') && (() => {
+      {tabs.length > 0 && workspaceOn && (
+        <WorkspaceBar
+          sessionId={session.id}
+          tabs={tabs}
+          agentActive={session.status === 'running'}
+          onPause={onPause ? () => onPause(session.id) : undefined}
+        />
+      )}
+
+      {frameRect && !surfaceActive && (showErrorUi || browserDead || browserMissing || session.status === 'draft' || session.status === 'stopped' || session.status === 'idle' || session.status === 'stuck') && (() => {
         const isStarting = !showErrorUi && !browserDead && !browserMissing && session.status === 'draft';
         const browserLine = browserDead
           ? 'Browser ended'
@@ -1469,8 +1487,13 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           deck is showing, so there is nothing to sit on top of — and a rect
           measured at the wrong moment was drawing the cards into a narrow
           strip with the rest of the pane left black. */}
-      <div className="pane__output">
-        {deckActive && <PreviewDeck session={session} actions={deckActions} />}
+      <div className={`pane__output${session.status === 'running' && !surfaceActive ? ' pane__output--agent' : ''}`}>
+        {newTabActive && activeTab ? (
+          <NewTabPage
+            session={session}
+            onOpen={(input) => { void window.electronAPI?.workspace?.tab(session.id, { op: 'navigate', tabId: activeTab.id, input }); }}
+          />
+        ) : deckActive && <PreviewDeck session={session} actions={deckActions} />}
       </div>
 
     </div>

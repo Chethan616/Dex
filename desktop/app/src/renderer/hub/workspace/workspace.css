@@ -1,0 +1,298 @@
+/* ── Workspace chrome: tab strip + toolbar above the live page ───────────── */
+
+.ws {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 8px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-base);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Tabs */
+.ws-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ws-tabs::-webkit-scrollbar { display: none; }
+
+.ws-tab {
+  flex: 0 1 220px;
+  min-width: 92px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 0 10px;
+  border-radius: 10px;
+  color: var(--color-fg-secondary);
+  font-size: 12.5px;
+  cursor: default;
+  box-shadow: inset 0 0 0 1px transparent;
+  transition: background-color var(--duration-fast) ease, color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+}
+.ws-tab:hover { background: var(--surface-chip); color: var(--color-fg-primary); }
+.ws-tab--active {
+  background: var(--surface-chip-hover, rgba(255, 255, 255, 0.07));
+  color: var(--color-fg-primary);
+  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+}
+.ws-tab:focus-visible { outline: 2px solid var(--color-accent-default); outline-offset: 1px; }
+
+.ws-tab__icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  color: var(--color-fg-tertiary);
+}
+img.ws-tab__icon { object-fit: contain; }
+.ws-tab__icon--crashed { color: var(--color-status-warning, #e3b341); }
+
+.ws-tab__title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ws-tab__close {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-fg-tertiary);
+  opacity: 0;
+  cursor: pointer;
+}
+.ws-tab:hover .ws-tab__close,
+.ws-tab--active .ws-tab__close { opacity: 1; }
+.ws-tab__close:hover { background: var(--surface-chip-hover, rgba(255, 255, 255, 0.08)); color: var(--color-fg-primary); }
+
+.ws-newtab {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-fg-tertiary);
+  cursor: pointer;
+}
+.ws-newtab:hover { background: var(--surface-chip); color: var(--color-fg-primary); }
+
+.ws-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.6px solid var(--color-border-default);
+  border-top-color: var(--color-accent-default, #35b8ff);
+  animation: ws-spin 0.8s linear infinite;
+}
+@keyframes ws-spin { to { transform: rotate(360deg); } }
+
+/* Toolbar */
+.ws-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ws-nav {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--surface-chip);
+  box-shadow: var(--line-chip);
+}
+.ws-nav__sep {
+  width: 1px;
+  height: 14px;
+  margin: 0 2px;
+  background: var(--color-border-subtle);
+}
+
+.ws-btn {
+  width: 30px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+}
+.ws-btn:hover:not(:disabled) { background: var(--surface-chip-hover, rgba(255, 255, 255, 0.07)); color: var(--color-fg-primary); }
+.ws-btn:disabled { opacity: 0.35; cursor: default; }
+
+.ws-address {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--surface-chip);
+  box-shadow: var(--line-chip);
+  transition: box-shadow var(--duration-fast) ease, background-color var(--duration-fast) ease;
+}
+.ws-address:hover { background: var(--surface-chip-hover, rgba(255, 255, 255, 0.06)); }
+.ws-address--editing {
+  background: var(--color-bg-elevated);
+  box-shadow: 0 0 0 2px var(--color-accent-default, #35b8ff);
+}
+.ws-address__lock { flex: none; display: grid; place-items: center; color: var(--color-fg-tertiary); }
+.ws-address__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--color-fg-primary);
+  font: 500 13px/1 var(--font-ui);
+  text-align: center;
+}
+.ws-address--editing .ws-address__input { text-align: left; }
+.ws-address__input::placeholder { color: var(--color-fg-tertiary); font-weight: 400; }
+
+/* "DEX is working" */
+.ws-agent {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 4px 0 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent-default, #35b8ff) 12%, transparent);
+  color: var(--color-fg-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ws-agent__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-accent-default, #35b8ff);
+  animation: ws-pulse 1.6s ease-in-out infinite;
+}
+@keyframes ws-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent-default, #35b8ff) 55%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-accent-default, #35b8ff) 0%, transparent); }
+}
+.ws-agent__pause {
+  height: 24px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-fg-primary);
+  color: var(--color-bg-base);
+  font: 600 11.5px var(--font-ui);
+  cursor: pointer;
+}
+.ws-agent__pause:hover { opacity: 0.88; }
+@media (max-width: 1100px) { .ws-agent__text { display: none; } }
+
+/* The live page, while DEX drives: a glow around it that never covers it. */
+.pane__output--agent {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent-default, #35b8ff) 55%, transparent),
+    0 0 18px -4px color-mix(in srgb, var(--color-accent-default, #35b8ff) 45%, transparent);
+}
+
+/* ── New-tab page ──────────────────────────────────────────────────────── */
+.ws-newtab-page {
+  width: min(760px, 100%);
+  margin: 32px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.ws-ntp-heading {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-fg-primary);
+}
+.ws-ntp-empty { margin: 0; font-size: 12.5px; color: var(--color-fg-tertiary); }
+.ws-ntp-sites { display: flex; gap: 10px; flex-wrap: wrap; }
+.ws-ntp-site {
+  width: 132px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--color-fg-secondary);
+  font: 500 12px var(--font-ui);
+  cursor: pointer;
+}
+.ws-ntp-site:hover { background: var(--surface-chip); color: var(--color-fg-primary); }
+.ws-ntp-site__mark {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--surface-chip-hover, rgba(255, 255, 255, 0.07));
+  color: var(--color-fg-primary);
+  font-size: 16px;
+  font-weight: 700;
+}
+.ws-ntp-site__label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-ntp-files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.ws-ntp-file {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ws-ntp-file:hover { background: var(--surface-chip); }
+.ws-ntp-file__badge {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--surface-chip-hover, rgba(255, 255, 255, 0.07));
+  color: var(--color-fg-secondary);
+  font: 700 9.5px var(--font-ui);
+  letter-spacing: 0.04em;
+}
+.ws-ntp-file__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ws-ntp-file__name { font-size: 13px; font-weight: 600; color: var(--color-fg-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-ntp-file__kind { font-size: 11.5px; color: var(--color-fg-tertiary); }

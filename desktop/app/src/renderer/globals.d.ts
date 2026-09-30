@@ -221,6 +221,38 @@ interface ElectronLogsAPI {
   updateAnchor: (anchor: { x: number; y: number; width: number; height: number }) => void;
 }
 
+/** One tab of a task's workspace (main/sessions/BrowserPool.ts WorkspaceTabState). */
+interface WorkspaceTab {
+  id: string;
+  url: string;
+  title: string;
+  faviconUrl: string | null;
+  loading: boolean;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  active: boolean;
+  openedBy: 'task' | 'user' | 'page';
+  isNewTab: boolean;
+  crashed: boolean;
+}
+
+type WorkspaceTabAction =
+  | { op: 'new'; input?: string }
+  | { op: 'activate' | 'close'; tabId: string }
+  | { op: 'navigate'; tabId?: string; input: string }
+  | { op: 'back' | 'forward' | 'reload' | 'stop'; tabId?: string };
+
+interface ElectronWorkspaceAPI {
+  tabs: (sessionId: string) => Promise<WorkspaceTab[]>;
+  tab: (sessionId: string, action: WorkspaceTabAction) => Promise<boolean>;
+  onTabsChanged: (cb: (sessionId: string, tabs: WorkspaceTab[]) => void) => () => void;
+  shortcut: (sessionId: string, shortcut: WorkspaceShortcut) => Promise<boolean>;
+  onFocusAddress: (cb: (sessionId: string) => void) => () => void;
+}
+
+type WorkspaceShortcut =
+  | 'new-tab' | 'close-tab' | 'focus-address' | 'reload' | 'back' | 'forward' | 'next-tab' | 'prev-tab';
+
 interface ElectronTakeoverAPI {
   show: (
     sessionId: string,
@@ -485,6 +517,7 @@ interface ElectronAPI {
   logs?: ElectronLogsAPI;
   popup?: ElectronPopupAPI;
   takeover?: ElectronTakeoverAPI;
+  workspace?: ElectronWorkspaceAPI;
   sessions: ElectronSessionAPI;
   channels: ElectronChannelsAPI;
   chromeImport?: ElectronChromeImportAPI;

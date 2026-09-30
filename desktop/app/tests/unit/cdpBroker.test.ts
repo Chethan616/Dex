@@ -176,6 +176,51 @@ describe('CdpBroker', () => {
   });
 });
 
+describe('CdpBroker hooks', () => {
+  it('runs the workspace hooks around page commands, marking iframe sessions', async () => {
+    const tab = fakeTab('TARGET-H');
+    const seen: string[] = [];
+    const broker = new CdpBroker(() => [tab.wc], {
+      beforeCommand: async (_wc, method, _params, { child }) => { seen.push(`before ${method}${child ? ' (child)' : ''}`); },
+      afterCommand: (_wc, method) => { seen.push(`after ${method}`); },
+    });
+    await broker.start();
+    try {
+      const c = await connect(broker.endpointFor('any').wsUrl);
+      const { result } = await c.call('Target.attachToTarget', { targetId: 'TARGET-H', flatten: true });
+      await c.call('Input.dispatchMouseEvent', { type: 'mousePressed', x: 10, y: 20 }, result.sessionId);
+      tab.emit('message', {}, 'Target.attachedToTarget', { sessionId: 'FRAME', targetInfo: { type: 'iframe' } });
+      await settle();
+      await c.call('Runtime.evaluate', { expression: '1' }, 'FRAME');
+      await c.call('Target.getTargets');
+      expect(seen).toEqual([
+        'before Input.dispatchMouseEvent',
+        'after Input.dispatchMouseEvent',
+        'before Runtime.evaluate (child)',
+        'after Runtime.evaluate',
+      ]);
+      c.ws.close();
+    } finally {
+      await broker.stop();
+    }
+  });
+
+  it('still answers when a hook throws', async () => {
+    const tab = fakeTab('TARGET-X');
+    const broker = new CdpBroker(() => [tab.wc], { beforeCommand: async () => { throw new Error('cursor broke'); } });
+    await broker.start();
+    try {
+      const c = await connect(broker.endpointFor('any').wsUrl);
+      const { result } = await c.call('Target.attachToTarget', { targetId: 'TARGET-X', flatten: true });
+      const res = await c.call('Runtime.evaluate', { expression: '1' }, result.sessionId);
+      expect(res.result).toEqual({ result: { type: 'string', value: 'from TARGET-X' } });
+      c.ws.close();
+    } finally {
+      await broker.stop();
+    }
+  });
+});
+
 describe('isBlockedOnPage', () => {
   it('allows page work and the page’s own auto-attach, nothing that reaches further', () => {
     expect(isBlockedOnPage('Runtime.evaluate')).toBe(false);

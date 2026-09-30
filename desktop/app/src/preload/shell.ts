@@ -74,6 +74,32 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
   },
   popup: createPopupBridge(),
+  /** The task's tabs (docs/unify/PLAN.md §3.2): list, act, follow changes. */
+  workspace: {
+    tabs: (sessionId: string): Promise<unknown[]> => ipcRenderer.invoke('workspace:tabs', sessionId),
+    tab: (
+      sessionId: string,
+      action:
+        | { op: 'new'; input?: string }
+        | { op: 'activate' | 'close'; tabId: string }
+        | { op: 'navigate'; tabId?: string; input: string }
+        | { op: 'back' | 'forward' | 'reload' | 'stop'; tabId?: string },
+    ): Promise<boolean> => ipcRenderer.invoke('workspace:tab', sessionId, action),
+    shortcut: (sessionId: string, shortcut: string): Promise<boolean> =>
+      ipcRenderer.invoke('workspace:shortcut', sessionId, shortcut),
+    onFocusAddress: (cb: (sessionId: string) => void): (() => void) => {
+      const handler = (_event: unknown, sessionId: unknown) => { if (typeof sessionId === 'string') cb(sessionId); };
+      ipcRenderer.on('workspace:focus-address', handler);
+      return () => ipcRenderer.removeListener('workspace:focus-address', handler);
+    },
+    onTabsChanged: (cb: (sessionId: string, tabs: unknown[]) => void): (() => void) => {
+      const handler = (_event: unknown, sessionId: unknown, tabs: unknown) => {
+        if (typeof sessionId === 'string' && Array.isArray(tabs)) cb(sessionId, tabs);
+      };
+      ipcRenderer.on('workspace:tabs-changed', handler);
+      return () => ipcRenderer.removeListener('workspace:tabs-changed', handler);
+    },
+  },
   takeover: {
     show: (
       sessionId: string,

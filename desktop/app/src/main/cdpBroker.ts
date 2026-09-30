@@ -42,6 +42,16 @@ export interface BrokerContents extends DebuggableContents {
   };
 }
 
+/**
+ * Around every command the agent sends to a page: the workspace uses these
+ * for the agent cursor, the politeness wait, and hiding the cursor from
+ * screenshots (main/workspace). `child` is an iframe or worker session.
+ */
+export interface BrokerHooks {
+  beforeCommand?(wc: BrokerContents, method: string, params: Record<string, unknown>, info: { child: boolean }): Promise<void>;
+  afterCommand?(wc: BrokerContents, method: string, params: Record<string, unknown>, info: { child: boolean }): void;
+}
+
 export interface CdpEndpoint {
   /** The broker's loopback port (for display and logs; useless without the token). */
   port: number;
@@ -114,6 +124,7 @@ class BrokerConnection {
     private readonly scope: string,
     private readonly targets: () => BrokerContents[],
     private readonly pageTargetId: string | null,
+    private readonly hooks: BrokerHooks = {},
   ) {
     ws.on('message', (raw) => { void this.onMessage(raw); });
     ws.on('close', () => this.dispose());
@@ -233,16 +244,32 @@ class BrokerConnection {
       : this.attachments.find((a) => a.sessionId === undefined);
     if (page) {
       if (isBlockedOnPage(method)) throw notHere(method);
-      return page.wc.debugger.sendCommand(method, params);
+      return this.forward(page.wc, method, params, undefined);
     }
     // …or to an iframe/worker under it.
     if (sessionId) {
       const owner = this.attachments.find((a) => a.children.has(sessionId));
       if (!owner) throw new CdpError(-32001, 'Session with given id not found.');
       if (isBlockedOnPage(method)) throw notHere(method);
-      return owner.wc.debugger.sendCommand(method, params, sessionId);
+      return this.forward(owner.wc, method, params, sessionId);
     }
     return this.browserLevel(method, params);
+  }
+
+  private async forward(wc: BrokerContents, method: string, params: Record<string, unknown>, childSession: string | undefined): Promise<unknown> {
+    const info = { child: childSession !== undefined };
+    try {
+      await this.hooks.beforeCommand?.(wc, method, params, info);
+    } catch (err) {
+      mainLogger.warn('cdpBroker.hook.before', { method, error: (err as Error).message });
+    }
+    try {
+      return childSession
+        ? await wc.debugger.sendCommand(method, params, childSession)
+        : await wc.debugger.sendCommand(method, params);
+    } finally {
+      try { this.hooks.afterCommand?.(wc, method, params, info); } catch { /* never block the reply */ }
+    }
   }
 
   private async browserLevel(method: string, params: Record<string, unknown>): Promise<unknown> {
@@ -301,7 +328,10 @@ export class CdpBroker {
   private scopeToToken = new Map<string, string>();
 
   /** `resolve(scope)` → the WebContents a scope (a DEX session id) may reach. */
-  constructor(private readonly resolve: (scope: string) => BrokerContents[]) {}
+  constructor(
+    private readonly resolve: (scope: string) => BrokerContents[],
+    private readonly hooks: BrokerHooks = {},
+  ) {}
 
   get listeningPort(): number {
     return this.port;
@@ -320,7 +350,7 @@ export class CdpBroker {
         return;
       }
       wss.handleUpgrade(req, socket, head, (ws) => {
-        const conn = new BrokerConnection(ws, route.scope, () => this.resolve(route.scope), route.kind === 'page' ? route.targetId : null);
+        const conn = new BrokerConnection(ws, route.scope, () => this.resolve(route.scope), route.kind === 'page' ? route.targetId : null, this.hooks);
         if (route.kind === 'page') {
           void conn.attachPage().then((attached) => { if (!attached) ws.close(1008, 'No such target'); });
         }

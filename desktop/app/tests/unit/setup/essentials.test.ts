@@ -86,5 +86,5 @@ describe('essentials installers', () => {
     const name = (tag: string) => spawnSync('powershell', ['-NoProfile', '-Command', `$tag = '${tag}'\n${naming}\n$name`], { encoding: 'utf-8' }).stdout.trim();
     expect(name('v2.56.0.windows.1')).toBe('Git-2.56.0-64-bit.exe');
     expect(name('v2.35.1.windows.2')).toBe('Git-2.35.1.2-64-bit.exe');
-  });
+  }, 30_000); // six PowerShell launches; slow when the whole suite runs at once
 });

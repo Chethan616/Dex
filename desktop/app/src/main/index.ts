@@ -94,7 +94,9 @@ import {
   setAnnouncedCdpPort,
   verifyCdpOwnership,
 } from './startup/cli';
-import { CdpBroker, type BrokerContents } from './cdpBroker';
+import { CdpBroker, type BrokerContents, type BrokerHooks } from './cdpBroker';
+import { moveCursor, setCursorVisible } from './workspace/agentCursor';
+import { noteAgentInput, waitForUserIdle } from './workspace/userActivity';
 import { leaseDebugger } from './cdpLease';
 import { assertString, assertAttachments, type ValidatedAttachment } from './ipc-validators';
 import { runPreflight, formatPreflightForLog, type PreflightReport } from './startup/preflight';
@@ -350,10 +352,38 @@ setTimeout(() => {
 // How an agent reaches its own browser tab, and nothing else (cdpBroker.ts):
 // a private loopback endpoint with one secret link per task. Started when the
 // app is ready; engines get their link through cdpFor().
-const cdpBroker = new CdpBroker((sessionId) => {
-  const wc = browserPool.getWebContents(sessionId);
-  return wc && !wc.isDestroyed() ? [wc as unknown as BrokerContents] : [];
-});
+// The agent's input to a shared page (docs/unify/PLAN.md §3.4–3.5): wait while
+// you're using the page, glide DEX's cursor to the spot and let it arrive
+// before the click lands, and keep the cursor out of the agent's screenshots.
+const AGENT_INPUT = new Set([
+  'Input.dispatchMouseEvent', 'Input.dispatchKeyEvent', 'Input.insertText', 'Input.dispatchTouchEvent',
+  'Input.synthesizeScrollGesture', 'Input.synthesizeTapGesture', 'Input.dispatchDragEvent', 'Input.imeSetComposition',
+]);
+type CursorTarget = Parameters<typeof moveCursor>[0];
+const workspaceHooks: BrokerHooks = {
+  async beforeCommand(wc, method, params, { child }) {
+    if (AGENT_INPUT.has(method)) {
+      await waitForUserIdle(wc);
+      if (!child && method === 'Input.dispatchMouseEvent') {
+        const type = params.type;
+        if (type === 'mouseMoved' || type === 'mousePressed' || type === 'mouseWheel') {
+          await moveCursor(wc as unknown as CursorTarget, Number(params.x), Number(params.y), type === 'mousePressed');
+        }
+      }
+      noteAgentInput(wc, 400);
+    } else if (method === 'Page.captureScreenshot' && !child) {
+      await setCursorVisible(wc as unknown as CursorTarget, false);
+    }
+  },
+  afterCommand(wc, method, _params, { child }) {
+    if (AGENT_INPUT.has(method)) noteAgentInput(wc, 250);
+    else if (method === 'Page.captureScreenshot' && !child) void setCursorVisible(wc as unknown as CursorTarget, true);
+  },
+};
+const cdpBroker = new CdpBroker(
+  (sessionId) => browserPool.getAllWebContents(sessionId) as unknown as BrokerContents[],
+  workspaceHooks,
+);
 let cdpBrokerReady: boolean | null = null;
 
 function cdpFor(sessionId: string): { cdpPort: number; cdpWsUrl: string } {
@@ -408,6 +438,19 @@ browserPool.setOnGone((sessionId) => {
 // any clicks the user makes inside the attached view.
 browserPool.setOnNavigate((sessionId, url) => {
   sessionManager.updateNavigationFromUrl(sessionId, url);
+});
+// The workspace's tab strip follows every tab change (opened, closed,
+// switched, navigated, retitled, loading).
+browserPool.setOnTabsChanged((sessionId, tabs) => {
+  if (shellWindow && !shellWindow.isDestroyed()) {
+    shellWindow.webContents.send('workspace:tabs-changed', sessionId, tabs);
+  }
+});
+browserPool.setOnFocusAddress((sessionId) => {
+  if (shellWindow && !shellWindow.isDestroyed()) {
+    shellWindow.webContents.focus();
+    shellWindow.webContents.send('workspace:focus-address', sessionId);
+  }
 });
 browserPool.setOnInterruptShortcut((sessionId) => {
   return interruptBrowserSessionFromShortcut?.(sessionId) ?? false;
@@ -2484,6 +2527,50 @@ app.whenReady().then(async () => {
       takeoverOverlay.reraise(validatedId, shellWindow);
     }
     return ok;
+  });
+
+  // ---- Workspace tabs (docs/unify/PLAN.md §3.2–3.3) ----
+  ipcMain.handle('workspace:tabs', (_event, id: string) => {
+    return browserPool.listTabs(assertString(id, 'id', 100));
+  });
+
+  ipcMain.handle('workspace:shortcut', (_event, id: string, shortcut: unknown) => {
+    const validatedId = assertString(id, 'id', 100);
+    const allowed = ['new-tab', 'close-tab', 'focus-address', 'reload', 'back', 'forward', 'next-tab', 'prev-tab'];
+    if (typeof shortcut !== 'string' || !allowed.includes(shortcut)) return false;
+    browserPool.runShortcut(validatedId, undefined, shortcut as Parameters<typeof browserPool.runShortcut>[2]);
+    return true;
+  });
+
+  ipcMain.handle('workspace:tab', (_event, id: string, action: unknown) => {
+    const validatedId = assertString(id, 'id', 100);
+    if (!action || typeof action !== 'object') return false;
+    const a = action as { op?: unknown; tabId?: unknown; input?: unknown };
+    const tabId = typeof a.tabId === 'string' && a.tabId.length <= 20 ? a.tabId : undefined;
+    switch (a.op) {
+      case 'new': {
+        const newId = browserPool.openTab(validatedId, { openedBy: 'user' });
+        if (newId && typeof a.input === 'string' && a.input.trim() && a.input.length <= 4096) {
+          browserPool.navigateTab(validatedId, newId, a.input);
+        }
+        return newId !== null;
+      }
+      case 'activate':
+        return tabId ? browserPool.activateTab(validatedId, tabId) : false;
+      case 'close':
+        return tabId ? browserPool.closeTab(validatedId, tabId) : false;
+      case 'navigate':
+        return typeof a.input === 'string' && a.input.length <= 4096
+          ? browserPool.navigateTab(validatedId, tabId, a.input)
+          : false;
+      case 'back':
+      case 'forward':
+      case 'reload':
+      case 'stop':
+        return browserPool.tabAction(validatedId, tabId, a.op);
+      default:
+        return false;
+    }
   });
 
   ipcMain.handle('sessions:view-detach', (_event, id: string) => {
