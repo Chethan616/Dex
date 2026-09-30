@@ -70,12 +70,28 @@ export function linkifyPathsToReact(text: string): React.ReactNode[] {
 export function Markdown({
   source,
   variant = 'default',
+  renderLink,
+  renderInlineCode,
 }: {
   source: string;
-  variant?: 'default' | 'compact';
+  variant?: 'default' | 'compact' | 'chat';
+  /** The chat's links: a GitHub mark, a file chip. `undefined` = the usual link. */
+  renderLink?: (href: string, children: React.ReactNode) => React.ReactNode | undefined;
+  /** The chat's `inline code` that names a file it made. `undefined` = plain code. */
+  renderInlineCode?: (text: string) => React.ReactNode | undefined;
 }): React.ReactElement {
+  const code = renderInlineCode
+    ? ({ node: _node, className, children, ...props }: React.ComponentPropsWithoutRef<'code'> & { node?: unknown }) => {
+      const text = String(children ?? '');
+      if (!className && !text.includes('\n')) {
+        const custom = renderInlineCode(text);
+        if (custom !== undefined) return <>{custom}</>;
+      }
+      return <code className={className} {...props}>{children}</code>;
+    }
+    : undefined;
   return (
-    <div className={`md${variant === 'compact' ? ' md--compact' : ''}`}>
+    <div className={`md${variant === 'compact' ? ' md--compact' : variant === 'chat' ? ' md--chat' : ''}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
         urlTransform={(url) => {
@@ -106,8 +122,13 @@ export function Markdown({
                 >{children}</a>
               );
             }
+            if (renderLink && typeof href === 'string') {
+              const custom = renderLink(href, children);
+              if (custom !== undefined) return <>{custom}</>;
+            }
             return <a {...props} href={href} target="_blank" rel="noreferrer">{children}</a>;
           },
+          ...(code ? { code } : {}),
         }}
       >
         {source}

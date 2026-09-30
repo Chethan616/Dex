@@ -323,6 +323,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('sessions:download-output', filePath),
     revealOutput: (filePath: string): Promise<{ revealed: boolean }> =>
       ipcRenderer.invoke('sessions:reveal-output', filePath),
+    openFile: (sessionId: string, filePath: string, how: 'open' | 'reveal' | 'copy' = 'open'): Promise<{ opened?: boolean; revealed?: boolean; saved?: string | null }> =>
+      ipcRenderer.invoke('sessions:open-file', { sessionId, path: filePath, how }),
     listEditors: (): Promise<Array<{ id: string; name: string }>> =>
       ipcRenderer.invoke('sessions:list-editors'),
     openInEditor: (editorId: string, filePath: string): Promise<{ opened: boolean }> =>

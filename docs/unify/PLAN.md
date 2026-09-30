@@ -222,6 +222,44 @@ Every document tab has **Outline ▾ · Request edits · Zoom · Download · Ope
   - they're registered with `setIgnoreMenuShortcuts` and forwarded from `before-input-event` when the page has focus;
   - DEX's existing Ctrl+C interrupt keeps working.
 
+### 3.12 The conversation (added 2026-09-30, from `UI/claude_see_this_…png`)
+
+The chat moves out of the floating Logs window and into the pane, styled like
+Codex's (the two screenshots in `UI/`), inside DEX's own layout:
+
+- **A pinned Chat tab** first in the tab strip. Picking it parks the page on
+  the stage (the agent keeps working there, §4.2) and draws the conversation
+  in the rect; picking a web tab brings the page back. By default a finished
+  or page-less task opens on Chat and a running browser task on its page,
+  with your own choice winning until the next run.
+- **Turns, not a log:**
+  - your messages are right-aligned blue bubbles;
+  - DEX's work collapses into **"Worked for 3m 45s ›"** over a hairline
+    (open while it's working, closed when done). Inside are the tool
+    cards, interim notes and screenshots;
+  - the reply is full-width prose. GitHub links carry the GitHub mark and
+    file links a file-type icon;
+  - files it made follow as one **card list**: a type icon, the name, the kind
+    ("Word", "Document · PDF") and **Open in ▾**, which offers default app,
+    Show in File Explorer, an editor, and Download a copy;
+  - a footer holds copy and the time.
+- **The minibar**, a floating card at the top right of the chat, like Codex's:
+  - the engine and model, and the status with its elapsed time;
+  - **Progress** from `dex-state`;
+  - **Outputs**, the files and documents it made;
+  - **Sources**, the sites and searches it used, with **View all**.
+
+  It hides behind a toggle on narrow panes.
+- **The composer** is Codex's rounded box: +, the approval mode, the engine
+  chip, and a round send button. It keeps DEX's slash commands, @-mentions
+  and attachments (it's the old `FollowUpInput`).
+- **Files outside `outputs/`** (Downloads, Documents) open through a new
+  `sessions:open-file`. It opens only paths this task recorded, and it only
+  ever reveals an executable, never runs it.
+- **Events carry `at`**, stamped in `SessionManager.appendOutput`, so every
+  turn knows its duration. Older sessions just show "Worked".
+- The Logs button stays, for the raw terminal view.
+
 ## 4. Architecture
 
 ### 4.1 Main process: `src/main/workspace/`

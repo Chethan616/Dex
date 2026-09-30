@@ -45,6 +45,8 @@ interface ElectronSessionAPI {
   delete: (id: string) => Promise<void>;
   downloadOutput: (filePath: string) => Promise<{ opened: boolean }>;
   revealOutput: (filePath: string) => Promise<{ revealed: boolean }>;
+  /** A file this task recorded, wherever it was saved (docs/unify/PLAN.md §3.12). */
+  openFile: (sessionId: string, filePath: string, how?: 'open' | 'reveal' | 'copy') => Promise<{ opened?: boolean; revealed?: boolean; saved?: string | null }>;
   listEditors: () => Promise<Array<{ id: string; name: string }>>;
   openInEditor: (editorId: string, filePath: string) => Promise<{ opened: boolean }>;
   listEngines: () => Promise<Array<{ id: string; displayName: string; binaryName: string; selectableModels?: Array<{ id: string; label: string; hint?: string }> }>>;

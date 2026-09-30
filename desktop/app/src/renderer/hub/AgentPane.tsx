@@ -11,17 +11,20 @@ import opencodeLogoDark from './opencode-logo-dark.svg';
 import opencodeLogoLight from './opencode-logo-light.svg';
 import { useThemedAsset } from '../design/useThemedAsset';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
-import { PreviewDeck, deckHasContent, getPendingConfirmations, ConfirmationCard } from './PreviewDeck';
+import { getPendingConfirmations, ConfirmationCard } from './PreviewDeck';
+import { ChatView } from './chat/ChatView';
 import { WorkspaceBar } from './workspace/WorkspaceBar';
 import { NewTabPage } from './workspace/NewTabPage';
 import { useWorkspaceTabs } from './workspace/useWorkspaceTabs';
-import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, type SlashCommand } from './slashCommands';
-import { matchingMentions, type MentionDef } from './mentions';
-import { CommandChip, CommandHints, MentionHints } from './CommandChip';
-import { MentionTextField, type MentionTextFieldHandle } from './MentionTextField';
-
-const FOLLOWUP_MAX_HEIGHT_PX = 80;
+import { useHydrateSession } from './useSessionsQuery';
 import type { AgentSession, OutputEntry } from './types';
+
+const ENGINE_NAMES: Record<string, string> = {
+  'claude-code': 'Claude Code',
+  codex: 'Codex',
+  browsercode: 'BrowserCode',
+  opencode: 'OpenCode',
+};
 
 function formatElapsed(createdAt: number): string {
   const seconds = Math.floor((Date.now() - createdAt) / 1000);
@@ -548,191 +551,6 @@ function PauseIcon(): React.ReactElement {
   );
 }
 
-interface FollowUpAttachment { idx: number; name: string; mime: string; bytes: Uint8Array }
-
-async function fileToAttachment(file: File, idx: number): Promise<FollowUpAttachment> {
-  const buf = await file.arrayBuffer();
-  return {
-    idx,
-    name: file.name || `image-${idx}`,
-    mime: file.type || 'application/octet-stream',
-    bytes: new Uint8Array(buf),
-  };
-}
-
-function FollowUpInput({ sessionId, onUserInput, autoFocus }: { sessionId: string; onUserInput: (text: string, attachments?: FollowUpAttachment[]) => void; autoFocus?: boolean }): React.ReactElement {
-  const [value, setValue] = useState('');
-  const [command, setCommand] = useState<SlashCommand | null>(null);
-  const [attachments, setAttachments] = useState<FollowUpAttachment[]>([]);
-  const [dragOver, setDragOver] = useState(false);
-  const idxCounter = useRef(0);
-  const fieldRef = useRef<MentionTextFieldHandle>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  // Caret position, tracked separately from `value` — an @mention can start
-  // anywhere in the text, unlike a slash command which only ever opens it.
-  const [caret, setCaret] = useState(0);
-
-  useEffect(() => {
-    if (autoFocus) {
-      fieldRef.current?.focus();
-    }
-  }, [autoFocus]);
-
-  const handleSubmit = useCallback(() => {
-    const trimmed = value.trim();
-    // Only include attachments whose `[Image #N]` token still appears in the
-    // text — deleting the token from the input removes the attachment.
-    const presentIdx = new Set<number>();
-    const tokenRe = /\[Image #(\d+)\]/g;
-    let m: RegExpExecArray | null;
-    while ((m = tokenRe.exec(trimmed)) !== null) presentIdx.add(Number(m[1]));
-    const filtered = attachments.filter((a) => presentIdx.has(a.idx));
-    if (!trimmed && filtered.length === 0 && !(command && !command.requiresArg)) return;
-    // A committed chip expands through its command; otherwise a leading slash
-    // is expanded here — the same rule as the dashboard and the overlay.
-    const prompt = command ? command.expand(trimmed) : expandSlashCommand(trimmed).prompt;
-    console.log('[FollowUpInput] sending follow-up', { id: sessionId, command: command?.name, attachmentCount: filtered.length });
-    onUserInput(prompt, filtered.length > 0 ? filtered : undefined);
-    setValue('');
-    setCommand(null);
-    setAttachments([]);
-    setCaret(0);
-    fieldRef.current?.clear();
-    idxCounter.current = 0;
-  }, [value, command, sessionId, onUserInput, attachments]);
-
-  const slashHints = command ? [] : matchingCommands(value);
-  const mentionHints = matchingMentions(value, caret);
-
-  const commitCommand = useCallback((next: SlashCommand) => {
-    setCommand(next);
-    setValue('');
-    fieldRef.current?.clear();
-    fieldRef.current?.focus();
-  }, []);
-
-  const pickMention = useCallback((mention: MentionDef) => {
-    fieldRef.current?.insertMentionChip(mention);
-  }, []);
-
-  const handleChange = useCallback((next: string) => {
-    if (!command) {
-      const m = /^\/([a-zA-Z][\w-]*)[ \n]([\s\S]*)$/.exec(next);
-      if (m) {
-        const found = SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase());
-        if (found) { setCommand(found); setValue(m[2]); fieldRef.current?.setPlainText(m[2]); return; }
-      }
-    }
-    setValue(next);
-  }, [command]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    const caretAtStart = caret === 0;
-    if (e.key === 'Backspace' && command && caretAtStart) {
-      e.preventDefault();
-      setCommand(null);
-      return;
-    }
-    if (!command && slashHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
-      e.preventDefault();
-      commitCommand(slashHints[0]);
-      return;
-    }
-    if (mentionHints.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
-      e.preventDefault();
-      pickMention(mentionHints[0]);
-      return;
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      (e.currentTarget as HTMLElement).blur();
-    } else if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  }, [handleSubmit, command, caret, slashHints, commitCommand, mentionHints, pickMention]);
-
-  const addFiles = useCallback(async (files: FileList | File[] | null) => {
-    if (!files) return;
-    const list = Array.from(files);
-    if (list.length === 0) return;
-    const startIdx = idxCounter.current + 1;
-    idxCounter.current += list.length;
-    try {
-      const next = await Promise.all(list.map((f, i) => fileToAttachment(f, startIdx + i)));
-      setAttachments((prev) => [...prev, ...next]);
-      const tokens = next.map((a) => `[Image #${a.idx}]`).join(' ');
-      if (fieldRef.current) {
-        // Smart spacing, same as before: a separating space is added only
-        // where the surrounding text doesn't already supply one.
-        const before = value.slice(0, caret);
-        const after = value.slice(caret);
-        const sep = before && !before.endsWith(' ') ? ' ' : '';
-        const inserted = sep + tokens + (after && !after.startsWith(' ') ? ' ' : '');
-        fieldRef.current.insertPlainTextAtCaret(inserted);
-      } else {
-        setValue((prev) => (prev ? prev + ' ' : '') + tokens);
-      }
-    } catch (err) {
-      console.error('[FollowUpInput] attach failed', err);
-    }
-  }, [value, caret]);
-
-  const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    const files = e.clipboardData?.files;
-    if (files && files.length > 0) {
-      e.preventDefault();
-      void addFiles(files);
-    }
-  }, [addFiles]);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    void addFiles(e.dataTransfer?.files ?? null);
-  }, [addFiles]);
-
-  return (
-    <div
-      className={`followup${dragOver ? ' followup--dragover' : ''}`}
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={handleDrop}
-    >
-      {command && <CommandChip command={command} onRemove={() => setCommand(null)} />}
-      <CommandHints hints={slashHints} onPick={commitCommand} />
-      <MentionHints hints={mentionHints} onPick={pickMention} />
-      <div className="followup__row">
-        <span className="followup__chevron">&rsaquo;</span>
-        <MentionTextField
-          ref={fieldRef}
-          className="followup__input"
-          maxHeightPx={FOLLOWUP_MAX_HEIGHT_PX}
-          onChange={(next, nextCaret) => { handleChange(next); setCaret(nextCaret); }}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={command ? command.summary : 'Follow up...'}
-          ariaLabel="Follow up"
-        />
-        <button
-          type="button"
-          className="followup__attach-btn"
-          onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-          aria-label="Attach files"
-          title="Attach files"
-        >+</button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          style={{ display: 'none' }}
-          onChange={(e) => { void addFiles(e.target.files); e.target.value = ''; }}
-        />
-      </div>
-    </div>
-  );
-}
-
 function CloseIcon(): React.ReactElement {
   return (
     <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
@@ -789,42 +607,32 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
    * to reach the page underneath.
    */
   /**
-   * The user's explicit choice, when they've made one, between the deck and
-   * the live page — set by the Browse/Activity toggle button. 'auto' defers
-   * to the default rule below. This has to be tri-state rather than a single
-   * "browseHere" boolean: a plain boolean can only ever *take the deck away*
-   * (once primarySite is set, the default rule already prefers the browser,
-   * so a "not browsing" state and "the default already shows the browser"
-   * state were indistinguishable — clicking "Activity" set the flag to a
-   * value that had no effect, which is exactly why the button did nothing
-   * after the agent had ever navigated a page).
+   * Chat or page (docs/unify/PLAN.md §3.12). Your own pick wins until the next
+   * run starts; otherwise a running task that has opened a page shows the
+   * page, and everything else — a finished task, a desktop or file task, a
+   * paused one — shows the conversation. The page isn't lost when the chat
+   * has the rect: it's parked on the stage, where DEX can keep using it.
    */
-  const [paneOverride, setPaneOverride] = useState<'auto' | 'browser' | 'activity'>('auto');
-  /**
-   * Whether the preview deck should take over the browser rect.
-   *
-   * The native WebContentsView composites *above* the renderer, so React can
-   * only be seen in this rect while that view is detached. By default, hand
-   * the rect to the deck when there is something to show and no page would be
-   * lost by it: the browser has never navigated (a desktop, file, or OS
-   * task), or the session is paused. Once primarySite is set the page wins —
-   * a live page is normally more useful than a card describing one.
-   *
-   * The one thing that overrides that default is the user's own explicit
-   * Browse/Activity choice, which always wins over the navigated-page
-   * default — that is the entire point of offering the toggle. A pending
-   * dex-registry confirmation does NOT force the deck up: it is rendered in
-   * the pane's header/chrome instead (see pendingConfirmations below), which
-   * is reachable regardless of whether the deck or the live page currently
-   * has the rect — so answering it no longer requires losing whatever page
-   * was showing.
-   */
-  const deckActive = useMemo(() => {
-    if (!deckHasContent(session)) return false;
-    if (paneOverride === 'browser') return false;
-    if (paneOverride === 'activity') return true;
-    return !session.primarySite || session.status === 'paused';
-  }, [session, paneOverride]);
+  const [paneOverride, setPaneOverride] = useState<'auto' | 'page' | 'chat'>('auto');
+  // The conversation needs the whole history, not just what streamed in.
+  useHydrateSession(session.id);
+  // The follow-up shortcut: to the chat, cursor in the composer.
+  const [composerFocus, setComposerFocus] = useState(0);
+  useEffect(() => {
+    const onFocus = (e: Event) => {
+      if ((e as CustomEvent<string>).detail !== session.id) return;
+      setPaneOverride('chat');
+      setComposerFocus((n) => n + 1);
+    };
+    window.addEventListener('dex:focus-composer', onFocus);
+    return () => window.removeEventListener('dex:focus-composer', onFocus);
+  }, [session.id]);
+  const chatActive = useMemo(() => {
+    if (session.hasBrowser === false) return true;
+    if (paneOverride !== 'auto') return paneOverride === 'chat';
+    const working = session.status === 'running' || session.status === 'stuck';
+    return !(working && session.primarySite);
+  }, [session.hasBrowser, session.status, session.primarySite, paneOverride]);
 
   /**
    * The task's tabs (docs/unify/PLAN.md §3.2). A blank tab *you* opened shows
@@ -834,35 +642,23 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
   const workspaceOn = session.hasBrowser !== false && !browserDead;
   const tabs = useWorkspaceTabs(session.id, workspaceOn);
   const activeTab = tabs.find((t) => t.active);
-  const newTabActive = Boolean(activeTab?.isNewTab && activeTab.openedBy !== 'task');
-  /** Something React draws owns the rect (the deck, or the New-tab page). */
-  const surfaceActive = deckActive || newTabActive;
+  const newTabActive = !chatActive && Boolean(activeTab?.isNewTab && activeTab.openedBy !== 'task');
+  /** Something React draws owns the rect (the chat, or the New-tab page). */
+  const surfaceActive = chatActive || newTabActive;
 
-  /**
-   * A dex-find result, a dex-canvas document, or a screenshot can land at
-   * any point in a task that has already navigated a page — e.g. "search my
-   * drive" opens Google Drive itself, so `primarySite` is set and the deck
-   * stays hidden behind it for the rest of the run. The card is real (each
-   * of these tools always emits its event — see main/index.ts's /dex/search
-   * and /dex/canvas routes) and reachable via the Browse/Activity toggle,
-   * but a plain unlabeled button gives no hint that clicking it would
-   * reveal something new — which is exactly how a genuine result can look,
-   * from the outside, like it was never produced at all. This tracks
-   * whether a new one has arrived since the deck was last actually visible,
-   * so the toggle can say so.
-   */
-  const artifactCount = useMemo(
-    () => session.output.filter((e) => e.type === 'artifact' || e.type === 'screenshot' || e.type === 'canvas').length,
+  /** Something new in the chat while you were on the page: a dot on the Chat tab. */
+  const replyCount = useMemo(
+    () => session.output.filter((e) => e.type === 'done' || e.type === 'file_output' || e.type === 'canvas' || e.type === 'artifact' || e.type === 'error').length,
     [session.output],
   );
-  const seenArtifactCountRef = useRef(0);
+  const seenReplyCountRef = useRef(0);
   useEffect(() => {
-    if (deckActive) seenArtifactCountRef.current = artifactCount;
-  }, [deckActive, artifactCount]);
+    if (chatActive) seenReplyCountRef.current = replyCount;
+  }, [chatActive, replyCount]);
   useEffect(() => {
-    seenArtifactCountRef.current = 0;
+    seenReplyCountRef.current = 0;
   }, [session.id]);
-  const hasUnseenArtifact = !deckActive && artifactCount > seenArtifactCountRef.current;
+  const chatUnread = !chatActive && replyCount > seenReplyCountRef.current;
 
   // Rendered in the header/chrome below, not inside the deck — see the doc
   // comment on ConfirmationCard in PreviewDeck.tsx for why.
@@ -880,9 +676,6 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
   // Logs overlay is a separate window (see logsPill.ts). The pane tracks
   // visibility only to reflect it in the Logs button's active state.
   const [logsOpen, setLogsOpen] = useState(false);
-  // Auto-open the logs overlay once per fresh session id so users see the
-  // agent's stream as soon as a task starts.
-  const autoLogsTriggeredRef = useRef<Set<string>>(new Set());
   const computeBounds = useCallback((): { x: number; y: number; width: number; height: number; slotWidth: number } | null => {
     const el = paneRef.current?.querySelector('.pane__output') as HTMLElement | null;
     if (!el) return null;
@@ -930,29 +723,6 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
     void api.logs.toggle(session.id, anchor).then((nowOpen) => setLogsOpen(nowOpen));
   }, [session.id]);
 
-  // On session change, push the new session id to the floating logs overlay
-  // so it re-targets (also handles first-mount auto-show for running sessions).
-  // Deliberately does NOT depend on session.status — re-firing logs.show() on
-  // every running→idle transition causes the logs window's showInactive +
-  // setAlwaysOnTop calls to surface the app/Space on macOS, yanking the user
-  // back from whatever window they'd switched to.
-  useEffect(() => {
-    if (session.status === 'draft') return;
-    const api = window.electronAPI;
-    if (!api?.logs?.show) return;
-    const outEl = paneRef.current?.querySelector('.pane__output') as HTMLElement | null;
-    const rect = outEl?.getBoundingClientRect();
-    if (!rect || rect.width <= 0 || rect.height <= 0) return;
-    const anchor = {
-      x: Math.round(rect.left),
-      y: Math.round(rect.top),
-      width: Math.round(rect.width),
-      height: Math.round(rect.height),
-    };
-    void api.logs.show(session.id, anchor).then((open) => setLogsOpen(open));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- see comment above
-  }, [session.id]);
-
   useEffect(() => {
     const paneEl = paneRef.current;
     if (!paneEl) return;
@@ -991,8 +761,8 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
       // PLAN §3.4). While DEX drives, .pane__output--agent draws a glow
       // around the rect, and the workspace bar says so, with Pause.
       if (surfaceActive) {
-        // The deck or the New-tab page owns the rect: pull the native view
-        // out of the way. Bounds measurement below still runs, so it's
+        // The chat or the New-tab page owns the rect: the page steps aside
+        // (to the stage, where the agent can still use it). Bounds measurement below still runs, so it's
         // positioned exactly where the browser would have been.
         if (hasAttachedRef.current) {
           hasAttachedRef.current = false;
@@ -1019,8 +789,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
         width: slotWidth,
         height: Math.round(o.height),
       });
-      // Auto-show the logs overlay once per session on the first real pane
-      // measurement. Ref-keyed so Esc-close doesn't trigger a re-open.
+      // The Logs window (opened with its button) follows the pane.
       const logsAnchor = {
         x: Math.round(o.left),
         y: Math.round(o.top),
@@ -1029,17 +798,6 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
       };
       if (logsAnchor.width > 0 && logsAnchor.height > 0) {
         api.logs?.updateAnchor?.(logsAnchor);
-      }
-      if (
-        session.status !== 'draft' &&
-        api.logs?.show &&
-        logsAnchor.width > 0 &&
-        logsAnchor.height > 0 &&
-        !autoLogsTriggeredRef.current.has(session.id)
-      ) {
-        autoLogsTriggeredRef.current.add(session.id);
-        console.log('[AgentPane] auto-open logs on first pane measurement', { sessionId: session.id, logsAnchor });
-        void api.logs.show(session.id, logsAnchor).then((open) => setLogsOpen(open));
       }
     };
     // Coalesce rapid ResizeObserver / layout callbacks into one IPC per frame.
@@ -1122,6 +880,12 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [focused, workspaceOn, session.id]);
 
+  const engineName = session.engine ? ENGINE_NAMES[session.engine] ?? session.engine : 'DEX';
+  const engineIcon = session.engine === 'claude-code' ? claudeCodeLogo
+    : session.engine === 'codex' ? openaiLogo
+      : session.engine === 'browsercode' ? opencodeLogo
+        : undefined;
+  const tabUrls = useMemo(() => tabs.map((t) => t.url).filter(Boolean), [tabs]);
   const elapsed = formatElapsed(session.createdAt);
   const statusText = STATUS_LABEL[session.status] ?? session.status;
   const isCancellation = !!session.error && session.error.toLowerCase().includes('cancel');
@@ -1139,43 +903,6 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
       )
     ),
   );
-
-  /**
-   * The same three choices the idle placeholder offers, for the deck: give the
-   * task back to the agent, keep the page and browse it yourself, or start
-   * over. Built here rather than inside the placeholder block because the deck
-   * and that block are now separate surfaces.
-   */
-  const deckActions = (
-    <>
-      {canResume && (
-        <button
-          className="pane__rerun-btn pane__rerun-btn--primary"
-          onClick={() => onResume?.(session.id)}
-        >
-          <ResumeIcon />
-          <span>Resume</span>
-        </button>
-      )}
-      {!browserDead && !browserMissing && (
-        <button
-          className="pane__rerun-btn"
-          onClick={() => setPaneOverride('browser')}
-          title="Keep the page as the agent left it and carry on yourself"
-        >
-          <BrowserIcon />
-          <span>Continue browsing</span>
-        </button>
-      )}
-      {onRerun && (
-        <button className="pane__rerun-btn" onClick={() => onRerun(session.id)}>
-          <RerunIcon />
-          <span>Rerun task</span>
-        </button>
-      )}
-    </>
-  );
-
 
   useEffect(() => {
     if (!focused || (!isRunningLike && !isPaused) || (!onPause && !onCancel)) return;
@@ -1278,21 +1005,6 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
             <SplitIcon />
             <span>Logs</span>
           </button>
-          {session.hasBrowser !== false && deckHasContent(session) && (
-            <button
-              className={`pane__action-btn${!deckActive ? ' pane__action-btn--active' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setPaneOverride(deckActive ? 'browser' : 'activity');
-              }}
-              aria-label={deckActive ? 'Continue browsing' : (hasUnseenArtifact ? 'Show activity — new result' : 'Show activity')}
-              data-tip={deckActive ? 'Take the browser back and keep browsing' : (hasUnseenArtifact ? 'A new result is waiting behind the live page' : 'Show what the agent did')}
-            >
-              <BrowserIcon />
-              <span>{deckActive ? 'Browse' : 'Activity'}</span>
-              {hasUnseenArtifact ? <span className="pane__action-badge" aria-hidden="true" /> : null}
-            </button>
-          )}
           {onRerun && (
             <button
               className="pane__action-btn pane__action-btn--icon"
@@ -1385,6 +1097,13 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           tabs={tabs}
           agentActive={session.status === 'running'}
           onPause={onPause ? () => onPause(session.id) : undefined}
+          chat={{
+            active: chatActive,
+            unread: chatUnread,
+            working: isRunningLike,
+            onSelect: () => setPaneOverride('chat'),
+          }}
+          onSelectPage={() => setPaneOverride('page')}
         />
       )}
 
@@ -1403,8 +1122,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
         const subLine = (showErrorUi || isCancellation) ? browserLine : null;
         // Offering to hand the rect back only makes sense while the deck is
         // holding it and there is still a live browser underneath to hand back.
-        const canBrowseHere = deckActive && !browserDead && !browserMissing;
-        const showActions = !isStarting && (onRerun || canResume || canBrowseHere || (showErrorUi && isApiKeyError(session.error) && onOpenSettings));
+        const showActions = !isStarting && (onRerun || canResume || (showErrorUi && isApiKeyError(session.error) && onOpenSettings));
         const placeholder = (
             <div className="pane__browser-starting">
               {showErrorUi && (
@@ -1434,20 +1152,6 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
                     >
                       <ResumeIcon />
                       <span>Resume</span>
-                    </button>
-                  )}
-                  {/* Sits between Resume and Rerun because it is the third
-                      answer to the same question: Resume gives the task back
-                      to the agent, Rerun starts it over, this keeps the page
-                      and gives it to you. */}
-                  {canBrowseHere && (
-                    <button
-                      className="pane__rerun-btn"
-                      onClick={() => setPaneOverride('browser')}
-                      title="Keep the page as the agent left it and carry on yourself"
-                    >
-                      <BrowserIcon />
-                      <span>Continue browsing</span>
                     </button>
                   )}
                   {showErrorUi && isApiKeyError(session.error) && onOpenSettings && (
@@ -1487,13 +1191,28 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           deck is showing, so there is nothing to sit on top of — and a rect
           measured at the wrong moment was drawing the cards into a narrow
           strip with the rest of the pane left black. */}
-      <div className={`pane__output${session.status === 'running' && !surfaceActive ? ' pane__output--agent' : ''}`}>
-        {newTabActive && activeTab ? (
+      <div className={`pane__output${session.status === 'running' && !surfaceActive ? ' pane__output--agent' : ''}${chatActive ? ' pane__output--chat' : ''}`}>
+        {chatActive ? (
+          <ChatView
+            session={session}
+            tabUrls={tabUrls}
+            engineName={engineName}
+            engineIcon={engineIcon}
+            onFollowUp={onFollowUp}
+            onPause={isRunningLike ? onPause : undefined}
+            onOpenUrl={(url) => {
+              void window.electronAPI?.workspace?.tab(session.id, { op: 'new', input: url });
+              setPaneOverride('page');
+            }}
+            focused={focused}
+            focusSignal={composerFocus}
+          />
+        ) : newTabActive && activeTab ? (
           <NewTabPage
             session={session}
             onOpen={(input) => { void window.electronAPI?.workspace?.tab(session.id, { op: 'navigate', tabId: activeTab.id, input }); }}
           />
-        ) : deckActive && <PreviewDeck session={session} actions={deckActions} />}
+        ) : null}
       </div>
 
     </div>

@@ -1299,6 +1299,13 @@ button:focus:not(:focus-visible) {
   min-height: 0;
 }
 
+/* The chat fills the slot edge to edge (chat/chat.css positions inside it). */
+.pane__output--chat {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+
 .pane__term-wrap {
   flex: 1 1 auto;
   min-height: 0;

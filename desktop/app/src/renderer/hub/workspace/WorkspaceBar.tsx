@@ -14,6 +14,10 @@ interface WorkspaceBarProps {
   /** DEX is driving this task right now. */
   agentActive: boolean;
   onPause?: () => void;
+  /** The pinned Chat tab (docs/unify/PLAN.md §3.12). */
+  chat?: { active: boolean; unread: boolean; working: boolean; onSelect: () => void };
+  /** A web tab was picked: the page takes the rect back from the chat. */
+  onSelectPage?: () => void;
 }
 
 const Icon = {
@@ -41,6 +45,9 @@ const Icon = {
   lock: (
     <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.6" stroke="currentColor" strokeWidth="1.3" fill="none" /><path d="M5.6 7V5.4a2.4 2.4 0 0 1 4.8 0V7" stroke="currentColor" strokeWidth="1.3" fill="none" /></svg>
   ),
+  chat: (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 3.5h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H7.5L4.5 14v-2.5H3a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinejoin="round" /></svg>
+  ),
   crashed: (
     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 2.5 14 13H2L8 2.5Z" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinejoin="round" /><path d="M8 6.5v3M8 11.2v.3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
   ),
@@ -62,7 +69,7 @@ function TabIcon({ tab }: { tab: WorkspaceTab }): React.ReactElement {
   return <span className="ws-tab__icon ws-tab__icon--globe">{Icon.globe}</span>;
 }
 
-export function WorkspaceBar({ sessionId, tabs, agentActive, onPause }: WorkspaceBarProps): React.ReactElement {
+export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSelectPage }: WorkspaceBarProps): React.ReactElement {
   const api = window.electronAPI?.workspace;
   const active = tabs.find((t) => t.active) ?? tabs[0];
   const inputRef = useRef<HTMLInputElement>(null);
@@ -106,18 +113,32 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause }: Workspac
   return (
     <div className="ws" onClick={(e) => e.stopPropagation()}>
       <div className="ws-tabs" role="tablist" aria-label="Tabs">
+        {chat && (
+          <div
+            role="tab"
+            aria-selected={chat.active}
+            tabIndex={chat.active ? 0 : -1}
+            className={`ws-tab ws-tab--chat${chat.active ? ' ws-tab--active' : ''}`}
+            title="The conversation"
+            onClick={chat.onSelect}
+          >
+            <span className="ws-tab__icon">{chat.working ? <span className="ws-spinner" /> : Icon.chat}</span>
+            <span className="ws-tab__title">Chat</span>
+            {chat.unread && <span className="ws-tab__dot" aria-label="New reply" />}
+          </div>
+        )}
         {tabs.map((tab) => (
           <div
             key={tab.id}
             role="tab"
-            aria-selected={tab.active}
-            tabIndex={tab.active ? 0 : -1}
-            className={`ws-tab${tab.active ? ' ws-tab--active' : ''}${tab.openedBy === 'task' ? ' ws-tab--task' : ''}`}
+            aria-selected={tab.active && !chat?.active}
+            tabIndex={tab.active && !chat?.active ? 0 : -1}
+            className={`ws-tab${tab.active && !chat?.active ? ' ws-tab--active' : ''}${tab.openedBy === 'task' ? ' ws-tab--task' : ''}`}
             title={tab.title ? `${tab.title}\n${tab.url}` : tab.url || 'New tab'}
             onMouseDown={(e) => {
               if (e.button === 1) { e.preventDefault(); act({ op: 'close', tabId: tab.id }); }
             }}
-            onClick={() => act({ op: 'activate', tabId: tab.id })}
+            onClick={() => { act({ op: 'activate', tabId: tab.id }); onSelectPage?.(); }}
           >
             <TabIcon tab={tab} />
             <span className="ws-tab__title">{tabLabel(tab)}</span>
@@ -131,12 +152,12 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause }: Workspac
             </button>
           </div>
         ))}
-        <button type="button" className="ws-newtab" aria-label="New tab (Ctrl+T)" title="New tab (Ctrl+T)" onClick={() => act({ op: 'new' })}>
+        <button type="button" className="ws-newtab" aria-label="New tab (Ctrl+T)" title="New tab (Ctrl+T)" onClick={() => { act({ op: 'new' }); onSelectPage?.(); }}>
           {Icon.plus}
         </button>
       </div>
 
-      <div className="ws-toolbar">
+      {!chat?.active && <div className="ws-toolbar">
         <div className="ws-nav">
           <button type="button" className="ws-btn" aria-label="Back (Alt+←)" title="Back" disabled={!active?.canGoBack} onClick={() => act({ op: 'back', tabId: active?.id })}>{Icon.back}</button>
           <button type="button" className="ws-btn" aria-label="Forward (Alt+→)" title="Forward" disabled={!active?.canGoForward} onClick={() => act({ op: 'forward', tabId: active?.id })}>{Icon.forward}</button>
@@ -187,7 +208,7 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause }: Workspac
             )}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

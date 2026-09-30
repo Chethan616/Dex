@@ -69,7 +69,17 @@ export interface ToolResult {
   ms: number;
 }
 
-export type Block =
+/**
+ * When a block happened (`at`, stamped by SessionManager.appendOutput) and
+ * when it last changed (`endAt`: a streamed reply's last delta, a tool's
+ * result). Absent on sessions recorded before events carried times.
+ */
+export interface BlockTimes {
+  at?: number;
+  endAt?: number;
+}
+
+export type Block = (
   | { kind: 'user'; id: number; text: string; attachments?: Array<{ name: string; mime: string; size: number }> }
   | { kind: 'text'; id: number; text: string }
   | { kind: 'tool'; id: number; name: string; meta: ToolMeta; summary: string; args: unknown; iteration: number; result?: ToolResult }
@@ -84,7 +94,8 @@ export type Block =
   | { kind: 'file'; id: number; name: string; path: string; size: number; mime: string }
   | { kind: 'image'; id: number; path: string; caption?: string }
   | { kind: 'canvas'; id: number; title: string; markdown: string }
-  | { kind: 'artifact'; id: number; title: string; note?: string; count: number; items: Array<{ label: string; detail?: string }> };
+  | { kind: 'artifact'; id: number; title: string; note?: string; count: number; items: Array<{ label: string; detail?: string }> }
+) & BlockTimes;
 
 export interface Usage {
   inputTokens: number;
@@ -156,6 +167,16 @@ function replaceLast(t: Transcript, block: Block): Transcript {
 }
 
 export function appendEvent(t: Transcript, raw: RawEvent): Transcript {
+  const at = typeof raw.at === 'number' ? raw.at : undefined;
+  const next = fold(t, raw, at);
+  // A new block starts (and, so far, ends) when its event happened.
+  if (at === undefined || next.blocks.length <= t.blocks.length) return next;
+  const blocks = next.blocks.slice();
+  blocks[blocks.length - 1] = { ...blocks[blocks.length - 1], at, endAt: at };
+  return { ...next, blocks };
+}
+
+function fold(t: Transcript, raw: RawEvent, at: number | undefined): Transcript {
   const id = t.nextId;
   switch (raw.type) {
     case 'user_input': {
@@ -166,7 +187,7 @@ export function appendEvent(t: Transcript, raw: RawEvent): Transcript {
       const text = str(raw.text);
       if (!text) return t;
       const last = t.blocks[t.blocks.length - 1];
-      if (last?.kind === 'text') return replaceLast(t, { ...last, text: last.text + text });
+      if (last?.kind === 'text') return replaceLast(t, { ...last, text: last.text + text, endAt: at ?? last.endAt });
       return text.trim() ? push(t, { kind: 'text', id, text: text.replace(/^\s+/, '') }) : t;
     }
     case 'tool_call': {
@@ -190,7 +211,7 @@ export function appendEvent(t: Transcript, raw: RawEvent): Transcript {
         const b = t.blocks[i];
         if (b.kind === 'tool' && !b.result && (b.name === name || !name)) {
           const blocks = t.blocks.slice();
-          blocks[i] = { ...b, result };
+          blocks[i] = { ...b, result, endAt: at ?? b.endAt };
           return { ...t, blocks };
         }
       }

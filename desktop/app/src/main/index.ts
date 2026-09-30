@@ -17,7 +17,7 @@ import path from 'node:path';
 // dev-time fallback.
 loadDotEnv({ path: path.resolve(__dirname, '..', '..', '.env') });
 
-import { app, BrowserWindow, crashReporter, globalShortcut, ipcMain, Menu, MenuItemConstructorOptions, nativeImage, shell } from 'electron';
+import { app, BrowserWindow, crashReporter, dialog, globalShortcut, ipcMain, Menu, MenuItemConstructorOptions, nativeImage, shell } from 'electron';
 import { mergeChromiumFeature } from './startup/chromiumFeatures';
 import { destroyStage, stageEnabled, waitForFrame } from './workspace/stage';
 
@@ -124,6 +124,7 @@ import { TaskStateMutationSchema } from '../shared/session-schemas';
 // Agent loop: CLI subprocess driving the browser harness. Engine is
 // pluggable (claude-code, codex, …) — see src/main/hl/engines/.
 import { bootstrapHarness, harnessDir } from './hl/harness';
+import { isRunnable, resolveRecordedFile } from './sessions/recordedFiles';
 import { resolveAgentPath } from './hl/agentPaths';
 import { runEngine, DEFAULT_ENGINE_ID } from './hl/engines';
 import type { EngineRunControl } from './hl/engines/types';
@@ -2405,6 +2406,38 @@ app.whenReady().then(async () => {
     shell.showItemInFolder(resolvedPath);
     mainLogger.info('main.sessions:reveal-output', { path: resolvedPath });
     return { revealed: true };
+  });
+
+  // The chat's file cards (docs/unify/PLAN.md §3.12): a file this task
+  // recorded, wherever it was saved — never a path the page merely names,
+  // and never run as a program (an executable is only shown in its folder).
+  ipcMain.handle('sessions:open-file', async (_event, payload: { sessionId?: unknown; path?: unknown; how?: unknown }) => {
+    const id = assertString(payload?.sessionId, 'sessionId', 100);
+    const requested = assertString(payload?.path, 'path', 2000);
+    const how = payload?.how === 'reveal' || payload?.how === 'copy' ? payload.how : 'open';
+    const session = sessionManager.getSession(id);
+    if (!session) throw new Error('No such task.');
+    const resolved = resolveRecordedFile(requested, session.output, harnessDir());
+    if (!resolved) {
+      mainLogger.warn('main.sessions:open-file.refused', { id, path: requested });
+      throw new Error('refused: not a file this task produced');
+    }
+    if (!fs.existsSync(resolved)) throw new Error('That file has been moved or deleted.');
+    if (how === 'reveal' || (how === 'open' && isRunnable(resolved))) {
+      shell.showItemInFolder(resolved);
+      return { revealed: true };
+    }
+    if (how === 'copy') {
+      const options = { defaultPath: path.join(app.getPath('downloads'), path.basename(resolved)) };
+      const res = shellWindow ? await dialog.showSaveDialog(shellWindow, options) : await dialog.showSaveDialog(options);
+      if (res.canceled || !res.filePath) return { saved: null };
+      await fs.promises.copyFile(resolved, res.filePath);
+      mainLogger.info('main.sessions:open-file.copied', { id, to: res.filePath });
+      return { saved: res.filePath };
+    }
+    const err = await shell.openPath(resolved);
+    if (err) throw new Error(err);
+    return { opened: true };
   });
 
   ipcMain.handle('sessions:open-in-editor', async (_event, payload: { editorId: string; filePath: string }) => {

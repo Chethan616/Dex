@@ -114,6 +114,13 @@ export function useUpdateSession() {
   };
 }
 
+/**
+ * Load a session's full history into the cache. The list arrives with empty
+ * `output`s and only live events are appended after that, so a task that ran
+ * before this window opened — or started while it was reloading — would show
+ * a partial conversation. Replaces the cached output only when the fetched
+ * one is longer, so it never rolls back events that arrived meanwhile.
+ */
 export function useHydrateSession(id: string | null) {
   const qc = useQueryClient();
 
@@ -121,16 +128,14 @@ export function useHydrateSession(id: string | null) {
     if (!id) return;
     const api = window.electronAPI;
     if (!api) return;
-
-    const cached = qc.getQueryData<AgentSession[]>(SESSIONS_KEY);
-    const existing = cached?.find((s) => s.id === id);
-    if (existing && existing.output.length > 0) return;
+    let cancelled = false;
 
     api.sessions.get(id).then((full) => {
-      if (!full || full.output.length === 0) return;
+      if (cancelled || !full || full.output.length === 0) return;
       qc.setQueryData<AgentSession[]>(SESSIONS_KEY, (prev = []) =>
-        prev.map((s) => (s.id === id ? { ...s, output: full.output } : s)),
+        prev.map((s) => (s.id === id && full.output.length > s.output.length ? { ...s, output: full.output } : s)),
       );
     }).catch(() => {});
+    return () => { cancelled = true; };
   }, [id, qc]);
 }

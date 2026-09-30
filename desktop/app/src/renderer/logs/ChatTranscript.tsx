@@ -68,7 +68,7 @@ const KIND_PATH: Record<ToolKind, string> = {
   other: 'M8 2l1.6 3.9L13.5 6l-3 2.7.9 4.1L8 10.7l-3.4 2.1.9-4.1-3-2.7 3.9-.1z',
 };
 
-function KindGlyph({ kind }: { kind: ToolKind }): React.ReactElement {
+export function KindGlyph({ kind }: { kind: ToolKind }): React.ReactElement {
   return (
     <svg className="chat-tool__glyph" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path d={KIND_PATH[kind]} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
@@ -84,7 +84,7 @@ function Chevron({ open }: { open: boolean }): React.ReactElement {
   );
 }
 
-function prettyArgs(args: unknown): string {
+export function prettyArgs(args: unknown): string {
   if (args == null) return '';
   if (typeof args === 'string') return args;
   try {

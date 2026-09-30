@@ -338,9 +338,9 @@ export function HubApp(): React.ReactElement {
     },
     'action.followUp': () => {
       const s = sessions[focusIndex];
-      if (!s || s.status !== 'idle') return;
-      console.log('[VimKeys] follow up → logs focus', s.id);
-      window.electronAPI?.logs.focusFollowUp(s.id);
+      if (!s || s.status === 'draft') return;
+      // The pane's chat has the composer now (docs/unify/PLAN.md §3.12).
+      window.dispatchEvent(new CustomEvent('dex:focus-composer', { detail: s.id }));
     },
     'scroll.halfDown': () => {
       const el = document.querySelector('.hub-grid, .dashboard');

@@ -400,6 +400,10 @@ export class SessionManager extends EventEmitter {
       mainLogger.warn('SessionManager.appendOutput', { id, reason: 'not_found' });
       return;
     }
+    // When it happened, so the chat can say "Worked for 3m 45s" per turn.
+    // Events that carry their own time (screenshots, confirmations) keep it.
+    const stamped = event as HlEvent & { at?: number };
+    if (typeof stamped.at !== 'number') stamped.at = Date.now();
     session.output.push(event);
     const seq = session.output.length - 1;
     this.db.appendEvent(id, seq, event);
