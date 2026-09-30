@@ -81,10 +81,19 @@ function moveScript(x: number, y: number, press: boolean): string {
   })()`;
 }
 
-const VISIBILITY = (visible: boolean) => `(() => {
+// Hiding has to reach the screen before a screenshot is taken, so wait for
+// two frames — but not on a hidden tab, where frames never come.
+const VISIBILITY = (visible: boolean) => `(async () => {
   const s = globalThis.__dexCursor;
-  if (s && s.host) s.host.style.visibility = ${visible ? "''" : "'hidden'"};
-  return !!s;
+  if (!s || !s.host) return false;
+  s.host.style.visibility = ${visible ? "''" : "'hidden'"};
+  if (${visible ? 'false' : 'true'}) {
+    await Promise.race([
+      new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+      new Promise((r) => setTimeout(r, 80)),
+    ]);
+  }
+  return true;
 })()`;
 
 async function run(wc: CursorContents, code: string): Promise<unknown> {
