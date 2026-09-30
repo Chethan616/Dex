@@ -150,14 +150,28 @@ is only a small compatibility bridge that points at the vendored
 
 Two environment variables identify the assigned browser view:
 
-- `BU_TARGET_ID` - the CDP target id of the view you must drive.
-- `BU_CDP_WS` - your private link to it. DEX has no open debugging port: this
-  link reaches only your own tab, and browser-level control (closing the
-  browser, opening other targets) is refused. `BU_CDP_PORT` is informational.
+- `BU_TARGET_ID` - the CDP target id of the tab the task started in.
+- `BU_CDP_WS` - your private link to this task's tabs. DEX has no open
+  debugging port: this link reaches only this task's own tabs, and
+  browser-level control (closing the browser, creating targets) is refused.
+  `BU_CDP_PORT` is informational.
 
-Use only this assigned target. Do not create unrelated browser targets, switch
-to other user tabs, or navigate internal Chrome pages unless the user explicitly
-asks for app/browser diagnostics.
+Work in the assigned tab. The task's other tabs — ones the user opened, a
+site's login popup, or a background tab you opened with `dex-tab new` — are
+listed by `dex-tab list` and reachable with `session.use(targetId)`; see
+`./dex-tools/tabs.md`. Do not navigate internal Chrome pages unless the user
+explicitly asks for app/browser diagnostics.
+
+## Sharing The Page With The User
+
+The user sees the page and can use it while you work. DEX shows them a small
+cursor where you click (your screenshots never include it). While they are
+clicking or typing in the page, your input waits until they pause — a slow
+click is that, not a hang. If the page changed under you (another URL, a
+scroll, a dialog gone), they probably did it: read the page again before your
+next action instead of repeating the last one. For a side lookup, open a
+background tab with `dex-tab new` rather than navigating away from what they
+are looking at.
 
 ## First Call
 

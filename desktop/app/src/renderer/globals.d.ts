@@ -231,9 +231,11 @@ interface WorkspaceTab {
   canGoBack: boolean;
   canGoForward: boolean;
   active: boolean;
-  openedBy: 'task' | 'user' | 'page';
+  openedBy: 'task' | 'user' | 'page' | 'agent';
   isNewTab: boolean;
   crashed: boolean;
+  /** DEX's scratch tab: closed when the run ends unless kept. */
+  temporary: boolean;
 }
 
 type WorkspaceTabAction =

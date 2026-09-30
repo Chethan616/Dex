@@ -17,7 +17,7 @@ Connect to the app-assigned target before page-level calls:
 browser-harness-js 'await connectToAssignedTarget()'
 ```
 
-`connectToAssignedTarget()` reads `BU_TARGET_ID` and `BU_CDP_WS` (DEX's private link to your tab — there is no open debugging port), attaches the assigned target, and enables the common Page/DOM/Runtime/Network domains. The CLI auto-installs `bun` on first run if it is missing. Set `BROWSER_HARNESS_SKIP_BUN_INSTALL=1` to opt out.
+`connectToAssignedTarget()` reads `BU_TARGET_ID` and `BU_CDP_WS` (DEX's private link to this task's tabs — there is no open debugging port), attaches the assigned target, and enables the common Page/DOM/Runtime/Network domains. The task's other tabs (the user's, a popup, ones you open with `dex-tab new`) are in `listPageTargets()`; `session.use(targetId)` switches to one. The CLI auto-installs `bun` on first run if it is missing. Set `BROWSER_HARNESS_SKIP_BUN_INSTALL=1` to opt out.
 
 ## How to use
 

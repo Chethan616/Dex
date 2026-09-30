@@ -1,9 +1,10 @@
-import { WebContentsView, nativeTheme, type BrowserWindow, type WebContents } from 'electron';
+import { WebContentsView, nativeTheme, type BrowserWindow, type View, type WebContents } from 'electron';
 import { browserLogger } from '../logger';
 import { getWindowBackgroundColor } from '../themeMode';
 import { leaseDebugger } from '../cdpLease';
 import { normalizeAddress } from '../../shared/address';
 import { noteInputEvent } from '../workspace/userActivity';
+import { fitStage, getStage, type StageHost } from '../workspace/stage';
 import type { TabInfo } from './types';
 
 const DEFAULT_BROWSER_WIDTH = 1280;
@@ -15,12 +16,18 @@ const ACTIVE_FRAME_RATE = 60;
 const DEFAULT_IDLE_FREEZE_DELAY_MS = 15_000;
 /** Tabs per task before opening another quietly closes the oldest background one. */
 const MAX_TABS_PER_SESSION = 12;
+/** How long a tab off your screen stays awake after the agent last used it. */
+const AGENT_BUSY_MS = 6_000;
+
+type Rect = { x: number; y: number; width: number; height: number };
+type ViewHost = { contentView: { addChildView(view: View): void; removeChildView(view: View): void }; isDestroyed(): boolean };
 
 /**
  * Who opened a tab: the task's first tab ('task'), the user (the + button,
- * Ctrl+T), or a page (window.open, target=_blank, an OAuth popup).
+ * Ctrl+T), a page (window.open, target=_blank, an OAuth popup), or the agent
+ * itself (`dex-tab new`).
  */
-export type TabOpener = 'task' | 'user' | 'page';
+export type TabOpener = 'task' | 'user' | 'page' | 'agent';
 
 /** One tab as the workspace UI sees it. */
 export interface WorkspaceTabState {
@@ -36,6 +43,8 @@ export interface WorkspaceTabState {
   /** Nothing loaded yet: the workspace shows DEX's New-tab page instead. */
   isNewTab: boolean;
   crashed: boolean;
+  /** Opened by DEX for its own work; closed when the run ends unless kept. */
+  temporary: boolean;
 }
 
 export type TabAction = 'back' | 'forward' | 'reload' | 'stop';
@@ -53,6 +62,14 @@ interface TabEntry {
   crashed: boolean;
   /** Has ever started a real navigation (so it's no longer a "new tab"). */
   navigated: boolean;
+  /** The agent's scratch tab: closed at the end of the run unless kept. */
+  temporary: boolean;
+  kept: boolean;
+  /** On your screen (in DEX's window), parked on the stage, or in no window. */
+  place: 'screen' | 'stage' | 'none';
+  parent: ViewHost | null;
+  /** Set while the agent is using a tab that's off your screen (it's shown on the stage). */
+  agentBusyTimer: ReturnType<typeof setTimeout> | null;
 }
 
 interface PoolEntry {
@@ -96,10 +113,16 @@ export class BrowserPool {
   private onFocusAddress?: (sessionId: string) => void;
   private tabsChangedTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private idleFreezeDelayMs: number;
+  private stage: () => StageHost | null;
+  /** The hub asked for the views out of the way (a menu over them). */
+  private uiHidden = false;
+  /** DEX's window is hidden (closed to the tray) or minimized. */
+  private windowHidden = false;
 
-  constructor(maxConcurrent = DEFAULT_MAX_CONCURRENT, opts: { idleFreezeDelayMs?: number } = {}) {
+  constructor(maxConcurrent = DEFAULT_MAX_CONCURRENT, opts: { idleFreezeDelayMs?: number; stage?: () => StageHost | null } = {}) {
     this.maxConcurrent = maxConcurrent;
     this.idleFreezeDelayMs = opts.idleFreezeDelayMs ?? readIdleFreezeDelayMs();
+    this.stage = opts.stage ?? getStage;
     browserLogger.info('BrowserPool.init', { maxConcurrent });
 
     // Repaint every pooled view (attached AND detached, every tab) when the
@@ -233,7 +256,6 @@ export class BrowserPool {
     const tab = this.addTab(entry, { openedBy: 'task', timingStartedAt });
     entry.view = tab.view;
     entry.activeTabId = tab.id;
-    tab.view.setBounds({ x: 0, y: 0, width: DEFAULT_BROWSER_WIDTH, height: DEFAULT_BROWSER_HEIGHT });
 
     browserLogger.info('BrowserPool.create', {
       sessionId,
@@ -279,9 +301,17 @@ export class BrowserPool {
       loading: false,
       crashed: false,
       navigated: Boolean(opts.webContents),
+      temporary: false,
+      kept: false,
+      place: 'none',
+      parent: null,
+      agentBusyTimer: null,
     };
     entry.tabs.push(tab);
     this.wireTab(entry, tab, opts.timingStartedAt ?? Date.now());
+    // Born off screen, on the stage at the pane's size: it lays out at the
+    // size it'll be shown at, and the agent can use it before you ever see it.
+    this.park(tab, entry.bounds ?? { x: 0, y: 0, width: DEFAULT_BROWSER_WIDTH, height: DEFAULT_BROWSER_HEIGHT });
     return tab;
   }
 
@@ -565,19 +595,17 @@ export class BrowserPool {
     const index = entry.tabs.findIndex((t) => t.id === tabId);
     if (index < 0) return;
     const [gone] = entry.tabs.splice(index, 1);
+    this.unplace(gone);
     if (entry.tabs.length === 0) {
       // The last tab went away on its own: the browser is gone.
       this.clearIdleFreezeTimer(entry);
-      if (entry.attached && entry.window && !entry.window.isDestroyed()) {
-        try { entry.window.contentView.removeChildView(gone.view); } catch { /* already gone */ }
-      }
       this.entries.delete(sessionId);
       this.notifyGone(sessionId);
       return;
     }
     if (entry.activeTabId === tabId) {
       const next = entry.tabs[Math.min(index, entry.tabs.length - 1)];
-      this.swapActive(entry, gone, next);
+      this.swapActive(entry, null, next);
     }
     this.scheduleTabsChanged(sessionId);
   }
@@ -588,12 +616,9 @@ export class BrowserPool {
     entry.view = next.view;
     const win = entry.window;
     if (!entry.attached || !win || win.isDestroyed()) return;
-    if (entry.bounds) next.view.setBounds(entry.bounds);
-    try { next.view.setBackgroundColor(getWindowBackgroundColor()); } catch { /* noop */ }
-    win.contentView.addChildView(next.view);
-    if (prev && prev.view !== next.view) {
-      try { win.contentView.removeChildView(prev.view); } catch { /* destroyed */ }
-    }
+    if (this.screenAllowed()) this.putOnScreen(next, win, entry.bounds);
+    else this.park(next, entry.bounds);
+    if (prev && prev !== next) this.park(prev, entry.bounds);
     this.applyFrameRate(entry);
     void this.wakeForVisibility(entry, 'tab-switch');
     const url = next.view.webContents.getURL();
@@ -611,10 +636,11 @@ export class BrowserPool {
   }
 
   /** Open a tab. Without a URL it's a new tab (the workspace shows its New-tab page). */
-  openTab(sessionId: string, opts: { url?: string; activate?: boolean; openedBy?: TabOpener } = {}): string | null {
+  openTab(sessionId: string, opts: { url?: string; activate?: boolean; openedBy?: TabOpener; temporary?: boolean } = {}): string | null {
     const entry = this.entries.get(sessionId);
     if (!entry) return null;
     const tab = this.addTab(entry, { openedBy: opts.openedBy ?? 'user' });
+    tab.temporary = opts.temporary === true;
     if (opts.url) {
       tab.navigated = !isBlank(opts.url);
       tab.view.webContents.loadURL(opts.url).catch((err) => {
@@ -718,8 +744,177 @@ export class BrowserPool {
         openedBy: tab.openedBy,
         isNewTab: !tab.navigated && isBlank(url),
         crashed: tab.crashed,
+        temporary: tab.temporary && !tab.kept,
       };
     });
+  }
+
+  /** A tab you (or the agent, on purpose) want kept past the end of the run. */
+  keepTab(sessionId: string, tabId: string): boolean {
+    const tab = this.entries.get(sessionId)?.tabs.find((t) => t.id === tabId);
+    if (!tab) return false;
+    if (!tab.kept) {
+      tab.kept = true;
+      this.scheduleTabsChanged(sessionId);
+    }
+    return true;
+  }
+
+  /**
+   * End of a run: close the agent's scratch tabs, like Codex does. Never the
+   * tab on screen, never one you opened, never one that was kept.
+   */
+  closeTemporaryTabs(sessionId: string): number {
+    const entry = this.entries.get(sessionId);
+    if (!entry) return 0;
+    const doomed = entry.tabs.filter((t) => t.temporary && !t.kept && t.id !== entry.activeTabId);
+    for (const tab of doomed) this.closeTab(sessionId, tab.id);
+    if (doomed.length) browserLogger.info('BrowserPool.tab.closedTemporary', { sessionId, count: doomed.length });
+    return doomed.length;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Where views live: on your screen, or parked on the stage (workspace/stage.ts)
+  // ---------------------------------------------------------------------------
+
+  private screenAllowed(): boolean {
+    return !this.uiHidden && !this.windowHidden;
+  }
+
+  /** Take a view out of whatever window holds it. */
+  private unplace(tab: TabEntry): void {
+    const parent = tab.parent;
+    tab.parent = null;
+    tab.place = 'none';
+    if (tab.agentBusyTimer) { clearTimeout(tab.agentBusyTimer); tab.agentBusyTimer = null; }
+    if (!parent || parent.isDestroyed()) return;
+    try { parent.contentView.removeChildView(tab.view); } catch { /* destroyed */ }
+  }
+
+  /** On your screen, in `win`, on top of the other views. */
+  private putOnScreen(tab: TabEntry, win: BrowserWindow, bounds: Rect | null): void {
+    if (tab.parent !== win) {
+      const busy = tab.agentBusyTimer;
+      tab.agentBusyTimer = null; // keep the agent's wake timer across the move
+      this.unplace(tab);
+      tab.agentBusyTimer = busy;
+    }
+    if (bounds) tab.view.setBounds(bounds);
+    try { tab.view.setBackgroundColor(getWindowBackgroundColor()); } catch { /* noop */ }
+    win.contentView.addChildView(tab.view); // raises it if it's already there
+    tab.view.setVisible?.(true);
+    tab.parent = win;
+    tab.place = 'screen';
+  }
+
+  /**
+   * Off your screen. On the stage it keeps a surface — the agent can still
+   * screenshot it — and sleeps hidden unless the agent is using it. Without a
+   * stage (macOS, tests) it's in no window, as before.
+   */
+  private park(tab: TabEntry, bounds: Rect | null): void {
+    const stage = this.stage();
+    const size = bounds && bounds.width > 0 && bounds.height > 0 ? bounds : null;
+    if (!stage) {
+      if (tab.place !== 'none') {
+        const busy = tab.agentBusyTimer;
+        tab.agentBusyTimer = null;
+        this.unplace(tab);
+        tab.agentBusyTimer = busy;
+      }
+      if (size) tab.view.setBounds({ x: 0, y: 0, width: size.width, height: size.height });
+      return;
+    }
+    if (tab.parent !== stage) {
+      const busy = tab.agentBusyTimer;
+      tab.agentBusyTimer = null;
+      this.unplace(tab);
+      tab.agentBusyTimer = busy;
+      stage.contentView.addChildView(tab.view);
+      tab.parent = stage;
+      tab.place = 'stage';
+    }
+    if (size) {
+      fitStage(stage, size.width, size.height);
+      // Laid out while shown, then hidden — a view hidden before it's ever
+      // been laid out stays 0×0. The stage is off screen, so nothing flashes.
+      tab.view.setVisible?.(true);
+      tab.view.setBounds({ x: 0, y: 0, width: size.width, height: size.height });
+    }
+    tab.view.setVisible?.(tab.agentBusyTimer !== null);
+  }
+
+  /** Re-place every attached session's front tab after the screen state changed. */
+  private refreshScreen(): void {
+    for (const entry of this.entries.values()) {
+      if (!entry.attached || !entry.window || entry.window.isDestroyed()) continue;
+      const tab = entry.tabs.find((t) => t.id === entry.activeTabId);
+      if (!tab) continue;
+      if (this.screenAllowed()) {
+        this.putOnScreen(tab, entry.window, entry.bounds);
+        void this.wakeForVisibility(entry, 'reattach');
+        this.applyFrameRate(entry);
+      } else {
+        this.park(tab, entry.bounds);
+        try {
+          entry.view.webContents.setFrameRate(entry.idleFreezeEligible ? IDLE_FRAME_RATE : THROTTLED_FRAME_RATE);
+        } catch { /* destroyed */ }
+      }
+    }
+  }
+
+  /** DEX's window was hidden to the tray / minimized, or came back. */
+  setWindowHidden(hidden: boolean): void {
+    if (this.windowHidden === hidden) return;
+    this.windowHidden = hidden;
+    browserLogger.info('BrowserPool.windowHidden', { hidden });
+    this.refreshScreen();
+  }
+
+  /**
+   * The pane is laying out a session it shows: make sure its tab is really on
+   * screen. (Recovers from a hub that hid the views and never asked for them back.)
+   */
+  ensureOnScreen(sessionId: string): void {
+    const entry = this.entries.get(sessionId);
+    if (!entry?.attached || !entry.window || entry.window.isDestroyed() || this.windowHidden) return;
+    const tab = entry.tabs.find((t) => t.id === entry.activeTabId);
+    if (!tab || tab.place === 'screen') return;
+    this.uiHidden = false;
+    this.putOnScreen(tab, entry.window, entry.bounds);
+  }
+
+  private findTab(wc: WebContents): TabEntry | null {
+    for (const entry of this.entries.values()) {
+      for (const tab of entry.tabs) if (tab.view.webContents === wc) return tab;
+    }
+    return null;
+  }
+
+  /**
+   * The agent is using this tab (a CDP command through the broker). A tab off
+   * your screen is shown on the stage while it's busy, so the page runs like
+   * the tab in front; it sleeps again a few seconds after the last use.
+   * True when it was just woken: wait for a frame before a screenshot.
+   */
+  noteAgentUse(wc: WebContents): boolean {
+    const tab = this.findTab(wc);
+    if (!tab) return false;
+    if (tab.agentBusyTimer) clearTimeout(tab.agentBusyTimer);
+    tab.agentBusyTimer = setTimeout(() => {
+      tab.agentBusyTimer = null;
+      if (tab.place === 'stage') {
+        try { tab.view.setVisible(false); } catch { /* destroyed */ }
+      }
+    }, AGENT_BUSY_MS);
+    if (tab.place !== 'stage' || tab.view.getVisible?.() !== false) return false;
+    tab.view.setVisible(true);
+    return true;
+  }
+
+  getTabWebContents(sessionId: string, tabId: string): WebContents | null {
+    const tab = this.entries.get(sessionId)?.tabs.find((t) => t.id === tabId);
+    return tab && !tab.view.webContents.isDestroyed() ? tab.view.webContents : null;
   }
 
   /** Every tab's WebContents — what the task's agent may reach (cdpBroker). */
@@ -849,8 +1044,16 @@ export class BrowserPool {
     if (!entry) return null;
     if (!(bounds.width > 0 && bounds.height > 0)) return entry.bounds;
     entry.bounds = { ...bounds };
-    entry.view.setBounds(entry.bounds);
+    this.applyBounds(entry);
     return entry.bounds;
+  }
+
+  /** The front tab takes the pane's rect — where it's shown, or its size on the stage. */
+  private applyBounds(entry: PoolEntry): void {
+    const tab = entry.tabs.find((t) => t.id === entry.activeTabId);
+    if (!tab || !entry.bounds) return;
+    if (tab.place === 'screen') tab.view.setBounds(entry.bounds);
+    else this.park(tab, entry.bounds);
   }
 
   attachToWindow(sessionId: string, window: BrowserWindow, bounds: { x: number; y: number; width: number; height: number }): boolean {
@@ -880,15 +1083,18 @@ export class BrowserPool {
       }
       entry.bounds = { ...bounds };
       entry.window = window;
-      entry.view.setBounds(entry.bounds);
+      this.applyBounds(entry);
       return true;
     }
 
     if (validShape) entry.bounds = { ...bounds };
-    if (entry.bounds) entry.view.setBounds(entry.bounds);
-    window.contentView.addChildView(entry.view);
     entry.attached = true;
     entry.window = window;
+    const front = entry.tabs.find((t) => t.id === entry.activeTabId);
+    if (front) {
+      if (this.screenAllowed()) this.putOnScreen(front, window, entry.bounds);
+      else this.park(front, entry.bounds);
+    }
     void this.wakeForVisibility(entry, 'attach');
     this.applyFrameRate(entry);
 
@@ -902,7 +1108,7 @@ export class BrowserPool {
     return true;
   }
 
-  detachFromWindow(sessionId: string, window: BrowserWindow): boolean {
+  detachFromWindow(sessionId: string, _window: BrowserWindow): boolean {
     const entry = this.entries.get(sessionId);
     if (!entry) {
       browserLogger.warn('BrowserPool.detach.notFound', { sessionId });
@@ -914,8 +1120,9 @@ export class BrowserPool {
       return false;
     }
 
-    window.contentView.removeChildView(entry.view);
     entry.attached = false;
+    const front = entry.tabs.find((t) => t.id === entry.activeTabId);
+    if (front) this.park(front, entry.bounds);
 
     this.applyFrameRate(entry);
     this.scheduleIdleFreeze(entry, 'detached');
@@ -937,31 +1144,16 @@ export class BrowserPool {
     browserLogger.info('BrowserPool.detachAll', { count: ids.length });
   }
 
-  temporarilyDetachAll(window: BrowserWindow): void {
-    for (const entry of this.entries.values()) {
-      if (entry.attached) {
-        window.contentView.removeChildView(entry.view);
-        try {
-          entry.view.webContents.setFrameRate(entry.idleFreezeEligible ? IDLE_FRAME_RATE : THROTTLED_FRAME_RATE);
-        } catch (err) {
-          browserLogger.warn('BrowserPool.temporarilyDetachAll.frameRate.error', {
-            sessionId: entry.sessionId,
-            error: (err as Error).message,
-          });
-        }
-      }
-    }
+  /** The hub wants the views out of the way for a moment (a menu over them). */
+  temporarilyDetachAll(_window: BrowserWindow): void {
+    this.uiHidden = true;
+    this.refreshScreen();
     browserLogger.info('BrowserPool.temporarilyDetachAll');
   }
 
-  reattachAll(window: BrowserWindow): void {
-    for (const entry of this.entries.values()) {
-      if (entry.attached) {
-        window.contentView.addChildView(entry.view);
-        void this.wakeForVisibility(entry, 'reattach');
-        this.applyFrameRate(entry);
-      }
-    }
+  reattachAll(_window: BrowserWindow): void {
+    this.uiHidden = false;
+    this.refreshScreen();
     browserLogger.info('BrowserPool.reattachAll');
   }
 
@@ -989,23 +1181,14 @@ export class BrowserPool {
     }
   }
 
-  destroy(sessionId: string, window?: BrowserWindow): void {
+  destroy(sessionId: string, _window?: BrowserWindow): void {
     const entry = this.entries.get(sessionId);
     if (!entry) {
       browserLogger.debug('BrowserPool.destroy.notFound', { sessionId });
       return;
     }
 
-    if (entry.attached && window) {
-      try {
-        window.contentView.removeChildView(entry.view);
-      } catch (err) {
-        browserLogger.warn('BrowserPool.destroy.detachError', {
-          sessionId,
-          error: (err as Error).message,
-        });
-      }
-    }
+    for (const tab of entry.tabs) this.unplace(tab);
 
     const lifetimeMs = Date.now() - entry.createdAt;
     this.clearIdleFreezeTimer(entry);

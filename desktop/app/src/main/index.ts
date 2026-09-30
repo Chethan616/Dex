@@ -19,11 +19,24 @@ loadDotEnv({ path: path.resolve(__dirname, '..', '..', '.env') });
 
 import { app, BrowserWindow, crashReporter, globalShortcut, ipcMain, Menu, MenuItemConstructorOptions, nativeImage, shell } from 'electron';
 import { mergeChromiumFeature } from './startup/chromiumFeatures';
+import { destroyStage, stageEnabled, waitForFrame } from './workspace/stage';
 
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch(
     'enable-features',
     mergeChromiumFeature(app.commandLine.getSwitchValue('enable-features'), 'GlobalShortcutsPortal'),
+  );
+}
+
+// Tabs off your screen live on an off-screen stage window (workspace/stage.ts).
+// Windows' occlusion tracking would call that window hidden and stop painting
+// it — then the agent can't screenshot a background tab or a task you aren't
+// looking at. Hidden views still sleep (they're setVisible(false)); the cost is
+// that DEX's own window keeps drawing its animations while another app covers it.
+if (stageEnabled()) {
+  app.commandLine.appendSwitch(
+    'disable-features',
+    mergeChromiumFeature(app.commandLine.getSwitchValue('disable-features'), 'CalculateNativeWinOcclusion'),
   );
 }
 
@@ -97,7 +110,8 @@ import {
 import { CdpBroker, type BrokerContents, type BrokerHooks } from './cdpBroker';
 import { moveCursor, setCursorVisible } from './workspace/agentCursor';
 import { noteAgentInput, waitForUserIdle } from './workspace/userActivity';
-import { leaseDebugger } from './cdpLease';
+import { leaseDebugger, withDebugger } from './cdpLease';
+import { normalizeAddress } from '../shared/address';
 import { assertString, assertAttachments, type ValidatedAttachment } from './ipc-validators';
 import { runPreflight, formatPreflightForLog, type PreflightReport } from './startup/preflight';
 import {
@@ -362,6 +376,10 @@ const AGENT_INPUT = new Set([
 type CursorTarget = Parameters<typeof moveCursor>[0];
 const workspaceHooks: BrokerHooks = {
   async beforeCommand(wc, method, params, { child }) {
+    // A tab off your screen wakes on the stage while the agent uses it; a
+    // screenshot right after waking waits for the page to draw.
+    const woke = browserPool.noteAgentUse(wc as unknown as Electron.WebContents);
+    if (woke && method === 'Page.captureScreenshot') await waitForFrame(wc as unknown as CursorTarget);
     if (AGENT_INPUT.has(method)) {
       await waitForUserIdle(wc);
       if (!child && method === 'Input.dispatchMouseEvent') {
@@ -621,7 +639,18 @@ function openShellAndWire(): BrowserWindow {
   shellWindow.on('closed', () => {
     mainLogger.info('main.shellWindow.closed');
     shellWindow = null;
+    destroyStage();
   });
+
+  // Closed to the tray or minimized: the task on screen moves to the stage, so
+  // the agent can still see its page.
+  const syncWindowHidden = () => {
+    if (!shellWindow || shellWindow.isDestroyed()) return;
+    browserPool.setWindowHidden(!shellWindow.isVisible() || shellWindow.isMinimized());
+  };
+  for (const event of ['hide', 'show', 'minimize', 'restore'] as const) {
+    shellWindow.on(event as 'hide', syncWindowHidden);
+  }
 
   mainLogger.info('main.openShellAndWire.done', { windowId: shellWindow.id });
   return shellWindow;
@@ -976,6 +1005,7 @@ app.whenReady().then(async () => {
     sendToPill('session-updated', session);
     forwardSessionUpdatedToLogs(session);
     notifiedStuck.delete(session.id);
+    browserPool.closeTemporaryTabs(session.id);
     browserPool.markSessionIdle(session.id);
     const doneEvent = session.output.find(
       (e: { type: string }) => e.type === 'done',
@@ -1754,6 +1784,59 @@ app.whenReady().then(async () => {
           sessionManager.appendOutput(id, { type: 'file_output', name, path: f.path, size, mime });
         }
         return { ...result, files: files.map((f) => f.path), problems };
+      },
+
+      // The `dex-tab` CLI: the agent's view of its workspace tabs (docs/unify
+      // PLAN.md §4.2). Tabs it opens are background scratch tabs unless it
+      // shows or keeps them; `targetId` is what `session.use()` takes.
+      'POST /dex/tab': async (raw) => {
+        let parsed: { sessionId?: unknown; op?: unknown; tab?: unknown; url?: unknown; show?: unknown; keep?: unknown };
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new Error('request body must be JSON');
+        }
+        const id = assertString(parsed.sessionId, 'sessionId', 100);
+        if (!browserPool.getWebContents(id)) throw new Error('This task has no browser open.');
+        const tabId = typeof parsed.tab === 'string' ? parsed.tab : '';
+        const describe = async () => {
+          const tabs = browserPool.listTabs(id);
+          return Promise.all(tabs.map(async (t) => {
+            const wc = browserPool.getTabWebContents(id, t.id);
+            let targetId: string | null = null;
+            if (wc) {
+              try {
+                const info = await withDebugger(wc, () => wc.debugger.sendCommand('Target.getTargetInfo')) as { targetInfo?: { targetId?: string } };
+                targetId = info.targetInfo?.targetId ?? null;
+              } catch { /* closing */ }
+            }
+            return { tab: t.id, targetId, url: t.url, title: t.title, onScreen: t.active, openedBy: t.openedBy, temporary: t.temporary };
+          }));
+        };
+        switch (parsed.op) {
+          case 'list':
+            return { tabs: await describe() };
+          case 'new': {
+            const url = typeof parsed.url === 'string' ? normalizeAddress(parsed.url) : null;
+            if (!url) throw new Error('dex-tab new needs a URL or search words');
+            const opened = browserPool.openTab(id, { url, openedBy: 'agent', activate: parsed.show === true, temporary: parsed.keep !== true && parsed.show !== true });
+            if (!opened) throw new Error('Could not open a tab.');
+            await new Promise((resolve) => setTimeout(resolve, 60));
+            return { opened: (await describe()).find((t) => t.tab === opened) ?? { tab: opened } };
+          }
+          case 'show':
+            if (!browserPool.activateTab(id, tabId)) throw new Error(`No tab ${tabId || '(missing)'}`);
+            browserPool.keepTab(id, tabId);
+            return { shown: tabId };
+          case 'keep':
+            if (!browserPool.keepTab(id, tabId)) throw new Error(`No tab ${tabId || '(missing)'}`);
+            return { kept: tabId };
+          case 'close':
+            if (!browserPool.closeTab(id, tabId)) throw new Error(`No tab ${tabId || '(missing)'}`);
+            return { closed: tabId };
+          default:
+            throw new Error('op must be list, new, show, keep or close');
+        }
       },
 
       // The `dex-state` CLI's only endpoint. Everything it can do is one of
@@ -2556,7 +2639,9 @@ app.whenReady().then(async () => {
         return newId !== null;
       }
       case 'activate':
-        return tabId ? browserPool.activateTab(validatedId, tabId) : false;
+        if (!tabId || !browserPool.activateTab(validatedId, tabId)) return false;
+        browserPool.keepTab(validatedId, tabId);
+        return true;
       case 'close':
         return tabId ? browserPool.closeTab(validatedId, tabId) : false;
       case 'navigate':
@@ -2619,10 +2704,7 @@ app.whenReady().then(async () => {
     // on every resize to fit the emulated viewport, but that clobbered any
     // manual zoom the user set via Cmd+=/Cmd+- and felt like the browser
     // was "resetting itself" on layout changes.)
-    const children = shellWindow.contentView.children;
-    if (!children.includes(view)) {
-      shellWindow.contentView.addChildView(view);
-    }
+    browserPool.ensureOnScreen(id);
     // Keep takeover overlay tracking the browser rect and sitting above it.
     // Use the fitted (centered) rect so the overlay aligns with the visible
     // view, not the wider hub box.

@@ -3,7 +3,7 @@ import { BrowserPool } from '../../../src/main/sessions/BrowserPool';
 import { contentViewStub } from '../../fixtures/electron-mock';
 
 function mockWindow(): any {
-  return { contentView: { ...contentViewStub } };
+  return { isDestroyed: () => false, contentView: { ...contentViewStub } };
 }
 
 function instrumentLifecycle(view: NonNullable<ReturnType<BrowserPool['create']>>) {
@@ -531,5 +531,150 @@ describe('BrowserPool — tabs', () => {
     (pool.getWebContents('s1') as unknown as { destroy: () => void }).destroy();
     expect(gone).toHaveBeenCalledWith('s1');
     expect(pool.activeCount).toBe(0);
+  });
+});
+
+describe('BrowserPool — the agent’s scratch tabs (dex-tab)', () => {
+  let pool: BrowserPool;
+  beforeEach(() => { pool = new BrowserPool(5); });
+  afterEach(() => { pool.destroyAll(); });
+
+  it('closes the agent’s background tabs at the end of the run, but not kept, shown or user tabs', () => {
+    pool.create('s1');
+    const scratch = pool.openTab('s1', { url: 'https://a.example/', openedBy: 'agent', activate: false, temporary: true })!;
+    const kept = pool.openTab('s1', { url: 'https://b.example/', openedBy: 'agent', activate: false, temporary: true })!;
+    const mine = pool.openTab('s1', { url: 'https://c.example/', openedBy: 'user', activate: false })!;
+    const onScreen = pool.openTab('s1', { url: 'https://d.example/', openedBy: 'agent', activate: true, temporary: true })!;
+    expect(pool.keepTab('s1', kept)).toBe(true);
+    expect(pool.listTabs('s1').find((t) => t.id === scratch)?.temporary).toBe(true);
+    expect(pool.listTabs('s1').find((t) => t.id === kept)?.temporary).toBe(false);
+
+    expect(pool.closeTemporaryTabs('s1')).toBe(1);
+    expect(pool.listTabs('s1').map((t) => t.id)).toEqual(['t1', kept, mine, onScreen]);
+  });
+
+  it('finds a tab’s WebContents by id', () => {
+    pool.create('s1');
+    const id = pool.openTab('s1', { url: 'https://a.example/', activate: false })!;
+    expect(pool.getTabWebContents('s1', id)?.getURL()).toBe('https://a.example/');
+    expect(pool.getTabWebContents('s1', 'nope')).toBeNull();
+    expect(pool.keepTab('s1', 'nope')).toBe(false);
+  });
+});
+
+describe('BrowserPool — tabs off your screen live on the stage', () => {
+  type View = { getVisible(): boolean; getBounds(): { x: number; y: number; width: number; height: number } };
+  let pool: BrowserPool;
+  let stage: Set<unknown>;
+  let screen: Set<unknown>;
+  let win: any;
+  const bounds = { x: 300, y: 90, width: 900, height: 640 };
+
+  beforeEach(() => {
+    stage = new Set();
+    screen = new Set();
+    const host = {
+      contentView: { addChildView: (v: unknown) => { stage.add(v); }, removeChildView: (v: unknown) => { stage.delete(v); } },
+      isDestroyed: () => false,
+      getContentSize: () => [1280, 800],
+      setContentSize: vi.fn(),
+    };
+    win = {
+      isDestroyed: () => false,
+      contentView: { ...contentViewStub, addChildView: (v: unknown) => { screen.add(v); }, removeChildView: (v: unknown) => { screen.delete(v); } },
+    };
+    pool = new BrowserPool(5, { stage: () => host as any });
+  });
+
+  afterEach(() => { vi.useRealTimers(); pool.destroyAll(); });
+
+  it('parks a new task’s tab on the stage, laid out but asleep, until the pane shows it', () => {
+    const view = pool.create('s1') as unknown as View;
+    expect(stage.has(view)).toBe(true);
+    expect(view.getVisible()).toBe(false);
+    expect(view.getBounds()).toMatchObject({ width: 1280, height: 800 });
+
+    pool.attachToWindow('s1', win, bounds);
+    expect(screen.has(view)).toBe(true);
+    expect(stage.has(view)).toBe(false);
+    expect(view.getVisible()).toBe(true);
+    expect(view.getBounds()).toEqual(bounds);
+  });
+
+  it('switching tabs parks the old one at the pane’s size; detaching parks the front one', () => {
+    pool.create('s1');
+    pool.attachToWindow('s1', win, bounds);
+    const first = pool.getView('s1') as unknown as View;
+    const second = pool.openTab('s1', { url: 'https://example.com/', activate: false })!;
+    const secondView = pool.getTabWebContents('s1', second);
+    expect(secondView).not.toBeNull();
+    expect(screen.size).toBe(1);
+    expect(stage.size).toBe(1); // the background tab, born on the stage at the pane's size
+
+    pool.activateTab('s1', second);
+    expect(stage.has(first)).toBe(true);
+    expect(first.getVisible()).toBe(false);
+    expect(first.getBounds()).toMatchObject({ x: 0, y: 0, width: 900, height: 640 });
+    const front = pool.getView('s1') as unknown as View;
+    expect(screen.has(front)).toBe(true);
+
+    pool.detachFromWindow('s1', win);
+    expect(screen.size).toBe(0);
+    expect(stage.size).toBe(2);
+  });
+
+  it('moves the task on screen to the stage while DEX is in the tray, and back', () => {
+    const view = pool.create('s1') as unknown as View;
+    pool.attachToWindow('s1', win, bounds);
+    pool.setWindowHidden(true);
+    expect(stage.has(view)).toBe(true);
+    expect(screen.has(view)).toBe(false);
+    pool.setWindowHidden(false);
+    expect(screen.has(view)).toBe(true);
+    expect(view.getBounds()).toEqual(bounds);
+  });
+
+  it('gets out of the way for a hub menu, and recovers if the hub never asks for it back', () => {
+    const view = pool.create('s1') as unknown as View;
+    pool.attachToWindow('s1', win, bounds);
+    pool.temporarilyDetachAll(win);
+    expect(screen.has(view)).toBe(false);
+    pool.reattachAll(win);
+    expect(screen.has(view)).toBe(true);
+
+    pool.temporarilyDetachAll(win);
+    pool.ensureOnScreen('s1');
+    expect(screen.has(view)).toBe(true);
+  });
+
+  it('wakes a parked tab while the agent uses it, then lets it sleep', () => {
+    vi.useFakeTimers();
+    pool.create('s1');
+    pool.attachToWindow('s1', win, bounds);
+    const bg = pool.openTab('s1', { url: 'https://example.com/', activate: false })!;
+    const wc = pool.getTabWebContents('s1', bg)!;
+    const onScreenWc = pool.getWebContents('s1')!;
+    const bgView = [...stage][0] as View;
+
+    expect(pool.noteAgentUse(wc)).toBe(true); // just woken: wait for a frame
+    expect(bgView.getVisible()).toBe(true);
+    expect(pool.noteAgentUse(wc)).toBe(false); // already awake
+    expect(pool.noteAgentUse(onScreenWc)).toBe(false); // on screen: nothing to do
+
+    vi.advanceTimersByTime(7_000);
+    expect(bgView.getVisible()).toBe(false);
+  });
+
+  it('takes closed tabs and ended tasks off the stage and the screen', () => {
+    pool.create('s1');
+    pool.attachToWindow('s1', win, bounds);
+    const bg = pool.openTab('s1', { url: 'https://example.com/', activate: false })!;
+    expect(stage.size).toBe(1);
+    pool.closeTab('s1', bg);
+    expect(stage.size).toBe(0);
+
+    pool.destroy('s1', win);
+    expect(screen.size).toBe(0);
+    expect(stage.size).toBe(0);
   });
 });

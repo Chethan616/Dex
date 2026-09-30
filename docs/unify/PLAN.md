@@ -249,7 +249,7 @@ Every document tab has **Outline ▾ · Request edits · Zoom · Download · Ope
 
 - **`BU_TARGET_ID`** follows the **active web tab**, and `listPageTargets()` sees all the task's tabs. Nothing changes for engines (Claude Code, Codex, BrowserCode).
 - **New helpers** in the harness SDK and `dex-tools`, going through DEX's control server (`DEX_CONTROL_FILE`):
-  - `dex-tab list | new <url> | use <id> | close <id>`;
+  - `dex-tab list | new <url> [--show] [--keep] | show <id> | keep <id> | close <id>` ✅ (switching is the harness's own `session.use(targetId)`);
   - `dex-open <file>`, which opens a document tab so the user sees what was written.
   - Tabs the agent opens are marked `openedBy:'agent'`.
 - **A CDP broker in the main process replaces the open remote-debugging port.** ✅ *Shipped early on `feat/low-latency` (`f675a5f4`, `main/cdpBroker.ts` + `main/cdpLease.ts`): the port is closed by default, each task gets a token link to its own tab, and `Browser.*`/foreign targets are refused. P1 builds the cursor handshake and the guards on top of it.*
@@ -266,6 +266,7 @@ Every document tab has **Outline ▾ · Request edits · Zoom · Download · Ope
   - a password-field guard;
   - download and site-policy guards while DEX drives.
 - **Turn end** (`turnEnded`): detach the debugger, close DEX's temporary tabs unless they're kept or the result, and release your tabs.
+- **Tabs off your screen live on the stage** ✅ (`workspace/stage.ts`, [P1-background-tabs.md](P1-background-tabs.md)): an off-screen `BaseWindow` where background tabs, other tasks' tabs and the tray-hidden task keep a surface. A view removed from every window can't be screenshotted at all (it hung, before unify too); on the stage it sleeps hidden and is shown there while the agent uses it.
 - **Skill docs** (`SKILL.md`, `AGENTS.md`):
   - tell the agent about tabs, documents and "the user may be using the page";
   - prefer `dex-open` over describing a file.

@@ -322,6 +322,7 @@ export const WebContentsView = class {
   webContents: ReturnType<typeof createMockWebContents>;
   private _bounds = { x: 0, y: 0, width: 0, height: 0 };
   private _bg = '#00000000';
+  private _visible = true;
 
   constructor(opts?: { webContents?: ReturnType<typeof createMockWebContents> }) {
     this.webContents = opts?.webContents ?? createMockWebContents();
@@ -341,6 +342,14 @@ export const WebContentsView = class {
 
   getBackgroundColor(): string {
     return this._bg;
+  }
+
+  setVisible(visible: boolean): void {
+    this._visible = visible;
+  }
+
+  getVisible(): boolean {
+    return this._visible;
   }
 };
 
