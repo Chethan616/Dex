@@ -14,7 +14,7 @@
  * so only the turn being written re-renders while a reply streams.
  */
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { CopyButton, Orb } from '../../components/lib';
+import { AgentAvatar, CopyButton, Orb } from '../../components/lib';
 import { Markdown } from '../Markdown';
 import { KindGlyph, prettyArgs } from '../../logs/ChatTranscript';
 import { appendEvent, buildTranscript, EMPTY_TRANSCRIPT, type Block, type Transcript } from '../../logs/transcript';
@@ -210,6 +210,11 @@ function FindCard({ block }: { block: Extract<Block, { kind: 'artifact' }> }): R
 interface TurnViewProps {
   turn: Turn;
   sessionId: string;
+  engineId?: string;
+  /** What the turn's avatar shows: the session's status on the newest turn. */
+  avatarStatus: string;
+  /** Only the newest turn's avatar moves; older ones hold still. */
+  avatarLive: boolean;
   open: boolean;
   onToggle: (key: number) => void;
   now: number;
@@ -231,8 +236,45 @@ function activityOf(turn: Turn): { label: string; orb: React.ComponentProps<type
   return { label: 'Thinking', orb: 'solving' };
 }
 
-const TurnView = memo(function TurnView({ turn, sessionId, open, onToggle, now, docSignals, renderLink, renderInlineCode }: TurnViewProps) {
+/**
+ * The task's own face at the head of each of DEX's turns — hopping while it
+ * works, awake while it waits for you, asleep when paused — and a hop and a
+ * spin when a reply lands.
+ */
+function TurnAvatar({ sessionId, engineId, status, live, turnLive, failed }: {
+  sessionId: string;
+  engineId?: string;
+  status: string;
+  live: boolean;
+  turnLive: boolean;
+  failed: boolean;
+}): React.ReactElement {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const wasLive = useRef(turnLive);
+  useEffect(() => {
+    const landed = wasLive.current && !turnLive && !failed;
+    wasLive.current = turnLive;
+    if (!landed) return;
+    const t = setTimeout(() => ref.current?.click(), 180);
+    return () => clearTimeout(t);
+  }, [turnLive, failed]);
+  return (
+    <AgentAvatar
+      ref={ref}
+      sessionId={sessionId}
+      engineId={engineId}
+      status={status}
+      size={24}
+      animate={live}
+      whirl={turnLive ? 1 : 0}
+      className="cx-head__avatar"
+    />
+  );
+}
+
+const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarStatus, avatarLive, open, onToggle, now, docSignals, renderLink, renderInlineCode }: TurnViewProps) {
   const hasWork = turn.work.length > 0 || turn.live;
+  const failed = turn.alerts.some((a) => a.kind === 'error');
   // Sessions recorded before events carried times just say "Worked".
   const end = turn.live ? now : turn.endAt;
   const duration = turn.startAt !== undefined && end !== undefined ? formatDuration(end - turn.startAt) : null;
@@ -257,16 +299,18 @@ const TurnView = memo(function TurnView({ turn, sessionId, open, onToggle, now, 
         </div>
       ) : null}
 
-      {hasWork && (
-        <button type="button" className="cx-worked" onClick={() => onToggle(turn.key)} aria-expanded={open}>
-          {activity && <Orb size={20} state={activity.orb} />}
-          <span className="cx-worked__label">
-            {turn.live ? 'Working' : 'Worked'}{duration ? ` for ${duration}` : ''}
-          </span>
-          {activity && <span className="cx-worked__now">{activity.label}</span>}
-          {turn.work.length > 0 && <Chevron open={open} />}
-        </button>
-      )}
+      <div className={`cx-head${hasWork ? '' : ' cx-head--bare'}`}>
+        <TurnAvatar sessionId={sessionId} engineId={engineId} status={avatarStatus} live={avatarLive} turnLive={turn.live} failed={failed} />
+        {hasWork && (
+          <button type="button" className="cx-worked" onClick={() => onToggle(turn.key)} aria-expanded={open}>
+            <span className="cx-worked__label">
+              {turn.live ? 'Working' : 'Worked'}{duration ? ` for ${duration}` : ''}
+            </span>
+            {activity && <span className="cx-worked__now">{activity.label}</span>}
+            {turn.work.length > 0 && <Chevron open={open} />}
+          </button>
+        )}
+      </div>
       {open && turn.work.length > 0 && (
         <div className="cx-work">
           {turn.work.map((b) => <WorkStep key={b.id} block={b} running={b.id === runningToolId} sessionId={sessionId} />)}
@@ -440,11 +484,14 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
     <div ref={rootRef} className={`cx cx--${size}${miniOpen ? ' cx--mini' : ''}`}>
       <div className="cx__scroller" ref={scrollerRef} onScroll={onScroll}>
         <div className="cx__col">
-          {turns.map((turn) => (
+          {turns.map((turn, i) => (
             <TurnView
               key={turn.key}
               turn={turn}
               sessionId={sessionId}
+              engineId={session.engine}
+              avatarStatus={i < turns.length - 1 ? 'idle' : turn.live && turn.alerts.some((a) => a.kind === 'notice') ? 'waiting' : session.status}
+              avatarLive={i === turns.length - 1}
               open={choices.get(turn.key) ?? turn.live}
               onToggle={onToggle}
               now={turn.live ? now : 0}
@@ -454,13 +501,16 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
             />
           ))}
           {turns.length === 0 && (
-            <div className="cx__empty"><Orb size={32} state="breathing" /></div>
+            <div className="cx__empty">
+              <AgentAvatar sessionId={sessionId} engineId={session.engine} status={session.status} size={64} whirl={running ? 1 : 0} />
+            </div>
           )}
         </div>
       </div>
 
       {miniOpen ? (
         <Minibar
+          avatar={<AgentAvatar sessionId={sessionId} engineId={session.engine} status={session.status} size={28} whirl={running ? 1 : 0} />}
           sessionId={sessionId}
           title={session.prompt}
           engineName={engineName}

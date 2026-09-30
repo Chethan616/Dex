@@ -15,7 +15,7 @@ interface WorkspaceBarProps {
   agentActive: boolean;
   onPause?: () => void;
   /** The pinned Chat tab (docs/unify/PLAN.md §3.12). */
-  chat?: { active: boolean; unread: boolean; working: boolean; onSelect: () => void };
+  chat?: { active: boolean; unread: boolean; working: boolean; onSelect: () => void; icon?: React.ReactNode };
   /** A web tab was picked: the page takes the rect back from the chat. */
   onSelectPage?: () => void;
 }
@@ -122,7 +122,7 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
             title="The conversation"
             onClick={chat.onSelect}
           >
-            <span className="ws-tab__icon">{chat.working ? <span className="ws-spinner" /> : Icon.chat}</span>
+            <span className="ws-tab__icon">{chat.icon ?? (chat.working ? <span className="ws-spinner" /> : Icon.chat)}</span>
             <span className="ws-tab__title">Chat</span>
             {chat.unread && <span className="ws-tab__dot" aria-label="New reply" />}
           </div>

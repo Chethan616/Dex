@@ -118,16 +118,31 @@
   white-space: nowrap;
 }
 
-/* "Worked for 3m 45s ›" over a hairline */
+/* The turn's head: DEX's face, then "Worked for 3m 45s ›", over a hairline */
+.cx-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--cx-rule);
+}
+
+.cx-head--bare {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.cx-head__avatar { flex-shrink: 0; }
+
 .cx-worked {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
+  flex: 1;
   min-width: 0;
-  padding: 2px 0 10px;
+  padding: 2px 0;
   border: 0;
-  border-bottom: 1px solid var(--cx-rule);
   background: none;
   color: var(--color-fg-tertiary);
   font: inherit;
@@ -615,6 +630,12 @@
   align-items: center;
   gap: 6px;
   padding: 0 8px 6px;
+}
+
+.cx-mini__avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-right: 2px;
 }
 
 .cx-mini__title {

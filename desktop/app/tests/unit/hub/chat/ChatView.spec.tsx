@@ -146,6 +146,47 @@ describe('ChatView', () => {
     expect(onPause).toHaveBeenCalledWith('s1');
   });
 
+  it('gives each turn the task’s face: hopping on the live turn, still on older ones', () => {
+    const el = render();
+    const faces = [...el.querySelectorAll('.cx-head canvas[data-bot-avatar]')];
+    expect(faces).toHaveLength(2);
+    // One task, one face.
+    expect(new Set(faces.map((f) => f.getAttribute('data-bot-avatar'))).size).toBe(1);
+    expect(faces.map((f) => f.getAttribute('data-state'))).toEqual(['default', 'working']);
+    expect(el.querySelector('.cx-mini canvas[data-bot-avatar]')?.getAttribute('data-state')).toBe('working');
+  });
+
+  it('sleeps when the task is paused, and stays awake while it waits for you', () => {
+    let el = render({ session: session({ status: 'paused', output: OUTPUT.slice(0, 8) }) });
+    expect(el.querySelector('.cx-head canvas')?.getAttribute('data-state')).toBe('sleeping');
+    act(() => root?.unmount());
+    root = null;
+    el = render({ session: session({ output: [...OUTPUT, { type: 'notify', message: 'Log in to Vercel to continue', level: 'blocking', at: 403_000 } as unknown as HlEvent] }) });
+    const faces = [...el.querySelectorAll('.cx-head canvas')];
+    expect(faces.at(-1)?.getAttribute('data-state')).toBe('default');
+  });
+
+  it('hops when a reply lands, but not when the turn failed', () => {
+    const hop = vi.spyOn(HTMLCanvasElement.prototype, 'click');
+    const working = OUTPUT.filter((e) => e.type !== 'error');
+    render({ session: session({ output: working }) });
+    hop.mockClear();
+    const finish = [{ type: 'tool_result', name: 'WebSearch', ok: true, preview: '', ms: 1, at: 404_000 }, { type: 'thinking', text: 'Added them.', at: 405_000 }, { type: 'done', summary: 'Added them.', iterations: 3, at: 406_000 }] as unknown as HlEvent[];
+    act(() => root!.render(<ChatView session={session({ status: 'idle', output: [...working, ...finish] })} engineName="Claude Code" />));
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(hop).toHaveBeenCalledTimes(1);
+
+    // The same, with an error in the turn: no celebration.
+    act(() => root?.unmount());
+    root = null;
+    render();
+    hop.mockClear();
+    act(() => root!.render(<ChatView session={session({ status: 'idle', output: [...OUTPUT, ...finish] })} engineName="Claude Code" />));
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(hop).not.toHaveBeenCalled();
+    hop.mockRestore();
+  });
+
   it('just says “Worked” for a session recorded before events had times', () => {
     const old = OUTPUT.map((e) => { const { at: _at, ...rest } = e as HlEvent & { at?: number }; return rest; }) as HlEvent[];
     const el = render({ session: session({ status: 'idle', output: old.slice(0, 8) }) });

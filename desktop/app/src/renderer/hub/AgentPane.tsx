@@ -1102,6 +1102,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
             unread: chatUnread,
             working: isRunningLike,
             onSelect: () => setPaneOverride('chat'),
+            icon: <AgentAvatar engineId={session.engine} sessionId={session.id} status={session.status} size={18} interactive={false} />,
           }}
           onSelectPage={() => setPaneOverride('page')}
         />

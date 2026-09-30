@@ -10,6 +10,8 @@ import type { FileItem, Source } from './turns';
 import type { TaskStep } from '../types';
 
 interface MinibarProps {
+  /** The task's own face, beside its title. */
+  avatar?: React.ReactNode;
   sessionId: string;
   title: string;
   engineName: string;
@@ -55,7 +57,7 @@ function sourceLabel(s: Source): string {
   return s.name;
 }
 
-export function Minibar({ sessionId, title, engineName, engineIcon, model, status, steps, outputs, docs, sources, onOpenUrl, onClose }: MinibarProps): React.ReactElement {
+export function Minibar({ avatar, sessionId, title, engineName, engineIcon, model, status, steps, outputs, docs, sources, onOpenUrl, onClose }: MinibarProps): React.ReactElement {
   const [allSources, setAllSources] = useState(false);
   const shownSources = allSources ? sources : sources.slice(0, SHOWN_SOURCES);
   const doneSteps = steps.filter((s) => s.status === 'done').length;
@@ -63,6 +65,7 @@ export function Minibar({ sessionId, title, engineName, engineIcon, model, statu
   return (
     <aside className="cx-mini" aria-label="About this task">
       <div className="cx-mini__head">
+        {avatar && <span className="cx-mini__avatar">{avatar}</span>}
         <span className="cx-mini__title" title={title}>{title}</span>
         <button type="button" className="cx-mini__close" onClick={onClose} aria-label="Hide panel" title="Hide panel">
           <svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>

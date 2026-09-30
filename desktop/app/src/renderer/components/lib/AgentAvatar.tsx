@@ -64,17 +64,24 @@ export interface AgentAvatarProps {
   color?: string | null;
   className?: string;
   label?: string;
+  /** The trail round a working spin, 0–2. Off by default. */
+  whirl?: number;
 }
 
-export function AgentAvatar({
+/**
+ * The ref is the avatar's canvas: `ref.current.click()` makes it hop and turn
+ * round, as a click does — the chat's "done!" when a reply lands.
+ */
+export const AgentAvatar = React.forwardRef<HTMLCanvasElement, AgentAvatarProps>(function AgentAvatar({
   engineId, sessionId, status, type, size = 24, interactive, animate = true, face, color,
-  className, label,
-}: AgentAvatarProps): React.ReactElement {
+  className, label, whirl,
+}, ref): React.ReactElement {
   const theme = useLibTheme();
   const state = avatarStateFor(status);
   const seed = sessionId ? (hash(sessionId) % 1000) / 1000 : undefined;
   return (
     <BotAvatar
+      ref={ref}
       type={type ?? avatarTypeFor(engineId, sessionId)}
       state={state}
       size={size}
@@ -89,6 +96,7 @@ export function AgentAvatar({
       shading={size < 28 ? 'smooth' : 'plastic'}
       className={`lib-avatar${className ? ` ${className}` : ''}`}
       aria-label={label}
+      whirl={whirl}
     />
   );
-}
+});
