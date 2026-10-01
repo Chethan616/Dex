@@ -1,5 +1,16 @@
 package com.chethan616.dex.ui
 
+import kotlinx.coroutines.flow.first
+import com.chethan616.dex.ui.avatar.LocalBotFlight
+import com.chethan616.dex.ui.avatar.BotFlightLayer
+import com.chethan616.dex.ui.avatar.BotFlight
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.compose.ui.Modifier
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -158,6 +169,21 @@ private fun SignedInNav(
     }
   }
 
+  // A task's bot flies between its Home row and the chat's top bar
+  // (avatar/BotFlight.kt): up when you open it, back down when you go back.
+  val flight = androidx.compose.runtime.remember { BotFlight() }
+  LaunchedEffect(nav, flight) {
+    var openChat: String? = null
+    nav.currentBackStackEntryFlow.collect { entry ->
+      val chat = if (entry.destination.hasRoute<SessionRoute>()) entry.toRoute<SessionRoute>().id else null
+      val left = openChat
+      if (chat != null && chat != left) flight.chatOpened(chat)
+      if (left != null && chat == null && entry.destination.hasRoute<HomeRoute>()) flight.toHome(left)
+      openChat = chat
+    }
+  }
+  androidx.compose.runtime.CompositionLocalProvider(LocalBotFlight provides flight) {
+  Box(Modifier.fillMaxSize()) {
   // Screens slide over each other, nothing else: no scale, no fade, no shared
   // elements. Moving an opaque layer is the cheapest thing a frame can do, so
   // it stays smooth even while the new screen is still filling in. The
@@ -181,10 +207,17 @@ private fun SignedInNav(
         )
       }
       composable<SessionRoute> { entry ->
+        // Settled once the slide in has finished: the conversation is built then.
+        var settled by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+          snapshotFlow { transition.currentState }.first { it == EnterExitState.Visible }
+          settled = true
+        }
         SessionScreen(
           container = container,
           sessionId = entry.toRoute<SessionRoute>().id,
           onBack = { nav.popBackStack() },
+          settled = settled,
         )
       }
       composable<SettingsRoute> {
@@ -198,6 +231,9 @@ private fun SignedInNav(
       composable<TourRoute> {
         OnboardingScreen(onDone = { nav.popBackStack() }, doneLabel = "Done")
       }
+  }
+  BotFlightLayer(flight)
+  }
   }
 }
 

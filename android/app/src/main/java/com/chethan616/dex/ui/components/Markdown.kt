@@ -49,6 +49,9 @@ private sealed interface MdBlock {
   data object Rule : MdBlock
 }
 
+private val RULE = Regex("^(-{3,}|\\*{3,}|_{3,})$")
+private val HEADING = Regex("^#{1,6} ")
+private val BULLET = Regex("^([-*+]|\\d+[.)]) ")
 private val TABLE_SEPARATOR = Regex("^\\|?\\s*:?-{2,}:?\\s*(\\|\\s*:?-{2,}:?\\s*)*\\|?\\s*$")
 
 private fun cells(line: String): List<String> =
@@ -84,13 +87,13 @@ private fun parse(source: String): List<MdBlock> {
         out += MdBlock.Table(header, rows)
         continue
       }
-      Regex("^(-{3,}|\\*{3,}|_{3,})$").matches(trimmed) -> { flush(); out += MdBlock.Rule }
-      Regex("^#{1,6} ").containsMatchIn(trimmed) -> {
+      RULE.matches(trimmed) -> { flush(); out += MdBlock.Rule }
+      HEADING.containsMatchIn(trimmed) -> {
         flush()
         val level = trimmed.takeWhile { it == '#' }.length
         out += MdBlock.Heading(level, trimmed.drop(level).trim())
       }
-      Regex("^([-*+]|\\d+[.)]) ").containsMatchIn(trimmed) -> {
+      BULLET.containsMatchIn(trimmed) -> {
         flush()
         val marker = trimmed.substringBefore(' ')
         out += MdBlock.Bullet(if (marker.first().isDigit()) marker else "•", trimmed.substringAfter(' '))

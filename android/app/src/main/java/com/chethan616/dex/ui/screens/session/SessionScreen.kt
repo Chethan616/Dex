@@ -1,5 +1,6 @@
 package com.chethan616.dex.ui.screens.session
 
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.snapshotFlow
@@ -116,7 +117,14 @@ fun SessionScreen(
   container: AppContainer,
   sessionId: String,
   onBack: () -> Unit,
+  /**
+   * The screen has finished sliding in. The conversation is composed only
+   * then: building a long list during the slide is what made it stutter. Until
+   * then the top bar and composer are up and the bot is landing.
+   */
+  settled: Boolean = true,
 ) {
+  val flight = com.chethan616.dex.ui.avatar.LocalBotFlight.current
   val vm: SessionViewModel = viewModel(key = sessionId, factory = SessionViewModel.factory(container, sessionId))
   val state by vm.state.collectAsStateWithLifecycle()
   val sending by vm.sending.collectAsStateWithLifecycle()
@@ -143,6 +151,15 @@ fun SessionScreen(
   // reader is at the bottom; leave them be otherwise.
   val atBottom by remember { derivedStateOf { !list.canScrollForward } }
   var placed by remember(sessionId) { mutableStateOf(false) }
+  // The list fades in once it's at the bottom (a quick fade on its layer).
+  val listAlpha = remember(sessionId) { androidx.compose.animation.core.Animatable(0f) }
+  LaunchedEffect(placed, state.blocks.isEmpty()) {
+    when {
+      placed -> listAlpha.animateTo(1f, tween(180))
+      state.blocks.isEmpty() -> listAlpha.snapTo(1f)
+      else -> listAlpha.snapTo(0f)
+    }
+  }
   val lastSignature = state.blocks.lastOrNull()?.let { it.seq to (it.text?.length ?: 0) + (it.result?.preview?.length ?: 0) }
   LaunchedEffect(state.blocks.size, lastSignature) {
     if (state.blocks.isEmpty()) return@LaunchedEffect
@@ -181,6 +198,7 @@ fun SessionScreen(
   if (filesOpen) FilesSheet(state.blocks, session, onDismiss = { filesOpen = false })
   com.chethan616.dex.ui.files.ModelViewerHost()
   Scaffold(
+    modifier = Modifier.onGloballyPositioned { flight?.chatScreen = it },
     topBar = {
       SessionTopBar(
         session, sessionId, mood, onBack,
@@ -223,14 +241,16 @@ fun SessionScreen(
     },
   ) { inner ->
     Box(Modifier.fillMaxSize()) {
-      if (state.loading) {
+      if (!settled) {
+        // Sliding in: nothing heavy yet.
+      } else if (state.loading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator(Modifier.size(64.dp)) }
       } else {
         LazyColumn(
           state = list,
           contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = inner.calculateTopPadding() + 8.dp, bottom = inner.calculateBottomPadding() + 16.dp),
           verticalArrangement = Arrangement.spacedBy(12.dp),
-          modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (placed || state.blocks.isEmpty()) 1f else 0f },
+          modifier = Modifier.fillMaxSize().graphicsLayer { alpha = listAlpha.value },
         ) {
           // Runs of tool calls fold into one expandable row; everything else
           // is its own item.
@@ -352,10 +372,17 @@ private fun SessionTopBar(
       verticalAlignment = Alignment.CenterVertically,
     ) {
       IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
+      // Where the bot lands when it flies in from Home (BotFlight).
+      val flight = com.chethan616.dex.ui.avatar.LocalBotFlight.current
+      val type = botTypeFor(session?.engine, sessionId)
+      androidx.compose.runtime.SideEffect { flight?.chatLook = type to mood }
       BotAvatar(
-        type = botTypeFor(session?.engine, sessionId),
+        type = type,
         mood = mood,
         size = 44.dp,
+        modifier = if (flight == null) Modifier else Modifier
+          .onGloballyPositioned { flight.chatBotPlaced(it) }
+          .graphicsLayer { alpha = if (flight.hidesChatBot(sessionId)) 0f else 1f },
       )
       Spacer(Modifier.size(10.dp))
       Column(Modifier.weight(1f)) {

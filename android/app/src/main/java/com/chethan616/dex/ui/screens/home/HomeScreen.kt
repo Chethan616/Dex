@@ -1,5 +1,6 @@
 package com.chethan616.dex.ui.screens.home
 
+import com.chethan616.dex.ui.avatar.flightEnd
 import androidx.compose.foundation.lazy.itemsIndexed
 import android.Manifest
 import android.app.Activity
@@ -527,14 +528,20 @@ private fun ApprovalCard(session: Session, onOpen: () -> Unit, onAnswer: (Boolea
 private fun RunningCard(session: Session, onClick: () -> Unit) {
   val scheme = MaterialTheme.colorScheme
   val press = remember { MutableInteractionSource() }
-  Surface(onClick = onClick, shape = RoundedCornerShape(28.dp), color = scheme.surfaceContainerHigh, interactionSource = press, modifier = Modifier.fillMaxWidth().springPress(press, 0.96f)) {
+  val flight = com.chethan616.dex.ui.avatar.LocalBotFlight.current
+  val spot = com.chethan616.dex.ui.avatar.rememberFlightSpot()
+  val type = botTypeFor(session.engine, session.id)
+  val mood = rememberBotMood(session)
+  Surface(onClick = { flight?.toChat(session.id, type, mood, spot.coords); onClick() }, shape = RoundedCornerShape(28.dp), color = scheme.surfaceContainerHigh, interactionSource = press, modifier = Modifier.fillMaxWidth().springPress(press, 0.96f)) {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
+        // Its bot flies up into the chat's top bar when you open it (BotFlight).
         BotAvatar(
-          type = botTypeFor(session.engine, session.id),
-          mood = rememberBotMood(session),
+          type = type,
+          mood = mood,
           size = 48.dp,
           interactive = false,
+          modifier = Modifier.flightEnd(flight, session.id, spot),
         )
         Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
@@ -577,15 +584,21 @@ private fun SessionRow(
     bottomEnd = if (index == count - 1) big else small,
   )
   val press = remember { MutableInteractionSource() }
-  Surface(onClick = onClick, shape = shape, color = scheme.surfaceContainerLow, interactionSource = press, modifier = Modifier.fillMaxWidth().springPress(press, 0.97f)) {
+  val flight = com.chethan616.dex.ui.avatar.LocalBotFlight.current
+  val spot = com.chethan616.dex.ui.avatar.rememberFlightSpot()
+  val type = botTypeFor(session.engine, session.id)
+  val mood = rememberBotMood(session)
+  Surface(onClick = { flight?.toChat(session.id, type, mood, spot.coords); onClick() }, shape = shape, color = scheme.surfaceContainerLow, interactionSource = press, modifier = Modifier.fillMaxWidth().springPress(press, 0.97f)) {
     Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-      // Still: a list of breathing bots would redraw every frame.
+      // Still: a list of breathing bots would redraw every frame. It flies
+      // up into the chat's top bar when you open it (BotFlight).
       BotAvatar(
-        type = botTypeFor(session.engine, session.id),
-        mood = rememberBotMood(session),
+        type = type,
+        mood = mood,
         size = 40.dp,
         interactive = false,
         still = true,
+        modifier = Modifier.flightEnd(flight, session.id, spot),
       )
       Spacer(Modifier.size(12.dp))
       Column(Modifier.weight(1f)) {

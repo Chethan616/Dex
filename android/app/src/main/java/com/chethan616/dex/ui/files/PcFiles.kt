@@ -108,11 +108,22 @@ class PcFiles(private val context: Context, private val repo: DexRepository, pri
   private val scenes = mutableStateMapOf<String, com.chethan616.dex.data.SceneFiles>()
 
   init {
-    // Yesterday's downloads: the PC still has them, the phone needn't.
-    runCatching {
-      val cutoff = System.currentTimeMillis() - 24 * 60 * 60_000L
-      File(context.cacheDir, "dex-files").listFiles()?.filter { it.lastModified() < cutoff }?.forEach { it.deleteRecursively() }
+    // Yesterday's downloads: the PC still has them, the phone needn't. Once
+    // per launch, on a background thread: this ran on the UI thread in the
+    // first frame of every chat you opened.
+    if (swept.compareAndSet(false, true)) {
+      val dir = File(context.cacheDir, "dex-files")
+      kotlin.concurrent.thread(isDaemon = true, name = "dex-files-sweep") {
+        runCatching {
+          val cutoff = System.currentTimeMillis() - 24 * 60 * 60_000L
+          dir.listFiles()?.filter { it.lastModified() < cutoff }?.forEach { it.deleteRecursively() }
+        }
+      }
     }
+  }
+
+  private companion object {
+    val swept = java.util.concurrent.atomic.AtomicBoolean(false)
   }
 
   fun state(path: String?): FetchState = path?.let { states[it] } ?: FetchState.Idle
@@ -290,29 +301,78 @@ internal fun TaskItem.isPicture(): Boolean =
 /** Pictures without an inline preview are fetched for the grid up to this size. */
 private const val MAX_PREVIEW_FETCH = 12L * 1024 * 1024
 
-/** A small bitmap of a picture already on the phone — decoded at ~1/4 size or less. */
-@Composable
-fun rememberLocalPreview(file: File?): ImageBitmap? = remember(file?.path, file?.length()) {
-  file?.takeIf { it.isFile }?.let { f ->
-    runCatching {
-      val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-      BitmapFactory.decodeFile(f.path, bounds)
-      var sample = 1
-      while (bounds.outWidth / (sample * 2) >= 360) sample *= 2
-      BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inSampleSize = sample })?.asImageBitmap()
-    }.getOrNull()
+/**
+ * Decoded previews, so a picture scrolled away and back isn't decoded again.
+ * Bounded by pixel bytes (~24 MB).
+ */
+private object PreviewCache {
+  private val cache = object : android.util.LruCache<String, ImageBitmap>(24 * 1024 * 1024) {
+    override fun sizeOf(key: String, value: ImageBitmap): Int = value.width * value.height * 4
   }
+  fun get(key: String): ImageBitmap? = cache.get(key)
+  fun put(key: String, bitmap: ImageBitmap) { cache.put(key, bitmap) }
 }
 
-/** The inline preview's pixels (a ~50 KB JPEG the PC attached to the block). */
+/**
+ * A small bitmap of a picture already on the phone — decoded at ~1/4 size or
+ * less, on a background thread (decoding in composition stalled scrolling).
+ */
 @Composable
-fun rememberThumb(base64: String?): ImageBitmap? = remember(base64) {
-  base64?.let {
-    runCatching {
-      val bytes = Base64.decode(it, Base64.DEFAULT)
-      BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+fun rememberLocalPreview(file: File?): ImageBitmap? {
+  val key = file?.let { "f${it.path}:${it.length()}" }
+  return androidx.compose.runtime.produceState(key?.let { PreviewCache.get(it) }, key) {
+    if (file == null || key == null || value != null) return@produceState
+    value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+      file.takeIf { it.isFile }?.let { f ->
+        runCatching {
+          val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+          BitmapFactory.decodeFile(f.path, bounds)
+          var sample = 1
+          while (bounds.outWidth / (sample * 2) >= 360) sample *= 2
+          BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inSampleSize = sample })?.asImageBitmap()
+        }.getOrNull()
+      }?.also { PreviewCache.put(key, it) }
+    }
+  }.value
+}
+
+/**
+ * An inline preview (a ~50 KB JPEG the PC attached to the block). Its shape
+ * comes at once from the JPEG header, so the card has its final size from
+ * the first frame; its pixels are decoded on a background thread and fill in
+ * a moment later. Decoding in composition used to stall opening a chat full
+ * of screenshots.
+ */
+@androidx.compose.runtime.Stable
+class Thumb(val aspect: Float, bitmap: ImageBitmap?) {
+  var bitmap: ImageBitmap? by mutableStateOf(bitmap)
+}
+
+@Composable
+fun rememberThumb(base64: String?): Thumb? {
+  if (base64 == null) return null
+  val key = remember(base64) { "t${base64.length}:${base64.hashCode()}" }
+  val thumb = remember(key) {
+    val cached = PreviewCache.get(key)
+    val aspect = cached?.let { it.width.toFloat() / it.height } ?: runCatching {
+      val bytes = Base64.decode(base64, Base64.DEFAULT)
+      val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+      BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+      if (bounds.outWidth > 0 && bounds.outHeight > 0) bounds.outWidth.toFloat() / bounds.outHeight else null
     }.getOrNull()
+    aspect?.let { Thumb(it, cached) }
+  } ?: return null
+  if (thumb.bitmap == null) {
+    LaunchedEffect(key) {
+      thumb.bitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        runCatching {
+          val bytes = Base64.decode(base64, Base64.DEFAULT)
+          BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }.getOrNull()?.also { PreviewCache.put(key, it) }
+      }
+    }
   }
+  return thumb
 }
 
 fun Block.asTaskItem(): TaskItem? {
@@ -362,16 +422,18 @@ fun PcFileCard(item: TaskItem) {
   ) {
     Column {
       if (thumb != null) {
-        Image(
-          thumb,
-          contentDescription = item.caption ?: item.name,
-          contentScale = ContentScale.Crop,
-          modifier = Modifier
+        Box(
+          Modifier
             .fillMaxWidth()
-            .aspectRatio((thumb.width.toFloat() / thumb.height).coerceIn(0.6f, 2.2f))
+            .aspectRatio(thumb.aspect.coerceIn(0.6f, 2.2f))
             .heightIn(max = 320.dp)
-            .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = 6.dp, bottomEnd = 6.dp)),
-        )
+            .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = 6.dp, bottomEnd = 6.dp))
+            .background(scheme.surfaceContainerHigh),
+        ) {
+          thumb.bitmap?.let {
+            Image(it, contentDescription = item.caption ?: item.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+          }
+        }
       }
       Row(Modifier.padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         if (thumb == null) {
@@ -482,7 +544,7 @@ fun FilesSheet(blocks: List<Block>, session: Session?, onDismiss: () -> Unit) {
               if (pic.thumb == null && pic.size <= MAX_PREVIEW_FETCH) {
                 LaunchedEffect(pic.path) { files0?.prefetch(scope, pic) }
               }
-              val bmp = rememberThumb(pic.thumb) ?: rememberLocalPreview((st as? FetchState.Ready)?.file)
+              val bmp = rememberThumb(pic.thumb)?.bitmap ?: rememberLocalPreview((st as? FetchState.Ready)?.file)
               Box(
                 Modifier
                   .weight(1f)
