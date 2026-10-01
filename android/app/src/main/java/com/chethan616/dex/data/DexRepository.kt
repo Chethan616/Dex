@@ -30,6 +30,15 @@ import java.io.File
 class DexRepository(private val appContext: Context) {
 
   private val db get() = Firebase.firestore
+
+  /**
+   * Firestore calls snapshot listeners on the main thread unless told
+   * otherwise, so turning a long conversation into blocks used to run on the
+   * UI thread — right while its screen slid in. Every listener here runs on
+   * this one background thread instead; the flows hand results to the UI.
+   */
+  private val listenerThread: java.util.concurrent.Executor =
+    java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "dex-firestore").apply { isDaemon = true } }
   private val uid: String get() = requireNotNull(Firebase.auth.currentUser?.uid) { "Not signed in" }
   private fun user() = db.collection("users").document(uid)
 
@@ -40,7 +49,7 @@ class DexRepository(private val appContext: Context) {
     val reg = user().collection("sessions")
       .orderBy("lastActivityAt", Query.Direction.DESCENDING)
       .limit(limit)
-      .addSnapshotListener { snap, err ->
+      .addSnapshotListener(listenerThread) { snap, err ->
         if (err != null) { close(err); return@addSnapshotListener }
         trySend(snap?.documents?.mapNotNull { it.toSession() } ?: emptyList())
       }
@@ -48,7 +57,7 @@ class DexRepository(private val appContext: Context) {
   }
 
   fun session(id: String): Flow<Session?> = callbackFlow {
-    val reg = user().collection("sessions").document(id).addSnapshotListener { snap, err ->
+    val reg = user().collection("sessions").document(id).addSnapshotListener(listenerThread) { snap, err ->
       if (err != null) { close(err); return@addSnapshotListener }
       trySend(snap?.toSession())
     }
@@ -58,7 +67,7 @@ class DexRepository(private val appContext: Context) {
   fun blocks(sessionId: String): Flow<List<Block>> = callbackFlow {
     val reg = user().collection("sessions").document(sessionId).collection("blocks")
       .orderBy("seq")
-      .addSnapshotListener { snap, err ->
+      .addSnapshotListener(listenerThread) { snap, err ->
         if (err != null) { close(err); return@addSnapshotListener }
         trySend(snap?.documents?.map { it.toBlock() } ?: emptyList())
       }
@@ -67,7 +76,7 @@ class DexRepository(private val appContext: Context) {
 
   /** users/{uid}.profile — null until chosen (drives the "Pick your DEX" step). */
   fun profile(): Flow<DexProfile?> = callbackFlow {
-    val reg = user().addSnapshotListener { snap, err ->
+    val reg = user().addSnapshotListener(listenerThread) { snap, err ->
       if (err != null) { close(err); return@addSnapshotListener }
       val p = snap?.get("profile") as? Map<*, *>
       trySend(
@@ -92,7 +101,7 @@ class DexRepository(private val appContext: Context) {
   }
 
   fun desktops(): Flow<List<Device>> = callbackFlow {
-    val reg = user().collection("devices").whereEqualTo("kind", "desktop").addSnapshotListener { snap, err ->
+    val reg = user().collection("devices").whereEqualTo("kind", "desktop").addSnapshotListener(listenerThread) { snap, err ->
       if (err != null) { close(err); return@addSnapshotListener }
       trySend(snap?.documents?.map { it.toDevice() }?.sortedByDescending { it.lastSeenMs } ?: emptyList())
     }
@@ -110,7 +119,7 @@ class DexRepository(private val appContext: Context) {
   }
 
   fun command(id: String): Flow<CommandState> = callbackFlow {
-    val reg = user().collection("commands").document(id).addSnapshotListener { snap, err ->
+    val reg = user().collection("commands").document(id).addSnapshotListener(listenerThread) { snap, err ->
       if (err != null) { trySend(CommandState.Failed(err.message ?: "Failed")); return@addSnapshotListener }
       val state = when (snap?.getString("status")) {
         "running" -> CommandState.Running

@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,18 +43,19 @@ fun ShapeBadge(
 ) {
   // A morph from the shape to itself is just the shape — as a Path, outside composition.
   val path = remember(shape) { Morph(shape, shape).toPath(0f, Path()) }
-  val angle = if (spinMs > 0) {
-    val a by rememberInfiniteTransition(label = "shape").animateFloat(
+  // The angle is read only while drawing, so the turn redraws the shape alone:
+  // the badge and what sits on it are never recomposed for it.
+  val angle: State<Float>? = if (spinMs > 0) {
+    rememberInfiniteTransition(label = "shape").animateFloat(
       initialValue = 0f,
       targetValue = 360f,
       animationSpec = infiniteRepeatable(tween(spinMs, easing = LinearEasing), RepeatMode.Restart),
       label = "deg",
     )
-    a
-  } else 0f
+  } else null
   Box(modifier.size(size), contentAlignment = Alignment.Center) {
     Canvas(Modifier.fillMaxSize()) {
-      rotate(angle) {
+      rotate(angle?.value ?: 0f) {
         // MaterialShapes live in a unit square; stretch it to the badge.
         scale(this.size.width, this.size.height, pivot = Offset.Zero) { drawPath(path, color) }
       }

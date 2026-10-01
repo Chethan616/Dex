@@ -1,7 +1,9 @@
 package com.chethan616.dex.ui
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -62,15 +64,14 @@ fun DexRoot(
     container.auth.account.collect { value = if (it == null) Gate.SignedOut else Gate.SignedIn(it) }
   }
 
-  // Signing in zooms through: the sign-in screen swells and fades as the app
-  // springs up from just below its size (Home then cascades its cards in).
-  val motion = MaterialTheme.motionScheme
+  // Opening the app shows Home at once (nothing was on screen before it);
+  // signing in or out is a short cross-fade.
   AnimatedContent(
     targetState = gate,
     contentKey = { it::class },
     transitionSpec = {
-      (fadeIn(motion.slowEffectsSpec()) + scaleIn(motion.slowSpatialSpec(), initialScale = 0.88f)) togetherWith
-        (fadeOut(motion.fastEffectsSpec()) + scaleOut(motion.fastSpatialSpec(), targetScale = 1.08f))
+      if (initialState is Gate.Loading) EnterTransition.None togetherWith ExitTransition.None
+      else fadeIn(tween(220)) togetherWith fadeOut(tween(120))
     },
     label = "gate",
   ) { state ->
@@ -157,26 +158,23 @@ private fun SignedInNav(
     }
   }
 
-  // Springs, not tweens (the theme's expressive motion scheme): screens arrive
-  // with a little overshoot and settle; leaving ones step back and fade.
-  val motion = MaterialTheme.motionScheme
-  SharedTransitionLayout {
-    NavHost(
-      navController = nav,
-      startDestination = HomeRoute,
-      enterTransition = {
-        slideInHorizontally(motion.defaultSpatialSpec()) { it / 4 } + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.94f) + fadeIn(motion.defaultEffectsSpec())
-      },
-      exitTransition = { slideOutHorizontally(motion.defaultSpatialSpec()) { -it / 10 } + scaleOut(motion.defaultSpatialSpec(), targetScale = 0.96f) + fadeOut(motion.fastEffectsSpec()) },
-      popEnterTransition = { slideInHorizontally(motion.defaultSpatialSpec()) { -it / 10 } + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.96f) + fadeIn(motion.defaultEffectsSpec()) },
-      popExitTransition = { slideOutHorizontally(motion.defaultSpatialSpec()) { it / 4 } + scaleOut(motion.defaultSpatialSpec(), targetScale = 0.94f) + fadeOut(motion.fastEffectsSpec()) },
-    ) {
+  // Screens slide over each other, nothing else: no scale, no fade, no shared
+  // elements. Moving an opaque layer is the cheapest thing a frame can do, so
+  // it stays smooth even while the new screen is still filling in. The
+  // screen underneath drifts a quarter of the way (parallax). Back runs the
+  // same slide in reverse, and follows your thumb with predictive back.
+  NavHost(
+    navController = nav,
+    startDestination = HomeRoute,
+    enterTransition = { slideInHorizontally(NavSlide) { it } },
+    exitTransition = { slideOutHorizontally(NavSlide) { -it / 4 } },
+    popEnterTransition = { slideInHorizontally(NavSlide) { -it / 4 } },
+    popExitTransition = { slideOutHorizontally(NavSlide) { it } },
+  ) {
       composable<HomeRoute> {
         HomeScreen(
           container = container,
           account = account,
-          sharedScope = this@SharedTransitionLayout,
-          animatedScope = this,
           onOpenSession = { nav.navigate(SessionRoute(it)) },
           onOpenSettings = { nav.navigate(SettingsRoute) },
           shared = shared,
@@ -186,31 +184,22 @@ private fun SignedInNav(
         SessionScreen(
           container = container,
           sessionId = entry.toRoute<SessionRoute>().id,
-          sharedScope = this@SharedTransitionLayout,
-          animatedScope = this,
           onBack = { nav.popBackStack() },
         )
       }
-      // Settings grows out of the gear (a container transform: SettingsScreen
-      // and Home's header share bounds), so the route itself only fades.
-      composable<SettingsRoute>(
-        enterTransition = { fadeIn(motion.fastEffectsSpec()) },
-        exitTransition = { fadeOut(motion.fastEffectsSpec()) },
-        popEnterTransition = { fadeIn(motion.fastEffectsSpec()) },
-        popExitTransition = { fadeOut(motion.fastEffectsSpec()) },
-      ) {
+      composable<SettingsRoute> {
         SettingsScreen(
           container = container,
           account = account,
           onBack = { nav.popBackStack() },
           onOpenTour = { nav.navigate(TourRoute) { launchSingleTop = true } },
-          sharedScope = this@SharedTransitionLayout,
-          animatedScope = this,
         )
       }
       composable<TourRoute> {
         OnboardingScreen(onDone = { nav.popBackStack() }, doneLabel = "Done")
       }
-    }
   }
 }
+
+/** M3's emphasized-decelerate: quick off the mark, a long soft landing. */
+private val NavSlide = tween<androidx.compose.ui.unit.IntOffset>(320, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f))

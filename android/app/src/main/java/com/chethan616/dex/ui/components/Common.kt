@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.chethan616.dex.data.SessionStatus
@@ -73,16 +74,20 @@ fun sessionStatusLabel(status: SessionStatus, error: String?): String =
 @Composable
 fun StatusDot(status: SessionStatus, modifier: Modifier = Modifier) {
   val color = statusColor(status)
-  val pulse by rememberInfiniteTransition(label = "pulse").animateFloat(
-    initialValue = 1f,
-    targetValue = 0.35f,
-    animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-    label = "a",
-  )
+  // Only a live dot pulses, and its alpha is read in the layer: the dot is
+  // redrawn, never recomposed, each frame.
+  val pulse = if (status.isLive) {
+    rememberInfiniteTransition(label = "pulse").animateFloat(
+      initialValue = 1f,
+      targetValue = 0.35f,
+      animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+      label = "a",
+    )
+  } else null
   Box(
     modifier
       .size(8.dp)
-      .alpha(if (status.isLive) pulse else 1f)
+      .graphicsLayer { alpha = pulse?.value ?: 1f }
       .background(color, CircleShape),
   )
 }

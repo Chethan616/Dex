@@ -1,8 +1,9 @@
 package com.chethan616.dex.ui.screens.session
 
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -114,8 +115,6 @@ import kotlinx.coroutines.launch
 fun SessionScreen(
   container: AppContainer,
   sessionId: String,
-  sharedScope: SharedTransitionScope,
-  animatedScope: AnimatedVisibilityScope,
   onBack: () -> Unit,
 ) {
   val vm: SessionViewModel = viewModel(key = sessionId, factory = SessionViewModel.factory(container, sessionId))
@@ -129,17 +128,29 @@ fun SessionScreen(
   var filesOpen by remember { mutableStateOf(false) }
   val attach = com.chethan616.dex.ui.attach.rememberAttachmentState()
   val pcFiles = rememberPcFiles(androidx.compose.ui.platform.LocalContext.current, container.repo, sessionId)
-  val fileCount = remember(state.blocks, session) { collectTaskItems(state.blocks, session).let { (p, f, d) -> p.size + f.size + d.size } }
+  val taskItems = remember(state.blocks, session) { collectTaskItems(state.blocks, session) }
+  val fileCount = taskItems.let { (p, f, d) -> p.size + f.size + d.size }
   // A 3D model the task made comes over to the phone right away, so the tap
   // opens the viewer at once instead of waiting on a download.
-  val models = remember(state.blocks, session) { collectTaskItems(state.blocks, session).second.filter { it.worthPrefetching() } }
+  val models = remember(taskItems) { taskItems.second.filter { it.worthPrefetching() } }
+  val groups = remember(state.blocks) { groupTools(state.blocks) }
   LaunchedEffect(models) { models.forEach { pcFiles.prefetch(scope, it) } }
 
-  // Follow the stream while the reader is at the bottom; leave them be otherwise.
+  // The conversation opens at its latest message: placed there at once, not
+  // scrolled to. An animated scroll from the top composed every message on
+  // the way down, which was the lag when opening a long task. The list stays
+  // invisible until it's placed. After that, follow the stream while the
+  // reader is at the bottom; leave them be otherwise.
   val atBottom by remember { derivedStateOf { !list.canScrollForward } }
+  var placed by remember(sessionId) { mutableStateOf(false) }
   val lastSignature = state.blocks.lastOrNull()?.let { it.seq to (it.text?.length ?: 0) + (it.result?.preview?.length ?: 0) }
   LaunchedEffect(state.blocks.size, lastSignature) {
-    if (state.blocks.isNotEmpty() && (atBottom || list.layoutInfo.totalItemsCount < 3)) {
+    if (state.blocks.isEmpty()) return@LaunchedEffect
+    if (!placed) {
+      val total = snapshotFlow { list.layoutInfo.totalItemsCount }.first { it >= groups.size }
+      list.scrollToItem((total - 1).coerceAtLeast(0))
+      placed = true
+    } else if (atBottom) {
       list.animateScrollToItem(list.layoutInfo.totalItemsCount.coerceAtLeast(1) - 1)
     }
   }
@@ -172,7 +183,7 @@ fun SessionScreen(
   Scaffold(
     topBar = {
       SessionTopBar(
-        session, sessionId, mood, sharedScope, animatedScope, onBack,
+        session, sessionId, mood, onBack,
         onSync = { haptics.click(); vm.sync() },
         fileCount = fileCount,
         onFiles = { haptics.tick(); filesOpen = true },
@@ -219,13 +230,13 @@ fun SessionScreen(
           state = list,
           contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = inner.calculateTopPadding() + 8.dp, bottom = inner.calculateBottomPadding() + 16.dp),
           verticalArrangement = Arrangement.spacedBy(12.dp),
-          modifier = Modifier.fillMaxSize(),
+          modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (placed || state.blocks.isEmpty()) 1f else 0f },
         ) {
           // Runs of tool calls fold into one expandable row; everything else
           // is its own item.
           val live = session?.status?.isLive == true
           val runningSeq = if (live) state.blocks.lastOrNull { it.kind == "tool" && it.result == null }?.seq else null
-          items(groupTools(state.blocks), key = { it.first().seq }) { group ->
+          items(groups, key = { it.first().seq }) { group ->
             Box(Modifier.animateItem()) {
               if (group.first().kind == "tool") ToolGroup(group, runningSeq)
               else BlockView(group.first(), running = false)
@@ -304,24 +315,22 @@ private fun LiveLine(last: Block?) {
     else -> "Thinking…"
   }
   val bot = LocalTaskBot.current
-  val shimmer by rememberInfiniteTransition(label = "shimmer").animateFloat(
-    initialValue = -1f,
-    targetValue = 2f,
-    animationSpec = infiniteRepeatable(tween(1800, easing = LinearEasing), RepeatMode.Restart),
-    label = "x",
+  // A soft pulse, read in the layer: the label is redrawn, not recomposed,
+  // each frame (the old moving-gradient text recomposed 60+ times a second).
+  val pulse = rememberInfiniteTransition(label = "pulse").animateFloat(
+    initialValue = 1f,
+    targetValue = 0.45f,
+    animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse),
+    label = "a",
   )
-  val base = MaterialTheme.colorScheme.onSurfaceVariant
-  val hi = MaterialTheme.colorScheme.onSurface
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
     BotAvatar(type = bot?.type ?: "flower", mood = BotMood.Thinking, size = 36.dp, interactive = false)
     Spacer(Modifier.size(8.dp))
     Text(
-      buildAnnotatedString {
-        pushStyle(SpanStyle(brush = Brush.linearGradient(listOf(base, hi, base), start = androidx.compose.ui.geometry.Offset(shimmer * 300f, 0f), end = androidx.compose.ui.geometry.Offset(shimmer * 300f + 300f, 0f))))
-        append(label)
-        pop()
-      },
+      label,
       style = MaterialTheme.typography.bodyLarge,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.graphicsLayer { alpha = pulse.value },
     )
   }
 }
@@ -331,8 +340,6 @@ private fun SessionTopBar(
   session: Session?,
   sessionId: String,
   mood: BotMood,
-  sharedScope: SharedTransitionScope,
-  animatedScope: AnimatedVisibilityScope,
   onBack: () -> Unit,
   onSync: () -> Unit,
   fileCount: Int,
@@ -345,14 +352,11 @@ private fun SessionTopBar(
       verticalAlignment = Alignment.CenterVertically,
     ) {
       IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
-      with(sharedScope) {
-        BotAvatar(
-          type = botTypeFor(session?.engine, sessionId),
-          mood = mood,
-          size = 44.dp,
-          modifier = Modifier.sharedElement(rememberSharedContentState("avatar-$sessionId"), animatedScope),
-        )
-      }
+      BotAvatar(
+        type = botTypeFor(session?.engine, sessionId),
+        mood = mood,
+        size = 44.dp,
+      )
       Spacer(Modifier.size(10.dp))
       Column(Modifier.weight(1f)) {
         Text(session?.prompt.orEmpty(), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)

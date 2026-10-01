@@ -9,7 +9,6 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -19,7 +18,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
@@ -45,32 +43,6 @@ fun Modifier.springPress(interaction: MutableInteractionSource, pressedScale: Fl
   val pressed by interaction.collectIsPressedAsState()
   val scale by animateFloatAsState(if (pressed) pressedScale else 1f, PressSpring, label = "press")
   return graphicsLayer { scaleX = scale; scaleY = scale }
-}
-
-/**
- * One card of an entrance cascade: it rises from a little below on a real
- * spring — under-damped, so it overshoots by a few dp and settles — a beat
- * after the one above it. `play` false shows it in place at once (you've
- * seen this screen already).
- */
-@Composable
-fun Modifier.cascadeIn(index: Int, play: Boolean): Modifier {
-  val p = remember { Animatable(if (play) 0f else 1f) }
-  // Keyed on nothing: once it has started, `play` turning off doesn't cut it short.
-  LaunchedEffect(Unit) {
-    if (p.value < 1f) {
-      delay(index * 55L)
-      p.animateTo(1f, spring(dampingRatio = 0.55f, stiffness = 260f))
-    }
-  }
-  return graphicsLayer {
-    val v = p.value
-    alpha = (v * 1.6f).coerceIn(0f, 1f)
-    translationY = (1f - v) * 64.dp.toPx()
-    val s = 0.9f + 0.1f * v
-    scaleX = s
-    scaleY = s
-  }
 }
 
 /**

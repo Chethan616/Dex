@@ -75,8 +75,6 @@ fun SettingsScreen(
   account: Account,
   onBack: () -> Unit,
   onOpenTour: () -> Unit = {},
-  sharedScope: androidx.compose.animation.SharedTransitionScope? = null,
-  animatedScope: androidx.compose.animation.AnimatedVisibilityScope? = null,
 ) {
   val haptics = LocalHaptics.current
   val context = LocalContext.current
@@ -97,20 +95,7 @@ fun SettingsScreen(
 
   // A Surface, not a background modifier: it also sets the content colour, so
   // the title and back arrow are onSurface instead of the default black.
-  // The screen is the gear on Home, grown to fill the window.
-  val growFromGear = if (sharedScope != null && animatedScope != null) {
-    with(sharedScope) {
-      Modifier.sharedBounds(
-        rememberSharedContentState(SETTINGS_BOUNDS),
-        animatedScope,
-        enter = androidx.compose.animation.fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
-        exit = androidx.compose.animation.fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
-        resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.scaleToBounds(),
-        clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(32.dp)),
-      )
-    }
-  } else Modifier
-  Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize().then(growFromGear)) {
+  Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
   Column(
     Modifier
       .fillMaxSize()
@@ -134,12 +119,7 @@ fun SettingsScreen(
           76.dp,
           spinMs = 36_000,
         ) {
-          com.chethan616.dex.ui.profile.DexAvatar(
-            size = 58.dp,
-            modifier = if (sharedScope != null && animatedScope != null) {
-              with(sharedScope) { Modifier.sharedElement(rememberSharedContentState(MY_DEX), animatedScope) }
-            } else Modifier,
-          )
+          com.chethan616.dex.ui.profile.DexAvatar(size = 58.dp)
         }
         Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
@@ -395,10 +375,6 @@ private fun SettingRow(icon: ImageVector, title: String, subtitle: String, onCli
     }
   }
 }
-
-/** Shared with Home's header: the gear becomes this screen, your DEX flies across. */
-const val SETTINGS_BOUNDS = "settings-bounds"
-const val MY_DEX = "my-dex"
 
 private val ROW_SHAPES = listOf(
   androidx.compose.material3.MaterialShapes.Cookie4Sided,

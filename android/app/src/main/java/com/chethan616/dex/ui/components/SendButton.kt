@@ -79,13 +79,16 @@ fun ExpressiveSendButton(
     round.animateTo(if (!active || pressed) 1f else 0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
   }
 
-  // A slow turn while it's ready; a quick spin on send.
-  val drift by rememberInfiniteTransition(label = "drift").animateFloat(
-    initialValue = 0f,
-    targetValue = 360f,
-    animationSpec = infiniteRepeatable(tween(14_000, easing = LinearEasing), RepeatMode.Restart),
-    label = "deg",
-  )
+  // A slow turn while it's ready; a quick spin on send. Nothing runs while
+  // there's nothing to send, and the angle is read only while drawing.
+  val drift = if (active) {
+    rememberInfiniteTransition(label = "drift").animateFloat(
+      initialValue = 0f,
+      targetValue = 360f,
+      animationSpec = infiniteRepeatable(tween(14_000, easing = LinearEasing), RepeatMode.Restart),
+      label = "deg",
+    )
+  } else null
   val kick = remember { Animatable(0f) }
   val pop = remember { Animatable(1f) }
   val arrowY = remember { Animatable(0f) }   // fraction of the button's height
@@ -126,7 +129,7 @@ fun ExpressiveSendButton(
   ) {
     Canvas(Modifier.fillMaxSize()) {
       morph.toPath(round.value, path)
-      rotate(if (active) drift + kick.value else kick.value) {
+      rotate((drift?.value ?: 0f) + kick.value) {
         // MaterialShapes live in a unit square; stretch it to the button.
         scale(this.size.width, this.size.height, pivot = Offset.Zero) { drawPath(path, container) }
       }

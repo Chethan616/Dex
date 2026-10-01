@@ -116,6 +116,12 @@ fun BotAvatar(
   interactive: Boolean = true,
   label: String? = null,
   color: Color? = null,
+  /**
+   * A still portrait: the mood's face and accent, drawn once — for lists,
+   * where a dozen breathing, blinking bots would each redraw every frame.
+   * A tap still makes it jump.
+   */
+  still: Boolean = false,
 ) {
   val shape = BOT_SHAPES[type] ?: BOT_SHAPES.getValue("flower")
   val body = remember(type) { PathParser().parsePathString(shape.path).toPath() }
@@ -138,13 +144,15 @@ fun BotAvatar(
   val accent = remember { Animatable(0f) }     // the accent popping in, 0…1
 
   val slow = mood == BotMood.Sleeping || mood == BotMood.Sad
-  val breath by rememberInfiniteTransition(label = "breath").animateFloat(
+  // Both phases are read only while drawing (a running bot redraws; it never
+  // recomposes), and a still one has none at all.
+  val breathPhase = if (still) null else rememberInfiniteTransition(label = "breath").animateFloat(
     initialValue = 0f,
     targetValue = 1f,
     animationSpec = infiniteRepeatable(tween(if (slow) 4200 else 3000, easing = LinearEasing), RepeatMode.Restart),
     label = "breathPhase",
   )
-  val beat by rememberInfiniteTransition(label = "beat").animateFloat(
+  val beatPhase = if (still) null else rememberInfiniteTransition(label = "beat").animateFloat(
     initialValue = 0f,
     targetValue = 1f,
     animationSpec = infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Restart),
@@ -161,6 +169,22 @@ fun BotAvatar(
     squash.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
   }
 
+  if (still) {
+    // The mood's resting pose, set once.
+    LaunchedEffect(mood) {
+      accent.snapTo(1f)
+      eyeOpen.snapTo(when (mood) { BotMood.Sleeping -> 0f; BotMood.Thinking -> 0.72f; else -> 1f })
+      val (x, y) = when (mood) {
+        BotMood.Sleeping -> 0f to 2.5f
+        BotMood.Sad -> -1f to 2.2f
+        BotMood.NeedsYou, BotMood.Happy -> 0f to -0.5f
+        BotMood.Thinking -> 2.6f to -2.4f
+        else -> 0f to 0f
+      }
+      lookX.snapTo(x)
+      lookY.snapTo(y)
+    }
+  } else {
   // The accent pops in on every change of mood.
   LaunchedEffect(mood) {
     accent.snapTo(0f)
@@ -225,6 +249,7 @@ fun BotAvatar(
       BotMood.Thinking, BotMood.Sad, BotMood.Sleeping -> Unit
     }
   }
+  }
 
   val large = size >= 36.dp
   val showAccent = size >= 24.dp
@@ -244,6 +269,8 @@ fun BotAvatar(
       .semantics { contentDescription = label ?: "DEX, ${moodLabel(mood)}" },
   ) {
     val unit = this.size.minDimension / 100f
+    val breath = breathPhase?.value ?: 0f
+    val beat = beatPhase?.value ?: 0.4f
     val phase = breath * 2f * PI.toFloat()
     val breathe = if (slow) 1f + 0.025f * sin(phase) else 1f + 0.012f * sin(phase)
     val bob = if (mood == BotMood.Idle) 1.2f * sin(phase) else 0f
