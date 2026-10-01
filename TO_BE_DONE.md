@@ -123,6 +123,16 @@ These come from the owner directly, over several sessions. Treat each as a hard 
 **Tools and taste**
 - **Don't run `graphify update`.** It was killed for using too much memory. Skip it unless the owner asks, even though `CLAUDE.md` says to run it after changes.
 - **No metal buttons.** The owner dislikes the `MetalButton` / metallic style. Use plain pill buttons, or M3 Expressive on Android.
+- **Fluidity beats flourish.** The owner's words: "I prefer fluidity more than anything." On the phone (and the desktop) every animation must stay smooth on a real device:
+  - no shared-element transitions;
+  - no per-item entrance cascades;
+  - no full-screen scale or fade transitions;
+  - read animated values in the **draw or layer phase** (`Canvas {}`, `graphicsLayer {}`), never in composition, or the whole subtree recomposes every frame;
+  - nothing animates forever in a list (`BotAvatar(still = true)`);
+  - Firestore listeners on a background executor;
+  - no animated scroll through long lists.
+
+  Android 1.0.19's commit (`ec9a8d17`) explains each of these.
 
 **Style of this codebase** (match it; reviewers notice)
 - Comments explain **why**, in plain sentences, at the density of the surrounding code. Look at `BrowserPool.ts`, `stage.ts` or `documents.ts`.
@@ -576,15 +586,16 @@ PLAN §3.7, plus Codex's note format in Appendix B. The format matters: the mode
 
 `android/` holds a Jetpack Compose app (material3 `1.5.0-alpha29`, M3 Expressive), package `com.chethan616.dex`. It pairs with the PC over the Firebase bridge.
 
-**State at hand-over:** **1.0.18** (versionCode 19).
-- It's published as `DEX-android-1.0.18.apk` on the GitHub release **v3.1.0**, which is `releases/latest`.
+**State at hand-over:** **1.0.19** (versionCode 20).
+- It's published as `DEX-android-1.0.19.apk` on the GitHub release **v3.1.0**, which is `releases/latest`.
 - The in-app `ReleaseChecker` reads `releases/latest` and looks for an asset named `DEX-android-<version>.apk`.
 - Recent work:
   - bot moods everywhere (`ui/avatar/BotAvatar.kt`, `BotMoods.kt`, `TaskBot.kt`);
   - an expressive send button (`ui/components/SendButton.kt`);
   - a compact agent picker (`ui/components/AgentPicker.kt`);
-  - shared-element and spring transitions (`DexRoot.kt`, Home ↔ Settings);
-  - physics (`ui/components/Physics.kt`: `springPress`, `cascadeIn`, `springDrag`).
+  - slide-only screen transitions (`DexRoot.kt`; shared elements were removed for smoothness);
+  - touch physics (`ui/components/Physics.kt`: `springPress`, `springDrag`);
+  - a fluidity pass and a baseline profile (`app/src/main/baseline-prof.txt`). Keep both: see the fluidity rule in §1.2.
 
 **Release (Android only, no new tag):**
 1. Bump `versionCode` / `versionName` in `android/app/build.gradle.kts`.
