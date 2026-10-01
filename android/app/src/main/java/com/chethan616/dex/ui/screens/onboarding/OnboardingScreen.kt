@@ -206,7 +206,11 @@ private fun TopBar(showSkip: Boolean, onSkip: () -> Unit) {
     Modifier.fillMaxWidth().height(56.dp).padding(start = 24.dp, end = 8.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    Text("DEX", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+    androidx.compose.foundation.Image(
+      painter = androidx.compose.ui.res.painterResource(com.chethan616.dex.R.drawable.dex_wordmark),
+      contentDescription = "DEX",
+      modifier = Modifier.height(34.dp),
+    )
     Spacer(Modifier.weight(1f))
     AnimatedVisibility(showSkip, enter = fadeIn(), exit = fadeOut()) {
       TextButton(onClick = onSkip) { Text("Skip") }
