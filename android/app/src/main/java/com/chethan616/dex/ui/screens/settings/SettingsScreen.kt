@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.AutoAwesome
+import com.chethan616.dex.ui.components.springPress
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Computer
@@ -377,7 +378,13 @@ private fun SwitchRow(icon: ImageVector, title: String, subtitle: String, checke
 
 @Composable
 private fun SettingRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
-  Surface(onClick = onClick, color = androidx.compose.ui.graphics.Color.Transparent) {
+  val press = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+  Surface(
+    onClick = onClick,
+    color = androidx.compose.ui.graphics.Color.Transparent,
+    interactionSource = press,
+    modifier = Modifier.springPress(press, 0.98f),
+  ) {
     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
       RowIcon(icon)
       Spacer(Modifier.size(14.dp))

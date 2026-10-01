@@ -88,6 +88,10 @@ import com.chethan616.dex.ui.avatar.BotMood
 import com.chethan616.dex.ui.avatar.botTypeFor
 import com.chethan616.dex.ui.avatar.rememberBotMood
 import com.chethan616.dex.ui.components.ShapeBadge
+import com.chethan616.dex.ui.components.cascadeIn
+import com.chethan616.dex.ui.components.springDrag
+import com.chethan616.dex.ui.components.springPress
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -148,15 +152,12 @@ fun HomeScreen(
   // the PC answers with a session id — then opens that session.
   val scope = rememberCoroutineScope()
   // The first time Home appears (after the tour, sign-in, or a fresh launch)
-  // its cards bounce in one after another. Not again when you come back to it.
+  // its cards spring in one after another. Not again when you come back to it.
   var entered by rememberSaveable { mutableStateOf(false) }
-  val entrance = remember { Animatable(if (entered) 1f else 0f) }
-  LaunchedEffect(Unit) {
-    if (!entered) {
-      entrance.animateTo(1f, tween(1150, easing = androidx.compose.animation.core.LinearEasing))
-      entered = true
-    }
-  }
+  // Off once the cascade has played, so a card scrolled away and back
+  // doesn't bounce in a second time.
+  var playEntrance by remember { mutableStateOf(!entered) }
+  LaunchedEffect(Unit) { delay(1600); entered = true; playEntrance = false }
   var sending by remember { mutableStateOf(false) }
   var sendStatus by remember { mutableStateOf<String?>(null) }
   fun startTask(prompt: String, engine: String?, model: String?) {
@@ -288,12 +289,12 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize(),
       ) {
-        item(key = "header") { Box(Modifier.cascade(entrance, 0)) { Header(account, onOpenSettings, sharedScope, animatedScope) } }
-        update?.let { u -> item(key = "update") { Box(Modifier.cascade(entrance, 1)) { UpdateBanner(u) } } }
-        item(key = "desktop") { Box(Modifier.cascade(entrance, 1)) { DesktopCard(state.desktop, state.loading) } }
+        item(key = "header") { Box(Modifier.cascadeIn(0, playEntrance)) { Header(account, onOpenSettings, sharedScope, animatedScope) } }
+        update?.let { u -> item(key = "update") { Box(Modifier.cascadeIn(1, playEntrance)) { UpdateBanner(u) } } }
+        item(key = "desktop") { Box(Modifier.cascadeIn(1, playEntrance)) { DesktopCard(state.desktop, state.loading) } }
         item(key = "composer") {
           PromptBar(
-            modifier = Modifier.cascade(entrance, 2),
+            modifier = Modifier.cascadeIn(2, playEntrance),
             engines = state.desktop?.engines?.takeIf { it.isNotEmpty() } ?: FALLBACK_ENGINES,
             initialEngine = container.prefs.lastEngine.value,
             busy = sending,
@@ -308,7 +309,7 @@ fun HomeScreen(
         item(key = "suggestions") {
           LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(SUGGESTIONS.size) { i ->
-              Box(Modifier.cascade(entrance, 3 + i))
+              Box(Modifier.cascadeIn(3 + i, playEntrance))
               { SuggestionTile(SUGGESTIONS[i], i) { haptics.tick(); openComposer(SUGGESTIONS[i].prompt) } }
             }
           }
@@ -321,9 +322,9 @@ fun HomeScreen(
         }
 
         if (state.needsYou.isNotEmpty()) {
-          item(key = "h-needs") { Box(Modifier.cascade(entrance, 5)) { SectionTitle("Needs you", state.needsYou.size) } }
+          item(key = "h-needs") { Box(Modifier.cascadeIn(5, playEntrance)) { SectionTitle("Needs you", state.needsYou.size) } }
           items(state.needsYou, key = { "n-" + it.id }) { s ->
-            Box(Modifier.animateItem()) {
+            Box(Modifier.animateItem(placementSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow))) {
               ApprovalCard(s, onOpen = { onOpenSession(s.id) }, onAnswer = { ok ->
                 if (ok) haptics.confirm() else haptics.reject()
                 vm.answer(s, ok)
@@ -332,15 +333,15 @@ fun HomeScreen(
           }
         }
         if (state.running.isNotEmpty()) {
-          item(key = "h-running") { Box(Modifier.cascade(entrance, 6)) { SectionTitle("Running", state.running.size) } }
+          item(key = "h-running") { Box(Modifier.cascadeIn(6, playEntrance)) { SectionTitle("Running", state.running.size) } }
           items(state.running, key = { "r-" + it.id }) { s ->
-            Box(Modifier.animateItem()) {
+            Box(Modifier.animateItem(placementSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow))) {
               RunningCard(s, sharedScope, animatedScope) { haptics.tick(); onOpenSession(s.id) }
             }
           }
         }
         if (state.recent.isNotEmpty()) {
-          item(key = "h-recent") { Box(Modifier.cascade(entrance, 7)) { SectionTitle("Recent", null) } }
+          item(key = "h-recent") { Box(Modifier.cascadeIn(7, playEntrance)) { SectionTitle("Recent", null) } }
           item(key = "recent") {
             // One grouped card: tight 3dp seams, big outer corners.
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -391,7 +392,8 @@ private fun Header(account: Account, onOpenSettings: () -> Unit, sharedScope: Sh
     else -> MaterialShapes.Puffy to scheme.surfaceContainerHighest
   }
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
-    ShapeBadge(backdrop, tone, 64.dp, spinMs = 30_000) {
+    // Grab your DEX and fling it: it springs home (components/Physics.kt).
+    ShapeBadge(backdrop, tone, 64.dp, spinMs = 30_000, modifier = Modifier.springDrag(onGrab = { haptics.tick() }, onRelease = { haptics.hop() })) {
       com.chethan616.dex.ui.profile.DexAvatar(
         size = 50.dp,
         mood = if (hello) BotMood.Happy else BotMood.Idle,
@@ -513,11 +515,13 @@ private fun ApprovalCard(session: Session, onOpen: () -> Unit, onAnswer: (Boolea
       delay(4200)
     }
   }
+  val press = remember { MutableInteractionSource() }
   Surface(
     onClick = onOpen,
     shape = RoundedCornerShape(28.dp),
     color = scheme.tertiaryContainer,
-    modifier = Modifier.fillMaxWidth().graphicsLayer { rotationZ = wiggle.value },
+    interactionSource = press,
+    modifier = Modifier.fillMaxWidth().springPress(press, 0.97f).graphicsLayer { rotationZ = wiggle.value },
   ) {
     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
@@ -541,7 +545,8 @@ private fun ApprovalCard(session: Session, onOpen: () -> Unit, onAnswer: (Boolea
 @Composable
 private fun RunningCard(session: Session, sharedScope: SharedTransitionScope, animatedScope: AnimatedVisibilityScope, onClick: () -> Unit) {
   val scheme = MaterialTheme.colorScheme
-  Surface(onClick = onClick, shape = RoundedCornerShape(28.dp), color = scheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+  val press = remember { MutableInteractionSource() }
+  Surface(onClick = onClick, shape = RoundedCornerShape(28.dp), color = scheme.surfaceContainerHigh, interactionSource = press, modifier = Modifier.fillMaxWidth().springPress(press, 0.96f)) {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         with(sharedScope) {
@@ -595,7 +600,8 @@ private fun SessionRow(
     bottomStart = if (index == count - 1) big else small,
     bottomEnd = if (index == count - 1) big else small,
   )
-  Surface(onClick = onClick, shape = shape, color = scheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+  val press = remember { MutableInteractionSource() }
+  Surface(onClick = onClick, shape = shape, color = scheme.surfaceContainerLow, interactionSource = press, modifier = Modifier.fillMaxWidth().springPress(press, 0.97f)) {
     Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
       with(sharedScope) {
         BotAvatar(
@@ -627,26 +633,6 @@ private fun SessionRow(
   }
 }
 
-/**
- * One step of Home's entrance cascade: item `index` rises from a little below,
- * overshoots and settles, as `entrance` runs 0 → 1. Drawn in the layer only —
- * no relayout per frame, so it stays smooth.
- */
-private fun Modifier.cascade(entrance: Animatable<Float, *>, index: Int): Modifier = graphicsLayer {
-  val start = index * 0.07f
-  val t = ((entrance.value - start) / 0.45f).coerceIn(0f, 1f)
-  // easeOutBack: past the mark, then back.
-  val c1 = 1.70158f
-  val c3 = c1 + 1f
-  val u = t - 1f
-  val eased = 1f + c3 * u * u * u + c1 * u * u
-  alpha = t
-  translationY = (1f - eased) * 56.dp.toPx()
-  val s = 0.92f + 0.08f * eased
-  scaleX = s
-  scaleY = s
-}
-
 /** A suggestion: its icon on a shape of its own, the label under it; it bounces when tapped. */
 @Composable
 private fun SuggestionTile(s: Suggestion, index: Int, onClick: () -> Unit) {
@@ -658,19 +644,13 @@ private fun SuggestionTile(s: Suggestion, index: Int, onClick: () -> Unit) {
     scheme.surfaceContainerHighest to scheme.onSurface,
   )
   val (bg, fg) = tones[index % tones.size]
-  val squish = remember { Animatable(1f) }
-  val scope = rememberCoroutineScope()
+  val press = remember { MutableInteractionSource() }
   Surface(
-    onClick = {
-      scope.launch {
-        squish.animateTo(0.9f, tween(80))
-        squish.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
-      }
-      onClick()
-    },
+    onClick = onClick,
     shape = RoundedCornerShape(24.dp),
     color = scheme.surfaceContainer,
-    modifier = Modifier.size(width = 118.dp, height = 112.dp).graphicsLayer { scaleX = squish.value; scaleY = squish.value },
+    interactionSource = press,
+    modifier = Modifier.size(width = 118.dp, height = 112.dp).springPress(press, 0.9f),
   ) {
     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
       ShapeBadge(TILE_SHAPES[index % TILE_SHAPES.size], bg, 44.dp, spinMs = 24_000 + index * 5_000) {
