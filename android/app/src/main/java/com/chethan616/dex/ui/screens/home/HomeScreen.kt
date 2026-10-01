@@ -199,9 +199,14 @@ fun HomeScreen(
     attach.add(s.uris)
   }
 
-  // Newer APK on GitHub Releases? (checked once per launch)
-  val update by androidx.compose.runtime.produceState<com.chethan616.dex.update.AppUpdate?>(null) {
-    value = com.chethan616.dex.update.ReleaseChecker.check()
+  // A newer APK on GitHub Releases, from the same in-app updater as
+  // Settings › Updates: the banner shows while there's one to get.
+  val updateContext = androidx.compose.ui.platform.LocalContext.current
+  val updateState by com.chethan616.dex.update.AppUpdater.state.collectAsStateWithLifecycle()
+  LaunchedEffect(Unit) { com.chethan616.dex.update.AppUpdater.check(updateContext) }
+  val update = updateState.takeIf {
+    it is com.chethan616.dex.update.UpdateState.Available || it is com.chethan616.dex.update.UpdateState.Downloading ||
+      it is com.chethan616.dex.update.UpdateState.Ready || (it is com.chethan616.dex.update.UpdateState.Failed && it.update != null)
   }
 
   val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -287,7 +292,7 @@ fun HomeScreen(
         // every recent session can be its own lazy item: only the rows on
         // screen are composed, instead of all of them at once.
         item(key = "header") { Header(account, onOpenSettings) }
-        update?.let { u -> item(key = "update") { Box(Modifier.padding(top = GAP)) { UpdateBanner(u) } } }
+        update?.let { u -> item(key = "update") { Box(Modifier.padding(top = GAP)) { com.chethan616.dex.update.UpdateBanner(u) } } }
         item(key = "desktop") { Box(Modifier.padding(top = GAP)) { DesktopCard(state.desktop, state.loading) } }
         item(key = "composer") {
           PromptBar(
@@ -447,27 +452,6 @@ private fun DesktopCard(desktop: Device?, loading: Boolean) {
           }
         }
       }
-    }
-  }
-}
-
-@Composable
-private fun UpdateBanner(update: com.chethan616.dex.update.AppUpdate) {
-  val context = androidx.compose.ui.platform.LocalContext.current
-  val haptics = LocalHaptics.current
-  Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth()) {
-    Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-      Column(Modifier.weight(1f)) {
-        Text("DEX ${update.version} is out", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
-        Text("Download and install over this version.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.75f))
-      }
-      Button(
-        onClick = {
-          haptics.click()
-          context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(update.downloadUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        },
-        shapes = ButtonDefaults.shapes(),
-      ) { Text("Update") }
     }
   }
 }

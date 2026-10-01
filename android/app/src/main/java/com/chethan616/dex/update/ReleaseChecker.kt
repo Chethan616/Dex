@@ -9,17 +9,28 @@ import java.net.URL
 
 /**
  * Updates come from GitHub Releases — the same place the desktop updates
- * from. .github/workflows/dex-release.yml attaches `DEX-android-<ver>.apk`
- * to each release; if that version is newer than this build, the home screen
- * offers it. The APK is signed with the same key, so it installs over this one.
+ * from. Each release carries `DEX-android-<ver>.apk`; if that version is newer
+ * than this build, DEX offers it (Home's banner, Settings › About). The APK is
+ * signed with the same key, so it installs over this one.
  */
-data class AppUpdate(val version: String, val downloadUrl: String, val notesUrl: String)
+data class AppUpdate(val version: String, val downloadUrl: String, val notesUrl: String, val size: Long = -1)
+
+/** What GitHub said. */
+sealed interface ReleaseCheck {
+  /** Nothing newer. `latest` is the newest phone version published, when there is one. */
+  data class UpToDate(val latest: String?) : ReleaseCheck
+  data class Available(val update: AppUpdate) : ReleaseCheck
+  data class Failed(val message: String) : ReleaseCheck
+}
 
 object ReleaseChecker {
   private const val LATEST = "https://api.github.com/repos/Chethan616/Dex/releases/latest"
   private val ASSET = Regex("""DEX-android-(\d+(?:\.\d+)*)\.apk""")
 
-  suspend fun check(): AppUpdate? = withContext(Dispatchers.IO) {
+  /** Newer APK on GitHub Releases, or null (none, or GitHub unreachable). */
+  suspend fun check(): AppUpdate? = (latest() as? ReleaseCheck.Available)?.update
+
+  suspend fun latest(): ReleaseCheck = withContext(Dispatchers.IO) {
     runCatching {
       val conn = (URL(LATEST).openConnection() as HttpURLConnection).apply {
         setRequestProperty("Accept", "application/vnd.github+json")
@@ -27,19 +38,26 @@ object ReleaseChecker {
         connectTimeout = 8000
         readTimeout = 8000
       }
-      if (conn.responseCode != 200) return@runCatching null
+      when (conn.responseCode) {
+        200 -> Unit
+        403, 429 -> return@runCatching ReleaseCheck.Failed("GitHub is busy right now. Try again in a few minutes.")
+        else -> return@runCatching ReleaseCheck.Failed("Couldn’t reach GitHub (${conn.responseCode}).")
+      }
       val release = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-      val assets = release.optJSONArray("assets") ?: return@runCatching null
+      val assets = release.optJSONArray("assets") ?: return@runCatching ReleaseCheck.UpToDate(null)
+      var newest: String? = null
       for (i in 0 until assets.length()) {
         val asset = assets.getJSONObject(i)
-        val match = ASSET.matchEntire(asset.optString("name")) ?: continue
-        val version = match.groupValues[1]
+        val version = ASSET.matchEntire(asset.optString("name"))?.groupValues?.get(1) ?: continue
+        if (newest == null || isNewer(version, newest)) newest = version
         if (isNewer(version, BuildConfig.VERSION_NAME)) {
-          return@runCatching AppUpdate(version, asset.optString("browser_download_url"), release.optString("html_url"))
+          return@runCatching ReleaseCheck.Available(
+            AppUpdate(version, asset.optString("browser_download_url"), release.optString("html_url"), asset.optLong("size", -1)),
+          )
         }
       }
-      null
-    }.getOrNull()
+      ReleaseCheck.UpToDate(newest)
+    }.getOrElse { ReleaseCheck.Failed("Couldn’t reach GitHub. Check your connection.") }
   }
 
   internal fun isNewer(candidate: String, current: String): Boolean {

@@ -4,4 +4,6 @@
     <cache-path name="dex" path="dex-files/" />
     <!-- Photos taken for an attachment, and copies of attached files. -->
     <cache-path name="outgoing" path="outgoing/" />
+    <!-- DEX updates downloaded from GitHub Releases, handed to the installer. -->
+    <cache-path name="updates" path="updates/" />
 </paths>

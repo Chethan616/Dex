@@ -588,9 +588,13 @@ PLAN §3.7, plus Codex's note format in Appendix B. The format matters: the mode
 
 `android/` holds a Jetpack Compose app (material3 `1.5.0-alpha29`, M3 Expressive), package `com.chethan616.dex`. It pairs with the PC over the Firebase bridge.
 
-**State at hand-over:** **1.0.20** (versionCode 21).
-- It's published as `DEX-android-1.0.20.apk` on the GitHub release **v3.1.0**, which is `releases/latest`.
-- The in-app `ReleaseChecker` reads `releases/latest` and looks for an asset named `DEX-android-<version>.apk`.
+**State at hand-over:** **1.0.21** (versionCode 22).
+- It's published as `DEX-android-1.0.21.apk` on the GitHub release **v3.1.0**, which is `releases/latest`.
+- The app updates itself from GitHub Releases, like the desktop:
+  - `update/ReleaseChecker.kt` reads `releases/latest` and looks for an asset named `DEX-android-<version>.apk`;
+  - `update/AppUpdater.kt` downloads it inside the app, checks it's DEX at that version and signed with the same key, then opens Android's installer (`REQUEST_INSTALL_PACKAGES`; the FileProvider `updates/` path);
+  - Settings › Updates and Home's banner both show it (`update/UpdateUi.kt`).
+- **Asset naming matters:** a release without a correctly named APK means phones never see the update.
 - Recent work:
   - bot moods everywhere (`ui/avatar/BotAvatar.kt`, `BotMoods.kt`, `TaskBot.kt`);
   - an expressive send button (`ui/components/SendButton.kt`);

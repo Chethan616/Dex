@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.SystemUpdate
 import com.chethan616.dex.ui.components.springPress
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
@@ -270,13 +271,17 @@ fun SettingsScreen(
       }
     }
 
+    // Like the desktop's: checks GitHub Releases, downloads in the app, installs over this one.
+    Group("Updates") {
+      com.chethan616.dex.update.UpdateRow { RowIcon(Icons.Rounded.SystemUpdate) }
+    }
+
     Group("About") {
       SettingRow(Icons.Rounded.AutoAwesome, "Welcome tour", "What DEX on your phone can do") {
         haptics.click()
         onOpenTour()
       }
       Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("DEX for Android ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleSmall)
         Text(
           "Thinking orbs and bot avatars from Libraries.dev (MIT, Jakub Antalik). Material 3 Expressive patterns after meticha/material-3-expressive-catalog (Apache 2.0).",
           style = MaterialTheme.typography.bodySmall,
