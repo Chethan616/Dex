@@ -26,7 +26,8 @@ export interface GitHubAccount {
   avatar?: string;
 }
 
-let cancelled = false;
+/** Bumped by every start and every cancel: a loop from an older attempt stops. */
+let flow = 0;
 
 /**
  * If the GitHub CLI is installed and signed in, its token is a ready-made
@@ -67,7 +68,7 @@ export async function connectGitHubViaCli(): Promise<GitHubAccount> {
 }
 
 export function cancelGitHub(): void {
-  cancelled = true;
+  flow += 1;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -77,7 +78,7 @@ export async function connectGitHub(onCode: (code: GitHubDeviceCode) => void): P
   if (!client) {
     throw new Error('GitHub sign-in isn’t set up in this build yet (no OAuth app). See docs/ACCOUNTS_SETUP.md.');
   }
-  cancelled = false;
+  const mine = ++flow;
 
   const start = await fetch('https://github.com/login/device/code', {
     method: 'POST',
@@ -99,17 +100,25 @@ export async function connectGitHub(onCode: (code: GitHubDeviceCode) => void): P
   const deadline = Date.now() + (device.expires_in ?? 900) * 1000;
   while (Date.now() < deadline) {
     await sleep(interval);
-    if (cancelled) throw new Error('Sign-in cancelled.');
-    const poll = await fetch('https://github.com/login/oauth/access_token', {
-      method: 'POST',
-      headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: client.clientId,
-        device_code: device.device_code,
-        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-      }),
-    });
-    const result = (await poll.json()) as { access_token?: string; error?: string; interval?: number };
+    if (mine !== flow) throw new Error('Sign-in cancelled.');
+    let poll: Response;
+    let result: { access_token?: string; error?: string; interval?: number };
+    try {
+      poll = await fetch('https://github.com/login/oauth/access_token', {
+        method: 'POST',
+        headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: client.clientId,
+          device_code: device.device_code,
+          grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+        }),
+      });
+      result = (await poll.json()) as typeof result;
+    } catch (err) {
+      // A dropped connection mid-wait isn't a failed sign-in: poll again.
+      mainLogger.warn('accounts.github.pollRetry', { error: (err as Error).message });
+      continue;
+    }
     if (result.access_token) {
       const user = await fetch('https://api.github.com/user', {
         headers: { authorization: `Bearer ${result.access_token}`, accept: 'application/vnd.github+json' },

@@ -8,6 +8,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.AttachFile
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Button
@@ -35,7 +37,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import com.chethan616.dex.data.CommandState
 import com.chethan616.dex.data.Device
 import com.chethan616.dex.data.Engine
+import com.chethan616.dex.data.shortName
 import com.chethan616.dex.ui.avatar.BotAvatar
 import com.chethan616.dex.ui.avatar.BotMood
 import com.chethan616.dex.ui.avatar.botTypeFor
@@ -85,6 +87,10 @@ fun NewTaskSheet(
   onDismiss: () -> Unit,
   onStarted: (String) -> Unit,
   onVoice: () -> Unit,
+  attachments: com.chethan616.dex.ui.attach.AttachmentState? = null,
+  pickers: com.chethan616.dex.ui.attach.AttachPickers? = null,
+  /** Shared in from another app: offer instructions that fit it. */
+  shared: com.chethan616.dex.share.SharedContent? = null,
 ) {
   val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
   val haptics = LocalHaptics.current
@@ -93,14 +99,16 @@ fun NewTaskSheet(
   var text by remember(prefill) { mutableStateOf(prefill) }
   var engine by remember { mutableStateOf(engines.firstOrNull { it.id == lastEngine } ?: engines.first()) }
   var model by remember(engine) { mutableStateOf<String?>(null) }
-  var modelMenu by remember { mutableStateOf(false) }
   var state by remember { mutableStateOf<SendState>(SendState.Idle) }
   val focus = remember { FocusRequester() }
   LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 
+  val hasFiles = (attachments?.items?.size ?: 0) > 0
+  var attachMenu by remember { mutableStateOf(false) }
+
   fun submit() {
     val prompt = text.trim()
-    if (prompt.isEmpty() || state is SendState.Sending) return
+    if ((prompt.isEmpty() && !hasFiles) || state is SendState.Sending || attachments?.preparing == true) return
     haptics.send()
     val pcName = desktop?.name ?: "your PC"
     state = SendState.Sending(if (desktop?.isReachable == true) "Sending to $pcName…" else "Queued — $pcName is offline, it’ll start when it’s back")
@@ -131,6 +139,17 @@ fun NewTaskSheet(
       verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
       Row(verticalAlignment = Alignment.CenterVertically) {
+        // Your DEX listens as you type: awake, then thinking about it, then off it goes.
+        com.chethan616.dex.ui.profile.DexAvatar(
+          size = 44.dp,
+          mood = when {
+            state is SendState.Sending -> com.chethan616.dex.ui.avatar.BotMood.Working
+            state is SendState.Failed -> com.chethan616.dex.ui.avatar.BotMood.Sad
+            text.isNotBlank() -> com.chethan616.dex.ui.avatar.BotMood.Thinking
+            else -> com.chethan616.dex.ui.avatar.BotMood.Idle
+          },
+        )
+        Spacer(Modifier.size(10.dp))
         Text("New task", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
         Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
           Text(
@@ -141,53 +160,53 @@ fun NewTaskSheet(
         }
       }
 
+      if (shared != null) {
+        // One tap turns what was shared into an instruction.
+        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          items(shared.quickActions().size) { i ->
+            val action = shared.quickActions()[i]
+            androidx.compose.material3.SuggestionChip(
+              onClick = {
+                haptics.tick()
+                val body = shared.text?.takeIf { !it.startsWith(action) }
+                text = if (body != null) "$action\n\n$body" else action
+              },
+              label = { Text(action) },
+              shape = RoundedCornerShape(50),
+            )
+          }
+        }
+      }
+
+      if (attachments != null) com.chethan616.dex.ui.attach.AttachmentStrip(attachments)
+
       OutlinedTextField(
         value = text,
         onValueChange = { text = it },
-        placeholder = { Text("What should DEX do on your PC?") },
+        placeholder = { Text(if (hasFiles) "What should DEX do with this?" else "What should DEX do on your PC?") },
         shape = RoundedCornerShape(24.dp),
         minLines = 3,
         maxLines = 8,
         trailingIcon = {
-          IconButton(onClick = onVoice) { Icon(Icons.Rounded.Mic, "Speak") }
+          Row {
+            if (pickers != null) {
+              Box {
+                IconButton(onClick = { haptics.tick(); attachMenu = true }) { Icon(Icons.Rounded.AttachFile, "Attach") }
+                com.chethan616.dex.ui.attach.AttachMenu(expanded = attachMenu, onDismiss = { attachMenu = false }, pickers = pickers)
+              }
+            }
+            IconButton(onClick = onVoice) { Icon(Icons.Rounded.Mic, "Speak") }
+          }
         },
         modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).focusRequester(focus),
       )
 
       Text("Agent", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween), modifier = Modifier.fillMaxWidth()) {
-        engines.forEachIndexed { i, e ->
-          ToggleButton(
-            checked = engine.id == e.id,
-            onCheckedChange = { haptics.tick(); engine = e },
-            shapes = when (i) {
-              0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-              engines.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-              else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-            },
-            modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-          ) {
-            BotAvatar(type = botTypeFor(e.id, e.id), mood = if (engine.id == e.id) BotMood.Working else BotMood.Idle, size = 22.dp, interactive = false)
-            Spacer(Modifier.size(ToggleButtonDefaults.IconSpacing))
-            Text(e.name, maxLines = 1)
-          }
-        }
-      }
+      com.chethan616.dex.ui.components.AgentToggleRow(engines, engine.id, onSelect = { engine = it }, modifier = Modifier.fillMaxWidth())
 
       if (engine.models.isNotEmpty()) {
-        Box {
-          TextButton(onClick = { haptics.tick(); modelMenu = true }) {
-            Icon(Icons.Rounded.Tune, null, Modifier.size(18.dp))
-            Spacer(Modifier.size(8.dp))
-            Text("Model: " + (engine.models.firstOrNull { it.id == model }?.label ?: "Default"))
-          }
-          DropdownMenu(expanded = modelMenu, onDismissRequest = { modelMenu = false }, shape = RoundedCornerShape(20.dp)) {
-            DropdownMenuItem(text = { Text("Default") }, onClick = { model = null; modelMenu = false; haptics.tick() })
-            engine.models.forEach { m ->
-              DropdownMenuItem(text = { Text(m.label) }, onClick = { model = m.id; modelMenu = false; haptics.tick() })
-            }
-          }
-        }
+        Text("Model", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        com.chethan616.dex.ui.components.ModelChips(engine, model, onPick = { model = it }, maxHeight = 120.dp)
       }
 
       AnimatedContent(
@@ -201,7 +220,7 @@ fun NewTaskSheet(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
           ) {
-            DexOrb(OrbState.Connecting, size = 40.dp)
+            androidx.compose.material3.LoadingIndicator(Modifier.size(44.dp))
             Spacer(Modifier.size(12.dp))
             Text(s.label, style = MaterialTheme.typography.bodyLarge)
           }
@@ -211,7 +230,7 @@ fun NewTaskSheet(
             }
             Button(
               onClick = ::submit,
-              enabled = text.isNotBlank(),
+              enabled = (text.isNotBlank() || hasFiles) && attachments?.preparing != true,
               shapes = ButtonDefaults.shapes(),
               modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp),
             ) {

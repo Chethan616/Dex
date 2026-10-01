@@ -314,25 +314,37 @@ function checkBun(env: NodeJS.ProcessEnv): PreflightCheck {
   };
 }
 
-function checkCdpPort(port: number | null, verified: boolean | null): PreflightCheck {
-  const base = { id: 'cdp-port' as const, label: 'Browser debugging port' };
-  if (port == null) {
-    return { ...base, status: 'degraded', detail: 'Not assigned yet.' };
-  }
+/**
+ * The agents' way into their browser tab: the CDP broker (main/cdpBroker.ts),
+ * a private loopback endpoint with one secret link per task. `devtoolsPort` is
+ * the raw remote-debugging port, open only when explicitly requested — worth
+ * a warning, because it exposes every DEX window to any program on the PC.
+ */
+function checkCdpPort(port: number | null, verified: boolean | null, devtoolsPort: number | null): PreflightCheck {
+  const base = { id: 'cdp-port' as const, label: 'Browser connection for agents' };
   if (verified === false) {
     return {
       ...base,
       status: 'degraded',
-      detail: `Port ${port} is answering, but another Chromium owns it. DEX may be driving the wrong browser.`,
-      fix: { summary: 'Close other Chrome/Edge instances started with --remote-debugging-port, then restart DEX.' },
+      detail: 'The private browser connection didn’t start, so agents can’t reach their browser tab.',
+      fix: { summary: 'Restart DEX. If it keeps failing, look for cdpBroker in the log.' },
     };
   }
-  // The port walk means a collision is normal and already handled; saying so
-  // stops a non-default port from looking like a fault.
+  if (port == null || port === 0) {
+    return { ...base, status: 'degraded', detail: 'Starting…' };
+  }
+  if (devtoolsPort != null) {
+    return {
+      ...base,
+      status: 'degraded',
+      detail: `Remote debugging is also open on port ${devtoolsPort}: any program on this PC can control DEX’s windows, approval cards included.`,
+      fix: { summary: 'Start DEX without --remote-debugging-port or AGB_CDP_PORT unless you are developing DEX.' },
+    };
+  }
   return {
     ...base,
     status: 'ok',
-    detail: port === 9222 ? `Port ${port}.` : `Port ${port} (9222 was taken; DEX moved up automatically).`,
+    detail: `Private, on port ${port}: one secret link per task, reaching only that task’s own tab.`,
   };
 }
 
@@ -356,6 +368,8 @@ export function runPreflight(opts: {
   harnessPath: string;
   cdpPort: number | null;
   cdpVerified: boolean | null;
+  /** The raw remote-debugging port, when explicitly opened. */
+  devtoolsPort?: number | null;
 }): PreflightReport {
   // An explicit run is always a fresh look at the machine.
   resetDiscoveryCaches();
@@ -363,7 +377,7 @@ export function runPreflight(opts: {
     checkGitBash(opts.env),
     checkBun(opts.env),
     checkNode(opts.env),
-    checkCdpPort(opts.cdpPort, opts.cdpVerified),
+    checkCdpPort(opts.cdpPort, opts.cdpVerified, opts.devtoolsPort ?? null),
     checkHarnessDir(opts.harnessPath),
   ];
   return {

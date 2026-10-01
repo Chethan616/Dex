@@ -17,13 +17,26 @@ import path from 'node:path';
 // dev-time fallback.
 loadDotEnv({ path: path.resolve(__dirname, '..', '..', '.env') });
 
-import { app, BrowserWindow, crashReporter, globalShortcut, ipcMain, Menu, MenuItemConstructorOptions, nativeImage, shell } from 'electron';
+import { app, BrowserWindow, crashReporter, dialog, globalShortcut, ipcMain, Menu, MenuItemConstructorOptions, nativeImage, shell } from 'electron';
 import { mergeChromiumFeature } from './startup/chromiumFeatures';
+import { destroyStage, stageEnabled, waitForFrame } from './workspace/stage';
 
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch(
     'enable-features',
     mergeChromiumFeature(app.commandLine.getSwitchValue('enable-features'), 'GlobalShortcutsPortal'),
+  );
+}
+
+// Tabs off your screen live on an off-screen stage window (workspace/stage.ts).
+// Windows' occlusion tracking would call that window hidden and stop painting
+// it — then the agent can't screenshot a background tab or a task you aren't
+// looking at. Hidden views still sleep (they're setVisible(false)); the cost is
+// that DEX's own window keeps drawing its animations while another app covers it.
+if (stageEnabled()) {
+  app.commandLine.appendSwitch(
+    'disable-features',
+    mergeChromiumFeature(app.commandLine.getSwitchValue('disable-features'), 'CalculateNativeWinOcclusion'),
   );
 }
 
@@ -86,13 +99,19 @@ import { registerChromeImportHandlers } from './chrome-import/ipc';
 import { mainLogger } from './logger';
 import { createLocalTaskServer } from './localTaskServer';
 import { registerAccountsIpc } from './accounts';
+import { registerSetupIpc } from './setup/essentials';
 import { registerProfileIpc } from './profile';
 import {
   resolveUserDataDir,
-  resolveCdpPort,
+  resolveDevtoolsPortOptIn,
   setAnnouncedCdpPort,
   verifyCdpOwnership,
 } from './startup/cli';
+import { CdpBroker, type BrokerContents, type BrokerHooks } from './cdpBroker';
+import { moveCursor, setCursorVisible } from './workspace/agentCursor';
+import { noteAgentInput, waitForUserIdle } from './workspace/userActivity';
+import { leaseDebugger, withDebugger } from './cdpLease';
+import { normalizeAddress } from '../shared/address';
 import { assertString, assertAttachments, type ValidatedAttachment } from './ipc-validators';
 import { runPreflight, formatPreflightForLog, type PreflightReport } from './startup/preflight';
 import {
@@ -105,6 +124,9 @@ import { TaskStateMutationSchema } from '../shared/session-schemas';
 // Agent loop: CLI subprocess driving the browser harness. Engine is
 // pluggable (claude-code, codex, …) — see src/main/hl/engines/.
 import { bootstrapHarness, harnessDir } from './hl/harness';
+import { isRunnable, resolveRecordedFile } from './sessions/recordedFiles';
+import { DocumentTabs, MAX_DOC_BYTES } from './workspace/documents';
+import { resolveAgentPath } from './hl/agentPaths';
 import { runEngine, DEFAULT_ENGINE_ID } from './hl/engines';
 import type { EngineRunControl } from './hl/engines/types';
 import { getEngine, setEngine, type EngineId } from './hl/engine';
@@ -175,13 +197,20 @@ if (process.platform === 'win32') {
   app.setAppUserModelId('com.chethan616.dex');
 }
 
-const resolvedCdp = resolveCdpPort(process.argv);
-app.commandLine.appendSwitch('remote-debugging-port', String(resolvedCdp.port));
-setAnnouncedCdpPort(resolvedCdp.port);
+// No remote-debugging port unless explicitly asked for: it would expose every
+// window, DEX's own approval cards included, to any process on the PC. Agents
+// reach their tab through the CDP broker (cdpBroker.ts), started when ready.
+const devtoolsPort = resolveDevtoolsPortOptIn(process.argv, process.env);
+if (devtoolsPort) {
+  app.commandLine.appendSwitch('remote-debugging-port', String(devtoolsPort.port));
+  setAnnouncedCdpPort(devtoolsPort.port);
+}
 mainLogger.info('main.startup', {
-  msg: `Remote debugging port set to ${resolvedCdp.port}`,
-  cdpPort: resolvedCdp.port,
-  cdpPortSource: resolvedCdp.source,
+  msg: devtoolsPort
+    ? `Remote debugging port ${devtoolsPort.port} opened on request (${devtoolsPort.source}) — every DEX window is reachable on it`
+    : 'Remote debugging port off; agents use the CDP broker',
+  devtoolsPort: devtoolsPort?.port ?? null,
+  devtoolsPortSource: devtoolsPort?.source ?? null,
   userDataOverride: resolvedUserData.value,
   userDataSource: resolvedUserData.source,
   forceOnboarding: process.env.AGB_FORCE_ONBOARDING === '1',
@@ -196,6 +225,13 @@ if (started) {
 // App state
 // ---------------------------------------------------------------------------
 let shellWindow: BrowserWindow | null = null;
+
+// Document tabs (docs/unify/PLAN.md §3.9). The hub draws them; this keeps each
+// task's list and reloads a tab when its file changes on disk.
+const documentTabs = new DocumentTabs(
+  (sessionId, docs, focusId) => shellWindow?.webContents.send('workspace:docs-changed', sessionId, docs, focusId ?? null),
+  (sessionId, docId, mtimeMs) => shellWindow?.webContents.send('workspace:doc-changed', sessionId, docId, mtimeMs),
+);
 let onboardingWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
@@ -336,6 +372,52 @@ setTimeout(() => {
   }
 }, 10_000);
 
+// How an agent reaches its own browser tab, and nothing else (cdpBroker.ts):
+// a private loopback endpoint with one secret link per task. Started when the
+// app is ready; engines get their link through cdpFor().
+// The agent's input to a shared page (docs/unify/PLAN.md §3.4–3.5): wait while
+// you're using the page, glide DEX's cursor to the spot and let it arrive
+// before the click lands, and keep the cursor out of the agent's screenshots.
+const AGENT_INPUT = new Set([
+  'Input.dispatchMouseEvent', 'Input.dispatchKeyEvent', 'Input.insertText', 'Input.dispatchTouchEvent',
+  'Input.synthesizeScrollGesture', 'Input.synthesizeTapGesture', 'Input.dispatchDragEvent', 'Input.imeSetComposition',
+]);
+type CursorTarget = Parameters<typeof moveCursor>[0];
+const workspaceHooks: BrokerHooks = {
+  async beforeCommand(wc, method, params, { child }) {
+    // A tab off your screen wakes on the stage while the agent uses it; a
+    // screenshot right after waking waits for the page to draw.
+    const woke = browserPool.noteAgentUse(wc as unknown as Electron.WebContents);
+    if (woke && method === 'Page.captureScreenshot') await waitForFrame(wc as unknown as CursorTarget);
+    if (AGENT_INPUT.has(method)) {
+      await waitForUserIdle(wc);
+      if (!child && method === 'Input.dispatchMouseEvent') {
+        const type = params.type;
+        if (type === 'mouseMoved' || type === 'mousePressed' || type === 'mouseWheel') {
+          await moveCursor(wc as unknown as CursorTarget, Number(params.x), Number(params.y), type === 'mousePressed');
+        }
+      }
+      noteAgentInput(wc, 400);
+    } else if (method === 'Page.captureScreenshot' && !child) {
+      await setCursorVisible(wc as unknown as CursorTarget, false);
+    }
+  },
+  afterCommand(wc, method, _params, { child }) {
+    if (AGENT_INPUT.has(method)) noteAgentInput(wc, 250);
+    else if (method === 'Page.captureScreenshot' && !child) void setCursorVisible(wc as unknown as CursorTarget, true);
+  },
+};
+const cdpBroker = new CdpBroker(
+  (sessionId) => browserPool.getAllWebContents(sessionId) as unknown as BrokerContents[],
+  workspaceHooks,
+);
+let cdpBrokerReady: boolean | null = null;
+
+function cdpFor(sessionId: string): { cdpPort: number; cdpWsUrl: string } {
+  const endpoint = cdpBroker.endpointFor(sessionId);
+  return { cdpPort: endpoint.port, cdpWsUrl: endpoint.wsUrl };
+}
+
 /**
  * Last handshake result per connection, from the startup check or an explicit
  * re-check. Settings reads it so the dots are already meaningful when the pane
@@ -347,8 +429,9 @@ function refreshPreflight(cdpVerified: boolean | null = null): PreflightReport {
   preflightReport = runPreflight({
     env: process.env,
     harnessPath: harnessDir(),
-    cdpPort: resolvedCdp.port,
-    cdpVerified,
+    cdpPort: cdpBroker.listeningPort || null,
+    cdpVerified: cdpVerified ?? cdpBrokerReady,
+    devtoolsPort: devtoolsPort?.port ?? null,
   });
   for (const line of formatPreflightForLog(preflightReport)) {
     const missing = line.startsWith('[FAIL]');
@@ -382,6 +465,19 @@ browserPool.setOnGone((sessionId) => {
 // any clicks the user makes inside the attached view.
 browserPool.setOnNavigate((sessionId, url) => {
   sessionManager.updateNavigationFromUrl(sessionId, url);
+});
+// The workspace's tab strip follows every tab change (opened, closed,
+// switched, navigated, retitled, loading).
+browserPool.setOnTabsChanged((sessionId, tabs) => {
+  if (shellWindow && !shellWindow.isDestroyed()) {
+    shellWindow.webContents.send('workspace:tabs-changed', sessionId, tabs);
+  }
+});
+browserPool.setOnFocusAddress((sessionId) => {
+  if (shellWindow && !shellWindow.isDestroyed()) {
+    shellWindow.webContents.focus();
+    shellWindow.webContents.send('workspace:focus-address', sessionId);
+  }
 });
 browserPool.setOnInterruptShortcut((sessionId) => {
   return interruptBrowserSessionFromShortcut?.(sessionId) ?? false;
@@ -552,7 +648,18 @@ function openShellAndWire(): BrowserWindow {
   shellWindow.on('closed', () => {
     mainLogger.info('main.shellWindow.closed');
     shellWindow = null;
+    destroyStage();
   });
+
+  // Closed to the tray or minimized: the task on screen moves to the stage, so
+  // the agent can still see its page.
+  const syncWindowHidden = () => {
+    if (!shellWindow || shellWindow.isDestroyed()) return;
+    browserPool.setWindowHidden(!shellWindow.isVisible() || shellWindow.isMinimized());
+  };
+  for (const event of ['hide', 'show', 'minimize', 'restore'] as const) {
+    shellWindow.on(event as 'hide', syncWindowHidden);
+  }
 
   mainLogger.info('main.openShellAndWire.done', { windowId: shellWindow.id });
   return shellWindow;
@@ -580,31 +687,35 @@ app.whenReady().then(async () => {
   }, 8000);
   startResourceMonitor(resourceMonitorContext);
 
-  // Verify the CDP endpoint at our announced port is actually OUR Electron
-  // instance and not, e.g., the user's own Chrome that happened to already
-  // bind 9222. Without this, BU_CDP_PORT handed to the agent would point at
-  // a stranger's browser — `/json/list` returns targets the agent has no
-  // access to, and `/devtools/page/<id>` gives 404/403. Log loudly on
-  // mismatch so users hit a clear error instead of mysterious CDP failures.
-  verifyCdpOwnership(resolvedCdp.port).then((v) => {
-    // Fold the CDP result into the environment report as soon as we have it,
-    // so Settings shows one coherent picture rather than three half-answers.
-    refreshPreflight(v.ok);
-    if (v.ok) {
-      mainLogger.info('main.cdp.verified', { port: resolvedCdp.port, browser: v.browser, userAgent: v.userAgent });
-    } else {
-      mainLogger.error('main.cdp.verifyFailed', {
-        port: resolvedCdp.port,
-        portSource: resolvedCdp.source,
-        browser: v.browser ?? null,
-        userAgent: v.userAgent ?? null,
-        error: v.error ?? null,
-        hint: v.userAgent
-          ? `CDP on :${resolvedCdp.port} responded but User-Agent does not contain Electron/ or BrowserUse/ — another Chromium-based process likely owns this port. Close it (or pass --remote-debugging-port=<free port>) and restart.`
-          : `Could not reach CDP on :${resolvedCdp.port}; Electron may not have bound it (another process likely holds it).`,
-      });
-    }
+  // The agents' private way into their tabs. Fold the result into the
+  // environment report as soon as it's known.
+  cdpBroker.start().then((port) => {
+    cdpBrokerReady = true;
+    mainLogger.info('main.cdpBroker.ready', { port });
+    refreshPreflight(true);
+  }).catch((err) => {
+    cdpBrokerReady = false;
+    mainLogger.error('main.cdpBroker.failed', { error: (err as Error).message });
+    refreshPreflight(false);
   });
+
+  // Only when the raw port was asked for: check it's really ours, not a
+  // browser that already held that port.
+  if (devtoolsPort && devtoolsPort.port !== 0) {
+    verifyCdpOwnership(devtoolsPort.port).then((v) => {
+      if (v.ok) {
+        mainLogger.info('main.cdp.verified', { port: devtoolsPort.port, browser: v.browser, userAgent: v.userAgent });
+      } else {
+        mainLogger.error('main.cdp.verifyFailed', {
+          port: devtoolsPort.port,
+          portSource: devtoolsPort.source,
+          browser: v.browser ?? null,
+          userAgent: v.userAgent ?? null,
+          error: v.error ?? null,
+        });
+      }
+    });
+  }
 
   if (process.platform === 'darwin' && app.dock) {
     try {
@@ -631,6 +742,7 @@ app.whenReady().then(async () => {
   registerTelemetryHandlers();
   registerAppPopupHandlers();
   registerAccountsIpc();
+  registerSetupIpc();
   registerProfileIpc();
   startSystemThemeWatcher();
   registerChannelHandlers(channelRouter, whatsAppAdapter);
@@ -902,6 +1014,7 @@ app.whenReady().then(async () => {
     sendToPill('session-updated', session);
     forwardSessionUpdatedToLogs(session);
     notifiedStuck.delete(session.id);
+    browserPool.closeTemporaryTabs(session.id);
     browserPool.markSessionIdle(session.id);
     const doneEvent = session.output.find(
       (e: { type: string }) => e.type === 'done',
@@ -1155,6 +1268,12 @@ app.whenReady().then(async () => {
     queuedFollowUps.delete(id);
   }
 
+  /** Show what the user attached, on their message in the chat (desktop + phone). */
+  function noteUserAttachments(sessionId: string, items: Array<{ name: string; mime: string; size: number }>): void {
+    if (items.length === 0) return;
+    sessionManager.appendOutput(sessionId, { type: 'user_attachments', items });
+  }
+
   async function resumeSessionWithAgent(
     validatedId: string,
     validatedPrompt: string,
@@ -1215,6 +1334,7 @@ app.whenReady().then(async () => {
     const engineId = sessionManager.getSessionEngine(validatedId) ?? DEFAULT_ENGINE_ID;
     await stampConfiguredSessionModel(validatedId, engineId, source);
     const abortController = sessionManager.resumeSession(validatedId, validatedPrompt);
+    noteUserAttachments(validatedId, resumeAttachments.map((a) => ({ name: a.name, mime: a.mime, size: a.bytes.byteLength })));
     if (resumeAttachments.length > 0) {
       mainLogger.info('main.sessions:resume.attachments', { id: validatedId, count: resumeAttachments.length, source });
     }
@@ -1233,7 +1353,7 @@ app.whenReady().then(async () => {
       prompt: validatedPrompt,
       attachments: resumeAttachments.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
       webContents,
-      cdpPort: resolvedCdp.port,
+      ...cdpFor(validatedId),
       signal: abortController.signal,
       resumeSessionId: sessionManager.getEngineSessionId(validatedId),
       model: sessionManager.getSessionModel(validatedId) ?? undefined,
@@ -1332,6 +1452,7 @@ app.whenReady().then(async () => {
       mainLogger.info('main.startSessionWithAgent.timing', { id, step: 'loadBlank', ms: Date.now() - t0 });
 
       const attachmentsForRun = sessionManager.loadAttachmentsForRun(id);
+      noteUserAttachments(id, attachmentsForRun.map((a) => ({ name: a.name, mime: a.mime, size: a.size })));
       if (attachmentsForRun.length > 0) {
         mainLogger.info('main.startSessionWithAgent.attachments', { id, count: attachmentsForRun.length, totalBytes: attachmentsForRun.reduce((s, a) => s + a.size, 0) });
       }
@@ -1345,7 +1466,7 @@ app.whenReady().then(async () => {
         prompt: sessionManager.getSession(id)!.prompt,
         attachments: attachmentsForRun.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
         webContents: view.webContents,
-        cdpPort: resolvedCdp.port,
+        ...cdpFor(id),
         signal: abortController.signal,
         model: sessionManager.getSessionModel(id) ?? undefined,
         onRunControl: bindRunControl(id, runId),
@@ -1380,9 +1501,8 @@ app.whenReady().then(async () => {
 
   /** Show a file in the task as a file card (desktop chat + phone). Deduped by path. */
   function appendFileCard(sessionId: string, rawPath: string, name?: string): void {
-    // Agents run in Git Bash and often pass /c/Users/… paths.
-    const msys = process.platform === 'win32' ? /^\/([a-zA-Z])(?:\/(.*))?$/.exec(rawPath.trim()) : null;
-    const filePath = msys ? path.win32.normalize(`${msys[1].toUpperCase()}:/${msys[2] ?? ''}`) : path.resolve(rawPath.trim());
+    // Agents run in Git Bash: /c/Users/…, /tmp/…, paths relative to the harness.
+    const filePath = resolveAgentPath(rawPath, harnessDir());
     const session = sessionManager.getSession(sessionId);
     if (!session) return;
     const already = session.output.some((e) => e.type === 'file_output' && (e as { path?: string }).path === filePath);
@@ -1475,9 +1595,9 @@ app.whenReady().then(async () => {
         // reliably and looks to the site like real entry. The secret is built
         // into the expression here in main and is never logged or returned.
         const dbg = view.webContents.debugger;
-        const attachedHere = !dbg.isAttached();
+        let release: (() => void) | null = null;
         try {
-          if (attachedHere) dbg.attach('1.3');
+          release = leaseDebugger(view.webContents);
           const literal = JSON.stringify(secret);
           const sel = selector ? JSON.stringify(selector) : 'null';
           const expression = `(() => {
@@ -1512,9 +1632,7 @@ app.whenReady().then(async () => {
         } catch (err) {
           return { filled: false, error: (err as Error).message };
         } finally {
-          if (attachedHere && dbg.isAttached()) {
-            try { dbg.detach(); } catch { /* already gone */ }
-          }
+          release?.();
         }
       },
 
@@ -1677,6 +1795,77 @@ app.whenReady().then(async () => {
         return { ...result, files: files.map((f) => f.path), problems };
       },
 
+      // The `dex-tab` CLI: the agent's view of its workspace tabs (docs/unify
+      // PLAN.md §4.2). Tabs it opens are background scratch tabs unless it
+      // shows or keeps them; `targetId` is what `session.use()` takes.
+      'POST /dex/tab': async (raw) => {
+        let parsed: { sessionId?: unknown; op?: unknown; tab?: unknown; url?: unknown; show?: unknown; keep?: unknown };
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new Error('request body must be JSON');
+        }
+        const id = assertString(parsed.sessionId, 'sessionId', 100);
+        if (!browserPool.getWebContents(id)) throw new Error('This task has no browser open.');
+        const tabId = typeof parsed.tab === 'string' ? parsed.tab : '';
+        const describe = async () => {
+          const tabs = browserPool.listTabs(id);
+          return Promise.all(tabs.map(async (t) => {
+            const wc = browserPool.getTabWebContents(id, t.id);
+            let targetId: string | null = null;
+            if (wc) {
+              try {
+                const info = await withDebugger(wc, () => wc.debugger.sendCommand('Target.getTargetInfo')) as { targetInfo?: { targetId?: string } };
+                targetId = info.targetInfo?.targetId ?? null;
+              } catch { /* closing */ }
+            }
+            return { tab: t.id, targetId, url: t.url, title: t.title, onScreen: t.active, openedBy: t.openedBy, temporary: t.temporary };
+          }));
+        };
+        switch (parsed.op) {
+          case 'list':
+            return { tabs: await describe() };
+          case 'new': {
+            const url = typeof parsed.url === 'string' ? normalizeAddress(parsed.url) : null;
+            if (!url) throw new Error('dex-tab new needs a URL or search words');
+            const opened = browserPool.openTab(id, { url, openedBy: 'agent', activate: parsed.show === true, temporary: parsed.keep !== true && parsed.show !== true });
+            if (!opened) throw new Error('Could not open a tab.');
+            await new Promise((resolve) => setTimeout(resolve, 60));
+            return { opened: (await describe()).find((t) => t.tab === opened) ?? { tab: opened } };
+          }
+          case 'show':
+            if (!browserPool.activateTab(id, tabId)) throw new Error(`No tab ${tabId || '(missing)'}`);
+            browserPool.keepTab(id, tabId);
+            return { shown: tabId };
+          case 'keep':
+            if (!browserPool.keepTab(id, tabId)) throw new Error(`No tab ${tabId || '(missing)'}`);
+            return { kept: tabId };
+          case 'close':
+            if (!browserPool.closeTab(id, tabId)) throw new Error(`No tab ${tabId || '(missing)'}`);
+            return { closed: tabId };
+          default:
+            throw new Error('op must be list, new, show, keep or close');
+        }
+      },
+
+      // The `dex-open` CLI: show the user a file in a document tab — what the
+      // agent wrote, downloaded or filled in. The agent can already read any
+      // file; this only puts it in front of the user.
+      'POST /dex/open': async (raw) => {
+        let parsed: { sessionId?: unknown; path?: unknown; show?: unknown };
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new Error('request body must be JSON');
+        }
+        const id = assertString(parsed.sessionId, 'sessionId', 100);
+        const requested = assertString(parsed.path, 'path', 2000);
+        if (!sessionManager.getSession(id)) throw new Error('No such task.');
+        const abs = path.isAbsolute(requested) ? requested : path.resolve(harnessDir(), requested);
+        const doc = documentTabs.open(id, abs, 'agent', parsed.show !== false);
+        return { opened: { tab: doc.id, name: doc.name, path: doc.path, size: doc.size } };
+      },
+
       // The `dex-state` CLI's only endpoint. Everything it can do is one of
       // the verbs in TaskStateMutationSchema, so validation is a single parse
       // and the handler stays a pass-through to the session manager.
@@ -1690,6 +1879,8 @@ app.whenReady().then(async () => {
         const { sessionId, ...rest } = (parsed ?? {}) as { sessionId?: unknown };
         const id = assertString(sessionId, 'sessionId', 100);
         const mutation = TaskStateMutationSchema.parse(rest);
+        // Store the file where it really is, not as Git Bash spelled it.
+        if (mutation.op === 'file') mutation.path = resolveAgentPath(mutation.path, harnessDir());
         const state = sessionManager.applyTaskState(id, mutation);
         // A recorded file (a render, a model, an export) also shows in the
         // task itself as a file card — with a preview for pictures — on the
@@ -1983,7 +2174,7 @@ app.whenReady().then(async () => {
       prompt: session.prompt,
       attachments: rerunAttachments.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
       webContents: view.webContents,
-      cdpPort: resolvedCdp.port,
+      ...cdpFor(validatedId),
       signal: abortController.signal,
       // Rerun intentionally starts a fresh conversation; SessionManager.rerunSession
       // already cleared any stored resume id. The model choice is a property of
@@ -2055,6 +2246,7 @@ app.whenReady().then(async () => {
     drainingQueuedFollowUps.delete(validatedId);
     terminateActiveRunControl(validatedId);
     browserPool.destroy(validatedId, shellWindow ?? undefined);
+    documentTabs.closeSession(validatedId);
     sessionManager.deleteSession(validatedId);
     approvalPolicy.clearSession(validatedId);
   });
@@ -2140,6 +2332,14 @@ app.whenReady().then(async () => {
       const { findServerDefinition } = await import('./mcp/catalog');
       const { listConnections, setConnection } = await import('./mcp/store');
       const { verifyServer } = await import('./mcp/client');
+
+      // Blender needs no keys: installed means connected — unless the user
+      // switched it off, which leaves an entry saying so.
+      const { findBlender } = await import('./startup/blender');
+      if (findBlender() && !(await listConnections()).some((c) => c.id === 'blender')) {
+        await setConnection('blender', { enabled: true, values: {} });
+        mainLogger.info('mcp.autoConnect', { id: 'blender' });
+      }
 
       for (const connection of await listConnections()) {
         if (!connection.enabled) continue;
@@ -2235,6 +2435,58 @@ app.whenReady().then(async () => {
     return { revealed: true };
   });
 
+  // The chat's file cards (docs/unify/PLAN.md §3.12): a file this task
+  // recorded, wherever it was saved — never a path the page merely names,
+  // and never run as a program (an executable is only shown in its folder).
+  ipcMain.handle('sessions:open-file', async (_event, payload: { sessionId?: unknown; path?: unknown; how?: unknown }) => {
+    const id = assertString(payload?.sessionId, 'sessionId', 100);
+    const requested = assertString(payload?.path, 'path', 2000);
+    const how = payload?.how === 'reveal' || payload?.how === 'copy' ? payload.how : 'open';
+    const session = sessionManager.getSession(id);
+    if (!session) throw new Error('No such task.');
+    const resolved = resolveRecordedFile(requested, session.output, harnessDir())
+      ?? (documentTabs.isOpen(id, requested) ? path.resolve(requested) : null);
+    if (!resolved) {
+      mainLogger.warn('main.sessions:open-file.refused', { id, path: requested });
+      throw new Error('refused: not a file this task produced');
+    }
+    if (!fs.existsSync(resolved)) throw new Error('That file has been moved or deleted.');
+    if (how === 'reveal' || (how === 'open' && isRunnable(resolved))) {
+      shell.showItemInFolder(resolved);
+      return { revealed: true };
+    }
+    if (how === 'copy') {
+      const options = { defaultPath: path.join(app.getPath('downloads'), path.basename(resolved)) };
+      const res = shellWindow ? await dialog.showSaveDialog(shellWindow, options) : await dialog.showSaveDialog(options);
+      if (res.canceled || !res.filePath) return { saved: null };
+      await fs.promises.copyFile(resolved, res.filePath);
+      mainLogger.info('main.sessions:open-file.copied', { id, to: res.filePath });
+      return { saved: res.filePath };
+    }
+    const err = await shell.openPath(resolved);
+    if (err) throw new Error(err);
+    return { opened: true };
+  });
+
+  // The bytes of a file this task recorded or opened as a document, for the
+  // hub's viewers (document tabs, screenshots in the chat). Same rule as
+  // open-file: never a path the page merely names.
+  ipcMain.handle('sessions:read-file', async (_event, payload: { sessionId?: unknown; path?: unknown }) => {
+    const id = assertString(payload?.sessionId, 'sessionId', 100);
+    const requested = assertString(payload?.path, 'path', 2000);
+    const session = sessionManager.getSession(id);
+    if (!session) throw new Error('No such task.');
+    const resolved = resolveRecordedFile(requested, session.output, harnessDir())
+      ?? (documentTabs.isOpen(id, requested) ? path.resolve(requested) : null);
+    if (!resolved) {
+      mainLogger.warn('main.sessions:read-file.refused', { id, path: requested });
+      throw new Error('refused: not a file this task produced');
+    }
+    const stat = await fs.promises.stat(resolved);
+    if (stat.size > MAX_DOC_BYTES) throw new Error('Too big to show here; open it in its own app.');
+    return { bytes: await fs.promises.readFile(resolved), size: stat.size, mtimeMs: stat.mtimeMs };
+  });
+
   ipcMain.handle('sessions:open-in-editor', async (_event, payload: { editorId: string; filePath: string }) => {
     mainLogger.info('main.sessions:open-in-editor.enter', {
       editorId: payload?.editorId,
@@ -2316,7 +2568,21 @@ app.whenReady().then(async () => {
       },
       onSessionOutput: (cb) => { sessionManager.onEvent('session-output', cb); },
       onSessionDeleted: (cb) => { sessionManager.onEvent('session-deleted', cb); },
-      getTaskFiles: (id) => sessionManager.getTaskState(id).files,
+      // Older tasks recorded Git Bash paths (/tmp/…, /c/…, outputs\…): the
+      // phone gets real paths — with sizes — and each file once.
+      getTaskFiles: (id) => {
+        const seen = new Set<string>();
+        const out: Array<{ name: string; path: string; size?: number }> = [];
+        for (const f of sessionManager.getTaskState(id).files) {
+          const real = resolveAgentPath(f.path, harnessDir());
+          if (seen.has(real.toLowerCase())) continue;
+          seen.add(real.toLowerCase());
+          let size: number | undefined;
+          try { size = fs.statSync(real).size; } catch { /* gone since */ }
+          out.push({ ...f, path: real, size });
+        }
+        return out;
+      },
       listEngines: async () => {
         const { listAdapters } = await import('./hl/engines');
         return listAdapters().map((a) => ({
@@ -2325,13 +2591,19 @@ app.whenReady().then(async () => {
           models: (a.selectableModels ?? []).map((m) => ({ id: m.id, label: m.label })),
         }));
       },
-      newTask: async ({ prompt, engine, model }) => {
+      newTask: async ({ prompt, engine, model, attachments: phoneFiles }) => {
         const validatedPrompt = assertString(prompt, 'prompt', 10000);
+        // Same limits as the desktop's own task box (shared/attachments.ts).
+        const attachments = assertAttachments(phoneFiles ?? []);
         const engineId = engine ? assertString(engine, 'engine', 50) : DEFAULT_ENGINE_ID;
         const id = sessionManager.createSession(validatedPrompt, { originChannel: 'android' });
         sessionManager.setSessionEngine(id, engineId);
         if (model) sessionManager.setSessionModel(id, assertString(model, 'model', 100));
-        captureEvent('session_created', { source: 'android', engine: engineId, prompt_length: validatedPrompt.length, attachments_count: 0 });
+        if (attachments.length > 0) {
+          const turnIndex = sessionManager.getNextAttachmentTurnIndex(id);
+          for (const a of attachments) sessionManager.saveAttachment(id, a, turnIndex);
+        }
+        captureEvent('session_created', { source: 'android', engine: engineId, prompt_length: validatedPrompt.length, attachments_count: attachments.length });
         try {
           await startSessionWithAgent(id);
           return { id };
@@ -2339,7 +2611,7 @@ app.whenReady().then(async () => {
           return { id, error: (err as Error).message };
         }
       },
-      followUp: (id, prompt) => handleResumeRequest(assertString(id, 'id', 100), assertString(prompt, 'prompt', 10000), []),
+      followUp: (id, prompt, phoneFiles) => handleResumeRequest(assertString(id, 'id', 100), assertString(prompt, 'prompt', 10000), assertAttachments(phoneFiles ?? [])),
       pause: (id) => pauseSessionFromMain(assertString(id, 'id', 100), 'button'),
       resume: (id) => handleResumeRequest(assertString(id, 'id', 100), 'Continue from where you left off.', []),
       stop: (id) => cancelSessionFromMain(assertString(id, 'id', 100), 'button'),
@@ -2420,6 +2692,70 @@ app.whenReady().then(async () => {
     return ok;
   });
 
+  // ---- Document tabs (docs/unify/PLAN.md §3.9) ----
+  ipcMain.handle('workspace:docs', (_event, id: string) => documentTabs.list(assertString(id, 'id', 100)));
+
+  // From the hub (a file card, Recents): only files this task recorded.
+  ipcMain.handle('workspace:doc-open', (_event, id: string, filePath: string) => {
+    const validatedId = assertString(id, 'id', 100);
+    const requested = assertString(filePath, 'path', 2000);
+    const session = sessionManager.getSession(validatedId);
+    if (!session) throw new Error('No such task.');
+    const resolved = resolveRecordedFile(requested, session.output, harnessDir())
+      ?? (documentTabs.isOpen(validatedId, requested) ? path.resolve(requested) : null);
+    if (!resolved) throw new Error('refused: not a file this task produced');
+    return documentTabs.open(validatedId, resolved, 'user');
+  });
+
+  ipcMain.handle('workspace:doc-close', (_event, id: string, docId: string) =>
+    documentTabs.close(assertString(id, 'id', 100), assertString(docId, 'docId', 20)));
+
+  // ---- Workspace tabs (docs/unify/PLAN.md §3.2–3.3) ----
+  ipcMain.handle('workspace:tabs', (_event, id: string) => {
+    return browserPool.listTabs(assertString(id, 'id', 100));
+  });
+
+  ipcMain.handle('workspace:shortcut', (_event, id: string, shortcut: unknown) => {
+    const validatedId = assertString(id, 'id', 100);
+    const allowed = ['new-tab', 'close-tab', 'focus-address', 'reload', 'back', 'forward', 'next-tab', 'prev-tab'];
+    if (typeof shortcut !== 'string' || !allowed.includes(shortcut)) return false;
+    browserPool.runShortcut(validatedId, undefined, shortcut as Parameters<typeof browserPool.runShortcut>[2]);
+    return true;
+  });
+
+  ipcMain.handle('workspace:tab', (_event, id: string, action: unknown) => {
+    const validatedId = assertString(id, 'id', 100);
+    if (!action || typeof action !== 'object') return false;
+    const a = action as { op?: unknown; tabId?: unknown; input?: unknown };
+    const tabId = typeof a.tabId === 'string' && a.tabId.length <= 20 ? a.tabId : undefined;
+    switch (a.op) {
+      case 'new': {
+        const newId = browserPool.openTab(validatedId, { openedBy: 'user' });
+        if (newId && typeof a.input === 'string' && a.input.trim() && a.input.length <= 4096) {
+          browserPool.navigateTab(validatedId, newId, a.input);
+        }
+        return newId !== null;
+      }
+      case 'activate':
+        if (!tabId || !browserPool.activateTab(validatedId, tabId)) return false;
+        browserPool.keepTab(validatedId, tabId);
+        return true;
+      case 'close':
+        return tabId ? browserPool.closeTab(validatedId, tabId) : false;
+      case 'navigate':
+        return typeof a.input === 'string' && a.input.length <= 4096
+          ? browserPool.navigateTab(validatedId, tabId, a.input)
+          : false;
+      case 'back':
+      case 'forward':
+      case 'reload':
+      case 'stop':
+        return browserPool.tabAction(validatedId, tabId, a.op);
+      default:
+        return false;
+    }
+  });
+
   ipcMain.handle('sessions:view-detach', (_event, id: string) => {
     const validatedId = assertString(id, 'id', 100);
     if (!shellWindow) return false;
@@ -2466,10 +2802,7 @@ app.whenReady().then(async () => {
     // on every resize to fit the emulated viewport, but that clobbered any
     // manual zoom the user set via Cmd+=/Cmd+- and felt like the browser
     // was "resetting itself" on layout changes.)
-    const children = shellWindow.contentView.children;
-    if (!children.includes(view)) {
-      shellWindow.contentView.addChildView(view);
-    }
+    browserPool.ensureOnScreen(id);
     // Keep takeover overlay tracking the browser rect and sitting above it.
     // Use the fitted (centered) rect so the overlay aligns with the visible
     // view, not the wider hub box.
@@ -2744,6 +3077,7 @@ app.whenReady().then(async () => {
     }
     activeAgents.clear();
     browserPool.destroyAll(shellWindow ?? undefined);
+    documentTabs.dispose();
     stopResourceMonitor();
     sessionManager.destroy();
     whatsAppAdapter.disconnect().catch(() => {});

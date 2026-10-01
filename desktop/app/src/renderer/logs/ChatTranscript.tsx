@@ -17,6 +17,7 @@
  * and folded in once per animation frame, and the reducer shares every
  * untouched block, so only the block being written re-renders.
  */
+import { formatBytes } from '../../shared/attachments';
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Markdown } from '../hub/Markdown';
 import { AgentAvatar, CopyButton, Orb, type OrbState } from '../components/lib';
@@ -67,7 +68,7 @@ const KIND_PATH: Record<ToolKind, string> = {
   other: 'M8 2l1.6 3.9L13.5 6l-3 2.7.9 4.1L8 10.7l-3.4 2.1.9-4.1-3-2.7 3.9-.1z',
 };
 
-function KindGlyph({ kind }: { kind: ToolKind }): React.ReactElement {
+export function KindGlyph({ kind }: { kind: ToolKind }): React.ReactElement {
   return (
     <svg className="chat-tool__glyph" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path d={KIND_PATH[kind]} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
@@ -83,7 +84,7 @@ function Chevron({ open }: { open: boolean }): React.ReactElement {
   );
 }
 
-function prettyArgs(args: unknown): string {
+export function prettyArgs(args: unknown): string {
   if (args == null) return '';
   if (typeof args === 'string') return args;
   try {
@@ -97,10 +98,23 @@ function prettyArgs(args: unknown): string {
 
 /* ── Blocks ───────────────────────────────────────────────────────────── */
 
-const UserBubble = memo(function UserBubble({ text }: { text: string }) {
+const UserBubble = memo(function UserBubble({ text, attachments }: { text: string; attachments?: Array<{ name: string; mime: string; size: number }> }) {
   return (
     <div className="chat-row chat-row--user">
-      <div className="chat-user">{text}</div>
+      <div className="chat-user-col">
+        {attachments && attachments.length > 0 && (
+          <div className="chat-user-files">
+            {attachments.map((a, i) => (
+              <span key={`${a.name}-${i}`} className="chat-user-file" title={a.name}>
+                <span className="chat-user-file__icon" aria-hidden="true">{a.mime.startsWith('image/') ? '🖼' : a.mime === 'application/pdf' ? '📄' : '📎'}</span>
+                <span className="chat-user-file__name">{a.name}</span>
+                <span className="chat-user-file__size">{formatBytes(a.size)}</span>
+              </span>
+            ))}
+          </div>
+        )}
+        {text && <div className="chat-user">{text}</div>}
+      </div>
     </div>
   );
 });
@@ -210,7 +224,7 @@ const Notice = memo(function Notice({ block }: { block: Extract<Block, { kind: '
 function BlockView({ block, running, usage }: { block: Block; running: boolean; usage: Usage }): React.ReactElement | null {
   switch (block.kind) {
     case 'user':
-      return <UserBubble text={block.text} />;
+      return <UserBubble text={block.text} attachments={block.attachments} />;
     case 'text':
       return <AssistantText text={block.text} streaming={running} />;
     case 'tool':

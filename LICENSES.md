@@ -63,6 +63,20 @@ Approved budget per `prompt.md` §8: a small handful, justified individually.
 
 ---
 
+## Desktop app: document viewers (`desktop/app`, unify P2)
+
+Added for the workspace's document tabs (`docs/unify/PLAN.md` §3.9). All permissive; bundled into the renderer.
+
+| Package | License | SPDX | Why | Status |
+|---|---|---|---|---|
+| `pdfjs-dist` 6.3 | Apache-2.0 | `Apache-2.0` | PDF pages with a text layer | ✓ |
+| `docx-preview` 0.4 | Apache-2.0 | `Apache-2.0` | .docx as real pages, with tracked changes | ✓ |
+| `jszip` (transitive of docx-preview) | MIT or GPL-3.0 | `MIT OR GPL-3.0-or-later` | unzips .docx; used under MIT | ✓ |
+| SheetJS CE `xlsx` 0.20.3 (from cdn.sheetjs.com; npm's 0.18.5 has known parser CVEs) | Apache-2.0 | `Apache-2.0` | .xlsx / .csv sheets | ✓ |
+| `@google/model-viewer` 4.3 | Apache-2.0 | `Apache-2.0` | .glb / .gltf, as on the phone | ✓ |
+| `three` 0.183 (peer of model-viewer) | MIT | `MIT` | 3D rendering | ✓ |
+| `lit`, `@monogrid/gainmap-js` (transitive of model-viewer) | BSD-3-Clause, MIT | `BSD-3-Clause`, `MIT` | model-viewer's runtime | ✓ |
+
 ## Fonts
 
 | Font | License | Source | Status |

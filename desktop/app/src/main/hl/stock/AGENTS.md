@@ -22,7 +22,8 @@ a less structured one only when the structured one cannot.
 | Finding a file — call it immediately, never ask where first | `dex-find` (searches an index, not a live walk) | — never a hand-rolled `Get-ChildItem`/`find`/shell scan instead |
 | A plain factual lookup, not tied to a specific site or a login | `dex-websearch` | the browser, only if the answer must come from a specific site |
 | A report, summary, comparison, or anything whose *shape* (headings, a table) is part of the answer | `dex-canvas` — a rendered document, not terminal text | your normal reply, for anything that's genuinely just a short answer |
-| 3D: a model, a scene, a render, a Blender script — anything in Blender | The Blender tools + `dex-blender` — read `./dex-tools/blender.md` first | — never Blender's UI through screenshots-and-clicks |
+| 3D: a model, a scene, a render, a Blender script — anything in Blender | The Blender tools + `dex-blender` — read `./dex-tools/blender.md` first. Blender runs in the background with no window | — never Blender's UI through screenshots-and-clicks, never the Blender app on the user's screen unless they ask |
+| Showing the user a file you made or found (a report, PDF, sheet, image, 3D model) while they're at the PC | `dex-open <file>` — a document tab that reloads as you edit it (see `./dex-tools/open.md`) | — never just a path to go and find |
 | Giving the user a file, a picture of a page/the screen, or your canvas — "send me…", "on WhatsApp", or any task from WhatsApp | `dex-send` (see `./dex-tools/send.md`) | — never just a path on disk when the user is on their phone |
 | Files, processes, configuration | the purpose-built `dex-*` tool, else your own Bash/`dex-sh` | — |
 
@@ -150,12 +151,28 @@ is only a small compatibility bridge that points at the vendored
 
 Two environment variables identify the assigned browser view:
 
-- `BU_TARGET_ID` - the CDP target id of the view you must drive.
-- `BU_CDP_PORT` - the local CDP HTTP port.
+- `BU_TARGET_ID` - the CDP target id of the tab the task started in.
+- `BU_CDP_WS` - your private link to this task's tabs. DEX has no open
+  debugging port: this link reaches only this task's own tabs, and
+  browser-level control (closing the browser, creating targets) is refused.
+  `BU_CDP_PORT` is informational.
 
-Use only this assigned target. Do not create unrelated browser targets, switch
-to other user tabs, or navigate internal Chrome pages unless the user explicitly
-asks for app/browser diagnostics.
+Work in the assigned tab. The task's other tabs — ones the user opened, a
+site's login popup, or a background tab you opened with `dex-tab new` — are
+listed by `dex-tab list` and reachable with `session.use(targetId)`; see
+`./dex-tools/tabs.md`. Do not navigate internal Chrome pages unless the user
+explicitly asks for app/browser diagnostics.
+
+## Sharing The Page With The User
+
+The user sees the page and can use it while you work. DEX shows them a small
+cursor where you click (your screenshots never include it). While they are
+clicking or typing in the page, your input waits until they pause — a slow
+click is that, not a hang. If the page changed under you (another URL, a
+scroll, a dialog gone), they probably did it: read the page again before your
+next action instead of repeating the last one. For a side lookup, open a
+background tab with `dex-tab new` rather than navigating away from what they
+are looking at.
 
 ## First Call
 
@@ -165,8 +182,7 @@ Run this once before page-level CDP calls:
 browser-harness-js 'await connectToAssignedTarget()'
 ```
 
-That connects to `BU_CDP_PORT`, attaches `BU_TARGET_ID` when the browser-level
-endpoint is available, enables common Page/DOM/Runtime/Network domains, and
+That connects through `BU_CDP_WS`, attaches `BU_TARGET_ID`, enables common Page/DOM/Runtime/Network domains, and
 keeps the session alive for later `browser-harness-js` calls.
 
 ## Basic Pattern
@@ -220,8 +236,8 @@ rg -n "captureScreenshot|dispatchMouseEvent|setFileInputFiles" ./browser-harness
 The `browser-harness-js` REPL preloads:
 
 - `session` - persistent CDP `Session`.
-- `connectToAssignedTarget()` - DEX helper for `BU_TARGET_ID` / `BU_CDP_PORT`
-  and `BU_CDP_PORT`.
+- `connectToAssignedTarget()` - DEX helper: connects through `BU_CDP_WS` and
+  attaches `BU_TARGET_ID`.
 - `listPageTargets()` - lists real page targets when connected to a browser
   endpoint.
 - `detectBrowsers()` and `resolveWsUrl(opts)` - upstream browser discovery.

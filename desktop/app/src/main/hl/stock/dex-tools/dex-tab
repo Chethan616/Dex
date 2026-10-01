@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# dex-tab — this task's browser tabs, which the user sees and can use too.
+#
+# Tabs you open are scratch tabs: they load in the background and are closed
+# when the run ends, unless you `show` or `keep` them. Hand the targetId from
+# `list`/`new` to browser-harness-js's `session.use()` to drive one.
+#
+# See tabs.md in this directory.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+usage() {
+  cat >&2 <<'USAGE'
+usage:
+  dex-tab list                       every tab: id, targetId, url, title, which is on screen
+  dex-tab new <url|search words> [--show] [--keep]
+                                     open a tab (in the background unless --show)
+  dex-tab show <tab-id>              put a tab on screen for the user (and keep it)
+  dex-tab keep <tab-id>              leave a tab open after the run ends
+  dex-tab close <tab-id>             close a tab
+
+  Tabs you open are closed when the run ends unless shown or kept.
+USAGE
+  exit 2
+}
+
+[ $# -ge 1 ] || usage
+op="$1"; shift
+
+session="$(dex_session_id)"
+[ -n "$session" ] || { echo "dex-tab: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
+sid="\"sessionId\":\"$(dex_esc "$session")\""
+
+case "$op" in
+  list)
+    body="{${sid},\"op\":\"list\"}"
+    ;;
+  new)
+    url=""; show=false; keep=false
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --show) show=true; shift ;;
+        --keep) keep=true; shift ;;
+        *)      url="${url:+$url }$1"; shift ;;
+      esac
+    done
+    [ -n "$url" ] || usage
+    body="{${sid},\"op\":\"new\",\"url\":\"$(dex_esc "$url")\",\"show\":${show},\"keep\":${keep}}"
+    ;;
+  show|keep|close)
+    [ $# -ge 1 ] || usage
+    body="{${sid},\"op\":\"${op}\",\"tab\":\"$(dex_esc "$1")\"}"
+    ;;
+  -h|--help|help) usage ;;
+  *) echo "dex-tab: unknown verb '$op'" >&2; usage ;;
+esac
+
+dex_post /dex/tab "$body"

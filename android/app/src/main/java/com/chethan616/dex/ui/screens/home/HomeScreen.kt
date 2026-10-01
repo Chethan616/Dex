@@ -1,5 +1,6 @@
 package com.chethan616.dex.ui.screens.home
 
+import androidx.compose.foundation.lazy.itemsIndexed
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
@@ -8,8 +9,6 @@ import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -86,7 +85,19 @@ import com.chethan616.dex.data.Session
 import com.chethan616.dex.ui.avatar.BotAvatar
 import com.chethan616.dex.ui.avatar.BotMood
 import com.chethan616.dex.ui.avatar.botTypeFor
-import com.chethan616.dex.ui.avatar.moodFor
+import com.chethan616.dex.ui.avatar.rememberBotMood
+import com.chethan616.dex.ui.components.ShapeBadge
+import com.chethan616.dex.ui.components.springDrag
+import com.chethan616.dex.ui.components.springPress
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
+import kotlinx.coroutines.delay
 import com.chethan616.dex.ui.components.ENGINE_NAMES
 import com.chethan616.dex.ui.components.PromptBar
 import com.chethan616.dex.ui.components.StatusDot
@@ -101,6 +112,9 @@ import kotlinx.coroutines.launch
 
 private data class Suggestion(val icon: ImageVector, val label: String, val prompt: String)
 
+/** Each suggestion tile wears its own shape and colour. */
+private val TILE_SHAPES = listOf(MaterialShapes.Cookie9Sided, MaterialShapes.Clover4Leaf, MaterialShapes.Sunny, MaterialShapes.Pill)
+
 private val SUGGESTIONS = listOf(
   Suggestion(Icons.Rounded.Mail, "Unread email", "Summarize my unread email from today and flag anything urgent."),
   Suggestion(Icons.Rounded.CalendarMonth, "Today’s calendar", "What’s on my calendar today? List times and who I’m meeting."),
@@ -108,16 +122,22 @@ private val SUGGESTIONS = listOf(
   Suggestion(Icons.Rounded.Edit, "Draft a reply", "Draft a polite reply to the most recent email that needs a response."),
 )
 
+/** Space above each item of Home's list. */
+private val GAP = 12.dp
+
 @Composable
 fun HomeScreen(
   container: AppContainer,
   account: Account,
-  sharedScope: SharedTransitionScope,
-  animatedScope: AnimatedVisibilityScope,
   onOpenSession: (String) -> Unit,
   onOpenSettings: () -> Unit,
+  shared: kotlinx.coroutines.flow.MutableStateFlow<com.chethan616.dex.share.SharedContent?> = kotlinx.coroutines.flow.MutableStateFlow(null),
 ) {
   val vm: HomeViewModel = viewModel(factory = HomeViewModel.factory(container))
+  // One set of attachments for the prompt bar and the full sheet alike.
+  val attach = com.chethan616.dex.ui.attach.rememberAttachmentState()
+  val pickers = com.chethan616.dex.ui.attach.rememberAttachPickers(attach)
+  var sharedNow by remember { mutableStateOf<com.chethan616.dex.share.SharedContent?>(null)}
   val state by vm.state.collectAsStateWithLifecycle()
   val refreshing by vm.refreshing.collectAsStateWithLifecycle()
   val haptics = LocalHaptics.current
@@ -130,21 +150,28 @@ fun HomeScreen(
   // The inline prompt bar sends straight away and follows the command until
   // the PC answers with a session id — then opens that session.
   val scope = rememberCoroutineScope()
+  // No entrance animation: Home is simply there when the app opens. Cards
+  // springing in one by one read as the app being slow.
   var sending by remember { mutableStateOf(false) }
   var sendStatus by remember { mutableStateOf<String?>(null) }
   fun startTask(prompt: String, engine: String?, model: String?) {
     val pc = state.desktop
+    val files = attach.items.toList()
     sending = true
-    sendStatus = if (pc?.isReachable == true) "Sending to ${pc.name}…" else "Queued — ${pc?.name ?: "your PC"} is offline; it starts when it’s back"
+    sendStatus = when {
+      files.isNotEmpty() -> "Sending ${files.size} file${if (files.size > 1) "s" else ""} to ${pc?.name ?: "your PC"}…"
+      pc?.isReachable == true -> "Sending to ${pc.name}…"
+      else -> "Queued — ${pc?.name ?: "your PC"} is offline; it starts when it’s back"
+    }
     scope.launch {
-      vm.newTask(prompt, engine, model).collect { cmd ->
+      vm.newTask(prompt, engine, model, files) { attach.uploadProgress = it }.collect { cmd ->
         when (cmd) {
           CommandState.Pending -> Unit
           CommandState.Running -> sendStatus = "Starting on ${pc?.name ?: "your PC"}…"
           is CommandState.Done -> {
             sending = false
             val id = cmd.result["sessionId"] as? String
-            if (id != null) { sendStatus = null; haptics.success(); onOpenSession(id) }
+            if (id != null) { sendStatus = null; attach.items.clear(); haptics.success(); onOpenSession(id) }
             else { haptics.reject(); sendStatus = cmd.result["error"] as? String ?: "Your PC couldn’t start that." }
           }
           is CommandState.Failed -> { sending = false; haptics.reject(); sendStatus = cmd.error }
@@ -155,7 +182,20 @@ fun HomeScreen(
 
   fun openComposer(text: String = "") {
     prefill = text
+    sharedNow = null
     sheetOpen = true
+  }
+
+  // Share → DEX from another app: copy what came in, open the sheet with it.
+  val incoming by shared.collectAsStateWithLifecycle()
+  LaunchedEffect(incoming) {
+    val s = incoming ?: return@LaunchedEffect
+    shared.value = null
+    attach.items.clear()
+    prefill = listOfNotNull(s.subject?.takeIf { it != s.text }, s.text).joinToString("\n")
+    sharedNow = s
+    sheetOpen = true
+    attach.add(s.uris)
   }
 
   // Newer APK on GitHub Releases? (checked once per launch)
@@ -240,14 +280,17 @@ fun HomeScreen(
       val insets = WindowInsets.safeDrawing.asPaddingValues()
       LazyColumn(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = insets.calculateTopPadding() + 8.dp, bottom = 120.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize(),
       ) {
+        // Spacing is per item (GAP above each; the recent rows 3 dp apart), so
+        // every recent session can be its own lazy item: only the rows on
+        // screen are composed, instead of all of them at once.
         item(key = "header") { Header(account, onOpenSettings) }
-        update?.let { u -> item(key = "update") { UpdateBanner(u) } }
-        item(key = "desktop") { DesktopCard(state.desktop, state.loading) }
+        update?.let { u -> item(key = "update") { Box(Modifier.padding(top = GAP)) { UpdateBanner(u) } } }
+        item(key = "desktop") { Box(Modifier.padding(top = GAP)) { DesktopCard(state.desktop, state.loading) } }
         item(key = "composer") {
           PromptBar(
+            modifier = Modifier.padding(top = GAP),
             engines = state.desktop?.engines?.takeIf { it.isNotEmpty() } ?: FALLBACK_ENGINES,
             initialEngine = container.prefs.lastEngine.value,
             busy = sending,
@@ -255,57 +298,54 @@ fun HomeScreen(
             onSend = ::startTask,
             onVoice = ::startVoice,
             onMore = { openComposer() },
+            attachments = attach,
+            pickers = pickers,
           )
         }
         item(key = "suggestions") {
-          LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(SUGGESTIONS) { s ->
-              AssistChip(
-                onClick = { haptics.tick(); openComposer(s.prompt) },
-                label = { Text(s.label) },
-                leadingIcon = { Icon(s.icon, null, Modifier.size(AssistChipDefaults.IconSize)) },
-                shape = RoundedCornerShape(50),
-              )
+          LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = GAP)) {
+            items(SUGGESTIONS.size) { i ->
+              SuggestionTile(SUGGESTIONS[i], i) { haptics.tick(); openComposer(SUGGESTIONS[i].prompt) }
             }
           }
         }
 
         if (state.loading) {
           item(key = "loading") {
-            Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { LoadingIndicator(Modifier.size(56.dp)) }
+            Box(Modifier.fillMaxWidth().padding(top = GAP).padding(40.dp), contentAlignment = Alignment.Center) { LoadingIndicator(Modifier.size(56.dp)) }
           }
         }
 
         if (state.needsYou.isNotEmpty()) {
-          item(key = "h-needs") { SectionTitle("Needs you", state.needsYou.size) }
+          item(key = "h-needs") { Box(Modifier.padding(top = GAP)) { SectionTitle("Needs you", state.needsYou.size) } }
           items(state.needsYou, key = { "n-" + it.id }) { s ->
-            ApprovalCard(s, onOpen = { onOpenSession(s.id) }, onAnswer = { ok ->
-              if (ok) haptics.confirm() else haptics.reject()
-              vm.answer(s, ok)
-            })
+            Box(Modifier.animateItem().padding(top = GAP)) {
+              ApprovalCard(s, onOpen = { onOpenSession(s.id) }, onAnswer = { ok ->
+                if (ok) haptics.confirm() else haptics.reject()
+                vm.answer(s, ok)
+              })
+            }
           }
         }
         if (state.running.isNotEmpty()) {
-          item(key = "h-running") { SectionTitle("Running", state.running.size) }
+          item(key = "h-running") { Box(Modifier.padding(top = GAP)) { SectionTitle("Running", state.running.size) } }
           items(state.running, key = { "r-" + it.id }) { s ->
-            RunningCard(s, sharedScope, animatedScope) { haptics.tick(); onOpenSession(s.id) }
+            Box(Modifier.animateItem().padding(top = GAP)) {
+              RunningCard(s) { haptics.tick(); onOpenSession(s.id) }
+            }
           }
         }
         if (state.recent.isNotEmpty()) {
-          item(key = "h-recent") { SectionTitle("Recent", null) }
-          item(key = "recent") {
-            // One grouped card: tight 3dp seams, big outer corners.
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-              state.recent.forEachIndexed { i, s ->
-                androidx.compose.runtime.key(s.id) {
-                  SessionRow(s, i, state.recent.size, sharedScope, animatedScope) { haptics.tick(); onOpenSession(s.id) }
-                }
-              }
+          item(key = "h-recent") { Box(Modifier.padding(top = GAP)) { SectionTitle("Recent", null) } }
+          // One grouped card: tight 3 dp seams, big outer corners.
+          itemsIndexed(state.recent, key = { _, s -> "c-" + s.id }) { i, s ->
+            Box(Modifier.padding(top = if (i == 0) GAP else 3.dp)) {
+              SessionRow(s, i, state.recent.size) { haptics.tick(); onOpenSession(s.id) }
             }
           }
         }
         if (!state.loading && state.sessions.isEmpty()) {
-          item(key = "empty") { EmptyState(onStart = { openComposer() }) }
+          item(key = "empty") { Box(Modifier.padding(top = GAP)) { EmptyState(onStart = { openComposer() }) } }
         }
       }
     }
@@ -316,10 +356,13 @@ fun HomeScreen(
       prefill = prefill,
       desktop = state.desktop,
       lastEngine = container.prefs.lastEngine.value,
-      send = vm::newTask,
-      onDismiss = { sheetOpen = false },
-      onStarted = { id -> sheetOpen = false; onOpenSession(id) },
+      send = { p, e, m -> vm.newTask(p, e, m, attach.items.toList()) { attach.uploadProgress = it } },
+      onDismiss = { sheetOpen = false; sharedNow = null },
+      onStarted = { id -> sheetOpen = false; sharedNow = null; attach.items.clear(); onOpenSession(id) },
       onVoice = ::startVoice,
+      attachments = attach,
+      pickers = pickers,
+      shared = sharedNow,
     )
   }
 }
@@ -329,8 +372,24 @@ private fun Header(account: Account, onOpenSettings: () -> Unit) {
   val haptics = LocalHaptics.current
   val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
   val greeting = when (hour) { in 5..11 -> "Good morning"; in 12..16 -> "Good afternoon"; in 17..21 -> "Good evening"; else -> "Up late" }
+  // It's pleased to see you, then settles down.
+  var hello by remember { mutableStateOf(true) }
+  LaunchedEffect(Unit) { delay(2800); hello = false }
+  val scheme = MaterialTheme.colorScheme
+  val (backdrop, tone) = when (hour) {
+    in 5..11 -> MaterialShapes.Sunny to scheme.tertiaryContainer
+    in 12..16 -> MaterialShapes.SoftBurst to scheme.primaryContainer
+    in 17..21 -> MaterialShapes.Cookie12Sided to scheme.secondaryContainer
+    else -> MaterialShapes.Puffy to scheme.surfaceContainerHighest
+  }
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
-    com.chethan616.dex.ui.profile.DexAvatar(size = 52.dp)
+    // Grab your DEX and fling it: it springs home (components/Physics.kt).
+    ShapeBadge(backdrop, tone, 64.dp, spinMs = 30_000, modifier = Modifier.springDrag(onGrab = { haptics.tick() }, onRelease = { haptics.hop() })) {
+      com.chethan616.dex.ui.profile.DexAvatar(
+        size = 50.dp,
+        mood = if (hello) BotMood.Happy else BotMood.Idle,
+      )
+    }
     Spacer(Modifier.size(12.dp))
     Column(Modifier.weight(1f)) {
       Text(greeting + ",", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -349,9 +408,15 @@ private fun DesktopCard(desktop: Device?, loading: Boolean) {
   val status = LocalStatusColors.current
   Surface(shape = RoundedCornerShape(28.dp), color = scheme.surfaceContainer, modifier = Modifier.fillMaxWidth().animateContentSize()) {
     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-      Box(Modifier.size(48.dp).background(scheme.secondaryContainer, RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+      val online = desktop?.isReachable == true
+      ShapeBadge(
+        if (online) MaterialShapes.Cookie6Sided else MaterialShapes.Circle,
+        if (online) scheme.secondaryContainer else scheme.surfaceContainerHighest,
+        52.dp,
+        spinMs = if (online) 20_000 else 0,
+      ) {
         if (loading) DexOrb(OrbState.Connecting, size = 28.dp)
-        else Icon(Icons.Rounded.Computer, null, tint = scheme.onSecondaryContainer)
+        else Icon(Icons.Rounded.Computer, null, tint = if (online) scheme.onSecondaryContainer else scheme.onSurfaceVariant)
       }
       Spacer(Modifier.size(14.dp))
       Column(Modifier.weight(1f)) {
@@ -412,8 +477,8 @@ private fun SectionTitle(title: String, count: Int?) {
     Text(title, style = MaterialTheme.typography.titleLarge)
     if (count != null) {
       Spacer(Modifier.size(8.dp))
-      Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
-        Text("$count", Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium)
+      ShapeBadge(MaterialShapes.Clover4Leaf, MaterialTheme.colorScheme.secondaryContainer, 28.dp, spinMs = 16_000) {
+        Text("$count", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
       }
     }
   }
@@ -423,10 +488,25 @@ private fun SectionTitle(title: String, count: Int?) {
 private fun ApprovalCard(session: Session, onOpen: () -> Unit, onAnswer: (Boolean) -> Unit) {
   val pc = session.pendingConfirmation ?: return
   val scheme = MaterialTheme.colorScheme
-  Surface(onClick = onOpen, shape = RoundedCornerShape(28.dp), color = scheme.tertiaryContainer, modifier = Modifier.fillMaxWidth()) {
+  // A little wiggle now and then, like a tap on the shoulder.
+  val wiggle = remember { Animatable(0f) }
+  LaunchedEffect(session.id, pc.id) {
+    while (true) {
+      for (deg in floatArrayOf(-2.2f, 2f, -1.4f, 0.8f, 0f)) wiggle.animateTo(deg, tween(70))
+      delay(4200)
+    }
+  }
+  val press = remember { MutableInteractionSource() }
+  Surface(
+    onClick = onOpen,
+    shape = RoundedCornerShape(28.dp),
+    color = scheme.tertiaryContainer,
+    interactionSource = press,
+    modifier = Modifier.fillMaxWidth().springPress(press, 0.97f).graphicsLayer { rotationZ = wiggle.value },
+  ) {
     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
-        DexOrb(OrbState.Listening, size = 28.dp)
+        BotAvatar(type = botTypeFor(session.engine, session.id), mood = BotMood.NeedsYou, size = 44.dp)
         Spacer(Modifier.size(10.dp))
         Text("DEX needs your OK", style = MaterialTheme.typography.titleMedium, color = scheme.onTertiaryContainer)
       }
@@ -444,26 +524,24 @@ private fun ApprovalCard(session: Session, onOpen: () -> Unit, onAnswer: (Boolea
 }
 
 @Composable
-private fun RunningCard(session: Session, sharedScope: SharedTransitionScope, animatedScope: AnimatedVisibilityScope, onClick: () -> Unit) {
+private fun RunningCard(session: Session, onClick: () -> Unit) {
   val scheme = MaterialTheme.colorScheme
-  Surface(onClick = onClick, shape = RoundedCornerShape(28.dp), color = scheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+  val press = remember { MutableInteractionSource() }
+  Surface(onClick = onClick, shape = RoundedCornerShape(28.dp), color = scheme.surfaceContainerHigh, interactionSource = press, modifier = Modifier.fillMaxWidth().springPress(press, 0.96f)) {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
-        with(sharedScope) {
-          BotAvatar(
-            type = botTypeFor(session.engine, session.id),
-            mood = BotMood.Working,
-            size = 48.dp,
-            interactive = false,
-            modifier = Modifier.sharedElement(rememberSharedContentState("avatar-${session.id}"), animatedScope),
-          )
-        }
+        BotAvatar(
+          type = botTypeFor(session.engine, session.id),
+          mood = rememberBotMood(session),
+          size = 48.dp,
+          interactive = false,
+        )
         Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
           Text(session.prompt, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
           Text(ENGINE_NAMES[session.engine] ?: session.engine.orEmpty(), style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
         }
-        StatusPill(session.status)
+        StatusPill(session.status, label = com.chethan616.dex.ui.components.sessionStatusLabel(session.status, session.error))
       }
       Row(verticalAlignment = Alignment.CenterVertically) {
         DexOrb(OrbState.Working, size = 22.dp)
@@ -486,8 +564,6 @@ private fun SessionRow(
   session: Session,
   index: Int,
   count: Int,
-  sharedScope: SharedTransitionScope,
-  animatedScope: AnimatedVisibilityScope,
   onClick: () -> Unit,
 ) {
   val scheme = MaterialTheme.colorScheme
@@ -500,17 +576,17 @@ private fun SessionRow(
     bottomStart = if (index == count - 1) big else small,
     bottomEnd = if (index == count - 1) big else small,
   )
-  Surface(onClick = onClick, shape = shape, color = scheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+  val press = remember { MutableInteractionSource() }
+  Surface(onClick = onClick, shape = shape, color = scheme.surfaceContainerLow, interactionSource = press, modifier = Modifier.fillMaxWidth().springPress(press, 0.97f)) {
     Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-      with(sharedScope) {
-        BotAvatar(
-          type = botTypeFor(session.engine, session.id),
-          mood = moodFor(session.status.id),
-          size = 40.dp,
-          interactive = false,
-          modifier = Modifier.sharedElement(rememberSharedContentState("avatar-${session.id}"), animatedScope),
-        )
-      }
+      // Still: a list of breathing bots would redraw every frame.
+      BotAvatar(
+        type = botTypeFor(session.engine, session.id),
+        mood = rememberBotMood(session),
+        size = 40.dp,
+        interactive = false,
+        still = true,
+      )
       Spacer(Modifier.size(12.dp))
       Column(Modifier.weight(1f)) {
         Text(session.prompt, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -532,6 +608,34 @@ private fun SessionRow(
   }
 }
 
+/** A suggestion: its icon on a shape of its own, the label under it; it bounces when tapped. */
+@Composable
+private fun SuggestionTile(s: Suggestion, index: Int, onClick: () -> Unit) {
+  val scheme = MaterialTheme.colorScheme
+  val tones = listOf(
+    scheme.primaryContainer to scheme.onPrimaryContainer,
+    scheme.tertiaryContainer to scheme.onTertiaryContainer,
+    scheme.secondaryContainer to scheme.onSecondaryContainer,
+    scheme.surfaceContainerHighest to scheme.onSurface,
+  )
+  val (bg, fg) = tones[index % tones.size]
+  val press = remember { MutableInteractionSource() }
+  Surface(
+    onClick = onClick,
+    shape = RoundedCornerShape(24.dp),
+    color = scheme.surfaceContainer,
+    interactionSource = press,
+    modifier = Modifier.size(width = 118.dp, height = 112.dp).springPress(press, 0.9f),
+  ) {
+    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+      ShapeBadge(TILE_SHAPES[index % TILE_SHAPES.size], bg, 44.dp) {
+        Icon(s.icon, null, tint = fg, modifier = Modifier.size(22.dp))
+      }
+      Text(s.label, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+  }
+}
+
 @Composable
 private fun EmptyState(onStart: () -> Unit) {
   Column(
@@ -539,10 +643,12 @@ private fun EmptyState(onStart: () -> Unit) {
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {
-    BotAvatar(type = "cloud", mood = BotMood.Sleeping, size = 110.dp)
-    Text("Nothing running", style = MaterialTheme.typography.titleLarge)
+    ShapeBadge(MaterialShapes.SoftBurst, MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f), 170.dp, spinMs = 40_000) {
+      BotAvatar(type = "cloud", mood = BotMood.Sleeping, size = 112.dp)
+    }
+    Text("All quiet", style = MaterialTheme.typography.headlineSmall)
     Text(
-      "Give DEX a job — it runs on your PC and reports back here.",
+      "Your DEX is napping. Give it a job — it runs on your PC and reports back here.",
       style = MaterialTheme.typography.bodyMedium,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

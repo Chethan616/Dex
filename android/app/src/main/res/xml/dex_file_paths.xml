@@ -2,4 +2,6 @@
 <!-- Only the cache folder files from the PC are saved in (DexRepository.fetchFile). -->
 <paths>
     <cache-path name="dex" path="dex-files/" />
+    <!-- Photos taken for an attachment, and copies of attached files. -->
+    <cache-path name="outgoing" path="outgoing/" />
 </paths>

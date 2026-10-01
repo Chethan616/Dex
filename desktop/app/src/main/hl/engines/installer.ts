@@ -30,7 +30,9 @@ const INSTALLERS: Record<string, InstallSpec> = {
   'claude-code': {
     displayName: 'Claude Code',
     command: (platform) => {
-      if (platform === 'win32') return 'npm install -g @anthropic-ai/claude-code';
+      // Claude Code's native Windows installer: no Node.js needed, installs
+      // for this user only (no admin), keeps itself up to date.
+      if (platform === 'win32') return 'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://claude.ai/install.ps1 | iex"';
       return 'curl -fsSL https://claude.ai/install.sh | bash';
     },
   },
@@ -87,7 +89,13 @@ export function installerSpawnSpec(
 export function runInstallCommand(
   displayName: string,
   installCommand: string,
-  opts: { platform?: NodeJS.Platform; env?: NodeJS.ProcessEnv; timeoutMs?: number } = {},
+  opts: {
+    platform?: NodeJS.Platform;
+    env?: NodeJS.ProcessEnv;
+    timeoutMs?: number;
+    /** Each readable line of the installer's output, as it comes (for progress). */
+    onOutput?: (line: string) => void;
+  } = {},
 ): Promise<EngineInstallResult> {
   const timeoutMs = opts.timeoutMs ?? INSTALL_TIMEOUT_MS;
   return new Promise((resolve) => {
@@ -147,11 +155,23 @@ export function runInstallCommand(
       }, 1000);
     }, timeoutMs);
 
+    const report = (chunk: unknown): void => {
+      if (!opts.onOutput) return;
+      // Installers draw spinners and progress bars with control characters;
+      // pass on the lines a person could read.
+      for (const raw of String(chunk).split(/[\r\n]+/)) {
+        // eslint-disable-next-line no-control-regex
+        const line = raw.replace(/\u001b\[[0-9;]*[A-Za-z]|[\u0000-\u001f\u007f]/g, '').trim();
+        if (/[A-Za-z]{3}/.test(line)) opts.onOutput(line.slice(0, 160));
+      }
+    };
     child.stdout?.on('data', (chunk) => {
       stdout = trimTail(stdout + String(chunk));
+      report(chunk);
     });
     child.stderr?.on('data', (chunk) => {
       stderr = trimTail(stderr + String(chunk));
+      report(chunk);
     });
     child.on('error', (err) => {
       finish({

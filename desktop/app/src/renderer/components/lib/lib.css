@@ -323,3 +323,125 @@
 
 .dex-pick__btn--primary:hover { background: var(--color-fg-primary); opacity: 0.88; }
 .dex-pick__btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ------------------------------------------------------------ Bot moods
+ * Accents beside a task bot's head (AgentAvatar `mood`, botMood.ts): thought
+ * dots, a "!", sparkles, a sweat drop, floating z's. Everything scales with
+ * the avatar (--avatar-size) and sits outside its box, so layouts don't move.
+ */
+.lib-mood-host {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  line-height: 0;
+  vertical-align: middle;
+  --u: calc(var(--avatar-size, 24px) / 24);
+}
+
+.lib-mood {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Thinking: three dots in a little cloud, up and to the right. */
+.lib-mood--thinking {
+  top: calc(-7 * var(--u));
+  right: calc(-9 * var(--u));
+  display: flex;
+  gap: calc(1.4 * var(--u));
+  padding: calc(2 * var(--u)) calc(3 * var(--u));
+  border-radius: 999px;
+  background: var(--color-bg-elevated, #22222c);
+  box-shadow: 0 0 0 1px rgba(var(--highlight-rgb, 255, 255, 255), 0.10), 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.lib-mood--thinking i {
+  width: calc(2.2 * var(--u));
+  height: calc(2.2 * var(--u));
+  min-width: 2px;
+  min-height: 2px;
+  border-radius: 50%;
+  background: var(--color-fg-secondary, #8a8f98);
+  animation: lib-mood-dot 1.2s ease-in-out infinite;
+}
+.lib-mood--thinking i:nth-child(2) { animation-delay: 0.15s; }
+.lib-mood--thinking i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes lib-mood-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-30%); opacity: 1; } }
+
+/* Needs you: an amber "!" that pulses. */
+.lib-mood--needs-you {
+  top: calc(-6 * var(--u));
+  right: calc(-6 * var(--u));
+  display: grid;
+  place-items: center;
+  width: calc(10 * var(--u));
+  height: calc(10 * var(--u));
+  min-width: 9px;
+  min-height: 9px;
+  border-radius: 50%;
+  background: #f5a623;
+  color: #1a1206;
+  font: 800 calc(7.5 * var(--u))/1 var(--font-ui, system-ui, sans-serif);
+  box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.55);
+  animation: lib-mood-pulse 1.4s ease-out infinite;
+}
+@keyframes lib-mood-pulse { 70% { box-shadow: 0 0 0 calc(5 * var(--u)) rgba(245, 166, 35, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0); } }
+
+/* Happy: sparkles that twinkle round the head. */
+.lib-mood--happy { inset: calc(-6 * var(--u)); }
+.lib-mood--happy i {
+  position: absolute;
+  width: calc(5 * var(--u));
+  height: calc(5 * var(--u));
+  background: #ffd24a;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: lib-mood-twinkle 1.1s ease-in-out infinite;
+}
+.lib-mood--happy i:nth-child(1) { top: 0; right: 8%; }
+.lib-mood--happy i:nth-child(2) { top: 30%; left: 0; width: calc(3.6 * var(--u)); height: calc(3.6 * var(--u)); animation-delay: 0.35s; }
+.lib-mood--happy i:nth-child(3) { top: 12%; left: 30%; width: calc(3 * var(--u)); height: calc(3 * var(--u)); animation-delay: 0.7s; background: #7fd8ff; }
+@keyframes lib-mood-twinkle { 0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.3; } 50% { transform: scale(1.15) rotate(45deg); opacity: 1; } }
+
+/* Sad: a sweat drop sliding down the side of the head. */
+.lib-mood--sad {
+  top: calc(1 * var(--u));
+  right: calc(-2 * var(--u));
+  width: calc(4.5 * var(--u));
+  height: calc(6.5 * var(--u));
+  min-width: 4px;
+  min-height: 6px;
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  background: linear-gradient(160deg, #bfe6ff, #5fb2f2);
+  box-shadow: inset -1px -1px 0 rgba(0, 0, 0, 0.12);
+  animation: lib-mood-sweat 2.6s ease-in infinite;
+}
+@keyframes lib-mood-sweat { 0% { transform: translateY(0) scale(0.6); opacity: 0; } 20% { opacity: 1; transform: translateY(0) scale(1); } 80% { opacity: 1; } 100% { transform: translateY(calc(7 * var(--u))) scale(0.9); opacity: 0; } }
+
+/* Sleeping: z's floating up. */
+.lib-mood--sleeping {
+  top: calc(-8 * var(--u));
+  right: calc(-6 * var(--u));
+  width: calc(10 * var(--u));
+  height: calc(12 * var(--u));
+}
+.lib-mood--sleeping i {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  font: italic 800 calc(6 * var(--u))/1 var(--font-ui, system-ui, sans-serif);
+  color: var(--color-fg-tertiary, #6e737d);
+  animation: lib-mood-z 2.8s ease-out infinite;
+}
+.lib-mood--sleeping i:nth-child(2) { left: 40%; font-size: calc(4.5 * var(--u)); animation-delay: 1.4s; }
+@keyframes lib-mood-z { 0% { transform: translate(0, 0) scale(0.6); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(calc(4 * var(--u)), calc(-8 * var(--u))) scale(1.1); opacity: 0; } }
+
+/* Tiny avatars (sidebar rows) keep only the clearest accents. */
+.lib-mood-host[style*="--avatar-size: 14px"] .lib-mood--happy,
+.lib-mood-host[style*="--avatar-size: 14px"] .lib-mood--sleeping { display: none; }
+
+.lib-mood-host--still .lib-mood,
+.lib-mood-host--still .lib-mood i { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lib-mood, .lib-mood i { animation: none !important; }
+}

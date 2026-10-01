@@ -55,10 +55,25 @@ class HomeViewModel(private val c: AppContainer) : ViewModel() {
     }
   }
 
-  /** Sends a new task and follows its command until the desktop answers. */
-  fun newTask(prompt: String, engine: String?, model: String?): Flow<CommandState> = flow {
+  /**
+   * Sends a new task — uploading any attachments to the PC first — and
+   * follows its command until the desktop answers.
+   */
+  fun newTask(
+    prompt: String,
+    engine: String?,
+    model: String?,
+    attachments: List<com.chethan616.dex.data.PendingAttachment> = emptyList(),
+    onUpload: (Float?) -> Unit = {},
+  ): Flow<CommandState> = flow {
     c.prefs.setLastEngine(engine)
-    val id = c.repo.send(CommandType.NewTask, mapOf("prompt" to prompt, "engine" to engine, "model" to model))
+    val uploads = if (attachments.isEmpty()) emptyList() else try {
+      c.repo.uploadAll(attachments) { onUpload(it) }
+    } finally {
+      onUpload(null)
+    }
+    val text = prompt.ifBlank { if (attachments.size == 1) "Take a look at the attached file." else "Take a look at the attached files." }
+    val id = c.repo.send(CommandType.NewTask, mapOf("prompt" to text, "engine" to engine, "model" to model, "uploads" to uploads.ifEmpty { null }))
     emit(CommandState.Pending)
     c.repo.command(id).collect { emit(it) }
   }.catch { emit(CommandState.Failed(it.message ?: "Couldn’t send that.")) }

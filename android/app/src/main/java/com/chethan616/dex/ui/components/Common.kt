@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.chethan616.dex.data.SessionStatus
@@ -62,26 +63,37 @@ fun statusLabel(status: SessionStatus): String = when (status) {
   SessionStatus.Stopped -> "Done"
 }
 
+/** The PC's word for a task you stopped (its status is plain "stopped", like a finished one). */
+const val USER_STOPPED = "Cancelled by user"
+
+/** "Stopped" for a task you stopped, otherwise the status's own label. */
+fun sessionStatusLabel(status: SessionStatus, error: String?): String =
+  if (status == SessionStatus.Stopped && error.equals(USER_STOPPED, ignoreCase = true)) "Stopped" else statusLabel(status)
+
 /** Status dot that pulses while the task is live. */
 @Composable
 fun StatusDot(status: SessionStatus, modifier: Modifier = Modifier) {
   val color = statusColor(status)
-  val pulse by rememberInfiniteTransition(label = "pulse").animateFloat(
-    initialValue = 1f,
-    targetValue = 0.35f,
-    animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-    label = "a",
-  )
+  // Only a live dot pulses, and its alpha is read in the layer: the dot is
+  // redrawn, never recomposed, each frame.
+  val pulse = if (status.isLive) {
+    rememberInfiniteTransition(label = "pulse").animateFloat(
+      initialValue = 1f,
+      targetValue = 0.35f,
+      animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+      label = "a",
+    )
+  } else null
   Box(
     modifier
       .size(8.dp)
-      .alpha(if (status.isLive) pulse else 1f)
+      .graphicsLayer { alpha = pulse?.value ?: 1f }
       .background(color, CircleShape),
   )
 }
 
 @Composable
-fun StatusPill(status: SessionStatus, modifier: Modifier = Modifier) {
+fun StatusPill(status: SessionStatus, modifier: Modifier = Modifier, label: String = statusLabel(status)) {
   val color = statusColor(status)
   Row(
     modifier
@@ -91,7 +103,7 @@ fun StatusPill(status: SessionStatus, modifier: Modifier = Modifier) {
     horizontalArrangement = Arrangement.spacedBy(6.dp),
   ) {
     StatusDot(status)
-    Text(statusLabel(status), style = MaterialTheme.typography.labelMedium, color = color)
+    Text(label, style = MaterialTheme.typography.labelMedium, color = color)
   }
 }
 

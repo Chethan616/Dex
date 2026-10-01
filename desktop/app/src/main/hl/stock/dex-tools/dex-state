@@ -78,7 +78,12 @@ case "$op" in
     ;;
   file)
     [ $# -ge 1 ] || usage
-    body="{\"sessionId\":\"$(dex_esc "$session")\",\"op\":\"file\",\"path\":\"$(dex_esc "$1")\""
+    # The app needs a path it can open: absolute, and Windows-style under Git
+    # Bash (/tmp/x.png and ./out.png mean nothing to it on their own).
+    fpath="$1"
+    case "$fpath" in /*|[A-Za-z]:[\\/]*) ;; *) fpath="$PWD/$fpath" ;; esac
+    command -v cygpath >/dev/null 2>&1 && fpath="$(cygpath -w "$fpath")"
+    body="{\"sessionId\":\"$(dex_esc "$session")\",\"op\":\"file\",\"path\":\"$(dex_esc "$fpath")\""
     [ $# -ge 2 ] && body="${body},\"size\":$2"
     body="${body}}"
     ;;

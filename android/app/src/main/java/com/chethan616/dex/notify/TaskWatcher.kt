@@ -67,6 +67,13 @@ object TaskWatcher {
       return
     }
     when {
+      // You pressed Stop (here, on the notification or on the PC): not a failure.
+      s.error.equals(com.chethan616.dex.ui.components.USER_STOPPED, ignoreCase = true) -> Notifications.show(
+        context, kind = "failed",
+        title = "Stopped · $title",
+        body = s.lastLine.takeIf { it.isNotBlank() }?.let { "Stopped at: ${it.take(300)}" } ?: "You stopped this task.",
+        sessionId = s.id, confirmationId = null,
+      )
       !s.error.isNullOrBlank() -> Notifications.show(
         context, kind = "failed",
         title = "Couldn't finish · $title",

@@ -14,9 +14,11 @@ them with Bash like any other command.
 | `dex-find` | Finding a file by name or by what's inside it (a PDF's own text, not just its filename). See `find.md`. Pass `--drive` only when the user tags `@drive`. |
 | `dex-canvas` | Rendering a markdown document (report, table, summary) in the pane itself instead of as terminal text. See `canvas.md`. |
 | `dex-websearch` | A plain factual lookup that doesn't need a browser tab. See `websearch.md`. |
+| `dex-open` | Showing the user a file you made or found — a report, PDF, sheet, image or 3D model — rendered in a document tab that reloads as you edit it. See `open.md`. |
+| `dex-tab` | This task's browser tabs, which the user shares: listing them, opening a background tab for a side lookup, showing one to the user. See `tabs.md`. |
 | `dex-send` | Sending the user a file, a screenshot (`--page`, `--screen`) or your canvas as a PDF (`--canvas`) on WhatsApp. See `send.md`. |
 | `dex-3d` | An AI-generated, textured 3D model (GLB) of one object from a description or a picture — free on the user's Hugging Face account. See `blender.md`. |
-| `dex-blender` | Opening Blender so the Blender tools can reach it, and headless Blender scripts and renders. See `blender.md` for how to build scenes and models that look good. |
+| `dex-blender` | This task's background Blender (no window — the user keeps their desktop): its status and autosaved scene, headless scripts and renders, and showing the scene to the user when they ask. See `blender.md` for how to build scenes and models that look good. |
 
 There are also skill files here for two user commands, read when the command is
 used rather than run as tools:

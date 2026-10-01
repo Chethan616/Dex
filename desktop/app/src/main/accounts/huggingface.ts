@@ -8,9 +8,10 @@
  * Hosting), used with PKCE and a loopback redirect on any port. So every
  * install signs in with nothing to set up — unlike Google.
  *
- * Scopes: openid + profile (who you are) and inference-api (text-to-image
- * through Inference Providers). ZeroGPU Spaces only need to know who you
- * are: your free daily GPU quota is what they spend.
+ * Scopes: openid + profile (who you are) and inference-api (Inference
+ * Providers, kept for models served there). The ZeroGPU Spaces dex-3d uses —
+ * FLUX for the picture, Hunyuan3D / TRELLIS for the model — only need to know
+ * who you are: your free daily GPU quota is what they spend.
  *
  * The token lives in the OS credential store (keytar), not with the MCP
  * connections — there is no Hugging Face MCP server behind it.
@@ -165,6 +166,28 @@ async function tokenRequest(fields: Record<string, string>): Promise<{ access_to
     throw new Error(`Hugging Face sign-in failed: ${json.error_description || json.error || `HTTP ${res.status}`}`);
   }
   return { access_token: json.access_token, refresh_token: json.refresh_token, expires_in: json.expires_in };
+}
+
+let planCache: { at: number; plan: 'pro' | 'free' } | null = null;
+
+/**
+ * Free or PRO. PRO buys much more daily ZeroGPU time and first place in
+ * the queue — the same sign-in simply goes further, nothing to configure.
+ * Asked of Hugging Face at most every 10 minutes; null when it can't say.
+ */
+export async function huggingFacePlan(): Promise<'pro' | 'free' | null> {
+  if (planCache && Date.now() - planCache.at < 10 * 60_000) return planCache.plan;
+  const token = await huggingFaceToken();
+  if (!token) return null;
+  try {
+    const res = await fetch('https://huggingface.co/api/whoami-v2', { headers: { authorization: `Bearer ${token}` } });
+    if (!res.ok) return planCache?.plan ?? null;
+    const who = (await res.json()) as { isPro?: boolean };
+    planCache = { at: Date.now(), plan: who.isPro ? 'pro' : 'free' };
+    return planCache.plan;
+  } catch {
+    return planCache?.plan ?? null;
+  }
 }
 
 /**

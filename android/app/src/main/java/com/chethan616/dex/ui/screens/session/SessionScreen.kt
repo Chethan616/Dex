@@ -1,8 +1,9 @@
 package com.chethan616.dex.ui.screens.session
 
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -34,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.AttachFile
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MoreVert
@@ -86,7 +88,10 @@ import com.chethan616.dex.data.Session
 import com.chethan616.dex.data.SessionStatus
 import com.chethan616.dex.ui.avatar.BotAvatar
 import com.chethan616.dex.ui.avatar.botTypeFor
-import com.chethan616.dex.ui.avatar.moodFor
+import com.chethan616.dex.ui.avatar.BotMood
+import com.chethan616.dex.ui.avatar.LocalTaskBot
+import com.chethan616.dex.ui.avatar.TaskBot
+import com.chethan616.dex.ui.avatar.rememberBotMood
 import com.chethan616.dex.ui.components.BlockView
 import com.chethan616.dex.ui.components.ToolGroup
 import com.chethan616.dex.ui.components.ErrorCard
@@ -96,9 +101,10 @@ import com.chethan616.dex.ui.files.FilesSheet
 import com.chethan616.dex.ui.files.LocalPcFiles
 import com.chethan616.dex.ui.files.collectTaskItems
 import com.chethan616.dex.ui.files.rememberPcFiles
+import com.chethan616.dex.ui.files.worthPrefetching
 import com.chethan616.dex.notify.TaskWatcher
 import com.chethan616.dex.ui.components.ENGINE_NAMES
-import com.chethan616.dex.ui.components.MetalSendButton
+import com.chethan616.dex.ui.components.ExpressiveSendButton
 import com.chethan616.dex.ui.components.StatusPill
 import com.chethan616.dex.ui.haptics.LocalHaptics
 import com.chethan616.dex.ui.orb.DexOrb
@@ -109,8 +115,6 @@ import kotlinx.coroutines.launch
 fun SessionScreen(
   container: AppContainer,
   sessionId: String,
-  sharedScope: SharedTransitionScope,
-  animatedScope: AnimatedVisibilityScope,
   onBack: () -> Unit,
 ) {
   val vm: SessionViewModel = viewModel(key = sessionId, factory = SessionViewModel.factory(container, sessionId))
@@ -122,14 +126,31 @@ fun SessionScreen(
   val scope = rememberCoroutineScope()
   var confirmStop by remember { mutableStateOf(false) }
   var filesOpen by remember { mutableStateOf(false) }
+  val attach = com.chethan616.dex.ui.attach.rememberAttachmentState()
   val pcFiles = rememberPcFiles(androidx.compose.ui.platform.LocalContext.current, container.repo, sessionId)
-  val fileCount = remember(state.blocks, session) { collectTaskItems(state.blocks, session).let { (p, f, d) -> p.size + f.size + d.size } }
+  val taskItems = remember(state.blocks, session) { collectTaskItems(state.blocks, session) }
+  val fileCount = taskItems.let { (p, f, d) -> p.size + f.size + d.size }
+  // A 3D model the task made comes over to the phone right away, so the tap
+  // opens the viewer at once instead of waiting on a download.
+  val models = remember(taskItems) { taskItems.second.filter { it.worthPrefetching() } }
+  val groups = remember(state.blocks) { groupTools(state.blocks) }
+  LaunchedEffect(models) { models.forEach { pcFiles.prefetch(scope, it) } }
 
-  // Follow the stream while the reader is at the bottom; leave them be otherwise.
+  // The conversation opens at its latest message: placed there at once, not
+  // scrolled to. An animated scroll from the top composed every message on
+  // the way down, which was the lag when opening a long task. The list stays
+  // invisible until it's placed. After that, follow the stream while the
+  // reader is at the bottom; leave them be otherwise.
   val atBottom by remember { derivedStateOf { !list.canScrollForward } }
+  var placed by remember(sessionId) { mutableStateOf(false) }
   val lastSignature = state.blocks.lastOrNull()?.let { it.seq to (it.text?.length ?: 0) + (it.result?.preview?.length ?: 0) }
   LaunchedEffect(state.blocks.size, lastSignature) {
-    if (state.blocks.isNotEmpty() && (atBottom || list.layoutInfo.totalItemsCount < 3)) {
+    if (state.blocks.isEmpty()) return@LaunchedEffect
+    if (!placed) {
+      val total = snapshotFlow { list.layoutInfo.totalItemsCount }.first { it >= groups.size }
+      list.scrollToItem((total - 1).coerceAtLeast(0))
+      placed = true
+    } else if (atBottom) {
       list.animateScrollToItem(list.layoutInfo.totalItemsCount.coerceAtLeast(1) - 1)
     }
   }
@@ -151,12 +172,18 @@ fun SessionScreen(
     lastStatus = s.status
   }
 
-  androidx.compose.runtime.CompositionLocalProvider(LocalPcFiles provides pcFiles) {
+  // The task's bot wears what it's doing — in the top bar, the live line and
+  // the "Done" chip (ui/avatar/BotMoods.kt).
+  val mood = rememberBotMood(session, state.blocks)
+  val bot = TaskBot(botTypeFor(session?.engine, sessionId), mood, state.blocks.lastOrNull()?.seq)
+
+  androidx.compose.runtime.CompositionLocalProvider(LocalPcFiles provides pcFiles, LocalTaskBot provides bot) {
   if (filesOpen) FilesSheet(state.blocks, session, onDismiss = { filesOpen = false })
+  com.chethan616.dex.ui.files.ModelViewerHost()
   Scaffold(
     topBar = {
       SessionTopBar(
-        session, sessionId, sharedScope, animatedScope, onBack,
+        session, sessionId, mood, onBack,
         onSync = { haptics.click(); vm.sync() },
         fileCount = fileCount,
         onFiles = { haptics.tick(); filesOpen = true },
@@ -179,7 +206,15 @@ fun SessionScreen(
         Composer(
           session = session,
           sending = sending,
-          onSend = { text -> haptics.send(); vm.followUp(text) },
+          attach = attach,
+          onSend = { text ->
+            haptics.send()
+            val files = attach.items.toList()
+            scope.launch {
+              val ok = vm.followUp(text, files) { attach.uploadProgress = it }
+              if (ok) attach.items.clear() else attach.error = "Couldn’t send that — check your connection and try again."
+            }
+          },
           onPause = { haptics.click(); vm.pause() },
           onResume = { haptics.click(); vm.resume() },
           onStop = { haptics.longPress(); confirmStop = true },
@@ -195,13 +230,13 @@ fun SessionScreen(
           state = list,
           contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = inner.calculateTopPadding() + 8.dp, bottom = inner.calculateBottomPadding() + 16.dp),
           verticalArrangement = Arrangement.spacedBy(12.dp),
-          modifier = Modifier.fillMaxSize(),
+          modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (placed || state.blocks.isEmpty()) 1f else 0f },
         ) {
           // Runs of tool calls fold into one expandable row; everything else
           // is its own item.
           val live = session?.status?.isLive == true
           val runningSeq = if (live) state.blocks.lastOrNull { it.kind == "tool" && it.result == null }?.seq else null
-          items(groupTools(state.blocks), key = { it.first().seq }) { group ->
+          items(groups, key = { it.first().seq }) { group ->
             Box(Modifier.animateItem()) {
               if (group.first().kind == "tool") ToolGroup(group, runningSeq)
               else BlockView(group.first(), running = false)
@@ -210,7 +245,10 @@ fun SessionScreen(
           // Why it stopped, when the conversation itself doesn't say (older tasks).
           val failure = session?.error?.takeIf { !live && it.isNotBlank() && state.blocks.none { b -> b.kind == "error" } }
           if (failure != null) {
-            item(key = "failure") { ErrorCard(failure.replace(Regex("""^[a-z_]+_error:\s*""", RegexOption.IGNORE_CASE), "")) }
+            item(key = "failure") {
+              if (failure.equals(com.chethan616.dex.ui.components.USER_STOPPED, ignoreCase = true)) com.chethan616.dex.ui.components.StoppedCard()
+              else ErrorCard(failure.replace(Regex("""^[a-z_]+_error:\s*""", RegexOption.IGNORE_CASE), ""))
+            }
           }
           if (session?.status?.isLive == true && state.blocks.lastOrNull().isQuiet()) {
             item(key = "live") { LiveLine(state.blocks.lastOrNull()) }
@@ -271,29 +309,28 @@ private fun Block?.isQuiet(): Boolean = this == null || !(kind == "tool" && resu
 
 @Composable
 private fun LiveLine(last: Block?) {
-  val (orb, label) = when (last?.kind) {
-    "text" -> OrbState.Composing to "Writing…"
-    "user" -> OrbState.Breathing to "Reading your message…"
-    else -> OrbState.Solving to "Thinking…"
+  val label = when (last?.kind) {
+    "text" -> "Writing…"
+    "user" -> "Reading your message…"
+    else -> "Thinking…"
   }
-  val shimmer by rememberInfiniteTransition(label = "shimmer").animateFloat(
-    initialValue = -1f,
-    targetValue = 2f,
-    animationSpec = infiniteRepeatable(tween(1800, easing = LinearEasing), RepeatMode.Restart),
-    label = "x",
+  val bot = LocalTaskBot.current
+  // A soft pulse, read in the layer: the label is redrawn, not recomposed,
+  // each frame (the old moving-gradient text recomposed 60+ times a second).
+  val pulse = rememberInfiniteTransition(label = "pulse").animateFloat(
+    initialValue = 1f,
+    targetValue = 0.45f,
+    animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse),
+    label = "a",
   )
-  val base = MaterialTheme.colorScheme.onSurfaceVariant
-  val hi = MaterialTheme.colorScheme.onSurface
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-    DexOrb(orb, size = 28.dp)
-    Spacer(Modifier.size(10.dp))
+    BotAvatar(type = bot?.type ?: "flower", mood = BotMood.Thinking, size = 36.dp, interactive = false)
+    Spacer(Modifier.size(8.dp))
     Text(
-      buildAnnotatedString {
-        pushStyle(SpanStyle(brush = Brush.linearGradient(listOf(base, hi, base), start = androidx.compose.ui.geometry.Offset(shimmer * 300f, 0f), end = androidx.compose.ui.geometry.Offset(shimmer * 300f + 300f, 0f))))
-        append(label)
-        pop()
-      },
+      label,
       style = MaterialTheme.typography.bodyLarge,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.graphicsLayer { alpha = pulse.value },
     )
   }
 }
@@ -302,8 +339,7 @@ private fun LiveLine(last: Block?) {
 private fun SessionTopBar(
   session: Session?,
   sessionId: String,
-  sharedScope: SharedTransitionScope,
-  animatedScope: AnimatedVisibilityScope,
+  mood: BotMood,
   onBack: () -> Unit,
   onSync: () -> Unit,
   fileCount: Int,
@@ -316,19 +352,16 @@ private fun SessionTopBar(
       verticalAlignment = Alignment.CenterVertically,
     ) {
       IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
-      with(sharedScope) {
-        BotAvatar(
-          type = botTypeFor(session?.engine, sessionId),
-          mood = moodFor(session?.status?.id),
-          size = 44.dp,
-          modifier = Modifier.sharedElement(rememberSharedContentState("avatar-$sessionId"), animatedScope),
-        )
-      }
+      BotAvatar(
+        type = botTypeFor(session?.engine, sessionId),
+        mood = mood,
+        size = 44.dp,
+      )
       Spacer(Modifier.size(10.dp))
       Column(Modifier.weight(1f)) {
         Text(session?.prompt.orEmpty(), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(verticalAlignment = Alignment.CenterVertically) {
-          session?.let { StatusPill(it.status) }
+          session?.let { StatusPill(it.status, label = com.chethan616.dex.ui.components.sessionStatusLabel(it.status, it.error)) }
           Spacer(Modifier.size(8.dp))
           Text(
             listOfNotNull(ENGINE_NAMES[session?.engine] ?: session?.engine, session?.deviceName).joinToString(" · "),
@@ -364,7 +397,7 @@ private fun ApprovalBanner(title: String, detail: String, onAnswer: (Boolean) ->
   ) {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
-        DexOrb(OrbState.Listening, size = 28.dp)
+        BotAvatar(type = LocalTaskBot.current?.type ?: "flower", mood = BotMood.NeedsYou, size = 44.dp)
         Spacer(Modifier.size(10.dp))
         Column(Modifier.weight(1f)) {
           Text("Approve this?", style = MaterialTheme.typography.titleSmall, color = scheme.onTertiaryContainer)
@@ -386,6 +419,7 @@ private fun ApprovalBanner(title: String, detail: String, onAnswer: (Boolean) ->
 private fun Composer(
   session: Session?,
   sending: Boolean,
+  attach: com.chethan616.dex.ui.attach.AttachmentState,
   onSend: (String) -> Unit,
   onPause: () -> Unit,
   onResume: () -> Unit,
@@ -406,19 +440,16 @@ private fun Composer(
     }
   }
   val paused = session?.status == SessionStatus.Paused
+  val pickers = com.chethan616.dex.ui.attach.rememberAttachPickers(attach)
+  var attachMenu by remember { mutableStateOf(false) }
+  val hasFiles = attach.items.isNotEmpty()
   Surface(
     shape = RoundedCornerShape(32.dp),
     color = scheme.surfaceContainerHigh,
     shadowElevation = 6.dp,
     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
   ) {
-    Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
-      if (live || paused) {
-        FilledTonalIconButton(onClick = if (paused) onResume else onPause, shapes = IconButtonDefaults.shapes()) {
-          Icon(if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, if (paused) "Resume" else "Pause")
-        }
-        FilledTonalIconButton(onClick = onStop, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Stop, "Stop") }
-      }
+    val field: @Composable (Modifier) -> Unit = { m ->
       TextField(
         value = text,
         onValueChange = { text = it },
@@ -430,8 +461,18 @@ private fun Composer(
           focusedIndicatorColor = Color.Transparent,
           unfocusedIndicatorColor = Color.Transparent,
         ),
-        modifier = Modifier.weight(1f),
+        modifier = m,
       )
+    }
+    val attachButton: @Composable () -> Unit = {
+      Box {
+        IconButton(onClick = { haptics.tick(); attachMenu = true }, enabled = session != null) {
+          Icon(Icons.Rounded.AttachFile, "Attach")
+        }
+        com.chethan616.dex.ui.attach.AttachMenu(expanded = attachMenu, onDismiss = { attachMenu = false }, pickers = pickers)
+      }
+    }
+    val micAndSend: @Composable () -> Unit = {
       IconButton(
         onClick = {
           haptics.click()
@@ -444,13 +485,35 @@ private fun Composer(
           }
         },
       ) { Icon(Icons.Rounded.Mic, "Speak") }
-      // The desktop's liquid-metal send button.
-      MetalSendButton(
-        onClick = { val t = text.trim(); if (t.isNotEmpty()) { onSend(t); text = "" } },
-        enabled = text.isNotBlank() && session != null,
+      ExpressiveSendButton(
+        onClick = { val t = text.trim(); if (t.isNotEmpty() || hasFiles) { onSend(t); text = "" } },
+        enabled = (text.isNotBlank() || hasFiles) && !attach.preparing && session != null,
         busy = sending,
         size = 48.dp,
       )
+    }
+    Column {
+      com.chethan616.dex.ui.attach.AttachmentStrip(attach, Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp))
+      // While it runs there are five buttons: the text keeps the whole top row
+      // and the controls move underneath, as on the desktop. The field stays at
+      // one call site, so the keyboard survives the switch when a task ends.
+      val running = live || paused
+      Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (!running) attachButton()
+        field(Modifier.weight(1f))
+        if (!running) micAndSend()
+      }
+      if (running) {
+        Row(Modifier.padding(start = 6.dp, end = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+          attachButton()
+          FilledTonalIconButton(onClick = if (paused) onResume else onPause, shapes = IconButtonDefaults.shapes()) {
+            Icon(if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, if (paused) "Resume" else "Pause")
+          }
+          FilledTonalIconButton(onClick = onStop, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Stop, "Stop") }
+          Spacer(Modifier.weight(1f))
+          micAndSend()
+        }
+      }
     }
   }
 }

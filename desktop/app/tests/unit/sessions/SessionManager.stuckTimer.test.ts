@@ -136,3 +136,20 @@ describe('stuck timer suspension for a pending confirmation', () => {
     manager.destroy();
   });
 });
+
+describe('event times', () => {
+  afterEach(() => { vi.useRealTimers(); mockState.stores.clear(); });
+
+  it('stamps each event with when it happened, and keeps a time an event already carries', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_700_000_000_000);
+    const manager = new SessionManager(tempDbPath());
+    const id = manager.createSession('stamp me');
+    manager.appendOutput(id, { type: 'thinking', text: 'hi' });
+    manager.appendOutput(id, { type: 'screenshot', path: 'C:/x.png', mode: 'raw', at: 42 });
+    const [thinking, shot] = manager.getSession(id)!.output as Array<HlEvent & { at?: number }>;
+    expect(thinking.at).toBe(1_700_000_000_000);
+    expect(shot.at).toBe(42);
+    manager.destroy();
+  });
+});

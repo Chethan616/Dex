@@ -272,17 +272,35 @@ function createMockWebContents() {
     for (const handler of handlers) handler(...args);
     return handlers.length > 0;
   };
+  let destroyed = false;
+  let url = 'about:blank';
+  let windowOpenHandler: ((details: unknown) => unknown) | null = null;
   return {
     id,
-    getURL: (): string => 'about:blank',
+    getURL: (): string => url,
     getTitle: (): string => 'New Tab',
     getOSProcessId: (): number => 10000 + id,
-    isDestroyed: (): boolean => false,
+    isDestroyed: (): boolean => destroyed,
+    getUserAgent: (): string => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) dex/3.1.0 Chrome/146.0.0.0 Electron/41.2.1 Safari/537.36',
+    setUserAgent: (_ua: string): void => undefined,
+    executeJavaScript: (): Promise<unknown> => Promise.resolve(undefined),
+    setWindowOpenHandler: (handler: (details: unknown) => unknown): void => { windowOpenHandler = handler; },
+    /** Test hook: what the page's window.open would get back. */
+    openWindow: (details: unknown): unknown => windowOpenHandler?.(details),
+    reload: (): void => undefined,
+    stop: (): void => undefined,
+    navigationHistory: {
+      canGoBack: (): boolean => false,
+      canGoForward: (): boolean => false,
+      goBack: (): void => undefined,
+      goForward: (): void => undefined,
+    },
     isCurrentlyAudible: (): boolean => false,
     setFrameRate: (_fps: number): void => undefined,
     setBackgroundThrottling: (_throttle: boolean): void => undefined,
-    loadURL: (_url: string): Promise<void> => Promise.resolve(),
-    close: (): void => undefined,
+    loadURL: (next: string): Promise<void> => { url = next; return Promise.resolve(); },
+    close: (): void => { if (!destroyed) { destroyed = true; emit('destroyed'); } },
+    destroy: (): void => { if (!destroyed) { destroyed = true; emit('destroyed'); } },
     on,
     off,
     once,
@@ -297,13 +315,17 @@ function createMockWebContents() {
   };
 }
 
+/** A bare WebContents, as Chromium makes one for a popup (tests). */
+export const createPopupWebContents = createMockWebContents;
+
 export const WebContentsView = class {
   webContents: ReturnType<typeof createMockWebContents>;
   private _bounds = { x: 0, y: 0, width: 0, height: 0 };
   private _bg = '#00000000';
+  private _visible = true;
 
-  constructor(_opts?: unknown) {
-    this.webContents = createMockWebContents();
+  constructor(opts?: { webContents?: ReturnType<typeof createMockWebContents> }) {
+    this.webContents = opts?.webContents ?? createMockWebContents();
   }
 
   setBounds(bounds: { x: number; y: number; width: number; height: number }): void {
@@ -320,6 +342,14 @@ export const WebContentsView = class {
 
   getBackgroundColor(): string {
     return this._bg;
+  }
+
+  setVisible(visible: boolean): void {
+    this._visible = visible;
+  }
+
+  getVisible(): boolean {
+    return this._visible;
   }
 };
 

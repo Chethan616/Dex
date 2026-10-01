@@ -31,7 +31,9 @@ export function engineMcpLaunches(ctx: SpawnContext): EngineMcpLaunch[] {
     // Electron's own Node, like the built-in servers: nothing to install.
     command: process.execPath,
     args: [ctx.mcpLauncherPath!, ctx.mcpConfigPath!, server.id],
-    env: { ELECTRON_RUN_AS_NODE: '1' },
+    // Codex hands MCP servers only a whitelisted environment: the task id
+    // must travel explicitly (the Blender server keeps one Blender per task).
+    env: { ELECTRON_RUN_AS_NODE: '1', DEX_SESSION_ID: ctx.sessionId },
   }));
 }
 

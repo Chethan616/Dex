@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# dex-open — show the user a file, in a document tab of this task.
+#
+# A report you wrote, a PDF you downloaded, a sheet you filled in: open it
+# and the user sees it — rendered (PDF pages, Word pages, a sheet grid, an
+# image, a 3D model), not a path. The tab reloads by itself when you change
+# the file, so open it once and keep editing.
+#
+# See open.md in this directory.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+usage() {
+  cat >&2 <<'USAGE'
+usage:
+  dex-open <file>                  open it in a document tab and put it in front
+  dex-open <file> --background     open the tab without switching the user to it
+
+  Relative paths are from your working directory. Up to 80 MB.
+USAGE
+  exit 2
+}
+
+[ $# -ge 1 ] || usage
+file=""; show=true
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --background) show=false; shift ;;
+    -h|--help|help) usage ;;
+    *) file="$1"; shift ;;
+  esac
+done
+[ -n "$file" ] || usage
+
+session="$(dex_session_id)"
+[ -n "$session" ] || { echo "dex-open: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
+
+# The app needs a path it can open: absolute, and Windows-style under Git Bash.
+case "$file" in /*|[A-Za-z]:[\/]*) ;; *) file="$PWD/$file" ;; esac
+command -v cygpath >/dev/null 2>&1 && file="$(cygpath -w "$file")"
+[ -f "$file" ] || { echo "dex-open: no such file: $file" >&2; exit 2; }
+
+dex_post /dex/open "{\"sessionId\":\"$(dex_esc "$session")\",\"path\":\"$(dex_esc "$file")\",\"show\":${show}}"

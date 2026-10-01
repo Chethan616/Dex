@@ -303,3 +303,19 @@ describe('validation helpers', () => {
     expect(result.active).toBe(0);
   });
 });
+
+describe('event times survive validation', () => {
+  it('keeps `at` on every kind of event, and still strips fields nobody declared', () => {
+    const events = [
+      { type: 'thinking', text: 'hi', at: 1 },
+      { type: 'tool_call', name: 'Bash', args: {}, iteration: 1, at: 2 },
+      { type: 'tool_result', name: 'Bash', ok: true, preview: '', ms: 1, at: 3 },
+      { type: 'done', summary: 'ok', iterations: 1, at: 4 },
+      { type: 'user_input', text: 'more', at: 5 },
+      { type: 'file_output', name: 'a.pdf', path: 'C:/a.pdf', size: 1, mime: 'application/pdf', at: 6 },
+    ];
+    for (const e of events) expect((HlEventSchema.parse(e) as { at?: number }).at).toBe(e.at);
+    expect(HlEventSchema.parse({ type: 'thinking', text: 'old' })).toEqual({ type: 'thinking', text: 'old' });
+    expect(HlEventSchema.parse({ type: 'thinking', text: 'x', at: 1, secret: 'nope' })).toEqual({ type: 'thinking', text: 'x', at: 1 });
+  });
+});

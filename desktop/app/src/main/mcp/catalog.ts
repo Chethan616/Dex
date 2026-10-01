@@ -17,7 +17,7 @@
 import path from 'node:path';
 import { oauthClient } from '../accounts/oauthClients';
 import { knownFolders } from '../startup/knownFolders';
-import { findBlender } from '../startup/blender';
+import { blenderHome, findBlender } from '../startup/blender';
 
 export type McpTransport = 'stdio';
 
@@ -197,15 +197,21 @@ export const MCP_CATALOG: McpServerDefinition[] = [
   },
   {
     // github.com/ahujasid/mcp-for-blender (MIT) — the maintainer's package,
-    // run with uvx like the npx servers above; not vendored. It drives a
-    // running Blender over localhost:9876 through its add-on, and returns
-    // viewport screenshots as images, so the agent can see what it built.
+    // run with uvx; not vendored. mcp-servers/blender wraps it so it drives a
+    // Blender that runs in the BACKGROUND (no window, one per task, started
+    // on the first Blender tool call) — the user keeps their desktop. Its
+    // "viewport screenshots" are real renders through the scene camera.
     id: 'blender',
     displayName: 'Blender',
-    summary: 'Build 3D scenes and models in a live Blender: run Python in the scene, see the viewport, pull free Poly Haven HDRIs, textures and models, export GLB/FBX.',
+    summary: 'Build 3D scenes and models in Blender, in the background — no window, your desktop stays yours: run Python in the scene, see renders of it, pull free Poly Haven HDRIs, textures and models, export GLB/FBX.',
     transport: 'stdio',
-    command: 'uvx',
-    args: ['mcp-for-blender'],
+    command: 'node',
+    args: [],
+    builtIn: 'blender',
+    launchEnv: () => ({
+      DEX_BLENDER: findBlender() ?? '',
+      DEX_BLENDER_HOME: blenderHome(),
+    }),
     env: {
       // Anonymous usage pings off; content collection is off by default anyway.
       DISABLE_TELEMETRY: 'true',

@@ -23,6 +23,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.rounded.AutoAwesome
+import com.chethan616.dex.ui.components.springPress
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
@@ -66,7 +70,12 @@ import com.chethan616.dex.ui.theme.LocalStatusColors
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen(container: AppContainer, account: Account, onBack: () -> Unit) {
+fun SettingsScreen(
+  container: AppContainer,
+  account: Account,
+  onBack: () -> Unit,
+  onOpenTour: () -> Unit = {},
+) {
   val haptics = LocalHaptics.current
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
@@ -104,8 +113,15 @@ fun SettingsScreen(container: AppContainer, account: Account, onBack: () -> Unit
     // Account
     Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.primaryContainer) {
       Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-        com.chethan616.dex.ui.profile.DexAvatar(size = 60.dp)
-        Spacer(Modifier.size(14.dp))
+        com.chethan616.dex.ui.components.ShapeBadge(
+          androidx.compose.material3.MaterialShapes.Cookie12Sided,
+          MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f),
+          76.dp,
+          spinMs = 36_000,
+        ) {
+          com.chethan616.dex.ui.profile.DexAvatar(size = 58.dp)
+        }
+        Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
           Text(profile?.name ?: account.displayName, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
           Text(account.email.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f))
@@ -125,7 +141,7 @@ fun SettingsScreen(container: AppContainer, account: Account, onBack: () -> Unit
       }
       desktops.forEach { d ->
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-          Icon(Icons.Rounded.Computer, null, tint = MaterialTheme.colorScheme.primary)
+          RowIcon(Icons.Rounded.Computer)
           Spacer(Modifier.size(14.dp))
           Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -255,6 +271,10 @@ fun SettingsScreen(container: AppContainer, account: Account, onBack: () -> Unit
     }
 
     Group("About") {
+      SettingRow(Icons.Rounded.AutoAwesome, "Welcome tour", "What DEX on your phone can do") {
+        haptics.click()
+        onOpenTour()
+      }
       Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("DEX for Android ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleSmall)
         Text(
@@ -316,21 +336,37 @@ private fun Group(title: String, content: @Composable () -> Unit) {
 @Composable
 private fun SwitchRow(icon: ImageVector, title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
   Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-    Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+    RowIcon(icon)
     Spacer(Modifier.size(14.dp))
     Column(Modifier.weight(1f)) {
       Text(title, style = MaterialTheme.typography.titleSmall)
       Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    Switch(checked = checked, onCheckedChange = onChange)
+    Switch(
+      checked = checked,
+      onCheckedChange = onChange,
+      thumbContent = {
+        Icon(
+          if (checked) Icons.Rounded.Check else Icons.Rounded.Close,
+          null,
+          Modifier.size(androidx.compose.material3.SwitchDefaults.IconSize),
+        )
+      },
+    )
   }
 }
 
 @Composable
 private fun SettingRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
-  Surface(onClick = onClick, color = androidx.compose.ui.graphics.Color.Transparent) {
+  val press = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+  Surface(
+    onClick = onClick,
+    color = androidx.compose.ui.graphics.Color.Transparent,
+    interactionSource = press,
+    modifier = Modifier.springPress(press, 0.98f),
+  ) {
     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-      Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+      RowIcon(icon)
       Spacer(Modifier.size(14.dp))
       Column(Modifier.weight(1f)) {
         Text(title, style = MaterialTheme.typography.titleSmall)
@@ -338,4 +374,24 @@ private fun SettingRow(icon: ImageVector, title: String, subtitle: String, onCli
       }
     }
   }
+}
+
+private val ROW_SHAPES = listOf(
+  androidx.compose.material3.MaterialShapes.Cookie4Sided,
+  androidx.compose.material3.MaterialShapes.Clover4Leaf,
+  androidx.compose.material3.MaterialShapes.Sunny,
+  androidx.compose.material3.MaterialShapes.Cookie6Sided,
+  androidx.compose.material3.MaterialShapes.Pill,
+)
+
+/** A row's icon on a shape of its own (picked from the icon, so it never changes). */
+@Composable
+private fun RowIcon(icon: ImageVector) {
+  val i = (icon.name.hashCode() and 0x7fffffff) % ROW_SHAPES.size
+  com.chethan616.dex.ui.components.ShapeBadge(
+    ROW_SHAPES[i],
+    MaterialTheme.colorScheme.secondaryContainer,
+    40.dp,
+    spinMs = 22_000 + i * 4_000,
+  ) { Icon(icon, null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(20.dp)) }
 }

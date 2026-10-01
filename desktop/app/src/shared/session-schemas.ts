@@ -11,12 +11,21 @@ export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 // HlEvent — structured agent output events
 // ---------------------------------------------------------------------------
 
+/**
+ * When it happened (ms), stamped by SessionManager.appendOutput — the chat's
+ * "Worked for 3m 45s". Optional: sessions recorded before it have none.
+ * Declared, not passed through: these schemas strip unknown fields.
+ */
+const WHEN = { at: z.number().optional() };
+
 export const HlEventThinkingSchema = z.object({
+  ...WHEN,
   type: z.literal('thinking'),
   text: z.string(),
 });
 
 export const HlEventToolCallSchema = z.object({
+  ...WHEN,
   type: z.literal('tool_call'),
   name: z.string(),
   args: z.unknown(),
@@ -24,6 +33,7 @@ export const HlEventToolCallSchema = z.object({
 });
 
 export const HlEventToolResultSchema = z.object({
+  ...WHEN,
   type: z.literal('tool_result'),
   name: z.string(),
   ok: z.boolean(),
@@ -32,22 +42,37 @@ export const HlEventToolResultSchema = z.object({
 });
 
 export const HlEventDoneSchema = z.object({
+  ...WHEN,
   type: z.literal('done'),
   summary: z.string(),
   iterations: z.number(),
 });
 
 export const HlEventErrorSchema = z.object({
+  ...WHEN,
   type: z.literal('error'),
   message: z.string(),
 });
 
 export const HlEventUserInputSchema = z.object({
+  ...WHEN,
   type: z.literal('user_input'),
   text: z.string(),
 });
 
+/**
+ * Files the user sent with their message (from the desktop chat, the hub or
+ * the phone). Metadata only — the bytes go to the engine, not the log — so
+ * the chat can show what was attached on the message it belongs to.
+ */
+export const HlEventUserAttachmentsSchema = z.object({
+  ...WHEN,
+  type: z.literal('user_attachments'),
+  items: z.array(z.object({ name: z.string(), mime: z.string(), size: z.number() })),
+});
+
 export const HlEventSkillWrittenSchema = z.object({
+  ...WHEN,
   type: z.literal('skill_written'),
   path: z.string(),
   domain: z.string(),
@@ -57,12 +82,14 @@ export const HlEventSkillWrittenSchema = z.object({
 });
 
 export const HlEventNotifySchema = z.object({
+  ...WHEN,
   type: z.literal('notify'),
   message: z.string(),
   level: z.enum(['info', 'blocking']),
 });
 
 export const HlEventHarnessEditedSchema = z.object({
+  ...WHEN,
   type: z.literal('harness_edited'),
   target: z.enum(['helpers', 'tools']),
   action: z.enum(['write', 'patch']),
@@ -73,6 +100,7 @@ export const HlEventHarnessEditedSchema = z.object({
 });
 
 export const HlEventSkillUsedSchema = z.object({
+  ...WHEN,
   type: z.literal('skill_used'),
   path: z.string(),
   domain: z.string().optional(),
@@ -80,6 +108,7 @@ export const HlEventSkillUsedSchema = z.object({
 });
 
 export const HlEventFileOutputSchema = z.object({
+  ...WHEN,
   type: z.literal('file_output'),
   name: z.string(),
   path: z.string(),
@@ -92,6 +121,7 @@ export const HlEventFileOutputSchema = z.object({
 // (authoritative). For Codex, costUsd is computed from a local price table in
 // main/hl/pricing.ts (estimated — may drift from OpenAI's dashboard).
 export const HlEventTurnUsageSchema = z.object({
+  ...WHEN,
   type: z.literal('turn_usage'),
   inputTokens: z.number(),
   outputTokens: z.number(),
@@ -208,6 +238,7 @@ export type TaskStateMutation = z.infer<typeof TaskStateMutationSchema>;
 // it is small, it makes the renderer a pure function of the last event, and a
 // dropped frame cannot desynchronise the plan view.
 export const HlEventTaskStateSchema = z.object({
+  ...WHEN,
   type: z.literal('task_state'),
   state: TaskStateSchema,
 });
@@ -215,6 +246,7 @@ export const HlEventTaskStateSchema = z.object({
 // A result worth showing as a card rather than as terminal text — today, file
 // search hits. `items` is empty for the `reading` kind, which uses `body`.
 export const HlEventArtifactSchema = z.object({
+  ...WHEN,
   type: z.literal('artifact'),
   kind: z.enum(['files', 'reading']),
   title: z.string(),
@@ -280,6 +312,7 @@ export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventDoneSchema,
   HlEventErrorSchema,
   HlEventUserInputSchema,
+  HlEventUserAttachmentsSchema,
   HlEventSkillWrittenSchema,
   HlEventNotifySchema,
   HlEventHarnessEditedSchema,

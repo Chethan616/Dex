@@ -45,6 +45,10 @@ interface ElectronSessionAPI {
   delete: (id: string) => Promise<void>;
   downloadOutput: (filePath: string) => Promise<{ opened: boolean }>;
   revealOutput: (filePath: string) => Promise<{ revealed: boolean }>;
+  /** The bytes of a file this task recorded or opened as a document. */
+  readFile: (sessionId: string, filePath: string) => Promise<{ bytes: Uint8Array; size: number; mtimeMs: number }>;
+  /** A file this task recorded, wherever it was saved (docs/unify/PLAN.md §3.12). */
+  openFile: (sessionId: string, filePath: string, how?: 'open' | 'reveal' | 'copy') => Promise<{ opened?: boolean; revealed?: boolean; saved?: string | null }>;
   listEditors: () => Promise<Array<{ id: string; name: string }>>;
   openInEditor: (editorId: string, filePath: string) => Promise<{ opened: boolean }>;
   listEngines: () => Promise<Array<{ id: string; displayName: string; binaryName: string; selectableModels?: Array<{ id: string; label: string; hint?: string }> }>>;
@@ -220,6 +224,56 @@ interface ElectronLogsAPI {
   ) => Promise<void>;
   updateAnchor: (anchor: { x: number; y: number; width: number; height: number }) => void;
 }
+
+/** One tab of a task's workspace (main/sessions/BrowserPool.ts WorkspaceTabState). */
+interface WorkspaceTab {
+  id: string;
+  url: string;
+  title: string;
+  faviconUrl: string | null;
+  loading: boolean;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  active: boolean;
+  openedBy: 'task' | 'user' | 'page' | 'agent';
+  isNewTab: boolean;
+  crashed: boolean;
+  /** DEX's scratch tab: closed when the run ends unless kept. */
+  temporary: boolean;
+}
+
+type WorkspaceTabAction =
+  | { op: 'new'; input?: string }
+  | { op: 'activate' | 'close'; tabId: string }
+  | { op: 'navigate'; tabId?: string; input: string }
+  | { op: 'back' | 'forward' | 'reload' | 'stop'; tabId?: string };
+
+/** A document tab: a file the hub draws itself (docs/unify/PLAN.md §3.9). */
+interface WorkspaceDoc {
+  id: string;
+  path: string;
+  name: string;
+  openedBy: 'user' | 'agent';
+  openedAt: number;
+  size: number;
+  mtimeMs: number;
+}
+
+interface ElectronWorkspaceAPI {
+  docs: (sessionId: string) => Promise<WorkspaceDoc[]>;
+  docOpen: (sessionId: string, filePath: string) => Promise<WorkspaceDoc>;
+  docClose: (sessionId: string, docId: string) => Promise<boolean>;
+  onDocsChanged: (cb: (sessionId: string, docs: WorkspaceDoc[], focusId: string | null) => void) => () => void;
+  onDocChanged: (cb: (sessionId: string, docId: string, mtimeMs: number) => void) => () => void;
+  tabs: (sessionId: string) => Promise<WorkspaceTab[]>;
+  tab: (sessionId: string, action: WorkspaceTabAction) => Promise<boolean>;
+  onTabsChanged: (cb: (sessionId: string, tabs: WorkspaceTab[]) => void) => () => void;
+  shortcut: (sessionId: string, shortcut: WorkspaceShortcut) => Promise<boolean>;
+  onFocusAddress: (cb: (sessionId: string) => void) => () => void;
+}
+
+type WorkspaceShortcut =
+  | 'new-tab' | 'close-tab' | 'focus-address' | 'reload' | 'back' | 'forward' | 'next-tab' | 'prev-tab';
 
 interface ElectronTakeoverAPI {
   show: (
@@ -430,6 +484,8 @@ interface AccountInfo {
   connected: boolean;
   profile?: AccountProfileInfo;
   devBuild: boolean;
+  /** Hugging Face only: the plan (sets the daily GPU time) and today's use. */
+  huggingface?: { plan: 'pro' | 'free' | null; modelsToday: number; refillsAt?: number };
 }
 
 type AccountProgressEvent =
@@ -458,6 +514,7 @@ interface ElectronSettingsAccountsAPI {
   connect: (provider: AccountProviderId) => Promise<{ ok: boolean; profile?: AccountProfileInfo; error?: string }>;
   cancel: (provider: AccountProviderId) => Promise<void>;
   disconnect: (provider: AccountProviderId) => Promise<void>;
+  openLink: (key: 'huggingface-pro' | 'huggingface-billing' | 'huggingface-zerogpu') => Promise<void>;
   onProgress: (cb: (event: AccountProgressEvent) => void) => () => void;
 }
 
@@ -482,6 +539,7 @@ interface ElectronAPI {
   logs?: ElectronLogsAPI;
   popup?: ElectronPopupAPI;
   takeover?: ElectronTakeoverAPI;
+  workspace?: ElectronWorkspaceAPI;
   sessions: ElectronSessionAPI;
   channels: ElectronChannelsAPI;
   chromeImport?: ElectronChromeImportAPI;

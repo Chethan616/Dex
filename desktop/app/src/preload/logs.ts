@@ -138,8 +138,12 @@ contextBridge.exposeInMainWorld('logsAPI', {
   // Follow-up input from inside the logs window — routes through the same
   // sessions:resume IPC the pane's FollowUpInput uses so replies land in
   // the same session without the main hub needing focus.
-  followUp: (sessionId: string, prompt: string): Promise<{ resumed?: boolean; queued?: boolean; error?: string }> =>
-    ipcRenderer.invoke('sessions:resume', { id: sessionId, prompt }),
+  followUp: (
+    sessionId: string,
+    prompt: string,
+    attachments?: Array<{ name: string; mime: string; bytes: Uint8Array }>,
+  ): Promise<{ resumed?: boolean; queued?: boolean; error?: string }> =>
+    ipcRenderer.invoke('sessions:resume', { id: sessionId, prompt, attachments: attachments ?? [] }),
 });
 
 debugLog('[logs-preload] ready');

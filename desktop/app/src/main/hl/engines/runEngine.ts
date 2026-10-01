@@ -30,23 +30,18 @@ import type {
 } from './types';
 import type { HlEvent } from '../../../shared/session-schemas';
 import type { WebContents } from 'electron';
+import { isScratchFile } from './outputs';
+import { withDebugger } from '../../cdpLease';
 
 async function resolveTargetIdForWebContents(wc: WebContents): Promise<string> {
-  const dbg = wc.debugger;
-  const attachedByUs = !dbg.isAttached();
-  if (attachedByUs) dbg.attach('1.3');
-  try {
-    const info = (await dbg.sendCommand('Target.getTargetInfo')) as {
+  return withDebugger(wc, async () => {
+    const info = (await wc.debugger.sendCommand('Target.getTargetInfo')) as {
       targetInfo?: { targetId?: string };
     };
     const id = info?.targetInfo?.targetId;
     if (!id) throw new Error('Target.getTargetInfo returned no targetId');
     return id;
-  } finally {
-    if (attachedByUs) {
-      try { dbg.detach(); } catch { /* already detached */ }
-    }
-  }
+  });
 }
 
 function mimeFromExt(filename: string): string {
@@ -58,6 +53,8 @@ function mimeFromExt(filename: string): string {
     yaml: 'application/x-yaml', yml: 'application/x-yaml',
     js: 'text/javascript', ts: 'application/typescript', py: 'text/x-python',
     zip: 'application/zip', tar: 'application/x-tar', gz: 'application/gzip',
+    glb: 'model/gltf-binary', gltf: 'model/gltf+json', obj: 'model/obj', stl: 'model/stl',
+    fbx: 'application/octet-stream', blend: 'application/x-blender',
   };
   return map[ext] ?? 'application/octet-stream';
 }
@@ -281,6 +278,7 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
     originChannel: opts.originChannel,
     targetId,
     cdpPort: opts.cdpPort,
+    cdpWsUrl: opts.cdpWsUrl,
     resumeSessionId: opts.resumeSessionId,
     savedApiKey,
     providerId,
@@ -509,7 +507,7 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
       const filePath = path.join(outputsDir, filename);
       let stat;
       try { stat = fs.statSync(filePath); } catch { return; }
-      if (!stat.isFile()) return;
+      if (!stat.isFile() || stat.size === 0 || isScratchFile(filename)) return;
       if (seenOutputs.get(filename) === stat.size) return;
       seenOutputs.set(filename, stat.size);
       opts.onEvent({

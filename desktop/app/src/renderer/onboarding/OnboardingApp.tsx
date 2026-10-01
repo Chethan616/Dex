@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { OnboardingCookieList } from './OnboardingCookieList';
-import introImage from './intro.png';
+import { SetupStep } from './SetupStep';
+import { ConnectStep } from './ConnectStep';
+import { IntroStage } from './IntroStage';
+import { ArrowRight, StepFooter } from './StepFooter';
 import dexWordmark from '../assets/dex-wordmark.png';
 import claudeCodeLogo from './claude-code-logo.svg';
 import codexLogo from './codex-logo.svg';
@@ -14,7 +17,7 @@ import {
   rendererToAccelerator,
 } from '../../shared/hotkeys';
 import { pollInstalledStatus } from '../shared/installStatus';
-import { AgentAvatar, DexAvatar, ProfilePicker, useDexProfile, MetalButton, NewBadge, Orb, OrbLabel, Switch } from '../components/lib';
+import { ProfilePicker, useDexProfile, Orb, OrbLabel, Switch } from '../components/lib';
 
 interface ChromeProfile {
   id: string;
@@ -125,11 +128,22 @@ declare global {
       };
       onWhatsappQr: (cb: (dataUrl: string) => void) => () => void;
       onChannelStatus: (cb: (channelId: string, status: string, detail?: string) => void) => () => void;
+      setup: {
+        detect: () => Promise<unknown>;
+        install: (ids: string[]) => Promise<unknown>;
+        onProgress: (cb: (event: unknown) => void) => () => void;
+      };
+      accounts: {
+        list: () => Promise<unknown>;
+        connect: (provider: string) => Promise<unknown>;
+        cancel: (provider: string) => Promise<void>;
+        onProgress: (cb: (event: unknown) => void) => () => void;
+      };
     };
   }
 }
 
-type Step = 'intro' | 'avatar' | 'profile' | 'apikey' | 'notifications' | 'shortcut';
+type Step = 'intro' | 'avatar' | 'setup' | 'profile' | 'apikey' | 'connect' | 'notifications' | 'shortcut';
 type InstallableOnboardingEngine = 'claude-code' | 'codex';
 type InstallingEngines = Record<InstallableOnboardingEngine, boolean>;
 
@@ -211,7 +225,7 @@ function PreferencesStep({
           )}
         </div>
         <button
-          className="btn btn-secondary pref-row-action"
+          className="ob-btn ob-btn--tonal pref-row-action"
           onClick={handleEnable}
           disabled={requested}
         >
@@ -242,17 +256,12 @@ function PreferencesStep({
         />
       </div>
 
-      <div className="apikey-actions">
-        <MetalButton size="lg" onClick={handleContinue} disabled={saving}>
+      <StepFooter onBack={onBack}>
+        <button type="button" className="ob-btn ob-btn--primary" onClick={handleContinue} disabled={saving}>
           {saving ? 'Saving…' : 'Continue'}
-        </MetalButton>
-      </div>
-
-      <div className="step-subactions">
-        <button className="back-btn" onClick={onBack}>
-          Back
+          <ArrowRight />
         </button>
-      </div>
+      </StepFooter>
     </div>
   );
 }
@@ -282,7 +291,7 @@ function AvatarStep({ onContinue, onBack }: { onContinue: () => void; onBack: ()
   );
 }
 
-const VALID_STEPS: readonly Step[] = ['intro', 'avatar', 'profile', 'apikey', 'notifications', 'shortcut'];
+const VALID_STEPS: readonly Step[] = ['intro', 'avatar', 'setup', 'profile', 'apikey', 'connect', 'notifications', 'shortcut'];
 
 // Cookie sync is unsupported on Windows: Chromium 127+ uses App-Bound
 // Encryption (v20) keyed to the original user-data-dir, so a temp-copy
@@ -297,14 +306,22 @@ const COOKIE_SYNC_SUPPORTED = typeof window !== 'undefined'
 const IS_WINDOWS = typeof window !== 'undefined'
   && window.onboardingAPI?.platform === 'win32';
 
-// On Windows we don't run the engine installers ourselves: the npm-install
-// scripts shell out through cmd.exe in ways that have been unreliable on
-// real user machines, so we instead copy the command to the user's
-// clipboard and poll detect-IPC until they finish running it manually.
-const ENGINE_INSTALL_COMMANDS: Record<InstallableOnboardingEngine, string> = {
-  'claude-code': 'npm install -g @anthropic-ai/claude-code',
-  codex: 'npm install -g @openai/codex',
-};
+/**
+ * The steps, in order, for this platform. "Get your PC ready" is Windows'
+ * (Git, Node.js, Bun — installed for the user); cookie import is not.
+ */
+const STEP_ORDER: readonly Step[] = [
+  'intro',
+  'avatar',
+  ...(IS_WINDOWS ? ['setup' as const] : []),
+  ...(COOKIE_SYNC_SUPPORTED ? ['profile' as const] : []),
+  'apikey',
+  'connect',
+  'notifications',
+  'shortcut',
+];
+const nextStep = (s: Step): Step => STEP_ORDER[Math.min(STEP_ORDER.indexOf(s) + 1, STEP_ORDER.length - 1)];
+const prevStep = (s: Step): Step => STEP_ORDER[Math.max(STEP_ORDER.indexOf(s) - 1, 0)];
 
 export function OnboardingApp() {
   const [step, setStep] = useState<Step>('intro');
@@ -589,9 +606,12 @@ export function OnboardingApp() {
     setInstallingEngines(next);
   }, []);
 
+  const [engineInstallError, setEngineInstallError] = useState<Partial<Record<InstallableOnboardingEngine, string>>>({});
+
   const handleInstallEngine = useCallback(async (engineId: InstallableOnboardingEngine) => {
     if (installingEnginesRef.current[engineId]) return;
     setEngineInstalling(engineId, true);
+    setEngineInstallError((prev) => ({ ...prev, [engineId]: undefined }));
     try {
       const res = await window.onboardingAPI.installEngine(engineId);
       const status = res.opened
@@ -601,10 +621,18 @@ export function OnboardingApp() {
           : await refreshCodexStatus();
       if (!res.opened || !status?.installed) {
         console.warn('[onboarding] installEngine failed', engineId, res.error);
+        const detail = (res.error ?? '').split('\n').filter(Boolean).slice(-1)[0] ?? '';
+        setEngineInstallError((prev) => ({
+          ...prev,
+          [engineId]: /npm|node/i.test(detail) && engineId === 'codex'
+            ? 'Codex needs Node.js — go Back to “Get your PC ready” to install it, then try again.'
+            : `Couldn’t install${detail ? `: ${detail.slice(0, 160)}` : ''}. Check your internet connection and try again.`,
+        }));
         return;
       }
     } catch (err) {
       console.error('[onboarding] installEngine threw', engineId, err);
+      setEngineInstallError((prev) => ({ ...prev, [engineId]: 'Couldn’t install. Try again.' }));
     } finally {
       setEngineInstalling(engineId, false);
     }
@@ -617,33 +645,6 @@ export function OnboardingApp() {
   const handleInstallCodex = useCallback(() => {
     void handleInstallEngine('codex');
   }, [handleInstallEngine]);
-
-  // Windows-only: copy the npm install command to the clipboard, then poll
-  // the detect-IPC until the user has run it themselves. We don't spawn the
-  // installer ourselves on win32 because the cmd.exe path-out has been
-  // unreliable. The polling reuses `waitForInstalledStatus` (~2 min window).
-  const handleManualInstallEngine = useCallback(async (engineId: InstallableOnboardingEngine) => {
-    if (installingEnginesRef.current[engineId]) return;
-    try {
-      await navigator.clipboard.writeText(ENGINE_INSTALL_COMMANDS[engineId]);
-    } catch (err) {
-      console.warn('[onboarding] manual install: clipboard write failed', err);
-    }
-    setEngineInstalling(engineId, true);
-    try {
-      await waitForInstalledStatus(engineId);
-    } finally {
-      setEngineInstalling(engineId, false);
-    }
-  }, [setEngineInstalling, waitForInstalledStatus]);
-
-  const handleManualInstallClaudeCode = useCallback(() => {
-    void handleManualInstallEngine('claude-code');
-  }, [handleManualInstallEngine]);
-
-  const handleManualInstallCodex = useCallback(() => {
-    void handleManualInstallEngine('codex');
-  }, [handleManualInstallEngine]);
 
   const claudeCodeReady = Boolean(claudeCode?.installed && claudeCode.authed);
   const codexReady = Boolean(codex?.installed && codex.authed);
@@ -725,7 +726,7 @@ export function OnboardingApp() {
     setSaving(true);
     try {
       await window.onboardingAPI.saveApiKey(apiKey.trim());
-      setStep('notifications');
+      setStep('connect');
     } catch (err) {
       console.error('[onboarding] save key failed', err);
     } finally {
@@ -763,7 +764,7 @@ export function OnboardingApp() {
     try {
       await window.onboardingAPI.saveOpenAIKey(openaiKey.trim());
       console.log('[onboarding] handleSaveOpenaiKeyAndContinue: saved, advancing');
-      setStep('notifications');
+      setStep('connect');
     } catch (err) {
       console.error('[onboarding] save openai key failed', err);
     } finally {
@@ -799,7 +800,7 @@ export function OnboardingApp() {
         window.onboardingAPI.capture?.('onboarding_provider_selected', { provider: 'openai-key' });
       }
       console.log('[onboarding] handleStepSaveAndContinue: advancing to notifications step');
-      setStep('notifications');
+      setStep('connect');
     } catch (err) {
       console.error('[onboarding] handleStepSaveAndContinue threw', err);
     } finally {
@@ -918,9 +919,7 @@ export function OnboardingApp() {
 
       <div className={`onboarding-content ${step === 'intro' ? 'onboarding-content-wide' : ''}`}>
         <div className="step-indicator">
-          {((COOKIE_SYNC_SUPPORTED
-            ? ['intro', 'avatar', 'profile', 'apikey', 'notifications', 'shortcut']
-            : ['intro', 'avatar', 'apikey', 'notifications', 'shortcut']) as Step[]).map((s, i, all) => {
+          {STEP_ORDER.map((s, i, all) => {
             const currentIdx = all.indexOf(step);
             const thisIdx = i;
             const cls = thisIdx < currentIdx ? 'done' : thisIdx === currentIdx ? 'active' : '';
@@ -937,39 +936,45 @@ export function OnboardingApp() {
           <div className="step-panel intro-panel">
             <div className="intro-content">
               <div className="intro-text">
-                <div className="intro-mascot">
-                  <DexAvatar size={64} interactive />
-                  <NewBadge label="Agents" />
-                </div>
                 <h1 className="intro-title">
                   <img className="intro-wordmark" src={dexWordmark} alt="DEX" draggable={false} />
                 </h1>
                 <p className="intro-subtitle">
-                  Run AI agents that browse the web, complete tasks, and report back — all from your desktop.
+                  An AI agent that works on your PC for you — mail, websites, files, even 3D in Blender —
+                  and you can hand it tasks from your phone.
                 </p>
-                <MetalButton
-                  size="lg"
-                  className="intro-cta"
+                <ul className="intro-points">
+                  <li>Runs on Claude Code or Codex — your own subscription</li>
+                  <li>Works in your Gmail, Drive, Calendar and GitHub directly</li>
+                  <li>Asks before anything risky; your keys stay on this PC</li>
+                </ul>
+                <button
+                  type="button"
+                  className="ob-btn ob-btn--primary ob-btn--lg intro-cta"
                   onClick={() => setStep('avatar')}
                 >
                   Get started
-                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M3.5 8h9m0 0L8.5 4m4 4l-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </MetalButton>
+                  <ArrowRight />
+                </button>
               </div>
-              <div className="intro-image-wrap">
-                <img className="intro-image" src={introImage} alt="DEX" />
-              </div>
+              <IntroStage />
             </div>
           </div>
         )}
 
         {step === 'avatar' && (
           <AvatarStep
-            onContinue={() => setStep(COOKIE_SYNC_SUPPORTED ? 'profile' : 'apikey')}
+            onContinue={() => setStep(nextStep('avatar'))}
             onBack={() => setStep('intro')}
           />
+        )}
+
+        {step === 'setup' && (
+          <SetupStep onContinue={() => setStep(nextStep('setup'))} onBack={() => setStep(prevStep('setup'))} />
+        )}
+
+        {step === 'connect' && (
+          <ConnectStep onContinue={() => setStep(nextStep('connect'))} onBack={() => setStep(prevStep('connect'))} />
         )}
 
         {step === 'profile' && (
@@ -988,7 +993,7 @@ export function OnboardingApp() {
             {!loadingProfiles && profiles.length === 0 && (
               <div className="profile-empty">
                 <p>No Chromium browser profiles found.</p>
-                <button className="btn btn-primary" onClick={handleSkipProfile}>
+                <button type="button" className="ob-btn ob-btn--primary" onClick={handleSkipProfile}>
                   Continue without import
                 </button>
               </div>
@@ -1078,9 +1083,10 @@ export function OnboardingApp() {
                 />
 
                 <div className="apikey-actions">
-                  <MetalButton size="lg" onClick={() => setStep('apikey')}>
+                  <button type="button" className="ob-btn ob-btn--primary" onClick={() => setStep('apikey')}>
                     Continue
-                  </MetalButton>
+                    <ArrowRight />
+                  </button>
                 </div>
 
                 <button
@@ -1113,9 +1119,10 @@ export function OnboardingApp() {
 
         {step === 'apikey' && (
           <div className="step-panel">
-            <h1 className="step-title">Vendor setup</h1>
+            <h1 className="step-title">Choose your AI engine</h1>
             <p className="step-subtitle">
-              Install each provider CLI once, then sign in or add that provider&rsquo;s API key. Credentials are stored locally in the system keychain.
+              DEX thinks with Claude Code or Codex. Use the subscription you already have (Claude or ChatGPT), or an API key.
+              You need one — both is fine; pick per task later. Keys stay in Windows&rsquo; credential store.
             </p>
 
             {/* Installed + authed → selectable card. Click flips to configured state. */}
@@ -1190,7 +1197,7 @@ export function OnboardingApp() {
                     <button
                       type="button"
                       className="provider-card__action"
-                      onClick={IS_WINDOWS ? handleManualInstallClaudeCode : handleInstallClaudeCode}
+                      onClick={handleInstallClaudeCode}
                       disabled={installingClaudeCode}
                     >
                       <div className="claude-code-card__icon">
@@ -1198,16 +1205,12 @@ export function OnboardingApp() {
                       </div>
                       <div className="claude-code-card__text">
                         <div className="claude-code-card__title">
-                          {installingClaudeCode
-                            ? (IS_WINDOWS ? 'Waiting for Claude Code…' : 'Installing Claude Code…')
-                            : (IS_WINDOWS ? 'Copy install command' : 'Install Claude Code')}
+                          {installingClaudeCode ? 'Installing Claude Code…' : 'Install Claude Code'}
                         </div>
-                        <div className="claude-code-card__sub">
-                          {IS_WINDOWS
-                            ? (installingClaudeCode
-                              ? `Run ${ENGINE_INSTALL_COMMANDS['claude-code']} in your terminal — we’ll detect it when it finishes.`
-                              : `Click to copy ${ENGINE_INSTALL_COMMANDS['claude-code']}. Paste it into PowerShell, and we’ll detect when it finishes.`)
-                            : 'Runs the installer in the background. We’ll detect it when it finishes.'}
+                        <div className={`claude-code-card__sub${engineInstallError['claude-code'] ? ' claude-code-card__sub--error' : ''}`}>
+                          {installingClaudeCode
+                            ? 'Anthropic’s official installer, in the background — about a minute.'
+                            : engineInstallError['claude-code'] ?? 'One click — DEX installs it for you. Then sign in with your Claude account.'}
                         </div>
                       </div>
                       <div className="claude-code-card__chevron">{installingClaudeCode ? '\u2026' : '\u203A'}</div>
@@ -1230,7 +1233,7 @@ export function OnboardingApp() {
                         </button>
                       </div>
                       <div className="apikey-actions">
-                        <button className="btn btn-secondary" onClick={handleTestKey} disabled={!apiKey.trim() || testing}>
+                        <button type="button" className="ob-btn ob-btn--tonal" onClick={handleTestKey} disabled={!apiKey.trim() || testing}>
                           {testing ? 'Testing...' : 'Test Key'}
                         </button>
                       </div>
@@ -1287,7 +1290,7 @@ export function OnboardingApp() {
                     <button
                       type="button"
                       className="provider-card__action"
-                      onClick={IS_WINDOWS ? handleManualInstallCodex : handleInstallCodex}
+                      onClick={handleInstallCodex}
                       disabled={installingCodex}
                     >
                       <div className="claude-code-card__icon">
@@ -1295,16 +1298,12 @@ export function OnboardingApp() {
                       </div>
                       <div className="claude-code-card__text">
                         <div className="claude-code-card__title">
-                          {installingCodex
-                            ? (IS_WINDOWS ? 'Waiting for Codex…' : 'Installing Codex…')
-                            : (IS_WINDOWS ? 'Copy install command' : 'Install Codex CLI')}
+                          {installingCodex ? 'Installing Codex…' : 'Install Codex'}
                         </div>
-                        <div className="claude-code-card__sub">
-                          {IS_WINDOWS
-                            ? (installingCodex
-                              ? `Run ${ENGINE_INSTALL_COMMANDS.codex} in your terminal — we’ll detect it when it finishes.`
-                              : `Click to copy ${ENGINE_INSTALL_COMMANDS.codex}. Paste it into PowerShell, and we’ll detect when it finishes.`)
-                            : 'Runs the installer in the background. We’ll detect it when it finishes.'}
+                        <div className={`claude-code-card__sub${engineInstallError.codex ? ' claude-code-card__sub--error' : ''}`}>
+                          {installingCodex
+                            ? 'OpenAI’s official package, in the background — about a minute.'
+                            : engineInstallError.codex ?? 'One click — DEX installs it for you. Then sign in with your ChatGPT account.'}
                         </div>
                       </div>
                       <div className="claude-code-card__chevron">{installingCodex ? '\u2026' : '\u203A'}</div>
@@ -1378,7 +1377,7 @@ export function OnboardingApp() {
                         </button>
                       </div>
                       <div className="apikey-actions">
-                        <button className="btn btn-secondary" onClick={handleTestOpenaiKey} disabled={!openaiKey.trim() || openaiTesting}>
+                        <button type="button" className="ob-btn ob-btn--tonal" onClick={handleTestOpenaiKey} disabled={!openaiKey.trim() || openaiTesting}>
                           {openaiTesting ? 'Testing...' : 'Test Key'}
                         </button>
                       </div>
@@ -1388,23 +1387,20 @@ export function OnboardingApp() {
               </div>
             )}
 
-            <div className="apikey-actions apikey-actions--footer">
-              <MetalButton
-                size="lg"
-                className="apikey-continue-btn"
+            <StepFooter
+              onBack={() => setStep(prevStep('apikey'))}
+              hint={canContinueProviderSetup ? undefined : 'Set up Claude Code or Codex above to continue.'}
+            >
+              <button
+                type="button"
+                className="ob-btn ob-btn--primary"
                 onClick={handleStepSaveAndContinue}
                 disabled={!canContinueProviderSetup || stepSaving}
               >
-                {stepSaving ? 'Saving...' : 'Save & Continue'}
-              </MetalButton>
-            </div>
-
-            <button
-              className="back-btn"
-              onClick={() => setStep(COOKIE_SYNC_SUPPORTED ? 'profile' : 'avatar')}
-            >
-              Back
-            </button>
+                {stepSaving ? 'Saving…' : 'Continue'}
+                <ArrowRight />
+              </button>
+            </StepFooter>
           </div>
         )}
 
@@ -1465,9 +1461,10 @@ export function OnboardingApp() {
               {shortcutError ?? 'Press the shortcut to try it.'}
             </p>
 
-            <div className="apikey-actions">
+            <div className="apikey-actions shortcut-actions">
               <button
-                className="btn btn-secondary"
+                type="button"
+                className="ob-btn ob-btn--tonal"
                 onClick={(e) => {
                   if (shouldIgnoreRecordingClick(e)) return;
                   if (recording) {
@@ -1479,21 +1476,21 @@ export function OnboardingApp() {
               >
                 {recording ? 'Cancel' : 'Change shortcut'}
               </button>
-              <button className="btn btn-primary" onClick={handleFinish}>
-                Skip
-              </button>
             </div>
 
-            <button className="back-btn" onClick={() => setStep('notifications')}>
-              Back
-            </button>
+            <StepFooter onBack={() => setStep(prevStep('shortcut'))}>
+              <button type="button" className="ob-btn ob-btn--primary" onClick={handleFinish}>
+                Finish setup
+                <ArrowRight />
+              </button>
+            </StepFooter>
           </div>
         )}
 
         {step === 'notifications' && (
           <PreferencesStep
             onContinue={() => setStep('shortcut')}
-            onBack={() => setStep('notifications')}
+            onBack={() => setStep(prevStep('notifications'))}
           />
         )}
       </div>

@@ -117,3 +117,16 @@ describe('claude-code adapter spawn args', () => {
     expect(wrappedPrompt).not.toMatch(/When the user asks you to produce a file \(a report,/);
   });
 });
+
+describe('claude-code adapter streaming text', () => {
+  it('keeps whitespace-only deltas so words and table rows stay apart', async () => {
+    const adapter = await claudeCodeAdapter();
+    const ctx = { iter: 0, pendingTools: new Map(), harnessHelpersPath: '', harnessToolsPath: '', harnessSkillPath: '' };
+    const delta = (text: string) => JSON.stringify({ type: 'stream_event', event: { type: 'content_block_delta', delta: { type: 'text_delta', text } } });
+    const text = ['(114', ' ', 'users)', '\n', '| a |', '']
+      .flatMap((d) => adapter.parseLine(delta(d), ctx as never).events)
+      .map((e) => (e as { text: string }).text)
+      .join('');
+    expect(text).toBe('(114 users)\n| a |');
+  });
+});

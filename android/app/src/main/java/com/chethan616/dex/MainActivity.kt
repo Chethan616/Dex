@@ -21,11 +21,15 @@ class MainActivity : ComponentActivity() {
   /** A session to open, from a notification tap. Consumed by the nav host. */
   private val openSession = MutableStateFlow<String?>(null)
 
+  /** Something shared into DEX from another app. Consumed by the home screen. */
+  private val shared = MutableStateFlow<com.chethan616.dex.share.SharedContent?>(null)
+
   override fun onCreate(savedInstanceState: Bundle?) {
     installSplashScreen()
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
     openSession.value = intent.getStringExtra(Notifications.EXTRA_SESSION_ID)
+    shared.value = com.chethan616.dex.share.SharedContent.from(intent)
 
     val c = container
     setContent {
@@ -34,7 +38,7 @@ class MainActivity : ComponentActivity() {
       DexTheme(mode = theme, dynamicColor = dynamic) {
         val haptics = rememberHaptics { c.prefs.haptics.value }
         CompositionLocalProvider(LocalHaptics provides haptics) {
-          DexRoot(container = c, openSession = openSession)
+          DexRoot(container = c, openSession = openSession, shared = shared)
         }
       }
     }
@@ -43,5 +47,6 @@ class MainActivity : ComponentActivity() {
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     intent.getStringExtra(Notifications.EXTRA_SESSION_ID)?.let { openSession.value = it }
+    com.chethan616.dex.share.SharedContent.from(intent)?.let { shared.value = it }
   }
 }

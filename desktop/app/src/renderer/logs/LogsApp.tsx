@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TerminalPane } from '../hub/TerminalPane';
 import { FileRow, type FileOutputEntry } from './FileRow';
 import { ChatTranscript, type SessionHistory } from './ChatTranscript';
+import { useChatAttachments } from './useChatAttachments';
+import { formatBytes } from '../../shared/attachments';
 import { AgentAvatar, Orb, Segmented } from '../components/lib';
 
 type LogsView = 'chat' | 'raw';
@@ -39,7 +41,11 @@ declare global {
       onModeChanged: (cb: (mode: 'dot' | 'normal' | 'full') => void) => () => void;
       onActiveSessionChanged: (cb: (id: string | null) => void) => () => void;
       onFocusFollowUp: (cb: () => void) => () => void;
-      followUp: (sessionId: string, prompt: string) => Promise<{ resumed?: boolean; queued?: boolean; error?: string }>;
+      followUp: (
+        sessionId: string,
+        prompt: string,
+        attachments?: Array<{ name: string; mime: string; bytes: Uint8Array }>,
+      ) => Promise<{ resumed?: boolean; queued?: boolean; error?: string }>;
     };
   }
 }
@@ -79,6 +85,11 @@ export function LogsApp(): React.ReactElement {
   const [caret, setCaret] = useState(0);
   const [history, setHistory] = useState<SessionHistory | null>(null);
   const [view, setViewState] = useState<LogsView>(readView);
+  // Files for the follow-up: picked, dropped anywhere on the window, or pasted.
+  const attach = useChatAttachments();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
   // The terminal is mounted lazily, the first time Raw is shown, then kept.
   const [rawOpened, setRawOpened] = useState(() => readView() === 'raw');
   useEffect(() => { if (view === 'raw') setRawOpened(true); }, [view]);
@@ -232,13 +243,17 @@ export function LogsApp(): React.ReactElement {
   const sendFollowUp = useCallback(async () => {
     if (!sessionId) return;
     const trimmed = input.trim();
-    if ((!trimmed && !(command && !command.requiresArg)) || sending) return;
+    const hasFiles = attach.items.length > 0;
+    if ((!trimmed && !hasFiles && !(command && !command.requiresArg)) || sending) return;
     // Same command rule as everywhere else: a committed chip expands through
     // its command, otherwise a leading slash is expanded here.
-    const prompt = command ? command.expand(trimmed) : expandSlashCommand(trimmed).prompt;
+    const expanded = command ? command.expand(trimmed) : expandSlashCommand(trimmed).prompt;
+    const prompt = expanded.trim() || (attach.items.length === 1 ? `Here's ${attach.items[0].name}.` : 'Here are the attached files.');
     setSending(true);
     try {
-      await window.logsAPI.followUp(sessionId, prompt);
+      const result = await window.logsAPI.followUp(sessionId, prompt, attach.items.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })));
+      if (result?.error) throw new Error(result.error);
+      attach.clear();
       setInput('');
       setCommand(null);
       setCaret(0);
@@ -248,7 +263,7 @@ export function LogsApp(): React.ReactElement {
     } finally {
       setSending(false);
     }
-  }, [sessionId, input, command, sending]);
+  }, [sessionId, input, command, sending, attach]);
 
   const slashHints = command ? [] : matchingCommands(input);
   const mentionHints = matchingMentions(input, caret);
@@ -321,7 +336,23 @@ export function LogsApp(): React.ReactElement {
   }
 
   return (
-    <div className={`logs-root${mode === 'full' ? ' logs-root--full' : ''}`}>
+    <div
+      className={`logs-root${mode === 'full' ? ' logs-root--full' : ''}${dragging ? ' logs-root--drop' : ''}`}
+      onDragEnter={(e) => { if (!sessionId || !e.dataTransfer.types.includes('Files')) return; dragDepth.current += 1; setDragging(true); }}
+      onDragLeave={() => { dragDepth.current = Math.max(0, dragDepth.current - 1); if (dragDepth.current === 0) setDragging(false); }}
+      onDragOver={(e) => { if (sessionId && e.dataTransfer.types.includes('Files')) e.preventDefault(); }}
+      onDrop={(e) => {
+        e.preventDefault();
+        dragDepth.current = 0;
+        setDragging(false);
+        if (sessionId && e.dataTransfer.files.length) void attach.add(e.dataTransfer.files);
+      }}
+    >
+      {dragging && (
+        <div className="logs-drop" aria-hidden="true">
+          <div className="logs-drop__card">Drop to attach to your follow-up</div>
+        </div>
+      )}
       <header className="logs-header">
         <div className="logs-header__who">
           {sessionId ? (
@@ -434,7 +465,31 @@ export function LogsApp(): React.ReactElement {
         <form
           className="logs-followup"
           onSubmit={(e) => { e.preventDefault(); void sendFollowUp(); }}
+          onPasteCapture={(e) => {
+            // A screenshot pasted into the box becomes an attachment, not text.
+            if (e.clipboardData.files.length > 0) {
+              e.preventDefault();
+              void attach.add(e.clipboardData.files);
+            }
+          }}
         >
+          {attach.items.length > 0 && (
+            <div className="logs-attach">
+              {attach.items.map((a) => (
+                <div key={a.id} className="logs-attach__chip" title={a.name}>
+                  {a.preview
+                    ? <img className="logs-attach__thumb" src={a.preview} alt="" />
+                    : <span className="logs-attach__icon" aria-hidden="true">{a.mime === 'application/pdf' ? '📄' : '📎'}</span>}
+                  <span className="logs-attach__name">{a.name}</span>
+                  <span className="logs-attach__size">{formatBytes(a.bytes.byteLength)}</span>
+                  <button type="button" className="logs-attach__remove" aria-label={`Remove ${a.name}`} onMouseDown={preventButtonFocus} onClick={() => attach.remove(a.id)}>
+                    <svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {attach.error && <div className="logs-attach__error" role="alert">{attach.error}</div>}
           {command && <CommandChip command={command} onRemove={() => setCommand(null)} />}
           <CommandHints hints={slashHints} onPick={commitCommand} />
           <MentionHints hints={mentionHints} onPick={pickMention} />
@@ -455,10 +510,30 @@ export function LogsApp(): React.ReactElement {
               disabled={!sessionId || sending}
               ariaLabel="Follow up"
             />
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              hidden
+              onChange={(e) => { if (e.target.files?.length) void attach.add(e.target.files); e.target.value = ''; }}
+            />
+            <button
+              type="button"
+              className="logs-followup__attach"
+              disabled={!sessionId || sending}
+              aria-label="Attach files"
+              title="Attach files — or drop them on the window, or paste a screenshot"
+              onMouseDown={preventButtonFocus}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" d="M20.5 11.5l-8.2 8.2a5.3 5.3 0 01-7.5-7.5l8.6-8.6a3.5 3.5 0 015 5l-8.6 8.6a1.8 1.8 0 01-2.5-2.5l7.9-7.9" />
+              </svg>
+            </button>
             <button
               type="submit"
               className="logs-followup__send"
-              disabled={!sessionId || sending || (!input.trim() && !(command && !command.requiresArg))}
+              disabled={!sessionId || sending || (!input.trim() && attach.items.length === 0 && !(command && !command.requiresArg))}
               aria-label="Send follow-up"
               onMouseDown={preventButtonFocus}
             >

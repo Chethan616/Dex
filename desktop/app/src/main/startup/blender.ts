@@ -1,13 +1,32 @@
 /**
  * Where Blender is installed, for the agent (DEX_BLENDER) and the Blender
- * connection. The MCP server drives a *running* Blender over a local socket;
- * the agent starts it with `dex-blender open`, and uses the same exe for
- * headless work (`"$DEX_BLENDER" -b file.blend -P script.py`).
+ * connection. The Blender tools drive a Blender that runs in the background
+ * with no window (mcp-servers/blender), and `dex-blender run/render` use the
+ * same exe for one-off headless work.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 
+/**
+ * Where the background Blenders keep each task's scene (<home>/<session>/
+ * scene.blend, autosaved) — mcp-servers/blender and `dex-blender` agree on it.
+ */
+export function blenderHome(): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { app } = require('electron') as typeof import('electron');
+    return path.join(app.getPath('userData'), 'blender');
+  } catch {
+    return path.join(process.env.APPDATA ?? process.cwd(), 'DEX', 'blender');
+  }
+}
+
 let cached: string | null | undefined;
+
+/** Look again next time — Blender may have just been installed. */
+export function resetBlenderCache(): void {
+  cached = undefined;
+}
 
 /** Newest blender.exe under the usual install roots, or null. */
 export function findBlender(): string | null {

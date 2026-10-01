@@ -19,8 +19,8 @@ import { EventEmitter } from 'node:events';
 import type { WebContents, Debugger } from 'electron';
 import WebSocket from 'ws';
 import { mainLogger } from '../logger';
+import { leaseDebugger } from '../cdpLease';
 
-const CDP_PROTOCOL_VERSION = '1.3';
 
 export interface CdpClient {
   send(method: string, params?: Record<string, unknown>, sessionId?: string | null): Promise<unknown>;
@@ -38,6 +38,7 @@ class WebContentsCdpClient extends EventEmitter implements CdpClient {
   readonly transport = 'webcontents' as const;
   private dbg: Debugger;
   private attached = false;
+  private release: (() => void) | null = null;
   private onMessage = (_e: Electron.Event, method: string, params: unknown, sessionId?: string) => {
     this.emit(method, params, sessionId);
   };
@@ -54,10 +55,11 @@ class WebContentsCdpClient extends EventEmitter implements CdpClient {
 
   attach(): void {
     if (this.attached) return;
+    // Leased, so this client's close() can't detach the agent's broker (cdpLease.ts).
     try {
-      this.dbg.attach(CDP_PROTOCOL_VERSION);
+      this.release = leaseDebugger(this.wc);
     } catch (err) {
-      mainLogger.debug('hl.cdp.webcontents.alreadyAttached', { error: (err as Error).message });
+      mainLogger.debug('hl.cdp.webcontents.attachFailed', { error: (err as Error).message });
     }
     this.dbg.removeListener('message', this.onMessage);
     this.dbg.removeListener('detach', this.onDetach);
@@ -76,9 +78,8 @@ class WebContentsCdpClient extends EventEmitter implements CdpClient {
   }
 
   async close(): Promise<void> {
-    if (this.attached) {
-      try { this.dbg.detach(); } catch { /* ignore */ }
-    }
+    this.release?.();
+    this.release = null;
     this.dbg.removeListener('message', this.onMessage);
     this.dbg.removeListener('detach', this.onDetach);
     this.attached = false;

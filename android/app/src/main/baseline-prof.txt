@@ -1,0 +1,22 @@
+# Baseline profile: code ART compiles ahead of time when the app is installed,
+# instead of interpreting and JIT-compiling it during the first runs of each
+# screen (that's the "janky until it warms up" feel of a fresh Compose app).
+# The Compose libraries ship rules for their own internals; these add DEX's
+# code and the parts of the UI stack its screens lean on hardest.
+# Wildcards are expanded against the final dex at build time (R8 names too).
+
+# DEX itself: every screen, component, avatar and the data layer.
+HSPLcom/chethan616/dex/**;->**(**)**
+Lcom/chethan616/dex/**;
+
+# Material 3 Expressive: shapes, morphs, loading indicator, buttons, sheets.
+HSPLandroidx/compose/material3/**;->**(**)**
+Landroidx/compose/material3/**;
+HSPLandroidx/graphics/shapes/**;->**(**)**
+Landroidx/graphics/shapes/**;
+
+# Animation and navigation: every screen change and spring goes through these.
+HSPLandroidx/compose/animation/**;->**(**)**
+Landroidx/compose/animation/**;
+HSPLandroidx/navigation/**;->**(**)**
+Landroidx/navigation/**;

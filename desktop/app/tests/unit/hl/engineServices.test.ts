@@ -22,7 +22,7 @@ describe('connected services for Codex / BrowserCode', () => {
   it('registers each server with Codex via the launcher — paths only, no tokens', () => {
     const args = codexMcpOverrides(connected);
     expect(args).toContain(`mcp_servers.dex_google.args=['C:\\Program Files\\DEX\\mcp-servers\\launch.mjs','C:\\Users\\me\\AppData\\Roaming\\DEX\\harness\\mcp.json','google']`);
-    expect(args).toContain(`mcp_servers.dex_google.env={ELECTRON_RUN_AS_NODE='1'}`);
+    expect(args).toContain(`mcp_servers.dex_google.env={ELECTRON_RUN_AS_NODE='1',DEX_SESSION_ID='s1'}`);
     expect(args.join(' ')).not.toMatch(/TOKEN|SECRET/);
   });
 

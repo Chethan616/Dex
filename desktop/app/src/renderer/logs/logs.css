@@ -277,6 +277,90 @@ html, body {
   gap: 8px;
 }
 
+/* Attach: paperclip, chips above the input, and a drop target over the window. */
+.logs-followup__attach {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.logs-followup__attach:hover:not(:disabled) { background: var(--surface-chip, rgba(125, 125, 125, 0.12)); color: var(--color-fg-primary); }
+.logs-followup__attach:disabled { opacity: 0.4; cursor: default; }
+
+.logs-attach {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.logs-attach__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 260px;
+  padding: 4px 6px 4px 4px;
+  border-radius: 12px;
+  background: var(--surface-chip, rgba(125, 125, 125, 0.12));
+  box-shadow: inset 0 0 0 1px var(--line-chip, rgba(125, 125, 125, 0.25));
+  font-size: 12px;
+  color: var(--color-fg-primary);
+  animation: logs-chip-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.logs-attach__thumb { width: 28px; height: 28px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+.logs-attach__icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: rgba(125, 211, 252, 0.12); flex-shrink: 0; }
+.logs-attach__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logs-attach__size { color: var(--color-fg-secondary); flex-shrink: 0; }
+.logs-attach__remove {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.logs-attach__remove:hover { background: rgba(125, 125, 125, 0.2); color: var(--color-fg-primary); }
+.logs-attach__error { font-size: 12px; color: var(--color-danger, #f87171); }
+
+.logs-drop {
+  position: absolute;
+  inset: 8px;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--color-accent-default);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--color-bg-base, #111) 78%, transparent);
+  pointer-events: none;
+  animation: logs-chip-in 140ms ease both;
+}
+.logs-drop__card {
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--surface-chip, rgba(125, 125, 125, 0.16));
+  color: var(--color-fg-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+.logs-root { position: relative; }
+
+@keyframes logs-chip-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logs-attach__chip, .logs-drop { animation: none; }
+}
+
 /* The ended state has a single centred label, no rows. */
 .logs-followup--ended {
   flex-direction: row;
