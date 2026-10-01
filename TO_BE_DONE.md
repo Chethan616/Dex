@@ -588,8 +588,8 @@ PLAN §3.7, plus Codex's note format in Appendix B. The format matters: the mode
 
 `android/` holds a Jetpack Compose app (material3 `1.5.0-alpha29`, M3 Expressive), package `com.chethan616.dex`. It pairs with the PC over the Firebase bridge.
 
-**State at hand-over:** **1.0.22** (versionCode 23).
-- It's published as `DEX-android-1.0.22.apk` on the GitHub release **v3.2.0** (desktop 3.2.0), which is `releases/latest`.
+**State at hand-over:** **1.0.23** (versionCode 24).
+- It's published as `DEX-android-1.0.23.apk` on the GitHub release **v3.2.0** (desktop 3.2.0), which is `releases/latest`.
 - The app updates itself from GitHub Releases, like the desktop:
   - `update/ReleaseChecker.kt` reads `releases/latest` and looks for an asset named `DEX-android-<version>.apk`;
   - `update/AppUpdater.kt` downloads it inside the app, checks it's DEX at that version and signed with the same key, then opens Android's installer (`REQUEST_INSTALL_PACKAGES`; the FileProvider `updates/` path);

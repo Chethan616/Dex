@@ -30,8 +30,18 @@ import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.chethan616.dex.ui.components.ShapeBadge
+import com.chethan616.dex.ui.components.springPress
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -142,30 +152,84 @@ fun AttachMenu(
   extraLabel: String? = null,
   onExtra: (() -> Unit)? = null,
 ) {
+  DropdownMenu(
+    expanded = expanded,
+    onDismissRequest = onDismiss,
+    shape = RoundedCornerShape(28.dp),
+    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+  ) {
+    AttachMenuCard(pickers, onDismiss, extraLabel, onExtra)
+  }
+}
+
+/**
+ * The "+" menu's card, the same family as the agent picker (AgentPicker.kt):
+ * the three ways to attach as big tinted tiles, each icon on its own
+ * Material shape, and "More options" as a row under them. Nothing in it
+ * moves on its own; the tiles squish under a finger.
+ */
+@Composable
+private fun AttachMenuCard(pickers: AttachPickers, onDismiss: () -> Unit, extraLabel: String?, onExtra: (() -> Unit)?) {
   val haptics = LocalHaptics.current
-  DropdownMenu(expanded = expanded, onDismissRequest = onDismiss, shape = RoundedCornerShape(20.dp)) {
-    DropdownMenuItem(
-      text = { Text("Photos") },
-      leadingIcon = { Icon(Icons.Rounded.PhotoLibrary, null) },
-      onClick = { haptics.tick(); onDismiss(); pickers.photos() },
-    )
-    DropdownMenuItem(
-      text = { Text("Camera") },
-      leadingIcon = { Icon(Icons.Rounded.PhotoCamera, null) },
-      onClick = { haptics.tick(); onDismiss(); pickers.camera() },
-    )
-    DropdownMenuItem(
-      text = { Text("Files") },
-      leadingIcon = { Icon(Icons.Rounded.FolderOpen, null) },
-      onClick = { haptics.tick(); onDismiss(); pickers.files() },
-    )
+  val scheme = MaterialTheme.colorScheme
+  fun pick(action: () -> Unit) { haptics.tick(); onDismiss(); action() }
+  Column(Modifier.width(304.dp).padding(horizontal = 12.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Text("Attach", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      AttachTile(Icons.Rounded.PhotoLibrary, "Photos", MaterialShapes.Cookie9Sided, scheme.primaryContainer, scheme.onPrimaryContainer, Modifier.weight(1f)) { pick(pickers.photos) }
+      AttachTile(Icons.Rounded.PhotoCamera, "Camera", MaterialShapes.Clover4Leaf, scheme.tertiaryContainer, scheme.onTertiaryContainer, Modifier.weight(1f)) { pick(pickers.camera) }
+      AttachTile(Icons.Rounded.FolderOpen, "Files", MaterialShapes.Sunny, scheme.secondaryContainer, scheme.onSecondaryContainer, Modifier.weight(1f)) { pick(pickers.files) }
+    }
     if (extraLabel != null && onExtra != null) {
-      androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp))
-      DropdownMenuItem(
-        text = { Text(extraLabel) },
-        leadingIcon = { Icon(Icons.Rounded.Tune, null) },
-        onClick = { haptics.tick(); onDismiss(); onExtra() },
-      )
+      val press = remember { MutableInteractionSource() }
+      Surface(
+        onClick = { pick(onExtra) },
+        shape = RoundedCornerShape(20.dp),
+        color = scheme.surfaceContainerHighest,
+        interactionSource = press,
+        modifier = Modifier.fillMaxWidth().springPress(press, 0.97f),
+      ) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+          ShapeBadge(MaterialShapes.Pill, scheme.secondaryContainer, 36.dp) {
+            Icon(Icons.Rounded.Tune, null, tint = scheme.onSecondaryContainer, modifier = Modifier.size(18.dp))
+          }
+          Spacer(Modifier.size(12.dp))
+          Column(Modifier.weight(1f)) {
+            Text(extraLabel, style = MaterialTheme.typography.titleSmall)
+            Text("Agent, model and more room to write", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+          }
+          Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = scheme.onSurfaceVariant)
+        }
+      }
+    }
+  }
+}
+
+/** One way to attach: its icon on a shape of its own, the word under it. */
+@Composable
+private fun AttachTile(
+  icon: androidx.compose.ui.graphics.vector.ImageVector,
+  label: String,
+  shape: androidx.graphics.shapes.RoundedPolygon,
+  container: Color,
+  content: Color,
+  modifier: Modifier = Modifier,
+  onClick: () -> Unit,
+) {
+  val press = remember { MutableInteractionSource() }
+  Surface(
+    onClick = onClick,
+    shape = RoundedCornerShape(22.dp),
+    color = container,
+    interactionSource = press,
+    modifier = modifier.height(96.dp).springPress(press, 0.92f).semantics { contentDescription = label },
+  ) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+      ShapeBadge(shape, content.copy(alpha = 0.12f), 46.dp) {
+        Icon(icon, null, tint = content, modifier = Modifier.size(22.dp))
+      }
+      Spacer(Modifier.size(8.dp))
+      Text(label, style = MaterialTheme.typography.labelLarge, color = content, maxLines = 1)
     }
   }
 }
