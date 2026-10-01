@@ -1,6 +1,6 @@
 # Unify — one live workspace per task
 
-**Branch:** `unify` · **Status:** plan, researched (no product code yet) · **Written:** 2026-09-29–30
+**Branch:** `unify` · **Status:** P0, P1 (core), the chat (§3.12) and P2 built; P3–P5 to do — see [`TO_BE_DONE.md`](../../TO_BE_DONE.md) at the repo root · **Written:** 2026-09-29–30, status 2026-10-01
 
 Each DEX task gets a single **workspace**: tabs holding web pages, documents and a New-tab page. You and DEX work in the same live tabs at the same time. DEX's clicks show as a small cursor. You can type any URL, use Chrome extensions, and open the .docx or .pdf the agent just wrote, right next to the page it came from.
 
