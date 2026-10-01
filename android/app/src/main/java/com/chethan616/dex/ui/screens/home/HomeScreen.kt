@@ -147,6 +147,16 @@ fun HomeScreen(
   // The inline prompt bar sends straight away and follows the command until
   // the PC answers with a session id — then opens that session.
   val scope = rememberCoroutineScope()
+  // The first time Home appears (after the tour, sign-in, or a fresh launch)
+  // its cards bounce in one after another. Not again when you come back to it.
+  var entered by rememberSaveable { mutableStateOf(false) }
+  val entrance = remember { Animatable(if (entered) 1f else 0f) }
+  LaunchedEffect(Unit) {
+    if (!entered) {
+      entrance.animateTo(1f, tween(1150, easing = androidx.compose.animation.core.LinearEasing))
+      entered = true
+    }
+  }
   var sending by remember { mutableStateOf(false) }
   var sendStatus by remember { mutableStateOf<String?>(null) }
   fun startTask(prompt: String, engine: String?, model: String?) {
@@ -278,11 +288,12 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize(),
       ) {
-        item(key = "header") { Header(account, onOpenSettings) }
-        update?.let { u -> item(key = "update") { UpdateBanner(u) } }
-        item(key = "desktop") { DesktopCard(state.desktop, state.loading) }
+        item(key = "header") { Box(Modifier.cascade(entrance, 0)) { Header(account, onOpenSettings, sharedScope, animatedScope) } }
+        update?.let { u -> item(key = "update") { Box(Modifier.cascade(entrance, 1)) { UpdateBanner(u) } } }
+        item(key = "desktop") { Box(Modifier.cascade(entrance, 1)) { DesktopCard(state.desktop, state.loading) } }
         item(key = "composer") {
           PromptBar(
+            modifier = Modifier.cascade(entrance, 2),
             engines = state.desktop?.engines?.takeIf { it.isNotEmpty() } ?: FALLBACK_ENGINES,
             initialEngine = container.prefs.lastEngine.value,
             busy = sending,
@@ -297,7 +308,8 @@ fun HomeScreen(
         item(key = "suggestions") {
           LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(SUGGESTIONS.size) { i ->
-              SuggestionTile(SUGGESTIONS[i], i) { haptics.tick(); openComposer(SUGGESTIONS[i].prompt) }
+              Box(Modifier.cascade(entrance, 3 + i))
+              { SuggestionTile(SUGGESTIONS[i], i) { haptics.tick(); openComposer(SUGGESTIONS[i].prompt) } }
             }
           }
         }
@@ -309,7 +321,7 @@ fun HomeScreen(
         }
 
         if (state.needsYou.isNotEmpty()) {
-          item(key = "h-needs") { SectionTitle("Needs you", state.needsYou.size) }
+          item(key = "h-needs") { Box(Modifier.cascade(entrance, 5)) { SectionTitle("Needs you", state.needsYou.size) } }
           items(state.needsYou, key = { "n-" + it.id }) { s ->
             Box(Modifier.animateItem()) {
               ApprovalCard(s, onOpen = { onOpenSession(s.id) }, onAnswer = { ok ->
@@ -320,7 +332,7 @@ fun HomeScreen(
           }
         }
         if (state.running.isNotEmpty()) {
-          item(key = "h-running") { SectionTitle("Running", state.running.size) }
+          item(key = "h-running") { Box(Modifier.cascade(entrance, 6)) { SectionTitle("Running", state.running.size) } }
           items(state.running, key = { "r-" + it.id }) { s ->
             Box(Modifier.animateItem()) {
               RunningCard(s, sharedScope, animatedScope) { haptics.tick(); onOpenSession(s.id) }
@@ -328,7 +340,7 @@ fun HomeScreen(
           }
         }
         if (state.recent.isNotEmpty()) {
-          item(key = "h-recent") { SectionTitle("Recent", null) }
+          item(key = "h-recent") { Box(Modifier.cascade(entrance, 7)) { SectionTitle("Recent", null) } }
           item(key = "recent") {
             // One grouped card: tight 3dp seams, big outer corners.
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -364,7 +376,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun Header(account: Account, onOpenSettings: () -> Unit) {
+private fun Header(account: Account, onOpenSettings: () -> Unit, sharedScope: SharedTransitionScope, animatedScope: AnimatedVisibilityScope) {
   val haptics = LocalHaptics.current
   val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
   val greeting = when (hour) { in 5..11 -> "Good morning"; in 12..16 -> "Good afternoon"; in 17..21 -> "Good evening"; else -> "Up late" }
@@ -380,16 +392,29 @@ private fun Header(account: Account, onOpenSettings: () -> Unit) {
   }
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
     ShapeBadge(backdrop, tone, 64.dp, spinMs = 30_000) {
-      com.chethan616.dex.ui.profile.DexAvatar(size = 50.dp, mood = if (hello) BotMood.Happy else BotMood.Idle)
+      com.chethan616.dex.ui.profile.DexAvatar(
+        size = 50.dp,
+        mood = if (hello) BotMood.Happy else BotMood.Idle,
+        modifier = with(sharedScope) { Modifier.sharedElement(rememberSharedContentState(com.chethan616.dex.ui.screens.settings.MY_DEX), animatedScope) },
+      )
     }
     Spacer(Modifier.size(12.dp))
     Column(Modifier.weight(1f)) {
       Text(greeting + ",", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
       Text(account.firstName, style = MaterialTheme.typography.headlineLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
+    // The gear is the Settings screen, small: it grows into it (sharedBounds).
     FilledTonalIconButton(
       onClick = { haptics.click(); onOpenSettings() },
       shapes = IconButtonDefaults.shapes(),
+      modifier = with(sharedScope) {
+        Modifier.sharedBounds(
+          rememberSharedContentState(com.chethan616.dex.ui.screens.settings.SETTINGS_BOUNDS),
+          animatedScope,
+          resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(),
+          clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(32.dp)),
+        )
+      },
     ) { Icon(Icons.Rounded.Settings, "Settings") }
   }
 }
@@ -600,6 +625,26 @@ private fun SessionRow(
       }
     }
   }
+}
+
+/**
+ * One step of Home's entrance cascade: item `index` rises from a little below,
+ * overshoots and settles, as `entrance` runs 0 → 1. Drawn in the layer only —
+ * no relayout per frame, so it stays smooth.
+ */
+private fun Modifier.cascade(entrance: Animatable<Float, *>, index: Int): Modifier = graphicsLayer {
+  val start = index * 0.07f
+  val t = ((entrance.value - start) / 0.45f).coerceIn(0f, 1f)
+  // easeOutBack: past the mark, then back.
+  val c1 = 1.70158f
+  val c3 = c1 + 1f
+  val u = t - 1f
+  val eased = 1f + c3 * u * u * u + c1 * u * u
+  alpha = t
+  translationY = (1f - eased) * 56.dp.toPx()
+  val s = 0.92f + 0.08f * eased
+  scaleX = s
+  scaleY = s
 }
 
 /** A suggestion: its icon on a shape of its own, the label under it; it bounces when tapped. */

@@ -99,7 +99,6 @@ fun NewTaskSheet(
   var text by remember(prefill) { mutableStateOf(prefill) }
   var engine by remember { mutableStateOf(engines.firstOrNull { it.id == lastEngine } ?: engines.first()) }
   var model by remember(engine) { mutableStateOf<String?>(null) }
-  var modelMenu by remember { mutableStateOf(false) }
   var state by remember { mutableStateOf<SendState>(SendState.Idle) }
   val focus = remember { FocusRequester() }
   LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
@@ -203,41 +202,11 @@ fun NewTaskSheet(
       )
 
       Text("Agent", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween), modifier = Modifier.fillMaxWidth()) {
-        engines.forEachIndexed { i, e ->
-          ToggleButton(
-            checked = engine.id == e.id,
-            onCheckedChange = { haptics.tick(); engine = e },
-            shapes = when (i) {
-              0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-              engines.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-              else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-            },
-            // Three across a phone: the default padding leaves "Claude" clipped.
-            contentPadding = PaddingValues(horizontal = 8.dp),
-            modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-          ) {
-            BotAvatar(type = botTypeFor(e.id), mood = if (engine.id == e.id) BotMood.Working else BotMood.Idle, size = 20.dp, interactive = false)
-            Spacer(Modifier.size(6.dp))
-            Text(e.shortName, maxLines = 1, softWrap = false)
-          }
-        }
-      }
+      com.chethan616.dex.ui.components.AgentToggleRow(engines, engine.id, onSelect = { engine = it }, modifier = Modifier.fillMaxWidth())
 
       if (engine.models.isNotEmpty()) {
-        Box {
-          TextButton(onClick = { haptics.tick(); modelMenu = true }) {
-            Icon(Icons.Rounded.Tune, null, Modifier.size(18.dp))
-            Spacer(Modifier.size(8.dp))
-            Text("Model: " + (engine.models.firstOrNull { it.id == model }?.label ?: "Default"))
-          }
-          DropdownMenu(expanded = modelMenu, onDismissRequest = { modelMenu = false }, shape = RoundedCornerShape(20.dp)) {
-            DropdownMenuItem(text = { Text("Default") }, onClick = { model = null; modelMenu = false; haptics.tick() })
-            engine.models.forEach { m ->
-              DropdownMenuItem(text = { Text(m.label) }, onClick = { model = m.id; modelMenu = false; haptics.tick() })
-            }
-          }
-        }
+        Text("Model", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        com.chethan616.dex.ui.components.ModelChips(engine, model, onPick = { model = it }, maxHeight = 120.dp)
       }
 
       AnimatedContent(

@@ -69,7 +69,14 @@ import com.chethan616.dex.ui.theme.LocalStatusColors
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen(container: AppContainer, account: Account, onBack: () -> Unit, onOpenTour: () -> Unit = {}) {
+fun SettingsScreen(
+  container: AppContainer,
+  account: Account,
+  onBack: () -> Unit,
+  onOpenTour: () -> Unit = {},
+  sharedScope: androidx.compose.animation.SharedTransitionScope? = null,
+  animatedScope: androidx.compose.animation.AnimatedVisibilityScope? = null,
+) {
   val haptics = LocalHaptics.current
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
@@ -89,7 +96,20 @@ fun SettingsScreen(container: AppContainer, account: Account, onBack: () -> Unit
 
   // A Surface, not a background modifier: it also sets the content colour, so
   // the title and back arrow are onSurface instead of the default black.
-  Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
+  // The screen is the gear on Home, grown to fill the window.
+  val growFromGear = if (sharedScope != null && animatedScope != null) {
+    with(sharedScope) {
+      Modifier.sharedBounds(
+        rememberSharedContentState(SETTINGS_BOUNDS),
+        animatedScope,
+        enter = androidx.compose.animation.fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+        exit = androidx.compose.animation.fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
+        resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.scaleToBounds(),
+        clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(32.dp)),
+      )
+    }
+  } else Modifier
+  Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize().then(growFromGear)) {
   Column(
     Modifier
       .fillMaxSize()
@@ -112,7 +132,14 @@ fun SettingsScreen(container: AppContainer, account: Account, onBack: () -> Unit
           MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f),
           76.dp,
           spinMs = 36_000,
-        ) { com.chethan616.dex.ui.profile.DexAvatar(size = 58.dp) }
+        ) {
+          com.chethan616.dex.ui.profile.DexAvatar(
+            size = 58.dp,
+            modifier = if (sharedScope != null && animatedScope != null) {
+              with(sharedScope) { Modifier.sharedElement(rememberSharedContentState(MY_DEX), animatedScope) }
+            } else Modifier,
+          )
+        }
         Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
           Text(profile?.name ?: account.displayName, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -361,6 +388,10 @@ private fun SettingRow(icon: ImageVector, title: String, subtitle: String, onCli
     }
   }
 }
+
+/** Shared with Home's header: the gear becomes this screen, your DEX flies across. */
+const val SETTINGS_BOUNDS = "settings-bounds"
+const val MY_DEX = "my-dex"
 
 private val ROW_SHAPES = listOf(
   androidx.compose.material3.MaterialShapes.Cookie4Sided,

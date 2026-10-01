@@ -80,41 +80,10 @@ import com.chethan616.dex.ui.theme.LocalIsDark
 import com.jakubantalik.thinkingorbs.OrbState
 
 /*
- * Components carried over from the desktop app so the two feel like one
- * product: the metal "New" badge and the prompt bar itself (TaskInput) with
- * its chips. Its send button is the phone's own, M3 Expressive
- * (SendButton.kt).
+ * Carried over from the desktop app so the two feel like one product: the
+ * prompt bar (TaskInput) with its chips. Its send button and agent picker are
+ * the phone's own, M3 Expressive (SendButton.kt, AgentPicker.kt).
  */
-
-/** The metal "New" pill (desktop NewBadge / menu-new-pill): brushed silver with a passing sheen. */
-@Composable
-fun MetalNewBadge(label: String = "New", modifier: Modifier = Modifier) {
-  val sheen by rememberInfiniteTransition(label = "sheen").animateFloat(
-    initialValue = -1f,
-    targetValue = 2f,
-    animationSpec = infiniteRepeatable(tween(2800, easing = LinearEasing), RepeatMode.Restart),
-    label = "x",
-  )
-  Box(
-    modifier
-      .clip(RoundedCornerShape(50))
-      .background(Brush.verticalGradient(listOf(Color(0xFFFDFDFD), Color(0xFFD9DADE), Color(0xFFB9BBC1), Color(0xFFECEEF1))))
-      .drawWithContent {
-        drawContent()
-        val w = size.width
-        drawRect(
-          Brush.linearGradient(
-            listOf(Color.Transparent, Color.White.copy(alpha = 0.85f), Color.Transparent),
-            start = Offset(sheen * w - w * 0.3f, 0f),
-            end = Offset(sheen * w + w * 0.3f, size.height),
-          ),
-        )
-      }
-      .padding(horizontal = 8.dp, vertical = 2.dp),
-  ) {
-    Text(label, color = Color(0xFF2A2B2F), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-  }
-}
 
 /** A chip in the prompt bar's action row (desktop .task-input__plus / engine toggle). */
 @Composable
@@ -130,18 +99,11 @@ private fun BarChip(onClick: () -> Unit, modifier: Modifier = Modifier, content:
   }
 }
 
-private val ENGINE_BLURB = mapOf(
-  "claude-code" to "Anthropic’s coding agent",
-  "codex" to "OpenAI’s coding agent",
-  "browsercode" to "DEX’s browser agent · any model",
-  "opencode" to "Open-source coding agent",
-)
-
 /**
  * The desktop prompt bar: one card with the text area on top and, below it,
- * "+" and mic on the left, the engine and model chips and the metal send
- * button on the right. The engine menu is the desktop's: avatar, name,
- * one-line description, a check on the current one.
+ * "+" on the left, the agent chip, then mic and the send button. The agent
+ * chip opens a compact picker (AgentPicker.kt): the agents in one row, that
+ * agent's models as chips.
  */
 @Composable
 fun PromptBar(
@@ -239,41 +201,15 @@ fun PromptBar(
               )
               Icon(Icons.Rounded.KeyboardArrowDown, null, Modifier.size(16.dp))
             }
-            DropdownMenu(expanded = engineMenu, onDismissRequest = { engineMenu = false }, shape = RoundedCornerShape(20.dp)) {
-              Text("Agent", style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-              engines.forEach { e ->
-                DropdownMenuItem(
-                  leadingIcon = { BotAvatar(type = botTypeFor(e.id), mood = if (e.id == engine.id) BotMood.Working else BotMood.Idle, size = 28.dp, interactive = false) },
-                  text = {
-                    Column(Modifier.widthIn(min = 180.dp)) {
-                      Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(e.name, style = MaterialTheme.typography.titleSmall)
-                        if (e.id == "browsercode") { Spacer(Modifier.size(6.dp)); MetalNewBadge() }
-                      }
-                      Text(ENGINE_BLURB[e.id] ?: "", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                  },
-                  trailingIcon = { if (e.id == engine.id) Icon(Icons.Rounded.Check, null) },
-                  onClick = { haptics.tick(); engineId = e.id; model = null; engineMenu = false },
-                )
-              }
-              if (engine.models.isNotEmpty()) {
-                androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 6.dp))
-                Text("Model", style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-                DropdownMenuItem(
-                  text = { Column { Text("Default", style = MaterialTheme.typography.titleSmall); Text("Engine’s own choice", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant) } },
-                  trailingIcon = { if (model == null) Icon(Icons.Rounded.Check, null) },
-                  onClick = { haptics.tick(); model = null; engineMenu = false },
-                )
-                engine.models.forEach { m ->
-                  DropdownMenuItem(
-                    text = { Text(m.label, style = MaterialTheme.typography.titleSmall) },
-                    trailingIcon = { if (model == m.id) Icon(Icons.Rounded.Check, null) },
-                    onClick = { haptics.tick(); model = m.id; engineMenu = false },
-                  )
-                }
-              }
-            }
+            AgentPickerMenu(
+              expanded = engineMenu,
+              onDismiss = { engineMenu = false },
+              engines = engines,
+              engine = engine,
+              model = model,
+              onEngine = { engineId = it.id; model = null },
+              onModel = { model = it },
+            )
           }
         }
         if (engine == null) Spacer(Modifier.weight(1f)) else Spacer(Modifier.size(8.dp))

@@ -6,6 +6,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -59,10 +62,16 @@ fun DexRoot(
     container.auth.account.collect { value = if (it == null) Gate.SignedOut else Gate.SignedIn(it) }
   }
 
+  // Signing in zooms through: the sign-in screen swells and fades as the app
+  // springs up from just below its size (Home then cascades its cards in).
+  val motion = MaterialTheme.motionScheme
   AnimatedContent(
     targetState = gate,
     contentKey = { it::class },
-    transitionSpec = { (fadeIn(tween(420)) + scaleIn(initialScale = 0.96f)) togetherWith fadeOut(tween(200)) },
+    transitionSpec = {
+      (fadeIn(motion.slowEffectsSpec()) + scaleIn(motion.slowSpatialSpec(), initialScale = 0.88f)) togetherWith
+        (fadeOut(motion.fastEffectsSpec()) + scaleOut(motion.fastSpatialSpec(), targetScale = 1.08f))
+    },
     label = "gate",
   ) { state ->
     when (state) {
@@ -77,11 +86,13 @@ fun DexRoot(
 @Composable
 private fun SignedOut(container: AppContainer) {
   val onboarded by container.prefs.onboarded.collectAsStateWithLifecycle()
+  val motion = MaterialTheme.motionScheme
+  // "Get started": the tour swells away and sign-in bounces up into place.
   AnimatedContent(
     targetState = onboarded,
     transitionSpec = {
-      (slideInHorizontally(tween(480)) { it / 4 } + fadeIn(tween(360))) togetherWith
-        (slideOutHorizontally(tween(420)) { -it / 6 } + fadeOut(tween(240)))
+      (slideInVertically(motion.defaultSpatialSpec()) { it / 8 } + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.86f) + fadeIn(motion.defaultEffectsSpec())) togetherWith
+        (scaleOut(motion.fastSpatialSpec(), targetScale = 1.1f) + fadeOut(motion.fastEffectsSpec()))
     },
     label = "tour",
   ) { done ->
@@ -146,14 +157,19 @@ private fun SignedInNav(
     }
   }
 
+  // Springs, not tweens (the theme's expressive motion scheme): screens arrive
+  // with a little overshoot and settle; leaving ones step back and fade.
+  val motion = MaterialTheme.motionScheme
   SharedTransitionLayout {
     NavHost(
       navController = nav,
       startDestination = HomeRoute,
-      enterTransition = { slideInHorizontally(tween(420)) { it / 5 } + fadeIn(tween(320)) },
-      exitTransition = { slideOutHorizontally(tween(420)) { -it / 8 } + fadeOut(tween(240)) },
-      popEnterTransition = { slideInHorizontally(tween(420)) { -it / 8 } + fadeIn(tween(320)) },
-      popExitTransition = { slideOutHorizontally(tween(420)) { it / 5 } + fadeOut(tween(240)) },
+      enterTransition = {
+        slideInHorizontally(motion.defaultSpatialSpec()) { it / 4 } + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.94f) + fadeIn(motion.defaultEffectsSpec())
+      },
+      exitTransition = { slideOutHorizontally(motion.defaultSpatialSpec()) { -it / 10 } + scaleOut(motion.defaultSpatialSpec(), targetScale = 0.96f) + fadeOut(motion.fastEffectsSpec()) },
+      popEnterTransition = { slideInHorizontally(motion.defaultSpatialSpec()) { -it / 10 } + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.96f) + fadeIn(motion.defaultEffectsSpec()) },
+      popExitTransition = { slideOutHorizontally(motion.defaultSpatialSpec()) { it / 4 } + scaleOut(motion.defaultSpatialSpec(), targetScale = 0.94f) + fadeOut(motion.fastEffectsSpec()) },
     ) {
       composable<HomeRoute> {
         HomeScreen(
@@ -175,12 +191,21 @@ private fun SignedInNav(
           onBack = { nav.popBackStack() },
         )
       }
-      composable<SettingsRoute> {
+      // Settings grows out of the gear (a container transform: SettingsScreen
+      // and Home's header share bounds), so the route itself only fades.
+      composable<SettingsRoute>(
+        enterTransition = { fadeIn(motion.fastEffectsSpec()) },
+        exitTransition = { fadeOut(motion.fastEffectsSpec()) },
+        popEnterTransition = { fadeIn(motion.fastEffectsSpec()) },
+        popExitTransition = { fadeOut(motion.fastEffectsSpec()) },
+      ) {
         SettingsScreen(
           container = container,
           account = account,
           onBack = { nav.popBackStack() },
           onOpenTour = { nav.navigate(TourRoute) { launchSingleTop = true } },
+          sharedScope = this@SharedTransitionLayout,
+          animatedScope = this,
         )
       }
       composable<TourRoute> {
