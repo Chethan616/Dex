@@ -140,6 +140,17 @@ fun NewTaskSheet(
       verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
       Row(verticalAlignment = Alignment.CenterVertically) {
+        // Your DEX listens as you type: awake, then thinking about it, then off it goes.
+        com.chethan616.dex.ui.profile.DexAvatar(
+          size = 44.dp,
+          mood = when {
+            state is SendState.Sending -> com.chethan616.dex.ui.avatar.BotMood.Working
+            state is SendState.Failed -> com.chethan616.dex.ui.avatar.BotMood.Sad
+            text.isNotBlank() -> com.chethan616.dex.ui.avatar.BotMood.Thinking
+            else -> com.chethan616.dex.ui.avatar.BotMood.Idle
+          },
+        )
+        Spacer(Modifier.size(10.dp))
         Text("New task", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
         Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
           Text(
@@ -240,7 +251,7 @@ fun NewTaskSheet(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
           ) {
-            DexOrb(OrbState.Connecting, size = 40.dp)
+            androidx.compose.material3.LoadingIndicator(Modifier.size(44.dp))
             Spacer(Modifier.size(12.dp))
             Text(s.label, style = MaterialTheme.typography.bodyLarge)
           }

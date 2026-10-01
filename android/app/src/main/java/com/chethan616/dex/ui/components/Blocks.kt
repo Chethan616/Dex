@@ -66,6 +66,8 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.chethan616.dex.data.Block
+import com.chethan616.dex.ui.avatar.BotAvatar
+import com.chethan616.dex.ui.avatar.LocalTaskBot
 import com.chethan616.dex.ui.haptics.LocalHaptics
 import com.chethan616.dex.ui.orb.DexOrb
 import com.chethan616.dex.ui.orb.orbStateFor
@@ -230,6 +232,20 @@ private fun CodeSection(label: String, body: String?, error: Boolean = false) {
   }
 }
 
+/**
+ * The mark on a "Done": on the current turn, the task's own bot — beaming,
+ * then dozing off (BotMoods.kt); on older turns, a plain check.
+ */
+@Composable
+private fun DoneMark(block: Block, size: androidx.compose.ui.unit.Dp) {
+  val bot = LocalTaskBot.current
+  if (bot != null && bot.latestSeq == block.seq) {
+    BotAvatar(type = bot.type, mood = bot.mood, size = size, interactive = true)
+  } else {
+    Icon(Icons.Rounded.CheckCircle, null, Modifier.size(size * 0.6f), tint = MaterialTheme.colorScheme.onTertiaryContainer)
+  }
+}
+
 @Composable
 fun DoneCard(block: Block) {
   if (block.echo) {
@@ -243,7 +259,7 @@ fun DoneCard(block: Block) {
   ) {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+        DoneMark(block, 32.dp)
         Spacer(Modifier.size(8.dp))
         Text("Done", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onTertiaryContainer)
         if (block.iteration > 0) {
@@ -266,8 +282,8 @@ private fun DoneFooter(block: Block) {
   val haptics = LocalHaptics.current
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
     Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.tertiaryContainer) {
-      Row(Modifier.padding(start = 8.dp, end = 12.dp, top = 5.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Rounded.CheckCircle, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onTertiaryContainer)
+      Row(Modifier.padding(start = 4.dp, end = 12.dp, top = 3.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+        DoneMark(block, 26.dp)
         Spacer(Modifier.size(6.dp))
         Text(
           if (block.iteration > 0) "Done · ${block.iteration} steps" else "Done",

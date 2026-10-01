@@ -87,7 +87,10 @@ import com.chethan616.dex.data.Session
 import com.chethan616.dex.data.SessionStatus
 import com.chethan616.dex.ui.avatar.BotAvatar
 import com.chethan616.dex.ui.avatar.botTypeFor
-import com.chethan616.dex.ui.avatar.moodFor
+import com.chethan616.dex.ui.avatar.BotMood
+import com.chethan616.dex.ui.avatar.LocalTaskBot
+import com.chethan616.dex.ui.avatar.TaskBot
+import com.chethan616.dex.ui.avatar.rememberBotMood
 import com.chethan616.dex.ui.components.BlockView
 import com.chethan616.dex.ui.components.ToolGroup
 import com.chethan616.dex.ui.components.ErrorCard
@@ -100,7 +103,7 @@ import com.chethan616.dex.ui.files.rememberPcFiles
 import com.chethan616.dex.ui.files.worthPrefetching
 import com.chethan616.dex.notify.TaskWatcher
 import com.chethan616.dex.ui.components.ENGINE_NAMES
-import com.chethan616.dex.ui.components.MetalSendButton
+import com.chethan616.dex.ui.components.ExpressiveSendButton
 import com.chethan616.dex.ui.components.StatusPill
 import com.chethan616.dex.ui.haptics.LocalHaptics
 import com.chethan616.dex.ui.orb.DexOrb
@@ -158,13 +161,18 @@ fun SessionScreen(
     lastStatus = s.status
   }
 
-  androidx.compose.runtime.CompositionLocalProvider(LocalPcFiles provides pcFiles) {
+  // The task's bot wears what it's doing — in the top bar, the live line and
+  // the "Done" chip (ui/avatar/BotMoods.kt).
+  val mood = rememberBotMood(session, state.blocks)
+  val bot = TaskBot(botTypeFor(session?.engine, sessionId), mood, state.blocks.lastOrNull()?.seq)
+
+  androidx.compose.runtime.CompositionLocalProvider(LocalPcFiles provides pcFiles, LocalTaskBot provides bot) {
   if (filesOpen) FilesSheet(state.blocks, session, onDismiss = { filesOpen = false })
   com.chethan616.dex.ui.files.ModelViewerHost()
   Scaffold(
     topBar = {
       SessionTopBar(
-        session, sessionId, sharedScope, animatedScope, onBack,
+        session, sessionId, mood, sharedScope, animatedScope, onBack,
         onSync = { haptics.click(); vm.sync() },
         fileCount = fileCount,
         onFiles = { haptics.tick(); filesOpen = true },
@@ -290,11 +298,12 @@ private fun Block?.isQuiet(): Boolean = this == null || !(kind == "tool" && resu
 
 @Composable
 private fun LiveLine(last: Block?) {
-  val (orb, label) = when (last?.kind) {
-    "text" -> OrbState.Composing to "Writing…"
-    "user" -> OrbState.Breathing to "Reading your message…"
-    else -> OrbState.Solving to "Thinking…"
+  val label = when (last?.kind) {
+    "text" -> "Writing…"
+    "user" -> "Reading your message…"
+    else -> "Thinking…"
   }
+  val bot = LocalTaskBot.current
   val shimmer by rememberInfiniteTransition(label = "shimmer").animateFloat(
     initialValue = -1f,
     targetValue = 2f,
@@ -304,8 +313,8 @@ private fun LiveLine(last: Block?) {
   val base = MaterialTheme.colorScheme.onSurfaceVariant
   val hi = MaterialTheme.colorScheme.onSurface
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-    DexOrb(orb, size = 28.dp)
-    Spacer(Modifier.size(10.dp))
+    BotAvatar(type = bot?.type ?: "flower", mood = BotMood.Thinking, size = 36.dp, interactive = false)
+    Spacer(Modifier.size(8.dp))
     Text(
       buildAnnotatedString {
         pushStyle(SpanStyle(brush = Brush.linearGradient(listOf(base, hi, base), start = androidx.compose.ui.geometry.Offset(shimmer * 300f, 0f), end = androidx.compose.ui.geometry.Offset(shimmer * 300f + 300f, 0f))))
@@ -321,6 +330,7 @@ private fun LiveLine(last: Block?) {
 private fun SessionTopBar(
   session: Session?,
   sessionId: String,
+  mood: BotMood,
   sharedScope: SharedTransitionScope,
   animatedScope: AnimatedVisibilityScope,
   onBack: () -> Unit,
@@ -338,7 +348,7 @@ private fun SessionTopBar(
       with(sharedScope) {
         BotAvatar(
           type = botTypeFor(session?.engine, sessionId),
-          mood = moodFor(session?.status?.id),
+          mood = mood,
           size = 44.dp,
           modifier = Modifier.sharedElement(rememberSharedContentState("avatar-$sessionId"), animatedScope),
         )
@@ -383,7 +393,7 @@ private fun ApprovalBanner(title: String, detail: String, onAnswer: (Boolean) ->
   ) {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
-        DexOrb(OrbState.Listening, size = 28.dp)
+        BotAvatar(type = LocalTaskBot.current?.type ?: "flower", mood = BotMood.NeedsYou, size = 44.dp)
         Spacer(Modifier.size(10.dp))
         Column(Modifier.weight(1f)) {
           Text("Approve this?", style = MaterialTheme.typography.titleSmall, color = scheme.onTertiaryContainer)
@@ -471,8 +481,7 @@ private fun Composer(
           }
         },
       ) { Icon(Icons.Rounded.Mic, "Speak") }
-      // The desktop's liquid-metal send button.
-      MetalSendButton(
+      ExpressiveSendButton(
         onClick = { val t = text.trim(); if (t.isNotEmpty() || hasFiles) { onSend(t); text = "" } },
         enabled = (text.isNotBlank() || hasFiles) && !attach.preparing && session != null,
         busy = sending,

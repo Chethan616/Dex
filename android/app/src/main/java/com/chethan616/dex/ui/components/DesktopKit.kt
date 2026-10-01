@@ -81,82 +81,10 @@ import com.jakubantalik.thinkingorbs.OrbState
 
 /*
  * Components carried over from the desktop app so the two feel like one
- * product: the liquid-metal send button (MetalFx "chromatic" circle), the
- * metal "New" badge, and the prompt bar itself (TaskInput) with its chips.
+ * product: the metal "New" badge and the prompt bar itself (TaskInput) with
+ * its chips. Its send button is the phone's own, M3 Expressive
+ * (SendButton.kt).
  */
-
-/** The chromatic ramp metal-fx's "chromatic" preset runs around its ring. */
-private val CHROMATIC = listOf(
-  Color(0xFFF4F6FA), Color(0xFF9AA7BD), Color(0xFFE9EEF6), Color(0xFFB7C8E6),
-  Color(0xFFFFD6EE), Color(0xFFCFE3FF), Color(0xFF8C98AE), Color(0xFFF4F6FA),
-)
-
-/**
- * The desktop's send button: a disc inside a slowly turning chromatic metal
- * ring, with a specular glint. It presses in with a spring and dims when
- * disabled. Busy shows an orb in place of the arrow.
- */
-@Composable
-fun MetalSendButton(
-  onClick: () -> Unit,
-  modifier: Modifier = Modifier,
-  enabled: Boolean = true,
-  busy: Boolean = false,
-  size: Dp = 44.dp,
-) {
-  val dark = LocalIsDark.current
-  val spin by rememberInfiniteTransition(label = "metal").animateFloat(
-    initialValue = 0f,
-    targetValue = 360f,
-    animationSpec = infiniteRepeatable(tween(if (enabled) 5200 else 12000, easing = LinearEasing), RepeatMode.Restart),
-    label = "spin",
-  )
-  val interaction = remember { MutableInteractionSource() }
-  val pressed by interaction.collectIsPressedAsState()
-  val scale by animateFloatAsState(if (pressed) 0.9f else 1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "press")
-  val disc = if (dark) Color(0xFF1D1D1D) else Color.White
-  val ink = if (dark) Color(0xFFF8F8F8) else Color(0xFF111111)
-
-  Box(
-    modifier
-      .size(size)
-      .scale(scale)
-      .clip(CircleShape)
-      .clickable(interactionSource = interaction, indication = null, enabled = enabled && !busy, onClick = onClick),
-    contentAlignment = Alignment.Center,
-  ) {
-    Canvas(Modifier.fillMaxSize()) {
-      val ring = this.size.minDimension * 0.09f
-      rotate(spin) {
-        drawCircle(Brush.sweepGradient(CHROMATIC), radius = this.size.minDimension / 2f)
-      }
-      drawCircle(disc, radius = this.size.minDimension / 2f - ring)
-      // Soft inner glow + a glint in the upper left, like the MetalFx inner shadow.
-      drawCircle(
-        Brush.radialGradient(listOf(Color.White.copy(alpha = if (dark) 0.10f else 0.0f), Color.Transparent)),
-        radius = this.size.minDimension / 2f - ring,
-      )
-      drawArc(
-        color = Color.White.copy(alpha = 0.55f),
-        startAngle = 200f,
-        sweepAngle = 45f,
-        useCenter = false,
-        topLeft = Offset(ring * 0.5f, ring * 0.5f),
-        size = androidx.compose.ui.geometry.Size(this.size.width - ring, this.size.height - ring),
-        style = Stroke(width = ring * 0.45f),
-      )
-    }
-    AnimatedContent(busy, transitionSpec = { (fadeIn() + scaleIn(initialScale = 0.6f)) togetherWith fadeOut() }, label = "send") { isBusy ->
-      if (isBusy) DexOrb(OrbState.Connecting, size = size * 0.55f)
-      else Icon(
-        Icons.Rounded.ArrowUpward,
-        contentDescription = "Send",
-        tint = ink.copy(alpha = if (enabled) 1f else 0.45f),
-        modifier = Modifier.size(size * 0.42f),
-      )
-    }
-  }
-}
 
 /** The metal "New" pill (desktop NewBadge / menu-new-pill): brushed silver with a passing sheen. */
 @Composable
@@ -353,7 +281,7 @@ fun PromptBar(
           Icon(Icons.Rounded.Mic, "Speak", tint = scheme.onSurfaceVariant)
         }
         Spacer(Modifier.size(4.dp))
-        MetalSendButton(onClick = ::send, enabled = (text.isNotBlank() || hasFiles) && attachments?.preparing != true, busy = busy)
+        ExpressiveSendButton(onClick = ::send, enabled = (text.isNotBlank() || hasFiles) && attachments?.preparing != true, busy = busy, size = 44.dp)
       }
       if (status != null) {
         Spacer(Modifier.height(8.dp))
