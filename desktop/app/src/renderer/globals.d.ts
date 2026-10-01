@@ -45,6 +45,8 @@ interface ElectronSessionAPI {
   delete: (id: string) => Promise<void>;
   downloadOutput: (filePath: string) => Promise<{ opened: boolean }>;
   revealOutput: (filePath: string) => Promise<{ revealed: boolean }>;
+  /** The bytes of a file this task recorded or opened as a document. */
+  readFile: (sessionId: string, filePath: string) => Promise<{ bytes: Uint8Array; size: number; mtimeMs: number }>;
   /** A file this task recorded, wherever it was saved (docs/unify/PLAN.md §3.12). */
   openFile: (sessionId: string, filePath: string, how?: 'open' | 'reveal' | 'copy') => Promise<{ opened?: boolean; revealed?: boolean; saved?: string | null }>;
   listEditors: () => Promise<Array<{ id: string; name: string }>>;
@@ -246,7 +248,23 @@ type WorkspaceTabAction =
   | { op: 'navigate'; tabId?: string; input: string }
   | { op: 'back' | 'forward' | 'reload' | 'stop'; tabId?: string };
 
+/** A document tab: a file the hub draws itself (docs/unify/PLAN.md §3.9). */
+interface WorkspaceDoc {
+  id: string;
+  path: string;
+  name: string;
+  openedBy: 'user' | 'agent';
+  openedAt: number;
+  size: number;
+  mtimeMs: number;
+}
+
 interface ElectronWorkspaceAPI {
+  docs: (sessionId: string) => Promise<WorkspaceDoc[]>;
+  docOpen: (sessionId: string, filePath: string) => Promise<WorkspaceDoc>;
+  docClose: (sessionId: string, docId: string) => Promise<boolean>;
+  onDocsChanged: (cb: (sessionId: string, docs: WorkspaceDoc[], focusId: string | null) => void) => () => void;
+  onDocChanged: (cb: (sessionId: string, docId: string, mtimeMs: number) => void) => () => void;
   tabs: (sessionId: string) => Promise<WorkspaceTab[]>;
   tab: (sessionId: string, action: WorkspaceTabAction) => Promise<boolean>;
   onTabsChanged: (cb: (sessionId: string, tabs: WorkspaceTab[]) => void) => () => void;

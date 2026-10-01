@@ -16,6 +16,8 @@ import { ChatView } from './chat/ChatView';
 import { WorkspaceBar } from './workspace/WorkspaceBar';
 import { NewTabPage } from './workspace/NewTabPage';
 import { useWorkspaceTabs } from './workspace/useWorkspaceTabs';
+import { useWorkspaceDocs } from './workspace/useWorkspaceDocs';
+import { DocumentView } from './workspace/docs/DocumentView';
 import { useHydrateSession } from './useSessionsQuery';
 import type { AgentSession, OutputEntry } from './types';
 
@@ -613,7 +615,37 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
    * paused one — shows the conversation. The page isn't lost when the chat
    * has the rect: it's parked on the stage, where DEX can keep using it.
    */
-  const [paneOverride, setPaneOverride] = useState<'auto' | 'page' | 'chat'>('auto');
+  const [paneOverride, setPaneOverride] = useState<'auto' | 'page' | 'chat' | 'doc'>('auto');
+  /**
+   * Document tabs (docs/unify/PLAN.md §3.9): files drawn by the hub itself.
+   * One in front owns the rect like the chat does; the page steps aside to
+   * the stage. A doc someone just opened — you from a file card, or DEX with
+   * `dex-open` — comes to the front.
+   */
+  const workspaceDocs = useWorkspaceDocs(session.id);
+  const [activeDocId, setActiveDocId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!workspaceDocs.focus) return;
+    setActiveDocId(workspaceDocs.focus.id);
+    setPaneOverride('doc');
+  }, [workspaceDocs.focus]);
+  const activeDoc = paneOverride === 'doc' ? workspaceDocs.docs.find((d) => d.id === activeDocId) : undefined;
+  const docActive = Boolean(activeDoc);
+  // The doc in front was closed (here, or by its task going away).
+  useEffect(() => {
+    if (paneOverride === 'doc' && !activeDoc) setPaneOverride('auto');
+  }, [paneOverride, activeDoc]);
+  const closeDoc = useCallback((docId: string) => {
+    if (docId === activeDocId) {
+      // Next to the right, else to the left, else back to the usual surface.
+      const list = workspaceDocs.docs;
+      const i = list.findIndex((d) => d.id === docId);
+      const next = list[i + 1] ?? list[i - 1];
+      if (next) setActiveDocId(next.id);
+      else setPaneOverride('auto');
+    }
+    void window.electronAPI?.workspace?.docClose(session.id, docId);
+  }, [activeDocId, workspaceDocs.docs, session.id]);
   // The conversation needs the whole history, not just what streamed in.
   useHydrateSession(session.id);
   // The follow-up shortcut: to the chat, cursor in the composer.
@@ -628,11 +660,12 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
     return () => window.removeEventListener('dex:focus-composer', onFocus);
   }, [session.id]);
   const chatActive = useMemo(() => {
+    if (docActive) return false;
     if (session.hasBrowser === false) return true;
     if (paneOverride !== 'auto') return paneOverride === 'chat';
     const working = session.status === 'running' || session.status === 'stuck';
     return !(working && session.primarySite);
-  }, [session.hasBrowser, session.status, session.primarySite, paneOverride]);
+  }, [docActive, session.hasBrowser, session.status, session.primarySite, paneOverride]);
 
   /**
    * The task's tabs (docs/unify/PLAN.md §3.2). A blank tab *you* opened shows
@@ -642,9 +675,9 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
   const workspaceOn = session.hasBrowser !== false && !browserDead;
   const tabs = useWorkspaceTabs(session.id, workspaceOn);
   const activeTab = tabs.find((t) => t.active);
-  const newTabActive = !chatActive && Boolean(activeTab?.isNewTab && activeTab.openedBy !== 'task');
-  /** Something React draws owns the rect (the chat, or the New-tab page). */
-  const surfaceActive = chatActive || newTabActive;
+  const newTabActive = !chatActive && !docActive && Boolean(activeTab?.isNewTab && activeTab.openedBy !== 'task');
+  /** Something React draws owns the rect (the chat, a document, or the New-tab page). */
+  const surfaceActive = chatActive || docActive || newTabActive;
 
   /** Something new in the chat while you were on the page: a dot on the Chat tab. */
   const replyCount = useMemo(
@@ -854,9 +887,11 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
   }, [session.id]);
 
   // Browser shortcuts while the hub itself has focus (the page handles the
-  // same keys in main when it has focus): Ctrl+T/W/L/R, Ctrl+Tab.
+  // same keys in main when it has focus): Ctrl+T/W/L/R, Ctrl+Tab. With a
+  // document in front, Ctrl+W closes the document and there's no page to reload.
+  const frontDocId = activeDoc?.id;
   useEffect(() => {
-    if (!focused || !workspaceOn) return;
+    if (!focused || (!workspaceOn && !frontDocId)) return;
     const api = window.electronAPI?.workspace;
     if (!api) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -864,6 +899,13 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
       const target = e.target as HTMLElement | null;
       const typing = !!target?.closest('input, textarea, [contenteditable="true"]');
       const key = e.key.toLowerCase();
+      if (frontDocId && (key === 'w' || key === 'r')) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (key === 'w') closeDoc(frontDocId);
+        return;
+      }
+      if (!workspaceOn) return;
       const shortcut: WorkspaceShortcut | null =
         key === 't' ? 'new-tab'
           : key === 'w' ? 'close-tab'
@@ -878,7 +920,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
     };
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [focused, workspaceOn, session.id]);
+  }, [focused, workspaceOn, session.id, frontDocId, closeDoc]);
 
   const engineName = session.engine ? ENGINE_NAMES[session.engine] ?? session.engine : 'DEX';
   const engineIcon = session.engine === 'claude-code' ? claudeCodeLogo
@@ -1084,10 +1126,17 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           rect — the pre-existing idle/error states, plus the two new ones the
           deck introduces: a running task that has never navigated (desktop,
           file or OS work) and a paused session. */}
-      {tabs.length > 0 && workspaceOn && (
+      {((tabs.length > 0 && workspaceOn) || workspaceDocs.docs.length > 0) && (
         <WorkspaceBar
           sessionId={session.id}
-          tabs={tabs}
+          tabs={workspaceOn ? tabs : []}
+          browser={workspaceOn}
+          docs={{
+            items: workspaceDocs.docs,
+            activeId: activeDoc?.id ?? null,
+            onSelect: (id) => { setActiveDocId(id); setPaneOverride('doc'); },
+            onClose: closeDoc,
+          }}
           agentActive={session.status === 'running'}
           onPause={onPause ? () => onPause(session.id) : undefined}
           chat={{
@@ -1185,8 +1234,18 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           deck is showing, so there is nothing to sit on top of — and a rect
           measured at the wrong moment was drawing the cards into a narrow
           strip with the rest of the pane left black. */}
-      <div className={`pane__output${session.status === 'running' && !surfaceActive ? ' pane__output--agent' : ''}${chatActive ? ' pane__output--chat' : ''}`}>
-        {chatActive ? (
+      <div className={`pane__output${session.status === 'running' && !surfaceActive ? ' pane__output--agent' : ''}${chatActive || docActive ? ' pane__output--chat' : ''}`}>
+        {activeDoc ? (
+          <DocumentView
+            sessionId={session.id}
+            doc={activeDoc}
+            revision={workspaceDocs.revisions[activeDoc.id] ?? 0}
+            onOpenUrl={(url) => {
+              void window.electronAPI?.workspace?.tab(session.id, { op: 'new', input: url });
+              setPaneOverride('page');
+            }}
+          />
+        ) : chatActive ? (
           <ChatView
             session={session}
             tabUrls={tabUrls}

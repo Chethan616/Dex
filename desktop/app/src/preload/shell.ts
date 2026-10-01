@@ -99,6 +99,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on('workspace:tabs-changed', handler);
       return () => ipcRenderer.removeListener('workspace:tabs-changed', handler);
     },
+    // Document tabs (docs/unify/PLAN.md §3.9).
+    docs: (sessionId: string): Promise<unknown[]> => ipcRenderer.invoke('workspace:docs', sessionId),
+    docOpen: (sessionId: string, filePath: string): Promise<unknown> => ipcRenderer.invoke('workspace:doc-open', sessionId, filePath),
+    docClose: (sessionId: string, docId: string): Promise<boolean> => ipcRenderer.invoke('workspace:doc-close', sessionId, docId),
+    onDocsChanged: (cb: (sessionId: string, docs: unknown[], focusId: string | null) => void): (() => void) => {
+      const handler = (_event: unknown, sessionId: unknown, docs: unknown, focusId: unknown) => {
+        if (typeof sessionId === 'string' && Array.isArray(docs)) cb(sessionId, docs, typeof focusId === 'string' ? focusId : null);
+      };
+      ipcRenderer.on('workspace:docs-changed', handler);
+      return () => ipcRenderer.removeListener('workspace:docs-changed', handler);
+    },
+    onDocChanged: (cb: (sessionId: string, docId: string, mtimeMs: number) => void): (() => void) => {
+      const handler = (_event: unknown, sessionId: unknown, docId: unknown, mtimeMs: unknown) => {
+        if (typeof sessionId === 'string' && typeof docId === 'string') cb(sessionId, docId, Number(mtimeMs) || 0);
+      };
+      ipcRenderer.on('workspace:doc-changed', handler);
+      return () => ipcRenderer.removeListener('workspace:doc-changed', handler);
+    },
   },
   takeover: {
     show: (
@@ -325,6 +343,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('sessions:reveal-output', filePath),
     openFile: (sessionId: string, filePath: string, how: 'open' | 'reveal' | 'copy' = 'open'): Promise<{ opened?: boolean; revealed?: boolean; saved?: string | null }> =>
       ipcRenderer.invoke('sessions:open-file', { sessionId, path: filePath, how }),
+    readFile: (sessionId: string, filePath: string): Promise<{ bytes: Uint8Array; size: number; mtimeMs: number }> =>
+      ipcRenderer.invoke('sessions:read-file', { sessionId, path: filePath }),
     listEditors: (): Promise<Array<{ id: string; name: string }>> =>
       ipcRenderer.invoke('sessions:list-editors'),
     openInEditor: (editorId: string, filePath: string): Promise<{ opened: boolean }> =>

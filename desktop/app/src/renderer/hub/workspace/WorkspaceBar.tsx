@@ -6,6 +6,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { displayAddress } from '../../../shared/address';
+import { FileBadge } from '../chat/fileKinds';
 import './workspace.css';
 
 interface WorkspaceBarProps {
@@ -18,6 +19,10 @@ interface WorkspaceBarProps {
   chat?: { active: boolean; unread: boolean; working: boolean; onSelect: () => void; icon?: React.ReactNode };
   /** A web tab was picked: the page takes the rect back from the chat. */
   onSelectPage?: () => void;
+  /** Document tabs (docs/unify/PLAN.md §3.9), after Chat and before the web tabs. */
+  docs?: { items: WorkspaceDoc[]; activeId: string | null; onSelect: (id: string) => void; onClose: (id: string) => void };
+  /** The task has a browser: web tabs, "+" and the toolbar. */
+  browser?: boolean;
 }
 
 const Icon = {
@@ -69,7 +74,7 @@ function TabIcon({ tab }: { tab: WorkspaceTab }): React.ReactElement {
   return <span className="ws-tab__icon ws-tab__icon--globe">{Icon.globe}</span>;
 }
 
-export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSelectPage }: WorkspaceBarProps): React.ReactElement {
+export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSelectPage, docs, browser = true }: WorkspaceBarProps): React.ReactElement {
   const api = window.electronAPI?.workspace;
   const active = tabs.find((t) => t.active) ?? tabs[0];
   const inputRef = useRef<HTMLInputElement>(null);
@@ -109,6 +114,8 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
   }, [act, active, draft]);
 
   const secure = active?.url.startsWith('https://');
+  /** What owns the rect: the chat, a document, or the active web page. */
+  const pageInFront = !chat?.active && !docs?.activeId;
 
   return (
     <div className="ws" onClick={(e) => e.stopPropagation()}>
@@ -127,13 +134,41 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
             {chat.unread && <span className="ws-tab__dot" aria-label="New reply" />}
           </div>
         )}
-        {tabs.map((tab) => (
+        {docs?.items.map((doc) => {
+          const on = doc.id === docs.activeId && !chat?.active;
+          return (
+            <div
+              key={doc.id}
+              role="tab"
+              aria-selected={on}
+              tabIndex={on ? 0 : -1}
+              className={`ws-tab ws-tab--doc${on ? ' ws-tab--active' : ''}`}
+              title={doc.openedBy === 'agent' ? `${doc.path}\nOpened by DEX` : doc.path}
+              onMouseDown={(e) => {
+                if (e.button === 1) { e.preventDefault(); docs.onClose(doc.id); }
+              }}
+              onClick={() => docs.onSelect(doc.id)}
+            >
+              <span className="ws-tab__icon"><FileBadge name={doc.name} size="sm" /></span>
+              <span className="ws-tab__title">{doc.name}</span>
+              <button
+                type="button"
+                className="ws-tab__close"
+                aria-label={`Close ${doc.name}`}
+                onClick={(e) => { e.stopPropagation(); docs.onClose(doc.id); }}
+              >
+                {Icon.close}
+              </button>
+            </div>
+          );
+        })}
+        {browser && tabs.map((tab) => (
           <div
             key={tab.id}
             role="tab"
-            aria-selected={tab.active && !chat?.active}
-            tabIndex={tab.active && !chat?.active ? 0 : -1}
-            className={`ws-tab${tab.active && !chat?.active ? ' ws-tab--active' : ''}${tab.openedBy === 'task' ? ' ws-tab--task' : ''}`}
+            aria-selected={tab.active && pageInFront}
+            tabIndex={tab.active && pageInFront ? 0 : -1}
+            className={`ws-tab${tab.active && pageInFront ? ' ws-tab--active' : ''}${tab.openedBy === 'task' ? ' ws-tab--task' : ''}`}
             title={tab.title ? `${tab.title}\n${tab.url}` : tab.url || 'New tab'}
             onMouseDown={(e) => {
               if (e.button === 1) { e.preventDefault(); act({ op: 'close', tabId: tab.id }); }
@@ -152,12 +187,14 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
             </button>
           </div>
         ))}
-        <button type="button" className="ws-newtab" aria-label="New tab (Ctrl+T)" title="New tab (Ctrl+T)" onClick={() => { act({ op: 'new' }); onSelectPage?.(); }}>
-          {Icon.plus}
-        </button>
+        {browser && (
+          <button type="button" className="ws-newtab" aria-label="New tab (Ctrl+T)" title="New tab (Ctrl+T)" onClick={() => { act({ op: 'new' }); onSelectPage?.(); }}>
+            {Icon.plus}
+          </button>
+        )}
       </div>
 
-      {!chat?.active && <div className="ws-toolbar">
+      {browser && pageInFront && <div className="ws-toolbar">
         <div className="ws-nav">
           <button type="button" className="ws-btn" aria-label="Back (Alt+←)" title="Back" disabled={!active?.canGoBack} onClick={() => act({ op: 'back', tabId: active?.id })}>{Icon.back}</button>
           <button type="button" className="ws-btn" aria-label="Forward (Alt+→)" title="Forward" disabled={!active?.canGoForward} onClick={() => act({ op: 'forward', tabId: active?.id })}>{Icon.forward}</button>

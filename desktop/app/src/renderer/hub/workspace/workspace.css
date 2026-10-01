@@ -315,3 +315,7 @@ img.ws-tab__icon { object-fit: contain; }
   border-radius: 50%;
   background: var(--color-status-info);
 }
+
+/* Document tabs (docs/unify/PLAN.md §3.9): the file's badge as the icon. */
+.ws-tab--doc .ws-tab__icon .cx-badge--sm { width: 16px; height: 16px; background: none; border-radius: 0; }
+.ws-tab--doc .ws-tab__icon .cx-badge--sm svg { width: 15px; height: 15px; }

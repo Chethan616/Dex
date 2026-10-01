@@ -1,12 +1,14 @@
 /**
  * The files a turn made, as one card list (Codex's layout): badge, name, what
- * kind of file it is, and "Open in ▾" — the default app, the folder, an
- * editor, or a copy saved somewhere else. Opening goes through
- * `sessions.openFile`, which only opens files this task recorded.
+ * kind of file it is, and "Open in ▾" — a document tab in DEX, the default
+ * app, the folder, an editor, or a copy saved somewhere else. Opening goes
+ * through `workspace.docOpen` / `sessions.openFile`, which only open files
+ * this task recorded.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FileBadge, extOf, fileKind } from './fileKinds';
 import type { FileItem } from './turns';
+import { viewerFor } from '../workspace/docs/kinds';
 
 const EDITABLE = new Set(['md', 'txt', 'json', 'csv', 'js', 'ts', 'tsx', 'jsx', 'py', 'html', 'css', 'yaml', 'yml', 'toml', 'xml', 'sql', 'sh', 'ps1', 'java', 'c', 'cpp', 'go', 'rs', 'rb', 'php', 'kt', 'dart', 'swift', 'log']);
 
@@ -28,6 +30,19 @@ export function openFile(sessionId: string, path: string, how: 'open' | 'reveal'
   });
 }
 
+/**
+ * Show a file the task made: as a document tab in the workspace when DEX can
+ * draw it (docs/unify/PLAN.md §3.9), else in its default app.
+ */
+export function showFile(sessionId: string, path: string): Promise<void> {
+  const ws = window.electronAPI?.workspace;
+  if (!ws?.docOpen || viewerFor(path) === 'none') return openFile(sessionId, path);
+  return ws.docOpen(sessionId, path).then(() => undefined).catch((err: unknown) => {
+    console.warn('[chat] docOpen failed; opening in its app', { error: (err as Error)?.message });
+    return openFile(sessionId, path);
+  });
+}
+
 function MenuIcon({ d }: { d: string }): React.ReactElement {
   return (
     <svg className="cx-menu__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -37,6 +52,7 @@ function MenuIcon({ d }: { d: string }): React.ReactElement {
 }
 
 const ICON = {
+  tab: 'M2.5 4h11v8.5h-11zM2.5 6.5h11M5 4V2.8',
   app: 'M2.5 3.5h11v9h-11zM2.5 6h11',
   folder: 'M2 4.2c0-.6.5-1 1-1h3l1.4 1.5H13c.6 0 1 .4 1 1v6.1c0 .6-.4 1-1 1H3c-.5 0-1-.4-1-1z',
   editor: 'M5.5 5 2.8 8l2.7 3M10.5 5l2.7 3-2.7 3M9 3.5l-2 9',
@@ -73,6 +89,11 @@ function OpenIn({ sessionId, file }: { sessionId: string; file: FileItem }): Rea
       </button>
       {open && (
         <div className="cx-menu" role="menu">
+          {viewerFor(file.name) !== 'none' && (
+            <button type="button" role="menuitem" className="cx-menu__item" onClick={() => pick(() => showFile(sessionId, file.path))}>
+              <MenuIcon d={ICON.tab} />A tab in DEX
+            </button>
+          )}
           <button type="button" role="menuitem" className="cx-menu__item" onClick={() => pick(() => openFile(sessionId, file.path, 'open'))}>
             <MenuIcon d={ICON.app} />Default app
           </button>
@@ -99,7 +120,7 @@ export function FileCards({ sessionId, files }: { sessionId: string; files: File
     <div className="cx-files">
       {files.map((f) => (
         <div key={f.path} className="cx-file">
-          <button type="button" className="cx-file__main" onClick={() => void openFile(sessionId, f.path)} title={f.path}>
+          <button type="button" className="cx-file__main" onClick={() => void showFile(sessionId, f.path)} title={f.path}>
             <FileBadge name={f.name} mime={f.mime} />
             <span className="cx-file__text">
               <span className="cx-file__name">{f.name}</span>

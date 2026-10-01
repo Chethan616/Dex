@@ -101,6 +101,7 @@
     "vitest": "^4.1.4"
   },
   "dependencies": {
+    "@google/model-viewer": "^4.3.1",
     "@gradio/client": "^2.7.0",
     "@hapi/boom": "^10.0.1",
     "@tanstack/react-query": "^5.100.8",
@@ -120,6 +121,7 @@
     "better-sqlite3": "^12.9.0",
     "border-beam": "1.4.1",
     "bot-avatars": "0.1.1",
+    "docx-preview": "^0.4.1",
     "dotenv": "^17.4.2",
     "electron-squirrel-startup": "^1.0.1",
     "electron-updater": "^6.8.3",
@@ -131,6 +133,7 @@
     "metal-fx": "^2.0.11",
     "node-cache": "^5.1.2",
     "node-pty": "^1.1.0",
+    "pdfjs-dist": "^6.3.289",
     "qrcode": "^1.5.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
@@ -138,9 +141,10 @@
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "thinking-orbs": "0.3.2",
-    "three": "^0.149.0",
+    "three": "^0.183.2",
     "voice-glow": "0.2.1",
     "ws": "^8.20.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.3.6"
   }
 }

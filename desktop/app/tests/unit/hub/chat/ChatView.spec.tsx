@@ -123,9 +123,18 @@ describe('ChatView', () => {
     const el = render();
     act(() => (el.querySelector('.cx-openin__btn') as HTMLButtonElement).click());
     const items = [...el.querySelectorAll('.cx-menu__item')].map((i) => i.textContent);
-    expect(items).toEqual(['Default app', 'Show in File Explorer', 'Download a copy']);
-    act(() => (el.querySelectorAll('.cx-menu__item')[1] as HTMLButtonElement).click());
+    expect(items).toEqual(['A tab in DEX', 'Default app', 'Show in File Explorer', 'Download a copy']);
+    act(() => (el.querySelectorAll('.cx-menu__item')[2] as HTMLButtonElement).click());
     expect(openFile).toHaveBeenCalledWith('s1', REPORT, 'reveal');
+  });
+
+  it('opens a file card as a document tab when DEX can draw it', async () => {
+    const docOpen = vi.fn(() => Promise.resolve({}));
+    (window as unknown as { electronAPI: { workspace?: unknown } }).electronAPI.workspace = { docOpen };
+    const el = render();
+    await act(async () => (el.querySelector('.cx-file__main') as HTMLButtonElement).click());
+    expect(docOpen).toHaveBeenCalledWith('s1', REPORT);
+    expect(openFile).not.toHaveBeenCalled();
   });
 
   it('lists outputs and sources in the minibar, and hides it when asked', () => {

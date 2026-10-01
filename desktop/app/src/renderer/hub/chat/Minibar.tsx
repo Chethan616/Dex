@@ -5,7 +5,7 @@
  */
 import React, { useState } from 'react';
 import { FileBadge } from './fileKinds';
-import { openFile } from './FileCards';
+import { showFile } from './FileCards';
 import type { FileItem, Source } from './turns';
 import type { TaskStep } from '../types';
 
@@ -103,7 +103,7 @@ export function Minibar({ avatar, sessionId, title, engineName, engineIcon, mode
             </button>
           ))}
           {outputs.map((f) => (
-            <button key={f.path} type="button" className="cx-mini__row cx-mini__row--link" onClick={() => void openFile(sessionId, f.path)} title={f.path}>
+            <button key={f.path} type="button" className="cx-mini__row cx-mini__row--link" onClick={() => void showFile(sessionId, f.path)} title={f.path}>
               <FileBadge name={f.name} mime={f.mime} size="sm" />
               <span className="cx-mini__label">{f.name}</span>
             </button>

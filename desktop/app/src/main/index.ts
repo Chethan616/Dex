@@ -125,6 +125,7 @@ import { TaskStateMutationSchema } from '../shared/session-schemas';
 // pluggable (claude-code, codex, …) — see src/main/hl/engines/.
 import { bootstrapHarness, harnessDir } from './hl/harness';
 import { isRunnable, resolveRecordedFile } from './sessions/recordedFiles';
+import { DocumentTabs, MAX_DOC_BYTES } from './workspace/documents';
 import { resolveAgentPath } from './hl/agentPaths';
 import { runEngine, DEFAULT_ENGINE_ID } from './hl/engines';
 import type { EngineRunControl } from './hl/engines/types';
@@ -224,6 +225,13 @@ if (started) {
 // App state
 // ---------------------------------------------------------------------------
 let shellWindow: BrowserWindow | null = null;
+
+// Document tabs (docs/unify/PLAN.md §3.9). The hub draws them; this keeps each
+// task's list and reloads a tab when its file changes on disk.
+const documentTabs = new DocumentTabs(
+  (sessionId, docs, focusId) => shellWindow?.webContents.send('workspace:docs-changed', sessionId, docs, focusId ?? null),
+  (sessionId, docId, mtimeMs) => shellWindow?.webContents.send('workspace:doc-changed', sessionId, docId, mtimeMs),
+);
 let onboardingWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
@@ -1840,6 +1848,24 @@ app.whenReady().then(async () => {
         }
       },
 
+      // The `dex-open` CLI: show the user a file in a document tab — what the
+      // agent wrote, downloaded or filled in. The agent can already read any
+      // file; this only puts it in front of the user.
+      'POST /dex/open': async (raw) => {
+        let parsed: { sessionId?: unknown; path?: unknown; show?: unknown };
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new Error('request body must be JSON');
+        }
+        const id = assertString(parsed.sessionId, 'sessionId', 100);
+        const requested = assertString(parsed.path, 'path', 2000);
+        if (!sessionManager.getSession(id)) throw new Error('No such task.');
+        const abs = path.isAbsolute(requested) ? requested : path.resolve(harnessDir(), requested);
+        const doc = documentTabs.open(id, abs, 'agent', parsed.show !== false);
+        return { opened: { tab: doc.id, name: doc.name, path: doc.path, size: doc.size } };
+      },
+
       // The `dex-state` CLI's only endpoint. Everything it can do is one of
       // the verbs in TaskStateMutationSchema, so validation is a single parse
       // and the handler stays a pass-through to the session manager.
@@ -2220,6 +2246,7 @@ app.whenReady().then(async () => {
     drainingQueuedFollowUps.delete(validatedId);
     terminateActiveRunControl(validatedId);
     browserPool.destroy(validatedId, shellWindow ?? undefined);
+    documentTabs.closeSession(validatedId);
     sessionManager.deleteSession(validatedId);
     approvalPolicy.clearSession(validatedId);
   });
@@ -2417,7 +2444,8 @@ app.whenReady().then(async () => {
     const how = payload?.how === 'reveal' || payload?.how === 'copy' ? payload.how : 'open';
     const session = sessionManager.getSession(id);
     if (!session) throw new Error('No such task.');
-    const resolved = resolveRecordedFile(requested, session.output, harnessDir());
+    const resolved = resolveRecordedFile(requested, session.output, harnessDir())
+      ?? (documentTabs.isOpen(id, requested) ? path.resolve(requested) : null);
     if (!resolved) {
       mainLogger.warn('main.sessions:open-file.refused', { id, path: requested });
       throw new Error('refused: not a file this task produced');
@@ -2438,6 +2466,25 @@ app.whenReady().then(async () => {
     const err = await shell.openPath(resolved);
     if (err) throw new Error(err);
     return { opened: true };
+  });
+
+  // The bytes of a file this task recorded or opened as a document, for the
+  // hub's viewers (document tabs, screenshots in the chat). Same rule as
+  // open-file: never a path the page merely names.
+  ipcMain.handle('sessions:read-file', async (_event, payload: { sessionId?: unknown; path?: unknown }) => {
+    const id = assertString(payload?.sessionId, 'sessionId', 100);
+    const requested = assertString(payload?.path, 'path', 2000);
+    const session = sessionManager.getSession(id);
+    if (!session) throw new Error('No such task.');
+    const resolved = resolveRecordedFile(requested, session.output, harnessDir())
+      ?? (documentTabs.isOpen(id, requested) ? path.resolve(requested) : null);
+    if (!resolved) {
+      mainLogger.warn('main.sessions:read-file.refused', { id, path: requested });
+      throw new Error('refused: not a file this task produced');
+    }
+    const stat = await fs.promises.stat(resolved);
+    if (stat.size > MAX_DOC_BYTES) throw new Error('Too big to show here; open it in its own app.');
+    return { bytes: await fs.promises.readFile(resolved), size: stat.size, mtimeMs: stat.mtimeMs };
   });
 
   ipcMain.handle('sessions:open-in-editor', async (_event, payload: { editorId: string; filePath: string }) => {
@@ -2644,6 +2691,24 @@ app.whenReady().then(async () => {
     }
     return ok;
   });
+
+  // ---- Document tabs (docs/unify/PLAN.md §3.9) ----
+  ipcMain.handle('workspace:docs', (_event, id: string) => documentTabs.list(assertString(id, 'id', 100)));
+
+  // From the hub (a file card, Recents): only files this task recorded.
+  ipcMain.handle('workspace:doc-open', (_event, id: string, filePath: string) => {
+    const validatedId = assertString(id, 'id', 100);
+    const requested = assertString(filePath, 'path', 2000);
+    const session = sessionManager.getSession(validatedId);
+    if (!session) throw new Error('No such task.');
+    const resolved = resolveRecordedFile(requested, session.output, harnessDir())
+      ?? (documentTabs.isOpen(validatedId, requested) ? path.resolve(requested) : null);
+    if (!resolved) throw new Error('refused: not a file this task produced');
+    return documentTabs.open(validatedId, resolved, 'user');
+  });
+
+  ipcMain.handle('workspace:doc-close', (_event, id: string, docId: string) =>
+    documentTabs.close(assertString(id, 'id', 100), assertString(docId, 'docId', 20)));
 
   // ---- Workspace tabs (docs/unify/PLAN.md §3.2–3.3) ----
   ipcMain.handle('workspace:tabs', (_event, id: string) => {
@@ -3012,6 +3077,7 @@ app.whenReady().then(async () => {
     }
     activeAgents.clear();
     browserPool.destroyAll(shellWindow ?? undefined);
+    documentTabs.dispose();
     stopResourceMonitor();
     sessionManager.destroy();
     whatsAppAdapter.disconnect().catch(() => {});

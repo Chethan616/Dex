@@ -20,7 +20,8 @@ import { KindGlyph, prettyArgs } from '../../logs/ChatTranscript';
 import { appendEvent, buildTranscript, EMPTY_TRANSCRIPT, type Block, type Transcript } from '../../logs/transcript';
 import type { AgentSession, TaskStep } from '../types';
 import { Composer, type ComposerAttachment } from './Composer';
-import { FileCards, openFile } from './FileCards';
+import { FileCards, showFile } from './FileCards';
+import { useTaskFileUrl } from '../workspace/useTaskFileUrl';
 import { FileBadge } from './fileKinds';
 import { Minibar } from './Minibar';
 import { allOutputs, collectSources, formatDuration, toTurns, type FileItem, type Turn } from './turns';
@@ -164,18 +165,24 @@ const WorkStep = memo(function WorkStep({ block, running, sessionId }: { block: 
     return <div className="cx-note"><Markdown source={block.text} variant="compact" /></div>;
   }
   if (block.kind === 'image') {
-    return (
-      <figure className="cx-shot">
-        <img src={`file://${block.path}`} alt={block.caption ?? 'Screenshot'} loading="lazy" onClick={() => void openFile(sessionId, block.path)} />
-        {block.caption && <figcaption>{block.caption}</figcaption>}
-      </figure>
-    );
+    return <Shot sessionId={sessionId} path={block.path} caption={block.caption} />;
   }
   if (block.kind === 'notice') {
     return <div className="cx-quiet" title={block.detail}>{block.title}</div>;
   }
   return null;
 });
+
+/** A screenshot the task took: its bytes via readFile (the hub can't load file://). */
+function Shot({ sessionId, path, caption }: { sessionId: string; path: string; caption?: string }): React.ReactElement {
+  const url = useTaskFileUrl(sessionId, path);
+  return (
+    <figure className="cx-shot">
+      {url && <img src={url} alt={caption ?? 'Screenshot'} onClick={() => void showFile(sessionId, path)} />}
+      {caption && <figcaption>{caption}</figcaption>}
+    </figure>
+  );
+}
 
 function DocCard({ block, openSignal }: { block: Extract<Block, { kind: 'canvas' }>; openSignal: number }): React.ReactElement {
   const [open, setOpen] = useState(false);
@@ -382,7 +389,7 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
     const file = findOutput(href, outputsRef.current);
     if (!file) return undefined;
     return (
-      <a className="cx-link" href="#" title={file.path} onClick={(e) => { e.preventDefault(); void openFile(sessionId, file.path); }}>
+      <a className="cx-link" href="#" title={file.path} onClick={(e) => { e.preventDefault(); void showFile(sessionId, file.path); }}>
         <FileBadge name={file.name} mime={file.mime} size="sm" />{children}
       </a>
     );
@@ -393,7 +400,7 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
     const file = findOutput(text, outputsRef.current);
     if (!file) return undefined;
     return (
-      <a className="cx-link cx-link--file" href="#" title={file.path} onClick={(e) => { e.preventDefault(); void openFile(sessionId, file.path); }}>
+      <a className="cx-link cx-link--file" href="#" title={file.path} onClick={(e) => { e.preventDefault(); void showFile(sessionId, file.path); }}>
         <FileBadge name={file.name} mime={file.mime} size="sm" />{file.name}
       </a>
     );
