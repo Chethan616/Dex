@@ -492,15 +492,14 @@ private fun Composer(
       )
     }
     val attachButton: @Composable () -> Unit = {
-      Box {
-        IconButton(onClick = { haptics.tick(); attachMenu = true }, enabled = session != null) {
-          Icon(Icons.Rounded.AttachFile, "Attach")
-        }
+      // The same "+" and mic as Home's prompt bar (DesktopKit.kt).
+      Box(Modifier.padding(start = 4.dp)) {
+        com.chethan616.dex.ui.components.PromptPlusButton(open = attachMenu, onClick = { haptics.tick(); attachMenu = !attachMenu }, enabled = session != null)
         com.chethan616.dex.ui.attach.AttachMenu(expanded = attachMenu, onDismiss = { attachMenu = false }, pickers = pickers)
       }
     }
     val micAndSend: @Composable () -> Unit = {
-      IconButton(
+      com.chethan616.dex.ui.components.PromptMicButton(
         onClick = {
           haptics.click()
           runCatching {
@@ -511,7 +510,8 @@ private fun Composer(
             )
           }
         },
-      ) { Icon(Icons.Rounded.Mic, "Speak") }
+      )
+      Spacer(Modifier.size(6.dp))
       ExpressiveSendButton(
         onClick = { val t = text.trim(); if (t.isNotEmpty() || hasFiles) { onSend(t); text = "" } },
         enabled = (text.isNotBlank() || hasFiles) && !attach.preparing && session != null,
