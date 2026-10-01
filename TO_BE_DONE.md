@@ -588,8 +588,8 @@ PLAN §3.7, plus Codex's note format in Appendix B. The format matters: the mode
 
 `android/` holds a Jetpack Compose app (material3 `1.5.0-alpha29`, M3 Expressive), package `com.chethan616.dex`. It pairs with the PC over the Firebase bridge.
 
-**State at hand-over:** **1.0.21** (versionCode 22).
-- It's published as `DEX-android-1.0.21.apk` on the GitHub release **v3.1.0**, which is `releases/latest`.
+**State at hand-over:** **1.0.22** (versionCode 23).
+- It's published as `DEX-android-1.0.22.apk` on the GitHub release **v3.2.0** (desktop 3.2.0), which is `releases/latest`.
 - The app updates itself from GitHub Releases, like the desktop:
   - `update/ReleaseChecker.kt` reads `releases/latest` and looks for an asset named `DEX-android-<version>.apk`;
   - `update/AppUpdater.kt` downloads it inside the app, checks it's DEX at that version and signed with the same key, then opens Android's installer (`REQUEST_INSTALL_PACKAGES`; the FileProvider `updates/` path);
@@ -613,9 +613,9 @@ PLAN §3.7, plus Codex's note format in Appendix B. The format matters: the mode
 
    The SDK is at `D:\Android\Sdk`; build-tools are under `D:/Android/Sdk/build-tools/<ver>/`.
 4. Copy the APK to `android/release/DEX-android-<ver>.apk` (gitignored).
-5. `gh release upload v3.1.0 android/release/DEX-android-<ver>.apk`. Check the asset's sha256 digest equals the local file (`gh release view v3.1.0 --json assets`).
-6. `gh release delete-asset v3.1.0 DEX-android-<old>.apk -y`.
-7. Update the notes line that names the APK: `gh release view --json body` → edit → `gh release edit v3.1.0 --notes-file …`.
+5. `gh release upload <latest tag, e.g. v3.2.0> android/release/DEX-android-<ver>.apk`. Check the asset's sha256 digest equals the local file (`gh release view <latest tag, e.g. v3.2.0> --json assets`).
+6. `gh release delete-asset <latest tag, e.g. v3.2.0> DEX-android-<old>.apk -y`.
+7. Update the notes line that names the APK: `gh release view --json body` → edit → `gh release edit <latest tag, e.g. v3.2.0> --notes-file …`.
 
 **Screenshots without a phone (Robolectric):**
 1. Add temporarily: `testImplementation("org.robolectric:robolectric:4.17")`, the compose BOM, `ui-test-junit4`, `debugImplementation ui-test-manifest`, and `testOptions.unitTests.isIncludeAndroidResources = true`.
