@@ -169,7 +169,10 @@ function thumbFor(filePath: string | undefined, mime?: string): string | null {
 }
 
 function serializeBlock(block: Block): Record<string, unknown> {
-  const base = { seq: block.id, kind: block.kind };
+  // `at`: when the desktop recorded it (absent on blocks from before events
+  // carried times). The phone uses it to interleave subagent mention rows
+  // with the conversation by timestamp, the same way the hub's chat does.
+  const base = { seq: block.id, kind: block.kind, at: block.at ?? null };
   switch (block.kind) {
     case 'user':
       return {
