@@ -52,6 +52,9 @@ function copyDirSync(src, dst) {
   }
 }
 
+/** Folders under domain-skills/ that DEX wrote itself; a sync keeps them. */
+const DEX_OWNED = ['google-travel'];
+
 function rmrf(p) {
   fs.rmSync(p, { recursive: true, force: true });
 }
@@ -70,8 +73,18 @@ function main() {
     }
 
     console.log(`[sync-domain-skills] replacing ${path.relative(process.cwd(), destDir)}/`);
+    // DEX's own playbooks live beside upstream's: set them aside, put them back.
+    const kept = path.join(tmp, '__dex_owned');
+    for (const name of DEX_OWNED) {
+      const own = path.join(destDir, name);
+      if (fs.existsSync(own)) copyDirSync(own, path.join(kept, name));
+    }
     rmrf(destDir);
     copyDirSync(srcPath, destDir);
+    for (const name of DEX_OWNED) {
+      const saved = path.join(kept, name);
+      if (fs.existsSync(saved)) copyDirSync(saved, path.join(destDir, name));
+    }
 
     const version = {
       repo: 'browser-use/harnessless',

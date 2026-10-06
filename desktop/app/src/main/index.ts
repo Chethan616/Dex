@@ -2015,6 +2015,18 @@ app.whenReady().then(async () => {
       // clicking the same button again.
       // dex-react: the agent reacts to the user's message — sparingly, when it
       // means something (a go-ahead, a thank-you), never to every message.
+      // A hosted connector's proxy (mcp-servers/remote) got a 401: renew its
+      // token here, where the refresh token lives.
+      'POST /dex/connector-token': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { id?: unknown };
+        const id = assertString(body.id, 'id', 80);
+        if (!id.startsWith('remote_')) throw new Error('not a hosted connector');
+        const { freshRemoteToken } = await import('./connectors/remote');
+        const token = await freshRemoteToken(id, Number.POSITIVE_INFINITY);
+        if (!token) throw new Error('This connector needs signing in again.');
+        return { token };
+      },
+
       'POST /dex/react': async (raw) => {
         const body = JSON.parse(raw || '{}') as { sessionId?: unknown; emoji?: unknown; target?: unknown; on?: unknown };
         const sessionId = assertString(body.sessionId, 'sessionId', 100);
@@ -3146,6 +3158,30 @@ app.whenReady().then(async () => {
       });
     }
     return result;
+  });
+
+  // The Marketplace's hosted connectors (shared/connectorCatalog.ts).
+  ipcMain.handle('connectors:list', async () => {
+    const { HOSTED_CONNECTORS, remoteConnectionId } = await import('../shared/connectorCatalog');
+    const { listConnections } = await import('./mcp/store');
+    const byId = new Map((await listConnections()).map((c) => [c.id, c]));
+    return HOSTED_CONNECTORS.map((c) => {
+      const conn = byId.get(remoteConnectionId(c.id));
+      const signedIn = c.auth === 'none' || Boolean(conn?.values?.DEX_REMOTE_TOKEN);
+      return { id: c.id, connected: Boolean(conn?.enabled && signedIn), toolCount: conn?.toolNames?.length ?? 0 };
+    });
+  });
+  ipcMain.handle('connectors:connect', async (_event, id: unknown) => {
+    const { connectRemote } = await import('./connectors/remote');
+    return connectRemote(assertString(id, 'id', 60));
+  });
+  ipcMain.handle('connectors:cancel', async () => {
+    const { cancelRemoteSignIn } = await import('./connectors/remote');
+    cancelRemoteSignIn();
+  });
+  ipcMain.handle('connectors:disconnect', async (_event, id: unknown) => {
+    const { disconnectRemote } = await import('./connectors/remote');
+    await disconnectRemote(assertString(id, 'id', 60));
   });
 
   ipcMain.handle('settings:mcp:set', async (_event, id: string, patch: { enabled?: boolean; values?: Record<string, string> }) => {

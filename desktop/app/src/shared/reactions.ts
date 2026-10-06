@@ -53,8 +53,10 @@ export function validReaction(target: unknown, emoji: unknown): { target: string
   // One emoji, however many code points it takes (skin tones, ZWJ families,
   // flags, keycaps) — not a sentence.
   if (!e || e.length > 32) return null;
-  if (!/\p{Extended_Pictographic}|\p{Regional_Indicator}|⃣/u.test(e)) return null;
-  const rest = e.replace(/[#*0-9]️?⃣/gu, '').replace(/\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}|[‍️\u{e0020}-\u{e007f}]/gu, '');
+  if (!/\p{Extended_Pictographic}|\p{Regional_Indicator}|\u20e3/u.test(e)) return null;
+  const rest = e
+    .replace(/[#*0-9]\ufe0f?\u20e3/gu, '')
+    .replace(/\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}|\u200d|\ufe0f|[\u{e0020}-\u{e007f}]/gu, '');
   if (rest.length > 0) return null;
   return { target, emoji: e };
 }

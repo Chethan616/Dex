@@ -18,11 +18,6 @@ interface NewTabPageProps {
   onOpenLogs?: () => void;
 }
 
-/** Settings at a section, from anywhere in the hub (HubApp listens). */
-function openSettingsAt(sectionId: string): void {
-  window.dispatchEvent(new CustomEvent('dex:open-settings', { detail: sectionId }));
-}
-
 const TOOL_ICONS = {
   files: 'M2 4.2c0-.6.5-1 1-1h3l1.4 1.5H13c.6 0 1 .4 1 1v6.1c0 .6-.4 1-1 1H3c-.5 0-1-.4-1-1z',
   logs: 'M3 3.5h10v9H3zM5.5 6.5h5M5.5 9h3',
@@ -71,7 +66,7 @@ export function NewTabPage({ session, onOpen, onOpenLogs }: NewTabPageProps): Re
   const tools: Array<{ id: keyof typeof TOOL_ICONS; label: string; hint: string; run: () => void }> = [
     { id: 'files', label: 'Find a file', hint: 'Any file this task made', run: () => findRef.current?.focus() },
     ...(onOpenLogs ? [{ id: 'logs' as const, label: 'Logs', hint: 'The raw run, step by step', run: onOpenLogs }] : []),
-    { id: 'accounts', label: 'Accounts', hint: 'Google, Microsoft, GitHub…', run: () => openSettingsAt('settings-integrations') },
+    { id: 'accounts', label: 'Connectors', hint: 'Google, Notion, Jira, Canva…', run: () => window.dispatchEvent(new CustomEvent('dex:open-marketplace')) },
   ];
 
   return (

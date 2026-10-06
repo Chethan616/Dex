@@ -468,8 +468,23 @@ interface ElectronSettingsPreflightAPI {
   refresh: () => Promise<PreflightReportInfo>;
 }
 
+/** A hosted connector's state (main/connectors/remote.ts). */
+interface HostedConnectorStatus {
+  id: string;
+  connected: boolean;
+  toolCount: number;
+}
+
+interface ElectronSettingsConnectorsAPI {
+  list: () => Promise<HostedConnectorStatus[]>;
+  connect: (id: string) => Promise<{ ok: true; toolNames: string[] } | { ok: false; error: string }>;
+  cancel: () => Promise<void>;
+  disconnect: (id: string) => Promise<void>;
+}
+
 interface ElectronSettingsAPI {
   mcp?: ElectronSettingsMcpAPI;
+  connectors?: ElectronSettingsConnectorsAPI;
   accounts?: ElectronSettingsAccountsAPI;
   bridge?: ElectronSettingsBridgeAPI;
   preflight?: ElectronSettingsPreflightAPI;

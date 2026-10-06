@@ -1127,7 +1127,7 @@ export function ConnectionsPane({
         className={embedded ? 'settings-page__section' : 'conn-pane__group'}
       >
       <div className="settings-section-header">
-        <h2 className="settings-section-header__title">Connections</h2>
+        <h2 className="settings-section-header__title">Channels</h2>
       </div>
 
       <div className="conn-card">

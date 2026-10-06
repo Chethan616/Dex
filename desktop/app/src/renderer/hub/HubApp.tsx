@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AgentPane } from './AgentPane';
 import { Dashboard } from './Dashboard';
 import { KeybindingsOverlay } from './KeybindingsOverlay';
+import { Marketplace } from './connectors/Marketplace';
 import { CommandBar } from './CommandBar';
 import { SettingsPane } from './SettingsPane';
 import { useVimKeys } from './useVimKeys';
@@ -172,6 +173,8 @@ export function HubApp(): React.ReactElement {
   }, []);
   const openPill = useCallback(() => { window.electronAPI?.pill.toggle(); }, []);
   const [helpOpen, setHelpOpen] = useState(false);
+  /** The Marketplace pane, and which view it opens on. */
+  const [market, setMarket] = useState<'browse' | 'installed' | null>(null);
   const [settingsIntent, setSettingsIntent] = useState<SettingsOpenIntent | null>(null);
   const settingsRequestIdRef = useRef(0);
   const [focusIndex, setFocusIndex] = useState(0);
@@ -392,6 +395,13 @@ export function HubApp(): React.ReactElement {
     window.addEventListener('dex:open-settings', onOpen);
     return () => window.removeEventListener('dex:open-settings', onOpen);
   }, [openSettingsPage]);
+
+  // The Marketplace, from Settings › Connectors or the New-tab page.
+  useEffect(() => {
+    const onOpen = (e: Event) => setMarket((e as CustomEvent<unknown>).detail === 'installed' ? 'installed' : 'browse');
+    window.addEventListener('dex:open-marketplace', onOpen);
+    return () => window.removeEventListener('dex:open-marketplace', onOpen);
+  }, []);
 
   useEffect(() => {
     const unsub = window.electronAPI?.on?.pillToggled?.(() => {
@@ -838,6 +848,16 @@ export function HubApp(): React.ReactElement {
           onClose={hideCmdBar}
           onInvoke={(id) => vimHandlers[id]?.()}
           formatShortcut={vim.formatShortcut}
+        />
+      )}
+
+      {market && (
+        <Marketplace
+          initialView={market}
+          onClose={() => {
+            setMarket(null);
+            if (viewMode !== 'settings') showBrowserViews();
+          }}
         />
       )}
 

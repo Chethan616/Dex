@@ -19,6 +19,7 @@ import path from 'node:path';
 import { oauthClient } from '../accounts/oauthClients';
 import { knownFolders } from '../startup/knownFolders';
 import { blenderHome, findBlender } from '../startup/blender';
+import { HOSTED_CONNECTORS, remoteConnectionId, type HostedConnector } from '../../shared/connectorCatalog';
 
 export type McpTransport = 'stdio';
 
@@ -125,6 +126,13 @@ export function launchSpec(definition: McpServerDefinition, values: Record<strin
     env.DEX_REDDIT_BRIDGE_PATH ||= redditBridgePath();
     for (const key of ['REDDIT_REFRESH_TOKEN', 'DEX_REDDIT_REFRESH_TOKEN', 'REDDIT_CLIENT_SECRET', 'REDDIT_PASSWORD', 'REDDIT_CLIENT_ID', 'REDDIT_USERNAME']) {
       delete env[key];
+    }
+  }
+  // A hosted connector's proxy needs its URL and current access token only;
+  // the refresh token and client details stay in the credential store.
+  if (definition.builtIn === 'remote') {
+    for (const key of Object.keys(env)) {
+      if (key.startsWith('DEX_REMOTE_') && !['DEX_REMOTE_URL', 'DEX_REMOTE_TOKEN', 'DEX_REMOTE_ID'].includes(key)) delete env[key];
     }
   }
   if (definition.builtIn) {
@@ -322,8 +330,41 @@ export const MCP_CATALOG: McpServerDefinition[] = [
   },
 ];
 
+/**
+ * A hosted connector (shared/connectorCatalog.ts) as an MCP server: DEX's
+ * proxy, mcp-servers/remote, pointed at the service with its token.
+ */
+function remoteDefinition(c: HostedConnector): McpServerDefinition {
+  return {
+    id: remoteConnectionId(c.id),
+    displayName: c.name,
+    summary: c.blurb,
+    transport: 'stdio',
+    command: 'node',
+    args: [],
+    builtIn: 'remote',
+    launchEnv: () => ({ DEX_REMOTE_URL: c.url, DEX_REMOTE_ID: remoteConnectionId(c.id), DEX_CONTROL_FILE: controlFilePath() }),
+    credentials: c.auth === 'oauth' ? [{ key: 'DEX_REMOTE_TOKEN', label: `${c.name} sign-in`, secret: true }] : [],
+  };
+}
+
+function controlFilePath(): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { app } = require('electron') as typeof import('electron');
+    return path.join(app.getPath('userData'), 'local-task-server.json');
+  } catch {
+    return '';
+  }
+}
+
+const REMOTE_DEFINITIONS = new Map(HOSTED_CONNECTORS.map((c) => [remoteConnectionId(c.id), c]));
+
 export function findServerDefinition(id: string): McpServerDefinition | undefined {
-  return MCP_CATALOG.find((server) => server.id === id);
+  const builtIn = MCP_CATALOG.find((server) => server.id === id);
+  if (builtIn) return builtIn;
+  const hosted = REMOTE_DEFINITIONS.get(id);
+  return hosted ? remoteDefinition(hosted) : undefined;
 }
 
 /**

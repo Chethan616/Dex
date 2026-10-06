@@ -256,6 +256,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return () => ipcRenderer.removeListener('bridge:state', handler);
       },
     },
+    /** The Marketplace's hosted connectors (shared/connectorCatalog.ts). */
+    connectors: {
+      list: (): Promise<unknown> => ipcRenderer.invoke('connectors:list'),
+      connect: (id: string): Promise<unknown> => ipcRenderer.invoke('connectors:connect', id),
+      cancel: (): Promise<void> => ipcRenderer.invoke('connectors:cancel'),
+      disconnect: (id: string): Promise<void> => ipcRenderer.invoke('connectors:disconnect', id),
+    },
     accounts: {
       list: (): Promise<unknown> => ipcRenderer.invoke('accounts:list'),
       connect: (provider: 'google' | 'github' | 'slack' | 'reddit' | 'huggingface'): Promise<unknown> => ipcRenderer.invoke('accounts:connect', provider),

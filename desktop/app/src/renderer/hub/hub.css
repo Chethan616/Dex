@@ -7867,3 +7867,32 @@ button:focus:not(:focus-visible) {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* Settings › Connectors: the way into the Marketplace. */
+.settings-market {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--color-accent-default, #35b8ff) 10%, var(--color-bg-elevated)), var(--color-bg-elevated));
+}
+.settings-market__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.settings-market__title { font-size: 14px; font-weight: 650; color: var(--color-fg-primary); }
+.settings-market__sub { font-size: 12.5px; color: var(--color-fg-secondary); }
+.settings-market__installed { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--color-accent-default, #35b8ff); font: inherit; font-size: 12.5px; cursor: pointer; }
+.settings-market__browse {
+  flex: none;
+  height: 34px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-fg-primary);
+  color: var(--color-bg-elevated);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}

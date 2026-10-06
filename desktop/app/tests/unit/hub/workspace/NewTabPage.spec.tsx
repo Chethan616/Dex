@@ -50,19 +50,18 @@ describe('NewTabPage', () => {
     act(() => { root.render(<NewTabPage session={session()} onOpen={() => {}} {...props} />); });
   };
 
-  it('offers its tools, and Accounts opens Settings at that section', () => {
+  it('offers its tools, and Connectors opens the Marketplace', () => {
     const onOpenLogs = vi.fn();
-    const opened: unknown[] = [];
-    const listen = (e: Event) => opened.push((e as CustomEvent).detail);
-    window.addEventListener('dex:open-settings', listen);
+    const opened = vi.fn();
+    window.addEventListener('dex:open-marketplace', opened);
     render({ onOpenLogs });
     const labels = Array.from(host.querySelectorAll('.ws-ntp-tool__label')).map((l) => l.textContent);
-    expect(labels).toEqual(['Find a file', 'Logs', 'Accounts']);
+    expect(labels).toEqual(['Find a file', 'Logs', 'Connectors']);
     act(() => (host.querySelectorAll('.ws-ntp-tool')[1] as HTMLButtonElement).click());
     expect(onOpenLogs).toHaveBeenCalled();
     act(() => (host.querySelectorAll('.ws-ntp-tool')[2] as HTMLButtonElement).click());
-    expect(opened).toEqual(['settings-integrations']);
-    window.removeEventListener('dex:open-settings', listen);
+    expect(opened).toHaveBeenCalledTimes(1);
+    window.removeEventListener('dex:open-marketplace', opened);
   });
 
   it('finds a task file by name and opens it as a document tab', async () => {
