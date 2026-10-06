@@ -42,10 +42,37 @@ data class TaskFile(val name: String, val path: String, val size: Long)
 
 data class ToolResult(val ok: Boolean, val preview: String, val ms: Long)
 
+/**
+ * A subagent the task launched (desktop/app/src/main/firebase/bridge.ts's
+ * serializeSubagent is the writer, built from src/shared/subagents.ts's
+ * fold of Claude Code's Task tool). Only the latest step is mirrored here —
+ * never the full step list — the phone shows mention rows and an
+ * Active/Done sheet, not a per-subagent transcript.
+ */
+data class SubagentActivity(val kind: String, val name: String?, val preview: String?, val at: Long?)
+
+data class Subagent(
+  val id: String,
+  val name: String,
+  val subagentType: String?,
+  val prompt: String?,
+  val status: String, // "active" | "done"
+  val ok: Boolean?,
+  val summary: String?,
+  val startedAt: Long?,
+  val endedAt: Long?,
+  val lastActivity: SubagentActivity?,
+  val stepCount: Long,
+) {
+  val isActive: Boolean get() = status == "active"
+}
+
 /** One chat block — same kinds as renderer/logs/transcript.ts. */
 data class Block(
   val seq: Long,
   val kind: String,
+  /** When the desktop recorded it (SessionManager.appendOutput's `at`), ms since epoch. Absent on sessions recorded before blocks carried times. */
+  val at: Long? = null,
   val text: String? = null,
   val name: String? = null,
   val toolKind: String? = null,

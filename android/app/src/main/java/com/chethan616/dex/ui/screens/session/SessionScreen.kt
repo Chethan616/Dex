@@ -87,6 +87,7 @@ import com.chethan616.dex.AppContainer
 import com.chethan616.dex.data.Block
 import com.chethan616.dex.data.Session
 import com.chethan616.dex.data.SessionStatus
+import com.chethan616.dex.data.Subagent
 import com.chethan616.dex.ui.avatar.BotAvatar
 import com.chethan616.dex.ui.avatar.botTypeFor
 import com.chethan616.dex.ui.avatar.BotMood
@@ -96,6 +97,11 @@ import com.chethan616.dex.ui.avatar.rememberBotMood
 import com.chethan616.dex.ui.components.BlockView
 import com.chethan616.dex.ui.components.ToolGroup
 import com.chethan616.dex.ui.components.ErrorCard
+import com.chethan616.dex.ui.components.ConversationItem
+import com.chethan616.dex.ui.components.SubagentMentionRow
+import com.chethan616.dex.ui.components.SubagentsButton
+import com.chethan616.dex.ui.components.SubagentsSheet
+import com.chethan616.dex.ui.components.mergeConversation
 import com.chethan616.dex.notify.Notifications
 import com.chethan616.dex.ui.files.FilesButton
 import com.chethan616.dex.ui.files.FilesSheet
@@ -134,6 +140,7 @@ fun SessionScreen(
   val scope = rememberCoroutineScope()
   var confirmStop by remember { mutableStateOf(false) }
   var filesOpen by remember { mutableStateOf(false) }
+  var subagentsOpen by remember { mutableStateOf(false) }
   val attach = com.chethan616.dex.ui.attach.rememberAttachmentState()
   val pcFiles = rememberPcFiles(androidx.compose.ui.platform.LocalContext.current, container.repo, sessionId)
   val taskItems = remember(state.blocks, session) { collectTaskItems(state.blocks, session) }
@@ -142,6 +149,10 @@ fun SessionScreen(
   // opens the viewer at once instead of waiting on a download.
   val models = remember(taskItems) { taskItems.second.filter { it.worthPrefetching() } }
   val groups = remember(state.blocks) { groupTools(state.blocks) }
+  // Subagent mention rows, merged in by timestamp (ui/components/Subagents.kt) —
+  // "X, Y and Z started working" / "X finished", among the usual block groups.
+  val conversation = remember(groups, state.subagents) { mergeConversation(groups, state.subagents) }
+  val activeSubagentCount = remember(state.subagents) { state.subagents.count { it.isActive } }
   LaunchedEffect(models) { models.forEach { pcFiles.prefetch(scope, it) } }
 
   // The conversation opens at its latest message: placed there at once, not
@@ -164,7 +175,7 @@ fun SessionScreen(
   LaunchedEffect(state.blocks.size, lastSignature) {
     if (state.blocks.isEmpty()) return@LaunchedEffect
     if (!placed) {
-      val total = snapshotFlow { list.layoutInfo.totalItemsCount }.first { it >= groups.size }
+      val total = snapshotFlow { list.layoutInfo.totalItemsCount }.first { it >= conversation.size }
       list.scrollToItem((total - 1).coerceAtLeast(0))
       placed = true
     } else if (atBottom) {
@@ -196,6 +207,7 @@ fun SessionScreen(
 
   androidx.compose.runtime.CompositionLocalProvider(LocalPcFiles provides pcFiles, LocalTaskBot provides bot) {
   if (filesOpen) FilesSheet(state.blocks, session, onDismiss = { filesOpen = false })
+  if (subagentsOpen) SubagentsSheet(state.subagents, onDismiss = { subagentsOpen = false })
   com.chethan616.dex.ui.files.ModelViewerHost()
   Scaffold(
     modifier = Modifier.onGloballyPositioned { flight?.chatScreen = it },
@@ -205,6 +217,9 @@ fun SessionScreen(
         onSync = { haptics.click(); vm.sync() },
         fileCount = fileCount,
         onFiles = { haptics.tick(); filesOpen = true },
+        subagentCount = state.subagents.size,
+        activeSubagentCount = activeSubagentCount,
+        onSubagents = { haptics.tick(); subagentsOpen = true },
       )
     },
     bottomBar = {
@@ -256,10 +271,24 @@ fun SessionScreen(
           // is its own item.
           val live = session?.status?.isLive == true
           val runningSeq = if (live) state.blocks.lastOrNull { it.kind == "tool" && it.result == null }?.seq else null
-          items(groups, key = { it.first().seq }) { group ->
+          items(
+            conversation,
+            key = { item ->
+              when (item) {
+                is ConversationItem.Blocks -> item.group.first().seq
+                is ConversationItem.Mention -> "mention-${item.group.kind}-${item.group.at}"
+              }
+            },
+          ) { item ->
             Box(Modifier.animateItem()) {
-              if (group.first().kind == "tool") ToolGroup(group, runningSeq)
-              else BlockView(group.first(), running = false)
+              when (item) {
+                is ConversationItem.Mention -> SubagentMentionRow(item.group)
+                is ConversationItem.Blocks -> {
+                  val group = item.group
+                  if (group.first().kind == "tool") ToolGroup(group, runningSeq)
+                  else BlockView(group.first(), running = false)
+                }
+              }
             }
           }
           // Why it stopped, when the conversation itself doesn't say (older tasks).
@@ -364,6 +393,9 @@ private fun SessionTopBar(
   onSync: () -> Unit,
   fileCount: Int,
   onFiles: () -> Unit,
+  subagentCount: Int = 0,
+  activeSubagentCount: Int = 0,
+  onSubagents: () -> Unit = {},
 ) {
   var menu by remember { mutableStateOf(false) }
   Surface(color = MaterialTheme.colorScheme.surface) {
@@ -399,6 +431,7 @@ private fun SessionTopBar(
           )
         }
       }
+      SubagentsButton(subagentCount, activeSubagentCount, onSubagents)
       FilesButton(fileCount, onFiles)
       Box {
         IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "More") }
