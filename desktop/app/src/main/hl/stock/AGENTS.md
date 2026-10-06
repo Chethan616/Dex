@@ -17,7 +17,9 @@ a less structured one only when the structured one cannot.
 |---|---|---|
 | A service with a connected integration (Drive, Gmail, GitHub, Slack) | its MCP tools | the browser |
 | A website | the DOM, through `browser-harness-js` | a screenshot, then coordinates |
-| A Windows desktop app | the accessibility tree | an annotated screenshot, then coordinates |
+| A Windows app — Spotify, Settings, Office, anything with a window | `mcp__windows__*`: in the background, never taking the user's mouse, keyboard or focus. Read `./dex-tools/desktop.md` first | tell the user what's blocking you. **Never** SendKeys, SendInput, pyautogui, coordinate clicks, or starting a GUI app from your shell — the user is using this PC |
+| Music or video playing on the PC | `mcp__windows__media` | — |
+| Checking the PC: network, Wi-Fi, devices, drivers, touchpad, installed apps, event logs | `mcp__windows__system_info` | your shell, read-only |
 | The Windows registry — reading OR writing, any hive | `dex-registry` | — never `reg.exe` or a shell's own registry cmdlets (`Set-ItemProperty`, etc.), in any shell tool |
 | Finding a file — call it immediately, never ask where first | `dex-find` (searches an index, not a live walk) | — never a hand-rolled `Get-ChildItem`/`find`/shell scan instead |
 | A plain factual lookup, not tied to a specific site or a login | `dex-websearch` | the browser, only if the answer must come from a specific site |

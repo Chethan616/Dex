@@ -230,7 +230,10 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
   try {
     // Hosted connectors' tokens last about an hour: renew the ones close to it.
     await (await import('../../connectors/remote')).refreshRemoteConnections().catch(() => {});
-    const servers = usableServers(await enabledConnections());
+    const { alwaysOnConnections } = await import('../../mcp/catalog');
+    const { listConnections } = await import('../../mcp/store');
+    const enabled = await enabledConnections();
+    const servers = usableServers([...enabled, ...alwaysOnConnections(await listConnections()).filter((a) => !enabled.some((e) => e.id === a.id))]);
     if (servers.length > 0) {
       mcpConfigPath = writeClaudeMcpConfig(opts.harnessDir, servers) ?? undefined;
       mcpServers = servers.map((server) => ({

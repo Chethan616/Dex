@@ -98,6 +98,20 @@ describe('approvals/policy — new categories follow session mode', () => {
     expect(needsPrompt({ sessionId: SID, category: 'process-launch' })).toBe(false);
   });
 
+  it('desktop control: Full access asks for nothing; Approve for me asks before changing the PC; Ask asks for everything', () => {
+    setSessionMode(SID, 'full');
+    for (const c of ['app-control', 'system-change', 'system-destructive', 'elevation'] as const) {
+      expect(needsPrompt({ sessionId: SID, category: c }), c).toBe(false);
+    }
+    setSessionMode(SID, 'auto');
+    expect(needsPrompt({ sessionId: SID, category: 'app-control' })).toBe(false);
+    expect(needsPrompt({ sessionId: SID, category: 'system-change' })).toBe(true);
+    expect(needsPrompt({ sessionId: SID, category: 'system-destructive' })).toBe(true);
+    expect(needsPrompt({ sessionId: SID, category: 'elevation' })).toBe(true);
+    setSessionMode(SID, 'ask');
+    expect(needsPrompt({ sessionId: SID, category: 'app-control' })).toBe(true);
+  });
+
   it('downloads: auto mode asks only for programs, scripts and installers', () => {
     setSessionMode(SID, 'auto');
     expect(needsPrompt({ sessionId: SID, category: 'download', subject: 'report.pdf' })).toBe(false);

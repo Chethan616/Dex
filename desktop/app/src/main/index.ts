@@ -113,6 +113,7 @@ import { noteAgentInput, takeUserActsSinceAgent, userActiveWithin, waitForUserId
 import { maskSecretFields, READS_PAGE, redactSecrets, secretValues } from './workspace/secretFields';
 import { handleDownload } from './workspace/downloads';
 import { pageMenuTemplate } from './workspace/pageMenu';
+import * as deskState from './desktop/deskState';
 import { TabMemory, tabsToSave } from './workspace/tabMemory';
 import { leaseDebugger, withDebugger } from './cdpLease';
 import { normalizeAddress } from '../shared/address';
@@ -406,6 +407,10 @@ const AGENT_INPUT = new Set([
 type CursorTarget = Parameters<typeof moveCursor>[0];
 const workspaceHooks: BrokerHooks = {
   async beforeCommand(wc, method, params, { child }) {
+    // Paused on Windows (cooperative, desktop/deskState.ts): the agent's
+    // commands to the page wait until Resume.
+    const heldSession = browserPool.sessionIdOf(wc as unknown as Electron.WebContents);
+    if (heldSession && deskState.isHeld(heldSession)) await deskState.waitWhileHeld(heldSession);
     // A tab off your screen wakes on the stage while the agent uses it; a
     // screenshot right after waking waits for the page to draw.
     const woke = browserPool.noteAgentUse(wc as unknown as Electron.WebContents);
@@ -1192,22 +1197,32 @@ app.whenReady().then(async () => {
       return { error: 'Session is still starting and cannot be paused yet. Try again in a moment.' };
     }
     const controlResult = active.control.pause();
-    if (!controlResult.paused) return controlResult;
+    // Windows can't suspend the engine: hold its hands instead (deskState).
+    const cooperative = !controlResult.paused && process.platform === 'win32';
+    if (!controlResult.paused && !cooperative) return controlResult;
+    if (cooperative) deskState.hold(id, 'paused');
 
     const result = sessionManager.pauseSession(id, opts);
+    if (!result.paused && cooperative) deskState.release(id);
     if (result.paused) {
       takeoverOverlay.hide(id, shellWindow);
       captureEvent('session_paused', {
         engine: sessionManager.getSessionEngine(id) ?? 'unknown',
         source,
       });
-    } else {
+    } else if (!cooperative) {
       active.control.resume();
     }
     return result;
   }
 
   function resumePausedRun(id: string, source: 'button' | 'logs' | 'resume'): { resumed?: boolean; error?: string } {
+    // A cooperative pause (Windows): let go of its hands.
+    if (deskState.release(id)) {
+      const result = sessionManager.resumePausedSession(id);
+      if (result.resumed) captureEvent('session_resumed', { engine: sessionManager.getSessionEngine(id) ?? 'unknown', source });
+      return result;
+    }
     const active = activeRunControls.get(id);
     if (!active) {
       return { error: 'Paused agent process is no longer available.' };
@@ -1302,6 +1317,8 @@ app.whenReady().then(async () => {
     if (shouldIgnoreEngineEvent(id, event.type, runId)) return;
     if (event.type === 'done') {
       sessionManager.appendOutput(id, event);
+      // Held (a cooperative pause) when it finished: it's done, not paused.
+      if (deskState.release(id)) sessionManager.resumePausedSession(id);
       sessionManager.completeSession(id);
       void drainQueuedFollowUp(id, 'done');
     } else if (event.type === 'error') {
@@ -2027,6 +2044,44 @@ app.whenReady().then(async () => {
         return { token };
       },
 
+      // The Windows server asks before each action on the user's apps:
+      // held (paused) → it waits.
+      'POST /dex/desktop-gate': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { sessionId?: unknown };
+        const sessionId = assertString(body.sessionId, 'sessionId', 100);
+        return { hold: deskState.isHeld(sessionId), reason: deskState.holdReason(sessionId) };
+      },
+
+      // Something on the desktop the user should know: DEX brought a window
+      // to the front by mistake, or the user took a window DEX had parked.
+      'POST /dex/desktop-event': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { sessionId?: unknown; kind?: unknown; window?: { title?: unknown; process?: unknown }; incident?: { to?: { process?: unknown } } };
+        const sessionId = assertString(body.sessionId, 'sessionId', 100);
+        const app = String(body.window?.process ?? body.incident?.to?.process ?? 'an app').replace(/\.exe$/i, '');
+        if (body.kind === 'focus-incident') {
+          sessionManager.appendOutput(sessionId, { type: 'notify', level: 'info', message: `DEX brought ${app} to the front by mistake — sorry. It won't do it that way again.` });
+        } else if (body.kind === 'taken-over') {
+          sessionManager.appendOutput(sessionId, { type: 'notify', level: 'info', message: `You took ${app} — DEX is leaving it alone.` });
+        }
+        return { ok: true };
+      },
+
+      // A capture from the Windows server, shown in the task's chat.
+      'POST /dex/screenshot': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { sessionId?: unknown; path?: unknown; caption?: unknown; mode?: unknown };
+        const sessionId = assertString(body.sessionId, 'sessionId', 100);
+        const shot = assertString(body.path, 'path', 2000);
+        if (!fs.existsSync(shot) || !/\.png$/i.test(shot)) throw new Error('not a capture');
+        sessionManager.appendOutput(sessionId, {
+          type: 'screenshot',
+          path: shot,
+          caption: typeof body.caption === 'string' ? body.caption.slice(0, 200) : undefined,
+          mode: body.mode === 'uia' ? 'uia' : 'raw',
+          at: Date.now(),
+        });
+        return { ok: true };
+      },
+
       'POST /dex/react': async (raw) => {
         const body = JSON.parse(raw || '{}') as { sessionId?: unknown; emoji?: unknown; target?: unknown; on?: unknown };
         const sessionId = assertString(body.sessionId, 'sessionId', 100);
@@ -2346,6 +2401,7 @@ app.whenReady().then(async () => {
     queuedFollowUps.delete(validatedId);
     drainingQueuedFollowUps.delete(validatedId);
     terminateActiveRunControl(validatedId);
+    deskState.release(validatedId);
     browserPool.destroy(validatedId, shellWindow ?? undefined);
     documentTabs.closeSession(validatedId);
     tabMemory.forget(validatedId);

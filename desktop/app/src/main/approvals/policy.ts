@@ -14,7 +14,15 @@ export type ApprovalCategory =
   | 'process-launch'
   | 'service-control'
   /** A file the agent (or a page, while the task runs) downloads in a workspace tab. */
-  | 'download';
+  | 'download'
+  /** Acting inside a Windows app in the background (mcp-servers/windows, docs/desktop-control). */
+  | 'app-control'
+  /** A reversible change to the PC's settings, with an undo. */
+  | 'system-change'
+  /** Hard to undo: uninstalling, resetting the network, closing a window the user opened. */
+  | 'system-destructive'
+  /** Needs administrator rights. */
+  | 'elevation';
 
 export type ApprovalLifetime = 'once' | 'turn' | 'session';
 
@@ -26,6 +34,10 @@ const APPROVAL_CATEGORIES: ReadonlySet<string> = new Set<ApprovalCategory>([
   'process-launch',
   'service-control',
   'download',
+  'app-control',
+  'system-change',
+  'system-destructive',
+  'elevation',
 ]);
 
 /** Coerces an untrusted category string to a known category, defaulting to
@@ -171,6 +183,11 @@ export function needsPrompt(input: ApprovalCheckInput): boolean {
   if (category === 'filesystem-write-unsafe-path') return subject ? isRiskyPath(subject) : false;
   // A program, script or installer is worth a look; a PDF isn't.
   if (category === 'download') return subject ? isRunnable(subject) : false;
+  // Desktop control (docs/desktop-control/PLAN.md §6, the owner's decisions):
+  // "Approve for me" lets DEX work inside apps, and asks before it changes
+  // the PC; Full access (returned above) asks for nothing.
+  if (category === 'app-control') return false;
+  if (category === 'system-change' || category === 'system-destructive' || category === 'elevation') return true;
   return subject ? isRiskyCommand(subject) : false;
 }
 

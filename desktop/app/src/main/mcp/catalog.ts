@@ -358,11 +358,49 @@ function controlFilePath(): string {
   }
 }
 
+/**
+ * DEX's Windows server (mcp-servers/windows, docs/desktop-control): Windows
+ * apps, media and PC diagnostics in the background. Every task on Windows
+ * gets it without the user turning anything on (see alwaysOnConnections).
+ */
+export const WINDOWS_TOOL_NAMES = [
+  'windows_list', 'window_tree', 'window_find', 'window_capture', 'ui_invoke', 'ui_set_text', 'ui_toggle', 'ui_select',
+  'ui_expand', 'ui_scroll', 'ui_wait', 'app_launch', 'window_manage', 'media', 'system_info', 'open_settings',
+];
+
+export const WINDOWS_DEFINITION: McpServerDefinition = {
+  id: 'windows',
+  displayName: 'Windows',
+  summary: 'Use Windows apps and settings in the background — your mouse, keyboard and windows stay yours.',
+  transport: 'stdio',
+  command: 'node',
+  args: [],
+  builtIn: 'windows',
+  credentials: [],
+  launchEnv: () => {
+    let home = '';
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { app } = require('electron') as typeof import('electron');
+      home = path.join(app.getPath('userData'), 'desktop');
+    } catch { /* tests */ }
+    return { DEX_EXE_PATH: process.execPath, DEX_DESK_HOME: home, DEX_CONTROL_FILE: controlFilePath() };
+  },
+};
+
+/** Servers every task gets on this platform (unless the user switched one off). */
+export function alwaysOnConnections(stored: Array<{ id: string; enabled: boolean }>): Array<{ id: string; values: Record<string, string>; toolNames: string[] }> {
+  if (process.platform !== 'win32') return [];
+  if (stored.some((c) => c.id === 'windows' && c.enabled === false)) return [];
+  return [{ id: 'windows', values: {}, toolNames: WINDOWS_TOOL_NAMES }];
+}
+
 const REMOTE_DEFINITIONS = new Map(HOSTED_CONNECTORS.map((c) => [remoteConnectionId(c.id), c]));
 
 export function findServerDefinition(id: string): McpServerDefinition | undefined {
   const builtIn = MCP_CATALOG.find((server) => server.id === id);
   if (builtIn) return builtIn;
+  if (id === WINDOWS_DEFINITION.id) return WINDOWS_DEFINITION;
   const hosted = REMOTE_DEFINITIONS.get(id);
   return hosted ? remoteDefinition(hosted) : undefined;
 }

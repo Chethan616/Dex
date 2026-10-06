@@ -641,6 +641,19 @@ The owner wants all of these done.
 >   - **Not yet tried:** a full sign-in with a real account. The owner should click Connect on, say, Notion once.
 > - **Travel:** the Kiwi.com connector, plus `domain-skills/google-travel` (flights, hotels, restaurants). `sync-domain-skills` keeps DEX-owned folders.
 > - **`dex/` deleted** (`4ba1b6e7`).
+> - **Windows desktop control, Phase 1 built.** It's always on for tasks on Windows. `docs/desktop-control/PLAN.md` describes the design; the owner's decisions are in its §6.
+>   - **The server:** `mcp-servers/windows`, 16 tools.
+>     - The host is `host/host.ps1` plus `DexDesk.cs`. The UIA interop is generated at first run from Windows' own `UIAutomationCore.dll` type library, so no DLL is committed or downloaded.
+>     - `AutoSetFocus` is off, and a focus sentinel runs around every action.
+>     - Apps open parked off-screen.
+>     - The rest: background `PrintWindow` captures, the media controls (SMTC), and read-only `system_info` (network, Wi-Fi, WLAN drops, devices, drivers, touchpad, apps, events).
+>   - **Policy:** `policy.mjs` refuses password managers, Windows security, terminals (by window class) and other agents. Tiers map to the new approval categories (`app-control`, `system-change`, `system-destructive`, `elevation`). Full access asks for nothing; Approve-for-me asks before PC changes.
+>   - **Pause on Windows is now cooperative** (`desktop/deskState.ts`): the task is held, and its browser commands (at the broker) and Windows tools (at `/dex/desktop-gate`) wait until Resume.
+>   - **Live-tested** through MCP against `scripts/desk-fixture.ps1`, an off-screen, never-activated window: press, type, toggle, tree, capture and refusals all work, with no focus changes.
+>   - **Next:**
+>     - Phase 2: `system_change` with the owner's no-prompt elevated helper, plus the undo journal;
+>     - the owner's three acceptance tasks: Spotify playlist shuffle, Wi-Fi troubleshooting, touchpad gestures;
+>     - Phase 4: borrowed input. Per the owner, take it at once and give it back the instant the user moves or types.
 
 1. **UI/UX fixes first.**
    - **The Done pill** (phone): the bot sits *inside* the pill's start, as in the owner's `UI/new2.png`, and is never clipped when it jumps (`UI/fix1.png` and `fix2.png` show too big a gap).
