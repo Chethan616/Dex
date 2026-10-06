@@ -32,6 +32,12 @@ service cloud.firestore {
       match /blocks/{blockId} {
         allow read, write: if isOwner(uid);
       }
+      // Subagents the task launched (one row per subagent — see bridge.ts's
+      // serializeSubagent), mirrored for the phone's mention rows and
+      // Subagents sheet.
+      match /subagents/{subagentId} {
+        allow read, write: if isOwner(uid);
+      }
     }
 
     // Commands the phone sends: created only as `pending`, with a known type
