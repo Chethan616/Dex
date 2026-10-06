@@ -17,7 +17,7 @@ import path from 'node:path';
 // dev-time fallback.
 loadDotEnv({ path: path.resolve(__dirname, '..', '..', '.env') });
 
-import { app, BrowserWindow, crashReporter, dialog, globalShortcut, ipcMain, Menu, MenuItemConstructorOptions, nativeImage, shell } from 'electron';
+import { app, BrowserWindow, crashReporter, dialog, globalShortcut, ipcMain, Menu, MenuItemConstructorOptions, nativeImage, session as electronSession, shell } from 'electron';
 import { mergeChromiumFeature } from './startup/chromiumFeatures';
 import { destroyStage, stageEnabled, waitForFrame } from './workspace/stage';
 
@@ -109,7 +109,9 @@ import {
 } from './startup/cli';
 import { CdpBroker, type BrokerContents, type BrokerHooks } from './cdpBroker';
 import { moveCursor, setCursorVisible } from './workspace/agentCursor';
-import { noteAgentInput, waitForUserIdle } from './workspace/userActivity';
+import { noteAgentInput, userActiveWithin, waitForUserIdle } from './workspace/userActivity';
+import { maskSecretFields, READS_PAGE, redactSecrets, secretValues } from './workspace/secretFields';
+import { handleDownload } from './workspace/downloads';
 import { leaseDebugger, withDebugger } from './cdpLease';
 import { normalizeAddress } from '../shared/address';
 import { assertString, assertAttachments, type ValidatedAttachment } from './ipc-validators';
@@ -377,7 +379,8 @@ setTimeout(() => {
 // app is ready; engines get their link through cdpFor().
 // The agent's input to a shared page (docs/unify/PLAN.md §3.4–3.5): wait while
 // you're using the page, glide DEX's cursor to the spot and let it arrive
-// before the click lands, and keep the cursor out of the agent's screenshots.
+// before the click lands, and keep the cursor — and your password, code and
+// card fields (workspace/secretFields.ts) — out of what the agent sees.
 const AGENT_INPUT = new Set([
   'Input.dispatchMouseEvent', 'Input.dispatchKeyEvent', 'Input.insertText', 'Input.dispatchTouchEvent',
   'Input.synthesizeScrollGesture', 'Input.synthesizeTapGesture', 'Input.dispatchDragEvent', 'Input.imeSetComposition',
@@ -399,12 +402,26 @@ const workspaceHooks: BrokerHooks = {
       }
       noteAgentInput(wc, 400);
     } else if (method === 'Page.captureScreenshot' && !child) {
-      await setCursorVisible(wc as unknown as CursorTarget, false);
+      await Promise.all([
+        setCursorVisible(wc as unknown as CursorTarget, false),
+        maskSecretFields(wc as unknown as CursorTarget, true),
+      ]);
     }
   },
   afterCommand(wc, method, _params, { child }) {
     if (AGENT_INPUT.has(method)) noteAgentInput(wc, 250);
-    else if (method === 'Page.captureScreenshot' && !child) void setCursorVisible(wc as unknown as CursorTarget, true);
+    else if (method === 'Page.captureScreenshot' && !child) {
+      void setCursorVisible(wc as unknown as CursorTarget, true);
+      void maskSecretFields(wc as unknown as CursorTarget, false);
+    }
+  },
+  async filterResult(wc, method, result) {
+    if (!READS_PAGE.has(method)) return result;
+    const secrets = await secretValues(wc as unknown as CursorTarget);
+    if (secrets.length === 0) return result;
+    const { value, hits } = redactSecrets(result, secrets);
+    if (hits > 0) mainLogger.info('workspace.secrets.redacted', { method, hits });
+    return value;
   },
 };
 const cdpBroker = new CdpBroker(
@@ -1518,6 +1535,20 @@ app.whenReady().then(async () => {
     } as Record<string, string>)[ext] ?? 'application/octet-stream';
     sessionManager.appendOutput(sessionId, { type: 'file_output', name: fileName, path: filePath, size, mime });
   }
+
+  // Downloads in a task's tabs land in Downloads (no Save dialog) and show as
+  // the task's files; the agent's wait on the approval policy first.
+  electronSession.defaultSession.on('will-download', (_event, item, wc) => {
+    handleDownload(item, wc, {
+      sessionIdOf: (contents) => browserPool.sessionIdOf(contents as Electron.WebContents),
+      isRunning: (id) => sessionManager.getSession(id)?.status === 'running',
+      userStarted: (contents) => userActiveWithin(contents, 2000),
+      approve: async (id, title, detail, fileName) => (await requestConfirmation(id, title, detail, 'download', fileName)).approved,
+      folder: () => app.getPath('downloads'),
+      finished: (id, filePath, name) => appendFileCard(id, filePath, name),
+      log: (event, data) => mainLogger.info(event, data),
+    });
+  });
 
   const localTaskServer = await createLocalTaskServer({
     userDataPath: app.getPath('userData'),

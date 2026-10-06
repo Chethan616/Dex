@@ -450,6 +450,19 @@ P2 is unit-tested (DocumentTabs with real files and the watcher; kinds; sheet ca
 
 ## 3.2 P1 leftovers
 
+> **Progress (2026-10-06):**
+> - #6 is done (`4d239ffc`). The last 10 closed pages per task are kept, never the agent's scratch tabs or blank ones.
+> - #3 is mostly done:
+>   - **Downloads** (`workspace/downloads.ts`): a download from a task's tab saves straight to Downloads, with no Save dialog, and becomes a file card.
+>     - Downloads the agent or page starts while the task runs (you didn't click or type in that tab in the last 2 s) are paused, then go through the approval policy's new `download` category.
+>     - "Auto" mode asks only for runnable files; "Full access" never asks; a refused download is cancelled.
+>   - **Password fields** (`workspace/secretFields.ts`):
+>     - before the agent's screenshot, password, one-time-code and card fields (including a password toggled to "show") draw as dots;
+>     - script, DOM-snapshot and accessibility-tree replies have current secret values replaced with `[hidden by DEX]`, via the broker's new `filterResult` hook;
+>     - main frame only.
+>
+>   **Still open in #3:** the per-site policy for new origins.
+
 1. **One web profile `persist:dex-web`, plus a one-time cookie migration** (PLAN §4.1; P0 #9 proved the copy: 20/20 cookies with flags).
    - **Do:**
      - every tab's `WebContentsView` uses `session.fromPartition('persist:dex-web')`;

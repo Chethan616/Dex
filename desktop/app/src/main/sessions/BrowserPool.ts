@@ -927,6 +927,14 @@ export class BrowserPool {
     return true;
   }
 
+  /** The task whose tab `wc` is, or null (DEX's own windows, a closed tab). */
+  sessionIdOf(wc: WebContents): string | null {
+    for (const entry of this.entries.values()) {
+      if (entry.tabs.some((t) => t.view.webContents === wc)) return entry.sessionId;
+    }
+    return null;
+  }
+
   getTabWebContents(sessionId: string, tabId: string): WebContents | null {
     const tab = this.entries.get(sessionId)?.tabs.find((t) => t.id === tabId);
     return tab && !tab.view.webContents.isDestroyed() ? tab.view.webContents : null;

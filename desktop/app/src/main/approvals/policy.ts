@@ -6,11 +6,15 @@
 // Settings pane's global default (see main/index.ts's settings:approvals:*
 // handlers) has been changed away from it.
 
+import { isRunnable } from '../sessions/recordedFiles';
+
 export type ApprovalCategory =
   | 'registry-write'
   | 'filesystem-write-unsafe-path'
   | 'process-launch'
-  | 'service-control';
+  | 'service-control'
+  /** A file the agent (or a page, while the task runs) downloads in a workspace tab. */
+  | 'download';
 
 export type ApprovalLifetime = 'once' | 'turn' | 'session';
 
@@ -21,6 +25,7 @@ const APPROVAL_CATEGORIES: ReadonlySet<string> = new Set<ApprovalCategory>([
   'filesystem-write-unsafe-path',
   'process-launch',
   'service-control',
+  'download',
 ]);
 
 /** Coerces an untrusted category string to a known category, defaulting to
@@ -164,6 +169,8 @@ export function needsPrompt(input: ApprovalCheckInput): boolean {
   if (mode === 'ask') return true;
   // 'auto' — prompt only when the heuristic actually flags this action.
   if (category === 'filesystem-write-unsafe-path') return subject ? isRiskyPath(subject) : false;
+  // A program, script or installer is worth a look; a PDF isn't.
+  if (category === 'download') return subject ? isRunnable(subject) : false;
   return subject ? isRiskyCommand(subject) : false;
 }
 

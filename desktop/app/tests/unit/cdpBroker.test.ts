@@ -205,6 +205,28 @@ describe('CdpBroker hooks', () => {
     }
   });
 
+  it('lets the workspace rewrite what the agent reads back, and sends it unchanged if that fails', async () => {
+    const tab = fakeTab('TARGET-F');
+    let fail = false;
+    const broker = new CdpBroker(() => [tab.wc], {
+      filterResult: async (_wc, method, result) => {
+        if (fail) throw new Error('page went away');
+        return method === 'Runtime.evaluate' ? { result: { type: 'string', value: '[hidden by DEX]' } } : result;
+      },
+    });
+    await broker.start();
+    try {
+      const c = await connect(broker.endpointFor('any').wsUrl);
+      const { result } = await c.call('Target.attachToTarget', { targetId: 'TARGET-F', flatten: true });
+      expect((await c.call('Runtime.evaluate', { expression: 'pw.value' }, result.sessionId)).result).toEqual({ result: { type: 'string', value: '[hidden by DEX]' } });
+      fail = true;
+      expect((await c.call('Runtime.evaluate', { expression: '1' }, result.sessionId)).result).toEqual({ result: { type: 'string', value: 'from TARGET-F' } });
+      c.ws.close();
+    } finally {
+      await broker.stop();
+    }
+  });
+
   it('still answers when a hook throws', async () => {
     const tab = fakeTab('TARGET-X');
     const broker = new CdpBroker(() => [tab.wc], { beforeCommand: async () => { throw new Error('cursor broke'); } });

@@ -97,6 +97,19 @@ describe('approvals/policy — new categories follow session mode', () => {
     setSessionMode(SID, 'auto');
     expect(needsPrompt({ sessionId: SID, category: 'process-launch' })).toBe(false);
   });
+
+  it('downloads: auto mode asks only for programs, scripts and installers', () => {
+    setSessionMode(SID, 'auto');
+    expect(needsPrompt({ sessionId: SID, category: 'download', subject: 'report.pdf' })).toBe(false);
+    expect(needsPrompt({ sessionId: SID, category: 'download', subject: 'setup.EXE' })).toBe(true);
+    expect(needsPrompt({ sessionId: SID, category: 'download', subject: 'install.ps1' })).toBe(true);
+    setSessionMode(SID, 'full');
+    expect(needsPrompt({ sessionId: SID, category: 'download', subject: 'setup.exe' })).toBe(false);
+    setSessionMode(SID, 'ask');
+    expect(needsPrompt({ sessionId: SID, category: 'download', subject: 'report.pdf' })).toBe(true);
+    recordDecision(SID, 'download', true, 'session');
+    expect(needsPrompt({ sessionId: SID, category: 'download', subject: 'report.pdf' })).toBe(false);
+  });
 });
 
 describe('approvals/policy — approval lifetimes', () => {

@@ -44,12 +44,15 @@ export interface BrokerContents extends DebuggableContents {
 
 /**
  * Around every command the agent sends to a page: the workspace uses these
- * for the agent cursor, the politeness wait, and hiding the cursor from
- * screenshots (main/workspace). `child` is an iframe or worker session.
+ * for the agent cursor, the politeness wait, hiding the cursor and secret
+ * fields from screenshots, and keeping password values out of what the
+ * agent reads (main/workspace). `child` is an iframe or worker session.
  */
 export interface BrokerHooks {
   beforeCommand?(wc: BrokerContents, method: string, params: Record<string, unknown>, info: { child: boolean }): Promise<void>;
   afterCommand?(wc: BrokerContents, method: string, params: Record<string, unknown>, info: { child: boolean }): void;
+  /** What the agent gets back instead of `result`. Only on success; a throw sends the result unchanged. */
+  filterResult?(wc: BrokerContents, method: string, result: unknown, info: { child: boolean }): Promise<unknown>;
 }
 
 export interface CdpEndpoint {
@@ -263,12 +266,20 @@ class BrokerConnection {
     } catch (err) {
       mainLogger.warn('cdpBroker.hook.before', { method, error: (err as Error).message });
     }
+    let result: unknown;
     try {
-      return childSession
+      result = childSession
         ? await wc.debugger.sendCommand(method, params, childSession)
         : await wc.debugger.sendCommand(method, params);
     } finally {
       try { this.hooks.afterCommand?.(wc, method, params, info); } catch { /* never block the reply */ }
+    }
+    if (!this.hooks.filterResult) return result;
+    try {
+      return await this.hooks.filterResult(wc, method, result, info);
+    } catch (err) {
+      mainLogger.warn('cdpBroker.hook.filter', { method, error: (err as Error).message });
+      return result;
     }
   }
 
