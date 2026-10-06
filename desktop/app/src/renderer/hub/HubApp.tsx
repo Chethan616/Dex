@@ -382,6 +382,17 @@ export function HubApp(): React.ReactElement {
     return unsub;
   }, [openSettingsPage]);
 
+  // Settings at a section, asked for from inside the hub (the New-tab page's
+  // Accounts tool): `detail` is the section id.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const sectionId = (e as CustomEvent<unknown>).detail;
+      openSettingsPage(typeof sectionId === 'string' ? ({ sectionId } as SettingsOpenPayload) : undefined);
+    };
+    window.addEventListener('dex:open-settings', onOpen);
+    return () => window.removeEventListener('dex:open-settings', onOpen);
+  }, [openSettingsPage]);
+
   useEffect(() => {
     const unsub = window.electronAPI?.on?.pillToggled?.(() => {
       setHelpOpen(false);

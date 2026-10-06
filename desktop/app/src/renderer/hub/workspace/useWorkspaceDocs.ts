@@ -24,7 +24,14 @@ export function useWorkspaceDocs(sessionId: string): WorkspaceDocs {
     setState(EMPTY);
     if (!api?.docs) return;
     let live = true;
-    api.docs(sessionId).then((docs) => { if (live) setState((s) => ({ ...s, docs })); }).catch(() => { /* none */ });
+    api.docs(sessionId).then((docs) => {
+      if (!live) return;
+      // A doc opened for this task a moment ago — from the Logs window, which
+      // switches the hub to this task first — comes to the front, though its
+      // "focus" push went out before this pane was listening.
+      const fresh = docs.filter((d) => d.openedBy === 'user' && Date.now() - d.openedAt < 3000).sort((a, b) => b.openedAt - a.openedAt)[0];
+      setState((s) => ({ ...s, docs, focus: fresh ? { id: fresh.id, seq: (s.focus?.seq ?? 0) + 1 } : s.focus }));
+    }).catch(() => { /* none */ });
     const offList = api.onDocsChanged((id, docs, focusId) => {
       if (id !== sessionId) return;
       setState((s) => ({

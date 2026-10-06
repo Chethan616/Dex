@@ -319,3 +319,40 @@ img.ws-tab__icon { object-fit: contain; }
 /* Document tabs (docs/unify/PLAN.md §3.9): the file's badge as the icon. */
 .ws-tab--doc .ws-tab__icon .cx-badge--sm { width: 16px; height: 16px; background: none; border-radius: 0; }
 .ws-tab--doc .ws-tab__icon .cx-badge--sm svg { width: 15px; height: 15px; }
+
+/* New-tab page: Tools (docs/unify/PLAN.md §3.6) and finding a task's file. */
+.ws-ntp-tools { display: flex; gap: 10px; flex-wrap: wrap; }
+.ws-ntp-tool {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 190px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 14px;
+  background: var(--color-bg-base);
+  color: var(--color-fg-secondary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) ease, color var(--duration-fast) ease;
+}
+.ws-ntp-tool:hover { background: var(--surface-chip); color: var(--color-fg-primary); }
+.ws-ntp-tool:focus-visible { outline: 2px solid var(--color-accent-default); outline-offset: 1px; }
+.ws-ntp-tool__icon { flex: none; color: var(--color-accent-default); }
+.ws-ntp-tool__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ws-ntp-tool__label { font-size: 13px; font-weight: 600; color: var(--color-fg-primary); }
+.ws-ntp-tool__hint { font-size: 11.5px; color: var(--color-fg-tertiary); }
+.ws-ntp-find {
+  width: min(420px, 100%);
+  height: 34px;
+  margin-bottom: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 10px;
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: 13px;
+}
+.ws-ntp-find:focus-visible { outline: 2px solid var(--color-accent-default); outline-offset: 0; }

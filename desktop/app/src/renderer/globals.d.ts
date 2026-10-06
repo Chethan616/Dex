@@ -50,6 +50,8 @@ interface ElectronSessionAPI {
   /** A file this task recorded, wherever it was saved (docs/unify/PLAN.md §3.12). */
   openFile: (sessionId: string, filePath: string, how?: 'open' | 'reveal' | 'copy') => Promise<{ opened?: boolean; revealed?: boolean; saved?: string | null }>;
   listEditors: () => Promise<Array<{ id: string; name: string }>>;
+  /** Logs window only: show a task's file as a document tab in the hub. */
+  showInDex?: (sessionId: string, filePath: string) => Promise<{ opened: boolean }>;
   /** `sessionId` lets main accept that task's recorded files outside outputs/ (same rule as openFile). */
   openInEditor: (editorId: string, filePath: string, sessionId?: string) => Promise<{ opened: boolean }>;
   listEngines: () => Promise<Array<{ id: string; displayName: string; binaryName: string; selectableModels?: Array<{ id: string; label: string; hint?: string }> }>>;

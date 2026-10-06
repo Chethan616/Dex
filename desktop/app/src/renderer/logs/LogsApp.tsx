@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TerminalPane } from '../hub/TerminalPane';
-import { FileRow, type FileOutputEntry } from './FileRow';
+import { FileRow, LogsSessionContext, type FileOutputEntry } from './FileRow';
 import { ChatTranscript, type SessionHistory } from './ChatTranscript';
 import { useChatAttachments } from './useChatAttachments';
 import { formatBytes } from '../../shared/attachments';
@@ -454,7 +454,9 @@ export function LogsApp(): React.ReactElement {
       {/* The chat shows produced files inline where they happened. */}
       {hasFiles && view === 'raw' && (
         <div className="logs-files" aria-label="Produced files">
-          {cappedFiles.map((f, i) => <FileRow key={`${f.path}-${i}`} entry={f} />)}
+          <LogsSessionContext.Provider value={sessionId}>
+            {cappedFiles.map((f, i) => <FileRow key={`${f.path}-${i}`} entry={f} />)}
+          </LogsSessionContext.Provider>
         </div>
       )}
       {sessionStatus === 'stopped' ? (

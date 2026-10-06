@@ -2716,6 +2716,27 @@ app.whenReady().then(async () => {
     return documentTabs.open(validatedId, resolved, 'user');
   });
 
+  // From the Logs window: show one of the task's files in a document tab, in
+  // front, with the hub on that task. Same rule as doc-open (recorded files
+  // or open documents only).
+  ipcMain.handle('logs:show-file', (_event, id: string, filePath: string) => {
+    const validatedId = assertString(id, 'id', 100);
+    const requested = assertString(filePath, 'path', 2000);
+    const session = sessionManager.getSession(validatedId);
+    if (!session) throw new Error('No such task.');
+    const resolved = resolveRecordedFile(requested, session.output, harnessDir())
+      ?? (documentTabs.isOpen(validatedId, requested) ? path.resolve(requested) : null);
+    if (!resolved) throw new Error('refused: not a file this task produced');
+    const doc = documentTabs.open(validatedId, resolved, 'user');
+    if (shellWindow && !shellWindow.isDestroyed()) {
+      if (shellWindow.isMinimized()) shellWindow.restore();
+      shellWindow.show();
+      shellWindow.focus();
+      shellWindow.webContents.send('select-session', validatedId);
+    }
+    return { opened: true, tab: doc.id };
+  });
+
   ipcMain.handle('workspace:doc-close', (_event, id: string, docId: string) =>
     documentTabs.close(assertString(id, 'id', 100), assertString(docId, 'docId', 20)));
 

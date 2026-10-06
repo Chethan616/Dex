@@ -35,8 +35,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('sessions:pause', { id, source: 'logs-ctrl-c' }),
     listEditors: (): Promise<Array<{ id: string; name: string }>> =>
       ipcRenderer.invoke('sessions:list-editors'),
-    openInEditor: (editorId: string, filePath: string): Promise<{ opened: boolean }> =>
-      ipcRenderer.invoke('sessions:open-in-editor', { editorId, filePath }),
+    openInEditor: (editorId: string, filePath: string, sessionId?: string): Promise<{ opened: boolean }> =>
+      ipcRenderer.invoke('sessions:open-in-editor', { editorId, filePath, sessionId }),
+    // A task's file as a document tab in the hub, in front.
+    showInDex: (sessionId: string, filePath: string): Promise<{ opened: boolean }> =>
+      ipcRenderer.invoke('logs:show-file', sessionId, filePath),
     downloadOutput: (filePath: string): Promise<{ opened: boolean }> =>
       ipcRenderer.invoke('sessions:download-output', filePath),
   },

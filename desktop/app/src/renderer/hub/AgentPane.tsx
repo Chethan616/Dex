@@ -1269,6 +1269,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           <NewTabPage
             session={session}
             onOpen={(input) => { void window.electronAPI?.workspace?.tab(session.id, { op: 'navigate', tabId: activeTab.id, input }); }}
+            onOpenLogs={handleToggleLogs}
           />
         ) : null}
       </div>

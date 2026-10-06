@@ -2,8 +2,11 @@
  * FileRow — a produced file, with an "Open in <editor> / Reveal" menu.
  * Shared by the chat transcript (inline file cards) and the Raw view's footer.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
+
+/** The task these files belong to, so a row can open one in the hub. */
+export const LogsSessionContext = createContext<string | null>(null);
 
 export interface FileOutputEntry {
   type: 'file_output';
@@ -33,6 +36,7 @@ function getEditors(): Promise<Array<{ id: string; name: string }>> {
 }
 
 export function FileRow({ entry }: { entry: FileOutputEntry }): React.ReactElement {
+  const sessionId = useContext(LogsSessionContext);
   const [editors, setEditors] = useState<Array<{ id: string; name: string }>>([]);
   const [popupId, setPopupId] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -51,7 +55,7 @@ export function FileRow({ entry }: { entry: FileOutputEntry }): React.ReactEleme
       return;
     }
     try {
-      const res = await api(editorId, entry.path);
+      const res = await api(editorId, entry.path, sessionId ?? undefined);
       console.log('[LogsApp file] openInEditor success', res);
     } catch (err) {
       console.error('[LogsApp file] openInEditor failed', err);
@@ -59,6 +63,12 @@ export function FileRow({ entry }: { entry: FileOutputEntry }): React.ReactEleme
       catch (revealErr) { console.error('[LogsApp file] reveal fallback also failed', revealErr); }
     }
   }, [entry.path]);
+
+  const onShowInDex = useCallback(async () => {
+    if (!entry.path || !sessionId) return;
+    try { await window.electronAPI?.sessions?.showInDex?.(sessionId, entry.path); }
+    catch (err) { console.error('[LogsApp file] showInDex failed', err); }
+  }, [entry.path, sessionId]);
 
   const onReveal = useCallback(async () => {
     if (!entry.path) return;
@@ -83,6 +93,7 @@ export function FileRow({ entry }: { entry: FileOutputEntry }): React.ReactEleme
         placement: 'top-start',
         width: 220,
         items: [
+          ...(sessionId ? [{ id: 'dex', label: 'Open in DEX' }] : []),
           ...resolvedEditors.map((editor) => ({
             id: `editor:${editor.id}`,
             label: `Open in ${editor.name}`,
@@ -90,15 +101,16 @@ export function FileRow({ entry }: { entry: FileOutputEntry }): React.ReactEleme
           })),
           {
             id: 'reveal',
-            label: 'Reveal in Finder',
+            label: 'Show in File Explorer',
             icon: { type: 'finder' as const },
-            separatorBefore: resolvedEditors.length > 0,
+            separatorBefore: resolvedEditors.length > 0 || Boolean(sessionId),
           },
         ],
       },
       {
         onAction: (action) => {
           if (action.kind !== 'menu-select') return;
+          if (action.itemId === 'dex') void onShowInDex();
           if (action.itemId.startsWith('editor:')) void onOpenInEditor(action.itemId.slice('editor:'.length));
           if (action.itemId === 'reveal') void onReveal();
         },
@@ -106,7 +118,7 @@ export function FileRow({ entry }: { entry: FileOutputEntry }): React.ReactEleme
       },
     );
     if (nextId) setPopupId(nextId);
-  }, [editors, onOpenInEditor, onReveal, popupId]);
+  }, [editors, onOpenInEditor, onReveal, onShowInDex, popupId, sessionId]);
 
   return (
     <div className="logs-file-row-wrap">

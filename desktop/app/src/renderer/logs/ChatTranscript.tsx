@@ -21,7 +21,7 @@ import { formatBytes } from '../../shared/attachments';
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Markdown } from '../hub/Markdown';
 import { AgentAvatar, CopyButton, Orb, type OrbState } from '../components/lib';
-import { FileRow } from './FileRow';
+import { FileRow, LogsSessionContext } from './FileRow';
 import {
   appendEvent,
   buildTranscript,
@@ -400,6 +400,7 @@ export function ChatTranscript({ sessionId, status, engine, history }: ChatTrans
   }, [blocks]);
 
   return (
+    <LogsSessionContext.Provider value={sessionId}>
     <div className="chat">
       <div className="chat__scroller" ref={scrollerRef} onScroll={onScroll}>
         <div className="chat__inner">
@@ -452,6 +453,7 @@ export function ChatTranscript({ sessionId, status, engine, history }: ChatTrans
         </button>
       )}
     </div>
+    </LogsSessionContext.Provider>
   );
 }
 
