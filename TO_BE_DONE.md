@@ -78,6 +78,7 @@ DEX keeps its own layout: sidebar, dashboard, agent view header, Logs window. Th
 | P3 — extensions | ⏳ not started. Spikes proved the approach (Appendix C #3–#5) |
 | P4 — annotate / request edits / side chat | ⏳ not started |
 | P5 — polish | ⏳ not started |
+| Windows app & OS control (beyond the browser) | 📝 researched and planned on 2026-10-06: `docs/desktop-control/RESEARCH.md` and `PLAN.md`. Background UI Automation with `AutoSetFocus` off, verified on the owner's PC. Next: Phase 0 spikes, after the owner answers PLAN §6 |
 
 **Tests at hand-over** (`desktop/app`, `npx vitest run`): **820 passed, 8 skipped**, 98 files. `tsc --noEmit` is clean. ESLint shows only old warnings in `AgentPane.tsx`.
 
