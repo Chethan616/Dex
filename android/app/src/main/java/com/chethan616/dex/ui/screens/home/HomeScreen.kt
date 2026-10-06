@@ -2,6 +2,11 @@ package com.chethan616.dex.ui.screens.home
 
 import com.chethan616.dex.ui.avatar.flightEnd
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.heightIn
+import com.chethan616.dex.ui.theme.Space
+import com.chethan616.dex.ui.theme.Sizes
+import androidx.compose.ui.layout.layout
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
@@ -102,7 +107,6 @@ import kotlinx.coroutines.delay
 import com.chethan616.dex.ui.components.ENGINE_NAMES
 import com.chethan616.dex.ui.components.PromptBar
 import com.chethan616.dex.ui.components.StatusDot
-import com.chethan616.dex.ui.components.StatusPill
 import com.chethan616.dex.ui.components.relativeTime
 import com.chethan616.dex.ui.haptics.LocalHaptics
 import com.chethan616.dex.ui.orb.DexOrb
@@ -122,6 +126,17 @@ private val SUGGESTIONS = listOf(
   Suggestion(Icons.Rounded.VideoCall, "Start a Meet", "Create a Google Meet for 30 minutes starting now and give me the link."),
   Suggestion(Icons.Rounded.Edit, "Draft a reply", "Draft a polite reply to the most recent email that needs a response."),
 )
+
+/**
+ * Lets a row reach past the list's side padding to the screen's edges (and
+ * scroll under them), while its first item still lines up with everything
+ * else through the row's own content padding.
+ */
+private fun Modifier.bleed(by: androidx.compose.ui.unit.Dp): Modifier = layout { measurable, constraints ->
+  val extra = by.roundToPx() * 2
+  val placeable = measurable.measure(constraints.copy(minWidth = constraints.minWidth + extra, maxWidth = constraints.maxWidth + extra))
+  layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
+}
 
 /** Space above each item of Home's list. */
 private val GAP = 12.dp
@@ -145,8 +160,6 @@ fun HomeScreen(
 
   var sheetOpen by rememberSaveable { mutableStateOf(false) }
   var prefill by rememberSaveable { mutableStateOf("") }
-  var fabExpanded by rememberSaveable { mutableStateOf(false) }
-  BackHandler(fabExpanded) { fabExpanded = false }
 
   // The inline prompt bar sends straight away and follows the command until
   // the PC answers with a session id — then opens that session.
@@ -232,6 +245,73 @@ fun HomeScreen(
     }
   }
 
+  HomeContent(
+    account = account,
+    state = state,
+    refreshing = refreshing,
+    update = update,
+    onRefresh = { vm.refresh() },
+    onOpenSession = onOpenSession,
+    onOpenSettings = onOpenSettings,
+    onNewTask = { openComposer() },
+    onSuggestion = { openComposer(it) },
+    onVoice = ::startVoice,
+    onAnswer = { s, ok -> vm.answer(s, ok) },
+    promptBar = { m ->
+      PromptBar(
+        modifier = m,
+        engines = state.desktop?.engines?.takeIf { it.isNotEmpty() } ?: FALLBACK_ENGINES,
+        initialEngine = container.prefs.lastEngine.value,
+        busy = sending,
+        status = sendStatus,
+        onSend = ::startTask,
+        onVoice = ::startVoice,
+        onMore = { openComposer() },
+        attachments = attach,
+        pickers = pickers,
+      )
+    },
+  )
+
+  if (sheetOpen) {
+    NewTaskSheet(
+      prefill = prefill,
+      desktop = state.desktop,
+      lastEngine = container.prefs.lastEngine.value,
+      send = { p, e, m -> vm.newTask(p, e, m, attach.items.toList()) { attach.uploadProgress = it } },
+      onDismiss = { sheetOpen = false; sharedNow = null },
+      onStarted = { id -> sheetOpen = false; sharedNow = null; attach.items.clear(); onOpenSession(id) },
+      onVoice = ::startVoice,
+      attachments = attach,
+      pickers = pickers,
+      shared = sharedNow,
+    )
+  }
+}
+
+/**
+ * Home's UI as a function of its state: everything you see, nothing that
+ * fetches. HomeScreen owns the view model, the sheet and the sending; this
+ * draws. (It's also what the screenshot tests render.)
+ */
+@Composable
+internal fun HomeContent(
+  account: Account,
+  state: HomeState,
+  refreshing: Boolean,
+  update: com.chethan616.dex.update.UpdateState?,
+  onRefresh: () -> Unit,
+  onOpenSession: (String) -> Unit,
+  onOpenSettings: () -> Unit,
+  onNewTask: () -> Unit,
+  onSuggestion: (String) -> Unit,
+  onVoice: () -> Unit,
+  onAnswer: (Session, Boolean) -> Unit,
+  promptBar: @Composable (Modifier) -> Unit,
+) {
+  val haptics = LocalHaptics.current
+  var fabExpanded by rememberSaveable { mutableStateOf(false) }
+  BackHandler(fabExpanded) { fabExpanded = false }
   Scaffold(
     floatingActionButton = {
       FloatingActionButtonMenu(
@@ -247,22 +327,22 @@ fun HomeScreen(
         },
       ) {
         FloatingActionButtonMenuItem(
-          onClick = { fabExpanded = false; haptics.click(); openComposer() },
+          onClick = { fabExpanded = false; haptics.click(); onNewTask() },
           text = { Text("New task") },
           icon = { Icon(Icons.Rounded.Edit, null) },
         )
         FloatingActionButtonMenuItem(
-          onClick = { fabExpanded = false; startVoice() },
+          onClick = { fabExpanded = false; onVoice() },
           text = { Text("Say it") },
           icon = { Icon(Icons.Rounded.Mic, null) },
         )
         FloatingActionButtonMenuItem(
-          onClick = { fabExpanded = false; haptics.click(); openComposer(SUGGESTIONS[0].prompt) },
+          onClick = { fabExpanded = false; haptics.click(); onSuggestion(SUGGESTIONS[0].prompt) },
           text = { Text("Check my email") },
           icon = { Icon(Icons.Rounded.Mail, null) },
         )
         FloatingActionButtonMenuItem(
-          onClick = { fabExpanded = false; haptics.click(); openComposer(SUGGESTIONS[2].prompt) },
+          onClick = { fabExpanded = false; haptics.click(); onSuggestion(SUGGESTIONS[2].prompt) },
           text = { Text("Start a Meet") },
           icon = { Icon(Icons.Rounded.VideoCall, null) },
         )
@@ -272,7 +352,7 @@ fun HomeScreen(
     val pull = rememberPullToRefreshState()
     PullToRefreshBox(
       isRefreshing = refreshing,
-      onRefresh = { haptics.tick(); vm.refresh() },
+      onRefresh = { haptics.tick(); onRefresh() },
       state = pull,
       modifier = Modifier.fillMaxSize(),
       indicator = {
@@ -291,27 +371,26 @@ fun HomeScreen(
         // Spacing is per item (GAP above each; the recent rows 3 dp apart), so
         // every recent session can be its own lazy item: only the rows on
         // screen are composed, instead of all of them at once.
-        item(key = "header") { Header(account, onOpenSettings) }
+        // What you see first: who you are and which PC you're talking to,
+        // then the prompt. Everything else is below it.
+        item(key = "header") { Header(account, state.desktop, state.loading, onOpenSettings) }
         update?.let { u -> item(key = "update") { Box(Modifier.padding(top = GAP)) { com.chethan616.dex.update.UpdateBanner(u) } } }
-        item(key = "desktop") { Box(Modifier.padding(top = GAP)) { DesktopCard(state.desktop, state.loading) } }
-        item(key = "composer") {
-          PromptBar(
-            modifier = Modifier.padding(top = GAP),
-            engines = state.desktop?.engines?.takeIf { it.isNotEmpty() } ?: FALLBACK_ENGINES,
-            initialEngine = container.prefs.lastEngine.value,
-            busy = sending,
-            status = sendStatus,
-            onSend = ::startTask,
-            onVoice = ::startVoice,
-            onMore = { openComposer() },
-            attachments = attach,
-            pickers = pickers,
-          )
+        // No PC yet: that's the one thing to do first, so it gets a card.
+        // Once there is one, it's the line under your name.
+        if (!state.loading && state.desktop == null) {
+          item(key = "desktop") { Box(Modifier.padding(top = GAP)) { NoPcCard() } }
         }
+        item(key = "composer") { promptBar(Modifier.padding(top = GAP)) }
         item(key = "suggestions") {
-          LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = GAP)) {
+          // Quick actions are a light row of chips: there when you want one,
+          // never louder than the prompt above them.
+          LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(Space.s),
+            contentPadding = PaddingValues(horizontal = Space.l),
+            modifier = Modifier.padding(top = Space.m).bleed(Space.l),
+          ) {
             items(SUGGESTIONS.size) { i ->
-              SuggestionTile(SUGGESTIONS[i], i) { haptics.tick(); openComposer(SUGGESTIONS[i].prompt) }
+              QuickChip(SUGGESTIONS[i], i) { haptics.tick(); onSuggestion(SUGGESTIONS[i].prompt) }
             }
           }
         }
@@ -328,7 +407,7 @@ fun HomeScreen(
             Box(Modifier.animateItem().padding(top = GAP)) {
               ApprovalCard(s, onOpen = { onOpenSession(s.id) }, onAnswer = { ok ->
                 if (ok) haptics.confirm() else haptics.reject()
-                vm.answer(s, ok)
+                onAnswer(s, ok)
               })
             }
           }
@@ -351,30 +430,16 @@ fun HomeScreen(
           }
         }
         if (!state.loading && state.sessions.isEmpty()) {
-          item(key = "empty") { Box(Modifier.padding(top = GAP)) { EmptyState(onStart = { openComposer() }) } }
+          item(key = "empty") { Box(Modifier.padding(top = GAP)) { EmptyState() } }
         }
       }
     }
   }
 
-  if (sheetOpen) {
-    NewTaskSheet(
-      prefill = prefill,
-      desktop = state.desktop,
-      lastEngine = container.prefs.lastEngine.value,
-      send = { p, e, m -> vm.newTask(p, e, m, attach.items.toList()) { attach.uploadProgress = it } },
-      onDismiss = { sheetOpen = false; sharedNow = null },
-      onStarted = { id -> sheetOpen = false; sharedNow = null; attach.items.clear(); onOpenSession(id) },
-      onVoice = ::startVoice,
-      attachments = attach,
-      pickers = pickers,
-      shared = sharedNow,
-    )
-  }
 }
 
 @Composable
-private fun Header(account: Account, onOpenSettings: () -> Unit) {
+private fun Header(account: Account, desktop: Device?, loading: Boolean, onOpenSettings: () -> Unit) {
   val haptics = LocalHaptics.current
   val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
   val greeting = when (hour) { in 5..11 -> "Good morning"; in 12..16 -> "Good afternoon"; in 17..21 -> "Good evening"; else -> "Up late" }
@@ -388,7 +453,7 @@ private fun Header(account: Account, onOpenSettings: () -> Unit) {
     in 17..21 -> MaterialShapes.Cookie12Sided to scheme.secondaryContainer
     else -> MaterialShapes.Puffy to scheme.surfaceContainerHighest
   }
-  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
+  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = Space.s, bottom = Space.xs)) {
     // Grab your DEX and fling it: it springs home (components/Physics.kt).
     ShapeBadge(backdrop, tone, 64.dp, spinMs = 30_000, modifier = Modifier.springDrag(onGrab = { haptics.tick() }, onRelease = { haptics.hop() })) {
       com.chethan616.dex.ui.profile.DexAvatar(
@@ -396,10 +461,11 @@ private fun Header(account: Account, onOpenSettings: () -> Unit) {
         mood = if (hello) BotMood.Happy else BotMood.Idle,
       )
     }
-    Spacer(Modifier.size(12.dp))
+    Spacer(Modifier.size(Space.m))
     Column(Modifier.weight(1f)) {
-      Text(greeting + ",", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      Text(greeting + ",", style = MaterialTheme.typography.titleMedium, color = scheme.onSurfaceVariant)
       Text(account.firstName, style = MaterialTheme.typography.headlineLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+      DeviceLine(desktop, loading)
     }
     FilledTonalIconButton(
       onClick = { haptics.click(); onOpenSettings() },
@@ -408,49 +474,45 @@ private fun Header(account: Account, onOpenSettings: () -> Unit) {
   }
 }
 
+/**
+ * Which PC DEX is working on, in one line under your name: a dot and its
+ * name when it's ready, how long it's been gone when it's offline (tasks
+ * still queue for it).
+ */
 @Composable
-private fun DesktopCard(desktop: Device?, loading: Boolean) {
+private fun DeviceLine(desktop: Device?, loading: Boolean) {
   val scheme = MaterialTheme.colorScheme
   val status = LocalStatusColors.current
-  Surface(shape = RoundedCornerShape(28.dp), color = scheme.surfaceContainer, modifier = Modifier.fillMaxWidth().animateContentSize()) {
-    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-      val online = desktop?.isReachable == true
-      ShapeBadge(
-        if (online) MaterialShapes.Cookie6Sided else MaterialShapes.Circle,
-        if (online) scheme.secondaryContainer else scheme.surfaceContainerHighest,
-        52.dp,
-        spinMs = if (online) 20_000 else 0,
-      ) {
-        if (loading) DexOrb(OrbState.Connecting, size = 28.dp)
-        else Icon(Icons.Rounded.Computer, null, tint = if (online) scheme.onSecondaryContainer else scheme.onSurfaceVariant)
+  val (dot, text) = when {
+    loading -> scheme.outline to "Looking for your PC…"
+    desktop == null -> return
+    desktop.isReachable -> status.running to "${desktop.name} · ready"
+    else -> status.idle to "${desktop.name} · offline ${relativeTime(desktop.lastSeenMs)} — tasks wait for it"
+  }
+  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+    Box(Modifier.size(8.dp).background(dot, CircleShape))
+    Spacer(Modifier.size(6.dp))
+    Text(text, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+  }
+}
+
+/** First run: no PC is paired yet, and here's how to pair one. */
+@Composable
+private fun NoPcCard() {
+  val scheme = MaterialTheme.colorScheme
+  Surface(shape = MaterialTheme.shapes.large, color = scheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+    Row(Modifier.padding(Space.l), verticalAlignment = Alignment.CenterVertically) {
+      ShapeBadge(MaterialShapes.Cookie6Sided, scheme.secondaryContainer, 48.dp) {
+        Icon(Icons.Rounded.Computer, null, tint = scheme.onSecondaryContainer)
       }
       Spacer(Modifier.size(14.dp))
       Column(Modifier.weight(1f)) {
-        when {
-          loading -> Text("Looking for your PC…", style = MaterialTheme.typography.titleMedium)
-          desktop == null -> {
-            Text("No PC connected yet", style = MaterialTheme.typography.titleMedium)
-            Text(
-              "On your PC: DEX → Settings → Accounts → DEX on your phone — sign in with this same email and password.",
-              style = MaterialTheme.typography.bodySmall,
-              color = scheme.onSurfaceVariant,
-            )
-          }
-          else -> {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Text(desktop.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-              Spacer(Modifier.size(8.dp))
-              Box(Modifier.size(8.dp).background(if (desktop.isReachable) status.running else status.stopped, RoundedCornerShape(50)))
-            }
-            Text(
-              if (desktop.isReachable) desktop.engines.joinToString(" · ") { it.name }.ifBlank { "Online" }
-              else "Offline · last seen ${relativeTime(desktop.lastSeenMs)} — tasks start when it’s back",
-              style = MaterialTheme.typography.bodySmall,
-              color = scheme.onSurfaceVariant,
-              maxLines = 2,
-            )
-          }
-        }
+        Text("Connect your PC", style = MaterialTheme.typography.titleMedium)
+        Text(
+          "On your PC, open DEX › Settings › Accounts › DEX on your phone, and sign in with this same email.",
+          style = MaterialTheme.typography.bodySmall,
+          color = scheme.onSurfaceVariant,
+        )
       }
     }
   }
@@ -458,12 +520,18 @@ private fun DesktopCard(desktop: Device?, loading: Boolean) {
 
 @Composable
 private fun SectionTitle(title: String, count: Int?) {
-  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp, start = 4.dp)) {
-    Text(title, style = MaterialTheme.typography.titleLarge)
+  val scheme = MaterialTheme.colorScheme
+  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = Space.m, start = Space.xs)) {
+    Text(title, style = MaterialTheme.typography.titleMedium)
     if (count != null) {
-      Spacer(Modifier.size(8.dp))
-      ShapeBadge(MaterialShapes.Clover4Leaf, MaterialTheme.colorScheme.secondaryContainer, 28.dp, spinMs = 16_000) {
-        Text("$count", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+      Spacer(Modifier.size(Space.s))
+      Surface(shape = CircleShape, color = scheme.secondaryContainer) {
+        Text(
+          "$count",
+          style = MaterialTheme.typography.labelMedium,
+          color = scheme.onSecondaryContainer,
+          modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+        )
       }
     }
   }
@@ -530,9 +598,13 @@ private fun RunningCard(session: Session, onClick: () -> Unit) {
         Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
           Text(session.prompt, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-          Text(ENGINE_NAMES[session.engine] ?: session.engine.orEmpty(), style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
+          // The wavy bar below says it's working; this says who and for how long.
+          Text(
+            listOfNotNull(ENGINE_NAMES[session.engine] ?: session.engine, relativeTime(session.createdAt).takeIf { it.isNotEmpty() && it != "now" }?.let { "started $it ago" }).joinToString(" · "),
+            style = MaterialTheme.typography.labelMedium,
+            color = scheme.onSurfaceVariant,
+          )
         }
-        StatusPill(session.status, label = com.chethan616.dex.ui.components.sessionStatusLabel(session.status, session.error))
       }
       Row(verticalAlignment = Alignment.CenterVertically) {
         DexOrb(OrbState.Working, size = 22.dp)
@@ -598,16 +670,22 @@ private fun SessionRow(
       Spacer(Modifier.size(8.dp))
       Column(horizontalAlignment = Alignment.End) {
         Text(relativeTime(session.lastActivityAt), style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant)
-        Spacer(Modifier.height(4.dp))
-        StatusDot(session.status)
+        // Finished is the normal case and gets no dot; waiting for you, stuck
+        // or failed do.
+        val failed = session.status == com.chethan616.dex.data.SessionStatus.Stopped && !session.error.isNullOrBlank() &&
+          !session.error.equals(com.chethan616.dex.ui.components.USER_STOPPED, ignoreCase = true)
+        if (session.status != com.chethan616.dex.data.SessionStatus.Stopped || failed) {
+          Spacer(Modifier.height(4.dp))
+          if (failed) Box(Modifier.size(8.dp).background(scheme.error, CircleShape)) else StatusDot(session.status)
+        }
       }
     }
   }
 }
 
-/** A suggestion: its icon on a shape of its own, the label under it; it bounces when tapped. */
+/** A quick action: a light chip, its icon on a little shape of its own. */
 @Composable
-private fun SuggestionTile(s: Suggestion, index: Int, onClick: () -> Unit) {
+private fun QuickChip(s: Suggestion, index: Int, onClick: () -> Unit) {
   val scheme = MaterialTheme.colorScheme
   val tones = listOf(
     scheme.primaryContainer to scheme.onPrimaryContainer,
@@ -619,40 +697,39 @@ private fun SuggestionTile(s: Suggestion, index: Int, onClick: () -> Unit) {
   val press = remember { MutableInteractionSource() }
   Surface(
     onClick = onClick,
-    shape = RoundedCornerShape(24.dp),
+    shape = CircleShape,
     color = scheme.surfaceContainer,
     interactionSource = press,
-    modifier = Modifier.size(width = 118.dp, height = 112.dp).springPress(press, 0.9f),
+    modifier = Modifier.heightIn(min = Sizes.chip + 4.dp).springPress(press, 0.94f),
   ) {
-    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
-      ShapeBadge(TILE_SHAPES[index % TILE_SHAPES.size], bg, 44.dp) {
-        Icon(s.icon, null, tint = fg, modifier = Modifier.size(22.dp))
+    Row(Modifier.padding(start = 6.dp, end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+      ShapeBadge(TILE_SHAPES[index % TILE_SHAPES.size], bg, 32.dp) {
+        Icon(s.icon, null, tint = fg, modifier = Modifier.size(17.dp))
       }
-      Text(s.label, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+      Spacer(Modifier.size(Space.s))
+      Text(s.label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
     }
   }
 }
 
 @Composable
-private fun EmptyState(onStart: () -> Unit) {
+private fun EmptyState() {
   Column(
-    Modifier.fillMaxWidth().padding(vertical = 32.dp),
+    Modifier.fillMaxWidth().padding(vertical = Space.xl),
     horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.spacedBy(12.dp),
+    verticalArrangement = Arrangement.spacedBy(Space.s),
   ) {
-    ShapeBadge(MaterialShapes.SoftBurst, MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f), 170.dp, spinMs = 40_000) {
-      BotAvatar(type = "cloud", mood = BotMood.Sleeping, size = 112.dp)
+    ShapeBadge(MaterialShapes.SoftBurst, MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f), 150.dp, spinMs = 40_000) {
+      BotAvatar(type = "cloud", mood = BotMood.Sleeping, size = 100.dp)
     }
-    Text("All quiet", style = MaterialTheme.typography.headlineSmall)
+    Spacer(Modifier.size(Space.xs))
+    Text("All quiet", style = MaterialTheme.typography.titleLarge)
     Text(
-      "Your DEX is napping. Give it a job — it runs on your PC and reports back here.",
+      "Your DEX is napping. Give it a job above — it runs on your PC and reports back here.",
       style = MaterialTheme.typography.bodyMedium,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
+      textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+      modifier = Modifier.padding(horizontal = Space.xl),
     )
-    Button(onClick = onStart, shapes = ButtonDefaults.shapes()) {
-      Icon(Icons.Rounded.Add, null)
-      Spacer(Modifier.size(8.dp))
-      Text("New task")
-    }
   }
 }

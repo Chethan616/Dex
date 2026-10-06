@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chethan616.dex.data.Engine
+import com.chethan616.dex.data.shortName
 import com.chethan616.dex.ui.avatar.BotAvatar
 import com.chethan616.dex.ui.avatar.BotMood
 import com.chethan616.dex.ui.avatar.botTypeFor
@@ -163,8 +164,10 @@ private fun AgentChip(engine: Engine, modelLabel: String?, open: Boolean, onClic
         BotAvatar(type = botTypeFor(engine.id), mood = BotMood.Idle, size = 26.dp, interactive = false, still = true)
       }
       Spacer(Modifier.size(8.dp))
+      // The short name ("Claude", not "Claude Code"): the chip must fit a
+      // small phone at large text sizes, model and all.
       Text(
-        engine.name + (modelLabel?.let { " · $it" } ?: ""),
+        engine.shortName + (modelLabel?.let { " · $it" } ?: ""),
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
         maxLines = 1,
@@ -176,6 +179,9 @@ private fun AgentChip(engine: Engine, modelLabel: String?, open: Boolean, onClic
     }
   }
 }
+
+/** The prompt's words: a touch larger than body text — it's the main thing on Home. */
+private val PromptText = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, lineHeight = 24.sp)
 
 /**
  * The prompt bar: one card with the text area on top and, below it, "+",
@@ -234,13 +240,13 @@ fun PromptBar(
       BasicTextField(
         value = text,
         onValueChange = { text = it },
-        textStyle = MaterialTheme.typography.bodyLarge.copy(color = scheme.onSurface),
+        textStyle = PromptText.copy(color = scheme.onSurface),
         cursorBrush = SolidColor(scheme.primary),
         maxLines = 6,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 28.dp).onFocusChanged { focused = it.isFocused },
+        modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp).onFocusChanged { focused = it.isFocused },
         decorationBox = { inner ->
           Box {
-            if (text.isEmpty()) Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurfaceVariant.copy(alpha = 0.75f))
+            if (text.isEmpty()) Text(placeholder, style = PromptText, color = scheme.onSurfaceVariant.copy(alpha = 0.75f))
             inner()
           }
         },

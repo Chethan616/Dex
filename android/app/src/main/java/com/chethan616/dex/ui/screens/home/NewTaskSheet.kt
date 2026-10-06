@@ -63,6 +63,13 @@ import com.chethan616.dex.ui.avatar.botTypeFor
 import com.chethan616.dex.ui.haptics.LocalHaptics
 import com.chethan616.dex.ui.orb.DexOrb
 import com.jakubantalik.thinkingorbs.OrbState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.unit.sp
+import com.chethan616.dex.ui.theme.LocalStatusColors
+import com.chethan616.dex.ui.theme.Space
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
@@ -71,6 +78,9 @@ internal val FALLBACK_ENGINES = listOf(
   Engine("codex", "Codex", emptyList()),
   Engine("browsercode", "BrowserCode", emptyList()),
 )
+
+/** The task's words, the same size as Home's prompt. */
+private val TaskText = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, lineHeight = 24.sp)
 
 private sealed interface SendState {
   data object Idle : SendState
@@ -130,13 +140,14 @@ fun NewTaskSheet(
   }
 
   ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp)) {
+    val scheme = MaterialTheme.colorScheme
     Column(
       Modifier
         .fillMaxWidth()
         .padding(horizontal = 20.dp)
         .navigationBarsPadding()
         .imePadding(),
-      verticalArrangement = Arrangement.spacedBy(16.dp),
+      verticalArrangement = Arrangement.spacedBy(Space.l),
     ) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         // Your DEX listens as you type: awake, then thinking about it, then off it goes.
@@ -151,12 +162,14 @@ fun NewTaskSheet(
         )
         Spacer(Modifier.size(10.dp))
         Text("New task", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-        Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
-          Text(
-            desktop?.name ?: "No PC yet",
-            Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelLarge,
-          )
+        // Which PC it goes to, and whether it's there right now.
+        val status = LocalStatusColors.current
+        Surface(shape = CircleShape, color = scheme.secondaryContainer, contentColor = scheme.onSecondaryContainer) {
+          Row(Modifier.padding(start = 10.dp, end = 12.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).background(if (desktop?.isReachable == true) status.running else status.idle, CircleShape))
+            Spacer(Modifier.size(6.dp))
+            Text(desktop?.name ?: "No PC yet", style = MaterialTheme.typography.labelLarge, maxLines = 1)
+          }
         }
       }
 
@@ -180,33 +193,53 @@ fun NewTaskSheet(
 
       if (attachments != null) com.chethan616.dex.ui.attach.AttachmentStrip(attachments)
 
-      OutlinedTextField(
-        value = text,
-        onValueChange = { text = it },
-        placeholder = { Text(if (hasFiles) "What should DEX do with this?" else "What should DEX do on your PC?") },
-        shape = RoundedCornerShape(24.dp),
-        minLines = 3,
-        maxLines = 8,
-        trailingIcon = {
-          Row {
+      Surface(shape = MaterialTheme.shapes.large, color = scheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(start = 18.dp, end = 10.dp, top = 16.dp, bottom = 10.dp)) {
+          BasicTextField(
+            value = text,
+            onValueChange = { text = it },
+            textStyle = TaskText.copy(color = scheme.onSurface),
+            cursorBrush = SolidColor(scheme.primary),
+            maxLines = 8,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp).focusRequester(focus),
+            decorationBox = { inner ->
+              Box {
+                if (text.isEmpty()) {
+                  Text(
+                    if (hasFiles) "What should DEX do with this?" else "What should DEX do on your PC?",
+                    style = TaskText,
+                    color = scheme.onSurfaceVariant.copy(alpha = 0.75f),
+                  )
+                }
+                inner()
+              }
+            },
+          )
+          Spacer(Modifier.size(Space.s))
+          Row(verticalAlignment = Alignment.CenterVertically) {
             if (pickers != null) {
               Box {
-                IconButton(onClick = { haptics.tick(); attachMenu = true }) { Icon(Icons.Rounded.AttachFile, "Attach") }
+                com.chethan616.dex.ui.components.PromptPlusButton(open = attachMenu, onClick = { haptics.tick(); attachMenu = !attachMenu })
                 com.chethan616.dex.ui.attach.AttachMenu(expanded = attachMenu, onDismiss = { attachMenu = false }, pickers = pickers)
               }
+              Spacer(Modifier.size(Space.s))
             }
-            IconButton(onClick = onVoice) { Icon(Icons.Rounded.Mic, "Speak") }
+            com.chethan616.dex.ui.components.PromptMicButton(onClick = onVoice)
           }
-        },
-        modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).focusRequester(focus),
-      )
+        }
+      }
 
-      Text("Agent", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      com.chethan616.dex.ui.components.AgentToggleRow(engines, engine.id, onSelect = { engine = it }, modifier = Modifier.fillMaxWidth())
+      // A label sits close to its control; groups sit apart.
+      Column(verticalArrangement = Arrangement.spacedBy(Space.s)) {
+        Text("Agent", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+        com.chethan616.dex.ui.components.AgentToggleRow(engines, engine.id, onSelect = { engine = it }, modifier = Modifier.fillMaxWidth())
+      }
 
       if (engine.models.isNotEmpty()) {
-        Text("Model", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        com.chethan616.dex.ui.components.ModelChips(engine, model, onPick = { model = it }, maxHeight = 120.dp)
+        Column(verticalArrangement = Arrangement.spacedBy(Space.s)) {
+          Text("Model", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+          com.chethan616.dex.ui.components.ModelChips(engine, model, onPick = { model = it }, maxHeight = 120.dp)
+        }
       }
 
       AnimatedContent(
@@ -228,15 +261,38 @@ fun NewTaskSheet(
             if (s is SendState.Failed) {
               Text(s.error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             }
+            // The button says what will happen: start now, queue for later,
+            // or (disabled) what's missing — never just a grey bar.
+            val ready = (text.isNotBlank() || hasFiles) && attachments?.preparing != true
+            val pc = desktop?.name ?: "your PC"
             Button(
               onClick = ::submit,
-              enabled = (text.isNotBlank() || hasFiles) && attachments?.preparing != true,
+              enabled = ready,
               shapes = ButtonDefaults.shapes(),
               modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp),
             ) {
-              Icon(Icons.AutoMirrored.Rounded.Send, null)
-              Spacer(Modifier.size(10.dp))
-              Text("Start on ${desktop?.name ?: "PC"}", style = MaterialTheme.typography.titleMedium)
+              if (ready) {
+                Icon(Icons.AutoMirrored.Rounded.Send, null)
+                Spacer(Modifier.size(10.dp))
+              }
+              Text(
+                when {
+                  attachments?.preparing == true -> "Getting your files ready…"
+                  !ready -> "Write the task first"
+                  desktop?.isReachable == true -> "Start on $pc"
+                  else -> "Queue for $pc"
+                },
+                style = MaterialTheme.typography.titleMedium,
+              )
+            }
+            if (ready && desktop != null && !desktop.isReachable) {
+              Text(
+                "${desktop.name} is offline. DEX starts this the moment it's back.",
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Space.s),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+              )
             }
           }
         }
