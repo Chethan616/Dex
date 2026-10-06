@@ -130,3 +130,125 @@ describe('claude-code adapter streaming text', () => {
     expect(text).toBe('(114 users)\n| a |');
   });
 });
+
+describe('claude-code adapter subagents (the Task tool)', () => {
+  function freshCtx() {
+    return { iter: 0, pendingTools: new Map(), harnessHelpersPath: '', harnessToolsPath: '', harnessSkillPath: '', subagents: new Map() };
+  }
+
+  it('turns a Task tool_use into a subagent_start instead of an ordinary tool_call', async () => {
+    const adapter = await claudeCodeAdapter();
+    const ctx = freshCtx();
+    const line = JSON.stringify({
+      type: 'assistant',
+      parent_tool_use_id: null,
+      message: {
+        content: [
+          { type: 'tool_use', id: 'toolu_1', name: 'Task', input: { description: 'Pdf selection review', prompt: 'Review selection handling', subagent_type: 'general-purpose' } },
+        ],
+      },
+    });
+    const { events } = adapter.parseLine(line, ctx as never);
+    expect(events).toEqual([
+      { type: 'subagent_start', id: 'toolu_1', name: 'Pdf selection review', subagentType: 'general-purpose', prompt: 'Review selection handling' },
+    ]);
+    expect(ctx.subagents.has('toolu_1')).toBe(true);
+  });
+
+  it('launching several subagents in one turn emits one subagent_start per Task call', async () => {
+    const adapter = await claudeCodeAdapter();
+    const ctx = freshCtx();
+    const line = JSON.stringify({
+      type: 'assistant',
+      parent_tool_use_id: null,
+      message: {
+        content: [
+          { type: 'tool_use', id: 'toolu_a', name: 'Task', input: { description: 'Xlsx ui review', prompt: 'p1' } },
+          { type: 'tool_use', id: 'toolu_b', name: 'Task', input: { description: 'Glass contrast review', prompt: 'p2' } },
+        ],
+      },
+    });
+    const { events } = adapter.parseLine(line, ctx as never);
+    expect(events.map((e) => (e as { id: string }).id)).toEqual(['toolu_a', 'toolu_b']);
+    expect(events.every((e) => e.type === 'subagent_start')).toBe(true);
+  });
+
+  it('routes a nested assistant message (parent_tool_use_id set) to subagent_step, not tool_call', async () => {
+    const adapter = await claudeCodeAdapter();
+    const ctx = freshCtx();
+    ctx.subagents.set('toolu_1', { name: 'Pdf selection review' });
+    const line = JSON.stringify({
+      type: 'assistant',
+      parent_tool_use_id: 'toolu_1',
+      message: { content: [{ type: 'tool_use', id: 'toolu_inner', name: 'Read', input: { file_path: 'pointerInput.kt' } }] },
+    });
+    const { events } = adapter.parseLine(line, ctx as never);
+    expect(events).toEqual([
+      { type: 'subagent_step', id: 'toolu_1', kind: 'tool_call', name: 'Read', preview: 'pointerInput.kt' },
+    ]);
+  });
+
+  it('does not bump the top-level iteration counter for a subagent-nested turn', async () => {
+    const adapter = await claudeCodeAdapter();
+    const ctx = freshCtx();
+    ctx.subagents.set('toolu_1', { name: 'Pdf selection review' });
+    const line = JSON.stringify({
+      type: 'assistant',
+      parent_tool_use_id: 'toolu_1',
+      message: { content: [{ type: 'tool_use', id: 'toolu_inner', name: 'Read', input: { file_path: 'x.kt' } }] },
+    });
+    adapter.parseLine(line, ctx as never);
+    expect(ctx.iter).toBe(0);
+  });
+
+  it('a nested tool_result becomes a subagent_step, paired with its tool name', async () => {
+    const adapter = await claudeCodeAdapter();
+    const ctx = freshCtx();
+    ctx.subagents.set('toolu_1', { name: 'Pdf selection review' });
+    ctx.pendingTools.set('toolu_inner', { name: 'Read', startedAt: Date.now(), iter: 0 });
+    const line = JSON.stringify({
+      type: 'user',
+      parent_tool_use_id: 'toolu_1',
+      message: { content: [{ type: 'tool_result', tool_use_id: 'toolu_inner', content: 'file contents', is_error: false }] },
+    });
+    const { events } = adapter.parseLine(line, ctx as never);
+    expect(events).toEqual([
+      { type: 'subagent_step', id: 'toolu_1', kind: 'tool_result', name: 'Read', ok: true, preview: 'file contents', ms: expect.any(Number) },
+    ]);
+  });
+
+  it("the Task call's own top-level tool_result becomes subagent_done, and clears the tracked subagent", async () => {
+    const adapter = await claudeCodeAdapter();
+    const ctx = freshCtx();
+    ctx.subagents.set('toolu_1', { name: 'Pdf selection review' });
+    const line = JSON.stringify({
+      type: 'user',
+      parent_tool_use_id: null,
+      message: { content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: 'Reviewed the selection handling; filed two fixes.', is_error: false }] },
+    });
+    const { events } = adapter.parseLine(line, ctx as never);
+    expect(events).toEqual([
+      { type: 'subagent_done', id: 'toolu_1', ok: true, summary: 'Reviewed the selection handling; filed two fixes.' },
+    ]);
+    expect(ctx.subagents.has('toolu_1')).toBe(false);
+  });
+
+  it('an ordinary top-level tool_use/tool_result still works unchanged alongside subagents', async () => {
+    const adapter = await claudeCodeAdapter();
+    const ctx = freshCtx();
+    const call = JSON.stringify({
+      type: 'assistant',
+      parent_tool_use_id: null,
+      message: { content: [{ type: 'tool_use', id: 'toolu_top', name: 'Bash', input: { command: 'ls' } }] },
+    });
+    const callEvents = adapter.parseLine(call, ctx as never).events;
+    expect(callEvents).toEqual([{ type: 'tool_call', name: 'Bash', args: { preview: 'ls', command: 'ls' }, iteration: 1 }]);
+    const result = JSON.stringify({
+      type: 'user',
+      parent_tool_use_id: null,
+      message: { content: [{ type: 'tool_result', tool_use_id: 'toolu_top', content: 'a.txt', is_error: false }] },
+    });
+    const resultEvents = adapter.parseLine(result, ctx as never).events;
+    expect(resultEvents).toEqual([{ type: 'tool_result', name: 'Bash', ok: true, preview: 'a.txt', ms: expect.any(Number) }]);
+  });
+});

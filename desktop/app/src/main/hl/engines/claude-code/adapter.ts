@@ -8,6 +8,18 @@
  *   assistant.content[] tool_use  → tool_call (with normalized args)
  *   user.content[] tool_result    → tool_result (paired by tool_use_id)
  *   result                  → done / error
+ *
+ * Subagents (the Task tool): every stream-json message carries a top-level
+ * `parent_tool_use_id` — null for the orchestrator's own messages, or the id
+ * of the Task tool_use block that spawned a subagent for that subagent's own
+ * nested messages. A `tool_use` block named "Task" (fields: `description`, a
+ * short 3-5 word label; `prompt`; `subagent_type`) is the start of one; its
+ * own tool calls arrive later tagged with that id as parent_tool_use_id, and
+ * its result comes back as an ordinary top-level tool_result for that id.
+ * Translated to subagent_start / subagent_step / subagent_done so a
+ * subagent's internal work never pollutes the orchestrator's own tool_call /
+ * tool_result stream — see src/shared/subagents.ts for how those fold into
+ * per-subagent records.
  */
 
 import { mainLogger } from '../../../logger';
@@ -288,15 +300,48 @@ const claudeCodeAdapter: EngineAdapter = {
     }
 
     if (type === 'assistant') {
-      ctx.iter++;
       const msg = e.message as Record<string, unknown> | undefined;
       const content = msg?.content as Array<Record<string, unknown>> | undefined;
       if (!Array.isArray(content)) return { events };
+      const parentId = typeof e.parent_tool_use_id === 'string' ? e.parent_tool_use_id : undefined;
+      const subagent = parentId ? ctx.subagents?.get(parentId) : undefined;
+
+      if (subagent) {
+        // Nested inside a subagent's own turn: its tool calls go on its own
+        // transcript (subagent_step), never the orchestrator's tool_call list.
+        for (const block of content) {
+          if (block?.type !== 'tool_use') continue;
+          const id = block.id as string;
+          const name = (block.name as string | undefined) ?? 'unknown';
+          const input = (block.input as Record<string, unknown> | undefined) ?? {};
+          ctx.pendingTools.set(id, { name, startedAt: Date.now(), iter: ctx.iter });
+          events.push({ type: 'subagent_step', id: parentId!, kind: 'tool_call', name, preview: stringifyToolInput(name, input) });
+        }
+        return { events };
+      }
+
+      ctx.iter++;
       for (const block of content) {
         if (block?.type !== 'tool_use') continue;
         const id = block.id as string;
         const name = (block.name as string | undefined) ?? 'unknown';
         const input = (block.input as Record<string, unknown> | undefined) ?? {};
+
+        // The Task tool launches a subagent — show it as a quiet mention in
+        // the chat and on the Subagents tab, not as an ordinary tool call.
+        if (name === 'Task' && typeof input.description === 'string') {
+          const subagentType = typeof input.subagent_type === 'string' ? input.subagent_type : undefined;
+          ctx.subagents?.set(id, { name: input.description });
+          events.push({
+            type: 'subagent_start',
+            id,
+            name: input.description,
+            subagentType,
+            prompt: typeof input.prompt === 'string' ? input.prompt : '',
+          });
+          continue;
+        }
+
         ctx.pendingTools.set(id, { name, startedAt: Date.now(), iter: ctx.iter });
         events.push({
           type: 'tool_call',
@@ -312,12 +357,34 @@ const claudeCodeAdapter: EngineAdapter = {
       const msg = e.message as Record<string, unknown> | undefined;
       const content = msg?.content as Array<Record<string, unknown>> | undefined;
       if (!Array.isArray(content)) return { events };
+      const parentId = typeof e.parent_tool_use_id === 'string' ? e.parent_tool_use_id : undefined;
+      const subagent = parentId ? ctx.subagents?.get(parentId) : undefined;
+
       for (const block of content) {
         if (block?.type !== 'tool_result') continue;
         const tid = block.tool_use_id as string;
-        const match = ctx.pendingTools.get(tid);
         const { text, isError } = stringifyToolResult(block.content);
         const ok = block.is_error !== true && !isError;
+
+        // The Task tool's own result: it always comes back at the top level
+        // (parent_tool_use_id null), since the orchestrator is the one
+        // reading it — the subagent is done.
+        if (!subagent && ctx.subagents?.has(tid)) {
+          events.push({ type: 'subagent_done', id: tid, ok, summary: text.slice(0, 4000) });
+          ctx.subagents.delete(tid);
+          continue;
+        }
+
+        if (subagent) {
+          const match = ctx.pendingTools.get(tid);
+          const ms = match ? Date.now() - match.startedAt : 0;
+          const name = match?.name ?? 'unknown';
+          events.push({ type: 'subagent_step', id: parentId!, kind: 'tool_result', name, ok, preview: text.slice(0, 2000), ms });
+          ctx.pendingTools.delete(tid);
+          continue;
+        }
+
+        const match = ctx.pendingTools.get(tid);
         const ms = match ? Date.now() - match.startedAt : 0;
         const name = match?.name ?? 'unknown';
         events.push({ type: 'tool_result', name, ok, preview: text.slice(0, 2000), ms });
