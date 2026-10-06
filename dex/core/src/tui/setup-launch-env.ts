@@ -1,2 +1,0 @@
-export const TUI_SETUP_AUTH_SOURCE_ENV = "DEX_TUI_SETUP_AUTH_SOURCE";
-export const TUI_SETUP_AUTH_SOURCE_CONFIG = "config";

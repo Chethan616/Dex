@@ -12,18 +12,17 @@
 ## Area
 
 <!-- Tick what this touches. -->
-- [ ] App / UI (`app/`)
-- [ ] Framework / agent (`dex/core/`)
-- [ ] Engines / drivers
+- [ ] Desktop app (`desktop/app/`)
+- [ ] Phone app (`android/`)
+- [ ] Firebase rules (`firebase/`)
 - [ ] Docs / community files
 - [ ] Other:
 
 ## Verification
 
 <!-- How did you test it? -->
-- [ ] `flutter analyze` clean on touched files (app changes)
-- [ ] `flutter build windows --debug` green (app changes)
-- [ ] `pnpm build` green (core changes)
+- [ ] `npx tsc --noEmit` and `npx vitest run` green in `desktop/app` (desktop changes)
+- [ ] `./gradlew :app:compileDebugKotlin` green in `android` (phone changes)
 - [ ] Manually ran the affected flow:
 
 ## Screenshots / recordings

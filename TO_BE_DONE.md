@@ -106,7 +106,6 @@ These come from the owner directly, over several sessions. Treat each as a hard 
 **Files never to commit**
 - `desktop/app/install-id.json`
 - anything under `UI/` (the owner's screenshots and notes)
-- `dex/core/apps/android/.gradle/9.4.1/fileHashes/fileHashes.lock`
 - `desktop/app/package-lock.json`: the repo uses **yarn**. An npm install made this file. Leave it untracked or delete it.
 
 **Other people's files and settings**
@@ -642,10 +641,10 @@ The owner wants all of these done.
 3. **Reactions, like Grok's agents and WhatsApp/Instagram** (`UI/g1.png`, `g2.png`), on desktop and phone:
    - DEX reacts to your message (👀 while it works on it, 👍 when it's done, and the agent can pick another);
    - you can react to any message with any emoji: a quick row plus the full picker.
-4. **Integrations, many of them, through OAuth**, for students, employees, doctors, engineers and others. Start from the old `dex/core/extensions` list.
+4. **Integrations, many of them, through OAuth**, for students, employees, doctors, engineers and others. The old `dex/core/extensions` list was mostly LLM providers and chat channels (OpenClaw's), so the marketplace starts from what those users actually use.
    - The scalable route is **remote MCP servers with OAuth (dynamic client registration)**: Notion, Linear, Atlassian, Asana, Canva, Figma, Stripe, HubSpot, Box, Zapier and so on. DEX runs the OAuth flow once and passes the token to every engine.
    - Plus **Google Flights, Hotels and restaurants, and bookings**. There's no public Google API for these, so it's browser skills on google.com/travel and Maps (with "Reserve"), plus an optional Amadeus connector.
-5. **Delete the old `dex/` folder** (the Python/Flutter-era app) once nothing references it. Mine `dex/core/extensions` first.
+5. ✅ **The old `dex/` folder is deleted** (2026-10-07). It was the OpenClaw fork plus the Flutter-era app, 19,700 files, and nothing referenced it; git history keeps it. `RUN.bat`/`STOP.bat` went with it, the README now describes the current app, and LICENSES.md drops what no longer ships.
 6. **Then continue Windows desktop control** (`docs/desktop-control/PLAN.md`; Phase 1 is half-built in `desktop/app/mcp-servers/windows/`).
 
 # Part 4 — The Android app (if you touch it)
