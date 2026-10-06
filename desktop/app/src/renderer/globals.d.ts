@@ -276,7 +276,7 @@ interface ElectronWorkspaceAPI {
 }
 
 type WorkspaceShortcut =
-  | 'new-tab' | 'close-tab' | 'focus-address' | 'reload' | 'back' | 'forward' | 'next-tab' | 'prev-tab';
+  | 'new-tab' | 'close-tab' | 'reopen-tab' | 'focus-address' | 'reload' | 'back' | 'forward' | 'next-tab' | 'prev-tab';
 
 interface ElectronTakeoverAPI {
   show: (

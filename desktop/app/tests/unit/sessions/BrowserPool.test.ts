@@ -491,6 +491,25 @@ describe('BrowserPool — tabs', () => {
     expect(pool.activeCount).toBe(1);
   });
 
+  it('Ctrl+Shift+T reopens the last closed tab, but not the agent’s scratch tabs or blank ones', () => {
+    pool.create('s1');
+    const a = pool.openTab('s1', { url: 'https://a.example/' })!;
+    const b = pool.openTab('s1', { url: 'https://b.example/' })!;
+    const scratch = pool.openTab('s1', { url: 'https://scratch.example/', openedBy: 'agent', activate: false, temporary: true })!;
+    pool.closeTab('s1', a);
+    pool.closeTab('s1', b);
+    pool.closeTab('s1', scratch);
+    pool.closeTab('s1', 't1');
+
+    pool.runShortcut('s1', undefined, 'reopen-tab');
+    expect(pool.getWebContents('s1')!.getURL()).toBe('https://b.example/');
+    pool.runShortcut('s1', undefined, 'reopen-tab');
+    expect(pool.getWebContents('s1')!.getURL()).toBe('https://a.example/');
+    const count = pool.listTabs('s1').length;
+    pool.runShortcut('s1', undefined, 'reopen-tab');
+    expect(pool.listTabs('s1')).toHaveLength(count);
+  });
+
   it('opens a page’s popup as a tab in the same workspace', async () => {
     const { createPopupWebContents } = await import('../../fixtures/electron-mock');
     pool.create('s1');

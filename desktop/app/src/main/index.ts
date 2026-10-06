@@ -2747,7 +2747,7 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('workspace:shortcut', (_event, id: string, shortcut: unknown) => {
     const validatedId = assertString(id, 'id', 100);
-    const allowed = ['new-tab', 'close-tab', 'focus-address', 'reload', 'back', 'forward', 'next-tab', 'prev-tab'];
+    const allowed = ['new-tab', 'close-tab', 'reopen-tab', 'focus-address', 'reload', 'back', 'forward', 'next-tab', 'prev-tab'];
     if (typeof shortcut !== 'string' || !allowed.includes(shortcut)) return false;
     browserPool.runShortcut(validatedId, undefined, shortcut as Parameters<typeof browserPool.runShortcut>[2]);
     return true;

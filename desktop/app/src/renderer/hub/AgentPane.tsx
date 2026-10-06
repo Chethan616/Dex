@@ -910,7 +910,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
       }
       if (!workspaceOn) return;
       const shortcut: WorkspaceShortcut | null =
-        key === 't' ? 'new-tab'
+        key === 't' ? (e.shiftKey ? 'reopen-tab' : 'new-tab')
           : key === 'w' ? 'close-tab'
             : key === 'l' ? 'focus-address'
               : key === 'tab' ? (e.shiftKey ? 'prev-tab' : 'next-tab')

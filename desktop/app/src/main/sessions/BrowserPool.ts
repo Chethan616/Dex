@@ -50,7 +50,10 @@ export interface WorkspaceTabState {
 export type TabAction = 'back' | 'forward' | 'reload' | 'stop';
 
 export type WorkspaceShortcut =
-  | 'new-tab' | 'close-tab' | 'focus-address' | 'reload' | 'back' | 'forward' | 'next-tab' | 'prev-tab';
+  | 'new-tab' | 'close-tab' | 'reopen-tab' | 'focus-address' | 'reload' | 'back' | 'forward' | 'next-tab' | 'prev-tab';
+
+/** How many closed tabs Ctrl+Shift+T can bring back, per task. */
+const REOPEN_STACK = 10;
 
 interface TabEntry {
   id: string;
@@ -88,6 +91,8 @@ interface PoolEntry {
   idleFreezeEligible: boolean;
   frozen: boolean;
   freezeTimer: ReturnType<typeof setTimeout> | null;
+  /** Pages you closed, newest last, for Ctrl+Shift+T. DEX's scratch tabs aren't kept. */
+  closed?: string[];
 }
 
 function readIdleFreezeDelayMs(): number {
@@ -535,7 +540,7 @@ export class BrowserPool {
     input: { control: boolean; shift: boolean; alt: boolean; meta: boolean },
   ): WorkspaceShortcut | null {
     if (input.control && !input.alt && !input.meta) {
-      if (key === 't') return 'new-tab';
+      if (key === 't') return input.shift ? 'reopen-tab' : 'new-tab';
       if (key === 'w') return 'close-tab';
       if (key === 'l') return 'focus-address';
       if (key === 'r') return 'reload';
@@ -562,6 +567,11 @@ export class BrowserPool {
       case 'close-tab':
         this.closeTab(sessionId, current);
         break;
+      case 'reopen-tab': {
+        const url = entry.closed?.pop();
+        if (url) this.openTab(sessionId, { url, openedBy: 'user' });
+        break;
+      }
       case 'focus-address':
         this.onFocusAddress?.(sessionId);
         break;
@@ -672,6 +682,11 @@ export class BrowserPool {
     if (!entry || !tab) return false;
     if (entry.tabs.length === 1) {
       this.openTab(sessionId, { activate: true, openedBy: 'user' });
+    }
+    // Remember a real page for Ctrl+Shift+T (not DEX's own scratch tabs).
+    const closedUrl = tab.view.webContents.isDestroyed() ? '' : tab.view.webContents.getURL();
+    if (!tab.temporary && !isBlank(closedUrl)) {
+      entry.closed = [...(entry.closed ?? []), closedUrl].slice(-REOPEN_STACK);
     }
     // forgetTab via 'destroyed' would also do this; do it now so the strip
     // updates immediately even if Chromium takes its time.
