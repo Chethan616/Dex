@@ -209,6 +209,26 @@ export const TOOLS = [
     },
   },
   {
+    name: 'system_change',
+    op: 'change',
+    description: "Change the PC — only these, each typed and checked: dns_flush, wifi_reconnect {profile?}, explorer_restart, gesture_set {key, value} (touchpad gestures; see system_info touchpad), touchpad_set {field, value}, app_uninstall {wingetId}; and, through DEX's admin helper: ip_renew {adapter?}, adapter_restart {name}, dns_set {adapter, servers: ['1.1.1.1'] | 'dhcp'}, device_restart / device_enable / device_disable {instanceId}, service_restart {name}, winsock_reset, ip_stack_reset, restore_point {description?}. Diagnose with system_info first; change the cheapest thing that fixes it; give `reason` in plain words (the user may see it on an approval card). Each change is journaled; `undo` reverses the ones that can be.",
+    inputSchema: {
+      type: 'object',
+      required: ['action', 'reason'],
+      properties: {
+        action: { type: 'string' },
+        args: { type: 'object', description: 'The action’s own fields, e.g. {key:"ThreeFingerSlideEnabled", value:1}.' },
+        reason: { type: 'string', description: 'Why, in one sentence the user would understand.' },
+      },
+    },
+  },
+  {
+    name: 'undo',
+    op: 'undo',
+    description: "Reverse the last change this task made (or the one with `entry`, from a system_change result) — only changes with a recorded undo: DNS servers, touchpad settings and gestures, turning a device off or on.",
+    inputSchema: { type: 'object', properties: { entry: { type: 'string' } } },
+  },
+  {
     name: 'open_settings',
     op: 'launch',
     description: "Open a Windows Settings page (an ms-settings id like 'network-wifi', 'mousetouchpad', 'devices-touchpad', 'apps-volume') for the user to SEE. It comes to the front, so use it only when the user asked to see it, or as the very last step. To diagnose, use system_info instead.",

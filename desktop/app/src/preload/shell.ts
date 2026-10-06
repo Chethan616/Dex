@@ -221,6 +221,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       openSystemNotifications: (): Promise<{ ok: boolean; error?: string }> =>
         ipcRenderer.invoke('settings:open-system-notifications'),
     },
+    /** Admin changes without a Windows prompt each time (main/desktop/elevation.ts). */
+    elevation: {
+      status: (): Promise<{ supported: boolean; installed: boolean; outdated: boolean }> => ipcRenderer.invoke('desktop:elevation-status'),
+      setUp: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('desktop:elevation-setup'),
+      remove: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('desktop:elevation-remove'),
+    },
     approvals: {
       get: (): Promise<{ mode: 'ask' | 'auto' | 'full' }> => ipcRenderer.invoke('settings:approvals:get'),
       set: (mode: 'ask' | 'auto' | 'full'): Promise<{ mode: 'ask' | 'auto' | 'full' }> =>

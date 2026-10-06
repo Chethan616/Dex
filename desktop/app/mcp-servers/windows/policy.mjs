@@ -40,6 +40,8 @@ export function blockedReason(win) {
   return null;
 }
 
+import { ACTIONS, categoryOf } from './actions.mjs';
+
 const READS = new Set(['windows_list', 'window_tree', 'window_find', 'window_capture', 'ui_wait', 'ui_scroll', 'system_info']);
 
 function appName(win) {
@@ -86,6 +88,14 @@ export function classify(tool, args = {}, win = null) {
     }
     return { tier: 1, category: 'app-control', title: `${args.action} ${appName(win)}`, detail: win?.title ?? '', subject: win?.process };
   }
+  if (tool === 'system_change') {
+    const action = ACTIONS[args.action];
+    if (!action) return { refused: `“${args.action}” isn't a change DEX makes. See system_change's list.` };
+    const a = args.args ?? {};
+    if (!action.check(a)) return { refused: `Those details don't fit ${args.action}.` };
+    return { tier: action.tier, category: categoryOf(args.action), title: action.title(a), detail: String(args.reason ?? '').slice(0, 300), subject: args.action, admin: action.admin };
+  }
+  if (tool === 'undo') return { tier: 2, category: 'system-change', title: 'Undo DEX’s last change', detail: args.entry ? `Journal entry ${args.entry}` : '', subject: 'undo' };
   const verbs = {
     ui_invoke: (a) => `Press ${targetLabel(a.target)}`,
     ui_set_text: (a) => `Type into ${targetLabel(a.target)}`,

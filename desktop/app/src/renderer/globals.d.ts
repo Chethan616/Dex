@@ -482,8 +482,15 @@ interface ElectronSettingsConnectorsAPI {
   disconnect: (id: string) => Promise<void>;
 }
 
+interface ElectronSettingsElevationAPI {
+  status: () => Promise<{ supported: boolean; installed: boolean; outdated: boolean }>;
+  setUp: () => Promise<{ ok: boolean; error?: string }>;
+  remove: () => Promise<{ ok: boolean; error?: string }>;
+}
+
 interface ElectronSettingsAPI {
   mcp?: ElectronSettingsMcpAPI;
+  elevation?: ElectronSettingsElevationAPI;
   connectors?: ElectronSettingsConnectorsAPI;
   accounts?: ElectronSettingsAccountsAPI;
   bridge?: ElectronSettingsBridgeAPI;

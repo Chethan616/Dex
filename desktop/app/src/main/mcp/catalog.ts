@@ -365,7 +365,7 @@ function controlFilePath(): string {
  */
 export const WINDOWS_TOOL_NAMES = [
   'windows_list', 'window_tree', 'window_find', 'window_capture', 'ui_invoke', 'ui_set_text', 'ui_toggle', 'ui_select',
-  'ui_expand', 'ui_scroll', 'ui_wait', 'app_launch', 'window_manage', 'media', 'system_info', 'open_settings',
+  'ui_expand', 'ui_scroll', 'ui_wait', 'app_launch', 'window_manage', 'media', 'system_info', 'system_change', 'undo', 'open_settings',
 ];
 
 export const WINDOWS_DEFINITION: McpServerDefinition = {

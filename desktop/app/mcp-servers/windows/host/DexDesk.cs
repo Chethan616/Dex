@@ -932,6 +932,36 @@ public static class DexDesk {
     };
   }
 
+  /**
+   * SPI_SETTOUCHPADPARAMETERS: change one touchpad setting, keeping the rest.
+   * Returns the value it had, for the undo journal.
+   */
+  public static string SetTouchpad(string field, string value) {
+    var p = new TOUCHPAD_PARAMETERS { versionNumber = 1 };
+    uint size = (uint)Marshal.SizeOf(typeof(TOUCHPAD_PARAMETERS));
+    if (!SystemParametersInfo(0x00AE, size, ref p, 0)) throw new DexDeskError("unsupported", "This Windows doesn't let DEX change touchpad settings (needs Windows 11).");
+    Func<uint, int, bool, uint> setBit = (v, i, set) => set ? (v | (1u << i)) : (v & ~(1u << i));
+    bool on = value == "true" || value == "1";
+    string before;
+    switch (field) {
+      case "touchpadEnabled": before = (((p.flags1 >> 3) & 1) != 0).ToString().ToLower(); p.flags1 = setBit(p.flags1, 3, on); break;
+      case "allowActiveWhenMousePresent": before = (((p.flags2 >> 0) & 1) != 0).ToString().ToLower(); p.flags2 = setBit(p.flags2, 0, on); break;
+      case "tapEnabled": before = (((p.flags2 >> 2) & 1) != 0).ToString().ToLower(); p.flags2 = setBit(p.flags2, 2, on); break;
+      case "tapAndDragEnabled": before = (((p.flags2 >> 3) & 1) != 0).ToString().ToLower(); p.flags2 = setBit(p.flags2, 3, on); break;
+      case "twoFingerTapEnabled": before = (((p.flags2 >> 4) & 1) != 0).ToString().ToLower(); p.flags2 = setBit(p.flags2, 4, on); break;
+      case "rightClickZoneEnabled": before = (((p.flags2 >> 5) & 1) != 0).ToString().ToLower(); p.flags2 = setBit(p.flags2, 5, on); break;
+      case "panEnabled": before = (((p.flags2 >> 7) & 1) != 0).ToString().ToLower(); p.flags2 = setBit(p.flags2, 7, on); break;
+      case "zoomEnabled": before = (((p.flags2 >> 8) & 1) != 0).ToString().ToLower(); p.flags2 = setBit(p.flags2, 8, on); break;
+      case "scrollDirectionReversed": before = (((p.flags2 >> 9) & 1) != 0).ToString().ToLower(); p.flags2 = setBit(p.flags2, 9, on); break;
+      case "cursorSpeed": before = p.cursorSpeed.ToString(); p.cursorSpeed = uint.Parse(value); break;
+      case "sensitivity": before = p.sensitivityLevel.ToString(); p.sensitivityLevel = int.Parse(value); break;
+      default: throw new DexDeskError("bad_args", "Unknown touchpad setting: " + field);
+    }
+    // SPIF_UPDATEINIFILE | SPIF_SENDCHANGE: saved, and every app hears about it.
+    if (!SystemParametersInfo(0x00AF, size, ref p, 0x01 | 0x02)) throw new DexDeskError("change_failed", "Windows didn't accept the touchpad change.");
+    return before;
+  }
+
   /** SPI_GETTOUCHPADPARAMETERS (Windows 11): what the touchpad is set to, in words. */
   static object Touchpad() {
     var p = new TOUCHPAD_PARAMETERS { versionNumber = 1 };

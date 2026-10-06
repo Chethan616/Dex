@@ -9,7 +9,11 @@
 # system diagnostics. It never changes the system.
 param(
   [string]$DeskHome = (Join-Path $env:APPDATA 'DEX\desktop'),
-  [string]$DexExe = ''
+  [string]$DexExe = '',
+  # The elevated helper (docs/desktop-control/PLAN.md §6): started as
+  # administrator by the DEX\Elevated scheduled task, it serves admin changes
+  # on a loopback port to DEX only (the per-install secret), then exits idle.
+  [switch]$Elevated
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -19,6 +23,111 @@ $utf8 = New-Object System.Text.UTF8Encoding $false
 New-Item -ItemType Directory -Force $DeskHome | Out-Null
 
 function Write-Line([string]$json) { [Console]::Out.WriteLine($json); [Console]::Out.Flush() }
+
+# ── Changes to the PC (mcp-servers/windows/actions.mjs is the allowlist) ──
+# Each returns what it did, what was there before, and how to undo it.
+$script:AdminActions = @('ip_renew', 'adapter_restart', 'dns_set', 'device_restart', 'device_enable', 'device_disable', 'service_restart', 'winsock_reset', 'ip_stack_reset', 'restore_point')
+$script:GestureKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad'
+
+function Invoke-Change($a) {
+  $p = $a.args
+  switch ("$($a.action)") {
+    'dns_flush' { Clear-DnsClientCache; return @{ done = $true } }
+    'wifi_reconnect' {
+      $profileName = if ($p.profile) { "$($p.profile)" } else {
+        $line = (& netsh.exe wlan show interfaces) | Where-Object { $_ -match '^\s+Profile\s+:' } | Select-Object -First 1
+        if ($line) { ($line -split ':', 2)[1].Trim() } else { $null }
+      }
+      if (-not $profileName) { throw [System.Exception]::new('no_profile|Not connected to Wi-Fi, so there is nothing to reconnect.|Give a profile name from system_info wifi.') }
+      & netsh.exe wlan disconnect | Out-Null
+      Start-Sleep -Seconds 2
+      $out = (& netsh.exe wlan connect name="$profileName") | Out-String
+      return @{ done = $true; profile = $profileName; said = $out.Trim() }
+    }
+    'explorer_restart' {
+      Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+      Start-Sleep -Milliseconds 1200
+      if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) { Start-Process explorer.exe }
+      return @{ done = $true }
+    }
+    'gesture_set' {
+      $before = (Get-ItemProperty -Path $script:GestureKey -Name $p.key -ErrorAction SilentlyContinue).($p.key)
+      Set-ItemProperty -Path $script:GestureKey -Name $p.key -Value ([uint32]$p.value) -Type DWord
+      return @{ done = $true; before = $before; after = [uint32]$p.value
+        undo = if ($null -ne $before) { @{ action = 'gesture_set'; args = @{ key = $p.key; value = [uint32]$before } } } else { $null }
+        note = 'Windows applies gesture changes after you sign out, or after Explorer restarts (explorer_restart).' }
+    }
+    'touchpad_set' {
+      $before = [DexDesk]::SetTouchpad("$($p.field)", "$($p.value)".ToLower())
+      $undoValue = if ($before -eq 'true' -or $before -eq 'false') { $before -eq 'true' } else { [int]$before }
+      return @{ done = $true; before = $before; after = $p.value; undo = @{ action = 'touchpad_set'; args = @{ field = $p.field; value = $undoValue } } }
+    }
+    'app_uninstall' {
+      $out = (& winget.exe uninstall --id "$($p.wingetId)" --exact --silent --accept-source-agreements --disable-interactivity 2>&1) | Out-String
+      return @{ done = ($LASTEXITCODE -eq 0); said = $out.Trim().Substring(0, [math]::Min(1500, $out.Trim().Length)); reinstall = "winget install --id $($p.wingetId) --exact" }
+    }
+    'ip_renew' {
+      if ($p.adapter) { & ipconfig.exe /release "$($p.adapter)" | Out-Null; & ipconfig.exe /renew "$($p.adapter)" | Out-Null } else { & ipconfig.exe /release | Out-Null; & ipconfig.exe /renew | Out-Null }
+      return @{ done = $true }
+    }
+    'adapter_restart' { Restart-NetAdapter -Name "$($p.name)" -Confirm:$false; return @{ done = $true } }
+    'dns_set' {
+      $before = @((Get-DnsClientServerAddress -InterfaceAlias "$($p.adapter)" -AddressFamily IPv4).ServerAddresses)
+      $wasAuto = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$((Get-NetAdapter -Name "$($p.adapter)").InterfaceGuid)" -Name NameServer -ErrorAction SilentlyContinue).NameServer -eq ''
+      if ("$($p.servers)" -eq 'dhcp') { Set-DnsClientServerAddress -InterfaceAlias "$($p.adapter)" -ResetServerAddresses }
+      else { Set-DnsClientServerAddress -InterfaceAlias "$($p.adapter)" -ServerAddresses @($p.servers) }
+      return @{ done = $true; before = $before; undo = @{ action = 'dns_set'; args = @{ adapter = $p.adapter; servers = $(if ($wasAuto -or $before.Count -eq 0) { 'dhcp' } else { $before }) } } }
+    }
+    'device_restart' { & pnputil.exe /restart-device "$($p.instanceId)" | Out-Null; return @{ done = ($LASTEXITCODE -eq 0) } }
+    'device_enable' { Enable-PnpDevice -InstanceId "$($p.instanceId)" -Confirm:$false; return @{ done = $true; undo = @{ action = 'device_disable'; args = @{ instanceId = $p.instanceId } } } }
+    'device_disable' { Disable-PnpDevice -InstanceId "$($p.instanceId)" -Confirm:$false; return @{ done = $true; undo = @{ action = 'device_enable'; args = @{ instanceId = $p.instanceId } } } }
+    'service_restart' { Restart-Service -Name "$($p.name)" -Force; return @{ done = $true } }
+    'winsock_reset' { $out = (& netsh.exe winsock reset) | Out-String; return @{ done = $true; restartNeeded = $true; said = $out.Trim() } }
+    'ip_stack_reset' { $out = (& netsh.exe int ip reset) | Out-String; return @{ done = $true; restartNeeded = $true; said = $out.Trim() } }
+    'restore_point' {
+      Checkpoint-Computer -Description $(if ($p.description) { "$($p.description)" } else { 'DEX' }) -RestorePointType MODIFY_SETTINGS -WarningVariable warned -WarningAction SilentlyContinue
+      return @{ done = $true; note = if ($warned) { "$warned" } else { $null } }
+    }
+    default { throw [System.Exception]::new("bad_args|Unknown change: $($a.action).|") }
+  }
+}
+
+if ($Elevated) {
+  # Only admin changes, only for DEX: a loopback port, the per-install secret
+  # (in this user's profile, written by DEX), and an exit after 15 idle minutes.
+  $secretFile = Join-Path $DeskHome 'elevated.secret'
+  $portFile = Join-Path $DeskHome 'elevated.port'
+  $secret = (Get-Content $secretFile -Raw -ErrorAction Stop).Trim()
+  $listener = New-Object System.Net.Sockets.TcpListener ([System.Net.IPAddress]::Loopback), 0
+  $listener.Start()
+  Set-Content -Path $portFile -Value $listener.LocalEndpoint.Port -Encoding ascii
+  $idle = [Diagnostics.Stopwatch]::StartNew()
+  try {
+    while ($idle.Elapsed.TotalMinutes -lt 15) {
+      if (-not $listener.Pending()) { Start-Sleep -Milliseconds 200; continue }
+      $client = $listener.AcceptTcpClient()
+      $idle.Restart()
+      try {
+        $stream = $client.GetStream()
+        $reader = New-Object System.IO.StreamReader($stream, $utf8)
+        $writer = New-Object System.IO.StreamWriter($stream, $utf8)
+        $writer.AutoFlush = $true
+        $req = $reader.ReadLine() | ConvertFrom-Json
+        $reply = if ("$($req.secret)" -ne $secret) { @{ ok = $false; error = 'denied'; message = 'Not DEX.' } }
+          elseif ($script:AdminActions -notcontains "$($req.action)") { @{ ok = $false; error = 'refused'; message = 'Not an admin change.' } }
+          else {
+            try { @{ ok = $true; result = (Invoke-Change $req) } }
+            catch { $parts = "$($_.Exception.Message)" -split '\|', 3; @{ ok = $false; error = $(if ($parts.Count -ge 2) { $parts[0] } else { 'change_failed' }); message = $(if ($parts.Count -ge 2) { $parts[1] } else { "$($_.Exception.Message)" }) } }
+          }
+        $writer.WriteLine(($reply | ConvertTo-Json -Depth 8 -Compress))
+      } catch { } finally { $client.Close() }
+    }
+  } finally {
+    $listener.Stop()
+    Remove-Item $portFile -Force -ErrorAction SilentlyContinue
+  }
+  exit 0
+}
 
 # ── The UI Automation interop, built from Windows' own type library ──────
 # What tlbimp would make, generated here once per UIAutomationCore version:
@@ -280,6 +389,10 @@ while ($true) {
     switch ("$($req.op)") {
       'media' { Send-Result $req.id (Invoke-Media $req.args) }
       'sys' { Send-Result $req.id (Invoke-Sys $req.args) }
+      'change' {
+        if ($script:AdminActions -contains "$($req.args.action)") { Send-Error $req.id 'needs_admin|That change needs the elevated helper.|' }
+        else { Send-Result $req.id (Invoke-Change $req.args) }
+      }
       'shutdown' { Send-Result $req.id @{ bye = $true }; exit 0 }
       default { Send-Error $req.id "unknown_op|Unknown op: $($req.op)|" }
     }

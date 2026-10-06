@@ -20,6 +20,9 @@ import { TOOLS, TOOL_BY_NAME, toHostOp } from './tools.mjs';
 import { blockedReason, classify } from './policy.mjs';
 import { Host } from './host.mjs';
 import { controlClient } from './control.mjs';
+import { ACTIONS } from './actions.mjs';
+import net from 'node:net';
+import { spawnSync } from 'node:child_process';
 
 const PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: 'dex-windows', version: '1.0.0' };
@@ -103,6 +106,77 @@ async function waitForGate() {
   }
 }
 
+/* ── Admin changes: DEX's elevated helper (host.ps1 -Elevated) ────────── */
+
+const readFile = (f) => { try { return fs.readFileSync(f, 'utf-8').trim(); } catch { return null; } };
+
+function askHelper(port, message) {
+  return new Promise((resolve, reject) => {
+    const sock = net.connect({ host: '127.0.0.1', port }, () => sock.write(`${JSON.stringify(message)}\n`));
+    let buf = '';
+    sock.setEncoding('utf-8');
+    sock.setTimeout(10 * 60_000, () => { sock.destroy(); reject(new Error('The admin helper didn’t answer.')); });
+    sock.on('data', (d) => { buf += d; });
+    sock.on('end', () => { try { resolve(JSON.parse(buf)); } catch { reject(new Error('The admin helper gave a bad answer.')); } });
+    sock.on('error', reject);
+  });
+}
+
+/** Run an admin change through the helper, starting its task when it isn't up. */
+async function elevated(action, args) {
+  const secret = readFile(path.join(home, 'elevated.secret'));
+  if (!secret) return { ok: false, error: 'elevation_not_set_up', message: 'Admin changes aren’t set up on this PC yet.', hint: 'Tell the user: Settings › Agent approval › Admin changes › Set up (one Windows prompt). Until then, say what you would change.' };
+  const portFile = path.join(home, 'elevated.port');
+  let port = Number(readFile(portFile));
+  const tryAsk = async () => (port ? askHelper(port, { secret, action, args }) : Promise.reject(new Error('no port')));
+  try { return await tryAsk(); } catch { /* not running: start it */ }
+  try { fs.rmSync(portFile, { force: true }); } catch { /* gone */ }
+  const run = spawnSync('schtasks.exe', ['/run', '/tn', '\\DEX\\Elevated'], { encoding: 'utf-8', windowsHide: true });
+  if (run.status !== 0) return { ok: false, error: 'elevation_not_set_up', message: 'DEX’s admin helper isn’t installed.', hint: 'Tell the user: Settings › Agent approval › Admin changes › Set up (one Windows prompt).' };
+  for (let i = 0; i < 60; i += 1) {
+    await new Promise((r) => setTimeout(r, 250));
+    port = Number(readFile(portFile));
+    if (!port) continue;
+    try { return await tryAsk(); } catch { /* still starting */ }
+  }
+  return { ok: false, error: 'helper_timeout', message: 'DEX’s admin helper didn’t start.', hint: 'Try once more; if it keeps failing, the user can set it up again in Settings.' };
+}
+
+/* ── The undo journal: one file per change, in this task's folder ─────── */
+
+const journalDir = path.join(home, 'journal', session);
+
+function journal(entry) {
+  fs.mkdirSync(journalDir, { recursive: true });
+  const id = `${Date.now()}-${entry.action}`;
+  fs.writeFileSync(path.join(journalDir, `${id}.json`), JSON.stringify({ id, at: new Date().toISOString(), ...entry }, null, 2));
+  return id;
+}
+
+function journalEntries() {
+  try {
+    return fs.readdirSync(journalDir).filter((f) => f.endsWith('.json')).sort()
+      .map((f) => { try { return JSON.parse(fs.readFileSync(path.join(journalDir, f), 'utf-8')); } catch { return null; } })
+      .filter(Boolean);
+  } catch { return []; }
+}
+
+async function runChange(action, args, reason, { isUndo = false } = {}) {
+  const def = ACTIONS[action];
+  // Before something hard to undo that needs admin: a restore point, if Windows will make one.
+  let restorePoint = null;
+  if (def.admin && def.tier >= 3 && action !== 'restore_point') {
+    const rp = await elevated('restore_point', { description: `DEX before ${action}` });
+    restorePoint = rp.ok ? 'made' : `skipped (${rp.message ?? rp.error})`;
+  }
+  const res = def.admin ? await elevated(action, args) : await getHost().call('change', { action, args });
+  if (!res.ok) return res;
+  const result = res.result ?? {};
+  // An undo isn't itself undone by the next undo: that steps further back.
+  const entry = journal({ action, args, reason, result, undo: isUndo ? null : result.undo ?? null, undone: false });
+  return { ok: true, result: { ...result, entry, ...(restorePoint ? { restorePoint } : {}) } };
+}
+
 /* ── tools/call ───────────────────────────────────────────────────────── */
 
 function takesWindow(tool) {
@@ -138,6 +212,20 @@ export async function callTool(name, args = {}) {
     } else if (verdict.tier >= 3) {
       return errorResult('denied', "DEX isn't reachable to approve a change like this.", null);
     }
+  }
+
+  if (name === 'system_change') {
+    const res = await runChange(args.action, args.args ?? {}, args.reason);
+    return res.ok ? textResult(res.result) : errorResult(res.error ?? 'change_failed', res.message ?? 'The change failed.', res.hint);
+  }
+  if (name === 'undo') {
+    const entries = journalEntries().filter((e) => e.undo && !e.undone);
+    const target = args.entry ? entries.find((e) => e.id === args.entry) : entries[entries.length - 1];
+    if (!target) return errorResult('nothing_to_undo', 'There’s no change of this task that DEX can undo.');
+    const res = await runChange(target.undo.action, target.undo.args ?? {}, `Undo: ${target.reason ?? target.action}`, { isUndo: true });
+    if (!res.ok) return errorResult(res.error ?? 'change_failed', res.message ?? 'The undo failed.', res.hint);
+    fs.writeFileSync(path.join(journalDir, `${target.id}.json`), JSON.stringify({ ...target, undone: true }, null, 2));
+    return textResult({ undid: target.id, ...res.result });
   }
 
   const { op, args: hostArgs } = toHostOp(name, args);

@@ -650,8 +650,14 @@ The owner wants all of these done.
 >   - **Policy:** `policy.mjs` refuses password managers, Windows security, terminals (by window class) and other agents. Tiers map to the new approval categories (`app-control`, `system-change`, `system-destructive`, `elevation`). Full access asks for nothing; Approve-for-me asks before PC changes.
 >   - **Pause on Windows is now cooperative** (`desktop/deskState.ts`): the task is held, and its browser commands (at the broker) and Windows tools (at `/dex/desktop-gate`) wait until Resume.
 >   - **Live-tested** through MCP against `scripts/desk-fixture.ps1`, an off-screen, never-activated window: press, type, toggle, tree, capture and refusals all work, with no focus changes.
+>   - **Phase 2 is built too.**
+>     - **`system_change`:** 17 typed, allowlisted actions (`mcp-servers/windows/actions.mjs`). Non-admin ones run in the host; admin ones go through the **elevated helper**: `host.ps1 -Elevated`, on loopback, gated by a per-install secret, admin actions only, exiting after 15 idle minutes.
+>     - **Helper setup** is one UAC prompt, in Settings › Agent approval › Admin changes (`main/desktop/elevation.ts`). It copies `host.ps1` to admin-only `%ProgramData%\DEX\elevated` and registers the task `\DEX\Elevated` to run with highest privileges; the server starts it with `schtasks /run`.
+>     - **Undo journal:** one file per change, in `<userData>/desktop/journal/<session>/`; the `undo` tool reverses entries. Before a tier-3 admin change, the server tries a restore point.
+>     - The agent guide `dex-tools/desktop.md` has recipes for the owner's three tasks.
+>     - **Live-tested:** `dns_flush`, `gesture_set` (same value) and undo. The helper's door is tested unelevated.
+>     - **Not yet done:** the helper running elevated (it needs the owner's UAC click), and the Spotify recipe (Spotify isn't installed here).
 >   - **Next:**
->     - Phase 2: `system_change` with the owner's no-prompt elevated helper, plus the undo journal;
 >     - the owner's three acceptance tasks: Spotify playlist shuffle, Wi-Fi troubleshooting, touchpad gestures;
 >     - Phase 4: borrowed input. Per the owner, take it at once and give it back the instant the user moves or types.
 

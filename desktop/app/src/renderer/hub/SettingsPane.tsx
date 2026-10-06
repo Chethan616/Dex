@@ -199,7 +199,49 @@ function AgentApprovalSection(): React.ReactElement {
           <Orb size={20} state="connecting" />
         )}
       </SettingsRow>
+      <AdminChangesRow />
     </div>
+  );
+}
+
+/**
+ * Windows only: set up DEX's elevated helper once (one Windows prompt), so
+ * admin fixes — network, devices, services — don't need one each time. The
+ * Agent approval mode above still decides whether DEX asks you first.
+ */
+function AdminChangesRow(): React.ReactElement | null {
+  const api = window.electronAPI?.settings?.elevation;
+  const [status, setStatus] = useState<{ supported: boolean; installed: boolean; outdated: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const load = useCallback(() => { void api?.status().then(setStatus).catch(() => setStatus(null)); }, [api]);
+  useEffect(load, [load]);
+  if (!api || !status?.supported) return null;
+  const run = async (fn: () => Promise<{ ok: boolean; error?: string }>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fn();
+      if (!r.ok) setError(r.error ?? 'That didn’t work.');
+    } finally {
+      setBusy(false);
+      load();
+    }
+  };
+  const label = !status.installed ? 'Not set up' : status.outdated ? 'Needs an update' : 'Set up';
+  return (
+    <SettingsRow
+      label="Admin changes"
+      sublabel={error ?? `Lets DEX make admin fixes — network, devices, services — without a Windows prompt each time. One prompt to set up. ${label}.`}
+    >
+      {status.installed && !status.outdated ? (
+        <button type="button" className="conn-card__btn conn-card__btn--secondary" disabled={busy} onClick={() => void run(api.remove)}>Remove</button>
+      ) : (
+        <button type="button" className="conn-card__btn conn-card__btn--primary" disabled={busy} onClick={() => void run(api.setUp)}>
+          {busy ? 'Waiting for Windows…' : status.outdated ? 'Update' : 'Set up'}
+        </button>
+      )}
+    </SettingsRow>
   );
 }
 

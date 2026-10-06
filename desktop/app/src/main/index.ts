@@ -3216,6 +3216,11 @@ app.whenReady().then(async () => {
     return result;
   });
 
+  // DEX's elevated helper for admin changes (desktop/elevation.ts).
+  ipcMain.handle('desktop:elevation-status', async () => (await import('./desktop/elevation')).elevationStatus());
+  ipcMain.handle('desktop:elevation-setup', async () => (await import('./desktop/elevation')).setUpElevation());
+  ipcMain.handle('desktop:elevation-remove', async () => (await import('./desktop/elevation')).removeElevation());
+
   // The Marketplace's hosted connectors (shared/connectorCatalog.ts).
   ipcMain.handle('connectors:list', async () => {
     const { HOSTED_CONNECTORS, remoteConnectionId } = await import('../shared/connectorCatalog');

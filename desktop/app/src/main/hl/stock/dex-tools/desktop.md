@@ -45,6 +45,59 @@ no window: `status`, `play`, `pause`, `next`, `previous`, `shuffle`,
 with these — not by opening Settings. End with a short report: what you
 found, what you'd change, and how to undo it.
 
+## Changing the PC
+
+`system_change` makes one typed change from a fixed list (its description
+has the list) — never a free command. Rules:
+
+1. **Diagnose first** with `system_info`. Say what you found.
+2. **Cheapest fix first**: flush DNS before resetting the network stack;
+   restart a device before reinstalling its driver.
+3. Give `reason` in plain words — the user may see it on an approval card.
+4. Every change is journaled (`entry` in the result). `undo` reverses the
+   last one that can be (DNS servers, touchpad settings, a device on/off).
+5. Admin changes go through DEX's admin helper. If it says
+   `elevation_not_set_up`, tell the user how to set it up (Settings › Agent
+   approval › Admin changes) and what you would change.
+6. Things that need a restart (`winsock_reset`, `ip_stack_reset`): say so,
+   and never restart the PC yourself.
+
+End with a short fix report: what you found, what you changed (with the
+journal entries), how to undo it.
+
+## Recipes
+
+**"Play my <playlist> on Spotify, shuffled"**
+1. `media status`: is Spotify already a session?
+2. A playlist link → `app_launch {uri:"spotify:playlist:<id>"}` (the id is
+   the part after `/playlist/` in an open.spotify.com link). A name →
+   `app_launch` Spotify (app id from `system_info apps`), then in its parked
+   window: `window_find` the search box, `ui_set_text`, `ui_wait` for
+   results, `ui_invoke` the playlist.
+3. `media shuffle` (value true), then `media play`.
+4. `media status` — playing, shuffle on — and tell the user in one line.
+
+**"My Wi-Fi keeps dropping / is slow"**
+1. `system_info wifi` (signal, band, rates), `network` (IP, DNS, gateway,
+   internet), `wlan_events` (drops per hour and why), `driver` for the
+   adapter (age).
+2. Read it: weak signal → move closer / 5 GHz; DNS fails but internet works
+   → `dns_flush`, then `dns_set` to 1.1.1.1 (admin); APIPA (169.254.x.x) →
+   `ip_renew` (admin); frequent drops with an old driver → tell the user
+   where to update it; repeated failures → `adapter_restart` (admin), and
+   only then `winsock_reset` (needs a restart).
+3. Check again after each change; stop when it's fixed.
+
+**"My touchpad works but gestures don't"**
+1. `system_info touchpad`: is it a precision touchpad? Is it enabled and
+   active (a mouse plugged in can turn it off)? What is each gesture set to
+   (`gestureSettings`)? Any vendor utility running?
+2. A gesture set to 0 (nothing) → `gesture_set` it (1 for three-finger
+   swipes) and `explorer_restart` so it takes effect.
+3. Settings look right → `explorer_restart` (gesture handling lives there);
+   still nothing → `device_restart` the touchpad's instance id (admin).
+   A driver reinstall is never your call — tell the user.
+
 ## When a tool says no
 
 | `error` | What it means | What to do |
@@ -58,6 +111,7 @@ found, what you'd change, and how to undo it.
 | `ambiguous_window` / `ambiguous_element` | More than one match | Pick by `hwnd` / handle from `extra.candidates` |
 | `elevated_window` | It runs as administrator | Tell the user |
 | `provider_timeout` | The app didn't answer | Wait a moment, try once more |
+| `elevation_not_set_up` | Admin changes aren't set up on this PC | Tell the user: Settings › Agent approval › Admin changes |
 
 If a result has `focus.incident`, you just interrupted the user (something
 came to the front, or the pointer moved). Say sorry in one line and don't do
