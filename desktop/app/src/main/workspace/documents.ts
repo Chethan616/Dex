@@ -87,6 +87,32 @@ export class DocumentTabs {
     return { ...doc };
   }
 
+  /**
+   * Bring back a task's remembered documents (main/workspace/tabMemory.ts),
+   * quietly: none comes to the front, and files that are gone are skipped.
+   * Returns how many came back.
+   */
+  restore(sessionId: string, saved: ReadonlyArray<{ path: string; openedBy: DocTab['openedBy'] }>): number {
+    const docs = this.bySession.get(sessionId) ?? [];
+    let added = 0;
+    for (const s of saved) {
+      const abs = path.resolve(s.path);
+      if (docs.some((d) => key(d.path) === key(abs))) continue;
+      let stat: fs.Stats;
+      try { stat = fs.statSync(abs); } catch { continue; }
+      if (!stat.isFile() || stat.size > MAX_DOC_BYTES) continue;
+      // openedAt 0: never "just opened", so the hub doesn't jump to it.
+      docs.push({ id: `d${++this.seq}`, path: abs, name: path.basename(abs), openedBy: s.openedBy, openedAt: 0, size: stat.size, mtimeMs: stat.mtimeMs });
+      this.watch(abs);
+      added++;
+    }
+    if (added === 0) return 0;
+    this.bySession.set(sessionId, docs);
+    mainLogger.info('documents.restore', { sessionId, count: added });
+    this.onListChanged(sessionId, this.list(sessionId));
+    return added;
+  }
+
   close(sessionId: string, id: string): boolean {
     const docs = this.bySession.get(sessionId);
     const index = docs?.findIndex((d) => d.id === id) ?? -1;

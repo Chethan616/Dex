@@ -557,6 +557,25 @@ describe('BrowserPool — tabs', () => {
     expect(onFound).toHaveBeenCalledTimes(2);
   });
 
+  it('brings a remembered tab back unloaded: its title shows, and it loads when you look at it', () => {
+    pool.create('s1');
+    const id = pool.openTab('s1', { url: 'https://docs.example.com/guide', activate: false, openedBy: 'user', unloaded: { title: 'The guide' } })!;
+    const wc = pool.getTabWebContents('s1', id)!;
+    expect(wc.getURL()).toBe('about:blank');
+    expect(pool.listTabs('s1').find((t) => t.id === id)).toMatchObject({ url: 'https://docs.example.com/guide', title: 'The guide', isNewTab: false });
+
+    pool.activateTab('s1', id);
+    expect(wc.getURL()).toBe('https://docs.example.com/guide');
+  });
+
+  it('loads a remembered tab as soon as the agent uses it', () => {
+    pool.create('s1');
+    const id = pool.openTab('s1', { url: 'https://a.example/', activate: false, unloaded: { title: 'A' } })!;
+    const wc = pool.getTabWebContents('s1', id)!;
+    pool.noteAgentUse(wc);
+    expect(wc.getURL()).toBe('https://a.example/');
+  });
+
   it('opens a page’s popup as a tab in the same workspace', async () => {
     const { createPopupWebContents } = await import('../../fixtures/electron-mock');
     pool.create('s1');

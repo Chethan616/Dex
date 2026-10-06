@@ -4,6 +4,7 @@ import { mainLogger } from '../logger';
 import type { HlEvent, TaskState, TaskStateMutation } from '../../shared/session-schemas';
 import type { AgentSession, SessionStatus, SessionEvents } from './types';
 import { SessionDb } from './SessionDb';
+import type { SavedWorkspace } from '../workspace/tabMemory';
 import { extractRegistrableDomain } from './domain';
 import {
   hlEventToTermBytes,
@@ -288,6 +289,16 @@ export class SessionManager extends EventEmitter {
     });
     this.emitEvent('session-updated', { ...session });
     return { resumed: true };
+  }
+
+  // -- Workspace tabs (main/workspace/tabMemory.ts) --------------------------
+
+  getWorkspaceTabs(id: string): SavedWorkspace | null {
+    return this.db.getWorkspaceTabs(id);
+  }
+
+  saveWorkspaceTabs(id: string, saved: SavedWorkspace): void {
+    this.db.saveWorkspaceTabs(id, saved);
   }
 
   // -- Task state ledger ----------------------------------------------------

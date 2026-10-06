@@ -97,6 +97,8 @@ interface TabEntry {
   parent: ViewHost | null;
   /** Set while the agent is using a tab that's off your screen (it's shown on the stage). */
   agentBusyTimer: ReturnType<typeof setTimeout> | null;
+  /** A remembered tab not loaded yet (tabMemory): loads when shown or used. */
+  pending?: { url: string; title: string };
 }
 
 interface PoolEntry {
@@ -737,12 +739,19 @@ export class BrowserPool {
   }
 
   /** Open a tab. Without a URL it's a new tab (the workspace shows its New-tab page). */
-  openTab(sessionId: string, opts: { url?: string; activate?: boolean; openedBy?: TabOpener; temporary?: boolean } = {}): string | null {
+  openTab(
+    sessionId: string,
+    opts: { url?: string; activate?: boolean; openedBy?: TabOpener; temporary?: boolean; unloaded?: { title: string } } = {},
+  ): string | null {
     const entry = this.entries.get(sessionId);
     if (!entry) return null;
     const tab = this.addTab(entry, { openedBy: opts.openedBy ?? 'user' });
     tab.temporary = opts.temporary === true;
-    if (opts.url) {
+    if (opts.url && opts.unloaded) {
+      // A remembered tab: shown by its title, loaded when you look at it.
+      tab.navigated = true;
+      tab.pending = { url: opts.url, title: opts.unloaded.title };
+    } else if (opts.url) {
       tab.navigated = !isBlank(opts.url);
       tab.view.webContents.loadURL(opts.url).catch((err) => {
         browserLogger.warn('BrowserPool.tab.load.error', { sessionId, tabId: tab.id, error: (err as Error).message });
@@ -755,10 +764,21 @@ export class BrowserPool {
     return tab.id;
   }
 
+  /** Load a remembered tab that hasn't loaded yet. */
+  private wake(sessionId: string, tab: TabEntry): void {
+    if (!tab.pending) return;
+    const { url } = tab.pending;
+    tab.pending = undefined;
+    tab.view.webContents.loadURL(url).catch((err) => {
+      browserLogger.warn('BrowserPool.tab.wake.error', { sessionId, tabId: tab.id, error: (err as Error).message });
+    });
+  }
+
   activateTab(sessionId: string, tabId: string): boolean {
     const entry = this.entries.get(sessionId);
     const next = entry?.tabs.find((t) => t.id === tabId);
     if (!entry || !next) return false;
+    this.wake(sessionId, next);
     if (entry.activeTabId === tabId) return true;
     const prev = entry.tabs.find((t) => t.id === entry.activeTabId) ?? null;
     this.swapActive(entry, prev, next);
@@ -834,8 +854,8 @@ export class BrowserPool {
       let zoom = 100;
       try {
         zoom = Math.round((wc.getZoomFactor?.() ?? 1) * 100);
-        url = wc.getURL();
-        title = wc.getTitle();
+        url = tab.pending?.url ?? wc.getURL();
+        title = tab.pending ? tab.pending.title : wc.getTitle();
         const history = (wc as unknown as { navigationHistory?: { canGoBack(): boolean; canGoForward(): boolean } }).navigationHistory;
         canGoBack = history?.canGoBack() ?? false;
         canGoForward = history?.canGoForward() ?? false;
@@ -1009,6 +1029,7 @@ export class BrowserPool {
   noteAgentUse(wc: WebContents): boolean {
     const tab = this.findTab(wc);
     if (!tab) return false;
+    if (tab.pending) this.wake(this.sessionIdOf(wc) ?? '', tab);
     if (tab.agentBusyTimer) clearTimeout(tab.agentBusyTimer);
     tab.agentBusyTimer = setTimeout(() => {
       tab.agentBusyTimer = null;
@@ -1283,8 +1304,8 @@ export class BrowserPool {
         const wc = tab.view.webContents;
         return {
           targetId: String(wc.id),
-          url: wc.getURL() || 'about:blank',
-          title: wc.getTitle() || 'New Tab',
+          url: tab.pending?.url ?? (wc.getURL() || 'about:blank'),
+          title: tab.pending?.title || wc.getTitle() || 'New Tab',
           type: 'page' as const,
           active: tab.id === entry.activeTabId,
         };

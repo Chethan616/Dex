@@ -3,6 +3,7 @@ import { mainLogger } from '../logger';
 import { DB_SCHEMA_VERSION, RECOVERY_ERROR, VALID_STATUSES, MAX_ATTACHMENTS_PER_SESSION } from './db-constants';
 import type { HlEvent, SessionStatus, TaskState } from '../../shared/session-schemas';
 import { EMPTY_TASK_STATE } from '../../shared/session-schemas';
+import { parseSaved, type SavedWorkspace } from '../workspace/tabMemory';
 
 interface SessionRow {
   id: string;
@@ -397,6 +398,25 @@ export class SessionDb {
         this.setVersion(13);
       })();
       mainLogger.info('SessionDb.migration.complete', { version: 13 });
+    }
+
+    if (this.getVersion() < 14) {
+      mainLogger.info('SessionDb.migration.running', { from: this.getVersion(), to: 14 });
+      this.db.transaction(() => {
+        // A task's workspace tabs (main/workspace/tabMemory.ts): one row per
+        // session, its web tabs and document tabs as JSON — always read and
+        // written whole, like task_state.
+        this.db.exec(`
+          CREATE TABLE IF NOT EXISTS workspace_tabs (
+            session_id  TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+            tabs        TEXT NOT NULL DEFAULT '[]',
+            docs        TEXT NOT NULL DEFAULT '[]',
+            updated_at  INTEGER NOT NULL
+          );
+        `);
+        this.setVersion(14);
+      })();
+      mainLogger.info('SessionDb.migration.complete', { version: 14 });
     }
 
     const final = this.getVersion();
@@ -799,6 +819,42 @@ export class SessionDb {
       this.db.prepare('DELETE FROM task_state WHERE session_id = ?').run(sessionId);
     } catch (err) {
       mainLogger.warn('SessionDb.clearTaskState.failed', { sessionId, error: (err as Error).message });
+    }
+  }
+
+  // -- Workspace tabs -------------------------------------------------------
+
+  private workspaceStmts: { get: Database.Statement; save: Database.Statement } | null = null;
+
+  private workspace(): { get: Database.Statement; save: Database.Statement } {
+    this.workspaceStmts ??= {
+      get: this.db.prepare('SELECT tabs, docs FROM workspace_tabs WHERE session_id = ?'),
+      save: this.db.prepare(`
+        INSERT INTO workspace_tabs (session_id, tabs, docs, updated_at) VALUES (?, ?, ?, ?)
+        ON CONFLICT(session_id) DO UPDATE SET tabs = excluded.tabs, docs = excluded.docs, updated_at = excluded.updated_at
+      `),
+    };
+    return this.workspaceStmts;
+  }
+
+  getWorkspaceTabs(sessionId: string): SavedWorkspace | null {
+    if (this.closed) return null;
+    try {
+      const row = this.workspace().get.get(sessionId) as { tabs: string; docs: string } | undefined;
+      return row ? parseSaved(row.tabs, row.docs) : null;
+    } catch (err) {
+      mainLogger.warn('SessionDb.getWorkspaceTabs.failed', { sessionId, error: (err as Error).message });
+      return null;
+    }
+  }
+
+  saveWorkspaceTabs(sessionId: string, saved: SavedWorkspace): void {
+    if (this.closed) return;
+    try {
+      this.workspace().save.run(sessionId, JSON.stringify(saved.tabs), JSON.stringify(saved.docs), Date.now());
+    } catch (err) {
+      // A task deleted meanwhile (the foreign key) — nothing to remember.
+      mainLogger.warn('SessionDb.saveWorkspaceTabs.failed', { sessionId, error: (err as Error).message });
     }
   }
 

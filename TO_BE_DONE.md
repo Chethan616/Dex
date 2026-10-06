@@ -476,6 +476,11 @@ P2 is unit-tested (DocumentTabs with real files and the watcher; kinds; sheet ca
 >   - Developer tools.
 >
 >   Ctrl+F, Ctrl+=, Ctrl+- and Ctrl+0 work from the page; Ctrl+F also works from the hub. The find bar sits inside the toolbar's height. A zoom pill in the address bar shows when the page isn't at 100%.
+>
+> - #2 is done, with §3.1 #6 (`workspace/tabMemory.ts`). Each task's web tabs and document tabs live in a new `workspace_tabs` table (schema v14): one JSON row per task, written 1 s after changes and flushed on quit.
+>   - **On resume** (after a restart, a cancel or an error), the task's tab reopens at its last page as before. Your other tabs come back unloaded, showing their title, and each loads when you open it or the agent uses it.
+>   - **Document tabs** come back quietly the first time the hub asks for the task's documents. Missing files are skipped.
+>   - Not remembered: the agent's scratch tabs, blank tabs and non-web pages.
 
 1. **One web profile `persist:dex-web`, plus a one-time cookie migration** (PLAN §4.1; P0 #9 proved the copy: 20/20 cookies with flags).
    - **Do:**

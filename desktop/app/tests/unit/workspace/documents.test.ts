@@ -52,6 +52,22 @@ describe('DocumentTabs', () => {
     expect(lists.at(-1)?.focusId).toBe(first.id);
   });
 
+  it('brings back remembered documents quietly, skipping files that are gone', () => {
+    const a = file('a.md');
+    const b = file('b.txt');
+    expect(tabs.restore('s1', [
+      { path: a, openedBy: 'user' },
+      { path: path.join(dir, 'deleted.pdf'), openedBy: 'agent' },
+      { path: b, openedBy: 'agent' },
+      { path: dir, openedBy: 'user' },
+    ])).toBe(2);
+    expect(tabs.list('s1').map((d) => [d.name, d.openedBy, d.openedAt])).toEqual([['a.md', 'user', 0], ['b.txt', 'agent', 0]]);
+    expect(lists).toHaveLength(1);
+    expect(lists[0].focusId).toBeUndefined();
+    expect(tabs.isOpen('s1', a)).toBe(true);
+    expect(tabs.restore('s1', [{ path: a, openedBy: 'user' }])).toBe(0);
+  });
+
   it('opens in the background without asking for focus', () => {
     tabs.open('s1', file('b.txt'), 'agent', false);
     expect(lists.at(-1)?.focusId).toBeUndefined();

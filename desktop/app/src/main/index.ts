@@ -113,6 +113,7 @@ import { noteAgentInput, takeUserActsSinceAgent, userActiveWithin, waitForUserId
 import { maskSecretFields, READS_PAGE, redactSecrets, secretValues } from './workspace/secretFields';
 import { handleDownload } from './workspace/downloads';
 import { pageMenuTemplate } from './workspace/pageMenu';
+import { TabMemory, tabsToSave } from './workspace/tabMemory';
 import { leaseDebugger, withDebugger } from './cdpLease';
 import { normalizeAddress } from '../shared/address';
 import { assertString, assertAttachments, type ValidatedAttachment } from './ipc-validators';
@@ -232,13 +233,29 @@ let shellWindow: BrowserWindow | null = null;
 // Document tabs (docs/unify/PLAN.md §3.9). The hub draws them; this keeps each
 // task's list and reloads a tab when its file changes on disk.
 const documentTabs = new DocumentTabs(
-  (sessionId, docs, focusId) => shellWindow?.webContents.send('workspace:docs-changed', sessionId, docs, focusId ?? null),
+  (sessionId, docs, focusId) => {
+    tabMemory.noteDocs(sessionId, docs.map((d) => ({ path: d.path, openedBy: d.openedBy })));
+    shellWindow?.webContents.send('workspace:docs-changed', sessionId, docs, focusId ?? null);
+  },
   (sessionId, docId, mtimeMs) => shellWindow?.webContents.send('workspace:doc-changed', sessionId, docId, mtimeMs),
 );
 let onboardingWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
 const sessionManager = new SessionManager(path.join(app.getPath('userData'), 'sessions.db'));
+
+// Each task's tabs and documents, remembered for when it comes back
+// (workspace/tabMemory.ts). Documents come back the first time the hub asks.
+const tabMemory = new TabMemory({
+  load: (id) => sessionManager.getWorkspaceTabs(id),
+  save: (id, saved) => sessionManager.saveWorkspaceTabs(id, saved),
+});
+const docsRestored = new Set<string>();
+function restoreDocs(sessionId: string): void {
+  if (docsRestored.has(sessionId)) return;
+  docsRestored.add(sessionId);
+  documentTabs.restore(sessionId, tabMemory.saved(sessionId).docs);
+}
 
 /**
  * Outstanding dex-registry confirmations, keyed by id.
@@ -497,6 +514,7 @@ browserPool.setOnNavigate((sessionId, url) => {
 // The workspace's tab strip follows every tab change (opened, closed,
 // switched, navigated, retitled, loading).
 browserPool.setOnTabsChanged((sessionId, tabs) => {
+  tabMemory.noteTabs(sessionId, tabsToSave(tabs));
   if (shellWindow && !shellWindow.isDestroyed()) {
     shellWindow.webContents.send('workspace:tabs-changed', sessionId, tabs);
   }
@@ -1339,6 +1357,8 @@ app.whenReady().then(async () => {
     let webContents = browserPool.getWebContents(validatedId);
     if (!webContents) {
       const restoreUrl = restorableResumeUrl(currentSession.lastUrl);
+      // Read before the new browser reports its (still empty) tabs over them.
+      const rememberedTabs = tabMemory.saved(validatedId).tabs.filter((t) => t.openedBy !== 'task');
       mainLogger.info('main.sessions:resume.recreateBrowser', {
         id: validatedId,
         hasLastUrl: Boolean(currentSession.lastUrl),
@@ -1366,6 +1386,11 @@ app.whenReady().then(async () => {
         try { await view.webContents.loadURL('about:blank'); }
         catch { /* keep going; runEngine will surface target failures */ }
       }
+      // The task's other tabs come back unloaded, behind the one DEX works in.
+      for (const tab of rememberedTabs) {
+        browserPool.openTab(validatedId, { url: tab.url, activate: false, openedBy: tab.openedBy, unloaded: { title: tab.title } });
+      }
+      if (rememberedTabs.length) mainLogger.info('main.sessions:resume.tabsRestored', { id: validatedId, count: rememberedTabs.length });
       webContents = view.webContents;
     }
 
@@ -2299,6 +2324,8 @@ app.whenReady().then(async () => {
     terminateActiveRunControl(validatedId);
     browserPool.destroy(validatedId, shellWindow ?? undefined);
     documentTabs.closeSession(validatedId);
+    tabMemory.forget(validatedId);
+    docsRestored.delete(validatedId);
     sessionManager.deleteSession(validatedId);
     approvalPolicy.clearSession(validatedId);
   });
@@ -2754,7 +2781,11 @@ app.whenReady().then(async () => {
   });
 
   // ---- Document tabs (docs/unify/PLAN.md §3.9) ----
-  ipcMain.handle('workspace:docs', (_event, id: string) => documentTabs.list(assertString(id, 'id', 100)));
+  ipcMain.handle('workspace:docs', (_event, id: string) => {
+    const validatedId = assertString(id, 'id', 100);
+    restoreDocs(validatedId);
+    return documentTabs.list(validatedId);
+  });
 
   // From the hub (a file card, Recents): only files this task recorded.
   ipcMain.handle('workspace:doc-open', (_event, id: string, filePath: string) => {
@@ -3215,6 +3246,7 @@ app.whenReady().then(async () => {
       ctrl.abort();
     }
     activeAgents.clear();
+    tabMemory.flush();
     browserPool.destroyAll(shellWindow ?? undefined);
     documentTabs.dispose();
     stopResourceMonitor();
