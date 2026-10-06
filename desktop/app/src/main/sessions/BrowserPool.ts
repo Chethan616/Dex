@@ -45,12 +45,36 @@ export interface WorkspaceTabState {
   crashed: boolean;
   /** Opened by DEX for its own work; closed when the run ends unless kept. */
   temporary: boolean;
+  /** Page zoom in percent (100 when not zoomed). */
+  zoom: number;
 }
 
 export type TabAction = 'back' | 'forward' | 'reload' | 'stop';
 
-export type WorkspaceShortcut =
-  | 'new-tab' | 'close-tab' | 'reopen-tab' | 'focus-address' | 'reload' | 'back' | 'forward' | 'next-tab' | 'prev-tab';
+export const WORKSPACE_SHORTCUTS = [
+  'new-tab', 'close-tab', 'reopen-tab', 'focus-address', 'reload', 'back', 'forward', 'next-tab', 'prev-tab',
+  'find', 'zoom-in', 'zoom-out', 'zoom-reset',
+] as const;
+export type WorkspaceShortcut = typeof WORKSPACE_SHORTCUTS[number];
+
+export type ZoomStep = 'in' | 'out' | 'reset';
+
+/** Chrome's zoom levels. */
+const ZOOM_LEVELS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
+
+/** The next zoom level from `current`, Chrome's way: the nearest level past it. */
+export function nextZoom(current: number, step: ZoomStep): number {
+  if (step === 'reset') return 1;
+  if (step === 'in') return ZOOM_LEVELS.find((z) => z > current + 0.001) ?? ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
+  return [...ZOOM_LEVELS].reverse().find((z) => z < current - 0.001) ?? ZOOM_LEVELS[0];
+}
+
+/** Find-in-page's count, for the find bar. */
+export interface FindResult {
+  /** 1-based; 0 when nothing matches. */
+  active: number;
+  matches: number;
+}
 
 /** How many closed tabs Ctrl+Shift+T can bring back, per task. */
 const REOPEN_STACK = 10;
@@ -116,6 +140,8 @@ export class BrowserPool {
   private onInterruptShortcut?: (sessionId: string) => boolean | void;
   private onTabsChanged?: (sessionId: string, tabs: WorkspaceTabState[]) => void;
   private onFocusAddress?: (sessionId: string) => void;
+  private onFind?: (sessionId: string) => void;
+  private onFound?: (sessionId: string, tabId: string, result: FindResult) => void;
   private tabsChangedTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private idleFreezeDelayMs: number;
   private stage: () => StageHost | null;
@@ -458,6 +484,12 @@ export class BrowserPool {
       if (isActive()) this.notifyGone(sessionId);
     });
 
+    wc.on('found-in-page', (_event, result) => {
+      if (!result.finalUpdate) return;
+      this.onFound?.(sessionId, tab.id, { active: result.activeMatchOrdinal ?? 0, matches: result.matches ?? 0 });
+    });
+    wc.on('zoom-changed', () => changed());
+
     wc.on('did-start-loading', () => { tab.loading = true; changed(); });
     wc.on('did-stop-loading', () => { tab.loading = false; changed(); });
     wc.on('page-title-updated', () => changed());
@@ -545,6 +577,10 @@ export class BrowserPool {
       if (key === 'l') return 'focus-address';
       if (key === 'r') return 'reload';
       if (key === 'tab') return input.shift ? 'prev-tab' : 'next-tab';
+      if (key === 'f') return 'find';
+      if (key === '=' || key === '+') return 'zoom-in';
+      if (key === '-' || key === '_') return 'zoom-out';
+      if (key === '0') return 'zoom-reset';
     }
     if (input.alt && !input.control && !input.meta) {
       if (key === 'arrowleft') return 'back';
@@ -590,12 +626,67 @@ export class BrowserPool {
         if (next) this.activateTab(sessionId, next.id);
         break;
       }
+      case 'find':
+        this.onFind?.(sessionId);
+        break;
+      case 'zoom-in':
+      case 'zoom-out':
+      case 'zoom-reset':
+        this.zoomTab(sessionId, current, shortcut === 'zoom-in' ? 'in' : shortcut === 'zoom-out' ? 'out' : 'reset');
+        break;
     }
   }
 
   /** The hub should put the cursor in the address bar (Ctrl+L, a new tab). */
   setOnFocusAddress(listener: (sessionId: string) => void): void {
     this.onFocusAddress = listener;
+  }
+
+  /** The hub should open its find bar (Ctrl+F in the page). */
+  setOnFind(listener: (sessionId: string) => void): void {
+    this.onFind = listener;
+  }
+
+  /** Find-in-page's count changed. */
+  setOnFound(listener: (sessionId: string, tabId: string, result: FindResult) => void): void {
+    this.onFound = listener;
+  }
+
+  /** Zoom a tab a step (Chrome's levels). Returns the new zoom in percent, or null. */
+  zoomTab(sessionId: string, tabId: string | undefined, step: ZoomStep): number | null {
+    const entry = this.entries.get(sessionId);
+    const tab = entry?.tabs.find((t) => t.id === (tabId ?? entry.activeTabId));
+    if (!entry || !tab || tab.view.webContents.isDestroyed()) return null;
+    const wc = tab.view.webContents;
+    const next = nextZoom(wc.getZoomFactor(), step);
+    wc.setZoomFactor(next);
+    this.scheduleTabsChanged(sessionId);
+    return Math.round(next * 100);
+  }
+
+  /**
+   * Find `text` in a tab: a new search, or with `next` the next match
+   * (`forward: false` for the previous one). Empty text stops finding.
+   */
+  findInTab(sessionId: string, tabId: string | undefined, text: string, opts: { forward?: boolean; next?: boolean } = {}): boolean {
+    const entry = this.entries.get(sessionId);
+    const tab = entry?.tabs.find((t) => t.id === (tabId ?? entry.activeTabId));
+    if (!entry || !tab || tab.view.webContents.isDestroyed()) return false;
+    const wc = tab.view.webContents;
+    if (!text) {
+      wc.stopFindInPage('clearSelection');
+      this.onFound?.(sessionId, tab.id, { active: 0, matches: 0 });
+      return true;
+    }
+    wc.findInPage(text, { forward: opts.forward ?? true, findNext: !opts.next });
+    return true;
+  }
+
+  /** Close find: the highlights go, and the current match stays selected. */
+  stopFind(sessionId: string, tabId: string | undefined): void {
+    const entry = this.entries.get(sessionId);
+    const tab = entry?.tabs.find((t) => t.id === (tabId ?? entry.activeTabId));
+    if (tab && !tab.view.webContents.isDestroyed()) tab.view.webContents.stopFindInPage('keepSelection');
   }
 
   /** A tab's WebContents went away (closed by us, or by the page). */
@@ -740,7 +831,9 @@ export class BrowserPool {
       let title = '';
       let canGoBack = false;
       let canGoForward = false;
+      let zoom = 100;
       try {
+        zoom = Math.round((wc.getZoomFactor?.() ?? 1) * 100);
         url = wc.getURL();
         title = wc.getTitle();
         const history = (wc as unknown as { navigationHistory?: { canGoBack(): boolean; canGoForward(): boolean } }).navigationHistory;
@@ -760,6 +853,7 @@ export class BrowserPool {
         isNewTab: !tab.navigated && isBlank(url),
         crashed: tab.crashed,
         temporary: tab.temporary && !tab.kept,
+        zoom,
       };
     });
   }

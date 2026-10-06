@@ -915,7 +915,8 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
             : key === 'l' ? 'focus-address'
               : key === 'tab' ? (e.shiftKey ? 'prev-tab' : 'next-tab')
                 : key === 'r' && !typing ? 'reload'
-                  : null;
+                  : key === 'f' && !frontDocId && !chatActive ? 'find'
+                    : null;
       if (!shortcut) return;
       e.preventDefault();
       e.stopPropagation();
@@ -923,7 +924,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
     };
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [focused, workspaceOn, session.id, frontDocId, closeDoc]);
+  }, [focused, workspaceOn, session.id, frontDocId, closeDoc, chatActive]);
 
   const engineName = session.engine ? ENGINE_NAMES[session.engine] ?? session.engine : 'DEX';
   const engineIcon = session.engine === 'claude-code' ? claudeCodeLogo

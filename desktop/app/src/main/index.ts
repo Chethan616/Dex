@@ -17,7 +17,7 @@ import path from 'node:path';
 // dev-time fallback.
 loadDotEnv({ path: path.resolve(__dirname, '..', '..', '.env') });
 
-import { app, BrowserWindow, crashReporter, dialog, globalShortcut, ipcMain, Menu, MenuItemConstructorOptions, nativeImage, session as electronSession, shell } from 'electron';
+import { app, BrowserWindow, clipboard, crashReporter, dialog, globalShortcut, ipcMain, Menu, MenuItemConstructorOptions, nativeImage, session as electronSession, shell } from 'electron';
 import { mergeChromiumFeature } from './startup/chromiumFeatures';
 import { destroyStage, stageEnabled, waitForFrame } from './workspace/stage';
 
@@ -112,6 +112,7 @@ import { moveCursor, setCursorVisible } from './workspace/agentCursor';
 import { noteAgentInput, takeUserActsSinceAgent, userActiveWithin, waitForUserIdle } from './workspace/userActivity';
 import { maskSecretFields, READS_PAGE, redactSecrets, secretValues } from './workspace/secretFields';
 import { handleDownload } from './workspace/downloads';
+import { pageMenuTemplate } from './workspace/pageMenu';
 import { leaseDebugger, withDebugger } from './cdpLease';
 import { normalizeAddress } from '../shared/address';
 import { assertString, assertAttachments, type ValidatedAttachment } from './ipc-validators';
@@ -135,7 +136,7 @@ import { getEngine, setEngine, type EngineId } from './hl/engine';
 import { forwardAgentEvent } from './pill';
 // Session management
 import { SessionManager } from './sessions/SessionManager';
-import { BrowserPool } from './sessions/BrowserPool';
+import { BrowserPool, WORKSPACE_SHORTCUTS } from './sessions/BrowserPool';
 import * as approvalPolicy from './approvals/policy';
 import { normalizeApprovalCategory, normalizeApprovalLifetime, normalizeApprovalMode } from './approvals/policy';
 import type { ApprovalCategory, ApprovalLifetime } from './approvals/policy';
@@ -505,6 +506,16 @@ browserPool.setOnFocusAddress((sessionId) => {
     shellWindow.webContents.focus();
     shellWindow.webContents.send('workspace:focus-address', sessionId);
   }
+});
+// Ctrl+F in the page: the hub opens its find bar; the count follows the page.
+browserPool.setOnFind((sessionId) => {
+  if (shellWindow && !shellWindow.isDestroyed()) {
+    shellWindow.webContents.focus();
+    shellWindow.webContents.send('workspace:find', sessionId);
+  }
+});
+browserPool.setOnFound((sessionId, tabId, result) => {
+  if (shellWindow && !shellWindow.isDestroyed()) shellWindow.webContents.send('workspace:found', sessionId, tabId, result);
 });
 browserPool.setOnInterruptShortcut((sessionId) => {
   return interruptBrowserSessionFromShortcut?.(sessionId) ?? false;
@@ -2788,9 +2799,66 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('workspace:shortcut', (_event, id: string, shortcut: unknown) => {
     const validatedId = assertString(id, 'id', 100);
-    const allowed = ['new-tab', 'close-tab', 'reopen-tab', 'focus-address', 'reload', 'back', 'forward', 'next-tab', 'prev-tab'];
-    if (typeof shortcut !== 'string' || !allowed.includes(shortcut)) return false;
+    if (typeof shortcut !== 'string' || !(WORKSPACE_SHORTCUTS as readonly string[]).includes(shortcut)) return false;
     browserPool.runShortcut(validatedId, undefined, shortcut as Parameters<typeof browserPool.runShortcut>[2]);
+    return true;
+  });
+
+  // Find in the page in front (the hub's find bar). Empty text stops.
+  ipcMain.handle('workspace:find', (_event, id: string, request: unknown) => {
+    const validatedId = assertString(id, 'id', 100);
+    if (!request || typeof request !== 'object') return false;
+    const r = request as { tabId?: unknown; text?: unknown; forward?: unknown; next?: unknown; stop?: unknown };
+    const tabId = typeof r.tabId === 'string' && r.tabId.length <= 20 ? r.tabId : undefined;
+    if (r.stop === true) {
+      browserPool.stopFind(validatedId, tabId);
+      return true;
+    }
+    if (typeof r.text !== 'string' || r.text.length > 1000) return false;
+    return browserPool.findInTab(validatedId, tabId, r.text, { forward: r.forward !== false, next: r.next === true });
+  });
+
+  // The toolbar's ⋯ menu, popped up natively at the button (workspace/pageMenu.ts).
+  ipcMain.handle('workspace:page-menu', (_event, id: string, tabId: unknown, x: unknown, y: unknown) => {
+    const validatedId = assertString(id, 'id', 100);
+    if (!shellWindow || shellWindow.isDestroyed()) return false;
+    const tab = typeof tabId === 'string' && tabId.length <= 20 ? tabId : undefined;
+    const state = browserPool.listTabs(validatedId).find((t) => (tab ? t.id === tab : t.active));
+    const wc = state ? browserPool.getTabWebContents(validatedId, state.id) : null;
+    if (!state || !wc) return false;
+    const window = shellWindow;
+    const url = wc.getURL();
+    const template = pageMenuTemplate({ url, zoom: state.zoom }, {
+      find: () => browserPool.runShortcut(validatedId, state.id, 'find'),
+      zoom: (step) => browserPool.zoomTab(validatedId, state.id, step),
+      print: () => { if (!wc.isDestroyed()) wc.print({}, () => {}); },
+      copyLink: () => clipboard.writeText(url),
+      openExternally: () => { void shell.openExternal(url); },
+      clearSiteData: () => {
+        let origin = '';
+        let host = '';
+        try { ({ origin, host } = new URL(url)); } catch { return; }
+        void dialog.showMessageBox(window, {
+          type: 'warning',
+          buttons: ['Clear', 'Cancel'],
+          defaultId: 1,
+          cancelId: 1,
+          message: `Clear cookies and site data for ${host}?`,
+          detail: "You'll be signed out of this site in DEX, and the page reloads.",
+        }).then(async ({ response }) => {
+          if (response !== 0 || wc.isDestroyed()) return;
+          await wc.session.clearStorageData({ origin });
+          mainLogger.info('workspace.clearSiteData', { sessionId: validatedId, host });
+          if (!wc.isDestroyed()) wc.reload();
+        });
+      },
+      devTools: () => { if (!wc.isDestroyed()) wc.openDevTools({ mode: 'detach' }); },
+    });
+    Menu.buildFromTemplate(template).popup({
+      window,
+      x: typeof x === 'number' && Number.isFinite(x) ? Math.max(0, Math.round(x)) : undefined,
+      y: typeof y === 'number' && Number.isFinite(y) ? Math.max(0, Math.round(y)) : undefined,
+    });
     return true;
   });
 

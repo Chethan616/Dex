@@ -87,6 +87,28 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ): Promise<boolean> => ipcRenderer.invoke('workspace:tab', sessionId, action),
     shortcut: (sessionId: string, shortcut: string): Promise<boolean> =>
       ipcRenderer.invoke('workspace:shortcut', sessionId, shortcut),
+    /** The ⋯ menu for a tab, natively at (x, y) in the window. */
+    pageMenu: (sessionId: string, tabId: string, x: number, y: number): Promise<boolean> =>
+      ipcRenderer.invoke('workspace:page-menu', sessionId, tabId, x, y),
+    find: (
+      sessionId: string,
+      request: { tabId?: string; text: string; forward?: boolean; next?: boolean } | { tabId?: string; stop: true },
+    ): Promise<boolean> => ipcRenderer.invoke('workspace:find', sessionId, request),
+    onFind: (cb: (sessionId: string) => void): (() => void) => {
+      const handler = (_event: unknown, sessionId: unknown) => { if (typeof sessionId === 'string') cb(sessionId); };
+      ipcRenderer.on('workspace:find', handler);
+      return () => ipcRenderer.removeListener('workspace:find', handler);
+    },
+    onFound: (cb: (sessionId: string, tabId: string, result: { active: number; matches: number }) => void): (() => void) => {
+      const handler = (_event: unknown, sessionId: unknown, tabId: unknown, result: unknown) => {
+        const r = result as { active?: unknown; matches?: unknown } | null;
+        if (typeof sessionId === 'string' && typeof tabId === 'string' && r && typeof r.active === 'number' && typeof r.matches === 'number') {
+          cb(sessionId, tabId, { active: r.active, matches: r.matches });
+        }
+      };
+      ipcRenderer.on('workspace:found', handler);
+      return () => ipcRenderer.removeListener('workspace:found', handler);
+    },
     onFocusAddress: (cb: (sessionId: string) => void): (() => void) => {
       const handler = (_event: unknown, sessionId: unknown) => { if (typeof sessionId === 'string') cb(sessionId); };
       ipcRenderer.on('workspace:focus-address', handler);

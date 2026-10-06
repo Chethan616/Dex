@@ -1,8 +1,10 @@
 /**
  * The workspace's browser chrome, above the live page: a tab strip, then
- * back / forward / reload, the address bar, and (while DEX drives) a quiet
- * "DEX is working" chip with Pause. Everything here is renderer DOM above
- * the native page view, so it's always clickable.
+ * back / forward / reload, the address bar, (while DEX drives) a quiet
+ * "DEX is working" chip with Pause, and the ⋯ menu. Everything here is
+ * renderer DOM above the native page view, so it's always clickable; the
+ * find bar stays inside the toolbar's height for the same reason, and the
+ * ⋯ menu is native (main/workspace/pageMenu.ts) so it can draw over the page.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { displayAddress } from '../../../shared/address';
@@ -56,7 +58,22 @@ const Icon = {
   crashed: (
     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 2.5 14 13H2L8 2.5Z" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinejoin="round" /><path d="M8 6.5v3M8 11.2v.3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
   ),
+  more: (
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="3.5" cy="8" r="1.3" fill="currentColor" /><circle cx="8" cy="8" r="1.3" fill="currentColor" /><circle cx="12.5" cy="8" r="1.3" fill="currentColor" /></svg>
+  ),
+  up: (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 10l4-4 4 4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  ),
+  down: (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  ),
 };
+
+/** The find bar's count: "3 of 12", "No matches", or nothing before a search. */
+export function findCount(text: string, found: { active: number; matches: number } | null): string {
+  if (!text || !found) return '';
+  return found.matches === 0 ? 'No matches' : `${found.active} of ${found.matches}`;
+}
 
 function tabLabel(tab: WorkspaceTab): string {
   if (tab.isNewTab) return 'New tab';
@@ -105,6 +122,49 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
     if (active?.isNewTab && active.openedBy === 'user') requestAnimationFrame(focusAddress);
   }, [active?.id, active?.isNewTab, active?.openedBy, focusAddress]);
 
+  // Find in page (Ctrl+F, or the ⋯ menu): a small bar at the toolbar's end.
+  const findRef = useRef<HTMLInputElement>(null);
+  const [findOpen, setFindOpen] = useState(false);
+  const [findText, setFindText] = useState('');
+  const [found, setFound] = useState<{ active: number; matches: number } | null>(null);
+  const activeId = active?.id;
+  const closeFind = useCallback(() => {
+    setFindOpen(false);
+    setFindText('');
+    setFound(null);
+    void api?.find?.(sessionId, { tabId: activeId, stop: true });
+  }, [api, sessionId, activeId]);
+  const findStep = useCallback((forward: boolean) => {
+    if (findText) void api?.find?.(sessionId, { tabId: activeId, text: findText, next: true, forward });
+  }, [api, sessionId, activeId, findText]);
+  /** What owns the rect: the chat, a document, or the active web page. */
+  const pageInFront = !chat?.active && !docs?.activeId;
+  const pageInFrontRef = useRef(pageInFront);
+  pageInFrontRef.current = pageInFront;
+  useEffect(() => api?.onFind?.((id) => {
+    if (id !== sessionId || !pageInFrontRef.current) return;
+    setFindOpen(true);
+    requestAnimationFrame(() => { findRef.current?.focus(); findRef.current?.select(); });
+  }), [api, sessionId]);
+  useEffect(() => api?.onFound?.((id, tabId, result) => {
+    if (id === sessionId && tabId === activeId) setFound(result);
+  }), [api, sessionId, activeId]);
+  // Another tab, or the page leaves the front: the search ends with it.
+  useEffect(() => {
+    if (!pageInFront && findOpen) closeFind();
+  }, [pageInFront, findOpen, closeFind]);
+  const lastTab = useRef(activeId);
+  useEffect(() => {
+    const previous = lastTab.current;
+    lastTab.current = activeId;
+    if (previous === activeId || !findOpen) return;
+    // The highlights are in the tab you left.
+    void api?.find?.(sessionId, { tabId: previous, stop: true });
+    setFindOpen(false);
+    setFindText('');
+    setFound(null);
+  }, [activeId, findOpen, api, sessionId]);
+
   const submit = useCallback(() => {
     const text = draft.trim();
     if (!text || !active) return;
@@ -114,8 +174,6 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
   }, [act, active, draft]);
 
   const secure = active?.url.startsWith('https://');
-  /** What owns the rect: the chat, a document, or the active web page. */
-  const pageInFront = !chat?.active && !docs?.activeId;
 
   return (
     <div className="ws" onClick={(e) => e.stopPropagation()}>
@@ -234,7 +292,46 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
               }
             }}
           />
+          {!editing && active?.zoom !== undefined && active.zoom !== 100 && (
+            <button
+              type="button"
+              className="ws-address__zoom"
+              title="Back to 100% (Ctrl+0)"
+              aria-label={`Zoomed to ${active.zoom}%. Reset zoom`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { void api?.shortcut(sessionId, 'zoom-reset'); }}
+            >
+              {active.zoom}%
+            </button>
+          )}
         </form>
+
+        {findOpen && (
+          <div className="ws-find" role="search">
+            <input
+              ref={findRef}
+              className="ws-find__input"
+              value={findText}
+              placeholder="Find in page"
+              aria-label="Find in page"
+              spellCheck={false}
+              onChange={(e) => {
+                const text = e.target.value;
+                setFindText(text);
+                if (!text) setFound(null);
+                void api?.find?.(sessionId, { tabId: activeId, text });
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); findStep(!e.shiftKey); }
+                if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+              }}
+            />
+            <span className="ws-find__count" aria-live="polite">{findCount(findText, found)}</span>
+            <button type="button" className="ws-btn ws-find__btn" aria-label="Previous match (Shift+Enter)" title="Previous" disabled={!found?.matches} onClick={() => findStep(false)}>{Icon.up}</button>
+            <button type="button" className="ws-btn ws-find__btn" aria-label="Next match (Enter)" title="Next" disabled={!found?.matches} onClick={() => findStep(true)}>{Icon.down}</button>
+            <button type="button" className="ws-btn ws-find__btn" aria-label="Close find (Esc)" title="Close" onClick={closeFind}>{Icon.close}</button>
+          </div>
+        )}
 
         {agentActive && (
           <div className="ws-agent" role="status">
@@ -245,6 +342,22 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
             )}
           </div>
         )}
+
+        <button
+          type="button"
+          className="ws-btn ws-more"
+          aria-label="More for this page"
+          title="Find, zoom, print, open in your browser…"
+          disabled={!active || !api?.pageMenu}
+          onClick={(e) => {
+            if (!active) return;
+            const r = e.currentTarget.getBoundingClientRect();
+            // The native menu opens from its top-left corner; most of it sits left of the button.
+            void api?.pageMenu?.(sessionId, active.id, Math.max(0, r.right - 236), r.bottom + 4);
+          }}
+        >
+          {Icon.more}
+        </button>
       </div>}
     </div>
   );

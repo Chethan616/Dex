@@ -243,6 +243,8 @@ interface WorkspaceTab {
   crashed: boolean;
   /** DEX's scratch tab: closed when the run ends unless kept. */
   temporary: boolean;
+  /** Page zoom in percent (100 when not zoomed). Missing from an older main. */
+  zoom?: number;
 }
 
 type WorkspaceTabAction =
@@ -273,10 +275,18 @@ interface ElectronWorkspaceAPI {
   onTabsChanged: (cb: (sessionId: string, tabs: WorkspaceTab[]) => void) => () => void;
   shortcut: (sessionId: string, shortcut: WorkspaceShortcut) => Promise<boolean>;
   onFocusAddress: (cb: (sessionId: string) => void) => () => void;
+  pageMenu?: (sessionId: string, tabId: string, x: number, y: number) => Promise<boolean>;
+  find?: (
+    sessionId: string,
+    request: { tabId?: string; text: string; forward?: boolean; next?: boolean } | { tabId?: string; stop: true },
+  ) => Promise<boolean>;
+  onFind?: (cb: (sessionId: string) => void) => () => void;
+  onFound?: (cb: (sessionId: string, tabId: string, result: { active: number; matches: number }) => void) => () => void;
 }
 
 type WorkspaceShortcut =
-  | 'new-tab' | 'close-tab' | 'reopen-tab' | 'focus-address' | 'reload' | 'back' | 'forward' | 'next-tab' | 'prev-tab';
+  | 'new-tab' | 'close-tab' | 'reopen-tab' | 'focus-address' | 'reload' | 'back' | 'forward' | 'next-tab' | 'prev-tab'
+  | 'find' | 'zoom-in' | 'zoom-out' | 'zoom-reset';
 
 interface ElectronTakeoverAPI {
   show: (

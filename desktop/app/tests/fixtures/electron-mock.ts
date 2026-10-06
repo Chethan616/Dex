@@ -274,10 +274,17 @@ function createMockWebContents() {
   };
   let destroyed = false;
   let url = 'about:blank';
+  let zoomFactor = 1;
   let windowOpenHandler: ((details: unknown) => unknown) | null = null;
   return {
     id,
     getURL: (): string => url,
+    getZoomFactor: (): number => zoomFactor,
+    setZoomFactor: (factor: number): void => { zoomFactor = factor; },
+    /** Test hook: every find call, in order. */
+    finds: [] as Array<{ text: string; opts?: unknown } | { stop: string }>,
+    findInPage(text: string, opts?: unknown): number { this.finds.push({ text, opts }); return 1; },
+    stopFindInPage(action: string): void { this.finds.push({ stop: action }); },
     getTitle: (): string => 'New Tab',
     getOSProcessId: (): number => 10000 + id,
     isDestroyed: (): boolean => destroyed,

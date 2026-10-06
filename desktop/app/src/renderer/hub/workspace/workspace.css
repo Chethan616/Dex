@@ -356,3 +356,52 @@ img.ws-tab__icon { object-fit: contain; }
   font-size: 13px;
 }
 .ws-ntp-find:focus-visible { outline: 2px solid var(--color-accent-default); outline-offset: 0; }
+
+/* Zoom (only while not 100%), find in page and the ⋯ menu (docs/unify/PLAN.md §3.2 #5).
+   The find bar stays inside the toolbar's height: the live page is drawn
+   above any DOM that would reach into it. */
+.ws-address__zoom {
+  flex: none;
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent-default, #35b8ff) 14%, transparent);
+  color: var(--color-fg-secondary);
+  font: 600 11px/1 var(--font-ui);
+  cursor: pointer;
+}
+.ws-address__zoom:hover { color: var(--color-fg-primary); }
+.ws-find {
+  flex: 0 1 300px;
+  min-width: 180px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 2px 0 12px;
+  border-radius: 999px;
+  background: var(--color-bg-elevated);
+  box-shadow: 0 0 0 2px var(--color-accent-default, #35b8ff);
+}
+.ws-find__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--color-fg-primary);
+  font: 500 13px/1 var(--font-ui);
+}
+.ws-find__input::placeholder { color: var(--color-fg-tertiary); font-weight: 400; }
+.ws-find__count {
+  flex: none;
+  padding: 0 4px;
+  color: var(--color-fg-tertiary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ws-find__btn { width: 26px; height: 26px; }
+.ws-more { flex: none; }

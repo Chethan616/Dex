@@ -466,6 +466,16 @@ P2 is unit-tested (DocumentTabs with real files and the watcher; kinds; sheet ca
 >   - when you click, type or scroll in a page between the agent's commands, the broker sends its connection a `DEX.notice` event ahead of the next reply (`noticeFor` hook; `takeUserActsSinceAgent` in userActivity);
 >   - the harness REPL prints it after the snippet's output, and the CLI moves it to stderr as `[DEX] The user clicked…`;
 >   - `dex-tools/tabs.md` tells the agent what to do with it.
+> - #5 is done. The toolbar's ⋯ button opens a **native** menu (`workspace/pageMenu.ts`), which draws over the live page, so nothing has to be parked. It offers:
+>   - Find in page;
+>   - zoom in, zoom out and actual size;
+>   - Print;
+>   - Copy link;
+>   - Open in your browser;
+>   - Clear data for the host (with a confirm, then a reload);
+>   - Developer tools.
+>
+>   Ctrl+F, Ctrl+=, Ctrl+- and Ctrl+0 work from the page; Ctrl+F also works from the hub. The find bar sits inside the toolbar's height. A zoom pill in the address bar shows when the page isn't at 100%.
 
 1. **One web profile `persist:dex-web`, plus a one-time cookie migration** (PLAN §4.1; P0 #9 proved the copy: 20/20 cookies with flags).
    - **Do:**

@@ -510,6 +510,53 @@ describe('BrowserPool — tabs', () => {
     expect(pool.listTabs('s1')).toHaveLength(count);
   });
 
+  it('zooms the page in Chrome’s steps from its keys, and reports the zoom', () => {
+    pool.create('s1');
+    const wc = pool.getWebContents('s1') as unknown as { emit: (event: string, ...args: unknown[]) => boolean };
+    const key = (k: string) => wc.emit('before-input-event', { preventDefault: () => {} }, { type: 'keyDown', key: k, control: true, shift: false, meta: false, alt: false });
+    key('=');
+    key('=');
+    expect(pool.listTabs('s1')[0].zoom).toBe(125);
+    key('-');
+    expect(pool.listTabs('s1')[0].zoom).toBe(110);
+    key('0');
+    expect(pool.listTabs('s1')[0].zoom).toBe(100);
+    expect(pool.zoomTab('s1', undefined, 'out')).toBe(90);
+    expect(pool.zoomTab('s1', 'nope', 'in')).toBeNull();
+  });
+
+  it('finds in the page: Ctrl+F asks the hub for its bar; a new search, the next match, and the count', () => {
+    const onFind = vi.fn();
+    const onFound = vi.fn();
+    pool.setOnFind(onFind);
+    pool.setOnFound(onFound);
+    pool.create('s1');
+    const wc = pool.getWebContents('s1') as unknown as {
+      emit: (event: string, ...args: unknown[]) => boolean;
+      finds: unknown[];
+    };
+    const preventDefault = vi.fn();
+    wc.emit('before-input-event', { preventDefault }, { type: 'keyDown', key: 'f', control: true, shift: false, meta: false, alt: false });
+    expect(onFind).toHaveBeenCalledWith('s1');
+    expect(preventDefault).toHaveBeenCalled();
+
+    pool.findInTab('s1', undefined, 'resnet');
+    pool.findInTab('s1', undefined, 'resnet', { next: true, forward: false });
+    pool.stopFind('s1', undefined);
+    pool.findInTab('s1', undefined, '');
+    expect(wc.finds).toEqual([
+      { text: 'resnet', opts: { forward: true, findNext: true } },
+      { text: 'resnet', opts: { forward: false, findNext: false } },
+      { stop: 'keepSelection' },
+      { stop: 'clearSelection' },
+    ]);
+    wc.emit('found-in-page', {}, { activeMatchOrdinal: 1, matches: 7, finalUpdate: false });
+    wc.emit('found-in-page', {}, { activeMatchOrdinal: 2, matches: 7, finalUpdate: true });
+    expect(onFound).toHaveBeenCalledWith('s1', 't1', { active: 0, matches: 0 });
+    expect(onFound).toHaveBeenLastCalledWith('s1', 't1', { active: 2, matches: 7 });
+    expect(onFound).toHaveBeenCalledTimes(2);
+  });
+
   it('opens a page’s popup as a tab in the same workspace', async () => {
     const { createPopupWebContents } = await import('../../fixtures/electron-mock');
     pool.create('s1');
