@@ -212,3 +212,62 @@ describe('ChatView', () => {
     expect(el.querySelector('.cx-worked__label')?.textContent).toBe('Worked');
   });
 });
+
+describe('ChatView: subagents mentioned in the chat, and MCP result cards / follow-up chips', () => {
+  const MCP_OUTPUT = [
+    { type: 'subagent_start', id: 'sub1', name: 'Calendar check', prompt: 'Check for conflicts', at: 1_000 },
+    { type: 'subagent_done', id: 'sub1', ok: true, summary: 'No conflicts found.', at: 1_500 },
+    { type: 'tool_call', name: 'mcp__google__calendar_list_events', args: {}, iteration: 1, at: 2_000 },
+    {
+      type: 'tool_result',
+      name: 'mcp__google__calendar_list_events',
+      ok: true,
+      preview: JSON.stringify({ events: [{ id: 'e1', summary: 'Standup', start: '2026-10-07T09:00:00Z', end: '2026-10-07T09:30:00Z', link: 'https://calendar.google.com/e1' }] }, null, 2),
+      ms: 100,
+      at: 2_100,
+    },
+    { type: 'thinking', text: 'Here is your schedule.', at: 2_200 },
+    { type: 'done', summary: 'Here is your schedule.', iterations: 1, at: 2_300 },
+  ] as unknown as HlEvent[];
+
+  function mcpSession(overrides: Partial<AgentSession> = {}): AgentSession {
+    return session({ status: 'idle', createdAt: 0, output: MCP_OUTPUT, ...overrides });
+  }
+
+  it('shows a quiet mention row for a subagent starting and another for it finishing', () => {
+    const el = render({ session: mcpSession() });
+    // Mentions live under "Worked for", folded by default on a finished turn.
+    act(() => (el.querySelector('.cx-worked') as HTMLButtonElement).click());
+    const mentions = [...el.querySelectorAll('.cx-mention__text')].map((n) => n.textContent);
+    expect(mentions).toEqual(['Calendar check started working', 'Calendar check finished']);
+    // Each mention row carries the subagent's own avatar.
+    expect(el.querySelectorAll('.cx-mention canvas').length).toBeGreaterThan(0);
+  });
+
+  it('renders a recognised MCP calendar result as a typed card, with an action that opens the event link', () => {
+    const onOpenUrl = vi.fn();
+    const el = render({ session: mcpSession(), onOpenUrl });
+    expect(el.querySelector('.cx-card__label')?.textContent).toBe('Calendar');
+    expect(el.querySelector('.cx-card__row-title')?.textContent).toBe('Standup');
+    const action = el.querySelector('.cx-card__action') as HTMLButtonElement;
+    expect(action).not.toBeNull();
+    act(() => action.click());
+    expect(onOpenUrl).toHaveBeenCalledWith('https://calendar.google.com/e1');
+  });
+
+  it('offers follow-up chips derived from the calendar tool this turn used, and sending one goes through the follow-up path', () => {
+    const onFollowUp = vi.fn();
+    const el = render({ session: mcpSession(), onFollowUp });
+    const chips = [...el.querySelectorAll('.cx-chip')];
+    expect(chips.map((c) => c.textContent?.trim())).toEqual(['Show my week', 'Any conflicts?']);
+    act(() => (chips[0] as HTMLButtonElement).click());
+    expect(onFollowUp).toHaveBeenCalledWith('s1', 'Show my calendar for this week', undefined);
+  });
+
+  it('a session with no subagents and no MCP tools shows neither mentions, cards nor chips', () => {
+    const el = render();
+    expect(el.querySelector('.cx-mention')).toBeNull();
+    expect(el.querySelector('.cx-card')).toBeNull();
+    expect(el.querySelector('.cx-chip')).toBeNull();
+  });
+});

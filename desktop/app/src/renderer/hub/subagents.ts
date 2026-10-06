@@ -138,3 +138,27 @@ export function mentionText(group: SubagentMentionGroup): string {
   const verb = group.kind === 'start' ? 'started working' : 'finished';
   return `${joinNames(group.items.map((i) => i.name))} ${verb}`;
 }
+
+/**
+ * Which turn each mention line belongs under, by timestamp: the turn whose
+ * [startAt, endAt] window contains the mention, or the last turn if none
+ * does (a mention arriving after the last block's own timestamp — the usual
+ * case for a "done" line, since the Task result often lands a beat after
+ * the orchestrator's last visible step). Takes a structural slice of Turn
+ * rather than importing it, so this module (shared-ish display logic) never
+ * has to depend on chat/turns.ts's Block-derived type.
+ */
+export function assignMentions<T extends { key: number; startAt?: number; endAt?: number }>(
+  turns: readonly T[],
+  groups: readonly SubagentMentionGroup[],
+): Map<number, SubagentMentionGroup[]> {
+  const out = new Map<number, SubagentMentionGroup[]>();
+  for (const g of groups) {
+    const turn = turns.find((t) => (t.startAt ?? -Infinity) <= g.at && g.at <= (t.endAt ?? Infinity)) ?? turns[turns.length - 1];
+    if (!turn) continue;
+    const list = out.get(turn.key);
+    if (list) list.push(g);
+    else out.set(turn.key, [g]);
+  }
+  return out;
+}
