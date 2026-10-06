@@ -9,7 +9,7 @@
  */
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DocumentView } from '../../../../src/renderer/hub/workspace/docs/DocumentView';
 import { WorkspaceBar } from '../../../../src/renderer/hub/workspace/WorkspaceBar';
 
@@ -24,6 +24,15 @@ function doc(overrides: Partial<WorkspaceDoc> = {}): WorkspaceDoc {
 }
 
 describe('DocumentView', () => {
+  // The first test to open a viewer pays for compiling it (react-markdown is
+  // big); a cold run took 9 s. Warm the chunks once, outside any test's wait.
+  beforeAll(async () => {
+    await Promise.all([
+      import('../../../../src/renderer/hub/workspace/docs/TextView'),
+      import('../../../../src/renderer/hub/workspace/docs/MediaView'),
+    ]);
+  }, 60_000);
+
   let host: HTMLDivElement;
   let root: Root;
   let files: Record<string, string>;
