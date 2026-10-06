@@ -1,6 +1,15 @@
 package com.chethan616.dex.update
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,7 +20,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -45,7 +53,25 @@ internal fun UpdateState.action(): String? = when (this) {
   else -> "Check for updates"
 }
 
-/** Settings › About: this version, what GitHub says, and the next step. */
+/** Settings' one-line status: short enough to never wrap the title. */
+internal fun UpdateState.rowStatus(canInstall: Boolean): String {
+  val mine = "Version ${BuildConfig.VERSION_NAME}"
+  return when (this) {
+    UpdateState.Idle -> mine
+    UpdateState.Checking -> "$mine · checking…"
+    is UpdateState.UpToDate -> "$mine · up to date"
+    is UpdateState.Available -> "${update.version} is out" + (if (update.size > 0) " · ${update.size / (1024 * 1024)} MB" else "")
+    is UpdateState.Downloading -> "Getting ${update.version}" + (if (progress >= 0f) " · ${(progress * 100).toInt()}%" else "…")
+    is UpdateState.Ready -> if (canInstall) "${update.version} is ready to install" else "Allow DEX to install apps, then come back"
+    is UpdateState.Failed -> message
+  }
+}
+
+/**
+ * Settings › Updates: one quiet row, like the rest of Settings — the app and
+ * its version, what GitHub says, and a small control on the end. A filled
+ * button only when there's something to get; otherwise a round "check again".
+ */
 @Composable
 fun UpdateRow(icon: @Composable () -> Unit) {
   val context = LocalContext.current
@@ -56,29 +82,48 @@ fun UpdateRow(icon: @Composable () -> Unit) {
     AppUpdater.resumed(context)
     onPauseOrDispose { }
   }
-  val label = state.action()
-  Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+  val busy = state is UpdateState.Checking || state is UpdateState.Downloading
+  Column(Modifier.fillMaxWidth()) {
+    Row(
+      Modifier
+        .fillMaxWidth()
+        .clickable(enabled = !busy) { haptics.tick(); AppUpdater.act(context) }
+        .padding(16.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
       icon()
-      androidx.compose.foundation.layout.Spacer(Modifier.size(14.dp))
+      Spacer(Modifier.size(14.dp))
       Column(Modifier.weight(1f)) {
-        Text("DEX for Android ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleSmall)
+        Text("DEX for Android", style = MaterialTheme.typography.titleSmall, maxLines = 1)
         Text(
-          state.status(AppUpdater.canInstall(context)),
+          state.rowStatus(AppUpdater.canInstall(context)),
           style = MaterialTheme.typography.bodySmall,
           color = if (state is UpdateState.Failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+          maxLines = 2,
+          overflow = TextOverflow.Ellipsis,
         )
       }
-      androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+      Spacer(Modifier.size(8.dp))
       when {
-        label == null -> LoadingIndicator(Modifier.size(36.dp))
+        // Downloading shows its own bar below; a spinner too would say it twice.
+        state is UpdateState.Downloading -> Unit
+        busy -> LoadingIndicator(Modifier.size(32.dp))
         state is UpdateState.Available || state is UpdateState.Ready ->
-          Button(onClick = { haptics.click(); AppUpdater.act(context) }, shapes = ButtonDefaults.shapes()) { Text(label) }
+          Button(
+            onClick = { haptics.click(); AppUpdater.act(context) },
+            shapes = ButtonDefaults.shapes(),
+            contentPadding = ButtonDefaults.SmallContentPadding,
+          ) { Text(state.action().orEmpty()) }
         else ->
-          OutlinedButton(onClick = { haptics.tick(); AppUpdater.act(context) }, shapes = ButtonDefaults.shapes()) { Text(label) }
+          FilledTonalIconButton(
+            onClick = { haptics.tick(); AppUpdater.act(context) },
+            shapes = IconButtonDefaults.shapes(),
+          ) { Icon(Icons.Rounded.Refresh, contentDescription = "Check for updates") }
       }
     }
-    if (state is UpdateState.Downloading) DownloadBar(state.progress)
+    if (state is UpdateState.Downloading) {
+      Box(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) { DownloadBar(state.progress) }
+    }
   }
 }
 

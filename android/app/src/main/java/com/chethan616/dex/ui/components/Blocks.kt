@@ -246,29 +246,34 @@ private fun DoneMark(block: Block, size: androidx.compose.ui.unit.Dp) {
   }
 }
 
+/** "1 step", "6 steps". */
+internal fun steps(n: Number): String = if (n.toLong() == 1L) "1 step" else "$n steps"
+
 @Composable
 fun DoneCard(block: Block) {
   if (block.echo) {
     DoneFooter(block)
     return
   }
-  Card(
-    shape = RoundedCornerShape(24.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-    modifier = Modifier.fillMaxWidth(),
+  // A drawn background, not a Card: a Card clips its content to its shape,
+  // and the bot jumps out of its own box when tapped.
+  Column(
+    Modifier
+      .fillMaxWidth()
+      .background(MaterialTheme.colorScheme.tertiaryContainer, RoundedCornerShape(24.dp))
+      .padding(16.dp),
+    verticalArrangement = Arrangement.spacedBy(8.dp),
   ) {
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        DoneMark(block, 32.dp)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      DoneMark(block, 32.dp)
+      Spacer(Modifier.size(8.dp))
+      Text("Done", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onTertiaryContainer)
+      if (block.iteration > 0) {
         Spacer(Modifier.size(8.dp))
-        Text("Done", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onTertiaryContainer)
-        if (block.iteration > 0) {
-          Spacer(Modifier.size(8.dp))
-          Text("${block.iteration} steps", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f))
-        }
+        Text(steps(block.iteration), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f))
       }
-      Markdown(block.text.orEmpty(), color = MaterialTheme.colorScheme.onTertiaryContainer)
     }
+    Markdown(block.text.orEmpty(), color = MaterialTheme.colorScheme.onTertiaryContainer)
   }
 }
 
@@ -281,15 +286,33 @@ private fun DoneFooter(block: Block) {
   val clipboard = LocalClipboardManager.current
   val haptics = LocalHaptics.current
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.tertiaryContainer) {
-      Row(Modifier.padding(start = 4.dp, end = 12.dp, top = 3.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-        DoneMark(block, 26.dp)
-        Spacer(Modifier.size(6.dp))
+    val label = if (block.iteration > 0) "Done · ${steps(block.iteration)}" else "Done"
+    val bot = LocalTaskBot.current
+    if (bot != null && bot.latestSeq == block.seq) {
+      // The bot sits on the pill's start, drawn after it so it's on top, and
+      // nothing clips it: a tap makes it jump clear of the pill, like Home's.
+      Box(contentAlignment = Alignment.CenterStart) {
         Text(
-          if (block.iteration > 0) "Done · ${block.iteration} steps" else "Done",
+          label,
           style = MaterialTheme.typography.labelLarge,
           color = MaterialTheme.colorScheme.onTertiaryContainer,
+          modifier = Modifier
+            .padding(start = 14.dp)
+            .background(MaterialTheme.colorScheme.tertiaryContainer, RoundedCornerShape(50))
+            .padding(start = 24.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
         )
+        BotAvatar(type = bot.type, mood = bot.mood, size = 30.dp, interactive = true)
+      }
+    } else {
+      Row(
+        Modifier
+          .background(MaterialTheme.colorScheme.tertiaryContainer, RoundedCornerShape(50))
+          .padding(start = 8.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Icon(Icons.Rounded.CheckCircle, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onTertiaryContainer)
+        Spacer(Modifier.size(6.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onTertiaryContainer)
       }
     }
     Spacer(Modifier.weight(1f))
@@ -346,7 +369,7 @@ fun ToolGroup(blocks: List<Block>, runningSeq: Long?) {
         Spacer(Modifier.size(10.dp))
         Column(Modifier.weight(1f)) {
           Text(
-            if (running != null) "Working · step ${blocks.indexOf(running) + 1}" else "Worked through ${blocks.size} steps",
+            if (running != null) "Working · step ${blocks.indexOf(running) + 1}" else "Worked through ${steps(blocks.size)}",
             style = MaterialTheme.typography.titleSmall,
           )
           Text(
