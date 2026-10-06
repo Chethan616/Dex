@@ -5,6 +5,16 @@ import type { HlEvent, TaskState, TaskStateMutation } from '../../shared/session
 import type { AgentSession, SessionStatus, SessionEvents } from './types';
 import { SessionDb } from './SessionDb';
 import type { SavedWorkspace } from '../workspace/tabMemory';
+import { validReaction } from '../../shared/reactions';
+
+/** The key of the user's latest message: the last follow-up, or the first prompt. */
+export function latestUserMessageKey(output: ReadonlyArray<HlEvent>): string {
+  for (let i = output.length - 1; i >= 0; i -= 1) {
+    const e = output[i] as HlEvent & { at?: number };
+    if (e.type === 'user_input' && typeof e.at === 'number') return `u:${e.at}`;
+  }
+  return 'u:prompt';
+}
 import { extractRegistrableDomain } from './domain';
 import {
   hlEventToTermBytes,
@@ -405,6 +415,22 @@ export class SessionManager extends EventEmitter {
     return state;
   }
 
+  /**
+   * Record a reaction on a message (shared/reactions.ts). Without a target,
+   * it goes on the user's latest message — what an agent reacting means.
+   * False when the session, the target or the emoji isn't valid.
+   */
+  react(id: string, input: { target?: string; emoji: string; by: 'user' | 'agent'; on?: boolean }): boolean {
+    const session = this.sessions.get(id);
+    if (!session) return false;
+    this.hydrateOutput(id);
+    const target = input.target ?? latestUserMessageKey(session.output);
+    const valid = validReaction(target, input.emoji);
+    if (!valid) return false;
+    this.appendOutput(id, { type: 'reaction', target: valid.target, emoji: valid.emoji, by: input.by, on: input.on !== false });
+    return true;
+  }
+
   appendOutput(id: string, event: HlEvent): void {
     const session = this.sessions.get(id);
     if (!session) {
@@ -560,7 +586,8 @@ export class SessionManager extends EventEmitter {
     }
 
     this.hydrateOutput(id);
-    const userEvent: HlEvent = { type: 'user_input', text: prompt };
+    // Timed like every other event: a reaction names this message by it.
+    const userEvent: HlEvent = { type: 'user_input', text: prompt, at: Date.now() };
     session.output.push(userEvent);
     const seq = session.output.length - 1;
     this.db.appendEvent(id, seq, userEvent);

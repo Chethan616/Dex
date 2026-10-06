@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# dex-react — react to the user's message with an emoji, like a person in a
+# chat would. The reaction shows on their message, on the PC and the phone.
+#
+# Sparingly: react when it says something a reply wouldn't — 👍 to "go
+# ahead" / "book it", ❤️ to a thank-you, 😂 to a joke, 👀 to "take a look at
+# this" while you start. Never on every message, and never instead of doing
+# the work or answering.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+usage() {
+  cat >&2 <<'USAGE'
+usage:
+  dex-react <emoji>          react to the user's latest message
+  dex-react <emoji> --off    take your reaction back
+USAGE
+  exit 2
+}
+
+[ $# -ge 1 ] || usage
+emoji=""; on=true
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --off) on=false; shift ;;
+    -h|--help|help) usage ;;
+    *) emoji="$1"; shift ;;
+  esac
+done
+[ -n "$emoji" ] || usage
+
+session="$(dex_session_id)"
+[ -n "$session" ] || { echo "dex-react: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
+
+dex_post /dex/react "{\"sessionId\":\"$(dex_esc "$session")\",\"emoji\":\"$(dex_esc "$emoji")\",\"on\":${on}}" >/dev/null && echo "reacted $emoji"

@@ -28,7 +28,31 @@ import { allOutputs, collectSources, formatDuration, toTurns, type FileItem, typ
 import { assignMentions, groupSubagentMentions, mentionText, useSubagents, type SubagentMentionGroup } from '../subagents';
 import type { HlEvent as SharedHlEvent } from '../../../shared/session-schemas';
 import { ResultCard } from './ResultCard';
+import { ReactionChips, ReactTrigger } from './Reactions';
+import { agentMessageKey, foldReactions, userMessageKey, type Reaction, type Reactions } from '../../../shared/reactions';
 import './chat.css';
+
+const NO_REACTIONS: Reaction[] = [];
+
+/**
+ * Everyone's reactions, folded from the log — with each message's list kept
+ * the same object while it doesn't change, so a reaction on one message
+ * doesn't re-render every turn.
+ */
+function useReactions(output: AgentSession['output']): Reactions {
+  const cache = useRef<Map<string, { sig: string; list: Reaction[] }>>(new Map());
+  return useMemo(() => {
+    const folded = foldReactions(output as unknown as Array<{ type?: string } & Record<string, unknown>>);
+    const next: Reactions = {};
+    for (const [key, list] of Object.entries(folded)) {
+      const sig = list.map((r) => `${r.by}${r.emoji}`).join('|');
+      const old = cache.current.get(key);
+      next[key] = old && old.sig === sig ? old.list : list;
+      cache.current.set(key, { sig, list: next[key] });
+    }
+    return next;
+  }, [output]);
+}
 
 type RawEvent = { type?: string } & Record<string, unknown>;
 
@@ -79,7 +103,7 @@ function useTranscript(session: AgentSession): Transcript {
 }
 
 function sameTurn(a: Turn, b: Turn): boolean {
-  return a.live === b.live && a.reply === b.reply && a.replyStreaming === b.replyStreaming
+  return a.live === b.live && a.reply === b.reply && a.replyStreaming === b.replyStreaming && a.replyAt === b.replyAt
     && a.startAt === b.startAt && a.endAt === b.endAt && a.user === b.user
     && a.work.length === b.work.length && a.work.every((w, i) => w === b.work[i])
     && a.files.length === b.files.length && a.docs.length === b.docs.length
@@ -256,6 +280,10 @@ interface TurnViewProps {
   mentions: SubagentMentionGroup[];
   onOpenUrl?: (url: string) => void;
   onFollowUpChip?: (prompt: string) => void;
+  /** Reactions on this turn's message of yours, and on DEX's reply (shared/reactions.ts). */
+  userReactions: Reaction[];
+  replyReactions: Reaction[];
+  onReact?: (target: string, emoji: string, on: boolean) => void;
 }
 
 function activityOf(turn: Turn): { label: string; orb: React.ComponentProps<typeof Orb>['state'] } {
@@ -290,7 +318,10 @@ function TurnAvatar({ sessionId, engineId, mood }: { sessionId: string; engineId
   );
 }
 
-const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood, open, onToggle, now, docSignals, renderLink, renderInlineCode, mentions, onOpenUrl, onFollowUpChip }: TurnViewProps) {
+const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood, open, onToggle, now, docSignals, renderLink, renderInlineCode, mentions, onOpenUrl, onFollowUpChip, userReactions, replyReactions, onReact }: TurnViewProps) {
+  const userKey = turn.user ? userMessageKey(turn.user.at, turn.user.id === 0) : null;
+  const replyKey = agentMessageKey(turn.replyAt);
+  const mineOn = (list: Reaction[]) => list.filter((r) => r.by === 'user').map((r) => r.emoji);
   const hasWork = turn.work.length > 0 || turn.live || mentions.length > 0;
   // Sessions recorded before events carried times just say "Worked".
   const end = turn.live ? now : turn.endAt;
@@ -312,7 +343,15 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood,
               ))}
             </div>
           )}
-          {turn.user.text && <div className="cx-user__bubble">{turn.user.text}</div>}
+          {turn.user.text && (
+            <div className="cx-user__line">
+              {userKey && onReact && <ReactTrigger align="end" mine={mineOn(userReactions)} onPick={(e, on) => onReact(userKey, e, on)} />}
+              <div className={`cx-user__bubble${userReactions.length ? ' cx-user__bubble--reacted' : ''}`}>
+                {turn.user.text}
+                {userKey && onReact && <ReactionChips align="end" reactions={userReactions} onToggle={(e, on) => onReact(userKey, e, on)} />}
+              </div>
+            </div>
+          )}
         </div>
       ) : null}
 
@@ -351,6 +390,7 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood,
       {turn.reply && (
         <div className={`cx-reply${turn.replyStreaming ? ' cx-reply--streaming' : ''}`}>
           <Markdown source={turn.reply} variant="chat" renderLink={renderLink} renderInlineCode={renderInlineCode} />
+          {replyKey && onReact && <ReactionChips align="start" reactions={replyReactions} onToggle={(e, on) => onReact(replyKey, e, on)} />}
         </div>
       )}
 
@@ -363,6 +403,7 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood,
       {!turn.live && turn.reply && (
         <div className="cx-foot">
           <CopyButton text={turn.reply} />
+          {replyKey && onReact && <ReactTrigger align="start" mine={mineOn(replyReactions)} onPick={(e, on) => onReact(replyKey, e, on)} />}
           {turn.endAt ? <span className="cx-foot__time">{timeOfDay(turn.endAt)}</span> : null}
         </div>
       )}
@@ -398,6 +439,10 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
   const mood = useBotMood(session);
   const transcript = useTranscript(session);
   const blocks = transcript.blocks;
+  const reactions = useReactions(session.output);
+  const onReact = useCallback((target: string, emoji: string, on: boolean) => {
+    void window.electronAPI?.sessions?.react?.(session.id, target, emoji, on);
+  }, [session.id]);
 
   // Turns keep their identity while nothing in them changed.
   const prevTurns = useRef<Map<number, Turn>>(new Map());
@@ -552,6 +597,9 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
               mentions={mentionsByTurn.get(turn.key) ?? EMPTY_MENTIONS}
               onOpenUrl={onOpenUrl}
               onFollowUpChip={onFollowUp ? sendChip : undefined}
+              userReactions={(turn.user && reactions[userMessageKey(turn.user.at, turn.user.id === 0) ?? '']) || NO_REACTIONS}
+              replyReactions={reactions[agentMessageKey(turn.replyAt) ?? ''] ?? NO_REACTIONS}
+              onReact={onReact}
             />
           ))}
           {turns.length === 0 && (

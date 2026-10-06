@@ -210,7 +210,7 @@ describe('SessionManager persistence', () => {
     expect(abortController.signal.aborted).toBe(false);
     expect(session?.status).toBe('running');
     expect(session?.error).toBeUndefined();
-    expect(session?.output.at(-1)).toEqual({ type: 'user_input', text: 'Continue from here' });
+    expect(session?.output.at(-1)).toEqual({ type: 'user_input', text: 'Continue from here', at: expect.any(Number) });
     // The opening request stays the task's prompt (title + first message).
     expect(session?.prompt).toBe('Open example.com');
 

@@ -99,7 +99,7 @@ export function bootstrapHarness(): void {
   // without the user deleting their userData.
   // Both markers, since neither branch's existing users have both yet — a
   // reader with only one of these two AGENTS.md sections is still stale.
-  const sentinels = ['dex-registry', 'dex-find', 'dex-canvas', 'dex-websearch'];  // AGENTS.md markers; bump when content changes
+  const sentinels = ['dex-registry', 'dex-find', 'dex-canvas', 'dex-websearch', 'dex-react'];  // AGENTS.md markers; bump when content changes
   const needsSkill = !fs.existsSync(sp) || (() => {
     try {
       const content = fs.readFileSync(sp, 'utf-8');
@@ -138,7 +138,7 @@ function materializeDexTools(): void {
     prefix: DEX_TOOLS_PREFIX,
     entries: Object.entries(STOCK_DEX_TOOLS),
     logName: 'dexTools',
-    executableBasenames: new Set(['dex-state', 'dex-remember', 'dex-recall', 'dex-fill', 'dex-sh', 'dex-registry', 'dex-find', 'dex-canvas', 'dex-websearch', 'dex-send', 'dex-blender', 'dex-3d', 'dex-tab', 'dex-open']),
+    executableBasenames: new Set(['dex-state', 'dex-remember', 'dex-recall', 'dex-fill', 'dex-sh', 'dex-registry', 'dex-find', 'dex-canvas', 'dex-websearch', 'dex-send', 'dex-blender', 'dex-3d', 'dex-tab', 'dex-open', 'dex-react']),
   });
 }
 

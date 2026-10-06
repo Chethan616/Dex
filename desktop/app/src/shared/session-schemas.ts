@@ -344,6 +344,17 @@ export const HlEventSubagentDoneSchema = z.object({
   summary: z.string(),
 });
 
+// A reaction on a chat message (shared/reactions.ts): yours on any message,
+// DEX's on yours when it means something. `on: false` takes it back.
+export const HlEventReactionSchema = z.object({
+  ...WHEN,
+  type: z.literal('reaction'),
+  target: z.string(),
+  emoji: z.string(),
+  by: z.enum(['user', 'agent']),
+  on: z.boolean(),
+});
+
 export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventThinkingSchema,
   HlEventToolCallSchema,
@@ -366,6 +377,7 @@ export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventSubagentStartSchema,
   HlEventSubagentStepSchema,
   HlEventSubagentDoneSchema,
+  HlEventReactionSchema,
 ]);
 
 export type HlEvent = z.infer<typeof HlEventSchema>;

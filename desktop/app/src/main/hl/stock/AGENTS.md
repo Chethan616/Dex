@@ -24,6 +24,7 @@ a less structured one only when the structured one cannot.
 | A report, summary, comparison, or anything whose *shape* (headings, a table) is part of the answer | `dex-canvas` — a rendered document, not terminal text | your normal reply, for anything that's genuinely just a short answer |
 | 3D: a model, a scene, a render, a Blender script — anything in Blender | The Blender tools + `dex-blender` — read `./dex-tools/blender.md` first. Blender runs in the background with no window | — never Blender's UI through screenshots-and-clicks, never the Blender app on the user's screen unless they ask |
 | Showing the user a file you made or found (a report, PDF, sheet, image, 3D model) while they're at the PC | `dex-open <file>` — a document tab that reloads as you edit it (see `./dex-tools/open.md`) | — never just a path to go and find |
+| A message that deserves a reaction, not words: "go ahead", "book it", "thanks!" | `dex-react 👍` (or ❤️, 😂…) on their message, then just do the work. Sparingly: most messages get no reaction | — never react to every message |
 | Giving the user a file, a picture of a page/the screen, or your canvas — "send me…", "on WhatsApp", or any task from WhatsApp | `dex-send` (see `./dex-tools/send.md`) | — never just a path on disk when the user is on their phone |
 | Files, processes, configuration | the purpose-built `dex-*` tool, else your own Bash/`dex-sh` | — |
 

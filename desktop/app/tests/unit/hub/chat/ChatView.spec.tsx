@@ -80,6 +80,55 @@ describe('ChatView', () => {
     vi.useRealTimers();
   });
 
+  it('shows reactions on the bubble’s corner, and reacting goes to DEX', async () => {
+    const react = vi.fn(() => Promise.resolve(true));
+    (window as unknown as { electronAPI: unknown }).electronAPI = { sessions: { openFile, listEditors: () => Promise.resolve([]), react } };
+    const el = render({
+      session: session({
+        status: 'idle',
+        output: [
+          ...OUTPUT.slice(0, 8),
+          { type: 'reaction', target: 'u:prompt', emoji: '👍', by: 'agent', on: true, at: 286_000 },
+          { type: 'reaction', target: 'a:280000', emoji: '❤️', by: 'user', on: true, at: 287_000 },
+        ] as unknown as HlEvent[],
+      }),
+    });
+    const first = el.querySelector('.cx-turn')!;
+    const onPrompt = first.querySelector('.cx-user__bubble .cx-react')!;
+    expect(onPrompt.textContent).toBe('👍');
+    expect(onPrompt.classList.contains('cx-react--mine')).toBe(false);
+    const onReply = first.querySelector('.cx-reply .cx-react')!;
+    expect(onReply.textContent).toBe('❤️');
+    expect(onReply.classList.contains('cx-react--mine')).toBe(true);
+
+    // Tapping your own takes it back.
+    act(() => (onReply as HTMLButtonElement).click());
+    expect(react).toHaveBeenLastCalledWith('s1', 'a:280000', '❤️', false);
+
+    // The smiley on your message opens the quick row; a pick reacts.
+    act(() => (first.querySelector('.cx-user .cx-reactor__btn') as HTMLButtonElement).click());
+    const quick = [...first.querySelectorAll('.cx-quick__emoji')];
+    expect(quick.map((b) => b.textContent)).toContain('😂');
+    act(() => (quick.find((b) => b.textContent === '😂') as HTMLButtonElement).click());
+    expect(react).toHaveBeenLastCalledWith('s1', 'u:prompt', '😂', true);
+    expect(first.querySelector('.cx-quick')).toBeNull();
+
+    // "+" opens every emoji, with search.
+    act(() => (first.querySelector('.cx-user .cx-reactor__btn') as HTMLButtonElement).click());
+    act(() => (first.querySelector('.cx-quick__more') as HTMLButtonElement).click());
+    // It opens on your recents (the 😂 just used), with every category a tab away.
+    expect([...first.querySelectorAll('.cx-picker__emoji')].map((b) => b.textContent)).toEqual(['😂']);
+    const smileys = [...first.querySelectorAll<HTMLButtonElement>('.cx-picker__tab')].find((t) => t.title === 'Smileys & emotion')!;
+    act(() => smileys.click());
+    expect(first.querySelectorAll('.cx-picker__emoji').length).toBeGreaterThan(50);
+    const search = first.querySelector('.cx-picker__search') as HTMLInputElement;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(search, 'pizza');
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect([...first.querySelectorAll('.cx-picker__emoji')].map((b) => b.textContent)).toContain('🍕');
+  });
+
   it('shows each turn: your bubble, the folded work, the reply, and the files', () => {
     const el = render();
     const bubbles = [...el.querySelectorAll('.cx-user__bubble')].map((b) => b.textContent);

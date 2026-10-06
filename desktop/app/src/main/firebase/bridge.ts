@@ -57,6 +57,7 @@ import { mainLogger } from '../logger';
 import { getInstallId } from '../installId';
 import type { AgentSession, HlEvent } from '../sessions/types';
 import { appendEvent, buildTranscript, type Block, type Transcript } from '../../renderer/logs/transcript';
+import { foldReactions } from '../../shared/reactions';
 import { buildSubagents, foldSubagentEvent, subagentsList, EMPTY_SUBAGENTS, type Subagent, type SubagentsState } from '../../shared/subagents';
 import { firebaseConfig } from './config';
 import { clearCredentials, loadCredentials, saveCredentials } from './credentials';
@@ -92,6 +93,8 @@ export interface BridgeHost {
   answerConfirmation(sessionId: string, confirmationId: string, approved: boolean, lifetime?: string): { ok: boolean; error?: string };
   getApprovalMode(): string;
   setApprovalMode(mode: string): string;
+  /** A reaction from the phone on a chat message (shared/reactions.ts). */
+  react(sessionId: string, target: string, emoji: string, on: boolean): boolean;
 }
 
 export type BridgeState =
@@ -603,6 +606,9 @@ export class FirebaseBridge {
       tokens: t.usage.inputTokens + t.usage.outputTokens,
       blockCount: t.blocks.length,
       pendingConfirmation: pendingConfirmation(session),
+      // Everyone's reactions, by message key (shared/reactions.ts); the
+      // phone puts them on the matching bubbles.
+      reactions: foldReactions((session.output ?? []) as unknown as Array<{ type?: string } & Record<string, unknown>>),
       files: this.host.getTaskFiles(id).slice(-30).map((f) => ({ name: clip(f.name, 200), path: f.path, size: f.size ?? 0 })),
       deviceId: this.deviceId,
       deviceName: os.hostname(),
@@ -850,6 +856,9 @@ export class FirebaseBridge {
           break;
         case 'answer_confirmation':
           result = this.host.answerConfirmation(str(data.sessionId), str(data.confirmationId), data.approved === true, str(data.lifetime) || undefined);
+          break;
+        case 'react':
+          result = { ok: this.host.react(str(data.sessionId), str(data.target), str(data.emoji), data.on !== false) };
           break;
         case 'set_approval_mode':
           result = { mode: this.host.setApprovalMode(str(data.mode)) };

@@ -28,6 +28,8 @@ export interface Turn {
   reply: string;
   /** The block the reply is streaming into, while it is. */
   replyStreaming: boolean;
+  /** When the reply's first words arrived: what a reaction on it is keyed by (shared/reactions.ts). */
+  replyAt?: number;
   files: FileItem[];
   docs: Array<Of<'canvas'>>;
   finds: Array<Of<'artifact'>>;
@@ -89,11 +91,11 @@ function buildTurn(user: Of<'user'> | null, agent: Block[], live: boolean, fallb
     turn.endAt = latest(turn.endAt, b.endAt ?? b.at);
     switch (b.kind) {
       case 'text':
-        if (i > lastWork) { replyParts.push(b.text.trim()); lastText = b; }
+        if (i > lastWork) { replyParts.push(b.text.trim()); lastText = b; turn.replyAt ??= b.at; }
         else turn.work.push(b);
         break;
       case 'done':
-        if (!b.echo && b.summary.trim()) replyParts.push(b.summary.trim());
+        if (!b.echo && b.summary.trim()) { replyParts.push(b.summary.trim()); turn.replyAt ??= b.at; }
         break;
       case 'file': {
         const key = b.path.toLowerCase();
