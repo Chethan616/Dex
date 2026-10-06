@@ -49,6 +49,10 @@ opened unless they asked.
   user can follow along. Your screenshots never include it.
 - If the user is clicking, scrolling or typing in the page, your input waits
   until they pause (about 1.5 s, at most 8 s). A slow click is that, not a hang.
+- When the user clicks, types or scrolls in a page between your commands,
+  your next snippet prints a line starting with `[DEX] The user clicked…`
+  (on stderr). Look at the page again before acting, and don't undo what
+  they did.
 - If the page changed under you — another URL, scrolled, a dialog closed —
   the user probably did it. Read the page again before your next action
   instead of repeating the old one.

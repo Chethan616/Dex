@@ -25,6 +25,17 @@ const session = new Session();
 (globalThis as any).detectBrowsers = detectBrowsers;
 (globalThis as any).CDP = Generated;
 
+// What DEX tells the agent between snippets ("the user clicked in this page
+// since your last command"). Collected while a snippet runs and printed with
+// its output (the CLI puts it on stderr).
+const DEX_NOTICE = 'DEX.notice';
+const NOTICE_MARK = '___DEX_NOTICE___';
+const notices: string[] = [];
+session.onEvent((method, params) => {
+  const message = (params as { message?: unknown } | undefined)?.message;
+  if (method === DEX_NOTICE && typeof message === 'string' && !notices.includes(message)) notices.push(message);
+});
+
 // The link the socket was opened with, to notice when DEX hands out a new one
 // (DEX restarted; this REPL server outlived it).
 let connectedVia: string | null = null;
@@ -137,7 +148,8 @@ const server = Bun.serve({
       }
       try {
         const result = await runSnippet(code);
-        const body = renderResult(result);
+        let body = renderResult(result);
+        if (notices.length) body += `${body ? '\n' : ''}${NOTICE_MARK}${notices.splice(0).join(' ')}`;
         return new Response(body, { status: 200, headers: TEXT });
       } catch (e: any) {
         const msg = (e?.stack ?? e?.message ?? String(e)) + '\n';

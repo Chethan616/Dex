@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { noteAgentInput, noteInputEvent, userActiveWithin, waitForUserIdle } from '../../../src/main/workspace/userActivity';
+import { noteAgentInput, noteInputEvent, takeUserActsSinceAgent, userActiveWithin, waitForUserIdle } from '../../../src/main/workspace/userActivity';
 
 describe('userActivity', () => {
   afterEach(() => { vi.useRealTimers(); });
@@ -50,5 +50,20 @@ describe('userActivity', () => {
 
   it('does not wait at all for a page you haven’t touched', async () => {
     expect(await waitForUserIdle({})).toBeLessThan(20);
+  });
+
+  it('tells DEX once what you did in the page since its last command', () => {
+    const tab = {};
+    noteInputEvent(tab, 'mouseDown');
+    expect(takeUserActsSinceAgent(tab)).toEqual([]); // before DEX's first look: nothing it could have missed
+    noteInputEvent(tab, 'mouseDown');
+    noteInputEvent(tab, 'mouseUp');
+    noteInputEvent(tab, 'char');
+    noteInputEvent(tab, 'mouseMove');
+    expect(takeUserActsSinceAgent(tab)).toEqual(['clicked', 'typed']);
+    expect(takeUserActsSinceAgent(tab)).toEqual([]);
+    noteAgentInput(tab, 400);
+    noteInputEvent(tab, 'mouseDown');
+    expect(takeUserActsSinceAgent(tab)).toEqual([]);
   });
 });

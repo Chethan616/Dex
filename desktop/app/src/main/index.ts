@@ -109,7 +109,7 @@ import {
 } from './startup/cli';
 import { CdpBroker, type BrokerContents, type BrokerHooks } from './cdpBroker';
 import { moveCursor, setCursorVisible } from './workspace/agentCursor';
-import { noteAgentInput, userActiveWithin, waitForUserIdle } from './workspace/userActivity';
+import { noteAgentInput, takeUserActsSinceAgent, userActiveWithin, waitForUserIdle } from './workspace/userActivity';
 import { maskSecretFields, READS_PAGE, redactSecrets, secretValues } from './workspace/secretFields';
 import { handleDownload } from './workspace/downloads';
 import { leaseDebugger, withDebugger } from './cdpLease';
@@ -414,6 +414,16 @@ const workspaceHooks: BrokerHooks = {
       void setCursorVisible(wc as unknown as CursorTarget, true);
       void maskSecretFields(wc as unknown as CursorTarget, false);
     }
+  },
+  // You used the page between the agent's commands: it hears so on its next
+  // one, instead of acting on a page that's no longer what it last saw.
+  noticeFor(wc) {
+    const acts = takeUserActsSinceAgent(wc);
+    if (acts.length === 0) return null;
+    const did = acts.length === 1 ? acts[0] : `${acts.slice(0, -1).join(', ')} and ${acts[acts.length - 1]}`;
+    const url = wc.isDestroyed() ? '' : wc.getURL();
+    return `The user ${did} in this page since your last command${url ? ` (now at ${url})` : ''}. `
+      + 'It may have changed: look again before your next action, and don\'t undo what they did.';
   },
   async filterResult(wc, method, result) {
     if (!READS_PAGE.has(method)) return result;

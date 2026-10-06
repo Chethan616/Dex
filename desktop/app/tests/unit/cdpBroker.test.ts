@@ -227,6 +227,30 @@ describe('CdpBroker hooks', () => {
     }
   });
 
+  it('tells the agent what DEX noticed, ahead of the command’s reply', async () => {
+    const tab = fakeTab('TARGET-N');
+    let notice: string | null = 'The user clicked in this page since your last command.';
+    const broker = new CdpBroker(() => [tab.wc], { noticeFor: () => { const n = notice; notice = null; return n; } });
+    await broker.start();
+    try {
+      const c = await connect(broker.endpointFor('any').wsUrl);
+      const order: string[] = [];
+      c.ws.on('message', (raw) => {
+        const m = JSON.parse(String(raw));
+        order.push(m.method ?? `reply ${m.id}`);
+      });
+      const { result } = await c.call('Target.attachToTarget', { targetId: 'TARGET-N', flatten: true });
+      await c.call('Runtime.evaluate', { expression: '1' }, result.sessionId);
+      await c.call('Runtime.evaluate', { expression: '2' }, result.sessionId);
+      const notices = c.events.filter((e) => e.method === 'DEX.notice');
+      expect(notices).toEqual([{ method: 'DEX.notice', params: { message: 'The user clicked in this page since your last command.' }, sessionId: result.sessionId }]);
+      expect(order.indexOf('DEX.notice')).toBeLessThan(order.indexOf('reply 2'));
+      c.ws.close();
+    } finally {
+      await broker.stop();
+    }
+  });
+
   it('still answers when a hook throws', async () => {
     const tab = fakeTab('TARGET-X');
     const broker = new CdpBroker(() => [tab.wc], { beforeCommand: async () => { throw new Error('cursor broke'); } });

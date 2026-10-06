@@ -53,7 +53,16 @@ export interface BrokerHooks {
   afterCommand?(wc: BrokerContents, method: string, params: Record<string, unknown>, info: { child: boolean }): void;
   /** What the agent gets back instead of `result`. Only on success; a throw sends the result unchanged. */
   filterResult?(wc: BrokerContents, method: string, result: unknown, info: { child: boolean }): Promise<unknown>;
+  /**
+   * Something the agent should hear before this command runs ("the user
+   * clicked in this page since your last look"). Sent to its connection as
+   * a `DEX.notice` event, which the harness prints with the snippet's output.
+   */
+  noticeFor?(wc: BrokerContents): string | null;
 }
+
+/** DEX's own event to the agent's connection; other CDP clients ignore it. */
+export const NOTICE_EVENT = 'DEX.notice';
 
 export interface CdpEndpoint {
   /** The broker's loopback port (for display and logs; useless without the token). */
@@ -247,6 +256,7 @@ class BrokerConnection {
       : this.attachments.find((a) => a.sessionId === undefined);
     if (page) {
       if (isBlockedOnPage(method)) throw notHere(method);
+      this.notify(page.wc, sessionId);
       return this.forward(page.wc, method, params, undefined);
     }
     // …or to an iframe/worker under it.
@@ -254,9 +264,19 @@ class BrokerConnection {
       const owner = this.attachments.find((a) => a.children.has(sessionId));
       if (!owner) throw new CdpError(-32001, 'Session with given id not found.');
       if (isBlockedOnPage(method)) throw notHere(method);
+      this.notify(owner.wc, sessionId);
       return this.forward(owner.wc, method, params, sessionId);
     }
     return this.browserLevel(method, params);
+  }
+
+  /** Ahead of the command's reply, so the harness has it when the command returns. */
+  private notify(wc: BrokerContents, sessionId: string | undefined): void {
+    let message: string | null = null;
+    try { message = this.hooks.noticeFor?.(wc) ?? null; } catch { /* never block the command */ }
+    if (!message) return;
+    const params = { message };
+    this.send(sessionId ? { method: NOTICE_EVENT, params, sessionId } : { method: NOTICE_EVENT, params });
   }
 
   private async forward(wc: BrokerContents, method: string, params: Record<string, unknown>, childSession: string | undefined): Promise<unknown> {

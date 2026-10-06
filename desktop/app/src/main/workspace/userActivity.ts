@@ -11,11 +11,18 @@
  * inputs and events inside it aren't counted as yours.
  */
 
-/** What counts as you using the page. Hovering doesn't. */
-const USER_INPUT = new Set(['mouseDown', 'mouseUp', 'mouseWheel', 'keyDown', 'rawKeyDown', 'char', 'touchStart', 'gestureScrollBegin']);
+/** What counts as you using the page, as the agent is told it. Hovering doesn't count. */
+const USER_INPUT: Record<string, string> = {
+  mouseDown: 'clicked', mouseUp: 'clicked', touchStart: 'tapped',
+  keyDown: 'typed', rawKeyDown: 'typed', char: 'typed',
+  mouseWheel: 'scrolled', gestureScrollBegin: 'scrolled',
+};
 
 const lastUserInput = new WeakMap<object, number>();
 const agentInputUntil = new WeakMap<object, number>();
+/** What you did in a tab since DEX's last command there. */
+const sinceAgent = new WeakMap<object, Set<string>>();
+const agentLooked = new WeakSet<object>();
 
 /** Call just before (and after) DEX sends input to `wc`. */
 export function noteAgentInput(wc: object, windowMs = 250): void {
@@ -24,9 +31,27 @@ export function noteAgentInput(wc: object, windowMs = 250): void {
 
 /** Feed every `input-event` of a tab through this. */
 export function noteInputEvent(wc: object, type: string): void {
-  if (!USER_INPUT.has(type)) return;
+  const what = USER_INPUT[type];
+  if (!what) return;
   if ((agentInputUntil.get(wc) ?? 0) > Date.now()) return;
   lastUserInput.set(wc, Date.now());
+  if (!agentLooked.has(wc)) return;
+  const acts = sinceAgent.get(wc) ?? new Set<string>();
+  acts.add(what);
+  sinceAgent.set(wc, acts);
+}
+
+/**
+ * DEX is sending a command to `wc`. What you did there since its last one
+ * (`['clicked', 'typed']`), told once; empty when you left it alone or DEX
+ * hadn't looked at the page yet.
+ */
+export function takeUserActsSinceAgent(wc: object): string[] {
+  agentLooked.add(wc);
+  const acts = sinceAgent.get(wc);
+  if (!acts || acts.size === 0) return [];
+  sinceAgent.delete(wc);
+  return [...acts];
 }
 
 export function userActiveWithin(wc: object, ms: number): boolean {

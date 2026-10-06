@@ -462,6 +462,10 @@ P2 is unit-tested (DocumentTabs with real files and the watcher; kinds; sheet ca
 >     - main frame only.
 >
 >   **Still open in #3:** the per-site policy for new origins.
+> - #7 is done:
+>   - when you click, type or scroll in a page between the agent's commands, the broker sends its connection a `DEX.notice` event ahead of the next reply (`noticeFor` hook; `takeUserActsSinceAgent` in userActivity);
+>   - the harness REPL prints it after the snippet's output, and the CLI moves it to stderr as `[DEX] The user clicked…`;
+>   - `dex-tools/tabs.md` tells the agent what to do with it.
 
 1. **One web profile `persist:dex-web`, plus a one-time cookie migration** (PLAN §4.1; P0 #9 proved the copy: 20/20 cookies with flags).
    - **Do:**

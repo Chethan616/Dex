@@ -99,7 +99,16 @@ post_eval() {
   status="${out##*___STATUS___}"
   body="${out%$'\n'___STATUS___*}"
   if [ "$status" = "200" ]; then
+    # DEX's notices ride after a marker (repl.ts): they go to stderr so the
+    # snippet's own output stays clean for whatever reads it.
+    local notice=""
+    if [[ "$body" == *___DEX_NOTICE___* ]]; then
+      notice="${body##*___DEX_NOTICE___}"
+      body="${body%___DEX_NOTICE___*}"
+      body="${body%$'\n'}"
+    fi
     [ -n "$body" ] && printf '%s\n' "$body"
+    [ -n "$notice" ] && printf '[DEX] %s\n' "$notice" >&2
     return 0
   else
     [ -n "$body" ] && printf '%s\n' "$body" >&2
