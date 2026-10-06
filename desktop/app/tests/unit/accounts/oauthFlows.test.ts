@@ -14,6 +14,7 @@ const opened: URL[] = [];
 let browser: (auth: URL) => Promise<void> = async () => {};
 const clipboardWrites: string[] = [];
 const vault = new Map<string, string>();
+let failKeytarWrites = false;
 
 vi.mock('electron', () => ({
   shell: { openExternal: async (url: string) => { const u = new URL(url); opened.push(u); setTimeout(() => { void browser(u); }, 5); } },
@@ -26,12 +27,17 @@ vi.mock('../../../src/main/accounts/oauthClients', () => ({
     google: { clientId: 'g-client', clientSecret: 'g-secret' },
     slack: { clientId: 's-client', clientSecret: 's-secret' },
     github: { clientId: 'gh-client' },
+    reddit: { clientId: 'r-client' },
+    microsoft: { clientId: 'm-client', clientSecret: 'm-secret' },
   } as Record<string, unknown>)[p] ?? null,
 }));
 vi.mock('keytar', () => ({
   default: undefined,
   getPassword: async (s: string, a: string) => vault.get(`${s}/${a}`) ?? null,
-  setPassword: async (s: string, a: string, v: string) => { vault.set(`${s}/${a}`, v); },
+  setPassword: async (s: string, a: string, v: string) => {
+    if (failKeytarWrites) throw new Error('keychain unavailable');
+    vault.set(`${s}/${a}`, v);
+  },
   deletePassword: async (s: string, a: string) => vault.delete(`${s}/${a}`),
 }));
 
@@ -59,7 +65,7 @@ beforeEach(() => {
     return hit[1](url, init);
   });
 });
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => { failKeytarWrites = false; vi.unstubAllGlobals(); });
 
 const form = (init?: RequestInit) => new URLSearchParams(String(init?.body ?? ''));
 
@@ -87,6 +93,8 @@ describe('Google sign-in', () => {
     // The challenge is the SHA-256 of the verifier that was later sent.
     expect(auth.searchParams.get('code_challenge')).toBe(createHash('sha256').update(verifierSent).digest('base64url'));
     expect(auth.searchParams.get('redirect_uri')).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/callback$/);
+    expect(auth.searchParams.get('scope')).toContain('https://www.googleapis.com/auth/chat.messages');
+    expect(auth.searchParams.get('scope')).toContain('https://www.googleapis.com/auth/chat.spaces.readonly');
   });
 
   it('rejects a response whose state doesn’t match', async () => {
@@ -132,6 +140,159 @@ describe('Slack install', () => {
     } finally {
       blocker.close();
     }
+  });
+});
+
+describe('Reddit installed-app OAuth', () => {
+  async function waitForRedditPort(): Promise<void> {
+    for (let attempts = 0; attempts < 20; attempts += 1) {
+      const free = await new Promise<boolean>((resolve) => {
+        const probe = net.createServer();
+        probe.once('error', () => resolve(false));
+        probe.listen(53683, '127.0.0.1', () => probe.close(() => resolve(true)));
+      });
+      if (free) return;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error('Reddit loopback port did not become free');
+  }
+
+  beforeEach(waitForRedditPort);
+
+  it('exchanges the code using the public client and verifies the account', async () => {
+    browser = async (auth) => { await redirectBack(auth, { code: 'r-code', state: auth.searchParams.get('state')! }); };
+    routes.push([/www\.reddit\.com\/api\/v1\/access_token/, (_u, init) => {
+      expect(new Headers(init?.headers).get('authorization')).toBe(`Basic ${Buffer.from('r-client:').toString('base64')}`);
+      expect(form(init)).toEqual(new URLSearchParams({ grant_type: 'authorization_code', code: 'r-code', redirect_uri: 'http://127.0.0.1:53683/reddit/callback' }));
+      return json({ access_token: 'r-access', refresh_token: 'r-refresh' });
+    }]);
+    routes.push([/oauth\.reddit\.com\/api\/v1\/me/, (_u, init) => {
+      expect(new Headers(init?.headers).get('authorization')).toBe('Bearer r-access');
+      return json({ name: 'reddit-user', subreddit: { title: 'Reddit User' } });
+    }]);
+
+    const { connectReddit } = await import('../../../src/main/accounts/reddit');
+    await expect(connectReddit()).resolves.toEqual({ refreshToken: 'r-refresh', username: 'reddit-user', name: 'Reddit User' });
+    const auth = opened[0];
+    expect(auth.origin + auth.pathname).toBe('https://www.reddit.com/api/v1/authorize');
+    expect(auth.searchParams.get('response_type')).toBe('code');
+    expect(auth.searchParams.get('duration')).toBe('permanent');
+    expect(auth.searchParams.get('scope')?.split(' ')).toEqual(expect.arrayContaining(['identity', 'read', 'history', 'submit', 'edit', 'save']));
+    expect(auth.searchParams.get('state')).toBeTruthy();
+    expect(auth.searchParams.get('redirect_uri')).toBe('http://127.0.0.1:53683/reddit/callback');
+  });
+
+  it('rejects a forged callback without consuming the listener needed by the valid state', async () => {
+    let invalidResponse = '';
+    browser = async (auth) => {
+      invalidResponse = await redirectBack(auth, { code: 'forged-code', state: 'forged-state' });
+      await redirectBack(auth, { code: 'real-code', state: auth.searchParams.get('state')! });
+    };
+    routes.push([/www\.reddit\.com\/api\/v1\/access_token/, () => json({ access_token: 'r-access', refresh_token: 'r-refresh' })]);
+    routes.push([/oauth\.reddit\.com\/api\/v1\/me/, () => json({ name: 'reddit-user' })]);
+
+    const { connectReddit } = await import('../../../src/main/accounts/reddit');
+    await expect(connectReddit()).resolves.toMatchObject({ username: 'reddit-user' });
+    expect(invalidResponse).toContain('did not match');
+  });
+
+  it('does not exchange a code when the user cancels', async () => {
+    browser = async (auth) => { await redirectBack(auth, { error: 'access_denied', state: auth.searchParams.get('state')! }); };
+    const { connectReddit } = await import('../../../src/main/accounts/reddit');
+    await expect(connectReddit()).rejects.toThrow(/cancelled/);
+  });
+});
+
+describe('Microsoft sign-in', () => {
+  it('uses PKCE, requests full scopes, and returns the tokens and user profile', async () => {
+    let verifierSent = '';
+    browser = async (auth) => { await redirectBack(auth, { code: 'm-code', state: auth.searchParams.get('state')! }); };
+    routes.push([/login\.microsoftonline\.com\/common\/oauth2\/v2\.0\/token/, (_u, init) => {
+      const body = form(init);
+      verifierSent = body.get('code_verifier')!;
+      expect(body.get('code')).toBe('m-code');
+      expect(body.get('client_id')).toBe('m-client');
+      expect(body.get('client_secret')).toBe('m-secret');
+      return json({ access_token: 'ms-at', refresh_token: 'ms-rt', expires_in: 3600 });
+    }]);
+    routes.push([/graph\.microsoft\.com\/v1\.0\/me$/, () => json({ displayName: 'Alex MS', mail: 'alex@outlook.com' })]);
+    routes.push([/graph\.microsoft\.com\/v1\.0\/me\/photo\/\$value/, () => new Response('avatar-bytes', { status: 200, headers: { 'content-type': 'image/jpeg' } })]);
+
+    const { connectMicrosoft } = await import('../../../src/main/accounts/microsoft');
+    const account = await connectMicrosoft();
+    expect(account).toMatchObject({
+      refreshToken: 'ms-rt',
+      accessToken: 'ms-at',
+      email: 'alex@outlook.com',
+      name: 'Alex MS',
+    });
+    expect(account.picture).toMatch(/^data:image\/jpeg;base64,/);
+
+    const auth = opened[0];
+    expect(auth.origin + auth.pathname).toBe('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
+    expect(auth.searchParams.get('prompt')).toBe('select_account');
+    expect(auth.searchParams.get('code_challenge_method')).toBe('S256');
+    expect(auth.searchParams.get('code_challenge')).toBe(createHash('sha256').update(verifierSent).digest('base64url'));
+    expect(auth.searchParams.get('scope')).toContain('offline_access');
+    expect(auth.searchParams.get('scope')).toContain('Mail.ReadWrite');
+    expect(auth.searchParams.get('scope')).toContain('Calendars.ReadWrite');
+    expect(auth.searchParams.get('scope')).toContain('Files.ReadWrite.All');
+    expect(auth.searchParams.get('scope')).toContain('Chat.ReadWrite');
+    expect(auth.searchParams.get('scope')).toContain('Tasks.ReadWrite');
+  });
+
+  it('rejects when the state in the redirect does not match', async () => {
+    browser = async (auth) => { await redirectBack(auth, { code: 'm-code', state: 'bad-state' }); };
+    const { connectMicrosoft } = await import('../../../src/main/accounts/microsoft');
+    await expect(connectMicrosoft()).rejects.toThrow(/didn’t match/);
+  });
+
+  it('explains when the user cancels the sign-in', async () => {
+    browser = async (auth) => { await redirectBack(auth, { error: 'access_denied', state: auth.searchParams.get('state')! }); };
+    const { connectMicrosoft } = await import('../../../src/main/accounts/microsoft');
+    await expect(connectMicrosoft()).rejects.toThrow(/cancelled/);
+  });
+});
+
+describe('MCP credential persistence', () => {
+  it('fails closed on keytar errors and keeps other accounts when Reddit is updated', async () => {
+    vault.clear();
+    failKeytarWrites = false;
+    vi.resetModules();
+    const moduleRuntime = (await import('node:module')).default as unknown as {
+      _load: (request: string, parent: unknown, isMain: boolean) => unknown;
+    };
+    const originalLoad = moduleRuntime._load;
+    moduleRuntime._load = function loadMock(request, parent, isMain) {
+      if (request === 'keytar') {
+        return {
+          getPassword: async (service: string, account: string) => vault.get(`${service}/${account}`) ?? null,
+          setPassword: async (service: string, account: string, value: string) => {
+            if (failKeytarWrites) throw new Error('keychain unavailable');
+            vault.set(`${service}/${account}`, value);
+          },
+          deletePassword: async (service: string, account: string) => vault.delete(`${service}/${account}`),
+        };
+      }
+      return originalLoad.call(this, request, parent, isMain);
+    };
+    const store = await import('../../../src/main/mcp/store');
+    await store.setConnection('google', { enabled: true, values: { GOOGLE_REFRESH_TOKEN: 'google-old' } });
+    await store.setConnection('slack', { enabled: true, values: { SLACK_BOT_TOKEN: 'slack-token' } });
+
+    failKeytarWrites = true;
+    await expect(store.setConnection('reddit', { enabled: true, values: { REDDIT_REFRESH_TOKEN: 'reddit-token' } })).rejects.toThrow(/OS credential store/);
+    expect((await store.listConnections()).map((connection) => connection.id)).toEqual(['google', 'slack']);
+    failKeytarWrites = false;
+
+    await store.setConnection('reddit', { enabled: true, values: { REDDIT_REFRESH_TOKEN: 'reddit-old', REDDIT_USERNAME: 'user' } });
+    await store.setConnection('reddit', { values: { REDDIT_REFRESH_TOKEN: 'reddit-new' } });
+    expect(await store.listConnections()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'google', values: { GOOGLE_REFRESH_TOKEN: 'google-old' } }),
+      expect.objectContaining({ id: 'slack', values: { SLACK_BOT_TOKEN: 'slack-token' } }),
+      expect.objectContaining({ id: 'reddit', values: { REDDIT_REFRESH_TOKEN: 'reddit-new', REDDIT_USERNAME: 'user' } }),
+    ]));
+    moduleRuntime._load = originalLoad;
   });
 });
 

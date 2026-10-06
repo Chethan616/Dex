@@ -67,7 +67,7 @@ console.log(dim('Users never see this — they only click “Connect”. Nothing
 
 await provider(
   'google',
-  'Google — Gmail, Calendar, Meet, Drive, Docs, Sheets, Contacts, Tasks',
+  'Google — Gmail, Calendar, Meet, Drive, Docs, Sheets, Contacts, Tasks, Chat',
   `https://console.cloud.google.com/auth/clients/create${project ? `?project=${project}` : ''}`,
   [
     'If asked, configure the consent screen: app name DEX, your email, Audience “External”.',
@@ -107,6 +107,20 @@ await provider(
     'Copy the Client ID below (no secret needed).',
   ],
   [['clientId', 'Client ID']],
+);
+
+await provider(
+  'microsoft',
+  'Microsoft 365 — Outlook, Calendar, OneDrive, SharePoint, Teams, To Do',
+  'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade',
+  [
+    'Name: DEX · Supported account types: Accounts in any organizational directory and personal Microsoft accounts.',
+    'Redirect URI: Platform: Mobile and desktop applications · Redirect URI: http://127.0.0.1 · Register.',
+    'Under Authentication → Advanced settings, allow public client flows: Yes.',
+    'Copy the Application (client) ID below.',
+    'Optional: Under Certificates & secrets, create a client secret if needed, or leave blank for PKCE.',
+  ],
+  [['clientId', 'Application (client) ID'], ['clientSecret', 'Client secret (optional)']],
 );
 
 rl.close();

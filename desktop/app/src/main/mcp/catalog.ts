@@ -14,6 +14,7 @@
  * secrets themselves, live in store.ts.
  */
 
+import fs from 'node:fs';
 import path from 'node:path';
 import { oauthClient } from '../accounts/oauthClients';
 import { knownFolders } from '../startup/knownFolders';
@@ -22,7 +23,7 @@ import { blenderHome, findBlender } from '../startup/blender';
 export type McpTransport = 'stdio';
 
 /** Which one-click sign-in Settings offers instead of credential fields. */
-export type AccountProvider = 'google' | 'github' | 'slack';
+export type AccountProvider = 'google' | 'github' | 'slack' | 'reddit' | 'microsoft';
 
 export interface McpCredentialField {
   /** Key used in the env passed to the server process. */
@@ -90,6 +91,21 @@ function appRoot(): string {
   }
 }
 
+/** Copy the bridge out of app.asar for the child Node process. */
+function redditBridgePath(): string {
+  const source = path.join(appRoot(), 'mcp-servers', 'reddit', 'oauth-bridge.mjs');
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { app } = require('electron') as typeof import('electron');
+    const target = path.join(app.getPath('userData'), 'mcp-servers', 'reddit', 'oauth-bridge.mjs');
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    if (!fs.existsSync(target) || fs.statSync(source).mtimeMs > fs.statSync(target).mtimeMs) fs.copyFileSync(source, target);
+    return target;
+  } catch {
+    return source;
+  }
+}
+
 /** mcp-servers/launch.mjs — how engines that can't read mcp.json start a connected server. */
 export function mcpLauncherScript(): string {
   return path.join(appRoot(), 'mcp-servers', 'launch.mjs');
@@ -98,6 +114,19 @@ export function mcpLauncherScript(): string {
 /** How to start a server: the one place every spawner (verify, tool calls, engine config) asks. */
 export function launchSpec(definition: McpServerDefinition, values: Record<string, string>): LaunchSpec {
   const env = { ...(definition.env ?? {}), ...(definition.launchEnv?.() ?? {}), ...values };
+  // reddit-mcp-server currently hard-codes client_credentials/password grants.
+  // For DEX OAuth accounts, preload a narrow fetch adapter that exchanges the
+  // saved refresh token instead, while leaving all other requests untouched.
+  if (definition.id === 'reddit' && values.REDDIT_REFRESH_TOKEN) {
+    // Keep the refresh token out of mcp.json and the npx installer process.
+    // The bundled launcher reads it from keytar only after npx has finished.
+    env.DEX_REDDIT_CLIENT_ID ||= env.REDDIT_CLIENT_ID || oauthClient('reddit')?.clientId || '';
+    env.DEX_REDDIT_USERNAME ||= values.REDDIT_USERNAME || '';
+    env.DEX_REDDIT_BRIDGE_PATH ||= redditBridgePath();
+    for (const key of ['REDDIT_REFRESH_TOKEN', 'DEX_REDDIT_REFRESH_TOKEN', 'REDDIT_CLIENT_SECRET', 'REDDIT_PASSWORD', 'REDDIT_CLIENT_ID', 'REDDIT_USERNAME']) {
+      delete env[key];
+    }
+  }
   if (definition.builtIn) {
     return {
       command: process.execPath,
@@ -166,9 +195,34 @@ export const MCP_CATALOG: McpServerDefinition[] = [
     connect: 'slack',
   },
   {
+    id: 'reddit',
+    displayName: 'Reddit',
+    summary: 'Search Reddit, read posts and comments, and manage your own posts through your account.',
+    transport: 'stdio',
+    command: 'node',
+    args: [],
+    builtIn: 'reddit',
+    credentials: [
+      {
+        key: 'REDDIT_REFRESH_TOKEN',
+        label: 'Reddit account',
+        secret: true,
+        help: 'Filled securely when you connect Reddit in Accounts.',
+      },
+      {
+        key: 'REDDIT_USERNAME',
+        label: 'Reddit username',
+        secret: false,
+        help: 'Filled in by Reddit sign-in.',
+      },
+    ],
+    docsUrl: 'https://github.com/jordanburke/reddit-mcp-server',
+    connect: 'reddit',
+  },
+  {
     id: 'google',
     displayName: 'Google',
-    summary: 'Gmail, Calendar, Meet, Drive, Docs, Sheets, Contacts and Tasks for your Google account — read and send mail, schedule meetings with Meet links, find and write documents.',
+    summary: 'Gmail, Calendar, Meet, Drive, Docs, Sheets, Contacts, Tasks and Chat for your Google account — read and send mail, schedule meetings with Meet links, find and write documents, and message in Google Chat.',
     transport: 'stdio',
     command: 'node',
     args: [],
@@ -239,6 +293,31 @@ export const MCP_CATALOG: McpServerDefinition[] = [
       const exe = findBlender();
       const version = exe?.match(/Blender (\d+(?:\.\d+)*)/)?.[1];
       return version ? `Blender ${version}` : undefined;
+    },
+  },
+  {
+    id: 'microsoft',
+    displayName: 'Microsoft 365',
+    summary: 'Outlook mail, Calendar, OneDrive/SharePoint files, Teams chats and Microsoft To Do — read, send and manage through your Microsoft account.',
+    transport: 'stdio',
+    command: 'node',
+    args: [],
+    builtIn: 'microsoft',
+    connect: 'microsoft',
+    credentials: [
+      {
+        key: 'MICROSOFT_REFRESH_TOKEN',
+        label: 'Microsoft account',
+        secret: true,
+        help: 'Filled in by "Continue with Microsoft" — you never paste this.',
+      },
+    ],
+    launchEnv: () => {
+      const client = oauthClient('microsoft');
+      return {
+        MICROSOFT_CLIENT_ID: client?.clientId ?? '',
+        MICROSOFT_CLIENT_SECRET: client?.clientSecret ?? '',
+      };
     },
   },
 ];

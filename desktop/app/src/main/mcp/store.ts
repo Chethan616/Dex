@@ -11,6 +11,9 @@
  * so a connection and its secret can never disagree about whether it exists.
  */
 import { mainLogger } from '../logger';
+import { createRequire } from 'node:module';
+
+const nodeRequire = createRequire(import.meta.url);
 
 const MCP_SERVICE = 'com.chethan616.dex.mcp';
 const ACCOUNT = 'connections';
@@ -23,8 +26,7 @@ interface KeytarLike {
 
 function getKeytar(): KeytarLike | null {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('keytar') as KeytarLike;
+    return nodeRequire('keytar') as KeytarLike;
   } catch {
     return null;
   }
@@ -74,13 +76,16 @@ async function load(): Promise<Store> {
 }
 
 async function persist(store: Store): Promise<void> {
-  cached = store;
   const keytar = getKeytar();
-  if (!keytar) return;
+  if (!keytar) throw new Error('The OS credential store is unavailable. Connect a credential store before saving MCP accounts.');
   try {
     await keytar.setPassword(MCP_SERVICE, ACCOUNT, JSON.stringify(store));
+    // Publish only after the OS keychain confirms the write. A failed write
+    // must not look connected for the remainder of this process.
+    cached = store;
   } catch (err) {
     mainLogger.error('mcp.store.save.failed', { error: (err as Error).message });
+    throw new Error('Could not save the connection in the OS credential store.', { cause: err });
   }
 }
 

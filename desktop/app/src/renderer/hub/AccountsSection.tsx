@@ -20,7 +20,7 @@ const META: Record<Provider, ProviderMeta> = {
   google: {
     name: 'Google',
     tagline: 'Mail, meetings, documents — DEX works in your account directly instead of clicking through Google’s websites.',
-    services: ['Gmail', 'Calendar', 'Meet', 'Drive', 'Docs', 'Sheets', 'Contacts', 'Tasks'],
+    services: ['Gmail', 'Calendar', 'Meet', 'Drive', 'Docs', 'Sheets', 'Contacts', 'Tasks', 'Chat'],
     action: 'Continue with Google',
   },
   github: {
@@ -35,11 +35,23 @@ const META: Record<Provider, ProviderMeta> = {
     services: ['Channels', 'Messages', 'Reactions', 'People'],
     action: 'Add to Slack',
   },
+  reddit: {
+    name: 'Reddit',
+    tagline: 'Search communities, read discussions and use Reddit tools with your account. DEX never asks for your Reddit password.',
+    services: ['Search', 'Posts', 'Comments', 'Your account'],
+    action: 'Connect Reddit',
+  },
   huggingface: {
     name: 'Hugging Face',
     tagline: 'AI 3D models from a sentence or a photo, made on Hugging Face’s GPUs with your account’s free daily time.',
     services: ['FLUX', 'Hunyuan3D', 'TRELLIS', '3D for Blender'],
     action: 'Continue with Hugging Face',
+  },
+  microsoft: {
+    name: 'Microsoft 365',
+    tagline: 'Outlook, Calendar, OneDrive, Teams and To Do u{2014} DEX works in your Microsoft account directly.',
+    services: ['Outlook', 'Calendar', 'OneDrive', 'SharePoint', 'Teams', 'To Do'],
+    action: 'Continue with Microsoft',
   },
 };
 
@@ -73,6 +85,17 @@ function SlackMark(): React.ReactElement {
   );
 }
 
+function RedditMark(): React.ReactElement {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <circle cx="12" cy="12" r="11" fill="#FF4500" />
+      <path d="M18.3 12.2a1.4 1.4 0 0 0-2.5-.9 6.5 6.5 0 0 0-3.3-1l.6-3 2.1.4a1 1 0 1 0 .1-.8l-2.5-.5a.4.4 0 0 0-.5.3l-.7 3.6a6.6 6.6 0 0 0-3.4 1 1.4 1.4 0 1 0-1.6 2.3 2.6 2.6 0 0 0-.1.7c0 2.3 2.5 4.2 5.6 4.2s5.6-1.9 5.6-4.2a2.6 2.6 0 0 0-.1-.7 1.4 1.4 0 0 0 .7-1.4ZM9.4 13a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8Zm5.1 3.5a4.4 4.4 0 0 1-5 0 .4.4 0 0 1 .5-.6 3.6 3.6 0 0 0 4 0 .4.4 0 0 1 .5.6Zm.1-1.7a.9.9 0 1 1 0-1.8.9.9 0 0 1 0 1.8Z" fill="#fff" />
+      <circle cx="18.1" cy="5.1" r="1" fill="#fff" />
+      <path d="m16.7 6.2 1-1" stroke="#fff" strokeWidth=".7" />
+    </svg>
+  );
+}
+
 /** Hugging Face's own logo (huggingface.co/front/assets/huggingface_logo-noborder.svg). */
 function HuggingFaceMark(): React.ReactElement {
   return (
@@ -89,8 +112,19 @@ function HuggingFaceMark(): React.ReactElement {
     </svg>
   );
 }
+/** Microsoft's four-square logo (brand.microsoft.com guidelines). */
+function MicrosoftMark(): React.ReactElement {
+  return (
+    <svg viewBox="0 0 21 21" width="20" height="20" aria-hidden="true">
+      <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+      <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+    </svg>
+  );
+}
 
-const MARK: Record<Provider, () => React.ReactElement> = { google: GoogleMark, github: GitHubMark, slack: SlackMark, huggingface: HuggingFaceMark };
+const MARK: Record<Provider, () => React.ReactElement> = { google: GoogleMark, github: GitHubMark, slack: SlackMark, reddit: RedditMark, huggingface: HuggingFaceMark, microsoft: MicrosoftMark };
 
 /** A provider's logo, for anywhere else that offers these sign-ins (onboarding). */
 export function ProviderMark({ provider }: { provider: Provider }): React.ReactElement {
@@ -299,7 +333,12 @@ function AccountCard({ info, flow, onConnect, onCancel, onDisconnect }: {
                 {info.via === 'cli' ? 'Connect with GitHub CLI' : meta.action}
               </button>
             )}
-            {!info.available && info.devBuild && (
+            {!info.available && info.devBuild && info.provider === 'reddit' && (
+              <span className="account-card__note">
+                Reddit requires an approved app client ID. Set <code>DEX_REDDIT_CLIENT_ID</code> after Reddit grants API access, register <code>http://127.0.0.1:53683/reddit/callback</code>, then restart DEX.
+              </span>
+            )}
+            {!info.available && info.devBuild && info.provider !== 'reddit' && (
               <span className="account-card__note">
                 Dev build: this checkout has no {meta.name} sign-in app. Run <code>yarn oauth:setup</code> once (it also uploads it for releases), then restart.
               </span>
@@ -493,7 +532,7 @@ export function AccountsSection({ advanced }: { advanced?: React.ReactNode }): R
       )}
       <PhoneCard />
       <p className="accounts__privacy">
-        Sign-in happens in your browser. DEX stores only the access Google, GitHub or Slack grants it, in Windows Credential Manager,
+        Sign-in happens in your browser. DEX stores only the access Google, GitHub, Slack, Reddit or Microsoft grants it, in Windows Credential Manager,
         and you can remove it here or from your account settings at any time.
       </p>
       {advanced && (

@@ -468,7 +468,7 @@ interface ElectronSettingsAPI {
   app?: ElectronSettingsAppAPI;
 }
 
-type AccountProviderId = 'google' | 'github' | 'slack' | 'huggingface';
+type AccountProviderId = 'google' | 'github' | 'slack' | 'reddit' | 'huggingface' | 'microsoft';
 
 interface AccountProfileInfo {
   identity: string;

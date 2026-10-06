@@ -24,6 +24,10 @@ export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/contacts.readonly',
   'https://www.googleapis.com/auth/tasks',
+  // Google Chat: read spaces, messages and memberships; send messages
+  'https://www.googleapis.com/auth/chat.messages',
+  'https://www.googleapis.com/auth/chat.spaces.readonly',
+  'https://www.googleapis.com/auth/chat.memberships.readonly',
 ];
 
 export interface GoogleAccount {

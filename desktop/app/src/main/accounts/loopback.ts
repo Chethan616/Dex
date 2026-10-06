@@ -66,7 +66,7 @@ h1{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:-.01em}p{margin:
  * Start listening. `port` 0 picks a free one (Google allows any loopback port);
  * providers that pin the redirect URL exactly (Slack) pass their fixed port.
  */
-export async function startLoopback(opts: { port?: number; path?: string; providerName: string }): Promise<Loopback> {
+export async function startLoopback(opts: { port?: number; path?: string; providerName: string; expectedState?: string }): Promise<Loopback> {
   const callbackPath = opts.path ?? '/callback';
   let settle: ((r: LoopbackResult) => void) | null = null;
   let reject: ((e: Error) => void) | null = null;
@@ -76,6 +76,14 @@ export async function startLoopback(opts: { port?: number; path?: string; provid
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
     if (url.pathname !== callbackPath) {
       res.writeHead(404).end();
+      return;
+    }
+    // Reject an invalid OAuth callback without consuming the one-shot listener.
+    // A random local request must not be able to close the browser flow before
+    // the provider's real redirect arrives.
+    if (opts.expectedState !== undefined && url.searchParams.get('state') !== opts.expectedState) {
+      res.writeHead(400, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(page('Sign-in not confirmed', 'This response did not match the sign-in DEX started. Return to the original Reddit sign-in tab.', false));
       return;
     }
     const error = url.searchParams.get('error');

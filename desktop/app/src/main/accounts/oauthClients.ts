@@ -7,7 +7,8 @@
  *
  *   1. environment — DEX_GOOGLE_CLIENT_ID, DEX_GOOGLE_CLIENT_SECRET,
  *      DEX_GITHUB_CLIENT_ID, DEX_SLACK_CLIENT_ID, DEX_SLACK_CLIENT_SECRET,
- *      DEX_SLACK_REDIRECT_URI (dev: desktop/app/.env)
+ *      DEX_SLACK_REDIRECT_URI, DEX_REDDIT_CLIENT_ID,
+ *      DEX_REDDIT_REDIRECT_URI (dev: desktop/app/.env)
  *   2. config/oauth-clients.json next to the app (gitignored) — how a
  *      packaged build carries them. Written once by the developer with
  *      `yarn oauth:setup`; users never see a client id, only "Connect".
@@ -16,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { mainLogger } from '../logger';
 
-export type OAuthProvider = 'google' | 'github' | 'slack' | 'huggingface';
+export type OAuthProvider = 'google' | 'github' | 'slack' | 'reddit' | 'huggingface' | 'microsoft';
 
 export interface OAuthClient {
   clientId: string;

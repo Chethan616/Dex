@@ -3,7 +3,7 @@
  * DEX's built-in Google MCP server.
  *
  * One "Connect with Google" in Settings gives every engine Gmail, Calendar,
- * Meet, Drive, Docs, Sheets, Contacts and Tasks — no credential files, no
+ * Meet, Drive, Docs, Sheets, Contacts, Tasks and Chat — no credential files, no
  * paths, no Cloud Console JSON. DEX runs this script with Electron's bundled
  * Node (ELECTRON_RUN_AS_NODE=1) and passes the account through env:
  *
@@ -973,6 +973,84 @@ const TOOLS = [
       return { id: t.id, status: t.status };
     },
   },
+
+  /* Google Chat */
+  {
+    name: 'chat_spaces_list',
+    description: 'List Google Chat spaces, group chats, and direct messages the user belongs to.',
+    inputSchema: S({ page_size: num('Max spaces to return (1-100, default 30)') }),
+    run: async ({ page_size = 30 }) => {
+      const res = await google('GET', 'https://chat.googleapis.com/v1/spaces', {
+        query: { pageSize: Math.min(100, Math.max(1, Number(page_size) || 30)) },
+      });
+      return (res.spaces ?? []).map((s) => ({
+        name: s.name,
+        displayName: s.displayName,
+        type: s.spaceType || s.type,
+        singleUserBotDm: s.singleUserBotDm,
+      }));
+    },
+  },
+  {
+    name: 'chat_messages_list',
+    description: 'List recent messages in a Google Chat space (e.g. "spaces/AAAA...").',
+    inputSchema: S({
+      space: str('Space name, e.g. "spaces/AAAAAAAAAAA"'),
+      page_size: num('Max messages to return (1-100, default 30)'),
+    }, ['space']),
+    run: async ({ space, page_size = 30 }) => {
+      const spaceName = space.startsWith('spaces/') ? space : `spaces/${space}`;
+      const res = await google('GET', `https://chat.googleapis.com/v1/${spaceName}/messages`, {
+        query: { pageSize: Math.min(100, Math.max(1, Number(page_size) || 30)), orderBy: 'createTime desc' },
+      });
+      return (res.messages ?? []).map((m) => ({
+        name: m.name,
+        sender: m.sender?.displayName || m.sender?.name,
+        text: m.text,
+        createTime: m.createTime,
+        thread: m.thread?.name,
+      }));
+    },
+  },
+  {
+    name: 'chat_send_message',
+    description: 'Send a message to a Google Chat space or DM (e.g. "spaces/AAAA...").',
+    inputSchema: S({
+      space: str('Space name, e.g. "spaces/AAAAAAAAAAA"'),
+      text: str('Message content'),
+      thread_key: str('Optional thread key or thread name to reply in a specific thread'),
+    }, ['space', 'text']),
+    run: async ({ space, text, thread_key }) => {
+      const spaceName = space.startsWith('spaces/') ? space : `spaces/${space}`;
+      const body = { text };
+      if (thread_key) {
+        body.thread = { name: thread_key.startsWith('spaces/') ? thread_key : `${spaceName}/threads/${thread_key}` };
+      }
+      const res = await google('POST', `https://chat.googleapis.com/v1/${spaceName}/messages`, { body });
+      return { name: res.name, text: res.text, createTime: res.createTime, thread: res.thread?.name };
+    },
+  },
+  {
+    name: 'chat_space_members',
+    description: 'List members in a Google Chat space.',
+    inputSchema: S({
+      space: str('Space name, e.g. "spaces/AAAAAAAAAAA"'),
+      page_size: num('Max members to return (1-100, default 50)'),
+    }, ['space']),
+    run: async ({ space, page_size = 50 }) => {
+      const spaceName = space.startsWith('spaces/') ? space : `spaces/${space}`;
+      const res = await google('GET', `https://chat.googleapis.com/v1/${spaceName}/members`, {
+        query: { pageSize: Math.min(100, Math.max(1, Number(page_size) || 50)) },
+      });
+      return (res.memberships ?? []).map((m) => ({
+        name: m.name,
+        user: m.member?.displayName,
+        email: m.member?.name,
+        role: m.role,
+        state: m.state,
+      }));
+    },
+  },
 ];
 
 const TOOL_BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
@@ -1033,7 +1111,7 @@ async function handle(msg) {
         protocolVersion: params?.protocolVersion ?? PROTOCOL_VERSION,
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER_INFO,
-        instructions: 'Google Workspace for the account the user connected in DEX: Gmail, Calendar, Meet, Drive, Docs, Sheets, Contacts, Tasks. Prefer these tools over driving Google websites in the browser.',
+        instructions: 'Google Workspace for the account the user connected in DEX: Gmail, Calendar, Meet, Drive, Docs, Sheets, Contacts, Tasks, Chat. Prefer these tools over driving Google websites in the browser.',
       });
     case 'ping':
       return isRequest ? reply(id, {}) : undefined;

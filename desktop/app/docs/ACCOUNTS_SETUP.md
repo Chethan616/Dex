@@ -1,7 +1,7 @@
 # One-click accounts: registering DEX's sign-in apps
 
-Users only ever click **Connect** and approve DEX on Google's, Slack's or
-GitHub's own OAuth page — like Claude's connectors. That works because the
+Users only ever click **Connect** and approve DEX on Google's, Slack's,
+GitHub's or Reddit's own OAuth page — like Claude's connectors. That works because the
 product registers one app per service. Do it once, as DEX's developer:
 
 ```
@@ -52,6 +52,34 @@ No redirect URL to register: Desktop clients accept any `http://127.0.0.1:<port>
 4. **Basic Information** → copy Client ID and Client Secret. The secret is
    confidential: only ship it in builds you control.
 
+## Reddit
+
+Reddit's MCP connection uses Reddit's installed-app OAuth flow, so DEX never
+asks for your Reddit password. Reddit currently requires approved API access
+before an app can use the API; app creation or API use may be blocked until
+Reddit approves the request. See Reddit's
+[Responsible Builder Policy](https://support.reddithelp.com/hc/en-us/articles/42728983564564-Responsible-Builder-Policy).
+
+After Reddit approves the app and provides a client ID:
+
+1. Register an **installed app** with this exact redirect URI:
+   `http://127.0.0.1:53683/reddit/callback`.
+2. Set `DEX_REDDIT_CLIENT_ID` in the desktop app's environment, or add this
+   entry to the gitignored `config/oauth-clients.json`:
+
+   ```json
+   {
+     "reddit": {
+       "clientId": "your-approved-client-id",
+       "redirectUri": "http://127.0.0.1:53683/reddit/callback"
+     }
+   }
+   ```
+
+3. Restart DEX, open **Settings → Accounts**, and choose **Connect Reddit**.
+   DEX stores Reddit's refresh token in the OS credential store. The token is
+   used by the upstream Reddit MCP server to make authorized API requests.
+
 ## What happens on connect
 
 - The browser signs in; DEX receives the grant on a one-shot local server.
@@ -59,4 +87,5 @@ No redirect URL to register: Desktop clients accept any `http://127.0.0.1:<port>
 - The matching MCP server is switched on and verified, so the next task can
   use its tools. Google uses DEX's own server (`mcp-servers/google/server.mjs`),
   run by Electron's bundled Node — nothing to install.
-- **Disconnect** revokes the grant with Google/Slack and deletes the token.
+- **Disconnect** revokes the grant with Google, Slack or Reddit and deletes
+  the token.

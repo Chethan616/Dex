@@ -1,5 +1,5 @@
 /**
- * Connected accounts: Google, GitHub, Slack — signed in with one click,
+ * Connected accounts: Google, GitHub, Slack, Reddit — signed in with one click,
  * never configured with tokens or file paths.
  *
  * Each account is backed by an MCP connection (mcp/store.ts): signing in
@@ -21,6 +21,8 @@ import { cancelGitHub, connectGitHub, connectGitHubViaCli, githubCliAvailable } 
 import { cancelHuggingFace, connectHuggingFace, connectHuggingFaceToken, forgetHuggingFace, huggingFacePlan, loadHuggingFace } from './huggingface';
 import { huggingFaceUsage } from '../threed/usage';
 import { cancelSlack, connectSlack, revokeSlack } from './slack';
+import { cancelReddit, connectReddit, revokeReddit } from './reddit';
+import { cancelMicrosoft, connectMicrosoft, revokeMicrosoft } from './microsoft';
 
 export interface AccountProfile {
   identity: string;
@@ -53,7 +55,7 @@ export type AccountProgress =
   | { provider: OAuthProvider; phase: 'done'; profile: AccountProfile }
   | { provider: OAuthProvider; phase: 'error'; error: string };
 
-const PROVIDERS: OAuthProvider[] = ['google', 'github', 'slack', 'huggingface'];
+const PROVIDERS: OAuthProvider[] = ['google', 'github', 'slack', 'reddit', 'huggingface', 'microsoft'];
 
 /** Fires with the provider whenever an account connects or disconnects. */
 export const accountEvents = new EventEmitter();
@@ -160,6 +162,31 @@ export async function connectAccount(provider: OAuthProvider): Promise<{ ok: boo
       broadcast({ provider, phase: 'done', profile });
       accountEvents.emit('changed', provider);
       return { ok: true, profile };
+    } else if (provider === 'reddit') {
+      const account = await connectReddit();
+      const client = oauthClient('reddit');
+      if (!client) throw new Error('Reddit sign-in needs an approved Reddit app client ID.');
+      await setConnection('reddit', {
+        enabled: true,
+        values: {
+          REDDIT_CLIENT_ID: client.clientId,
+          // Clear credentials from the earlier password-based Reddit setup.
+          REDDIT_CLIENT_SECRET: '',
+          REDDIT_USERNAME: account.username,
+          REDDIT_PASSWORD: '',
+          REDDIT_REFRESH_TOKEN: account.refreshToken,
+        },
+        identity: account.username,
+      });
+      profile = { identity: account.username, name: account.name, connectedAt: Date.now() };
+    } else if (provider === 'microsoft') {
+      const account = await connectMicrosoft();
+      await setConnection('microsoft', {
+        enabled: true,
+        values: { MICROSOFT_REFRESH_TOKEN: account.refreshToken },
+        identity: account.email,
+      });
+      profile = { identity: account.email, name: account.name, picture: account.picture, connectedAt: Date.now() };
     } else {
       const account = await connectSlack();
       await setConnection('slack', { enabled: true, values: { SLACK_BOT_TOKEN: account.botToken, SLACK_TEAM_ID: account.teamId }, identity: account.teamName ?? account.teamId });
@@ -201,6 +228,8 @@ export function cancelAccount(provider: OAuthProvider): void {
   if (provider === 'google') cancelGoogle();
   else if (provider === 'github') cancelGitHub();
   else if (provider === 'huggingface') cancelHuggingFace();
+  else if (provider === 'reddit') cancelReddit();
+  else if (provider === 'microsoft') cancelMicrosoft();
   else cancelSlack();
 }
 
@@ -209,6 +238,12 @@ export async function disconnectAccount(provider: OAuthProvider): Promise<void> 
   // Revoke on the provider's side too, so "disconnect" really means it.
   if (provider === 'google' && connection?.values.GOOGLE_REFRESH_TOKEN) await revokeGoogle(connection.values.GOOGLE_REFRESH_TOKEN);
   if (provider === 'slack' && connection?.values.SLACK_BOT_TOKEN) await revokeSlack(connection.values.SLACK_BOT_TOKEN);
+  if (provider === 'reddit' && connection?.values.REDDIT_REFRESH_TOKEN && connection.values.REDDIT_CLIENT_ID) {
+    await revokeReddit(connection.values.REDDIT_CLIENT_ID, connection.values.REDDIT_REFRESH_TOKEN);
+  }
+  if (provider === 'microsoft' && connection?.values.MICROSOFT_REFRESH_TOKEN) {
+    await revokeMicrosoft(connection.values.MICROSOFT_REFRESH_TOKEN, connection.values.MICROSOFT_CLIENT_SECRET);
+  }
   if (provider === 'huggingface') await forgetHuggingFace();
   else await removeConnection(provider);
   writeProfile(provider, null);
@@ -217,7 +252,7 @@ export async function disconnectAccount(provider: OAuthProvider): Promise<void> 
 }
 
 function asProvider(value: unknown): OAuthProvider {
-  if (value === 'google' || value === 'github' || value === 'slack' || value === 'huggingface') return value;
+  if (value === 'google' || value === 'github' || value === 'slack' || value === 'reddit' || value === 'huggingface' || value === 'microsoft') return value;
   throw new TypeError('unknown account provider');
 }
 

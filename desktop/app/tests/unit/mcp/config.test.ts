@@ -15,6 +15,9 @@ import path from 'node:path';
 vi.mock('../../../src/main/logger', () => ({
   mainLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
+vi.mock('../../../src/main/accounts/oauthClients', () => ({
+  oauthClient: (provider: string) => provider === 'reddit' ? { clientId: 'reddit-client-id' } : null,
+}));
 
 const { buildClaudeMcpConfig, usableServers, writeClaudeMcpConfig, clearMcpConfig } = await import(
   '../../../src/main/mcp/config'
@@ -75,6 +78,80 @@ describe('buildClaudeMcpConfig', () => {
 
   it('is empty when nothing is enabled', () => {
     expect(Object.keys(buildClaudeMcpConfig([]).mcpServers)).toHaveLength(0);
+  });
+
+  it('keeps Reddit refresh tokens out of MCP config and the npx launch environment', () => {
+    const server = usableServers([{
+      id: 'reddit',
+      values: { REDDIT_REFRESH_TOKEN: 'long-lived-refresh-token', REDDIT_USERNAME: 'reddit-user' },
+    }])[0];
+    const { command, args, env } = buildClaudeMcpConfig([server]).mcpServers.reddit;
+    expect(command).not.toBe('npx');
+    expect(args.at(-1)).toMatch(/mcp-servers[\\/]reddit[\\/]server\.mjs$/);
+    expect(env).toMatchObject({ DEX_REDDIT_CLIENT_ID: 'reddit-client-id', DEX_REDDIT_USERNAME: 'reddit-user' });
+    expect(env).not.toHaveProperty('REDDIT_REFRESH_TOKEN');
+    expect(env).not.toHaveProperty('DEX_REDDIT_REFRESH_TOKEN');
+    expect(env).not.toHaveProperty('REDDIT_CLIENT_SECRET');
+    expect(env).not.toHaveProperty('REDDIT_PASSWORD');
+    expect(JSON.stringify({ command, args, env })).not.toContain('long-lived-refresh-token');
+  });
+});
+
+describe('Reddit credential bridge', () => {
+  it('installs without Reddit credentials, then gives only the MCP process the refresh token', async () => {
+    const { cleanRedditInstallerEnvironment, redditMcpEnvironment } = await import('../../../mcp-servers/reddit/server.mjs');
+    const source = {
+      PATH: 'path',
+      DEX_REDDIT_CLIENT_ID: 'reddit-client-id',
+      DEX_REDDIT_USERNAME: 'reddit-user',
+      DEX_REDDIT_REFRESH_TOKEN: 'long-lived-refresh-token',
+      REDDIT_REFRESH_TOKEN: 'long-lived-refresh-token',
+      REDDIT_CLIENT_SECRET: 'old-secret',
+      REDDIT_PASSWORD: 'should-never-exist',
+      NODE_OPTIONS: '--trace-warnings',
+    };
+    const installer = cleanRedditInstallerEnvironment(source);
+    expect(installer).not.toHaveProperty('DEX_REDDIT_REFRESH_TOKEN');
+    expect(installer).not.toHaveProperty('REDDIT_REFRESH_TOKEN');
+    expect(installer).not.toHaveProperty('REDDIT_CLIENT_SECRET');
+    expect(installer).not.toHaveProperty('REDDIT_PASSWORD');
+
+    const mcp = redditMcpEnvironment(source, {
+      token: 'long-lived-refresh-token',
+      username: 'reddit-user',
+      bridgePath: 'C:\\DEX\\oauth-bridge.mjs',
+    });
+    expect(mcp.DEX_REDDIT_REFRESH_TOKEN).toBe('long-lived-refresh-token');
+    expect(mcp).not.toHaveProperty('REDDIT_REFRESH_TOKEN');
+    expect(mcp).not.toHaveProperty('REDDIT_PASSWORD');
+    expect(mcp.REDDIT_CLIENT_SECRET).toBe('dex-installed-public-client');
+    expect(mcp.REDDIT_CLIENT_ID).toBe('reddit-client-id');
+    expect(mcp.REDDIT_USERNAME).toBe('reddit-user');
+  });
+
+  it('overrides upstream password-grant requests with the saved OAuth refresh token', async () => {
+    const { installRedditOAuthBridge } = await import('../../../mcp-servers/reddit/oauth-bridge.mjs');
+    const originalFetch = globalThis.fetch;
+    let request: { url: string; init?: RequestInit } | undefined;
+    try {
+      installRedditOAuthBridge({
+        fetchImpl: async (input: string | URL | Request, init?: RequestInit) => {
+          request = { url: String(input), init };
+          return new Response('{}', { status: 200 });
+        },
+        refreshToken: 'long-lived-refresh-token',
+        clientId: 'reddit-client-id',
+      });
+      await globalThis.fetch('https://www.reddit.com/api/v1/access_token', {
+        method: 'POST',
+        body: new URLSearchParams({ grant_type: 'password', username: 'ignored', password: 'ignored' }),
+      });
+      expect(request?.url).toBe('https://www.reddit.com/api/v1/access_token');
+      expect(new Headers(request?.init?.headers).get('authorization')).toBe(`Basic ${Buffer.from('reddit-client-id:').toString('base64')}`);
+      expect(new URLSearchParams(String(request?.init?.body))).toEqual(new URLSearchParams({ grant_type: 'refresh_token', refresh_token: 'long-lived-refresh-token' }));
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });
 
