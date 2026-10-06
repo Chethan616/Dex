@@ -628,6 +628,26 @@ PLAN §3.7, plus Codex's note format in Appendix B. The format matters: the mode
 
 ---
 
+## 3.7 The owner's requests of 2026-10-06 (in this order)
+
+The owner wants all of these done.
+
+1. **UI/UX fixes first.**
+   - **The Done pill** (phone): the bot sits *inside* the pill's start, as in the owner's `UI/new2.png`, and is never clipped when it jumps (`UI/fix1.png` and `fix2.png` show too big a gap).
+   - **The Settings sidebar** must highlight the section actually on screen; near the bottom it showed the wrong one (`UI/g4.png`).
+2. **Connections → "Connectors", with a Marketplace** (`UI/g3.jpeg`):
+   - a pane of its own, with search, "For you", "Featured" and categories;
+   - each connector has an icon, a one-line description and Add / Added / Connect;
+   - "N installed ›" opens the installed connectors.
+3. **Reactions, like Grok's agents and WhatsApp/Instagram** (`UI/g1.png`, `g2.png`), on desktop and phone:
+   - DEX reacts to your message (👀 while it works on it, 👍 when it's done, and the agent can pick another);
+   - you can react to any message with any emoji: a quick row plus the full picker.
+4. **Integrations, many of them, through OAuth**, for students, employees, doctors, engineers and others. Start from the old `dex/core/extensions` list.
+   - The scalable route is **remote MCP servers with OAuth (dynamic client registration)**: Notion, Linear, Atlassian, Asana, Canva, Figma, Stripe, HubSpot, Box, Zapier and so on. DEX runs the OAuth flow once and passes the token to every engine.
+   - Plus **Google Flights, Hotels and restaurants, and bookings**. There's no public Google API for these, so it's browser skills on google.com/travel and Maps (with "Reserve"), plus an optional Amadeus connector.
+5. **Delete the old `dex/` folder** (the Python/Flutter-era app) once nothing references it. Mine `dex/core/extensions` first.
+6. **Then continue Windows desktop control** (`docs/desktop-control/PLAN.md`; Phase 1 is half-built in `desktop/app/mcp-servers/windows/`).
+
 # Part 4 — The Android app (if you touch it)
 
 `android/` holds a Jetpack Compose app (material3 `1.5.0-alpha29`, M3 Expressive), package `com.chethan616.dex`. It pairs with the PC over the Firebase bridge.

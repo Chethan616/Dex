@@ -1070,6 +1070,28 @@ function KeybindRow({ kb, isOverridden, onUpdate, onReset, platform, formatShort
   );
 }
 
+/**
+ * The section you're reading: the last one (in page order, not tab order —
+ * the tabs aren't in the same order as the page) whose top has passed just
+ * under the top edge; at the very bottom, the last section on the page,
+ * since the last few can never scroll up to the top.
+ */
+export function sectionInView<T extends string>(scroller: HTMLElement, ids: readonly T[]): T | null {
+  const top = scroller.getBoundingClientRect().top;
+  const sections = ids
+    .map((id) => ({ id, el: scroller.querySelector<HTMLElement>(`#${id}`) }))
+    .filter((s): s is { id: T; el: HTMLElement } => !!s.el && !s.el.hidden)
+    .map((s) => ({ id: s.id, top: s.el.getBoundingClientRect().top - top }))
+    .sort((a, b) => a.top - b.top);
+  if (sections.length === 0) return null;
+  if (scroller.scrollTop > 0 && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4) {
+    return sections[sections.length - 1].id;
+  }
+  let current = sections[0].id;
+  for (const s of sections) if (s.top <= 48) current = s.id;
+  return current;
+}
+
 export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, onResetBinding, onResetAll, formatShortcut }: SettingsPaneProps): React.ReactElement {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('settings-application');
@@ -1139,6 +1161,9 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
     const target = scroller?.querySelector<HTMLElement>(`#${id}`);
     if (!scroller || !target) return;
     const tabOffset = 24;
+    // The tab you clicked stays lit while the page glides there, even if the
+    // section can't reach the top (the last ones at the bottom).
+    spyLockUntilRef.current = performance.now() + 900;
     scroller.scrollTo({
       top: Math.max(0, target.offsetTop - tabOffset),
       behavior,
@@ -1157,19 +1182,15 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
   // and skipping the setState when the active tab hasn't actually changed
   // avoids re-rendering on frames where scrolling didn't cross a section
   // boundary at all.
+  const spyLockUntilRef = useRef(0);
   const scrollRafRef = useRef<number | null>(null);
   const updateActiveFromScroll = useCallback(() => {
     if (scrollRafRef.current !== null) return;
     scrollRafRef.current = requestAnimationFrame(() => {
       scrollRafRef.current = null;
       const scroller = scrollerRef.current;
-      if (!scroller) return;
-      let next = visibleTabs[0]?.id ?? tabs[0].id;
-      const threshold = scroller.scrollTop + 48;
-      for (const tab of visibleTabs) {
-        const section = scroller.querySelector<HTMLElement>(`#${tab.id}`);
-        if (section && section.offsetTop <= threshold) next = tab.id;
-      }
+      if (!scroller || performance.now() < spyLockUntilRef.current) return;
+      const next = sectionInView(scroller, visibleTabs.map((tab) => tab.id)) ?? visibleTabs[0]?.id ?? tabs[0].id;
       setActiveSection((prev) => (prev === next ? prev : next));
     });
   }, [tabs, visibleTabs]);
