@@ -2,11 +2,16 @@
  * The Marketplace's hosted connectors: services that run their own MCP
  * server, reached with one sign-in in the user's browser.
  *
- * Every OAuth entry here was probed on 2026-10-07 for the MCP authorization
+ * Every OAuth entry here was checked on 2026-10-07 for the MCP authorization
  * spec — protected-resource metadata, an authorization server with dynamic
- * client registration and PKCE — so DEX needs no app registered with each
- * service: it registers itself the first time you connect. "none" entries
- * answer without signing in.
+ * client registration and PKCE — and for accepting DEX's loopback redirect
+ * (http://127.0.0.1:<port>/callback), so DEX needs no app registered with
+ * each service: it registers itself the first time you connect. "none"
+ * entries answer without signing in.
+ *
+ * Left out because their servers refuse an app like DEX's today: Figma and
+ * QuickBooks (registration closed), Calendly (https redirects only), Gamma
+ * and PitchBook (loopback redirects refused).
  *
  * The built-in connectors (Google, Microsoft 365, GitHub, Slack, Reddit,
  * Hugging Face, Blender, WhatsApp) live in main/mcp/catalog.ts and
@@ -60,8 +65,6 @@ export const HOSTED_CONNECTORS: HostedConnector[] = [
   { id: 'asana', name: 'Asana', blurb: 'Projects, tasks and who’s on what.', category: 'Productivity', audiences: ['work', 'business'], url: 'https://mcp.asana.com/sse', auth: 'oauth', mark: m('A', '#f06a6a') },
   { id: 'airtable', name: 'Airtable', blurb: 'Read and update the bases you run things on.', category: 'Productivity', audiences: ['work', 'business', 'engineer'], url: 'https://mcp.airtable.com/mcp', auth: 'oauth', mark: m('A', '#18bfff') },
   { id: 'zapier', name: 'Zapier', blurb: 'Reach thousands of apps through your Zapier actions.', category: 'Productivity', audiences: ['work', 'business'], url: 'https://mcp.zapier.com/api/mcp/mcp', auth: 'oauth', mark: m('Z', '#ff4f00'), featured: true },
-  { id: 'calendly', name: 'Calendly', blurb: 'Your scheduling links, events and invitees.', category: 'Productivity', audiences: ['work', 'business'], url: 'https://mcp.calendly.com/mcp', auth: 'oauth', mark: m('C', '#006bff') },
-  { id: 'gamma', name: 'Gamma', blurb: 'Make presentations, documents and sites from a prompt.', category: 'Productivity', audiences: ['student', 'work', 'creator'], url: 'https://mcp.gamma.app/mcp', auth: 'oauth', mark: m('G', '#7c3aed') },
 
   // Meetings & notes
   { id: 'granola', name: 'Granola', blurb: 'Your meeting notes and transcripts.', category: 'Meetings & notes', audiences: ['work', 'business'], url: 'https://mcp.granola.ai/mcp', auth: 'oauth', mark: m('G', '#c8d94a', '#1b1b1b') },
@@ -87,7 +90,6 @@ export const HOSTED_CONNECTORS: HostedConnector[] = [
 
   // Design & media
   { id: 'canva', name: 'Canva', blurb: 'Find, make and edit your designs.', category: 'Design & media', audiences: ['student', 'creator', 'work', 'business'], url: 'https://mcp.canva.com/mcp', auth: 'oauth', mark: m('C', '#00c4cc'), featured: true },
-  { id: 'figma', name: 'Figma', blurb: 'Read your design files: frames, components, styles.', category: 'Design & media', audiences: ['creator', 'engineer'], url: 'https://mcp.figma.com/mcp', auth: 'oauth', mark: m('F', '#a259ff') },
   { id: 'miro', name: 'Miro', blurb: 'Boards, sticky notes and diagrams.', category: 'Design & media', audiences: ['work', 'student', 'creator'], url: 'https://mcp.miro.com/', auth: 'oauth', mark: m('M', '#ffd02f', '#050038') },
   { id: 'excalidraw', name: 'Excalidraw', blurb: 'Hand-drawn style diagrams. No sign-in.', category: 'Design & media', audiences: ['student', 'engineer', 'creator'], url: 'https://mcp.excalidraw.com/mcp', auth: 'none', mark: m('E', '#6965db') },
   { id: 'mermaid', name: 'Mermaid Chart', blurb: 'Flowcharts and diagrams from text.', category: 'Design & media', audiences: ['engineer', 'student'], url: 'https://mcp.mermaidchart.com/mcp', auth: 'oauth', mark: m('M', '#ff3670') },
@@ -109,11 +111,9 @@ export const HOSTED_CONNECTORS: HostedConnector[] = [
   { id: 'stripe', name: 'Stripe', blurb: 'Payments, customers, invoices and subscriptions.', category: 'Finance & business', audiences: ['business', 'engineer'], url: 'https://mcp.stripe.com', auth: 'oauth', mark: m('S', '#635bff'), featured: true },
   { id: 'paypal', name: 'PayPal', blurb: 'Invoices, orders and transactions.', category: 'Finance & business', audiences: ['business'], url: 'https://mcp.paypal.com/mcp', auth: 'oauth', mark: m('P', '#003087') },
   { id: 'square', name: 'Square', blurb: 'Your shop: orders, items, customers, payments.', category: 'Finance & business', audiences: ['business'], url: 'https://mcp.squareup.com/sse', auth: 'oauth', mark: m('□', '#000000') },
-  { id: 'quickbooks', name: 'QuickBooks', blurb: 'Your books: invoices, expenses, reports.', category: 'Finance & business', audiences: ['business'], url: 'https://mcp.quickbooks.intuit.com/mcp', auth: 'oauth', mark: m('qb', '#2ca01c') },
   { id: 'ramp', name: 'Ramp', blurb: 'Company cards, spend and bills.', category: 'Finance & business', audiences: ['business'], url: 'https://ramp-mcp-remote.ramp.com/mcp', auth: 'oauth', mark: m('R', '#e4f222', '#1b1b1b'), needsPlan: true },
   { id: 'plaid', name: 'Plaid', blurb: 'Your Plaid developer dashboard and integrations.', category: 'Finance & business', audiences: ['engineer', 'business'], url: 'https://api.dashboard.plaid.com/mcp/sse', auth: 'oauth', mark: m('P', '#111111') },
   { id: 'morningstar', name: 'Morningstar', blurb: 'Fund and stock research, for subscribers.', category: 'Finance & business', audiences: ['business'], url: 'https://mcp.morningstar.com/mcp', auth: 'oauth', mark: m('M', '#e5212c'), needsPlan: true },
-  { id: 'pitchbook', name: 'PitchBook', blurb: 'Company, deal and investor data, for subscribers.', category: 'Finance & business', audiences: ['business'], url: 'https://premium.mcp.pitchbook.com/mcp', auth: 'oauth', mark: m('PB', '#0a3c6e'), needsPlan: true },
 
   // Research & health
   { id: 'pubmed', name: 'PubMed', blurb: 'Search biomedical literature and read abstracts. No sign-in.', category: 'Research & health', audiences: ['doctor', 'student'], url: 'https://pubmed.mcp.claude.com/mcp', auth: 'none', mark: m('Pm', '#20558a'), featured: true },

@@ -631,6 +631,17 @@ PLAN §3.7, plus Codex's note format in Appendix B. The format matters: the mode
 
 The owner wants all of these done.
 
+> **Progress (2026-10-07):** 1–5 are done and pushed. 6 is next.
+> - **Done pill** (Android 1.0.28): the bot sits inside the pill's start, unclipped. The Settings sidebar fix is `17c78cf7`.
+> - **Reactions** (`f2b65a7f`, Android 1.0.28): `shared/reactions.ts` is the model, and the agent uses `dex-react` sparingly; the owner asked for no reaction on every message. The phone sends a `react` command (Firestore rule deployed).
+> - **Connectors + Marketplace** (`ecca603b`): `shared/connectorCatalog.ts` lists 50 hosted MCP servers.
+>   - On 2026-10-07 each one passed OAuth discovery and DCR+PKCE, and accepted the loopback redirect.
+>   - Figma, QuickBooks, Calendly, Gamma and PitchBook refuse DEX today, so they're left out.
+>   - The pieces: `main/connectors/remoteAuth.ts` (the flow), `remote.ts` (connect, refresh, disconnect) and `mcp-servers/remote` (the stdio↔HTTP bridge, both transports).
+>   - **Not yet tried:** a full sign-in with a real account. The owner should click Connect on, say, Notion once.
+> - **Travel:** the Kiwi.com connector, plus `domain-skills/google-travel` (flights, hotels, restaurants). `sync-domain-skills` keeps DEX-owned folders.
+> - **`dex/` deleted** (`4ba1b6e7`).
+
 1. **UI/UX fixes first.**
    - **The Done pill** (phone): the bot sits *inside* the pill's start, as in the owner's `UI/new2.png`, and is never clipped when it jumps (`UI/fix1.png` and `fix2.png` show too big a gap).
    - **The Settings sidebar** must highlight the section actually on screen; near the bottom it showed the wrong one (`UI/g4.png`).
