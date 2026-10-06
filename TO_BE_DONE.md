@@ -412,6 +412,17 @@ P2 is unit-tested (DocumentTabs with real files and the watcher; kinds; sheet ca
 
 ## 3.1 Finish P2
 
+> **Progress (2026-10-06, `7481e245`, `b4386c2a`):**
+> - #1 is partly done: Find a file (a finder over every task file), Logs and Accounts are in. Terminal, Review and the keyboard shortcuts are still to do.
+> - #2 is done ("Open in DEX" in the Logs window).
+> - From #5, the document bar now has:
+>   - breadcrumbs;
+>   - View source (Markdown/HTML);
+>   - "Open in ▾" (default app, editors, File Explorer, a copy);
+>   - a filterable Files panel of the task's files beside the document.
+>
+>   Thumbnails, syntax colours and the virtualised grid are still open.
+
 1. **New-tab page: the Tools row** (PLAN §3.6).
    - **Do:** a row of tool tiles on `NewTabPage`:
      - **Files** (Ctrl+P): quick-open over the task's files and outputs, opening each as a doc tab;
