@@ -79,11 +79,15 @@ class DexRepository(private val appContext: Context) {
    * mirrors one doc per subagent, not one per step). One listener for the
    * whole subcollection drives both the chat's mention rows and the
    * Subagents sheet — never a listener per subagent.
+   *
+   * Optional by design: if the project's rules don't allow the collection
+   * yet (or anything else fails), there are simply no subagents — the
+   * conversation it's combined with must keep working.
    */
   fun subagents(sessionId: String): Flow<List<Subagent>> = callbackFlow {
     val reg = user().collection("sessions").document(sessionId).collection("subagents")
       .addSnapshotListener(listenerThread) { snap, err ->
-        if (err != null) { close(err); return@addSnapshotListener }
+        if (err != null) { trySend(emptyList()); close(); return@addSnapshotListener }
         trySend(snap?.documents?.map { it.toSubagent() }?.sortedBy { it.startedAt ?: 0L } ?: emptyList())
       }
     awaitClose { reg.remove() }
