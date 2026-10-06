@@ -1,0 +1,237 @@
+/* SubagentsPane — the Subagents tab (see SubagentsPane.tsx's doc comment). */
+
+.sa {
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
+  font-family: var(--font-ui);
+}
+
+.sa-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sa-section__title {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-fg-tertiary);
+}
+
+.sa-empty {
+  margin: 0;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--color-fg-tertiary);
+}
+
+.sa-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.sa-row:hover,
+.sa-row:focus-visible {
+  background: var(--color-surface-interactive);
+  outline: none;
+}
+
+.sa-row__avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
+.sa-row__live-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-status-success, #3dd68c);
+  border: 2px solid var(--color-bg-base);
+  animation: sa-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes sa-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.sa-row__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sa-row__name {
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sa-row__activity {
+  font-size: 12px;
+  color: var(--color-fg-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sa-row__time {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--color-fg-tertiary);
+}
+
+/* Detail: one subagent's own transcript. */
+
+.sa--detail {
+  gap: 16px;
+}
+
+.sa-back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: var(--color-fg-tertiary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.sa-back:hover { color: var(--color-fg-secondary); }
+
+.sa-detail__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sa-detail__title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sa-detail__name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sa-detail__meta {
+  font-size: 12.5px;
+  color: var(--color-fg-tertiary);
+}
+
+.sa-detail__prompt {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-bg-sunken);
+  border: 1px solid var(--cx-card-line, var(--color-border-subtle));
+  font-size: 13px;
+  color: var(--color-fg-secondary);
+  white-space: pre-wrap;
+}
+
+.sa-detail__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sa-step {
+  border-radius: 8px;
+}
+
+.sa-step--failed .sa-step__name { color: var(--color-status-danger); }
+
+.sa-step__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.sa-step__head:hover { background: var(--color-surface-interactive); }
+
+.sa-step__kind {
+  flex-shrink: 0;
+  color: var(--color-fg-tertiary);
+}
+
+.sa-step__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.sa-step__ms {
+  flex-shrink: 0;
+  color: var(--color-fg-tertiary);
+}
+
+.sa-step__preview {
+  margin: 2px 0 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--color-bg-sunken);
+  color: var(--color-fg-secondary);
+  font: 11.5px/1.5 var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.sa-detail__result {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-bg-sunken);
+  font-size: 13px;
+  color: var(--color-fg-secondary);
+  white-space: pre-wrap;
+}
+
+.sa-detail__result--error {
+  color: var(--color-status-danger);
+}
