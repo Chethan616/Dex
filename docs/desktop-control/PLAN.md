@@ -1071,7 +1071,35 @@ bypass mode [V], but match only "as written".
 
 ---
 
-## 6. Owner decisions (open questions)
+## 6. Owner decisions
+
+### Answered (2026-10-06)
+
+These override anything above that says otherwise.
+
+1. **Elevation (Q1): no per-action admin prompt.** Admin steps run elevated without a UAC "Yes/No" each time, like Codex's Full access or Claude Code's bypass mode. Whether DEX asks first is decided by the **existing Approvals setting**, on the desktop and the phone:
+   - *Full access*: admin steps just run;
+   - *Approve for me*: a card for admin and destructive steps;
+   - *Ask*: a card for everything.
+
+   **Mechanism:** a one-time setup (the only UAC prompt, from Settings) registers an elevated helper as a scheduled task, `DEX\Elevated`, run as the same user with highest privileges. It is the user's own elevated token, so HKCU (touchpad gestures) and per-user apps still work. DEX starts it on demand with no prompt, and talks to it over a named pipe whose DACL allows only that user, with a per-install secret. It runs only the typed `system_change` actions; there is no free shell.
+
+   This replaces the "one UAC per batch" design of §4.2.4. The batch card stays for *Approve for me* and *Ask*.
+2. **Full access is quiet (Q2): yes.**
+   - T2 (reversible) changes run without a card.
+   - So do T3 (destructive) and T4 (admin) under *Full access*, following the owner's answer to Q1.
+   - The undo journal, backups and restore point still happen before every T3 step, with or without a card.
+   - "Refused" stays refused in every mode: DEX's own windows, password managers, and security settings such as Defender, the firewall, UAC and BitLocker.
+3. **Borrowed input (Q3): take it immediately, no card.** When an app can't be driven in the background, DEX uses the real mouse and keyboard at once. Because the user must never be blocked, it also:
+   - shows the edge-glow and "DEX is using your mouse — move it to take over" (§Phase 4);
+   - **hands control back the instant the user moves or types** (the low-level hooks), and resumes only after they've been idle ≥ 2 s;
+   - restores the cursor position and the previous foreground window after each burst.
+
+   In practice that means short bursts in the gaps of the user's own input.
+4. **Firebase rule for phone subagents:** deployed (owner's OK, 2026-10-06).
+
+### Still open
+
 
 1. **Elevation.**
    - (a) One UAC prompt per approved batch. The default; needs the user at
