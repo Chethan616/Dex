@@ -36,7 +36,12 @@ data class Session(
   val deviceName: String?,
   /** Files the task recorded (dex-state file), for the Files sheet. */
   val files: List<TaskFile> = emptyList(),
+  /** Reactions by message key (desktop/app/src/shared/reactions.ts): 'u:prompt', 'u:<at>', 'a:<at>'. */
+  val reactions: Map<String, List<Reaction>> = emptyMap(),
 )
+
+/** One emoji on a message, from you or from DEX. */
+data class Reaction(val emoji: String, val byAgent: Boolean)
 
 data class TaskFile(val name: String, val path: String, val size: Long)
 
@@ -140,6 +145,7 @@ enum class CommandType(val id: String) {
   SyncSession("sync_session"),
   SetApprovalMode("set_approval_mode"),
   FetchFile("fetch_file"),
+  React("react"),
 }
 
 /**

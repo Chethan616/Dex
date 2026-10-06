@@ -344,6 +344,11 @@ private fun DocumentSnapshot.toSession(): Session? {
       PendingConfirmation(it["id"]?.toString() ?: "", it["title"]?.toString() ?: "", it["detail"]?.toString() ?: "")
     },
     deviceName = getString("deviceName"),
+    reactions = (get("reactions") as? Map<*, *>)?.entries?.associate { (k, v) ->
+      k.toString() to ((v as? List<*>)?.mapNotNull { r ->
+        (r as? Map<*, *>)?.let { m -> m["emoji"]?.toString()?.let { Reaction(it, m["by"] == "agent") } }
+      } ?: emptyList())
+    } ?: emptyMap(),
     files = (get("files") as? List<*>)?.mapNotNull { f ->
       (f as? Map<*, *>)?.let { m ->
         val p = m["path"]?.toString() ?: return@let null

@@ -85,6 +85,26 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Strin
   fun stop() = command(CommandType.Stop)
   fun sync() = command(CommandType.SyncSession)
 
+  /**
+   * React to a message. Shown at once here; the desktop records it and it
+   * comes back with the session, which replaces this guess.
+   */
+  fun react(target: String, emoji: String, on: Boolean) {
+    _pendingReactions.value = _pendingReactions.value.filterNot { it.first == target && it.second == emoji } + Triple(target, emoji, on)
+    command(CommandType.React, mapOf("target" to target, "emoji" to emoji, "on" to on))
+  }
+
+  private val _pendingReactions = MutableStateFlow<List<Triple<String, String, Boolean>>>(emptyList())
+  val pendingReactions: StateFlow<List<Triple<String, String, Boolean>>> = _pendingReactions
+
+  /** The session's reactions came back: drop the guesses they now show. */
+  fun reactionsArrived(server: Map<String, List<com.chethan616.dex.data.Reaction>>) {
+    val left = _pendingReactions.value.filterNot { (target, emoji, on) ->
+      server[target].orEmpty().any { !it.byAgent && it.emoji == emoji } == on
+    }
+    if (left.size != _pendingReactions.value.size) _pendingReactions.value = left
+  }
+
   fun answer(approved: Boolean) {
     val pc = state.value.session?.pendingConfirmation ?: return
     command(CommandType.AnswerConfirmation, mapOf("confirmationId" to pc.id, "approved" to approved, "lifetime" to "once"))

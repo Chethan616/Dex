@@ -289,19 +289,19 @@ private fun DoneFooter(block: Block) {
     val label = if (block.iteration > 0) "Done · ${steps(block.iteration)}" else "Done"
     val bot = LocalTaskBot.current
     if (bot != null && bot.latestSeq == block.seq) {
-      // The bot sits on the pill's start, drawn after it so it's on top, and
-      // nothing clips it: a tap makes it jump clear of the pill, like Home's.
+      // The bot sits inside the pill's start, a little taller than the pill,
+      // drawn after it so it's on top. Nothing clips it: a tap makes it jump
+      // clear of the pill, like Home's.
       Box(contentAlignment = Alignment.CenterStart) {
         Text(
           label,
           style = MaterialTheme.typography.labelLarge,
           color = MaterialTheme.colorScheme.onTertiaryContainer,
           modifier = Modifier
-            .padding(start = 14.dp)
             .background(MaterialTheme.colorScheme.tertiaryContainer, RoundedCornerShape(50))
-            .padding(start = 24.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
+            .padding(start = 38.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
         )
-        BotAvatar(type = bot.type, mood = bot.mood, size = 30.dp, interactive = true)
+        BotAvatar(type = bot.type, mood = bot.mood, size = 30.dp, modifier = Modifier.padding(start = 4.dp), interactive = true)
       }
     } else {
       Row(
@@ -495,10 +495,10 @@ fun CanvasCard(block: Block) {
 @Composable
 fun BlockView(block: Block, running: Boolean) {
   when (block.kind) {
-    "user" -> UserBubble(block.text.orEmpty(), block.attachments)
-    "text" -> AssistantText(block.text.orEmpty())
+    "user" -> Reactable(messageKey(block), alignEnd = true) { UserBubble(block.text.orEmpty(), block.attachments) }
+    "text" -> Reactable(messageKey(block), alignEnd = false) { AssistantText(block.text.orEmpty()) }
     "tool" -> ToolCard(block, running)
-    "done" -> DoneCard(block)
+    "done" -> Reactable(messageKey(block), alignEnd = false) { DoneCard(block) }
     "error" -> if (block.text.equals(USER_STOPPED, ignoreCase = true)) StoppedCard() else ErrorCard(block.text.orEmpty())
     "notice" -> NoticeRow(block)
     "file", "image" -> FileCard(block)
