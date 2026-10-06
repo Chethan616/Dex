@@ -98,7 +98,7 @@ function OpenIn({ sessionId, file }: { sessionId: string; file: FileItem }): Rea
             <MenuIcon d={ICON.app} />Default app
           </button>
           {editors.map((ed) => (
-            <button key={ed.id} type="button" role="menuitem" className="cx-menu__item" onClick={() => pick(() => window.electronAPI?.sessions?.openInEditor?.(ed.id, file.path).catch(() => openFile(sessionId, file.path, 'reveal')))}>
+            <button key={ed.id} type="button" role="menuitem" className="cx-menu__item" onClick={() => pick(() => window.electronAPI?.sessions?.openInEditor?.(ed.id, file.path, sessionId).catch(() => openFile(sessionId, file.path, 'reveal')))}>
               <MenuIcon d={ICON.editor} />{ed.name}
             </button>
           ))}

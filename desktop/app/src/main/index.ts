@@ -2487,7 +2487,7 @@ app.whenReady().then(async () => {
     return { bytes: await fs.promises.readFile(resolved), size: stat.size, mtimeMs: stat.mtimeMs };
   });
 
-  ipcMain.handle('sessions:open-in-editor', async (_event, payload: { editorId: string; filePath: string }) => {
+  ipcMain.handle('sessions:open-in-editor', async (_event, payload: { editorId: string; filePath: string; sessionId?: string }) => {
     mainLogger.info('main.sessions:open-in-editor.enter', {
       editorId: payload?.editorId,
       filePath: payload?.filePath,
@@ -2496,13 +2496,22 @@ app.whenReady().then(async () => {
     try {
       const editorId = assertString(payload?.editorId, 'editorId', 50);
       const filePath = assertString(payload?.filePath, 'filePath', 2000);
-      const resolvedPath = path.resolve(filePath);
       const outputsRoot = path.resolve(harnessDir(), 'outputs');
+      let resolvedPath = path.resolve(filePath);
       if (!resolvedPath.startsWith(outputsRoot + path.sep)) {
-        mainLogger.warn('main.sessions:open-in-editor.outsideOutputs', {
-          resolvedPath, outputsRoot,
-        });
-        throw new Error(`refused: path "${resolvedPath}" is outside outputs dir "${outputsRoot}"`);
+        // Outside outputs/: the same rule as open-file — a file this task
+        // recorded (a report it saved to Downloads) or has open as a
+        // document. Never an arbitrary path the page names.
+        const id = typeof payload?.sessionId === 'string' ? payload.sessionId : null;
+        const session = id ? sessionManager.getSession(id) : null;
+        const allowed = session && id
+          ? resolveRecordedFile(filePath, session.output, harnessDir()) ?? (documentTabs.isOpen(id, filePath) ? resolvedPath : null)
+          : null;
+        if (!allowed) {
+          mainLogger.warn('main.sessions:open-in-editor.outsideOutputs', { resolvedPath, outputsRoot });
+          throw new Error(`refused: path "${resolvedPath}" is outside outputs dir "${outputsRoot}"`);
+        }
+        resolvedPath = allowed;
       }
       const { openInEditor } = await import('./editors');
       await openInEditor(editorId, resolvedPath);

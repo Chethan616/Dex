@@ -18,6 +18,7 @@ import { NewTabPage } from './workspace/NewTabPage';
 import { useWorkspaceTabs } from './workspace/useWorkspaceTabs';
 import { useWorkspaceDocs } from './workspace/useWorkspaceDocs';
 import { DocumentView } from './workspace/docs/DocumentView';
+import { taskFiles } from './workspace/docs/fileTree';
 import { useHydrateSession } from './useSessionsQuery';
 import type { AgentSession, OutputEntry } from './types';
 
@@ -630,6 +631,8 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
     setPaneOverride('doc');
   }, [workspaceDocs.focus]);
   const activeDoc = paneOverride === 'doc' ? workspaceDocs.docs.find((d) => d.id === activeDocId) : undefined;
+  // The task's files, for the Files panel beside a document.
+  const docFiles = useMemo(() => taskFiles(session.output, workspaceDocs.docs), [session.output, workspaceDocs.docs]);
   const docActive = Boolean(activeDoc);
   // The doc in front was closed (here, or by its task going away).
   useEffect(() => {
@@ -1240,6 +1243,8 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
             sessionId={session.id}
             doc={activeDoc}
             revision={workspaceDocs.revisions[activeDoc.id] ?? 0}
+            files={docFiles}
+            onOpenFile={(p) => { void window.electronAPI?.workspace?.docOpen(session.id, p).catch(() => { /* not one of this task's files */ }); }}
             onOpenUrl={(url) => {
               void window.electronAPI?.workspace?.tab(session.id, { op: 'new', input: url });
               setPaneOverride('page');

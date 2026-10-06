@@ -40,6 +40,7 @@ describe('DocumentView', () => {
   let openFile: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    try { window.localStorage.clear(); } catch { /* none */ }
     host = document.createElement('div');
     document.body.appendChild(host);
     root = createRoot(host);
@@ -68,7 +69,7 @@ describe('DocumentView', () => {
     await render(<DocumentView sessionId="s1" doc={doc()} revision={0} onOpenUrl={() => {}} />);
     await vi.waitFor(() => expect(host.querySelector('.dv-md h1')?.textContent).toBe('Plan'), LOAD);
     expect(readFile).toHaveBeenCalledWith('s1', 'C:/work/notes.md');
-    expect(host.querySelector('.dv-bar__name')?.textContent).toBe('notes.md');
+    expect(host.querySelector('.dv-crumbs__name')?.textContent).toBe('notes.md');
     expect(host.querySelector('.dv-bar__meta')?.textContent).toContain('opened by DEX');
 
     // The outline arrives a render after the headings do.
@@ -122,6 +123,33 @@ describe('DocumentView', () => {
       host.querySelector('.dv')!.dispatchEvent(new KeyboardEvent('keydown', { key: '0', ctrlKey: true, bubbles: true }));
     });
     expect(label()).toBe('100%');
+  });
+
+  it('shows Markdown as its source on "View source", and back', async () => {
+    files['C:/work/notes.md'] = '# Plan';
+    await render(<DocumentView sessionId="s1" doc={doc()} revision={0} onOpenUrl={() => {}} />);
+    await vi.waitFor(() => expect(host.querySelector('.dv-md h1')?.textContent).toBe('Plan'), LOAD);
+    const toggle = Array.from(host.querySelectorAll('button')).find((b) => b.textContent === 'View source') as HTMLButtonElement;
+    await act(async () => { toggle.click(); });
+    await vi.waitFor(() => expect(host.querySelector('.dv-text__code')?.textContent).toBe('# Plan'), LOAD);
+    await act(async () => { toggle.click(); });
+    await vi.waitFor(() => expect(host.querySelector('.dv-md h1')).not.toBeNull(), LOAD);
+  });
+
+  it('lists the task’s files beside the document and opens one on click', async () => {
+    files['C:/work/notes.md'] = 'x';
+    const onOpenFile = vi.fn();
+    const taskFiles = [{ name: 'notes.md', path: 'C:/work/notes.md' }, { name: 'data.csv', path: 'C:/work/data/data.csv' }];
+    await render(<DocumentView sessionId="s1" doc={doc()} revision={0} onOpenUrl={() => {}} files={taskFiles} onOpenFile={onOpenFile} />);
+    // Two files: the panel starts open, with the open document marked.
+    const rail = host.querySelector('.dv-files')!;
+    expect(rail).not.toBeNull();
+    expect(rail.querySelector('.dv-files__item--on')?.textContent).toContain('notes.md');
+    const csv = Array.from(rail.querySelectorAll('.dv-files__item')).find((b) => b.textContent?.includes('data.csv')) as HTMLButtonElement;
+    await act(async () => { csv.click(); });
+    expect(onOpenFile).toHaveBeenCalledWith('C:/work/data/data.csv');
+    // The breadcrumb shows where the file is.
+    expect(host.querySelector('.dv-crumbs')?.textContent).toContain('work');
   });
 
   it('offers the file’s own app when it can’t draw it, or main refuses it', async () => {

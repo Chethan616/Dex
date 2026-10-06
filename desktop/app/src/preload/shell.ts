@@ -347,8 +347,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('sessions:read-file', { sessionId, path: filePath }),
     listEditors: (): Promise<Array<{ id: string; name: string }>> =>
       ipcRenderer.invoke('sessions:list-editors'),
-    openInEditor: (editorId: string, filePath: string): Promise<{ opened: boolean }> =>
-      ipcRenderer.invoke('sessions:open-in-editor', { editorId, filePath }),
+    openInEditor: (editorId: string, filePath: string, sessionId?: string): Promise<{ opened: boolean }> =>
+      ipcRenderer.invoke('sessions:open-in-editor', { editorId, filePath, sessionId }),
     listEngines: (): Promise<Array<{ id: string; displayName: string; binaryName: string; selectableModels?: Array<{ id: string; label: string; hint?: string }> }>> =>
       ipcRenderer.invoke('sessions:list-engines'),
     engineStatus: (engineId: string): Promise<{

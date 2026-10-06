@@ -1,7 +1,8 @@
 /**
- * A document tab's surface (docs/unify/PLAN.md §3.9): a slim toolbar — the
- * file's name, zoom, its outline, tracked changes for Word, "Open in app" —
- * over the file drawn by the hub itself. Each kind's viewer is its own lazy
+ * A document tab's surface (docs/unify/PLAN.md §3.9): a slim toolbar — where
+ * the file is, zoom, its outline, tracked changes for Word, View source,
+ * "Open in ▾" — over the file drawn by the hub itself, with the task's files
+ * in a panel beside it. Each kind's viewer is its own lazy
  * chunk, so pdf.js or SheetJS only load when a tab of that kind is open.
  *
  * The bytes come from `sessions.readFile`, which only reads files this task
@@ -12,6 +13,9 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useStat
 import { FileBadge } from '../../chat/fileKinds';
 import { openFile } from '../../chat/FileCards';
 import { safeHref, viewerFor, zoomable, type OutlineItem, type ViewerKind, type ViewerProps } from './kinds';
+import { crumbs, type TaskFile } from './fileTree';
+import { FilesRail } from './FilesRail';
+import { OpenInMenu } from './OpenInMenu';
 import './docs.css';
 
 const VIEWERS: Partial<Record<ViewerKind, React.LazyExoticComponent<React.ComponentType<ViewerProps>>>> = {
@@ -47,11 +51,35 @@ export interface DocumentViewProps {
   revision: number;
   /** A web link in the document: open it in a workspace tab. */
   onOpenUrl: (url: string) => void;
+  /** The task's files, for the Files panel beside the document. */
+  files?: TaskFile[];
+  /** A file picked in the Files panel: open (or bring forward) its tab. */
+  onOpenFile?: (path: string) => void;
 }
 
-export function DocumentView({ sessionId, doc, revision, onOpenUrl }: DocumentViewProps): React.ReactElement {
-  const kind = viewerFor(doc.name);
+/** Kinds that have a source worth reading as text: "View source". */
+const HAS_SOURCE = new Set<ViewerKind>(['markdown', 'html']);
+
+/** The Files panel's open/closed choice, kept per viewer (a convenience only). */
+function savedFilesOpen(): boolean | null {
+  try {
+    const v = window.localStorage.getItem('dex.docs.filesOpen');
+    return v === null ? null : v === '1';
+  } catch { return null; }
+}
+
+export function DocumentView({ sessionId, doc, revision, onOpenUrl, files = [], onOpenFile }: DocumentViewProps): React.ReactElement {
+  const realKind = viewerFor(doc.name);
+  const [source, setSource] = useState(false);
+  // "View source" draws a Markdown or HTML file as the text it is.
+  const kind: ViewerKind = source && HAS_SOURCE.has(realKind) ? 'text' : realKind;
   const Viewer = VIEWERS[kind];
+  const [filesOpen, setFilesOpenState] = useState<boolean>(() => savedFilesOpen() ?? files.length > 1);
+  const setFilesOpen = useCallback((open: boolean) => {
+    setFilesOpenState(open);
+    try { window.localStorage.setItem('dex.docs.filesOpen', open ? '1' : '0'); } catch { /* not kept */ }
+  }, []);
+  const showFiles = filesOpen && files.length > 0 && Boolean(onOpenFile);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -64,6 +92,7 @@ export function DocumentView({ sessionId, doc, revision, onOpenUrl }: DocumentVi
 
   // A different document starts fresh; a new revision of the same one doesn't.
   useEffect(() => {
+    setSource(false);
     setZoom(1);
     setOutline([]);
     setOutlineOpen(false);
@@ -159,9 +188,29 @@ export function DocumentView({ sessionId, doc, revision, onOpenUrl }: DocumentVi
           </button>
         )}
         <FileBadge name={doc.name} size="sm" />
-        <span className="dv-bar__name" title={doc.path}>{doc.name}</span>
+        {/* Where the file is: its last folders, then its name. Click to show it in Explorer. */}
+        <button type="button" className="dv-crumbs" title={`${doc.path}
+Show in File Explorer`} onClick={() => void openFile(sessionId, doc.path, 'reveal')}>
+          {crumbs(doc.path).map((c, i, all) => (
+            <React.Fragment key={i}>
+              {i > 0 && <span className="dv-crumbs__sep" aria-hidden="true">›</span>}
+              <span className={i === all.length - 1 ? 'dv-crumbs__name' : 'dv-crumbs__dir'}>{c}</span>
+            </React.Fragment>
+          ))}
+        </button>
         <span className="dv-bar__meta">{meta}{doc.openedBy === 'agent' ? ' · opened by DEX' : ''}</span>
         <span className="dv-bar__fill" />
+        {HAS_SOURCE.has(realKind) && (
+          <button
+            type="button"
+            className={`dv-chip${source ? ' dv-chip--on' : ''}`}
+            aria-pressed={source}
+            title={source ? 'Show it rendered' : 'Show the file as text'}
+            onClick={() => setSource((v) => !v)}
+          >
+            View source
+          </button>
+        )}
         {kind === 'docx' && (
           <button
             type="button"
@@ -184,10 +233,19 @@ export function DocumentView({ sessionId, doc, revision, onOpenUrl }: DocumentVi
             </button>
           </div>
         )}
-        <button type="button" className="dv-chip" title="Open in its own app" onClick={() => void openFile(sessionId, doc.path, 'open')}>Open in app</button>
-        <button type="button" className="dv-btn" aria-label="Show in folder" title="Show in folder" onClick={() => void openFile(sessionId, doc.path, 'reveal')}>
-          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M2 4.2c0-.6.5-1 1-1h3l1.4 1.5H13c.6 0 1 .4 1 1v6.1c0 .6-.4 1-1 1H3c-.5 0-1-.4-1-1z" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinejoin="round" /></svg>
-        </button>
+        <OpenInMenu sessionId={sessionId} path={doc.path} name={doc.name} />
+        {files.length > 0 && onOpenFile && (
+          <button
+            type="button"
+            className={`dv-btn${showFiles ? ' dv-btn--on' : ''}`}
+            aria-pressed={showFiles}
+            aria-label="Task files"
+            title="Task files"
+            onClick={() => setFilesOpen(!showFiles)}
+          >
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M2 4.2c0-.6.5-1 1-1h3l1.4 1.5H13c.6 0 1 .4 1 1v6.1c0 .6-.4 1-1 1H3c-.5 0-1-.4-1-1z" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinejoin="round" /></svg>
+          </button>
+        )}
       </div>
 
       <div className="dv-body">
@@ -229,6 +287,7 @@ export function DocumentView({ sessionId, doc, revision, onOpenUrl }: DocumentVi
             </Suspense>
           )}
         </div>
+        {showFiles && <FilesRail files={files} activePath={doc.path} onOpen={(p) => onOpenFile?.(p)} />}
       </div>
     </div>
   );
