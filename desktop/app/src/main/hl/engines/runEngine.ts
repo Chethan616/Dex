@@ -574,6 +574,7 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
     harnessHelpersPath: harnessHelpersAbs,
     harnessToolsPath: '',
     harnessSkillPath: harnessSkillAbs,
+    subagents: new Map(),
   };
 
   let buf = '';

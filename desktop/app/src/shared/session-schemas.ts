@@ -305,6 +305,45 @@ export const HlEventCanvasSchema = z.object({
   at: z.number(),
 });
 
+// A Claude Code "Task" tool call: it hands a prompt to a subagent and the
+// subagent's own stream-json messages come back tagged with
+// parent_tool_use_id === this call's id (see main/hl/engines/claude-code/
+// adapter.ts). Codex's `codex exec --json` stream has no equivalent item
+// type today, so Codex sessions simply never emit these.
+export const HlEventSubagentStartSchema = z.object({
+  ...WHEN,
+  type: z.literal('subagent_start'),
+  id: z.string(),
+  /** The Task call's own `description` — a short 3-5 word label ("Pdf selection review"). */
+  name: z.string(),
+  /** The `subagent_type` the orchestrator picked (e.g. "general-purpose", "Explore"). */
+  subagentType: z.string().optional(),
+  prompt: z.string(),
+});
+
+// One step inside a subagent's own transcript: a tool it called, or that
+// tool's result. Kept separate from the top-level tool_call/tool_result so a
+// subagent's internal work never pollutes the orchestrator's own "Worked
+// for" list.
+export const HlEventSubagentStepSchema = z.object({
+  ...WHEN,
+  type: z.literal('subagent_step'),
+  id: z.string(),
+  kind: z.enum(['tool_call', 'tool_result']),
+  name: z.string().optional(),
+  preview: z.string().optional(),
+  ok: z.boolean().optional(),
+  ms: z.number().optional(),
+});
+
+export const HlEventSubagentDoneSchema = z.object({
+  ...WHEN,
+  type: z.literal('subagent_done'),
+  id: z.string(),
+  ok: z.boolean(),
+  summary: z.string(),
+});
+
 export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventThinkingSchema,
   HlEventToolCallSchema,
@@ -324,6 +363,9 @@ export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventScreenshotSchema,
   HlEventConfirmationSchema,
   HlEventCanvasSchema,
+  HlEventSubagentStartSchema,
+  HlEventSubagentStepSchema,
+  HlEventSubagentDoneSchema,
 ]);
 
 export type HlEvent = z.infer<typeof HlEventSchema>;

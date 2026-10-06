@@ -7,6 +7,7 @@
  * and pulls out what the minibar lists (outputs, sources).
  */
 import type { Block } from '../../logs/transcript';
+import { detectResultCard, type ResultCardData } from './mcpResults';
 
 type Of<K extends Block['kind']> = Extract<Block, { kind: K }>;
 
@@ -36,6 +37,15 @@ export interface Turn {
   endAt?: number;
   /** DEX is still working on this turn. */
   live: boolean;
+  /** A recognised MCP result (calendar/mail/tasks — mcpResults.ts), shown as a card instead of just a generic tool row. */
+  resultCards: ResultCardData[];
+  /** Follow-up suggestions derived from which MCP tool this turn used (no extra LLM call — see followUpChips below). */
+  chips: FollowUpChip[];
+}
+
+export interface FollowUpChip {
+  label: string;
+  prompt: string;
 }
 
 function fileOf(b: Of<'file'>): FileItem {
@@ -67,6 +77,8 @@ function buildTurn(user: Of<'user'> | null, agent: Block[], live: boolean, fallb
     startAt: user?.at ?? fallbackStart ?? agent[0]?.at,
     endAt: undefined,
     live,
+    resultCards: [],
+    chips: [],
   };
   const replyParts: string[] = [];
   let lastText: Of<'text'> | null = null;
@@ -113,7 +125,62 @@ function buildTurn(user: Of<'user'> | null, agent: Block[], live: boolean, fallb
 
   turn.reply = replyParts.filter(Boolean).join('\n\n');
   turn.replyStreaming = live && lastText !== null && agent[agent.length - 1] === lastText;
+
+  // Recognised MCP results (mcpResults.ts) become cards instead of plain tool
+  // rows — only once the tool is actually done, and only for a turn that has
+  // settled into its reply, so a card never flashes up mid-stream.
+  if (!live) {
+    for (const b of turn.work) {
+      if (b.kind !== 'tool' || !b.result || !b.result.ok) continue;
+      const card = detectResultCard(b.name, b.result.preview);
+      if (card) turn.resultCards.push(card);
+    }
+    if (turn.reply) turn.chips = chipsForTools(turn.work.filter((b): b is Of<'tool'> => b.kind === 'tool').map((b) => b.name));
+  }
   return turn;
+}
+
+/**
+ * Follow-up suggestions, derived from which MCP tool this turn actually
+ * called — not from the reply's content and no extra LLM call, so a chip
+ * never promises something DEX didn't just demonstrate it can do. Mirrors
+ * the MCP tool-name convention mcpResults.ts matches against.
+ */
+const CHIP_RULES: Array<{ match: RegExp; chips: FollowUpChip[] }> = [
+  {
+    match: /^mcp__(google|microsoft)__(calendar|meet)/,
+    chips: [
+      { label: 'Show my week', prompt: 'Show my calendar for this week' },
+      { label: 'Any conflicts?', prompt: 'Are there any conflicts on my calendar this week?' },
+    ],
+  },
+  {
+    match: /^mcp__google__gmail_|^mcp__microsoft__mail_/,
+    chips: [
+      { label: 'Show unread emails', prompt: 'Show me my unread emails' },
+      { label: 'Anything urgent?', prompt: 'Is there anything urgent in my inbox?' },
+    ],
+  },
+  {
+    match: /^mcp__google__tasks_|^mcp__microsoft__todo_/,
+    chips: [{ label: 'Show all tasks', prompt: 'Show me all my open tasks' }],
+  },
+];
+
+function chipsForTools(toolNames: string[]): FollowUpChip[] {
+  const chips: FollowUpChip[] = [];
+  const seen = new Set<string>();
+  for (const name of toolNames) {
+    for (const rule of CHIP_RULES) {
+      if (!rule.match.test(name)) continue;
+      for (const chip of rule.chips) {
+        if (seen.has(chip.label)) continue;
+        seen.add(chip.label);
+        chips.push(chip);
+      }
+    }
+  }
+  return chips.slice(0, 3);
 }
 
 /** Split blocks into turns. `running`: DEX is working on the last one. */

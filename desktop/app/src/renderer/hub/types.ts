@@ -17,7 +17,10 @@ export type HlEvent =
   | { type: 'artifact'; kind: 'files' | 'reading'; title: string; note?: string; total?: number; body?: string; file?: string; items: ArtifactItem[] }
   | { type: 'screenshot'; path: string; caption?: string; mode: 'raw' | 'uia'; at: number }
   | { type: 'confirmation'; id: string; title: string; detail: string; status: 'pending' | 'approved' | 'denied'; at: number }
-  | { type: 'canvas'; title: string; markdown: string; at: number };
+  | { type: 'canvas'; title: string; markdown: string; at: number }
+  | { type: 'subagent_start'; id: string; name: string; subagentType?: string; prompt: string }
+  | { type: 'subagent_step'; id: string; kind: 'tool_call' | 'tool_result'; name?: string; preview?: string; ok?: boolean; ms?: number }
+  | { type: 'subagent_done'; id: string; ok: boolean; summary: string };
 
 export interface TaskStepFailure {
   reason: string;

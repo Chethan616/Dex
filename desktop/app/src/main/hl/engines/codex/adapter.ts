@@ -13,6 +13,16 @@
  *
  * Resume uses a sub-subcommand: `codex exec resume <id> <prompt>` rather
  * than a `--resume <id>` flag, so buildSpawnArgs branches on it.
+ *
+ * Subagents: `codex exec --json` has no sub-thread/subagent item type today
+ * — every `item.started`/`item.completed` here is one of command_execution,
+ * file_change, mcp_tool_call, web_search, reasoning or agent_message (see
+ * itemTypeToToolName/isNarrativeItem below), and an `mcp_tool_call` item
+ * doesn't even carry the server/tool it called, only command/path/text/url
+ * (normalizeItemArgs). So Codex sessions never emit subagent_start/step/done
+ * (src/shared/session-schemas.ts) — there is nothing in its stream to
+ * translate. If a future Codex CLI adds one, it should show up as a new
+ * `item.type` here before anything is built for it.
  */
 
 import fs from 'node:fs';

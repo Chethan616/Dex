@@ -25,6 +25,8 @@ interface WorkspaceBarProps {
   docs?: { items: WorkspaceDoc[]; activeId: string | null; onSelect: (id: string) => void; onClose: (id: string) => void };
   /** The task has a browser: web tabs, "+" and the toolbar. */
   browser?: boolean;
+  /** The Subagents tab: shown only once the task has launched at least one. */
+  subagents?: { active: boolean; count: number; activeCount: number; onSelect: () => void };
 }
 
 const Icon = {
@@ -67,6 +69,9 @@ const Icon = {
   down: (
     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
   ),
+  subagents: (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="5.5" cy="5.5" r="2.1" stroke="currentColor" strokeWidth="1.2" fill="none" /><circle cx="11" cy="7" r="1.6" stroke="currentColor" strokeWidth="1.2" fill="none" /><path d="M2 13c0-2.2 1.6-3.8 3.5-3.8S9 10.8 9 13M9.3 12.3c.2-1.6 1.4-2.7 2.8-2.7 1.6 0 2.9 1.3 2.9 3" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" /></svg>
+  ),
 };
 
 /** The find bar's count: "3 of 12", "No matches", or nothing before a search. */
@@ -91,7 +96,7 @@ function TabIcon({ tab }: { tab: WorkspaceTab }): React.ReactElement {
   return <span className="ws-tab__icon ws-tab__icon--globe">{Icon.globe}</span>;
 }
 
-export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSelectPage, docs, browser = true }: WorkspaceBarProps): React.ReactElement {
+export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSelectPage, docs, browser = true, subagents }: WorkspaceBarProps): React.ReactElement {
   const api = window.electronAPI?.workspace;
   const active = tabs.find((t) => t.active) ?? tabs[0];
   const inputRef = useRef<HTMLInputElement>(null);
@@ -137,8 +142,8 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
   const findStep = useCallback((forward: boolean) => {
     if (findText) void api?.find?.(sessionId, { tabId: activeId, text: findText, next: true, forward });
   }, [api, sessionId, activeId, findText]);
-  /** What owns the rect: the chat, a document, or the active web page. */
-  const pageInFront = !chat?.active && !docs?.activeId;
+  /** What owns the rect: the chat, a document, the Subagents tab, or the active web page. */
+  const pageInFront = !chat?.active && !docs?.activeId && !subagents?.active;
   const pageInFrontRef = useRef(pageInFront);
   pageInFrontRef.current = pageInFront;
   useEffect(() => api?.onFind?.((id) => {
@@ -190,6 +195,20 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
             <span className="ws-tab__icon">{chat.icon ?? (chat.working ? <span className="ws-spinner" /> : Icon.chat)}</span>
             <span className="ws-tab__title">Chat</span>
             {chat.unread && <span className="ws-tab__dot" aria-label="New reply" />}
+          </div>
+        )}
+        {subagents && subagents.count > 0 && (
+          <div
+            role="tab"
+            aria-selected={subagents.active}
+            tabIndex={subagents.active ? 0 : -1}
+            className={`ws-tab ws-tab--subagents${subagents.active ? ' ws-tab--active' : ''}`}
+            title={`${subagents.count} subagent${subagents.count === 1 ? '' : 's'}`}
+            onClick={subagents.onSelect}
+          >
+            <span className="ws-tab__icon">{Icon.subagents}</span>
+            <span className="ws-tab__title">Subagents</span>
+            {subagents.activeCount > 0 && <span className="ws-tab__dot" aria-label={`${subagents.activeCount} active`} />}
           </div>
         )}
         {docs?.items.map((doc) => {

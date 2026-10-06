@@ -79,6 +79,14 @@ export interface ParseContext {
    *  Adapters capture this from their init/thread-started event so cost
    *  estimation and future per-turn UI can cite the model that ran. */
   currentModel?: string;
+  /**
+   * Claude Code only: Task-tool subagents currently running, keyed by the
+   * tool_use id that launched them. Nested stream-json messages carry that
+   * id as `parent_tool_use_id`, which is how parseLine tells a subagent's
+   * own tool calls apart from the top-level agent's (see claude-code/
+   * adapter.ts). Entries are removed once the subagent's result comes back.
+   */
+  subagents?: Map<string, { name: string }>;
 }
 
 /** Result of parsing one NDJSON line. */

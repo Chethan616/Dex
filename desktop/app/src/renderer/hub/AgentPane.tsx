@@ -15,11 +15,13 @@ import { getPendingConfirmations, ConfirmationCard } from './PreviewDeck';
 import { ChatView } from './chat/ChatView';
 import { WorkspaceBar } from './workspace/WorkspaceBar';
 import { NewTabPage } from './workspace/NewTabPage';
+import { SubagentsPane } from './workspace/SubagentsPane';
 import { useWorkspaceTabs } from './workspace/useWorkspaceTabs';
 import { useWorkspaceDocs } from './workspace/useWorkspaceDocs';
 import { DocumentView } from './workspace/docs/DocumentView';
 import { taskFiles } from './workspace/docs/fileTree';
 import { useHydrateSession } from './useSessionsQuery';
+import { useSubagents } from './subagents';
 import type { AgentSession, OutputEntry } from './types';
 
 const ENGINE_NAMES: Record<string, string> = {
@@ -616,7 +618,17 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
    * paused one — shows the conversation. The page isn't lost when the chat
    * has the rect: it's parked on the stage, where DEX can keep using it.
    */
-  const [paneOverride, setPaneOverride] = useState<'auto' | 'page' | 'chat' | 'doc'>('auto');
+  const [paneOverride, setPaneOverride] = useState<'auto' | 'page' | 'chat' | 'doc' | 'subagents'>('auto');
+  /**
+   * Subagents (the Task tool): a quiet tab listing what the task has
+   * delegated, Active then Done. Only shown once the task has launched one.
+   */
+  const subagents = useSubagents(session);
+  const activeSubagentCount = useMemo(() => subagents.filter((a) => a.status === 'active').length, [subagents]);
+  const subagentsActive = paneOverride === 'subagents' && subagents.length > 0;
+  useEffect(() => {
+    if (paneOverride === 'subagents' && subagents.length === 0) setPaneOverride('auto');
+  }, [paneOverride, subagents.length]);
   /**
    * Document tabs (docs/unify/PLAN.md §3.9): files drawn by the hub itself.
    * One in front owns the rect like the chat does; the page steps aside to
@@ -663,12 +675,12 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
     return () => window.removeEventListener('dex:focus-composer', onFocus);
   }, [session.id]);
   const chatActive = useMemo(() => {
-    if (docActive) return false;
+    if (docActive || subagentsActive) return false;
     if (session.hasBrowser === false) return true;
     if (paneOverride !== 'auto') return paneOverride === 'chat';
     const working = session.status === 'running' || session.status === 'stuck';
     return !(working && session.primarySite);
-  }, [docActive, session.hasBrowser, session.status, session.primarySite, paneOverride]);
+  }, [docActive, subagentsActive, session.hasBrowser, session.status, session.primarySite, paneOverride]);
 
   /**
    * The task's tabs (docs/unify/PLAN.md §3.2). A blank tab *you* opened shows
@@ -678,9 +690,9 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
   const workspaceOn = session.hasBrowser !== false && !browserDead;
   const tabs = useWorkspaceTabs(session.id, workspaceOn);
   const activeTab = tabs.find((t) => t.active);
-  const newTabActive = !chatActive && !docActive && Boolean(activeTab?.isNewTab && activeTab.openedBy !== 'task');
-  /** Something React draws owns the rect (the chat, a document, or the New-tab page). */
-  const surfaceActive = chatActive || docActive || newTabActive;
+  const newTabActive = !chatActive && !docActive && !subagentsActive && Boolean(activeTab?.isNewTab && activeTab.openedBy !== 'task');
+  /** Something React draws owns the rect (the chat, a document, the Subagents tab, or the New-tab page). */
+  const surfaceActive = chatActive || docActive || subagentsActive || newTabActive;
 
   /** Something new in the chat while you were on the page: a dot on the Chat tab. */
   const replyCount = useMemo(
@@ -1130,7 +1142,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           rect — the pre-existing idle/error states, plus the two new ones the
           deck introduces: a running task that has never navigated (desktop,
           file or OS work) and a paused session. */}
-      {((tabs.length > 0 && workspaceOn) || workspaceDocs.docs.length > 0) && (
+      {((tabs.length > 0 && workspaceOn) || workspaceDocs.docs.length > 0 || subagents.length > 0) && (
         <WorkspaceBar
           sessionId={session.id}
           tabs={workspaceOn ? tabs : []}
@@ -1140,6 +1152,12 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
             activeId: activeDoc?.id ?? null,
             onSelect: (id) => { setActiveDocId(id); setPaneOverride('doc'); },
             onClose: closeDoc,
+          }}
+          subagents={{
+            active: subagentsActive,
+            count: subagents.length,
+            activeCount: activeSubagentCount,
+            onSelect: () => setPaneOverride('subagents'),
           }}
           agentActive={session.status === 'running'}
           onPause={onPause ? () => onPause(session.id) : undefined}
@@ -1238,7 +1256,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           deck is showing, so there is nothing to sit on top of — and a rect
           measured at the wrong moment was drawing the cards into a narrow
           strip with the rest of the pane left black. */}
-      <div className={`pane__output${session.status === 'running' && !surfaceActive ? ' pane__output--agent' : ''}${chatActive || docActive ? ' pane__output--chat' : ''}`}>
+      <div className={`pane__output${session.status === 'running' && !surfaceActive ? ' pane__output--agent' : ''}${chatActive || docActive || subagentsActive ? ' pane__output--chat' : ''}`}>
         {activeDoc ? (
           <DocumentView
             sessionId={session.id}
@@ -1251,6 +1269,8 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
               setPaneOverride('page');
             }}
           />
+        ) : subagentsActive ? (
+          <SubagentsPane subagents={subagents} />
         ) : chatActive ? (
           <ChatView
             session={session}

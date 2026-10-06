@@ -906,6 +906,151 @@
 
 .cx__jump:hover { color: var(--color-fg-primary); }
 
+/* Subagent mention rows (UI/claude_see_this_i_missed_inprompt…png): "X, Y
+   and Z started working" / "X finished", among the "Ran commands" steps. */
+.cx-mention {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 30px;
+  color: var(--color-fg-tertiary);
+  font-size: 12.5px;
+}
+
+.cx-mention__avatars {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.cx-mention__avatar:not(:first-child) {
+  margin-left: -6px;
+}
+
+/* Rich result cards for recognised MCP results (mcpResults.ts). */
+.cx-card {
+  margin: 8px 0;
+  border-radius: 14px;
+  background: var(--cx-card);
+  border: 1px solid var(--cx-card-line);
+  overflow: hidden;
+  max-width: 420px;
+}
+
+.cx-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--color-bg-sunken);
+  color: var(--color-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cx-card__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.cx-card__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--cx-card-line);
+}
+
+.cx-card__row:first-child { border-top: none; }
+
+.cx-card__row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cx-card__row-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-fg-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cx-card__row-title--done {
+  text-decoration: line-through;
+  color: var(--color-fg-tertiary);
+  font-weight: 500;
+}
+
+.cx-card__row-sub {
+  font-size: 12.5px;
+  color: var(--color-fg-secondary);
+}
+
+.cx-card__row-snippet {
+  font-size: 12px;
+  color: var(--color-fg-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.cx-card__unread-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cx-link);
+  flex-shrink: 0;
+}
+
+.cx-card__action {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--cx-tile);
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+}
+
+.cx-card__action:hover { color: var(--color-fg-primary); }
+
+/* Follow-up suggestion chips under a finished reply. */
+.cx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.cx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--cx-card-line);
+  background: transparent;
+  color: var(--color-fg-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.cx-chip:hover {
+  background: var(--color-surface-interactive);
+  color: var(--color-fg-primary);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cx-work, .cx-menu, .cx-mini { animation: none; }
   .cx-reply--streaming .md--chat > :last-child::after { animation: none; }

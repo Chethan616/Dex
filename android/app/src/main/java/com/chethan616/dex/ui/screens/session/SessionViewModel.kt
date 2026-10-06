@@ -9,6 +9,7 @@ import com.chethan616.dex.AppContainer
 import com.chethan616.dex.data.Block
 import com.chethan616.dex.data.CommandType
 import com.chethan616.dex.data.Session
+import com.chethan616.dex.data.Subagent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,6 +24,7 @@ data class SessionState(
   val loading: Boolean = true,
   val session: Session? = null,
   val blocks: List<Block> = emptyList(),
+  val subagents: List<Subagent> = emptyList(),
   val error: String? = null,
 )
 
@@ -31,7 +33,8 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Strin
   val state: StateFlow<SessionState> = combine(
     c.repo.session(sessionId).onStart { emit(null) },
     c.repo.blocks(sessionId).onStart { emit(emptyList()) },
-  ) { session, blocks -> SessionState(loading = session == null, session = session, blocks = blocks) }
+    c.repo.subagents(sessionId).onStart { emit(emptyList()) },
+  ) { session, blocks, subagents -> SessionState(loading = session == null, session = session, blocks = blocks, subagents = subagents) }
     .catch { emit(SessionState(loading = false, error = it.message)) }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionState())
 

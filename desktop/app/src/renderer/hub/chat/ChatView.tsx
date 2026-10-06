@@ -25,9 +25,15 @@ import { useTaskFileUrl } from '../workspace/useTaskFileUrl';
 import { FileBadge } from './fileKinds';
 import { Minibar } from './Minibar';
 import { allOutputs, collectSources, formatDuration, toTurns, type FileItem, type Turn } from './turns';
+import { assignMentions, groupSubagentMentions, mentionText, useSubagents, type SubagentMentionGroup } from '../subagents';
+import type { HlEvent as SharedHlEvent } from '../../../shared/session-schemas';
+import { ResultCard } from './ResultCard';
 import './chat.css';
 
 type RawEvent = { type?: string } & Record<string, unknown>;
+
+/** A stable empty array for turns with no subagent mentions, so TurnView's memo doesn't bail out on a fresh `[]` every render. */
+const EMPTY_MENTIONS: SubagentMentionGroup[] = [];
 
 export interface ChatViewProps {
   session: AgentSession;
@@ -173,6 +179,26 @@ const WorkStep = memo(function WorkStep({ block, running, sessionId }: { block: 
   return null;
 });
 
+/**
+ * A quiet event row for subagents mentioned in the chat (UI/claude_see_this_
+ * i_missed_inprompt...png): "Pdf selection review, Xlsx ui review and Glass
+ * contrast review started working", later "Pdf selection review finished".
+ * Each subagent gets its own small bot avatar, the same style as the
+ * Subagents tab's rows.
+ */
+function MentionRow({ group }: { group: SubagentMentionGroup }): React.ReactElement {
+  return (
+    <div className="cx-mention">
+      <span className="cx-mention__avatars">
+        {group.items.slice(0, 4).map((it) => (
+          <AgentAvatar key={it.id} sessionId={it.id} size={16} animate={false} className="cx-mention__avatar" />
+        ))}
+      </span>
+      <span className="cx-mention__text">{mentionText(group)}</span>
+    </div>
+  );
+}
+
 /** A screenshot the task took: its bytes via readFile (the hub can't load file://). */
 function Shot({ sessionId, path, caption }: { sessionId: string; path: string; caption?: string }): React.ReactElement {
   const url = useTaskFileUrl(sessionId, path);
@@ -226,6 +252,10 @@ interface TurnViewProps {
   docSignals: Map<number, number>;
   renderLink: (href: string, children: React.ReactNode) => React.ReactNode | undefined;
   renderInlineCode: (text: string) => React.ReactNode | undefined;
+  /** Subagents mentioned during this turn's work (UI/claude_see_this_i_missed…png), time-merged with the tool steps. */
+  mentions: SubagentMentionGroup[];
+  onOpenUrl?: (url: string) => void;
+  onFollowUpChip?: (prompt: string) => void;
 }
 
 function activityOf(turn: Turn): { label: string; orb: React.ComponentProps<typeof Orb>['state'] } {
@@ -260,8 +290,8 @@ function TurnAvatar({ sessionId, engineId, mood }: { sessionId: string; engineId
   );
 }
 
-const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood, open, onToggle, now, docSignals, renderLink, renderInlineCode }: TurnViewProps) {
-  const hasWork = turn.work.length > 0 || turn.live;
+const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood, open, onToggle, now, docSignals, renderLink, renderInlineCode, mentions, onOpenUrl, onFollowUpChip }: TurnViewProps) {
+  const hasWork = turn.work.length > 0 || turn.live || mentions.length > 0;
   // Sessions recorded before events carried times just say "Worked".
   const end = turn.live ? now : turn.endAt;
   const duration = turn.startAt !== undefined && end !== undefined ? formatDuration(end - turn.startAt) : null;
@@ -294,13 +324,20 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood,
               {turn.live ? 'Working' : 'Worked'}{duration ? ` for ${duration}` : ''}
             </span>
             {activity && <span className="cx-worked__now">{activity.label}</span>}
-            {turn.work.length > 0 && <Chevron open={open} />}
+            {(turn.work.length > 0 || mentions.length > 0) && <Chevron open={open} />}
           </button>
         )}
       </div>
-      {open && turn.work.length > 0 && (
+      {open && (turn.work.length > 0 || mentions.length > 0) && (
         <div className="cx-work">
-          {turn.work.map((b) => <WorkStep key={b.id} block={b} running={b.id === runningToolId} sessionId={sessionId} />)}
+          {mentions.length === 0
+            ? turn.work.map((b) => <WorkStep key={b.id} block={b} running={b.id === runningToolId} sessionId={sessionId} />)
+            : [
+              ...turn.work.map((b, i) => ({ at: b.at ?? turn.startAt ?? i, node: <WorkStep key={b.id} block={b} running={b.id === runningToolId} sessionId={sessionId} /> })),
+              ...mentions.map((g) => ({ at: g.at, node: <MentionRow key={g.key} group={g} /> })),
+            ]
+              .sort((a, b) => a.at - b.at)
+              .map((it) => it.node)}
         </div>
       )}
 
@@ -317,6 +354,8 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood,
         </div>
       )}
 
+      {turn.resultCards.map((card, i) => <ResultCard key={i} card={card} onOpenUrl={onOpenUrl} />)}
+
       {turn.docs.map((d) => <DocCard key={d.id} block={d} openSignal={docSignals.get(d.id) ?? 0} />)}
       {turn.finds.map((f) => <FindCard key={f.id} block={f} />)}
       {turn.files.length > 0 && <FileCards sessionId={sessionId} files={turn.files} />}
@@ -325,6 +364,17 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood,
         <div className="cx-foot">
           <CopyButton text={turn.reply} />
           {turn.endAt ? <span className="cx-foot__time">{timeOfDay(turn.endAt)}</span> : null}
+        </div>
+      )}
+
+      {!turn.live && turn.chips.length > 0 && onFollowUpChip && (
+        <div className="cx-chips">
+          {turn.chips.map((chip) => (
+            <button key={chip.label} type="button" className="cx-chip" onClick={() => onFollowUpChip(chip.prompt)}>
+              <svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M2 6h7M6 3l3 3-3 3" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              {chip.label}
+            </button>
+          ))}
         </div>
       )}
     </section>
@@ -375,6 +425,17 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
 
   const live = turns.length > 0 && turns[turns.length - 1].live;
   const now = useNow(live);
+
+  // Subagents mentioned in the chat (UI/claude_see_this_i_missed_inprompt…
+  // png): grouped into "X, Y and Z started working" / "finished" lines, each
+  // assigned to the turn whose time window it falls in.
+  const subagents = useSubagents(session);
+  const subagentsById = useMemo(() => new Map(subagents.map((a) => [a.id, a])), [subagents]);
+  const mentionGroups = useMemo(
+    () => groupSubagentMentions(session.output as unknown as SharedHlEvent[], subagentsById),
+    [session.output, subagentsById],
+  );
+  const mentionsByTurn = useMemo(() => assignMentions(turns, mentionGroups), [turns, mentionGroups]);
 
   const outputs = useMemo(() => allOutputs(turns), [turns]);
   const outputsRef = useRef(outputs);
@@ -465,6 +526,9 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
     onFollowUp?.(sessionId, text, attachments?.map(({ name, mime, bytes }) => ({ name, mime, bytes })));
   }, [onFollowUp, sessionId]);
 
+  // A follow-up chip (turns.ts's FollowUpChip) sends through the same path as the composer.
+  const sendChip = useCallback((prompt: string) => send(prompt), [send]);
+
   const statusLabel = running ? (live && turns[turns.length - 1].startAt ? `working · ${formatDuration(now - (turns[turns.length - 1].startAt ?? now))}` : 'working')
     : session.status === 'paused' ? 'paused' : session.status === 'stopped' && session.error ? 'failed' : 'done';
 
@@ -485,6 +549,9 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
               docSignals={docSignals}
               renderLink={renderLink}
               renderInlineCode={renderInlineCode}
+              mentions={mentionsByTurn.get(turn.key) ?? EMPTY_MENTIONS}
+              onOpenUrl={onOpenUrl}
+              onFollowUpChip={onFollowUp ? sendChip : undefined}
             />
           ))}
           {turns.length === 0 && (

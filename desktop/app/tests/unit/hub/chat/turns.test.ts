@@ -71,3 +71,81 @@ describe('chat turns', () => {
     expect(formatDuration(3_900_000)).toBe('1h 5m');
   });
 });
+
+describe('chat turns: MCP result cards and follow-up chips', () => {
+  function turnFor(toolName: string, result: unknown, reply = 'Done.') {
+    const [turn] = toTurns(buildTranscript('check my calendar', [
+      { type: 'tool_call', name: toolName, args: {}, iteration: 1 },
+      { type: 'tool_result', name: toolName, ok: true, preview: JSON.stringify(result, null, 2), ms: 40 },
+      { type: 'thinking', text: reply },
+      { type: 'done', summary: reply, iterations: 1 },
+    ]).blocks, false);
+    return turn;
+  }
+
+  it('turns a finished calendar_list_events result into a calendar card', () => {
+    const turn = turnFor('mcp__google__calendar_list_events', {
+      timeZone: 'UTC',
+      events: [{ id: 'e1', summary: 'Cancel AI Plus subscription', start: '2027-09-28T09:00:00Z', end: '2027-09-28T10:00:00Z', link: 'https://calendar.google.com/e1' }],
+    });
+    expect(turn.resultCards).toEqual([
+      { kind: 'calendar', provider: 'google', items: [{ id: 'e1', title: 'Cancel AI Plus subscription', start: '2027-09-28T09:00:00Z', end: '2027-09-28T10:00:00Z', location: undefined, link: 'https://calendar.google.com/e1' }] },
+    ]);
+  });
+
+  it('cards only appear once the turn has settled, not while it is still live', () => {
+    const [turn] = toTurns(buildTranscript('x', [
+      { type: 'tool_call', name: 'mcp__google__gmail_search', args: {}, iteration: 1 },
+      { type: 'tool_result', name: 'mcp__google__gmail_search', ok: true, preview: JSON.stringify([{ id: 'm1', subject: 'Hi' }]), ms: 1 },
+    ]).blocks, true); // live
+    expect(turn.resultCards).toEqual([]);
+  });
+
+  it('a mail list becomes a mail card', () => {
+    const turn = turnFor('mcp__microsoft__mail_list', [
+      { id: 'm1', subject: 'Invoice', fromName: 'Billing', received: '2026-10-01', isRead: false, preview: 'Your invoice is ready' },
+    ]);
+    expect(turn.resultCards).toEqual([
+      { kind: 'mail', provider: 'microsoft', items: [{ id: 'm1', subject: 'Invoice', from: 'Billing', date: '2026-10-01', unread: true, snippet: 'Your invoice is ready' }] },
+    ]);
+  });
+
+  it('an unrecognised tool or a non-MCP tool never produces a card', () => {
+    expect(turnFor('Bash', { ok: true }).resultCards).toEqual([]);
+    expect(turnFor('mcp__google__drive_search', [{ id: 'f1', name: 'x.pdf' }]).resultCards).toEqual([]);
+  });
+
+  it('a truncated/invalid JSON preview falls back to no card instead of throwing', () => {
+    const [turn] = toTurns(buildTranscript('x', [
+      { type: 'tool_call', name: 'mcp__google__calendar_list_events', args: {}, iteration: 1 },
+      { type: 'tool_result', name: 'mcp__google__calendar_list_events', ok: true, preview: '{"events": [ { "summary": "cut off', ms: 1 },
+      { type: 'done', summary: 'Done', iterations: 1 },
+    ]).blocks, false);
+    expect(turn.resultCards).toEqual([]);
+  });
+
+  it('a calendar tool used this turn offers "Show my week" / "Any conflicts?" chips', () => {
+    const turn = turnFor('mcp__google__calendar_list_events', { events: [] });
+    expect(turn.chips).toEqual([
+      { label: 'Show my week', prompt: 'Show my calendar for this week' },
+      { label: 'Any conflicts?', prompt: 'Are there any conflicts on my calendar this week?' },
+    ]);
+  });
+
+  it('a mail tool offers mail chips, and chips are capped at 3 total', () => {
+    const turn = turnFor('mcp__google__gmail_search', []);
+    expect(turn.chips.map((c) => c.label)).toEqual(['Show unread emails', 'Anything urgent?']);
+  });
+
+  it('no MCP tool used this turn means no chips', () => {
+    expect(turnFor('Bash', { ok: true }).chips).toEqual([]);
+  });
+
+  it('chips never appear on a turn with no reply yet (still running)', () => {
+    const [turn] = toTurns(buildTranscript('x', [
+      { type: 'tool_call', name: 'mcp__google__gmail_search', args: {}, iteration: 1 },
+      { type: 'tool_result', name: 'mcp__google__gmail_search', ok: true, preview: '[]', ms: 1 },
+    ]).blocks, true);
+    expect(turn.chips).toEqual([]);
+  });
+});

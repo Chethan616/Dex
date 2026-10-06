@@ -74,6 +74,21 @@ class DexRepository(private val appContext: Context) {
     awaitClose { reg.remove() }
   }
 
+  /**
+   * Subagents the task launched (desktop/app/src/main/firebase/bridge.ts
+   * mirrors one doc per subagent, not one per step). One listener for the
+   * whole subcollection drives both the chat's mention rows and the
+   * Subagents sheet — never a listener per subagent.
+   */
+  fun subagents(sessionId: String): Flow<List<Subagent>> = callbackFlow {
+    val reg = user().collection("sessions").document(sessionId).collection("subagents")
+      .addSnapshotListener(listenerThread) { snap, err ->
+        if (err != null) { close(err); return@addSnapshotListener }
+        trySend(snap?.documents?.map { it.toSubagent() }?.sortedBy { it.startedAt ?: 0L } ?: emptyList())
+      }
+    awaitClose { reg.remove() }
+  }
+
   /** users/{uid}.profile — null until chosen (drives the "Pick your DEX" step). */
   fun profile(): Flow<DexProfile?> = callbackFlow {
     val reg = user().addSnapshotListener(listenerThread) { snap, err ->
@@ -341,6 +356,7 @@ private fun DocumentSnapshot.toBlock(): Block {
   return Block(
     seq = long("seq"),
     kind = getString("kind") ?: "text",
+    at = (get("at") as? Number)?.toLong(),
     text = getString("text"),
     name = getString("name"),
     toolKind = getString("toolKind"),
@@ -368,6 +384,30 @@ private fun DocumentSnapshot.toBlock(): Block {
         AttachmentMeta(m["name"]?.toString() ?: return@let null, m["mime"]?.toString() ?: "", (m["size"] as? Number)?.toLong() ?: 0)
       }
     } ?: emptyList(),
+  )
+}
+
+private fun DocumentSnapshot.toSubagent(): Subagent {
+  val last = get("lastActivity") as? Map<*, *>
+  return Subagent(
+    id = getString("id") ?: id,
+    name = getString("name") ?: "Subagent",
+    subagentType = getString("subagentType"),
+    prompt = getString("prompt"),
+    status = getString("status") ?: "done",
+    ok = get("ok") as? Boolean,
+    summary = getString("summary"),
+    startedAt = (get("startedAt") as? Number)?.toLong(),
+    endedAt = (get("endedAt") as? Number)?.toLong(),
+    lastActivity = last?.let {
+      SubagentActivity(
+        kind = it["kind"]?.toString() ?: "tool_call",
+        name = it["name"]?.toString(),
+        preview = it["preview"]?.toString(),
+        at = (it["at"] as? Number)?.toLong(),
+      )
+    },
+    stepCount = (get("stepCount") as? Number)?.toLong() ?: 0,
   )
 }
 

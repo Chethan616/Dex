@@ -15,6 +15,16 @@
  *                               the logs window uses (renderer/logs/
  *                               transcript.ts), so the phone shows exactly
  *                               what the desktop shows
+ *   sessions/{id}/subagents/{subagentId}
+ *                               one row per subagent (src/shared/
+ *                               subagents.ts's fold of subagent_start/step/
+ *                               done — the same one the hub's chat and
+ *                               Subagents tab use), kept small on purpose:
+ *                               name, status, prompt, summary and only the
+ *                               *latest* step — never the full step list —
+ *                               so the phone can show mention rows and an
+ *                               Active/Done sheet with exactly one listener
+ *                               on the subcollection, not one per subagent
  *   commands/{id}               what the phone asks for: new_task, follow_up,
  *                               pause, resume, stop, answer_confirmation,
  *                               sync_session, fetch_file. The desktop claims
@@ -47,6 +57,7 @@ import { mainLogger } from '../logger';
 import { getInstallId } from '../installId';
 import type { AgentSession, HlEvent } from '../sessions/types';
 import { appendEvent, buildTranscript, type Block, type Transcript } from '../../renderer/logs/transcript';
+import { buildSubagents, foldSubagentEvent, subagentsList, EMPTY_SUBAGENTS, type Subagent, type SubagentsState } from '../../shared/subagents';
 import { firebaseConfig } from './config';
 import { clearCredentials, loadCredentials, saveCredentials } from './credentials';
 import { redactSecrets } from './redact';
@@ -158,7 +169,10 @@ function thumbFor(filePath: string | undefined, mime?: string): string | null {
 }
 
 function serializeBlock(block: Block): Record<string, unknown> {
-  const base = { seq: block.id, kind: block.kind };
+  // `at`: when the desktop recorded it (absent on blocks from before events
+  // carried times). The phone uses it to interleave subagent mention rows
+  // with the conversation by timestamp, the same way the hub's chat does.
+  const base = { seq: block.id, kind: block.kind, at: block.at ?? null };
   switch (block.kind) {
     case 'user':
       return {
@@ -202,6 +216,31 @@ function serializeBlock(block: Block): Record<string, unknown> {
     default:
       return base;
   }
+}
+
+/**
+ * A subagent as Firestore stores it: name, status, prompt and summary, plus
+ * only its *latest* step as `lastActivity` — never the full step list. The
+ * phone only ever shows a mention row and an Active/Done sheet (no per-
+ * subagent transcript today), so there's nothing to gain from sending every
+ * step, and every step would mean a write on every one of the subagent's
+ * own tool calls instead of one write per debounce tick.
+ */
+function serializeSubagent(a: Subagent): Record<string, unknown> {
+  const last = a.steps[a.steps.length - 1];
+  return {
+    id: a.id,
+    name: clip(a.name, 200),
+    subagentType: a.subagentType ? clip(a.subagentType, 100) : null,
+    prompt: clip(a.prompt, 2000) ?? null,
+    status: a.status,
+    ok: a.ok ?? null,
+    summary: clip(a.summary, 2000) ?? null,
+    startedAt: a.startedAt ?? null,
+    endedAt: a.endedAt ?? null,
+    lastActivity: last ? { kind: last.kind, name: last.name ?? null, preview: clip(last.preview, 200) ?? null, at: last.at ?? null } : null,
+    stepCount: a.steps.length,
+  };
 }
 
 /** The one-line preview the phone's session list shows. */
@@ -250,6 +289,10 @@ export class FirebaseBridge {
   private readonly deviceId = `desktop-${getInstallId()}`;
   private transcripts = new Map<string, Transcript>();
   private written = new Map<string, Map<number, string>>();
+  private subagentsBySession = new Map<string, SubagentsState>();
+  private writtenSubagents = new Map<string, Map<string, string>>();
+  /** The project's rules refused the subagents collection (not deployed yet). */
+  private subagentsRefused = false;
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
   private heartbeat: ReturnType<typeof setInterval> | null = null;
   private unsubCommands: (() => void) | null = null;
@@ -348,6 +391,9 @@ export class FirebaseBridge {
     }
     this.transcripts.clear();
     this.written.clear();
+    this.subagentsBySession.clear();
+    this.writtenSubagents.clear();
+    this.subagentsRefused = false;
     this.setState({ state: 'off', reason: 'signed-out' });
   }
 
@@ -429,6 +475,12 @@ export class FirebaseBridge {
     this.host.onSessionOutput((id, event) => {
       const t = this.transcripts.get(id);
       if (t) this.transcripts.set(id, appendEvent(t, event as never));
+      // Same lazy-cache shape as transcripts: only fold incrementally once
+      // something has already asked for this session's subagents (the
+      // initial writeSession call builds the first snapshot from
+      // session.output in one go via subagentsFor below).
+      const sub = this.subagentsBySession.get(id);
+      if (sub) this.subagentsBySession.set(id, foldSubagentEvent(sub, event));
       this.schedule(id);
     });
     this.host.onSessionDeleted((id) => {
@@ -448,18 +500,25 @@ export class FirebaseBridge {
     this.timers.delete(id);
     this.transcripts.delete(id);
     this.written.delete(id);
+    this.subagentsBySession.delete(id);
+    this.writtenSubagents.delete(id);
     if (!this.db || !this.uid) return;
     const { collection, doc, getDocs, writeBatch } = await import('firebase/firestore');
     const blocks = await getDocs(collection(this.db, this.userDoc('sessions', id, 'blocks')));
-    for (let i = 0; i < blocks.docs.length; i += 450) {
+    // Rules that predate the subagents collection refuse this read; the
+    // task still goes.
+    const subagents = await getDocs(collection(this.db, this.userDoc('sessions', id, 'subagents')))
+      .catch(() => ({ docs: [] as typeof blocks.docs, size: 0 }));
+    const toDelete = [...blocks.docs, ...subagents.docs];
+    for (let i = 0; i < toDelete.length; i += 450) {
       const batch = writeBatch(this.db);
-      for (const b of blocks.docs.slice(i, i + 450)) batch.delete(b.ref);
+      for (const b of toDelete.slice(i, i + 450)) batch.delete(b.ref);
       await batch.commit();
     }
     const batch = writeBatch(this.db);
     batch.delete(doc(this.db, this.userDoc('sessions', id)));
     await batch.commit();
-    mainLogger.info('firebase.bridge.deleted', { id, blocks: blocks.size });
+    mainLogger.info('firebase.bridge.deleted', { id, blocks: blocks.size, subagents: subagents.size });
   }
 
   /**
@@ -483,6 +542,15 @@ export class FirebaseBridge {
       this.transcripts.set(session.id, t);
     }
     return t;
+  }
+
+  private subagentsFor(session: AgentSession): SubagentsState {
+    let s = this.subagentsBySession.get(session.id);
+    if (!s) {
+      s = session.output && session.output.length > 0 ? buildSubagents(session.output) : EMPTY_SUBAGENTS;
+      this.subagentsBySession.set(session.id, s);
+    }
+    return s;
   }
 
   private async syncInitial(): Promise<void> {
@@ -557,6 +625,41 @@ export class FirebaseBridge {
       if (writes >= 450) this.schedule(id);
     }
     await batch.commit();
+    if (opts.withBlocks) await this.writeSubagents(session);
+  }
+
+  /**
+   * The task's subagents, one doc each (never per step — see
+   * serializeSubagent), in a batch of their own: a Firebase project whose
+   * rules predate the subagents collection refuses these writes, and that
+   * must never stop the conversation itself from reaching the phone.
+   */
+  private async writeSubagents(session: AgentSession): Promise<void> {
+    if (!this.db || !this.uid || this.subagentsRefused) return;
+    const subagents = subagentsList(this.subagentsFor(session));
+    if (subagents.length === 0) return;
+    const { doc, writeBatch } = await import('firebase/firestore');
+    const seen = this.writtenSubagents.get(session.id) ?? new Map<string, string>();
+    const batch = writeBatch(this.db);
+    const changed: Array<[string, string]> = [];
+    for (const a of subagents.slice(0, 450)) {
+      const data = serializeSubagent(a);
+      const key = JSON.stringify(data);
+      if (seen.get(a.id) === key) continue;
+      batch.set(doc(this.db, this.userDoc('sessions', session.id, 'subagents', a.id)), data);
+      changed.push([a.id, key]);
+    }
+    if (changed.length === 0) return;
+    try {
+      await batch.commit();
+      for (const [subId, key] of changed) seen.set(subId, key);
+      this.writtenSubagents.set(session.id, seen);
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      // The rules aren't deployed yet: stop trying until the next sign-in.
+      if (code === 'permission-denied') this.subagentsRefused = true;
+      mainLogger.warn('firebase.bridge.subagents.writeFailed', { id: session.id, code, error: (err as Error).message });
+    }
   }
 
   private listenForCommands(): void {
