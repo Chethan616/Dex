@@ -14,6 +14,7 @@
  */
 import type { OrbState } from 'thinking-orbs';
 import { parseWidget, type Widget } from '../../shared/widgets';
+import { HOSTED_CONNECTORS, remoteConnectionId } from '../../shared/connectorCatalog';
 
 export type ToolKind = 'search' | 'browse' | 'mcp' | 'read' | 'write' | 'run' | 'desktop' | 'agent' | 'other';
 
@@ -51,6 +52,18 @@ const RULES: Array<[RegExp, ToolKind]> = [
   [/read|cat|view|glob|grep|find|list|ls$|search_?files|^fs|file/i, 'read'],
 ];
 
+/** DEX's own MCP servers, by the id their tools carry (mcp__<id>__<tool>). */
+const BUILT_IN_SERVERS: Record<string, string> = {
+  google: 'Google', microsoft: 'Microsoft 365', github: 'GitHub', slack: 'Slack', reddit: 'Reddit',
+  huggingface: 'Hugging Face', blender: 'Blender', windows: 'Windows',
+};
+const HOSTED_NAMES = new Map(HOSTED_CONNECTORS.map((c) => [remoteConnectionId(c.id), c.name]));
+
+/** "remote_kiwi" → "Kiwi.com flights": the name the user knows from the Marketplace. */
+export function serverName(id: string): string {
+  return BUILT_IN_SERVERS[id] ?? HOSTED_NAMES.get(id) ?? id;
+}
+
 export function classifyTool(name: string): ToolMeta {
   let kind: ToolKind = 'other';
   for (const [re, k] of RULES) {
@@ -59,7 +72,8 @@ export function classifyTool(name: string): ToolMeta {
   const meta: ToolMeta = { kind, ...KIND_META[kind] };
   if (kind === 'mcp') {
     const parts = name.replace(/^mcp__/, '').split('__');
-    meta.display = parts.length > 1 ? `${parts[0]} · ${parts.slice(1).join(' ')}` : parts[0];
+    const server = serverName(parts[0]);
+    meta.display = parts.length > 1 ? `${server} · ${parts.slice(1).join(' ').replace(/[-_]+/g, ' ')}` : server;
   }
   return meta;
 }

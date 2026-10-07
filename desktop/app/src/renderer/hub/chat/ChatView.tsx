@@ -30,6 +30,7 @@ import type { HlEvent as SharedHlEvent } from '../../../shared/session-schemas';
 import { ResultCard } from './ResultCard';
 import { WidgetView } from './Widgets';
 import { ReactionBadge } from './Reactions';
+import { friendlyModel } from './modelName';
 import { agentEmojis, foldReactions, userMessageKey, type Reaction, type Reactions } from '../../../shared/reactions';
 import './chat.css';
 
@@ -612,7 +613,7 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
           title={session.prompt}
           engineName={engineName}
           engineIcon={engineIcon}
-          model={session.model ? (session.model.includes('/') ? session.model.split('/').pop() : session.model) : undefined}
+          model={friendlyModel(session.model) ?? undefined}
           status={statusLabel}
           steps={steps}
           outputs={outputs}
@@ -641,7 +642,9 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
             onSend={send}
             working={running}
             onPause={onPause ? () => onPause(sessionId) : undefined}
-            engineLabel={engineName + (session.model ? ` · ${session.model.includes('/') ? session.model.split('/').pop() : session.model}` : '')}
+            engineLabel={friendlyModel(session.model) ?? engineName}
+            engineIcon={engineIcon}
+            engineTitle={engineName + (session.model ? ` · ${session.model}` : '')}
             autoFocus={focused}
             focusSignal={focusSignal}
           />

@@ -34,14 +34,18 @@ interface ComposerProps {
   /** DEX is working: an empty box offers Pause instead of Send. */
   working?: boolean;
   onPause?: () => void;
-  /** "Claude Code · opus", shown on the right. */
+  /** The model as a person says it ("Haiku 4.5"), in a chip on the right. */
   engineLabel?: string;
+  /** The engine's logo, at the start of that chip. */
+  engineIcon?: string;
+  /** The full engine and model id, on hover. */
+  engineTitle?: string;
   autoFocus?: boolean;
   /** Bumped to put the cursor here. */
   focusSignal?: number;
 }
 
-export function Composer({ sessionId, onSend, working, onPause, engineLabel, autoFocus, focusSignal }: ComposerProps): React.ReactElement {
+export function Composer({ sessionId, onSend, working, onPause, engineLabel, engineIcon, engineTitle, autoFocus, focusSignal }: ComposerProps): React.ReactElement {
   const [value, setValue] = useState('');
   const [command, setCommand] = useState<SlashCommand | null>(null);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
@@ -210,7 +214,12 @@ export function Composer({ sessionId, onSend, working, onPause, engineLabel, aut
           onChange={(e) => { void addFiles(e.target.files); e.target.value = ''; }}
         />
         <span className="cx-composer__grow" />
-        {engineLabel && <span className="cx-composer__engine">{engineLabel}</span>}
+        {engineLabel && (
+          <span className="cx-composer__engine" title={engineTitle ?? engineLabel}>
+            {engineIcon && <img src={engineIcon} alt="" draggable={false} />}
+            <span className="cx-composer__engine-name">{engineLabel}</span>
+          </span>
+        )}
         {showPause ? (
           <button type="button" className="cx-composer__send cx-composer__send--stop" onClick={onPause} aria-label="Pause" title="Pause (Ctrl+C)">
             <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1.8" fill="currentColor" /></svg>

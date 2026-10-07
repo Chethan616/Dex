@@ -41,7 +41,8 @@ describe('transcript', () => {
 
   it('gives each kind of action its own orb', () => {
     expect(classifyTool('WebSearch').orb).toBe('searching');
-    expect(classifyTool('mcp__github__create_issue')).toMatchObject({ kind: 'mcp', orb: 'connecting', display: 'github · create_issue' });
+    expect(classifyTool('mcp__github__create_issue')).toMatchObject({ kind: 'mcp', orb: 'connecting', display: 'GitHub · create issue' });
+    expect(classifyTool('mcp__remote_kiwi__search-flight').display).toBe('Kiwi.com flights · search flight');
     expect(classifyTool('Bash').kind).toBe('run');
     expect(classifyTool('Edit').kind).toBe('write');
     expect(classifyTool('Read').kind).toBe('read');

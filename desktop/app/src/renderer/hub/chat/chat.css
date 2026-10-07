@@ -850,13 +850,24 @@
 .cx-composer__icon:hover { background: var(--color-surface-interactive-hover); color: var(--color-fg-primary); }
 
 .cx-composer__engine {
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 200px;
+  height: 28px;
+  padding: 0 11px 0 9px;
+  border-radius: 999px;
+  background: var(--surface-chip);
+  color: var(--color-fg-secondary);
   font-size: 12.5px;
-  color: var(--color-fg-tertiary);
+  font-weight: 550;
+  cursor: default;
 }
+
+.cx-composer__engine img { width: 14px; height: 14px; flex: none; }
+
+.cx-composer__engine-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .cx-composer__send {
   display: inline-flex;
@@ -874,7 +885,11 @@
 }
 
 .cx-composer__send:hover:not(:disabled) { transform: scale(1.05); }
-.cx-composer__send:disabled { opacity: 0.25; cursor: default; }
+.cx-composer__send:disabled {
+  background: var(--surface-chip);
+  color: var(--color-fg-tertiary);
+  cursor: default;
+}
 
 .cx-composer__send--stop {
   background: var(--color-surface-interactive-hover);
