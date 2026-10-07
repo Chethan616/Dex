@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Palette
@@ -322,9 +323,15 @@ fun SettingsScreen(
         haptics.click()
         onOpenTour()
       }
+      // The credit Apache-2.0's NOTICE asks redistributors to keep (NOTICE, LICENSES.md).
+      val uri = androidx.compose.ui.platform.LocalUriHandler.current
+      SettingRow(Icons.Rounded.Code, "Open source · Apache-2.0", "DEX was created by Chethan Krishna (@Chethan616). Tap for the code — ideas and pull requests welcome") {
+        haptics.click()
+        runCatching { uri.openUri("https://github.com/Chethan616/Dex") }
+      }
       Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
-          "Thinking orbs and bot avatars from Libraries.dev (MIT, Jakub Antalik). Material 3 Expressive patterns after meticha/material-3-expressive-catalog (Apache 2.0).",
+          "Thinking orbs and bot avatars from Libraries.dev (MIT, Jakub Antalik). Material 3 Expressive patterns after meticha/material-3-expressive-catalog (Apache 2.0). Task glyphs: Material Symbols (Apache 2.0). Full list: LICENSES.md in the repository.",
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

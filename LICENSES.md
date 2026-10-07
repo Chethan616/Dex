@@ -1,64 +1,101 @@
-# Third-party licenses — Dex
+# Licenses
 
-This file is the authoritative audit of every third-party component bundled with or vendored into Dex. **Pre-shipping rule:** no AGPL-licensed dependency is permitted in the shipped product. Optional add-ons the user installs themselves are not covered here.
+## DEX
 
-Status legend: `✓ verified` · `△ pending` (filled in during the phase that vendors it) · `✗ blocked` (license incompatible — must remove or replace).
+DEX is licensed under the **Apache License 2.0** ([LICENSE](LICENSE)).
+Copyright 2026 Chethan Krishna ([@Chethan616](https://github.com/Chethan616)) and the DEX contributors.
 
----
+**What that means**
 
-## What this repo ships
+- **Use, change, ship and sell it**, privately or commercially, for free.
+- **Keep the credit.** If you redistribute DEX or something built from it,
+  keep the [NOTICE](NOTICE) file's attribution ("DEX was created by Chethan
+  Krishna (@Chethan616)", with the link) in your NOTICE, your docs or your
+  About screen. Mark the files you changed. That's Apache-2.0 §4(b) and (d).
+- **Contributions** are under the same license (Apache-2.0 §5): no extra
+  agreement to sign.
+- **A patent grant** comes with it from every contributor, and ends for anyone
+  who sues over the code's patents.
 
-The Windows app (`desktop/app`, Electron) and the Android app (`android`).
-The old Flutter client, the forked OpenClaw runtime (`dex/core`) and its
-Python drivers were removed on 2026-10-07; their licenses no longer apply.
-Agent engines (Claude Code, Codex, OpenCode) are installed by the user, not
-bundled.
+Versions up to v3.2.0 were released under the MIT License. Those releases stay
+MIT; everything after them is Apache-2.0.
 
-## Android app (`android`)
+## Third-party components
 
-| Package | License | Why | Status |
+Checked on 2026-10-07. Re-run the dependency scan with `yarn licenses:scan` in
+`desktop/app` (scripts/license-scan.mjs) before each release.
+
+### Code DEX is built from
+
+| Component | Where | License | Notes |
 |---|---|---|---|
-| Jetpack Compose, Material 3, AndroidX | Apache-2.0 | the UI | ✓ |
-| Material Symbols (Rounded, filled) — google/material-design-icons | Apache-2.0 | the live-update glyphs (`res/drawable/ic_task_*.xml`) | ✓ |
-| Firebase Auth / Firestore / Messaging | Apache-2.0 | pairing with the desktop | ✓ |
-| Coil | Apache-2.0 | images | ✓ |
+| Browser Use desktop app | `desktop/` (where DEX started) | MIT | Notice kept in `desktop/LICENSE-browser-use` |
+| Browser Use browser-harness | `desktop/app/src/main/hl/stock/` (browser harness, domain skills) | MIT | Synced by `scripts/sync-domain-skills.mjs` |
+| Thinking orbs | `android/orbs` | MIT | `android/orbs/LICENSE` |
+| Bot avatars (Libraries.dev) | `android/…/ui/avatar/BotShapes.kt`, desktop avatars | MIT | Credited in the phone's Settings › About |
+| `<model-viewer>` | `android/app/src/main/assets/viewer` | Apache-2.0 | `LICENSE-model-viewer.txt` beside it |
+| Material Symbols (Rounded) | `android/app/src/main/res/drawable/ic_task_*.xml` | Apache-2.0 | |
+| material-3-expressive-catalog (meticha) | patterns adapted in the phone's UI | Apache-2.0 | Credited in Settings › About |
 
----
+### Desktop app (`desktop/app`) — npm production dependencies
 
-## Desktop app: document viewers (`desktop/app`, unify P2)
+414 packages are reachable from `package.json`'s `dependencies`:
 
-Added for the workspace's document tabs (`docs/unify/PLAN.md` §3.9). All permissive; bundled into the renderer.
+| License | Packages |
+|---|---|
+| MIT | 286 |
+| Apache-2.0 | 60 |
+| ISC | 32 |
+| BSD-3-Clause | 24 |
+| BlueOak-1.0.0 | 2 |
+| BSD-2-Clause, 0BSD, Unlicense, Python-2.0, MIT AND Zlib, MIT AND ISC | 1 each |
+| Dual-licensed, used under the permissive option (MIT OR WTFPL; MIT OR GPL-3.0-or-later — `jszip`; BSD-2 OR MIT OR Apache-2.0) | 3 |
+| **GPL-3.0** — `libsignal` 6.0.0, pulled in by `@whiskeysockets/baileys` (MIT) for the WhatsApp channel | **1** |
 
-| Package | License | SPDX | Why | Status |
-|---|---|---|---|---|
-| `pdfjs-dist` 6.3 | Apache-2.0 | `Apache-2.0` | PDF pages with a text layer | ✓ |
-| `docx-preview` 0.4 | Apache-2.0 | `Apache-2.0` | .docx as real pages, with tracked changes | ✓ |
-| `jszip` (transitive of docx-preview) | MIT or GPL-3.0 | `MIT OR GPL-3.0-or-later` | unzips .docx; used under MIT | ✓ |
-| SheetJS CE `xlsx` 0.20.3 (from cdn.sheetjs.com; npm's 0.18.5 has known parser CVEs) | Apache-2.0 | `Apache-2.0` | .xlsx / .csv sheets | ✓ |
-| `@google/model-viewer` 4.3 | Apache-2.0 | `Apache-2.0` | .glb / .gltf, as on the phone | ✓ |
-| `three` 0.183 (peer of model-viewer) | MIT | `MIT` | 3D rendering | ✓ |
-| `lit`, `@monogrid/gainmap-js` (transitive of model-viewer) | BSD-3-Clause, MIT | `BSD-3-Clause`, `MIT` | model-viewer's runtime | ✓ |
+**libsignal (GPL-3.0).** WhatsApp's protocol needs Signal's encryption, and
+its JavaScript implementation is GPL-3.0. Apache-2.0 code may be combined into a
+GPL-3.0 work, but not the other way round, so:
 
-## Fonts
+- **DEX's source is Apache-2.0.** You may use any part of it under Apache-2.0
+  terms.
+- **The Windows installer bundles libsignal.** As a combined work it is
+  distributed under GPL-3.0, and this repository is its complete source.
+  Redistributing the installer means following GPL-3.0 (offering the source).
+- **Planned:** move the WhatsApp channel to an optional download, so the
+  installer itself is Apache-2.0 only (TO_BE_DONE §3.8).
 
-| Font | License | Source | Status |
-|---|---|---|---|
-| Geist (variable) | OFL-1.1 | https://github.com/vercel/geist-font | △ pending — confirm in Phase 5 (download single variable .ttf) |
-| Geist Mono (variable) | OFL-1.1 | https://github.com/vercel/geist-font | △ pending — confirm in Phase 5 |
+Electron ships Chromium's own third-party notices (`LICENSES.chromium.html` in
+the installed app).
 
----
+### Phone app (`android`)
 
-## Out-of-band / opt-in components (NOT bundled)
+| Package | License |
+|---|---|
+| Jetpack Compose, Material 3, AndroidX (core, lifecycle, navigation, webkit, credentials…) | Apache-2.0 |
+| Kotlin standard library, kotlinx.coroutines, kotlinx.serialization | Apache-2.0 |
+| Firebase (Auth, Firestore, Messaging), Google ID (sign-in) | Apache-2.0 |
+| Google Play services libraries those pull in | Android Software Development Kit License (Google's terms; redistributable in apps) |
+| Coil, OkHttp | Apache-2.0 |
+| Thinking orbs (`android/orbs`, vendored) | MIT |
 
-User-installed if used, not shipped in DEX:
+No copyleft code is in the APK. (JUnit, EPL-1.0, is only used by tests and isn't shipped.)
 
-- **Open Interpreter** — AGPL. Not bundled. User may install separately at their own risk.
-- **Ollama / local model weights** — not bundled; users provide their own.
+### Not bundled
 
----
+- **Agent engines** (Claude Code, Codex, OpenCode) are installed by the user
+  under their own terms.
+- **Blender** is a separate program DEX drives when the user has it installed
+  (GPL; not linked or shipped).
+- **Models** (local or hosted, e.g. on Hugging Face) come under their own
+  licenses and terms.
+- **Fonts:** none are shipped; the UI uses the system font when Geist isn't
+  installed.
 
-## Audit checklist (for Phase 7 close-out)
+## Rules for adding a dependency
 
-- [ ] Every row above is `✓ verified`, not `△ pending`.
-- [ ] No transitive dependency is AGPL (run a license check on `desktop/app/yarn.lock` and the Gradle dependencies).
-- [ ] Attribution screen / "About Dex" in the app surfaces this list (or a link to it).
+1. Permissive only (MIT, Apache-2.0, BSD, ISC and similar) for anything
+   bundled. No GPL, AGPL, SSPL or non-commercial licenses in the app — the
+   libsignal case above is the one known exception, and it's planned out.
+2. Add it to this file in the same PR, with where it's used.
+3. Vendored code keeps its license file next to it, and a line in
+   [NOTICE](NOTICE) when its license asks for one.

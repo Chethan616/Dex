@@ -786,6 +786,34 @@ The rule already in AGENTS.md ("the most structured interface first") isn't enou
    - then Kiwi results as cards in under ~20 s, with Select and "Open in Google Flights";
    - zero browser steps until the user selects.
 
+### Licensing and open source — done (2026-10-07)
+
+- **DEX is Apache-2.0** (it was MIT up to v3.2.0). The owner wanted
+  attribution required and contributors welcome.
+  - NOTICE credits "Chethan Krishna (@Chethan616)", and Apache §4(d) makes
+    redistributors carry it.
+  - Both apps show the credit: desktop Settings › Application, phone
+    Settings › About.
+- **Upstream code:** Browser Use's desktop app and browser-harness (MIT;
+  notice in `desktop/LICENSE-browser-use`), thinking orbs and bot avatars
+  (MIT), model-viewer and Material Symbols (Apache-2.0). All listed in
+  LICENSES.md.
+- **The one conflict: libsignal (GPL-3.0),** via Baileys, for WhatsApp.
+  - The source stays Apache-2.0; the installer is a GPL-3.0 combined work
+    (documented in NOTICE and LICENSES.md).
+  - **Next:** make WhatsApp an optional download so the installer is
+    Apache-only, e.g. fetch Baileys and its dependencies into
+    `<userData>/addons/whatsapp` on first use and `import()` it from there.
+- **Run `yarn licenses:scan` before a release.** It fails on any new
+  non-permissive dependency.
+- **Community files rewritten for today's app:** CONTRIBUTING.md, SECURITY.md
+  (private reporting through GitHub advisories), the issue and PR templates,
+  and README badges with a contributing section.
+- **Owner, in GitHub settings:**
+  - turn on private vulnerability reporting and Discussions;
+  - create the labels `good first issue` and `help wanted`;
+  - add topics to the repo.
+
 ### 3. Live update polish — done (1.0.32)
 
 - **Back to one colour (owner, 1.0.32):** an all-blue track. The task's own bot (its shape, face and mood) is painted a lighter blue (`botStill(tint=…)`).

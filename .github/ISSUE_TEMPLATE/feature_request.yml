@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an idea or improvement for Dex.
+description: Suggest an idea or improvement for DEX.
 title: "[feat]: "
 labels: ["enhancement"]
 body:
@@ -25,10 +25,13 @@ body:
     attributes:
       label: Area
       options:
-        - App / UI
-        - Agent / gateway
-        - Engines (desktop / browser)
-        - Channels
-        - Other
+        - Desktop app — chat, workspace, settings
+        - Phone app
+        - Agent and tasks
+        - Widgets (questions, cards)
+        - Connectors and MCP
+        - Windows control
+        - Phone ↔ PC sync
+        - Other / not sure
     validations:
       required: true

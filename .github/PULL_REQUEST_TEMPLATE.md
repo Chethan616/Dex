@@ -1,4 +1,4 @@
-<!-- Thanks for contributing to Dex! Fill this in so reviewers have context. -->
+<!-- Thanks for contributing to DEX! Fill this in so reviewers have context. -->
 
 ## Summary
 
@@ -32,3 +32,7 @@
 ## Notes for reviewers
 
 <!-- Anything tricky, follow-ups, or known gaps. -->
+
+## License
+
+- [ ] My contribution is my own work (or I have the right to submit it), and I agree it's licensed under the [Apache License 2.0](../LICENSE), like the rest of DEX.

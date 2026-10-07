@@ -1,49 +1,50 @@
-# Third-party code in Dex
+DEX
+Copyright 2026 Chethan Krishna (https://github.com/Chethan616) and the DEX contributors
 
-## OpenDia — `extension/`
+DEX was created by Chethan Krishna (@Chethan616).
+Source: https://github.com/Chethan616/Dex
 
-Dex's browser extension is a fork of **OpenDia** by Aeon Inc.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this software except in compliance with the License. A copy is in LICENSE,
+or at http://www.apache.org/licenses/LICENSE-2.0.
 
-    https://github.com/aeonfun/opendia
-    Copyright (c) 2025 Aeon Inc
-    MIT License — the full text is in extension/LICENSE.opendia
+-------------------------------------------------------------------------------
+Attribution
+-------------------------------------------------------------------------------
 
-MIT permits the fork and requires the copyright notice and licence text to
-travel with the code, which is what this file and `extension/LICENSE.opendia`
-are for.
+Under section 4(d) of the License, if you redistribute DEX or a work derived
+from it, you must include the attribution notices in this NOTICE file —
+"DEX was created by Chethan Krishna (@Chethan616)" with the source link above —
+in a NOTICE file you distribute, in your documentation, or wherever such
+third-party notices normally appear (for example an "About" or "Credits"
+screen). Changed files must say that you changed them (section 4(b)).
 
-### What was taken, and what was not
+-------------------------------------------------------------------------------
+Third-party software in DEX
+-------------------------------------------------------------------------------
 
-Taken: `opendia-extension/` — the MV3 extension itself. Its background service
-worker, its content script, and the page-understanding work inside them are the
-part that is hard to write and easy to underestimate. Two thousand lines of
-each, most of it about the ways real pages differ from the DOM you expect.
+The full list, with every package's license, is in LICENSES.md. Notices that
+their licenses ask to be carried:
 
-Dropped: `opendia-mcp/` — a Node server whose only job was to bridge that
-extension to an MCP client over stdio. Dex's browser agent is already a server,
-so it hosts the WebSocket itself.
+* The desktop app (desktop/) began as Browser Use's desktop app.
+  Copyright (c) 2026 Browser Use. MIT License — desktop/LICENSE-browser-use.
 
-That removes a process, a protocol and a port, but tidiness is not the reason.
+* The agent's browser harness and domain skills come from
+  browser-use/browser-harness. Copyright (c) Browser Use. MIT License.
 
-**Tools arriving over MCP would bypass Dex's safety machinery.** An MCP tool is
-opaque: it is called and it returns. Nothing classifies it, nothing assigns it
-a confirmation tier, nothing verifies afterwards that it did what it said. On
-that path, "post a tweet" would simply happen. Hosted natively, the same
-capability goes through what every other action goes through — a confirmation
-card before anything consequential, verification against the live page after,
-and the rule that anything a page said is data rather than instruction.
+* Thinking orbs (android/orbs) — Copyright (c) 2026 Jakub Antalik. MIT License,
+  android/orbs/LICENSE. Bot avatar outlines — bot-avatars by Libraries.dev,
+  (c) Jakub Antalik, MIT License.
 
-### What this costs
+* <model-viewer> (android/app/src/main/assets/viewer) — Copyright Google LLC.
+  Apache License 2.0, LICENSE-model-viewer.txt in that folder.
 
-Their anti-detection work for Twitter, LinkedIn and Facebook becomes ours to
-maintain as those sites change; upstream fixes stop arriving for free. And this
-is Dex driving the browser that holds the owner's bank and their email, rather
-than a profile Dex signed into itself — so the blast radius of a page trying to
-steer it is everything they are signed into. The untrusted-content rule covers
-that and is restated in `extension/README.md`. Both were accepted deliberately
-when this was chosen; they are written down so the choice stays visible.
+* Material Symbols (android/app/src/main/res/drawable/ic_task_*.xml) —
+  Copyright Google LLC. Apache License 2.0.
 
-### Changes made
-
-Recorded in `extension/README.md` so the difference from upstream is one file
-away rather than a diff away.
+* The Windows desktop installer bundles libsignal
+  (github.com/whiskeysockets/libsignal-node), used by the WhatsApp channel,
+  which is licensed under the GNU General Public License v3.0. DEX's own
+  code is Apache-2.0, which is compatible with GPL-3.0; the installer as a
+  combined work is distributed under the terms of GPL-3.0, and its complete
+  corresponding source is this repository. See LICENSES.md.

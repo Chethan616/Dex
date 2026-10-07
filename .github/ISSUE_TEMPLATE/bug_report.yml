@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in Dex is broken or behaving unexpectedly.
+description: Something in DEX is broken or behaving unexpectedly.
 title: "[bug]: "
 labels: ["bug"]
 body:
@@ -11,7 +11,7 @@ body:
     attributes:
       label: What happened?
       description: What did you do, and what went wrong?
-      placeholder: I opened Settings → Diagnostics and the gateway showed disconnected with empty logs.
+      placeholder: I asked from the phone to find flights; the question showed as text instead of a form.
     validations:
       required: true
   - type: textarea
@@ -25,7 +25,7 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. Launch Dex
+        1. Open DEX
         2. Open ...
         3. See ...
     validations:
@@ -35,18 +35,21 @@ body:
     attributes:
       label: Area
       options:
-        - App / UI
-        - Agent / gateway
-        - Engines (desktop / browser)
-        - Channels (WhatsApp, Telegram, ...)
+        - Desktop app — chat, workspace, settings
+        - Phone app
+        - Agent and tasks
+        - Widgets (questions, cards)
+        - Connectors and MCP
+        - Windows control
+        - Phone ↔ PC sync
         - Other / not sure
     validations:
       required: true
   - type: input
     id: version
     attributes:
-      label: Dex version / build
-      placeholder: e.g. 2026.6.22, feat/liquid-glass-ui
+      label: DEX version
+      placeholder: e.g. desktop 3.2.0, phone 1.0.32 (Settings › Updates)
   - type: input
     id: os
     attributes:
@@ -56,5 +59,5 @@ body:
     id: logs
     attributes:
       label: Logs
-      description: For agent/gateway issues, paste the Settings → Diagnostics log.
+      description: For agent or task issues, the log from Settings › Diagnostics helps. Remove anything private first.
       render: shell

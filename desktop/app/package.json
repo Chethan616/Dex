@@ -53,14 +53,15 @@
     "start:reset-sessions": "node scripts/reset-sessions.mjs",
     "sync-domain-skills": "node scripts/sync-domain-skills.mjs",
     "postinstall": "node scripts/chmod-node-pty-helpers.mjs",
-    "oauth:setup": "node scripts/oauth-setup.mjs"
+    "oauth:setup": "node scripts/oauth-setup.mjs",
+    "licenses:scan": "node scripts/license-scan.mjs"
   },
   "keywords": [],
   "author": {
-    "name": "Chethan616",
-    "email": "chethankrishna2022@gmail.com"
+    "name": "Chethan Krishna",
+    "url": "https://github.com/Chethan616"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",
     "@electron-forge/maker-deb": "^7.11.1",

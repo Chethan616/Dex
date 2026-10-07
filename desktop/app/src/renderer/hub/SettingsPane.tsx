@@ -399,10 +399,21 @@ function AppSection(): React.ReactElement {
         <div>
           <div className="settings-pane__label">Version</div>
           <div className="settings-pane__sublabel">
-            {info ? `DEX ${info.version}` : 'Detecting version...'}
+            {info ? `DEX ${info.version} · by Chethan Krishna · Apache-2.0` : 'Detecting version...'}
           </div>
         </div>
         {info && <span className="settings-pane__value">v{info.version}</span>}
+      </div>
+      {/* The credit Apache-2.0's NOTICE asks redistributors to keep (NOTICE, LICENSES.md). */}
+      <div className="settings-pane__row">
+        <div>
+          <div className="settings-pane__label">Open source</div>
+          <div className="settings-pane__sublabel">DEX was created by Chethan Krishna (@Chethan616). Ideas, issues and pull requests are welcome.</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="conn-card__btn" onClick={() => { void window.electronAPI?.widgets?.openUrl('https://github.com/Chethan616/Dex'); }}>Source code</button>
+          <button className="conn-card__btn" onClick={() => { void window.electronAPI?.widgets?.openUrl('https://github.com/Chethan616/Dex/blob/main/LICENSES.md'); }}>Licenses</button>
+        </div>
       </div>
       <div className="settings-pane__row">
         <div>

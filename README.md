@@ -1,5 +1,11 @@
 # DEX
 
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/Chethan616/Dex?include_prereleases)](https://github.com/Chethan616/Dex/releases/latest)
+[![Stars](https://img.shields.io/github/stars/Chethan616/Dex?style=social)](https://github.com/Chethan616/Dex/stargazers)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Good first issues](https://img.shields.io/github/issues/Chethan616/Dex/good%20first%20issue)](https://github.com/Chethan616/Dex/labels/good%20first%20issue)
+
 An AI agent that works on your PC beside you — in a browser, your documents,
 your apps and your accounts — while you keep using it. And a phone app that
 starts tasks, follows them and answers DEX's questions from anywhere.
@@ -16,6 +22,11 @@ starts tasks, follows them and answers DEX's questions from anywhere.
   more — DEX uses the service's API instead of clicking through its website.
 
 Releases (installer, APK, source): https://github.com/Chethan616/Dex/releases
+
+**DEX is open source, and built in the open.** If it's useful to you, a ⭐
+helps more people find it. Ideas, bugs and pull requests are all welcome —
+start with [CONTRIBUTING.md](CONTRIBUTING.md) or an issue labelled
+[good first issue](https://github.com/Chethan616/Dex/labels/good%20first%20issue).
 
 ---
 
@@ -57,6 +68,23 @@ cd android
 Pairing the phone needs your own Firebase project: see `firebase/README.md`.
 Release steps are in `TO_BE_DONE.md`.
 
+## Contributing
+
+Pull requests, issues and ideas are welcome — from a typo fix to a new
+connector. [CONTRIBUTING.md](CONTRIBUTING.md) has the setup, the checks to run
+and how reviews work. Be kind: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+Security issues go to [SECURITY.md](SECURITY.md), not a public issue.
+
 ## License
 
-MIT. Third-party components and their licenses are listed in `LICENSES.md`.
+DEX is licensed under the **[Apache License 2.0](LICENSE)** — free to use,
+change and ship, commercially too.
+
+**Credit is required.** DEX was created by Chethan Krishna
+([@Chethan616](https://github.com/Chethan616)). If you redistribute DEX or
+build something from it, keep the attribution in [NOTICE](NOTICE) — in your
+NOTICE file, docs or About screen — and mark the files you changed
+(Apache-2.0 §4).
+
+Third-party components and their licenses are in [LICENSES.md](LICENSES.md).
+Releases up to v3.2.0 were MIT.
