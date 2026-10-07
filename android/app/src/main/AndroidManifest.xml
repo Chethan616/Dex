@@ -5,6 +5,8 @@
     <!-- Installing DEX updates downloaded from GitHub Releases (update/AppUpdater). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 16 live updates: the status-bar pill for a task you started here. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- A quiet ongoing notification while a PC task runs (notify/TaskWatchService). -->

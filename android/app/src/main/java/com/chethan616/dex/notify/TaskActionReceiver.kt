@@ -34,6 +34,7 @@ class TaskActionReceiver : BroadcastReceiver() {
             val text = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KEY_REPLY)?.toString()?.trim()
             if (!text.isNullOrEmpty()) {
               context.container.repo.send(CommandType.FollowUp, mapOf("sessionId" to sessionId, "prompt" to text))
+              PhoneTasks.mark(context, sessionId)
               // Replace the reply field's spinner with a clear "sent".
               Notifications.replySent(context, sessionId, intent.getStringExtra(EXTRA_TITLE).orEmpty(), text)
             }

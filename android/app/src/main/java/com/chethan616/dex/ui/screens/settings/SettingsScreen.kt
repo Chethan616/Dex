@@ -3,6 +3,7 @@ package com.chethan616.dex.ui.screens.settings
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
+import com.chethan616.dex.notify.LiveUpdate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,8 @@ import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Vibration
@@ -268,6 +271,44 @@ fun SettingsScreen(
           Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
+      }
+      // Android 16's status-bar pill for tasks started from this phone (notify/LiveUpdate.kt).
+      var live by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(LiveUpdate.status(context)) }
+      androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        live = LiveUpdate.status(context)
+        onPauseOrDispose { }
+      }
+      fun openNotificationSettings(promotion: Boolean) {
+        val action = if (promotion && Build.VERSION.SDK_INT >= 36 && Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1) {
+          Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS
+        } else {
+          Settings.ACTION_APP_NOTIFICATION_SETTINGS
+        }
+        runCatching {
+          context.startActivity(Intent(action).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+      }
+      SettingRow(
+        Icons.Rounded.Timer,
+        "Live updates",
+        when (live) {
+          LiveUpdate.Status.On -> "On · tasks you start here show in the status bar until they're done"
+          LiveUpdate.Status.Off -> "Off · tap to let DEX show tasks in the status bar"
+          LiveUpdate.Status.NeedsAndroid16 -> "Needs Android 16 · tasks still show as a notification"
+          LiveUpdate.Status.NotificationsOff -> "Notifications are off · tap to turn them on"
+        },
+      ) {
+        haptics.click()
+        openNotificationSettings(promotion = live == LiveUpdate.Status.Off)
+      }
+      SettingRow(Icons.Rounded.PlayCircle, "Try a live update", "A 25-second pretend task. Go to your home screen to watch it") {
+        if (live == LiveUpdate.Status.NotificationsOff) {
+          haptics.reject()
+          openNotificationSettings(promotion = false)
+        } else {
+          haptics.success()
+          LiveUpdate.demo(context)
+        }
       }
     }
 

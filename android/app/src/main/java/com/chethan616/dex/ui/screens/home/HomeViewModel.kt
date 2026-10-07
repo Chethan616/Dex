@@ -75,7 +75,10 @@ class HomeViewModel(private val c: AppContainer) : ViewModel() {
     val text = prompt.ifBlank { if (attachments.size == 1) "Take a look at the attached file." else "Take a look at the attached files." }
     val id = c.repo.send(CommandType.NewTask, mapOf("prompt" to text, "engine" to engine, "model" to model, "uploads" to uploads.ifEmpty { null }))
     emit(CommandState.Pending)
-    c.repo.command(id).collect { emit(it) }
+    c.repo.command(id).collect {
+      if (it is CommandState.Done) (it.result["sessionId"] as? String)?.let(c::markFromPhone)
+      emit(it)
+    }
   }.catch { emit(CommandState.Failed(it.message ?: "Couldn’t send that.")) }
 
   fun answer(session: Session, approved: Boolean) {

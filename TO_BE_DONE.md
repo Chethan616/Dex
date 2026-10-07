@@ -633,6 +633,12 @@ The owner wants all of these done.
 
 > **Progress (2026-10-07):** 1–5 are done and pushed. 6 is next.
 > - **Done pill** (Android 1.0.28): the bot sits inside the pill's start, unclipped. The Settings sidebar fix is `17c78cf7`.
+> - **Live updates** (Android 1.0.29): a task you start or follow up *from the phone* rides in the status bar like a food delivery or GitHub's agent sessions. It's Android 16's promoted notification, which is the pill on a Pixel and the Live Alert capsule on OnePlus.
+>   - **What it shows:** a ProgressStyle track with the bot riding it (sent → working → done), a ticking timer, and "Approve" in the pill when DEX needs an OK.
+>   - **Code:** `notify/LiveUpdate.kt` and `PhoneTasks.kt`, with the channel `live_updates` (DEFAULT, silent) and the `POST_PROMOTED_NOTIFICATIONS` permission.
+>   - **Settings:** Settings › Feel has a "Live updates" status row and a "Try a live update" 25-second demo.
+>   - **The rule:** from AOSP `android16-qpr1-release`, the notification must request promotion, be ongoing, have a title, use ProgressStyle/BigText/Call, and **not** be colorized; the channel must be above MIN. Robolectric's 16.0 still uses the old rule, which required colorized.
+>   - **Status:** checked in Robolectric, not yet on the phone.
 > - **Reactions** (`f2b65a7f`, Android 1.0.28): `shared/reactions.ts` is the model, and the agent uses `dex-react` sparingly; the owner asked for no reaction on every message. The phone sends a `react` command (Firestore rule deployed).
 > - **Connectors + Marketplace** (`ecca603b`): `shared/connectorCatalog.ts` lists 50 hosted MCP servers.
 >   - On 2026-10-07 each one passed OAuth discovery and DCR+PKCE, and accepted the loopback redirect.

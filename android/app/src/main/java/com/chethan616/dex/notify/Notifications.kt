@@ -20,6 +20,7 @@ object Notifications {
   const val CHANNEL_TASKS = "tasks"
   const val CHANNEL_APPROVALS = "approvals"
   const val CHANNEL_LIVE = "live"
+  const val CHANNEL_LIVE_UPDATES = "live_updates"
   const val LIVE_ID = 0x0DE5
   const val EXTRA_SESSION_ID = "sessionId"
 
@@ -43,10 +44,25 @@ object Notifications {
         setShowBadge(false)
       },
     )
+    // Default importance, but silent: a live update needs more than LOW to
+    // ride in the status bar, and should never ring.
+    nm.createNotificationChannel(
+      NotificationChannel(CHANNEL_LIVE_UPDATES, "Live updates", NotificationManager.IMPORTANCE_DEFAULT).apply {
+        description = "A task you started from this phone, live in the status bar until it's done."
+        setSound(null, null)
+        enableVibration(false)
+        setShowBadge(false)
+      },
+    )
   }
 
-  /** The ongoing "working on it" notification [TaskWatchService] keeps up. */
+  /**
+   * The ongoing "working on it" notification [TaskWatchService] keeps up: a
+   * live update in the status bar when a running task was asked from this
+   * phone ([PhoneTasks]), a quiet one otherwise.
+   */
   fun live(context: Context, running: List<Session>): Notification {
+    running.firstOrNull { PhoneTasks.has(it.id) }?.let { return LiveUpdate.build(context, it, others = running.size - 1) }
     val first = running.firstOrNull()
     val title = when {
       first == null -> "DEX"
@@ -74,7 +90,7 @@ object Notifications {
     return builder.build()
   }
 
-  private fun taskAction(context: Context, action: String, sessionId: String, title: String, mutable: Boolean = false): PendingIntent =
+  internal fun taskAction(context: Context, action: String, sessionId: String, title: String, mutable: Boolean = false): PendingIntent =
     PendingIntent.getBroadcast(
       context,
       (action + sessionId).hashCode(),
@@ -106,7 +122,7 @@ object Notifications {
     NotificationManagerCompat.from(context).notify(sessionId.hashCode(), n)
   }
 
-  private fun openSession(context: Context, sessionId: String): PendingIntent =
+  internal fun openSession(context: Context, sessionId: String): PendingIntent =
     PendingIntent.getActivity(
       context,
       sessionId.hashCode(),

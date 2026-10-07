@@ -20,6 +20,10 @@ class AppContainer(context: Context) {
   val firebaseReady: Boolean = BuildConfig.HAS_FIREBASE
   val auth: AuthRepository by lazy { AuthRepository(context) }
   val repo: DexRepository by lazy { DexRepository(context) }
+  private val appContext = context.applicationContext
+
+  /** A task asked from this phone: it gets the live update in the status bar. */
+  fun markFromPhone(sessionId: String) = com.chethan616.dex.notify.PhoneTasks.mark(appContext, sessionId)
 }
 
 class DexApp : Application() {
@@ -32,6 +36,7 @@ class DexApp : Application() {
     super.onCreate()
     container = AppContainer(this)
     Notifications.createChannels(this)
+    com.chethan616.dex.notify.PhoneTasks.attach(this)
     // Local notifications for as long as the process lives (see TaskWatcher).
     if (container.firebaseReady) {
       appScope.launch {

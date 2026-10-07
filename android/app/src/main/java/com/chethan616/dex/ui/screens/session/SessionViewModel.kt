@@ -72,6 +72,7 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Strin
       }
       val prompt = text.ifBlank { if (attachments.size == 1) "Here’s a file for this." else "Here are some files for this." }
       c.repo.send(CommandType.FollowUp, mapOf("sessionId" to sessionId, "prompt" to prompt, "uploads" to uploads.ifEmpty { null }))
+      c.markFromPhone(sessionId)
       true
     } catch (_: Throwable) {
       false
