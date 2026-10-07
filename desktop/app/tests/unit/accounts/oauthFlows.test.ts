@@ -206,7 +206,11 @@ describe('Reddit installed-app OAuth', () => {
 describe('Microsoft sign-in', () => {
   it('uses PKCE, requests full scopes, and returns the tokens and user profile', async () => {
     let verifierSent = '';
-    browser = async (auth) => { await redirectBack(auth, { code: 'm-code', state: auth.searchParams.get('state')! }); };
+    browser = async (auth) => {
+      // What the Entra app registers: localhost, any port, this path.
+      expect(auth.searchParams.get('redirect_uri')).toMatch(/^http:\/\/localhost:\d+\/microsoft\/callback$/);
+      await redirectBack(auth, { code: 'm-code', state: auth.searchParams.get('state')! });
+    };
     routes.push([/login\.microsoftonline\.com\/common\/oauth2\/v2\.0\/token/, (_u, init) => {
       const body = form(init);
       verifierSent = body.get('code_verifier')!;

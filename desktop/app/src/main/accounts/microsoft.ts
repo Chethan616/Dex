@@ -9,10 +9,10 @@
  * password. The refresh token (offline_access) is the only thing stored in
  * the OS credential store; access tokens are obtained on demand.
  *
- * Redirect URI: http://127.0.0.1:<loopback-port>/microsoft/callback
- * Microsoft requires the redirect URI to be registered in the Azure app
- * under "Mobile and desktop applications" (allows arbitrary loopback ports
- * per RFC 8252 §7.3 and MSAL behaviour).
+ * Redirect URI: http://localhost:<loopback-port>/microsoft/callback,
+ * registered in the Entra app as `http://localhost/microsoft/callback` under
+ * "Mobile and desktop applications". Entra ignores the port of a localhost
+ * redirect but matches the path; its portal refuses `http://127.0.0.1`.
  */
 import { shell } from 'electron';
 import { mainLogger } from '../logger';
@@ -80,7 +80,7 @@ export async function connectMicrosoft(): Promise<MicrosoftAccount> {
 
   cancelMicrosoft();
 
-  const loopback = await startLoopback({ path: '/microsoft/callback', providerName: 'Microsoft' });
+  const loopback = await startLoopback({ path: '/microsoft/callback', providerName: 'Microsoft', host: 'localhost' });
   active = loopback;
 
   const { verifier, challenge } = pkcePair();

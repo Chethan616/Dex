@@ -65,8 +65,12 @@ h1{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:-.01em}p{margin:
 /**
  * Start listening. `port` 0 picks a free one (Google allows any loopback port);
  * providers that pin the redirect URL exactly (Slack) pass their fixed port.
+ *
+ * `host: 'localhost'` names the redirect `http://localhost:<port>/…` — what
+ * Microsoft's portal accepts (it refuses `http://127.0.0.1` there). The
+ * browser may then try ::1 before 127.0.0.1, so it listens on both.
  */
-export async function startLoopback(opts: { port?: number; path?: string; providerName: string; expectedState?: string }): Promise<Loopback> {
+export async function startLoopback(opts: { port?: number; path?: string; providerName: string; expectedState?: string; host?: 'localhost' }): Promise<Loopback> {
   const callbackPath = opts.path ?? '/callback';
   let settle: ((r: LoopbackResult) => void) | null = null;
   let reject: ((e: Error) => void) | null = null;
@@ -94,8 +98,10 @@ export async function startLoopback(opts: { port?: number; path?: string; provid
       : page('Not connected', error === 'access_denied' ? 'You cancelled the sign-in. Nothing was changed.' : `The sign-in didn’t finish (${error ?? 'no code'}). Try again from DEX.`, false));
     settle?.({ params: url.searchParams });
     settle = null;
-    setTimeout(() => server.close(), 500);
+    setTimeout(closeAll, 500);
   });
+  let ipv6: http.Server | null = null;
+  const closeAll = () => { server.close(); ipv6?.close(); };
 
   await new Promise<void>((resolve, rejectListen) => {
     server.once('error', (err: NodeJS.ErrnoException) => {
@@ -106,20 +112,27 @@ export async function startLoopback(opts: { port?: number; path?: string; provid
     server.listen(opts.port ?? 0, '127.0.0.1', () => resolve());
   });
   const { port } = server.address() as AddressInfo;
+  if (opts.host === 'localhost') {
+    const second = http.createServer((req, res) => server.emit('request', req, res));
+    await new Promise<void>((resolve) => {
+      second.once('error', () => resolve()); // no IPv6 here: 127.0.0.1 alone is fine
+      second.listen(port, '::1', () => { ipv6 = second; resolve(); });
+    });
+  }
 
   const timer = setTimeout(() => {
     reject?.(new Error('The sign-in timed out. Start it again from DEX.'));
-    server.close();
+    closeAll();
   }, SIGN_IN_TIMEOUT_MS);
   void wait.finally(() => clearTimeout(timer)).catch(() => {});
 
   return {
-    redirectUri: `http://127.0.0.1:${port}${callbackPath}`,
+    redirectUri: `http://${opts.host ?? '127.0.0.1'}:${port}${callbackPath}`,
     wait,
     close: () => {
       clearTimeout(timer);
       reject?.(new Error('Sign-in cancelled.'));
-      server.close();
+      closeAll();
     },
   };
 }

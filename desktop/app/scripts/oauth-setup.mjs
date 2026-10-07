@@ -115,12 +115,11 @@ await provider(
   'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade',
   [
     'Name: DEX · Supported account types: Accounts in any organizational directory and personal Microsoft accounts.',
-    'Redirect URI: Platform: Mobile and desktop applications · Redirect URI: http://127.0.0.1 · Register.',
-    'Under Authentication → Advanced settings, allow public client flows: Yes.',
-    'Copy the Application (client) ID below.',
-    'Optional: Under Certificates & secrets, create a client secret if needed, or leave blank for PKCE.',
+    'Redirect URI: Public client/native (mobile & desktop) · http://localhost/microsoft/callback · Register.',
+    'Authentication → Allow public client flows: Yes → Save.',
+    'Copy the Application (client) ID below. No secret: DEX signs in with PKCE.',
   ],
-  [['clientId', 'Application (client) ID'], ['clientSecret', 'Client secret (optional)']],
+  [['clientId', 'Application (client) ID']],
 );
 
 rl.close();
