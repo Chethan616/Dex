@@ -47,6 +47,7 @@ The repo is **public**.
   - 3.7 The owner's requests of 2026-10-06
   - 3.8 The owner's requests of 2026-10-07: widgets (generative UI), MCP first, live-update polish
   - 3.9 Channels, Marketplace logos, Telegram (v3.3.0)
+  - 3.10 The first public release, v1.0.0
 - **Part 4 — The Android app** (state and release, in case you touch it)
 - **Appendix A** — `docs/unify/PLAN.md` (the entire plan)
 - **Appendix B** — `docs/unify/codex-research.md` (the entire research)
@@ -626,7 +627,6 @@ PLAN §3.7, plus Codex's note format in Appendix B. The format matters: the mode
 - **`AgentPane.tsx` has old unused code** (lint warnings: `OutputRow`, `OutputIcon`, `CopyIcon`, `TerminalPane` import…). That's leftover from the pre-chat deck. Remove it when you're next in there, in its own commit.
 - **HTML documents** are drawn with scripts off (sandbox). A user may expect a running page: offer "Open as a web tab" in the doc bar for .html. That needs a `file://` web tab, so check the address bar's refusal of `file:` and allow it **only** for paths the task recorded.
 - **`gltf` with external buffers** can't render from one file's bytes (`ModelView` says so). If it matters, have main serve the folder via a scoped custom protocol.
-- **Token connections can't be saved (since 2026-09-29).** The log says `mcp.store.save.failed: The stub received bad data`. `mcp/store.ts` keeps every connection in **one** keytar entry, and Windows Credential Manager refuses a secret over 2,560 bytes (that error is how keytar reports it). Store one entry per connection id, and migrate the old blob on first read.
 - **Big files:** `sessions:read-file` sends the whole file over IPC (≤ 80 MB). For video, a streaming custom protocol (`protocol.handle` with range requests) would start playback faster. Add it only if it's a real problem.
 
 ---
@@ -790,7 +790,7 @@ The rule already in AGENTS.md ("the most structured interface first") isn't enou
 
 ### Licensing and open source — done (2026-10-07)
 
-- **DEX is Apache-2.0** (it was MIT up to v3.2.0). The owner wanted
+- **DEX is Apache-2.0** (it was MIT before v1.0.0). The owner wanted
   attribution required and contributors welcome.
   - NOTICE credits "Chethan Krishna (@Chethan616)", and Apache §4(d) makes
     redistributors carry it.
@@ -848,12 +848,44 @@ What the owner asked: "move the dex phone to the channels section at 1st then wh
 - **Telegram widgets:** Telegram can show buttons (inline keyboards). `dex-ui choose` could become buttons there instead of a plain question.
 - **Telegram duplicates after a crash:** the update offset is kept in memory, so messages from the last minutes before a crash can arrive twice (only within 10 minutes; older ones are skipped). Persist the offset if it shows up.
 
+## 3.10 The first public release, v1.0.0 (2026-10-07)
+
+The owner deleted every earlier release (v3.1.0–v3.3.0) and their tags and
+shipped everything as **v1.0.0**, the first public release. The desktop
+starts again at 1.0.0; the phone keeps counting (1.0.34), because its
+updater only offers a higher version name.
+
+**Done in this round:**
+- **Connections save again.** `mcp/store.ts` kept every MCP connection in one
+  keytar entry and Windows refuses more than 2,560 bytes, so saves failed
+  ("The stub received bad data") once a few were added. It's now split into
+  parts behind a manifest, written as a new generation before switching.
+- **Microsoft 365** needs DEX's Entra app (the owner registers it; the client
+  ID goes in `config/oauth-clients.json` and the `DEX_OAUTH_CLIENTS_JSON`
+  secret). The redirect is `http://localhost/microsoft/callback`, because the
+  portal refuses `http://127.0.0.1`. Release builds hide any sign-in they
+  can't do (Reddit until an approved app exists).
+- **Travel through MCP, not the browser.** `connectionsForPrompt` in
+  `mcp/catalog.ts` gives a flight task Kiwi.com and a hotel task trivago
+  (both keyless, verified 2026-10-07), with a hint to answer with cards. A
+  follow-up keeps the topic (`taskPrompt`). Google's own Maps MCP (Grounding
+  Lite) needs a Cloud project with billing, so it isn't used.
+- **The prompt bar:** the engine is a chip with its logo and the model as
+  people say it ("Haiku 4.5", `chat/modelName.ts`); MCP sources read as the
+  service ("Kiwi.com flights").
+- **Phone:** a turn's widgets come after its answer (`widgetsLast`, as on the
+  desktop), and the chat follows the stream until you drag it.
+- **README** rewritten for newcomers, with images in `docs/images/`.
+
+**Known:** `dexUi.test.ts` and `search/query.test.ts` can time out when the
+machine is busy (e.g. a Gradle build running); they pass on their own.
+
 # Part 4 — The Android app (if you touch it)
 
 `android/` holds a Jetpack Compose app (material3 `1.5.0-alpha29`, M3 Expressive), package `com.chethan616.dex`. It pairs with the PC over the Firebase bridge.
 
 **State at hand-over:** **1.0.25** (versionCode 26).
-- It's published as `DEX-android-1.0.25.apk` on the GitHub release **v3.2.0** (desktop 3.2.0), which is `releases/latest`.
+- It's published as `DEX-android-<ver>.apk` on the latest GitHub release (`releases/latest`).
 - The app updates itself from GitHub Releases, like the desktop:
   - `update/ReleaseChecker.kt` reads `releases/latest` and looks for an asset named `DEX-android-<version>.apk`;
   - `update/AppUpdater.kt` downloads it inside the app, checks it's DEX at that version and signed with the same key, then opens Android's installer (`REQUEST_INSTALL_PACKAGES`; the FileProvider `updates/` path);
@@ -877,9 +909,9 @@ What the owner asked: "move the dex phone to the channels section at 1st then wh
 
    The SDK is at `D:\Android\Sdk`; build-tools are under `D:/Android/Sdk/build-tools/<ver>/`.
 4. Copy the APK to `android/release/DEX-android-<ver>.apk` (gitignored).
-5. `gh release upload <latest tag, e.g. v3.2.0> android/release/DEX-android-<ver>.apk`. Check the asset's sha256 digest equals the local file (`gh release view <latest tag, e.g. v3.2.0> --json assets`).
-6. `gh release delete-asset <latest tag, e.g. v3.2.0> DEX-android-<old>.apk -y`.
-7. Update the notes line that names the APK: `gh release view --json body` → edit → `gh release edit <latest tag, e.g. v3.2.0> --notes-file …`.
+5. `gh release upload <latest tag, e.g. v1.0.0> android/release/DEX-android-<ver>.apk`. Check the asset's sha256 digest equals the local file (`gh release view <latest tag, e.g. v1.0.0> --json assets`).
+6. `gh release delete-asset <latest tag, e.g. v1.0.0> DEX-android-<old>.apk -y`.
+7. Update the notes line that names the APK: `gh release view --json body` → edit → `gh release edit <latest tag, e.g. v1.0.0> --notes-file …`.
 
 **Screenshots without a phone (Robolectric):**
 1. Add temporarily: `testImplementation("org.robolectric:robolectric:4.17")`, the compose BOM, `ui-test-junit4`, `debugImplementation ui-test-manifest`, and `testOptions.unitTests.isIncludeAndroidResources = true`.
