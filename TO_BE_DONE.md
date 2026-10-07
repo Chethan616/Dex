@@ -786,13 +786,15 @@ The rule already in AGENTS.md ("the most structured interface first") isn't enou
    - then Kiwi results as cards in under ~20 s, with Select and "Open in Google Flights";
    - zero browser steps until the user selects.
 
-### 3. Live update polish — done (1.0.31)
+### 3. Live update polish — done (1.0.32)
 
-- The emojis are gone from the live update; the task's own bot stays.
-- The status-bar icon is the kind of task: a clean, white, rounded glyph (Material Symbols Rounded, filled), chosen from the prompt's words:
+- **Back to one colour (owner, 1.0.32):** an all-blue track. The task's own bot (its shape, face and mood) is painted a lighter blue (`botStill(tint=…)`).
+- **Removed:** the phone and flag icons at the ends of the track, and every emoji. The steps stay as the text line.
+- **The status-bar icon** is the kind of task: a clean, white, rounded glyph (Material Symbols Rounded, filled), chosen from the prompt's words:
   - flight, hotel, food, place, shopping, mail, calendar, music, code, PC, doc, research;
-  - anything else keeps DEX's mark.
+  - anything else keeps the DEX mark.
 - **Open:** OnePlus's collapsed capsule may draw the app icon instead of the notification's small icon. Check it on the phone. If the glyph replaces the DEX mark instead of sitting after it, compose both into one small icon or put the glyph in the large icon.
+- **Desktop widgets everywhere:** the pane's chat and the logs window (`logs/ChatTranscript.tsx`, answers via `logsAPI.followUp`). Mail, phone and map links open through `widgets:open-url` (main checks the scheme).
 
 # Part 4 — The Android app (if you touch it)
 

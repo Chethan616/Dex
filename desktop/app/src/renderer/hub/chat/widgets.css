@@ -4,7 +4,20 @@
  * and the chat's own tokens so light and dark both just work.
  */
 
-.cx {
+/* Outside the chat (the logs window), widgets bring the chat's card tokens with them. */
+.cx-wscope {
+  --cx-card: rgba(255, 255, 255, 0.03);
+  --cx-card-line: rgba(255, 255, 255, 0.08);
+  --cx-tile: rgba(255, 255, 255, 0.06);
+}
+
+[data-mode="light"] .cx-wscope {
+  --cx-card: rgba(0, 0, 0, 0.015);
+  --cx-card-line: rgba(0, 0, 0, 0.10);
+  --cx-tile: rgba(0, 0, 0, 0.04);
+}
+
+.cx, .cx-wscope {
   --cx-w-accent: var(--color-accent-default, #3b82f6);
   --cx-w-accent-soft: color-mix(in srgb, var(--cx-w-accent) 16%, transparent);
   --cx-w-accent-line: color-mix(in srgb, var(--cx-w-accent) 55%, transparent);
@@ -247,6 +260,10 @@
 .cx-w-stepper__unit { font-size: 12.5px; font-weight: 400; color: var(--color-fg-secondary); }
 
 /* Answered: folds to one quiet line */
+.cx-w__glyph--small { width: 22px; height: 22px; border-radius: 7px; }
+.cx-w--waiting__hint { color: var(--color-fg-tertiary); font-size: 12px; }
+.cx-w--waiting__hint::before { content: '·'; margin-right: 8px; }
+
 .cx-w--done {
   display: inline-flex;
   align-items: center;

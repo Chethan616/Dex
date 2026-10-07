@@ -20,6 +20,7 @@
 import { formatBytes } from '../../shared/attachments';
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Markdown } from '../hub/Markdown';
+import { WidgetView } from '../hub/chat/Widgets';
 import { AgentAvatar, CopyButton, Orb, type OrbState } from '../components/lib';
 import { FileRow, LogsSessionContext } from './FileRow';
 import {
@@ -389,6 +390,8 @@ export function ChatTranscript({ sessionId, status, engine, history }: ChatTrans
 
   const { blocks, usage } = transcript;
   const lastId = blocks[blocks.length - 1]?.id;
+  // A widget question with a message after it was answered (hub/chat/Widgets.tsx).
+  const lastUserId = useMemo(() => [...blocks].reverse().find((b) => b.kind === 'user')?.id ?? -1, [blocks]);
   const live = useMemo(() => (running ? liveState(blocks) : null), [running, blocks]);
   const engineName = engine ? ENGINE_NAME[engine] ?? engine : 'Agent';
   // Only the newest turn's avatar reflects the live status (and animates).
@@ -432,9 +435,20 @@ export function ChatTranscript({ sessionId, status, engine, history }: ChatTrans
                     <span className="chat-turn__name">{engineName}</span>
                   </div>
                 )}
-                <div className="chat-block">
-                  <BlockView block={block} running={blockRunning} usage={usage} />
-                </div>
+                {block.kind === 'widget' ? (
+                  <div className="chat-block cx-wscope">
+                    <WidgetView
+                      widget={block.widget}
+                      answered={block.id < lastUserId}
+                      onReply={(text) => { void window.logsAPI?.followUp(sessionId, text); }}
+                      onOpenUrl={(url) => { void window.electronAPI?.widgets?.openUrl(url); }}
+                    />
+                  </div>
+                ) : (
+                  <div className="chat-block">
+                    <BlockView block={block} running={blockRunning} usage={usage} />
+                  </div>
+                )}
               </React.Fragment>
             );
           })}

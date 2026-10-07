@@ -319,4 +319,27 @@ describe('ChatView: subagents mentioned in the chat, and MCP result cards / foll
     expect(el.querySelector('.cx-card')).toBeNull();
     expect(el.querySelector('.cx-chip')).toBeNull();
   });
+
+  it('asks with a widget in the chat: one tap answers as a follow-up, and the question folds once answered', () => {
+    const onFollowUp = vi.fn();
+    const ask = { type: 'widget', id: 'w1', at: 70_000, widget: { type: 'ask', title: 'Where are you flying from?', fields: [{ kind: 'place', suggestions: ['Hyderabad (HYD)', 'Bengaluru (BLR)'] }] } };
+    const cards = { type: 'widget', id: 'w2', at: 71_000, widget: { type: 'cards', title: 'Cheapest flights', items: [{ title: 'IndiGo 6E 2345', price: '₹4,850', actions: [{ label: 'Select', reply: 'Book IndiGo 6E 2345' }] }] } };
+    const el = render({
+      onFollowUp,
+      session: session({ status: 'idle', prompt: 'find the cheapest flight to Delhi on Friday', output: [{ type: 'thinking', text: 'Sure.', at: 61_000 }, ask, cards] as unknown as HlEvent[] }),
+    });
+    const turn = el.querySelector('.cx-turn')!;
+    expect(turn.querySelector('.cx-w__title')?.textContent).toBe('Where are you flying from?');
+    expect(turn.querySelector('.cx-wc__title')?.textContent).toBe('IndiGo 6E 2345');
+
+    act(() => ([...turn.querySelectorAll('.cx-w-opt')].find((b) => b.textContent?.includes('Hyderabad')) as HTMLButtonElement).click());
+    expect(onFollowUp).toHaveBeenCalledWith('s1', 'Hyderabad (HYD)', undefined);
+    act(() => ([...turn.querySelectorAll('.cx-wbtn')].find((b) => b.textContent?.includes('Select')) as HTMLButtonElement).click());
+    expect(onFollowUp).toHaveBeenLastCalledWith('s1', 'Book IndiGo 6E 2345', undefined);
+
+    // Once a later message exists, the question is one quiet line.
+    act(() => root!.render(<ChatView session={session({ status: 'idle', prompt: 'find the cheapest flight to Delhi on Friday', output: [ask, { type: 'user_input', text: 'Hyderabad (HYD)', at: 80_000 }] as unknown as HlEvent[] })} engineName="Claude Code" onFollowUp={onFollowUp} />));
+    expect(el.querySelector('.cx-w--done')?.textContent).toContain('Where are you flying from?');
+    expect(el.querySelectorAll('.cx-w-opt')).toHaveLength(0);
+  });
 });

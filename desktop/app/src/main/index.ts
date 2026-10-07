@@ -2285,6 +2285,17 @@ app.whenReady().then(async () => {
     return resumeSessionWithAgent(validatedId, validatedPrompt, resumeAttachments, 'resume');
   }
 
+  // A widget's link (shared/widgets.ts actions), in the user's own apps: web
+  // pages, mail and phone only — the same schemes the widget schema allows.
+  ipcMain.handle('widgets:open-url', async (_event, url: unknown) => {
+    if (typeof url !== 'string' || url.length > 2000) return { opened: false };
+    const geo = /^geo:([-\d.]+),([-\d.]+)(?:\?q=(.*))?$/i.exec(url);
+    const target = geo ? `https://www.google.com/maps/search/?api=1&query=${geo[3] ?? `${geo[1]},${geo[2]}`}` : url;
+    if (!/^(https?:\/\/|mailto:|tel:)/i.test(target)) return { opened: false };
+    await shell.openExternal(target);
+    return { opened: true };
+  });
+
   ipcMain.handle('sessions:resume', async (_event, payload: { id: string; prompt: string; attachments?: unknown }) => {
     const validatedId = assertString(payload?.id, 'id', 100);
     const validatedPrompt = assertString(payload?.prompt, 'prompt', 10000);

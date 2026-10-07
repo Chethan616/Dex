@@ -19,22 +19,21 @@ import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 
-/** A bot's body colour, as ARGB (for places outside Compose, like a notification's progress track). */
-fun botColorArgb(type: String): Int = (BOT_SHAPES[type] ?: BOT_SHAPES.getValue("flower")).color.toInt()
-
 /**
  * A bot as a still picture, for places Compose can't draw live — a live
  * update's progress tracker. The same body, lit-plastic shading, face and
  * accent as [BotAvatar], drawn once into a [px]-square bitmap.
  *
  * [hop] lifts it (body units) and [lean] tilts it, so alternating frames
- * read as a bot hopping along; [lookX] turns its eyes (positive: ahead).
+ * read as a bot hopping along; [lookX] turns its eyes (positive: ahead);
+ * [tint] paints it one colour instead of its own.
  */
-fun botStill(type: String, mood: BotMood, px: Int, lookX: Float = 0f, hop: Float = 0f, lean: Float = 0f): Bitmap {
+fun botStill(type: String, mood: BotMood, px: Int, lookX: Float = 0f, hop: Float = 0f, lean: Float = 0f, tint: Int? = null): Bitmap {
   val shape = BOT_SHAPES[type] ?: BOT_SHAPES.getValue("flower")
   val body = PathParser().parsePathString(shape.path).toPath()
   val parts = shape.parts?.let { PathParser().parsePathString(it).toPath() }
-  val base = Color(shape.color)
+  // `tint`: the bot's own shape and face, in someone else's colour.
+  val base = tint?.let { Color(it) } ?: Color(shape.color)
   // A sad bot loses a little colour, as in BotAvatar.
   val bodyColor = if (mood == BotMood.Sad) lerp(base, Color(0xFF8C9199), 0.32f) else base
   val ink = if (base.luminance() > 0.45f) Color(0xFF15161A) else Color(0xFFF8F8FA)

@@ -33,6 +33,10 @@ function normalizeSettingsOpenPayload(raw: unknown): SettingsOpenPayload | undef
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Widget links that aren't web pages (mailto:, tel:) — main checks the scheme.
+  widgets: {
+    openUrl: (url: string): Promise<{ opened: boolean }> => ipcRenderer.invoke('widgets:open-url', url),
+  },
   profile: {
     get: (): Promise<unknown> => ipcRenderer.invoke('profile:get'),
     set: (next: { bot?: string; color?: string | null; name?: string | null }): Promise<unknown> => ipcRenderer.invoke('profile:set', next),

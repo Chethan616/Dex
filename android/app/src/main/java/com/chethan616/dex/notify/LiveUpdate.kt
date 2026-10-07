@@ -14,7 +14,6 @@ import com.chethan616.dex.data.PendingConfirmation
 import com.chethan616.dex.data.Session
 import com.chethan616.dex.data.SessionStatus
 import com.chethan616.dex.ui.avatar.BotMood
-import com.chethan616.dex.ui.avatar.botColorArgb
 import com.chethan616.dex.ui.avatar.botStill
 import com.chethan616.dex.ui.avatar.botTypeFor
 import kotlinx.coroutines.CoroutineScope
@@ -29,11 +28,11 @@ import kotlinx.coroutines.launch
  * status-bar pill (OnePlus's Live Alert capsule, a Pixel's chip) that food
  * deliveries and GitHub's agent sessions use.
  *
- * The track runs from your phone to a finish flag, and the task's own bot
- * rides it — the same bot as in the chat, wearing its mood: a thought cloud
- * while it gets going, a grin while it works (hopping a step at a time),
- * wide eyes and an amber "!" when it needs your OK, a sweat drop when stuck.
- * When it's done it sits on the flag, beaming, for a few seconds.
+ * One colour, like a delivery's: a blue track, and the task's own bot —
+ * its shape and face from the chat, painted the same blue — riding it in
+ * its mood: a thought cloud while it gets going, a grin while it works
+ * (hopping a step at a time), wide eyes and a "!" when it needs your OK, a
+ * sweat drop when stuck. When it's done it beams at the end for a moment.
  *
  * The track is honest about what DEX knows: sent (0–10), working (10–90,
  * filling as steps pile up but never reaching the end on its own), done.
@@ -41,9 +40,9 @@ import kotlinx.coroutines.launch
  */
 object LiveUpdate {
   const val DEMO_ID = 0x0DE6
-  private const val SENT = 0xFF35B8FF.toInt()
-  private const val GREEN = 0xFF1DB954.toInt()
   private const val BLUE = 0xFF1683FF.toInt()
+  /** The bot on the track: a lighter blue than the track, as the first live update had. */
+  private const val BOT_BLUE = 0xFF4FB4FF.toInt()
   private const val CELEBRATE_MS = 6_000L
 
   /**
@@ -114,38 +113,20 @@ object LiveUpdate {
           lookX = if (mood == BotMood.Working || mood == BotMood.Happy) 3f else 0f,
           hop = if (up) 7f else 0f,
           lean = if (up) 7f else 0f,
+          tint = BOT_BLUE,
         ),
       )
     }.getOrElse { IconCompat.createWithResource(context, R.drawable.ic_live_bot) }
   }
 
-  private fun style(context: Context, s: Session, mood: BotMood, progress: Int): NotificationCompat.ProgressStyle {
-    // The working stretch is the bot's own colour, its trail — unless the bot
-    // is grey or white, which would read as track not yet covered.
-    val trail = runCatching { botColorArgb(botTypeFor(s.engine, s.id)) }.getOrDefault(BLUE).let { argb ->
-      val hsv = FloatArray(3).also { android.graphics.Color.colorToHSV(argb, it) }
-      if (hsv[1] < 0.3f) BLUE else argb
-    }
-    return NotificationCompat.ProgressStyle()
+  /** One blue for the whole track: sent, working, done. */
+  private fun style(context: Context, s: Session, mood: BotMood, progress: Int): NotificationCompat.ProgressStyle =
+    NotificationCompat.ProgressStyle()
       .setStyledByProgress(true)
-      .setProgressSegments(
-        listOf(
-          NotificationCompat.ProgressStyle.Segment(10).setColor(SENT),
-          NotificationCompat.ProgressStyle.Segment(80).setColor(trail),
-          NotificationCompat.ProgressStyle.Segment(10).setColor(GREEN),
-        ),
-      )
-      .setProgressPoints(
-        listOf(
-          NotificationCompat.ProgressStyle.Point(10).setColor(SENT),
-          NotificationCompat.ProgressStyle.Point(90).setColor(GREEN),
-        ),
-      )
-      .setProgressStartIcon(IconCompat.createWithResource(context, R.drawable.ic_live_phone))
-      .setProgressEndIcon(IconCompat.createWithResource(context, R.drawable.ic_live_flag))
+      .setProgressSegments(listOf(10, 80, 10).map { NotificationCompat.ProgressStyle.Segment(it).setColor(BLUE) })
+      .setProgressPoints(listOf(10, 90).map { NotificationCompat.ProgressStyle.Point(it).setColor(BLUE) })
       .setProgressTrackerIcon(tracker(context, s, mood))
       .setProgress(progress)
-  }
 
   fun build(context: Context, s: Session, others: Int = 0, withActions: Boolean = true): Notification {
     val title = titleOf(s)
@@ -196,7 +177,7 @@ object LiveUpdate {
       .setRequestPromotedOngoing(true)
       .setShortCriticalText("Done")
       .setShowWhen(false)
-      .setColor(GREEN)
+      .setColor(BLUE)
       .setCategory(NotificationCompat.CATEGORY_PROGRESS)
       .setTimeoutAfter(CELEBRATE_MS)
     if (colorOs) builder.setSubText(text) else builder.setContentText(text).setSubText(s.deviceName)

@@ -91,6 +91,13 @@ function openable(url: string): string {
   return url;
 }
 
+/** Web pages go where the chat opens them (a tab of the task); mail and phone links to the user's own apps. */
+function openAction(url: string, onOpenUrl?: (u: string) => void): void {
+  const target = openable(url);
+  if (/^https?:\/\//i.test(target) && onOpenUrl) onOpenUrl(target);
+  else void window.electronAPI?.widgets?.openUrl(target);
+}
+
 /* ── Dates ───────────────────────────────────────────────────────────── */
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -385,6 +392,16 @@ function AskView({ widget, answered, onReply }: { widget: AskWidget; answered: b
       </div>
     );
   }
+  // Somewhere that can't answer: say what's being asked, and where.
+  if (!onReply) {
+    return (
+      <div className="cx-w cx-w--done cx-w--waiting">
+        <span className="cx-w__glyph cx-w__glyph--small"><Glyph name={askGlyph(widget)} size={13} /></span>
+        <span className="cx-w--done__title">{widget.title}</span>
+        <span className="cx-w--waiting__hint">Waiting for your answer</span>
+      </div>
+    );
+  }
 
   const send = (next: Record<string, AnswerValue | undefined>) => {
     const text = formatAnswer(widget, next);
@@ -442,7 +459,7 @@ function ActionButton({ action, onReply, onOpenUrl, small }: { action: WidgetAct
       type="button"
       className={`cx-wbtn${action.primary ? ' cx-wbtn--primary' : ''}${small ? ' cx-wbtn--small' : ''}`}
       title={action.url}
-      onClick={() => (action.url ? onOpenUrl?.(openable(action.url)) : action.reply ? onReply?.(action.reply) : undefined)}
+      onClick={() => (action.url ? openAction(action.url, onOpenUrl) : action.reply ? onReply?.(action.reply) : undefined)}
     >
       <Glyph name={actionGlyph(action)} size={small ? 13 : 15} />
       <span>{action.label}</span>

@@ -16,6 +16,10 @@ function debugLog(message: string, data?: Record<string, unknown>): void {
 debugLog('[logs-preload] init');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Widget links (hub/chat/Widgets.tsx): the logs window has no browser of its own.
+  widgets: {
+    openUrl: (url: string): Promise<{ opened: boolean }> => ipcRenderer.invoke('widgets:open-url', url),
+  },
   sessions: {
     getTermReplay: async (id: string): Promise<string> => {
       debugLog('[logs-preload] getTermReplay', { id });

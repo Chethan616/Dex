@@ -569,7 +569,13 @@ interface ElectronProfileAPI {
   onChange: (cb: (profile: DexProfile) => void) => () => void;
 }
 
+/** Widget links (hub/chat/Widgets.tsx): the user's own browser, mail or phone app. */
+interface ElectronWidgetsAPI {
+  openUrl: (url: string) => Promise<{ opened: boolean }>;
+}
+
 interface ElectronAPI {
+  widgets?: ElectronWidgetsAPI;
   profile?: ElectronProfileAPI;
   pill: ElectronPillAPI;
   logs?: ElectronLogsAPI;
