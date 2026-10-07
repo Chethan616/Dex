@@ -29,7 +29,7 @@ anything risky. Answers come back as things you can act on — flight cards with
   tabs that you and DEX share (you can click around while it works), the
   documents it makes, and a chat. A small *DEX* cursor shows where it clicks.
 - **Work your accounts properly.** 50+ connectors — Google (Gmail, Calendar,
-  Drive, Docs, Sheets, Meet), Microsoft 365, GitHub, Notion, Jira, Linear,
+  Drive, Docs, Sheets, Meet), GitHub, Notion, Jira, Linear,
   Slack, Canva, Dropbox, Stripe, PubMed and more — each one a single sign-in in
   your browser. DEX uses the service's API instead of clicking through its
   website: faster, cheaper and it doesn't break when a page changes.
