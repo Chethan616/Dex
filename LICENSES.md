@@ -17,8 +17,9 @@ Copyright 2026 Chethan Krishna ([@Chethan616](https://github.com/Chethan616)) an
 - **A patent grant** comes with it from every contributor, and ends for anyone
   who sues over the code's patents.
 
-Versions up to v3.2.0 were released under the MIT License. Those releases stay
-MIT; everything after them is Apache-2.0.
+Before its first public release (v1.0.0), DEX's code was published under the
+MIT License, until 7 October 2026. Copies taken then stay MIT; everything
+since is Apache-2.0.
 
 ## Third-party components
 
@@ -89,7 +90,7 @@ marks in Settings › Channels) so you can tell them apart. The vectors come fro
 Simple Icons (CC0); Google, Microsoft, Slack, Reddit and Hugging Face are their
 published full-colour marks; the rest (Monday.com, Granola, Fireflies, Semgrep,
 Jam, Context7, DeepWiki, Canva, invideo, Close, Attio, Ramp, Plaid,
-Morningstar, BioRender, Exa, Kiwi.com, Scholar Gateway) are the icons those
+Morningstar, BioRender, Exa, Kiwi.com, Scholar Gateway, trivago) are the icons those
 services publish on their own sites. Every logo is a trademark of its owner,
 used only to name the service; none of them is covered by DEX's license, and
 their use doesn't mean the owner endorses DEX.

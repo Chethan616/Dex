@@ -49,7 +49,7 @@ body:
     id: version
     attributes:
       label: DEX version
-      placeholder: e.g. desktop 3.2.0, phone 1.0.32 (Settings › Updates)
+      placeholder: e.g. desktop 1.0.0, phone 1.0.34 (Settings › Updates)
   - type: input
     id: os
     attributes:

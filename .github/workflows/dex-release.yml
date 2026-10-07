@@ -1,6 +1,6 @@
 # Ship a DEX release: tag it, and GitHub Releases becomes the update feed.
 #
-#   git tag v3.0.24 && git push origin v3.0.24
+#   git tag v1.0.0 && git push origin v1.0.0
 #
 # Desktop: the installed app checks
 #   https://github.com/Chethan616/Dex/releases/latest/download/RELEASES
@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing tag to (re)publish, e.g. v3.0.24'
+        description: 'Existing tag to (re)publish, e.g. v1.0.0'
         required: true
 
 permissions:
