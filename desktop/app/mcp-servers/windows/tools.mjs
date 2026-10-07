@@ -229,6 +229,21 @@ export const TOOLS = [
     inputSchema: { type: 'object', properties: { entry: { type: 'string' } } },
   },
   {
+    name: 'input_act',
+    op: 'borrow',
+    description: "Last resort, for a control that only works with the real mouse (ui_invoke said needs_input) or an app with no accessibility. DEX borrows the user's mouse and keyboard for a moment: it waits for a pause in their input, brings the window up, shows a glow round the screen, runs the steps, then puts their window and pointer back. If they move the mouse or type, DEX lets go at once (stopped: user_took_over) — don't fight them; wait or ask. Steps: {click:{target:\"e17\"}} (the element's centre) or {click:{x, y}} (pixels in this window's last window_capture picture), with button:\"right\" or double:true; {type:\"text\"} (refused in password fields); {key:\"Enter\"|\"Ctrl+S\"|\"Alt+F4\"…}; {scroll:{target|x,y, dy}} (dy>0 scrolls down); {wait:ms} (≤5000). Batch every step of one job into one call; check the result with window_find or window_capture.",
+    inputSchema: {
+      type: 'object',
+      required: ['window', 'steps', 'why'],
+      properties: {
+        window: windowSelector,
+        steps: { type: 'array', minItems: 1, maxItems: 40, items: { type: 'object' } },
+        why: { type: 'string', description: 'What these steps do, in plain words (the user may see it).' },
+        maxWaitMs: { type: 'number', description: 'How long to wait for the user to pause (default 20000, at most 30000).' },
+      },
+    },
+  },
+  {
     name: 'open_settings',
     op: 'launch',
     description: "Open a Windows Settings page (an ms-settings id like 'network-wifi', 'mousetouchpad', 'devices-touchpad', 'apps-volume') for the user to SEE. It comes to the front, so use it only when the user asked to see it, or as the very last step. To diagnose, use system_info instead.",

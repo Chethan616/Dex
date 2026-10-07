@@ -657,9 +657,17 @@ The owner wants all of these done.
 >     - The agent guide `dex-tools/desktop.md` has recipes for the owner's three tasks.
 >     - **Live-tested:** `dns_flush`, `gesture_set` (same value) and undo. The helper's door is tested unelevated.
 >     - **Not yet done:** the helper running elevated (it needs the owner's UAC click), and the Spotify recipe (Spotify isn't installed here).
->   - **Next:**
->     - the owner's three acceptance tasks: Spotify playlist shuffle, Wi-Fi troubleshooting, touchpad gestures;
->     - Phase 4: borrowed input. Per the owner, take it at once and give it back the instant the user moves or types.
+>   - **Phase 4, borrowed input, is built** (the tool `input_act`, host op `borrow`). It is for a control only the real mouse can press, or an app with no accessibility. It's `app-control`, so Full access and Approve-for-me take it at once, per the owner.
+>     - **What the host does:**
+>       - It waits for a 1.5 s pause in the user's input; if none comes in 20 s, it returns `user_busy`.
+>       - It brings the window into view (parked and off-screen ones come to the middle) and in front.
+>       - It shows a click-through edge glow, with the pill "DEX is using your mouse — move it to take over".
+>       - It runs the steps with SendInput, marked with DEX's own `dwExtraInfo`. Steps: a click on a handle or on a capture point, typing, keys, scroll, wait.
+>     - **Letting go:** low-level hooks stop it on any unmarked input (`stopped: user_took_over`). It refuses to start if it can't hook.
+>     - **Password boxes:** it won't type into a focused one (`stopped: secret_field`).
+>     - **Afterwards:** it puts the window back (re-parked or moved home), restores the user's front window, and puts back the pointer, unless the user has taken the mouse.
+>     - **Live-tested on the fixture:** a click, typing, the password refusal, a simulated user nudge (it stopped before the first step), and the glow on screen. The window, front window and cursor were restored every time.
+>   - **Next:** the owner's three acceptance tasks: Spotify playlist shuffle, Wi-Fi troubleshooting, touchpad gestures.
 
 1. **UI/UX fixes first.**
    - **The Done pill** (phone): the bot sits *inside* the pill's start, as in the owner's `UI/new2.png`, and is never clipped when it jumps (`UI/fix1.png` and `fix2.png` show too big a gap).

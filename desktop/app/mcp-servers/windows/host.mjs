@@ -11,6 +11,12 @@ export function timeoutFor(op, args = {}) {
   if (op === 'wait') return Math.min(30_000, Number(args.timeoutMs) || 10_000) + 8_000;
   if (op === 'launch') return 30_000;
   if (op === 'sys' || op === 'media') return 60_000;
+  if (op === 'borrow') {
+    const steps = Array.isArray(args.steps) ? args.steps : [];
+    const waits = steps.reduce((t, s) => t + Math.min(5_000, Number(s?.wait) || 0), 0);
+    const typed = steps.reduce((t, s) => t + (typeof s?.type === 'string' ? s.type.length : 0), 0);
+    return Math.min(30_000, Number(args.maxWaitMs) || 20_000) + waits + steps.length * 1_500 + typed * 20 + 15_000;
+  }
   return 25_000;
 }
 

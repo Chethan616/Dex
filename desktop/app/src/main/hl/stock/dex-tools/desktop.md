@@ -2,7 +2,8 @@
 
 The user is using this PC while you work. These tools work **in the
 background**: they never bring a window to the front, move the pointer, or
-type into whatever the user is typing in. Anything that does — `SendKeys`,
+type into whatever the user is typing in (all but `input_act`, which borrows
+them politely — see below). Anything else that does — `SendKeys`,
 `SendInput`, pyautogui, clicking at coordinates, starting a GUI app from your
 shell — interrupts them. Don't.
 
@@ -29,6 +30,23 @@ minimized, so it keeps working) and not in the user's way. Use the
 
 `show:true`, `window_manage unpark` and `open_settings` put a window on the
 user's screen. Only when they asked to see it, or as your very last step.
+
+## When only the real mouse will do
+
+Some controls ignore accessibility (`ui_invoke` says `needs_input`), and some
+apps (games, canvas editors) have none. Then `input_act` borrows the user's
+mouse and keyboard for a moment. It waits for a pause in their typing, brings
+the window up, shows a glow round the screen, runs your steps, and puts their
+window and pointer back. Rules:
+
+1. Try every background route first (another control, the app's menu, a
+   setting, a URI). `input_act` is the last resort, not a shortcut.
+2. Batch the whole job — every click, key and bit of text — into one call.
+   Aim clicks at handles (`{click:{target:"e17"}}`); use `{x, y}` only from a
+   fresh `window_capture` of that window.
+3. `stopped: "user_took_over"` means they moved the mouse or typed. Don't try
+   again straight away: wait, or ask if they'd like you to carry on.
+4. Check the result afterwards (`window_find`, `window_capture`).
 
 ## Playing music and video
 
@@ -102,7 +120,7 @@ journal entries), how to undo it.
 
 | `error` | What it means | What to do |
 |---|---|---|
-| `needs_input` | That control only works with the real mouse | Try another route (a menu item, another control); otherwise tell the user |
+| `needs_input` | That control only works with the real mouse | Try another route (a menu item, another control); otherwise `input_act` |
 | `secret_field` | A password box | Ask the user to type it |
 | `held` | The user paused you, or took that window | Wait; don't work around it |
 | `denied` | The user said no | Ask what they'd like instead |
@@ -112,6 +130,14 @@ journal entries), how to undo it.
 | `elevated_window` | It runs as administrator | Tell the user |
 | `provider_timeout` | The app didn't answer | Wait a moment, try once more |
 | `elevation_not_set_up` | Admin changes aren't set up on this PC | Tell the user: Settings › Agent approval › Admin changes |
+| `cant_watch` | `input_act` couldn't watch for the user's input, so it didn't borrow it | Tell the user what you needed to press |
+
+`input_act` also reports, without an error: `reason: "user_busy"` (the
+user didn't pause in time; try later), `stopped: "user_took_over"` (they
+moved or typed; don't fight them), `stopped: "secret_field"` (a password
+box; ask them to type it), `stopped: "covered"` (another window was over that
+point, so it didn't click) and `stopped: "lost_focus"` (the app lost the
+front before typing).
 
 If a result has `focus.incident`, you just interrupted the user (something
 came to the front, or the pointer moved). Say sorry in one line and don't do

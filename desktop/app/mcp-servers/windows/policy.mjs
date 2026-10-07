@@ -95,6 +95,16 @@ export function classify(tool, args = {}, win = null) {
     if (!action.check(a)) return { refused: `Those details don't fit ${args.action}.` };
     return { tier: action.tier, category: categoryOf(args.action), title: action.title(a), detail: String(args.reason ?? '').slice(0, 300), subject: args.action, admin: action.admin };
   }
+  if (tool === 'input_act') {
+    const steps = Array.isArray(args.steps) ? args.steps : [];
+    return {
+      tier: 1,
+      category: 'app-control',
+      title: `Use your mouse and keyboard in ${appName(win)}`,
+      detail: `${String(args.why ?? '').slice(0, 240)} (${steps.length} step${steps.length === 1 ? '' : 's'}; move the mouse to take over)`,
+      subject: win?.process,
+    };
+  }
   if (tool === 'undo') return { tier: 2, category: 'system-change', title: 'Undo DEX’s last change', detail: args.entry ? `Journal entry ${args.entry}` : '', subject: 'undo' };
   const verbs = {
     ui_invoke: (a) => `Press ${targetLabel(a.target)}`,

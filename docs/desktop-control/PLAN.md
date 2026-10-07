@@ -964,7 +964,15 @@ bypass mode [V], but match only "as written".
 
 ### Phase 4 — Borrowed input, vision fallback, app memory, operator subagent
 
-**Borrowed input**
+**Borrowed input** — built (2026-10-07) as `input_act {window, steps, why}`,
+with the owner's answer in §6 (no card in Full access or Approve-for-me). It
+differs from the sketch below in three ways:
+- steps are batched in one call, not one tool per click;
+- the idle wait is 1.5 s, not 3 s;
+- DEX's input is told apart by its own `dwExtraInfo` mark, not the
+  injected flag (other tools' injected input counts as the user's).
+
+The sketch as first planned:
 - **The tool:** `input_borrow {window, reason, seconds≤30}`, category
   `app-control`, always a card unless the owner allows "when idle"
   (owner Q3).

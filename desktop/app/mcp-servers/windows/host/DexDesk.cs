@@ -126,6 +126,8 @@ public static class DexDesk {
     public readonly Dictionary<string, Node> ByHandle = new Dictionary<string, Node>();
     /** The handles the last window_tree showed: what a capture annotates. */
     public List<string> LastTree = new List<string>();
+    /** How much the last window_capture shrank the window: its picture's pixels → the window's. */
+    public double CaptureScale = 1;
   }
   static readonly Dictionary<long, WinMap> maps = new Dictionary<long, WinMap>();
   /** Windows DEX opened, and parked off-screen: hwnd → launch id. */
@@ -169,7 +171,7 @@ public static class DexDesk {
   static readonly HashSet<string> Mutating = new HashSet<string> { "invoke", "set_text", "toggle", "select", "expand", "scroll", "launch", "window" };
 
   static readonly HashSet<string> Ops = new HashSet<string> {
-    "hello", "windows", "tree", "find", "invoke", "set_text", "toggle", "select", "expand", "scroll", "wait", "capture", "launch", "window", "touchpad", "resolve",
+    "hello", "windows", "tree", "find", "invoke", "set_text", "toggle", "select", "expand", "scroll", "wait", "capture", "launch", "window", "touchpad", "resolve", "borrow",
   };
 
   /**
@@ -245,6 +247,7 @@ public static class DexDesk {
       case "launch": return Launch(a);
       case "window": return WindowAction(a);
       case "touchpad": return Touchpad();
+      case "borrow": return Borrow(a);
       case "resolve": {
         var w = Resolve(a);
         return new Dictionary<string, object> {
@@ -744,6 +747,7 @@ public static class DexDesk {
     int ox = w.Bounds[0] - r.Left, oy = w.Bounds[1] - r.Top;
     if (Bool(a, "annotate", false)) Annotate(bmp, w, ox, oy);
     double scale = width > maxWidth ? (double)maxWidth / width : 1.0;
+    MapFor(w.H).CaptureScale = scale;
     Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
     using (var outBmp = scale < 1 ? new Bitmap(bmp, (int)(width * scale), (int)(height * scale)) : new Bitmap(bmp)) {
       outBmp.Save(path, ImageFormat.Png);
@@ -979,5 +983,349 @@ public static class DexDesk {
       { "sensitivity", p.sensitivityLevel >= 0 && p.sensitivityLevel < sens.Length ? sens[p.sensitivityLevel] : p.sensitivityLevel.ToString() },
       { "cursorSpeed", p.cursorSpeed },
     };
+  }
+
+  // ── Borrowed input (docs/desktop-control/PLAN.md, Phase 4) ─────────────
+  // For a control nothing but the real mouse can press. The owner's choice:
+  // take it at once — no card in Full access — but give it back the instant
+  // the user moves or types, and put their window and cursor back after.
+
+  [StructLayout(LayoutKind.Sequential)] struct MOUSEINPUT { public int dx, dy; public uint mouseData, dwFlags, time; public IntPtr dwExtraInfo; }
+  [StructLayout(LayoutKind.Sequential)] struct KEYBDINPUT { public ushort wVk, wScan; public uint dwFlags, time; public IntPtr dwExtraInfo; }
+  [StructLayout(LayoutKind.Explicit)] struct INPUTUNION { [FieldOffset(0)] public MOUSEINPUT mi; [FieldOffset(0)] public KEYBDINPUT ki; }
+  [StructLayout(LayoutKind.Sequential)] struct INPUT { public uint type; public INPUTUNION u; }
+  [StructLayout(LayoutKind.Sequential)] struct MSLLHOOKSTRUCT { public POINT pt; public uint mouseData, flags, time; public IntPtr dwExtraInfo; }
+  [StructLayout(LayoutKind.Sequential)] struct KBDLLHOOKSTRUCT { public uint vkCode, scanCode, flags, time; public IntPtr dwExtraInfo; }
+  [StructLayout(LayoutKind.Sequential)] struct MSG { public IntPtr hwnd; public uint message; public IntPtr wParam, lParam; public uint time; public POINT pt; }
+  delegate IntPtr LowLevelProc(int code, IntPtr wParam, IntPtr lParam);
+
+  [DllImport("user32.dll", SetLastError = true)] static extern uint SendInput(uint n, INPUT[] inputs, int size);
+  [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
+  [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] static extern bool BringWindowToTop(IntPtr h);
+  [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
+  [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(POINT p);
+  [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr h, uint flags);
+  [DllImport("user32.dll")] static extern bool AttachThreadInput(uint a, uint b, bool attach);
+  [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
+  [DllImport("user32.dll")] static extern IntPtr SetWindowsHookEx(int id, LowLevelProc fn, IntPtr mod, uint thread);
+  [DllImport("user32.dll")] static extern bool UnhookWindowsHookEx(IntPtr h);
+  [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr h, int code, IntPtr w, IntPtr l);
+  [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern IntPtr GetModuleHandle(string name);
+  [DllImport("user32.dll")] static extern int GetMessage(out MSG m, IntPtr h, uint min, uint max);
+  [DllImport("user32.dll")] static extern bool PostThreadMessage(uint thread, uint msg, IntPtr w, IntPtr l);
+
+  /** Marks DEX's own injected input, so the hooks can tell it from the user's. */
+  static readonly IntPtr DexMark = new IntPtr(0x44455821);
+  static volatile bool userTookOver;
+  static int hooksInstalled;   // 1 mouse | 2 keyboard
+  static LowLevelProc mouseProc, keyProc;   // kept alive while hooked
+
+  static IntPtr OnMouse(int code, IntPtr w, IntPtr l) {
+    if (code >= 0) {
+      var m = (MSLLHOOKSTRUCT)Marshal.PtrToStructure(l, typeof(MSLLHOOKSTRUCT));
+      if (m.dwExtraInfo != DexMark) userTookOver = true;
+    }
+    return CallNextHookEx(IntPtr.Zero, code, w, l);
+  }
+  static IntPtr OnKey(int code, IntPtr w, IntPtr l) {
+    if (code >= 0) {
+      var k = (KBDLLHOOKSTRUCT)Marshal.PtrToStructure(l, typeof(KBDLLHOOKSTRUCT));
+      if (k.dwExtraInfo != DexMark) userTookOver = true;
+    }
+    return CallNextHookEx(IntPtr.Zero, code, w, l);
+  }
+
+  /** Low-level hooks on a thread of their own (they need its message loop); returns its id, to stop it. */
+  static uint StartWatching() {
+    uint threadId = 0;
+    var ready = new ManualResetEvent(false);
+    var t = new Thread(() => {
+      threadId = GetCurrentThreadId();
+      mouseProc = OnMouse; keyProc = OnKey;
+      IntPtr mod = GetModuleHandle(null);
+      IntPtr hm = SetWindowsHookEx(14 /* WH_MOUSE_LL */, mouseProc, mod, 0);
+      IntPtr hk = SetWindowsHookEx(13 /* WH_KEYBOARD_LL */, keyProc, mod, 0);
+      hooksInstalled = (hm != IntPtr.Zero ? 1 : 0) + (hk != IntPtr.Zero ? 2 : 0);
+      ready.Set();
+      MSG msg;
+      while (GetMessage(out msg, IntPtr.Zero, 0, 0) > 0) { }
+      UnhookWindowsHookEx(hm); UnhookWindowsHookEx(hk);
+    });
+    t.IsBackground = true;
+    t.Start();
+    ready.WaitOne(2000);
+    Thread.Sleep(30);   // into GetMessage, so a WM_QUIT finds its queue
+    return threadId;
+  }
+
+  static void Send(INPUT i) { SendInput(1, new[] { i }, Marshal.SizeOf(typeof(INPUT))); }
+  static INPUT Mouse(uint flags, uint data, int dx, int dy) {
+    return new INPUT { type = 0, u = new INPUTUNION { mi = new MOUSEINPUT { dx = dx, dy = dy, dwFlags = flags, mouseData = data, dwExtraInfo = DexMark } } };
+  }
+  static INPUT Key(ushort vk, ushort scan, uint flags) {
+    return new INPUT { type = 1, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = vk, wScan = scan, dwFlags = flags, dwExtraInfo = DexMark } } };
+  }
+
+  /** The pointer to a screen point, as marked input (SetCursorPos would look like the user's hand). */
+  static void MoveTo(int x, int y) {
+    int vx = GetSystemMetrics(76), vy = GetSystemMetrics(77), vw = Math.Max(2, GetSystemMetrics(78)), vh = Math.Max(2, GetSystemMetrics(79));
+    int nx = (int)Math.Round((x - vx) * 65535.0 / (vw - 1)), ny = (int)Math.Round((y - vy) * 65535.0 / (vh - 1));
+    Send(Mouse(0x0001 | 0x8000 | 0x4000 /* MOVE | ABSOLUTE | VIRTUALDESK */, 0, nx, ny));
+  }
+
+  static readonly Dictionary<string, ushort> KeyNames = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase) {
+    {"enter",0x0D},{"tab",0x09},{"escape",0x1B},{"esc",0x1B},{"backspace",0x08},{"delete",0x2E},{"space",0x20},
+    {"up",0x26},{"down",0x28},{"left",0x25},{"right",0x27},{"home",0x24},{"end",0x23},{"pageup",0x21},{"pagedown",0x22},
+    {"f1",0x70},{"f2",0x71},{"f3",0x72},{"f4",0x73},{"f5",0x74},{"f6",0x75},{"f7",0x76},{"f8",0x77},{"f9",0x78},{"f10",0x79},{"f11",0x7A},{"f12",0x7B},
+    {"ctrl",0x11},{"control",0x11},{"alt",0x12},{"shift",0x10},
+  };
+
+  static ushort Vk(string name) {
+    ushort vk;
+    if (KeyNames.TryGetValue(name, out vk)) return vk;
+    if (name.Length == 1) { char c = char.ToUpperInvariant(name[0]); if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) return c; }
+    throw new DexDeskError("bad_args", "Unknown key: " + name + ".", "Keys: Enter, Tab, Escape, Backspace, Delete, Space, arrows, Home, End, PageUp, PageDown, F1–F12, a letter or digit, with Ctrl+/Alt+/Shift+.", null);
+  }
+
+  /** Bring a window to the front from a background process (Windows only lets the input queue's owner do that). */
+  static void Activate(IntPtr h) {
+    uint pid;
+    uint fgThread = GetWindowThreadProcessId(GetForegroundWindow(), out pid);
+    uint mine = GetCurrentThreadId();
+    bool attached = fgThread != 0 && fgThread != mine && AttachThreadInput(mine, fgThread, true);
+    BringWindowToTop(h);
+    SetForegroundWindow(h);
+    if (attached) AttachThreadInput(mine, fgThread, false);
+  }
+
+  /** The glow round the screen while DEX has the mouse: click-through, never activated. */
+  class Glow : System.Windows.Forms.Form {
+    protected override bool ShowWithoutActivation { get { return true; } }
+    protected override System.Windows.Forms.CreateParams CreateParams {
+      // layered | transparent | toolwindow | noactivate | topmost
+      get { var cp = base.CreateParams; cp.ExStyle |= 0x80000 | 0x20 | 0x80 | 0x08000000 | 0x8; return cp; }
+    }
+    public Glow() {
+      FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+      ShowInTaskbar = false; TopMost = true; StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+      // Physical pixels (the thread is per-monitor aware), so it reaches every edge.
+      Bounds = new Rectangle(GetSystemMetrics(76), GetSystemMetrics(77), GetSystemMetrics(78), GetSystemMetrics(79));
+      BackColor = Color.Magenta; TransparencyKey = Color.Magenta;
+    }
+    protected override void OnPaint(System.Windows.Forms.PaintEventArgs e) {
+      var r = ClientRectangle;
+      for (int i = 0; i < 6; i++)
+        using (var pen = new Pen(Color.FromArgb(53, 184 - i * 12, 255), 2)) e.Graphics.DrawRectangle(pen, i * 2, i * 2, r.Width - 1 - i * 4, r.Height - 1 - i * 4);
+      using (var f = new Font("Segoe UI", 11, FontStyle.Bold))
+      using (var bg = new SolidBrush(Color.FromArgb(22, 131, 255))) {
+        string text = "DEX is using your mouse \u2014 move it to take over";
+        var size = e.Graphics.MeasureString(text, f);
+        var box = new RectangleF((r.Width - size.Width) / 2 - 18, 18, size.Width + 36, size.Height + 12);
+        // A pill. No anti-aliasing on its edge: blended pixels would fringe with the transparency key.
+        using (var pill = new GraphicsPath()) {
+          float d = box.Height;
+          pill.AddArc(box.X, box.Y, d, d, 90, 180);
+          pill.AddArc(box.Right - d, box.Y, d, d, 270, 180);
+          pill.CloseFigure();
+          e.Graphics.FillPath(bg, pill);
+        }
+        e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        e.Graphics.DrawString(text, f, Brushes.White, box.X + 18, box.Y + 6);
+      }
+    }
+  }
+
+  static System.Windows.Forms.Form ShowGlow() {
+    System.Windows.Forms.Form glow = null;
+    var ready = new ManualResetEvent(false);
+    var t = new Thread(() => {
+      try {
+        SetThreadDpiAwarenessContext(PerMonitorAwareV2);
+        glow = new Glow();
+        glow.Shown += (s, e) => ready.Set();
+        System.Windows.Forms.Application.Run(glow);
+      } catch { ready.Set(); }
+    });
+    t.SetApartmentState(ApartmentState.STA); t.IsBackground = true; t.Start();
+    ready.WaitOne(2000);
+    return glow;
+  }
+
+  static void CloseGlow(System.Windows.Forms.Form glow) {
+    if (glow == null) return;
+    try { glow.Invoke(new Action(() => glow.Close())); } catch { }
+  }
+
+  static uint IdleMs() {
+    var li = new LASTINPUTINFO { cbSize = (uint)Marshal.SizeOf(typeof(LASTINPUTINFO)) };
+    GetLastInputInfo(ref li);
+    return (uint)Environment.TickCount - li.dwTime;
+  }
+
+  /** Where a click step lands, on screen: an element's centre, or a point in the window's last capture. */
+  static POINT ClickPoint(Win w, Dictionary<string, object> c) {
+    object t; c.TryGetValue("target", out t);
+    if (t is string) {
+      var n = Element(w, (string)t);
+      var rect = n.El.GetCurrentPropertyValue(P.UIA_BoundingRectanglePropertyId) as double[];
+      if (rect == null || rect.Length < 4 || rect[2] <= 0 || rect[3] <= 0) throw new DexDeskError("not_drawn", "That element has no place on screen to click.", "Pick another, or click a point from window_capture.", null);
+      return new POINT { X = (int)(rect[0] + rect[2] / 2), Y = (int)(rect[1] + rect[3] / 2) };
+    }
+    if (!c.ContainsKey("x") || !c.ContainsKey("y")) throw new DexDeskError("bad_args", "A click needs a target handle, or x and y in the window's last window_capture picture.");
+    RECT r; GetWindowRect(w.H, out r);
+    double scale = MapFor(w.H).CaptureScale;
+    return new POINT { X = r.Left + (int)Math.Round(Convert.ToDouble(c["x"]) / scale), Y = r.Top + (int)Math.Round(Convert.ToDouble(c["y"]) / scale) };
+  }
+
+  /** Would input at this point reach the app — its window or its own menus — and not whatever covers it (DEX's cards included)? */
+  static bool Reaches(Win w, IntPtr at) {
+    if (at == IntPtr.Zero) return false;
+    IntPtr root = GetAncestor(at, 2 /* GA_ROOT */);
+    if (root == w.H) return true;
+    uint pid; GetWindowThreadProcessId(root, out pid);
+    return pid == w.Pid;
+  }
+
+  static bool FocusedIsSecret() {
+    try { var el = uia.GetFocusedElement(); return el != null && Live(el, P.UIA_IsPasswordPropertyId); } catch { return false; }
+  }
+
+  static object Borrow(Dictionary<string, object> a) {
+    var w = Resolve(a);
+    var steps = a.ContainsKey("steps") ? a["steps"] as object[] : null;
+    if (steps == null || steps.Length == 0 || steps.Length > 40) throw new DexDeskError("bad_args", "steps: 1 to 40 of {click}, {type}, {key}, {scroll} or {wait}.");
+    if (w.Minimized) throw new DexDeskError("not_drawn", "That window is minimized.", "window_manage restore it first (or app_launch parks windows instead).", null);
+    foreach (var raw in steps) {
+      var step = raw as Dictionary<string, object>;
+      if (step == null) throw new DexDeskError("bad_args", "Each step is an object.");
+      if (step.ContainsKey("key")) foreach (var part in Convert.ToString(step["key"]).Split('+')) Vk(part.Trim());
+      if (step.ContainsKey("click") && Str((Dictionary<string, object>)step["click"], "target") != null) Element(w, Str((Dictionary<string, object>)step["click"], "target"));
+    }
+
+    // Only in a pause in the user's own input.
+    var waited = Stopwatch.StartNew();
+    while (IdleMs() < 1500) {
+      if (waited.ElapsedMilliseconds > Math.Min(30000, Int(a, "maxWaitMs", 20000)))
+        return new Dictionary<string, object> { { "borrowed", false }, { "reason", "user_busy" }, { "hint", "The user is using the PC right now. Try again in a little while." } };
+      Thread.Sleep(200);
+    }
+
+    IntPtr prevFg = GetForegroundWindow();
+    POINT prevCursor; GetCursorPos(out prevCursor);
+    long key = w.H.ToInt64();
+    bool wasParked = parked.ContainsKey(key);
+    var original = new WINDOWPLACEMENT { length = Marshal.SizeOf(typeof(WINDOWPLACEMENT)) };
+    GetWindowPlacement(w.H, ref original);
+    RECT before; GetWindowRect(w.H, out before);
+    int cx = (before.Left + before.Right) / 2, cy = (before.Top + before.Bottom) / 2;
+    int vx0 = GetSystemMetrics(76), vy0 = GetSystemMetrics(77);
+    bool offScreen = cx < vx0 || cy < vy0 || cx >= vx0 + GetSystemMetrics(78) || cy >= vy0 + GetSystemMetrics(79);
+    bool moved = wasParked || offScreen;
+    if (moved) {
+      // On screen for the moment, in the middle, so it can take clicks.
+      var wp = original;
+      int ww = wp.rcNormalPosition.Right - wp.rcNormalPosition.Left, hh = wp.rcNormalPosition.Bottom - wp.rcNormalPosition.Top;
+      int sx = GetSystemMetrics(0), sy = GetSystemMetrics(1);
+      int left = Math.Max(0, (sx - ww) / 2), top = Math.Max(0, (sy - hh) / 2);
+      wp.rcNormalPosition = new RECT { Left = left, Top = top, Right = left + ww, Bottom = top + hh };
+      wp.showCmd = SW_SHOWNOACTIVATE;
+      wp.flags = 0;
+      SetWindowPlacement(w.H, ref wp);
+    }
+
+    userTookOver = false; hooksInstalled = 0;
+    var glow = ShowGlow();
+    uint watcher = StartWatching();
+    int done = 0;
+    string stopped = null;
+    var held = new List<ushort>();
+    try {
+      // No watching, no borrowing: DEX must be able to let go.
+      if (hooksInstalled != 3) throw new DexDeskError("cant_watch", "DEX couldn't watch for the user's mouse and keyboard, so it won't borrow them.", "Tell the user what you needed to press.", null);
+      Activate(w.H);
+      Thread.Sleep(150);
+      foreach (var raw in steps) {
+        if (userTookOver) break;
+        var step = (Dictionary<string, object>)raw;
+        if (step.ContainsKey("click")) {
+          var c = (Dictionary<string, object>)step["click"];
+          var pt = ClickPoint(w, c);
+          if (!Reaches(w, WindowFromPoint(pt))) { stopped = "covered"; break; }
+          MoveTo(pt.X, pt.Y);
+          Thread.Sleep(50);
+          bool right = Str(c, "button") == "right";
+          int times = Bool(c, "double", false) ? 2 : 1;
+          for (int i = 0; i < times && !userTookOver; i++) {
+            Send(Mouse(right ? 0x0008u : 0x0002u, 0, 0, 0));
+            Send(Mouse(right ? 0x0010u : 0x0004u, 0, 0, 0));
+            Thread.Sleep(60);
+          }
+        } else if (step.ContainsKey("type")) {
+          Thread.Sleep(60);
+          if (!Reaches(w, GetForegroundWindow())) { stopped = "lost_focus"; break; }
+          if (FocusedIsSecret()) { stopped = "secret_field"; break; }
+          foreach (char ch in Convert.ToString(step["type"])) {
+            if (userTookOver) break;
+            Send(Key(0, ch, 0x0004 /* UNICODE */));
+            Send(Key(0, ch, 0x0004 | 0x0002 /* KEYUP */));
+            Thread.Sleep(6);
+          }
+        } else if (step.ContainsKey("key")) {
+          if (!Reaches(w, GetForegroundWindow())) { stopped = "lost_focus"; break; }
+          var vks = new List<ushort>();
+          foreach (var part in Convert.ToString(step["key"]).Split('+')) vks.Add(Vk(part.Trim()));
+          foreach (var vk in vks) { Send(Key(vk, 0, 0)); held.Add(vk); }
+          for (int i = vks.Count - 1; i >= 0; i--) { Send(Key(vks[i], 0, 0x0002)); held.Remove(vks[i]); }
+        } else if (step.ContainsKey("scroll")) {
+          var c = (Dictionary<string, object>)step["scroll"];
+          var pt = ClickPoint(w, c);
+          if (!Reaches(w, WindowFromPoint(pt))) { stopped = "covered"; break; }
+          MoveTo(pt.X, pt.Y);
+          Thread.Sleep(30);
+          Send(Mouse(0x0800 /* WHEEL */, unchecked((uint)(-Int(c, "dy", 1) * 120)), 0, 0));
+        } else if (step.ContainsKey("wait")) {
+          int ms = Math.Min(5000, Math.Max(0, Convert.ToInt32(step["wait"])));
+          for (int t = 0; t < ms && !userTookOver; t += 50) Thread.Sleep(50);
+        }
+        if (userTookOver) break;
+        done++;
+        Thread.Sleep(80);
+      }
+    } finally {
+      foreach (var vk in held) Send(Key(vk, 0, 0x0002));   // never leave a key down
+      PostThreadMessage(watcher, 0x0012 /* WM_QUIT */, IntPtr.Zero, IntPtr.Zero);
+      CloseGlow(glow);
+      // Put things back: DEX's window parked again, the user's window in
+      // front (unless they've since picked another), and — if they didn't
+      // take the mouse — the pointer where it was.
+      if (wasParked && IsWindow(w.H)) Park(w.H);
+      IntPtr fgNow = GetForegroundWindow();
+      if (prevFg != IntPtr.Zero && prevFg != w.H && IsWindow(prevFg) && IsWindowVisible(prevFg) && (fgNow == w.H || fgNow == IntPtr.Zero || !userTookOver)) Activate(prevFg);
+      // Back where it was. A plain move, once it's out of front: restoring
+      // the placement of the active window pulls it onto a screen.
+      if (moved && !wasParked && IsWindow(w.H)) {
+        if (GetForegroundWindow() == w.H) {
+          // Nothing of the user's to hand the front back to: minimizing hands it to the next window, as Park does.
+          ShowWindow(w.H, SW_SHOWMINNOACTIVE);
+          original.showCmd = SW_SHOWNOACTIVATE; original.flags = 0;
+          SetWindowPlacement(w.H, ref original);
+        } else {
+          SetWindowPos(w.H, IntPtr.Zero, before.Left, before.Top, 0, 0, 0x0001 | 0x0004 | 0x0010 /* NOSIZE | NOZORDER | NOACTIVATE */);
+        }
+      }
+      if (!userTookOver) SetCursorPos(prevCursor.X, prevCursor.Y);
+      // DEX's own input isn't the user's hand on a parked window.
+      var li = new LASTINPUTINFO { cbSize = (uint)Marshal.SizeOf(typeof(LASTINPUTINFO)) };
+      GetLastInputInfo(ref li);
+      if (!userTookOver) watchedInput = li.dwTime;
+    }
+    if (userTookOver) stopped = "user_took_over";
+    var res = new Dictionary<string, object> { { "borrowed", true }, { "stepsDone", done }, { "steps", steps.Length }, { "movedOnScreen", moved } };
+    if (stopped == "user_took_over") { res["stopped"] = stopped; res["hint"] = "The user moved the mouse or typed, so DEX let go. Don't fight them: wait until they pause, or ask."; }
+    if (stopped == "covered") { res["stopped"] = stopped; res["hint"] = "Another window covers that point, so DEX didn't click. Capture the window again and aim at what's visible, or tell the user."; }
+    if (stopped == "lost_focus") { res["stopped"] = stopped; res["hint"] = "The app lost the front before DEX could type, so it stopped. Try again, or tell the user."; }
+    if (stopped == "secret_field") { res["stopped"] = stopped; res["hint"] = "The focused field is a password box. DEX doesn't type there; ask the user to."; }
+    return res;
   }
 }

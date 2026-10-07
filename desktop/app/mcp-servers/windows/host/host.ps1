@@ -173,7 +173,7 @@ $sha = (Get-FileHash $source -Algorithm SHA256).Hash.Substring(0, 12).ToLower()
 $dll = Join-Path $DeskHome "DexDesk-$sha-$coreVersion.dll"
 if (-not (Test-Path $dll)) {
   $tmpDll = Join-Path $DeskHome ("DexDesk-" + [Guid]::NewGuid().ToString('N') + ".dll")
-  Add-Type -Path $source -ReferencedAssemblies $interop, 'System.Drawing', 'System.Web.Extensions' -OutputAssembly $tmpDll -OutputType Library
+  Add-Type -Path $source -ReferencedAssemblies $interop, 'System.Drawing', 'System.Windows.Forms', 'System.Web.Extensions' -OutputAssembly $tmpDll -OutputType Library
   try { Move-Item $tmpDll $dll -ErrorAction Stop } catch { Remove-Item $tmpDll -Force -ErrorAction SilentlyContinue }
 }
 Add-Type -Path $dll

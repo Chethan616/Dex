@@ -12,6 +12,7 @@ import path from 'node:path';
 import { createInterface } from 'node:readline';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
+import { timeoutFor } from '../../../mcp-servers/windows/host.mjs';
 import { blockedReason, classify } from '../../../mcp-servers/windows/policy.mjs';
 
 const SERVER = path.resolve(__dirname, '../../../mcp-servers/windows/server.mjs');
@@ -36,6 +37,20 @@ describe('the Windows policy', () => {
     expect(classify('media', { action: 'shuffle', value: true })).toMatchObject({ tier: 1, category: 'app-control' });
     expect(classify('window_manage', { action: 'close' }, notepad)).toMatchObject({ tier: 3, category: 'system-destructive' });
     expect(classify('window_manage', { action: 'close' }, { ...notepad, openedByDex: true })).toMatchObject({ tier: 1 });
+  });
+
+  it('borrows the mouse as app-control, saying why and that the user can take over', () => {
+    const notepad = { process: 'notepad.exe', title: 'notes.txt - Notepad', openedByDex: false };
+    expect(classify('input_act', { steps: [{ click: { target: 'e3' } }, { key: 'Enter' }], why: 'Press the canvas button' }, notepad)).toMatchObject({
+      tier: 1, category: 'app-control', title: 'Use your mouse and keyboard in notepad',
+      detail: 'Press the canvas button (2 steps; move the mouse to take over)',
+    });
+    expect(classify('input_act', { steps: [], why: 'x' }, { process: 'WindowsTerminal.exe' }).refused).toMatch(/terminals/);
+  });
+
+  it('gives a borrow time for its wait, its pauses and its typing', () => {
+    expect(timeoutFor('borrow', { steps: [{ click: { x: 1, y: 1 } }] })).toBe(20_000 + 1_500 + 15_000);
+    expect(timeoutFor('borrow', { maxWaitMs: 90_000, steps: [{ wait: 9_000 }, { type: 'hello' }] })).toBe(30_000 + 5_000 + 3_000 + 100 + 15_000);
   });
 });
 
@@ -116,6 +131,16 @@ describe('the Windows server', () => {
     const { tool } = await start({ DEX_CONTROL_FILE: c.file, DEX_DESK_HOME: c.dir });
     const { body } = await tool('ui_invoke', { window: { hwnd: 4 }, target: 'e1' });
     expect(body.error).toBe('held');
+  });
+
+  it('hands a borrow to the helper, but never on a window the user took', async () => {
+    const c = await fakeControl();
+    const { tool } = await start({ DEX_CONTROL_FILE: c.file, DEX_DESK_HOME: c.dir });
+    const steps = [{ click: { target: 'e2' } }, { type: 'hi' }];
+    expect((await tool('input_act', { window: { hwnd: 4 }, steps, why: 'x' })).body.error).toBe('held');
+    const { body } = await tool('input_act', { window: { hwnd: 1 }, steps, why: 'Type a greeting' });
+    expect(body).toMatchObject({ op: 'borrow', args: { window: { hwnd: 1 }, steps } });
+    expect(c.heard.find((h) => h.path === '/dex/confirm')!.body).toMatchObject({ category: 'app-control', title: 'Use your mouse and keyboard in notepad' });
   });
 
   it('reports a focus incident to DEX and tells the agent', async () => {
