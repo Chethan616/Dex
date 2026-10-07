@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -148,7 +150,7 @@ fun SessionScreen(
   // A 3D model the task made comes over to the phone right away, so the tap
   // opens the viewer at once instead of waiting on a download.
   val models = remember(taskItems) { taskItems.second.filter { it.worthPrefetching() } }
-  val groups = remember(state.blocks) { groupTools(state.blocks) }
+  val groups = remember(state.blocks) { groupTools(widgetsLast(state.blocks)) }
   // Subagent mention rows, merged in by timestamp (ui/components/Subagents.kt) —
   // "X, Y and Z started working" / "X finished", among the usual block groups.
   val conversation = remember(groups, state.subagents) { mergeConversation(groups, state.subagents) }
@@ -159,8 +161,18 @@ fun SessionScreen(
   // scrolled to. An animated scroll from the top composed every message on
   // the way down, which was the lag when opening a long task. The list stays
   // invisible until it's placed. After that, follow the stream while the
-  // reader is at the bottom; leave them be otherwise.
+  // reader is following it: they stop by dragging the list, and start again
+  // by reaching the bottom, tapping "Latest" or sending a message.
+  // (Checking "at the bottom?" after new text arrived never worked: the new
+  // text had already made the list scrollable again.)
   val atBottom by remember { derivedStateOf { !list.canScrollForward } }
+  var follow by remember(sessionId) { mutableStateOf(true) }
+  LaunchedEffect(list) {
+    list.interactionSource.interactions.collect { if (it is androidx.compose.foundation.interaction.DragInteraction.Start) follow = false }
+  }
+  LaunchedEffect(list) {
+    snapshotFlow { list.canScrollForward }.collect { if (!it) follow = true }
+  }
   var placed by remember(sessionId) { mutableStateOf(false) }
   // The list fades in once it's at the bottom (a quick fade on its layer).
   val listAlpha = remember(sessionId) { androidx.compose.animation.core.Animatable(0f) }
@@ -178,8 +190,10 @@ fun SessionScreen(
       val total = snapshotFlow { list.layoutInfo.totalItemsCount }.first { it >= conversation.size }
       list.scrollToItem((total - 1).coerceAtLeast(0))
       placed = true
-    } else if (atBottom) {
-      list.animateScrollToItem(list.layoutInfo.totalItemsCount.coerceAtLeast(1) - 1)
+    } else if (follow) {
+      // The end of the last item, not its top: a long answer is still
+      // being written at its bottom.
+      list.scrollToEnd(animated = false)
     }
   }
 
@@ -256,6 +270,7 @@ fun SessionScreen(
           attach = attach,
           onSend = { text ->
             haptics.send()
+            follow = true
             val files = attach.items.toList()
             scope.launch {
               val ok = vm.followUp(text, files) { attach.uploadProgress = it }
@@ -336,7 +351,8 @@ fun SessionScreen(
       ) {
         SmallFloatingActionButton(onClick = {
           haptics.tick()
-          scope.launch { list.animateScrollToItem(list.layoutInfo.totalItemsCount - 1) }
+          follow = true
+          scope.launch { list.scrollToEnd(animated = true) }
         }) { Icon(Icons.Rounded.KeyboardArrowDown, "Latest") }
       }
     }
@@ -355,6 +371,45 @@ fun SessionScreen(
       dismissButton = { TextButton(onClick = { confirmStop = false }) { Text("Keep going") } },
     )
   }
+}
+
+/** To the very end: the last item, then whatever of it is below the screen. */
+private suspend fun androidx.compose.foundation.lazy.LazyListState.scrollToEnd(animated: Boolean) {
+  val last = layoutInfo.totalItemsCount - 1
+  if (last < 0) return
+  if (animated) animateScrollToItem(last) else scrollToItem(last)
+  val info = layoutInfo
+  val item = info.visibleItemsInfo.lastOrNull { it.index == last } ?: return
+  val below = item.offset + item.size - (info.viewportEndOffset - info.afterContentPadding)
+  if (below > 0) {
+    if (animated) animateScrollBy(below.toFloat()) else scrollBy(below.toFloat())
+  }
+}
+
+/**
+ * A turn's widgets go after its answer, as on the desktop. The agent shows
+ * its cards (dex-ui) and only then writes the reply, but the reply reads as
+ * the lead-in and the cards are what you act on — so they close the turn,
+ * just above its "Done" (or after it, when the Done card carries the answer).
+ */
+internal fun widgetsLast(blocks: List<Block>): List<Block> {
+  if (blocks.none { it.kind == "widget" }) return blocks
+  val out = ArrayList<Block>(blocks.size)
+  var start = 0
+  fun flush(end: Int) {
+    val turn = blocks.subList(start, end)
+    val widgets = turn.filter { it.kind == "widget" }
+    if (widgets.isEmpty()) { out += turn; return }
+    val rest = turn.filter { it.kind != "widget" }
+    val last = rest.lastOrNull()
+    val at = if (last?.kind == "done" && last.echo) rest.lastIndex else rest.size
+    out += rest.subList(0, at)
+    out += widgets
+    out += rest.subList(at, rest.size)
+  }
+  blocks.forEachIndexed { i, b -> if (b.kind == "user" && i > start) { flush(i); start = i } }
+  flush(blocks.size)
+  return out
 }
 
 /** Nothing visibly moving at the tail — show what the agent is doing. */
