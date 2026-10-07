@@ -67,6 +67,20 @@ describe('WorkspaceBar page tools', () => {
     });
   };
 
+  it('gives a new tab an empty address bar, even when Ctrl+T focused it while the last tab was still in front', () => {
+    const a = tab({ id: 'a', url: 'https://site-a.example/page' });
+    render([a]);
+    const input = host.querySelector('.ws-address__input') as HTMLInputElement;
+    // Ctrl+T: main asks for the address bar first…
+    act(() => input.focus());
+    expect(input.value).toBe('https://site-a.example/page');
+    // …then the new tab arrives.
+    render([{ ...a, active: false }, tab({ id: 'n', url: 'about:blank', title: 'New tab', isNewTab: true, openedBy: 'user' })]);
+    expect(input.value).toBe('');
+    act(() => { input.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    expect(api.tab).not.toHaveBeenCalledWith('s1', expect.objectContaining({ op: 'navigate' }));
+  });
+
   it('opens find on Ctrl+F, searches as you type, steps with Enter, and closes with Esc', async () => {
     render([tab()]);
     expect(host.querySelector('.ws-find')).toBeNull();

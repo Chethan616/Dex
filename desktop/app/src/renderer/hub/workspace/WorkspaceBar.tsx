@@ -112,6 +112,15 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
   useEffect(() => {
     if (!editing) setDraft(active?.url && !active.isNewTab ? active.url : '');
   }, [active?.url, active?.isNewTab, editing]);
+  // Another tab: what the bar held belonged to the last one. Ctrl+T focuses
+  // the bar before the new tab arrives, so it had copied tab A's address —
+  // and Enter then loaded A in the new tab.
+  const draftTab = useRef(active?.id);
+  useEffect(() => {
+    if (draftTab.current === active?.id) return;
+    draftTab.current = active?.id;
+    setDraft(active?.url && !active.isNewTab ? active.url : '');
+  }, [active?.id, active?.url, active?.isNewTab]);
 
   const focusAddress = useCallback(() => {
     const el = inputRef.current;
