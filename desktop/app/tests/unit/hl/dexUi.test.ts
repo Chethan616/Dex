@@ -53,8 +53,7 @@ describe.runIf(Boolean(BASH))('dex-ui', () => {
     const status = await new Promise<number | null>((r) => child.on('close', r));
     expect(status, stderr).toBe(0);
     const body = bodies.pop()!;
-    const widget = body.widget && typeof body.widget === 'object' && !('type' in body.widget) ? { ...body.widget, type: body.type } : body.widget;
-    return { body, parsed: parseWidget(widget) };
+    return { body, parsed: parseWidget(body.widget, { type: body.type as string | undefined, title: (body.title as string | undefined) || undefined }) };
   };
 
   it('asks a choice in one line, quotes and all', async () => {
@@ -67,6 +66,12 @@ describe.runIf(Boolean(BASH))('dex-ui', () => {
   it('turns label/url pairs into buttons', async () => {
     const { parsed } = await run(['link', 'Open in Google Flights', 'https://www.google.com/travel/flights?q=Flights%20to%20DEL&hl=en', 'Directions', 'geo:17.38,78.48']);
     expect(parsed.widget).toMatchObject({ type: 'buttons', buttons: [{ label: 'Open in Google Flights' }, { label: 'Directions', url: 'geo:17.38,78.48' }] });
+  });
+
+  it('takes the title from the command line, as an agent tried: dex-ui ask "Flight details"', async () => {
+    const { parsed } = await run(['ask', 'Flight details'], '{"from": {"type": "text", "label": "Departure city"}, "date": {"type": "date", "label": "Travel date"}}');
+    expect(parsed.error).toBeNull();
+    expect(parsed.widget).toMatchObject({ type: 'ask', title: 'Flight details', fields: [{ id: 'from', kind: 'place' }, { id: 'date', kind: 'date' }] });
   });
 
   it('takes a full spec from stdin, with the type from the subcommand', async () => {

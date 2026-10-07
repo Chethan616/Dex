@@ -2086,13 +2086,15 @@ app.whenReady().then(async () => {
       // `dex-ui`: a widget from the fixed kit (shared/widgets.ts) — a question
       // with real controls, or results as cards, link buttons or facts.
       'POST /dex/ui': async (raw) => {
-        let body: { sessionId?: unknown; type?: unknown; widget?: unknown };
+        let body: { sessionId?: unknown; type?: unknown; title?: unknown; widget?: unknown };
         try { body = JSON.parse(raw || '{}'); } catch { throw new Error('the widget spec on stdin is not valid JSON — check quotes and commas'); }
         const sessionId = assertString(body.sessionId, 'sessionId', 100);
         if (!sessionManager.getSession(sessionId)) throw new Error('no such session');
-        let spec = body.widget;
-        if (spec && typeof spec === 'object' && !Array.isArray(spec) && !('type' in spec) && typeof body.type === 'string') spec = { ...spec, type: body.type };
-        const { widget, error } = parseWidget(spec);
+        // The command line's subcommand and title ride along as hints: `dex-ui ask "Flight details"`.
+        const { widget, error } = parseWidget(body.widget, {
+          type: typeof body.type === 'string' ? body.type : undefined,
+          title: typeof body.title === 'string' && body.title.trim() ? body.title.trim() : undefined,
+        });
         if (!widget) throw new Error(`that widget doesn't fit DEX's kit: ${error}. See ui.md in your DEX tools.`);
         const id = `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
         sessionManager.appendOutput(sessionId, { type: 'widget', id, widget });

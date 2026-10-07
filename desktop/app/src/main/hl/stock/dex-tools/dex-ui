@@ -12,7 +12,7 @@ set -uo pipefail
 usage() {
   cat >&2 <<'USAGE'
 usage:
-  dex-ui ask     <<'EOF'  {"title": "...", "fields": [...]}       JSON on stdin
+  dex-ui ask ["<title>"] <<'EOF'  {"title": "...", "fields": [...]}   JSON on stdin
   dex-ui cards   <<'EOF'  {"title": "...", "items": [...]}
   dex-ui buttons <<'EOF'  {"buttons": [{"label": "...", "url": "https://..."}]}
   dex-ui facts   <<'EOF'  {"title": "...", "rows": [{"label": "...", "value": "..."}]}
@@ -36,9 +36,12 @@ sid="$(dex_esc "$session")"
 
 case "$op" in
   ask|cards|buttons|facts)
+    # An optional title on the command line: dex-ui ask "Flight details" <<'EOF'
+    title=""
+    [ $# -ge 1 ] && title="$(dex_esc "$1")"
     spec="$(cat)"
     [ -n "${spec//[[:space:]]/}" ] || { echo "dex-ui $op: no JSON on stdin" >&2; exit 2; }
-    body="{\"sessionId\":\"${sid}\",\"type\":\"${op}\",\"widget\":${spec}}"
+    body="{\"sessionId\":\"${sid}\",\"type\":\"${op}\",\"title\":\"${title}\",\"widget\":${spec}}"
     ;;
   choose)
     [ $# -ge 3 ] || usage

@@ -78,15 +78,172 @@ export const WidgetSchema = z.discriminatedUnion('type', [
 export type Widget = z.infer<typeof WidgetSchema>;
 export type AskWidget = Omit<Extract<Widget, { type: 'ask' }>, 'fields'> & { fields: AskField[] };
 
+/* ── Reading what agents actually write ─────────────────────────────── */
+
+// Agents guess the shape before (or instead of) reading ui.md. A live run
+// sent `{"from": {"type": "text", …}, "date": {"type": "date"}}` with the
+// title as an argument, got "Invalid input" twice and fell back to prose. So
+// the kit reads the natural variants, and an error shows the shape to use.
+
+type Loose = Record<string, unknown>;
+const isObj = (v: unknown): v is Loose => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+const firstOf = (o: Loose, ...keys: string[]): unknown => keys.map((k) => o[k]).find((v) => v !== undefined && v !== null && v !== '');
+
+const KIND_ALIASES: Record<string, AskField['kind']> = {
+  choice: 'choice', choices: 'choice', select: 'choice', options: 'choice', option: 'choice', radio: 'choice', dropdown: 'choice',
+  chips: 'choice', enum: 'choice', buttons: 'choice', multiselect: 'choice', checkbox: 'choice', checkboxes: 'choice', boolean: 'choice', yesno: 'choice',
+  place: 'place', city: 'place', location: 'place', airport: 'place', address: 'place', destination: 'place', origin: 'place', station: 'place',
+  date: 'date', day: 'date', dates: 'date', daterange: 'date', calendar: 'date',
+  time: 'time', slot: 'time', slots: 'time', clock: 'time',
+  number: 'number', integer: 'number', int: 'number', count: 'number', stepper: 'number', quantity: 'number', numeric: 'number', float: 'number',
+  text: 'text', string: 'text', input: 'text', textarea: 'text', free: 'text', freetext: 'text', email: 'text', phone: 'text', name: 'text',
+};
+const PLACE_WORDS = /\b(city|cities|airport|from|to|origin|destination|depart(ure|ing)?|arriv(al|e|ing)|location|address|place|station|where)\b/i;
+
+function slugId(raw: string): string {
+  const id = raw.replace(/[^\w-]+/g, '_').replace(/^[^A-Za-z]+/, '').slice(0, 24);
+  return id || 'field';
+}
+
+function normAction(raw: unknown): unknown {
+  if (!isObj(raw)) return raw;
+  const a: Loose = { ...raw };
+  a.label = firstOf(raw, 'label', 'text', 'title', 'name');
+  a.url = firstOf(raw, 'url', 'href', 'link');
+  a.reply = firstOf(raw, 'reply', 'message', 'send', 'prompt', 'value');
+  if (a.url && a.reply) delete a.reply;
+  return a;
+}
+
+function normOption(o: unknown): unknown {
+  if (typeof o === 'number' || typeof o === 'boolean') return String(o);
+  if (!isObj(o)) return o;
+  return { ...o, label: firstOf(o, 'label', 'title', 'name', 'text', 'value'), detail: firstOf(o, 'detail', 'description', 'subtitle', 'hint') };
+}
+
+function normField(key: string | undefined, raw: unknown): unknown {
+  // {"from": "Departure city"}: a field named by its label.
+  if (typeof raw === 'string') raw = { label: raw };
+  if (!isObj(raw)) return raw;
+  const f: Loose = { ...raw };
+  const given = String(firstOf(raw, 'kind', 'type', 'input', 'widget') ?? '').toLowerCase().replace(/[\s_-]/g, '');
+  const options = firstOf(raw, 'options', 'choices', 'values', 'items');
+  let kind = KIND_ALIASES[given] ?? (Array.isArray(options) ? 'choice' : 'text');
+  const label = firstOf(raw, 'label', 'title', 'question', 'name', 'prompt');
+  // A generic text field that's plainly a place ("from", "Departure city") gets the place control.
+  if (kind === 'text' && (!given || given === 'text' || given === 'string' || given === 'input') && PLACE_WORDS.test(`${key ?? ''} ${String(label ?? '')}`)) kind = 'place';
+  f.kind = kind;
+  f.id = firstOf(raw, 'id') ?? (key ? slugId(key) : undefined);
+  f.label = label;
+  if (f.default === undefined && raw.value !== undefined) f.default = raw.value;
+  if (['multiselect', 'checkbox', 'checkboxes'].includes(given)) f.multi = true;
+  if (['dates', 'daterange'].includes(given)) f.range = true;
+  if (kind === 'choice') {
+    f.options = Array.isArray(options) ? options.map(normOption) : given === 'boolean' || given === 'yesno' ? ['Yes', 'No'] : options;
+  } else if (kind === 'place' && Array.isArray(options) && !f.suggestions) {
+    f.suggestions = options.map((o) => (isObj(o) ? firstOf(o, 'label', 'value', 'name') : String(o)));
+  } else if (kind === 'time' && Array.isArray(options) && !f.slots) {
+    f.slots = options;
+  }
+  if (kind === 'number') {
+    for (const k of ['min', 'max', 'step', 'default']) if (typeof f[k] === 'string' && f[k] !== '' && !Number.isNaN(Number(f[k]))) f[k] = Number(f[k]);
+  } else if (f.default !== undefined && typeof f.default !== 'string') {
+    delete f.default;
+  }
+  return f;
+}
+
+const TYPE_ALIASES: Record<string, Widget['type']> = {
+  ask: 'ask', form: 'ask', question: 'ask', questions: 'ask', input: 'ask', choose: 'ask',
+  cards: 'cards', card: 'cards', results: 'cards', list: 'cards', options: 'cards',
+  buttons: 'buttons', button: 'buttons', links: 'buttons', link: 'buttons',
+  facts: 'facts', fact: 'facts', table: 'facts', summary: 'facts', details: 'facts',
+};
+
+/**
+ * The spec as the kit expects it, from the shapes agents tend to write:
+ * fields as a map keyed by id, `type` for a field's kind, common kind names
+ * (select, city, stepper…), `question` for the title, `choices`, `value`,
+ * links as `href`, facts as a plain map. `hint` carries what the command
+ * line said: `dex-ui ask "Flight details"`.
+ */
+export function normalizeWidget(raw: unknown, hint: { type?: string; title?: string } = {}): unknown {
+  const hintType = hint.type ? TYPE_ALIASES[hint.type.toLowerCase()] : undefined;
+  if (Array.isArray(raw)) {
+    const listKey = { ask: 'fields', cards: 'items', buttons: 'buttons', facts: 'rows' }[hintType ?? 'ask'];
+    raw = { [listKey]: raw };
+  }
+  if (!isObj(raw)) return raw;
+  // An unknown type stays as given, so the schema refuses it rather than guessing.
+  const typeGiven = typeof raw.type === 'string' ? TYPE_ALIASES[raw.type.toLowerCase()] ?? (raw.type as Widget['type']) : undefined;
+  const type = typeGiven ?? hintType ?? (raw.fields || raw.inputs ? 'ask' : raw.items || raw.cards || raw.results ? 'cards' : raw.buttons || raw.links ? 'buttons' : raw.rows || raw.facts ? 'facts' : 'ask');
+  const w: Loose = { ...raw, type };
+  const title = firstOf(raw, 'title', 'question', 'prompt', 'heading') ?? hint.title;
+  if (title !== undefined) w.title = title;
+
+  if (type === 'ask') {
+    let fields = firstOf(raw, 'fields', 'inputs', 'questions');
+    if (fields === undefined) {
+      // No `fields`: the spec itself is the map of fields — what the live run sent.
+      const reserved = new Set(['type', 'title', 'question', 'prompt', 'heading', 'note', 'icon', 'submit', 'button']);
+      const entries = Object.entries(raw).filter(([k, v]) => !reserved.has(k) && (isObj(v) || typeof v === 'string'));
+      if (entries.length) fields = Object.fromEntries(entries);
+    }
+    if (Array.isArray(fields)) w.fields = fields.map((f) => normField(undefined, f));
+    else if (isObj(fields)) w.fields = Object.entries(fields).map(([k, v]) => normField(k, v));
+    w.submit = firstOf(raw, 'submit', 'button', 'submitLabel');
+    const list = Array.isArray(w.fields) ? (w.fields as Loose[]) : [];
+    if (w.title === undefined) w.title = list.length === 1 && typeof list[0]?.label === 'string' ? list[0].label : 'A few details';
+  } else if (type === 'cards') {
+    const items = firstOf(raw, 'items', 'cards', 'results', 'options');
+    if (Array.isArray(items)) {
+      w.items = items.map((c) => (isObj(c) ? {
+        ...c,
+        title: firstOf(c, 'title', 'name', 'label'),
+        subtitle: firstOf(c, 'subtitle', 'description', 'detail', 'summary'),
+        actions: Array.isArray(firstOf(c, 'actions', 'buttons', 'links')) ? (firstOf(c, 'actions', 'buttons', 'links') as unknown[]).map(normAction) : undefined,
+      } : c));
+    }
+  } else if (type === 'buttons') {
+    const buttons = firstOf(raw, 'buttons', 'links', 'actions');
+    if (Array.isArray(buttons)) w.buttons = buttons.map(normAction);
+  } else if (type === 'facts') {
+    const rows = firstOf(raw, 'rows', 'facts', 'items', 'data');
+    if (isObj(rows)) w.rows = Object.entries(rows).map(([label, value]) => ({ label, value: String(value) }));
+    else if (Array.isArray(rows)) w.rows = rows.map((r) => (isObj(r) ? { label: firstOf(r, 'label', 'key', 'name'), value: String(firstOf(r, 'value', 'text') ?? '') } : r));
+    const actions = firstOf(raw, 'actions', 'buttons', 'links');
+    if (Array.isArray(actions)) w.actions = actions.map(normAction);
+  }
+  return w;
+}
+
+/** What each kind looks like, for an error the agent can act on. */
+const SHAPES: Record<Widget['type'], string> = {
+  ask: '{"title":"Where and when are you flying?","fields":[{"id":"from","kind":"place","label":"From","suggestions":["Hyderabad (HYD)"]},{"id":"date","kind":"date","label":"Date"},{"id":"pax","kind":"number","label":"Travellers","min":1,"default":1}]} — kinds: choice (options), place (suggestions), date, time (slots "HH:MM"), number, text',
+  cards: '{"title":"Flights","items":[{"title":"IndiGo 6E 2345","subtitle":"07:05 → 09:15","price":"₹4,850","actions":[{"label":"Select","reply":"Book 6E 2345"},{"label":"Open","url":"https://…"}]}]}',
+  buttons: '{"buttons":[{"label":"Open in Google Flights","url":"https://www.google.com/travel/flights?q=…"}]}',
+  facts: '{"title":"Your booking","rows":[{"label":"Flight","value":"6E 2345"}]}',
+};
+
+function issueText(i: z.core.$ZodIssue): string {
+  const where = i.path.join('.') || '(spec)';
+  if (i.code === 'invalid_type' && i.message.includes('undefined')) return `${where}: missing`;
+  if (i.code === 'invalid_union' && i.path[i.path.length - 1] !== undefined && String(i.path[0]) === 'fields') return `${where}: unknown kind (choice, place, date, time, number or text)`;
+  if (i.code === 'invalid_union') return `${where}: not one of the kit's shapes`;
+  return `${where}: ${i.message}`;
+}
+
 /**
  * Parse an agent's spec: the widget with every field given an id, or a
- * short, fixable list of what's wrong (the agent reads it and tries again).
+ * short, fixable message — what's wrong and the shape to use.
  */
-export function parseWidget(raw: unknown): { widget: Widget; error: null } | { widget: null; error: string } {
-  const r = WidgetSchema.safeParse(raw);
+export function parseWidget(raw: unknown, hint: { type?: string; title?: string } = {}): { widget: Widget; error: null } | { widget: null; error: string } {
+  const normal = normalizeWidget(raw, hint);
+  const r = WidgetSchema.safeParse(normal);
   if (!r.success) {
-    const problems = r.error.issues.slice(0, 6).map((i) => `${i.path.join('.') || '(spec)'}: ${i.message}`);
-    return { widget: null, error: problems.join('; ') };
+    const problems = r.error.issues.slice(0, 5).map(issueText).join('; ');
+    const type = (isObj(normal) && typeof normal.type === 'string' && normal.type in SHAPES ? normal.type : 'ask') as Widget['type'];
+    return { widget: null, error: `${problems}. A ${type} looks like ${SHAPES[type]}` };
   }
   const widget = r.data;
   if (widget.type === 'ask') {

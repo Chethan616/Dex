@@ -29,7 +29,9 @@ describe('a widget spec', () => {
   it('says exactly which key is wrong, so the agent can fix it', () => {
     expect(parseWidget({ type: 'ask', title: 'When?', fields: [{ kind: 'date', default: '9/10/2026' }] }).error).toMatch(/fields\.0\.default: dates are YYYY-MM-DD/);
     expect(parseWidget({ type: 'buttons', buttons: [{ label: 'Go', url: 'javascript:alert(1)' }] }).error).toMatch(/buttons\.0\.url/);
-    expect(parseWidget({ type: 'buttons', buttons: [{ label: 'Go', url: 'https://a.b', reply: 'x' }] }).error).toMatch(/a url or a reply/);
+    expect(parseWidget({ type: 'buttons', buttons: [{ label: 'Go' }] }).error).toMatch(/a url or a reply/);
+    // Both given: the link wins, rather than refusing the button.
+    expect(parseWidget({ type: 'buttons', buttons: [{ label: 'Go', url: 'https://a.b', reply: 'x' }] }).widget).toMatchObject({ buttons: [{ url: 'https://a.b' }] });
     expect(parseWidget({ type: 'ask', title: 'Pick', fields: [{ kind: 'choice', options: ['only one'] }] }).error).toMatch(/options/);
     expect(parseWidget({ type: 'banner', text: 'hi' }).error).toBeTruthy();
   });
@@ -69,6 +71,62 @@ describe('a widget spec', () => {
     expect(quickReplies(parseWidget({ type: 'ask', title: 'Cabin?', fields: [{ kind: 'choice', options: ['Economy', 'Business'] }] }).widget!)).toEqual(['Economy', 'Business']);
     expect(quickReplies(parseWidget(flightForm).widget!)).toEqual([]);
     expect(widgetLine(parseWidget({ type: 'cards', title: 'Cheapest flights', items: [{ title: 'IndiGo 6E 2345' }] }).widget!)).toBe('Cheapest flights');
+  });
+});
+
+describe('what agents actually write', () => {
+  it('reads the spec a live run sent — fields as a map, `type` for kind, `value` for default — that "Invalid input" refused twice', () => {
+    const live = {
+      from: { type: 'text', label: 'Departure city', placeholder: 'e.g., Bangalore, Chennai' },
+      date: { type: 'date', label: 'Travel date' },
+      passengers: { type: 'number', label: 'Number of passengers', value: 1 },
+    };
+    const { widget, error } = parseWidget(live, { type: 'ask' });
+    expect(error).toBeNull();
+    expect(widget).toMatchObject({
+      type: 'ask', title: 'A few details', submit: 'Send',
+      fields: [
+        { id: 'from', kind: 'place', label: 'Departure city', placeholder: 'e.g., Bangalore, Chennai' },
+        { id: 'date', kind: 'date', label: 'Travel date' },
+        { id: 'passengers', kind: 'number', label: 'Number of passengers', default: 1 },
+      ],
+    });
+    expect(parseWidget(live, { type: 'ask', title: 'Flight details' }).widget).toMatchObject({ title: 'Flight details' });
+  });
+
+  it('reads common names for kinds and keys', () => {
+    const { widget } = parseWidget({
+      question: 'Your trip',
+      fields: [
+        { name: 'cabin', type: 'select', choices: ['Economy', { title: 'Business', description: 'Lie-flat' }] },
+        { label: 'Dates', type: 'date_range' },
+        { label: 'Extras', type: 'checkboxes', options: ['Bag', 'Meal'] },
+        { label: 'Return?', type: 'boolean' },
+        { label: 'Leave at', type: 'time', options: ['07:00', '19:30'] },
+        { label: 'Bags', type: 'integer', min: '0', max: '3' },
+      ],
+    });
+    expect(widget).toMatchObject({
+      type: 'ask', title: 'Your trip',
+      fields: [
+        { kind: 'choice', label: 'cabin', options: ['Economy', { label: 'Business', detail: 'Lie-flat' }] },
+        { kind: 'date', range: true },
+        { kind: 'choice', multi: true, options: ['Bag', 'Meal'] },
+        { kind: 'choice', options: ['Yes', 'No'] },
+        { kind: 'time', slots: ['07:00', '19:30'] },
+        { kind: 'number', min: 0, max: 3 },
+      ],
+    });
+    expect(parseWidget({ facts: { Flight: '6E 2345', Price: 4850 } }, { type: 'facts' }).widget).toMatchObject({ type: 'facts', rows: [{ label: 'Flight', value: '6E 2345' }, { label: 'Price', value: '4850' }] });
+    expect(parseWidget([{ text: 'Open', href: 'https://a.b' }], { type: 'buttons' }).widget).toMatchObject({ type: 'buttons', buttons: [{ label: 'Open', url: 'https://a.b' }] });
+    expect(parseWidget({ results: [{ name: 'IndiGo', description: '07:05', buttons: [{ label: 'Select', message: 'Book it' }] }] }, { type: 'cards' }).widget)
+      .toMatchObject({ type: 'cards', items: [{ title: 'IndiGo', subtitle: '07:05', actions: [{ label: 'Select', reply: 'Book it' }] }] });
+  });
+
+  it('when it still doesn’t fit, says what and shows the shape to use', () => {
+    const { error } = parseWidget({ type: 'ask', title: 'When?', fields: [{ kind: 'date', default: '9/10/2026' }] });
+    expect(error).toMatch(/fields\.0\.default: dates are YYYY-MM-DD/);
+    expect(error).toMatch(/A ask looks like \{"title":"Where and when are you flying\?"/);
   });
 });
 
