@@ -9,6 +9,13 @@
  *
  * Enabled/disabled state is kept in the same blob rather than in settings,
  * so a connection and its secret can never disagree about whether it exists.
+ *
+ * Windows Credential Manager holds at most 2,560 bytes per entry, and a few
+ * connectors' tokens outgrow that (keytar reports it as "The stub received
+ * bad data"). So the blob is cut into parts: `connections` holds a small
+ * manifest naming a generation, and `connections@<gen>#<i>` hold the parts.
+ * A save writes a whole new generation before switching the manifest to it,
+ * so a failed save leaves the previous one intact.
  */
 import { mainLogger } from '../logger';
 import { createRequire } from 'node:module';
@@ -17,6 +24,10 @@ const nodeRequire = createRequire(import.meta.url);
 
 const MCP_SERVICE = 'com.chethan616.dex.mcp';
 const ACCOUNT = 'connections';
+/** Bytes per credential entry: Windows allows 2,560; stay well under. */
+const PART_BYTES = 2000;
+
+interface Manifest { v: 2; gen: string; parts: number }
 
 interface KeytarLike {
   getPassword(service: string, account: string): Promise<string | null>;
@@ -61,7 +72,7 @@ async function load(): Promise<Store> {
       return cached;
     }
     try {
-      const blob = await keytar.getPassword(MCP_SERVICE, ACCOUNT);
+      const blob = await readBlob(keytar);
       cached = blob ? (JSON.parse(blob) as Store) : {};
     } catch (err) {
       mainLogger.warn('mcp.store.load.failed', { error: (err as Error).message });
@@ -75,11 +86,69 @@ async function load(): Promise<Store> {
   return loading;
 }
 
+function manifestOf(raw: string | null): Manifest | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<Manifest>;
+    return parsed.v === 2 && typeof parsed.gen === 'string' && typeof parsed.parts === 'number' ? parsed as Manifest : null;
+  } catch {
+    return null;
+  }
+}
+
+const partAccount = (gen: string, i: number) => `${ACCOUNT}@${gen}#${i}`;
+
+/** The stored JSON: the parts a manifest names, or (before v2) the entry itself. */
+async function readBlob(keytar: KeytarLike): Promise<string | null> {
+  const head = await keytar.getPassword(MCP_SERVICE, ACCOUNT);
+  const manifest = manifestOf(head);
+  if (!manifest) return head;
+  const parts: string[] = [];
+  for (let i = 0; i < manifest.parts; i++) {
+    const part = await keytar.getPassword(MCP_SERVICE, partAccount(manifest.gen, i));
+    if (part === null) throw new Error(`part ${i} of ${manifest.parts} is missing`);
+    parts.push(part);
+  }
+  return parts.join('');
+}
+
+/** Cut text into pieces of at most `max` UTF-8 bytes, never inside a character. */
+export function splitUtf8(text: string, max = PART_BYTES): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let bytes = 0;
+  for (const ch of text) {
+    const size = Buffer.byteLength(ch);
+    if (bytes + size > max) {
+      parts.push(current);
+      current = '';
+      bytes = 0;
+    }
+    current += ch;
+    bytes += size;
+  }
+  if (current || parts.length === 0) parts.push(current);
+  return parts;
+}
+
+async function writeBlob(keytar: KeytarLike, blob: string): Promise<void> {
+  const previous = manifestOf(await keytar.getPassword(MCP_SERVICE, ACCOUNT).catch(() => null));
+  const gen = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const parts = splitUtf8(blob);
+  for (const [i, part] of parts.entries()) await keytar.setPassword(MCP_SERVICE, partAccount(gen, i), part);
+  const manifest: Manifest = { v: 2, gen, parts: parts.length };
+  await keytar.setPassword(MCP_SERVICE, ACCOUNT, JSON.stringify(manifest));
+  // The old generation is unreachable now; tidy it away (best-effort).
+  if (previous && previous.gen !== gen) {
+    for (let i = 0; i < previous.parts; i++) await keytar.deletePassword(MCP_SERVICE, partAccount(previous.gen, i)).catch(() => false);
+  }
+}
+
 async function persist(store: Store): Promise<void> {
   const keytar = getKeytar();
   if (!keytar) throw new Error('The OS credential store is unavailable. Connect a credential store before saving MCP accounts.');
   try {
-    await keytar.setPassword(MCP_SERVICE, ACCOUNT, JSON.stringify(store));
+    await writeBlob(keytar, JSON.stringify(store));
     // Publish only after the OS keychain confirms the write. A failed write
     // must not look connected for the remainder of this process.
     cached = store;
