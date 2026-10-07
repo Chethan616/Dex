@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The end of a live update's track: the finish line. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="#FFB8BCC6"
+      android:pathData="M5.9,3.4h1.6v17.6a0.8,0.8 0 0 1 -1.6,0z" />
+  <path
+      android:fillColor="#FFFFD24A"
+      android:pathData="M6.7,2.6m-1.4,0a1.4,1.4 0 1 1 2.8,0a1.4,1.4 0 1 1 -2.8,0" />
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:strokeColor="#40000000"
+      android:strokeWidth="0.5"
+      android:pathData="M7.5,4.2h11.4v8h-11.4z" />
+  <path
+      android:fillColor="#FF1D1F24"
+      android:pathData="M7.5,4.2h2.85v2.667h-2.85zM13.2,4.2h2.85v2.667h-2.85zM10.35,6.867h2.85v2.667h-2.85zM16.05,6.867h2.85v2.667h-2.85zM7.5,9.533h2.85v2.667h-2.85zM13.2,9.533h2.85v2.667h-2.85z" />
+</vector>

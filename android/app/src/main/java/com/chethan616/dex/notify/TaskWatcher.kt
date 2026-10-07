@@ -80,12 +80,16 @@ object TaskWatcher {
         body = s.error.take(400),
         sessionId = s.id, confirmationId = null,
       )
-      !s.summary.isNullOrBlank() || s.lastLine.isNotBlank() -> Notifications.show(
-        context, kind = "done",
-        title = "Done · $title",
-        body = markdownToPlain(s.summary ?: s.lastLine).take(1200),
-        sessionId = s.id, confirmationId = null,
-      )
+      !s.summary.isNullOrBlank() || s.lastLine.isNotBlank() -> {
+        // Asked from this phone: a moment at the finish line in the status bar first.
+        if (PhoneTasks.has(s.id)) LiveUpdate.finished(context, s.copy(summary = s.summary?.let(::markdownToPlain), lastLine = markdownToPlain(s.lastLine)))
+        Notifications.show(
+          context, kind = "done",
+          title = "Done · $title",
+          body = markdownToPlain(s.summary ?: s.lastLine).take(1200),
+          sessionId = s.id, confirmationId = null,
+        )
+      }
     }
   }
 }

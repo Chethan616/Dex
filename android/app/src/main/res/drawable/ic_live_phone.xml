@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The start of a live update's track: your phone, where you asked. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="#FF35B8FF"
+      android:pathData="M8.2,2.5h7.6a2.6,2.6 0 0 1 2.6,2.6v13.8a2.6,2.6 0 0 1 -2.6,2.6h-7.6a2.6,2.6 0 0 1 -2.6,-2.6v-13.8a2.6,2.6 0 0 1 2.6,-2.6z" />
+  <path
+      android:fillColor="#FF0E2A44"
+      android:pathData="M8.4,4.6h7.2a0.6,0.6 0 0 1 0.6,0.6v11.2a0.6,0.6 0 0 1 -0.6,0.6h-7.2a0.6,0.6 0 0 1 -0.6,-0.6v-11.2a0.6,0.6 0 0 1 0.6,-0.6z" />
+  <!-- A little message bubble: you asked from here. -->
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M9.6,7.2h4.8a0.9,0.9 0 0 1 0.9,0.9v2.6a0.9,0.9 0 0 1 -0.9,0.9h-2.9l-1.7,1.4v-1.4h-0.2a0.9,0.9 0 0 1 -0.9,-0.9v-2.6a0.9,0.9 0 0 1 0.9,-0.9z" />
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M12,18.9m-0.9,0a0.9,0.9 0 1 1 1.8,0a0.9,0.9 0 1 1 -1.8,0" />
+</vector>

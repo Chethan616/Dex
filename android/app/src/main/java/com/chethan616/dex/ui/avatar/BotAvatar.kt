@@ -336,7 +336,7 @@ private fun moodLabel(mood: BotMood): String = when (mood) {
 }
 
 /** The face, in the 100-unit body box. */
-private fun DrawScope.drawFace(
+internal fun DrawScope.drawFace(
   mood: BotMood,
   shape: BotShape,
   ink: Color,
@@ -403,7 +403,7 @@ private fun DrawScope.drawFace(
 }
 
 /** The accent beside the head, in the 100-unit box: pops in with the mood. */
-private fun DrawScope.drawAccent(mood: BotMood, ink: Color, phase: Float, beat: Float, pop: Float) {
+internal fun DrawScope.drawAccent(mood: BotMood, ink: Color, phase: Float, beat: Float, pop: Float) {
   if (pop <= 0.01f) return
   when (mood) {
     BotMood.Thinking -> scale(pop, pivot = Offset(80f, 16f)) {

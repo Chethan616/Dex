@@ -638,7 +638,13 @@ The owner wants all of these done.
 >   - **Code:** `notify/LiveUpdate.kt` and `PhoneTasks.kt`, with the channel `live_updates` (DEFAULT, silent) and the `POST_PROMOTED_NOTIFICATIONS` permission.
 >   - **Settings:** Settings › Feel has a "Live updates" status row and a "Try a live update" 25-second demo.
 >   - **The rule:** from AOSP `android16-qpr1-release`, the notification must request promotion, be ongoing, have a title, use ProgressStyle/BigText/Call, and **not** be colorized; the channel must be above MIN. Robolectric's 16.0 still uses the old rule, which required colorized.
->   - **Status:** checked in Robolectric, not yet on the phone.
+>   - **Status:** seen working on the owner's OnePlus (the 1.0.29 demo).
+>   - **1.0.30, more playful:**
+>     - The tracker is the task's own bot (`ui/avatar/BotStill.kt` draws `BotAvatar`'s face and accent into a bitmap), in its mood: a thought cloud, a grin, "!", a sweat drop.
+>     - It hops a step at a time, and the working stretch takes the bot's colour (blue for grey or white bots).
+>     - The track runs from a phone icon to a finish flag.
+>     - The finish-line moment (`LiveUpdate.finished`): six seconds of the bot beaming at the flag.
+>     - On ColorOS (OnePlus/OPPO/realme) the step goes in the sub-text, which is the line their card shows.
 > - **Reactions** (`f2b65a7f`, Android 1.0.28): `shared/reactions.ts` is the model, and the agent uses `dex-react` sparingly; the owner asked for no reaction on every message. The phone sends a `react` command (Firestore rule deployed).
 > - **Connectors + Marketplace** (`ecca603b`): `shared/connectorCatalog.ts` lists 50 hosted MCP servers.
 >   - On 2026-10-07 each one passed OAuth discovery and DCR+PKCE, and accepted the loopback redirect.

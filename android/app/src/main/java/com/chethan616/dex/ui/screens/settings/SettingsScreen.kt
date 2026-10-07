@@ -301,7 +301,7 @@ fun SettingsScreen(
         haptics.click()
         openNotificationSettings(promotion = live == LiveUpdate.Status.Off)
       }
-      SettingRow(Icons.Rounded.PlayCircle, "Try a live update", "A 25-second pretend task. Go to your home screen to watch it") {
+      SettingRow(Icons.Rounded.PlayCircle, "Try a live update", "A 30-second pretend task. Go to your home screen to watch it") {
         if (live == LiveUpdate.Status.NotificationsOff) {
           haptics.reject()
           openNotificationSettings(promotion = false)
