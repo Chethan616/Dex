@@ -35,6 +35,7 @@ Checked on 2026-10-07. Re-run the dependency scan with `yarn licenses:scan` in
 | Bot avatars (Libraries.dev) | `android/…/ui/avatar/BotShapes.kt`, desktop avatars | MIT | Credited in the phone's Settings › About |
 | `<model-viewer>` | `android/app/src/main/assets/viewer` | Apache-2.0 | `LICENSE-model-viewer.txt` beside it |
 | Material Symbols (Rounded) | `android/app/src/main/res/drawable/ic_task_*.xml` | Apache-2.0 | |
+| Simple Icons | `desktop/app/src/renderer/assets/brand-logos/*.svg` (most of the Marketplace logos) | CC0-1.0 | Path data only, in each brand's colour |
 | material-3-expressive-catalog (meticha) | patterns adapted in the phone's UI | Apache-2.0 | Credited in Settings › About |
 
 ### Desktop app (`desktop/app`) — npm production dependencies
@@ -79,6 +80,19 @@ the installed app).
 | Thinking orbs (`android/orbs`, vendored) | MIT |
 
 No copyleft code is in the APK. (JUnit, EPL-1.0, is only used by tests and isn't shipped.)
+
+### Logos and trademarks
+
+The Marketplace and Settings show each service's own logo
+(`desktop/app/src/renderer/assets/brand-logos/`, the Telegram and WhatsApp
+marks in Settings › Channels) so you can tell them apart. The vectors come from
+Simple Icons (CC0); Google, Microsoft, Slack, Reddit and Hugging Face are their
+published full-colour marks; the rest (Monday.com, Granola, Fireflies, Semgrep,
+Jam, Context7, DeepWiki, Canva, invideo, Close, Attio, Ramp, Plaid,
+Morningstar, BioRender, Exa, Kiwi.com, Scholar Gateway) are the icons those
+services publish on their own sites. Every logo is a trademark of its owner,
+used only to name the service; none of them is covered by DEX's license, and
+their use doesn't mean the owner endorses DEX.
 
 ### Not bundled
 

@@ -1,6 +1,6 @@
 /**
  * PDF pages (pdf.js): each page is a canvas with a text layer on top, so text
- * can be selected and copied — and later annotated (PLAN.md §3.7). Pages
+ * can be selected and copied — and later annotated (docs/unify/PLAN.md §3.7). Pages
  * render only as they come near the screen, so a long PDF opens at once.
  */
 import React, { useEffect, useRef } from 'react';

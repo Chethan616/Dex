@@ -149,8 +149,9 @@ import {
   stopResourceMonitor,
   type ResourceMonitorContext,
 } from './resourceMonitor';
-// Channels (WhatsApp)
+// Channels (WhatsApp, Telegram)
 import { WhatsAppAdapter } from './channels/WhatsAppAdapter';
+import { TelegramAdapter } from './channels/TelegramAdapter';
 import { ChannelRouter } from './channels/ChannelRouter';
 import { registerChannelHandlers, unregisterChannelHandlers } from './channels/ipc';
 // Auto-updater
@@ -546,7 +547,8 @@ browserPool.setOnInterruptShortcut((sessionId) => {
 });
 const accountStore = new AccountStore();
 const whatsAppAdapter = new WhatsAppAdapter();
-const channelRouter = new ChannelRouter(sessionManager, whatsAppAdapter);
+const telegramAdapter = new TelegramAdapter();
+const channelRouter = new ChannelRouter(sessionManager, { whatsapp: whatsAppAdapter, telegram: telegramAdapter });
 
 type SettingsOpenPayload = {
   focusBrowserCodeProvider?: string;
@@ -696,6 +698,9 @@ function openShellAndWire(): BrowserWindow {
         mainLogger.warn('main.whatsapp.autoReconnect.failed', { error: (err as Error).message });
       });
     }
+    telegramAdapter.resume().catch((err) => {
+      mainLogger.warn('main.telegram.resume.failed', { error: (err as Error).message });
+    });
   });
 
   shellWindow.on('close', (e) => {
@@ -807,11 +812,16 @@ app.whenReady().then(async () => {
   registerSetupIpc();
   registerProfileIpc();
   startSystemThemeWatcher();
-  registerChannelHandlers(channelRouter, whatsAppAdapter);
+  registerChannelHandlers(channelRouter, whatsAppAdapter, telegramAdapter);
   whatsAppAdapter.onStatusChange((status, detail) => {
     const target = shellWindow ?? onboardingWindow;
     if (target && !target.isDestroyed()) {
       target.webContents.send('channel-status', 'whatsapp', status, detail);
+    }
+  });
+  telegramAdapter.onStatusChange((status, detail) => {
+    if (shellWindow && !shellWindow.isDestroyed()) {
+      shellWindow.webContents.send('channel-status', 'telegram', status, detail);
     }
   });
   whatsAppAdapter.onQr((dataUrl) => {
@@ -3393,6 +3403,7 @@ app.whenReady().then(async () => {
     stopResourceMonitor();
     sessionManager.destroy();
     whatsAppAdapter.disconnect().catch(() => {});
+    telegramAdapter.disconnect().catch(() => {});
     channelRouter.destroy();
     unregisterChannelHandlers();
   });

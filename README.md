@@ -17,9 +17,12 @@ starts tasks, follows them and answers DEX's questions from anywhere.
 - **Phone (Android):** a Jetpack Compose app, paired with the desktop
   through your own Firebase project. Start tasks, read the chat, approve
   steps, get the files.
-- **Connectors:** Google (Gmail, Calendar, Drive, Docs, Sheets, Meet, Tasks),
-  Microsoft 365, GitHub, Slack, Reddit, Hugging Face, Blender, WhatsApp, and
-  more — DEX uses the service's API instead of clicking through its website.
+- **Channels:** text DEX a task from WhatsApp ("Message yourself") or your
+  own Telegram bot, and get the answer and files back in the same chat.
+- **Connectors:** a Marketplace of 50+ — Google (Gmail, Calendar, Drive,
+  Docs, Sheets, Meet, Tasks), Microsoft 365, GitHub, Notion, Jira, Canva,
+  Stripe, PubMed, Kiwi.com flights and more, one sign-in each. DEX uses the
+  service's API instead of clicking through its website.
 
 Releases (installer, APK, source): https://github.com/Chethan616/Dex/releases
 

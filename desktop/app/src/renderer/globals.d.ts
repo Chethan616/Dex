@@ -119,6 +119,21 @@ interface ElectronChannelsAPI {
     status: () => Promise<{ status: string; identity: string | null }>;
     clearAuth: () => Promise<{ status: string }>;
   };
+  telegram?: {
+    connect: (token: string) => Promise<{ ok: boolean; info?: TelegramChannelInfo; error?: string }>;
+    status: () => Promise<TelegramChannelInfo>;
+    remove: () => Promise<TelegramChannelInfo>;
+  };
+}
+
+/** main/channels/TelegramAdapter.ts TelegramInfo. Never carries the token. */
+interface TelegramChannelInfo {
+  status: string;
+  bot: string | null;
+  owner: string | null;
+  pairUrl: string | null;
+  pairQr: string | null;
+  error?: string;
 }
 
 interface ChromeProfileSummary {

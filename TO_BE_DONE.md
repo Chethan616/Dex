@@ -35,7 +35,7 @@ The repo is **public**.
   - 2.1 Phase status
   - 2.2 Code map
   - 2.3 How the pieces talk
-  - 2.4 Where the code differs from PLAN.md
+  - 2.4 Where the code differs from docs/unify/PLAN.md
 - **Part 3 — What to do, in order**
   - 3.0 Verify P2 live (first)
   - 3.1 Finish P2
@@ -46,6 +46,7 @@ The repo is **public**.
   - 3.6 Known issues
   - 3.7 The owner's requests of 2026-10-06
   - 3.8 The owner's requests of 2026-10-07: widgets (generative UI), MCP first, live-update polish
+  - 3.9 Channels, Marketplace logos, Telegram (v3.3.0)
 - **Part 4 — The Android app** (state and release, in case you touch it)
 - **Appendix A** — `docs/unify/PLAN.md` (the entire plan)
 - **Appendix B** — `docs/unify/codex-research.md` (the entire research)
@@ -251,7 +252,7 @@ PLAN §5 and the P1/P2 rows, against the code:
 | Bot moods (awake/thinking/working/needs-you/happy/sad/sleeping) | ✅ | `components/lib/botMood.ts`, `AgentAvatar.tsx`, `TaskAvatar.tsx` |
 | Events carry `at` | ✅ | `SessionManager.appendOutput`, `session-schemas.ts` `WHEN` |
 | `sessions:open-file` (recorded files only; executables only revealed) | ✅ | `index.ts`, `sessions/recordedFiles.ts` |
-| **P2** document tabs (all kinds in §3.9 except .blend/.pptx), live reload, `dex-open`, file cards → tabs | ✅ **not live-tested** | §2.2 "P2" |
+| **P2** document tabs (all kinds in PLAN §3.9 except .blend/.pptx), live reload, `dex-open`, file cards → tabs | ✅ **not live-tested** | §2.2 "P2" |
 | `persist:dex-web` profile + one-time cookie migration | ❌ | §3.2 |
 | Tab persistence across restarts | ❌ | §3.2 |
 | Download guard, per-site navigation policy, password-field guard | ❌ | §3.2 |
@@ -365,7 +366,7 @@ engine (Claude Code / Codex / BrowserCode)
 
 For 1–3 the page view is detached from DEX's window and parked on the stage, so the agent can keep using it and screenshots still work. A new run (`status → running`) resets your pick to `auto`. `dex-open` (or a file-card click) sets `doc` for that tab.
 
-## 2.4 Where the code differs from PLAN.md (on purpose)
+## 2.4 Where the code differs from docs/unify/PLAN.md (on purpose)
 
 | PLAN.md says | The code does | Why |
 |---|---|---|
@@ -374,7 +375,7 @@ For 1–3 the page view is detached from DEX's window and parked on the stage, s
 | A Settings toggle "New workspace (beta)" until P2 (§5) | **No toggle.** The workspace is simply on | The owner wanted it as the default |
 | `ActivityStrip.tsx` under the page (§3.1) | A chip in the toolbar ("DEX is working — you can use the page too" + Pause) and a glow around the page | Takes no vertical space |
 | PreviewDeck folded into New tab (§4.3) | The **chat** replaced the deck as the default surface (§3.12). `PreviewDeck.tsx` still provides `ConfirmationCard`/`getPendingConfirmations` (approval cards in the pane header) | The chat is where outputs, progress and sources live now |
-| Document viewer per the table (§3.9) | All but **.blend** and **.pptx**; no page-thumbnail rail; no virtualised grid (capped table instead) | Listed in §3.1 |
+| Document viewer per the table (PLAN §3.9) | All but **.blend** and **.pptx**; no page-thumbnail rail; no virtualised grid (capped table instead) | Listed in §3.1 |
 
 ---
 
@@ -625,6 +626,7 @@ PLAN §3.7, plus Codex's note format in Appendix B. The format matters: the mode
 - **`AgentPane.tsx` has old unused code** (lint warnings: `OutputRow`, `OutputIcon`, `CopyIcon`, `TerminalPane` import…). That's leftover from the pre-chat deck. Remove it when you're next in there, in its own commit.
 - **HTML documents** are drawn with scripts off (sandbox). A user may expect a running page: offer "Open as a web tab" in the doc bar for .html. That needs a `file://` web tab, so check the address bar's refusal of `file:` and allow it **only** for paths the task recorded.
 - **`gltf` with external buffers** can't render from one file's bytes (`ModelView` says so). If it matters, have main serve the folder via a scoped custom protocol.
+- **Token connections can't be saved (since 2026-09-29).** The log says `mcp.store.save.failed: The stub received bad data`. `mcp/store.ts` keeps every connection in **one** keytar entry, and Windows Credential Manager refuses a secret over 2,560 bytes (that error is how keytar reports it). Store one entry per connection id, and migrate the old blob on first read.
 - **Big files:** `sessions:read-file` sends the whole file over IPC (≤ 80 MB). For video, a streaming custom protocol (`protocol.handle` with range requests) would start playback faster. Add it only if it's a real problem.
 
 ---
@@ -823,6 +825,28 @@ The rule already in AGENTS.md ("the most structured interface first") isn't enou
   - anything else keeps the DEX mark.
 - **Open:** OnePlus's collapsed capsule may draw the app icon instead of the notification's small icon. Check it on the phone. If the glyph replaces the DEX mark instead of sitting after it, compose both into one small icon or put the glyph in the large icon.
 - **Desktop widgets everywhere:** the pane's chat and the logs window (`logs/ChatTranscript.tsx`, answers via `logsAPI.followUp`). Mail, phone and map links open through `widgets:open-url` (main checks the scheme).
+
+## 3.9 Channels, Marketplace logos, Telegram (v3.3.0, 2026-10-07)
+
+What the owner asked: "move the dex phone to the channels section at 1st then whatsapp then telegram and advanced connect with token", "delete the old accounts section", "original logos for everything" in the Marketplace, and Ctrl+T must not carry the last tab's address.
+
+**Done:**
+- **New tab / Ctrl+T** starts with an empty address bar (`WorkspaceBar.tsx`: the draft resets when the active tab changes; Ctrl+T focused the bar before the new tab's state arrived).
+- **Settings › Channels**, in this order: DEX on your phone (`PhoneCard.tsx`), WhatsApp, Telegram (`TelegramCard.tsx`), then *Advanced — connect with a token* (the old `McpSection`). `ConnectionsPane` takes `channelsFirst` / `channelsLast`.
+- **Settings › Connectors** is just the Marketplace card, with the installed connectors' logos. The old Accounts grid (`AccountsSection.tsx`) is gone: Google, Microsoft 365, GitHub, Slack, Reddit and Hugging Face are connected from the Marketplace. GitHub's device code shows in the Marketplace row while it waits, and Hugging Face's page there keeps the daily-limit guide (`connectors/HuggingFaceGuide.tsx`). Onboarding's logos moved to `ProviderMark.tsx`.
+- **Real logos** for all 57 Marketplace entries: `renderer/assets/brand-logos/` (Simple Icons, CC0, in brand colour; full-colour marks for Google, Microsoft, Slack, Reddit, Hugging Face; the services' own icons for the 18 Simple Icons lacks), mapped in `connectors/brandLogos.ts`, on a white tile in both themes. Credited in LICENSES.md (trademarks).
+- **Telegram channel** (`main/channels/TelegramAdapter.ts`): your own bot from @BotFather.
+  - Bot API long polling; no server.
+  - The token and owner live in keytar (`DEX/telegram`); the token is never logged or sent to the renderer.
+  - Pairing: a `t.me/<bot>?start=<code>` link (and QR) in Settings; the first person to open it owns the bot, and strangers are told it's private.
+  - Any message to the bot starts a task; a reply continues one; status is a reaction (👀 ✍ 👍 😢 — Telegram's own set).
+  - `ChannelRouter` now serves both apps (`ChatAdapter`). A hub task's `dex-send` goes to WhatsApp, else to the Telegram bot. The agent's prompt treats Telegram like WhatsApp: plain text, `dex-send` for files.
+- **Cleanup:** the Python-era plans and notes at the root, `tested/`, `docs/architecture/`, and Browser Use's own repo files under `desktop/` (README, CONTRIBUTING, CHANGELOG, Taskfile, `.github`, two scripts with hard-coded paths) are deleted.
+
+**Still to do:**
+- **Live-test Telegram** with a real bot: set it up, pair it from the phone, send "find a flight to Goa on Friday", reply to the answer, and `dex-send` a file. Check the reactions show.
+- **Telegram widgets:** Telegram can show buttons (inline keyboards). `dex-ui choose` could become buttons there instead of a plain question.
+- **Telegram duplicates after a crash:** the update offset is kept in memory, so messages from the last minutes before a crash can arrive twice (only within 10 minutes; older ones are skipped). Persist the offset if it shows up.
 
 # Part 4 — The Android app (if you touch it)
 
@@ -1309,7 +1333,7 @@ Each phase ships on its own, behind a Settings toggle ("New workspace (beta)") u
 
 # Research: how the Codex desktop app (Windows) builds its in-app browser
 
-Input for [PLAN.md](./PLAN.md), the unify plan.
+Input for [docs/unify/PLAN.md](docs/unify/PLAN.md), the unify plan.
 
 Research date: 29–30 Sep 2026. Target: MSIX `OpenAI.Codex_26.924.2738.0_x64__2p2nqsd0c76g0` (app version 26.924.22138, build 11645).
 Method: read-only inspection of the install directory, `app.asar` (listed and selectively extracted), the bundled `cua_node` runtime, the user-data *directory names* (no cookie, login or token files opened), the running process tree, public docs, and one question to the Codex CLI.

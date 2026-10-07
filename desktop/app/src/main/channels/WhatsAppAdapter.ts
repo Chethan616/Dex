@@ -195,7 +195,7 @@ export class WhatsAppAdapter implements ChannelAdapter {
   }
 
   /** Your own "Message yourself" chat — the only place DEX sends to on its own. */
-  selfChatJid(): string | null {
+  homeChat(): string | null {
     const id = this.sock?.user?.id;
     return id ? id.replace(/:.*@/, '@') : null;
   }

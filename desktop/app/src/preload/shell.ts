@@ -9,6 +9,7 @@ import {
 import type { AgentSession, HlEvent, TabInfo, BrowserPoolStats } from '../shared/session-schemas';
 import { createPopupBridge } from './popupBridge';
 import type { PreflightReport } from '../main/startup/preflight';
+import type { TelegramInfo as TelegramChannelInfo } from '../main/channels/TelegramAdapter';
 
 interface McpConnectionInfo {
   id: string;
@@ -487,6 +488,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       disconnect: (): Promise<{ status: string }> => ipcRenderer.invoke('channels:whatsapp:disconnect'),
       status: (): Promise<{ status: string; identity: string | null }> => ipcRenderer.invoke('channels:whatsapp:status'),
       clearAuth: (): Promise<{ status: string }> => ipcRenderer.invoke('channels:whatsapp:clear-auth'),
+    },
+    telegram: {
+      connect: (token: string): Promise<{ ok: boolean; info?: TelegramChannelInfo; error?: string }> => ipcRenderer.invoke('channels:telegram:connect', token),
+      status: (): Promise<TelegramChannelInfo> => ipcRenderer.invoke('channels:telegram:status'),
+      remove: (): Promise<TelegramChannelInfo> => ipcRenderer.invoke('channels:telegram:remove'),
     },
   },
   chromeImport: {

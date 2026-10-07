@@ -271,3 +271,73 @@ describe('ConnectionsPane provider loading', () => {
     act(() => root.unmount());
   });
 });
+
+describe('ConnectionsPane channels', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  const telegramApi = () => {
+    const api = (window as unknown as { electronAPI: { channels: Record<string, unknown> } }).electronAPI;
+    const telegram = {
+      status: vi.fn(async () => ({ status: 'disconnected', bot: null, owner: null, pairUrl: null, pairQr: null })),
+      connect: vi.fn(async () => ({ ok: true, info: { status: 'connected', bot: 'my_dex_bot', owner: null, pairUrl: 'https://t.me/my_dex_bot?start=abc', pairQr: 'data:image/png;base64,AA' } })),
+      remove: vi.fn(),
+    };
+    api.channels.telegram = telegram;
+    return telegram;
+  };
+
+  const renderChannels = () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    act(() => {
+      root.render(
+        <ConnectionsPane
+          embedded
+          connectionsSectionId="settings-connections"
+          channelsFirst={<div className="conn-card"><span className="conn-card__name">DEX on your phone</span></div>}
+          channelsLast={<details className="channels-advanced"><summary>Advanced — connect with a token</summary></details>}
+        />,
+      );
+    });
+    return { container, root };
+  };
+
+  it('lists DEX on your phone first, then WhatsApp, Telegram and the token connections', async () => {
+    installElectronApi();
+    telegramApi();
+    const { container, root } = renderChannels();
+    await flush();
+    const section = container.querySelector('#settings-connections') as HTMLElement;
+    const order = [...section.querySelectorAll('.conn-card__name, .channels-advanced > summary')].map((n) => n.textContent);
+    expect(order).toEqual(['DEX on your phone', 'WhatsApp', 'Telegram', 'Advanced — connect with a token']);
+    act(() => root.unmount());
+  });
+
+  it('sets up Telegram from the token @BotFather sends, then offers the pairing link', async () => {
+    installElectronApi();
+    const telegram = telegramApi();
+    const { container, root } = renderChannels();
+    await flush();
+    const card = cardByName(container, 'Telegram');
+    act(() => buttonByText(card, 'Set up').click());
+
+    const input = card.querySelector('input[aria-label="Bot token"]') as HTMLInputElement;
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    act(() => {
+      setValue?.call(input, '12345:not-a-real-token-only-for-tests');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => { buttonByText(card, 'Connect').click(); });
+    await flush();
+
+    expect(telegram.connect).toHaveBeenCalledWith('12345:not-a-real-token-only-for-tests');
+    expect(card.textContent).toContain('@my_dex_bot is ready');
+    expect(card.querySelector('img.conn-card__qr-img')?.getAttribute('src')).toBe('data:image/png;base64,AA');
+    expect(buttonByText(card, 'Open in Telegram')).toBeTruthy();
+    act(() => root.unmount());
+  });
+});

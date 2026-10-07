@@ -15,6 +15,7 @@ import { useThemedAsset } from '../design/useThemedAsset';
 import { CookieBrowser, type CookieBrowserApi } from '../shared/CookieBrowser';
 import { pollInstalledStatus } from '../shared/installStatus';
 import { Orb } from '../components/lib';
+import { TelegramCard } from './TelegramCard';
 
 type WaStatus = 'disconnected' | 'connecting' | 'qr_ready' | 'connected' | 'error';
 type AuthType = 'oauth' | 'apiKey' | 'none';
@@ -95,6 +96,9 @@ interface ConnectionsPaneProps {
   connectionsSectionId?: string;
   browserSyncSectionId?: string;
   focusBrowserCodeProvider?: SettingsProviderFocusRequest | null;
+  /** Channels shown before WhatsApp (DEX on your phone) and after Telegram (the token connections). */
+  channelsFirst?: React.ReactNode;
+  channelsLast?: React.ReactNode;
 }
 
 export function ConnectionsPane({
@@ -103,6 +107,8 @@ export function ConnectionsPane({
   connectionsSectionId,
   browserSyncSectionId,
   focusBrowserCodeProvider,
+  channelsFirst,
+  channelsLast,
 }: ConnectionsPaneProps): React.ReactElement {
   const openaiLogo = useThemedAsset(openaiLogoDark, openaiLogoLight);
   const opencodeLogo = useThemedAsset(opencodeLogoDark, opencodeLogoLight);
@@ -1130,6 +1136,8 @@ export function ConnectionsPane({
         <h2 className="settings-section-header__title">Channels</h2>
       </div>
 
+      {channelsFirst}
+
       <div className="conn-card">
         <div className="conn-card__header">
           {/* Inline, not a remote URL. The icon used to be fetched from
@@ -1197,6 +1205,10 @@ export function ConnectionsPane({
           </div>
         )}
       </div>
+
+      <TelegramCard />
+
+      {channelsLast}
 
       </section>
 

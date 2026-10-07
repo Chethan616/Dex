@@ -5,7 +5,7 @@
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Orb } from '../components/lib';
-import { ProviderMark } from '../hub/AccountsSection';
+import { ProviderMark } from '../hub/ProviderMark';
 import { ArrowRight, StepFooter } from './StepFooter';
 
 type Provider = 'google' | 'github' | 'slack' | 'huggingface';

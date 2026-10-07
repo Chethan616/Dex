@@ -118,6 +118,10 @@
   box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.18);
   line-height: 1;
 }
+/* Logos sit on white in both themes, the way app icons do. */
+.mk-mark--logo { background: #fff; overflow: hidden; }
+.mk-mark--logo img { width: 62%; height: 62%; object-fit: contain; user-select: none; }
+.mk-mark--bleed img { width: 100%; height: 100%; object-fit: cover; }
 .mk__row-text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .mk__name { font-size: 14px; font-weight: 600; color: var(--color-fg-primary); }
 .mk__blurb { font-size: 12.5px; color: var(--color-fg-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -159,3 +163,6 @@
 .mk__detail-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
 .mk__waiting { color: var(--color-fg-secondary); font-size: 13px; }
 .mk__error { margin: 6px 0 0; color: var(--color-status-error, #e5484d); font-size: 13px; }
+
+.mk__code { font-family: var(--font-mono); font-weight: 650; letter-spacing: 0.06em; color: var(--color-fg-primary); }
+.mk__detail-guide { width: 100%; margin-top: 12px; }

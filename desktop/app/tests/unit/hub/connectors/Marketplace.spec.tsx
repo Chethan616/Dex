@@ -2,7 +2,7 @@
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Marketplace } from '../../../../src/renderer/hub/connectors/Marketplace';
+import { MARKET_ITEMS, Marketplace } from '../../../../src/renderer/hub/connectors/Marketplace';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -101,6 +101,25 @@ describe('the Marketplace', () => {
     expect(host.textContent).toContain('14 tools');
     await act(async () => ([...host.querySelectorAll<HTMLButtonElement>('.mk__btn')].find((b) => b.closest('.mk__installed-row')?.textContent?.includes('Notion'))!).click());
     expect(api.connectors.disconnect).toHaveBeenCalledWith('notion');
+  });
+
+  it('shows every connector with its own logo', async () => {
+    expect(MARKET_ITEMS.filter((i) => !i.logo).map((i) => i.key)).toEqual([]);
+    await render();
+    const notion = [...host.querySelectorAll('.mk__item')].find((i) => i.querySelector('.mk__name')?.textContent === 'Notion')!;
+    // Small logos are inlined as data URLs; the file's <title> names the brand.
+    expect(decodeURIComponent(notion.querySelector('.mk-mark--logo img')?.getAttribute('src') ?? '')).toMatch(/<title>Notion<\/title>|notion\.svg/);
+  });
+
+  it('shows GitHub’s sign-in code while it waits for it', async () => {
+    let progress: ((event: AccountProgressEvent) => void) | undefined;
+    api.accounts.onProgress = vi.fn((cb: (event: AccountProgressEvent) => void) => { progress = cb; return () => {}; });
+    api.accounts.connect = vi.fn(() => new Promise(() => {}));
+    await render();
+    const github = () => [...host.querySelectorAll('.mk__item')].find((i) => i.querySelector('.mk__name')?.textContent === 'GitHub')!;
+    act(() => (github().querySelector('.mk__btn') as HTMLButtonElement).click());
+    act(() => progress?.({ provider: 'github', phase: 'code', userCode: 'WDJB-MJHT', verificationUri: 'https://github.com/login/device' }));
+    expect(github().querySelector('.mk__code')?.textContent).toBe('WDJB-MJHT');
   });
 
   it('closes on Esc', async () => {

@@ -11,6 +11,8 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AUDIENCES, HOSTED_CONNECTORS, type Audience, type ConnectorCategory, type ConnectorMark } from '../../../shared/connectorCatalog';
+import { brandLogo, type BrandLogo } from './brandLogos';
+import { HuggingFaceGuide } from './HuggingFaceGuide';
 import './marketplace.css';
 
 type Source = { kind: 'hosted'; id: string } | { kind: 'account'; provider: AccountProviderId };
@@ -22,6 +24,7 @@ export interface MarketItem {
   category: ConnectorCategory;
   audiences: Audience[];
   mark: ConnectorMark;
+  logo?: BrandLogo;
   featured?: boolean;
   needsPlan?: boolean;
   noSignIn?: boolean;
@@ -41,7 +44,7 @@ const BUILT_IN: MarketItem[] = [
 ];
 
 export const MARKET_ITEMS: MarketItem[] = [
-  ...BUILT_IN,
+  ...BUILT_IN.map((item) => ({ ...item, logo: brandLogo(item.key.slice('account:'.length)) })),
   ...HOSTED_CONNECTORS.map((c) => ({
     key: `hosted:${c.id}`,
     name: c.name,
@@ -49,6 +52,7 @@ export const MARKET_ITEMS: MarketItem[] = [
     category: c.category,
     audiences: c.audiences,
     mark: c.mark,
+    logo: brandLogo(c.id),
     featured: c.featured,
     needsPlan: c.needsPlan,
     noSignIn: c.auth === 'none',
@@ -66,7 +70,16 @@ function readAudience(): Audience | 'all' {
   } catch { return 'all'; }
 }
 
-export function Mark({ mark, size = 44 }: { mark: ConnectorMark; size?: number }): React.ReactElement {
+/** The connector's logo on its tile — or its letters on the brand colour when there's no logo. */
+export function Mark({ item, size = 44 }: { item: Pick<MarketItem, 'mark' | 'logo'>; size?: number }): React.ReactElement {
+  const { mark, logo } = item;
+  if (logo) {
+    return (
+      <span className={`mk-mark mk-mark--logo${logo.bleed ? ' mk-mark--bleed' : ''}`} style={{ width: size, height: size, background: logo.tile }} aria-hidden="true">
+        <img src={logo.src} alt="" draggable={false} />
+      </span>
+    );
+  }
   return (
     <span className="mk-mark" style={{ width: size, height: size, background: mark.bg, color: mark.fg ?? '#fff', fontSize: size * (mark.text.length > 1 ? 0.34 : 0.46) }} aria-hidden="true">
       {mark.text}
@@ -79,10 +92,11 @@ interface State {
   tools: Map<string, number>;
   /** Built-in accounts this build can't sign in to (no OAuth app configured). */
   unavailable: Set<string>;
+  accounts: Map<string, AccountInfo>;
 }
 
 function useMarketState(): [State, () => Promise<void>] {
-  const [state, setState] = useState<State>({ connected: new Set(), tools: new Map(), unavailable: new Set() });
+  const [state, setState] = useState<State>({ connected: new Set(), tools: new Map(), unavailable: new Set(), accounts: new Map() });
   const load = useCallback(async () => {
     const api = window.electronAPI?.settings;
     const [hosted, accounts] = await Promise.all([
@@ -92,6 +106,7 @@ function useMarketState(): [State, () => Promise<void>] {
     const connected = new Set<string>();
     const tools = new Map<string, number>();
     const unavailable = new Set<string>();
+    const byKey = new Map<string, AccountInfo>();
     for (const h of hosted) {
       if (h.connected) connected.add(`hosted:${h.id}`);
       if (h.toolCount) tools.set(`hosted:${h.id}`, h.toolCount);
@@ -99,8 +114,11 @@ function useMarketState(): [State, () => Promise<void>] {
     for (const a of accounts) {
       if (a.connected) connected.add(`account:${a.provider}`);
       if (!a.available) unavailable.add(`account:${a.provider}`);
+      byKey.set(`account:${a.provider}`, a);
     }
-    setState({ connected, tools, unavailable });
+    setState({ connected, tools, unavailable, accounts: byKey });
+    // Settings' Marketplace card shows what's installed.
+    window.dispatchEvent(new Event('dex:connectors-changed'));
   }, []);
   useEffect(() => { void load(); }, [load]);
   return [state, load];
@@ -115,6 +133,8 @@ export function Marketplace({ initialView = 'browse', onClose }: { initialView?:
   const [audience, setAudience] = useState<Audience | 'all'>(readAudience);
   const [busy, setBusy] = useState<string | null>(null);
   const [errors, setErrors] = useState<Map<string, string>>(new Map());
+  /** GitHub signs in with a code typed on github.com: shown while it waits. */
+  const [codes, setCodes] = useState<Map<string, string>>(new Map());
   const searchRef = useRef<HTMLInputElement>(null);
 
   // The live pages are native views above the DOM: hide them while this is
@@ -126,6 +146,14 @@ export function Marketplace({ initialView = 'browse', onClose }: { initialView?:
     return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose, view.name]);
   useEffect(() => { if (view.name === 'browse') searchRef.current?.focus(); }, [view.name]);
+  useEffect(() => window.electronAPI?.settings?.accounts?.onProgress?.((event) => {
+    setCodes((prev) => {
+      const next = new Map(prev);
+      if (event.phase === 'code') next.set(`account:${event.provider}`, event.userCode);
+      else next.delete(`account:${event.provider}`);
+      return next;
+    });
+  }), []);
 
   const pickAudience = (a: Audience | 'all') => {
     setAudience(a);
@@ -179,6 +207,7 @@ export function Marketplace({ initialView = 'browse', onClose }: { initialView?:
       connected={state.connected.has(item.key)}
       unavailable={state.unavailable.has(item.key)}
       busy={busy === item.key}
+      code={busy === item.key ? codes.get(item.key) : undefined}
       error={errors.get(item.key)}
       onOpen={() => setView({ name: 'detail', key: item.key })}
       onAdd={() => void add(item)}
@@ -198,7 +227,7 @@ export function Marketplace({ initialView = 'browse', onClose }: { initialView?:
             <header className="mk__head">
               <h2 className="mk__title">Marketplace</h2>
               <button type="button" className="mk__installed" onClick={() => setView({ name: 'installed' })} disabled={installed.length === 0}>
-                <span className="mk__stack">{installed.slice(0, 4).map((i) => <Mark key={i.key} mark={i.mark} size={22} />)}</span>
+                <span className="mk__stack">{installed.slice(0, 4).map((i) => <Mark key={i.key} item={i} size={22} />)}</span>
                 {installed.length} installed
                 <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
@@ -263,7 +292,7 @@ export function Marketplace({ initialView = 'browse', onClose }: { initialView?:
               <div className="mk__list">
                 {installed.map((item) => (
                   <div key={item.key} className="mk__installed-row">
-                    <Mark mark={item.mark} size={36} />
+                    <Mark item={item} size={36} />
                     <span className="mk__row-text">
                       <span className="mk__name">{item.name}</span>
                       <span className="mk__blurb">{state.tools.get(item.key) ? `${state.tools.get(item.key)} tools` : item.category}</span>
@@ -289,19 +318,26 @@ export function Marketplace({ initialView = 'browse', onClose }: { initialView?:
                 </button>
               </header>
               <div className="mk__body mk__detail">
-                <Mark mark={item.mark} size={64} />
+                <Mark item={item} size={64} />
                 <h2 className="mk__detail-name">{item.name}</h2>
                 <p className="mk__detail-meta">{item.category}{item.needsPlan ? ' · needs a paid plan of the service' : ''}</p>
                 <p className="mk__detail-blurb">{item.blurb}</p>
                 <p className="mk__detail-how">{how}</p>
                 {on && state.tools.get(item.key) ? <p className="mk__detail-how">DEX has {state.tools.get(item.key)} tools from it, in every task.</p> : null}
+                {item.key === 'account:huggingface' && state.accounts.get(item.key) && (
+                  <div className="mk__detail-guide"><HuggingFaceGuide info={state.accounts.get(item.key) as AccountInfo} /></div>
+                )}
                 {errors.get(item.key) && <p className="mk__error" role="alert">{errors.get(item.key)}</p>}
                 <div className="mk__detail-actions">
                   {on ? (
                     <button type="button" className="mk__btn mk__btn--quiet" onClick={() => void remove(item)}>Remove</button>
                   ) : busy === item.key ? (
                     <>
-                      <span className="mk__waiting">Finish signing in in your browser…</span>
+                      <span className="mk__waiting">
+                        {codes.get(item.key)
+                          ? <>Enter <strong className="mk__code">{codes.get(item.key)}</strong> on the page that opened — it’s copied.</>
+                          : 'Finish signing in in your browser…'}
+                      </span>
                       <button type="button" className="mk__btn mk__btn--quiet" onClick={() => void cancel(item)}>Cancel</button>
                     </>
                   ) : (
@@ -317,11 +353,12 @@ export function Marketplace({ initialView = 'browse', onClose }: { initialView?:
   );
 }
 
-function MarketRow({ item, connected, unavailable, busy, error, onOpen, onAdd, onCancel }: {
+function MarketRow({ item, connected, unavailable, busy, code, error, onOpen, onAdd, onCancel }: {
   item: MarketItem;
   connected: boolean;
   unavailable: boolean;
   busy: boolean;
+  code?: string;
   error?: string;
   onOpen: () => void;
   onAdd: () => void;
@@ -330,10 +367,12 @@ function MarketRow({ item, connected, unavailable, busy, error, onOpen, onAdd, o
   return (
     <div className={`mk__item${connected ? ' mk__item--on' : ''}`}>
       <button type="button" className="mk__item-open" onClick={onOpen} title={item.blurb}>
-        <Mark mark={item.mark} />
+        <Mark item={item} />
         <span className="mk__row-text">
           <span className="mk__name">{item.name}</span>
-          <span className={`mk__blurb${error ? ' mk__blurb--error' : ''}`}>{error ?? item.blurb}</span>
+          <span className={`mk__blurb${error ? ' mk__blurb--error' : ''}`}>
+            {error ?? (code ? <>Enter <strong className="mk__code">{code}</strong> on the page that opened — it’s copied</> : item.blurb)}
+          </span>
         </span>
       </button>
       {connected ? (

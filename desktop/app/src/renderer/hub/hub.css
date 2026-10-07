@@ -4288,6 +4288,11 @@ button:focus:not(:focus-visible) {
   flex-shrink: 0;
 }
 
+.conn-card__icon--orb {
+  display: grid;
+  place-items: center;
+}
+
 .conn-card__icon--contain {
   object-fit: contain;
   padding: 4px;
@@ -4468,6 +4473,51 @@ button:focus:not(:focus-visible) {
   flex-basis: 100%;
   font-size: var(--font-size-xs);
   color: var(--color-status-success, #4ade80);
+}
+
+/* Settings › Channels › Telegram: making the bot (TelegramCard). */
+.tg-setup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tg-setup__steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: 1.3em;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--color-fg-secondary);
+}
+
+.tg-setup__steps code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface-chip);
+  color: var(--color-fg-primary);
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+}
+
+.tg-setup__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.tg-setup__note {
+  margin: 0;
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-tertiary);
 }
 
 .conn-card__sub {
@@ -7111,345 +7161,16 @@ button:focus:not(:focus-visible) {
 }
 
 /* ---------------------------------------------------------------------------
-   Settings — Accounts (AccountsSection.tsx)
+   Settings — Channels: Advanced (token connections)
 --------------------------------------------------------------------------- */
 
-.accounts {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.accounts__loading {
-  display: flex;
-  justify-content: center;
-  padding: var(--space-10) 0;
-}
-
-.accounts__grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.account-card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 18px 20px;
-  border-radius: 16px;
-  background: var(--surface-card-solid);
-  box-shadow:
-    var(--surface-card-glow),
-    inset 0 0 0 1px rgba(var(--highlight-rgb), 0.06),
-    var(--surface-card-ring);
-  transition: box-shadow 200ms var(--ease-out), transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.account-card:hover {
-  box-shadow:
-    var(--surface-card-glow),
-    inset 0 0 0 1px rgba(var(--highlight-rgb), 0.1),
-    var(--surface-card-ring);
-}
-
-.account-card--connected {
-  box-shadow:
-    var(--surface-card-glow),
-    inset 0 0 0 1px color-mix(in srgb, var(--status-running) 30%, transparent),
-    var(--surface-card-ring);
-}
-
-.account-card__head {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-.account-card__mark {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--surface-chip);
-  box-shadow: inset 0 0 0 1px var(--line-chip);
-  color: var(--color-fg-primary);
-}
-
-.account-card__title {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.account-card__name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--color-fg-primary);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.account-card__tagline {
-  color: var(--color-fg-tertiary);
-  font-size: 12.5px;
-  line-height: 1.45;
-}
-
-.account-card__services {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.account-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(var(--highlight-rgb), 0.045);
-  color: var(--color-fg-secondary);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-
-.account-card--connected .account-chip {
-  background: color-mix(in srgb, var(--status-running) 11%, transparent);
-  color: var(--color-fg-primary);
-}
-
-.account-card--connected .account-chip svg {
-  color: var(--status-running);
-}
-
-.account-card__foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  min-height: 44px;
-}
-
-/* Google's own sign-in button spec: white, 1px #747775 border, the G, Roboto-ish medium. */
-.google-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  height: 42px;
-  padding: 0 18px 0 14px;
-  border: 1px solid #747775;
-  border-radius: 999px;
-  background: #fff;
-  color: #1f1f1f;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 140ms ease, box-shadow 140ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.google-btn:hover:not(:disabled) {
-  background: #f8faff;
-  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
-}
-
-.google-btn:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-.google-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-:root:not([data-mode='light']) .google-btn {
-  border-color: #8e918f;
-  background: #131314;
-  color: #e3e3e3;
-}
-
-:root:not([data-mode='light']) .google-btn:hover:not(:disabled) {
-  background: #1f1f21;
-}
-
-.account-btn {
-  height: 32px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 999px;
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 120ms ease;
-}
-
-.account-btn--ghost {
-  background: var(--surface-chip);
-  box-shadow: inset 0 0 0 1px var(--line-chip);
-  color: var(--color-fg-secondary);
-}
-
-.account-btn--ghost:hover {
-  background: var(--surface-chip-hover);
-  color: var(--color-fg-primary);
-}
-
-.account-btn--danger {
-  background: color-mix(in srgb, var(--color-status-error) 14%, transparent);
-  color: var(--color-status-error);
-}
-
-.account-card__confirm {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--color-fg-secondary);
-  font-size: 12.5px;
-  animation: chat-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.account-who {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.account-who__pic {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.account-who__text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.account-who__name {
-  overflow: hidden;
-  color: var(--color-fg-primary);
-  font-size: 13px;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.account-who__id {
-  overflow: hidden;
-  color: var(--color-fg-tertiary);
-  font-size: 11.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.account-who__status {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: 4px;
-  color: var(--status-running);
-  font-size: 11.5px;
-  font-weight: 600;
-}
-
-.account-who__status::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.account-flow {
-  flex: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(var(--highlight-rgb), 0.035);
-  animation: chat-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.account-flow__text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 180px;
-  font-size: 12.5px;
-  color: var(--color-fg-tertiary);
-}
-
-.account-flow__text strong {
-  color: var(--color-fg-primary);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.account-code {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.account-code__char {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 34px;
-  border-radius: 8px;
-  background: var(--surface-card-solid);
-  box-shadow: inset 0 0 0 1px rgba(var(--highlight-rgb), 0.12);
-  color: var(--color-fg-primary);
-  font-family: var(--font-mono);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.account-code__dash {
-  color: var(--color-fg-tertiary);
-  font-weight: 600;
-}
-
-.account-card__error {
-  color: var(--color-status-error);
-  font-size: 12.5px;
-}
-
-.account-card__note {
-  color: var(--color-fg-tertiary);
-  font-size: 12px;
-}
-
-.accounts__privacy {
-  margin: 0;
-  color: var(--color-fg-tertiary);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.accounts__advanced {
+.channels-advanced {
   border-radius: 14px;
   background: rgba(var(--highlight-rgb), 0.02);
   box-shadow: inset 0 0 0 1px var(--color-border-subtle);
 }
 
-.accounts__advanced > summary {
+.channels-advanced > summary {
   padding: 12px 16px;
   color: var(--color-fg-secondary);
   font-size: 12.5px;
@@ -7458,22 +7179,22 @@ button:focus:not(:focus-visible) {
   list-style: none;
 }
 
-.accounts__advanced > summary::-webkit-details-marker {
+.channels-advanced > summary::-webkit-details-marker {
   display: none;
 }
 
-.accounts__advanced > summary::before {
+.channels-advanced > summary::before {
   content: '›';
   display: inline-block;
   margin-right: 8px;
   transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.accounts__advanced[open] > summary::before {
+.channels-advanced[open] > summary::before {
   transform: rotate(90deg);
 }
 
-.accounts__advanced > .settings-card {
+.channels-advanced > .settings-card {
   padding: 0 16px 16px;
 }
 
@@ -7482,7 +7203,7 @@ button:focus:not(:focus-visible) {
   to   { opacity: 1; transform: none; }
 }
 
-/* Settings — phone pairing form (AccountsSection PhoneCard) */
+/* Settings — phone pairing form (PhoneCard.tsx) */
 .phone-form {
   display: flex;
   flex-direction: column;
@@ -7548,84 +7269,6 @@ button:focus:not(:focus-visible) {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-/* Settings — one-time sign-in app setup (AccountsSection SetupPanel) */
-.account-setup {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: rgba(var(--highlight-rgb), 0.03);
-  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
-  animation: chat-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.account-setup__steps {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding-left: 20px;
-  color: var(--color-fg-secondary);
-  font-size: 12.5px;
-  line-height: 1.5;
-}
-
-.account-setup__steps li::marker {
-  color: var(--color-fg-tertiary);
-  font-weight: 600;
-}
-
-.account-setup__fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 8px;
-}
-
-.account-setup__note {
-  color: var(--color-fg-tertiary);
-  font-size: 11.5px;
-}
-
-.account-card__note code {
-  padding: 1px 5px;
-  border-radius: 5px;
-  background: rgba(var(--highlight-rgb), 0.07);
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-
-/* Plain primary action on the Accounts page (no liquid metal here). */
-.account-btn--primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 16px;
-  background: var(--color-fg-primary);
-  color: var(--color-bg-base);
-  font-weight: 600;
-  transition: opacity 120ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.account-btn--primary:hover:not(:disabled) {
-  opacity: 0.88;
-}
-
-.account-btn--primary:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-.account-btn--primary:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.account-btn--primary svg {
-  width: 16px;
-  height: 16px;
 }
 
 /* Settings → Appearance → Your DEX */
@@ -7882,7 +7525,8 @@ button:focus:not(:focus-visible) {
 .settings-market__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .settings-market__title { font-size: 14px; font-weight: 650; color: var(--color-fg-primary); }
 .settings-market__sub { font-size: 12.5px; color: var(--color-fg-secondary); }
-.settings-market__installed { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--color-accent-default, #35b8ff); font: inherit; font-size: 12.5px; cursor: pointer; }
+.settings-market__installed { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; padding: 0; border: 0; background: none; color: var(--color-fg-secondary); font: inherit; font-size: 12.5px; cursor: pointer; }
+.settings-market__installed:hover { color: var(--color-fg-primary); }
 .settings-market__browse {
   flex: none;
   height: 34px;

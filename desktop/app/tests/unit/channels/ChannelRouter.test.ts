@@ -39,15 +39,23 @@ function setup() {
     send: vi.fn(async () => `dex-${++sent}`),
     react: vi.fn(async () => {}),
     sendFile: vi.fn(async (..._args: unknown[]) => `file-${++sent}`),
-    selfChatJid: () => 'me@s.whatsapp.net',
+    homeChat: () => 'me@s.whatsapp.net',
     status: 'connected',
   };
-  const router = new ChannelRouter(sessionManager as any, adapter as any);
+  const telegram = {
+    onMessage: vi.fn(),
+    send: vi.fn(async () => `tg:42:${++sent}`),
+    react: vi.fn(async () => {}),
+    sendFile: vi.fn(async (..._args: unknown[]) => `tg:42:${++sent}`),
+    homeChat: () => '42',
+    status: 'connected',
+  };
+  const router = new ChannelRouter(sessionManager as any, { whatsapp: adapter as any, telegram: telegram as any });
   const start = vi.fn(async () => {});
   const followUp = vi.fn(async () => ({ queued: true }));
   router.setStartSession(start);
   router.setFollowUp(followUp);
-  return { router, handlers, sessions, sessionManager, adapter, start, followUp };
+  return { router, handlers, sessions, sessionManager, adapter, telegram, start, followUp };
 }
 
 const msg = (over: Partial<InboundMessage>): InboundMessage => ({
@@ -151,7 +159,18 @@ describe('ChannelRouter file delivery (dex-send)', () => {
   it('refuses when WhatsApp is not connected', async () => {
     const t = setup();
     t.adapter.status = 'disconnected';
-    await expect(t.router.sendFiles('s1', [{ path: file }])).rejects.toThrow(/isn't connected/);
+    await expect(t.router.sendFiles('s1', [{ path: file }])).rejects.toThrow(/WhatsApp isn't connected/);
+  });
+
+  it('a hub task goes to your Telegram bot when WhatsApp is off, and fails only when neither is on', async () => {
+    const t = setup();
+    t.sessionManager.origin = { originChannel: null, originConversationId: null };
+    t.adapter.status = 'disconnected';
+    const res = await t.router.sendFiles('hub-2', [{ path: file }]);
+    expect((t.telegram.sendFile.mock.calls[0] as unknown[])[0]).toBe('42');
+    expect(res.to).toMatch(/Telegram/);
+    t.telegram.status = 'disconnected';
+    await expect(t.router.sendFiles('hub-3', [{ path: file }])).rejects.toThrow(/Neither WhatsApp nor Telegram/);
   });
 
   it('on Done, sends the files the task recorded (once), then the answer', async () => {
@@ -168,5 +187,27 @@ describe('ChannelRouter file delivery (dex-send)', () => {
     t.handlers['session-completed']({ id: 's1', prompt: 'x', output: [{ type: 'done', summary: 'Again.' }] });
     await new Promise((r) => setTimeout(r, 20));
     expect(t.adapter.sendFile).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ChannelRouter on Telegram', () => {
+  const tg = (over: Partial<InboundMessage>): InboundMessage => msg({ channelId: 'telegram', from: '42', conversationId: '42', mentioned: true, ...over });
+
+  it('starts a task from any message to the bot, answers there, and threads replies', async () => {
+    const t = setup();
+    t.sessionManager.origin = { originChannel: 'telegram', originConversationId: '42' };
+    t.router.handleInbound(tg({ text: 'book a cab', messageId: 'tg:42:1' }));
+    expect(t.sessionManager.createSession).toHaveBeenCalledWith('book a cab', { originChannel: 'telegram', originConversationId: '42' });
+
+    t.handlers['session-completed']({ id: 's1', prompt: 'book a cab', output: [{ type: 'done', summary: 'Booked.' }] });
+    await flush();
+    expect(t.adapter.send).not.toHaveBeenCalled();
+    expect(t.telegram.send).toHaveBeenCalledWith('42', expect.stringContaining('a new message starts a new task'), { quoteMessageId: 'tg:42:1' });
+    expect(t.telegram.react).toHaveBeenCalledWith('42', 'tg:42:1', '✅');
+
+    t.router.handleInbound(tg({ text: 'make it an SUV', replyToMessageId: 'tg:42:1', mentioned: true }));
+    await flush();
+    expect(t.followUp).toHaveBeenCalledWith('s1', 'make it an SUV');
+    expect(t.sessionManager.createSession).toHaveBeenCalledTimes(1);
   });
 });

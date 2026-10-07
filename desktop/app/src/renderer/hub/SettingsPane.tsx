@@ -1,7 +1,7 @@
-import { HOSTED_CONNECTORS } from '../../shared/connectorCatalog';
 import React, { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { ConnectionsPane, type SettingsProviderFocusRequest } from './ConnectionsPane';
-import { AccountsSection } from './AccountsSection';
+import { PhoneCard } from './PhoneCard';
+import { MARKET_ITEMS, Mark, type MarketItem } from './connectors/Marketplace';
 import type { ActionId, KeyBinding } from './keybindings';
 import { fallbackShortcutPlatform, keyboardEventToShortcut } from '../../shared/hotkeys';
 import { useThemeMode } from '../design/useThemeMode';
@@ -982,10 +982,10 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'settings-application', label: 'Application', icon: 'M2.5 3.5h11v9h-11zM2.5 6h11', keywords: 'version update download restart tab layout side top sidebar' },
   { id: 'settings-appearance', label: 'Appearance', icon: 'M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8 2.5v11', keywords: 'theme light dark system mode colour color', isNew: true },
   { id: 'settings-model-providers', label: 'Model providers', icon: 'M8 2l5 3v6l-5 3-5-3V5zM8 8l5-3M8 8v6M8 8L3 5', keywords: 'api key openai anthropic claude gemini groq ollama browsercode model provider' },
-  { id: 'settings-connections', label: 'Channels', icon: 'M3 3.5h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H7.5L4.5 14v-2.5H3a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1Z', keywords: 'whatsapp channel message text yourself notifications' },
+  { id: 'settings-connections', label: 'Channels', icon: 'M3 3.5h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H7.5L4.5 14v-2.5H3a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1Z', keywords: 'phone android dex app pair whatsapp telegram bot channel message text yourself notifications advanced token api mcp' },
   { id: 'settings-browser-sync', label: 'Browser Sync', icon: 'M13 8a5 5 0 01-8.6 3.5M3 8a5 5 0 018.6-3.5M11.5 2.5v2h-2M4.5 13.5v-2h2', keywords: 'cookies chrome sync login' },
   { id: 'settings-shortcuts', label: 'Shortcuts', icon: 'M2.5 4.5h11v7h-11zM5 7h.01M8 7h.01M11 7h.01M5.5 9.5h5', keywords: 'keyboard keybindings hotkey shortcut' },
-  { id: 'settings-integrations', label: 'Connectors', icon: 'M6.5 9.5l3-3M5 7.5L3.8 8.7a2.5 2.5 0 003.5 3.5L8.5 11M11 8.5l1.2-1.2a2.5 2.5 0 00-3.5-3.5L7.5 5', keywords: 'connectors marketplace accounts google gmail calendar meet drive docs sheets github slack notion jira canva stripe pubmed flights sign in connect mcp integrations', isNew: true },
+  { id: 'settings-integrations', label: 'Connectors', icon: 'M6.5 9.5l3-3M5 7.5L3.8 8.7a2.5 2.5 0 003.5 3.5L8.5 11M11 8.5l1.2-1.2a2.5 2.5 0 00-3.5-3.5L7.5 5', keywords: 'connectors marketplace accounts google gmail calendar meet drive docs sheets microsoft outlook github slack reddit hugging face notion jira canva stripe pubmed flights sign in connect integrations', isNew: true },
   { id: 'settings-diagnostics', label: 'Diagnostics', icon: 'M2 8h2.5l1.5-4 3 8 1.5-4H14', keywords: 'preflight git bash node python health check missing' },
   { id: 'settings-agent-approval', label: 'Agent approval', icon: 'M8 2l5 2v4c0 3-2.2 5-5 6-2.8-1-5-3-5-6V4zM5.8 8l1.6 1.6L10.5 6.5', keywords: 'permission approve ask auto full access registry safety' },
   { id: 'settings-privacy', label: 'Privacy', icon: 'M4.5 7V5.5a3.5 3.5 0 017 0V7M3.5 7h9v6.5h-9z', keywords: 'telemetry notifications data crash' },
@@ -1148,12 +1148,24 @@ export function sectionInView<T extends string>(scroller: HTMLElement, ids: read
 
 /** Settings › Connectors: the way into the Marketplace, with what's installed. */
 function MarketplaceCard(): React.ReactElement {
-  const [installed, setInstalled] = useState<string[]>([]);
+  const [installed, setInstalled] = useState<MarketItem[]>([]);
   useEffect(() => {
-    void window.electronAPI?.settings?.connectors?.list().then((list) => {
-      const on = new Set(list.filter((c) => c.connected).map((c) => c.id));
-      setInstalled(HOSTED_CONNECTORS.filter((c) => on.has(c.id)).map((c) => c.name));
-    }).catch(() => {});
+    const load = () => {
+      const api = window.electronAPI?.settings;
+      void Promise.all([
+        api?.connectors?.list().catch(() => []) ?? [],
+        api?.accounts?.list().catch(() => []) ?? [],
+      ]).then(([hosted, accounts]) => {
+        const on = new Set([
+          ...hosted.filter((c) => c.connected).map((c) => `hosted:${c.id}`),
+          ...accounts.filter((a) => a.connected).map((a) => `account:${a.provider}`),
+        ]);
+        setInstalled(MARKET_ITEMS.filter((i) => on.has(i.key)));
+      });
+    };
+    load();
+    window.addEventListener('dex:connectors-changed', load);
+    return () => window.removeEventListener('dex:connectors-changed', load);
   }, []);
   const open = (detail?: 'installed') => window.dispatchEvent(new CustomEvent('dex:open-marketplace', { detail }));
   return (
@@ -1161,11 +1173,12 @@ function MarketplaceCard(): React.ReactElement {
       <div className="settings-market__text">
         <span className="settings-market__title">Marketplace</span>
         <span className="settings-market__sub">
-          {HOSTED_CONNECTORS.length + 6}+ connectors — Notion, Jira, Canva, Dropbox, Stripe, PubMed, Kiwi.com flights and more. One sign-in each, in your browser.
+          {MARKET_ITEMS.length} connectors — Google, Microsoft 365, GitHub, Notion, Jira, Canva, Dropbox, Stripe, PubMed, Kiwi.com flights and more. One sign-in each, in your browser.
         </span>
         {installed.length > 0 && (
           <button type="button" className="settings-market__installed" onClick={() => open('installed')}>
-            {installed.length} installed: {installed.slice(0, 4).join(', ')}{installed.length > 4 ? '…' : ''} ›
+            <span className="mk__stack">{installed.slice(0, 5).map((i) => <Mark key={i.key} item={i} size={22} />)}</span>
+            {installed.length} installed ›
           </button>
         )}
       </div>
@@ -1385,6 +1398,13 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
             connectionsSectionId="settings-connections"
             browserSyncSectionId="settings-browser-sync"
             focusBrowserCodeProvider={providerFocus}
+            channelsFirst={<PhoneCard />}
+            channelsLast={(
+              <details className="channels-advanced">
+                <summary>Advanced — connect with a token</summary>
+                <McpSection />
+              </details>
+            )}
           />
 
           <section id="settings-integrations" className="settings-page__section">
@@ -1392,7 +1412,6 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
               <h2 className="settings-section-header__title">Connectors</h2>
             </div>
             <MarketplaceCard />
-            <AccountsSection advanced={<McpSection />} />
           </section>
 
           <section id="settings-diagnostics" className="settings-page__section">
