@@ -19,6 +19,7 @@ bundled.
 | Package | License | Why | Status |
 |---|---|---|---|
 | Jetpack Compose, Material 3, AndroidX | Apache-2.0 | the UI | ✓ |
+| Material Symbols (Rounded, filled) — google/material-design-icons | Apache-2.0 | the live-update glyphs (`res/drawable/ic_task_*.xml`) | ✓ |
 | `androidx.emoji2:emoji2-emojipicker` 1.5 | Apache-2.0 | every emoji, for reactions | ✓ |
 | Firebase Auth / Firestore / Messaging | Apache-2.0 | pairing with the desktop | ✓ |
 | Coil | Apache-2.0 | images | ✓ |

@@ -355,6 +355,9 @@ private fun DocumentSnapshot.toSession(): Session? {
         TaskFile(m["name"]?.toString() ?: p.substringAfterLast('\\').substringAfterLast('/'), p, (m["size"] as? Number)?.toLong() ?: 0)
       }
     } ?: emptyList(),
+    ask = (get("ask") as? Map<*, *>)?.let { m ->
+      m["title"]?.toString()?.takeIf { it.isNotBlank() }?.let { t -> OpenQuestion(t, (m["replies"] as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList()) }
+    },
   )
 }
 
@@ -388,6 +391,7 @@ private fun DocumentSnapshot.toBlock(): Block {
     echo = getBoolean("echo") == true,
     path = getString("path"),
     thumb = getString("thumb"),
+    widget = getString("widget"),
     attachments = (get("attachments") as? List<*>)?.mapNotNull { a ->
       (a as? Map<*, *>)?.let { m ->
         AttachmentMeta(m["name"]?.toString() ?: return@let null, m["mime"]?.toString() ?: "", (m["size"] as? Number)?.toLong() ?: 0)

@@ -218,7 +218,17 @@ fun SessionScreen(
     com.chethan616.dex.ui.components.ReactionsState(merged) { target, emoji, on -> vm.react(target, emoji, on) }
   }
 
-  androidx.compose.runtime.CompositionLocalProvider(LocalPcFiles provides pcFiles, LocalTaskBot provides bot, com.chethan616.dex.ui.components.LocalReactions provides reactions) {
+  // Widgets (ui/components/Widgets.kt): an answer is your next message, and
+  // a question with a message after it has been answered.
+  val lastUserSeq = state.blocks.lastOrNull { it.kind == "user" }?.seq ?: -1L
+  val widgetHost = androidx.compose.runtime.remember(lastUserSeq) {
+    com.chethan616.dex.ui.components.WidgetHost(
+      reply = { text -> scope.launch { vm.followUp(text, emptyList()) } },
+      answered = { seq -> lastUserSeq > seq },
+    )
+  }
+
+  androidx.compose.runtime.CompositionLocalProvider(LocalPcFiles provides pcFiles, LocalTaskBot provides bot, com.chethan616.dex.ui.components.LocalReactions provides reactions, com.chethan616.dex.ui.components.LocalWidgetHost provides widgetHost) {
   if (filesOpen) FilesSheet(state.blocks, session, onDismiss = { filesOpen = false })
   if (subagentsOpen) SubagentsSheet(state.subagents, onDismiss = { subagentsOpen = false })
   com.chethan616.dex.ui.files.ModelViewerHost()

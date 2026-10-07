@@ -58,6 +58,7 @@ import { getInstallId } from '../installId';
 import type { AgentSession, HlEvent } from '../sessions/types';
 import { appendEvent, buildTranscript, type Block, type Transcript } from '../../renderer/logs/transcript';
 import { foldReactions } from '../../shared/reactions';
+import { quickReplies, widgetLine } from '../../shared/widgets';
 import { buildSubagents, foldSubagentEvent, subagentsList, EMPTY_SUBAGENTS, type Subagent, type SubagentsState } from '../../shared/subagents';
 import { firebaseConfig } from './config';
 import { clearCredentials, loadCredentials, saveCredentials } from './credentials';
@@ -216,6 +217,9 @@ function serializeBlock(block: Block): Record<string, unknown> {
       return { ...base, name: block.title, text: clip(block.markdown, MAX_TEXT) };
     case 'artifact':
       return { ...base, name: block.title, text: clip(block.note, 1000) ?? null, count: block.count, items: block.items.map((i) => ({ label: clip(i.label, 300), detail: clip(i.detail, 300) ?? null })) };
+    // The spec as JSON: the phone renders the same kit (Widgets.kt).
+    case 'widget':
+      return { ...base, name: block.widget.type, text: clip(widgetLine(block.widget), 300), widget: JSON.stringify(block.widget) };
     default:
       return base;
   }
@@ -254,8 +258,23 @@ function lastLine(t: Transcript): string {
     if (b.kind === 'tool') return `${b.result ? b.meta.done : b.meta.active} ${b.meta.display ?? b.summary}`.slice(0, 160);
     if (b.kind === 'done') return b.summary.split('\n')[0].slice(0, 160);
     if (b.kind === 'error') return b.message.slice(0, 160);
+    if (b.kind === 'widget') return widgetLine(b.widget).slice(0, 160);
   }
   return '';
+}
+
+/**
+ * The question DEX is waiting on, when its last word was a widget question
+ * nobody has answered: the phone's notification shows it, with quick
+ * replies when it has ready answers.
+ */
+function openQuestion(t: Transcript): { title: string; replies: string[] } | null {
+  for (let i = t.blocks.length - 1; i >= 0; i -= 1) {
+    const b = t.blocks[i];
+    if (b.kind === 'user') return null;
+    if (b.kind === 'widget' && b.widget.type === 'ask') return { title: clip(b.widget.title, 300) ?? '', replies: quickReplies(b.widget).map((r) => clip(r, 80) ?? r) };
+  }
+  return null;
 }
 
 function pendingConfirmation(session: AgentSession): { id: string; title: string | undefined; detail: string | undefined } | null {
@@ -602,6 +621,7 @@ export class FirebaseBridge {
       error: clip(session.error, 2000) ?? null,
       summary: done && done.kind === 'done' ? clip(done.summary, 2000) : null,
       lastLine: clip(lastLine(t), 200),
+      ask: openQuestion(t),
       costUsd: t.usage.costUsd || session.costUsd || 0,
       tokens: t.usage.inputTokens + t.usage.outputTokens,
       blockCount: t.blocks.length,

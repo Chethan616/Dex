@@ -67,10 +67,13 @@ dex_post() {
 
   # Keep the status line separate from the body so a non-2xx reply still shows
   # the server's own error message instead of an opaque curl failure.
-  response="$(curl -sS -X POST "${url}${path}" \
+  # The body goes in on stdin, not as an argument: on Windows an argument to
+  # curl.exe passes through the ANSI code page, and "₹", "—" or an emoji
+  # arrive as "?". A pipe carries the UTF-8 bytes as they are.
+  response="$(printf '%s' "${body}" | curl -sS -X POST "${url}${path}" \
     -H "authorization: Bearer ${token}" \
-    -H "content-type: application/json" \
-    --data-raw "${body}" \
+    -H "content-type: application/json; charset=utf-8" \
+    --data-binary @- \
     -w $'\n%{http_code}' 2>&1)" || {
       echo "dex: could not reach the DEX control server at ${url}" >&2
       return 3

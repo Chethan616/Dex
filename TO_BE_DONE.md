@@ -44,6 +44,8 @@ The repo is **public**.
   - 3.4 P4: annotate, request edits, side chat
   - 3.5 P5: polish
   - 3.6 Known issues
+  - 3.7 The owner's requests of 2026-10-06
+  - 3.8 The owner's requests of 2026-10-07: widgets (generative UI), MCP first, live-update polish
 - **Part 4 — The Android app** (state and release, in case you touch it)
 - **Appendix A** — `docs/unify/PLAN.md` (the entire plan)
 - **Appendix B** — `docs/unify/codex-research.md` (the entire research)
@@ -696,6 +698,101 @@ The owner wants all of these done.
    - Plus **Google Flights, Hotels and restaurants, and bookings**. There's no public Google API for these, so it's browser skills on google.com/travel and Maps (with "Reserve"), plus an optional Amadeus connector.
 5. ✅ **The old `dex/` folder is deleted** (2026-10-07). It was the OpenClaw fork plus the Flutter-era app, 19,700 files, and nothing referenced it; git history keeps it. `RUN.bat`/`STOP.bat` went with it, the README now describes the current app, and LICENSES.md drops what no longer ships.
 6. **Then continue Windows desktop control** (`docs/desktop-control/PLAN.md`; Phase 1 is half-built in `desktop/app/mcp-servers/windows/`).
+
+## 3.8 The owner's requests of 2026-10-07: widgets, not prose; MCP, not the browser
+
+The trigger: asked from the phone, "find the cheapest flight to Delhi on Friday" produced:
+- "where are you flying from?" typed as prose;
+- then 61 browser steps;
+- then "visit google.com/travel/flights and search yourself".
+
+The owner values UX above everything. Three things follow.
+
+### 1. Generative UI from a fixed kit — built (desktop + phone)
+
+- **The tool:** `dex-ui` (dex-tools/`dex-ui`, guide `ui.md`). The agent sends a small JSON spec; DEX validates it (`shared/widgets.ts`, zod) and appends a `widget` event.
+  - **Desktop:** the chat renders it (`hub/chat/Widgets.tsx`, `widgets.css`).
+  - **Phone:** it syncs as a `widget` block with the spec as JSON (bridge.ts), rendered by `ui/components/Widgets.kt`.
+  - **Cost:** predefined components, so a few hundred tokens and no generated web page.
+- **The kit:**
+  - `ask`: a question with 1–6 fields:
+    - `choice` (pills, or rows with a detail line; `multi`, `other`);
+    - `place` (suggestions plus a field);
+    - `date` (a strip of the next 7 days plus a calendar; `range`);
+    - `time` (slots plus a picker);
+    - `number` (a stepper with a unit);
+    - `text`.
+  - `cards`: results, each with title, subtitle, lines, price, badge, icon and up to 3 actions.
+  - `buttons`: link buttons, instead of "visit https://…".
+  - `facts`: a key/value table.
+  - An action either opens a url (https, mailto:, tel:, geo:) or sends a `reply` as the user's next message.
+- **How it behaves:**
+  - A one-field question answers in one tap; a form sends with its button.
+  - The answer is the user's next message (quick-reply style, so no Firestore rule change). The question then folds to one quiet "✓ title" line.
+  - The phone uses Material's date and time pickers behind "Other". Its notification asks the open question, with the ready answers as reply chips (session doc `ask: {title, replies}`).
+- **Agent rules:** AGENTS.md has two table rows: ask with widgets, never prose; show results as cards and links as buttons. ui.md gives ideas by task (travel, food, scheduling, shopping, mail/docs, code, PC fixes). The google-travel skills now ask with one form and answer with cards.
+- **Fixed on the way:** `dex_post` (dex-lib.sh) passed bodies to curl.exe as an argument, so on Windows "₹", "—" and emojis arrived as "?" and big canvases hit the 32K command-line cap. It now pipes the body (`--data-binary @-`); tests/unit/hl/dexUi.test.ts runs the real script.
+- **Next for the kit, best value first:**
+  1. **"Use my location"** in a `place` field on the phone (coarse location, asked the first time), so "near me" needs no typing.
+  2. **Agent-chosen follow-up chips:** `dex-ui suggest "Show cheaper days" "Add to calendar"`, the existing `cx-chips` row with the agent's own suggestions.
+  3. **`compare`:** 2–4 options side by side (columns), for "which laptop / plan / flight".
+  4. **`checklist`:** a list with ticks the user can toggle (a packing list, the steps of a fix). The ticked state comes back as a reply.
+  5. **`rating`:** stars or 😞…😀 after a task ("how did that go?"), to learn preferences.
+  6. **Images on cards:** an `image` url (https), with Coil on the phone and img on the desktop (the hub's CSP already allows https images). Hotels and products need it.
+  7. **Map preview card:** a static map needs a key (Google Static Maps) or OSM tiles. Until then, Directions buttons.
+  8. **Contacts and files pickers:** "send it to…" from the phone's contacts, "which file?" with the phone's own picker.
+- **Brainstorm, by who uses DEX:**
+  - **Students:**
+    - assignment due date (`date`), which course or section (`choice`);
+    - exam timetable (`facts`), study-slot booking (`time` slots);
+    - "summarize this PDF": a canvas plus "Open PDF" buttons.
+  - **Employees:**
+    - meeting slots from the calendar (`date` plus `time` slots), attendees (`choice multi`);
+    - expense claims (`facts` plus Approve/Edit replies), "which draft?" (`choice` rows);
+    - Open in Gmail/Docs buttons.
+  - **Doctors:**
+    - appointment slots (`time`), patient-friendly instructions (`facts`), referral letter (canvas plus Open);
+    - never put patient identifiers in widget titles (they reach the phone's notification).
+  - **Engineers:**
+    - deploy target (`choice`), incident summary (`facts`);
+    - "which fix?" (`choice` rows with trade-offs), Open PR / View diff / Runbook buttons.
+  - **Everyone, at home:**
+    - food: area, party, time, then restaurant cards with Directions/Call/Book;
+    - travel: one form, then flight/hotel cards with Select/Open, then booking facts;
+    - shopping: budget (`number`), product cards;
+    - PC fixes: diagnosis `facts`, then fixes as `choice` rows, cheapest first.
+
+### 2. MCP first, the browser last — plan (not built yet)
+
+The rule already in AGENTS.md ("the most structured interface first") isn't enough on its own: the agent can only pick an MCP it has. The travel task drove Google Flights for 61 steps because Kiwi.com (a keyless remote MCP, verified working through our proxy) is only there once the user adds it in the Marketplace.
+
+1. **Keyless connectors attach themselves when the task needs them.** In `runEngine.ts`, next to `alwaysOnConnections()`, a `connectionsForPrompt(prompt)` adds open servers (no sign-in) by topic:
+   - travel: Kiwi.com;
+   - code docs: Context7, DeepWiki;
+   - research: Exa, Hugging Face, PubMed.
+
+   It uses the same proxy (`mcp-servers/remote`), only for that task, with no Marketplace step. Signed-in connectors still need the user's one click.
+2. **Flights:** Kiwi.com MCP first (prices, times and a booking link: straight into `dex-ui cards`). Google Flights in the browser only to compare, or when Kiwi has no result. Build the Google Flights deep link for the Open button without driving the page.
+3. **Hotels:** there's no keyless API.
+   - Options, cheapest first: Google Hotels deep links (button only); Booking.com/Expedia affiliate APIs (key, approval); Amadeus self-service (free tier, key: hotel offers plus flights).
+   - Plan: an `amadeus` server in `mcp-servers/` with the user's key in keytar, offered in the Marketplace.
+4. **Restaurants and places:**
+   - Google Places API (New) with the user's key: text search, nearby, details, hours, phone, rating. One small DEX-run MCP (`mcp-servers/places`).
+   - Fallback without a key: OpenStreetMap Nominatim/Overpass (free, rate-limited, fewer ratings).
+   - Directions: always a Google Maps `dir/?api=1` button, which needs no API.
+5. **Bookings:** "Reserve a table" partners (OpenTable, EazyDiner, Dineout) have no open APIs. Booking stays a browser step, but only after the user picks a card. The browser does the last mile, not the search.
+6. **Acceptance:** the same phone prompt should produce:
+   - one `ask` form (From with suggestions, date pre-filled with Friday);
+   - then Kiwi results as cards in under ~20 s, with Select and "Open in Google Flights";
+   - zero browser steps until the user selects.
+
+### 3. Live update polish — done (1.0.31)
+
+- The emojis are gone from the live update; the task's own bot stays.
+- The status-bar icon is the kind of task: a clean, white, rounded glyph (Material Symbols Rounded, filled), chosen from the prompt's words:
+  - flight, hotel, food, place, shopping, mail, calendar, music, code, PC, doc, research;
+  - anything else keeps DEX's mark.
+- **Open:** OnePlus's collapsed capsule may draw the app icon instead of the notification's small icon. Check it on the phone. If the glyph replaces the DEX mark instead of sitting after it, compose both into one small icon or put the glyph in the large icon.
 
 # Part 4 — The Android app (if you touch it)
 

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { WidgetSchema } from './widgets';
 
 // ---------------------------------------------------------------------------
 // Session status
@@ -355,6 +356,15 @@ export const HlEventReactionSchema = z.object({
   on: z.boolean(),
 });
 
+// A widget from the agent's fixed UI kit (shared/widgets.ts, `dex-ui`): a
+// question with real controls, or results as cards, link buttons or facts.
+export const HlEventWidgetSchema = z.object({
+  ...WHEN,
+  type: z.literal('widget'),
+  id: z.string(),
+  widget: WidgetSchema,
+});
+
 export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventThinkingSchema,
   HlEventToolCallSchema,
@@ -378,6 +388,7 @@ export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventSubagentStepSchema,
   HlEventSubagentDoneSchema,
   HlEventReactionSchema,
+  HlEventWidgetSchema,
 ]);
 
 export type HlEvent = z.infer<typeof HlEventSchema>;

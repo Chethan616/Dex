@@ -35,8 +35,11 @@ Opening a hotel shows **Prices** (the same room from each booking site),
 **Reviews** and **Location**. When the user cares about price, compare the
 sites in Prices; say which one is cheapest and whether it's refundable.
 
-Give a short table — name, area, rating (reviews), price per night, total,
-free cancellation — with the 3–5 best for what they asked.
+Missing the city, the dates or guests? One `dex-ui ask` (a `place`, a `date`
+with `range: true`, a `number`) — not prose. Show the 3–5 best as `dex-ui
+cards` (`icon: "hotel"`): name, area and rating as subtitle, price per night
+and total, a badge like "Free cancellation", and actions **Select** (`reply`)
+and **Open** (`url`).
 
 ## Booking
 

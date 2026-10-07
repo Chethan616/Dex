@@ -28,6 +28,7 @@ import { allOutputs, collectSources, formatDuration, toTurns, type FileItem, typ
 import { assignMentions, groupSubagentMentions, mentionText, useSubagents, type SubagentMentionGroup } from '../subagents';
 import type { HlEvent as SharedHlEvent } from '../../../shared/session-schemas';
 import { ResultCard } from './ResultCard';
+import { WidgetView } from './Widgets';
 import { ReactionChips, ReactTrigger } from './Reactions';
 import { agentMessageKey, foldReactions, userMessageKey, type Reaction, type Reactions } from '../../../shared/reactions';
 import './chat.css';
@@ -280,6 +281,8 @@ interface TurnViewProps {
   mentions: SubagentMentionGroup[];
   onOpenUrl?: (url: string) => void;
   onFollowUpChip?: (prompt: string) => void;
+  /** The newest turn: its questions are still open; older ones were answered. */
+  isLast?: boolean;
   /** Reactions on this turn's message of yours, and on DEX's reply (shared/reactions.ts). */
   userReactions: Reaction[];
   replyReactions: Reaction[];
@@ -318,7 +321,7 @@ function TurnAvatar({ sessionId, engineId, mood }: { sessionId: string; engineId
   );
 }
 
-const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood, open, onToggle, now, docSignals, renderLink, renderInlineCode, mentions, onOpenUrl, onFollowUpChip, userReactions, replyReactions, onReact }: TurnViewProps) {
+const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood, open, onToggle, now, docSignals, renderLink, renderInlineCode, mentions, onOpenUrl, onFollowUpChip, isLast, userReactions, replyReactions, onReact }: TurnViewProps) {
   const userKey = turn.user ? userMessageKey(turn.user.at, turn.user.id === 0) : null;
   const replyKey = agentMessageKey(turn.replyAt);
   const mineOn = (list: Reaction[]) => list.filter((r) => r.by === 'user').map((r) => r.emoji);
@@ -393,6 +396,10 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood,
           {replyKey && onReact && <ReactionChips align="start" reactions={replyReactions} onToggle={(e, on) => onReact(replyKey, e, on)} />}
         </div>
       )}
+
+      {turn.widgets.map((w) => (
+        <WidgetView key={w.id} widget={w.widget} answered={!isLast} onReply={onFollowUpChip} onOpenUrl={onOpenUrl} />
+      ))}
 
       {turn.resultCards.map((card, i) => <ResultCard key={i} card={card} onOpenUrl={onOpenUrl} />)}
 
@@ -597,6 +604,7 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
               mentions={mentionsByTurn.get(turn.key) ?? EMPTY_MENTIONS}
               onOpenUrl={onOpenUrl}
               onFollowUpChip={onFollowUp ? sendChip : undefined}
+              isLast={i === turns.length - 1}
               userReactions={(turn.user && reactions[userMessageKey(turn.user.at, turn.user.id === 0) ?? '']) || NO_REACTIONS}
               replyReactions={reactions[agentMessageKey(turn.replyAt) ?? ''] ?? NO_REACTIONS}
               onReact={onReact}

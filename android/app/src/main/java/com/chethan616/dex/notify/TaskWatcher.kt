@@ -80,6 +80,14 @@ object TaskWatcher {
         body = s.error.take(400),
         sessionId = s.id, confirmationId = null,
       )
+      // It finished on a question (a dex-ui widget): ask it, with the ready answers as reply chips.
+      s.ask != null -> Notifications.show(
+        context, kind = "done",
+        title = s.ask.title,
+        body = if (s.ask.replies.isNotEmpty()) "$title — tap an answer, or reply." else "$title — reply here, or open DEX to answer.",
+        sessionId = s.id, confirmationId = null,
+        choices = s.ask.replies,
+      )
       !s.summary.isNullOrBlank() || s.lastLine.isNotBlank() -> {
         // Asked from this phone: a moment at the finish line in the status bar first.
         if (PhoneTasks.has(s.id)) LiveUpdate.finished(context, s.copy(summary = s.summary?.let(::markdownToPlain), lastLine = markdownToPlain(s.lastLine)))

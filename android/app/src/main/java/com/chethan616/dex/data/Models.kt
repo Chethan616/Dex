@@ -38,7 +38,11 @@ data class Session(
   val files: List<TaskFile> = emptyList(),
   /** Reactions by message key (desktop/app/src/shared/reactions.ts): 'u:prompt', 'u:<at>', 'a:<at>'. */
   val reactions: Map<String, List<Reaction>> = emptyMap(),
+  /** A widget question DEX is waiting on (bridge.ts's openQuestion), with quick replies when it has ready answers. */
+  val ask: OpenQuestion? = null,
 )
+
+data class OpenQuestion(val title: String, val replies: List<String>)
 
 /** One emoji on a message, from you or from DEX. */
 data class Reaction(val emoji: String, val byAgent: Boolean)
@@ -103,6 +107,8 @@ data class Block(
   val thumb: String? = null,
   /** user: files sent with the message. */
   val attachments: List<AttachmentMeta> = emptyList(),
+  /** widget: the spec as JSON (desktop/app/src/shared/widgets.ts), rendered by ui/components/Widgets.kt. */
+  val widget: String? = null,
 )
 
 data class AttachmentMeta(val name: String, val mime: String, val size: Long)

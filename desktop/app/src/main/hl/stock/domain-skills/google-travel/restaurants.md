@@ -29,15 +29,20 @@ price level, cuisine, whether it's open, and sometimes "Reserve a table":
 Scroll the feed (not the page) for more. Opening a place shows hours, phone,
 address, the menu link and recent reviews.
 
-Give a short list — name, rating (reviews), price level, cuisine, open now?,
-distance — and say which ones can be booked online.
+Show the best 3–5 as `dex-ui cards` (`icon: "food"`): name, "cuisine · price
+level · distance" as subtitle, rating as the badge ("4.5 ★"), a line for
+open-now or online booking, and actions **Directions** (`url`: a Google Maps
+directions link), **Call** (`url`: `tel:`) and **Book** (`reply`) where they
+can be booked.
 
 ## Booking a table
 
 Places with **Reserve a table** book through a partner (OpenTable, Resy,
 TheFork, EazyDiner, Dineout, Zomato… depending on the country).
 
-1. **Confirm with the user** the place, date, time and party size first.
+1. **Confirm with the user** the place, date, time and party size first —
+   one `dex-ui ask` with a `date`, `time` slots (the ones the place offers)
+   and a `number` for the party.
 2. Click Reserve a table, pick the slot, and fill in the name and phone
    number the user gave you.
 3. **Ask before the final "Confirm"** if anything differs from what they

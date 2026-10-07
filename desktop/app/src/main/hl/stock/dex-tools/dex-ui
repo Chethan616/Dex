@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# dex-ui — put a widget from DEX's UI kit in the chat instead of prose: a
+# question with real controls (choices, a place, a date, a time, a number),
+# or results as cards, link buttons or a fact table. See ui.md.
+#
+# Specs come from stdin as JSON (a heredoc), the same way dex-canvas takes its
+# markdown: quotes and brackets are painful to hand-escape into arguments.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+usage() {
+  cat >&2 <<'USAGE'
+usage:
+  dex-ui ask     <<'EOF'  {"title": "...", "fields": [...]}       JSON on stdin
+  dex-ui cards   <<'EOF'  {"title": "...", "items": [...]}
+  dex-ui buttons <<'EOF'  {"buttons": [{"label": "...", "url": "https://..."}]}
+  dex-ui facts   <<'EOF'  {"title": "...", "rows": [{"label": "...", "value": "..."}]}
+
+quick forms:
+  dex-ui choose "<question>" "<option>" "<option>" [...]
+  dex-ui link "<label>" "<url>" ["<label>" "<url>" ...]
+
+After ask/choose, end your turn: the answer arrives as the user's next
+message. Every key is in ui.md.
+USAGE
+  exit 2
+}
+
+[ $# -ge 1 ] || usage
+op="$1"; shift
+
+session="$(dex_session_id)"
+[ -n "$session" ] || { echo "dex-ui: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
+sid="$(dex_esc "$session")"
+
+case "$op" in
+  ask|cards|buttons|facts)
+    spec="$(cat)"
+    [ -n "${spec//[[:space:]]/}" ] || { echo "dex-ui $op: no JSON on stdin" >&2; exit 2; }
+    body="{\"sessionId\":\"${sid}\",\"type\":\"${op}\",\"widget\":${spec}}"
+    ;;
+  choose)
+    [ $# -ge 3 ] || usage
+    title="$1"; shift
+    opts=""
+    for o in "$@"; do opts="${opts}${opts:+,}\"$(dex_esc "$o")\""; done
+    body="{\"sessionId\":\"${sid}\",\"widget\":{\"type\":\"ask\",\"title\":\"$(dex_esc "$title")\",\"fields\":[{\"kind\":\"choice\",\"options\":[${opts}]}]}}"
+    ;;
+  link|links)
+    if [ $# -lt 2 ] || [ $(( $# % 2 )) -ne 0 ]; then usage; fi
+    btns=""
+    while [ $# -ge 2 ]; do
+      btns="${btns}${btns:+,}{\"label\":\"$(dex_esc "$1")\",\"url\":\"$(dex_esc "$2")\"}"
+      shift 2
+    done
+    body="{\"sessionId\":\"${sid}\",\"widget\":{\"type\":\"buttons\",\"buttons\":[${btns}]}}"
+    ;;
+  *) usage ;;
+esac
+
+dex_post /dex/ui "$body"

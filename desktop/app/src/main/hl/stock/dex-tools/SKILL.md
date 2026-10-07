@@ -16,6 +16,7 @@ them with Bash like any other command.
 | `dex-websearch` | A plain factual lookup that doesn't need a browser tab. See `websearch.md`. |
 | `dex-open` | Showing the user a file you made or found — a report, PDF, sheet, image or 3D model — rendered in a document tab that reloads as you edit it. See `open.md`. |
 | `mcp__windows__*` | Windows apps, media and PC diagnostics, in the background. See `desktop.md`. |
+| `dex-ui` | Asking the user with real controls (choices, a place, a date, a time, a number) instead of prose, and showing results as cards, link buttons or facts — on the PC and the phone. See `ui.md`. |
 | `dex-react` | Reacting to the user's message with an emoji, as a person would in a chat: 👍 to a go-ahead, ❤️ to thanks. Sparingly — only when it means something, never on every message. |
 | `dex-tab` | This task's browser tabs, which the user shares: listing them, opening a background tab for a side lookup, showing one to the user. See `tabs.md`. |
 | `dex-send` | Sending the user a file, a screenshot (`--page`, `--screen`) or your canvas as a PDF (`--canvas`) on WhatsApp. See `send.md`. |

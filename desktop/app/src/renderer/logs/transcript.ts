@@ -13,6 +13,7 @@
  * token), which is why consecutive text is merged rather than one block each.
  */
 import type { OrbState } from 'thinking-orbs';
+import { parseWidget, type Widget } from '../../shared/widgets';
 
 export type ToolKind = 'search' | 'browse' | 'mcp' | 'read' | 'write' | 'run' | 'desktop' | 'agent' | 'other';
 
@@ -95,6 +96,8 @@ export type Block = (
   | { kind: 'image'; id: number; path: string; caption?: string }
   | { kind: 'canvas'; id: number; title: string; markdown: string }
   | { kind: 'artifact'; id: number; title: string; note?: string; count: number; items: Array<{ label: string; detail?: string }> }
+  /** From the agent's UI kit (shared/widgets.ts): `wid` is the widget's own id. */
+  | { kind: 'widget'; id: number; wid: string; widget: Widget }
 ) & BlockTimes;
 
 export interface Usage {
@@ -258,6 +261,10 @@ function fold(t: Transcript, raw: RawEvent, at: number | undefined): Transcript 
       return push(t, { kind: 'image', id, path: str(raw.path), caption: raw.caption ? str(raw.caption) : undefined });
     case 'canvas':
       return push(t, { kind: 'canvas', id, title: str(raw.title), markdown: str(raw.markdown) });
+    case 'widget': {
+      const parsed = parseWidget(raw.widget);
+      return parsed.widget ? push(t, { kind: 'widget', id, wid: str(raw.id), widget: parsed.widget }) : t;
+    }
     case 'artifact': {
       const items = Array.isArray(raw.items) ? (raw.items as Array<{ label?: unknown; detail?: unknown }>) : [];
       return push(t, {

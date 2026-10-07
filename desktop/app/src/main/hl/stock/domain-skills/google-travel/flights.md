@@ -4,6 +4,14 @@ DEX's own playbook (not synced from upstream). URL forms checked to load on
 2026-10-07. Google changes its layouts often: read the page, don't trust
 fixed selectors.
 
+## Before searching: ask once, with a widget
+
+Missing the origin, the date or how many are flying? Ask for all of it in
+**one** `dex-ui ask` (a `place` for From/To with likely airports as
+suggestions, a `date` — `range: true` for a return — and a `number` for
+travellers), then end your turn. Never ask in prose, one thing at a time.
+Don't ask for what you can infer ("on Friday" is a date you can work out).
+
 ## First choice: the Kiwi.com connector
 
 If `mcp__remote_kiwi__search-flight` is among your tools, the user added
@@ -45,8 +53,12 @@ airline, times, duration, stops:
 "Best" and "Cheapest" are tabs above the list. The date grid and price graph
 show cheaper days; mention them when the user's dates are flexible.
 
-Give the user a short table — airline, depart → arrive, duration, stops,
-price — with the 3–5 best, not everything.
+Show the 3–5 best as `dex-ui cards` (`icon: "flight"`): title = airline and
+flight number, subtitle = "07:05 → 09:15 · 2h 10m · Non-stop", price, a badge
+for "Cheapest" / "Fastest", and actions **Select** (`reply`: "Book <flight>
+at <time>") and **Open** (`url`: the Google Flights link). Add one sentence on
+cheaper nearby days if the date grid shows any. Never tell the user to go to
+the site and search themselves — give the button.
 
 ## Booking
 

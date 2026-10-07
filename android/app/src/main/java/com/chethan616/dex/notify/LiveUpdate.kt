@@ -73,11 +73,33 @@ object LiveUpdate {
   }
 
   fun textOf(s: Session): String = when {
-    s.pendingConfirmation != null -> "✋ Needs your OK: ${s.pendingConfirmation.title.ifBlank { "open DEX to answer" }}"
-    s.status == SessionStatus.Stuck -> "😅 Stuck — open DEX to help it along"
+    s.pendingConfirmation != null -> "Needs your OK: ${s.pendingConfirmation.title.ifBlank { "open DEX to answer" }}"
+    s.status == SessionStatus.Stuck -> "Stuck — open DEX to help it along"
     s.lastLine.isNotBlank() -> s.lastLine.lineSequence().first().take(200)
     else -> "Getting ready on ${s.deviceName ?: "your PC"}…"
   }
+
+  /**
+   * What kind of task it is, as a clean white glyph for the status bar —
+   * a plane for flights, a pin for places — from the words of the prompt.
+   * Anything else keeps DEX's own mark.
+   */
+  private val GLYPHS: List<Pair<Regex, Int>> = listOf(
+    """\b(flights?|fly|flying|airports?|airlines?|plane|boarding|indigo|air india|vistara)\b""" to R.drawable.ic_task_flight,
+    """\b(hotels?|stays?|airbnb|resorts?|hostels?|check-?in)\b""" to R.drawable.ic_task_hotel,
+    """\b(restaurants?|dinner|lunch|breakfast|brunch|food|caf[eé]s?|table for|swiggy|zomato|biryani|pizza)\b""" to R.drawable.ic_task_food,
+    """\b(directions?|route|navigate|near me|nearby|maps?|how far|commute|drive to)\b""" to R.drawable.ic_task_place,
+    """\b(buy|order|amazon|flipkart|shop|shopping|cart|deals?|price of)\b""" to R.drawable.ic_task_shopping,
+    """\b(e-?mails?|gmail|inbox|mail)\b""" to R.drawable.ic_task_mail,
+    """\b(meetings?|calendar|schedule|appointments?|events?|remind(er)?s?)\b""" to R.drawable.ic_task_calendar,
+    """\b(spotify|playlists?|songs?|music|album)\b""" to R.drawable.ic_task_music,
+    """\b(code|bugs?|repo|github|pull request|PR|deploy|refactor|compile|tests?)\b""" to R.drawable.ic_task_code,
+    """\b(wi-?fi|touchpad|drivers?|bluetooth|my pc|laptop|windows|settings)\b""" to R.drawable.ic_task_pc,
+    """\b(docs?|documents?|reports?|slides|pdf|essay|resume|summari[sz]e)\b""" to R.drawable.ic_task_doc,
+    """\b(research|compare|look up|find out)\b""" to R.drawable.ic_task_research,
+  ).map { (re, icon) -> Regex(re, RegexOption.IGNORE_CASE) to icon }
+
+  fun glyphOf(s: Session): Int = GLYPHS.firstOrNull { (re, _) -> re.containsMatchIn(s.prompt) }?.second ?: R.drawable.ic_notification
 
   private fun titleOf(s: Session) = s.prompt.lineSequence().firstOrNull().orEmpty().trim().take(80).ifBlank { "Your task" }
 
@@ -131,7 +153,7 @@ object LiveUpdate {
     val text = textOf(s)
     val device = listOfNotNull(s.deviceName, if (others > 0) "+$others more" else null).joinToString(" · ").ifBlank { null }
     val builder = NotificationCompat.Builder(context, Notifications.CHANNEL_LIVE_UPDATES)
-      .setSmallIcon(R.drawable.ic_notification)
+      .setSmallIcon(glyphOf(s))
       .setContentTitle(title)
       .setStyle(style(context, s, mood, progressOf(s)))
       .setOngoing(true)
@@ -163,9 +185,9 @@ object LiveUpdate {
     val id = s.id.hashCode() xor 0x5EED
     val title = titleOf(s)
     val answer = (s.summary ?: s.lastLine).lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }?.take(200)
-    val text = "🎉 " + (answer ?: "Done")
+    val text = answer ?: "Done"
     val builder = NotificationCompat.Builder(context, Notifications.CHANNEL_LIVE_UPDATES)
-      .setSmallIcon(R.drawable.ic_notification)
+      .setSmallIcon(glyphOf(s))
       .setContentTitle(title)
       .setStyle(style(context, s, BotMood.Happy, 100))
       .setOngoing(true)

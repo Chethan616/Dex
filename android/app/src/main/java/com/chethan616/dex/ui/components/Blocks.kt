@@ -503,6 +503,7 @@ fun BlockView(block: Block, running: Boolean) {
     "notice" -> NoticeRow(block)
     "file", "image" -> FileCard(block)
     "canvas", "artifact" -> CanvasCard(block)
+    "widget" -> WidgetBlock(block)
     else -> Unit
   }
 }

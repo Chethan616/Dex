@@ -143,7 +143,7 @@ object Notifications {
       PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-  fun show(context: Context, kind: String, title: String, body: String, sessionId: String, confirmationId: String?) {
+  fun show(context: Context, kind: String, title: String, body: String, sessionId: String, confirmationId: String?, choices: List<String> = emptyList()) {
     if (Build.VERSION.SDK_INT >= 33 &&
       ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
     ) return
@@ -163,6 +163,7 @@ object Notifications {
     if (!approval && (kind == "done" || kind == "failed")) {
       val input = androidx.core.app.RemoteInput.Builder(TaskActionReceiver.KEY_REPLY)
         .setLabel(if (kind == "failed") "Tell DEX what to try…" else "Follow up…")
+        .apply { if (choices.isNotEmpty()) setChoices(choices.take(5).toTypedArray<CharSequence>()) }
         .build()
       builder.addAction(
         NotificationCompat.Action.Builder(0, "Reply", taskAction(context, TaskActionReceiver.ACTION_REPLY, sessionId, title, mutable = true))

@@ -126,6 +126,7 @@ import {
   type EngineStatus,
 } from './hl/engines/statusCache';
 import { TaskStateMutationSchema } from '../shared/session-schemas';
+import { parseWidget } from '../shared/widgets';
 // Agent loop: CLI subprocess driving the browser harness. Engine is
 // pluggable (claude-code, codex, …) — see src/main/hl/engines/.
 import { bootstrapHarness, harnessDir } from './hl/harness';
@@ -2080,6 +2081,24 @@ app.whenReady().then(async () => {
           at: Date.now(),
         });
         return { ok: true };
+      },
+
+      // `dex-ui`: a widget from the fixed kit (shared/widgets.ts) — a question
+      // with real controls, or results as cards, link buttons or facts.
+      'POST /dex/ui': async (raw) => {
+        let body: { sessionId?: unknown; type?: unknown; widget?: unknown };
+        try { body = JSON.parse(raw || '{}'); } catch { throw new Error('the widget spec on stdin is not valid JSON — check quotes and commas'); }
+        const sessionId = assertString(body.sessionId, 'sessionId', 100);
+        if (!sessionManager.getSession(sessionId)) throw new Error('no such session');
+        let spec = body.widget;
+        if (spec && typeof spec === 'object' && !Array.isArray(spec) && !('type' in spec) && typeof body.type === 'string') spec = { ...spec, type: body.type };
+        const { widget, error } = parseWidget(spec);
+        if (!widget) throw new Error(`that widget doesn't fit DEX's kit: ${error}. See ui.md in your DEX tools.`);
+        const id = `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+        sessionManager.appendOutput(sessionId, { type: 'widget', id, widget });
+        return widget.type === 'ask'
+          ? { ok: true, id, next: "Shown. End your turn now: the user's answer arrives as their next message." }
+          : { ok: true, id };
       },
 
       'POST /dex/react': async (raw) => {

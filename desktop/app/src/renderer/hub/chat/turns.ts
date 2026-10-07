@@ -33,6 +33,8 @@ export interface Turn {
   files: FileItem[];
   docs: Array<Of<'canvas'>>;
   finds: Array<Of<'artifact'>>;
+  /** From the agent's UI kit (shared/widgets.ts): questions, cards, link buttons, facts. */
+  widgets: Array<Of<'widget'>>;
   /** Shown in the open, never folded: errors and things that need you. */
   alerts: Array<Of<'error'> | Of<'notice'>>;
   startAt?: number;
@@ -75,6 +77,7 @@ function buildTurn(user: Of<'user'> | null, agent: Block[], live: boolean, fallb
     files: [],
     docs: [],
     finds: [],
+    widgets: [],
     alerts: [],
     startAt: user?.at ?? fallbackStart ?? agent[0]?.at,
     endAt: undefined,
@@ -110,6 +113,9 @@ function buildTurn(user: Of<'user'> | null, agent: Block[], live: boolean, fallb
         break;
       case 'artifact':
         turn.finds.push(b);
+        break;
+      case 'widget':
+        turn.widgets.push(b);
         break;
       case 'error':
         turn.alerts.push(b);
