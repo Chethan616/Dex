@@ -159,6 +159,9 @@ data class WField(
   val numDefault: Double? = null,
   val unit: String? = null,
   val multiline: Boolean = false,
+  /** Shown only while the field named here has one of these answers (a return date for "Round trip"). */
+  val showIfField: String? = null,
+  val showIfIs: List<String> = emptyList(),
 )
 data class WCard(val title: String, val subtitle: String?, val lines: List<String>, val price: String?, val badge: String?, val icon: String?, val actions: List<WAction>)
 
@@ -211,6 +214,8 @@ fun parseWidget(json: String?): Widget? = runCatching {
           numDefault = f.num("default").takeIf { f.optString("kind") == "number" },
           unit = f.str("unit"),
           multiline = f.optBoolean("multiline"),
+          showIfField = f.optJSONObject("showIf")?.str("field"),
+          showIfIs = f.optJSONObject("showIf")?.let { c -> c.optJSONArray("is")?.strings() ?: listOfNotNull(c.str("is")) } ?: emptyList(),
         )
       },
     )
@@ -257,8 +262,25 @@ private fun valueText(f: WField, a: Answer): String = when (a) {
   is Answer.Num -> numText(a.n) + (f.unit?.let { " ${unitFor(it, a.n)}" } ?: "")
 }
 
+/** False while a field's `showIf` isn't met: the field it depends on has another answer, or none yet. */
+fun fieldShown(w: Widget.Ask, f: WField, values: Map<String, Answer>): Boolean {
+  val source = f.showIfField ?: return true
+  val field = w.fields.firstOrNull { it.id == source }
+  val words = when (val a = values[source]) {
+    is Answer.Choice -> a.picked.flatMap { p ->
+      val o = field?.options?.firstOrNull { it.label == p }
+      listOfNotNull(p, o?.value)
+    }
+    is Answer.Words -> listOf(a.text.trim())
+    is Answer.Num -> listOf(numText(a.n))
+    else -> emptyList()
+  }
+  val wanted = f.showIfIs.map { it.trim().lowercase() }
+  return words.any { it.lowercase() in wanted }
+}
+
 fun formatAnswer(w: Widget.Ask, values: Map<String, Answer>): String {
-  val parts = w.fields.mapNotNull { f -> values[f.id]?.let { f to valueText(f, it) } }.filter { it.second.isNotBlank() }
+  val parts = w.fields.filter { fieldShown(w, it, values) }.mapNotNull { f -> values[f.id]?.let { f to valueText(f, it) } }.filter { it.second.isNotBlank() }
   if (w.fields.size == 1) return parts.firstOrNull()?.second.orEmpty()
   return parts.joinToString("\n") { (f, v) -> "${f.label ?: f.id}: $v" }
 }
@@ -336,7 +358,7 @@ fun WidgetBlock(block: Block) {
 
 /** The chat's own card: the filled surface tool cards use, the theme's medium corner, no outline. */
 @Composable
-private fun WidgetSurface(content: @Composable () -> Unit) {
+internal fun WidgetSurface(content: @Composable () -> Unit) {
   Surface(
     shape = MaterialTheme.shapes.medium,
     color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -346,7 +368,7 @@ private fun WidgetSurface(content: @Composable () -> Unit) {
 
 /** An icon on an Expressive shape, as Home's quick chips wear theirs. */
 @Composable
-private fun GlyphTile(icon: ImageVector, size: Int = 36) {
+internal fun GlyphTile(icon: ImageVector, size: Int = 36) {
   ShapeBadge(MaterialShapes.Cookie9Sided, MaterialTheme.colorScheme.primaryContainer, size.dp) {
     Icon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size((size * 0.5f).dp))
   }
@@ -354,7 +376,7 @@ private fun GlyphTile(icon: ImageVector, size: Int = 36) {
 
 /** A pill you can pick: tonal when off, the primary container when on, with a springy press. */
 @Composable
-private fun Pill(text: String, on: Boolean, icon: ImageVector? = null, dashed: Boolean = false, onClick: () -> Unit) {
+internal fun Pill(text: String, on: Boolean, icon: ImageVector? = null, dashed: Boolean = false, onClick: () -> Unit) {
   val press = remember { MutableInteractionSource() }
   val scheme = MaterialTheme.colorScheme
   val bg by animateColorAsState(if (on) scheme.secondaryContainer else scheme.surfaceContainerHigh, tween(160), label = "pill")
@@ -427,7 +449,7 @@ private fun AskCard(w: Widget.Ask, answered: Boolean, key: Long, reply: (String)
               w.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
           }
-          w.fields.forEach { f ->
+          w.fields.filter { fieldShown(w, it, values) }.forEach { f ->
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
               if (!solo && f.label != null) {
                 Text(
@@ -453,7 +475,7 @@ private fun AskCard(w: Widget.Ask, answered: Boolean, key: Long, reply: (String)
             }
           }
           if (!solo || (w.fields.first().kind == "choice" && w.fields.first().multi)) {
-            val ready = w.fields.all { it.optional || filled(it, values[it.id]) }
+            val ready = w.fields.filter { fieldShown(w, it, values) }.all { it.optional || filled(it, values[it.id]) }
             Button(onClick = { send() }, enabled = ready, modifier = Modifier.align(Alignment.End).heightIn(min = Sizes.control)) {
               Text(w.submit ?: "Send")
               Spacer(Modifier.width(8.dp))

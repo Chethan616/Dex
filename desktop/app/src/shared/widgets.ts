@@ -37,10 +37,15 @@ export const WidgetActionSchema = z.object({
 }).refine((a) => Boolean(a.url) !== Boolean(a.reply), { message: 'an action has a url or a reply (one of them)' });
 export type WidgetAction = z.infer<typeof WidgetActionSchema>;
 
+/** Show a field only while another field's answer is one of these ("Round trip" → the return date). */
+const ShowIf = z.object({ field: z.string().regex(/^[A-Za-z][\w-]{0,23}$/), is: z.union([text(200), z.array(text(200)).min(1).max(8)]) });
+export type ShowIf = z.infer<typeof ShowIf>;
+
 const fieldBase = {
   id: z.string().regex(/^[A-Za-z][\w-]{0,23}$/).optional(),
   label: text(60).optional(),
   optional: z.boolean().optional(),
+  showIf: ShowIf.optional(),
 };
 
 const ChoiceOption = z.union([
@@ -135,6 +140,13 @@ function normField(key: string | undefined, raw: unknown): unknown {
   f.kind = kind;
   f.id = firstOf(raw, 'id') ?? (key ? slugId(key) : undefined);
   f.label = label;
+  const cond = firstOf(raw, 'showIf', 'showWhen', 'visibleIf', 'onlyIf', 'when');
+  if (isObj(cond)) {
+    const is = firstOf(cond, 'is', 'equals', 'eq', 'value', 'in');
+    f.showIf = { field: firstOf(cond, 'field', 'id', 'name', 'key'), is };
+  } else {
+    delete f.showIf;
+  }
   if (f.default === undefined && raw.value !== undefined) f.default = raw.value;
   if (['multiselect', 'checkbox', 'checkboxes'].includes(given)) f.multi = true;
   if (['dates', 'daterange'].includes(given)) f.range = true;
@@ -311,12 +323,36 @@ function valueText(field: AskField, v: AnswerValue): string {
   }
 }
 
+/** What a field's answer reads as, to compare with a `showIf`: the picked options' labels and values, or the typed text. */
+function answerWords(field: AskField | undefined, v: AnswerValue | undefined): string[] {
+  if (!v) return [];
+  if (v.kind === 'choice') {
+    return v.picked.flatMap((p) => {
+      const o = field?.kind === 'choice' ? field.options.find((x) => optionLabel(x) === p) : undefined;
+      return o && typeof o !== 'string' && o.value ? [p, o.value] : [p];
+    });
+  }
+  if (v.kind === 'place' || v.kind === 'text') return [v.text.trim()];
+  if (v.kind === 'number') return [String(v.n)];
+  return [];
+}
+
+/** False while a field's `showIf` isn't met (the field it depends on has another answer, or none yet). */
+export function fieldShown(widget: AskWidget, field: AskField, values: Record<string, AnswerValue | undefined>): boolean {
+  const c = field.showIf;
+  if (!c) return true;
+  const wanted = (Array.isArray(c.is) ? c.is : [c.is]).map((w) => w.trim().toLowerCase());
+  const source = widget.fields.find((f) => f.id === c.field);
+  return answerWords(source, values[c.field]).some((w) => wanted.includes(w.toLowerCase()));
+}
+
 /**
  * The message an answer sends: just the value for a one-field question
  * ("Hyderabad (HYD)"), "Label: value" lines for a form.
  */
 export function formatAnswer(widget: AskWidget, values: Record<string, AnswerValue | undefined>): string {
   const parts = widget.fields
+    .filter((f) => fieldShown(widget, f, values))
     .map((f) => ({ f, v: values[f.id] }))
     .filter((p): p is { f: AskField; v: AnswerValue } => p.v !== undefined && valueText(p.f, p.v) !== '');
   if (widget.fields.length === 1) return parts[0] ? valueText(parts[0].f, parts[0].v) : '';

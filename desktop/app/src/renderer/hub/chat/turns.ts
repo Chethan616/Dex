@@ -173,6 +173,20 @@ const CHIP_RULES: Array<{ match: RegExp; chips: FollowUpChip[] }> = [
     match: /^mcp__google__tasks_|^mcp__microsoft__todo_/,
     chips: [{ label: 'Show all tasks', prompt: 'Show me all my open tasks' }],
   },
+  {
+    match: /^mcp__remote_kiwi__/,
+    chips: [
+      { label: 'Cheaper days?', prompt: 'Which nearby days are cheaper for this trip?' },
+      { label: 'Find a hotel there', prompt: 'Find me a hotel there for those dates' },
+    ],
+  },
+  {
+    match: /^mcp__remote_trivago__/,
+    chips: [
+      { label: 'Cheaper options', prompt: 'Show me cheaper options' },
+      { label: 'Closest to the centre', prompt: 'Which of these is closest to the centre?' },
+    ],
+  },
 ];
 
 function chipsForTools(toolNames: string[]): FollowUpChip[] {

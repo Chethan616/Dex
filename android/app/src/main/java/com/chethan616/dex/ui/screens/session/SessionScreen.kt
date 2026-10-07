@@ -1,5 +1,6 @@
 package com.chethan616.dex.ui.screens.session
 
+import com.chethan616.dex.ui.components.withTurnExtras
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.flow.first
@@ -150,7 +151,8 @@ fun SessionScreen(
   // A 3D model the task made comes over to the phone right away, so the tap
   // opens the viewer at once instead of waiting on a download.
   val models = remember(taskItems) { taskItems.second.filter { it.worthPrefetching() } }
-  val groups = remember(state.blocks) { groupTools(widgetsLast(state.blocks)) }
+  val sessionLive = session?.status?.isLive == true
+  val groups = remember(state.blocks, sessionLive) { groupTools(withTurnExtras(widgetsLast(state.blocks), sessionLive)) }
   // Subagent mention rows, merged in by timestamp (ui/components/Subagents.kt) —
   // "X, Y and Z started working" / "X finished", among the usual block groups.
   val conversation = remember(groups, state.subagents) { mergeConversation(groups, state.subagents) }

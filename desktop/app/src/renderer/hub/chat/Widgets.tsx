@@ -12,7 +12,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import {
-  formatAnswer, formatDay, formatTime, optionLabel, unitFor,
+  fieldShown, formatAnswer, formatDay, formatTime, optionLabel, unitFor,
   type AnswerValue, type AskField, type AskWidget, type Widget, type WidgetAction, type WidgetCard, type WidgetIcon,
 } from '../../../shared/widgets';
 import './widgets.css';
@@ -409,7 +409,8 @@ function AskView({ widget, answered, onReply }: { widget: AskWidget; answered: b
     setSent(true);
     onReply(text);
   };
-  const ready = widget.fields.every((f) => f.optional || filled(f, values[f.id]));
+  const shown = widget.fields.filter((f) => fieldShown(widget, f, values));
+  const ready = shown.every((f) => f.optional || filled(f, values[f.id]));
 
   return (
     <div className="cx-w" role="form" aria-label={widget.title}>
@@ -420,7 +421,7 @@ function AskView({ widget, answered, onReply }: { widget: AskWidget; answered: b
           {widget.note && <span className="cx-w__note">{widget.note}</span>}
         </div>
       </div>
-      {widget.fields.map((f) => {
+      {shown.map((f) => {
         const onChange = (v: AnswerValue | undefined, commit?: boolean) => {
           const next = { ...values, [f.id]: v };
           setValues(next);

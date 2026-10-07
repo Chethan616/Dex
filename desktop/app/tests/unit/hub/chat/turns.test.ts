@@ -137,6 +137,11 @@ describe('chat turns: MCP result cards and follow-up chips', () => {
     expect(turn.chips.map((c) => c.label)).toEqual(['Show unread emails', 'Anything urgent?']);
   });
 
+  it('a flight or hotel search offers travel chips', () => {
+    expect(turnFor('mcp__remote_kiwi__search-flight', []).chips.map((c) => c.label)).toEqual(['Cheaper days?', 'Find a hotel there']);
+    expect(turnFor('mcp__remote_trivago__trivago-accommodation-search', []).chips.map((c) => c.label)).toEqual(['Cheaper options', 'Closest to the centre']);
+  });
+
   it('no MCP tool used this turn means no chips', () => {
     expect(turnFor('Bash', { ok: true }).chips).toEqual([]);
   });

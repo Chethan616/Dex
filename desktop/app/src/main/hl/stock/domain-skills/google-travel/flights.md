@@ -7,9 +7,13 @@ fixed selectors.
 ## Before searching: ask once, with a widget
 
 Missing the origin, the date or how many are flying? Ask for all of it in
-**one** `dex-ui ask` (a `place` for From/To with likely airports as
-suggestions, a `date` — `range: true` for a return — and a `number` for
-travellers), then end your turn. Never ask in prose, one thing at a time.
+**one** `dex-ui ask`: a `choice` "Trip" with "One way" and "Round trip"
+(never assume either; skip it only when they already said "one way" or
+"return"), a `place` for
+From and To with likely airports as suggestions, a `date` for departing, a
+second `date` for returning with `"showIf": {"field": "trip", "is": "Round
+trip"}` so a one-way traveller never sees it, and a `number` for travellers.
+Then end your turn. Never ask in prose, one thing at a time.
 Don't ask for what you can infer ("on Friday" is a date you can work out).
 
 ## First choice: the Kiwi.com connector

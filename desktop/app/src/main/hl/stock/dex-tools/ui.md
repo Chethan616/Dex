@@ -36,8 +36,11 @@ dex-ui link "Open in Google Flights" "https://www.google.com/travel/flights?q=..
 dex-ui ask <<'EOF'
 {"title": "Where and when are you flying?", "icon": "flight",
  "fields": [
+   {"id": "trip", "kind": "choice", "label": "Trip", "options": ["One way", "Round trip"]},
    {"id": "from", "kind": "place", "label": "From", "suggestions": ["Hyderabad (HYD)", "Bengaluru (BLR)"]},
-   {"id": "date", "kind": "date", "label": "Date", "default": "2026-10-09"},
+   {"id": "to", "kind": "place", "label": "To", "suggestions": ["Delhi (DEL)", "Goa (GOI)"]},
+   {"id": "depart", "kind": "date", "label": "Depart", "default": "2026-10-09"},
+   {"id": "back", "kind": "date", "label": "Return", "showIf": {"field": "trip", "is": "Round trip"}},
    {"id": "pax", "kind": "number", "label": "Travellers", "min": 1, "max": 9, "default": 1, "unit": "adult(s)"}
  ],
  "submit": "Find flights"}
@@ -46,7 +49,8 @@ EOF
 
 `ask` — `title` (the question), optional `note`, `icon`, `submit`, and 1–6
 `fields`. Each field has an optional `id` and `label`, `optional: true` if it
-may be left empty, and a `kind`:
+may be left empty, `showIf: {"field": "<id>", "is": "<answer>"}` to show it
+only while another field has that answer (`is` can be a list), and a `kind`:
 
 | kind | extra keys | what the user gets |
 |---|---|---|
@@ -87,7 +91,9 @@ weather, pc, check.
 
 ## Ideas, by kind of task
 
-- **Travel:** ask from / to / dates / travellers in one form; flights or
+- **Travel:** ask one way or round trip first, then from / to / dates /
+  travellers, in one form. The return date has `showIf` on the trip choice,
+  so a one-way traveller never sees it. Never assume a round trip; flights or
   hotels as cards with Select + Open; the chosen trip as facts.
 - **Food and places:** ask area, party size and time (slots); restaurants as
   cards (rating badge, cuisine · distance) with Directions and Call.

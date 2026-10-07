@@ -283,8 +283,6 @@ fun DoneCard(block: Block) {
  */
 @Composable
 private fun DoneFooter(block: Block) {
-  val clipboard = LocalClipboardManager.current
-  val haptics = LocalHaptics.current
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
     val label = if (block.iteration > 0) "Done · ${steps(block.iteration)}" else "Done"
     val bot = LocalTaskBot.current
@@ -316,9 +314,7 @@ private fun DoneFooter(block: Block) {
       }
     }
     Spacer(Modifier.weight(1f))
-    IconButton(onClick = { clipboard.setText(AnnotatedString(block.text.orEmpty())); haptics.confirm() }) {
-      Icon(Icons.Rounded.ContentCopy, "Copy answer", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+    CopyAndTime(block.text.orEmpty(), block.at)
   }
 }
 
@@ -504,6 +500,9 @@ fun BlockView(block: Block, running: Boolean) {
     "file", "image" -> FileCard(block)
     "canvas", "artifact" -> CanvasCard(block)
     "widget" -> WidgetBlock(block)
+    "resultcard" -> ResultCardBlock(block)
+    "replyfoot" -> ReplyFootBlock(block)
+    "chips" -> ChipsBlock(block)
     else -> Unit
   }
 }
