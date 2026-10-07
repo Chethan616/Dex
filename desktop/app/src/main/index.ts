@@ -1442,6 +1442,7 @@ app.whenReady().then(async () => {
       sessionId: validatedId,
       originChannel: sessionManager.getSessionOrigin(validatedId).originChannel ?? undefined,
       prompt: validatedPrompt,
+      taskPrompt: sessionManager.getSession(validatedId)?.prompt,
       attachments: resumeAttachments.map((a) => ({ name: a.name, mime: a.mime, bytes: a.bytes })),
       webContents,
       ...cdpFor(validatedId),

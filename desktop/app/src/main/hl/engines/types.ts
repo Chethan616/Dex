@@ -173,6 +173,8 @@ export interface EngineRunControl {
 export interface RunEngineOptions {
   engineId: string;
   prompt: string;
+  /** On a follow-up, the task's first prompt (it says what the task is about). */
+  taskPrompt?: string;
   sessionId: string;
   /** Where the task came from ('whatsapp', 'android', …); undefined for the hub. */
   originChannel?: string;

@@ -25,7 +25,7 @@ describe('the Marketplace', () => {
         disconnect: vi.fn(async () => {}),
       },
       accounts: {
-        list: vi.fn(async () => [{ provider: 'google', connected: true, available: true }, { provider: 'slack', connected: false, available: false }]),
+        list: vi.fn(async () => [{ provider: 'google', connected: true, available: true }, { provider: 'slack', connected: false, available: false, devBuild: true }, { provider: 'reddit', connected: false, available: false, devBuild: false }]),
         connect: vi.fn(async () => ({ ok: true })),
         cancel: vi.fn(async () => {}),
         disconnect: vi.fn(async () => {}),
@@ -82,10 +82,11 @@ describe('the Marketplace', () => {
     expect(api.connectors.list).toHaveBeenCalledTimes(2);
   });
 
-  it('greys out a built-in account this build can’t sign in to', async () => {
+  it('greys out a sign-in a dev build can’t do, and leaves it out of a release', async () => {
     await render();
     const slack = [...host.querySelectorAll('.mk__item')].find((i) => i.querySelector('.mk__name')?.textContent === 'Slack')!;
     expect((slack.querySelector('.mk__btn') as HTMLButtonElement).disabled).toBe(true);
+    expect(names(host)).not.toContain('Reddit');
   });
 
   it('opens a connector’s page, and the installed list where you can remove one', async () => {

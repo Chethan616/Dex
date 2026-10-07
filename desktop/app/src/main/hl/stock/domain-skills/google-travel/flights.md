@@ -14,10 +14,11 @@ Don't ask for what you can infer ("on Friday" is a date you can work out).
 
 ## First choice: the Kiwi.com connector
 
-If `mcp__remote_kiwi__search-flight` is among your tools, the user added
-Kiwi.com in the Marketplace: it returns structured results with prices,
-times and booking links, faster than any page. Use it, then use Google
-Flights to compare or when Kiwi has no result.
+Every travel task gets `mcp__remote_kiwi__search-flight` (no sign-in): it
+returns prices, times and a booking link for each flight, in seconds and with
+no page to drive. Search there first and show the best 3–6 as `dex-ui cards`
+(Select, and the booking link as Open). Open Google Flights only to book the
+one the user picks, or when Kiwi finds nothing.
 
 ## Google Flights by URL
 

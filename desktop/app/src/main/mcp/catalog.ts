@@ -396,6 +396,48 @@ export function alwaysOnConnections(stored: Array<{ id: string; enabled: boolean
   return [{ id: 'windows', values: {}, toolNames: WINDOWS_TOOL_NAMES }];
 }
 
+/**
+ * Connectors that need no sign-in join a task by its topic, so "cheapest
+ * flight to Canada" searches Kiwi.com instead of driving Google Flights for
+ * sixty steps (TO_BE_DONE §3.8). They cost nothing to attach and send only
+ * the search; the Marketplace still adds them to every task.
+ */
+const KEYLESS_BY_TOPIC: Array<{ topic: RegExp; ids: string[] }> = [
+  { topic: /\b(flights?|fly|flying|airfares?|airports?|airlines?|plane|layovers?|nonstop|round[- ]trip|one[- ]way)\b/i, ids: ['kiwi'] },
+  { topic: /\b(hotels?|resorts?|hostels?|motels?|accommodations?|lodging|airbnb|(?:places?|where) to stay)\b/i, ids: ['trivago'] },
+  { topic: /\b(trips?|travel(?:l?ing)?|vacations?|holidays?|itinerar(?:y|ies)|getaway|honeymoon)\b/i, ids: ['kiwi', 'trivago'] },
+];
+
+/** Tool names of the keyless connectors, as their servers listed them on 2026-10-07. */
+const KEYLESS_TOOLS: Record<string, string[]> = {
+  kiwi: ['search-flight'],
+  trivago: ['trivago-accommodation-search', 'trivago-accommodation-radius-search', 'trivago-destination-price-trends'],
+};
+
+/** What the agent should do with them, said where it sees the tools. */
+const CONNECTOR_HINTS: Record<string, string> = {
+  remote_kiwi: 'Search flights here first: it returns prices, times and a booking link for each. Show the best 3–6 as `dex-ui cards` (each with Select and the booking link as Open). Use the browser only to book the one the user picks, or when this finds nothing.',
+  remote_trivago: 'Search hotels here first: live prices from many booking sites, with photos and links. Show the best 3–6 as `dex-ui cards` (with the photo as the image, Select, and the link as Open). Use the browser only to book the one the user picks, or when this finds nothing.',
+};
+
+export function connectorHint(id: string): string | undefined {
+  return CONNECTOR_HINTS[id];
+}
+
+/** Keyless connectors this task's words call for, unless the user switched one off. */
+export function connectionsForPrompt(
+  text: string,
+  stored: Array<{ id: string; enabled: boolean; toolNames?: string[] }>,
+): Array<{ id: string; values: Record<string, string>; toolNames: string[] }> {
+  const ids = new Set(KEYLESS_BY_TOPIC.filter((t) => t.topic.test(text)).flatMap((t) => t.ids));
+  return [...ids].flatMap((id) => {
+    const connectionId = remoteConnectionId(id);
+    const saved = stored.find((c) => c.id === connectionId);
+    if (saved?.enabled === false) return [];
+    return [{ id: connectionId, values: {}, toolNames: saved?.toolNames?.length ? saved.toolNames : KEYLESS_TOOLS[id] ?? [] }];
+  });
+}
+
 const REMOTE_DEFINITIONS = new Map(HOSTED_CONNECTORS.map((c) => [remoteConnectionId(c.id), c]));
 
 export function findServerDefinition(id: string): McpServerDefinition | undefined {

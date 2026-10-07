@@ -1,7 +1,16 @@
-# Hotels — Google Hotels
+# Hotels — trivago, then Google Hotels
 
 DEX's own playbook (not synced from upstream). URL form checked to load on
 2026-10-07. Read the page; layouts change.
+
+## First choice: the trivago connector
+
+Every hotel or trip task gets trivago's tools (no sign-in), e.g.
+`mcp__remote_trivago__trivago-accommodation-search`: live prices from many
+booking sites, with photos, ratings and a link. Search there first and show
+the best 3–6 as `dex-ui cards` (the photo as the image, Select, and the link
+as Open). Use Google Hotels below only to book the one the user picks, or
+when trivago finds nothing.
 
 ## Search by URL
 

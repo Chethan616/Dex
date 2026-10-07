@@ -230,10 +230,16 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
   try {
     // Hosted connectors' tokens last about an hour: renew the ones close to it.
     await (await import('../../connectors/remote')).refreshRemoteConnections().catch(() => {});
-    const { alwaysOnConnections } = await import('../../mcp/catalog');
+    const { alwaysOnConnections, connectionsForPrompt, connectorHint } = await import('../../mcp/catalog');
     const { listConnections } = await import('../../mcp/store');
     const enabled = await enabledConnections();
-    const servers = usableServers([...enabled, ...alwaysOnConnections(await listConnections()).filter((a) => !enabled.some((e) => e.id === a.id))]);
+    const stored = await listConnections();
+    // A follow-up's words alone ("the cheaper one") don't say it's a travel
+    // task; the task's first prompt does.
+    const topicText = `${opts.taskPrompt ?? ''}
+${opts.prompt}`;
+    const extra = [...alwaysOnConnections(stored), ...connectionsForPrompt(topicText, stored)];
+    const servers = usableServers([...enabled, ...extra.filter((a, i) => !enabled.some((e) => e.id === a.id) && extra.findIndex((b) => b.id === a.id) === i)]);
     if (servers.length > 0) {
       mcpConfigPath = writeClaudeMcpConfig(opts.harnessDir, servers) ?? undefined;
       mcpServers = servers.map((server) => ({
@@ -260,7 +266,8 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
           ? ` Its tools: ${names.join(', ')}.`
           : ` Its tools are named ${prefix}*.`;
         const who = server.identity ? ` You are signed in as ${server.identity} — use that account, never guess it from an email address.` : '';
-        return `${server.definition.displayName} is connected and authenticated.${who}${detail}`;
+        const hint = connectorHint(server.definition.id);
+        return `${server.definition.displayName} is connected and authenticated.${who}${detail}${hint ? ` ${hint}` : ''}`;
       });
     } else {
       clearMcpConfig(opts.harnessDir);

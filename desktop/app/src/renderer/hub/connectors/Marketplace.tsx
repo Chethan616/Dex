@@ -92,11 +92,13 @@ interface State {
   tools: Map<string, number>;
   /** Built-in accounts this build can't sign in to (no OAuth app configured). */
   unavailable: Set<string>;
+  /** …of those, the ones an installed DEX doesn't show at all. */
+  hidden: Set<string>;
   accounts: Map<string, AccountInfo>;
 }
 
 function useMarketState(): [State, () => Promise<void>] {
-  const [state, setState] = useState<State>({ connected: new Set(), tools: new Map(), unavailable: new Set(), accounts: new Map() });
+  const [state, setState] = useState<State>({ connected: new Set(), tools: new Map(), unavailable: new Set(), hidden: new Set(), accounts: new Map() });
   const load = useCallback(async () => {
     const api = window.electronAPI?.settings;
     const [hosted, accounts] = await Promise.all([
@@ -106,6 +108,7 @@ function useMarketState(): [State, () => Promise<void>] {
     const connected = new Set<string>();
     const tools = new Map<string, number>();
     const unavailable = new Set<string>();
+    const hidden = new Set<string>();
     const byKey = new Map<string, AccountInfo>();
     for (const h of hosted) {
       if (h.connected) connected.add(`hosted:${h.id}`);
@@ -114,9 +117,12 @@ function useMarketState(): [State, () => Promise<void>] {
     for (const a of accounts) {
       if (a.connected) connected.add(`account:${a.provider}`);
       if (!a.available) unavailable.add(`account:${a.provider}`);
+      // A release only lists what it can connect; a dev build shows the rest
+      // greyed out, as a reminder to set them up (yarn oauth:setup).
+      if (!a.available && !a.connected && !a.devBuild) hidden.add(`account:${a.provider}`);
       byKey.set(`account:${a.provider}`, a);
     }
-    setState({ connected, tools, unavailable, accounts: byKey });
+    setState({ connected, tools, unavailable, hidden, accounts: byKey });
     // Settings' Marketplace card shows what's installed.
     window.dispatchEvent(new Event('dex:connectors-changed'));
   }, []);
@@ -190,15 +196,16 @@ export function Marketplace({ initialView = 'browse', onClose }: { initialView?:
     await reload();
   };
 
-  const installed = MARKET_ITEMS.filter((i) => state.connected.has(i.key));
+  const items = useMemo(() => MARKET_ITEMS.filter((i) => !state.hidden.has(i.key)), [state.hidden]);
+  const installed = items.filter((i) => state.connected.has(i.key));
   const q = query.trim().toLowerCase();
   const results = useMemo(() => (q
-    ? MARKET_ITEMS.filter((i) => `${i.name} ${i.blurb} ${i.category}`.toLowerCase().includes(q))
-    : []), [q]);
+    ? items.filter((i) => `${i.name} ${i.blurb} ${i.category}`.toLowerCase().includes(q))
+    : []), [q, items]);
   const forYou = useMemo(() => {
-    const pool = MARKET_ITEMS.filter((i) => audience === 'all' ? i.featured : i.audiences.includes(audience));
+    const pool = items.filter((i) => audience === 'all' ? i.featured : i.audiences.includes(audience));
     return [...pool.filter((i) => !state.connected.has(i.key)), ...pool.filter((i) => state.connected.has(i.key))].slice(0, 6);
-  }, [audience, state.connected]);
+  }, [audience, state.connected, items]);
 
   const row = (item: MarketItem) => (
     <MarketRow
@@ -258,20 +265,20 @@ export function Marketplace({ initialView = 'browse', onClose }: { initialView?:
                   </section>
                   <section className="mk__section">
                     <h3 className="mk__heading">Featured</h3>
-                    <div className="mk__grid">{MARKET_ITEMS.filter((i) => i.featured).map(row)}</div>
+                    <div className="mk__grid">{items.filter((i) => i.featured).map(row)}</div>
                   </section>
                   {CATEGORY_ORDER.map((cat) => {
-                    const items = MARKET_ITEMS.filter((i) => i.category === cat);
-                    if (items.length === 0) return null;
+                    const inCategory = items.filter((i) => i.category === cat);
+                    if (inCategory.length === 0) return null;
                     return (
                       <section key={cat} className="mk__section">
                         <h3 className="mk__heading">{cat}</h3>
-                        <div className="mk__grid">{items.map(row)}</div>
+                        <div className="mk__grid">{inCategory.map(row)}</div>
                       </section>
                     );
                   })}
                   <p className="mk__foot">
-                    Flights, hotels and restaurants: DEX searches Google Flights, Google Hotels and Google Maps in its browser — no connector needed.
+                    Travel tasks get Kiwi.com flights and trivago hotels on their own — no need to add them. Restaurants: DEX searches Google Maps in its browser.
                   </p>
                 </>
               )}

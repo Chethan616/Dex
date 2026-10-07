@@ -7,7 +7,7 @@
  * client registration and PKCE — and for accepting DEX's loopback redirect
  * (http://127.0.0.1:<port>/callback), so DEX needs no app registered with
  * each service: it registers itself the first time you connect. "none"
- * entries answer without signing in.
+ * entries answer without signing in (trivago checked 2026-10-07 too).
  *
  * Left out because their servers refuse an app like DEX's today: Figma and
  * QuickBooks (registration closed), Calendly (https redirects only), Gamma
@@ -124,6 +124,7 @@ export const HOSTED_CONNECTORS: HostedConnector[] = [
 
   // Travel & food
   { id: 'kiwi', name: 'Kiwi.com flights', blurb: 'Search flights between any two places, with booking links. No sign-in.', category: 'Travel & food', audiences: ['student', 'work', 'business'], url: 'https://mcp.kiwi.com', auth: 'none', mark: m('K', '#00a991'), featured: true },
+  { id: 'trivago', name: 'trivago hotels', blurb: 'Hotel prices from many booking sites, with photos and links. No sign-in.', category: 'Travel & food', audiences: ['student', 'work', 'business', 'creator'], url: 'https://mcp.trivago.com/mcp', auth: 'none', mark: m('t', '#e32851'), featured: true },
 ];
 
 export const AUDIENCES: Array<{ id: Audience; label: string }> = [
