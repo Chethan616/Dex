@@ -205,18 +205,9 @@ fun SessionScreen(
   val mood = rememberBotMood(session, state.blocks)
   val bot = TaskBot(botTypeFor(session?.engine, sessionId), mood, state.blocks.lastOrNull()?.seq)
 
-  // Reactions: the session's, with yours shown at once until it comes back.
-  val pendingReactions by vm.pendingReactions.collectAsStateWithLifecycle()
+  // DEX's reactions on your messages (ui/components/Reactions.kt): shown, never added from here.
   val serverReactions = session?.reactions ?: emptyMap()
-  androidx.compose.runtime.LaunchedEffect(serverReactions) { vm.reactionsArrived(serverReactions) }
-  val reactions = androidx.compose.runtime.remember(serverReactions, pendingReactions) {
-    val merged = serverReactions.toMutableMap()
-    for ((target, emoji, on) in pendingReactions) {
-      val list = merged[target].orEmpty().filterNot { !it.byAgent && it.emoji == emoji }
-      merged[target] = if (on) list + com.chethan616.dex.data.Reaction(emoji, byAgent = false) else list
-    }
-    com.chethan616.dex.ui.components.ReactionsState(merged) { target, emoji, on -> vm.react(target, emoji, on) }
-  }
+  val reactions = androidx.compose.runtime.remember(serverReactions) { com.chethan616.dex.ui.components.ReactionsState(serverReactions) }
 
   // Widgets (ui/components/Widgets.kt): an answer is your next message, and
   // a question with a message after it has been answered.

@@ -380,9 +380,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('sessions:download-output', filePath),
     revealOutput: (filePath: string): Promise<{ revealed: boolean }> =>
       ipcRenderer.invoke('sessions:reveal-output', filePath),
-    /** React to a chat message (shared/reactions.ts); on:false takes it back. */
-    react: (sessionId: string, target: string, emoji: string, on = true): Promise<boolean> =>
-      ipcRenderer.invoke('sessions:react', { sessionId, target, emoji, on }),
     openFile: (sessionId: string, filePath: string, how: 'open' | 'reveal' | 'copy' = 'open'): Promise<{ opened?: boolean; revealed?: boolean; saved?: string | null }> =>
       ipcRenderer.invoke('sessions:open-file', { sessionId, path: filePath, how }),
     readFile: (sessionId: string, filePath: string): Promise<{ bytes: Uint8Array; size: number; mtimeMs: number }> =>

@@ -29,7 +29,7 @@ a less structured one only when the structured one cannot.
 | Flights, hotels, restaurants, table bookings | The Kiwi.com connector for flights if you have it; otherwise Google Flights, Google Hotels or Google Maps in your browser — read `./domain-skills/google-travel/` first. Ask what's missing with one `dex-ui ask`; show options as `dex-ui cards`. **Never book or pay without the user's yes; stop at payment** | other travel sites the user names |
 | A question for the user — a place, a date, a time, a number, one of a few options | `dex-ui ask` / `dex-ui choose` — real controls in the chat, then end your turn (see `./dex-tools/ui.md`) | — never the question as plain prose |
 | Results with a shape (flights, hotels, places, products, options), a link to send them to, key facts | `dex-ui cards`, `dex-ui link`, `dex-ui facts` — and two sentences at most | — never "visit https://… for details" |
-| A message that deserves a reaction, not words: "go ahead", "book it", "thanks!" | `dex-react 👍` (or ❤️, 😂…) on their message, then just do the work. Sparingly: most messages get no reaction | — never react to every message |
+| A message that deserves a reaction, not words | DEX already puts 👍 on a plain go-ahead after you asked something, and ❤️ on thanks, by itself. Use `dex-react` only for a rare other moment (🎉 when they share good news), then just do the work | — never react to every message, never twice |
 | Giving the user a file, a picture of a page/the screen, or your canvas — "send me…", "on WhatsApp", or any task from WhatsApp | `dex-send` (see `./dex-tools/send.md`) | — never just a path on disk when the user is on their phone |
 | Files, processes, configuration | the purpose-built `dex-*` tool, else your own Bash/`dex-sh` | — |
 

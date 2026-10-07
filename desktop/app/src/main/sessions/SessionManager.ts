@@ -5,7 +5,7 @@ import type { HlEvent, TaskState, TaskStateMutation } from '../../shared/session
 import type { AgentSession, SessionStatus, SessionEvents } from './types';
 import { SessionDb } from './SessionDb';
 import type { SavedWorkspace } from '../workspace/tabMemory';
-import { validReaction } from '../../shared/reactions';
+import { autoReaction, endedOnQuestion, foldReactions, validReaction } from '../../shared/reactions';
 
 /** The key of the user's latest message: the last follow-up, or the first prompt. */
 export function latestUserMessageKey(output: ReadonlyArray<HlEvent>): string {
@@ -427,7 +427,15 @@ export class SessionManager extends EventEmitter {
     const target = input.target ?? latestUserMessageKey(session.output);
     const valid = validReaction(target, input.emoji);
     if (!valid) return false;
-    this.appendOutput(id, { type: 'reaction', target: valid.target, emoji: valid.emoji, by: input.by, on: input.on !== false });
+    const on = input.on !== false;
+    // DEX puts one emoji on a message: a new one replaces its last.
+    if (input.by === 'agent' && on) {
+      const current = foldReactions(session.output as unknown as Array<{ type?: string } & Record<string, unknown>>)[valid.target] ?? [];
+      for (const r of current) {
+        if (r.by === 'agent' && r.emoji !== valid.emoji) this.appendOutput(id, { type: 'reaction', target: valid.target, emoji: r.emoji, by: 'agent', on: false });
+      }
+    }
+    this.appendOutput(id, { type: 'reaction', target: valid.target, emoji: valid.emoji, by: input.by, on });
     return true;
   }
 
@@ -587,12 +595,17 @@ export class SessionManager extends EventEmitter {
 
     this.hydrateOutput(id);
     // Timed like every other event: a reaction names this message by it.
+    const asked = endedOnQuestion(session.output as unknown as Array<{ type?: string } & Record<string, unknown>>);
     const userEvent: HlEvent = { type: 'user_input', text: prompt, at: Date.now() };
     session.output.push(userEvent);
     const seq = session.output.length - 1;
     this.db.appendEvent(id, seq, userEvent);
     this.emitEvent('session-output', id, userEvent);
     this.emitTermBytes(id, userEvent);
+    // DEX's reaction, when one says it better than words (shared/reactions.ts):
+    // 👍 to "ok go on" after it asked something, ❤️ to thanks — usually none.
+    const emoji = autoReaction(prompt, asked);
+    if (emoji) this.react(id, { target: `u:${userEvent.at}`, emoji, by: 'agent' });
 
     // session.prompt stays the task's opening request: it's the title, and
     // transcripts rebuild the first message from it. The follow-up itself is

@@ -105,7 +105,6 @@ dependencies {
   implementation(libs.coil.compose)
   // The in-app 3D viewer: <model-viewer> in a WebView, served from assets.
   implementation(libs.androidx.webkit)
-  implementation(libs.androidx.emoji2.emojipicker)
   implementation(libs.coil.network)
 
   testImplementation(libs.junit)

@@ -495,10 +495,10 @@ fun CanvasCard(block: Block) {
 @Composable
 fun BlockView(block: Block, running: Boolean) {
   when (block.kind) {
-    "user" -> Reactable(messageKey(block), alignEnd = true) { UserBubble(block.text.orEmpty(), block.attachments) }
-    "text" -> Reactable(messageKey(block), alignEnd = false) { AssistantText(block.text.orEmpty()) }
+    "user" -> Reactable(messageKey(block)) { UserBubble(block.text.orEmpty(), block.attachments) }
+    "text" -> AssistantText(block.text.orEmpty())
     "tool" -> ToolCard(block, running)
-    "done" -> Reactable(messageKey(block), alignEnd = false) { DoneCard(block) }
+    "done" -> DoneCard(block)
     "error" -> if (block.text.equals(USER_STOPPED, ignoreCase = true)) StoppedCard() else ErrorCard(block.text.orEmpty())
     "notice" -> NoticeRow(block)
     "file", "image" -> FileCard(block)

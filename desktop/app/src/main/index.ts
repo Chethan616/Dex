@@ -2626,13 +2626,6 @@ app.whenReady().then(async () => {
     return { revealed: true };
   });
 
-  // A reaction of yours on a chat message (shared/reactions.ts).
-  ipcMain.handle('sessions:react', (_event, payload: { sessionId?: unknown; target?: unknown; emoji?: unknown; on?: unknown }) => {
-    const id = assertString(payload?.sessionId, 'sessionId', 100);
-    if (typeof payload?.target !== 'string' || typeof payload?.emoji !== 'string') return false;
-    return sessionManager.react(id, { target: payload.target, emoji: payload.emoji, by: 'user', on: payload.on !== false });
-  });
-
   // The chat's file cards (docs/unify/PLAN.md §3.12): a file this task
   // recorded, wherever it was saved — never a path the page merely names,
   // and never run as a program (an executable is only shown in its folder).
@@ -2828,7 +2821,6 @@ app.whenReady().then(async () => {
         approvalPolicy.setGlobalDefaultMode(normalized);
         return normalized;
       },
-      react: (sessionId, target, emoji, on) => sessionManager.react(sessionId, { target, emoji, by: 'user', on }),
       answerConfirmation: (sessionId, confirmationId, approved, lifetime) => {
         const pending = pendingConfirmations.get(confirmationId);
         if (!pending || pending.sessionId !== sessionId) return { ok: false, error: 'no matching pending confirmation' };

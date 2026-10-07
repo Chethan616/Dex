@@ -71,8 +71,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -98,8 +96,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import com.chethan616.dex.data.Block
 import com.chethan616.dex.ui.haptics.LocalHaptics
+import com.chethan616.dex.ui.theme.LocalStatusColors
+import com.chethan616.dex.ui.theme.Sizes
+import com.chethan616.dex.ui.theme.Space
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -330,22 +334,21 @@ fun WidgetBlock(block: Block) {
   }
 }
 
-private val CardShape = RoundedCornerShape(24.dp)
-
+/** The chat's own card: the filled surface tool cards use, the theme's medium corner, no outline. */
 @Composable
 private fun WidgetSurface(content: @Composable () -> Unit) {
   Surface(
-    shape = CardShape,
+    shape = MaterialTheme.shapes.medium,
     color = MaterialTheme.colorScheme.surfaceContainerLow,
-    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
     modifier = Modifier.fillMaxWidth(),
   ) { content() }
 }
 
+/** An icon on an Expressive shape, as Home's quick chips wear theirs. */
 @Composable
 private fun GlyphTile(icon: ImageVector, size: Int = 36) {
-  Surface(shape = RoundedCornerShape((size / 3).dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(size.dp)) {
-    Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size((size * 0.55f).dp)) }
+  ShapeBadge(MaterialShapes.Cookie9Sided, MaterialTheme.colorScheme.primaryContainer, size.dp) {
+    Icon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size((size * 0.5f).dp))
   }
 }
 
@@ -353,17 +356,18 @@ private fun GlyphTile(icon: ImageVector, size: Int = 36) {
 @Composable
 private fun Pill(text: String, on: Boolean, icon: ImageVector? = null, dashed: Boolean = false, onClick: () -> Unit) {
   val press = remember { MutableInteractionSource() }
-  val bg by animateColorAsState(if (on) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh, tween(160), label = "pill")
-  val fg = if (on) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+  val scheme = MaterialTheme.colorScheme
+  val bg by animateColorAsState(if (on) scheme.secondaryContainer else scheme.surfaceContainerHigh, tween(160), label = "pill")
+  val fg = if (on) scheme.onSecondaryContainer else scheme.onSurface
   Surface(
     onClick = onClick,
     shape = CircleShape,
     color = if (dashed) Color.Transparent else bg,
-    border = if (dashed) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else if (on) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)) else null,
+    border = if (dashed) BorderStroke(1.dp, scheme.outlineVariant) else null,
     interactionSource = press,
-    modifier = Modifier.heightIn(min = 40.dp).springPress(press, 0.96f),
+    modifier = Modifier.heightIn(min = Sizes.chip).springPress(press, 0.94f),
   ) {
-    Row(Modifier.padding(horizontal = 16.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.padding(horizontal = Space.l, vertical = Space.s), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.xs + 2.dp)) {
       icon?.let { Icon(it, null, Modifier.size(16.dp), tint = if (on) fg else MaterialTheme.colorScheme.onSurfaceVariant) }
       Text(text, style = MaterialTheme.typography.labelLarge, color = if (dashed) MaterialTheme.colorScheme.onSurfaceVariant else fg)
       if (on && icon == null) Icon(Icons.Rounded.Check, null, Modifier.size(16.dp), tint = fg)
@@ -407,15 +411,16 @@ private fun AskCard(w: Widget.Ask, answered: Boolean, key: Long, reply: (String)
   AnimatedContent(answered || sent, transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(160)) }, label = "ask") { done ->
     if (done) {
       Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Surface(shape = CircleShape, color = Color(0xFF1DB954).copy(alpha = 0.18f), modifier = Modifier.size(22.dp)) {
-          Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Check, null, Modifier.size(14.dp), tint = Color(0xFF1DB954)) }
+        val good = LocalStatusColors.current.running
+        Surface(shape = CircleShape, color = good.copy(alpha = 0.16f), modifier = Modifier.size(22.dp)) {
+          Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Check, null, Modifier.size(14.dp), tint = good) }
         }
         Text(w.title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
       }
     } else {
       WidgetSurface {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-          Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.padding(Space.l), verticalArrangement = Arrangement.spacedBy(Space.l)) {
+          Row(horizontalArrangement = Arrangement.spacedBy(Space.m), verticalAlignment = Alignment.CenterVertically) {
             GlyphTile(askIcon(w))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
               Text(w.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -432,7 +437,8 @@ private fun AskCard(w: Widget.Ask, answered: Boolean, key: Long, reply: (String)
                 )
               }
               val onChange: (Answer?, Boolean) -> Unit = { a, commit ->
-                haptics.tick()
+                // A tap is felt; typing isn't (a tick per letter was the field buzzing).
+                if (a !is Answer.Words || commit) haptics.tick()
                 if (a == null) values.remove(f.id) else values[f.id] = a
                 if (commit && a != null) send()
               }
@@ -448,7 +454,7 @@ private fun AskCard(w: Widget.Ask, answered: Boolean, key: Long, reply: (String)
           }
           if (!solo || (w.fields.first().kind == "choice" && w.fields.first().multi)) {
             val ready = w.fields.all { it.optional || filled(it, values[it.id]) }
-            Button(onClick = { send() }, enabled = ready, modifier = Modifier.align(Alignment.End).heightIn(min = 48.dp)) {
+            Button(onClick = { send() }, enabled = ready, modifier = Modifier.align(Alignment.End).heightIn(min = Sizes.control)) {
               Text(w.submit ?: "Send")
               Spacer(Modifier.width(8.dp))
               Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(18.dp))
@@ -479,8 +485,8 @@ private fun ChoiceInput(f: WField, value: Answer?, solo: Boolean, onChange: (Ans
         val press = remember { MutableInteractionSource() }
         Surface(
           onClick = { pick(o.label) },
-          shape = RoundedCornerShape(18.dp),
-          color = if (on) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+          shape = MaterialTheme.shapes.small,
+          color = if (on) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
           interactionSource = press,
           modifier = Modifier.fillMaxWidth().springPress(press, 0.98f),
         ) {
@@ -551,7 +557,7 @@ private fun DateInput(f: WField, value: Answer?, solo: Boolean, onChange: (Answe
       val press = remember { MutableInteractionSource() }
       Surface(
         onClick = { pick(d) },
-        shape = RoundedCornerShape(18.dp),
+        shape = MaterialTheme.shapes.medium,
         color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
         interactionSource = press,
         modifier = Modifier.width(60.dp).springPress(press, 0.94f),
@@ -571,7 +577,7 @@ private fun DateInput(f: WField, value: Answer?, solo: Boolean, onChange: (Answe
     val press = remember { MutableInteractionSource() }
     Surface(
       onClick = { picker = true },
-      shape = RoundedCornerShape(18.dp),
+      shape = MaterialTheme.shapes.medium,
       color = Color.Transparent,
       border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
       interactionSource = press,
@@ -692,19 +698,28 @@ private fun WordsInput(f: WField, solo: Boolean, onChange: (Answer?, Boolean) ->
   }
 }
 
+/** A filled field, shaped like the app's prompt bar: no outline, no focus ring. */
 @Composable
 private fun TypeField(value: String, onValue: (String) -> Unit, placeholder: String, icon: ImageVector?, send: Boolean, multiline: Boolean = false, onSend: (String) -> Unit) {
-  OutlinedTextField(
+  val scheme = MaterialTheme.colorScheme
+  TextField(
     value = value,
     onValueChange = onValue,
     placeholder = { Text(placeholder) },
-    leadingIcon = icon?.let { { Icon(it, null) } },
+    leadingIcon = icon?.let { { Icon(it, null, tint = scheme.onSurfaceVariant) } },
     trailingIcon = if (send) {
       { IconButton(onClick = { if (value.isNotBlank()) onSend(value.trim()) }, enabled = value.isNotBlank()) { Icon(Icons.AutoMirrored.Rounded.Send, "Send") } }
     } else null,
     singleLine = !multiline,
     minLines = if (multiline) 3 else 1,
-    shape = RoundedCornerShape(18.dp),
+    shape = if (multiline) MaterialTheme.shapes.medium else CircleShape,
+    colors = TextFieldDefaults.colors(
+      focusedContainerColor = scheme.surfaceContainerHigh,
+      unfocusedContainerColor = scheme.surfaceContainerHigh,
+      focusedIndicatorColor = Color.Transparent,
+      unfocusedIndicatorColor = Color.Transparent,
+      disabledIndicatorColor = Color.Transparent,
+    ),
     keyboardOptions = KeyboardOptions(imeAction = if (send && !multiline) ImeAction.Send else ImeAction.Default),
     keyboardActions = KeyboardActions(onSend = { if (value.isNotBlank()) onSend(value.trim()) }),
     modifier = Modifier.fillMaxWidth(),
@@ -731,7 +746,7 @@ private fun ActionRow(actions: List<WAction>, open: (String) -> Unit, reply: (St
       }
       when {
         a.primary -> Button(onClick = onClick, contentPadding = padding, modifier = Modifier.heightIn(min = if (small) 36.dp else 44.dp)) { content() }
-        small -> OutlinedButton(onClick = onClick, contentPadding = padding, modifier = Modifier.heightIn(min = 36.dp)) { content() }
+        small -> FilledTonalButton(onClick = onClick, contentPadding = padding, modifier = Modifier.heightIn(min = 36.dp)) { content() }
         else -> FilledTonalButton(onClick = onClick, contentPadding = padding, modifier = Modifier.heightIn(min = 44.dp)) { content() }
       }
     }
@@ -766,8 +781,9 @@ private fun CardsCard(w: Widget.Cards, open: (String) -> Unit, reply: (String) -
               Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 c.price?.let { Text(it, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
                 c.badge?.let {
-                  Surface(shape = CircleShape, color = Color(0xFF1DB954).copy(alpha = 0.16f)) {
-                    Text(it, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = Color(0xFF14833B), modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                  val good = LocalStatusColors.current.running
+                  Surface(shape = CircleShape, color = good.copy(alpha = 0.14f)) {
+                    Text(it, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = good, modifier = Modifier.padding(horizontal = Space.s, vertical = 3.dp))
                   }
                 }
               }

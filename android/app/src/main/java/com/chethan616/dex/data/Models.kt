@@ -151,7 +151,6 @@ enum class CommandType(val id: String) {
   SyncSession("sync_session"),
   SetApprovalMode("set_approval_mode"),
   FetchFile("fetch_file"),
-  React("react"),
 }
 
 /**

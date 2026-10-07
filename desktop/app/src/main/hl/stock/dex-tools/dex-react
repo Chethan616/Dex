@@ -2,10 +2,11 @@
 # dex-react — react to the user's message with an emoji, like a person in a
 # chat would. The reaction shows on their message, on the PC and the phone.
 #
-# Sparingly: react when it says something a reply wouldn't — 👍 to "go
-# ahead" / "book it", ❤️ to a thank-you, 😂 to a joke, 👀 to "take a look at
-# this" while you start. Never on every message, and never instead of doing
-# the work or answering.
+# Rarely. DEX already puts 👍 on a plain go-ahead after it asked something,
+# and ❤️ on a thank-you, by itself (shared/reactions.ts autoReaction) — so
+# use this only for another moment a person would mark (🎉 to good news).
+# Never on every message, never a second emoji on one, and never instead of
+# doing the work or answering. A new reaction replaces your last one.
 
 set -uo pipefail
 . "$(dirname "$0")/dex-lib.sh"

@@ -95,7 +95,6 @@ export interface BridgeHost {
   getApprovalMode(): string;
   setApprovalMode(mode: string): string;
   /** A reaction from the phone on a chat message (shared/reactions.ts). */
-  react(sessionId: string, target: string, emoji: string, on: boolean): boolean;
 }
 
 export type BridgeState =
@@ -876,9 +875,6 @@ export class FirebaseBridge {
           break;
         case 'answer_confirmation':
           result = this.host.answerConfirmation(str(data.sessionId), str(data.confirmationId), data.approved === true, str(data.lifetime) || undefined);
-          break;
-        case 'react':
-          result = { ok: this.host.react(str(data.sessionId), str(data.target), str(data.emoji), data.on !== false) };
           break;
         case 'set_approval_mode':
           result = { mode: this.host.setApprovalMode(str(data.mode)) };

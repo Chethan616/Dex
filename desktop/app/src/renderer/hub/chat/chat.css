@@ -1056,97 +1056,40 @@
   .cx-reply--streaming .md--chat > :last-child::after { animation: none; }
 }
 
-/* ── Reactions (shared/reactions.ts): chips on the bubble's corner, like
-   Grok's and WhatsApp's; a smiley on hover; a quick row; every emoji. ── */
-.cx-user__line { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+/* ── DEX's reaction on your message (shared/reactions.ts): a small emoji
+   tucked onto the bubble's corner, as Grok and WhatsApp show one (UI/g1.png).
+   The ring in the page's own colour makes it sit on the bubble. ───────── */
+/* Full width, so the bubble's 78% is of the column — not of a row shrunk to the bubble,
+   which squeezed it until "book it" broke mid-word. */
+.cx-user__line { display: flex; align-items: center; justify-content: flex-end; gap: 6px; width: 100%; }
 .cx-user__bubble { position: relative; }
-.cx-user__bubble--reacted { margin-bottom: 14px; }
-.cx-reacts { display: flex; gap: 4px; flex-wrap: wrap; }
-.cx-user__bubble .cx-reacts { position: absolute; right: -6px; bottom: -16px; }
-.cx-reply .cx-reacts { margin-top: 6px; }
-.cx-react {
+.cx-user__bubble--reacted { margin-bottom: 12px; }
+
+.cx-react-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -14px;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  height: 24px;
+  justify-content: center;
+  gap: 2px;
   min-width: 24px;
-  padding: 0 6px;
-  border: 1px solid var(--color-border-subtle);
+  height: 24px;
+  padding: 0 5px;
   border-radius: 999px;
   background: var(--color-bg-elevated);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
-  color: var(--color-fg-secondary);
-  font: 600 11px/1 var(--font-ui);
-  cursor: pointer;
-  transition: transform var(--duration-fast) ease;
+  box-shadow: 0 0 0 2px var(--color-bg-base);
+  animation: cx-react-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  user-select: none;
 }
-.cx-react:hover { transform: scale(1.08); }
-.cx-react--mine { border-color: color-mix(in srgb, var(--color-accent-default, #35b8ff) 55%, transparent); background: color-mix(in srgb, var(--color-accent-default, #35b8ff) 14%, var(--color-bg-elevated)); }
-.cx-react__emoji { font-size: 13px; line-height: 1; }
 
-.cx-reactor { position: relative; display: inline-flex; }
-.cx-reactor__btn {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-fg-tertiary);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity var(--duration-fast) ease, background-color var(--duration-fast) ease;
-}
-.cx-user:hover .cx-reactor__btn,
-.cx-turn:hover .cx-foot .cx-reactor__btn,
-.cx-reactor--open .cx-reactor__btn,
-.cx-reactor__btn:focus-visible { opacity: 1; }
-.cx-reactor__btn:hover { background: var(--surface-chip); color: var(--color-fg-primary); }
+.cx-react-badge__emoji { font-size: 12px; line-height: 1; }
 
-.cx-quick, .cx-picker {
-  position: absolute;
-  z-index: 30;
-  bottom: calc(100% + 6px);
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-bg-elevated);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+@keyframes cx-react-pop {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
-.cx-reactor--end .cx-quick, .cx-reactor--end .cx-picker { right: 0; }
-.cx-reactor--start .cx-quick, .cx-reactor--start .cx-picker { left: 0; }
-.cx-quick { display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; }
-.cx-quick__emoji, .cx-quick__more {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  font-size: 20px;
-  cursor: pointer;
-  transition: transform 120ms ease, background-color 120ms ease;
-}
-.cx-quick__emoji:hover { transform: scale(1.22); }
-.cx-quick__emoji--on { background: color-mix(in srgb, var(--color-accent-default, #35b8ff) 18%, transparent); }
-.cx-quick__more { color: var(--color-fg-secondary); background: var(--surface-chip); font-size: 14px; }
 
-.cx-picker { width: 320px; padding: 8px; border-radius: 16px; display: flex; flex-direction: column; gap: 6px; }
-.cx-picker__search {
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 10px;
-  background: var(--color-bg-base);
-  color: var(--color-fg-primary);
-  font: inherit;
-  font-size: 13px;
+@media (prefers-reduced-motion: reduce) {
+  .cx-react-badge { animation: none; }
 }
-.cx-picker__tabs { display: flex; gap: 2px; }
-.cx-picker__tab { flex: 1; height: 28px; border: 0; border-radius: 8px; background: transparent; font-size: 15px; cursor: pointer; opacity: 0.6; }
-.cx-picker__tab--on, .cx-picker__tab:hover { opacity: 1; background: var(--surface-chip); }
-.cx-picker__grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; height: 232px; overflow-y: auto; align-content: start; }
-.cx-picker__emoji { height: 36px; border: 0; border-radius: 8px; background: transparent; font-size: 22px; cursor: pointer; }
-.cx-picker__emoji:hover { background: var(--surface-chip); }
-.cx-picker__emoji--on { background: color-mix(in srgb, var(--color-accent-default, #35b8ff) 18%, transparent); }
-.cx-picker__empty { grid-column: 1 / -1; margin: 12px 0; color: var(--color-fg-tertiary); font-size: 12px; text-align: center; }

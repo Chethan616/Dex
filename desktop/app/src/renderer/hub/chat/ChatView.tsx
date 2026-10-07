@@ -29,8 +29,8 @@ import { assignMentions, groupSubagentMentions, mentionText, useSubagents, type 
 import type { HlEvent as SharedHlEvent } from '../../../shared/session-schemas';
 import { ResultCard } from './ResultCard';
 import { WidgetView } from './Widgets';
-import { ReactionChips, ReactTrigger } from './Reactions';
-import { agentMessageKey, foldReactions, userMessageKey, type Reaction, type Reactions } from '../../../shared/reactions';
+import { ReactionBadge } from './Reactions';
+import { agentEmojis, foldReactions, userMessageKey, type Reaction, type Reactions } from '../../../shared/reactions';
 import './chat.css';
 
 const NO_REACTIONS: Reaction[] = [];
@@ -283,10 +283,8 @@ interface TurnViewProps {
   onFollowUpChip?: (prompt: string) => void;
   /** The newest turn: its questions are still open; older ones were answered. */
   isLast?: boolean;
-  /** Reactions on this turn's message of yours, and on DEX's reply (shared/reactions.ts). */
+  /** Reactions on this turn's message of yours: DEX's is shown (shared/reactions.ts). */
   userReactions: Reaction[];
-  replyReactions: Reaction[];
-  onReact?: (target: string, emoji: string, on: boolean) => void;
 }
 
 function activityOf(turn: Turn): { label: string; orb: React.ComponentProps<typeof Orb>['state'] } {
@@ -321,10 +319,7 @@ function TurnAvatar({ sessionId, engineId, mood }: { sessionId: string; engineId
   );
 }
 
-const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood, open, onToggle, now, docSignals, renderLink, renderInlineCode, mentions, onOpenUrl, onFollowUpChip, isLast, userReactions, replyReactions, onReact }: TurnViewProps) {
-  const userKey = turn.user ? userMessageKey(turn.user.at, turn.user.id === 0) : null;
-  const replyKey = agentMessageKey(turn.replyAt);
-  const mineOn = (list: Reaction[]) => list.filter((r) => r.by === 'user').map((r) => r.emoji);
+const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood, open, onToggle, now, docSignals, renderLink, renderInlineCode, mentions, onOpenUrl, onFollowUpChip, isLast, userReactions }: TurnViewProps) {
   const hasWork = turn.work.length > 0 || turn.live || mentions.length > 0;
   // Sessions recorded before events carried times just say "Worked".
   const end = turn.live ? now : turn.endAt;
@@ -348,10 +343,9 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood,
           )}
           {turn.user.text && (
             <div className="cx-user__line">
-              {userKey && onReact && <ReactTrigger align="end" mine={mineOn(userReactions)} onPick={(e, on) => onReact(userKey, e, on)} />}
-              <div className={`cx-user__bubble${userReactions.length ? ' cx-user__bubble--reacted' : ''}`}>
+              <div className={`cx-user__bubble${agentEmojis(userReactions).length ? ' cx-user__bubble--reacted' : ''}`}>
                 {turn.user.text}
-                {userKey && onReact && <ReactionChips align="end" reactions={userReactions} onToggle={(e, on) => onReact(userKey, e, on)} />}
+                <ReactionBadge reactions={userReactions} />
               </div>
             </div>
           )}
@@ -393,7 +387,6 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood,
       {turn.reply && (
         <div className={`cx-reply${turn.replyStreaming ? ' cx-reply--streaming' : ''}`}>
           <Markdown source={turn.reply} variant="chat" renderLink={renderLink} renderInlineCode={renderInlineCode} />
-          {replyKey && onReact && <ReactionChips align="start" reactions={replyReactions} onToggle={(e, on) => onReact(replyKey, e, on)} />}
         </div>
       )}
 
@@ -410,7 +403,6 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood,
       {!turn.live && turn.reply && (
         <div className="cx-foot">
           <CopyButton text={turn.reply} />
-          {replyKey && onReact && <ReactTrigger align="start" mine={mineOn(replyReactions)} onPick={(e, on) => onReact(replyKey, e, on)} />}
           {turn.endAt ? <span className="cx-foot__time">{timeOfDay(turn.endAt)}</span> : null}
         </div>
       )}
@@ -447,9 +439,6 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
   const transcript = useTranscript(session);
   const blocks = transcript.blocks;
   const reactions = useReactions(session.output);
-  const onReact = useCallback((target: string, emoji: string, on: boolean) => {
-    void window.electronAPI?.sessions?.react?.(session.id, target, emoji, on);
-  }, [session.id]);
 
   // Turns keep their identity while nothing in them changed.
   const prevTurns = useRef<Map<number, Turn>>(new Map());
@@ -606,8 +595,6 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
               onFollowUpChip={onFollowUp ? sendChip : undefined}
               isLast={i === turns.length - 1}
               userReactions={(turn.user && reactions[userMessageKey(turn.user.at, turn.user.id === 0) ?? '']) || NO_REACTIONS}
-              replyReactions={reactions[agentMessageKey(turn.replyAt) ?? ''] ?? NO_REACTIONS}
-              onReact={onReact}
             />
           ))}
           {turns.length === 0 && (

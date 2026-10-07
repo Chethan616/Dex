@@ -1,8 +1,9 @@
 /**
- * Reactions on chat messages, like WhatsApp's or Grok's: you can react to
- * any message (DEX's or your own) with any emoji, and DEX reacts to yours
- * only when it means something — 👍 to a go-ahead, ❤️ to a thank-you —
- * never to every message.
+ * DEX's reactions on your messages, like a person's in a chat (Grok's,
+ * WhatsApp's): only when one says it better than words — 👍 to "ok go on"
+ * after it asked you something, ❤️ to a thank-you — never on every message.
+ * You don't react (the owner found it off); DEX does, sparingly: by rule
+ * (autoReaction, below) and, rarely, by choice (`dex-react`).
  *
  * A reaction is an event in the task's log, so it survives restarts and
  * reaches the phone. It names its message by a key both sides can work out
@@ -30,9 +31,6 @@ export interface Reaction {
 
 /** message key → its reactions, in the order they were added. */
 export type Reactions = Record<string, Reaction[]>;
-
-/** The quick row, before "+" opens every emoji. */
-export const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👀'] as const;
 
 export function userMessageKey(at: number | undefined, isPrompt: boolean): string | null {
   if (isPrompt) return 'u:prompt';
@@ -77,14 +75,46 @@ export function foldReactions(events: ReadonlyArray<{ type?: string } & Record<s
   return out;
 }
 
-/** Chips to draw under a message: one per emoji, with who added it. */
-export function chipsFor(reactions: Reaction[] | undefined): Array<{ emoji: string; count: number; mine: boolean; agent: boolean }> {
-  const chips: Array<{ emoji: string; count: number; mine: boolean; agent: boolean }> = [];
-  for (const r of reactions ?? []) {
-    let chip = chips.find((c) => c.emoji === r.emoji);
-    if (!chip) { chip = { emoji: r.emoji, count: 0, mine: false, agent: false }; chips.push(chip); }
-    chip.count += 1;
-    if (r.by === 'user') chip.mine = true; else chip.agent = true;
+/** What a message shows: DEX's emoji on it (yours, from before, aren't shown). */
+export function agentEmojis(reactions: Reaction[] | undefined): string[] {
+  return [...new Set((reactions ?? []).filter((r) => r.by === 'agent').map((r) => r.emoji))];
+}
+
+const GO_AHEAD = /^(ok|okay|k|kk|yes|yep|yeah|yup|sure|alright|go|go on|go ahead|do it|proceed|continue|carry on|sounds good|perfect|great|book it|send it|ship it|please do|lgtm|fine|cool|that works|works for me|confirm|confirmed)( (please|then|dex|go on|go ahead|do it|yes|sure|thanks))*$/;
+const THANKS = /^(thanks|thank you|thank u|thx|ty|tysm|cheers)( (so much|a lot|dex|man|bro|buddy|again))*$/;
+const LAUGH = /^((ha){2,}h?|lol|lmao|rofl)$/;
+
+/**
+ * DEX's own reaction to a follow-up of yours, or null — and null is the
+ * usual answer. A plain go-ahead gets 👍 only when DEX had just asked you
+ * something (`asked`); a thank-you gets ❤️; a laugh 😂. Anything longer
+ * than a few words is a real message and gets a real answer instead.
+ */
+export function autoReaction(text: string, asked: boolean): string | null {
+  const t = text.toLowerCase().replace(/\p{Extended_Pictographic}|‍|️/gu, ' ').replace(/[.!,;:~?\s]+/g, ' ').trim();
+  if (!t || t.split(' ').length > 6) return null;
+  if (THANKS.test(t)) return '❤️';
+  if (LAUGH.test(t)) return '😂';
+  if (asked && GO_AHEAD.test(t)) return '👍';
+  return null;
+}
+
+/**
+ * Did DEX's last turn end by asking you something — a widget question, an
+ * approval, or words ending on a "?"? (Events of the task so far, in order.)
+ */
+export function endedOnQuestion(events: ReadonlyArray<{ type?: string } & Record<string, unknown>>): boolean {
+  let text = '';
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    const e = events[i];
+    if (e.type === 'user_input') break;
+    if (e.type === 'widget' && (e.widget as { type?: string } | undefined)?.type === 'ask') return true;
+    if (e.type === 'confirmation' && e.status === 'pending') return true;
+    if (e.type === 'done' && typeof e.summary === 'string' && !text) text = e.summary;
+    if (e.type === 'thinking' && typeof e.text === 'string') text = e.text + text;
+    if (e.type === 'tool_call' && text) break;
   }
-  return chips;
+  // Agents often end "…What date? How many of you? Once you tell me, I'll search." —
+  // a question near the end counts, not only a final "?".
+  return text.trim().slice(-400).includes('?');
 }

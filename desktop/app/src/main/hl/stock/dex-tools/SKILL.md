@@ -17,7 +17,7 @@ them with Bash like any other command.
 | `dex-open` | Showing the user a file you made or found — a report, PDF, sheet, image or 3D model — rendered in a document tab that reloads as you edit it. See `open.md`. |
 | `mcp__windows__*` | Windows apps, media and PC diagnostics, in the background. See `desktop.md`. |
 | `dex-ui` | Asking the user with real controls (choices, a place, a date, a time, a number) instead of prose, and showing results as cards, link buttons or facts — on the PC and the phone. See `ui.md`. |
-| `dex-react` | Reacting to the user's message with an emoji, as a person would in a chat: 👍 to a go-ahead, ❤️ to thanks. Sparingly — only when it means something, never on every message. |
+| `dex-react` | A rare emoji on the user's message, when it says something words wouldn't (🎉 to good news). DEX already reacts to go-aheads and thanks by itself — don't double up; most messages get none. |
 | `dex-tab` | This task's browser tabs, which the user shares: listing them, opening a background tab for a side lookup, showing one to the user. See `tabs.md`. |
 | `dex-send` | Sending the user a file, a screenshot (`--page`, `--screen`) or your canvas as a PDF (`--canvas`) on WhatsApp. See `send.md`. |
 | `dex-3d` | An AI-generated, textured 3D model (GLB) of one object from a description or a picture — free on the user's Hugging Face account. See `blender.md`. |
