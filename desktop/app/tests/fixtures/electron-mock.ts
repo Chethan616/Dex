@@ -331,8 +331,12 @@ export const WebContentsView = class {
   private _bg = '#00000000';
   private _visible = true;
 
-  constructor(opts?: { webContents?: ReturnType<typeof createMockWebContents> }) {
+  /** What the view was made with, so tests can see e.g. which session a tab got. */
+  webPreferences: Record<string, unknown> | undefined;
+
+  constructor(opts?: { webContents?: ReturnType<typeof createMockWebContents>; webPreferences?: Record<string, unknown> }) {
     this.webContents = opts?.webContents ?? createMockWebContents();
+    this.webPreferences = opts?.webPreferences;
   }
 
   setBounds(bounds: { x: number; y: number; width: number; height: number }): void {

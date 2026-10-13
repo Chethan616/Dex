@@ -8,6 +8,7 @@ import { pipeline } from 'node:stream/promises';
 import { session } from 'electron';
 import WebSocket from 'ws';
 import { mainLogger } from '../logger';
+import { WEB_PARTITION, webSession } from '../workspace/webProfile';
 import {
   chromiumBrowserExecutableCandidates,
   findDefaultChromiumBrowser,
@@ -344,7 +345,7 @@ export async function importChromeProfileCookies(profileId: string): Promise<Coo
     total: cookies.length,
   });
 
-  const electronSession = session.defaultSession;
+  const electronSession = webSession() ?? session.fromPartition(WEB_PARTITION);
   let imported = 0;
   let failed = 0;
   let skipped = 0;
@@ -524,11 +525,11 @@ export interface SessionCookie {
   sameSite: string;
 }
 
-/** List every cookie in the app's default Electron session jar. Used by the
+/** List every cookie in the web profile's jar (workspace/webProfile.ts). Used by the
  *  Settings + Onboarding cookie viewer so the user can see (and search) what
  *  was actually imported. Read-only — values are not returned. */
 export async function listSessionCookies(): Promise<SessionCookie[]> {
-  const electronSession = session.defaultSession;
+  const electronSession = webSession() ?? session.fromPartition(WEB_PARTITION);
   const all = await electronSession.cookies.get({});
   return all.map((c) => ({
     name: c.name,

@@ -5,6 +5,7 @@ import { leaseDebugger } from '../cdpLease';
 import { normalizeAddress } from '../../shared/address';
 import { noteInputEvent } from '../workspace/userActivity';
 import { fitStage, getStage, type StageHost } from '../workspace/stage';
+import { cleanUserAgent, webSession } from '../workspace/webProfile';
 import type { TabInfo } from './types';
 
 const DEFAULT_BROWSER_WIDTH = 1280;
@@ -147,15 +148,20 @@ export class BrowserPool {
   private tabsChangedTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private idleFreezeDelayMs: number;
   private stage: () => StageHost | null;
+  private webSession: () => Electron.Session | null;
   /** The hub asked for the views out of the way (a menu over them). */
   private uiHidden = false;
   /** DEX's window is hidden (closed to the tray) or minimized. */
   private windowHidden = false;
 
-  constructor(maxConcurrent = DEFAULT_MAX_CONCURRENT, opts: { idleFreezeDelayMs?: number; stage?: () => StageHost | null } = {}) {
+  constructor(
+    maxConcurrent = DEFAULT_MAX_CONCURRENT,
+    opts: { idleFreezeDelayMs?: number; stage?: () => StageHost | null; webSession?: () => Electron.Session | null } = {},
+  ) {
     this.maxConcurrent = maxConcurrent;
     this.idleFreezeDelayMs = opts.idleFreezeDelayMs ?? readIdleFreezeDelayMs();
     this.stage = opts.stage ?? getStage;
+    this.webSession = opts.webSession ?? webSession;
     browserLogger.info('BrowserPool.init', { maxConcurrent });
 
     // Repaint every pooled view (attached AND detached, every tab) when the
@@ -312,6 +318,10 @@ export class BrowserPool {
     entry: PoolEntry,
     opts: { openedBy: TabOpener; webContents?: WebContents; timingStartedAt?: number },
   ): TabEntry {
+    // Tabs live in the shared web profile (workspace/webProfile.ts), never
+    // in DEX's own session. A popup's WebContents is already in its
+    // opener's profile.
+    const ses = this.webSession();
     const view = opts.webContents
       ? new WebContentsView({ webContents: opts.webContents })
       : new WebContentsView({
@@ -320,6 +330,7 @@ export class BrowserPool {
           nodeIntegration: false,
           sandbox: true,
           backgroundThrottling: true,
+          ...(ses ? { session: ses } : {}),
         },
       });
     // Without this, attach/detach during view swaps briefly paints black
@@ -377,9 +388,7 @@ export class BrowserPool {
     // Sec-CH-UA hints, and TLS fingerprint stay coherent with the engine.
     try {
       const defaultUa = wc.getUserAgent();
-      const cleanedUa = defaultUa
-        .replace(/\sElectron\/\S+/, '')
-        .replace(/\s[A-Za-z][\w-]*\/\d+\.\d+\.\d+(?=\sChrome\/)/, '');
+      const cleanedUa = cleanUserAgent(defaultUa);
       if (cleanedUa !== defaultUa) {
         wc.setUserAgent(cleanedUa);
         browserLogger.info('BrowserPool.userAgent.stripped', { sessionId, tabId: tab.id, before: defaultUa, after: cleanedUa });

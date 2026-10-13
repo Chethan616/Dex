@@ -113,6 +113,8 @@ import { noteAgentInput, takeUserActsSinceAgent, userActiveWithin, waitForUserId
 import { maskSecretFields, READS_PAGE, redactSecrets, secretValues } from './workspace/secretFields';
 import { handleDownload } from './workspace/downloads';
 import { pageMenuTemplate } from './workspace/pageMenu';
+import { prepareWebProfile } from './workspace/webProfile';
+import * as sitePermissions from './workspace/sitePermissions';
 import * as deskState from './desktop/deskState';
 import { TabMemory, tabsToSave } from './workspace/tabMemory';
 import { leaseDebugger, withDebugger } from './cdpLease';
@@ -497,6 +499,53 @@ refreshPreflight();
 
 const browserPool = new BrowserPool();
 let interruptBrowserSessionFromShortcut: ((sessionId: string) => boolean) | null = null;
+
+const sitePermissionStore = new sitePermissions.SitePermissionStore(path.join(app.getPath('userData'), 'site-permissions.json'));
+
+function originOf(url: string | undefined): string {
+  try { return new URL(url ?? '').origin; } catch { return url ?? ''; }
+}
+
+/** Camera, location and the rest in task tabs: workspace/sitePermissions.ts. */
+function installSitePermissions(ses: Electron.Session): void {
+  ses.setPermissionRequestHandler((wc, permission, callback, details) => {
+    const origin = originOf((details as { requestingUrl?: string }).requestingUrl ?? wc.getURL());
+    void sitePermissions.decide({
+      origin,
+      permission,
+      details: {
+        mediaTypes: (details as Electron.MediaAccessPermissionRequest).mediaTypes,
+        externalURL: (details as Electron.OpenExternalPermissionRequest).externalURL,
+      },
+      userActive: userActiveWithin(wc, sitePermissions.USER_REQUEST_WINDOW_MS),
+    }, {
+      store: sitePermissionStore,
+      ask: async (host, what) => {
+        const parent = shellWindow && !shellWindow.isDestroyed() ? shellWindow : null;
+        const options: Electron.MessageBoxOptions = {
+          type: 'question',
+          buttons: ['Allow', 'Block'],
+          defaultId: 1,
+          cancelId: 1,
+          noLink: true,
+          message: `${host} wants to ${what}`,
+          detail: 'This is for the site in DEX\'s browser. You can change it later with "Clear data for this site".',
+          checkboxLabel: 'Remember for this site',
+          checkboxChecked: true,
+        };
+        const { response, checkboxChecked } = parent
+          ? await dialog.showMessageBox(parent, options)
+          : await dialog.showMessageBox(options);
+        return { allow: response === 0, remember: checkboxChecked };
+      },
+      log: (event, data) => mainLogger.info(event, data),
+    }).then(callback, () => callback(false));
+  });
+  ses.setPermissionCheckHandler((_wc, permission, requestingOrigin, details) =>
+    sitePermissions.check(originOf(requestingOrigin), permission, sitePermissionStore, { mediaType: details.mediaType }));
+  // USB, serial and HID devices: never, from a web page in DEX.
+  ses.setDevicePermissionHandler(() => false);
+}
 const resourceMonitorContext: ResourceMonitorContext = {
   browserSessions: () => browserPool.getStats().sessions,
   sessionInfo: (sessionId) => sessionManager.getResourceInfo(sessionId),
@@ -753,6 +802,15 @@ app.whenReady().then(async () => {
     }
   }, 8000);
   startResourceMonitor(resourceMonitorContext);
+
+  // Every task's tabs share one browser profile, apart from DEX's own
+  // windows. Opened (and, the first time, filled with your cookies) before
+  // any tab can exist.
+  const webSes = await prepareWebProfile({
+    userDataPath: app.getPath('userData'),
+    log: (event, data) => mainLogger.info(event, data),
+  });
+  installSitePermissions(webSes);
 
   // The agents' private way into their tabs. Fold the result into the
   // environment report as soon as it's known.
@@ -1613,7 +1671,10 @@ app.whenReady().then(async () => {
 
   // Downloads in a task's tabs land in Downloads (no Save dialog) and show as
   // the task's files; the agent's wait on the approval policy first.
-  electronSession.defaultSession.on('will-download', (_event, item, wc) => {
+  // The web profile is where task tabs live; the default session still
+  // covers a page that predates it (nothing should, but a stray download
+  // must never open a Save dialog the agent can't answer).
+  const onWillDownload = (_event: Electron.Event, item: Electron.DownloadItem, wc: Electron.WebContents): void => {
     handleDownload(item, wc, {
       sessionIdOf: (contents) => browserPool.sessionIdOf(contents as Electron.WebContents),
       isRunning: (id) => sessionManager.getSession(id)?.status === 'running',
@@ -1623,7 +1684,9 @@ app.whenReady().then(async () => {
       finished: (id, filePath, name) => appendFileCard(id, filePath, name),
       log: (event, data) => mainLogger.info(event, data),
     });
-  });
+  };
+  webSes.on('will-download', onWillDownload);
+  electronSession.defaultSession.on('will-download', onWillDownload);
 
   const localTaskServer = await createLocalTaskServer({
     userDataPath: app.getPath('userData'),
@@ -3002,6 +3065,7 @@ app.whenReady().then(async () => {
         }).then(async ({ response }) => {
           if (response !== 0 || wc.isDestroyed()) return;
           await wc.session.clearStorageData({ origin });
+          sitePermissionStore.forget(origin);
           mainLogger.info('workspace.clearSiteData', { sessionId: validatedId, host });
           if (!wc.isDestroyed()) wc.reload();
         });
@@ -3399,6 +3463,7 @@ app.whenReady().then(async () => {
     }
     activeAgents.clear();
     tabMemory.flush();
+    sitePermissionStore.flush();
     browserPool.destroyAll(shellWindow ?? undefined);
     documentTabs.dispose();
     stopResourceMonitor();

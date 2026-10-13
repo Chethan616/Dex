@@ -44,6 +44,15 @@ describe('BrowserPool — creation', () => {
     expect(pool.activeCount).toBe(1);
   });
 
+  it("opens tabs in the shared web profile, not in DEX's own session", () => {
+    const webSes = { id: 'persist:dex-web' } as unknown as Electron.Session;
+    const webPool = new BrowserPool(3, { webSession: () => webSes });
+    const view = webPool.create('s1') as unknown as { webPreferences?: { session?: unknown; sandbox?: boolean } };
+    expect(view.webPreferences?.session).toBe(webSes);
+    expect(view.webPreferences?.sandbox).toBe(true);
+    webPool.destroyAll();
+  });
+
   it('assigns unique webContents per session', () => {
     const v1 = pool.create('s1');
     const v2 = pool.create('s2');
