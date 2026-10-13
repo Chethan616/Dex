@@ -299,6 +299,65 @@ interface ElectronWorkspaceAPI {
   onFound?: (cb: (sessionId: string, tabId: string, result: { active: number; matches: number }) => void) => () => void;
 }
 
+/** An extension in Settings › Extensions (main/extensions/ExtensionManager.ts). */
+interface ExtensionSummary {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  source: 'store' | 'unpacked';
+  enabled: boolean;
+  loaded: boolean;
+  pinned: boolean;
+  fileAccess: boolean;
+  icon: string | null;
+  warnings: string[];
+  permissions: string[];
+  hostPermissions: string[];
+  hasPopup: boolean;
+  optionsUrl: string | null;
+  homepageUrl: string | null;
+  storeUrl: string | null;
+  error: string | null;
+  manifestVersion: number;
+}
+
+/** One extension button in the workspace toolbar (main/extensions/ExtensionHost.ts). */
+interface ExtensionToolbarItem {
+  id: string;
+  name: string;
+  pinned: boolean;
+  title: string;
+  icon: string | null;
+  badgeText: string;
+  badgeBackgroundColor: string;
+  badgeTextColor: string;
+  enabled: boolean;
+  hasPopup: boolean;
+}
+
+interface ExtensionAnchor { x: number; y: number; width: number; height: number }
+
+interface ElectronExtensionsAPI {
+  list: () => Promise<ExtensionSummary[]>;
+  toolbar: (sessionId: string | null) => Promise<ExtensionToolbarItem[]>;
+  action: (id: string, sessionId: string | null, anchor: ExtensionAnchor | null) => Promise<boolean>;
+  actionMenu: (id: string, sessionId: string | null, x: number, y: number) => Promise<boolean>;
+  menu: (sessionId: string | null, anchor: ExtensionAnchor) => Promise<boolean>;
+  closePopup: () => Promise<boolean>;
+  install: (input: string) => Promise<'success' | 'already_installed' | 'user_cancelled' | 'install_in_progress'>;
+  loadUnpacked: () => Promise<ExtensionSummary | null>;
+  setEnabled: (id: string, on: boolean) => Promise<boolean>;
+  setPinned: (id: string, on: boolean) => Promise<boolean>;
+  setFileAccess: (id: string, on: boolean) => Promise<boolean>;
+  reload: (id: string) => Promise<boolean>;
+  remove: (id: string) => Promise<boolean>;
+  checkUpdates: () => Promise<string[]>;
+  /** 'store', 'options:<id>' or 'store-page:<id>'. */
+  open: (target: string, sessionId?: string | null) => Promise<boolean>;
+  onChanged: (cb: () => void) => () => void;
+}
+
 type WorkspaceShortcut =
   | 'new-tab' | 'close-tab' | 'reopen-tab' | 'focus-address' | 'reload' | 'back' | 'forward' | 'next-tab' | 'prev-tab'
   | 'find' | 'zoom-in' | 'zoom-out' | 'zoom-reset';
@@ -596,6 +655,7 @@ interface ElectronAPI {
   popup?: ElectronPopupAPI;
   takeover?: ElectronTakeoverAPI;
   workspace?: ElectronWorkspaceAPI;
+  extensions?: ElectronExtensionsAPI;
   sessions: ElectronSessionAPI;
   channels: ElectronChannelsAPI;
   chromeImport?: ElectronChromeImportAPI;

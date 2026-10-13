@@ -13,7 +13,9 @@
  */
 
 const SEARCH = 'https://www.google.com/search?q=';
-const ALLOWED_SCHEMES = new Set(['http:', 'https:', 'about:']);
+// chrome-extension: pages are an installed extension's own (its options, its
+// popup opened as a tab); a missing one simply fails to load.
+const ALLOWED_SCHEMES = new Set(['http:', 'https:', 'about:', 'chrome-extension:']);
 
 const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/;
 const HOST_LIKE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,63}$/i;

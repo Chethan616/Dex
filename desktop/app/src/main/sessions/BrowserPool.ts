@@ -145,6 +145,7 @@ export class BrowserPool {
   private onFocusAddress?: (sessionId: string) => void;
   private onFind?: (sessionId: string) => void;
   private onFound?: (sessionId: string, tabId: string, result: FindResult) => void;
+  private onContextMenu?: (sessionId: string, tabId: string, wc: WebContents, params: Electron.ContextMenuParams) => void;
   private tabsChangedTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private idleFreezeDelayMs: number;
   private stage: () => StageHost | null;
@@ -495,6 +496,9 @@ export class BrowserPool {
       if (isActive()) this.notifyGone(sessionId);
     });
 
+    wc.on('context-menu', (_event, params) => this.onContextMenu?.(sessionId, tab.id, wc, params));
+    wc.on('audio-state-changed', () => changed());
+
     wc.on('found-in-page', (_event, result) => {
       if (!result.finalUpdate) return;
       this.onFound?.(sessionId, tab.id, { active: result.activeMatchOrdinal ?? 0, matches: result.matches ?? 0 });
@@ -659,6 +663,11 @@ export class BrowserPool {
   }
 
   /** Find-in-page's count changed. */
+  /** A right-click in a tab (DEX draws the menu: workspace/pageContextMenu.ts). */
+  setOnContextMenu(listener: (sessionId: string, tabId: string, wc: WebContents, params: Electron.ContextMenuParams) => void): void {
+    this.onContextMenu = listener;
+  }
+
   setOnFound(listener: (sessionId: string, tabId: string, result: FindResult) => void): void {
     this.onFound = listener;
   }
@@ -1048,6 +1057,36 @@ export class BrowserPool {
     }, AGENT_BUSY_MS);
     if (tab.place !== 'stage' || tab.view.getVisible?.() !== false) return false;
     tab.view.setVisible(true);
+    return true;
+  }
+
+  /** Every task that has a browser. */
+  sessionIds(): string[] {
+    return [...this.entries.keys()];
+  }
+
+  /** A task's tabs with their WebContents, for the extension APIs (main/extensions). */
+  poolTabs(sessionId: string): Array<{ tabId: string; wc: WebContents; active: boolean; pending: { url: string; title: string } | null; loading: boolean; faviconUrl: string | null; openedBy: TabOpener }> {
+    const entry = this.entries.get(sessionId);
+    if (!entry) return [];
+    return entry.tabs
+      .filter((t) => !t.view.webContents.isDestroyed())
+      .map((t) => ({
+        tabId: t.id, wc: t.view.webContents, active: t.id === entry.activeTabId,
+        pending: t.pending ?? null, loading: t.loading, faviconUrl: t.faviconUrl, openedBy: t.openedBy,
+      }));
+  }
+
+  /** Load a URL already checked by the caller (an extension's chrome-extension:// page). */
+  loadUrl(sessionId: string, tabId: string, url: string): boolean {
+    const tab = this.entries.get(sessionId)?.tabs.find((t) => t.id === tabId);
+    if (!tab || tab.view.webContents.isDestroyed()) return false;
+    tab.pending = undefined;
+    tab.navigated = !isBlank(url);
+    tab.view.webContents.loadURL(url).catch((err) => {
+      browserLogger.warn('BrowserPool.tab.loadUrl.error', { sessionId, tabId, error: (err as Error).message });
+    });
+    this.scheduleTabsChanged(sessionId);
     return true;
   }
 

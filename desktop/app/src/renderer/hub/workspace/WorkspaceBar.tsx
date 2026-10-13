@@ -9,6 +9,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { displayAddress } from '../../../shared/address';
 import { FileBadge } from '../chat/fileKinds';
+import { ExtensionsBar } from './ExtensionsBar';
 import './workspace.css';
 
 interface WorkspaceBarProps {
@@ -370,6 +371,8 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
             )}
           </div>
         )}
+
+        <ExtensionsBar sessionId={sessionId} activeTabId={active?.id} />
 
         <button
           type="button"

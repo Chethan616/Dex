@@ -23,6 +23,11 @@ describe('normalizeAddress', () => {
     expect(normalizeAddress('file:///C:/Windows/win.ini')).toBe(searchUrl('file:///C:/Windows/win.ini'));
   });
 
+  it("opens an extension's own pages, like its options", () => {
+    expect(normalizeAddress('chrome-extension://eimadpbcbfnmbkopoojfekhnkhdbieeh/ui/popup/index.html'))
+      .toBe('chrome-extension://eimadpbcbfnmbkopoojfekhnkhdbieeh/ui/popup/index.html');
+  });
+
   it('ignores empty input', () => {
     expect(normalizeAddress('   ')).toBeNull();
   });

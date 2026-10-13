@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { ConnectionsPane, type SettingsProviderFocusRequest } from './ConnectionsPane';
 import { PhoneCard } from './PhoneCard';
+import { ExtensionsSection } from './ExtensionsSection';
 import { MARKET_ITEMS, Mark, type MarketItem } from './connectors/Marketplace';
 import type { ActionId, KeyBinding } from './keybindings';
 import { fallbackShortcutPlatform, keyboardEventToShortcut } from '../../shared/hotkeys';
@@ -945,6 +946,7 @@ function McpSection(): React.ReactElement {
 
 export type SettingsSectionId =
   | 'settings-integrations'
+  | 'settings-extensions'
   | 'settings-diagnostics'
   | 'settings-model-providers'
   | 'settings-connections'
@@ -986,6 +988,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'settings-browser-sync', label: 'Browser Sync', icon: 'M13 8a5 5 0 01-8.6 3.5M3 8a5 5 0 018.6-3.5M11.5 2.5v2h-2M4.5 13.5v-2h2', keywords: 'cookies chrome sync login' },
   { id: 'settings-shortcuts', label: 'Shortcuts', icon: 'M2.5 4.5h11v7h-11zM5 7h.01M8 7h.01M11 7h.01M5.5 9.5h5', keywords: 'keyboard keybindings hotkey shortcut' },
   { id: 'settings-integrations', label: 'Connectors', icon: 'M6.5 9.5l3-3M5 7.5L3.8 8.7a2.5 2.5 0 003.5 3.5L8.5 11M11 8.5l1.2-1.2a2.5 2.5 0 00-3.5-3.5L7.5 5', keywords: 'connectors marketplace accounts google gmail calendar meet drive docs sheets microsoft outlook github slack reddit hugging face notion jira canva stripe pubmed flights sign in connect integrations', isNew: true },
+  { id: 'settings-extensions', label: 'Extensions', icon: 'M6 2.5h3v2a1.5 1.5 0 003 0v-2h1.5v4h-2a1.5 1.5 0 000 3h2v4h-4v-2a1.5 1.5 0 00-3 0v2h-4v-4h2a1.5 1.5 0 000-3h-2v-4H6z', keywords: 'chrome extensions web store add-ons plugins dark reader ublock adblock grammarly translate bitwarden unpacked', isNew: true },
   { id: 'settings-diagnostics', label: 'Diagnostics', icon: 'M2 8h2.5l1.5-4 3 8 1.5-4H14', keywords: 'preflight git bash node python health check missing' },
   { id: 'settings-agent-approval', label: 'Agent approval', icon: 'M8 2l5 2v4c0 3-2.2 5-5 6-2.8-1-5-3-5-6V4zM5.8 8l1.6 1.6L10.5 6.5', keywords: 'permission approve ask auto full access registry safety' },
   { id: 'settings-privacy', label: 'Privacy', icon: 'M4.5 7V5.5a3.5 3.5 0 017 0V7M3.5 7h9v6.5h-9z', keywords: 'telemetry notifications data crash' },
@@ -1412,6 +1415,13 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
               <h2 className="settings-section-header__title">Connectors</h2>
             </div>
             <MarketplaceCard />
+          </section>
+
+          <section id="settings-extensions" className="settings-page__section">
+            <div className="settings-section-header">
+              <h2 className="settings-section-header__title">Extensions</h2>
+            </div>
+            <ExtensionsSection />
           </section>
 
           <section id="settings-diagnostics" className="settings-page__section">

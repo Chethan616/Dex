@@ -280,6 +280,18 @@ const config: ForgeConfig = {
           config: 'vite.preload.config.ts',
           target: 'preload',
         },
+        {
+          // Chrome extensions' service workers in the web profile (main/extensions)
+          entry: 'src/preload/extensionWorker.ts',
+          config: 'vite.preload.config.ts',
+          target: 'preload',
+        },
+        {
+          // Every frame in the web profile: extension pages and the Web Store
+          entry: 'src/preload/webFrame.ts',
+          config: 'vite.preload.config.ts',
+          target: 'preload',
+        },
       ],
       renderer: [
         {

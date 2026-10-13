@@ -405,3 +405,44 @@ img.ws-tab__icon { object-fit: contain; }
 }
 .ws-find__btn { width: 26px; height: 26px; }
 .ws-more { flex: none; }
+
+/* Extensions in the toolbar (ExtensionsBar.tsx) */
+.ws-ext {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.ws-ext__btn {
+  position: relative;
+}
+.ws-ext__btn--off .ws-ext__icon { filter: grayscale(1); opacity: 0.5; }
+.ws-ext__icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+.ws-ext__icon--blank {
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--color-bg-elevated);
+  color: var(--color-fg-secondary);
+}
+.ws-ext__badge {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  min-width: 14px;
+  height: 12px;
+  padding: 0 3px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 12px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 0 0 1.5px var(--color-bg-base);
+}

@@ -114,6 +114,11 @@ import { maskSecretFields, READS_PAGE, redactSecrets, secretValues } from './wor
 import { handleDownload } from './workspace/downloads';
 import { pageMenuTemplate } from './workspace/pageMenu';
 import { prepareWebProfile } from './workspace/webProfile';
+import { pageContextMenu } from './workspace/pageContextMenu';
+import { ExtensionManager, extensionIdFrom } from './extensions/ExtensionManager';
+import { ExtensionHost, type Anchor } from './extensions/ExtensionHost';
+import type { TabsBackend } from './extensions/types';
+import type { MenuTarget } from './extensions/menusApi';
 import * as sitePermissions from './workspace/sitePermissions';
 import * as deskState from './desktop/deskState';
 import { TabMemory, tabsToSave } from './workspace/tabMemory';
@@ -502,6 +507,111 @@ let interruptBrowserSessionFromShortcut: ((sessionId: string) => boolean) | null
 
 const sitePermissionStore = new sitePermissions.SitePermissionStore(path.join(app.getPath('userData'), 'site-permissions.json'));
 
+// Chrome extensions (main/extensions), made once the web profile exists.
+let extensionManager: ExtensionManager | null = null;
+let extensionHost: ExtensionHost | null = null;
+/** The task the workspace last showed: the "current window" for extensions. */
+let shownSessionId: string | null = null;
+
+const extensionTabs: TabsBackend = {
+  windows: () => browserPool.sessionIds().map((sessionId) => ({ sessionId, title: 'DEX task', tabs: browserPool.poolTabs(sessionId) })),
+  shownSessionId: () => (shownSessionId && browserPool.sessionIds().includes(shownSessionId) ? shownSessionId : null),
+  hubFocused: () => Boolean(shellWindow && !shellWindow.isDestroyed() && shellWindow.isFocused()),
+  openTab: (sessionId, url, active) => {
+    const tabId = browserPool.openTab(sessionId, { url, activate: active, openedBy: 'page' });
+    return tabId ? browserPool.poolTabs(sessionId).find((t) => t.tabId === tabId) ?? null : null;
+  },
+  closeTab: (sessionId, tabId) => browserPool.closeTab(sessionId, tabId),
+  activateTab: (sessionId, tabId) => browserPool.activateTab(sessionId, tabId),
+  loadUrl: (sessionId, tabId, url) => browserPool.loadUrl(sessionId, tabId, url),
+  goBack: (sessionId, tabId) => browserPool.tabAction(sessionId, tabId, 'back'),
+  goForward: (sessionId, tabId) => browserPool.tabAction(sessionId, tabId, 'forward'),
+  showSession: (sessionId) => {
+    if (!shellWindow || shellWindow.isDestroyed()) return;
+    shellWindow.show();
+    shellWindow.webContents.send('select-session', sessionId);
+  },
+};
+
+/** GET with a size cap, through Chromium's network stack (system proxy and all). */
+async function fetchCapped(url: string, maxBytes: number): Promise<Buffer> {
+  const { net } = await import('electron');
+  const res = await net.fetch(url, { redirect: 'follow' });
+  if (!res.ok || !res.body) throw new Error(`Download failed (${res.status})`);
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) { await reader.cancel(); throw new Error('The download is too big'); }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+}
+
+/** Yes/no over DEX's window. */
+async function askOverHub(message: string, detail: string, ok: string, icon?: Electron.NativeImage): Promise<boolean> {
+  const parent = shellWindow && !shellWindow.isDestroyed() ? shellWindow : null;
+  const options: Electron.MessageBoxOptions = {
+    type: icon ? 'none' : 'question', buttons: [ok, 'Cancel'], defaultId: 0, cancelId: 1, noLink: true, message, detail,
+    ...(icon ? { icon } : {}),
+  };
+  const { response } = parent ? await dialog.showMessageBox(parent, options) : await dialog.showMessageBox(options);
+  return response === 0;
+}
+
+function startExtensions(webSes: Electron.Session): void {
+  const userData = app.getPath('userData');
+  const manager = new ExtensionManager({
+    dir: path.join(userData, 'extensions'),
+    extensions: webSes.extensions,
+    fetchBytes: fetchCapped,
+    fetchText: async (url) => (await fetchCapped(url, 4 * 1024 * 1024)).toString('utf8'),
+    chromeVersion: process.versions.chrome,
+    confirmInstall: async ({ name, warnings, iconPath, source }) => {
+      const icon = iconPath && fs.existsSync(iconPath) ? nativeImage.createFromPath(iconPath).resize({ width: 48, height: 48 }) : undefined;
+      const can = warnings.length ? `It can:\n${warnings.map((w) => `• ${w}`).join('\n')}` : 'It needs no special permissions.';
+      return askOverHub(`Add “${name}”?`, source === 'unpacked' ? `${can}\n\nThis is an unpacked extension from a folder on your PC.` : can, 'Add extension', icon);
+    },
+    clearData: (id) => webSes.clearStorageData({ origin: `chrome-extension://${id}` }),
+    uiLocale: app.getLocale(),
+    log: (event, data) => mainLogger.info(event, data),
+  });
+  const host = new ExtensionHost({
+    session: webSes,
+    manager,
+    tabs: extensionTabs,
+    hubWindow: () => (shellWindow && !shellWindow.isDestroyed() ? shellWindow : null),
+    preloadDir: __dirname,
+    ask: askOverHub,
+    changed: () => { if (shellWindow && !shellWindow.isDestroyed()) shellWindow.webContents.send('extensions:changed'); },
+    log: (event, data) => mainLogger.info(event, data),
+    userDataPath: userData,
+  });
+  host.install();
+  // A proxy or site asking to sign in, in DEX's browser: an extension that
+  // listens to webRequest.onAuthRequired may answer (a library proxy's login).
+  app.on('login', (event, wc, details, authInfo, callback) => {
+    const fromWeb = wc ? wc.session === webSes : authInfo.isProxy;
+    if (!fromWeb) return;
+    event.preventDefault();
+    void host.webRequest.authRequired({
+      url: details.url, method: (details as { method?: string }).method, webContentsId: wc?.id,
+      isProxy: authInfo.isProxy, host: authInfo.host, port: authInfo.port, realm: authInfo.realm, scheme: authInfo.scheme,
+    }).then((answer) => {
+      if (answer && answer !== 'cancel') callback(answer.username, answer.password);
+      else callback();
+    }, () => callback());
+  });
+  extensionManager = manager;
+  extensionHost = host;
+  void manager.start()
+    .then(() => manager.startUpdates())
+    .catch((err) => mainLogger.error('extensions.start.failed', { error: (err as Error).message }));
+}
+
 function originOf(url: string | undefined): string {
   try { return new URL(url ?? '').origin; } catch { return url ?? ''; }
 }
@@ -553,10 +663,12 @@ const resourceMonitorContext: ResourceMonitorContext = {
 // Push browser-gone notifications to the shell renderer so the UI can stop
 // showing "Browser starting…" when a WebContents is destroyed or crashes.
 browserPool.setOnGone((sessionId) => {
+  announcedBrowser.delete(sessionId);
   if (shellWindow && !shellWindow.isDestroyed()) {
     shellWindow.webContents.send('sessions:browser-gone', sessionId);
   }
   takeoverOverlay.hide(sessionId, shellWindow);
+  extensionHost?.tabsChanged();
   // An idle session whose browser is gone has nothing left to do — promote
   // to 'stopped' so the UI stops showing "Idle" and renders the end state.
   sessionManager.markBrowserEnded(sessionId);
@@ -569,8 +681,19 @@ browserPool.setOnNavigate((sessionId, url) => {
 });
 // The workspace's tab strip follows every tab change (opened, closed,
 // switched, navigated, retitled, loading).
+const announcedBrowser = new Set<string>();
 browserPool.setOnTabsChanged((sessionId, tabs) => {
   tabMemory.noteTabs(sessionId, tabsToSave(tabs));
+  extensionHost?.tabsChanged();
+  // A browser made for a task the hub already knows (a resume after a
+  // restart): tell the hub, or its pane never shows the tabs.
+  if (!announcedBrowser.has(sessionId) && shellWindow && !shellWindow.isDestroyed()) {
+    const session = sessionManager.getSession(sessionId);
+    if (session) {
+      announcedBrowser.add(sessionId);
+      shellWindow.webContents.send('session-updated', { ...session, hasBrowser: true });
+    }
+  }
   if (shellWindow && !shellWindow.isDestroyed()) {
     shellWindow.webContents.send('workspace:tabs-changed', sessionId, tabs);
   }
@@ -601,6 +724,8 @@ const channelRouter = new ChannelRouter(sessionManager, { whatsapp: whatsAppAdap
 
 type SettingsOpenPayload = {
   focusBrowserCodeProvider?: string;
+  /** A Settings section to scroll to, e.g. 'settings-extensions'. */
+  sectionId?: string;
 };
 
 function normalizeSettingsOpenPayload(payload: unknown): SettingsOpenPayload | undefined {
@@ -811,6 +936,7 @@ app.whenReady().then(async () => {
     log: (event, data) => mainLogger.info(event, data),
   });
   installSitePermissions(webSes);
+  startExtensions(webSes);
 
   // The agents' private way into their tabs. Fold the result into the
   // environment report as soon as it's known.
@@ -1116,7 +1242,9 @@ app.whenReady().then(async () => {
     }
   };
   sessionManager.onEvent('session-updated', (session) => {
-    shellWindow?.webContents.send('session-updated', session);
+    // Whether it has a browser *now*: a resume after a restart recreates it,
+    // and the hub keeps whatever it was last told.
+    shellWindow?.webContents.send('session-updated', { ...session, hasBrowser: !!browserPool.getWebContents(session.id) });
     sendToPill('session-updated', session);
     forwardSessionUpdatedToLogs(session);
     if (session.status === 'running' && !notifiedStarted.has(session.id)) {
@@ -2947,6 +3075,7 @@ app.whenReady().then(async () => {
     mainLogger.info('main.sessions:view-attach', { id: validatedId, visualBounds: bounds });
     const ok = browserPool.attachToWindow(validatedId, shellWindow, bounds);
     if (ok) {
+      if (shownSessionId !== validatedId) { shownSessionId = validatedId; extensionHost?.tabsChanged(); }
       // Only focus the BrowserView when the shell window is already the
       // user's foreground window. Otherwise — e.g. user submitted a task
       // via the global-shortcut pill while focused on Cursor — focusing
@@ -3077,6 +3206,173 @@ app.whenReady().then(async () => {
       x: typeof x === 'number' && Number.isFinite(x) ? Math.max(0, Math.round(x)) : undefined,
       y: typeof y === 'number' && Number.isFinite(y) ? Math.max(0, Math.round(y)) : undefined,
     });
+    return true;
+  });
+
+  // Right-click in a task's tab: a browser's menu, plus extensions' items.
+  browserPool.setOnContextMenu((sessionId, tabId, wc, params) => {
+    if (!shellWindow || shellWindow.isDestroyed() || wc.isDestroyed()) return;
+    const window = shellWindow;
+    const frame = params.frame;
+    const top = wc.mainFrame;
+    const target: MenuTarget = {
+      pageUrl: params.pageURL,
+      frameUrl: params.frameURL || undefined,
+      frameId: frame && top && frame !== top ? frame.frameTreeNodeId : 0,
+      linkUrl: params.linkURL || undefined,
+      srcUrl: params.srcURL || undefined,
+      mediaType: params.mediaType,
+      selectionText: params.selectionText || undefined,
+      editable: params.isEditable,
+    };
+    const history = wc.navigationHistory;
+    const template = pageContextMenu(params as unknown as Parameters<typeof pageContextMenu>[0], {
+      canGoBack: history.canGoBack(),
+      canGoForward: history.canGoForward(),
+      back: () => browserPool.tabAction(sessionId, tabId, 'back'),
+      forward: () => browserPool.tabAction(sessionId, tabId, 'forward'),
+      reload: () => browserPool.tabAction(sessionId, tabId, 'reload'),
+      openInNewTab: (url) => { browserPool.openTab(sessionId, { url, activate: false, openedBy: 'user' }); },
+      copyText: (text) => clipboard.writeText(text),
+      copyImageAt: (x, y) => { if (!wc.isDestroyed()) wc.copyImageAt(x, y); },
+      download: (url) => { if (!wc.isDestroyed()) wc.downloadURL(url); },
+      search: (text) => { browserPool.openTab(sessionId, { url: `https://www.google.com/search?q=${encodeURIComponent(text)}`, activate: true, openedBy: 'user' }); },
+      replaceMisspelling: (word) => { if (!wc.isDestroyed()) wc.replaceMisspelling(word); },
+      addToDictionary: (word) => { wc.session.addWordToSpellCheckerDictionary(word); },
+      editCommand: (cmd) => {
+        if (wc.isDestroyed()) return;
+        if (cmd === 'pasteAndMatchStyle') wc.pasteAndMatchStyle();
+        else wc[cmd]();
+      },
+      print: () => { if (!wc.isDestroyed()) wc.print({}, () => {}); },
+      inspect: (x, y) => { if (!wc.isDestroyed()) wc.inspectElement(x, y); },
+      extensionClick: (entry) => extensionHost?.menuClicked(entry, target, wc.id),
+      extensionIcon: (id) => extensionHost?.iconImage(id, 16),
+    }, extensionHost?.pageMenuEntries(target) ?? []);
+    Menu.buildFromTemplate(template).popup({ window });
+  });
+
+  // ---- Extensions (main/extensions, docs/unify/PLAN.md §3.8) ----
+  const anchorOf = (a: unknown): Anchor | null => {
+    if (!a || typeof a !== 'object') return null;
+    const { x, y, width, height } = a as Record<string, unknown>;
+    return [x, y, width, height].every((n) => typeof n === 'number' && Number.isFinite(n))
+      ? { x: x as number, y: y as number, width: width as number, height: height as number }
+      : null;
+  };
+  const extId = (v: unknown): string => {
+    const id = assertString(v, 'id', 40);
+    if (!/^[a-p]{32}$/.test(id)) throw new Error('Not an extension id');
+    return id;
+  };
+  const optionalSession = (v: unknown): string | null => (typeof v === 'string' && v.length <= 100 ? v : null);
+
+  ipcMain.handle('extensions:list', () => (extensionManager?.list() ?? []).map((s) => ({ ...s, icon: extensionHost?.iconOf(s.id, 48) ?? null })));
+  ipcMain.handle('extensions:toolbar', (_event, sessionId: unknown) => {
+    const id = optionalSession(sessionId);
+    if (id && browserPool.sessionIds().includes(id) && shownSessionId !== id) { shownSessionId = id; extensionHost?.tabsChanged(); }
+    return extensionHost?.toolbar(id) ?? [];
+  });
+  ipcMain.handle('extensions:action', async (_event, id: unknown, sessionId: unknown, anchor: unknown) => {
+    await extensionHost?.actionClicked(extId(id), optionalSession(sessionId), anchorOf(anchor));
+    return true;
+  });
+  ipcMain.handle('extensions:close-popup', () => { extensionHost?.closePopup(); return true; });
+  const openForExtensions = (sessionId: string | null, url: string): void => {
+    const session = sessionId && browserPool.sessionIds().includes(sessionId) ? sessionId : extensionTabs.shownSessionId();
+    if (session) browserPool.openTab(session, { url, activate: true, openedBy: 'user' });
+    else void shell.openExternal(url);
+  };
+  const manageExtensions = (): void => {
+    openSettingsInShell({ sectionId: 'settings-extensions' });
+  };
+  ipcMain.handle('extensions:action-menu', (_event, id: unknown, sessionId: unknown, x: unknown, y: unknown) => {
+    if (!shellWindow || shellWindow.isDestroyed() || !extensionHost) return false;
+    const session = optionalSession(sessionId);
+    const template = extensionHost.actionMenu(extId(id), session, {
+      manage: manageExtensions,
+      openTab: (url) => openForExtensions(session, url),
+    });
+    if (template.length === 0) return false;
+    Menu.buildFromTemplate(template).popup({
+      window: shellWindow,
+      x: typeof x === 'number' && Number.isFinite(x) ? Math.round(x) : undefined,
+      y: typeof y === 'number' && Number.isFinite(y) ? Math.round(y) : undefined,
+    });
+    return true;
+  });
+  // The puzzle button: every extension (a click is its button), pinning, and the way to more.
+  ipcMain.handle('extensions:menu', (_event, sessionId: unknown, anchor: unknown) => {
+    if (!shellWindow || shellWindow.isDestroyed() || !extensionHost || !extensionManager) return false;
+    const session = optionalSession(sessionId);
+    const a = anchorOf(anchor);
+    const host = extensionHost;
+    const manager = extensionManager;
+    const items = host.toolbar(session);
+    const template: MenuItemConstructorOptions[] = items.length
+      ? [
+        ...items.map((item): MenuItemConstructorOptions => ({
+          label: item.badgeText ? `${item.name}  (${item.badgeText})` : item.name,
+          icon: host.iconImage(item.id, 16),
+          enabled: item.enabled,
+          click: () => { void host.actionClicked(item.id, session, a); },
+        })),
+        { type: 'separator' },
+        {
+          label: 'Pin to toolbar',
+          submenu: items.map((item) => ({ label: item.name, type: 'checkbox' as const, checked: item.pinned, click: () => manager.setPinned(item.id, !item.pinned) })),
+        },
+      ]
+      : [{ label: 'No extensions yet', enabled: false }];
+    template.push(
+      { type: 'separator' },
+      { label: 'Get extensions from the Chrome Web Store', click: () => openForExtensions(session, 'https://chromewebstore.google.com/category/extensions') },
+      { label: 'Manage extensions', click: manageExtensions },
+    );
+    Menu.buildFromTemplate(template).popup({
+      window: shellWindow,
+      x: a ? Math.round(a.x) : undefined,
+      y: a ? Math.round(a.y + a.height) : undefined,
+    });
+    return true;
+  });
+  ipcMain.handle('extensions:install', async (_event, input: unknown) => {
+    if (!extensionManager) throw new Error("Extensions aren't ready yet");
+    const id = extensionIdFrom(assertString(input, 'input', 500));
+    if (!id) throw new Error("That isn't a Chrome Web Store link or an extension id.");
+    return extensionManager.installFromStore(id);
+  });
+  ipcMain.handle('extensions:load-unpacked', async () => {
+    if (!extensionManager || !shellWindow) throw new Error("Extensions aren't ready yet");
+    const picked = await dialog.showOpenDialog(shellWindow, { title: 'Choose the extension folder', properties: ['openDirectory'] });
+    if (picked.canceled || !picked.filePaths[0]) return null;
+    return extensionManager.loadUnpacked(picked.filePaths[0]);
+  });
+  ipcMain.handle('extensions:set-enabled', async (_event, id: unknown, on: unknown) => { await extensionManager?.setEnabled(extId(id), on === true); return true; });
+  ipcMain.handle('extensions:set-pinned', (_event, id: unknown, on: unknown) => { extensionManager?.setPinned(extId(id), on === true); return true; });
+  ipcMain.handle('extensions:set-file-access', async (_event, id: unknown, on: unknown) => { await extensionManager?.setFileAccess(extId(id), on === true); return true; });
+  ipcMain.handle('extensions:reload', async (_event, id: unknown) => { await extensionManager?.reload(extId(id)); return true; });
+  ipcMain.handle('extensions:remove', async (_event, id: unknown) => extensionHost?.confirmUninstall(extId(id)) ?? false);
+  ipcMain.handle('extensions:check-updates', async () => extensionManager?.checkForUpdates() ?? []);
+  // An extension's options page, or the store: in the task on screen, else your own browser.
+  ipcMain.handle('extensions:open', (_event, target: unknown, sessionId: unknown) => {
+    const t = assertString(target, 'target', 300);
+    let url: string | null = null;
+    if (t === 'store') url = 'https://chromewebstore.google.com/category/extensions';
+    else {
+      const [kind, id] = t.split(':');
+      const summary = id && /^[a-p]{32}$/.test(id) ? extensionManager?.summary(id) : null;
+      if (kind === 'options' && summary?.optionsUrl) url = summary.optionsUrl;
+      if (kind === 'store-page' && summary?.storeUrl) url = summary.storeUrl;
+    }
+    if (!url) return false;
+    if (url.startsWith('chrome-extension://')) {
+      const session = optionalSession(sessionId) ?? extensionTabs.shownSessionId();
+      if (!session) return false;
+      browserPool.openTab(session, { url, activate: true, openedBy: 'user' });
+      return true;
+    }
+    openForExtensions(optionalSession(sessionId), url);
     return true;
   });
 
@@ -3464,6 +3760,8 @@ app.whenReady().then(async () => {
     activeAgents.clear();
     tabMemory.flush();
     sitePermissionStore.flush();
+    extensionHost?.dispose();
+    extensionManager?.stop();
     browserPool.destroyAll(shellWindow ?? undefined);
     documentTabs.dispose();
     stopResourceMonitor();

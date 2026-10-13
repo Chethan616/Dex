@@ -22,7 +22,7 @@ interface McpConnectionInfo {
   verified?: { ok: boolean; serverName?: string; toolCount?: number; error?: string };
 }
 
-type SettingsOpenPayload = { focusBrowserCodeProvider?: string };
+type SettingsOpenPayload = { focusBrowserCodeProvider?: string; sectionId?: string };
 
 function normalizeSettingsOpenPayload(raw: unknown): SettingsOpenPayload | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
@@ -79,6 +79,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
   },
   popup: createPopupBridge(),
+  /** Chrome extensions in DEX's browser (main/extensions). */
+  extensions: {
+    list: () => ipcRenderer.invoke('extensions:list'),
+    toolbar: (sessionId: string | null) => ipcRenderer.invoke('extensions:toolbar', sessionId),
+    action: (id: string, sessionId: string | null, anchor: unknown) => ipcRenderer.invoke('extensions:action', id, sessionId, anchor),
+    actionMenu: (id: string, sessionId: string | null, x: number, y: number) => ipcRenderer.invoke('extensions:action-menu', id, sessionId, x, y),
+    menu: (sessionId: string | null, anchor: unknown) => ipcRenderer.invoke('extensions:menu', sessionId, anchor),
+    closePopup: () => ipcRenderer.invoke('extensions:close-popup'),
+    install: (input: string) => ipcRenderer.invoke('extensions:install', input),
+    loadUnpacked: () => ipcRenderer.invoke('extensions:load-unpacked'),
+    setEnabled: (id: string, on: boolean) => ipcRenderer.invoke('extensions:set-enabled', id, on),
+    setPinned: (id: string, on: boolean) => ipcRenderer.invoke('extensions:set-pinned', id, on),
+    setFileAccess: (id: string, on: boolean) => ipcRenderer.invoke('extensions:set-file-access', id, on),
+    reload: (id: string) => ipcRenderer.invoke('extensions:reload', id),
+    remove: (id: string) => ipcRenderer.invoke('extensions:remove', id),
+    checkUpdates: () => ipcRenderer.invoke('extensions:check-updates'),
+    open: (target: string, sessionId?: string | null) => ipcRenderer.invoke('extensions:open', target, sessionId ?? null),
+    onChanged: (cb: () => void): (() => void) => {
+      const handler = (): void => cb();
+      ipcRenderer.on('extensions:changed', handler);
+      return () => ipcRenderer.removeListener('extensions:changed', handler);
+    },
+  },
   /** The task's tabs (docs/unify/PLAN.md §3.2): list, act, follow changes. */
   workspace: {
     tabs: (sessionId: string): Promise<unknown[]> => ipcRenderer.invoke('workspace:tabs', sessionId),
