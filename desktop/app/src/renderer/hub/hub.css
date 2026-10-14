@@ -1321,6 +1321,13 @@ button:focus:not(:focus-visible) {
   overflow: hidden;
 }
 
+.pane__tool-terminal {
+  display: flex;
+  height: 100%;
+  padding: 10px 6px 6px 12px;
+  background: var(--color-bg-base);
+}
+
 .pane__terminal .xterm {
   height: 100%;
   width: 100%;

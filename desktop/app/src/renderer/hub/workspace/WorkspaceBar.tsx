@@ -28,6 +28,8 @@ interface WorkspaceBarProps {
   browser?: boolean;
   /** The Subagents tab: shown only once the task has launched at least one. */
   subagents?: { active: boolean; count: number; activeCount: number; onSelect: () => void };
+  /** Tool tabs you opened (Terminal, Review), each closable. */
+  tools?: Array<{ id: WorkspaceTool; active: boolean; onSelect: () => void; onClose: () => void }>;
   /** The Desk tab (DeskView.tsx): shown once the task's Windows tools have worked in a window. */
   desk?: { active: boolean; live: boolean; onSelect: () => void };
 }
@@ -72,6 +74,12 @@ const Icon = {
   down: (
     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
   ),
+  terminal: (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.6" stroke="currentColor" strokeWidth="1.3" fill="none" /><path d="M4.8 6.3 6.8 8l-2 1.7M8.3 10h3" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  ),
+  review: (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 2.5v7M5 9.5a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6ZM11 6.5a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6ZM11 6.5c0 2.5-2.2 3-6 3.4" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
+  ),
   desk: (
     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="3" width="12" height="8.2" rx="1.4" stroke="currentColor" strokeWidth="1.3" fill="none" /><path d="M6 13.5h4M8 11.2v2.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
   ),
@@ -102,7 +110,7 @@ function TabIcon({ tab }: { tab: WorkspaceTab }): React.ReactElement {
   return <span className="ws-tab__icon ws-tab__icon--globe">{Icon.globe}</span>;
 }
 
-export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSelectPage, docs, browser = true, subagents, desk }: WorkspaceBarProps): React.ReactElement {
+export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSelectPage, docs, browser = true, subagents, desk, tools }: WorkspaceBarProps): React.ReactElement {
   const api = window.electronAPI?.workspace;
   const active = tabs.find((t) => t.active) ?? tabs[0];
   const inputRef = useRef<HTMLInputElement>(null);
@@ -158,7 +166,7 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
     if (findText) void api?.find?.(sessionId, { tabId: activeId, text: findText, next: true, forward });
   }, [api, sessionId, activeId, findText]);
   /** What owns the rect: the chat, a document, the Subagents or Desk tab, or the active web page. */
-  const pageInFront = !chat?.active && !docs?.activeId && !subagents?.active && !desk?.active;
+  const pageInFront = !chat?.active && !docs?.activeId && !subagents?.active && !desk?.active && !tools?.some((t) => t.active);
   const pageInFrontRef = useRef(pageInFront);
   pageInFrontRef.current = pageInFront;
   useEffect(() => api?.onFind?.((id) => {
@@ -212,6 +220,29 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
             {chat.unread && <span className="ws-tab__dot" aria-label="New reply" />}
           </div>
         )}
+        {tools?.map((tool) => (
+          <div
+            key={tool.id}
+            role="tab"
+            aria-selected={tool.active}
+            tabIndex={tool.active ? 0 : -1}
+            className={`ws-tab ws-tab--tool${tool.active ? ' ws-tab--active' : ''}`}
+            title={tool.id === 'terminal' ? 'The run as a terminal (Ctrl+`)' : 'What this task changed (Ctrl+Shift+G)'}
+            onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); tool.onClose(); } }}
+            onClick={tool.onSelect}
+          >
+            <span className="ws-tab__icon">{tool.id === 'terminal' ? Icon.terminal : Icon.review}</span>
+            <span className="ws-tab__title">{tool.id === 'terminal' ? 'Terminal' : 'Review'}</span>
+            <button
+              type="button"
+              className="ws-tab__close"
+              aria-label={`Close ${tool.id === 'terminal' ? 'Terminal' : 'Review'}`}
+              onClick={(e) => { e.stopPropagation(); tool.onClose(); }}
+            >
+              {Icon.close}
+            </button>
+          </div>
+        ))}
         {desk && (
           <div
             role="tab"

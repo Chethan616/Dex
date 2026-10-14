@@ -67,6 +67,14 @@ function normalizeItemArgs(item: Record<string, unknown>): Record<string, unknow
   if (typeof item.file_path === 'string') out.file_path = item.file_path;
   if (typeof item.text === 'string' && !out.command) out.text = (item.text as string).slice(0, 500);
   if (typeof item.url === 'string') out.url = item.url;
+  // A file_change says which files it added, changed or deleted (not the
+  // text): the hub's Review tab lists them.
+  if (Array.isArray(item.changes)) {
+    out.changes = (item.changes as Array<Record<string, unknown>>)
+      .filter((c) => c && typeof c.path === 'string')
+      .slice(0, 100)
+      .map((c) => ({ path: c.path as string, kind: typeof c.kind === 'string' ? c.kind : 'update' }));
+  }
   return out;
 }
 

@@ -17,6 +17,7 @@ import { WorkspaceBar } from './workspace/WorkspaceBar';
 import { NewTabPage } from './workspace/NewTabPage';
 import { SubagentsPane } from './workspace/SubagentsPane';
 import { DeskView, useDeskState } from './workspace/DeskView';
+import { ReviewPane } from './workspace/ReviewPane';
 import { changesFrom } from './chat/DeskChanges';
 import { useWorkspaceTabs } from './workspace/useWorkspaceTabs';
 import { useWorkspaceDocs } from './workspace/useWorkspaceDocs';
@@ -620,7 +621,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
    * paused one — shows the conversation. The page isn't lost when the chat
    * has the rect: it's parked on the stage, where DEX can keep using it.
    */
-  const [paneOverride, setPaneOverride] = useState<'auto' | 'page' | 'chat' | 'doc' | 'subagents' | 'desk'>('auto');
+  const [paneOverride, setPaneOverride] = useState<'auto' | 'page' | 'chat' | 'doc' | 'subagents' | 'desk' | WorkspaceTool>('auto');
   /**
    * Subagents (the Task tool): a quiet tab listing what the task has
    * delegated, Active then Done. Only shown once the task has launched one.
@@ -640,6 +641,31 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
   const deskChanges = useMemo(() => changesFrom(session.output), [session.output]);
   const hasDesk = Boolean(deskState?.window) || deskChanges.length > 0;
   const deskActive = paneOverride === 'desk' && hasDesk;
+  /**
+   * Tool tabs (docs/unify/PLAN.md §3.6), opened from the New-tab page or with
+   * Ctrl+` (Terminal: the run as a terminal) and Ctrl+Shift+G (Review: what
+   * the task changed). They stay until you close them.
+   */
+  const [openTools, setOpenTools] = useState<WorkspaceTool[]>([]);
+  const toolActive: WorkspaceTool | null = paneOverride === 'terminal' || paneOverride === 'review'
+    ? (openTools.includes(paneOverride) ? paneOverride : null)
+    : null;
+  const openTool = useCallback((tool: WorkspaceTool) => {
+    setOpenTools((list) => (list.includes(tool) ? list : [...list, tool]));
+    setPaneOverride(tool);
+  }, []);
+  /** The shortcut again, with its tab in front: back to what was there. */
+  const toggleTool = useCallback((tool: WorkspaceTool) => {
+    if (paneOverride === tool) setPaneOverride('auto');
+    else openTool(tool);
+  }, [paneOverride, openTool]);
+  const closeTool = useCallback((tool: WorkspaceTool) => {
+    setOpenTools((list) => list.filter((t) => t !== tool));
+    setPaneOverride((p) => (p === tool ? 'auto' : p));
+  }, []);
+  useEffect(() => window.electronAPI?.workspace?.onOpenTool?.((id, tool) => {
+    if (id === session.id) openTool(tool);
+  }), [session.id, openTool]);
   /**
    * Document tabs (docs/unify/PLAN.md §3.9): files drawn by the hub itself.
    * One in front owns the rect like the chat does; the page steps aside to
@@ -686,12 +712,12 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
     return () => window.removeEventListener('dex:focus-composer', onFocus);
   }, [session.id]);
   const chatActive = useMemo(() => {
-    if (docActive || subagentsActive || deskActive) return false;
+    if (docActive || subagentsActive || deskActive || toolActive) return false;
     if (session.hasBrowser === false) return true;
     if (paneOverride !== 'auto') return paneOverride === 'chat';
     const working = session.status === 'running' || session.status === 'stuck';
     return !(working && session.primarySite);
-  }, [docActive, subagentsActive, deskActive, session.hasBrowser, session.status, session.primarySite, paneOverride]);
+  }, [docActive, subagentsActive, deskActive, toolActive, session.hasBrowser, session.status, session.primarySite, paneOverride]);
 
   /**
    * The task's tabs (docs/unify/PLAN.md §3.2). A blank tab *you* opened shows
@@ -701,9 +727,9 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
   const workspaceOn = session.hasBrowser !== false && !browserDead;
   const tabs = useWorkspaceTabs(session.id, workspaceOn);
   const activeTab = tabs.find((t) => t.active);
-  const newTabActive = !chatActive && !docActive && !subagentsActive && !deskActive && Boolean(activeTab?.isNewTab && activeTab.openedBy !== 'task');
+  const newTabActive = !chatActive && !docActive && !subagentsActive && !deskActive && !toolActive && Boolean(activeTab?.isNewTab && activeTab.openedBy !== 'task');
   /** Something React draws owns the rect (the chat, a document, the Subagents tab, or the New-tab page). */
-  const surfaceActive = chatActive || docActive || subagentsActive || deskActive || newTabActive;
+  const surfaceActive = chatActive || docActive || subagentsActive || deskActive || Boolean(toolActive) || newTabActive;
 
   /** Something new in the chat while you were on the page: a dot on the Chat tab. */
   const replyCount = useMemo(
@@ -916,6 +942,23 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
   // same keys in main when it has focus): Ctrl+T/W/L/R, Ctrl+Tab. With a
   // document in front, Ctrl+W closes the document and there's no page to reload.
   const frontDocId = activeDoc?.id;
+  // Ctrl+` and Ctrl+Shift+G: the Terminal and Review tabs, with or without a browser.
+  useEffect(() => {
+    if (!focused) return;
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.defaultPrevented || !e.ctrlKey || e.altKey || e.metaKey) return;
+      const tool: WorkspaceTool | null = e.code === 'Backquote' && !e.shiftKey ? 'terminal'
+        : e.code === 'KeyG' && e.shiftKey ? 'review'
+          : null;
+      if (!tool) return;
+      e.preventDefault();
+      e.stopPropagation();
+      toggleTool(tool);
+    };
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [focused, toggleTool]);
+
   useEffect(() => {
     if (!focused || (!workspaceOn && !frontDocId)) return;
     const api = window.electronAPI?.workspace;
@@ -1153,7 +1196,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           rect — the pre-existing idle/error states, plus the two new ones the
           deck introduces: a running task that has never navigated (desktop,
           file or OS work) and a paused session. */}
-      {((tabs.length > 0 && workspaceOn) || workspaceDocs.docs.length > 0 || subagents.length > 0 || hasDesk) && (
+      {((tabs.length > 0 && workspaceOn) || workspaceDocs.docs.length > 0 || subagents.length > 0 || hasDesk || openTools.length > 0) && (
         <WorkspaceBar
           sessionId={session.id}
           tabs={workspaceOn ? tabs : []}
@@ -1164,6 +1207,12 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
             onSelect: (id) => { setActiveDocId(id); setPaneOverride('doc'); },
             onClose: closeDoc,
           }}
+          tools={openTools.map((tool) => ({
+            id: tool,
+            active: toolActive === tool,
+            onSelect: () => setPaneOverride(tool),
+            onClose: () => closeTool(tool),
+          }))}
           desk={hasDesk ? {
             active: deskActive,
             live: isRunningLike && Boolean(deskState) && Date.now() - (deskState?.at ?? 0) < 10_000,
@@ -1274,7 +1323,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           deck is showing, so there is nothing to sit on top of — and a rect
           measured at the wrong moment was drawing the cards into a narrow
           strip with the rest of the pane left black. */}
-      <div className={`pane__output${session.status === 'running' && !surfaceActive ? ' pane__output--agent' : ''}${chatActive || docActive || subagentsActive || deskActive ? ' pane__output--chat' : ''}`}>
+      <div className={`pane__output${session.status === 'running' && !surfaceActive ? ' pane__output--agent' : ''}${chatActive || docActive || subagentsActive || deskActive || toolActive ? ' pane__output--chat' : ''}`}>
         {activeDoc ? (
           <DocumentView
             sessionId={session.id}
@@ -1289,6 +1338,12 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           />
         ) : subagentsActive ? (
           <SubagentsPane subagents={subagents} />
+        ) : toolActive === 'terminal' ? (
+          <div className="pane__tool-terminal">
+            <TerminalPane sessionId={session.id} engine={session.engine} isActive={isRunningLike} />
+          </div>
+        ) : toolActive === 'review' ? (
+          <ReviewPane session={session} />
         ) : deskActive ? (
           <DeskView
             sessionId={session.id}
@@ -1318,6 +1373,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
         ) : newTabActive && activeTab ? (
           <NewTabPage
             session={session}
+            onOpenTool={openTool}
             onOpen={(input) => { void window.electronAPI?.workspace?.tab(session.id, { op: 'navigate', tabId: activeTab.id, input }); }}
             onOpenLogs={handleToggleLogs}
           />

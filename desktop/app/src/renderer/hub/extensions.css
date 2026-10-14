@@ -1,178 +1,72 @@
-/* Settings › Extensions (ExtensionsSection.tsx): laid out like Connectors —
-   the store card (.settings-market, hub.css), then a quiet installed list. */
+/* Chrome extensions: Settings › Extensions is the Marketplace-style card
+   (.settings-market in hub.css); the panel (ExtensionsMarket.tsx) uses the
+   Marketplace's own classes (connectors/marketplace.css) plus these. */
 
-.ext-market__mark {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: rgba(var(--highlight-rgb), 0.06);
-  color: var(--color-fg-primary);
+/* ── The Extensions panel (ExtensionsMarket.tsx), on the Marketplace's own classes ── */
+.ext-mark img { width: 74%; height: 74%; }
+.ext-mark--letter { background: var(--surface-chip); color: var(--color-fg-secondary); }
+.mk__installed-row .mk__item-open { flex: 1; }
+.mk__installed-row.ext-off .mk-mark { opacity: 0.45; }
+
+.ext-detail {
+  width: 100%;
+  margin-top: 14px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 14px;
+  overflow: hidden;
 }
-
-.ext-market__installed {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-  color: var(--color-fg-secondary);
-  font-size: 12.5px;
-}
-.ext-market__stack { display: inline-flex; }
-.ext-market__stack .ext-icon { margin-left: -5px; border-radius: 6px; box-shadow: 0 0 0 2px var(--color-bg-elevated); background: var(--color-bg-elevated); }
-.ext-market__stack .ext-icon:first-child { margin-left: 0; }
-
-.ext-icon {
-  flex: none;
-  object-fit: contain;
-  border-radius: 7px;
-}
-.ext-icon--blank {
-  display: grid;
-  place-items: center;
-  background: rgba(var(--highlight-rgb), 0.08);
-  color: var(--color-fg-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.ext-notice {
-  margin: -4px 2px 12px;
-  font-size: 12.5px;
-  line-height: 1.4;
-}
-.ext-notice--ok { color: var(--color-fg-secondary); }
-.ext-notice--error { color: var(--color-status-error); }
-
-.ext-list { margin-bottom: 14px; }
-
-/* One installed extension: icon, name, one line; a click opens the rest. */
-.ext-row { border-bottom: 1px solid var(--color-border-subtle); }
-.ext-row:last-child { border-bottom: 0; }
-.ext-row__head {
+.ext-detail__row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  padding: 10px 16px 10px 12px;
-}
-.ext-row__toggle {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 4px;
-  border: 0;
-  border-radius: 10px;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.ext-row__toggle:hover { background: rgba(var(--highlight-rgb), 0.03); }
-.ext-row--off .ext-icon,
-.ext-row--off .ext-row__text { opacity: 0.5; }
-.ext-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.ext-row__name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--color-border-subtle);
   font-size: 13.5px;
-  font-weight: 550;
   color: var(--color-fg-primary);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
-.ext-row__tag {
-  flex: none;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: rgba(var(--highlight-rgb), 0.06);
-  color: var(--color-fg-tertiary);
-  font-size: 11px;
-  font-weight: 500;
-}
-.ext-row__desc,
-.ext-row__error {
-  font-size: 12px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.ext-row__desc { color: var(--color-fg-tertiary); }
-.ext-row__error { color: var(--color-status-error); }
-.ext-row__chev { flex: none; color: var(--color-fg-tertiary); transition: transform 180ms var(--ease-out); }
-.ext-row__chev--open { transform: rotate(90deg); }
+.ext-detail__perms { padding: 11px 14px 13px; font-size: 13px; color: var(--color-fg-secondary); }
+.ext-detail__perms-title { display: block; margin-bottom: 4px; color: var(--color-fg-primary); font-weight: 550; }
+.ext-detail__perms ul { margin: 0; padding-left: 18px; }
+.ext-detail__perms p { margin: 0; }
 
-.ext-row__body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 0 16px 14px 56px;
-}
-.ext-row__actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.ext-row__perms { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--color-fg-secondary); }
-.ext-row__perms-title { font-weight: 550; color: var(--color-fg-primary); }
-.ext-row__perms ul { margin: 0; padding-left: 18px; }
-.ext-row__perms p { margin: 0; }
-.ext-row__check { display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; cursor: pointer; }
-.ext-row__version { font-size: 11.5px; color: var(--color-fg-tertiary); }
-
-/* Small plain pills (never MetalButton). */
-.ext-pill {
-  height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--color-border-default);
-  border-radius: 999px;
-  background: var(--color-bg-elevated);
-  color: var(--color-fg-primary);
+.ext-store-search {
+  margin-top: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg-secondary);
   font: inherit;
-  font-size: 12.5px;
-  font-weight: 500;
-  white-space: nowrap;
+  font-size: 13px;
   cursor: pointer;
 }
-.ext-pill:hover:not(:disabled) { background: rgba(var(--highlight-rgb), 0.05); }
-.ext-pill:disabled { opacity: 0.5; cursor: default; }
-.ext-pill[aria-pressed='true'] { border-color: color-mix(in srgb, var(--color-accent-default) 45%, transparent); }
-.ext-pill--danger { color: var(--color-status-error); }
+.ext-store-search:hover { color: var(--color-fg-primary); }
 
-.ext-popular {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-border-subtle);
+.ext-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg-primary);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
-.ext-list > .ext-popular:first-child { border-top: 0; }
-.ext-popular__label { font-size: 12.5px; color: var(--color-fg-tertiary); }
-.ext-popular__list { display: flex; flex-wrap: wrap; gap: 6px; }
 
-.ext-advanced__body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 0 16px 16px;
-}
-.ext-advanced__add { display: flex; gap: 6px; }
-.ext-advanced__add input {
+.ext-adv { max-width: 560px; }
+.ext-adv__text { margin: 0 0 10px; font-size: 13px; color: var(--color-fg-secondary); }
+.ext-adv__form { display: flex; gap: 8px; }
+.ext-adv__form input {
   flex: 1;
   min-width: 0;
-  height: 30px;
-  padding: 0 12px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-subtle);
   border-radius: 999px;
-  border: 1px solid var(--color-border-default);
   background: var(--color-bg-base);
   color: var(--color-fg-primary);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   outline: none;
 }
-.ext-advanced__add input:focus { border-color: var(--color-accent-default); }
-.ext-advanced__dev { display: flex; flex-wrap: wrap; gap: 6px; }
+.ext-adv__form input:focus { box-shadow: 0 0 0 2px var(--color-accent-default, #35b8ff); }

@@ -56,6 +56,8 @@ export type TabAction = 'back' | 'forward' | 'reload' | 'stop';
 export const WORKSPACE_SHORTCUTS = [
   'new-tab', 'close-tab', 'reopen-tab', 'focus-address', 'reload', 'back', 'forward', 'next-tab', 'prev-tab',
   'find', 'zoom-in', 'zoom-out', 'zoom-reset',
+  // The task's tool tabs in the hub (docs/unify/PLAN.md §3.6).
+  'open-terminal', 'open-review',
 ] as const;
 export type WorkspaceShortcut = typeof WORKSPACE_SHORTCUTS[number];
 
@@ -148,6 +150,7 @@ export class BrowserPool {
   private onTabsChanged?: (sessionId: string, tabs: WorkspaceTabState[]) => void;
   private onFocusAddress?: (sessionId: string) => void;
   private onFind?: (sessionId: string) => void;
+  private onOpenTool?: (sessionId: string, tool: 'terminal' | 'review') => void;
   private onFound?: (sessionId: string, tabId: string, result: FindResult) => void;
   private onContextMenu?: (sessionId: string, tabId: string, wc: WebContents, params: Electron.ContextMenuParams) => void;
   private tabsChangedTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -596,9 +599,12 @@ export class BrowserPool {
 
   private browserShortcut(
     key: string,
-    input: { control: boolean; shift: boolean; alt: boolean; meta: boolean },
+    input: { control: boolean; shift: boolean; alt: boolean; meta: boolean; code?: string },
   ): WorkspaceShortcut | null {
     if (input.control && !input.alt && !input.meta) {
+      // By physical key, whatever the keyboard layout: Ctrl+` and Ctrl+Shift+G.
+      if (input.code === 'Backquote' && !input.shift) return 'open-terminal';
+      if (input.code === 'KeyG' && input.shift) return 'open-review';
       if (key === 't') return input.shift ? 'reopen-tab' : 'new-tab';
       if (key === 'w') return 'close-tab';
       if (key === 'l') return 'focus-address';
@@ -656,6 +662,10 @@ export class BrowserPool {
       case 'find':
         this.onFind?.(sessionId);
         break;
+      case 'open-terminal':
+      case 'open-review':
+        this.onOpenTool?.(sessionId, shortcut === 'open-terminal' ? 'terminal' : 'review');
+        break;
       case 'zoom-in':
       case 'zoom-out':
       case 'zoom-reset':
@@ -672,6 +682,11 @@ export class BrowserPool {
   /** The hub should open its find bar (Ctrl+F in the page). */
   setOnFind(listener: (sessionId: string) => void): void {
     this.onFind = listener;
+  }
+
+  /** The hub should open a tool tab (Ctrl+` / Ctrl+Shift+G in the page). */
+  setOnOpenTool(listener: (sessionId: string, tool: 'terminal' | 'review') => void): void {
+    this.onOpenTool = listener;
   }
 
   /** Find-in-page's count changed. */

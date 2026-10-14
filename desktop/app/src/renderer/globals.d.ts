@@ -191,6 +191,7 @@ interface ElectronChromeImportAPI {
 }
 
 interface ElectronOnAPI {
+  selectSession?: (cb: (sessionId: string) => void) => () => void;
   sessionUpdated: (cb: (session: import('./hub/types').AgentSession) => void) => () => void;
   sessionBrowserGone: (cb: (id: string) => void) => () => void;
   sessionOutput: (cb: (id: string, event: import('./hub/types').HlEvent) => void) => () => void;
@@ -296,6 +297,8 @@ interface ElectronWorkspaceAPI {
     request: { tabId?: string; text: string; forward?: boolean; next?: boolean } | { tabId?: string; stop: true },
   ) => Promise<boolean>;
   onFind?: (cb: (sessionId: string) => void) => () => void;
+  /** Ctrl+` / Ctrl+Shift+G pressed in a page (main/sessions/BrowserPool.ts): open that tool tab. */
+  onOpenTool?: (cb: (sessionId: string, tool: WorkspaceTool) => void) => () => void;
   onFound?: (cb: (sessionId: string, tabId: string, result: { active: number; matches: number }) => void) => () => void;
 }
 
@@ -353,8 +356,9 @@ interface ElectronExtensionsAPI {
   reload: (id: string) => Promise<boolean>;
   remove: (id: string) => Promise<boolean>;
   checkUpdates: () => Promise<string[]>;
-  /** 'store', 'options:<id>' or 'store-page:<id>'. */
+  /** 'store', 'store-search:<words>', 'options:<id>' or 'store-page:<id>': a tab of `sessionId`'s task, else DEX's extension window. */
   open: (target: string, sessionId?: string | null) => Promise<boolean>;
+  catalogIcons: (ids: string[]) => Promise<Record<string, string>>;
   onChanged: (cb: () => void) => () => void;
 }
 
@@ -389,9 +393,13 @@ interface ElectronDeskAPI {
   onFrame: (cb: (sessionId: string, meta: DeskFrameInfo, jpeg: Uint8Array) => void) => () => void;
 }
 
+/** A task's tool tabs (docs/unify/PLAN.md §3.6): the run as a terminal, and what it changed. */
+type WorkspaceTool = 'terminal' | 'review';
+
 type WorkspaceShortcut =
   | 'new-tab' | 'close-tab' | 'reopen-tab' | 'focus-address' | 'reload' | 'back' | 'forward' | 'next-tab' | 'prev-tab'
-  | 'find' | 'zoom-in' | 'zoom-out' | 'zoom-reset';
+  | 'find' | 'zoom-in' | 'zoom-out' | 'zoom-reset'
+  | 'open-terminal' | 'open-review';
 
 interface ElectronTakeoverAPI {
   show: (

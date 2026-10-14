@@ -92,7 +92,7 @@ import { registerApiKeyHandlers } from './settings/apiKeyIpc';
 import { registerConsentHandlers } from './consentIpc';
 import { registerTelemetryHandlers } from './telemetryIpc';
 import { registerThemeHandlers } from './themeIpc';
-import { startSystemThemeWatcher } from './themeMode';
+import { getWindowBackgroundColor, startSystemThemeWatcher } from './themeMode';
 import { registerAppPopupHandlers } from './appPopup';
 import { captureEvent } from './telemetry';
 import { registerChromeImportHandlers } from './chrome-import/ipc';
@@ -113,7 +113,7 @@ import { noteAgentInput, takeUserActsSinceAgent, userActiveWithin, waitForUserId
 import { maskSecretFields, READS_PAGE, redactSecrets, secretValues } from './workspace/secretFields';
 import { handleDownload } from './workspace/downloads';
 import { pageMenuTemplate } from './workspace/pageMenu';
-import { prepareWebProfile } from './workspace/webProfile';
+import { prepareWebProfile, webSession } from './workspace/webProfile';
 import { pageContextMenu } from './workspace/pageContextMenu';
 import { ExtensionManager, extensionIdFrom } from './extensions/ExtensionManager';
 import { ExtensionHost, type Anchor } from './extensions/ExtensionHost';
@@ -122,6 +122,8 @@ import type { MenuTarget } from './extensions/menusApi';
 import * as sitePermissions from './workspace/sitePermissions';
 import * as deskState from './desktop/deskState';
 import { DeskLive } from './desktop/deskLive';
+import { CatalogIcons } from './extensions/catalogIcons';
+import { openExtensionWindow } from './extensions/extensionWindow';
 import { deskHome, hubArea, journalDir, runUndo, runWindowOp } from './desktop/deskHelpers';
 import { firstUseApp, readDeskSettings } from './desktop/deskSettings';
 import { appName } from '../shared/deskWords';
@@ -758,6 +760,13 @@ browserPool.setOnFind((sessionId) => {
   if (shellWindow && !shellWindow.isDestroyed()) {
     shellWindow.webContents.focus();
     shellWindow.webContents.send('workspace:find', sessionId);
+  }
+});
+// Ctrl+` / Ctrl+Shift+G in the page: the hub opens the Terminal / Review tab.
+browserPool.setOnOpenTool((sessionId, tool) => {
+  if (shellWindow && !shellWindow.isDestroyed()) {
+    shellWindow.webContents.focus();
+    shellWindow.webContents.send('workspace:open-tool', sessionId, tool);
   }
 });
 browserPool.setOnFound((sessionId, tabId, result) => {
@@ -3356,6 +3365,13 @@ app.whenReady().then(async () => {
     if (session) browserPool.openTab(session, { url, activate: true, openedBy: 'user' });
     else void shell.openExternal(url);
   };
+  const catalogIcons = new CatalogIcons({ dir: path.join(app.getPath('userData'), 'extensions'), fetchBytes: fetchCapped });
+  ipcMain.handle('extensions:catalog-icons', async (_event, ids: unknown) => {
+    const { EXTENSION_CATALOG } = await import('../shared/extensionCatalog');
+    const known = new Set(EXTENSION_CATALOG.map((e) => e.id));
+    const wanted = Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && known.has(id)) : [];
+    return catalogIcons.icons(wanted);
+  });
   const manageExtensions = (): void => {
     openSettingsInShell({ sectionId: 'settings-extensions' });
   };
@@ -3432,21 +3448,26 @@ app.whenReady().then(async () => {
     const t = assertString(target, 'target', 300);
     let url: string | null = null;
     if (t === 'store') url = 'https://chromewebstore.google.com/category/extensions';
-    else {
+    else if (t.startsWith('store-search:')) {
+      const q = t.slice('store-search:'.length).trim().slice(0, 120);
+      if (q) url = `https://chromewebstore.google.com/search/${encodeURIComponent(q)}`;
+    } else {
       const [kind, id] = t.split(':');
       const summary = id && /^[a-p]{32}$/.test(id) ? extensionManager?.summary(id) : null;
       if (kind === 'options' && summary?.optionsUrl) url = summary.optionsUrl;
       if (kind === 'store-page' && summary?.storeUrl) url = summary.storeUrl;
     }
     if (!url) return false;
-    if (url.startsWith('chrome-extension://')) {
-      const session = optionalSession(sessionId) ?? extensionTabs.shownSessionId();
-      if (!session) return false;
+    // From a task's toolbar: a tab of that task.
+    const session = optionalSession(sessionId);
+    if (session && browserPool.sessionIds().includes(session)) {
       browserPool.openTab(session, { url, activate: true, openedBy: 'user' });
       return true;
     }
-    openForExtensions(optionalSession(sessionId), url);
-    return true;
+    // From Settings › Extensions, where no task is in front: DEX's extension
+    // window on the web profile (options pages and "Add to DEX" work there).
+    const ses = webSession();
+    return ses ? openExtensionWindow(url, ses, { backgroundColor: getWindowBackgroundColor() }) : false;
   });
 
   ipcMain.handle('workspace:tab', (_event, id: string, action: unknown) => {

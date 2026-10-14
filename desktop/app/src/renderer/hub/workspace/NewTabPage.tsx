@@ -16,11 +16,15 @@ interface NewTabPageProps {
   onOpen: (input: string) => void;
   /** The task's raw Logs window. */
   onOpenLogs?: () => void;
+  /** Open a tool tab: the run as a terminal, or what the task changed. */
+  onOpenTool?: (tool: WorkspaceTool) => void;
 }
 
 const TOOL_ICONS = {
   files: 'M2 4.2c0-.6.5-1 1-1h3l1.4 1.5H13c.6 0 1 .4 1 1v6.1c0 .6-.4 1-1 1H3c-.5 0-1-.4-1-1z',
   logs: 'M3 3.5h10v9H3zM5.5 6.5h5M5.5 9h3',
+  terminal: 'M2.5 3.5h11v9h-11zM5 6.3 6.8 8 5 9.7M8.3 10h2.7',
+  review: 'M5 2.5v7M5 9.5a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6zM11 6.5a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6zM11 6.5c0 2.5-2.2 3-6 3.4',
   accounts: 'M8 7.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM3 14c.6-2.6 2.6-4 5-4s4.4 1.4 5 4',
 };
 
@@ -37,7 +41,7 @@ function fileKind(name: string, mime: string): string {
   return ext ? ext.toUpperCase() : 'File';
 }
 
-export function NewTabPage({ session, onOpen, onOpenLogs }: NewTabPageProps): React.ReactElement {
+export function NewTabPage({ session, onOpen, onOpenLogs, onOpenTool }: NewTabPageProps): React.ReactElement {
   const [query, setQuery] = useState('');
   const findRef = useRef<HTMLInputElement>(null);
   const allFiles = useMemo(() => taskFiles(session.output, []), [session.output]);
@@ -65,6 +69,10 @@ export function NewTabPage({ session, onOpen, onOpenLogs }: NewTabPageProps): Re
 
   const tools: Array<{ id: keyof typeof TOOL_ICONS; label: string; hint: string; run: () => void }> = [
     { id: 'files', label: 'Find a file', hint: 'Any file this task made', run: () => findRef.current?.focus() },
+    ...(onOpenTool ? [
+      { id: 'terminal' as const, label: 'Terminal', hint: 'The run as a terminal · Ctrl+`', run: () => onOpenTool('terminal') },
+      { id: 'review' as const, label: 'Review', hint: 'What this task changed · Ctrl+Shift+G', run: () => onOpenTool('review') },
+    ] : []),
     ...(onOpenLogs ? [{ id: 'logs' as const, label: 'Logs', hint: 'The raw run, step by step', run: onOpenLogs }] : []),
     { id: 'accounts', label: 'Connectors', hint: 'Google, Notion, Jira, Canva…', run: () => window.dispatchEvent(new CustomEvent('dex:open-marketplace')) },
   ];

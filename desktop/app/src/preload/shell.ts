@@ -96,6 +96,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     remove: (id: string) => ipcRenderer.invoke('extensions:remove', id),
     checkUpdates: () => ipcRenderer.invoke('extensions:check-updates'),
     open: (target: string, sessionId?: string | null) => ipcRenderer.invoke('extensions:open', target, sessionId ?? null),
+    /** Real icons for the suggested extensions (shared/extensionCatalog.ts), as data URLs. */
+    catalogIcons: (ids: string[]): Promise<Record<string, string>> => ipcRenderer.invoke('extensions:catalog-icons', ids),
     onChanged: (cb: () => void): (() => void) => {
       const handler = (): void => cb();
       ipcRenderer.on('extensions:changed', handler);
@@ -155,6 +157,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
       };
       ipcRenderer.on('workspace:found', handler);
       return () => ipcRenderer.removeListener('workspace:found', handler);
+    },
+    /** Ctrl+` / Ctrl+Shift+G pressed in a page: open that tool tab. */
+    onOpenTool: (cb: (sessionId: string, tool: 'terminal' | 'review') => void): (() => void) => {
+      const handler = (_event: unknown, sessionId: unknown, tool: unknown) => {
+        if (typeof sessionId === 'string' && (tool === 'terminal' || tool === 'review')) cb(sessionId, tool);
+      };
+      ipcRenderer.on('workspace:open-tool', handler);
+      return () => ipcRenderer.removeListener('workspace:open-tool', handler);
     },
     onFocusAddress: (cb: (sessionId: string) => void): (() => void) => {
       const handler = (_event: unknown, sessionId: unknown) => { if (typeof sessionId === 'string') cb(sessionId); };
@@ -580,6 +590,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }>> => ipcRenderer.invoke('chrome-import:get-syncs'),
   },
   on: {
+    /** Main wants this task in front (a notification, the tray, a store page it opened). */
+    selectSession: (cb: (sessionId: string) => void): (() => void) => {
+      const handler = (_event: unknown, sessionId: unknown) => { if (typeof sessionId === 'string') cb(sessionId); };
+      ipcRenderer.on('select-session', handler);
+      return () => ipcRenderer.removeListener('select-session', handler);
+    },
     windowReady: (cb: () => void): (() => void) => {
       const handler = () => cb();
       ipcRenderer.on('window-ready', handler);

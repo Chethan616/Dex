@@ -1,0 +1,106 @@
+/* The Review tab (ReviewPane.tsx): what a task changed, with line diffs. */
+
+.rv {
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
+  font-family: var(--font-ui);
+}
+
+.rv-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+.rv-title { margin: 0; font-size: 15px; font-weight: 650; }
+.rv-summary { display: inline-flex; gap: 8px; font-size: 12.5px; color: var(--color-fg-tertiary); }
+.rv-add { color: var(--color-status-success); font-variant-numeric: tabular-nums; }
+.rv-del { color: var(--color-status-danger); font-variant-numeric: tabular-nums; }
+.rv-empty { margin: 0; font-size: 13px; color: var(--color-fg-tertiary); }
+
+.rv-file {
+  border-radius: 12px;
+  border: 1px solid var(--color-border-subtle, rgba(127, 127, 127, 0.16));
+  background: var(--color-bg-elevated);
+  overflow: hidden;
+}
+.rv-file__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 6px;
+  min-width: 0;
+}
+.rv-file__toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rv-file__toggle:disabled { cursor: default; }
+.rv-file__toggle:hover:not(:disabled) { background: rgba(var(--highlight-rgb), 0.04); }
+.rv-chev { flex: none; color: var(--color-fg-tertiary); transition: transform 160ms var(--ease-out); }
+.rv-chev--open { transform: rotate(90deg); }
+.rv-file__name { flex: none; font-size: 13px; font-weight: 600; }
+.rv-file__path {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl;          /* keep the end of a long path, where the name is */
+  text-align: left;
+  font-size: 12px;
+  color: var(--color-fg-tertiary);
+}
+.rv-file__counts { display: inline-flex; gap: 6px; font-size: 12px; }
+.rv-file__verb { flex: none; font-size: 12px; color: var(--color-fg-tertiary); }
+.rv-open {
+  flex: none;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.rv-open:hover { background: rgba(var(--highlight-rgb), 0.05); }
+
+.rv-file__edits { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
+.rv-diff {
+  border-radius: 8px;
+  border: 1px solid var(--color-border-subtle, rgba(127, 127, 127, 0.16));
+  overflow-x: auto;
+  font-family: var(--font-mono, ui-monospace, Consolas, monospace);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.rv-line { display: flex; min-width: max-content; white-space: pre; }
+.rv-line > span:last-child { padding-right: 12px; }
+.rv-sign { flex: none; width: 22px; text-align: center; color: var(--color-fg-tertiary); user-select: none; }
+.rv-line--add { background: color-mix(in srgb, var(--color-status-success) 12%, transparent); }
+.rv-line--add .rv-sign { color: var(--color-status-success); }
+.rv-line--del { background: color-mix(in srgb, var(--color-status-danger) 11%, transparent); }
+.rv-line--del .rv-sign { color: var(--color-status-danger); }
+.rv-gap {
+  padding: 2px 12px;
+  background: rgba(var(--highlight-rgb), 0.03);
+  color: var(--color-fg-tertiary);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+}
+.rv-note { font-size: 12.5px; color: var(--color-fg-tertiary); }
+.rv-pc { margin-top: 6px; }
