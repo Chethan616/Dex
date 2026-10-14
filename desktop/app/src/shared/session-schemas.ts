@@ -290,6 +290,16 @@ export const HlEventConfirmationSchema = z.object({
   detail: z.string(),
   status: z.enum(['pending', 'approved', 'denied']),
   at: z.number(),
+  /** approvals/policy.ts's category; absent on cards from before it was recorded. */
+  category: z.string().optional(),
+  /**
+   * The Windows tools' tier (docs/desktop-control/PLAN.md §2.1): 1 inside an
+   * app, 2 a reversible change, 3 hard to undo, 4 admin. The phone says it,
+   * and approves 3 and 4 only inside the app.
+   */
+  tier: z.number().int().min(0).max(4).optional(),
+  /** Hard to undo or admin: answered for this one step only, never "for this task". */
+  onceOnly: z.boolean().optional(),
 });
 
 // A rendered document — the agent's own generative UI ("build me a canvas"),
@@ -365,6 +375,24 @@ export const HlEventWidgetSchema = z.object({
   widget: WidgetSchema,
 });
 
+// A change DEX made to the PC with the Windows tools (mcp-servers/windows,
+// its undo journal in <userData>/desktop/journal/<session>/). The chat shows
+// it with an Undo button while it can be undone; a later event for the same
+// `entry` with `undone: true` marks it so ("last write wins", like
+// confirmation).
+export const HlEventDeskChangeSchema = z.object({
+  ...WHEN,
+  type: z.literal('desk_change'),
+  entry: z.string(),
+  title: z.string(),
+  reason: z.string().optional(),
+  undoable: z.boolean(),
+  undone: z.boolean().optional(),
+  /** This entry undid another one (its id). */
+  undoes: z.string().optional(),
+  restartNeeded: z.boolean().optional(),
+});
+
 export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventThinkingSchema,
   HlEventToolCallSchema,
@@ -389,6 +417,7 @@ export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventSubagentDoneSchema,
   HlEventReactionSchema,
   HlEventWidgetSchema,
+  HlEventDeskChangeSchema,
 ]);
 
 export type HlEvent = z.infer<typeof HlEventSchema>;

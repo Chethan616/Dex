@@ -102,6 +102,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return () => ipcRenderer.removeListener('extensions:changed', handler);
     },
   },
+  /** The Desk tab (main/desktop/deskLive.ts): the window DEX works in, live. */
+  desk: {
+    state: (sessionId: string) => ipcRenderer.invoke('desk:state', sessionId),
+    watch: (sessionId: string, on: boolean) => ipcRenderer.invoke('desk:watch', sessionId, on),
+    showMe: (sessionId: string) => ipcRenderer.invoke('desk:show-me', sessionId),
+    handBack: (sessionId: string) => ipcRenderer.invoke('desk:hand-back', sessionId),
+    undo: (sessionId: string, entry: string) => ipcRenderer.invoke('desk:undo', sessionId, entry),
+    openJournal: (sessionId?: string) => ipcRenderer.invoke('desk:open-journal', sessionId ?? null),
+    onChanged: (cb: (sessionId: string, state: unknown) => void): (() => void) => {
+      const handler = (_e: unknown, sessionId: string, state: unknown): void => cb(sessionId, state);
+      ipcRenderer.on('desk:changed', handler);
+      return () => ipcRenderer.removeListener('desk:changed', handler);
+    },
+    onFrame: (cb: (sessionId: string, meta: unknown, jpeg: Uint8Array) => void): (() => void) => {
+      const handler = (_e: unknown, sessionId: string, meta: unknown, jpeg: Uint8Array): void => cb(sessionId, meta, jpeg);
+      ipcRenderer.on('desk:frame', handler);
+      return () => ipcRenderer.removeListener('desk:frame', handler);
+    },
+  },
   /** The task's tabs (docs/unify/PLAN.md §3.2): list, act, follow changes. */
   workspace: {
     tabs: (sessionId: string): Promise<unknown[]> => ipcRenderer.invoke('workspace:tabs', sessionId),

@@ -116,3 +116,46 @@ describe('times', () => {
     expect(t.blocks[0].at).toBeUndefined();
   });
 });
+
+describe('the Windows tools, in plain words', () => {
+  it('says what each step did, with the app and the control', () => {
+    expect(classifyTool('mcp__windows__ui_invoke', { window: { process: 'Spotify.exe' }, target: { name: 'Shuffle' } }))
+      .toMatchObject({ kind: 'desktop', active: 'Pressing “Shuffle” in Spotify', done: 'Pressed “Shuffle” in Spotify', display: '' });
+    expect(classifyTool('mcp__windows__system_info', { topic: 'wifi' })).toMatchObject({ done: 'Read your Wi-Fi adapter' });
+    expect(classifyTool('mcp__windows__media', { action: 'shuffle', value: true })).toMatchObject({ done: 'Turned shuffle on' });
+    expect(classifyTool('mcp__windows__system_change', { action: 'dns_set', args: { adapter: 'Wi-Fi', servers: ['1.1.1.1'] } })).toMatchObject({ done: 'Changed Wi-Fi DNS servers' });
+    expect(classifyTool('mcp__windows__app_launch', { app: 'C:\\Users\\me\\AppData\\Roaming\\Spotify\\Spotify.exe' })).toMatchObject({ done: 'Opened Spotify in the background' });
+  });
+
+  it('names the control from the result once a handle is all the call had', () => {
+    let t = EMPTY_TRANSCRIPT;
+    t = appendEvent(t, { type: 'tool_call', name: 'mcp__windows__ui_invoke', args: { window: { hwnd: 7 }, target: 'e17' } });
+    const before = t.blocks[0];
+    expect(before.kind === 'tool' && before.meta.active).toBe('Pressing a control in the app');
+    t = appendEvent(t, { type: 'tool_result', name: 'mcp__windows__ui_invoke', ok: true, preview: '{"method":"invoke","element":{"name":"Like \\"song\\"","role":"Button"}}' });
+    const after = t.blocks[0];
+    expect(after.kind === 'tool' && after.meta.done).toBe('Pressed “Like "song"” in the app');
+  });
+
+  it('names the app from the result, and a window PowerShell hosts by its title', () => {
+    let t = EMPTY_TRANSCRIPT;
+    t = appendEvent(t, { type: 'tool_call', name: 'mcp__windows__ui_toggle', args: { window: { hwnd: 7 }, target: 'e4', state: 'on' } });
+    t = appendEvent(t, { type: 'tool_result', name: 'mcp__windows__ui_toggle', ok: true, preview: '{"was":"off","now":"on","element":{"name":"Enable shuffle","role":"CheckBox"},"window":{"hwnd":7,"title":"DEX desk fixture","process":"powershell.exe"}}' });
+    t = appendEvent(t, { type: 'tool_call', name: 'mcp__windows__window_tree', args: { window: { hwnd: 9 } } });
+    t = appendEvent(t, { type: 'tool_result', name: 'mcp__windows__window_tree', ok: true, preview: '{"window":{"hwnd":9,"title":"Spotify Premium","process":"Spotify.exe"},"nodes":[]}' });
+    const [toggle, tree] = t.blocks;
+    expect(toggle.kind === 'tool' && toggle.meta.done).toBe('Turned “Enable shuffle” on in DEX desk fixture');
+    expect(tree.kind === 'tool' && tree.meta.done).toBe('Read what’s in Spotify');
+  });
+});
+
+describe('changes to the PC', () => {
+  it('folds an undo onto the change it undid', () => {
+    let t = EMPTY_TRANSCRIPT;
+    t = appendEvent(t, { type: 'desk_change', entry: '1700000000000-dns_set', title: "Set Wi-Fi's DNS to 1.1.1.1", reason: 'Lookups time out', undoable: true });
+    expect(t.blocks[0]).toMatchObject({ kind: 'change', undoable: true, undone: false });
+    t = appendEvent(t, { type: 'desk_change', entry: '1700000000999-dns_set', title: "Undid: Set Wi-Fi's DNS to 1.1.1.1", undoable: false, undoes: '1700000000000-dns_set' });
+    expect(t.blocks[0]).toMatchObject({ undone: true });
+    expect(t.blocks[1]).toMatchObject({ kind: 'change', undoes: '1700000000000-dns_set' });
+  });
+});

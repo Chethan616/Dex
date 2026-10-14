@@ -80,6 +80,12 @@ async function fakeControl(opts: { hold?: boolean; approve?: boolean } = {}) {
   return { heard, file, dir };
 }
 
+/** Events reach the fake DEX a moment after the reply: wait for them, not for a fixed time. */
+async function until(check: () => boolean, ms = 5_000): Promise<void> {
+  const deadline = Date.now() + ms;
+  while (!check() && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
+}
+
 async function start(env: Record<string, string>) {
   server = spawn(process.execPath, [SERVER], {
     env: { ...process.env, NODE_ENV: 'test', DEX_DESK_HOST_CMD: JSON.stringify({ command: process.execPath, args: [FAKE_HOST] }), DEX_SESSION_ID: 's1', ...env },
@@ -148,8 +154,68 @@ describe('the Windows server', () => {
     const { tool } = await start({ DEX_CONTROL_FILE: c.file, DEX_DESK_HOME: c.dir });
     const { body } = await tool('ui_invoke', { window: { hwnd: 1 }, target: 'e9' });
     expect(body.focus.note).toMatch(/interrupted the user/);
+    await until(() => c.heard.some((h) => h.body.kind === 'focus-incident'));
+    expect(c.heard.find((h) => h.path === '/dex/desktop-event' && h.body.kind === 'focus-incident')!.body).toMatchObject({ sessionId: 's1' });
+  });
+
+  it('tells DEX what it does in which window, start and end, for the Desk tab', async () => {
+    const c = await fakeControl();
+    const { tool } = await start({ DEX_CONTROL_FILE: c.file, DEX_DESK_HOME: c.dir });
+    const { body } = await tool('ui_invoke', { window: { hwnd: 1 }, target: 'e5' });
+    // The element's name is DEX's to show; the agent still gets it in the result.
+    expect(body).toMatchObject({ method: 'invoke', element: { name: 'Save', role: 'Button' } });
+    await until(() => c.heard.filter((h) => h.body.kind === 'act').length >= 2);
+    const acts = c.heard.filter((h) => h.path === '/dex/desktop-event' && h.body.kind === 'act').map((h) => h.body);
+    expect(acts).toHaveLength(2);
+    expect(acts[0]).toMatchObject({ phase: 'start', tool: 'ui_invoke', args: { target: 'e5' }, window: { hwnd: 1, process: 'notepad.exe', openedByDex: false } });
+    expect(acts[1]).toMatchObject({ phase: 'end', ok: true, seq: acts[0].seq, element: { name: 'Save', role: 'Button' } });
+  });
+
+  it('never sends the whole of what it types to DEX', async () => {
+    const c = await fakeControl();
+    const { tool } = await start({ DEX_CONTROL_FILE: c.file, DEX_DESK_HOME: c.dir });
+    await tool('ui_set_text', { window: { hwnd: 1 }, target: 'e5', text: 'x'.repeat(500) });
+    await until(() => c.heard.some((h) => h.body.kind === 'act'));
+    const act = c.heard.find((h) => h.path === '/dex/desktop-event' && h.body.kind === 'act')!.body as { args: { text: string } };
+    expect(act.args.text).toHaveLength(40);
+  });
+
+  it('journals a change with its title, tells DEX, and undoes it from DEX’s own Undo button', async () => {
+    const c = await fakeControl();
+    const env = { DEX_CONTROL_FILE: c.file, DEX_DESK_HOME: c.dir };
+    const { tool } = await start(env);
+    const { body } = await tool('system_change', { action: 'gesture_set', args: { key: 'ThreeFingerSlideEnabled', value: 1 }, reason: 'swipes do nothing' });
+    expect(body.entry).toMatch(/^\d+-gesture_set$/);
+    await until(() => c.heard.some((h) => h.body.kind === 'change'));
+    expect(c.heard.find((h) => h.body.kind === 'change')!.body).toMatchObject({
+      sessionId: 's1', entry: body.entry, title: 'Set touchpad ThreeFingerSlideEnabled to 1', reason: 'swipes do nothing', undoable: true, undoes: null,
+    });
+    const file = path.join(c.dir, 'journal', 's1', `${body.entry}.json`);
+    expect(JSON.parse(fs.readFileSync(file, 'utf-8'))).toMatchObject({ title: 'Set touchpad ThreeFingerSlideEnabled to 1', tier: 2, admin: false, undone: false });
+
+    // The Undo button runs the server once with --undo: no approval card (the click is one).
+    const undo = (entry: string) => new Promise<any>((resolve) => {
+      const child = spawn(process.execPath, [SERVER, '--undo', entry], {
+        env: { ...process.env, NODE_ENV: 'test', DEX_DESK_HOST_CMD: JSON.stringify({ command: process.execPath, args: [FAKE_HOST] }), DEX_SESSION_ID: 's1', ...env },
+      });
+      let out = '';
+      child.stdout!.on('data', (d) => { out += d; });
+      child.on('close', () => resolve(JSON.parse(out.trim())));
+    });
+    const confirmsBefore = c.heard.filter((h) => h.path === '/dex/confirm').length;
+    expect(await undo(body.entry)).toMatchObject({ ok: true, result: { undid: body.entry } });
+    expect(c.heard.filter((h) => h.path === '/dex/confirm').length).toBe(confirmsBefore);
+    expect(JSON.parse(fs.readFileSync(file, 'utf-8')).undone).toBe(true);
+    expect(c.heard.filter((h) => h.body.kind === 'change')[1].body).toMatchObject({ undoes: body.entry, title: 'Undid: Set touchpad ThreeFingerSlideEnabled to 1', undoable: false });
+    expect(await undo(body.entry)).toMatchObject({ ok: false, error: 'nothing_to_undo' });
+  }, 20_000);
+
+  it('reports nothing for a call it refused', async () => {
+    const c = await fakeControl();
+    const { tool } = await start({ DEX_CONTROL_FILE: c.file, DEX_DESK_HOME: c.dir });
+    await tool('ui_invoke', { window: { hwnd: 3 }, target: 'e1' });
     await new Promise((r) => setTimeout(r, 100));
-    expect(c.heard.find((h) => h.path === '/dex/desktop-event')!.body).toMatchObject({ kind: 'focus-incident', sessionId: 's1' });
+    expect(c.heard.some((h) => h.body.kind === 'act')).toBe(false);
   });
 
   it('returns a capture as an image, and puts it in the task’s chat', async () => {
@@ -157,7 +223,7 @@ describe('the Windows server', () => {
     const { tool } = await start({ DEX_CONTROL_FILE: c.file, DEX_DESK_HOME: c.dir });
     const { r } = await tool('window_capture', { window: { hwnd: 1 } });
     expect(r.content.some((x: { type: string; mimeType?: string }) => x.type === 'image' && x.mimeType === 'image/png')).toBe(true);
-    await new Promise((res) => setTimeout(res, 100));
+    await until(() => c.heard.some((h) => h.path === '/dex/screenshot'));
     expect(c.heard.find((h) => h.path === '/dex/screenshot')!.body).toMatchObject({ sessionId: 's1', mode: 'raw' });
   });
 });

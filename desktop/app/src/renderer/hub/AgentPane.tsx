@@ -16,6 +16,8 @@ import { ChatView } from './chat/ChatView';
 import { WorkspaceBar } from './workspace/WorkspaceBar';
 import { NewTabPage } from './workspace/NewTabPage';
 import { SubagentsPane } from './workspace/SubagentsPane';
+import { DeskView, useDeskState } from './workspace/DeskView';
+import { changesFrom } from './chat/DeskChanges';
 import { useWorkspaceTabs } from './workspace/useWorkspaceTabs';
 import { useWorkspaceDocs } from './workspace/useWorkspaceDocs';
 import { DocumentView } from './workspace/docs/DocumentView';
@@ -618,7 +620,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
    * paused one — shows the conversation. The page isn't lost when the chat
    * has the rect: it's parked on the stage, where DEX can keep using it.
    */
-  const [paneOverride, setPaneOverride] = useState<'auto' | 'page' | 'chat' | 'doc' | 'subagents'>('auto');
+  const [paneOverride, setPaneOverride] = useState<'auto' | 'page' | 'chat' | 'doc' | 'subagents' | 'desk'>('auto');
   /**
    * Subagents (the Task tool): a quiet tab listing what the task has
    * delegated, Active then Done. Only shown once the task has launched one.
@@ -629,6 +631,15 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
   useEffect(() => {
     if (paneOverride === 'subagents' && subagents.length === 0) setPaneOverride('auto');
   }, [paneOverride, subagents.length]);
+  /**
+   * The Desk tab (docs/desktop-control/PLAN.md §Phase 3): the Windows app the
+   * task works in, live, once its Windows tools have touched a window or
+   * changed something on the PC.
+   */
+  const deskState = useDeskState(session.id);
+  const deskChanges = useMemo(() => changesFrom(session.output), [session.output]);
+  const hasDesk = Boolean(deskState?.window) || deskChanges.length > 0;
+  const deskActive = paneOverride === 'desk' && hasDesk;
   /**
    * Document tabs (docs/unify/PLAN.md §3.9): files drawn by the hub itself.
    * One in front owns the rect like the chat does; the page steps aside to
@@ -675,12 +686,12 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
     return () => window.removeEventListener('dex:focus-composer', onFocus);
   }, [session.id]);
   const chatActive = useMemo(() => {
-    if (docActive || subagentsActive) return false;
+    if (docActive || subagentsActive || deskActive) return false;
     if (session.hasBrowser === false) return true;
     if (paneOverride !== 'auto') return paneOverride === 'chat';
     const working = session.status === 'running' || session.status === 'stuck';
     return !(working && session.primarySite);
-  }, [docActive, subagentsActive, session.hasBrowser, session.status, session.primarySite, paneOverride]);
+  }, [docActive, subagentsActive, deskActive, session.hasBrowser, session.status, session.primarySite, paneOverride]);
 
   /**
    * The task's tabs (docs/unify/PLAN.md §3.2). A blank tab *you* opened shows
@@ -690,9 +701,9 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
   const workspaceOn = session.hasBrowser !== false && !browserDead;
   const tabs = useWorkspaceTabs(session.id, workspaceOn);
   const activeTab = tabs.find((t) => t.active);
-  const newTabActive = !chatActive && !docActive && !subagentsActive && Boolean(activeTab?.isNewTab && activeTab.openedBy !== 'task');
+  const newTabActive = !chatActive && !docActive && !subagentsActive && !deskActive && Boolean(activeTab?.isNewTab && activeTab.openedBy !== 'task');
   /** Something React draws owns the rect (the chat, a document, the Subagents tab, or the New-tab page). */
-  const surfaceActive = chatActive || docActive || subagentsActive || newTabActive;
+  const surfaceActive = chatActive || docActive || subagentsActive || deskActive || newTabActive;
 
   /** Something new in the chat while you were on the page: a dot on the Chat tab. */
   const replyCount = useMemo(
@@ -1142,7 +1153,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           rect — the pre-existing idle/error states, plus the two new ones the
           deck introduces: a running task that has never navigated (desktop,
           file or OS work) and a paused session. */}
-      {((tabs.length > 0 && workspaceOn) || workspaceDocs.docs.length > 0 || subagents.length > 0) && (
+      {((tabs.length > 0 && workspaceOn) || workspaceDocs.docs.length > 0 || subagents.length > 0 || hasDesk) && (
         <WorkspaceBar
           sessionId={session.id}
           tabs={workspaceOn ? tabs : []}
@@ -1153,6 +1164,11 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
             onSelect: (id) => { setActiveDocId(id); setPaneOverride('doc'); },
             onClose: closeDoc,
           }}
+          desk={hasDesk ? {
+            active: deskActive,
+            live: isRunningLike && Boolean(deskState) && Date.now() - (deskState?.at ?? 0) < 10_000,
+            onSelect: () => setPaneOverride('desk'),
+          } : undefined}
           subagents={{
             active: subagentsActive,
             count: subagents.length,
@@ -1256,7 +1272,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           deck is showing, so there is nothing to sit on top of — and a rect
           measured at the wrong moment was drawing the cards into a narrow
           strip with the rest of the pane left black. */}
-      <div className={`pane__output${session.status === 'running' && !surfaceActive ? ' pane__output--agent' : ''}${chatActive || docActive || subagentsActive ? ' pane__output--chat' : ''}`}>
+      <div className={`pane__output${session.status === 'running' && !surfaceActive ? ' pane__output--agent' : ''}${chatActive || docActive || subagentsActive || deskActive ? ' pane__output--chat' : ''}`}>
         {activeDoc ? (
           <DocumentView
             sessionId={session.id}
@@ -1271,6 +1287,17 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           />
         ) : subagentsActive ? (
           <SubagentsPane subagents={subagents} />
+        ) : deskActive ? (
+          <DeskView
+            sessionId={session.id}
+            state={deskState}
+            changes={deskChanges}
+            running={isRunningLike}
+            paused={isPaused}
+            onPause={onPause ? () => onPause(session.id) : undefined}
+            onResume={canResume && onResume ? () => onResume(session.id) : undefined}
+            onStop={onCancel ? () => onCancel(session.id) : undefined}
+          />
         ) : chatActive ? (
           <ChatView
             session={session}

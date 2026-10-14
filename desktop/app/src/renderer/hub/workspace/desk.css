@@ -1,0 +1,107 @@
+/* The Desk tab (DeskView.tsx): the Windows app DEX is working in, live. */
+
+.desk {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 18px 16px;
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
+  font-family: var(--font-ui);
+  min-height: 0;
+}
+
+.desk-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.desk-head__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.desk-head__name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.desk-head__app { font-size: 14px; font-weight: 600; flex-shrink: 0; }
+.desk-head__title {
+  min-width: 0;
+  font-size: 13px;
+  color: var(--color-fg-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.desk-head__caption {
+  font-size: 13px;
+  color: var(--color-fg-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desk-chip {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-fg-tertiary);
+  background: var(--color-surface-interactive, rgba(127, 127, 127, 0.1));
+}
+.desk-chip--live { color: var(--color-status-success); background: color-mix(in srgb, var(--color-status-success) 14%, transparent); }
+.desk-chip--yours { color: var(--color-status-info); background: color-mix(in srgb, var(--color-status-info) 14%, transparent); }
+
+.desk-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+/* Plain pill buttons. */
+.desk-btn {
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-elevated);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.desk-btn:hover:not(:disabled) { background: var(--color-surface-interactive-hover, rgba(127, 127, 127, 0.14)); }
+.desk-btn:disabled { opacity: 0.55; cursor: default; }
+.desk-btn--primary { border-color: transparent; background: var(--color-accent-default); color: var(--color-fg-inverse, #fff); }
+.desk-btn--primary:hover:not(:disabled) { background: var(--color-accent-hover, var(--color-accent-default)); }
+.desk-btn--danger { color: var(--color-status-danger); }
+
+.desk-error { font-size: 12.5px; color: var(--color-status-danger); }
+
+.desk-stage {
+  position: relative;
+  flex: 1;
+  min-height: 160px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-subtle, rgba(127, 127, 127, 0.16));
+  background: var(--color-bg-sunken, rgba(0, 0, 0, 0.2));
+  overflow: hidden;
+}
+
+.desk-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.desk-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-fg-tertiary);
+}
+
+.desk-changes { flex-shrink: 0; max-height: 34%; overflow-y: auto; }

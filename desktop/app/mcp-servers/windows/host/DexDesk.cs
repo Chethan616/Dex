@@ -95,6 +95,7 @@ public static class DexDesk {
   [DllImport("advapi32.dll", SetLastError = true)] static extern bool GetTokenInformation(IntPtr token, int cls, out int info, int len, out int retLen);
   [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
   [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
+  [DllImport("user32.dll")] static extern IntPtr GetWindowDpiAwarenessContext(IntPtr h);
   static readonly IntPtr PerMonitorAwareV2 = new IntPtr(-4);
 
   const int SW_SHOWMINNOACTIVE = 7, SW_SHOWNOACTIVATE = 4, SW_MINIMIZE = 6;
@@ -137,6 +138,8 @@ public static class DexDesk {
   static readonly HashSet<long> takenOver = new HashSet<long>();
   static Timer watcher;
   static uint watchedInput;
+  /** This task (DEX_SESSION_ID, as the server names its files): the Desk tab's files are per task. */
+  static string session = "shared";
 
   public static void Init(string dexExePath, string homeDir) {
     dexExe = dexExePath ?? "";
@@ -159,7 +162,10 @@ public static class DexDesk {
     }) cache.AddProperty(id);
     cache.TreeScope = TreeScope.TreeScope_Element;
     selfElevated = IsElevated((uint)Process.GetCurrentProcess().Id);
+    session = Regex.Replace(Environment.GetEnvironmentVariable("DEX_SESSION_ID") ?? "", "[^A-Za-z0-9_-]", "_");
+    if (session.Length == 0) session = "shared";
     watcher = new Timer(Watch, null, 2000, 2000);
+    frameTimer = new Timer(FrameTick, null, 500, 500);
   }
 
   /** One line of JSON to stdout, from the request loop or the watcher alike. */
@@ -206,9 +212,13 @@ public static class DexDesk {
   static Dictionary<string, object> RunLocked(string op, Dictionary<string, object> args) {
     var res = new Dictionary<string, object>();
     Snapshot before = Mutating.Contains(op) ? Snap() : null;
+    opElement = null;
     try {
       res["ok"] = true;
-      res["result"] = Dispatch(op, args);
+      var result = Dispatch(op, args);
+      var dict = result as Dictionary<string, object>;
+      if (dict != null && opElement != null && !dict.ContainsKey("element") && !string.IsNullOrEmpty((string)opElement["name"])) dict["element"] = opElement;
+      res["result"] = result;
     } catch (DexDeskError e) {
       res["ok"] = false; res["error"] = e.Code; res["message"] = e.Message;
       if (e.Hint != null) res["hint"] = e.Hint;
@@ -371,6 +381,7 @@ public static class DexDesk {
 
   /** A window selector → exactly one window DEX may touch, or a clear error. */
   static Win Resolve(Dictionary<string, object> a) {
+    SyncTaken();
     var sel = Obj(a, "window") ?? a;
     IntPtr h = IntPtr.Zero;
     string opened = Str(sel, "opened");
@@ -404,6 +415,7 @@ public static class DexDesk {
     var info = Info(h);
     if (IsDex(info)) throw new DexDeskError("refused", "DEX doesn't use its own windows.");
     if (!selfElevated && IsElevated(info.Pid)) throw new DexDeskError("elevated_window", "That window runs as administrator, which DEX's helper can't reach from here.", "Ask the user, or use the admin route when it's set up.", null);
+    NoteWorking(info.H);
     return info;
   }
 
@@ -588,6 +600,11 @@ public static class DexDesk {
     return n;
   }
   static Node Target(Win w, Dictionary<string, object> a) {
+    var n = FindTarget(w, a);
+    NoteFocus(w, n);
+    return n;
+  }
+  static Node FindTarget(Win w, Dictionary<string, object> a) {
     object t; a.TryGetValue("target", out t);
     if (t is string) return Element(w, (string)t);
     var loc = t as Dictionary<string, object>;
@@ -732,7 +749,8 @@ public static class DexDesk {
     if (string.IsNullOrEmpty(path)) throw new DexDeskError("bad_args", "capture needs a path.");
     int maxWidth = Math.Max(200, Math.Min(1600, Int(a, "maxWidth", 1280)));
     RECT r; GetWindowRect(w.H, out r);
-    int width = r.Right - r.Left, height = r.Bottom - r.Top;
+    int width, height;
+    double ratio = DpiRatio(w.H, r, out width, out height);
     if (width <= 0 || height <= 0 || w.Minimized) throw new DexDeskError("not_drawn", "That window is minimized, so there's nothing to see.", "app_launch parks windows off-screen instead of minimizing them.", null);
     int tries = 0;
     Bitmap bmp = null;
@@ -745,9 +763,9 @@ public static class DexDesk {
     }
     // The window rect includes the invisible resize border; tree boxes are relative to the visible frame.
     int ox = w.Bounds[0] - r.Left, oy = w.Bounds[1] - r.Top;
-    if (Bool(a, "annotate", false)) Annotate(bmp, w, ox, oy);
+    if (Bool(a, "annotate", false)) Annotate(bmp, w, ox, oy, ratio);
     double scale = width > maxWidth ? (double)maxWidth / width : 1.0;
-    MapFor(w.H).CaptureScale = scale;
+    MapFor(w.H).CaptureScale = scale * ratio;     // picture px per screen px, for input_act's {x, y}
     Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
     using (var outBmp = scale < 1 ? new Bitmap(bmp, (int)(width * scale), (int)(height * scale)) : new Bitmap(bmp)) {
       outBmp.Save(path, ImageFormat.Png);
@@ -763,7 +781,24 @@ public static class DexDesk {
     return total > 0 && same > total * 0.98;
   }
 
-  static void Annotate(Bitmap bmp, Win w, int ox, int oy) {
+  /**
+   * PrintWindow draws a window at the size the window itself thinks it is: a
+   * DPI-unaware app on a 125% screen hands back a picture 80% the size of its
+   * real rect, and a picture that big leaves the rest black. Gives that size,
+   * and the picture's pixels per screen pixel.
+   */
+  static double DpiRatio(IntPtr h, RECT phys, out int width, out int height) {
+    width = phys.Right - phys.Left; height = phys.Bottom - phys.Top;
+    try {
+      IntPtr old = SetThreadDpiAwarenessContext(GetWindowDpiAwarenessContext(h));
+      RECT own; bool ok = GetWindowRect(h, out own);
+      SetThreadDpiAwarenessContext(old);
+      if (ok && own.Right - own.Left > 0 && own.Bottom - own.Top > 0) { width = own.Right - own.Left; height = own.Bottom - own.Top; }
+    } catch (EntryPointNotFoundException) { /* before Windows 10 1607: no virtualization to undo */ }
+    return (double)width / Math.Max(1, phys.Right - phys.Left);
+  }
+
+  static void Annotate(Bitmap bmp, Win w, int ox, int oy, double ratio) {
     WinMap m; if (!maps.TryGetValue(w.H.ToInt64(), out m)) return;
     using (var g = Graphics.FromImage(bmp))
     using (var pen = new Pen(Color.FromArgb(220, 22, 131, 255), 2))
@@ -773,7 +808,7 @@ public static class DexDesk {
       foreach (var h in m.LastTree) {
         Node n; if (!m.ByHandle.TryGetValue(h, out n)) continue;
         if (n.Box[2] <= 0 || n.Box[3] <= 0) continue;
-        var rect = new Rectangle(n.Box[0] + ox, n.Box[1] + oy, n.Box[2], n.Box[3]);
+        var rect = new Rectangle((int)((n.Box[0] + ox) * ratio), (int)((n.Box[1] + oy) * ratio), (int)(n.Box[2] * ratio), (int)(n.Box[3] * ratio));
         g.DrawRectangle(pen, rect);
         var size = g.MeasureString(n.H, font);
         g.FillRectangle(bg, rect.X, rect.Y, size.Width, size.Height);
@@ -790,17 +825,35 @@ public static class DexDesk {
     return new RECT { Left = vx + vw + 200, Top = vy, Right = vx + vw + 200 + w, Bottom = vy + h };
   }
 
+  [DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr h, int attr, ref int value, int size);
+  const int DWMWA_TRANSITIONS_FORCEDISABLED = 3;
+
+  /**
+   * Off every screen, not minimized (minimized apps stop drawing and their
+   * accessibility goes stale), and not in front.
+   *
+   * SetWindowPos, never SetWindowPlacement: Windows pulls a placement that is
+   * wholly off-screen back onto the screen's edge (documented, and measured:
+   * a "parked" window sat at the right edge, in full view).
+   */
   static void Park(IntPtr h) {
-    var wp = new WINDOWPLACEMENT { length = Marshal.SizeOf(typeof(WINDOWPLACEMENT)) };
-    GetWindowPlacement(h, ref wp);
-    int w = wp.rcNormalPosition.Right - wp.rcNormalPosition.Left, ht = wp.rcNormalPosition.Bottom - wp.rcNormalPosition.Top;
-    // A window that took the foreground hands it back as it minimizes: Windows
-    // activates the next window in z-order — the one the user was in.
-    if (GetForegroundWindow() == h) ShowWindow(h, SW_SHOWMINNOACTIVE);
-    wp.showCmd = SW_SHOWNOACTIVATE;
-    wp.flags = 0;
-    wp.rcNormalPosition = ParkRect(w, ht);
-    SetWindowPlacement(h, ref wp);
+    int noAnim = 1;
+    DwmSetWindowAttribute(h, DWMWA_TRANSITIONS_FORCEDISABLED, ref noAnim, 4);   // no flying to and from the taskbar
+    // Minimized (an app launched that way): restored where it was, then straight off-screen.
+    if (IsIconic(h)) ShowWindow(h, SW_SHOWNOACTIVATE);
+    RECT r; GetWindowRect(h, out r);
+    var park = ParkRect(r.Right - r.Left, r.Bottom - r.Top);
+    SetWindowPos(h, IntPtr.Zero, park.Left, park.Top, 0, 0, 0x0001 | 0x0004 | 0x0010 /* NOSIZE | NOZORDER | NOACTIVATE */);
+    if (GetForegroundWindow() == h) {
+      // It took the front. Minimizing hands it back to the window the user was
+      // in; restoring puts it where it is now — off-screen — without activating.
+      ShowWindow(h, SW_MINIMIZE);
+      for (int i = 0; i < 15 && GetForegroundWindow() == h; i++) Thread.Sleep(20);   // activation lands a moment later
+      Thread.Sleep(120);   // restored any sooner, some apps (WinForms) take the front straight back
+      ShowWindow(h, SW_SHOWNOACTIVATE);
+    }
+    noAnim = 0;
+    DwmSetWindowAttribute(h, DWMWA_TRANSITIONS_FORCEDISABLED, ref noAnim, 4);
   }
 
   static List<long> Hwnds() { var l = new List<long>(); foreach (var w in TopWindows(true)) l.Add(w.H.ToInt64()); return l; }
@@ -895,6 +948,7 @@ public static class DexDesk {
     SetThreadDpiAwarenessContext(PerMonitorAwareV2);
     if (!Monitor.TryEnter(stateLock)) return;   // an op is running; next tick
     try {
+      SyncTaken();
       var li = new LASTINPUTINFO { cbSize = (uint)Marshal.SizeOf(typeof(LASTINPUTINFO)) };
       GetLastInputInfo(ref li);
       bool userActed = li.dwTime != watchedInput;
@@ -904,6 +958,7 @@ public static class DexDesk {
         var h = new IntPtr(key);
         if (!IsWindow(h)) { parked.Remove(key); continue; }
         if (key == fg && userActed) {
+          takenLaunch[key] = parked[key];
           parked.Remove(key);
           takenOver.Add(key);
           var wp = new WINDOWPLACEMENT { length = Marshal.SizeOf(typeof(WINDOWPLACEMENT)) };
@@ -927,6 +982,166 @@ public static class DexDesk {
 
   /** Is the user's hand on this window now? (A window they took.) */
   public static bool IsTakenOver(long hwnd) { return takenOver.Contains(hwnd); }
+
+  // ── The Desk tab: live pictures of the window DEX works in ────────────
+  // (docs/desktop-control/PLAN.md §Phase 3.) While an op has touched a window
+  // in the last few seconds, and while the Desk tab is on screen in DEX (main
+  // keeps live/<session>.want fresh), two pictures a second of that window go
+  // to live/<session>-0.jpg and -1.jpg in turn, and live/<session>.json says
+  // which is newest and where the element being acted on is. Two slots: main
+  // reads one while the next is written to the other. Nothing is captured
+  // while nobody looks, and nothing is drawn on the real window.
+  const int FrameMaxWidth = 960;
+  const int FrameWorkingMs = 8000;
+  const int FocusShownMs = 5000;
+  static readonly Stopwatch clock = Stopwatch.StartNew();
+  static Timer frameTimer;
+  static long frameHwnd;
+  static long frameUntil;
+  static int frameBusy;
+  static int frameSeq;
+  static readonly object focusLock = new object();
+  static long focusHwnd;
+  static int[] focusBox;
+  static string focusName, focusRole;
+  static long focusAt;
+  static ImageCodecInfo jpegCodec;
+
+  static string LiveDir() { return System.IO.Path.Combine(home, "live"); }
+
+  static void NoteWorking(IntPtr h) {
+    Interlocked.Exchange(ref frameHwnd, h.ToInt64());
+    Interlocked.Exchange(ref frameUntil, clock.ElapsedMilliseconds + FrameWorkingMs);
+  }
+
+  /** The element an op acts on: the box the Desk tab draws round it. */
+  static void NoteFocus(Win w, Node n) {
+    int[] box = n.Box;
+    try {
+      // Where it is now, not where the last tree saw it.
+      var r = n.El.GetCurrentPropertyValue(P.UIA_BoundingRectanglePropertyId) as double[];
+      if (r != null && r.Length == 4 && r[2] > 0 && r[3] > 0) box = new[] { (int)r[0] - w.Bounds[0], (int)r[1] - w.Bounds[1], (int)r[2], (int)r[3] };
+    } catch { /* keep the tree's box */ }
+    lock (focusLock) {
+      focusHwnd = w.H.ToInt64(); focusBox = box; focusName = n.Name; focusRole = n.Role; focusAt = clock.ElapsedMilliseconds;
+    }
+    opElement = new Dictionary<string, object> { { "name", n.Name }, { "role", n.Role } };
+  }
+  /** The element the op in progress acted on, said back in its result (and in DEX's chat). */
+  static Dictionary<string, object> opElement;
+
+  /** Main says the Desk tab is showing by touching this file every couple of seconds. */
+  static bool Watched() {
+    try {
+      var t = File.GetLastWriteTimeUtc(System.IO.Path.Combine(LiveDir(), session + ".want"));
+      return (DateTime.UtcNow - t).TotalSeconds < 6;
+    } catch { return false; }
+  }
+
+  static void FrameTick(object _) {
+    if (Interlocked.Exchange(ref frameBusy, 1) == 1) return;   // the last one is still drawing
+    try {
+      long h = Interlocked.Read(ref frameHwnd);
+      if (h == 0 || clock.ElapsedMilliseconds > Interlocked.Read(ref frameUntil) || !Watched()) return;
+      SetThreadDpiAwarenessContext(PerMonitorAwareV2);
+      WriteFrame(new IntPtr(h));
+    } catch { /* never let a picture take the host down */ }
+    finally { Interlocked.Exchange(ref frameBusy, 0); }
+  }
+
+  static void WriteFrame(IntPtr h) {
+    if (!IsWindow(h) || IsIconic(h)) return;
+    RECT r; GetWindowRect(h, out r);
+    int width, height;
+    double ratio = DpiRatio(h, r, out width, out height);   // the picture's px per screen px
+    if (width <= 0 || height <= 0 || width > 10000 || height > 10000) return;
+    // The visible frame, without the invisible resize borders (DWM gives screen px).
+    RECT v;
+    if (DwmGetWindowAttribute(h, DWMWA_EXTENDED_FRAME_BOUNDS, out v, Marshal.SizeOf(typeof(RECT))) != 0) v = r;
+    int ox = Math.Max(0, (int)Math.Round((v.Left - r.Left) * ratio)), oy = Math.Max(0, (int)Math.Round((v.Top - r.Top) * ratio));
+    int vw = Math.Min(width - ox, (int)Math.Round((v.Right - v.Left) * ratio)), vh = Math.Min(height - oy, (int)Math.Round((v.Bottom - v.Top) * ratio));
+    if (vw <= 0 || vh <= 0) return;
+    double scale = vw > FrameMaxWidth ? (double)FrameMaxWidth / vw : 1.0;
+    int fw = Math.Max(1, (int)Math.Round(vw * scale)), fh = Math.Max(1, (int)Math.Round(vh * scale));
+    string dir = LiveDir();
+    Directory.CreateDirectory(dir);
+    int seq = frameSeq + 1;
+    string file = session + "-" + (seq % 2) + ".jpg";
+    using (var bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb)) {
+      using (var g = Graphics.FromImage(bmp)) { IntPtr hdc = g.GetHdc(); try { PrintWindow(h, hdc, 2 /* PW_RENDERFULLCONTENT */); } finally { g.ReleaseHdc(hdc); } }
+      if (Blank(bmp)) return;                  // keep the last good picture
+      using (var outBmp = new Bitmap(fw, fh, PixelFormat.Format24bppRgb)) {
+        using (var g = Graphics.FromImage(outBmp)) {
+          g.InterpolationMode = InterpolationMode.HighQualityBilinear;
+          g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+          g.DrawImage(bmp, new Rectangle(0, 0, fw, fh), new Rectangle(ox, oy, vw, vh), GraphicsUnit.Pixel);
+        }
+        if (jpegCodec == null) foreach (var c in ImageCodecInfo.GetImageEncoders()) if (c.MimeType == "image/jpeg") jpegCodec = c;
+        using (var ps = new EncoderParameters(1)) {
+          ps.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 72L);
+          outBmp.Save(System.IO.Path.Combine(dir, file), jpegCodec, ps);
+        }
+      }
+    }
+    frameSeq = seq;
+    // Element boxes are in screen px: to the picture's px, then the frame's.
+    double boxScale = scale * ratio;
+    var meta = new Dictionary<string, object> {
+      { "seq", seq }, { "file", file }, { "at", (long)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds },
+      { "width", fw }, { "height", fh }, { "scale", boxScale }, { "window", Describe(h) },
+    };
+    lock (focusLock) {
+      if (focusHwnd == h.ToInt64() && focusBox != null && clock.ElapsedMilliseconds - focusAt < FocusShownMs && focusBox[2] > 0 && focusBox[3] > 0) {
+        meta["focus"] = new Dictionary<string, object> {
+          { "box", new[] { (int)Math.Round(focusBox[0] * boxScale), (int)Math.Round(focusBox[1] * boxScale), (int)Math.Max(1, Math.Round(focusBox[2] * boxScale)), (int)Math.Max(1, Math.Round(focusBox[3] * boxScale)) } },
+          { "name", focusName }, { "role", focusRole },
+        };
+      }
+    }
+    string metaPath = System.IO.Path.Combine(dir, session + ".json"), tmp = metaPath + ".tmp";
+    File.WriteAllText(tmp, Json.Serialize(meta));
+    try { if (File.Exists(metaPath)) File.Replace(tmp, metaPath, null); else File.Move(tmp, metaPath); }
+    catch (IOException) { /* main was reading it: the next picture says it */ }
+  }
+
+  // ── "Show me" and "Hand back", from the Desk tab ──────────────────────
+  // Main lists the windows the user has taken in live/<session>.taken.json.
+  // A window there is the user's: DEX leaves it alone (and no longer parks
+  // it). Gone from the list again (Hand back), it's DEX's to use — and parked
+  // again if DEX opened it.
+  static DateTime takenStamp = DateTime.MinValue;
+  static HashSet<long> listedTaken = new HashSet<long>();
+  /** Launch ids of parked windows the user took, so Hand back can park them again. */
+  static readonly Dictionary<long, string> takenLaunch = new Dictionary<long, string>();
+
+  static void SyncTaken() {
+    string f = System.IO.Path.Combine(LiveDir(), session + ".taken.json");
+    DateTime stamp;
+    try { stamp = File.Exists(f) ? File.GetLastWriteTimeUtc(f) : DateTime.MinValue; } catch { return; }
+    if (stamp == takenStamp) return;
+    var now = new HashSet<long>();
+    if (stamp != DateTime.MinValue) {
+      try {
+        var d = Json.DeserializeObject(File.ReadAllText(f)) as Dictionary<string, object>;
+        var list = d != null && d.ContainsKey("hwnds") ? d["hwnds"] as object[] : null;
+        if (list != null) foreach (var x in list) now.Add(Convert.ToInt64(x));
+      } catch { return; }                      // half-written: read it next time
+    }
+    takenStamp = stamp;
+    foreach (var h in now) {
+      if (listedTaken.Contains(h)) continue;
+      string id;
+      if (parked.TryGetValue(h, out id)) { takenLaunch[h] = id; parked.Remove(h); }
+      takenOver.Add(h);
+    }
+    foreach (var h in listedTaken) {
+      if (now.Contains(h)) continue;
+      takenOver.Remove(h);
+      string id;
+      if (takenLaunch.TryGetValue(h, out id)) { parked[h] = id; takenLaunch.Remove(h); }
+    }
+    listedTaken = now;
+  }
 
   // ── System ─────────────────────────────────────────────────────────────
   static object Hello() {

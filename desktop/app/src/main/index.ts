@@ -121,6 +121,8 @@ import type { TabsBackend } from './extensions/types';
 import type { MenuTarget } from './extensions/menusApi';
 import * as sitePermissions from './workspace/sitePermissions';
 import * as deskState from './desktop/deskState';
+import { DeskLive } from './desktop/deskLive';
+import { deskHome, hubArea, journalDir, runUndo, runWindowOp } from './desktop/deskHelpers';
 import { TabMemory, tabsToSave } from './workspace/tabMemory';
 import { leaseDebugger, withDebugger } from './cdpLease';
 import { normalizeAddress } from '../shared/address';
@@ -249,6 +251,13 @@ const documentTabs = new DocumentTabs(
   },
   (sessionId, docId, mtimeMs) => shellWindow?.webContents.send('workspace:doc-changed', sessionId, docId, mtimeMs),
 );
+// The Desk tab (desktop/deskLive.ts): the window a task's Windows tools work
+// in, live, and the user's Show me / Hand back.
+const deskLive = new DeskLive({
+  home: deskHome,
+  send: (channel, ...args) => { if (shellWindow && !shellWindow.isDestroyed()) shellWindow.webContents.send(channel, ...args); },
+  windowOp: (op, hwnd) => runWindowOp(op, hwnd, op === 'show' ? hubArea(shellWindow) : undefined),
+});
 let onboardingWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
@@ -900,8 +909,11 @@ function openShellAndWire(): BrowserWindow {
   shellWindow.on('closed', () => {
     mainLogger.info('main.shellWindow.closed');
     shellWindow = null;
+    deskLive.stopAll();
     destroyStage();
   });
+  // A reloaded hub has no Desk tabs showing until it says so again.
+  shellWindow.webContents.on('did-start-navigation', (details) => { if (details.isMainFrame && !details.isSameDocument) deskLive.stopAll(); });
 
   // Closed to the tray or minimized: the task on screen moves to the stage, so
   // the agent can still see its page.
@@ -2269,13 +2281,31 @@ app.whenReady().then(async () => {
       // Something on the desktop the user should know: DEX brought a window
       // to the front by mistake, or the user took a window DEX had parked.
       'POST /dex/desktop-event': async (raw) => {
-        const body = JSON.parse(raw || '{}') as { sessionId?: unknown; kind?: unknown; window?: { title?: unknown; process?: unknown }; incident?: { to?: { process?: unknown } } };
+        const body = JSON.parse(raw || '{}') as {
+          sessionId?: unknown; kind?: unknown; window?: { hwnd?: unknown; title?: unknown; process?: unknown }; incident?: { to?: { process?: unknown } };
+          entry?: unknown; title?: unknown; reason?: unknown; undoable?: unknown; undoes?: unknown; restartNeeded?: unknown;
+        };
         const sessionId = assertString(body.sessionId, 'sessionId', 100);
+        if (!sessionManager.getSession(sessionId)) return { ok: false };
         const app = String(body.window?.process ?? body.incident?.to?.process ?? 'an app').replace(/\.exe$/i, '');
-        if (body.kind === 'focus-incident') {
+        if (body.kind === 'act') {
+          deskLive.noteAct(sessionId, body as Parameters<DeskLive['noteAct']>[1]);
+        } else if (body.kind === 'focus-incident') {
           sessionManager.appendOutput(sessionId, { type: 'notify', level: 'info', message: `DEX brought ${app} to the front by mistake — sorry. It won't do it that way again.` });
         } else if (body.kind === 'taken-over') {
+          deskLive.noteTakenOver(sessionId, body.window);
           sessionManager.appendOutput(sessionId, { type: 'notify', level: 'info', message: `You took ${app} — DEX is leaving it alone.` });
+        } else if (body.kind === 'change') {
+          // A change to the PC, journaled with its undo: the chat shows it with an Undo button.
+          sessionManager.appendOutput(sessionId, {
+            type: 'desk_change',
+            entry: assertString(body.entry, 'entry', 80),
+            title: assertString(body.title, 'title', 300),
+            reason: typeof body.reason === 'string' ? body.reason.slice(0, 300) : undefined,
+            undoable: body.undoable === true,
+            undoes: typeof body.undoes === 'string' ? body.undoes.slice(0, 80) : undefined,
+            restartNeeded: body.restartNeeded === true || undefined,
+          });
         }
         return { ok: true };
       },
@@ -2647,6 +2677,7 @@ app.whenReady().then(async () => {
     drainingQueuedFollowUps.delete(validatedId);
     terminateActiveRunControl(validatedId);
     deskState.release(validatedId);
+    deskLive.forget(validatedId);
     browserPool.destroy(validatedId, shellWindow ?? undefined);
     documentTabs.closeSession(validatedId);
     tabMemory.forget(validatedId);
@@ -3620,6 +3651,26 @@ app.whenReady().then(async () => {
       });
     }
     return result;
+  });
+
+  // The Desk tab (desktop/deskLive.ts) and the chat's Undo buttons.
+  const deskSession = (v: unknown): string => {
+    const id = assertString(v, 'sessionId', 100);
+    if (!sessionManager.getSession(id)) throw new Error('no such task');
+    return id;
+  };
+  ipcMain.handle('desk:state', (_event, sessionId: unknown) => deskLive.state(assertString(sessionId, 'sessionId', 100)));
+  ipcMain.handle('desk:watch', (_event, sessionId: unknown, on: unknown) => {
+    deskLive.watch(assertString(sessionId, 'sessionId', 100), on === true);
+    return true;
+  });
+  ipcMain.handle('desk:show-me', (_event, sessionId: unknown) => deskLive.showMe(deskSession(sessionId)));
+  ipcMain.handle('desk:hand-back', (_event, sessionId: unknown) => deskLive.handBack(deskSession(sessionId)));
+  ipcMain.handle('desk:undo', (_event, sessionId: unknown, entry: unknown) => runUndo(deskSession(sessionId), assertString(entry, 'entry', 80)));
+  ipcMain.handle('desk:open-journal', async (_event, sessionId: unknown) => {
+    const dir = journalDir(typeof sessionId === 'string' ? sessionId : null);
+    fs.mkdirSync(dir, { recursive: true });
+    return (await shell.openPath(dir)) === '';
   });
 
   // DEX's elevated helper for admin changes (desktop/elevation.ts).

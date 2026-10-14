@@ -18,7 +18,13 @@ createInterface({ input: process.stdin }).on('line', (line) => {
   }
   if (op === 'windows') return say({ id, ok: true, result: { windows: Object.values(WINDOWS) } });
   if (op === 'invoke') {
-    return say({ id, ok: true, result: { method: 'invoke' }, ...(args.target === 'e9' ? { focus: { incident: { kind: 'foreground', to: { process: 'notepad.exe' } } } } : {}) });
+    const element = args.target === 'e5' ? { element: { name: 'Save', role: 'Button' } } : {};
+    return say({ id, ok: true, result: { method: 'invoke', ...element }, ...(args.target === 'e9' ? { focus: { incident: { kind: 'foreground', to: { process: 'notepad.exe' } } } } : {}) });
+  }
+  if (op === 'change') {
+    // A touchpad gesture, with the undo the real host records.
+    const undo = args.action === 'gesture_set' ? { action: 'gesture_set', args: { key: args.args.key, value: 0 } } : undefined;
+    return say({ id, ok: true, result: { done: true, ...(undo && args.args.value !== 0 ? { undo } : {}) } });
   }
   if (op === 'capture') {
     fs.mkdirSync(path.dirname(args.path), { recursive: true });

@@ -15,6 +15,7 @@
 import type { OrbState } from 'thinking-orbs';
 import { parseWidget, type Widget } from '../../shared/widgets';
 import { HOSTED_CONNECTORS, remoteConnectionId } from '../../shared/connectorCatalog';
+import { deskWords } from '../../shared/deskWords';
 
 export type ToolKind = 'search' | 'browse' | 'mcp' | 'read' | 'write' | 'run' | 'desktop' | 'agent' | 'other';
 
@@ -64,7 +65,38 @@ export function serverName(id: string): string {
   return BUILT_IN_SERVERS[id] ?? HOSTED_NAMES.get(id) ?? id;
 }
 
-export function classifyTool(name: string): ToolMeta {
+const WINDOWS_TOOL = /^mcp__windows__([a-z_]+)$/;
+
+/** The element a Windows tool acted on, from its result (`"element":{"name":…}`). */
+function elementOf(preview: string): { name?: string; role?: string } | null {
+  const m = /"element":\{"name":"((?:[^"\\]|\\.)*)"(?:,"role":"([A-Za-z]+)")?/.exec(preview);
+  if (!m) return null;
+  try { return { name: JSON.parse(`"${m[1]}"`) as string, role: m[2] }; } catch { return { name: m[1], role: m[2] }; }
+}
+
+/** The window a Windows tool worked in, from its result (`"window":{"hwnd":…,"title":…,"process":…}`). */
+function windowOf(preview: string): { title?: string; process?: string } | null {
+  const m = /"window":\{"hwnd":\d+,"title":"((?:[^"\\]|\\.)*)","process":"((?:[^"\\]|\\.)*)"/.exec(preview);
+  if (!m) return null;
+  const unquote = (s: string): string => { try { return JSON.parse(`"${s}"`) as string; } catch { return s; } };
+  return { title: unquote(m[1]), process: unquote(m[2]) };
+}
+
+/**
+ * The Windows tools in plain words (shared/deskWords.ts): "Pressed “Shuffle”
+ * in Spotify" says it all, so there's no separate target beside it.
+ */
+function windowsMeta(tool: string, args: unknown, element: { name?: string; role?: string } | null = null, window: { title?: string; process?: string } | null = null): ToolMeta {
+  const a = args && typeof args === 'object' ? (args as Record<string, unknown>) : {};
+  const words = deskWords(tool, a, window, element);
+  return { kind: 'desktop', active: words.active, done: words.done, orb: KIND_META.desktop.orb, display: '' };
+}
+
+export function classifyTool(name: string, args?: unknown): ToolMeta {
+  const win = WINDOWS_TOOL.exec(name);
+  if (win) return windowsMeta(win[1], args);
+  // Claude Code loading deferred tools: housekeeping, not a step worth naming.
+  if (name === 'ToolSearch') return { kind: 'other', done: 'Loaded its tools', active: 'Loading its tools', orb: KIND_META.other.orb, display: '' };
   let kind: ToolKind = 'other';
   for (const [re, k] of RULES) {
     if (re.test(name)) { kind = k; break; }
@@ -112,6 +144,11 @@ export type Block = (
   | { kind: 'artifact'; id: number; title: string; note?: string; count: number; items: Array<{ label: string; detail?: string }> }
   /** From the agent's UI kit (shared/widgets.ts): `wid` is the widget's own id. */
   | { kind: 'widget'; id: number; wid: string; widget: Widget }
+  /**
+   * A change DEX made to the PC (the Windows tools' undo journal). `undone`
+   * once a later change undid it; `undoes` on the change that did.
+   */
+  | { kind: 'change'; id: number; entry: string; title: string; reason?: string; undoable: boolean; undone: boolean; undoes?: string; restartNeeded?: boolean }
 ) & BlockTimes;
 
 export interface Usage {
@@ -213,7 +250,7 @@ function fold(t: Transcript, raw: RawEvent, at: number | undefined): Transcript 
         kind: 'tool',
         id,
         name,
-        meta: classifyTool(name),
+        meta: classifyTool(name, raw.args),
         summary: summarizeArgs(raw.args),
         args: raw.args,
         iteration: Number(raw.iteration ?? 0),
@@ -228,7 +265,12 @@ function fold(t: Transcript, raw: RawEvent, at: number | undefined): Transcript 
         const b = t.blocks[i];
         if (b.kind === 'tool' && !b.result && (b.name === name || !name)) {
           const blocks = t.blocks.slice();
-          blocks[i] = { ...b, result, endAt: at ?? b.endAt };
+          // A Windows tool says what it pressed: "Pressed “Shuffle” in Spotify", not "a button".
+          const win = WINDOWS_TOOL.exec(b.name);
+          const element = win && result.ok ? elementOf(result.preview) : null;
+          const window = win && result.ok ? windowOf(result.preview) : null;
+          const meta = win && (element || window) ? windowsMeta(win[1], b.args, element, window) : null;
+          blocks[i] = { ...b, ...(meta ? { meta } : {}), result, endAt: at ?? b.endAt };
           return { ...t, blocks };
         }
       }
@@ -275,6 +317,24 @@ function fold(t: Transcript, raw: RawEvent, at: number | undefined): Transcript 
       return push(t, { kind: 'image', id, path: str(raw.path), caption: raw.caption ? str(raw.caption) : undefined });
     case 'canvas':
       return push(t, { kind: 'canvas', id, title: str(raw.title), markdown: str(raw.markdown) });
+    case 'desk_change': {
+      const entry = str(raw.entry);
+      if (!entry) return t;
+      const undoes = raw.undoes ? str(raw.undoes) : undefined;
+      let next = t;
+      if (undoes) {
+        const i = t.blocks.findIndex((b) => b.kind === 'change' && b.entry === undoes);
+        if (i >= 0) {
+          const blocks = t.blocks.slice();
+          blocks[i] = { ...(blocks[i] as Extract<Block, { kind: 'change' }>), undone: true };
+          next = { ...t, blocks };
+        }
+      }
+      return push(next, {
+        kind: 'change', id, entry, title: str(raw.title), reason: raw.reason ? str(raw.reason) : undefined,
+        undoable: raw.undoable === true, undone: raw.undone === true, undoes, restartNeeded: raw.restartNeeded === true || undefined,
+      });
+    }
     case 'widget': {
       const parsed = parseWidget(raw.widget);
       return parsed.widget ? push(t, { kind: 'widget', id, wid: str(raw.id), widget: parsed.widget }) : t;

@@ -20,6 +20,7 @@ import { KindGlyph, prettyArgs } from '../../logs/ChatTranscript';
 import { appendEvent, buildTranscript, EMPTY_TRANSCRIPT, type Block, type Transcript } from '../../logs/transcript';
 import type { AgentSession, TaskStep } from '../types';
 import { Composer, type ComposerAttachment } from './Composer';
+import { DeskChanges } from './DeskChanges';
 import { FileCards, showFile } from './FileCards';
 import { useTaskFileUrl } from '../workspace/useTaskFileUrl';
 import { FileBadge } from './fileKinds';
@@ -400,6 +401,7 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood,
       {turn.docs.map((d) => <DocCard key={d.id} block={d} openSignal={docSignals.get(d.id) ?? 0} />)}
       {turn.finds.map((f) => <FindCard key={f.id} block={f} />)}
       {turn.files.length > 0 && <FileCards sessionId={sessionId} files={turn.files} />}
+      {turn.changes.length > 0 && <DeskChanges sessionId={sessionId} changes={turn.changes} />}
 
       {!turn.live && turn.reply && (
         <div className="cx-foot">

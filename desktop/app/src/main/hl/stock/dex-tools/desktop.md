@@ -31,6 +31,13 @@ minimized, so it keeps working) and not in the user's way. Use the
 `show:true`, `window_manage unpark` and `open_settings` put a window on the
 user's screen. Only when they asked to see it, or as your very last step.
 
+The user watches the window you work in from DEX's **Desk** tab — a live
+mirror with a box on the control you act on — so there's no need to bring a
+window forward to show them. From there they can **Show me** (the window
+comes onto their screen and becomes theirs: your calls on it answer `held`)
+and **Hand back** (it's yours again, parked off-screen). While a window is
+theirs, leave it alone; ask if you need it.
+
 ## When only the real mouse will do
 
 Some controls ignore accessibility (`ui_invoke` says `needs_input`), and some
@@ -80,8 +87,10 @@ has the list) — never a free command. Rules:
 6. Things that need a restart (`winsock_reset`, `ip_stack_reset`): say so,
    and never restart the PC yourself.
 
-End with a short fix report: what you found, what you changed (with the
-journal entries), how to undo it.
+End with a short fix report: what you found, what you changed, how to undo
+it. DEX already lists each change under your reply with its own **Undo**
+button (and in the Desk tab), so say in words what each one did and why —
+don't paste journal ids.
 
 ## Recipes
 

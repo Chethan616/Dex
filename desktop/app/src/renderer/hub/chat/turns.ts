@@ -37,6 +37,8 @@ export interface Turn {
   widgets: Array<Of<'widget'>>;
   /** Shown in the open, never folded: errors and things that need you. */
   alerts: Array<Of<'error'> | Of<'notice'>>;
+  /** Changes DEX made to the PC this turn, each with Undo while it can be undone. */
+  changes: Array<Of<'change'>>;
   startAt?: number;
   endAt?: number;
   /** DEX is still working on this turn. */
@@ -79,6 +81,7 @@ function buildTurn(user: Of<'user'> | null, agent: Block[], live: boolean, fallb
     finds: [],
     widgets: [],
     alerts: [],
+    changes: [],
     startAt: user?.at ?? fallbackStart ?? agent[0]?.at,
     endAt: undefined,
     live,
@@ -119,6 +122,9 @@ function buildTurn(user: Of<'user'> | null, agent: Block[], live: boolean, fallb
         break;
       case 'error':
         turn.alerts.push(b);
+        break;
+      case 'change':
+        turn.changes.push(b);
         break;
       case 'notice':
         if (b.level === 'blocking') turn.alerts.push(b);

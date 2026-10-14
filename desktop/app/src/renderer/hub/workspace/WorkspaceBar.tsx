@@ -28,6 +28,8 @@ interface WorkspaceBarProps {
   browser?: boolean;
   /** The Subagents tab: shown only once the task has launched at least one. */
   subagents?: { active: boolean; count: number; activeCount: number; onSelect: () => void };
+  /** The Desk tab (DeskView.tsx): shown once the task's Windows tools have worked in a window. */
+  desk?: { active: boolean; live: boolean; onSelect: () => void };
 }
 
 const Icon = {
@@ -70,6 +72,9 @@ const Icon = {
   down: (
     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
   ),
+  desk: (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="3" width="12" height="8.2" rx="1.4" stroke="currentColor" strokeWidth="1.3" fill="none" /><path d="M6 13.5h4M8 11.2v2.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
+  ),
   subagents: (
     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="5.5" cy="5.5" r="2.1" stroke="currentColor" strokeWidth="1.2" fill="none" /><circle cx="11" cy="7" r="1.6" stroke="currentColor" strokeWidth="1.2" fill="none" /><path d="M2 13c0-2.2 1.6-3.8 3.5-3.8S9 10.8 9 13M9.3 12.3c.2-1.6 1.4-2.7 2.8-2.7 1.6 0 2.9 1.3 2.9 3" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" /></svg>
   ),
@@ -97,7 +102,7 @@ function TabIcon({ tab }: { tab: WorkspaceTab }): React.ReactElement {
   return <span className="ws-tab__icon ws-tab__icon--globe">{Icon.globe}</span>;
 }
 
-export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSelectPage, docs, browser = true, subagents }: WorkspaceBarProps): React.ReactElement {
+export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSelectPage, docs, browser = true, subagents, desk }: WorkspaceBarProps): React.ReactElement {
   const api = window.electronAPI?.workspace;
   const active = tabs.find((t) => t.active) ?? tabs[0];
   const inputRef = useRef<HTMLInputElement>(null);
@@ -152,8 +157,8 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
   const findStep = useCallback((forward: boolean) => {
     if (findText) void api?.find?.(sessionId, { tabId: activeId, text: findText, next: true, forward });
   }, [api, sessionId, activeId, findText]);
-  /** What owns the rect: the chat, a document, the Subagents tab, or the active web page. */
-  const pageInFront = !chat?.active && !docs?.activeId && !subagents?.active;
+  /** What owns the rect: the chat, a document, the Subagents or Desk tab, or the active web page. */
+  const pageInFront = !chat?.active && !docs?.activeId && !subagents?.active && !desk?.active;
   const pageInFrontRef = useRef(pageInFront);
   pageInFrontRef.current = pageInFront;
   useEffect(() => api?.onFind?.((id) => {
@@ -205,6 +210,20 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
             <span className="ws-tab__icon">{chat.icon ?? (chat.working ? <span className="ws-spinner" /> : Icon.chat)}</span>
             <span className="ws-tab__title">Chat</span>
             {chat.unread && <span className="ws-tab__dot" aria-label="New reply" />}
+          </div>
+        )}
+        {desk && (
+          <div
+            role="tab"
+            aria-selected={desk.active}
+            tabIndex={desk.active ? 0 : -1}
+            className={`ws-tab ws-tab--desk${desk.active ? ' ws-tab--active' : ''}`}
+            title="The Windows app DEX is working in"
+            onClick={desk.onSelect}
+          >
+            <span className="ws-tab__icon">{Icon.desk}</span>
+            <span className="ws-tab__title">Desk</span>
+            {desk.live && <span className="ws-tab__dot" aria-label="DEX is working here" />}
           </div>
         )}
         {subagents && subagents.count > 0 && (

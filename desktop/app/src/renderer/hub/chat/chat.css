@@ -605,6 +605,50 @@
 .cx-find__list li span { flex-shrink: 0; }
 .cx-find__list li em { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-fg-tertiary); font-style: normal; }
 
+/* Changes DEX made to the PC (DeskChanges.tsx), with Undo */
+.cx-changes {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--cx-card-line);
+  background: var(--cx-card);
+  font-size: 13.5px;
+}
+.cx-changes__head { display: flex; align-items: center; justify-content: space-between; font-weight: 600; }
+.cx-changes__journal {
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-fg-tertiary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.cx-changes__journal:hover { color: var(--color-fg-primary); background: var(--surface-chip-hover, rgba(255, 255, 255, 0.07)); }
+.cx-changes__list { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.cx-change { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.cx-change__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cx-change__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-change__why { font-size: 12px; color: var(--color-fg-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-change--undone .cx-change__title { color: var(--color-fg-tertiary); text-decoration: line-through; text-decoration-color: var(--color-fg-quaternary, rgba(127, 127, 127, 0.5)); }
+.cx-change__undo {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border: 1px solid var(--cx-card-line);
+  border-radius: 999px;
+  background: var(--surface-chip, rgba(255, 255, 255, 0.04));
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.cx-change__undo:hover:not(:disabled) { background: var(--surface-chip-hover, rgba(255, 255, 255, 0.08)); }
+.cx-change__undo:disabled { opacity: 0.55; cursor: default; }
+.cx-change__done { flex-shrink: 0; font-size: 12px; color: var(--color-fg-tertiary); }
+.cx-changes__error { margin-top: 8px; font-size: 12.5px; color: var(--color-status-danger); }
+
 /* ── The minibar ────────────────────────────────────────────────────── */
 
 .cx-mini {

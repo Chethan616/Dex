@@ -33,6 +33,14 @@ const session = (process.env.DEX_SESSION_ID || 'shared').replace(/[^A-Za-z0-9_-]
 const log = (msg) => process.stderr.write(`dex windows: ${msg}\n`);
 const control = controlClient(process.env);
 
+/** Events still on their way to DEX: `--undo` waits for them before it exits. */
+const inflight = new Set();
+function report(kind, data) {
+  const p = control.event(kind, data);
+  inflight.add(p);
+  void p.finally(() => inflight.delete(p));
+}
+
 /**
  * host.ps1 and DexDesk.cs on real disk: in an installed DEX this folder is
  * inside app.asar, which Electron's Node can read but PowerShell can't.
@@ -161,7 +169,7 @@ function journalEntries() {
   } catch { return []; }
 }
 
-async function runChange(action, args, reason, { isUndo = false } = {}) {
+async function runChange(action, args, reason, { isUndo = false, undoes = null } = {}) {
   const def = ACTIONS[action];
   // Before something hard to undo that needs admin: a restore point, if Windows will make one.
   let restorePoint = null;
@@ -173,8 +181,23 @@ async function runChange(action, args, reason, { isUndo = false } = {}) {
   if (!res.ok) return res;
   const result = res.result ?? {};
   // An undo isn't itself undone by the next undo: that steps further back.
-  const entry = journal({ action, args, reason, result, undo: isUndo ? null : result.undo ?? null, undone: false });
+  const undo = isUndo ? null : result.undo ?? null;
+  const title = def.title(args);
+  const entry = journal({ action, args, reason, result, undo, undone: false, title, tier: def.tier, admin: def.admin, ...(undoes ? { undoes } : {}) });
+  // DEX shows it in the task's chat, with an Undo button while it can be undone.
+  report('change', { entry, title: isUndo ? `Undid: ${undoes?.title ?? title}` : title, reason, undoable: Boolean(undo), undoes: undoes?.id ?? null, restartNeeded: Boolean(result.restartNeeded) });
   return { ok: true, result: { ...result, entry, ...(restorePoint ? { restorePoint } : {}) } };
+}
+
+/** Reverse one journaled change (the newest that can be, without `entryId`). */
+export async function undoEntry(entryId) {
+  const entries = journalEntries().filter((e) => e.undo && !e.undone);
+  const target = entryId ? entries.find((e) => e.id === entryId) : entries[entries.length - 1];
+  if (!target) return { ok: false, error: 'nothing_to_undo', message: 'There’s no change of this task that DEX can undo.' };
+  const res = await runChange(target.undo.action, target.undo.args ?? {}, `Undo: ${target.reason ?? target.action}`, { isUndo: true, undoes: { id: target.id, title: target.title ?? target.action } });
+  if (!res.ok) return res;
+  fs.writeFileSync(path.join(journalDir, `${target.id}.json`), JSON.stringify({ ...target, undone: true }, null, 2));
+  return { ok: true, result: { undid: target.id, ...res.result } };
 }
 
 /* ── tools/call ───────────────────────────────────────────────────────── */
@@ -214,18 +237,52 @@ export async function callTool(name, args = {}) {
     }
   }
 
+  const act = actReporter(name, args, win);
+  try {
+    const out = await runTool(name, args, win, h);
+    act.end(!out.isError, out.element ?? null);
+    delete out.element;
+    return out;
+  } catch (err) {
+    act.end(false, null);
+    throw err;
+  }
+}
+
+/* ── What DEX is doing, for the Desk tab and its caption ──────────────── */
+
+let actSeq = 0;
+const BRIEF_KEYS = ['target', 'state', 'action', 'value', 'app', 'uri', 'page', 'topic', 'expanded', 'direction', 'show', 'name', 'role', 'class', 'log'];
+
+/** The parts of a call that say what it does: never all of the typed text. */
+export function briefArgs(args = {}) {
+  const out = {};
+  for (const k of BRIEF_KEYS) {
+    const v = args[k];
+    if (v === undefined || v === null) continue;
+    out[k] = typeof v === 'string' ? v.slice(0, 120) : v;
+  }
+  if (typeof args.text === 'string') out.text = args.text.slice(0, 40);
+  if (typeof args.why === 'string') out.why = args.why.slice(0, 160);
+  if (args.args && typeof args.args === 'object') out.args = args.args;
+  return out;
+}
+
+function actReporter(tool, args, win) {
+  const seq = ++actSeq;
+  const window = win ? { hwnd: win.hwnd, title: win.title ?? '', process: win.process ?? '', openedByDex: Boolean(win.openedByDex), takenOver: Boolean(win.takenOver) } : null;
+  void control.event('act', { seq, phase: 'start', tool, args: briefArgs(args), window });
+  return { end: (ok, element) => { void control.event('act', { seq, phase: 'end', tool, args: briefArgs(args), window, ok, ...(element ? { element } : {}) }); } };
+}
+
+async function runTool(name, args, win, h) {
   if (name === 'system_change') {
     const res = await runChange(args.action, args.args ?? {}, args.reason);
     return res.ok ? textResult(res.result) : errorResult(res.error ?? 'change_failed', res.message ?? 'The change failed.', res.hint);
   }
   if (name === 'undo') {
-    const entries = journalEntries().filter((e) => e.undo && !e.undone);
-    const target = args.entry ? entries.find((e) => e.id === args.entry) : entries[entries.length - 1];
-    if (!target) return errorResult('nothing_to_undo', 'There’s no change of this task that DEX can undo.');
-    const res = await runChange(target.undo.action, target.undo.args ?? {}, `Undo: ${target.reason ?? target.action}`, { isUndo: true });
-    if (!res.ok) return errorResult(res.error ?? 'change_failed', res.message ?? 'The undo failed.', res.hint);
-    fs.writeFileSync(path.join(journalDir, `${target.id}.json`), JSON.stringify({ ...target, undone: true }, null, 2));
-    return textResult({ undid: target.id, ...res.result });
+    const res = await undoEntry(args.entry);
+    return res.ok ? textResult(res.result) : errorResult(res.error ?? 'change_failed', res.message ?? 'The undo failed.', res.hint);
   }
 
   const { op, args: hostArgs } = toHostOp(name, args);
@@ -239,6 +296,11 @@ export async function callTool(name, args = {}) {
   if (bad) return bad;
 
   const result = res.result ?? {};
+  const element = result.element ?? null;
+  // Which window it was, by name: the agent and DEX's chat both say "in Spotify", not "in 1247236".
+  if (win && result && typeof result === 'object' && !Array.isArray(result) && !result.window) {
+    result.window = { hwnd: win.hwnd, title: win.title ?? '', process: win.process ?? '' };
+  }
   const incident = res.focus?.incident ?? null;
   if (incident) {
     void control.event('focus-incident', { tool: name, incident });
@@ -260,7 +322,7 @@ export async function callTool(name, args = {}) {
     if (data) content.push({ type: 'image', data, mimeType: 'image/png' });
     return { content };
   }
-  return textResult(result);
+  return { ...textResult(result), element };
 }
 
 /* ── JSON-RPC over stdio ──────────────────────────────────────────────── */
@@ -299,7 +361,18 @@ async function handle(msg) {
 }
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isMain) {
+if (isMain && process.argv[2] === '--undo') {
+  // DEX's own Undo button (the task's chat, the Desk tab): the user's click
+  // is the approval. One change, one line of JSON, then exit.
+  undoEntry(process.argv[3] || null)
+    .catch((err) => ({ ok: false, error: 'change_failed', message: err?.message ?? String(err) }))
+    .then(async (r) => {
+      await Promise.allSettled([...inflight]);
+      process.stdout.write(`${JSON.stringify(r)}\n`);
+      host?.stop();
+      process.exit(0);
+    });
+} else if (isMain) {
   if (process.platform !== 'win32') log('this server only works on Windows');
   const rl = createInterface({ input: process.stdin, crlfDelay: Infinity });
   rl.on('line', (line) => {

@@ -358,6 +358,37 @@ interface ElectronExtensionsAPI {
   onChanged: (cb: () => void) => () => void;
 }
 
+/** main/desktop/deskLive.ts: the window a task's Windows tools work in. */
+interface DeskWindowInfo { hwnd: number; title: string; process: string; openedByDex: boolean }
+interface DeskStateInfo {
+  window: DeskWindowInfo | null;
+  caption: string | null;
+  acting: boolean;
+  at: number;
+  taken: number[];
+}
+interface DeskFrameInfo {
+  seq: number;
+  at: number;
+  width: number;
+  height: number;
+  window?: { hwnd: number; title?: string; process?: string } | null;
+  focus?: { box: [number, number, number, number]; name?: string; role?: string };
+}
+interface DeskOpResult { ok: boolean; foreground?: boolean; error?: string; message?: string }
+
+interface ElectronDeskAPI {
+  state: (sessionId: string) => Promise<DeskStateInfo | null>;
+  watch: (sessionId: string, on: boolean) => Promise<boolean>;
+  showMe: (sessionId: string) => Promise<DeskOpResult>;
+  handBack: (sessionId: string) => Promise<DeskOpResult>;
+  /** Reverse one journaled change: the user's click is the approval. */
+  undo: (sessionId: string, entry: string) => Promise<DeskOpResult>;
+  openJournal: (sessionId?: string) => Promise<boolean>;
+  onChanged: (cb: (sessionId: string, state: DeskStateInfo) => void) => () => void;
+  onFrame: (cb: (sessionId: string, meta: DeskFrameInfo, jpeg: Uint8Array) => void) => () => void;
+}
+
 type WorkspaceShortcut =
   | 'new-tab' | 'close-tab' | 'reopen-tab' | 'focus-address' | 'reload' | 'back' | 'forward' | 'next-tab' | 'prev-tab'
   | 'find' | 'zoom-in' | 'zoom-out' | 'zoom-reset';
@@ -656,6 +687,7 @@ interface ElectronAPI {
   takeover?: ElectronTakeoverAPI;
   workspace?: ElectronWorkspaceAPI;
   extensions?: ElectronExtensionsAPI;
+  desk?: ElectronDeskAPI;
   sessions: ElectronSessionAPI;
   channels: ElectronChannelsAPI;
   chromeImport?: ElectronChromeImportAPI;
