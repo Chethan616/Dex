@@ -215,6 +215,9 @@ img.ws-tab__icon { object-fit: contain; }
   cursor: pointer;
 }
 .ws-agent__pause:hover { opacity: 0.88; }
+/* Paused by you: a still dot, quieter colour, and Resume where Pause was. */
+.ws-agent--paused { background: var(--surface-chip, rgba(127, 127, 127, 0.12)); }
+.ws-agent__dot--paused { background: var(--color-fg-tertiary); animation: none; }
 @media (max-width: 1100px) { .ws-agent__text { display: none; } }
 
 /* The live page, while DEX drives: a glow around it that never covers it. */

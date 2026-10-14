@@ -616,7 +616,8 @@ interface DesktopControlSettings {
 interface ElectronSettingsDesktopAPI {
   get: () => Promise<DesktopControlSettings>;
   set: (patch: Partial<Omit<DesktopControlSettings, 'supported'>>) => Promise<DesktopControlSettings>;
-  runningApps: () => Promise<string[]>;
+  /** Every installed app (name + process) and the processes with a window open now. */
+  apps: () => Promise<{ installed: Array<{ name: string; exe: string }>; running: string[] }>;
 }
 
 interface ElectronSettingsAPI {

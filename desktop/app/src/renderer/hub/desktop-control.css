@@ -1,4 +1,4 @@
-/* Settings › Desktop control (DesktopControlSection.tsx): app lists as chips. */
+/* Settings › Desktop control (DesktopControlSection.tsx): app lists as chips, and the app picker. */
 
 .desk-apps__list {
   display: flex;
@@ -9,17 +9,32 @@
   margin-top: var(--space-2);
 }
 
+.desk-app__tile {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-accent-default) 14%, var(--color-bg-elevated));
+  color: var(--color-fg-primary);
+  font-size: 11px;
+  font-weight: 650;
+}
+
 .desk-apps__chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px 3px 11px;
+  gap: 7px;
+  height: 30px;
+  padding: 0 6px 0 5px;
   border-radius: 999px;
-  background: var(--color-surface-interactive, rgba(127, 127, 127, 0.1));
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-elevated);
   color: var(--color-fg-primary);
   font-size: 12.5px;
 }
-
+.desk-apps__chip .desk-app__tile { width: 20px; height: 20px; border-radius: 999px; }
 .desk-apps__chip button {
   display: inline-flex;
   align-items: center;
@@ -35,21 +50,69 @@
 }
 .desk-apps__chip button:hover { color: var(--color-fg-primary); background: rgba(var(--highlight-rgb), 0.08); }
 
+.desk-apps__add-wrap { position: relative; display: inline-flex; }
 .desk-apps__add {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.desk-apps__add input {
-  width: 200px;
-  padding: 5px 12px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px dashed var(--color-border-default);
   border-radius: 999px;
-  border: 1px solid var(--color-border-default);
-  background: var(--color-bg-elevated);
-  color: var(--color-fg-primary);
+  background: transparent;
+  color: var(--color-fg-secondary);
   font: inherit;
   font-size: 12.5px;
+  cursor: pointer;
+}
+.desk-apps__add:hover, .desk-apps__add[aria-expanded='true'] { color: var(--color-fg-primary); border-style: solid; background: var(--surface-chip); }
+
+/* The picker: a search, at most eight apps, never the whole list. */
+.desk-pick {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: 320px;
+  padding: 8px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 14px;
+  background: var(--color-bg-elevated);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+}
+.desk-pick__search {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 10px;
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: 13px;
   outline: none;
 }
-.desk-apps__add input:focus { border-color: var(--color-accent-default); }
+.desk-pick__search:focus { border-color: var(--color-accent-default); }
+.desk-pick__label { padding: 8px 6px 4px; font-size: 11.5px; color: var(--color-fg-tertiary); }
+.desk-pick__label:empty { display: none; }
+.desk-pick__list { margin: 0; padding: 0; list-style: none; }
+.desk-pick__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.desk-pick__row--on { background: var(--surface-chip); }
+.desk-pick__name { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.desk-pick__exe { flex: none; max-width: 120px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11.5px; color: var(--color-fg-tertiary); }
+.desk-pick__foot { padding: 8px 6px 2px; font-size: 11.5px; color: var(--color-fg-tertiary); }
+.settings-card.desk-card { overflow: visible; }

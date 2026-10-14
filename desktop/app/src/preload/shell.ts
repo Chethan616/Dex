@@ -288,7 +288,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     desktop: {
       get: () => ipcRenderer.invoke('desktop:settings-get'),
       set: (patch: unknown) => ipcRenderer.invoke('desktop:settings-set', patch),
-      runningApps: (): Promise<string[]> => ipcRenderer.invoke('desktop:running-apps'),
+      apps: (): Promise<{ installed: Array<{ name: string; exe: string }>; running: string[] }> => ipcRenderer.invoke('desktop:apps'),
     },
     approvals: {
       get: (): Promise<{ mode: 'ask' | 'auto' | 'full' }> => ipcRenderer.invoke('settings:approvals:get'),

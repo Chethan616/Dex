@@ -3746,18 +3746,20 @@ app.whenReady().then(async () => {
     const stored = (await listConnections()).find((c) => c.id === 'windows');
     return { supported: process.platform === 'win32', enabled: stored?.enabled !== false, ...next };
   });
-  // Apps with a window open now: what the lists above suggest (names only).
-  ipcMain.handle('desktop:running-apps', async () => {
-    if (process.platform !== 'win32') return [];
+  // The apps on this PC (desktop/installedApps.ts) and the ones open now: what
+  // the "Ask first" / "Never use" pickers search and suggest.
+  ipcMain.handle('desktop:apps', async () => {
+    if (process.platform !== 'win32') return { installed: [], running: [] };
+    const { installedApps } = await import('./desktop/installedApps');
     const { execFile } = await import('node:child_process');
-    const out = await new Promise<string>((resolve) => {
+    const runningOut = await new Promise<string>((resolve) => {
       execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -ExpandProperty ProcessName -Unique'],
         { windowsHide: true, timeout: 8_000 }, (_err, stdout) => resolve(String(stdout ?? '')));
     });
     const self = path.basename(process.execPath).toLowerCase();
-    return [...new Set(out.split(/\r?\n/).map((n) => n.trim()).filter(Boolean).map((n) => `${n.toLowerCase()}.exe`))]
-      .filter((n) => n !== self && n !== 'explorer.exe' && n !== 'applicationframehost.exe' && n !== 'textinputhost.exe')
-      .sort();
+    const running = [...new Set(runningOut.split(/\s+/).map((n) => n.trim().toLowerCase()).filter(Boolean).map((n) => `${n}.exe`))]
+      .filter((n) => n !== self && !['explorer.exe', 'applicationframehost.exe', 'textinputhost.exe', 'shellexperiencehost.exe'].includes(n));
+    return { installed: await installedApps(), running };
   });
 
   // DEX's elevated helper for admin changes (desktop/elevation.ts).

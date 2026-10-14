@@ -755,6 +755,19 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
   useEffect(() => {
     if (session.status === 'running') setPaneOverride('auto');
   }, [session.status]);
+  /**
+   * You paused from the page's toolbar, so the page stayed in front. When the
+   * task then finishes (stopped, or idle with its answer), the pane goes back
+   * to the conversation; a resume already did (a new run is 'auto').
+   */
+  const pausedOnPageRef = useRef(false);
+  useEffect(() => {
+    if (session.status === 'running') { pausedOnPageRef.current = false; return; }
+    if ((session.status === 'idle' || session.status === 'stopped') && pausedOnPageRef.current) {
+      pausedOnPageRef.current = false;
+      setPaneOverride('auto');
+    }
+  }, [session.status]);
   useEffect(() => {
     setPaneOverride('auto');
   }, [session.id]);
@@ -1226,8 +1239,12 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           }}
           agentActive={session.status === 'running'}
           // Paused from the page's own toolbar: you're doing something on the
-          // page, so it stays in front (a paused task otherwise shows the chat).
-          onPause={onPause ? () => { setPaneOverride('page'); onPause(session.id); } : undefined}
+          // page, so it stays in front (a paused task otherwise shows the chat),
+          // and the same chip offers Resume. Once the task finishes, the pane
+          // goes back to the conversation (pausedOnPage below).
+          onPause={onPause ? () => { pausedOnPageRef.current = true; setPaneOverride('page'); onPause(session.id); } : undefined}
+          agentPaused={isPaused}
+          onResume={canResume && onResume ? () => onResume(session.id) : undefined}
           chat={{
             active: chatActive,
             unread: chatUnread,

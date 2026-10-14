@@ -18,6 +18,9 @@ interface WorkspaceBarProps {
   /** DEX is driving this task right now. */
   agentActive: boolean;
   onPause?: () => void;
+  /** Paused (by you): the chip stays, offering Resume in the same place. */
+  agentPaused?: boolean;
+  onResume?: () => void;
   /** The pinned Chat tab (docs/unify/PLAN.md §3.12). */
   chat?: { active: boolean; unread: boolean; working: boolean; onSelect: () => void; icon?: React.ReactNode };
   /** A web tab was picked: the page takes the rect back from the chat. */
@@ -110,7 +113,7 @@ function TabIcon({ tab }: { tab: WorkspaceTab }): React.ReactElement {
   return <span className="ws-tab__icon ws-tab__icon--globe">{Icon.globe}</span>;
 }
 
-export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSelectPage, docs, browser = true, subagents, desk, tools }: WorkspaceBarProps): React.ReactElement {
+export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, agentPaused = false, onResume, chat, onSelectPage, docs, browser = true, subagents, desk, tools }: WorkspaceBarProps): React.ReactElement {
   const api = window.electronAPI?.workspace;
   const active = tabs.find((t) => t.active) ?? tabs[0];
   const inputRef = useRef<HTMLInputElement>(null);
@@ -418,6 +421,15 @@ export function WorkspaceBar({ sessionId, tabs, agentActive, onPause, chat, onSe
             <span className="ws-agent__text">DEX is working — you can use the page too</span>
             {onPause && (
               <button type="button" className="ws-agent__pause" onClick={onPause}>Pause</button>
+            )}
+          </div>
+        )}
+        {!agentActive && agentPaused && (
+          <div className="ws-agent ws-agent--paused" role="status">
+            <span className="ws-agent__dot ws-agent__dot--paused" aria-hidden="true" />
+            <span className="ws-agent__text">Paused — the page is yours</span>
+            {onResume && (
+              <button type="button" className="ws-agent__pause" onClick={onResume}>Resume</button>
             )}
           </div>
         )}
