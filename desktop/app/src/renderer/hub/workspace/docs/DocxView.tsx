@@ -7,9 +7,9 @@
  */
 import React, { useEffect, useRef } from 'react';
 import { renderAsync } from 'docx-preview';
-import { safeHref, type OutlineItem, type ViewerProps } from './kinds';
+import { safeHref, type OutlineItem, type PageThumb, type ViewerProps } from './kinds';
 
-export default function DocxView({ bytes, zoom, redlines = true, onReady, onOutline, onError }: ViewerProps): React.ReactElement {
+export default function DocxView({ bytes, zoom, redlines = true, onReady, onOutline, onPages, onError }: ViewerProps): React.ReactElement {
   const hostRef = useRef<HTMLDivElement>(null);
   const styleRef = useRef<HTMLDivElement>(null);
 
@@ -50,12 +50,34 @@ export default function DocxView({ bytes, zoom, redlines = true, onReady, onOutl
           if (label && level <= 3) items.push({ label: label.slice(0, 120), level, el });
         }
         onOutline?.(items);
+        // Thumbnails for the Pages rail: a scaled copy of each page (ids dropped, so anchors stay unique).
+        const sections = Array.from(host.querySelectorAll<HTMLElement>('section.docx'));
+        onPages?.(sections.map((el): PageThumb => ({
+          el,
+          ratio: el.offsetHeight / Math.max(1, el.offsetWidth),
+          draw: (slot, width) => {
+            const scale = width / Math.max(1, el.offsetWidth);
+            const copy = el.cloneNode(true) as HTMLElement;
+            copy.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
+            copy.removeAttribute('id');
+            copy.style.margin = '0';
+            copy.style.transform = `scale(${scale})`;
+            copy.style.transformOrigin = '0 0';
+            copy.style.pointerEvents = 'none';
+            const frame = document.createElement('div');
+            frame.className = 'docx-wrapper dv-pages__docx';
+            frame.style.width = `${width}px`;
+            frame.style.height = `${Math.round(el.offsetHeight * scale)}px`;
+            frame.appendChild(copy);
+            slot.replaceChildren(frame);
+          },
+        })));
       })
       .catch((err: unknown) => {
         if (!cancelled) onError?.(`Couldn’t read this Word document: ${(err as Error)?.message ?? err}`);
       });
     return () => { cancelled = true; };
-  }, [bytes, redlines, onReady, onOutline, onError]);
+  }, [bytes, redlines, onReady, onOutline, onPages, onError]);
 
   return (
     <div className="dv-docx">

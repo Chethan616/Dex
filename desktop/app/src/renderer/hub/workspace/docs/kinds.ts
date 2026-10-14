@@ -63,6 +63,15 @@ export interface OutlineItem {
   el: HTMLElement;
 }
 
+/** A page for the Pages rail (PagesRail.tsx): where it is, and how to draw its thumbnail. */
+export interface PageThumb {
+  el: HTMLElement;
+  /** Height ÷ width, so the rail can hold the place before the thumbnail is drawn. */
+  ratio: number;
+  /** Draw the thumbnail into `slot`, `width` CSS px wide. */
+  draw: (slot: HTMLElement, width: number) => Promise<void> | void;
+}
+
 /** What every viewer is handed. It draws into the document's scroll area. */
 export interface ViewerProps {
   bytes: Uint8Array;
@@ -72,5 +81,7 @@ export interface ViewerProps {
   redlines?: boolean;
   onReady?: () => void;
   onOutline?: (items: OutlineItem[]) => void;
+  /** Its pages, for the Pages rail (PDF, Word). */
+  onPages?: (pages: PageThumb[]) => void;
   onError?: (message: string) => void;
 }

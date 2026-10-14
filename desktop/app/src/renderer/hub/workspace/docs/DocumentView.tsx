@@ -12,9 +12,10 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FileBadge } from '../../chat/fileKinds';
 import { openFile } from '../../chat/FileCards';
-import { safeHref, viewerFor, zoomable, type OutlineItem, type ViewerKind, type ViewerProps } from './kinds';
+import { safeHref, viewerFor, zoomable, type OutlineItem, type PageThumb, type ViewerKind, type ViewerProps } from './kinds';
 import { crumbs, type TaskFile } from './fileTree';
 import { FilesRail } from './FilesRail';
+import { PagesRail } from './PagesRail';
 import { OpenInMenu } from './OpenInMenu';
 import './docs.css';
 
@@ -86,6 +87,9 @@ export function DocumentView({ sessionId, doc, revision, onOpenUrl, files = [], 
   const [redlines, setRedlines] = useState(true);
   const [outline, setOutline] = useState<OutlineItem[]>([]);
   const [outlineOpen, setOutlineOpen] = useState(false);
+  /** The Pages rail (PDF, Word): one rail at a time, so it and Outline take turns. */
+  const [pages, setPages] = useState<PageThumb[]>([]);
+  const [pagesOpen, setPagesOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   // Where you were reading, kept across a reload of the same document.
   const keepScroll = useRef<{ id: string; top: number; left: number } | null>(null);
@@ -96,6 +100,8 @@ export function DocumentView({ sessionId, doc, revision, onOpenUrl, files = [], 
     setZoom(1);
     setOutline([]);
     setOutlineOpen(false);
+    setPages([]);
+    setPagesOpen(false);
     setLoaded(null);
     keepScroll.current = null;
   }, [doc.id]);
@@ -175,6 +181,18 @@ export function DocumentView({ sessionId, doc, revision, onOpenUrl, files = [], 
   return (
     <div className="dv" onKeyDown={onKeyDown}>
       <div className="dv-bar">
+        {pages.length > 1 && (
+          <button
+            type="button"
+            className={`dv-btn${pagesOpen ? ' dv-btn--on' : ''}`}
+            aria-pressed={pagesOpen}
+            aria-label="Pages"
+            title="Pages"
+            onClick={() => { setPagesOpen((v) => !v); setOutlineOpen(false); }}
+          >
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><rect x="2.5" y="2.5" width="4.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" /><rect x="2.5" y="9.5" width="4.5" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" /><path d="M9.5 3.5h4M9.5 6.5h4M9.5 10.5h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
+          </button>
+        )}
         {outline.length > 0 && (
           <button
             type="button"
@@ -182,7 +200,7 @@ export function DocumentView({ sessionId, doc, revision, onOpenUrl, files = [], 
             aria-pressed={outlineOpen}
             aria-label="Outline"
             title="Outline"
-            onClick={() => setOutlineOpen((v) => !v)}
+            onClick={() => { setOutlineOpen((v) => !v); setPagesOpen(false); }}
           >
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M3 4h10M5.5 8H13M5.5 12H13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
           </button>
@@ -249,6 +267,7 @@ Show in File Explorer`} onClick={() => void openFile(sessionId, doc.path, 'revea
       </div>
 
       <div className="dv-body">
+        {pagesOpen && pages.length > 1 && <PagesRail pages={pages} scroller={scrollRef.current} />}
         {outlineOpen && outline.length > 0 && (
           <nav className="dv-outline" aria-label="Outline">
             {outline.map((item, i) => (
@@ -282,6 +301,7 @@ Show in File Explorer`} onClick={() => void openFile(sessionId, doc.path, 'revea
                 redlines={redlines}
                 onReady={onReady}
                 onOutline={setOutline}
+                onPages={setPages}
                 onError={onError}
               />
             </Suspense>

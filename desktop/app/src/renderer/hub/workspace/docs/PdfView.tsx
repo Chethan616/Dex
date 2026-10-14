@@ -6,14 +6,14 @@
 import React, { useEffect, useRef } from 'react';
 import * as pdfjs from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import type { OutlineItem, ViewerProps } from './kinds';
+import type { OutlineItem, PageThumb, ViewerProps } from './kinds';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
 /** CSS pixels per PDF point at 100%. */
 const CSS_PER_PT = 96 / 72;
 
-export default function PdfView({ bytes, zoom, onReady, onOutline, onError }: ViewerProps): React.ReactElement {
+export default function PdfView({ bytes, zoom, onReady, onOutline, onPages, onError }: ViewerProps): React.ReactElement {
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -85,6 +85,27 @@ export default function PdfView({ bytes, zoom, onReady, onOutline, onError }: Vi
         pages.forEach((p) => observer!.observe(p));
         onReady?.();
 
+        // Thumbnails for the Pages rail: each page drawn small, when the rail asks.
+        onPages?.(pages.map((el, i): PageThumb => ({
+          el,
+          ratio: el.offsetHeight / Math.max(1, el.offsetWidth),
+          draw: async (slot, width) => {
+            const page = await doc.getPage(i + 1);
+            if (cancelled) return;
+            const base = page.getViewport({ scale: 1 });
+            const dpr = window.devicePixelRatio || 1;
+            const viewport = page.getViewport({ scale: (width / base.width) * dpr });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
+            canvas.style.width = `${width}px`;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            await page.render({ canvasContext: ctx, canvas, viewport }).promise;
+            if (!cancelled) slot.replaceChildren(canvas);
+          },
+        })));
+
         // The PDF's own bookmarks, where it has them.
         const outline = await doc.getOutline().catch(() => null);
         if (!outline || cancelled) return;
@@ -112,7 +133,7 @@ export default function PdfView({ bytes, zoom, onReady, onOutline, onError }: Vi
       observer?.disconnect();
       void task.destroy();
     };
-  }, [bytes, zoom, onReady, onOutline, onError]);
+  }, [bytes, zoom, onReady, onOutline, onPages, onError]);
 
   return <div className="dv-pdf" ref={hostRef} />;
 }
