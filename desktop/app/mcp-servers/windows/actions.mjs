@@ -12,6 +12,10 @@ const NAME = /^[\w .()&'-]{1,80}$/u;                       // adapter, service, 
 const INSTANCE = /^[A-Za-z0-9\\&_.#{}-]{3,200}$/;          // device instance ids
 const IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
 const WINGET_ID = /^[A-Za-z0-9][\w.+-]{1,120}$/;
+// A Run value or a Startup-folder file name: no path parts, so it can't point outside that folder.
+const STARTUP_NAME = /^[^\\/:*?"<>|\x00-\x1f]{1,120}$/;
+// A Store package's name ("5319275A.WhatsAppDesktop") or family name (…_cv1g1gvanyjgm).
+const PACKAGE = /^[A-Za-z0-9][A-Za-z0-9.-]{2,99}(_[a-z0-9]{13})?$/;
 
 /** HKCU\…\PrecisionTouchPad values DEX may set, and what each number means. */
 export const GESTURE_KEYS = {
@@ -35,6 +39,12 @@ export const ACTIONS = {
   explorer_restart: { tier: 2, admin: false, title: () => 'Restart Windows Explorer (the taskbar blinks)', check: () => true },
   gesture_set: { tier: 2, admin: false, title: (a) => `Set touchpad ${a.key} to ${a.value}`, check: (a) => Object.hasOwn(GESTURE_KEYS, a.key) && Number.isInteger(a.value) && a.value >= 0 && a.value <= 4294967295 },
   touchpad_set: { tier: 2, admin: false, title: (a) => `Set touchpad ${a.field} to ${a.value}`, check: (a) => TOUCHPAD_FIELDS.includes(a.field) && (typeof a.value === 'boolean' || (Number.isInteger(a.value) && a.value >= 0 && a.value <= 20)) },
+  explorer_cache_clear: { tier: 2, admin: false, title: () => 'Clear File Explorer’s thumbnail and icon cache (the taskbar blinks)', check: () => true },
+  // Only the user's own startup entries, through the same on/off switch Task
+  // Manager uses (StartupApproved); the Run keys themselves are never edited.
+  startup_disable: { tier: 2, admin: false, title: (a) => `Stop ${a.name} from starting with Windows`, check: (a) => str(a.name, 120) && STARTUP_NAME.test(a.name) },
+  startup_enable: { tier: 2, admin: false, title: (a) => `Let ${a.name} start with Windows`, check: (a) => str(a.name, 120) && STARTUP_NAME.test(a.name) },
+  app_reset: { tier: 3, admin: false, title: (a) => `Reset the app ${a.package} (its data is cleared and you sign in again)`, check: (a) => PACKAGE.test(a.package ?? '') },
 
   ip_renew: { tier: 2, admin: true, title: (a) => `Renew the IP address of ${a.adapter ?? 'every adapter'}`, check: (a) => a.adapter === undefined || NAME.test(a.adapter) },
   adapter_restart: { tier: 2, admin: true, title: (a) => `Restart the network adapter ${a.name}`, check: (a) => str(a.name, 80) && NAME.test(a.name) },
@@ -46,6 +56,9 @@ export const ACTIONS = {
   device_restart: { tier: 2, admin: true, title: (a) => `Restart the device ${a.instanceId}`, check: (a) => INSTANCE.test(a.instanceId ?? '') },
   device_enable: { tier: 2, admin: true, title: (a) => `Turn on the device ${a.instanceId}`, check: (a) => INSTANCE.test(a.instanceId ?? '') },
   service_restart: { tier: 2, admin: true, title: (a) => `Restart the ${a.name} service`, check: (a) => str(a.name, 80) && /^[\w.-]+$/.test(a.name) },
+  device_scan: { tier: 2, admin: true, title: () => 'Scan for hardware changes (Windows looks for drivers for new devices)', check: () => true },
+  // Tier 2: nothing is lost, Windows rebuilds the index by itself; search is just incomplete for a while.
+  search_reindex: { tier: 2, admin: true, title: () => 'Rebuild the Windows Search index (search finds fewer files until it’s done)', check: () => true },
   device_disable: { tier: 3, admin: true, title: (a) => `Turn off the device ${a.instanceId}`, check: (a) => INSTANCE.test(a.instanceId ?? '') },
   winsock_reset: { tier: 3, admin: true, title: () => 'Reset Winsock (needs a restart)', check: () => true },
   ip_stack_reset: { tier: 3, admin: true, title: () => 'Reset the TCP/IP stack (needs a restart)', check: () => true },

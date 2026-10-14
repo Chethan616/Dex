@@ -991,12 +991,34 @@ bypass mode [V], but match only "as written".
 
 **Left:** the acceptance run with Spotify (not installed on the owner's PC),
 CPU profile of the Desk tab, phone Undo (rules change), and the owner's Q7.
-**Next (owner, 2026-10-14):** troubleshooting coverage — new `system_info`
-topics (processes, startup, disk, search, app) and `system_change` actions
-(device_scan, search_reindex, explorer_cache_clear, startup_disable/enable,
-app_reset) with recipes for touchpad, gestures, missing drivers, laggy
-Search/Explorer and slow apps. The design is in TO_BE_DONE.md's RESUME
-block, third batch, item 4.
+**Troubleshooting coverage — built (2026-10-14, the owner's third batch,
+item 4):**
+- New `system_info` topics: `processes` (CPU over a one-second sample plus
+  memory, one row per app, no window titles), `startup` (Run keys, Startup
+  folders and Store startup tasks, each with on/off and `canToggle`),
+  `disk` (drives and disk health), `search` (WSearch service, the index's
+  item count, state and pause reason through Windows Search's own catalog
+  API `ISearchCatalogManager`, the Explorer thumbnail cache's size) and
+  `app {name}` (version, location, Store package, data size, running).
+- New `system_change` actions: `explorer_cache_clear` (user),
+  `startup_disable` / `startup_enable {name}` (user, with Undo: only the
+  user's own Run value or Startup-folder file, switched through
+  `StartupApproved` exactly as Task Manager does — never the Run keys),
+  `app_reset {package}` (user, tier 3, Reset-AppxPackage),
+  `device_scan` (admin, `pnputil /scan-devices`) and `search_reindex`
+  (admin: the catalog's own Reset, i.e. Indexing Options' Rebuild; if the
+  indexer doesn't answer, stop WSearch, remove the index files, start it).
+- Recipes in `dex-tools/desktop.md`: touchpad not working, gestures,
+  missing drivers (ends on Windows Update's optional updates page), laggy
+  Search/Explorer, a slow app (WhatsApp), and a triage for vague asks.
+- Tested on a second Windows 11 PC through the host's line protocol: every
+  read topic, the refusals, and the startup switch on a throwaway entry.
+  Not yet run as a whole task through DEX, and the admin ones need the
+  elevated helper (changing `host.ps1` makes Settings show "Needs an
+  update" until the user re-runs Set up).
+- `host.ps1` strings stay ASCII: Windows PowerShell 5.1 reads a script
+  without a BOM as ANSI, so a `›` reached the model as `â€º` (a test
+  guards it now).
 
 **Acceptance**
 - During task 1, the Desk tab shows Spotify updating while parked. Show me

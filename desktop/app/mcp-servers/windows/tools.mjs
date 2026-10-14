@@ -192,16 +192,17 @@ export const TOOLS = [
   {
     name: 'system_info',
     op: 'sys',
-    description: "Read the PC's state without changing anything: network (adapters, IP, DNS, gateway, internet), wifi (signal, band, rates), wlan_events (drops per hour, recent disconnect reasons; hours?), devices (class? e.g. Mouse, Net, HIDClass; without class: devices with problems), driver (instanceId), touchpad (precision touchpad settings and gestures), apps (filter?; installed, store and Start-menu app ids), events (log: system/wlan/ncsi/dhcp/pnp/apperrors; hours?, provider?, limit?).",
+    description: "Read the PC's state without changing anything: network (adapters, IP, DNS, gateway, internet), wifi (signal, band, rates), wlan_events (drops per hour, recent disconnect reasons; hours?), devices (class? e.g. Mouse, Net, HIDClass; without class: devices with problems), driver (instanceId), touchpad (precision touchpad settings and gestures), apps (filter?; installed, store and Start-menu app ids), events (log: system/wlan/ncsi/dhcp/pnp/apperrors; hours?, provider?, limit?), processes (CPU now and memory, top 15 apps each; takes a second), startup (apps that start with Windows, on or off, and which DEX may switch), disk (drives: free and used; disk health), search (Windows Search: service, index items and state, File Explorer's thumbnail cache), app (name: one installed app's version, location, Store package, data size, whether it's running).",
     inputSchema: {
       type: 'object',
       required: ['topic'],
       properties: {
-        topic: { type: 'string', enum: ['network', 'wifi', 'wlan_events', 'devices', 'driver', 'touchpad', 'apps', 'events'] },
+        topic: { type: 'string', enum: ['network', 'wifi', 'wlan_events', 'devices', 'driver', 'touchpad', 'apps', 'events', 'processes', 'startup', 'disk', 'search', 'app'] },
         hours: { type: 'number' },
         class: { type: 'string' },
         instanceId: { type: 'string' },
         filter: { type: 'string' },
+        name: { type: 'string', description: 'app: the app, e.g. "WhatsApp".' },
         log: { type: 'string' },
         provider: { type: 'string' },
         limit: { type: 'number' },
@@ -211,7 +212,7 @@ export const TOOLS = [
   {
     name: 'system_change',
     op: 'change',
-    description: "Change the PC — only these, each typed and checked: dns_flush, wifi_reconnect {profile?}, explorer_restart, gesture_set {key, value} (touchpad gestures; see system_info touchpad), touchpad_set {field, value}, app_uninstall {wingetId}; and, through DEX's admin helper: ip_renew {adapter?}, adapter_restart {name}, dns_set {adapter, servers: ['1.1.1.1'] | 'dhcp'}, device_restart / device_enable / device_disable {instanceId}, service_restart {name}, winsock_reset, ip_stack_reset, restore_point {description?}. Diagnose with system_info first; change the cheapest thing that fixes it; give `reason` in plain words (the user may see it on an approval card). Each change is journaled; `undo` reverses the ones that can be.",
+    description: "Change the PC — only these, each typed and checked: dns_flush, wifi_reconnect {profile?}, explorer_restart, gesture_set {key, value} (touchpad gestures; see system_info touchpad), touchpad_set {field, value}, explorer_cache_clear, startup_disable / startup_enable {name} (a canToggle startup app from system_info startup), app_reset {package} (a Store app from system_info app; clears its data and signs the user out of it: last resort, say so first), app_uninstall {wingetId}; and, through DEX's admin helper: ip_renew {adapter?}, adapter_restart {name}, dns_set {adapter, servers: ['1.1.1.1'] | 'dhcp'}, device_restart / device_enable / device_disable {instanceId}, service_restart {name}, device_scan (look for new hardware and its drivers), search_reindex (rebuild the Windows Search index), winsock_reset, ip_stack_reset, restore_point {description?}. Diagnose with system_info first; change the cheapest thing that fixes it; give `reason` in plain words (the user may see it on an approval card). Each change is journaled; `undo` reverses the ones that can be.",
     inputSchema: {
       type: 'object',
       required: ['action', 'reason'],
@@ -225,7 +226,7 @@ export const TOOLS = [
   {
     name: 'undo',
     op: 'undo',
-    description: "Reverse the last change this task made (or the one with `entry`, from a system_change result) — only changes with a recorded undo: DNS servers, touchpad settings and gestures, turning a device off or on.",
+    description: "Reverse the last change this task made (or the one with `entry`, from a system_change result) — only changes with a recorded undo: DNS servers, touchpad settings and gestures, turning a device off or on, a startup app off or on.",
     inputSchema: { type: 'object', properties: { entry: { type: 'string' } } },
   },
   {
@@ -246,7 +247,7 @@ export const TOOLS = [
   {
     name: 'open_settings',
     op: 'launch',
-    description: "Open a Windows Settings page (an ms-settings id like 'network-wifi', 'mousetouchpad', 'devices-touchpad', 'apps-volume') for the user to SEE. It comes to the front, so use it only when the user asked to see it, or as the very last step. To diagnose, use system_info instead.",
+    description: "Open a Windows Settings page (an ms-settings id like 'network-wifi', 'mousetouchpad', 'devices-touchpad', 'apps-volume', 'startupapps', 'windowsupdate-optionalupdates') for the user to SEE. It comes to the front, so use it only when the user asked to see it, or as the very last step. To diagnose, use system_info instead.",
     inputSchema: { type: 'object', required: ['page'], properties: { page: { type: 'string' } } },
   },
 ];

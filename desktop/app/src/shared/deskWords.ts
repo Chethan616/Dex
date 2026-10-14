@@ -57,7 +57,18 @@ const TOPICS: Record<string, DeskWords> = {
   touchpad: pair('Reading your touchpad settings', 'Read your touchpad settings'),
   apps: pair('Looking through your apps', 'Looked through your apps'),
   events: pair('Reading Windows’ event log', 'Read Windows’ event log'),
+  processes: pair('Checking what’s using your CPU and memory', 'Checked what’s using your CPU and memory'),
+  startup: pair('Checking which apps start with Windows', 'Checked which apps start with Windows'),
+  disk: pair('Checking your drives', 'Checked your drives'),
+  search: pair('Checking Windows Search', 'Checked Windows Search'),
 };
+
+/** "5319275A.WhatsAppDesktop_cv1g1gvanyjgm" → "WhatsApp Desktop": a Store package as people say it. */
+export function storeName(pkg: unknown): string {
+  const name = str(pkg).split('_')[0].split('.').pop() ?? '';
+  // Split before whole words only: "WhatsAppDesktop" keeps its "WhatsApp".
+  return name ? name.replace(/([a-z])([A-Z][a-z]{3,})/g, '$1 $2') : 'an app';
+}
 
 const CHANGES: Record<string, (a: Args) => DeskWords> = {
   dns_flush: () => pair('Clearing the DNS cache', 'Cleared the DNS cache'),
@@ -65,6 +76,10 @@ const CHANGES: Record<string, (a: Args) => DeskWords> = {
   explorer_restart: () => pair('Restarting Windows Explorer', 'Restarted Windows Explorer'),
   gesture_set: () => pair('Changing a touchpad gesture', 'Changed a touchpad gesture'),
   touchpad_set: () => pair('Changing a touchpad setting', 'Changed a touchpad setting'),
+  explorer_cache_clear: () => pair('Clearing File Explorer’s thumbnail cache', 'Cleared File Explorer’s thumbnail cache'),
+  startup_disable: (a) => pair(`Stopping ${str(a.name) || 'an app'} from starting with Windows`, `Stopped ${str(a.name) || 'an app'} from starting with Windows`),
+  startup_enable: (a) => pair(`Letting ${str(a.name) || 'an app'} start with Windows`, `Let ${str(a.name) || 'an app'} start with Windows`),
+  app_reset: (a) => pair(`Resetting ${storeName(a.package)}`, `Reset ${storeName(a.package)}`),
   app_uninstall: (a) => pair(`Uninstalling ${str(a.wingetId) || 'an app'}`, `Uninstalled ${str(a.wingetId) || 'an app'}`),
   ip_renew: () => pair('Renewing your IP address', 'Renewed your IP address'),
   adapter_restart: (a) => pair(`Restarting ${str(a.name) || 'a network adapter'}`, `Restarted ${str(a.name) || 'a network adapter'}`),
@@ -72,6 +87,8 @@ const CHANGES: Record<string, (a: Args) => DeskWords> = {
   device_restart: () => pair('Restarting a device', 'Restarted a device'),
   device_enable: () => pair('Turning a device on', 'Turned a device on'),
   device_disable: () => pair('Turning a device off', 'Turned a device off'),
+  device_scan: () => pair('Scanning for new hardware', 'Scanned for new hardware'),
+  search_reindex: () => pair('Rebuilding the Windows Search index', 'Started rebuilding the Windows Search index'),
   service_restart: (a) => pair(`Restarting the ${str(a.name) || ''} service`.replace('  ', ' '), `Restarted the ${str(a.name) || ''} service`.replace('  ', ' ')),
   winsock_reset: () => pair('Resetting Winsock', 'Reset Winsock'),
   ip_stack_reset: () => pair('Resetting the network stack', 'Reset the network stack'),
@@ -133,7 +150,10 @@ export function deskWords(tool: string, args: Args = {}, window?: { process?: st
       return pair(`Arranging ${app}`, `Arranged ${app}`);
     }
     case 'media': return (MEDIA[str(args.action)] ?? MEDIA.status)(args);
-    case 'system_info': return TOPICS[str(args.topic)] ?? pair('Checking your PC', 'Checked your PC');
+    case 'system_info': {
+      if (args.topic === 'app' && str(args.name)) return pair(`Checking ${str(args.name)}`, `Checked ${str(args.name)}`);
+      return TOPICS[str(args.topic)] ?? pair('Checking your PC', 'Checked your PC');
+    }
     case 'system_change': {
       const f = CHANGES[str(args.action)];
       const a = args.args && typeof args.args === 'object' ? (args.args as Args) : {};

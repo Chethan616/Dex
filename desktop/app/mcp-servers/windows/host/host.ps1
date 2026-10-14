@@ -26,8 +26,79 @@ function Write-Line([string]$json) { [Console]::Out.WriteLine($json); [Console]:
 
 # ── Changes to the PC (mcp-servers/windows/actions.mjs is the allowlist) ──
 # Each returns what it did, what was there before, and how to undo it.
-$script:AdminActions = @('ip_renew', 'adapter_restart', 'dns_set', 'device_restart', 'device_enable', 'device_disable', 'service_restart', 'winsock_reset', 'ip_stack_reset', 'restore_point')
+$script:AdminActions = @('ip_renew', 'adapter_restart', 'dns_set', 'device_restart', 'device_enable', 'device_disable', 'service_restart', 'winsock_reset', 'ip_stack_reset', 'restore_point', 'device_scan', 'search_reindex')
 $script:GestureKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad'
+
+# Windows Search's own catalog API (searchapi.h): the item count and state that
+# Indexing Options shows, and its Rebuild. Compiled only when first used.
+function Initialize-SearchIndex {
+  if ('DexSearchIndex' -as [type]) { return }
+  Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class DexSearchIndex {
+  [ComImport, Guid("AB310581-AC80-11D1-8DF3-00C04FB6EF69"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface ISearchManager {
+    void GetIndexerVersionStr([MarshalAs(UnmanagedType.LPWStr)] out string version);
+    void GetIndexerVersion(out uint major, out uint minor);
+    void GetParameter([MarshalAs(UnmanagedType.LPWStr)] string name, IntPtr value);
+    void SetParameter([MarshalAs(UnmanagedType.LPWStr)] string name, IntPtr value);
+    void get_ProxyName(IntPtr name);
+    void get_BypassList(IntPtr list);
+    void SetProxy(int usage, int local, uint port, [MarshalAs(UnmanagedType.LPWStr)] string proxy, [MarshalAs(UnmanagedType.LPWStr)] string bypass);
+    ISearchCatalogManager GetCatalog([MarshalAs(UnmanagedType.LPWStr)] string catalog);
+  }
+  // Declared up to the last method used: COM calls by slot, so the order is the header's.
+  [ComImport, Guid("AB310581-AC80-11D1-8DF3-00C04FB6EF50"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface ISearchCatalogManager {
+    void get_Name(IntPtr name);
+    void GetParameter([MarshalAs(UnmanagedType.LPWStr)] string name, IntPtr value);
+    void SetParameter([MarshalAs(UnmanagedType.LPWStr)] string name, IntPtr value);
+    void GetCatalogStatus(out int status, out int pausedReason);
+    void Reset();
+    void Reindex();
+    void ReindexMatchingURLs([MarshalAs(UnmanagedType.LPWStr)] string pattern);
+    void ReindexSearchRoot([MarshalAs(UnmanagedType.LPWStr)] string root);
+    void put_ConnectTimeout(uint seconds);
+    void get_ConnectTimeout(out uint seconds);
+    void put_DataTimeout(uint seconds);
+    void get_DataTimeout(out uint seconds);
+    void NumberOfItems(out int count);
+    void NumberOfItemsToIndex(out int incremental, out int notifications, out int highPriority);
+  }
+  static ISearchCatalogManager Catalog() {
+    var t = Type.GetTypeFromCLSID(new Guid("7D096C5F-AC08-4F1F-BEB7-5C22C517CE39"));
+    return ((ISearchManager)Activator.CreateInstance(t)).GetCatalog("SystemIndex");
+  }
+  public static int[] Status() {
+    var c = Catalog();
+    int status, reason, items, inc, ntf, hi;
+    c.GetCatalogStatus(out status, out reason);
+    c.NumberOfItems(out items);
+    c.NumberOfItemsToIndex(out inc, out ntf, out hi);
+    return new int[] { status, reason, items, inc + ntf + hi };
+  }
+  public static void Reset() { Catalog().Reset(); }
+}
+'@
+}
+$script:SearchData = Join-Path $env:ProgramData 'Microsoft\Search\Data\Applications\Windows'
+$script:SearchIndexFile = '^Windows(-\w+)?\.(edb|db)$'
+$script:ExplorerCacheFile = '^(thumbcache|iconcache)_.*\.db$'
+
+# Startup apps, as Task Manager and Settings › Apps › Startup list them. The
+# on/off switch is StartupApproved: an entry's first byte is even when on, odd when off.
+$script:RunKeys = @(
+  @{ scope = 'user'; key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'; approved = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run' }
+  @{ scope = 'machine'; key = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Run'; approved = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run' }
+  @{ scope = 'machine'; key = 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run'; approved = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run32' }
+)
+$script:UserStartupApproved = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder'
+function Test-StartupOn($approvedKey, [string]$name) {
+  $v = (Get-ItemProperty -Path $approvedKey -Name $name -ErrorAction SilentlyContinue).$name
+  if ($v -is [byte[]] -and $v.Length -gt 0) { return (($v[0] -band 1) -eq 0) }
+  return $true
+}
 
 function Invoke-Change($a) {
   $p = $a.args
@@ -62,6 +133,57 @@ function Invoke-Change($a) {
       $undoValue = if ($before -eq 'true' -or $before -eq 'false') { $before -eq 'true' } else { [int]$before }
       return @{ done = $true; before = $before; after = $p.value; undo = @{ action = 'touchpad_set'; args = @{ field = $p.field; value = $undoValue } } }
     }
+    'explorer_cache_clear' {
+      # Explorer holds these files open, so it stops first and always comes back.
+      $files = @(Get-ChildItem -LiteralPath (Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Explorer') -File -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $script:ExplorerCacheFile })
+      $files += @(Get-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'IconCache.db') -Force -ErrorAction SilentlyContinue)
+      $freed = 0; $removed = 0; $left = @()
+      Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+      try {
+        Start-Sleep -Milliseconds 800
+        foreach ($pass in 1, 2) {
+          $left = @()
+          foreach ($f in $files) {
+            if (-not (Test-Path -LiteralPath $f.FullName)) { continue }
+            try { $len = $f.Length; Remove-Item -LiteralPath $f.FullName -Force -ErrorAction Stop; $freed += $len; $removed += 1 } catch { $left += $f }
+          }
+          if (-not $left.Count) { break }
+          Start-Sleep -Milliseconds 500
+        }
+      } finally {
+        Start-Sleep -Milliseconds 400
+        if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) { Start-Process explorer.exe }
+      }
+      return @{ done = $true; filesRemoved = $removed; freedMB = [math]::Round($freed / 1MB, 1); stillInUse = $left.Count
+        note = 'Windows makes the thumbnails and icons again as folders are opened, so the first visit to a big folder is a little slower.' }
+    }
+    { $_ -in 'startup_disable', 'startup_enable' } {
+      $on = "$($a.action)" -eq 'startup_enable'
+      $name = "$($p.name)"
+      # Only the user's own entries: their Run value, or a file in their Startup folder.
+      $approved = $null
+      if ($null -ne (Get-ItemProperty -Path $script:RunKeys[0].key -Name $name -ErrorAction SilentlyContinue)) { $approved = $script:RunKeys[0].approved }
+      elseif (Test-Path -LiteralPath (Join-Path ([Environment]::GetFolderPath('Startup')) $name) -PathType Leaf) { $approved = $script:UserStartupApproved }
+      else { throw [System.Exception]::new("not_found|`"$name`" isn't one of your own startup apps.|Use a name from system_info startup with canToggle:true; the others are switched in Settings > Apps > Startup (open_settings startupapps).") }
+      $before = Test-StartupOn $approved $name
+      if (-not (Test-Path $approved)) { New-Item -Path $approved -Force | Out-Null }
+      # Task Manager's format: 02 = on; 03 = off, then when it was turned off.
+      $bytes = New-Object byte[] 12
+      $bytes[0] = if ($on) { 2 } else { 3 }
+      if (-not $on) { [BitConverter]::GetBytes([DateTime]::UtcNow.ToFileTimeUtc()).CopyTo($bytes, 4) }
+      Set-ItemProperty -Path $approved -Name $name -Value $bytes -Type Binary
+      return @{ done = $true; name = $name; before = $before; after = $on
+        undo = if ($before -ne $on) { @{ action = $(if ($before) { 'startup_enable' } else { 'startup_disable' }); args = @{ name = $name } } } else { $null }
+        note = 'It takes effect the next time you sign in; an app already running stays open.' }
+    }
+    'app_reset' {
+      $pkgs = @(Get-AppxPackage -ErrorAction SilentlyContinue | Where-Object { -not $_.IsFramework -and ($_.Name -eq "$($p.package)" -or $_.PackageFamilyName -eq "$($p.package)") })
+      if ($pkgs.Count -ne 1) { throw [System.Exception]::new("not_found|No single Store app is called `"$($p.package)`".|Use the package or family name from system_info app.") }
+      if (-not (Get-Command Reset-AppxPackage -ErrorAction SilentlyContinue)) { throw [System.Exception]::new('unsupported|This version of Windows can''t reset apps from a script.|Tell the user: Settings > Apps > Installed apps > the app > Advanced options > Reset.') }
+      Reset-AppxPackage -Package $pkgs[0].PackageFullName
+      return @{ done = $true; package = $pkgs[0].Name; version = "$($pkgs[0].Version)"
+        note = 'The app starts as if newly installed: the user signs in again (WhatsApp: link the phone again with the QR code).' }
+    }
     'app_uninstall' {
       $out = (& winget.exe uninstall --id "$($p.wingetId)" --exact --silent --accept-source-agreements --disable-interactivity 2>&1) | Out-String
       return @{ done = ($LASTEXITCODE -eq 0); said = $out.Trim().Substring(0, [math]::Min(1500, $out.Trim().Length)); reinstall = "winget install --id $($p.wingetId) --exact" }
@@ -82,6 +204,25 @@ function Invoke-Change($a) {
     'device_enable' { Enable-PnpDevice -InstanceId "$($p.instanceId)" -Confirm:$false; return @{ done = $true; undo = @{ action = 'device_disable'; args = @{ instanceId = $p.instanceId } } } }
     'device_disable' { Disable-PnpDevice -InstanceId "$($p.instanceId)" -Confirm:$false; return @{ done = $true; undo = @{ action = 'device_enable'; args = @{ instanceId = $p.instanceId } } } }
     'service_restart' { Restart-Service -Name "$($p.name)" -Force; return @{ done = $true } }
+    'device_scan' {
+      $out = (& pnputil.exe /scan-devices) | Out-String
+      Start-Sleep -Seconds 3
+      $problems = @(Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.Status -ne 'OK' })
+      return @{ done = ($LASTEXITCODE -eq 0); said = $out.Trim(); problemDevicesNow = $problems.Count }
+    }
+    'search_reindex' {
+      # Indexing Options' own Rebuild. If the indexer is too stuck to answer,
+      # the documented fix: stop it, remove the index files, start it again.
+      $how = 'rebuild'
+      try { Initialize-SearchIndex; [DexSearchIndex]::Reset() }
+      catch {
+        $how = 'fresh_files'
+        Stop-Service -Name WSearch -Force
+        Get-ChildItem -LiteralPath $script:SearchData -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $script:SearchIndexFile } | Remove-Item -Force
+        Start-Service -Name WSearch
+      }
+      return @{ done = $true; how = $how; note = 'Windows rebuilds the index in the background: search finds fewer files until it finishes (minutes to a few hours, depending on how many files there are).' }
+    }
     'winsock_reset' { $out = (& netsh.exe winsock reset) | Out-String; return @{ done = $true; restartNeeded = $true; said = $out.Trim() } }
     'ip_stack_reset' { $out = (& netsh.exe int ip reset) | Out-String; return @{ done = $true; restartNeeded = $true; said = $out.Trim() } }
     'restore_point' {
@@ -278,7 +419,7 @@ function Get-NetworkInfo {
 function Get-WifiInfo {
   $raw = (& netsh.exe wlan show interfaces) 2>&1 | Out-String
   if ($raw -match 'location permission|Location services') {
-    return [ordered]@{ locationBlocked = $true; note = 'Windows hides Wi-Fi details until location is allowed: Settings › Privacy & security › Location.' }
+    return [ordered]@{ locationBlocked = $true; note = 'Windows hides Wi-Fi details until location is allowed: Settings > Privacy & security > Location.' }
   }
   $fields = [ordered]@{}
   foreach ($line in ($raw -split "`r?`n")) {
@@ -351,6 +492,116 @@ function Get-EventInfo($a) {
     })
   }
 }
+function Get-ProcessInfo {
+  # CPU now, not since boot: two samples a second apart.
+  $first = @{}; foreach ($p in Get-Process -ErrorAction SilentlyContinue) { try { $first[$p.Id] = $p.TotalProcessorTime.TotalMilliseconds } catch { } }
+  $clock = [Diagnostics.Stopwatch]::StartNew()
+  Start-Sleep -Milliseconds 1000
+  $elapsed = $clock.Elapsed.TotalMilliseconds * [Environment]::ProcessorCount
+  # One row per app: Chrome's thirty processes are one Chrome. No window
+  # titles: what the user has open isn't a diagnosis.
+  $rows = @{}
+  foreach ($p in Get-Process -ErrorAction SilentlyContinue) {
+    if ($p.Id -eq 0) { continue }
+    $cpu = 0.0; try { if ($first.ContainsKey($p.Id)) { $cpu = ($p.TotalProcessorTime.TotalMilliseconds - $first[$p.Id]) / $elapsed * 100 } } catch { }
+    $name = $p.ProcessName
+    if (-not $rows.ContainsKey($name)) { $rows[$name] = @{ processes = 0; cpu = 0.0; memory = 0.0 } }
+    $r = $rows[$name]; $r.processes += 1; $r.cpu += $cpu; $r.memory += $p.WorkingSet64 / 1MB
+  }
+  $all = @($rows.GetEnumerator() | ForEach-Object { [pscustomobject][ordered]@{ name = $_.Key; processes = $_.Value.processes; cpuPercent = [math]::Round($_.Value.cpu, 1); memoryMB = [math]::Round($_.Value.memory) } })
+  $os = Get-CimInstance Win32_OperatingSystem
+  $totalMB = [math]::Round($os.TotalVisibleMemorySize / 1KB); $freeMB = [math]::Round($os.FreePhysicalMemory / 1KB)
+  return [ordered]@{
+    cpuPercent = [math]::Round(($all | Measure-Object cpuPercent -Sum).Sum, 1)
+    memory = [ordered]@{ totalMB = $totalMB; usedMB = $totalMB - $freeMB; usedPercent = [math]::Round(($totalMB - $freeMB) / [math]::Max(1, $totalMB) * 100) }
+    uptimeHours = [math]::Round(((Get-Date) - $os.LastBootUpTime).TotalHours, 1)
+    byCpu = @($all | Sort-Object cpuPercent -Descending | Select-Object -First 15)
+    byMemory = @($all | Sort-Object memoryMB -Descending | Select-Object -First 15)
+  }
+}
+function Get-StartupInfo {
+  $items = New-Object System.Collections.ArrayList
+  foreach ($k in $script:RunKeys) {
+    $props = Get-ItemProperty -Path $k.key -ErrorAction SilentlyContinue
+    if (-not $props) { continue }
+    foreach ($p in $props.PSObject.Properties) {
+      if ($p.Name -like 'PS*') { continue }
+      $cmd = "$($p.Value)"
+      [void]$items.Add([ordered]@{ name = $p.Name; enabled = (Test-StartupOn $k.approved $p.Name); scope = $k.scope; command = $cmd.Substring(0, [math]::Min(200, $cmd.Length)); canToggle = ($k.scope -eq 'user') })
+    }
+  }
+  $folders = @(
+    @{ scope = 'user'; dir = [Environment]::GetFolderPath('Startup'); approved = $script:UserStartupApproved }
+    @{ scope = 'machine'; dir = [Environment]::GetFolderPath('CommonStartup'); approved = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder' }
+  )
+  foreach ($f in $folders) {
+    foreach ($file in @(Get-ChildItem -LiteralPath $f.dir -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'desktop.ini' })) {
+      [void]$items.Add([ordered]@{ name = $file.Name; enabled = (Test-StartupOn $f.approved $file.Name); scope = $f.scope; command = $file.FullName; canToggle = ($f.scope -eq 'user') })
+    }
+  }
+  # Store apps (WhatsApp, Teams, Spotify from the Store) have startup tasks of
+  # their own, switched in Settings › Apps › Startup.
+  $root = 'HKCU:\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\SystemAppData'
+  foreach ($pkg in @(Get-ChildItem -LiteralPath $root -ErrorAction SilentlyContinue)) {
+    foreach ($task in @(Get-ChildItem -LiteralPath $pkg.PSPath -ErrorAction SilentlyContinue)) {
+      $state = (Get-ItemProperty -LiteralPath $task.PSPath -Name State -ErrorAction SilentlyContinue).State
+      if ($null -eq $state) { continue }
+      # 2 on, 4 on by policy; 0, 1 and 3 are off (by the user, the app, or policy).
+      [void]$items.Add([ordered]@{ name = $pkg.PSChildName; task = $task.PSChildName; enabled = ($state -eq 2 -or $state -eq 4); scope = 'store'; canToggle = $false })
+    }
+  }
+  return [ordered]@{ items = @($items); note = 'Entries with canToggle:false are switched by the user in Settings > Apps > Startup (open_settings "startupapps").' }
+}
+function Get-DiskInfo {
+  $drives = @(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Object {
+    [ordered]@{ drive = $_.DeviceID; label = $_.VolumeName; fileSystem = $_.FileSystem
+      sizeGB = [math]::Round($_.Size / 1GB, 1); freeGB = [math]::Round($_.FreeSpace / 1GB, 1)
+      freePercent = if ($_.Size) { [math]::Round($_.FreeSpace / $_.Size * 100) } else { $null } }
+  })
+  $physical = @(); try { $physical = @(Get-PhysicalDisk -ErrorAction Stop | ForEach-Object { [ordered]@{ name = $_.FriendlyName; media = "$($_.MediaType)"; bus = "$($_.BusType)"; health = "$($_.HealthStatus)"; sizeGB = [math]::Round($_.Size / 1GB) } }) } catch { }
+  return [ordered]@{ drives = $drives; physical = $physical }
+}
+$script:CatalogStatus = @('idle', 'paused', 'recovering', 'full_crawl', 'incremental_crawl', 'processing_notifications', 'shutting_down')
+$script:PausedReason = @('none', 'high_io', 'high_cpu', 'high_notification_rate', 'low_battery', 'low_memory', 'low_disk', 'delayed_recovery', 'user_active', 'external', 'upgrading')
+function Get-SearchInfo {
+  $svc = Get-Service -Name WSearch -ErrorAction SilentlyContinue
+  $index = $null
+  if ($svc -and "$($svc.Status)" -eq 'Running') {
+    try {
+      Initialize-SearchIndex
+      $s = [DexSearchIndex]::Status()
+      $index = [ordered]@{ items = $s[2]; waiting = $s[3]; state = $script:CatalogStatus[$s[0]]; pausedBecause = if ($s[0] -eq 1) { $script:PausedReason[$s[1]] } else { $null } }
+    } catch { $index = @{ error = "The indexer didn't answer: $($_.Exception.Message)" } }
+  }
+  # Readable only as administrator on most PCs; empty otherwise.
+  $files = @(Get-ChildItem -LiteralPath $script:SearchData -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $script:SearchIndexFile } | ForEach-Object { [ordered]@{ name = $_.Name; sizeMB = [math]::Round($_.Length / 1MB) } })
+  $indexer = Get-Process -Name SearchIndexer -ErrorAction SilentlyContinue | Select-Object -First 1
+  $cache = @(Get-ChildItem -LiteralPath (Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Explorer') -File -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $script:ExplorerCacheFile })
+  return [ordered]@{
+    service = if ($svc) { [ordered]@{ status = "$($svc.Status)".ToLower(); startType = "$($svc.StartType)".ToLower() } } else { $null }
+    index = $index
+    indexFiles = $files
+    indexerMemoryMB = if ($indexer) { [math]::Round($indexer.WorkingSet64 / 1MB) } else { $null }
+    explorerCache = [ordered]@{ files = $cache.Count; sizeMB = [math]::Round(($cache | Measure-Object Length -Sum).Sum / 1MB, 1) }
+  }
+}
+function Get-AppInfo([string]$name) {
+  if (-not $name) { throw [System.Exception]::new('bad_args|app needs a name, e.g. "WhatsApp".|') }
+  $keys = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+  $desktop = @(Get-ItemProperty $keys -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like "*$name*" } | Select-Object -First 5 | ForEach-Object {
+    [ordered]@{ name = $_.DisplayName; version = $_.DisplayVersion; publisher = $_.Publisher; location = $_.InstallLocation; installed = $_.InstallDate; scope = if ($_.PSPath -like '*HKEY_CURRENT_USER*') { 'user' } else { 'machine' } }
+  })
+  $store = @(Get-AppxPackage -ErrorAction SilentlyContinue | Where-Object { -not $_.IsFramework -and ($_.Name -like "*$name*" -or $_.PackageFamilyName -like "*$name*") } | Select-Object -First 5 | ForEach-Object {
+    $dataMB = $null; try { $dataMB = [math]::Round((Get-ChildItem -LiteralPath (Join-Path $env:LOCALAPPDATA "Packages\$($_.PackageFamilyName)") -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum / 1MB) } catch { }
+    [ordered]@{ package = $_.Name; family = $_.PackageFamilyName; version = "$($_.Version)"; location = $_.InstallLocation; status = "$($_.Status)"; dataMB = $dataMB }
+  })
+  $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -like "*$name*" } | Group-Object ProcessName | ForEach-Object {
+    $oldest = $null; try { $oldest = ($_.Group | Sort-Object StartTime | Select-Object -First 1).StartTime } catch { }
+    [ordered]@{ process = $_.Name; count = $_.Count; memoryMB = [math]::Round(($_.Group | Measure-Object WorkingSet64 -Sum).Sum / 1MB); runningMinutes = if ($oldest) { [math]::Round(((Get-Date) - $oldest).TotalMinutes) } else { $null } }
+  })
+  if (-not $desktop.Count -and -not $store.Count) { throw [System.Exception]::new("not_found|No installed app matches `"$name`".|Try a shorter name, or system_info apps with a filter.") }
+  return [ordered]@{ desktop = $desktop; store = $store; running = $running }
+}
 function Invoke-Sys($a) {
   switch ("$($a.topic)") {
     'network' { return Get-NetworkInfo }
@@ -361,7 +612,12 @@ function Invoke-Sys($a) {
     'touchpad' { return Get-TouchpadInfo }
     'apps' { return Get-AppList "$($a.filter)" }
     'events' { return Get-EventInfo $a }
-    default { throw [System.Exception]::new('bad_args|topic is one of: network, wifi, wlan_events, devices, driver, touchpad, apps, events.|') }
+    'processes' { return Get-ProcessInfo }
+    'startup' { return Get-StartupInfo }
+    'disk' { return Get-DiskInfo }
+    'search' { return Get-SearchInfo }
+    'app' { return Get-AppInfo "$($a.name)" }
+    default { throw [System.Exception]::new('bad_args|topic is one of: network, wifi, wlan_events, devices, driver, touchpad, apps, events, processes, startup, disk, search, app.|') }
   }
 }
 

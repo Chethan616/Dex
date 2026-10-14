@@ -36,6 +36,48 @@ describe('the changes DEX may make', () => {
     expect(classify('system_change', { action: 'format_c', args: {} }).refused).toMatch(/isn't a change DEX makes/);
     expect(classify('system_change', { action: 'dns_set', args: { adapter: 'Wi-Fi' } }).refused).toMatch(/don't fit/);
   });
+
+  it('switches only a startup app by its name, never a path', () => {
+    expect(ACTIONS.startup_disable.check({ name: 'Steam' })).toBe(true);
+    expect(ACTIONS.startup_enable.check({ name: 'Mathworks Service Host' })).toBe(true);
+    expect(ACTIONS.startup_disable.check({ name: 'Spotify.lnk' })).toBe(true);
+    expect(ACTIONS.startup_disable.check({ name: '..\\..\\Windows\\explorer.exe' })).toBe(false);
+    expect(ACTIONS.startup_disable.check({ name: 'C:/evil' })).toBe(false);
+    expect(ACTIONS.startup_disable.check({ name: '' })).toBe(false);
+    expect(ACTIONS.startup_disable.check({})).toBe(false);
+    expect(categoryOf('startup_disable')).toBe('system-change');
+  });
+
+  it('resets only a Store package named exactly, and asks every time', () => {
+    expect(ACTIONS.app_reset.check({ package: '5319275A.WhatsAppDesktop' })).toBe(true);
+    expect(ACTIONS.app_reset.check({ package: '5319275A.WhatsAppDesktop_cv1g1gvanyjgm' })).toBe(true);
+    expect(ACTIONS.app_reset.check({ package: '*' })).toBe(false);
+    expect(ACTIONS.app_reset.check({ package: 'WhatsApp; Remove-Item C:\\' })).toBe(false);
+    // Hard to undo (the user signs in again): one approval per reset, never remembered.
+    expect(categoryOf('app_reset')).toBe('system-destructive');
+  });
+
+  it('runs the device scan and the search rebuild through the admin helper', () => {
+    expect(categoryOf('device_scan')).toBe('elevation');
+    expect(categoryOf('search_reindex')).toBe('elevation');
+    expect(categoryOf('explorer_cache_clear')).toBe('system-change');
+    expect(classify('system_change', { action: 'search_reindex', args: {}, reason: 'search misses files' }))
+      .toMatchObject({ tier: 2, category: 'elevation', admin: true });
+  });
+
+  it('lists every admin change in the helper too, and nothing else', () => {
+    // The elevated helper refuses anything outside its own list, so the two must agree.
+    const ps1 = fs.readFileSync(path.resolve(__dirname, '../../../mcp-servers/windows/host/host.ps1'), 'utf-8');
+    const listed = [...(ps1.match(/\$script:AdminActions = @\(([^)]*)\)/)?.[1] ?? '').matchAll(/'(\w+)'/g)].map((m) => m[1]).sort();
+    const admin = Object.entries(ACTIONS).filter(([, a]) => a.admin).map(([name]) => name).sort();
+    expect(listed).toEqual(admin);
+  });
+
+  it('keeps the host script ASCII outside comments, which Windows PowerShell reads as ANSI', () => {
+    const ps1 = fs.readFileSync(path.resolve(__dirname, '../../../mcp-servers/windows/host/host.ps1'), 'utf-8');
+    const bad = ps1.split('\n').map((line, i) => [i + 1, line.replace(/^\s*#.*$/, '')] as const).filter(([, code]) => /[^\x00-\x7F]/.test(code));
+    expect(bad.map(([n]) => n)).toEqual([]);
+  });
 });
 
 let helper: ChildProcess | null = null;
