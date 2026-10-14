@@ -170,6 +170,8 @@ sealed interface Widget {
   data class Cards(val title: String?, val icon: String?, val items: List<WCard>) : Widget
   data class Buttons(val title: String?, val buttons: List<WAction>) : Widget
   data class Facts(val title: String?, val icon: String?, val rows: List<Pair<String, String>>, val actions: List<WAction>) : Widget
+  /** The saved workflows, each whole so View can draw its graph (WorkflowGraph.kt). */
+  data class Workflows(val title: String?, val items: List<WWorkflow>) : Widget
 }
 
 private fun JSONObject.str(k: String): String? = if (has(k) && !isNull(k)) optString(k).takeIf { it.isNotBlank() } else null
@@ -228,6 +230,7 @@ fun parseWidget(json: String?): Widget? = runCatching {
       o.optJSONArray("rows").objects().map { it.optString("label") to it.optString("value") },
       o.optJSONArray("actions").objects().map { it.action() },
     )
+    "workflows" -> Widget.Workflows(o.str("title"), o.optJSONArray("items").objects().mapNotNull { parseWorkflow(it) })
     else -> null
   }
 }.getOrNull()
@@ -353,6 +356,7 @@ fun WidgetBlock(block: Block) {
       ActionRow(widget.buttons, open, reply, small = false)
     }
     is Widget.Facts -> FactsCard(widget, open, reply)
+    is Widget.Workflows -> WorkflowsCard(widget.title, widget.items, reply)
   }
 }
 
