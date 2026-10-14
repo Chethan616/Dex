@@ -35,3 +35,5 @@ DEX's first public GitHub release was **v3.1.0**, on 2026-09-29: https://github.
 **Why:** Secrets for the APK were never added to CI (adding them is an outward change that needs the user's OK).
 
 **How to apply:** Follow these steps for the next release. Bump `versionCode`/`versionName` in `android/app/build.gradle.kts` and the desktop `package.json` first.
+
+**2026-10-15:** the owner released **v2.0.0** (desktop 2.0.0, Android versionName 2.0.0, versionCode 37) from their PC (`931b17db`). Troubleshooting (`7533df5a`) and workflows (`2d97bf84`, `cb1375ad`) came after it, so the next release is 2.0.1 with phone versionName > 2.0.0.

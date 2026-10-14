@@ -23,5 +23,5 @@
 - [Licensing](licensing.md) — Apache-2.0 since 2026-10-07 (MIT ≤ v3.2.0), NOTICE credit to Chethan Krishna; libsignal GPL exception; run yarn licenses:scan before releases
 - [Channels](channels.md) — Settings › Channels order: phone, WhatsApp, Telegram, Advanced; Telegram = own @BotFather bot, pairing link
 - [Keep the resume log](keep-resume-log.md) — update the RESUME HERE block atop TO_BE_DONE.md at every milestone; read it first after a reset
-- [Workflows & routines](workflows-and-routines.md) — owner spec 2026-10-14: NL create/edit routines, /workflow gen-UI cards, View = n8n-style graph, phone too; order in TO_BE_DONE RESUME block
+- [Workflows & routines](workflows-and-routines.md) — built 2026-10-15: dex-workflow CLI, /workflow cards (local in a task), n8n-style snake graph, scheduler; phone rendered only
 - [Second PC](second-pc.md) — srira PC: unify worktree at D:\Projects\Dex-unify (D:\Projects\DEX is a RUST clone with its own uncommitted work); no signing keys → no releases there
