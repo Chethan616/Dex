@@ -164,13 +164,15 @@ export class TabsApi {
 
   /** The window a caller means by "current": its own tab's, its popup's, or the one on screen. */
   currentSession(ctx: CallContext): string | null {
-    if (ctx.contents) {
-      const popup = this.access.popupSessionOf(ctx.contents);
-      if (popup) return popup;
-      const own = this.all().find((t) => t.tab.wc === ctx.contents);
-      if (own) return own.win.sessionId;
-    }
-    return this.backend.shownSessionId() ?? this.backend.windows()[0]?.sessionId ?? null;
+    return this.callerSession(ctx) ?? this.backend.shownSessionId() ?? this.backend.windows()[0]?.sessionId ?? null;
+  }
+
+  /** The task the calling page lives in (its tab, or its toolbar popup); null for a page outside any task. */
+  private callerSession(ctx: CallContext): string | null {
+    if (!ctx.contents) return null;
+    const popup = this.access.popupSessionOf(ctx.contents);
+    if (popup) return popup;
+    return this.all().find((t) => t.tab.wc === ctx.contents)?.win.sessionId ?? null;
   }
 
   private resolveWindow(ctx: CallContext, windowId: number | undefined): string | null {
@@ -393,7 +395,13 @@ export class TabsApi {
       'windows.update': (ctx, [windowId, info]) => {
         const session = this.resolveWindow(ctx, typeof windowId === 'number' ? windowId : undefined);
         if (!session) throw new ApiError(`No window with id: ${String(windowId)}.`);
-        if ((info as { focused?: boolean } | undefined)?.focused) this.backend.showSession(session);
+        // Focusing "the current window" from a page outside any task (an
+        // options page in DEX's extension window) is about that page's own
+        // window, not a task: DEX doesn't switch tasks for it.
+        const explicit = typeof windowId === 'number' && windowId !== CURRENT;
+        if ((info as { focused?: boolean } | undefined)?.focused && (explicit || ctx.kind === 'worker' || this.callerSession(ctx))) {
+          this.backend.showSession(session);
+        }
         return this.windowFor(ctx.extensionId, session, false);
       },
       'windows.remove': () => { throw new ApiError("An extension can't close a DEX task"); },

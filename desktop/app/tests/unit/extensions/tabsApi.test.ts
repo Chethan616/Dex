@@ -55,6 +55,28 @@ function setup(windows: PoolWindow[], shown: string | null, access: Partial<Exte
 
 const ctx: CallContext = { extensionId: 'a'.repeat(32), kind: 'worker' };
 
+describe('chrome.windows.update focus', () => {
+  it('switches DEX to a task only for a caller in that task, or one that names its window', async () => {
+    const t = tab('https://one.example/', { active: true });
+    const { backend, handlers, api } = setup([{ sessionId: 's1', title: 'Task', tabs: [t] }], 's1', {
+      popupSessionOf: (wc) => (wc === popupWc ? 's1' : null),
+    });
+    // An options page in DEX's extension window: in no task.
+    const loose: CallContext = { extensionId: 'a'.repeat(32), kind: 'page', contents: { id: 999 } as unknown as PoolTab['wc'] };
+    await handlers['windows.update'](loose, [-2, { focused: true }]);
+    expect(backend.showSession).not.toHaveBeenCalled();
+    // Its toolbar popup, and the task's own tab: that task.
+    await handlers['windows.update']({ ...loose, contents: popupWc }, [-2, { focused: true }]);
+    await handlers['windows.update']({ ...loose, contents: t.wc }, [undefined, { focused: true }]);
+    expect(backend.showSession).toHaveBeenCalledTimes(2);
+    // Naming the window works from anywhere.
+    const id = api.windowFor('a'.repeat(32), 's1', false)!.id;
+    await handlers['windows.update'](loose, [id, { focused: true }]);
+    expect(backend.showSession).toHaveBeenCalledTimes(3);
+  });
+});
+const popupWc = { id: 998 } as unknown as PoolTab['wc'];
+
 describe('chrome.tabs over DEX tasks', () => {
   it('finds the active tab of the task on screen for {active, currentWindow}', () => {
     const one = tab('https://one.example/', { active: true });
