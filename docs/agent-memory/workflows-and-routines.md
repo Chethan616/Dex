@@ -1,6 +1,6 @@
 ---
 name: workflows-and-routines
-description: "DEX workflows/daily routines — owner spec 2026-10-14, BUILT 2026-10-15 (2d97bf84 desktop, cb1375ad phone): dex-workflow CLI, /workflow cards, n8n-style graph, scheduler"
+description: "DEX workflows/daily routines — owner spec 2026-10-14, BUILT 2026-10-15 (8963092f desktop, de842ac8 phone): dex-workflow CLI, /workflow cards, n8n-style graph, scheduler"
 metadata:
   node_type: memory
   type: project
