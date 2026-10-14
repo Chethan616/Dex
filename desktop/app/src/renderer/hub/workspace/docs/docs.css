@@ -466,3 +466,15 @@
 .dv-files__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dv-files__chev { flex: none; transition: transform var(--duration-fast, 120ms) ease; }
 .dv-files__chev--open { transform: rotate(90deg); }
+
+/* Syntax colours (highlight.ts): keyword, string, comment, number, property or call, type or tag, attribute, variable. */
+.dv-text { --hl-k: #8250df; --hl-s: #0a7d38; --hl-c: #6e7781; --hl-n: #b35900; --hl-p: #0550ae; --hl-t: #b4325c; --hl-a: #8a5a00; --hl-v: #0b6e8a; }
+[data-mode='dark'] .dv-text { --hl-k: #c792ea; --hl-s: #a5d6a7; --hl-c: #7d8590; --hl-n: #f0a868; --hl-p: #82aaff; --hl-t: #ff8fa3; --hl-a: #e6c07b; --hl-v: #6ed1e6; }
+.hl-k { color: var(--hl-k); }
+.hl-s { color: var(--hl-s); }
+.hl-c { color: var(--hl-c); font-style: italic; }
+.hl-n { color: var(--hl-n); }
+.hl-p { color: var(--hl-p); }
+.hl-t { color: var(--hl-t); }
+.hl-a { color: var(--hl-a); }
+.hl-v { color: var(--hl-v); }

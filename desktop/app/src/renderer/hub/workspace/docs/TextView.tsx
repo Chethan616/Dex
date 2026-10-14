@@ -7,6 +7,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Markdown } from '../../Markdown';
 import { extOf, type OutlineItem, type ViewerProps } from './kinds';
+import { tokenize } from './highlight';
 
 /** More than this many characters is "open it in an editor". */
 export const MAX_TEXT_CHARS = 2_000_000;
@@ -24,13 +25,17 @@ export function decodeText(bytes: Uint8Array, name: string): { text: string; cli
 export default function TextView({ bytes, name, zoom, onReady }: ViewerProps): React.ReactElement {
   const { text, clipped } = useMemo(() => decodeText(bytes, name), [bytes, name]);
   const lines = useMemo(() => text.split(/\r?\n/), [text]);
+  // Colours for code DEX knows (highlight.ts); anything else, or a huge file, stays plain.
+  const tokens = useMemo(() => tokenize(text, name), [text, name]);
   useEffect(() => { onReady?.(); }, [text, onReady]);
   return (
     <div className="dv-text" style={{ zoom }}>
       {clipped && <div className="dv-sheet__note">This file is long; showing its first {(MAX_TEXT_CHARS / 1_000_000).toFixed(0)} million characters.</div>}
       <div className="dv-text__body">
         <pre className="dv-text__gutter" aria-hidden="true">{lines.map((_, i) => i + 1).join('\n')}</pre>
-        <pre className="dv-text__code">{text}</pre>
+        <pre className="dv-text__code">
+          {tokens.map((t, i) => (t.kind ? <span key={i} className={`hl-${t.kind}`}>{t.text}</span> : t.text))}
+        </pre>
       </div>
     </div>
   );
