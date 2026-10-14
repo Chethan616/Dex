@@ -3,7 +3,7 @@ import { read, utils, write } from 'xlsx';
 import { mimeFor, safeHref, viewerFor, zoomable } from '../../../../src/renderer/hub/workspace/docs/kinds';
 import { nextZoom, sizeLabel } from '../../../../src/renderer/hub/workspace/docs/DocumentView';
 import { MAX_TEXT_CHARS, decodeText } from '../../../../src/renderer/hub/workspace/docs/TextView';
-import { MAX_ROWS, sheetGrid } from '../../../../src/renderer/hub/workspace/docs/SheetView';
+import { MAX_ROWS, ROW_H, sheetGrid, visibleRows } from '../../../../src/renderer/hub/workspace/docs/SheetView';
 
 /** The pieces behind document tabs (docs/unify/PLAN.md §3.9). */
 describe('document viewers', () => {
@@ -103,5 +103,21 @@ describe('document viewers', () => {
     const csv = new TextEncoder().encode('city,temp\nPune,31\nOslo,4\n');
     const book = read(csv, { type: 'array', dense: true });
     expect(sheetGrid(book, book.SheetNames[0]).rows).toEqual([['city', 'temp'], ['Pune', '31'], ['Oslo', '4']]);
+  });
+});
+
+describe('a long sheet draws only the rows in view', () => {
+  it('starts at the top with a margin below, and follows the scroll', () => {
+    expect(visibleRows(100_000, 0, 800, 0)).toEqual({ first: 0, last: Math.ceil((800 - ROW_H) / ROW_H) + 30 });
+    const mid = visibleRows(100_000, 50_000 * ROW_H, 800, 0);
+    expect(mid.first).toBeLessThan(50_000);
+    expect(mid.last).toBeGreaterThan(50_000 + 800 / ROW_H);
+    expect(mid.last - mid.first).toBeLessThan(120);
+  });
+
+  it('never runs past the last row, and counts zoom and the note above the table', () => {
+    expect(visibleRows(40, 10_000, 800, 0)).toEqual({ first: 40, last: 40 });
+    const zoomed = visibleRows(100_000, 1000 * ROW_H * 2 + 33, 800, 33, 2);
+    expect(zoomed.first).toBe(1000 - 1 - 30);
   });
 });

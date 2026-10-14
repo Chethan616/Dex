@@ -252,6 +252,10 @@
 }
 .dv-sheet__grid th,
 .dv-sheet__grid td {
+  /* One height for every row: SheetView draws only the rows in view and counts on it (ROW_H). */
+  box-sizing: border-box;
+  height: 26px;
+  line-height: 17px;
   padding: 4px 8px;
   border-right: 1px solid var(--color-border-subtle);
   border-bottom: 1px solid var(--color-border-subtle);
@@ -262,6 +266,7 @@
   text-align: left;
 }
 .dv-sheet__grid td { background: var(--color-bg-base); user-select: text; -webkit-user-select: text; }
+.dv-sheet__grid .dv-sheet__spacer td { height: auto; padding: 0; border: 0; background: transparent; }
 .dv-sheet__grid th {
   position: sticky;
   background: var(--color-bg-elevated, var(--color-bg-base));

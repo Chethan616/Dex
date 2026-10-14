@@ -3,12 +3,27 @@
  * the sheet formats them, a tab per sheet. Read-only, and capped — a sheet
  * bigger than the cap shows its first rows and says so; "Open in app" has
  * the rest.
+ *
+ * Only the rows in view (and a margin) are drawn; spacer rows keep the
+ * scroll height, so a 100,000-row sheet scrolls like a short one.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { read, utils, type WorkBook } from 'xlsx';
 import type { ViewerProps } from './kinds';
 
-export const MAX_ROWS = 5000;
+export const MAX_ROWS = 100_000;
+/** Every row's height (docs.css sets it on the cells), at zoom 1. */
+export const ROW_H = 26;
+const OVERSCAN = 30;
+
+/** The rows to draw for a scroll position: those in view, and a margin each side. */
+export function visibleRows(rowCount: number, scrollTop: number, viewHeight: number, tableTop: number, zoom = 1, rowH = ROW_H): { first: number; last: number } {
+  const rh = rowH * (zoom || 1);
+  const top = scrollTop - tableTop - rh;   // the header row sits above the first
+  const first = Math.max(0, Math.min(rowCount, Math.floor(top / rh) - OVERSCAN));
+  const last = Math.max(first, Math.min(rowCount, Math.ceil((top + viewHeight) / rh) + OVERSCAN));
+  return { first, last };
+}
 export const MAX_COLS = 200;
 
 export interface SheetGrid {
@@ -50,6 +65,38 @@ export default function SheetView({ bytes, zoom, onReady, onError }: ViewerProps
   const grid = useMemo(() => (book && name ? sheetGrid(book, name) : null), [book, name]);
   useEffect(() => { if (grid) onReady?.(); }, [grid, onReady]);
 
+  // Window the rows against the document's scroller (.dv-scroll, which also holds the sticky header).
+  const tableRef = useRef<HTMLTableElement>(null);
+  const rowCount = grid?.rows.length ?? 0;
+  const [win, setWin] = useState({ first: 0, last: 200 });
+  /** The rows' real height, measured once drawn (CSS sets ROW_H; a font could change it). */
+  const [rowH, setRowH] = useState(ROW_H);
+  useEffect(() => {
+    const table = tableRef.current;
+    const scroller = table?.closest<HTMLElement>('.dv-scroll');
+    if (!table || !scroller) return;
+    let raf = 0;
+    const measure = (): void => {
+      raf = 0;
+      const sample = table.querySelector<HTMLElement>('tbody tr:not(.dv-sheet__spacer)');
+      const measured = sample ? sample.getBoundingClientRect().height / (zoom || 1) : ROW_H;
+      const h = measured > 4 ? Math.round(measured * 100) / 100 : ROW_H;
+      setRowH((prev) => (Math.abs(prev - h) < 0.01 ? prev : h));
+      const next = visibleRows(rowCount, scroller.scrollTop, scroller.clientHeight, table.offsetTop, zoom, h);
+      setWin((prev) => (prev.first === next.first && prev.last === next.last ? prev : next));
+    };
+    const onScroll = (): void => { if (!raf) raf = requestAnimationFrame(measure); };
+    measure();
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    const ro = new ResizeObserver(onScroll);
+    ro.observe(scroller);
+    return () => {
+      scroller.removeEventListener('scroll', onScroll);
+      ro.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [rowCount, zoom, sheet]);
+
   if (!book || !grid) return <div className="dv-sheet" />;
   const letters = Array.from({ length: grid.cols }, (_, i) => utils.encode_col(i));
 
@@ -61,7 +108,7 @@ export default function SheetView({ bytes, zoom, onReady, onError }: ViewerProps
       {grid.rows.length === 0 ? (
         <div className="dv-sheet__note">This sheet is empty.</div>
       ) : (
-        <table className="dv-sheet__grid" style={{ zoom }}>
+        <table className="dv-sheet__grid" style={{ zoom }} ref={tableRef}>
           <thead>
             <tr>
               <th className="dv-sheet__corner" />
@@ -69,12 +116,17 @@ export default function SheetView({ bytes, zoom, onReady, onError }: ViewerProps
             </tr>
           </thead>
           <tbody>
-            {grid.rows.map((row, r) => (
-              <tr key={r}>
-                <th scope="row">{r + 1}</th>
-                {letters.map((l, c) => <td key={l} title={row[c] && row[c].length > 40 ? row[c] : undefined}>{row[c] ?? ''}</td>)}
-              </tr>
-            ))}
+            {win.first > 0 && <tr className="dv-sheet__spacer" aria-hidden="true" style={{ height: win.first * rowH }}><td colSpan={grid.cols + 1} /></tr>}
+            {grid.rows.slice(win.first, win.last).map((row, i) => {
+              const r = win.first + i;
+              return (
+                <tr key={r}>
+                  <th scope="row">{r + 1}</th>
+                  {letters.map((l, c) => <td key={l} title={row[c] && row[c].length > 40 ? row[c] : undefined}>{row[c] ?? ''}</td>)}
+                </tr>
+              );
+            })}
+            {win.last < grid.rows.length && <tr className="dv-sheet__spacer" aria-hidden="true" style={{ height: (grid.rows.length - win.last) * rowH }}><td colSpan={grid.cols + 1} /></tr>}
           </tbody>
         </table>
       )}
