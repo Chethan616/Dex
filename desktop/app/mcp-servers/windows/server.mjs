@@ -200,6 +200,16 @@ export async function undoEntry(entryId) {
   return { ok: true, result: { undid: target.id, ...res.result } };
 }
 
+/* ── Settings › Desktop control: apps the user put off-limits ───────────── */
+
+/** Read on every call, so a change in DEX's Settings applies at once. */
+function userBlocked() {
+  try {
+    const list = JSON.parse(fs.readFileSync(path.join(home, 'settings.json'), 'utf-8')).blocked;
+    return Array.isArray(list) ? list.filter((p) => typeof p === 'string').map((p) => p.toLowerCase()) : [];
+  } catch { return []; }
+}
+
 /* ── tools/call ───────────────────────────────────────────────────────── */
 
 function takesWindow(tool) {
@@ -222,7 +232,8 @@ export async function callTool(name, args = {}) {
     if (bad) return bad;
     win = r.result;
   }
-  const verdict = classify(name, args, win);
+  const blockedApps = userBlocked();
+  const verdict = classify(name, args, win, { userBlocked: blockedApps });
   if (verdict.refused) return errorResult('refused', verdict.refused, 'Tell the user what you needed instead of working around it.');
 
   // An admin change with no admin helper: say so now, before asking the user to approve something that can't run.
@@ -245,7 +256,7 @@ export async function callTool(name, args = {}) {
 
   const act = actReporter(name, args, win);
   try {
-    const out = await runTool(name, args, win, h);
+    const out = await runTool(name, args, win, h, blockedApps);
     act.end(!out.isError, out.element ?? null);
     delete out.element;
     return out;
@@ -281,7 +292,7 @@ function actReporter(tool, args, win) {
   return { end: (ok, element) => { void control.event('act', { seq, phase: 'end', tool, args: briefArgs(args), window, ok, ...(element ? { element } : {}) }); } };
 }
 
-async function runTool(name, args, win, h) {
+async function runTool(name, args, win, h, blockedApps = []) {
   if (name === 'system_change') {
     const res = await runChange(args.action, args.args ?? {}, args.reason);
     return res.ok ? textResult(res.result) : errorResult(res.error ?? 'change_failed', res.message ?? 'The change failed.', res.hint);
@@ -315,7 +326,7 @@ async function runTool(name, args, win, h) {
 
   if (name === 'windows_list' && Array.isArray(result.windows)) {
     result.windows = result.windows.map((w) => {
-      const why = blockedReason(w);
+      const why = blockedReason(w, blockedApps);
       return why ? { hwnd: w.hwnd, process: w.process, blocked: why } : w;
     });
   }

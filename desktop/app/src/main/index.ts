@@ -123,6 +123,8 @@ import * as sitePermissions from './workspace/sitePermissions';
 import * as deskState from './desktop/deskState';
 import { DeskLive } from './desktop/deskLive';
 import { deskHome, hubArea, journalDir, runUndo, runWindowOp } from './desktop/deskHelpers';
+import { firstUseApp, readDeskSettings } from './desktop/deskSettings';
+import { appName } from '../shared/deskWords';
 import { TabMemory, tabsToSave } from './workspace/tabMemory';
 import { leaseDebugger, withDebugger } from './cdpLease';
 import { normalizeAddress } from '../shared/address';
@@ -292,8 +294,12 @@ const pendingConfirmations = new Map<string, {
   detail: string;
   category: ApprovalCategory;
   tier?: number;
+  /** A "Let DEX use <app> for this task?" card: the app a yes lets DEX use from now on. */
+  app?: string;
 }>();
 const CONFIRMATION_TIMEOUT_MS = 10 * 60 * 1000;
+/** Apps the user let a task use (Settings › Desktop control: ask first / first use asks). */
+const approvedApps = new Map<string, Set<string>>();
 
 /**
  * Answers a pending confirmation exactly once — called from the renderer's
@@ -306,6 +312,11 @@ function resolveConfirmation(id: string, approved: boolean, lifetime: ApprovalLi
   if (!pending) return;
   pendingConfirmations.delete(id);
   approvalPolicy.recordDecision(pending.sessionId, pending.category, approved, lifetime);
+  if (approved && pending.app) {
+    const apps = approvedApps.get(pending.sessionId) ?? new Set<string>();
+    apps.add(pending.app);
+    approvedApps.set(pending.sessionId, apps);
+  }
   const session = sessionManager.getSession(pending.sessionId);
   if (session) {
     sessionManager.appendOutput(pending.sessionId, {
@@ -338,8 +349,17 @@ function requestConfirmation(
   /** The Windows tools' tier (docs/desktop-control/PLAN.md §2.1): the phone says it, and asks in the app for 3 and 4. */
   tier?: number,
 ): Promise<{ approved: boolean }> {
-  if (!approvalPolicy.needsPrompt({ sessionId, category, subject })) {
+  // Settings › Desktop control: the first use of an app in a task may ask
+  // "Let DEX use it?", even where the approval mode alone wouldn't.
+  const app = category === 'app-control'
+    ? firstUseApp(readDeskSettings(deskHome()), subject, approvalPolicy.getSessionMode(sessionId), approvedApps.get(sessionId))
+    : null;
+  if (!app && !approvalPolicy.needsPrompt({ sessionId, category, subject })) {
     return Promise.resolve({ approved: true });
+  }
+  if (app) {
+    detail = `First step: ${title}${detail ? ` — ${detail}` : ''}. Once you say yes, DEX uses ${appName(app)} for the rest of this task without asking again.`;
+    title = `Let DEX use ${appName(app)} for this task?`;
   }
 
   const id = randomUUID();
@@ -363,6 +383,7 @@ function requestConfirmation(
       detail,
       category,
       tier,
+      app: app ?? undefined,
       resolve: (approved) => {
         clearTimeout(timeout);
         resolve({ approved });
@@ -2687,6 +2708,7 @@ app.whenReady().then(async () => {
     terminateActiveRunControl(validatedId);
     deskState.release(validatedId);
     deskLive.forget(validatedId);
+    approvedApps.delete(validatedId);
     browserPool.destroy(validatedId, shellWindow ?? undefined);
     documentTabs.closeSession(validatedId);
     tabMemory.forget(validatedId);
@@ -3680,6 +3702,41 @@ app.whenReady().then(async () => {
     const dir = journalDir(typeof sessionId === 'string' ? sessionId : null);
     fs.mkdirSync(dir, { recursive: true });
     return (await shell.openPath(dir)) === '';
+  });
+
+  // Settings › Desktop control (desktop/deskSettings.ts).
+  ipcMain.handle('desktop:settings-get', async () => {
+    const { listConnections } = await import('./mcp/store');
+    const stored = (await listConnections()).find((c) => c.id === 'windows');
+    return { supported: process.platform === 'win32', enabled: stored?.enabled !== false, ...readDeskSettings(deskHome()) };
+  });
+  ipcMain.handle('desktop:settings-set', async (_event, patch: unknown) => {
+    const p = (patch && typeof patch === 'object' ? patch : {}) as { enabled?: unknown; blocked?: unknown; askFirst?: unknown; firstUseAsks?: unknown };
+    const { writeDeskSettings } = await import('./desktop/deskSettings');
+    if (typeof p.enabled === 'boolean') {
+      const { removeConnection, setConnection } = await import('./mcp/store');
+      // On is the default (no stored row); off is a stored, disabled row (mcp/catalog alwaysOnConnections).
+      if (p.enabled) await removeConnection('windows');
+      else await setConnection('windows', { enabled: false });
+    }
+    const next = writeDeskSettings(deskHome(), { blocked: p.blocked, askFirst: p.askFirst, firstUseAsks: p.firstUseAsks });
+    mainLogger.info('desktop.settings', { enabled: p.enabled, blocked: next.blocked.length, askFirst: next.askFirst.length, firstUseAsks: next.firstUseAsks });
+    const { listConnections } = await import('./mcp/store');
+    const stored = (await listConnections()).find((c) => c.id === 'windows');
+    return { supported: process.platform === 'win32', enabled: stored?.enabled !== false, ...next };
+  });
+  // Apps with a window open now: what the lists above suggest (names only).
+  ipcMain.handle('desktop:running-apps', async () => {
+    if (process.platform !== 'win32') return [];
+    const { execFile } = await import('node:child_process');
+    const out = await new Promise<string>((resolve) => {
+      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -ExpandProperty ProcessName -Unique'],
+        { windowsHide: true, timeout: 8_000 }, (_err, stdout) => resolve(String(stdout ?? '')));
+    });
+    const self = path.basename(process.execPath).toLowerCase();
+    return [...new Set(out.split(/\r?\n/).map((n) => n.trim()).filter(Boolean).map((n) => `${n.toLowerCase()}.exe`))]
+      .filter((n) => n !== self && n !== 'explorer.exe' && n !== 'applicationframehost.exe' && n !== 'textinputhost.exe')
+      .sort();
   });
 
   // DEX's elevated helper for admin changes (desktop/elevation.ts).

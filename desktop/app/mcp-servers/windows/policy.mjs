@@ -32,10 +32,16 @@ export const BLOCKED_PROCESSES = new Map([
  */
 const TERMINAL_CLASSES = new Set(['consolewindowclass', 'cascadia_hosting_window_class', 'pseudoconsolewindow']);
 
-export function blockedReason(win) {
+/**
+ * Why DEX won't touch this window, or null. `userBlocked`: process names
+ * (lower case, ".exe") the user listed in Settings › Desktop control.
+ */
+export function blockedReason(win, userBlocked = []) {
   if (!win) return null;
-  const byProcess = win.process ? BLOCKED_PROCESSES.get(String(win.process).toLowerCase()) : null;
+  const proc = win.process ? String(win.process).toLowerCase() : '';
+  const byProcess = proc ? BLOCKED_PROCESSES.get(proc) : null;
   if (byProcess) return byProcess;
+  if (proc && userBlocked.includes(proc)) return 'you asked DEX not to use it (Settings › Desktop control)';
   if (win.className && TERMINAL_CLASSES.has(String(win.className).toLowerCase())) return 'terminals are off-limits (DEX uses its own shell)';
   return null;
 }
@@ -59,8 +65,8 @@ function targetLabel(target) {
  * must not do it. `win` is the resolved window (process, title, openedByDex),
  * or null for tools that don't take one.
  */
-export function classify(tool, args = {}, win = null) {
-  const blocked = blockedReason(win);
+export function classify(tool, args = {}, win = null, { userBlocked = [] } = {}) {
+  const blocked = blockedReason(win, userBlocked);
   if (blocked) return { refused: `DEX doesn't use ${appName(win)}: ${blocked}.` };
 
   if (READS.has(tool)) return { tier: 0 };

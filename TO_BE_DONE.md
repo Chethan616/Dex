@@ -23,20 +23,22 @@
 **2026-10-14, session `baacd51d` (Opus 5.5).** Read this block, then `git log --oneline -8`, then carry on from "In progress".
 
 **Done and pushed (unify == main):**
+- `5d7c4f38` Approvals carry **tier** + **onceOnly** (desktop card, policy `ONCE_ONLY`, server tier 4 for admin + early `elevation_not_set_up`), phone tier text (no Approve on the notification for tier ≥ 3), change rows reach the phone read-only. Also the owner's 2026-10-14 asks: toolbar-chip Pause keeps the page, Recents scrolls (all tasks, "7d"), computed symmetric gear (`HubApp.tsx` SettingsIcon), Chrome's puzzle (`hub/icons/PuzzleIcon.tsx`, Material Symbols "extension").
 - `f6e4f15f` Desktop control Phase 3, part 1: the **Desk tab** (`hub/workspace/DeskView.tsx`, `main/desktop/deskLive.ts`, `deskHelpers.ts`), **Show me / Hand back** (`mcp-servers/windows/host/window.ps1`, one-shot, started by main), plain-words chat labels for `mcp__windows__*` (`shared/deskWords.ts`, `logs/transcript.ts`), **changes with Undo** (`desk_change` event, `hub/chat/DeskChanges.tsx`, server `--undo` mode). Also fixed: parking (SetWindowPos, not SetWindowPlacement, which clamps on-screen), DPI-unaware captures (black band). Live-tested on `scripts/desk-fixture.ps1`.
 - `bce80fac`, `5baf2f78`, `60331561`, `330033de`: P3 Chrome extensions + web profile (see `docs/unify/P3.md`).
 
-**In progress (uncommitted when this was written):**
+**Was in progress, now committed in `5d7c4f38` (kept for the details):**
 1. Approvals carry **tier** (Windows tools: 2 reversible, 3 hard to undo, 4 admin) and **onceOnly** (`approvals/policy.ts` `ONCE_ONLY` = system-destructive, elevation: never remembered). Card shows the tier and "Just this step" (`PreviewDeck.tsx` ConfirmationCard). Bridge's `pendingConfirmation` sends `tier`/`onceOnly`. Server asks admin changes as tier 4 and answers `elevation_not_set_up` *before* asking. Tests added (policy, windowsServer). **Desktop part done, tests green.**
 2. Android: `PendingConfirmation(tier, onceOnly)`, `tierLabel`, `inAppOnly` (tier ≥ 3: no Approve/Deny on the notification — owner Q7 still open, PLAN default). Compiles. Not yet built as an APK or screenshotted.
 3. Phone Undo for changes: **not done.** Needs a new command type (`undo_change`), and `firebase/firestore.rules` allowlists command types → a rules deploy needs the owner's OK. For now the phone may show change rows read-only (bridge `serializeBlock` has no `change` case yet).
 
 **Owner's requests of 2026-10-14 (this session), in order:**
-- [ ] Pause from the workspace toolbar chip ("DEX is working — you can use the page too · Pause") must **keep the page in front**, not jump to Chat. Only that path; everything else unchanged.
-- [ ] Home page: the **Recents** section must scroll.
-- [ ] Top bar **settings (gear) icon** beside the Grid View icon is lopsided (left side squashed): redraw symmetric.
-- [ ] Extensions icon: the **exact Chrome puzzle-piece**, in DEX's toolbar style.
-- [ ] Then finish Phase 3: Settings › Desktop control (on/off, blocked apps, ask-first apps, first-use toggle, journal link), PLAN/TO_BE_DONE write-up, commit + push.
+- [x] Pause from the workspace toolbar chip ("DEX is working — you can use the page too · Pause") must **keep the page in front**, not jump to Chat. Only that path; everything else unchanged.
+- [x] Home page: the **Recents** section must scroll.
+- [x] Top bar **settings (gear) icon** beside the Grid View icon is lopsided (left side squashed): redraw symmetric.
+- [x] Extensions icon: the **exact Chrome puzzle-piece**, in DEX's toolbar style.
+- [x] Then finish Phase 3: Settings › Desktop control (on/off, blocked apps, ask-first apps, first-use toggle, journal link), PLAN write-up (`docs/desktop-control/PLAN.md` "Built (2026-10-14)"). **Not yet seen live** (the owner was active; needs a dev restart): open Settings › Desktop control and check it.
+- Phase 3 leftovers: Spotify acceptance run (not installed), Desk-tab CPU profile, phone Undo (needs `undo_change` in `firebase/firestore.rules` + a deploy: owner's OK), owner Q7.
 
 **Still after that (the plan order):** rest of P2 (Tools row: Terminal, Review, shortcuts; .pptx; code colours) → P1 leftovers (address-bar suggestions, per-site policy) → P4 → P5 → more widgets.
 

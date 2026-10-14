@@ -274,6 +274,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       setUp: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('desktop:elevation-setup'),
       remove: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('desktop:elevation-remove'),
     },
+    /** Settings › Desktop control (main/desktop/deskSettings.ts). */
+    desktop: {
+      get: () => ipcRenderer.invoke('desktop:settings-get'),
+      set: (patch: unknown) => ipcRenderer.invoke('desktop:settings-set', patch),
+      runningApps: (): Promise<string[]> => ipcRenderer.invoke('desktop:running-apps'),
+    },
     approvals: {
       get: (): Promise<{ mode: 'ask' | 'auto' | 'full' }> => ipcRenderer.invoke('settings:approvals:get'),
       set: (mode: 'ask' | 'auto' | 'full'): Promise<{ mode: 'ask' | 'auto' | 'full' }> =>

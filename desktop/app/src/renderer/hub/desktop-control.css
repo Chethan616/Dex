@@ -1,0 +1,55 @@
+/* Settings › Desktop control (DesktopControlSection.tsx): app lists as chips. */
+
+.desk-apps__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.desk-apps__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 11px;
+  border-radius: 999px;
+  background: var(--color-surface-interactive, rgba(127, 127, 127, 0.1));
+  color: var(--color-fg-primary);
+  font-size: 12.5px;
+}
+
+.desk-apps__chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-fg-tertiary);
+  cursor: pointer;
+}
+.desk-apps__chip button:hover { color: var(--color-fg-primary); background: rgba(var(--highlight-rgb), 0.08); }
+
+.desk-apps__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.desk-apps__add input {
+  width: 200px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-elevated);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+.desk-apps__add input:focus { border-color: var(--color-accent-default); }

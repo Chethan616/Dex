@@ -952,6 +952,41 @@ bypass mode [V], but match only "as written".
   - "first use of each app asks" toggle;
   - a link to the journal.
 
+**Built (2026-10-14: `f6e4f15f`, `5d7c4f38` and the Settings commit after them)**
+- **Desk tab** (`hub/workspace/DeskView.tsx`, `main/desktop/deskLive.ts`):
+  the host captures the window it last worked in (`DexDesk.cs` WriteFrame,
+  2/s, JPEG, two slots + `live/<session>.json`) only while main keeps
+  `live/<session>.want` fresh, i.e. while a Desk tab is on screen. Captures
+  use the window's own DPI (DPI-unaware apps came back with a black band).
+  The caption comes from the server's `act` events (`/dex/desktop-event`).
+- **Show me / Hand back**: `host/window.ps1`, a one-shot started by main at
+  the click (foreground rights). The window is listed in
+  `live/<session>.taken.json` before it moves; the host reads that file in
+  `Resolve` and its watcher, so the agent gets `held`.
+- **Parking fixed**: `SetWindowPlacement` clamps any wholly off-screen
+  placement back onto the screen edge (documented). Park now uses
+  `SetWindowPos`; a window in front is minimized with `SW_MINIMIZE` (which
+  activates the next window) and restored with `SW_SHOWNOACTIVATE`.
+- **Chat labels** (`shared/deskWords.ts`): "Pressed “Shuffle” in Spotify",
+  naming the control and window from the result (`element`, `window`).
+- **Fix report → Undo buttons**: each journaled change is a `desk_change`
+  event shown under the turn and in the Desk tab; Undo runs the server's
+  `--undo <entry>` (the click is the approval).
+- **Approvals**: cards carry `tier` (4 = admin) and `onceOnly`
+  (system-destructive and elevation are never remembered). Admin changes
+  with no helper fail before the card.
+- **Phone**: tier text on the approval; tiers 3–4 have no Approve on the
+  notification (Q7 still open: this is the default). Change rows show
+  read-only; a phone Undo needs a new command type in the Firestore rules.
+- **Settings › Desktop control** (`hub/DesktopControlSection.tsx`,
+  `main/desktop/deskSettings.ts`): on/off (the built-in Windows connection),
+  "ask the first time a task uses an app" (Approve for me, Ask), "Ask first"
+  apps (every mode), "Never use" apps (the server reads them from
+  `<desk>/settings.json` on every call), and the change journal.
+
+**Left:** the acceptance run with Spotify (not installed on the owner's PC),
+CPU profile of the Desk tab, phone Undo (rules change), and the owner's Q7.
+
 **Acceptance**
 - During task 1, the Desk tab shows Spotify updating while parked. Show me
   brings it forward on one click; Hand back hides it again; the agent waits

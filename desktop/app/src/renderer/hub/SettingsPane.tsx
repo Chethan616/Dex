@@ -3,6 +3,7 @@ import { ConnectionsPane, type SettingsProviderFocusRequest } from './Connection
 import { PhoneCard } from './PhoneCard';
 import { ExtensionsSection } from './ExtensionsSection';
 import { PuzzleIcon } from './icons/PuzzleIcon';
+import { DesktopControlSection } from './DesktopControlSection';
 import { MARKET_ITEMS, Mark, type MarketItem } from './connectors/Marketplace';
 import type { ActionId, KeyBinding } from './keybindings';
 import { fallbackShortcutPlatform, keyboardEventToShortcut } from '../../shared/hotkeys';
@@ -948,6 +949,7 @@ function McpSection(): React.ReactElement {
 export type SettingsSectionId =
   | 'settings-integrations'
   | 'settings-extensions'
+  | 'settings-desktop'
   | 'settings-diagnostics'
   | 'settings-model-providers'
   | 'settings-connections'
@@ -990,6 +992,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'settings-shortcuts', label: 'Shortcuts', icon: 'M2.5 4.5h11v7h-11zM5 7h.01M8 7h.01M11 7h.01M5.5 9.5h5', keywords: 'keyboard keybindings hotkey shortcut' },
   { id: 'settings-integrations', label: 'Connectors', icon: 'M6.5 9.5l3-3M5 7.5L3.8 8.7a2.5 2.5 0 003.5 3.5L8.5 11M11 8.5l1.2-1.2a2.5 2.5 0 00-3.5-3.5L7.5 5', keywords: 'connectors marketplace accounts google gmail calendar meet drive docs sheets microsoft outlook github slack reddit hugging face notion jira canva stripe pubmed flights sign in connect integrations', isNew: true },
   { id: 'settings-extensions', label: 'Extensions', icon: 'M3 5H5.7a1.55 1.55 0 1 1 3.1 0h2.7v2.7a1.55 1.55 0 1 1 0 3.1v2.7H3Z', keywords: 'chrome extensions web store add-ons plugins dark reader ublock adblock grammarly translate bitwarden unpacked', isNew: true },
+  { id: 'settings-desktop', label: 'Desktop control', icon: 'M2.5 3h11v7.5h-11zM6 13.5h4M8 10.5v3', keywords: 'windows apps desktop control spotify settings wifi touchpad block blocked never ask first journal undo changes desk', isNew: true },
   { id: 'settings-diagnostics', label: 'Diagnostics', icon: 'M2 8h2.5l1.5-4 3 8 1.5-4H14', keywords: 'preflight git bash node python health check missing' },
   { id: 'settings-agent-approval', label: 'Agent approval', icon: 'M8 2l5 2v4c0 3-2.2 5-5 6-2.8-1-5-3-5-6V4zM5.8 8l1.6 1.6L10.5 6.5', keywords: 'permission approve ask auto full access registry safety' },
   { id: 'settings-privacy', label: 'Privacy', icon: 'M4.5 7V5.5a3.5 3.5 0 017 0V7M3.5 7h9v6.5h-9z', keywords: 'telemetry notifications data crash' },
@@ -1423,6 +1426,13 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
               <h2 className="settings-section-header__title">Extensions</h2>
             </div>
             <ExtensionsSection />
+          </section>
+
+          <section id="settings-desktop" className="settings-page__section">
+            <div className="settings-section-header">
+              <h2 className="settings-section-header__title">Desktop control</h2>
+            </div>
+            <DesktopControlSection />
           </section>
 
           <section id="settings-diagnostics" className="settings-page__section">

@@ -592,9 +592,29 @@ interface ElectronSettingsElevationAPI {
   remove: () => Promise<{ ok: boolean; error?: string }>;
 }
 
+/** Settings › Desktop control (main/desktop/deskSettings.ts). Apps are process names: "outlook.exe". */
+interface DesktopControlSettings {
+  supported: boolean;
+  /** DEX may use Windows apps at all (the built-in Windows tools). */
+  enabled: boolean;
+  /** Never used, on top of the built-in list. */
+  blocked: string[];
+  /** Asked about before DEX starts using them in a task, in every approval mode. */
+  askFirst: string[];
+  /** The first use of every app in a task asks (Approve for me, Ask). */
+  firstUseAsks: boolean;
+}
+
+interface ElectronSettingsDesktopAPI {
+  get: () => Promise<DesktopControlSettings>;
+  set: (patch: Partial<Omit<DesktopControlSettings, 'supported'>>) => Promise<DesktopControlSettings>;
+  runningApps: () => Promise<string[]>;
+}
+
 interface ElectronSettingsAPI {
   mcp?: ElectronSettingsMcpAPI;
   elevation?: ElectronSettingsElevationAPI;
+  desktop?: ElectronSettingsDesktopAPI;
   connectors?: ElectronSettingsConnectorsAPI;
   accounts?: ElectronSettingsAccountsAPI;
   bridge?: ElectronSettingsBridgeAPI;
