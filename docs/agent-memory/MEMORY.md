@@ -9,7 +9,7 @@
 - [Blender in the background](blender-background.md) — per-task windowless Blender host behind the MCP, dex-3d via FLUX + Hunyuan ZeroGPU Spaces
 - [Phone adb testing](phone-adb-testing.md) — the OnePlus lags (screenshot every step), ×3 coordinates, live notification sits under Silent, WebView CDP debugging
 - [No metal buttons](no-metal-buttons.md) — user dislikes MetalButton; use plain pill buttons for desktop CTAs
-- [Release process](release-process.md) — v1.0.0 is the first public release (old 3.x deleted); phone versionName must always increase; tag → CI installer; APK uploaded with gh
+- [Release process](release-process.md) — v1.0.0 first public release, v2.0.0 on 2026-10-14 (phone 2.0.0, code 37); phone versionName must always increase; tag → CI installer; APK uploaded with gh
 - [Android screenshots without a device](android-screenshots-without-device.md) — Robolectric NATIVE graphics renders Compose screens to PNG when the phone is away
 - [Unify workspace plan](unify-workspace-plan.md) — `unify` branch: Codex-style workspace; P0–P3 built (Chrome extensions + DNR engine 2026-10-14); main == unify; hand-over TO_BE_DONE.md
 - [CDP broker, no debug port](cdp-broker.md) — since f675a5f4 agents use a token broker (BU_CDP_WS); dev CDP testing needs AGB_CDP_PORT=9222; use cdpLease for debugger access

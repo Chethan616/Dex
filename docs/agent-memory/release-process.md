@@ -1,6 +1,6 @@
 ---
 name: release-process
-description: How DEX releases ship — tag triggers CI for the Windows installer; the Android APK is built and uploaded locally
+description: How DEX releases ship — tag triggers CI for the Windows installer; the Android APK is built and uploaded locally; latest is v2.0.0 (2026-10-14)
 metadata:
   node_type: memory
   type: project
@@ -22,6 +22,7 @@ DEX's first public GitHub release was **v3.1.0**, on 2026-09-29: https://github.
 - **Notes.** Replace the generated ones with `gh release edit <tag> --title … --notes-file …`. **Never write a bare `@name` in notes:** GitHub turns it into a mention and lists that account under the release's Contributors (v3.3.0's "@BotFather" put a stranger there and the owner was furious). Write BotFather, or put it in backticks.
 - **Before tagging:** `yarn licenses:scan`, tsc, vitest, and a scan of the new commits for token-shaped strings (a test's fake Telegram token shaped like a real one could trip GitHub push protection).
 - **Current (2026-10-07):** the owner deleted every earlier release (v3.1.0–v3.3.0) and their tags, and restarted at **v1.0.0** as the first public release: desktop 1.0.0 + `DEX-android-1.0.34.apk` (versionCode 35). The desktop version may restart, but the **phone's versionName must always increase**: `ReleaseChecker.isNewer` compares names, so a lower one strands every installed phone. Anyone with desktop 3.x installed must uninstall before 1.0 (Squirrel launches the highest app-x.y.z). From 1.0.21 the phone updates itself in-app (update/AppUpdater.kt) from releases/latest, so the APK name must stay `DEX-android-<ver>.apk`. The CI Android job is a no-op without signing secrets; the publish job still creates the release.
+- **v2.0.0 (2026-10-14):** desktop 2.0.0 + `DEX-android-2.0.0.apk` (versionCode 37; the phone's versionName jumped 1.0.35 → 2.0.0 to match). The owner asked for it ("release v2 now") while another machine continues the work, so pull before any later bump. Notes are written by hand in the v1.0.0 style (what's new, install/update, build it with us, licenses).
 - **Android-only update** (done 2026-10-01, 1.0.16 on v3.1.0, at the user's request "edit the previous release"):
   - bump `versionCode`/`versionName` only, then build;
   - `gh release upload` the new APK to the **latest** release (the phone's ReleaseChecker reads `releases/latest`);
