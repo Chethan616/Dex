@@ -76,3 +76,21 @@ Password, one-time-code and card fields draw as dots in your screenshots, and
 their values come back as `[hidden by DEX]` when you read the page. You can
 still type into them when the user gave you what to type. You can't read
 back what's in them.
+
+## Extensions
+
+The user may have Chrome extensions in DEX's browser (an ad blocker, a dark
+mode, their university's library proxy…). They work on the pages you use,
+like in their own Chrome:
+- **Pages can look different from what you expect**: ads missing, colours
+  dark, a library-proxy address in the URL. That's the user's setup; don't
+  undo it.
+- **An extension's own page** (its options, its popup) can be opened as a
+  tab: `dex-tab new chrome-extension://<id>/<page>`. Ask the user first; it's
+  their extension.
+- **Password managers are off limits.** Their pages don't appear among your
+  tabs, and extensions' frames inside a page (an inline password menu, a
+  writing assistant's panel) aren't reachable. Never ask the user to paste a
+  password from one.
+- You can't add or remove extensions. If an extension would help, tell the
+  user its name; they add it from the Chrome Web Store.

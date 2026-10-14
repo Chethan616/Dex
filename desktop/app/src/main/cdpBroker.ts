@@ -59,6 +59,17 @@ export interface BrokerHooks {
    * a `DEX.notice` event, which the harness prints with the snippet's output.
    */
   noticeFor?(wc: BrokerContents): string | null;
+  /**
+   * May the agent reach a tab showing `url`? False keeps the tab out of its
+   * target list and refuses its commands (a password manager's own pages).
+   */
+  pageAllowed?(url: string): boolean;
+  /**
+   * May the agent hold a session in an iframe or worker at `url`? False
+   * detaches it as soon as auto-attach reaches it (extensions' frames
+   * injected into a web page are the extension's, not the page's).
+   */
+  childAllowed?(url: string): boolean;
 }
 
 /** DEX's own event to the agent's connection; other CDP clients ignore it. */
@@ -121,6 +132,8 @@ interface Attachment {
   sessionId: string | undefined;
   /** Chromium's own ids for iframes and workers auto-attached under the page. */
   children: Set<string>;
+  /** Their target ids, so a child that navigates can be found by its session. */
+  childTargets: Map<string, string>;
   release: () => void;
   onMessage: (event: unknown, method: string, params: Record<string, unknown>, sessionId?: string) => void;
   onDetach: (event: unknown, reason: string) => void;
@@ -187,10 +200,36 @@ class BrokerConnection {
       targetId,
       sessionId,
       children: new Set(),
+      childTargets: new Map(),
       release,
       onMessage: (_event, method, params, childSession) => {
         if (childSession && !att.children.has(childSession)) return;
-        if (method === 'Target.attachedToTarget' && typeof params?.sessionId === 'string') att.children.add(params.sessionId);
+        if ((method === 'Target.attachedToTarget' || method === 'Target.targetInfoChanged') && this.hooks.childAllowed) {
+          const url = String((params?.targetInfo as { url?: unknown } | undefined)?.url ?? '');
+          const child = method === 'Target.attachedToTarget' ? params?.sessionId : undefined;
+          if (url && !this.hooks.childAllowed(url)) {
+            if (typeof child === 'string') {
+              void wc.debugger.sendCommand('Target.detachFromTarget', { sessionId: child }, childSession).catch(() => undefined);
+              mainLogger.info('cdpBroker.childRefused', { scope: this.scope, url: url.slice(0, 80) });
+              return;
+            }
+            // A child that navigated somewhere the agent may not be: let it go.
+            const targetId = String((params?.targetInfo as { targetId?: unknown } | undefined)?.targetId ?? '');
+            const known = att.childTargets.get(targetId);
+            if (known) {
+              att.children.delete(known);
+              att.childTargets.delete(targetId);
+              void wc.debugger.sendCommand('Target.detachFromTarget', { sessionId: known }).catch(() => undefined);
+              this.send({ method: 'Target.detachedFromTarget', params: { sessionId: known, targetId } });
+              return;
+            }
+          }
+        }
+        if (method === 'Target.attachedToTarget' && typeof params?.sessionId === 'string') {
+          att.children.add(params.sessionId);
+          const tid = (params.targetInfo as { targetId?: unknown } | undefined)?.targetId;
+          if (typeof tid === 'string') att.childTargets.set(tid, params.sessionId);
+        }
         if (method === 'Target.detachedFromTarget' && typeof params?.sessionId === 'string') att.children.delete(params.sessionId);
         const wireSession = childSession ?? att.sessionId;
         this.send(wireSession ? { method, params, sessionId: wireSession } : { method, params });
@@ -256,6 +295,9 @@ class BrokerConnection {
       : this.attachments.find((a) => a.sessionId === undefined);
     if (page) {
       if (isBlockedOnPage(method)) throw notHere(method);
+      if (this.hooks.pageAllowed && !this.hooks.pageAllowed(page.wc.getURL())) {
+        throw new CdpError(-32000, "DEX keeps this page away from the agent: it's a password manager's own page.");
+      }
       this.notify(page.wc, sessionId);
       return this.forward(page.wc, method, params, undefined);
     }
@@ -359,10 +401,17 @@ export class CdpBroker {
   private scopeToToken = new Map<string, string>();
 
   /** `resolve(scope)` → the WebContents a scope (a DEX session id) may reach. */
+  private readonly resolve: (scope: string) => BrokerContents[];
+
   constructor(
-    private readonly resolve: (scope: string) => BrokerContents[],
+    resolve: (scope: string) => BrokerContents[],
     private readonly hooks: BrokerHooks = {},
-  ) {}
+  ) {
+    this.resolve = (scope) => resolve(scope).filter((wc) => {
+      if (!hooks.pageAllowed) return true;
+      try { return wc.isDestroyed() || hooks.pageAllowed(wc.getURL()); } catch { return false; }
+    });
+  }
 
   get listeningPort(): number {
     return this.port;

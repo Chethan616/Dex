@@ -8,8 +8,9 @@ import { CdpBroker, isBlockedOnPage, type BrokerContents } from '../../src/main/
 import { leaseDebugger } from '../../src/main/cdpLease';
 
 /** A stand-in for a task's browser view: its debugger records what it's sent. */
-function fakeTab(targetId: string) {
+function fakeTab(targetId: string, url = 'https://example.com/' + targetId) {
   const events = new EventEmitter();
+  const where = { url };
   let attached = false;
   const sent: Array<{ method: string; params: unknown; sessionId?: string }> = [];
   const dbg = {
@@ -31,11 +32,11 @@ function fakeTab(targetId: string) {
   const wc: BrokerContents = {
     isDestroyed: () => false,
     getTitle: () => 'Tab ' + targetId,
-    getURL: () => 'https://example.com/' + targetId,
+    getURL: () => where.url,
     getUserAgent: () => 'Mozilla/5.0 Chrome/146',
     debugger: dbg,
   };
-  return { wc, dbg, sent, emit: (...args: unknown[]) => events.emit(...(args as [string, ...unknown[]])) };
+  return { wc, dbg, sent, where, emit: (...args: unknown[]) => events.emit(...(args as [string, ...unknown[]])) };
 }
 
 type Client = {
@@ -260,6 +261,60 @@ describe('CdpBroker hooks', () => {
       const { result } = await c.call('Target.attachToTarget', { targetId: 'TARGET-X', flatten: true });
       const res = await c.call('Runtime.evaluate', { expression: '1' }, result.sessionId);
       expect(res.result).toEqual({ result: { type: 'string', value: 'from TARGET-X' } });
+      c.ws.close();
+    } finally {
+      await broker.stop();
+    }
+  });
+});
+
+describe('CdpBroker and extensions', () => {
+  const VAULT = 'chrome-extension://nngceckbapebfimnlniiiahkandclblb/popup/index.html';
+  const hooks = {
+    pageAllowed: (url: string) => !url.startsWith('chrome-extension://nngceckbapebfimnlniiiahkandclblb'),
+    childAllowed: (url: string) => !url.startsWith('chrome-extension://'),
+  };
+
+  it("keeps a password manager's page out of the agent's reach, even after a tab goes there", async () => {
+    const web = fakeTab('WEB');
+    const vault = fakeTab('VAULT', VAULT);
+    const broker = new CdpBroker(() => [web.wc, vault.wc], hooks);
+    await broker.start();
+    try {
+      const c = await connect(broker.endpointFor('s').wsUrl);
+      const targets = await c.call('Target.getTargets');
+      expect(targets.result.targetInfos.map((t: { targetId: string }) => t.targetId)).toEqual(['WEB']);
+      expect((await c.call('Target.attachToTarget', { targetId: 'VAULT', flatten: true })).error).toBeDefined();
+      const { result } = await c.call('Target.attachToTarget', { targetId: 'WEB', flatten: true });
+      web.where.url = VAULT;
+      const refused = await c.call('Runtime.evaluate', { expression: 'document.body.innerText' }, result.sessionId);
+      expect(refused.error?.message).toMatch(/password manager/);
+      expect(web.sent.some((m) => m.method === 'Runtime.evaluate')).toBe(false);
+      c.ws.close();
+    } finally {
+      await broker.stop();
+    }
+  });
+
+  it("detaches an extension's frame inside a page before the agent hears of it", async () => {
+    const web = fakeTab('WEB');
+    const broker = new CdpBroker(() => [web.wc], hooks);
+    await broker.start();
+    try {
+      const c = await connect(broker.endpointFor('s').wsUrl);
+      await c.call('Target.attachToTarget', { targetId: 'WEB', flatten: true });
+      web.emit('message', {}, 'Target.attachedToTarget', { sessionId: 'EXT-FRAME', targetInfo: { targetId: 'F1', type: 'iframe', url: 'chrome-extension://abcdefghijklmnopabcdefghijklmnop/menu.html' } });
+      web.emit('message', {}, 'Target.attachedToTarget', { sessionId: 'AD-FRAME', targetInfo: { targetId: 'F2', type: 'iframe', url: 'https://ads.example/frame' } });
+      await settle();
+      expect(c.events.some((e) => e.params?.sessionId === 'EXT-FRAME')).toBe(false);
+      expect(c.events.some((e) => e.params?.sessionId === 'AD-FRAME')).toBe(true);
+      expect(web.sent).toContainEqual(expect.objectContaining({ method: 'Target.detachFromTarget', params: { sessionId: 'EXT-FRAME' } }));
+      expect((await c.call('Runtime.evaluate', { expression: '1' }, 'EXT-FRAME')).error?.message).toMatch(/not found/);
+      // A page frame that navigates into an extension page is let go too.
+      web.emit('message', {}, 'Target.targetInfoChanged', { targetInfo: { targetId: 'F2', type: 'iframe', url: 'chrome-extension://abcdefghijklmnopabcdefghijklmnop/x.html' } });
+      await settle();
+      expect(c.events).toContainEqual(expect.objectContaining({ method: 'Target.detachedFromTarget', params: { sessionId: 'AD-FRAME', targetId: 'F2' } }));
+      expect((await c.call('Runtime.evaluate', { expression: '1' }, 'AD-FRAME')).error?.message).toMatch(/not found/);
       c.ws.close();
     } finally {
       await broker.stop();

@@ -79,7 +79,7 @@ DEX keeps its own layout: sidebar, dashboard, agent view header, Logs window. Th
 | P1 — browser & shared control | ✅ core done, live-tested. Tabs, toolbar, address bar, popups as tabs, native-size rendering, no blocking overlay, polite agent, agent cursor with arrival handshake, `dex-tab`, the off-screen **stage**, the CDP broker. **Leftovers listed in §3.2** |
 | Chat in the pane (PLAN §3.12) | ✅ done, live-tested. Codex-style turns, file cards, minibar, composer, per-task bot avatar with moods |
 | P2 — documents | ✅ built and unit-tested, **not yet live-tested** (§3.0). Remaining P2 bits in §3.1 |
-| P3 — extensions | ⏳ not started. Spikes proved the approach (Appendix C #3–#5) |
+| P3 — extensions | ✅ built and live-tested 2026-10-14: Web Store installs (verified CRX3), the shim, toolbar + popups, declarativeNetRequest engine, agent kept out of password managers. Dark Reader and uBlock Origin Lite (100/100 on adblock-tester.com) work; VIT Vellore Library installs and opens its sign-in. See `docs/unify/P3.md` and §3.3 |
 | P4 — annotate / request edits / side chat | ⏳ not started |
 | P5 — polish | ⏳ not started |
 | Windows app & OS control (beyond the browser) | 📝 researched and planned on 2026-10-06: `docs/desktop-control/RESEARCH.md` and `PLAN.md`. Background UI Automation with `AutoSetFocus` off, verified on the owner's PC. Next: Phase 0 spikes, after the owner answers PLAN §6 |
@@ -254,14 +254,16 @@ PLAN §5 and the P1/P2 rows, against the code:
 | Events carry `at` | ✅ | `SessionManager.appendOutput`, `session-schemas.ts` `WHEN` |
 | `sessions:open-file` (recorded files only; executables only revealed) | ✅ | `index.ts`, `sessions/recordedFiles.ts` |
 | **P2** document tabs (all kinds in PLAN §3.9 except .blend/.pptx), live reload, `dex-open`, file cards → tabs | ✅ **not live-tested** | §2.2 "P2" |
-| `persist:dex-web` profile + one-time cookie migration | ❌ | §3.2 |
-| Tab persistence across restarts | ❌ | §3.2 |
-| Download guard, per-site navigation policy, password-field guard | ❌ | §3.2 |
+| `persist:dex-web` profile + one-time cookie migration | ✅ (`330033de`) | `workspace/webProfile.ts`; site permission prompts in `workspace/sitePermissions.ts` |
+| Tab persistence across restarts | ✅ | `workspace/tabMemory.ts` |
+| Download guard, password-field guard | ✅; per-site navigation policy ❌ | §3.2 |
+| Page right-click menu (links, images, spelling, Inspect, extensions' items) | ✅ | `workspace/pageContextMenu.ts` |
+| Fit a too-wide page into a narrow pane (zoom out to ≥50%) | ✅ (`5baf2f78`) | `workspace/fitWidth.ts` |
 | Address-bar suggestions (history, site memory) | ❌ | §3.2 |
 | ⋯ menu: find in page, zoom, print, open in your browser, copy link, devtools, clear site data | ❌ | §3.2 |
 | Ctrl+Shift+T reopen closed tab | ❌ | §3.2 |
 | `user-interacted` signal to the engine | ❌ | §3.2 (the skill doc tells the agent to re-read instead) |
-| Extensions (P3) | ❌ | §3.3 |
+| Extensions (P3) | ✅ | `main/extensions/`, `preload/{extensionShim,extensionWorker,webFrame,storeBridge}.ts`, `docs/unify/P3.md` |
 | Annotate / Request edits / @-mention a tab / side chat (P4) | ❌ | §3.4 |
 | Split, maximize, reorder, memory badges, interactive terminal, phone tab list (P5) | ❌ | §3.5 |
 
@@ -486,7 +488,8 @@ P2 is unit-tested (DocumentTabs with real files and the watcher; kinds; sheet ca
 >   - **Document tabs** come back quietly the first time the hub asks for the task's documents. Missing files are skipped.
 >   - Not remembered: the agent's scratch tabs, blank tabs and non-web pages.
 
-1. **One web profile `persist:dex-web`, plus a one-time cookie migration** (PLAN §4.1; P0 #9 proved the copy: 20/20 cookies with flags).
+1. ✅ **Done 2026-10-13 (`330033de`).** Live: 11/11 cookies copied in 90 ms on the owner's PC. Also new: there was no permission handler at all (Electron grants everything), now `workspace/sitePermissions.ts` asks.
+   **One web profile `persist:dex-web`, plus a one-time cookie migration** (PLAN §4.1; P0 #9 proved the copy: 20/20 cookies with flags).
    - **Do:**
      - every tab's `WebContentsView` uses `session.fromPartition('persist:dex-web')`;
      - on first run, copy cookies from `session.defaultSession` (`cookies.get({})` then `cookies.set` with the same flags; skip `__Host-` when the path isn't `/`);
@@ -531,6 +534,25 @@ P2 is unit-tested (DocumentTabs with real files and the watcher; kinds; sheet ca
    - On the agent's next CDP `Input.*` or screenshot, the broker adds a one-line notice to the session output ("You used the page since DEX's last look"), which the engines surface. Today `tabs.md` only *tells* the agent to re-read after surprises.
 
 ## 3.3 P3 — Extensions
+
+> **Done (2026-10-14).** Everything below is built; `docs/unify/P3.md` has
+> the results, the API coverage table, the security review and the known
+> gaps. What changed from this plan:
+> - **No `electron-chrome-web-store`.** DEX's own installer (`extensions/crx.ts`,
+>   `ExtensionManager.ts`) verifies CRX3 signatures *and* the Web Store's
+>   publisher key, which the library doesn't; `fflate` (already shipped) unzips.
+>   The store page's API is DEX's own (`preload/storeBridge.ts`, `extensions/webStore.ts`).
+> - **Electron's own `chrome.webRequest` never fires in extensions**, and a
+>   session allows one listener per request event, so `extensions/webRequestHub.ts`
+>   owns the web profile's hooks and serves both the DNR engine and extensions'
+>   listeners. The hooks are only installed while something needs them.
+> - **declarativeNetRequest** didn't exist in Electron: `extensions/dnr/` is a
+>   full engine (uBlock Origin Lite needs it to block anything).
+> - **`chrome.storage.sync`** fails in Electron; `extensions/syncStorage.ts` keeps it on the PC.
+> - Tab ids are webContents ids (what Electron's native tabs.sendMessage and
+>   scripting already use); each DEX task is one window.
+> - Next: the owner's VIT sign-in end to end; Google Translate, Grammarly,
+>   Bitwarden; `chrome.downloads`; `commands` shortcuts; a sign-in prompt for sites.
 
 **Read first:** PLAN §3.8 and §4.4 (Appendix A), and P0 #2–#5 (Appendix C).
 - Native `loadExtension` works.

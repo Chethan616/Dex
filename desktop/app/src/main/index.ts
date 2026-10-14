@@ -414,7 +414,18 @@ const AGENT_INPUT = new Set([
   'Input.synthesizeScrollGesture', 'Input.synthesizeTapGesture', 'Input.dispatchDragEvent', 'Input.imeSetComposition',
 ]);
 type CursorTarget = Parameters<typeof moveCursor>[0];
+/** The agent may use extension pages in tabs, but never a password manager's (desktop-control rule 5). */
+function agentMayReachPage(url: string): boolean {
+  const id = /^chrome-extension:\/\/([a-p]{32})\//.exec(url)?.[1];
+  if (!id) return true;
+  return ExtensionHost.agentMayUse(url, extensionHost?.nameOf(id) ?? '');
+}
+
 const workspaceHooks: BrokerHooks = {
+  pageAllowed: agentMayReachPage,
+  // Extensions' frames inside a web page belong to the extension (a password
+  // manager's inline menu, a writing assistant's panel), not to the page.
+  childAllowed: (url) => !url.startsWith('chrome-extension://'),
   async beforeCommand(wc, method, params, { child }) {
     // Paused on Windows (cooperative, desktop/deskState.ts): the agent's
     // commands to the page wait until Resume.
