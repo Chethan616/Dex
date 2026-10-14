@@ -985,7 +985,7 @@ interface SettingsTab {
 
 const SETTINGS_TABS: SettingsTab[] = [
   { id: 'settings-application', label: 'Application', icon: 'M2.5 3.5h11v9h-11zM2.5 6h11', keywords: 'version update download restart tab layout side top sidebar' },
-  { id: 'settings-appearance', label: 'Appearance', icon: 'M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8 2.5v11', keywords: 'theme light dark system mode colour color', isNew: true },
+  { id: 'settings-appearance', label: 'Appearance', icon: 'M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8 2.5v11', keywords: 'theme light dark system mode colour color' },
   { id: 'settings-model-providers', label: 'Model providers', icon: 'M8 2l5 3v6l-5 3-5-3V5zM8 8l5-3M8 8v6M8 8L3 5', keywords: 'api key openai anthropic claude gemini groq ollama browsercode model provider' },
   { id: 'settings-connections', label: 'Channels', icon: 'M3 3.5h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H7.5L4.5 14v-2.5H3a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1Z', keywords: 'phone android dex app pair whatsapp telegram bot channel message text yourself notifications advanced token api mcp' },
   { id: 'settings-browser-sync', label: 'Browser Sync', icon: 'M13 8a5 5 0 01-8.6 3.5M3 8a5 5 0 018.6-3.5M11.5 2.5v2h-2M4.5 13.5v-2h2', keywords: 'cookies chrome sync login' },
@@ -1131,28 +1131,6 @@ function KeybindRow({ kb, isOverridden, onUpdate, onReset, platform, formatShort
   );
 }
 
-/**
- * The section you're reading: the last one (in page order, not tab order —
- * the tabs aren't in the same order as the page) whose top has passed just
- * under the top edge; at the very bottom, the last section on the page,
- * since the last few can never scroll up to the top.
- */
-export function sectionInView<T extends string>(scroller: HTMLElement, ids: readonly T[]): T | null {
-  const top = scroller.getBoundingClientRect().top;
-  const sections = ids
-    .map((id) => ({ id, el: scroller.querySelector<HTMLElement>(`#${id}`) }))
-    .filter((s): s is { id: T; el: HTMLElement } => !!s.el && !s.el.hidden)
-    .map((s) => ({ id: s.id, top: s.el.getBoundingClientRect().top - top }))
-    .sort((a, b) => a.top - b.top);
-  if (sections.length === 0) return null;
-  if (scroller.scrollTop > 0 && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4) {
-    return sections[sections.length - 1].id;
-  }
-  let current = sections[0].id;
-  for (const s of sections) if (s.top <= 48) current = s.id;
-  return current;
-}
-
 /** Settings › Connectors: the way into the Marketplace, with what's installed. */
 function MarketplaceCard(): React.ReactElement {
   const [installed, setInstalled] = useState<MarketItem[]>([]);
@@ -1212,18 +1190,25 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
     return tabs.filter((tab) => `${tab.label} ${tab.keywords}`.toLowerCase().includes(q));
   }, [query, tabs]);
 
-  // Filtering hides whole sections. ConnectionsPane renders three of them
-  // itself, so they're toggled by id rather than through props.
+  // One section at a time: the rail picks it, a search narrows the rail and
+  // shows its first match. ConnectionsPane renders three sections itself, so
+  // they're shown and hidden by id rather than through props.
   useLayoutEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
     const shown = new Set(visibleTabs.map((tab) => tab.id));
+    const current = shown.has(activeSection) ? activeSection : visibleTabs[0]?.id;
     for (const tab of tabs) {
       const section = scroller.querySelector<HTMLElement>(`#${tab.id}`);
-      if (section) section.hidden = !shown.has(tab.id);
+      if (section) section.hidden = tab.id !== current;
     }
-    if (visibleTabs.length > 0 && !shown.has(activeSection)) setActiveSection(visibleTabs[0].id);
+    if (current && current !== activeSection) setActiveSection(current);
   }, [visibleTabs, tabs, activeSection]);
+
+  // A new section starts at its top.
+  useLayoutEffect(() => {
+    if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+  }, [activeSection]);
 
   // "/" jumps to search, as on libraries.dev; Esc clears it.
   useEffect(() => {
@@ -1248,7 +1233,11 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
     const measure = (): void => {
       const btn = nav.querySelector<HTMLElement>('.settings-page__tab--active');
       if (!btn) { setPill(null); return; }
-      const next = { top: btn.offsetTop, height: btn.offsetHeight };
+      // Measured against the rail itself: each button sits in its own
+      // positioned row, so its offsetTop is always 0 (the pill used to stay
+      // stuck on the first item, Application).
+      const top = btn.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
+      const next = { top: Math.round(top), height: btn.offsetHeight };
       setPill((prev) => (prev && prev.top === next.top && prev.height === next.height ? prev : next));
     };
     measure();
@@ -1258,47 +1247,8 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
     return () => ro.disconnect();
   }, [activeSection, visibleTabs]);
 
-  const scrollToSection = useCallback((id: SettingsSectionId, behavior: ScrollBehavior = 'smooth') => {
-    const scroller = scrollerRef.current;
-    const target = scroller?.querySelector<HTMLElement>(`#${id}`);
-    if (!scroller || !target) return;
-    const tabOffset = 24;
-    // The tab you clicked stays lit while the page glides there, even if the
-    // section can't reach the top (the last ones at the bottom).
-    spyLockUntilRef.current = performance.now() + 900;
-    scroller.scrollTo({
-      top: Math.max(0, target.offsetTop - tabOffset),
-      behavior,
-    });
+  const showSection = useCallback((id: SettingsSectionId) => {
     setActiveSection(id);
-  }, []);
-
-  // The browser fires 'scroll' as fast as it can paint frames — a trackpad
-  // fling can produce dozens of events per second. Each pass here was
-  // running a querySelector per tab (9 of them) plus a state update
-  // (re-rendering the whole pane and its tab list) on every single one of
-  // those events with no throttling at all, which is exactly what made
-  // scrolling the Settings page itself feel laggy. Coalescing to one pass
-  // per animation frame — the standard fix for a scroll handler — cuts
-  // that to at most 60 passes/sec regardless of how many raw events fire,
-  // and skipping the setState when the active tab hasn't actually changed
-  // avoids re-rendering on frames where scrolling didn't cross a section
-  // boundary at all.
-  const spyLockUntilRef = useRef(0);
-  const scrollRafRef = useRef<number | null>(null);
-  const updateActiveFromScroll = useCallback(() => {
-    if (scrollRafRef.current !== null) return;
-    scrollRafRef.current = requestAnimationFrame(() => {
-      scrollRafRef.current = null;
-      const scroller = scrollerRef.current;
-      if (!scroller || performance.now() < spyLockUntilRef.current) return;
-      const next = sectionInView(scroller, visibleTabs.map((tab) => tab.id)) ?? visibleTabs[0]?.id ?? tabs[0].id;
-      setActiveSection((prev) => (prev === next ? prev : next));
-    });
-  }, [tabs, visibleTabs]);
-
-  useEffect(() => () => {
-    if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
   }, []);
 
   useEffect(() => {
@@ -1306,8 +1256,10 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
       intent?.focusBrowserCodeProvider ? 'settings-model-providers' : undefined
     );
     if (!sectionId) return;
-    requestAnimationFrame(() => scrollToSection(sectionId, 'auto'));
-  }, [intent?.requestId, intent?.sectionId, intent?.focusBrowserCodeProvider, scrollToSection]);
+    // Opened for one section (an engine's key, Channels…): clear a search that would hide it.
+    setQuery('');
+    showSection(sectionId);
+  }, [intent?.requestId, intent?.sectionId, intent?.focusBrowserCodeProvider, showSection]);
 
   const providerFocus: SettingsProviderFocusRequest | null = intent?.focusBrowserCodeProvider
     ? { providerId: intent.focusBrowserCodeProvider, requestId: intent.requestId }
@@ -1340,7 +1292,7 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Escape') { setQuery(''); e.currentTarget.blur(); }
-              if (e.key === 'Enter' && visibleTabs[0]) scrollToSection(visibleTabs[0].id);
+              if (e.key === 'Enter' && visibleTabs[0]) showSection(visibleTabs[0].id);
             }}
           />
           {!query && <kbd>/</kbd>}
@@ -1359,7 +1311,7 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
               <button
                 type="button"
                 className={`settings-page__tab${activeSection === tab.id ? ' settings-page__tab--active' : ''}`}
-                onClick={() => scrollToSection(tab.id)}
+                onClick={() => showSection(tab.id)}
                 data-settings-tab={tab.id}
                 aria-current={activeSection === tab.id ? 'true' : undefined}
                 title={tab.label}
@@ -1375,7 +1327,7 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
         <div className="settings-rail__foot">Press / to search</div>
       </aside>
 
-      <div className="settings-page__scroller" ref={scrollerRef} onScroll={updateActiveFromScroll}>
+      <div className="settings-page__scroller" ref={scrollerRef}>
         <div className="settings-page__content">
           {visibleTabs.length === 0 && (
             <div className="settings-page__empty" role="status">

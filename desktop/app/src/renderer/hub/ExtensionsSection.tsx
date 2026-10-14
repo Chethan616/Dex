@@ -1,11 +1,13 @@
 /**
  * Settings › Extensions: the Chrome extensions in DEX's browser
- * (main/extensions). Add one from the Chrome Web Store (its page in a task's
- * tab, or a pasted link here), switch it off, pin it to the toolbar, open its
- * options, or remove it.
+ * (main/extensions), laid out like Settings › Connectors — one card that
+ * leads to the Chrome Web Store, then a quiet list of what's installed. A row
+ * opens to pin, options and permissions; adding by link and loading an
+ * unpacked extension sit under Advanced.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Switch } from '../components/lib';
+import { PuzzleIcon } from './icons/PuzzleIcon';
 import './extensions.css';
 
 /** A few people reach for first; each is an "Add" away. */
@@ -22,27 +24,45 @@ function messageOf(err: unknown): string {
   return String((err as Error)?.message ?? err).replace(/^Error invoking remote method '[^']*': (Error: )?/, '');
 }
 
+function ExtIcon({ ext, size }: { ext: Pick<ExtensionSummary, 'icon' | 'name'>; size: number }): React.ReactElement {
+  return ext.icon
+    ? <img className="ext-icon" src={ext.icon} alt="" width={size} height={size} draggable={false} />
+    : <span className="ext-icon ext-icon--blank" style={{ width: size, height: size }} aria-hidden="true">{ext.name.slice(0, 1)}</span>;
+}
+
+function Chevron({ open }: { open: boolean }): React.ReactElement {
+  return (
+    <svg className={`ext-row__chev${open ? ' ext-row__chev--open' : ''}`} viewBox="0 0 12 12" width="12" height="12" fill="none" aria-hidden="true">
+      <path d="M4.5 3l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function ExtensionRow({ ext, onError }: { ext: ExtensionSummary; onError(message: string): void }): React.ReactElement {
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
   const run = useCallback(async (f: () => Promise<unknown> | undefined) => {
     setBusy(true);
     try { await f(); } catch (err) { onError(messageOf(err)); } finally { setBusy(false); }
   }, [onError]);
 
   return (
-    <div className={`ext-row${ext.enabled ? '' : ' ext-row--off'}`}>
-      <div className="ext-row__main">
-        {ext.icon
-          ? <img className="ext-row__icon" src={ext.icon} alt="" />
-          : <span className="ext-row__icon ext-row__icon--blank" aria-hidden="true">{ext.name.slice(0, 1)}</span>}
-        <div className="ext-row__text">
-          <div className="ext-row__title">
-            <span className="settings-pane__label">{ext.name}</span>
-            <span className="ext-row__version">{ext.version}{ext.source === 'unpacked' ? ' · unpacked' : ''}</span>
-          </div>
-          {ext.description && <div className="settings-pane__sublabel ext-row__desc">{ext.description}</div>}
-          {ext.error && <div className="ext-row__error" role="alert">{ext.error}</div>}
-        </div>
+    <div className={`ext-row${ext.enabled ? '' : ' ext-row--off'}${open ? ' ext-row--open' : ''}`}>
+      <div className="ext-row__head">
+        <button type="button" className="ext-row__toggle" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+          <ExtIcon ext={ext} size={28} />
+          <span className="ext-row__text">
+            <span className="ext-row__name">
+              {ext.name}
+              {ext.pinned && <span className="ext-row__tag">Pinned</span>}
+              {ext.source === 'unpacked' && <span className="ext-row__tag">Unpacked</span>}
+            </span>
+            {ext.error
+              ? <span className="ext-row__error" role="alert">{ext.error}</span>
+              : ext.description && <span className="ext-row__desc">{ext.description}</span>}
+          </span>
+          <Chevron open={open} />
+        </button>
         <Switch
           checked={ext.enabled}
           onChange={() => { void run(() => api()?.setEnabled(ext.id, !ext.enabled)); }}
@@ -50,50 +70,56 @@ function ExtensionRow({ ext, onError }: { ext: ExtensionSummary; onError(message
           disabled={busy}
         />
       </div>
-      <div className="ext-row__actions">
-        <button
-          type="button"
-          className={`ext-pill${ext.pinned ? ' ext-pill--on' : ''}`}
-          aria-pressed={ext.pinned}
-          disabled={busy || !ext.enabled}
-          onClick={() => { void run(() => api()?.setPinned(ext.id, !ext.pinned)); }}
-        >
-          {ext.pinned ? 'Pinned to toolbar' : 'Pin to toolbar'}
-        </button>
-        {ext.optionsUrl && (
-          <button type="button" className="ext-pill" disabled={busy || !ext.loaded} onClick={() => { void run(() => api()?.open(`options:${ext.id}`)); }}>
-            Options
-          </button>
-        )}
-        {ext.source === 'unpacked' && (
-          <button type="button" className="ext-pill" disabled={busy || !ext.enabled} onClick={() => { void run(() => api()?.reload(ext.id)); }}>
-            Reload
-          </button>
-        )}
-        <button type="button" className="ext-pill ext-pill--quiet" disabled={busy} onClick={() => { void run(() => api()?.remove(ext.id)); }}>
-          Remove
-        </button>
-      </div>
-      <details className="ext-row__details">
-        <summary>What it can do</summary>
-        {ext.warnings.length
-          ? <ul>{ext.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
-          : <p>It needs no special permissions.</p>}
-        <label className="ext-row__check">
-          <input
-            type="checkbox"
-            checked={ext.fileAccess}
-            disabled={busy || !ext.enabled}
-            onChange={() => { void run(() => api()?.setFileAccess(ext.id, !ext.fileAccess)); }}
-          />
-          Allow access to files on your PC (file:// pages)
-        </label>
-        {ext.storeUrl && (
-          <button type="button" className="ext-link" onClick={() => { void api()?.open(`store-page:${ext.id}`); }}>
-            See it in the Chrome Web Store
-          </button>
-        )}
-      </details>
+
+      {open && (
+        <div className="ext-row__body">
+          <div className="ext-row__actions">
+            <button
+              type="button"
+              className="ext-pill"
+              aria-pressed={ext.pinned}
+              disabled={busy || !ext.enabled}
+              onClick={() => { void run(() => api()?.setPinned(ext.id, !ext.pinned)); }}
+            >
+              {ext.pinned ? 'Unpin from toolbar' : 'Pin to toolbar'}
+            </button>
+            {ext.optionsUrl && (
+              <button type="button" className="ext-pill" disabled={busy || !ext.loaded} onClick={() => { void run(() => api()?.open(`options:${ext.id}`)); }}>
+                Options
+              </button>
+            )}
+            {ext.source === 'unpacked' && (
+              <button type="button" className="ext-pill" disabled={busy || !ext.enabled} onClick={() => { void run(() => api()?.reload(ext.id)); }}>
+                Reload
+              </button>
+            )}
+            {ext.storeUrl && (
+              <button type="button" className="ext-pill" onClick={() => { void api()?.open(`store-page:${ext.id}`); }}>
+                Store page
+              </button>
+            )}
+            <button type="button" className="ext-pill ext-pill--danger" disabled={busy} onClick={() => { void run(() => api()?.remove(ext.id)); }}>
+              Remove
+            </button>
+          </div>
+          <div className="ext-row__perms">
+            <span className="ext-row__perms-title">What it can do</span>
+            {ext.warnings.length
+              ? <ul>{ext.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
+              : <p>It needs no special permissions.</p>}
+            <label className="ext-row__check">
+              <input
+                type="checkbox"
+                checked={ext.fileAccess}
+                disabled={busy || !ext.enabled}
+                onChange={() => { void run(() => api()?.setFileAccess(ext.id, !ext.fileAccess)); }}
+              />
+              Allow access to files on your PC (file:// pages)
+            </label>
+          </div>
+          <span className="ext-row__version">Version {ext.version}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -120,7 +146,7 @@ export function ExtensionsSection(): React.ReactElement {
     setNotice(null);
     try {
       const result = await api()?.install(text);
-      if (result === 'success') { setNotice({ kind: 'ok', text: `${label ?? 'The extension'} is added. Its button is in the extensions menu (the puzzle piece) of a task's toolbar.` }); setInput(''); }
+      if (result === 'success') { setNotice({ kind: 'ok', text: `${label ?? 'The extension'} is added. Its button is under the puzzle piece in a task's toolbar.` }); setInput(''); }
       else if (result === 'already_installed') setNotice({ kind: 'ok', text: `${label ?? 'That extension'} is already here.` });
       else if (result === 'install_in_progress') setNotice({ kind: 'ok', text: 'Still adding it…' });
     } catch (err) {
@@ -131,97 +157,89 @@ export function ExtensionsSection(): React.ReactElement {
     }
   }, [refresh]);
 
-  const installed = new Set((list ?? []).map((e) => e.id));
-  const suggestions = SUGGESTED.filter((s) => !installed.has(s.id));
+  const exts = list ?? [];
+  const installedIds = new Set(exts.map((e) => e.id));
+  const suggestions = SUGGESTED.filter((s) => !installedIds.has(s.id));
 
   return (
-    <div className="settings-card ext-section">
-      <div className="settings-pane__row ext-add">
-        <div className="settings-pane__label-block">
-          <div className="settings-pane__label">Add from the Chrome Web Store</div>
-          <div className="settings-pane__sublabel">
-            Click “Add to DEX” on its store page in a task's tab, or paste the page's link here. Extensions work in DEX's browser only, never in DEX itself.
-          </div>
+    <>
+      <div className="settings-market">
+        <span className="ext-market__mark" aria-hidden="true"><PuzzleIcon size={22} /></span>
+        <div className="settings-market__text">
+          <span className="settings-market__title">Chrome Web Store</span>
+          <span className="settings-market__sub">
+            Add extensions to DEX’s browser: Dark Reader, uBlock Origin Lite, Google Translate, Grammarly and thousands more. Click “Add to DEX” on a store page. They work in task tabs, never in DEX itself.
+          </span>
+          {exts.length > 0 && (
+            <span className="ext-market__installed">
+              <span className="ext-market__stack">{exts.slice(0, 5).map((e) => <ExtIcon key={e.id} ext={e} size={20} />)}</span>
+              {exts.length} installed
+            </span>
+          )}
         </div>
-        <form
-          className="ext-add__form"
-          onSubmit={(e) => { e.preventDefault(); void add(input); }}
-        >
-          <input
-            className="ext-add__input"
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="chromewebstore.google.com/detail/… or an extension id"
-            aria-label="Chrome Web Store link or extension id"
-            spellCheck={false}
-          />
-          <button type="submit" className="conn-card__btn conn-card__btn--primary" disabled={!input.trim() || adding !== null}>
-            {adding === input.trim() && adding ? 'Adding…' : 'Add'}
-          </button>
-          <button type="button" className="conn-card__btn conn-card__btn--secondary" onClick={() => { void api()?.open('store'); }}>
-            Browse the store
-          </button>
-        </form>
-        {notice && <div className={`ext-notice ext-notice--${notice.kind}`} role="status">{notice.text}</div>}
+        <button type="button" className="settings-market__browse" onClick={() => { void api()?.open('store'); }}>Browse</button>
       </div>
 
-      {list === null ? (
-        <div className="settings-pane__row"><div className="settings-pane__sublabel">Loading…</div></div>
-      ) : list.length === 0 ? (
-        <div className="settings-pane__row ext-empty">
-          <div className="settings-pane__sublabel">No extensions yet. A few to start with:</div>
+      {notice && <div className={`ext-notice ext-notice--${notice.kind}`} role="status">{notice.text}</div>}
+
+      {list !== null && (exts.length > 0 || suggestions.length > 0) && (
+        <div className="settings-card ext-list">
+          {exts.map((ext) => <ExtensionRow key={ext.id} ext={ext} onError={(text) => setNotice({ kind: 'error', text })} />)}
+          {suggestions.length > 0 && (
+            <div className="ext-popular">
+              <span className="ext-popular__label">{exts.length ? 'Popular' : 'Popular, to start with'}</span>
+              <div className="ext-popular__list">
+                {suggestions.map((s) => (
+                  <button key={s.id} type="button" className="ext-pill" title={s.what} disabled={adding !== null} onClick={() => { void add(s.id, s.name); }}>
+                    {adding === s.id ? `Adding ${s.name}…` : `+ ${s.name}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      ) : (
-        list.map((ext) => <ExtensionRow key={ext.id} ext={ext} onError={(text) => setNotice({ kind: 'error', text })} />)
       )}
 
-      {list !== null && suggestions.length > 0 && (
-        <div className="settings-pane__row ext-suggest">
-          {list.length > 0 && <div className="settings-pane__sublabel">Popular</div>}
-          <div className="ext-suggest__list">
-            {suggestions.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className="ext-suggest__item"
-                disabled={adding !== null}
-                onClick={() => { void add(s.id, s.name); }}
-              >
-                <span className="ext-suggest__name">{adding === s.id ? `Adding ${s.name}…` : s.name}</span>
-                <span className="ext-suggest__what">{s.what}</span>
-              </button>
-            ))}
+      <details className="channels-advanced ext-advanced">
+        <summary>Advanced — add by link, load unpacked, check for updates</summary>
+        <div className="ext-advanced__body">
+          <form className="ext-advanced__add" onSubmit={(e) => { e.preventDefault(); void add(input); }}>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="A Chrome Web Store link or an extension id"
+              aria-label="Chrome Web Store link or extension id"
+              spellCheck={false}
+            />
+            <button type="submit" className="ext-pill" disabled={!input.trim() || adding !== null}>
+              {adding && adding === input.trim() ? 'Adding…' : 'Add'}
+            </button>
+          </form>
+          <div className="ext-advanced__dev">
+            <button
+              type="button"
+              className="ext-pill"
+              onClick={() => {
+                void api()?.loadUnpacked().then((r) => { if (r) setNotice({ kind: 'ok', text: `${r.name} is loaded.` }); refresh(); })
+                  .catch((err) => { const m = messageOf(err); if (m !== 'Cancelled') setNotice({ kind: 'error', text: m }); });
+              }}
+            >
+              Load unpacked…
+            </button>
+            <button
+              type="button"
+              className="ext-pill"
+              onClick={() => {
+                void api()?.checkUpdates().then((ids) => setNotice({ kind: 'ok', text: ids.length ? `Updated ${ids.length} extension${ids.length === 1 ? '' : 's'}.` : 'Every extension is up to date.' }))
+                  .catch((err) => setNotice({ kind: 'error', text: messageOf(err) }));
+              }}
+            >
+              Check for updates
+            </button>
           </div>
         </div>
-      )}
-
-      <details className="settings-pane__row ext-dev">
-        <summary>For developers</summary>
-        <div className="ext-dev__body">
-          <div className="settings-pane__sublabel">Load an extension from a folder on your PC (it stays where it is; Reload picks up changes).</div>
-          <button
-            type="button"
-            className="conn-card__btn conn-card__btn--secondary"
-            onClick={() => {
-              void api()?.loadUnpacked().then((r) => { if (r) setNotice({ kind: 'ok', text: `${r.name} is loaded.` }); refresh(); })
-                .catch((err) => { const m = messageOf(err); if (m !== 'Cancelled') setNotice({ kind: 'error', text: m }); });
-            }}
-          >
-            Load unpacked…
-          </button>
-          <button
-            type="button"
-            className="conn-card__btn conn-card__btn--secondary"
-            onClick={() => {
-              void api()?.checkUpdates().then((ids) => setNotice({ kind: 'ok', text: ids.length ? `Updated ${ids.length} extension${ids.length === 1 ? '' : 's'}.` : 'Every extension is up to date.' }))
-                .catch((err) => setNotice({ kind: 'error', text: messageOf(err) }));
-            }}
-          >
-            Check for updates
-          </button>
-        </div>
       </details>
-    </div>
+    </>
   );
 }

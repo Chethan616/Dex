@@ -23,6 +23,7 @@
 **2026-10-14, session `baacd51d` (Opus 5.5).** Read this block, then `git log --oneline -8`, then carry on from "In progress".
 
 **Done and pushed (unify == main):**
+- `daff5ca9` Settings › Desktop control (`hub/DesktopControlSection.tsx`, `main/desktop/deskSettings.ts`; the server reads `blocked` from `<desk>/settings.json`). Not yet seen live.
 - `5d7c4f38` Approvals carry **tier** + **onceOnly** (desktop card, policy `ONCE_ONLY`, server tier 4 for admin + early `elevation_not_set_up`), phone tier text (no Approve on the notification for tier ≥ 3), change rows reach the phone read-only. Also the owner's 2026-10-14 asks: toolbar-chip Pause keeps the page, Recents scrolls (all tasks, "7d"), computed symmetric gear (`HubApp.tsx` SettingsIcon), Chrome's puzzle (`hub/icons/PuzzleIcon.tsx`, Material Symbols "extension").
 - `f6e4f15f` Desktop control Phase 3, part 1: the **Desk tab** (`hub/workspace/DeskView.tsx`, `main/desktop/deskLive.ts`, `deskHelpers.ts`), **Show me / Hand back** (`mcp-servers/windows/host/window.ps1`, one-shot, started by main), plain-words chat labels for `mcp__windows__*` (`shared/deskWords.ts`, `logs/transcript.ts`), **changes with Undo** (`desk_change` event, `hub/chat/DeskChanges.tsx`, server `--undo` mode). Also fixed: parking (SetWindowPos, not SetWindowPlacement, which clamps on-screen), DPI-unaware captures (black band). Live-tested on `scripts/desk-fixture.ps1`.
 - `bce80fac`, `5baf2f78`, `60331561`, `330033de`: P3 Chrome extensions + web profile (see `docs/unify/P3.md`).
@@ -39,6 +40,13 @@
 - [x] Extensions icon: the **exact Chrome puzzle-piece**, in DEX's toolbar style.
 - [x] Then finish Phase 3: Settings › Desktop control (on/off, blocked apps, ask-first apps, first-use toggle, journal link), PLAN write-up (`docs/desktop-control/PLAN.md` "Built (2026-10-14)"). **Not yet seen live** (the owner was active; needs a dev restart): open Settings › Desktop control and check it.
 - Phase 3 leftovers: Spotify acceptance run (not installed), Desk-tab CPU profile, phone Undo (needs `undo_change` in `firebase/firestore.rules` + a deploy: owner's OK), owner Q7.
+
+**Owner's requests of 2026-10-14, second batch (Settings page), in order:**
+- [x] Settings › Extensions should look like Connectors (the Marketplace section): minimal.
+- [x] Remove the "New" tag on Appearance.
+- [x] Settings as one screen per section instead of one long scroll (owner: "u decide") — decided: yes, one section per screen, the rail switches sections, search still finds any section.
+- [x] The rail's "Application" item looks different (cause: the sliding pill measured `offsetTop` inside each positioned row, always 0, so it sat on Application) from the others: make every item consistent.
+- [ ] Then continue: P2 Tools row (Terminal tab = `hub/TerminalPane.tsx`, Review tab = created/changed files with diffs from Edit/Write tool args, shortcuts Ctrl+` / Ctrl+Shift+G / Ctrl+P), then the rest of the plan.
 
 **Still after that (the plan order):** rest of P2 (Tools row: Terminal, Review, shortcuts; .pptx; code colours) → P1 leftovers (address-bar suggestions, per-site policy) → P4 → P5 → more widgets.
 

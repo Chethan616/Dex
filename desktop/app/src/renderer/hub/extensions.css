@@ -1,199 +1,178 @@
-/* Settings › Extensions (ExtensionsSection.tsx) */
+/* Settings › Extensions (ExtensionsSection.tsx): laid out like Connectors —
+   the store card (.settings-market, hub.css), then a quiet installed list. */
 
-.ext-add {
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-3);
-}
-.ext-add__form {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-.ext-add__input {
-  flex: 1 1 260px;
-  min-width: 0;
-  height: 32px;
-  padding: 0 var(--space-3);
-  border-radius: 999px;
-  border: 1px solid var(--color-border-default);
-  background: var(--color-bg-base);
+.ext-market__mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(var(--highlight-rgb), 0.06);
   color: var(--color-fg-primary);
-  font-size: var(--font-size-xs);
-  outline: none;
 }
-.ext-add__input:focus { border-color: var(--color-accent-default); }
-.ext-add__form .conn-card__btn { border-radius: 999px; }
+
+.ext-market__installed {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--color-fg-secondary);
+  font-size: 12.5px;
+}
+.ext-market__stack { display: inline-flex; }
+.ext-market__stack .ext-icon { margin-left: -5px; border-radius: 6px; box-shadow: 0 0 0 2px var(--color-bg-elevated); background: var(--color-bg-elevated); }
+.ext-market__stack .ext-icon:first-child { margin-left: 0; }
+
+.ext-icon {
+  flex: none;
+  object-fit: contain;
+  border-radius: 7px;
+}
+.ext-icon--blank {
+  display: grid;
+  place-items: center;
+  background: rgba(var(--highlight-rgb), 0.08);
+  color: var(--color-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
 
 .ext-notice {
-  font-size: var(--font-size-xs);
+  margin: -4px 2px 12px;
+  font-size: 12.5px;
   line-height: 1.4;
 }
 .ext-notice--ok { color: var(--color-fg-secondary); }
 .ext-notice--error { color: var(--color-status-error); }
 
-.ext-row {
+.ext-list { margin-bottom: 14px; }
+
+/* One installed extension: icon, name, one line; a click opens the rest. */
+.ext-row { border-bottom: 1px solid var(--color-border-subtle); }
+.ext-row:last-child { border-bottom: 0; }
+.ext-row__head {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--color-border-subtle);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 10px 12px;
 }
-.ext-row--off .ext-row__icon,
-.ext-row--off .ext-row__text { opacity: 0.55; }
-.ext-row__main {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-}
-.ext-row__icon {
-  width: 32px;
-  height: 32px;
-  flex: none;
-  object-fit: contain;
-  border-radius: 8px;
-}
-.ext-row__icon--blank {
-  display: grid;
-  place-items: center;
-  background: var(--color-bg-elevated);
-  color: var(--color-fg-secondary);
-  font-weight: 600;
-}
-.ext-row__text {
+.ext-row__toggle {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.ext-row__title {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  min-width: 0;
-}
-.ext-row__version {
-  font-size: var(--font-size-2xs);
-  color: var(--color-fg-tertiary, var(--color-fg-secondary));
-  white-space: nowrap;
-}
-.ext-row__desc {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.ext-row__error {
-  font-size: var(--font-size-xs);
-  color: var(--color-status-error);
-}
-.ext-row__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  padding-left: calc(32px + var(--space-3));
-}
-
-/* Plain pill buttons (no metal). */
-.ext-pill {
-  height: 26px;
-  padding: 0 var(--space-3);
-  border-radius: 999px;
-  border: 1px solid var(--color-border-default);
-  background: var(--color-bg-base);
-  color: var(--color-fg-secondary);
-  font-size: var(--font-size-2xs);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
-}
-.ext-pill:hover:not(:disabled) { background: var(--color-surface-interactive-hover); color: var(--color-fg-primary); }
-.ext-pill:disabled { opacity: 0.45; cursor: default; }
-.ext-pill--on {
-  border-color: transparent;
-  background: var(--color-accent-subtle, rgba(80, 140, 255, 0.16));
-  color: var(--color-accent-default);
-}
-.ext-pill--quiet { border-color: transparent; background: transparent; }
-
-.ext-row__details {
-  padding-left: calc(32px + var(--space-3));
-  font-size: var(--font-size-xs);
-  color: var(--color-fg-secondary);
-}
-.ext-row__details summary {
-  cursor: pointer;
-  width: fit-content;
-  user-select: none;
-}
-.ext-row__details ul {
-  margin: var(--space-2) 0;
-  padding-left: var(--space-4);
-}
-.ext-row__details p { margin: var(--space-2) 0; }
-.ext-row__check {
-  display: flex;
   align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-2) 0;
-}
-.ext-link {
+  gap: 12px;
+  padding: 4px;
   border: 0;
-  padding: 0;
+  border-radius: 10px;
   background: none;
-  color: var(--color-accent-default);
-  font-size: var(--font-size-xs);
-  cursor: pointer;
-}
-.ext-link:hover { text-decoration: underline; }
-
-.ext-suggest {
-  flex-direction: column;
-  align-items: stretch;
-}
-.ext-suggest__list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: var(--space-2);
-}
-.ext-suggest__item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: var(--space-3);
-  border-radius: 12px;
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-bg-base);
+  color: inherit;
+  font: inherit;
   text-align: left;
   cursor: pointer;
 }
-.ext-suggest__item:hover:not(:disabled) { background: var(--color-surface-interactive-hover); }
-.ext-suggest__item:disabled { opacity: 0.6; cursor: default; }
-.ext-suggest__name {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-fg-primary);
-}
-.ext-suggest__what {
-  font-size: var(--font-size-2xs);
-  color: var(--color-fg-secondary);
-}
-
-.ext-dev { display: block; }
-.ext-dev summary {
-  cursor: pointer;
-  font-size: var(--font-size-xs);
-  color: var(--color-fg-secondary);
-  user-select: none;
-}
-.ext-dev__body {
+.ext-row__toggle:hover { background: rgba(var(--highlight-rgb), 0.03); }
+.ext-row--off .ext-icon,
+.ext-row--off .ext-row__text { opacity: 0.5; }
+.ext-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ext-row__name {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
+  gap: 8px;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 550;
+  color: var(--color-fg-primary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
-.ext-dev__body .settings-pane__sublabel { flex-basis: 100%; }
-.ext-dev__body .conn-card__btn { border-radius: 999px; }
+.ext-row__tag {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(var(--highlight-rgb), 0.06);
+  color: var(--color-fg-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+}
+.ext-row__desc,
+.ext-row__error {
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ext-row__desc { color: var(--color-fg-tertiary); }
+.ext-row__error { color: var(--color-status-error); }
+.ext-row__chev { flex: none; color: var(--color-fg-tertiary); transition: transform 180ms var(--ease-out); }
+.ext-row__chev--open { transform: rotate(90deg); }
+
+.ext-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 14px 56px;
+}
+.ext-row__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.ext-row__perms { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--color-fg-secondary); }
+.ext-row__perms-title { font-weight: 550; color: var(--color-fg-primary); }
+.ext-row__perms ul { margin: 0; padding-left: 18px; }
+.ext-row__perms p { margin: 0; }
+.ext-row__check { display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; cursor: pointer; }
+.ext-row__version { font-size: 11.5px; color: var(--color-fg-tertiary); }
+
+/* Small plain pills (never MetalButton). */
+.ext-pill {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 999px;
+  background: var(--color-bg-elevated);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ext-pill:hover:not(:disabled) { background: rgba(var(--highlight-rgb), 0.05); }
+.ext-pill:disabled { opacity: 0.5; cursor: default; }
+.ext-pill[aria-pressed='true'] { border-color: color-mix(in srgb, var(--color-accent-default) 45%, transparent); }
+.ext-pill--danger { color: var(--color-status-error); }
+
+.ext-popular {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+.ext-list > .ext-popular:first-child { border-top: 0; }
+.ext-popular__label { font-size: 12.5px; color: var(--color-fg-tertiary); }
+.ext-popular__list { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.ext-advanced__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+.ext-advanced__add { display: flex; gap: 6px; }
+.ext-advanced__add input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+.ext-advanced__add input:focus { border-color: var(--color-accent-default); }
+.ext-advanced__dev { display: flex; flex-wrap: wrap; gap: 6px; }

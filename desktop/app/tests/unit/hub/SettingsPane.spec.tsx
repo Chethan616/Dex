@@ -137,6 +137,27 @@ describe('SettingsPane shortcut recorder', () => {
     act(() => root.unmount());
   });
 
+  it('shows one section at a time: the rail switches it, a search lands on its first match', async () => {
+    const { container, root } = renderSettingsPane(vi.fn(async () => true));
+    const visible = (): string[] => Array.from(container.querySelectorAll<HTMLElement>('.settings-page__section'))
+      .filter((s) => !s.hidden).map((s) => s.id);
+    expect(visible()).toEqual(['settings-application']);
+
+    await act(async () => { container.querySelector<HTMLButtonElement>('[data-settings-tab="settings-privacy"]')!.click(); });
+    expect(visible()).toEqual(['settings-privacy']);
+    expect(container.querySelector('[data-settings-tab="settings-privacy"]')!.getAttribute('aria-current')).toBe('true');
+
+    const search = container.querySelector<HTMLInputElement>('.settings-rail__search input')!;
+    await act(async () => {
+      const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      setValue.call(search, 'theme');
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(visible()).toEqual(['settings-appearance']);
+
+    act(() => root.unmount());
+  });
+
   it('keeps the tab layout picker working alongside the appearance picker', () => {
     const layoutEvents: string[] = [];
     const onLayoutChange = (event: Event) => {
