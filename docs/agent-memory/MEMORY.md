@@ -1,0 +1,26 @@
+# DEX V3 Memory Index
+
+- [Project Overview](project-overview.md) — DEX today: Electron desktop + Android app, unify==main, TO_BE_DONE.md is the hand-over; old Python era deleted
+- [Injected Click Guard](injected-click-guard.md) — Why window_manager's show/focus can auto-approve confirmation cards, and the movement-based fix
+- [Local Inference GPU](local-inference-gpu.md) — Ollama on D:, RX 6800M blocked by a 2021 AMD driver (ROCm refuses, Vulkan computes garbage)
+- [LLM Provider Limits](llm-provider-limits.md) — Gemini free tier is 20 req/DAY; Groq works; DEX needs ~30 calls per GUI task
+- [Site Memory & Commands](site-memory-and-commands.md) — /scrape and /bugbounty, and where DEX stores per-site notes
+- [Phone app & accounts](phone-and-accounts.md) — android/ app, Firebase bridge, one-click Google/GitHub/Slack; needs user-owned OAuth + Firebase setup
+- [Blender in the background](blender-background.md) — per-task windowless Blender host behind the MCP, dex-3d via FLUX + Hunyuan ZeroGPU Spaces
+- [Phone adb testing](phone-adb-testing.md) — the OnePlus lags (screenshot every step), ×3 coordinates, live notification sits under Silent, WebView CDP debugging
+- [No metal buttons](no-metal-buttons.md) — user dislikes MetalButton; use plain pill buttons for desktop CTAs
+- [Release process](release-process.md) — v1.0.0 is the first public release (old 3.x deleted); phone versionName must always increase; tag → CI installer; APK uploaded with gh
+- [Android screenshots without a device](android-screenshots-without-device.md) — Robolectric NATIVE graphics renders Compose screens to PNG when the phone is away
+- [Unify workspace plan](unify-workspace-plan.md) — `unify` branch: Codex-style workspace; P0–P3 built (Chrome extensions + DNR engine 2026-10-14); main == unify; hand-over TO_BE_DONE.md
+- [CDP broker, no debug port](cdp-broker.md) — since f675a5f4 agents use a token broker (BU_CDP_WS); dev CDP testing needs AGB_CDP_PORT=9222; use cdpLease for debugger access
+- [Notes in UI/](notes-in-ui-folder.md) — the user leaves requests as file names in DEXV3/UI/claude_see_this*; check there when resuming
+- [Fluidity first](fluidity-first.md) — user wants smooth over flashy, but keep liked effects (bot flight) rebuilt cheaply; draw-phase reads, still list avatars
+- [Codex works here too](codex-in-repo.md) — user runs Codex on this repo; its uncommitted changes need review + a separate commit
+- [Desktop control plan](desktop-control-plan.md) — Windows app/OS control in mcp-servers/windows; phases 1, 2, 4 (borrowed input) built; acceptance tasks + Phase 3 left
+- [Connectors & Marketplace](connectors-marketplace.md) — 50+ hosted MCP servers via OAuth DCR; real logos only; travel tasks auto-get Kiwi + trivago; releases hide sign-ins they can't do
+- [Reactions are DEX's, selective](reactions-selective.md) — users can't react; DEX auto-reacts 👍 to go-aheads after a question, ❤️ to thanks; small corner badge (UI/g1.png)
+- [Widgets, not prose](widgets-genui.md) — ask with dex-ui widgets, buttons not links, MCP before browser, no emojis in live update; built b893f9cc, MCP-first plan in TO_BE_DONE §3.8
+- [Licensing](licensing.md) — Apache-2.0 since 2026-10-07 (MIT ≤ v3.2.0), NOTICE credit to Chethan Krishna; libsignal GPL exception; run yarn licenses:scan before releases
+- [Channels](channels.md) — Settings › Channels order: phone, WhatsApp, Telegram, Advanced; Telegram = own @BotFather bot, pairing link
+- [Keep the resume log](keep-resume-log.md) — update the RESUME HERE block atop TO_BE_DONE.md at every milestone; read it first after a reset
+- [Workflows & routines](workflows-and-routines.md) — owner spec 2026-10-14: NL create/edit routines, /workflow gen-UI cards, View = n8n-style graph, phone too; order in TO_BE_DONE RESUME block

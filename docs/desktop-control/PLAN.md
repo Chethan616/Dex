@@ -984,8 +984,19 @@ bypass mode [V], but match only "as written".
   apps (every mode), "Never use" apps (the server reads them from
   `<desk>/settings.json` on every call), and the change journal.
 
+- **App pickers** (2026-10-14, `1505cb6b`): "Ask first" / "Never use" are
+  chips plus an "Add app" search over every installed app
+  (`main/desktop/installedApps.ts`: Start-menu programs and Store apps,
+  each mapped to its process name), suggesting the apps open now.
+
 **Left:** the acceptance run with Spotify (not installed on the owner's PC),
 CPU profile of the Desk tab, phone Undo (rules change), and the owner's Q7.
+**Next (owner, 2026-10-14):** troubleshooting coverage — new `system_info`
+topics (processes, startup, disk, search, app) and `system_change` actions
+(device_scan, search_reindex, explorer_cache_clear, startup_disable/enable,
+app_reset) with recipes for touchpad, gestures, missing drivers, laggy
+Search/Explorer and slow apps. The design is in TO_BE_DONE.md's RESUME
+block, third batch, item 4.
 
 **Acceptance**
 - During task 1, the Desk tab shows Spotify updating while parked. Show me
