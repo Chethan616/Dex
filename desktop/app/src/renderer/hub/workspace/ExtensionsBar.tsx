@@ -8,7 +8,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 const PUZZLE = (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path d="M6 2.5h3v2a1.5 1.5 0 003 0v-2h1.5v4h-2a1.5 1.5 0 000 3h2v4h-4v-2a1.5 1.5 0 00-3 0v2h-4v-4h2a1.5 1.5 0 000-3h-2v-4H6z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    <path d="M3 5H5.7a1.55 1.55 0 1 1 3.1 0h2.7v2.7a1.55 1.55 0 1 1 0 3.1v2.7H3Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" />
   </svg>
 );
 

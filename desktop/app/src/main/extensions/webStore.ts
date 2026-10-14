@@ -30,7 +30,10 @@ export function storeCaller(senderOrigin: string | undefined | null): boolean {
   return senderOrigin === STORE_ORIGIN;
 }
 
-export function createStoreApi(deps: StoreDeps): (method: string, args: unknown[]) => Promise<unknown> {
+/** Tell the store page something happened (it listens to chrome.management events). */
+export type StoreNotify = (event: string, args: unknown[]) => void;
+
+export function createStoreApi(deps: StoreDeps): (method: string, args: unknown[], notify?: StoreNotify) => Promise<unknown> {
   const { manager } = deps;
   const status = (id: unknown): string => {
     if (typeof id !== 'string' || !isExtensionId(id)) return 'installable';
@@ -46,7 +49,7 @@ export function createStoreApi(deps: StoreDeps): (method: string, args: unknown[
     return extensionInfo(id, { manifest: { name: s.name, version: s.version, description: s.description } as Manifest, name: s.name, granted: manager.granted(id) }, s.enabled, s.optionsUrl, ext.source);
   };
 
-  return async (method, args) => {
+  return async (method, args, notify) => {
     switch (method) {
       case 'beginInstallWithManifest3': {
         const d = (args[0] ?? {}) as { id?: unknown; manifest?: unknown; iconUrl?: unknown; localizedName?: unknown };
@@ -62,6 +65,10 @@ export function createStoreApi(deps: StoreDeps): (method: string, args: unknown[
         if (!ok) return { result: 'user_cancelled' };
         try {
           const result = await manager.installFromStore(id, { confirmed: true });
+          if (result === 'success' || result === 'already_installed') {
+            // The page waits for this to turn its spinner into "Remove from DEX".
+            setImmediate(() => { const i = info(id); if (i) notify?.('management.onInstalled', [i]); });
+          }
           return { result: result === 'already_installed' ? 'success' : result };
         } catch (err) {
           deps.log?.('extensions.store.installFailed', { id, error: (err as Error).message });
@@ -93,7 +100,8 @@ export function createStoreApi(deps: StoreDeps): (method: string, args: unknown[
       case 'getMV2DeprecationStatus':
         return 'inactive';
       case 'getReferrerChain':
-        return '';
+        // An empty referrer chain, encoded as the store expects it.
+        return 'EgIIAA==';
       case 'isPendingCustodianApproval':
         return false;
       case 'management.getAll':
@@ -110,7 +118,10 @@ export function createStoreApi(deps: StoreDeps): (method: string, args: unknown[
       case 'management.uninstall': {
         const id = String(args[0] ?? '');
         const s = manager.summary(id);
-        if (s && await deps.confirmRemove(s.name)) await manager.uninstall(id);
+        if (s && await deps.confirmRemove(s.name)) {
+          await manager.uninstall(id);
+          setImmediate(() => notify?.('management.onUninstalled', [id]));
+        }
         return undefined;
       }
       default:

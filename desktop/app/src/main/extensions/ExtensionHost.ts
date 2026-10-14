@@ -283,7 +283,10 @@ export class ExtensionHost {
     ipcMain.handle('dex-cws:call', async (e, method: unknown, args: unknown) => {
       if (e.sender.session !== this.deps.session || !storeCaller(e.senderFrame?.origin)) return undefined;
       if (typeof method !== 'string' || !Array.isArray(args)) return undefined;
-      return storeApi(method, args);
+      const frame = e.senderFrame;
+      return storeApi(method, args, (event, eventArgs) => {
+        try { if (frame && !frame.isDestroyed()) frame.send('dex-cws:event', event, eventArgs); } catch { /* page gone */ }
+      });
     });
     this.deps.manager.onChanged(() => {
       this.grantsCache.clear();

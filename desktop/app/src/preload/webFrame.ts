@@ -32,23 +32,45 @@ function extensionPage(): void {
   });
 }
 
-/** "Add to Chrome" → "Add to DEX", once the store has drawn its buttons. */
+/**
+ * The store's Chrome-only wording, made DEX's: "Add to Chrome" → "Add to
+ * DEX", and its "Switch to Chrome?" dialog and banner out of the way. Found
+ * by their text, not Google's class names, which change; if the store's
+ * wording changes, this just stops doing anything.
+ */
 function rebrand(): void {
-  const swap = (root: ParentNode): void => {
-    for (const el of Array.from(root.querySelectorAll('span, button, div[role="button"]'))) {
+  const leafWithText = (text: string): HTMLElement[] =>
+    Array.from(document.querySelectorAll<HTMLElement>('span, button, h1, h2, h3, div, p'))
+      .filter((el) => el.childElementCount === 0 && el.textContent?.trim() === text);
+  const pass = (): void => {
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('span, button'))) {
       if (el.childElementCount > 0) continue;
-      const text = el.textContent ?? '';
-      const next = text
-        .replace(/^Add to Chrome$/, 'Add to DEX')
-        .replace(/^Remove from Chrome$/, 'Remove from DEX');
-      if (next !== text) el.textContent = next;
+      const text = el.textContent?.trim() ?? '';
+      if (text === 'Add to Chrome') el.textContent = 'Add to DEX';
+      else if (text === 'Remove from Chrome') el.textContent = 'Remove from DEX';
+    }
+    // The "Switch to Chrome?" dialog: dismissed with its own "No thanks".
+    for (const title of leafWithText('Switch to Chrome?')) {
+      const dialog = title.closest<HTMLElement>('[role="dialog"]');
+      const no = dialog && Array.from(dialog.querySelectorAll<HTMLElement>('button')).find((b) => b.textContent?.trim() === 'No thanks');
+      if (no && !no.dataset.dexDismissed) { no.dataset.dexDismissed = '1'; no.click(); }
+    }
+    // The "Switch to Chrome to install…" banner: its card goes.
+    for (const line of leafWithText('Switch to Chrome to install extensions and themes')) {
+      let card: HTMLElement | null = line;
+      while (card?.parentElement && card.parentElement.tagName !== 'SECTION' && card.parentElement !== document.body) card = card.parentElement;
+      if (card && card.parentElement?.tagName === 'SECTION') card.style.display = 'none';
     }
   };
+  let queued = false;
+  const later = (): void => {
+    if (queued) return;
+    queued = true;
+    setTimeout(() => { queued = false; pass(); }, 150);
+  };
   const start = (): void => {
-    swap(document);
-    new MutationObserver((records) => {
-      for (const r of records) for (const n of Array.from(r.addedNodes)) if (n instanceof Element) swap(n);
-    }).observe(document.documentElement, { childList: true, subtree: true });
+    pass();
+    new MutationObserver(later).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();

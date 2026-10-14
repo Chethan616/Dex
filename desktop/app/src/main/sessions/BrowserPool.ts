@@ -6,6 +6,7 @@ import { normalizeAddress } from '../../shared/address';
 import { noteInputEvent } from '../workspace/userActivity';
 import { fitStage, getStage, type StageHost } from '../workspace/stage';
 import { cleanUserAgent, webSession } from '../workspace/webProfile';
+import { afterMeasure, afterResize, effectiveZoom, freshFit, withUserZoom, type FitState } from '../workspace/fitWidth';
 import type { TabInfo } from './types';
 
 const DEFAULT_BROWSER_WIDTH = 1280;
@@ -100,6 +101,9 @@ interface TabEntry {
   agentBusyTimer: ReturnType<typeof setTimeout> | null;
   /** A remembered tab not loaded yet (tabMemory): loads when shown or used. */
   pending?: { url: string; title: string };
+  /** Your zoom, and the fit DEX adds when the page is wider than its pane (workspace/fitWidth.ts). */
+  zoom: FitState;
+  fitTimer: ReturnType<typeof setTimeout> | null;
 }
 
 interface PoolEntry {
@@ -351,6 +355,8 @@ export class BrowserPool {
       place: 'none',
       parent: null,
       agentBusyTimer: null,
+      zoom: freshFit(),
+      fitTimer: null,
     };
     entry.tabs.push(tab);
     this.wireTab(entry, tab, opts.timingStartedAt ?? Date.now());
@@ -503,7 +509,8 @@ export class BrowserPool {
       if (!result.finalUpdate) return;
       this.onFound?.(sessionId, tab.id, { active: result.activeMatchOrdinal ?? 0, matches: result.matches ?? 0 });
     });
-    wc.on('zoom-changed', () => changed());
+    // Ctrl+wheel in the page: Electron reports it and leaves the zooming to us.
+    wc.on('zoom-changed', (_event, direction) => { this.zoomTab(sessionId, tab.id, direction === 'in' ? 'in' : 'out'); });
 
     wc.on('did-start-loading', () => { tab.loading = true; changed(); });
     wc.on('did-stop-loading', () => { tab.loading = false; changed(); });
@@ -546,9 +553,14 @@ export class BrowserPool {
         pid: wc.getOSProcessId(), wcId: wc.id,
       });
       if (isActive()) this.notifyNavigate(sessionId, url);
+      // A new document: whether it needs fitting is measured afresh.
+      tab.zoom = freshFit(tab.zoom.userZoom);
+      this.applyZoom(tab);
       changed();
     });
     wc.on('did-finish-load', () => {
+      this.scheduleFit(tab, 50);
+      this.scheduleFit(tab, 1500);
       if (!currentNavigation) return;
       browserLogger.info('BrowserPool.navigation.didFinishLoad', {
         sessionId, tabId: tab.id, component: 'BrowserPool', area: 'navigation', event: 'didFinishLoad',
@@ -677,11 +689,57 @@ export class BrowserPool {
     const entry = this.entries.get(sessionId);
     const tab = entry?.tabs.find((t) => t.id === (tabId ?? entry.activeTabId));
     if (!entry || !tab || tab.view.webContents.isDestroyed()) return null;
-    const wc = tab.view.webContents;
-    const next = nextZoom(wc.getZoomFactor(), step);
-    wc.setZoomFactor(next);
+    const next = nextZoom(tab.zoom.userZoom, step);
+    tab.zoom = withUserZoom(tab.zoom, next, this.viewWidth(tab));
+    this.applyZoom(tab);
     this.scheduleTabsChanged(sessionId);
     return Math.round(next * 100);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Fitting a too-wide page into the pane (workspace/fitWidth.ts)
+  // ---------------------------------------------------------------------------
+
+  private viewWidth(tab: TabEntry): number {
+    try { return tab.view.getBounds().width; } catch { return 0; }
+  }
+
+  private applyZoom(tab: TabEntry): void {
+    const wc = tab.view.webContents;
+    if (wc.isDestroyed()) return;
+    const z = effectiveZoom(tab.zoom);
+    try { if (Math.abs(wc.getZoomFactor() - z) > 0.001) wc.setZoomFactor(z); } catch { /* not ready */ }
+  }
+
+  /** Measure the page soon (after a load, or the pane changing size). */
+  private scheduleFit(tab: TabEntry, delayMs: number): void {
+    if (tab.fitTimer) clearTimeout(tab.fitTimer);
+    tab.fitTimer = setTimeout(() => { tab.fitTimer = null; void this.measureFit(tab); }, delayMs);
+  }
+
+  private async measureFit(tab: TabEntry): Promise<void> {
+    const wc = tab.view.webContents;
+    const width = this.viewWidth(tab);
+    if (wc.isDestroyed() || tab.pending || width <= 0) return;
+    let m: unknown;
+    try {
+      // Its own world: the page can't fake the numbers.
+      m = await wc.executeJavaScriptInIsolatedWorld(1010, [{ code: '[document.documentElement.scrollWidth, document.documentElement.clientWidth]' }]);
+    } catch { return; }
+    if (!Array.isArray(m) || typeof m[0] !== 'number' || typeof m[1] !== 'number') return;
+    const next = afterMeasure(tab.zoom, width, { scrollWidth: m[0], clientWidth: m[1] });
+    if (next === tab.zoom) return;
+    tab.zoom = next;
+    this.applyZoom(tab);
+  }
+
+  /** The pane changed size: refit at once when the page's width is known, else measure. */
+  private refit(tab: TabEntry): void {
+    if (tab.zoom.contentWidth !== null) {
+      const next = afterResize(tab.zoom, this.viewWidth(tab));
+      if (next !== tab.zoom) { tab.zoom = next; this.applyZoom(tab); }
+    }
+    this.scheduleFit(tab, 200);
   }
 
   /**
@@ -716,6 +774,7 @@ export class BrowserPool {
     const index = entry.tabs.findIndex((t) => t.id === tabId);
     if (index < 0) return;
     const [gone] = entry.tabs.splice(index, 1);
+    if (gone.fitTimer) { clearTimeout(gone.fitTimer); gone.fitTimer = null; }
     this.unplace(gone);
     if (entry.tabs.length === 0) {
       // The last tab went away on its own: the browser is gone.
@@ -740,6 +799,9 @@ export class BrowserPool {
     if (this.screenAllowed()) this.putOnScreen(next, win, entry.bounds);
     else this.park(next, entry.bounds);
     if (prev && prev !== next) this.park(prev, entry.bounds);
+    // Chromium shares zoom between tabs of one site: the tab in front gets its own back.
+    this.applyZoom(next);
+    this.refit(next);
     this.applyFrameRate(entry);
     void this.wakeForVisibility(entry, 'tab-switch');
     const url = next.view.webContents.getURL();
@@ -871,7 +933,7 @@ export class BrowserPool {
       let canGoForward = false;
       let zoom = 100;
       try {
-        zoom = Math.round((wc.getZoomFactor?.() ?? 1) * 100);
+        zoom = Math.round(tab.zoom.userZoom * 100);
         url = tab.pending?.url ?? wc.getURL();
         title = tab.pending ? tab.pending.title : wc.getTitle();
         const history = (wc as unknown as { navigationHistory?: { canGoBack(): boolean; canGoForward(): boolean } }).navigationHistory;
@@ -1238,8 +1300,10 @@ export class BrowserPool {
   private applyBounds(entry: PoolEntry): void {
     const tab = entry.tabs.find((t) => t.id === entry.activeTabId);
     if (!tab || !entry.bounds) return;
+    const before = this.viewWidth(tab);
     if (tab.place === 'screen') tab.view.setBounds(entry.bounds);
     else this.park(tab, entry.bounds);
+    if (this.viewWidth(tab) !== before) this.refit(tab);
   }
 
   attachToWindow(sessionId: string, window: BrowserWindow, bounds: { x: number; y: number; width: number; height: number }): boolean {
