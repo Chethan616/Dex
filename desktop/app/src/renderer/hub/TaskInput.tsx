@@ -247,7 +247,7 @@ export const TaskInput = forwardRef<TaskInputHandle, TaskInputProps>(function Ta
 
   const submit = useCallback(() => {
     const trimmed = value.trim();
-    if (!trimmed && attachments.length === 0) return;
+    if (!trimmed && attachments.length === 0 && !(command && !command.requiresArg)) return;
 
     // A committed chip expands through its own command; otherwise a leading
     // slash is expanded here, before anything leaves the renderer. Either way

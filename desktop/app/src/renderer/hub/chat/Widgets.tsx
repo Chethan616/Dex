@@ -15,6 +15,7 @@ import {
   fieldShown, formatAnswer, formatDay, formatTime, optionLabel, unitFor,
   type AnswerValue, type AskField, type AskWidget, type Widget, type WidgetAction, type WidgetCard, type WidgetIcon,
 } from '../../../shared/widgets';
+import { WorkflowCards } from '../workflows/WorkflowCards';
 import './widgets.css';
 
 /* ── Glyphs: one clean, rounded line set ─────────────────────────────── */
@@ -533,5 +534,7 @@ export function WidgetView({ widget, answered, onReply, onOpenUrl }: WidgetViewP
           )}
         </div>
       );
+    case 'workflows':
+      return <WorkflowCards title={widget.title} items={widget.items} />;
   }
 }

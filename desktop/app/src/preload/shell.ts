@@ -38,6 +38,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   widgets: {
     openUrl: (url: string): Promise<{ opened: boolean }> => ipcRenderer.invoke('widgets:open-url', url),
   },
+  // Saved workflows (shared/workflows.ts): the cards' View and Run now, and `/workflow` in a task.
+  workflows: {
+    get: (id: string): Promise<unknown> => ipcRenderer.invoke('workflows:get', id),
+    run: (id: string): Promise<{ sessionId?: string; error?: string }> => ipcRenderer.invoke('workflows:run', id),
+    showInChat: (sessionId: string): Promise<{ ok: boolean }> => ipcRenderer.invoke('workflows:show-in-chat', sessionId),
+  },
   profile: {
     get: (): Promise<unknown> => ipcRenderer.invoke('profile:get'),
     set: (next: { bot?: string; color?: string | null; name?: string | null }): Promise<unknown> => ipcRenderer.invoke('profile:set', next),

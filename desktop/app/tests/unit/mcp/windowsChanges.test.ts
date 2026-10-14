@@ -75,7 +75,8 @@ describe('the changes DEX may make', () => {
 
   it('keeps the host script ASCII outside comments, which Windows PowerShell reads as ANSI', () => {
     const ps1 = fs.readFileSync(path.resolve(__dirname, '../../../mcp-servers/windows/host/host.ps1'), 'utf-8');
-    const bad = ps1.split('\n').map((line, i) => [i + 1, line.replace(/^\s*#.*$/, '')] as const).filter(([, code]) => /[^\x00-\x7F]/.test(code));
+    // Split on CRLF too: a Windows checkout has it, and `.` stops at a stray \r.
+    const bad = ps1.split(/\r?\n/).map((line, i) => [i + 1, line.replace(/^\s*#.*$/, '')] as const).filter(([, code]) => /[^\x00-\x7F]/.test(code));
     expect(bad.map(([n]) => n)).toEqual([]);
   });
 });

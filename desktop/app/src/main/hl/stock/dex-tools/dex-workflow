@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# dex-workflow — the user's saved workflows and daily routines: make, change,
+# delete, list, show as cards in the chat, and run. DEX keeps them and starts
+# the scheduled ones on time. See workflows.md.
+#
+# Specs come from stdin as JSON (a heredoc), like dex-ui: quotes and brackets
+# are painful to hand-escape into arguments.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+usage() {
+  cat >&2 <<'USAGE'
+usage:
+  dex-workflow list                                   every workflow: id, name, trigger, steps
+  dex-workflow get <name|id>                          one workflow, in full
+  dex-workflow create <<'EOF'  {"name": "...", "trigger": {...}, "steps": [...]}
+  dex-workflow update <name|id> <<'EOF'  {only the fields that change; "steps" replaces them all}
+  dex-workflow enable <name|id>  /  dex-workflow disable <name|id>
+  dex-workflow delete <name|id>
+  dex-workflow show [<name|id>]                       cards in the chat, with View and Run now
+  dex-workflow run <name|id>                          start it now, as a task of its own
+
+Every key is in workflows.md.
+USAGE
+  exit 2
+}
+
+[ $# -ge 1 ] || usage
+op="$1"; shift
+
+session="$(dex_session_id)"
+sid="$(dex_esc "$session")"
+ref=""
+[ $# -ge 1 ] && ref="$(dex_esc "$1")"
+
+case "$op" in
+  list)
+    body="{\"op\":\"list\",\"sessionId\":\"${sid}\"}"
+    ;;
+  get|enable|disable|delete|run)
+    [ -n "$ref" ] || { echo "dex-workflow $op: say which workflow (its name or id)" >&2; exit 2; }
+    body="{\"op\":\"${op}\",\"sessionId\":\"${sid}\",\"ref\":\"${ref}\"}"
+    ;;
+  show)
+    [ -n "$session" ] || { echo "dex-workflow show: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
+    body="{\"op\":\"show\",\"sessionId\":\"${sid}\",\"ref\":\"${ref}\"}"
+    ;;
+  create|update)
+    if [ "$op" = update ] && [ -z "$ref" ]; then echo "dex-workflow update: say which workflow (its name or id)" >&2; exit 2; fi
+    spec="$(cat)"
+    [ -n "${spec//[[:space:]]/}" ] || { echo "dex-workflow $op: no JSON on stdin" >&2; exit 2; }
+    body="{\"op\":\"${op}\",\"sessionId\":\"${sid}\",\"ref\":\"${ref}\",\"spec\":${spec}}"
+    ;;
+  -h|--help|help) usage ;;
+  *) echo "dex-workflow: unknown verb '$op'" >&2; usage ;;
+esac
+
+dex_post /dex/workflow "$body"

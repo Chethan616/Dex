@@ -21,6 +21,12 @@ export interface SlashCommand {
   requiresArg: boolean;
   /** Turn the argument string into the prompt the agent receives. */
   expand: (arg: string) => string;
+  /**
+   * Done by DEX itself, with no agent turn, when typed bare inside a task:
+   * `/workflow` draws the saved workflows straight into the chat. With words
+   * after it, or from the dashboard (no task yet), it goes to the agent.
+   */
+  inTask?: (sessionId: string) => void;
 }
 
 /**
@@ -136,6 +142,28 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         `\`$DEX_SITE_MEMORY_DIR/${hostOf(target)}.security.md\`.`,
       ].join('\n'), extra);
     },
+  },
+  {
+    name: 'workflow',
+    usage: '/workflow [what to do]',
+    summary: 'Your saved workflows and routines — view, run, or say what to make or change.',
+    requiresArg: false,
+    expand: (arg) => {
+      const words = arg.trim();
+      if (!words) {
+        return [
+          'Show me my saved workflows: run `dex-workflow show`, then end your turn.',
+          'If there are none, say so in one line and offer to make one (read `./dex-tools/workflows.md`).',
+        ].join('\n');
+      }
+      return [
+        `About my workflows and routines: ${words}`,
+        '',
+        'Read `./dex-tools/workflows.md` and use `dex-workflow` to do it — create, change, delete or run —',
+        'then show the result with `dex-workflow show <name>`.',
+      ].join('\n');
+    },
+    inTask: (sessionId) => { void window.electronAPI?.workflows?.showInChat(sessionId); },
   },
 ];
 

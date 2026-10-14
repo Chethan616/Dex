@@ -1,0 +1,201 @@
+/*
+ * Workflow cards (in the chat, on widgets.css's card) and the graph sheet
+ * (WorkflowGraph.tsx, portalled to <body>, so it brings its own tokens).
+ * Monochrome like the rest of the hub: the trigger node and Run now are the
+ * inverted pair, everything else sits on the chip surface. Light and dark
+ * come from the theme tokens.
+ */
+
+.cx-wc__badge--muted {
+  background: var(--surface-chip);
+  color: var(--color-fg-tertiary);
+}
+
+[data-mode='light'] .cx-wc__badge--muted { color: var(--color-fg-tertiary); }
+
+.cx-wc__item--empty .cx-wc__line { line-height: 1.45; }
+
+.cx-wbtn:disabled { opacity: 0.6; cursor: default; }
+
+/* ── The graph sheet ─────────────────────────────────────────────────── */
+
+.wfg {
+  --wfg-line: color-mix(in srgb, var(--color-fg-primary) 10%, transparent);
+  --wfg-dot: color-mix(in srgb, var(--color-fg-primary) 13%, transparent);
+  --wfg-edge: color-mix(in srgb, var(--color-fg-primary) 38%, transparent);
+  --wfg-node: var(--color-bg-elevated);
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--color-modal-scrim, rgba(0, 0, 0, 0.5));
+  animation: wfg-fade 0.16s ease-out both;
+}
+
+@keyframes wfg-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wfg-rise { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: none; } }
+
+.wfg__sheet {
+  width: min(1120px, 100%);
+  height: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--wfg-line);
+  background: var(--color-bg-base);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+  animation: wfg-rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.wfg__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-8);
+  border-bottom: 1px solid var(--wfg-line);
+}
+
+.wfg__head-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: var(--surface-chip);
+  box-shadow: var(--line-chip);
+  color: var(--fg-chip-icon);
+}
+
+.wfg__head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.wfg__title { margin: 0; font-size: var(--font-size-lg); font-weight: 650; color: var(--color-fg-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wfg__sub { font-size: var(--font-size-sm); color: var(--color-fg-tertiary); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wfg__desc { margin: 0; padding: var(--space-4) var(--space-8); border-bottom: 1px solid var(--wfg-line); font-size: var(--font-size-md); color: var(--color-fg-secondary); }
+
+.wfg__run {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-fg-primary);
+  color: var(--color-bg-base);
+  font: inherit;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.wfg__run:hover { opacity: 0.9; }
+.wfg__run:disabled { opacity: 0.6; cursor: default; }
+
+.wfg__icon-btn {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--surface-chip);
+  box-shadow: var(--line-chip);
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.wfg__icon-btn:hover { background: var(--surface-chip-hover); color: var(--color-fg-primary); }
+
+/* The canvas: dots that move with it (WorkflowGraph sets their offset and size). */
+.wfg__canvas {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background-color: var(--color-bg-sunken, var(--color-bg-base));
+  background-image: radial-gradient(circle, var(--wfg-dot) 1.1px, transparent 1.3px);
+  background-size: 22px 22px;
+}
+
+.wfg__canvas--grab { cursor: grabbing; }
+
+.wfg__layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.wfg__edges { position: absolute; left: 0; top: 0; overflow: visible; color: var(--wfg-edge); }
+.wfg__edge { fill: none; stroke: var(--wfg-edge); stroke-width: 1.6; }
+.wfg__dots { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.wfg__dot { fill: var(--color-bg-base); stroke: var(--wfg-edge); stroke-width: 1.5; }
+.wfg__dot--in { fill: var(--wfg-edge); }
+
+.wfg__node {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border-radius: 16px;
+  border: 1px solid var(--wfg-line);
+  background: var(--wfg-node);
+  box-shadow: var(--shadow-sm);
+  user-select: none;
+}
+
+.wfg__node-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: var(--surface-chip);
+  box-shadow: var(--line-chip);
+  color: var(--fg-chip-icon);
+}
+
+.wfg__node-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.wfg__node-kind { font-size: var(--font-size-xs); font-weight: 600; letter-spacing: 0.02em; color: var(--color-fg-tertiary); }
+.wfg__node-title { font-size: var(--font-size-md); font-weight: 600; line-height: 1.3; color: var(--color-fg-primary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wfg__node-detail { font-size: var(--font-size-sm); color: var(--color-fg-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* The trigger: the inverted pair, like a primary button. */
+.wfg__node--trigger { background: var(--color-fg-primary); border-color: transparent; }
+.wfg__node--trigger .wfg__node-icon { background: color-mix(in srgb, var(--color-bg-base) 16%, transparent); box-shadow: none; color: var(--color-bg-base); }
+.wfg__node--trigger .wfg__node-kind { color: color-mix(in srgb, var(--color-bg-base) 65%, transparent); }
+.wfg__node--trigger .wfg__node-title { color: var(--color-bg-base); }
+
+.wfg__controls {
+  position: absolute;
+  right: var(--space-6);
+  bottom: var(--space-6);
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-base);
+  border: 1px solid var(--wfg-line);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 640px) {
+  .wfg { padding: 0; }
+  .wfg__sheet { width: 100%; height: 100%; border-radius: 0; border: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wfg, .wfg__sheet { animation: none; }
+}

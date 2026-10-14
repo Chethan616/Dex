@@ -247,6 +247,17 @@ export function LogsApp(): React.ReactElement {
     if ((!trimmed && !hasFiles && !(command && !command.requiresArg)) || sending) return;
     // Same command rule as everywhere else: a committed chip expands through
     // its command, otherwise a leading slash is expanded here.
+    const found = command ?? expandSlashCommand(trimmed).command;
+    const bareArg = command ? trimmed : trimmed.replace(/^\/[a-zA-Z][\w-]*\s*/, '');
+    // A bare command DEX answers itself (`/workflow`) skips the agent.
+    if (found?.inTask && !bareArg && !hasFiles) {
+      found.inTask(sessionId);
+      setInput('');
+      setCommand(null);
+      setCaret(0);
+      inputRef.current?.clear();
+      return;
+    }
     const expanded = command ? command.expand(trimmed) : expandSlashCommand(trimmed).prompt;
     const prompt = expanded.trim() || (attach.items.length === 1 ? `Here's ${attach.items[0].name}.` : 'Here are the attached files.');
     setSending(true);

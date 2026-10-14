@@ -707,8 +707,16 @@ interface ElectronWidgetsAPI {
   openUrl: (url: string) => Promise<{ opened: boolean }>;
 }
 
+/** Saved workflows (shared/workflows.ts): View fetches the live copy, Run now starts a task. */
+interface ElectronWorkflowsAPI {
+  get: (id: string) => Promise<import('../shared/workflows').Workflow | null>;
+  run: (id: string) => Promise<{ sessionId?: string; error?: string }>;
+  showInChat: (sessionId: string) => Promise<{ ok: boolean }>;
+}
+
 interface ElectronAPI {
   widgets?: ElectronWidgetsAPI;
+  workflows?: ElectronWorkflowsAPI;
   profile?: ElectronProfileAPI;
   pill: ElectronPillAPI;
   logs?: ElectronLogsAPI;

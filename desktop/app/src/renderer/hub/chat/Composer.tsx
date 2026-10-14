@@ -75,15 +75,18 @@ export function Composer({ sessionId, onSend, working, onPause, engineLabel, eng
     if (!trimmed && filtered.length === 0 && !(command && !command.requiresArg)) return;
     // A committed chip expands through its command; otherwise a leading slash
     // is expanded here — the same rule as the dashboard and the overlay.
-    const prompt = command ? command.expand(trimmed) : expandSlashCommand(trimmed).prompt;
-    onSend(prompt, filtered.length > 0 ? filtered : undefined);
+    const expanded = command ? { prompt: command.expand(trimmed), command } : expandSlashCommand(trimmed);
+    // A bare command DEX answers itself (`/workflow`) skips the agent.
+    const bareArg = command ? trimmed : trimmed.replace(/^\/[a-zA-Z][\w-]*\s*/, '');
+    if (expanded.command?.inTask && !bareArg && filtered.length === 0) expanded.command.inTask(sessionId);
+    else onSend(expanded.prompt, filtered.length > 0 ? filtered : undefined);
     setValue('');
     setCommand(null);
     setAttachments([]);
     setCaret(0);
     fieldRef.current?.clear();
     idxCounter.current = 0;
-  }, [value, command, onSend, attachments]);
+  }, [value, command, onSend, attachments, sessionId]);
 
   const slashHints = useMemo(() => (command ? [] : matchingCommands(value)), [command, value]);
   const mentionHints = useMemo(() => matchingMentions(value, caret), [value, caret]);

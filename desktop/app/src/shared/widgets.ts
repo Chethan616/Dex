@@ -13,6 +13,7 @@
  * The phone renders the same specs (android/…/ui/components/Widgets.kt).
  */
 import { z } from 'zod';
+import { WorkflowSchema, workflowLine } from './workflows';
 
 /** Glyphs a widget may name; each platform draws its own clean version. */
 export const WIDGET_ICONS = [
@@ -79,6 +80,10 @@ export const WidgetSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('cards'), title: text(120).optional(), icon: Icon.optional(), items: z.array(CardSchema).min(1).max(8) }),
   z.object({ type: z.literal('buttons'), title: text(120).optional(), buttons: z.array(WidgetActionSchema).min(1).max(6) }),
   z.object({ type: z.literal('facts'), title: text(120).optional(), icon: Icon.optional(), rows: z.array(z.object({ label: text(40), value: text(200) })).min(1).max(12), actions: z.array(WidgetActionSchema).max(3).optional() }),
+  // The user's saved workflows (shared/workflows.ts), from `/workflow` or
+  // `dex-workflow show`: a card each with View (the graph) and Run now. Each
+  // carries the whole workflow, so the phone can draw the graph too.
+  z.object({ type: z.literal('workflows'), title: text(120).optional(), items: z.array(WorkflowSchema).max(12) }),
 ]);
 export type Widget = z.infer<typeof WidgetSchema>;
 export type AskWidget = Omit<Extract<Widget, { type: 'ask' }>, 'fields'> & { fields: AskField[] };
@@ -182,7 +187,7 @@ const TYPE_ALIASES: Record<string, Widget['type']> = {
 export function normalizeWidget(raw: unknown, hint: { type?: string; title?: string } = {}): unknown {
   const hintType = hint.type ? TYPE_ALIASES[hint.type.toLowerCase()] : undefined;
   if (Array.isArray(raw)) {
-    const listKey = { ask: 'fields', cards: 'items', buttons: 'buttons', facts: 'rows' }[hintType ?? 'ask'];
+    const listKey = { ask: 'fields', cards: 'items', buttons: 'buttons', facts: 'rows', workflows: 'items' }[hintType ?? 'ask'];
     raw = { [listKey]: raw };
   }
   if (!isObj(raw)) return raw;
@@ -235,6 +240,7 @@ const SHAPES: Record<Widget['type'], string> = {
   cards: '{"title":"Flights","items":[{"title":"IndiGo 6E 2345","subtitle":"07:05 → 09:15","price":"₹4,850","actions":[{"label":"Select","reply":"Book 6E 2345"},{"label":"Open","url":"https://…"}]}]}',
   buttons: '{"buttons":[{"label":"Open in Google Flights","url":"https://www.google.com/travel/flights?q=…"}]}',
   facts: '{"title":"Your booking","rows":[{"label":"Flight","value":"6E 2345"}]}',
+  workflows: 'nothing: DEX draws the saved workflows itself — run `dex-workflow show`',
 };
 
 function issueText(i: z.core.$ZodIssue): string {
@@ -366,6 +372,7 @@ export function widgetLine(w: Widget): string {
     case 'cards': return w.title ?? w.items[0]?.title ?? 'Results';
     case 'buttons': return w.title ?? w.buttons.map((b) => b.label).join(' · ');
     case 'facts': return w.title ?? w.rows.map((r) => `${r.label}: ${r.value}`).join(' · ');
+    case 'workflows': return w.title ?? (w.items.length ? w.items.map(workflowLine).join(' — ') : 'No workflows yet');
   }
 }
 

@@ -166,6 +166,9 @@ import {
 import { WhatsAppAdapter } from './channels/WhatsAppAdapter';
 import { TelegramAdapter } from './channels/TelegramAdapter';
 import { ChannelRouter } from './channels/ChannelRouter';
+import { WorkflowStore } from './workflows/store';
+import { startWorkflowScheduler } from './workflows/scheduler';
+import { workflowPrompt, type Workflow } from '../shared/workflows';
 import { registerChannelHandlers, unregisterChannelHandlers } from './channels/ipc';
 // Auto-updater
 import {
@@ -266,6 +269,8 @@ let onboardingWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
 const sessionManager = new SessionManager(path.join(app.getPath('userData'), 'sessions.db'));
+// Saved workflows and routines (shared/workflows.ts): `dex-workflow`, `/workflow`, the scheduler.
+const workflowStore = new WorkflowStore(path.join(app.getPath('userData'), 'workflows.json'));
 
 // Each task's tabs and documents, remembered for when it comes back
 // (workspace/tabMemory.ts). Documents come back the first time the hub asks.
@@ -1877,6 +1882,30 @@ app.whenReady().then(async () => {
   webSes.on('will-download', onWillDownload);
   electronSession.defaultSession.on('will-download', onWillDownload);
 
+  // A workflow's run: a task of its own, like one from the task box, with the
+  // steps as its prompt and the engine the workflow was made with.
+  async function startWorkflowRun(workflow: Workflow, by: 'schedule' | 'user', show = false): Promise<string> {
+    const id = sessionManager.createSession(workflowPrompt(workflow, by));
+    // Run now from a card: the hub switches to the run straight away.
+    if (show && shellWindow && !shellWindow.isDestroyed()) shellWindow.webContents.send('select-session', id);
+    const engineId = workflow.engine ?? DEFAULT_ENGINE_ID;
+    sessionManager.setSessionEngine(id, engineId);
+    if (workflow.model) sessionManager.setSessionModel(id, workflow.model);
+    // The scheduler records its own runs before it starts them.
+    if (by === 'user') workflowStore.recordRun(workflow.id, { at: Date.now(), by, sessionId: id });
+    captureEvent('session_created', { source: by === 'schedule' ? 'workflow_schedule' : 'workflow', engine: engineId, prompt_length: 0, attachments_count: 0 });
+    await startSessionWithAgent(id);
+    return id;
+  }
+
+  /** The workflows as a chat widget: a card each, with View and Run now. */
+  function showWorkflowsIn(sessionId: string, only?: Workflow): string {
+    const items = only ? [only] : workflowStore.list().sort((a, b) => a.name.localeCompare(b.name)).slice(0, 12);
+    const id = `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+    sessionManager.appendOutput(sessionId, { type: 'widget', id, widget: { type: 'workflows', title: only ? undefined : 'Your workflows', items } });
+    return id;
+  }
+
   const localTaskServer = await createLocalTaskServer({
     userDataPath: app.getPath('userData'),
     log: mainLogger,
@@ -2377,11 +2406,69 @@ app.whenReady().then(async () => {
           title: typeof body.title === 'string' && body.title.trim() ? body.title.trim() : undefined,
         });
         if (!widget) throw new Error(`that widget doesn't fit DEX's kit: ${error}. See ui.md in your DEX tools.`);
+        // Saved workflows are drawn from DEX's own store, never from a spec the agent wrote.
+        if (widget.type === 'workflows') throw new Error('show saved workflows with `dex-workflow show`, not dex-ui');
         const id = `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
         sessionManager.appendOutput(sessionId, { type: 'widget', id, widget });
         return widget.type === 'ask'
           ? { ok: true, id, next: "Shown. End your turn now: the user's answer arrives as their next message." }
           : { ok: true, id };
+      },
+
+      // `dex-workflow`: make, change, delete, list, show and run the user's
+      // workflows and routines (shared/workflows.ts, dex-tools/workflows.md).
+      'POST /dex/workflow': async (raw) => {
+        let body: { sessionId?: unknown; op?: unknown; ref?: unknown; spec?: unknown };
+        try { body = JSON.parse(raw || '{}'); } catch { throw new Error('the workflow spec on stdin is not valid JSON — check quotes and commas'); }
+        const op = assertString(body.op, 'op', 20);
+        const sessionId = typeof body.sessionId === 'string' && body.sessionId ? body.sessionId.slice(0, 100) : null;
+        const ref = typeof body.ref === 'string' ? body.ref.slice(0, 120) : '';
+        const pick = (): Workflow => {
+          const { workflow, error } = workflowStore.find(ref);
+          if (!workflow) throw new Error(error ?? 'no such workflow');
+          return workflow;
+        };
+        switch (op) {
+          case 'list':
+            return { workflows: workflowStore.list().map((w) => ({ id: w.id, name: w.name, trigger: w.trigger, steps: w.steps.length, enabled: w.enabled, lastRun: w.lastRun?.at ?? null })) };
+          case 'get':
+            return { workflow: pick() };
+          case 'create': {
+            const made = sessionId && sessionManager.getSession(sessionId)
+              ? { engine: sessionManager.getSessionEngine(sessionId) ?? undefined, model: sessionManager.getSessionModel(sessionId) ?? undefined }
+              : undefined;
+            const { workflow, error } = workflowStore.create(body.spec, made);
+            if (!workflow) throw new Error(`that workflow doesn't fit: ${error}`);
+            return { ok: true, workflow };
+          }
+          case 'update': {
+            const { workflow, error } = workflowStore.update(pick().id, body.spec);
+            if (!workflow) throw new Error(`that change doesn't fit: ${error}`);
+            return { ok: true, workflow };
+          }
+          case 'enable':
+          case 'disable': {
+            const { workflow } = workflowStore.update(pick().id, { enabled: op === 'enable' });
+            return { ok: true, workflow };
+          }
+          case 'delete': {
+            const w = pick();
+            workflowStore.remove(w.id);
+            return { ok: true, deleted: w.name };
+          }
+          case 'show': {
+            if (!sessionId || !sessionManager.getSession(sessionId)) throw new Error('no session to show it in (DEX_SESSION_ID)');
+            const id = showWorkflowsIn(sessionId, ref ? pick() : undefined);
+            return { ok: true, id, next: 'Shown as cards with View and Run now. Say nothing more about them unless the user asked something else.' };
+          }
+          case 'run': {
+            const w = pick();
+            const started = await startWorkflowRun(w, 'user');
+            return { ok: true, sessionId: started, next: `“${w.name}” is running as a task of its own. Tell the user in one line.` };
+          }
+          default:
+            throw new Error('op is one of: list, get, create, update, enable, disable, delete, show, run');
+        }
       },
 
       'POST /dex/react': async (raw) => {
@@ -2488,6 +2575,14 @@ app.whenReady().then(async () => {
     });
   });
 
+  // Routines on their schedule ("every weekday at 7:30").
+  const stopWorkflowScheduler = startWorkflowScheduler({
+    store: workflowStore,
+    startRun: startWorkflowRun,
+    log: (event, data) => mainLogger.info(event, data),
+  });
+  app.once('before-quit', stopWorkflowScheduler);
+
   ipcMain.handle('sessions:create', (_event, payload: unknown) => {
     let promptRaw: unknown;
     let attachmentsRaw: unknown;
@@ -2532,6 +2627,26 @@ app.whenReady().then(async () => {
       attachments_count: attachments.length,
     });
     return id;
+  });
+
+  // Workflows from the hub: the cards' View (the live copy, when it still
+  // exists) and Run now, and `/workflow` typed in a task's composer.
+  ipcMain.handle('workflows:get', (_event, id: unknown) => workflowStore.get(assertString(id, 'id', 40)));
+  ipcMain.handle('workflows:run', async (_event, id: unknown) => {
+    const w = workflowStore.get(assertString(id, 'id', 40));
+    if (!w) return { error: 'That workflow was deleted.' };
+    try {
+      return { sessionId: await startWorkflowRun(w, 'user', true) };
+    } catch (err) {
+      return { error: (err as Error).message };
+    }
+  });
+  ipcMain.handle('workflows:show-in-chat', (_event, sessionId: unknown) => {
+    const id = assertString(sessionId, 'sessionId', 100);
+    if (!sessionManager.getSession(id)) return { ok: false };
+    sessionManager.appendOutput(id, { type: 'user_input', text: '/workflow' });
+    showWorkflowsIn(id);
+    return { ok: true };
   });
 
   ipcMain.handle('sessions:start', async (_event, id: string) => {
