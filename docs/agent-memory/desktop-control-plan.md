@@ -30,7 +30,7 @@ On 2026-10-06 the owner asked for "Jarvis"-style autonomy: multi-step app tasks 
 
 **2026-10-14 later:** Settings › Desktop control app pickers search every installed app (`installedApps.ts`, `1505cb6b`). Owner's next asks for this area: real troubleshooting coverage (touchpad, gestures, missing drivers, laggy Search/Explorer, slow apps like WhatsApp) — design in TO_BE_DONE RESUME block, third batch item 4.
 
-**Troubleshooting (2026-10-14, `1551a30f`, from the second PC):** system_info topics processes/startup/disk/search/app; system_change explorer_cache_clear, startup_disable/enable (StartupApproved, with undo), app_reset (tier 3), device_scan + search_reindex (admin). Recipes in dex-tools/desktop.md. Gotcha: host.ps1 is read by Windows PowerShell 5.1 as ANSI (no BOM), so keep its strings ASCII (a test enforces it). Search index count/state comes from ISearchCatalogManager via a lazily compiled C# interop in host.ps1.
+**Troubleshooting (2026-10-14, `7533df5a`, from the second PC):** system_info topics processes/startup/disk/search/app; system_change explorer_cache_clear, startup_disable/enable (StartupApproved, with undo), app_reset (tier 3), device_scan + search_reindex (admin). Recipes in dex-tools/desktop.md. Gotcha: host.ps1 is read by Windows PowerShell 5.1 as ANSI (no BOM), so keep its strings ASCII (a test enforces it). Search index count/state comes from ISearchCatalogManager via a lazily compiled C# interop in host.ps1.
 
 **Left:**
 - The owner's acceptance tasks: Spotify (not installed on the PC), Wi-Fi, touchpad.
